@@ -36,12 +36,12 @@
 #ifndef __SALOGL_COCOA_H__
 #define __SALOGL_COCOA_H__
 
-#include <salgdi.h>
+#include "java/salgdi.h"
 
 SAL_DLLPRIVATE NSFont *NSFont_findPlainFont( NSFont *pNSFont );
 SAL_DLLPRIVATE NSArray *NSFontManager_getAllFonts();
-SAL_DLLPRIVATE BOOL NSFontManager_isFixedPitch( NSFont *pNSFont );
-SAL_DLLPRIVATE BOOL NSFontManager_isItalic( NSFont *pNSFont );
+SAL_DLLPRIVATE sal_Bool NSFontManager_isFixedPitch( NSFont *pNSFont );
+SAL_DLLPRIVATE sal_Bool NSFontManager_isItalic( NSFont *pNSFont );
 SAL_DLLPRIVATE FontWidth NSFontManager_widthOfFont( NSFont *pNSFont );
 SAL_DLLPRIVATE FontWeight NSFontManager_weightOfFont( NSFont *pNSFont );
 

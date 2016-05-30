@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified April 2006 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 #ifndef _SV_SCRBAR_HXX
 #define _SV_SCRBAR_HXX
@@ -69,12 +72,12 @@ private:
     long            mnLineSize;
     long            mnPageSize;
     long            mnDelta;
-    USHORT          mnDragDraw;
-    USHORT          mnStateFlags;
+    sal_uInt16          mnDragDraw;
+    sal_uInt16          mnStateFlags;
     ScrollType      meScrollType;
     ScrollType      meDDScrollType;
-    BOOL            mbCalcSize;
-    BOOL            mbFullDrag;
+    sal_Bool            mbCalcSize;
+    sal_Bool            mbFullDrag;
     Link            maScrollHdl;
     Link            maEndScrollHdl;
 
@@ -86,34 +89,34 @@ private:
 	SAL_DLLPRIVATE void			ImplInit( Window* pParent, WinBits nStyle );
 	SAL_DLLPRIVATE void			ImplInitStyle( WinBits nStyle );
 	SAL_DLLPRIVATE void			ImplLoadRes( const ResId& rResId );
-	SAL_DLLPRIVATE void			ImplUpdateRects( BOOL bUpdate = TRUE );
+	SAL_DLLPRIVATE void			ImplUpdateRects( sal_Bool bUpdate = sal_True );
 #if defined USE_JAVA && defined MACOSX
-	SAL_DLLPRIVATE void			ImplUpdateRectsNative( BOOL bUpdate = TRUE );
+	SAL_DLLPRIVATE void			ImplUpdateRectsNative( sal_Bool bUpdate = sal_True );
 #endif	// USE_JAVA
 	SAL_DLLPRIVATE long			ImplCalcThumbPos( long nPixPos );
 	SAL_DLLPRIVATE long			ImplCalcThumbPosPix( long nPos );
-	SAL_DLLPRIVATE void			ImplCalc( BOOL bUpdate = TRUE );
-	SAL_DLLPRIVATE void			ImplDraw( USHORT nDrawFlags, OutputDevice* pOutDev  );
+	SAL_DLLPRIVATE void			ImplCalc( sal_Bool bUpdate = sal_True );
+	SAL_DLLPRIVATE void			ImplDraw( sal_uInt16 nDrawFlags, OutputDevice* pOutDev  );
     using Window::ImplScroll;
-	SAL_DLLPRIVATE long			ImplScroll( long nNewPos, BOOL bCallEndScroll );
-	SAL_DLLPRIVATE long			ImplDoAction( BOOL bCallEndScroll );
-	SAL_DLLPRIVATE void			ImplDoMouseAction( const Point& rPos, BOOL bCallAction = TRUE );
+	SAL_DLLPRIVATE long			ImplScroll( long nNewPos, sal_Bool bCallEndScroll );
+	SAL_DLLPRIVATE long			ImplDoAction( sal_Bool bCallEndScroll );
+	SAL_DLLPRIVATE void			ImplDoMouseAction( const Point& rPos, sal_Bool bCallAction = sal_True );
 	SAL_DLLPRIVATE void			ImplInvert();
-    SAL_DLLPRIVATE BOOL         ImplDrawNative( USHORT nDrawFlags );
+    SAL_DLLPRIVATE sal_Bool         ImplDrawNative( sal_uInt16 nDrawFlags );
     SAL_DLLPRIVATE void         ImplDragThumb( const Point& rMousePos );
 	DECL_DLLPRIVATE_LINK(       ImplTimerHdl, Timer* );
 	DECL_DLLPRIVATE_LINK(       ImplAutoTimerHdl, AutoTimer* );
 
 public:
-                    ScrollBar( Window* pParent, WinBits nStyle = WB_VERT );
-                    ScrollBar( Window* pParent, const ResId& rResId );
-                    ~ScrollBar();
+    explicit        ScrollBar( Window* pParent, WinBits nStyle = WB_VERT );
+    explicit        ScrollBar( Window* pParent, const ResId& );
+    virtual         ~ScrollBar();
 
     virtual void    MouseButtonDown( const MouseEvent& rMEvt );
     virtual void    Tracking( const TrackingEvent& rTEvt );
     virtual void    KeyInput( const KeyEvent& rKEvt );
     virtual void    Paint( const Rectangle& rRect );
-    virtual void    Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, ULONG nFlags );
+    virtual void    Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, sal_uLong nFlags );
     virtual void    Resize();
     virtual void    StateChanged( StateChangedType nType );
     virtual void    DataChanged( const DataChangedEvent& rDCEvt );
@@ -128,9 +131,9 @@ public:
     long            DoScroll( long nNewPos );
     long            DoScrollAction( ScrollType eScrollType );
 
-    void            EnableDrag( BOOL bEnable = TRUE )
+    void            EnableDrag( sal_Bool bEnable = sal_True )
                         { mbFullDrag = bEnable; }
-    BOOL            IsDragEnabled() const { return mbFullDrag; }
+    sal_Bool            IsDragEnabled() const { return mbFullDrag; }
 
     void            SetRangeMin( long nNewRange );
     long            GetRangeMin() const { return mnMinRange; }
@@ -168,11 +171,12 @@ private:
     SAL_DLLPRIVATE void ImplInitSettings();
 
 public:
-                    ScrollBarBox( Window* pParent, WinBits nStyle = 0 );
-                    ScrollBarBox( Window* pParent, const ResId& rResId );
+    explicit        ScrollBarBox( Window* pParent, WinBits nStyle = 0 );
+    explicit        ScrollBarBox( Window* pParent, const ResId& );
 
     virtual void    StateChanged( StateChangedType nType );
     virtual void    DataChanged( const DataChangedEvent& rDCEvt );
 };
 
 #endif // _SV_SCRBAR_HXX
+

@@ -33,9 +33,9 @@
  *
  ************************************************************************/
 
-#include <salgdi.h>
-#include <salatslayout.hxx>
-#include <saldata.hxx>
+#include "java/salatslayout.hxx"
+#include "java/saldata.hxx"
+#include "java/salgdi.h"
 
 using namespace rtl;
 

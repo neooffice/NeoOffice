@@ -33,9 +33,9 @@
  *
  ************************************************************************/
 
-#include <saldata.hxx>
-#include <salgdi.h>
-#include <salinst.h>
+#include "java/saldata.hxx"
+#include "java/salgdi.h"
+#include "java/salinst.h"
 
 using namespace rtl;
 using namespace vcl;

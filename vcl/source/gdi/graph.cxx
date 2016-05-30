@@ -1,38 +1,43 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified October 2015 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
-#include <vcl/impgraph.hxx>
+
 #include <vcl/outdev.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/graph.hxx>
+#include <vcl/metaact.hxx>
+#include <impgraph.hxx>
 #include <comphelper/processfactory.hxx>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/graphic/XGraphicProvider.hpp>
@@ -61,11 +66,11 @@ static void ImplDrawDefault( OutputDevice* pOutDev, const UniString* pText,
                              Font* pFont, const Bitmap* pBitmap, const BitmapEx* pBitmapEx,
                              const Point& rDestPt, const Size& rDestSize )
 {
-    USHORT      nPixel = (USHORT) pOutDev->PixelToLogic( Size( 1, 1 ) ).Width();
-    USHORT      nPixelWidth = nPixel;
+    sal_uInt16      nPixel = (sal_uInt16) pOutDev->PixelToLogic( Size( 1, 1 ) ).Width();
+    sal_uInt16      nPixelWidth = nPixel;
     Point       aPoint( rDestPt.X() + nPixelWidth, rDestPt.Y() + nPixelWidth );
     Size        aSize( rDestSize.Width() - ( nPixelWidth << 1 ), rDestSize.Height() - ( nPixelWidth << 1 ) );
-    BOOL        bFilled = ( pBitmap != NULL || pBitmapEx != NULL || pFont != NULL );
+    sal_Bool        bFilled = ( pBitmap != NULL || pBitmapEx != NULL || pFont != NULL );
     Rectangle   aBorderRect( aPoint, aSize );
 
     pOutDev->Push();
@@ -140,8 +145,8 @@ static void ImplDrawDefault( OutputDevice* pOutDev, const UniString* pText,
 
                 if ( nTextWidth <= nWidth || aSz.Height() <= nThreshold )
                 {
-                    USHORT nStart = 0;
-                    USHORT nLen = 0;
+                    sal_uInt16 nStart = 0;
+                    sal_uInt16 nLen = 0;
 
                     while( nStart < pText->Len() && pText->GetChar( nStart ) == ' ' )
                         nStart++;
@@ -149,7 +154,7 @@ static void ImplDrawDefault( OutputDevice* pOutDev, const UniString* pText,
                         nLen++;
                     while( nStart < pText->Len() && nLines-- )
                     {
-                        USHORT nNext = nLen;
+                        sal_uInt16 nNext = nLen;
                         do
                         {
                             while ( nStart+nNext < pText->Len() && pText->GetChar( nStart+nNext ) == ' ' )
@@ -163,7 +168,7 @@ static void ImplDrawDefault( OutputDevice* pOutDev, const UniString* pText,
                         }
                         while ( nStart+nNext < pText->Len() );
 
-                        USHORT n = nLen;
+                        sal_uInt16 n = nLen;
                         nTextWidth = pOutDev->GetTextWidth( *pText, nStart, n );
                         while( nTextWidth > aSize.Width() )
 #ifdef USE_JAVA
@@ -173,7 +178,7 @@ static void ImplDrawDefault( OutputDevice* pOutDev, const UniString* pText,
                             // the measurement of long strings
                             if ( aSize.Width() < nTextWidth * 0.75 )
                             {
-                                USHORT nGuess = n * 0.75;
+                                sal_uInt16 nGuess = n * 0.75;
                                 nTextWidth = pOutDev->GetTextWidth( *pText, nStart, nGuess );
                                 if ( nTextWidth > aSize.Width() )
                                     n = nGuess;
@@ -186,7 +191,7 @@ static void ImplDrawDefault( OutputDevice* pOutDev, const UniString* pText,
                         pOutDev->DrawText( aPoint, *pText, nStart, n );
 
                         aPoint.Y() += nTextHeight;
-                        nStart      = sal::static_int_cast<USHORT>(nStart + nLen);
+                        nStart      = sal::static_int_cast<sal_uInt16>(nStart + nLen);
                         nLen        = nNext-nLen;
                         while( nStart < pText->Len() && pText->GetChar( nStart ) == ' ' )
                         {
@@ -258,6 +263,13 @@ Graphic::Graphic( const Bitmap& rBmp )
 Graphic::Graphic( const BitmapEx& rBmpEx )
 {
     mpImpGraphic = new ImpGraphic( rBmpEx );
+}
+
+// ------------------------------------------------------------------------
+
+Graphic::Graphic(const SvgDataPtr& rSvgDataPtr)
+{
+    mpImpGraphic = new ImpGraphic(rSvgDataPtr);
 }
 
 // ------------------------------------------------------------------------
@@ -352,21 +364,21 @@ Graphic& Graphic::operator=( const Graphic& rGraphic )
 
 // ------------------------------------------------------------------------
 
-BOOL Graphic::operator==( const Graphic& rGraphic ) const
+sal_Bool Graphic::operator==( const Graphic& rGraphic ) const
 {
     return( *mpImpGraphic == *rGraphic.mpImpGraphic );
 }
 
 // ------------------------------------------------------------------------
 
-BOOL Graphic::operator!=( const Graphic& rGraphic ) const
+sal_Bool Graphic::operator!=( const Graphic& rGraphic ) const
 {
     return( *mpImpGraphic != *rGraphic.mpImpGraphic );
 }
 
 // ------------------------------------------------------------------------
 
-BOOL Graphic::operator!() const
+sal_Bool Graphic::operator!() const
 {
     return( GRAPHIC_NONE == mpImpGraphic->ImplGetType() );
 }
@@ -417,72 +429,51 @@ void Graphic::SetDefaultType()
 
 // ------------------------------------------------------------------------
 
-BOOL Graphic::IsSupportedGraphic() const
+sal_Bool Graphic::IsSupportedGraphic() const
 {
     return mpImpGraphic->ImplIsSupportedGraphic();
 }
 
 // ------------------------------------------------------------------------
 
-BOOL Graphic::IsTransparent() const
+sal_Bool Graphic::IsTransparent() const
 {
     return mpImpGraphic->ImplIsTransparent();
 }
 
 // ------------------------------------------------------------------------
 
-BOOL Graphic::IsAlpha() const
+sal_Bool Graphic::IsAlpha() const
 {
     return mpImpGraphic->ImplIsAlpha();
 }
 
 // ------------------------------------------------------------------------
 
-BOOL Graphic::IsAnimated() const
+sal_Bool Graphic::IsAnimated() const
 {
     return mpImpGraphic->ImplIsAnimated();
 }
 
 // ------------------------------------------------------------------------
 
-Bitmap Graphic::GetBitmap() const
+sal_Bool Graphic::IsEPS() const
 {
-    return GetBitmap( NULL );
+    return mpImpGraphic->ImplIsEPS();
 }
 
 // ------------------------------------------------------------------------
 
-BitmapEx Graphic::GetBitmapEx() const
+Bitmap Graphic::GetBitmap(const GraphicConversionParameters& rParameters) const
 {
-    return GetBitmapEx( NULL );
+    return mpImpGraphic->ImplGetBitmap(rParameters);
 }
 
 // ------------------------------------------------------------------------
 
-Bitmap Graphic::GetBitmap( const Size* pSizePixel ) const
+BitmapEx Graphic::GetBitmapEx(const GraphicConversionParameters& rParameters) const
 {
-    return mpImpGraphic->ImplGetBitmap( pSizePixel, FALSE );
-}
-
-// ------------------------------------------------------------------------
-
-BitmapEx Graphic::GetBitmapEx( const Size* pSizePixel ) const
-{
-    return mpImpGraphic->ImplGetBitmapEx( pSizePixel, FALSE );
-}
-
-// ------------------------------------------------------------------------
-
-Bitmap Graphic::GetUnlimitedBitmap( const Size* pSizePixel ) const
-{
-    return mpImpGraphic->ImplGetBitmap( pSizePixel, TRUE ) ;
-}
-
-// ------------------------------------------------------------------------
-
-BitmapEx Graphic::GetUnlimitedBitmapEx( const Size* pSizePixel ) const
-{
-    return mpImpGraphic->ImplGetBitmapEx( pSizePixel, TRUE ) ;
+    return mpImpGraphic->ImplGetBitmapEx(rParameters);
 }
 
 // ------------------------------------------------------------------------
@@ -568,7 +559,7 @@ Size Graphic::GetSizePixel( const OutputDevice* pRefDevice ) const
     Size aRet;
 
     if( GRAPHIC_BITMAP == mpImpGraphic->ImplGetType() )
-        aRet = mpImpGraphic->ImplGetBitmapEx( NULL, FALSE ).GetSizePixel();
+        aRet = mpImpGraphic->ImplGetBitmapEx(GraphicConversionParameters()).GetSizePixel();
     else
         aRet = ( pRefDevice ? pRefDevice : Application::GetDefaultDevice() )->LogicToPixel( GetPrefSize(), GetPrefMapMode() );
 
@@ -577,7 +568,7 @@ Size Graphic::GetSizePixel( const OutputDevice* pRefDevice ) const
 
 // ------------------------------------------------------------------
 
-ULONG Graphic::GetSizeBytes() const
+sal_uLong Graphic::GetSizeBytes() const
 {
     return mpImpGraphic->ImplGetSizeBytes();
 }
@@ -661,7 +652,7 @@ Link Graphic::GetAnimationNotifyHdl() const
 
 // ------------------------------------------------------------------------
 
-ULONG Graphic::GetAnimationLoopCount() const
+sal_uLong Graphic::GetAnimationLoopCount() const
 {
     return mpImpGraphic->ImplGetAnimationLoopCount();
 }
@@ -696,20 +687,20 @@ void Graphic::SetContext( GraphicReader* pReader )
 
 // ------------------------------------------------------------------------
 
-USHORT Graphic::GetGraphicsCompressMode( SvStream& rIStm )
+sal_uInt16 Graphic::GetGraphicsCompressMode( SvStream& rIStm )
 {
-    const ULONG     nPos = rIStm.Tell();
-    const USHORT    nOldFormat = rIStm.GetNumberFormatInt();
-    UINT32          nTmp32;
-    UINT16          nTmp16;
-    USHORT          nCompressMode = COMPRESSMODE_NONE;
+    const sal_uLong     nPos = rIStm.Tell();
+    const sal_uInt16    nOldFormat = rIStm.GetNumberFormatInt();
+    sal_uInt32          nTmp32;
+    sal_uInt16          nTmp16;
+    sal_uInt16          nCompressMode = COMPRESSMODE_NONE;
 
     rIStm.SetNumberFormatInt( NUMBERFORMAT_INT_LITTLEENDIAN );
 
     rIStm >> nTmp32;
 
     // is it a swapped graphic with a bitmap?
-    rIStm.SeekRel( (nTmp32 == (UINT32) GRAPHIC_BITMAP ) ? 40 : -4 );
+    rIStm.SeekRel( (nTmp32 == (sal_uInt32) GRAPHIC_BITMAP ) ? 40 : -4 );
 
     // try to read bitmap id
     rIStm >> nTmp16;
@@ -734,7 +725,7 @@ USHORT Graphic::GetGraphicsCompressMode( SvStream& rIStm )
 
 // ------------------------------------------------------------------------
 
-void Graphic::SetDocFileName( const String& rName, ULONG nFilePos )
+void Graphic::SetDocFileName( const String& rName, sal_uLong nFilePos )
 {
     mpImpGraphic->ImplSetDocFileName( rName, nFilePos );
 }
@@ -748,14 +739,14 @@ const String& Graphic::GetDocFileName() const
 
 // ------------------------------------------------------------------------
 
-ULONG Graphic::GetDocFilePos() const
+sal_uLong Graphic::GetDocFilePos() const
 {
     return mpImpGraphic->ImplGetDocFilePos();
 }
 
 // ------------------------------------------------------------------------
 
-BOOL Graphic::ReadEmbedded( SvStream& rIStream, BOOL bSwap )
+sal_Bool Graphic::ReadEmbedded( SvStream& rIStream, sal_Bool bSwap )
 {
     ImplTestRefCount();
     return mpImpGraphic->ImplReadEmbedded( rIStream, bSwap );
@@ -763,7 +754,7 @@ BOOL Graphic::ReadEmbedded( SvStream& rIStream, BOOL bSwap )
 
 // ------------------------------------------------------------------------
 
-BOOL Graphic::WriteEmbedded( SvStream& rOStream )
+sal_Bool Graphic::WriteEmbedded( SvStream& rOStream )
 {
     ImplTestRefCount();
     return mpImpGraphic->ImplWriteEmbedded( rOStream );
@@ -771,7 +762,7 @@ BOOL Graphic::WriteEmbedded( SvStream& rOStream )
 
 // ------------------------------------------------------------------------
 
-BOOL Graphic::SwapOut()
+sal_Bool Graphic::SwapOut()
 {
     ImplTestRefCount();
     return mpImpGraphic->ImplSwapOut();
@@ -779,7 +770,7 @@ BOOL Graphic::SwapOut()
 
 // ------------------------------------------------------------------------
 
-BOOL Graphic::SwapOut( SvStream* pOStream )
+sal_Bool Graphic::SwapOut( SvStream* pOStream )
 {
     ImplTestRefCount();
     return mpImpGraphic->ImplSwapOut( pOStream );
@@ -787,7 +778,7 @@ BOOL Graphic::SwapOut( SvStream* pOStream )
 
 // ------------------------------------------------------------------------
 
-BOOL Graphic::SwapIn()
+sal_Bool Graphic::SwapIn()
 {
     ImplTestRefCount();
     return mpImpGraphic->ImplSwapIn();
@@ -795,7 +786,7 @@ BOOL Graphic::SwapIn()
 
 // ------------------------------------------------------------------------
 
-BOOL Graphic::SwapIn( SvStream* pStrm )
+sal_Bool Graphic::SwapIn( SvStream* pStrm )
 {
     ImplTestRefCount();
     return mpImpGraphic->ImplSwapIn( pStrm );
@@ -803,7 +794,7 @@ BOOL Graphic::SwapIn( SvStream* pStrm )
 
 // ------------------------------------------------------------------------
 
-BOOL Graphic::IsSwapOut() const
+sal_Bool Graphic::IsSwapOut() const
 {
     return mpImpGraphic->ImplIsSwapOut();
 }
@@ -825,21 +816,21 @@ GfxLink Graphic::GetLink() const
 
 // ------------------------------------------------------------------------
 
-BOOL Graphic::IsLink() const
+sal_Bool Graphic::IsLink() const
 {
     return mpImpGraphic->ImplIsLink();
 }
 
 // ------------------------------------------------------------------------
 
-ULONG Graphic::GetChecksum() const
+sal_uLong Graphic::GetChecksum() const
 {
     return mpImpGraphic->ImplGetChecksum();
 }
 
 // ------------------------------------------------------------------------
 
-BOOL Graphic::ExportNative( SvStream& rOStream ) const
+sal_Bool Graphic::ExportNative( SvStream& rOStream ) const
 {
 	return mpImpGraphic->ImplExportNative( rOStream );
 }
@@ -857,4 +848,9 @@ SvStream& operator>>( SvStream& rIStream, Graphic& rGraphic )
 SvStream& operator<<( SvStream& rOStream, const Graphic& rGraphic )
 {
     return rOStream << *rGraphic.mpImpGraphic;
+}
+
+const SvgDataPtr& Graphic::getSvgData() const 
+{ 
+    return mpImpGraphic->getSvgData();
 }

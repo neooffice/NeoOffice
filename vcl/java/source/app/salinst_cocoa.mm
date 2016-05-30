@@ -40,10 +40,11 @@
 #include <postmac.h>
 #undef check
 
-#include <saldata.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/window.hxx>
 #include <vos/mutex.hxx>
+
+#include "java/saldata.hxx"
 
 #include "salinst_cocoa.h"
 
@@ -58,12 +59,12 @@ static NSMutableDictionary *pCurrentInstanceSecurityURLCacheDictionary = nil;
 using namespace osl;
 using namespace vos;
 
-static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs );
+static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookmark, BOOL bResolveAliasURLs, NSString *pTitle, NSMutableArray *pSecurityScopedURLs );
 
-@interface VCLRequestSecurityScopedURL : NSObject
+@interface VCLRequestSecurityScopedURL : NSObject <NSOpenSavePanelDelegate>
 {
-	MacOSBOOL				mbCancelled;
-	MacOSBOOL				mbFinished;
+	BOOL					mbCancelled;
+	BOOL					mbFinished;
 	NSOpenPanel*			mpOpenPanel;
 	NSURL*					mpSecurityScopedURL;
 	NSString*				mpTitle;
@@ -73,23 +74,23 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 - (void)cancel:(id)pObject;
 - (void)dealloc;
 - (void)destroy:(id)pObject;
-- (MacOSBOOL)finished;
+- (BOOL)finished;
 - (id)initWithURL:(NSURL *)pURL title:(NSString *)pTitle;
 #ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
-- (MacOSBOOL)panel:(id)pSender shouldEnableURL:(NSURL *)pURL;
+- (BOOL)panel:(id)pSender shouldEnableURL:(NSURL *)pURL;
 #else	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
-- (MacOSBOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError *)ppError;
+- (BOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError **)ppError;
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (void)panel:(id)pSender didChangeToDirectoryURL:(NSURL *)pURL;
-- (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding;
+- (void)panel:(id)pObject willExpand:(BOOL)bExpanding;
 - (void)requestSecurityScopedURL:(id)pObject;
 - (NSURL *)securityScopedURL;
 - (void)setResult:(NSInteger)nResult;
 @end
 
-static MacOSBOOL IsURLReadableOrWritable( NSURL *pURL )
+static BOOL IsURLReadableOrWritable( NSURL *pURL )
 {
-	MacOSBOOL bRet = NO;
+	BOOL bRet = NO;
 
 	if ( pURL )
 	{
@@ -102,9 +103,9 @@ static MacOSBOOL IsURLReadableOrWritable( NSURL *pURL )
 	return bRet;
 }
 
-static MacOSBOOL IsCurrentInstanceCacheSecurityURL( NSURL *pURL, MacOSBOOL bExists )
+static BOOL IsCurrentInstanceCacheSecurityURL( NSURL *pURL, BOOL bExists )
 {
-	MacOSBOOL bRet = NO;
+	BOOL bRet = NO;
 
 	if ( pURL )
 	{
@@ -144,9 +145,9 @@ static MacOSBOOL IsCurrentInstanceCacheSecurityURL( NSURL *pURL, MacOSBOOL bExis
 // temporary, or one of the safe system folders. These folders do not need a
 // security scoped URL and the majority of calls to this function are for paths
 // in these folders.
-static MacOSBOOL IsInIgnoreURLs( NSString *pURLString )
+static BOOL IsInIgnoreURLs( NSString *pURLString )
 {
-	MacOSBOOL bRet = NO;
+	BOOL bRet = NO;
 
 	if ( !pURLString )
 		return NO;
@@ -300,7 +301,7 @@ static MacOSBOOL IsInIgnoreURLs( NSString *pURLString )
 	return bRet;
 }
 
-static NSURL *ResolveAliasURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs )
+static NSURL *ResolveAliasURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookmark, NSString *pTitle, NSMutableArray *pSecurityScopedURLs )
 {
 	NSURL *pRet = nil;
 
@@ -312,7 +313,7 @@ static NSURL *ResolveAliasURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoB
 		NSData *pData = [NSURL bookmarkDataWithContentsOfURL:pURL error:nil];
 		if ( pData )
 		{
-			MacOSBOOL bStale = NO;
+			BOOL bStale = NO;
 			pURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
 			if ( !bStale && pURL )
 			{
@@ -337,7 +338,7 @@ static NSURL *ResolveAliasURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoB
 	return pRet;
 }
 
-static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs )
+static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookmark, BOOL bResolveAliasURLs, NSString *pTitle, NSMutableArray *pSecurityScopedURLs )
 {
 	if ( pURL && [pURL isFileURL] && pSecurityScopedURLs )
 	{
@@ -400,10 +401,10 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 				{
 					// Check if there are any cached security scoped bookmarks
 					// for this URL or any of its parent folders
-					MacOSBOOL bShowOpenPanel = YES;
+					BOOL bShowOpenPanel = YES;
 					NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
 					NSURL *pTmpURL = pURL;
-					MacOSBOOL bSecurityScopedURLFound = NO;
+					BOOL bSecurityScopedURLFound = NO;
 					while ( pUserDefaults && pTmpURL && !bSecurityScopedURLFound )
 					{
 						NSString *pKey = [pTmpURL absoluteString];
@@ -412,7 +413,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 							NSObject *pBookmarkData = [pUserDefaults objectForKey:pKey];
 							if ( pBookmarkData && [pBookmarkData isKindOfClass:[NSData class]] )
 							{
-								MacOSBOOL bStale = NO;
+								BOOL bStale = NO;
 								NSURL *pSecurityScopedURL = [NSURL URLByResolvingBookmarkData:(NSData *)pBookmarkData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
 								if ( !bStale && pSecurityScopedURL )
 								{
@@ -450,7 +451,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 						// Don't lock mutex as we expect callbacks to this
 						// object from a different thread while the dialog is
 						// showing
-						ULONG nCount = Application::ReleaseSolarMutex();
+						sal_uLong nCount = Application::ReleaseSolarMutex();
 
 						// Ignore any AWT events while the open dialog is
 						// showing to emulate a modal dialog
@@ -484,8 +485,10 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 	return pRet;
 }
 
-- (void)cancel:(id)pObject;
+- (void)cancel:(id)pObject
 {
+	(void)pObject;
+
 	if ( mpOpenPanel && !mbCancelled && !mbFinished )
 	{
 		// Prevent crashing by only allowing cancellation to be requested once
@@ -514,6 +517,8 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 - (void)destroy:(id)pObject
 {
+	(void)pObject;
+
 	if ( !mbFinished )
 		[self cancel:self];
 
@@ -554,7 +559,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 	}
 }
 
-- (MacOSBOOL)finished
+- (BOOL)finished
 {
 	return mbFinished;
 }
@@ -591,11 +596,18 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 }
 
 #ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
-- (MacOSBOOL)panel:(id)pSender shouldEnableURL:(NSURL *)pURL
+- (BOOL)panel:(id)pSender shouldEnableURL:(NSURL *)pURL
 #else	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
-- (MacOSBOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError *)ppError
+- (BOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError **)ppError
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 {
+	(void)pSender;
+
+#ifndef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+	if ( ppError )
+		*ppError = nil;
+#endif	// !USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+
 	if ( pURL )
 	{
 		pURL = [pURL URLByStandardizingPath];
@@ -603,7 +615,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 			pURL = [pURL URLByResolvingSymlinksInPath];
 	}
 
-	MacOSBOOL bRet = ( pURL && mpURL && [pURL isFileURL] && [pURL isEqual:mpURL] );
+	BOOL bRet = ( pURL && mpURL && [pURL isFileURL] && [pURL isEqual:mpURL] );
 
 #ifndef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 	if ( !bRet )
@@ -615,6 +627,8 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 - (void)panel:(id)pSender didChangeToDirectoryURL:(NSURL *)pURL
 {
+	(void)pSender;
+
 	if ( mpOpenPanel && !mbCancelled && !mbFinished && mpURL )
 	{
 		if ( pURL )
@@ -645,13 +659,17 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 	}
 }
 
-- (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding
+- (void)panel:(id)pObject willExpand:(BOOL)bExpanding
 {
 	// Stop exceptions from being logged on Mac OS X 10.9
+	(void)pObject;
+	(void)bExpanding;
 }
 
 - (void)requestSecurityScopedURL:(id)pObject
 {
+	(void)pObject;
+
 	// Do not allow recursion or reuse
 	if ( mbCancelled || mbFinished || mpOpenPanel || mpSecurityScopedURL || !mpURL )
 		return;
@@ -763,7 +781,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 								NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
 								if ( pData )
 								{
-									MacOSBOOL bStale = NO;
+									BOOL bStale = NO;
 									NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
 									if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
 									{
@@ -828,6 +846,8 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 - (void)getModalWindow:(id)pObject
 {
+	(void)pObject;
+
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 	{
@@ -869,7 +889,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 @end
 
-void NSApplication_dispatchPendingEvents( BOOL bInNativeDrag, BOOL bWait )
+void NSApplication_dispatchPendingEvents( sal_Bool bInNativeDrag, sal_Bool bWait )
 {
 	// Do not dispatch any native events in a native drag session as it causes
 	// the [NSView dragImage:at:offset:event:pasteboard:source:slideBack:]
@@ -918,7 +938,7 @@ sal_Bool Application_beginModalSheet( id *pNSWindowForSheet )
 
 	// Do not allow more than one window to display a modal sheet
 	if ( pSalData->mbInNativeModalSheet || !pNSWindowForSheet )
-		return false;
+		return sal_False;
 
 	JavaSalFrame *pFocusFrame = NULL;
 
@@ -1020,7 +1040,7 @@ id Application_acquireSecurityScopedURLFromNSURL( const id pNonSecurityScopedURL
 					if ( pURL )
 					{
 						NSMutableArray *pSecurityScopedURLs = [NSMutableArray arrayWithCapacity:2];
-						AcquireSecurityScopedURL( pURL, (MacOSBOOL)bMustShowDialogIfNoBookmark, YES, pDialogTitle, pSecurityScopedURLs );
+						AcquireSecurityScopedURL( pURL, (BOOL)bMustShowDialogIfNoBookmark, YES, pDialogTitle && [pDialogTitle isKindOfClass:[NSString class]] ? (NSString *)pDialogTitle : nil, pSecurityScopedURLs );
 						if ( pSecurityScopedURLs && [pSecurityScopedURLs count] )
 						{
 							pRet = pSecurityScopedURLs;
@@ -1071,7 +1091,7 @@ void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 				NSData *pData = [pURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
 				if ( pData )
 				{
-					MacOSBOOL bStale = NO;
+					BOOL bStale = NO;
 					NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
 					if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
 					{

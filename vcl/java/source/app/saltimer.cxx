@@ -33,17 +33,9 @@
  *
  ************************************************************************/
 
-#define _SV_SALTIMER_CXX
-
-#ifndef _SV_SALTIMER_H
-#include <saltimer.h>
-#endif
-#ifndef _SV_SALDATA_HXX
-#include <saldata.hxx>
-#endif
-#ifndef _SALJAVA_H
-#include <saljava.h>
-#endif
+#include "java/saldata.hxx"
+#include "java/saljava.h"
+#include "java/saltimer.h"
 
 // =======================================================================
 
@@ -59,7 +51,7 @@ JavaSalTimer::~JavaSalTimer()
 
 // -----------------------------------------------------------------------
   
-void JavaSalTimer::Start( ULONG nMS )
+void JavaSalTimer::Start( sal_uLong nMS )
 {
 	SalData *pSalData = GetSalData();
 	gettimeofday( &pSalData->maTimeout, NULL );

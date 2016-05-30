@@ -35,8 +35,8 @@
 
 #include <stdio.h>
 
-#include <salsys.h>
-#include <salframe.h>
+#include "java/salframe.h"
+#include "java/salsys.h"
 
 using namespace rtl;
 
@@ -96,7 +96,7 @@ OUString JavaSalSystem::GetScreenName( unsigned int nScreen )
 
 // -----------------------------------------------------------------------
 
-int JavaSalSystem::ShowNativeMessageBox( const String& rTitle, const String& rMessage, int nButtonCombination, int nDefaultButton )
+int JavaSalSystem::ShowNativeMessageBox( const String& /* rTitle */, const String& /* rMessage */, int /* nButtonCombination */, int /* nDefaultButton */ )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalSystem::ShowNativeMessageBox not implemented\n" );

@@ -36,13 +36,14 @@
 #ifndef __SALINST_COCOA_H__
 #define __SALINST_COCOA_H__
 
-#include <salinst.h>
 #include <sal/types.h>
 
-SAL_DLLPRIVATE void NSApplication_dispatchPendingEvents( BOOL bInNativeDrag, BOOL bWait );
+#include "java/salinst.h"
+
+SAL_DLLPRIVATE void NSApplication_dispatchPendingEvents( sal_Bool bInNativeDrag, sal_Bool bWait );
 SAL_DLLPRIVATE id NSApplication_getModalWindow();
-SAL_DLLPRIVATE BOOL VCLInstance_setDragLock( BOOL bLock );
-SAL_DLLPRIVATE BOOL VCLInstance_updateNativeMenus();
+SAL_DLLPRIVATE sal_Bool VCLInstance_setDragLock( sal_Bool bLock );
+SAL_DLLPRIVATE sal_Bool VCLInstance_updateNativeMenus();
 
 // Note: these must not be static as the symbol will be loaded by various
 // modules

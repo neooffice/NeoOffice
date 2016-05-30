@@ -37,12 +37,6 @@
 
 #include <dlfcn.h>
 
-#include <salgdi.h>
-#include <saldata.hxx>
-#include <salbmp.h>
-#include <salframe.h>
-#include <salinst.h>
-#include <svsys.h>
 #include <rtl/ustring.h>
 #include <osl/module.h>
 #include <vcl/decoview.hxx>
@@ -52,6 +46,14 @@
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
+#undef check
+
+#include "java/salbmp.h"
+#include "java/saldata.hxx"
+#include "java/salframe.h"
+#include "java/salgdi.h"
+#include "java/salinst.h"
+#include "java/svsys.h"
 
 #include "../java/VCLEventQueue_cocoa.h"
 
@@ -116,7 +118,7 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 							VCLBitmapBuffer();
 	virtual					~VCLBitmapBuffer();
 
-	BOOL					Create( long nX, long nY, long nWidth, long nHeight, JavaSalGraphics *pGraphics, bool bUseLayer = true );
+	bool					Create( long nX, long nY, long nWidth, long nHeight, JavaSalGraphics *pGraphics, bool bUseLayer = true );
 	void					Destroy();
 	void					DrawContextAndDestroy( JavaSalGraphics *pGraphics, CGRect aSrcRect, CGRect aDestRect );
 	void					ReleaseContext();
@@ -182,16 +184,16 @@ static bool IsRunningMavericksOrLower()
 
 @interface VCLNativeControlWindow : NSWindow
 {
-	MacOSBOOL				mbInactive;
+	BOOL					mbInactive;
 }
 + (id)createAndAttachToView:(NSView *)pView controlState:(ControlState)nControlState;
-- (MacOSBOOL)_hasActiveControls;
-- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation;
-- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen;
-- (MacOSBOOL)isKeyWindow;
+- (BOOL)_hasActiveControls;
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation;
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation screen:(NSScreen *)pScreen;
+- (BOOL)isKeyWindow;
 - (void)orderFrontRegardless;
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(NSInteger)nOtherWindowNumber;
-- (void)setInactive:(MacOSBOOL)bInactive;
+- (void)setInactive:(BOOL)bInactive;
 @end
 
 @implementation VCLNativeControlWindow
@@ -215,9 +217,9 @@ static bool IsRunningMavericksOrLower()
 	return pRet;
 }
 
-- (MacOSBOOL)_hasActiveControls
+- (BOOL)_hasActiveControls
 {
-	MacOSBOOL bActive = !mbInactive;
+	BOOL bActive = !mbInactive;
 	if ( bActive )
 	{
 		// If the application is not active, then force inactive state
@@ -229,7 +231,7 @@ static bool IsRunningMavericksOrLower()
 	return bActive;
 }
 
-- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation
 {
 	[super initWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation];
 
@@ -238,7 +240,7 @@ static bool IsRunningMavericksOrLower()
 	return self;
 }
 
-- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation screen:(NSScreen *)pScreen
 {
 	[super initWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation screen:pScreen];
 
@@ -247,7 +249,7 @@ static bool IsRunningMavericksOrLower()
 	return self;
 }
 
-- (MacOSBOOL)isKeyWindow
+- (BOOL)isKeyWindow
 {
 	return [self _hasActiveControls];
 }
@@ -259,10 +261,13 @@ static bool IsRunningMavericksOrLower()
 
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(NSInteger)nOtherWindowNumber
 {
+	(void)nOrderingMode;
+	(void)nOtherWindowNumber;
+
 	[super orderWindow:NSWindowOut relativeTo:0];
 }
 
-- (void)setInactive:(MacOSBOOL)bInactive
+- (void)setInactive:(BOOL)bInactive
 {
 	mbInactive = bInactive;
 }
@@ -278,27 +283,27 @@ static bool IsRunningMavericksOrLower()
 	NSControlSize			mnControlSize;
 	NSInteger				mnButtonState;
 	ControlState			mnControlState;
-	MacOSBOOL				mbDrawRTL;
+	BOOL					mbDrawRTL;
 	VCLBitmapBuffer*		mpBuffer;
 	JavaSalGraphics*		mpGraphics;
 	CGRect					maDestRect;
-	MacOSBOOL				mbDrawn;
-	MacOSBOOL				mbRedraw;
+	sal_Bool				mbDrawn;
+	sal_Bool				mbRedraw;
 	NSSize					maSize;
 }
-+ (id)createWithButtonType:(NSButtonType)nButtonType bezelStyle:(NSBezelStyle)nBezelStyle controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState drawRTL:(MacOSBOOL)bDrawRTL bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
++ (id)createWithButtonType:(NSButtonType)nButtonType bezelStyle:(NSBezelStyle)nBezelStyle controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState drawRTL:(BOOL)bDrawRTL bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
 - (NSButton *)button;
 - (void)draw:(id)pObject;
-- (MacOSBOOL)drawn;
+- (sal_Bool)drawn;
 - (void)getSize:(id)pObject;
-- (id)initWithButtonType:(NSButtonType)nButtonType bezelStyle:(NSBezelStyle)nBezelStyle controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState drawRTL:(MacOSBOOL)bDrawRTL bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
-- (MacOSBOOL)redraw;
+- (id)initWithButtonType:(NSButtonType)nButtonType bezelStyle:(NSBezelStyle)nBezelStyle controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState drawRTL:(BOOL)bDrawRTL bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
+- (sal_Bool)redraw;
 - (NSSize)size;
 @end
 
 @implementation VCLNativeButton
 
-+ (id)createWithButtonType:(NSButtonType)nButtonType bezelStyle:(NSBezelStyle)nBezelStyle controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState drawRTL:(MacOSBOOL)bDrawRTL bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
++ (id)createWithButtonType:(NSButtonType)nButtonType bezelStyle:(NSBezelStyle)nBezelStyle controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState drawRTL:(BOOL)bDrawRTL bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
 {
 	VCLNativeButton *pRet = [[VCLNativeButton alloc] initWithButtonType:nButtonType bezelStyle:nBezelStyle controlSize:nControlSize buttonState:nButtonState controlState:nControlState drawRTL:bDrawRTL bitmapBuffer:pBuffer graphics:pGraphics destRect:aDestRect];
 	[pRet autorelease];
@@ -356,9 +361,11 @@ static bool IsRunningMavericksOrLower()
 
 - (void)draw:(id)pObject
 {
+	(void)pObject;
+
 	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
 	{
-		mbRedraw = NO;
+		mbRedraw = sal_False;
 
 		NSButton *pButton = [self button];
 		if ( pButton )
@@ -368,7 +375,7 @@ static bool IsRunningMavericksOrLower()
 			{
 				float fCellHeight = [pCell cellSize].height;
 				float fOffscreenHeight = maDestRect.size.height;
-				MacOSBOOL bPlacard = NO;
+				BOOL bPlacard = NO;
 				if ( mnButtonType == NSMomentaryLightButton )
 				{
 					fCellHeight -= ( FOCUSRING_WIDTH * 2 );
@@ -396,7 +403,7 @@ static bool IsRunningMavericksOrLower()
 							if ( IsRunningMavericksOrLower() )
 							{
 								[pButton highlight:NO];
-								mbRedraw = YES;
+								mbRedraw = sal_True;
 							}
 							else
 							{
@@ -467,7 +474,7 @@ static bool IsRunningMavericksOrLower()
 
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
-						mbDrawn = YES;
+						mbDrawn = sal_True;
 					}
 
 					CGContextEndTransparencyLayer( mpBuffer->maContext );
@@ -483,13 +490,15 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (MacOSBOOL)drawn
+- (sal_Bool)drawn
 {
 	return mbDrawn;
 }
 
 - (void)getSize:(id)pObject
 {
+	(void)pObject;
+
 	if ( NSEqualSizes( maSize, NSZeroSize ) )
 	{
 		NSButton *pButton = [self button];
@@ -502,7 +511,7 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (id)initWithButtonType:(NSButtonType)nButtonType bezelStyle:(NSBezelStyle)nBezelStyle controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState drawRTL:(MacOSBOOL)bDrawRTL bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
+- (id)initWithButtonType:(NSButtonType)nButtonType bezelStyle:(NSBezelStyle)nBezelStyle controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState drawRTL:(BOOL)bDrawRTL bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
 {
 	[super init];
 
@@ -515,14 +524,14 @@ static bool IsRunningMavericksOrLower()
 	mpBuffer = pBuffer;
 	mpGraphics = pGraphics;
 	maDestRect = aDestRect;
-	mbDrawn = NO;
-	mbRedraw = NO;
+	mbDrawn = sal_False;
+	mbRedraw = sal_False;
 	maSize = NSZeroSize;
 
 	return self;
 }
 
-- (MacOSBOOL)redraw
+- (sal_Bool)redraw
 {
 	return mbRedraw;
 }
@@ -539,28 +548,28 @@ static bool IsRunningMavericksOrLower()
 @interface VCLNativeComboBox : NSObject
 {
 	ControlState			mnControlState;
-	MacOSBOOL				mbEditable;
+	BOOL					mbEditable;
 	VCLBitmapBuffer*		mpBuffer;
 	JavaSalGraphics*		mpGraphics;
 	CGRect					maDestRect;
-	MacOSBOOL				mbDrawn;
-	MacOSBOOL				mbRTL;
+	sal_Bool				mbDrawn;
+	BOOL					mbRTL;
 	NSSize					maSize;
 }
-+ (id)createWithControlState:(ControlState)nControlState editable:(MacOSBOOL)bEditable bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
++ (id)createWithControlState:(ControlState)nControlState editable:(BOOL)bEditable bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
 - (NSControl *)comboBox;
 - (NSControl *)popUpButton;
 - (void)draw:(id)pObject;
-- (MacOSBOOL)drawn;
+- (sal_Bool)drawn;
 - (void)getSize:(id)pObject;
-- (id)initWithControlState:(ControlState)nControlState editable:(MacOSBOOL)bEditable bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
-- (MacOSBOOL)isRTL;
+- (id)initWithControlState:(ControlState)nControlState editable:(BOOL)bEditable bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
+- (BOOL)isRTL;
 - (NSSize)size;
 @end
 
 @implementation VCLNativeComboBox
 
-+ (id)createWithControlState:(ControlState)nControlState editable:(MacOSBOOL)bEditable bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
++ (id)createWithControlState:(ControlState)nControlState editable:(BOOL)bEditable bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
 {
 	VCLNativeComboBox *pRet = [[VCLNativeComboBox alloc] initWithControlState:nControlState editable:bEditable bitmapBuffer:pBuffer graphics:pGraphics destRect:aDestRect];
 	[pRet autorelease];
@@ -667,6 +676,8 @@ static bool IsRunningMavericksOrLower()
 
 - (void)draw:(id)pObject
 {
+	(void)pObject;
+
 	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
 	{
 		NSControl *pControl = ( mbEditable ? [self comboBox] : [self popUpButton] );
@@ -710,7 +721,7 @@ static bool IsRunningMavericksOrLower()
 						[pCell drawWithFrame:aDrawRect inView:pControl];
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
-						mbDrawn = YES;
+						mbDrawn = sal_True;
 					}
 
 					CGContextEndTransparencyLayer( mpBuffer->maContext );
@@ -726,13 +737,15 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (MacOSBOOL)drawn
+- (sal_Bool)drawn
 {
 	return mbDrawn;
 }
 
 - (void)getSize:(id)pObject
 {
+	(void)pObject;
+
 	if ( NSEqualSizes( maSize, NSZeroSize ) )
 	{
 		NSControl *pControl = ( mbEditable ? [self comboBox] : [self popUpButton] );
@@ -748,7 +761,7 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (id)initWithControlState:(ControlState)nControlState editable:(MacOSBOOL)bEditable bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
+- (id)initWithControlState:(ControlState)nControlState editable:(BOOL)bEditable bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
 {
 	[super init];
 
@@ -757,14 +770,14 @@ static bool IsRunningMavericksOrLower()
 	mpBuffer = pBuffer;
 	mpGraphics = pGraphics;
 	maDestRect = aDestRect;
-	mbDrawn = NO;
+	mbDrawn = sal_False;
 	mbRTL = NO;
 	maSize = NSZeroSize;
 
 	return self;
 }
 
-- (MacOSBOOL)isRTL
+- (BOOL)isRTL
 {
 	return mbRTL;
 }
@@ -789,12 +802,12 @@ static bool IsRunningMavericksOrLower()
 	ControlState			mnControlState;
 	VCLBitmapBuffer*		mpBuffer;
 	JavaSalGraphics*		mpGraphics;
-	ScrollbarValue*			mpScrollbarValue;
-	MacOSBOOL				mbDoubleScrollbarArrows;
+	const ScrollbarValue*	mpScrollbarValue;
+	BOOL					mbDoubleScrollbarArrows;
 	CGRect					maDestRect;
-	MacOSBOOL				mbDrawn;
-	MacOSBOOL				mbHorizontal;
-	MacOSBOOL				mbDrawOnlyTrack;
+	sal_Bool				mbDrawn;
+	BOOL					mbHorizontal;
+	BOOL					mbDrawOnlyTrack;
 	NSRect					maDecrementArrowBounds;
 	NSRect					maIncrementArrowBounds;
 	NSRect					maDecrementPageBounds;
@@ -803,13 +816,13 @@ static bool IsRunningMavericksOrLower()
 	NSRect					maTrackBounds;
 	NSRect					maTotalBounds;
 }
-+ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics scrollbarValue:(ScrollbarValue *)pScrollbarValue doubleScrollbarArrows:(MacOSBOOL)bDoubleScrollbarArrows destRect:(CGRect)aDestRect;
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics scrollbarValue:(const ScrollbarValue *)pScrollbarValue doubleScrollbarArrows:(BOOL)bDoubleScrollbarArrows destRect:(CGRect)aDestRect;
 - (NSScroller *)scroller;
 - (void)draw:(id)pObject;
-- (MacOSBOOL)drawn;
+- (sal_Bool)drawn;
 - (void)getBounds:(id)pObject;
-- (MacOSBOOL)horizontal;
-- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics scrollbarValue:(ScrollbarValue *)pScrollbarValue doubleScrollbarArrows:(MacOSBOOL)bDoubleScrollbarArrows destRect:(CGRect)aDestRect;
+- (BOOL)horizontal;
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics scrollbarValue:(const ScrollbarValue *)pScrollbarValue doubleScrollbarArrows:(BOOL)bDoubleScrollbarArrows destRect:(CGRect)aDestRect;
 - (NSRect)decrementArrowBounds;
 - (NSRect)incrementArrowBounds;
 - (NSRect)decrementPageBounds;
@@ -821,7 +834,7 @@ static bool IsRunningMavericksOrLower()
 
 @implementation VCLNativeScrollbar
 
-+ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics scrollbarValue:(ScrollbarValue *)pScrollbarValue doubleScrollbarArrows:(MacOSBOOL)bDoubleScrollbarArrows destRect:(CGRect)aDestRect
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics scrollbarValue:(const ScrollbarValue *)pScrollbarValue doubleScrollbarArrows:(BOOL)bDoubleScrollbarArrows destRect:(CGRect)aDestRect
 {
 	VCLNativeScrollbar *pRet = [[VCLNativeScrollbar alloc] initWithControlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics scrollbarValue:pScrollbarValue doubleScrollbarArrows:bDoubleScrollbarArrows destRect:aDestRect];
 	[pRet autorelease];
@@ -901,6 +914,8 @@ static bool IsRunningMavericksOrLower()
 
 - (void)draw:(id)pObject
 {
+	(void)pObject;
+
 	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
 	{
 		NSScroller *pScroller = [self scroller];
@@ -940,7 +955,7 @@ static bool IsRunningMavericksOrLower()
 						}
 						else
 						{
-							MacOSBOOL bHighlight = NO;
+							BOOL bHighlight = NO;
 							NSUInteger nHighlightArrow = 0;
 							NSUInteger nHighlightPart = 0;
 							if ( mpScrollbarValue )
@@ -1002,7 +1017,7 @@ static bool IsRunningMavericksOrLower()
 						[pScroller drawKnob];
 					[NSGraphicsContext setCurrentContext:pOldContext];
 
-					mbDrawn = YES;
+					mbDrawn = sal_True;
 				}
 
 				CGContextEndTransparencyLayer( mpBuffer->maContext );
@@ -1017,19 +1032,21 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (MacOSBOOL)drawn
+- (sal_Bool)drawn
 {
 	return mbDrawn;
 }
 
 - (void)getBounds:(id)pObject
 {
+	(void)pObject;
+
 	if ( NSEqualRects( maTotalBounds, NSZeroRect ) )
 	{
 		NSScroller *pScroller = [self scroller];
 		if ( pScroller )
 		{
-			MacOSBOOL bFlipped = [pScroller isFlipped];
+			BOOL bFlipped = [pScroller isFlipped];
 
 			maDecrementArrowBounds = [pScroller rectForPart:NSScrollerDecrementLine];
 			if ( !bFlipped )
@@ -1062,12 +1079,12 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (MacOSBOOL)horizontal
+- (BOOL)horizontal
 {
 	return mbHorizontal;
 }
 
-- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics scrollbarValue:(ScrollbarValue *)pScrollbarValue doubleScrollbarArrows:(MacOSBOOL)bDoubleScrollbarArrows destRect:(CGRect)aDestRect
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics scrollbarValue:(const ScrollbarValue *)pScrollbarValue doubleScrollbarArrows:(BOOL)bDoubleScrollbarArrows destRect:(CGRect)aDestRect
 {
 	[super init];
 
@@ -1077,7 +1094,7 @@ static bool IsRunningMavericksOrLower()
 	mpScrollbarValue = pScrollbarValue;
 	mbDoubleScrollbarArrows = bDoubleScrollbarArrows;
 	maDestRect = aDestRect;
-	mbDrawn = NO;
+	mbDrawn = sal_False;
 	mbHorizontal = NO;
 	maDecrementArrowBounds = NSZeroRect;
 	maIncrementArrowBounds = NSZeroRect;
@@ -1135,25 +1152,25 @@ static bool IsRunningMavericksOrLower()
 	NSControlSize			mnControlSize;
 	VCLBitmapBuffer*		mpBuffer;
 	JavaSalGraphics*		mpGraphics;
-	ProgressbarValue*		mpProgressbarValue;
+	const ImplControlValue*	mpControlValue;
 	CGRect					maDestRect;
-	MacOSBOOL				mbDrawn;
+	sal_Bool				mbDrawn;
 	NSSize					maSize;
 }
-+ (id)createWithControlState:(ControlState)nControlState controlSize:(NSControlSize)nControlSize bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics progressbarValue:(ProgressbarValue *)pProgressbarValue destRect:(CGRect)aDestRect;
++ (id)createWithControlState:(ControlState)nControlState controlSize:(NSControlSize)nControlSize bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics progressbarValue:(const ImplControlValue *)pControlValue destRect:(CGRect)aDestRect;
 - (NSProgressIndicator *)progressIndicator;
 - (void)draw:(id)pObject;
-- (MacOSBOOL)drawn;
+- (sal_Bool)drawn;
 - (void)getSize:(id)pObject;
-- (id)initWithControlState:(ControlState)nControlState controlSize:(NSControlSize)nControlSize bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics progressbarValue:(ProgressbarValue *)pProgressbarValue destRect:(CGRect)aDestRect;
+- (id)initWithControlState:(ControlState)nControlState controlSize:(NSControlSize)nControlSize bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics progressbarValue:(const ImplControlValue *)pControlValue destRect:(CGRect)aDestRect;
 - (NSSize)size;
 @end
 
 @implementation VCLNativeProgressbar
 
-+ (id)createWithControlState:(ControlState)nControlState controlSize:(NSControlSize)nControlSize bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics progressbarValue:(ProgressbarValue *)pProgressbarValue destRect:(CGRect)aDestRect
++ (id)createWithControlState:(ControlState)nControlState controlSize:(NSControlSize)nControlSize bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics progressbarValue:(const ImplControlValue *)pControlValue destRect:(CGRect)aDestRect
 {
-	VCLNativeProgressbar *pRet = [[VCLNativeProgressbar alloc] initWithControlState:nControlState controlSize:(NSControlSize)nControlSize bitmapBuffer:pBuffer graphics:pGraphics progressbarValue:pProgressbarValue destRect:aDestRect];
+	VCLNativeProgressbar *pRet = [[VCLNativeProgressbar alloc] initWithControlState:nControlState controlSize:(NSControlSize)nControlSize bitmapBuffer:pBuffer graphics:pGraphics progressbarValue:pControlValue destRect:aDestRect];
 	[pRet autorelease];
 	return pRet;
 }
@@ -1178,12 +1195,14 @@ static bool IsRunningMavericksOrLower()
 	[pProgressIndicator setMaxValue:fRange];
 	[pProgressIndicator setDoubleValue:0];
 
-	if ( mpProgressbarValue )
+	if ( mpControlValue )
 	{
-		if ( mpProgressbarValue->mbIndeterminate )
-			[pProgressIndicator setIndeterminate:YES];
-		else
-			[pProgressIndicator setDoubleValue:(double)mpProgressbarValue->mdPercentComplete * fRange / 100.0f];
+		double fValue = (double)mpControlValue->getNumericVal();
+		if ( fValue > fRange )
+			fValue = fRange;
+		else if ( fValue < 0 )
+			fValue = 0;
+		[pProgressIndicator setDoubleValue:fValue];
 	}
 
 	// The enabled state is controlled by the [NSWindow _hasActiveControls]
@@ -1197,6 +1216,8 @@ static bool IsRunningMavericksOrLower()
 
 - (void)draw:(id)pObject
 {
+	(void)pObject;
+
 	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
 	{
 		NSProgressIndicator *pProgressIndicator = [self progressIndicator];
@@ -1211,15 +1232,6 @@ static bool IsRunningMavericksOrLower()
 				{
 					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
 					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
-				}
-
-				// Clear the background of the control with the fill color
-				CGColorRef aFillColor = CreateCGColorFromSalColor( mpGraphics->mnFillColor );
-				if ( aFillColor )
-				{
-					CGContextSetFillColorWithColor( mpBuffer->maContext, aFillColor );
-					CGContextFillRect( mpBuffer->maContext, aAdjustedDestRect );
-					CGColorRelease( aFillColor );
 				}
 
 				// Vertically center control. Note that we translate the
@@ -1237,7 +1249,7 @@ static bool IsRunningMavericksOrLower()
 					[pProgressIndicator drawRect:[pProgressIndicator frame]];
 					[NSGraphicsContext setCurrentContext:pOldContext];
 
-					mbDrawn = YES;
+					mbDrawn = sal_True;
 				}
 
 				CGContextEndTransparencyLayer( mpBuffer->maContext );
@@ -1252,13 +1264,15 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (MacOSBOOL)drawn
+- (sal_Bool)drawn
 {
 	return mbDrawn;
 }
 
 - (void)getSize:(id)pObject
 {
+	(void)pObject;
+
 	if ( NSEqualSizes( maSize, NSZeroSize ) )
 	{
 		NSProgressIndicator *pProgressIndicator = [self progressIndicator];
@@ -1267,7 +1281,7 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (id)initWithControlState:(ControlState)nControlState controlSize:(NSControlSize)nControlSize bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics progressbarValue:(ProgressbarValue *)pProgressbarValue destRect:(CGRect)aDestRect
+- (id)initWithControlState:(ControlState)nControlState controlSize:(NSControlSize)nControlSize bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics progressbarValue:(const ImplControlValue *)pControlValue destRect:(CGRect)aDestRect
 {
 	[super init];
 
@@ -1275,9 +1289,9 @@ static bool IsRunningMavericksOrLower()
 	mnControlSize = nControlSize;
 	mpBuffer = pBuffer;
 	mpGraphics = pGraphics;
-	mpProgressbarValue = pProgressbarValue;
+	mpControlValue = pControlValue;
 	maDestRect = aDestRect;
-	mbDrawn = NO;
+	mbDrawn = sal_False;
 	maSize = NSZeroSize;
 
 	return self;
@@ -1298,12 +1312,12 @@ static bool IsRunningMavericksOrLower()
 	VCLBitmapBuffer*		mpBuffer;
 	JavaSalGraphics*		mpGraphics;
 	CGRect					maDestRect;
-	MacOSBOOL				mbDrawn;
+	sal_Bool				mbDrawn;
 }
 + (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
 - (NSBox *)box;
 - (void)draw:(id)pObject;
-- (MacOSBOOL)drawn;
+- (sal_Bool)drawn;
 - (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
 @end
 
@@ -1332,6 +1346,8 @@ static bool IsRunningMavericksOrLower()
 
 - (void)draw:(id)pObject
 {
+	(void)pObject;
+
 	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
 	{
 		NSBox *pBox = [self box];
@@ -1357,7 +1373,7 @@ static bool IsRunningMavericksOrLower()
 					[pBox drawRect:[pBox frame]];
 					[NSGraphicsContext setCurrentContext:pOldContext];
 
-					mbDrawn = YES;
+					mbDrawn = sal_True;
 				}
 
 				CGContextEndTransparencyLayer( mpBuffer->maContext );
@@ -1372,7 +1388,7 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (MacOSBOOL)drawn
+- (sal_Bool)drawn
 {
 	return mbDrawn;
 }
@@ -1385,7 +1401,7 @@ static bool IsRunningMavericksOrLower()
 	mpBuffer = pBuffer;
 	mpGraphics = pGraphics;
 	maDestRect = aDestRect;
-	mbDrawn = NO;
+	mbDrawn = sal_False;
 
 	return self;
 }
@@ -1400,12 +1416,12 @@ static bool IsRunningMavericksOrLower()
 	VCLBitmapBuffer*		mpBuffer;
 	JavaSalGraphics*		mpGraphics;
 	CGRect					maDestRect;
-	MacOSBOOL				mbDrawn;
+	sal_Bool				mbDrawn;
 }
 + (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
 - (NSView *)borderView;
 - (void)draw:(id)pObject;
-- (MacOSBOOL)drawn;
+- (sal_Bool)drawn;
 - (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
 @end
 
@@ -1451,6 +1467,8 @@ static bool IsRunningMavericksOrLower()
 
 - (void)draw:(id)pObject
 {
+	(void)pObject;
+
 	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
 	{
 		NSView *pView = [self borderView];
@@ -1476,7 +1494,7 @@ static bool IsRunningMavericksOrLower()
 					[pView drawRect:[pView frame]];
 					[NSGraphicsContext setCurrentContext:pOldContext];
 
-					mbDrawn = YES;
+					mbDrawn = sal_True;
 				}
 
 				CGContextEndTransparencyLayer( mpBuffer->maContext );
@@ -1491,7 +1509,7 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (MacOSBOOL)drawn
+- (sal_Bool)drawn
 {
 	return mbDrawn;
 }
@@ -1504,7 +1522,7 @@ static bool IsRunningMavericksOrLower()
 	mpBuffer = pBuffer;
 	mpGraphics = pGraphics;
 	maDestRect = aDestRect;
-	mbDrawn = NO;
+	mbDrawn = sal_False;
 
 	return self;
 }
@@ -1518,20 +1536,20 @@ static bool IsRunningMavericksOrLower()
 	ControlState			mnControlState;
 	VCLBitmapBuffer*		mpBuffer;
 	JavaSalGraphics*		mpGraphics;
-	ListViewHeaderValue*	mpListViewHeaderValue;
+	const ListViewHeaderValue*	mpListViewHeaderValue;
 	CGRect					maDestRect;
-	MacOSBOOL				mbDrawn;
+	sal_Bool				mbDrawn;
 }
-+ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics listViewHeaderValue:(ListViewHeaderValue *)pListViewHeaderValue destRect:(CGRect)aDestRect;
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics listViewHeaderValue:(const ListViewHeaderValue *)pListViewHeaderValue destRect:(CGRect)aDestRect;
 - (NSTableColumn *)tableColumn;
 - (void)draw:(id)pObject;
-- (MacOSBOOL)drawn;
-- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics listViewHeaderValue:(ListViewHeaderValue *)pListViewHeaderValue destRect:(CGRect)aDestRect;
+- (sal_Bool)drawn;
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics listViewHeaderValue:(const ListViewHeaderValue *)pListViewHeaderValue destRect:(CGRect)aDestRect;
 @end
 
 @implementation VCLNativeTableHeaderColumn
 
-+ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics listViewHeaderValue:(ListViewHeaderValue *)pListViewHeaderValue destRect:(CGRect)aDestRect
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics listViewHeaderValue:(const ListViewHeaderValue *)pListViewHeaderValue destRect:(CGRect)aDestRect
 {
 	VCLNativeTableHeaderColumn *pRet = [[VCLNativeTableHeaderColumn alloc] initWithControlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics listViewHeaderValue:pListViewHeaderValue destRect:aDestRect];
 	[pRet autorelease];
@@ -1585,6 +1603,8 @@ static bool IsRunningMavericksOrLower()
 
 - (void)draw:(id)pObject
 {
+	(void)pObject;
+
 	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
 	{
 		NSTableColumn *pTableColumn = [self tableColumn];
@@ -1597,7 +1617,7 @@ static bool IsRunningMavericksOrLower()
 				NSTableHeaderCell *pTableHeaderCell = [pTableColumn headerCell];
 				if ( pTableHeaderView && pTableHeaderCell && [pTableHeaderCell isKindOfClass:[NSTableHeaderCell class]] )
 				{
-					MacOSBOOL bHighlighted = ( ( mnControlState & CTRL_STATE_SELECTED ) || ( mpListViewHeaderValue && mpListViewHeaderValue->mbPrimarySortColumn ) );
+					BOOL bHighlighted = ( ( mnControlState & CTRL_STATE_SELECTED ) || ( mpListViewHeaderValue && mpListViewHeaderValue->mbPrimarySortColumn ) );
 
 					// Prevent clipping of left separator by extending width
 					// to the left when drawing highlighted or pressed cells
@@ -1660,7 +1680,7 @@ static bool IsRunningMavericksOrLower()
 
 							[NSGraphicsContext setCurrentContext:pOldContext];
 
-							mbDrawn = YES;
+							mbDrawn = sal_True;
 						}
 
 						CGContextEndTransparencyLayer( mpBuffer->maContext );
@@ -1677,12 +1697,12 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (MacOSBOOL)drawn
+- (sal_Bool)drawn
 {
 	return mbDrawn;
 }
 
-- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics listViewHeaderValue:(ListViewHeaderValue *)pListViewHeaderValue destRect:(CGRect)aDestRect
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics listViewHeaderValue:(const ListViewHeaderValue *)pListViewHeaderValue destRect:(CGRect)aDestRect
 {
 	[super init];
 
@@ -1691,7 +1711,7 @@ static bool IsRunningMavericksOrLower()
 	mpGraphics = pGraphics;
 	mpListViewHeaderValue = pListViewHeaderValue;
 	maDestRect = aDestRect;
-	mbDrawn = NO;
+	mbDrawn = sal_False;
 
 	return self;
 }
@@ -1705,23 +1725,23 @@ static bool IsRunningMavericksOrLower()
 	ControlState			mnControlState;
 	VCLBitmapBuffer*		mpBuffer;
 	JavaSalGraphics*		mpGraphics;
-	SpinbuttonValue*		mpSpinbuttonValue;
+	const SpinbuttonValue*	mpSpinbuttonValue;
 	CGRect					maDestRect;
-	MacOSBOOL				mbDrawn;
+	sal_Bool				mbDrawn;
 	NSSize					maSize;
 }
-+ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics spinbuttonValue:(SpinbuttonValue *)pSpinbuttonValue destRect:(CGRect)aDestRect;
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics spinbuttonValue:(const SpinbuttonValue *)pSpinbuttonValue destRect:(CGRect)aDestRect;
 - (NSStepper *)stepper;
 - (void)draw:(id)pObject;
-- (MacOSBOOL)drawn;
+- (sal_Bool)drawn;
 - (void)getSize:(id)pObject;
-- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics spinbuttonValue:(SpinbuttonValue *)pSpinbuttonValue destRect:(CGRect)aDestRect;
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics spinbuttonValue:(const SpinbuttonValue *)pSpinbuttonValue destRect:(CGRect)aDestRect;
 - (NSSize)size;
 @end
 
 @implementation VCLNativeSpinbuttons
 
-+ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics spinbuttonValue:(SpinbuttonValue *)pSpinbuttonValue destRect:(CGRect)aDestRect
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics spinbuttonValue:(const SpinbuttonValue *)pSpinbuttonValue destRect:(CGRect)aDestRect
 {
 	VCLNativeSpinbuttons *pRet = [[VCLNativeSpinbuttons alloc] initWithControlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics spinbuttonValue:pSpinbuttonValue destRect:aDestRect];
 	[pRet autorelease];
@@ -1776,6 +1796,8 @@ static bool IsRunningMavericksOrLower()
 
 - (void)draw:(id)pObject
 {
+	(void)pObject;
+
 	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
 	{
 		NSStepper *pStepper = [self stepper];
@@ -1832,7 +1854,7 @@ static bool IsRunningMavericksOrLower()
 
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
-						mbDrawn = YES;
+						mbDrawn = sal_True;
 					}
 
 					CGContextEndTransparencyLayer( mpBuffer->maContext );
@@ -1848,13 +1870,15 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (MacOSBOOL)drawn
+- (sal_Bool)drawn
 {
 	return mbDrawn;
 }
 
 - (void)getSize:(id)pObject
 {
+	(void)pObject;
+
 	if ( NSEqualSizes( maSize, NSZeroSize ) )
 	{
 		NSStepper *pStepper = [self stepper];
@@ -1863,7 +1887,7 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics spinbuttonValue:(SpinbuttonValue *)pSpinbuttonValue destRect:(CGRect)aDestRect
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics spinbuttonValue:(const SpinbuttonValue *)pSpinbuttonValue destRect:(CGRect)aDestRect
 {
 	[super init];
 
@@ -1872,7 +1896,7 @@ static bool IsRunningMavericksOrLower()
 	mpGraphics = pGraphics;
 	mpSpinbuttonValue = pSpinbuttonValue;
 	maDestRect = aDestRect;
-	mbDrawn = NO;
+	mbDrawn = sal_False;
 	maSize = NSZeroSize;
 
 	return self;
@@ -1893,12 +1917,12 @@ static bool IsRunningMavericksOrLower()
 	VCLBitmapBuffer*		mpBuffer;
 	JavaSalGraphics*		mpGraphics;
 	CGRect					maDestRect;
-	MacOSBOOL				mbDrawn;
+	sal_Bool				mbDrawn;
 }
 + (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
 - (NSTextField *)textField;
 - (void)draw:(id)pObject;
-- (MacOSBOOL)drawn;
+- (sal_Bool)drawn;
 - (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
 @end
 
@@ -1937,6 +1961,8 @@ static bool IsRunningMavericksOrLower()
 
 - (void)draw:(id)pObject
 {
+	(void)pObject;
+
 	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
 	{
 		NSTextField *pTextField = [self textField];
@@ -1980,7 +2006,7 @@ static bool IsRunningMavericksOrLower()
 
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
-						mbDrawn = YES;
+						mbDrawn = sal_True;
 					}
 
 					CGContextEndTransparencyLayer( mpBuffer->maContext );
@@ -1996,7 +2022,7 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (MacOSBOOL)drawn
+- (sal_Bool)drawn
 {
 	return mbDrawn;
 }
@@ -2009,7 +2035,7 @@ static bool IsRunningMavericksOrLower()
 	mpBuffer = pBuffer;
 	mpGraphics = pGraphics;
 	maDestRect = aDestRect;
-	mbDrawn = NO;
+	mbDrawn = sal_False;
 
 	return self;
 }
@@ -2024,19 +2050,19 @@ static bool IsRunningMavericksOrLower()
 	VCLBitmapBuffer*		mpBuffer;
 	JavaSalGraphics*		mpGraphics;
 	CGRect					maDestRect;
-	MacOSBOOL				mbDrawn;
-	MacOSBOOL				mbDrawSeparator;
+	sal_Bool				mbDrawn;
+	BOOL					mbDrawSeparator;
 }
-+ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect drawSeparator:(MacOSBOOL)bDrawSeparator;
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect drawSeparator:(BOOL)bDrawSeparator;
 - (NSControl *)menuItemCellControl;
 - (void)draw:(id)pObject;
-- (MacOSBOOL)drawn;
-- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect drawSeparator:(MacOSBOOL)bDrawSeparator;
+- (sal_Bool)drawn;
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect drawSeparator:(BOOL)bDrawSeparator;
 @end
 
 @implementation VCLNativeMenuItemCell
 
-+ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect drawSeparator:(MacOSBOOL)bDrawSeparator
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect drawSeparator:(BOOL)bDrawSeparator
 {
 	VCLNativeMenuItemCell *pRet = [[VCLNativeMenuItemCell alloc] initWithControlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics destRect:aDestRect drawSeparator:bDrawSeparator];
 	[pRet autorelease];
@@ -2070,6 +2096,8 @@ static bool IsRunningMavericksOrLower()
 
 - (void)draw:(id)pObject
 {
+	(void)pObject;
+
 	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
 	{
 		NSControl *pControl = [self menuItemCellControl];
@@ -2111,7 +2139,7 @@ static bool IsRunningMavericksOrLower()
 						}
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
-						mbDrawn = YES;
+						mbDrawn = sal_True;
 					}
 
 					CGContextEndTransparencyLayer( mpBuffer->maContext );
@@ -2127,12 +2155,12 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (MacOSBOOL)drawn
+- (sal_Bool)drawn
 {
 	return mbDrawn;
 }
 
-- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect drawSeparator:(MacOSBOOL)bDrawSeparator
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect drawSeparator:(BOOL)bDrawSeparator
 {
 	[super init];
 
@@ -2140,7 +2168,7 @@ static bool IsRunningMavericksOrLower()
 	mpBuffer = pBuffer;
 	mpGraphics = pGraphics;
 	maDestRect = aDestRect;
-	mbDrawn = NO;
+	mbDrawn = sal_False;
 	mbDrawSeparator = bDrawSeparator;
 
 	return self;
@@ -2161,12 +2189,12 @@ static bool IsRunningMavericksOrLower()
 	VCLBitmapBuffer*		mpBuffer;
 	JavaSalGraphics*		mpGraphics;
 	CGRect					maDestRect;
-	MacOSBOOL				mbDrawn;
+	sal_Bool				mbDrawn;
 }
 + (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
 - (NSTabView *)tabView;
 - (void)draw:(id)pObject;
-- (MacOSBOOL)drawn;
+- (sal_Bool)drawn;
 - (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
 @end
 
@@ -2197,6 +2225,8 @@ static bool IsRunningMavericksOrLower()
 
 - (void)draw:(id)pObject
 {
+	(void)pObject;
+
 	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
 	{
 		NSTabView *pTabView = [self tabView];
@@ -2222,7 +2252,7 @@ static bool IsRunningMavericksOrLower()
 					[pTabView drawRect:[pTabView frame]];
 					[NSGraphicsContext setCurrentContext:pOldContext];
 
-					mbDrawn = YES;
+					mbDrawn = sal_True;
 				}
 
 				CGContextEndTransparencyLayer( mpBuffer->maContext );
@@ -2237,7 +2267,7 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (MacOSBOOL)drawn
+- (sal_Bool)drawn
 {
 	return mbDrawn;
 }
@@ -2250,7 +2280,7 @@ static bool IsRunningMavericksOrLower()
 	mpBuffer = pBuffer;
 	mpGraphics = pGraphics;
 	maDestRect = aDestRect;
-	mbDrawn = NO;
+	mbDrawn = sal_False;
 
 	return self;
 }
@@ -2323,23 +2353,23 @@ static bool IsRunningMavericksOrLower()
 	ControlState			mnControlState;
 	VCLBitmapBuffer*		mpBuffer;
 	JavaSalGraphics*		mpGraphics;
-	TabitemValue*			mpTabitemValue;
+	const TabitemValue*		mpTabitemValue;
 	CGRect					maDestRect;
-	MacOSBOOL				mbDrawn;
+	sal_Bool				mbDrawn;
 	NSSize					maSize;
 }
-+ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics tabitemValue:(TabitemValue *)pTabitemValue destRect:(CGRect)aDestRect;
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics tabitemValue:(const TabitemValue *)pTabitemValue destRect:(CGRect)aDestRect;
 - (VCLNativeTabViewItem *)tabViewItem;
 - (void)draw:(id)pObject;
-- (MacOSBOOL)drawn;
+- (sal_Bool)drawn;
 - (void)getSize:(id)pObject;
-- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics tabitemValue:(TabitemValue *)pTabitemValue destRect:(CGRect)aDestRect;
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics tabitemValue:(const TabitemValue *)pTabitemValue destRect:(CGRect)aDestRect;
 - (NSSize)size;
 @end
 
 @implementation VCLNativeTabCell
 
-+ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics tabitemValue:(TabitemValue *)pTabitemValue destRect:(CGRect)aDestRect
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics tabitemValue:(const TabitemValue *)pTabitemValue destRect:(CGRect)aDestRect
 {
 	VCLNativeTabCell *pRet = [[VCLNativeTabCell alloc] initWithControlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics tabitemValue:pTabitemValue destRect:aDestRect];
 	[pRet autorelease];
@@ -2410,6 +2440,8 @@ static bool IsRunningMavericksOrLower()
 
 - (void)draw:(id)pObject
 {
+	(void)pObject;
+
 	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
 	{
 		VCLNativeTabViewItem *pItem = [self tabViewItem];
@@ -2488,7 +2520,7 @@ static bool IsRunningMavericksOrLower()
 
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
-						mbDrawn = YES;
+						mbDrawn = sal_True;
 					}
 
 					CGContextEndTransparencyLayer( mpBuffer->maContext );
@@ -2504,13 +2536,15 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (MacOSBOOL)drawn
+- (sal_Bool)drawn
 {
 	return mbDrawn;
 }
 
 - (void)getSize:(id)pObject
 {
+	(void)pObject;
+
 	if ( NSEqualSizes( maSize, NSZeroSize ) )
 	{
 		VCLNativeTabViewItem *pItem = [self tabViewItem];
@@ -2523,7 +2557,7 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics tabitemValue:(TabitemValue *)pTabitemValue destRect:(CGRect)aDestRect;
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics tabitemValue:(const TabitemValue *)pTabitemValue destRect:(CGRect)aDestRect
 {
 	[super init];
 
@@ -2532,7 +2566,7 @@ static bool IsRunningMavericksOrLower()
 	mpGraphics = pGraphics;
 	mpTabitemValue = pTabitemValue;
 	maDestRect = aDestRect;
-	mbDrawn = NO;
+	mbDrawn = sal_False;
 	maSize = NSZeroSize;
 
 	return self;
@@ -2571,10 +2605,10 @@ VCLBitmapBuffer::~VCLBitmapBuffer()
 
 // -----------------------------------------------------------------------
 
-BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaSalGraphics *pGraphics, bool bUseLayer )
+bool VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaSalGraphics *pGraphics, bool bUseLayer )
 {
 	if ( nWidth <= 0 || nHeight <= 0 || !pGraphics )
-		return FALSE;
+		return false;
 
 	bool bDrawToPrintGraphics = ( pGraphics->mpPrinter ? true : false );
 	mbUseLayer = false;
@@ -2626,7 +2660,7 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 	{
 		try
 		{
-			mpBits = new BYTE[ mnScanlineSize * mnHeight ];
+			mpBits = new sal_uInt8[ mnScanlineSize * mnHeight ];
 		}
 		catch( const std::bad_alloc& ) {}
 	}
@@ -2634,7 +2668,7 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 	if ( !mpBits && !mbUseLayer )
 	{
 		Destroy();
-		return FALSE;
+		return false;
 	}
 
 	if ( !maContext && !mbUseLayer )
@@ -2643,7 +2677,7 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 		if ( !aColorSpace )
 		{
 			Destroy();
-			return FALSE;
+			return false;
 		}
 
 		// Use requested width and height, not actual width and height of the
@@ -2658,7 +2692,7 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 	if ( !maContext )
 	{
 		Destroy();
-		return FALSE;
+		return false;
 	}
 
 	if ( mpBits )
@@ -2666,7 +2700,7 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 
 	mbLastDrawToPrintGraphics = bDrawToPrintGraphics;
 
-	return TRUE;
+	return true;
 }
 
 // -----------------------------------------------------------------------
@@ -2771,11 +2805,11 @@ void VCLBitmapBuffer::ReleaseContext()
  * @param rCaption		text used for the control.  Presently ignored
  *				as we draw only the frame and let VCL draw
  *				the text
- * @return TRUE if successful, FALSE on error
+ * @return sal_True if successful, sal_False on error
  */
-static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const OUString& rCaption )
+static sal_Bool DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const OUString& /* rCaption */ )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -2814,11 +2848,11 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
  * @param rCaption		text used for the control.  Presently ignored
  *				as we draw only the frame and let VCL draw
  *				the text
- * @return TRUE if successful, FALSE on error
+ * @return sal_True if successful, sal_False on error
  */
-static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const OUString& rCaption )
+static sal_Bool DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const OUString& /* rCaption */ )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -2847,11 +2881,11 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
  * @param rDestBounds		eventual destination rectangle for the scrollbar
  * @param nState			overall scrollbar state (active vs. disabled)
  * @param pScrollbarValue	VCL scrollbar info value
- * @return TRUE if successful, FALSE on error
+ * @return sal_True if successful, sal_False on error
  */
-static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ScrollbarValue *pScrollbarValue )
+static sal_Bool DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ScrollbarValue *pScrollbarValue )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -2887,11 +2921,11 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
  * @param nState			overall control state
  * @param pValue			optional value giving enabled & pressed state for
  *							subcontrols.
- * @return TRUE if drawing successful, FALSE if not
+ * @return sal_True if drawing successful, sal_False if not
  */
-static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, SpinbuttonValue *pValue )
+static sal_Bool DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const SpinbuttonValue *pValue )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -2931,11 +2965,11 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
  * @param nState			overall control state
  * @param pValue			optional value giving enabled & pressed state for
  *							subcontrols.
- * @return TRUE if drawing successful, FALSE if not
+ * @return sal_True if drawing successful, sal_False if not
  */
-static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, SpinbuttonValue *pValue )
+static sal_Bool DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const SpinbuttonValue *pValue )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -2964,12 +2998,12 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
  * @param nState			overall control state
  * @param pValue			value providing the percentage completion and other
  *							progressbar state
- * @param bSmall			TRUE to use small progress bar otherwise use large
- * @return TRUE if drawing successful, FALSE if not
+ * @param bSmall			sal_True to use small progress bar otherwise use large
+ * @return sal_True if drawing successful, sal_False if not
  */
-static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ProgressbarValue *pValue, BOOL bSmall )
+static sal_Bool DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue *pValue, sal_Bool bSmall )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -3000,11 +3034,11 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
  * @param pValue			value providing the tab style, its position in
  *							the tab order relative to other tabs, and other
  *							tab-specific values
- * @return TRUE if drawing successful, FALSE if not
+ * @return sal_True if drawing successful, sal_False if not
  */
-static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, TabitemValue *pValue )
+static sal_Bool DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const TabitemValue *pValue )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -3032,9 +3066,9 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
  * @param rDestBounds		destination rectangle where object will be painted
  * @param nState			overall control state
  */
-static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
+static sal_Bool DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -3062,9 +3096,9 @@ static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
  * @param rDestBounds		destination rectangle where object will be painted
  * @param nState			overall control state
  */
-static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
+static sal_Bool DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -3090,9 +3124,9 @@ static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectang
  *							be painted
  * @param rDestBounds		destination rectangle where object will be painted
  */
-static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds )
+static sal_Bool DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_True;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -3119,9 +3153,9 @@ static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangl
  *							be painted
  * @param rDestBounds		destination rectangle where object will be painted
  */
-static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
+static sal_Bool DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -3147,9 +3181,9 @@ static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
  *							be painted
  * @param rDestBounds		destination rectangle where object will be painted
  */
-static BOOL DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
+static sal_Bool DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -3179,24 +3213,22 @@ static BOOL DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle&
  * @param pValue		NWF structure providing additional disclosure
  *						button state including alignment and collapsed/expanded
  *						state
- * @return OK if successful, FALSE on failure
+ * @return OK if successful, sal_False on failure
  */
-static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, DisclosureBtnValue *pValue )
+static sal_Bool DrawNativeDisclosureButton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue *pValue )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	NSInteger nButtonState;
-	if ( pValue && pValue->mnOpenCloseState == DISCLOSUREBTN_OPEN )
+	NSInteger nButtonState = NSOffState;
+	if ( pValue && pValue->getTristateVal() == BUTTONVALUE_ON )
 		nButtonState = NSOnState;
-	else
-		nButtonState = NSOffState;
 
 	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 		nState |= CTRL_STATE_INACTIVE;
 
-	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSOnOffButton bezelStyle:NSDisclosureBezelStyle controlSize:NSRegularControlSize buttonState:nButtonState controlState:nState drawRTL:( pValue && pValue->mnAlignment == DISCLOSUREBTN_ALIGN_RIGHT ? YES : NO ) bitmapBuffer:&aSharedDisclosureBtnBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSOnOffButton bezelStyle:NSDisclosureBezelStyle controlSize:NSRegularControlSize buttonState:nButtonState controlState:nState drawRTL:NO bitmapBuffer:&aSharedDisclosureBtnBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
 	bRet = [pVCLNativeButton drawn];
@@ -3218,9 +3250,9 @@ static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle
  *						really, this is meaningless for separators but is used
  *						by both VCL and Carbon, so we go for it
  */
-static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
+static sal_Bool DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -3251,9 +3283,9 @@ static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle
  * @param pValue		NWF structure providing information about primary
  *						sort column and additional sort order state
  */
-static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ListViewHeaderValue *pValue )
+static sal_Bool DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ListViewHeaderValue *pValue )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -3261,13 +3293,13 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
 		nState |= CTRL_STATE_INACTIVE;
 
 	// If the mouse is pressed and in the list view header, set the pressed flag
-	BOOL bRedraw = FALSE;
+	sal_Bool bRedraw = sal_False;
 	if ( pGraphics->mpFrame && GetSalData()->maLastPointerState.mnState & MOUSE_LEFT )
 	{
 		Point aScreenPoint( GetSalData()->maLastPointerState.maPos );
 		if ( rDestBounds.IsInside( Point( aScreenPoint.X() - pGraphics->mpFrame->maGeometry.nX, aScreenPoint.Y() - pGraphics->mpFrame->maGeometry.nY ) ) )
 			nState |= CTRL_STATE_PRESSED;
-		bRedraw = TRUE;
+		bRedraw = sal_True;
 	}
 
 	VCLNativeTableHeaderColumn *pVCLNativeTableHeaderColumn = [VCLNativeTableHeaderColumn createWithControlState:nState bitmapBuffer:&aSharedListViewHeaderBuffer graphics:pGraphics listViewHeaderValue:pValue destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
@@ -3305,9 +3337,9 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
  * @param nState		current control enabled/disabled/focused state
  * @param aValue		control value
  */
-static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
+static sal_Bool DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_True;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -3341,9 +3373,9 @@ static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& 
  * @param nState		current control enabled/disabled/focused state
  * @param aValue		control value
  */
-static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
+static sal_Bool DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -3380,9 +3412,9 @@ static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDe
  * @param nState		current control enabled/disabled/focused state
  * @param aValue		control value
  */
-static BOOL DrawNativeRadioButton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
+static sal_Bool DrawNativeRadioButton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -3420,9 +3452,9 @@ static BOOL DrawNativeRadioButton( JavaSalGraphics *pGraphics, const Rectangle& 
  * @param nState		current control enabled/disabled/focused state
  * @param aValue		control value
  */
-static BOOL DrawNativePushButton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
+static sal_Bool DrawNativePushButton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -3460,35 +3492,16 @@ static BOOL DrawNativePushButton( JavaSalGraphics *pGraphics, const Rectangle& r
 // =======================================================================
 
 /**
- * (static) Exclude the window's grow box region from the specified region if
- * the window has a grow box.
- *
- * @param pGraphics		pointer to the graphics object where the region should
- *						be painted
- * @param nType         control flavor that is requsted to be drawn
- * @param rControlRegion the control's region
- */
-static const Region GetRegionAdjustedForGrowBox( JavaSalGraphics *pGraphics, ControlType nType, const Region &rControlRegion )
-{
-	Region aRegion( rControlRegion );
-
-	// Only adjust for grow box on pre-Mac OS X 10.7 releases
-	return aRegion;
-}
-
-// =======================================================================
-
-/**
  * Determine if support exists for drawing a particular native widget in the
  * interface.
  *
  * @param nType         control flavor that is requsted to be drawn
  * @param nPart         subpart of the control that is requested to be drawn
- * @return TRUE if supported, FALSE if not
+ * @return sal_True if supported, sal_False if not
  */
-BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart nPart )
+sal_Bool JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart nPart )
 {
-	BOOL isSupported = FALSE;
+	sal_Bool isSupported = sal_False;
 
 #ifndef USE_NATIVE_CONTROLS
 	return isSupported;
@@ -3498,116 +3511,112 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 	{
 		case CTRL_PUSHBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
 		case CTRL_RADIOBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
 		case CTRL_CHECKBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
 		case CTRL_COMBOBOX:
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == HAS_BACKGROUND_TEXTURE ) )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
 		case CTRL_LISTBOX:
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == HAS_BACKGROUND_TEXTURE ) )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
 		case CTRL_SCROLLBAR:
 			if( ( nPart == PART_ENTIRE_CONTROL ) || nPart == PART_DRAW_BACKGROUND_HORZ || nPart == PART_DRAW_BACKGROUND_VERT )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
 		case CTRL_SPINBOX:
 			if( nPart == PART_ENTIRE_CONTROL || nPart == PART_ALL_BUTTONS || nPart == HAS_BACKGROUND_TEXTURE )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
 		case CTRL_SPINBUTTONS:
 			if( nPart == PART_ENTIRE_CONTROL || nPart == PART_ALL_BUTTONS )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
 		case CTRL_PROGRESS:
 		case CTRL_INTROPROGRESS:
 			if( nPart == PART_ENTIRE_CONTROL )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
 		case CTRL_TAB_ITEM:
 			if( nPart == PART_ENTIRE_CONTROL )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
 		case CTRL_TAB_PANE:
 			if( nPart == PART_ENTIRE_CONTROL )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
 		case CTRL_FIXEDBORDER:
 		case CTRL_GROUPBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
 		case CTRL_MENU_POPUP:
 			if( nPart == PART_ENTIRE_CONTROL )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
 		case CTRL_EDITBOX:
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == HAS_BACKGROUND_TEXTURE ) )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
-		case CTRL_DISCLOSUREBTN:
+		case CTRL_LISTNODE:
 			if( nPart == PART_ENTIRE_CONTROL )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
 		case CTRL_LISTVIEWHEADER:
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == PART_LISTVIEWHEADER_SORT_MARK ) )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
 		case CTRL_FIXEDLINE:
 			if( nPart == PART_ENTIRE_CONTROL )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
 		case CTRL_LISTVIEWBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
 		case CTRL_TOOLBAR:
 			// Suppress the non-native toolbar background
 			if( nPart == CTRL_PUSHBUTTON || nPart == PART_BUTTON )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 
 #ifdef USE_NATIVE_CTRL_FRAME
 		case CTRL_FRAME:
 			if ( nPart == PART_BORDER )
-				isSupported = TRUE;
+				isSupported = sal_True;
 			break;
 #endif	// USE_NATIVE_CTRL_FRAME
 
 		case CTRL_TOOLTIP:
 			if( !IsRunningMavericksOrLower() && nPart == PART_ENTIRE_CONTROL )
-				isSupported = TRUE;
-			break;
-
-		default:
-			isSupported = FALSE;
+				isSupported = sal_True;
 			break;
 	}
 
@@ -3625,19 +3634,18 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
  * @param nPart                 subportion of the control to be hit tested
  * @param rControlRegion
  * @param aPos                  coordinate to hit test
- * @param rControlHandle
  * @param rIsInside             return parameter indicating whether aPos was
  *                              within the control or not
- * @return TRUE if the function performed hit testing, FALSE if default OOo
+ * @return sal_True if the function performed hit testing, sal_False if default OOo
  *      hit testing should be used instead
  */
-BOOL JavaSalGraphics::hitTestNativeControl( ControlType nType, ControlPart nPart, const Region& rControlRegion, const Point& aPos, SalControlHandle& rControlHandle, BOOL& rIsInside )
+sal_Bool JavaSalGraphics::hitTestNativeControl( ControlType nType, ControlPart nPart, const Rectangle& rControlRegion, const Point& aPos, sal_Bool& rIsInside )
 {
-	rIsInside = FALSE;
+	rIsInside = sal_False;
 
 #ifndef USE_NATIVE_CONTROLS
 	if ( !IsNativeControlSupported( nType, nPart ) )
-		return rIsInside;
+		return sal_False;
 #endif	// !USE_NATIVE_CONTROLS
 
 	// [ed] Scrollbars are a special case:  in order to get proper regions,
@@ -3646,18 +3654,18 @@ BOOL JavaSalGraphics::hitTestNativeControl( ControlType nType, ControlPart nPart
 	// these regions, to perform our hit testing.
 
 	if ( nType == CTRL_SCROLLBAR )
-		return FALSE;
+		return sal_False;
 
-	Region aNativeBoundingRegion;
-	Region aNativeContentRegion;
-	if ( getNativeControlRegion( nType, nPart, rControlRegion, 0, ImplControlValue(), rControlHandle, OUString(), aNativeBoundingRegion, aNativeContentRegion ) )
+	Rectangle aNativeBoundingRegion;
+	Rectangle aNativeContentRegion;
+	if ( getNativeControlRegion( nType, nPart, rControlRegion, 0, ImplControlValue(), OUString(), aNativeBoundingRegion, aNativeContentRegion ) )
 	{
 		rIsInside = aNativeBoundingRegion.IsInside( aPos );
-		return TRUE;
+		return sal_True;
 	}
 	else
 	{
-		return FALSE;
+		return sal_False;
 	}
 }
 
@@ -3672,14 +3680,13 @@ BOOL JavaSalGraphics::hitTestNativeControl( ControlType nType, ControlPart nPart
  * @param rControlRegion        bounding region of the entire control in VCL
  *				frame coordinates
  * @param aValue		An optional value used for certain control types
- * @param rControlHandle	Platform dependent control data
  * @param rCaption		Caption title or string for the control.
  *				Contains keyboard shortcuts prefixed with ~
- * @return TRUE if drawing was successful, FALSE if drawing was not successful
+ * @return sal_True if drawing was successful, sal_False if drawing was not successful
  */
-BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, const OUString& rCaption )
+sal_Bool JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, const Rectangle& rControlRegion, ControlState nState, const ImplControlValue& aValue, const OUString& rCaption )
 {
-	BOOL bOK = FALSE;
+	sal_Bool bOK = sal_False;
 
 #ifndef USE_NATIVE_CONTROLS
 	if ( !IsNativeControlSupported( nType, nPart ) )
@@ -3688,74 +3695,64 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	const Region &rRealControlRegion = GetRegionAdjustedForGrowBox( this, nType, rControlRegion );
-
 	switch( nType )
 	{
 		case CTRL_PUSHBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
-				bOK = DrawNativePushButton( this, buttonRect, nState, aValue );
+				bOK = DrawNativePushButton( this, rControlRegion, nState, aValue );
 			}
 			break;
 
 		case CTRL_RADIOBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
-				bOK = DrawNativeRadioButton( this, buttonRect, nState, aValue );
+				bOK = DrawNativeRadioButton( this, rControlRegion, nState, aValue );
 			}
 			break;
 
 		case CTRL_CHECKBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
-				bOK = DrawNativeCheckbox( this, buttonRect, nState, aValue );
+				bOK = DrawNativeCheckbox( this, rControlRegion, nState, aValue );
 			}
 			break;
 
 		case CTRL_COMBOBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
-				bOK = DrawNativeComboBox( this, buttonRect, nState, rCaption );
+				bOK = DrawNativeComboBox( this, rControlRegion, nState, rCaption );
 			}
 			break;
 
 		case CTRL_LISTBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
-				bOK = DrawNativeListBox( this, buttonRect, nState, rCaption );
+				bOK = DrawNativeListBox( this, rControlRegion, nState, rCaption );
 			}
 			break;
 
 		case CTRL_SCROLLBAR:
 			if( ( nPart == PART_ENTIRE_CONTROL) || ( nPart == PART_DRAW_BACKGROUND_HORZ ) || ( nPart == PART_DRAW_BACKGROUND_VERT ) )
 			{
-				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
-				ScrollbarValue *pValue = static_cast<ScrollbarValue *> ( aValue.getOptionalVal() );
-				bOK = DrawNativeScrollBar( this, buttonRect, nState, pValue );
+				const ScrollbarValue *pValue = ( aValue.getType() == CTRL_SCROLLBAR ? static_cast< const ScrollbarValue* >( &aValue ) : NULL );
+				bOK = DrawNativeScrollBar( this, rControlRegion, nState, pValue );
 			}
 			break;
 
 		case CTRL_SPINBOX:
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == PART_ALL_BUTTONS ) )
 			{
-				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
-				SpinbuttonValue *pValue = static_cast<SpinbuttonValue *> ( aValue.getOptionalVal() );
-				bOK = DrawNativeSpinbox( this, buttonRect, nState, pValue );
+				const SpinbuttonValue *pValue = ( aValue.getType() == CTRL_SPINBUTTONS ? static_cast< const SpinbuttonValue* >( &aValue ) : NULL );
+				bOK = DrawNativeSpinbox( this, rControlRegion, nState, pValue );
 			}
 			break;
 
 		case CTRL_SPINBUTTONS:
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == PART_ALL_BUTTONS ) )
 			{
-				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
-				SpinbuttonValue *pValue = static_cast<SpinbuttonValue *> ( aValue.getOptionalVal() );
-				bOK = DrawNativeSpinbutton( this, buttonRect, nState, pValue );
+				const SpinbuttonValue *pValue = ( aValue.getType() == CTRL_SPINBUTTONS ? static_cast< const SpinbuttonValue* >( &aValue ) : NULL );
+				bOK = DrawNativeSpinbutton( this, rControlRegion, nState, pValue );
 			}
 			break;
 
@@ -3763,36 +3760,22 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case CTRL_INTROPROGRESS:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
-				ProgressbarValue aProgressbarValue;
-				ProgressbarValue *pValue = static_cast<ProgressbarValue *> ( aValue.getOptionalVal() );
-				if ( pValue )
-				{
-					aProgressbarValue.mbIndeterminate = pValue->mbIndeterminate;
-					aProgressbarValue.mdPercentComplete = pValue->mdPercentComplete;
-				}
-				else
-				{
-					aProgressbarValue.mdPercentComplete = (double)( aValue.getNumericVal() * 100 / ctrlRect.GetWidth() );
-				}
-
-				bOK = DrawNativeProgressbar( this, ctrlRect, nState, &aProgressbarValue, nType == CTRL_INTROPROGRESS ? TRUE : FALSE );
+				bOK = DrawNativeProgressbar( this, rControlRegion, nState, &aValue, nType == CTRL_INTROPROGRESS ? sal_True : sal_False );
 			}
 			break;
 
 		case CTRL_TAB_ITEM:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
-				TabitemValue *pValue = static_cast<TabitemValue *> ( aValue.getOptionalVal() );
-				bOK = DrawNativeTab( this, ctrlRect, nState, pValue );
+				const TabitemValue *pValue = ( aValue.getType() == CTRL_TAB_ITEM ? static_cast< const TabitemValue* >( &aValue ) : NULL );
+				bOK = DrawNativeTab( this, rControlRegion, nState, pValue );
 			}
 			break;
 
 		case CTRL_TAB_PANE:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
+				Rectangle ctrlRect( rControlRegion );
 				// hack - on 10.3+ tab panes visually need to intersect the
 				// middle of the associated segmented control.  Subtract
 				// 15 off the height to shoehorn the drawing in.
@@ -3808,8 +3791,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case CTRL_GROUPBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
-				bOK = DrawNativePrimaryGroupBox( this, ctrlRect, nState );
+				bOK = DrawNativePrimaryGroupBox( this, rControlRegion, nState );
 			}
 			break;
 
@@ -3817,68 +3799,60 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case CTRL_TOOLTIP:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
-				bOK = DrawNativeMenuBackground( this, ctrlRect );
+				bOK = DrawNativeMenuBackground( this, rControlRegion );
 			}
 			break;
 
 		case CTRL_EDITBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
-				bOK = DrawNativeEditBox( this, ctrlRect, nState );
+				bOK = DrawNativeEditBox( this, rControlRegion, nState );
 			}
 			break;
 
-		case CTRL_DISCLOSUREBTN:
+		case CTRL_LISTNODE:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
-				DisclosureBtnValue *pValue = static_cast<DisclosureBtnValue *> ( aValue.getOptionalVal() );
-				bOK = DrawNativeDisclosureBtn( this, ctrlRect, nState, pValue );
+				bOK = DrawNativeDisclosureButton( this, rControlRegion, nState, &aValue );
 			}
 			break;
 
 		case CTRL_LISTVIEWHEADER:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
-				ListViewHeaderValue *pValue = static_cast<ListViewHeaderValue *> ( aValue.getOptionalVal() );
-				bOK = DrawNativeListViewHeader( this, ctrlRect, nState, pValue );
+				const ListViewHeaderValue *pValue = ( aValue.getType() == CTRL_LISTVIEWHEADER ? static_cast< const ListViewHeaderValue* >( &aValue ) : NULL );
+				bOK = DrawNativeListViewHeader( this, rControlRegion, nState, pValue );
 			}
 			break;
 
 		case CTRL_FIXEDLINE:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
-				bOK = DrawNativeSeparatorLine( this, ctrlRect, nState );
+				bOK = DrawNativeSeparatorLine( this, rControlRegion, nState );
 			}
 			break;
 
 		case CTRL_LISTVIEWBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
-				bOK = DrawNativeListBoxFrame( this, ctrlRect, nState );
+				bOK = DrawNativeListBoxFrame( this, rControlRegion, nState );
 			}
 			break;
 
 		case CTRL_TOOLBAR:
 			if( nPart == PART_BUTTON )
 			{
-				Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
-				bOK = DrawNativeBevelButton( this, ctrlRect, nState, aValue );
+				bOK = DrawNativeBevelButton( this, rControlRegion, nState, aValue );
 			}
 			break;
 
 		case CTRL_FRAME:
 			if ( nPart == PART_BORDER )
 			{
-				USHORT nValue = (USHORT)aValue.getNumericVal();
+				sal_uInt16 nValue = (sal_uInt16)aValue.getNumericVal();
 				if ( ! ( nValue & ( FRAME_DRAW_MENU | FRAME_DRAW_WINDOWBORDER ) ) )
 				{
-					Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
+					Rectangle ctrlRect( rControlRegion );
 					ctrlRect.Left() -= FRAME_TRIMWIDTH;
 					ctrlRect.Top() -= FRAME_TRIMWIDTH;
 					if ( nValue & FRAME_DRAW_DOUBLEIN )
@@ -3909,15 +3883,14 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
  * @param rControlRegion	bounding region of the complete control in VCL frame coordiantes.
  * @param nState		current control state (e.g. pressed, disabled)
  * @param aValue		An optional value used for certain control types
- * @param rControlHandle	Platform dependent control data
  * @param rCaption		Caption title or string for the control.
  *				Contains keyboard shortcuts prefixed with ~
- * @return TRUE if the text was drawn, FALSE if the control had its text drawn
+ * @return sal_True if the text was drawn, sal_False if the control had its text drawn
  *	with drawNativeControl()
  */
-BOOL JavaSalGraphics::drawNativeControlText( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, const OUString& rCaption )
+sal_Bool JavaSalGraphics::drawNativeControlText( ControlType /* nType */, ControlPart /* nPart */, const Rectangle& /* rControlRegion */, ControlState /* nState */, const ImplControlValue& /* aValue */, const OUString& /* rCaption */ )
 {
-	return FALSE;
+	return sal_False;
 }
 
 // =======================================================================
@@ -3931,7 +3904,6 @@ BOOL JavaSalGraphics::drawNativeControlText( ControlType nType, ControlPart nPar
  * @param rControlRegion	bounding region of the control in VCL frame coordinates
  * @param nState		current control state (e.g. pressed, disabled)
  * @param aValue		An optional value used for certain control types
- * @param rControlHandle	Platform dependent control data
  * @param rCaption		Caption title or string for the control.
  *				Contains keyboard shortcuts prefixed with ~
  * @param rNativeBoundingRegion	return parameter that contains the true bounds
@@ -3941,20 +3913,18 @@ BOOL JavaSalGraphics::drawNativeControlText( ControlType nType, ControlPart nPar
  *				can safely be overdrawn with custom content
  *				without overdrawing the system adornments of
  *				the control
- * @return TRUE if appropriate information was returned about any native widget
- *	drawing areas, FALSE if the entire control region can be considered
+ * @return sal_True if appropriate information was returned about any native widget
+ *	drawing areas, sal_False if the entire control region can be considered
  *	an accurate enough representation of the native widget area
  */
-BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, const OUString& rCaption, Region &rNativeBoundingRegion, Region &rNativeContentRegion )
+sal_Bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPart, const Rectangle& rControlRegion, ControlState nState, const ImplControlValue& aValue, const OUString& /* rCaption */, Rectangle& rNativeBoundingRegion, Rectangle& rNativeContentRegion )
 {
-	BOOL bReturn = FALSE;
+	sal_Bool bReturn = sal_False;
 
 #ifndef USE_NATIVE_CONTROLS
 	if ( !IsNativeControlSupported( nType, nPart ) )
 		return bReturn;
 #endif	// !USE_NATIVE_CONTROLS
-
-	const Region &rRealControlRegion = GetRegionAdjustedForGrowBox( this, nType, rControlRegion );
 
 	switch( nType )
 	{
@@ -3976,7 +3946,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				NSSize aSize = [pVCLNativeButton size];
 				if ( !NSEqualSizes( aSize, NSZeroSize ) )
 				{
-					Rectangle buttonRect = rRealControlRegion.GetBoundRect();
+					Rectangle buttonRect( rControlRegion );
 					long buttonWidth = buttonRect.GetWidth();
 					long buttonHeight = (long)aSize.height;
 					if ( buttonHeight >= buttonWidth )
@@ -3986,9 +3956,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 					Point topLeft( (long)(buttonRect.Left() - FOCUSRING_WIDTH), (long)(buttonRect.Top() + ((buttonRect.GetHeight() - buttonHeight) / 2) - FOCUSRING_WIDTH) );
 					Size boundsSize( (long)buttonWidth + ( FOCUSRING_WIDTH * 2 ), (long)buttonHeight + ( FOCUSRING_WIDTH * 2 ) );
-					rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-					rNativeContentRegion = Region( rNativeBoundingRegion );
-					bReturn = TRUE;
+					rNativeBoundingRegion = Rectangle( topLeft, boundsSize );
+					rNativeContentRegion = rNativeBoundingRegion;
+					bReturn = sal_True;
 				}
 
 				[pPool release];
@@ -3998,31 +3968,31 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 		case CTRL_RADIOBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
+				Rectangle buttonRect( rControlRegion );
 				Point topLeft( (long)(buttonRect.Left() - FOCUSRING_WIDTH), (long)(buttonRect.Top() - FOCUSRING_WIDTH) );
 				Size boundsSize( (long)RADIOBUTTON_WIDTH + ( FOCUSRING_WIDTH * 2 ), (long)RADIOBUTTON_HEIGHT + ( FOCUSRING_WIDTH * 2 ) );
-				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-				rNativeContentRegion = Region( rNativeBoundingRegion );
-				bReturn = TRUE;
+				rNativeBoundingRegion = Rectangle( topLeft, boundsSize );
+				rNativeContentRegion = rNativeBoundingRegion;
+				bReturn = sal_True;
 			}
 			break;
 
 		case CTRL_CHECKBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
+				Rectangle buttonRect( rControlRegion );
 				Point topLeft( (long)(buttonRect.Left() - FOCUSRING_WIDTH), (long)(buttonRect.Top() - FOCUSRING_WIDTH) );
 				Size boundsSize( (long)CHECKBOX_WIDTH + ( FOCUSRING_WIDTH * 2 ), (long)CHECKBOX_HEIGHT + ( FOCUSRING_WIDTH * 2 ) );
-				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-				rNativeContentRegion = Region( rNativeBoundingRegion );
-				bReturn = TRUE;
+				rNativeBoundingRegion = Rectangle( topLeft, boundsSize );
+				rNativeContentRegion = rNativeBoundingRegion;
+				bReturn = sal_True;
 			}
 			break;
 
 		case CTRL_COMBOBOX:
 		case CTRL_LISTBOX:
 			{
-				Rectangle comboBoxRect = rRealControlRegion.GetBoundRect();
+				Rectangle comboBoxRect( rControlRegion );
 				long nHeightAdjust = ( COMBOBOX_HEIGHT - comboBoxRect.GetHeight() ) / 2;
 				if ( nHeightAdjust > 0 )
 				{
@@ -4043,7 +4013,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					// Vertically center the preferred bounds
 					float fYAdjust = ( (float)comboBoxRect.GetHeight() - aSize.height ) / 2;
 					NSRect preferredRect = NSMakeRect( comboBoxRect.Left(), comboBoxRect.Top() + fYAdjust, aSize.width > comboBoxRect.GetWidth() ? aSize.width : comboBoxRect.GetWidth(), aSize.height );
-					MacOSBOOL bRTL = [pVCLNativeComboBox isRTL];
+					BOOL bRTL = [pVCLNativeComboBox isRTL];
 
 					switch( nPart )
 					{
@@ -4051,9 +4021,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							{
 								// Fix clipping of edges by returning the
 								// passed in bounds
-								rNativeBoundingRegion = Region( comboBoxRect );
-								rNativeContentRegion = Region( rNativeBoundingRegion );
-								bReturn = TRUE;
+								rNativeBoundingRegion = comboBoxRect;
+								rNativeContentRegion = rNativeBoundingRegion;
+								bReturn = sal_True;
 							}
 							break;
 
@@ -4067,17 +4037,17 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 									else
 										topLeft = Point( (long)preferredRect.origin.x + (long)preferredRect.size.width - COMBOBOX_BUTTON_WIDTH - FOCUSRING_WIDTH, (long)preferredRect.origin.y );
 									Size boundsSize( COMBOBOX_BUTTON_WIDTH + FOCUSRING_WIDTH, (long)preferredRect.size.height );
-									rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+									rNativeBoundingRegion = Rectangle( topLeft, boundsSize );
 								}
 								else
 								{
 									Point topLeft( (long)preferredRect.origin.x, (long)preferredRect.origin.y );
 									Size boundsSize( (long)preferredRect.size.width, (long)preferredRect.size.height );
-									rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+									rNativeBoundingRegion = Rectangle( topLeft, boundsSize );
 								}
 
-								rNativeContentRegion = Region( rNativeBoundingRegion );
-								bReturn = TRUE;
+								rNativeContentRegion = rNativeBoundingRegion;
+								bReturn = sal_True;
 							}
 							break;
 
@@ -4089,9 +4059,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 								else
 									topLeft = Point( (long)preferredRect.origin.x + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH, (long)preferredRect.origin.y + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH );
 								Size boundsSize( (long)preferredRect.size.width - ( bEditable ? COMBOBOX_BUTTON_WIDTH : LISTBOX_BUTTON_WIDTH ) - ( ( FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH ) * 2 ), (long)preferredRect.size.height - ( ( FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH ) * 2 ) );
-								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-								rNativeContentRegion = Region( rNativeBoundingRegion );
-								bReturn = TRUE;
+								rNativeBoundingRegion = Rectangle( topLeft, boundsSize );
+								rNativeContentRegion = rNativeBoundingRegion;
+								bReturn = sal_True;
 							}
 							break;
 					}
@@ -4104,9 +4074,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 		case CTRL_SCROLLBAR:
 			{
 				// Fix bug 1600 by detecting if double arrows are at both ends
-				Rectangle scrollbarRect = rRealControlRegion.GetBoundRect();
-
-				ScrollbarValue *pValue = static_cast<ScrollbarValue *> ( aValue.getOptionalVal() );
+				Rectangle scrollbarRect( rControlRegion );
+				const ScrollbarValue *pValue = ( aValue.getType() == CTRL_SCROLLBAR ? static_cast< const ScrollbarValue* >( &aValue ) : NULL );
 				bool bDoubleScrollbarArrows = GetSalData()->mbDoubleScrollbarArrows;
 
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -4115,7 +4084,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 				[pVCLNativeScrollbar performSelectorOnMainThread:@selector(getBounds:) withObject:pVCLNativeScrollbar waitUntilDone:YES modes:pModes];
 
-				MacOSBOOL bHorizontal = [pVCLNativeScrollbar horizontal];
+				BOOL bHorizontal = [pVCLNativeScrollbar horizontal];
 				NSRect aDecrementArrowBounds = [pVCLNativeScrollbar decrementArrowBounds];
 				NSRect aIncrementArrowBounds = [pVCLNativeScrollbar incrementArrowBounds];
 				NSRect aDecrementPageBounds = [pVCLNativeScrollbar decrementPageBounds];
@@ -4205,10 +4174,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 				Point topLeft( (long)( scrollbarRect.Left() + bounds.origin.x ), (long)( scrollbarRect.Top() + bounds.origin.y ) );
 				Size boundsSize( (long)bounds.size.width, (long)bounds.size.height );
-				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-				rNativeContentRegion = Region( rNativeBoundingRegion );
-
-				bReturn = TRUE;
+				rNativeBoundingRegion = Rectangle( topLeft, boundsSize );
+				rNativeContentRegion = rNativeBoundingRegion;
+				bReturn = sal_True;
 
 				[pPool release];
 			}
@@ -4216,9 +4184,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 		case CTRL_SPINBOX:
 			{
-				Rectangle spinboxRect = rRealControlRegion.GetBoundRect();
-
-				SpinbuttonValue *pValue = static_cast<SpinbuttonValue *> ( aValue.getOptionalVal() );
+				Rectangle spinboxRect( rControlRegion );
+				const SpinbuttonValue *pValue = ( aValue.getType() == CTRL_SPINBUTTONS ? static_cast< const SpinbuttonValue* >( &aValue ) : NULL );
 
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -4242,9 +4209,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					{
 						case PART_ENTIRE_CONTROL:
 							{
-								rNativeBoundingRegion = Region( spinboxRect );
-								rNativeContentRegion = Region( rNativeBoundingRegion );
-								bReturn = TRUE;
+								rNativeBoundingRegion = spinboxRect;
+								rNativeContentRegion = rNativeBoundingRegion;
+								bReturn = sal_True;
 							}
 							break;
 
@@ -4252,9 +4219,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							{
 								Point topLeft( (long)( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), (long)( spinboxRect.Top() + ( ( spinboxRect.GetHeight() - aSize.height ) / 2 ) - FOCUSRING_WIDTH ) );
 								Size boundsSize( (long)( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), (long)( ( aSize.height / 2 ) + FOCUSRING_WIDTH ) );
-								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-								rNativeContentRegion = Region( rNativeBoundingRegion );
-								bReturn = TRUE;
+								rNativeBoundingRegion = Rectangle( topLeft, boundsSize );
+								rNativeContentRegion = rNativeBoundingRegion;
+								bReturn = sal_True;
 							}
 							break;
 
@@ -4262,9 +4229,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							{
 								Point topLeft( (long)( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), (long)( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) ) );
 								Size boundsSize( (long)( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), (long)( ( aSize.height / 2 ) + FOCUSRING_WIDTH ) );
-								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-								rNativeContentRegion = Region( rNativeBoundingRegion );
-								bReturn = TRUE;
+								rNativeBoundingRegion = Rectangle( topLeft, boundsSize );
+								rNativeContentRegion = rNativeBoundingRegion;
+								bReturn = sal_True;
 							}
 							break;
 
@@ -4272,9 +4239,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							{
 								Point topLeft( spinboxRect.Left() + FOCUSRING_WIDTH, spinboxRect.Top() + FOCUSRING_WIDTH );
 								Size boundsSize( spinboxRect.GetWidth() - (long)aSize.width - ( FOCUSRING_WIDTH * 2 ), spinboxRect.GetHeight() - ( FOCUSRING_WIDTH * 2 ) );
-								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-								rNativeContentRegion = Region( rNativeBoundingRegion );
-								bReturn = TRUE;
+								rNativeBoundingRegion = Rectangle( topLeft, boundsSize );
+								rNativeContentRegion = rNativeBoundingRegion;
+								bReturn = sal_True;
 							}
 							break;
 					}
@@ -4286,9 +4253,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 		case CTRL_SPINBUTTONS:
 			{
-				Rectangle spinboxRect = rRealControlRegion.GetBoundRect();
-
-				SpinbuttonValue *pValue = static_cast<SpinbuttonValue *> ( aValue.getOptionalVal() );
+				Rectangle spinboxRect( rControlRegion );
+				const SpinbuttonValue *pValue = ( aValue.getType() == CTRL_SPINBUTTONS ? static_cast< const SpinbuttonValue* >( &aValue ) : NULL );
 
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -4304,9 +4270,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							{
 								Point topLeft( (long)( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), (long)( spinboxRect.Top() + ( ( spinboxRect.GetHeight() - aSize.height ) / 2 ) - FOCUSRING_WIDTH ) );
 								Size boundsSize( (long)( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), (long)( aSize.height + ( FOCUSRING_WIDTH * 2 ) ) );
-								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-								rNativeContentRegion = Region( rNativeBoundingRegion );
-								bReturn = TRUE;
+								rNativeBoundingRegion = Rectangle( topLeft, boundsSize );
+								rNativeContentRegion = rNativeBoundingRegion;
+								bReturn = sal_True;
 							}
 							break;
 
@@ -4314,9 +4280,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							{
 								Point topLeft( (long)( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), (long)( spinboxRect.Top() + ( ( spinboxRect.GetHeight() - aSize.height ) / 2 ) - FOCUSRING_WIDTH ) );
 								Size boundsSize( (long)( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), (long)( ( aSize.height / 2 ) + FOCUSRING_WIDTH ) );
-								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-								rNativeContentRegion = Region( rNativeBoundingRegion );
-								bReturn = TRUE;
+								rNativeBoundingRegion = Rectangle( topLeft, boundsSize );
+								rNativeContentRegion = rNativeBoundingRegion;
+								bReturn = sal_True;
 							}
 							break;
 
@@ -4324,9 +4290,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							{
 								Point topLeft( (long)( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), (long)( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) ) );
 								Size boundsSize( (long)( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), (long)( ( aSize.height / 2 ) + FOCUSRING_WIDTH ) );
-								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-								rNativeContentRegion = Region( rNativeBoundingRegion );
-								bReturn = TRUE;
+								rNativeBoundingRegion = Rectangle( topLeft, boundsSize );
+								rNativeContentRegion = rNativeBoundingRegion;
+								bReturn = sal_True;
 							}
 							break;
 					}
@@ -4340,23 +4306,11 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 		case CTRL_INTROPROGRESS:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle controlRect = rRealControlRegion.GetBoundRect();
-
-				ProgressbarValue aProgressbarValue;
-				ProgressbarValue *pValue = static_cast<ProgressbarValue *> ( aValue.getOptionalVal() );
-				if ( pValue )
-				{
-					aProgressbarValue.mbIndeterminate = pValue->mbIndeterminate;
-					aProgressbarValue.mdPercentComplete = pValue->mdPercentComplete;
-				}
-				else
-				{
-					aProgressbarValue.mdPercentComplete = (double)( aValue.getNumericVal() * 100 / controlRect.GetWidth() );
-				}
+				Rectangle controlRect( rControlRegion );
 
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-				VCLNativeProgressbar *pVCLNativeProgressbar = [VCLNativeProgressbar createWithControlState:nState controlSize:( nType == CTRL_INTROPROGRESS ? NSSmallControlSize : NSRegularControlSize ) bitmapBuffer:NULL graphics:NULL progressbarValue:&aProgressbarValue destRect:CGRectMake( controlRect.Left(), controlRect.Top(), controlRect.GetWidth(), controlRect.GetHeight() )];
+				VCLNativeProgressbar *pVCLNativeProgressbar = [VCLNativeProgressbar createWithControlState:nState controlSize:( nType == CTRL_INTROPROGRESS ? NSSmallControlSize : NSRegularControlSize ) bitmapBuffer:NULL graphics:NULL progressbarValue:&aValue destRect:CGRectMake( controlRect.Left(), controlRect.Top(), controlRect.GetWidth(), controlRect.GetHeight() )];
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 				[pVCLNativeProgressbar performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeProgressbar waitUntilDone:YES modes:pModes];
 				NSSize aSize = [pVCLNativeProgressbar size];
@@ -4369,10 +4323,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					// Fix clipping of small progress bar by adding padding
 					Point topLeft( (long)preferredRect.origin.x, (long)preferredRect.origin.y - PROGRESSBARPADDING_HEIGHT );
 					Size boundsSize( (long)preferredRect.size.width, (long)preferredRect.size.height + ( PROGRESSBARPADDING_HEIGHT * 2 ) );
-					rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-					rNativeContentRegion = Region( rNativeBoundingRegion );
-
-					bReturn = TRUE;
+					rNativeBoundingRegion = Rectangle( topLeft, boundsSize );
+					rNativeContentRegion = rNativeBoundingRegion;
+					bReturn = sal_True;
 				}
 
 				[pPool release];
@@ -4382,9 +4335,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 		case CTRL_TAB_ITEM:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle controlRect = rRealControlRegion.GetBoundRect();
-
-				TabitemValue *pValue = static_cast<TabitemValue *> ( aValue.getOptionalVal() );
+				Rectangle controlRect( rControlRegion );
+				const TabitemValue *pValue = ( aValue.getType() == CTRL_TAB_ITEM ? static_cast< const TabitemValue* >( &aValue ) : NULL );
 
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -4396,10 +4348,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				{
 					Point topLeft( controlRect.Left(), controlRect.Top() - FOCUSRING_WIDTH );
 					Size boundsSize( (long)aSize.width, (long)aSize.height + ( FOCUSRING_WIDTH * 2 ) );
-					rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-					rNativeContentRegion = Region( rNativeBoundingRegion );
-
-					bReturn = TRUE;
+					rNativeBoundingRegion = Rectangle( topLeft, boundsSize );
+					rNativeContentRegion = rNativeBoundingRegion;
+					bReturn = sal_True;
 				}
 
 				[pPool release];
@@ -4411,11 +4362,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			{
 				// for now, assume tab panes will occupy the full rectangle and
 				// not require bound adjustment.
-				Rectangle controlRect = rRealControlRegion.GetBoundRect();
-				rNativeBoundingRegion = Region( controlRect );
-				rNativeContentRegion = Region( rNativeBoundingRegion );
-
-				bReturn = TRUE;
+				rNativeBoundingRegion = rControlRegion;
+				rNativeContentRegion = rNativeBoundingRegion;
+				bReturn = sal_True;
 			}
 			break;
 
@@ -4425,11 +4374,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			{
 				// for now, assume primary group boxes will occupy the full rectangle and
 				// not require bound adjustment.
-				Rectangle controlRect = rRealControlRegion.GetBoundRect();
-				rNativeBoundingRegion = Region( controlRect );
-				rNativeContentRegion = Region( rNativeBoundingRegion );
-
-				bReturn = TRUE;
+				rNativeBoundingRegion = rControlRegion;
+				rNativeContentRegion = rNativeBoundingRegion;
+				bReturn = sal_True;
 			}
 			break;
 
@@ -4438,18 +4385,16 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
 				// we can draw menu backgrounds for any size rectangular area
-				Rectangle controlRect = rRealControlRegion.GetBoundRect();
-				rNativeBoundingRegion = Region( controlRect );
-				rNativeContentRegion = Region( rNativeBoundingRegion );
-
-				bReturn = TRUE;
+				rNativeBoundingRegion = rControlRegion;
+				rNativeContentRegion = rNativeBoundingRegion;
+				bReturn = sal_True;
 			}
 			break;
 
 		case CTRL_EDITBOX:
 			{
 				// fill entire control area with edit box
-				Rectangle controlRect = rRealControlRegion.GetBoundRect();
+				Rectangle controlRect( rControlRegion );
 				long nHeightAdjust = ( EDITBOX_HEIGHT - controlRect.GetHeight() ) / 2;
 				if ( nHeightAdjust > 0 )
 				{
@@ -4461,9 +4406,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				{
 					case PART_ENTIRE_CONTROL:
 						{
-							rNativeBoundingRegion = Region( controlRect );
-							rNativeContentRegion = Region( rNativeBoundingRegion );
-							bReturn = TRUE;
+							rNativeBoundingRegion = controlRect;
+							rNativeContentRegion = rNativeBoundingRegion;
+							bReturn = sal_True;
 						}
 						break;
 
@@ -4471,68 +4416,60 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 						{
 							Point topLeft( controlRect.Left() + FOCUSRING_WIDTH, controlRect.Top() + FOCUSRING_WIDTH );
 							Size boundsSize( controlRect.GetWidth() - ( FOCUSRING_WIDTH * 2 ), controlRect.GetHeight() - ( FOCUSRING_WIDTH * 2 ) );
-							rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-							rNativeContentRegion = Region( rNativeBoundingRegion );
-							bReturn = TRUE;
+							rNativeBoundingRegion = Rectangle( topLeft, boundsSize );
+							rNativeContentRegion = rNativeBoundingRegion;
+							bReturn = sal_True;
 						}
 						break;
 				}
 
-				bReturn = TRUE;
+				bReturn = sal_True;
 			}
 			break;
 
-		case CTRL_DISCLOSUREBTN:
+		case CTRL_LISTNODE:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle controlRect = rRealControlRegion.GetBoundRect();
-				rNativeBoundingRegion = Region( controlRect );
-				rNativeContentRegion = Region( rNativeBoundingRegion );
-
-				bReturn = TRUE;
+				rNativeBoundingRegion = rControlRegion;
+				rNativeContentRegion = rNativeBoundingRegion;
+				bReturn = sal_True;
 			}
 			break;
 
 		case CTRL_LISTVIEWHEADER:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle controlRect = rRealControlRegion.GetBoundRect();
-				rNativeBoundingRegion = Region( controlRect );
-				rNativeContentRegion = Region( rNativeBoundingRegion );
-
-				bReturn = TRUE;
+				rNativeBoundingRegion = rControlRegion;
+				rNativeContentRegion = rNativeBoundingRegion;
+				bReturn = sal_True;
 			}
 			break;
 
 		case CTRL_LISTVIEWBOX:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle controlRect = rRealControlRegion.GetBoundRect();
-				rNativeBoundingRegion = Region( controlRect );
-				rNativeContentRegion = Region( rNativeBoundingRegion );
-
-				bReturn = TRUE;
+				rNativeBoundingRegion = rControlRegion;
+				rNativeContentRegion = rNativeBoundingRegion;
+				bReturn = sal_True;
 			}
 			break;
 
 		case CTRL_TOOLBAR:
 			if ( nPart == PART_BUTTON )
 			{
-				Rectangle controlRect = rRealControlRegion.GetBoundRect();
-				rNativeBoundingRegion = Region( controlRect );
-				rNativeContentRegion = Region( rNativeBoundingRegion );
-
-				bReturn = TRUE;
+				rNativeBoundingRegion = rControlRegion;
+				rNativeContentRegion = rNativeBoundingRegion;
+				bReturn = sal_True;
 			}
 			break;
 
 		case CTRL_FRAME:
 			if ( nPart == PART_BORDER )
 			{
-				USHORT nValue = (USHORT)aValue.getNumericVal();
+				sal_uInt16 nValue = (sal_uInt16)aValue.getNumericVal();
 				if ( ! ( nValue & ( FRAME_DRAW_MENU | FRAME_DRAW_WINDOWBORDER ) ) )
 				{
-					Rectangle controlRect = rRealControlRegion.GetBoundRect();
+					Rectangle controlRect( rControlRegion );
 					controlRect.Left() += FRAME_TRIMWIDTH;
 					controlRect.Top() += FRAME_TRIMWIDTH;
 					if ( nValue & FRAME_DRAW_DOUBLEIN )
@@ -4540,9 +4477,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 						controlRect.Right() -= FRAME_TRIMWIDTH;
 						controlRect.Bottom() -= FRAME_TRIMWIDTH;
 					}
-					rNativeBoundingRegion = Region( controlRect );
-					rNativeContentRegion = Region( rNativeBoundingRegion );
-					bReturn = TRUE;
+					rNativeBoundingRegion = controlRect;
+					rNativeContentRegion = rNativeBoundingRegion;
+					bReturn = sal_True;
 				}
 			}
 			break;
@@ -4560,13 +4497,13 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
  * @param nPart		part of the control whose text is being drawn
  * @param nState	current state of the control
  * @param aValue	extra control-specific data of the ucrrent control state
- * @param textColor	location in which color to draw text should be returned
- * @return TRUE if a native widget text color is provided, FALSE if the standard
+ * @param nTextColor	location in which color to draw text should be returned
+ * @return sal_True if a native widget text color is provided, sal_False if the standard
  *	VCL text color should be used.
  */
-BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& aValue, SalColor& textColor )
+sal_Bool JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart /* nPart */, ControlState nState, const ImplControlValue& /* aValue */, SalColor& nTextColor )
 {
-	BOOL bReturn = FALSE;
+	sal_Bool bReturn = sal_False;
 
 #ifndef USE_NATIVE_CONTROLS
 	if ( !IsNativeControlSupported( nType, nPart ) )
@@ -4586,17 +4523,17 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 					// Fix text color when running on OS X 10.10 and our
 					// application is not the active application
 					if ( IsRunningMavericksOrLower() || !NSApplication_isActive() )
-						bReturn = JavaSalFrame::GetSelectedControlTextColor( textColor );
+						bReturn = JavaSalFrame::GetSelectedControlTextColor( nTextColor );
 					else
-						bReturn = JavaSalFrame::GetAlternateSelectedControlTextColor( textColor );
+						bReturn = JavaSalFrame::GetAlternateSelectedControlTextColor( nTextColor );
 				}
 				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
 				{
-					bReturn = JavaSalFrame::GetDisabledControlTextColor( textColor );
+					bReturn = JavaSalFrame::GetDisabledControlTextColor( nTextColor );
 				}
 				else
 				{
-					bReturn = JavaSalFrame::GetControlTextColor( textColor );
+					bReturn = JavaSalFrame::GetControlTextColor( nTextColor );
 				}
 			}
 			break;
@@ -4606,11 +4543,11 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 		case CTRL_LISTBOX:
 			{
 				if( nState & CTRL_STATE_PRESSED )
-					bReturn = JavaSalFrame::GetSelectedControlTextColor( textColor );
+					bReturn = JavaSalFrame::GetSelectedControlTextColor( nTextColor );
 				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
-					bReturn = JavaSalFrame::GetDisabledControlTextColor( textColor );
+					bReturn = JavaSalFrame::GetDisabledControlTextColor( nTextColor );
 				else
-					bReturn = JavaSalFrame::GetControlTextColor( textColor );
+					bReturn = JavaSalFrame::GetControlTextColor( nTextColor );
 			}
 			break;
 
@@ -4619,21 +4556,21 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 				if ( nState & CTRL_STATE_SELECTED )
 				{
 					if ( IsRunningMavericksOrLower() || ! ( nState & CTRL_STATE_INACTIVE ) )
-						bReturn = JavaSalFrame::GetAlternateSelectedControlTextColor( textColor );
+						bReturn = JavaSalFrame::GetAlternateSelectedControlTextColor( nTextColor );
 					else
-						bReturn = JavaSalFrame::GetSelectedControlTextColor( textColor );
+						bReturn = JavaSalFrame::GetSelectedControlTextColor( nTextColor );
 				}
 				else if ( nState & CTRL_STATE_PRESSED )
 				{
-					bReturn = JavaSalFrame::GetSelectedControlTextColor( textColor );
+					bReturn = JavaSalFrame::GetSelectedControlTextColor( nTextColor );
 				}
 				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
 				{
-					bReturn = JavaSalFrame::GetDisabledControlTextColor( textColor );
+					bReturn = JavaSalFrame::GetDisabledControlTextColor( nTextColor );
 				}
 				else
 				{
-					bReturn = JavaSalFrame::GetControlTextColor( textColor );
+					bReturn = JavaSalFrame::GetControlTextColor( nTextColor );
 				}
 			}
 			break;
@@ -4641,11 +4578,11 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 		case CTRL_MENU_POPUP:
 			{
 				if ( nState & CTRL_STATE_SELECTED )
-					bReturn = JavaSalFrame::GetSelectedMenuItemTextColor( textColor );
+					bReturn = JavaSalFrame::GetSelectedMenuItemTextColor( nTextColor );
 				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
-					bReturn = JavaSalFrame::GetDisabledControlTextColor( textColor );
+					bReturn = JavaSalFrame::GetDisabledControlTextColor( nTextColor );
 				else
-					bReturn = JavaSalFrame::GetControlTextColor( textColor );
+					bReturn = JavaSalFrame::GetControlTextColor( nTextColor );
 			}
 			break;
 	}

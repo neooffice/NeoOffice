@@ -36,7 +36,7 @@
 #ifndef __VCLEVENTQUEUE_COCOA_H__
 #define __VCLEVENTQUEUE_COCOA_H__
 
-#include <salframe.h>
+#include "java/salframe.h"
 
 // Comment out the following line to disable full screen mode
 #define USE_NATIVE_FULL_SCREEN_MODE
@@ -46,21 +46,21 @@
 @interface VCLView : NSView <NSTextInputClient>
 {
 	JavaSalFrame*			mpFrame;
-	MacOSBOOL				mbInKeyDown;
+	BOOL					mbInKeyDown;
 	NSInputManager*			mpInputManager;
 	NSEvent*				mpLastKeyDownEvent;
 	SalKeyEvent*			mpPendingKeyUpEvent;
 	NSRange					maSelectedRange;
 	id						mpTextInput;
 	NSRange					maTextInputRange;
-	MacOSBOOL				mbTextInputWantsNonRepeatKeyDown;
+	BOOL					mbTextInputWantsNonRepeatKeyDown;
 }
-- (MacOSBOOL)acceptsFirstResponder;
+- (BOOL)acceptsFirstResponder;
 - (void)abandonInput;
 - (void)dealloc;
 - (void)keyDown:(NSEvent *)pEvent;
 - (void)keyUp:(NSEvent *)pEvent;
-- (MacOSBOOL)hasMarkedText;
+- (BOOL)hasMarkedText;
 - (NSRange)markedRange;
 - (NSRange)selectedRange;
 - (void)setMarkedText:(id)aString selectedRange:(NSRange)aSelectedRange replacementRange:(NSRange)aReplacementRange;
@@ -74,7 +74,7 @@
 - (void)insertText:(id)aString;
 - (void)setJavaFrame:(JavaSalFrame *)pFrame;
 - (void)concludeDragOperation:(id < NSDraggingInfo >)pSender;
-- (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(MacOSBOOL)bSlideBack;
+- (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(BOOL)bSlideBack;
 - (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint;
 - (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation;
 - (void)draggedImage:(NSImage *)pImage movedTo:(NSPoint)aPoint;
@@ -83,22 +83,22 @@
 - (NSDragOperation)draggingEntered:(id < NSDraggingInfo >)pSender;
 - (void)draggingExited:(id < NSDraggingInfo >)pSender;
 - (id)draggingSourceDelegate;
-- (NSDragOperation)draggingSourceOperationMaskForLocal:(MacOSBOOL)bLocal;
+- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal;
 - (NSDragOperation)draggingUpdated:(id < NSDraggingInfo >)pSender;
 - (void)drawRect:(NSRect)aDirtyRect;
 - (void)resetCursorRects;
-- (MacOSBOOL)ignoreModifierKeysWhileDragging;
+- (BOOL)ignoreModifierKeysWhileDragging;
 - (id)initWithFrame:(NSRect)aFrame;
-- (MacOSBOOL)isOpaque;
+- (BOOL)isOpaque;
 - (NSArray *)namesOfPromisedFilesDroppedAtDestination:(NSURL *)pDropDestination;
-- (MacOSBOOL)performDragOperation:(id < NSDraggingInfo >)pSender;
-- (MacOSBOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender;
-- (MacOSBOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard;
+- (BOOL)performDragOperation:(id < NSDraggingInfo >)pSender;
+- (BOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender;
+- (BOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard;
 - (void)setDraggingDestinationDelegate:(id)pDelegate;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType;
-- (MacOSBOOL)wantsPeriodicDraggingUpdates;
-- (MacOSBOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes;
+- (BOOL)wantsPeriodicDraggingUpdates;
+- (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes;
 @end
 
 @interface NSWindow (VCLWindow)
@@ -106,54 +106,54 @@
 - (NSRect)_frameOnExitFromFullScreen;
 - (void)_restoreModalWindowLevel;
 - (void)_setModalWindowLevel;
-- (MacOSBOOL)inLiveResize;
+- (BOOL)inLiveResize;
 @end
 
-@interface VCLPanel : NSPanel
+@interface VCLPanel : NSPanel <NSWindowDelegate>
 {
-	MacOSBOOL				mbCanBecomeKeyWindow;
+	BOOL					mbCanBecomeKeyWindow;
 	NSUInteger				mnIgnoreMouseReleasedModifiers;
 	JavaSalFrame*			mpFrame;
-	ULONG					mnLastMetaModifierReleasedTime;
+	sal_uLong				mnLastMetaModifierReleasedTime;
 	NSEvent*				mpLastWindowDraggedEvent;
-	MacOSBOOL				mbInVersionBrowser;
-	MacOSBOOL				mbCloseOnExitVersionBrowser;
+	BOOL					mbInVersionBrowser;
+	BOOL					mbCloseOnExitVersionBrowser;
 }
 - (void)_init;
-- (MacOSBOOL)canBecomeKeyWindow;
+- (BOOL)canBecomeKeyWindow;
 - (void)dealloc;
-- (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow;
+- (void)setCanBecomeKeyWindow:(BOOL)bCanBecomeKeyWindow;
 - (void)setJavaFrame:(JavaSalFrame *)pFrame;
 @end
 
-@interface VCLWindow : NSWindow
+@interface VCLWindow : NSWindow <NSWindowDelegate>
 {
-	MacOSBOOL				mbCanBecomeKeyWindow;
+	BOOL					mbCanBecomeKeyWindow;
 	NSUInteger				mnIgnoreMouseReleasedModifiers;
 	JavaSalFrame*			mpFrame;
-	ULONG					mnLastMetaModifierReleasedTime;
+	sal_uLong				mnLastMetaModifierReleasedTime;
 	NSEvent*				mpLastWindowDraggedEvent;
-	MacOSBOOL				mbInVersionBrowser;
-	MacOSBOOL				mbCloseOnExitVersionBrowser;
+	BOOL					mbInVersionBrowser;
+	BOOL					mbCloseOnExitVersionBrowser;
 }
 + (void)clearModalWindowLevel;
 + (void)restoreModalWindowLevel;
 + (void)swizzleSelectors:(NSWindow *)pWindow;
 - (void)_init;
 - (void)becomeKeyWindow;
-- (MacOSBOOL)canBecomeKeyWindow;
+- (BOOL)canBecomeKeyWindow;
 - (void)dealloc;
 - (void)displayIfNeeded;
 - (id)draggingSourceDelegate;
-- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation;
-- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen;
-- (MacOSBOOL)makeFirstResponder:(NSResponder *)pResponder;
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation;
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation screen:(NSScreen *)pScreen;
+- (BOOL)makeFirstResponder:(NSResponder *)pResponder;
 - (void)makeKeyWindow;
-- (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber;
-- (MacOSBOOL)performKeyEquivalent:(NSEvent *)pEvent;
+- (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(NSInteger)nOtherWindowNumber;
+- (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
 - (void)resignKeyWindow;
 - (void)sendEvent:(NSEvent *)pEvent;
-- (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow;
+- (void)setCanBecomeKeyWindow:(BOOL)bCanBecomeKeyWindow;
 - (void)setJavaFrame:(JavaSalFrame *)pFrame;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
 - (void)windowDidExitFullScreen:(NSNotification *)pNotification;
@@ -162,8 +162,8 @@
 - (void)windowDidResize:(NSNotification *)pNotification;
 - (void)windowDidDeminiaturize:(NSNotification *)pNotification;
 - (void)windowWillMiniaturize:(NSNotification *)pNotification;
-- (MacOSBOOL)windowShouldClose:(id)pObject;
-- (MacOSBOOL)windowShouldZoom:(NSWindow *)pWindow toFrame:(NSRect)aNewFrame;
+- (BOOL)windowShouldClose:(id)pObject;
+- (BOOL)windowShouldZoom:(NSWindow *)pWindow toFrame:(NSRect)aNewFrame;
 - (void)windowWillEnterVersionBrowser:(NSNotification *)pNotification;
 - (void)windowDidExitVersionBrowser:(NSNotification *)pNotification;
 - (void)windowWillClose:(NSNotification *)pNotification;
@@ -172,14 +172,13 @@
 
 SAL_DLLPRIVATE void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect );
 SAL_DLLPRIVATE NSCursor *JavaSalFrame_getCursor( NSView *pView );
-
-SAL_DLLPRIVATE MacOSBOOL NSWindow_hasMarkedText( NSWindow *pWindow );
+SAL_DLLPRIVATE sal_Bool NSWindow_hasMarkedText( NSWindow *pWindow );
 
 #endif	// __OBJC__
 
 SAL_DLLPRIVATE void VCLEventQueue_cancelTermination();
 SAL_DLLPRIVATE void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelection, CFDataRef *pRTFSelection );
-SAL_DLLPRIVATE BOOL VCLEventQueue_paste( void *pNSWindow );
+SAL_DLLPRIVATE sal_Bool VCLEventQueue_paste( void *pNSWindow );
 SAL_DLLPRIVATE void VCLEventQueue_removeCachedEvents();
 SAL_DLLPRIVATE sal_Bool NSApplication_isActive();
 SAL_DLLPRIVATE void VCLEventQueue_installVCLEventQueueClasses();

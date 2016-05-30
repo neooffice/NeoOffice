@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified May 2008 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
@@ -36,12 +39,8 @@
 
 #if defined USE_JAVA && defined MACOSX
 
-#ifndef _SV_GDIMTF_HXX
 #include <vcl/gdimtf.hxx>
-#endif
-#ifndef _SV_METAACT_HXX
 #include <vcl/metaact.hxx>
-#endif
 
 #define META_TEXTLINE_PDF_ACTION				META_TEXTLINE_ACTION
 #define META_NEW_PAGE_PDF_ACTION				(10000)
@@ -77,21 +76,20 @@
 #define META_BEGINTRANSPARENCYGROUP_PDF_ACTION	(10030)
 #define META_ENDTRANSPARENCYGROUP_PDF_ACTION	(10031)
 #define META_ENDTRANSPARENCYGROUPMASK_PDF_ACTION	(10032)
-#define META_SETDOCINFO_PDF_ACTION				(10033)
-#define META_SETLOCALE_PDF_ACTION				(10034)
-#define META_CREATENAMEDDEST_PDF_ACTION			(10035)
-#define META_ADDSTREAM_PDF_ACTION				(10036)
+#define META_SETLOCALE_PDF_ACTION				(10033)
+#define META_CREATENAMEDDEST_PDF_ACTION			(10034)
+#define META_ADDSTREAM_PDF_ACTION				(10035)
 
 class SAL_DLLPRIVATE MetaTextLinePDFAction : public MetaTextLineAction
 {
 private:
-    bool                mbUnderlineAbove;
+    sal_Bool            mbUnderlineAbove;
 
 public:
-    					MetaTextLinePDFAction( const Point& rPos, long nWidth, FontStrikeout eStrikeout, FontUnderline eUnderline, FontUnderline eOverline, bool bUnderlineAbove ) : MetaTextLineAction( rPos, nWidth, eStrikeout, eUnderline, eOverline ), mbUnderlineAbove( bUnderlineAbove ) {}
+    					MetaTextLinePDFAction( const Point& rPos, long nWidth, FontStrikeout eStrikeout, FontUnderline eUnderline, FontUnderline eOverline, sal_Bool bUnderlineAbove ) : MetaTextLineAction( rPos, nWidth, eStrikeout, eUnderline, eOverline ), mbUnderlineAbove( bUnderlineAbove ) {}
     virtual				~MetaTextLinePDFAction() {}
 
-    bool				IsUnderlineAbove() const { return mbUnderlineAbove; }
+    sal_Bool			IsUnderlineAbove() const { return mbUnderlineAbove; }
 };
 
 class SAL_DLLPRIVATE MetaNewPagePDFAction : public MetaAction
@@ -147,13 +145,13 @@ public:
 class SAL_DLLPRIVATE MetaAntiAliasPDFAction : public MetaAction
 {
 private:
-    sal_Int32			mnAntiAlias;
+    sal_uInt16			mnAntiAlias;
 
 public:
-    					MetaAntiAliasPDFAction( sal_Int32 nAntiAlias ) : MetaAction( META_ANTIALIAS_PDF_ACTION ), mnAntiAlias( nAntiAlias ) {}
+    					MetaAntiAliasPDFAction( sal_uInt16 nAntiAlias ) : MetaAction( META_ANTIALIAS_PDF_ACTION ), mnAntiAlias( nAntiAlias ) {}
     virtual				~MetaAntiAliasPDFAction() {}
 
-    sal_Int32			GetAntiAlias() const { return mnAntiAlias; }
+    sal_uInt16			GetAntiAlias() const { return mnAntiAlias; }
 };
 
 class SAL_DLLPRIVATE MetaPolyLinePDFAction : public MetaAction
@@ -518,14 +516,14 @@ class SAL_DLLPRIVATE MetaEndTransparencyGroupPDFAction : public MetaAction
 {
 private:
     Rectangle			maBoundingRect;
-    sal_uInt32			mnTransparentPercent;
+    sal_uInt16			mnTransparentPercent;
 
 public:
-    					MetaEndTransparencyGroupPDFAction( const Rectangle& rBoundingRect, sal_uInt32 nTransparentPercent ) : MetaAction( META_ENDTRANSPARENCYGROUP_PDF_ACTION ), maBoundingRect( rBoundingRect ), mnTransparentPercent( nTransparentPercent ) {}
+    					MetaEndTransparencyGroupPDFAction( const Rectangle& rBoundingRect, sal_uInt16 nTransparentPercent ) : MetaAction( META_ENDTRANSPARENCYGROUP_PDF_ACTION ), maBoundingRect( rBoundingRect ), mnTransparentPercent( nTransparentPercent ) {}
     virtual				~MetaEndTransparencyGroupPDFAction() {}
 
     const Rectangle&	GetBoundingRect() const { return maBoundingRect; }
-    sal_uInt32			GetTransparentPercent() const { return mnTransparentPercent; }
+    sal_uInt16			GetTransparentPercent() const { return mnTransparentPercent; }
 };
 
 class SAL_DLLPRIVATE MetaEndTransparencyGroupMaskPDFAction : public MetaAction
@@ -540,18 +538,6 @@ public:
 
     const Rectangle&	GetBoundingRect() const { return maBoundingRect; }
     const Bitmap&		GetAlphaMask() const { return maAlphaMask; }
-};
-
-class SAL_DLLPRIVATE MetaSetDocInfoPDFAction : public MetaAction
-{
-private:
-    ::vcl::PDFDocInfo	maDocInfo;
-
-public:
-    					MetaSetDocInfoPDFAction( const ::vcl::PDFDocInfo& rDocInfo ) : MetaAction( META_SETDOCINFO_PDF_ACTION ), maDocInfo( rDocInfo ) {}
-    virtual				~MetaSetDocInfoPDFAction() {}
-
-    const ::vcl::PDFDocInfo&	GetDocInfo() const { return maDocInfo; }
 };
 
 class SAL_DLLPRIVATE MetaSetLocalePDFAction : public MetaAction
@@ -603,15 +589,15 @@ public:
 #endif	// USE_JAVA && MACOSX
 
 using namespace vcl;
-
+ 
 #if defined USE_JAVA && defined MACOSX
 
 static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
 {
-    for ( ULONG i = 0, nCount = rMtf.GetActionCount(); i < nCount; i++ )
+    for ( sal_uLong i = 0, nCount = rMtf.GetActionCount(); i < nCount; i++ )
     {
         const MetaAction *pAction = rMtf.GetAction( i );
-        const USHORT nType = pAction->GetType();
+        const sal_uInt16 nType = pAction->GetType();
 
         switch( nType )
         {
@@ -871,7 +857,7 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
             {
                 const MetaClipRegionAction* pA = (const MetaClipRegionAction*) pAction;
                 if( pA->IsClipping() )
-                    aWriter.SetClipRegion( pA->GetRegion() );
+                    aWriter.SetClipRegion( pA->GetRegion().GetAsB2DPolyPolygon() );
                 else
                     aWriter.SetClipRegion();
             }
@@ -894,7 +880,7 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
             case( META_ISECTREGIONCLIPREGION_ACTION ):
             {
                const MetaISectRegionClipRegionAction* pA = (const MetaISectRegionClipRegionAction*) pAction;
-               aWriter.IntersectClipRegion( pA->GetRegion() );
+               aWriter.IntersectClipRegion( pA->GetRegion().GetAsB2DPolyPolygon() );
             }
             break;
 
@@ -1157,13 +1143,6 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
             }
             break;
 
-            case( META_SETDOCINFO_PDF_ACTION ):
-            {
-                const MetaSetDocInfoPDFAction* pA = (const MetaSetDocInfoPDFAction*) pAction;
-                aWriter.SetDocInfo( pA->GetDocInfo() );
-            }
-            break;
-
             case( META_SETLOCALE_PDF_ACTION ):
             {
                 const MetaSetLocalePDFAction* pA = (const MetaSetLocalePDFAction*) pAction;
@@ -1198,9 +1177,9 @@ PDFWriter::AnyWidget::~AnyWidget()
 {
 }
 
-PDFWriter::PDFWriter( const PDFWriter::PDFWriterContext& rContext )
+PDFWriter::PDFWriter( const PDFWriter::PDFWriterContext& rContext, const com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >& xEnc )
         :
-        pImplementation( new PDFWriterImpl( rContext ) )
+        pImplementation( new PDFWriterImpl( rContext, xEnc, *this ) )
 {
 }
 
@@ -1232,13 +1211,15 @@ bool PDFWriter::Emit()
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() && ((PDFWriterImpl*)pImplementation)->emit() )
     {
         GDIMetaFile aMtf( ((PDFWriterImpl*)pImplementation)->getReplayMetaFile() );
-        PDFWriterContext aContext( ((PDFWriterImpl*)pImplementation)->getContext() );
+        const PDFWriter::PDFWriterContext& rContext = ((PDFWriterImpl*)pImplementation)->getContext();
+        const com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >& rEnc = ((PDFWriterImpl*)pImplementation)->getMaterialHolder();
+        PDFWriter& rPDFWriter = ((PDFWriterImpl*)pImplementation)->getPDFWriter();
         void *pOldImplementation = pImplementation;
 
         // Fix bug 3061 by making a substitute writer and copying the actions
         // into that as the current writer seems to get mangled layouts in some
         // cases
-        PDFWriterImpl aSubstituteWriter( aContext );
+        PDFWriterImpl aSubstituteWriter( rContext, rEnc, rPDFWriter );
         pImplementation = &aSubstituteWriter;
         ReplayMetaFile( *this, aMtf );
         bRet = aSubstituteWriter.emit();
@@ -1247,7 +1228,7 @@ bool PDFWriter::Emit()
         // Now replay the same meta file into the final destination
         if ( bRet )
         {
-            PDFWriterImpl aFinalWriter( aContext, &aSubstituteWriter );
+            PDFWriterImpl aFinalWriter( rContext, rEnc, rPDFWriter, &aSubstituteWriter );
             pImplementation = &aFinalWriter;
             ReplayMetaFile( *this, aMtf );
             bRet = aFinalWriter.emit();
@@ -1264,20 +1245,6 @@ bool PDFWriter::Emit()
 PDFWriter::PDFVersion PDFWriter::GetVersion() const
 {
     return ((PDFWriterImpl*)pImplementation)->getVersion();
-}
-
-void PDFWriter::SetDocInfo( const PDFDocInfo& rInfo )
-{
-#if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetDocInfoPDFAction( rInfo ) );
-#endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setDocInfo( rInfo );
-}
-
-const PDFDocInfo& PDFWriter::GetDocInfo() const
-{
-    return ((PDFWriterImpl*)pImplementation)->getDocInfo();
 }
 
 void PDFWriter::SetDocumentLocale( const com::sun::star::lang::Locale& rLoc )
@@ -1313,7 +1280,7 @@ void PDFWriter::DrawTextLine(
                              FontStrikeout eStrikeout,
                              FontUnderline eUnderline,
                              FontUnderline eOverline,
-                             BOOL bUnderlineAbove )
+                             sal_Bool bUnderlineAbove )
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
@@ -1338,7 +1305,7 @@ void PDFWriter::DrawTextArray(
 
 void PDFWriter::DrawStretchText(
                                 const Point& rStartPt,
-                                ULONG nWidth,
+                                sal_uLong nWidth,
                                 const XubString& rStr,
                                 xub_StrLen nIndex,
                                 xub_StrLen nLen )
@@ -1353,7 +1320,7 @@ void PDFWriter::DrawStretchText(
 void PDFWriter::DrawText(
                          const Rectangle& rRect,
                          const XubString& rStr,
-                         USHORT nStyle )
+                         sal_uInt16 nStyle )
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
@@ -1407,7 +1374,7 @@ void PDFWriter::DrawRect( const Rectangle& rRect )
     ((PDFWriterImpl*)pImplementation)->drawRectangle( rRect );
 }
 
-void PDFWriter::DrawRect( const Rectangle& rRect, ULONG nHorzRound, ULONG nVertRound )
+void PDFWriter::DrawRect( const Rectangle& rRect, sal_uLong nHorzRound, sal_uLong nVertRound )
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
@@ -1552,13 +1519,16 @@ void PDFWriter::DrawBitmapEx( const Point& rDestPt, const Size& rDestSize, const
 
 void PDFWriter::DrawBitmapEx( const Point& rDestPt, const Size& rDestSize, const Point& rSrcPtPixel, const Size& rSrcSizePixel, const BitmapEx& rBitmap )
 {
-    BitmapEx aBitmap( rBitmap );
-    aBitmap.Crop( Rectangle( rSrcPtPixel, rSrcSizePixel ) );
+    if ( !!rBitmap )
+    {
+	BitmapEx aBitmap( rBitmap );
+	aBitmap.Crop( Rectangle( rSrcPtPixel, rSrcSizePixel ) );
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpExScaleAction( rDestPt, rDestSize, aBitmap ) );
+	if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
+		((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpExScaleAction( rDestPt, rDestSize, aBitmap ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, rDestSize, aBitmap );
+	((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, rDestSize, aBitmap );
+    }
 }
 
 void PDFWriter::DrawMask( const Point& rDestPt, const Bitmap& rBitmap, const Color& rMaskColor )
@@ -1577,7 +1547,7 @@ void PDFWriter::DrawMask( const Point& rDestPt, const Size& rDestSize, const Bit
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaMaskScaleAction( rDestPt, rDestSize, rBitmap, rMaskColor ) );
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaMaskAction( rDestPt, rBitmap, rMaskColor ) );
 #endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawMask( rDestPt, rDestSize, rBitmap, rMaskColor );
 }
@@ -1629,7 +1599,7 @@ void PDFWriter::DrawWallpaper( const Rectangle& rRect, const Wallpaper& rWallpap
     ((PDFWriterImpl*)pImplementation)->drawWallpaper( rRect, rWallpaper );
 }
 
-void PDFWriter::DrawTransparent( const PolyPolygon& rPolyPoly, USHORT nTransparencePercent )
+void PDFWriter::DrawTransparent( const PolyPolygon& rPolyPoly, sal_uInt16 nTransparencePercent )
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
@@ -1647,7 +1617,7 @@ void PDFWriter::BeginTransparencyGroup()
     ((PDFWriterImpl*)pImplementation)->beginTransparencyGroup();
 }
 
-void PDFWriter::EndTransparencyGroup( const Rectangle& rRect, USHORT nTransparentPercent )
+void PDFWriter::EndTransparencyGroup( const Rectangle& rRect, sal_uInt16 nTransparentPercent )
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
@@ -1665,7 +1635,7 @@ void PDFWriter::EndTransparencyGroup( const Rectangle& rRect, const Bitmap& rAlp
     ((PDFWriterImpl*)pImplementation)->endTransparencyGroup( rRect, rAlphaMask );
 }
 
-void PDFWriter::Push( USHORT nFlags )
+void PDFWriter::Push( sal_uInt16 nFlags )
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
@@ -1705,7 +1675,7 @@ void PDFWriter::SetLineColor( const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaLineColorAction( rColor, TRUE ) );
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaLineColorAction( rColor, sal_True ) );
 #endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setLineColor( rColor );
 }
@@ -1714,7 +1684,7 @@ void PDFWriter::SetFillColor( const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaFillColorAction( rColor, TRUE ) );
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaFillColorAction( rColor, sal_True ) );
 #endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setFillColor( rColor );
 }
@@ -1723,16 +1693,16 @@ void PDFWriter::SetClipRegion()
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaClipRegionAction( Region(), FALSE ) );
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaClipRegionAction( Region(), sal_False ) );
 #endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->clearClipRegion();
 }
 
-void PDFWriter::SetClipRegion( const Region& rRegion )
+void PDFWriter::SetClipRegion( const basegfx::B2DPolyPolygon& rRegion )
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaClipRegionAction( rRegion, TRUE ) );
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaClipRegionAction( Region( rRegion ), sal_True ) );
 #endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setClipRegion( rRegion );
 }
@@ -1746,11 +1716,11 @@ void PDFWriter::MoveClipRegion( long nHorzMove, long nVertMove )
     ((PDFWriterImpl*)pImplementation)->moveClipRegion( nHorzMove, nVertMove );
 }
 
-void PDFWriter::IntersectClipRegion( const Region& rRegion )
+void PDFWriter::IntersectClipRegion( const basegfx::B2DPolyPolygon& rRegion )
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaISectRegionClipRegionAction( rRegion ) );
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaISectRegionClipRegionAction( Region( rRegion ) ) );
 #endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->intersectClipRegion( rRegion );
 }
@@ -1764,7 +1734,7 @@ void PDFWriter::IntersectClipRegion( const Rectangle& rRect )
     ((PDFWriterImpl*)pImplementation)->intersectClipRegion( rRect );
 }
 
-void PDFWriter::SetAntialiasing( USHORT nMode )
+void PDFWriter::SetAntialiasing( sal_uInt16 nMode )
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
@@ -1773,11 +1743,11 @@ void PDFWriter::SetAntialiasing( USHORT nMode )
     ((PDFWriterImpl*)pImplementation)->setAntiAlias( (sal_Int32)nMode );
 }
 
-void PDFWriter::SetLayoutMode( ULONG nMode )
+void PDFWriter::SetLayoutMode( sal_uLong nMode )
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaLayoutModeAction( nMode ) );
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaLayoutModeAction( (sal_uInt32)nMode ) );
 #endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setLayoutMode( (sal_Int32)nMode );
 }
@@ -1804,7 +1774,7 @@ void PDFWriter::SetTextFillColor()
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextFillColorAction( Color( COL_TRANSPARENT ), FALSE ) );
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextFillColorAction( Color( COL_TRANSPARENT ), sal_False ) );
 #endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setTextFillColor();
 }
@@ -1813,7 +1783,7 @@ void PDFWriter::SetTextFillColor( const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextFillColorAction( rColor, TRUE ) );
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextFillColorAction( rColor, sal_True ) );
 #endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setTextFillColor( rColor );
 }
@@ -1822,7 +1792,7 @@ void PDFWriter::SetTextLineColor()
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextLineColorAction( Color( COL_TRANSPARENT ), FALSE ) );
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextLineColorAction( Color( COL_TRANSPARENT ), sal_False ) );
 #endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setTextLineColor();
 }
@@ -1831,7 +1801,7 @@ void PDFWriter::SetTextLineColor( const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextLineColorAction( rColor, TRUE ) );
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextLineColorAction( rColor, sal_True ) );
 #endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setTextLineColor( rColor );
 }
@@ -1840,7 +1810,7 @@ void PDFWriter::SetOverlineColor()
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaOverlineColorAction( Color( COL_TRANSPARENT ), FALSE ) );
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaOverlineColorAction( Color( COL_TRANSPARENT ), sal_False ) );
 #endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setOverlineColor();
 }
@@ -1849,7 +1819,7 @@ void PDFWriter::SetOverlineColor( const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaOverlineColorAction( rColor, TRUE ) );
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaOverlineColorAction( rColor, sal_True ) );
 #endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setOverlineColor( rColor );
 }
@@ -1879,6 +1849,10 @@ sal_Int32 PDFWriter::CreateLink( const Rectangle& rRect, sal_Int32 nPageNr )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateLinkPDFAction( rRect, nPageNr ) );
 #endif	// USE_JAVA && MACOSX
     return ((PDFWriterImpl*)pImplementation)->createLink( rRect, nPageNr );
+}
+sal_Int32 PDFWriter::RegisterDestReference( sal_Int32 nDestId, const Rectangle& rRect, sal_Int32 nPageNr, DestAreaType eType )
+{
+    return ((PDFWriterImpl*)pImplementation)->registerDestReference( nDestId, rRect, nPageNr, eType );
 }
 //--->i56629
 sal_Int32 PDFWriter::CreateNamedDest( const rtl::OUString& sDestName, const Rectangle& rRect, sal_Int32 nPageNr, PDFWriter::DestAreaType eType )
@@ -2119,3 +2093,18 @@ std::set< PDFWriter::ErrorCode > PDFWriter::GetErrors()
 {
     return ((PDFWriterImpl*)pImplementation)->getErrors();
 }
+
+com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >
+PDFWriter::InitEncryption( const rtl::OUString& i_rOwnerPassword,
+                           const rtl::OUString& i_rUserPassword,
+                           bool b128Bit
+                          )
+{
+    return PDFWriterImpl::initEncryption( i_rOwnerPassword, i_rUserPassword, b128Bit );
+}
+
+void PDFWriter::PlayMetafile( const GDIMetaFile& i_rMTF, const vcl::PDFWriter::PlayMetafileContext& i_rPlayContext, PDFExtOutDevData* i_pData )
+{
+    ((PDFWriterImpl*)pImplementation)->playMetafile( i_rMTF, i_pData, i_rPlayContext, NULL);
+}
+

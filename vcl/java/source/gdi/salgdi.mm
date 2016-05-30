@@ -33,14 +33,16 @@
  *
  ************************************************************************/
 
-#include <salgdi.h>
-#include <saldata.hxx>
-#include <salinst.h>
 #include <basegfx/polygon/b2dpolygon.hxx>
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
+#undef check
+
+#include "java/saldata.hxx"
+#include "java/salgdi.h"
+#include "java/salinst.h"
 
 class SAL_DLLPRIVATE JavaSalGraphicsCopyLayerOp : public JavaSalGraphicsOp
 {
@@ -621,9 +623,19 @@ void JavaSalGraphics::GetResolution( sal_Int32& rDPIX, sal_Int32& rDPIY )
 
 // -----------------------------------------------------------------------
 
-USHORT JavaSalGraphics::GetBitCount()
+sal_uInt16 JavaSalGraphics::GetBitCount()
 {
 	return 32;
+}
+
+// -----------------------------------------------------------------------
+
+long JavaSalGraphics::GetGraphicsWidth() const
+{
+	if ( mpFrame )
+		return mpFrame->maGeometry.nWidth;
+	else
+		return 0;
 }
 
 // -----------------------------------------------------------------------
@@ -639,58 +651,46 @@ void JavaSalGraphics::ResetClipRegion()
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::BeginSetClipRegion( ULONG nRectCount )
+bool JavaSalGraphics::setClipRegion( const Region& rRegion )
 {
-	ResetClipRegion();
-}
-
-// -----------------------------------------------------------------------
-
-BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeight )
-{
-	BOOL bRet = TRUE;
-
-	CGRect aRect = UnflipFlippedRect( CGRectMake( nX, nY, nWidth, nHeight ), maNativeBounds );
-	if ( !CGRectIsEmpty( aRect ) )
+	if ( maNativeClipPath )
 	{
-		if ( !maNativeClipPath )
-			maNativeClipPath = CGPathCreateMutable();
-
-		if ( maNativeClipPath )
-			CGPathAddRect( maNativeClipPath, NULL, aRect );
+		CFRelease( maNativeClipPath );
+		maNativeClipPath = NULL;
 	}
 
-	return bRet;
-}
-
-// -----------------------------------------------------------------------
-
-bool JavaSalGraphics::unionClipRegion( const ::basegfx::B2DPolyPolygon& rPolyPoly )
-{
-	bool bRet = true;
-
-	const sal_uInt32 nPoly = rPolyPoly.count();
-	if ( nPoly )
+	maNativeClipPath = CGPathCreateMutable();
+	if ( maNativeClipPath )
 	{
-		if ( !maNativeClipPath )
-			maNativeClipPath = CGPathCreateMutable();
-
-		if ( maNativeClipPath )
+		if ( rRegion.HasPolyPolygonOrB2DPolyPolygon() )
 		{
-			CGMutablePathRef aCGPath = CGPathCreateMutable();
-			AddPolyPolygonToPaths( aCGPath, rPolyPoly, maNativeBounds );
-			CGPathAddPath( maNativeClipPath, NULL, aCGPath );
-			CFRelease( aCGPath );
+			const ::basegfx::B2DPolyPolygon aPolyPoly = rRegion.GetAsB2DPolyPolygon();
+			const sal_uInt32 nPoly = aPolyPoly.count();
+			if ( nPoly )
+			{
+				CGMutablePathRef aCGPath = CGPathCreateMutable();
+				AddPolyPolygonToPaths( aCGPath, aPolyPoly, maNativeBounds );
+				CGPathAddPath( maNativeClipPath, NULL, aCGPath );
+				CFRelease( aCGPath );
+			}
+		}
+		else
+		{
+			RectangleVector aRects;
+			rRegion.GetRegionRectangles( aRects );
+			for ( RectangleVector::const_iterator it = aRects.begin(); it != aRects.end(); ++it )
+			{
+				if ( !(*it).IsEmpty() )
+				{
+					CGRect aRect = UnflipFlippedRect( CGRectMake( (*it).Left(), (*it).Top(), (*it).GetWidth(), (*it).GetHeight() ), maNativeBounds );
+					if ( !CGRectIsEmpty( aRect ) )
+						CGPathAddRect( maNativeClipPath, NULL, aRect );
+				}
+			}
 		}
 	}
 
-	return bRet;
-}
-
-// -----------------------------------------------------------------------
-
-void JavaSalGraphics::EndSetClipRegion()
-{
+	return true;
 }
 
 // -----------------------------------------------------------------------
@@ -872,7 +872,7 @@ bool JavaSalGraphics::drawAlphaRect( long nX, long nY, long nWidth, long nHeight
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
+void JavaSalGraphics::drawPolyLine( sal_uInt32 nPoints, const SalPoint* pPtAry )
 {
 	if ( mnLineColor && nPoints && pPtAry )
 	{
@@ -881,7 +881,7 @@ void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 		{
 			CGPoint aUnflippedPoint = UnflipFlippedPoint( CGPointMake( pPtAry[ 0 ].mnX, pPtAry[ 0 ].mnY ), maNativeBounds );
 			CGPathMoveToPoint( aPath, NULL, aUnflippedPoint.x, aUnflippedPoint.y );
-			for ( ULONG i = 1 ; i < nPoints; i++ )
+			for ( sal_uInt32 i = 1 ; i < nPoints; i++ )
 			{
 				aUnflippedPoint = UnflipFlippedPoint( CGPointMake( pPtAry[ i ].mnX, pPtAry[ i ].mnY ), maNativeBounds );
 				CGPathAddLineToPoint( aPath, NULL, aUnflippedPoint.x, aUnflippedPoint.y );
@@ -894,7 +894,7 @@ void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
+void JavaSalGraphics::drawPolygon( sal_uInt32 nPoints, const SalPoint* pPtAry )
 {
 	if ( ( mnFillColor || mnLineColor ) && nPoints && pPtAry )
 	{
@@ -903,7 +903,7 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 		{
 			CGPoint aUnflippedPoint = UnflipFlippedPoint( CGPointMake( pPtAry[ 0 ].mnX, pPtAry[ 0 ].mnY ), maNativeBounds );
 			CGPathMoveToPoint( aPath, NULL, aUnflippedPoint.x, aUnflippedPoint.y );
-			for ( ULONG i = 1 ; i < nPoints; i++ )
+			for ( sal_uInt32 i = 1 ; i < nPoints; i++ )
 			{
 				aUnflippedPoint = UnflipFlippedPoint( CGPointMake( pPtAry[ i ].mnX, pPtAry[ i ].mnY ), maNativeBounds );
 				CGPathAddLineToPoint( aPath, NULL, aUnflippedPoint.x, aUnflippedPoint.y );
@@ -1008,7 +1008,7 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 
 // -----------------------------------------------------------------------
 
-bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::basegfx::B2DVector& rLineWidths, ::basegfx::B2DLineJoin eLineJoin )
+bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, double /* fTransparency */, const ::basegfx::B2DVector& rLineWidths, basegfx::B2DLineJoin eLineJoin, com::sun::star::drawing::LineCap /* nLineCap */ )
 {
 	bool bRet = true;
 
@@ -1031,30 +1031,30 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalGraphics::drawPolyLineBezier( ULONG nPoints, const SalPoint* pPtAry, const BYTE* pFlgAry )
+sal_Bool JavaSalGraphics::drawPolyLineBezier( sal_uInt32 /* nPoints */, const SalPoint* /* pPtAry */, const sal_uInt8* /* pFlgAry */ )
 {
 	return sal_False;
 }
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalGraphics::drawPolygonBezier( ULONG nPoints, const SalPoint* pPtAry, const BYTE* pFlgAry )
+sal_Bool JavaSalGraphics::drawPolygonBezier( sal_uInt32 /* nPoints */, const SalPoint* /* pPtAry */, const sal_uInt8* /* pFlgAry */ )
 {
 	return sal_False;
 }
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalGraphics::drawPolyPolygonBezier( sal_uInt32 nPoly, const sal_uInt32* nPoints, const SalPoint* const* pPtAry, const BYTE* const* pFlgAry )
+sal_Bool JavaSalGraphics::drawPolyPolygonBezier( sal_uInt32 /* nPoly */, const sal_uInt32* /* nPoints */, const SalPoint* const* /* pPtAry */, const sal_uInt8* const* /* pFlgAry */ )
 {
 	return sal_False;
 }
 
 // -----------------------------------------------------------------------
 
-BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void* pPtr, ULONG nSize )
+sal_Bool JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void* pPtr, sal_uLong nSize )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	if ( pPtr && nSize )
 	{
@@ -1072,7 +1072,7 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 				CFRelease( aData );
 			}
 
-			bRet = TRUE;
+			bRet = sal_True;
 		}
 	}
 
@@ -1081,17 +1081,7 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 
 // -----------------------------------------------------------------------
 
-long JavaSalGraphics::GetGraphicsWidth() const
-{
-	if ( mpFrame )
-		return mpFrame->maGeometry.nWidth;
-	else
-		return 0;
-}
-
-// -----------------------------------------------------------------------
-
-void JavaSalGraphics::setLineTransparency( sal_uInt8 nTransparency )
+void JavaSalGraphics::setLineTransparency( sal_uInt16 nTransparency )
 {
 	if ( nTransparency > 100 )
 		nTransparency = 100;
@@ -1105,7 +1095,7 @@ void JavaSalGraphics::setLineTransparency( sal_uInt8 nTransparency )
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::setFillTransparency( sal_uInt8 nTransparency )
+void JavaSalGraphics::setFillTransparency( sal_uInt16 nTransparency )
 {
 	if ( nTransparency > 100 )
 		nTransparency = 100;
@@ -1291,7 +1281,7 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext, CGRect aBound
 
 // -----------------------------------------------------------------------
 
-ULONG JavaSalGraphics::getBitmapDirectionFormat()
+sal_uLong JavaSalGraphics::getBitmapDirectionFormat()
 {
 	return JavaSalBitmap::GetNativeDirectionFormat();
 }
@@ -1606,8 +1596,8 @@ CGContextRef JavaSalGraphicsOp::saveClipXORGState( JavaSalGraphics *pGraphics, C
 					mnBitmapCapacity = nScanlineSize * aBitmapSize.height;
 					try
 					{
-						mpDrawBits = new BYTE[ mnBitmapCapacity ];
-						mpXORBits = new BYTE[ mnBitmapCapacity ];
+						mpDrawBits = new sal_uInt8[ mnBitmapCapacity ];
+						mpXORBits = new sal_uInt8[ mnBitmapCapacity ];
 					}
 					catch( const std::bad_alloc& ) {}
 

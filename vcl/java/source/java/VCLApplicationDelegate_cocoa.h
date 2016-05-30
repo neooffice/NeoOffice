@@ -41,39 +41,39 @@
 #include <postmac.h>
 
 @interface VCLMainMenuDidEndTracking : NSObject
-+ (void)mainMenuDidEndTracking:(MacOSBOOL)bNoDelay;
++ (void)mainMenuDidEndTracking:(BOOL)bNoDelay;
 - (void)handlePendingMainMenuChanges:(id)pObject;
 @end
 
-@interface VCLApplicationDelegate : NSObject
+@interface VCLApplicationDelegate : NSObject <NSApplicationDelegate, NSMenuDelegate>
 {
-	MacOSBOOL				mbAppMenuInitialized;
-	MacOSBOOL				mbCancelTracking;
+	BOOL					mbAppMenuInitialized;
+	BOOL					mbCancelTracking;
 	id						mpDelegate;
 	NSMenu*					mpDockMenu;
-	MacOSBOOL				mbInTermination;
-	MacOSBOOL				mbInTracking;
+	BOOL					mbInTermination;
+	BOOL					mbInTracking;
 }
 + (VCLApplicationDelegate *)sharedDelegate;
 - (void)addMenuBarItem:(NSNotification *)pNotification;
-- (MacOSBOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
-- (MacOSBOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
+- (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
+- (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
 - (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification;
 - (NSMenu *)applicationDockMenu:(NSApplication *)pApplication;
-- (MacOSBOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(MacOSBOOL)bFlag;
-- (MacOSBOOL)applicationShouldOpenUntitledFile:(NSApplication *)pSender;
+- (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
+- (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)pSender;
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification;
 - (void)cancelTermination;
 - (void)dealloc;
 - (id)init;
-- (MacOSBOOL)isInTracking;
+- (BOOL)isInTracking;
 - (void)menuNeedsUpdate:(NSMenu *)pMenu;
 - (void)setDelegate:(id)pDelegate;
 - (void)showAbout;
 - (void)showPreferences;
 - (void)trackMenuBar:(NSNotification *)pNotification;
-- (MacOSBOOL)validateMenuItem:(NSMenuItem *)pMenuItem;
+- (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem;
 @end
 
 #endif

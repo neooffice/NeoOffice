@@ -33,13 +33,14 @@
  *
  ************************************************************************/
 
-#include <salgdi.h>
-#include <salbmp.h>
-#include <salinst.h>
-#include <vcl/salwtype.hxx>
+#include <basegfx/polygon/b2dpolygon.hxx>
 #include <vcl/sysdata.hxx>
 #include <vcl/bmpacc.hxx>
-#include <basegfx/polygon/b2dpolygon.hxx>
+
+#include "salwtype.hxx"
+#include "java/salbmp.h"
+#include "java/salgdi.h"
+#include "java/salinst.h"
 
 using namespace osl;
 using namespace vcl;
@@ -108,7 +109,7 @@ void JavaSalGraphicsDrawImageOp::drawOp( JavaSalGraphics *pGraphics, CGContextRe
 
 // =======================================================================
 
-void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGraphics )
+void JavaSalGraphics::copyBits( const SalTwoRect& rPosAry, SalGraphics* pSrcGraphics )
 {
 	JavaSalGraphics *pJavaSrcGraphics = (JavaSalGraphics *)pSrcGraphics;
 	if ( !pJavaSrcGraphics )
@@ -121,28 +122,28 @@ void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGrap
 	if ( mpPrinter )
 	{
 		SalTwoRect aPosAry;
-		memcpy( &aPosAry, pPosAry, sizeof( SalTwoRect ) );
+		memcpy( &aPosAry, &rPosAry, sizeof( SalTwoRect ) );
 
-		JavaSalBitmap *pBitmap = (JavaSalBitmap *)pJavaSrcGraphics->getBitmap( pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight );
+		JavaSalBitmap *pBitmap = (JavaSalBitmap *)pJavaSrcGraphics->getBitmap( rPosAry.mnSrcX, rPosAry.mnSrcY, rPosAry.mnSrcWidth, rPosAry.mnSrcHeight );
 		if ( pBitmap )
 		{
 			aPosAry.mnSrcX = 0;
 			aPosAry.mnSrcY = 0;
-			drawBitmap( &aPosAry, *pBitmap );
+			drawBitmap( aPosAry, *pBitmap );
 			delete pBitmap;
 		}
 	}
 	else
 	{
-		CGRect aUnflippedSrcRect = UnflipFlippedRect( CGRectMake( pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight ), pJavaSrcGraphics->maNativeBounds );
-		CGRect aUnflippedDestRect = UnflipFlippedRect( CGRectMake( pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight ), maNativeBounds );
+		CGRect aUnflippedSrcRect = UnflipFlippedRect( CGRectMake( rPosAry.mnSrcX, rPosAry.mnSrcY, rPosAry.mnSrcWidth, rPosAry.mnSrcHeight ), pJavaSrcGraphics->maNativeBounds );
+		CGRect aUnflippedDestRect = UnflipFlippedRect( CGRectMake( rPosAry.mnDestX, rPosAry.mnDestY, rPosAry.mnDestWidth, rPosAry.mnDestHeight ), maNativeBounds );
 		copyFromGraphics( pJavaSrcGraphics, aUnflippedSrcRect, aUnflippedDestRect, true );
 	}
 }
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY, long nSrcWidth, long nSrcHeight, USHORT nFlags )
+void JavaSalGraphics::copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY, long nSrcWidth, long nSrcHeight, sal_uInt16 /* nFlags */ )
 {
 	// Don't do anything if this is a printer
 	if ( mpPrinter )
@@ -155,12 +156,12 @@ void JavaSalGraphics::copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rSalBitmap )
+void JavaSalGraphics::drawBitmap( const SalTwoRect& rPosAry, const SalBitmap& rSalBitmap )
 {
 	JavaSalBitmap *pJavaSalBitmap = (JavaSalBitmap *)&rSalBitmap;
 
 	SalTwoRect aPosAry;
-	memcpy( &aPosAry, pPosAry, sizeof( SalTwoRect ) );
+	memcpy( &aPosAry, &rPosAry, sizeof( SalTwoRect ) );
 
 	// Adjust the source and destination to eliminate unnecessary copying
 	float fScaleX = (float)aPosAry.mnDestWidth / aPosAry.mnSrcWidth;
@@ -235,7 +236,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 	}
 	else
 	{
-		BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
+		BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( true );
 		if ( pSrcBuffer )
 		{
 			if ( pSrcBuffer->mpBits )
@@ -267,14 +268,14 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 				}
 			}
 
-			pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
+			pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, true );
 		}
 	}
 }
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rSalBitmap, SalColor nTransparentColor )
+void JavaSalGraphics::drawBitmap( const SalTwoRect& rPosAry, const SalBitmap& rSalBitmap, SalColor nTransparentColor )
 {
 	// Don't do anything if this is a printer
 	if ( mpPrinter )
@@ -283,7 +284,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 	JavaSalBitmap *pJavaSalBitmap = (JavaSalBitmap *)&rSalBitmap;
 
 	SalTwoRect aPosAry;
-	memcpy( &aPosAry, pPosAry, sizeof( SalTwoRect ) );
+	memcpy( &aPosAry, &rPosAry, sizeof( SalTwoRect ) );
 
 	// Adjust the source and destination to eliminate unnecessary copying
 	float fScaleX = (float)aPosAry.mnDestWidth / aPosAry.mnSrcWidth;
@@ -349,7 +350,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 
 	// Scale the bitmap if necessary and always make a copy so that we can
 	// mask out the appropriate bits
-	BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
+	BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( true );
 	if ( pSrcBuffer )
 	{
 		BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | getBitmapDirectionFormat() );
@@ -385,13 +386,13 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 			delete pDestBuffer;
 		}
 
-		pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
+		pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, true );
 	}
 }
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rSalBitmap, const SalBitmap& rTransparentBitmap )
+void JavaSalGraphics::drawBitmap( const SalTwoRect& rPosAry, const SalBitmap& rSalBitmap, const SalBitmap& rTransparentBitmap )
 {
 	// Don't do anything if this is a printer
 	if ( mpPrinter )
@@ -401,7 +402,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 	JavaSalBitmap *pTransJavaSalBitmap = (JavaSalBitmap *)&rTransparentBitmap;
 
 	SalTwoRect aPosAry;
-	memcpy( &aPosAry, pPosAry, sizeof( SalTwoRect ) );
+	memcpy( &aPosAry, &rPosAry, sizeof( SalTwoRect ) );
 
 	// Adjust the source and destination to eliminate unnecessary copying
 	float fScaleX = (float)aPosAry.mnDestWidth / aPosAry.mnSrcWidth;
@@ -467,7 +468,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 
 	// Scale the bitmap if necessary and always make a copy so that we can
 	// mask out the appropriate bits
-	BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
+	BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( true );
 	if ( pSrcBuffer )
 	{
 		BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | getBitmapDirectionFormat() );
@@ -475,7 +476,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		{
 			if ( pDestBuffer->mpBits )
 			{
-				BitmapBuffer *pTransSrcBuffer = pTransJavaSalBitmap->AcquireBuffer( TRUE );
+				BitmapBuffer *pTransSrcBuffer = pTransJavaSalBitmap->AcquireBuffer( true );
 				if ( pTransSrcBuffer )
 				{
 					// Fix bug 2475 by handling the case where the
@@ -512,7 +513,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 								{
 									if ( bTransPixels && j < pTransDestBuffer->mnWidth )
 									{
-										BitmapColor aColor( pTransDestBuffer->maPalette[ pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask ) ] );
+										BitmapColor aColor( pTransDestBuffer->maPalette[ pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask ).GetIndex() ] );
 										if ( ( MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000 ) != 0xff000000 )
 											pBits[ j ] = 0x00000000;
 									}
@@ -543,7 +544,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 						delete pTransDestBuffer;
 					}
 
-					pTransJavaSalBitmap->ReleaseBuffer( pTransSrcBuffer, TRUE );
+					pTransJavaSalBitmap->ReleaseBuffer( pTransSrcBuffer, true );
 				}
 
 				if ( pDestBuffer->mpBits )
@@ -553,13 +554,13 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 			delete pDestBuffer;
 		}
 
-		pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
+		pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, true );
 	}
 }
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSalBitmap, SalColor nMaskColor )
+void JavaSalGraphics::drawMask( const SalTwoRect& rPosAry, const SalBitmap& rSalBitmap, SalColor nMaskColor )
 {
 	// Don't do anything if this is a printer
 	if ( mpPrinter )
@@ -568,7 +569,7 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 	JavaSalBitmap *pJavaSalBitmap = (JavaSalBitmap *)&rSalBitmap;
 
 	SalTwoRect aPosAry;
-	memcpy( &aPosAry, pPosAry, sizeof( SalTwoRect ) );
+	memcpy( &aPosAry, &rPosAry, sizeof( SalTwoRect ) );
 
 	// Adjust the source and destination to eliminate unnecessary copying
 	float fScaleX = (float)aPosAry.mnDestWidth / aPosAry.mnSrcWidth;
@@ -634,7 +635,7 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 
 	// Scale the bitmap if necessary and always make a copy so that we can
 	// mask out the appropriate bits
-	BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
+	BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( true );
 	if ( pSrcBuffer )
 	{
 		BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | getBitmapDirectionFormat() );
@@ -672,7 +673,7 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 			delete pDestBuffer;
 		}
 
-		pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
+		pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, true );
 	}
 }
 
@@ -783,7 +784,7 @@ void JavaSalGraphics::invert( long nX, long nY, long nWidth, long nHeight, SalIn
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert nFlags )
+void JavaSalGraphics::invert( sal_uInt32 nPoints, const SalPoint* pPtAry, SalInvert nFlags )
 {
 	// Don't do anything if this is a printer
 	if ( mpPrinter )
@@ -792,7 +793,7 @@ void JavaSalGraphics::invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert n
 	if ( nPoints && pPtAry )
 	{
 		::basegfx::B2DPolygon aPoly;
-		for ( ULONG i = 0 ; i < nPoints; i++ )
+		for ( sal_uInt32 i = 0 ; i < nPoints; i++ )
 			aPoly.append( ::basegfx::B2DPoint( pPtAry[ i ].mnX, pPtAry[ i ].mnY ) );
 		aPoly.removeDoublePoints();
 		aPoly.setClosed( true );
@@ -908,7 +909,7 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 		return true;
 
 	// Always make a copy so that we can mask out the appropriate bits
-	BitmapBuffer *pTransSrcBuffer = pTransJavaSalBitmap->AcquireBuffer( TRUE );
+	BitmapBuffer *pTransSrcBuffer = pTransJavaSalBitmap->AcquireBuffer( true );
 	if ( pTransSrcBuffer )
 	{
 		SalTwoRect aCopyPosAry;
@@ -940,7 +941,7 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 		{
 			if ( pTransDestBuffer->mpBits )
 			{
-				BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
+				BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( true );
 				if ( pSrcBuffer )
 				{
 					BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, JavaSalBitmap::Get32BitNativeFormat() | getBitmapDirectionFormat() );
@@ -960,7 +961,7 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 								{
 									if ( bTransPixels && j < pTransDestBuffer->mnWidth )
 									{
-										BYTE nAlpha = ~pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask );
+										sal_uInt8 nAlpha = ~pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask ).GetIndex();
 										if ( !nAlpha )
 										{
 											pBits[ j ] = 0x00000000;
@@ -970,7 +971,7 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 											// Fix bugs 2549 and 2576 by
 											// premultiplying the colors
 											float fTransPercent = (float)nAlpha / 0xff;
-											pBits[ j ] =  ( ( (SalColor)( (BYTE)( pBits[ j ] >> 24 ) * fTransPercent ) << 24 ) & 0xff000000 ) | ( ( (SalColor)( (BYTE)( pBits[ j ] >> 16 ) * fTransPercent ) << 16 ) & 0x00ff0000 )  | ( ( (SalColor)( (BYTE)( pBits[ j ] >> 8 ) * fTransPercent ) << 8 ) & 0x0000ff00 )  | ( (SalColor)( (BYTE)( pBits[ j ] ) * fTransPercent ) & 0x000000ff );
+											pBits[ j ] =  ( ( (SalColor)( (sal_uInt8)( pBits[ j ] >> 24 ) * fTransPercent ) << 24 ) & 0xff000000 ) | ( ( (SalColor)( (sal_uInt8)( pBits[ j ] >> 16 ) * fTransPercent ) << 16 ) & 0x00ff0000 )  | ( ( (SalColor)( (sal_uInt8)( pBits[ j ] >> 8 ) * fTransPercent ) << 8 ) & 0x0000ff00 )  | ( (SalColor)( (sal_uInt8)( pBits[ j ] ) * fTransPercent ) & 0x000000ff );
 										}
 									}
 									else
@@ -1002,7 +1003,7 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 						delete pCopyBuffer;
 					}
 
-					pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
+					pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, true );
 				}
 
 				delete[] pTransDestBuffer->mpBits;
@@ -1011,10 +1012,20 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 			delete pTransDestBuffer;
 		}
 
-		pTransJavaSalBitmap->ReleaseBuffer( pTransSrcBuffer, TRUE );
+		pTransJavaSalBitmap->ReleaseBuffer( pTransSrcBuffer, true );
 	}
 
 	return true;
+}
+
+// -----------------------------------------------------------------------
+
+bool JavaSalGraphics::drawTransformedBitmap( const basegfx::B2DPoint& /* rNull */, const basegfx::B2DPoint& /* rX */, const basegfx::B2DPoint& /* rY */, const SalBitmap& /* rSourceBitmap */, const SalBitmap* /* pAlphaBitmap */ )
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalGraphics::drawTransformedBitmap not implemented\n" );
+#endif
+	return false;
 }
 
 // -----------------------------------------------------------------------
@@ -1041,8 +1052,23 @@ bool JavaSalGraphics::supportsOperation( OutDevSupportType eType ) const
 
 SystemGraphicsData JavaSalGraphics::GetGraphicsData() const
 {
-	SystemGraphicsData aRes;
-	aRes.nSize = sizeof( SystemGraphicsData );
-	aRes.rCGContext = NULL;
-	return aRes; 
+	SystemGraphicsData aRet;
+	memset( &aRet, 0, sizeof( SystemGraphicsData ) );
+	aRet.nSize = sizeof( SystemGraphicsData );
+	aRet.rCGContext = NULL;
+	return aRet;
+}
+
+// -----------------------------------------------------------------------
+
+SystemFontData JavaSalGraphics::GetSysFontData( int /* nFallbacklevel */ ) const
+{
+	SystemFontData aRet;
+	memset( &aRet, 0, sizeof( SystemFontData ) );
+	aRet.nSize = sizeof( SystemFontData );
+
+	if ( mpFont )
+		aRet.bAntialias = mpFont->isAntialiased();
+
+	return aRet;
 }

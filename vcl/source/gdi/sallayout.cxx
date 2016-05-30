@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified February 2006 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
@@ -36,18 +39,16 @@
 #include <math.h>
 #include <sal/alloca.h>
 
-#ifndef _SV_SVSYS_HXX
-#include <svsys.h>
-#endif
-#include <vcl/salgdi.hxx>
-#include <vcl/sallayout.hxx>
+#include <salgdi.hxx>
+#include <sallayout.hxx>
+
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
+#include <basegfx/matrix/b2dhommatrixtools.hxx>
+
 #include <i18npool/lang.h>
 
-#ifndef _TL_DEBUG_HXX
 #include <tools/debug.hxx>
-#endif
 
 #include <limits.h>
 
@@ -62,16 +63,30 @@
 
 #include <algorithm>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX && !defined USE_SUBPIXEL_TEXT_RENDERING
+#include "java/salatslayout.hxx"
+#endif	// USE_JAVA && MACOSX && !USE_SUBPIXEL_TEXT_RENDERING
 
-#if !defined USE_SUBPIXEL_TEXT_RENDERING && defined MACOSX
-#ifndef _SV_SALATSLAYOUT_HXX
-#include <salatslayout.hxx>
+#ifdef DEBUG
+//#define MULTI_SL_DEBUG
 #endif
-#endif	// !USE_SUBPIXEL_TEXT_RENDERING && MACOSX
 
-#endif	// USE_JAVA
-
+#ifdef MULTI_SL_DEBUG
+#include <string>
+FILE * mslLogFile = NULL;
+FILE * mslLog()
+{
+#ifdef MSC
+	std::string logFileName(getenv("TEMP"));
+	logFileName.append("\\msllayout.log");
+    if (mslLogFile == NULL) mslLogFile = fopen(logFileName.c_str(),"w");
+    else fflush(mslLogFile);
+    return mslLogFile;
+#else
+    return stdout;
+#endif
+}
+#endif
 // =======================================================================
 
 // TODO: ask the glyph directly, for now we need this method because of #i99367#
@@ -84,11 +99,12 @@ bool IsDiacritic( sal_UCS4 nChar )
  	if( nChar >= 0x2100 )
 		return false;
 
+	// TODO: #i105058# use icu uchar.h's character classification instead of the handcrafted table
 	struct DiaRange { sal_UCS4 mnMin, mnEnd;};
 	static const DiaRange aRanges[] = {
 		{0x0300, 0x0370},
-		{0x0590, 0x05C0}, {0x05C1, 0x05C3}, {0x05C3, 0x05C6}, {0x05C7, 0x05C8},
-		{0x0610, 0x061B}, {0x064B, 0x0660}, {0x0670, 0x0671}, {0x06D6, 0x06DC}, {0x06DF, 0x06EE},
+		{0x0590, 0x05BE}, {0x05BF, 0x05C0}, {0x05C1, 0x05C3}, {0x05C4, 0x05C6}, {0x05C7, 0x05C8},
+		{0x0610, 0x061B}, {0x064B, 0x0660}, {0x0670, 0x0671}, {0x06D6, 0x06DD}, {0x06DF, 0x06E5}, {0x06E7, 0x06E9}, {0x06EA,0x06EF},
 		{0x0730, 0x074D}, {0x07A6, 0x07B1}, {0x07EB, 0x07F4},
 #if 0 // all known fonts have zero-width diacritics already, so no need to query it
 		{0x0900, 0x0904}, {0x093C, 0x093D}, {0x0941, 0x0948}, {0x094D, 0x0950}, {0x0951, 0x0958},
@@ -96,7 +112,8 @@ bool IsDiacritic( sal_UCS4 nChar )
 		{0x0A00, 0x0A05}, {0x0A3C, 0x0A59}, //...
 #endif
 		{0x1DC0, 0x1E00},
-		{0x205F, 0x2070}, {0x20D0, 0x2100}
+		{0x205F, 0x2070}, {0x20D0, 0x2100},
+		{0xFB1E, 0xFB1F}
 	};
 
 	// TODO: almost anything is faster than an O(n) search
@@ -122,13 +139,12 @@ int GetVerticalFlags( sal_UCS4 nChar )
         /* #i52932# remember:
          nChar == 0x2010 || nChar == 0x2015
          nChar == 0x2016 || nChar == 0x2026
-
-         are GF_NONE also, but already handled in the first if
+         are GF_NONE also, but already handled in the outer if condition
         */
         if((nChar >= 0x3008 && nChar <= 0x301C && nChar != 0x3012)
-        ||  nChar == 0xFF3B || nChar == 0xFF3D
+        || (nChar == 0xFF3B || nChar == 0xFF3D)
         || (nChar >= 0xFF5B && nChar <= 0xFF9F) // halfwidth forms
-        ||  nChar == 0xFFE3 )
+        || (nChar == 0xFFE3) )
             return GF_NONE; // not rotated
 #ifndef USE_JAVA
         else if( nChar == 0x30fc )
@@ -136,8 +152,10 @@ int GetVerticalFlags( sal_UCS4 nChar )
 #endif	// !USE_JAVA
         return GF_ROTL;     // left
     }
+    else if( (nChar >= 0x20000) && (nChar <= 0x3FFFF) ) // all SIP/TIP ideographs
+        return GF_ROTL; // left
 
-    return GF_NONE;
+    return GF_NONE; // not rotated as default
 }
 
 // -----------------------------------------------------------------------
@@ -400,6 +418,11 @@ inline bool IsControlChar( sal_UCS4 cChar )
     // byte order markers and invalid unicode
     if( (cChar == 0xFEFF) || (cChar == 0xFFFE) || (cChar == 0xFFFF) )
         return true;
+	// variation selectors
+	if( (0xFE00 <= cChar) && (cChar <= 0xFE0F) )
+		return true;
+	if( (0xE0100 <= cChar) && (cChar <= 0xE01EF) )
+		return true;
     return false;
 }
 
@@ -885,10 +908,8 @@ bool SalLayout::GetOutline( SalGraphics& rSalGraphics,
         {
             if( aPos.X() || aPos.Y() )
             {
-                ::basegfx::B2DHomMatrix aMatrix;
-		aMatrix.translate( aPos.X(), aPos.Y() );
-		aGlyphOutline.transform( aMatrix );
-	    }
+	    	    aGlyphOutline.transform(basegfx::tools::createTranslateB2DHomMatrix(aPos.X(), aPos.Y()));
+    	    }
 
             // insert outline at correct position
             rVector.push_back( aGlyphOutline );
@@ -952,10 +973,10 @@ bool SalLayout::IsSpacingGlyph( sal_GlyphId nGlyph ) const
 
 // -----------------------------------------------------------------------
 
-const ImplFontData* SalLayout::GetFallbackFontData( sal_GlyphId /*nGlyphId*/ ) const
+const ImplFontData* SalLayout::GetFallbackFontData( sal_GlyphId /*aGlyphId*/ ) const
 {
 #if 0
-    int nFallbackLevel = (nGlyphId & GF_FONTMASK) >> GF_FONTSHIFT
+    int nFallbackLevel = (aGlyphId & GF_FONTMASK) >> GF_FONTSHIFT
     assert( nFallbackLevel == 0 );
 #endif
     return NULL;
@@ -1169,11 +1190,11 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
 	}
 
     // calculate adjusted cluster widths
-    sal_Int32* pNewGlyphWidths = (sal_Int32*)alloca( mnGlyphCount * sizeof(long) );
+    sal_Int32* pNewGlyphWidths = (sal_Int32*)alloca( mnGlyphCount * sizeof(sal_Int32) );
     for( i = 0; i < mnGlyphCount; ++i )
         pNewGlyphWidths[ i ] = 0;
 
-#if defined USE_JAVA && defined  USE_SUBPIXEL_TEXT_RENDERING
+#if defined USE_JAVA && defined USE_SUBPIXEL_TEXT_RENDERING
     // Smooth out kerning by allocating deltas evenly within each word
     long nUnshiftedWidth = 0;
     long nUnshiftedDelta = 0;
@@ -1183,77 +1204,83 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
     for( int nCharPos = i = -1; rArgs.GetNextPos( &nCharPos, &bRTL ); )
     {
         n = nCharPos - rArgs.mnMinCharPos;
-        i = pLogCluster[ n ];
-        long nDelta = rArgs.mpDXArray[ n ] ;
-        if( n > 0 )
-            nDelta -= rArgs.mpDXArray[ n-1 ];
-        pNewGlyphWidths[ i ] += nDelta * mnUnitsPerPixel;
+        if( (n < 0) || (nCharCount <= n) )  continue;
 
-#if defined USE_JAVA && defined  USE_SUBPIXEL_TEXT_RENDERING
-        pG = mpGlyphItems + i;
-        GlyphItem* pClusterG = pG + 1;
-        int j;
-        for( j = i; ++j < mnGlyphCount; ++pClusterG )
+        if( pLogCluster[ n ] >= 0 )
+            i = pLogCluster[ n ];
+        if( i >= 0 )
         {
-            if( pClusterG->IsClusterStart() )
-                break;
-        }
+            long nDelta = rArgs.mpDXArray[ n ] ;
+            if( n > 0 )
+                nDelta -= rArgs.mpDXArray[ n-1 ];
+            pNewGlyphWidths[ i ] += nDelta * mnUnitsPerPixel;
 
-        // Fix bug 3582 by not shifting the glyph immediately to the left
-        // of a spacing glyph and by treating nonprinting characters like
-        // spaces
-        if( j == mnGlyphCount || !pG->mnGlyphIndex || ( pG->IsRTLGlyph() && rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && pG->IsKashidaAllowedAfterGlyph() ) || pG[1].IsNonprintingChar() || pG->IsNonprintingChar() || IsSpacingGlyph( pG[1].mnGlyphIndex ) || IsSpacingGlyph( pG->mnGlyphIndex ) || ( pG > mpGlyphItems && pG[-1].mnCharPos - pG->mnCharPos > 1 ) )
-        {
-            // Apply unshifted delta to previous clusters
-            if( nUnshiftedWidth && nUnshiftedDelta && pFirstUnshiftedGlyph && pFirstUnshiftedGlyph < pG )
-            {
-                pG--;
-                for( j = i - 1; pG >= pFirstUnshiftedGlyph; --j, --pG )
-                {
-                    if( pNewGlyphWidths[ j ] )
-                    {
-                        // Apply delta proportionally to width of glyph so that
-                        // glyphs following narrow characters such as "i" and
-                        // "l" will not be shifted too far left
-                        int nShift = (int)((float)pG->mnNewWidth * nUnshiftedDelta / nUnshiftedWidth );
-                        if( nShift > pNewGlyphWidths[ j ] )
-                            nShift = pNewGlyphWidths[ j ];
-                        pNewGlyphWidths[ j ] = pG->mnNewWidth + nShift;
-                        if( pNewGlyphWidths[ j ] < 0 )
-                        {
-                            nShift += pNewGlyphWidths[ j ];
-                            pNewGlyphWidths[ j ] = 0;
-                        }
-                        nUnshiftedWidth -= pG->mnNewWidth;
-                        nUnshiftedDelta -= nShift;
-                    }
-                }
-            }
-
-            nUnshiftedWidth = 0;
-            nUnshiftedDelta = 0;
-            pFirstUnshiftedGlyph = NULL;
-        }
-        else
-        {
-            if( !pFirstUnshiftedGlyph )
-                pFirstUnshiftedGlyph = pG;
-
-            // calculate original and adjusted cluster width
-            int nOldClusterWidth = pG->mnNewWidth;
-            int nNewClusterWidth = pNewGlyphWidths[ i ];
-            pClusterG = pG + 1;
+#if defined USE_JAVA && defined USE_SUBPIXEL_TEXT_RENDERING
+            pG = mpGlyphItems + i;
+            GlyphItem* pClusterG = pG + 1;
+            int j;
             for( j = i; ++j < mnGlyphCount; ++pClusterG )
             {
                 if( pClusterG->IsClusterStart() )
                     break;
-                nOldClusterWidth += pClusterG->mnNewWidth;
-                nNewClusterWidth += pNewGlyphWidths[ j ];
+           }
+
+            // Fix bug 3582 by not shifting the glyph immediately to the left
+            // of a spacing glyph and by treating nonprinting characters like
+            // spaces
+            if( j == mnGlyphCount || !pG->maGlyphId || ( pG->IsRTLGlyph() && rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && pG->IsKashidaAllowedAfterGlyph() ) || pG[1].IsNonprintingChar() || pG->IsNonprintingChar() || IsSpacingGlyph( pG[1].maGlyphId ) || IsSpacingGlyph( pG->maGlyphId ) || ( pG > mpGlyphItems && pG[-1].mnCharPos - pG->mnCharPos > 1 ) )
+            {
+                // Apply unshifted delta to previous clusters
+                if( nUnshiftedWidth && nUnshiftedDelta && pFirstUnshiftedGlyph && pFirstUnshiftedGlyph < pG )
+                {
+                    pG--;
+                    for( j = i - 1; pG >= pFirstUnshiftedGlyph; --j, --pG )
+                    {
+                        if( pNewGlyphWidths[ j ] )
+                        {
+                            // Apply delta proportionally to width of glyph so that
+                            // glyphs following narrow characters such as "i" and
+                            // "l" will not be shifted too far left
+                            int nShift = (int)((float)pG->mnNewWidth * nUnshiftedDelta / nUnshiftedWidth );
+                            if( nShift > pNewGlyphWidths[ j ] )
+                                nShift = pNewGlyphWidths[ j ];
+                            pNewGlyphWidths[ j ] = pG->mnNewWidth + nShift;
+                            if( pNewGlyphWidths[ j ] < 0 )
+                            {
+                                nShift += pNewGlyphWidths[ j ];
+                                pNewGlyphWidths[ j ] = 0;
+                            }
+                            nUnshiftedWidth -= pG->mnNewWidth;
+                            nUnshiftedDelta -= nShift;
+                        }
+                    }
+                }
+
+                nUnshiftedWidth = 0;
+                nUnshiftedDelta = 0;
+                pFirstUnshiftedGlyph = NULL;
             }
-            nUnshiftedWidth += nOldClusterWidth;
-            nUnshiftedDelta += nNewClusterWidth - nOldClusterWidth;
-        }
+            else
+            {
+                if( !pFirstUnshiftedGlyph )
+                    pFirstUnshiftedGlyph = pG;
+
+                // calculate original and adjusted cluster width
+                int nOldClusterWidth = pG->mnNewWidth;
+                int nNewClusterWidth = pNewGlyphWidths[ i ];
+                pClusterG = pG + 1;
+                for( j = i; ++j < mnGlyphCount; ++pClusterG )
+                {
+                    if( pClusterG->IsClusterStart() )
+                        break;
+                    nOldClusterWidth += pClusterG->mnNewWidth;
+                    nNewClusterWidth += pNewGlyphWidths[ j ];
+                }
+                nUnshiftedWidth += nOldClusterWidth;
+                nUnshiftedDelta += nNewClusterWidth - nOldClusterWidth;
+            }
 #endif	// USE_JAVA && USE_SUBPIXEL_TEXT_RENDERING
+        }
     }
 
     // move cluster positions using the adjusted widths
@@ -1294,7 +1321,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                 {
                     // Fix bug 823 by handling inappropriate placement of
                     // kashidas by upper layers.
-                    if( i == mnGlyphCount - 1 || pG->IsKashidaAllowedAfterGlyph() || pG[1].IsNonprintingChar() || pG->IsNonprintingChar() || IsSpacingGlyph( pG[1].mnGlyphIndex ) || IsSpacingGlyph( pG->mnGlyphIndex ) )
+                    if( i == mnGlyphCount - 1 || pG->IsKashidaAllowedAfterGlyph() || pG[1].IsNonprintingChar() || pG->IsNonprintingChar() || IsSpacingGlyph( pG[1].maGlyphId ) || IsSpacingGlyph( pG->maGlyphId ) )
                         bHandled = true;
                 }
                 else if( pG > mpGlyphItems )
@@ -1305,7 +1332,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
 
                 // Fix bug 3564 by only adjusting the next glyph if there is a
                 // valid glyph
-                if( !bHandled && i < mnGlyphCount - 1 && pG->mnGlyphIndex & GF_IDXMASK )
+                if( !bHandled && i < mnGlyphCount - 1 && pG->maGlyphId & GF_IDXMASK )
                 {
                     nNewClusterWidth -= nDiff;
                     pNewGlyphWidths[i + 1] += nDiff;
@@ -1431,10 +1458,10 @@ void GenericSalLayout::ApplyAsianKerning( const sal_Unicode* pStr, int nLength )
         {
             // ignore code ranges that are not affected by asian punctuation compression
             const sal_Unicode cHere = pStr[n];
-            if( (0x3000 != (cHere & 0xFF00)) && (0x2010 != (cHere & 0xFFF0)) || (0xFF00 != (cHere & 0xFF00)) ) 
+            if( ((0x3000 != (cHere & 0xFF00)) && (0x2010 != (cHere & 0xFFF0))) || (0xFF00 != (cHere & 0xFF00)) ) 
                 continue;
             const sal_Unicode cNext = pStr[n+1];
-            if( (0x3000 != (cNext & 0xFF00)) && (0x2010 != (cNext & 0xFFF0)) || (0xFF00 != (cNext & 0xFF00)) ) 
+            if( ((0x3000 != (cNext & 0xFF00)) && (0x2010 != (cNext & 0xFFF0))) || (0xFF00 != (cNext & 0xFF00)) ) 
                 continue;
 
             // calculate compression values
@@ -1480,9 +1507,9 @@ void GenericSalLayout::KashidaJustify( long nKashidaIndex, int nKashidaWidth )
             continue;
         // no kashida-injection for blank justified expansion either
 #ifdef USE_JAVA
-        if( !pG1->IsKashidaAllowedAfterGlyph() || pG1->IsNonprintingChar() || IsSpacingGlyph( pG1->mnGlyphIndex ) )
+        if( !pG1->IsKashidaAllowedAfterGlyph() || pG1->IsNonprintingChar() || IsSpacingGlyph( pG1->maGlyphId ) )
 #else	// USE_JAVA
-        if( IsSpacingGlyph( pG1->mnGlyphIndex ) )
+        if( IsSpacingGlyph( pG1->maGlyphId ) )
 #endif	// USE_JAVA
             continue;
 
@@ -1512,9 +1539,9 @@ void GenericSalLayout::KashidaJustify( long nKashidaIndex, int nKashidaWidth )
             continue;
         // no kashida-injection for blank justified expansion either
 #ifdef USE_JAVA
-        if( !pG1->IsKashidaAllowedAfterGlyph() || pG1->IsNonprintingChar() || IsSpacingGlyph( pG1->mnGlyphIndex ) )
+        if( !pG1->IsKashidaAllowedAfterGlyph() || pG1->IsNonprintingChar() || IsSpacingGlyph( pG1->maGlyphId ) )
 #else	// USE_JAVA
-        if( IsSpacingGlyph( pG1->mnGlyphIndex ) )
+        if( IsSpacingGlyph( pG1->maGlyphId ) )
 #endif	// USE_JAVA
             continue;
 
@@ -1652,12 +1679,12 @@ int GenericSalLayout::GetNextGlyphs( int nLen, sal_GlyphId* pGlyphs, Point& rPos
     // find more glyphs which can be merged into one drawing instruction
     int nCount = 0;
     long nYPos = pG->maLinearPos.Y();
-    long nOldFlags = pG->mnGlyphIndex;
+    long nOldFlags = pG->maGlyphId;
     for(;;)
     {
         // update return data with glyph info
         ++nCount;
-        *(pGlyphs++) = pG->mnGlyphIndex;
+        *(pGlyphs++) = pG->maGlyphId;
         if( pCharPosAry )
             *(pCharPosAry++) = pG->mnCharPos;
         if( pGlyphAdvAry )
@@ -1696,10 +1723,10 @@ int GenericSalLayout::GetNextGlyphs( int nLen, sal_GlyphId* pGlyphs, Point& rPos
             break;
 
         // stop when glyph flags change
-        if( (nOldFlags ^ pG->mnGlyphIndex) & GF_FLAGMASK )
+        if( (nOldFlags ^ pG->maGlyphId) & GF_FLAGMASK )
             break;
 
-        nOldFlags = pG->mnGlyphIndex; // &GF_FLAGMASK not needed for test above
+        nOldFlags = pG->maGlyphId; // &GF_FLAGMASK not needed for test above
     }
 
     aRelativePos.X() /= mnUnitsPerPixel;
@@ -1740,7 +1767,7 @@ void GenericSalLayout::DropGlyph( int nStart )
     if( nStart >= mnGlyphCount )
         return;
     GlyphItem* pG = mpGlyphItems + nStart;
-    pG->mnGlyphIndex = GF_DROPPED;
+    pG->maGlyphId = GF_DROPPED;
     pG->mnCharPos = -1;
 }
 
@@ -1756,7 +1783,7 @@ void GenericSalLayout::Simplify( bool bIsBase )
     const GlyphItem* pGEnd = mpGlyphItems + mnGlyphCount;
     for(; pGSrc < pGEnd; ++pGSrc )
     {
-        if( pGSrc->mnGlyphIndex == nDropMarker )
+        if( pGSrc->maGlyphId == nDropMarker )
             continue;
         if( pGDst != pGSrc )
             *pGDst = *pGSrc;
@@ -1952,12 +1979,25 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
         }
     }
 
+    // Compute rtl flags, since in some scripts glyphs/char order can be
+    // reversed for a few character sequencies e.g. Myanmar
+    std::vector<bool> vRtl(rArgs.mnEndCharPos - rArgs.mnMinCharPos, false);
+    rArgs.ResetPos();
+    bool bRtl;
+    int nRunStart, nRunEnd;
+    while (rArgs.GetNextRun(&nRunStart, &nRunEnd, &bRtl))
+    {
+        if (bRtl) std::fill(vRtl.begin() + (nRunStart - rArgs.mnMinCharPos),
+                            vRtl.begin() + (nRunEnd - rArgs.mnMinCharPos), true);
+    }
+    rArgs.ResetPos();
+
     // prepare "merge sort"
     int nStartOld[ MAX_FALLBACK ];
     int nStartNew[ MAX_FALLBACK ];
     int nCharPos[ MAX_FALLBACK ];
     sal_Int32 nGlyphAdv[ MAX_FALLBACK ];
-    int nValid[ MAX_FALLBACK ];
+    int nValid[ MAX_FALLBACK ] = {0};
 
     sal_GlyphId nDummy;
     Point aPos;
@@ -1988,6 +2028,10 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
         nStartNew[ nLevel ] = nStartOld[ nLevel ] = 0;
         nValid[ nLevel ] = mpLayouts[n]->GetNextGlyphs( 1, &nDummy, aPos,
             nStartNew[ nLevel ], &nGlyphAdv[ nLevel ], &nCharPos[ nLevel ] );
+#ifdef MULTI_SL_DEBUG
+        if (nValid[nLevel]) fprintf(mslLog(), "layout[%d]->GetNextGlyphs %d,%d x%d a%d c%d %x\n", n, nStartOld[nLevel], nStartNew[nLevel], aPos.X(), nGlyphAdv[nLevel], nCharPos[nLevel],
+            rArgs.mpStr[nCharPos[nLevel]]);
+#endif
         if( (n > 0) && !nValid[ nLevel ] )
         {
             // an empty fallback layout can be released
@@ -2007,12 +2051,18 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
     }
     mnLevel = nLevel;
 
-    // merge the fallback levels
+    // prepare merge the fallback levels
     long nXPos = 0;
     double fUnitMul = 1.0;
     for( n = 0; n < nLevel; ++n )
         maFallbackRuns[n].ResetPos();
+    // get the next codepoint index that needs fallback
     int nActiveCharPos = nCharPos[0];
+    // get the end index of the active run
+    int nLastRunEndChar = (vRtl[nActiveCharPos - mnMinCharPos])?
+        rArgs.mnEndCharPos : rArgs.mnMinCharPos - 1;
+    int nRunVisibleEndChar = nCharPos[0];
+    // merge the fallback levels
     while( nValid[0] && (nLevel > 0))
     {
         // find best fallback level
@@ -2048,6 +2098,9 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
                 nStartOld[0] = nStartNew[0];
                 nValid[0] = mpLayouts[0]->GetNextGlyphs( 1, &nDummy, aPos,
                     nStartNew[0], &nGlyphAdv[0], &nCharPos[0] );
+#ifdef MULTI_SL_DEBUG
+                if (nValid[0]) fprintf(mslLog(), "layout[0]->GetNextGlyphs %d,%d x%d a%d c%d %x\n", nStartOld[0], nStartNew[0], aPos.X(), nGlyphAdv[0], nCharPos[0], rArgs.mpStr[nCharPos[0]]);
+#endif
                 if( !nValid[0] )
                    break;
             }
@@ -2065,7 +2118,9 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
             int nOrigCharPos = nCharPos[n];
             nValid[n] = mpLayouts[n]->GetNextGlyphs( 1, &nDummy, aPos,
                 nStartNew[n], &nGlyphAdv[n], &nCharPos[n] );
-
+#ifdef MULTI_SL_DEBUG
+            if (nValid[n]) fprintf(mslLog(), "layout[%d]->GetNextGlyphs %d,%d a%d c%d %x\n", n, nStartOld[n], nStartNew[n], nGlyphAdv[n], nCharPos[n], rArgs.mpStr[nCharPos[n]]);
+#endif
             // break after last glyph of active layout
             if( !nValid[n] )
             {
@@ -2111,6 +2166,27 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
                     { maFallbackRuns[0].NextRun(); break; }
                 bKeepNotDef = bNeedFallback;
             }
+            // check for reordered glyphs
+            if (aMultiArgs.mpDXArray &&
+                nRunVisibleEndChar < mnEndCharPos &&
+                nRunVisibleEndChar >= mnMinCharPos &&
+                nCharPos[n] < mnEndCharPos &&
+                nCharPos[n] >= mnMinCharPos)
+            {
+                if (vRtl[nActiveCharPos - mnMinCharPos])
+                {
+                    if (aMultiArgs.mpDXArray[nRunVisibleEndChar-mnMinCharPos]
+                        >= aMultiArgs.mpDXArray[nCharPos[n] - mnMinCharPos])
+                    {
+                        nRunVisibleEndChar = nCharPos[n];
+                    }
+                }
+                else if (aMultiArgs.mpDXArray[nRunVisibleEndChar-mnMinCharPos]
+                         <= aMultiArgs.mpDXArray[nCharPos[n] - mnMinCharPos])
+                {
+                    nRunVisibleEndChar = nCharPos[n];
+                }
+            }
         }
 
         // if a justification array is available
@@ -2120,16 +2196,40 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
             // the run advance is the width from the first char
             // in the run to the first char in the next run
             nRunAdvance = 0;
-            const bool bLTR = (nActiveCharPos < nCharPos[0]);
+#ifdef MULTI_SL_DEBUG
+            const bool bLTR = !(vRtl[nActiveCharPos - mnMinCharPos]);//(nActiveCharPos < nCharPos[0]);
+            int nOldRunAdv = 0;
             int nDXIndex = nCharPos[0] - mnMinCharPos - bLTR;
             if( nDXIndex >= 0 )
-                nRunAdvance += aMultiArgs.mpDXArray[ nDXIndex ];
+                nOldRunAdv += aMultiArgs.mpDXArray[ nDXIndex ];
             nDXIndex = nActiveCharPos - mnMinCharPos - bLTR;
             if( nDXIndex >= 0 )
-                nRunAdvance -= aMultiArgs.mpDXArray[ nDXIndex ];
+                nOldRunAdv -= aMultiArgs.mpDXArray[ nDXIndex ];
             if( !bLTR )
-                nRunAdvance = -nRunAdvance;
-
+                nOldRunAdv = -nOldRunAdv;
+#endif
+            if (vRtl[nActiveCharPos - mnMinCharPos])
+            {
+              if (nRunVisibleEndChar > mnMinCharPos && nRunVisibleEndChar <= mnEndCharPos)
+                  nRunAdvance -= aMultiArgs.mpDXArray[nRunVisibleEndChar - 1 - mnMinCharPos];
+              if (nLastRunEndChar > mnMinCharPos && nLastRunEndChar <= mnEndCharPos)
+                  nRunAdvance += aMultiArgs.mpDXArray[nLastRunEndChar - 1 - mnMinCharPos];
+#ifdef MULTI_SL_DEBUG
+              fprintf(mslLog(), "rtl visible %d-%d,%d-%d adv%d(%d)\n", nLastRunEndChar-1, nRunVisibleEndChar-1, nActiveCharPos - bLTR, nCharPos[0] - bLTR, nRunAdvance, nOldRunAdv);
+#endif
+            }
+            else
+            {
+                if (nRunVisibleEndChar >= mnMinCharPos)
+                  nRunAdvance += aMultiArgs.mpDXArray[nRunVisibleEndChar - mnMinCharPos];
+                if (nLastRunEndChar >= mnMinCharPos)
+                  nRunAdvance -= aMultiArgs.mpDXArray[nLastRunEndChar - mnMinCharPos];
+#ifdef MULTI_SL_DEBUG
+                fprintf(mslLog(), "visible %d-%d,%d-%d adv%d(%d)\n", nLastRunEndChar, nRunVisibleEndChar, nActiveCharPos - bLTR, nCharPos[0] - bLTR, nRunAdvance, nOldRunAdv);
+#endif
+            }
+            nLastRunEndChar = nRunVisibleEndChar;
+            nRunVisibleEndChar = nCharPos[0];
             // the requested width is still in pixel units
             // => convert it to base level font units
             nRunAdvance *= mnUnitsPerPixel;
@@ -2147,9 +2247,25 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 
         // prepare for next fallback run
         nActiveCharPos = nCharPos[0];
+        // it essential that the runs don't get ahead of themselves and in the
+        // if( bKeepNotDef && !bNeedFallback ) statement above, the next run may
+        // have already been reached on the base level
         for( int i = nFBLevel; --i >= 0;)
-            if( !maFallbackRuns[i].PosIsInRun( nActiveCharPos ) )
-                maFallbackRuns[i].NextRun();
+        {
+            if (maFallbackRuns[i].GetRun(&nRunStart, &nRunEnd, &bRtl))
+            {
+                if (bRtl)
+                {
+                    if (nRunStart > nActiveCharPos)
+                        maFallbackRuns[i].NextRun();
+                }
+                else
+                {
+                    if (nRunEnd <= nActiveCharPos)
+                        maFallbackRuns[i].NextRun();
+                }
+            }
+        }
     }
 
     mpLayouts[0]->Simplify( true );
@@ -2169,9 +2285,9 @@ void MultiSalLayout::InitFont() const
 
 // -----------------------------------------------------------------------
 
-const ImplFontData* MultiSalLayout::GetFallbackFontData( sal_GlyphId nGlyphId ) const
+const ImplFontData* MultiSalLayout::GetFallbackFontData( sal_GlyphId aGlyphId ) const
 {
-    int nFallbackLevel = (nGlyphId & GF_FONTMASK) >> GF_FONTSHIFT;
+    int nFallbackLevel = (aGlyphId & GF_FONTMASK) >> GF_FONTSHIFT;
     return mpFallbackFonts[ nFallbackLevel ];
 }
 

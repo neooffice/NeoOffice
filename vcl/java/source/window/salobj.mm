@@ -33,8 +33,8 @@
  *
  ************************************************************************/
 
-#include <salframe.h>
-#include <salgdi.h>
+#include "java/salframe.h"
+#include "java/salgdi.h"
 
 #include "salobj_cocoa.h"
 
@@ -43,16 +43,16 @@
 JavaSalObject::JavaSalObject( SalFrame *pParent )
 {
 	mpChildView = VCLChildView_create();
-	mbInFlush = FALSE;
+	mbInFlush = sal_False;
 	mpParent = (JavaSalFrame *)pParent;
-	mbVisible = FALSE;
+	mbVisible = sal_False;
 
 	memset( &maSysData, 0, sizeof( SystemEnvData ) );
 	maSysData.nSize = sizeof( SystemEnvData );
 
 	// Set window value now as the avmedia module needs access to it before
 	// it is actually shown
-	maSysData.pView = (NSView *)mpChildView;
+	maSysData.mpNSView = (NSView *)mpChildView;
 
 	if ( mpParent )
 		mpParent->AddObject( this, false );
@@ -69,7 +69,7 @@ JavaSalObject::~JavaSalObject()
 
 void JavaSalObject::Destroy()
 {
-	Show( FALSE );
+	Show( sal_False );
 
 	if ( mpParent )
 	{
@@ -87,9 +87,9 @@ void JavaSalObject::Flush()
 {
 	if ( mbVisible )
 	{
-		mbInFlush = TRUE;
-		Show( TRUE );
-		mbInFlush = FALSE;
+		mbInFlush = sal_True;
+		Show( sal_True );
+		mbInFlush = sal_False;
 	}
 }
 
@@ -103,14 +103,14 @@ void JavaSalObject::ResetClipRegion()
 
 // -----------------------------------------------------------------------
 
-USHORT JavaSalObject::GetClipRegionType()
+sal_uInt16 JavaSalObject::GetClipRegionType()
 {
 	return SAL_OBJECT_CLIP_INCLUDERECTS;
 }
 
 // -----------------------------------------------------------------------
 
-void JavaSalObject::BeginSetClipRegion( ULONG nRects )
+void JavaSalObject::BeginSetClipRegion( sal_uLong /* nRects */ )
 {
 	maClipRect = Rectangle();
 }
@@ -157,7 +157,7 @@ void JavaSalObject::SetPosSize( long nX, long nY, long nWidth, long nHeight )
 
 // -----------------------------------------------------------------------
 
-void JavaSalObject::Show( BOOL bVisible )
+void JavaSalObject::Show( sal_Bool bVisible )
 {
 	mbVisible = bVisible;
 
@@ -179,7 +179,7 @@ void JavaSalObject::Show( BOOL bVisible )
 
 // -----------------------------------------------------------------------
 
-void JavaSalObject::Enable( BOOL bEnable )
+void JavaSalObject::Enable( sal_Bool /* bEnable */ )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalObject::Enable not implemented\n" );
@@ -214,4 +214,13 @@ void JavaSalObject::SetBackground( SalColor nSalColor )
 const SystemEnvData* JavaSalObject::GetSystemData() const
 {
 	return &maSysData;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalObject::InterceptChildWindowKeyDown( sal_Bool /* bIntercept */ )
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalObject::InterceptChildWindowKeyDown not implemented\n" );
+#endif
 }

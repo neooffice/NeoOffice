@@ -33,6 +33,8 @@
  *
  ************************************************************************/
 
+#include <tools/gen.hxx>
+
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
@@ -55,7 +57,7 @@
 - (void)destroy:(id)pObject;
 - (void)drawRect:(NSRect)aDirtyRect;
 - (id)initWithFrame:(NSRect)aFrame;
-- (MacOSBOOL)isOpaque;
+- (BOOL)isOpaque;
 - (void)setBackgroundColor:(NSColor *)pColor;
 - (void)setBounds:(NSValue *)pValue;
 - (void)setClip:(NSValue *)pValue;
@@ -95,6 +97,8 @@
 
 - (void)destroy:(id)pObject
 {
+	(void)pObject;
+
 	// Detach any children
 	NSArray *pSubviews = [self subviews];
 	if ( pSubviews )
@@ -144,7 +148,7 @@
 	return self;
 }
 
-- (MacOSBOOL)isOpaque
+- (BOOL)isOpaque
 {
 	return ( mpBackgroundColor && [mpBackgroundColor alphaComponent] == 1.0f );
 }
@@ -300,6 +304,8 @@
 
 - (void)initialize:(id)pObject
 {
+	(void)pObject;
+
 	[mpView initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
 }
 
@@ -308,24 +314,24 @@
 @interface ShowVCLChildView : NSObject
 {
 	NSWindow*				mpParentWindow;
-	MacOSBOOL					mbShow;
+	BOOL					mbShow;
 	VCLChildView*			mpView;
 }
-+ (id)childWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(MacOSBOOL)bShow;
-- (id)initWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(MacOSBOOL)bShow;
++ (id)childWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(BOOL)bShow;
+- (id)initWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(BOOL)bShow;
 - (void)show:(id)pObject;
 @end
 
 @implementation ShowVCLChildView
 
-+ (id)childWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(MacOSBOOL)bShow
++ (id)childWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(BOOL)bShow
 {
 	ShowVCLChildView *pRet = [[ShowVCLChildView alloc] initWithView:pView parentWindow:pParentWindow show:bShow];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)initWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(MacOSBOOL)bShow
+- (id)initWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(BOOL)bShow
 {
 	[super init];
 
@@ -338,6 +344,8 @@
 
 - (void)show:(id)pObject
 {
+	(void)pObject;
+
 	if ( mpView )
 	{
 		NSView *pSuperview = [mpView superview];

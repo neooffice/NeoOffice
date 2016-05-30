@@ -33,4 +33,6 @@
  *
  ************************************************************************/
 
-#define DEFAULT_PRINTER 0x100
+#include "svids.hrc"
+
+#define DEFAULT_PRINTER			(SV_PRINT_NOCONTENT + 1)

@@ -1,46 +1,52 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified August 2006 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
 
-#ifndef _SV_RC_H
+#include <comphelper/processfactory.hxx>
+
+#include <tools/diagnose_ex.h>
 #include <tools/rc.h>
-#endif
-#include <vcl/svdata.hxx>
+
 #include <vcl/svapp.hxx>
 #include <vcl/event.hxx>
 #include <vcl/ctrl.hxx>
 #include <vcl/decoview.hxx>
-#include <vcl/controllayout.hxx>
 #include <vcl/salnativewidgets.hxx>
 
+#include <textlayout.hxx>
+#include <svdata.hxx>
+#include <controldata.hxx>
 
 
 using namespace vcl;
@@ -49,8 +55,8 @@ using namespace vcl;
 
 void Control::ImplInitControlData()
 {
-    mbHasFocus		= FALSE;
-    mpLayoutData	= NULL;
+    mbHasControlFocus	    = sal_False;
+    mpControlData   = new ImplControlData;
 }
 
 // -----------------------------------------------------------------------
@@ -89,7 +95,7 @@ Control::Control( Window* pParent, const ResId& rResId ) :
 
 Control::~Control()
 {
-    delete mpLayoutData, mpLayoutData = NULL;
+    delete mpControlData, mpControlData = NULL;
 }
 
 // -----------------------------------------------------------------------
@@ -110,7 +116,7 @@ void Control::LoseFocus()
 
 void Control::Resize()
 {
-    delete mpLayoutData, mpLayoutData = NULL;
+    ImplClearLayoutData();
     Window::Resize();
 }
 
@@ -122,18 +128,39 @@ void Control::FillLayoutData() const
 
 // -----------------------------------------------------------------------
 
+void Control::CreateLayoutData() const
+{
+	DBG_ASSERT( !mpControlData->mpLayoutData, "Control::CreateLayoutData: should be called with non-existent layout data only!" );
+	mpControlData->mpLayoutData = new ::vcl::ControlLayoutData();
+}
+
+// -----------------------------------------------------------------------
+
+bool Control::HasLayoutData() const
+{
+    return mpControlData->mpLayoutData != NULL;
+}
+
+// -----------------------------------------------------------------------
+
+::vcl::ControlLayoutData* Control::GetLayoutData() const
+{
+    return mpControlData->mpLayoutData;
+}
+
+// -----------------------------------------------------------------------
+
 void Control::SetText( const String& rStr )
 {
-    delete mpLayoutData;
-    mpLayoutData = NULL;
+    ImplClearLayoutData();
 #ifdef USE_JAVA
     if ( GetType() == WINDOW_PUSHBUTTON && IsNativeControlSupported( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL ) )
     {
         XubString aText( rStr );
         aText.SearchAndReplaceAll( '\n', ' ' );
         Window::SetText( aText );
-        return;
     }
+    else
 #endif	// USE_JAVA
     Window::SetText( rStr );
 }
@@ -150,9 +177,9 @@ Rectangle ControlLayoutData::GetCharacterBounds( long nIndex ) const
 
 Rectangle Control::GetCharacterBounds( long nIndex ) const
 {
-    if( ! mpLayoutData )
+    if( !HasLayoutData() )
         FillLayoutData();
-    return mpLayoutData ? mpLayoutData->GetCharacterBounds( nIndex ) : Rectangle();
+    return mpControlData->mpLayoutData ? mpControlData->mpLayoutData->GetCharacterBounds( nIndex ) : Rectangle();
 }
 
 // -----------------------------------------------------------------------
@@ -175,9 +202,9 @@ long ControlLayoutData::GetIndexForPoint( const Point& rPoint ) const
 
 long Control::GetIndexForPoint( const Point& rPoint ) const
 {
-    if( ! mpLayoutData )
+    if( ! HasLayoutData() )
         FillLayoutData();
-    return mpLayoutData ? mpLayoutData->GetIndexForPoint( rPoint ) : -1;
+    return mpControlData->mpLayoutData ? mpControlData->mpLayoutData->GetIndexForPoint( rPoint ) : -1;
 }
 
 // -----------------------------------------------------------------------
@@ -194,9 +221,9 @@ long ControlLayoutData::GetLineCount() const
 
 long Control::GetLineCount() const
 {
-    if( ! mpLayoutData )
+    if( !HasLayoutData() )
         FillLayoutData();
-    return mpLayoutData ? mpLayoutData->GetLineCount() : 0;
+    return mpControlData->mpLayoutData ? mpControlData->mpLayoutData->GetLineCount() : 0;
 }
 
 // -----------------------------------------------------------------------
@@ -228,9 +255,9 @@ Pair ControlLayoutData::GetLineStartEnd( long nLine ) const
 
 Pair Control::GetLineStartEnd( long nLine ) const
 {
-    if( ! mpLayoutData )
+    if( !HasLayoutData() )
         FillLayoutData();
-    return mpLayoutData ? mpLayoutData->GetLineStartEnd( nLine ) : Pair( -1, -1 );
+    return mpControlData->mpLayoutData ? mpControlData->mpLayoutData->GetLineStartEnd( nLine ) : Pair( -1, -1 );
 }
 
 // -----------------------------------------------------------------------
@@ -271,18 +298,18 @@ long ControlLayoutData::ToRelativeLineIndex( long nIndex ) const
 
 long Control::ToRelativeLineIndex( long nIndex ) const
 {
-    if( ! mpLayoutData )
+    if( !HasLayoutData() )
         FillLayoutData();
-    return mpLayoutData ? mpLayoutData->ToRelativeLineIndex( nIndex ) : -1;
+    return mpControlData->mpLayoutData ? mpControlData->mpLayoutData->ToRelativeLineIndex( nIndex ) : -1;
 }
 
 // -----------------------------------------------------------------------
 
 String Control::GetDisplayText() const
 {
-    if( ! mpLayoutData )
+    if( !HasLayoutData() )
         FillLayoutData();
-    return mpLayoutData ? mpLayoutData->m_aDisplayText : GetText();
+    return mpControlData->mpLayoutData ? mpControlData->mpLayoutData->m_aDisplayText : GetText();
 }
 
 // -----------------------------------------------------------------------
@@ -291,12 +318,13 @@ long Control::Notify( NotifyEvent& rNEvt )
 {
     if ( rNEvt.GetType() == EVENT_GETFOCUS )
     {
-        if ( !mbHasFocus )
+        if ( !mbHasControlFocus )
         {
-            mbHasFocus = TRUE;
+            mbHasControlFocus = sal_True;
+            StateChanged( STATE_CHANGE_CONTROL_FOCUS );
             if ( ImplCallEventListenersAndHandler( VCLEVENT_CONTROL_GETFOCUS, maGetFocusHdl, this ) )
                 // been destroyed within the handler
-                return TRUE;
+                return sal_True;
         }
     }
     else
@@ -306,10 +334,11 @@ long Control::Notify( NotifyEvent& rNEvt )
             Window* pFocusWin = Application::GetFocusWindow();
             if ( !pFocusWin || !ImplIsWindowOrChild( pFocusWin ) )
             {
-                mbHasFocus = FALSE;
+                mbHasControlFocus = sal_False;
+                StateChanged( STATE_CHANGE_CONTROL_FOCUS );
                 if ( ImplCallEventListenersAndHandler( VCLEVENT_CONTROL_LOSEFOCUS, maLoseFocusHdl, this ) )
                     // been destroyed within the handler
-                    return TRUE;
+                    return sal_True;
             }
         }
     }
@@ -329,8 +358,7 @@ void Control::StateChanged( StateChangedType nStateChange )
         nStateChange == STATE_CHANGE_CONTROLFONT
         )
     {
-        delete mpLayoutData;
-        mpLayoutData = NULL;
+        ImplClearLayoutData();
     }
     Window::StateChanged( nStateChange );
 }
@@ -339,31 +367,31 @@ void Control::StateChanged( StateChangedType nStateChange )
 
 void Control::AppendLayoutData( const Control& rSubControl ) const
 {
-    if( ! rSubControl.mpLayoutData )
+    if( !rSubControl.HasLayoutData() )
         rSubControl.FillLayoutData();
-    if( ! rSubControl.mpLayoutData || ! rSubControl.mpLayoutData->m_aDisplayText.Len() )
+    if( !rSubControl.HasLayoutData() || !rSubControl.mpControlData->mpLayoutData->m_aDisplayText.Len() )
         return;
 
-    long nCurrentIndex = mpLayoutData->m_aDisplayText.Len();
-    mpLayoutData->m_aDisplayText.Append( rSubControl.mpLayoutData->m_aDisplayText );
-    int nLines = rSubControl.mpLayoutData->m_aLineIndices.size();
+    long nCurrentIndex = mpControlData->mpLayoutData->m_aDisplayText.Len();
+    mpControlData->mpLayoutData->m_aDisplayText.Append( rSubControl.mpControlData->mpLayoutData->m_aDisplayText );
+    int nLines = rSubControl.mpControlData->mpLayoutData->m_aLineIndices.size();
     int n;
-    mpLayoutData->m_aLineIndices.push_back( nCurrentIndex );
+    mpControlData->mpLayoutData->m_aLineIndices.push_back( nCurrentIndex );
     for( n = 1; n < nLines; n++ )
-        mpLayoutData->m_aLineIndices.push_back( rSubControl.mpLayoutData->m_aLineIndices[n] + nCurrentIndex );
-    int nRectangles = rSubControl.mpLayoutData->m_aUnicodeBoundRects.size();
+        mpControlData->mpLayoutData->m_aLineIndices.push_back( rSubControl.mpControlData->mpLayoutData->m_aLineIndices[n] + nCurrentIndex );
+    int nRectangles = rSubControl.mpControlData->mpLayoutData->m_aUnicodeBoundRects.size();
         Rectangle aRel = const_cast<Control&>(rSubControl).GetWindowExtentsRelative( const_cast<Control*>(this) );
     for( n = 0; n < nRectangles; n++ )
     {
-        Rectangle aRect = rSubControl.mpLayoutData->m_aUnicodeBoundRects[n];
+        Rectangle aRect = rSubControl.mpControlData->mpLayoutData->m_aUnicodeBoundRects[n];
         aRect.Move( aRel.Left(), aRel.Top() );
-        mpLayoutData->m_aUnicodeBoundRects.push_back( aRect );
+        mpControlData->mpLayoutData->m_aUnicodeBoundRects.push_back( aRect );
     }
 }
 
 // -----------------------------------------------------------------
 
-BOOL Control::ImplCallEventListenersAndHandler(  ULONG nEvent, const Link& rHandler, void* pCaller )
+sal_Bool Control::ImplCallEventListenersAndHandler(  sal_uLong nEvent, const Link& rHandler, void* pCaller )
 {
     ImplDelData aCheckDelete;
     ImplAddDel( &aCheckDelete );
@@ -376,25 +404,25 @@ BOOL Control::ImplCallEventListenersAndHandler(  ULONG nEvent, const Link& rHand
         if ( !aCheckDelete.IsDelete() )
         {
             ImplRemoveDel( &aCheckDelete );
-            return FALSE;
+            return sal_False;
         }
     }
-    return TRUE;
+    return sal_True;
 }
 
 // -----------------------------------------------------------------
 
 void Control::SetLayoutDataParent( const Control* pParent ) const
 {
-    if( mpLayoutData )
-        mpLayoutData->m_pParent = pParent;
+    if( HasLayoutData() )
+        mpControlData->mpLayoutData->m_pParent = pParent;
 }
 
 // -----------------------------------------------------------------
 
 void Control::ImplClearLayoutData() const
 {
-    delete mpLayoutData, mpLayoutData = NULL;
+    delete mpControlData->mpLayoutData, mpControlData->mpLayoutData = NULL;
 }
 
 // -----------------------------------------------------------------------
@@ -438,8 +466,8 @@ void Control::DataChanged( const DataChangedEvent& rDCEvt)
     {
         AllSettings     aSettings = GetSettings();
         StyleSettings   aStyleSettings = aSettings.GetStyleSettings();
-        ULONG           nOldOptions = rDCEvt.GetOldSettings()->GetStyleSettings().GetOptions();
-        ULONG           nNewOptions = aStyleSettings.GetOptions();
+        sal_uLong           nOldOptions = rDCEvt.GetOldSettings()->GetStyleSettings().GetOptions();
+        sal_uLong           nNewOptions = aStyleSettings.GetOptions();
 
         if ( !(nNewOptions & STYLE_OPTION_MONO) && ( nOldOptions & STYLE_OPTION_MONO ) )
         {
@@ -474,4 +502,103 @@ Size Control::GetOptimalSize(WindowSizeType eType) const
     default:
         return Size( LONG_MAX, LONG_MAX );
     }
+}
+
+// -----------------------------------------------------------------
+
+void Control::SetReferenceDevice( OutputDevice* _referenceDevice )
+{
+    if ( mpControlData->mpReferenceDevice == _referenceDevice )
+        return;
+
+    mpControlData->mpReferenceDevice = _referenceDevice;
+    Invalidate();
+}
+
+// -----------------------------------------------------------------
+
+OutputDevice* Control::GetReferenceDevice() const
+{
+    return mpControlData->mpReferenceDevice;
+}
+
+// -----------------------------------------------------------------
+
+const Font& Control::GetCanonicalFont( const StyleSettings& _rStyle ) const
+{
+    return _rStyle.GetLabelFont();
+}
+
+// -----------------------------------------------------------------
+const Color& Control::GetCanonicalTextColor( const StyleSettings& _rStyle ) const
+{
+    return _rStyle.GetLabelTextColor();
+}
+
+// -----------------------------------------------------------------
+void Control::ImplInitSettings( const sal_Bool _bFont, const sal_Bool _bForeground )
+{
+    const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
+
+    if ( _bFont )
+    {
+        Font aFont( GetCanonicalFont( rStyleSettings ) );
+        if ( IsControlFont() )
+            aFont.Merge( GetControlFont() );
+        SetZoomedPointFont( aFont );
+    }
+
+    if ( _bForeground || _bFont )
+    {
+        Color aColor;
+        if ( IsControlForeground() )
+            aColor = GetControlForeground();
+        else
+            aColor = GetCanonicalTextColor( rStyleSettings );
+        SetTextColor( aColor );
+        SetTextFillColor();
+    }
+}
+
+// -----------------------------------------------------------------
+
+void Control::DrawControlText( OutputDevice& _rTargetDevice, Rectangle& _io_rRect, const XubString& _rStr,
+    sal_uInt16 _nStyle, MetricVector* _pVector, String* _pDisplayText ) const
+{
+#ifdef FS_DEBUG
+    if ( !_pVector )
+    {
+        static MetricVector aCharRects;
+        static String sDisplayText;
+        aCharRects.clear();
+        sDisplayText = String();
+        _pVector = &aCharRects;
+        _pDisplayText = &sDisplayText;
+    }
+#endif
+
+    if ( !mpControlData->mpReferenceDevice || ( mpControlData->mpReferenceDevice == &_rTargetDevice ) )
+    {
+        _io_rRect = _rTargetDevice.GetTextRect( _io_rRect, _rStr, _nStyle );
+        _rTargetDevice.DrawText( _io_rRect, _rStr, _nStyle, _pVector, _pDisplayText );
+    }
+    else
+    {
+        ControlTextRenderer aRenderer( *this, _rTargetDevice, *mpControlData->mpReferenceDevice );
+        _io_rRect = aRenderer.DrawText( _io_rRect, _rStr, _nStyle, _pVector, _pDisplayText );
+    }
+
+#ifdef FS_DEBUG
+    _rTargetDevice.Push( PUSH_LINECOLOR | PUSH_FILLCOLOR );
+    _rTargetDevice.SetLineColor( COL_LIGHTRED );
+    _rTargetDevice.SetFillColor();
+    for (   MetricVector::const_iterator cr = _pVector->begin();
+            cr != _pVector->end();
+            ++cr
+        )
+    {
+        _rTargetDevice.DrawRect( *cr );
+    }
+    _rTargetDevice.Pop();
+#endif
 }

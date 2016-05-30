@@ -1,38 +1,41 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified July 2006 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
 #include <rtl/memory.h>
 #include <vcl/bmpacc.hxx>
 #include <vcl/salbtype.hxx>
-#include <vcl/bmpfast.hxx>
+#include <bmpfast.hxx>
 
 // -----------
 // - Defines -
@@ -103,12 +106,12 @@ static void	ImplPALToPAL( const BitmapBuffer& rSrcBuffer, BitmapBuffer& rDstBuff
 	BitmapColor*		pColMapBuf = aColMap.ImplGetColorBuffer();
 	BitmapColor			aIndex( 0 );
 
-	for( USHORT i = 0, nSrcCount = aColMap.GetEntryCount(), nDstCount = rDstBuffer.maPalette.GetEntryCount(); i < nSrcCount; i++ )
+	for( sal_uInt16 i = 0, nSrcCount = aColMap.GetEntryCount(), nDstCount = rDstBuffer.maPalette.GetEntryCount(); i < nSrcCount; i++ )
 	{
 	    if( ( i < nDstCount ) && ( rSrcBuffer.maPalette[ i ] == rDstBuffer.maPalette[ i ] ) )
-		    aIndex.SetIndex( sal::static_int_cast<BYTE>(i) );
+		    aIndex.SetIndex( sal::static_int_cast<sal_uInt8>(i) );
 		else
-			aIndex.SetIndex( sal::static_int_cast<BYTE>(rDstBuffer.maPalette.GetBestIndex( rSrcBuffer.maPalette[ i ] )) );
+			aIndex.SetIndex( sal::static_int_cast<sal_uInt8>(rDstBuffer.maPalette.GetBestIndex( rSrcBuffer.maPalette[ i ] )) );
 
 		pColMapBuf[ i ] = aIndex;
 	}
@@ -214,7 +217,7 @@ static void	ImplTCToTC( const BitmapBuffer& rSrcBuffer, BitmapBuffer& rDstBuffer
 	if( BMP_SCANLINE_FORMAT( rSrcBuffer.mnFormat ) == BMP_FORMAT_24BIT_TC_BGR )
 	{
 		BitmapColor aCol;
-		BYTE*		pPixel;
+		sal_uInt8*		pPixel;
 
 		for( long nActY = 0, nMapY; nActY < nHeight; nActY++ )
 		{
@@ -255,7 +258,7 @@ static void	ImplTCToPAL( const BitmapBuffer& rSrcBuffer, BitmapBuffer& rDstBuffe
 	const ColorMask&	rSrcMask = rSrcBuffer.maColorMask;
 	const ColorMask&	rDstMask = rDstBuffer.maColorMask;
 	BitmapPalette		aColMap( rSrcBuffer.maPalette.GetEntryCount() );
-	BYTE*				pColToPalMap = new BYTE[ TC_TO_PAL_COLORS ];
+	sal_uInt8*				pColToPalMap = new sal_uInt8[ TC_TO_PAL_COLORS ];
 	BitmapColor			aIndex( 0 );
 
 	for( long nR = 0; nR < 16; nR++ )
@@ -264,10 +267,10 @@ static void	ImplTCToPAL( const BitmapBuffer& rSrcBuffer, BitmapBuffer& rDstBuffe
 		{
 			for( long nB = 0; nB < 16; nB++ )
 			{
-				BitmapColor aCol( sal::static_int_cast<BYTE>(nR << 4),
-                                  sal::static_int_cast<BYTE>(nG << 4),
-                                  sal::static_int_cast<BYTE>(nB << 4) );
-				pColToPalMap[ ImplIndexFromColor( aCol ) ] = (BYTE) rDstBuffer.maPalette.GetBestIndex( aCol );
+				BitmapColor aCol( sal::static_int_cast<sal_uInt8>(nR << 4),
+                                  sal::static_int_cast<sal_uInt8>(nG << 4),
+                                  sal::static_int_cast<sal_uInt8>(nB << 4) );
+				pColToPalMap[ ImplIndexFromColor( aCol ) ] = (sal_uInt8) rDstBuffer.maPalette.GetBestIndex( aCol );
 			}
 		}
 	}
@@ -294,11 +297,12 @@ static void	ImplTCToPAL( const BitmapBuffer& rSrcBuffer, BitmapBuffer& rDstBuffe
 // - StretchAndConvert -
 // ---------------------
 
-BitmapBuffer* StretchAndConvert( const BitmapBuffer& rSrcBuffer, const SalTwoRect& rTwoRect, 
+BitmapBuffer* StretchAndConvert( 
+    const BitmapBuffer& rSrcBuffer, const SalTwoRect& rTwoRect, 
 #ifdef USE_JAVA
-								 ULONG nDstBitmapFormat, BitmapPalette* pDstPal, ColorMask* pDstMask, BYTE *pDstBits )
+	sal_uLong nDstBitmapFormat, const BitmapPalette* pDstPal, const ColorMask* pDstMask, sal_uInt8* pDstBits )
 #else	// USE_JAVA
-								 ULONG nDstBitmapFormat, BitmapPalette* pDstPal, ColorMask* pDstMask )
+	sal_uLong nDstBitmapFormat, const BitmapPalette* pDstPal, const ColorMask* pDstMask )
 #endif	// USE_JAVA
 {
     FncGetPixel		pFncGetPixel;
@@ -336,7 +340,7 @@ BitmapBuffer* StretchAndConvert( const BitmapBuffer& rSrcBuffer, const SalTwoRec
 	}
 
 	// set function for setting pixels
-    const ULONG nDstScanlineFormat = BMP_SCANLINE_FORMAT( nDstBitmapFormat );
+    const sal_uLong nDstScanlineFormat = BMP_SCANLINE_FORMAT( nDstBitmapFormat );
 	switch( nDstScanlineFormat )
 	{
 		IMPL_CASE_SET_FORMAT( _1BIT_MSB_PAL, 1 );
@@ -372,16 +376,16 @@ BitmapBuffer* StretchAndConvert( const BitmapBuffer& rSrcBuffer, const SalTwoRec
 	pDstBuffer->mnHeight = rTwoRect.mnDestHeight;
 	pDstBuffer->mnScanlineSize = AlignedWidth4Bytes( pDstBuffer->mnBitCount * pDstBuffer->mnWidth );
 #ifdef USE_JAVA
-	if ( pDstBits )
-	{
-		pDstBuffer->mpBits = pDstBits;
-	}
-	else
-	{
+    if ( pDstBits )
+    {
+        pDstBuffer->mpBits = pDstBits;
+    }
+    else
+    {
 #endif	// USE_JAVA
     try
     {
-        pDstBuffer->mpBits = new BYTE[ pDstBuffer->mnScanlineSize * pDstBuffer->mnHeight ];
+        pDstBuffer->mpBits = new sal_uInt8[ pDstBuffer->mnScanlineSize * pDstBuffer->mnHeight ];
     }
     catch( const std::bad_alloc& )
     {
@@ -391,7 +395,7 @@ BitmapBuffer* StretchAndConvert( const BitmapBuffer& rSrcBuffer, const SalTwoRec
         return NULL;
     }
 #ifdef USE_JAVA
-	}
+    }
 #endif	// USE_JAVA
 
 	// do we need a destination palette or color mask?
@@ -440,21 +444,21 @@ BitmapBuffer* StretchAndConvert( const BitmapBuffer& rSrcBuffer, const SalTwoRec
         // memory exception, clean up
         // remark: the buffer ptr causing the exception
         // is still NULL here
-        delete pSrcScan;
-        delete pDstScan;
-        delete pMapX;
-        delete pMapY;
+        delete[] pSrcScan;
+        delete[] pDstScan;
+        delete[] pMapX;
+        delete[] pMapY;
         delete pDstBuffer;
         return NULL;
     }
     
-    // horizontal mapping table
-	if( nDstDX != nSrcDX )
+	// horizontal mapping table
+	if( (nDstDX != nSrcDX) && (nDstDX != 0) )
 	{
-		const double fFactorX = ( nDstDX > 1 ) ? (double) ( nSrcDX - 1 ) / ( nDstDX - 1 ) : 0.0;
+		const double fFactorX = (double)nSrcDX / nDstDX;
 
 		for( i = 0L; i < nDstDX; i++ )
-			pMapX[ i ] = nSrcX + FRound( i * fFactorX );
+			pMapX[ i ] = nSrcX + static_cast<int>( i * fFactorX );
 	}
 	else
 	{
@@ -463,12 +467,12 @@ BitmapBuffer* StretchAndConvert( const BitmapBuffer& rSrcBuffer, const SalTwoRec
 	}
 
 	// vertical mapping table
-	if( nDstDY != nSrcDY )
+	if( (nDstDY != nSrcDY) && (nDstDY != 0) )
 	{
-		const double fFactorY = ( nDstDY > 1 ) ? (double) ( nSrcDY - 1 ) / ( nDstDY - 1 ) : 0.0;
+		const double fFactorY = (double)nSrcDY / nDstDY;
 
 		for( i = 0L; i < nDstDY; i++ )
-			pMapY[ i ] = nSrcY + FRound( i * fFactorY );
+			pMapY[ i ] = nSrcY + static_cast<int>( i * fFactorY );
 	}
 	else
 	{

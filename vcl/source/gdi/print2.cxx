@@ -1,54 +1,58 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified August 2007 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
-
-#define _SPOOLPRINTER_EXT
 
 #include <functional>
 #include <algorithm>
 #include <utility>
 #include <list>
 #include <vector>
+
 #include <basegfx/polygon/b2dpolygon.hxx>
 #include <basegfx/polygon/b2dpolygontools.hxx>
+
 #include <tools/debug.hxx>
+
 #include <vcl/virdev.hxx>
 #include <vcl/metaact.hxx>
 #include <vcl/gdimtf.hxx>
-#include <vcl/print.h>
 #include <vcl/salbtype.hxx>
 #include <vcl/print.hxx>
 #include <vcl/svapp.hxx>
-#include <vcl/sallayout.hxx>
 #include <vcl/bmpacc.hxx>
+
+#include <print.h>
 
 #include "pdfwriter_impl.hxx"
 
@@ -70,7 +74,7 @@ typedef ::std::list< Component > ComponentList;
 // List of (intersecting) actions, plus overall bounds
 struct ConnectedComponents
 {
-    ConnectedComponents() : 
+    ConnectedComponents() :
         aComponentList(),
         aBounds(),
         aBgColor(COL_WHITE),
@@ -85,7 +89,7 @@ struct ConnectedComponents
     bool			bIsFullyTransparent;
 };
 
-typedef ::std::list< ConnectedComponents > ConnectedComponentsList;	
+typedef ::std::list< ConnectedComponents > ConnectedComponentsList;
 
 
 // -----------
@@ -130,7 +134,7 @@ static bool checkRect( Rectangle&       io_rPrevRect,
 {
     // shape needs to fully cover previous content, and have uniform
     // color
-    const bool bRet( 
+    const bool bRet(
         rMapModeVDev.LogicToPixel(rCurrRect).IsInside(io_rPrevRect) &&
         rMapModeVDev.IsFillColor() );
 
@@ -139,7 +143,7 @@ static bool checkRect( Rectangle&       io_rPrevRect,
         io_rPrevRect = rCurrRect;
         o_rBgColor = rMapModeVDev.GetFillColor();
     }
-    
+
     return bRet;
 }
 
@@ -158,7 +162,7 @@ static void ImplConvertTransparentAction( GDIMetaFile&        o_rMtf,
     if( rAct.GetType() == META_TRANSPARENT_ACTION )
     {
         const MetaTransparentAction* pTransAct = static_cast<const MetaTransparentAction*>(&rAct);
-        USHORT				         nTransparency( pTransAct->GetTransparence() );
+        sal_uInt16				         nTransparency( pTransAct->GetTransparence() );
 
         // #i10613# Respect transparency for draw color
         if( nTransparency )
@@ -167,16 +171,16 @@ static void ImplConvertTransparentAction( GDIMetaFile&        o_rMtf,
 
             // assume white background for alpha blending
             Color aLineColor( rStateOutDev.GetLineColor() );
-            aLineColor.SetRed( static_cast<UINT8>( (255L*nTransparency + (100L - nTransparency)*aLineColor.GetRed()) / 100L ) );
-            aLineColor.SetGreen( static_cast<UINT8>( (255L*nTransparency + (100L - nTransparency)*aLineColor.GetGreen()) / 100L ) );
-            aLineColor.SetBlue( static_cast<UINT8>( (255L*nTransparency + (100L - nTransparency)*aLineColor.GetBlue()) / 100L ) );
-            o_rMtf.AddAction( new MetaLineColorAction(aLineColor, TRUE) );
+            aLineColor.SetRed( static_cast<sal_uInt8>( (255L*nTransparency + (100L - nTransparency)*aLineColor.GetRed()) / 100L ) );
+            aLineColor.SetGreen( static_cast<sal_uInt8>( (255L*nTransparency + (100L - nTransparency)*aLineColor.GetGreen()) / 100L ) );
+            aLineColor.SetBlue( static_cast<sal_uInt8>( (255L*nTransparency + (100L - nTransparency)*aLineColor.GetBlue()) / 100L ) );
+            o_rMtf.AddAction( new MetaLineColorAction(aLineColor, sal_True) );
 
             Color aFillColor( rStateOutDev.GetFillColor() );
-            aFillColor.SetRed( static_cast<UINT8>( (255L*nTransparency + (100L - nTransparency)*aFillColor.GetRed()) / 100L ) );
-            aFillColor.SetGreen( static_cast<UINT8>( (255L*nTransparency + (100L - nTransparency)*aFillColor.GetGreen()) / 100L ) );
-            aFillColor.SetBlue( static_cast<UINT8>( (255L*nTransparency + (100L - nTransparency)*aFillColor.GetBlue()) / 100L ) );
-            o_rMtf.AddAction( new MetaFillColorAction(aFillColor, TRUE) );
+            aFillColor.SetRed( static_cast<sal_uInt8>( (255L*nTransparency + (100L - nTransparency)*aFillColor.GetRed()) / 100L ) );
+            aFillColor.SetGreen( static_cast<sal_uInt8>( (255L*nTransparency + (100L - nTransparency)*aFillColor.GetGreen()) / 100L ) );
+            aFillColor.SetBlue( static_cast<sal_uInt8>( (255L*nTransparency + (100L - nTransparency)*aFillColor.GetBlue()) / 100L ) );
+            o_rMtf.AddAction( new MetaFillColorAction(aFillColor, sal_True) );
         }
 
         o_rMtf.AddAction( new MetaPolyPolygonAction(pTransAct->GetPolyPolygon()) );
@@ -193,7 +197,7 @@ static void ImplConvertTransparentAction( GDIMetaFile&        o_rMtf,
             case META_BMPEX_ACTION:
                 aBmpEx = static_cast<const MetaBmpExAction&>(rAct).GetBitmapEx();
                 break;
-            
+
             case META_BMPEXSCALE_ACTION:
                 aBmpEx = static_cast<const MetaBmpExScaleAction&>(rAct).GetBitmapEx();
                 break;
@@ -222,7 +226,7 @@ static void ImplConvertTransparentAction( GDIMetaFile&        o_rMtf,
 
             if( pRA->HasPalette() )
                 aActualColor = pRA->GetBestPaletteColor( aBgColor ).operator Color();
-    
+
             aBmp.ReleaseAccess(pRA);
 
             // did we get true white?
@@ -251,22 +255,22 @@ static void ImplConvertTransparentAction( GDIMetaFile&        o_rMtf,
         switch( rAct.GetType() )
         {
             case META_BMPEX_ACTION:
-                o_rMtf.AddAction( new MetaBmpAction( 
-                                       static_cast<const MetaBmpExAction&>(rAct).GetPoint(), 
+                o_rMtf.AddAction( new MetaBmpAction(
+                                       static_cast<const MetaBmpExAction&>(rAct).GetPoint(),
                                        aBmp ));
                 break;
             case META_BMPEXSCALE_ACTION:
-                o_rMtf.AddAction( new MetaBmpScaleAction( 
-                                       static_cast<const MetaBmpExScaleAction&>(rAct).GetPoint(), 
-                                       static_cast<const MetaBmpExScaleAction&>(rAct).GetSize(), 
+                o_rMtf.AddAction( new MetaBmpScaleAction(
+                                       static_cast<const MetaBmpExScaleAction&>(rAct).GetPoint(),
+                                       static_cast<const MetaBmpExScaleAction&>(rAct).GetSize(),
                                        aBmp ));
                 break;
             case META_BMPEXSCALEPART_ACTION:
-                o_rMtf.AddAction( new MetaBmpScalePartAction( 
-                                       static_cast<const MetaBmpExScalePartAction&>(rAct).GetDestPoint(), 
-                                       static_cast<const MetaBmpExScalePartAction&>(rAct).GetDestSize(), 
-                                       static_cast<const MetaBmpExScalePartAction&>(rAct).GetSrcPoint(), 
-                                       static_cast<const MetaBmpExScalePartAction&>(rAct).GetSrcSize(), 
+                o_rMtf.AddAction( new MetaBmpScalePartAction(
+                                       static_cast<const MetaBmpExScalePartAction&>(rAct).GetDestPoint(),
+                                       static_cast<const MetaBmpExScalePartAction&>(rAct).GetDestSize(),
+                                       static_cast<const MetaBmpExScalePartAction&>(rAct).GetSrcPoint(),
+                                       static_cast<const MetaBmpExScalePartAction&>(rAct).GetSrcSize(),
                                        aBmp ));
                 break;
             default:
@@ -408,9 +412,21 @@ static Rectangle ImplCalcActionBounds( const MetaAction& rAct, const OutputDevic
             break;
 
 		case META_LINE_ACTION:
-            aActionBounds = Rectangle( static_cast<const MetaLineAction&>(rAct).GetStartPoint(), 
-                                       static_cast<const MetaLineAction&>(rAct).GetEndPoint() );
+		{
+			const MetaLineAction& rMetaLineAction = static_cast<const MetaLineAction&>(rAct);
+            aActionBounds = Rectangle( rMetaLineAction.GetStartPoint(),  rMetaLineAction.GetEndPoint() );
+            aActionBounds.Justify();
+			const long nLineWidth(rMetaLineAction.GetLineInfo().GetWidth());
+			if(nLineWidth)
+			{
+				const long nHalfLineWidth((nLineWidth + 1) / 2);
+				aActionBounds.Left() -= nHalfLineWidth;
+				aActionBounds.Top() -= nHalfLineWidth;
+				aActionBounds.Right() += nHalfLineWidth;
+				aActionBounds.Bottom() += nHalfLineWidth;
+			}
             break;
+		}
 
 		case META_RECT_ACTION:
             aActionBounds = static_cast<const MetaRectAction&>(rAct).GetRect();
@@ -450,8 +466,20 @@ static Rectangle ImplCalcActionBounds( const MetaAction& rAct, const OutputDevic
             break;
 
 		case META_POLYLINE_ACTION:
-            aActionBounds = static_cast<const MetaPolyLineAction&>(rAct).GetPolygon().GetBoundRect();
+		{
+			const MetaPolyLineAction& rMetaPolyLineAction = static_cast<const MetaPolyLineAction&>(rAct);
+            aActionBounds = rMetaPolyLineAction.GetPolygon().GetBoundRect();
+			const long nLineWidth(rMetaPolyLineAction.GetLineInfo().GetWidth());
+			if(nLineWidth)
+			{
+				const long nHalfLineWidth((nLineWidth + 1) / 2);
+				aActionBounds.Left() -= nHalfLineWidth;
+				aActionBounds.Top() -= nHalfLineWidth;
+				aActionBounds.Right() += nHalfLineWidth;
+				aActionBounds.Bottom() += nHalfLineWidth;
+			}
             break;
+		}
 
 		case META_POLYGON_ACTION:
             aActionBounds = static_cast<const MetaPolygonAction&>(rAct).GetPolygon().GetBoundRect();
@@ -462,47 +490,47 @@ static Rectangle ImplCalcActionBounds( const MetaAction& rAct, const OutputDevic
             break;
 
 		case META_BMP_ACTION:
-			aActionBounds = Rectangle( static_cast<const MetaBmpAction&>(rAct).GetPoint(), 
+			aActionBounds = Rectangle( static_cast<const MetaBmpAction&>(rAct).GetPoint(),
                                        rOut.PixelToLogic( static_cast<const MetaBmpAction&>(rAct).GetBitmap().GetSizePixel() ) );
             break;
 
 		case META_BMPSCALE_ACTION:
-			aActionBounds = Rectangle( static_cast<const MetaBmpScaleAction&>(rAct).GetPoint(), 
+			aActionBounds = Rectangle( static_cast<const MetaBmpScaleAction&>(rAct).GetPoint(),
                                        static_cast<const MetaBmpScaleAction&>(rAct).GetSize() );
             break;
 
 		case META_BMPSCALEPART_ACTION:
-			aActionBounds = Rectangle( static_cast<const MetaBmpScalePartAction&>(rAct).GetDestPoint(), 
+			aActionBounds = Rectangle( static_cast<const MetaBmpScalePartAction&>(rAct).GetDestPoint(),
                                        static_cast<const MetaBmpScalePartAction&>(rAct).GetDestSize() );
             break;
 
 		case META_BMPEX_ACTION:
-			aActionBounds = Rectangle( static_cast<const MetaBmpExAction&>(rAct).GetPoint(), 
+			aActionBounds = Rectangle( static_cast<const MetaBmpExAction&>(rAct).GetPoint(),
                                        rOut.PixelToLogic( static_cast<const MetaBmpExAction&>(rAct).GetBitmapEx().GetSizePixel() ) );
             break;
 
 		case META_BMPEXSCALE_ACTION:
-			aActionBounds = Rectangle( static_cast<const MetaBmpExScaleAction&>(rAct).GetPoint(), 
+			aActionBounds = Rectangle( static_cast<const MetaBmpExScaleAction&>(rAct).GetPoint(),
                                        static_cast<const MetaBmpExScaleAction&>(rAct).GetSize() );
             break;
 
 		case META_BMPEXSCALEPART_ACTION:
-			aActionBounds = Rectangle( static_cast<const MetaBmpExScalePartAction&>(rAct).GetDestPoint(), 
+			aActionBounds = Rectangle( static_cast<const MetaBmpExScalePartAction&>(rAct).GetDestPoint(),
                                        static_cast<const MetaBmpExScalePartAction&>(rAct).GetDestSize() );
             break;
 
 		case META_MASK_ACTION:
-			aActionBounds = Rectangle( static_cast<const MetaMaskAction&>(rAct).GetPoint(), 
+			aActionBounds = Rectangle( static_cast<const MetaMaskAction&>(rAct).GetPoint(),
                                        rOut.PixelToLogic( static_cast<const MetaMaskAction&>(rAct).GetBitmap().GetSizePixel() ) );
             break;
 
 		case META_MASKSCALE_ACTION:
-			aActionBounds = Rectangle( static_cast<const MetaMaskScaleAction&>(rAct).GetPoint(), 
+			aActionBounds = Rectangle( static_cast<const MetaMaskScaleAction&>(rAct).GetPoint(),
                                        static_cast<const MetaMaskScaleAction&>(rAct).GetSize() );
             break;
 
 		case META_MASKSCALEPART_ACTION:
-			aActionBounds = Rectangle( static_cast<const MetaMaskScalePartAction&>(rAct).GetDestPoint(), 
+			aActionBounds = Rectangle( static_cast<const MetaMaskScalePartAction&>(rAct).GetDestPoint(),
                                        static_cast<const MetaMaskScalePartAction&>(rAct).GetDestSize() );
             break;
 
@@ -527,12 +555,12 @@ static Rectangle ImplCalcActionBounds( const MetaAction& rAct, const OutputDevic
             break;
 
 		case META_FLOATTRANSPARENT_ACTION:
-			aActionBounds = Rectangle( static_cast<const MetaFloatTransparentAction&>(rAct).GetPoint(), 
+			aActionBounds = Rectangle( static_cast<const MetaFloatTransparentAction&>(rAct).GetPoint(),
                                        static_cast<const MetaFloatTransparentAction&>(rAct).GetSize() );
             break;
 
 		case META_EPS_ACTION:
-			aActionBounds = Rectangle( static_cast<const MetaEPSAction&>(rAct).GetPoint(), 
+			aActionBounds = Rectangle( static_cast<const MetaEPSAction&>(rAct).GetPoint(),
                                        static_cast<const MetaEPSAction&>(rAct).GetSize() );
             break;
 
@@ -547,7 +575,7 @@ static Rectangle ImplCalcActionBounds( const MetaAction& rAct, const OutputDevic
 
                 // #105987# Use API method instead of Impl* methods
                 // #107490# Set base parameter equal to index parameter
-                rOut.GetTextBoundRect( aActionBounds, rTextAct.GetText(), rTextAct.GetIndex(), 
+                rOut.GetTextBoundRect( aActionBounds, rTextAct.GetText(), rTextAct.GetIndex(),
                                        rTextAct.GetIndex(), rTextAct.GetLen() );
                 aActionBounds.Move( aPtLog.X(), aPtLog.Y() );
             }
@@ -563,8 +591,8 @@ static Rectangle ImplCalcActionBounds( const MetaAction& rAct, const OutputDevic
             if( nLen )
             {
                 // #105987# ImplLayout takes everything in logical coordinates
-                SalLayout* pSalLayout = rOut.ImplLayout( rTextAct.GetText(), rTextAct.GetIndex(), 
-                                                         rTextAct.GetLen(), rTextAct.GetPoint(), 
+                SalLayout* pSalLayout = rOut.ImplLayout( rTextAct.GetText(), rTextAct.GetIndex(),
+                                                         rTextAct.GetLen(), rTextAct.GetPoint(),
                                                          0, rTextAct.GetDXArray() );
                 if( pSalLayout )
                 {
@@ -594,8 +622,8 @@ static Rectangle ImplCalcActionBounds( const MetaAction& rAct, const OutputDevic
             if( nLen )
             {
                 // #105987# ImplLayout takes everything in logical coordinates
-                SalLayout* pSalLayout = rOut.ImplLayout( rTextAct.GetText(), rTextAct.GetIndex(), 
-                                                         rTextAct.GetLen(), rTextAct.GetPoint(), 
+                SalLayout* pSalLayout = rOut.ImplLayout( rTextAct.GetText(), rTextAct.GetIndex(),
+                                                         rTextAct.GetLen(), rTextAct.GetPoint(),
                                                          rTextAct.GetWidth() );
                 if( pSalLayout )
                 {
@@ -609,7 +637,7 @@ static Rectangle ImplCalcActionBounds( const MetaAction& rAct, const OutputDevic
 
 		case META_TEXTLINE_ACTION:
 			DBG_ERROR("META_TEXTLINE_ACTION not supported");
-            break;
+        break;
 
 		default:
             break;
@@ -644,10 +672,12 @@ static bool ImplIsActionHandlingTransparency( const MetaAction& rAct )
 }
 
 // remove comment to enable highlighting of generated output
-bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, GDIMetaFile& rOutMtf, 
+bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, GDIMetaFile& rOutMtf,
                                                      long nMaxBmpDPIX, long nMaxBmpDPIY,
                                                      bool bReduceTransparency, bool bTransparencyAutoMode,
-                                                     bool bDownsampleBitmaps )
+                                                     bool bDownsampleBitmaps,
+                                                     const Color& rBackground
+                                                     )
 {
 	MetaAction*             pCurrAct;
 	bool		            bTransparent( false );
@@ -658,8 +688,8 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
     if( ! bReduceTransparency || bTransparencyAutoMode )
     {
         // watch for transparent drawing actions
-	    for( pCurrAct = ( (GDIMetaFile&) rInMtf ).FirstAction(); 
-             pCurrAct && !bTransparent; 
+	    for( pCurrAct = ( (GDIMetaFile&) rInMtf ).FirstAction();
+             pCurrAct && !bTransparent;
              pCurrAct = ( (GDIMetaFile&) rInMtf ).NextAction() )
         {
             // #i10613# Extracted "specialness" predicate into extra method
@@ -679,7 +709,7 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
     }
 #endif	// !USE_JAVA || !MACOSX
 
-    // #i10613# Determine set of connected components containing transparent objects. These are 
+    // #i10613# Determine set of connected components containing transparent objects. These are
     // then processed as bitmaps, the original actions are removed from the metafile.
 	if( !bTransparent )
     {
@@ -688,7 +718,7 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
     }
 	else
 	{
-        // #i10613# 
+        // #i10613#
         // This works as follows: we want a number of distinct sets of
         // connected components, where each set contains metafile
         // actions that are intersecting (note: there are possibly
@@ -727,7 +757,7 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
 		VirtualDevice aMapModeVDev;
 		aMapModeVDev.mnDPIX = mnDPIX;
 		aMapModeVDev.mnDPIY = mnDPIY;
-		aMapModeVDev.EnableOutput(FALSE);
+		aMapModeVDev.EnableOutput(sal_False);
 
         int nLastBgAction, nActionNum;
 
@@ -738,6 +768,20 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
         bool bStillBackground=true; // true until first non-bg action
         nActionNum=0; nLastBgAction=-1;
 		pCurrAct=const_cast<GDIMetaFile&>(rInMtf).FirstAction();
+        if( rBackground != Color( COL_TRANSPARENT ) )
+        {
+            aBackgroundComponent.aBgColor = rBackground;
+            if( meOutDevType == OUTDEV_PRINTER )
+            {
+                Printer* pThis = dynamic_cast<Printer*>(this);
+                Point aPageOffset = pThis->GetPageOffsetPixel();
+                aPageOffset = Point( 0, 0 ) - aPageOffset;
+                Size aSize  = pThis->GetPaperSizePixel();
+                aBackgroundComponent.aBounds = Rectangle( aPageOffset, aSize );
+            }
+            else
+                aBackgroundComponent.aBounds = Rectangle( Point( 0, 0 ), GetOutputSizePixel() );
+        }
 		while( pCurrAct && bStillBackground )
 		{
             switch( pCurrAct->GetType() )
@@ -816,18 +860,17 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
 
             // execute action to get correct MapModes etc.
             pCurrAct->Execute( &aMapModeVDev );
-            
+
             pCurrAct=const_cast<GDIMetaFile&>(rInMtf).NextAction();
             ++nActionNum;
         }
+        
+        // clean up aMapModeVDev
+        sal_uInt32 nCount = aMapModeVDev.GetGCStackDepth();
+        while( nCount-- )
+            aMapModeVDev.Pop();
 
-        ConnectedComponentsList	aCCList; // list containing distinct sets of connected components as elements. 
-
-        // create an OutputDevice to record mapmode changes and the like
-		VirtualDevice aMapModeVDev2;
-		aMapModeVDev2.mnDPIX = mnDPIX;
-		aMapModeVDev2.mnDPIY = mnDPIY;
-		aMapModeVDev2.EnableOutput(FALSE);
+        ConnectedComponentsList	aCCList; // list containing distinct sets of connected components as elements.
 
         // fast-forward until one after the last background action
         // (need to reconstruct map mode vdev state)
@@ -837,12 +880,12 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
 		{
             // up to and including last ink-generating background
             // action go to background component
-            aBackgroundComponent.aComponentList.push_back( 
+            aBackgroundComponent.aComponentList.push_back(
                 ::std::make_pair(
                     pCurrAct, nActionNum) );
 
 			// execute action to get correct MapModes etc.
-			pCurrAct->Execute( &aMapModeVDev2 );
+			pCurrAct->Execute( &aMapModeVDev );
             pCurrAct=const_cast<GDIMetaFile&>(rInMtf).NextAction();
             ++nActionNum;
         }
@@ -854,15 +897,15 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
 
         // iterate over all actions (start where background action
         // search left off)
-		for( ; 
-             pCurrAct; 
+		for( ;
+             pCurrAct;
              pCurrAct=const_cast<GDIMetaFile&>(rInMtf).NextAction(), ++nActionNum )
 		{
 			// execute action to get correct MapModes etc.
-			pCurrAct->Execute( &aMapModeVDev2 );
+			pCurrAct->Execute( &aMapModeVDev );
 
             // cache bounds of current action 
-            const Rectangle aBBCurrAct( ImplCalcActionBounds(*pCurrAct, aMapModeVDev2) );
+            const Rectangle aBBCurrAct( ImplCalcActionBounds(*pCurrAct, aMapModeVDev) );
 
             // accumulate collected bounds here, initialize with current action
             Rectangle								aTotalBounds( aBBCurrAct ); // thus,
@@ -881,7 +924,7 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
             //
 
             // if aBBCurrAct is empty, it will intersect with no
-            // aCCList member. Thus, we can safe us the check.
+            // aCCList member. Thus, we can save the check.
             // Furthermore, this ensures that non-output-generating
             // actions get their own aCCList entry, which is necessary
             // when copying them to the output metafile (see stage 4
@@ -891,9 +934,9 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
             // not be considered for connected components,
             // too. Just put each of them into a separate
             // component.
-            aTotalComponents.bIsFullyTransparent = !ImplIsNotTransparent(*pCurrAct, aMapModeVDev2);
+            aTotalComponents.bIsFullyTransparent = !ImplIsNotTransparent(*pCurrAct, aMapModeVDev);
 
-            if( !aBBCurrAct.IsEmpty() &&        
+            if( !aBBCurrAct.IsEmpty() &&
                 !aTotalComponents.bIsFullyTransparent )
             {
                 if( !aBackgroundComponent.aComponentList.empty() &&
@@ -902,11 +945,11 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
                     // it seems the background is not large enough. to
                     // be on the safe side, combine with this component.
                     aTotalBounds.Union( aBackgroundComponent.aBounds );
-                        
+
                     // extract all aCurr actions to aTotalComponents
-                    aTotalComponents.aComponentList.splice( aTotalComponents.aComponentList.end(), 
+                    aTotalComponents.aComponentList.splice( aTotalComponents.aComponentList.end(),
                                                             aBackgroundComponent.aComponentList );
-                        
+
                     if( aBackgroundComponent.bIsSpecial )
                         bTreatSpecial = true;
                 }
@@ -947,11 +990,11 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
 
                             // calc union bounding box
                             aTotalBounds.Union( aCurrCC->aBounds );
-                        
+
                             // extract all aCurr actions to aTotalComponents
-                            aTotalComponents.aComponentList.splice( aTotalComponents.aComponentList.end(), 
+                            aTotalComponents.aComponentList.splice( aTotalComponents.aComponentList.end(),
                                                                     aCurrCC->aComponentList );
-                        
+
                             if( aCurrCC->bIsSpecial )
                                 bTreatSpecial = true;
 
@@ -1004,7 +1047,7 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
             {
                 // added action is special and none of prev components
                 // special -> do the detailed tests
-                
+
                 // can the action handle transparency correctly
                 // (i.e. when painted on white background, does the
                 // action still look correct)?
@@ -1048,19 +1091,19 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
 
             // set new bounds and add action to list
             aTotalComponents.aBounds = aTotalBounds;
-            aTotalComponents.aComponentList.push_back( 
+            aTotalComponents.aComponentList.push_back(
                 ::std::make_pair(
                     pCurrAct, nActionNum) );
 
             // add aTotalComponents as a new entry to aCCList
             aCCList.push_back( aTotalComponents );
 
-            DBG_ASSERT( !aTotalComponents.aComponentList.empty(), 
+            DBG_ASSERT( !aTotalComponents.aComponentList.empty(),
                         "Printer::GetPreparedMetaFile empty component" );
-            DBG_ASSERT( !aTotalComponents.aBounds.IsEmpty() || 
+            DBG_ASSERT( !aTotalComponents.aBounds.IsEmpty() ||
                         (aTotalComponents.aBounds.IsEmpty() && aTotalComponents.aComponentList.size() == 1),
                         "Printer::GetPreparedMetaFile non-output generating actions must be solitary");
-            DBG_ASSERT( !aTotalComponents.bIsFullyTransparent || 
+            DBG_ASSERT( !aTotalComponents.bIsFullyTransparent ||
                         (aTotalComponents.bIsFullyTransparent && aTotalComponents.aComponentList.size() == 1),
                         "Printer::GetPreparedMetaFile fully transparent actions must be solitary");
         }
@@ -1111,17 +1154,24 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
         //  ====================================================
         //
 
-        Point aTmpPoint;
+        Point aPageOffset;
         Size aTmpSize( GetOutputSizePixel() );
         if( mpPDFWriter )
         {
             aTmpSize = mpPDFWriter->getCurPageSize();
             aTmpSize = LogicToPixel( aTmpSize, MapMode( MAP_POINT ) );
-            
+
             // also add error code to PDFWriter
             mpPDFWriter->insertError( vcl::PDFWriter::Warning_Transparency_Converted );
         }
-        const Rectangle aOutputRect( aTmpPoint, aTmpSize );
+        else if( meOutDevType == OUTDEV_PRINTER )
+        {
+            Printer* pThis = dynamic_cast<Printer*>(this);
+            aPageOffset = pThis->GetPageOffsetPixel();
+            aPageOffset = Point( 0, 0 ) - aPageOffset;
+            aTmpSize  = pThis->GetPaperSizePixel();
+        }
+        const Rectangle aOutputRect( aPageOffset, aTmpSize );
         bool bTiling = dynamic_cast<Printer*>(this) != NULL;
 
         // iterate over all aCCList members and generate bitmaps for the special ones
@@ -1129,7 +1179,7 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
         {
             if( aCurr->bIsSpecial )
             {
-                Rectangle aBoundRect( aCurr->aBounds );            
+                Rectangle aBoundRect( aCurr->aBounds );
                 aBoundRect.Intersection( aOutputRect );
 
                 const double fBmpArea( (double) aBoundRect.GetWidth() * aBoundRect.GetHeight() );
@@ -1152,15 +1202,16 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
                         Size			aDstSzPix;
 
                         VirtualDevice	aMapVDev;	// here, we record only mapmode information
-                        aMapVDev.EnableOutput(FALSE);
+                        aMapVDev.EnableOutput(sal_False);
 
                         VirtualDevice 	aPaintVDev; // into this one, we render.
+                        aPaintVDev.SetBackground( aBackgroundComponent.aBgColor );
 
                         rOutMtf.AddAction( new MetaPushAction( PUSH_MAPMODE ) );
                         rOutMtf.AddAction( new MetaMapModeAction() );
 
                         aPaintVDev.SetDrawMode( GetDrawMode() );
-			    
+
                         while( aDstPtPix.Y() <= aBoundRect.Bottom() )
                         {
                             aDstPtPix.X() = aBoundRect.Left();
@@ -1183,11 +1234,11 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
                                     aMapVDev.mnDPIX = aPaintVDev.mnDPIX = mnDPIX;
                                     aMapVDev.mnDPIY = aPaintVDev.mnDPIY = mnDPIY;
 
-                                    aPaintVDev.EnableOutput(FALSE);
+                                    aPaintVDev.EnableOutput(sal_False);
 
                                     // iterate over all actions
-                                    for( pCurrAct=const_cast<GDIMetaFile&>(rInMtf).FirstAction(), nActionNum=0; 
-                                         pCurrAct; 
+                                    for( pCurrAct=const_cast<GDIMetaFile&>(rInMtf).FirstAction(), nActionNum=0;
+                                         pCurrAct;
                                          pCurrAct=const_cast<GDIMetaFile&>(rInMtf).NextAction(), ++nActionNum )
                                     {
                                         // enable output only for
@@ -1195,10 +1246,10 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
                                         // the current aCCList element
                                         // (aCurr)
                                         if( aCCList_MemberMap[nActionNum] == &(*aCurr) )
-                                            aPaintVDev.EnableOutput(TRUE);
+                                            aPaintVDev.EnableOutput(sal_True);
 
                                         // but process every action
-                                        const USHORT nType( pCurrAct->GetType() );
+                                        const sal_uInt16 nType( pCurrAct->GetType() );
 
                                         if( META_MAPMODE_ACTION == nType )
                                         {
@@ -1229,19 +1280,19 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
                                             pCurrAct->Execute( &aPaintVDev );
                                         }
 
-                                        if( !( nActionNum % 4 ) )
+                                        if( !( nActionNum % 8 ) )
                                             Application::Reschedule();
                                     }
 
-                                    const BOOL bOldMap = mbMap;
-                                    mbMap = aPaintVDev.mbMap = FALSE;
+                                    const sal_Bool bOldMap = mbMap;
+                                    mbMap = aPaintVDev.mbMap = sal_False;
 
                                     Bitmap aBandBmp( aPaintVDev.GetBitmap( Point(), aDstSzPix ) );
 
                                     // scale down bitmap, if requested
                                     if( bDownsampleBitmaps )
                                     {
-                                        aBandBmp = GetDownsampledBitmap( aDstSzPix, 
+                                        aBandBmp = GetDownsampledBitmap( aDstSzPix,
                                                                          Point(), aBandBmp.GetSizePixel(),
                                                                          aBandBmp, nMaxBmpDPIX, nMaxBmpDPIY );
                                     }
@@ -1250,7 +1301,7 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
                                     rOutMtf.AddAction( new MetaBmpScaleAction( aDstPtPix, aDstSzPix, aBandBmp ) );
                                     rOutMtf.AddAction( new MetaCommentAction( "PRNSPOOL_TRANSPARENTBITMAP_END" ) );
 
-                                    aPaintVDev.mbMap = TRUE;
+                                    aPaintVDev.mbMap = sal_True;
                                     mbMap = bOldMap;
                                     aMapVDev.Pop();
                                     aPaintVDev.Pop();
@@ -1270,22 +1321,20 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
             }
         }
 
+        // clean up aMapModeVDev
+        nCount = aMapModeVDev.GetGCStackDepth();
+        while( nCount-- )
+            aMapModeVDev.Pop();
+        
         //
         //  STAGE 4: Copy actions to output metafile
         //  ========================================
         //
 
-        // create an OutputDevice to record color settings, mapmode
-        // changes and the like
-		VirtualDevice aMapModeVDev3;
-		aMapModeVDev3.mnDPIX = mnDPIX;
-		aMapModeVDev3.mnDPIY = mnDPIY;
-		aMapModeVDev3.EnableOutput(FALSE);
-
         // iterate over all actions and duplicate the ones not in a
         // special aCCList member into rOutMtf
-        for( pCurrAct=const_cast<GDIMetaFile&>(rInMtf).FirstAction(), nActionNum=0; 
-             pCurrAct; 
+        for( pCurrAct=const_cast<GDIMetaFile&>(rInMtf).FirstAction(), nActionNum=0;
+             pCurrAct;
              pCurrAct=const_cast<GDIMetaFile&>(rInMtf).NextAction(), ++nActionNum )
         {
             const ConnectedComponents* pCurrAssociatedComponent = aCCList_MemberMap[nActionNum];
@@ -1309,7 +1358,7 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
                     // given background color
                     ImplConvertTransparentAction(rOutMtf,
                                                  *pCurrAct,
-                                                 aMapModeVDev3,
+                                                 aMapModeVDev,
                                                  aBackgroundComponent.aBgColor);
                 }
                 else
@@ -1318,7 +1367,7 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
                     rOutMtf.AddAction( ( pCurrAct->Duplicate(), pCurrAct ) );
                 }
 
-                pCurrAct->Execute(&aMapModeVDev3);
+                pCurrAct->Execute(&aMapModeVDev);
             }
         }
 
@@ -1330,7 +1379,7 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
 
 // -----------------------------------------------------------------------------
 
-Bitmap OutputDevice::GetDownsampledBitmap( const Size& rDstSz, 
+Bitmap OutputDevice::GetDownsampledBitmap( const Size& rDstSz,
                                            const Point& rSrcPt, const Size& rSrcSz,
                                            const Bitmap& rBmp, long nMaxBmpDPIX, long nMaxBmpDPIY )
 {
@@ -1370,8 +1419,8 @@ Bitmap OutputDevice::GetDownsampledBitmap( const Size& rDstSz,
             const double    fMaxPixelY = aDstSizeTwip.Height() * nMaxBmpDPIY / 1440.0;
 
             // check, if the bitmap DPI exceeds the maximum DPI (allow 4 pixel rounding tolerance)
-            if( ( ( fBmpPixelX > ( fMaxPixelX + 4 ) ) || 
-                  ( fBmpPixelY > ( fMaxPixelY + 4 ) ) ) && 
+            if( ( ( fBmpPixelX > ( fMaxPixelX + 4 ) ) ||
+                  ( fBmpPixelY > ( fMaxPixelY + 4 ) ) ) &&
                 ( fBmpPixelY > 0.0 ) && ( fMaxPixelY > 0.0 ) )
             {
                 // do scaling
@@ -1432,7 +1481,7 @@ BitmapEx OutputDevice::GetDownsampledBitmapEx( const Size& rDstSz,
         {
             // do downsampling if neccessary
             Size aDstSizeTwip( PixelToLogic( LogicToPixel( rDstSz ), MAP_TWIP ) );
-                  
+
             // #103209# Normalize size (mirroring has to happen outside of this method)
             aDstSizeTwip = Size( labs(aDstSizeTwip.Width()), labs(aDstSizeTwip.Height()) );
 
@@ -1443,8 +1492,8 @@ BitmapEx OutputDevice::GetDownsampledBitmapEx( const Size& rDstSz,
             const double    fMaxPixelY = aDstSizeTwip.Height() * nMaxBmpDPIY / 1440.0;
 
             // check, if the bitmap DPI exceeds the maximum DPI (allow 4 pixel rounding tolerance)
-            if( ( ( fBmpPixelX > ( fMaxPixelX + 4 ) ) || 
-                  ( fBmpPixelY > ( fMaxPixelY + 4 ) ) ) && 
+            if( ( ( fBmpPixelX > ( fMaxPixelX + 4 ) ) ||
+                  ( fBmpPixelY > ( fMaxPixelY + 4 ) ) ) &&
                 ( fBmpPixelY > 0.0 ) && ( fMaxPixelY > 0.0 ) )
             {
                 // do scaling
@@ -1504,7 +1553,7 @@ void Printer::DrawGradientEx( OutputDevice* pOut, const Rectangle& rRect, const 
                                    ( (long) rEndColor.GetGreen() * rGradient.GetEndIntensity() ) / 100L ) >> 1;
             const long      nB = ( ( (long) rStartColor.GetBlue() * rGradient.GetStartIntensity() ) / 100L +
                                    ( (long) rEndColor.GetBlue() * rGradient.GetEndIntensity() ) / 100L ) >> 1;
-            const Color     aColor( (BYTE) nR, (BYTE) nG, (BYTE) nB );
+            const Color     aColor( (sal_uInt8) nR, (sal_uInt8) nG, (sal_uInt8) nB );
 
             pOut->Push( PUSH_LINECOLOR | PUSH_FILLCOLOR );
             pOut->SetLineColor( aColor );
@@ -1547,7 +1596,7 @@ void Printer::DrawGradientEx( OutputDevice* pOut, const PolyPolygon& rPolyPoly, 
                                    ( (long) rEndColor.GetGreen() * rGradient.GetEndIntensity() ) / 100L ) >> 1;
             const long      nB = ( ( (long) rStartColor.GetBlue() * rGradient.GetStartIntensity() ) / 100L +
                                    ( (long) rEndColor.GetBlue() * rGradient.GetEndIntensity() ) / 100L ) >> 1;
-            const Color     aColor( (BYTE) nR, (BYTE) nG, (BYTE) nB );
+            const Color     aColor( (sal_uInt8) nR, (sal_uInt8) nG, (sal_uInt8) nB );
 
             pOut->Push( PUSH_LINECOLOR | PUSH_FILLCOLOR );
             pOut->SetLineColor( aColor );

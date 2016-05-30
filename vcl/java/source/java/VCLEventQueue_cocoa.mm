@@ -33,7 +33,6 @@
  *
  ************************************************************************/
 
-#include <saldata.hxx>
 #include <vos/mutex.hxx>
 
 #include <premac.h>
@@ -42,6 +41,9 @@
 #import <Carbon/Carbon.h>
 #import <objc/objc-class.h>
 #include <postmac.h>
+#undef check
+
+#include "java/saldata.hxx"
 
 #include "VCLApplicationDelegate_cocoa.h"
 #include "VCLEventQueue_cocoa.h"
@@ -85,9 +87,9 @@ static NSPoint GetFlippedContentViewLocation( NSWindow *pWindow, NSEvent *pEvent
 	return aRet;
 }
 
-static USHORT GetEventCode( NSUInteger nModifiers )
+static sal_uInt16 GetEventCode( NSUInteger nModifiers )
 {
-	USHORT nRet = 0;
+	sal_uInt16 nRet = 0;
 
 	if ( nModifiers & NSLeftMouseDownMask )
 		nRet |= MOUSE_LEFT;
@@ -120,9 +122,9 @@ static USHORT GetEventCode( NSUInteger nModifiers )
 	return nRet;
 }
 
-static USHORT GetKeyCode( USHORT nKey, USHORT nChar )
+static sal_uInt16 GetKeyCode( sal_uInt16 nKey, sal_uInt16 nChar )
 {
-	USHORT nRet = 0;
+	sal_uInt16 nRet = 0;
 
 	switch ( nKey )
 	{
@@ -382,14 +384,8 @@ static USHORT GetKeyCode( USHORT nKey, USHORT nChar )
 		case kVK_ANSI_Comma:
 			nRet = KEY_COMMA;
 			break;
-		case kVK_ANSI_LeftBracket:
-			nRet = KEY_BRACKETLEFT;
-			break;
 		case kVK_ANSI_Period:
 			nRet = KEY_POINT;
-			break;
-		case kVK_ANSI_RightBracket:
-			nRet = KEY_BRACKETRIGHT;
 			break;
 		case kVK_F1:
 			nRet = KEY_F1;
@@ -496,7 +492,9 @@ static USHORT GetKeyCode( USHORT nKey, USHORT nChar )
 		case kVK_ANSI_KeypadClear:
 		case kVK_ANSI_Backslash:
 		case kVK_ANSI_Grave:
+		case kVK_ANSI_LeftBracket:
 		case kVK_ANSI_Quote:
+		case kVK_ANSI_RightBracket:
 		case kVK_ANSI_Semicolon:
 		case kVK_ANSI_Slash:
 		case kVK_CapsLock:
@@ -540,11 +538,11 @@ static void RegisterMainBundleWithLaunchServices()
 
 @interface IsApplicationActive : NSObject
 {
-	MacOSBOOL					mbActive;
+	BOOL					mbActive;
 }
 + (id)create;
 - (id)init;
-- (MacOSBOOL)isActive;
+- (BOOL)isActive;
 - (void)isApplicationActive:(id)pObject;
 @end
 
@@ -566,13 +564,15 @@ static void RegisterMainBundleWithLaunchServices()
 	return self;
 }
 
-- (MacOSBOOL)isActive
+- (BOOL)isActive
 {
 	return mbActive;
 }
 
 - (void)isApplicationActive:(id)pObject
 {
+	(void)pObject;
+
 	// Fix bug 3491 by returning YES only if there is no key window or
 	// the key window is a Java window
 	NSApplication *pApp = [NSApplication sharedApplication];
@@ -592,34 +592,39 @@ static void RegisterMainBundleWithLaunchServices()
 @end
 
 @interface NSView (VCLViewPoseAs)
-- (void)poseAsDragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(MacOSBOOL)bSlideBack;
+- (void)poseAsDragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(BOOL)bSlideBack;
 @end
 
 @interface VCLCMenuBar : NSObject
 {
 }
-+ (void)activate:(id)pObject modallyDisabled:(MacOSBOOL)bModallyDisabled;
++ (void)activate:(id)pObject modallyDisabled:(BOOL)bModallyDisabled;
 + (void)addDefaultHelpMenu;
-+ (void)clearMenuBarExcludingAppleMenu_OnAppKitThread:(MacOSBOOL)bClear;
-+ (MacOSBOOL)isActiveMenuBar:(id)pObject;
++ (void)clearMenuBarExcludingAppleMenu_OnAppKitThread:(BOOL)bClear;
++ (BOOL)isActiveMenuBar:(id)pObject;
 @end
 
 @implementation VCLCMenuBar
 
-+ (void)activate:(id)pObject modallyDisabled:(MacOSBOOL)bModallyDisabled
++ (void)activate:(id)pObject modallyDisabled:(BOOL)bModallyDisabled
 {
+	(void)pObject;
+	(void)bModallyDisabled;
 }
 
 + (void)addDefaultHelpMenu
 {
 }
 
-+ (void)clearMenuBarExcludingAppleMenu_OnAppKitThread:(MacOSBOOL)bClear
++ (void)clearMenuBarExcludingAppleMenu_OnAppKitThread:(BOOL)bClear
 {
+	(void)bClear;
 }
 
-+ (MacOSBOOL)isActiveMenuBar:(id)pObject
++ (BOOL)isActiveMenuBar:(id)pObject
 {
+	(void)pObject;
+
 	return NO;
 }
 
@@ -642,7 +647,7 @@ static void RegisterMainBundleWithLaunchServices()
 	[self setAcceptsMouseMovedEvents:YES];
 }
 
-- (MacOSBOOL)canBecomeKeyWindow
+- (BOOL)canBecomeKeyWindow
 {
 	return ( mbCanBecomeKeyWindow && ![self becomesKeyOnlyIfNeeded] );
 }
@@ -655,7 +660,7 @@ static void RegisterMainBundleWithLaunchServices()
 	[super dealloc];
 }
 
-- (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow
+- (void)setCanBecomeKeyWindow:(BOOL)bCanBecomeKeyWindow
 {
 	mbCanBecomeKeyWindow = bCanBecomeKeyWindow;
 }
@@ -675,17 +680,17 @@ static void RegisterMainBundleWithLaunchServices()
 - (void)_init;
 - (void)poseAsBecomeKeyWindow;
 - (void)poseAsDisplayIfNeeded;
-- (id)poseAsInitWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation;
-- (id)poseAsInitWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen;
-- (MacOSBOOL)poseAsMakeFirstResponder:(NSResponder *)pResponder;
+- (id)poseAsInitWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation;
+- (id)poseAsInitWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation screen:(NSScreen *)pScreen;
+- (BOOL)poseAsMakeFirstResponder:(NSResponder *)pResponder;
 - (void)poseAsMakeKeyWindow;
-- (void)poseAsOrderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber;
-- (MacOSBOOL)poseAsPerformKeyEquivalent:(NSEvent *)pEvent;
+- (void)poseAsOrderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(NSInteger)nOtherWindowNumber;
+- (BOOL)poseAsPerformKeyEquivalent:(NSEvent *)pEvent;
 - (void)poseAsResignKeyWindow;
 - (void)poseAsSendEvent:(NSEvent *)pEvent;
 @end
 
-static MacOSBOOL bJavaAWTInitialized = NO;
+static BOOL bJavaAWTInitialized = NO;
 static NSMutableDictionary *pDraggingDestinationDelegates = nil;
 static NSMutableArray *pNeedRestoreModalWindows = nil;
 static VCLResponder *pSharedResponder = nil;
@@ -863,7 +868,7 @@ static NSUInteger nMouseMask = 0;
 	}
 }
 
-- (MacOSBOOL)canBecomeKeyWindow
+- (BOOL)canBecomeKeyWindow
 {
 	return mbCanBecomeKeyWindow;
 }
@@ -901,7 +906,7 @@ static NSUInteger nMouseMask = 0;
 	return pRet;
 }
 
-- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation
 {
 	[VCLWindow swizzleSelectors:self];
 
@@ -916,7 +921,7 @@ static NSUInteger nMouseMask = 0;
 	return pRet;
 }
 
-- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation screen:(NSScreen *)pScreen
 {
 	[VCLWindow swizzleSelectors:self];
 
@@ -931,11 +936,11 @@ static NSUInteger nMouseMask = 0;
 	return pRet;
 }
 
-- (MacOSBOOL)makeFirstResponder:(NSResponder *)pResponder
+- (BOOL)makeFirstResponder:(NSResponder *)pResponder
 {
 	NSResponder *pOldResponder = [self firstResponder];
 
-	MacOSBOOL bRet = NO;
+	BOOL bRet = NO;
 	if ( [super respondsToSelector:@selector(poseAsMakeFirstResponder:)] )
 		bRet = [super poseAsMakeFirstResponder:pResponder];
 
@@ -959,7 +964,7 @@ static NSUInteger nMouseMask = 0;
 
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
-		MacOSBOOL bTrackingMenuBar = false;
+		BOOL bTrackingMenuBar = false;
 		VCLApplicationDelegate *pSharedDelegate = [VCLApplicationDelegate sharedDelegate];
 		if ( pSharedDelegate )
 			bTrackingMenuBar = [pSharedDelegate isInTracking];
@@ -975,7 +980,7 @@ static NSUInteger nMouseMask = 0;
 		[super poseAsMakeKeyWindow];
 }
 
-- (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber
+- (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(NSInteger)nOtherWindowNumber
 {
 #ifdef USE_NATIVE_FULL_SCREEN_MODE
 	if ( nOrderingMode != NSWindowOut && ![self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
@@ -1037,9 +1042,9 @@ static NSUInteger nMouseMask = 0;
 		[super poseAsOrderWindow:nOrderingMode relativeTo:nOtherWindowNumber];
 }
 
-- (MacOSBOOL)performKeyEquivalent:(NSEvent *)pEvent
+- (BOOL)performKeyEquivalent:(NSEvent *)pEvent
 {
-	MacOSBOOL bCommandKeyPressed = ( pEvent && [pEvent modifierFlags] & NSCommandKeyMask );
+	BOOL bCommandKeyPressed = ( pEvent && [pEvent modifierFlags] & NSCommandKeyMask );
 
 	if ( bCommandKeyPressed && [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
@@ -1063,7 +1068,7 @@ static NSUInteger nMouseMask = 0;
 		}
 	}
 
-	MacOSBOOL bRet = NO;
+	BOOL bRet = NO;
 	if ( [super respondsToSelector:@selector(poseAsPerformKeyEquivalent:)] )
 		bRet = [super poseAsPerformKeyEquivalent:pEvent];
 
@@ -1154,7 +1159,7 @@ static NSUInteger nMouseMask = 0;
 	// Cache the event time
 	JavaSalEventQueue::setLastNativeEventTime( [pEvent timestamp] );
 
-	MacOSBOOL bIsVCLWindow = ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] );
+	BOOL bIsVCLWindow = ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] );
 	NSEventType nType = [pEvent type];
 	NSRect aOldFrame = [self frame];
 
@@ -1174,7 +1179,7 @@ static NSUInteger nMouseMask = 0;
 			[VCLMainMenuDidEndTracking mainMenuDidEndTracking:YES];
 		}
 
-		MacOSBOOL bVisible = [self isVisible];
+		BOOL bVisible = [self isVisible];
 		[self release];
 		if ( !bVisible )
 			return;
@@ -1192,7 +1197,7 @@ static NSUInteger nMouseMask = 0;
 	// custom windows as some of the native modal panels will dealloc windows
 	// during [NSWindow sendEvent:]:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62851#62851
-	MacOSBOOL bVisible = [self isVisible];
+	BOOL bVisible = [self isVisible];
 	[self release];
 	if ( !bVisible )
 		return;
@@ -1209,7 +1214,7 @@ static NSUInteger nMouseMask = 0;
 			if ( aFrame.size.width != aOldFrame.size.width || aFrame.size.height != aOldFrame.size.height )
 				return;
 
-			USHORT nID = 0;
+			sal_uInt16 nID = 0;
 			NSUInteger nModifiers = [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
 
 			switch ( nType )
@@ -1244,8 +1249,8 @@ static NSUInteger nMouseMask = 0;
 				case NSOtherMouseUp:
 					// Remove matching mouse down mask
 					nID = SALEVENT_MOUSEBUTTONUP;
-					nModifiers |= NSEventMaskFromType( nType - 1 );
-					nMouseMask &= ~NSEventMaskFromType( nType - 1 );
+					nModifiers |= NSEventMaskFromType( (NSEventType)( nType - 1 ) );
+					nMouseMask &= ~NSEventMaskFromType( (NSEventType)( nType - 1 ) );
 					break;
 				default:
 					break;
@@ -1296,7 +1301,7 @@ static NSUInteger nMouseMask = 0;
 				{
 					// Fix bug 3453 by adding back any recently released
 					// modifiers
-					if ( mnLastMetaModifierReleasedTime >= (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 ) )
+					if ( mnLastMetaModifierReleasedTime >= (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 ) )
 						nModifiers |= NSCommandKeyMask;
 
 					if ( mpLastWindowDraggedEvent && nModifiers & NSLeftMouseDownMask )
@@ -1312,7 +1317,7 @@ static NSUInteger nMouseMask = 0;
 					}
 				}
 
-				USHORT nCode = GetEventCode( nModifiers );
+				sal_uInt16 nCode = GetEventCode( nModifiers );
 
 				// Fix bug 2769 by creating synthetic window moved events
 				// when dragging a window's title bar
@@ -1324,7 +1329,7 @@ static NSUInteger nMouseMask = 0;
 				}
 				NSPoint aLocation = GetFlippedContentViewLocation( self, pPositionEvent );
 				SalMouseEvent *pMouseEvent = new SalMouseEvent();
-				pMouseEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
+				pMouseEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 				pMouseEvent->mnX = (long)aLocation.x;
 				pMouseEvent->mnY = (long)aLocation.y;
 				if ( nID == SALEVENT_MOUSEMOVE || nID == SALEVENT_MOUSELEAVE )
@@ -1338,9 +1343,9 @@ static NSUInteger nMouseMask = 0;
 				{
 					// Strange but true, fix bug 2157 by posting a synthetic
 					// mouse moved event
-					USHORT nExtraCode = GetEventCode( ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) | nMouseMask );
+					sal_uInt16 nExtraCode = GetEventCode( ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) | nMouseMask );
 					pExtraMouseEvent = new SalMouseEvent();
-					pExtraMouseEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
+					pExtraMouseEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 					pExtraMouseEvent->mnX = (long)aLocation.x;
 					pExtraMouseEvent->mnY = (long)aLocation.y;
 					pExtraMouseEvent->mnButton = 0;
@@ -1366,12 +1371,12 @@ static NSUInteger nMouseMask = 0;
 			if ( nModifiers & NSCommandKeyMask )
 				mnLastMetaModifierReleasedTime = 0;
 			else
-				mnLastMetaModifierReleasedTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 ) + MODIFIER_RELEASE_INTERVAL;
+				mnLastMetaModifierReleasedTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 ) + MODIFIER_RELEASE_INTERVAL;
 
-			USHORT nCode = GetEventCode( nModifiers );
+			sal_uInt16 nCode = GetEventCode( nModifiers );
 
 			SalKeyModEvent *pKeyModEvent = new SalKeyModEvent();
-			pKeyModEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
+			pKeyModEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 			pKeyModEvent->mnCode = nCode;
 			pKeyModEvent->mnModKeyCode = 0;
 
@@ -1481,8 +1486,8 @@ static NSUInteger nMouseMask = 0;
 
 	        // Fix bug 3030 by setting the modifiers. Note that we ignore the
 			// Shift modifier as using it will disable horizontal scrolling.
-			USHORT nCode = GetEventCode( nModifiers ) & ( KEY_MOD1 | KEY_MOD2 | KEY_MOD3 );
-			MacOSBOOL bScrollPages = ( nType == NSEventTypeSwipe && ! ( nModifiers & NSCommandKeyMask ) );
+			sal_uInt16 nCode = GetEventCode( nModifiers ) & ( KEY_MOD1 | KEY_MOD2 | KEY_MOD3 );
+			BOOL bScrollPages = ( nType == NSEventTypeSwipe && ! ( nModifiers & NSCommandKeyMask ) );
 
 			long nDeltaX = FloatToLong( fDeltaX );
 			if ( !nDeltaX )
@@ -1496,14 +1501,14 @@ static NSUInteger nMouseMask = 0;
 			if ( nDeltaX )
 			{
 				SalWheelMouseEvent *pWheelMouseEvent = new SalWheelMouseEvent();
-				pWheelMouseEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
+				pWheelMouseEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 				pWheelMouseEvent->mnX = (long)aLocation.x;
 				pWheelMouseEvent->mnY = (long)aLocation.y;
 				pWheelMouseEvent->mnDelta = nDeltaX;
 				pWheelMouseEvent->mnNotchDelta = ( nDeltaX < 0 ? -1 : 1 );
 				pWheelMouseEvent->mnScrollLines = ( bScrollPages ? SAL_WHEELMOUSE_EVENT_PAGESCROLL : abs( nDeltaX ) );
 				pWheelMouseEvent->mnCode = nCode;
-				pWheelMouseEvent->mbHorz = TRUE;
+				pWheelMouseEvent->mbHorz = sal_True;
 
 				JavaSalEvent *pSalWheelMouseEvent = new JavaSalEvent( SALEVENT_WHEELMOUSE, mpFrame, pWheelMouseEvent );
 				JavaSalEventQueue::postCachedEvent( pSalWheelMouseEvent );
@@ -1521,14 +1526,14 @@ static NSUInteger nMouseMask = 0;
 			if ( nDeltaY )
 			{
 				SalWheelMouseEvent *pWheelMouseEvent = new SalWheelMouseEvent();
-				pWheelMouseEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
+				pWheelMouseEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 				pWheelMouseEvent->mnX = (long)aLocation.x;
 				pWheelMouseEvent->mnY = (long)aLocation.y;
 				pWheelMouseEvent->mnDelta = nDeltaY;
 				pWheelMouseEvent->mnNotchDelta = ( nDeltaY < 0 ? -1 : 1 );
 				pWheelMouseEvent->mnScrollLines = ( bScrollPages ? SAL_WHEELMOUSE_EVENT_PAGESCROLL : abs( nDeltaY ) );
 				pWheelMouseEvent->mnCode = nCode;
-				pWheelMouseEvent->mbHorz = FALSE;
+				pWheelMouseEvent->mbHorz = sal_False;
 
 				JavaSalEvent *pSalWheelMouseEvent = new JavaSalEvent( SALEVENT_WHEELMOUSE, mpFrame, pWheelMouseEvent );
 				JavaSalEventQueue::postCachedEvent( pSalWheelMouseEvent );
@@ -1560,7 +1565,7 @@ static NSUInteger nMouseMask = 0;
 	}
 }
 
-- (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow
+- (void)setCanBecomeKeyWindow:(BOOL)bCanBecomeKeyWindow
 {
 	mbCanBecomeKeyWindow = bCanBecomeKeyWindow;
 }
@@ -1598,6 +1603,8 @@ static NSUInteger nMouseMask = 0;
 
 - (void)windowDidExitFullScreen:(NSNotification *)pNotification
 {
+	(void)pNotification;
+
 #ifdef USE_NATIVE_FULL_SCREEN_MODE
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
@@ -1610,6 +1617,8 @@ static NSUInteger nMouseMask = 0;
 
 - (void)windowWillEnterFullScreen:(NSNotification *)pNotification
 {
+	(void)pNotification;
+
 #ifdef USE_NATIVE_FULL_SCREEN_MODE
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
@@ -1622,6 +1631,8 @@ static NSUInteger nMouseMask = 0;
 
 - (void)windowDidMove:(NSNotification *)pNotification
 {
+	(void)pNotification;
+
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
 	{
 		JavaSalEvent *pMoveResizeEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
@@ -1632,6 +1643,8 @@ static NSUInteger nMouseMask = 0;
 
 - (void)windowDidResize:(NSNotification *)pNotification
 {
+	(void)pNotification;
+
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
 	{
 		JavaSalEvent *pMoveResizeEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
@@ -1642,6 +1655,8 @@ static NSUInteger nMouseMask = 0;
 
 - (void)windowDidDeminiaturize:(NSNotification *)pNotification
 {
+	(void)pNotification;
+
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
 	{
 		JavaSalEvent *pDeminimizedEvent = new JavaSalEvent( SALEVENT_DEMINIMIZED, mpFrame, NULL );
@@ -1652,6 +1667,8 @@ static NSUInteger nMouseMask = 0;
 
 - (void)windowWillMiniaturize:(NSNotification *)pNotification
 {
+	(void)pNotification;
+
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
 	{
 		JavaSalEvent *pMinimizedEvent = new JavaSalEvent( SALEVENT_MINIMIZED, mpFrame, NULL );
@@ -1660,9 +1677,11 @@ static NSUInteger nMouseMask = 0;
 	}
 }
 
-- (MacOSBOOL)windowShouldClose:(id)pObject
+- (BOOL)windowShouldClose:(id)pObject
 {
-	MacOSBOOL bRet = YES;
+	(void)pObject;
+
+	BOOL bRet = YES;
 
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
@@ -1678,11 +1697,11 @@ static NSUInteger nMouseMask = 0;
 	return bRet;
 }
 
-- (MacOSBOOL)windowShouldZoom:(NSWindow *)pWindow toFrame:(NSRect)aNewFrame
+- (BOOL)windowShouldZoom:(NSWindow *)pWindow toFrame:(NSRect)aNewFrame
 {
-	MacOSBOOL bRet = YES;
+	BOOL bRet = YES;
 
-	if ( pWindow == self && [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
+	if ( pWindow == self && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
 		if ( ![self isVisible] )
 		{
@@ -1717,22 +1736,30 @@ static NSUInteger nMouseMask = 0;
 
 - (void)windowWillClose:(NSNotification *)pNotification
 {
+	(void)pNotification;
+
 	RegisterMainBundleWithLaunchServices();
 }
 
-- (void)windowWillEnterVersionBrowser:(NSNotification *)notification
+- (void)windowWillEnterVersionBrowser:(NSNotification *)pNotification
 {
+	(void)pNotification;
+
 	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
 		mbInVersionBrowser = YES;
 }
 
 - (void)windowWillExitVersionBrowser:(NSNotification *)pNotification
 {
+	(void)pNotification;
+
 	RegisterMainBundleWithLaunchServices();
 }
 
 - (void)windowDidExitVersionBrowser:(NSNotification *)pNotification
 {
+	(void)pNotification;
+
 	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
 	{
 		mbInVersionBrowser = NO;
@@ -1760,7 +1787,7 @@ static CFDataRef aRTFSelection = nil;
 
 @implementation VCLView
 
-- (MacOSBOOL)acceptsFirstResponder
+- (BOOL)acceptsFirstResponder
 {
 	return YES;
 }
@@ -1804,7 +1831,7 @@ static CFDataRef aRTFSelection = nil;
 	}
 }
 
-- (MacOSBOOL)accessibilityIsIgnored
+- (BOOL)accessibilityIsIgnored
 {
 	return NO;
 }
@@ -1828,7 +1855,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (void)keyDown:(NSEvent *)pEvent
 {
-	MacOSBOOL bOldInKeyDown = mbInKeyDown;
+	BOOL bOldInKeyDown = mbInKeyDown;
 	mbInKeyDown = YES;
 
 	if ( mpLastKeyDownEvent )
@@ -1862,8 +1889,8 @@ static CFDataRef aRTFSelection = nil;
 			NSUInteger nLength = [pChars length];
 			for ( ; i < nLength; i++ )
 			{
-				USHORT nChar = (USHORT)[pChars characterAtIndex:i];
-				USHORT nCode = GetKeyCode( UNDEFINED_KEY_CODE, nChar );
+				sal_uInt16 nChar = (sal_uInt16)[pChars characterAtIndex:i];
+				sal_uInt16 nCode = GetKeyCode( UNDEFINED_KEY_CODE, nChar );
 				if ( nCode == KEY_ESCAPE || nCode == KEY_RETURN )
 				{
 					id pTextInput = mpTextInput;
@@ -1880,6 +1907,8 @@ static CFDataRef aRTFSelection = nil;
 
 - (void)keyUp:(NSEvent *)pEvent
 {
+	(void)pEvent;
+
 	if ( mpLastKeyDownEvent )
 	{
 		[mpLastKeyDownEvent release];
@@ -1891,7 +1920,7 @@ static CFDataRef aRTFSelection = nil;
 		NSWindow *pWindow = [self window];
 		if ( pWindow && [pWindow isVisible] && mpFrame )
 		{
-			mpPendingKeyUpEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
+			mpPendingKeyUpEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 
 			JavaSalEvent *pKeyEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, mpPendingKeyUpEvent );
 			JavaSalEventQueue::postCachedEvent( pKeyEvent );
@@ -1906,7 +1935,7 @@ static CFDataRef aRTFSelection = nil;
 	}
 }
 
-- (MacOSBOOL)hasMarkedText
+- (BOOL)hasMarkedText
 {
 	return ( mpTextInput ? YES : NO );
 }
@@ -1927,6 +1956,8 @@ static CFDataRef aRTFSelection = nil;
 
 - (void)setMarkedText:(id)aString selectedRange:(NSRange)aSelectedRange replacementRange:(NSRange)aReplacementRange
 {
+	(void)aReplacementRange;
+
 	maSelectedRange = NSMakeRange( NSNotFound, 0 );
 	maTextInputRange = NSMakeRange( NSNotFound, 0 );
 
@@ -1989,27 +2020,27 @@ static CFDataRef aRTFSelection = nil;
 			}
 		}
 
-		ULONG nLen = aText.Len();
-		ULONG nCursorPos = ( maSelectedRange.location == NSNotFound ? nLen : maSelectedRange.location );
+		sal_uLong nLen = aText.Len();
+		sal_uLong nCursorPos = ( maSelectedRange.location == NSNotFound ? nLen : maSelectedRange.location );
 		if ( nCursorPos > nLen )
 			nCursorPos = nLen;
 
-		USHORT *pAttr = NULL;
+		sal_uInt16 *pAttr = NULL;
 		if ( nLen )
 		{
-			pAttr = (USHORT *)rtl_allocateMemory( sizeof( USHORT* ) * nLen );
+			pAttr = (sal_uInt16 *)rtl_allocateMemory( sizeof( sal_uInt16* ) * nLen );
 			if ( pAttr )
 			{
 				// If no characters are selected, highlight all of them
-				ULONG nStartHighlightPos = 0;
-				ULONG nEndHighlightPos = nLen;
+				sal_uLong nStartHighlightPos = 0;
+				sal_uLong nEndHighlightPos = nLen;
 				if ( maSelectedRange.location != NSNotFound && maSelectedRange.location < nLen && maSelectedRange.length )
 				{
 					nStartHighlightPos = maSelectedRange.location;
 					nEndHighlightPos = maSelectedRange.location + maSelectedRange.length;
 				}
 
-				for ( USHORT i = 0; i < nLen; i++ )
+				for ( sal_uInt16 i = 0; i < nLen; i++ )
 				{
 					if ( i >= nStartHighlightPos && i < nEndHighlightPos )
 						pAttr[ i ] = SAL_EXTTEXTINPUT_ATTR_HIGHLIGHT;
@@ -2020,12 +2051,12 @@ static CFDataRef aRTFSelection = nil;
 		}
 
 		SalExtTextInputEvent *pInputEvent = new SalExtTextInputEvent();
-		pInputEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
+		pInputEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 		pInputEvent->maText = aText;
 		pInputEvent->mpTextAttr = pAttr;
 		pInputEvent->mnCursorPos = nCursorPos;
 		pInputEvent->mnDeltaStart = 0;
-		pInputEvent->mbOnlyCursor = FALSE;
+		pInputEvent->mbOnlyCursor = sal_False;
 		pInputEvent->mnCursorFlags = 0;
 
 		JavaSalEvent *pSalInputEvent = new JavaSalEvent( SALEVENT_EXTTEXTINPUT, mpFrame, (void *)pInputEvent, OString(), 0, nCursorPos );
@@ -2061,12 +2092,12 @@ static CFDataRef aRTFSelection = nil;
 		if ( pWindow && [pWindow isVisible] && mpFrame )
 		{
 			SalExtTextInputEvent *pInputEvent = new SalExtTextInputEvent();
-			pInputEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
+			pInputEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 			pInputEvent->maText = XubString();
 			pInputEvent->mpTextAttr = NULL;
 			pInputEvent->mnCursorPos = 0;
 			pInputEvent->mnDeltaStart = 0;
-			pInputEvent->mbOnlyCursor = FALSE;
+			pInputEvent->mbOnlyCursor = sal_False;
 			pInputEvent->mnCursorFlags = 0;
 
 			JavaSalEvent *pSalInputEvent = new JavaSalEvent( SALEVENT_EXTTEXTINPUT, mpFrame, (void *)pInputEvent, OString(), 0, 0 );
@@ -2083,6 +2114,8 @@ static CFDataRef aRTFSelection = nil;
 
 - (NSAttributedString *)attributedSubstringForProposedRange:(NSRange)aRange actualRange:(NSRangePointer)pActualRange
 {
+	(void)pActualRange;
+
 	NSAttributedString *pRet = nil;
 
 	if ( mpTextInput && aRange.location != NSNotFound )
@@ -2111,6 +2144,8 @@ static CFDataRef aRTFSelection = nil;
 
 - (void)insertText:(id)aString replacementRange:(NSRange)aReplacementRange
 {
+	(void)aReplacementRange;
+
 	maSelectedRange = NSMakeRange( NSNotFound, 0 );
 	maTextInputRange = NSMakeRange( NSNotFound, 0 );
 
@@ -2151,14 +2186,14 @@ static CFDataRef aRTFSelection = nil;
 				aText = XubString( aBuf );
 			}
 
-			ULONG nLen = aText.Len();
+			sal_uLong nLen = aText.Len();
 			SalExtTextInputEvent *pInputEvent = new SalExtTextInputEvent();
-			pInputEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
+			pInputEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 			pInputEvent->maText = aText;
 			pInputEvent->mpTextAttr = NULL;
 			pInputEvent->mnCursorPos = nLen;
 			pInputEvent->mnDeltaStart = 0;
-			pInputEvent->mbOnlyCursor = FALSE;
+			pInputEvent->mbOnlyCursor = sal_False;
 			pInputEvent->mnCursorFlags = 0;
 
 			JavaSalEvent *pSalInputEvent = new JavaSalEvent( SALEVENT_EXTTEXTINPUT, mpFrame, (void *)pInputEvent, OString(), nLen, nLen );
@@ -2187,11 +2222,11 @@ static CFDataRef aRTFSelection = nil;
 				NSUInteger nLength = [pChars length];
 				for ( ; i < nLength; i++ )
 				{
-					USHORT nChar = (USHORT)[pChars characterAtIndex:i];
-					USHORT nCode = GetKeyCode( mpLastKeyDownEvent ? [mpLastKeyDownEvent keyCode] : UNDEFINED_KEY_CODE, nChar ) | GetEventCode( nModifiers & ~NSAlternateKeyMask );
+					sal_uInt16 nChar = (sal_uInt16)[pChars characterAtIndex:i];
+					sal_uInt16 nCode = GetKeyCode( mpLastKeyDownEvent ? [mpLastKeyDownEvent keyCode] : UNDEFINED_KEY_CODE, nChar ) | GetEventCode( nModifiers & ~NSAlternateKeyMask );
 
 					SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
-					pKeyDownEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
+					pKeyDownEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 					pKeyDownEvent->mnCode = nCode;
 					pKeyDownEvent->mnCharCode = nChar;
 					pKeyDownEvent->mnRepeat = 0;
@@ -2225,6 +2260,8 @@ static CFDataRef aRTFSelection = nil;
 
 - (NSUInteger)characterIndexForPoint:(NSPoint)aPoint
 {
+	(void)aPoint;
+
 #ifdef DEBUG
 	fprintf( stderr, "[VCLView characterIndexForPoint:] not implemented\n" );
 #endif
@@ -2233,6 +2270,8 @@ static CFDataRef aRTFSelection = nil;
 
 - (NSRect)firstRectForCharacterRange:(NSRange)aRange actualRange:(NSRangePointer)pActualRange
 {
+	(void)aRange;
+
 	NSRect aRet = NSZeroRect;
 
 	if ( pActualRange )
@@ -2297,7 +2336,7 @@ static CFDataRef aRTFSelection = nil;
 					for ( ; i < nLength; i++ )
 					{
 						SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
-						pKeyDownEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
+						pKeyDownEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 						pKeyDownEvent->mnCode = KEY_BACKSPACE;
 						pKeyDownEvent->mnCharCode = 0;
 						pKeyDownEvent->mnRepeat = 0;
@@ -2343,10 +2382,10 @@ static CFDataRef aRTFSelection = nil;
 			short nCommandKey = [pSharedResponder lastCommandKey];
 			if ( nCommandKey )
 			{
-				USHORT nCode = nCommandKey | [pSharedResponder lastModifiers];
+				sal_uInt16 nCode = nCommandKey | [pSharedResponder lastModifiers];
 
 				SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
-				pKeyDownEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
+				pKeyDownEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 				pKeyDownEvent->mnCode = nCode;
 				pKeyDownEvent->mnCharCode = 0;
 				pKeyDownEvent->mnRepeat = 0;
@@ -2369,11 +2408,11 @@ static CFDataRef aRTFSelection = nil;
 			NSUInteger nLength = [pChars length];
 			for ( ; i < nLength; i++ )
 			{
-				USHORT nChar = (USHORT)[pChars characterAtIndex:i];
-				USHORT nCode = GetKeyCode( [mpLastKeyDownEvent keyCode], nChar ) | GetEventCode( nModifiers );
+				sal_uInt16 nChar = (sal_uInt16)[pChars characterAtIndex:i];
+				sal_uInt16 nCode = GetKeyCode( [mpLastKeyDownEvent keyCode], nChar ) | GetEventCode( nModifiers );
 
 				SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
-				pKeyDownEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
+				pKeyDownEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 				pKeyDownEvent->mnCode = nCode;
 				pKeyDownEvent->mnCharCode = nChar;
 				pKeyDownEvent->mnRepeat = 0;
@@ -2427,7 +2466,7 @@ static CFDataRef aRTFSelection = nil;
 		[pDelegate concludeDragOperation:pSender];
 }
 
-- (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(MacOSBOOL)bSlideBack
+- (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(BOOL)bSlideBack
 {
 	// Fix bug 3652 by locking the application mutex and never letting it get
 	// released during a native drag session. This prevents drag events from
@@ -2563,7 +2602,7 @@ static CFDataRef aRTFSelection = nil;
 	return pRet;
 }
 
-- (NSDragOperation)draggingSourceOperationMaskForLocal:(MacOSBOOL)bLocal
+- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal
 {
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingSourceOperationMaskForLocal:)])
@@ -2620,7 +2659,7 @@ static CFDataRef aRTFSelection = nil;
 	}
 }
 
-- (MacOSBOOL)ignoreModifierKeysWhileDragging
+- (BOOL)ignoreModifierKeysWhileDragging
 {
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(ignoreModifierKeysWhileDragging)])
@@ -2646,7 +2685,7 @@ static CFDataRef aRTFSelection = nil;
 	return self;
 }
 
-- (MacOSBOOL)isOpaque
+- (BOOL)isOpaque
 {
 	return YES;
 }
@@ -2660,7 +2699,7 @@ static CFDataRef aRTFSelection = nil;
 		return nil;
 }
 
-- (MacOSBOOL)performDragOperation:(id < NSDraggingInfo >)pSender
+- (BOOL)performDragOperation:(id < NSDraggingInfo >)pSender
 {
 	if ( pSender )
 	{
@@ -2683,7 +2722,7 @@ static CFDataRef aRTFSelection = nil;
 	return NO;
 }
 
-- (MacOSBOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender
+- (BOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender
 {
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(prepareForDragOperation:)])
@@ -2692,9 +2731,9 @@ static CFDataRef aRTFSelection = nil;
 		return NO;
 }
 
-- (MacOSBOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard
+- (BOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard
 {
-	MacOSBOOL bRet = NO;
+	BOOL bRet = NO;
 
 	NSWindow *pWindow = [self window];
 	if ( pPasteboard && pWindow && [pWindow isVisible] )
@@ -2806,7 +2845,7 @@ static CFDataRef aRTFSelection = nil;
 	return nil;
 }
 
-- (MacOSBOOL)wantsPeriodicDraggingUpdates
+- (BOOL)wantsPeriodicDraggingUpdates
 {
 	id pDelegate = [self draggingDestinationDelegate];
 	// Ignore the delegate's selector as always returns NO and we need to return
@@ -2817,9 +2856,9 @@ static CFDataRef aRTFSelection = nil;
 		return NO;
 }
 
-- (MacOSBOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes
+- (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes
 {
-	MacOSBOOL bRet = NO;
+	BOOL bRet = NO;
 
 	if ( pPasteboard && pTypes )
 	{
@@ -2886,7 +2925,7 @@ static CFDataRef aRTFSelection = nil;
 
 @end
 
-static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
+static BOOL bVCLEventQueueClassesInitialized = NO;
 
 @interface InstallVCLEventQueueClasses : NSObject
 {
@@ -2906,6 +2945,8 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 
 - (void)installVCLEventQueueClasses:(id)pObject
 {
+	(void)pObject;
+
 	if ( bVCLEventQueueClassesInitialized )
 		return;
 
@@ -3226,17 +3267,19 @@ sal_Bool NSApplication_isActive()
 	return pRet;
 }
 
-- (void)cancelTermination:(id)pObject;
+- (void)cancelTermination:(id)pObject
 {
+	(void)pObject;
+
 	VCLApplicationDelegate *pDelegate = [VCLApplicationDelegate sharedDelegate];
 	if ( pDelegate )
 		[pDelegate cancelTermination];
 }
 @end
 
-MacOSBOOL NSWindow_hasMarkedText( NSWindow *pWindow )
+sal_Bool NSWindow_hasMarkedText( NSWindow *pWindow )
 {
-	MacOSBOOL bRet = NO;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -3251,7 +3294,7 @@ MacOSBOOL NSWindow_hasMarkedText( NSWindow *pWindow )
 	{
 		NSResponder *pResponder = [pWindow firstResponder];
 		if ( pResponder && [pResponder isKindOfClass:[VCLView class]] && [(VCLView *)pResponder hasMarkedText] )
-			bRet = YES;
+			bRet = sal_True;
 	}
 
 	[pPool release];

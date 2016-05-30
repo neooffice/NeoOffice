@@ -1,41 +1,39 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified February 2006 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
 
-#ifndef _SV_SVSYS_HXX
-#include <svsys.h>
-#endif
-#include <vcl/salgdi.hxx>
 #include <tools/debug.hxx>
-#include <vcl/outdev.h>
 #include <vcl/outdev.hxx>
 #include <vcl/virdev.hxx>
 #include <vcl/bmpacc.hxx>
@@ -44,25 +42,28 @@
 #include <vcl/svapp.hxx>
 #include <vcl/wrkwin.hxx>
 #include <vcl/graph.hxx>
-#include <vcl/wall2.hxx>
+
+#include <wall2.hxx>
+#include <salgdi.hxx>
+#include <window.h>
+#include <svdata.hxx>
+#include <outdev.h>
+
 #include <com/sun/star/uno/Sequence.hxx>
 
 #include <basegfx/vector/b2dvector.hxx>
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #include <basegfx/polygon/b2dpolygon.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
+
 #include <math.h>
-#include <vcl/window.h>
-#include <vcl/svdata.hxx>
 
 #ifdef USE_JAVA
 
 #ifdef MACOSX
-#ifndef _SV_SALGDI_H
-#include <salgdi.h>
-#endif
+#include "java/salgdi.h"
 #endif	// MACOSX
-
+ 
 #define MAX_TRANSPARENT_GRADIENT_BMP_PIXELS ( 4 * 1024 * 1024 )
 #ifdef MACOSX
 #define MIN_TRANSPARENT_GRADIENT_RESOLUTION ( 2 * MIN_SCREEN_RESOLUTION )
@@ -78,7 +79,7 @@ DBG_NAMEEX( OutputDevice )
 
 // ------------------------------------------------------------------------
 
-void OutputDevice::DrawGrid( const Rectangle& rRect, const Size& rDist, ULONG nFlags )
+void OutputDevice::DrawGrid( const Rectangle& rRect, const Size& rDist, sal_uLong nFlags )
 {
 	DBG_TRACE( "OutputDevice::DrawGrid()" );
 	DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
@@ -136,8 +137,8 @@ void OutputDevice::DrawGrid( const Rectangle& rRect, const Size& rDist, ULONG nF
 	if( mbInitFillColor )
 		ImplInitFillColor();
 
-	const BOOL bOldMap = mbMap;
-	EnableMapMode( FALSE );
+	const sal_Bool bOldMap = mbMap;
+	EnableMapMode( sal_False );
 
 	if( nFlags & GRID_DOTS )
 	{
@@ -201,16 +202,35 @@ void OutputDevice::DrawTransparent( const basegfx::B2DPolyPolygon& rB2DPolyPoly,
     if( mbInitFillColor )
 	    ImplInitFillColor();
 
-	if((mnAntialiasing & ANTIALIASING_ENABLE_B2DDRAW) && mpGraphics->supportsOperation(OutDevSupport_B2DDraw))
+	if((mnAntialiasing & ANTIALIASING_ENABLE_B2DDRAW)
+		&& mpGraphics->supportsOperation(OutDevSupport_B2DDraw)
+		&& ROP_OVERPAINT == GetRasterOp() )
     {
         // b2dpolygon support not implemented yet on non-UNX platforms
         const ::basegfx::B2DHomMatrix aTransform = ImplGetDeviceTransformation();
-        ::basegfx::B2DPolyPolygon aB2DPP = rB2DPolyPoly;
-        aB2DPP.transform( aTransform );
-        
-        if( mpGraphics->DrawPolyPolygon( aB2DPP, fTransparency, this ) )
+        basegfx::B2DPolyPolygon aB2DPolyPolygon(rB2DPolyPoly);
+
+		// transform the polygon into device space and ensure it is closed
+		aB2DPolyPolygon.transform( aTransform );
+		aB2DPolyPolygon.setClosed( true );
+
+		bool bDrawnOk = true;
+		if( IsFillColor() )
+			bDrawnOk = mpGraphics->DrawPolyPolygon( aB2DPolyPolygon, fTransparency, this );
+		if( bDrawnOk && IsLineColor() )
+		{
+			const basegfx::B2DVector aHairlineWidth(1,1);
+			const int nPolyCount = aB2DPolyPolygon.count();
+			for( int nPolyIdx = 0; nPolyIdx < nPolyCount; ++nPolyIdx )
+			{
+				const ::basegfx::B2DPolygon aOnePoly = aB2DPolyPolygon.getB2DPolygon( nPolyIdx );
+				mpGraphics->DrawPolyLine( aOnePoly, fTransparency, aHairlineWidth, ::basegfx::B2DLINEJOIN_NONE, com::sun::star::drawing::LineCap_BUTT, this );
+			}
+		}
+
+        if( bDrawnOk )
         {
-#if 0 
+#if 0
             // MetaB2DPolyPolygonAction is not implemented yet:
             // according to AW adding it is very dangerous since there is a lot
             // of code that uses the metafile actions directly and unless every
@@ -233,7 +253,7 @@ void OutputDevice::DrawTransparent( const basegfx::B2DPolyPolygon& rB2DPolyPoly,
 // ------------------------------------------------------------------------
 
 void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
-									USHORT nTransparencePercent )
+									sal_uInt16 nTransparencePercent )
 {
 	DBG_TRACE( "OutputDevice::DrawTransparent()" );
 	DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
@@ -282,7 +302,10 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 
     // try hard to draw it directly, because the emulation layers are slower
 	if( !pDisableNative
-	    && mpGraphics->supportsOperation( OutDevSupport_B2DDraw ) 
+	    && mpGraphics->supportsOperation( OutDevSupport_B2DDraw )
+#if defined UNX && ! defined QUARTZ
+            && GetBitCount() > 8
+#endif
 #ifdef WIN32
         // workaround bad dithering on remote displaying when using GDI+ with toolbar buttoin hilighting
         && !rPolyPoly.IsRect()
@@ -301,14 +324,23 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 
 		// get the polygon in device coordinates
 		basegfx::B2DPolyPolygon aB2DPolyPolygon( rPolyPoly.getB2DPolyPolygon() );
-        aB2DPolyPolygon.setClosed( true );
 		const ::basegfx::B2DHomMatrix aTransform = ImplGetDeviceTransformation();
 		aB2DPolyPolygon.transform( aTransform );
 
-		// draw the transparent polygon
-		bDrawn = mpGraphics->DrawPolyPolygon( aB2DPolyPolygon, nTransparencePercent*0.01, this );
+		const double fTransparency = 0.01 * nTransparencePercent;
+		if( mbFillColor )
+		{
+            // #121591#
+            // CAUTION: Only non printing (pixel-renderer) VCL commands from OutputDevices
+            // should be used when printing. Normally this is avoided by the printer being
+            // non-AAed and thus e.g. on WIN GdiPlus calls are not used. It may be necessary
+            // to add (OUTDEV_PRINTER != meOutDevType) to the entering if statement, thus
+            // using the fallbacl some lines below (which is not very good, though). For
+            // now, WinSalGraphics::drawPolyPolygon will detect printer usage and correct
+            // the wrong mapping (see there for details)
+            bDrawn = mpGraphics->DrawPolyPolygon( aB2DPolyPolygon, fTransparency, this );
+		}
 
-		// DrawTransparent() assumes that the border is NOT to be drawn transparently???
 		if( mbLineColor )
 		{
 			// disable the fill color for now
@@ -319,7 +351,7 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 			for( int nPolyIdx = 0; nPolyIdx < nPolyCount; ++nPolyIdx )
 			{
 				const ::basegfx::B2DPolygon& rPolygon = aB2DPolyPolygon.getB2DPolygon( nPolyIdx );
-				mpGraphics->DrawPolyLine( rPolygon, aLineWidths, ::basegfx::B2DLINEJOIN_NONE, this );
+				bDrawn = mpGraphics->DrawPolyLine( rPolygon, fTransparency, aLineWidths, ::basegfx::B2DLINEJOIN_NONE, com::sun::star::drawing::LineCap_BUTT, this );
 			}
 			// prepare to restore the fill color
 			mbInitFillColor = mbFillColor;
@@ -346,8 +378,8 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 			ImplGetGraphics();
 		if ( mpGraphics )
 		{
-			((JavaSalGraphics *)mpGraphics)->setLineTransparency( (sal_uInt8)nTransparencePercent );
-			((JavaSalGraphics *)mpGraphics)->setFillTransparency( (sal_uInt8)nTransparencePercent );
+			((JavaSalGraphics *)mpGraphics)->setLineTransparency( nTransparencePercent );
+			((JavaSalGraphics *)mpGraphics)->setFillTransparency( nTransparencePercent );
 
 			DrawPolyPolygon( rPolyPoly );
 
@@ -357,11 +389,17 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 #else	// USE_JAVA && MACOSX
 		if( OUTDEV_PRINTER == meOutDevType )
 		{
+			if(100 <= nTransparencePercent)
+			{
+				// #i112959# 100% transparent, draw nothing
+				return;
+			}
+
 			Rectangle		aPolyRect( LogicToPixel( rPolyPoly ).GetBoundRect() );
 			const Size		aDPISize( LogicToPixel( Size( 1, 1 ), MAP_INCH ) );
 			const long		nBaseExtent = Max( FRound( aDPISize.Width() / 300. ), 1L );
 			long			nMove;
-			const USHORT	nTrans = ( nTransparencePercent < 13 ) ? 0 :
+			const sal_uInt16	nTrans = ( nTransparencePercent < 13 ) ? 0 :
 									 ( nTransparencePercent < 38 ) ? 25 :
 									 ( nTransparencePercent < 63 ) ? 50 :
 									 ( nTransparencePercent < 88 ) ? 75 : 100;
@@ -371,30 +409,40 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 				case( 25 ): nMove = nBaseExtent * 3; break;
 				case( 50 ): nMove = nBaseExtent * 4; break;
 				case( 75 ): nMove = nBaseExtent * 6; break;
-							// TODO What is the correct VALUE???
+
+				// #i112959#  very transparent (88 < nTransparencePercent <= 99)
+				case( 100 ): nMove = nBaseExtent * 8; break;
+
+				// #i112959# not transparent (nTransparencePercent < 13)
 				default:    nMove = 0; break;
 			}
 
 			Push( PUSH_CLIPREGION | PUSH_LINECOLOR );
 			IntersectClipRegion( rPolyPoly );
 			SetLineColor( GetFillColor() );
+			const sal_Bool bOldMap = mbMap;
+			EnableMapMode( sal_False );
 
-			Rectangle aRect( aPolyRect.TopLeft(), Size( aPolyRect.GetWidth(), nBaseExtent ) );
-
-			const BOOL bOldMap = mbMap;
-			EnableMapMode( FALSE );
-
-			while( aRect.Top() <= aPolyRect.Bottom() )
+			if(nMove)
 			{
-				DrawRect( aRect );
-				aRect.Move( 0, nMove );
+				Rectangle aRect( aPolyRect.TopLeft(), Size( aPolyRect.GetWidth(), nBaseExtent ) );
+				while( aRect.Top() <= aPolyRect.Bottom() )
+				{
+					DrawRect( aRect );
+					aRect.Move( 0, nMove );
+				}
+
+				aRect = Rectangle( aPolyRect.TopLeft(), Size( nBaseExtent, aPolyRect.GetHeight() ) );
+				while( aRect.Left() <= aPolyRect.Right() )
+				{
+					DrawRect( aRect );
+					aRect.Move( nMove, 0 );
+				}
 			}
-
-			aRect = Rectangle( aPolyRect.TopLeft(), Size( nBaseExtent, aPolyRect.GetHeight() ) );
-			while( aRect.Left() <= aPolyRect.Right() )
+			else
 			{
-				DrawRect( aRect );
-				aRect.Move( nMove, 0 );
+				// #i112959# if not transparent, draw full rectangle in clip region
+				DrawRect( aPolyRect );
 			}
 
 			EnableMapMode( bOldMap );
@@ -430,25 +478,25 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
                     if( 1 )
                     {
                         if ( mbInitClipRegion )
-                            ImplInitClipRegion();        
+                            ImplInitClipRegion();
                         if ( mbInitLineColor )
                             ImplInitLineColor();
                         if ( mbInitFillColor )
                             ImplInitFillColor();
-    
+
                         Rectangle aLogicPolyRect( rPolyPoly.GetBoundRect() );
                         Rectangle aPixelRect( ImplLogicToDevicePixel( aLogicPolyRect ) );
 
                         if( !mbOutputClipped )
                         {
-                            bDrawn = mpGraphics->DrawAlphaRect( 
-                               aPixelRect.Left(), aPixelRect.Top(), 
+                            bDrawn = mpGraphics->DrawAlphaRect(
+                               aPixelRect.Left(), aPixelRect.Top(),
                                // #i98405# use methods with small g, else one pixel too much will be painted.
                                // This is because the source is a polygon which when painted would not paint
-                               // the rightmost and lowest pixel line(s), so use one pixel less for the 
+                               // the rightmost and lowest pixel line(s), so use one pixel less for the
                                // rectangle, too.
                                aPixelRect.getWidth(), aPixelRect.getHeight(),
-                               sal::static_int_cast<sal_uInt8>(nTransparencePercent), 
+                               sal::static_int_cast<sal_uInt8>(nTransparencePercent),
                                this );
                         }
                         else
@@ -460,16 +508,16 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
                 {
                     VirtualDevice	aVDev( *this, 1 );
                     const Size		aDstSz( aDstRect.GetSize() );
-                    const BYTE		cTrans = (BYTE) MinMax( FRound( nTransparencePercent * 2.55 ), 0, 255 );
+                    const sal_uInt8		cTrans = (sal_uInt8) MinMax( FRound( nTransparencePercent * 2.55 ), 0, 255 );
 
                     if( aDstRect.Left() || aDstRect.Top() )
                         aPolyPoly.Move( -aDstRect.Left(), -aDstRect.Top() );
 
                     if( aVDev.SetOutputSizePixel( aDstSz ) )
                     {
-                        const BOOL bOldMap = mbMap;
+                        const sal_Bool bOldMap = mbMap;
 
-                        EnableMapMode( FALSE );
+                        EnableMapMode( sal_False );
 
                         aVDev.SetLineColor( COL_BLACK );
                         aVDev.SetFillColor( COL_BLACK );
@@ -497,25 +545,25 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
                                 if( aPaint.GetBitCount() <= 8 )
                                 {
                                     const BitmapPalette&	rPal = pW->GetPalette();
-                                    const USHORT			nCount = rPal.GetEntryCount();
-                                    BitmapColor*			pMap = (BitmapColor*) new BYTE[ nCount * sizeof( BitmapColor ) ];
+                                    const sal_uInt16			nCount = rPal.GetEntryCount();
+                                    BitmapColor*			pMap = (BitmapColor*) new sal_uInt8[ nCount * sizeof( BitmapColor ) ];
 
-                                    for( USHORT i = 0; i < nCount; i++ )
+                                    for( sal_uInt16 i = 0; i < nCount; i++ )
                                     {
                                         BitmapColor aCol( rPal[ i ] );
-                                        pMap[ i ] = BitmapColor( (BYTE) rPal.GetBestIndex( aCol.Merge( aFillCol, cTrans ) ) );
+                                        pMap[ i ] = BitmapColor( (sal_uInt8) rPal.GetBestIndex( aCol.Merge( aFillCol, cTrans ) ) );
                                     }
 
                                     if( pR->GetScanlineFormat() == BMP_FORMAT_1BIT_MSB_PAL &&
                                         pW->GetScanlineFormat() == BMP_FORMAT_8BIT_PAL )
                                     {
-                                        const BYTE cBlack = aBlack.GetIndex();
+                                        const sal_uInt8 cBlack = aBlack.GetIndex();
 
                                         for( nY = 0; nY < nHeight; nY++ )
                                         {
                                             Scanline	pWScan = pW->GetScanline( nY );
                                             Scanline	pRScan = pR->GetScanline( nY );
-                                            BYTE		cBit = 128;
+                                            sal_uInt8		cBit = 128;
 
                                             for( nX = 0; nX < nWidth; nX++, cBit >>= 1, pWScan++ )
                                             {
@@ -523,7 +571,7 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
                                                     cBit = 128, pRScan++;
 
                                                 if( ( *pRScan & cBit ) == cBlack )
-                                                    *pWScan = (BYTE) pMap[ *pWScan ].GetIndex();
+                                                    *pWScan = (sal_uInt8) pMap[ *pWScan ].GetIndex();
                                             }
                                         }
                                     }
@@ -535,20 +583,20 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
                                                     pW->SetPixel( nY, nX, pMap[ pW->GetPixel( nY, nX ).GetIndex() ] );
                                     }
 
-                                    delete[] (BYTE*) pMap;
+                                    delete[] (sal_uInt8*) pMap;
                                 }
                                 else
                                 {
                                     if( pR->GetScanlineFormat() == BMP_FORMAT_1BIT_MSB_PAL &&
                                         pW->GetScanlineFormat() == BMP_FORMAT_24BIT_TC_BGR )
                                     {
-                                        const BYTE cBlack = aBlack.GetIndex();
+                                        const sal_uInt8 cBlack = aBlack.GetIndex();
 
                                         for( nY = 0; nY < nHeight; nY++ )
                                         {
                                             Scanline	pWScan = pW->GetScanline( nY );
                                             Scanline	pRScan = pR->GetScanline( nY );
-                                            BYTE		cBit = 128;
+                                            sal_uInt8		cBit = 128;
 
                                             for( nX = 0; nX < nWidth; nX++, cBit >>= 1, pWScan += 3 )
                                             {
@@ -613,9 +661,9 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
         if( mpAlphaVDev )
         {
             const Color aFillCol( mpAlphaVDev->GetFillColor() );
-            mpAlphaVDev->SetFillColor( Color(sal::static_int_cast<UINT8>(255*nTransparencePercent/100),
-                                             sal::static_int_cast<UINT8>(255*nTransparencePercent/100),
-                                             sal::static_int_cast<UINT8>(255*nTransparencePercent/100)) );
+            mpAlphaVDev->SetFillColor( Color(sal::static_int_cast<sal_uInt8>(255*nTransparencePercent/100),
+                                             sal::static_int_cast<sal_uInt8>(255*nTransparencePercent/100),
+                                             sal::static_int_cast<sal_uInt8>(255*nTransparencePercent/100)) );
 
             mpAlphaVDev->DrawTransparent( rPolyPoly, nTransparencePercent );
 
@@ -635,7 +683,10 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 	const Color aBlack( COL_BLACK );
 
 	if( mpMetaFile )
+    {
+         // missing here is to map the data using the DeviceTransformation
 		mpMetaFile->AddAction( new MetaFloatTransparentAction( rMtf, rPos, rSize, rTransparenceGradient ) );
+    }
 
 	if( ( rTransparenceGradient.GetStartColor() == aBlack && rTransparenceGradient.GetEndColor() == aBlack ) ||
 		( mnDrawMode & ( DRAWMODE_NOTRANSPARENCY ) ) )
@@ -695,151 +746,211 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 			if( pVDev->SetOutputSizePixel( aDstRect.GetSize() ) )
 #endif	// USE_JAVA
 			{
-				Bitmap		aPaint, aMask;
-				AlphaMask	aAlpha;
-				MapMode 	aMap( GetMapMode() );
-				Point		aOutPos( PixelToLogic( aDstRect.TopLeft() ) );
-				const BOOL	bOldMap = mbMap;
+				if(GetAntialiasing())
+				{
+					// #i102109#
+					// For MetaFile replay (see task) it may now be neccessary to take
+					// into account that the content is AntiAlialised and needs to be masked
+					// like that. Instead of masking, i will use a copy-modify-paste cycle
+					// here (as i already use in the VclPrimiziveRenderer with successs)
+					pVDev->SetAntialiasing(GetAntialiasing());
 
-				aMap.SetOrigin( Point( -aOutPos.X(), -aOutPos.Y() ) );
+					// create MapMode for buffer (offset needed) and set
+					MapMode aMap(GetMapMode());
+					const Point aOutPos(PixelToLogic(aDstRect.TopLeft()));
+					aMap.SetOrigin(Point(-aOutPos.X(), -aOutPos.Y()));
 #ifdef USE_JAVA
-				if ( (double)aScaleX > 1.0f )
-					aMap.SetScaleX( aScaleX );
-				if ( (double)aScaleY > 1.0f )
-					aMap.SetScaleY( aScaleY );
+					if ( (double)aScaleX > 1.0f )
+						aMap.SetScaleX( aScaleX );
+					if ( (double)aScaleY > 1.0f )
+						aMap.SetScaleY( aScaleY );
 #endif	// USE_JAVA
-				pVDev->SetMapMode( aMap );
-				const BOOL	bVDevOldMap = pVDev->IsMapModeEnabled();
+					pVDev->SetMapMode(aMap);
 
-				// create paint bitmap
-				( (GDIMetaFile&) rMtf ).WindStart();
-				( (GDIMetaFile&) rMtf ).Play( pVDev, rPos, rSize );
-				( (GDIMetaFile&) rMtf ).WindStart();
-				pVDev->EnableMapMode( FALSE );
-				aPaint = pVDev->GetBitmap( Point(), pVDev->GetOutputSizePixel() );
-				pVDev->EnableMapMode( bVDevOldMap ); // #i35331#: MUST NOT use EnableMapMode( TRUE ) here!
+					// copy MapMode state and disable for target
+					const bool bOrigMapModeEnabled(IsMapModeEnabled());
+					EnableMapMode(false);
 
-				// create mask bitmap
-				pVDev->SetLineColor( COL_BLACK );
-				pVDev->SetFillColor( COL_BLACK );
-				pVDev->DrawRect( Rectangle( pVDev->PixelToLogic( Point() ), pVDev->GetOutputSize() ) );
-				pVDev->SetDrawMode( DRAWMODE_WHITELINE | DRAWMODE_WHITEFILL | DRAWMODE_WHITETEXT |
-									DRAWMODE_WHITEBITMAP | DRAWMODE_WHITEGRADIENT );
-				( (GDIMetaFile&) rMtf ).WindStart();
-				( (GDIMetaFile&) rMtf ).Play( pVDev, rPos, rSize );
-				( (GDIMetaFile&) rMtf ).WindStart();
-				pVDev->EnableMapMode( FALSE );
-				aMask = pVDev->GetBitmap( Point(), pVDev->GetOutputSizePixel() );
-				pVDev->EnableMapMode( bVDevOldMap ); // #i35331#: MUST NOT use EnableMapMode( TRUE ) here!
+					// copy MapMode state and disable for buffer
+					const bool bBufferMapModeEnabled(pVDev->IsMapModeEnabled());
+					pVDev->EnableMapMode(false);
 
-				// create alpha mask from gradient
-				pVDev->SetDrawMode( DRAWMODE_GRAYGRADIENT );
-				pVDev->DrawGradient( Rectangle( rPos, rSize ), rTransparenceGradient );
-				pVDev->SetDrawMode( DRAWMODE_DEFAULT );
-				pVDev->EnableMapMode( FALSE );
-				pVDev->DrawMask( Point(), pVDev->GetOutputSizePixel(), aMask, Color( COL_WHITE ) );
+					// copy content from original to buffer
+					pVDev->DrawOutDev(
+						aPoint, pVDev->GetOutputSizePixel(), // dest
+						aDstRect.TopLeft(), pVDev->GetOutputSizePixel(), // source
+						*this);
 
-				aAlpha = pVDev->GetBitmap( Point(), pVDev->GetOutputSizePixel() );
+					// draw MetaFile to buffer
+					pVDev->EnableMapMode(bBufferMapModeEnabled);
+					((GDIMetaFile&)rMtf).WindStart();
+					((GDIMetaFile&)rMtf).Play(pVDev, rPos, rSize);
+					((GDIMetaFile&)rMtf).WindStart();
 
-				delete pVDev;
+					// get content bitmap from buffer
+					pVDev->EnableMapMode(false);
+					const Bitmap aPaint(pVDev->GetBitmap(aPoint, pVDev->GetOutputSizePixel()));
+
+					// create alpha mask from gradient and get as Bitmap
+					pVDev->EnableMapMode(bBufferMapModeEnabled);
+					pVDev->SetDrawMode(DRAWMODE_GRAYGRADIENT);
+					pVDev->DrawGradient(Rectangle(rPos, rSize), rTransparenceGradient);
+					pVDev->SetDrawMode(DRAWMODE_DEFAULT);
+					pVDev->EnableMapMode(false);
+					const AlphaMask aAlpha(pVDev->GetBitmap(aPoint, pVDev->GetOutputSizePixel()));
+
+					// draw masked content to target and restore MapMode
+					DrawBitmapEx(aDstRect.TopLeft(), BitmapEx(aPaint, aAlpha));
+					EnableMapMode(bOrigMapModeEnabled);
+				}
+				else
+				{
+					Bitmap		aPaint, aMask;
+					AlphaMask	aAlpha;
+					MapMode 	aMap( GetMapMode() );
+					Point		aOutPos( PixelToLogic( aDstRect.TopLeft() ) );
+					const sal_Bool	bOldMap = mbMap;
+
+					aMap.SetOrigin( Point( -aOutPos.X(), -aOutPos.Y() ) );
+#ifdef USE_JAVA
+					if ( (double)aScaleX > 1.0f )
+						aMap.SetScaleX( aScaleX );
+					if ( (double)aScaleY > 1.0f )
+						aMap.SetScaleY( aScaleY );
+#endif	// USE_JAVA
+					pVDev->SetMapMode( aMap );
+					const sal_Bool	bVDevOldMap = pVDev->IsMapModeEnabled();
+
+					// create paint bitmap
+					( (GDIMetaFile&) rMtf ).WindStart();
+					( (GDIMetaFile&) rMtf ).Play( pVDev, rPos, rSize );
+					( (GDIMetaFile&) rMtf ).WindStart();
+					pVDev->EnableMapMode( sal_False );
+					aPaint = pVDev->GetBitmap( Point(), pVDev->GetOutputSizePixel() );
+					pVDev->EnableMapMode( bVDevOldMap ); // #i35331#: MUST NOT use EnableMapMode( sal_True ) here!
+
+					// create mask bitmap
+					pVDev->SetLineColor( COL_BLACK );
+					pVDev->SetFillColor( COL_BLACK );
+					pVDev->DrawRect( Rectangle( pVDev->PixelToLogic( Point() ), pVDev->GetOutputSize() ) );
+					pVDev->SetDrawMode( DRAWMODE_WHITELINE | DRAWMODE_WHITEFILL | DRAWMODE_WHITETEXT |
+										DRAWMODE_WHITEBITMAP | DRAWMODE_WHITEGRADIENT );
+					( (GDIMetaFile&) rMtf ).WindStart();
+					( (GDIMetaFile&) rMtf ).Play( pVDev, rPos, rSize );
+					( (GDIMetaFile&) rMtf ).WindStart();
+					pVDev->EnableMapMode( sal_False );
+					aMask = pVDev->GetBitmap( Point(), pVDev->GetOutputSizePixel() );
+					pVDev->EnableMapMode( bVDevOldMap ); // #i35331#: MUST NOT use EnableMapMode( sal_True ) here!
+
+					// create alpha mask from gradient
+					pVDev->SetDrawMode( DRAWMODE_GRAYGRADIENT );
+					pVDev->DrawGradient( Rectangle( rPos, rSize ), rTransparenceGradient );
+					pVDev->SetDrawMode( DRAWMODE_DEFAULT );
+					pVDev->EnableMapMode( sal_False );
+					pVDev->DrawMask( Point(), pVDev->GetOutputSizePixel(), aMask, Color( COL_WHITE ) );
+
+					aAlpha = pVDev->GetBitmap( Point(), pVDev->GetOutputSizePixel() );
+
+					delete pVDev;
 
 #ifdef USE_JAVA
-				ULONG nTransGradPushClipBeginPos = GDI_METAFILE_END;
-				ULONG nTransGradPushClipEndPos = GDI_METAFILE_END;
-				ULONG nTransGradPopClipBeginPos = GDI_METAFILE_END;
-				ULONG nTransGradPopClipEndPos = GDI_METAFILE_END;
-				ULONG nCount = ( (GDIMetaFile&) rMtf ).GetActionCount();
-				ULONG nPos;
-				for ( nPos = 0; nPos < nCount; nPos++ )
-				{
-					MetaAction *pAct = ( (GDIMetaFile&) rMtf ).GetAction( nPos );
-					if ( pAct && pAct->GetType() == META_COMMENT_ACTION )
+					sal_uLong nTransGradPushClipBeginPos = GDI_METAFILE_END;
+					sal_uLong nTransGradPushClipEndPos = GDI_METAFILE_END;
+					sal_uLong nTransGradPopClipBeginPos = GDI_METAFILE_END;
+					sal_uLong nTransGradPopClipEndPos = GDI_METAFILE_END;
+					sal_uLong nCount = ( (GDIMetaFile&) rMtf ).GetActionCount();
+					sal_uLong nPos;
+					for ( nPos = 0; nPos < nCount; nPos++ )
 					{
-						if ( ((MetaCommentAction *)pAct)->GetComment().CompareIgnoreCaseToAscii( "XTRANSGRADPUSHCLIP_SEQ_BEGIN" ) == COMPARE_EQUAL )
-							nTransGradPushClipBeginPos = nPos;
-						else if ( ((MetaCommentAction *)pAct)->GetComment().CompareIgnoreCaseToAscii( "XTRANSGRADPUSHCLIP_SEQ_END" ) == COMPARE_EQUAL )
-							nTransGradPushClipEndPos = nPos;
-						else if ( ((MetaCommentAction *)pAct)->GetComment().CompareIgnoreCaseToAscii( "XTRANSGRADPOPCLIP_SEQ_BEGIN" ) == COMPARE_EQUAL )
-							nTransGradPopClipBeginPos = nPos;
-						else if ( ((MetaCommentAction *)pAct)->GetComment().CompareIgnoreCaseToAscii( "XTRANSGRADPOPCLIP_SEQ_END" ) == COMPARE_EQUAL )
-							nTransGradPopClipEndPos = nPos;
+						MetaAction *pAct = ( (GDIMetaFile&) rMtf ).GetAction( nPos );
+						if ( pAct && pAct->GetType() == META_COMMENT_ACTION )
+						{
+							if ( ((MetaCommentAction *)pAct)->GetComment().CompareIgnoreCaseToAscii( "XTRANSGRADPUSHCLIP_SEQ_BEGIN" ) == COMPARE_EQUAL )
+								nTransGradPushClipBeginPos = nPos;
+							else if ( ((MetaCommentAction *)pAct)->GetComment().CompareIgnoreCaseToAscii( "XTRANSGRADPUSHCLIP_SEQ_END" ) == COMPARE_EQUAL )
+								nTransGradPushClipEndPos = nPos;
+							else if ( ((MetaCommentAction *)pAct)->GetComment().CompareIgnoreCaseToAscii( "XTRANSGRADPOPCLIP_SEQ_BEGIN" ) == COMPARE_EQUAL )
+								nTransGradPopClipBeginPos = nPos;
+							else if ( ((MetaCommentAction *)pAct)->GetComment().CompareIgnoreCaseToAscii( "XTRANSGRADPOPCLIP_SEQ_END" ) == COMPARE_EQUAL )
+								nTransGradPopClipEndPos = nPos;
+						}
 					}
-				}
 
-				// Only use metafile's clip if the clip commands are at the
-				// beginning and end of the metafile
-				if ( !nTransGradPushClipBeginPos &&
-					nTransGradPushClipBeginPos < nTransGradPushClipEndPos &&
-					nTransGradPushClipEndPos < nTransGradPopClipBeginPos &&
-					nTransGradPopClipBeginPos < nTransGradPopClipEndPos &&
-					nTransGradPopClipEndPos == nCount - 1 )
-				{
-					// Copy code from GDIMetaFile::Play for creating map mode
-					// to use when executing metafile commands
-					MapMode aOldMap( GetMapMode() );
-					MapMode aGDIMap( ( (GDIMetaFile&) rMtf ).GetPrefMapMode() );
-					if ( aOutRect.GetWidth() && aOutRect.GetHeight() )
+					// Only use metafile's clip if the clip commands are at the
+					// beginning and end of the metafile
+					if ( !nTransGradPushClipBeginPos &&
+						nTransGradPushClipBeginPos < nTransGradPushClipEndPos &&
+						nTransGradPushClipEndPos < nTransGradPopClipBeginPos &&
+						nTransGradPopClipBeginPos < nTransGradPopClipEndPos &&
+						nTransGradPopClipEndPos == nCount - 1 )
 					{
-						Size aTmpPrefSize( LogicToPixel( ( (GDIMetaFile&) rMtf ).GetPrefSize(), aGDIMap ) );
-						if ( !aTmpPrefSize.Width() )
-							aTmpPrefSize.Width() = aOutRect.GetWidth();
+						// Copy code from GDIMetaFile::Play for creating map mode
+						// to use when executing metafile commands
+						MapMode aOldMap( GetMapMode() );
+						MapMode aGDIMap( ( (GDIMetaFile&) rMtf ).GetPrefMapMode() );
+						if ( aOutRect.GetWidth() && aOutRect.GetHeight() )
+						{
+							Size aTmpPrefSize( LogicToPixel( ( (GDIMetaFile&) rMtf ).GetPrefSize(), aGDIMap ) );
+							if ( !aTmpPrefSize.Width() )
+								aTmpPrefSize.Width() = aOutRect.GetWidth();
 
-						if ( !aTmpPrefSize.Height() )
-							aTmpPrefSize.Height() = aOutRect.GetHeight();
+							if ( !aTmpPrefSize.Height() )
+								aTmpPrefSize.Height() = aOutRect.GetHeight();
 
-						Fraction aGDIScaleX( aOutRect.GetWidth(), aTmpPrefSize.Width() );
-						Fraction aGDIScaleY( aOutRect.GetHeight(), aTmpPrefSize.Height() );
+							Fraction aGDIScaleX( aOutRect.GetWidth(), aTmpPrefSize.Width() );
+							Fraction aGDIScaleY( aOutRect.GetHeight(), aTmpPrefSize.Height() );
 
-						aGDIScaleX *= aGDIMap.GetScaleX(); aGDIMap.SetScaleX( aGDIScaleX );
-						aGDIScaleY *= aGDIMap.GetScaleY(); aGDIMap.SetScaleY( aGDIScaleY );
+							aGDIScaleX *= aGDIMap.GetScaleX(); aGDIMap.SetScaleX( aGDIScaleX );
+							aGDIScaleY *= aGDIMap.GetScaleY(); aGDIMap.SetScaleY( aGDIScaleY );
         
         				const Size& rOldOffset( GetPixelOffset() );
         				const Size aEmptySize;
         				SetPixelOffset( aEmptySize );
-						aGDIMap.SetOrigin( PixelToLogic( LogicToPixel( rPos ), aGDIMap ) );
+							aGDIMap.SetOrigin( PixelToLogic( LogicToPixel( rPos ), aGDIMap ) );
         				SetPixelOffset( rOldOffset );
 
-						Push();
-						SetMapMode( aGDIMap );
+							Push();
+							SetMapMode( aGDIMap );
 
-						for ( nPos = nTransGradPushClipBeginPos; nPos < nTransGradPushClipEndPos; nPos++ )
-						{
-							MetaAction *pAct = ( (GDIMetaFile&) rMtf ).GetAction( nPos );
-							if ( pAct )
-								pAct->Execute( this );
+							for ( nPos = nTransGradPushClipBeginPos; nPos < nTransGradPushClipEndPos; nPos++ )
+							{
+								MetaAction *pAct = ( (GDIMetaFile&) rMtf ).GetAction( nPos );
+								if ( pAct )
+									pAct->Execute( this );
+							}
+
+							SetMapMode( aOldMap );
+
+							EnableMapMode( sal_False );
+							DrawBitmapEx( aDstRect.TopLeft(), aDstRect.GetSize(), aVirDevRect.TopLeft(), aVirDevRect.GetSize(), BitmapEx( aPaint, aAlpha ) );
+							EnableMapMode( bOldMap );
+
+							SetMapMode( aGDIMap );
+
+							for ( nPos = nTransGradPopClipBeginPos; nPos < nTransGradPopClipEndPos; nPos++ )
+							{
+								MetaAction *pAct = ( (GDIMetaFile&) rMtf ).GetAction( nPos );
+								if ( pAct )
+									pAct->Execute( this );
+							}
+
+
+							SetMapMode( aOldMap );
+							Pop();
 						}
-
-						SetMapMode( aOldMap );
-
-						EnableMapMode( FALSE );
+					}
+					else
+					{
+						EnableMapMode( sal_False );
 						DrawBitmapEx( aDstRect.TopLeft(), aDstRect.GetSize(), aVirDevRect.TopLeft(), aVirDevRect.GetSize(), BitmapEx( aPaint, aAlpha ) );
 						EnableMapMode( bOldMap );
-
-						SetMapMode( aGDIMap );
-
-						for ( nPos = nTransGradPopClipBeginPos; nPos < nTransGradPopClipEndPos; nPos++ )
-						{
-							MetaAction *pAct = ( (GDIMetaFile&) rMtf ).GetAction( nPos );
-							if ( pAct )
-								pAct->Execute( this );
-						}
-
-
-						SetMapMode( aOldMap );
-						Pop();
 					}
-				}
-				else
-				{
-					EnableMapMode( FALSE );
-					DrawBitmapEx( aDstRect.TopLeft(), aDstRect.GetSize(), aVirDevRect.TopLeft(), aVirDevRect.GetSize(), BitmapEx( aPaint, aAlpha ) );
-					EnableMapMode( bOldMap );
-				}
 #else	// USE_JAVA
-				EnableMapMode( FALSE );
-				DrawBitmapEx( aDstRect.TopLeft(), BitmapEx( aPaint, aAlpha ) );
-				EnableMapMode( bOldMap );
+					EnableMapMode( sal_False );
+					DrawBitmapEx( aDstRect.TopLeft(), BitmapEx( aPaint, aAlpha ) );
+					EnableMapMode( bOldMap );
 #endif	// USE_JAVA
+				}
 			}
 			else
 				delete pVDev;
@@ -860,8 +971,8 @@ void OutputDevice::ImplDrawColorWallpaper( long nX, long nY,
 	Color aOldFillColor = GetFillColor();
 	SetLineColor();
 	SetFillColor( rWallpaper.GetColor() );
-    BOOL bMap = mbMap;
-    EnableMapMode( FALSE );
+    sal_Bool bMap = mbMap;
+    EnableMapMode( sal_False );
     DrawRect( Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) ) );
 	SetLineColor( aOldLineColor );
 	SetFillColor( aOldFillColor );
@@ -880,10 +991,10 @@ void OutputDevice::ImplDrawBitmapWallpaper( long nX, long nY,
 	Size					aSize;
 	GDIMetaFile*			pOldMetaFile = mpMetaFile;
 	const WallpaperStyle	eStyle = rWallpaper.GetStyle();
-	const BOOL				bOldMap = mbMap;
-	BOOL					bDrawn = FALSE;
-	BOOL					bDrawGradientBackground = FALSE;
-	BOOL					bDrawColorBackground = FALSE;
+	const sal_Bool				bOldMap = mbMap;
+	sal_Bool					bDrawn = sal_False;
+	sal_Bool					bDrawGradientBackground = sal_False;
+	sal_Bool					bDrawColorBackground = sal_False;
 
 	if( pCached )
 		aBmpEx = *pCached;
@@ -892,13 +1003,13 @@ void OutputDevice::ImplDrawBitmapWallpaper( long nX, long nY,
 
 	const long nBmpWidth = aBmpEx.GetSizePixel().Width();
 	const long nBmpHeight = aBmpEx.GetSizePixel().Height();
-	const BOOL bTransparent = aBmpEx.IsTransparent();
+	const sal_Bool bTransparent = aBmpEx.IsTransparent();
 
 	// draw background
 	if( bTransparent )
 	{
 		if( rWallpaper.IsGradient() )
-			bDrawGradientBackground = TRUE;
+			bDrawGradientBackground = sal_True;
 		else
 		{
 			if( !pCached && !rWallpaper.GetColor().GetTransparency() )
@@ -910,15 +1021,15 @@ void OutputDevice::ImplDrawBitmapWallpaper( long nX, long nY,
 				aBmpEx = aVDev.GetBitmap( Point(), aVDev.GetOutputSizePixel() );
 			}
 
-			bDrawColorBackground = TRUE;
+			bDrawColorBackground = sal_True;
 		}
 	}
 	else if( eStyle != WALLPAPER_TILE && eStyle != WALLPAPER_SCALE )
 	{
 		if( rWallpaper.IsGradient() )
-			bDrawGradientBackground = TRUE;
+			bDrawGradientBackground = sal_True;
 		else
-			bDrawColorBackground = TRUE;
+			bDrawColorBackground = sal_True;
 	}
 
 	// background of bitmap?
@@ -927,7 +1038,7 @@ void OutputDevice::ImplDrawBitmapWallpaper( long nX, long nY,
 	else if( bDrawColorBackground && bTransparent )
 	{
 		ImplDrawColorWallpaper( nX, nY, nWidth, nHeight, rWallpaper );
-		bDrawColorBackground = FALSE;
+		bDrawColorBackground = sal_False;
 	}
 
 	// calc pos and size
@@ -944,7 +1055,7 @@ void OutputDevice::ImplDrawBitmapWallpaper( long nX, long nY,
 	}
 
 	mpMetaFile = NULL;
-	EnableMapMode( FALSE );
+	EnableMapMode( sal_False );
 	Push( PUSH_CLIPREGION );
 	IntersectClipRegion( Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) ) );
 
@@ -1044,7 +1155,7 @@ void OutputDevice::ImplDrawBitmapWallpaper( long nX, long nY,
 				for( long nBmpX = nStartX; nBmpX <= nRight; nBmpX += nBmpWidth )
 					DrawBitmapEx( Point( nBmpX, nBmpY ), aBmpEx );
 
-			bDrawn = TRUE;
+			bDrawn = sal_True;
 		}
 		break;
 	}
@@ -1119,8 +1230,8 @@ void OutputDevice::ImplDrawGradientWallpaper( long nX, long nY,
 {
 	Rectangle		aBound;
 	GDIMetaFile*	pOldMetaFile = mpMetaFile;
-	const BOOL		bOldMap = mbMap;
-    BOOL            bNeedGradient = TRUE;
+	const sal_Bool		bOldMap = mbMap;
+    sal_Bool            bNeedGradient = sal_True;
 
 /*
 	if ( rWallpaper.IsRect() )
@@ -1130,7 +1241,7 @@ void OutputDevice::ImplDrawGradientWallpaper( long nX, long nY,
 		aBound = Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) );
 
 	mpMetaFile = NULL;
-	EnableMapMode( FALSE );
+	EnableMapMode( sal_False );
 	Push( PUSH_CLIPREGION );
 	IntersectClipRegion( Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) ) );
 
@@ -1147,7 +1258,7 @@ void OutputDevice::ImplDrawGradientWallpaper( long nX, long nY,
             if( mnOutOffX+nWidth > gradientWidth )
 		        ImplDrawColorWallpaper(  nX, nY, nWidth, nHeight, rWallpaper.GetGradient().GetEndColor() );
             if( mnOutOffX > gradientWidth )
-                bNeedGradient = FALSE;
+                bNeedGradient = sal_False;
             else
                 aBound = Rectangle( Point( -mnOutOffX, nY ), Size( gradientWidth, nHeight ) );
         }
@@ -1197,7 +1308,7 @@ void OutputDevice::DrawWallpaper( const Rectangle& rRect,
 							   rWallpaper );
 		}
 	}
-    
+
     if( mpAlphaVDev )
         mpAlphaVDev->DrawWallpaper( rRect, rWallpaper );
 }
@@ -1209,18 +1320,19 @@ void OutputDevice::Erase()
 	if ( !IsDeviceOutputNecessary() || ImplIsRecordLayout() )
 		return;
     
-    BOOL bNativeOK = FALSE; 
+    sal_Bool bNativeOK = sal_False; 
+
     if( meOutDevType == OUTDEV_WINDOW )
     {
         Window* pWindow = static_cast<Window*>(this);
-        ControlPart aCtrlPart = pWindow->ImplGetWindowImpl()->mnNativeBackground; 
+        ControlPart aCtrlPart = pWindow->ImplGetWindowImpl()->mnNativeBackground;
         if( aCtrlPart != 0 && ! pWindow->IsControlBackground() )
         {
             ImplControlValue    aControlValue;
             Point               aGcc3WorkaroundTemporary;
-            Region              aCtrlRegion( Rectangle( aGcc3WorkaroundTemporary, GetOutputSizePixel() ) );
+            Rectangle           aCtrlRegion( aGcc3WorkaroundTemporary, GetOutputSizePixel() );
             ControlState        nState = 0;
-            
+
             if( pWindow->IsEnabled() ) 				nState |= CTRL_STATE_ENABLED;
             bNativeOK = pWindow->DrawNativeControl( CTRL_WINDOW_BACKGROUND, aCtrlPart, aCtrlRegion,
                                                     nState, aControlValue, rtl::OUString() );
@@ -1257,10 +1369,14 @@ void OutputDevice::ImplDraw2ColorFrame( const Rectangle& rRect,
 
 // -----------------------------------------------------------------------
 
-void OutputDevice::DrawEPS( const Point& rPoint, const Size& rSize,
+bool OutputDevice::DrawEPS( const Point& rPoint, const Size& rSize,
 							const GfxLink& rGfxLink, GDIMetaFile* pSubst )
 {
-	if ( mpMetaFile )
+	DBG_TRACE( "OutputDevice::DrawEPS()" );
+
+	bool bDrawn(true);
+
+    if ( mpMetaFile )
 	{
 		GDIMetaFile aSubst;
 
@@ -1271,27 +1387,27 @@ void OutputDevice::DrawEPS( const Point& rPoint, const Size& rSize,
 	}
 
 	if ( !IsDeviceOutputNecessary() || ImplIsRecordLayout() )
-		return;
+		return bDrawn;
 
 	if( mbOutputClipped )
-		return;
+		return bDrawn;
 
-	Rectangle	aRect( ImplLogicToDevicePixel( Rectangle( rPoint, rSize ) ) );
-	if( !aRect.IsEmpty() )
+	Rectangle aRect( ImplLogicToDevicePixel( Rectangle( rPoint, rSize ) ) );
+
+    if( !aRect.IsEmpty() )
 	{
         // draw the real EPS graphics
-		bool bDrawn = FALSE;
         if( rGfxLink.GetData() && rGfxLink.GetDataSize() )
         {
             if( !mpGraphics && !ImplGetGraphics() )
-                return;
+                return bDrawn;
 
             if( mbInitClipRegion )
                 ImplInitClipRegion();
 
             aRect.Justify();
             bDrawn = mpGraphics->DrawEPS( aRect.Left(), aRect.Top(), aRect.GetWidth(), aRect.GetHeight(),
-                         (BYTE*) rGfxLink.GetData(), rGfxLink.GetDataSize(), this );
+                         (sal_uInt8*) rGfxLink.GetData(), rGfxLink.GetDataSize(), this );
         }
 
         // else draw the substitution graphics
@@ -1299,7 +1415,7 @@ void OutputDevice::DrawEPS( const Point& rPoint, const Size& rSize,
 		{
 			GDIMetaFile* pOldMetaFile = mpMetaFile;
 
-			mpMetaFile = NULL;
+            mpMetaFile = NULL;
 			Graphic( *pSubst ).Draw( this, rPoint, rSize );
 			mpMetaFile = pOldMetaFile;
 		}
@@ -1307,4 +1423,35 @@ void OutputDevice::DrawEPS( const Point& rPoint, const Size& rSize,
 
     if( mpAlphaVDev )
         mpAlphaVDev->DrawEPS( rPoint, rSize, rGfxLink, pSubst );
+
+    return bDrawn;
 }
+
+// -----------------------------------------------------------------------
+
+void OutputDevice::DrawCheckered(const Point& rPos, const Size& rSize, sal_uInt32 nLen, Color aStart, Color aEnd)
+{
+    const sal_uInt32 nMaxX(rPos.X() + rSize.Width());
+    const sal_uInt32 nMaxY(rPos.Y() + rSize.Height());
+
+    Push(PUSH_LINECOLOR|PUSH_FILLCOLOR);
+    SetLineColor();
+
+    for(sal_uInt32 x(0), nX(rPos.X()); nX < nMaxX; x++, nX += nLen)
+    {
+        const sal_uInt32 nRight(std::min(nMaxX, nX + nLen));
+
+        for(sal_uInt32 y(0), nY(rPos.Y()); nY < nMaxY; y++, nY += nLen)
+        {
+            const sal_uInt32 nBottom(std::min(nMaxY, nY + nLen));
+
+            SetFillColor((x & 0x0001) ^ (y & 0x0001) ? aStart : aEnd);
+            DrawRect(Rectangle(nX, nY, nRight, nBottom));
+        }
+    }
+
+    Pop();
+}
+
+// -----------------------------------------------------------------------
+// eof

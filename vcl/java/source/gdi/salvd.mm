@@ -33,12 +33,12 @@
  *
  ************************************************************************/
 
-#include <salvd.h>
-#include <salgdi.h>
-
 #include <premac.h>
 #import <AppKit/AppKit.h>
 #include <postmac.h>
+
+#include "java/salgdi.h"
+#include "java/salvd.h"
 
 using namespace vcl;
 
@@ -93,6 +93,8 @@ using namespace vcl;
 
 - (void)getGraphicsLayer:(id)pObject
 {
+	(void)pObject;
+
 	if ( maLayer )
 	{
 		CGLayerRelease( maLayer );
@@ -162,9 +164,8 @@ JavaSalVirtualDevice::JavaSalVirtualDevice() :
 	mnWidth( 0 ),
 	mnHeight( 0 ),
 	maVirDevLayer( NULL ),
-	mnBitCount( 32 ),
 	mpGraphics( new JavaSalGraphics() ),
-	mbGraphics( FALSE )
+	mbGraphics( sal_False )
 {
 	// By default no mirroring for VirtualDevices
 	mpGraphics->SetLayout( 0 );
@@ -192,7 +193,7 @@ SalGraphics* JavaSalVirtualDevice::GetGraphics()
 	if ( mbGraphics )
 		return NULL;
 
-	mbGraphics = TRUE;
+	mbGraphics = sal_True;
 
 	return mpGraphics;
 }
@@ -204,19 +205,19 @@ void JavaSalVirtualDevice::ReleaseGraphics( SalGraphics* pGraphics )
 	if ( pGraphics != mpGraphics )
 		return;
 
-	mbGraphics = FALSE;
+	mbGraphics = sal_False;
 }
 
 // -----------------------------------------------------------------------
 
-BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
+sal_Bool JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 {
 	if ( nDX < 1 )
 		nDX = 1;
 	if ( nDY < 1 )
 		nDY = 1;
 
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	mnWidth = 0;
 	mnHeight = 0;
@@ -265,7 +266,7 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 		mpGraphics->setLayer( maVirDevLayer );
 		mnWidth = nDX;
 		mnHeight = nDY;
-		bRet = TRUE;
+		bRet = sal_True;
 	}
 
 	[pPool release];

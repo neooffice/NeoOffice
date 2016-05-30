@@ -39,12 +39,13 @@
 #import <objc/objc-runtime.h>
 #include <postmac.h>
 
-#include <saldata.hxx>
-#include <salframe.h>
 #include <rtl/ustring.hxx>
 #include <vcl/svapp.hxx>
-#include <vcl/svids.hrc>
 #include <vos/mutex.hxx>
+
+#include "svids.hrc"
+#include "java/saldata.hxx"
+#include "java/salframe.h"
 
 #include "VCLApplicationDelegate_cocoa.h"
 #include "../app/salinst_cocoa.h"
@@ -180,32 +181,32 @@ static void HandleDidChangeScreenParametersRequest()
 static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 @interface NSObject (SFXDocument)
-+ (MacOSBOOL)isInVersionBrowser;
++ (BOOL)isInVersionBrowser;
 @end
 
 @interface VCLDocument : NSDocument
-+ (MacOSBOOL)autosavesInPlace;
-- (MacOSBOOL)hasUnautosavedChanges;
-- (MacOSBOOL)isDocumentEdited;
++ (BOOL)autosavesInPlace;
+- (BOOL)hasUnautosavedChanges;
+- (BOOL)isDocumentEdited;
 - (void)makeWindowControllers;
-- (MacOSBOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
+- (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (void)restoreStateWithCoder:(NSCoder *)pCoder;
 @end
 
 @implementation VCLDocument
 
-+ (MacOSBOOL)autosavesInPlace
++ (BOOL)autosavesInPlace
 {
 	return YES;
 }
 
-- (MacOSBOOL)hasUnautosavedChanges
+- (BOOL)hasUnautosavedChanges
 {
 	// Don't allow NSDocument to do autosaving
 	return NO;
 }
 
-- (MacOSBOOL)isDocumentEdited
+- (BOOL)isDocumentEdited
 {
 	return NO;
 }
@@ -218,8 +219,11 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	[self performSelector:@selector(close) withObject:nil afterDelay:0];
 }
 
-- (MacOSBOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError
+- (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError
 {
+	(void)pURL;
+	(void)pTypeName;
+
 	if ( ppError )
 		*ppError = nil;
 
@@ -228,13 +232,14 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (void)restoreStateWithCoder:(NSCoder *)pCoder
 {
+	(void)pCoder;
 	// Don't allow NSDocument to do the restoration
 }
 
 @end
 
 @interface NSDocumentController (VCLDocumentController)
-- (void)_docController:(NSDocumentController *)pDocController shouldTerminate:(MacOSBOOL)bShouldTerminate;
+- (void)_docController:(NSDocumentController *)pDocController shouldTerminate:(BOOL)bShouldTerminate;
 - (void)beginOpenPanelWithCompletionHandler:(void (^)(NSArray *))aCompletionHandler;
 @end
 
@@ -249,7 +254,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 - (id)makeDocumentWithContentsOfURL:(NSURL *)pAbsoluteURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (void)newDocument:(id)pSender;
 - (NSOpenPanel *)openPanel;
-- (void)reopenDocumentForURL:(NSURL *)pURL withContentsOfURL:(NSURL *)pContentsURL display:(MacOSBOOL)bDisplayDocument completionHandler:(void (^)(NSDocument *pDocument, MacOSBOOL bDocumentWasAlreadyOpen, NSError *error))aCompletionHandler;
+- (void)reopenDocumentForURL:(NSURL *)pURL withContentsOfURL:(NSURL *)pContentsURL display:(BOOL)bDisplayDocument completionHandler:(void (^)(NSDocument *pDocument, BOOL bDocumentWasAlreadyOpen, NSError *error))aCompletionHandler;
 @end
 
 @implementation VCLDocumentController
@@ -262,6 +267,8 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (void)beginOpenPanel:(NSOpenPanel *)pOpenPanel forTypes:(NSArray *)pTypes completionHandler:(void (^)(NSInteger result))aCompletionHandler
 {
+	(void)pTypes;
+
 	mpOpenPanel = pOpenPanel;
 
 	if ( aCompletionHandler )
@@ -270,6 +277,8 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (Class)documentClassForType:(NSString *)pDocumentTypeName
 {
+	(void)pDocumentTypeName;
+
 	// Always return our custom class for rendering in the version browser
 	return NSClassFromString( pSFXDocumentRevision );
 }
@@ -302,7 +311,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		NSString *pPath = [pAbsoluteURL path];
 		if ( pApp && pPath )
 		{
-			MacOSBOOL bResume = YES;
+			BOOL bResume = YES;
 			CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisableResume" ), kCFPreferencesCurrentApplication );
 			if ( aPref )
 			{
@@ -324,6 +333,8 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (void)newDocument:(id)pSender
 {
+	(void)pSender;
+
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 	{
@@ -342,13 +353,18 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	mpOpenPanel = nil;
 
 	if ( [self respondsToSelector:@selector(beginOpenPanelWithCompletionHandler:)] )
-		[self beginOpenPanelWithCompletionHandler:^(NSArray *pResult) {}];
+		[self beginOpenPanelWithCompletionHandler:^(NSArray *pResult) {
+			(void)pResult;
+		}];
 
 	return mpOpenPanel;
 }
 
-- (void)reopenDocumentForURL:(NSURL *)pURL withContentsOfURL:(NSURL *)pContentsURL display:(MacOSBOOL)bDisplayDocument completionHandler:(void (^)(NSDocument *pDocument, MacOSBOOL bDocumentWasAlreadyOpen, NSError *error))aCompletionHandler
+- (void)reopenDocumentForURL:(NSURL *)pURL withContentsOfURL:(NSURL *)pContentsURL display:(BOOL)bDisplayDocument completionHandler:(void (^)(NSDocument *pDocument, BOOL bDocumentWasAlreadyOpen, NSError *error))aCompletionHandler
 {
+	(void)pURL;
+	(void)bDisplayDocument;
+
 	VCLDocument *pDoc = nil;
 	if ( pContentsURL )
 	{
@@ -415,8 +431,10 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	}
 }
 
-- (MacOSBOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename
+- (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename
 {
+	(void)pApplication;
+
 	if ( pFilename )
 		Application_cacheSecurityScopedURL( [NSURL fileURLWithPath:pFilename] );
 
@@ -426,7 +444,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	NSFileManager *pFileManager = [NSFileManager defaultManager];
 	if ( pFileManager )
 	{
-		MacOSBOOL bDir = NO;
+		BOOL bDir = NO;
 		if ( [pFileManager fileExistsAtPath:pFilename isDirectory:&bDir] && !bDir )
 			HandleOpenPrintFileRequest( [pFilename UTF8String], sal_False );
 	}
@@ -434,8 +452,10 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	return YES;
 }
 
-- (MacOSBOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename
+- (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename
 {
+	(void)pApplication;
+
 	if ( pFilename )
 		Application_cacheSecurityScopedURL( [NSURL fileURLWithPath:pFilename] );
 
@@ -445,7 +465,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	NSFileManager *pFileManager = [NSFileManager defaultManager];
 	if ( pFileManager )
 	{
-		MacOSBOOL bDir = NO;
+		BOOL bDir = NO;
 		if ( [pFileManager fileExistsAtPath:pFilename isDirectory:&bDir] && !bDir )
 			HandleOpenPrintFileRequest( [pFilename UTF8String], sal_True );
 	}
@@ -465,19 +485,25 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (NSMenu *)applicationDockMenu:(NSApplication *)pApplication
 {
+	(void)pApplication;
+
 	return mpDockMenu;
 }
 
-- (MacOSBOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(MacOSBOOL)bFlag
+- (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag
 {
+	(void)pApplication;
+
 	// Fix bug reported in the following NeoOffice forum topic by
 	// returning true if there is visible windows:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8478
 	return bFlag;
 }
 
-- (MacOSBOOL)applicationShouldOpenUntitledFile:(NSApplication *)pSender
+- (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)pSender
 {
+	(void)pSender;
+
 	return NO;
 }
 
@@ -585,7 +611,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	return self;
 }
 
-- (MacOSBOOL)isInTracking
+- (BOOL)isInTracking
 {
 	return mbInTracking;
 }
@@ -781,7 +807,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	}
 }
 
-- (MacOSBOOL)validateMenuItem:(NSMenuItem *)pMenuItem
+- (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem
 {
 	return ( !mbInTermination && pMenuItem );
 }

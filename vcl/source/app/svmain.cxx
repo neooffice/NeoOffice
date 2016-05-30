@@ -1,40 +1,72 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified May 2006 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
+
+#include "rtl/logfile.hxx"
+
+#include "osl/file.hxx"
+
+#include "vos/signal.hxx"
+#include "vos/process.hxx"
+
+#include "tools/tools.h"
+#include "tools/debug.hxx"
+#include "tools/unqid.hxx"
+#include "tools/resmgr.hxx"
+
+#include "comphelper/processfactory.hxx"
+
+#include "unotools/syslocaleoptions.hxx"
+#include "unotools/fontcfg.hxx"
+
+#include "vcl/svapp.hxx"
+#include "vcl/wrkwin.hxx"
+#include "vcl/cvtgrf.hxx"
+#include "vcl/image.hxx"
+#include "vcl/settings.hxx"
+#include "vcl/unowrap.hxx"
+#include "vcl/configsettings.hxx"
+#include "vcl/lazydelete.hxx"
 
 #ifdef WNT
 #include <tools/prewin.h>
 #include <process.h>    // for _beginthreadex
 #include <ole2.h>   // for _beginthreadex
 #include <tools/postwin.h>
+#include <com/sun/star/accessibility/XMSAAService.hpp>
+#include <win/g_msaasvc.h>
+using namespace com::sun::star::accessibility;
 #endif
 
 // [ed 5/14/02 Add in explicit check for quartz graphics.  OS X will define
@@ -42,46 +74,28 @@
 // building X11 graphics layers.
 
 #if defined UNX && ! defined QUARTZ
-#include "svunx.h"
+//#include "svunx.h"
 #endif
 
-#include "svsys.h"
-#include "vcl/salinst.hxx"
-#include "vcl/salwtype.hxx"
-#include "vos/signal.hxx"
-#include "tools/tools.h"
-#include "tools/debug.hxx"
-#include "tools/unqid.hxx"
-#include "vcl/svdata.hxx"
-#include "vcl/dbggui.hxx"
-#include "vcl/svapp.hxx"
-#include "vcl/wrkwin.hxx"
-#include "vcl/cvtgrf.hxx"
-#include "vcl/image.hxx"
-#include "tools/resmgr.hxx"
-#include "vcl/accmgr.hxx"
-#include "vcl/idlemgr.hxx"
-#include "vcl/outdev.h"
-#include "vcl/outfont.hxx"
-#include "vcl/print.h"
-#include "vcl/settings.hxx"
-#include "vcl/unowrap.hxx"
-#include "vcl/salsys.hxx"
-#include "vcl/saltimer.hxx"
-#include "vcl/salimestatus.hxx"
-#include "vcl/impimagetree.hxx"
-#include "vcl/xconnection.hxx"
+//#include "svsys.h"
 
-#include "vos/process.hxx"
-#include "osl/file.hxx"
-#include "comphelper/processfactory.hxx"
+#include "salinst.hxx"
+#include "salwtype.hxx"
+#include "svdata.hxx"
+#include "dbggui.hxx"
+#include "accmgr.hxx"
+#include "idlemgr.hxx"
+#include "outdev.h"
+#include "outfont.hxx"
+#include "print.h"
+#include "salsys.hxx"
+#include "saltimer.hxx"
+#include "salimestatus.hxx"
+#include "impimagetree.hxx"
+#include "xconnection.hxx"
+
 #include "com/sun/star/lang/XMultiServiceFactory.hpp"
 #include "com/sun/star/lang/XComponent.hpp"
-#include "rtl/logfile.hxx"
-
-#include "vcl/fontcfg.hxx"
-#include "vcl/configsettings.hxx"
-#include "vcl/lazydelete.hxx"
 
 #include "cppuhelper/implbase1.hxx"
 #include "uno/current_context.hxx"
@@ -95,25 +109,30 @@
 
 #include <dlfcn.h>
 
-#ifndef _SV_SALDATA_HXX
-#include <saldata.hxx>
-#endif
-#ifndef _UTL_BOOTSTRAP_HXX
 #include <unotools/bootstrap.hxx>
-#endif
 
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
+#undef check
+ 
+#include "java/saldata.hxx"
 
 using namespace utl;
-
+ 
 #endif	// USE_JAVA && MACOSX
+
+namespace {
+
+namespace css = com::sun::star;
+
+}
 
 using namespace ::rtl;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
+
 
 
 #if defined USE_JAVA && defined MACOSX
@@ -177,12 +196,12 @@ public:
 
 ::vos::OSignalHandler::TSignalAction SAL_CALL ImplVCLExceptionHandler::signal( ::vos::OSignalHandler::TSignalInfo* pInfo )
 {
-    static BOOL bIn = FALSE;
+    static sal_Bool bIn = sal_False;
 
     // Wenn wir nocheinmal abstuerzen, verabschieden wir uns gleich
     if ( !bIn )
     {
-        USHORT nVCLException = 0;
+        sal_uInt16 nVCLException = 0;
 
         // UAE
         if ( (pInfo->Signal == osl_Signal_AccessViolation)     ||
@@ -208,7 +227,7 @@ public:
 
         if ( nVCLException )
         {
-            bIn = TRUE;
+            bIn = sal_True;
 #if defined USE_JAVA && defined MACOSX
             GetAppSalData()->mbInSignalHandler = true;
 #endif	// USE_JAVA && MACOSX
@@ -220,7 +239,7 @@ public:
             ImplSVData* pSVData = ImplGetSVData();
             if ( pSVData->mpApp )
             {
-                USHORT nOldMode = Application::GetSystemWindowMode();
+                sal_uInt16 nOldMode = Application::GetSystemWindowMode();
                 Application::SetSystemWindowMode( nOldMode & ~SYSTEMWINDOW_MODE_NOAUTOMODE );
                 pSVData->mpApp->Exception( nVCLException );
                 Application::SetSystemWindowMode( nOldMode );
@@ -228,7 +247,7 @@ public:
 #if defined USE_JAVA && defined MACOSX
             GetAppSalData()->mbInSignalHandler = false;
 #endif	// USE_JAVA && MACOSX
-            bIn = FALSE;
+            bIn = sal_False;
 
             return vos::OSignalHandler::TAction_CallNextHandler;
         }
@@ -238,7 +257,7 @@ public:
 }
 
 // =======================================================================
-BOOL ImplSVMain()
+sal_Bool ImplSVMain()
 {
     // The 'real' SVMain()
     RTL_LOGFILE_CONTEXT( aLog, "vcl (ss112471) ::SVMain" );
@@ -247,26 +266,22 @@ BOOL ImplSVMain()
 
     DBG_ASSERT( pSVData->mpApp, "no instance of class Application" );
 
-    Reference<XMultiServiceFactory> xMS;
+    css::uno::Reference<XMultiServiceFactory> xMS;
 
 
-    BOOL bInit = InitVCL( xMS );
+    sal_Bool bInit = InitVCL( xMS );
 
     if( bInit )
     {
         // Application-Main rufen
-        pSVData->maAppData.mbInAppMain = TRUE;
+        pSVData->maAppData.mbInAppMain = sal_True;
         pSVData->mpApp->Main();
-        pSVData->maAppData.mbInAppMain = FALSE;
+        pSVData->maAppData.mbInAppMain = sal_False;
     }
     
     if( pSVData->mxDisplayConnection.is() )
     {
-        vcl::DisplayConnection* pConnection = 
-            dynamic_cast<vcl::DisplayConnection*>(pSVData->mxDisplayConnection.get());
-
-        if( pConnection )
-            pConnection->dispatchDowningEvent();
+        pSVData->mxDisplayConnection->terminate();
         pSVData->mxDisplayConnection.clear();
     }
 
@@ -275,23 +290,27 @@ BOOL ImplSVMain()
     // be some events in the AWT EventQueue, which need the SolarMutex which
     // - on the other hand - is destroyed in DeInitVCL(). So empty the queue
     // here ..
-	Reference< XComponent > xComponent(pSVData->mxAccessBridge, UNO_QUERY);
+	css::uno::Reference< XComponent > xComponent(pSVData->mxAccessBridge, UNO_QUERY);
 	if( xComponent.is() )
 	{
-	  ULONG nCount = Application::ReleaseSolarMutex();
+	  sal_uLong nCount = Application::ReleaseSolarMutex();
 	  xComponent->dispose();
 	  Application::AcquireSolarMutex(nCount);
 	  pSVData->mxAccessBridge.clear();
 	}
 
     DeInitVCL();
+	#ifdef WNT
+		if( g_acc_manager1 )
+			g_acc_manager1->release();
+	#endif 
     return bInit;
 }
 
-BOOL SVMain()
+sal_Bool SVMain()
 {
     // #i47888# allow for alternative initialization as required for e.g. MacOSX
-    extern BOOL ImplSVMainHook( BOOL* );
+    extern sal_Bool ImplSVMainHook( sal_Bool* );
 
 #if defined USE_JAVA && defined MACOSX
     // Attempt to fix haxie bugs that cause bug 2912 by calling
@@ -325,7 +344,7 @@ BOOL SVMain()
     }
 #endif	// USE_JAVA && MACOSX
 
-    BOOL bInit;
+    sal_Bool bInit;
     if( ImplSVMainHook( &bInit ) )
         return bInit;
     else
@@ -373,12 +392,12 @@ Any SAL_CALL DesktopEnvironmentContext::getValueByName( const rtl::OUString& Nam
     return retVal;
 }
 
-BOOL InitVCL( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory > & rSMgr )
+sal_Bool InitVCL( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory > & rSMgr )
 {
     RTL_LOGFILE_CONTEXT( aLog, "vcl (ss112471) ::InitVCL" );
 
     if( pExceptionHandler != NULL )
-        return FALSE;
+        return sal_False;
     
     if( ! ImplGetSVData() )
         ImplInitSVData();
@@ -411,7 +430,7 @@ BOOL InitVCL( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XM
     RTL_LOGFILE_CONTEXT_TRACE( aLog, "{ ::CreateSalInstance" );
     pSVData->mpDefInst = CreateSalInstance();
     if ( !pSVData->mpDefInst )
-        return FALSE;
+        return sal_False;
     RTL_LOGFILE_CONTEXT_TRACE( aLog, "} ::CreateSalInstance" );
 
     // Desktop Environment context (to be able to get value of "system.desktop-environment" as soon as possible)
@@ -435,7 +454,7 @@ BOOL InitVCL( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XM
 
     // Initialize global data
     pSVData->maGDIData.mpScreenFontList     = new ImplDevFontList;
-    pSVData->maGDIData.mpScreenFontCache    = new ImplFontCache( FALSE );
+    pSVData->maGDIData.mpScreenFontCache    = new ImplFontCache( sal_False );
     pSVData->maGDIData.mpGrfConverter       = new GraphicConverter;
 
     // Exception-Handler setzen
@@ -444,13 +463,13 @@ BOOL InitVCL( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XM
     // Debug-Daten initialisieren
     DBGGUI_INIT();
 
-    return TRUE;
+    return sal_True;
 }
 
 void DeInitVCL()
 {
     ImplSVData* pSVData = ImplGetSVData();
-    pSVData->mbDeInit = TRUE;
+    pSVData->mbDeInit = sal_True;
     
     vcl::DeleteOnDeinitBase::ImplDeleteOnDeInit();
 
@@ -476,7 +495,9 @@ void DeInitVCL()
             aBuf.append( rtl::OUStringToOString( pWin->GetText(), osl_getThreadTextEncoding() ) );
             aBuf.append( "\" type = \"" );
             aBuf.append( typeid(*pWin).name() );
-            aBuf.append( "\"\n" );
+            aBuf.append( "\", ptr = 0x" );
+            aBuf.append( sal_Int64( pWin ), 16 );
+            aBuf.append( "\n" );
         }
     }
     DBG_ASSERT( nBadTopWindows==0, aBuf.getStr() );
@@ -549,6 +570,26 @@ void DeInitVCL()
         delete pSVData->maCtrlData.mpSplitVArwImgList;
         pSVData->maCtrlData.mpSplitVArwImgList = NULL;
     }
+    if ( pSVData->maCtrlData.mpDisclosurePlus )
+    {
+        delete pSVData->maCtrlData.mpDisclosurePlus;
+        pSVData->maCtrlData.mpDisclosurePlus = NULL;
+    }
+    if ( pSVData->maCtrlData.mpDisclosurePlusHC )
+    {
+        delete pSVData->maCtrlData.mpDisclosurePlusHC;
+        pSVData->maCtrlData.mpDisclosurePlusHC = NULL;
+    }
+    if ( pSVData->maCtrlData.mpDisclosureMinus )
+    {
+        delete pSVData->maCtrlData.mpDisclosureMinus;
+        pSVData->maCtrlData.mpDisclosureMinus = NULL;
+    }
+    if ( pSVData->maCtrlData.mpDisclosureMinusHC )
+    {
+        delete pSVData->maCtrlData.mpDisclosureMinusHC;
+        pSVData->maCtrlData.mpDisclosureMinusHC = NULL;
+    }
 #if defined USE_JAVA && defined MACOSX
     if ( pSVData->maCtrlData.mpNonNativeCheckImgList )
     {
@@ -584,6 +625,12 @@ void DeInitVCL()
 
     if ( pSVData->maAppData.mpSettings )
     {
+		if ( pSVData->maAppData.mpCfgListener )
+		{
+			pSVData->maAppData.mpSettings->GetSysLocale().GetOptions().RemoveListener( pSVData->maAppData.mpCfgListener );
+			delete pSVData->maAppData.mpCfgListener;
+		}
+		
         delete pSVData->maAppData.mpSettings;
         pSVData->maAppData.mpSettings = NULL;
     }

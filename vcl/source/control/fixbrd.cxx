@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified July 2006 by Edward Peterlin. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
@@ -43,7 +46,7 @@
 void FixedBorder::ImplInit( Window* pParent, WinBits nStyle )
 {
 	mnType			= FIXEDBORDER_TYPE_DOUBLEOUT;
-	mbTransparent	= TRUE;
+	mbTransparent	= sal_True;
 
 	nStyle = ImplInitStyle( nStyle );
 	Control::ImplInit( pParent, nStyle, NULL );
@@ -52,12 +55,12 @@ void FixedBorder::ImplInit( Window* pParent, WinBits nStyle )
 #ifdef USE_JAVA
 	if( IsNativeControlSupported( CTRL_FIXEDBORDER, PART_ENTIRE_CONTROL ) )
 	{
-		SetMouseTransparent( TRUE );
-		EnableChildTransparentMode( TRUE );
+		SetMouseTransparent( sal_True );
+		EnableChildTransparentMode( sal_True );
 		SetParentClipMode( PARENTCLIPMODE_NOCLIP );
-		SetPaintTransparent( TRUE );
+		SetPaintTransparent( sal_True );
 		SetBackground();
-    }
+	}
 #endif	// USE_JAVA
 }
 
@@ -79,18 +82,18 @@ void FixedBorder::ImplInitSettings()
 		  !(pParent->GetStyle() & WB_CLIPCHILDREN) ) &&
 		 !IsControlBackground() && mbTransparent )
 	{
-		SetMouseTransparent( TRUE );
-		EnableChildTransparentMode( TRUE );
+		SetMouseTransparent( sal_True );
+		EnableChildTransparentMode( sal_True );
 		SetParentClipMode( PARENTCLIPMODE_NOCLIP );
-		SetPaintTransparent( TRUE );
+		SetPaintTransparent( sal_True );
 		SetBackground();
 	}
 	else
 	{
-		SetMouseTransparent( FALSE );
-		EnableChildTransparentMode( FALSE );
+		SetMouseTransparent( sal_False );
+		EnableChildTransparentMode( sal_False );
 		SetParentClipMode( 0 );
-		SetPaintTransparent( FALSE );
+		SetPaintTransparent( sal_False );
 
 		if ( IsControlBackground() )
 			SetBackground( GetControlBackground() );
@@ -129,18 +132,20 @@ FixedBorder::~FixedBorder()
 
 // -----------------------------------------------------------------------
 
-void FixedBorder::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
+void FixedBorder::ImplDraw( OutputDevice* pDev, sal_uLong nDrawFlags,
 							const Point& rPos, const Size& rSize )
 {
 	const StyleSettings&	rStyleSettings = GetSettings().GetStyleSettings();
 	Rectangle				aRect( rPos, rSize );
-	USHORT					nBorderStyle = mnType;
+	sal_uInt16					nBorderStyle = mnType;
 
 	if ( (nDrawFlags & WINDOW_DRAW_MONO) ||
 		 (rStyleSettings.GetOptions() & STYLE_OPTION_MONO) )
 		nBorderStyle |= FRAME_DRAW_MONO;
 
-#ifdef USE_JAVA
+#ifndef USE_JAVA
+    /*
+#endif	// !USE_JAVA
     // seems only to be used in tools->options around a tabpage (ie, no tabcontrol!)
     // as tabpages that are not embedded in a tabcontrol should not be drawn natively
     // the fixedborder must also not be drawn (reason was, that it looks too ugly, dialogs must be redesigned)
@@ -155,7 +160,9 @@ void FixedBorder::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
 	     						aControlValue, rtl::OUString() );
     }
     else
-#endif	// USE_JAVA
+#ifndef USE_JAVA
+    */
+#endif	// !USE_JAVA
     {
 	    DecorationView	aDecoView( pDev );
 	    aDecoView.DrawFrame( aRect, nBorderStyle );
@@ -172,7 +179,7 @@ void FixedBorder::Paint( const Rectangle& )
 // -----------------------------------------------------------------------
 
 void FixedBorder::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
-						ULONG nFlags )
+						sal_uLong nFlags )
 {
 	Point	aPos  = pDev->LogicToPixel( rPos );
 	Size	aSize = pDev->LogicToPixel( rSize );
@@ -227,7 +234,7 @@ void FixedBorder::DataChanged( const DataChangedEvent& rDCEvt )
 
 // -----------------------------------------------------------------------
 
-void FixedBorder::SetTransparent( BOOL bTransparent )
+void FixedBorder::SetTransparent( sal_Bool bTransparent )
 {
 	if ( mbTransparent != bTransparent )
 	{
@@ -239,7 +246,7 @@ void FixedBorder::SetTransparent( BOOL bTransparent )
 
 // -----------------------------------------------------------------------
 
-void FixedBorder::SetBorderType( USHORT nType )
+void FixedBorder::SetBorderType( sal_uInt16 nType )
 {
 	if ( mnType != nType )
 	{

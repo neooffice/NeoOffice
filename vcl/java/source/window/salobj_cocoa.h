@@ -36,11 +36,11 @@
 #ifndef __SALOBJ_COCOA_H__
 #define __SALOBJ_COCOA_H__
 
-#include <salobj.h>
-
 #include <premac.h>
 #import <Foundation/Foundation.h>
 #include <postmac.h>
+
+#include "java/salobj.h"
 
 SAL_DLLPRIVATE id VCLChildView_create();
 SAL_DLLPRIVATE void VCLChildView_release( id pVCLChildView );

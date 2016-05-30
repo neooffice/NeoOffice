@@ -1,53 +1,55 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified May 2006 by Edward H. Peterlin. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
-#include <tools/debug.hxx>
 
-#ifndef _SV_RC_H
-#include <tools/rc.h>
-#endif
-#include <vcl/svdata.hxx>
-#ifndef _SV_APP_HXX
-#include <vcl/svapp.hxx>
-#endif
-#include <vcl/help.hxx>
-#include <vcl/event.hxx>
-#include <vcl/menu.hxx>
-#include <vcl/button.hxx>
-#include <vcl/tabpage.hxx>
-#include <vcl/tabctrl.hxx>
-#include <vcl/controllayout.hxx>
-#include <vcl/sound.hxx>
+#include "tools/debug.hxx"
+#include "tools/rc.h"
 
-#include <vcl/window.h>
+#include "vcl/svapp.hxx"
+#include "vcl/help.hxx"
+#include "vcl/event.hxx"
+#include "vcl/menu.hxx"
+#include "vcl/button.hxx"
+#include "vcl/tabpage.hxx"
+#include "vcl/tabctrl.hxx"
+#include "vcl/controllayout.hxx"
+#include "vcl/sound.hxx"
+#include "vcl/lstbox.hxx"
+
+#include "controldata.hxx"
+#include "svdata.hxx"
+#include "window.h"
 
 #include <hash_map>
 #include <vector>
@@ -56,22 +58,22 @@
 
 struct ImplTabItem
 {
-    USHORT              mnId;
-    USHORT              mnTabPageResId;
+    sal_uInt16              mnId;
+    sal_uInt16              mnTabPageResId;
     TabPage*            mpTabPage;
     String              maText;
     String              maFormatText;
     String              maHelpText;
-    ULONG               mnHelpId;
+    rtl::OString        maHelpId;
     Rectangle           maRect;
-    USHORT              mnLine;
+    sal_uInt16              mnLine;
     bool                mbFullVisible;
     bool                mbEnabled;
     Image               maTabImage;
 
     ImplTabItem()
-    : mnId( 0 ), mnTabPageResId( 0 ), mpTabPage( NULL ), mnHelpId( 0 ),
-      mnLine( 0 ), mbFullVisible( FALSE ), mbEnabled( true )
+    : mnId( 0 ), mnTabPageResId( 0 ), mpTabPage( NULL ),
+      mnLine( 0 ), mbFullVisible( sal_False ), mbEnabled( true )
     {}
 };
 
@@ -79,35 +81,14 @@ struct ImplTabItem
 
 struct ImplTabCtrlData
 {
-    PushButton*						mpLeftBtn;
-    PushButton*						mpRightBtn;
     std::hash_map< int, int >		maLayoutPageIdToLine;
     std::hash_map< int, int >		maLayoutLineToPageId;
     std::vector< Rectangle >		maTabRectangles;
     Point                           maItemsOffset;       // offset of the tabitems
     std::vector< ImplTabItem >      maItemList;
+    ListBox*                        mpListBox;
+    Size                            maMinSize;
 };
-
-// -----------------------------------------------------------------------
-
-#if 0
-// not used
-#define TABCOLORCOUNT   10
-
-static ColorData aImplTabColorAry[TABCOLORCOUNT] =
-{
-    RGB_COLORDATA(  80, 216, 248 ),
-    RGB_COLORDATA( 128, 216, 168 ),
-    RGB_COLORDATA( 128, 144, 248 ),
-    RGB_COLORDATA( 208, 180, 168 ),
-    RGB_COLORDATA( 248, 252, 168 ),
-    RGB_COLORDATA( 168, 144, 168 ),
-    RGB_COLORDATA( 248, 144,  80 ),
-    RGB_COLORDATA( 248, 216,  80 ),
-    RGB_COLORDATA( 248, 180, 168 ),
-    RGB_COLORDATA( 248, 216, 168 )
-};
-#endif
 
 // -----------------------------------------------------------------------
 
@@ -134,9 +115,6 @@ void TabControl::ImplInit( Window* pParent, WinBits nStyle )
     if ( !(nStyle & WB_NODIALOGCONTROL) )
         nStyle |= WB_DIALOGCONTROL;
 
-    // no single line tabs since NWF
-    nStyle &= ~WB_SINGLELINE;
-
     Control::ImplInit( pParent, nStyle, NULL );
 
     mnLastWidth         		= 0;
@@ -145,54 +123,53 @@ void TabControl::ImplInit( Window* pParent, WinBits nStyle )
     mnMaxPageWidth      		= 0;
     mnActPageId         		= 0;
     mnCurPageId         		= 0;
-    mnFirstPagePos      		= 0;
-    mnLastFirstPagePos  		= 0;
-    mbFormat            		= TRUE;
-    mbRestoreHelpId     		= FALSE;
-    mbRestoreUnqId      		= FALSE;
-    mbSingleLine        		= FALSE;
-    mbScroll            		= FALSE;
-    mbColored           		= FALSE;
-    mbSmallInvalidate   		= FALSE;
-    mbExtraSpace        		= FALSE;
+    mbFormat            		= sal_True;
+    mbRestoreHelpId     		= sal_False;
+    mbRestoreUnqId      		= sal_False;
+    mbSmallInvalidate   		= sal_False;
+    mbExtraSpace        		= sal_False;
     mpTabCtrlData               = new ImplTabCtrlData;
-    mpTabCtrlData->mpLeftBtn    = NULL;
-    mpTabCtrlData->mpRightBtn   = NULL;
+    mpTabCtrlData->mpListBox    = NULL;
 
 
-    ImplInitSettings( TRUE, TRUE, TRUE );
+    ImplInitSettings( sal_True, sal_True, sal_True );
+
+    if( (nStyle & WB_DROPDOWN) )
+    {
+        mpTabCtrlData->mpListBox = new ListBox( this, WB_DROPDOWN );
+        mpTabCtrlData->mpListBox->SetPosSizePixel( Point( 0, 0 ), Size( 200, 20 ) );
+        mpTabCtrlData->mpListBox->SetSelectHdl( LINK( this, TabControl, ImplListBoxSelectHdl ) );
+        mpTabCtrlData->mpListBox->Show();
+    }
 
     // if the tabcontrol is drawn (ie filled) by a native widget, make sure all contols will have transparent background
     // otherwise they will paint with a wrong background
     if( IsNativeControlSupported(CTRL_TAB_PANE, PART_ENTIRE_CONTROL) )
-        EnableChildTransparentMode( TRUE );
+        EnableChildTransparentMode( sal_True );
+    
+    if ( pParent->IsDialog() )
+        pParent->AddChildEventListener( LINK( this, TabControl, ImplWindowEventListener ) );
+}
+
+// -----------------------------------------------------------------
+
+const Font& TabControl::GetCanonicalFont( const StyleSettings& _rStyle ) const
+{
+    return _rStyle.GetAppFont();
+}
+
+// -----------------------------------------------------------------
+const Color& TabControl::GetCanonicalTextColor( const StyleSettings& _rStyle ) const
+{
+    return _rStyle.GetButtonTextColor();
 }
 
 // -----------------------------------------------------------------------
 
-void TabControl::ImplInitSettings( BOOL bFont,
-                                   BOOL bForeground, BOOL bBackground )
+void TabControl::ImplInitSettings( sal_Bool bFont,
+                                   sal_Bool bForeground, sal_Bool bBackground )
 {
-    const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
-
-    if ( bFont )
-    {
-        Font aFont = rStyleSettings.GetAppFont();
-        if ( IsControlFont() )
-            aFont.Merge( GetControlFont() );
-        SetZoomedPointFont( aFont );
-    }
-
-    if ( bForeground || bFont )
-    {
-        Color aColor;
-        if ( IsControlForeground() )
-            aColor = GetControlForeground();
-        else
-            aColor = rStyleSettings.GetButtonTextColor();
-        SetTextColor( aColor );
-        SetTextFillColor();
-    }
+    Control::ImplInitSettings( bFont, bForeground );
 
     if ( bBackground )
     {
@@ -205,17 +182,17 @@ void TabControl::ImplInitSettings( BOOL bFont,
         {
             // set transparent mode for NWF tabcontrols to have
             // the background always cleared properly
-            EnableChildTransparentMode( TRUE );
+            EnableChildTransparentMode( sal_True );
             SetParentClipMode( PARENTCLIPMODE_NOCLIP );
-            SetPaintTransparent( TRUE );
+            SetPaintTransparent( sal_True );
             SetBackground();
             ImplGetWindowImpl()->mbUseNativeFocus = ImplGetSVData()->maNWFData.mbNoFocusRects;
         }
         else
         {
-            EnableChildTransparentMode( FALSE );
+            EnableChildTransparentMode( sal_False );
             SetParentClipMode( 0 );
-            SetPaintTransparent( FALSE );
+            SetPaintTransparent( sal_False );
 
             if ( IsControlBackground() )
                 SetBackground( GetControlBackground() );
@@ -223,17 +200,15 @@ void TabControl::ImplInitSettings( BOOL bFont,
                 SetBackground( pParent->GetBackground() );
         }
     }
-
-    ImplScrollBtnsColor();
 }
 
 // -----------------------------------------------------------------------
 
 void TabControl::ImplFreeLayoutData()
 {
-    if( mpLayoutData )
+    if( HasLayoutData() )
     {
-        delete mpLayoutData, mpLayoutData = NULL;
+        ImplClearLayoutData();
         mpTabCtrlData->maLayoutPageIdToLine.clear();
         mpTabCtrlData->maLayoutLineToPageId.clear();
     }
@@ -267,14 +242,14 @@ void TabControl::ImplLoadRes( const ResId& rResId )
 {
     Control::ImplLoadRes( rResId );
 
-    ULONG nObjMask = ReadLongRes();
+    sal_uLong nObjMask = ReadLongRes();
 
     if ( nObjMask & RSC_TABCONTROL_ITEMLIST )
     {
-        ULONG nEle = ReadLongRes();
+        sal_uLong nEle = ReadLongRes();
 
         // Item hinzufuegen
-        for( ULONG i = 0; i < nEle; i++ )
+        for( sal_uLong i = 0; i < nEle; i++ )
         {
             InsertPage( ResId( (RSHEADER_TYPE *)GetClassRes(), *rResId.GetResMgr() ) );
             IncrementRes( GetObjSizeRes( (RSHEADER_TYPE *)GetClassRes() ) );
@@ -286,22 +261,23 @@ void TabControl::ImplLoadRes( const ResId& rResId )
 
 TabControl::~TabControl()
 {
+    if ( GetParent()->IsDialog() )
+        GetParent()->RemoveChildEventListener( LINK( this, TabControl, ImplWindowEventListener ) );
+
     ImplFreeLayoutData();
 
     // TabCtrl-Daten loeschen
     if ( mpTabCtrlData )
     {
-        if ( mpTabCtrlData->mpLeftBtn )
-            delete mpTabCtrlData->mpLeftBtn;
-        if ( mpTabCtrlData->mpRightBtn )
-            delete mpTabCtrlData->mpRightBtn;
+        if( mpTabCtrlData->mpListBox )
+            delete mpTabCtrlData->mpListBox;
         delete mpTabCtrlData;
     }
 }
 
 // -----------------------------------------------------------------------
 
-ImplTabItem* TabControl::ImplGetItem( USHORT nId ) const
+ImplTabItem* TabControl::ImplGetItem( sal_uInt16 nId ) const
 {
     for( std::vector< ImplTabItem >::iterator it = mpTabCtrlData->maItemList.begin();
          it != mpTabCtrlData->maItemList.end(); ++it )
@@ -311,74 +287,6 @@ ImplTabItem* TabControl::ImplGetItem( USHORT nId ) const
     }
 
     return NULL;
-}
-
-// -----------------------------------------------------------------------
-
-void TabControl::ImplScrollBtnsColor()
-{
-    if ( mpTabCtrlData && mpTabCtrlData->mpLeftBtn )
-    {
-        mpTabCtrlData->mpLeftBtn->SetControlForeground();
-        mpTabCtrlData->mpRightBtn->SetControlForeground();
-    }
-}
-
-// -----------------------------------------------------------------------
-
-void TabControl::ImplSetScrollBtnsState()
-{
-    if ( mbScroll )
-    {
-        mpTabCtrlData->mpLeftBtn->Enable( mnFirstPagePos != 0 );
-        mpTabCtrlData->mpRightBtn->Enable( mnFirstPagePos < mnLastFirstPagePos );
-    }
-}
-
-// -----------------------------------------------------------------------
-
-void TabControl::ImplPosScrollBtns()
-{
-    if ( mbScroll )
-    {
-        if ( !mpTabCtrlData->mpLeftBtn )
-        {
-            mpTabCtrlData->mpLeftBtn = new PushButton( this, WB_RECTSTYLE | WB_SMALLSTYLE | WB_NOPOINTERFOCUS | WB_REPEAT );
-            mpTabCtrlData->mpLeftBtn->SetSymbol( SYMBOL_PREV );
-            mpTabCtrlData->mpLeftBtn->SetClickHdl( LINK( this, TabControl, ImplScrollBtnHdl ) );
-        }
-        if ( !mpTabCtrlData->mpRightBtn )
-        {
-            mpTabCtrlData->mpRightBtn = new PushButton( this, WB_RECTSTYLE | WB_SMALLSTYLE | WB_NOPOINTERFOCUS | WB_REPEAT );
-            mpTabCtrlData->mpRightBtn->SetSymbol( SYMBOL_NEXT );
-            mpTabCtrlData->mpRightBtn->SetClickHdl( LINK( this, TabControl, ImplScrollBtnHdl ) );
-        }
-
-        Rectangle aRect = ImplGetTabRect( TAB_PAGERECT );
-        aRect.Left()   -= TAB_OFFSET;
-        aRect.Top()    -= TAB_OFFSET;
-        aRect.Right()  += TAB_OFFSET;
-        aRect.Bottom() += TAB_OFFSET;
-        long nX = aRect.Right()-mnBtnSize+1;
-        long nY = aRect.Top()-mnBtnSize;
-        mpTabCtrlData->mpRightBtn->SetPosSizePixel( nX, nY, mnBtnSize, mnBtnSize );
-        nX -= mnBtnSize;
-        mpTabCtrlData->mpLeftBtn->SetPosSizePixel( nX, nY, mnBtnSize, mnBtnSize );
-        ImplScrollBtnsColor();
-        ImplSetScrollBtnsState();
-        mpTabCtrlData->mpLeftBtn->Show();
-        mpTabCtrlData->mpRightBtn->Show();
-    }
-    else
-    {
-        if ( mpTabCtrlData )
-        {
-            if ( mpTabCtrlData->mpLeftBtn )
-                mpTabCtrlData->mpLeftBtn->Hide();
-            if ( mpTabCtrlData->mpRightBtn )
-                mpTabCtrlData->mpRightBtn->Hide();
-        }
-    }
 }
 
 // -----------------------------------------------------------------------
@@ -398,45 +306,37 @@ Size TabControl::ImplGetItemSize( ImplTabItem* pItem, long nMaxWidth )
     if( aImageSize.Height() > aSize.Height() )
         aSize.Height() = aImageSize.Height();
 
-#ifndef USE_JAVA
-    Region aCtrlRegion(  Rectangle( (const Point&)Point( 0, 0 ), aSize ) );
-    Region aBoundingRgn, aContentRgn;
-    const ImplControlValue aControlValue( BUTTONVALUE_DONTKNOW, rtl::OUString(), 0 );
+    aSize.Width()  += TAB_TABOFFSET_X*2;
+    aSize.Height() += TAB_TABOFFSET_Y*2;
+
+#ifdef USE_JAVA
+    // [ed] 10/17/06 Call through to the NWF to get recommended tab item sizes
+    TabControl * aNonConstTabControl = (TabControl *)this;
+    if ( aNonConstTabControl->IsNativeControlSupported( CTRL_TAB_ITEM, PART_ENTIRE_CONTROL ) )
+    {
+        TabitemValue tiValue;
+        Rectangle aCtrlRegion( Point( 0, 0 ), aSize );
+        Rectangle aBoundingRgn, aContentRgn;
+        if( aNonConstTabControl->GetNativeControlRegion( CTRL_TAB_ITEM, PART_ENTIRE_CONTROL, aCtrlRegion, 0, tiValue, pItem->maText, aBoundingRgn, aContentRgn ) )
+        {
+            if ( aSize.Width() < aContentRgn.GetWidth() )
+                aSize.Width() = aContentRgn.GetWidth();
+            if ( aSize.Height() < aContentRgn.GetHeight() )
+                aSize.Height() = aContentRgn.GetHeight();
+        }
+    }
+#else	// USE_JAVA
+    Rectangle aCtrlRegion( Point( 0, 0 ), aSize );
+    Rectangle aBoundingRgn, aContentRgn;
+    const ImplControlValue aControlValue;
     if(GetNativeControlRegion( CTRL_TAB_ITEM, PART_ENTIRE_CONTROL, aCtrlRegion,
                                            CTRL_STATE_ENABLED, aControlValue, rtl::OUString(),
                                            aBoundingRgn, aContentRgn ) )
     {
-        Rectangle aCont(aContentRgn.GetBoundRect());
-        return aCont.GetSize();
+        return aContentRgn.GetSize();
     }
-#endif	// !USE_JAVA
-
-    aSize.Width()  += TAB_TABOFFSET_X*2;
-    aSize.Height() += TAB_TABOFFSET_Y*2;
-#ifdef USE_JAVA
-	// [ed] 10/17/06 Call through to the NWF to get recommended tab item sizes
-	TabControl * aNonConstTabControl = (TabControl *)this;
-	if ( aNonConstTabControl->IsNativeControlSupported( CTRL_TAB_ITEM, PART_ENTIRE_CONTROL ) )
-	{
-		ImplControlValue aControlValue;
-		Point aPoint( 0, 0 );
-		Region aCtrlRegion( Rectangle( aPoint, aSize ) );
-		
-		TabitemValue tiValue;
-		aControlValue.setOptionalVal( (void *)(&tiValue) );
-		
-		Region aBoundingRegion, aEntireCtrlRegion;
-		
-		if( aNonConstTabControl->GetNativeControlRegion( CTRL_TAB_ITEM, PART_ENTIRE_CONTROL, aCtrlRegion, 0, aControlValue, pItem->maText, aBoundingRegion, aEntireCtrlRegion ) )
-		{
-			Rectangle aNativeBoundRect = aEntireCtrlRegion.GetBoundRect();
-			if ( aNativeBoundRect.GetWidth() > aSize.Width() )
-				aSize.Width() = aNativeBoundRect.GetWidth();
-			if ( aNativeBoundRect.GetHeight() > aSize.Height() )
-				aSize.Height() = aNativeBoundRect.GetHeight();
-		}
-	}
 #endif	// USE_JAVA
+
     // For systems without synthetic bold support
     if ( mbExtraSpace )
         aSize.Width() += TAB_EXTRASPACE_X;
@@ -476,23 +376,26 @@ Size TabControl::ImplGetItemSize( ImplTabItem* pItem, long nMaxWidth )
 
 // -----------------------------------------------------------------------
 
-Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight )
+Rectangle TabControl::ImplGetTabRect( sal_uInt16 nItemPos, long nWidth, long nHeight )
 {
     Size aWinSize = Control::GetOutputSizePixel();
-    if ( nWidth == -1 )
+    if ( nWidth < 0 )
         nWidth = aWinSize.Width();
-    if ( nHeight == -1 )
+    if ( nHeight < 0 )
         nHeight = aWinSize.Height();
 
     if ( mpTabCtrlData->maItemList.empty() )
     {
-        return Rectangle( Point( TAB_OFFSET, TAB_OFFSET ),
-                          Size( nWidth-TAB_OFFSET*2, nHeight-TAB_OFFSET*2 ) );
+        long nW = nWidth-TAB_OFFSET*2;
+        long nH = nHeight-TAB_OFFSET*2;
+        return (nW > 0 && nH > 0)
+        ? Rectangle( Point( TAB_OFFSET, TAB_OFFSET ), Size( nW, nH ) )
+        : Rectangle();
     }
 
     if ( nItemPos == TAB_PAGERECT )
     {
-        USHORT nLastPos;
+        sal_uInt16 nLastPos;
 #ifndef USE_JAVA
         if ( mnCurPageId )
             nLastPos = GetPagePos( mnCurPageId );
@@ -501,9 +404,11 @@ Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight
             nLastPos = 0;
 
         Rectangle aRect = ImplGetTabRect( nLastPos, nWidth, nHeight );
-        aRect = Rectangle( Point( TAB_OFFSET, aRect.Bottom()+TAB_OFFSET ),
-                           Size( nWidth-TAB_OFFSET*2,
-                                 nHeight-aRect.Bottom()-TAB_OFFSET*2 ) );
+        long nW = nWidth-TAB_OFFSET*2;
+        long nH = nHeight-aRect.Bottom()-TAB_OFFSET*2;
+        aRect = (nW > 0 && nH > 0)
+        ? Rectangle( Point( TAB_OFFSET, aRect.Bottom()+TAB_OFFSET ), Size( nW, nH ) )
+        : Rectangle();
         return aRect;
     }
 
@@ -516,9 +421,9 @@ Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight
     {
         Font aFont( GetFont() );
         Font aLightFont = aFont;
-        aFont.SetTransparent( TRUE );
+        aFont.SetTransparent( sal_True );
         aFont.SetWeight( (!ImplGetSVData()->maNWFData.mbNoBoldTabFocus) ? WEIGHT_BOLD : WEIGHT_LIGHT );
-        aLightFont.SetTransparent( TRUE );
+        aLightFont.SetTransparent( sal_True );
         aLightFont.SetWeight( WEIGHT_LIGHT );
 
         // If Bold and none Bold strings have the same width, we
@@ -538,18 +443,16 @@ Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight
         long            nX = nOffsetX;
         long            nY = nOffsetY;
         long            nMaxWidth = nWidth;
-        USHORT          nPos = 0;
+        sal_uInt16          nPos = 0;
 
         if ( (mnMaxPageWidth > 0) && (mnMaxPageWidth < nMaxWidth) )
             nMaxWidth = mnMaxPageWidth;
         nMaxWidth -= GetItemsOffset().X();
 
-        mbScroll = FALSE;
-
-        USHORT          nLines = 0;
-        USHORT          nCurLine = 0;
+        sal_uInt16          nLines = 0;
+        sal_uInt16          nCurLine = 0;
         long            nLineWidthAry[100];
-        USHORT          nLinePosAry[101];
+        sal_uInt16          nLinePosAry[101];
 
         nLineWidthAry[0] = 0;
         nLinePosAry[0] = 0;
@@ -572,10 +475,10 @@ Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight
 
             Rectangle aNewRect( Point( nX, nY ), aSize );
             if ( mbSmallInvalidate && (it->maRect != aNewRect) )
-                mbSmallInvalidate = FALSE;
+                mbSmallInvalidate = sal_False;
             it->maRect = aNewRect;
             it->mnLine = nLines;
-            it->mbFullVisible = TRUE;
+            it->mbFullVisible = sal_True;
 
             nLineWidthAry[nLines] += aSize.Width();
             nX += aSize.Width();
@@ -591,8 +494,8 @@ Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight
             long    nDX = 0;
             long    nModDX = 0;
             long    nIDX = 0;
-            USHORT  i;
-            USHORT  n;
+            sal_uInt16  i;
+            sal_uInt16  n;
             long    nLineHeightAry[100];
             long    nIH = mpTabCtrlData->maItemList[0].maRect.Bottom()-2;
 
@@ -600,7 +503,7 @@ Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight
             while ( i < nLines+1 )
             {
 #ifdef USE_JAVA
-				nLineHeightAry[i] = nIH*(nLines-i) + GetItemsOffset().Y();
+                nLineHeightAry[i] = nIH*(nLines-i) + GetItemsOffset().Y();
 #else	// USE_JAVA
                 if ( i <= nCurLine )
                     nLineHeightAry[i] = nIH*(nLines-(nCurLine-i)) + GetItemsOffset().Y();
@@ -612,7 +515,7 @@ Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight
 
             i = 0;
             n = 0;
-            nLinePosAry[nLines+1] = (USHORT)mpTabCtrlData->maItemList.size();
+            nLinePosAry[nLines+1] = (sal_uInt16)mpTabCtrlData->maItemList.size();
             for( std::vector< ImplTabItem >::iterator it = mpTabCtrlData->maItemList.begin();
                  it != mpTabCtrlData->maItemList.end(); ++it )
             {
@@ -675,16 +578,15 @@ Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight
             }
         }
 
-
 #ifdef USE_JAVA
-        USHORT lineIndex = 0;
-        USHORT curItemIndex = 0;
+        sal_uInt16 lineIndex = 0;
+        sal_uInt16 curItemIndex = 0;
         for( std::vector< ImplTabItem >::iterator it = mpTabCtrlData->maItemList.begin();
              it != mpTabCtrlData->maItemList.end(); ++it )
         {
             if ( nLines && (lineIndex <= nLines ) && ( curItemIndex == nLinePosAry[lineIndex+1] ) )
                 lineIndex++;
-				
+
             it->maRect.Left() += ( nWidth - nLineWidthAry[lineIndex] ) / 2;
             it->maRect.Right() += ( nWidth - nLineWidthAry[lineIndex] ) / 2;
 
@@ -694,9 +596,7 @@ Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight
 
         mnLastWidth     = nWidth;
         mnLastHeight    = nHeight;
-        mbFormat        = FALSE;
-
-        ImplPosScrollBtns();
+        mbFormat        = sal_False;
     }
 
     return size_t(nItemPos) < mpTabCtrlData->maItemList.size() ? mpTabCtrlData->maItemList[nItemPos].maRect : Rectangle();
@@ -704,7 +604,7 @@ Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight
 
 // -----------------------------------------------------------------------
 
-void TabControl::ImplChangeTabPage( USHORT nId, USHORT nOldId )
+void TabControl::ImplChangeTabPage( sal_uInt16 nId, sal_uInt16 nOldId )
 {
     ImplFreeLayoutData();
 
@@ -716,7 +616,7 @@ void TabControl::ImplChangeTabPage( USHORT nId, USHORT nOldId )
 
     if ( IsReallyVisible() && IsUpdateMode() )
     {
-        USHORT nPos = GetPagePos( nId );
+        sal_uInt16 nPos = GetPagePos( nId );
         Rectangle aRect = ImplGetTabRect( nPos );
 
         if ( !pOldItem || (pOldItem->mnLine != pItem->mnLine) )
@@ -748,9 +648,9 @@ void TabControl::ImplChangeTabPage( USHORT nId, USHORT nOldId )
     if ( pOldPage )
     {
         if ( mbRestoreHelpId )
-            pCtrlParent->SetHelpId( 0 );
+            pCtrlParent->SetHelpId( rtl::OString() );
         if ( mbRestoreUnqId )
-            pCtrlParent->SetUniqueId( 0 );
+            pCtrlParent->SetUniqueId( rtl::OString() );
         pOldPage->DeactivatePage();
     }
 
@@ -758,24 +658,25 @@ void TabControl::ImplChangeTabPage( USHORT nId, USHORT nOldId )
     {
         pPage->SetPosSizePixel( aRect.TopLeft(), aRect.GetSize() );
 
-        // Hier Page aktivieren, damit die Controls entsprechend umgeschaltet
-        // werden koennen und HilfeId gegebenenfalls beim Parent umsetzen
-        if ( !GetHelpId() )
+        // activate page here so the conbtrols can be switched
+        // also set the help id of the parent window to that of the tab page
+        if ( !GetHelpId().getLength() )
         {
-            mbRestoreHelpId = TRUE;
+            mbRestoreHelpId = sal_True;
             pCtrlParent->SetHelpId( pPage->GetHelpId() );
         }
-        if ( !pCtrlParent->GetUniqueId() )
+        if ( !pCtrlParent->GetUniqueId().getLength() )
         {
-            mbRestoreUnqId = TRUE;
+            mbRestoreUnqId = sal_True;
             pCtrlParent->SetUniqueId( pPage->GetUniqueId() );
         }
 
         pPage->ActivatePage();
+		pPage->Show();
 
         if ( pOldPage && pOldPage->HasChildPathFocus() )
         {
-            USHORT  n = 0;
+            sal_uInt16  n = 0;
             Window* pFirstChild = pPage->ImplGetDlgWindow( n, DLGWINDOW_FIRST );
             if ( pFirstChild )
                 pFirstChild->ImplControlFocus( GETFOCUS_INIT );
@@ -783,15 +684,15 @@ void TabControl::ImplChangeTabPage( USHORT nId, USHORT nOldId )
                 GrabFocus();
         }
 
-        pPage->Show();
+        // pPage->Show(); 
     }
 
     if ( pOldPage )
         pOldPage->Hide();
 
 #ifdef USE_JAVA
-	if ( pOldItem )
-		Invalidate();
+    if ( pOldItem )
+        Invalidate();
 #endif	// USE_JAVA
 
     // Invalidate the same region that will be send to NWF
@@ -810,7 +711,7 @@ void TabControl::ImplChangeTabPage( USHORT nId, USHORT nOldId )
 
 // -----------------------------------------------------------------------
 
-BOOL TabControl::ImplPosCurTabPage()
+sal_Bool TabControl::ImplPosCurTabPage()
 {
     // Aktuelle TabPage resizen/positionieren
     ImplTabItem* pItem = ImplGetItem( GetCurPageId() );
@@ -818,17 +719,17 @@ BOOL TabControl::ImplPosCurTabPage()
     {
         Rectangle aRect = ImplGetTabRect( TAB_PAGERECT );
         pItem->mpTabPage->SetPosSizePixel( aRect.TopLeft(), aRect.GetSize() );
-        return TRUE;
+        return sal_True;
     }
 
-    return FALSE;
+    return sal_False;
 }
 
 // -----------------------------------------------------------------------
 
-void TabControl::ImplActivateTabPage( BOOL bNext )
+void TabControl::ImplActivateTabPage( sal_Bool bNext )
 {
-    USHORT nCurPos = GetPagePos( GetCurPageId() );
+    sal_uInt16 nCurPos = GetPagePos( GetCurPageId() );
 
     if ( bNext )
         nCurPos = (nCurPos + 1) % GetPageCount();
@@ -845,16 +746,9 @@ void TabControl::ImplActivateTabPage( BOOL bNext )
 
 // -----------------------------------------------------------------------
 
-void TabControl::ImplSetFirstPagePos( USHORT )
-{
-    return; // was only required for single line
-}
-
-// -----------------------------------------------------------------------
-
 void TabControl::ImplShowFocus()
 {
-    if ( !GetPageCount() )
+    if ( !GetPageCount() || mpTabCtrlData->mpListBox )
         return;
 
     // make sure the focussed item rect is computed using a bold font
@@ -865,14 +759,14 @@ void TabControl::ImplShowFocus()
     aFont.SetWeight( (!ImplGetSVData()->maNWFData.mbNoBoldTabFocus) ? WEIGHT_BOLD : WEIGHT_LIGHT );
     SetFont( aFont );
 
-    USHORT                   nCurPos     = GetPagePos( mnCurPageId );
+    sal_uInt16                   nCurPos     = GetPagePos( mnCurPageId );
     Rectangle                aRect       = ImplGetTabRect( nCurPos );
     const ImplTabItem&       rItem       = mpTabCtrlData->maItemList[ nCurPos ];
     Size                     aTabSize    = aRect.GetSize();
     Size aImageSize( 0, 0 );
     long                     nTextHeight = GetTextHeight();
     long                     nTextWidth  = GetCtrlTextWidth( rItem.maFormatText );
-    USHORT                   nOff;
+    sal_uInt16                   nOff;
 
     if ( !(GetSettings().GetStyleSettings().GetOptions() & STYLE_OPTION_MONO) )
         nOff = 1;
@@ -908,8 +802,8 @@ void TabControl::ImplShowFocus()
         aRect.Bottom() = aRect.Top() + aImageSize.Height() + 4;
     }
 #ifdef USE_JAVA
-	aRect.Left() = aRect.Left()+2;
-	aRect.Top() = aRect.Top()+2;
+    aRect.Left() = aRect.Left()+2;
+    aRect.Top() = aRect.Top()+2;
 #endif	// USE_JAVA
     ShowFocus( aRect );
 
@@ -925,9 +819,9 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
 
     if( bLayout )
     {
-        if( ! mpLayoutData )
+        if( !HasLayoutData() )
         {
-            mpLayoutData = new vcl::ControlLayoutData();
+            mpControlData->mpLayoutData = new vcl::ControlLayoutData();
             mpTabCtrlData->maLayoutLineToPageId.clear();
             mpTabCtrlData->maLayoutPageIdToLine.clear();
             mpTabCtrlData->maTabRectangles.clear();
@@ -938,13 +832,13 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
     Rectangle               aRect = pItem->maRect;
     long                    nLeftBottom = aRect.Bottom();
     long                    nRightBottom = aRect.Bottom();
-    BOOL                    bLeftBorder = TRUE;
-    BOOL                    bRightBorder = TRUE;
-    USHORT                  nOff;
-    BOOL                    bNativeOK = FALSE;
+    sal_Bool                    bLeftBorder = sal_True;
+    sal_Bool                    bRightBorder = sal_True;
+    sal_uInt16                  nOff;
+    sal_Bool                    bNativeOK = sal_False;
 
-    USHORT nOff2 = 0;
-    USHORT nOff3 = 0;
+    sal_uInt16 nOff2 = 0;
+    sal_uInt16 nOff3 = 0;
 
     if ( !(rStyleSettings.GetOptions() & STYLE_OPTION_MONO) )
         nOff = 1;
@@ -968,10 +862,10 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
         {
             aLeftTestPos.X() -= 2;
             if ( rCurRect.IsInside( aLeftTestPos ) )
-                bLeftBorder = FALSE;
+                bLeftBorder = sal_False;
             aRightTestPos.X() += 2;
             if ( rCurRect.IsInside( aRightTestPos ) )
-                bRightBorder = FALSE;
+                bRightBorder = sal_False;
         }
         else
         {
@@ -982,10 +876,9 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
         }
     }
 
-    if( !bLayout && (bNativeOK = IsNativeControlSupported(CTRL_TAB_ITEM, PART_ENTIRE_CONTROL)) == TRUE )
+    if( !bLayout && (bNativeOK = IsNativeControlSupported(CTRL_TAB_ITEM, PART_ENTIRE_CONTROL)) == sal_True )
     {
-        ImplControlValue		aControlValue;
-        Region				aCtrlRegion( pItem->maRect );
+        Rectangle           aCtrlRegion( pItem->maRect );
         ControlState		nState = 0;
 
         if( pItem->mnId == mnCurPageId )
@@ -1020,17 +913,17 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
             tiValue.mnAlignment |= TABITEM_FIRST_IN_GROUP;
         if ( bLastInGroup )
             tiValue.mnAlignment |= TABITEM_LAST_IN_GROUP;
-        aControlValue.setOptionalVal( (void *)(&tiValue) );
 
         bNativeOK = DrawNativeControl( CTRL_TAB_ITEM, PART_ENTIRE_CONTROL, aCtrlRegion, nState,
-                    aControlValue, rtl::OUString() );
+                    tiValue, rtl::OUString() );
 #ifdef USE_JAVA
-		if ( bNativeOK )
-		{
-			Color aTextColor;
-			if ( GetNativeControlTextColor( CTRL_TAB_ITEM, PART_ENTIRE_CONTROL, nState, aControlValue, aTextColor ) )
-				SetTextColor( aTextColor );
-		}
+        if ( bNativeOK )
+        {
+            ImplControlValue aControlValue;
+            Color aTextColor;
+            if ( GetNativeControlTextColor( CTRL_TAB_ITEM, PART_ENTIRE_CONTROL, nState, aControlValue, aTextColor ) )
+                SetTextColor( aTextColor );
+        }
 #endif	// USE_JAVA
     }
 
@@ -1081,8 +974,8 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
 
     if( bLayout )
     {
-        int nLine = mpLayoutData->m_aLineIndices.size();
-        mpLayoutData->m_aLineIndices.push_back( mpLayoutData->m_aDisplayText.Len() );
+        int nLine = mpControlData->mpLayoutData->m_aLineIndices.size();
+        mpControlData->mpLayoutData->m_aLineIndices.push_back( mpControlData->mpLayoutData->m_aDisplayText.Len() );
         mpTabCtrlData->maLayoutPageIdToLine[ (int)pItem->mnId ] = nLine;
         mpTabCtrlData->maLayoutLineToPageId[ nLine ] = (int)pItem->mnId;
         mpTabCtrlData->maTabRectangles.push_back( aRect );
@@ -1091,11 +984,11 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
     // set font accordingly, current item is painted bold
     // we set the font attributes always before drawing to be re-entrant (DrawNativeControl may trigger additional paints)
     Font aFont( GetFont() );
-    aFont.SetTransparent( TRUE );
+    aFont.SetTransparent( sal_True );
 #ifdef USE_JAVA
-	// tab highlighting is sufficient for indicating active tab, leave text
-	// alone
-	aFont.SetWeight( WEIGHT_LIGHT );
+    // tab highlighting is sufficient for indicating active tab, leave text
+    // alone
+    aFont.SetWeight( WEIGHT_LIGHT );
 #else	// USE_JAVA
     aFont.SetWeight( ((bIsCurrentItem) && (!ImplGetSVData()->maNWFData.mbNoBoldTabFocus)) ? WEIGHT_BOLD : WEIGHT_LIGHT );
 #endif	// USE_JAVA
@@ -1123,14 +1016,14 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
     long nYPos = aRect.Top()+((aTabSize.Height()-nTextHeight)/2)-nOff3;
     if( pItem->maFormatText.Len() )
     {
-        USHORT nStyle = TEXT_DRAW_MNEMONIC;
+        sal_uInt16 nStyle = TEXT_DRAW_MNEMONIC;
         if( ! pItem->mbEnabled )
             nStyle |= TEXT_DRAW_DISABLE;
         DrawCtrlText( Point( nXPos + aImageSize.Width(), nYPos ),
                       pItem->maFormatText,
                       0, STRING_LEN, nStyle,
-                      bLayout ? &mpLayoutData->m_aUnicodeBoundRects : NULL,
-                      bLayout ? &mpLayoutData->m_aDisplayText : NULL
+                      bLayout ? &mpControlData->mpLayoutData->m_aUnicodeBoundRects : NULL,
+                      bLayout ? &mpControlData->mpLayoutData->m_aDisplayText : NULL
                       );
     }
 
@@ -1145,24 +1038,79 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
 
 // -----------------------------------------------------------------------
 
-IMPL_LINK( TabControl, ImplScrollBtnHdl, PushButton*, EMPTYARG )
+long TabControl::ImplHandleKeyEvent( const KeyEvent& rKeyEvent )
 {
-    ImplSetScrollBtnsState();
+    long nRet = 0;
+    
+    if ( GetPageCount() > 1 )
+    {
+        KeyCode         aKeyCode = rKeyEvent.GetKeyCode();
+        sal_uInt16          nKeyCode = aKeyCode.GetCode();
+
+        if ( aKeyCode.IsMod1() )
+        {
+            if ( aKeyCode.IsShift() || (nKeyCode == KEY_PAGEUP) )
+            {
+                if ( (nKeyCode == KEY_TAB) || (nKeyCode == KEY_PAGEUP) )
+                {
+                    ImplActivateTabPage( sal_False );
+                    nRet = 1;
+                }
+            }
+            else
+            {
+                if ( (nKeyCode == KEY_TAB) || (nKeyCode == KEY_PAGEDOWN) )
+                {
+                    ImplActivateTabPage( sal_True );
+                    nRet = 1;
+                }
+            }
+        }
+    }    
+    
+    return nRet;
+}
+
+
+// -----------------------------------------------------------------------
+
+IMPL_LINK( TabControl, ImplListBoxSelectHdl, ListBox*, EMPTYARG )
+{
+    SelectTabPage( GetPageId( mpTabCtrlData->mpListBox->GetSelectEntryPos() ) );
     return 0;
 }
 
 // -----------------------------------------------------------------------
 
+IMPL_LINK( TabControl, ImplWindowEventListener, VclSimpleEvent*, pEvent )
+{
+	if ( pEvent && pEvent->ISA( VclWindowEvent ) && (pEvent->GetId() == VCLEVENT_WINDOW_KEYINPUT) )
+	{
+	    VclWindowEvent* pWindowEvent = static_cast< VclWindowEvent* >(pEvent);
+	    // Do not handle events from TabControl or it's children, which is done in Notify(), where the events can be consumed.
+	    if ( !IsWindowOrChild( pWindowEvent->GetWindow() ) )
+	    {
+            KeyEvent* pKeyEvent = static_cast< KeyEvent* >(pWindowEvent->GetData());
+	        ImplHandleKeyEvent( *pKeyEvent );
+	    }
+	}
+	return 0;
+}
+
+
+// -----------------------------------------------------------------------
+
 void TabControl::MouseButtonDown( const MouseEvent& rMEvt )
 {
-    if ( rMEvt.IsLeft() )
+    if( mpTabCtrlData->mpListBox == NULL )
     {
-        USHORT nPageId = GetPageId( rMEvt.GetPosPixel() );
-        ImplTabItem* pItem = ImplGetItem( nPageId );
-        if( pItem && pItem->mbEnabled )
-            SelectTabPage( nPageId );
-        else
-            Sound::Beep( SOUND_ERROR, this );
+        if( rMEvt.IsLeft() )
+        {
+            sal_uInt16 nPageId = GetPageId( rMEvt.GetPosPixel() );
+            ImplTabItem* pItem = ImplGetItem( nPageId );
+            if( pItem && pItem->mbEnabled )
+                SelectTabPage( nPageId );
+        }
     }
 }
 
@@ -1170,14 +1118,16 @@ void TabControl::MouseButtonDown( const MouseEvent& rMEvt )
 
 void TabControl::KeyInput( const KeyEvent& rKEvt )
 {
-    if ( GetPageCount() > 1 )
+    if( mpTabCtrlData->mpListBox )
+        mpTabCtrlData->mpListBox->KeyInput( rKEvt );
+    else if ( GetPageCount() > 1 )
     {
         KeyCode aKeyCode = rKEvt.GetKeyCode();
-        USHORT  nKeyCode = aKeyCode.GetCode();
+        sal_uInt16  nKeyCode = aKeyCode.GetCode();
 
         if ( (nKeyCode == KEY_LEFT) || (nKeyCode == KEY_RIGHT) )
         {
-            BOOL bNext = (nKeyCode == KEY_RIGHT);
+            sal_Bool bNext = (nKeyCode == KEY_RIGHT);
             ImplActivateTabPage( bNext );
         }
     }
@@ -1216,12 +1166,12 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
             break;
         }
 #ifdef USE_JAVA
-       curItemIndex++;
+        curItemIndex++;
 #endif	// USE_JAVA
     }
 #ifdef USE_JAVA
     if ( ! pCurItem )
-       curItemIndex = mpTabCtrlData->maItemList.size();
+        curItemIndex = mpTabCtrlData->maItemList.size();
 #endif	// USE_JAVA
 
     // Draw the TabPage border
@@ -1237,19 +1187,19 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
     // increased to avoid round corners that might be drawn by a theme
     // in this case we're only interested in the top border of the tabpage because the tabitems are used
     // standalone (eg impress)
-    BOOL bNoTabPage = FALSE;
+    sal_Bool bNoTabPage = sal_False;
     TabPage*        pCurPage = (pCurItem) ? pCurItem->mpTabPage : NULL;
     if( !pCurPage || !pCurPage->IsVisible() )
     {
-        bNoTabPage = TRUE;
+        bNoTabPage = sal_True;
         aRect.Left()-=10;
         aRect.Right()+=10;
     }
 
-    BOOL bNativeOK = FALSE;
-    if( ! bLayout && (bNativeOK = IsNativeControlSupported( CTRL_TAB_PANE, PART_ENTIRE_CONTROL) ) == TRUE )
+    sal_Bool bNativeOK = sal_False;
+    if( ! bLayout && (bNativeOK = IsNativeControlSupported( CTRL_TAB_PANE, PART_ENTIRE_CONTROL) ) == sal_True )
     {
-        const ImplControlValue aControlValue( BUTTONVALUE_DONTKNOW, rtl::OUString(), 0 );
+        const ImplControlValue aControlValue;
 
         ControlState nState = CTRL_STATE_ENABLED;
         int part = PART_ENTIRE_CONTROL;
@@ -1263,10 +1213,8 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
         if( !rRect.IsEmpty() )
             aClipRgn.Intersect( rRect );
 
-        Region aCtrlRegion( aRect );
-        Rectangle aClipRect( aClipRgn.GetBoundRect() );
-        if( !aClipRgn.IsEmpty() ) //&& aClipRect.getHeight() && aClipRect.getWidth() )
-            bNativeOK = DrawNativeControl( CTRL_TAB_PANE, part, aCtrlRegion, nState,
+        if( !aClipRgn.IsEmpty() )
+            bNativeOK = DrawNativeControl( CTRL_TAB_PANE, part, aRect, nState,
                 aControlValue, rtl::OUString() );
     }
     else
@@ -1325,7 +1273,7 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
         }
     }
 
-    if ( !mpTabCtrlData->maItemList.empty() )
+    if ( !mpTabCtrlData->maItemList.empty() && mpTabCtrlData->mpListBox == NULL )
     {
         // Some native toolkits (GTK+) draw tabs right-to-left, with an
         // overlap between adjacent tabs
@@ -1374,10 +1322,10 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
                         if ( mpTabCtrlData->maItemList[ idx + 1 ].mnLine != pItem->mnLine )
                             isLastTabInRow = true;
                     }
-                    ImplDrawItem( pItem, aCurRect, bLayout, isFirstTabInRow, isLastTabInRow, FALSE );
+                    ImplDrawItem( pItem, aCurRect, bLayout, isFirstTabInRow, isLastTabInRow, sal_False );
                 }
 #else	// USE_JAVA
-                    ImplDrawItem( pItem, aCurRect, bLayout, (pItem==pFirstTab), (pItem==pLastTab), FALSE );
+                    ImplDrawItem( pItem, aCurRect, bLayout, (pItem==pFirstTab), (pItem==pLastTab), sal_False );
 #endif	// USE_JAVA
             }
 
@@ -1409,10 +1357,10 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
                     if ( mpTabCtrlData->maItemList[ curItemIndex + 1 ].mnLine != pCurItem->mnLine )
                         isLastTabInRow = true;
                 }
-                ImplDrawItem( pCurItem, aCurRect, bLayout, isFirstTabInRow, isLastTabInRow, TRUE );
+                ImplDrawItem( pCurItem, aCurRect, bLayout, isFirstTabInRow, isLastTabInRow, sal_True );
             }
 #else	// USE_JAVA
-                ImplDrawItem( pCurItem, aCurRect, bLayout, (pCurItem==pFirstTab), (pCurItem==pLastTab), TRUE );
+                ImplDrawItem( pCurItem, aCurRect, bLayout, (pCurItem==pFirstTab), (pCurItem==pLastTab), sal_True );
 #endif	// USE_JAVA
         }
     }
@@ -1421,7 +1369,7 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
         ImplShowFocus();
 
     if( ! bLayout )
-        mbSmallInvalidate = TRUE;
+        mbSmallInvalidate = sal_True;
 }
 
 // -----------------------------------------------------------------------
@@ -1432,27 +1380,34 @@ void TabControl::Resize()
 
     if ( !IsReallyShown() )
         return;
+    
+    if( mpTabCtrlData->mpListBox )
+    {
+        // get the listbox' preferred size
+        Size aTabCtrlSize( GetSizePixel() );
+        long nPrefWidth = mpTabCtrlData->mpListBox->GetOptimalSize( WINDOWSIZE_PREFERRED ).Width();
+        if( nPrefWidth > aTabCtrlSize.Width() )
+            nPrefWidth = aTabCtrlSize.Width();
+        Size aNewSize( nPrefWidth, LogicToPixel( Size( 12, 12 ), MapMode( MAP_APPFONT ) ).Height() );
+        Point aNewPos( (aTabCtrlSize.Width() - nPrefWidth) / 2, 0 );
+        mpTabCtrlData->mpListBox->SetPosSizePixel( aNewPos, aNewSize );
+    }
 
-    mbFormat = TRUE;
+    mbFormat = sal_True;
 
     // Aktuelle TabPage resizen/positionieren
-    BOOL bTabPage = ImplPosCurTabPage();
+    sal_Bool bTabPage = ImplPosCurTabPage();
     // Feststellen, was invalidiert werden muss
     Size aNewSize = Control::GetOutputSizePixel();
     long nNewWidth = aNewSize.Width();
-    if ( mbScroll )
-        mbSmallInvalidate = FALSE;
-    else
+    for( std::vector< ImplTabItem >::iterator it = mpTabCtrlData->maItemList.begin();
+         it != mpTabCtrlData->maItemList.end(); ++it )
     {
-        for( std::vector< ImplTabItem >::iterator it = mpTabCtrlData->maItemList.begin();
-             it != mpTabCtrlData->maItemList.end(); ++it )
+        if ( !it->mbFullVisible ||
+             (it->maRect.Right()-2 >= nNewWidth) )
         {
-            if ( !it->mbFullVisible ||
-                 (it->maRect.Right()-2 >= nNewWidth) )
-            {
-                mbSmallInvalidate = FALSE;
-                break;
-            }
+            mbSmallInvalidate = sal_False;
+            break;
         }
     }
 
@@ -1482,8 +1437,16 @@ void TabControl::Resize()
 
 void TabControl::GetFocus()
 {
-    ImplShowFocus();
-    SetInputContext( InputContext( GetFont() ) );
+    if( ! mpTabCtrlData->mpListBox )
+    {
+        ImplShowFocus();
+        SetInputContext( InputContext( GetFont() ) );
+    }
+    else
+    {
+        if( mpTabCtrlData->mpListBox->IsReallyVisible() )
+            mpTabCtrlData->mpListBox->GrabFocus();
+    }
     Control::GetFocus();
 }
 
@@ -1491,7 +1454,8 @@ void TabControl::GetFocus()
 
 void TabControl::LoseFocus()
 {
-    HideFocus();
+    if( ! mpTabCtrlData->mpListBox )
+        HideFocus();
     Control::LoseFocus();
 }
 
@@ -1499,7 +1463,7 @@ void TabControl::LoseFocus()
 
 void TabControl::RequestHelp( const HelpEvent& rHEvt )
 {
-    USHORT nItemId = rHEvt.KeyboardActivated() ? mnCurPageId : GetPageId( ScreenToOutputPixel( rHEvt.GetMousePosPixel() ) );
+    sal_uInt16 nItemId = rHEvt.KeyboardActivated() ? mnCurPageId : GetPageId( ScreenToOutputPixel( rHEvt.GetMousePosPixel() ) );
 
     if ( nItemId )
     {
@@ -1521,13 +1485,13 @@ void TabControl::RequestHelp( const HelpEvent& rHEvt )
         }
         else if ( rHEvt.GetMode() & HELPMODE_EXTENDED )
         {
-            ULONG nHelpId = GetHelpId( nItemId );
-            if ( nHelpId )
+            rtl::OUString aHelpId( rtl::OStringToOUString( GetHelpId( nItemId ), RTL_TEXTENCODING_UTF8 ) );
+            if ( aHelpId.getLength() )
             {
                 // Wenn eine Hilfe existiert, dann ausloesen
                 Help* pHelp = Application::GetHelp();
                 if ( pHelp )
-                    pHelp->Start( nHelpId, this );
+                    pHelp->Start( aHelpId, this );
                 return;
             }
         }
@@ -1585,10 +1549,10 @@ void TabControl::RequestHelp( const HelpEvent& rHEvt )
 
 void TabControl::Command( const CommandEvent& rCEvt )
 {
-    if ( (rCEvt.GetCommand() == COMMAND_CONTEXTMENU) && (GetPageCount() > 1) )
+    if( (mpTabCtrlData->mpListBox == NULL) && (rCEvt.GetCommand() == COMMAND_CONTEXTMENU) && (GetPageCount() > 1) )
     {
         Point   aMenuPos;
-        BOOL    bMenu;
+        sal_Bool    bMenu;
         if ( rCEvt.IsMouseEvent() )
         {
             aMenuPos = rCEvt.GetMousePosPixel();
@@ -1597,7 +1561,7 @@ void TabControl::Command( const CommandEvent& rCEvt )
         else
         {
             aMenuPos = ImplGetTabRect( GetPagePos( mnCurPageId ) ).Center();
-            bMenu = TRUE;
+            bMenu = sal_True;
         }
 
         if ( bMenu )
@@ -1609,10 +1573,10 @@ void TabControl::Command( const CommandEvent& rCEvt )
                 aMenu.InsertItem( it->mnId, it->maText, MIB_CHECKABLE | MIB_RADIOCHECK );
                 if ( it->mnId == mnCurPageId )
                     aMenu.CheckItem( it->mnId );
-                aMenu.SetHelpId( it->mnId, it->mnHelpId );
+                aMenu.SetHelpId( it->mnId, it->maHelpId );
             }
 
-            USHORT nId = aMenu.Execute( this, aMenuPos );
+            sal_uInt16 nId = aMenu.Execute( this, aMenuPos );
             if ( nId && (nId != mnCurPageId) )
                 SelectTabPage( nId );
             return;
@@ -1629,7 +1593,11 @@ void TabControl::StateChanged( StateChangedType nType )
     Control::StateChanged( nType );
 
     if ( nType == STATE_CHANGE_INITSHOW )
+    {
         ImplPosCurTabPage();
+        if( mpTabCtrlData->mpListBox )
+            Resize();
+    }
     else if ( nType == STATE_CHANGE_UPDATEMODE )
     {
         if ( IsUpdateMode() )
@@ -1638,17 +1606,17 @@ void TabControl::StateChanged( StateChangedType nType )
     else if ( (nType == STATE_CHANGE_ZOOM)  ||
               (nType == STATE_CHANGE_CONTROLFONT) )
     {
-        ImplInitSettings( TRUE, FALSE, FALSE );
+        ImplInitSettings( sal_True, sal_False, sal_False );
         Invalidate();
     }
     else if ( nType == STATE_CHANGE_CONTROLFOREGROUND )
     {
-        ImplInitSettings( FALSE, TRUE, FALSE );
+        ImplInitSettings( sal_False, sal_True, sal_False );
         Invalidate();
     }
     else if ( nType == STATE_CHANGE_CONTROLBACKGROUND )
     {
-        ImplInitSettings( FALSE, FALSE, TRUE );
+        ImplInitSettings( sal_False, sal_False, sal_True );
         Invalidate();
     }
 }
@@ -1664,7 +1632,7 @@ void TabControl::DataChanged( const DataChangedEvent& rDCEvt )
          ((rDCEvt.GetType() == DATACHANGED_SETTINGS) &&
           (rDCEvt.GetFlags() & SETTINGS_STYLE)) )
     {
-        ImplInitSettings( TRUE, TRUE, TRUE );
+        ImplInitSettings( sal_True, sal_True, sal_True );
         Invalidate();
     }
 }
@@ -1744,34 +1712,12 @@ long TabControl::PreNotify( NotifyEvent& rNEvt )
 
 long TabControl::Notify( NotifyEvent& rNEvt )
 {
-    if ( (rNEvt.GetType() == EVENT_KEYINPUT) && (GetPageCount() > 1) )
-    {
-        const KeyEvent* pKEvt = rNEvt.GetKeyEvent();
-        KeyCode         aKeyCode = pKEvt->GetKeyCode();
-        USHORT          nKeyCode = aKeyCode.GetCode();
+    long nRet = 0;
 
-        if ( aKeyCode.IsMod1() )
-        {
-            if ( aKeyCode.IsShift() || (nKeyCode == KEY_PAGEUP) )
-            {
-                if ( (nKeyCode == KEY_TAB) || (nKeyCode == KEY_PAGEUP) )
-                {
-                    ImplActivateTabPage( FALSE );
-                    return TRUE;
-                }
-            }
-            else
-            {
-                if ( (nKeyCode == KEY_TAB) || (nKeyCode == KEY_PAGEDOWN) )
-                {
-                    ImplActivateTabPage( TRUE );
-                    return TRUE;
-                }
-            }
-        }
-    }
+    if ( rNEvt.GetType() == EVENT_KEYINPUT )
+        nRet = ImplHandleKeyEvent( *rNEvt.GetKeyEvent() );
 
-    return Control::Notify( rNEvt );
+    return nRet ? nRet : Control::Notify( rNEvt );
 }
 
 // -----------------------------------------------------------------------
@@ -1788,7 +1734,7 @@ long TabControl::DeactivatePage()
     if ( maDeactivateHdl.IsSet() )
         return maDeactivateHdl.Call( this );
     else
-        return TRUE;
+        return sal_True;
 }
 
 // -----------------------------------------------------------------------
@@ -1815,16 +1761,16 @@ Size TabControl::GetTabPageSizePixel() const
 
 // -----------------------------------------------------------------------
 
-void TabControl::InsertPage( const ResId& rResId, USHORT nPos )
+void TabControl::InsertPage( const ResId& rResId, sal_uInt16 nPos )
 {
     GetRes( rResId.SetRT( RSC_TABCONTROLITEM ) );
 
-    ULONG nObjMask = ReadLongRes();
-    USHORT nItemId  = 1;
+    sal_uLong nObjMask = ReadLongRes();
+    sal_uInt16 nItemId  = 1;
 
     // ID
     if ( nObjMask & RSC_TABCONTROLITEM_ID )
-        nItemId = sal::static_int_cast<USHORT>(ReadLongRes());
+        nItemId = sal::static_int_cast<sal_uInt16>(ReadLongRes());
 
     // Text
     XubString aTmpStr;
@@ -1836,22 +1782,18 @@ void TabControl::InsertPage( const ResId& rResId, USHORT nPos )
     if ( nObjMask & RSC_TABCONTROLITEM_PAGERESID )
     {
         ImplTabItem& rItem = mpTabCtrlData->maItemList[ GetPagePos( nItemId ) ];
-        rItem.mnTabPageResId = sal::static_int_cast<USHORT>(ReadLongRes());
+        rItem.mnTabPageResId = sal::static_int_cast<sal_uInt16>(ReadLongRes());
     }
 }
 
 // -----------------------------------------------------------------------
 
-void TabControl::InsertPage( USHORT nPageId, const XubString& rText,
-                             USHORT nPos )
+void TabControl::InsertPage( sal_uInt16 nPageId, const XubString& rText,
+                             sal_uInt16 nPos )
 {
     DBG_ASSERT( nPageId, "TabControl::InsertPage(): PageId == 0" );
     DBG_ASSERT( GetPagePos( nPageId ) == TAB_PAGE_NOTFOUND,
                 "TabControl::InsertPage(): PageId already exists" );
-
-    // set current page id
-    if ( !mnCurPageId )
-        mnCurPageId = nPageId;
 
     // insert new page item
     ImplTabItem* pItem = NULL;
@@ -1859,36 +1801,51 @@ void TabControl::InsertPage( USHORT nPageId, const XubString& rText,
     {
         mpTabCtrlData->maItemList.push_back( ImplTabItem() );
         pItem = &mpTabCtrlData->maItemList.back();
+        if( mpTabCtrlData->mpListBox )
+            mpTabCtrlData->mpListBox->InsertEntry( rText );
     }
     else
     {
         std::vector< ImplTabItem >::iterator new_it =
             mpTabCtrlData->maItemList.insert( mpTabCtrlData->maItemList.begin() + nPos, ImplTabItem() );
         pItem = &(*new_it);
+        if( mpTabCtrlData->mpListBox )
+            mpTabCtrlData->mpListBox->InsertEntry( rText, nPos);
     }
+    if( mpTabCtrlData->mpListBox )
+    {
+        if( ! mnCurPageId )
+            mpTabCtrlData->mpListBox->SelectEntryPos( 0 );
+        mpTabCtrlData->mpListBox->SetDropDownLineCount( mpTabCtrlData->mpListBox->GetEntryCount() );
+    }
+    
+    // set current page id
+    if ( !mnCurPageId )
+        mnCurPageId = nPageId;
 
     // init new page item
     pItem->mnId             = nPageId;
     pItem->mpTabPage        = NULL;
     pItem->mnTabPageResId   = 0;
-    pItem->mnHelpId         = 0;
     pItem->maText           = rText;
-    pItem->mbFullVisible    = FALSE;
+    pItem->mbFullVisible    = sal_False;
 
-    mbFormat = TRUE;
+    mbFormat = sal_True;
     if ( IsUpdateMode() )
         Invalidate();
 
     ImplFreeLayoutData();
+    if( mpTabCtrlData->mpListBox ) // reposition/resize listbox
+        Resize();
 
-	ImplCallEventListeners( VCLEVENT_TABPAGE_INSERTED, (void*) (ULONG)nPageId );
+	ImplCallEventListeners( VCLEVENT_TABPAGE_INSERTED, (void*) (sal_uLong)nPageId );
 }
 
 // -----------------------------------------------------------------------
 
-void TabControl::RemovePage( USHORT nPageId )
+void TabControl::RemovePage( sal_uInt16 nPageId )
 {
-    USHORT nPos = GetPagePos( nPageId );
+    sal_uInt16 nPos = GetPagePos( nPageId );
 
     // does the item exist ?
     if ( nPos != TAB_PAGE_NOTFOUND )
@@ -1897,6 +1854,11 @@ void TabControl::RemovePage( USHORT nPageId )
         std::vector< ImplTabItem >::iterator it = mpTabCtrlData->maItemList.begin() + nPos;
         bool bIsCurrentPage = (it->mnId == mnCurPageId);
         mpTabCtrlData->maItemList.erase( it );
+        if( mpTabCtrlData->mpListBox )
+        {
+            mpTabCtrlData->mpListBox->RemoveEntry( nPos );
+            mpTabCtrlData->mpListBox->SetDropDownLineCount( mpTabCtrlData->mpListBox->GetEntryCount() );
+        }
 
         // If current page is removed, than first page gets the current page
         if ( bIsCurrentPage  )
@@ -1917,13 +1879,13 @@ void TabControl::RemovePage( USHORT nPageId )
             }
         }
 
-        mbFormat = TRUE;
+        mbFormat = sal_True;
         if ( IsUpdateMode() )
             Invalidate();
 
         ImplFreeLayoutData();
 
-		ImplCallEventListeners( VCLEVENT_TABPAGE_REMOVED, (void*) (ULONG) nPageId );
+		ImplCallEventListeners( VCLEVENT_TABPAGE_REMOVED, (void*) (sal_uLong) nPageId );
     }
 }
 
@@ -1934,10 +1896,12 @@ void TabControl::Clear()
     // clear item list
     mpTabCtrlData->maItemList.clear();
     mnCurPageId = 0;
+    if( mpTabCtrlData->mpListBox )
+        mpTabCtrlData->mpListBox->Clear();
 
     ImplFreeLayoutData();
 
-    mbFormat = TRUE;
+    mbFormat = sal_True;
     if ( IsUpdateMode() )
         Invalidate();
 
@@ -1946,14 +1910,17 @@ void TabControl::Clear()
 
 // -----------------------------------------------------------------------
 
-void TabControl::EnablePage( USHORT i_nPageId, bool i_bEnable )
+void TabControl::EnablePage( sal_uInt16 i_nPageId, bool i_bEnable )
 {
     ImplTabItem* pItem = ImplGetItem( i_nPageId );
 
     if ( pItem && pItem->mbEnabled != i_bEnable )
     {
         pItem->mbEnabled = i_bEnable;
-        mbFormat = TRUE;
+        mbFormat = sal_True;
+        if( mpTabCtrlData->mpListBox )
+            mpTabCtrlData->mpListBox->SetEntryFlags( GetPagePos( i_nPageId ),
+                                                     i_bEnable ? 0 : (LISTBOX_ENTRY_FLAG_DISABLE_SELECTION | LISTBOX_ENTRY_FLAG_DRAW_DISABLED) );
         if( pItem->mnId == mnCurPageId )
         {
              // SetCurPageId will change to an enabled page
@@ -1966,14 +1933,14 @@ void TabControl::EnablePage( USHORT i_nPageId, bool i_bEnable )
 
 // -----------------------------------------------------------------------
 
-USHORT TabControl::GetPageCount() const
+sal_uInt16 TabControl::GetPageCount() const
 {
-    return (USHORT)mpTabCtrlData->maItemList.size();
+    return (sal_uInt16)mpTabCtrlData->maItemList.size();
 }
 
 // -----------------------------------------------------------------------
 
-USHORT TabControl::GetPageId( USHORT nPos ) const
+sal_uInt16 TabControl::GetPageId( sal_uInt16 nPos ) const
 {
     if( size_t(nPos) < mpTabCtrlData->maItemList.size() )
         return mpTabCtrlData->maItemList[ nPos ].mnId;
@@ -1982,13 +1949,13 @@ USHORT TabControl::GetPageId( USHORT nPos ) const
 
 // -----------------------------------------------------------------------
 
-USHORT TabControl::GetPagePos( USHORT nPageId ) const
+sal_uInt16 TabControl::GetPagePos( sal_uInt16 nPageId ) const
 {
     for( std::vector< ImplTabItem >::const_iterator it = mpTabCtrlData->maItemList.begin();
          it != mpTabCtrlData->maItemList.end(); ++it )
     {
         if ( it->mnId == nPageId )
-            return (USHORT)(it - mpTabCtrlData->maItemList.begin());
+            return (sal_uInt16)(it - mpTabCtrlData->maItemList.begin());
     }
 
     return TAB_PAGE_NOTFOUND;
@@ -1996,11 +1963,11 @@ USHORT TabControl::GetPagePos( USHORT nPageId ) const
 
 // -----------------------------------------------------------------------
 
-USHORT TabControl::GetPageId( const Point& rPos ) const
+sal_uInt16 TabControl::GetPageId( const Point& rPos ) const
 {
     for( size_t i = 0; i < mpTabCtrlData->maItemList.size(); ++i )
     {
-        if ( ((TabControl*)this)->ImplGetTabRect( static_cast<USHORT>(i) ).IsInside( rPos ) )
+        if ( ((TabControl*)this)->ImplGetTabRect( static_cast<sal_uInt16>(i) ).IsInside( rPos ) )
             return mpTabCtrlData->maItemList[ i ].mnId;
     }
 
@@ -2009,9 +1976,9 @@ USHORT TabControl::GetPageId( const Point& rPos ) const
 
 // -----------------------------------------------------------------------
 
-void TabControl::SetCurPageId( USHORT nPageId )
+void TabControl::SetCurPageId( sal_uInt16 nPageId )
 {
-    USHORT nPos = GetPagePos( nPageId );
+    sal_uInt16 nPos = GetPagePos( nPageId );
     while( nPos != TAB_PAGE_NOTFOUND &&
            ! mpTabCtrlData->maItemList[nPos].mbEnabled )
     {
@@ -2036,8 +2003,8 @@ void TabControl::SetCurPageId( USHORT nPageId )
             mnActPageId = nPageId;
         else
         {
-            mbFormat = TRUE;
-            USHORT nOldId = mnCurPageId;
+            mbFormat = sal_True;
+            sal_uInt16 nOldId = mnCurPageId;
             mnCurPageId = nPageId;
             ImplChangeTabPage( nPageId, nOldId );
         }
@@ -2046,7 +2013,7 @@ void TabControl::SetCurPageId( USHORT nPageId )
 
 // -----------------------------------------------------------------------
 
-USHORT TabControl::GetCurPageId() const
+sal_uInt16 TabControl::GetCurPageId() const
 {
     if ( mnActPageId )
         return mnActPageId;
@@ -2056,20 +2023,13 @@ USHORT TabControl::GetCurPageId() const
 
 // -----------------------------------------------------------------------
 
-void TabControl::SetFirstPageId( USHORT )
-{
-    return; // was only required for single line
-}
-
-// -----------------------------------------------------------------------
-
-void TabControl::SelectTabPage( USHORT nPageId )
+void TabControl::SelectTabPage( sal_uInt16 nPageId )
 {
     if ( nPageId && (nPageId != mnCurPageId) )
     {
         ImplFreeLayoutData();
 
-		ImplCallEventListeners( VCLEVENT_TABPAGE_DEACTIVATE, (void*) (ULONG) mnCurPageId );
+		ImplCallEventListeners( VCLEVENT_TABPAGE_DEACTIVATE, (void*) (sal_uLong) mnCurPageId );
         if ( DeactivatePage() )
         {
             mnActPageId = nPageId;
@@ -2078,14 +2038,16 @@ void TabControl::SelectTabPage( USHORT nPageId )
             nPageId = mnActPageId;
             mnActPageId = 0;
             SetCurPageId( nPageId );
-			ImplCallEventListeners( VCLEVENT_TABPAGE_ACTIVATE, (void*) (ULONG) nPageId );
+            if( mpTabCtrlData->mpListBox )
+                mpTabCtrlData->mpListBox->SelectEntryPos( GetPagePos( nPageId ) );
+			ImplCallEventListeners( VCLEVENT_TABPAGE_ACTIVATE, (void*) (sal_uLong) nPageId );
         }
     }
 }
 
 // -----------------------------------------------------------------------
 
-void TabControl::SetTabPage( USHORT nPageId, TabPage* pTabPage )
+void TabControl::SetTabPage( sal_uInt16 nPageId, TabPage* pTabPage )
 {
     ImplTabItem* pItem = ImplGetItem( nPageId );
 
@@ -2110,7 +2072,7 @@ void TabControl::SetTabPage( USHORT nPageId, TabPage* pTabPage )
 
 // -----------------------------------------------------------------------
 
-TabPage* TabControl::GetTabPage( USHORT nPageId ) const
+TabPage* TabControl::GetTabPage( sal_uInt16 nPageId ) const
 {
     ImplTabItem* pItem = ImplGetItem( nPageId );
 
@@ -2122,7 +2084,7 @@ TabPage* TabControl::GetTabPage( USHORT nPageId ) const
 
 // -----------------------------------------------------------------------
 
-USHORT TabControl::GetTabPageResId( USHORT nPageId ) const
+sal_uInt16 TabControl::GetTabPageResId( sal_uInt16 nPageId ) const
 {
     ImplTabItem* pItem = ImplGetItem( nPageId );
 
@@ -2134,24 +2096,30 @@ USHORT TabControl::GetTabPageResId( USHORT nPageId ) const
 
 // -----------------------------------------------------------------------
 
-void TabControl::SetPageText( USHORT nPageId, const XubString& rText )
+void TabControl::SetPageText( sal_uInt16 nPageId, const XubString& rText )
 {
     ImplTabItem* pItem = ImplGetItem( nPageId );
 
     if ( pItem && pItem->maText != rText )
     {
         pItem->maText = rText;
-        mbFormat = TRUE;
+        mbFormat = sal_True;
+        if( mpTabCtrlData->mpListBox )
+        {
+            sal_uInt16 nPos = GetPagePos( nPageId );
+            mpTabCtrlData->mpListBox->RemoveEntry( nPos );
+            mpTabCtrlData->mpListBox->InsertEntry( rText, nPos );
+        }
         if ( IsUpdateMode() )
             Invalidate();
         ImplFreeLayoutData();
-		ImplCallEventListeners( VCLEVENT_TABPAGE_PAGETEXTCHANGED, (void*) (ULONG) nPageId );
+		ImplCallEventListeners( VCLEVENT_TABPAGE_PAGETEXTCHANGED, (void*) (sal_uLong) nPageId );
     }
 }
 
 // -----------------------------------------------------------------------
 
-XubString TabControl::GetPageText( USHORT nPageId ) const
+XubString TabControl::GetPageText( sal_uInt16 nPageId ) const
 {
     ImplTabItem* pItem = ImplGetItem( nPageId );
 
@@ -2163,7 +2131,7 @@ XubString TabControl::GetPageText( USHORT nPageId ) const
 
 // -----------------------------------------------------------------------
 
-void TabControl::SetHelpText( USHORT nPageId, const XubString& rText )
+void TabControl::SetHelpText( sal_uInt16 nPageId, const XubString& rText )
 {
     ImplTabItem* pItem = ImplGetItem( nPageId );
 
@@ -2173,17 +2141,17 @@ void TabControl::SetHelpText( USHORT nPageId, const XubString& rText )
 
 // -----------------------------------------------------------------------
 
-const XubString& TabControl::GetHelpText( USHORT nPageId ) const
+const XubString& TabControl::GetHelpText( sal_uInt16 nPageId ) const
 {
     ImplTabItem* pItem = ImplGetItem( nPageId );
 
     if ( pItem )
     {
-        if ( !pItem->maHelpText.Len() && pItem->mnHelpId )
+        if ( !pItem->maHelpText.Len() && pItem->maHelpId.getLength() )
         {
             Help* pHelp = Application::GetHelp();
             if ( pHelp )
-                pItem->maHelpText = pHelp->GetHelpText( pItem->mnHelpId, this );
+                pItem->maHelpText = pHelp->GetHelpText( rtl::OStringToOUString( pItem->maHelpId, RTL_TEXTENCODING_UTF8 ), this );
         }
 
         return pItem->maHelpText;
@@ -2194,36 +2162,37 @@ const XubString& TabControl::GetHelpText( USHORT nPageId ) const
 
 // -----------------------------------------------------------------------
 
-void TabControl::SetHelpId( USHORT nPageId, ULONG nHelpId )
+void TabControl::SetHelpId( sal_uInt16 nPageId, const rtl::OString& rHelpId )
 {
     ImplTabItem* pItem = ImplGetItem( nPageId );
 
     if ( pItem )
-        pItem->mnHelpId = nHelpId;
+        pItem->maHelpId = rHelpId;
 }
 
 // -----------------------------------------------------------------------
 
-ULONG TabControl::GetHelpId( USHORT nPageId ) const
+rtl::OString TabControl::GetHelpId( sal_uInt16 nPageId ) const
 {
+    rtl::OString aRet;
     ImplTabItem* pItem = ImplGetItem( nPageId );
 
     if ( pItem )
-        return pItem->mnHelpId;
-    else
-        return 0;
+        aRet = pItem->maHelpId;
+    
+    return aRet;
 }
 
 // -----------------------------------------------------------------------
 
-void TabControl::SetPageImage( USHORT i_nPageId, const Image& i_rImage )
+void TabControl::SetPageImage( sal_uInt16 i_nPageId, const Image& i_rImage )
 {
     ImplTabItem* pItem = ImplGetItem( i_nPageId );
 
     if ( pItem )
     {
         pItem->maTabImage = i_rImage;
-        mbFormat = TRUE;
+        mbFormat = sal_True;
         if ( IsUpdateMode() )
             Invalidate();
     }
@@ -2231,7 +2200,7 @@ void TabControl::SetPageImage( USHORT i_nPageId, const Image& i_rImage )
 
 // -----------------------------------------------------------------------
 
-const Image* TabControl::GetPageImage( USHORT i_nPageId ) const
+const Image* TabControl::GetPageImage( sal_uInt16 i_nPageId ) const
 {
     const ImplTabItem* pItem = ImplGetItem( i_nPageId );
     return pItem ? &pItem->maTabImage : NULL;
@@ -2239,21 +2208,21 @@ const Image* TabControl::GetPageImage( USHORT i_nPageId ) const
 
 // -----------------------------------------------------------------------
 
-Rectangle TabControl::GetCharacterBounds( USHORT nPageId, long nIndex ) const
+Rectangle TabControl::GetCharacterBounds( sal_uInt16 nPageId, long nIndex ) const
 {
     Rectangle aRet;
 
-    if( ! mpLayoutData || ! mpTabCtrlData->maLayoutPageIdToLine.size() )
+    if( !HasLayoutData() || ! mpTabCtrlData->maLayoutPageIdToLine.size() )
         FillLayoutData();
 
-    if( mpLayoutData )
+    if( HasLayoutData() )
     {
         std::hash_map< int, int >::const_iterator it = mpTabCtrlData->maLayoutPageIdToLine.find( (int)nPageId );
         if( it != mpTabCtrlData->maLayoutPageIdToLine.end() )
         {
-            Pair aPair = mpLayoutData->GetLineStartEnd( it->second );
+            Pair aPair = mpControlData->mpLayoutData->GetLineStartEnd( it->second );
             if( (aPair.B() - aPair.A()) >= nIndex )
-                aRet = mpLayoutData->GetCharacterBounds( aPair.A() + nIndex );
+                aRet = mpControlData->mpLayoutData->GetCharacterBounds( aPair.A() + nIndex );
         }
     }
 
@@ -2262,28 +2231,28 @@ Rectangle TabControl::GetCharacterBounds( USHORT nPageId, long nIndex ) const
 
 // -----------------------------------------------------------------------
 
-long TabControl::GetIndexForPoint( const Point& rPoint, USHORT& rPageId ) const
+long TabControl::GetIndexForPoint( const Point& rPoint, sal_uInt16& rPageId ) const
 {
     long nRet = -1;
 
-    if( ! mpLayoutData || ! mpTabCtrlData->maLayoutPageIdToLine.size() )
+    if( !HasLayoutData() || ! mpTabCtrlData->maLayoutPageIdToLine.size() )
         FillLayoutData();
 
-    if( mpLayoutData )
+    if( HasLayoutData() )
     {
-        int nIndex = mpLayoutData->GetIndexForPoint( rPoint );
+        int nIndex = mpControlData->mpLayoutData->GetIndexForPoint( rPoint );
         if( nIndex != -1 )
         {
             // what line (->pageid) is this index in ?
-            int nLines = mpLayoutData->GetLineCount();
+            int nLines = mpControlData->mpLayoutData->GetLineCount();
             int nLine = -1;
             while( ++nLine < nLines )
             {
-                Pair aPair = mpLayoutData->GetLineStartEnd( nLine );
+                Pair aPair = mpControlData->mpLayoutData->GetLineStartEnd( nLine );
                 if( aPair.A() <= nIndex && aPair.B() >= nIndex )
                 {
                     nRet = nIndex - aPair.A();
-                    rPageId = (USHORT)mpTabCtrlData->maLayoutLineToPageId[ nLine ];
+                    rPageId = (sal_uInt16)mpTabCtrlData->maLayoutLineToPageId[ nLine ];
                     break;
                 }
             }
@@ -2304,14 +2273,14 @@ void TabControl::FillLayoutData() const
 
 // -----------------------------------------------------------------------
 
-Rectangle TabControl::GetTabPageBounds( USHORT nPage ) const
+Rectangle TabControl::GetTabPageBounds( sal_uInt16 nPage ) const
 {
     Rectangle aRet;
 
-    if( ! mpLayoutData || ! mpTabCtrlData->maLayoutPageIdToLine.size() )
+    if( !HasLayoutData() || ! mpTabCtrlData->maLayoutPageIdToLine.size() )
         FillLayoutData();
 
-    if( mpLayoutData )
+    if( HasLayoutData() )
     {
         std::hash_map< int, int >::const_iterator it = mpTabCtrlData->maLayoutPageIdToLine.find( (int)nPage );
         if( it != mpTabCtrlData->maLayoutPageIdToLine.end() )
@@ -2329,7 +2298,7 @@ Rectangle TabControl::GetTabPageBounds( USHORT nPage ) const
 
 // -----------------------------------------------------------------------
 
-Rectangle TabControl::GetTabBounds( USHORT nPageId ) const
+Rectangle TabControl::GetTabBounds( sal_uInt16 nPageId ) const
 {
     Rectangle aRet;
 
@@ -2357,3 +2326,25 @@ Point TabControl::GetItemsOffset() const
 }
 
 // -----------------------------------------------------------------------
+
+Size TabControl::GetOptimalSize(WindowSizeType eType) const
+{
+    switch (eType) {
+    case WINDOWSIZE_MINIMUM:
+        return mpTabCtrlData ? mpTabCtrlData->maMinSize : Size();
+    default:
+        return Control::GetOptimalSize( eType );
+    }
+}
+
+// -----------------------------------------------------------------------
+
+void TabControl::SetMinimumSizePixel( const Size& i_rSize )
+{
+    if( mpTabCtrlData )
+        mpTabCtrlData->maMinSize = i_rSize;
+}
+
+// -----------------------------------------------------------------------
+
+

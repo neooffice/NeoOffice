@@ -33,20 +33,21 @@
  *
  ************************************************************************/
 
-#include <salgdi.h>
-#include <salatslayout.hxx>
-#include <saldata.hxx>
-#include <salinst.h>
-#include <vcl/sallayout.hxx>
-#include <vcl/impfont.hxx>
-#include <vcl/outdev.h>
-#include <vcl/unohelp.hxx>
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #include <rtl/process.h>
+#include <vcl/unohelp.hxx>
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
+
+#include "outdev.h"
+#include "sallayout.hxx"
+#include "impfont.hxx"
+#include "java/salatslayout.hxx"
+#include "java/saldata.hxx"
+#include "java/salgdi.h"
+#include "java/salinst.h"
 
 #include "salgdi3_cocoa.h"
 
@@ -75,6 +76,8 @@ using namespace vos;
 
 - (void)loadNativeFonts:(id)pObject
 {
+	(void)pObject;
+
 	ImplFontListChanged();
 }
 
@@ -82,7 +85,7 @@ using namespace vos;
 
 // ============================================================================
 
-static void ImplFontListChangedCallback( CFNotificationCenterRef aCenter, void *pObserver, CFStringRef aName, const void *pObject, CFDictionaryRef aUserInfo )
+static void ImplFontListChangedCallback( CFNotificationCenterRef, void*, CFStringRef, const void*, CFDictionaryRef )
 {
 	static bool bInCallback = false;
 
@@ -694,11 +697,11 @@ bool JavaImplFontData::IsBadFont( const JavaImplFontData *pFontData, bool bHandl
 
 // -----------------------------------------------------------------------
 
-IMPL_STATIC_LINK_NOINSTANCE( JavaImplFontData, RunNativeFontsTimer, void*, pCallData )
+IMPL_STATIC_LINK_NOINSTANCE( JavaImplFontData, RunNativeFontsTimer, void*, /* pCallData */ )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	ULONG nCount = Application::ReleaseSolarMutex();
+	sal_uLong nCount = Application::ReleaseSolarMutex();
 	VCLLoadNativeFonts *pVCLLoadNativeFonts = [VCLLoadNativeFonts create];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pVCLLoadNativeFonts performSelectorOnMainThread:@selector(loadNativeFonts:) withObject:pVCLLoadNativeFonts waitUntilDone:YES modes:pModes];
@@ -767,7 +770,7 @@ void JavaSalGraphics::SetTextColor( SalColor nSalColor )
 
 // -----------------------------------------------------------------------
 
-USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
+sal_uInt16 JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 {
 	if ( !pFont || !pFont->mpFontData )
 		return SAL_SETFONT_BADFONT;
@@ -968,7 +971,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
+void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric, int /* nFallbackLevel */ )
 {
 	float fFontSize = 0;
 	if ( mpFont )
@@ -1054,7 +1057,7 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 
 // -----------------------------------------------------------------------
 
-ULONG JavaSalGraphics::GetKernPairs( ULONG nPairs, ImplKernPairData* pKernPairs )
+sal_uLong JavaSalGraphics::GetKernPairs( sal_uLong /* nPairs */, ImplKernPairData* /* pKernPairs */ )
 {
 	return 0;
 }
@@ -1081,7 +1084,7 @@ void JavaSalGraphics::GetDevFontList( ImplDevFontList* pList )
 
 // -----------------------------------------------------------------------
 
-BOOL JavaSalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect )
+bool JavaSalGraphics::GetGlyphBoundRect( sal_GlyphId nIndex, Rectangle& rRect )
 {
 	rRect = Rectangle( Point( 0, 0 ), Size( 0, 0 ) );
 
@@ -1113,18 +1116,18 @@ BOOL JavaSalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect )
 
 // -----------------------------------------------------------------------
 
-BOOL JavaSalGraphics::GetGlyphOutline( long nIndex, B2DPolyPolygon& rPolyPoly )
+bool JavaSalGraphics::GetGlyphOutline( sal_GlyphId /* nIndex */, B2DPolyPolygon& rPolyPoly )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalGraphics::GetGlyphOutline not implemented\n" );
 #endif
 	rPolyPoly.clear();
-	return FALSE;
+	return false;
 }
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::GetDevFontSubstList( OutputDevice* pOutDev )
+void JavaSalGraphics::GetDevFontSubstList( OutputDevice* /* pOutDev */ )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalGraphics::GetDevFontSubstList not implemented\n" );
@@ -1133,7 +1136,7 @@ void JavaSalGraphics::GetDevFontSubstList( OutputDevice* pOutDev )
 
 // -----------------------------------------------------------------------
 
-bool JavaSalGraphics::AddTempDevFont( ImplDevFontList* pList, const String& rFileURL, const String& rFontName )
+bool JavaSalGraphics::AddTempDevFont( ImplDevFontList* /* pList */, const String& /* rFileURL */, const String& /* rFontName */ )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalGraphics::AddTempDevFont not implemented\n" );
@@ -1143,24 +1146,24 @@ bool JavaSalGraphics::AddTempDevFont( ImplDevFontList* pList, const String& rFil
 
 // -----------------------------------------------------------------------
 
-BOOL JavaSalGraphics::CreateFontSubset( const rtl::OUString& rToFile,
-                                    const ImplFontData* pFont, sal_Int32* pGlyphIDs,
-                                    sal_uInt8* pEncoding, sal_Int32* pWidths,
-                                    int nGlyphs, FontSubsetInfo& rInfo )
+sal_Bool JavaSalGraphics::CreateFontSubset( const rtl::OUString& /* rToFile */,
+                                    const ImplFontData* /* pFont */, sal_GlyphId* /* pGlyphIDs */,
+                                    sal_uInt8* /* pEncoding */, sal_Int32* /* pWidths */,
+                                    int /* nGlyphs */, FontSubsetInfo& /* rInfo */ )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalGraphics::CreateFontSubset not implemented\n" );
 #endif
-	return FALSE;
+	return sal_False;
 }
 
 // -----------------------------------------------------------------------
 
-const void* JavaSalGraphics::GetEmbedFontData( const ImplFontData* pFont,
-                                           const sal_Ucs* pUnicodes,
-                                           sal_Int32* pWidths,
-                                           FontSubsetInfo& rInfo,
-                                           long* pDataLen )
+const void* JavaSalGraphics::GetEmbedFontData( const ImplFontData* /* pFont */,
+                                           const sal_Ucs* /* pUnicodes */,
+                                           sal_Int32* /* pWidths */,
+                                           FontSubsetInfo& /* rInfo */,
+                                           long* /* pDataLen */ )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalGraphics::GetEmbedFontData not implemented\n" );
@@ -1170,7 +1173,7 @@ const void* JavaSalGraphics::GetEmbedFontData( const ImplFontData* pFont,
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::FreeEmbedFontData( const void* pData, long nLen )
+void JavaSalGraphics::FreeEmbedFontData( const void* /* pData */, long /* nLen */ )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalGraphics::FreeEmbedFontData not implemented\n" );
@@ -1179,7 +1182,7 @@ void JavaSalGraphics::FreeEmbedFontData( const void* pData, long nLen )
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::GetGlyphWidths( const ImplFontData* pFont, bool bVertical, Int32Vector& rWidths, Ucs2UIntMap& rUnicodeEnc )
+void JavaSalGraphics::GetGlyphWidths( const ImplFontData* /* pFont */, bool /* bVertical */, Int32Vector& rWidths, Ucs2UIntMap& rUnicodeEnc )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalGraphics::GetGlyphWidths not implemented\n" );

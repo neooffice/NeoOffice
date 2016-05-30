@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified February 2006 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 #ifndef _VCL_PDFWRITER_IMPL_HXX
 #define _VCL_PDFWRITER_IMPL_HXX
 
@@ -39,14 +42,14 @@
 #include "vcl/gradient.hxx"
 #include "vcl/hatch.hxx"
 #include "vcl/wall.hxx"
-#include "vcl/outdata.hxx"
+#include "outdata.hxx"
 #include "rtl/strbuf.hxx"
 #include "rtl/cipher.h"
 #include "rtl/digest.h"
 #include "com/sun/star/util/XURLTransformer.hpp"
 #include "com/sun/star/lang/Locale.hpp"
 
-#include <vcl/sallayout.hxx>
+#include <sallayout.hxx>
 #include "pdffontcache.hxx"
 
 #include <vector>
@@ -54,10 +57,14 @@
 #include <hash_map>
 #include <list>
 
+#include <boost/shared_array.hpp>
+
 class ImplFontSelectData;
 class ImplFontMetricData;
-struct FontSubsetInfo;
+class FontSubsetInfo;
 class ZCodec;
+class EncHashTransporter;
+struct BitStreamState;
 
 // the maximum password length
 #define ENCRYPTED_PWD_SIZE     32
@@ -146,14 +153,20 @@ public:
         // if pOutPoint is set it will be updated to the emitted point
         // (in PDF map mode, that is 10th of point)
         void appendPoint( const Point& rPoint, rtl::OStringBuffer& rBuffer, bool bNeg = false, Point* pOutPoint = NULL ) const;
+        // appends a B2DPoint without further transformation
+        void appendPixelPoint( const basegfx::B2DPoint& rPoint, rtl::OStringBuffer& rBuffer ) const;
         // appends a rectangle
         void appendRect( const Rectangle& rRect, rtl::OStringBuffer& rBuffer ) const;
         // converts a rectangle to 10th points page space
         void convertRect( Rectangle& rRect ) const;
         // appends a polygon optionally closing it
         void appendPolygon( const Polygon& rPoly, rtl::OStringBuffer& rBuffer, bool bClose = true ) const;
+        // appends a polygon optionally closing it
+        void appendPolygon( const basegfx::B2DPolygon& rPoly, rtl::OStringBuffer& rBuffer, bool bClose = true ) const;
         // appends a polypolygon optionally closing the subpaths
         void appendPolyPolygon( const PolyPolygon& rPolyPoly, rtl::OStringBuffer& rBuffer, bool bClose = true ) const;
+        // appends a polypolygon optionally closing the subpaths
+        void appendPolyPolygon( const basegfx::B2DPolyPolygon& rPolyPoly, rtl::OStringBuffer& rBuffer, bool bClose = true ) const;
         // converts a length (either vertical or horizontal; this
         // can be important if the source MapMode is not
         // symmetrical) to page length and appends it to the buffer
@@ -161,7 +174,7 @@ public:
         // (in PDF map mode, that is 10th of point)        
         void appendMappedLength( sal_Int32 nLength, rtl::OStringBuffer& rBuffer, bool bVertical = true, sal_Int32* pOutLength = NULL ) const;
         // the same for double values
-        void appendMappedLength( double fLength, rtl::OStringBuffer& rBuffer, bool bVertical = true, sal_Int32* pOutLength = NULL ) const;
+        void appendMappedLength( double fLength, rtl::OStringBuffer& rBuffer, bool bVertical = true, sal_Int32* pOutLength = NULL, sal_Int32 nPrecision = 5 ) const;
         // appends LineInfo
         // returns false if too many dash array entry were created for
         // the implementation limits of some PDF readers
@@ -272,14 +285,62 @@ public:
     };
 
     // font subsets
-    struct GlyphEmit
+    class GlyphEmit
     {
-        sal_Ucs		m_aUnicode;
+        // performance: actually this should probably a vector;
+        sal_Ucs		                    m_aBufferedUnicodes[3];
+        sal_Int32                       m_nUnicodes;
+        sal_Int32                       m_nMaxUnicodes;
+        boost::shared_array<sal_Ucs>    m_pUnicodes;
 #if defined USE_JAVA && defined MACOSX
-        sal_uInt16	m_nSubsetGlyphID;
+        sal_uInt16                      m_nSubsetGlyphID;
 #else	// USE_JAVA && MACOSX
-        sal_uInt8	m_nSubsetGlyphID;
+        sal_uInt8                       m_nSubsetGlyphID;
 #endif	// USE_JAVA && MACOSX
+        
+    public:
+        GlyphEmit() : m_nUnicodes(0), m_nSubsetGlyphID(0)
+        {
+            rtl_zeroMemory( m_aBufferedUnicodes, sizeof( m_aBufferedUnicodes ) );
+            m_nMaxUnicodes = sizeof(m_aBufferedUnicodes)/sizeof(m_aBufferedUnicodes[0]);
+        }
+        ~GlyphEmit()
+        {
+        }
+
+#if defined USE_JAVA && defined MACOSX
+        void setGlyphId( sal_uInt16 i_nId ) { m_nSubsetGlyphID = i_nId; }
+        sal_uInt16 getGlyphId() const { return m_nSubsetGlyphID; }
+#else	// USE_JAVA && MACOSX
+        void setGlyphId( sal_uInt8 i_nId ) { m_nSubsetGlyphID = i_nId; }
+        sal_uInt8 getGlyphId() const { return m_nSubsetGlyphID; }
+#endif	// USE_JAVA && MACOSX
+        
+        void addCode( sal_Ucs i_cCode )
+        {
+            if( m_nUnicodes == m_nMaxUnicodes )
+            {
+                sal_Ucs* pNew = new sal_Ucs[ 2 * m_nMaxUnicodes];
+                if( m_pUnicodes.get() )
+                    rtl_copyMemory( pNew, m_pUnicodes.get(), m_nMaxUnicodes * sizeof(sal_Ucs) );
+                else
+                    rtl_copyMemory( pNew, m_aBufferedUnicodes, m_nMaxUnicodes * sizeof(sal_Ucs) );
+                m_pUnicodes.reset( pNew );
+                m_nMaxUnicodes *= 2;
+            }
+            if( m_pUnicodes.get() )
+                m_pUnicodes[ m_nUnicodes++ ] = i_cCode;
+            else
+                m_aBufferedUnicodes[ m_nUnicodes++ ] = i_cCode;
+        }
+        sal_Int32 countCodes() const { return m_nUnicodes; }
+        sal_Ucs getCode( sal_Int32 i_nIndex ) const
+        {
+            sal_Ucs nRet = 0;
+            if( i_nIndex < m_nUnicodes )
+                nRet = m_pUnicodes.get() ? m_pUnicodes[ i_nIndex ] : m_aBufferedUnicodes[ i_nIndex ];
+            return nRet;
+        }
     };
     typedef std::map< sal_GlyphId, GlyphEmit > FontEmitMapping;
 #if defined USE_JAVA && defined MACOSX
@@ -351,6 +412,8 @@ public:
     {
         sal_Int32						m_nNormalFontID;
         std::list< EmbedEncoding >		m_aExtendedEncodings;
+        
+        EmbedFont() : m_nNormalFontID( 0 ) {}
     };
     typedef std::map< const ImplFontData*, EmbedFont > FontEmbedData;
 
@@ -433,9 +496,10 @@ public:
         rtl::OString				m_aName;
         rtl::OUString				m_aDescription;
         rtl::OUString				m_aText;
-        USHORT						m_nTextStyle;
+        sal_uInt16						m_nTextStyle;
         rtl::OUString				m_aValue;
-        rtl::OString				m_aDAString;
+        rtl::OString                m_aDAString;
+        rtl::OString                m_aDRDict;
         rtl::OString				m_aMKDict;
 		rtl::OString				m_aMKDictCAString;	// i12626, added to be able to encrypt the /CA text string
 														// since the object number is not known at the moment
@@ -609,7 +673,6 @@ private:
 
     MapMode								m_aMapMode; // PDFWriterImpl scaled units
     std::vector< PDFPage >				m_aPages;
-    PDFDocInfo							m_aDocInfo;
     /* maps object numbers to file offsets (needed for xref) */
     std::vector< sal_uInt64 >			m_aObjects;
     /* contains Bitmaps until they are written to the
@@ -626,6 +689,9 @@ private:
        dest id is always the dest's position in this vector
      */
     std::vector<PDFDest>				m_aDests;
+    /** contains destinations accessible via a public Id, instead of being linked to by an ordinary link
+    */
+    ::std::map< sal_Int32, sal_Int32 >  m_aDestinationIdTranslation;
     /* contains all links ever set during PDF creation,
        link id is always the link's position in this vector
     */
@@ -680,6 +746,7 @@ private:
     FontSubsetData						m_aSubsets;
     bool                                m_bEmbedStandardFonts;
     FontEmbedData						m_aEmbeddedFonts;
+    FontEmbedData                       m_aSystemFonts;
     sal_Int32							m_nNextFID;
     PDFFontCache                        m_aFontCache;
 
@@ -714,19 +781,20 @@ private:
     // graphics state
     struct GraphicsState
     {
-        Font			m_aFont;
-        MapMode			m_aMapMode;
-        Color			m_aLineColor;
-        Color			m_aFillColor;
-        Color			m_aTextLineColor;
-        Color			m_aOverlineColor;
-        Region			m_aClipRegion;
-        sal_Int32		m_nAntiAlias;
-        sal_Int32		m_nLayoutMode;
-        LanguageType    m_aDigitLanguage;
-        sal_Int32		m_nTransparentPercent;
-        sal_uInt16		m_nFlags;
-        sal_uInt16      m_nUpdateFlags;
+        Font			                 m_aFont;
+        MapMode			                 m_aMapMode;
+        Color			                 m_aLineColor;
+        Color			                 m_aFillColor;
+        Color			                 m_aTextLineColor;
+        Color			                 m_aOverlineColor;
+        basegfx::B2DPolyPolygon			 m_aClipRegion;
+        bool                             m_bClipRegion;
+        sal_Int32		                 m_nAntiAlias;
+        sal_Int32		                 m_nLayoutMode;
+        LanguageType                     m_aDigitLanguage;
+        sal_Int32		                 m_nTransparentPercent;
+        sal_uInt16		                 m_nFlags;
+        sal_uInt16                       m_nUpdateFlags;
         
         static const sal_uInt16 updateFont                  = 0x0001;
         static const sal_uInt16 updateMapMode               = 0x0002;
@@ -745,12 +813,10 @@ private:
                 m_aFillColor( COL_TRANSPARENT ),
                 m_aTextLineColor( COL_TRANSPARENT ),
                 m_aOverlineColor( COL_TRANSPARENT ),
+                m_bClipRegion( false ),
                 m_nAntiAlias( 1 ),
                 m_nLayoutMode( 0 ),
-#ifdef USE_JAVA
-                // Fix bug 3248 by initializing enumeration data member
                 m_aDigitLanguage( 0 ),
-#endif	// USE_JAVA
                 m_nTransparentPercent( 0 ),
                 m_nFlags( 0xffff ),
                 m_nUpdateFlags( 0xffff )
@@ -763,12 +829,10 @@ private:
                 m_aTextLineColor( rState.m_aTextLineColor ),
                 m_aOverlineColor( rState.m_aOverlineColor ),
                 m_aClipRegion( rState.m_aClipRegion ),
+                m_bClipRegion( rState.m_bClipRegion ),
                 m_nAntiAlias( rState.m_nAntiAlias ),
                 m_nLayoutMode( rState.m_nLayoutMode ),
-#ifdef USE_JAVA
-                // Fix bug 3248 by initializing enumeration data member
-                m_aDigitLanguage( 0 ),
-#endif	// USE_JAVA
+                m_aDigitLanguage( rState.m_aDigitLanguage ),
                 m_nTransparentPercent( rState.m_nTransparentPercent ),
                 m_nFlags( rState.m_nFlags ),
                 m_nUpdateFlags( rState.m_nUpdateFlags )
@@ -784,8 +848,10 @@ private:
             m_aTextLineColor		= rState.m_aTextLineColor;
             m_aOverlineColor		= rState.m_aOverlineColor;
             m_aClipRegion			= rState.m_aClipRegion;
+            m_bClipRegion           = rState.m_bClipRegion;
             m_nAntiAlias			= rState.m_nAntiAlias;
             m_nLayoutMode			= rState.m_nLayoutMode;
+            m_aDigitLanguage        = rState.m_aDigitLanguage;
             m_nTransparentPercent	= rState.m_nTransparentPercent;
             m_nFlags				= rState.m_nFlags;
             m_nUpdateFlags          = rState.m_nUpdateFlags;
@@ -796,7 +862,8 @@ private:
     GraphicsState							m_aCurrentPDFState;
 
 #if defined USE_JAVA && defined MACOSX
-    PDFWriterImpl*				            m_pParentWriter;
+    const com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >&	m_xEnc;
+    PDFWriterImpl*							m_pParentWriter;
     GDIMetaFile								m_aReplayMtf;
 #endif	// USE_JAVA && MACOSX
 
@@ -815,129 +882,50 @@ i12626
 /* used to cipher the stream data and for password management */
 	rtlCipher								m_aCipher;
 	rtlDigest								m_aDigest;
-/* pad string used for password in Standard security handler */
-	sal_uInt8								m_nPadString[ENCRYPTED_PWD_SIZE];
-/* the owner password, in clear text */
-	rtl::OUString							m_aOwnerPassword;
-/* the padded owner password */
-	sal_uInt8								m_nPaddedOwnerPassword[ENCRYPTED_PWD_SIZE];
-/* the encryption dictionary owner password, according to algorithm 3.3 */
-	sal_uInt8								m_nEncryptedOwnerPassword[ENCRYPTED_PWD_SIZE]; 
-/* the user password, in clear text */
-	rtl::OUString							m_aUserPassword;
-/* the padded user password */
-	sal_uInt8								m_nPaddedUserPassword[ENCRYPTED_PWD_SIZE];
-/* the encryption dictionary user password, according to algorithm 3.4 or 3.5 depending on the
-   security handler revision */
-	sal_uInt8								m_nEncryptedUserPassword[ENCRYPTED_PWD_SIZE];
-
-/* the encryption key, formed with the user password according to algorithm 3.2, maximum length is 16 bytes + 3 + 2
-   for 128 bit security   */
-	sal_uInt8								m_nEncryptionKey[MAXIMUM_RC4_KEY_LENGTH];
+	/* pad string used for password in Standard security handler */
+	static const sal_uInt8					s_nPadString[ENCRYPTED_PWD_SIZE];
+	
+	/* the encryption key, formed with the user password according to algorithm 3.2, maximum length is 16 bytes + 3 + 2
+	for 128 bit security   */
 	sal_Int32								m_nKeyLength; // key length, 16 or 5
 	sal_Int32								m_nRC4KeyLength; // key length, 16 or 10, to be input to the algorith 3.1
 
-/* set to true if the following stream must be encrypted, used inside writeBuffer() */
+	/* set to true if the following stream must be encrypted, used inside writeBuffer() */
 	sal_Bool								m_bEncryptThisStream;
-
-/* the numerical value of the access permissions, according to PDF spec, must be signed */
+	
+	/* the numerical value of the access permissions, according to PDF spec, must be signed */
 	sal_Int32                               m_nAccessPermissions;
-/* the document ID, the raw MD5 hash */
-	sal_uInt8								m_nDocID[MD5_DIGEST_SIZE];
-/* string buffer to hold document ID, this is the output string */
-	rtl::OStringBuffer						m_aDocID;
-/* string to hold the PDF creation date */
-	rtl::OStringBuffer						m_aCreationDateString;
-/* string to hold the PDF creation date, for PDF/A metadata */
-	rtl::OStringBuffer						m_aCreationMetaDateString;
-/* the buffer where the data are encrypted, dynamically allocated */
+	/* string to hold the PDF creation date */
+	rtl::OString						    m_aCreationDateString;
+	/* string to hold the PDF creation date, for PDF/A metadata */
+	rtl::OString						    m_aCreationMetaDateString;
+	/* the buffer where the data are encrypted, dynamically allocated */
 	sal_uInt8								*m_pEncryptionBuffer;
-/* size of the buffer */
+	/* size of the buffer */
 	sal_Int32								m_nEncryptionBufferSize;
-
-/* check and reallocate the buffer for encryption */
-	sal_Bool checkEncryptionBufferSize( register sal_Int32 newSize )
-		{
-			if( m_nEncryptionBufferSize < newSize )
-			{
-/* reallocate the buffer, the used function allocate as rtl_allocateMemory
-   if the pointer parameter is NULL */
-				m_pEncryptionBuffer = (sal_uInt8*)rtl_reallocateMemory( m_pEncryptionBuffer, newSize );
-				if( m_pEncryptionBuffer )
-					m_nEncryptionBufferSize = newSize;
-				else
-					m_nEncryptionBufferSize = 0;
-			}
-			return ( m_nEncryptionBufferSize != 0 );
-		}
-/* init the internal pad string */
-	void initPadString()
-		{
-			static const sal_uInt8 nPadString[32] =
-				{
-					0x28, 0xBF, 0x4E, 0x5E, 0x4E, 0x75, 0x8A, 0x41, 0x64, 0x00, 0x4E, 0x56, 0xFF, 0xFA, 0x01, 0x08,
-					0x2E, 0x2E, 0x00, 0xB6, 0xD0, 0x68, 0x3E, 0x80, 0x2F, 0x0C, 0xA9, 0xFE, 0x64, 0x53, 0x69, 0x7A
-				};
-
-			for(sal_uInt32 i = 0; i < sizeof( nPadString ); i++ )
-				m_nPadString[i] = nPadString[i];
-
-		};
-/* initialize the encryption engine */
-	void initEncryption();
-
-/* this function implements part of the PDF spec algorithm 3.1 in encryption, the rest (the actual encryption) is in PDFWriterImpl::writeBuffer */
-    void checkAndEnableStreamEncryption( register sal_Int32 nObject )
-		{
-			if( m_aContext.Encrypt )
-			{
-				m_bEncryptThisStream = true;
-				register sal_Int32 i = m_nKeyLength;
-				m_nEncryptionKey[i++] = (sal_uInt8)nObject;
-				m_nEncryptionKey[i++] = (sal_uInt8)( nObject >> 8 );
-				m_nEncryptionKey[i++] = (sal_uInt8)( nObject >> 16 );
-//the other location of m_nEncryptionKey are already set to 0, our fixed generation number
-// do the MD5 hash
-				sal_uInt8 nMD5Sum[ RTL_DIGEST_LENGTH_MD5 ];
-				// the i+2 to take into account the generation number, always zero
-				rtl_digest_MD5( &m_nEncryptionKey, i+2, nMD5Sum, sizeof(nMD5Sum) ); 
-// initialize the RC4 with the key
-// key legth: see algoritm 3.1, step 4: (N+5) max 16
-				rtl_cipher_initARCFOUR( m_aCipher, rtl_Cipher_DirectionEncode, nMD5Sum, m_nRC4KeyLength, NULL, 0 );
-			}
-		};
-
+	
+	/* check and reallocate the buffer for encryption */
+	sal_Bool checkEncryptionBufferSize( register sal_Int32 newSize );
+	/* this function implements part of the PDF spec algorithm 3.1 in encryption, the rest (the actual encryption) is in PDFWriterImpl::writeBuffer */
+    void checkAndEnableStreamEncryption( register sal_Int32 nObject );
+    
 	void disableStreamEncryption() { m_bEncryptThisStream = false; };
-
-/* */
-    void enableStringEncryption( register sal_Int32 nObject )
-		{
-			register sal_Int32 i = m_nKeyLength;
-			m_nEncryptionKey[i++] = (sal_uInt8)nObject;
-			m_nEncryptionKey[i++] = (sal_uInt8)( nObject >> 8 );
-			m_nEncryptionKey[i++] = (sal_uInt8)( nObject >> 16 );
-//the other location of m_nEncryptionKey are already set to 0, our fixed generation number
-// do the MD5 hash
-			sal_uInt8 nMD5Sum[ RTL_DIGEST_LENGTH_MD5 ];
-			// the i+2 to take into account the generation number, always zero
-			rtl_digest_MD5( &m_nEncryptionKey, i+2, nMD5Sum, sizeof(nMD5Sum) ); 
-// initialize the RC4 with the key
-// key legth: see algoritm 3.1, step 4: (N+5) max 16
-			rtl_cipher_initARCFOUR( m_aCipher, rtl_Cipher_DirectionEncode, nMD5Sum, m_nRC4KeyLength, NULL, 0 );
-		};
+	
+	/* */
+    void enableStringEncryption( register sal_Int32 nObject );
 
 // test if the encryption is active, if yes than encrypt the unicode string  and add to the OStringBuffer parameter
 	void appendUnicodeTextStringEncrypt( const rtl::OUString& rInString, const sal_Int32 nInObjectNumber, rtl::OStringBuffer& rOutBuffer );
 
-	void appendLiteralStringEncrypt( const rtl::OUString& rInString, const sal_Int32 nInObjectNumber, rtl::OStringBuffer& rOutBuffer );
+	void appendLiteralStringEncrypt( const rtl::OUString& rInString, const sal_Int32 nInObjectNumber, rtl::OStringBuffer& rOutBuffer, rtl_TextEncoding nEnc = RTL_TEXTENCODING_ASCII_US );
 	void appendLiteralStringEncrypt( const rtl::OString& rInString, const sal_Int32 nInObjectNumber, rtl::OStringBuffer& rOutBuffer );
 	void appendLiteralStringEncrypt( rtl::OStringBuffer& rInString, const sal_Int32 nInObjectNumber, rtl::OStringBuffer& rOutBuffer );
 
     /* creates fonts and subsets that will be emitted later */
 #if defined USE_JAVA && defined MACOSX
-    void registerGlyphs( int nGlyphs, sal_GlyphId* pGlyphs, sal_Ucs* pUnicodes, sal_uInt16* pMappedGlyphs, bool* pMappedIdentityGlyphs, sal_Int32* pMappedFontObjects, sal_Int32* pMappedFontSubObjects, rtl::OString pMappedXObjects[], const ImplFontData* pFallbackFonts[] );
+    void registerGlyphs( int nGlyphs, sal_GlyphId* pGlyphs, sal_Ucs* pUnicodes, sal_Int32* pUnicodesPerGlyph, sal_uInt16* pMappedGlyphs, bool* pMappedIdentityGlyphs, sal_Int32* pMappedFontObjects, sal_Int32* pMappedFontSubObjects, rtl::OString pMappedXObjects[], const ImplFontData* pFallbackFonts[] );
 #else	// USE_JAVA && MACOSX
-    void registerGlyphs( int nGlyphs, sal_GlyphId* pGlyphs, sal_Int32* pGlpyhWidths, sal_Ucs* pUnicodes, sal_uInt8* pMappedGlyphs, sal_Int32* pMappedFontObjects, const ImplFontData* pFallbackFonts[] );
+    void registerGlyphs( int nGlyphs, sal_GlyphId* pGlyphs, sal_Int32* pGlpyhWidths, sal_Ucs* pUnicodes, sal_Int32* pUnicodesPerGlyph, sal_uInt8* pMappedGlyphs, sal_Int32* pMappedFontObjects, const ImplFontData* pFallbackFonts[] );
 #endif	// USE_JAVA && MACOSX
 
     /*  emits a text object according to the passed layout */
@@ -982,10 +970,12 @@ i12626
     sal_Int32 emitBuiltinFont( const ImplFontData*, sal_Int32 nObject = -1 );
     /* writes a type1 embedded font object and returns its mapping from font ids to object ids (or 0 in case of failure ) */
     std::map< sal_Int32, sal_Int32 > emitEmbeddedFont( const ImplFontData*, EmbedFont& );
+    /* writes a type1 system font object and returns its mapping from font ids to object ids (or 0 in case of failure ) */
+    std::map< sal_Int32, sal_Int32 > emitSystemFont( const ImplFontData*, EmbedFont& );
     /* writes a font descriptor and returns its object id (or 0) */
     sal_Int32 emitFontDescriptor( const ImplFontData*, FontSubsetInfo&, sal_Int32 nSubsetID, sal_Int32 nStream );
     /* writes a ToUnicode cmap, returns the corresponding stream object */
-    sal_Int32 createToUnicodeCMap( sal_uInt8* pEncoding, sal_Ucs* pUnicodes, int nGlyphs );
+    sal_Int32 createToUnicodeCMap( sal_uInt8* pEncoding, sal_Ucs* pUnicodes, sal_Int32* pUnicodesPerGlyph, sal_Int32* pEncToUnicodeIndex, int nGlyphs );
 
     /* get resource dict object number */
     sal_Int32 getResourceDictObj()
@@ -1068,7 +1058,8 @@ i12626
     sal_Int32 findRadioGroupWidget( const PDFWriter::RadioButtonWidget& rRadio );
     Font replaceFont( const Font& rControlFont, const Font& rAppSetFont );
     sal_Int32 getBestBuiltinFont( const Font& rFont );
-
+    sal_Int32 getSystemFont( const Font& i_rFont );
+    
     // used for edit and listbox
     Font drawFieldBorder( PDFWidget&, const PDFWriter::AnyWidget&, const StyleSettings& );
     
@@ -1079,7 +1070,7 @@ i12626
     void createDefaultListBoxAppearance( PDFWidget&, const PDFWriter::ListBoxWidget& rWidget );
 
     /* ensure proper escapement and uniqueness of field names */
-    rtl::OString convertWidgetFieldName( const rtl::OUString& rString );
+    void createWidgetFieldName( sal_Int32 i_nWidgetsIndex, const PDFWriter::AnyWidget& i_rInWidget );
     /* adds an entry to m_aObjects and returns its index+1,
      * sets the offset to ~0
      */
@@ -1117,32 +1108,72 @@ i12626
 #endif	// USE_JAVA && MACOSX
 
     /* draws an emphasis mark */
-    void drawEmphasisMark(  long nX, long nY, const PolyPolygon& rPolyPoly, BOOL bPolyLine, const Rectangle& rRect1, const Rectangle& rRect2 );
+    void drawEmphasisMark(  long nX, long nY, const PolyPolygon& rPolyPoly, sal_Bool bPolyLine, const Rectangle& rRect1, const Rectangle& rRect2 );
 
     /* true if PDF/A-1a or PDF/A-1b is output */
     sal_Bool        m_bIsPDF_A1;
+    PDFWriter&      m_rOuterFace;
 
-/*
-i12626
-methods for PDF security
+    /*
+    i12626
+    methods for PDF security
+    
+    pad a password according  algorithm 3.2, step 1 */
+    static void padPassword( const rtl::OUString& i_rPassword, sal_uInt8* o_pPaddedPW );
+    /* algorithm 3.2: compute an encryption key */
+	static bool computeEncryptionKey( EncHashTransporter*,
+	                                  vcl::PDFWriter::PDFEncryptionProperties& io_rProperties,
+	                                  sal_Int32 i_nAccessPermissions
+	                                 );
+	/* algorithm 3.3: computing the encryption dictionary'ss owner password value ( /O ) */
+	static bool computeODictionaryValue( const sal_uInt8* i_pPaddedOwnerPassword, const sal_uInt8* i_pPaddedUserPassword,
+	                                     std::vector< sal_uInt8 >& io_rOValue,
+	                                     sal_Int32 i_nKeyLength
+	                                    );
+	/* algorithm 3.4 or 3.5: computing the encryption dictionary's user password value ( /U ) revision 2 or 3 of the standard security handler */
+	static bool computeUDictionaryValue( EncHashTransporter* i_pTransporter,
+	                                     vcl::PDFWriter::PDFEncryptionProperties& io_rProperties,
+	                                     sal_Int32 i_nKeyLength,
+	                                     sal_Int32 i_nAccessPermissions
+	                                    );
 
- pad a password according  algorithm 3.2, step 1 */
-	void padPassword( const rtl::OUString aPassword, sal_uInt8 *paPasswordTarget );
-/* algorithm 3.2: compute an encryption key */
-	void computeEncryptionKey( sal_uInt8 *paThePaddedPassword, sal_uInt8 *paEncryptionKey );
-/* algorithm 3.3: computing the encryption dictionary'ss owner password value ( /O ) */
-	void computeODictionaryValue();
-/* algorithm 3.4 or 3.5: computing the encryption dictionary's user password value ( /U ) revision 2 or 3 of the standard security handler */
-	void computeUDictionaryValue();
+	static void computeDocumentIdentifier( std::vector< sal_uInt8 >& o_rIdentifier,
+	                                       const vcl::PDFWriter::PDFDocInfo& i_rDocInfo,
+	                                       rtl::OString& o_rCString1,
+	                                       rtl::OString& o_rCString2
+	                                      );
+	static sal_Int32 computeAccessPermissions( const vcl::PDFWriter::PDFEncryptionProperties& i_rProperties,
+	                                           sal_Int32& o_rKeyLength, sal_Int32& o_rRC4KeyLength );
+    void setupDocInfo();
+    bool prepareEncryption( const com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >& );
 
+	// helper for playMetafile
+    void implWriteGradient( const PolyPolygon& rPolyPoly, const Gradient& rGradient,
+                            VirtualDevice* pDummyVDev, const vcl::PDFWriter::PlayMetafileContext& );
+    void implWriteBitmapEx( const Point& rPoint, const Size& rSize, const BitmapEx& rBitmapEx,
+                           VirtualDevice* pDummyVDev, const vcl::PDFWriter::PlayMetafileContext& );
+    
+    // helpers for CCITT 1bit bitmap stream
+    void putG4Bits( sal_uInt32 i_nLength, sal_uInt32 i_nCode, BitStreamState& io_rState );
+    void putG4Span( long i_nSpan, bool i_bWhitePixel, BitStreamState& io_rState );
+    void writeG4Stream( BitmapReadAccess* i_pBitmap );
+    
+    // color helper functions
+    void appendStrokingColor( const Color& rColor, rtl::OStringBuffer& rBuffer );
+    void appendNonStrokingColor( const Color& rColor, rtl::OStringBuffer& rBuffer );
 public:
 #if defined USE_JAVA && defined MACOSX
-    PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, PDFWriterImpl *pParentWriter = NULL );
+    PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, const com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >&, PDFWriter&, PDFWriterImpl *pParentWriter = NULL );
 #else	// USE_JAVA && MACOSX
-    PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext );
+    PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, const com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >&, PDFWriter& );
 #endif	// USE_JAVA && MACOSX
     ~PDFWriterImpl();
 
+    static com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >
+           initEncryption( const rtl::OUString& i_rOwnerPassword,
+                           const rtl::OUString& i_rUserPassword,
+                           bool b128Bit );
+    
     /*	for OutputDevice so the reference device can have a list
      *	that contains only suitable fonts (subsettable or builtin)
      *	produces a new font list
@@ -1164,6 +1195,7 @@ public:
     bool emit();
     std::set< PDFWriter::ErrorCode > getErrors();
     void insertError( PDFWriter::ErrorCode eErr ) { m_aErrors.insert( eErr ); }
+    void playMetafile( const GDIMetaFile&, vcl::PDFExtOutDevData*, const vcl::PDFWriter::PlayMetafileContext&, VirtualDevice* pDummyDev = NULL );
     
     Size getCurPageSize() const
     {
@@ -1174,8 +1206,6 @@ public:
     }
 
     PDFWriter::PDFVersion getVersion() const { return m_aContext.Version; }
-    void setDocInfo( const PDFDocInfo& rInfo );
-    const PDFDocInfo& getDocInfo() const { return m_aDocInfo; }
     
     void setDocumentLocale( const com::sun::star::lang::Locale& rLoc )
     { m_aContext.DocumentLocale = rLoc; }
@@ -1232,13 +1262,13 @@ public:
     void setTextFillColor( const Color& rColor )
     {
         m_aGraphicsStack.front().m_aFont.SetFillColor( rColor );
-        m_aGraphicsStack.front().m_aFont.SetTransparent( ImplIsColorTransparent( rColor ) ? TRUE : FALSE );
+        m_aGraphicsStack.front().m_aFont.SetTransparent( ImplIsColorTransparent( rColor ) ? sal_True : sal_False );
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateFont;
     }
     void setTextFillColor()
     {
         m_aGraphicsStack.front().m_aFont.SetFillColor( Color( COL_TRANSPARENT ) );
-        m_aGraphicsStack.front().m_aFont.SetTransparent( TRUE );
+        m_aGraphicsStack.front().m_aFont.SetTransparent( sal_True );
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateFont;
     }
     void setTextColor( const Color& rColor )
@@ -1249,17 +1279,18 @@ public:
 
     void clearClipRegion()
     {
-        m_aGraphicsStack.front().m_aClipRegion.SetNull();
+        m_aGraphicsStack.front().m_aClipRegion.clear();
+        m_aGraphicsStack.front().m_bClipRegion = false;
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateClipRegion;
     }
 
-    void setClipRegion( const Region& rRegion );
+    void setClipRegion( const basegfx::B2DPolyPolygon& rRegion );
 
     void moveClipRegion( sal_Int32 nX, sal_Int32 nY );
 
     bool intersectClipRegion( const Rectangle& rRect );
 
-    bool intersectClipRegion( const Region& rRegion );
+    bool intersectClipRegion( const basegfx::B2DPolyPolygon& rRegion );
 
     void setLayoutMode( sal_Int32 nLayoutMode )
     {
@@ -1288,10 +1319,10 @@ public:
     /* actual drawing functions */
     void drawText( const Point& rPos, const String& rText, xub_StrLen nIndex = 0, xub_StrLen nLen = STRING_LEN, bool bTextLines = true );
     void drawTextArray( const Point& rPos, const String& rText, const sal_Int32* pDXArray = NULL, xub_StrLen nIndex = 0, xub_StrLen nLen = STRING_LEN, bool bTextLines = true );
-    void drawStretchText( const Point& rPos, ULONG nWidth, const String& rText,
+    void drawStretchText( const Point& rPos, sal_uLong nWidth, const String& rText,
                           xub_StrLen nIndex = 0, xub_StrLen nLen = STRING_LEN,
                           bool bTextLines = true  );
-    void drawText( const Rectangle& rRect, const String& rOrigStr, USHORT nStyle, bool bTextLines = true  );
+    void drawText( const Rectangle& rRect, const String& rOrigStr, sal_uInt16 nStyle, bool bTextLines = true  );
     void drawTextLine( const Point& rPos, long nWidth, FontStrikeout eStrikeout, FontUnderline eUnderline, FontUnderline eOverline, bool bUnderlineAbove );
     void drawWaveTextLine( rtl::OStringBuffer& aLine, long nWidth, FontUnderline eTextLine, Color aColor, bool bIsAbove );
     void drawStraightTextLine( rtl::OStringBuffer& aLine, long nWidth, FontUnderline eTextLine, Color aColor, bool bIsAbove );
@@ -1347,6 +1378,7 @@ public:
     // links
     sal_Int32 createLink( const Rectangle& rRect, sal_Int32 nPageNr = -1 );
     sal_Int32 createDest( const Rectangle& rRect, sal_Int32 nPageNr = -1, PDFWriter::DestAreaType eType = PDFWriter::XYZ );
+    sal_Int32 registerDestReference( sal_Int32 nDestId, const Rectangle& rRect, sal_Int32 nPageNr = -1, PDFWriter::DestAreaType eType = PDFWriter::XYZ );
     sal_Int32 setLinkDest( sal_Int32 nLinkId, sal_Int32 nDestId );
     sal_Int32 setLinkURL( sal_Int32 nLinkId, const rtl::OUString& rURL );
     void setLinkPropertyId( sal_Int32 nLinkId, sal_Int32 nPropertyId );
@@ -1399,6 +1431,8 @@ public:
 #if defined USE_JAVA && defined MACOSX
     void addAction( MetaAction *pAction );
     const PDFWriter::PDFWriterContext& getContext() { return m_aContext; }
+    const com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >& getMaterialHolder() { return m_xEnc; }
+    PDFWriter& getPDFWriter() { return m_rOuterFace; }
     const GDIMetaFile& getReplayMetaFile() { return m_aReplayMtf; }
     bool isReplayWriter() { return ( m_pParentWriter ? true : false ); }
 #endif	// USE_JAVA && MACOSX

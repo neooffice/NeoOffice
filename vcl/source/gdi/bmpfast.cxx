@@ -1,36 +1,39 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified May 2006 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
 
-#include <vcl/bmpfast.hxx>
+#include <bmpfast.hxx>
 
 #ifndef NO_OPTIMIZED_BITMAP_ACCESS
 
@@ -57,7 +60,7 @@ protected:
    PIXBYTE* mpPixel;
 };
 
-template <ULONG PIXFMT>
+template <sal_uLong PIXFMT>
 class TrueColorPixelPtr : public BasePixelPtr
 {
 public:
@@ -323,7 +326,7 @@ public:
 // =======================================================================
 // converting truecolor formats
 
-template <ULONG SRCFMT, ULONG DSTFMT>
+template <sal_uLong SRCFMT, sal_uLong DSTFMT>
 inline void ImplConvertPixel( const TrueColorPixelPtr<DSTFMT>& rDst,
     const TrueColorPixelPtr<SRCFMT>& rSrc )
 {
@@ -347,7 +350,7 @@ inline void ImplConvertPixel<BMP_FORMAT_16BIT_TC_LSB_MASK, BMP_FORMAT_16BIT_TC_M
 
 // -----------------------------------------------------------------------
 
-template <ULONG SRCFMT, ULONG DSTFMT>
+template <sal_uLong SRCFMT, sal_uLong DSTFMT>
 inline void ImplConvertLine( const TrueColorPixelPtr<DSTFMT>& rDst,
     const TrueColorPixelPtr<SRCFMT>& rSrc, int nPixelCount )
 {
@@ -364,7 +367,7 @@ inline void ImplConvertLine( const TrueColorPixelPtr<DSTFMT>& rDst,
 // =======================================================================
 // alpha blending truecolor pixels
 
-template <unsigned ALPHABITS, ULONG SRCFMT, ULONG DSTFMT>
+template <unsigned ALPHABITS, sal_uLong SRCFMT, sal_uLong DSTFMT>
 inline void ImplBlendPixels( const TrueColorPixelPtr<DSTFMT>& rDst,
     const TrueColorPixelPtr<SRCFMT>& rSrc, unsigned nAlphaVal )
 {
@@ -396,7 +399,7 @@ inline void ImplBlendPixels( const TrueColorPixelPtr<DSTFMT>& rDst,
 
 // -----------------------------------------------------------------------
 
-template <unsigned ALPHABITS, ULONG MASKFMT, ULONG SRCFMT, ULONG DSTFMT>
+template <unsigned ALPHABITS, sal_uLong MASKFMT, sal_uLong SRCFMT, sal_uLong DSTFMT>
 inline void ImplBlendLines( const TrueColorPixelPtr<DSTFMT>& rDst,
     const TrueColorPixelPtr<SRCFMT>& rSrc, const TrueColorPixelPtr<MASKFMT>& rMsk,
     int nPixelCount )
@@ -415,7 +418,7 @@ inline void ImplBlendLines( const TrueColorPixelPtr<DSTFMT>& rDst,
 
 // -----------------------------------------------------------------------
 
-template <unsigned ALPHABITS, ULONG SRCFMT, ULONG DSTFMT>
+template <unsigned ALPHABITS, sal_uLong SRCFMT, sal_uLong DSTFMT>
 inline void ImplBlendLines( const TrueColorPixelPtr<DSTFMT>& rDst,
     const TrueColorPixelPtr<SRCFMT>& rSrc, unsigned nAlphaVal,
     int nPixelCount )
@@ -473,7 +476,7 @@ static bool ImplCopyImage( BitmapBuffer& rDstBuffer, const BitmapBuffer& rSrcBuf
 
 // -----------------------------------------------------------------------
 
-template <ULONG DSTFMT,ULONG SRCFMT>
+template <sal_uLong DSTFMT,sal_uLong SRCFMT>
 bool ImplConvertToBitmap( TrueColorPixelPtr<SRCFMT>& rSrcLine,
     BitmapBuffer& rDstBuffer, const BitmapBuffer& rSrcBuffer )
 {
@@ -514,7 +517,7 @@ bool ImplConvertToBitmap( TrueColorPixelPtr<SRCFMT>& rSrcLine,
 
 // -----------------------------------------------------------------------
 
-template <ULONG SRCFMT>
+template <sal_uLong SRCFMT>
 inline bool ImplConvertFromBitmap( BitmapBuffer& rDst, const BitmapBuffer& rSrc )
 {
     TrueColorPixelPtr<SRCFMT> aSrcType; aSrcType.SetRawPtr( rSrc.mpBits );
@@ -615,8 +618,8 @@ bool ImplFastBitmapConversion( BitmapBuffer& rDst, const BitmapBuffer& rSrc,
     if( rDst.mnHeight < rTR.mnDestY + rTR.mnDestHeight )
         return false;
 
-    const ULONG nSrcFormat = rSrc.mnFormat & ~BMP_FORMAT_TOP_DOWN;
-    const ULONG nDstFormat = rDst.mnFormat & ~BMP_FORMAT_TOP_DOWN;
+    const sal_uLong nSrcFormat = rSrc.mnFormat & ~BMP_FORMAT_TOP_DOWN;
+    const sal_uLong nDstFormat = rDst.mnFormat & ~BMP_FORMAT_TOP_DOWN;
 
     // TODO: also implement conversions for 16bit colormasks with non-565 format
     if( nSrcFormat & (BMP_FORMAT_16BIT_TC_LSB_MASK | BMP_FORMAT_16BIT_TC_MSB_MASK) )
@@ -638,7 +641,7 @@ bool ImplFastBitmapConversion( BitmapBuffer& rDst, const BitmapBuffer& rSrc,
             return false;
 #ifdef USE_JAVA
         // Fix bug 1477 by returning false if the source and destination
-		// heights are not equal
+        // heights are not equal
         if ( rDst.mnHeight != rSrc.mnHeight )
             return false;
 #endif	// USE_JAVA
@@ -702,7 +705,7 @@ bool ImplFastBitmapConversion( BitmapBuffer& rDst, const BitmapBuffer& rSrc,
 
 // =======================================================================
 
-template <ULONG DSTFMT,ULONG SRCFMT> //,ULONG MSKFMT>
+template <sal_uLong DSTFMT,sal_uLong SRCFMT> //,sal_uLong MSKFMT>
 bool ImplBlendToBitmap( TrueColorPixelPtr<SRCFMT>& rSrcLine,
     BitmapBuffer& rDstBuffer, const BitmapBuffer& rSrcBuffer,
     const BitmapBuffer& rMskBuffer )
@@ -779,7 +782,7 @@ inline bool ImplBlendToBitmap<BMP_FORMAT_32BIT_TC_BGRA,BMP_FORMAT_32BIT_TC_BGRA>
 
 // -----------------------------------------------------------------------
 
-template <ULONG SRCFMT>
+template <sal_uLong SRCFMT>
 bool ImplBlendFromBitmap( BitmapBuffer& rDst, const BitmapBuffer& rSrc, const BitmapBuffer& rMsk )
 {
     TrueColorPixelPtr<SRCFMT> aSrcType; aSrcType.SetRawPtr( rSrc.mpBits );
@@ -897,8 +900,8 @@ bool ImplFastBitmapBlending( BitmapWriteAccess& rDstWA,
     const BitmapBuffer& rSrc = *rSrcRA.ImplGetBitmapBuffer();
     const BitmapBuffer& rMsk = *rMskRA.ImplGetBitmapBuffer();
 
-    const ULONG nSrcFormat = rSrc.mnFormat & ~BMP_FORMAT_TOP_DOWN;
-    const ULONG nDstFormat = rDst.mnFormat & ~BMP_FORMAT_TOP_DOWN;
+    const sal_uLong nSrcFormat = rSrc.mnFormat & ~BMP_FORMAT_TOP_DOWN;
+    const sal_uLong nDstFormat = rDst.mnFormat & ~BMP_FORMAT_TOP_DOWN;
 
     // accelerated conversions for 16bit colormasks with non-565 format are not yet implemented
     if( nSrcFormat & (BMP_FORMAT_16BIT_TC_LSB_MASK | BMP_FORMAT_16BIT_TC_MSB_MASK) )
@@ -971,18 +974,18 @@ bool ImplFastEraseBitmap( BitmapBuffer& rDst, const BitmapColor& rColor )
     if( bDisableFastBitops )
         return false;
 
-    const ULONG nDstFormat = rDst.mnFormat & ~BMP_FORMAT_TOP_DOWN;
+    const sal_uLong nDstFormat = rDst.mnFormat & ~BMP_FORMAT_TOP_DOWN;
 
     // erasing a bitmap is often just a byte-wise memory fill
     bool bByteFill = true;
-    BYTE nFillByte;
+    sal_uInt8 nFillByte;
 
     switch( nDstFormat )
     {
         case BMP_FORMAT_1BIT_MSB_PAL:
         case BMP_FORMAT_1BIT_LSB_PAL:
             nFillByte = rColor.GetIndex();
-            nFillByte = static_cast<BYTE>( -(nFillByte & 1) ); // 0x00 or 0xFF
+            nFillByte = static_cast<sal_uInt8>( -(nFillByte & 1) ); // 0x00 or 0xFF
             break;
         case BMP_FORMAT_4BIT_MSN_PAL:
         case BMP_FORMAT_4BIT_LSN_PAL:

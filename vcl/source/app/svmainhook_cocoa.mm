@@ -50,27 +50,27 @@
 #include "svmainhook_cocoa.h"
 #include "../../java/source/java/VCLEventQueue_cocoa.h"
 
-#define DOFUNCTION( x ) MacOSBOOL SAL_DLLPUBLIC_EXPORT _##x ()
+#define DOFUNCTION( x ) BOOL SAL_DLLPUBLIC_EXPORT _##x ()
 #define FUNCTION( x ) DOFUNCTION( x )
 
-typedef MacOSBOOL BundleCheck_Type();
+typedef BOOL BundleCheck_Type();
 typedef sal_Bool Application_canUseJava_Type();
 
 // The following are custom data types for Apple's App Store receipt payload
 // ASN.1 format as documented in the following URL:
 // https://developer.apple.com/library/mac/releasenotes/General/ValidateAppStoreReceipt/Chapters/ValidateLocally.html
 
-typedef struct AppReceiptAttribute
+typedef struct
 {
 	SecAsn1Item				type;
 	SecAsn1Item				version;
 	SecAsn1Item				value;
-};
+} AppReceiptAttribute;
 
-typedef struct AppReceiptAttributes
+typedef struct
 {
 	AppReceiptAttribute**	mpAttrs;
-};
+} AppReceiptAttributes;
 
 static Application_canUseJava_Type *pApplication_canUseJava = NULL;
 
@@ -118,7 +118,7 @@ static CFDataRef ImplCreateMacAddress()
 					io_object_t aParentService;
 					if ( IORegistryEntryGetParentEntry( aService, kIOServicePlane, &aParentService ) == KERN_SUCCESS )
 					{
-						aRet = (CFDataRef)IORegistryEntryCreateCFProperty( aParentService, CFSTR( "IOMACAddress" ), kCFAllocatorDefault, NULL );
+						aRet = (CFDataRef)IORegistryEntryCreateCFProperty( aParentService, CFSTR( "IOMACAddress" ), kCFAllocatorDefault, 0 );
 
 						IOObjectRelease( aParentService );
 
@@ -170,7 +170,7 @@ void NSApplication_run()
 		NSBundle *pBundle = [NSBundle mainBundle];
 		if ( pBundle )
 		{
-			MacOSBOOL bBundleOK = NO;
+			BOOL bBundleOK = NO;
 			NSDictionary *pInfoDict = [pBundle infoDictionary];
 			if ( pInfoDict )
 			{
@@ -257,7 +257,7 @@ void NSApplication_terminate()
 				{
 					if ( CMSDecoderUpdateMessage( aDecoder, pData.bytes, pData.length ) == errSecSuccess && CMSDecoderFinalizeMessage( aDecoder ) == errSecSuccess )
 					{
-						MacOSBOOL bSigned = NO;
+						BOOL bSigned = NO;
 						size_t nSigners = 0;
 						if ( CMSDecoderGetNumSigners( aDecoder, &nSigners ) == errSecSuccess && nSigners > 0 )
 						{

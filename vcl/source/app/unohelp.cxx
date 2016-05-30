@@ -1,70 +1,63 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified February 2006 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
 
+#include <tools/tempfile.hxx>
 
+#include <osl/file.hxx>
 
+#include <cppuhelper/servicefactory.hxx>
+
+#include <vcl/svapp.hxx>
 #include <vcl/unohelp.hxx>
+
+#include <svdata.hxx>
+
 #include <com/sun/star/lang/XSingleServiceFactory.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <comphelper/processfactory.hxx>
 
-#ifndef _COM_SUN_STAR_TEXT_XBREAKITERATOR_HPP_
 #include <com/sun/star/i18n/XBreakIterator.hpp>
-#endif
 #include <com/sun/star/i18n/XCharacterClassification.hpp>
-
-#ifndef _COM_SUN_STAR_UTIL_XCOLLATOR_HPP_
 #include <com/sun/star/i18n/XCollator.hpp>
-#endif
 #include <com/sun/star/awt/XExtendedToolkit.hpp>
 #include <com/sun/star/accessibility/AccessibleEventObject.hpp>
 #include <com/sun/star/accessibility/AccessibleStateType.hpp>
-
-
 #include <com/sun/star/registry/XImplementationRegistration.hpp>
-
-#include <cppuhelper/servicefactory.hxx>
-
-#include <tools/tempfile.hxx>
-#include <osl/file.hxx>
-
-#include <vcl/svdata.hxx>
-#include <vcl/svapp.hxx>
 
 using namespace ::com::sun::star;
 using namespace ::rtl;
-
-#define DOSTRING( x )			   			#x
-#define STRING( x )				   			DOSTRING( x )
 
 struct VCLRegServiceInfo
 {
@@ -196,10 +189,10 @@ uno::Reference < i18n::XCollator > vcl::unohelper::CreateCollator()
 	return xB;
 }
 
-::rtl::OUString vcl::unohelper::CreateLibraryName( const sal_Char* pModName, BOOL bSUPD )
+::rtl::OUString vcl::unohelper::CreateLibraryName( const sal_Char* pModName, sal_Bool bSUPD )
 {
 	// create variable library name suffixes
-	OUString aDLLSuffix = OUString::createFromAscii( STRING(DLLPOSTFIX) );
+	OUString aDLLSuffix; //= OUString::createFromAscii( STRING(DLLPOSTFIX) );
 
 	OUString aLibName;
 

@@ -33,19 +33,20 @@
  *
  ************************************************************************/
 
-#include <salbmp.h>
-#include <saldata.hxx>
-#include <salgdi.h>
-#include <salinst.h>
 #include <vcl/bmpacc.hxx>
+
+#include "java/salbmp.h"
+#include "java/saldata.hxx"
+#include "java/salgdi.h"
+#include "java/salinst.h"
 
 using namespace vcl;
 
 // ==================================================================
  
-void ReleaseBitmapBufferBytePointerCallback( void *pInfo, const void *pPointer, size_t nSize )
+void ReleaseBitmapBufferBytePointerCallback( void* /* pInfo */, const void *pPointer, size_t /* nSize */ )
 {
-	BYTE *pBits = (BYTE *)pPointer;
+	sal_uInt8 *pBits = (sal_uInt8 *)pPointer;
 	if ( pBits )
 		delete[] pBits;
 
@@ -53,14 +54,14 @@ void ReleaseBitmapBufferBytePointerCallback( void *pInfo, const void *pPointer, 
 
 // ==================================================================
 
-ULONG JavaSalBitmap::Get32BitNativeFormat()
+sal_uLong JavaSalBitmap::Get32BitNativeFormat()
 {
 	return BMP_FORMAT_32BIT_TC_BGRA;
 }
 
 // ------------------------------------------------------------------
 
-ULONG JavaSalBitmap::GetNativeDirectionFormat()
+sal_uLong JavaSalBitmap::GetNativeDirectionFormat()
 {
 	return BMP_FORMAT_TOP_DOWN;
 }
@@ -130,7 +131,7 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraph
 	mnBitCount = pSrcGraphics->GetBitCount();
 
 	// Save the palette
-	USHORT nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
+	sal_uInt16 nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
 	if ( nColors )
 	{
 		maPalette = rPal;
@@ -164,7 +165,7 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraph
 
 // ------------------------------------------------------------------
 
-bool JavaSalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPalette& rPal )
+bool JavaSalBitmap::Create( const Size& rSize, sal_uInt16 nBitCount, const BitmapPalette& rPal )
 {
 	Destroy();
 
@@ -186,7 +187,7 @@ bool JavaSalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPal
 		mnBitCount = 32;
 
 	// Save the palette
-	USHORT nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
+	sal_uInt16 nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
 	if ( nColors )
 	{
 		maPalette = rPal;
@@ -207,23 +208,23 @@ bool JavaSalBitmap::Create( const SalBitmap& rSalBmp )
 
 	if ( bRet )
 	{
-		BitmapBuffer *pSrcBuffer = rJavaSalBmp.AcquireBuffer( TRUE );
+		BitmapBuffer *pSrcBuffer = rJavaSalBmp.AcquireBuffer( true );
 		if ( pSrcBuffer )
 		{
-			BitmapBuffer *pDestBuffer = AcquireBuffer( FALSE );
+			BitmapBuffer *pDestBuffer = AcquireBuffer( false );
 			if ( pDestBuffer && pDestBuffer->mpBits && pDestBuffer->mnScanlineSize == pSrcBuffer->mnScanlineSize && pDestBuffer->mnHeight == pSrcBuffer->mnHeight )
 			{
 				memcpy( pDestBuffer->mpBits, pSrcBuffer->mpBits, pDestBuffer->mnScanlineSize * pDestBuffer->mnHeight );
 				pDestBuffer->maColorMask = pSrcBuffer->maColorMask;
 				pDestBuffer->maPalette = pSrcBuffer->maPalette;
-				ReleaseBuffer( pDestBuffer, FALSE );
+				ReleaseBuffer( pDestBuffer, false );
 			}
 			else
 			{
 				Destroy();
 				bRet = false;
 			}
-			rJavaSalBmp.ReleaseBuffer( pSrcBuffer, TRUE );
+			rJavaSalBmp.ReleaseBuffer( pSrcBuffer, false );
 		}
 		else
 		{
@@ -237,14 +238,14 @@ bool JavaSalBitmap::Create( const SalBitmap& rSalBmp )
 
 // ------------------------------------------------------------------
 
-bool JavaSalBitmap::Create( const SalBitmap& rSalBmp, SalGraphics* pGraphics )
+bool JavaSalBitmap::Create( const SalBitmap& /* rSalBmp */, SalGraphics* /* pGraphics */ )
 {
 	return false;
 }
 
 // ------------------------------------------------------------------
 
-bool JavaSalBitmap::Create( const SalBitmap& rSalBmp, USHORT nNewBitCount )
+bool JavaSalBitmap::Create( const SalBitmap& /* rSalBmp */, sal_uInt16 /* nNewBitCount */ )
 {
 	return false;
 }
@@ -287,7 +288,7 @@ void JavaSalBitmap::Destroy()
 
 // ------------------------------------------------------------------
 
-USHORT JavaSalBitmap::GetBitCount() const
+sal_uInt16 JavaSalBitmap::GetBitCount() const
 {
 	return mnBitCount;
 }
@@ -335,7 +336,7 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 	{
 		try
 		{
-			mpBits = new BYTE[ pBuffer->mnScanlineSize * pBuffer->mnHeight ];
+			mpBits = new sal_uInt8[ pBuffer->mnScanlineSize * pBuffer->mnHeight ];
 		}
 		catch( const std::bad_alloc& ) {}
 		if ( mpBits )
@@ -400,7 +401,7 @@ void JavaSalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, bool bReadOnly )
 		if ( !bReadOnly )
 		{
 			// Save the palette
-			USHORT nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
+			sal_uInt16 nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
 			if ( nColors )
 			{
 				maPalette = pBuffer->maPalette;
@@ -414,7 +415,7 @@ void JavaSalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, bool bReadOnly )
 
 // ------------------------------------------------------------------
 
-bool JavaSalBitmap::GetSystemData( BitmapSystemData& rData )
+bool JavaSalBitmap::GetSystemData( BitmapSystemData& /* rData */ )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalBitmap::GetSystemData not implemented\n" );

@@ -1,52 +1,53 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified September 2008 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
 
-#ifndef _SV_SVIDS_HRC
-#include <vcl/svids.hrc>
-#endif
-#include <vcl/svdata.hxx>
+#include <tools/rc.h>
+
+#include <svids.hrc>
+#include <svdata.hxx>
+#include <brdwin.hxx>
+#include <window.h>
+
 #include <vcl/metric.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/wrkwin.hxx>
 #include <vcl/fixed.hxx>
 #include <vcl/sound.hxx>
-#include <vcl/brdwin.hxx>
 #include <vcl/msgbox.hxx>
 #include <vcl/button.hxx>
-#ifndef _SV_RC_H
-#include <tools/rc.h>
-#endif
 #include <vcl/mnemonic.hxx>
-#include <vcl/window.h>
 
 
 
@@ -78,10 +79,10 @@ void MessBox::ImplInitMessBoxData()
 	mpFixedText 		= NULL;
 	mpFixedImage		= NULL;
 	mnSoundType 		= 0;
-	mbHelpBtn			= FALSE;
-	mbSound 			= TRUE;
+	mbHelpBtn			= sal_False;
+	mbSound 			= sal_True;
     mpCheckBox          = NULL;
-    mbCheck             = FALSE;
+    mbCheck             = sal_False;
 }
 
 // -----------------------------------------------------------------------
@@ -89,11 +90,11 @@ void MessBox::ImplInitMessBoxData()
 void MessBox::ImplInitButtons()
 {
 	WinBits nStyle = GetStyle();
-	USHORT	nOKFlags = BUTTONDIALOG_OKBUTTON;
-	USHORT	nCancelFlags = BUTTONDIALOG_CANCELBUTTON;
-	USHORT	nRetryFlags = 0;
-	USHORT	nYesFlags = 0;
-	USHORT	nNoFlags = 0;
+	sal_uInt16	nOKFlags = BUTTONDIALOG_OKBUTTON;
+	sal_uInt16	nCancelFlags = BUTTONDIALOG_CANCELBUTTON;
+	sal_uInt16	nRetryFlags = 0;
+	sal_uInt16	nYesFlags = 0;
+	sal_uInt16	nNoFlags = 0;
 
 	if ( nStyle & WB_OK_CANCEL )
 	{
@@ -141,8 +142,8 @@ void MessBox::ImplInitButtons()
 	}
     else if ( nStyle & WB_ABORT_RETRY_IGNORE )
     {
-        USHORT nAbortFlags = 0;
-        USHORT nIgnoreFlags = 0;
+        sal_uInt16 nAbortFlags = 0;
+        sal_uInt16 nIgnoreFlags = 0;
 
         if ( nStyle & WB_DEF_CANCEL )
             nAbortFlags |= BUTTONDIALOG_DEFBUTTON | BUTTONDIALOG_FOCUSBUTTON;
@@ -194,16 +195,15 @@ MessBox::MessBox( Window* pParent, const ResId& rResId ) :
 	ImplInitMessBoxData();
 
 	GetRes( rResId.SetRT( RSC_MESSBOX ) );
-	USHORT nHiButtons	= ReadShortRes();
-	USHORT nLoButtons	= ReadShortRes();
-	USHORT nHiDefButton = ReadShortRes();
-	USHORT nLoDefButton = ReadShortRes();
-	USHORT nHiHelpId	= ReadShortRes();
-	USHORT nLoHelpId	= ReadShortRes();
-	/* USHORT bSysModal	= */ ReadShortRes();
-	SetHelpId( ((ULONG)nHiHelpId << 16) + nLoHelpId );
-	WinBits nBits = (((ULONG)nHiButtons << 16) + nLoButtons) |
-					(((ULONG)nHiDefButton << 16) + nLoDefButton);
+	sal_uInt16 nHiButtons	= ReadShortRes();
+	sal_uInt16 nLoButtons	= ReadShortRes();
+	sal_uInt16 nHiDefButton = ReadShortRes();
+	sal_uInt16 nLoDefButton = ReadShortRes();
+	rtl::OString aHelpId( ReadByteStringRes() );
+	/* sal_uInt16 bSysModal	= */ ReadShortRes();
+	SetHelpId( aHelpId );
+	WinBits nBits = (((sal_uLong)nHiButtons << 16) + nLoButtons) |
+					(((sal_uLong)nHiDefButton << 16) + nLoDefButton);
 	ImplInit( pParent, nBits | WB_MOVEABLE | WB_HORZ | WB_CENTER );
 
 	ImplLoadRes( rResId );
@@ -235,12 +235,12 @@ MessBox::~MessBox()
 
 void MessBox::ImplPosControls()
 {
-	if ( GetHelpId() )
+	if ( GetHelpId().getLength() )
 	{
 		if ( !mbHelpBtn )
 		{
 			AddButton( BUTTON_HELP, BUTTONID_HELP, BUTTONDIALOG_HELPBUTTON, 3 );
-			mbHelpBtn = TRUE;
+			mbHelpBtn = sal_True;
 		}
 	}
 	else
@@ -248,7 +248,7 @@ void MessBox::ImplPosControls()
 		if ( mbHelpBtn )
 		{
 			RemoveButton( BUTTONID_HELP );
-			mbHelpBtn = FALSE;
+			mbHelpBtn = sal_False;
 		}
 	}
 
@@ -266,7 +266,7 @@ void MessBox::ImplPosControls()
 	long			nMaxLineWidth;
 	long			nWidth;
 	WinBits 		nWinStyle = WB_LEFT | WB_WORDBREAK | WB_NOLABEL | WB_INFO;
-	USHORT			nTextStyle = TEXT_DRAW_MULTILINE | TEXT_DRAW_TOP | TEXT_DRAW_LEFT;
+	sal_uInt16			nTextStyle = TEXT_DRAW_MULTILINE | TEXT_DRAW_TOP | TEXT_DRAW_LEFT;
 
 	if ( mpFixedText )
 		delete mpFixedText;
@@ -285,7 +285,7 @@ void MessBox::ImplPosControls()
 
 	// Message-Text um Tabs bereinigen
 	XubString	aTabStr( RTL_CONSTASCII_USTRINGPARAM( "    " ) );
-	USHORT		nIndex = 0;
+	sal_uInt16		nIndex = 0;
 	while ( nIndex != STRING_NOTFOUND )
 		nIndex = aMessText.SearchAndReplace( '\t', aTabStr, nIndex );
 
@@ -425,6 +425,8 @@ void MessBox::ImplPosControls()
     }
 
 	mpFixedText = new FixedText( this, nWinStyle );
+	if( mpFixedText->GetStyle() & WB_EXTRAOFFSET ) // TODO: use CalcMinimumSize() instead
+		aFixedSize.Width() += 2;
 	mpFixedText->SetPosSizePixel( aTextPos, aFixedSize );
 	mpFixedText->SetText( aMessText );
 	mpFixedText->Show();
@@ -448,14 +450,14 @@ void MessBox::StateChanged( StateChangedType nType )
 
 // -----------------------------------------------------------------------
 
-BOOL MessBox::GetCheckBoxState() const
+sal_Bool MessBox::GetCheckBoxState() const
 {
     return mpCheckBox ? mpCheckBox->IsChecked() : mbCheck;
 }
 
 // -----------------------------------------------------------------------
 
-void MessBox::SetCheckBoxState( BOOL bCheck )
+void MessBox::SetCheckBoxState( sal_Bool bCheck )
 {
     if( mpCheckBox ) mpCheckBox->Check( bCheck );
     mbCheck = bCheck;
@@ -472,15 +474,15 @@ void MessBox::SetDefaultCheckBoxText()
 
 // -----------------------------------------------------------------------
 
-BOOL MessBox::SetModeImage( const Image& rImage, BmpColorMode eMode )
+sal_Bool MessBox::SetModeImage( const Image& rImage, BmpColorMode eMode )
 {
     if( eMode == BMP_COLOR_NORMAL )
         SetImage( rImage );
     else if( eMode == BMP_COLOR_HIGHCONTRAST )
 		maImageHC = rImage;
     else
-        return FALSE;
-    return TRUE;
+        return sal_False;
+    return sal_True;
 }
 
 // -----------------------------------------------------------------------
@@ -501,9 +503,9 @@ void InfoBox::ImplInitInfoBoxData()
 	if ( !GetText().Len() )
 		SetText( Application::GetDisplayName() );
 
-	SetImage( GetSettings().GetStyleSettings().GetDialogColor().IsDark() ?
+	SetImage( GetSettings().GetStyleSettings().GetHighContrastMode() ?
                 InfoBox::GetStandardImageHC() : InfoBox::GetStandardImage() );
-	mnSoundType = ((USHORT)SOUND_INFO)+1;
+	mnSoundType = ((sal_uInt16)SOUND_INFO)+1;
 }
 
 // -----------------------------------------------------------------------
@@ -518,6 +520,14 @@ InfoBox::InfoBox( Window* pParent, const XubString& rMessage ) :
 
 InfoBox::InfoBox( Window* pParent, const ResId & rResId ) :
 	MessBox( pParent, rResId.SetRT( RSC_INFOBOX ) )
+{
+	ImplInitInfoBoxData();
+}
+
+// -----------------------------------------------------------------------
+
+InfoBox::InfoBox( Window* pParent, WinBits nStyle, const XubString& rMessage ) :
+	MessBox( pParent, nStyle, ImplGetSVEmptyStr(), rMessage )
 {
 	ImplInitInfoBoxData();
 }
@@ -547,7 +557,7 @@ void WarningBox::ImplInitWarningBoxData()
 		SetText( Application::GetDisplayName() );
 
 	SetImage( WarningBox::GetStandardImage() );
-	mnSoundType = ((USHORT)SOUND_WARNING)+1;
+	mnSoundType = ((sal_uInt16)SOUND_WARNING)+1;
 }
 
 // -----------------------------------------------------------------------
@@ -592,9 +602,9 @@ void ErrorBox::ImplInitErrorBoxData()
 	if ( !GetText().Len() )
 		SetText( Application::GetDisplayName() );
 
-	SetImage( GetSettings().GetStyleSettings().GetDialogColor().IsDark() ? 
+	SetImage( GetSettings().GetStyleSettings().GetHighContrastMode() ? 
         ErrorBox::GetStandardImageHC() : ErrorBox::GetStandardImage() );
-	mnSoundType = ((USHORT)SOUND_ERROR)+1;
+	mnSoundType = ((sal_uInt16)SOUND_ERROR)+1;
 }
 
 // -----------------------------------------------------------------------
@@ -638,9 +648,9 @@ void QueryBox::ImplInitQueryBoxData()
 	if ( !GetText().Len() )
 		SetText( Application::GetDisplayName() );
 
-	SetImage( GetSettings().GetStyleSettings().GetDialogColor().IsDark() ?
+	SetImage( GetSettings().GetStyleSettings().GetHighContrastMode() ?
         QueryBox::GetStandardImageHC() : QueryBox::GetStandardImage() );
-	mnSoundType = ((USHORT)SOUND_QUERY)+1;
+	mnSoundType = ((sal_uInt16)SOUND_QUERY)+1;
 }
 
 // -----------------------------------------------------------------------

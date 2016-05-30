@@ -35,16 +35,12 @@
 
 #import <dlfcn.h>
 
-#include <saldata.hxx>
-#include <salframe.h>
-#include <salinst.h>
+#include <comphelper/processfactory.hxx>
+#include <toolkit/helper/vclunohelper.hxx>
 #include <vcl/edit.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/unohelp.hxx>
-#include <vcl/window.h>
 #include <vcl/window.hxx>
-#include <comphelper/processfactory.hxx>
-#include <toolkit/helper/vclunohelper.hxx>
 #include <vos/mutex.hxx>
 #include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
 #include <com/sun/star/frame/XDispatchHelper.hpp>
@@ -54,7 +50,14 @@
 
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
+#include <Cocoa/Cocoa.h>
 #include <postmac.h>
+#undef check
+
+#include "window.h"
+#include "java/saldata.hxx"
+#include "java/salframe.h"
+#include "java/salinst.h"
 
 #include "VCLEventQueue_cocoa.h"
 
@@ -64,11 +67,7 @@ static Application_setPrivateClipboard_Type *pApplication_setPrivateClipboard = 
 
 using namespace com::sun::star::awt;
 using namespace com::sun::star::beans;
-using namespace com::sun::star::container;
-using namespace com::sun::star::datatransfer;
-using namespace com::sun::star::datatransfer::clipboard;
-using namespace com::sun::star::frame;
-using namespace com::sun::star::uno;
+using namespace com::sun::star;
 using namespace vcl;
 using namespace vos;
 
@@ -118,7 +117,7 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 				if ( pWindow )
 				{
 					// Try to copy current selection to system clipboard
-					Reference< XClipboard > xClipboard = pWindow->GetClipboard();
+					uno::Reference< datatransfer::clipboard::XClipboard > xClipboard = pWindow->GetClipboard();
 					if ( !pApplication_setPrivateClipboard )
 						pApplication_setPrivateClipboard = (Application_setPrivateClipboard_Type *)dlsym( RTLD_DEFAULT, "Application_setPrivateClipboard" );
 					if ( xClipboard.is() && pApplication_setPrivateClipboard )
@@ -126,22 +125,22 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 						pApplication_setPrivateClipboard( &xClipboard, sal_True );
 						try
 						{
-							xClipboard->setContents( Reference< XTransferable >(), Reference< XClipboardOwner >() );
+							xClipboard->setContents( uno::Reference< datatransfer::XTransferable >(), uno::Reference< datatransfer::clipboard::XClipboardOwner >() );
 
-							Reference< XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+							uno::Reference< frame::XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), uno::UNO_QUERY );
 							if ( xFramesSupplier.is() )
 							{
-								Reference< XIndexAccess > xList( xFramesSupplier->getFrames(), UNO_QUERY );
+								uno::Reference< container::XIndexAccess > xList( xFramesSupplier->getFrames(), uno::UNO_QUERY );
 								if ( xList.is() )
 								{
 									sal_Int32 nCount = xList->getCount();
 									for ( sal_Int32 i = 0; i < nCount; i++ )
 									{
-										Reference< XFrame > xFrame;
+										uno::Reference< frame::XFrame > xFrame;
 										xList->getByIndex( i ) >>= xFrame;
 										if ( xFrame.is() )
 										{
-											Reference< XWindow > xWindow = xFrame->getComponentWindow();
+											uno::Reference< XWindow > xWindow = xFrame->getComponentWindow();
 											if ( xWindow.is() )
 											{
 												Window *pCurrentWindow = VCLUnoHelper::GetWindow( xWindow );
@@ -150,12 +149,12 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 												if ( pCurrentWindow == pWindow )
 												
 												{
-													Reference< XDispatchProvider > xDispatchProvider( xFrame, UNO_QUERY );
+													uno::Reference< frame::XDispatchProvider > xDispatchProvider( xFrame, uno::UNO_QUERY );
 													if ( xDispatchProvider.is() )
 													{
-														Reference< XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" ) ) ), UNO_QUERY );
+														uno::Reference< frame::XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" ) ) ), uno::UNO_QUERY );
 														if ( xDispatchHelper.is() )
-															xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Copy" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, Sequence< PropertyValue >() );
+															xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Copy" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, uno::Sequence< PropertyValue >() );
 													}
 
 													break;
@@ -171,20 +170,20 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 							if ( pEditWindow )
 								pEditWindow->Copy();
 
-							Reference< XTransferable > xTransferable = xClipboard->getContents();
+							uno::Reference< datatransfer::XTransferable > xTransferable = xClipboard->getContents();
 							if ( xTransferable.is() )
 							{
-								DataFlavor aFlavor;
+								datatransfer::DataFlavor aFlavor;
 
 								// Handle string selection
 								if ( pTextSelection )
 								{
-									Type aType( getCppuType( ( OUString* )0 ) );
+									uno::Type aType( getCppuType( ( OUString* )0 ) );
 									aFlavor.MimeType = OUString( RTL_CONSTASCII_USTRINGPARAM( "text/plain;charset=utf-16" ) );
 									aFlavor.DataType = aType;
 									if ( xTransferable->isDataFlavorSupported( aFlavor ) )
 									{
-										Any aValue = xTransferable->getTransferData( aFlavor );
+										uno::Any aValue = xTransferable->getTransferData( aFlavor );
 										if ( aValue.getValueType().equals( aType ) )
 										{
 											OUString aText;
@@ -198,15 +197,15 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 								// Handle RTF selection
 								if ( pRTFSelection )
 								{
-									Type aType( getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ) );
+									uno::Type aType( getCppuType( ( uno::Sequence< sal_Int8 >* )0 ) );
 									aFlavor.MimeType = OUString( RTL_CONSTASCII_USTRINGPARAM( "text/richtext" ) );
 									aFlavor.DataType = aType;
 									if ( xTransferable->isDataFlavorSupported( aFlavor ) )
 									{
-										Any aValue = xTransferable->getTransferData( aFlavor );
+										uno::Any aValue = xTransferable->getTransferData( aFlavor );
 										if ( aValue.getValueType().equals( aType ) )
 										{
-											Sequence< sal_Int8 > aData;
+											uno::Sequence< sal_Int8 > aData;
 											aValue >>= aData;
 											if ( aData.getLength() )
 												*pRTFSelection = CFDataCreate( NULL, (const UInt8 *)aData.getArray(), aData.getLength() );
@@ -231,9 +230,9 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 
 // ----------------------------------------------------------------------------
 
-BOOL VCLEventQueue_paste( void *pNSWindow )
+sal_Bool VCLEventQueue_paste( void *pNSWindow )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	if ( !Application::IsShutDown() )
 	{
@@ -261,20 +260,20 @@ BOOL VCLEventQueue_paste( void *pNSWindow )
 
 				if ( pWindow )
 				{
-					Reference< XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+					uno::Reference< frame::XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), uno::UNO_QUERY );
 					if ( xFramesSupplier.is() )
 					{
-						Reference< XIndexAccess > xList( xFramesSupplier->getFrames(), UNO_QUERY );
+						uno::Reference< container::XIndexAccess > xList( xFramesSupplier->getFrames(), uno::UNO_QUERY );
 						if ( xList.is() )
 						{
 							sal_Int32 nCount = xList->getCount();
 							for ( sal_Int32 i = 0; i < nCount; i++ )
 							{
-								Reference< XFrame > xFrame;
+								uno::Reference< frame::XFrame > xFrame;
 								xList->getByIndex( i ) >>= xFrame;
 								if ( xFrame.is() )
 								{
-									Reference< XWindow > xWindow = xFrame->getComponentWindow();
+									uno::Reference< XWindow > xWindow = xFrame->getComponentWindow();
 									if ( xWindow.is() )
 									{
 										Window *pCurrentWindow = VCLUnoHelper::GetWindow( xWindow );
@@ -283,14 +282,14 @@ BOOL VCLEventQueue_paste( void *pNSWindow )
 										if ( pCurrentWindow == pWindow )
 										
 										{
-											Reference< XDispatchProvider > xDispatchProvider( xFrame, UNO_QUERY );
+											uno::Reference< frame::XDispatchProvider > xDispatchProvider( xFrame, uno::UNO_QUERY );
 											if ( xDispatchProvider.is() )
 											{
-												Reference< XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" ) ) ), UNO_QUERY );
+												uno::Reference< frame::XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" ) ) ), uno::UNO_QUERY );
 												if ( xDispatchHelper.is() )
 												{
-													Any aRet = xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Paste" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, Sequence< PropertyValue >() );
-													bRet = ( aRet.getValue() ? TRUE : FALSE );
+													uno::Any aRet = xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Paste" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, uno::Sequence< PropertyValue >() );
+													bRet = ( aRet.getValue() ? sal_True : sal_False );
 												}
 											}
 

@@ -35,10 +35,6 @@
 
 #include <map>
 
-#include <saldata.hxx>
-#include <salframe.h>
-#include <salinst.h>
-#include <salmenu.h>
 #include <vcl/window.hxx>
 #include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
 
@@ -46,6 +42,12 @@
 #import <CoreFoundation/CoreFoundation.h>
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
+#undef check
+
+#include "java/saldata.hxx"
+#include "java/salframe.h"
+#include "java/salinst.h"
+#include "java/salmenu.h"
 
 #include "../app/salinst_cocoa.h"
 #include "../java/VCLApplicationDelegate_cocoa.h"
@@ -54,8 +56,7 @@
 
 static ::std::map< JavaSalMenu*, JavaSalMenu* > aMenuMap;
 
-using namespace com::sun::star::datatransfer::clipboard;
-using namespace com::sun::star::uno;
+using namespace com::sun::star;
 using namespace vcl;
 
 @interface VCLMenuWrapperArgs : NSObject
@@ -130,17 +131,17 @@ using namespace vcl;
 {
 }
 - (id)initWithTitle:(NSString *)pTitle;
-- (MacOSBOOL)performKeyEquivalent:(NSEvent *)pEvent;
+- (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
 @end
 
 @interface VCLMenuWrapper : NSObject
 {
 	JavaSalFrame*			mpFrame;
 	VCLMenu*				mpMenu;
-	MacOSBOOL				mbMenuBar;
+	BOOL					mbMenuBar;
 	NSMutableArray*			mpMenuItems;
 }
-- (id)init:(MacOSBOOL)bMenuBar;
+- (id)init:(BOOL)bMenuBar;
 - (void)checkMenuItem:(VCLMenuWrapperArgs *)pArgs;
 - (void)destroy:(id)pObject;
 - (void)enableMenuItem:(VCLMenuWrapperArgs *)pArgs;
@@ -155,12 +156,12 @@ using namespace vcl;
 - (void)setMenuItemTitle:(VCLMenuWrapperArgs *)pArgs;
 @end
 
-static MacOSBOOL bInPerformKeyEquivalent = NO;
+static BOOL bInPerformKeyEquivalent = NO;
 static NSTimeInterval nLastMenuItemSelectedTime = 0;
 static JavaSalFrame *pMenuBarFrame = NULL;
 static VCLMenuWrapper *pMenuBarMenu = nil;
 static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
-static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
+static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 @implementation VCLMenu
 
@@ -173,9 +174,9 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 	return self;
 }
 
-- (MacOSBOOL)performKeyEquivalent:(NSEvent *)pEvent
+- (BOOL)performKeyEquivalent:(NSEvent *)pEvent
 {
-	MacOSBOOL bRet = NO;
+	BOOL bRet = NO;
 
 	bInPerformKeyEquivalent = YES;
 	bRet = [super performKeyEquivalent:pEvent];
@@ -187,7 +188,7 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 @implementation VCLMainMenuDidEndTracking
 
-+ (void)mainMenuDidEndTracking:(MacOSBOOL)bNoDelay
++ (void)mainMenuDidEndTracking:(BOOL)bNoDelay
 {
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
@@ -235,20 +236,20 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 @interface VCLMenuItem : NSMenuItem
 {
-	USHORT					mnID;
+	sal_uInt16				mnID;
 	Menu*					mpMenu;
-	MacOSBOOL				mbReallyEnabled;
+	BOOL					mbReallyEnabled;
 }
-- (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(USHORT)nID menu:(Menu *)pMenu;
-- (MacOSBOOL)isReallyEnabled;
+- (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(sal_uInt16)nID menu:(Menu *)pMenu;
+- (BOOL)isReallyEnabled;
 - (void)selected;
-- (void)setReallyEnabled:(MacOSBOOL)bEnabled;
-- (MacOSBOOL)validateMenuItem:(NSMenuItem *)pMenuItem;
+- (void)setReallyEnabled:(BOOL)bEnabled;
+- (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem;
 @end
 
 @implementation VCLMenuWrapper
 
-- (id)init:(MacOSBOOL)bMenuBar
+- (id)init:(BOOL)bMenuBar
 {
 	[super init];
 
@@ -286,6 +287,8 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 - (void)destroy:(id)pObject
 {
+	(void)pObject;
+
 	[self removeMenuAsMainMenu:self];
 
 	if ( mpMenu )
@@ -388,6 +391,8 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 - (void)removeMenuAsMainMenu:(id)pObject
 {
+	(void)pObject;
+
 	if ( self != pMenuBarMenu )
 		return;
 
@@ -484,6 +489,8 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 - (void)setMenuAsMainMenu:(id)pObject
 {
+	(void)pObject;
+
 	if ( !mbMenuBar || self == pMenuBarMenu )
 		return;
 
@@ -663,8 +670,10 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 @implementation VCLMenuItem
 
-- (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(USHORT)nID menu:(Menu *)pMenu
+- (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(sal_uInt16)nID menu:(Menu *)pMenu
 {
+	(void)eType;
+
 	[super initWithTitle:( pTitle ? pTitle : @"" ) action:nil keyEquivalent:@""];
 
 	mnID = nID;
@@ -677,14 +686,14 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 	return self;
 }
 
-- (MacOSBOOL)isReallyEnabled
+- (BOOL)isReallyEnabled
 {
 	return mbReallyEnabled;
 }
 
 - (void)selected
 {
-	MacOSBOOL bOldInPerformKeyEquivalent = bInPerformKeyEquivalent;
+	BOOL bOldInPerformKeyEquivalent = bInPerformKeyEquivalent;
 	bInPerformKeyEquivalent = YES;
 
 	JavaSalEvent *pActivateEvent = new JavaSalEvent( SALEVENT_MENUACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
@@ -703,15 +712,15 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 	bInPerformKeyEquivalent = bOldInPerformKeyEquivalent;
 }
 
-- (void)setReallyEnabled:(MacOSBOOL)bEnabled
+- (void)setReallyEnabled:(BOOL)bEnabled
 {
 	mbReallyEnabled = bEnabled;
 	[self setEnabled:mbReallyEnabled];
 }
 
-- (MacOSBOOL)validateMenuItem:(NSMenuItem *)pMenuItem
+- (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem
 {
-	MacOSBOOL bRet = YES;
+	BOOL bRet = YES;
 
 	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
 	if ( pAppDelegate )
@@ -736,10 +745,10 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 @interface VCLCreateMenu : NSObject
 {
 	VCLMenuWrapper*			mpMenu;
-	MacOSBOOL				mbMenuBar;
+	BOOL					mbMenuBar;
 }
-+ (id)create:(MacOSBOOL)bMenuBar;
-- (id)init:(MacOSBOOL)bMenuBar;
++ (id)create:(BOOL)bMenuBar;
+- (id)init:(BOOL)bMenuBar;
 - (void)dealloc;
 - (void)createMenu:(id)pObject;
 - (VCLMenuWrapper *)menu;
@@ -747,14 +756,14 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 @implementation VCLCreateMenu
 
-+ (id)create:(MacOSBOOL)bMenuBar
++ (id)create:(BOOL)bMenuBar
 {
 	VCLCreateMenu *pRet = [[VCLCreateMenu alloc] init:bMenuBar];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)init:(MacOSBOOL)bMenuBar
+- (id)init:(BOOL)bMenuBar
 {
 	[super init];
 
@@ -774,6 +783,8 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 - (void)createMenu:(id)pObject
 {
+	(void)pObject;
+
 	if ( mpMenu )
 		return;
 
@@ -789,14 +800,14 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 @interface VCLCreateMenuItem : NSObject
 {
-	USHORT					mnID;
+	sal_uInt16				mnID;
 	Menu*					mpMenu;
 	NSMenuItem*				mpMenuItem;
 	NSString*				mpTitle;
 	MenuItemType			meType;
 }
-+ (id)createWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(USHORT)nID menu:(Menu *)pMenu;
-- (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(USHORT)nID menu:(Menu *)pMenu;
++ (id)createWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(sal_uInt16)nID menu:(Menu *)pMenu;
+- (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(sal_uInt16)nID menu:(Menu *)pMenu;
 - (void)dealloc;
 - (void)createMenuItem:(id)pObject;
 - (NSMenuItem *)menuItem;
@@ -804,14 +815,14 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 @implementation VCLCreateMenuItem
 
-+ (id)createWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(USHORT)nID menu:(Menu *)pMenu
++ (id)createWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(sal_uInt16)nID menu:(Menu *)pMenu
 {
 	VCLCreateMenuItem *pRet = [[VCLCreateMenuItem alloc] initWithTitle:pTitle type:eType id:nID menu:pMenu];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(USHORT)nID menu:(Menu *)pMenu
+- (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(sal_uInt16)nID menu:(Menu *)pMenu
 {
 	[super init];
 
@@ -839,6 +850,8 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 - (void)createMenuItem:(id)pObject
 {
+	(void)pObject;
+
 	if ( mpMenuItem )
 		return;
 
@@ -891,6 +904,8 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 - (void)destroy:(id)pObject
 {
+	(void)pObject;
+
 	if ( mpMenuItem )
 		[mpMenuItem release];
 }
@@ -902,7 +917,7 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 JavaSalMenu::JavaSalMenu() :
 	mpMenu( NULL ),
 	mpParentFrame( NULL ),
-	mbIsMenuBarMenu( FALSE ),
+	mbIsMenuBarMenu( sal_False ),
 	mpParentVCLMenu( NULL )
 {
 	aMenuMap[ this ] = this;
@@ -967,7 +982,7 @@ void JavaSalMenu::SetMenuBarToFocusFrame()
 			{
 				JavaSalInstance *pInst = GetSalData()->mpFirstInstance;
 				if ( pInst )
-					pEmptyMenuBar = (JavaSalMenu *)pInst->CreateMenu( TRUE, NULL );
+					pEmptyMenuBar = (JavaSalMenu *)pInst->CreateMenu( sal_True, NULL );
 			}
 
 			if ( pEmptyMenuBar && pEmptyMenuBar->mbIsMenuBarMenu && pEmptyMenuBar->mpMenu )
@@ -980,9 +995,9 @@ void JavaSalMenu::SetMenuBarToFocusFrame()
 
 //-----------------------------------------------------------------------------
 
-BOOL JavaSalMenu::VisibleMenuBar()
+sal_Bool JavaSalMenu::VisibleMenuBar()
 {
-	return TRUE;
+	return sal_True;
 }
 
 //-----------------------------------------------------------------------------
@@ -1067,7 +1082,7 @@ void JavaSalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsi
 
 //-----------------------------------------------------------------------------
 
-void JavaSalMenu::CheckItem( unsigned nPos, BOOL bCheck )
+void JavaSalMenu::CheckItem( unsigned nPos, sal_Bool bCheck )
 {
 	if ( mpMenu )
 	{
@@ -1083,7 +1098,7 @@ void JavaSalMenu::CheckItem( unsigned nPos, BOOL bCheck )
 
 //-----------------------------------------------------------------------------
 
-void JavaSalMenu::EnableItem( unsigned nPos, BOOL bEnable )
+void JavaSalMenu::EnableItem( unsigned nPos, sal_Bool bEnable )
 {
 	if ( mpMenu )
 	{
@@ -1099,7 +1114,7 @@ void JavaSalMenu::EnableItem( unsigned nPos, BOOL bEnable )
 
 //-----------------------------------------------------------------------------
 
-void JavaSalMenu::SetItemImage( unsigned nPos, SalMenuItem* pSalMenuItem, const Image& rImage )
+void JavaSalMenu::SetItemImage( unsigned /* nPos */, SalMenuItem* /* pSalMenuItem */, const Image& /* rImage */ )
 {
 	// for now we'll ignore putting icons in AWT menus.  Most Mac apps don't
 	// have them, so they're kind of extraneous on the platform anyhow.
@@ -1107,7 +1122,7 @@ void JavaSalMenu::SetItemImage( unsigned nPos, SalMenuItem* pSalMenuItem, const 
 
 //-----------------------------------------------------------------------------
 
-void JavaSalMenu::SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const XubString& rText )
+void JavaSalMenu::SetItemText( unsigned /* nPos */, SalMenuItem* pSalMenuItem, const XubString& rText )
 {
 	// assume pSalMenuItem is a pointer to the menu item object already at nPos
 	JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pSalMenuItem;
@@ -1132,7 +1147,7 @@ void JavaSalMenu::SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const X
 
 //-----------------------------------------------------------------------------
 
-void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const KeyCode& rKeyCode, const XubString& rKeyName )
+void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const KeyCode& rKeyCode, const XubString& /* rKeyName */ )
 {
 	// Only pass through keycodes that are using the command key as Java will
 	// always add a command key to any shortcut. Also, ignore any shortcuts
@@ -1170,7 +1185,7 @@ void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, cons
 
 //-----------------------------------------------------------------------------
 
-void JavaSalMenu::GetSystemMenuData( SystemMenuData* pData )
+void JavaSalMenu::GetSystemMenuData( SystemMenuData* /* pData */ )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalMenu::GetSystemMenuData not implemented\n" );
@@ -1203,7 +1218,7 @@ JavaSalMenuItem::~JavaSalMenuItem()
 
 //-----------------------------------------------------------------------------
 
-SalMenu* JavaSalInstance::CreateMenu( BOOL bMenuBar, Menu *pVCLMenuWrapper )
+SalMenu* JavaSalInstance::CreateMenu( sal_Bool bMenuBar, Menu *pVCLMenuWrapper )
 {
 #ifndef NO_NATIVE_MENUS
 	JavaSalMenu *pSalMenu = new JavaSalMenu();
@@ -1333,7 +1348,7 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdate
 		Window *pWindow = pVCLMenuWrapper->GetWindow();
 		if ( pWindow )
 		{
-			Reference< XClipboard > aClipboard = pWindow->GetClipboard();
+			uno::Reference< datatransfer::clipboard::XClipboard > aClipboard = pWindow->GetClipboard();
 			if ( aClipboard.is() )
 				aClipboard->getContents();
 		}
@@ -1344,8 +1359,8 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdate
 	pActivateEvent->dispatch();
 	pActivateEvent->release();
 
-	USHORT nCount = pVCLMenuWrapper->GetItemCount();
-	for( USHORT i = 0; i < nCount; i++ )
+	sal_uInt16 nCount = pVCLMenuWrapper->GetItemCount();
+	for( sal_uInt16 i = 0; i < nCount; i++ )
 	{
 		// If this menu item has a submenu, fix that submenu up
 		JavaSalMenuItem *pSalMenuItem = (JavaSalMenuItem *)pVCLMenuWrapper->GetItemSalItem( i );

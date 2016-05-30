@@ -44,17 +44,17 @@
  ************************************************************************/
 
 #include <dlfcn.h>
-
 #include <sys/sysctl.h>
-#include <unicode/ubidi.h>
 
-#include <salatslayout.hxx>
-#include <saldata.hxx>
-#include <salgdi.h>
-#include <salinst.h>
-#include <vcl/outfont.hxx>
-#include <vcl/svapp.hxx>
 #include <basegfx/polygon/b2dpolypolygon.hxx>
+#include <unicode/ubidi.h>
+#include <vcl/svapp.hxx>
+
+#include "outfont.hxx"
+#include "java/salatslayout.hxx"
+#include "java/saldata.hxx"
+#include "java/salgdi.h"
+#include "java/salinst.h"
 
 #define MAXEXTRACHARS 100
 #ifdef USE_SUBPIXEL_TEXT_RENDERING
@@ -203,7 +203,7 @@ using namespace vcl;
 
 // ============================================================================
 
-ImplATSLayoutDataHash::ImplATSLayoutDataHash( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, JavaImplFont *pFont ) :
+ImplATSLayoutDataHash::ImplATSLayoutDataHash( const sal_Unicode *pStr, int /* nLen */, int nMinCharPos, int nEndCharPos, int nFlags, JavaImplFont *pFont ) :
 	mnLen( nEndCharPos - nMinCharPos ),
 	mnFontID( (CTFontRef)pFont->getNativeFont() ),
 	mfFontSize( pFont->getSize() ),
@@ -379,7 +379,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, in
 
 // ----------------------------------------------------------------------------
 
-ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, JavaImplFont *pFont, const SalATSLayout *pCurrentLayout ) :
+ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /* nFallbackLevel */, JavaImplFont *pFont, const SalATSLayout *pCurrentLayout ) :
 	mnRefCount( 1 ),
 	mpHash( pLayoutHash ),
 	mpFont( NULL ),
@@ -1019,7 +1019,7 @@ static void SalCGPathApplier( void *pInfo, const CGPathElement *pElement )
 		}
 		case kCGPathElementAddQuadCurveToPoint:
 		{
-			USHORT nSize = pPolygonList->back().GetSize();
+			sal_uInt16 nSize = pPolygonList->back().GetSize();
 			if ( nSize )
 			{
 				Point aStart( pPolygonList->back().GetPoint( nSize - 1 ) );
@@ -1037,7 +1037,7 @@ static void SalCGPathApplier( void *pInfo, const CGPathElement *pElement )
 			Point aStart( Float32ToLong( pElement->points[ 0 ].x * UNITS_PER_PIXEL ), Float32ToLong( pElement->points[ 0 ].y * -1 * UNITS_PER_PIXEL ) );
 			Point aOffCurve( Float32ToLong( pElement->points[ 1 ].x * UNITS_PER_PIXEL ), Float32ToLong( pElement->points[ 1 ].y * -1 * UNITS_PER_PIXEL ) );
 			Point aEnd( Float32ToLong( pElement->points[ 2 ].x * UNITS_PER_PIXEL ), Float32ToLong( pElement->points[ 2 ].y * -1 * UNITS_PER_PIXEL ) );
-			USHORT nSize = pPolygonList->back().GetSize();
+			sal_uInt16 nSize = pPolygonList->back().GetSize();
 			pPolygonList->back().Insert( nSize++, aStart, POLY_CONTROL );
 			pPolygonList->back().Insert( nSize++, aOffCurve, POLY_CONTROL );
 			pPolygonList->back().Insert( nSize, aEnd );
@@ -1045,7 +1045,7 @@ static void SalCGPathApplier( void *pInfo, const CGPathElement *pElement )
 		}
 		case kCGPathElementCloseSubpath:
 		{
-			USHORT nSize = pPolygonList->back().GetSize();
+			sal_uInt16 nSize = pPolygonList->back().GetSize();
 			if ( nSize > 1 )
 				pPolygonList->back().Insert( nSize, Point( pPolygonList->back().GetPoint( 0 ) ) );
 			break;
@@ -2102,14 +2102,14 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pFallbackFont ? pFallbackFont->getNativeFont() : 0 );
 			if ( it == pSalData->maNativeFontMapping.end() || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetWeight() != mpGraphics->mnFontWeight || ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) != mpGraphics->mbFontItalic || it->second->GetPitch() != mpGraphics->mnFontPitch )
 			{
-				USHORT nHighScore = 0;
+				sal_uInt16 nHighScore = 0;
 				sal_IntPtr nNativeFont = mpFont->getNativeFont();
 				for ( it = pSalData->maNativeFontMapping.begin(); it != pSalData->maNativeFontMapping.end(); ++it )
 				{
 					if ( it->first == nNativeFont )
 						continue;
 
-					USHORT nScore = ( ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) == mpGraphics->mbFontItalic ? 8 : 0 );
+					sal_uInt16 nScore = ( ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) == mpGraphics->mbFontItalic ? 8 : 0 );
 					nScore += ( it->second->GetWeight() == mpGraphics->mnFontWeight ? 4 : 0 );
 					nScore += ( it->second->GetFamilyType() == mpGraphics->mnFontFamily ? 2 : 0 );
 					nScore += ( it->second->GetPitch() == mpGraphics->mnFontPitch ? 1 : 0 );
@@ -2258,7 +2258,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 // ----------------------------------------------------------------------------
 
-bool SalATSLayout::GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) const
+bool SalATSLayout::GetBoundRect( SalGraphics& /* rGraphics */, Rectangle& rRect ) const
 {
 	rRect.SetEmpty();
 
@@ -2406,7 +2406,7 @@ bool SalATSLayout::GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) cons
 
 // ----------------------------------------------------------------------------
 
-bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVector ) const
+bool SalATSLayout::GetOutline( SalGraphics& /* rGraphics */, B2DPolyPolygonVector& rVector ) const
 {
 	int nMaxGlyphs = 256;
 	sal_GlyphId aGlyphArray[ nMaxGlyphs ];
