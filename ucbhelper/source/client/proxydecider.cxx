@@ -1,37 +1,40 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified December 2006 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_ucbhelper.hxx"
 
 /**************************************************************************
-								TODO
+                                TODO
  **************************************************************************
 
  *************************************************************************/
@@ -61,13 +64,15 @@
 using namespace com::sun::star;
 using namespace ucbhelper;
 
-#define CONFIG_ROOT_KEY     "org.openoffice.Inet/Settings"
-#define PROXY_TYPE_KEY      "ooInetProxyType"
-#define NO_PROXY_LIST_KEY   "ooInetNoProxy"
-#define HTTP_PROXY_NAME_KEY "ooInetHTTPProxyName"
-#define HTTP_PROXY_PORT_KEY "ooInetHTTPProxyPort"
-#define FTP_PROXY_NAME_KEY  "ooInetFTPProxyName"
-#define FTP_PROXY_PORT_KEY  "ooInetFTPProxyPort"
+#define CONFIG_ROOT_KEY      "org.openoffice.Inet/Settings"
+#define PROXY_TYPE_KEY       "ooInetProxyType"
+#define NO_PROXY_LIST_KEY    "ooInetNoProxy"
+#define HTTP_PROXY_NAME_KEY  "ooInetHTTPProxyName"
+#define HTTP_PROXY_PORT_KEY  "ooInetHTTPProxyPort"
+#define HTTPS_PROXY_NAME_KEY "ooInetHTTPSProxyName"
+#define HTTPS_PROXY_PORT_KEY "ooInetHTTPSProxyPort"
+#define FTP_PROXY_NAME_KEY   "ooInetFTPProxyName"
+#define FTP_PROXY_PORT_KEY   "ooInetFTPProxyPort"
 
 //=========================================================================
 namespace ucbhelper
@@ -102,7 +107,7 @@ class HostnameCache
     typedef std::pair< rtl::OUString, rtl::OUString > HostListEntry;
 
     std::list< HostListEntry >     m_aHostList;
-    sal_uInt32                     m_nCapacity;                           
+    sal_uInt32                     m_nCapacity;
 
 public:
     explicit HostnameCache( sal_uInt32 nCapacity )
@@ -119,7 +124,7 @@ public:
         {
             if ( (*it).first == rKey )
             {
-                rValue = (*it).second; 
+                rValue = (*it).second;
                 return true;
             }
             it++;
@@ -132,7 +137,7 @@ public:
         if ( m_aHostList.size() == m_nCapacity )
             m_aHostList.resize( m_nCapacity / 2 );
 
-        m_aHostList.push_front( HostListEntry( rKey, rValue ) ); 
+        m_aHostList.push_front( HostListEntry( rKey, rValue ) );
     }
 };
 
@@ -142,6 +147,7 @@ class InternetProxyDecider_Impl :
 {
     mutable osl::Mutex                       m_aMutex;
     InternetProxyServer                      m_aHttpProxy;
+    InternetProxyServer                      m_aHttpsProxy;
     InternetProxyServer                      m_aFtpProxy;
     const InternetProxyServer                m_aEmptyProxy;
 #if defined USE_JAVA && defined MACOSX
@@ -261,6 +267,63 @@ bool WildCard::Matches( const rtl::OUString& rString ) const
 }
 
 //=========================================================================
+bool getConfigStringValue(
+    const uno::Reference< container::XNameAccess > & xNameAccess,
+    const char * key,
+    rtl::OUString & value )
+{
+    try
+    {
+        if ( !( xNameAccess->getByName( rtl::OUString::createFromAscii( key ) )
+                >>= value ) )
+        {
+            OSL_ENSURE( sal_False,
+                        "InternetProxyDecider - "
+                        "Error getting config item value!" );
+            return false;
+        }
+    }
+    catch ( lang::WrappedTargetException const & )
+    {
+        return false;
+    }
+    catch ( container::NoSuchElementException const & )
+    {
+        return false;
+    }
+    return true;
+}
+
+//=========================================================================
+bool getConfigInt32Value(
+    const uno::Reference< container::XNameAccess > & xNameAccess,
+    const char * key,
+    sal_Int32 & value )
+{
+    try
+    {
+        uno::Any aValue = xNameAccess->getByName(
+            rtl::OUString::createFromAscii( key ) );
+        if ( aValue.hasValue() && !( aValue >>= value ) )
+        {
+            OSL_ENSURE( sal_False,
+                        "InternetProxyDecider - "
+                        "Error getting config item value!" );
+            return false;
+        }
+    }
+    catch ( lang::WrappedTargetException const & )
+    {
+        return false;
+    }
+    catch ( container::NoSuchElementException const & )
+    {
+        return false;
+    }
+    return true;
+}
+
+//=========================================================================
 //=========================================================================
 //
 // InternetProxyDecider_Impl Implementation.
@@ -306,127 +369,43 @@ InternetProxyDecider_Impl::InternetProxyDecider_Impl(
 
             if ( xNameAccess.is() )
             {
-                try
-                {
-                    if ( !( xNameAccess->getByName(
-                                rtl::OUString::createFromAscii(
-                                    PROXY_TYPE_KEY ) ) >>= m_nProxyType ) )
-                    {
-                        OSL_ENSURE( sal_False,
-                                    "InternetProxyDecider - "
-                                    "Error getting config item value!" );
-                    }
-                }
-                catch ( lang::WrappedTargetException const & )
-                {
-                }
-                catch ( container::NoSuchElementException const & )
-                {
-                }
+                // *** Proxy type ***
+                getConfigInt32Value(
+                    xNameAccess, PROXY_TYPE_KEY, m_nProxyType );
 
+                // *** No proxy list ***
                 rtl::OUString aNoProxyList;
-                try
-                {
-                    if ( !( xNameAccess->getByName(
-                                rtl::OUString::createFromAscii(
-                                    NO_PROXY_LIST_KEY ) ) >>= aNoProxyList ) )
-                    {
-                        OSL_ENSURE( sal_False,
-                                    "InternetProxyDecider - "
-                                    "Error getting config item value!" );
-                    }
-                }
-                catch ( lang::WrappedTargetException const & )
-                {
-                }
-                catch ( container::NoSuchElementException const & )
-                {
-                }
-
+                getConfigStringValue(
+                    xNameAccess, NO_PROXY_LIST_KEY, aNoProxyList );
                 setNoProxyList( aNoProxyList );
 
-                try
-                {
-                    if ( !( xNameAccess->getByName(
-                                rtl::OUString::createFromAscii(
-                                    HTTP_PROXY_NAME_KEY ) )
-                            >>= m_aHttpProxy.aName ) )
-                    {
-                        OSL_ENSURE( sal_False,
-                                    "InternetProxyDecider - "
-                                    "Error getting config item value!" );
-                    }
-                }
-                catch ( lang::WrappedTargetException const & )
-                {
-                }
-                catch ( container::NoSuchElementException const & )
-                {
-                }
+                // *** HTTP ***
+                getConfigStringValue(
+                    xNameAccess, HTTP_PROXY_NAME_KEY, m_aHttpProxy.aName );
 
                 m_aHttpProxy.nPort = -1;
-                try
-                {
-                    uno::Any aValue = xNameAccess->getByName(
-                            rtl::OUString::createFromAscii(
-                                HTTP_PROXY_PORT_KEY ) );
-                    if ( aValue.hasValue() &&
-                         !( aValue >>= m_aHttpProxy.nPort ) )
-                    {
-                        OSL_ENSURE( sal_False,
-                                    "InternetProxyDecider - "
-                                    "Error getting config item value!" );
-                    }
-                }
-                catch ( lang::WrappedTargetException const & )
-                {
-                }
-                catch ( container::NoSuchElementException const & )
-                {
-                }
-
+                getConfigInt32Value(
+                    xNameAccess, HTTP_PROXY_PORT_KEY, m_aHttpProxy.nPort );
                 if ( m_aHttpProxy.nPort == -1 )
                     m_aHttpProxy.nPort = 80; // standard HTTP port.
 
-                try
-                {
-                    if ( !( xNameAccess->getByName(
-                                rtl::OUString::createFromAscii(
-                                    FTP_PROXY_NAME_KEY ) )
-                            >>= m_aFtpProxy.aName ) )
-                    {
-                        OSL_ENSURE( sal_False,
-                                    "InternetProxyDecider - "
-                                    "Error getting config item value!" );
-                    }
-                }
-                catch ( lang::WrappedTargetException const & )
-                {
-                }
-                catch ( container::NoSuchElementException const & )
-                {
-                }
+                // *** HTTPS ***
+                getConfigStringValue(
+                    xNameAccess, HTTPS_PROXY_NAME_KEY, m_aHttpsProxy.aName );
+
+                m_aHttpsProxy.nPort = -1;
+                getConfigInt32Value(
+                    xNameAccess, HTTPS_PROXY_PORT_KEY, m_aHttpsProxy.nPort );
+                if ( m_aHttpsProxy.nPort == -1 )
+                    m_aHttpsProxy.nPort = 443; // standard HTTPS port.
+
+                // *** FTP ***
+                getConfigStringValue(
+                    xNameAccess, FTP_PROXY_NAME_KEY, m_aFtpProxy.aName );
 
                 m_aFtpProxy.nPort = -1;
-                try
-                {
-                    uno::Any aValue = xNameAccess->getByName(
-                            rtl::OUString::createFromAscii(
-                                FTP_PROXY_PORT_KEY ) );
-                    if ( aValue.hasValue() &&
-                         !( aValue >>= m_aFtpProxy.nPort ) )
-                    {
-                        OSL_ENSURE( sal_False,
-                                    "InternetProxyDecider - "
-                                    "Error getting config item value!" );
-                    }
-                }
-                catch ( lang::WrappedTargetException const & )
-                {
-                }
-                catch ( container::NoSuchElementException const & )
-                {
-                }
+                getConfigInt32Value(
+                    xNameAccess, FTP_PROXY_PORT_KEY, m_aFtpProxy.nPort );
             }
 
             // Register as listener for config changes.
@@ -685,7 +664,6 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
     }
 #endif	// USE_JAVA && MACOSX
 
-
     if ( rHost.getLength() && m_aNoProxyList.size() )
     {
         //////////////////////////////////////////////////////////////////
@@ -719,7 +697,7 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
             // This might be quite expensive (DNS lookup).
             const osl::SocketAddr aAddr( aHost, nPort );
             aFullyQualifiedHost = aAddr.getHostname().toAsciiLowerCase();
-            m_aHostnames.put( aHost, aFullyQualifiedHost ); 
+            m_aHostnames.put( aHost, aFullyQualifiedHost );
         }
 
         // Error resolving name? -> fallback.
@@ -751,6 +729,12 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
     {
         if ( m_aFtpProxy.aName.getLength() > 0 && m_aFtpProxy.nPort >= 0 )
             return m_aFtpProxy;
+    }
+    else if ( rProtocol.toAsciiLowerCase()
+                  .equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "https" ) ) )
+    {
+        if ( m_aHttpsProxy.aName.getLength() )
+            return m_aHttpsProxy;
     }
     else if ( m_aHttpProxy.aName.getLength() )
     {
@@ -824,6 +808,29 @@ void SAL_CALL InternetProxyDecider_Impl::changesOccurred(
 
                     if ( m_aHttpProxy.nPort == -1 )
                         m_aHttpProxy.nPort = 80; // standard HTTP port.
+                }
+                else if ( aKey.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM(
+                                                    HTTPS_PROXY_NAME_KEY ) ) )
+                {
+                    if ( !( rElem.Element >>= m_aHttpsProxy.aName ) )
+                    {
+                        OSL_ENSURE( sal_False,
+                                    "InternetProxyDecider - changesOccurred - "
+                                    "Error getting config item value!" );
+                    }
+                }
+                else if ( aKey.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM(
+                                                    HTTPS_PROXY_PORT_KEY ) ) )
+                {
+                    if ( !( rElem.Element >>= m_aHttpsProxy.nPort ) )
+                    {
+                        OSL_ENSURE( sal_False,
+                                    "InternetProxyDecider - changesOccurred - "
+                                    "Error getting config item value!" );
+                    }
+
+                    if ( m_aHttpsProxy.nPort == -1 )
+                        m_aHttpsProxy.nPort = 443; // standard HTTPS port.
                 }
                 else if ( aKey.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM(
                                                     FTP_PROXY_NAME_KEY ) ) )
