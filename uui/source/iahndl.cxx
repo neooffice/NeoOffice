@@ -267,7 +267,7 @@ UUIInteractionHelper::getStringFromRequest(
 #else	// USE_JAVA && MACOSX
     Application* pApp = 0;
     if(
-        / be aware,it is the same type
+        // be aware,it is the same type
         static_cast< oslThreadIdentifier >(
             Application::GetMainThreadIdentifier())
         != osl_getThreadIdentifier(NULL)
