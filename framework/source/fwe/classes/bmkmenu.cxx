@@ -231,7 +231,7 @@ void BmkMenu::Initialize()
 	// Remove separators at the beginning of menu
 	while ( GetItemCount() && GetItemType( 0 ) == MENUITEM_SEPARATOR )
 		RemoveItem( 0 );
-#endif	USE_JAVA
+#endif	// USE_JAVA
 }
 
 sal_uInt16 BmkMenu::CreateMenuId()
