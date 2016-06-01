@@ -78,7 +78,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 #ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (MacOSBOOL)panel:(id)pSender shouldEnableURL:(NSURL *)pURL;
 #else	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
-- (MacOSBOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError *)ppError;
+- (MacOSBOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError **)ppError;
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (void)panel:(id)pSender didChangeToDirectoryURL:(NSURL *)pURL;
 - (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding;
@@ -484,7 +484,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 	return pRet;
 }
 
-- (void)cancel:(id)pObject;
+- (void)cancel:(id)pObject
 {
 	if ( mpOpenPanel && !mbCancelled && !mbFinished )
 	{
@@ -593,9 +593,14 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 #ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (MacOSBOOL)panel:(id)pSender shouldEnableURL:(NSURL *)pURL
 #else	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
-- (MacOSBOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError *)ppError
+- (MacOSBOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError **)ppError
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 {
+#ifndef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+	if ( ppError )
+		*ppError = nil;
+#endif	// !USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+
 	if ( pURL )
 	{
 		pURL = [pURL URLByStandardizingPath];
