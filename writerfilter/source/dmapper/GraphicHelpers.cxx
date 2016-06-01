@@ -1,4 +1,32 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ *************************************************************/
+
 #include "ConversionHelper.hxx"
 #include "GraphicHelpers.hxx"
 
@@ -8,6 +36,8 @@
 #include <com/sun/star/text/VertOrientation.hpp>
 #include <com/sun/star/text/RelOrientation.hpp>
 #include <com/sun/star/text/WrapTextMode.hpp>
+
+#include "dmapperLoggers.hxx"
 
 #include <iostream>
 using namespace std;
@@ -27,7 +57,7 @@ int PositionHandler::savedAlignH = text::HoriOrientation::NONE;
 
 PositionHandler::PositionHandler( bool vertical ) :
 #endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
-    Properties( )
+LoggedProperties(dmapper_logger, "PositionHandler")
 {
 #ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
     m_nOrient = text::VertOrientation::NONE;
@@ -56,7 +86,7 @@ PositionHandler::~PositionHandler( )
 {
 }
 
-void PositionHandler::attribute( Id aName, Value& rVal )
+void PositionHandler::lcl_attribute( Id aName, Value& rVal )
 {
     sal_Int32 nIntValue = rVal.getInt( );
     switch ( aName )
@@ -113,11 +143,15 @@ void PositionHandler::attribute( Id aName, Value& rVal )
                 }
             }
             break;
-        default:;
+        default:
+#ifdef DEBUG_DOMAINMAPPER
+            dmapper_logger->element("unhandled");
+#endif
+            break;
     }
 }
 
-void PositionHandler::sprm( Sprm& rSprm )
+void PositionHandler::lcl_sprm( Sprm& rSprm )
 {
 #ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
     Value::Pointer_t pValue = rSprm.getValue();
@@ -182,7 +216,11 @@ void PositionHandler::sprm( Sprm& rSprm )
         case NS_ooxml::LN_CT_PosH_posOffset:
         case NS_ooxml::LN_CT_PosV_posOffset:
             m_nPosition = ConversionHelper::convertEMUToMM100( nIntValue );
-        default:;
+        default:
+#ifdef DEBUG_DOMAINMAPPER
+            dmapper_logger->element("unhandled");
+#endif
+            break;
     }
 #endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
 }
@@ -228,7 +266,7 @@ void PositionHandler::setAlignV(const ::rtl::OUString & sText)
 #endif	// !NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
 
 WrapHandler::WrapHandler( ) :
-    Properties( ),
+LoggedProperties(dmapper_logger, "WrapHandler"),
     m_nType( 0 ),
     m_nSide( 0 )
 {
@@ -238,7 +276,7 @@ WrapHandler::~WrapHandler( )
 {
 }
 
-void WrapHandler::attribute( Id aName, Value& rVal )
+void WrapHandler::lcl_attribute( Id aName, Value& rVal )
 {
     switch ( aName )
     {
@@ -252,7 +290,7 @@ void WrapHandler::attribute( Id aName, Value& rVal )
     }
 }
 
-void WrapHandler::sprm( Sprm& )
+void WrapHandler::lcl_sprm( Sprm& )
 {
 }
 
@@ -291,5 +329,3 @@ sal_Int32 WrapHandler::getWrapMode( )
 }
 
 } }
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

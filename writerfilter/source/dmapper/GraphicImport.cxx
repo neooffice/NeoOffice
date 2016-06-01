@@ -1,82 +1,79 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Portions of this file are part of the LibreOffice project.
  *
- * Copyright 2000, 2010 Oracle and/or its affiliates.
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified September 2011 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *************************************************************/
 
-#include "GraphicImport.hxx"
-#include "GraphicHelpers.hxx"
 
-#include <dmapper/DomainMapper.hxx>
-#include <PropertyMap.hxx>
-#include <doctok/resourceids.hxx>
-#include <ooxml/resourceids.hxx>
-#include <ConversionHelper.hxx>
-#include <com/sun/star/uno/XComponentContext.hpp>
-#include <com/sun/star/io/XInputStream.hpp>
-#include <cppuhelper/implbase1.hxx>
+
+#include <string.h>
+
 #include <com/sun/star/awt/Size.hpp>
 #include <com/sun/star/container/XNamed.hpp>
 #include <com/sun/star/drawing/ColorMode.hpp>
-
-#include <com/sun/star/graphic/XGraphicProvider.hpp>
+#include <com/sun/star/drawing/PointSequenceSequence.hpp>
+#include <com/sun/star/drawing/XShape.hpp>
 #include <com/sun/star/graphic/XGraphic.hpp>
+#include <com/sun/star/graphic/XGraphicProvider.hpp>
+#include <com/sun/star/io/XInputStream.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#if SUPD == 310
 #include <com/sun/star/table/BorderLine.hpp>
-#else	// SUPD == 310
-#include <com/sun/star/table/BorderLine2.hpp>
-#endif	// SUPD == 310
 #include <com/sun/star/text/GraphicCrop.hpp>
-#include <com/sun/star/text/XTextContent.hpp>
-#include <com/sun/star/text/TextContentAnchorType.hpp>
 #include <com/sun/star/text/HoriOrientation.hpp>
 #include <com/sun/star/text/RelOrientation.hpp>
+#include <com/sun/star/text/TextContentAnchorType.hpp>
 #include <com/sun/star/text/VertOrientation.hpp>
 #include <com/sun/star/text/WrapTextMode.hpp>
-#include <com/sun/star/drawing/XShape.hpp>
+#include <com/sun/star/text/XTextContent.hpp>
+#include <com/sun/star/uno/XComponentContext.hpp>
+
+#include <cppuhelper/implbase1.hxx>
 #include <rtl/ustrbuf.hxx>
 
+#include <dmapper/DomainMapper.hxx>
+#include <doctok/resourceids.hxx>
+#include <ooxml/resourceids.hxx>
+#include <resourcemodel/ResourceModelHelper.hxx>
 
-#include <iostream>
-#include <resourcemodel/QNameToString.hxx>
-#include <string.h>
-
-#ifdef DEBUG_DOMAINMAPPER
-#include <resourcemodel/TagLogger.hxx>
-#endif
+#include "ConversionHelper.hxx"
+#include "GraphicHelpers.hxx"
+#include "GraphicImport.hxx"
+#include "PropertyMap.hxx"
+#include "WrapPolygonHandler.hxx"
+#include "dmapperLoggers.hxx"
 
 namespace writerfilter {
+
+using resourcemodel::resolveSprmProps;
+
 namespace dmapper
 {
 using namespace ::std;
 using namespace ::com::sun::star;
 
-#ifdef DEBUG_DOMAINMAPPER
-extern TagLogger::Pointer_t dmapper_logger;
-#endif
-    
 class XInputStreamHelper : public cppu::WeakImplHelper1
 <    io::XInputStream   >
 {
@@ -234,6 +231,8 @@ public:
     sal_Int32 nWrap;
     bool      bOpaque;
     bool      bContour;
+    bool      bContourOutside;
+    WrapPolygon::Pointer_t mpWrapPolygon;
     bool      bIgnoreWRK;
 
     sal_Int32 nLeftMargin;
@@ -296,6 +295,7 @@ public:
         ,nWrap(0)
         ,bOpaque( true )
         ,bContour(false)
+        ,bContourOutside(true)
         ,bIgnoreWRK(true)
         ,nLeftMargin(319)
         ,nRightMargin(319)
@@ -358,9 +358,12 @@ GraphicImport::GraphicImport(uno::Reference < uno::XComponentContext >    xCompo
                              uno::Reference< lang::XMultiServiceFactory > xTextFactory,
                              DomainMapper& rDMapper, 
                              GraphicImportType eImportType )
-: m_pImpl( new GraphicImport_Impl( eImportType, rDMapper ))
-  ,m_xComponentContext( xComponentContext )
-  ,m_xTextFactory( xTextFactory)
+: LoggedProperties(dmapper_logger, "GraphicImport")
+, LoggedTable(dmapper_logger, "GraphicImport")
+, LoggedStream(dmapper_logger, "GraphicImport")
+, m_pImpl( new GraphicImport_Impl( eImportType, rDMapper ))
+, m_xComponentContext( xComponentContext )
+, m_xTextFactory( xTextFactory)
 {
 }
 /*-- 01.11.2006 09:42:42---------------------------------------------------
@@ -370,15 +373,32 @@ GraphicImport::~GraphicImport()
 {
     delete m_pImpl;
 }
+
+void GraphicImport::handleWrapTextValue(sal_uInt32 nVal)
+{
+    switch (nVal)
+    {
+    case NS_ooxml::LN_Value_wordprocessingDrawing_ST_WrapText_bothSides: // 90920; 
+        m_pImpl->nWrap = text::WrapTextMode_PARALLEL;
+        break;
+    case NS_ooxml::LN_Value_wordprocessingDrawing_ST_WrapText_left: // 90921;
+        m_pImpl->nWrap = text::WrapTextMode_LEFT;
+        break;
+    case NS_ooxml::LN_Value_wordprocessingDrawing_ST_WrapText_right: // 90922;
+        m_pImpl->nWrap = text::WrapTextMode_RIGHT;
+        break;
+    case NS_ooxml::LN_Value_wordprocessingDrawing_ST_WrapText_largest: // 90923;
+        m_pImpl->nWrap = text::WrapTextMode_DYNAMIC;
+        break;
+    default:;
+    }
+}
+
 /*-- 01.11.2006 09:45:01---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void GraphicImport::attribute(Id nName, Value & val)
+void GraphicImport::lcl_attribute(Id nName, Value & val)
 {
-#ifdef DEBUG_DOMAINMAPPER
-    dmapper_logger->startElement("attribute");
-    dmapper_logger->attribute("name", (*QNameToString::Instance())(nName));
-#endif
     sal_Int32 nIntValue = val.getInt();
     /* WRITERFILTERSTATUS: table: PICFattribute */
     switch( nName )
@@ -1031,29 +1051,27 @@ void GraphicImport::attribute(Id nName, Value & val)
             m_pImpl->nVertOrient = text::VertOrientation::NONE;
 #endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
         break;
-        case NS_ooxml::LN_CT_WrapTight_wrapText: // 90934;            
+        case NS_ooxml::LN_CT_WrapTight_wrapText: // 90934;         
             /* WRITERFILTERSTATUS: done: 100, planned: 0.5, spent: 0 */
             m_pImpl->bContour = true;
-            //no break;
+            m_pImpl->bContourOutside = true;
+
+            handleWrapTextValue(val.getInt());
+            
+            break;
+        case NS_ooxml::LN_CT_WrapThrough_wrapText:
+            /* WRITERFILTERSTATUS: done: 100, planned: 0.5, spent: 0 */
+            m_pImpl->bContour = true;
+            m_pImpl->bContourOutside = false;
+
+            handleWrapTextValue(val.getInt());
+            
+            break;
         case NS_ooxml::LN_CT_WrapSquare_wrapText: //90928;
             /* WRITERFILTERSTATUS: done: 100, planned: 0.5, spent: 0 */
-            switch ( val.getInt() )
-            {
-                case NS_ooxml::LN_Value_wordprocessingDrawing_ST_WrapText_bothSides: // 90920; 
-                    m_pImpl->nWrap = text::WrapTextMode_PARALLEL;
-                break;
-                case NS_ooxml::LN_Value_wordprocessingDrawing_ST_WrapText_left: // 90921;
-                    m_pImpl->nWrap = text::WrapTextMode_LEFT;
-                break;
-                case NS_ooxml::LN_Value_wordprocessingDrawing_ST_WrapText_right: // 90922;
-                    m_pImpl->nWrap = text::WrapTextMode_RIGHT;
-                break;
-                case NS_ooxml::LN_Value_wordprocessingDrawing_ST_WrapText_largest: // 90923;
-                    m_pImpl->nWrap = text::WrapTextMode_DYNAMIC;
-                break;
-                default:;
-            }
-        break;
+            
+            handleWrapTextValue(val.getInt());
+            break;
         case NS_ooxml::LN_shape:
             /* WRITERFILTERSTATUS: done: 100, planned: 0.5, spent: 0 */
             {
@@ -1090,6 +1108,18 @@ void GraphicImport::attribute(Id nName, Value & val)
                                    uno::makeAny( aSize.Height ) );
                             xGraphProps->setPropertyValue( rtl::OUString::createFromAscii( "Width" ),
                                    uno::makeAny( aSize.Width ) );
+
+                            {
+                                text::GraphicCrop aGraphicCrop( 0, 0, 0, 0 );
+                                uno::Reference< beans::XPropertySet > xSourceGraphProps( xShape, uno::UNO_QUERY );
+                                uno::Any aAny = xSourceGraphProps->getPropertyValue( rtl::OUString::createFromAscii("GraphicCrop"));
+                                if ( aAny >>= aGraphicCrop )
+                                {
+                                    xGraphProps->setPropertyValue(
+                                        rtl::OUString::createFromAscii("GraphicCrop"),
+                                        uno::makeAny( aGraphicCrop ) );
+                                }
+                            }
                         }
                     }
                     catch( const beans::UnknownPropertyException e )
@@ -1145,19 +1175,12 @@ void GraphicImport::attribute(Id nName, Value & val)
             val.getString();
             //TODO: does it need to be handled?
         break;
-        default: 
-#if OSL_DEBUG_LEVEL > 0
-            ::rtl::OString sMessage( "GraphicImport::attribute() - Id: ");
-            sMessage += ::rtl::OString::valueOf( sal_Int32( nName ), 10 );
-            sMessage += ::rtl::OString(" / 0x");
-            sMessage += ::rtl::OString::valueOf( sal_Int32( nName ), 16 );
-            OSL_ENSURE( false, sMessage.getStr())
+        default:
+#ifdef DEBUG_DMAPPER_GRAPHIC_IMPORT
+            dmapper_logger->element("unhandled");
 #endif               
             ;
     }
-#ifdef DEBUG_DOMAINMAPPER
-    dmapper_logger->endElement("attribute");
-#endif
 }
 
 uno::Reference<text::XTextContent> GraphicImport::GetGraphicObject()
@@ -1373,13 +1396,8 @@ void GraphicImport::ProcessShapeOptions(Value& val)
 /*-- 01.11.2006 09:45:02---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void GraphicImport::sprm(Sprm & rSprm)
+void GraphicImport::lcl_sprm(Sprm & rSprm)
 {
-#ifdef DEBUG_DOMAINMAPPER
-    dmapper_logger->startElement("sprm");
-    dmapper_logger->chars(rSprm.toString());
-#endif
-
     sal_uInt32 nSprmId = rSprm.getId();
     Value::Pointer_t pValue = rSprm.getValue();
 
@@ -1401,13 +1419,13 @@ void GraphicImport::sprm(Sprm & rSprm)
         case NS_ooxml::LN_CT_Anchor_extent: // 90978;
         case NS_ooxml::LN_CT_Anchor_effectExtent: // 90979;
         case NS_ooxml::LN_EG_WrapType_wrapSquare: // 90945;                   
-        case NS_ooxml::LN_EG_WrapType_wrapTight: // 90946;                
+        case NS_ooxml::LN_EG_WrapType_wrapTight: // 90946;
+        case NS_ooxml::LN_EG_WrapType_wrapThrough:
         case NS_ooxml::LN_CT_Anchor_docPr: // 90980;
         case NS_ooxml::LN_CT_Anchor_cNvGraphicFramePr: // 90981;
         case NS_ooxml::LN_CT_Anchor_a_graphic: // 90982;
         case NS_ooxml::LN_CT_WrapPath_start: // 90924;
         case NS_ooxml::LN_CT_WrapPath_lineTo: // 90925;
-        case NS_ooxml::LN_CT_WrapTight_wrapPolygon: // 90933; 
         case NS_ooxml::LN_graphic_graphic:
         case NS_ooxml::LN_pic_pic:
             /* WRITERFILTERSTATUS: done: 100, planned: 0.5, spent: 0 */
@@ -1419,6 +1437,17 @@ void GraphicImport::sprm(Sprm & rSprm)
             }
         }
         break;
+        case NS_ooxml::LN_CT_WrapTight_wrapPolygon: 
+        case NS_ooxml::LN_CT_WrapThrough_wrapPolygon:
+            /* WRITERFILTERSTATUS: done: 100, planned: 4, spent: 2 */
+            {
+                WrapPolygonHandler aHandler;
+                
+                resolveSprmProps(aHandler, rSprm);
+
+                m_pImpl->mpWrapPolygon = aHandler.getPolygon(); 
+            }
+            break;
         case NS_ooxml::LN_CT_Anchor_positionH: // 90976;
         {
             // Use a special handler for the positionning
@@ -1431,6 +1460,7 @@ void GraphicImport::sprm(Sprm & rSprm)
             if( pProperties.get( ) )
             {
                 pProperties->resolve( *pHandler );
+
 #ifndef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
                 if( !m_pImpl->bUseSimplePos )
                 {
@@ -1456,6 +1486,7 @@ void GraphicImport::sprm(Sprm & rSprm)
             if( pProperties.get( ) )
             {
                 pProperties->resolve( *pHandler );
+
 #ifndef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
                 if( !m_pImpl->bUseSimplePos )
                 {
@@ -1489,10 +1520,6 @@ void GraphicImport::sprm(Sprm & rSprm)
             /* WRITERFILTERSTATUS: done: 100, planned: 0.5, spent: 0 */
             m_pImpl->nWrap = text::WrapTextMode_NONE;
         break;
-        case NS_ooxml::LN_EG_WrapType_wrapThrough: // 90947;              
-            /* WRITERFILTERSTATUS: done: 100, planned: 0.5, spent: 0 */
-            m_pImpl->nWrap = text::WrapTextMode_THROUGHT;
-        break;
         case 0xf010:
         case 0xf011:
             //ignore - doesn't contain useful members
@@ -1517,17 +1544,11 @@ void GraphicImport::sprm(Sprm & rSprm)
 #endif
             ;
     }
-
-    
-
-#ifdef DEBUG_DOMAINMAPPER
-    dmapper_logger->endElement("sprm");
-#endif
 }
 /*-- 01.11.2006 09:45:02---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void GraphicImport::entry(int /*pos*/, writerfilter::Reference<Properties>::Pointer_t /*ref*/)
+void GraphicImport::lcl_entry(int /*pos*/, writerfilter::Reference<Properties>::Pointer_t /*ref*/)
 {
 }
 /*-- 16.11.2006 16:14:32---------------------------------------------------
@@ -1568,7 +1589,7 @@ uno::Reference< text::XTextContent > GraphicImport::createGraphicObject( const b
             xGraphicObject = uno::Reference< text::XTextContent >( xGraphicObjectProperties, uno::UNO_QUERY_THROW );
 
             //shapes have only one border, PICF might have four
-            table::BorderLine2 aBorderLine;
+            table::BorderLine aBorderLine;
             for( sal_Int32 nBorder = 0; nBorder < 4; ++nBorder )
             {
                 if( m_pImpl->eGraphicImportType == IMPORT_AS_GRAPHIC || !nBorder )
@@ -1589,11 +1610,7 @@ uno::Reference< text::XTextContent > GraphicImport::createGraphicObject( const b
             }
 
             // setting properties for all types
-#if SUPD == 310
-            xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_ALTERNATIVE_TEXT ),
-#else	// SUPD == 310
             xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_TITLE ),
-#endif	// SUPD == 310
                 uno::makeAny( m_pImpl->sAlternativeText ));
             if( m_pImpl->bPositionProtected )
                 xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_POSITION_PROTECTED ), 
@@ -1680,7 +1697,7 @@ uno::Reference< text::XTextContent > GraphicImport::createGraphicObject( const b
                 xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_SURROUND_CONTOUR ),
                     uno::makeAny(m_pImpl->bContour));
                 xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_CONTOUR_OUTSIDE ),
-                    uno::makeAny(true));
+                    uno::makeAny(m_pImpl->bContourOutside));
                 xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_LEFT_MARGIN ),
                     uno::makeAny(m_pImpl->nLeftMargin));
                 xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_RIGHT_MARGIN ),
@@ -1690,8 +1707,6 @@ uno::Reference< text::XTextContent > GraphicImport::createGraphicObject( const b
                 xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_BOTTOM_MARGIN ),
                     uno::makeAny(m_pImpl->nBottomMargin));
 
-                xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_CONTOUR_POLY_POLYGON),
-                    uno::Any());
                 if( m_pImpl->eColorMode == drawing::ColorMode_STANDARD &&
                     m_pImpl->nContrast == -70 &&
                     m_pImpl->nBrightness == 70 )
@@ -1719,16 +1734,31 @@ uno::Reference< text::XTextContent > GraphicImport::createGraphicObject( const b
                     xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_HORI_MIRRORED_ON_ODD_PAGES ),
                         uno::makeAny( m_pImpl->bHoriFlip ));
                 }
+
                 if( m_pImpl->bVertFlip )
                     xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_VERT_MIRRORED ),
                         uno::makeAny( m_pImpl->bVertFlip ));
                 xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_BACK_COLOR ),
                     uno::makeAny( m_pImpl->nFillColor ));
+
                 //there seems to be no way to detect the original size via _real_ API
                 uno::Reference< beans::XPropertySet > xGraphicProperties( xGraphic, uno::UNO_QUERY_THROW );
                 awt::Size aGraphicSize, aGraphicSizePixel;
                 xGraphicProperties->getPropertyValue(rPropNameSupplier.GetName( PROP_SIZE100th_M_M )) >>= aGraphicSize;
                 xGraphicProperties->getPropertyValue(rPropNameSupplier.GetName( PROP_SIZE_PIXEL )) >>= aGraphicSizePixel;
+                                
+                uno::Any aContourPolyPolygon;
+                if( aGraphicSize.Width && aGraphicSize.Height &&
+                    m_pImpl->mpWrapPolygon.get() != NULL)
+                {
+                    awt::Size aDstSize(m_pImpl->getXSize(), m_pImpl->getYSize());
+                    WrapPolygon::Pointer_t pCorrected = m_pImpl->mpWrapPolygon->correctWordWrapPolygon(aGraphicSize, aDstSize);
+                    aContourPolyPolygon <<= pCorrected->getPointSequenceSequence();
+                }
+
+                xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_CONTOUR_POLY_POLYGON),
+                                                           aContourPolyPolygon);
+
                 if( aGraphicSize.Width && aGraphicSize.Height )
                 {
                     //todo: i71651 graphic size is not provided by the GraphicDescriptor
@@ -1737,6 +1767,7 @@ uno::Reference< text::XTextContent > GraphicImport::createGraphicObject( const b
                     lcl_CalcCrop( m_pImpl->nLeftCrop, aGraphicSize.Width );
                     lcl_CalcCrop( m_pImpl->nRightCrop, aGraphicSize.Width );
 
+                    
 #ifndef NO_LIBO_4_1_GRAPHIC_IMPORT_FIXES
                     // We need a separate try-catch here, otherwise a bad crop setting will also nuke the size settings as well.
                     try
@@ -1748,15 +1779,17 @@ uno::Reference< text::XTextContent > GraphicImport::createGraphicObject( const b
                     }
                     catch (const uno::Exception& e)
                     {
-#if SUPD == 310
+#if SUPD == 412
                         clog << __FILE__ << ":" << __LINE__ << " failed. Message :" ;
                         clog << rtl::OUStringToOString( e.Message, RTL_TEXTENCODING_UTF8 ).getStr( )  << endl;
-#else	// SUPD == 310
+#else	// SUPD == 412
+
                         SAL_WARN("writerfilter", "failed. Message :" << e.Message);
-#endif	// SUPD == 310
+#endif	// SUPD == 412
                     }
 #endif	// !NO_LIBO_4_1_GRAPHIC_IMPORT_FIXES
                 }
+                
             }
             
             if(m_pImpl->eGraphicImportType == IMPORT_AS_DETECTED_INLINE || m_pImpl->eGraphicImportType == IMPORT_AS_DETECTED_ANCHOR)
@@ -1804,81 +1837,81 @@ void GraphicImport::data(const sal_uInt8* buf, size_t len, writerfilter::Referen
 /*-- 01.11.2006 09:45:03---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void GraphicImport::startSectionGroup()
+void GraphicImport::lcl_startSectionGroup()
 {
 }
 /*-- 01.11.2006 09:45:03---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void GraphicImport::endSectionGroup()
+void GraphicImport::lcl_endSectionGroup()
 {
 }
 /*-- 01.11.2006 09:45:03---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void GraphicImport::startParagraphGroup()
+void GraphicImport::lcl_startParagraphGroup()
 {
 }
 /*-- 01.11.2006 09:45:03---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void GraphicImport::endParagraphGroup()
+void GraphicImport::lcl_endParagraphGroup()
 {
 }
 /*-- 01.11.2006 09:45:03---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void GraphicImport::startCharacterGroup()
+void GraphicImport::lcl_startCharacterGroup()
 {
 }
 /*-- 01.11.2006 09:45:04---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void GraphicImport::endCharacterGroup()
+void GraphicImport::lcl_endCharacterGroup()
 {
 }
 /*-- 01.11.2006 09:45:04---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void GraphicImport::text(const sal_uInt8 * /*_data*/, size_t /*len*/)
+void GraphicImport::lcl_text(const sal_uInt8 * /*_data*/, size_t /*len*/)
 {
 }
 /*-- 01.11.2006 09:45:05---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void GraphicImport::utext(const sal_uInt8 * /*_data*/, size_t /*len*/)
+void GraphicImport::lcl_utext(const sal_uInt8 * /*_data*/, size_t /*len*/)
 {
 }
 /*-- 01.11.2006 09:45:05---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void GraphicImport::props(writerfilter::Reference<Properties>::Pointer_t /*ref*/)
+void GraphicImport::lcl_props(writerfilter::Reference<Properties>::Pointer_t /*ref*/)
 {
 }
 /*-- 01.11.2006 09:45:06---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void GraphicImport::table(Id /*name*/, writerfilter::Reference<Table>::Pointer_t /*ref*/)
+void GraphicImport::lcl_table(Id /*name*/, writerfilter::Reference<Table>::Pointer_t /*ref*/)
 {
 }
 /*-- 01.11.2006 09:45:07---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void GraphicImport::substream(Id /*name*/, ::writerfilter::Reference<Stream>::Pointer_t /*ref*/)
+void GraphicImport::lcl_substream(Id /*name*/, ::writerfilter::Reference<Stream>::Pointer_t /*ref*/)
 {
 }
 /*-- 01.11.2006 09:45:07---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void GraphicImport::info(const string & /*info*/)
+void GraphicImport::lcl_info(const string & /*info*/)
 {
 }
     
-void GraphicImport::startShape( ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > /*xShape*/ )
+void GraphicImport::lcl_startShape( ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > /*xShape*/ )
 {
 }
 
-void GraphicImport::endShape( )
+void GraphicImport::lcl_endShape( )
 {
 }
 
@@ -1892,5 +1925,3 @@ bool    GraphicImport::IsGraphic() const
 
 }
 }
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

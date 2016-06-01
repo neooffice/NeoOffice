@@ -1,29 +1,32 @@
-#************************************************************************
+#**************************************************************
+#  
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
+#  
+#    http://www.apache.org/licenses/LICENSE-2.0
+#  
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+#  
+#  This file incorporates work covered by the following license notice:
+# 
+#    Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+#    under the GNU General Public License, Version 3 as allowed by Section 4
+#    of the Apache License, Version 2.0.
 #
-# Copyright 2000, 2010 Oracle and/or its affiliates.
-#
-# This file is part of NeoOffice.
-#
-# NeoOffice is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 3
-# only, as published by the Free Software Foundation.
-#
-# NeoOffice is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
-#
-# You should have received a copy of the GNU General Public License
-# version 3 along with NeoOffice.  If not, see
-# <http://www.gnu.org/licenses/gpl-3.0.txt>
-# for a copy of the GPLv3 License.
-#
-# Modified September 2011 by Patrick Luby. NeoOffice is distributed under
-# GPL only under modification term 2 of the LGPL.
-#
-# ***********************************************************************/
-
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#  
+#**************************************************************
 PRJ=..$/..
 PRJNAME=writerfilter
 TARGET=ooxml
@@ -36,39 +39,38 @@ ENABLE_EXCEPTIONS=TRUE
 .INCLUDE :  settings.mk
 .INCLUDE :  $(PRJ)$/inc$/writerfilter.mk
 
-.IF "$(UPD)"=="310"
-GPERF=gperf
+.IF "$(PRODUCT_BUILD_TYPE)" == "java"
 SOLARINC+=-I..$/dmapper
-.ENDIF		# "$(UPD)"=="310"
+.ENDIF		# "$(PRODUCT_BUILD_TYPE)" == "java"
 
 #CFLAGS+=-DISOLATION_AWARE_ENABLED -DWIN32_LEAN_AND_MEAN -DXML_UNICODE -D_NTSDK -DUNICODE -D_UNICODE -D_WIN32_WINNT=0x0501
 #CFLAGS+=-wd4710 -wd4711 -wd4514 -wd4619 -wd4217 -wd4820
 
 NAMESPACES= \
-    wml \
-    dml-stylesheet \
-    dml-styleDefaults \
-    dml-shape3DLighting \
-    dml-shape3DScene \
-    dml-shape3DStyles \
-    dml-shape3DCamera \
-    dml-baseStylesheet \
-    dml-textCharacter \
-    dml-shapeEffects \
-    dml-shapeLineProperties \
-    dml-shapeProperties \
-    dml-baseTypes \
-    dml-documentProperties \
-    dml-graphicalObject \
-    dml-shapeGeometry \
-    dml-wordprocessingDrawing \
-    sml-customXmlMappings \
-    shared-math \
-    shared-relationshipReference \
-    dml-chartDrawing \
-    vml-main \
-    vml-officeDrawing \
-    vml-wordprocessingDrawing
+	wml \
+	dml-stylesheet \
+	dml-styleDefaults \
+	dml-shape3DLighting \
+	dml-shape3DScene \
+	dml-shape3DStyles \
+	dml-shape3DCamera \
+	dml-baseStylesheet \
+	dml-textCharacter \
+	dml-shapeEffects \
+	dml-shapeLineProperties \
+	dml-shapeProperties \
+	dml-baseTypes \
+	dml-documentProperties \
+	dml-graphicalObject \
+	dml-shapeGeometry \
+	dml-wordprocessingDrawing \
+	sml-customXmlMappings \
+	shared-math \
+	shared-relationshipReference \
+	dml-chartDrawing \
+	vml-main \
+	vml-officeDrawing \
+	vml-wordprocessingDrawing
 
 # --- Files --------------------------------------------------------
 
@@ -80,25 +82,23 @@ SLOFILES= \
     $(SLOFASTNAMESPACES) \
     $(SLO)$/OOXMLFactory_generated.obj \
     $(SLO)$/OOXMLFactory.obj \
-    $(SLO)$/OOXMLBinaryObjectReference.obj\
-    $(SLO)$/OOXMLFactory_values.obj \
-    $(SLO)$/OOXMLPropertySetImpl.obj \
-    $(SLO)$/OOXMLParserState.obj \
-    $(SLO)$/Handler.obj \
-    $(SLO)$/OOXMLDocumentImpl.obj \
-    $(SLO)$/OOXMLStreamImpl.obj \
-    $(SLO)$/OOXMLFastDocumentHandler.obj \
-    $(SLO)$/OOXMLFastContextHandler.obj \
-    $(SLO)$/OOXMLFastTokenHandler.obj
+	$(SLO)$/OOXMLBinaryObjectReference.obj\
+	$(SLO)$/OOXMLFactory_values.obj \
+	$(SLO)$/OOXMLPropertySetImpl.obj \
+	$(SLO)$/OOXMLParserState.obj \
+	$(SLO)$/Handler.obj \
+	$(SLO)$/OOXMLDocumentImpl.obj \
+	$(SLO)$/OOXMLStreamImpl.obj \
+	$(SLO)$/OOXMLFastDocumentHandler.obj \
+	$(SLO)$/OOXMLFastContextHandler.obj \
+	$(SLO)$/OOXMLFastTokenHandler.obj
 
-.IF "$(UPD)"!="310"
+.IF "$(PRODUCT_BUILD_TYPE)" != "java"
 SHL1TARGET=$(TARGET)
-.ENDIF		# "$(UPD)"!="310"
+.ENDIF		# "$(PRODUCT_BUILD_TYPE)" != "java"
 
-.IF "$(GUI)"=="UNX" || "$(GUI)"=="MAC"
+.IF "$(GUI)"=="UNX" || "$(GUI)"=="MAC" || "$(GUI)"=="OS2"
 RESOURCEMODELLIB=-lresourcemodel
-.ELIF "$(GUI)"=="OS2"
-RESOURCEMODELLIB=$(LB)$/iresourcemodel.lib
 .ELIF "$(GUI)"=="WNT"
 .IF "$(COM)"=="GCC"
 RESOURCEMODELLIB=-lresourcemodel
@@ -108,10 +108,10 @@ RESOURCEMODELLIB=$(LB)$/iresourcemodel.lib
 .ENDIF
 
 SHL1STDLIBS=$(SALLIB)\
-    $(CPPULIB)\
-    $(CPPUHELPERLIB) \
-    $(COMPHELPERLIB) \
-    $(RESOURCEMODELLIB)
+	$(CPPULIB)\
+	$(CPPUHELPERLIB) \
+	$(COMPHELPERLIB) \
+	$(RESOURCEMODELLIB)
 SHL1IMPLIB=i$(SHL1TARGET)
 SHL1USE_EXPORTS=name
 
@@ -128,7 +128,7 @@ DEFLIB1NAME=$(TARGET)
 .PHONY : test
 
 test:
-    echo $(SLOFILES)
+	echo $(SLOFILES)
 
 OOXMLCXXOUTDIR=$(MISC)
 OOXMLHXXOUTDIR=$(INCCOM)/ooxml
@@ -164,37 +164,37 @@ GPERFFASTTOKENHXX=$(OOXMLHXXOUTDIR)$/gperffasttoken.hxx
 MODELPROCESSED=$(MISC)$/model_preprocessed.xml
 
 OOXMLGENHEADERS= \
-    $(OOXMLFACTORYGENERATEDHXX) \
-    $(OOXMLFACTORYHXXS) \
-    $(OOXMLFASTTOKENSHXX) \
-    $(OOXMLFACTORYVALUESHXX) \
-    $(GPERFFASTTOKENHXX) \
-    $(OOXMLRESOURCEIDSHXX) \
-    $(OOXMLNAMESPACEIDSHXX)
+	$(OOXMLFACTORYGENERATEDHXX) \
+	$(OOXMLFACTORYHXXS) \
+	$(OOXMLFASTTOKENSHXX) \
+	$(OOXMLFACTORYVALUESHXX) \
+	$(GPERFFASTTOKENHXX) \
+	$(OOXMLRESOURCEIDSHXX) \
+	$(OOXMLNAMESPACEIDSHXX)
 
 GENERATEDFILES= \
-    $(OOXMLGENHEADERS) \
-    $(OOXMLFACTORYGENERATEDCXX) \
-    $(OOXMLFACTORYCXXS) \
-    $(OOXMLFACTORYVALUESCXX) \
-    $(TOKENXMLTMP) \
-    $(TOKENXML)
+	$(OOXMLGENHEADERS) \
+	$(OOXMLFACTORYGENERATEDCXX) \
+	$(OOXMLFACTORYCXXS) \
+	$(OOXMLFACTORYVALUESCXX) \
+	$(TOKENXMLTMP) \
+	$(TOKENXML)
 
-$(TOKENXMLTMP): $(SOLARVER)$/$(INPATH)$/inc$(UPDMINOREXT)$/oox$/token.txt
-    @$(TYPE) $(SOLARVER)$/$(INPATH)$/inc$(UPDMINOREXT)$/oox$/token.txt | $(SED) "s#\(.*\)#<fasttoken>\1</fasttoken>#" > $@
+$(TOKENXMLTMP): $(SOLARVER)$/$(INPATH)$/inc$(UPDMINOREXT)$/oox$/token$/tokens.txt
+    @$(TYPE) $(SOLARVER)$/$(INPATH)$/inc$(UPDMINOREXT)$/oox$/token$/tokens.txt | $(SED) "s#\(.*\)#<fasttoken>\1</fasttoken>#" > $@
 
 $(TOKENXML): tokenxmlheader $(TOKENXMLTMP) tokenxmlfooter
-    @$(TYPE) tokenxmlheader $(TOKENXMLTMP) tokenxmlfooter > $@
+	@$(TYPE) tokenxmlheader $(TOKENXMLTMP) tokenxmlfooter > $@
 
 $(OOXMLHXXOUTDIRCREATED):
-    $(MKDIRHIER) $(OOXMLHXXOUTDIR)
-    @$(TOUCH) $@
+	$(MKDIRHIER) $(OOXMLHXXOUTDIR)
+	@$(TOUCH) $@
 
 $(OOXMLGENHEADERS): $(OOXMLHXXOUTDIRCREATED)
 
 $(OOXMLFASTTOKENSHXX): $(OOXMLFASTTOKENSXSL) $(TOKENXML)
     @echo "Making:   " $(@:f)   
-    $(COMMAND_ECHO)$(XSLTPROC) $(OOXMLFASTTOKENSXSL) $(TOKENXML) > $@
+	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLFASTTOKENSXSL) $(TOKENXML) > $@
 
 $(OOXMLFACTORYGENERATEDHXX): factoryinc.xsl
     @echo "Making:   " $(@:f)   
@@ -214,33 +214,33 @@ $(OOXMLFACTORYHXXS): $(MODELPROCESSED)
 
 $(OOXMLCXXOUTDIR)$/OOXMLFactory%.cxx: factoryimpl_ns.xsl
     @echo "Making:   " $(@:f)   
-    $(COMMAND_ECHO)$(XSLTPROC) --stringparam file $@ $< $(MODELPROCESSED) > $@
+	$(COMMAND_ECHO)$(XSLTPROC) --stringparam file $@ $< $(MODELPROCESSED) > $@
 
 $(OOXMLHXXOUTDIR)$/OOXMLFactory%.hxx: factory_ns.xsl
     @echo "Making:   " $(@:f)   
-    $(COMMAND_ECHO)$(XSLTPROC) --stringparam file $@ $< $(MODELPROCESSED) > $@
+	$(COMMAND_ECHO)$(XSLTPROC) --stringparam file $@ $< $(MODELPROCESSED) > $@
 
 $(OOXMLFACTORYVALUESHXX): $(OOXMLFACTORYVALUESXSL) $(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
-    $(COMMAND_ECHO)$(XSLTPROC) $(OOXMLFACTORYVALUESXSL) $(MODELPROCESSED) > $@
+	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLFACTORYVALUESXSL) $(MODELPROCESSED) > $@
 
 $(OOXMLFACTORYVALUESCXX): $(OOXMLFACTORYVALUESIMPLXSL) $(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
-    $(COMMAND_ECHO)$(XSLTPROC) $(OOXMLFACTORYVALUESIMPLXSL) $(MODELPROCESSED) > $@
+	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLFACTORYVALUESIMPLXSL) $(MODELPROCESSED) > $@
 
 $(OOXMLRESOURCEIDSHXX):  $(OOXMLHXXOUTDIRCREATED) $(OOXMLRESOURCEIDSXSL) \
-    $(MODELPROCESSED)
+	$(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
-    $(COMMAND_ECHO)$(XSLTPROC) $(OOXMLRESOURCEIDSXSL) $(MODELPROCESSED) > $@
+	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLRESOURCEIDSXSL) $(MODELPROCESSED) > $@
 
 $(OOXMLNAMESPACEIDSHXX):  $(OOXMLHXXOUTDIRCREATED) $(OOXMLNAMESPACEIDSXSL) \
-    $(MODELPROCESSED)
+	$(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
-    $(COMMAND_ECHO)$(XSLTPROC) $(OOXMLNAMESPACEIDSXSL) $(MODELPROCESSED) > $@
+	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLNAMESPACEIDSXSL) $(MODELPROCESSED) > $@
 
 $(GPERFFASTTOKENHXX): $(OOXMLGPERFFASTTOKENXSL) $(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
-    $(COMMAND_ECHO)$(XSLTPROC) $(OOXMLGPERFFASTTOKENXSL) $(MODELPROCESSED) | tr -d '\r' | $(GPERF) -I -t -E -S1 -c -G -LC++ > $@
+	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLGPERFFASTTOKENXSL) $(MODELPROCESSED) | tr -d '\r' | $(GPERF) -I -t -E -S1 -c -G -LC++ > $@
 
 $(SLOFACTORIESNAMESPACES): $(OOXMLFACTORYSCXXS) $(OOXMLGENHEADERS)
 
@@ -255,7 +255,7 @@ $(SLO)$/OOXMLFactory_generated.obj: $(OOXMLFACTORYGENERATEDCXX) $(OOXMLGENHEADER
 .PHONY: genclean genmake genheaders
 
 genclean:
-    rm -f $(GENERATEDFILES)
+	rm -f $(GENERATEDFILES)
 
 genmake: $(GENERATEDFILES)
 

@@ -1,43 +1,42 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2000, 2010 Oracle and/or its affiliates.
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified September 2011 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 #include <PropertyMap.hxx>
 #include <ooxml/resourceids.hxx>
 #include <DomainMapper_Impl.hxx>
 #include <ConversionHelper.hxx>
-#if SUPD != 310
 #include <i18npool/paper.hxx>
-#endif	// SUPD != 310
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#if SUPD == 310
 #include <com/sun/star/table/BorderLine.hpp>
-#else	// SUPD == 310
-#include <com/sun/star/table/BorderLine2.hpp>
-#endif	// SUPD == 310
 #include <com/sun/star/container/XEnumeration.hpp>
 #include <com/sun/star/container/XEnumerationAccess.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
@@ -118,13 +117,43 @@ uno::Sequence< beans::PropertyValue > PropertyMap::GetPropertyValues()
     }
     return m_aValues;
 }
-/*-------------------------------------------------------------------------
 
-  -----------------------------------------------------------------------*/
+void lcl_AnyToTag(XMLTag::Pointer_t pTag, const uno::Any & rAny)
+{
+    try {
+        sal_Int32 aInt = 0;
+        rAny >>= aInt;
+        pTag->addAttr("value", aInt);
+        
+        sal_uInt32 auInt = 0;
+        rAny >>= auInt;
+        pTag->addAttr("unsignedValue", auInt);
+        
+        float aFloat = 0.0f;
+        rAny >>= aFloat;
+        pTag->addAttr("floatValue", aFloat);
+        
+        ::rtl::OUString aStr;
+        rAny >>= aStr;
+        pTag->addAttr("stringValue", aStr);                    
+    }
+    catch (...) {
+    }
+}
+
 void PropertyMap::Insert( PropertyIds eId, bool bIsTextProperty, const uno::Any& rAny, bool bOverwrite )
 {
-//    const ::rtl::OUString& rInsert = PropertyNameSupplier::
-//                           GetPropertyNameSupplier().GetName(eId);
+#ifdef DEBUG_DMAPPER_PROPERTY_MAP
+    const ::rtl::OUString& rInsert = PropertyNameSupplier::
+        GetPropertyNameSupplier().GetName(eId);
+
+    XMLTag::Pointer_t pTag(new XMLTag("propertyMap.insert"));
+    pTag->addAttr("name", rInsert);
+    lcl_AnyToTag(pTag, rAny);
+    
+    dmapper_logger->addTag(pTag);
+#endif
+
     PropertyMap::iterator aElement = find(PropertyDefinition( eId, bIsTextProperty ) );
     if( aElement != end())
     {
@@ -138,7 +167,6 @@ void PropertyMap::Insert( PropertyIds eId, bool bIsTextProperty, const uno::Any&
     Invalidate();
 }
 
-#ifdef DEBUG_DOMAINMAPPER
 XMLTag::Pointer_t PropertyMap::toTag() const
 {
     XMLTag::Pointer_t pResult(new XMLTag("PropertyMap"));
@@ -159,15 +187,15 @@ XMLTag::Pointer_t PropertyMap::toTag() const
             default:
             {
                 try {
-                    sal_Int32 aInt;
+                    sal_Int32 aInt = 0;
                     aMapIter->second >>= aInt;
                     pTag->addAttr("value", aInt);
 
-                    sal_uInt32 auInt;
+                    sal_uInt32 auInt = 0;
                     aMapIter->second >>= auInt;
                     pTag->addAttr("unsignedValue", auInt);
                     
-                    float aFloat;
+                    float aFloat = 0.0;
                     aMapIter->second >>= aFloat;
                     pTag->addAttr("floatValue", aFloat);
                     
@@ -188,7 +216,6 @@ XMLTag::Pointer_t PropertyMap::toTag() const
     
     return pResult;
 }
-#endif
 
 /*-- 13.12.2006 10:46:42---------------------------------------------------
 
@@ -278,18 +305,11 @@ SectionPropertyMap::SectionPropertyMap(bool bIsFirstSection) :
         m_nBorderDistances[ nBorder ] = -1;
     //todo: set defaults in ApplyPropertiesToPageStyles
     //initialize defaults
-#if SUPD == 310
-    //page height, todo: rounded to default values, default: 0x3dc0 (15808) twip  27883 1/100 mm
-    Insert( PROP_HEIGHT, false, uno::makeAny( (sal_Int32) 27883 ) );
-    //page width, todo: rounded to default values, default 0x2fd0 (12240) twip -> 21590 1/100 mm
-    Insert( PROP_WIDTH, false, uno::makeAny( (sal_Int32)21590 ) );
-#else	// SUPD == 310
     PaperInfo aLetter(PAPER_LETTER);
     //page height, 1/100mm
     Insert( PROP_HEIGHT, false, uno::makeAny( (sal_Int32) aLetter.getHeight() ) );
     //page width, 1/100mm
     Insert( PROP_WIDTH, false, uno::makeAny( (sal_Int32) aLetter.getWidth() ) );
-#endif	// SUPD == 310
     //page left margin, default 0x708 (1800) twip -> 3175 1/100 mm
     Insert( PROP_LEFT_MARGIN, false, uno::makeAny( (sal_Int32) 3175 ) );
     //page right margin, default 0x708 (1800) twip -> 3175 1/100 mm
@@ -352,7 +372,7 @@ void  SectionPropertyMap::SetPageStyleName( bool bFirst, const ::rtl::OUString& 
     for( sal_Int32 nStyle = 0; nStyle < rPageStyleNames.getLength(); ++nStyle)
     {
         if( pStyleNames[nStyle].getLength() > nDefaultLength &&
-                !rtl_ustr_compare_WithLength( sDefaultStyle, nDefaultLength, pStyleNames[nStyle], nDefaultLength))
+                !rtl_ustr_compare_WithLength( sDefaultStyle.getStr(), nDefaultLength, pStyleNames[nStyle].getStr(), nDefaultLength))
         {
             sal_Int32 nIndex = pStyleNames[nStyle].copy( nDefaultLength ).toInt32();
             if( nIndex > nMaxIndex)
@@ -420,10 +440,10 @@ uno::Reference< beans::XPropertySet > SectionPropertyMap::GetPageStyle(
 /*-- 28.07.2006 10:56:26---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void SectionPropertyMap::SetBorder( BorderPosition ePos, sal_Int32 nLineDistance, const table::BorderLine2& rBorderLine )
+void SectionPropertyMap::SetBorder( BorderPosition ePos, sal_Int32 nLineDistance, const table::BorderLine& rBorderLine )
 {
     delete m_pBorderLines[ePos];
-    m_pBorderLines[ePos] = new table::BorderLine2( rBorderLine );
+    m_pBorderLines[ePos] = new table::BorderLine( rBorderLine );
     m_nBorderDistances[ePos] = nLineDistance;
 }
 /*-- 28.07.2006 10:56:27---------------------------------------------------
@@ -555,7 +575,7 @@ uno::Reference< text::XTextColumns > SectionPropertyMap::ApplyColumnProperties(
         uno::Reference< beans::XPropertySet > xColumnPropSet( xColumns, uno::UNO_QUERY_THROW );
         if( !m_bEvenlySpaced &&
                 (sal_Int32(m_aColWidth.size()) == (m_nColumnCount + 1 )) &&
-                (sal_Int32(m_aColDistance.size()) == m_nColumnCount))
+                ((sal_Int32(m_aColDistance.size()) == m_nColumnCount) || (sal_Int32(m_aColDistance.size()) == m_nColumnCount + 1)) )
         {
             //the column width in word is an absolute value, in OOo it's relative
             //the distances are both absolute
@@ -907,9 +927,9 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
         //sep.dyaLinePitch
         if (nGridLinePitch < 1 || nGridLinePitch > 31680)
         {
-#if SUPD != 310
+#if SUPD != 412
             SAL_WARN("writerfilter", "sep.dyaLinePitch outside legal range: " << nGridLinePitch);
-#endif	// SUPD != 310
+#endif	// SUPD != 412
             nGridLinePitch = 1;
         }
 
@@ -953,22 +973,22 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
         if(nRubyHeight < 0 )
             nRubyHeight = 0;
         operator[]( PropertyDefinition( PROP_GRID_RUBY_HEIGHT, false )) = uno::makeAny( nRubyHeight );
-
-        sal_Int16 nGridMode = text::TextGridMode::NONE;
         
-        switch (m_nGridType)
+        // #i119558#, force to set document as standard page mode,
+        // refer to ww8 import process function "SwWW8ImplReader::SetDocumentGrid"
+        try
         {
-            case NS_ooxml::LN_Value_wordprocessingml_ST_DocGrid_lines:
-                nGridMode = text::TextGridMode::LINES;
-                break;
-            case NS_ooxml::LN_Value_wordprocessingml_ST_DocGrid_linesAndChars:
-                nGridMode = text::TextGridMode::LINES_AND_CHARS;
-                break;
-            default:
-                break;
+            uno::Reference< beans::XPropertySet > xDocProperties;
+            xDocProperties = uno::Reference< beans::XPropertySet >( rDM_Impl.GetTextDocument(), uno::UNO_QUERY_THROW );
+            sal_Bool bSquaredPageMode = sal_False;
+            operator[]( PropertyDefinition( PROP_GRID_STANDARD_MODE, false )) = uno::makeAny( !bSquaredPageMode );
+            xDocProperties->setPropertyValue( rtl::OUString::createFromAscii("DefaultPageMode"), uno::makeAny( bSquaredPageMode ));
         }
-        
-        operator[](PropertyDefinition(PROP_GRID_MODE, false)) = uno::makeAny(nGridMode);
+        catch (const uno::Exception& rEx)
+        {
+            OSL_ENSURE( false, "Exception in SectionPropertyMap::CloseSectionGroup");
+            (void)rEx;
+        }
         
         _ApplyProperties( xFollowPageStyle );
 
@@ -1003,19 +1023,28 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
                     uno::Reference< container::XEnumeration >  xEnum = xEnumAccess->createEnumeration( );
                     xRangeProperties = uno::Reference< beans::XPropertySet >( xEnum->nextElement( ), uno::UNO_QUERY_THROW );
                 }
-                else
-                    xRangeProperties = uno::Reference< beans::XPropertySet >( m_xStartingRange, uno::UNO_QUERY_THROW );
-            /* break type
-            0 - No break 1 - New Colunn 2 - New page 3 - Even page 4 - odd page */
-                xRangeProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_PAGE_DESC_NAME ),
-                    uno::makeAny( m_bTitlePage ? m_sFirstPageStyleName : m_sFollowPageStyleName ));
-    //  todo: page breaks with odd/even page numbering are not available - find out current page number to check how to change the number
-    //  or add even/odd page break types
-                if(m_bPageNoRestart || m_nPageNumber >= 0)
+                else if( m_xStartingRange.is() )
                 {
-                    sal_Int16 nPageNumber = m_nPageNumber >= 0 ? static_cast< sal_Int16 >(m_nPageNumber) : 1;
-                    xRangeProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_PAGE_NUMBER_OFFSET ),
-                        uno::makeAny( nPageNumber ));
+                    xRangeProperties = uno::Reference< beans::XPropertySet >( m_xStartingRange, uno::UNO_QUERY_THROW );
+                }
+                if ( xRangeProperties.is() )
+                {
+                    /* break type: 0 - No break 1 - New Column 2 - New page 3 - Even page 4 - odd page */
+                    uno::Reference< beans::XPropertySetInfo > xRangePropertiesInfo = xRangeProperties->getPropertySetInfo();
+                    if ( xRangePropertiesInfo->hasPropertyByName( rPropNameSupplier.GetName( PROP_PAGE_DESC_NAME ) ) )
+                    {
+                        xRangeProperties->setPropertyValue(
+                            rPropNameSupplier.GetName( PROP_PAGE_DESC_NAME ),
+                            uno::makeAny( m_bTitlePage ? m_sFirstPageStyleName : m_sFollowPageStyleName ) );
+                        //  todo: page breaks with odd/even page numbering are not available - find out current page number to check how to change the number
+                        //  or add even/odd page break types
+                        if ( m_bPageNoRestart || m_nPageNumber >= 0 )
+                        {
+                            sal_Int16 nPageNumber = m_nPageNumber >= 0 ? static_cast< sal_Int16 >(m_nPageNumber) : 1;
+                            xRangeProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_PAGE_NUMBER_OFFSET ),
+                                uno::makeAny( nPageNumber ));
+                        }
+                    }
                 }
             }
         }
@@ -1092,7 +1121,7 @@ StyleSheetPropertyMap::StyleSheetPropertyMap() :
     mbCT_TblWidth_typeSet( false ),
     mnListId( -1 ),
     mnListLevel( -1 ),
-    mnOutlineLevel( -1 )
+    mnOutlineLevel( 0 )
 {
 }
 /*-- 14.06.2007 13:57:43---------------------------------------------------
@@ -1271,5 +1300,3 @@ void TablePropertyMap::insertTableProperties( const PropertyMap* pMap )
 
 }//namespace dmapper
 }//namespace writerfilter
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
