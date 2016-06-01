@@ -189,7 +189,13 @@ void StartGrammarChecking( SwDoc &rDoc, SwRootFrm &rRootFrame )
 //        return;
 
 	uno::Reference< linguistic2::XProofreadingIterator > xGCIterator( rDoc.GetGCIterator() );
+#ifdef USE_JAVA
+	// Fix crash when printing the document in the
+	// testing/elcapitanbugs_emails/20160531 e-mail
+	if ( xGCIterator.is() && rDoc.GetDocShell() )
+#else	// USE_JAVA
 	if ( xGCIterator.is() )
+#endif	// USE_JAVA
 	{
         uno::Reference< lang::XComponent >  xDoc( rDoc.GetDocShell()->GetBaseModel(), uno::UNO_QUERY );
 		uno::Reference< text::XFlatParagraphIteratorProvider >  xFPIP( xDoc, uno::UNO_QUERY );
