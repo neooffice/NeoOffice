@@ -2838,7 +2838,6 @@ const Rectangle JavaSalFrame::GetScreenBounds( long nX, long nY, long nWidth, lo
 	// Iterate through the screens and find the screen that the
 	// point is inside of
 	Point aPoint( nX, nY );
-	::std::vector< Rectangle >::const_iterator it = aVCLScreensFullBoundsList.begin();
 	unsigned int i;
 	for ( i = 0; i < aVCLScreensFullBoundsList.size() && i < aVCLScreensVisibleBoundsList.size(); i++ )
 	{

@@ -1887,7 +1887,7 @@ static NSUInteger nMouseMask = 0;
 {
 	MacOSBOOL bRet = YES;
 
-	if ( pWindow == self && [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
+	if ( pWindow == self && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
 		if ( ![self isVisible] )
 		{
@@ -3434,7 +3434,7 @@ sal_Bool NSApplication_isActive()
 	return pRet;
 }
 
-- (void)cancelTermination:(id)pObject;
+- (void)cancelTermination:(id)pObject
 {
 	VCLApplicationDelegate *pDelegate = [VCLApplicationDelegate sharedDelegate];
 	if ( pDelegate )

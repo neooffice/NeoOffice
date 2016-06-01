@@ -2544,7 +2544,7 @@ static bool IsRunningMavericksOrLower()
 	}
 }
 
-- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics tabitemValue:(TabitemValue *)pTabitemValue destRect:(CGRect)aDestRect;
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics tabitemValue:(TabitemValue *)pTabitemValue destRect:(CGRect)aDestRect
 {
 	[super init];
 
