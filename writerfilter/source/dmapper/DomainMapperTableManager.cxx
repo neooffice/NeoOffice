@@ -381,9 +381,7 @@ void DomainMapperTableManager::pushStackOfMembers()
     m_aGridSpans.push( pNewSpans );
 #ifndef NO_LIBO_4_0_TABLE_FIXES
     m_aCellWidths.push_back( pNewCellWidths );
-#endif	// !NO_LIBO_4_0_TABLE_FIXES
 
-#ifndef NO_LIBO_4_0_TABLE_FIXES
     // And push it back to the right level.
     if (oCurrentWidth)
         m_aCellWidths.back()->push_back(*oCurrentWidth);
