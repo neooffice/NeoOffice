@@ -64,7 +64,7 @@ LINKFLAGSAPPGUI!:=	$(LINKFLAGSAPPGUI:s/-bind_at_load//)
 
 .IF "$(GUIBASE)" == "java"
 JAVAAPPOBJS = $(OBJ)$/main_java.obj
-JAVAAPPSTDLIBS = -Wl,-rpath,@executable_path/../basis-link/program -Wl,-rpath,@executable_path/../basis-link/ure-link/lib -Wl,-rpath,/usr/lib -Wl,-rpath,/usr/local/lib -framework AppKit
+JAVAAPPSTDLIBS = -Wl,-rpath,@executable_path/../program -Wl,-rpath,/usr/lib -Wl,-rpath,/usr/local/lib -framework AppKit
 .ENDIF		# "$(GUIBASE)" == "java"
 
 #.IF "$(OS)" == "LINUX" || "$(OS)" == "FREEBSD" || "$(OS)" == "NETBSD"
