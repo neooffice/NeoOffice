@@ -637,7 +637,7 @@ bool JavaImplFontData::IsBadFont( const JavaImplFontData *pFontData, bool bHandl
 				NSBundle *pBundle = [NSBundle mainBundle];
 				if ( pBundle && pBundle.bundlePath )
 				{
-					NSString *pCommandPath = [NSString stringWithFormat:@"%@/Contents/basis-link/program/checknativefont", pBundle.bundlePath];
+					NSString *pCommandPath = [NSString stringWithFormat:@"%@/Contents/program/checknativefont", pBundle.bundlePath];
 					if ( pCommandPath && !access( [pCommandPath UTF8String], R_OK | X_OK ) )
 					{
 						char *pCommandArgs[ 3 ];
