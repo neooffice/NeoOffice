@@ -241,12 +241,12 @@ int java_main( int argc, char **argv )
 	// regular directories. If they have, the application has been moved or
 	// copied to a file system that does not support softlinks.
 	NSFileManager *pFileManager = [NSFileManager defaultManager];
-	NSString *pProgramPath = [pBundlePath stringByAppendingPathComponent:@"Contents"];
-	if ( pProgramPath )
-		pProgramPath = [pProgramPath stringByAppendingPathComponent:@"program"];
-	if ( !pFileManager || !pProgramPath || ![pFileManager destinationOfSymbolicLinkAtPath:pProgramPath error:nil] )
+	NSString *pEtcPath = [pBundlePath stringByAppendingPathComponent:@"Contents"];
+	if ( pEtcPath )
+		pEtcPath = [pEtcPath stringByAppendingPathComponent:@"etc"];
+	if ( !pFileManager || !pEtcPath || ![pFileManager destinationOfSymbolicLinkAtPath:pEtcPath error:nil] )
 	{
-		NSLog( @"Application's main bundle path missing program softlink" );
+		NSLog( @"Application's main bundle path missing \"etc\" softlink" );
 		[pPool release];
 		_exit( 1 );
 	}
