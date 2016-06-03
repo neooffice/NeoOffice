@@ -306,7 +306,7 @@ int java_main( int argc, char **argv )
 	// Assign command's directory to PATH environment variable
   	const char *pEnvPath = getenv( "PATH" );
 	NSString *pPath = ( pEnvPath ? [NSString stringWithUTF8String:pEnvPath] : nil );
-	NSString *pStandardPath = [NSString stringWithFormat:@"%@/Contents/MacOS:%@/Contents/basis-link/program:%@/Contents/basis-link/ure-link/bin:/bin:/sbin:/usr/bin:/usr/sbin:", pBundlePath, pBundlePath, pBundlePath];
+	NSString *pStandardPath = [NSString stringWithFormat:@"%@/Contents/MacOS:%@/Contents/program:/bin:/sbin:/usr/bin:/usr/sbin:", pBundlePath, pBundlePath, pBundlePath];
 	if ( !pPath || [pPath length] < [pStandardPath length] || [pPath compare:pStandardPath options:NSLiteralSearch range:NSMakeRange( 0, [pStandardPath length] )] != NSOrderedSame )
 	{
 		NSString *pPathEnv = [NSString stringWithFormat:@"PATH=%@", pStandardPath];
@@ -329,7 +329,7 @@ int java_main( int argc, char **argv )
 		putenv( strdup( [pFrameworkPathEnv UTF8String] ) );
 	}
 
-	NSString *pStandardLibPath = [NSString stringWithFormat:@"%@/Contents/MacOS:%@/Contents/basis-link/program:%@/Contents/basis-link/ure-link/lib:/usr/lib:/usr/local/lib:", pBundlePath, pBundlePath, pBundlePath];
+	NSString *pStandardLibPath = [NSString stringWithFormat:@"%@/Contents/MacOS:%@/Contents/program:/usr/lib:/usr/local/lib:", pBundlePath, pBundlePath, pBundlePath];
 	const char *pEnvLibPath = getenv( "LD_LIBRARY_PATH" );
 	NSString *pLibPath = ( pEnvLibPath ? [NSString stringWithUTF8String:pEnvLibPath] : nil );
 	const char *pEnvDyLibPath = getenv( "DYLD_LIBRARY_PATH" );
@@ -444,13 +444,13 @@ int java_main( int argc, char **argv )
 			}
 		}
 
-		NSString *pPageinPath = [NSString stringWithFormat:@"%@/Contents/basis-link/program/pagein", pBundlePath];
+		NSString *pPageinPath = [NSString stringWithFormat:@"%@/Contents/program/pagein", pBundlePath];
 		if ( !access( [pPageinPath UTF8String], R_OK | X_OK ) )
 		{
 			int nCurrentArg = 0;
 			char *pPageinArgs[ argc + 3 ];
 			pPageinArgs[ nCurrentArg++ ] = (char *)[pPageinPath UTF8String];
-			NSString *pPageinSearchArg = [NSString stringWithFormat:@"-L%@/Contents/basis-link/program", pBundlePath];
+			NSString *pPageinSearchArg = [NSString stringWithFormat:@"-L%@/Contents/program", pBundlePath];
 			pPageinArgs[ nCurrentArg++ ] = (char *)[pPageinSearchArg UTF8String];
 			int i = 1;
 			for ( ; i < argc; i++ )
@@ -530,9 +530,9 @@ int java_main( int argc, char **argv )
 	// Dynamically load app's main symbol to improve startup speed
 	NSString *pAppMainLibPath = nil;
 	if ( bUnoPkg )
-		pAppMainLibPath = [NSString stringWithFormat:@"%@/Contents/basis-link/program/libunopkgapp.dylib", pBundlePath];
+		pAppMainLibPath = [NSString stringWithFormat:@"%@/Contents/program/libunopkgapp.dylib", pBundlePath];
 	else
-		pAppMainLibPath = [NSString stringWithFormat:@"%@/Contents/basis-link/program/libsofficeapp.dylib", pBundlePath];
+		pAppMainLibPath = [NSString stringWithFormat:@"%@/Contents/program/libsofficeapp.dylib", pBundlePath];
 
 	void *pAppMainLib = NULL;
 	if ( pAppMainLibPath )
