@@ -215,7 +215,7 @@ static void ImplFontListChanged()
 					const OUString aSong( OUString::createFromAscii( "Song" ) );
 					const OUString aSung( OUString::createFromAscii( "Sung" ) );
 					const OUString aNeoSymbol( OUString::createFromAscii( "Neo Symbol" ) );
-					const OUString aNeo3Symbol( OUString::createFromAscii( "Neo3Symbol" ) );
+					const OUString aNeo4Symbol( OUString::createFromAscii( "Neo4Symbol" ) );
 					const OUString aOpenSymbol( OUString::createFromAscii( "OpenSymbol" ) );
 					const OUString aRegular( OUString::createFromAscii( " Regular" ) );
 					const OUString aStarSymbol( OUString::createFromAscii( "StarSymbol" ) );
@@ -310,10 +310,10 @@ static void ImplFontListChanged()
 							// NeoOffice fonts to override our symbol font
 							continue;
 						}
-						else if ( aDisplayName == aNeo3Symbol )
+						else if ( aDisplayName == aNeo4Symbol )
 						{
 							aDisplayName = OUString( aOpenSymbol );
-							aMapName += aFontSeparator + OUString::createFromAscii( "Symbol" ) + aFontSeparator + aNeo3Symbol;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Symbol" ) + aFontSeparator + aNeo4Symbol;
 						}
 						else if ( aDisplayName == aLastResort )
 						{
