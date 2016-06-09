@@ -926,16 +926,13 @@ XubString JavaSalInstance::GetDefaultPrinter()
 	SalData *pSalData = GetSalData();
 	if ( !pSalData->maDefaultPrinter.Len() )
 	{
-		SimpleResMgr *pResMgr = SimpleResMgr::Create( CREATEVERSIONRESMGR_NAME( salapp ) );
+		ResMgr *pResMgr = ImplGetResMgr();
 		if ( pResMgr )
-		{
-			pSalData->maDefaultPrinter = XubString( pResMgr->ReadString( DEFAULT_PRINTER ) );
-			delete pResMgr;
-		}
+			pSalData->maDefaultPrinter = XubString( ResId( DEFAULT_PRINTER, *pResMgr ) );
 	}
 
 	if ( !pSalData->maDefaultPrinter.Len() )
-		pSalData->maDefaultPrinter = XubString( OUString::createFromAscii( "Printer" ) );
+		pSalData->maDefaultPrinter = XubString::CreateFromAscii( "Printer" );
 
 	return pSalData->maDefaultPrinter;
 }
