@@ -237,16 +237,20 @@ int java_main( int argc, char **argv )
 		_exit( 1 );
 	}
 
-	// Check if application's directory softlinks have been converted to
-	// regular directories. If they have, the application has been moved or
-	// copied to a file system that does not support softlinks.
+	// Check if application's softlinks have been converted to regular files.
+	// If they have, the application has been moved or copied to a file system
+	// that does not support softlinks.
 	NSFileManager *pFileManager = [NSFileManager defaultManager];
-	NSString *pEtcPath = [pBundlePath stringByAppendingPathComponent:@"Contents"];
-	if ( pEtcPath )
-		pEtcPath = [pEtcPath stringByAppendingPathComponent:@"etc"];
-	if ( !pFileManager || !pEtcPath || ![pFileManager destinationOfSymbolicLinkAtPath:pEtcPath error:nil] )
+	NSString *pBootstraprcPath = [pBundlePath stringByAppendingPathComponent:@"Contents"];
+	if ( pBootstraprcPath )
 	{
-		NSLog( @"Application's main bundle path missing \"etc\" softlink" );
+		pBootstraprcPath = [pBootstraprcPath stringByAppendingPathComponent:@"MacOS"];
+		if ( pBootstraprcPath )
+			pBootstraprcPath = [pBootstraprcPath stringByAppendingPathComponent:@"bootstraprc"];
+	}
+	if ( !pFileManager || !pBootstraprcPath || ![pFileManager destinationOfSymbolicLinkAtPath:pBootstraprcPath error:nil] )
+	{
+		NSLog( @"Application's main bundle path missing \"MacOS/bootstraprc\" softlink" );
 		[pPool release];
 		_exit( 1 );
 	}
