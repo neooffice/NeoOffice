@@ -645,7 +645,7 @@ bool JavaImplFontData::IsBadFont( const JavaImplFontData *pFontData, bool bHandl
 						pCommandArgs[ 1 ] = (char *)[(NSString *)aPSString UTF8String];
 						pCommandArgs[ 2 ] = NULL;
 
-						// Execute the pagein command in child process
+						// Execute the checknativefont command in child process
 						pid_t pid = fork();
 						if ( !pid )
 						{
