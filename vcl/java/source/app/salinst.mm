@@ -390,7 +390,7 @@ void SalAbort( const XubString& rErrorText )
 
 const ::rtl::OUString& SalGetDesktopEnvironment()
 {
-	static ::rtl::OUString aDesktopEnvironment( RTL_CONSTASCII_USTRINGPARAM( "Mac OS X" ) );
+	static ::rtl::OUString aDesktopEnvironment( RTL_CONSTASCII_USTRINGPARAM( "MacOSX" ) );
 	return aDesktopEnvironment;
 }
 
