@@ -102,10 +102,10 @@ static ::rtl::OUString CleanupNeoOfficeGenerator(::rtl::OUString aGenerator)
 
     // Fix loss of bullets in Impress documents after saving by changing any
     // document generator strings that start with "NeoOffice/2" that were not
-    // saved by NeoOffice 2.x by prepending "4." onto version number
+    // saved by NeoOffice 2.x by prepending "3." onto version number
     sal_Int32 nVersionPos = aNeoOffice.getLength();
     if (aRet.getLength() > nVersionPos + 1 && aRet.indexOf(aNeoOffice) == 0 && aRet.getStr()[nVersionPos] == '2' && aRet.getStr()[nVersionPos+1] != '.' && aRet.getStr()[nVersionPos+1] != '$')
-        aRet = aRet.replaceAt(nVersionPos, 0, ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("4.")));
+        aRet = aRet.replaceAt(nVersionPos, 0, ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("3.")));
 
     return aRet;
 }
