@@ -241,14 +241,14 @@ int java_main( int argc, char **argv )
 	// If they have, the application has been moved or copied to a file system
 	// that does not support softlinks.
 	NSFileManager *pFileManager = [NSFileManager defaultManager];
-	NSString *pBootstraprcPath = [pBundlePath stringByAppendingPathComponent:@"Contents"];
-	if ( pBootstraprcPath )
+	NSString *pSofficercPath = [pBundlePath stringByAppendingPathComponent:@"Contents"];
+	if ( pSofficercPath )
 	{
-		pBootstraprcPath = [pBootstraprcPath stringByAppendingPathComponent:@"MacOS"];
-		if ( pBootstraprcPath )
-			pBootstraprcPath = [pBootstraprcPath stringByAppendingPathComponent:@"bootstraprc"];
+		pSofficercPath = [pSofficercPath stringByAppendingPathComponent:@"MacOS"];
+		if ( pSofficercPath )
+			pSofficercPath = [pSofficercPath stringByAppendingPathComponent:@"sofficerc"];
 	}
-	if ( !pFileManager || !pBootstraprcPath || ![pFileManager destinationOfSymbolicLinkAtPath:pBootstraprcPath error:nil] )
+	if ( !pFileManager || !pSofficercPath || ![pFileManager destinationOfSymbolicLinkAtPath:pSofficercPath error:nil] )
 	{
 		NSLog( @"Application's main bundle path missing \"MacOS/bootstraprc\" softlink" );
 		[pPool release];
