@@ -79,11 +79,6 @@ static const NSString *pProductionBaseURLs[] = {
 #endif	// !TEST
 
 
-@interface NSPropertyListSerialization (UpdateWebView)
-+ (NSData *)dataWithPropertyList:(id)plist format:(NSPropertyListFormat)format options:(NSPropertyListWriteOptions)opt error:(NSError **)error;
-+ (id)propertyListWithData:(NSData *)data options:(NSPropertyListReadOptions)opt format:(NSPropertyListFormat *)format error:(NSError **)error;
-@end
-
 using namespace rtl;
 
 /**
@@ -140,19 +135,11 @@ static NSData *GetResumeDataForFile(NSURLDownload *pDownload, NSString *pPath)
 		if (pResumeData)
 		{
 			NSPropertyListFormat nFormat;
-			NSMutableDictionary *pResumeDict = nil;
-			if (class_getClassMethod([NSPropertyListSerialization class], @selector(propertyListWithData:options:format:error:)))
-				pResumeDict = [NSPropertyListSerialization propertyListWithData:pResumeData options:NSPropertyListMutableContainersAndLeaves format:&nFormat error:nil];
-			if (!pResumeDict && class_getClassMethod([NSPropertyListSerialization class], @selector(propertyListFromData:mutabilityOption:format:errorDescription:)))
-				pResumeDict = [NSPropertyListSerialization propertyListFromData:pResumeData mutabilityOption:NSPropertyListMutableContainersAndLeaves format:&nFormat errorDescription:nil];
-
+			NSMutableDictionary *pResumeDict = [NSPropertyListSerialization propertyListWithData:pResumeData options:NSPropertyListMutableContainersAndLeaves format:&nFormat error:nil];
 			if (pResumeDict && [pResumeDict isKindOfClass:[NSMutableDictionary class]] && [pResumeDict objectForKey:kDownloadBytesReceivedKey])
 			{
 				[pResumeDict setObject:[NSNumber numberWithUnsignedLongLong:nFileSize] forKey:kDownloadBytesReceivedKey];
-				if (class_getClassMethod([NSPropertyListSerialization class], @selector(dataWithPropertyList:format:options:error:)))
-					pRet = [NSPropertyListSerialization dataWithPropertyList:pResumeDict format:nFormat options:0 error:nil];
-				if (!pRet && class_getClassMethod([NSPropertyListSerialization class], @selector(dataFromPropertyList:format:errorDescription:)))
-					pRet = [NSPropertyListSerialization dataFromPropertyList:pResumeDict format:nFormat errorDescription:nil];
+				pRet = [NSPropertyListSerialization dataWithPropertyList:pResumeDict format:nFormat options:0 error:nil];
 			}
 		}
 	}
