@@ -278,7 +278,7 @@ static BOOL bIOPMAssertionIDSet = NO;
 				// mode. Note: delay the toggling as it needs to lock the
 				// applcation mutex.
 				NSWindow *pKeyWindow = [pApp keyWindow];
-				if ( pKeyWindow && [pKeyWindow styleMask] & NSFullScreenWindowMask && [pKeyWindow respondsToSelector:@selector(toggleFullScreen:)] )
+				if ( pKeyWindow && [pKeyWindow styleMask] & NSFullScreenWindowMask )
 					[pKeyWindow performSelector:@selector(toggleFullScreen:) withObject:self afterDelay:0];
 			}
 
@@ -292,10 +292,6 @@ static BOOL bIOPMAssertionIDSet = NO;
 	}
 }
 
-@end
-
-@interface NSWindow (VCLToggleFullScreen)
-- (void)toggleFullScreen:(id)pObject;
 @end
 
 @interface VCLToggleFullScreen : NSObject
@@ -342,7 +338,7 @@ static BOOL bIOPMAssertionIDSet = NO;
 {
 	(void)pObject;
 
-	if ( mpWindow && [mpWindow respondsToSelector:@selector(toggleFullScreen:)] )
+	if ( mpWindow )
 	{
 		BOOL bToggle = !mbToggleToCurrentScreenMode;
 		if ( !bToggle )
@@ -537,13 +533,6 @@ static BOOL bIOPMAssertionIDSet = NO;
 - (void)setVisible:(VCLWindowWrapperArgs *)pArgs;
 - (void)toFront:(VCLWindowWrapperArgs *)pArgs;
 - (NSWindow *)window;
-@end
-
-@interface NSCursor (VCLSetCursor)
-
-+ (NSCursor *)IBeamCursorForVerticalLayout;
-+ (NSCursor *)operationNotAllowedCursor;
-
 @end
 
 static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
@@ -773,8 +762,7 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 				pCursor = [NSCursor openHandCursor];
 				break;
 			case POINTER_NOTALLOWED:
-				if ( class_getClassMethod( [NSCursor class], @selector(operationNotAllowedCursor) ) )
-					pCursor = [NSCursor operationNotAllowedCursor];
+				pCursor = [NSCursor operationNotAllowedCursor];
 				break;
 			case POINTER_NSIZE:
 			case POINTER_WINDOW_NSIZE:
@@ -797,7 +785,6 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 				pCursor = [NSCursor pointingHandCursor];
 				break;
 			case POINTER_TEXT_VERTICAL:
-				if ( class_getClassMethod( [NSCursor class], @selector(IBeamCursorForVerticalLayout) ) )
 				pCursor = [NSCursor IBeamCursorForVerticalLayout];
 				break;
 			case POINTER_WAIT:
@@ -1618,7 +1605,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		sal_Bool *pInLiveResizePointer = (sal_Bool *)[pInLiveResize pointerValue];
 		if ( pInLiveResizePointer )
 		{
-			if ( [mpWindow respondsToSelector:@selector(inLiveResize)] && [mpWindow inLiveResize] )
+			if ( [mpWindow inLiveResize] )
 				*pInLiveResizePointer = YES;
 			else
 				*pInLiveResizePointer = NO;

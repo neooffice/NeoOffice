@@ -106,7 +106,6 @@
 - (NSRect)_frameOnExitFromFullScreen;
 - (void)_restoreModalWindowLevel;
 - (void)_setModalWindowLevel;
-- (BOOL)inLiveResize;
 @end
 
 @interface VCLPanel : NSPanel <NSWindowDelegate>

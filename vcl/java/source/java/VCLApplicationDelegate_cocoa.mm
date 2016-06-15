@@ -352,10 +352,9 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 {
 	mpOpenPanel = nil;
 
-	if ( [self respondsToSelector:@selector(beginOpenPanelWithCompletionHandler:)] )
-		[self beginOpenPanelWithCompletionHandler:^(NSArray *pResult) {
-			(void)pResult;
-		}];
+	[self beginOpenPanelWithCompletionHandler:^(NSArray *pResult) {
+		(void)pResult;
+	}];
 
 	return mpOpenPanel;
 }
@@ -422,8 +421,8 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 						[pSubmenu setDelegate:self];
 
 						// Set help menu
-						if ( i == nCount - 1 && [pApp respondsToSelector:@selector(setHelpMenu:)] )
-							[pApp setHelpMenu:pSubmenu];
+						if ( i == nCount - 1 )
+							pApp.helpMenu = pSubmenu;
 					}
 				}
 			}
