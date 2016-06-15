@@ -1,168 +1,168 @@
 <?xml version="1.0"?>
 <oor:data xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:oor="http://openoffice.org/2001/registry">
-    <dependency file="main" />
-    <oor:component-data xmlns:install="http://openoffice.org/2004/installation" oor:name="Addons" oor:package="org.openoffice.Office">
-        <node oor:name="AddonUI">
-            <node oor:name="OfficeHelp">
-                <node oor:name="UpdateCheckJob" oor:op="replace">
-                    <prop oor:name="URL" oor:type="xs:string">
-                        <value>vnd.sun.star.job:alias=UpdateCheck</value>
-                    </prop>
-                    <prop oor:name="ImageIdentifier" oor:type="xs:string">
-                        <value />
-                    </prop>
-                    <prop oor:name="Title" oor:type="xs:string">
-                        <value xml:lang="en-US">Check for ~Updates...</value>
-                        <value xml:lang="af">Kontroleer vir ~bywerkings...</value>
-                        <value xml:lang="ar">التحقق من وجو~د تحديثات...</value>
-                        <value xml:lang="as">উন্নয়নৰ কাৰণে পৰীক্ষা কৰক (~U) ...</value>
-                        <value xml:lang="ast">Guetar ~anovamientos...</value>
-                        <value xml:lang="be-BY">Спраўдзіць наяўнасць абнаўленняў...</value>
-                        <value xml:lang="bg">Проверка за ~обновяване...</value>
-                        <value xml:lang="bn">হালনাগাদের জন্য পরীক্ষা করুন... (~U)</value>
-                        <value xml:lang="br">Gwiriañ an ~hivizadennoù...</value>
-                        <value xml:lang="bs">Provjeri za ~nadogradnje...</value>
-                        <value xml:lang="ca">Comprova si ~hi ha actualitzacions...</value>
-                        <value xml:lang="ca-XR">Comprovar ~actulisacions</value>
-                        <value xml:lang="ca-XV">Comprova si ~hi ha actualitzacions...</value>
-                        <value xml:lang="cs">Zkontrolovat aktualizace...</value>
-                        <value xml:lang="cy">Gwirio am ~Ddiweddariadau...</value>
-                        <value xml:lang="da">Søg efter ~opdateringer...</value>
-                        <value xml:lang="de">Suche nach ~Updates...</value>
-                        <value xml:lang="dgo">अपडेटें लेई ~जाचो... </value>
-                        <value xml:lang="dz">དུས་མཐུན་ཚུ་ ཞིབ་དཔྱད་འབད་</value>
-                        <value xml:lang="el">Έλεγχος για Εν~ημερώσεις...</value>
-                        <value xml:lang="en-GB">Check for ~Updates...</value>
-                        <value xml:lang="en-ZA">Check for ~Updates...</value>
-                        <value xml:lang="eo">Serĉi por ĝisdatigoj...</value>
-                        <value xml:lang="es">Buscar ~actualizaciones...</value>
-                        <value xml:lang="et">Kontrolli uuenduste olemasolu...</value>
-                        <value xml:lang="eu">Bilatu ~eguneratzeak...</value>
-                        <value xml:lang="fi">Tarkista ~päivitysten saatavuus...</value>
-                        <value xml:lang="fr">Vérifier les mises à jo~ur...</value>
-                        <value xml:lang="ga">Lorg N~uashonruithe...</value>
-                        <value xml:lang="gd">Th~oir sùil airson ùrachaidhean...</value>
-                        <value xml:lang="gl">Buscando act~ualizacións...</value>
-                        <value xml:lang="gu">સુધારાઓ માટે ચકાસો (~U)...</value>
-                        <value xml:lang="he">בדיקת עידכונים...‏</value>
-                        <value xml:lang="hi">अद्यतन के लिए जाँचें...</value>
-                        <value xml:lang="hr">Provjeri za ~nadogradnje...</value>
-                        <value xml:lang="hu">~Frissítések keresése...</value>
-                        <value xml:lang="id">Periksa Pembahar~uan...</value>
-                        <value xml:lang="is">~Athuga með uppfærslur...</value>
-                        <value xml:lang="it">Controlla ~aggiornamenti...</value>
-                        <value xml:lang="ja">更新のチェック(~U)...</value>
-                        <value xml:lang="ka">~განახლებაზე შემოწმება...</value>
-                        <value xml:lang="kid">mw=gd2‖Check for ~Updates...</value>
-                        <value xml:lang="kk">Жаңар~туларға тексеру...</value>
-                        <value xml:lang="km">ពិនិត្យ​រកមើល​បច្ចុប្បន្ន​​ភាព...</value>
-                        <value xml:lang="kn">ಅಪ್‌ಡೇಟ್‌ಗಳಿಗಾಗಿ ಪರಿಶೀಲಿಸು(~U)...</value>
-                        <value xml:lang="ko">업데이트 확인(~U)...</value>
-                        <value xml:lang="kok">सुदार सोदात</value>
-                        <value xml:lang="ku">Li ~Rojanekirinan bigere...</value>
-                        <value xml:lang="lt">Tikrinti, ar yra naujinių...</value>
-                        <value xml:lang="lv">Pārbaudīt atjauninājumus...</value>
-                        <value xml:lang="mk">Провери за над~градби...</value>
-                        <value xml:lang="ml">~പരിഷ്കരണങ്ങള്‍ പരിശോധിക്കുക...</value>
-                        <value xml:lang="mn">~Шинэчлэлийг шалгах...</value>
-                        <value xml:lang="mni">অপদেতশিংগী অশোয়বা থিবা...</value>
-                        <value xml:lang="mr">सुधारणांकरीता तपासा (~U)...</value>
-                        <value xml:lang="my">~နောက်ဆုံးအချက်အလက်များ ရယူမှု ကို စစ်ဆေးပါ...</value>
-                        <value xml:lang="nb">Se etter ~oppdateringer …</value>
-                        <value xml:lang="ne">अद्याव</value>
-                        <value xml:lang="nl">Op ~updates controleren...</value>
-                        <value xml:lang="nn">Sjå etter ~oppdateringar …</value>
-                        <value xml:lang="nr">Kontroleer vir ~bywerkings...</value>
-                        <value xml:lang="nso">Kontroleer vir ~bywerkings...</value>
-                        <value xml:lang="oc">Verificar las mesas a jo~rn...</value>
-                        <value xml:lang="om">Haaromsoota Mirkaneessi...</value>
-                        <value xml:lang="or">ଅଦ୍ୟତନଗୁଡ଼ିକ ପାଇଁ ଯାଞ୍ଚକରନ୍ତୁ (~U)...</value>
-                        <value xml:lang="pa-IN">ਅੱਪਡੇਟ ਲਈ ਚੈੱਕ ਕਰੋ(~U)...</value>
-                        <value xml:lang="pl">Sprawdź ~aktualizację...</value>
-                        <value xml:lang="pt">Procurar at~ualizações...</value>
-                        <value xml:lang="pt-BR">Verificar se há at~ualizações...</value>
-                        <value xml:lang="ro">Ca~ută actualizări...</value>
-                        <value xml:lang="ru">Проверить наличие обновлений...</value>
-                        <value xml:lang="rw">Igenzura ry'Ivugurura...</value>
-                        <value xml:lang="sa-IN">नवीकरणेभ्यः परीक्षस्व </value>
-                        <value xml:lang="sh">Potraži ~nadogradnje...</value>
-                        <value xml:lang="si">යාවත්කාල සඳහා පරීක්ෂා කරන්න... (~U)</value>
-                        <value xml:lang="sk">Skontrolovať akt~ualizácie...</value>
-                        <value xml:lang="sl">Preveri ~stanje posodobitev ...</value>
-                        <value xml:lang="sq">E gatshme për përdorim</value>
-                        <value xml:lang="sr">Потражи ~надоградње...</value>
-                        <value xml:lang="ss">Kontroleer vir ~bywerkings...</value>
-                        <value xml:lang="st">Kontroleer vir ~bywerkings...</value>
-                        <value xml:lang="sv">Sök efter ~uppdateringar...</value>
-                        <value xml:lang="ta">புதுப்பித்தல்களை சரிப்பார் (~U)...</value>
-                        <value xml:lang="te">(~U) నవీకరణల కొరకు పరిశీలించుము...</value>
-                        <value xml:lang="tg">Санҷиши ~Ҷадидаҳо...</value>
-                        <value xml:lang="th">ตรวจสอบการ~ปรับรุ่น...</value>
-                        <value xml:lang="tn">Kontroleer vir ~bywerkings...</value>
-                        <value xml:lang="tr">~Güncellemeleri kontrol et...</value>
-                        <value xml:lang="ts">Kontroleer vir ~bywerkings...</value>
-                        <value xml:lang="ug">يېڭىلاشنى تەكشۈر(~U)…</value>
-                        <value xml:lang="uk">Перевірити наявність ~оновлень...</value>
-                        <value xml:lang="uz">Yangilanishga ~tekshirish...</value>
-                        <value xml:lang="ve">Kontroleer vir ~bywerkings...</value>
-                        <value xml:lang="vi">Kiểm tra bản ~cập nhật...</value>
-                        <value xml:lang="xh">Kontroleer vir ~bywerkings...</value>
-                        <value xml:lang="zh-CN">检查更新(~U)...</value>
-                        <value xml:lang="zh-TW">檢查是否有更新(~U)...</value>
-                        <value xml:lang="zu">Kontroleer vir ~bywerkings...</value>
-                    </prop>
-                    <prop oor:name="Target" oor:type="xs:string">
-                        <value>_self</value>
-                    </prop>
-                    <prop oor:name="Context" oor:type="xs:string">
-                        <value />
-                    </prop>
-                </node>
-            </node>
+  <dependency file="main"/>
+  <oor:component-data xmlns:install="http://openoffice.org/2004/installation" oor:name="Addons" oor:package="org.openoffice.Office">
+    <node oor:name="AddonUI">
+      <node oor:name="OfficeHelp">
+        <node oor:name="UpdateCheckJob" oor:op="replace">
+          <prop oor:name="URL" oor:type="xs:string">
+            <value>vnd.sun.star.job:alias=UpdateCheck</value>
+          </prop>
+          <prop oor:name="ImageIdentifier" oor:type="xs:string">
+            <value/>
+          </prop>
+          <prop oor:name="Title" oor:type="xs:string">
+            <value xml:lang="en-US">Check for ~Updates...</value>
+            <value xml:lang="af">Kontroleer vir ~bywerkings...</value>
+            <value xml:lang="ar">&#x627;&#x644;&#x62A;&#x62D;&#x642;&#x642; &#x645;&#x646; &#x648;&#x62C;&#x648;~&#x62F; &#x62A;&#x62D;&#x62F;&#x64A;&#x62B;&#x627;&#x62A;...</value>
+            <value xml:lang="as">&#x989;&#x9A8;&#x9CD;&#x9A8;&#x9DF;&#x9A8;&#x9F0; &#x995;&#x9BE;&#x9F0;&#x9A3;&#x9C7; &#x9AA;&#x9F0;&#x9C0;&#x995;&#x9CD;&#x9B7;&#x9BE; &#x995;&#x9F0;&#x995; (~U) ...</value>
+            <value xml:lang="ast">Guetar ~anovamientos...</value>
+            <value xml:lang="be-BY">&#x421;&#x43F;&#x440;&#x430;&#x45E;&#x434;&#x437;&#x456;&#x446;&#x44C; &#x43D;&#x430;&#x44F;&#x45E;&#x43D;&#x430;&#x441;&#x446;&#x44C; &#x430;&#x431;&#x43D;&#x430;&#x45E;&#x43B;&#x435;&#x43D;&#x43D;&#x44F;&#x45E;...</value>
+            <value xml:lang="bg">&#x41F;&#x440;&#x43E;&#x432;&#x435;&#x440;&#x43A;&#x430; &#x437;&#x430; ~&#x43E;&#x431;&#x43D;&#x43E;&#x432;&#x44F;&#x432;&#x430;&#x43D;&#x435;...</value>
+            <value xml:lang="bn">&#x9B9;&#x9BE;&#x9B2;&#x9A8;&#x9BE;&#x997;&#x9BE;&#x9A6;&#x9C7;&#x9B0; &#x99C;&#x9A8;&#x9CD;&#x9AF; &#x9AA;&#x9B0;&#x9C0;&#x995;&#x9CD;&#x9B7;&#x9BE; &#x995;&#x9B0;&#x9C1;&#x9A8;... (~U)</value>
+            <value xml:lang="br">Gwiria&#xF1; an ~hivizadenno&#xF9;...</value>
+            <value xml:lang="bs">Provjeri za ~nadogradnje...</value>
+            <value xml:lang="ca">Comprova si ~hi ha actualitzacions...</value>
+            <value xml:lang="ca-XR">Comprovar ~actulisacions</value>
+            <value xml:lang="ca-XV">Comprova si ~hi ha actualitzacions...</value>
+            <value xml:lang="cs">Zkontrolovat aktualizace...</value>
+            <value xml:lang="cy">Gwirio am ~Ddiweddariadau...</value>
+            <value xml:lang="da">S&#xF8;g efter ~opdateringer...</value>
+            <value xml:lang="de">Suche nach ~Updates...</value>
+            <value xml:lang="dgo">&#x905;&#x92A;&#x921;&#x947;&#x91F;&#x947;&#x902; &#x932;&#x947;&#x908; ~&#x91C;&#x93E;&#x91A;&#x94B;... </value>
+            <value xml:lang="dz">&#xF51;&#xF74;&#xF66;&#xF0B;&#xF58;&#xF50;&#xF74;&#xF53;&#xF0B;&#xF5A;&#xF74;&#xF0B; &#xF5E;&#xF72;&#xF56;&#xF0B;&#xF51;&#xF54;&#xFB1;&#xF51;&#xF0B;&#xF60;&#xF56;&#xF51;&#xF0B;</value>
+            <value xml:lang="el">&#x388;&#x3BB;&#x3B5;&#x3B3;&#x3C7;&#x3BF;&#x3C2; &#x3B3;&#x3B9;&#x3B1; &#x395;&#x3BD;~&#x3B7;&#x3BC;&#x3B5;&#x3C1;&#x3CE;&#x3C3;&#x3B5;&#x3B9;&#x3C2;...</value>
+            <value xml:lang="en-GB">Check for ~Updates...</value>
+            <value xml:lang="en-ZA">Check for ~Updates...</value>
+            <value xml:lang="eo">Ser&#x109;i por &#x11D;isdatigoj...</value>
+            <value xml:lang="es">Buscar ~actualizaciones...</value>
+            <value xml:lang="et">Kontrolli uuenduste olemasolu...</value>
+            <value xml:lang="eu">Bilatu ~eguneratzeak...</value>
+            <value xml:lang="fi">Tarkista ~p&#xE4;ivitysten saatavuus...</value>
+            <value xml:lang="fr">V&#xE9;rifier les mises &#xE0; jo~ur...</value>
+            <value xml:lang="ga">Lorg N~uashonruithe...</value>
+            <value xml:lang="gd">Th~oir s&#xF9;il airson &#xF9;rachaidhean...</value>
+            <value xml:lang="gl">Buscando act~ualizaci&#xF3;ns...</value>
+            <value xml:lang="gu">&#xAB8;&#xAC1;&#xAA7;&#xABE;&#xAB0;&#xABE;&#xA93; &#xAAE;&#xABE;&#xA9F;&#xAC7; &#xA9A;&#xA95;&#xABE;&#xAB8;&#xACB; (~U)...</value>
+            <value xml:lang="he">&#x5D1;&#x5D3;&#x5D9;&#x5E7;&#x5EA; &#x5E2;&#x5D9;&#x5D3;&#x5DB;&#x5D5;&#x5E0;&#x5D9;&#x5DD;...&#x200F;</value>
+            <value xml:lang="hi">&#x905;&#x926;&#x94D;&#x92F;&#x924;&#x928; &#x915;&#x947; &#x932;&#x93F;&#x90F; &#x91C;&#x93E;&#x901;&#x91A;&#x947;&#x902;...</value>
+            <value xml:lang="hr">Provjeri za ~nadogradnje...</value>
+            <value xml:lang="hu">~Friss&#xED;t&#xE9;sek keres&#xE9;se...</value>
+            <value xml:lang="id">Periksa Pembahar~uan...</value>
+            <value xml:lang="is">~Athuga me&#xF0; uppf&#xE6;rslur...</value>
+            <value xml:lang="it">Controlla ~aggiornamenti...</value>
+            <value xml:lang="ja">&#x66F4;&#x65B0;&#x306E;&#x30C1;&#x30A7;&#x30C3;&#x30AF;(~U)...</value>
+            <value xml:lang="ka">~&#x10D2;&#x10D0;&#x10DC;&#x10D0;&#x10EE;&#x10DA;&#x10D4;&#x10D1;&#x10D0;&#x10D6;&#x10D4; &#x10E8;&#x10D4;&#x10DB;&#x10DD;&#x10EC;&#x10DB;&#x10D4;&#x10D1;&#x10D0;...</value>
+            <value xml:lang="kid">mw=gd2&#x2016;Check for ~Updates...</value>
+            <value xml:lang="kk">&#x416;&#x430;&#x4A3;&#x430;&#x440;~&#x442;&#x443;&#x43B;&#x430;&#x440;&#x493;&#x430; &#x442;&#x435;&#x43A;&#x441;&#x435;&#x440;&#x443;...</value>
+            <value xml:lang="km">&#x1796;&#x17B7;&#x1793;&#x17B7;&#x178F;&#x17D2;&#x1799;&#x200B;&#x179A;&#x1780;&#x1798;&#x17BE;&#x179B;&#x200B;&#x1794;&#x1785;&#x17D2;&#x1785;&#x17BB;&#x1794;&#x17D2;&#x1794;&#x1793;&#x17D2;&#x1793;&#x200B;&#x200B;&#x1797;&#x17B6;&#x1796;...</value>
+            <value xml:lang="kn">&#xC85;&#xCAA;&#xCCD;&#x200C;&#xCA1;&#xCC7;&#xC9F;&#xCCD;&#x200C;&#xC97;&#xCB3;&#xCBF;&#xC97;&#xCBE;&#xC97;&#xCBF; &#xCAA;&#xCB0;&#xCBF;&#xCB6;&#xCC0;&#xCB2;&#xCBF;&#xCB8;&#xCC1;(~U)...</value>
+            <value xml:lang="ko">&#xC5C5;&#xB370;&#xC774;&#xD2B8; &#xD655;&#xC778;(~U)...</value>
+            <value xml:lang="kok">&#x938;&#x941;&#x926;&#x93E;&#x930; &#x938;&#x94B;&#x926;&#x93E;&#x924;</value>
+            <value xml:lang="ku">Li ~Rojanekirinan bigere...</value>
+            <value xml:lang="lt">Tikrinti, ar yra naujini&#x173;...</value>
+            <value xml:lang="lv">P&#x101;rbaud&#x12B;t atjaunin&#x101;jumus...</value>
+            <value xml:lang="mk">&#x41F;&#x440;&#x43E;&#x432;&#x435;&#x440;&#x438; &#x437;&#x430; &#x43D;&#x430;&#x434;~&#x433;&#x440;&#x430;&#x434;&#x431;&#x438;...</value>
+            <value xml:lang="ml">~&#xD2A;&#xD30;&#xD3F;&#xD37;&#xD4D;&#xD15;&#xD30;&#xD23;&#xD19;&#xD4D;&#xD19;&#xD33;&#xD4D;&#x200D; &#xD2A;&#xD30;&#xD3F;&#xD36;&#xD4B;&#xD27;&#xD3F;&#xD15;&#xD4D;&#xD15;&#xD41;&#xD15;...</value>
+            <value xml:lang="mn">~&#x428;&#x438;&#x43D;&#x44D;&#x447;&#x43B;&#x44D;&#x43B;&#x438;&#x439;&#x433; &#x448;&#x430;&#x43B;&#x433;&#x430;&#x445;...</value>
+            <value xml:lang="mni">&#x985;&#x9AA;&#x9A6;&#x9C7;&#x9A4;&#x9B6;&#x9BF;&#x982;&#x997;&#x9C0; &#x985;&#x9B6;&#x9CB;&#x9DF;&#x9AC;&#x9BE; &#x9A5;&#x9BF;&#x9AC;&#x9BE;...</value>
+            <value xml:lang="mr">&#x938;&#x941;&#x927;&#x93E;&#x930;&#x923;&#x93E;&#x902;&#x915;&#x930;&#x940;&#x924;&#x93E; &#x924;&#x92A;&#x93E;&#x938;&#x93E; (~U)...</value>
+            <value xml:lang="my">~&#x1014;&#x1031;&#x102C;&#x1000;&#x103A;&#x1006;&#x102F;&#x1036;&#x1038;&#x1021;&#x1001;&#x103B;&#x1000;&#x103A;&#x1021;&#x101C;&#x1000;&#x103A;&#x1019;&#x103B;&#x102C;&#x1038; &#x101B;&#x101A;&#x1030;&#x1019;&#x103E;&#x102F; &#x1000;&#x102D;&#x102F; &#x1005;&#x1005;&#x103A;&#x1006;&#x1031;&#x1038;&#x1015;&#x102B;...</value>
+            <value xml:lang="nb">Se etter ~oppdateringer &#x2026;</value>
+            <value xml:lang="ne">&#x905;&#x926;&#x94D;&#x92F;&#x93E;&#x935;</value>
+            <value xml:lang="nl">Op ~updates controleren...</value>
+            <value xml:lang="nn">Sj&#xE5; etter ~oppdateringar &#x2026;</value>
+            <value xml:lang="nr">Kontroleer vir ~bywerkings...</value>
+            <value xml:lang="nso">Kontroleer vir ~bywerkings...</value>
+            <value xml:lang="oc">Verificar las mesas a jo~rn...</value>
+            <value xml:lang="om">Haaromsoota Mirkaneessi...</value>
+            <value xml:lang="or">&#xB05;&#xB26;&#xB4D;&#xB5F;&#xB24;&#xB28;&#xB17;&#xB41;&#xB21;&#xB3C;&#xB3F;&#xB15; &#xB2A;&#xB3E;&#xB07;&#xB01; &#xB2F;&#xB3E;&#xB1E;&#xB4D;&#xB1A;&#xB15;&#xB30;&#xB28;&#xB4D;&#xB24;&#xB41; (~U)...</value>
+            <value xml:lang="pa-IN">&#xA05;&#xA71;&#xA2A;&#xA21;&#xA47;&#xA1F; &#xA32;&#xA08; &#xA1A;&#xA48;&#xA71;&#xA15; &#xA15;&#xA30;&#xA4B;(~U)...</value>
+            <value xml:lang="pl">Sprawd&#x17A; ~aktualizacj&#x119;...</value>
+            <value xml:lang="pt">Procurar at~ualiza&#xE7;&#xF5;es...</value>
+            <value xml:lang="pt-BR">Verificar se h&#xE1; at~ualiza&#xE7;&#xF5;es...</value>
+            <value xml:lang="ro">Ca~ut&#x103; actualiz&#x103;ri...</value>
+            <value xml:lang="ru">&#x41F;&#x440;&#x43E;&#x432;&#x435;&#x440;&#x438;&#x442;&#x44C; &#x43D;&#x430;&#x43B;&#x438;&#x447;&#x438;&#x435; &#x43E;&#x431;&#x43D;&#x43E;&#x432;&#x43B;&#x435;&#x43D;&#x438;&#x439;...</value>
+            <value xml:lang="rw">Igenzura ry'Ivugurura...</value>
+            <value xml:lang="sa-IN">&#x928;&#x935;&#x940;&#x915;&#x930;&#x923;&#x947;&#x92D;&#x94D;&#x92F;&#x903; &#x92A;&#x930;&#x940;&#x915;&#x94D;&#x937;&#x938;&#x94D;&#x935; </value>
+            <value xml:lang="sh">Potra&#x17E;i ~nadogradnje...</value>
+            <value xml:lang="si">&#xDBA;&#xDCF;&#xDC0;&#xDAD;&#xDCA;&#xD9A;&#xDCF;&#xDBD; &#xDC3;&#xDB3;&#xDC4;&#xDCF; &#xDB4;&#xDBB;&#xDD3;&#xD9A;&#xDCA;&#xDC2;&#xDCF; &#xD9A;&#xDBB;&#xDB1;&#xDCA;&#xDB1;... (~U)</value>
+            <value xml:lang="sk">Skontrolova&#x165; akt~ualiz&#xE1;cie...</value>
+            <value xml:lang="sl">Preveri ~stanje posodobitev ...</value>
+            <value xml:lang="sq">E gatshme p&#xEB;r p&#xEB;rdorim</value>
+            <value xml:lang="sr">&#x41F;&#x43E;&#x442;&#x440;&#x430;&#x436;&#x438; ~&#x43D;&#x430;&#x434;&#x43E;&#x433;&#x440;&#x430;&#x434;&#x45A;&#x435;...</value>
+            <value xml:lang="ss">Kontroleer vir ~bywerkings...</value>
+            <value xml:lang="st">Kontroleer vir ~bywerkings...</value>
+            <value xml:lang="sv">S&#xF6;k efter ~uppdateringar...</value>
+            <value xml:lang="ta">&#xBAA;&#xBC1;&#xBA4;&#xBC1;&#xBAA;&#xBCD;&#xBAA;&#xBBF;&#xBA4;&#xBCD;&#xBA4;&#xBB2;&#xBCD;&#xB95;&#xBB3;&#xBC8; &#xB9A;&#xBB0;&#xBBF;&#xBAA;&#xBCD;&#xBAA;&#xBBE;&#xBB0;&#xBCD; (~U)...</value>
+            <value xml:lang="te">(~U) &#xC28;&#xC35;&#xC40;&#xC15;&#xC30;&#xC23;&#xC32; &#xC15;&#xC4A;&#xC30;&#xC15;&#xC41; &#xC2A;&#xC30;&#xC3F;&#xC36;&#xC40;&#xC32;&#xC3F;&#xC02;&#xC1A;&#xC41;&#xC2E;&#xC41;...</value>
+            <value xml:lang="tg">&#x421;&#x430;&#x43D;&#x4B7;&#x438;&#x448;&#x438; ~&#x4B6;&#x430;&#x434;&#x438;&#x434;&#x430;&#x4B3;&#x43E;...</value>
+            <value xml:lang="th">&#xE15;&#xE23;&#xE27;&#xE08;&#xE2A;&#xE2D;&#xE1A;&#xE01;&#xE32;&#xE23;~&#xE1B;&#xE23;&#xE31;&#xE1A;&#xE23;&#xE38;&#xE48;&#xE19;...</value>
+            <value xml:lang="tn">Kontroleer vir ~bywerkings...</value>
+            <value xml:lang="tr">~G&#xFC;ncellemeleri kontrol et...</value>
+            <value xml:lang="ts">Kontroleer vir ~bywerkings...</value>
+            <value xml:lang="ug">&#x64A;&#x6D0;&#x6AD;&#x649;&#x644;&#x627;&#x634;&#x646;&#x649; &#x62A;&#x6D5;&#x643;&#x634;&#x6C8;&#x631;(~U)&#x2026;</value>
+            <value xml:lang="uk">&#x41F;&#x435;&#x440;&#x435;&#x432;&#x456;&#x440;&#x438;&#x442;&#x438; &#x43D;&#x430;&#x44F;&#x432;&#x43D;&#x456;&#x441;&#x442;&#x44C; ~&#x43E;&#x43D;&#x43E;&#x432;&#x43B;&#x435;&#x43D;&#x44C;...</value>
+            <value xml:lang="uz">Yangilanishga ~tekshirish...</value>
+            <value xml:lang="ve">Kontroleer vir ~bywerkings...</value>
+            <value xml:lang="vi">Ki&#x1EC3;m tra b&#x1EA3;n ~c&#x1EAD;p nh&#x1EAD;t...</value>
+            <value xml:lang="xh">Kontroleer vir ~bywerkings...</value>
+            <value xml:lang="zh-CN">&#x68C0;&#x67E5;&#x66F4;&#x65B0;(~U)...</value>
+            <value xml:lang="zh-TW">&#x6AA2;&#x67E5;&#x662F;&#x5426;&#x6709;&#x66F4;&#x65B0;(~U)...</value>
+            <value xml:lang="zu">Kontroleer vir ~bywerkings...</value>
+          </prop>
+          <prop oor:name="Target" oor:type="xs:string">
+            <value>_self</value>
+          </prop>
+          <prop oor:name="Context" oor:type="xs:string">
+            <value/>
+          </prop>
         </node>
-    </oor:component-data>
-    <oor:component-data xmlns:install="http://openoffice.org/2004/installation" oor:name="Jobs" oor:package="org.openoffice.Office">
-        <node oor:name="Jobs">
-            <node oor:name="UpdateCheck" oor:op="replace">
-                <prop oor:name="Service">
-                    <value>com.sun.star.setup.UpdateCheck</value>
-                </prop>
-                <node oor:name="Arguments">
-                    <prop oor:name="AutoCheckEnabled" oor:type="xs:boolean" oor:op="replace">
-                        <value>true</value>
-                    </prop>
-                    <prop oor:name="LastCheck" oor:type="xs:long" oor:op="replace">
-                        <value>0</value>
-                    </prop>
-                    <prop oor:name="CheckInterval" oor:type="xs:long" oor:op="replace">
-                        <value>604800</value>
-                    </prop>
-                    <prop oor:name="DownloadDestination" oor:type="xs:string" oor:op="replace">
-                        <value />
-                    </prop>
-                    <prop oor:name="AutoDownloadEnabled" oor:type="xs:boolean" oor:op="replace">
-                        <value>false</value>
-                    </prop>
-                    <prop oor:name="DownloadSupported" oor:type="xs:boolean" oor:op="replace">
-                        <value>false</value>
-                    </prop>
-                    <prop oor:name="DownloadPaused" oor:type="xs:boolean" oor:op="replace">
-                        <value>false</value>
-                    </prop>
-                </node>
-            </node>
+      </node>
+    </node>
+  </oor:component-data>
+  <oor:component-data xmlns:install="http://openoffice.org/2004/installation" oor:name="Jobs" oor:package="org.openoffice.Office">
+    <node oor:name="Jobs">
+      <node oor:name="UpdateCheck" oor:op="replace">
+        <prop oor:name="Service">
+          <value>com.sun.star.setup.UpdateCheck</value>
+        </prop>
+        <node oor:name="Arguments">
+          <prop oor:name="AutoCheckEnabled" oor:type="xs:boolean" oor:op="replace">
+            <value>true</value>
+          </prop>
+          <prop oor:name="LastCheck" oor:type="xs:long" oor:op="replace">
+            <value>0</value>
+          </prop>
+          <prop oor:name="CheckInterval" oor:type="xs:long" oor:op="replace">
+            <value>604800</value>
+          </prop>
+          <prop oor:name="DownloadDestination" oor:type="xs:string" oor:op="replace">
+            <value/>
+          </prop>
+          <prop oor:name="AutoDownloadEnabled" oor:type="xs:boolean" oor:op="replace">
+            <value>false</value>
+          </prop>
+          <prop oor:name="DownloadSupported" oor:type="xs:boolean" oor:op="replace">
+            <value>false</value>
+          </prop>
+          <prop oor:name="DownloadPaused" oor:type="xs:boolean" oor:op="replace">
+            <value>false</value>
+          </prop>
         </node>
-        <node oor:name="Events">
-            <node oor:name="onFirstVisibleTask" oor:op="fuse">
-                <node oor:name="JobList">
-                    <node oor:name="UpdateCheck" oor:op="replace" />
-                </node>
-            </node>
-            <node oor:name="OnCloseApp" oor:op="fuse">
-                <node oor:name="JobList">
-                    <node oor:name="UpdateCheck" oor:op="replace" />
-                </node>
-            </node>
+      </node>
+    </node>
+    <node oor:name="Events">
+      <node oor:name="onFirstVisibleTask" oor:op="fuse">
+        <node oor:name="JobList">
+          <node oor:name="UpdateCheck" oor:op="replace"/>
         </node>
-    </oor:component-data>
+      </node>
+      <node oor:name="OnCloseApp" oor:op="fuse">
+        <node oor:name="JobList">
+          <node oor:name="UpdateCheck" oor:op="replace"/>
+        </node>
+      </node>
+    </node>
+  </oor:component-data>
 </oor:data>
