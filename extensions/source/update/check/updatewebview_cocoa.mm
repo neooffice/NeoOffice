@@ -1960,10 +1960,6 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 
 @end
 
-@interface NSWindow (UpdateNonRecursiveResponderWebPanel)
-- (NSRect)_growBoxRect;
-@end
-
 @implementation UpdateNonRecursiveResponderWebPanel
 
 - (void)createWebView:(NSURLRequest *)pRequest
@@ -2077,12 +2073,7 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 	if ( focusView )
 		[focusView lockFocus];
 
-	NSSize growBoxSize=NSMakeSize( 0, 0 );
-	if ( [self respondsToSelector:@selector(_growBoxRect)] )
-		growBoxSize=[self _growBoxRect].size;
-	growBoxSize.width /= 2;
-
-	mpcancelButton = [[NSButton alloc] initWithFrame:NSMakeRect(contentSize.width-buttonSize.width-MAX(kUpdateBottomViewPadding, growBoxSize.width), kUpdateBottomViewPadding, buttonSize.width, buttonSize.height)];
+	mpcancelButton = [[NSButton alloc] initWithFrame:NSMakeRect(contentSize.width-buttonSize.width-kUpdateBottomViewPadding, kUpdateBottomViewPadding, buttonSize.width, buttonSize.height)];
 	[mpcancelButton setToolTip:UpdateGetVCLResString(SV_BUTTONTEXT_CANCEL)];
 	[mpcancelButton setEnabled:YES];
 	[mpcancelButton setButtonType:NSMomentaryPushInButton];
