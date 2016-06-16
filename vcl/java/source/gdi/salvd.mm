@@ -42,10 +42,6 @@
 
 using namespace vcl;
 
-@interface NSWindow (VCLVirtualDeviceGetGraphicsLayer)
-- (CGFloat)backingScaleFactor;
-@end
-
 @interface VCLVirtualDeviceGetGraphicsLayer : NSObject
 {
 	CGLayerRef				maLayer;
@@ -123,18 +119,10 @@ using namespace vcl;
 							if ( !aLastContext )
 								aLastContext = aContext;
 
-							if ( [pWindow respondsToSelector:@selector(backingScaleFactor)] )
+							float fBackingScaleFactor = [pWindow backingScaleFactor];
+							if ( fLastBackingScaleFactor < fBackingScaleFactor )
 							{
-								float fBackingScaleFactor = [pWindow backingScaleFactor];
-								if ( fLastBackingScaleFactor < fBackingScaleFactor )
-								{
-									fLastBackingScaleFactor = fBackingScaleFactor;
-									aLastContext = aContext;
-									break;
-								}
-							}
-							else
-							{
+								fLastBackingScaleFactor = fBackingScaleFactor;
 								aLastContext = aContext;
 								break;
 							}

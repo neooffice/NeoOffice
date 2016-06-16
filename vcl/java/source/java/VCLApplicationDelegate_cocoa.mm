@@ -235,7 +235,6 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 @interface NSDocumentController (VCLDocumentController)
 - (void)_docController:(NSDocumentController *)pDocController shouldTerminate:(MacOSBOOL)bShouldTerminate;
-- (void)beginOpenPanelWithCompletionHandler:(void (^)(NSArray *))aCompletionHandler;
 @end
 
 @interface VCLDocumentController : NSDocumentController
@@ -341,8 +340,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 {
 	mpOpenPanel = nil;
 
-	if ( [self respondsToSelector:@selector(beginOpenPanelWithCompletionHandler:)] )
-		[self beginOpenPanelWithCompletionHandler:^(NSArray *pResult) {}];
+	[self beginOpenPanelWithCompletionHandler:^(NSArray *pResult) {}];
 
 	return mpOpenPanel;
 }
@@ -406,8 +404,8 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 						[pSubmenu setDelegate:self];
 
 						// Set help menu
-						if ( i == nCount - 1 && [pApp respondsToSelector:@selector(setHelpMenu:)] )
-							[pApp setHelpMenu:pSubmenu];
+						if ( i == nCount - 1 )
+							pApp.helpMenu = pSubmenu;
 					}
 				}
 			}

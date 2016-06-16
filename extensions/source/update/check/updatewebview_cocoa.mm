@@ -78,18 +78,6 @@ static const NSString *pProductionBaseURLs[] = {
 };
 #endif	// !TEST
 
-#ifndef NSPropertyListReadOptions 
-typedef NSUInteger NSPropertyListReadOptions;
-#endif
-#ifndef typedef NSUInteger NSPropertyListWriteOptions;
-typedef NSUInteger NSPropertyListWriteOptions;
-#endif
-
-@interface NSPropertyListSerialization (UpdateWebView)
-+ (NSData *)dataWithPropertyList:(id)plist format:(NSPropertyListFormat)format options:(NSPropertyListWriteOptions)opt error:(NSError **)error;
-+ (id)propertyListWithData:(NSData *)data options:(NSPropertyListReadOptions)opt format:(NSPropertyListFormat *)format error:(NSError **)error;
-@end
-
 using namespace rtl;
 
 /**
@@ -146,19 +134,11 @@ static NSData *GetResumeDataForFile(NSURLDownload *pDownload, NSString *pPath)
 		if (pResumeData)
 		{
 			NSPropertyListFormat nFormat = 0;
-			NSMutableDictionary *pResumeDict = nil;
-			if (class_getClassMethod([NSPropertyListSerialization class], @selector(propertyListWithData:options:format:error:)))
-				pResumeDict = [NSPropertyListSerialization propertyListWithData:pResumeData options:NSPropertyListMutableContainersAndLeaves format:&nFormat error:nil];
-			if (!pResumeDict && class_getClassMethod([NSPropertyListSerialization class], @selector(propertyListFromData:mutabilityOption:format:errorDescription:)))
-				pResumeDict = [NSPropertyListSerialization propertyListFromData:pResumeData mutabilityOption:NSPropertyListMutableContainersAndLeaves format:&nFormat errorDescription:nil];
-
+			NSMutableDictionary *pResumeDict = [NSPropertyListSerialization propertyListWithData:pResumeData options:NSPropertyListMutableContainersAndLeaves format:&nFormat error:nil];
 			if (pResumeDict && [pResumeDict isKindOfClass:[NSMutableDictionary class]] && [pResumeDict objectForKey:kDownloadBytesReceivedKey])
 			{
 				[pResumeDict setObject:[NSNumber numberWithUnsignedLongLong:nFileSize] forKey:kDownloadBytesReceivedKey];
-				if (class_getClassMethod([NSPropertyListSerialization class], @selector(dataWithPropertyList:format:options:error:)))
-					pRet = [NSPropertyListSerialization dataWithPropertyList:pResumeDict format:nFormat options:0 error:nil];
-				if (!pRet && class_getClassMethod([NSPropertyListSerialization class], @selector(dataFromPropertyList:format:errorDescription:)))
-					pRet = [NSPropertyListSerialization dataFromPropertyList:pResumeDict format:nFormat errorDescription:nil];
+				pRet = [NSPropertyListSerialization dataWithPropertyList:pResumeDict format:nFormat options:0 error:nil];
 			}
 		}
 	}
@@ -1966,10 +1946,6 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 
 @end
 
-@interface NSWindow (UpdateNonRecursiveResponderWebPanel)
-- (NSRect)_growBoxRect;
-@end
-
 @implementation UpdateNonRecursiveResponderWebPanel
 
 - (void)createWebView:(NSURLRequest *)pRequest
@@ -2083,12 +2059,7 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 	if ( focusView )
 		[focusView lockFocus];
 
-	NSSize growBoxSize=NSMakeSize( 0, 0 );
-	if ( [self respondsToSelector:@selector(_growBoxRect)] )
-		growBoxSize=[self _growBoxRect].size;
-	growBoxSize.width /= 2;
-
-	mpcancelButton = [[NSButton alloc] initWithFrame:NSMakeRect(contentSize.width-buttonSize.width-MAX(kUpdateBottomViewPadding, growBoxSize.width), kUpdateBottomViewPadding, buttonSize.width, buttonSize.height)];
+	mpcancelButton = [[NSButton alloc] initWithFrame:NSMakeRect(contentSize.width-buttonSize.width-kUpdateBottomViewPadding, kUpdateBottomViewPadding, buttonSize.width, buttonSize.height)];
 	[mpcancelButton setToolTip:UpdateGetVCLResString(SV_BUTTONTEXT_CANCEL)];
 	[mpcancelButton setEnabled:YES];
 	[mpcancelButton setButtonType:NSMomentaryPushInButton];

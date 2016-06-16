@@ -194,7 +194,6 @@ static OUString aSaveAVersionLocalizedString;
 @interface NSDocument (SFXDocument)
 - (void)_checkAutosavingThenUpdateChangeCount:(NSDocumentChangeType)nChangeType;
 - (BOOL)_preserveContentsIfNecessaryAfterWriting:(BOOL)bAfter toURL:(NSURL *)pURL forSaveOperation:(NSUInteger)nSaveOperation version:(NSDocumentVersion **)ppVersion error:(NSError **)ppError;
-- (void)moveToURL:(NSURL *)pURL completionHandler:(void (^)(NSError *))aCompletionHandler;
 - (void)poseAsMakeWindowControllers;
 @end
 
@@ -537,34 +536,31 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	// Fix bug reported in the following NeoOffice forum by detecting when the
 	// user has moved or renamed the file:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8619
-	if ( [super respondsToSelector:@selector(moveToURL:completionHandler:)] )
-	{
-		[super moveToURL:pURL completionHandler:^(NSError *pError) {
-			if ( aCompletionHandler )
-				aCompletionHandler( pError );
+	[super moveToURL:pURL completionHandler:^(NSError *pError) {
+		if ( aCompletionHandler )
+			aCompletionHandler( pError );
 
-			if ( !pError && pURL )
+		if ( !pError && pURL )
+		{
+			if ( !pApplication_cacheSecurityScopedURL )
+				pApplication_cacheSecurityScopedURL = (Application_cacheSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" );
+			if ( pApplication_cacheSecurityScopedURL )
+				pApplication_cacheSecurityScopedURL( pURL );
+
+			if ( ![self isRelinquished] )
 			{
-				if ( !pApplication_cacheSecurityScopedURL )
-					pApplication_cacheSecurityScopedURL = (Application_cacheSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" );
-				if ( pApplication_cacheSecurityScopedURL )
-					pApplication_cacheSecurityScopedURL( pURL );
-
-				if ( ![self isRelinquished] )
+				IMutex& rSolarMutex = Application::GetSolarMutex();
+				rSolarMutex.acquire();
+				if ( !Application::IsShutDown() )
 				{
-					IMutex& rSolarMutex = Application::GetSolarMutex();
-					rSolarMutex.acquire();
-					if ( !Application::IsShutDown() )
-					{
-						SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
-						if ( pDoc == self )
-							SFXDocument_documentHasMoved( mpFrame, NSStringToOUString( [pURL absoluteString] ) );
-					}
-					rSolarMutex.release();
+					SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
+					if ( pDoc == self )
+						SFXDocument_documentHasMoved( mpFrame, NSStringToOUString( [pURL absoluteString] ) );
 				}
+				rSolarMutex.release();
 			}
-		}];
-	}
+		}
+	}];
 }
 
 - (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError

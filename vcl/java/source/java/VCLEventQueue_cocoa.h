@@ -106,7 +106,6 @@
 - (NSRect)_frameOnExitFromFullScreen;
 - (void)_restoreModalWindowLevel;
 - (void)_setModalWindowLevel;
-- (MacOSBOOL)inLiveResize;
 @end
 
 @interface VCLPanel : NSPanel
