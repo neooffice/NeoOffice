@@ -102,6 +102,7 @@
 @end
 
 @interface NSWindow (VCLWindow)
++ (void)setAllowsAutomaticWindowTabbing:(MacOSBOOL)bAllowsAutomaticWindowTabbing;
 - (void)_clearModalWindowLevel;
 - (NSRect)_frameOnExitFromFullScreen;
 - (void)_restoreModalWindowLevel;
