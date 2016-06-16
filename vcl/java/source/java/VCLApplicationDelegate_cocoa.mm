@@ -240,7 +240,6 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 @interface NSDocumentController (VCLDocumentController)
 - (void)_docController:(NSDocumentController *)pDocController shouldTerminate:(BOOL)bShouldTerminate;
-- (void)beginOpenPanelWithCompletionHandler:(void (^)(NSArray *))aCompletionHandler;
 @end
 
 @interface VCLDocumentController : NSDocumentController
