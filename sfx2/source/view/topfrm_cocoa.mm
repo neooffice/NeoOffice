@@ -422,6 +422,12 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	if ( mpRelinquishedLock )
 		[mpRelinquishedLock release];
 
+	if ( mpWinController )
+	{
+		[self removeWindowController:mpWinController];
+		[mpWinController release];
+	}
+
 	if ( mpWindow )
 		[mpWindow release];
 
