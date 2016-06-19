@@ -234,10 +234,6 @@ static OUString aSaveAVersionLocalizedString;
 - (BOOL)writeToURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 @end
 
-@interface SFXDocumentRevision : SFXDocument
-- (void)makeWindowControllers;
-@end
-
 @interface SFXUndoManager : NSUndoManager
 {
 	SFXDocument*			mpDoc;
@@ -915,10 +911,61 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 @end
 
+@interface SFXDocumentRevision : SFXDocument
+{
+	PDFView*				mpPDFView;
+	QLPreviewView*			mpQLPreviewView;
+}
+- (void)dealloc;
+- (void)destroy;
+- (id)init;
+- (void)makeWindowControllers;
+@end
+
 @implementation SFXDocumentRevision
+
+- (void)dealloc
+{
+	[self destroy];
+
+	[super dealloc];
+}
+
+- (void)destroy
+{
+	if ( mpPDFView )
+	{
+		[mpPDFView removeFromSuperview];
+		// Stop crashing when exiting the versions browser on macOS 10.12 by
+		// setting the document to nil before releasing
+		[mpPDFView setDocument:nil];
+		[mpPDFView release];
+	}
+
+	if ( mpQLPreviewView )
+	{
+		[mpQLPreviewView removeFromSuperview];
+		// Stop crashing when exiting the versions browser on macOS 10.12 by
+		// setting the preview item to nil before releasing
+		mpQLPreviewView.previewItem = nil;
+		[mpQLPreviewView release];
+	}
+}
+
+- (id)init
+{
+	[super init];
+
+	mpPDFView = nil;
+	mpQLPreviewView = nil;
+
+	return self;
+}
 
 - (void)makeWindowControllers
 {
+	[self destroy];
+
 	[super makeWindowControllers];
 
 	NSMutableData *pPDFData = nil;
@@ -1025,7 +1072,6 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 			[self addWindowController:pWinController];
 
-			PDFView *pPDFView = nil;
 			if ( pPDFData )
 			{
 				PDFDocument *pPDFDoc = [[PDFDocument alloc] initWithData:pPDFData];
@@ -1033,21 +1079,19 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 				{
 					[pPDFDoc autorelease];
 
-					pPDFView = [[PDFView alloc] initWithFrame:[[pWindow contentView] frame]];
-					if ( pPDFView )
+					mpPDFView = [[PDFView alloc] initWithFrame:[[pWindow contentView] frame]];
+					if ( mpPDFView )
 					{
-						[pPDFView autorelease];
-
-						[pPDFView setDocument:pPDFDoc];
-						[pPDFView setAllowsDragging:NO];
-						[pPDFView setAutoScales:YES];
-						[pPDFView setDisplaysPageBreaks:NO];
-						[pWindow setContentView:pPDFView];
+						[mpPDFView setDocument:pPDFDoc];
+						[mpPDFView setAllowsDragging:NO];
+						[mpPDFView setAutoScales:YES];
+						[mpPDFView setDisplaysPageBreaks:NO];
+						[pWindow setContentView:mpPDFView];
 					}
 				}
 			}
 
-			if ( !pPDFView && pFileURL )
+			if ( !mpPDFView && pFileURL )
 			{
 				SFXQLPreviewItem *pQLItem = [[SFXQLPreviewItem alloc] initWithURL:pFileURL];
 				if ( pQLItem )
@@ -1057,15 +1101,13 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 					NSRect aQLFrame = [[pWindow contentView] frame];
 					aQLFrame.origin.x = 0;
 					aQLFrame.origin.y = 0;
-					QLPreviewView *pQLView = [[QLPreviewView alloc] initWithFrame:aQLFrame];
-					if ( pQLView )
+					mpQLPreviewView = [[QLPreviewView alloc] initWithFrame:aQLFrame];
+					if ( mpQLPreviewView )
 					{
-						[pQLView autorelease];
-
-						[pQLView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+						[mpQLPreviewView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
 						[[pWindow contentView] setAutoresizesSubviews:YES];
-						[[pWindow contentView] addSubview:pQLView];
-						pQLView.previewItem = pQLItem;
+						[[pWindow contentView] addSubview:mpQLPreviewView];
+						mpQLPreviewView.previewItem = pQLItem;
 					}
 				}
 			}
