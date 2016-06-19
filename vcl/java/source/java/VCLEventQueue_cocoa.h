@@ -57,6 +57,8 @@
 }
 - (BOOL)acceptsFirstResponder;
 - (void)abandonInput;
+- (id)accessibilityAttributeValue:(NSString *)aAttribute;
+- (BOOL)accessibilityIsIgnored;
 - (void)dealloc;
 - (void)keyDown:(NSEvent *)pEvent;
 - (void)keyUp:(NSEvent *)pEvent;
@@ -102,6 +104,7 @@
 @end
 
 @interface NSWindow (VCLWindow)
++ (void)setAllowsAutomaticWindowTabbing:(BOOL)bAllowsAutomaticWindowTabbing;
 - (void)_clearModalWindowLevel;
 - (NSRect)_frameOnExitFromFullScreen;
 - (void)_restoreModalWindowLevel;

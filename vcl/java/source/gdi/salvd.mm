@@ -42,10 +42,6 @@
 
 using namespace vcl;
 
-@interface NSWindow (VCLVirtualDeviceGetGraphicsLayer)
-- (CGFloat)backingScaleFactor;
-@end
-
 @interface VCLVirtualDeviceGetGraphicsLayer : NSObject
 {
 	CGLayerRef				maLayer;
