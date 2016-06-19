@@ -57,6 +57,8 @@
 }
 - (MacOSBOOL)acceptsFirstResponder;
 - (void)abandonInput;
+- (id)accessibilityAttributeValue:(NSString *)aAttribute;
+- (MacOSBOOL)accessibilityIsIgnored;
 - (void)dealloc;
 - (void)keyDown:(NSEvent *)pEvent;
 - (void)keyUp:(NSEvent *)pEvent;

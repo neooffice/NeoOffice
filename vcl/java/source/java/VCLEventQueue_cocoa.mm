@@ -33,6 +33,8 @@
  *
  ************************************************************************/
 
+#include <dlfcn.h>
+
 #include <saldata.hxx>
 #include <vos/mutex.hxx>
 
@@ -51,7 +53,42 @@
 #define MODIFIER_RELEASE_INTERVAL 100
 #define UNDEFINED_KEY_CODE 0xffff
 
+typedef OSErr Gestalt_Type( OSType selector, SInt32 *response );
+
+static bool bIsRunningElCapitanOrLowerInitizalized  = false;
+static bool bIsRunningElCapitanOrLower = false;
+
 inline long FloatToLong( float f ) { return (long)( f == 0 ? f : f < 0 ? f - 0.5 : f + 0.5 ); }
+
+static bool IsRunningElCapitanOrLower()
+{
+	if ( !bIsRunningElCapitanOrLowerInitizalized )
+	{
+		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+		if ( pLib )
+		{
+			Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+			if ( pGestalt )
+			{
+				SInt32 res = 0;
+				pGestalt( gestaltSystemVersionMajor, &res );
+				if ( res == 10 )
+				{
+					res = 0;
+					pGestalt( gestaltSystemVersionMinor, &res );
+					if ( res <= 11 )
+						bIsRunningElCapitanOrLower = true;
+				}
+			}
+
+			dlclose( pLib );
+		}
+
+		bIsRunningElCapitanOrLowerInitizalized = true;
+	}
+
+	return bIsRunningElCapitanOrLower;
+}
 
 static NSPoint GetFlippedContentViewLocation( NSWindow *pWindow, NSEvent *pEvent )
 {
@@ -592,6 +629,7 @@ static void RegisterMainBundleWithLaunchServices()
 @end
 
 @interface NSView (VCLViewPoseAs)
+- (MacOSBOOL)poseAsAccessibilityIsIgnored;
 - (void)poseAsDragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(MacOSBOOL)bSlideBack;
 @end
 
@@ -1806,7 +1844,26 @@ static CFDataRef aRTFSelection = nil;
 
 - (MacOSBOOL)accessibilityIsIgnored
 {
-	return NO;
+	MacOSBOOL bRet = NO;
+
+	if ( [self isKindOfClass:[VCLView class]] )
+	{
+		return bRet;
+	}
+	else if ( [super respondsToSelector:@selector(poseAsAccessibilityIsIgnored)] )
+	{
+		// Stop exception from being thrown when entering the versions browser
+		// while running on macOS 10.12
+		bRet = [super poseAsAccessibilityIsIgnored];
+		if ( bRet && !IsRunningElCapitanOrLower() && [[self className] isEqualToString:@"NSRemoteView"] )
+		{
+			NSWindow *pWindow = [self window];
+			if ( pWindow && [[pWindow className] isEqualToString:@"NSDocumentRevisionsAuxiliaryWindow"] )
+				bRet = NO;
+		}
+	}
+
+	return bRet;
 }
 
 - (void)dealloc
@@ -3037,6 +3094,18 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 	}
 
 	// VCLView selectors
+
+	aSelector = @selector(accessibilityIsIgnored);
+	aPoseAsSelector = @selector(poseAsAccessibilityIsIgnored);
+	aOldMethod = class_getInstanceMethod( [NSView class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSView class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
 
 	aSelector = @selector(dragImage:at:offset:event:pasteboard:source:slideBack:);
 	aPoseAsSelector = @selector(poseAsDragImage:at:offset:event:pasteboard:source:slideBack:);
