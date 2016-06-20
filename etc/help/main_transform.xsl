@@ -1039,6 +1039,18 @@
 </xsl:template>
 <xsl:template match="paragraph[(@id='par_id3149797' or @id='hd_id3155388' or @id='par_id3147335' or @id='hd_id3153881' or @id='par_id3148943' or @id='hd_id3153061' or @id='par_id3156343' or @id='hd_id3146795' or @id='par_id3150358' or @id='par_id3154939') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedoptionen01014000xml']]]" />
 
+<!-- Replace "Mac OS X" and "OS X" with "Mac" -->
+<xsl:template match="paragraph[@id='hd_id4791405' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopi01170000xml']]]/text()">
+	<xsl:call-template name="replacewithmacbrand">
+		<xsl:with-param name="string"><xsl:value-of select="."/></xsl:with-param>
+	</xsl:call-template>
+</xsl:template>
+<xsl:template match="paragraph[@id='par_id6873683' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopi01170000xml']]]/ahelp/text()">
+	<xsl:call-template name="replacewithmacbrand">
+		<xsl:with-param name="string"><xsl:value-of select="."/></xsl:with-param>
+	</xsl:call-template>
+</xsl:template>
+
 <!-- Replace paragraph with "not available" warning -->
 <xsl:template match="paragraph" mode="notavailable">
 	<xsl:choose>
@@ -1047,6 +1059,39 @@
 		<xsl:when test="$lang='it'">Questa funzione non è disponibile.</xsl:when>
 		<xsl:when test="$lang='nl'">Deze functie is niet beschikbaar.</xsl:when>
 		<xsl:otherwise>This feature is not available.</xsl:otherwise>
+	</xsl:choose>
+</xsl:template>
+
+<!-- Replace "Mac OS X" and "OS X" with "Mac" in text -->
+<xsl:variable name="macosxbrand" select="'Mac OS X'"/>
+<xsl:variable name="osxbrand" select="'OS X'"/>
+<xsl:variable name="macbrand" select="'Mac'"/>
+<xsl:template name="replacewithmacbrand">
+	<xsl:param name="string"/>
+	<xsl:choose>
+		<xsl:when test="contains($string,$macosxbrand)">
+			<xsl:variable name="newstr">
+				<xsl:value-of select="substring-before($string,$macosxbrand)"/>
+				<xsl:value-of select="$macbrand"/>
+				<xsl:value-of select="substring-after($string,$macosxbrand)"/>
+			</xsl:variable>
+			<xsl:call-template name="replacewithmacbrand">
+				<xsl:with-param name="string" select="$newstr"/>
+			</xsl:call-template>
+		</xsl:when>
+		<xsl:when test="contains($string,$osxbrand)">
+			<xsl:variable name="newstr">
+				<xsl:value-of select="substring-before($string,$osxbrand)"/>
+				<xsl:value-of select="$macbrand"/>
+				<xsl:value-of select="substring-after($string,$osxbrand)"/>
+			</xsl:variable>
+			<xsl:call-template name="replacewithmacbrand">
+				<xsl:with-param name="string" select="$newstr"/>
+			</xsl:call-template>
+		</xsl:when>
+		<xsl:otherwise>
+			<xsl:value-of select="$string"/>
+		</xsl:otherwise>
 	</xsl:choose>
 </xsl:template>
 
