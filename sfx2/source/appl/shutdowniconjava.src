@@ -47,12 +47,12 @@ String STR_OPENATLAUNCH
 
 String STR_MACOSXOPTIONS
 {
-	Text [ de ] = "Mac OS X Optionen";
-	Text [ en-US ] = "Mac OS X Options";
-	Text [ es ] = "Opciones de Mac OS X";
-	Text [ fr ] = "Options liées à Mac OS X";
-	Text [ it ] = "Opzioni di Mac OS X";
-	Text [ nl ] = "Mac OS X opties";
+	Text [ de ] = "Mac Optionen";
+	Text [ en-US ] = "Mac Options";
+	Text [ es ] = "Opciones de Mac";
+	Text [ fr ] = "Options liées à Mac";
+	Text [ it ] = "Opzioni di Mac";
+	Text [ nl ] = "Mac opties";
 };
 
 String STR_IGNORETRACKPADGESTURES
@@ -67,22 +67,22 @@ String STR_IGNORETRACKPADGESTURES
 
 String STR_DISABLEMACOSXSERVICESMENU
 {
-	Text [ de ] = "Deaktiviere Mac OS X Dienste Menü";
-	Text [ en-US ] = "Disable Mac OS X Services Menu";
-	Text [ es ] = "Deshabilitar el menú Servicios del Mac OS X";
-	Text [ fr ] = "Désactiver le menu Services de Mac OS X";
-	Text [ it ] = "Disattiva il menù Servizi di Mac OS X";
-	Text [ nl ] = "Schakel Mac OS X voorzieningen uit";
+	Text [ de ] = "Deaktiviere Mac Dienste Menü";
+	Text [ en-US ] = "Disable Mac Services Menu";
+	Text [ es ] = "Deshabilitar el menú Servicios del Mac";
+	Text [ fr ] = "Désactiver le menu Services de Mac";
+	Text [ it ] = "Disattiva il menù Servizi di Mac";
+	Text [ nl ] = "Schakel Mac voorzieningen uit";
 };
 
 String STR_DISABLEMACOSXTEXTHIGHLIGHTING
 {
-	Text [ de ] = "Deaktiviere Mac OS X Text Hervorhebung";
-	Text [ en-US ] = "Disable Mac OS X Text Highlighting";
-	Text [ es ] = "Deshabilitar el color de resaltado de texto del Mac OS X";
-	Text [ fr ] = "Désactiver le surlignage de texte Mac OS X";
-	Text [ it ] = "Disattiva l'evidenziazione di testo di Mac OS X";
-	Text [ nl ] = "Schakel Mac OS X tekst markeren uit";
+	Text [ de ] = "Deaktiviere Mac Text Hervorhebung";
+	Text [ en-US ] = "Disable Mac Text Highlighting";
+	Text [ es ] = "Deshabilitar el color de resaltado de texto del Mac";
+	Text [ fr ] = "Désactiver le surlignage de texte Mac";
+	Text [ it ] = "Disattiva l'evidenziazione di testo di Mac";
+	Text [ nl ] = "Schakel Mac tekst markeren uit";
 };
 
 String STR_DISABLEQUICKLOOKSUPPORT
@@ -97,22 +97,22 @@ String STR_DISABLEQUICKLOOKSUPPORT
 
 String STR_DISABLEVERSIONSSUPPORT
 {
-	Text [ de ] = "Deaktiviere Mac OS X Versionen";
-	Text [ en-US ] = "Disable Mac OS X Versions";
-	Text [ es ] = "Deshabilitar Versiones de Mac OS X";
-	Text [ fr ] = "Désactiver Versions de Mac OS X";
-	Text [ it ] = "Disattiva Versioni di Mac OS X";
-	Text [ nl ] = "Schakel Mac OS X Versions uit";
+	Text [ de ] = "Deaktiviere Mac Versionen";
+	Text [ en-US ] = "Disable Mac Versions";
+	Text [ es ] = "Deshabilitar Versiones de Mac";
+	Text [ fr ] = "Désactiver Versions de Mac";
+	Text [ it ] = "Disattiva Versioni di Mac";
+	Text [ nl ] = "Schakel Mac Versions uit";
 };
 
 String STR_DISABLERESUMESUPPORT
 {
-	Text [ de ] = "Deaktiviere Mac OS X Resume";
-	Text [ en-US ] = "Disable Mac OS X Resume";
-	Text [ es ] = "Deshabilitar Resume de Mac OS X";
-	Text [ fr ] = "Désactiver Resume de Mac OS X";
-	Text [ it ] = "Disattiva Resume di Mac OS X";
-	Text [ nl ] = "Schakel Mac OS X Resume uit";
+	Text [ de ] = "Deaktiviere Mac Resume";
+	Text [ en-US ] = "Disable Mac Resume";
+	Text [ es ] = "Deshabilitar Resume de Mac";
+	Text [ fr ] = "Désactiver Resume de Mac";
+	Text [ it ] = "Disattiva Resume di Mac";
+	Text [ nl ] = "Schakel Mac Resume uit";
 };
 
 String STR_QUICKLOOKSUPPORT
