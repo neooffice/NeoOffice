@@ -47,7 +47,7 @@
 {
 	JavaSalFrame*			mpFrame;
 	MacOSBOOL				mbInKeyDown;
-	NSInputManager*			mpInputManager;
+	NSObject*				mpInputManager;
 	NSEvent*				mpLastKeyDownEvent;
 	SalKeyEvent*			mpPendingKeyUpEvent;
 	NSRange					maSelectedRange;

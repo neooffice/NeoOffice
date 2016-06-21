@@ -1793,6 +1793,11 @@ static NSUInteger nMouseMask = 0;
 
 @end
 
+@interface NSObject (VCLInputManager)
++ (NSObject *)currentInputManager;
+- (void)markedTextAbandoned:(id)pSender;
+@end
+
 static CFStringRef aTextSelection = nil;
 static CFDataRef aRTFSelection = nil;
 
@@ -1807,7 +1812,8 @@ static CFDataRef aRTFSelection = nil;
 {
 	if ( mpInputManager && [self hasMarkedText] )
 	{
-		[mpInputManager markedTextAbandoned:self];
+		if ( [mpInputManager respondsToSelector:@selector(markedTextAbandoned:)] )
+			[mpInputManager markedTextAbandoned:self];
 		[self unmarkText];
 	}
 }
@@ -1994,10 +2000,18 @@ static CFDataRef aRTFSelection = nil;
 	}
 
 	if ( mpInputManager )
+	{
 		[mpInputManager release];
-	mpInputManager = [NSInputManager currentInputManager];
-	if ( mpInputManager )
-		[mpInputManager retain];
+		mpInputManager = nil;
+	}
+
+	Class aInputManagerClass = NSClassFromString( @"NSInputManager" );
+	if ( class_getClassMethod( [aInputManagerClass class], @selector(currentInputManager) ) )
+	{
+		mpInputManager = [aInputManagerClass currentInputManager];
+		if ( mpInputManager )
+			[mpInputManager retain];
+	}
 
 	if ( mpTextInput )
 	{
