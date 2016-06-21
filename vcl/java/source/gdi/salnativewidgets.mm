@@ -124,6 +124,8 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 
 static bool bIsRunningMavericksOrLowerInitizalized  = false;
 static bool bIsRunningMavericksOrLower = false;
+static bool bIsRunningElCapitanOrLowerInitizalized  = false;
+static bool bIsRunningElCapitanOrLower = false;
 
 static VCLBitmapBuffer aSharedComboBoxBuffer;
 static VCLBitmapBuffer aSharedListBoxBuffer;
@@ -176,6 +178,36 @@ static bool IsRunningMavericksOrLower()
 	}
 
 	return bIsRunningMavericksOrLower;
+}
+
+static bool IsRunningElCapitanOrLower()
+{
+	if ( !bIsRunningElCapitanOrLowerInitizalized )
+	{
+		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+		if ( pLib )
+		{
+			Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+			if ( pGestalt )
+			{
+				SInt32 res = 0;
+				pGestalt( gestaltSystemVersionMajor, &res );
+				if ( res == 10 )
+				{
+					res = 0;
+					pGestalt( gestaltSystemVersionMinor, &res );
+					if ( res <= 11 )
+						bIsRunningElCapitanOrLower = true;
+				}
+			}
+
+			dlclose( pLib );
+		}
+
+		bIsRunningElCapitanOrLowerInitizalized = true;
+	}
+
+	return bIsRunningElCapitanOrLower;
 }
 
 // =======================================================================
@@ -369,6 +401,7 @@ static bool IsRunningMavericksOrLower()
 				float fCellHeight = [pCell cellSize].height;
 				float fOffscreenHeight = maDestRect.size.height;
 				MacOSBOOL bPlacard = NO;
+				MacOSBOOL bAttachToKeyWindow = NO;
 				if ( mnButtonType == NSMomentaryLightButton )
 				{
 					fCellHeight -= ( FOCUSRING_WIDTH * 2 );
@@ -401,6 +434,8 @@ static bool IsRunningMavericksOrLower()
 							else
 							{
 								[pButton setKeyEquivalent:@"\r"];
+								if ( ! ( mnControlState & CTRL_STATE_INACTIVE ) && !IsRunningElCapitanOrLower() )
+									bAttachToKeyWindow = YES;
 							}
 						}
 					}
@@ -443,6 +478,31 @@ static bool IsRunningMavericksOrLower()
 
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
+
+						// Fix drawing of default button color on macOS 10.12 by
+						// temporarily attaching the button to the key window
+						if ( bAttachToKeyWindow )
+						{
+							NSApplication *pApp = [NSApplication sharedApplication];
+							if ( pApp )
+							{
+								NSWindow *pKeyWindow = [pApp keyWindow];
+								if ( pKeyWindow )
+								{
+									NSView *pContentView = [pKeyWindow contentView];
+									if ( pContentView )
+									{
+										NSRect aBounds = [pButton bounds];
+										[pButton removeFromSuperview];
+										// Ensure that the button is not
+										// visible in the key window
+										[pButton setFrameOrigin:NSMakePoint(aBounds.size.width * -2, aBounds.size.height * -2)];
+										[pContentView addSubview:pButton positioned:NSWindowBelow relativeTo:nil];
+									}
+								}
+							}
+						}
+
 						[pCell drawWithFrame:aDrawRect inView:pButton];
 
 						if ( mbRedraw )
@@ -464,6 +524,9 @@ static bool IsRunningMavericksOrLower()
 								CGContextEndTransparencyLayer( mpBuffer->maContext );
 							}
 						}
+
+						if ( bAttachToKeyWindow )
+							[pButton removeFromSuperview];
 
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
