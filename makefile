@@ -242,6 +242,7 @@ build.oo_patches: \
 	build.oo_framework_patch \
 	build.oo_instsetoo_native_patch \
 	build.oo_jfreereport_patch \
+	build.oo_oox_patch \
 	build.oo_reportbuilder_patch \
 	build.oo_sal_patch \
 	build.oo_sdext_patch \
