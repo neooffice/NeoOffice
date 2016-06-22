@@ -1,12 +1,12 @@
 --- makefile.mk	2014-02-25 00:39:58.000000000 -0800
-+++ makefile.mk	2016-06-22 10:00:34.000000000 -0700
++++ makefile.mk	2016-06-22 14:38:32.000000000 -0700
 @@ -94,6 +94,12 @@
  .ENDIF
  .ENDIF
  
-+.IF "$(OS)"=="MACOSX"
++.IF "$(OS)"=="MACOSX" && "$(SYSTEM_OPENSSL)"=="YES"
 +# On OS X 10.10, the openssl include files are not in the XCode SDKs. Instead,
-+# they installed in /usr/include by the Xcode Command Line Tools.
++# they are installed in /usr/include by the Xcode Command Line Tools.
 +CDEFS+=-I/usr/include
 +.ENDIF
 +
