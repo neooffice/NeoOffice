@@ -7,7 +7,7 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-NeoOffice is a complete office suite for OS X. With NeoOffice, users can view, edit, and save OpenOffice documents, LibreOffice documents, and simple Microsoft Word, Excel, and PowerPoint documents.
+NeoOffice is a complete office suite. With NeoOffice, users can view, edit, and save OpenOffice documents, LibreOffice documents, and simple Microsoft Word, Excel, and PowerPoint documents.
 
 NeoOffice is extremely stable and thousands of users use it daily. The NeoOffice engineers created NeoOffice in 2003 when they made OpenOffice run natively on OS X for the first time.
 
@@ -16,9 +16,9 @@ Since then, the NeoOffice engineers have continually added improvements to NeoOf
 • NeoOffice > Open at Launch menu to open Calc or Impress instead of Writer at launch
 • File > Browse All Versions menu to restore previous versions of your documents
 • Native file locking to safely edit files in iCloud Drive, Dropbox, or network drives
-• Native OS X grammar checking
-• Native OS X text highlighting
-• Support for OS X Services
+• Native Mac grammar checking
+• Native Mac text highlighting
+• Support for Mac Services
 • Native floating tool windows
 
 
@@ -26,8 +26,8 @@ What's New in this Version:
 Before you buy NeoOffice, please click on the "NeoOffice 支持" link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would hang when dragging a pivot table onto a chart
-• NeoOffice would crash when double-clicking on a cell in a pivot table
+• NeoOffice would sometimes draw default buttons as unpressed, non-default buttons
+• NeoOffice would sometimes hang when selecting the File > Browse All Versions menu item
 
 
 Keywords:
@@ -39,5 +39,5 @@ http://www.neooffice.org/neojava/macappstore.php
 Marketing URL:
 http://www.neooffice.org/neojava/features.php
 
-Mac OS X App Screenshots:
+App Screenshots:
 Upload ScreenSnapshotWriterAndCalc_zh-Hans.png file. Note: the ScreenSnapshotWriterAndCalc_zh-Hans.png was created using the document files in the ScreenSnapshotWriterAndCalc/zh-Hans subdirectory.

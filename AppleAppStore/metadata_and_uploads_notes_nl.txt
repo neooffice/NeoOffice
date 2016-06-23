@@ -7,7 +7,7 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-NeoOffice is een compleet pakket kantoorsoftware voor OS X. Met NeoOffice kunnen gebruikers OpenOffice-documenten, LibreOffice-documenten en eenvoudige Microsoft Word-, Excel- en PowerPoint-documenten bekijken, bewerken en opslaan.
+NeoOffice is een compleet pakket kantoorsoftware. Met NeoOffice kunnen gebruikers OpenOffice-documenten, LibreOffice-documenten en eenvoudige Microsoft Word-, Excel- en PowerPoint-documenten bekijken, bewerken en opslaan.
 
 NeoOffice is zeer stabiel en wordt dagelijks gebruikt door duizenden mensen. De ontwikkelaars van NeoOffice hebben NeoOffice gecreëerd in 2003, toen ze OpenOffice voor het eerst draaiend kregen op OS X.
 
@@ -15,19 +15,19 @@ Sindsdien hebben de NeoOffice ingenieurs voortdurend verbeteringen toegevoegd aa
 
 • NeoOffice > Toon bij starten menu voor de opening van Calc of Impress in plaats van Writer bij opstarten
 • Bestand > Blader door alle versies menu voor de restauratie van vorige versies van uw documenten
-• OS X-eigen bestandsblokkering voor het veilig bewerken van bestanden in iCloud Drive, Dropbox of netwerkschijven
-• OS X-eigen grammaticacontrole
-• OS X-eigen tekstmarkering
-• Ondersteuning voor OS X Voorzieningen
-• OS X-eigen zwevende hulpvensters
+• Mac-eigen bestandsblokkering voor het veilig bewerken van bestanden in iCloud Drive, Dropbox of netwerkschijven
+• Mac-eigen grammaticacontrole
+• Mac-eigen tekstmarkering
+• Ondersteuning voor Mac Voorzieningen
+• Mac-eigen zwevende hulpvensters
 
 
 What's New in this Version:
 Voordat u koopt NeoOffice, alsjeblieft klik op de "NeoOffice Ondersteuning" link en lees de installatienotities.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would hang when dragging a pivot table onto a chart
-• NeoOffice would crash when double-clicking on a cell in a pivot table
+• NeoOffice would sometimes draw default buttons as unpressed, non-default buttons
+• NeoOffice would sometimes hang when selecting the File > Browse All Versions menu item
 
 
 Keywords:
@@ -39,5 +39,5 @@ http://www.neooffice.org/neojava/macappstore.php
 Marketing URL:
 http://www.neooffice.org/neojava/features.php
 
-Mac OS X App Screenshots:
+App Screenshots:
 Upload ScreenSnapshotWriterAndCalc_nl.png file. Note: the ScreenSnapshotWriterAndCalc_nl.png was created using the document files in the ScreenSnapshotWriterAndCalc/nl subdirectory.
