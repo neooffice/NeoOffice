@@ -41,7 +41,7 @@
 
 @class UpdateNonRecursiveResponderWebPanel;
 
-@interface UpdateWebView : WebView <NSURLDownloadDelegate>
+@interface UpdateWebView : WebView <NSURLDownloadDelegate, WebDownloadDelegate, WebFrameLoadDelegate, WebPolicyDelegate, WebResourceLoadDelegate, WebUIDelegate>
 {
 	NSObject*				mpDelegate;
 	UpdateNonRecursiveResponderWebPanel*	mpPanel;
