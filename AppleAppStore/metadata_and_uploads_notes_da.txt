@@ -26,8 +26,8 @@ What's New in this Version:
 Before you buy NeoOffice, please click on the »Support til NeoOffice« link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would hang when dragging a pivot table onto a chart
-• NeoOffice would crash when double-clicking on a cell in a pivot table
+• NeoOffice would sometimes draw default buttons as unpressed, non-default buttons
+• NeoOffice would sometimes hang when selecting the File > Browse All Versions menu item
 
 
 Keywords:
