@@ -7,7 +7,7 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-NeoOffice è una suite per ufficio completa per OS X. Con NeoOffice, gli utenti possono visualizzare, modificare e salvare documenti OpenOffice, documenti LibreOffice e semplici documenti di Microsoft Word, Excel e PowerPoint.
+NeoOffice è una suite per ufficio completa. Con NeoOffice, gli utenti possono visualizzare, modificare e salvare documenti OpenOffice, documenti LibreOffice e semplici documenti di Microsoft Word, Excel e PowerPoint.
 
 NeoOffice è estremamente stabile e migliaia di utenti lo usano giornalmente. Gli ingegneri di NeoOffice hanno creato NeoOffice nel 2003, quando hanno fatto OpenOffice funzionare nativamente su OS X per la prima volta.
 
@@ -16,9 +16,9 @@ Da allora, gli ingegneri di NeoOffice hanno continuamente aggiunti miglioramenti
 • Menu di NeoOffice > Apri al inizio per aprire Calc o Impress, invece di Writer al inizio
 • Menu di File > Sfoglia tutte le versioni per ripristinare le versioni precedenti dei voi documenti
 • Blocco nativo dei file per modificare in modo sicuro i file in iCloud Drive, Dropbox o dischi di rete
-• Controllo di grammatica nativo OS X
-• Evidenziazione nativo OS X
-• Sopporto per i Servizi di OS X
+• Controllo di grammatica nativo Mac
+• Evidenziazione nativo Mac
+• Sopporto per i Servizi di Mac
 • Finestre degli strumenti native flottante
 
 
@@ -39,5 +39,5 @@ http://www.neooffice.org/neojava/macappstore.php
 Marketing URL:
 http://www.neooffice.org/neojava/features.php
 
-Mac OS X App Screenshots:
+App Screenshots:
 Upload ScreenSnapshotWriterAndCalc_it.png file. Note: the ScreenSnapshotWriterAndCalc_it.png was created using the document files in the ScreenSnapshotWriterAndCalc/it subdirectory.
