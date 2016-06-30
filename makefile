@@ -547,30 +547,10 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Aqua Elements 3/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_industrial.zip" ; find . -exec touch {} \; ; zip -ruD "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_industrial.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"`
 	chmod -Rf u+rw "$(INSTALL_HOME)/package/Contents/tmp"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/tmp"
-	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/program" ; cd "$(INSTALL_HOME)/package/Contents/program" ; "$(PWD)/$(INSTALL_HOME)/package/Contents/program/regcomp" -revoke -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libMacOSXSpell.dylib'
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -revoke -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/classes/avmedia.jar'
-	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/program" ; cd "$(INSTALL_HOME)/package/Contents/program" ; "$(PWD)/$(INSTALL_HOME)/package/Contents/program/regcomp" -revoke -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libavmediaQuickTime.dylib'
-	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/program" ; cd "$(INSTALL_HOME)/package/Contents/program" ; "$(PWD)/$(INSTALL_HOME)/package/Contents/program/regcomp" -register -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libavmediajava.dylib'
-# Reregister vcl to enable custom drag and drop service
-	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/program" ; cd "$(INSTALL_HOME)/package/Contents/program" ; "$(PWD)/$(INSTALL_HOME)/package/Contents/program/regcomp" -revoke -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libvcl.dylib'
-	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/program" ; cd "$(INSTALL_HOME)/package/Contents/program" ; "$(PWD)/$(INSTALL_HOME)/package/Contents/program/regcomp" -register -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libvcl.dylib'
-	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/program" ; cd "$(INSTALL_HOME)/package/Contents/program" ; "$(PWD)/$(INSTALL_HOME)/package/Contents/program/regcomp" -revoke -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/fps_aqua.uno.dylib'
-	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/program" ; cd "$(INSTALL_HOME)/package/Contents/program" ; "$(PWD)/$(INSTALL_HOME)/package/Contents/program/regcomp" -register -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/fps_java.uno.dylib'
-# Reregister spellchecker to enable native grammarchecker
-	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/program" ; cd "$(INSTALL_HOME)/package/Contents/program" ; "$(PWD)/$(INSTALL_HOME)/package/Contents/program/regcomp" -revoke -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libspell.uno.dylib'
-	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/program" ; cd "$(INSTALL_HOME)/package/Contents/program" ; "$(PWD)/$(INSTALL_HOME)/package/Contents/program/regcomp" -register -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libspell.uno.dylib'
-ifndef PRODUCT_BUILD3
-# Revoke HSQLDB driver
-	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/program" ; cd "$(INSTALL_HOME)/package/Contents/program" ; "$(PWD)/$(INSTALL_HOME)/package/Contents/program/regcomp" -revoke -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libhsqldb.dylib'
-# Revoke JDBC driver
-	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/program" ; cd "$(INSTALL_HOME)/package/Contents/program" ; "$(PWD)/$(INSTALL_HOME)/package/Contents/program/regcomp" -revoke -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libjdbc.dylib'
-# Revoke Java services
-	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/program" ; cd "$(INSTALL_HOME)/package/Contents/program" ; sh -e -c 'for i in LuceneHelpWrapper.jar ScriptFramework.jar ScriptProviderForBeanShell.jar ScriptProviderForJava.jar ScriptProviderForJavaScript.jar XMergeBridge.jar XSLTFilter.jar XSLTValidate.jar agenda.jar fax.jar form.jar letter.jar query.jar report.jar table.jar web.jar ; do "$(PWD)/$(INSTALL_HOME)/package/Contents/program/regcomp" -revoke -r services.rdb -c "vnd.sun.star.expand:\$$OOO_BASE_DIR/program/classes/$$i" ; done'
-	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/program" ; cd "$(INSTALL_HOME)/package/Contents/program" ; sh -e -c 'for i in juh.jar ; do "$(PWD)/$(INSTALL_HOME)/package/Contents/program/regcomp" -revoke -r services.rdb -c "vnd.sun.star.expand:\$$URE_INTERNAL_JAVA_DIR/$$i" ; done'
-# Revoke Python services
-	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/program" ; cd "$(INSTALL_HOME)/package/Contents/program" ; "$(PWD)/$(INSTALL_HOME)/package/Contents/program/regcomp" -revoke -r services.rdb -c 'vnd.openoffice.pymodule:mailmerge'
-	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/program" ; cd "$(INSTALL_HOME)/package/Contents/program" ; "$(PWD)/$(INSTALL_HOME)/package/Contents/program/regcomp" -revoke -r services.rdb -c 'vnd.openoffice.pymodule:pythonscript'
-	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/program" ; cd "$(INSTALL_HOME)/package/Contents/program" ; "$(PWD)/$(INSTALL_HOME)/package/Contents/program/regcomp" -revoke -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/pythonloader.uno.dylib'
+ifdef PRODUCT_BUILD3
+	cd "$(INSTALL_HOME)/package/Contents" ; tidy -quiet -xml --hide-comments yes "$(PWD)/etc/program/services.rdb" | xmllint --noblanks - > "program/services.rdb"
+else
+	cd "$(INSTALL_HOME)/package/Contents" ; tidy -quiet -xml --hide-comments yes "$(PWD)/etc/sandbox/program/services.rdb" | xmllint --noblanks - > "program/services.rdb"
 endif
 # Add Mac OS X localized resources
 	cd "$(INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `echo "$(PRODUCT_BUNDLED_LANG_PACKS)" | sed "s#-#_#g"` ; do mkdir -p "$${i}.lproj" ; mkdir -p `echo "$${i}" | sed "s#_.*\\$$##"`".lproj" ; done'

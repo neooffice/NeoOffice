@@ -75,11 +75,13 @@
       <singleton name="com.sun.star.java.theJavaVirtualMachine"/>
     </implementation>
   </component>
+  <!-- Remove juh.jar
   <component loader="com.sun.star.loader.Java2" uri="vnd.sun.star.expand:$URE_INTERNAL_JAVA_DIR/juh.jar">
     <implementation name="com.sun.star.comp.juhtest.SmoketestCommandEnvironment">
       <service name="com.sun.star.deployment.test.SmoketestCommandEnvironment"/>
     </implementation>
   </component>
+  -->
   <component loader="com.sun.star.loader.SharedLibrary" uri="vnd.sun.star.expand:$URE_INTERNAL_LIB_DIR/namingservice.uno.dylib">
     <implementation name="com.sun.star.comp.stoc.NamingService">
       <service name="com.sun.star.uno.NamingService"/>
@@ -2647,6 +2649,7 @@
       <service name="com.sun.star.logging.PlainTextFormatter"/>
     </implementation>
   </component>
+  <!-- Remove mailmerge
   <component loader="com.sun.star.loader.Python" uri="vnd.openoffice.pymodule:mailmerge">
     <implementation name="org.openoffice.pyuno.MailMessage">
       <service name="com.sun.star.mail.MailMessage"/>
@@ -2655,6 +2658,7 @@
       <service name="com.sun.star.mail.MailServiceProvider"/>
     </implementation>
   </component>
+  -->
   <component loader="com.sun.star.loader.SharedLibrary" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/libmcnttype.dylib">
     <implementation name="com.sun.star.datatransfer.MimeCntTypeFactory">
       <service name="com.sun.star.datatransfer.MimeContentTypeFactory"/>
@@ -2838,17 +2842,21 @@
       <service name="com.sun.star.frame.ProtocolHandler"/>
     </implementation>
   </component>
+  <!-- Remove pythonloader.uno.dylib
   <component loader="com.sun.star.loader.SharedLibrary" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/pythonloader.uno.dylib">
     <implementation name="org.openoffice.comp.pyuno.Loader">
       <service name="com.sun.star.loader.Python"/>
     </implementation>
   </component>
+  -->
+  <!-- Remove pythonscript
   <component loader="com.sun.star.loader.Python" uri="vnd.openoffice.pymodule:pythonscript">
     <implementation name="org.openoffice.pyuno.LanguageScriptProviderForPython">
       <service name="com.sun.star.script.provider.LanguageScriptProvider"/>
       <service name="com.sun.star.script.provider.ScriptProviderForPython"/>
     </implementation>
   </component>
+  -->
   <component loader="com.sun.star.loader.SharedLibrary" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/libres.dylib">
     <implementation name="com.sun.star.comp.extensions.ResourceService">
       <service name="com.sun.star.resource.VclStringResourceLoader"/>
@@ -3512,11 +3520,13 @@
       <service name="com.sun.star.sheet.Solver"/>
     </implementation>
   </component>
+  <!-- Remove XSLTFilter.jar
   <component loader="com.sun.star.loader.Java2" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/classes/XSLTFilter.jar">
     <implementation name="XSLTransformer">
       <service name="com.sun.star.comp.JAXTHelper"/>
     </implementation>
   </component>
+  -->
   <component loader="com.sun.star.loader.SharedLibrary" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/libxsltfilter.dylib">
     <implementation name="com.sun.star.comp.documentconversion.XSLTFilter">
       <service name="com.sun.star.documentconversion.XSLTFilter"/>
@@ -3546,6 +3556,7 @@
       <service name="com.sun.star.embed.OLEEmbeddedObjectFactory"/>
     </implementation>
   </component>
+  <!-- Remove LuceneHelpWrapper.jar
   <component loader="com.sun.star.loader.Java2" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/classes/LuceneHelpWrapper.jar">
     <implementation name="com.sun.star.help.HelpIndexer">
       <service name="com.sun.star.help.HelpIndexer"/>
@@ -3554,11 +3565,15 @@
       <service name="com.sun.star.help.HelpSearch"/>
     </implementation>
   </component>
+  -->
+  <!-- Remove ScriptFramework.jar
   <component loader="com.sun.star.loader.Java2" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/classes/ScriptFramework.jar">
     <implementation name="com.sun.star.script.framework.security.SecurityDialog">
       <service name="com.sun.star.script.framework.security.SecurityDialog"/>
     </implementation>
   </component>
+  -->
+  <!-- Remove ScriptProviderForJava.jar
   <component loader="com.sun.star.loader.Java2" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/classes/ScriptProviderForJava.jar">
     <implementation name="com.sun.star.script.framework.provider.java.ScriptProviderForJava$_ScriptProviderForJava">
       <service name="com.sun.star.script.browse.BrowseNode"/>
@@ -3567,67 +3582,93 @@
       <service name="com.sun.star.script.provider.ScriptProviderForJava"/>
     </implementation>
   </component>
+  -->
+  <!-- Remove XMergeBridge.jar
   <component loader="com.sun.star.loader.Java2" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/classes/XMergeBridge.jar">
     <implementation name="XMergeBridge$_XMergeBridge">
       <service name="com.sun.star.documentconversion.XMergeBridge"/>
     </implementation>
   </component>
+  -->
+  <!-- Remove XSLTValidate.jar
   <component loader="com.sun.star.loader.Java2" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/classes/XSLTValidate.jar">
     <implementation name="XSLTValidate$_XSLTValidate">
       <service name="com.sun.star.documentconversion.XSLTValidate"/>
     </implementation>
   </component>
+  -->
+  <!-- Remove agenda.jar
   <component loader="com.sun.star.loader.Java2" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/classes/agenda.jar">
     <implementation name="com.sun.star.wizards.agenda.CallWizard$WizardImplementation">
       <service name="com.sun.star.wizards.agenda.CallWizard"/>
     </implementation>
   </component>
+  -->
+  <!-- Remove fax.jar
   <component loader="com.sun.star.loader.Java2" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/classes/fax.jar">
     <implementation name="com.sun.star.wizards.fax.CallWizard$WizardImplementation">
       <service name="com.sun.star.wizards.fax.CallWizard"/>
     </implementation>
   </component>
+  -->
+  <!-- Remove form.jar
   <component loader="com.sun.star.loader.Java2" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/classes/form.jar">
     <implementation name="com.sun.star.wizards.form.CallFormWizard$FormWizardImplementation">
       <service name="com.sun.star.wizards.form.CallFormWizard"/>
     </implementation>
   </component>
+  -->
+  <!-- Remove libhsqldb.dylib
   <component loader="com.sun.star.loader.SharedLibrary" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/libhsqldb.dylib">
     <implementation name="com.sun.star.sdbcx.comp.hsqldb.Driver">
       <service name="com.sun.star.sdbc.Driver"/>
       <service name="com.sun.star.sdbcx.Driver"/>
     </implementation>
   </component>
+  -->
+  <!-- Remove libjdbc.dylib
   <component loader="com.sun.star.loader.SharedLibrary" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/libjdbc.dylib">
     <implementation name="com.sun.star.comp.sdbc.JDBCDriver">
       <service name="com.sun.star.sdbc.Driver"/>
     </implementation>
   </component>
+  -->
+  <!-- Remove letter.jar
   <component loader="com.sun.star.loader.Java2" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/classes/letter.jar">
     <implementation name="com.sun.star.wizards.letter.CallWizard$WizardImplementation">
       <service name="com.sun.star.wizards.letter.CallWizard"/>
     </implementation>
   </component>
+  -->
+  <!-- Remove query.jar
   <component loader="com.sun.star.loader.Java2" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/classes/query.jar">
     <implementation name="com.sun.star.wizards.query.CallQueryWizard$QueryWizardImplementation">
       <service name="com.sun.star.wizards.query.CallQueryWizard"/>
     </implementation>
   </component>
+  -->
+  <!-- Remove report.jar
   <component loader="com.sun.star.loader.Java2" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/classes/report.jar">
     <implementation name="com.sun.star.wizards.report.CallReportWizard$ReportWizardImplementation">
       <service name="com.sun.star.wizards.report.CallReportWizard"/>
     </implementation>
   </component>
+  -->
+  <!-- Remove table.jar
   <component loader="com.sun.star.loader.Java2" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/classes/table.jar">
     <implementation name="com.sun.star.wizards.table.CallTableWizard$TableWizardImplementation">
       <service name="com.sun.star.wizards.table.CallTableWizard"/>
     </implementation>
   </component>
+  -->
+  <!-- Remove web.jar
   <component loader="com.sun.star.loader.Java2" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/classes/web.jar">
     <implementation name="com.sun.star.wizards.web.CallWizard$WizardImplementation">
       <service name="com.sun.star.wizards.web.CallWizard"/>
     </implementation>
   </component>
+  -->
+  <!-- Remove ScriptProviderForBeanShell.jar
   <component loader="com.sun.star.loader.Java2" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/classes/ScriptProviderForBeanShell.jar">
     <implementation name="com.sun.star.script.framework.provider.beanshell.ScriptProviderForBeanShell$_ScriptProviderForBeanShell">
       <service name="com.sun.star.script.browse.BrowseNode"/>
@@ -3636,6 +3677,8 @@
       <service name="com.sun.star.script.provider.ScriptProviderForBeanShell"/>
     </implementation>
   </component>
+  -->
+  <!-- Remove ScriptProviderForJavaScript.jar
   <component loader="com.sun.star.loader.Java2" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/classes/ScriptProviderForJavaScript.jar">
     <implementation name="com.sun.star.script.framework.provider.javascript.ScriptProviderForJavaScript$_ScriptProviderForJavaScript">
       <service name="com.sun.star.script.browse.BrowseNode"/>
@@ -3644,6 +3687,7 @@
       <service name="com.sun.star.script.provider.ScriptProviderForJavaScript"/>
     </implementation>
   </component>
+  -->
   <component loader="com.sun.star.loader.SharedLibrary" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/libxmlsecurity.dylib">
     <implementation name="com.sun.star.security.CertificateContainer">
       <service name="com.sun.star.security.CertificateContainer"/>
