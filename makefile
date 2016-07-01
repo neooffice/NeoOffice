@@ -473,6 +473,7 @@ else
 endif
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/vcl/$(UOUTPUTDIR)/LinkTarget/Executable/checknativefont" "program/checknativefont" ; chmod a+x "program/checknativefont"
 # Mac App Store will reject apps with shell scripts
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice.bin" ; ln -sf "../MacOS/soffice.bin" "program/soffice.bin"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in sbase scalc sdraw simpress smath soffice swriter unopkg unopkg.bin ; do rm -f "program/$$i" ; ln -sf "soffice.bin" "MacOS/$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in regcomp uno ; do rm -f "program/$$i" ; ln -sf "$$i.bin" "program/$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/resource/dba"*.res ; cp -f "$(PWD)/dbaccess/$(UOUTPUTDIR)/bin/dba"*.res "program/resource"
@@ -567,13 +568,13 @@ else
 # Remove update check files since the Mac App Store has its own update
 # check. Do not remove updatefeed.uno.dylib as it is needed by the pdfimport
 # extension.
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/libupdchk.dylib" "share/registry/onlineupdate.xcd"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/libupdchk.dylib"
 # Remove Java files
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "basis-link/program/classes" "program/libhsqldb.dylib" "basis-link/program/libjdbc$(DLLSUFFIX).dylib" "share/Scripts/java" "basis-link/share/registry/modules/org/openoffice/TypeDetection/Filter/fcfg_palm_filters.xcu" "basis-link/share/registry/modules/org/openoffice/TypeDetection/Filter/fcfg_pocketexcel_filters.xcu" "basis-link/share/registry/modules/org/openoffice/TypeDetection/Filter/fcfg_pocketword_filters.xcu" "basis-link/share/registry/modules/org/openoffice/TypeDetection/Types/fcfg_palm_types.xcu" "basis-link/share/registry/modules/org/openoffice/TypeDetection/Types/fcfg_pocketexcel_types.xcu" "basis-link/share/registry/modules/org/openoffice/TypeDetection/Types/fcfg_pocketword_types.xcu" "basis-link/ure-link/share/java" "basis-link/ure-link/lib/JREProperties.class" "basis-link/ure-link/lib/javaloader.uno.dylib" "basis-link/ure-link/lib/javavm.uno.dylib" "basis-link/ure-link/lib/libjava_uno.dylib" "basis-link/ure-link/lib/libjuh.dylib" "basis-link/ure-link/lib/libjuhx.dylib" "program/sunjavaplugin.dylib" "basis-link/ure-link/share/java" "program/javavendors.xml"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/classes" "program/libhsqldb.dylib" "program/libjdbc.dylib" "share/Scripts/java" "share/registry/palm.xcd" "share/registry/pocketexcel.xcd" "share/registry/pocketword.xcd" "program/JREProperties.class" "program/javaloader.uno.dylib" "program/javavm.uno.dylib" "program/javavendors.xml" "program/libjava_uno.dylib" "program/libjuh.dylib" "program/libjuhx.dylib" "program/sunjavaplugin.dylib"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . ! -type d -name "*.jnilib"` ; do rm -f $${i} ; done'
 	cd "$(INSTALL_HOME)/package/Contents/help" ; sh -e -c 'for i in `find . -type d -name "*.idxl"` ; do rm -Rf $${i} ; done'
 # Remove Python files
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/libpyuno.dylib" "program/mailmerge.py" "program/officehelper.py" "program/pythonloader.py" "pythonscript.pyc" "program/pythonloader.uno.dylib" "program/pythonloader.unorc" "program/pythonscript.py" "program/pyuno.so" "program/uno.py" "program/uno.pyc" "program/unohelper.py" "program/unohelper.pyc" "share/Scripts/python" "share/registry/pyuno.xcd"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/libpyuno.dylib" "program/mailmerge.py" "program/officehelper.py" "program/pythonloader.py" "program/pythonscript.py" "program/pythonloader.uno.dylib" "program/pythonloader.unorc" "program/pythonscript.py" "program/pyuno.so" "program/uno.py" "program/unohelper.py" "share/Scripts/python" "share/registry/pyuno.xcd"
 endif
 	cd "$(INSTALL_HOME)/package/Contents/basis-link" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
 	cd "$(INSTALL_HOME)/package/Contents/basis-link" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
