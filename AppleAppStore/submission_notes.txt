@@ -25,10 +25,7 @@ Metadata and Uploads
 See the following files for the respective localized text to use:
 
 metadata_and_uploads_notes.txt - English
-metadata_and_uploads_notes_de.txt - German
-metadata_and_uploads_notes_fr.txt - French
-metadata_and_uploads_notes_it.txt - Italian
-metadata_and_uploads_notes_nl.txt - Dutch
+metadata_and_uploads_notes_*.txt - German, French, Italian, etc.
 
 
 App Review Information
@@ -37,27 +34,20 @@ App Review Information
 Review Notes:
 Paste the following paragraphs into the Review Notes text area. Stop before the "App Sandbox Entitlement Usage Information" section:
 
-NeoOffice is a registered trademark that we - Planamesa Inc. Team ID 8V953UDD5Q - own.
-
-This product is a combination of our own - Planamesa Inc. Team ID 8V953UDD5Q - copyrighted source code plus third-party source code licensed under various open source software licenses. None of the third-party source code is subject to any of the GNU General Public License (GPL) open source licenses.
-
-In case Apple reviewers need to review any of the third-party source code licenses, a list of all third-party source code is provided below. The list is grouped by type of open source license and the copyright owner and a URL is provided for each third-party:
+NeoOffice is a registered trademark that we - Planamesa Inc. - own. This product is a combination of our own Planamesa Inc. copyrighted source code plus the following third-party source code licensed under various open source software licenses. None of the third-party source code is subject to any of the GNU General Public License (GPL) open source licenses:
 
 GNU Lesser General Public License (LGPL) version 3:
-- OpenOffice.org source code copyright by The Apache Software Foundation - http://www.openoffice.org/license.html
-- NeoOffice icons and images copyright by Armando Nava, Daniel Pimley, and Oscar Van Vliet - http://dl.dropbox.com/u/15165882/Akua_2012_Release.zip
+- OpenOffice.org source code copyright by The Apache Software Foundation
+- LibreOffice source code copyright by LibreOffice contributors
+- NeoOffice icons and images copyright by Armando Nava, Daniel Pimley, and Oscar Van Vliet
 
 GNU Lesser General Public License (LGPL) version 2:
-- NeoOffice icons and images copyright by Smokey Ardisson - http://www.ardisson.org/smokey/neo/neo2toolbarv101.zip
-- NeoOffice icons and images copyright by Daniel Pimley - http://www.pimley.net/projects/downloads/NeoOfficeAquaElements.zip
-- libwpd source code copyright by libwpd contributors - http://libwpd.sourceforge.net/authors_licensing.html
-
-Mozilla Public License version 2.0:
-- LibreOffice source code copyright by LibreOffice contributors - http://www.libreoffice.org/download/license/
+- NeoOffice icons and images copyright by Smokey Ardisson
+- NeoOffice icons and images copyright by Daniel Pimley
 
 MIT-style license:
-- Minizip source code copyright by Gilles Vollant - http://www.winimage.com/zLibDll/minizip.html
-- Mac remote control infrared receiver source code copyright by Martin Kahr - http://github.com/martinkahr/apple_remote_control
+- Minizip source code copyright by Gilles Vollant
+- Mac remote control infrared receiver source code copyright by Martin Kahr
 
 
 App Sandbox Entitlement Usage Information:
