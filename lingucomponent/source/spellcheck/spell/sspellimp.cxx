@@ -1028,7 +1028,7 @@ OUString SAL_CALL SpellChecker::getServiceDisplayName( const Locale& /*rLocale*/
 {
 	MutexGuard	aGuard( GetLinguMutex() );
 #if defined USE_JAVA && defined MACOSX && defined PRODUCT_NAME
-	return A2OU( PRODUCT_NAME " OS X Spellchecker + Grammarchecker" );
+	return A2OU( PRODUCT_NAME " Mac Spellchecker + Grammarchecker" );
 #else	// USE_JAVA && MACOSX && PRODUCT_NAME
 	return A2OU( "Hunspell SpellChecker" );
 #endif	// USE_JAVA && MACOSX && PRODUCT_NAME
