@@ -1,4 +1,24 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0"?>
+<!--***********************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ ***********************************************************-->
 <menu:menubar xmlns:menu="http://openoffice.org/2001/menu" menu:id="menubar">
 	<menu:menu menu:id=".uno:PickList">
 		<menu:menupopup>
@@ -42,6 +62,8 @@
 			<menu:menuseparator/>
 			<menu:menuitem menu:id=".uno:Print"/>
 			<menu:menuitem menu:id=".uno:PrinterSetup"/>
+			
+			
 		</menu:menupopup>
 	</menu:menu>
 	<menu:menu menu:id=".uno:EditMenu">
@@ -52,7 +74,7 @@
 			<menu:menuitem menu:id=".uno:Cut"/>
 			<menu:menuitem menu:id=".uno:Copy"/>
 			<menu:menuitem menu:id=".uno:Paste"/>
-			<menu:menuitem menu:id=".uno:PasteClipboard"/>
+                        <menu:menuitem menu:id=".uno:PasteSpecial"/>
 			<menu:menuitem menu:id=".uno:SelectAll"/>
 			<menu:menuseparator/>
 			<menu:menuitem menu:id=".uno:SearchDialog"/>
@@ -74,12 +96,12 @@
 	</menu:menu>
 	<menu:menu menu:id=".uno:ViewMenu">
 		<menu:menupopup>
-			<menu:menuitem menu:id=".uno:NormalMultiPaneGUI"/>
-            <menu:menuitem menu:id=".uno:OutlineMode"/>
-			<menu:menuitem menu:id=".uno:DiaMode"/>
+			<menu:menuitem menu:id=".uno:NormalMultiPaneGUI" menu:style="radio"/>
+            <menu:menuitem menu:id=".uno:OutlineMode" menu:style="radio"/>
+			<menu:menuitem menu:id=".uno:DiaMode" menu:style="radio"/>
 			<menu:menuitem menu:id=".uno:Presentation"/>
-			<menu:menuitem menu:id=".uno:NotesMode"/>
-			<menu:menuitem menu:id=".uno:HandoutMode"/>
+			<menu:menuitem menu:id=".uno:NotesMode" menu:style="radio"/>
+			<menu:menuitem menu:id=".uno:HandoutMode" menu:style="radio"/>
    			<menu:menuseparator/>
 			<menu:menu menu:id=".uno:MasterPageMenu">
 				<menu:menupopup>
@@ -91,14 +113,14 @@
 			</menu:menu>
 			<menu:menu menu:id=".uno:DisplayQualityMenu">
 				<menu:menupopup>
-					<menu:menuitem menu:id=".uno:OutputQualityColor"/>
-					<menu:menuitem menu:id=".uno:OutputQualityGrayscale"/>
-					<menu:menuitem menu:id=".uno:OutputQualityBlackWhite"/>
+					<menu:menuitem menu:id=".uno:OutputQualityColor" menu:style="radio"/>
+					<menu:menuitem menu:id=".uno:OutputQualityGrayscale" menu:style="radio"/>
+					<menu:menuitem menu:id=".uno:OutputQualityBlackWhite" menu:style="radio"/>
 				</menu:menupopup>
 			</menu:menu>
 			<menu:menuseparator/>
-			<menu:menuitem menu:id=".uno:RightPane"/>
-			<menu:menuitem menu:id=".uno:LeftPaneImpress"/>
+      <menu:menuitem menu:id=".uno:Sidebar"/>
+      <menu:menuitem menu:id=".uno:LeftPaneImpress"/>
 			<menu:menuitem menu:id=".uno:AvailableToolbars"/>
 			<menu:menuitem menu:id=".uno:StatusBarVisible"/>
 			<menu:menuitem menu:id=".uno:ShowImeStatusWindow"/>
@@ -117,7 +139,8 @@
 					<menu:menuitem menu:id=".uno:HelplinesFront"/>
 				</menu:menupopup>
 			</menu:menu>
-			<menu:menuseparator/>
+      <menu:menuitem menu:id=".uno:ShowAnnotations"/>
+      <menu:menuseparator/>
 			<menu:menuitem menu:id=".uno:Navigator"/>
 			<menu:menuseparator/>
 			<menu:menuitem menu:id=".uno:HeaderAndFooter"/>
@@ -141,10 +164,12 @@
 					<menu:menuseparator/>
 					<menu:menuitem menu:id=".uno:InsertAuthorField"/>
 					<menu:menuitem menu:id=".uno:InsertPageField"/>
-					<menu:menuitem menu:id=".uno:InsertFileField"/>
+          <menu:menuitem menu:id=".uno:InsertPagesField"/>
+          <menu:menuitem menu:id=".uno:InsertFileField"/>
 				</menu:menupopup>
 			</menu:menu>
-			<menu:menuitem menu:id=".uno:Bullet"/>
+      <menu:menuitem menu:id=".uno:InsertAnnotation"/>
+      <menu:menuitem menu:id=".uno:InsertSymbol"/>
             <menu:menu menu:id=".uno:FormattingMarkMenu">
                 <menu:menupopup>
                     <menu:menuitem menu:id=".uno:InsertNonBreakingSpace"/>
@@ -176,8 +201,6 @@
 				<menu:menupopup>
 					<menu:menuitem menu:id=".uno:InsertObject"/>
 					<menu:menuitem menu:id=".uno:InsertPlugin"/>
-					<menu:menuitem menu:id=".uno:InsertSound"/>
-					<menu:menuitem menu:id=".uno:InsertVideo"/>
 					<menu:menuitem menu:id=".uno:InsertMath"/>
 				</menu:menupopup>
 			</menu:menu>
@@ -198,8 +221,11 @@
             <menu:menuseparator/>
             <menu:menu menu:id=".uno:TransliterateMenu">
                 <menu:menupopup>
-                    <menu:menuitem menu:id=".uno:ChangeCaseToUpper"/>
+                    <menu:menuitem menu:id=".uno:ChangeCaseToSentenceCase"/>
                     <menu:menuitem menu:id=".uno:ChangeCaseToLower"/>
+                    <menu:menuitem menu:id=".uno:ChangeCaseToUpper"/>
+                    <menu:menuitem menu:id=".uno:ChangeCaseToTitleCase"/>
+                    <menu:menuitem menu:id=".uno:ChangeCaseToToggleCase"/>
                     <menu:menuitem menu:id=".uno:ChangeCaseToHalfWidth"/>
                     <menu:menuitem menu:id=".uno:ChangeCaseToFullWidth"/>
                     <menu:menuitem menu:id=".uno:ChangeCaseToHiragana"/>
@@ -234,7 +260,7 @@
                 <menu:menupopup>
                     <menu:menuitem menu:id=".uno:HangulHanjaConversion"/>
                     <menu:menuitem menu:id=".uno:ChineseConversion"/>
-                    <menu:menuitem menu:id=".uno:Thesaurus"/>
+                    <menu:menuitem menu:id=".uno:ThesaurusDialog"/>
                     <menu:menuitem menu:id=".uno:Hyphenation"/>
                     <menu:menuseparator/>
                     <menu:menuitem menu:id=".uno:MoreDictionaries"/>
@@ -244,6 +270,7 @@
 			<menu:menuitem menu:id=".uno:Gallery"/>
 			<menu:menuitem menu:id=".uno:BmpMask"/>
 			<menu:menuitem menu:id=".uno:AVMediaPlayer"/>
+            <menu:menuitem menu:id=".uno:PresentationMinimizer"/>
 			<menu:menuseparator/>
             <menu:menu menu:id=".uno:MacrosMenu">
                 <menu:menupopup>
@@ -260,7 +287,7 @@
 			<menu:menuitem menu:id=".uno:OpenXMLFilterSettings"/>
 			<menu:menuitem menu:id=".uno:AutoCorrectDlg"/>
 			<menu:menuitem menu:id=".uno:ConfigureDialog"/>
-			<menu:menuitem menu:id=".uno:OptionsTreeDialog"/>
+			
 		</menu:menupopup>
 	</menu:menu>
 	<menu:menu menu:id=".uno:SlideShowMenu">
@@ -279,7 +306,7 @@
 			<menu:menuitem menu:id=".uno:CustomShowDialog"/>
 		</menu:menupopup>
 	</menu:menu>
-	<menu:menu menu:id=".uno:WindowList">
+  <menu:menu menu:id=".uno:WindowList">
 		<menu:menupopup>
 			<menu:menuitem menu:id=".uno:NewWindow"/>
 			<menu:menuitem menu:id=".uno:CloseWin"/>
@@ -292,8 +319,8 @@
 			<menu:menuitem menu:id=".uno:ExtendedHelp"/>
 			<menu:menuseparator/>
 			<menu:menuitem menu:id=".uno:HelpSupport"/>
-			<menu:menuseparator/>
-			<menu:menuitem menu:id=".uno:About"/>
+			
+			
 		</menu:menupopup>
 	</menu:menu>
 </menu:menubar>
