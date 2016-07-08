@@ -576,8 +576,6 @@ else
 # Remove Python files
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/libpyuno.dylib" "program/mailmerge.py" "program/officehelper.py" "program/pythonloader.py" "program/pythonscript.py" "program/pythonloader.uno.dylib" "program/pythonloader.unorc" "program/pythonscript.py" "program/pyuno.so" "program/uno.py" "program/unohelper.py" "share/Scripts/python" "share/registry/pyuno.xcd"
 endif
-
-todo1:
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -name "*.xcd" -not -path "*/CVS/*"` ; do xmllint --noblanks "$(PWD)/etc/$${i}" > "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -not -name "*.xcd" -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
