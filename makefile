@@ -549,9 +549,9 @@ endif
 	chmod -Rf u+rw "$(INSTALL_HOME)/package/Contents/tmp"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/tmp"
 ifdef PRODUCT_BUILD3
-	cd "$(INSTALL_HOME)/package/Contents" ; tidy -quiet -xml --hide-comments yes "$(PWD)/etc/program/services.rdb" | xmllint --noblanks - > "program/services.rdb"
+	cd "$(INSTALL_HOME)/package/Contents" ; xmllint --noblanks "$(PWD)/etc/program/services.rdb" > "program/services.rdb"
 else
-	cd "$(INSTALL_HOME)/package/Contents" ; tidy -quiet -xml --hide-comments yes "$(PWD)/etc/sandbox/program/services.rdb" | xmllint --noblanks - > "program/services.rdb"
+	cd "$(INSTALL_HOME)/package/Contents" ; xmllint --noblanks "$(PWD)/etc/sandbox/program/services.rdb" > "program/services.rdb"
 endif
 # Add Mac OS X localized resources
 	cd "$(INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `echo "$(PRODUCT_BUNDLED_LANG_PACKS)" | sed "s#-#_#g"` ; do mkdir -p "$${i}.lproj" ; mkdir -p `echo "$${i}" | sed "s#_.*\\$$##"`".lproj" ; done'
@@ -576,14 +576,18 @@ else
 # Remove Python files
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/libpyuno.dylib" "program/mailmerge.py" "program/officehelper.py" "program/pythonloader.py" "program/pythonscript.py" "program/pythonloader.uno.dylib" "program/pythonloader.unorc" "program/pythonscript.py" "program/pyuno.so" "program/uno.py" "program/unohelper.py" "share/Scripts/python" "share/registry/pyuno.xcd"
 endif
-	cd "$(INSTALL_HOME)/package/Contents/basis-link" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
-	cd "$(INSTALL_HOME)/package/Contents/basis-link" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
+
+todo1:
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -name "*.xcd" -not -path "*/CVS/*"` ; do xmllint --noblanks "$(PWD)/etc/$${i}" > "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -not -name "*.xcd" -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
 ifdef PRODUCT_BUILD3
 	cd "$(INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' | sed 's#BuildMachine=.*$$#BuildMachine=$(BUILD_MACHINE)#g' > "../../out" ; mv -f "../../out" "program/bootstraprc"
-	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(TARGET_MACHINE)#$(TARGET_MACHINE)#g' "$(PWD)/etc/program/fundamentalbasisrc" > "basis-link/program/fundamentalbasisrc"
+	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(TARGET_MACHINE)#$(TARGET_MACHINE)#g' "$(PWD)/etc/program/fundamentalbasisrc" > "program/fundamentalbasisrc"
 else
-	cd "$(INSTALL_HOME)/package/Contents/basis-link" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find share -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
-	cd "$(INSTALL_HOME)/package/Contents/basis-link" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find share -type f -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/sandbox/$${i}" "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find share -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find share -type f -name "*.xcd" -not -path "*/CVS/*"` ; do xmllint --noblanks "$(PWD)/etc/sandbox/$${i}" > "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find share -type f -not -name "*.xcd" -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/sandbox/$${i}" "$${i}" ; done'
 # Remove report toolbar from Base since reports require Java support
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find "basis-link/share/registry" -name BaseWindowState.xcu` ; do sed "s#\"private:resource\/toolbar\/reportobjectbar\"#\"ignore\"#g" "$${i}" > "../../out" ; mv -f "../../out" "$${i}" ; done'
 	rm "$(INSTALL_HOME)/package/Contents/share/config/soffice.cfg/modules/dbapp/toolbar/reportobjectbar.xml"
