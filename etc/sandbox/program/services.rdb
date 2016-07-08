@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="utf8"?>
 <components xmlns="http://openoffice.org/2010/uno-components">
   <component loader="com.sun.star.loader.SharedLibrary" uri="vnd.sun.star.expand:$URE_INTERNAL_LIB_DIR/acceptor.uno.dylib">
     <implementation name="com.sun.star.comp.io.Acceptor">
