@@ -2384,7 +2384,12 @@
         <prop oor:name="FilterService">
           <value>com.sun.star.comp.oox.xls.ExcelFilter</value>
         </prop>
-        <prop oor:name="UserData"/>
+        <prop oor:name="UserData">
+          <value>OXML</value>
+        </prop>
+        <prop oor:name="UIName">
+          <value xml:lang="x-default">Microsoft Excel 2008-2016</value>
+        </prop>
         <prop oor:name="FileFormatVersion"/>
         <prop oor:name="Type">
           <value>MS Excel 2007 XML</value>
@@ -2402,7 +2407,12 @@
         <prop oor:name="FilterService">
           <value>com.sun.star.comp.oox.xls.ExcelFilter</value>
         </prop>
-        <prop oor:name="UserData"/>
+        <prop oor:name="UserData">
+          <value>OXML</value>
+        </prop>
+        <prop oor:name="UIName">
+          <value xml:lang="x-default">Microsoft Excel 2008-2016 Template</value>
+        </prop>
         <prop oor:name="FileFormatVersion"/>
         <prop oor:name="Type">
           <value>MS Excel 2007 XML Template</value>
@@ -2421,6 +2431,9 @@
           <value>com.sun.star.comp.oox.xls.ExcelFilter</value>
         </prop>
         <prop oor:name="UserData"/>
+        <prop oor:name="UIName">
+          <value xml:lang="x-default">Microsoft Excel 2008-2016 Binary</value>
+        </prop>
         <prop oor:name="FileFormatVersion"/>
         <prop oor:name="Type">
           <value>MS Excel 2007 Binary</value>
@@ -2966,7 +2979,7 @@
           <value>Calc MS Excel 2007 XML</value>
         </prop>
         <prop oor:name="UIName">
-          <value xml:lang="x-default">Microsoft Excel 2007 XML</value>
+          <value xml:lang="x-default">Microsoft Excel 2008-2016</value>
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
@@ -2986,7 +2999,7 @@
           <value>Calc MS Excel 2007 XML Template</value>
         </prop>
         <prop oor:name="UIName">
-          <value xml:lang="x-default">Microsoft Excel 2007 XML Template</value>
+          <value xml:lang="x-default">Microsoft Excel 2008-2016 Template</value>
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
@@ -3006,7 +3019,7 @@
           <value>Calc MS Excel 2007 Binary</value>
         </prop>
         <prop oor:name="UIName">
-          <value xml:lang="x-default">Microsoft Excel 2007 Binary</value>
+          <value xml:lang="x-default">Microsoft Excel 2008-2016 Binary</value>
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
