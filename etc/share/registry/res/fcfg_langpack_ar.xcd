@@ -59,12 +59,12 @@
       </node>
       <node oor:name="MS Word 2007 XML">
         <prop oor:name="UIName">
-          <value xml:lang="ar">Microsoft Word 2007 XML</value>
+          <value xml:lang="ar">Microsoft Word 2008-2016</value>
         </prop>
       </node>
       <node oor:name="MS Word 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="ar">قالبMicrosoft Word 2007 XML</value>
+          <value xml:lang="ar">قالبMicrosoft Word 2008-2016</value>
         </prop>
       </node>
       <node oor:name="HTML">
@@ -189,17 +189,17 @@
       </node>
       <node oor:name="Calc MS Excel 2007 XML">
         <prop oor:name="UIName">
-          <value xml:lang="ar">Microsoft Excel 2007 XML</value>
+          <value xml:lang="ar">Microsoft Excel 2008-2016</value>
         </prop>
       </node>
       <node oor:name="Calc MS Excel 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="ar">قالب Microsoft Excel 2007 XML</value>
+          <value xml:lang="ar">قالب Microsoft Excel 2008-2016</value>
         </prop>
       </node>
       <node oor:name="Calc MS Excel 2007 Binary">
         <prop oor:name="UIName">
-          <value xml:lang="ar">ثنائي Microsoft Excel 2007</value>
+          <value xml:lang="ar">ثنائي Microsoft Excel 2008-2016</value>
         </prop>
       </node>
       <node oor:name="StarOffice XML (Draw)">
@@ -259,12 +259,12 @@
       </node>
       <node oor:name="Impress MS PowerPoint 2007 XML">
         <prop oor:name="UIName">
-          <value xml:lang="ar">Microsoft PowerPoint 2007 XML</value>
+          <value xml:lang="ar">Microsoft PowerPoint 2008-2016</value>
         </prop>
       </node>
       <node oor:name="Impress MS PowerPoint 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="ar">قالب Microsoft PowerPoint 2007 XML</value>
+          <value xml:lang="ar">قالب Microsoft PowerPoint 2008-2016</value>
         </prop>
       </node>
       <node oor:name="StarOffice XML (Chart)">

@@ -64,12 +64,12 @@
       </node>
       <node oor:name="MS Word 2007 XML">
         <prop oor:name="UIName">
-          <value xml:lang="sk">Microsoft Word 2007 XML</value>
+          <value xml:lang="sk">Microsoft Word 2008-2016</value>
         </prop>
       </node>
       <node oor:name="MS Word 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="sk">Šablóna Microsoft Word 2007 XML</value>
+          <value xml:lang="sk">Šablóna Microsoft Word 2008-2016</value>
         </prop>
       </node>
       <node oor:name="HTML">
@@ -199,17 +199,17 @@
       </node>
       <node oor:name="Calc MS Excel 2007 XML">
         <prop oor:name="UIName">
-          <value xml:lang="sk">Microsoft Excel 2007 XML</value>
+          <value xml:lang="sk">Microsoft Excel 2008-2016</value>
         </prop>
       </node>
       <node oor:name="Calc MS Excel 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="sk">Šablóna Microsoft Excel 2007 XML</value>
+          <value xml:lang="sk">Šablóna Microsoft Excel 2008-2016</value>
         </prop>
       </node>
       <node oor:name="Calc MS Excel 2007 Binary">
         <prop oor:name="UIName">
-          <value xml:lang="sk">Microsoft Excel 2007 Binárny súbor</value>
+          <value xml:lang="sk">Microsoft Excel 2008-2016 Binárny súbor</value>
         </prop>
       </node>
       <node oor:name="StarOffice XML (Draw)">
@@ -274,12 +274,12 @@
       </node>
       <node oor:name="Impress MS PowerPoint 2007 XML">
         <prop oor:name="UIName">
-          <value xml:lang="sk">Microsoft PowerPoint 2007 XML</value>
+          <value xml:lang="sk">Microsoft PowerPoint 2008-2016</value>
         </prop>
       </node>
       <node oor:name="Impress MS PowerPoint 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="sk">Šablóna Microsoft PowerPoint 2007 XML</value>
+          <value xml:lang="sk">Šablóna Microsoft PowerPoint 2008-2016</value>
         </prop>
       </node>
       <node oor:name="StarOffice XML (Chart)">
