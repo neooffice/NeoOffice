@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="utf8"?>
+<oor:data xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:oor="http://openoffice.org/2001/registry">
+  <oor:component-data xmlns:install="http://openoffice.org/2004/installation" oor:package="org.openoffice.TypeDetection" oor:name="Filter">
+    <node oor:name="Filters">
+      <node oor:name="StarOffice XML (Base)">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">ODF-tietokanta</value>
+        </prop>
+      </node>
+      <node oor:name="HTML (StarWriter)">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">HTML-asiakirja (%productname% Writer)</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 95 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">MS Word 95 -malli</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 97 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">MS Word 97/2000 -malli</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Writer)">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">%oooxmlformatname% %oooxmlformatversion% -tekstiasiakirja</value>
+        </prop>
+      </node>
+      <node oor:name="Text">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Teksti</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded)">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Teksti (koodattu)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_StarOffice_XML_Writer_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">%oooxmlformatname% %oooxmlformatversion% -tekstiasiakirjamalli</value>
+        </prop>
+      </node>
+      <node oor:name="writer8">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">ODF-tekstiasiakirja</value>
+        </prop>
+      </node>
+      <node oor:name="NSO Writer UOF2">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Uniform Office Format 2 -tekstiasiakirja</value>
+        </prop>
+      </node>
+      <node oor:name="writer8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">ODF-tekstiasiakirjan malli</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2003 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Microsoft Word 2003 XML</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Microsoft Word 2007 XML</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Microsoft Excel 2007 -malli (XML)</value>
+        </prop>
+      </node>
+      <node oor:name="HTML">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">HTML-asiakirja</value>
+        </prop>
+      </node>
+      <node oor:name="Text (StarWriter/Web)">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Teksti (%productname% Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded) (StarWriter/Web)">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Teksti (koodattu) (%productname% Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_web_StarOffice_XML_Writer">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">%oooxmlformatname% %oooxmlformatversion% -tekstiasiakirja (%productname% Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_web_StarOffice_XML_Writer_Web_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">%oooxmlformatname% %oooxmlformatversion% -HTML-malli</value>
+        </prop>
+      </node>
+      <node oor:name="writerweb8_writer_template">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">HTML-asiakirjan malli</value>
+        </prop>
+      </node>
+      <node oor:name="writerweb8_writer">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">%productname% -teksti (%productname% Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded) (StarWriter/GlobalDocument)">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Teksti (koodattu) (%productname% -perusasiakirja)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_globaldocument_StarOffice_XML_Writer">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">%oooxmlformatname% %oooxmlformatversion% -tekstiasiakirja</value>
+        </prop>
+      </node>
+      <node oor:name="writer_globaldocument_StarOffice_XML_Writer_GlobalDocument">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">%oooxmlformatname% %oooxmlformatversion% -perusasiakirja</value>
+        </prop>
+      </node>
+      <node oor:name="writerglobal8">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">ODF-perusasiakirja</value>
+        </prop>
+      </node>
+      <node oor:name="writerglobal8_writer">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">ODF-tekstiasiakirja</value>
+        </prop>
+      </node>
+      <node oor:name="HTML (StarCalc)">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">HTML-asiakirja (%productname% Calc)</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 4.0 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">MS Excel 4.0 -malli</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 5.0/95 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">MS Excel 5.0 -malli</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 95 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">MS Excel 95 -malli</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 97 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">MS Excel 97/2000/XP -malli</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Calc)">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">%oooxmlformatname% %oooxmlformatversion% -laskentataulukko</value>
+        </prop>
+      </node>
+      <node oor:name="Text - txt - csv (StarCalc)">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Teksti CSV</value>
+        </prop>
+      </node>
+      <node oor:name="calc_HTML_WebQuery">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Web-kysely (%productname% Calc)</value>
+        </prop>
+      </node>
+      <node oor:name="calc_StarOffice_XML_Calc_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">%oooxmlformatname% %oooxmlformatversion% -laskentataulukkomalli</value>
+        </prop>
+      </node>
+      <node oor:name="calc8">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">ODF-laskentataulukko</value>
+        </prop>
+      </node>
+      <node oor:name="NSO Calc UOF2">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Uniform Office Format 2 -laskentataulukko</value>
+        </prop>
+      </node>
+      <node oor:name="calc8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">ODF-laskentataulukon malli</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 2003 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Microsoft Excel 2003 XML</value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Microsoft Excel 2007 (XML)</value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Microsoft Excel 2007 -malli (XML)</value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 Binary">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Microsoft Excel 2007 (binääri)</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Draw)">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">%oooxmlformatname% %oooxmlformatversion% -piirros</value>
+        </prop>
+      </node>
+      <node oor:name="draw_StarOffice_XML_Draw_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">%oooxmlformatname% %oooxmlformatversion% -piirrosmalli</value>
+        </prop>
+      </node>
+      <node oor:name="draw8">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">ODF-piirros</value>
+        </prop>
+      </node>
+      <node oor:name="draw8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">ODF-piirroksen malli</value>
+        </prop>
+      </node>
+      <node oor:name="MS PowerPoint 97 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">MS PowerPoint 97/2000/XP -malli</value>
+        </prop>
+      </node>
+      <node oor:name="impress_StarOffice_XML_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">%oooxmlformatname% %oooxmlformatversion%  -piirros (%productname% Impress)</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Impress)">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">%oooxmlformatname% %oooxmlformatversion% -esitys</value>
+        </prop>
+      </node>
+      <node oor:name="impress_StarOffice_XML_Impress_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">%oooxmlformatname% %oooxmlformatversion% -esitysmalli</value>
+        </prop>
+      </node>
+      <node oor:name="impress8">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">ODF-esitys</value>
+        </prop>
+      </node>
+      <node oor:name="NSO Impress UOF2">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Uniform Office Format 2 -esitys</value>
+        </prop>
+      </node>
+      <node oor:name="impress8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">ODF-esityksen malli</value>
+        </prop>
+      </node>
+      <node oor:name="impress8_draw">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">ODF-piirros (Impress)</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Microsoft PowerPoint 2007 XML</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">Microsoft PowerPoint 2007 XML -malli</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Chart)">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">%oooxmlformatname% %oooxmlformatversion% -kaavio</value>
+        </prop>
+      </node>
+      <node oor:name="chart8">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">ODF-kaavio</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Math)">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">%oooxmlformatname% %oooxmlformatversion% -kaava</value>
+        </prop>
+      </node>
+      <node oor:name="math8">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">ODF-kaava</value>
+        </prop>
+      </node>
+      <node oor:name="draw_html_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">HTML-asiakirja (%productname% Draw)</value>
+        </prop>
+      </node>
+      <node oor:name="impress_html_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="fi">HTML-asiakirja (%productname% Impress)</value>
+        </prop>
+      </node>
+    </node>
+  </oor:component-data>
+</oor:data>

@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="utf8"?>
+<oor:data xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:oor="http://openoffice.org/2001/registry">
+  <oor:component-data xmlns:install="http://openoffice.org/2004/installation" oor:package="org.openoffice.TypeDetection" oor:name="Filter">
+    <node oor:name="Filters">
+      <node oor:name="StarOffice XML (Base)">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Databáze ODF</value>
+        </prop>
+      </node>
+      <node oor:name="HTML (StarWriter)">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">HTML dokument (%productname% Writer)</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 95 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona Microsoft Word 95</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 97 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona Microsoft Word 97/2000/XP</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Writer)">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Textový dokument %oooxmlformatname% %oooxmlformatversion%</value>
+        </prop>
+      </node>
+      <node oor:name="Text">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Text</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded)">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Kódovaný text</value>
+        </prop>
+      </node>
+      <node oor:name="writer_StarOffice_XML_Writer_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona textového dokumentu %oooxmlformatname% %oooxmlformatversion%</value>
+        </prop>
+      </node>
+      <node oor:name="writer8">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Textový dokument ODF</value>
+        </prop>
+      </node>
+      <node oor:name="NSO Writer UOF2">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Textový dokument Uniform Office Format 2</value>
+        </prop>
+      </node>
+      <node oor:name="writer8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona textového dokumentu ODF</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2003 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Microsoft Word 2003 XML</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Microsoft Word 2007 XML</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona Microsoft Word 2007 XML</value>
+        </prop>
+      </node>
+      <node oor:name="HTML">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">HTML dokument</value>
+        </prop>
+      </node>
+      <node oor:name="Text (StarWriter/Web)">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Textový dokument (%productname% Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded) (StarWriter/Web)">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Kódovaný text (%productname% Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_web_StarOffice_XML_Writer">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Textový dokument %oooxmlformatname% %oooxmlformatversion% (%productname% Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_web_StarOffice_XML_Writer_Web_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">HTML šablona %oooxmlformatname% %oooxmlformatversion%</value>
+        </prop>
+      </node>
+      <node oor:name="writerweb8_writer_template">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona HTML dokumentu</value>
+        </prop>
+      </node>
+      <node oor:name="writerweb8_writer">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Textový dokument %productname% (%productname% Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded) (StarWriter/GlobalDocument)">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Kódovaný text (hlavní dokument %productname%)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_globaldocument_StarOffice_XML_Writer">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Textový dokument %oooxmlformatname% %oooxmlformatversion%</value>
+        </prop>
+      </node>
+      <node oor:name="writer_globaldocument_StarOffice_XML_Writer_GlobalDocument">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Hlavní dokument %oooxmlformatname% %oooxmlformatversion%</value>
+        </prop>
+      </node>
+      <node oor:name="writerglobal8">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Hlavní dokument ODF</value>
+        </prop>
+      </node>
+      <node oor:name="writerglobal8_writer">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Textový dokument ODF</value>
+        </prop>
+      </node>
+      <node oor:name="HTML (StarCalc)">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">HTML dokument (%productname% Calc)</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 4.0 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona Microsoft Excel 4.0</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 5.0/95 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona Microsoft Excel 5.0</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 95 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona Microsoft Excel 95</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 97 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona Microsoft Excel 97/2000/XP</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Calc)">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">%oooxmlformatname% %oooxmlformatversion% Sešit</value>
+        </prop>
+      </node>
+      <node oor:name="Text - txt - csv (StarCalc)">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Text CSV</value>
+        </prop>
+      </node>
+      <node oor:name="calc_HTML_WebQuery">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Webový dotaz (%productname% Calc)</value>
+        </prop>
+      </node>
+      <node oor:name="calc_StarOffice_XML_Calc_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona sešitu %oooxmlformatname% %oooxmlformatversion%</value>
+        </prop>
+      </node>
+      <node oor:name="calc8">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Sešit ODF</value>
+        </prop>
+      </node>
+      <node oor:name="NSO Calc UOF2">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Tabulka Uniform Office Format 2</value>
+        </prop>
+      </node>
+      <node oor:name="calc8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona sešitu ODF</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 2003 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Microsoft Excel 2003 XML</value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Microsoft Excel 2007 XML</value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona Microsoft Excel 2007 XML </value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 Binary">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Microsoft Excel 2007 binární</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Draw)">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Kresba %oooxmlformatname% %oooxmlformatversion%</value>
+        </prop>
+      </node>
+      <node oor:name="draw_StarOffice_XML_Draw_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona kresby %oooxmlformatname% %oooxmlformatversion%</value>
+        </prop>
+      </node>
+      <node oor:name="draw8">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Kresba ODF</value>
+        </prop>
+      </node>
+      <node oor:name="draw8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona kresby ODF</value>
+        </prop>
+      </node>
+      <node oor:name="MS PowerPoint 97 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona Microsoft PowerPoint 97/2000/XP</value>
+        </prop>
+      </node>
+      <node oor:name="impress_StarOffice_XML_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Kresba %oooxmlformatname% %oooxmlformatversion% (%productname% Impress)</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Impress)">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Prezentace %oooxmlformatname% %oooxmlformatversion%</value>
+        </prop>
+      </node>
+      <node oor:name="impress_StarOffice_XML_Impress_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona prezentace %oooxmlformatname% %oooxmlformatversion%</value>
+        </prop>
+      </node>
+      <node oor:name="impress8">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Prezentace ODF</value>
+        </prop>
+      </node>
+      <node oor:name="NSO Impress UOF2">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Prezentace Uniform Office Format 2</value>
+        </prop>
+      </node>
+      <node oor:name="impress8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona prezentace ODF</value>
+        </prop>
+      </node>
+      <node oor:name="impress8_draw">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Kresba ODF (Impress)</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Microsoft PowerPoint 2007 XML</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Šablona Microsoft PowerPoint 2007 XML </value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Chart)">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Graf %oooxmlformatname% %oooxmlformatversion%</value>
+        </prop>
+      </node>
+      <node oor:name="chart8">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Graf ODF</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Math)">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Vzorec %oooxmlformatname% %oooxmlformatversion%</value>
+        </prop>
+      </node>
+      <node oor:name="math8">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">Vzorec ODF</value>
+        </prop>
+      </node>
+      <node oor:name="draw_html_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">HTML dokument (%productname% Draw)</value>
+        </prop>
+      </node>
+      <node oor:name="impress_html_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="cs">HTML dokument (%productname% Impress)</value>
+        </prop>
+      </node>
+    </node>
+  </oor:component-data>
+</oor:data>

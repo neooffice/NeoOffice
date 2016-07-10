@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="utf8"?>
+<oor:data xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:oor="http://openoffice.org/2001/registry">
+  <oor:component-data xmlns:install="http://openoffice.org/2004/installation" oor:package="org.openoffice.TypeDetection" oor:name="Filter">
+    <node oor:name="Filters">
+      <node oor:name="StarOffice XML (Base)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قاعدة بيانات ODF</value>
+        </prop>
+      </node>
+      <node oor:name="HTML (StarWriter)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند HTML (%productname% Writer)</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 95 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب Microsoft Word 95</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 97 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب Microsoft Word 97/2000/XP</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Writer)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند %productname% %formatversion% نصي</value>
+        </prop>
+      </node>
+      <node oor:name="Text">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">النص</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">نص مشفر</value>
+        </prop>
+      </node>
+      <node oor:name="writer_StarOffice_XML_Writer_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب مستند %productname% %formatversion% نصي</value>
+        </prop>
+      </node>
+      <node oor:name="writer8">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند نص ODF</value>
+        </prop>
+      </node>
+      <node oor:name="writer8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب مستند نصي ODF</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2003 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">Microsoft Word 2003 XML</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">Microsoft Word 2007 XML</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالبMicrosoft Word 2007 XML</value>
+        </prop>
+      </node>
+      <node oor:name="HTML">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند HTML</value>
+        </prop>
+      </node>
+      <node oor:name="Text (StarWriter/Web)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">نص (%productname% Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded) (StarWriter/Web)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">نص مشفر (%productname% Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_web_StarOffice_XML_Writer">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند %productname% %formatversion% نصي (%productname% Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_web_StarOffice_XML_Writer_Web_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب %productname% %formatversion% HTML</value>
+        </prop>
+      </node>
+      <node oor:name="writerweb8_writer_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب مستند HTML</value>
+        </prop>
+      </node>
+      <node oor:name="writerweb8_writer">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">نص %productname% (%productname% Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded) (StarWriter/GlobalDocument)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">نص مشفر (مستند %productname% رئيسي)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_globaldocument_StarOffice_XML_Writer">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند %productname% %formatversion% نصي</value>
+        </prop>
+      </node>
+      <node oor:name="writer_globaldocument_StarOffice_XML_Writer_GlobalDocument">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند %productname% %formatversion% رئيسي</value>
+        </prop>
+      </node>
+      <node oor:name="writerglobal8">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">المستند الرئيسي لـ ODF</value>
+        </prop>
+      </node>
+      <node oor:name="writerglobal8_writer">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند نص ODF</value>
+        </prop>
+      </node>
+      <node oor:name="HTML (StarCalc)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند HTML (%productname% Calc)</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 4.0 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب Microsoft Excel 4.0</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 5.0/95 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب Microsoft Excel 5.0</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 95 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب Microsoft Excel 95</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 97 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب Microsoft Excel 97/2000/XP</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Calc)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">جدول بيانات %productname% %formatversion%</value>
+        </prop>
+      </node>
+      <node oor:name="Text - txt - csv (StarCalc)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قيم CSV نصية</value>
+        </prop>
+      </node>
+      <node oor:name="calc_HTML_WebQuery">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">استعلام صفحة ويب (%productname% Calc)</value>
+        </prop>
+      </node>
+      <node oor:name="calc_StarOffice_XML_Calc_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب جدول بيانات %productname% %formatversion%</value>
+        </prop>
+      </node>
+      <node oor:name="calc8">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">جدول بيانات ODF</value>
+        </prop>
+      </node>
+      <node oor:name="calc8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب جدول بيانات ODF</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 2003 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">Microsoft Excel 2003 XML</value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">Microsoft Excel 2007 XML</value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب Microsoft Excel 2007 XML</value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 Binary">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">ثنائي Microsoft Excel 2007</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Draw)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">رسم %productname% %formatversion%</value>
+        </prop>
+      </node>
+      <node oor:name="draw_StarOffice_XML_Draw_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب رسم %productname% %formatversion%</value>
+        </prop>
+      </node>
+      <node oor:name="draw8">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">رسم ODF</value>
+        </prop>
+      </node>
+      <node oor:name="draw8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب ODF Drawing</value>
+        </prop>
+      </node>
+      <node oor:name="MS PowerPoint 97 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب Microsoft PowerPoint 97/2000/XP</value>
+        </prop>
+      </node>
+      <node oor:name="impress_StarOffice_XML_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">رسم %productname% %formatversion% (%productname% Impress)</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Impress)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">عرض %productname% %formatversion% التقديمي</value>
+        </prop>
+      </node>
+      <node oor:name="impress_StarOffice_XML_Impress_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب عرض %productname% %formatversion% التقديمي</value>
+        </prop>
+      </node>
+      <node oor:name="impress8">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">عرض ODF التقديمي</value>
+        </prop>
+      </node>
+      <node oor:name="impress8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب عرض ODF التقديمي</value>
+        </prop>
+      </node>
+      <node oor:name="impress8_draw">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">رسم (ODF (Impress</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">Microsoft PowerPoint 2007 XML</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب Microsoft PowerPoint 2007 XML</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Chart)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">رسم %productname% %formatversion% بياني</value>
+        </prop>
+      </node>
+      <node oor:name="chart8">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مخطط ODF</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Math)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">صيغة %productname% %formatversion%</value>
+        </prop>
+      </node>
+      <node oor:name="math8">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">صيغة ODF</value>
+        </prop>
+      </node>
+      <node oor:name="draw_html_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند HTML (رسم %productname%)</value>
+        </prop>
+      </node>
+      <node oor:name="impress_html_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند HTML (%productname% Impress)</value>
+        </prop>
+      </node>
+    </node>
+  </oor:component-data>
+</oor:data>

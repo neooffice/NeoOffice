@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="utf8"?>
+<oor:data xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:oor="http://openoffice.org/2001/registry">
+  <oor:component-data xmlns:install="http://openoffice.org/2004/installation" oor:package="org.openoffice.TypeDetection" oor:name="Filter">
+    <node oor:name="Filters">
+      <node oor:name="StarOffice XML (Base)">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">ODF 데이터베이스</value>
+        </prop>
+      </node>
+      <node oor:name="HTML (StarWriter)">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">HTML 문서(%productname% Writer)</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 95 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">Microsoft Word 95 서식 파일</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 97 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">Microsoft Word 97/2000/XP 서식 파일</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Writer)">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">%oooxmlformatname% %oooxmlformatversion% 텍스트 문서</value>
+        </prop>
+      </node>
+      <node oor:name="Text">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">텍스트</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded)">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">인코딩된 텍스트</value>
+        </prop>
+      </node>
+      <node oor:name="writer_StarOffice_XML_Writer_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">%oooxmlformatname% %oooxmlformatversion% 텍스트 문서 템플릿</value>
+        </prop>
+      </node>
+      <node oor:name="writer8">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">ODF 텍스트 문서</value>
+        </prop>
+      </node>
+      <node oor:name="NSO Writer UOF2">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">통합 오피스 포맷 2 텍스트</value>
+        </prop>
+      </node>
+      <node oor:name="writer8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">ODF 텍스트 서식 파일</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2003 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">Microsoft Word 2003 XML</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">Microsoft Word 2007 XML</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">Microsoft Word 2007 XML 서식 파일</value>
+        </prop>
+      </node>
+      <node oor:name="HTML">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">HTML 문서</value>
+        </prop>
+      </node>
+      <node oor:name="Text (StarWriter/Web)">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">텍스트(%productname% Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded) (StarWriter/Web)">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">인코딩된 텍스트(%productname% Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_web_StarOffice_XML_Writer">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">%oooxmlformatname% %oooxmlformatversion% 텍스트 문서 (%productname% Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_web_StarOffice_XML_Writer_Web_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">%oooxmlformatname% %oooxmlformatversion% HTML 템플릿</value>
+        </prop>
+      </node>
+      <node oor:name="writerweb8_writer_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">HTML 문서 서식 파일</value>
+        </prop>
+      </node>
+      <node oor:name="writerweb8_writer">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">%productname% 텍스트(%productname% Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded) (StarWriter/GlobalDocument)">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">인코드된 텍스트(%productname% 마스터 문서)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_globaldocument_StarOffice_XML_Writer">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">%oooxmlformatname% %oooxmlformatversion% 텍스트 문서</value>
+        </prop>
+      </node>
+      <node oor:name="writer_globaldocument_StarOffice_XML_Writer_GlobalDocument">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">%oooxmlformatname% %oooxmlformatversion% 마스터 문서</value>
+        </prop>
+      </node>
+      <node oor:name="writerglobal8">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">ODF 마스터 문서</value>
+        </prop>
+      </node>
+      <node oor:name="writerglobal8_writer">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">ODF 텍스트 문서</value>
+        </prop>
+      </node>
+      <node oor:name="HTML (StarCalc)">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">HTML 문서(%productname% Calc)</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 4.0 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">Microsoft Excel 4.0 서식 파일</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 5.0/95 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">Microsoft Excel 5.0 서식 파일</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 95 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">Microsoft Excel 95 서식 파일</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 97 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">Microsoft Excel 97/2000/XP 서식 파일</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Calc)">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">%oooxmlformatname% %oooxmlformatversion% 스프레드시트</value>
+        </prop>
+      </node>
+      <node oor:name="Text - txt - csv (StarCalc)">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">텍스트 CSV</value>
+        </prop>
+      </node>
+      <node oor:name="calc_HTML_WebQuery">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">웹 페이지 쿼리(%productname% Calc)</value>
+        </prop>
+      </node>
+      <node oor:name="calc_StarOffice_XML_Calc_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">%oooxmlformatname% %oooxmlformatversion% 스프레드시트 템플릿</value>
+        </prop>
+      </node>
+      <node oor:name="calc8">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">ODF 스프레드시트</value>
+        </prop>
+      </node>
+      <node oor:name="NSO Calc UOF2">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">통합 오피스 포맷 2 스프레드시트</value>
+        </prop>
+      </node>
+      <node oor:name="calc8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">ODF 스프레드시트 서식 파일</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 2003 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">Microsoft Excel 2003 XML</value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">Microsoft Excel 2007 XML</value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">Microsoft Excel 2007 XML 서식 파일</value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 Binary">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">Microsoft Excel 2007 이진</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Draw)">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">%oooxmlformatname% %oooxmlformatversion% 그리기</value>
+        </prop>
+      </node>
+      <node oor:name="draw_StarOffice_XML_Draw_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">%oooxmlformatname% %oooxmlformatversion% 그리기 템플릿</value>
+        </prop>
+      </node>
+      <node oor:name="draw8">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">ODF 그리기</value>
+        </prop>
+      </node>
+      <node oor:name="draw8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">ODF 그리기 서식 파일</value>
+        </prop>
+      </node>
+      <node oor:name="MS PowerPoint 97 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">Microsoft PowerPoint 97/2000/XP 서식 파일</value>
+        </prop>
+      </node>
+      <node oor:name="impress_StarOffice_XML_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">%oooxmlformatname% %oooxmlformatversion% 그리기 (%productname% Impress)</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Impress)">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">%oooxmlformatname% %oooxmlformatversion% 프레젠테이션</value>
+        </prop>
+      </node>
+      <node oor:name="impress_StarOffice_XML_Impress_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">%oooxmlformatname% %oooxmlformatversion% 프레젠테이션 템플릿</value>
+        </prop>
+      </node>
+      <node oor:name="impress8">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">ODF 프레젠테이션</value>
+        </prop>
+      </node>
+      <node oor:name="NSO Impress UOF2">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">통합 오피스 포맷 2 프리젠테이션</value>
+        </prop>
+      </node>
+      <node oor:name="impress8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">ODF 프레젠테이션 서식 파일</value>
+        </prop>
+      </node>
+      <node oor:name="impress8_draw">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">ODF 그리기(Impress)</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">Microsoft PowerPoint 2007 XML</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">Microsoft PowerPoint 2007 XML 서식 파일</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Chart)">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">%oooxmlformatname% %oooxmlformatversion% 차트</value>
+        </prop>
+      </node>
+      <node oor:name="chart8">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">ODF 차트</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Math)">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">%oooxmlformatname% %oooxmlformatversion% 수식</value>
+        </prop>
+      </node>
+      <node oor:name="math8">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">ODF 수식</value>
+        </prop>
+      </node>
+      <node oor:name="draw_html_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">HTML 문서(%productname% Draw)</value>
+        </prop>
+      </node>
+      <node oor:name="impress_html_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ko">HTML 문서(%productname% Impress)</value>
+        </prop>
+      </node>
+    </node>
+  </oor:component-data>
+</oor:data>
