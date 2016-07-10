@@ -2800,7 +2800,12 @@
         <prop oor:name="FilterService">
           <value>com.sun.star.comp.oox.ppt.PowerPointImport</value>
         </prop>
-        <prop oor:name="UserData"/>
+        <prop oor:name="UserData">
+          <value>OXML</value>
+        </prop>
+        <prop oor:name="UIName">
+          <value xml:lang="x-default">Microsoft PowerPoint 2008-2016</value>
+        </prop>
         <prop oor:name="FileFormatVersion"/>
         <prop oor:name="Type">
           <value>MS PowerPoint 2007 XML</value>
@@ -2818,7 +2823,12 @@
         <prop oor:name="FilterService">
           <value>com.sun.star.comp.oox.ppt.PowerPointImport</value>
         </prop>
-        <prop oor:name="UserData"/>
+        <prop oor:name="UserData">
+          <value>OXML</value>
+        </prop>
+        <prop oor:name="UIName">
+          <value xml:lang="x-default">Microsoft PowerPoint 2008-2016 Template</value>
+        </prop>
         <prop oor:name="FileFormatVersion"/>
         <prop oor:name="Type">
           <value>MS PowerPoint 2007 XML Template</value>
@@ -3086,7 +3096,7 @@
         </prop>
         <prop oor:name="URLPattern"/>
         <prop oor:name="Extensions">
-          <value>pptm pptx</value>
+          <value>pptm pptx ppsx</value>
         </prop>
         <prop oor:name="MediaType"/>
         <prop oor:name="Preferred">
@@ -3096,7 +3106,7 @@
           <value>Impress MS PowerPoint 2007 XML</value>
         </prop>
         <prop oor:name="UIName">
-          <value xml:lang="x-default">Microsoft PowerPoint 2007 XML</value>
+          <value>Microsoft PowerPoint 2008-2016</value>
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
@@ -3116,7 +3126,7 @@
           <value>Impress MS PowerPoint 2007 XML Template</value>
         </prop>
         <prop oor:name="UIName">
-          <value>Microsoft PowerPoint 2007 XML Template</value>
+          <value>Microsoft PowerPoint 2008-2016 Template</value>
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
