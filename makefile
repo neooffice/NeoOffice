@@ -570,7 +570,7 @@ else
 # extension.
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/libupdchk.dylib"
 # Remove Java files
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/classes" "program/libhsqldb.dylib" "program/libjdbc.dylib" "share/Scripts/java" "share/registry/palm.xcd" "share/registry/pocketexcel.xcd" "share/registry/pocketword.xcd" "program/JREProperties.class" "program/javaloader.uno.dylib" "program/javavm.uno.dylib" "program/javavendors.xml" "program/libjava_uno.dylib" "program/libjuh.dylib" "program/libjuhx.dylib" "program/sunjavaplugin.dylib"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/classes" "program/libhsqldb.dylib" "program/libjdbc.dylib" "share/Scripts/beanshell" "share/Scripts/java" "share/registry/palm.xcd" "share/registry/pocketexcel.xcd" "share/registry/pocketword.xcd" "program/JREProperties.class" "program/javaloader.uno.dylib" "program/javavm.uno.dylib" "program/javavendors.xml" "program/libjava_uno.dylib" "program/libjuh.dylib" "program/libjuhx.dylib" "program/sunjavaplugin.dylib"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . ! -type d -name "*.jnilib"` ; do rm -f $${i} ; done'
 	cd "$(INSTALL_HOME)/package/Contents/help" ; sh -e -c 'for i in `find . -type d -name "*.idxl"` ; do rm -Rf $${i} ; done'
 # Remove Python files
@@ -579,6 +579,8 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -name "*.xcd" -not -path "*/CVS/*"` ; do xmllint --noblanks "$(PWD)/etc/$${i}" > "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -not -name "*.xcd" -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
+
+todo:
 ifdef PRODUCT_BUILD3
 	cd "$(INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' | sed 's#BuildMachine=.*$$#BuildMachine=$(BUILD_MACHINE)#g' > "../../out" ; mv -f "../../out" "program/bootstraprc"
 	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(TARGET_MACHINE)#$(TARGET_MACHINE)#g' "$(PWD)/etc/program/fundamentalbasisrc" > "program/fundamentalbasisrc"
