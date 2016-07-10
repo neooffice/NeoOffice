@@ -6342,7 +6342,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
-      <node oor:name="MS Word 2008-2016 XML" oor:op="replace">
+      <node oor:name="MS Word 2007 XML" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN 3RDPARTYFILTER</value>
         </prop>
@@ -6367,7 +6367,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
-      <node oor:name="MS Word 2008-2016 XML Template" oor:op="replace">
+      <node oor:name="MS Word 2007 XML Template" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN 3RDPARTYFILTER TEMPLATE TEMPLATEPATH</value>
         </prop>
@@ -6962,7 +6962,7 @@
           <value>true</value>
         </prop>
         <prop oor:name="PreferredFilter">
-          <value>MS Word 2008 XML</value>
+          <value>MS Word 2007 XML</value>
         </prop>
         <prop oor:name="UIName">
           <value>Microsoft Word 2008-2016 XML</value>
@@ -6986,7 +6986,7 @@
           <value>true</value>
         </prop>
         <prop oor:name="PreferredFilter">
-          <value>MS Word 2008 XML Template</value>
+          <value>MS Word 2007 XML Template</value>
         </prop>
         <prop oor:name="UIName">
           <value>Microsoft Word 2008-2016 XML Template</value>
