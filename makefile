@@ -579,8 +579,6 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -name "*.xcd" -not -path "*/CVS/*"` ; do xmllint --noblanks "$(PWD)/etc/$${i}" > "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -not -name "*.xcd" -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
-
-todo:
 ifdef PRODUCT_BUILD3
 	cd "$(INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' | sed 's#BuildMachine=.*$$#BuildMachine=$(BUILD_MACHINE)#g' > "../../out" ; mv -f "../../out" "program/bootstraprc"
 	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(TARGET_MACHINE)#$(TARGET_MACHINE)#g' "$(PWD)/etc/program/fundamentalbasisrc" > "program/fundamentalbasisrc"
@@ -589,7 +587,6 @@ else
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find share -type f -name "*.xcd" -not -path "*/CVS/*"` ; do xmllint --noblanks "$(PWD)/etc/sandbox/$${i}" > "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find share -type f -not -name "*.xcd" -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/sandbox/$${i}" "$${i}" ; done'
 # Remove report toolbar from Base since reports require Java support
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find "basis-link/share/registry" -name BaseWindowState.xcu` ; do sed "s#\"private:resource\/toolbar\/reportobjectbar\"#\"ignore\"#g" "$${i}" > "../../out" ; mv -f "../../out" "$${i}" ; done'
 	rm "$(INSTALL_HOME)/package/Contents/share/config/soffice.cfg/modules/dbapp/toolbar/reportobjectbar.xml"
 	cd "$(INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/$(PRODUCT_DIR_NAME)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' | sed 's#BuildMachine=.*$$#BuildMachine=$(BUILD_MACHINE)#g' > "../../out" ; mv -f "../../out" "program/bootstraprc"
 endif
@@ -865,9 +862,10 @@ build.package_%: $(INSTALL_HOME)/package_%
 	cd "$</Contents" ; rm -f "program/resource/sfx"*.res
 	cd "$</Contents" ; rm -f "program/resource/sw"*.res
 	cd "$</Contents" ; rm -f "program/resource/vcl"*.res
+	cd "$</Contents" ; xmllint --noblanks "$(PWD)/etc/share/registry/res/fcfg_langpack_$*" > "share/registry/res/fcfg_langpack_$*"
 ifndef PRODUCT_BUILD3
-# Remove report toolbar from Base since reports require Java support
-	cd "$</Contents" ; sh -e -c 'for i in `find "basis-link/share/registry" -name BaseWindowState.xcu` ; do sed "s#\"private:resource\/toolbar\/reportobjectbar\"#\"ignore\"#g" "$${i}" > "../../out" ; mv -f "../../out" "$${i}" ; done'
+	cd "$</Contents" ; xmllint --noblanks "$(PWD)/etc/sandbox/share/registry/res/fcfg_langpack_$*" > "share/registry/res/fcfg_langpack_$*"
+	cd "$</Contents" ; xmllint --noblanks "$(PWD)/etc/sandbox/share/registry/res/registry_$*" > "share/registry/res/registry_$*"
 endif
 	rm -Rf "$</Contents/Resources"
 	mkdir -p "$</Contents/Resources"
