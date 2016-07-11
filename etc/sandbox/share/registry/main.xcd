@@ -29735,11 +29735,13 @@
   </oor:component-data>
   <oor:component-data xmlns:install="http://openoffice.org/2004/installation" oor:name="Scripting" oor:package="org.openoffice.Office">
     <node oor:name="ScriptRuntimes">
+      <!-- Disable Java-based BeanShell scripts
       <node oor:name="BeanShell" oor:op="replace">
         <prop oor:name="SupportedFileExtensions">
           <value>bsh</value>
         </prop>
       </node>
+      -->
       <node oor:name="JavaScript" oor:op="replace">
         <prop oor:name="SupportedFileExtensions">
           <value>js</value>
