@@ -840,7 +840,7 @@
 				<string>application/lotus123</string>
 				<string>application/x-lotus123</string>
 				<string>application/wk1</string>
-				<string>applivation/x-quattropro</string>
+				<string>application/x-quattropro</string>
 				<string>application/x-pocket-excel</string>
 			</array>
 			<key>CFBundleTypeName</key>
