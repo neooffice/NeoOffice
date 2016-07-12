@@ -13294,6 +13294,7 @@
             <value>60</value>
           </prop>
         </node>
+        <!-- Disable Java-based JDBC driver
         <node oor:name="com.sun.star.comp.sdbc.JDBCDriver" oor:op="replace">
           <prop oor:name="DriverName">
             <value>com.sun.star.comp.sdbc.JDBCDriver</value>
@@ -13305,6 +13306,7 @@
             <value>60</value>
           </prop>
         </node>
+        -->
         <node oor:name="com.sun.star.comp.sdbc.MozabDriver" oor:op="replace">
           <prop oor:name="DriverName">
             <value>com.sun.star.comp.sdbc.MozabDriver</value>
@@ -61418,6 +61420,7 @@
   </oor:component-data>
   <oor:component-data oor:name="Drivers" oor:package="org.openoffice.Office.DataAccess">
     <node oor:name="Installed">
+      <!-- Disable Java-based JDBC driver
       <node oor:name="sdbc:mysql:jdbc:*" oor:op="replace">
         <prop oor:name="Driver">
           <value>org.openoffice.comp.drivers.MySQL.Driver</value>
@@ -61566,6 +61569,7 @@
           </node>
         </node>
       </node>
+      -->
       <node oor:name="sdbc:mysql:mysqlc:*" oor:op="replace">
         <prop oor:name="Driver">
           <value>org.openoffice.comp.drivers.MySQL.Driver</value>
@@ -63928,6 +63932,7 @@
   </oor:component-data>
   <oor:component-data oor:name="Drivers" oor:package="org.openoffice.Office.DataAccess">
     <node oor:name="Installed">
+      <!-- Disable Java-based HSQLDB driver
       <node oor:name="sdbc:embedded:hsqldb" oor:op="replace">
         <prop oor:name="Driver">
           <value>com.sun.star.sdbcx.comp.hsqldb.Driver</value>
@@ -63975,10 +63980,12 @@
           </node>
         </node>
       </node>
+      -->
     </node>
   </oor:component-data>
   <oor:component-data oor:name="Drivers" oor:package="org.openoffice.Office.DataAccess">
     <node oor:name="Installed">
+      <!-- Disable Java-based JDBC driver
       <node oor:name="jdbc:*" oor:op="replace">
         <prop oor:name="Driver">
           <value>com.sun.star.comp.sdbc.JDBCDriver</value>
@@ -64167,6 +64174,7 @@
           </node>
         </node>
       </node>
+      -->
     </node>
   </oor:component-data>
   <oor:component-data xmlns:install="http://openoffice.org/2004/installation" oor:name="Paths" oor:package="org.openoffice.Office">
