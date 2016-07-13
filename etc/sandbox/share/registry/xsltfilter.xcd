@@ -3,6 +3,7 @@
   <dependency file="main"/>
   <oor:component-data oor:package="org.openoffice.TypeDetection" oor:name="Filter">
     <node oor:name="Filters">
+      <!-- Disable Java-based filters
       <node oor:name="DocBook File" oor:op="replace">
         <prop oor:name="FileFormatVersion">
           <value>0</value>
@@ -205,10 +206,12 @@
           <value>IMPORT EXPORT ALIEN 3RDPARTYFILTER</value>
         </prop>
       </node>
+      -->
     </node>
   </oor:component-data>
   <oor:component-data oor:package="org.openoffice.TypeDetection" oor:name="Types">
     <node oor:name="Types">
+      <!-- Disable Java-based filters
       <node oor:name="writer_DocBook_File" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.filters.XMLFilterDetect</value>
@@ -311,6 +314,7 @@
           <value>doctype:vnd.uof.presentation</value>
         </prop>
       </node>
+      -->
     </node>
   </oor:component-data>
 </oor:data>
