@@ -493,6 +493,8 @@
 				<string>doc</string>
 				<string>docm</string>
 				<string>docx</string>
+				<string>uof</string>
+				<string>uot</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>sxw_sdw_doc_Option_1.icns</string>
@@ -691,6 +693,7 @@
 				<string>pptm</string>
 				<string>ppsx</string>
 				<string>pptx</string>
+				<string>uop</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>sxi_sdd_ppt.icns</string>
@@ -779,6 +782,7 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
+				<string>uos</string>
 				<string>xl</string>
 				<string>xlc</string>
 				<string>xlm</string>
