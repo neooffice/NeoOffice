@@ -3,6 +3,7 @@
   <dependency file="main"/>
   <oor:component-data oor:package="org.openoffice.TypeDetection" oor:name="Filter">
     <node oor:name="Filters">
+      <!-- Disable Java-based filters
       <node oor:name="Pocket Excel" oor:op="replace">
         <prop oor:name="FileFormatVersion">
           <value>1</value>
@@ -28,10 +29,12 @@
           <value>IMPORT EXPORT ALIEN 3RDPARTYFILTER</value>
         </prop>
       </node>
+      -->
     </node>
   </oor:component-data>
   <oor:component-data oor:package="org.openoffice.TypeDetection" oor:name="Types">
     <node oor:name="Types">
+      <!-- Disable Java-based filters
       <node oor:name="calc_Pocket_Excel_File" oor:op="replace">
         <prop oor:name="DetectService"/>
         <prop oor:name="URLPattern"/>
@@ -50,6 +53,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      -->
     </node>
   </oor:component-data>
 </oor:data>

@@ -570,7 +570,7 @@ else
 # extension.
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/libupdchk.dylib"
 # Remove Java files
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/classes" "program/libhsqldb.dylib" "program/libjdbc.dylib" "share/Scripts/beanshell" "share/Scripts/java" "share/registry/palm.xcd" "share/registry/pocketexcel.xcd" "share/registry/pocketword.xcd" "program/JREProperties.class" "program/javaloader.uno.dylib" "program/javavm.uno.dylib" "program/javavendors.xml" "program/libjava_uno.dylib" "program/libjuh.dylib" "program/libjuhx.dylib" "program/sunjavaplugin.dylib"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/classes" "program/libhsqldb.dylib" "program/libjdbc.dylib" "share/Scripts/beanshell" "share/Scripts/java" "program/JREProperties.class" "program/javaloader.uno.dylib" "program/javavm.uno.dylib" "program/javavendors.xml" "program/libjava_uno.dylib" "program/libjuh.dylib" "program/libjuhx.dylib" "program/sunjavaplugin.dylib"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . ! -type d -name "*.jnilib"` ; do rm -f $${i} ; done'
 	cd "$(INSTALL_HOME)/package/Contents/help" ; sh -e -c 'for i in `find . -type d -name "*.idxl"` ; do rm -Rf $${i} ; done'
 # Remove Python files
