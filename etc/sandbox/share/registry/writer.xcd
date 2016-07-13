@@ -6320,6 +6320,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      <!-- Disable Java-based filters
       <node oor:name="MS Word 2003 XML" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT EXPORT ALIEN 3RDPARTYFILTER</value>
@@ -6342,6 +6343,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="MS Word 2007 XML" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN 3RDPARTYFILTER</value>
@@ -6925,6 +6927,7 @@
           <value>doctype:uot:UOF2</value>
         </prop>
       </node>
+      <!-- Disable Java-based filters
       <node oor:name="writer_MS_Word_2003_XML" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.filters.XMLFilterDetect</value>
@@ -6947,6 +6950,7 @@
           <value>doctype:wordDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="writer_MS_Word_2007" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.oox.FormatDetector</value>
