@@ -753,12 +753,14 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
+				<string>602</string>
 				<string>txt</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>txt.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
+				<string>application/x-t602</string>
 				<string>text/plain</string>
 			</array>
 			<key>CFBundleTypeName</key>
