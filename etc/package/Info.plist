@@ -595,13 +595,11 @@
 			<array>
 				<string>htm</string>
 				<string>html</string>
-				<string>xhtml</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>html.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
-				<string>application/xhtml+xml</string>
 				<string>text/html</string>
 			</array>
 			<key>CFBundleTypeName</key>
