@@ -643,6 +643,7 @@
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>mml</string>
+				<string>xxx</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>sxm_smf_mml.icns</string>
