@@ -1,8 +1,8 @@
 [Bootstrap]
 BaseInstallation=${OOO_BASE_DIR}
+InstallMode=<installmode>
 ProductKey=
 ProductPatch=
-InstallMode=<installmode>
 UserInstallation=
 BuildMachine=
 [ErrorReport]
