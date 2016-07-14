@@ -53,30 +53,30 @@ check_installation() {
 		return 1
 	fi
 
-	if [ -f "$1/Contents/etc/bootstraprc" ] ; then
+	if [ -f "$1/Contents/program/bootstraprc" ] ; then
 		# Check for matching build machine. Note: we trim "local." off the end
 		# of the build machine because some test patches were released with
 		# "local." truncated.
-		grep "`echo '$(BUILD_MACHINE)' | sed 's#\.local\.$#\.#'`" "$1/Contents/etc/bootstraprc" >/dev/null 2>&1
+		grep "`echo '$(BUILD_MACHINE)' | sed 's#\.local\.$#\.#'`" "$1/Contents/program/bootstraprc" >/dev/null 2>&1
 		if [ "$?" != "0" ] ; then
 			return 1;
 		fi
 
 		# Allow a product base match
 		productnameversion="$(PRODUCT_NAME) $(PRODUCT_VERSION_BASE).*$(PRODUCT_VERSION_EXT)"
-		productkey=`grep "^ProductKey=$productnameversion" "$1/Contents/etc/bootstraprc"`
+		productkey=`grep "^ProductKey=$productnameversion" "$1/Contents/program/bootstraprc"`
 		if [ ! -z "$productkey" ] ; then
 			return 0;
 		fi
 
 		# Allow a previous product base match
 		productnameversion="$(PRODUCT_NAME) $(PREVIOUS_PRODUCT_VERSION_BASE).*$(PRODUCT_VERSION_EXT)"
-		productkey=`grep "^ProductKey=$productnameversion" "$1/Contents/etc/bootstraprc"`
+		productkey=`grep "^ProductKey=$productnameversion" "$1/Contents/program/bootstraprc"`
 		if [ ! -z "$productkey" ] ; then
 			return 0;
 		fi
 
-		productkey=`grep '^ProductKey=' "$1/Contents/etc/bootstraprc" | awk -F= '{ print $2 }'`
+		productkey=`grep '^ProductKey=' "$1/Contents/program/bootstraprc" | awk -F= '{ print $2 }'`
 		if [ ! -z "$productkey" ] ; then
 			last_installed_product_found="$productkey"
 		fi

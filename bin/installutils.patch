@@ -55,17 +55,17 @@ check_installation() {
 		return 1
 	fi
 
-	if [ -f "$1/Contents/etc/bootstraprc" ] ; then
+	if [ -f "$1/Contents/program/bootstraprc" ] ; then
 		# Check for matching build machine. Note: we trim "local." off the end
 		# of the build machine because some test patches were released with
 		# "local." truncated.
-		grep "`echo '$(BUILD_MACHINE)' | sed 's#\.local\.$#\.#'`" "$1/Contents/etc/bootstraprc" >/dev/null 2>&1
+		grep "`echo '$(BUILD_MACHINE)' | sed 's#\.local\.$#\.#'`" "$1/Contents/program/bootstraprc" >/dev/null 2>&1
 		if [ "$?" != "0" ] ; then
 			return 1;
 		fi
 
-		productkey=`grep '^ProductKey=' "$1/Contents/etc/bootstraprc"`
-		productpatch=`grep '^ProductPatch=' "$1/Contents/etc/bootstraprc"`
+		productkey=`grep '^ProductKey=' "$1/Contents/program/bootstraprc"`
+		productpatch=`grep '^ProductPatch=' "$1/Contents/program/bootstraprc"`
 		if [ -z "$productkey" -o -z "$productpatch" ] ; then
 			return 1;
 		fi
