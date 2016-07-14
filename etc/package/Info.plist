@@ -402,6 +402,7 @@
 				<string>ras</string>
 				<string>sgf</string>
 				<string>sgv</string>
+				<string>svg</string>
 				<string>svm</string>
 				<string>tga</string>
 				<string>tif</string>
@@ -431,6 +432,7 @@
 				<string>image/tiff</string>
 				<string>image/x-bitmap</string>
 				<string>image/x-pixmap</string>
+				<string>image/svg+xml</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
