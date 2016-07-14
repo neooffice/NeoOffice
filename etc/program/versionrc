@@ -1,20 +1,20 @@
 [Version]
 AllLanguages=en-US
-BuildVersion=
+# This setting must be set to nothing to prevent OOo build tag from
+# appearing in the Help :: About dialog
 buildid=
-ExtensionUpdateURL=http://updateext.services.openoffice.org/ProductUpdateService/check.Update
-OOOBaseVersion=3.1
+ExtensionUpdateURL=http://updateexte.services.openoffice.org/ExtensionUpdateService/check.Update
+OOOBaseVersion=4.1
+OOOPackageVersion=4.1.2
 # ProductBuildid must be set to zero as the UpdateURL will always return 1 if
 # there is a newer version
 ProductBuildid=0
-# These 4 settings must be set to nothing to prevent OOo build tag from
+# These 3 settings must be set to nothing to prevent OOo build tag from
 # appearing in the Help :: About dialog
 ProductMajor=
 ProductMinor=
-ProductPatch=
 ProductSource=
-UpdateID=OpenOffice.org_3_en-US
-# Custom UpdateURL
-UpdateURL=$(PRODUCT_UPDATE_CHECK_URL)?product=$(PRODUCT_NAME) $(PRODUCT_VERSION)&patch=$(PRODUCT_PATCH_VERSION)&os=${_OS}&arch=${_ARCH}&osversion=<OSVERSION>
+Revision=
+UpdateID=OpenOffice_4_en-US
+UpdateURL=UpdateURL=$(PRODUCT_UPDATE_CHECK_URL)?product=$(PRODUCT_NAME) $(PRODUCT_VERSION)&patch=$(PRODUCT_PATCH_VERSION)&os=${_OS}&arch=${_ARCH}&osversion=<OSVERSION>
 UpdateUserAgent=<PRODUCT> (${buildid}; ${_OS}; ${_ARCH}; BundledLanguages=${AllLanguages})
-Vendor=
