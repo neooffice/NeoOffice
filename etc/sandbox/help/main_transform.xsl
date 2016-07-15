@@ -24,35 +24,39 @@
     Aug 16 2005 workaround for #i53365#
     Aug 19 2005 fixed missing list processing in embedded sections
     Aug 19 2005 #i53535#, fixed wrong handling of Database parameter
-		Oct 17 2006 #i70462#, disabled sorting to avoid output of error messages to console
+    Oct 17 2006 #i70462#, disabled sorting to avoid output of error messages to console
+    Jun 15 2009 #i101799#, fixed wrong handling of http URLs with anchors
 ***********************************************************************//-->
 
-<!--
-
-  Copyright 2008 by Sun Microsystems, Inc.
- 
-  $RCSfile$
- 
-  $Revision$
- 
-  This file is part of NeoOffice.
- 
-  NeoOffice is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License version 3
-  only, as published by the Free Software Foundation.
- 
-  NeoOffice is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License version 3 for more details
-  (a copy is included in the LICENSE file that accompanied this code).
- 
-  You should have received a copy of the GNU General Public License
-  version 3 along with NeoOffice.  If not, see 
-  <http://www.gnu.org/licenses/gpl-3.0.txt>
-  for a copy of the GPLv3 License.
- 
--->
+<!--***********************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified July 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ ***********************************************************-->
 
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
@@ -139,7 +143,7 @@
 
   <!-- parts of help and image urls -->
 <xsl:variable name="help_url_prefix" select="'vnd.sun.star.help://'"/>
-<xsl:variable name="img_url_prefix" select="concat('vnd.sun.star.pkg://',$imgrepos,'/')"/>
+<xsl:variable name="img_url_prefix" select="concat('vnd.sun.star.zip://',$imgrepos,'/')"/>
 <xsl:variable name="urlpost" select="concat('?Language=',$lang,$am,'System=',$System,$am,'UseDB=no')"/>
 <xsl:variable name="urlpre" select="$help_url_prefix" /> 
 <xsl:variable name="linkprefix" select="$urlpre"/>
@@ -451,16 +455,10 @@
 
 <!-- SORT -->
 <xsl:template match="sort" >
-  <!-- sorting disabled due to #i70462#
 	<xsl:apply-templates><xsl:sort select="descendant::paragraph"/></xsl:apply-templates>
-	//-->
-	<xsl:apply-templates />
 </xsl:template>
 <xsl:template match="sort" mode="embedded">
-<!-- sorting disabled due to #i70462#
 	<xsl:apply-templates><xsl:sort select="descendant::paragraph"/></xsl:apply-templates>
-	//-->
-	<xsl:apply-templates />
 </xsl:template>
 
 <!-- SWITCH -->
@@ -657,13 +655,13 @@
 		<xsl:when test="@href and (parent::paragraph[@id='par_id6434522'] or parent::paragraph[@id='par_id3552964'] or parent::paragraph[@id='par_id6434522'] or parent::paragraph[@id='par_id3552964'] or paragraph[@id='par_id9625843'] or parent::paragraph[@id='par_id1683706'])">
 			<a href="$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
 		</xsl:when>
+		<xsl:when test="starts-with(@href,'http://') or starts-with(@href,'https://')">  <!-- web links -->
+			<a href="{@href}"><xsl:apply-templates /></a>
+		</xsl:when>
 		<xsl:when test="contains(@href,'#')">
 			<xsl:variable name="anchor"><xsl:value-of select="concat('#',substring-after(@href,'#'))"/></xsl:variable>
 			<xsl:variable name="href"><xsl:value-of select="concat($linkprefix,$archive,substring-before(@href,'#'),$linkpostfix,$dbpostfix,$anchor)"/></xsl:variable>
 			<a href="{$href}"><xsl:apply-templates /></a>
-		</xsl:when>
-		<xsl:when test="starts-with(@href,'http://')">  <!-- web links -->
-			<a href="{@href}"><xsl:apply-templates /></a>
 		</xsl:when>
 		<xsl:otherwise>
 			<xsl:variable name="href"><xsl:value-of select="concat($linkprefix,$archive,@href,$linkpostfix,$dbpostfix)"/></xsl:variable>
