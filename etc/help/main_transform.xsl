@@ -86,6 +86,8 @@
 <xsl:variable name="brand3" select="'%PRODUCTNAME'"/>
 <xsl:variable name="brand4" select="'%PRODUCTVERSION'"/>
 <xsl:variable name="brand5" select="'$(OO_PRODUCT_NAME)'"/>
+<xsl:variable name="brand6" select="'OpenOffice.org'"/>
+<xsl:variable name="brand7" select="'OpenOffice'"/>
 
 <!-- meta data variables from the help file -->
 <xsl:variable name="filename" select="/helpdocument/meta/topic/filename"/>
@@ -564,12 +566,32 @@
 			</xsl:call-template>
 		</xsl:when>
 		
-		<!-- Replace as many OpenOffice.org references as we can -->
+		<!-- Replace as many OpenOffice references as we can -->
 		<xsl:when test="contains($string,$brand5)">
 			<xsl:variable name="newstr">
 				<xsl:value-of select="substring-before($string,$brand5)"/>
 				<xsl:value-of select="$productname"/>
 				<xsl:value-of select="substring-after($string,$brand5)"/>
+			</xsl:variable>
+			<xsl:call-template name="brand">
+				<xsl:with-param name="string" select="$newstr"/>
+			</xsl:call-template>
+		</xsl:when>
+		<xsl:when test="contains($string,$brand6)">
+			<xsl:variable name="newstr">
+				<xsl:value-of select="substring-before($string,$brand6)"/>
+				<xsl:value-of select="$productname"/>
+				<xsl:value-of select="substring-after($string,$brand6)"/>
+			</xsl:variable>
+			<xsl:call-template name="brand">
+				<xsl:with-param name="string" select="$newstr"/>
+			</xsl:call-template>
+		</xsl:when>
+		<xsl:when test="contains($string,$brand7)">
+			<xsl:variable name="newstr">
+				<xsl:value-of select="substring-before($string,$brand7)"/>
+				<xsl:value-of select="$productname"/>
+				<xsl:value-of select="substring-after($string,$brand7)"/>
 			</xsl:variable>
 			<xsl:call-template name="brand">
 				<xsl:with-param name="string" select="$newstr"/>
