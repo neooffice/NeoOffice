@@ -45,6 +45,7 @@
 #include <toolkit/helper/vclunohelper.hxx>
 #include <tools/resmgr.hxx>
 #include <tools/simplerm.hxx>
+#include <tools/solarmutex.hxx>
 #include <vcl/apptypes.hxx>
 #include <vcl/ctrl.hxx>
 #include <vcl/floatwin.hxx>
@@ -462,12 +463,14 @@ JavaSalInstance::JavaSalInstance() :
 	mpSalYieldMutex( new SalYieldMutex() )
 {
 	mpSalYieldMutex->acquire();
+	::tools::SolarMutex::SetSolarMutex( mpSalYieldMutex );
 }
 
 // -----------------------------------------------------------------------
 
 JavaSalInstance::~JavaSalInstance()
 {
+	::tools::SolarMutex::SetSolarMutex( NULL );
 	if ( mpSalYieldMutex )
 	{
 		mpSalYieldMutex->release();
