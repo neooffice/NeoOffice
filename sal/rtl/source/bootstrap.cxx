@@ -295,10 +295,7 @@ static OUString & getIniFileName_Impl()
 				OUString execDirName(RTL_CONSTASCII_USTRINGPARAM("Contents/MacOS"));
 				sal_Int32 lastDirName = fileName.lastIndexOf(execDirName, lastSep);
 				if (lastDirName >= 0 && lastDirName + execDirName.getLength() == lastSep)
-{
 					fileName = fileName.copy(0, lastSep) + OUString(RTL_CONSTASCII_USTRINGPARAM("/../program")) + fileName.copy(lastSep);
-fprintf( stderr, "Here: %s\n", OUStringToOString( fileName, RTL_TEXTENCODING_UTF8 ).getStr() );
-}
 			}
 #endif	// USE_JAVA && MACOSX
 			theFileName = fileName;
