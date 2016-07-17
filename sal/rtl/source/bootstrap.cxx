@@ -56,14 +56,6 @@
 #include <hash_map>
 #include <list>
 
-#if defined USE_JAVA && defined MACOSX
-
-#include <sys/param.h>
-
-#include <osl/thread.h>
-
-#endif	// USE_JAVA && MACOSX
-
 #define MY_STRING_(x) # x
 #define MY_STRING(x) MY_STRING_(x)
 
@@ -294,20 +286,19 @@ static OUString & getIniFileName_Impl()
 		if(fileName.getLength())
 #if defined USE_JAVA && defined MACOSX
 		{
-			// Some *rc files such as sofficerc may be softlinks in the MacOS
+			// Handle cases where an executable is in the MacOS directory and
+			// its *rc file is in the program directory
 			// directory so resolve any softlinks in the file name
-			OUString aFilePath;
-            if (osl::File::getSystemPathFromFileURL(fileName, aFilePath) == osl::FileBase::E_None)
-            {
-				char realPath[PATH_MAX + 1];
-				memset(realPath, 0, sizeof(realPath));
-				OString aRealPath = OUStringToOString(aFilePath, osl_getThreadTextEncoding());
-				if (realpath(aRealPath.getStr(), realPath))
-				{
-					OUString aFileURL;
-					if (osl::File::getFileURLFromSystemPath(OUString(realPath, strlen(realPath), osl_getThreadTextEncoding()), aFileURL) == osl::FileBase::E_None && aFileURL.getLength())
-						fileName = aFileURL;
-				}
+			sal_Int32 lastSep = fileName.lastIndexOf('/');
+			if (lastSep >= 0)
+			{
+				OUString execDirName(RTL_CONSTASCII_USTRINGPARAM("Contents/MacOS"));
+				sal_Int32 lastDirName = fileName.lastIndexOf(execDirName, lastSep);
+				if (lastDirName >= 0 && lastDirName + execDirName.getLength() == lastSep)
+{
+					fileName = fileName.copy(0, lastSep) + OUString(RTL_CONSTASCII_USTRINGPARAM("/../program")) + fileName.copy(lastSep);
+fprintf( stderr, "Here: %s\n", OUStringToOString( fileName, RTL_TEXTENCODING_UTF8 ).getStr() );
+}
 			}
 #endif	// USE_JAVA && MACOSX
 			theFileName = fileName;

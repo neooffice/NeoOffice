@@ -241,16 +241,16 @@ int java_main( int argc, char **argv )
 	// If they have, the application has been moved or copied to a file system
 	// that does not support softlinks.
 	NSFileManager *pFileManager = [NSFileManager defaultManager];
-	NSString *pSofficercPath = [pBundlePath stringByAppendingPathComponent:@"Contents"];
-	if ( pSofficercPath )
+	NSString *pSofficePath = [pBundlePath stringByAppendingPathComponent:@"Contents"];
+	if ( pSofficePath )
 	{
-		pSofficercPath = [pSofficercPath stringByAppendingPathComponent:@"MacOS"];
-		if ( pSofficercPath )
-			pSofficercPath = [pSofficercPath stringByAppendingPathComponent:@"sofficerc"];
+		pSofficePath = [pSofficePath stringByAppendingPathComponent:@"MacOS"];
+		if ( pSofficePath )
+			pSofficePath = [pSofficePath stringByAppendingPathComponent:@"soffice"];
 	}
-	if ( !pFileManager || !pSofficercPath || ![pFileManager destinationOfSymbolicLinkAtPath:pSofficercPath error:nil] )
+	if ( !pFileManager || !pSofficePath || ![pFileManager destinationOfSymbolicLinkAtPath:pSofficePath error:nil] )
 	{
-		NSLog( @"Application's main bundle path missing \"MacOS/bootstraprc\" softlink" );
+		NSLog( @"Application's main bundle path missing \"MacOS/soffice\" softlink" );
 		[pPool release];
 		_exit( 1 );
 	}
@@ -310,7 +310,7 @@ int java_main( int argc, char **argv )
 	// Assign command's directory to PATH environment variable
   	const char *pEnvPath = getenv( "PATH" );
 	NSString *pPath = ( pEnvPath ? [NSString stringWithUTF8String:pEnvPath] : nil );
-	NSString *pStandardPath = [NSString stringWithFormat:@"%@/Contents/MacOS:%@/Contents/program:/bin:/sbin:/usr/bin:/usr/sbin:", pBundlePath, pBundlePath, pBundlePath];
+	NSString *pStandardPath = [NSString stringWithFormat:@"%@/Contents/MacOS:%@/Contents/program:/bin:/sbin:/usr/bin:/usr/sbin:", pBundlePath, pBundlePath];
 	if ( !pPath || [pPath length] < [pStandardPath length] || [pPath compare:pStandardPath options:NSLiteralSearch range:NSMakeRange( 0, [pStandardPath length] )] != NSOrderedSame )
 	{
 		NSString *pPathEnv = [NSString stringWithFormat:@"PATH=%@", pStandardPath];
@@ -333,7 +333,7 @@ int java_main( int argc, char **argv )
 		putenv( strdup( [pFrameworkPathEnv UTF8String] ) );
 	}
 
-	NSString *pStandardLibPath = [NSString stringWithFormat:@"%@/Contents/MacOS:%@/Contents/program:/usr/lib:/usr/local/lib:", pBundlePath, pBundlePath, pBundlePath];
+	NSString *pStandardLibPath = [NSString stringWithFormat:@"%@/Contents/MacOS:%@/Contents/program:/usr/lib:/usr/local/lib:", pBundlePath, pBundlePath];
 	const char *pEnvLibPath = getenv( "LD_LIBRARY_PATH" );
 	NSString *pLibPath = ( pEnvLibPath ? [NSString stringWithUTF8String:pEnvLibPath] : nil );
 	const char *pEnvDyLibPath = getenv( "DYLD_LIBRARY_PATH" );
