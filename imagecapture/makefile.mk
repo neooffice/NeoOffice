@@ -72,16 +72,15 @@ SHL1STDLIBS= \
 	$(COMPHELPERLIB) \
 	$(TOOLSLIB) \
 	$(VCLLIB) \
-	$(VOSLIB)
-
-SHL1STDLIBS += -framework AppKit
+	$(VOSLIB) \
+	-framework AppKit
 
 # --- Targets ------------------------------------------------------
 
 # Force zipping recipe to execute at the end
 makeoxt : ALLTAR
 
-.INCLUDE :  target.mk
+.INCLUDE : target.mk
 
 $(MISC)$/%.xml : %.xml
 	$(SED) 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' $< > $@
@@ -92,7 +91,7 @@ makeoxt : $(MISC)$/description.xml
 	zip -r $(BIN)$/$(PRJNAME).oxt META-INF ImageCapture uiIntegration.xcu -x "*CVS*"
 	zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $(UCR)$/$(TARGET).db -x "*CVS*"
 # Change install names to avoid library loading issues
-	sh -c -e 'install_name_tool -id "$(LB)$/$(TARGET)$(DLLPOST)" "$(LB)$/$(TARGET)$(DLLPOST)" ; for i in `otool -L "$(LB)$/$(TARGET)$(DLLPOST)" | awk "{ print \\$$1 }" | grep "^@loader_path\/"` ; do install_name_tool -change "$${i}" `echo "$${i}" | sed "s#^@loader_path/#@executable_path/../program/#"` "$(LB)$/$(TARGET)$(DLLPOST)" ; done'
+	sh -c -e 'install_name_tool -id "$(LB)$/$(TARGET)$(DLLPOST)" "$(LB)$/$(TARGET)$(DLLPOST)" ; for i in `otool -L "$(LB)$/$(TARGET)$(DLLPOST)" | awk "{ print \\$$1 }" | grep "^@loader_path\/"` ; do install_name_tool -change "$${i}" `echo "$${i}" | sed "s#^@loader_path/#@executable_path/#"` "$(LB)$/$(TARGET)$(DLLPOST)" ; done'
 .IF "$(debug)" == ""
 # Use stripped library if not in debug mode
 	$(RM) $(BIN)$/stripped
