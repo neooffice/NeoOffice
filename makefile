@@ -622,7 +622,7 @@ endif
 # bundle IDs.
 	cd "$(INSTALL_HOME)/package/Contents/Library/QuickLook" ; sed 's#$(NEOPEEK_QLPLUGIN_ID)#$(NEOPEEK_QLPLUGIN_ID).$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).'"`date '+%Y%m%d%H%M%S'`"'#g' "neopeek.qlgenerator/Contents/Info.plist" > "../../out" ; mv -f "../../out" "neopeek.qlgenerator/Contents/Info.plist"
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
-	xattr -rc "$(INSTALL_HOME)/package"
+	xattr -rcs "$(INSTALL_HOME)/package"
 # Sign all binaries
 	chmod -Rf u+rw "$(INSTALL_HOME)/package"
 # Mac App Store will reject apps with shell scripts
@@ -764,7 +764,7 @@ endif
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*"` ; do strip -S -x "$$i" ; done'
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.so"` ; do strip -S -x "$$i" ; done'
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
-	xattr -rc "$(PATCH_INSTALL_HOME)/package"
+	xattr -rcs "$(PATCH_INSTALL_HOME)/package"
 # Sign all binaries and use code resources file from main installer so that an
 # updated code resources is created without reshipping all referenced files
 	chmod -Rf u+rw "$(PATCH_INSTALL_HOME)/package"
@@ -865,7 +865,7 @@ endif
 # Add Mac OS X localized resources
 	cd "$</Contents/Resources" ; sh -e -c 'for i in `echo "$(PRODUCT_LANG_PACK_LOCALE)" | sed "s#-#_#g"` ; do mkdir -p "$${i}.lproj" ; mkdir -p `echo "$${i}" | sed "s#_.*\\$$##"`".lproj" ; done'
 	cd "$<" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
-	xattr -rc "$<"
+	xattr -rcs "$<"
 # Mac App Store requires files to be writable by root
 	chmod -Rf u+w,og-w,a+r "$<"
 # Mark certain directories writable for group
