@@ -239,18 +239,19 @@ int java_main( int argc, char **argv )
 
 	// Check if application's softlinks have been converted to regular files.
 	// If they have, the application has been moved or copied to a file system
-	// that does not support softlinks.
+	// that does not support softlinks. Use a shared library for this check as
+	// many extensions are linked to shared libraries using @executable_path.
 	NSFileManager *pFileManager = [NSFileManager defaultManager];
-	NSString *pSofficePath = [pBundlePath stringByAppendingPathComponent:@"Contents"];
-	if ( pSofficePath )
+	NSString *pSalDylibPath = [pBundlePath stringByAppendingPathComponent:@"Contents"];
+	if ( pSalDylibPath )
 	{
-		pSofficePath = [pSofficePath stringByAppendingPathComponent:@"MacOS"];
-		if ( pSofficePath )
-			pSofficePath = [pSofficePath stringByAppendingPathComponent:@"soffice"];
+		pSalDylibPath = [pSalDylibPath stringByAppendingPathComponent:@"MacOS"];
+		if ( pSalDylibPath )
+			pSalDylibPath = [pSalDylibPath stringByAppendingPathComponent:@"libuno_sal.dylib.3"];
 	}
-	if ( !pFileManager || !pSofficePath || ![pFileManager destinationOfSymbolicLinkAtPath:pSofficePath error:nil] )
+	if ( !pFileManager || !pSalDylibPath || ![pFileManager destinationOfSymbolicLinkAtPath:pSalDylibPath error:nil] )
 	{
-		NSLog( @"Application's main bundle path missing \"MacOS/soffice\" softlink" );
+		NSLog( @"Application's main bundle path missing \"MacOS/%@\" softlink", pSalDylibPath );
 		[pPool release];
 		_exit( 1 );
 	}
