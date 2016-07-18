@@ -474,6 +474,11 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice.bin" ; ln -sf "../MacOS/soffice.bin" "program/soffice.bin"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in sbase scalc sdraw simpress smath soffice swriter unopkg unopkg.bin ; do rm -f "program/$$i" ; ln -sf "soffice.bin" "MacOS/$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in regcomp uno ; do rm -f "program/$$i" ; ln -sf "$$i.bin" "program/$$i" ; done'
+# Shared libraries in extensions may link to OpenOffice shared libraries using
+# @executable_path so create softlinks in the MacOS directory for each shared
+# library in the program directory
+	cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -e -c 'for i in `find "../program" -type f -name "*.dylib*"` ; do ln -sf "$$i" ; done'
+	cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -e -c 'for i in `find "../program" -type f -name "*.so"` ; do ln -sf "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/resource/dba"*.res ; cp -f "$(PWD)/dbaccess/$(UOUTPUTDIR)/bin/dba"*.res "program/resource"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/resource/deploymentgui"*.res ; cp -f "$(PWD)/desktop/$(UOUTPUTDIR)/bin/deploymentgui"*.res "program/resource"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/resource/sfx"*.res ; cp -f "$(PWD)/sfx2/$(UOUTPUTDIR)/ResTarget/sfx"*.res "program/resource"
