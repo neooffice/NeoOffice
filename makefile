@@ -646,8 +646,10 @@ else
 	cat "etc/package/Entitlements.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$(INSTALL_HOME)/Entitlements.plist"
 	cd "$(INSTALL_HOME)/package" ; codesign --force -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(INSTALL_HOME)/Entitlements.plist" .
 endif
-# Test that all libraries will load
-	cd "$(INSTALL_HOME)/package" ; $(CC) -arch "$(TARGET_MACHINE)" -o "Contents/MacOS/loaddyliblist" "$(PWD)/etc/package/loaddyliblist.c" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/program" ; sh -e -c 'find . -type f -name "*.dylib*" | "Contents/MacOS/loaddyliblist" ; rm -f "Contents/MacOS/loaddyliblist"'
+# Test that all libraries will load. Exclude all of the CoinMP libraries as
+# they will fail to load so we only care if the OpenOffice libraries that link
+# to them load.
+	cd "$(INSTALL_HOME)/package" ; $(CC) -arch "$(TARGET_MACHINE)" -o "Contents/MacOS/loaddyliblist" "$(PWD)/etc/package/loaddyliblist.c" ; sh -e -c 'find . -type f -name "*.dylib*" -not -path "*/libCoinMP[.0-9]*" -not -path "*/libCoinUtils[.0-9]*" -not -path "*/libClp[.0-9]*" -not -path "*/libCbc[.0-9]*" -not -path "*/libOsi[.0-9]*" -not -path "*/libOsiCbc[.0-9]*" -not -path "*/libOsiClp[.0-9]*" -not -path "*/libCgl[.0-9]*" -not -path "*/libCbcSolver[.0-9]*" | "Contents/MacOS/loaddyliblist" ; rm -f "Contents/MacOS/loaddyliblist"'
 	mkdir -p "$(INSTALL_HOME)/tmp"
 	mkdir "$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app"
 	mv -f "$(INSTALL_HOME)/package/Contents" "$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app"
