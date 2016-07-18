@@ -134,11 +134,7 @@ namespace
 
 static inline rtl::OUString getBuildId()
 {
-#ifdef USE_JAVA
-	rtl::OUString aPathVal(UNISTRING("${$BRAND_BASE_DIR/program/" SAL_CONFIGFILE("version") ":buildid}"));
-#else	// USE_JAVA
 	rtl::OUString aPathVal(UNISTRING("${$OOO_BASE_DIR/program/" SAL_CONFIGFILE("version") ":buildid}"));
-#endif	// USE_JAVA
 	rtl::Bootstrap::expandMacros(aPathVal);
 	return aPathVal;
 }

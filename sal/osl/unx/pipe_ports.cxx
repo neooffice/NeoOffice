@@ -116,7 +116,7 @@ static OUString ImplPipePortFileURLForName( const OUString& rName )
 		if ( !bUserInstallInitialized )
 		{
 			OUString aURI;
-			Bootstrap::get( OUString( RTL_CONSTASCII_USTRINGPARAM( "BRAND_BASE_DIR" ) ), aURI );
+			Bootstrap::get( OUString( RTL_CONSTASCII_USTRINGPARAM( "OOO_BASE_DIR" ) ), aURI );
 			Bootstrap aData( aURI + OUString( RTL_CONSTASCII_USTRINGPARAM( "/program/" SAL_CONFIGFILE( "bootstrap" ) ) ) );
 			aData.getFrom( OUString( RTL_CONSTASCII_USTRINGPARAM( "UserInstallation" ) ), aUserInstallURL );
 

@@ -130,11 +130,7 @@ getBootstrapData(
     ::rtl::OUString & rBuildID,
     ::rtl::OUString & rInstallSetID)
 {
-#ifdef USE_JAVA
-    rBuildID = UNISTRING( "${$BRAND_BASE_DIR/program/" SAL_CONFIGFILE("version") ":ProductBuildid}" );
-#else	// USE_JAVA
     rBuildID = UNISTRING( "${$OOO_BASE_DIR/program/" SAL_CONFIGFILE("version") ":ProductBuildid}" );
-#endif	// USE_JAVA
     rtl::Bootstrap::expandMacros( rBuildID );
     if ( ! rBuildID.getLength() )
         return false;
