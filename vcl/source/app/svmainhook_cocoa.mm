@@ -74,7 +74,6 @@ typedef struct AppReceiptAttributes
 };
 
 static Application_canUseJava_Type *pApplication_canUseJava = NULL;
-static jmp_buf aReceiptCheckJmpBuf;
 
 static const SecAsn1Template aAttributeTemplate[] = {
 	{ SEC_ASN1_SEQUENCE, 0, NULL, sizeof( AppReceiptAttribute ) },
