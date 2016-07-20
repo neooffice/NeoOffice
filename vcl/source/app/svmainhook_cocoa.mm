@@ -34,6 +34,7 @@
  ************************************************************************/
 
 #include <dlfcn.h>
+#include <signal.h>
 
 #include <rtl/digest.h>
 #include <vcl/unohelp.hxx>
@@ -135,6 +136,12 @@ static CFDataRef ImplCreateMacAddress()
 	}
 
 	return aRet;
+}
+
+void ImplHandleAbort( int nSig )
+{
+    // Force exit since NSApplication won't shutdown when only exit() is invoked
+    _exit( 0 );
 }
 
 using namespace rtl;
@@ -242,6 +249,9 @@ void NSApplication_terminate()
 	}
 	else if ( pBundle )
 	{
+		// Fix spurious crashes in CMS* functions by trapping SIGABRT
+ 		signal( SIGABRT, &ImplHandleAbort );
+
 		NSURL *pURL = [pBundle appStoreReceiptURL];
 		if ( pURL && [pURL isKindOfClass:[NSURL class]] )
 			pURL = [pURL filePathURL];
