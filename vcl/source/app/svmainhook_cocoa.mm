@@ -138,7 +138,7 @@ static CFDataRef ImplCreateMacAddress()
 	return aRet;
 }
 
-void ImplHandleAbort( int nSig )
+void ImplHandleAbort( int /* nSig */ )
 {
     // Force exit since NSApplication won't shutdown when only exit() is invoked
     _exit( 0 );
