@@ -53,7 +53,6 @@
 
 #define DOFUNCTION( x ) MacOSBOOL SAL_DLLPUBLIC_EXPORT _##x ()
 #define FUNCTION( x ) DOFUNCTION( x )
-#define DEFAULTEXITSTATUS 173
 
 typedef MacOSBOOL BundleCheck_Type();
 typedef sal_Bool Application_canUseJava_Type();
@@ -143,7 +142,7 @@ static CFDataRef ImplCreateMacAddress()
 void ImplHandleAbort( int nSig )
 {
     // Force exit since NSApplication won't shutdown when only exit() is invoked
-    _exit( DEFAULTEXITSTATUS );
+    _exit( 0 );
 }
 
 using namespace rtl;
@@ -238,7 +237,7 @@ void NSApplication_run()
 
 void NSApplication_terminate()
 {
-	int nRet = DEFAULTEXITSTATUS;
+	int nRet = 173;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
