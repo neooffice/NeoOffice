@@ -34,6 +34,7 @@
  ************************************************************************/
 
 #include <dlfcn.h>
+#include <signal.h>
 
 #include <rtl/digest.h>
 #include <vcl/unohelp.hxx>
@@ -52,6 +53,7 @@
 
 #define DOFUNCTION( x ) MacOSBOOL SAL_DLLPUBLIC_EXPORT _##x ()
 #define FUNCTION( x ) DOFUNCTION( x )
+#define DEFAULTEXITSTATUS 173
 
 typedef MacOSBOOL BundleCheck_Type();
 typedef sal_Bool Application_canUseJava_Type();
@@ -73,6 +75,7 @@ typedef struct AppReceiptAttributes
 };
 
 static Application_canUseJava_Type *pApplication_canUseJava = NULL;
+static jmp_buf aReceiptCheckJmpBuf;
 
 static const SecAsn1Template aAttributeTemplate[] = {
 	{ SEC_ASN1_SEQUENCE, 0, NULL, sizeof( AppReceiptAttribute ) },
@@ -135,6 +138,12 @@ static CFDataRef ImplCreateMacAddress()
 	}
 
 	return aRet;
+}
+
+void ImplHandleAbort( int nSig )
+{
+    // Force exit since NSApplication won't shutdown when only exit() is invoked
+    _exit( DEFAULTEXITSTATUS );
 }
 
 using namespace rtl;
@@ -229,7 +238,7 @@ void NSApplication_run()
 
 void NSApplication_terminate()
 {
-	int nRet = 173;
+	int nRet = DEFAULTEXITSTATUS;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -242,6 +251,9 @@ void NSApplication_terminate()
 	}
 	else if ( pBundle )
 	{
+		// Fix spurious crashes in CMS* functions by trapping SIGABRT
+ 		signal( SIGABRT, &ImplHandleAbort );
+
 		NSURL *pURL = [pBundle appStoreReceiptURL];
 		if ( pURL && [pURL isKindOfClass:[NSURL class]] )
 			pURL = [pURL filePathURL];
