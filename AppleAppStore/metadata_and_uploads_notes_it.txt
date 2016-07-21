@@ -26,12 +26,12 @@ What's New in this Version:
 Prima di acquistare NeoOffice, per favore clicca sul link «Supporto per NeoOffice» e leggi le note d'installazione.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would sometimes draw default buttons as unpressed, non-default buttons
-• NeoOffice would sometimes hang when selecting the File > Browse All Versions menu item
+• NeoOffice would sometimes crash when quitting
+• NeoOffice would sometimes crash when changing the shape of a poly polygon object
 
 
 Keywords:
-neo,office,documento,foglio,testo,presentazioni,open,libre
+neo,office,documento,foglio,testo,presentazioni,open,libre,word,excel
 
 Support URL:
 http://www.neooffice.org/neojava/macappstore.php
