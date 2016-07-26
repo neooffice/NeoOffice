@@ -669,12 +669,8 @@
 		<xsl:when test="@href[ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]] and parent::paragraph[@id='par_id3497211']">
 			<a href="$(PRODUCT_DOCUMENTATION_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
 		</xsl:when>
-		<!-- Replace the OOo command line options URL -->
-		<xsl:when test="@href[ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidestart_parametersxml']]] and parent::paragraph[@id='par_id3150503']">
-			<a href="$(PRODUCT_DOCUMENTATION_LAUNCHSHORTCUTS_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
-		</xsl:when>
 		<!-- Replace the OOo spellchecking URLs -->
-		<xsl:when test="@href and (parent::paragraph[@id='par_id6434522'] or parent::paragraph[@id='par_id3552964'] or parent::paragraph[@id='par_id6434522'] or parent::paragraph[@id='par_id3552964'] or paragraph[@id='par_id9625843'] or parent::paragraph[@id='par_id1683706'])">
+		<xsl:when test="@href and (parent::paragraph[@id='par_id6434522'] or parent::paragraph[@id='par_id3552964'] or paragraph[@id='par_id9625843'] or parent::paragraph[@id='par_id1683706'])">
 			<a href="$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
 		</xsl:when>
 		<xsl:when test="starts-with(@href,'http://') or starts-with(@href,'https://')">  <!-- web links -->
@@ -1022,14 +1018,13 @@
 </xsl:template>
 
 <!-- Remove OpenOffice.org support text -->
-<xsl:template match="paragraph[(@id='par_id9173253' or @id='par_id3149140' or @id='par_id3154230' or @id='hd_id26327' or @id='par_id1318380' or @id='hd_id2611386' or @id='par_id3166335' or @id='hd_id0915200811081722' or @id='par_id0915200811081778' or @id='hd_id0804200803314150' or @id='par_id0804200803314235') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]]" />
+<xsl:template match="paragraph[(@id='par_id9173253' or @id='par_id3154230' or @id='hd_id26327' or @id='par_id1318380' or @id='hd_id2611386' or @id='par_id3166335' or @id='hd_id0915200811081722' or @id='par_id0915200811081778' or @id='hd_id0804200803314150' or @id='par_id0804200803314235') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]]" />
 
 <!-- Remove crash reporting text -->
 <xsl:template match="paragraph[@id='par_id3153345' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguideerror_reportxml']]]">
 	<xsl:apply-templates mode="notavailable" select="." />
 </xsl:template>
-<xsl:template match="paragraph[(@id='par_id3147088' or @id='par_id3153681' or @id='hd_id3148538' or @id='par_id3149811' or @id='hd_id3154046' or @id='par_id3147335' or @id='hd_id3159399' or @id='par_id3150504' or @id='par_id3149670' or @id='par_id3153526' or @id='hd_id3150792' or @id='par_id3154366' or @id='par_id3151177') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguideerror_reportxml']]]" />
-<xsl:template match="list[ancestor::body/preceding-sibling::meta[topic[@id='textsharedguideerror_reportxml']]]" />
+<xsl:template match="paragraph[(@id='par_id3147088' or @id='hd_id3148538' or @id='par_id3149811' or @id='hd_id3154046' or @id='par_id3147335' or @id='hd_id3159399' or @id='par_id3150504' or @id='par_id3149670' or @id='par_id3153526' or @id='hd_id3150792' or @id='par_id3154366' or @id='par_id3151177') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguideerror_reportxml']]]" />
 
 <!-- Remove Download and Language Pack text -->
 <xsl:template match="paragraph[(@id='hd_id3168534' or @id='par_id3028143') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]]" />
@@ -1037,17 +1032,10 @@
 <xsl:template match="listitem[paragraph[(@id='par_id130619' or @id='par_id2216559' or @id='par_id7869502' or @id='par_id9852900' or @id='par_id3791924') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidelanguage_selectxml']]]]" />
 
 <!-- Remove Online Registration text -->
-<xsl:template match="section[embed[@href='text/shared/00/00000408.xhp#online']]" />
-<xsl:template match="embed[@href='text/shared/01/08060100.xhp#registrierung']" />
-<xsl:template match="paragraph[@id='par_id3153882' and ancestor::body/preceding-sibling::meta[topic[@id='textshared0108060100xml']]]">
-	<xsl:apply-templates mode="notavailable" select="." />
-</xsl:template>
-<xsl:template match="paragraph[not(@id='hd_id3147477') and not(@id='par_id3153882') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0108060100xml']]]" />
 <xsl:template match="paragraph[@id='par_idN1055C' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopistartupxhp']]]">
 	<xsl:apply-templates mode="notavailable" select="." />
 </xsl:template>
 <xsl:template match="paragraph[not(@id='par_idN1054C') and not(@id='par_idN1055C') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopistartupxhp']]]" />
-<xsl:template match="paragraph[(@id='hd_id2926419' or @id='par_id2783898') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedmain0108xml']]]" />
 
 <!-- Remove LDAP text -->
 <xsl:template match="paragraph[@id='par_idN10558' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedexplorerdatabasedabawiz02ldapxml']]]">
@@ -1070,6 +1058,25 @@
 		<xsl:with-param name="string"><xsl:value-of select="."/></xsl:with-param>
 	</xsl:call-template>
 </xsl:template>
+
+<!-- Remove Exit menu item text -->
+<xsl:template match="paragraph[@id='par_id3151299' and ancestor::body/preceding-sibling::meta[topic[@id='textshared0101170000xml']]]" />
+<xsl:template match="paragraph[not(@id='hd_id3154545') and not(@id='par_id3151299') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0101170000xml']]]" />
+<xsl:template match="paragraph[@id='par_id3155869' and ancestor::body/preceding-sibling::meta[topic[@id='textshared0000000401xml']]]" mode="embedded" />
+
+<!-- Remove Tools :: Options warning text -->
+<xsl:template match="paragraph[@id='par_id1013200911280529' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedoptionen01000000xml']]]" />
+
+<!-- Remove Improvement Program text -->
+<xsl:template match="embed[@href='text/shared/optionen/improvement.xhp#improvement']" />
+<xsl:template match="section[embed[@href='text/shared/00/00000406.xhp#improvement']]" />
+<xsl:template match="paragraph[(@id='hd_id0120200910361765' or @id='par_id0120200910361848' or @id='par_id0120200910361874') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]]" />
+<xsl:template match="paragraph[@id='par_id0526200904120665' and ancestor::body/preceding-sibling::meta[topic[@id='textshared0000000406xml']]]" />
+<xsl:template match="paragraph[@id='par_id0526200312315378' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedoptionenimprovementxhp']]]">
+	<xsl:apply-templates mode="notavailable" select="." />
+</xsl:template>
+<xsl:template match="paragraph[not(@id='hd_id0526200912315340') and not(@id='par_id0526200312315378') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedoptionenimprovementxhp']]]" />
+<xsl:template match="list[ancestor::body/preceding-sibling::meta[topic[@id='textsharedoptionenimprovementxhp']]]" />
 
 <!-- Replace paragraph with "not available" warning -->
 <xsl:template match="paragraph" mode="notavailable">
