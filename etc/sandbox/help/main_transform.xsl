@@ -1236,6 +1236,14 @@
 <xsl:template match="paragraph[not(@id='hd_id0526200912315340') and not(@id='par_id0526200312315378') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedoptionenimprovementxhp']]]" />
 <xsl:template match="list[ancestor::body/preceding-sibling::meta[topic[@id='textsharedoptionenimprovementxhp']]]" />
 
+<!-- Remove Start Center text -->
+<xsl:template match="paragraph[@id='par_id3159201' and ancestor::body/preceding-sibling::meta[topic[@id='textshared0101050000xml']]]" />
+<xsl:template match="paragraph[@id='par_id0820200803204063' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidestartcenterxhp']]]">
+	<xsl:apply-templates mode="notavailable" select="." />
+</xsl:template>
+<xsl:template match="paragraph[not(@id='hd_id0820200802524447') and not(@id='par_id0820200803204063') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidestartcenterxhp']]]" />
+<xsl:template match="list[ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidestartcenterxhp']]]" />
+
 <!-- Replace paragraph with "not available" warning -->
 <xsl:template match="paragraph" mode="notavailable">
 	<xsl:choose>
