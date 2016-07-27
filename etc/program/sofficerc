@@ -1,10 +1,2 @@
 [Bootstrap]
-Logo=1
-NativeProgress=false
-ProgressBarColor=14,133,205
-ProgressFrameColor=207,208,211
-# Show progress bar at bottom of the splash screen
-ProgressPosition=14,260
-ProgressSize=432,4
-ShowProgressFrame=false
 URE_BOOTSTRAP=${ORIGIN}/fundamentalrc
