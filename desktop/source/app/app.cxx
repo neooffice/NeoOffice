@@ -1843,6 +1843,8 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
             // this fix twice.
             Application::Reschedule();
             Application::Reschedule();
+
+            OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
         }
 
         return;
