@@ -151,7 +151,7 @@ bool SunVersion::init(const char *szVersion)
             {
                 if ( ! isdigit(*pCur))
                 {
-#ifndef NO_LIBO_BUG_101057_FIX
+#ifdef NO_LIBO_BUG_101057_FIX
                     //1.4.1_01-, 1.4.1_01a, the numerical part may only be 2 chars.
                     int len = pCur - pLast;
                     if (len > 2)
