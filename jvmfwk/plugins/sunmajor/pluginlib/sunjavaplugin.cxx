@@ -475,11 +475,11 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     try
     {
         if ( !aVendorInfo.is() || aVendorInfo->compareVersions( ::rtl::OUString( pInfo->sVersion ) ) < 0 )
-            return JFW_PLUGIN_E_VM_CREATION_FAILED;
+            return JFW_PLUGIN_E_WRONG_VERSION_FORMAT;
     }
     catch ( MalformedVersionException& )
     {
-        return JFW_PLUGIN_E_VM_CREATION_FAILED;
+        return JFW_PLUGIN_E_WRONG_VERSION_FORMAT;
     }
 #endif	// USE_JAVA
     rtl::OUString sRuntimeLib = getRuntimeLib(pInfo->arVendorData);
