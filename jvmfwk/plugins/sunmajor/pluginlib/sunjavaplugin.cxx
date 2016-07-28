@@ -469,8 +469,15 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         return JFW_PLUGIN_E_WRONG_VENDOR;
 #ifdef USE_JAVA
     rtl::Reference<VendorBase> aVendorInfo = getJREInfoByPath( ::rtl::OUString( pInfo->sLocation ) );
-    if ( !aVendorInfo.is() || aVendorInfo->compareVersions( ::rtl::OUString( pInfo->sVersion ) ) < 0 )
-        return JFW_PLUGIN_E_VM_CREATION_FAILED;
+    try
+    {
+        if ( !aVendorInfo.is() || aVendorInfo->compareVersions( ::rtl::OUString( pInfo->sVersion ) ) < 0 )
+            return JFW_PLUGIN_E_WRONG_VERSION_FORMAT;
+    }
+    catch ( MalformedVersionException& )
+    {
+        return JFW_PLUGIN_E_WRONG_VERSION_FORMAT;
+    }
 #endif	// USE_JAVA
     rtl::OUString sRuntimeLib = getRuntimeLib(pInfo->arVendorData);
 #if defined USE_JAVA && defined MACOSX
