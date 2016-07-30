@@ -500,6 +500,7 @@ endif
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Resources"
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Resources/cursors"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/vcl/java/com/sun/star/vcl/images/"*.gif "Resources/cursors"
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -c -e 'for i in "$(PWD)/vcl/aqua/source/res/cursors/darc.png" "$(PWD)/vcl/aqua/source/res/cursors/dbezier.png" "$(PWD)/vcl/aqua/source/res/cursors/dcapt.png" "$(PWD)/vcl/aqua/source/res/cursors/dcirccut.png" "$(PWD)/vcl/aqua/source/res/cursors/dconnect.png" "$(PWD)/vcl/aqua/source/res/cursors/dellipse.png" "$(PWD)/vcl/aqua/source/res/cursors/dfree.png" "$(PWD)/vcl/aqua/source/res/cursors/dline.png" "$(PWD)/vcl/aqua/source/res/cursors/dpie.png" "$(PWD)/vcl/aqua/source/res/cursors/dpolygon.png" "$(PWD)/vcl/aqua/source/res/cursors/drect.png" "$(PWD)/vcl/aqua/source/res/cursors/dtext.png" "$(PWD)/vcl/aqua/source/res/cursors/vtext.png" ; do cp "$${i}" "Resources/cursors" ; done'
 	cd "$(INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/vcl/java/source/res" ; gnutar cvf - --exclude CVS MainMenu.nib ) | gnutar xvf - )
 	mkdir -p "$(INSTALL_HOME)/package/Contents/tmp"
 	cd "$(INSTALL_HOME)/package/Contents/tmp" ; unzip "$(PWD)/etc/package/neo2toolbarv101.zip"
