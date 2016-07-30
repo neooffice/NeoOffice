@@ -651,31 +651,19 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_CROOK hotSpot:NSMakePoint( 16, 17 ) path:[pPath stringByAppendingPathComponent:@"crook.gif"]];
 					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_CROP hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"crop.gif"]];
 					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_CROSS hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"cross.gif"]];
-					// Note: POINTER_DRAW_ARC darc.gif icon unused
-					// due to white background in icon
-					// Note: POINTER_DRAW_BEZIER dbezier.gif icon unused
-					// due to white background in icon
-					// Note: POINTER_DRAW_CAPTION dcapt.gif icon unused
-					// due to white background in icon
-					// Note: POINTER_DRAW_CIRCLECUT dcirccut.gif icon unused
-					// due to white background in icon
-					// Note: POINTER_DRAW_CONNECT dconnect.gif icon unused
-					// due to white background in icon
-					// Note: POINTER_DRAW_ELLIPSE dellipse.gif icon unused
-					// due to white background in icon
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_ARC hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"darc.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_BEZIER hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dbezier.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_CAPTION hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dcapt.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_CIRCLECUT hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dcirccut.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_CONNECT hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dconnect.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_ELLIPSE hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dellipse.png"]];
 					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DETECTIVE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"detectiv.gif"]];
-					// Note: POINTER_DRAW_FREEHAND dfree.gif icon unused
-					// due to white background in icon
-					// Note: POINTER_DRAW_LINE dline.gif icon unused
-					// due to white background in icon
-					// Note: POINTER_DRAW_PIE dpie.gif icon unused
-					// due to white background in icon
-					// Note: POINTER_DRAW_POLYGON dpolygon.gif icon unused
-					// due to white background in icon
-					// Note: POINTER_DRAW_RECT drect.gif icon unused
-					// due to white background in icon
-					// Note: POINTER_DRAW_TEXT dtext.gif icon unused
-					// white background in icon
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_FREEHAND hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dfree.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_LINE hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dline.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_PIE hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dpie.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_POLYGON hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dpolygon.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_RECT hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"drect.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_TEXT hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dtext.png"]];
 					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_FILL hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"fill.gif"]];
 					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_HAND hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"hand.gif"]];
 					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_HELP hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"help.gif"]];
@@ -722,8 +710,7 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_VSHEAR hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"vshear.gif"]];
 					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_VSIZEBAR hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"vsizebar.gif"]];
 					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_VSPLIT hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"vsplit.gif"]];
-					// Note: POINTER_TEXT_VERTICAL vtext.gif icon unused due to
-					// white background in icon
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_TEXT_VERTICAL hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"vtext.png"]];
 				}
 			}
 		}
