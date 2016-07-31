@@ -61,9 +61,10 @@ namespace java {
 
 Sequence< OUString > SAL_CALL JavaFolderPicker_getSupportedServiceNames()
 {
-	Sequence< OUString > aRet( 2 );
+	Sequence< OUString > aRet( 3 );
 	aRet[0] = OUString::createFromAscii( "com.sun.star.ui.dialogs.FolderPicker" );
-	aRet[1] = OUString::createFromAscii( FOLDER_PICKER_SERVICE_NAME );
+	aRet[1] = OUString::createFromAscii( "com.sun.star.ui.dialogs.SystemFolderPicker" );
+	aRet[2] = OUString::createFromAscii( FOLDER_PICKER_SERVICE_NAME );
 	return aRet;
 }
  

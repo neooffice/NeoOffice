@@ -176,9 +176,10 @@ namespace java {
 
 Sequence< OUString > SAL_CALL JavaFilePicker_getSupportedServiceNames()
 {
-	Sequence< OUString > aRet( 2 );
+	Sequence< OUString > aRet( 3 );
 	aRet[0] = OUString::createFromAscii( "com.sun.star.ui.dialogs.FilePicker" );
-	aRet[1] = OUString::createFromAscii( FILE_PICKER_SERVICE_NAME );
+	aRet[1] = OUString::createFromAscii( "com.sun.star.ui.dialogs.SystemFilePicker" );
+	aRet[2] = OUString::createFromAscii( FILE_PICKER_SERVICE_NAME );
 	return aRet;
 }
 
