@@ -2096,8 +2096,13 @@ PolyPolygon ImpEditView::GetNativeHighlightColorPolyPolygon()
 	if ( UseNativeHighlightColor() )
 	{
 		Region *pRegion = CalcSelectedRegion();
-		if ( pRegion && !pRegion->IsEmpty() )
-			aPolyPoly = pRegion->GetAsPolyPolygon();
+		if ( pRegion )
+		{
+			if ( !pRegion->IsEmpty() )
+				aPolyPoly = pRegion->GetAsPolyPolygon();
+
+			delete pRegion;
+		}
 	}
 #endif	// USE_NATIVE_HIGHLIGHT_COLOR
 
