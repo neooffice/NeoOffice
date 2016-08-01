@@ -474,11 +474,6 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice.bin" ; ln -sf "../MacOS/soffice.bin" "program/soffice.bin"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in sbase scalc sdraw simpress smath soffice swriter unopkg unopkg.bin ; do rm -f "program/$$i" ; ln -sf "soffice.bin" "MacOS/$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in regcomp uno ; do rm -f "program/$$i" ; ln -sf "$$i.bin" "program/$$i" ; done'
-# Shared libraries in extensions may link to OpenOffice shared libraries using
-# @executable_path so create softlinks in the MacOS directory for each shared
-# library in the program directory
-	cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -e -c 'for i in `find "../program" -type f -name "*.dylib*"` ; do ln -sf "$$i" ; done'
-	cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -e -c 'for i in `find "../program" -type f -name "*.so"` ; do ln -sf "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/resource/dba"*.res ; cp -f "$(PWD)/dbaccess/$(UOUTPUTDIR)/bin/dba"*.res "program/resource"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/resource/deploymentgui"*.res ; cp -f "$(PWD)/desktop/$(UOUTPUTDIR)/bin/deploymentgui"*.res "program/resource"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/resource/sfx"*.res ; cp -f "$(PWD)/sfx2/$(UOUTPUTDIR)/ResTarget/sfx"*.res "program/resource"
@@ -563,7 +558,7 @@ ifdef PRODUCT_BUILD3
 endif
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf README* program/LICENSE* program/open-url program/senddoc program/startup.sh program/unoinfo readmes share/extensions/install share/readme
 # Fix bug 3273 by not installing any OOo fonts
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/libAppleRemote.dylib" "program/libMacOSXSpell.dylib" "program/libavmediaQuickTime.dylib" "program/fps_aqua.uno.dylib" "share/fonts/truetype" "share/psprint"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/fps_aqua.uno.dylib" "program/libAppleRemote.dylib" "program/libMacOSXSpell.dylib" "program/libavmediaQuickTime.dylib" "program/liboooimprovecore.dylib" "share/fonts/truetype" "share/psprint"
 ifdef PRODUCT_BUILD3
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/jvmfwk/$(UOUTPUTDIR)/bin/javavendors.xml" "program/javavendors.xml"
 else
@@ -604,6 +599,11 @@ endif
 # Integrate the RemoteControl framework
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Frameworks"
 	cd "$(INSTALL_HOME)/package" ; ( ( cd "$(PWD)/$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)/build/Release" ; gnutar cvf - --exclude Headers RemoteControl.framework ) | ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents/Frameworks" ; gnutar xvf - ; strip -S -x RemoteControl.framework/Versions/A/RemoteControl ) )
+# Shared libraries in extensions may link to OpenOffice shared libraries using
+# @executable_path so create softlinks in the MacOS directory for each shared
+# library in the program directory
+	cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -e -c 'for i in `find "../program" -type f -name "*.dylib*"` ; do ln -sf "$$i" ; done'
+	cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -e -c 'for i in `find "../program" -type f -name "*.so"` ; do ln -sf "$$i" ; done'
 ifdef PRODUCT_BUILD3
 # Install OOo .oxt files
 	cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -c -e 'JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1 ; export JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY ; unset CLASSPATH ; unset DYLD_LIBRARY_PATH ; for i in `find "$(PWD)/$(OO_BUILD_HOME)/../ext_sources" -type f -name "*.oxt"` "$(PWD)/sdext/$(UOUTPUTDIR)/bin/pdfimport.oxt" ; do rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp" ; echo "yes" | ./unopkg.bin add --shared --verbose "$$i" -env:UserInstallation=file://"$(PWD)/$(INSTALL_HOME)/tmp" ; done ; rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp"'

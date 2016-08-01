@@ -2696,11 +2696,13 @@
       <service name="com.sun.star.office.Acceptor"/>
     </implementation>
   </component>
+  <!-- Remove liboooimprovecore.dylib
   <component loader="com.sun.star.loader.SharedLibrary" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/liboooimprovecore.dylib">
     <implementation name="com.sun.star.comp.extensions.oooimprovecore.Core">
       <service name="com.sun.star.oooimprovement.Core"/>
     </implementation>
   </component>
+  -->
   <component loader="com.sun.star.loader.SharedLibrary" uri="vnd.sun.star.expand:$OOO_BASE_DIR/program/liboox.dylib">
     <implementation name="com.sun.star.comp.oox.core.FastTokenHandler">
       <service name="com.sun.star.xml.sax.FastTokenHandler"/>
