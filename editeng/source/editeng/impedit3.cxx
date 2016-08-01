@@ -2910,18 +2910,13 @@ void ImpEditEngine::Paint( OutputDevice* pOutDev, Rectangle aClipRec, Point aSta
 	// Find the matching ImpEditView's selected region
 	Color aNativeHighlightColor( COL_TRANSPARENT );
 	PolyPolygon aNativeHighlightPolyPoly;
-	for ( sal_uInt16 nView = 0; nView < aEditViews.Count(); nView++ )
+	if ( pActiveView )
 	{
-		EditView *pEditView = aEditViews[ nView ];
-		if ( pEditView )
+		ImpEditView *pImpView = pActiveView->GetImpEditView();
+		if ( pImpView )
 		{
-			ImpEditView *pView = pEditView->GetImpEditView();
-			if ( pView && pView->GetWindow() == pOutDev )
-			{
-				aNativeHighlightColor = pOutDev->GetSettings().GetStyleSettings().GetHighlightColor();
-				aNativeHighlightPolyPoly = pView->GetNativeHighlightColorPolyPolygon();
-				break;
-			}
+			aNativeHighlightColor = pOutDev->GetSettings().GetStyleSettings().GetHighlightColor();
+			aNativeHighlightPolyPoly = pImpView->GetNativeHighlightColorPolyPolygon();
 		}
 	}
 
