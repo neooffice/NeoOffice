@@ -249,8 +249,10 @@ void NSApplication_terminate()
 	}
 	else if ( pBundle )
 	{
-		// Fix spurious crashes in CMS* functions by trapping SIGABRT
+		// Fix spurious crashes in CMS* functions by trapping SIGABRT and
+		// SIGSEGV signals
  		signal( SIGABRT, &ImplHandleAbort );
+ 		signal( SIGSEGV, &ImplHandleAbort );
 
 		NSURL *pURL = [pBundle appStoreReceiptURL];
 		if ( pURL && [pURL isKindOfClass:[NSURL class]] )
