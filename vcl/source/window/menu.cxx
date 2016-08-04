@@ -76,6 +76,10 @@
 
 #include <map>
 
+#ifdef USE_JAVA
+static ::std::map< Menu*, Menu* > aMenuMap;
+#endif	// USE_JAVA
+
 namespace vcl
 {
 
@@ -892,11 +896,33 @@ static int ImplGetTopDockingAreaHeight( Window *pWindow )
     return height;
 }
 
+#ifdef USE_JAVA
+
+bool Menu::IsValidMenu( Menu* pMenu )
+{
+    bool bRet = false;
+
+    if ( pMenu )
+    {
+        ::std::map< Menu*, Menu* >::const_iterator it = aMenuMap.find( pMenu );
+        if ( it != aMenuMap.end() )
+            bRet = true;
+    }
+
+	return bRet;
+}
+
+#endif	// USE_JAVA
+
 Menu::Menu()
 {
     DBG_CTOR( Menu, NULL );
     bIsMenuBar = FALSE;
     ImplInit();
+
+#ifdef USE_JAVA
+    aMenuMap[ this ] = this;
+#endif	// USE_JAVA
 }
 
 // this constructor makes sure we're creating the native menu
@@ -906,12 +932,20 @@ Menu::Menu( BOOL bMenubar )
     DBG_CTOR( Menu, NULL );
     bIsMenuBar = bMenubar;
     ImplInit();
+
+#ifdef USE_JAVA
+    aMenuMap[ this ] = this;
+#endif	// USE_JAVA
 }
 
 Menu::~Menu()
 {
     DBG_DTOR( Menu, NULL );
     
+#ifdef USE_JAVA
+    aMenuMap.erase( this );
+#endif	// USE_JAVA
+
     vcl::LazyDeletor<Menu>::Undelete( this );
 
     ImplCallEventListeners( VCLEVENT_OBJECT_DYING, ITEMPOS_INVALID );
