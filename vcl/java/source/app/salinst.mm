@@ -2219,7 +2219,10 @@ void JavaSalEvent::dispatch()
 						pFrame = pFrame->mpParent;
 				}
 
-				pFrame->CallCallback( nID, pMenuEvent );
+				// Check that the OOo code has not deleted the menu after we
+				// posted this event
+				if ( Menu::IsValidMenu( (Menu *)pMenuEvent->mpMenu ) )
+					pFrame->CallCallback( nID, pMenuEvent );
 			}
 			break;
 		}
