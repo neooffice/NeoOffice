@@ -212,6 +212,10 @@ public:
     SAL_DLLPRIVATE void				ImplKillLayoutData() const;
     SAL_DLLPRIVATE Menu*            ImplGetStartedFrom() const;
 
+#ifdef USE_JAVA
+    SAL_DLLPRIVATE static bool      IsValidMenu( Menu* pMenu );
+#endif	// USE_JAVA
+
 						    Menu();
     explicit                Menu( sal_Bool bMenuBar );
 	SAL_DLLPRIVATE Window*  ImplGetWindow() const { return pWindow; }
