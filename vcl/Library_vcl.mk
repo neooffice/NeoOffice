@@ -236,6 +236,8 @@ endif
 $(eval $(call gb_Library_add_objcxxobjects,vcl,\
     vcl/java/source/app/salinst \
     vcl/java/source/app/salinst_cocoa \
+    vcl/java/source/dtrans/DTransTransferable \
+    vcl/java/source/dtrans/java_dnd \
     vcl/java/source/gdi/salgdi \
     vcl/java/source/gdi/salgdi3 \
     vcl/java/source/gdi/salgdi3_cocoa \
@@ -255,6 +257,10 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/java/source/app/saldata \
     vcl/java/source/app/salinfo \
     vcl/java/source/app/saltimer \
+    vcl/java/source/dtrans/DTransClipboard \
+    vcl/java/source/dtrans/HtmlFmtFlt \
+    vcl/java/source/dtrans/java_clipboard \
+    vcl/java/source/dtrans/java_dndcontext \
     vcl/java/source/gdi/salatslayout \
     vcl/java/source/gdi/salbmp \
     vcl/java/source/gdi/salfont \
