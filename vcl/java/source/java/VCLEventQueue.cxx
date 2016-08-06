@@ -33,8 +33,6 @@
  *
  ************************************************************************/
 
-#import <dlfcn.h>
-
 #include <comphelper/processfactory.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <vcl/edit.hxx>
@@ -60,10 +58,7 @@
 #include "java/salinst.h"
 
 #include "VCLEventQueue_cocoa.h"
-
-typedef void Application_setPrivateClipboard_Type( ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::clipboard::XClipboard > *pClipboard, sal_Bool bSystemClipboard );
-
-static Application_setPrivateClipboard_Type *pApplication_setPrivateClipboard = NULL;
+#include "../dtrans/java_clipboard.hxx"
 
 using namespace com::sun::star::awt;
 using namespace com::sun::star::beans;
@@ -118,11 +113,12 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 				{
 					// Try to copy current selection to system clipboard
 					uno::Reference< datatransfer::clipboard::XClipboard > xClipboard = pWindow->GetClipboard();
-					if ( !pApplication_setPrivateClipboard )
-						pApplication_setPrivateClipboard = (Application_setPrivateClipboard_Type *)dlsym( RTLD_DEFAULT, "Application_setPrivateClipboard" );
-					if ( xClipboard.is() && pApplication_setPrivateClipboard )
+					if ( xClipboard.is() )
 					{
-						pApplication_setPrivateClipboard( &xClipboard, sal_True );
+						JavaClipboard *pJavaClipboard = dynamic_cast< JavaClipboard* >( xClipboard.get() );
+						if ( pJavaClipboard )
+							pJavaClipboard->setPrivateClipboard( sal_True );
+
 						try
 						{
 							xClipboard->setContents( uno::Reference< datatransfer::XTransferable >(), uno::Reference< datatransfer::clipboard::XClipboardOwner >() );
@@ -218,7 +214,8 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 						{
 						}
 
-						pApplication_setPrivateClipboard( &xClipboard, sal_False );
+						if ( pJavaClipboard )
+							pJavaClipboard->setPrivateClipboard( sal_False );
 					}
 				}
 			}

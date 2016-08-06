@@ -332,19 +332,3 @@ uno::Reference< uno::XInterface > JavaSalInstance::CreateClipboard( const uno::S
 
 	return pSalData->mxClipboard;
 }
-
-// ========================================================================
-
-extern "C" void Application_setPrivateClipboard( uno::Reference< datatransfer::clipboard::XClipboard > *pClipboard, sal_Bool bPrivateClipboard )
-{
-	if ( !pClipboard )
-		return;
-
-	uno::Reference< datatransfer::clipboard::XClipboard > aClipboard = *pClipboard;
-	if ( aClipboard.is() )
-	{
-		JavaClipboard *pJavaClipboard = dynamic_cast< JavaClipboard* >( aClipboard.get() );
-		if ( pJavaClipboard )
-			pJavaClipboard->setPrivateClipboard( bPrivateClipboard );
-	}
-}
