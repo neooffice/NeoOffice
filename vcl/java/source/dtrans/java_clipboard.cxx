@@ -276,12 +276,6 @@ Sequence< OUString > SAL_CALL JavaClipboard::getSupportedServiceNames() throw( R
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaClipboard::initialize( const Sequence< Any >& /* xAny */ ) throw( RuntimeException )
-{
-}
-
-// ------------------------------------------------------------------------
-
 void JavaClipboard::setPrivateClipboard( sal_Bool bPrivateClipboard )
 {
 	ClearableMutexGuard aGuard( maMutex );
