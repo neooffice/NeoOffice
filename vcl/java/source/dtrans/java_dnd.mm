@@ -96,7 +96,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 - (BOOL)wantsPeriodicDraggingUpdates;
 @end
 
-@interface JavaDNDDraggingSource : NSObject
+@interface JavaDNDDraggingSource : NSObject <NSDraggingSource>
 {
 	NSView*						mpSource;
 }
@@ -104,6 +104,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 - (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint;
 - (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation;
 - (void)draggedImage:(NSImage *)pImage movedTo:(NSPoint)aPoint;
+- (NSDragOperation)draggingSession:(NSDraggingSession *)pSession sourceOperationMaskForDraggingContext:(NSDraggingContext)nContext;
 - (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal;
 - (BOOL)ignoreModifierKeysWhileDragging;
 - (id)initWithView:(NSView *)pSource;
@@ -289,11 +290,25 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 		{
 			[pImage autorelease];
 
-			NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:NSDragPboard];
-			if ( pPasteboard )
+			NSView *pFocusView = [NSView focusView];
+			if ( pFocusView )
+				[pFocusView unlockFocus];
+
+			// Stop "image destination must have at least one image" message by
+			// drawing an empty image
+			[pImage lockFocus];
+			[[NSColor clearColor] set];
+			[NSBezierPath fillRect:NSMakeRect( 0, 0, [pImage size].width, [pImage size].height )];
+			[pImage unlockFocus];
+
+			if ( pFocusView )
+				[pFocusView lockFocus];
+
+			NSDraggingItem *pItem = [[NSDraggingItem alloc] initWithPasteboardWriter:pImage];
+			if ( pItem )
 			{
-				NSPoint aPoint = [mpSource convertPoint:[mpLastMouseEvent locationInWindow] fromView:nil];
-				[mpSource dragImage:pImage at:aPoint offset:NSMakeSize( 0, 0 ) event:mpLastMouseEvent pasteboard:pPasteboard source:mpDraggingSource slideBack:YES];
+				[pImage autorelease];
+				[mpSource beginDraggingSessionWithItems:[NSArray arrayWithObject:pItem] event:mpLastMouseEvent source:mpDraggingSource];
 			}
 		}
 	}
@@ -670,6 +685,13 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 
 		rSolarMutex.release();
 	}
+}
+
+- (NSDragOperation)draggingSession:(NSDraggingSession *)pSession sourceOperationMaskForDraggingContext:(NSDraggingContext)nContext
+{
+	(void)pSession;
+
+	return [self draggingSourceOperationMaskForLocal:( nContext == NSDraggingContextWithinApplication ? YES : NO )];
 }
 
 - (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal
