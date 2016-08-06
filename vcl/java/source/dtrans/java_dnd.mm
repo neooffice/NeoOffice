@@ -35,9 +35,6 @@
 
 #include <stdio.h>
 
-#include "java_dnd.hxx"
-#include "java_dndcontext.hxx"
-#include "DTransTransferable.hxx"
 #include <com/sun/star/datatransfer/dnd/DNDConstants.hpp>
 #include <vcl/svapp.hxx>
 #include <vcl/sysdata.hxx>
@@ -46,20 +43,22 @@
 #include <premac.h>
 #import <AppKit/AppKit.h>
 #include <postmac.h>
+#undef check
 
-using namespace com::sun::star::datatransfer;
-using namespace com::sun::star::datatransfer::dnd;
-using namespace com::sun::star::lang;
-using namespace com::sun::star::uno;
+#include "java/salinst.h"
+
+#include "java_dnd.hxx"
+#include "java_dndcontext.hxx"
+#include "DTransTransferable.hxx"
+
+using namespace com::sun::star;
 using namespace cppu;
-using namespace java;
 using namespace osl;
 using namespace rtl;
-using namespace std;
 using namespace vos;
 
-static ::std::list< ::java::JavaDragSource* > aDragSources;
-static ::std::list< ::java::JavaDropTarget* > aDropTargets;
+static ::std::list< JavaDragSource* > aDragSources;
+static ::std::list< JavaDropTarget* > aDropTargets;
 static JavaDragSource *pTrackDragOwner = NULL;
 
 static Point ImplGetPointFromNSPoint( NSPoint aPoint, NSWindow *pWindow );
@@ -617,15 +616,15 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 				pSource->handleDrag( aPos.X(), aPos.Y() );
 
 				// Dispatch drop event
-				DragSourceDropEvent *pDragEvent = new DragSourceDropEvent();
-				pDragEvent->Source = Reference< XInterface >( static_cast< OWeakObject* >( pSource ) );
-				pDragEvent->DragSource = Reference< XDragSource >( pSource );
-				pDragEvent->DragSourceContext = Reference< XDragSourceContext >( new DragSourceContext() );
+				datatransfer::dnd::DragSourceDropEvent *pDragEvent = new datatransfer::dnd::DragSourceDropEvent();
+				pDragEvent->Source = uno::Reference< uno::XInterface >( static_cast< OWeakObject* >( pSource ) );
+				pDragEvent->DragSource = uno::Reference< datatransfer::dnd::XDragSource >( pSource );
+				pDragEvent->DragSourceContext = uno::Reference< datatransfer::dnd::XDragSourceContext >( new JavaDragSourceContext() );
 				pDragEvent->DropAction = ImplGetDropActionFromOperationMask( nOperation, true );
-				pDragEvent->DropSuccess = ( pDragEvent->DropAction == DNDConstants::ACTION_NONE ? sal_False : sal_True );
+				pDragEvent->DropSuccess = ( pDragEvent->DropAction == datatransfer::dnd::DNDConstants::ACTION_NONE ? sal_False : sal_True );
 
 				// Reset cursor to window's VCL pointer
-				ImplSetCursorFromAction( DNDConstants::ACTION_NONE, pTrackDragOwner->mpWindow );
+				ImplSetCursorFromAction( datatransfer::dnd::DNDConstants::ACTION_NONE, pTrackDragOwner->mpWindow );
 
 				// Fix bug 1442 by dispatching and deleting the
 				// DragSourceDropEvent in the VCL event dispatch thread
@@ -753,19 +752,19 @@ static Point ImplGetPointFromNSPoint( NSPoint aPoint, NSWindow *pWindow )
 
 static sal_Int8 ImplGetActionsFromDragOperationMask( NSDragOperation nMask )
 {
-	sal_Int8 nRet = DNDConstants::ACTION_NONE;
+	sal_Int8 nRet = datatransfer::dnd::DNDConstants::ACTION_NONE;
 
 	if ( nMask & ( NSDragOperationCopy | NSDragOperationGeneric ) )
-		nRet |= DNDConstants::ACTION_COPY;
+		nRet |= datatransfer::dnd::DNDConstants::ACTION_COPY;
 	if ( nMask & ( NSDragOperationMove ) )
-		nRet |= DNDConstants::ACTION_MOVE;
+		nRet |= datatransfer::dnd::DNDConstants::ACTION_MOVE;
 	if ( nMask & ( NSDragOperationLink ) )
-		nRet |= DNDConstants::ACTION_LINK;
+		nRet |= datatransfer::dnd::DNDConstants::ACTION_LINK;
 
 	// If more than one action, add default action to signal that the drop
 	// target needs to decide which action to use
-	if ( nRet != DNDConstants::ACTION_NONE && nRet != DNDConstants::ACTION_COPY && nRet != DNDConstants::ACTION_MOVE && nRet != DNDConstants::ACTION_LINK )
-		nRet |= DNDConstants::ACTION_DEFAULT;
+	if ( nRet != datatransfer::dnd::DNDConstants::ACTION_NONE && nRet != datatransfer::dnd::DNDConstants::ACTION_COPY && nRet != datatransfer::dnd::DNDConstants::ACTION_MOVE && nRet != datatransfer::dnd::DNDConstants::ACTION_LINK )
+		nRet |= datatransfer::dnd::DNDConstants::ACTION_DEFAULT;
 
 	return nRet;
 }
@@ -776,11 +775,11 @@ static NSDragOperation ImplGetOperationMaskFromActions( sal_Int8 nActions )
 {
 	NSDragOperation nRet = NSDragOperationNone;
 
-	if ( nActions & DNDConstants::ACTION_COPY )
+	if ( nActions & datatransfer::dnd::DNDConstants::ACTION_COPY )
 		nRet |= NSDragOperationCopy;
-	if ( nActions & DNDConstants::ACTION_MOVE )
+	if ( nActions & datatransfer::dnd::DNDConstants::ACTION_MOVE )
 		nRet |= NSDragOperationMove;
-	if ( nActions & DNDConstants::ACTION_LINK )
+	if ( nActions & datatransfer::dnd::DNDConstants::ACTION_LINK )
 		nRet |= NSDragOperationLink;
 
 	return nRet;
@@ -792,11 +791,11 @@ static NSDragOperation ImplGetOperationFromActions( sal_Int8 nActions )
 {
 	NSDragOperation nRet = NSDragOperationNone;
 
-	if ( nActions & DNDConstants::ACTION_COPY )
+	if ( nActions & datatransfer::dnd::DNDConstants::ACTION_COPY )
 		nRet = NSDragOperationCopy;
-	if ( nActions & DNDConstants::ACTION_MOVE )
+	if ( nActions & datatransfer::dnd::DNDConstants::ACTION_MOVE )
 		nRet = NSDragOperationMove;
-	if ( nActions & DNDConstants::ACTION_LINK )
+	if ( nActions & datatransfer::dnd::DNDConstants::ACTION_LINK )
 		nRet = NSDragOperationLink;
 
 	return nRet;
@@ -806,7 +805,7 @@ static NSDragOperation ImplGetOperationFromActions( sal_Int8 nActions )
 
 static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool bSame )
 {
-	sal_Int8 nRet = DNDConstants::ACTION_NONE;
+	sal_Int8 nRet = datatransfer::dnd::DNDConstants::ACTION_NONE;
 	int nActionCount = 0;
 
 	// When the source and destination are the same, moving is preferred over
@@ -815,17 +814,17 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool 
 	{
 		if ( nMask & NSDragOperationLink )
 		{
-			nRet = DNDConstants::ACTION_LINK;
+			nRet = datatransfer::dnd::DNDConstants::ACTION_LINK;
 			nActionCount++;
 		}
 		if ( nMask & ( NSDragOperationCopy | NSDragOperationGeneric ) )
 		{
-			nRet = DNDConstants::ACTION_COPY;
+			nRet = datatransfer::dnd::DNDConstants::ACTION_COPY;
 			nActionCount++;
 		}
 		if ( nMask & NSDragOperationMove )
 		{
-			nRet = DNDConstants::ACTION_MOVE;
+			nRet = datatransfer::dnd::DNDConstants::ACTION_MOVE;
 			nActionCount++;
 		}
 	}
@@ -833,17 +832,17 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool 
 	{
 		if ( nMask & NSDragOperationLink )
 		{
-			nRet = DNDConstants::ACTION_LINK;
+			nRet = datatransfer::dnd::DNDConstants::ACTION_LINK;
 			nActionCount++;
 		}
 		if ( nMask & NSDragOperationMove )
 		{
-			nRet = DNDConstants::ACTION_MOVE;
+			nRet = datatransfer::dnd::DNDConstants::ACTION_MOVE;
 			nActionCount++;
 		}
 		if ( nMask & ( NSDragOperationCopy | NSDragOperationGeneric ) )
 		{
-			nRet = DNDConstants::ACTION_COPY;
+			nRet = datatransfer::dnd::DNDConstants::ACTION_COPY;
 			nActionCount++;
 		}
 	}
@@ -851,7 +850,7 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool 
 	// If more than one action, add default action to signal that the drop
 	// target needs to decide which action to use
 	if ( nActionCount > 1 )
-		nRet |= DNDConstants::ACTION_DEFAULT;
+		nRet |= datatransfer::dnd::DNDConstants::ACTION_DEFAULT;
 
 	return nRet;
 }
@@ -862,8 +861,8 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow )
 {
 	bool bSet = false;
 
-	nAction &= ~DNDConstants::ACTION_DEFAULT;
-	if ( nAction == DNDConstants::ACTION_NONE )
+	nAction &= ~datatransfer::dnd::DNDConstants::ACTION_DEFAULT;
+	if ( nAction == datatransfer::dnd::DNDConstants::ACTION_NONE )
 	{
 		// Reset the pointer to the last pointer set in VCL window
 		if ( pWindow && pWindow->IsVisible() )
@@ -879,7 +878,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow )
 			bSet = true;
 		}
 	}
-	else if ( nAction == DNDConstants::ACTION_MOVE )
+	else if ( nAction == datatransfer::dnd::DNDConstants::ACTION_MOVE )
 	{
 		NSCursor *pCursor = [NSCursor closedHandCursor];
 		if ( pCursor )
@@ -888,7 +887,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow )
 			bSet = true;
 		}
 	}
-	else if ( nAction == DNDConstants::ACTION_COPY )
+	else if ( nAction == datatransfer::dnd::DNDConstants::ACTION_COPY )
 	{
 		NSCursor *pCursor = [NSCursor dragCopyCursor];
 		if ( pCursor )
@@ -897,7 +896,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow )
 			bSet = true;
 		}
 	}
-	else if ( nAction == DNDConstants::ACTION_LINK )
+	else if ( nAction == datatransfer::dnd::DNDConstants::ACTION_LINK )
 	{
 		NSCursor *pCursor = [NSCursor dragLinkCursor];
 		if ( pCursor )
@@ -917,48 +916,27 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow )
 
 // ========================================================================
 
-namespace java
+static uno::Sequence< OUString > JavaDragSource_getSupportedServiceNames()
 {
-
-Sequence< OUString > SAL_CALL JavaDragSource_getSupportedServiceNames()
-{
-    Sequence< OUString > aRet( 1 );
+    uno::Sequence< OUString > aRet( 1 );
     aRet[0] = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.OleDragSource" );
     return aRet;
 }
  
 // ------------------------------------------------------------------------
  
-Reference< XInterface > SAL_CALL JavaDragSource_createInstance( const Reference<
-XMultiServiceFactory >& /* xMultiServiceFactory */ )
+static uno::Sequence< OUString > JavaDropTarget_getSupportedServiceNames()
 {
-	return Reference< XInterface >( static_cast< OWeakObject* >( new JavaDragSource() ) );
-}
-
-// ------------------------------------------------------------------------
-  
-Sequence< OUString > SAL_CALL JavaDropTarget_getSupportedServiceNames()
-{
-    Sequence< OUString > aRet( 1 );
+    uno::Sequence< OUString > aRet( 1 );
     aRet[0] = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.OleDropTarget" );
     return aRet;
 }
  
-// ------------------------------------------------------------------------
- 
-Reference< XInterface > SAL_CALL JavaDropTarget_createInstance( const Reference<
-XMultiServiceFactory >& /* xMultiServiceFactory */ )
-{
-	return Reference< XInterface >( static_cast< OWeakObject* >( new JavaDropTarget() ) );
-}
-
-}
-
 // ========================================================================
 
 IMPL_STATIC_LINK( JavaDragSource, dragDropEnd, void*, pData )
 {
-	DragSourceDropEvent *pDragEvent = (DragSourceDropEvent *)pData;
+	datatransfer::dnd::DragSourceDropEvent *pDragEvent = (datatransfer::dnd::DragSourceDropEvent *)pData;
 
 	if ( pDragEvent )
 	{
@@ -966,7 +944,7 @@ IMPL_STATIC_LINK( JavaDragSource, dragDropEnd, void*, pData )
 
 		if ( pSource && pTrackDragOwner == pSource )
 		{
-			Reference< XDragSourceListener > xListener( pSource->maListener );
+			uno::Reference< datatransfer::dnd::XDragSourceListener > xListener( pSource->maListener );
 			if ( xListener.is() )
 				xListener->dragDropEnd( *pDragEvent );
 
@@ -982,8 +960,8 @@ IMPL_STATIC_LINK( JavaDragSource, dragDropEnd, void*, pData )
 // ------------------------------------------------------------------------
 
 JavaDragSource::JavaDragSource() :
-	WeakComponentImplHelper3< XDragSource, XInitialization, XServiceInfo >( maMutex ),
-	mnActions( DNDConstants::ACTION_NONE ),
+	WeakComponentImplHelper3< datatransfer::dnd::XDragSource, lang::XInitialization, lang::XServiceInfo >( maMutex ),
+	mnActions( datatransfer::dnd::DNDConstants::ACTION_NONE ),
 	mpDraggingSource( nil ),
 	mpPasteboardHelper( nil ),
 	mpWindow( NULL )
@@ -1014,7 +992,7 @@ JavaDragSource::~JavaDragSource()
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaDragSource::initialize( const Sequence< Any >& arguments ) throw( RuntimeException )
+void JavaDragSource::initialize( const uno::Sequence< uno::Any >& arguments ) throw( uno::RuntimeException )
 {
 	NSView *pView = nil;
 	if ( arguments.getLength() > 1 )
@@ -1029,7 +1007,7 @@ void SAL_CALL JavaDragSource::initialize( const Sequence< Any >& arguments ) thr
 	}
 
 	if ( !pView || !mpWindow )
-		throw RuntimeException();
+		throw uno::RuntimeException();
 
 	aDragSources.push_back( this );
 
@@ -1051,27 +1029,27 @@ void SAL_CALL JavaDragSource::initialize( const Sequence< Any >& arguments ) thr
 
 // ------------------------------------------------------------------------
 
-sal_Bool SAL_CALL JavaDragSource::isDragImageSupported() throw( com::sun::star::uno::RuntimeException )
+sal_Bool JavaDragSource::isDragImageSupported() throw( uno::RuntimeException )
 {
 	return sal_False;
 }
 
 // ------------------------------------------------------------------------
 
-sal_Int32 SAL_CALL JavaDragSource::getDefaultCursor( sal_Int8 /* dragAction */ ) throw( com::sun::star::lang::IllegalArgumentException, com::sun::star::uno::RuntimeException )
+sal_Int32 JavaDragSource::getDefaultCursor( sal_Int8 /* dragAction */ ) throw( lang::IllegalArgumentException, uno::RuntimeException )
 {
 	return 0;
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& /* trigger */, sal_Int8 sourceActions, sal_Int32 /* cursor */, sal_Int32 /* image */, const Reference< XTransferable >& transferable, const Reference< XDragSourceListener >& listener ) throw( com::sun::star::uno::RuntimeException )
+void JavaDragSource::startDrag( const datatransfer::dnd::DragGestureEvent& /* trigger */, sal_Int8 sourceActions, sal_Int32 /* cursor */, sal_Int32 /* image */, const uno::Reference< datatransfer::XTransferable >& transferable, const uno::Reference< datatransfer::dnd::XDragSourceListener >& listener ) throw( uno::RuntimeException )
 {
-	DragSourceDropEvent aDragEvent;
-	aDragEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
-	aDragEvent.DragSource = Reference< XDragSource >( this );
-	aDragEvent.DragSourceContext = Reference< XDragSourceContext >( new DragSourceContext() );
-	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
+	datatransfer::dnd::DragSourceDropEvent aDragEvent;
+	aDragEvent.Source = uno::Reference< uno::XInterface >( static_cast< OWeakObject* >( this ) );
+	aDragEvent.DragSource = uno::Reference< datatransfer::dnd::XDragSource >( this );
+	aDragEvent.DragSourceContext = uno::Reference< datatransfer::dnd::XDragSourceContext >( new JavaDragSourceContext() );
+	aDragEvent.DropAction = datatransfer::dnd::DNDConstants::ACTION_NONE;
 	aDragEvent.DropSuccess = sal_False;
 
 	if ( pTrackDragOwner )
@@ -1114,7 +1092,7 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& /* trigger */, 
 
 	if ( !bDragStarted )
 	{
-		mnActions = DNDConstants::ACTION_NONE;
+		mnActions = datatransfer::dnd::DNDConstants::ACTION_NONE;
 		maContents.clear();
 		maListener.clear();
 
@@ -1125,16 +1103,16 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& /* trigger */, 
 
 // ------------------------------------------------------------------------
 
-OUString SAL_CALL JavaDragSource::getImplementationName() throw( RuntimeException )
+OUString JavaDragSource::getImplementationName() throw( uno::RuntimeException )
 {
 	return OUString::createFromAscii( "com.sun.star.datatransfer.dnd.JavaDragSource" );
 }
 
 // ------------------------------------------------------------------------
 
-sal_Bool SAL_CALL JavaDragSource::supportsService( const OUString& serviceName ) throw( RuntimeException )
+sal_Bool JavaDragSource::supportsService( const OUString& serviceName ) throw( uno::RuntimeException )
 {
-	Sequence < OUString > aSupportedServicesNames = JavaDragSource_getSupportedServiceNames();
+	uno::Sequence < OUString > aSupportedServicesNames = JavaDragSource_getSupportedServiceNames();
 
 	for ( sal_Int32 n = aSupportedServicesNames.getLength(); n--; )
 		if ( aSupportedServicesNames[n].compareTo(serviceName) == 0 )
@@ -1145,7 +1123,7 @@ sal_Bool SAL_CALL JavaDragSource::supportsService( const OUString& serviceName )
 
 // ------------------------------------------------------------------------
 
-Sequence< OUString > SAL_CALL JavaDragSource::getSupportedServiceNames() throw( RuntimeException )
+uno::Sequence< OUString > JavaDragSource::getSupportedServiceNames() throw( uno::RuntimeException )
 {
 	return JavaDragSource_getSupportedServiceNames();
 }
@@ -1161,13 +1139,13 @@ NSView *JavaDragSource::getNSView()
 
 void JavaDragSource::handleDrag( sal_Int32 /* nX */, sal_Int32 /* nY */ )
 {
-	DragSourceDragEvent aSourceDragEvent;
-	aSourceDragEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
-	aSourceDragEvent.DragSource = Reference< XDragSource >( this );
+	datatransfer::dnd::DragSourceDragEvent aSourceDragEvent;
+	aSourceDragEvent.Source = uno::Reference< uno::XInterface >( static_cast< OWeakObject* >( this ) );
+	aSourceDragEvent.DragSource = uno::Reference< datatransfer::dnd::XDragSource >( this );
 	aSourceDragEvent.DropAction = mnActions;
 	aSourceDragEvent.UserAction = ImplGetDropActionFromOperationMask( ImplGetOperationMaskFromActions( mnActions ), true );
 
-	Reference< XDragSourceListener > xListener( maListener );
+	uno::Reference< datatransfer::dnd::XDragSourceListener > xListener( maListener );
 
 	// Send source drag event
 	if ( xListener.is() )
@@ -1177,9 +1155,9 @@ void JavaDragSource::handleDrag( sal_Int32 /* nX */, sal_Int32 /* nY */ )
 // ========================================================================
 
 JavaDropTarget::JavaDropTarget() :
-	WeakComponentImplHelper3< XDropTarget, XInitialization, XServiceInfo >( maMutex ),
+	WeakComponentImplHelper3< datatransfer::dnd::XDropTarget, lang::XInitialization, lang::XServiceInfo >( maMutex ),
 	mbActive( sal_True ),
-	mnDefaultActions( DNDConstants::ACTION_NONE ),
+	mnDefaultActions( datatransfer::dnd::DNDConstants::ACTION_NONE ),
 	mpPasteboardHelper( nil ),
 	mbRejected( false ),
 	mpWindow( NULL )
@@ -1217,7 +1195,7 @@ void JavaDropTarget::disposing()
 
 // --------------------------------------------------------------------------
 
-void SAL_CALL JavaDropTarget::initialize( const Sequence< Any >& arguments ) throw( RuntimeException )
+void JavaDropTarget::initialize( const uno::Sequence< uno::Any >& arguments ) throw( uno::RuntimeException )
 {
 	NSView *pView = nil;
 
@@ -1233,7 +1211,7 @@ void SAL_CALL JavaDropTarget::initialize( const Sequence< Any >& arguments ) thr
 	}
 
 	if ( !pView || !mpWindow )
-		throw RuntimeException();
+		throw uno::RuntimeException();
 
 	aDropTargets.push_back( this );
 
@@ -1255,49 +1233,49 @@ void SAL_CALL JavaDropTarget::initialize( const Sequence< Any >& arguments ) thr
 
 // --------------------------------------------------------------------------
 
-void SAL_CALL JavaDropTarget::addDropTargetListener( const Reference< XDropTargetListener >& xListener ) throw( ::com::sun::star::uno::RuntimeException )
+void JavaDropTarget::addDropTargetListener( const uno::Reference< datatransfer::dnd::XDropTargetListener >& xListener ) throw( uno::RuntimeException )
 {
 	maListeners.push_back( xListener );
 }
 
 // --------------------------------------------------------------------------
 
-void SAL_CALL JavaDropTarget::removeDropTargetListener( const Reference< XDropTargetListener >& xListener ) throw( ::com::sun::star::uno::RuntimeException )
+void JavaDropTarget::removeDropTargetListener( const uno::Reference< datatransfer::dnd::XDropTargetListener >& xListener ) throw( uno::RuntimeException )
 {
 	maListeners.remove( xListener );
 }
 
 // --------------------------------------------------------------------------
 
-sal_Bool SAL_CALL JavaDropTarget::isActive() throw( ::com::sun::star::uno::RuntimeException )
+sal_Bool JavaDropTarget::isActive() throw( uno::RuntimeException )
 {
 	return mbActive;
 }
 
 // --------------------------------------------------------------------------
 
-void SAL_CALL JavaDropTarget::setActive( sal_Bool active ) throw( ::com::sun::star::uno::RuntimeException )
+void JavaDropTarget::setActive( sal_Bool active ) throw( uno::RuntimeException )
 {
 	mbActive = active;
 }
 
 // --------------------------------------------------------------------------
 
-sal_Int8 SAL_CALL JavaDropTarget::getDefaultActions() throw( ::com::sun::star::uno::RuntimeException )
+sal_Int8 JavaDropTarget::getDefaultActions() throw( uno::RuntimeException )
 {
 	return mnDefaultActions;
 }
 
 // --------------------------------------------------------------------------
 
-void SAL_CALL JavaDropTarget::setDefaultActions( sal_Int8 actions ) throw( ::com::sun::star::uno::RuntimeException )
+void JavaDropTarget::setDefaultActions( sal_Int8 actions ) throw( uno::RuntimeException )
 {
 	mnDefaultActions = actions;
 }
 
 // --------------------------------------------------------------------------
 
-OUString SAL_CALL JavaDropTarget::getImplementationName() throw( RuntimeException )
+OUString JavaDropTarget::getImplementationName() throw( uno::RuntimeException )
 {
 	return OUString::createFromAscii( "com.sun.star.datatransfer.dnd.JavaDropTarget"
  );
@@ -1305,9 +1283,9 @@ OUString SAL_CALL JavaDropTarget::getImplementationName() throw( RuntimeExceptio
 
 // ------------------------------------------------------------------------
 
-sal_Bool SAL_CALL JavaDropTarget::supportsService( const OUString& ServiceName ) throw( RuntimeException )
+sal_Bool JavaDropTarget::supportsService( const OUString& ServiceName ) throw( uno::RuntimeException )
 {
-	Sequence < OUString > aSupportedServicesNames = JavaDropTarget_getSupportedServiceNames();
+	uno::Sequence < OUString > aSupportedServicesNames = JavaDropTarget_getSupportedServiceNames();
 
 	for ( sal_Int32 n = aSupportedServicesNames.getLength(); n--; )
 		if ( aSupportedServicesNames[n].compareTo(ServiceName) == 0 )
@@ -1318,7 +1296,7 @@ sal_Bool SAL_CALL JavaDropTarget::supportsService( const OUString& ServiceName )
 
 // ------------------------------------------------------------------------
 
-Sequence< OUString > SAL_CALL JavaDropTarget::getSupportedServiceNames() throw( RuntimeException )
+uno::Sequence< OUString > JavaDropTarget::getSupportedServiceNames() throw( uno::RuntimeException )
 {
 	return JavaDropTarget_getSupportedServiceNames();
 }
@@ -1337,14 +1315,14 @@ sal_Int8 JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	mbRejected = false;
 
 	if ( !aInfo || ![aInfo conformsToProtocol:@protocol(NSDraggingInfo)] )
-		return DNDConstants::ACTION_NONE;
+		return datatransfer::dnd::DNDConstants::ACTION_NONE;
 
 	NSPasteboard *pPasteboard = [aInfo draggingPasteboard];
 	if ( !pPasteboard )
-		return DNDConstants::ACTION_NONE;
+		return datatransfer::dnd::DNDConstants::ACTION_NONE;
 
-	DropTargetDragEnterEvent aDragEnterEvent;
-	aDragEnterEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
+	datatransfer::dnd::DropTargetDragEnterEvent aDragEnterEvent;
+	aDragEnterEvent.Source = uno::Reference< uno::XInterface >( static_cast< OWeakObject* >( this ) );
 	aDragEnterEvent.LocationX = nX;
 	aDragEnterEvent.LocationY = nY;
 
@@ -1371,12 +1349,12 @@ sal_Int8 JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	// Set the cursor
 	ImplSetCursorFromAction( aDragEnterEvent.DropAction, mpWindow );
 
-	DropTargetDragContext *pContext = new DropTargetDragContext( aDragEnterEvent.DropAction );
-	aDragEnterEvent.Context = Reference< XDropTargetDragContext >( pContext );
+	JavaDropTargetDragContext *pContext = new JavaDropTargetDragContext( aDragEnterEvent.DropAction );
+	aDragEnterEvent.Context = uno::Reference< datatransfer::dnd::XDropTargetDragContext >( pContext );
 
-	list< Reference< XDropTargetListener > > listeners( maListeners );
+	::std::list< uno::Reference< datatransfer::dnd::XDropTargetListener > > listeners( maListeners );
 
-	for ( list< Reference< XDropTargetListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
+	for ( ::std::list< uno::Reference< datatransfer::dnd::XDropTargetListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
 	{
 		if ( (*it).is() )
 			(*it)->dragEnter( aDragEnterEvent );
@@ -1387,7 +1365,7 @@ sal_Int8 JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, id aInfo )
 
 	mbRejected = pContext->isRejected();
 	if ( mbRejected )
-		return DNDConstants::ACTION_NONE;
+		return datatransfer::dnd::DNDConstants::ACTION_NONE;
 	else
 		return aDragEnterEvent.DropAction;
 }
@@ -1403,8 +1381,8 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	if ( !pPasteboard )
 		return;
 
-	DropTargetDragEvent aDragEvent;
-	aDragEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
+	datatransfer::dnd::DropTargetDragEvent aDragEvent;
+	aDragEvent.Source = uno::Reference< uno::XInterface >( static_cast< OWeakObject* >( this ) );
 	aDragEvent.LocationX = nX;
 	aDragEvent.LocationY = nY;
 
@@ -1423,12 +1401,12 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	// Set the cursor
 	ImplSetCursorFromAction( aDragEvent.DropAction, mpWindow );
 
-	DropTargetDragContext *pContext = new DropTargetDragContext( aDragEvent.DropAction );
-	aDragEvent.Context = Reference< XDropTargetDragContext >( pContext );
+	JavaDropTargetDragContext *pContext = new JavaDropTargetDragContext( aDragEvent.DropAction );
+	aDragEvent.Context = uno::Reference< datatransfer::dnd::XDropTargetDragContext >( pContext );
 
-	list< Reference< XDropTargetListener > > listeners( maListeners );
+	::std::list< uno::Reference< datatransfer::dnd::XDropTargetListener > > listeners( maListeners );
 
-	for ( list< Reference< XDropTargetListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
+	for ( ::std::list< uno::Reference< datatransfer::dnd::XDropTargetListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
 	{
 		if ( (*it).is() )
 			(*it)->dragExit( aDragEvent );
@@ -1443,14 +1421,14 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, id aInfo )
 sal_Int8 JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, id aInfo )
 {
 	if ( !aInfo || ![aInfo conformsToProtocol:@protocol(NSDraggingInfo)] )
-		return DNDConstants::ACTION_NONE;
+		return datatransfer::dnd::DNDConstants::ACTION_NONE;
 
 	NSPasteboard *pPasteboard = [aInfo draggingPasteboard];
 	if ( !pPasteboard )
-		return DNDConstants::ACTION_NONE;
+		return datatransfer::dnd::DNDConstants::ACTION_NONE;
 
-	DropTargetDragEvent aDragEvent;
-	aDragEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
+	datatransfer::dnd::DropTargetDragEvent aDragEvent;
+	aDragEvent.Source = uno::Reference< uno::XInterface >( static_cast< OWeakObject* >( this ) );
 	aDragEvent.LocationX = nX;
 	aDragEvent.LocationY = nY;
 
@@ -1469,12 +1447,12 @@ sal_Int8 JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	// Set the cursor
 	ImplSetCursorFromAction( aDragEvent.DropAction, mpWindow );
 
-	DropTargetDragContext *pContext = new DropTargetDragContext( aDragEvent.DropAction );
-	aDragEvent.Context = Reference< XDropTargetDragContext >( pContext );
+	JavaDropTargetDragContext *pContext = new JavaDropTargetDragContext( aDragEvent.DropAction );
+	aDragEvent.Context = uno::Reference< datatransfer::dnd::XDropTargetDragContext >( pContext );
 
-	list< Reference< XDropTargetListener > > listeners( maListeners );
+	::std::list< uno::Reference< datatransfer::dnd::XDropTargetListener > > listeners( maListeners );
 
-	for ( list< Reference< XDropTargetListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
+	for ( ::std::list< uno::Reference< datatransfer::dnd::XDropTargetListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
 	{
 		if ( (*it).is() )
 			(*it)->dragOver( aDragEvent );
@@ -1485,7 +1463,7 @@ sal_Int8 JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, id aInfo )
 
 	mbRejected = pContext->isRejected();
 	if ( mbRejected )
-		return DNDConstants::ACTION_NONE;
+		return datatransfer::dnd::DNDConstants::ACTION_NONE;
 	else
 		return aDragEvent.DropAction;
 }
@@ -1503,8 +1481,8 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	if ( !pPasteboard )
 		return bRet;
 
-	DropTargetDropEvent aDropEvent;
-	aDropEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
+	datatransfer::dnd::DropTargetDropEvent aDropEvent;
+	aDropEvent.Source = uno::Reference< uno::XInterface >( static_cast< OWeakObject* >( this ) );
 	aDropEvent.LocationX = nX;
 	aDropEvent.LocationY = nY;
 
@@ -1522,15 +1500,15 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo )
 
 		DTransTransferable *pTransferable = new DTransTransferable( [pPasteboard name] );
 		if ( pTransferable )
-			aDropEvent.Transferable = Reference< XTransferable >( pTransferable );
+			aDropEvent.Transferable = uno::Reference< datatransfer::XTransferable >( pTransferable );
 	}
 
-	DropTargetDropContext *pContext = new DropTargetDropContext( aDropEvent.DropAction );
-	aDropEvent.Context = Reference< XDropTargetDropContext >( pContext );
+	JavaDropTargetDropContext *pContext = new JavaDropTargetDropContext( aDropEvent.DropAction );
+	aDropEvent.Context = uno::Reference< datatransfer::dnd::XDropTargetDropContext >( pContext );
 
-	list< Reference< XDropTargetListener > > listeners( maListeners );
+	::std::list< uno::Reference< datatransfer::dnd::XDropTargetListener > > listeners( maListeners );
 
-	for ( list< Reference< XDropTargetListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
+	for ( ::std::list< uno::Reference< datatransfer::dnd::XDropTargetListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
 	{
 		if ( (*it).is() )
 			(*it)->drop( aDropEvent );
@@ -1547,4 +1525,18 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	bRet = ( !mbRejected && pContext->getDropComplete() );
 
 	return bRet;
+}
+
+// ========================================================================
+
+uno::Reference< uno::XInterface > JavaSalInstance::CreateDragSource()
+{
+	return uno::Reference< uno::XInterface >( static_cast< lang::XInitialization* >( new JavaDragSource() ) );
+}
+
+// ------------------------------------------------------------------------
+
+uno::Reference< uno::XInterface > JavaSalInstance::CreateDropTarget()
+{
+	return uno::Reference< uno::XInterface >( static_cast< lang::XInitialization* >( new JavaDropTarget() ) );
 }

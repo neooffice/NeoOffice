@@ -36,11 +36,7 @@
 #ifndef _DTRANSCLIPBOARD_HXX
 #define	_DTRANSCLIPBOARD_HXX
 
-#ifndef _DTRANSTRANSFERABLE_HXX
 #include "DTransTransferable.hxx"
-#endif
-
-namespace java {
 
 class DTransClipboard
 {
@@ -50,7 +46,5 @@ public:
 
 						DTransClipboard() {};
 };
-
-} // namespace java
 
 #endif // _DTRANSCLIPBOARD_HXX

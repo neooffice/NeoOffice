@@ -49,12 +49,10 @@
 #include <com/sun/star/datatransfer/clipboard/XClipboardNotifier.hpp>
 #include <com/sun/star/datatransfer/clipboard/XFlushableClipboard.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
-
 #include <rtl/ustring.hxx>
 #include <sal/types.h>
-#include "DTransClipboard.hxx"
 
-namespace java {
+#include "DTransClipboard.hxx"
 
 class JavaClipboard : public ::cppu::WeakComponentImplHelper4< ::com::sun::star::datatransfer::clipboard::XClipboardEx, ::com::sun::star::datatransfer::clipboard::XFlushableClipboard, ::com::sun::star::datatransfer::clipboard::XClipboardNotifier, ::com::sun::star::lang::XServiceInfo >
 {
@@ -68,7 +66,7 @@ class JavaClipboard : public ::cppu::WeakComponentImplHelper4< ::com::sun::star:
 	sal_Bool				mbPrivateClipboard;
 
 public:
-							JavaClipboard( bool bSystemClipboard );
+							JavaClipboard( bool bSystemClipboard = true );
 	virtual					~JavaClipboard();
 
     virtual void			SAL_CALL flushClipboard( ) throw( ::com::sun::star::uno::RuntimeException );
@@ -85,21 +83,5 @@ public:
 
 	void					setPrivateClipboard( sal_Bool bPrivateClipboard );
 };
-
-class JavaClipboardFactory : public ::cppu::WeakComponentImplHelper1< ::com::sun::star::lang::XSingleServiceFactory >
-{
-	::std::hash_map< ::rtl::OUString, ::com::sun::star::uno::Reference< XInterface >, ::rtl::OUStringHash >	maInstances;
-	::osl::Mutex maMutex;
-
-public:
-							JavaClipboardFactory();
-	virtual					~JavaClipboardFactory();
-
-	virtual ::com::sun::star::uno::Reference< XInterface >	SAL_CALL createInstance() throw();
-	virtual ::com::sun::star::uno::Reference< XInterface >	SAL_CALL createInstanceWithArguments( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& rArgs ) throw();
-};
-
-::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL JavaClipboard_getSupportedServiceNames();
-}
 
 #endif

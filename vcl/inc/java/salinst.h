@@ -125,6 +125,9 @@ public:
 	virtual void			DestroyMenuItem( SalMenuItem* pItem );
 	virtual SalSession*		CreateSalSession();
 	virtual void*			GetConnectionIdentifier( ConnectionIdentifierType& rReturnedType, int& rReturnedBytes );
+    virtual com::sun::star::uno::Reference< com::sun::star::uno::XInterface >	CreateClipboard( const com::sun::star::uno::Sequence< com::sun::star::uno::Any >& rArguments );
+    virtual com::sun::star::uno::Reference< com::sun::star::uno::XInterface >	CreateDragSource();
+    virtual com::sun::star::uno::Reference< com::sun::star::uno::XInterface >	CreateDropTarget();
 	virtual void			AddToRecentDocumentList( const rtl::OUString& rFileUrl, const rtl::OUString& rMimeType );
 };
 

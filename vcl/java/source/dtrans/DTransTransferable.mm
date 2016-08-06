@@ -36,18 +36,11 @@
 #include <list>
 #include <mach-o/dyld.h>
 
-#ifndef _DTRANSCLIPBOARD_HXX
-#include "DTransClipboard.hxx"
-#endif
-#ifndef _DTRANSTRANSFERABLE_HXX
-#include "DTransTransferable.hxx"
-#endif
-#ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
-#endif
-#ifndef _VOS_MUTEX_HXX_
 #include <vos/mutex.hxx>
-#endif
+
+#include "DTransClipboard.hxx"
+#include "DTransTransferable.hxx"
 
 #include "HtmlFmtFlt.hxx"
 
@@ -63,14 +56,13 @@
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::io;
 using namespace com::sun::star::uno;
-using namespace java;
 using namespace rtl;
 using namespace vcl;
 using namespace vos;
 
 const NSString *kNeoOfficeInternalPboardType = @"NeoOfficeInternalPboardType";
 
-static UInt32 nSupportedTypes = 8;
+static sal_uInt16 nSupportedTypes = 8;
 
 // List of supported native type symbol names in priority order. The first
 // item on each line is the deprecated symbol name, the second item is the most

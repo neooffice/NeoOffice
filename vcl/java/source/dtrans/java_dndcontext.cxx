@@ -36,70 +36,66 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#ifndef _DTRANS_JAVA_DNDCONTEXT_HXX
-#include "java_dndcontext.hxx"
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_DND_DNDCONSTANTS_HPP_
 #include <com/sun/star/datatransfer/dnd/DNDConstants.hpp>
-#endif
 
-using namespace com::sun::star::datatransfer::dnd;
+#include "java_dndcontext.hxx"
+
+using namespace com::sun::star;
 using namespace cppu;
-using namespace java;
 
 // ========================================================================
 
-DragSourceContext::DragSourceContext() :
+JavaDragSourceContext::JavaDragSourceContext() :
 	WeakImplHelper1< XDragSourceContext >()
 {
 }
 
 // ------------------------------------------------------------------------
 
-DragSourceContext::~DragSourceContext()
+JavaDragSourceContext::~JavaDragSourceContext()
 {
 }
 
 // ------------------------------------------------------------------------
 
-sal_Int32 SAL_CALL DragSourceContext::getCurrentCursor() throw( ::com::sun::star::uno::RuntimeException )
+sal_Int32 SAL_CALL JavaDragSourceContext::getCurrentCursor() throw( ::com::sun::star::uno::RuntimeException )
 {
 #ifdef DEBUG
-	fprintf( stderr, "DragSourceContext::getCurrentCursor not implemented\n" );
+	fprintf( stderr, "JavaDragSourceContext::getCurrentCursor not implemented\n" );
 #endif
 	return 0;
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL DragSourceContext::setCursor( sal_Int32 /* cursorId */ ) throw( ::com::sun::star::uno::RuntimeException )
+void SAL_CALL JavaDragSourceContext::setCursor( sal_Int32 /* cursorId */ ) throw( ::com::sun::star::uno::RuntimeException )
 {
 #ifdef DEBUG
-	fprintf( stderr, "DragSourceContext::setCursor not implemented\n" );
+	fprintf( stderr, "JavaDragSourceContext::setCursor not implemented\n" );
 #endif
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL DragSourceContext::setImage( sal_Int32 /* imageId */ ) throw( ::com::sun::star::uno::RuntimeException )
+void SAL_CALL JavaDragSourceContext::setImage( sal_Int32 /* imageId */ ) throw( ::com::sun::star::uno::RuntimeException )
 {
 #ifdef DEBUG
-	fprintf( stderr, "DragSourceContext::setImage not implemented\n" );
+	fprintf( stderr, "JavaDragSourceContext::setImage not implemented\n" );
 #endif
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL DragSourceContext::transferablesFlavorsChanged() throw( ::com::sun::star::uno::RuntimeException )
+void SAL_CALL JavaDragSourceContext::transferablesFlavorsChanged() throw( ::com::sun::star::uno::RuntimeException )
 {
 #ifdef DEBUG
-	fprintf( stderr, "DragSourceContext::transferablesFlavorsChanged not implemented\n" );
+	fprintf( stderr, "JavaDragSourceContext::transferablesFlavorsChanged not implemented\n" );
 #endif
 }
 
 // ========================================================================
 
-DropTargetDropContext::DropTargetDropContext( sal_Int8 nAction ) :
+JavaDropTargetDropContext::JavaDropTargetDropContext( sal_Int8 nAction ) :
 	WeakImplHelper1< XDropTargetDropContext >(),
 	mnAction( nAction ),
 	mbRejected( false ),
@@ -109,34 +105,34 @@ DropTargetDropContext::DropTargetDropContext( sal_Int8 nAction ) :
 
 // ------------------------------------------------------------------------
 
-DropTargetDropContext::~DropTargetDropContext()
+JavaDropTargetDropContext::~JavaDropTargetDropContext()
 {
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL DropTargetDropContext::acceptDrop( sal_Int8 dragOperation ) throw( ::com::sun::star::uno::RuntimeException )
+void SAL_CALL JavaDropTargetDropContext::acceptDrop( sal_Int8 dragOperation ) throw( ::com::sun::star::uno::RuntimeException )
 {
-	mnAction &= DNDConstants::ACTION_DEFAULT;
+	mnAction &= datatransfer::dnd::DNDConstants::ACTION_DEFAULT;
 
-	if ( dragOperation & DNDConstants::ACTION_MOVE )
-		mnAction |= DNDConstants::ACTION_MOVE;
-	else if ( dragOperation & DNDConstants::ACTION_COPY )
-		mnAction |= DNDConstants::ACTION_COPY;
-	else if ( dragOperation & DNDConstants::ACTION_LINK )
-		mnAction |= DNDConstants::ACTION_LINK;
+	if ( dragOperation & datatransfer::dnd::DNDConstants::ACTION_MOVE )
+		mnAction |= datatransfer::dnd::DNDConstants::ACTION_MOVE;
+	else if ( dragOperation & datatransfer::dnd::DNDConstants::ACTION_COPY )
+		mnAction |= datatransfer::dnd::DNDConstants::ACTION_COPY;
+	else if ( dragOperation & datatransfer::dnd::DNDConstants::ACTION_LINK )
+		mnAction |= datatransfer::dnd::DNDConstants::ACTION_LINK;
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL DropTargetDropContext::rejectDrop() throw( ::com::sun::star::uno::RuntimeException )
+void SAL_CALL JavaDropTargetDropContext::rejectDrop() throw( ::com::sun::star::uno::RuntimeException )
 {
 	mbRejected = true;
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL DropTargetDropContext::dropComplete( sal_Bool success ) throw( ::com::sun::star::uno::RuntimeException )
+void SAL_CALL JavaDropTargetDropContext::dropComplete( sal_Bool success ) throw( ::com::sun::star::uno::RuntimeException )
 {
 	// Multiple listeners may call this method so don't reset when false
 	if ( !mbRejected && success )
@@ -145,21 +141,21 @@ void SAL_CALL DropTargetDropContext::dropComplete( sal_Bool success ) throw( ::c
 
 // ------------------------------------------------------------------------
 
-bool DropTargetDropContext::getDropComplete()
+bool JavaDropTargetDropContext::getDropComplete()
 {
 	return mbSuccess;
 }
 
 // ------------------------------------------------------------------------
 
-bool DropTargetDropContext::isRejected()
+bool JavaDropTargetDropContext::isRejected()
 {
 	return mbRejected;
 }
 
 // ========================================================================
 
-DropTargetDragContext::DropTargetDragContext( sal_Int8 nAction ) :
+JavaDropTargetDragContext::JavaDropTargetDragContext( sal_Int8 nAction ) :
 	WeakImplHelper1< XDropTargetDragContext >(),
 	mnAction( nAction ),
 	mbRejected( false )
@@ -168,34 +164,34 @@ DropTargetDragContext::DropTargetDragContext( sal_Int8 nAction ) :
 
 // ------------------------------------------------------------------------
 
-DropTargetDragContext::~DropTargetDragContext()
+JavaDropTargetDragContext::~JavaDropTargetDragContext()
 {
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL DropTargetDragContext::acceptDrag( sal_Int8 dragOperation ) throw( ::com::sun::star::uno::RuntimeException )
+void SAL_CALL JavaDropTargetDragContext::acceptDrag( sal_Int8 dragOperation ) throw( ::com::sun::star::uno::RuntimeException )
 {
-	mnAction &= DNDConstants::ACTION_DEFAULT;
+	mnAction &= datatransfer::dnd::DNDConstants::ACTION_DEFAULT;
 
-	if ( dragOperation & DNDConstants::ACTION_MOVE )
-		mnAction |= DNDConstants::ACTION_MOVE;
-	else if ( dragOperation & DNDConstants::ACTION_COPY )
-		mnAction |= DNDConstants::ACTION_COPY;
-	else if ( dragOperation & DNDConstants::ACTION_LINK )
-		mnAction |= DNDConstants::ACTION_LINK;
+	if ( dragOperation & datatransfer::dnd::DNDConstants::ACTION_MOVE )
+		mnAction |= datatransfer::dnd::DNDConstants::ACTION_MOVE;
+	else if ( dragOperation & datatransfer::dnd::DNDConstants::ACTION_COPY )
+		mnAction |= datatransfer::dnd::DNDConstants::ACTION_COPY;
+	else if ( dragOperation & datatransfer::dnd::DNDConstants::ACTION_LINK )
+		mnAction |= datatransfer::dnd::DNDConstants::ACTION_LINK;
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL DropTargetDragContext::rejectDrag() throw( ::com::sun::star::uno::RuntimeException )
+void SAL_CALL JavaDropTargetDragContext::rejectDrag() throw( ::com::sun::star::uno::RuntimeException )
 {
 	mbRejected = true;
 }
 
 // ------------------------------------------------------------------------
 
-bool DropTargetDragContext::isRejected()
+bool JavaDropTargetDragContext::isRejected()
 {
 	return mbRejected;
 }

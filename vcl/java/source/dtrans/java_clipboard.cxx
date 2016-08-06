@@ -35,36 +35,29 @@
 
 #include <com/sun/star/datatransfer/clipboard/RenderingCapabilities.hpp>
 
+#include "java/saldata.hxx"
+#include "java/salinst.h"
+
 #include "java_clipboard.hxx"
 #include "DTransClipboard.hxx"
 
-using namespace com::sun::star::datatransfer;
-using namespace com::sun::star::datatransfer::clipboard;
-using namespace com::sun::star::lang;
-using namespace com::sun::star::uno;
+using namespace com::sun::star;
 using namespace cppu;
-using namespace java;
 using namespace osl;
 using namespace rtl;
-using namespace std;
 
 // ========================================================================
 
-namespace java
+static uno::Sequence< OUString > JavaClipboard_getSupportedServiceNames()
 {
-
-Sequence< OUString > SAL_CALL JavaClipboard_getSupportedServiceNames()
-{
-	Sequence< OUString > aRet( 1 );
+	uno::Sequence< OUString > aRet( 1 );
 	aRet[0] = OUString::createFromAscii( "com.sun.star.datatransfer.clipboard.SystemClipboard" );
 	return aRet;
 }
 
-}
-
 // ========================================================================
 
-JavaClipboard::JavaClipboard( bool bSystemClipboard ) : WeakComponentImplHelper4< XClipboardEx, XFlushableClipboard, XClipboardNotifier, XServiceInfo >( maMutex ),
+JavaClipboard::JavaClipboard( bool bSystemClipboard ) : WeakComponentImplHelper4< datatransfer::clipboard::XClipboardEx, XFlushableClipboard, datatransfer::clipboard::XClipboardNotifier, XServiceInfo >( maMutex ),
 	mbSystemClipboard( bSystemClipboard ),
 	mbPrivateClipboard( sal_False )
 {
@@ -78,14 +71,14 @@ JavaClipboard::~JavaClipboard()
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaClipboard::flushClipboard( ) throw( RuntimeException )
+void SAL_CALL JavaClipboard::flushClipboard( ) throw( uno::RuntimeException )
 {
-	Reference< XTransferable > aContents;
+	uno::Reference< datatransfer::XTransferable > aContents;
 
 	ClearableMutexGuard aGuard( maMutex );
 
 	if ( mbSystemClipboard )
-		aContents = Reference< XTransferable >( mbPrivateClipboard ? maPrivateContents : maContents );
+		aContents = uno::Reference< datatransfer::XTransferable >( mbPrivateClipboard ? maPrivateContents : maContents );
 
 	aGuard.clear();
 
@@ -102,11 +95,11 @@ void SAL_CALL JavaClipboard::flushClipboard( ) throw( RuntimeException )
 
 // ------------------------------------------------------------------------
 
-Reference< XTransferable > SAL_CALL JavaClipboard::getContents() throw( RuntimeException )
+uno::Reference< datatransfer::XTransferable > SAL_CALL JavaClipboard::getContents() throw( uno::RuntimeException )
 {
 	MutexGuard aGuard( maMutex );
 
-	Reference< XTransferable > aContents( maContents );
+	uno::Reference< datatransfer::XTransferable > aContents( maContents );
 
 	if ( mbSystemClipboard && !mbPrivateClipboard )
 	{
@@ -116,25 +109,25 @@ Reference< XTransferable > SAL_CALL JavaClipboard::getContents() throw( RuntimeE
 
 		if ( pTransferable && pTransferable->hasOwnership() )
 		{
-			Reference< XTransferable > aLocalContents( pTransferable->getTransferable() );
+			uno::Reference< datatransfer::XTransferable > aLocalContents( pTransferable->getTransferable() );
 			if ( aLocalContents.is() )
 				aContents = aLocalContents;
 			else
-				maContents = Reference< XTransferable >( pTransferable );
+				maContents = uno::Reference< datatransfer::XTransferable >( pTransferable );
 		}
 		else
 		{
-			Reference< XTransferable > aOldContents( maContents );
+			uno::Reference< datatransfer::XTransferable > aOldContents( maContents );
 			if ( pTransferable )
 				aOldContents = pTransferable->getTransferable();
 			pTransferable = DTransClipboard::getContents();
 			if ( pTransferable )
-				maContents = Reference< XTransferable >( pTransferable );
+				maContents = uno::Reference< datatransfer::XTransferable >( pTransferable );
 			else
-				maContents = Reference< XTransferable >();
+				maContents = uno::Reference< datatransfer::XTransferable >();
 
-			Reference< XClipboardOwner > aOldOwner( maOwner );
-			maOwner = Reference< XClipboardOwner >();
+			uno::Reference< datatransfer::clipboard::XClipboardOwner > aOldOwner( maOwner );
+			maOwner = uno::Reference< datatransfer::clipboard::XClipboardOwner >();
 
 			aContents = maContents;
 
@@ -146,14 +139,14 @@ Reference< XTransferable > SAL_CALL JavaClipboard::getContents() throw( RuntimeE
 				pTransferable = (DTransTransferable *)aOldContents.get();
 				if ( pTransferable && pTransferable->getChangeCount() >= 0 )
 				{
-					list< Reference< XClipboardListener > > listeners( maListeners );
+					::std::list< uno::Reference< datatransfer::clipboard::XClipboardListener > > listeners( maListeners );
 
 					maMutex.release();
 
 					if ( aOldOwner.is() )
-						aOldOwner->lostOwnership( static_cast< XClipboard* >( this ), aOldContents );
+						aOldOwner->lostOwnership( static_cast< datatransfer::clipboard::XClipboard* >( this ), aOldContents );
 
-					ClipboardEvent aEvent( static_cast< OWeakObject* >( this ), aContents );
+					datatransfer::clipboard::ClipboardEvent aEvent( static_cast< OWeakObject* >( this ), aContents );
 					while ( listeners.begin() != listeners.end() )
 					{
 						if( listeners.front().is() )
@@ -172,14 +165,14 @@ Reference< XTransferable > SAL_CALL JavaClipboard::getContents() throw( RuntimeE
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaClipboard::setContents( const Reference< XTransferable >& xTransferable, const Reference< XClipboardOwner >& xClipboardOwner ) throw( RuntimeException )
+void SAL_CALL JavaClipboard::setContents( const uno::Reference< datatransfer::XTransferable >& xTransferable, const uno::Reference< datatransfer::clipboard::XClipboardOwner >& xClipboardOwner ) throw( uno::RuntimeException )
 {
 	ClearableMutexGuard aGuard( maMutex );
 
-	Reference< XTransferable > aOldContents( maContents );
+	uno::Reference< datatransfer::XTransferable > aOldContents( maContents );
 	maContents = xTransferable;
 
-	Reference< XClipboardOwner > aOldOwner( maOwner );
+	uno::Reference< datatransfer::clipboard::XClipboardOwner > aOldOwner( maOwner );
 	maOwner = xClipboardOwner;
 
 	if ( mbSystemClipboard && !mbPrivateClipboard )
@@ -190,23 +183,23 @@ void SAL_CALL JavaClipboard::setContents( const Reference< XTransferable >& xTra
 		if ( pTransferable )
 			aOldContents = pTransferable->getTransferable();
 		else
-			aOldContents = Reference< XTransferable >();
+			aOldContents = uno::Reference< datatransfer::XTransferable >();
 
 		pTransferable = DTransClipboard::setContents( xTransferable );
 		if ( pTransferable )
-			maContents = Reference< XTransferable >( pTransferable );
+			maContents = uno::Reference< datatransfer::XTransferable >( pTransferable );
 		else
-			maContents = Reference< XTransferable >();
+			maContents = uno::Reference< datatransfer::XTransferable >();
 	}
 
-	list< Reference< XClipboardListener > > listeners( maListeners );
+	::std::list< uno::Reference< datatransfer::clipboard::XClipboardListener > > listeners( maListeners );
 
 	aGuard.clear();
 
 	if ( aOldOwner.is() )
-		aOldOwner->lostOwnership( static_cast< XClipboard* >( this ), aOldContents );
+		aOldOwner->lostOwnership( static_cast< datatransfer::clipboard::XClipboard* >( this ), aOldContents );
 
-	ClipboardEvent aEvent( static_cast< OWeakObject* >( this ), xTransferable );
+	datatransfer::clipboard::ClipboardEvent aEvent( static_cast< OWeakObject* >( this ), xTransferable );
 	while ( listeners.begin() != listeners.end() )
 	{
 		if( listeners.front().is() )
@@ -217,21 +210,21 @@ void SAL_CALL JavaClipboard::setContents( const Reference< XTransferable >& xTra
 
 // ------------------------------------------------------------------------
 
-OUString SAL_CALL JavaClipboard::getName() throw( RuntimeException )
+OUString SAL_CALL JavaClipboard::getName() throw( uno::RuntimeException )
 {
 	return OUString();
 }
 
 // ------------------------------------------------------------------------
 
-sal_Int8 SAL_CALL JavaClipboard::getRenderingCapabilities() throw( RuntimeException )
+sal_Int8 SAL_CALL JavaClipboard::getRenderingCapabilities() throw( uno::RuntimeException )
 {
-	return RenderingCapabilities::Delayed;
+	return datatransfer::clipboard::RenderingCapabilities::Delayed;
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaClipboard::addClipboardListener( const Reference< XClipboardListener >& listener ) throw( RuntimeException )
+void SAL_CALL JavaClipboard::addClipboardListener( const uno::Reference< datatransfer::clipboard::XClipboardListener >& listener ) throw( uno::RuntimeException )
 {
 	MutexGuard aGuard( maMutex );
 
@@ -240,7 +233,7 @@ void SAL_CALL JavaClipboard::addClipboardListener( const Reference< XClipboardLi
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaClipboard::removeClipboardListener( const Reference< XClipboardListener >& listener ) throw( RuntimeException )
+void SAL_CALL JavaClipboard::removeClipboardListener( const uno::Reference< datatransfer::clipboard::XClipboardListener >& listener ) throw( uno::RuntimeException )
 {
 	MutexGuard aGuard( maMutex );
 
@@ -249,16 +242,16 @@ void SAL_CALL JavaClipboard::removeClipboardListener( const Reference< XClipboar
 
 // ------------------------------------------------------------------------
 
-OUString SAL_CALL JavaClipboard::getImplementationName() throw( RuntimeException )
+OUString SAL_CALL JavaClipboard::getImplementationName() throw( uno::RuntimeException )
 {
 	return OUString::createFromAscii( "com.sun.star.datatransfer.clipboard.JavaClipboard" );
 }
 
 // ------------------------------------------------------------------------
 
-sal_Bool SAL_CALL JavaClipboard::supportsService( const OUString& ServiceName ) throw( RuntimeException )
+sal_Bool SAL_CALL JavaClipboard::supportsService( const OUString& ServiceName ) throw( uno::RuntimeException )
 {
-	Sequence < OUString > aSupportedServicesNames = JavaClipboard_getSupportedServiceNames();
+	uno::Sequence < OUString > aSupportedServicesNames = JavaClipboard_getSupportedServiceNames();
 
 	for ( sal_Int32 n = aSupportedServicesNames.getLength(); n--; )
 		if ( aSupportedServicesNames[ n ].compareTo( ServiceName ) == 0 )
@@ -269,7 +262,7 @@ sal_Bool SAL_CALL JavaClipboard::supportsService( const OUString& ServiceName ) 
 
 // ------------------------------------------------------------------------
 
-Sequence< OUString > SAL_CALL JavaClipboard::getSupportedServiceNames() throw( RuntimeException )
+uno::Sequence< OUString > SAL_CALL JavaClipboard::getSupportedServiceNames() throw( uno::RuntimeException )
 {
 	return JavaClipboard_getSupportedServiceNames();
 }
@@ -282,10 +275,10 @@ void JavaClipboard::setPrivateClipboard( sal_Bool bPrivateClipboard )
 
 	if ( mbSystemClipboard && bPrivateClipboard != mbPrivateClipboard )
 	{
-		Reference< XTransferable > aOldContents( maContents );
+		uno::Reference< datatransfer::XTransferable > aOldContents( maContents );
 		maContents.clear();
 
-		Reference< XClipboardOwner > aOldOwner( maOwner );
+		uno::Reference< datatransfer::clipboard::XClipboardOwner > aOldOwner( maOwner );
 		maOwner.clear();
 
 		mbPrivateClipboard = bPrivateClipboard;
@@ -311,14 +304,14 @@ void JavaClipboard::setPrivateClipboard( sal_Bool bPrivateClipboard )
 			maPrivateOwner.clear();
 		}
 
-		list< Reference< XClipboardListener > > listeners( maListeners );
+		::std::list< uno::Reference< datatransfer::clipboard::XClipboardListener > > listeners( maListeners );
 
 		aGuard.clear();
 
 		if ( aOldOwner.is() )
-			aOldOwner->lostOwnership( static_cast< XClipboard* >( this ), aOldContents );
+			aOldOwner->lostOwnership( static_cast< datatransfer::clipboard::XClipboard* >( this ), aOldContents );
 
-		ClipboardEvent aEvent( static_cast< OWeakObject* >( this ), maContents );
+		datatransfer::clipboard::ClipboardEvent aEvent( static_cast< OWeakObject* >( this ), maContents );
 		while ( listeners.begin() != listeners.end() )
 		{
 			if( listeners.front().is() )
@@ -330,60 +323,24 @@ void JavaClipboard::setPrivateClipboard( sal_Bool bPrivateClipboard )
 
 // ========================================================================
 
-JavaClipboardFactory::JavaClipboardFactory() : WeakComponentImplHelper1< XSingleServiceFactory >( maMutex )
+uno::Reference< uno::XInterface > JavaSalInstance::CreateClipboard( const uno::Sequence< uno::Any >& /* rArguments */ )
 {
-}
+	SalData *pSalData = GetSalData();
 
-// ------------------------------------------------------------------------
+	if ( !pSalData->mxClipboard.is() )
+		pSalData->mxClipboard = uno::Reference< uno::XInterface >( static_cast< OWeakObject* >( new JavaClipboard() ) );
 
-JavaClipboardFactory::~JavaClipboardFactory()
-{
-}
-
-// ------------------------------------------------------------------------
-
-Reference< XInterface > JavaClipboardFactory::createInstance() throw()
-{
-	return createInstanceWithArguments( Sequence< Any >() );
-}
-
-// ------------------------------------------------------------------------
-
-Reference< XInterface > JavaClipboardFactory::createInstanceWithArguments( const Sequence< Any >& arguments ) throw()
-{
-	bool bSystemClipboard = false;
-	OUString aClipboardName;
-	if ( arguments.getLength() > 1 )
-	{
-		arguments.getConstArray()[ 1 ] >>= aClipboardName;
-	}
-	else
-	{
-		aClipboardName = OUString::createFromAscii( "CLIPBOARD" );
-		bSystemClipboard = true;
-	}
-
-	MutexGuard aGuard( maMutex );
-
-	Reference< XInterface > xClipboard = maInstances[ aClipboardName ];
-	if ( !xClipboard.is() )
-	{
-		JavaClipboard *pClipboard = new JavaClipboard( bSystemClipboard );
-		xClipboard = Reference< XInterface >( static_cast< OWeakObject* >( pClipboard ) );
-		maInstances[ aClipboardName ] = xClipboard;
-	}
-
-	return xClipboard;
+	return pSalData->mxClipboard;
 }
 
 // ========================================================================
 
-extern "C" void Application_setPrivateClipboard( Reference< XClipboard > *pClipboard, sal_Bool bPrivateClipboard )
+extern "C" void Application_setPrivateClipboard( uno::Reference< datatransfer::clipboard::XClipboard > *pClipboard, sal_Bool bPrivateClipboard )
 {
 	if ( !pClipboard )
 		return;
 
-	Reference< XClipboard > aClipboard = *pClipboard;
+	uno::Reference< datatransfer::clipboard::XClipboard > aClipboard = *pClipboard;
 	if ( aClipboard.is() )
 	{
 		JavaClipboard *pJavaClipboard = dynamic_cast< JavaClipboard* >( aClipboard.get() );

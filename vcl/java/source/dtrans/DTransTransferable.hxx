@@ -36,15 +36,9 @@
 #ifndef _DTRANSTRANSFERABLE_HXX
 #define _DTRANSTRANSFERABLE_HXX
 
-#ifndef _CPPUHELPER_COMPBASE1_HXX_
 #include <cppuhelper/compbase1.hxx>
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_DATAFLAVOR_HPP_
 #include <com/sun/star/datatransfer/DataFlavor.hpp>
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_XTRANSFERABLE_HPP_
 #include <com/sun/star/datatransfer/XTransferable.hpp>
-#endif
 
 #define TRANSFERABLE_TYPE_CLIPBOARD		0x0
 #define TRANSFERABLE_TYPE_DRAG			0x1
@@ -56,8 +50,6 @@
 struct NSArray;
 struct NSString;
 #endif
-
-namespace java {
 
 class DTransTransferable : public ::cppu::WeakImplHelper1 < ::com::sun::star::datatransfer::XTransferable >
 {
@@ -82,7 +74,5 @@ public:
 	virtual sal_Bool	isDataFlavorSupported( const ::com::sun::star::datatransfer::DataFlavor& aFlavor ) throw ( ::com::sun::star::uno::RuntimeException );
 	sal_Bool			setContents( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable > &xTransferable );
 };
-
-} // namespace java
 
 #endif // _DTRANSTRANSFERABLE_HXX

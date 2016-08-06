@@ -36,28 +36,18 @@
 #ifndef _DTRANS_JAVA_DNDCONTEXT_HXX
 #define _DTRANS_JAVA_DNDCONTEXT_HXX
 
-#ifndef _COM_SUN_STAR_DATATRANSFER_DND_XDRAGSOURCECONTEXT_HPP_
 #include <com/sun/star/datatransfer/dnd/XDragSourceContext.hpp>
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_DND_XDROPTARGETDROPCONTEXT_HPP_
 #include <com/sun/star/datatransfer/dnd/XDropTargetDropContext.hpp>
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_DND_XDROPTARGETDRAGCONTEXT_HPP_
 #include <com/sun/star/datatransfer/dnd/XDropTargetDragContext.hpp>
-#endif
-#ifndef _CPPUHELPER_IMPLBASE1_HXX_
 #include <cppuhelper/implbase1.hxx>
-#endif
 
-using namespace com::sun::star::uno;
+using namespace com::sun::star;
 
-namespace java {
-
-class DragSourceContext : public ::cppu::WeakImplHelper1< ::com::sun::star::datatransfer::dnd::XDragSourceContext >
+class JavaDragSourceContext : public ::cppu::WeakImplHelper1< ::com::sun::star::datatransfer::dnd::XDragSourceContext >
 {
 public:
-							DragSourceContext();
-	virtual					~DragSourceContext();
+							JavaDragSourceContext();
+	virtual					~JavaDragSourceContext();
 
 	virtual sal_Int32		SAL_CALL getCurrentCursor() throw( ::com::sun::star::uno::RuntimeException );
 	virtual void			SAL_CALL setCursor( sal_Int32 cursorId ) throw( ::com::sun::star::uno::RuntimeException );
@@ -65,15 +55,15 @@ public:
 	virtual void			SAL_CALL transferablesFlavorsChanged() throw( ::com::sun::star::uno::RuntimeException );
 };
 
-class DropTargetDropContext : public ::cppu::WeakImplHelper1< ::com::sun::star::datatransfer::dnd::XDropTargetDropContext >
+class JavaDropTargetDropContext : public ::cppu::WeakImplHelper1< ::com::sun::star::datatransfer::dnd::XDropTargetDropContext >
 {
 	sal_Int8				mnAction;
 	bool					mbRejected;
 	bool					mbSuccess;
 
 public:
-							DropTargetDropContext( sal_Int8 nAction );
-	virtual					~DropTargetDropContext();
+							JavaDropTargetDropContext( sal_Int8 nAction );
+	virtual					~JavaDropTargetDropContext();
 
 	virtual void			SAL_CALL acceptDrop( sal_Int8 dragOperation ) throw( ::com::sun::star::uno::RuntimeException );
 	virtual void			SAL_CALL rejectDrop() throw( ::com::sun::star::uno::RuntimeException );
@@ -83,21 +73,19 @@ public:
 	bool					isRejected();
 };
 
-class DropTargetDragContext : public ::cppu::WeakImplHelper1< ::com::sun::star::datatransfer::dnd::XDropTargetDragContext >
+class JavaDropTargetDragContext : public ::cppu::WeakImplHelper1< ::com::sun::star::datatransfer::dnd::XDropTargetDragContext >
 {
 	sal_Int8				mnAction;
 	bool					mbRejected;
 
 public:
-							DropTargetDragContext( sal_Int8 nAction );
-	virtual					~DropTargetDragContext();
+							JavaDropTargetDragContext( sal_Int8 nAction );
+	virtual					~JavaDropTargetDragContext();
 
 	virtual void			SAL_CALL acceptDrag( sal_Int8 dragOperation ) throw( ::com::sun::star::uno::RuntimeException );
 	virtual void			SAL_CALL rejectDrag() throw( ::com::sun::star::uno::RuntimeException );
 
 	bool					isRejected();
 };
-
-}
 
 #endif

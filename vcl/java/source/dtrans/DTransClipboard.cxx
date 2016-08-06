@@ -33,16 +33,11 @@
  *
  ************************************************************************/
 
-#ifndef _DTRANSCLIPBOARD_HXX
 #include "DTransClipboard.hxx"
-#endif
-#ifndef _DTRANSTRANSFERABLE_HXX
 #include "DTransTransferable.hxx"
-#endif
 
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::uno;
-using namespace java;
 using namespace rtl;
 
 // ============================================================================
