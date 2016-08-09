@@ -124,8 +124,6 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 	void					ReleaseContext();
 };
 
-static bool bIsRunningMavericksOrLowerInitizalized  = false;
-static bool bIsRunningMavericksOrLower = false;
 static bool bIsRunningElCapitanOrLowerInitizalized  = false;
 static bool bIsRunningElCapitanOrLower = false;
 
@@ -151,36 +149,6 @@ static VCLBitmapBuffer aSharedCheckboxBuffer;
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 // =======================================================================
-
-static bool IsRunningMavericksOrLower()
-{
-	if ( !bIsRunningMavericksOrLowerInitizalized )
-	{
-		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-		if ( pLib )
-		{
-			Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
-			if ( pGestalt )
-			{
-				SInt32 res = 0;
-				pGestalt( gestaltSystemVersionMajor, &res );
-				if ( res == 10 )
-				{
-					res = 0;
-					pGestalt( gestaltSystemVersionMinor, &res );
-					if ( res <= 9 )
-						bIsRunningMavericksOrLower = true;
-				}
-			}
-
-			dlclose( pLib );
-		}
-
-		bIsRunningMavericksOrLowerInitizalized = true;
-	}
-
-	return bIsRunningMavericksOrLower;
-}
 
 static bool IsRunningElCapitanOrLower()
 {
@@ -383,7 +351,7 @@ static bool IsRunningElCapitanOrLower()
 
 	// The enabled state is controlled by the [NSWindow _hasActiveControls]
 	// selector so we need to attach a custom hidden window to draw enabled
-	if ( IsRunningMavericksOrLower() || mnButtonType == NSMomentaryLightButton || mnControlState & CTRL_STATE_INACTIVE )
+	if ( mnButtonType == NSMomentaryLightButton || mnControlState & CTRL_STATE_INACTIVE )
 		[VCLNativeControlWindow createAndAttachToView:pButton controlState:mnControlState];
 
 	[pButton sizeToFit];
@@ -431,19 +399,9 @@ static bool IsRunningElCapitanOrLower()
 
 						if ( mnControlState & ( CTRL_STATE_DEFAULT | CTRL_STATE_FOCUSED ) && ! ( mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) ) )
 						{
-							// Do not use VCLNativeButtonCell animation as
-							// it sometimes draws darker than expected
-							if ( IsRunningMavericksOrLower() )
-							{
-								[pButton highlight:NO];
-								mbRedraw = sal_True;
-							}
-							else
-							{
-								[pButton setKeyEquivalent:@"\r"];
-								if ( ! ( mnControlState & CTRL_STATE_INACTIVE ) && !IsRunningElCapitanOrLower() )
-									bAttachToKeyWindow = YES;
-							}
+							[pButton setKeyEquivalent:@"\r"];
+							if ( ! ( mnControlState & CTRL_STATE_INACTIVE ) && !IsRunningElCapitanOrLower() )
+								bAttachToKeyWindow = YES;
 						}
 					}
 				}
@@ -817,7 +775,7 @@ static bool IsRunningElCapitanOrLower()
 			NSCell *pCell = [pControl cell];
 			if ( pCell )
 			{
-				mbRTL = ( !IsRunningMavericksOrLower() && [pCell userInterfaceLayoutDirection] == NSUserInterfaceLayoutDirectionRightToLeft );
+				mbRTL = ( [pCell userInterfaceLayoutDirection] == NSUserInterfaceLayoutDirectionRightToLeft );
 				maSize = [pCell cellSize];
 			}
 		}
@@ -1499,33 +1457,17 @@ static bool IsRunningElCapitanOrLower()
 
 - (NSView *)borderView
 {
-	if ( IsRunningMavericksOrLower() )
-	{
-		NSScrollView *pScrollView = [[NSScrollView alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
-		if ( !pScrollView )
-			return nil;
+	NSBox *pBox = [[NSBox alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
+	if ( !pBox )
+		return nil;
 
-		[pScrollView autorelease];
+	[pBox autorelease];
 
-		[pScrollView setBorderType:NSBezelBorder];
-		[pScrollView setDrawsBackground:NO];
+	[pBox setBoxType:NSBoxCustom];
+	[pBox setBorderType:NSLineBorder];
+	[pBox setBorderColor:[NSColor gridColor]];
 
-		return pScrollView;
-	}
-	else
-	{
-		NSBox *pBox = [[NSBox alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
-		if ( !pBox )
-			return nil;
-
-		[pBox autorelease];
-
-		[pBox setBoxType:NSBoxCustom];
-		[pBox setBorderType:NSLineBorder];
-		[pBox setBorderColor:[NSColor gridColor]];
-
-		return pBox;
-	}
+	return pBox;
 }
 
 - (void)draw:(id)pObject
@@ -1658,8 +1600,6 @@ static bool IsRunningElCapitanOrLower()
 	// Fix hanging reported in the following NeoOffice forum topic by not
 	// attaching a custom window on OS X 10.10:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8656
-	if ( IsRunningMavericksOrLower() )
-		[VCLNativeControlWindow createAndAttachToView:pScrollView controlState:mnControlState];
 
 	return pTableColumn;
 }
@@ -2194,10 +2134,7 @@ static bool IsRunningElCapitanOrLower()
 						}
 						else
 						{
-							if ( IsRunningMavericksOrLower() )
-								[[NSColor controlBackgroundColor] set];
-							else
-								[[NSColor controlColor] set];
+							[[NSColor controlColor] set];
 							[NSBezierPath fillRect:aDrawRect];
 						}
 						[NSGraphicsContext setCurrentContext:pOldContext];
@@ -2459,7 +2396,7 @@ static bool IsRunningElCapitanOrLower()
 
 		// Fix tab divider line color on OS X 10.10 by adding a second tab item
 		// to the left of the tab item to be drawn
-		if ( !IsRunningMavericksOrLower() && ! ( mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) ) )
+		if ( ! ( mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) ) )
 		{
 			pPreItem = [[VCLNativeTabViewItem alloc] initWithIdentifier:@""];
 			if ( !pPreItem )
@@ -3678,7 +3615,7 @@ sal_Bool JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPa
 #endif	// USE_NATIVE_CTRL_FRAME
 
 		case CTRL_TOOLTIP:
-			if( !IsRunningMavericksOrLower() && nPart == PART_ENTIRE_CONTROL )
+			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = sal_True;
 			break;
 	}
@@ -4585,7 +4522,7 @@ sal_Bool JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlP
 				{
 					// Fix text color when running on OS X 10.10 and our
 					// application is not the active application
-					if ( IsRunningMavericksOrLower() || !NSApplication_isActive() )
+					if ( !NSApplication_isActive() )
 						bReturn = JavaSalFrame::GetSelectedControlTextColor( nTextColor );
 					else
 						bReturn = JavaSalFrame::GetAlternateSelectedControlTextColor( nTextColor );
@@ -4618,7 +4555,7 @@ sal_Bool JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlP
 			{
 				if ( nState & CTRL_STATE_SELECTED )
 				{
-					if ( IsRunningMavericksOrLower() || ! ( nState & CTRL_STATE_INACTIVE ) )
+					if ( ! ( nState & CTRL_STATE_INACTIVE ) )
 						bReturn = JavaSalFrame::GetAlternateSelectedControlTextColor( nTextColor );
 					else
 						bReturn = JavaSalFrame::GetSelectedControlTextColor( nTextColor );
