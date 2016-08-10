@@ -1282,11 +1282,15 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				[mpWaitingView setFrameOrigin:NSMakePoint( ( aContentBounds.size.width - aWaitingFrame.size.width ) / 2, ( aContentBounds.size.height - aWaitingFrame.size.height ) / 2 )];
 			}
 
-			[mpWaitingView startAnimation:self];
+			// The wait spinner is very slow so don't display it when the
+			// spinner will only appear for a very short amount of time
+			[mpWaitingView performSelector:@selector(startAnimation:) withObject:self afterDelay:0.5f];
 		}
 		else
 		{
+			[NSObject cancelPreviousPerformRequestsWithTarget:mpWaitingView selector:@selector(startAnimation:) object:self];
 			[mpWaitingView stopAnimation:self];
+
 		}
 	}
 }
