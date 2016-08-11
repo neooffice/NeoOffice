@@ -1902,7 +1902,6 @@ sal_Int32 PDFWriter::CreateLink( const Rectangle& rRect, sal_Int32 nPageNr )
 sal_Int32 PDFWriter::RegisterDestReference( sal_Int32 nDestId, const Rectangle& rRect, sal_Int32 nPageNr, DestAreaType eType )
 {
 #if defined USE_JAVA && defined MACOSX
-fprintf( stderr, "Here: %i\n", ((PDFWriterImpl*)pImplementation)->isReplayWriter() );
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaRegisterDestReferencePDFAction( nDestId, rRect, nPageNr, eType ) );
 #endif	// USE_JAVA && MACOSX
