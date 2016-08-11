@@ -58,6 +58,13 @@
 
 #undef USE_PDFGRADIENTS
 
+#if defined USE_JAVA && defined MACOSX
+// Use code for drawing of entire polygons in gradients so that there are no
+// gaps between bands in elliptical or radial gradients in
+// vcl/source/gdi/outdev4.cxx
+#define USE_PDFGRADIENTS 1
+#endif	// USE_JAVA && MACOSX
+
 using namespace vcl;
 using namespace rtl;
 using namespace com::sun::star;
@@ -423,14 +430,14 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
 					const Size&		rSize= pA->GetSize();
 					const Gradient&	rTransparenceGradient = pA->GetGradient();
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                     // Because we draw entire polygons in gradients so that
                     // there are no gaps between bands in elliptical or radial
                     // gradients in vcl/source/gdi/outdev4.cxx, we cannot use a
                     // transparent drawing group as the overlapping polygons
                     // will result in a non-transparent gradient when the PDF
                     // is displayed in the OS X Preview application
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
                     // special case constant alpha value
                     if( rTransparenceGradient.GetStartColor() == rTransparenceGradient.GetEndColor() )
                     {
@@ -441,7 +448,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                         m_rOuterFace.EndTransparencyGroup( Rectangle( rPos, rSize ), nTransPercent );
                     }
                     else
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
                     {
                         const Size	aDstSizeTwip( pDummyVDev->PixelToLogic( pDummyVDev->LogicToPixel( rSize ), MAP_TWIP ) );
 
