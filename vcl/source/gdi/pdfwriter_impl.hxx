@@ -862,7 +862,6 @@ private:
     GraphicsState							m_aCurrentPDFState;
 
 #if defined USE_JAVA && defined MACOSX
-    const com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >&	m_xEnc;
     PDFWriterImpl*							m_pParentWriter;
     GDIMetaFile								m_aReplayMtf;
 #endif	// USE_JAVA && MACOSX
@@ -1431,7 +1430,6 @@ public:
 #if defined USE_JAVA && defined MACOSX
     void addAction( MetaAction *pAction );
     const PDFWriter::PDFWriterContext& getContext() { return m_aContext; }
-    const com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >& getMaterialHolder() { return m_xEnc; }
     PDFWriter& getPDFWriter() { return m_rOuterFace; }
     const GDIMetaFile& getReplayMetaFile() { return m_aReplayMtf; }
     bool isReplayWriter() { return ( m_pParentWriter ? true : false ); }

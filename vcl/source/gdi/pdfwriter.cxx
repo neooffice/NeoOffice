@@ -79,6 +79,8 @@
 #define META_SETLOCALE_PDF_ACTION				(10033)
 #define META_CREATENAMEDDEST_PDF_ACTION			(10034)
 #define META_ADDSTREAM_PDF_ACTION				(10035)
+#define META_REGISTERDESTREFERENCE_PDF_ACTION	(10036)
+#define META_PLAYMETAFILE_PDF_ACTION			(10037)
 
 class SAL_DLLPRIVATE MetaTextLinePDFAction : public MetaTextLineAction
 {
@@ -551,7 +553,7 @@ public:
 
     const com::sun::star::lang::Locale&	GetLocale() const { return maLocale; }
 };
-
+ 
 class SAL_DLLPRIVATE MetaCreateNamedDestPDFAction : public MetaAction
 {
 private:
@@ -584,6 +586,40 @@ public:
     const String&		GetMimeType() const { return maMimeType; }
     ::vcl::PDFOutputStream*	GetPDFOutputStream() const { return mpStream; }
     bool				IsCompress() const { return mbCompress; }
+};
+
+class SAL_DLLPRIVATE MetaRegisterDestReferencePDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnDestId;
+    Rectangle			maRect;
+    sal_Int32			mnPage;
+    ::vcl::PDFWriter::DestAreaType	meType;
+
+public:
+    					MetaRegisterDestReferencePDFAction( sal_Int32 nDestId, const Rectangle& rRect, sal_Int32 nPage, ::vcl::PDFWriter::DestAreaType eType ) : MetaAction( META_REGISTERDESTREFERENCE_PDF_ACTION ), mnDestId( nDestId ), maRect( rRect ), mnPage( nPage ), meType( eType ) {}
+    virtual				~MetaRegisterDestReferencePDFAction() {}
+
+    sal_Int32			GetDestId() const { return mnDestId; }
+    const Rectangle&	GetRect() const { return maRect; }
+    sal_Int32			GetPage() const { return mnPage; }
+    ::vcl::PDFWriter::DestAreaType	GetType() const { return meType; }
+};
+
+class SAL_DLLPRIVATE MetaPlayMetafilePDFAction : public MetaAction
+{
+private:
+    GDIMetaFile			maMtf;
+    ::vcl::PDFWriter::PlayMetafileContext	maPlayContext;
+    ::vcl::PDFExtOutDevData*	mpData;
+
+public:
+    					MetaPlayMetafilePDFAction( const GDIMetaFile& rMtf, const ::vcl::PDFWriter::PlayMetafileContext& rPlayContext, ::vcl::PDFExtOutDevData* pData ) : MetaAction( META_PLAYMETAFILE_PDF_ACTION ), maMtf( rMtf ), maPlayContext( rPlayContext ), mpData( pData ) {}
+    virtual				~MetaPlayMetafilePDFAction() {}
+
+    const GDIMetaFile&	GetMetaFile() const { return maMtf; }
+    const ::vcl::PDFWriter::PlayMetafileContext&	GetPlayContext() const { return maPlayContext; }
+    ::vcl::PDFExtOutDevData*	GetData() const { return mpData; }
 };
 
 #endif	// USE_JAVA && MACOSX
@@ -1164,6 +1200,20 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
             }
             break;
 
+            case( META_REGISTERDESTREFERENCE_PDF_ACTION ):
+            {
+                const MetaRegisterDestReferencePDFAction* pA = (const MetaRegisterDestReferencePDFAction*) pAction;
+                aWriter.RegisterDestReference( pA->GetDestId(), pA->GetRect(), pA->GetPage(), pA->GetType() );
+            }
+            break;
+
+            case( META_PLAYMETAFILE_PDF_ACTION ):
+            {
+                const MetaPlayMetafilePDFAction* pA = (const MetaPlayMetafilePDFAction*) pAction;
+                aWriter.PlayMetafile( pA->GetMetaFile(), pA->GetPlayContext(), pA->GetData() );
+            }
+            break;
+
             default:
                 DBG_ERROR( "PDFWriterImpl::emit: unsupported MetaAction #" );
             break;
@@ -1212,14 +1262,13 @@ bool PDFWriter::Emit()
     {
         GDIMetaFile aMtf( ((PDFWriterImpl*)pImplementation)->getReplayMetaFile() );
         const PDFWriter::PDFWriterContext& rContext = ((PDFWriterImpl*)pImplementation)->getContext();
-        const com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >& rEnc = ((PDFWriterImpl*)pImplementation)->getMaterialHolder();
         PDFWriter& rPDFWriter = ((PDFWriterImpl*)pImplementation)->getPDFWriter();
         void *pOldImplementation = pImplementation;
 
         // Fix bug 3061 by making a substitute writer and copying the actions
         // into that as the current writer seems to get mangled layouts in some
         // cases
-        PDFWriterImpl aSubstituteWriter( rContext, rEnc, rPDFWriter );
+        PDFWriterImpl aSubstituteWriter( rContext, com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >(), rPDFWriter );
         pImplementation = &aSubstituteWriter;
         ReplayMetaFile( *this, aMtf );
         bRet = aSubstituteWriter.emit();
@@ -1228,7 +1277,7 @@ bool PDFWriter::Emit()
         // Now replay the same meta file into the final destination
         if ( bRet )
         {
-            PDFWriterImpl aFinalWriter( rContext, rEnc, rPDFWriter, &aSubstituteWriter );
+            PDFWriterImpl aFinalWriter( rContext, com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >(), rPDFWriter, &aSubstituteWriter );
             pImplementation = &aFinalWriter;
             ReplayMetaFile( *this, aMtf );
             bRet = aFinalWriter.emit();
@@ -1852,6 +1901,11 @@ sal_Int32 PDFWriter::CreateLink( const Rectangle& rRect, sal_Int32 nPageNr )
 }
 sal_Int32 PDFWriter::RegisterDestReference( sal_Int32 nDestId, const Rectangle& rRect, sal_Int32 nPageNr, DestAreaType eType )
 {
+#if defined USE_JAVA && defined MACOSX
+fprintf( stderr, "Here: %i\n", ((PDFWriterImpl*)pImplementation)->isReplayWriter() );
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaRegisterDestReferencePDFAction( nDestId, rRect, nPageNr, eType ) );
+#endif	// USE_JAVA && MACOSX
     return ((PDFWriterImpl*)pImplementation)->registerDestReference( nDestId, rRect, nPageNr, eType );
 }
 //--->i56629
@@ -2105,6 +2159,10 @@ PDFWriter::InitEncryption( const rtl::OUString& i_rOwnerPassword,
 
 void PDFWriter::PlayMetafile( const GDIMetaFile& i_rMTF, const vcl::PDFWriter::PlayMetafileContext& i_rPlayContext, PDFExtOutDevData* i_pData )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaPlayMetafilePDFAction( i_rMTF, i_rPlayContext, i_pData ) );
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->playMetafile( i_rMTF, i_pData, i_rPlayContext, NULL);
 }
 

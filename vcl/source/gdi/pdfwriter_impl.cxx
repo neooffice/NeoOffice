@@ -1775,7 +1775,6 @@ void PDFWriterImpl::PDFPage::appendWaveLine( sal_Int32 nWidth, sal_Int32 nY, sal
         m_nResourceDict( -1 ),
         m_nFontDictObject( -1 ),
 #if defined USE_JAVA && defined MACOSX
-        m_xEnc( xEnc ),
         m_pParentWriter( pParentWriter ),
 #endif	// USE_JAVA && MACOSX
         m_pCodec( NULL ),
