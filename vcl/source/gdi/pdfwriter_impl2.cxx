@@ -423,7 +423,14 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
 					const Size&		rSize= pA->GetSize();
 					const Gradient&	rTransparenceGradient = pA->GetGradient();
 
-#ifndef USE_JAVA
+#ifdef USE_JAVA
+                    // Because we draw entire polygons in gradients so that
+                    // there are no gaps between bands in elliptical or radial
+                    // gradients in vcl/source/gdi/outdev4.cxx, we cannot use a
+                    // transparent drawing group as the overlapping polygons
+                    // will result in a non-transparent gradient when the PDF
+                    // is displayed in the OS X Preview application
+#else	// USE_JAVA
                     // special case constant alpha value
                     if( rTransparenceGradient.GetStartColor() == rTransparenceGradient.GetEndColor() )
                     {
@@ -434,7 +441,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                         m_rOuterFace.EndTransparencyGroup( Rectangle( rPos, rSize ), nTransPercent );
                     }
                     else
-#endif	// !USE_JAVA
+#endif	// USE_JAVA
                     {
                         const Size	aDstSizeTwip( pDummyVDev->PixelToLogic( pDummyVDev->LogicToPixel( rSize ), MAP_TWIP ) );
 
