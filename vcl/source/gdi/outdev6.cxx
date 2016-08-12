@@ -746,6 +746,11 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 			if( pVDev->SetOutputSizePixel( aDstRect.GetSize() ) )
 #endif	// USE_JAVA
 			{
+#if defined USE_JAVA && defined MACOSX
+				// Do not draw gradients using a alpha mask even when
+				// antialiasing is enabled as it will causes areas outside of
+				// the clip region to be filled with gray
+#else	// USE_JAVA && MACOSX
 				if(GetAntialiasing())
 				{
 					// #i102109#
@@ -804,6 +809,7 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 					EnableMapMode(bOrigMapModeEnabled);
 				}
 				else
+#endif	// USE_JAVA && MACOSX
 				{
 					Bitmap		aPaint, aMask;
 					AlphaMask	aAlpha;
