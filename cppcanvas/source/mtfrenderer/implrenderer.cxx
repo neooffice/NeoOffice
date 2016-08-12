@@ -1691,12 +1691,20 @@ namespace cppcanvas
                     case META_EPS_ACTION:
                     {
                         MetaEPSAction* 		pAct = static_cast<MetaEPSAction*>(pCurrAct);
+#if !defined USE_JAVA || !defined MACOSX
                         const GDIMetaFile&  rSubstitute = pAct->GetSubstitute();
+#endif	// !USE_JAVA || !MACOSX
 
                         // #121806# explicitely kept integer
+#if defined USE_JAVA && defined MACOSX
+                        const Size aMtfSize( rMtf.GetPrefSize() );
+                        const Size aMtfSizePixPre( rVDev.LogicToPixel( aMtfSize,
+                                                                       rMtf.GetPrefMapMode() ) );
+#else	// USE_JAVA && MACOSX
                         const Size aMtfSize( rSubstitute.GetPrefSize() );
                         const Size aMtfSizePixPre( rVDev.LogicToPixel( aMtfSize,
                                                                        rSubstitute.GetPrefMapMode() ) );
+#endif	// USE_JAVA && MACOSX
 
                         // #i44110# correct null-sized output - there
                         // are metafiles which have zero size in at
@@ -1710,30 +1718,32 @@ namespace cppcanvas
                         pushState( rStates, PUSH_ALL );
 
                         rVDev.Push();
+#if !defined USE_JAVA || !defined MACOSX
                         rVDev.SetMapMode( rSubstitute.GetPrefMapMode() );
+#endif	// !USE_JAVA || !MACOSX
 
                         const ::Point& rPos( rVDev.LogicToPixel( pAct->GetPoint() ) );
                         const ::Size&  rSize( rVDev.LogicToPixel( pAct->GetSize() ) );
 
-                        getState( rStates ).transform.translate( rPos.X(),
-                                                                 rPos.Y() );
-                        getState( rStates ).transform.scale( (double)rSize.Width() / aMtfSizePix.Width(),
-                                                             (double)rSize.Height() / aMtfSizePix.Height() );
-
 #if defined USE_JAVA && defined MACOSX
                         // Fix bug 2218 by rendering EPS to a bitmap
                         VirtualDevice aVDev;
-                        if ( aVDev.SetOutputSizePixel( aMtfSizePix ) )
+                        if ( aVDev.SetOutputSizePixel( rSize ) )
                         {
-                            aVDev.DrawEPS( Point(), aMtfSizePix, pAct->GetLink(), NULL );
-                            BitmapEx aBmpEx = aVDev.GetBitmapEx( Point(), aMtfSizePix );
-							// Fix bugs 3441 and 3489 by using an scale action
+                            aVDev.DrawEPS( Point(), rSize, pAct->GetLink(), NULL );
+                            BitmapEx aBmpEx = aVDev.GetBitmapEx( Point(), rSize );
+							// Fix bugs 3441 and 3489 by using a scale action
                             MetaBmpExScaleAction *pBmpExScaleAction = new MetaBmpExScaleAction( pAct->GetPoint(), pAct->GetSize(), aBmpEx );
                             GDIMetaFile aTmpMtf;
                             aTmpMtf.AddAction( pBmpExScaleAction );
                             createActions( aTmpMtf, rFactoryParms, bSubsettableActions );
                         }
 #else	// USE_JAVA && MACOSX
+                        getState( rStates ).transform.translate( rPos.X(),
+                                                                 rPos.Y() );
+                        getState( rStates ).transform.scale( (double)rSize.Width() / aMtfSizePix.Width(),
+                                                             (double)rSize.Height() / aMtfSizePix.Height() );
+
                         createActions( const_cast<GDIMetaFile&>(pAct->GetSubstitute()),
                                        rFactoryParms,
                                        bSubsettableActions );
