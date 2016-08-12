@@ -196,6 +196,9 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 	aRect.Top()    -= (long)fDY;
 	aRect.Bottom() += (long)fDY;
 
+#if defined USE_JAVA && defined MACOSX
+    Rectangle	aFullRect = aRect;
+#endif	// USE_JAVA && MACOSX
 	sal_Bool	bLinear = ( rGradient.GetStyle() == GRADIENT_LINEAR );
 	double		fBorder = rGradient.GetBorder() * aRect.GetHeight() / 100.0;
 	Point		aCenter = rRect.Center();
@@ -350,6 +353,33 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
         aRect.Bottom() = (long)( fGradientLine + ( ((double) i) + 1.0 ) * fScanInc );
         aPoly[0] = aRect.TopLeft();
         aPoly[1] = aRect.TopRight();
+#if defined USE_JAVA && defined MACOSX
+        // Fix printing bug reported in the following NeoOffice forum post by
+        // underlapping all successive stripes with the current color:
+        // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
+        if ( meRasterOp == ROP_OVERPAINT )
+        {
+            if ( bLinear )
+            {
+                aPoly[2] = aFullRect.BottomRight();
+                aPoly[3] = aFullRect.BottomLeft();
+            }
+            else
+            {
+                aMirrorRect.Bottom() = (long)( fMirrorGradientLine - ((double) i) * fScanInc );
+                aMirrorRect.Top() = (long)( fMirrorGradientLine - (((double) i) + 1.0)* fScanInc );
+                aPoly[2] = aMirrorRect.BottomRight();
+                aPoly[3] = aMirrorRect.BottomLeft();
+            }
+            aPoly.Rotate( aCenter, nAngle );
+            if ( bMtf )
+                mpMetaFile->AddAction( new MetaPolygonAction( aPoly ) );
+            else
+                ImplDrawPolygon( aPoly, pClipPolyPoly );
+        }
+        else
+        {
+#endif	// USE_JAVA && MACOSX
         aPoly[2] = aRect.BottomRight();
         aPoly[3] = aRect.BottomLeft();
         aPoly.Rotate( aCenter, nAngle );
@@ -371,6 +401,9 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
             else
                 ImplDrawPolygon( aPoly, pClipPolyPoly );
         }
+#if defined USE_JAVA && defined MACOSX
+        }
+#endif	// USE_JAVA && MACOSX
     }
     if ( !bLinear)
     {
