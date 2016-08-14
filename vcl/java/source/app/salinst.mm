@@ -1398,7 +1398,7 @@ bool JavaSalEvent::addWheelRotationAndScrollLines( long nRotation, sal_uLong nSc
 			if ( ! ( pWheelMouseEvent->mnCode & KEY_MOD1 ) )
 				pWheelMouseEvent->mnDelta += nRotation;
 			pWheelMouseEvent->mnNotchDelta = ( pWheelMouseEvent->mnDelta < 0 ? -1 : 1 );
-			pWheelMouseEvent->mnScrollLines = abs( pWheelMouseEvent->mnDelta );
+			pWheelMouseEvent->mnScrollLines = labs( pWheelMouseEvent->mnDelta );
 			bRet = true;
 		}
 	}
