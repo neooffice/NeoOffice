@@ -220,6 +220,11 @@ namespace vclcanvas
 
             basegfx::tools::KeyStopLerp aLerper(rValues.maStops);
 
+#if defined USE_JAVA && defined MACOSX
+            ::Point aRightBottomPt( ::basegfx::fround( aRightBottom.getX() ), ::basegfx::fround( aRightBottom.getY() ) );
+            ::Point aLeftBottomPt( ::basegfx::fround( aLeftBottom.getX() ), ::basegfx::fround( aLeftBottom.getY() ) );
+#endif	// USE_JAVA && MACOSX
+
             // only iterate nStepCount-1 steps, as the last strip is
             // explicitely painted below
             for( unsigned int i=0; i<nStepCount-1; ++i )
@@ -256,20 +261,20 @@ namespace vclcanvas
                                         ::basegfx::fround( rPoint4.getY() ) );
                 
 #if defined USE_JAVA && defined MACOSX
-                // Fix bug reported in the following NeoOffice forum post by
-                // using the slice as the clip and drawing the clip:
+                // Fix slide show bug reported in the following NeoOffice forum
+                // post by underlapping all successive stripes with the current
+                // color:
                 // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
-                if ( rOutDev.IsClipRegion() && rOutDev.GetClipRegion().HasPolyPolygonOrB2DPolyPolygon() )
-                {
-                    Region aClipRgn( rOutDev.GetClipRegion() );
-                    rOutDev.Push( PUSH_CLIPREGION );
-                    rOutDev.IntersectClipRegion( aTempPoly );
-                    rOutDev.DrawPolyPolygon( aClipRgn.GetAsPolyPolygon() );
-                    rOutDev.Pop();
-                }
-                else
+                ::Point aOldRightBottomPt( aTempPoly[2] );
+                ::Point aOldLeftBottomPt( aTempPoly[3] );
+                aTempPoly[2] = aRightBottomPt;
+                aTempPoly[3] = aLeftBottomPt;
 #endif	// USE_JAVA && MACOSX
                 rOutDev.DrawPolygon( aTempPoly );
+#if defined USE_JAVA && defined MACOSX
+                aTempPoly[2] = aOldRightBottomPt;
+                aTempPoly[3] = aOldLeftBottomPt;
+#endif	// USE_JAVA && MACOSX
             }
 
             // fill final strip (extending two times the bound rect's
