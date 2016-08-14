@@ -696,17 +696,32 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	BOOL bOldInPerformKeyEquivalent = bInPerformKeyEquivalent;
 	bInPerformKeyEquivalent = YES;
 
-	JavaSalEvent *pActivateEvent = new JavaSalEvent( SALEVENT_MENUACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
-	JavaSalEventQueue::postCachedEvent( pActivateEvent );
-	pActivateEvent->release();
+	// If no application mutex exists yet, ignore event as we are likely to
+	// crash
+	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+	{
+		// Prevent flooding of the OOo event queue when holding down a native
+		// menu shortcut by by locking the application mutex
+		::vos::IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
 
-	JavaSalEvent *pCommandEvent = new JavaSalEvent( SALEVENT_MENUCOMMAND, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
-	JavaSalEventQueue::postCachedEvent( pCommandEvent );
-	pCommandEvent->release();
+		if ( !Application::IsShutDown() )
+		{
+			JavaSalEvent *pActivateEvent = new JavaSalEvent( SALEVENT_MENUACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
+			JavaSalEventQueue::postCachedEvent( pActivateEvent );
+			pActivateEvent->release();
 
-	JavaSalEvent *pDeactivateEvent = new JavaSalEvent( SALEVENT_MENUDEACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
-	JavaSalEventQueue::postCachedEvent( pDeactivateEvent );
-	pDeactivateEvent->release();
+			JavaSalEvent *pCommandEvent = new JavaSalEvent( SALEVENT_MENUCOMMAND, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
+			JavaSalEventQueue::postCachedEvent( pCommandEvent );
+			pCommandEvent->release();
+
+			JavaSalEvent *pDeactivateEvent = new JavaSalEvent( SALEVENT_MENUDEACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
+			JavaSalEventQueue::postCachedEvent( pDeactivateEvent );
+			pDeactivateEvent->release();
+		}
+
+		rSolarMutex.release();
+	}
 
 	nLastMenuItemSelectedTime = [NSDate timeIntervalSinceReferenceDate] + MAIN_MENU_CHANGE_WAIT_INTERVAL;
 	bInPerformKeyEquivalent = bOldInPerformKeyEquivalent;
