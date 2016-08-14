@@ -299,20 +299,6 @@ namespace vclcanvas
 
             rOutDev.SetFillColor( rColors.back() );
 
-#if defined USE_JAVA && defined MACOSX
-            // Fix bug reported in the following NeoOffice forum post by
-            // using the slice as the clip and drawing the clip:
-            // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
-            if ( rOutDev.IsClipRegion() && rOutDev.GetClipRegion().HasPolyPolygonOrB2DPolyPolygon() )
-            {
-                Region aClipRgn( rOutDev.GetClipRegion() );
-                rOutDev.Push( PUSH_CLIPREGION );
-                rOutDev.IntersectClipRegion( aTempPoly );
-                rOutDev.DrawPolyPolygon( aClipRgn.GetAsPolyPolygon() );
-                rOutDev.Pop();
-            }
-            else
-#endif	// USE_JAVA && MACOSX
             rOutDev.DrawPolygon( aTempPoly );
         }
 
