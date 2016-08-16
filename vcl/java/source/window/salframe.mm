@@ -1851,10 +1851,14 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
         return;
 
 	mbFullScreen = [pFullScreen boolValue];
-	[self adjustColorLevelAndShadow];
 
 	if ( mbUndecorated && mpWindow )
 	{
+		// Only adjust the color, level, and shadow if the window is
+		// undecorated. Otherwise, a full screen window will not display the
+		// current document in the versions browser.
+		[self adjustColorLevelAndShadow];
+
 		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
 			[(VCLPanel *)mpWindow setCanBecomeKeyWindow:mbFullScreen];
 		else
