@@ -3961,26 +3961,29 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 		}
 
 		[pPool release];
-	}
 
-	USHORT nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
-	if ( bFullScreen )
-	{
-		memcpy( &maOriginalGeometry, &maGeometry, sizeof( SalFrameGeometry ) );
+		// Do not set frame bounds when entering or exiting full screen mode
+		// as that will cause the original size to be lost when a window that
+		// is in full screen mode transitions to the versions browser
+		USHORT nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
+		if ( bFullScreen )
+		{
+			memcpy( &maOriginalGeometry, &maGeometry, sizeof( SalFrameGeometry ) );
 
-		JavaSalSystem *pSalSystem = (JavaSalSystem *)ImplGetSalSystem();
-		Rectangle aWorkArea;
-		if ( pSalSystem )
-			aWorkArea = pSalSystem->GetDisplayWorkAreaPosSizePixel( nDisplay );
-		if ( aWorkArea.IsEmpty() )
-			aWorkArea = Rectangle( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
-		GetWorkArea( aWorkArea );
-		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
-	}
-	else
-	{
-		SetPosSize( maOriginalGeometry.nX - maOriginalGeometry.nLeftDecoration, maOriginalGeometry.nY - maOriginalGeometry.nTopDecoration, maOriginalGeometry.nWidth, maOriginalGeometry.nHeight, nFlags );
-		memset( &maOriginalGeometry, 0, sizeof( SalFrameGeometry ) );
+			JavaSalSystem *pSalSystem = (JavaSalSystem *)ImplGetSalSystem();
+			Rectangle aWorkArea;
+			if ( pSalSystem )
+				aWorkArea = pSalSystem->GetDisplayWorkAreaPosSizePixel( nDisplay );
+			if ( aWorkArea.IsEmpty() )
+				aWorkArea = Rectangle( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
+			GetWorkArea( aWorkArea );
+			SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
+		}
+		else
+		{
+			SetPosSize( maOriginalGeometry.nX - maOriginalGeometry.nLeftDecoration, maOriginalGeometry.nY - maOriginalGeometry.nTopDecoration, maOriginalGeometry.nWidth, maOriginalGeometry.nHeight, nFlags );
+			memset( &maOriginalGeometry, 0, sizeof( SalFrameGeometry ) );
+		}
 	}
 
 	if ( mpWindow )
