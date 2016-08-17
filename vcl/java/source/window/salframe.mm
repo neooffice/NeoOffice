@@ -1485,14 +1485,16 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 {
 	if ( mpParent )
 	{
-		if ( mpWindow && [mpParent parentWindow] )
-			[mpParent removeChildWindow:mpWindow];
 		[mpParent release];
 		mpParent = nil;
 	}
 
 	if ( mpWindow )
 	{
+		NSWindow *pParentWindow = [mpWindow parentWindow];
+		if ( pParentWindow )
+			[pParentWindow removeChildWindow:mpWindow];
+
 		CloseOrOrderOutWindow( mpWindow );
 
 		::std::map< NSWindow*, JavaSalGraphics* >::iterator nwit = aNativeWindowMap.find( mpWindow );
@@ -1971,6 +1973,11 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				}
 			}
 
+			NSWindow *pKeyWindow = nil;
+			NSApplication *pApp = [NSApplication sharedApplication];
+			if ( pApp )
+				pKeyWindow = [pApp keyWindow];
+
 			[mpWindow orderWindow:NSWindowAbove relativeTo:( mpParent ? [mpParent windowNumber] : 0 )];
 			MacOSBOOL bCanBecomeKeyWindow;
 			if ( [mpWindow isKindOfClass:[VCLPanel class]] )
@@ -1981,21 +1988,27 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				[mpWindow makeKeyWindow];
 
 			if ( mpParent && ![mpWindow parentWindow] )
-				[mpParent addChildWindow:mpWindow ordered:NSWindowAbove];
-
-			if ( [mpWindow level] == NSModalPanelWindowLevel )
 			{
-				NSApplication *pApp = [NSApplication sharedApplication];
-				if ( pApp )
-					[pApp requestUserAttention:NSInformationalRequest];
+				// Fix the hidden "Update links?" modal dialog when opening a
+				// document from a document that is already in full screen mode
+				// by attaching titled windows to the last key window if the
+				// last key window is in full screen mode
+				NSWindow *pParentWindow = mpParent;
+				if ( pKeyWindow && pKeyWindow != mpWindow && [mpWindow styleMask] & NSTitledWindowMask && [pKeyWindow styleMask] & NSFullScreenWindowMask )
+					pParentWindow = pKeyWindow;
+				[pParentWindow addChildWindow:mpWindow ordered:NSWindowAbove];
 			}
+
+			if ( pApp && [mpWindow level] == NSModalPanelWindowLevel )
+				[pApp requestUserAttention:NSInformationalRequest];
 		}
 		else
 		{
 			[self animateWaitingView:NO];
 
-			if ( mpParent && [mpWindow parentWindow] )
-				[mpParent removeChildWindow:mpWindow];
+			NSWindow *pParentWindow = [mpWindow parentWindow];
+			if ( pParentWindow )
+				[pParentWindow removeChildWindow:mpWindow];
 
 			CloseOrOrderOutWindow( mpWindow );
 
