@@ -1639,6 +1639,16 @@ void JavaSalEvent::dispatch()
 
 													uno::Any aRet = xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:FullScreen" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, uno::Sequence< beans::PropertyValue >() );
 
+													// Fix incorrect content
+													// bounds when presentations
+													// are in full screen mode
+													// by explicitly setting the
+													// window's full screen flag
+													// since some document types
+													// never call
+													// JavaSalFrame::ShowFullScreen()
+													pFrame->mbFullScreen = bFullScreen;
+
 													pFrame->mbInWindowDidExitFullScreen = FALSE;
 													pFrame->mbInWindowWillEnterFullScreen = FALSE;
 												}
