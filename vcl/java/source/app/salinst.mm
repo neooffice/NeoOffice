@@ -1606,6 +1606,8 @@ void JavaSalEvent::dispatch()
 
 				if ( pWindow )
 				{
+					bool bDispatched = false;
+
 					uno::Reference< frame::XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), uno::UNO_QUERY );
 					if ( xFramesSupplier.is() )
 					{
@@ -1637,7 +1639,14 @@ void JavaSalEvent::dispatch()
 													pFrame->mbInWindowDidExitFullScreen = !bFullScreen;
 													pFrame->mbInWindowWillEnterFullScreen = bFullScreen;
 
-													uno::Any aRet = xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:FullScreen" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, uno::Sequence< beans::PropertyValue >() );
+													try
+													{
+														uno::Any aRet = xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:FullScreen" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, uno::Sequence< beans::PropertyValue >() );
+														bDispatched = true;
+													}
+													catch ( ... )
+													{
+													}
 
 													pFrame->mbInWindowDidExitFullScreen = FALSE;
 													pFrame->mbInWindowWillEnterFullScreen = FALSE;
@@ -1651,6 +1660,13 @@ void JavaSalEvent::dispatch()
 							}
 						}
 					}
+
+					// Fix incorrect content bounds when presentations are in
+					// full screen mode by explicitly setting the window's full
+					// screen flag since some document types never call
+					// JavaSalFrame::ShowFullScreen()
+					if ( !bDispatched )
+						pFrame->mbFullScreen = bFullScreen;
 				}
 			}
 			break;

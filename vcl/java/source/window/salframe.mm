@@ -265,18 +265,11 @@ static BOOL bIOPMAssertionIDSet = NO;
 		}
 		else
 		{
-			[pApp setPresentationOptions:NSApplicationPresentationDefault];
-
-			if ( [pApp presentationOptions] & NSApplicationPresentationFullScreen )
-			{
-				// Fix hidden menu after existing slide show mode to a full
-				// screen mode window by toggling the window out of full screen
-				// mode. Note: delay the toggling as it needs to lock the
-				// applcation mutex.
-				NSWindow *pKeyWindow = [pApp keyWindow];
-				if ( pKeyWindow && [pKeyWindow styleMask] & NSFullScreenWindowMask && [pKeyWindow respondsToSelector:@selector(toggleFullScreen:)] )
-					[pKeyWindow performSelector:@selector(toggleFullScreen:) withObject:self afterDelay:0];
-			}
+			// Fix hidden menu after existing slide show mode to a full screen
+			// mode window on OS X 10.11 by explicitly setting the presentation
+			// options to NSApplicationPresentationAutoHideMenuBar and
+			// NSApplicationPresentationAutoHideDock
+			[pApp setPresentationOptions:NSApplicationPresentationDefault | NSApplicationPresentationAutoHideMenuBar | NSApplicationPresentationAutoHideDock];
 
 			// Stop blocking sleep
 			if ( bIOPMAssertionIDSet )
@@ -1505,14 +1498,16 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 {
 	if ( mpParent )
 	{
-		if ( mpWindow && [mpParent parentWindow] )
-			[mpParent removeChildWindow:mpWindow];
 		[mpParent release];
 		mpParent = nil;
 	}
 
 	if ( mpWindow )
 	{
+		NSWindow *pParentWindow = [mpWindow parentWindow];
+		if ( pParentWindow )
+			[pParentWindow removeChildWindow:mpWindow];
+
 		CloseOrOrderOutWindow( mpWindow );
 
 		::std::map< NSWindow*, JavaSalGraphics* >::iterator nwit = aNativeWindowMap.find( mpWindow );
@@ -1864,10 +1859,14 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
         return;
 
 	mbFullScreen = [pFullScreen boolValue];
-	[self adjustColorLevelAndShadow];
 
 	if ( mbUndecorated && mpWindow )
 	{
+		// Only adjust the color, level, and shadow if the window is
+		// undecorated. Otherwise, a full screen window will not display the
+		// current document in the versions browser on macOS 10.12.
+		[self adjustColorLevelAndShadow];
+
 		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
 			[(VCLPanel *)mpWindow setCanBecomeKeyWindow:mbFullScreen];
 		else
@@ -1987,6 +1986,11 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				}
 			}
 
+			NSWindow *pKeyWindow = nil;
+			NSApplication *pApp = [NSApplication sharedApplication];
+			if ( pApp )
+				pKeyWindow = [pApp keyWindow];
+
 			[mpWindow orderWindow:NSWindowAbove relativeTo:( mpParent ? [mpParent windowNumber] : 0 )];
 			MacOSBOOL bCanBecomeKeyWindow;
 			if ( [mpWindow isKindOfClass:[VCLPanel class]] )
@@ -1997,21 +2001,27 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				[mpWindow makeKeyWindow];
 
 			if ( mpParent && ![mpWindow parentWindow] )
-				[mpParent addChildWindow:mpWindow ordered:NSWindowAbove];
-
-			if ( [mpWindow level] == NSModalPanelWindowLevel )
 			{
-				NSApplication *pApp = [NSApplication sharedApplication];
-				if ( pApp )
-					[pApp requestUserAttention:NSInformationalRequest];
+				// Fix the hidden "update links" modal dialog when opening a
+				// document from a document that is already in full screen mode
+				// by attaching titled windows to the last key window if the
+				// last key window is in full screen mode
+				NSWindow *pParentWindow = mpParent;
+				if ( pKeyWindow && pKeyWindow != mpWindow && [mpWindow styleMask] & NSTitledWindowMask && [pKeyWindow styleMask] & NSFullScreenWindowMask )
+					pParentWindow = pKeyWindow;
+				[pParentWindow addChildWindow:mpWindow ordered:NSWindowAbove];
 			}
+
+			if ( pApp && [mpWindow level] == NSModalPanelWindowLevel )
+				[pApp requestUserAttention:NSInformationalRequest];
 		}
 		else
 		{
 			[self animateWaitingView:NO];
 
-			if ( mpParent && [mpWindow parentWindow] )
-				[mpParent removeChildWindow:mpWindow];
+			NSWindow *pParentWindow = [mpWindow parentWindow];
+			if ( pParentWindow )
+				[pParentWindow removeChildWindow:mpWindow];
 
 			CloseOrOrderOutWindow( mpWindow );
 
@@ -3970,26 +3980,29 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 		}
 
 		[pPool release];
-	}
 
-	USHORT nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
-	if ( bFullScreen )
-	{
-		memcpy( &maOriginalGeometry, &maGeometry, sizeof( SalFrameGeometry ) );
+		// Do not set frame bounds when entering or exiting full screen mode
+		// as that will cause the original size to be lost when a window that
+		// is in full screen mode transitions to the versions browser
+		USHORT nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
+		if ( bFullScreen )
+		{
+			memcpy( &maOriginalGeometry, &maGeometry, sizeof( SalFrameGeometry ) );
 
-		JavaSalSystem *pSalSystem = (JavaSalSystem *)ImplGetSalSystem();
-		Rectangle aWorkArea;
-		if ( pSalSystem )
-			aWorkArea = pSalSystem->GetDisplayWorkAreaPosSizePixel( nDisplay );
-		if ( aWorkArea.IsEmpty() )
-			aWorkArea = Rectangle( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
-		GetWorkArea( aWorkArea );
-		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
-	}
-	else
-	{
-		SetPosSize( maOriginalGeometry.nX - maOriginalGeometry.nLeftDecoration, maOriginalGeometry.nY - maOriginalGeometry.nTopDecoration, maOriginalGeometry.nWidth, maOriginalGeometry.nHeight, nFlags );
-		memset( &maOriginalGeometry, 0, sizeof( SalFrameGeometry ) );
+			JavaSalSystem *pSalSystem = (JavaSalSystem *)ImplGetSalSystem();
+			Rectangle aWorkArea;
+			if ( pSalSystem )
+				aWorkArea = pSalSystem->GetDisplayWorkAreaPosSizePixel( nDisplay );
+			if ( aWorkArea.IsEmpty() )
+				aWorkArea = Rectangle( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
+			GetWorkArea( aWorkArea );
+			SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
+		}
+		else
+		{
+			SetPosSize( maOriginalGeometry.nX - maOriginalGeometry.nLeftDecoration, maOriginalGeometry.nY - maOriginalGeometry.nTopDecoration, maOriginalGeometry.nWidth, maOriginalGeometry.nHeight, nFlags );
+			memset( &maOriginalGeometry, 0, sizeof( SalFrameGeometry ) );
+		}
 	}
 
 	if ( mpWindow )
