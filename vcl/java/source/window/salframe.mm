@@ -1851,7 +1851,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	{
 		// Only adjust the color, level, and shadow if the window is
 		// undecorated. Otherwise, a full screen window will not display the
-		// current document in the versions browser.
+		// current document in the versions browser on macOS 10.12.
 		[self adjustColorLevelAndShadow];
 
 		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
@@ -1989,7 +1989,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 			if ( mpParent && ![mpWindow parentWindow] )
 			{
-				// Fix the hidden "Update links?" modal dialog when opening a
+				// Fix the hidden "update links" modal dialog when opening a
 				// document from a document that is already in full screen mode
 				// by attaching titled windows to the last key window if the
 				// last key window is in full screen mode
