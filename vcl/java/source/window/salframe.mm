@@ -269,7 +269,10 @@ static BOOL bIOPMAssertionIDSet = NO;
 			// mode window on OS X 10.11 by explicitly setting the presentation
 			// options to NSApplicationPresentationAutoHideMenuBar and
 			// NSApplicationPresentationAutoHideDock
-			[pApp setPresentationOptions:NSApplicationPresentationDefault | NSApplicationPresentationAutoHideMenuBar | NSApplicationPresentationAutoHideDock];
+			if ( [pApp presentationOptions] & NSApplicationPresentationFullScreen )
+				[pApp setPresentationOptions:NSApplicationPresentationDefault | NSApplicationPresentationAutoHideMenuBar | NSApplicationPresentationAutoHideDock];
+			else
+				[pApp setPresentationOptions:NSApplicationPresentationDefault];
 
 			// Stop blocking sleep
 			if ( bIOPMAssertionIDSet )
