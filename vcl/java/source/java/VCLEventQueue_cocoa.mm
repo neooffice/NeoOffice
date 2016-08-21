@@ -1544,7 +1544,7 @@ static NSUInteger nMouseMask = 0;
 				pWheelMouseEvent->mnY = (long)aLocation.y;
 				pWheelMouseEvent->mnDelta = nDeltaX;
 				pWheelMouseEvent->mnNotchDelta = ( nDeltaX < 0 ? -1 : 1 );
-				pWheelMouseEvent->mnScrollLines = ( bScrollPages ? SAL_WHEELMOUSE_EVENT_PAGESCROLL : abs( nDeltaX ) );
+				pWheelMouseEvent->mnScrollLines = ( bScrollPages ? SAL_WHEELMOUSE_EVENT_PAGESCROLL : labs( nDeltaX ) );
 				pWheelMouseEvent->mnCode = nCode;
 				pWheelMouseEvent->mbHorz = sal_True;
 
@@ -1569,7 +1569,7 @@ static NSUInteger nMouseMask = 0;
 				pWheelMouseEvent->mnY = (long)aLocation.y;
 				pWheelMouseEvent->mnDelta = nDeltaY;
 				pWheelMouseEvent->mnNotchDelta = ( nDeltaY < 0 ? -1 : 1 );
-				pWheelMouseEvent->mnScrollLines = ( bScrollPages ? SAL_WHEELMOUSE_EVENT_PAGESCROLL : abs( nDeltaY ) );
+				pWheelMouseEvent->mnScrollLines = ( bScrollPages ? SAL_WHEELMOUSE_EVENT_PAGESCROLL : labs( nDeltaY ) );
 				pWheelMouseEvent->mnCode = nCode;
 				pWheelMouseEvent->mbHorz = sal_False;
 
