@@ -273,7 +273,10 @@ static BOOL bIOPMAssertionIDSet = NO;
 			// mode window on OS X 10.11 by explicitly setting the presentation
 			// options to NSApplicationPresentationAutoHideMenuBar and
 			// NSApplicationPresentationAutoHideDock
-			[pApp setPresentationOptions:NSApplicationPresentationDefault | NSApplicationPresentationAutoHideMenuBar | NSApplicationPresentationAutoHideDock];
+			if ( [pApp presentationOptions] & NSApplicationPresentationFullScreen )
+				[pApp setPresentationOptions:NSApplicationPresentationDefault | NSApplicationPresentationAutoHideMenuBar | NSApplicationPresentationAutoHideDock];
+			else
+				[pApp setPresentationOptions:NSApplicationPresentationDefault];
 
 			// Stop blocking sleep
 			if ( bIOPMAssertionIDSet )
@@ -3980,7 +3983,7 @@ void JavaSalFrame::ShowFullScreen( sal_Bool bFullScreen, sal_Int32 nDisplay )
 		// Do not set frame bounds when entering or exiting full screen mode
 		// as that will cause the original size to be lost when a window that
 		// is in full screen mode transitions to the versions browser
-sal_uInt16 nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
+		sal_uInt16 nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
 		if ( bFullScreen )
 		{
 			memcpy( &maOriginalGeometry, &maGeometry, sizeof( SalFrameGeometry ) );
