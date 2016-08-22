@@ -630,7 +630,6 @@ static void RegisterMainBundleWithLaunchServices()
 
 @interface NSView (VCLViewPoseAs)
 - (BOOL)poseAsAccessibilityIsIgnored;
-- (void)poseAsDragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(BOOL)bSlideBack;
 @end
 
 @interface VCLCMenuBar : NSObject
@@ -2537,38 +2536,34 @@ static CFDataRef aRTFSelection = nil;
 		[pDelegate concludeDragOperation:pSender];
 }
 
-- (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(BOOL)bSlideBack
-{
-	// Fix bug 3652 by locking the application mutex and never letting it get
-	// released during a native drag session. This prevents drag events from
-	// getting dispatched out of order when we release and reacquire the mutex.
-	if ( VCLInstance_setDragLock( YES ) )
-	{
-		if ( [super respondsToSelector:@selector(poseAsDragImage:at:offset:event:pasteboard:source:slideBack:)] )
-			[super poseAsDragImage:pImage at:aImageLocation offset:aMouseOffset event:pEvent pasteboard:pPasteboard source:pSourceObject slideBack:bSlideBack];
-		VCLInstance_setDragLock( NO );
-	}
-}
-
-- (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint
+- (void)draggingSession:(NSDraggingSession *)pSession endedAtPoint:(NSPoint)aScreenPoint operation:(NSDragOperation)nOperation
 {
 	id pDelegate = [self draggingSourceDelegate];
-	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggedImage:beganAt:)])
-		[pDelegate draggedImage:pImage beganAt:aPoint];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingSession:endedAtPoint:operation:)])
+		[pDelegate draggingSession:pSession endedAtPoint:aScreenPoint operation:nOperation];
 }
 
-- (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation
+- (void)draggingSession:(NSDraggingSession *)pSession movedToPoint:(NSPoint)aScreenPoint
 {
 	id pDelegate = [self draggingSourceDelegate];
-	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggedImage:endedAt:operation:)])
-		[pDelegate draggedImage:pImage endedAt:aPoint operation:nOperation];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingSession:movedToPoint:)])
+		[pDelegate draggingSession:pSession movedToPoint:aScreenPoint];
 }
 
-- (void)draggedImage:(NSImage *)pImage movedTo:(NSPoint)aPoint
+- (NSDragOperation)draggingSession:(NSDraggingSession *)pSession sourceOperationMaskForDraggingContext:(NSDraggingContext)nContext
 {
 	id pDelegate = [self draggingSourceDelegate];
-	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggedImage:movedTo:)])
-		[pDelegate draggedImage:pImage movedTo:aPoint];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingSession:sourceOperationMaskForDraggingContext:)])
+		return [pDelegate draggingSession:pSession sourceOperationMaskForDraggingContext:nContext];
+	else
+		return NSDragOperationNone;
+}
+
+- (void)draggingSession:(NSDraggingSession *)pSession willBeginAtPoint:(NSPoint)aScreenPoint
+{
+	id pDelegate = [self draggingSourceDelegate];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingSession:willBeginAtPoint:)])
+		[pDelegate draggingSession:pSession willBeginAtPoint:aScreenPoint];
 }
 
 - (id)draggingDestinationDelegate
@@ -2673,15 +2668,6 @@ static CFDataRef aRTFSelection = nil;
 	return pRet;
 }
 
-- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal
-{
-	id pDelegate = [self draggingSourceDelegate];
-	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingSourceOperationMaskForLocal:)])
-		return [pDelegate draggingSourceOperationMaskForLocal:bLocal];
-	else
-		return NSDragOperationNone;
-}
-
 - (NSDragOperation)draggingUpdated:(id < NSDraggingInfo >)pSender
 {
 	NSDragOperation nRet = NSDragOperationNone;
@@ -2730,11 +2716,11 @@ static CFDataRef aRTFSelection = nil;
 	}
 }
 
-- (BOOL)ignoreModifierKeysWhileDragging
+- (BOOL)ignoreModifierKeysForDraggingSession:(NSDraggingSession *)pSession
 {
 	id pDelegate = [self draggingSourceDelegate];
-	if ( pDelegate && [pDelegate respondsToSelector:@selector(ignoreModifierKeysWhileDragging)])
-		return [pDelegate ignoreModifierKeysWhileDragging];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(ignoreModifierKeysForDraggingSession:)])
+		return [pDelegate ignoreModifierKeysForDraggingSession:pSession];
 	else
 		return NO;
 }
@@ -2761,15 +2747,6 @@ static CFDataRef aRTFSelection = nil;
 	return YES;
 }
 
-- (NSArray *)namesOfPromisedFilesDroppedAtDestination:(NSURL *)pDropDestination
-{
-	id pDelegate = [self draggingSourceDelegate];
-	if ( pDelegate && [pDelegate respondsToSelector:@selector(namesOfPromisedFilesDroppedAtDestination:)])
-		return [pDelegate namesOfPromisedFilesDroppedAtDestination:pDropDestination];
-	else
-		return nil;
-}
-
 - (BOOL)performDragOperation:(id < NSDraggingInfo >)pSender
 {
 	if ( pSender )
@@ -2781,14 +2758,7 @@ static CFDataRef aRTFSelection = nil;
 
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(performDragOperation:)])
-	{
-		// Fix hanging when dragging a pivot table onto a chart by releasing
-		// the native drag lock so that the OOo code can display any dialogs
-		// in the drop event
-		if ( [pSender draggingSource] )
-			VCLInstance_setDragLock( NO );
 		return [pDelegate performDragOperation:pSender];
-	}
 
 	return NO;
 }
@@ -3152,18 +3122,6 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 
 	aSelector = @selector(accessibilityIsIgnored);
 	aPoseAsSelector = @selector(poseAsAccessibilityIsIgnored);
-	aOldMethod = class_getInstanceMethod( [NSView class], aSelector );
-	aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-	if ( aOldMethod && aNewMethod )
-	{
-		IMP aOldIMP = method_getImplementation( aOldMethod );
-		IMP aNewIMP = method_getImplementation( aNewMethod );
-		if ( aOldIMP && aNewIMP && class_addMethod( [NSView class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
-			method_setImplementation( aOldMethod, aNewIMP );
-	}
-
-	aSelector = @selector(dragImage:at:offset:event:pasteboard:source:slideBack:);
-	aPoseAsSelector = @selector(poseAsDragImage:at:offset:event:pasteboard:source:slideBack:);
 	aOldMethod = class_getInstanceMethod( [NSView class], aSelector );
 	aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 	if ( aOldMethod && aNewMethod )

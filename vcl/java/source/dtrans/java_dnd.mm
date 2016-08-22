@@ -50,6 +50,7 @@
 #include "java_dnd.hxx"
 #include "java_dndcontext.hxx"
 #include "DTransTransferable.hxx"
+#include "../app/salinst_cocoa.h"
 
 using namespace com::sun::star;
 using namespace cppu;
@@ -101,14 +102,12 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 	NSView*						mpSource;
 }
 - (void)dealloc;
-- (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint;
-- (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation;
-- (void)draggedImage:(NSImage *)pImage movedTo:(NSPoint)aPoint;
+- (void)draggingSession:(NSDraggingSession *)pSession endedAtPoint:(NSPoint)aPoint operation:(NSDragOperation)nOperation;
+- (void)draggingSession:(NSDraggingSession *)pSession movedToPoint:(NSPoint)aPoint;
 - (NSDragOperation)draggingSession:(NSDraggingSession *)pSession sourceOperationMaskForDraggingContext:(NSDraggingContext)nContext;
-- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal;
-- (BOOL)ignoreModifierKeysWhileDragging;
+- (void)draggingSession:(NSDraggingSession *)pSession willBeginAtPoint:(NSPoint)aPoint;
+- (BOOL)ignoreModifierKeysForDraggingSession:(NSDraggingSession *)pSession;
 - (id)initWithView:(NSView *)pSource;
-- (NSArray *)namesOfPromisedFilesDroppedAtDestination:(NSURL *)pDropDestination;
 @end
 
 @interface JavaDNDPasteboardHelper : NSObject
@@ -307,8 +306,17 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 			NSDraggingItem *pItem = [[NSDraggingItem alloc] initWithPasteboardWriter:pImage];
 			if ( pItem )
 			{
-				[pImage autorelease];
-				[mpSource beginDraggingSessionWithItems:[NSArray arrayWithObject:pItem] event:mpLastMouseEvent source:mpDraggingSource];
+				[pItem autorelease];
+
+				// Fix bug 3652 by locking the application mutex and never
+				// letting it get released during a native drag session. This
+				// prevents drag events from getting dispatched out of order
+				// when we release and reacquire the mutex.
+				if ( VCLInstance_setDragLock( YES ) )
+				{
+					if ( ![mpSource beginDraggingSessionWithItems:[NSArray arrayWithObject:pItem] event:mpLastMouseEvent source:mpDraggingSource] )
+						VCLInstance_setDragLock( NO );
+				}
 			}
 		}
 	}
@@ -503,7 +511,17 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 {
 	BOOL bRet = NO;
 
-	if ( !mpDestination || !pSender )
+	if ( !pSender )
+		return bRet;
+
+	// Fix hanging when dragging a pivot table onto a chart reported in
+	// 04/25/2016 e-mail to elcapitanbugs@neooffice.org by releasing the
+	// native drag lock so that the OOo code can display any dialogs in the
+	// drop event
+	if ( [pSender draggingSource] )
+		VCLInstance_setDragLock( NO );
+
+	if ( !mpDestination )
 		return bRet;
 
 	NSWindow *pWindow = [pSender draggingDestinationWindow];
@@ -562,52 +580,22 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 	[super dealloc];
 }
 
-- (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint
+- (void)draggingSession:(NSDraggingSession *)pSession endedAtPoint:(NSPoint)aPoint operation:(NSDragOperation)nOperation
 {
-	(void)pImage;
+	(void)pSession;
 
 	if ( !mpSource )
-		return;
- 
-	NSWindow *pWindow = [mpSource window];
-	if ( !pWindow )
-		return;
- 
-	Point aPos( ImplGetPointFromNSPoint( aPoint, pWindow ) );
-	if ( !Application::IsShutDown() )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
-			JavaDragSource *pSource = NULL;
-			for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
-			{
-				if ( (*it)->getNSView() == mpSource )
-				{
-					pSource = *it;
-					break;
-				}
-			}
-
-			if ( pSource && pTrackDragOwner == pSource )
-				pSource->handleDrag( aPos.X(), aPos.Y() );
-		}
-
-		rSolarMutex.release();
-	}
-}
-
-- (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation
-{
-	(void)pImage;
-
-	if ( !mpSource )
+		VCLInstance_setDragLock( NO );
 		return;
+	}
  
 	NSWindow *pWindow = [mpSource window];
 	if ( !pWindow )
+	{
+		VCLInstance_setDragLock( NO );
 		return;
+	}
  
 	Point aPos( ImplGetPointFromNSPoint( aPoint, pWindow ) );
 	if ( !Application::IsShutDown() )
@@ -649,11 +637,13 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 
 		rSolarMutex.release();
 	}
+
+	VCLInstance_setDragLock( NO );
 }
 
-- (void)draggedImage:(NSImage *)pImage movedTo:(NSPoint)aPoint
+- (void)draggingSession:(NSDraggingSession *)pSession movedToPoint:(NSPoint)aPoint
 {
-	(void)pImage;
+	(void)pSession;
 
 	if ( !mpSource )
 		return;
@@ -690,13 +680,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 - (NSDragOperation)draggingSession:(NSDraggingSession *)pSession sourceOperationMaskForDraggingContext:(NSDraggingContext)nContext
 {
 	(void)pSession;
-
-	return [self draggingSourceOperationMaskForLocal:( nContext == NSDraggingContextWithinApplication ? YES : NO )];
-}
-
-- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal
-{
-	(void)bLocal;
+	(void)nContext;
 
 	NSDragOperation nRet = NSDragOperationNone;
 	if ( !mpSource )
@@ -728,8 +712,46 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 	return nRet;
 }
 
-- (BOOL)ignoreModifierKeysWhileDragging
+- (void)draggingSession:(NSDraggingSession *)pSession willBeginAtPoint:(NSPoint)aPoint
 {
+	(void)pSession;
+
+	if ( !mpSource )
+		return;
+
+	NSWindow *pWindow = [mpSource window];
+	if ( !pWindow )
+		return;
+ 
+	Point aPos( ImplGetPointFromNSPoint( aPoint, pWindow ) );
+	if ( !Application::IsShutDown() )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
+		{
+			JavaDragSource *pSource = NULL;
+			for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
+			{
+				if ( (*it)->getNSView() == mpSource )
+				{
+					pSource = *it;
+					break;
+				}
+			}
+
+			if ( pSource && pTrackDragOwner == pSource )
+				pSource->handleDrag( aPos.X(), aPos.Y() );
+		}
+
+		rSolarMutex.release();
+	}
+}
+
+- (BOOL)ignoreModifierKeysForDraggingSession:(NSDraggingSession *)pSession
+{
+	(void)pSession;
+
 	return NO;
 }
 
@@ -742,13 +764,6 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 		[mpSource retain];
 
 	return self;
-}
-
-- (NSArray *)namesOfPromisedFilesDroppedAtDestination:(NSURL *)pDropDestination
-{
-	(void)pDropDestination;
-
-	return nil;
 }
 
 @end
