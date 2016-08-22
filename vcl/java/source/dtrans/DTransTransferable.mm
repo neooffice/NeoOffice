@@ -680,22 +680,17 @@ static void ImplInitializeSupportedPasteboardTypes()
 			{
 				for ( sal_uInt16 i = 0; i < nSupportedTypes; i++ )
 				{
-					// Try to load oldest supported symbol first
-					const NSString *pSymName = aSupportedPasteboardTypeSymbolNames[ i * 3 ];
-					if ( pSymName )
+					aSupportedPasteboardTypes[ i ] = aSupportedPasteboardTypeSymbolNames[ ( i * 3 ) + 1 ];
+					if ( !aSupportedPasteboardTypes[ i ] || ![aSupportedPasteboardTypes[ i ] length] )
 					{
-						NSString **ppType = (NSString **)CFBundleGetDataPointerForName( aBundle, (CFStringRef)pSymName );
-						if ( ppType && *ppType )
-							aSupportedPasteboardTypes[ i ] = (NSString *)*ppType;
-					}
-
-					// Try to load newer supported symbol next
-					pSymName = aSupportedPasteboardTypeSymbolNames[ ( i * 3 ) + 1 ];
-					if ( pSymName )
-					{
-						NSString **ppType = (NSString **)CFBundleGetDataPointerForName( aBundle, (CFStringRef)pSymName );
-						if ( ppType && *ppType )
-							aSupportedPasteboardTypes[ i ] = (NSString *)*ppType;
+						// Try to load deprecated type
+						const NSString *pSymName = aSupportedPasteboardTypeSymbolNames[ i * 3 ];
+						if ( pSymName )
+						{
+							NSString **ppType = (NSString **)CFBundleGetDataPointerForName( aBundle, (CFStringRef)pSymName );
+							if ( ppType && *ppType )
+								aSupportedPasteboardTypes[ i ] = (NSString *)*ppType;
+						}
 					}
 
 					// Assign the symbol to the matching local static NSString
