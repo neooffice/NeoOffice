@@ -71,16 +71,16 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 
 // ========================================================================
 
-@interface NSWindow (VCLWindow )
+@interface NSWindow (JavaDNDPasteboardHelper)
 - (void)setDraggingSourceDelegate:(id)pDelegate;
 @end
 
-@interface NSView (VCLView)
+@interface NSView (JavaDNDPasteboardHelper)
 - (void)setDraggingDestinationDelegate:(id)pDelegate;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
 @end
 
-@interface JavaDNDDraggingDestination : NSObject
+@interface JavaDNDDraggingDestination : NSObject <NSDraggingDestination>
 {
 	NSView*						mpDestination;
 }

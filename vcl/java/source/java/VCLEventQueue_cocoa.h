@@ -43,7 +43,7 @@
 
 #ifdef __OBJC__
 
-@interface VCLView : NSView <NSTextInputClient>
+@interface VCLView : NSView <NSDraggingDestination, NSDraggingSource, NSTextInputClient>
 {
 	JavaSalFrame*			mpFrame;
 	BOOL					mbInKeyDown;
