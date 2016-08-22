@@ -94,6 +94,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 - (id)initWithView:(NSView *)pDestination;
 - (BOOL)performDragOperation:(id < NSDraggingInfo >)pSender;
 - (BOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender;
+- (void)updateDraggingItemsForDrag:(id <NSDraggingInfo>)pSender;
 - (BOOL)wantsPeriodicDraggingUpdates;
 @end
 
@@ -560,6 +561,11 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 	(void)pSender;
 
 	return YES;
+}
+
+- (void)updateDraggingItemsForDrag:(id <NSDraggingInfo>)pSender
+{
+	(void)pSender;
 }
 
 - (BOOL)wantsPeriodicDraggingUpdates

@@ -2852,6 +2852,13 @@ static CFDataRef aRTFSelection = nil;
 	}
 }
 
+- (void)updateDraggingItemsForDrag:(id <NSDraggingInfo>)pSender
+{
+	id pDelegate = [self draggingDestinationDelegate];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(updateDraggingItemsForDrag:)])
+		[pDelegate updateDraggingItemsForDrag:pSender];
+}
+
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType
 {
 	NSWindow *pWindow = [self window];

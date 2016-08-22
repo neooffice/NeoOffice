@@ -96,6 +96,7 @@
 - (BOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard;
 - (void)setDraggingDestinationDelegate:(id)pDelegate;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
+- (void)updateDraggingItemsForDrag:(id <NSDraggingInfo>)pSender;
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType;
 - (BOOL)wantsPeriodicDraggingUpdates;
 - (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes;
