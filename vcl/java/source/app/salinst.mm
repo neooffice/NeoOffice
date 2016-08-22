@@ -212,7 +212,7 @@ sal_Bool VCLInstance_setDragLock( sal_Bool bLock )
 		{
 			IMutex& rSolarMutex = Application::GetSolarMutex();
 			rSolarMutex.acquire();
-			if ( !Application::IsShutDown() )
+			if ( !Application::IsShutDown() && !bInNativeDrag )
 			{	
 				bInNativeDrag = sal_True;
 				bRet = sal_True;
