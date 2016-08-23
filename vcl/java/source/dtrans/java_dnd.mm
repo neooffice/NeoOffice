@@ -154,10 +154,12 @@ static DTransTransferable *pCurrentTransferable = NULL;
 			delete pCurrentTransferable;
 			pCurrentTransferable = NULL;
 		}
-
-		if ( bUnlock )
-			VCLInstance_setDragLock( NO );
 	}
+
+	// Prevent risk of hanging by unlocking drag lock even if the dragging
+	// session does not match
+	if ( bUnlock )
+		VCLInstance_setDragLock( NO );
 }
 
 - (void)dealloc
