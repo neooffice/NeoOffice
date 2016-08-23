@@ -119,6 +119,7 @@ static DTransTransferable *pCurrentTransferable = NULL;
 {
 	NSView*						mpDestination;
 	JavaDNDDraggingSource*		mpDraggingSource;
+	JavaDragSource*				mpDragOwner;
 	BOOL						mbDragStarted;
 	NSEvent*					mpLastMouseEvent;
 	NSArray*					mpNewTypes;
@@ -130,7 +131,7 @@ static DTransTransferable *pCurrentTransferable = NULL;
 - (NSView *)getDestination;
 - (NSView *)getSource;
 - (id)initWithDraggingDestination:(NSView *)pDestination newTypes:(NSArray *)pNewTypes;
-- (id)initWithDraggingSource:(NSView *)pSource;
+- (id)initWithDraggingSource:(NSView *)pSource dragOwner:(JavaDragSource *)pDragOwner;
 - (void)mouseDown:(NSEvent *)pEvent;
 - (void)mouseDragged:(NSEvent *)pEvent;
 - (void)registerDragSource:(id)pSender;
@@ -202,6 +203,8 @@ static DTransTransferable *pCurrentTransferable = NULL;
 	if ( mpDestination )
 		[mpDestination retain];
 	mpDraggingSource = nil;
+	mpDragOwner = NULL;
+	mbDragStarted = NO;
 	mpLastMouseEvent = nil;
 	mpNewTypes = pNewTypes;
 	if ( mpNewTypes )
@@ -211,12 +214,13 @@ static DTransTransferable *pCurrentTransferable = NULL;
 	return self;
 }
 
-- (id)initWithDraggingSource:(NSView *)pSource
+- (id)initWithDraggingSource:(NSView *)pSource dragOwner:(JavaDragSource *)pDragOwner
 {
 	[super init];
 
 	mpDestination = nil;
 	mpDraggingSource = nil;
+	mpDragOwner = pDragOwner;
 	mbDragStarted = NO;
 	mpLastMouseEvent = nil;
 	mpNewTypes = nil;
@@ -315,7 +319,7 @@ static DTransTransferable *pCurrentTransferable = NULL;
 
 	mbDragStarted = NO;
 
-	if ( mpDraggingSource && mpLastMouseEvent && mpSource )
+	if ( mpDraggingSource && mpDragOwner && mpLastMouseEvent && mpSource )
 	{
 		// Fix bug 3652 by locking the application mutex and never letting it
 		// get released during a native drag session. This prevents drag events
@@ -325,7 +329,7 @@ static DTransTransferable *pCurrentTransferable = NULL;
 		{
 			NSDraggingSession *pDraggingSession = nil;
 			DTransTransferable *pTransferable = NULL;
-			if ( pTrackDragOwner && pTrackDragOwner->maContents.is() )
+			if ( pTrackDragOwner == mpDragOwner && pTrackDragOwner->maContents.is() )
 			{
 				pTransferable = new DTransTransferable( @"JavaDNDPasteboardHelper" );
 				if ( pTransferable )
@@ -1103,7 +1107,7 @@ void JavaDragSource::initialize( const uno::Sequence< uno::Any >& arguments ) th
 	if ( !mpPasteboardHelper )
 	{
 		// Do not retain as invoking alloc disables autorelease
-		mpPasteboardHelper = [[JavaDNDPasteboardHelper alloc] initWithDraggingSource:pView];
+		mpPasteboardHelper = [[JavaDNDPasteboardHelper alloc] initWithDraggingSource:pView dragOwner:this];
 		if ( mpPasteboardHelper )
 		{
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
