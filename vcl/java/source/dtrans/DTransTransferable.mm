@@ -173,7 +173,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 - (NSData *)PNGDataForType;
 @end
 
-@interface DTransPasteboardOwner : NSObject
+@interface DTransPasteboardOwner : NSObject <NSPasteboardWriting>
 {
 	int								mnChangeCount;
 	DTransTransferable*				mpTransferable;
@@ -186,7 +186,10 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 - (id)initWithTransferable:(DTransTransferable *)pTransferable pasteboardName:(NSString *)pPasteboardName types:(NSArray *)pTypes;
 - (void)pasteboard:(NSPasteboard *)pSender provideDataForType:(NSString *)pType;
 - (void)pasteboardChangedOwner:(NSPasteboard *)pSender;
+- (id)pasteboardPropertyListForType:(NSString *)pType;
 - (void)setContents:(id)pObject;
+- (NSArray *)writableTypesForPasteboard:(NSPasteboard *)pPasteboard;
+- (NSPasteboardWritingOptions)writingOptionsForType:(NSString *)pType pasteboard:(NSPasteboard *)pPasteboard;
 @end
 
 @implementation DTransPasteboardHelper
@@ -638,9 +641,27 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 
 - (void)pasteboardChangedOwner:(NSPasteboard *)pSender
 {
-	(void)pSender;
+	// Fix crash due to multiple calls to this selector that occur when this
+	// object is used as an NSDraggingItem by only releasing when the sender
+	// is the same pasteboard used to create this object 
+	NSPasteboard *pPasteboard = ( mpPasteboardName ? [NSPasteboard pasteboardWithName:mpPasteboardName] : [NSPasteboard generalPasteboard] );
+	if ( pPasteboard == pSender )
+		[self release];
+}
 
-	[self release];
+- (id)pasteboardPropertyListForType:(NSString *)pType
+{
+	id pRet = nil;
+
+	if ( pType )
+	{
+		if ( mpTransferable )
+			pRet = ImplGetDataForType( mpTransferable, pType );
+		if ( !pRet )
+			pRet = [NSData data];
+	}
+
+	return pRet;
 }
 
 - (void)setContents:(id)pObject
@@ -656,6 +677,21 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 		[self retain];
 		mnChangeCount = [pPasteboard declareTypes:mpTypes owner:self];
 	}
+}
+
+- (NSArray *)writableTypesForPasteboard:(NSPasteboard *)pPasteboard
+{
+	(void)pPasteboard;
+
+	return mpTypes;
+}
+
+- (NSPasteboardWritingOptions)writingOptionsForType:(NSString *)pType pasteboard:(NSPasteboard *)pPasteboard
+{
+	(void)pType;
+	(void)pPasteboard;
+
+	return NSPasteboardWritingPromised;
 }
 
 @end
@@ -1199,9 +1235,12 @@ sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) 
 
 // ----------------------------------------------------------------------------
 
-sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTransferable )
+sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTransferable, id *pPasteboardWriter )
 {
 	sal_Bool out = sal_False;
+
+	if ( pPasteboardWriter )
+		*pPasteboardWriter = nil;
 
 	mxTransferable = xTransferable;
 	if ( mxTransferable.is() )
@@ -1257,11 +1296,9 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 				}
 			}
 
-			// Do not retain as invoking alloc disables autorelease
-			// and the object will be released in the object's
-			// pasteboardChangedOwner: selector. Note that we will pass
-			// a zero length types array as that is needed to clear and
-			// take ownership of the clipboard.
+			// Do not retain the object as invoking the setContents: selector
+			// retains it and it will be released in the object's
+			// pasteboardChangedOwner: selector
 			DTransPasteboardOwner *pOwner = [DTransPasteboardOwner createWithTransferable:this pasteboardName:mpPasteboardName types:pTypes];
 			if ( pOwner )
 			{
@@ -1270,6 +1307,12 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 				mnChangeCount = [pOwner changeCount];
 				if ( mnChangeCount >= 0 )
 					out = sal_True;
+				if ( pPasteboardWriter )
+				{
+					// Retain before it released by the autorelease pool
+					[pOwner retain];
+					*pPasteboardWriter = pOwner;
+				}
 			}
 		}
 

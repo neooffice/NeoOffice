@@ -69,6 +69,7 @@ static NSDragOperation ImplGetOperationFromActions( sal_Int8 nActions );
 static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool bSame );
 static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 
+
 // ========================================================================
 
 @interface NSWindow (JavaDNDPasteboardHelper)
@@ -111,14 +112,21 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 - (id)initWithView:(NSView *)pSource;
 @end
 
+static NSDraggingSession *pCurrentDraggingSession = nil;
+static DTransTransferable *pCurrentTransferable = NULL;
+
 @interface JavaDNDPasteboardHelper : NSObject
 {
 	NSView*						mpDestination;
 	JavaDNDDraggingSource*		mpDraggingSource;
+	BOOL						mbDragStarted;
 	NSEvent*					mpLastMouseEvent;
 	NSArray*					mpNewTypes;
 	NSView*						mpSource;
 }
++ (void)releaseCurrentDraggingSession:(NSDraggingSession *)pSession releaseDragLock:(BOOL)bUnlock;
+- (void)dealloc;
+- (BOOL)dragStarted;
 - (NSView *)getDestination;
 - (NSView *)getSource;
 - (id)initWithDraggingDestination:(NSView *)pDestination newTypes:(NSArray *)pNewTypes;
@@ -134,6 +142,22 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 @end
 
 @implementation JavaDNDPasteboardHelper
+
++ (void)releaseCurrentDraggingSession:(NSDraggingSession *)pSession releaseDragLock:(BOOL)bUnlock
+{
+	if ( pSession == pCurrentDraggingSession )
+	{
+		pCurrentDraggingSession = nil;
+		if ( pCurrentTransferable )
+		{
+			delete pCurrentTransferable;
+			pCurrentTransferable = NULL;
+		}
+
+		if ( bUnlock )
+			VCLInstance_setDragLock( NO );
+	}
+}
 
 - (void)dealloc
 {
@@ -153,6 +177,11 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 		[mpSource release];
 
 	[super dealloc];
+}
+
+- (BOOL)dragStarted
+{
+	return mbDragStarted;
 }
 
 - (NSView *)getDestination
@@ -188,6 +217,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 
 	mpDestination = nil;
 	mpDraggingSource = nil;
+	mbDragStarted = NO;
 	mpLastMouseEvent = nil;
 	mpNewTypes = nil;
 	mpSource = pSource;
@@ -283,41 +313,55 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 {
 	(void)pSender;
 
+	mbDragStarted = NO;
+
 	if ( mpDraggingSource && mpLastMouseEvent && mpSource )
 	{
-		NSImage *pImage = [[NSImage alloc] initWithSize:NSMakeSize( 1, 1 )];
-		if ( pImage )
+		// Fix bug 3652 by locking the application mutex and never letting it
+		// get released during a native drag session. This prevents drag events
+		// from getting dispatched out of order when we release and reacquire
+		// the mutex.
+		if ( VCLInstance_setDragLock( YES ) )
 		{
-			[pImage autorelease];
-
-			NSView *pFocusView = [NSView focusView];
-			if ( pFocusView )
-				[pFocusView unlockFocus];
-
-			// Stop "image destination must have at least one image" message by
-			// drawing an empty image
-			[pImage lockFocus];
-			[[NSColor clearColor] set];
-			[NSBezierPath fillRect:NSMakeRect( 0, 0, [pImage size].width, [pImage size].height )];
-			[pImage unlockFocus];
-
-			if ( pFocusView )
-				[pFocusView lockFocus];
-
-			NSDraggingItem *pItem = [[NSDraggingItem alloc] initWithPasteboardWriter:pImage];
-			if ( pItem )
+			NSDraggingSession *pDraggingSession = nil;
+			DTransTransferable *pTransferable = NULL;
+			if ( pTrackDragOwner && pTrackDragOwner->maContents.is() )
 			{
-				[pItem autorelease];
-
-				// Fix bug 3652 by locking the application mutex and never
-				// letting it get released during a native drag session. This
-				// prevents drag events from getting dispatched out of order
-				// when we release and reacquire the mutex.
-				if ( VCLInstance_setDragLock( YES ) )
+				pTransferable = new DTransTransferable( @"JavaDNDPasteboardHelper" );
+				if ( pTransferable )
 				{
-					if ( ![mpSource beginDraggingSessionWithItems:[NSArray arrayWithObject:pItem] event:mpLastMouseEvent source:mpDraggingSource] )
-						VCLInstance_setDragLock( NO );
+					id pPasteboardWriter = nil;
+					pTransferable->setContents( pTrackDragOwner->maContents, &pPasteboardWriter );
+					if ( pPasteboardWriter )
+					{
+						if ( [[pPasteboardWriter class] conformsToProtocol:@protocol(NSPasteboardWriting)] )
+						{
+							NSDraggingItem *pDraggingItem = [[NSDraggingItem alloc] initWithPasteboardWriter:pPasteboardWriter];
+							if ( pDraggingItem )
+							{
+								[pDraggingItem autorelease];
+
+								pDraggingSession = [mpSource beginDraggingSessionWithItems:[NSArray arrayWithObject:pDraggingItem] event:mpLastMouseEvent source:mpDraggingSource];
+							}
+						}
+
+						[pPasteboardWriter release];
+					}
 				}
+			}
+
+			if ( pDraggingSession )
+			{
+				[JavaDNDPasteboardHelper releaseCurrentDraggingSession:pCurrentDraggingSession releaseDragLock:NO];
+				mbDragStarted = YES;
+				pCurrentDraggingSession = pDraggingSession;
+				pCurrentTransferable = pTransferable;
+			}
+			else
+			{
+				VCLInstance_setDragLock( NO );
+				if ( pTransferable )
+					delete pTransferable;
 			}
 		}
 	}
@@ -592,14 +636,14 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 
 	if ( !mpSource )
 	{
-		VCLInstance_setDragLock( NO );
+		[JavaDNDPasteboardHelper releaseCurrentDraggingSession:pCurrentDraggingSession releaseDragLock:YES];
 		return;
 	}
  
 	NSWindow *pWindow = [mpSource window];
 	if ( !pWindow )
 	{
-		VCLInstance_setDragLock( NO );
+		[JavaDNDPasteboardHelper releaseCurrentDraggingSession:pCurrentDraggingSession releaseDragLock:YES];
 		return;
 	}
  
@@ -644,7 +688,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 		rSolarMutex.release();
 	}
 
-	VCLInstance_setDragLock( NO );
+	[JavaDNDPasteboardHelper releaseCurrentDraggingSession:pCurrentDraggingSession releaseDragLock:YES];
 }
 
 - (void)draggingSession:(NSDraggingSession *)pSession movedToPoint:(NSPoint)aPoint
@@ -1110,27 +1154,23 @@ void JavaDragSource::startDrag( const datatransfer::dnd::DragGestureEvent& /* tr
 	bool bDragStarted = false;
 	if ( maContents.is() && mpPasteboardHelper )
 	{
-		DTransTransferable *pTransferable = new DTransTransferable( NSDragPboard );
-		if ( pTransferable )
-		{
-			pTrackDragOwner = this;
-			pTransferable->setContents( maContents );
+		pTrackDragOwner = this;
 
-			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-			// Fix bug 3644 by releasing the application mutex so that the drag
-			// code can display tooltip windows and dialogs without hanging
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			sal_uLong nCount = Application::ReleaseSolarMutex();
-			[(JavaDNDPasteboardHelper *)mpPasteboardHelper performSelectorOnMainThread:@selector(startDrag:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
-			Application::AcquireSolarMutex( nCount );
+		// Fix bug 3644 by releasing the application mutex so that the drag
+		// code can display tooltip windows and dialogs without hanging
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		sal_uLong nCount = Application::ReleaseSolarMutex();
+		[(JavaDNDPasteboardHelper *)mpPasteboardHelper performSelectorOnMainThread:@selector(startDrag:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
+		bDragStarted = [(JavaDNDPasteboardHelper *)mpPasteboardHelper dragStarted];
+		Application::AcquireSolarMutex( nCount );
 
-			[pPool release];
+		[pPool release];
 
-			// Make sure that we are still the drag owner
-			if ( pTrackDragOwner == this )
-				bDragStarted = true;
-		}
+		// Make sure that we are still the drag owner
+		if ( bDragStarted && pTrackDragOwner != this )
+			bDragStarted = false;
 	}
 
 	if ( !bDragStarted )
