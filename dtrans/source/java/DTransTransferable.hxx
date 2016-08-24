@@ -80,7 +80,7 @@ public:
 	virtual ::com::sun::star::uno::Sequence< ::com::sun::star::datatransfer::DataFlavor > getTransferDataFlavors() throw ( ::com::sun::star::uno::RuntimeException );
 	sal_Bool			hasOwnership();
 	virtual sal_Bool	isDataFlavorSupported( const ::com::sun::star::datatransfer::DataFlavor& aFlavor ) throw ( ::com::sun::star::uno::RuntimeException );
-	sal_Bool			setContents( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable > &xTransferable );
+	sal_Bool			setContents( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable > &xTransferable, sal_Bool bDeleteTransferable = sal_False );
 };
 
 } // namespace java

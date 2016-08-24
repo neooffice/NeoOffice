@@ -1069,7 +1069,7 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 		if ( pTransferable )
 		{
 			pTrackDragOwner = this;
-			pTransferable->setContents( maContents );
+			pTransferable->setContents( maContents, sal_True );
 
 			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
