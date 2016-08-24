@@ -331,13 +331,13 @@ static DTransTransferable *pCurrentTransferable = NULL;
 		{
 			NSDraggingSession *pDraggingSession = nil;
 			DTransTransferable *pTransferable = NULL;
-			if ( pTrackDragOwner == mpDragOwner && pTrackDragOwner->maContents.is() )
+			if ( mpDragOwner == pTrackDragOwner && mpDragOwner->maContents.is() )
 			{
 				pTransferable = new DTransTransferable( @"JavaDNDPasteboardHelper" );
 				if ( pTransferable )
 				{
 					id pPasteboardWriter = nil;
-					pTransferable->setContents( pTrackDragOwner->maContents, &pPasteboardWriter );
+					pTransferable->setContents( mpDragOwner->maContents, &pPasteboardWriter );
 					if ( pPasteboardWriter )
 					{
 						if ( [[pPasteboardWriter class] conformsToProtocol:@protocol(NSPasteboardWriting)] )
