@@ -177,6 +177,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 {
 	int								mnChangeCount;
 	DTransTransferable*				mpTransferable;
+	BOOL							mbTransferableOwner;
 	NSString*						mpPasteboardName;
 	NSArray*						mpTypes;
 }
@@ -187,9 +188,18 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 - (void)pasteboard:(NSPasteboard *)pSender provideDataForType:(NSString *)pType;
 - (void)pasteboardChangedOwner:(NSPasteboard *)pSender;
 - (id)pasteboardPropertyListForType:(NSString *)pType;
-- (void)setContents:(id)pObject;
+- (void)setContents:(NSNumber *)pNumber;
 - (NSArray *)writableTypesForPasteboard:(NSPasteboard *)pPasteboard;
 - (NSPasteboardWritingOptions)writingOptionsForType:(NSString *)pType pasteboard:(NSPasteboard *)pPasteboard;
+@end
+
+@interface DTransTransferableDeletor : NSObject
+{
+	DTransTransferable*				mpTransferable;
+}
++ (id)createWithTransferable:(DTransTransferable *)pTransferable;
+- (void)deleteTransferable:(id)pSender;
+- (id)initWithTransferable:(DTransTransferable *)pTransferable;
 @end
 
 @implementation DTransPasteboardHelper
@@ -596,7 +606,19 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 
 	if ( mpTypes )
 		[mpTypes release];
-	
+
+	if ( mpTransferable && mbTransferableOwner )
+	{
+		// Fix hanging when starting a new drag on OS X 10.10 and higher by
+		// deleting the transferable asynchronously
+		DTransTransferableDeletor *pDeletor = [DTransTransferableDeletor createWithTransferable:mpTransferable];
+		if ( pDeletor )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pDeletor performSelectorOnMainThread:@selector(deleteTransferable:) withObject:pDeletor waitUntilDone:NO modes:pModes];
+		}
+	}
+
 	[super dealloc];
 }
 
@@ -606,6 +628,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 
 	mnChangeCount = -1;
 	mpTransferable = pTransferable;
+	mbTransferableOwner = NO;
 	mpPasteboardName = pPasteboardName;
 	if ( mpPasteboardName )
 		[mpPasteboardName retain];
@@ -664,9 +687,9 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 	return pRet;
 }
 
-- (void)setContents:(id)pObject
+- (void)setContents:(NSNumber *)pNumber
 {
-	(void)pObject;
+	mnChangeCount = -1;
 
 	NSPasteboard *pPasteboard = ( mpPasteboardName ? [NSPasteboard pasteboardWithName:mpPasteboardName] : [NSPasteboard generalPasteboard] );
 	if ( pPasteboard )
@@ -676,6 +699,15 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 		// selector is called
 		[self retain];
 		mnChangeCount = [pPasteboard declareTypes:mpTypes owner:self];
+		if ( mnChangeCount >= 0 )
+		{
+			if ( pNumber )
+				mbTransferableOwner = [pNumber boolValue];
+		}
+		else
+		{
+			[self release];
+		}
 	}
 }
 
@@ -692,6 +724,43 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 	(void)pPasteboard;
 
 	return NSPasteboardWritingPromised;
+}
+
+@end
+
+@implementation DTransTransferableDeletor
+
++ (id)createWithTransferable:(DTransTransferable *)pTransferable
+{
+	DTransTransferableDeletor *pRet = [[DTransTransferableDeletor alloc] initWithTransferable:pTransferable];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (void)deleteTransferable:(id)pSender
+{
+	(void)pSender;
+
+	if ( mpTransferable )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
+		{
+			delete mpTransferable;
+			mpTransferable = nil;
+		}
+		rSolarMutex.release();
+	}
+}
+
+- (id)initWithTransferable:(DTransTransferable *)pTransferable
+{
+	[super init];
+
+	mpTransferable = pTransferable;
+
+	return self;
 }
 
 @end
@@ -1303,15 +1372,17 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 			if ( pOwner )
 			{
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[pOwner performSelectorOnMainThread:@selector(setContents:) withObject:pOwner waitUntilDone:YES modes:pModes];
+				[pOwner performSelectorOnMainThread:@selector(setContents:) withObject:[NSNumber numberWithBool:( pPasteboardWriter ? YES : NO )] waitUntilDone:YES modes:pModes];
 				mnChangeCount = [pOwner changeCount];
 				if ( mnChangeCount >= 0 )
-					out = sal_True;
-				if ( pPasteboardWriter )
 				{
-					// Retain before it released by the autorelease pool
-					[pOwner retain];
-					*pPasteboardWriter = pOwner;
+					out = sal_True;
+					if ( pPasteboardWriter )
+					{
+						// Retain before it released by the autorelease pool
+						[pOwner retain];
+						*pPasteboardWriter = pOwner;
+					}
 				}
 			}
 		}

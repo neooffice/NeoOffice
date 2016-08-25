@@ -112,9 +112,6 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 - (id)initWithView:(NSView *)pSource;
 @end
 
-static NSDraggingSession *pCurrentDraggingSession = nil;
-static DTransTransferable *pCurrentTransferable = NULL;
-
 @interface JavaDNDPasteboardHelper : NSObject
 {
 	NSView*						mpDestination;
@@ -125,7 +122,6 @@ static DTransTransferable *pCurrentTransferable = NULL;
 	NSArray*					mpNewTypes;
 	NSView*						mpSource;
 }
-+ (void)releaseCurrentDraggingSession:(NSDraggingSession *)pSession releaseDragLock:(BOOL)bUnlock;
 - (void)dealloc;
 - (BOOL)dragStarted;
 - (NSView *)getDestination;
@@ -143,24 +139,6 @@ static DTransTransferable *pCurrentTransferable = NULL;
 @end
 
 @implementation JavaDNDPasteboardHelper
-
-+ (void)releaseCurrentDraggingSession:(NSDraggingSession *)pSession releaseDragLock:(BOOL)bUnlock
-{
-	if ( pSession == pCurrentDraggingSession )
-	{
-		pCurrentDraggingSession = nil;
-		if ( pCurrentTransferable )
-		{
-			delete pCurrentTransferable;
-			pCurrentTransferable = NULL;
-		}
-	}
-
-	// Prevent risk of hanging by unlocking drag lock even if the dragging
-	// session does not match
-	if ( bUnlock )
-		VCLInstance_setDragLock( NO );
-}
 
 - (void)dealloc
 {
@@ -330,15 +308,13 @@ static DTransTransferable *pCurrentTransferable = NULL;
 		if ( VCLInstance_setDragLock( YES ) )
 		{
 			NSDraggingSession *pDraggingSession = nil;
-			DTransTransferable *pTransferable = NULL;
 			if ( mpDragOwner == pTrackDragOwner && mpDragOwner->maContents.is() )
 			{
-				pTransferable = new DTransTransferable( @"JavaDNDPasteboardHelper" );
+				DTransTransferable *pTransferable = new DTransTransferable( @"JavaDNDPasteboardHelper" );
 				if ( pTransferable )
 				{
 					id pPasteboardWriter = nil;
-					pTransferable->setContents( mpDragOwner->maContents, &pPasteboardWriter );
-					if ( pPasteboardWriter )
+					if ( pTransferable->setContents( mpDragOwner->maContents, &pPasteboardWriter ) && pPasteboardWriter )
 					{
 						if ( [[pPasteboardWriter class] conformsToProtocol:@protocol(NSPasteboardWriting)] )
 						{
@@ -353,22 +329,17 @@ static DTransTransferable *pCurrentTransferable = NULL;
 
 						[pPasteboardWriter release];
 					}
+					else
+					{
+						delete pTransferable;
+					}
 				}
 			}
 
 			if ( pDraggingSession )
-			{
-				[JavaDNDPasteboardHelper releaseCurrentDraggingSession:pCurrentDraggingSession releaseDragLock:NO];
 				mbDragStarted = YES;
-				pCurrentDraggingSession = pDraggingSession;
-				pCurrentTransferable = pTransferable;
-			}
 			else
-			{
 				VCLInstance_setDragLock( NO );
-				if ( pTransferable )
-					delete pTransferable;
-			}
 		}
 	}
 }
@@ -642,14 +613,14 @@ static DTransTransferable *pCurrentTransferable = NULL;
 
 	if ( !mpSource )
 	{
-		[JavaDNDPasteboardHelper releaseCurrentDraggingSession:pCurrentDraggingSession releaseDragLock:YES];
+		VCLInstance_setDragLock( NO );
 		return;
 	}
  
 	NSWindow *pWindow = [mpSource window];
 	if ( !pWindow )
 	{
-		[JavaDNDPasteboardHelper releaseCurrentDraggingSession:pCurrentDraggingSession releaseDragLock:YES];
+		VCLInstance_setDragLock( NO );
 		return;
 	}
  
@@ -694,7 +665,7 @@ static DTransTransferable *pCurrentTransferable = NULL;
 		rSolarMutex.release();
 	}
 
-	[JavaDNDPasteboardHelper releaseCurrentDraggingSession:pCurrentDraggingSession releaseDragLock:YES];
+	VCLInstance_setDragLock( NO );
 }
 
 - (void)draggingSession:(NSDraggingSession *)pSession movedToPoint:(NSPoint)aPoint
@@ -1157,11 +1128,11 @@ void JavaDragSource::startDrag( const datatransfer::dnd::DragGestureEvent& /* tr
 	maContents = transferable;
 	maListener = listener;
 
+	pTrackDragOwner = this;
+
 	bool bDragStarted = false;
 	if ( maContents.is() && mpPasteboardHelper )
 	{
-		pTrackDragOwner = this;
-
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		// Fix bug 3644 by releasing the application mutex so that the drag
@@ -1187,6 +1158,9 @@ void JavaDragSource::startDrag( const datatransfer::dnd::DragGestureEvent& /* tr
 
 		if ( listener.is() )
 			listener->dragDropEnd( aDragEvent );
+
+		if ( pTrackDragOwner == this )
+			pTrackDragOwner = NULL;
 	}
 }
 
