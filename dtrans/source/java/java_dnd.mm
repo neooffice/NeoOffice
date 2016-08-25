@@ -1062,29 +1062,35 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 	maContents = transferable;
 	maListener = listener;
 
+	pTrackDragOwner = this;
+
 	bool bDragStarted = false;
 	if ( maContents.is() && mpPasteboardHelper )
 	{
 		DTransTransferable *pTransferable = new DTransTransferable( NSDragPboard );
 		if ( pTransferable )
 		{
-			pTrackDragOwner = this;
-			pTransferable->setContents( maContents, sal_True );
+			if ( pTransferable->setContents( maContents, sal_True ) )
+			{
+				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+				// Fix bug 3644 by releasing the application mutex so that the drag
+				// code can display tooltip windows and dialogs without hanging
+				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+				ULONG nCount = Application::ReleaseSolarMutex();
+				[(JavaDNDPasteboardHelper *)mpPasteboardHelper performSelectorOnMainThread:@selector(startDrag:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
+				Application::AcquireSolarMutex( nCount );
 
-			// Fix bug 3644 by releasing the application mutex so that the drag
-			// code can display tooltip windows and dialogs without hanging
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			ULONG nCount = Application::ReleaseSolarMutex();
-			[(JavaDNDPasteboardHelper *)mpPasteboardHelper performSelectorOnMainThread:@selector(startDrag:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
-			Application::AcquireSolarMutex( nCount );
+				[pPool release];
 
-			[pPool release];
-
-			// Make sure that we are still the drag owner
-			if ( pTrackDragOwner == this )
-				bDragStarted = true;
+				// Make sure that we are still the drag owner
+				if ( pTrackDragOwner == this )
+					bDragStarted = true;
+			}
+			else
+			{
+				delete pTransferable;
+			}
 		}
 	}
 
@@ -1096,6 +1102,9 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 
 		if ( listener.is() )
 			listener->dragDropEnd( aDragEvent );
+
+		if ( pTrackDragOwner == this )
+			pTrackDragOwner = NULL;
 	}
 }
 
