@@ -198,6 +198,15 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 - (void)setContents:(NSNumber *)pNumber;
 @end
 
+@interface DTransTransferableDeletor : NSObject
+{
+	DTransTransferable*				mpTransferable;
+}
++ (id)createWithTransferable:(DTransTransferable *)pTransferable;
+- (void)deleteTransferable:(id)pSender;
+- (id)initWithTransferable:(DTransTransferable *)pTransferable;
+@end
+
 @implementation DTransPasteboardHelper
 
 + (id)createWithPasteboardName:(NSString *)pPasteboardName
@@ -601,11 +610,14 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 
 	if ( mpTransferable && mbTransferableOwner )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-			delete mpTransferable;
-		rSolarMutex.release();
+		// Fix hanging when starting a new drag on OS X 10.10 and higher by
+		// deleting the transferable asynchronously
+		DTransTransferableDeletor *pDeletor = [DTransTransferableDeletor createWithTransferable:mpTransferable];
+		if ( pDeletor )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pDeletor performSelectorOnMainThread:@selector(deleteTransferable:) withObject:pDeletor waitUntilDone:NO modes:pModes];
+		}
 	}
 
 	[super dealloc];
@@ -687,6 +699,41 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 
 @end
 
+@implementation DTransTransferableDeletor
+
++ (id)createWithTransferable:(DTransTransferable *)pTransferable
+{
+	DTransTransferableDeletor *pRet = [[DTransTransferableDeletor alloc] initWithTransferable:pTransferable];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (void)deleteTransferable:(id)pSender
+{
+	if ( mpTransferable )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
+		{
+			delete mpTransferable;
+			mpTransferable = nil;
+		}
+		rSolarMutex.release();
+	}
+}
+
+- (id)initWithTransferable:(DTransTransferable *)pTransferable
+{
+	[super init];
+
+	mpTransferable = pTransferable;
+
+	return self;
+}
+
+@end
+
 // ============================================================================
 
 static void ImplInitializeSupportedPasteboardTypes()
@@ -746,7 +793,6 @@ static void ImplInitializeSupportedPasteboardTypes()
 
 		[pTypes retain];
 		pSupportedPasteboardTypes = pTypes;
-CFShow( pTypes );
 	}
 
 	[pPool release];
