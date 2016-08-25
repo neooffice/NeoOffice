@@ -185,6 +185,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 {
 	int								mnChangeCount;
 	DTransTransferable*				mpTransferable;
+	BOOL							mbTransferableOwner;
 	NSString*						mpPasteboardName;
 	NSArray*						mpTypes;
 }
@@ -194,7 +195,16 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 - (id)initWithTransferable:(DTransTransferable *)pTransferable pasteboardName:(NSString *)pPasteboardName types:(NSArray *)pTypes;
 - (void)pasteboard:(NSPasteboard *)pSender provideDataForType:(NSString *)pType;
 - (void)pasteboardChangedOwner:(NSPasteboard *)pSender;
-- (void)setContents:(id)pObject;
+- (void)setContents:(NSNumber *)pNumber;
+@end
+
+@interface DTransTransferableDeletor : NSObject
+{
+	DTransTransferable*				mpTransferable;
+}
++ (id)createWithTransferable:(DTransTransferable *)pTransferable;
+- (void)deleteTransferable:(id)pSender;
+- (id)initWithTransferable:(DTransTransferable *)pTransferable;
 @end
 
 @implementation DTransPasteboardHelper
@@ -597,7 +607,19 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 
 	if ( mpTypes )
 		[mpTypes release];
-	
+
+	if ( mpTransferable && mbTransferableOwner )
+	{
+		// Fix hanging when starting a new drag on OS X 10.10 and higher by
+		// deleting the transferable asynchronously
+		DTransTransferableDeletor *pDeletor = [DTransTransferableDeletor createWithTransferable:mpTransferable];
+		if ( pDeletor )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pDeletor performSelectorOnMainThread:@selector(deleteTransferable:) withObject:pDeletor waitUntilDone:NO modes:pModes];
+		}
+	}
+
 	[super dealloc];
 }
 
@@ -607,6 +629,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 
 	mnChangeCount = -1;
 	mpTransferable = pTransferable;
+	mbTransferableOwner = NO;
 	mpPasteboardName = pPasteboardName;
 	if ( mpPasteboardName )
 		[mpPasteboardName retain];
@@ -642,11 +665,18 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 
 - (void)pasteboardChangedOwner:(NSPasteboard *)pSender
 {
-	[self release];
+	// Fix crash due to multiple calls to this selector that occur when this
+	// object is used as an NSDraggingItem by only releasing when the sender
+	// is the same pasteboard used to create this object 
+	NSPasteboard *pPasteboard = ( mpPasteboardName ? [NSPasteboard pasteboardWithName:mpPasteboardName] : [NSPasteboard generalPasteboard] );
+	if ( pPasteboard == pSender )
+		[self release];
 }
 
-- (void)setContents:(id)pObject
+- (void)setContents:(NSNumber *)pNumber
 {
+	mnChangeCount = -1;
+
 	NSPasteboard *pPasteboard = ( mpPasteboardName ? [NSPasteboard pasteboardWithName:mpPasteboardName] : [NSPasteboard generalPasteboard] );
 	if ( pPasteboard )
 	{
@@ -655,7 +685,51 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 		// selector is called
 		[self retain];
 		mnChangeCount = [pPasteboard declareTypes:mpTypes owner:self];
+		if ( mnChangeCount >= 0 )
+		{
+			if ( pNumber )
+				mbTransferableOwner = [pNumber boolValue];
+		}
+		else
+		{
+			[self release];
+		}
 	}
+}
+
+@end
+
+@implementation DTransTransferableDeletor
+
++ (id)createWithTransferable:(DTransTransferable *)pTransferable
+{
+	DTransTransferableDeletor *pRet = [[DTransTransferableDeletor alloc] initWithTransferable:pTransferable];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (void)deleteTransferable:(id)pSender
+{
+	if ( mpTransferable )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
+		{
+			delete mpTransferable;
+			mpTransferable = nil;
+		}
+		rSolarMutex.release();
+	}
+}
+
+- (id)initWithTransferable:(DTransTransferable *)pTransferable
+{
+	[super init];
+
+	mpTransferable = pTransferable;
+
+	return self;
 }
 
 @end
@@ -1204,7 +1278,7 @@ sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) 
 
 // ----------------------------------------------------------------------------
 
-sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTransferable )
+sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTransferable, sal_Bool bDeleteTransferable )
 {
 	sal_Bool out = sal_False;
 
@@ -1271,7 +1345,7 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 			if ( pOwner )
 			{
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[pOwner performSelectorOnMainThread:@selector(setContents:) withObject:pOwner waitUntilDone:YES modes:pModes];
+				[pOwner performSelectorOnMainThread:@selector(setContents:) withObject:[NSNumber numberWithBool:( bDeleteTransferable ? YES : NO )] waitUntilDone:YES modes:pModes];
 				mnChangeCount = [pOwner changeCount];
 				if ( mnChangeCount >= 0 )
 					out = sal_True;
