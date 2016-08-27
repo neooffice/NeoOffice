@@ -26,8 +26,11 @@ What's New in this Version:
 Before you buy NeoOffice, please click on the "NeoOffice Support" link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would sometimes crash when quitting
-• NeoOffice would sometimes crash when changing the shape of a poly polygon object
+• When opening a document that contains linked images or files while in full screen mode, NeoOffice would display a modal dialog behind the full screen window and would appear to be frozen
+• When displaying a presentation document while in full screen mode, NeoOffice would sometimes not use the whole screen and would leave an unused blank space on the screen
+• When running a slideshow while in full screen mode, NeoOffice would exit full screen mode at the end of the slideshow
+• NeoOffice would sometimes crash when selecting a menu item
+• NeoOffice would leak a small amount of memory when dragging text or images
 
 
 Keywords:
