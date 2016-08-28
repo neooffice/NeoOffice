@@ -1648,7 +1648,6 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */,
 
 sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& /* rJobName */, const String& /* rAppName */, ImplJobSetup* /* pSetupData */, vcl::PrinterController& /* rController */ )
 {
-fprintf( stderr, "Here\n" );
 	return sal_False;
 }
 
