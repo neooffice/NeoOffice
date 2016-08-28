@@ -330,9 +330,9 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 		// Prevent crashing by only allowing cancellation to be requested once
 		mbCancelled = YES;
 
-		NSApplication *pApp = [NSApplication sharedApplication];
-		if ( pApp )
-			[pApp endSheet:mpAttachedSheet returnCode:NSCancelButton];
+		NSWindow *pParent = [mpAttachedSheet sheetParent];
+		if ( pParent )
+			[pParent endSheet:mpAttachedSheet returnCode:NSModalResponseCancel];
 	}
 }
 
@@ -424,7 +424,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 	if ( mbFinished )
 		return;
 
-	if ( nResult == NSOKButton )
+	if ( nResult == NSModalResponseOK )
 		mbResult = YES;
 	else
 		mbResult = NO;
@@ -854,9 +854,9 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 		// Prevent crashing by only allowing cancellation to be requested once
 		mbCancelled = YES;
 
-		NSApplication *pApp = [NSApplication sharedApplication];
-		if ( pApp )
-			[pApp endSheet:mpAttachedSheet returnCode:NSCancelButton];
+		NSWindow *pParent = [mpAttachedSheet sheetParent];
+		if ( pParent )
+			[pParent endSheet:mpAttachedSheet returnCode:NSModalResponseCancel];
 	}
 }
 
@@ -949,7 +949,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 	if ( mbFinished )
 		return;
 
-	if ( nResult == NSOKButton )
+	if ( nResult == NSModalResponseOK )
 		mbResult = YES;
 	else
 		mbResult = NO;
@@ -1502,12 +1502,20 @@ JavaSalPrinter::~JavaSalPrinter()
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalPrinter::StartJob( const XubString* /* pFileName */,
-							   const XubString& rJobName,
-							   const XubString& /* rAppName */,
-							   sal_uLong /* nCopies */, bool /* bCollate */, bool /* bDirect */,
-							   ImplJobSetup* pSetupData )
+sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */,
+#if 0
+	const String& rJobName,
+#else	// 0
+	const String& /* rJobName */,
+#endif	// 0
+	const String& /* rAppName */, sal_uLong /* nCopies */, bool /* bCollate */, bool /* bDirect */,
+#if 0
+	ImplJobSetup* pSetupData )
+#else	// 0
+	ImplJobSetup* /* pSetupData */ )
+#endif	// 0
 {
+#if 0
 	// Set paper type
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1526,7 +1534,7 @@ sal_Bool JavaSalPrinter::StartJob( const XubString* /* pFileName */,
 	// Fix bug by detecting when an OOo printer job is being reused for serial
 	// print jobs
 	if ( rJobName.Len() )
-		maJobName = XubString( rJobName );
+		maJobName = rJobName;
 	else if ( !maJobName.Len() )
 		maJobName = GetSfxResString( STR_NONAME );
 
@@ -1631,6 +1639,17 @@ sal_Bool JavaSalPrinter::StartJob( const XubString* /* pFileName */,
 	[pPool release];
 
 	return mbStarted;
+#else	// 0
+	return sal_False;
+#endif	// 0
+}
+
+// -----------------------------------------------------------------------
+
+sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& /* rJobName */, const String& /* rAppName */, ImplJobSetup* /* pSetupData */, vcl::PrinterController& /* rController */ )
+{
+fprintf( stderr, "Here\n" );
+	return sal_False;
 }
 
 // -----------------------------------------------------------------------

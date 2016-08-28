@@ -90,7 +90,7 @@ class JavaSalPrinter : public SalPrinter
 	JavaSalGraphics*		mpGraphics;
 	JavaSalInfoPrinter*		mpInfoPrinter;
 	sal_Bool				mbGraphics;
-	XubString				maJobName;
+	String					maJobName;
 	Paper					mePaperFormat;
 	long					mnPaperWidth;
 	long					mnPaperHeight;
@@ -106,7 +106,8 @@ public:
 							JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter );
 	virtual					~JavaSalPrinter();
 
-	virtual sal_Bool		StartJob( const XubString* pFileName, const XubString& rJobName, const XubString& rAppName, sal_uLong nCopies, bool bCollate, bool bDirect, ImplJobSetup* pSetupData );
+	virtual sal_Bool		StartJob( const String* pFileName, const String& rJobName, const String& rAppName, sal_uLong nCopies, bool bCollate, bool bDirect, ImplJobSetup* pSetupData );
+	virtual sal_Bool		StartJob( const String* pFileName, const String& rJobName, const String& rAppName, ImplJobSetup* pSetupData, vcl::PrinterController& rController );
 	virtual sal_Bool		EndJob();
 	virtual sal_Bool		AbortJob();
 	virtual SalGraphics*	StartPage( ImplJobSetup* pSetupData, sal_Bool bNewJobData );
