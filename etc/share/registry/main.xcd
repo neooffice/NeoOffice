@@ -2000,7 +2000,7 @@
           <value>true</value>
         </prop>
         <prop oor:name="UseDocumentOOoLockFile" oor:type="xs:boolean">
-          <value>true</value>
+          <value>false</value>
         </prop>
         <prop oor:name="UseSystemPrintDialog" oor:type="xs:boolean">
           <value>false</value>
