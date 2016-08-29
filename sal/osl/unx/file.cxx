@@ -875,8 +875,12 @@ static int osl_file_queryLocking (sal_uInt32 uFlags)
     {
         if ((uFlags & osl_File_OpenFlag_Write) || (uFlags & osl_File_OpenFlag_Create))
         {
+#ifdef USE_JAVA
+            return 1;
+#else	// USE_JAVA
             static Locking_Impl g_locking;
             return (g_locking.m_enabled != 0);
+#endif	// USE_JAVA
         }
     }
     return 0;
