@@ -812,285 +812,6 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 @end
  
-@interface JavaSalPrinterShowPrintDialog : NSObject
-{
-	NSWindow*				mpAttachedSheet;
-	BOOL					mbCancelled;
-	BOOL					mbFinished;
-	NSPrintInfo*			mpInfo;
-	NSString*				mpJobName;
-	BOOL					mbResult;
-	NSWindow*				mpWindow;
-}
-+ (id)createWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName;
-- (void)cancel:(id)pObject;
-- (void)checkForErrors:(id)pObject;
-- (void)dealloc;
-- (void)destroy:(id)pObject;
-- (BOOL)finished;
-- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName;
-- (NSPrintInfo *)printInfo;
-- (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(NSInteger)nCode contextInfo:(void *)pContextInfo;
-- (void)setResult:(int)nResult printPanel:(NSPrintPanel *)pPanel;
-- (void)showPrintDialog:(id)pObject;
-@end
-
-@implementation JavaSalPrinterShowPrintDialog
-
-+ (id)createWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName
-{
-	JavaSalPrinterShowPrintDialog *pRet = [[JavaSalPrinterShowPrintDialog alloc] initWithPrintInfo:pInfo window:pWindow jobName:pJobName];
-	[pRet autorelease];
-	return pRet;
-}
-
-- (void)cancel:(id)pObject
-{
-	(void)pObject;
-
-	// Force the panel to end its modal session
-	if ( !mbCancelled && !mbFinished && mpAttachedSheet )
-	{
-		// Prevent crashing by only allowing cancellation to be requested once
-		mbCancelled = YES;
-
-		NSWindow *pParent = [mpAttachedSheet sheetParent];
-		if ( pParent )
-			[pParent endSheet:mpAttachedSheet returnCode:NSModalResponseCancel];
-	}
-}
-
-- (void)checkForErrors:(id)pObject
-{
-	(void)pObject;
-
-	// Detect if the sheet window has been closed without any call to the
-	// completion handler
-	if ( !mbFinished && ( !mpAttachedSheet || !mpWindow || [mpWindow attachedSheet] != mpAttachedSheet ) )
-		[self cancel:self];
-}
-
-- (void)dealloc
-{
-	[self destroy:self];
-
-	[super dealloc];
-}
-
-- (void)destroy:(id)pObject
-{
-	(void)pObject;
-
-	if ( !mbFinished )
-		[self cancel:self];
-
-	if ( mpAttachedSheet )
-	{
-		[mpAttachedSheet release];
-		mpAttachedSheet = nil;
-	}
-
-	if ( mpInfo )
-	{
-		[mpInfo release];
-		mpInfo = nil;
-	}
-
-	if ( mpWindow )
-	{
-		[mpWindow release];
-		mpWindow = nil;
-	}
-}
-
-- (BOOL)finished
-{
-	return mbFinished;
-}
-
-- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName
-{
-	[super init];
-
-	mpAttachedSheet = nil;
-	mbCancelled = NO;
-	mbFinished = NO;
-	mpInfo = pInfo;
-	if ( mpInfo )
-		[mpInfo retain];
-	mpJobName = pJobName;
-	mbResult = NO;
-	mpWindow = pWindow;
-	if ( mpWindow )
-		[mpWindow retain];
-
-	return self;
-}
-
-- (NSPrintInfo *)printInfo
-{
-	if ( mbResult )
-		return mpInfo;
-	else
-		return nil;
-}
-
-// Never call this selector directly since it releases self
-- (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(NSInteger)nCode contextInfo:(void *)pContextInfo
-{
-	(void)pContextInfo;
-
-	[self setResult:nCode printPanel:pPanel];
-	[self release];
-}
-
-- (void)setResult:(int)nResult printPanel:(NSPrintPanel *)pPanel
-{
-	if ( mbFinished )
-		return;
-
-	if ( nResult == NSModalResponseOK )
-		mbResult = YES;
-	else
-		mbResult = NO;
-
-	mbFinished = YES;
-
-	if ( mpAttachedSheet )
-	{
-		[mpAttachedSheet release];
-		mpAttachedSheet = nil;
-	}
-
-	if ( pPanel && mbResult )
-	{
-		NSPrintInfo *pInfo = nil;
-
-		@try
-		{
-			// When running in the sandbox, native file dialog calls may
-			// throw exceptions if the PowerBox daemon process is killed
-			pInfo = [pPanel printInfo];
-		}
-		@catch ( NSException *pExc )
-		{
-			mbFinished = YES;
-			if ( pExc )
-				NSLog( @"%@", [pExc callStackSymbols] );
-		}
-		
-		if ( pInfo && pInfo != mpInfo )
-		{
-			if ( mpInfo )
-				[mpInfo release];
-			mpInfo = pInfo;
-			[mpInfo retain];
-		}
-	}
-
-	// Post an event to wakeup the VCL event thread if the VCL
-	// event dispatch thread is in a potentially long wait
-	Application_postWakeUpEvent();
-}
-
-- (void)showPrintDialog:(id)pObject
-{
-	(void)pObject;
-
-	// Do not allow recursion or reuse
-	if ( mpAttachedSheet || mbCancelled || mbFinished || !mpInfo || mbResult )
-		return;
-
-	// Fix crashing bug reported in the following NeoOffice forum topic by
-	// using a separate NSPrintInfo instance for the modal sheet:
-	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8568
-	NSPrintInfo *pInfo = [[NSPrintInfo alloc] initWithDictionary:[mpInfo dictionary]];
-	if ( mpInfo )
-		[mpInfo release];
-	mpInfo = pInfo;
-	if ( mpInfo )
-		[mpInfo retain];
-	else
-		return;
-
-	// Don't use sheet if it is an open dialog or there is no window to attach
-	// a sheet to
-	if ( !mpWindow || [mpWindow attachedSheet] || ![mpWindow canBecomeKeyWindow] || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
-	{
-		if ( mpWindow )
-			[mpWindow release];
-		mpWindow = nil;
-	}
-
-	// Also set the job name via the PMPrintSettings so that the Save As
-	// dialog gets the job name
-	PMPrintSettings aSettings = (PMPrintSettings)[mpInfo PMPrintSettings];
-	if ( aSettings )
-		PMPrintSettingsSetJobName( aSettings, (CFStringRef)mpJobName );
-
-	// Fix bug 1548 by setting to print all pages
-	NSMutableDictionary *pDictionary = [mpInfo dictionary];
-	if ( pDictionary )
-	{
-		[pDictionary setObject:[NSNumber numberWithBool:YES] forKey:NSPrintAllPages];
-		[pDictionary setObject:[NSNumber numberWithBool:YES] forKey:NSPrintMustCollate];
-		[pDictionary removeObjectForKey:NSPrintCopies];
-		[pDictionary removeObjectForKey:NSPrintFirstPage];
-		[pDictionary removeObjectForKey:NSPrintLastPage];
-
-		// Fix bug 2030 by resetting the layout
-		[pDictionary setObject:[NSNumber numberWithUnsignedInt:1] forKey:@"NSPagesAcross"];
-		[pDictionary setObject:[NSNumber numberWithUnsignedInt:1] forKey:@"NSPagesDown"];
-	}
-
-	NSPrinter *pPrinter = [NSPrintInfo defaultPrinter];
-	if ( pPrinter )
-		[mpInfo setPrinter:pPrinter];
-
-	@try
-	{
-		// When running in the sandbox, native file dialog calls may
-		// throw exceptions if the PowerBox daemon process is killed
-		NSPrintPanel *pPanel = [NSPrintPanel printPanel];
-		if ( pPanel )
-		{
-			if ( mpWindow )
-			{
-				NSWindow *pOldAttachedSheet = [mpWindow attachedSheet];
-
-				// Retain self to ensure that we don't release it before the
-				// completion handler executes
-				[self retain];
-				[pPanel beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(printPanelDidEnd:returnCode:contextInfo:) contextInfo:nil];
-
-				NSWindow *pAttachedSheet = [mpWindow attachedSheet];
-				if ( pAttachedSheet && pAttachedSheet != pOldAttachedSheet )
-				{
-					mpAttachedSheet = pAttachedSheet;
-					if ( mpAttachedSheet )
-						[mpAttachedSheet retain];
-				}
-				else
-				{
-					mbFinished = YES;
-				}
-			}
-			else
-			{
-				[self setResult:[pPanel runModalWithPrintInfo:mpInfo] printPanel:pPanel];
-			}
-		}
-	}
-	@catch ( NSException *pExc )
-	{
-		mbFinished = YES;
-		if ( pExc )
-			NSLog( @"%@", [pExc callStackSymbols] );
-	}
-}
-
-@end
-
 // =======================================================================
 
 JavaSalInfoPrinter::JavaSalInfoPrinter( ImplJobSetup* pSetupData ) :
@@ -1450,7 +1171,6 @@ JavaSalPrinter::JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter ) :
 	mePaperFormat( PAPER_USER ),
 	mnPaperWidth( 0 ),
 	mnPaperHeight( 0 ),
-	mbStarted( sal_False ),
 	mpInfo( nil ),
 	mbPaperRotated( sal_False ),
 	mpPrintOperation( nil ),
@@ -1511,11 +1231,16 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 
 sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& rJobName, const String& /* rAppName */, ImplJobSetup* pSetupData, vcl::PrinterController& /* rController */ )
 {
+	sal_Bool bRet = sal_False;
+
 	// Set paper type
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( !mpInfo )
-		return sal_False;
+		return bRet;
+
+	if ( mpPrintOperation || maPrintThread || mpPrintView )
+		return bRet;
 
 	float fScaleFactor = 1.0f;
 	::std::hash_map< OUString, OUString, OUStringHash >::const_iterator it = pSetupData->maValueMap.find( aPageScalingFactorKey );
@@ -1533,99 +1258,60 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 	else if ( !maJobName.Len() )
 		maJobName = GetSfxResString( STR_NONAME );
 
-	if ( !mpPrintOperation )
+	NSString *pJobName = [NSString stringWithCharacters:maJobName.GetBuffer() length:maJobName.Len()];
+
+	// Update print info settings
+	mbPaperRotated = ImplPrintInfoSetPaperType( mpInfo, pSetupData->mePaperFormat, pSetupData->meOrientation, (float)pSetupData->mnPaperWidth * 72 / 2540, (float)pSetupData->mnPaperHeight * 72 / 2540 );
+	if ( ( mbPaperRotated && pSetupData->meOrientation == ORIENTATION_PORTRAIT ) || ( !mbPaperRotated && pSetupData->meOrientation == ORIENTATION_LANDSCAPE ) )
+		[mpInfo setOrientation:NSPaperOrientationLandscape];
+	else
+		[mpInfo setOrientation:NSPaperOrientationPortrait];
+	mePaperFormat = pSetupData->mePaperFormat;
+	mnPaperWidth = pSetupData->mnPaperWidth;
+	mnPaperHeight = pSetupData->mnPaperHeight;
+
+	// Set scaling factor
+	NSNumber *pValue = [NSNumber numberWithFloat:fScaleFactor];
+	if ( pValue )
 	{
-		mbStarted = sal_False;
+		NSMutableDictionary *pDict = [mpInfo dictionary];
+		if ( pDict )
+			[pDict setObject:pValue forKey:NSPrintScalingFactor];
+	}
 
-		if ( mpPrintView )
+	JavaSalEventQueue::setShutdownDisabled( sal_False );
+
+	NSSize aPaperSize = [mpInfo paperSize];
+
+	// Do not retain as invoking alloc disables autorelease
+	mpPrintView = [[VCLPrintView alloc] initWithFrame:NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height )];
+	if ( mpPrintView )
+	{
+		mpPrintOperation = [NSPrintOperation printOperationWithView:mpPrintView printInfo:mpInfo];
+		if ( mpPrintOperation )
 		{
-			[mpPrintView release];
-			mpPrintView = nil;
-		}
+			[mpPrintOperation retain];
+			[mpPrintOperation setJobTitle:pJobName];
+			[mpPrintOperation setShowsPrintPanel:YES];
+			[mpPrintOperation setShowsProgressPanel:YES];
 
-		NSString *pJobName = [NSString stringWithCharacters:maJobName.GetBuffer() length:maJobName.Len()];
-		NSWindow *pNSWindow = nil;
-		if ( Application_beginModalSheet( &pNSWindow ) )
-		{
-			// Don't lock mutex as we expect callbacks to this object from
-			// a different thread while the dialog is showing
-			sal_uLong nCount = Application::ReleaseSolarMutex();
-
-			// Ignore any AWT events while the page layout dialog is showing
-			// to emulate a modal dialog
-			JavaSalPrinterShowPrintDialog *pJavaSalPrinterShowPrintDialog = [JavaSalPrinterShowPrintDialog createWithPrintInfo:mpInfo window:pNSWindow jobName:pJobName];
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pJavaSalPrinterShowPrintDialog performSelectorOnMainThread:@selector(showPrintDialog:) withObject:pJavaSalPrinterShowPrintDialog waitUntilDone:YES modes:pModes];
-
-			while ( ![pJavaSalPrinterShowPrintDialog finished] && !Application::IsShutDown() )
+			maPrintThread = osl_createSuspendedThread( ImplPrintOperationRun, this );
+			if ( maPrintThread )
 			{
-				[pJavaSalPrinterShowPrintDialog performSelectorOnMainThread:@selector(checkForErrors:) withObject:pJavaSalPrinterShowPrintDialog waitUntilDone:YES modes:pModes];
-				if ( Application::IsShutDown() )
-					break;
+				bRet = sal_True;
 
-				IMutex &rSolarMutex = Application::GetSolarMutex();
-				rSolarMutex.acquire();
-				if ( !Application::IsShutDown() )
+				// Don't lock mutex as we expect callbacks to this object from
+				// a different thread while the dialog is showing
+				osl_resumeThread( maPrintThread );
+
+				while ( maPrintThread && osl_isThreadRunning( maPrintThread ) && !Application::IsShutDown() )
+				{
 					Application::Yield();
-				rSolarMutex.release();
-			}
 
-			NSPrintInfo *pInfo = [pJavaSalPrinterShowPrintDialog printInfo];
-			if ( pInfo )
-			{
-				if ( pInfo != mpInfo )
-				{
-					if ( mpInfo )
-						[mpInfo release];
-					mpInfo = pInfo;
-					[mpInfo retain];
-				}
-
-				mbStarted = sal_True;
-			}
-
-			[pJavaSalPrinterShowPrintDialog performSelectorOnMainThread:@selector(destroy:) withObject:pJavaSalPrinterShowPrintDialog waitUntilDone:YES modes:pModes];
-
-			Application::AcquireSolarMutex( nCount );
-			Application_endModalSheet();
-		}
-
-		if ( mbStarted )
-		{
-			// Update print info settings
-			mbPaperRotated = ImplPrintInfoSetPaperType( mpInfo, pSetupData->mePaperFormat, pSetupData->meOrientation, (float)pSetupData->mnPaperWidth * 72 / 2540, (float)pSetupData->mnPaperHeight * 72 / 2540 );
-			if ( ( mbPaperRotated && pSetupData->meOrientation == ORIENTATION_PORTRAIT ) || ( !mbPaperRotated && pSetupData->meOrientation == ORIENTATION_LANDSCAPE ) )
-				[mpInfo setOrientation:NSPaperOrientationLandscape];
-			else
-				[mpInfo setOrientation:NSPaperOrientationPortrait];
-			mePaperFormat = pSetupData->mePaperFormat;
-			mnPaperWidth = pSetupData->mnPaperWidth;
-			mnPaperHeight = pSetupData->mnPaperHeight;
-
-			// Set scaling factor
-			NSNumber *pValue = [NSNumber numberWithFloat:fScaleFactor];
-			if ( pValue )
-			{
-				NSMutableDictionary *pDict = [mpInfo dictionary];
-				if ( pDict )
-					[pDict setObject:pValue forKey:NSPrintScalingFactor];
-			}
-
-			NSSize aPaperSize = [mpInfo paperSize];
-
-			// Do not retain as invoking alloc disables autorelease
-			mpPrintView = [[VCLPrintView alloc] initWithFrame:NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height )];
-			if ( mpPrintView )
-			{
-				mpPrintOperation = [NSPrintOperation printOperationWithView:mpPrintView printInfo:mpInfo];
-				if ( mpPrintOperation )
-				{
-					[mpPrintOperation retain];
-					[mpPrintOperation setJobTitle:pJobName];
-					[mpPrintOperation setShowsPrintPanel:NO];
-					[mpPrintOperation setShowsProgressPanel:NO];
-
-					mbStarted = sal_True;
+					// Let the print thread run
+					sal_uLong nCount = Application::ReleaseSolarMutex();
+					OThread::yield();
+					Application::AcquireSolarMutex( nCount );
 				}
 			}
 		}
@@ -1633,7 +1319,12 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 
 	[pPool release];
 
-	return mbStarted;
+	// Ensure that print job has ended
+	EndJob();
+
+	JavaSalEventQueue::setShutdownDisabled( sal_True );
+
+	return bRet;
 }
 
 // -----------------------------------------------------------------------
@@ -1642,7 +1333,7 @@ sal_Bool JavaSalPrinter::EndJob()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( maPrintThread )
+	if ( maPrintThread && osl_getThreadIdentifier( maPrintThread ) != osl_getThreadIdentifier( NULL ) )
 	{
 		TimeValue aDelay;
 		aDelay.Seconds = 0;
@@ -1664,10 +1355,20 @@ sal_Bool JavaSalPrinter::EndJob()
 		maPrintThread = NULL;
 	}
 
-	[pPool release];
-	mbStarted = sal_False;
+	if ( mpPrintOperation )
+	{
+		[mpPrintOperation release];
+		mpPrintOperation = nil;
+	}
 
-	JavaSalEventQueue::setShutdownDisabled( sal_False );
+	if ( mpPrintView )
+	{
+		[mpPrintView release];
+		mpPrintView = nil;
+	}
+
+	[pPool release];
+
 	return sal_True;
 }
 
@@ -1736,19 +1437,6 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, sal_Bool bNewJ
 		}
 	}
 
-	if ( !maPrintThread )
-	{
-		// Do not retain as invoking alloc disables autorelease
-		maPrintThread = osl_createSuspendedThread( ImplPrintOperationRun, this );
-		if ( maPrintThread )
-			osl_resumeThread( maPrintThread );
-	}
-
-	// The OOo code does not call Printer::EndJob() if the page range is
-	// results in no pages to print so do not disable shutdown until a page
-	// is successfully started
-	JavaSalEventQueue::setShutdownDisabled( sal_True );
-
 	mpGraphics = new JavaSalGraphics();
 	mpGraphics->meOrientation = pSetupData->meOrientation;
 	mpGraphics->mbPaperRotated = mbPaperRotated;
@@ -1799,7 +1487,7 @@ sal_Bool JavaSalPrinter::EndPage()
 
 sal_uLong JavaSalPrinter::GetErrorCode()
 {
-	if ( !mbStarted || !mpPrintOperation || !maPrintThread || !osl_isThreadRunning( maPrintThread ) )
+	if ( !mpPrintOperation || !maPrintThread || mpPrintView || !osl_isThreadRunning( maPrintThread ) )
 		return SAL_PRINTER_ERROR_ABORT;
 	else
 		return 0;
