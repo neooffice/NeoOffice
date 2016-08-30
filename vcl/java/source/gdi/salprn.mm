@@ -1502,20 +1502,15 @@ JavaSalPrinter::~JavaSalPrinter()
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */,
-#if 0
-	const String& rJobName,
-#else	// 0
-	const String& /* rJobName */,
-#endif	// 0
-	const String& /* rAppName */, sal_uLong /* nCopies */, bool /* bCollate */, bool /* bDirect */,
-#if 0
-	ImplJobSetup* pSetupData )
-#else	// 0
-	ImplJobSetup* /* pSetupData */ )
-#endif	// 0
+sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& /* rJobName */, const String& /* rAppName */, sal_uLong /* nCopies */, bool /* bCollate */, bool /* bDirect */, ImplJobSetup* /* pSetupData */ )
 {
-#if 0
+	return sal_False;
+}
+
+// -----------------------------------------------------------------------
+
+sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& rJobName, const String& /* rAppName */, ImplJobSetup* pSetupData, vcl::PrinterController& /* rController */ )
+{
 	// Set paper type
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1639,16 +1634,6 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */,
 	[pPool release];
 
 	return mbStarted;
-#else	// 0
-	return sal_False;
-#endif	// 0
-}
-
-// -----------------------------------------------------------------------
-
-sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& /* rJobName */, const String& /* rAppName */, ImplJobSetup* /* pSetupData */, vcl::PrinterController& /* rController */ )
-{
-	return sal_False;
 }
 
 // -----------------------------------------------------------------------
