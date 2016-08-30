@@ -94,7 +94,6 @@ class JavaSalPrinter : public SalPrinter
 	Paper					mePaperFormat;
 	long					mnPaperWidth;
 	long					mnPaperHeight;
-	sal_Bool				mbStarted;
 	id						mpInfo;
 	sal_Bool				mbPaperRotated;
 	id						mpPrintOperation;
