@@ -1128,6 +1128,8 @@ BOOL JavaSalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
+	// Ignore any AWT events while the page layout dialog is showing
+	// to emulate a modal dialog
 	NSWindow *pNSWindow = nil;
 	if ( Application_beginModalSheet( &pNSWindow ) )
 	{
@@ -1135,8 +1137,6 @@ BOOL JavaSalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 		// a different thread while the dialog is showing
 		ULONG nCount = Application::ReleaseSolarMutex();
 
-		// Ignore any AWT events while the page layout dialog is showing
-		// to emulate a modal dialog
 		JavaSalInfoPrinterShowPageLayoutDialog *pJavaSalInfoPrinterShowPageLayoutDialog = [JavaSalInfoPrinterShowPageLayoutDialog createWithPrintInfo:mpInfo window:pNSWindow];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pJavaSalInfoPrinterShowPageLayoutDialog performSelectorOnMainThread:@selector(showPageLayoutDialog:) withObject:pJavaSalInfoPrinterShowPageLayoutDialog waitUntilDone:YES modes:pModes];
@@ -1466,12 +1466,12 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 							   ULONG nCopies, BOOL bCollate,
 							   ImplJobSetup* pSetupData, BOOL bFirstPass )
 {
-	// Set paper type
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
 	if ( !mpInfo )
 		return FALSE;
 
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	// Set paper type
 	float fScaleFactor = 1.0f;
 	::std::hash_map< OUString, OUString, OUStringHash >::const_iterator it = pSetupData->maValueMap.find( aPageScalingFactorKey );
 	if ( it != pSetupData->maValueMap.end() )
@@ -1501,6 +1501,8 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 		NSString *pJobName = [NSString stringWithCharacters:maJobName.GetBuffer() length:maJobName.Len()];
 		if ( bFirstPass )
 		{
+			// Ignore any AWT events while the page layout dialog is showing
+			// to emulate a modal dialog
 			NSWindow *pNSWindow = nil;
 			if ( Application_beginModalSheet( &pNSWindow ) )
 			{
@@ -1508,8 +1510,6 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 				// a different thread while the dialog is showing
 				ULONG nCount = Application::ReleaseSolarMutex();
 
-				// Ignore any AWT events while the page layout dialog is showing
-				// to emulate a modal dialog
 				JavaSalPrinterShowPrintDialog *pJavaSalPrinterShowPrintDialog = [JavaSalPrinterShowPrintDialog createWithPrintInfo:mpInfo window:pNSWindow jobName:pJobName];
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 				[pJavaSalPrinterShowPrintDialog performSelectorOnMainThread:@selector(showPrintDialog:) withObject:pJavaSalPrinterShowPrintDialog waitUntilDone:YES modes:pModes];
