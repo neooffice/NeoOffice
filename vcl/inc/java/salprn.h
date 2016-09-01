@@ -96,9 +96,7 @@ class JavaSalPrinter : public SalPrinter
 	long					mnPaperHeight;
 	id						mpInfo;
 	sal_Bool				mbPaperRotated;
-	id						mpPrintOperation;
-	oslThread				maPrintThread;
-	id						mpPrintView;
+	id						mpPrintJob;
 	::std::list< id >		maSecurityScopeURLList;
 
 public:
@@ -112,13 +110,6 @@ public:
 	virtual SalGraphics*	StartPage( ImplJobSetup* pSetupData, sal_Bool bNewJobData );
 	virtual sal_Bool		EndPage();
 	virtual sal_uLong		GetErrorCode();
-
-	XubString				GetJobDisposition();
-	XubString				GetJobSavingPath();
-	XubString				GetPageRange();
-	void					SetJobDisposition( const XubString *pJobDisposition );
-	void					SetJobSavingPath( const XubString *pJobSavingPath, sal_Int32 nIteration );
-	void					RunPrintOperation();
 };
 
 #endif // _SV_SALPRN_H
