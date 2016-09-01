@@ -1055,11 +1055,14 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 		{
 			[mpPrintOperation retain];
 
+			// [NSPrintOperation runOperation] will not spawn a separate thread
+			// so disable using a separate thread in all cases
+			[mpPrintOperation setCanSpawnSeparateThread:NO];
+
 			if ( mpJobName )
 				[mpPrintOperation setJobTitle:mpJobName];
 			[mpPrintOperation setShowsPrintPanel:YES];
 			[mpPrintOperation setShowsProgressPanel:YES];
-			[mpPrintOperation setCanSpawnSeparateThread:YES];
 			[NSPrintOperation setCurrentOperation:mpPrintOperation];
 
 			if ( mpWindow )
