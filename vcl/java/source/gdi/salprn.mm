@@ -869,8 +869,7 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 {
 	(void)pObject;
 
-	if ( !mbFinished )
-		[self cancel:self];
+	[self cancel:self];
 
 	if ( mpInfo )
 	{
@@ -878,9 +877,18 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 		mpInfo = nil;
 	}
 
+	if ( mpJobName )
+	{
+		[mpJobName release];
+		mpJobName = nil;
+	}
+
 	if ( mpPrintOperation )
 	{
-		[mpPrintOperation cleanUpOperation];
+		// Wait until the print operation's completion handler is called to
+		// prevent the print operation from leaking memory or hanging
+		while ( [NSPrintOperation currentOperation] == mpPrintOperation )
+			NSApplication_dispatchPendingEvents( sal_False, sal_True );
 		[mpPrintOperation release];
 		mpPrintOperation = nil;
 	}
@@ -912,6 +920,8 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 	if ( mpInfo )
 		[mpInfo retain];
 	mpJobName = pJobName;
+	if ( mpJobName )
+		[mpJobName retain];
 	mpPrintOperation = nil;
 	mpPrintView = nil;
 	mbResult = NO;
@@ -940,6 +950,8 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 
 	mbResult = bSuccess;
 	mbFinished = YES;
+	if ( [NSPrintOperation currentOperation] == mpPrintOperation )
+		[NSPrintOperation setCurrentOperation:nil];
 
 	NSPrintInfo *pInfo = nil;
 
@@ -966,8 +978,6 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 	// Post an event to wakeup the VCL event thread if the VCL
 	// event dispatch thread is in a potentially long wait
 	Application_postWakeUpEvent();
-
-	[self release];
 }
 
 - (BOOL)result
@@ -980,9 +990,6 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 	if ( mbFinished || !mpPrintOperation || mpPrintOperation != [NSPrintOperation currentOperation] || mbResult )
 		return;
 
-	// Retain self to ensure that we don't release it before the
-	// completion handler executes
-	[self retain];
 	@try
 	{
 		// When running in the sandbox, native file dialog calls may
@@ -991,8 +998,9 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 	}
 	@catch ( NSException *pExc )
 	{
-		[self release];
 		mbFinished = YES;
+		if ( [NSPrintOperation currentOperation] == mpPrintOperation )
+			[NSPrintOperation setCurrentOperation:nil];
 		if ( pExc )
 			NSLog( @"%@", [pExc callStackSymbols] );
 	}
@@ -1067,9 +1075,6 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 
 			if ( mpWindow )
 			{
-				// Retain self to ensure that we don't release it before the
-				// completion handler executes
-				[self retain];
 				@try
 				{
 					// When running in the sandbox, native file dialog calls may
@@ -1078,8 +1083,9 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 				}
 				@catch ( NSException *pExc )
 				{
-					[self release];
 					mbFinished = YES;
+					if ( [NSPrintOperation currentOperation] == mpPrintOperation )
+						[NSPrintOperation setCurrentOperation:nil];
 					if ( pExc )
 						NSLog( @"%@", [pExc callStackSymbols] );
 				}
