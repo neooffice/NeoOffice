@@ -537,6 +537,7 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 
 @interface VCLPrintView : NSView
 {
+	NSPrintOperation*		mpPrintOperation;
 	BOOL					mbPrintOperationAborted;
 	BOOL					mbPrintOperationEnded;
 	std::list< JavaSalGraphics* >*	mpUnprintedGraphicsList;
@@ -552,6 +553,7 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 - (BOOL)knowsPageRange:(NSRangePointer)pRange;
 - (NSPoint)locationOfPrintRect:(NSRect)aRect;
 - (NSRect)rectForPage:(NSInteger)nPageNumber;
+- (void)setPrintOperation:(NSPrintOperation *)pPrintOperation;
 @end
 
 @implementation VCLPrintView
@@ -585,6 +587,9 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 
 - (void)dealloc
 {
+	if ( mpPrintOperation )
+		[mpPrintOperation release];
+
 	if ( mpUnprintedGraphicsCondition )
 		delete mpUnprintedGraphicsCondition;
 
@@ -635,10 +640,9 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 					float fScaleFactor = 1.0f;
 					BOOL bFlipped = [self isFlipped];
 					NSRect aBounds = [self bounds];
-					NSPrintOperation *pPrintOperation = [NSPrintOperation currentOperation];
-					if ( pPrintOperation )
+					if ( mpPrintOperation )
 					{
-						NSPrintInfo *pInfo = [pPrintOperation printInfo];
+						NSPrintInfo *pInfo = [mpPrintOperation printInfo];
 						if ( pInfo )
 						{
 							NSDictionary *pDict = [pInfo dictionary];
@@ -694,6 +698,7 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 {
 	[super initWithFrame:aFrame];
 
+	mpPrintOperation = nil;
 	mbPrintOperationAborted = NO;
 	mbPrintOperationEnded = NO;
 	mpUnprintedGraphicsCondition = new Condition();
@@ -752,10 +757,9 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 				}
 
 				// Cancel all print output
-				NSPrintOperation *pPrintOperation = [NSPrintOperation currentOperation];
-				if ( pPrintOperation )
+				if ( mpPrintOperation )
 				{
-					NSPrintInfo *pInfo = [pPrintOperation printInfo];
+					NSPrintInfo *pInfo = [mpPrintOperation printInfo];
 					if ( pInfo )
 						[pInfo setJobDisposition:NSPrintCancelJob];
 				}
@@ -765,10 +769,9 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 				bContinue = NO;
 
 				// Set page orientation and adjust view frame
-				NSPrintOperation *pPrintOperation = [NSPrintOperation currentOperation];
-				if ( pPrintOperation )
+				if ( mpPrintOperation )
 				{
-					NSPrintInfo *pInfo = [pPrintOperation printInfo];
+					NSPrintInfo *pInfo = [mpPrintOperation printInfo];
 					if ( pInfo )
 					{
 						JavaSalGraphics *pGraphics = mpUnprintedGraphicsList->front();
@@ -804,6 +807,17 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 #endif // TODO
 
 	return aRet;
+}
+
+- (void)setPrintOperation:(NSPrintOperation *)pPrintOperation
+{
+	if ( pPrintOperation && pPrintOperation != mpPrintOperation )
+	{
+		if ( mpPrintOperation)
+			[mpPrintOperation release];
+		mpPrintOperation = pPrintOperation;
+		[mpPrintOperation retain];
+	}
 }
 
 @end
@@ -940,18 +954,21 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 		return nil;
 }
 
-// Never call this selector directly since it releases self
 - (void)printOperationDidRun:(NSPrintOperation *)pPrintOperation success:(BOOL)bSuccess contextInfo:(void *)pContextInfo
 {
 	(void)pContextInfo;
 
-	if ( mbFinished || !mpPrintOperation || pPrintOperation != mpPrintOperation )
+	if ( !mpPrintOperation || pPrintOperation != mpPrintOperation )
+		return;
+
+	if ( [NSPrintOperation currentOperation] == mpPrintOperation )
+		[NSPrintOperation setCurrentOperation:nil];
+
+	if ( mbFinished )
 		return;
 
 	mbResult = bSuccess;
 	mbFinished = YES;
-	if ( [NSPrintOperation currentOperation] == mpPrintOperation )
-		[NSPrintOperation setCurrentOperation:nil];
 
 	NSPrintInfo *pInfo = nil;
 
@@ -1073,6 +1090,7 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 			[mpPrintOperation setShowsProgressPanel:YES];
 			[NSPrintOperation setCurrentOperation:mpPrintOperation];
 
+			[mpPrintView setPrintOperation:mpPrintOperation];
 			if ( mpWindow )
 			{
 				@try
