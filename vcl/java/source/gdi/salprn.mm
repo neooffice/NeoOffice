@@ -38,6 +38,7 @@
 #include <osl/mutex.hxx>
 #include <sfx2/sfx.hrc>
 #include <tools/rcid.h>
+#include <vcl/print.hxx>
 #include <vcl/svapp.hxx>
 #include <vos/mutex.hxx>
 
@@ -59,6 +60,7 @@
 static rtl::OUString aPageScalingFactorKey( RTL_CONSTASCII_USTRINGPARAM( "PAGE_SCALING_FACTOR" ) );
 static ResMgr *pSfxResMgr = NULL;
 
+using namespace com::sun::star;
 using namespace osl;
 using namespace rtl;
 using namespace vcl;
@@ -824,6 +826,7 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
  
 @interface JavaSalPrinterPrintJob : NSObject
 {
+	BOOL					mbAborted;
 	BOOL					mbFinished;
 	BOOL					mbInDealloc;
 	NSPrintInfo*			mpInfo;
@@ -834,6 +837,7 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 	NSWindow*				mpWindow;
 }
 + (id)createWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName;
+- (BOOL)aborted;
 - (void)cancel:(id)pObject;
 - (void)checkForErrors:(id)pObject;
 - (void)dealloc;
@@ -853,6 +857,11 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 	JavaSalPrinterPrintJob *pRet = [[JavaSalPrinterPrintJob alloc] initWithPrintInfo:pInfo window:pWindow jobName:pJobName];
 	[pRet autorelease];
 	return pRet;
+}
+
+- (BOOL)aborted
+{
+	return mbAborted;
 }
 
 - (void)cancel:(id)pObject
@@ -944,6 +953,7 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 {
 	[super init];
 
+	mbAborted = NO;
 	mbFinished = NO;
 	mbInDealloc = NO;
 	mpInfo = pInfo;
@@ -993,6 +1003,12 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 		// When running in the sandbox, native file dialog calls may
 		// throw exceptions if the PowerBox daemon process is killed
 		pInfo = [mpPrintOperation printInfo];
+		if ( pInfo )
+		{
+			NSString *pDisposition = [pInfo jobDisposition];
+			if ( pDisposition && [pDisposition isEqualToString:NSPrintCancelJob] )
+				mbAborted = YES;
+		}
 	}
 	@catch ( NSException *pExc )
 	{
@@ -1549,111 +1565,123 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& rJobName, const String& /* rAppName */, ImplJobSetup* pSetupData, vcl::PrinterController& /* rController */ )
+sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& rJobName, const String& /* rAppName */, ImplJobSetup* pSetupData, vcl::PrinterController& rController )
 {
 	sal_Bool bRet = sal_False;
+	BOOL bAborted = NO;
 
-	if ( !mpInfo || mpPrintJob )
-		return bRet;
-
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	// Set paper type
-	float fScaleFactor = 1.0f;
-	::std::hash_map< OUString, OUString, OUStringHash >::const_iterator it = pSetupData->maValueMap.find( aPageScalingFactorKey );
-	if ( it != pSetupData->maValueMap.end() )
+	if ( mpInfo && !mpPrintJob )
 	{
-		fScaleFactor = it->second.toFloat();
-		if ( fScaleFactor <= 0.0f )
-			fScaleFactor = 1.0f;
-	}
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	// Fix bug by detecting when an OOo printer job is being reused for serial
-	// print jobs
-	if ( rJobName.Len() )
-		maJobName = rJobName;
-	else if ( !maJobName.Len() )
-		maJobName = GetSfxResString( STR_NONAME );
-
-	// Update print info settings
-	mbPaperRotated = ImplPrintInfoSetPaperType( mpInfo, pSetupData->mePaperFormat, pSetupData->meOrientation, (float)pSetupData->mnPaperWidth * 72 / 2540, (float)pSetupData->mnPaperHeight * 72 / 2540 );
-	if ( ( mbPaperRotated && pSetupData->meOrientation == ORIENTATION_PORTRAIT ) || ( !mbPaperRotated && pSetupData->meOrientation == ORIENTATION_LANDSCAPE ) )
-		[mpInfo setOrientation:NSPaperOrientationLandscape];
-	else
-		[mpInfo setOrientation:NSPaperOrientationPortrait];
-	mePaperFormat = pSetupData->mePaperFormat;
-	mnPaperWidth = pSetupData->mnPaperWidth;
-	mnPaperHeight = pSetupData->mnPaperHeight;
-
-	// Set scaling factor
-	NSNumber *pValue = [NSNumber numberWithFloat:fScaleFactor];
-	if ( pValue )
-	{
-		NSMutableDictionary *pDict = [mpInfo dictionary];
-		if ( pDict )
-			[pDict setObject:pValue forKey:NSPrintScalingFactor];
-	}
-
-	JavaSalEventQueue::setShutdownDisabled( sal_False );
-
-	// Ignore any AWT events while the page layout dialog is showing
-	// to emulate a modal dialog
-	NSWindow *pNSWindow = nil;
-	if ( Application_beginModalSheet( &pNSWindow ) )
-	{
-		// Don't lock mutex as we expect callbacks to this object from
-		// a different thread while the dialog is showing
-		sal_uLong nCount = Application::ReleaseSolarMutex();
-
-		mpPrintJob = [JavaSalPrinterPrintJob createWithPrintInfo:mpInfo window:pNSWindow jobName:[NSString stringWithCharacters:maJobName.GetBuffer() length:maJobName.Len()]];
-		if ( mpPrintJob )
+		// Set paper type
+		float fScaleFactor = 1.0f;
+		::std::hash_map< OUString, OUString, OUStringHash >::const_iterator it = pSetupData->maValueMap.find( aPageScalingFactorKey );
+		if ( it != pSetupData->maValueMap.end() )
 		{
-			[mpPrintJob retain];
-
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[mpPrintJob performSelectorOnMainThread:@selector(startPrintOperation:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
-
-			while ( ![mpPrintJob finished] && !Application::IsShutDown() )
-			{
-				[mpPrintJob performSelectorOnMainThread:@selector(checkForErrors:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
-				if ( Application::IsShutDown() )
-					break;
-
-				IMutex &rSolarMutex = Application::GetSolarMutex();
-				rSolarMutex.acquire();
-				if ( !Application::IsShutDown() )
-					Application::Yield();
-				rSolarMutex.release();
-			}
-
-			bRet = [(JavaSalPrinterPrintJob *)mpPrintJob result];
-			if ( bRet )
-			{
-				NSPrintInfo *pInfo = [mpPrintJob printInfo];
-				if ( pInfo )
-				{
-					if ( pInfo != mpInfo )
-					{
-						if ( mpInfo )
-							[mpInfo release];
-						mpInfo = pInfo;
-						[mpInfo retain];
-					}
-				}
-			}
-
-			[mpPrintJob performSelectorOnMainThread:@selector(destroy:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
-			[mpPrintJob release];
-			mpPrintJob = nil;
+			fScaleFactor = it->second.toFloat();
+			if ( fScaleFactor <= 0.0f )
+				fScaleFactor = 1.0f;
 		}
 
-		Application::AcquireSolarMutex( nCount );
-		Application_endModalSheet();
+		// Fix bug by detecting when an OOo printer job is being reused for
+		// serial print jobs
+		if ( rJobName.Len() )
+			maJobName = rJobName;
+		else if ( !maJobName.Len() )
+			maJobName = GetSfxResString( STR_NONAME );
+
+		// Update print info settings
+		mbPaperRotated = ImplPrintInfoSetPaperType( mpInfo, pSetupData->mePaperFormat, pSetupData->meOrientation, (float)pSetupData->mnPaperWidth * 72 / 2540, (float)pSetupData->mnPaperHeight * 72 / 2540 );
+		if ( ( mbPaperRotated && pSetupData->meOrientation == ORIENTATION_PORTRAIT ) || ( !mbPaperRotated && pSetupData->meOrientation == ORIENTATION_LANDSCAPE ) )
+			[mpInfo setOrientation:NSPaperOrientationLandscape];
+		else
+			[mpInfo setOrientation:NSPaperOrientationPortrait];
+		mePaperFormat = pSetupData->mePaperFormat;
+		mnPaperWidth = pSetupData->mnPaperWidth;
+		mnPaperHeight = pSetupData->mnPaperHeight;
+
+		// Set scaling factor
+		NSNumber *pValue = [NSNumber numberWithFloat:fScaleFactor];
+		if ( pValue )
+		{
+			NSMutableDictionary *pDict = [mpInfo dictionary];
+			if ( pDict )
+				[pDict setObject:pValue forKey:NSPrintScalingFactor];
+		}
+
+		JavaSalEventQueue::setShutdownDisabled( sal_True );
+
+		// Ignore any AWT events while the page layout dialog is showing
+		// to emulate a modal dialog
+		NSWindow *pNSWindow = nil;
+		if ( Application_beginModalSheet( &pNSWindow ) )
+		{
+			// Don't lock mutex as we expect callbacks to this object from
+			// a different thread while the dialog is showing
+			sal_uLong nCount = Application::ReleaseSolarMutex();
+
+			mpPrintJob = [JavaSalPrinterPrintJob createWithPrintInfo:mpInfo window:pNSWindow jobName:[NSString stringWithCharacters:maJobName.GetBuffer() length:maJobName.Len()]];
+			if ( mpPrintJob )
+			{
+				[mpPrintJob retain];
+
+				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+				[mpPrintJob performSelectorOnMainThread:@selector(startPrintOperation:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
+
+				while ( ![mpPrintJob finished] && !Application::IsShutDown() )
+				{
+					[mpPrintJob performSelectorOnMainThread:@selector(checkForErrors:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
+					if ( Application::IsShutDown() )
+						break;
+
+					IMutex &rSolarMutex = Application::GetSolarMutex();
+					rSolarMutex.acquire();
+					if ( !Application::IsShutDown() )
+						Application::Yield();
+					rSolarMutex.release();
+				}
+
+				bRet = [(JavaSalPrinterPrintJob *)mpPrintJob result];
+				if ( bRet )
+				{
+					bAborted = [(JavaSalPrinterPrintJob *)mpPrintJob aborted];
+
+					NSPrintInfo *pInfo = [mpPrintJob printInfo];
+					if ( pInfo )
+					{
+						if ( pInfo != mpInfo )
+						{
+							if ( mpInfo )
+								[mpInfo release];
+							mpInfo = pInfo;
+							[mpInfo retain];
+						}
+					}
+				}
+
+				[mpPrintJob performSelectorOnMainThread:@selector(destroy:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
+				[mpPrintJob release];
+				mpPrintJob = nil;
+			}
+
+			Application::AcquireSolarMutex( nCount );
+			Application_endModalSheet();
+		}
+
+		[pPool release];
+
+		JavaSalEventQueue::setShutdownDisabled( sal_False );
 	}
 
-	[pPool release];
-
-	JavaSalEventQueue::setShutdownDisabled( sal_True );
+	// Per the comments at the end of the AquaSalInfoPrinter::StartJob() method
+	// in vcl/aqua/source/gdi/salprn.cxx, we need to set the controller's last
+	// page property and fetch the meta file for the last page. Otherwise,
+	// closing a Writer window will cause a crash.
+	rController.setLastPage( sal_True );
+	GDIMetaFile aPageFile;
+	rController.getFilteredPageFile( 0, aPageFile );
+	rController.setJobState( bRet && !bAborted ? view::PrintableState_JOB_SPOOLED : view::PrintableState_JOB_ABORTED );
 
 	return bRet;
 }
