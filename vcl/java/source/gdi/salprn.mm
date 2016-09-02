@@ -825,6 +825,7 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 @interface JavaSalPrinterPrintJob : NSObject
 {
 	BOOL					mbFinished;
+	BOOL					mbInDealloc;
 	NSPrintInfo*			mpInfo;
 	NSString*				mpJobName;
 	NSPrintOperation*		mpPrintOperation;
@@ -874,6 +875,7 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 
 - (void)dealloc
 {
+	mbInDealloc = YES;
 	[self destroy:self];
 
 	[super dealloc];
@@ -900,9 +902,22 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 	if ( mpPrintOperation )
 	{
 		// Wait until the print operation's completion handler is called to
-		// prevent the print operation from leaking memory or hanging
+		// prevent the print operation from leaking memory or hanging. Avoid
+		// blocking if this instance is not in dealloc: by waiting
+		// asynchronously for the completion handler to be called.
 		while ( [NSPrintOperation currentOperation] == mpPrintOperation )
-			NSApplication_dispatchPendingEvents( sal_False, sal_True );
+		{
+			if ( mbInDealloc )
+			{
+				NSApplication_dispatchPendingEvents( sal_False, sal_True );
+			}
+			else
+			{
+				[self performSelector:@selector(destroy:) withObject:self afterDelay:0.5f];
+				return;
+			}
+		}
+
 		[mpPrintOperation release];
 		mpPrintOperation = nil;
 	}
@@ -930,6 +945,7 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 	[super init];
 
 	mbFinished = NO;
+	mbInDealloc = NO;
 	mpInfo = pInfo;
 	if ( mpInfo )
 		[mpInfo retain];
