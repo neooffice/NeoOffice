@@ -162,7 +162,12 @@ static OUString NSStringToOUString( NSString *pString )
 		return;
 
     ProofreadingResult *pResult = (ProofreadingResult *)[pResultValue pointerValue];
-	if ( !pResult || !pResult->aText.getLength() || pResult->nStartOfSentencePosition < 0 || pResult->nStartOfSentencePosition >= pResult->nBehindEndOfSentencePosition || pResult->nStartOfSentencePosition >= pResult->aText.getLength() )
+	if ( !pResult )
+		return;
+
+	pResult->aErrors.realloc( 0 );
+
+	if ( !pResult->aText.getLength() || pResult->nStartOfSentencePosition < 0 || pResult->nStartOfSentencePosition >= pResult->nBehindEndOfSentencePosition || pResult->nStartOfSentencePosition >= pResult->aText.getLength() )
 		return;
 
     NSString *pLocale = (NSString *)[pArgArray objectAtIndex:1];
@@ -182,15 +187,22 @@ static OUString NSStringToOUString( NSString *pString )
 			NSString *pString = [NSString stringWithCharacters:pResult->aText.getStr() + pResult->nStartOfSentencePosition length:nLen];
 			if ( pString )
 			{
-				NSArray *pDetails = nil;
-				[pChecker checkGrammarOfString:pString startingAt:0 language:pLocale wrap:NO inSpellDocumentWithTag:0 details:&pDetails];
-				if ( pDetails )
+				NSUInteger nLen = [pString length];
+				NSUInteger nStart = 0;
+				while ( nStart < nLen )
 				{
+					NSArray *pDetails = nil;
+					NSRange aCheckRange = [pChecker checkGrammarOfString:pString startingAt:nStart language:pLocale wrap:NO inSpellDocumentWithTag:0 details:&pDetails];
+					if ( aCheckRange.location == NSNotFound || !aCheckRange.length || !pDetails )
+						break;
+
+					nStart = aCheckRange.location + aCheckRange.length;
+
 					NSUInteger nCount = [pDetails count];
 					NSUInteger i = 0;
-					sal_Int32 nErrors = 0;
+					sal_Int32 nErrors = pResult->aErrors.getLength();
 
-					pResult->aErrors.realloc( nCount );
+					pResult->aErrors.realloc( nErrors + nCount );
 					SingleProofreadingError *pErrors = pResult->aErrors.getArray();
 					if ( pErrors )
 					{
@@ -199,7 +211,7 @@ static OUString NSStringToOUString( NSString *pString )
 							NSDictionary *pDict = [pDetails objectAtIndex:i];
 							if ( pDict )
 							{
-								NSRange aRange = NSMakeRange( 0, [pString length] );
+								NSRange aRange = NSMakeRange( NSNotFound, 0 );
 								NSValue *pRangeValue = [pDict objectForKey:NSGrammarRange];
 								if ( pRangeValue )
 									aRange = [pRangeValue rangeValue];
@@ -210,7 +222,7 @@ static OUString NSStringToOUString( NSString *pString )
 									if ( aDesc.getLength() )
 									{
 										SingleProofreadingError aError;
-										aError.nErrorStart = pResult->nStartOfSentencePosition + aRange.location;
+										aError.nErrorStart = pResult->nStartOfSentencePosition + aCheckRange.location + aRange.location;
 										aError.nErrorLength = aRange.length;
 										aError.nErrorType = TextMarkupType::PROOFREADING;
 										aError.aRuleIdentifier = aDesc;
