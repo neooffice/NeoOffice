@@ -1069,13 +1069,20 @@ void SalYieldMutex::acquire()
 		{
 			// Wait for other thread to release mutex
 			// We need to let any pending timers run so that we don't deadlock
+			sal_uInt16 nIterationsSinceLastWakeUpEvent = 0;
 			while ( !Application::IsShutDown() )
 			{
 				// Fix hanging in bug 3503 by posting a dummy event to wakeup
 				// the VCL event thread if the VCL event dispatch thread is in
-				// a potentially long wait
-				if ( nCurrentTimeout > 100 )
+				// a potentially long wait. Fix hanging when selecting a menu
+				// while Writer is doing a background spellcheck run by posting
+				// a wake up event so that
+				// JavaSalInstance::AnyEvent( INPUT_OTHER ) will eventually
+				// succeed.
+				if ( ++nIterationsSinceLastWakeUpEvent % 100 == 0 || nCurrentTimeout > 100 )
 				{
+					nIterationsSinceLastWakeUpEvent = 0;
+
 					TimeValue aDelay;
 					aDelay.Seconds = 0;
 					aDelay.Nanosec = 10000;
