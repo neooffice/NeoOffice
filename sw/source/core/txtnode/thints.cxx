@@ -25,6 +25,16 @@
  * Modified January 2012 by Patrick Luby. NeoOffice is distributed under
  * GPL only under modification term 2 of the LGPL.
  *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
@@ -790,7 +800,28 @@ SwTxtAttr* SwTxtNode::InsertItem( const SfxPoolItem& rAttr,
     SwTxtAttr* pNew = MakeTxtAttr( rAttr, nStt, nEnd );
 
     if ( pNew )
+#ifdef NO_OOO_412_RTF_CRASH_FIX
        Insert( pNew, nMode );
+#else	// NO_OOO_412_RTF_CRASH_FIX
+    {
+#if SUPD == 310
+        const bool bSuccess( Insert( pNew, nMode ) );
+#else	// SUPD == 310
+        const bool bSuccess( InsertHint( pNew, nMode ) );
+#endif	// SUPD == 310
+        // N.B.: also check that the hint is actually in the hints array,
+        // because hints of certain types may be merged after succesful
+        // insertion, and thus destroyed!
+#if SUPD == 310
+        if (!bSuccess || !GetpSwpHints() || ( USHRT_MAX == GetpSwpHints()->GetPos( pNew ) ))
+#else	// SUPD == 310
+        if (!bSuccess || ( USHRT_MAX == m_pSwpHints->GetPos( pNew ) ))
+#endif	// SUPD == 310
+        {
+            return 0;
+        }
+    }
+#endif	// NO_OOO_412_RTF_CRASH_FIX
 
     return pNew;
 }
