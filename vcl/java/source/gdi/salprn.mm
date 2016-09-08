@@ -35,7 +35,9 @@
 
 #include <list>
 
+#ifdef TODO
 #include <osl/mutex.hxx>
+#endif	// TODO
 #include <sfx2/sfx.hrc>
 #include <tools/rcid.h>
 #include <vcl/print.hxx>
@@ -539,19 +541,23 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 
 @interface VCLPrintView : NSView
 {
+	JavaSalPrinter*			mpPrinter;
+	vcl::PrinterController*	mpPrinterController;
 	NSPrintOperation*		mpPrintOperation;
 	BOOL					mbPrintOperationAborted;
 	BOOL					mbPrintOperationEnded;
+#ifdef TODO
 	std::list< JavaSalGraphics* >*	mpUnprintedGraphicsList;
 	Condition*				mpUnprintedGraphicsCondition;
 	Mutex*					mpUnprintedGraphicsMutex;
+#endif	// TODO
 }
 - (void)abortPrintOperation;
 - (BOOL)addUnprintedGraphics:(JavaSalGraphics *)pGraphics;
 - (void)dealloc;
 - (void)drawRect:(NSRect)aRect;
 - (void)endPrintOperation;
-- (id)initWithFrame:(NSRect)aFrame;
+- (id)initWithFrame:(NSRect)aFrame printer:(JavaSalPrinter *)pPrinter printerController:(vcl::PrinterController *)pPrinterController;
 - (BOOL)knowsPageRange:(NSRangePointer)pRange;
 - (NSPoint)locationOfPrintRect:(NSRect)aRect;
 - (NSRect)rectForPage:(NSInteger)nPageNumber;
@@ -562,6 +568,7 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 
 - (void)abortPrintOperation
 {
+#ifdef TODO
 	if ( mpUnprintedGraphicsCondition && mpUnprintedGraphicsMutex )
 	{
 		mpUnprintedGraphicsMutex->acquire();
@@ -569,12 +576,14 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 		mpUnprintedGraphicsCondition->set();
 		mpUnprintedGraphicsMutex->release();
 	}
+#endif	// TODO
 }
 
 - (BOOL)addUnprintedGraphics:(JavaSalGraphics *)pGraphics
 {
 	BOOL bRet = NO;
 
+#ifdef TODO
 	if ( pGraphics && mpUnprintedGraphicsCondition && mpUnprintedGraphicsList && mpUnprintedGraphicsMutex )
 	{
 		mpUnprintedGraphicsMutex->acquire();
@@ -583,15 +592,16 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 		mpUnprintedGraphicsMutex->release();
 		bRet = YES;
 	}
+#endif	// TODO
 
 	return bRet;
 }
 
 - (void)dealloc
 {
-	if ( mpPrintOperation )
-		[mpPrintOperation release];
+	[self destroy:self];
 
+#ifdef TODO
 	if ( mpUnprintedGraphicsCondition )
 		delete mpUnprintedGraphicsCondition;
 
@@ -608,12 +618,30 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 
 	if ( mpUnprintedGraphicsMutex )
 		delete mpUnprintedGraphicsMutex;
+#endif	// TODO
 
 	[super dealloc];
 }
 
+- (void)destroy:(id)pObject
+{
+	(void)pObject;
+
+	[self abortPrintOperation];
+
+	mpPrinter = NULL;
+	mpPrinterController = NULL;
+
+	if ( mpPrintOperation )
+	{
+		[mpPrintOperation release];
+		mpPrintOperation = nil;
+	}
+}
+
 - (void)drawRect:(NSRect)aRect
 {
+#ifdef TODO
 	if ( mpUnprintedGraphicsList && mpUnprintedGraphicsMutex )
 	{
 		JavaSalGraphics *pGraphics = NULL;
@@ -683,10 +711,12 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 			delete pGraphics;
 		}
 	}
+#endif	// TODO
 }
 
 - (void)endPrintOperation
 {
+#ifdef TODO
 	if ( mpUnprintedGraphicsCondition && mpUnprintedGraphicsMutex )
 	{
 		mpUnprintedGraphicsMutex->acquire();
@@ -694,20 +724,25 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 		mpUnprintedGraphicsCondition->set();
 		mpUnprintedGraphicsMutex->release();
 	}
+#endif	// TODO
 }
 
-- (id)initWithFrame:(NSRect)aFrame
+- (id)initWithFrame:(NSRect)aFrame printer:(JavaSalPrinter *)pPrinter printerController:(vcl::PrinterController *)pPrinterController
 {
 	[super initWithFrame:aFrame];
 
+	mpPrinter = pPrinter;
+	mpPrinterController = pPrinterController;
 	mpPrintOperation = nil;
 	mbPrintOperationAborted = NO;
 	mbPrintOperationEnded = NO;
+#ifdef TODO
 	mpUnprintedGraphicsCondition = new Condition();
 	if ( mpUnprintedGraphicsCondition )
 		mpUnprintedGraphicsCondition->set();
 	mpUnprintedGraphicsList = new std::list< JavaSalGraphics* >();
 	mpUnprintedGraphicsMutex = new Mutex();
+#endif	// TODO
 
 	return self;
 }
@@ -831,19 +866,20 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 	BOOL					mbInDealloc;
 	NSPrintInfo*			mpInfo;
 	NSString*				mpJobName;
+	JavaSalPrinter*			mpPrinter;
+	vcl::PrinterController*	mpPrinterController;
 	NSPrintOperation*		mpPrintOperation;
 	VCLPrintView*			mpPrintView;
 	BOOL					mbResult;
 	NSWindow*				mpWindow;
 }
-+ (id)createWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName;
 - (BOOL)aborted;
 - (void)cancel:(id)pObject;
 - (void)checkForErrors:(id)pObject;
 - (void)dealloc;
 - (void)destroy:(id)pObject;
 - (BOOL)finished;
-- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName;
+- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName printer:(JavaSalPrinter *)pPrinter printerController:(vcl::PrinterController *)pPrinterController;
 - (NSPrintInfo *)printInfo;
 - (void)printOperationDidRun:(NSPrintOperation *)pPrintOperation success:(BOOL)bSuccess contextInfo:(void *)pContextInfo;
 - (BOOL)result;
@@ -851,13 +887,6 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 @end
 
 @implementation JavaSalPrinterPrintJob
-
-+ (id)createWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName
-{
-	JavaSalPrinterPrintJob *pRet = [[JavaSalPrinterPrintJob alloc] initWithPrintInfo:pInfo window:pWindow jobName:pJobName];
-	[pRet autorelease];
-	return pRet;
-}
 
 - (BOOL)aborted
 {
@@ -896,6 +925,10 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 
 	[self cancel:self];
 
+	// Set printer and printer controller pointers in print view to NULL
+	if ( mpPrintView )
+		[mpPrintView destroy:self];
+
 	if ( mpInfo )
 	{
 		[mpInfo release];
@@ -907,6 +940,9 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 		[mpJobName release];
 		mpJobName = nil;
 	}
+
+	mpPrinter = NULL;
+	mpPrinterController = NULL;
 
 	if ( mpPrintOperation )
 	{
@@ -949,7 +985,7 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 	return mbFinished;
 }
 
-- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName
+- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName printer:(JavaSalPrinter *)pPrinter printerController:(vcl::PrinterController *)pPrinterController
 {
 	[super init];
 
@@ -962,6 +998,8 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 	mpJobName = pJobName;
 	if ( mpJobName )
 		[mpJobName retain];
+	mpPrinter = pPrinter;
+	mpPrinterController = pPrinterController;
 	mpPrintOperation = nil;
 	mpPrintView = nil;
 	mbResult = NO;
@@ -1036,7 +1074,7 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 
 - (void)runModalPrintOperation
 {
-	if ( mbFinished || !mpPrintOperation || mpPrintOperation != [NSPrintOperation currentOperation] || mbResult )
+	if ( mbFinished || !mpPrinter || !mpPrinterController || !mpPrintOperation || mpPrintOperation != [NSPrintOperation currentOperation] || mbResult )
 		return;
 
 	@try
@@ -1059,8 +1097,11 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 {
 	(void)pObject;
 
+	if ( !mpInfo || !mpPrinter || !mpPrinterController )
+		return;
+
 	// Do not allow recursion or reuse
-	if ( mbFinished || !mpInfo || mpPrintOperation || mpPrintView || mbResult || [NSPrintOperation currentOperation] )
+	if ( mbFinished || !mpInfo || !mpPrinterController || mpPrintOperation || mpPrintView || mbResult || [NSPrintOperation currentOperation] )
 		return;
 
 	// Fix crashing bug reported in the following NeoOffice forum topic by
@@ -1104,7 +1145,7 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 		[mpInfo setPrinter:pPrinter];
 
 	NSSize aPaperSize = [mpInfo paperSize];
-	mpPrintView = [[VCLPrintView alloc] initWithFrame:NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height )];
+	mpPrintView = [[VCLPrintView alloc] initWithFrame:NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height ) printer:mpPrinter printerController:mpPrinterController];
 	if ( mpPrintView )
 	{
 		mpPrintOperation = [NSPrintOperation printOperationWithView:mpPrintView printInfo:mpInfo];
@@ -1621,11 +1662,9 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 			// a different thread while the dialog is showing
 			sal_uLong nCount = Application::ReleaseSolarMutex();
 
-			mpPrintJob = [JavaSalPrinterPrintJob createWithPrintInfo:mpInfo window:pNSWindow jobName:[NSString stringWithCharacters:maJobName.GetBuffer() length:maJobName.Len()]];
+			mpPrintJob = [[JavaSalPrinterPrintJob alloc] initWithPrintInfo:mpInfo window:pNSWindow jobName:[NSString stringWithCharacters:maJobName.GetBuffer() length:maJobName.Len()] printer:this printerController:&rController];
 			if ( mpPrintJob )
 			{
-				[mpPrintJob retain];
-
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 				[mpPrintJob performSelectorOnMainThread:@selector(startPrintOperation:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
 
