@@ -878,6 +878,24 @@ void SfxStyleSheetBasePool::Remove( SfxStyleSheetBase* p )
 	{
 #ifdef USE_JAVA
 		pImp->aStylesMap.erase( p );
+		std::multimap< XubString, sal_uInt16 >::const_iterator snit = pImp->aStylesCachedNameMap.lower_bound( p->GetName() );
+		if ( snit != pImp->aStylesCachedNameMap.end() )
+		{
+			std::multimap< XubString, sal_uInt16 >::const_iterator ubsnit = pImp->aStylesCachedNameMap.upper_bound( p->GetName() );
+			for ( ; snit != ubsnit && snit != pImp->aStylesCachedNameMap.end(); ++snit )
+			{
+				sal_uInt16 n = snit->second;
+				if ( n < aStyles.size() )
+				{
+					SfxStyleSheetBase* pStyle = aStyles[n].get();
+					if ( pStyle == p )
+					{
+						pImp->aStylesCachedNameMap.erase( snit );
+						break;
+					}
+				}
+			}
+		}
 #endif	// USE_JAVA
 
 		SfxStyles::iterator aIter( std::find( aStyles.begin(), aStyles.end(), rtl::Reference< SfxStyleSheetBase >( p ) ) );
