@@ -135,8 +135,8 @@ class SfxStyleSheetBasePool_Impl
 	SfxStyles aStyles;
 	SfxStyleSheetIterator *pIter;
 #ifdef USE_JAVA
-	std::map< SfxStyleSheetBase*, SfxStyleSheetBase* > aStylesMap;
-	std::multimap< XubString, USHORT > aStylesCachedNameMap;
+	std::map< SfxStyleSheetBase*, USHORT > aStylesMap;
+	std::multimap< XubString, SfxStyleSheetBase* > aStylesCachedNameMap;
 #endif	// USE_JAVA
 	SfxStyleSheetBasePool_Impl() : pIter(0){}
 	~SfxStyleSheetBasePool_Impl(){delete pIter;}
@@ -249,26 +249,21 @@ BOOL SfxStyleSheetBase::SetName( const XubString& rName )
 		if ( aFollow.Equals( aName ) )
 			aFollow = rName;
 #ifdef USE_JAVA
-		rPool.pImp->aStylesMap[ this ] = this;
-		std::multimap< XubString, USHORT >::iterator snit = rPool.pImp->aStylesCachedNameMap.lower_bound( aName );
+		std::multimap< XubString, SfxStyleSheetBase* >::iterator snit = rPool.pImp->aStylesCachedNameMap.lower_bound( aName );
 		if ( snit != rPool.pImp->aStylesCachedNameMap.end() )
 		{
-			std::multimap< XubString, USHORT >::iterator ubsnit = rPool.pImp->aStylesCachedNameMap.upper_bound( aName );
+			std::multimap< XubString, SfxStyleSheetBase* >::iterator ubsnit = rPool.pImp->aStylesCachedNameMap.upper_bound( aName );
 			for ( ; snit != ubsnit && snit != rPool.pImp->aStylesCachedNameMap.end(); ++snit )
 			{
-				USHORT n = snit->second;
-				if ( n < rPool.aStyles.size() )
+				SfxStyleSheetBase* pStyle = snit->second;
+				if ( pStyle == this )
 				{
-					SfxStyleSheetBase* pStyle = rPool.aStyles[n].get();
-					if ( pStyle == this )
-					{
-						rPool.pImp->aStylesCachedNameMap.erase( snit );
-						rPool.pImp->aStylesCachedNameMap.insert( std::make_pair( rName, n ) );
-						break;
-					}
+					rPool.pImp->aStylesCachedNameMap.erase( snit );
+					break;
 				}
 			}
 		}
+		rPool.pImp->aStylesCachedNameMap.insert( std::make_pair( rName, this ) );
 #endif	// USE_JAVA
 		aName = rName;
 		rPool.SetSearchMask(eTmpFam, nTmpMask);
@@ -579,26 +574,41 @@ SfxStyleSheetBase* SfxStyleSheetIterator::Next()
 SfxStyleSheetBase* SfxStyleSheetIterator::Find(const XubString& rStr)
 {
 #ifdef USE_JAVA
-	std::multimap< XubString, USHORT >::iterator snit = pBasePool->pImp->aStylesCachedNameMap.lower_bound( rStr );
+	// Subclasses have access to the styles vector so rebuild style maps if
+	// a subclass may have changed the styles vector
+	if ( pBasePool->pImp->aStylesMap.size() != pBasePool->aStyles.size() || pBasePool->pImp->aStylesCachedNameMap.size() != pBasePool->aStyles.size() )
+	{
+		pBasePool->pImp->aStylesMap.clear();
+		pBasePool->pImp->aStylesCachedNameMap.clear();
+		for ( USHORT n = 0; n < pBasePool->aStyles.size(); n++ )
+		{
+			SfxStyleSheetBase* pStyle = pBasePool->aStyles[n].get();
+			if ( pStyle )
+			{
+				pBasePool->pImp->aStylesMap[ pStyle ] = n;
+				pBasePool->pImp->aStylesCachedNameMap.insert( std::make_pair( pStyle->GetName(), pStyle ) );
+			}
+		}
+	}
+
+	std::multimap< XubString, SfxStyleSheetBase* >::iterator snit = pBasePool->pImp->aStylesCachedNameMap.lower_bound( rStr );
 	if ( snit != pBasePool->pImp->aStylesCachedNameMap.end() )
 	{
-		std::multimap< XubString, USHORT >::iterator ubsnit = pBasePool->pImp->aStylesCachedNameMap.upper_bound( rStr );
+		std::multimap< XubString, SfxStyleSheetBase* >::iterator ubsnit = pBasePool->pImp->aStylesCachedNameMap.upper_bound( rStr );
 		for ( ; snit != ubsnit && snit != pBasePool->pImp->aStylesCachedNameMap.end(); ++snit )
 		{
-			USHORT n = snit->second;
-			if ( n < pBasePool->aStyles.size() )
+			SfxStyleSheetBase* pStyle = snit->second;
+			std::map< SfxStyleSheetBase*, USHORT >::const_iterator sit = pBasePool->pImp->aStylesMap.find( pStyle );
+			if ( sit != pBasePool->pImp->aStylesMap.end() )
 			{
-				SfxStyleSheetBase* pStyle = pBasePool->aStyles[n].get();
-				std::map< SfxStyleSheetBase*, SfxStyleSheetBase* >::const_iterator sit = pBasePool->pImp->aStylesMap.find( pStyle );
-				if ( sit == pBasePool->pImp->aStylesMap.end() )
+				USHORT n = sit->second;
+				if ( n < pBasePool->aStyles.size() )
 				{
-					// Remove stale entry from name map
-					pBasePool->pImp->aStylesCachedNameMap.erase( snit );
-				}
-				else if ( pStyle->GetName().Equals( rStr ) && DoesStyleMatch( pStyle ) )
-				{
-					nAktPosition = n;
-					return pAktStyle = pStyle;
+					if ( pStyle->GetName().Equals( rStr ) && DoesStyleMatch( pStyle ) )
+					{
+						nAktPosition = n;
+						return pAktStyle = pStyle;
+					}
 				}
 			}
 		}
@@ -768,14 +778,11 @@ SfxStyleSheetBase& SfxStyleSheetBasePool::Make( const XubString& rName, SfxStyle
 	if( !xStyle.is() )
 	{
 		xStyle = Create( rName, eFam, mask );
-#ifdef USE_JAVA
-		pImp->aStylesMap[ xStyle.get() ] = xStyle.get();
-#endif	// USE_JAVA
 		if(0xffff == nPos || nPos == aStyles.size() || nPos == rIter.Count())
 		{
 			aStyles.push_back( xStyle );
 #ifdef USE_JAVA
-			pImp->aStylesCachedNameMap.insert( std::make_pair( xStyle->GetName(), aStyles.size() - 1 ) );
+			pImp->aStylesMap[ xStyle.get() ] = aStyles.size() - 1;
 #endif	// USE_JAVA
 		}
 		else
@@ -783,9 +790,18 @@ SfxStyleSheetBase& SfxStyleSheetBasePool::Make( const XubString& rName, SfxStyle
 			rIter[nPos];
 			aStyles.insert( aStyles.begin() + rIter.GetPos(), xStyle );
 #ifdef USE_JAVA
-			pImp->aStylesCachedNameMap.insert( std::make_pair( xStyle->GetName(), nPos ) );
+			pImp->aStylesMap.clear();
+			for ( USHORT n = 0; n < aStyles.size(); n++ )
+			{
+				SfxStyleSheetBase* pStyle = aStyles[n].get();
+				if ( pStyle )
+					pImp->aStylesMap[ pStyle ] = n;
+			}
 #endif	// USE_JAVA
 		}
+#ifdef USE_JAVA
+		pImp->aStylesCachedNameMap.insert( std::make_pair( xStyle->GetName(), xStyle.get() ) );
+#endif	// USE_JAVA
 		Broadcast( SfxStyleSheetHint( SFX_STYLESHEET_CREATED, *xStyle.get() ) );
 	}
 	return *xStyle.get();
@@ -805,8 +821,8 @@ SfxStyleSheetBase& SfxStyleSheetBasePool::Add( SfxStyleSheetBase& rSheet )
 	rtl::Reference< SfxStyleSheetBase > xNew( Create( rSheet ) );
 	aStyles.push_back( xNew );
 #ifdef USE_JAVA
-	pImp->aStylesMap[ xNew.get() ] = xNew.get();
-	pImp->aStylesCachedNameMap.insert( std::make_pair( rSheet.GetName(), aStyles.size() - 1 ) );
+	pImp->aStylesMap[ xNew.get() ] = aStyles.size() - 1;
+	pImp->aStylesCachedNameMap.insert( std::make_pair( rSheet.GetName(), xNew.get() ) );
 #endif	// USE_JAVA
 	Broadcast( SfxStyleSheetHint( SFX_STYLESHEET_CHANGED, *xNew.get() ) );
 	return *xNew.get();
@@ -876,34 +892,25 @@ void SfxStyleSheetBasePool::Remove( SfxStyleSheetBase* p )
 {
 	if( p )
 	{
-#ifdef USE_JAVA
-		pImp->aStylesMap.erase( p );
-		std::multimap< XubString, USHORT >::iterator snit = pImp->aStylesCachedNameMap.lower_bound( p->GetName() );
-		if ( snit != pImp->aStylesCachedNameMap.end() )
-		{
-			std::multimap< XubString, USHORT >::iterator ubsnit = pImp->aStylesCachedNameMap.upper_bound( p->GetName() );
-			for ( ; snit != ubsnit && snit != pImp->aStylesCachedNameMap.end(); ++snit )
-			{
-				USHORT n = snit->second;
-				if ( n < aStyles.size() )
-				{
-					SfxStyleSheetBase* pStyle = aStyles[n].get();
-					if ( pStyle == p )
-					{
-						pImp->aStylesCachedNameMap.erase( snit );
-						break;
-					}
-				}
-			}
-		}
-#endif	// USE_JAVA
-
 		SfxStyles::iterator aIter( std::find( aStyles.begin(), aStyles.end(), rtl::Reference< SfxStyleSheetBase >( p ) ) );
 		if( aIter != aStyles.end() )
 		{
 			// Alle Styles umsetzen, deren Parent dieser hier ist
 			ChangeParent( p->GetName(), p->GetParent() );
 			aStyles.erase(aIter);
+#ifdef USE_JAVA
+			pImp->aStylesMap.clear();
+			pImp->aStylesCachedNameMap.clear();
+			for ( USHORT n = 0; n < aStyles.size(); n++ )
+			{
+				SfxStyleSheetBase* pStyle = aStyles[n].get();
+				if ( pStyle )
+				{
+					pImp->aStylesMap[ pStyle ] = n;
+					pImp->aStylesCachedNameMap.insert( std::make_pair( pStyle->GetName(), pStyle ) );
+				}
+			}
+#endif	// USE_JAVA
 			Broadcast( SfxStyleSheetHint( SFX_STYLESHEET_ERASED, *p ) );
 		}
 	}
@@ -923,8 +930,8 @@ void SfxStyleSheetBasePool::Insert( SfxStyleSheetBase* p )
 	}
 	aStyles.push_back( rtl::Reference< SfxStyleSheetBase >( p ) );
 #ifdef USE_JAVA
-	pImp->aStylesMap[ p ] = p;
-	pImp->aStylesCachedNameMap.insert( std::make_pair( p->GetName(), aStyles.size() - 1 ) );
+	pImp->aStylesMap[ p ] = aStyles.size() - 1;
+	pImp->aStylesCachedNameMap.insert( std::make_pair( p->GetName(), p ) );
 #endif	// USE_JAVA
 	Broadcast( SfxStyleSheetHint( SFX_STYLESHEET_CREATED, *p ) );
 }
