@@ -613,7 +613,7 @@ SfxStyleSheetBase* SfxStyleSheetIterator::Find(const XubString& rStr)
 				if ( sit == pBasePool->pImp->aStylesMap.end() )
 				{
 					bRebuild = sal_True;
-					continue;
+					break;
 				}
 				else
 				{
@@ -621,7 +621,7 @@ SfxStyleSheetBase* SfxStyleSheetIterator::Find(const XubString& rStr)
 					if ( n >= pBasePool->aStyles.size() )
 					{
 						bRebuild = sal_True;
-						continue;
+						break;
 					}
 					else
 					{
@@ -629,7 +629,7 @@ SfxStyleSheetBase* SfxStyleSheetIterator::Find(const XubString& rStr)
 						if ( pStyle != snit->second || !pStyle->GetName().Equals( rStr ) )
 						{
 							bRebuild = sal_True;
-							continue;
+							break;
 						}
 						else if ( DoesStyleMatch( pStyle ) )
 						{
