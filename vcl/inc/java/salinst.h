@@ -57,6 +57,7 @@
 #define SALEVENT_SYSTEMCOLORSCHANGED	((sal_uInt16)107)
 #define SALEVENT_ABOUT				((sal_uInt16)130)
 #define SALEVENT_PREFS				((sal_uInt16)140)
+#define SALEVENT_WAKEUP				((sal_uInt16)150)
 
 // -----------------
 // - SalYieldMutex -

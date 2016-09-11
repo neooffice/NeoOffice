@@ -1079,7 +1079,7 @@ void SalYieldMutex::acquire()
 				// a wake up event so that
 				// JavaSalInstance::AnyEvent( INPUT_OTHER ) will eventually
 				// succeed.
-				if ( ++nIterationsSinceLastWakeUpEvent % 100 == 0 || nCurrentTimeout > 100 )
+				if ( ++nIterationsSinceLastWakeUpEvent % 10000 == 0 || nCurrentTimeout > 100 )
 				{
 					nIterationsSinceLastWakeUpEvent = 0;
 
@@ -1553,6 +1553,10 @@ void JavaSalEvent::dispatch()
 			if ( pPreferencesHandler && !pSalData->mbInNativeModalSheet )
 				pPreferencesHandler();
 
+			return;
+		}
+		case SALEVENT_WAKEUP:
+		{
 			return;
 		}
 	}
@@ -2941,6 +2945,7 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 			switch ( nID )
 			{
 				case SALEVENT_CLOSE:
+				case SALEVENT_WAKEUP:
 				{
 					for ( ::std::list< JavaSalEventQueueItem* >::const_iterator it = pEventQueue->begin(); it != pEventQueue->end(); ++it )
 					{
