@@ -981,7 +981,7 @@ void Application_postWakeUpEvent()
 {
 	if ( !Application::IsShutDown() )
 	{
-		JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
+		JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_WAKEUP, NULL, NULL );
 		JavaSalEventQueue::postCachedEvent( pUserEvent );
 		pUserEvent->release();
 	}

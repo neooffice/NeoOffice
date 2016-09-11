@@ -56,6 +56,7 @@
 #define SALEVENT_SYSTEMCOLORSCHANGED	((USHORT)107)
 #define SALEVENT_ABOUT				((USHORT)130)
 #define SALEVENT_PREFS				((USHORT)140)
+#define SALEVENT_WAKEUP				((USHORT)150)
 
 // -----------------
 // - SalYieldMutex -
