@@ -86,7 +86,7 @@ static XubString GetSfxResString( int nId )
 	return XubString( ResId( nId, *pSfxResMgr ) );
 }
 
-Paper ImplPrintInfoGetPaperType( NSPrintInfo *pInfo, sal_Bool /* bPaperRotated */ )
+static Paper ImplPrintInfoGetPaperType( NSPrintInfo *pInfo, sal_Bool /* bPaperRotated */ )
 {
 	Paper nRet = PAPER_USER;
 
@@ -126,7 +126,7 @@ Paper ImplPrintInfoGetPaperType( NSPrintInfo *pInfo, sal_Bool /* bPaperRotated *
 	return nRet;
 }
 
-sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientation nOrientation, float fWidth, float fHeight )
+static sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientation nOrientation, float fWidth, float fHeight )
 {
 	(void)nOrientation;
 
@@ -208,6 +208,56 @@ sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientatio
 	}
 
 	return bRet;
+}
+
+static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData, sal_Bool bPaperRotated, long& rOutWidth, long& rOutHeight, long& rPageOffX, long& rPageOffY, long& rPageWidth, long& rPageHeight )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	Size aSize;
+	Rectangle aRect;
+	if ( pInfo )
+	{
+		NSSize aPaperSize = [pInfo paperSize];
+		NSRect aPageBounds = [pInfo imageablePageBounds];
+
+		// Flip page bounds
+		aPageBounds.origin.y = aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height;
+
+		NSPaperOrientation nOrientation = [pInfo orientation];
+		if ( ( bPaperRotated && nOrientation == NSPaperOrientationPortrait ) || ( !bPaperRotated && nOrientation == NSPaperOrientationLandscape ) )
+		{
+			aSize = Size( (long)( aPaperSize.height * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPaperSize.width * MIN_PRINTER_RESOLUTION / 72 ) );
+			aRect = Rectangle( Point( (long)( ( aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height ) * MIN_PRINTER_RESOLUTION / 72  ), (long)( aPageBounds.origin.x * MIN_PRINTER_RESOLUTION / 72  ) ), Size( (long)( aPageBounds.size.height * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPageBounds.size.width * MIN_PRINTER_RESOLUTION / 72 ) ) );
+		}
+		else
+		{
+			aSize = Size( (long)( aPaperSize.width * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPaperSize.height * MIN_PRINTER_RESOLUTION / 72 ) );
+			aRect = Rectangle( Point( (long)( aPageBounds.origin.x * MIN_PRINTER_RESOLUTION / 72  ), (long)( ( aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height ) * MIN_PRINTER_RESOLUTION / 72  ) ), Size( (long)( aPageBounds.size.width * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPageBounds.size.height * MIN_PRINTER_RESOLUTION / 72 ) ) );
+		}
+	}
+
+	// Fix bug 2278 by detecting if the OOo code wants rotated bounds
+	if ( pSetupData && pSetupData->meOrientation != ORIENTATION_PORTRAIT )
+	{
+		rPageWidth = aSize.Height();
+		rPageHeight = aSize.Width();
+		rPageOffX = aRect.nTop;
+		rPageOffY = aRect.nLeft;
+		rOutWidth = aRect.nBottom - aRect.nTop + 1;
+		rOutHeight = aRect.nRight - aRect.nLeft + 1;
+	}
+	else
+	{
+		rPageWidth = aSize.Width();
+		rPageHeight = aSize.Height();
+		rPageOffX = aRect.nLeft;
+		rPageOffY = aRect.nTop;
+		rOutWidth = aRect.nRight - aRect.nLeft + 1;
+		rOutHeight = aRect.nBottom - aRect.nTop + 1;
+	}
+
+	[pPool release];
 }
 
 @interface JavaSalInfoPrinterCreatePrintInfo : NSObject
@@ -1459,57 +1509,9 @@ sal_uLong JavaSalInfoPrinter::GetCapabilities( const ImplJobSetup* /* pSetupData
 
 // -----------------------------------------------------------------------
 
-void JavaSalInfoPrinter::GetPageInfo( const ImplJobSetup* pSetupData,
-								  long& rOutWidth, long& rOutHeight,
-								  long& rPageOffX, long& rPageOffY,
-								  long& rPageWidth, long& rPageHeight )
+void JavaSalInfoPrinter::GetPageInfo( const ImplJobSetup* pSetupData, long& rOutWidth, long& rOutHeight, long& rPageOffX, long& rPageOffY, long& rPageWidth, long& rPageHeight )
 {
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	Size aSize;
-	Rectangle aRect;
-	if ( mpInfo )
-	{
-		NSSize aPaperSize = [mpInfo paperSize];
-		NSRect aPageBounds = [mpInfo imageablePageBounds];
-
-		// Flip page bounds
-		aPageBounds.origin.y = aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height;
-
-		NSPaperOrientation nOrientation = [mpInfo orientation];
-		if ( ( mbPaperRotated && nOrientation == NSPaperOrientationPortrait ) || ( !mbPaperRotated && nOrientation == NSPaperOrientationLandscape ) )
-		{
-			aSize = Size( (long)( aPaperSize.height * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPaperSize.width * MIN_PRINTER_RESOLUTION / 72 ) );
-			aRect = Rectangle( Point( (long)( ( aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height ) * MIN_PRINTER_RESOLUTION / 72  ), (long)( aPageBounds.origin.x * MIN_PRINTER_RESOLUTION / 72  ) ), Size( (long)( aPageBounds.size.height * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPageBounds.size.width * MIN_PRINTER_RESOLUTION / 72 ) ) );
-		}
-		else
-		{
-			aSize = Size( (long)( aPaperSize.width * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPaperSize.height * MIN_PRINTER_RESOLUTION / 72 ) );
-			aRect = Rectangle( Point( (long)( aPageBounds.origin.x * MIN_PRINTER_RESOLUTION / 72  ), (long)( ( aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height ) * MIN_PRINTER_RESOLUTION / 72  ) ), Size( (long)( aPageBounds.size.width * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPageBounds.size.height * MIN_PRINTER_RESOLUTION / 72 ) ) );
-		}
-	}
-
-	// Fix bug 2278 by detecting if the OOo code wants rotated bounds
-	if ( pSetupData->meOrientation != ORIENTATION_PORTRAIT )
-	{
-		rPageWidth = aSize.Height();
-		rPageHeight = aSize.Width();
-		rPageOffX = aRect.nTop;
-		rPageOffY = aRect.nLeft;
-		rOutWidth = aRect.nBottom - aRect.nTop + 1;
-		rOutHeight = aRect.nRight - aRect.nLeft + 1;
-	}
-	else
-	{
-		rPageWidth = aSize.Width();
-		rPageHeight = aSize.Height();
-		rPageOffX = aRect.nLeft;
-		rPageOffY = aRect.nTop;
-		rOutWidth = aRect.nRight - aRect.nLeft + 1;
-		rOutHeight = aRect.nBottom - aRect.nTop + 1;
-	}
-
-	[pPool release];
+	ImplGetPageInfo( mpInfo, pSetupData, mbPaperRotated, rOutWidth, rOutHeight, rPageOffX, rPageOffY, rPageWidth, rPageHeight );
 }
 
 // -----------------------------------------------------------------------
@@ -1803,7 +1805,7 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, sal_Bool bNewJ
 		long nPageOffY = 0;
 		long nPageWidth = 0;
 		long nPageHeight = 0;
-		mpInfoPrinter->GetPageInfo( pSetupData, nOutWidth, nOutHeight, nPageOffX, nPageOffY, nPageWidth, nPageHeight );
+		ImplGetPageInfo( mpInfo, pSetupData, mbPaperRotated, nOutWidth, nOutHeight, nPageOffX, nPageOffY, nPageWidth, nPageHeight );
 
 		mpGraphics->mfPageTranslateX = (float)nPageOffX * 72 / MIN_PRINTER_RESOLUTION;
 		mpGraphics->mfPageTranslateY = (float)nPageOffY * 72 / MIN_PRINTER_RESOLUTION;
