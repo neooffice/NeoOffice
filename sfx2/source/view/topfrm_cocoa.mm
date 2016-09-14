@@ -572,6 +572,17 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	if ( !aReacquirer )
 		return;
 
+	// Attempt to fix the deadlock reported in the
+	// testing/elcapitanbugs_emails/20160913 e-mail by always executing this
+	// selector on the main thread
+	if ( CFRunLoopGetCurrent() != CFRunLoopGetMain() )
+	{
+		[self continueAsynchronousWorkOnMainThreadUsingBlock:^() {
+			[self relinquishPresentedItem:bWriter reacquirer:aReacquirer];
+		}];
+		return;
+	}
+
 	BOOL bOldIsRelinquished = [self setRelinquished:YES];
 
 	SfxObjectShell *pObjSh = NULL;
