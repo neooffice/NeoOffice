@@ -191,6 +191,7 @@ static OUString aSaveAVersionLocalizedString;
 - (void)_checkAutosavingThenUpdateChangeCount:(NSDocumentChangeType)nChangeType;
 - (BOOL)_preserveContentsIfNecessaryAfterWriting:(BOOL)bAfter toURL:(NSURL *)pURL forSaveOperation:(NSUInteger)nSaveOperation version:(NSDocumentVersion **)ppVersion error:(NSError **)ppError;
 - (void)browseDocumentVersions:(id)pSender;
+- (void)continueAsynchronousWorkOnMainThreadUsingBlock:(void (^)(void))aBlock;
 - (void)moveToURL:(NSURL *)pURL completionHandler:(void (^)(NSError *))aCompletionHandler;
 - (void)poseAsMakeWindowControllers;
 @end
@@ -576,6 +577,17 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	if ( !aReacquirer )
 		return;
 
+	// Attempt to fix the deadlock reported in the
+	// testing/elcapitanbugs_emails/20160913 e-mail by always executing this
+	// selector on the main thread
+	if ( CFRunLoopGetCurrent() != CFRunLoopGetMain() && [self respondsToSelector:@selector(continueAsynchronousWorkOnMainThreadUsingBlock:)] )
+	{
+		[self continueAsynchronousWorkOnMainThreadUsingBlock:^() {
+			[self relinquishPresentedItem:bWriter reacquirer:aReacquirer];
+		}];
+		return;
+	}
+ 
 	BOOL bOldIsRelinquished = [self setRelinquished:YES];
 
 	SfxObjectShell *pObjSh = NULL;
