@@ -192,7 +192,7 @@ static sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Ori
 				// Fix bugs 543, 1678, 2202, and 2913 by detecting when the
 				// paper should be rotated determining the minimum unmatched
 				// area
-				pValue = (NSValue *)[pDictionary objectForKey:NSPrintPaperSize];
+				pValue = [pDictionary objectForKey:NSPrintPaperSize];
 				if ( pValue )
 				{
 					aSize = [pValue sizeValue];
@@ -918,6 +918,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	NSString*				mpJobName;
 	JavaSalPrinter*			mpPrinter;
 	vcl::PrinterController*	mpPrinterController;
+	sal_uInt32				mnPrintJobCounter;
 	NSPrintOperation*		mpPrintOperation;
 	NSRange					maPrintRange;
 	NSMutableArray*			mpPrintViews;
@@ -1043,9 +1044,6 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		mpPrintOperation = nil;
 	}
 
-	maPrintRange = NSMakeRange( NSNotFound, 0 );
-	mfScaleFactor = 1.0f;
-
 	if ( mpWindow )
 	{
 		[mpWindow release];
@@ -1073,6 +1071,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		[mpJobName retain];
 	mpPrinter = pPrinter;
 	mpPrinterController = pPrinterController;
+	mnPrintJobCounter = 0;
 	mpPrintOperation = nil;
 	maPrintRange = NSMakeRange( NSNotFound, 0 );
 	mpPrintViews = nil;
@@ -1191,6 +1190,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	}
 	@catch ( NSException *pExc )
 	{
+		mbAborted = YES;
 		mbFinished = YES;
 		if ( [NSPrintOperation currentOperation] == mpPrintOperation )
 			[NSPrintOperation setCurrentOperation:nil];
@@ -1210,11 +1210,53 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	if ( !pPrintView )
 		return bRet;
 
+	@try
+	{
+		// When running in the sandbox, native file dialog calls may
+		// throw exceptions if the PowerBox daemon process is killed
+		NSMutableDictionary *pDictionary = [mpInfo dictionary];
+		if ( pDictionary )
+		{
+			NSURL *pURL = [pDictionary objectForKey:NSPrintJobSavingURL];
+			if ( pURL )
+			{
+				Application_cacheSecurityScopedURL( pURL );
+
+				// Cache save URL from first print operation
+				if ( mnPrintJobCounter == 1 )
+				{
+					NSString *pJobName = [pURL lastPathComponent];
+					if ( pJobName && [pJobName length] )
+					{
+						pJobName = [pJobName stringByDeletingPathExtension];
+						if ( pJobName && [pJobName length] )
+						{
+							if ( mpJobName )
+								[mpJobName release];
+							mpJobName = pJobName;
+							[mpJobName retain];
+						}
+					}
+				}
+
+				// Remove save URL so that the print job will display a save
+				// dialog if the user chose to save to PDF in the print dialog
+				[pDictionary removeObjectForKey:NSPrintJobSavingURL];
+			}
+		}
+	}
+	@catch ( NSException *pExc )
+	{
+		if ( pExc )
+			NSLog( @"%@", [pExc callStackSymbols] );
+	}
+
 	NSPrintOperation *pPrintOperation = [NSPrintOperation printOperationWithView:pPrintView printInfo:mpInfo];
 	if ( pPrintOperation )
 	{
 		bRet = YES;
 
+		mnPrintJobCounter++;
 		if ( mpPrintOperation )
 			[mpPrintOperation release];
 		mpPrintOperation = pPrintOperation;
@@ -1224,8 +1266,24 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		{
 			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
-			if ( mpJobName )
-				[mpPrintOperation setJobTitle:mpJobName];
+
+			// Set job name from save URL if there is one
+			NSString *pJobName = nil;
+			if ( mnPrintJobCounter == 1 )
+			{
+				if ( mpJobName && [mpJobName length] )
+					pJobName = mpJobName;
+			}
+			else
+			{
+				if ( mpJobName && [mpJobName length] )
+					pJobName = [NSString stringWithFormat:@"%@-%u", mpJobName, mnPrintJobCounter];
+				if ( !pJobName )
+					pJobName = [NSString stringWithFormat:@"%u", mnPrintJobCounter];
+			}
+			if ( pJobName )
+				[mpPrintOperation setJobTitle:pJobName];
+
 			[mpPrintOperation setShowsPrintPanel:bFirstPrintOperation];
 			[mpPrintOperation setShowsProgressPanel:YES];
 
@@ -1247,6 +1305,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		}
 		@catch ( NSException *pExc )
 		{
+			mbAborted = YES;
 			mbFinished = YES;
 			if ( [NSPrintOperation currentOperation] == mpPrintOperation )
 				[NSPrintOperation setCurrentOperation:nil];
