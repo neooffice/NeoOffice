@@ -919,8 +919,10 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	JavaSalPrinter*			mpPrinter;
 	vcl::PrinterController*	mpPrinterController;
 	NSPrintOperation*		mpPrintOperation;
-	VCLPrintView*			mpPrintView;
+	NSRange					maPrintRange;
+	NSMutableArray*			mpPrintViews;
 	BOOL					mbResult;
+	float					mfScaleFactor;
 	NSWindow*				mpWindow;
 }
 - (BOOL)aborted;
@@ -929,11 +931,12 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 - (void)dealloc;
 - (void)destroy:(id)pObject;
 - (BOOL)finished;
-- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName printer:(JavaSalPrinter *)pPrinter printerController:(vcl::PrinterController *)pPrinterController;
+- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName printer:(JavaSalPrinter *)pPrinter printerController:(vcl::PrinterController *)pPrinterController scaleFactor:(float)fScaleFactor;
 - (NSPrintInfo *)printInfo;
 - (void)printOperationDidRun:(NSPrintOperation *)pPrintOperation success:(BOOL)bSuccess contextInfo:(void *)pContextInfo;
 - (BOOL)result;
-- (void)startPrintOperation:(id)pObject;
+- (BOOL)startNextPrintOperation:(BOOL)bFirstPrintOperation;
+- (void)startPrintJob:(id)pObject;
 @end
 
 @implementation JavaSalPrinterPrintJob
@@ -947,17 +950,26 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 {
 	(void)pObject;
 
-	if ( mpPrintView )
-		[mpPrintView abortPrintOperation];
+	if ( mpPrintViews )
+	{
+		NSUInteger nCount = [mpPrintViews count];
+		NSUInteger i = 0;
+		for ( ; i < nCount; i++ )
+		{
+			VCLPrintView *pPrintView = [mpPrintViews objectAtIndex:i];
+			if ( pPrintView )
+				[pPrintView abortPrintOperation];
+		}
+	}
 }
 
 - (void)checkForErrors:(id)pObject
 {
 	(void)pObject;
 
-	// Detect if the sheet window has been closed without any call to the
+	// Detect if the print operation has finished without any call to the
 	// completion handler
-	if ( !mbFinished && ( !mpPrintOperation || mpPrintOperation != [NSPrintOperation currentOperation] ) )
+	if ( !mbFinished && ( mbAborted || !mpPrintOperation || mbResult || mpPrintOperation != [NSPrintOperation currentOperation] ) )
 		[self cancel:self];
 }
 
@@ -973,11 +985,25 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 {
 	(void)pObject;
 
-	[self cancel:self];
+	// Avoid callbacks into the JavaSalPrintJob instance by destroying the
+	// print views before destroying any other print objects
+	if ( mpPrintViews )
+	{
+		NSUInteger nCount = [mpPrintViews count];
+		NSUInteger i = 0;
+		for ( ; i < nCount; i++ )
+		{
+			VCLPrintView *pPrintView = [mpPrintViews objectAtIndex:i];
+			if ( pPrintView )
+			{
+				[pPrintView abortPrintOperation];
+				[pPrintView destroy:self];
+			}
+		}
 
-	// Set printer and printer controller pointers in print view to NULL
-	if ( mpPrintView )
-		[mpPrintView destroy:self];
+		[mpPrintViews release];
+		mpPrintViews = nil;
+	}
 
 	if ( mpInfo )
 	{
@@ -1017,11 +1043,8 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		mpPrintOperation = nil;
 	}
 
-	if ( mpPrintView )
-	{
-		[mpPrintView release];
-		mpPrintView = nil;
-	}
+	maPrintRange = NSMakeRange( NSNotFound, 0 );
+	mfScaleFactor = 1.0f;
 
 	if ( mpWindow )
 	{
@@ -1035,7 +1058,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	return mbFinished;
 }
 
-- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName printer:(JavaSalPrinter *)pPrinter printerController:(vcl::PrinterController *)pPrinterController
+- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName printer:(JavaSalPrinter *)pPrinter printerController:(vcl::PrinterController *)pPrinterController scaleFactor:(float)fScaleFactor
 {
 	[super init];
 
@@ -1051,8 +1074,12 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	mpPrinter = pPrinter;
 	mpPrinterController = pPrinterController;
 	mpPrintOperation = nil;
-	mpPrintView = nil;
+	maPrintRange = NSMakeRange( NSNotFound, 0 );
+	mpPrintViews = nil;
 	mbResult = NO;
+	mfScaleFactor = fScaleFactor;
+	if ( mfScaleFactor <= 0.0f )
+		mfScaleFactor = 1.0f;
 	mpWindow = pWindow;
 	if ( mpWindow )
 		[mpWindow retain];
@@ -1075,42 +1102,71 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	if ( !mpPrintOperation || pPrintOperation != mpPrintOperation )
 		return;
 
-	if ( [NSPrintOperation currentOperation] == mpPrintOperation )
+	if ( [NSPrintOperation currentOperation] == pPrintOperation )
 		[NSPrintOperation setCurrentOperation:nil];
 
-	if ( mbFinished )
+	if ( mbAborted || mbFinished || mbResult )
 		return;
-
-	mbResult = bSuccess;
-	mbFinished = YES;
-
-	NSPrintInfo *pInfo = nil;
 
 	@try
 	{
 		// When running in the sandbox, native file dialog calls may
 		// throw exceptions if the PowerBox daemon process is killed
-		pInfo = [mpPrintOperation printInfo];
+		NSPrintInfo *pInfo = [pPrintOperation printInfo];
 		if ( pInfo )
 		{
+			if ( pInfo != mpInfo )
+			{
+				if ( mpInfo )
+					[mpInfo release];
+				mpInfo = pInfo;
+				[mpInfo retain];
+			}
+
 			NSString *pDisposition = [pInfo jobDisposition];
 			if ( pDisposition && [pDisposition isEqualToString:NSPrintCancelJob] )
 				mbAborted = YES;
+		}
+
+		maPrintRange = [pPrintOperation pageRange];
+		if ( maPrintRange.location == NSNotFound )
+		{
+			maPrintRange.length = 0;
+		}
+		else if ( !maPrintRange.length )
+		{
+			maPrintRange.length = 1;
+		}
+
+		VCLPrintView *pPrintView = (VCLPrintView *)[pPrintOperation view];
+		if ( pPrintView )
+		{
+			if ( [pPrintView isKindOfClass:[VCLPrintView class]] )
+			{
+				[pPrintView abortPrintOperation];
+				[pPrintView destroy:self];
+			}
+
+			if ( mpPrintViews )
+				[mpPrintViews removeObject:pPrintView];
 		}
 	}
 	@catch ( NSException *pExc )
 	{
 		if ( pExc )
 			NSLog( @"%@", [pExc callStackSymbols] );
+
+		mbAborted = YES;
 	}
-		
-	if ( pInfo && pInfo != mpInfo )
-	{
-		if ( mpInfo )
-			[mpInfo release];
-		mpInfo = pInfo;
-		[mpInfo retain];
-	}
+
+	// If not aborted, start the next print operation
+	if ( !mbAborted && [self startNextPrintOperation:NO] )
+		return;
+
+	// Don't mark the print job as finished until there are no more views left
+	// to print
+	mbResult = bSuccess;
+	mbFinished = YES;
 
 	// Post an event to wakeup the VCL event thread if the VCL
 	// event dispatch thread is in a potentially long wait
@@ -1124,7 +1180,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 
 - (void)runModalPrintOperation
 {
-	if ( mbFinished || !mpPrinter || !mpPrinterController || !mpPrintOperation || mpPrintOperation != [NSPrintOperation currentOperation] || mbResult )
+	if ( mbAborted || mbFinished || !mpPrinter || !mpPrinterController || !mpPrintOperation || mpPrintOperation != [NSPrintOperation currentOperation] || mbResult )
 		return;
 
 	@try
@@ -1143,7 +1199,66 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	}
 }
 
-- (void)startPrintOperation:(id)pObject
+- (BOOL)startNextPrintOperation:(BOOL)bFirstPrintOperation
+{
+	BOOL bRet = NO;
+
+	if ( mbAborted || mbFinished || !mpInfo || !mpPrintViews || mbResult || [NSPrintOperation currentOperation] )
+		return bRet;
+
+	VCLPrintView *pPrintView = [mpPrintViews firstObject];
+	if ( !pPrintView )
+		return bRet;
+
+	NSPrintOperation *pPrintOperation = [NSPrintOperation printOperationWithView:pPrintView printInfo:mpInfo];
+	if ( pPrintOperation )
+	{
+		bRet = YES;
+
+		if ( mpPrintOperation )
+			[mpPrintOperation release];
+		mpPrintOperation = pPrintOperation;
+		[mpPrintOperation retain];
+
+		@try
+		{
+			// When running in the sandbox, native file dialog calls may
+			// throw exceptions if the PowerBox daemon process is killed
+			if ( mpJobName )
+				[mpPrintOperation setJobTitle:mpJobName];
+			[mpPrintOperation setShowsPrintPanel:bFirstPrintOperation];
+			[mpPrintOperation setShowsProgressPanel:YES];
+
+			// [NSPrintOperation runOperation] will not spawn a separate
+			// thread so disable using a separate thread in all cases
+			[mpPrintOperation setCanSpawnSeparateThread:NO];
+
+			[NSPrintOperation setCurrentOperation:mpPrintOperation];
+
+			[pPrintView setPrintOperation:mpPrintOperation];
+			if ( mpWindow )
+			{
+				[mpPrintOperation runOperationModalForWindow:mpWindow delegate:self didRunSelector:@selector(printOperationDidRun:success:contextInfo:) contextInfo:nil];
+			}
+			else
+			{
+				[self performSelector:@selector(runModalPrintOperation) withObject:nil afterDelay:0];
+			}
+		}
+		@catch ( NSException *pExc )
+		{
+			mbFinished = YES;
+			if ( [NSPrintOperation currentOperation] == mpPrintOperation )
+				[NSPrintOperation setCurrentOperation:nil];
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
+		}
+	}
+
+	return bRet;
+}
+
+- (void)startPrintJob:(id)pObject
 {
 	(void)pObject;
 
@@ -1151,7 +1266,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		return;
 
 	// Do not allow recursion or reuse
-	if ( mbFinished || !mpInfo || !mpPrinterController || mpPrintOperation || mpPrintView || mbResult || [NSPrintOperation currentOperation] )
+	if ( mbAborted || mbFinished || !mpInfo || !mpPrinterController || mpPrintOperation || mpPrintViews || mbResult || [NSPrintOperation currentOperation] )
 		return;
 
 	// Fix crashing bug reported in the following NeoOffice forum topic by
@@ -1165,6 +1280,8 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		[mpInfo retain];
 	else
 		return;
+
+	maPrintRange = NSMakeRange( NSNotFound, 0 );
 
 	// Don't use sheet if it is an open dialog or there is no window to attach
 	// a sheet to
@@ -1188,54 +1305,29 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		// Fix bug 2030 by resetting the layout
 		[pDictionary setObject:[NSNumber numberWithUnsignedInt:1] forKey:@"NSPagesAcross"];
 		[pDictionary setObject:[NSNumber numberWithUnsignedInt:1] forKey:@"NSPagesDown"];
+
+		// Set scaling factor
+		[pDictionary setObject:[NSNumber numberWithFloat:mfScaleFactor] forKey:NSPrintScalingFactor];
 	}
 
 	NSPrinter *pPrinter = [NSPrintInfo defaultPrinter];
 	if ( pPrinter )
 		[mpInfo setPrinter:pPrinter];
 
-	NSSize aPaperSize = [mpInfo paperSize];
-	mpPrintView = [[VCLPrintView alloc] initWithFrame:NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height ) printer:mpPrinter printerController:mpPrinterController];
-	if ( mpPrintView )
+	mpPrintViews = [NSMutableArray arrayWithCapacity:1];
+	if ( mpPrintViews )
 	{
-		mpPrintOperation = [NSPrintOperation printOperationWithView:mpPrintView printInfo:mpInfo];
-		if ( mpPrintOperation )
+		[mpPrintViews retain];
+
+		NSSize aPaperSize = [mpInfo paperSize];
 		{
-			[mpPrintOperation retain];
-
-			// [NSPrintOperation runOperation] will not spawn a separate thread
-			// so disable using a separate thread in all cases
-			[mpPrintOperation setCanSpawnSeparateThread:NO];
-
-			if ( mpJobName )
-				[mpPrintOperation setJobTitle:mpJobName];
-			[mpPrintOperation setShowsPrintPanel:YES];
-			[mpPrintOperation setShowsProgressPanel:YES];
-			[NSPrintOperation setCurrentOperation:mpPrintOperation];
-
-			[mpPrintView setPrintOperation:mpPrintOperation];
-			if ( mpWindow )
-			{
-				@try
-				{
-					// When running in the sandbox, native file dialog calls may
-					// throw exceptions if the PowerBox daemon process is killed
-					[mpPrintOperation runOperationModalForWindow:mpWindow delegate:self didRunSelector:@selector(printOperationDidRun:success:contextInfo:) contextInfo:nil];
-				}
-				@catch ( NSException *pExc )
-				{
-					mbFinished = YES;
-					if ( [NSPrintOperation currentOperation] == mpPrintOperation )
-						[NSPrintOperation setCurrentOperation:nil];
-					if ( pExc )
-						NSLog( @"%@", [pExc callStackSymbols] );
-				}
-			}
-			else
-			{
-				[self performSelector:@selector(runModalPrintOperation) withObject:nil afterDelay:0];
-			}
+			VCLPrintView *pPrintView = [[VCLPrintView alloc] initWithFrame:NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height ) printer:mpPrinter printerController:mpPrinterController];
+			if ( pPrintView )
+				[mpPrintViews addObject:pPrintView];
 		}
+
+		// Start first print operation
+		[self startNextPrintOperation:YES];
 	}
 }
 
@@ -1621,11 +1713,7 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 		float fScaleFactor = 1.0f;
 		::std::hash_map< OUString, OUString, OUStringHash >::const_iterator it = pSetupData->maValueMap.find( aPageScalingFactorKey );
 		if ( it != pSetupData->maValueMap.end() )
-		{
 			fScaleFactor = it->second.toFloat();
-			if ( fScaleFactor <= 0.0f )
-				fScaleFactor = 1.0f;
-		}
 
 		// Fix bug by detecting when an OOo printer job is being reused for
 		// serial print jobs
@@ -1644,15 +1732,6 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 		mnPaperWidth = pSetupData->mnPaperWidth;
 		mnPaperHeight = pSetupData->mnPaperHeight;
 
-		// Set scaling factor
-		NSNumber *pValue = [NSNumber numberWithFloat:fScaleFactor];
-		if ( pValue )
-		{
-			NSMutableDictionary *pDict = [mpInfo dictionary];
-			if ( pDict )
-				[pDict setObject:pValue forKey:NSPrintScalingFactor];
-		}
-
 		JavaSalEventQueue::setShutdownDisabled( sal_True );
 
 		// Ignore any AWT events while the page layout dialog is showing
@@ -1664,11 +1743,11 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 			// a different thread while the dialog is showing
 			sal_uLong nCount = Application::ReleaseSolarMutex();
 
-			mpPrintJob = [[JavaSalPrinterPrintJob alloc] initWithPrintInfo:mpInfo window:pNSWindow jobName:[NSString stringWithCharacters:maJobName.GetBuffer() length:maJobName.Len()] printer:this printerController:&rController];
+			mpPrintJob = [[JavaSalPrinterPrintJob alloc] initWithPrintInfo:mpInfo window:pNSWindow jobName:[NSString stringWithCharacters:maJobName.GetBuffer() length:maJobName.Len()] printer:this printerController:&rController scaleFactor:fScaleFactor];
 			if ( mpPrintJob )
 			{
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[mpPrintJob performSelectorOnMainThread:@selector(startPrintOperation:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
+				[mpPrintJob performSelectorOnMainThread:@selector(startPrintJob:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
 
 				while ( ![mpPrintJob finished] && !Application::IsShutDown() )
 				{
