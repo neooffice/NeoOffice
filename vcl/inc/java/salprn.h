@@ -90,7 +90,6 @@ class JavaSalPrinter : public SalPrinter
 	JavaSalGraphics*		mpGraphics;
 	JavaSalInfoPrinter*		mpInfoPrinter;
 	sal_Bool				mbGraphics;
-	String					maJobName;
 	Paper					mePaperFormat;
 	long					mnPaperWidth;
 	long					mnPaperHeight;
@@ -110,6 +109,8 @@ public:
 	virtual SalGraphics*	StartPage( ImplJobSetup* pSetupData, sal_Bool bNewJobData );
 	virtual sal_Bool		EndPage();
 	virtual sal_uLong		GetErrorCode();
+
+	void					UpdatePageInfo( const ImplJobSetup* pSetupData );
 };
 
 #endif // _SV_SALPRN_H
