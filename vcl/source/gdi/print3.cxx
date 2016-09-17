@@ -1725,7 +1725,7 @@ sal_Int32 PrinterController::getIntProperty( const rtl::OUString& i_rProperty, s
     return nRet;
 }
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 PrinterController::PageSize PrinterController::getFilteredPageSize( int i_nFilteredPage )
 {
@@ -1752,7 +1752,7 @@ PrinterController::PageSize PrinterController::getFilteredPageSize( int i_nFilte
     return aPageSize;
 }
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 /*
  * PrinterOptionsHelper
