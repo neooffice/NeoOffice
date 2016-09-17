@@ -68,6 +68,14 @@ using namespace rtl;
 using namespace vcl;
 using namespace vos;
 
+inline float Impl100thMMToPixel( long n ) { return (float)n * 72 / 2540; }
+
+inline long ImplPixelTo100thMM( float n ) { return (long)( n * 2540 / 72 ); }
+
+inline float ImplPrinterToPixel( long n ) { return (float)n * 72 / MIN_PRINTER_RESOLUTION; }
+
+inline long ImplPixelToPrinter( float n ) { return (long)( n * MIN_PRINTER_RESOLUTION / 72 ); }
+
 static XubString GetSfxResString( int nId )
 {
 	if ( !pSfxResMgr )
@@ -227,13 +235,13 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		NSPaperOrientation nOrientation = [pInfo orientation];
 		if ( ( bPaperRotated && nOrientation == NSPaperOrientationPortrait ) || ( !bPaperRotated && nOrientation == NSPaperOrientationLandscape ) )
 		{
-			aSize = Size( (long)( aPaperSize.height * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPaperSize.width * MIN_PRINTER_RESOLUTION / 72 ) );
-			aRect = Rectangle( Point( (long)( ( aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height ) * MIN_PRINTER_RESOLUTION / 72  ), (long)( aPageBounds.origin.x * MIN_PRINTER_RESOLUTION / 72  ) ), Size( (long)( aPageBounds.size.height * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPageBounds.size.width * MIN_PRINTER_RESOLUTION / 72 ) ) );
+			aSize = Size( ImplPixelToPrinter( aPaperSize.height ), ImplPixelToPrinter( aPaperSize.width ) );
+			aRect = Rectangle( Point( ImplPixelToPrinter( aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height ), ImplPixelToPrinter( aPageBounds.origin.x ) ), Size( ImplPixelToPrinter( aPageBounds.size.height ), ImplPixelToPrinter( aPageBounds.size.width ) ) );
 		}
 		else
 		{
-			aSize = Size( (long)( aPaperSize.width * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPaperSize.height * MIN_PRINTER_RESOLUTION / 72 ) );
-			aRect = Rectangle( Point( (long)( aPageBounds.origin.x * MIN_PRINTER_RESOLUTION / 72  ), (long)( ( aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height ) * MIN_PRINTER_RESOLUTION / 72  ) ), Size( (long)( aPageBounds.size.width * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPageBounds.size.height * MIN_PRINTER_RESOLUTION / 72 ) ) );
+			aSize = Size( ImplPixelToPrinter( aPaperSize.width ), ImplPixelToPrinter( aPaperSize.height ) );
+			aRect = Rectangle( Point( ImplPixelToPrinter( aPageBounds.origin.x ), ImplPixelToPrinter( aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height ) ), Size( ImplPixelToPrinter( aPageBounds.size.width ), ImplPixelToPrinter( aPageBounds.size.height ) ) );
 		}
 	}
 
@@ -917,6 +925,10 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	NSPrintInfo*			mpInfo;
 	JavaSalInfoPrinter*		mpInfoPrinter;
 	NSString*				mpJobName;
+	int						mnPageCount;
+	::std::map< int, Orientation >*	mpPaperOrientationMap;
+	::std::map< int, sal_Bool >*	mpPaperRotatedMap;
+	::std::map< int, NSSize >*	mpPaperSizeMap;
 	vcl::PrinterController*	mpPrinterController;
 	sal_uInt32				mnPrintJobCounter;
 	NSPrintOperation*		mpPrintOperation;
@@ -1020,6 +1032,24 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		mpJobName = nil;
 	}
 
+	if ( mpPaperSizeMap )
+	{
+		delete mpPaperSizeMap;
+		mpPaperSizeMap = NULL;
+	}
+
+	if ( mpPaperOrientationMap )
+	{
+		delete mpPaperOrientationMap;
+		mpPaperOrientationMap = NULL;
+	}
+
+	if ( mpPaperRotatedMap )
+	{
+		delete mpPaperRotatedMap;
+		mpPaperRotatedMap = NULL;
+	}
+
 	mpPrinterController = NULL;
 
 	if ( mpPrintOperation )
@@ -1071,6 +1101,10 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	mpJobName = pJobName;
 	if ( mpJobName )
 		[mpJobName retain];
+	mnPageCount = 0;
+	mpPaperOrientationMap = NULL;
+	mpPaperRotatedMap = NULL;
+	mpPaperSizeMap = NULL;
 	mpPrinterController = pPrinterController;
 	mnPrintJobCounter = 0;
 	mpPrintOperation = nil;
@@ -1083,6 +1117,50 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	mpWindow = pWindow;
 	if ( mpWindow )
 		[mpWindow retain];
+
+	// Cache paper details for each page here as process may be time consuming
+	// and this selector is usually called from the OOo event dispatch thread
+	// and not from the main thread
+	if ( mpInfoPrinter && mpPrinterController )
+	{
+		IMutex &rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
+		{
+			boost::shared_ptr< Printer > aPrinter( mpPrinterController->getPrinter() );
+			if ( aPrinter.get() )
+			{
+				mpPaperOrientationMap = new ::std::map< int, Orientation >();
+				mpPaperRotatedMap = new ::std::map< int, sal_Bool >();
+				mpPaperSizeMap = new ::std::map< int, NSSize >();
+				if ( mpPaperOrientationMap && mpPaperRotatedMap && mpPaperSizeMap )
+				{
+					ImplJobSetup aSetupData;
+					mnPageCount = mpPrinterController->getFilteredPageCount();	
+					for ( int i = 0; i < mnPageCount; i++ )
+					{
+						mpPrinterController->getFilteredPageSize( i );
+
+						// Invoking PrinterController::getFilteredPageSize()
+						// calls JavaSalInfoPrinter::SetData() so retrieve page
+						// info from the info printer
+						NSPrintInfo *pInfo = (NSPrintInfo *)mpInfoPrinter->GetPrintInfo();
+						if ( pInfo )
+						{
+							(*mpPaperSizeMap)[ i ] = [pInfo paperSize];
+
+							if ( mpInfoPrinter->SetData( 0, &aSetupData ) )
+							{
+								(*mpPaperOrientationMap)[ i ] = aSetupData.meOrientation;
+								(*mpPaperRotatedMap)[ i ] = mpInfoPrinter->IsPaperRotated();
+							}
+						}
+					}
+				}
+			}
+		}
+		rSolarMutex.release();
+	}
 
 	return self;
 }
@@ -1588,13 +1666,13 @@ sal_Bool JavaSalInfoPrinter::SetData( sal_uLong nFlags, ImplJobSetup* pSetupData
 			NSPaperOrientation nOrientation = ( mpInfo ? [mpInfo orientation] : NSPaperOrientationPortrait );
 			if ( ( mbPaperRotated && nOrientation == NSPaperOrientationPortrait ) || ( !mbPaperRotated && nOrientation == NSPaperOrientationLandscape ) )
 			{
-				pSetupData->mnPaperWidth = (long)( aPaperSize.height * 2540 / 72 );
-				pSetupData->mnPaperHeight = (long)( aPaperSize.width * 2540 / 72 );
+				pSetupData->mnPaperWidth = ImplPixelTo100thMM( aPaperSize.height );
+				pSetupData->mnPaperHeight = ImplPixelTo100thMM( aPaperSize.width );
 			}
 			else
 			{
-				pSetupData->mnPaperWidth = (long)( aPaperSize.width * 2540 / 72 );
-				pSetupData->mnPaperHeight = (long)( aPaperSize.height * 2540 / 72 );
+				pSetupData->mnPaperWidth = ImplPixelTo100thMM( aPaperSize.width );
+				pSetupData->mnPaperHeight = ImplPixelTo100thMM( aPaperSize.height );
 			}
 		}
 		else
@@ -1605,11 +1683,12 @@ sal_Bool JavaSalInfoPrinter::SetData( sal_uLong nFlags, ImplJobSetup* pSetupData
 	}
 	else if ( mpInfo )
 	{
-		mbPaperRotated = ImplPrintInfoSetPaperType( mpInfo, pSetupData->mePaperFormat, pSetupData->meOrientation, (float)pSetupData->mnPaperWidth * 72 / 2540, (float)pSetupData->mnPaperHeight * 72 / 2540 );
+		mbPaperRotated = ImplPrintInfoSetPaperType( mpInfo, pSetupData->mePaperFormat, pSetupData->meOrientation, Impl100thMMToPixel( pSetupData->mnPaperWidth ), Impl100thMMToPixel( pSetupData->mnPaperHeight ) );
 		if ( ( mbPaperRotated && pSetupData->meOrientation == ORIENTATION_PORTRAIT ) || ( !mbPaperRotated && pSetupData->meOrientation == ORIENTATION_LANDSCAPE ) )
 			[mpInfo setOrientation:NSPaperOrientationLandscape];
 		else
 			[mpInfo setOrientation:NSPaperOrientationPortrait];
+
 	}
 
 	[pPool release];
@@ -1683,16 +1762,6 @@ int JavaSalInfoPrinter::GetLandscapeAngle( const ImplJobSetup* /* pSetupData */ 
 	fprintf( stderr, "JavaSalInfoPrinter::GetLandscapeAngle not implemented\n" );
 #endif
 	return 900;
-}
-
-// -----------------------------------------------------------------------
-
-DuplexMode JavaSalInfoPrinter::GetDuplexMode( const ImplJobSetup* /* pJobSetup */ )
-{
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalInfoPrinter::GetDuplexMode not implemented\n" );
-#endif
-	return DUPLEX_UNKNOWN;
 }
 
 // =======================================================================
@@ -1941,8 +2010,8 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, sal_Bool bNewJ
 		long nPageHeight = 0;
 		ImplGetPageInfo( mpInfo, pSetupData, mbPaperRotated, nOutWidth, nOutHeight, nPageOffX, nPageOffY, nPageWidth, nPageHeight );
 
-		mpGraphics->mfPageTranslateX = (float)nPageOffX * 72 / MIN_PRINTER_RESOLUTION;
-		mpGraphics->mfPageTranslateY = (float)nPageOffY * 72 / MIN_PRINTER_RESOLUTION;
+		mpGraphics->mfPageTranslateX = ImplPrinterToPixel( nPageOffX );
+		mpGraphics->mfPageTranslateY = ImplPrinterToPixel( nPageOffY );
 		mpGraphics->maNativeBounds = CGRectMake( 0, 0, nPageWidth, nPageHeight );
 	}
 
@@ -1988,7 +2057,7 @@ void JavaSalPrinter::UpdatePageInfo( const ImplJobSetup* pSetupData )
 {
 	if ( pSetupData && mpInfo )
 	{
-		mbPaperRotated = ImplPrintInfoSetPaperType( mpInfo, pSetupData->mePaperFormat, pSetupData->meOrientation, (float)pSetupData->mnPaperWidth * 72 / 2540, (float)pSetupData->mnPaperHeight * 72 / 2540 );
+		mbPaperRotated = ImplPrintInfoSetPaperType( mpInfo, pSetupData->mePaperFormat, pSetupData->meOrientation, Impl100thMMToPixel( pSetupData->mnPaperWidth ), Impl100thMMToPixel( pSetupData->mnPaperHeight ) );
 		if ( ( mbPaperRotated && pSetupData->meOrientation == ORIENTATION_PORTRAIT ) || ( !mbPaperRotated && pSetupData->meOrientation == ORIENTATION_LANDSCAPE ) )
 			[mpInfo setOrientation:NSPaperOrientationLandscape];
 		else

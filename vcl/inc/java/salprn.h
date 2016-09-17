@@ -75,7 +75,6 @@ public:
 	virtual String			GetPaperBinName( const ImplJobSetup* pSetupData, sal_uLong nPaperBin );
 	virtual void			InitPaperFormats( const ImplJobSetup* pSetupData );
 	virtual int				GetLandscapeAngle( const ImplJobSetup* pSetupData );
-	virtual DuplexMode		GetDuplexMode( const ImplJobSetup* pSetupData );
 
 	id						GetPrintInfo() { return mpInfo; }
 	sal_Bool				IsPaperRotated() { return mbPaperRotated; }

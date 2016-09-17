@@ -1725,6 +1725,35 @@ sal_Int32 PrinterController::getIntProperty( const rtl::OUString& i_rProperty, s
     return nRet;
 }
 
+#ifdef USE_JAVA
+
+PrinterController::PageSize PrinterController::getFilteredPageSize( int i_nFilteredPage )
+{
+    const MultiPageSetup& rMPS( mpImplData->maMultiPage );
+    int nSubPages = rMPS.nRows * rMPS.nColumns;
+    if( nSubPages < 1 )
+        nSubPages = 1;
+
+    // map filtered page to real page
+    int nUnfilteredPage = (i_nFilteredPage * nSubPages) / rMPS.nRepeat;
+
+    // get page parameters
+    Sequence< PropertyValue > aPageParm( getPageParametersProtected( nUnfilteredPage ) );
+    const MapMode aMapMode( MAP_100TH_MM );
+
+    mpImplData->mpPrinter->Push();
+    mpImplData->mpPrinter->SetMapMode( aMapMode );
+
+    // modify job setup if necessary
+    PrinterController::PageSize aPageSize = mpImplData->modifyJobSetup( aPageParm, true );
+
+    mpImplData->mpPrinter->Pop();
+
+    return aPageSize;
+}
+
+#endif	// USE_JAVA
+
 /*
  * PrinterOptionsHelper
 **/
