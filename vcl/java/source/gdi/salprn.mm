@@ -1002,6 +1002,8 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 @interface JavaSalPrinterPrintJob : NSObject
 {
 	BOOL					mbAborted;
+	sal_Bool				mbCollate;
+	sal_uInt16				mnCopies;
 	BOOL					mbFinished;
 	BOOL					mbInDealloc;
 	NSPrintInfo*			mpInfo;
@@ -1019,7 +1021,6 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	NSMutableArray*			mpPrintViews;
 	BOOL					mbResult;
 	float					mfScaleFactor;
-	sal_Bool				mbSinglePrintJobs;
 	NSWindow*				mpWindow;
 }
 - (BOOL)aborted;
@@ -1176,6 +1177,8 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	[super init];
 
 	mbAborted = NO;
+	mbCollate = sal_False;
+	mnCopies = 1;
 	mbFinished = NO;
 	mbInDealloc = NO;
 	mpInfo = pInfo;
@@ -1199,7 +1202,6 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	mfScaleFactor = fScaleFactor;
 	if ( mfScaleFactor <= 0.0f )
 		mfScaleFactor = 1.0f;
-	mbSinglePrintJobs = sal_False;
 	mpWindow = pWindow;
 	if ( mpWindow )
 		[mpWindow retain];
@@ -1221,13 +1223,14 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 					pMonitorVisible->Value >>= mbMonitorVisible;
 			}
 
-			beans::PropertyValue* pSinglePrintJobsValue = mpPrinterController->getValue( OUString( RTL_CONSTASCII_USTRINGPARAM( "PrintCollateAsSingleJobs" ) ) );
-			if ( pSinglePrintJobsValue )
-				pSinglePrintJobsValue->Value >>= mbSinglePrintJobs;
-
 			boost::shared_ptr< Printer > aPrinter( mpPrinterController->getPrinter() );
 			if ( aPrinter.get() )
 			{
+				mbCollate = aPrinter->IsCollateCopy();
+				mnCopies = aPrinter->GetCopyCount();
+				if ( !mnCopies )
+					mnCopies = 1;
+
 				mpPaperOrientationMap = new ::std::map< int, Orientation >();
 				mpPaperRotatedMap = new ::std::map< int, sal_Bool >();
 				mpPaperSizeMap = new ::std::map< int, NSSize >();
@@ -1533,8 +1536,8 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	if ( pDictionary )
 	{
 		[pDictionary setObject:[NSNumber numberWithBool:YES] forKey:NSPrintAllPages];
-		[pDictionary setObject:[NSNumber numberWithBool:YES] forKey:NSPrintMustCollate];
-		[pDictionary removeObjectForKey:NSPrintCopies];
+		[pDictionary setObject:[NSNumber numberWithBool:mbCollate] forKey:NSPrintMustCollate];
+		[pDictionary setObject:[NSNumber numberWithUnsignedShort:mnCopies] forKey:NSPrintCopies];
 		[pDictionary removeObjectForKey:NSPrintFirstPage];
 		[pDictionary removeObjectForKey:NSPrintLastPage];
 
@@ -1558,7 +1561,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		mnPageCount = mpPrinterController->getFilteredPageCount();	
 		for ( int i = 0; i < mnPageCount; i++ )
 		{
-			VCLPrintView *pPrintView = [[VCLPrintView alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 ) infoPrinter:mpInfoPrinter printerController:mpPrinterController pageOffset:i totalPageCount:( mbSinglePrintJobs ? i + 1 : mnPageCount ) paperOrientationMap:mpPaperOrientationMap paperRotatedMap:mpPaperRotatedMap paperSizeMap:mpPaperSizeMap];
+			VCLPrintView *pPrintView = [[VCLPrintView alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 ) infoPrinter:mpInfoPrinter printerController:mpPrinterController pageOffset:i totalPageCount:mnPageCount paperOrientationMap:mpPaperOrientationMap paperRotatedMap:mpPaperRotatedMap paperSizeMap:mpPaperSizeMap];
 			if ( pPrintView )
 			{
 				int nCount = [pPrintView pageCount];
