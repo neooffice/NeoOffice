@@ -600,11 +600,12 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 @interface VCLPrintView : NSView
 {
 	JavaSalInfoPrinter*		mpInfoPrinter;
-	int						mnPageCount;
-	int						mnPageOffset;
-	::std::map< int, Orientation >*	mpPaperOrientationMap;
-	::std::map< int, sal_Bool >*	mpPaperRotatedMap;
-	::std::map< int, NSSize >*	mpPaperSizeMap;
+	NSUInteger				mnPageCount;
+	NSUInteger				mnPageOffset;
+	NSRange					maPageRange;
+	::std::map< NSUInteger, Orientation >*	mpPaperOrientationMap;
+	::std::map< NSUInteger, sal_Bool >*	mpPaperRotatedMap;
+	::std::map< NSUInteger, NSSize >*	mpPaperSizeMap;
 	vcl::PrinterController*	mpPrinterController;
 	NSPrintOperation*		mpPrintOperation;
 	BOOL					mbPrintOperationAborted;
@@ -620,13 +621,14 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 - (void)dealloc;
 - (void)drawRect:(NSRect)aRect;
 - (void)endPrintOperation;
-- (id)initWithFrame:(NSRect)aFrame infoPrinter:(JavaSalInfoPrinter *)pInfoPrinter printerController:(vcl::PrinterController *)pPrinterController pageOffset:(int)nPageOffset totalPageCount:(int)nTotalPageCount paperOrientationMap:(const ::std::map< int, Orientation >*)pPaperOrientationMap paperRotatedMap:(const ::std::map< int, sal_Bool >*)pPaperRotatedMap paperSizeMap:(const ::std::map< int, NSSize >*)pPaperSizeMap;
+- (id)initWithFrame:(NSRect)aFrame infoPrinter:(JavaSalInfoPrinter *)pInfoPrinter printerController:(vcl::PrinterController *)pPrinterController pageOffset:(int)nPageOffset totalPageCount:(NSUInteger)nTotalPageCount paperOrientationMap:(const ::std::map< NSUInteger, Orientation >*)pPaperOrientationMap paperRotatedMap:(const ::std::map< NSUInteger, sal_Bool >*)pPaperRotatedMap paperSizeMap:(const ::std::map< NSUInteger, NSSize >*)pPaperSizeMap;
 - (BOOL)knowsPageRange:(NSRangePointer)pRange;
 - (NSPoint)locationOfPrintRect:(NSRect)aRect;
 - (int)pageCount;
 - (int)pageOffset;
 - (NSRect)rectForPage:(NSInteger)nPageNumber;
 - (void)setPrintOperation:(NSPrintOperation *)pPrintOperation;
+- (void)updatePageRange;
 @end
 
 @implementation VCLPrintView
@@ -725,6 +727,8 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 
 - (void)drawRect:(NSRect)aRect
 {
+	[self updatePageRange];
+
 #ifdef TODO
 	if ( mpUnprintedGraphicsList && mpUnprintedGraphicsMutex )
 	{
@@ -811,16 +815,17 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 #endif	// TODO
 }
 
-- (id)initWithFrame:(NSRect)aFrame infoPrinter:(JavaSalInfoPrinter *)pInfoPrinter printerController:(vcl::PrinterController *)pPrinterController pageOffset:(int)nPageOffset totalPageCount:(int)nTotalPageCount paperOrientationMap:(const ::std::map< int, Orientation >*)pPaperOrientationMap paperRotatedMap:(const ::std::map< int, sal_Bool >*)pPaperRotatedMap paperSizeMap:(const ::std::map< int, NSSize >*)pPaperSizeMap
+- (id)initWithFrame:(NSRect)aFrame infoPrinter:(JavaSalInfoPrinter *)pInfoPrinter printerController:(vcl::PrinterController *)pPrinterController pageOffset:(int)nPageOffset totalPageCount:(NSUInteger)nTotalPageCount paperOrientationMap:(const ::std::map< NSUInteger, Orientation >*)pPaperOrientationMap paperRotatedMap:(const ::std::map< NSUInteger, sal_Bool >*)pPaperRotatedMap paperSizeMap:(const ::std::map< NSUInteger, NSSize >*)pPaperSizeMap
 {
 	[super initWithFrame:aFrame];
 
 	mpInfoPrinter = pInfoPrinter;
 	mnPageCount = 0;
 	mnPageOffset = nPageOffset >= 0 ? nPageOffset : 0;
-	mpPaperOrientationMap = new ::std::map< int, Orientation >();
-	mpPaperRotatedMap = new ::std::map< int, sal_Bool >();
-	mpPaperSizeMap = new ::std::map< int, NSSize >();
+	maPageRange = NSMakeRange( NSNotFound, 0 );
+	mpPaperOrientationMap = new ::std::map< NSUInteger, Orientation >();
+	mpPaperRotatedMap = new ::std::map< NSUInteger, sal_Bool >();
+	mpPaperSizeMap = new ::std::map< NSUInteger, NSSize >();
 	mpPrinterController = pPrinterController;
 	mpPrintOperation = nil;
 	mbPrintOperationAborted = NO;
@@ -837,9 +842,9 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	if ( pPaperOrientationMap && pPaperRotatedMap && pPaperSizeMap && mpPaperOrientationMap && mpPaperRotatedMap && mpPaperSizeMap )
 	{
 		NSSize aFirstPageSize = NSZeroSize;
-		for ( int i = mnPageOffset; i < nTotalPageCount; i++ )
+		for ( NSUInteger i = mnPageOffset; i < nTotalPageCount; i++ )
 		{
-			::std::map< int, NSSize >::const_iterator sit = pPaperSizeMap->find( i );
+			::std::map< NSUInteger, NSSize >::const_iterator sit = pPaperSizeMap->find( i );
 			if ( sit == pPaperSizeMap->end() || sit->second.width <= 0 || sit->second.height <= 0 )
 			{
 				// Ignore empty pages
@@ -860,18 +865,21 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 				break;
 
 			mnPageCount++;
-			::std::map< int, Orientation >::const_iterator oit = pPaperOrientationMap->find( i );
+			::std::map< NSUInteger, Orientation >::const_iterator oit = pPaperOrientationMap->find( i );
 			if ( oit != pPaperOrientationMap->end() )
 				(*mpPaperOrientationMap)[ i ] = oit->second;
 			else
 				(*mpPaperOrientationMap)[ i ] = ORIENTATION_PORTRAIT;
-			::std::map< int, sal_Bool >::const_iterator rit = pPaperRotatedMap->find( i );
+			::std::map< NSUInteger, sal_Bool >::const_iterator rit = pPaperRotatedMap->find( i );
 			if ( rit != pPaperRotatedMap->end() )
 				(*mpPaperRotatedMap)[ i ] = rit->second;
 			else
 				(*mpPaperRotatedMap)[ i ] = sal_False;
 			(*mpPaperSizeMap)[ i ] = sit->second;
 		}
+
+		if ( mnPageCount )
+			maPageRange = NSMakeRange( mnPageOffset, mnPageCount );
 	}
 
 	return self;
@@ -881,10 +889,11 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 {
 	BOOL bRet = NO;
 
+	[self updatePageRange];
+
 	if ( pRange )
 	{
-		pRange->location = 1;
-		pRange->length = NSIntegerMax;
+		*pRange = NSMakeRange( 1, NSIntegerMax );
 		bRet = YES;
 	}
 
@@ -911,6 +920,8 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 - (NSRect)rectForPage:(NSInteger)nPageNumber
 {
 	(void)nPageNumber;
+
+	[self updatePageRange];
 
 	NSRect aRet = NSZeroRect;
 
@@ -997,6 +1008,55 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	}
 }
 
+- (void)updatePageRange
+{
+	// Reset page range
+	if ( mnPageCount )
+		maPageRange = NSMakeRange( mnPageOffset, mnPageCount );
+	else
+		maPageRange = NSMakeRange( NSNotFound, 0 );
+
+	if ( mpPrintOperation )
+	{
+		NSPrintInfo *pInfo = [mpPrintOperation printInfo];
+		if ( pInfo )
+		{
+			NSDictionary *pDict = [pInfo dictionary];
+			if ( pDict && maPageRange.location != NSNotFound && maPageRange.length )
+			{
+				NSNumber *pAllPages = [pDict objectForKey:NSPrintAllPages];
+				if ( !pAllPages || ![pAllPages boolValue] )
+				{
+					NSNumber *pFirstPage = [pDict objectForKey:NSPrintFirstPage];
+					if ( pFirstPage )
+					{
+						// Convert page info page numbers to zero based
+						NSUInteger nFirstPage = [pFirstPage integerValue] - 1;
+						if ( nFirstPage >= maPageRange.location + maPageRange.length )
+							maPageRange = NSMakeRange( NSNotFound, 0 );
+						else if ( nFirstPage > maPageRange.location )
+							maPageRange = NSMakeRange( nFirstPage, maPageRange.location + maPageRange.length - nFirstPage );
+					}
+
+					if ( maPageRange.location != NSNotFound && maPageRange.length )
+					{
+						NSNumber *pLastPage = [pDict objectForKey:NSPrintLastPage];
+						if ( pLastPage )
+						{
+							// Convert page info page numbers to zero based
+							NSUInteger nLastPage = [pLastPage integerValue] - 1;
+							if ( nLastPage < maPageRange.location )
+								maPageRange = NSMakeRange( NSNotFound, 0 );
+							else if ( nLastPage + 1 < maPageRange.location + maPageRange.length )
+								maPageRange = NSMakeRange( maPageRange.location, maPageRange.location + maPageRange.length - nLastPage - 1 );
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 @end
  
 @interface JavaSalPrinterPrintJob : NSObject
@@ -1011,9 +1071,9 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	NSString*				mpJobName;
 	sal_Bool				mbMonitorVisible;
 	int						mnPageCount;
-	::std::map< int, Orientation >*	mpPaperOrientationMap;
-	::std::map< int, sal_Bool >*	mpPaperRotatedMap;
-	::std::map< int, NSSize >*	mpPaperSizeMap;
+	::std::map< NSUInteger, Orientation >*	mpPaperOrientationMap;
+	::std::map< NSUInteger, sal_Bool >*	mpPaperRotatedMap;
+	::std::map< NSUInteger, NSSize >*	mpPaperSizeMap;
 	vcl::PrinterController*	mpPrinterController;
 	sal_uInt32				mnPrintJobCounter;
 	NSPrintOperation*		mpPrintOperation;
@@ -1231,9 +1291,9 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 				if ( !mnCopies )
 					mnCopies = 1;
 
-				mpPaperOrientationMap = new ::std::map< int, Orientation >();
-				mpPaperRotatedMap = new ::std::map< int, sal_Bool >();
-				mpPaperSizeMap = new ::std::map< int, NSSize >();
+				mpPaperOrientationMap = new ::std::map< NSUInteger, Orientation >();
+				mpPaperRotatedMap = new ::std::map< NSUInteger, sal_Bool >();
+				mpPaperSizeMap = new ::std::map< NSUInteger, NSSize >();
 				if ( mpPaperOrientationMap && mpPaperRotatedMap && mpPaperSizeMap )
 				{
 					ImplJobSetup aSetupData;
