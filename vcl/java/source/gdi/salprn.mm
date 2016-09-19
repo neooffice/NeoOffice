@@ -600,9 +600,11 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 @interface VCLPrintView : NSView
 {
 	JavaSalInfoPrinter*		mpInfoPrinter;
+	VCLPrintView*			mpNextPrintView;
 	NSUInteger				mnPageCount;
 	NSUInteger				mnPageOffset;
 	NSRange					maPageRange;
+	BOOL					mbPagesPrinted;
 	::std::map< NSUInteger, Orientation >*	mpPaperOrientationMap;
 	::std::map< NSUInteger, sal_Bool >*	mpPaperRotatedMap;
 	::std::map< NSUInteger, NSSize >*	mpPaperSizeMap;
@@ -622,11 +624,14 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 - (void)drawRect:(NSRect)aRect;
 - (void)endPrintOperation;
 - (id)initWithFrame:(NSRect)aFrame infoPrinter:(JavaSalInfoPrinter *)pInfoPrinter printerController:(vcl::PrinterController *)pPrinterController pageOffset:(int)nPageOffset totalPageCount:(NSUInteger)nTotalPageCount paperOrientationMap:(const ::std::map< NSUInteger, Orientation >*)pPaperOrientationMap paperRotatedMap:(const ::std::map< NSUInteger, sal_Bool >*)pPaperRotatedMap paperSizeMap:(const ::std::map< NSUInteger, NSSize >*)pPaperSizeMap;
+- (BOOL)isPagesPrinted;
 - (BOOL)knowsPageRange:(NSRangePointer)pRange;
 - (NSPoint)locationOfPrintRect:(NSRect)aRect;
+- (VCLPrintView *)nextPrintView;
 - (int)pageCount;
 - (int)pageOffset;
 - (NSRect)rectForPage:(NSInteger)nPageNumber;
+- (void)setNextPrintView:(VCLPrintView *)pPrintView;
 - (void)setPrintOperation:(NSPrintOperation *)pPrintOperation;
 - (void)updatePageRange;
 @end
@@ -697,6 +702,12 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	[self abortPrintOperation];
 
 	mpInfoPrinter = NULL;
+
+	if ( mpNextPrintView )
+	{
+		[mpNextPrintView release];
+		mpNextPrintView = nil;
+	}
 
 	if ( mpPaperSizeMap )
 	{
@@ -820,9 +831,11 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	[super initWithFrame:aFrame];
 
 	mpInfoPrinter = pInfoPrinter;
+	mpNextPrintView = nil;
 	mnPageCount = 0;
 	mnPageOffset = nPageOffset >= 0 ? nPageOffset : 0;
 	maPageRange = NSMakeRange( NSNotFound, 0 );
+	mbPagesPrinted = NO;
 	mpPaperOrientationMap = new ::std::map< NSUInteger, Orientation >();
 	mpPaperRotatedMap = new ::std::map< NSUInteger, sal_Bool >();
 	mpPaperSizeMap = new ::std::map< NSUInteger, NSSize >();
@@ -885,6 +898,11 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	return self;
 }
 
+- (BOOL)isPagesPrinted
+{
+	return mbPagesPrinted;
+}
+
 - (BOOL)knowsPageRange:(NSRangePointer)pRange
 {
 	BOOL bRet = NO;
@@ -905,6 +923,11 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	(void)aRect;
 
 	return NSMakePoint( 0, 0 );
+}
+
+- (VCLPrintView *)nextPrintView
+{
+	return mpNextPrintView;
 }
 
 - (int)pageCount
@@ -995,6 +1018,15 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 #endif // TODO
 
 	return aRet;
+}
+
+- (void)setNextPrintView:(VCLPrintView *)pPrintView
+{
+	if ( mpNextPrintView )
+		[mpNextPrintView release];
+	mpNextPrintView = pPrintView;
+	if ( mpNextPrintView )
+		[mpNextPrintView retain];
 }
 
 - (void)setPrintOperation:(NSPrintOperation *)pPrintOperation
@@ -1153,10 +1185,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		{
 			VCLPrintView *pPrintView = [mpPrintViews objectAtIndex:i];
 			if ( pPrintView )
-			{
-				[pPrintView abortPrintOperation];
 				[pPrintView destroy:self];
-			}
 		}
 
 		[mpPrintViews release];
@@ -1381,10 +1410,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		if ( pPrintView )
 		{
 			if ( [pPrintView isKindOfClass:[VCLPrintView class]] )
-			{
-				[pPrintView abortPrintOperation];
 				[pPrintView destroy:self];
-			}
 
 			if ( mpPrintViews )
 				[mpPrintViews removeObject:pPrintView];
@@ -1446,7 +1472,15 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	if ( mbAborted || mbFinished || !mpInfo || !mpPrintViews || mbResult || [NSPrintOperation currentOperation] )
 		return bRet;
 
+
+	// Find the next print view that has not been printed yet
 	VCLPrintView *pPrintView = [mpPrintViews firstObject];
+	while ( pPrintView && [pPrintView isPagesPrinted] )
+	{
+		[pPrintView destroy:self];
+		[mpPrintViews removeObject:pPrintView];
+	}
+
 	if ( !pPrintView )
 		return bRet;
 
@@ -1627,6 +1661,9 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 				int nCount = [pPrintView pageCount];
 				if ( nCount > 0 )
 				{
+					VCLPrintView *pLastPrintView = [mpPrintViews lastObject];
+					if ( pLastPrintView )
+						[pLastPrintView setNextPrintView:pPrintView];
 					[mpPrintViews addObject:pPrintView];
 					i = [pPrintView pageOffset] + nCount - 1;
 				}
