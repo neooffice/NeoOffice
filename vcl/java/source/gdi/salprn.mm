@@ -134,31 +134,42 @@ static sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Ori
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		// Paper sizes are always portrait dimensions
-		[pInfo setOrientation:NSPaperOrientationPortrait];
-
-		NSMutableDictionary *pDictionary = [pInfo dictionary];
-		if ( pDictionary )
+		@try
 		{
-			NSSize aSize = NSMakeSize( fWidth, fHeight );
-			NSValue *pValue = [NSValue valueWithSize:aSize];
-			if ( pValue )
-			{
-				[pDictionary setObject:pValue forKey:NSPrintPaperSize];
+			// When running in the sandbox, native file dialog calls may
+			// throw exceptions if the PowerBox daemon process is killed
 
-				// Fix bugs 543, 1678, 2202, and 2913 by detecting when the
-				// paper should be rotated determining the minimum unmatched
-				// area
-				pValue = [pDictionary objectForKey:NSPrintPaperSize];
+			// Paper sizes are always portrait dimensions
+			[pInfo setOrientation:NSPaperOrientationPortrait];
+
+			NSMutableDictionary *pDictionary = [pInfo dictionary];
+			if ( pDictionary )
+			{
+				NSSize aSize = NSMakeSize( fWidth, fHeight );
+				NSValue *pValue = [NSValue valueWithSize:aSize];
 				if ( pValue )
 				{
-					aSize = [pValue sizeValue];
-					double fDiff = pow( (double)aSize.width - fWidth, 2 ) + pow( (double)aSize.height - fHeight, 2 );
-					double fRotatedDiff = pow( (double)aSize.width - fHeight, 2 ) + pow( (double)aSize.height - fWidth, 2 );
-					if ( fDiff > fRotatedDiff )
-						bRet = sal_True;
+					[pDictionary setObject:pValue forKey:NSPrintPaperSize];
+
+					// Fix bugs 543, 1678, 2202, and 2913 by detecting when the
+					// paper should be rotated determining the minimum unmatched
+					// area
+					NSValue *pValue = [pDictionary objectForKey:NSPrintPaperSize];
+					if ( pValue )
+					{
+						aSize = [pValue sizeValue];
+						double fDiff = pow( (double)aSize.width - fWidth, 2 ) + pow( (double)aSize.height - fHeight, 2 );
+						double fRotatedDiff = pow( (double)aSize.width - fHeight, 2 ) + pow( (double)aSize.height - fWidth, 2 );
+						if ( fDiff > fRotatedDiff )
+							bRet = sal_True;
+					}
 				}
 			}
+		}
+		@catch ( NSException *pExc )
+		{
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
 		}
 
 		[pPool release];
@@ -559,11 +570,10 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	JavaSalInfoPrinter*		mpInfoPrinter;
 	NSString*				mpJobName;
 	sal_Bool				mbMonitorVisible;
-	int						mnPageCount;
+	NSUInteger				mnPageCount;
 	vcl::PrinterController*	mpPrinterController;
 	sal_uInt32				mnPrintJobCounter;
 	NSPrintOperation*		mpPrintOperation;
-	NSRange					maPrintRange;
 	VCLPrintView*			mpPrintView;
 	BOOL					mbResult;
 	float					mfScaleFactor;
@@ -587,6 +597,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 
 @interface VCLPrintView : NSView
 {
+	NSUInteger				mnFirstPage;
 	NSUInteger				mnLastPagePrinted;
 	BOOL					mbNewPrintOperationNeeded;
 	NSUInteger				mnPageCount;
@@ -610,9 +621,12 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 #ifdef TODO
 - (void)endPrintOperation;
 #endif	// TODO
+- (NSUInteger)firstPage;
 - (id)initWithFrame:(NSRect)aFrame printJob:(JavaSalPrinterPrintJob *)pPrintJob printerController:(vcl::PrinterController *)pPrinterController pageCount:(NSUInteger)nPageCount lastPagePrinted:(NSUInteger)nLastPagePrinted;
 - (BOOL)knowsPageRange:(NSRangePointer)pRange;
+- (NSUInteger)lastPagePrinted;
 - (NSPoint)locationOfPrintRect:(NSRect)aRect;
+- (BOOL)newPrintOperationNeeded;
 - (NSRect)rectForPage:(NSInteger)nPageNumber;
 - (void)setPrintOperation:(NSPrintOperation *)pPrintOperation;
 - (void)updatePaper:(NSInteger)nPageNumber;
@@ -788,13 +802,19 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 }
 #endif	// TODO
 
+- (NSUInteger)firstPage
+{
+	return mnFirstPage;
+}
+
 - (id)initWithFrame:(NSRect)aFrame printJob:(JavaSalPrinterPrintJob *)pPrintJob printerController:(vcl::PrinterController *)pPrinterController pageCount:(NSUInteger)nPageCount lastPagePrinted:(NSUInteger)nLastPagePrinted
 {
 	[super initWithFrame:aFrame];
 
+	mnFirstPage = nLastPagePrinted + 1;
 	mnLastPagePrinted = nLastPagePrinted;
 	mbNewPrintOperationNeeded = NO;
-	mnPageCount = nPageCount > 0 ? nPageCount : 0;
+	mnPageCount = nPageCount >= mnFirstPage ? nPageCount : mnFirstPage;
 	mbPaperRotated = NO;
 	mpPrinterController = pPrinterController;
 	mbPrintingStarted = NO;
@@ -821,7 +841,8 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 
 	if ( pRange )
 	{
-		*pRange = NSMakeRange( mnLastPagePrinted + 1, mnPageCount - mnLastPagePrinted );
+		// First page and page count should have already been sanity checked
+		*pRange = NSMakeRange( mnFirstPage, mnPageCount - mnFirstPage + 1 );
 		bRet = YES;
 	}
 
@@ -838,6 +859,11 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	(void)aRect;
 
 	return NSMakePoint( 0, 0 );
+}
+
+- (BOOL)newPrintOperationNeeded
+{
+	return mbNewPrintOperationNeeded;
 }
 
 - (NSRect)rectForPage:(NSInteger)nPageNumber
@@ -973,7 +999,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	{
 		NSPrintInfo *pInfo = [mpPrintOperation printInfo];
 		const ImplJobSetup *pSetupData = [mpPrintJob jobSetupForPage:nPageNumber];
-		const ImplJobSetup *pPrevSetupData = ( nPageNumber > 0 ? [mpPrintJob jobSetupForPage:nPageNumber - 1] : NULL );
+		const ImplJobSetup *pPrevSetupData = ( nPageNumber > 0 && nPageNumber > (NSInteger)mnFirstPage ? [mpPrintJob jobSetupForPage:nPageNumber - 1] : NULL );
 		if ( pInfo && pSetupData )
 		{
 			if ( bOldPrintingStarted && pPrevSetupData )
@@ -1028,7 +1054,6 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 					[pInfo setOrientation:NSPaperOrientationLandscape];
 				else
 					[pInfo setOrientation:NSPaperOrientationPortrait];
-
 			}
 		}
 	}
@@ -1057,7 +1082,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 
 	// Detect if the print operation has finished without any call to the
 	// completion handler
-	if ( !mbFinished && ( mbAborted || mnPageCount <= 0 || !mpPrintOperation || mbResult || !mpSetupDataMap || mpPrintOperation != [NSPrintOperation currentOperation] ) )
+	if ( !mbFinished && ( mbAborted || !mnPageCount || !mpPrintOperation || mbResult || !mpSetupDataMap || mpPrintOperation != [NSPrintOperation currentOperation] ) )
 		[self cancel:self];
 }
 
@@ -1160,7 +1185,6 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	mpPrinterController = pPrinterController;
 	mnPrintJobCounter = 0;
 	mpPrintOperation = nil;
-	maPrintRange = NSMakeRange( NSNotFound, 0 );
 	mpPrintView = nil;
 	mbResult = NO;
 	mfScaleFactor = fScaleFactor;
@@ -1200,8 +1224,9 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 				if ( mpSetupDataMap )
 				{
 					ImplJobSetup aSetupData;
-					mnPageCount = mpPrinterController->getFilteredPageCount();	
-					for ( int i = 0; i < mnPageCount; i++ )
+					int nPages = mpPrinterController->getFilteredPageCount();	
+					mnPageCount = nPages > 0 ? nPages : 0;
+					for ( NSUInteger i = 0; i < mnPageCount; i++ )
 					{
 						mpPrinterController->getFilteredPageSize( i );
 
@@ -1277,16 +1302,6 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 				mbAborted = YES;
 		}
 
-		maPrintRange = [pPrintOperation pageRange];
-		if ( maPrintRange.location == NSNotFound )
-		{
-			maPrintRange.length = 0;
-		}
-		else if ( !maPrintRange.length )
-		{
-			maPrintRange.length = 1;
-		}
-
 		VCLPrintView *pPrintView = (VCLPrintView *)[pPrintOperation view];
 		if ( pPrintView )
 		{
@@ -1295,8 +1310,16 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 
 			if ( pPrintView == mpPrintView )
 			{
+				NSUInteger nLastPagePrinted = [mpPrintView lastPagePrinted];
+				BOOL bNewPrintOperationNeeded = [mpPrintView newPrintOperationNeeded];
 				[mpPrintView release];
-				mpPrintView = nil;
+
+				// Prepare to run after print operation for the unprinted pages
+				if ( !mbAborted && bNewPrintOperationNeeded && nLastPagePrinted < mnPageCount )
+					mpPrintView = [[VCLPrintView alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 ) printJob:self printerController:mpPrinterController pageCount:mnPageCount lastPagePrinted:nLastPagePrinted];
+				else
+					mpPrintView = nil;
+
 			}
 		}
 	}
@@ -1356,6 +1379,13 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	if ( mbAborted || mbFinished || !mpInfo || !mpPrintView || mbResult || [NSPrintOperation currentOperation] )
 		return bRet;
 
+	const ImplJobSetup *pSetupData = [self jobSetupForPage:[mpPrintView firstPage]];
+	if ( !pSetupData )
+		return bRet;
+
+	// Set the paper size to the first page as the print operation will ignore
+	// any paper size changes made after the print operation is created
+	ImplPrintInfoSetPaperType( mpInfo, pSetupData->mePaperFormat, pSetupData->meOrientation, Impl100thMMToPixel( pSetupData->mnPaperWidth ), Impl100thMMToPixel( pSetupData->mnPaperHeight ) );
 
 	@try
 	{
@@ -1486,8 +1516,6 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		[mpInfo retain];
 	else
 		return;
-
-	maPrintRange = NSMakeRange( NSNotFound, 0 );
 
 	// Don't use sheet if it is an open dialog or there is no window to attach
 	// a sheet to
