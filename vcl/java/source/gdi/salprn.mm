@@ -596,8 +596,8 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	JavaSalPrinterPrintJob*	mpPrintJob;
 	NSPrintOperation*		mpPrintOperation;
 	BOOL					mbPrintOperationAborted;
-	BOOL					mbPrintOperationEnded;
 #ifdef TODO
+	BOOL					mbPrintOperationEnded;
 	std::list< JavaSalGraphics* >*	mpUnprintedGraphicsList;
 	Condition*				mpUnprintedGraphicsCondition;
 	Mutex*					mpUnprintedGraphicsMutex;
@@ -607,7 +607,9 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 - (BOOL)addUnprintedGraphics:(JavaSalGraphics *)pGraphics;
 - (void)dealloc;
 - (void)drawRect:(NSRect)aRect;
+#ifdef TODO
 - (void)endPrintOperation;
+#endif	// TODO
 - (id)initWithFrame:(NSRect)aFrame printJob:(JavaSalPrinterPrintJob *)pPrintJob printerController:(vcl::PrinterController *)pPrinterController pageCount:(NSUInteger)nPageCount lastPagePrinted:(NSUInteger)nLastPagePrinted;
 - (BOOL)knowsPageRange:(NSRangePointer)pRange;
 - (NSPoint)locationOfPrintRect:(NSRect)aRect;
@@ -620,15 +622,9 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 
 - (void)abortPrintOperation
 {
-#ifdef TODO
-	if ( mpUnprintedGraphicsCondition && mpUnprintedGraphicsMutex )
-	{
-		mpUnprintedGraphicsMutex->acquire();
-		mbPrintOperationAborted = YES;
-		mpUnprintedGraphicsCondition->set();
-		mpUnprintedGraphicsMutex->release();
-	}
-#endif	// TODO
+	// Don't abort immediately. Instead, abort the print operation before the
+	// next page is printed in the rectForPage: selector
+	mbPrintOperationAborted = YES;
 }
 
 - (BOOL)addUnprintedGraphics:(JavaSalGraphics *)pGraphics
@@ -779,9 +775,9 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 #endif	// TODO
 }
 
+#ifdef TODO
 - (void)endPrintOperation
 {
-#ifdef TODO
 	if ( mpUnprintedGraphicsCondition && mpUnprintedGraphicsMutex )
 	{
 		mpUnprintedGraphicsMutex->acquire();
@@ -789,8 +785,8 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		mpUnprintedGraphicsCondition->set();
 		mpUnprintedGraphicsMutex->release();
 	}
-#endif	// TODO
 }
+#endif	// TODO
 
 - (id)initWithFrame:(NSRect)aFrame printJob:(JavaSalPrinterPrintJob *)pPrintJob printerController:(vcl::PrinterController *)pPrinterController pageCount:(NSUInteger)nPageCount lastPagePrinted:(NSUInteger)nLastPagePrinted
 {
@@ -807,8 +803,8 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		[mpPrintJob retain];
 	mpPrintOperation = nil;
 	mbPrintOperationAborted = NO;
-	mbPrintOperationEnded = NO;
 #ifdef TODO
+	mbPrintOperationEnded = NO;
 	mpUnprintedGraphicsCondition = new Condition();
 	if ( mpUnprintedGraphicsCondition )
 		mpUnprintedGraphicsCondition->set();
@@ -852,13 +848,22 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 
 	[self updatePaper:nPageNumber];
 
-	if ( !mbNewPrintOperationNeeded && mpPrintOperation )
+	if ( mpPrintOperation )
 	{
 		NSPrintInfo *pInfo = [mpPrintOperation printInfo];
 		if ( pInfo )
 		{
-			NSSize aPaperSize = [pInfo paperSize];
-			aRet = NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height );
+			// We cannot force the print operation to abort until printing has
+			// started
+			if ( mbPrintingStarted && mbPrintOperationAborted )
+			{
+				[pInfo setJobDisposition:NSPrintCancelJob];
+			}
+			else if ( !mbNewPrintOperationNeeded )
+			{
+				NSSize aPaperSize = [pInfo paperSize];
+				aRet = NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height );
+			}
 		}
 	}
 
