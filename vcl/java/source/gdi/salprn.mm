@@ -787,6 +787,35 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		}
 	}
 #endif	// TODO
+
+	// The print operation will set the printer's paper size to the size of the
+	// page that is in the print dialog's preview pane so reset to the first
+	// page's paper size
+	if ( !mbPrintingStarted && [mpPrintOperation showsPrintPanel] )
+	{
+		NSUInteger nFirstPage = mnFirstPage;
+		NSPrintInfo *pInfo = [mpPrintOperation printInfo];
+		if ( pInfo )
+		{
+			NSDictionary *pDict = [pInfo dictionary];
+			if ( pDict )
+			{
+				NSNumber *pAllPages = [pDict objectForKey:NSPrintAllPages];
+				if ( !pAllPages || ![pAllPages boolValue] )
+				{
+					NSNumber *pFirstPage = [pDict objectForKey:NSPrintFirstPage];
+					if ( pFirstPage )
+					{
+						nFirstPage = [pFirstPage unsignedIntegerValue];
+						if ( nFirstPage < mnFirstPage )
+							nFirstPage = mnFirstPage;
+					}
+				}
+			}
+		}
+
+		[self updatePaper:nFirstPage];
+	}
 }
 
 #ifdef TODO
@@ -1054,6 +1083,13 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 					[pInfo setOrientation:NSPaperOrientationLandscape];
 				else
 					[pInfo setOrientation:NSPaperOrientationPortrait];
+
+				// The print operation will set the printer's paper size from
+				// the NSConcretePrintOperation._copyingBounds property and the
+				// print dialog may set this property directly so ensure that
+				// this property matches the print info's paper size
+				NSSize aPaperSize = [pInfo paperSize];
+				[mpPrintOperation setValue:[NSValue valueWithRect:NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height )] forKey:@"_copyingBounds"];
 			}
 		}
 	}
