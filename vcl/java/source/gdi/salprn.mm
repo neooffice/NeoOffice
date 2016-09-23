@@ -585,6 +585,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 - (void)checkForErrors:(id)pObject;
 - (void)dealloc;
 - (void)destroy:(id)pObject;
+- (void)end:(id)pObject;
 - (BOOL)finished;
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName infoPrinter:(JavaSalInfoPrinter *)pInfoPrinter printerController:(vcl::PrinterController *)pPrinterController scaleFactor:(float)fScaleFactor;
 - (const ImplJobSetup *)jobSetupForPage:(NSInteger)nPageNumber;
@@ -607,8 +608,8 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	JavaSalPrinterPrintJob*	mpPrintJob;
 	NSPrintOperation*		mpPrintOperation;
 	BOOL					mbPrintOperationAborted;
-#ifdef TODO
 	BOOL					mbPrintOperationEnded;
+#ifdef TODO
 	std::list< JavaSalGraphics* >*	mpUnprintedGraphicsList;
 	Condition*				mpUnprintedGraphicsCondition;
 	Mutex*					mpUnprintedGraphicsMutex;
@@ -618,8 +619,8 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 - (BOOL)addUnprintedGraphics:(JavaSalGraphics *)pGraphics;
 - (void)dealloc;
 - (void)drawRect:(NSRect)aRect;
-#ifdef TODO
 - (void)endPrintOperation;
+#ifdef TODO
 #endif	// TODO
 - (NSUInteger)firstPage;
 - (id)initWithFrame:(NSRect)aFrame printJob:(JavaSalPrinterPrintJob *)pPrintJob printerController:(vcl::PrinterController *)pPrinterController pageCount:(NSUInteger)nPageCount lastPagePrinted:(NSUInteger)nLastPagePrinted;
@@ -716,6 +717,8 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	if ( mbPrintingStarted )
 		mnLastPagePrinted = nPageNumber;
 
+	if ( !mbPrintOperationAborted && !mbPrintOperationEnded && !mbNewPrintOperationNeeded )
+	{
 #ifdef TODO
 	if ( mpUnprintedGraphicsList && mpUnprintedGraphicsMutex )
 	{
@@ -787,6 +790,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		}
 	}
 #endif	// TODO
+	}
 
 	// The print operation will set the printer's paper size to the size of the
 	// page that is in the print dialog's preview pane so reset to the first
@@ -818,18 +822,12 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	}
 }
 
-#ifdef TODO
 - (void)endPrintOperation
 {
-	if ( mpUnprintedGraphicsCondition && mpUnprintedGraphicsMutex )
-	{
-		mpUnprintedGraphicsMutex->acquire();
-		mbPrintOperationEnded = YES;
-		mpUnprintedGraphicsCondition->set();
-		mpUnprintedGraphicsMutex->release();
-	}
+	// Don't end immediately. Instead, end the print operation before the
+	// next page is printed in the rectForPage: selector
+	mbPrintOperationEnded = YES;
 }
-#endif	// TODO
 
 - (NSUInteger)firstPage
 {
@@ -852,8 +850,8 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		[mpPrintJob retain];
 	mpPrintOperation = nil;
 	mbPrintOperationAborted = NO;
-#ifdef TODO
 	mbPrintOperationEnded = NO;
+#ifdef TODO
 	mpUnprintedGraphicsCondition = new Condition();
 	if ( mpUnprintedGraphicsCondition )
 		mpUnprintedGraphicsCondition->set();
@@ -914,7 +912,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 			{
 				[pInfo setJobDisposition:NSPrintCancelJob];
 			}
-			else if ( !mbNewPrintOperationNeeded )
+			else if ( !mbPrintOperationEnded && !mbNewPrintOperationNeeded )
 			{
 				NSSize aPaperSize = [pInfo paperSize];
 				aRet = NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height );
@@ -1193,6 +1191,14 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		[mpWindow release];
 		mpWindow = nil;
 	}
+}
+
+- (void)end:(id)pObject
+{
+	(void)pObject;
+
+	if ( mpPrintView )
+		[mpPrintView endPrintOperation];
 }
 
 - (BOOL)finished
@@ -2055,10 +2061,16 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 
 sal_Bool JavaSalPrinter::EndJob()
 {
-#ifdef TODO
-	if ( mpPrintView )
-		[mpPrintView endPrintOperation];
-#endif	// TODO
+	if ( mpPrintJob )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[mpPrintJob performSelectorOnMainThread:@selector(end:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
+
+		[pPool release];
+	}
+
 
 	return sal_True;
 }
@@ -2067,12 +2079,15 @@ sal_Bool JavaSalPrinter::EndJob()
 
 sal_Bool JavaSalPrinter::AbortJob()
 {
-#ifdef TODO
-	if ( mpPrintView )
-		[mpPrintView abortPrintOperation];
-#endif	// TODO
+	if ( mpPrintJob )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	EndJob();
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[mpPrintJob performSelectorOnMainThread:@selector(cancel:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
+
+		[pPool release];
+	}
 
 	return sal_True;
 }
