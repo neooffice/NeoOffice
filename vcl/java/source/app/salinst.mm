@@ -3004,13 +3004,15 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 				}
 				case SALEVENT_WHEELMOUSE:
 				{
-					if ( pEventQueue->size() )
+					// Fix lag when swiping while automatic spell checking is
+					// enabled by coalescing all queued mouse wheel events
+					for ( ::std::list< JavaSalEventQueueItem* >::const_iterator it = pEventQueue->begin(); it != pEventQueue->end(); ++it )
 					{
-						JavaSalEvent *pOldEvent = pEventQueue->back()->getEvent();
-						if ( pOldEvent && pOldEvent->getID() == nID && pOldEvent->getFrame() == pFrame && !pEventQueue->back()->isRemove() )
+						JavaSalEvent *pOldEvent = (*it)->getEvent();
+						if ( pOldEvent && pOldEvent->getID() == nID && pOldEvent->getFrame() == pFrame && !(*it)->isRemove() )
 						{
 							if ( pNewEvent->addWheelRotationAndScrollLines( pOldEvent->getWheelRotation(), pOldEvent->getScrollAmount(), pOldEvent->isHorizontal() ) )
-								pEventQueue->back()->remove();
+								(*it)->remove();
 						}
 					}
 

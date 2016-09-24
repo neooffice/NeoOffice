@@ -1425,6 +1425,7 @@ static NSUInteger nMouseMask = 0;
 		else if ( nType == NSScrollWheel || ( ( nType == NSEventTypeMagnify || nType == NSEventTypeSwipe ) && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] ) )
 		{
 			static float fUnpostedMagnification = 0;
+			static float fUnpostedHorizontalScrollWheel = 0;
 			static float fUnpostedVerticalScrollWheel = 0;
 
 			NSApplication *pApp = [NSApplication sharedApplication];
@@ -1433,6 +1434,7 @@ static NSUInteger nMouseMask = 0;
 			float fDeltaY = 0;
 			if ( nType == NSEventTypeMagnify )
 			{
+				fUnpostedHorizontalScrollWheel = 0;
 				fUnpostedVerticalScrollWheel = 0;
 
 				// Magnify events need to be converted to vertical scrolls with
@@ -1493,6 +1495,7 @@ static NSUInteger nMouseMask = 0;
 					else
 						fDeltaY /= 5.0f;
 
+					fUnpostedHorizontalScrollWheel = 0;
 					fUnpostedVerticalScrollWheel += fDeltaY;
 					if ( FloatToLong( fUnpostedVerticalScrollWheel ) )
 					{
@@ -1506,7 +1509,15 @@ static NSUInteger nMouseMask = 0;
 				}
 				else
 				{
-					fUnpostedVerticalScrollWheel = 0;
+					if ( pApp )
+					{
+						NSEvent *pPendingEvent;
+						while ( ( pPendingEvent = [pApp nextEventMatchingMask:NSEventMaskFromType( nType ) untilDate:[NSDate date] inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:YES] ) != nil )
+						{
+							fDeltaX += [pEvent deltaX];
+							fDeltaY += [pEvent deltaY];
+						}
+					}
 
 					// Precise scrolling devices have excessively large
 					// deltas so apply a small reduction factor when scrolling
@@ -1515,6 +1526,28 @@ static NSUInteger nMouseMask = 0;
 					{
 						fDeltaX /= 2.0f;
 						fDeltaY /= 2.0f;
+					}
+
+					fUnpostedHorizontalScrollWheel += fDeltaX;
+					if ( FloatToLong( fUnpostedHorizontalScrollWheel ) )
+					{
+						fDeltaX = fUnpostedHorizontalScrollWheel;
+						fUnpostedHorizontalScrollWheel = 0;
+					}
+					else
+					{
+						fDeltaX = 0;
+					}
+
+					fUnpostedVerticalScrollWheel += fDeltaY;
+					if ( FloatToLong( fUnpostedVerticalScrollWheel ) )
+					{
+						fDeltaY = fUnpostedVerticalScrollWheel;
+						fUnpostedVerticalScrollWheel = 0;
+					}
+					else
+					{
+						fDeltaY = 0;
 					}
 				}
 			}
