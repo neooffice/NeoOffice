@@ -1430,6 +1430,7 @@ static NSUInteger nMouseMask = 0;
 			float fDeltaY = 0;
 			if ( nType == NSEventTypeMagnify )
 			{
+				fUnpostedHorizontalScrollWheel = 0;
 				fUnpostedVerticalScrollWheel = 0;
 
 				// Magnify events need to be converted to vertical scrolls with
@@ -1490,6 +1491,7 @@ static NSUInteger nMouseMask = 0;
 					else
 						fDeltaY /= 5.0f;
 
+					fUnpostedHorizontalScrollWheel = 0;
 					fUnpostedVerticalScrollWheel += fDeltaY;
 					if ( FloatToLong( fUnpostedVerticalScrollWheel ) )
 					{
@@ -1503,9 +1505,6 @@ static NSUInteger nMouseMask = 0;
 				}
 				else
 				{
-					fUnpostedHorizontalScrollWheel = 0;
-					fUnpostedVerticalScrollWheel = 0;
-
 					if ( pApp )
 					{
 						NSEvent *pPendingEvent;
