@@ -489,8 +489,12 @@ static bool IsRunningElCapitanOrLower()
 								NSWindow *pKeyWindow = [pApp keyWindow];
 								if ( pKeyWindow )
 								{
-									NSView *pContentView = [pKeyWindow contentView];
-									if ( pContentView )
+									// Fix crash in Mac App Store version when
+									// creating a new database by not attaching
+									// to the window if the content view is an
+									// instance of NSRemoteView
+									VCLView *pContentView = [pKeyWindow contentView];
+									if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
 									{
 										NSRect aBounds = [pButton bounds];
 										[pButton removeFromSuperview];
