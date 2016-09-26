@@ -616,12 +616,9 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 #endif	// TODO
 }
 - (void)abortPrintOperation;
-- (BOOL)addUnprintedGraphics:(JavaSalGraphics *)pGraphics;
 - (void)dealloc;
 - (void)drawRect:(NSRect)aRect;
 - (void)endPrintOperation;
-#ifdef TODO
-#endif	// TODO
 - (NSUInteger)firstPage;
 - (id)initWithFrame:(NSRect)aFrame printJob:(JavaSalPrinterPrintJob *)pPrintJob printerController:(vcl::PrinterController *)pPrinterController pageCount:(NSUInteger)nPageCount lastPagePrinted:(NSUInteger)nLastPagePrinted;
 - (BOOL)knowsPageRange:(NSRangePointer)pRange;
@@ -640,24 +637,6 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	// Don't abort immediately. Instead, abort the print operation before the
 	// next page is printed in the rectForPage: selector
 	mbPrintOperationAborted = YES;
-}
-
-- (BOOL)addUnprintedGraphics:(JavaSalGraphics *)pGraphics
-{
-	BOOL bRet = NO;
-
-#ifdef TODO
-	if ( pGraphics && mpUnprintedGraphicsCondition && mpUnprintedGraphicsList && mpUnprintedGraphicsMutex )
-	{
-		mpUnprintedGraphicsMutex->acquire();
-		mpUnprintedGraphicsList->push_back( pGraphics );
-		mpUnprintedGraphicsCondition->set();
-		mpUnprintedGraphicsMutex->release();
-		bRet = YES;
-	}
-#endif	// TODO
-
-	return bRet;
 }
 
 - (void)dealloc
@@ -714,10 +693,10 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 
 	NSUInteger nPageNumber = [mpPrintOperation currentPage];
 	[self updatePaper:[mpPrintOperation currentPage]];
-	if ( mbPrintingStarted )
+	if ( mbPrintingStarted && mnLastPagePrinted < nPageNumber )
 		mnLastPagePrinted = nPageNumber;
 
-	if ( !mbPrintOperationAborted && !mbPrintOperationEnded && !mbNewPrintOperationNeeded )
+	if ( !mbPrintOperationAborted && !mbPrintOperationEnded && !mbNewPrintOperationNeeded && nPageNumber > 0 && nPageNumber <= mnPageCount )
 	{
 #ifdef TODO
 	if ( mpUnprintedGraphicsList && mpUnprintedGraphicsMutex )
@@ -2167,17 +2146,10 @@ sal_Bool JavaSalPrinter::EndPage()
 {
 	if ( mpGraphics )
 	{
-#ifdef TODO
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-		// Give ownership of graphics to print view
-		if ( !mpPrintView || ![mpPrintView addUnprintedGraphics:mpGraphics] )
-			delete mpGraphics;
-
-		[pPool release];
-#endif	// TODO
+		delete mpGraphics;
+		mpGraphics = NULL;
 	}
-	mpGraphics = NULL;
+
 	mbGraphics = sal_False;
 	return sal_True;
 }
