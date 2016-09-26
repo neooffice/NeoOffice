@@ -616,6 +616,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 #endif	// TODO
 }
 - (void)abortPrintOperation;
+- (void)beginPageInRect:(NSRect)aRect atPlacement:(NSPoint)aLocation;
 - (void)dealloc;
 - (void)drawRect:(NSRect)aRect;
 - (void)endPrintOperation;
@@ -637,6 +638,14 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	// Don't abort immediately. Instead, abort the print operation before the
 	// next page is printed in the rectForPage: selector
 	mbPrintOperationAborted = YES;
+}
+
+- (void)beginPageInRect:(NSRect)aRect atPlacement:(NSPoint)aLocation
+{
+	IMutex &rSolarMutex = Application::GetSolarMutex();
+	rSolarMutex.acquire();
+
+	[super beginPageInRect:aRect atPlacement:aLocation];
 }
 
 - (void)dealloc
@@ -696,8 +705,11 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	if ( mbPrintingStarted && mnLastPagePrinted < nPageNumber )
 		mnLastPagePrinted = nPageNumber;
 
-	if ( !mbPrintOperationAborted && !mbPrintOperationEnded && !mbNewPrintOperationNeeded && nPageNumber > 0 && nPageNumber <= mnPageCount )
-	{
+	// The application mutex should have already been set in the
+	// beginPageInRect:atPlacement: selector
+	if ( !Application::IsShutDown() && !mbNewPrintOperationNeeded && mpPrinterController && !mbPrintOperationAborted && !mbPrintOperationEnded && nPageNumber > 0 && nPageNumber <= mnPageCount )
+		mpPrinterController->printFilteredPage( nPageNumber - 1 );
+
 #ifdef TODO
 	if ( mpUnprintedGraphicsList && mpUnprintedGraphicsMutex )
 	{
@@ -769,7 +781,6 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		}
 	}
 #endif	// TODO
-	}
 
 	// The print operation will set the printer's paper size to the size of the
 	// page that is in the print dialog's preview pane so reset to the first
@@ -806,6 +817,14 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	// Don't end immediately. Instead, end the print operation before the
 	// next page is printed in the rectForPage: selector
 	mbPrintOperationEnded = YES;
+}
+
+- (void)endPage
+{
+	[super endPage];
+
+	IMutex &rSolarMutex = Application::GetSolarMutex();
+	rSolarMutex.release();
 }
 
 - (NSUInteger)firstPage
@@ -985,10 +1004,10 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 - (void)updatePaper:(NSInteger)nPageNumber
 {
 	BOOL bOldPrintingStarted = mbPrintingStarted;
-	if ( !mbPrintingStarted )
+	if ( !mbPrintingStarted && mpPrintOperation )
 	{
 		// Check if we are actually spooling to printer
-		NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+		NSGraphicsContext *pContext = [mpPrintOperation context];
 		if ( pContext )
 		{
 			NSDictionary *pDict = [pContext attributes];
@@ -1067,6 +1086,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 				// this property matches the print info's paper size
 				NSSize aPaperSize = [pInfo paperSize];
 				[mpPrintOperation setValue:[NSValue valueWithRect:NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height )] forKey:@"_copyingBounds"];
+				[self setFrame:NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height )];
 			}
 		}
 	}
@@ -1967,19 +1987,19 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 		NSWindow *pNSWindow = nil;
 		if ( Application_beginModalSheet( &pNSWindow ) )
 		{
-			// Don't lock mutex as we expect callbacks to this object from
-			// a different thread while the dialog is showing
-			sal_uLong nCount = Application::ReleaseSolarMutex();
-
 			mpPrintJob = [[JavaSalPrinterPrintJob alloc] initWithPrintInfo:mpInfo window:pNSWindow jobName:[NSString stringWithCharacters:aJobName.GetBuffer() length:aJobName.Len()] infoPrinter:mpInfoPrinter printerController:&rController scaleFactor:fScaleFactor];
 			if ( mpPrintJob )
 			{
+				rController.jobStarted();
+
+				// Don't lock mutex as we expect callbacks to this object from
+				// a different thread while the dialog is showing
+				sal_uLong nCount = Application::ReleaseSolarMutex();
+
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 				[mpPrintJob performSelectorOnMainThread:@selector(startPrintJob:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
 
-				rController.jobStarted();
-
-				while ( ![mpPrintJob finished] && !Application::IsShutDown() )
+				while ( !Application::IsShutDown() && ![mpPrintJob finished] )
 				{
 					[mpPrintJob performSelectorOnMainThread:@selector(checkForErrors:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
 					if ( Application::IsShutDown() )
@@ -1991,6 +2011,8 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 						Application::Yield();
 					rSolarMutex.release();
 				}
+
+				Application::AcquireSolarMutex( nCount );
 
 				bRet = [(JavaSalPrinterPrintJob *)mpPrintJob result];
 				if ( bRet )
@@ -2015,7 +2037,6 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 				mpPrintJob = nil;
 			}
 
-			Application::AcquireSolarMutex( nCount );
 			Application_endModalSheet();
 		}
 
@@ -2075,6 +2096,7 @@ sal_Bool JavaSalPrinter::AbortJob()
 
 SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, sal_Bool bNewJobData )
 {
+return NULL;
 	if ( mbGraphics )
 		return NULL;
 
