@@ -1080,12 +1080,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 				else
 					[pInfo setOrientation:NSPaperOrientationPortrait];
 
-				// The print operation will set the printer's paper size from
-				// the NSConcretePrintOperation._copyingBounds property and the
-				// print dialog may set this property directly so ensure that
-				// this property matches the print info's paper size
 				NSSize aPaperSize = [pInfo paperSize];
-				[mpPrintOperation setValue:[NSValue valueWithRect:NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height )] forKey:@"_copyingBounds"];
 				[self setFrame:NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height )];
 			}
 		}
