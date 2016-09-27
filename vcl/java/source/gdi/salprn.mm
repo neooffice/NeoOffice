@@ -1232,52 +1232,46 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		[mpWindow retain];
 
 	// Cache paper details for each page here as process may be time consuming
-	// and this selector is usually called from the OOo event dispatch thread
-	// and not from the main thread
+	// and this selector should be called from the OOo event dispatch thread
+	// and this thread should have already locked the application mutex
 	if ( mpInfoPrinter && mpPrinterController )
 	{
-		IMutex &rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
+		mbMonitorVisible = mpPrinterController->isShowDialogs();
+		if ( mbMonitorVisible )
 		{
-			mbMonitorVisible = mpPrinterController->isShowDialogs();
-			if ( mbMonitorVisible )
-			{
-				beans::PropertyValue* pMonitorVisible = mpPrinterController->getValue( OUString( RTL_CONSTASCII_USTRINGPARAM( "MonitorVisible" ) ) );
-				if ( pMonitorVisible )
-					pMonitorVisible->Value >>= mbMonitorVisible;
-			}
+			beans::PropertyValue* pMonitorVisible = mpPrinterController->getValue( OUString( RTL_CONSTASCII_USTRINGPARAM( "MonitorVisible" ) ) );
+			if ( pMonitorVisible )
+				pMonitorVisible->Value >>= mbMonitorVisible;
+		}
 
-			boost::shared_ptr< Printer > aPrinter( mpPrinterController->getPrinter() );
-			if ( aPrinter.get() )
-			{
-				mbCollate = aPrinter->IsCollateCopy();
-				mnCopies = aPrinter->GetCopyCount();
-				if ( !mnCopies )
-					mnCopies = 1;
+		boost::shared_ptr< Printer > aPrinter( mpPrinterController->getPrinter() );
+		if ( aPrinter.get() )
+		{
+			mbCollate = aPrinter->IsCollateCopy();
+			mnCopies = aPrinter->GetCopyCount();
+			if ( !mnCopies )
+				mnCopies = 1;
 
-				mpSetupDataMap = new ::std::map< NSUInteger, ImplJobSetup >();
-				if ( mpSetupDataMap )
+			mpSetupDataMap = new ::std::map< NSUInteger, ImplJobSetup >();
+			if ( mpSetupDataMap )
+			{
+				ImplJobSetup aSetupData;
+				int nPages = mpPrinterController->getFilteredPageCount();	
+				mnPageCount = nPages > 0 ? nPages : 0;
+				for ( NSUInteger i = 0; i < mnPageCount; i++ )
 				{
-					ImplJobSetup aSetupData;
-					int nPages = mpPrinterController->getFilteredPageCount();	
-					mnPageCount = nPages > 0 ? nPages : 0;
-					for ( NSUInteger i = 0; i < mnPageCount; i++ )
-					{
-						mpPrinterController->getFilteredPageSize( i );
+					mpPrinterController->getFilteredPageSize( i );
 
-						// Invoking PrinterController::getFilteredPageSize()
-						// calls JavaSalInfoPrinter::SetData() so retrieve page
-						// info from the info printer. Note: use one-based
-						// page numbers to match the native page numbers.
-						NSPrintInfo *pInfo = (NSPrintInfo *)mpInfoPrinter->GetPrintInfo();
-						if ( pInfo && mpInfoPrinter->SetData( SAL_JOBSET_EXACTPAPERSIZE, &aSetupData ) )
-							(*mpSetupDataMap)[ i + 1 ] = aSetupData;
-					}
+					// Invoking PrinterController::getFilteredPageSize()
+					// calls JavaSalInfoPrinter::SetData() so retrieve page
+					// info from the info printer. Note: use one-based
+					// page numbers to match the native page numbers.
+					NSPrintInfo *pInfo = (NSPrintInfo *)mpInfoPrinter->GetPrintInfo();
+					if ( pInfo && mpInfoPrinter->SetData( SAL_JOBSET_EXACTPAPERSIZE, &aSetupData ) )
+						(*mpSetupDataMap)[ i + 1 ] = aSetupData;
 				}
 			}
 		}
-		rSolarMutex.release();
 	}
 
 	return self;
@@ -2091,7 +2085,6 @@ sal_Bool JavaSalPrinter::AbortJob()
 
 SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, sal_Bool bNewJobData )
 {
-return NULL;
 	if ( mbGraphics )
 		return NULL;
 
@@ -2137,20 +2130,17 @@ return NULL;
 	mpGraphics->mnDPIY = MIN_PRINTER_RESOLUTION;
 	mpGraphics->mpPrinter = this;
 
-	if ( mpInfoPrinter )
-	{
-		long nOutWidth = 0;
-		long nOutHeight = 0;
-		long nPageOffX = 0;
-		long nPageOffY = 0;
-		long nPageWidth = 0;
-		long nPageHeight = 0;
-		ImplGetPageInfo( mpInfo, pSetupData, mbPaperRotated, nOutWidth, nOutHeight, nPageOffX, nPageOffY, nPageWidth, nPageHeight );
+	long nOutWidth = 0;
+	long nOutHeight = 0;
+	long nPageOffX = 0;
+	long nPageOffY = 0;
+	long nPageWidth = 0;
+	long nPageHeight = 0;
+	ImplGetPageInfo( mpInfo, pSetupData, mbPaperRotated, nOutWidth, nOutHeight, nPageOffX, nPageOffY, nPageWidth, nPageHeight );
 
-		mpGraphics->mfPageTranslateX = ImplPrinterToPixel( nPageOffX );
-		mpGraphics->mfPageTranslateY = ImplPrinterToPixel( nPageOffY );
-		mpGraphics->maNativeBounds = CGRectMake( 0, 0, nPageWidth, nPageHeight );
-	}
+	mpGraphics->mfPageTranslateX = ImplPrinterToPixel( nPageOffX );
+	mpGraphics->mfPageTranslateY = ImplPrinterToPixel( nPageOffY );
+	mpGraphics->maNativeBounds = CGRectMake( 0, 0, nPageWidth, nPageHeight );
 
 	mbGraphics = sal_True;
 
