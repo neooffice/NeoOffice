@@ -35,9 +35,6 @@
 
 #include <list>
 
-#ifdef TODO
-#include <osl/mutex.hxx>
-#endif	// TODO
 #include <sfx2/sfx.hrc>
 #include <tools/rcid.h>
 #include <vcl/print.hxx>
@@ -585,6 +582,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 - (void)checkForErrors:(id)pObject;
 - (void)dealloc;
 - (void)destroy:(id)pObject;
+- (void)drawUndrawnNativeOps:(JavaSalGraphics *)pGraphics;
 - (void)end:(id)pObject;
 - (BOOL)finished;
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName infoPrinter:(JavaSalInfoPrinter *)pInfoPrinter printerController:(vcl::PrinterController *)pPrinterController scaleFactor:(float)fScaleFactor;
@@ -598,6 +596,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 
 @interface VCLPrintView : NSView
 {
+	NSRect					maDrawRect;
 	NSUInteger				mnFirstPage;
 	NSUInteger				mnLastPagePrinted;
 	BOOL					mbNewPrintOperationNeeded;
@@ -609,17 +608,15 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	NSPrintOperation*		mpPrintOperation;
 	BOOL					mbPrintOperationAborted;
 	BOOL					mbPrintOperationEnded;
-#ifdef TODO
-	std::list< JavaSalGraphics* >*	mpUnprintedGraphicsList;
-	Condition*				mpUnprintedGraphicsCondition;
-	Mutex*					mpUnprintedGraphicsMutex;
-#endif	// TODO
 }
 - (void)abortPrintOperation;
+- (BOOL)canDraw;
 - (void)beginPageInRect:(NSRect)aRect atPlacement:(NSPoint)aLocation;
 - (void)dealloc;
 - (void)drawRect:(NSRect)aRect;
+- (void)drawUndrawnNativeOps:(JavaSalGraphics *)pGraphics;
 - (void)endPrintOperation;
+- (void)endPage;
 - (NSUInteger)firstPage;
 - (id)initWithFrame:(NSRect)aFrame printJob:(JavaSalPrinterPrintJob *)pPrintJob printerController:(vcl::PrinterController *)pPrinterController pageCount:(NSUInteger)nPageCount lastPagePrinted:(NSUInteger)nLastPagePrinted;
 - (BOOL)knowsPageRange:(NSRangePointer)pRange;
@@ -648,28 +645,14 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	[super beginPageInRect:aRect atPlacement:aLocation];
 }
 
+- (BOOL)canDraw
+{
+	return ( !Application::IsShutDown() && !mbNewPrintOperationNeeded && !mbPrintOperationAborted && !mbPrintOperationEnded );
+}
+
 - (void)dealloc
 {
 	[self destroy:self];
-
-#ifdef TODO
-	if ( mpUnprintedGraphicsCondition )
-		delete mpUnprintedGraphicsCondition;
-
-	if ( mpUnprintedGraphicsList )
-	{
-		while ( mpUnprintedGraphicsList->size() )
-		{
-			delete mpUnprintedGraphicsList->front();
-			mpUnprintedGraphicsList->pop_front();
-		}
-
-		delete mpUnprintedGraphicsList;
-	}
-
-	if ( mpUnprintedGraphicsMutex )
-		delete mpUnprintedGraphicsMutex;
-#endif	// TODO
 
 	[super dealloc];
 }
@@ -701,86 +684,22 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		return;
 
 	NSUInteger nPageNumber = [mpPrintOperation currentPage];
+	if ( !nPageNumber || nPageNumber > mnPageCount )
+		return;
+
 	[self updatePaper:[mpPrintOperation currentPage]];
 	if ( mbPrintingStarted && mnLastPagePrinted < nPageNumber )
 		mnLastPagePrinted = nPageNumber;
 
 	// The application mutex should have already been set in the
 	// beginPageInRect:atPlacement: selector
-	if ( !Application::IsShutDown() && !mbNewPrintOperationNeeded && mpPrinterController && !mbPrintOperationAborted && !mbPrintOperationEnded && nPageNumber > 0 && nPageNumber <= mnPageCount )
-		mpPrinterController->printFilteredPage( nPageNumber - 1 );
-
-#ifdef TODO
-	if ( mpUnprintedGraphicsList && mpUnprintedGraphicsMutex )
+	if ( [self canDraw] && mpPrinterController )
 	{
-		JavaSalGraphics *pGraphics = NULL;
-
-		mpUnprintedGraphicsMutex->acquire();
-		if ( mpUnprintedGraphicsList->size() )
-		{
-			pGraphics = mpUnprintedGraphicsList->front();
-			mpUnprintedGraphicsList->pop_front();
-		}
-		else
-		{
-			mbPrintOperationEnded = YES;
-		}
-		mpUnprintedGraphicsMutex->release();
-
-		if ( pGraphics )
-		{
-			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
-			if ( pContext )
-			{
-				// Draw undrawn graphics ops to the print context
-				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
-				if ( aContext )
-				{
-					float fScaleFactor = 1.0f;
-					BOOL bFlipped = [self isFlipped];
-					NSRect aBounds = [self bounds];
-					if ( mpPrintOperation )
-					{
-						NSPrintInfo *pInfo = [mpPrintOperation printInfo];
-						if ( pInfo )
-						{
-							NSDictionary *pDict = [pInfo dictionary];
-							if ( pDict )
-							{
-								NSNumber *pValue = [pDict objectForKey:NSPrintScalingFactor];
-								if ( pValue )
-									fScaleFactor = [pValue floatValue];
-							}
-						}
-					}
-
-					CGContextSaveGState( aContext );
-
-					if ( bFlipped )
-					{
-						CGContextTranslateCTM( aContext, 0, aBounds.size.height );
-						CGContextScaleCTM( aContext, 1.0, -1.0f );
-						aRect.origin.y = aBounds.origin.y + aBounds.size.height - aRect.origin.y - aRect.size.height;
-					}
-
-					// Fix bug reported in the following NeoOffice forum topic
-					// by translating using the margins that were set before
-					// the native print dialog was displayed:
-					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8468
-					aRect.origin.x -= pGraphics->mfPageTranslateX;
-					aRect.origin.y += pGraphics->mfPageTranslateY;
-					CGContextTranslateCTM( aContext, pGraphics->mfPageTranslateX, pGraphics->mfPageTranslateY * -1 );
-
-					CGContextScaleCTM( aContext, fScaleFactor, fScaleFactor );
-					pGraphics->drawUndrawnNativeOps( aContext, NSRectToCGRect( aRect ) );
-					CGContextRestoreGState( aContext );
-				}
-			}
-
-			delete pGraphics;
-		}
+		NSRect aOldDrawRect = maDrawRect;
+		maDrawRect = aRect;
+		mpPrinterController->printFilteredPage( nPageNumber - 1 );
+		maDrawRect = aOldDrawRect;
 	}
-#endif	// TODO
 
 	// The print operation will set the printer's paper size to the size of the
 	// page that is in the print dialog's preview pane so reset to the first
@@ -812,6 +731,67 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	}
 }
 
+- (void)drawUndrawnNativeOps:(JavaSalGraphics *)pGraphics
+{
+	if ( !pGraphics || NSIsEmptyRect( maDrawRect ) || !mpPrintOperation )
+		return;
+
+	// The application mutex should have already been set in the
+	// beginPageInRect:atPlacement: selector
+	if ( [self canDraw] )
+	{
+		NSGraphicsContext *pContext = [mpPrintOperation context];
+		if ( !pContext && !mbPrintingStarted )
+			pContext = [NSGraphicsContext currentContext];
+		if ( pContext )
+		{
+			// Draw undrawn graphics ops to the print context
+			CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+			if ( aContext )
+			{
+				float fScaleFactor = 1.0f;
+				BOOL bFlipped = [self isFlipped];
+				NSRect aBounds = [self bounds];
+				if ( mpPrintOperation )
+				{
+					NSPrintInfo *pInfo = [mpPrintOperation printInfo];
+					if ( pInfo )
+					{
+						NSDictionary *pDict = [pInfo dictionary];
+						if ( pDict )
+						{
+							NSNumber *pValue = [pDict objectForKey:NSPrintScalingFactor];
+							if ( pValue )
+								fScaleFactor = [pValue floatValue];
+						}
+					}
+				}
+
+				CGContextSaveGState( aContext );
+
+				if ( bFlipped )
+				{
+					CGContextTranslateCTM( aContext, 0, aBounds.size.height );
+					CGContextScaleCTM( aContext, 1.0, -1.0f );
+					maDrawRect.origin.y = aBounds.origin.y + aBounds.size.height - maDrawRect.origin.y - maDrawRect.size.height;
+				}
+
+				// Fix bug reported in the following NeoOffice forum topic
+				// by translating using the margins that were set before
+				// the native print dialog was displayed:
+				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8468
+				maDrawRect.origin.x -= pGraphics->mfPageTranslateX;
+				maDrawRect.origin.y += pGraphics->mfPageTranslateY;
+				CGContextTranslateCTM( aContext, pGraphics->mfPageTranslateX, pGraphics->mfPageTranslateY * -1 );
+
+				CGContextScaleCTM( aContext, fScaleFactor, fScaleFactor );
+				pGraphics->drawUndrawnNativeOps( aContext, NSRectToCGRect( maDrawRect ) );
+				CGContextRestoreGState( aContext );
+			}
+		}
+	}
+}
+
 - (void)endPrintOperation
 {
 	// Don't end immediately. Instead, end the print operation before the
@@ -836,6 +816,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 {
 	[super initWithFrame:aFrame];
 
+	maDrawRect = NSZeroRect;
 	mnFirstPage = nLastPagePrinted + 1;
 	mnLastPagePrinted = nLastPagePrinted;
 	mbNewPrintOperationNeeded = NO;
@@ -849,13 +830,6 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	mpPrintOperation = nil;
 	mbPrintOperationAborted = NO;
 	mbPrintOperationEnded = NO;
-#ifdef TODO
-	mpUnprintedGraphicsCondition = new Condition();
-	if ( mpUnprintedGraphicsCondition )
-		mpUnprintedGraphicsCondition->set();
-	mpUnprintedGraphicsList = new std::list< JavaSalGraphics* >();
-	mpUnprintedGraphicsMutex = new Mutex();
-#endif	// TODO
 
 	return self;
 }
@@ -907,85 +881,11 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 			// We cannot force the print operation to abort until printing has
 			// started
 			if ( mbPrintingStarted && mbPrintOperationAborted )
-			{
 				[pInfo setJobDisposition:NSPrintCancelJob];
-			}
 			else if ( !mbPrintOperationEnded && !mbNewPrintOperationNeeded )
-			{
-				NSSize aPaperSize = [pInfo paperSize];
-				aRet = NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height );
-			}
-		}
-	}
-
-#ifdef TODO
-	if ( mpUnprintedGraphicsCondition && mpUnprintedGraphicsList && mpUnprintedGraphicsMutex )
-	{
-		BOOL bContinue = YES;
-		while ( bContinue )
-		{
-			mpUnprintedGraphicsMutex->acquire();
-
-			// Aborting has higher priority than ending
-			if ( mbPrintOperationAborted )
-			{
-				bContinue = NO;
-
-				while ( mpUnprintedGraphicsList->size() )
-				{
-					delete mpUnprintedGraphicsList->front();
-					mpUnprintedGraphicsList->pop_front();
-				}
-
-				// Cancel all print output
-				if ( mpPrintOperation )
-				{
-					NSPrintInfo *pInfo = [mpPrintOperation printInfo];
-					if ( pInfo )
-						[pInfo setJobDisposition:NSPrintCancelJob];
-				}
-			}
-			else if ( mpUnprintedGraphicsList && mpUnprintedGraphicsList->size() )
-			{
-				bContinue = NO;
-
-				// Set page orientation and adjust view frame
-				if ( mpPrintOperation )
-				{
-					NSPrintInfo *pInfo = [mpPrintOperation printInfo];
-					if ( pInfo )
-					{
-						JavaSalGraphics *pGraphics = mpUnprintedGraphicsList->front();
-						if ( ( pGraphics->mbPaperRotated && pGraphics->meOrientation == ORIENTATION_PORTRAIT ) || ( !pGraphics->mbPaperRotated && pGraphics->meOrientation == ORIENTATION_LANDSCAPE ) )
-							[pInfo setOrientation:NSPaperOrientationLandscape];
-						else
-							[pInfo setOrientation:NSPaperOrientationPortrait];
-
-						NSSize aPaperSize = [pInfo paperSize];
-						[self setFrame:NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height )];
-					}
-				}
-
 				aRet = [self bounds];
-			}
-			else if ( mbPrintOperationEnded )
-			{
-				bContinue = NO;
-			}
-			else
-			{
-				// Wait until the JavaSalPrinter instance aborts, ends, or
-				// adds another unprinted graphics
-				mpUnprintedGraphicsCondition->reset();
-				mpUnprintedGraphicsMutex->release();
-				mpUnprintedGraphicsCondition->wait();
-				mpUnprintedGraphicsMutex->acquire();
-			}
-
-			mpUnprintedGraphicsMutex->release();
 		}
 	}
-#endif // TODO
 
 	return aRet;
 }
@@ -1185,6 +1085,12 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		[mpWindow release];
 		mpWindow = nil;
 	}
+}
+
+- (void)drawUndrawnNativeOps:(JavaSalGraphics *)pGraphics
+{
+	if ( mpPrintView )
+		[mpPrintView drawUndrawnNativeOps:pGraphics];
 }
 
 - (void)end:(id)pObject
@@ -2083,42 +1989,10 @@ sal_Bool JavaSalPrinter::AbortJob()
 
 // -----------------------------------------------------------------------
 
-SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, sal_Bool bNewJobData )
+SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, sal_Bool /* bNewJobData */ )
 {
 	if ( mbGraphics )
 		return NULL;
-
-#ifdef TODO
-	// Fix bug 2060 by creating a new print job with the same printer if a
-	// change in paper size is requested. Change in orientation does not
-	// require a new print job.
-	if ( bNewJobData )
-	{
-		bool bEndJob = false;
-		if ( pSetupData->mePaperFormat == PAPER_USER && ( !pSetupData->mnPaperWidth || !pSetupData->mnPaperHeight ) )
-		{
-			// Fix bug 3660 by ignoring custom paper size with no width or
-			// height as that indicates that the OpenOffice.org code is
-			// automatically inserting a page
-		}
-		else if ( pSetupData->mePaperFormat != mePaperFormat )
-		{
-			bEndJob = true;
-		}
-		else if ( pSetupData->mePaperFormat == PAPER_USER && ( pSetupData->mnPaperWidth != mnPaperWidth || pSetupData->mnPaperHeight != mnPaperHeight ) )
-		{
-			bEndJob = true;
-		}
-
-		if ( bEndJob )
-		{
-			EndJob();
-
-			if ( !StartJob( NULL, maJobName, XubString(), 1, sal_True, sal_False, pSetupData ) )
-				return NULL;
-		}
-	}
-#endif	// TODO
 
 	// Update print info settings
 	UpdatePageInfo( pSetupData );
@@ -2153,6 +2027,14 @@ sal_Bool JavaSalPrinter::EndPage()
 {
 	if ( mpGraphics )
 	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		// This method should have been called on the main thread only in
+		// [VCLPrintView drawRect:]
+		[mpPrintJob drawUndrawnNativeOps:mpGraphics];
+
+		[pPool release];
+
 		delete mpGraphics;
 		mpGraphics = NULL;
 	}
