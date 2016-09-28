@@ -2280,7 +2280,7 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 		CGRect aDestRect = CGRectStandardize( NSRectToCGRect( aDirtyRect ) );
 		if ( CGRectIntersectsRect( aBounds, aDestRect ) )
 		{
-			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+			NSGraphicsContext *pContext = [pWindow graphicsContext];
 			if ( pContext )
 			{
 				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
