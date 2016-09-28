@@ -2231,7 +2231,9 @@ void JavaSalEvent::dispatch()
 		case SALEVENT_MENUCOMMAND:
 		case SALEVENT_MENUDEACTIVATE:
 		{
-			if ( pFrame && pFrame->mbVisible )
+			// Fix crash when pressing the Command-W keys in an unmodified
+			// document that has a modal sheet
+			if ( pFrame && pFrame->mbVisible && ( !pSalData->mbInNativeModalSheet || pFrame != pSalData->mpNativeModalSheetFrame ) )
 			{
 				SalMenuEvent *pMenuEvent = (SalMenuEvent *)mpData;
 				if ( !pMenuEvent )
