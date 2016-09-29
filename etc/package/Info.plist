@@ -882,28 +882,6 @@
 			<key>NSIsRelatedItemType</key>
 			<true/>
 		</dict>
-		<dict>
-			<key>CFBundleTypeExtensions</key>
-			<array>
-				<string>*</string>
-			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>generic.icns</string>
-			<key>CFBundleTypeName</key>
-			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
-			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
-			<key>LSIsAppleDefaultForType</key>
-			<false/>
-			<key>NSDocumentClass</key>
-			<string>VCLDocument</string>
-			<key>NSIsRelatedItemType</key>
-			<true/>
-		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
 	<string>soffice.bin</string>
