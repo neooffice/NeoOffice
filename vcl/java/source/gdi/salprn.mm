@@ -770,7 +770,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8468
 				maDrawRect.origin.x -= pGraphics->mfPageTranslateX;
 				maDrawRect.origin.y += pGraphics->mfPageTranslateY;
-				CGContextTranslateCTM( aContext, pGraphics->mfPageTranslateX, pGraphics->mfPageTranslateY * -1 );
+				CGContextTranslateCTM( aContext, pGraphics->mfPageTranslateX, ( pGraphics->mfPageTranslateY * -1 ) + ( pGraphics->mfPageOutputHeight * ( 1.0f - fScaleFactor ) ) );
 
 				CGContextScaleCTM( aContext, fScaleFactor, fScaleFactor );
 				pGraphics->drawUndrawnNativeOps( aContext, NSRectToCGRect( maDrawRect ) );
@@ -1937,6 +1937,8 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, sal_Bool /* bN
 
 	mpGraphics->mfPageTranslateX = ImplPrinterToPixel( nPageOffX );
 	mpGraphics->mfPageTranslateY = ImplPrinterToPixel( nPageOffY );
+	mpGraphics->mfPageOutputWidth = ImplPrinterToPixel( nOutWidth );
+	mpGraphics->mfPageOutputHeight = ImplPrinterToPixel( nOutHeight );
 	mpGraphics->maNativeBounds = CGRectMake( 0, 0, nPageWidth, nPageHeight );
 
 	mbGraphics = sal_True;
