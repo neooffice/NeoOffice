@@ -878,6 +878,10 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 			[mpPrintOperation release];
 		mpPrintOperation = pPrintOperation;
 		[mpPrintOperation retain];
+
+		// Stop landscape first page from being displayed as portrait in the
+		// print dialog by setting the paper to match the first page
+		[self updatePaper:mnFirstPage];
 	}
 }
 
