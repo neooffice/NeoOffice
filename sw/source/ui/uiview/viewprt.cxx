@@ -190,9 +190,8 @@ SfxTabPage* __EXPORT SwView::CreatePrintOptionsPage(Window* pParent,
 	SfxPrinter *pPrinter = pIDDA->getPrinter( false );
 	if ( pPrinter )
 	{
-		const SwAddPrinterItem* pAddPrinterAttr;
-		if( SFX_ITEM_SET == pPrinter->GetOptions().GetItemState( FN_PARAM_ADDPRINTER, sal_False,
-			(const SfxPoolItem**)&pAddPrinterAttr ) )
+		SFX_ITEMSET_GET( pPrinter->GetOptions(), pAddPrinterAttr, SwAddPrinterItem, FN_PARAM_ADDPRINTER, sal_False );
+		if ( pAddPrinterAttr )
 		{
     		SfxItemSet aSet( rSet );
     		aSet.Put( *pAddPrinterAttr );
