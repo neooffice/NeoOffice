@@ -650,7 +650,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8468
 					aRect.origin.x -= pGraphics->mfPageTranslateX;
 					aRect.origin.y += pGraphics->mfPageTranslateY;
-					CGContextTranslateCTM( aContext, pGraphics->mfPageTranslateX, pGraphics->mfPageTranslateY * -1 );
+					CGContextTranslateCTM( aContext, pGraphics->mfPageTranslateX, ( pGraphics->mfPageTranslateY * -1 ) + ( pGraphics->mfPageOutputHeight * ( 1.0f - fScaleFactor ) ) );
 
 					CGContextScaleCTM( aContext, fScaleFactor, fScaleFactor );
 					pGraphics->drawUndrawnNativeOps( aContext, NSRectToCGRect( aRect ) );
@@ -1725,6 +1725,8 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 
 		mpGraphics->mfPageTranslateX = (float)nPageOffX * 72 / MIN_PRINTER_RESOLUTION;
 		mpGraphics->mfPageTranslateY = (float)nPageOffY * 72 / MIN_PRINTER_RESOLUTION;
+		mpGraphics->mfPageOutputWidth = (float)nOutWidth * 72 / MIN_PRINTER_RESOLUTION;
+		mpGraphics->mfPageOutputHeight = (float)nOutHeight * 72 / MIN_PRINTER_RESOLUTION;
 		mpGraphics->maNativeBounds = CGRectMake( 0, 0, nPageWidth, nPageHeight );
 	}
 
