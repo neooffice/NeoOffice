@@ -236,6 +236,8 @@ public:
 	sal_Bool				mbPaperRotated;
 	float					mfPageTranslateX;
 	float					mfPageTranslateY;
+	float					mfPageOutputWidth;
+	float					mfPageOutputHeight;
 	CGRect					maNativeBounds;
 
 	static float			getContextBackingFactor( CGContextRef aContext );
