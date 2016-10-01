@@ -7,11 +7,9 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-NeoOffice is a complete office suite. With NeoOffice, users can view, edit, and save OpenOffice documents, LibreOffice documents, and simple Microsoft Word, Excel, and PowerPoint documents.
+NeoOffice is an office suite for Mac that is based on the OpenOffice office suite. With NeoOffice, you can view, edit, and save OpenOffice and LibreOffice documents.
 
-NeoOffice is extremely stable and thousands of users use it daily. The NeoOffice engineers created NeoOffice in 2003 when they made OpenOffice run natively on OS X for the first time.
-
-Since then, the NeoOffice engineers have continually added improvements to NeoOffice that users will not find in OpenOffice or LibreOffice such as:
+Two engineers created NeoOffice in 2003 when they made OpenOffice run natively on OS X for the first time. Since then, the NeoOffice engineers have continually added improvements to NeoOffice that you will not find in OpenOffice or LibreOffice such as:
 
 • NeoOffice > Open at Launch menu to open Calc or Impress instead of Writer at launch
 • File > Browse All Versions menu to restore previous versions of your documents
@@ -34,7 +32,7 @@ This version of NeoOffice fixes the following bugs:
 
 
 Keywords:
-neo,office,belge,hesap,tablosu,metin,sunum,open,libre,word,excel
+neo,office,belge,hesap,tablosu,metin,sunum,open,libre
 
 Support URL:
 http://www.neooffice.org/neojava/macappstore.php
