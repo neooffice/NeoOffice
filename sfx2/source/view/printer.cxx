@@ -304,23 +304,21 @@ short SfxPrintOptionsDialog::Execute()
                 Printer *pPrinter = pSetupDlg->GetPrinter();
                 if ( pPrinter )
                 {
-                    Printer *pTempPrinter = new Printer( pPrinter->GetJobSetup() );
-                    if ( pTempPrinter )
-                    {
-                        pDlgImpl->mbShowPrintSetupDialog = false;
+                    pDlgImpl->mbShowPrintSetupDialog = false;
 
-                        // If the user presses the native page setup dialog's OK
-                        // button, signal that action to the code in the
-                        // svtools/source/dialog/prnsetup.cxx file by changing
-                        // the dialog's printer
-                        if ( pTempPrinter->Setup( this ) )
+                    Printer aTempPrinter( pPrinter->GetJobSetup() );
+
+                    // If the user presses the native page setup dialog's OK
+                    // button, signal that action to the code in the
+                    // svtools/source/dialog/prnsetup.cxx file by changing
+                    // the dialog's printer
+                    if ( aTempPrinter.Setup( this ) )
+                    {
+                        SfxPrinter *pViewPrinter = pViewSh->GetPrinter( sal_True );
+                        if ( pViewPrinter )
                         {
-                            SfxPrinter *pViewPrinter = pViewSh->GetPrinter( sal_True );
-                            if ( pViewPrinter )
-                            {
-                                pViewPrinter->SetJobSetup( pTempPrinter->GetJobSetup() );
-                                pViewSh->SetPrinter( pViewPrinter, SFX_PRINTER_CHG_ORIENTATION | SFX_PRINTER_CHG_SIZE );
-                            }
+                            pViewPrinter->SetJobSetup( aTempPrinter.GetJobSetup() );
+                            pViewSh->SetPrinter( pViewPrinter, SFX_PRINTER_CHG_ORIENTATION | SFX_PRINTER_CHG_SIZE );
                         }
                     }
                 }
