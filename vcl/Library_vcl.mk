@@ -234,6 +234,7 @@ endif
 endif
 endif
 $(eval $(call gb_Library_add_objcxxobjects,vcl,\
+    vcl/aqua/source/gdi/aquaprintaccessoryview \
     vcl/java/source/app/salinst \
     vcl/java/source/app/salinst_cocoa \
     vcl/java/source/dtrans/DTransTransferable \
@@ -254,6 +255,7 @@ $(eval $(call gb_Library_add_objcxxobjects,vcl,\
     vcl/source/app/svmainhook_cocoa \
 ))
 $(eval $(call gb_Library_add_exception_objects,vcl,\
+    vcl/aqua/source/app/salinst \
     vcl/java/source/app/saldata \
     vcl/java/source/app/salinfo \
     vcl/java/source/app/saltimer \
