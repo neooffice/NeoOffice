@@ -47,6 +47,7 @@
 
 #include "jobset.h"
 #include "salptype.hxx"
+#include "aqua/aquaprintview.h"
 #include "java/salframe.h"
 #include "java/salgdi.h"
 #include "java/salinst.h"
@@ -567,6 +568,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	JavaSalInfoPrinter*		mpInfoPrinter;
 	NSString*				mpJobName;
 	sal_Bool				mbMonitorVisible;
+	BOOL					mbNeedsRestart;
 	NSUInteger				mnPageCount;
 	vcl::PrinterController*	mpPrinterController;
 	sal_uInt32				mnPrintJobCounter;
@@ -585,6 +587,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 - (BOOL)finished;
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo jobName:(NSString *)pJobName infoPrinter:(JavaSalInfoPrinter *)pInfoPrinter printerController:(vcl::PrinterController *)pPrinterController scaleFactor:(float)fScaleFactor;
 - (const ImplJobSetup *)jobSetupForPage:(NSInteger)nPageNumber;
+- (BOOL)needsRestart;
 - (NSPrintInfo *)printInfo;
 - (void)printOperationDidRun:(NSPrintOperation *)pPrintOperation success:(BOOL)bSuccess contextInfo:(void *)pContextInfo;
 - (BOOL)result;
@@ -1091,6 +1094,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	if ( mpJobName )
 		[mpJobName retain];
 	mbMonitorVisible = sal_True;
+	mbNeedsRestart = NO;
 	mnPageCount = 0;
 	mpPrinterController = pPrinterController;
 	mnPrintJobCounter = 0;
@@ -1162,6 +1166,11 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	return pRet;
 }
 
+- (BOOL)needsRestart
+{
+	return mbNeedsRestart;
+}
+
 - (NSPrintInfo *)printInfo
 {
 	if ( mbResult )
@@ -1180,7 +1189,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	if ( [NSPrintOperation currentOperation] == pPrintOperation )
 		[NSPrintOperation setCurrentOperation:nil];
 
-	if ( mbAborted || mbFinished || mbResult )
+	if ( mbAborted || mbFinished || mbNeedsRestart || mbResult )
 		return;
 
 	@try
@@ -1255,7 +1264,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 {
 	BOOL bRet = NO;
 
-	if ( mbAborted || mbFinished || !mpInfo || !mpPrintView || mbResult || [NSPrintOperation currentOperation] )
+	if ( mbAborted || mbFinished || !mpInfo || mbNeedsRestart || !mpPrintView || mbResult || [NSPrintOperation currentOperation] )
 		return bRet;
 
 	const ImplJobSetup *pSetupData = [self jobSetupForPage:[mpPrintView firstPage]];
@@ -1322,6 +1331,9 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
+			PrintAccessoryViewState aAccViewState;
+			NSObject *pAccViewObj = nil;
+
 			@try
 			{
 				// When running in the sandbox, native file dialog calls may
@@ -1344,7 +1356,15 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 				if ( pJobName )
 					[mpPrintOperation setJobTitle:pJobName];
 
-				[mpPrintOperation setShowsPrintPanel:bFirstPrintOperation];
+				if ( bFirstPrintOperation )
+				{
+					[mpPrintOperation setShowsPrintPanel:YES];
+                    pAccViewObj = [AquaPrintAccessoryView setupPrinterPanel:mpPrintOperation withController:mpPrinterController withState:&aAccViewState];
+				}
+				else
+				{
+					[mpPrintOperation setShowsPrintPanel:NO];
+				}
 
 				// Since we only run a modal print operation, always show the
 				// progress panel so that the application does not appear to
@@ -1362,6 +1382,10 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 				// requires that we dispatch OOo events and that causes
 				// unpredictable changes to the native print graphics context
 				[self printOperationDidRun:mpPrintOperation success:[mpPrintOperation runOperation] contextInfo:nil];
+
+				// Check if any OOo properties changed
+				if ( bFirstPrintOperation && aAccViewState.bNeedRestart )
+					mbNeedsRestart = YES;
 			}
 			@catch ( NSException *pExc )
 			{
@@ -1372,6 +1396,9 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 				if ( pExc )
 					NSLog( @"%@", [pExc callStackSymbols] );
 			}
+
+			if ( pAccViewObj )
+				[pAccViewObj release];
 		}
 
 		rSolarMutex.release();
@@ -1388,7 +1415,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		return;
 
 	// Do not allow recursion or reuse
-	if ( mbAborted || mbFinished || !mpInfo || !mpPrinterController || mpPrintOperation || mpPrintView || mbResult || [NSPrintOperation currentOperation] )
+	if ( mbAborted || mbFinished || !mpInfo || mbNeedsRestart || !mpPrinterController || mpPrintOperation || mpPrintView || mbResult || [NSPrintOperation currentOperation] )
 		return;
 
 	// Fix crashing bug reported in the following NeoOffice forum topic by
@@ -1822,41 +1849,52 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 		// to emulate a modal dialog
 		if ( VCLInstance_setDragLock( sal_True ) )
 		{
-			mpPrintJob = [[JavaSalPrinterPrintJob alloc] initWithPrintInfo:mpInfo jobName:[NSString stringWithCharacters:aJobName.GetBuffer() length:aJobName.Len()] infoPrinter:mpInfoPrinter printerController:&rController scaleFactor:fScaleFactor];
-			if ( mpPrintJob )
+			BOOL bNeedsRestart = YES;
+			while ( bNeedsRestart )
 			{
-				rController.jobStarted();
-
-				// Don't lock mutex as we expect callbacks to this object from
-				// a different thread while the dialog is showing
-				sal_uLong nCount = Application::ReleaseSolarMutex();
-
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[mpPrintJob performSelectorOnMainThread:@selector(runPrintJob:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
-
-				Application::AcquireSolarMutex( nCount );
-
-				bRet = [(JavaSalPrinterPrintJob *)mpPrintJob result];
-				if ( bRet )
+				mpPrintJob = [[JavaSalPrinterPrintJob alloc] initWithPrintInfo:mpInfo jobName:[NSString stringWithCharacters:aJobName.GetBuffer() length:aJobName.Len()] infoPrinter:mpInfoPrinter printerController:&rController scaleFactor:fScaleFactor];
+				if ( mpPrintJob )
 				{
-					bAborted = [(JavaSalPrinterPrintJob *)mpPrintJob aborted];
+					// Don't lock mutex as we expect callbacks to this object
+					// from a different thread while the dialog is showing
+					sal_uLong nCount = Application::ReleaseSolarMutex();
 
-					NSPrintInfo *pInfo = [mpPrintJob printInfo];
-					if ( pInfo )
+					NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+					[mpPrintJob performSelectorOnMainThread:@selector(runPrintJob:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
+
+					Application::AcquireSolarMutex( nCount );
+
+					bNeedsRestart = [(JavaSalPrinterPrintJob *)mpPrintJob needsRestart];
+					if ( bNeedsRestart )
 					{
-						if ( pInfo != mpInfo )
+						[mpPrintJob performSelectorOnMainThread:@selector(destroy:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
+						[mpPrintJob release];
+						mpPrintJob = nil;
+						continue;
+					}
+
+					bRet = [(JavaSalPrinterPrintJob *)mpPrintJob result];
+					if ( bRet )
+					{
+						bAborted = [(JavaSalPrinterPrintJob *)mpPrintJob aborted];
+	
+						NSPrintInfo *pInfo = [mpPrintJob printInfo];
+						if ( pInfo )
 						{
-							if ( mpInfo )
-								[mpInfo release];
-							mpInfo = pInfo;
-							[mpInfo retain];
+							if ( pInfo != mpInfo )
+							{
+								if ( mpInfo )
+									[mpInfo release];
+								mpInfo = pInfo;
+								[mpInfo retain];
+							}
 						}
 					}
-				}
 
-				[mpPrintJob performSelectorOnMainThread:@selector(destroy:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
-				[mpPrintJob release];
-				mpPrintJob = nil;
+					[mpPrintJob performSelectorOnMainThread:@selector(destroy:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
+					[mpPrintJob release];
+					mpPrintJob = nil;
+				}
 			}
 
 			VCLInstance_setDragLock( sal_False );
@@ -1867,6 +1905,13 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 		JavaSalEventQueue::setShutdownDisabled( sal_False );
 	}
 
+	view::PrintableState nPrintableState = ( bRet && !bAborted ? view::PrintableState_JOB_SPOOLED : view::PrintableState_JOB_ABORTED );
+
+	// Only mark the job as started if the print job was successful as it may
+	// set the document status to modified
+	if ( nPrintableState == view::PrintableState_JOB_SPOOLED )
+		rController.jobStarted();
+
 	// Per the comments at the end of the AquaSalInfoPrinter::StartJob() method
 	// in vcl/aqua/source/gdi/salprn.cxx, we need to set the controller's last
 	// page property and fetch the meta file for the last page. Otherwise,
@@ -1874,7 +1919,7 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 	rController.setLastPage( sal_True );
 	GDIMetaFile aPageFile;
 	rController.getFilteredPageFile( 0, aPageFile );
-	rController.setJobState( bRet && !bAborted ? view::PrintableState_JOB_SPOOLED : view::PrintableState_JOB_ABORTED );
+	rController.setJobState( nPrintableState );
 
 	return bRet;
 }
