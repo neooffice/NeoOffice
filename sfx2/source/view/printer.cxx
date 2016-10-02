@@ -294,7 +294,43 @@ SfxPrintOptionsDialog::~SfxPrintOptionsDialog()
 short SfxPrintOptionsDialog::Execute()
 {
     if( ! pPage )
+#if defined USE_JAVA && defined MACOSX
+    {
+        if ( pDlgImpl->mbShowPrintSetupDialog )
+        {
+            PrinterSetupDialog *pSetupDlg = dynamic_cast< PrinterSetupDialog* >( GetParent() );
+            if ( pSetupDlg )
+            {
+                Printer *pPrinter = pSetupDlg->GetPrinter();
+                if ( pPrinter )
+                {
+                    Printer *pTempPrinter = new Printer( pPrinter->GetJobSetup() );
+                    if ( pTempPrinter )
+                    {
+                        pDlgImpl->mbShowPrintSetupDialog = false;
+
+                        // If the user presses the native page setup dialog's OK
+                        // button, signal that action to the code in the
+                        // svtools/source/dialog/prnsetup.cxx file by changing
+                        // the dialog's printer
+                        if ( pTempPrinter->Setup( this ) )
+                        {
+                            SfxPrinter *pViewPrinter = pViewSh->GetPrinter( sal_True );
+                            if ( pViewPrinter )
+                            {
+                                pViewPrinter->SetJobSetup( pTempPrinter->GetJobSetup() );
+                                pViewSh->SetPrinter( pViewPrinter, SFX_PRINTER_CHG_ORIENTATION | SFX_PRINTER_CHG_SIZE );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+#endif	// USE_JAVA && MACOSX
         return RET_CANCEL;
+#if defined USE_JAVA && defined MACOSX
+    }
+#endif	// USE_JAVA && MACOSX
     
 	short nRet = ModalDialog::Execute();
 	if ( nRet == RET_OK )
