@@ -725,10 +725,9 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 			SfxObjectShell* pDoc = GetObjectShell();
 
 #if defined USE_JAVA && defined MACOSX
-			// Redirect slot to make sure that the "print selection only" and
-			// other print option dialogs are displayed
-			if ( nId == SID_PRINTDOC)
-				nId = SID_PRINTDOCDIRECT;
+			// Redirect slot to make sure that the print dialog is always shown
+			if ( nId == SID_PRINTDOCDIRECT )
+				nId = SID_PRINTDOC;
 #endif	// USE_JAVA && MACOSX
 
             // derived class may decide to abort this
