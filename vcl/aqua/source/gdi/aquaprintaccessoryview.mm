@@ -1185,9 +1185,19 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
             // Fix incorrect checkbox state after a restart by loading the
             // this property from where it was updated in the
             // ControllerProperties::changePropertyWithBoolValue() method
-            PropertyValue* pVal = pController->getValue( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "PrintContent" ) ) );
+            const PropertyValue* pVal = pController->getValue( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "PrintSelectionOnly" ) ) );
             if ( pVal )
-                pVal->Value >>= aSelectionChecked;
+            {
+                sal_Bool bPrintSelectionOnly;
+                pVal->Value >>= bPrintSelectionOnly;
+                aSelectionChecked = bPrintSelectionOnly ? 2 : 0;
+            }
+            else
+            {
+                pVal = pController->getValue( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "PrintContent" ) ) );
+                if ( pVal )
+                    pVal->Value >>= aSelectionChecked;
+            }
 #endif	// USE_JAVA
 
             bAddSelectionCheckBox = true;
