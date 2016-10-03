@@ -2173,11 +2173,15 @@ void Desktop::Main()
 
         if ( !pExecGlobals->bRestartRequested )
         {
+#if defined USE_JAVA && defined MACOSX
+            if (pCmdLineArgs->IsNoDefault() &&
+#else	// USE_JAVA && MACOSX
             if ((!pCmdLineArgs->IsNoDefault() &&
                  !pCmdLineArgs->WantsToLoadDocument() &&
                  !pCmdLineArgs->IsInvisible() &&
                  !pCmdLineArgs->IsHeadless() &&
                  !pCmdLineArgs->IsQuickstart()) &&
+#endif	// USE_JAVA && MACOSX
                 (SvtModuleOptions().IsModuleInstalled(SvtModuleOptions::E_SSTARTMODULE)) &&
                 (!bExistsRecoveryData                                                  ) &&
                 (!bExistsSessionData                                                   ) &&
