@@ -1123,7 +1123,11 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
     long nCurY = 0;
     long nCurX = 0;
     NSRect aViewFrame = { NSZeroPoint, {600, 400 } };
+#ifdef USE_JAVA
+    NSRect aTabViewFrame = aViewFrame;
+#else	// USE_JAVA
     NSRect aTabViewFrame = { { 190, 0 }, {410, 400 } };
+#endif	// USE_JAVA
     NSSize aMaxTabSize = NSZeroSize;
     NSView* pAccessoryView = [[NSView alloc] initWithFrame: aViewFrame];
     NSTabView* pTabView = [[NSTabView alloc] initWithFrame: aTabViewFrame];
