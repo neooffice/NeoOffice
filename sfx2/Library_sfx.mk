@@ -277,7 +277,6 @@ $(eval $(call gb_Library_add_exception_objects,sfx,\
 	sfx2/source/view/frmload \
 	sfx2/source/view/ipclient \
 	sfx2/source/view/orgmgr \
-	sfx2/source/view/printer \
 	sfx2/source/view/sfxbasecontroller \
 	sfx2/source/view/userinputinterception \
 	sfx2/source/view/viewfac \
@@ -286,6 +285,20 @@ $(eval $(call gb_Library_add_exception_objects,sfx,\
 	sfx2/source/view/viewprn \
 	sfx2/source/view/viewsh \
 ))
+
+ifeq ($(OS),MACOSX)
+# Fix crash in SwAddPrinterTabPage::Reset() when selecting the
+# File > Printer Settings menu in a non-empty Writer document and then
+# cancelling the OpenOffice printer settings dialog
+$(eval $(call gb_Library_add_cxxobjects,sfx,\
+	sfx2/source/view/printer \
+    , $(gb_COMPILERNOOPTFLAGS) $(gb_LinkTarget_EXCEPTIONFLAGS) \
+))
+else
+$(eval $(call gb_Library_add_exception_objects,sfx,\
+	sfx2/source/view/printer \
+))
+endif
 
 # i116803: crash in impress when
 # "opening stylist, select graphic style, select modify from context menu, cancel dialog, close stylist"
