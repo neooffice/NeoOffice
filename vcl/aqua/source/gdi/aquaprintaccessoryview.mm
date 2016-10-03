@@ -1112,6 +1112,37 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
     rCurY = aFieldRect.origin.y - 5;
 }
 
+#ifdef USE_JAVA
+
+@interface VCLPrintPanelAccessoryViewController : NSViewController <NSPrintPanelAccessorizing>
+{
+}
+- (NSSet<NSString *> *)keyPathsForValuesAffectingPreview;
+- (void)loadView;
+- (NSArray<NSDictionary<NSString *,NSString *> *> *)localizedSummaryItems;
+@end
+
+@implementation VCLPrintPanelAccessoryViewController
+
+- (NSSet<NSString *> *)keyPathsForValuesAffectingPreview
+{
+    return [NSSet set];
+}
+
+- (void)loadView
+{
+    // Do nothing as there is no nib to load
+}
+
+- (NSArray<NSDictionary<NSString *,NSString *> *> *)localizedSummaryItems
+{
+    return [NSArray array];
+}
+
+@end
+
+#endif	// USE_JAVA
+
 @implementation AquaPrintAccessoryView
 +(NSObject*)setupPrinterPanel: (NSPrintOperation*)pOp withController: (vcl::PrinterController*)pController  withState: (PrintAccessoryViewState*)pState
 {
@@ -1413,7 +1444,19 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
 #endif	// !USE_JAVA
 
     // set the accessory view
+#ifdef USE_JAVA
+    if ( pOp.printPanel )
+    {
+        VCLPrintPanelAccessoryViewController *pAccessoryController = [[VCLPrintPanelAccessoryViewController alloc] initWithNibName:nil bundle:nil];
+        if ( pAccessoryController )
+        {
+            pAccessoryController.view = pAccessoryView;
+            [pOp.printPanel addAccessoryController:pAccessoryController];
+        }
+    }
+#else	// USE_JAVA
     [pOp setAccessoryView: [pAccessoryView autorelease]];
+#endif	// USE_JAVA
     
     // set the current selecte tab item
     if( pState->nLastPage >= 0 && pState->nLastPage < [pTabView numberOfTabViewItems] )
