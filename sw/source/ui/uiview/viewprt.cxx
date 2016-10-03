@@ -266,6 +266,10 @@ void __EXPORT SwView::ExecutePrint(SfxRequest& rReq)
 					return;
                 }
             }
+#if defined USE_JAVA && defined MACOSX
+            // Don't do anything special when printing directly as we always
+            // display a print dialog before printing
+#else	// USE_JAVA && MACOSX
             else if( rReq.GetSlot() == SID_PRINTDOCDIRECT && ! bSilent )
             {
                 if( /*!bIsAPI && */
@@ -279,6 +283,7 @@ void __EXPORT SwView::ExecutePrint(SfxRequest& rReq)
                         bPrintSelection = true;
                 }
             }
+#endif	// USE_JAVA && MACOSX
 
             //#i61455# if master documentes are printed silently without loaded links then update the links now
             if( bSilent && pSh->IsGlobalDoc() && !pSh->IsGlblDocSaveLinks() )
