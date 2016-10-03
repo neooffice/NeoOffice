@@ -1445,15 +1445,28 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
 
     // set the accessory view
 #ifdef USE_JAVA
-    if ( pOp.printPanel )
+    @try
     {
-        VCLPrintPanelAccessoryViewController *pAccessoryController = [[VCLPrintPanelAccessoryViewController alloc] initWithNibName:nil bundle:nil];
-        if ( pAccessoryController )
+        // When running in the sandbox, native file dialog calls may
+        // throw exceptions if the PowerBox daemon process is killed
+        if ( pOp.printPanel )
         {
-            pAccessoryController.view = pAccessoryView;
-            [pOp.printPanel addAccessoryController:pAccessoryController];
+            VCLPrintPanelAccessoryViewController *pAccessoryController = [[VCLPrintPanelAccessoryViewController alloc] initWithNibName:nil bundle:nil];
+            if ( pAccessoryController )
+            {
+                [pAccessoryController autorelease];
+                pAccessoryController.view = pAccessoryView;
+                [pOp.printPanel addAccessoryController:pAccessoryController];
+            }
         }
     }
+    @catch ( NSException *pExc )
+    {
+        if ( pExc )
+            NSLog( @"%@", [pExc callStackSymbols] );
+    }
+
+    [pAccessoryView autorelease];
 #else	// USE_JAVA
     [pOp setAccessoryView: [pAccessoryView autorelease]];
 #endif	// USE_JAVA
