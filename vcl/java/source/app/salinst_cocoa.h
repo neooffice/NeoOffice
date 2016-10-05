@@ -40,9 +40,10 @@
 
 #include "java/salinst.h"
 
-SAL_DLLPRIVATE void NSApplication_dispatchPendingEvents( sal_Bool bInNativeDrag, sal_Bool bWait );
+SAL_DLLPRIVATE void NSApplication_dispatchPendingEvents( sal_Bool bInNativeDragPrint, sal_Bool bWait );
 SAL_DLLPRIVATE id NSApplication_getModalWindow();
-SAL_DLLPRIVATE sal_Bool VCLInstance_setDragLock( sal_Bool bLock );
+SAL_DLLPRIVATE sal_Bool VCLInstance_retainIfInDragPrintLock( id aObject );
+SAL_DLLPRIVATE sal_Bool VCLInstance_setDragPrintLock( sal_Bool bLock );
 SAL_DLLPRIVATE sal_Bool VCLInstance_updateNativeMenus();
 
 // Note: these must not be static as the symbol will be loaded by various

@@ -305,7 +305,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 		// get released during a native drag session. This prevents drag events
 		// from getting dispatched out of order when we release and reacquire
 		// the mutex.
-		if ( VCLInstance_setDragLock( YES ) )
+		if ( VCLInstance_setDragPrintLock( YES ) )
 		{
 			NSDraggingSession *pDraggingSession = nil;
 			if ( mpDragOwner == pTrackDragOwner && mpDragOwner->maContents.is() )
@@ -339,7 +339,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 			if ( pDraggingSession )
 				mbDragStarted = YES;
 			else
-				VCLInstance_setDragLock( NO );
+				VCLInstance_setDragPrintLock( NO );
 		}
 	}
 }
@@ -541,7 +541,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 	// native drag lock so that the OOo code can display any dialogs in the
 	// drop event
 	if ( [pSender draggingSource] )
-		VCLInstance_setDragLock( NO );
+		VCLInstance_setDragPrintLock( NO );
 
 	if ( !mpDestination )
 		return bRet;
@@ -613,14 +613,14 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 
 	if ( !mpSource )
 	{
-		VCLInstance_setDragLock( NO );
+		VCLInstance_setDragPrintLock( NO );
 		return;
 	}
  
 	NSWindow *pWindow = [mpSource window];
 	if ( !pWindow )
 	{
-		VCLInstance_setDragLock( NO );
+		VCLInstance_setDragPrintLock( NO );
 		return;
 	}
  
@@ -665,7 +665,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 		rSolarMutex.release();
 	}
 
-	VCLInstance_setDragLock( NO );
+	VCLInstance_setDragPrintLock( NO );
 }
 
 - (void)draggingSession:(NSDraggingSession *)pSession movedToPoint:(NSPoint)aPoint

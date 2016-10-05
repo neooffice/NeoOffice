@@ -99,9 +99,10 @@ static ::vos::OModule aPreferencesHandlerModule;
 static NativeAboutMenuHandler_Type *pAboutHandler = NULL;
 static NativePreferencesMenuHandler_Type *pPreferencesHandler = NULL;
 static bool bAllowReleaseYieldMutex = false;
-static sal_Bool bInNativeDrag = sal_False;
+static sal_Bool bInNativeDragPrint = sal_False;
 static SalYieldMutex aEventQueueMutex;
 static sal_uLong nCurrentTimeout = 0;
+static NSMutableArray *pObjectsRetainedDuringDragPrintLock = nil;
 
 using namespace com::sun::star;
 using namespace osl;
@@ -202,7 +203,32 @@ static JavaSalFrame *FindValidFrame( JavaSalFrame *pFrame )
 
 // ============================================================================
 
-sal_Bool VCLInstance_setDragLock( sal_Bool bLock )
+sal_Bool VCLInstance_retainIfInDragPrintLock( id aObject )
+{
+	sal_Bool bRet = sal_False;
+
+	if ( !aObject || CFRunLoopGetCurrent() != CFRunLoopGetMain() || !bInNativeDragPrint )
+		return bRet;
+
+	if ( !pObjectsRetainedDuringDragPrintLock )
+	{
+		pObjectsRetainedDuringDragPrintLock = [NSMutableArray arrayWithCapacity:10];
+		if ( pObjectsRetainedDuringDragPrintLock )
+			[pObjectsRetainedDuringDragPrintLock retain];
+	}
+
+	if ( pObjectsRetainedDuringDragPrintLock )
+	{
+		[pObjectsRetainedDuringDragPrintLock addObject:aObject];
+		bRet = YES;
+	}
+
+	return bRet;
+}
+
+// ----------------------------------------------------------------------------
+
+sal_Bool VCLInstance_setDragPrintLock( sal_Bool bLock )
 {
 	sal_Bool bRet = sal_False;
 
@@ -211,13 +237,13 @@ sal_Bool VCLInstance_setDragLock( sal_Bool bLock )
 
 	if ( bLock )
 	{
-		if ( !Application::IsShutDown() && !bInNativeDrag )
+		if ( !Application::IsShutDown() && !bInNativeDragPrint )
 		{
 			IMutex& rSolarMutex = Application::GetSolarMutex();
 			rSolarMutex.acquire();
-			if ( !Application::IsShutDown() && !bInNativeDrag )
+			if ( !Application::IsShutDown() && !bInNativeDragPrint )
 			{	
-				bInNativeDrag = sal_True;
+				bInNativeDragPrint = sal_True;
 				bRet = sal_True;
 			}
 			else
@@ -227,9 +253,11 @@ sal_Bool VCLInstance_setDragLock( sal_Bool bLock )
 			}
 		}
 	}
-	else if ( bInNativeDrag )
+	else if ( bInNativeDragPrint )
 	{
-		bInNativeDrag = sal_False;
+		bInNativeDragPrint = sal_False;
+		if ( pObjectsRetainedDuringDragPrintLock )
+			[pObjectsRetainedDuringDragPrintLock removeAllObjects];
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.release();
 		bRet = sal_True;
@@ -251,7 +279,7 @@ sal_Bool VCLInstance_updateNativeMenus()
 
 	// Check if there is a native modal window as we will deadlock when a
 	// native modal window is showing.
-	if ( bInNativeDrag || NSApplication_getModalWindow() )
+	if ( bInNativeDragPrint || NSApplication_getModalWindow() )
 		return bRet;
 
 	// Fix bug 2783 by cancelling menu actions if the input method if the
@@ -528,7 +556,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		// Fix bug 2731 by not doing this when we are in the begin menubar
 		// tracking handler
 		if ( pSalData->maNativeEventCondition.check() )
-			NSApplication_dispatchPendingEvents( bInNativeDrag, bWait );
+			NSApplication_dispatchPendingEvents( bInNativeDragPrint, bWait );
 	}
 	else
 	{
@@ -1103,7 +1131,7 @@ void SalYieldMutex::acquire()
 				// OOo dialog is closed first by dispatching any pending
 				// NSModalPanelRunLoopMode events
 				if ( NSApplication_getModalWindow() )
-					NSApplication_dispatchPendingEvents( bInNativeDrag, sal_False );
+					NSApplication_dispatchPendingEvents( bInNativeDragPrint, sal_False );
 
 				// Fix crashing bug when quitting by checking if another thread
 				// has started shutting down the application to avoid using this
@@ -1182,7 +1210,7 @@ sal_uLong SalYieldMutex::ReleaseAcquireCount()
 	// Never release the mutex in the main thread as it can cause crashing
 	// when dragging when the OOo code's VCL event dispatching thread runs
 	// while we are in the middle of a native drag event
-	if ( ( !bAllowReleaseYieldMutex || bInNativeDrag ) && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
+	if ( ( !bAllowReleaseYieldMutex || bInNativeDragPrint ) && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 		return nRet;
 
 	if ( mnThreadId == OThread::getCurrentIdentifier() )

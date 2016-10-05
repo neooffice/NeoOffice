@@ -44,6 +44,8 @@
 #include "java/salgdi.h"
 #include "java/salinst.h"
 
+#include "../app/salinst_cocoa.h"
+
 class SAL_DLLPRIVATE JavaSalGraphicsCopyLayerOp : public JavaSalGraphicsOp
 {
 	CGLayerRef				maSrcLayer;
@@ -325,6 +327,10 @@ void JavaSalGraphicsDrawEPSOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef 
 		pImageRep = [NSPDFImageRep imageRepWithData:(NSData *)maData];
 	if ( pImageRep )
 	{
+		// Fix crash after printing an EPS image by retaining the EPS image
+		// until after the print operation has ended
+		VCLInstance_retainIfInDragPrintLock( pImageRep );
+
 		NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:aContext flipped:NO];
 		if ( pContext )
 		{

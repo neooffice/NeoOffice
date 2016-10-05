@@ -1456,13 +1456,13 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 
 	// Set drag lock since drawing to windows during a print operation causes
 	// unpredictable changes to the native print graphics context
-	if ( VCLInstance_setDragLock( sal_True ) )
+	if ( VCLInstance_setDragPrintLock( sal_True ) )
 	{
 		// Run first print operation
 		[self runNextPrintOperation:YES];
 
 		// Multiple print operations should recurse within first print operation
-		VCLInstance_setDragLock( sal_False );
+		VCLInstance_setDragPrintLock( sal_False );
 	}
 }
 
