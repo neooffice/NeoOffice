@@ -206,6 +206,9 @@ sal_Bool VCLInstance_setDragLock( sal_Bool bLock )
 {
 	sal_Bool bRet = sal_False;
 
+	if ( CFRunLoopGetCurrent() != CFRunLoopGetMain() )
+		return bRet;
+
 	if ( bLock )
 	{
 		if ( !Application::IsShutDown() && !bInNativeDrag )

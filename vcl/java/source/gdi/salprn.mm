@@ -1454,8 +1454,16 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 
 	mpPrintView = [[VCLPrintView alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 ) printJob:self printerController:mpPrinterController pageCount:mnPageCount lastPagePrinted:0];
 
-	// Run first print operation
-	[self runNextPrintOperation:YES];
+	// Set drag lock since drawing to windows during a print operation causes
+	// unpredictable changes to the native print graphics context
+	if ( VCLInstance_setDragLock( sal_True ) )
+	{
+		// Run first print operation
+		[self runNextPrintOperation:YES];
+
+		// Multiple print operations should recurse within first print operation
+		VCLInstance_setDragLock( sal_False );
+	}
 }
 
 @end
@@ -1845,59 +1853,52 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 		// Update print info settings
 		UpdatePageInfo( pSetupData );
 
-		// Set drag lock since print job uses modal dialogs
-		// to emulate a modal dialog
-		if ( VCLInstance_setDragLock( sal_True ) )
+		BOOL bNeedsRestart = YES;
+		while ( bNeedsRestart )
 		{
-			BOOL bNeedsRestart = YES;
-			while ( bNeedsRestart )
+			mpPrintJob = [[JavaSalPrinterPrintJob alloc] initWithPrintInfo:mpInfo jobName:[NSString stringWithCharacters:aJobName.GetBuffer() length:aJobName.Len()] infoPrinter:mpInfoPrinter printerController:&rController scaleFactor:fScaleFactor];
+			if ( mpPrintJob )
 			{
-				mpPrintJob = [[JavaSalPrinterPrintJob alloc] initWithPrintInfo:mpInfo jobName:[NSString stringWithCharacters:aJobName.GetBuffer() length:aJobName.Len()] infoPrinter:mpInfoPrinter printerController:&rController scaleFactor:fScaleFactor];
-				if ( mpPrintJob )
+				// Don't lock mutex as we expect callbacks to this object
+				// from a different thread while the dialog is showing
+				sal_uLong nCount = Application::ReleaseSolarMutex();
+
+				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+				[mpPrintJob performSelectorOnMainThread:@selector(runPrintJob:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
+
+				Application::AcquireSolarMutex( nCount );
+
+				bNeedsRestart = [(JavaSalPrinterPrintJob *)mpPrintJob needsRestart];
+				if ( bNeedsRestart )
 				{
-					// Don't lock mutex as we expect callbacks to this object
-					// from a different thread while the dialog is showing
-					sal_uLong nCount = Application::ReleaseSolarMutex();
-
-					NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-					[mpPrintJob performSelectorOnMainThread:@selector(runPrintJob:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
-
-					Application::AcquireSolarMutex( nCount );
-
-					bNeedsRestart = [(JavaSalPrinterPrintJob *)mpPrintJob needsRestart];
-					if ( bNeedsRestart )
-					{
-						[mpPrintJob performSelectorOnMainThread:@selector(destroy:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
-						[mpPrintJob release];
-						mpPrintJob = nil;
-						continue;
-					}
-
-					bRet = [(JavaSalPrinterPrintJob *)mpPrintJob result];
-					if ( bRet )
-					{
-						bAborted = [(JavaSalPrinterPrintJob *)mpPrintJob aborted];
-	
-						NSPrintInfo *pInfo = [mpPrintJob printInfo];
-						if ( pInfo )
-						{
-							if ( pInfo != mpInfo )
-							{
-								if ( mpInfo )
-									[mpInfo release];
-								mpInfo = pInfo;
-								[mpInfo retain];
-							}
-						}
-					}
-
 					[mpPrintJob performSelectorOnMainThread:@selector(destroy:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
 					[mpPrintJob release];
 					mpPrintJob = nil;
+					continue;
 				}
-			}
 
-			VCLInstance_setDragLock( sal_False );
+				bRet = [(JavaSalPrinterPrintJob *)mpPrintJob result];
+				if ( bRet )
+				{
+					bAborted = [(JavaSalPrinterPrintJob *)mpPrintJob aborted];
+
+					NSPrintInfo *pInfo = [mpPrintJob printInfo];
+					if ( pInfo )
+					{
+						if ( pInfo != mpInfo )
+						{
+							if ( mpInfo )
+								[mpInfo release];
+							mpInfo = pInfo;
+							[mpInfo retain];
+						}
+					}
+				}
+
+				[mpPrintJob performSelectorOnMainThread:@selector(destroy:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
+				[mpPrintJob release];
+				mpPrintJob = nil;
+			}
 		}
 
 		[pPool release];
