@@ -271,7 +271,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	mpOpenPanel = pOpenPanel;
 
 	if ( aCompletionHandler )
-		aCompletionHandler( NSCancelButton );
+		aCompletionHandler( NSModalResponseCancel );
 }
 
 - (Class)documentClassForType:(NSString *)pDocumentTypeName
