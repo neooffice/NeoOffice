@@ -203,6 +203,13 @@ static JavaSalFrame *FindValidFrame( JavaSalFrame *pFrame )
 
 // ============================================================================
 
+sal_Bool VCLInstance_isInDragPrintLock()
+{
+	return ( CFRunLoopGetCurrent() == CFRunLoopGetMain() && bInNativeDragPrint );
+}
+
+// ----------------------------------------------------------------------------
+
 sal_Bool VCLInstance_retainIfInDragPrintLock( id aObject )
 {
 	sal_Bool bRet = sal_False;

@@ -1333,6 +1333,8 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		{
 			PrintAccessoryViewState aAccViewState;
 			NSObject *pAccViewObj = nil;
+			sal_Bool bInDragPrintLock = VCLInstance_isInDragPrintLock();
+			sal_Bool bNeedToReleaseDragPrintLock = sal_False;
 
 			@try
 			{
@@ -1378,14 +1380,30 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 				[NSPrintOperation setCurrentOperation:mpPrintOperation];
 				[mpPrintView setPrintOperation:mpPrintOperation];
 
-				// Only run a modal print operation because using a sheet
-				// requires that we dispatch OOo events and that causes
-				// unpredictable changes to the native print graphics context
-				[self printOperationDidRun:mpPrintOperation success:[mpPrintOperation runOperation] contextInfo:nil];
+				// Set drag lock if it has not already been set since drawing
+				// to windows during a print operation causes unpredictable
+				// changes to the native print graphics context
+				if ( !bInDragPrintLock )
+					bNeedToReleaseDragPrintLock = VCLInstance_setDragPrintLock( sal_True );
+				if ( bInDragPrintLock || bNeedToReleaseDragPrintLock )
+				{
+					// Only run a modal print operation because using a sheet
+					// requires that we dispatch OOo events and that causes
+					// unpredictable changes to the native print graphics
+					// context
+					[self printOperationDidRun:mpPrintOperation success:[mpPrintOperation runOperation] contextInfo:nil];
 
-				// Check if any OOo properties changed
-				if ( bFirstPrintOperation && aAccViewState.bNeedRestart )
-					mbNeedsRestart = YES;
+					// Check if any OOo properties changed
+					if ( bFirstPrintOperation && aAccViewState.bNeedRestart )
+						mbNeedsRestart = YES;
+				}
+				else
+				{
+					mbAborted = YES;
+					mbFinished = YES;
+					if ( [NSPrintOperation currentOperation] == mpPrintOperation )
+						[NSPrintOperation setCurrentOperation:nil];
+				}
 			}
 			@catch ( NSException *pExc )
 			{
@@ -1396,6 +1414,9 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 				if ( pExc )
 					NSLog( @"%@", [pExc callStackSymbols] );
 			}
+
+			if ( bNeedToReleaseDragPrintLock )
+				VCLInstance_setDragPrintLock( sal_False );
 
 			if ( pAccViewObj )
 				[pAccViewObj release];
@@ -1454,16 +1475,8 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 
 	mpPrintView = [[VCLPrintView alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 ) printJob:self printerController:mpPrinterController pageCount:mnPageCount lastPagePrinted:0];
 
-	// Set drag lock since drawing to windows during a print operation causes
-	// unpredictable changes to the native print graphics context
-	if ( VCLInstance_setDragPrintLock( sal_True ) )
-	{
-		// Run first print operation
-		[self runNextPrintOperation:YES];
-
-		// Multiple print operations should recurse within first print operation
-		VCLInstance_setDragPrintLock( sal_False );
-	}
+	// Run first print operation
+	[self runNextPrintOperation:YES];
 }
 
 @end

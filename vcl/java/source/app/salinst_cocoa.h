@@ -42,6 +42,7 @@
 
 SAL_DLLPRIVATE void NSApplication_dispatchPendingEvents( sal_Bool bInNativeDragPrint, sal_Bool bWait );
 SAL_DLLPRIVATE id NSApplication_getModalWindow();
+SAL_DLLPRIVATE sal_Bool VCLInstance_isInDragPrintLock();
 SAL_DLLPRIVATE sal_Bool VCLInstance_retainIfInDragPrintLock( id aObject );
 SAL_DLLPRIVATE sal_Bool VCLInstance_setDragPrintLock( sal_Bool bLock );
 SAL_DLLPRIVATE sal_Bool VCLInstance_updateNativeMenus();
