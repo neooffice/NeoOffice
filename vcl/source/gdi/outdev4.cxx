@@ -267,8 +267,23 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
         aRect.Top() = aBorderRect.Bottom();
         aPoly[0] = aBorderRect.TopLeft();
         aPoly[1] = aBorderRect.TopRight();
+#if defined USE_JAVA && defined MACOSX
+        // Fix printing bug reported in the following NeoOffice forum post by
+        // underlapping all successive stripes with the current color:
+        // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
+        if ( meRasterOp == ROP_OVERPAINT )
+        {
+            aPoly[2] = aFullRect.BottomRight();
+            aPoly[3] = aFullRect.BottomLeft();
+        }
+        else
+        {
+#endif	// USE_JAVA && MACOSX
         aPoly[2] = aBorderRect.BottomRight();
         aPoly[3] = aBorderRect.BottomLeft();
+#if defined USE_JAVA && defined MACOSX
+        }
+#endif	// USE_JAVA && MACOSX
         aPoly.Rotate( aCenter, nAngle );
         if ( bMtf )
             mpMetaFile->AddAction( new MetaPolygonAction( aPoly ) );
