@@ -3105,34 +3105,6 @@ void SAL_CALL SwXTextDocument::render(
     if(!IsValid())
         throw RuntimeException();
 
-#ifdef USE_JAVA
-    // Fix bug 2548 by reverting to browser mode at the end of PDF export
-    sal_Int32 nPropertyCount = rxOptions.getLength();
-    for( sal_Int32 nProperty = 0; nProperty < nPropertyCount; ++nProperty )
-    {
-        if ( rxOptions[ nProperty ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "ToggleBrowserMode" ) ) )
-        {
-            sal_Bool bToggleBrowserMode;
-            rxOptions[ nProperty ].Value >>= bToggleBrowserMode;
-            if ( bToggleBrowserMode )
-            {
-                const bool bIsPDFExport = !lcl_SeqHasProperty( rxOptions, "IsPrinter" );
-                bool bIsSwSrcView = false;
-                SfxViewShell *pView = GetRenderView( bIsSwSrcView, rxOptions, bIsPDFExport );
-
-                pDocShell->ToggleBrowserMode( true, (SwView *)pView );
-
-                const TypeId aSwViewTypeId = TYPE(SwView);
-                SwWrtShell* pWrtShell = ( pView && pView->IsA(aSwViewTypeId) ? ((SwView*)pView)->GetWrtShellPtr() : 0 );
-                if ( pWrtShell )
-                    pWrtShell->ViewShell::UpdateFlds( sal_True );
-            }
-
-            break;
-        }
-    }
-#endif	// USE_JAVA
-
     // due to #110067# (document page count changes sometimes during
     // PDF export/printing) we can not check for the upper bound properly.
     // Thus instead of throwing the exception we silently return.
