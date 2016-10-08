@@ -889,13 +889,38 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 
 @end
 
-void NSApplication_dispatchPendingEvents( sal_Bool bInNativeDrag, sal_Bool bWait )
+void NSApplication_dispatchPendingEvents( sal_Bool bInNativePrintDrag, sal_Bool bWait )
 {
+	if ( CFRunLoopGetCurrent() != CFRunLoopGetMain() )
+		return;
+
 	// Do not dispatch any native events in a native drag session as it causes
 	// the [NSView dragImage:at:offset:event:pasteboard:source:slideBack:]
 	// selector to never return
-	if ( bInNativeDrag || CFRunLoopGetCurrent() != CFRunLoopGetMain() )
-		return;
+	if ( bInNativePrintDrag )
+	{
+		BOOL bModalWindow = NO;
+
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		// Fix freeze when in a Writer document with lengthy table cells and
+		// Writer tries to display the repagination dialog after unchecking the
+		// "print selection only" checkbox in the print panel's accessory view
+		// by aborting the current native modal window
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp && [pApp modalWindow] )
+		{
+			bModalWindow = YES;
+			[pApp abortModal];
+		}
+
+		[pPool release];
+
+		// Do not return if we aborted a native modal window as the modal
+		// window will not abort until we dispatch some native events
+		if ( !bModalWindow )
+			return;
+	}
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
