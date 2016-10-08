@@ -173,9 +173,16 @@ class ControllerProperties
             // and they don't let us cancel the dialog either
             // hack: send a cancel message to the window displaying our views.
             // this is ugly.
+#ifdef USE_JAVA
+            NSApplication *pApp = [NSApplication sharedApplication];
+            if ( pApp && [pApp modalWindow] )
+                [pApp abortModal];
+            [mpOp setShowsProgressPanel:NO];
+#else	// USE_JAVA
             NSWindow* pNSWindow = [NSApp modalWindow];
             if( pNSWindow )
                 [pNSWindow cancelOperation: nil];
+#endif	// USE_JAVA
             [[mpOp printInfo] setJobDisposition: NSPrintCancelJob];
         }
 #ifndef USE_JAVA
