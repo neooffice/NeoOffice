@@ -66,6 +66,13 @@
 #include "view.hrc"
 #include "helpid.hrc"
 
+#ifdef USE_JAVA
+
+#include "com/sun/star/view/XViewSettingsSupplier.hpp"
+static const ::rtl::OUString sShowOnlineLayout( RTL_CONSTASCII_USTRINGPARAM( "ShowOnlineLayout"));
+
+#endif	// USE_JAVA
+
 using namespace com::sun::star;
 using namespace com::sun::star::uno;
 
@@ -87,6 +94,9 @@ class SfxPrinterController : public vcl::PrinterController, public SfxListener
 	sal_Bool        m_bTempPrinter;
 	util::DateTime	m_aLastPrinted;
 	::rtl::OUString	m_aLastPrintedBy;
+#ifdef USE_JAVA
+	sal_Bool        m_bReChangeToNormalView;
+#endif	// USE_JAVA
 
     Sequence< beans::PropertyValue > getMergedOptions() const;
     const Any& getSelectionObject() const;
@@ -131,6 +141,9 @@ SfxPrinterController::SfxPrinterController( const boost::shared_ptr<Printer>& i_
 	, m_bNeedsChange( sal_False )
 	, m_bApi(i_bApi)
 	, m_bTempPrinter( i_rPrinter.get() != NULL )
+#ifdef USE_JAVA
+	, m_bReChangeToNormalView( sal_False )
+#endif	// USE_JAVA
 {
 	if ( mpViewShell )
 	{
@@ -174,6 +187,24 @@ SfxPrinterController::SfxPrinterController( const boost::shared_ptr<Printer>& i_
             // the first renderer should always be available for the UI options,
             // but catch the exception to be safe
         }
+
+#ifdef USE_JAVA
+        // Determine if this is a Writer document that is in web layout mode
+        // as printing will switch the document to print layout mode
+        Reference< lang::XServiceInfo > xInfo( mxRenderable, UNO_QUERY );
+        if ( xInfo.is() && xInfo->supportsService( rtl::OUString::createFromAscii( "com.sun.star.text.TextDocument" ) ) )
+        {
+            try
+            {
+                Reference< view::XViewSettingsSupplier > xVSettingsSupplier( mpViewShell->GetController(), uno::UNO_QUERY_THROW );
+                uno::Reference< beans::XPropertySet > xViewProperties = xVSettingsSupplier->getViewSettings();
+                xViewProperties->getPropertyValue( sShowOnlineLayout ) >>= m_bReChangeToNormalView;
+            }
+            catch( const uno::Exception& )
+            {
+            }
+        }
+#endif	// USE_JAVA
     }
 
     // set some job parameters
@@ -394,6 +425,24 @@ void SfxPrinterController::jobFinished( com::sun::star::view::PrintableState nSt
             mpViewShell->pImp->m_pPrinterController.reset();
         }
 	}
+
+#ifdef USE_JAVA
+    // If this is a Writer document that was switched from web layout mode to
+    // print layout mode during printing, switch the document back to web
+    // layout mode
+    if ( m_bReChangeToNormalView && mxRenderable.is() )
+    {
+        try
+        {
+            Reference< view::XViewSettingsSupplier > xVSettingsSupplier( mpViewShell->GetController(), uno::UNO_QUERY_THROW );
+            uno::Reference< beans::XPropertySet > xViewProperties = xVSettingsSupplier->getViewSettings();
+            xViewProperties->setPropertyValue( sShowOnlineLayout, uno::makeAny( sal_True ) );
+        }
+        catch( const uno::Exception& )
+        {
+        }
+    }
+#endif	// USE_JAVA
 }
 
 //====================================================================
