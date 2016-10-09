@@ -130,6 +130,7 @@ using namespace vcl;
 @interface VCLMenu : NSMenu
 {
 }
+- (BOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute;
 - (id)initWithTitle:(NSString *)pTitle;
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
 @end
@@ -164,6 +165,17 @@ static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
 static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 @implementation VCLMenu
+
+- (BOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute
+{
+	// Fix missing selector exception that is thrown on some macOS 10.12
+	// machines when selecting a menu item in the macOS menubar by implementing
+	// the deprecated accessibilityIsAttributeSettable: selector
+	if ( [super respondsToSelector:@selector(accessibilityIsAttributeSettable:)] )
+		return [super accessibilityIsAttributeSettable:pAttribute];
+	else
+		return NO;
+}
 
 - (id)initWithTitle:(NSString *)pTitle
 {
