@@ -1028,7 +1028,7 @@ void ViewShell::CalcLayout()
 	// user to cancel if formatting is lasts longer than CALC_LAYOUT_INTERVAL
 	for ( ; ; )
 	{
-		PushToStopFormatStack( NULL, false, mbThumbnail ? 0 : CALC_LAYOUT_INTERVAL );
+		PushToStopFormatStack( NULL, false, mbThumbnail ? 0 : pOpt->IsPrinting() ? CALC_LAYOUT_INTERVAL / 3 : CALC_LAYOUT_INTERVAL );
 #endif	// USE_JAVA
 
 	//Progress einschalten wenn noch keiner Lauft.
