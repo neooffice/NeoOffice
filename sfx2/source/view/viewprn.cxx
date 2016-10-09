@@ -96,6 +96,7 @@ class SfxPrinterController : public vcl::PrinterController, public SfxListener
 	::rtl::OUString	m_aLastPrintedBy;
 #ifdef USE_JAVA
 	sal_Bool        m_bReChangeToNormalView;
+	mutable sal_Bool m_bThumbnail;
 #endif	// USE_JAVA
 
     Sequence< beans::PropertyValue > getMergedOptions() const;
@@ -143,6 +144,7 @@ SfxPrinterController::SfxPrinterController( const boost::shared_ptr<Printer>& i_
 	, m_bTempPrinter( i_rPrinter.get() != NULL )
 #ifdef USE_JAVA
 	, m_bReChangeToNormalView( sal_False )
+	, m_bThumbnail( sal_False )
 #endif	// USE_JAVA
 {
 	if ( mpViewShell )
@@ -260,9 +262,23 @@ Sequence< beans::PropertyValue > SfxPrinterController::getMergedOptions() const
         mxDevice = Reference< awt::XDevice >( pXDevice );
     }
     
+#ifdef USE_JAVA
+    Sequence< beans::PropertyValue > aRenderOptions( 2 );
+#else	// USE_JAVA
     Sequence< beans::PropertyValue > aRenderOptions( 1 );
+#endif	// USE_JAVA
     aRenderOptions[ 0 ].Name = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "RenderDevice" ) );
     aRenderOptions[ 0 ].Value <<= mxDevice;
+#ifdef USE_JAVA
+    aRenderOptions[ 1 ].Name = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "IsThumbnail" ) );
+    aRenderOptions[ 1 ].Value <<= m_bThumbnail;
+
+    // Only allow repagination in Writer documents once per print job. Note:
+    // Writer skips repagination when "print to selection only" is initially
+    // checked so wait until that option is unchecked first.
+    if ( getSelectionObject() == maCompleteSelection )
+        m_bThumbnail = sal_True;
+#endif	// USE_JAVA
 
     aRenderOptions = getJobProperties( aRenderOptions );
     return aRenderOptions;
