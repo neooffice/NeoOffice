@@ -3204,18 +3204,12 @@ void SAL_CALL SwXTextDocument::render(
                     }
                     // <--
 
-#ifdef USE_JAVA
-                    pVwSh->SetThumbnail( m_pPrintUIOptions->getBoolValue( "IsThumbnail", false ) );
-#endif	// USE_JAVA
                     SwPrintData const& rSwPrtOptions =
                         *m_pRenderData->GetSwPrtOptions();
                     if (bPrintProspect)
                         pVwSh->PrintProspect( pOut, rSwPrtOptions, nRenderer );
                     else    // normal printing and PDF export
                         pVwSh->PrintOrPDFExport( pOut, rSwPrtOptions, nRenderer );
-#ifdef USE_JAVA
-                    pVwSh->SetThumbnail( sal_False );
-#endif	// USE_JAVA
 
                     // After printing the last page, we take care for the links coming
                     // from the EditEngine. The links are generated during the painting
