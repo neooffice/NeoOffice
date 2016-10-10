@@ -908,10 +908,16 @@ void NSApplication_dispatchPendingEvents( sal_Bool bInNativePrintDrag, sal_Bool 
 		// "print selection only" checkbox in the print panel's accessory view
 		// by aborting the current native modal window
 		NSApplication *pApp = [NSApplication sharedApplication];
-		if ( pApp && [pApp modalWindow] )
+		if ( pApp )
 		{
-			bModalWindow = YES;
-			[pApp abortModal];
+			NSWindow *pNSWindow = [NSApp modalWindow];
+			if ( pNSWindow )
+			{
+				bModalWindow = YES;
+				[pNSWindow cancelOperation:pNSWindow];
+				[pNSWindow orderOut:pNSWindow];
+				[pApp abortModal];
+			}
 		}
 
 		[pPool release];

@@ -175,8 +175,16 @@ class ControllerProperties
             // this is ugly.
 #ifdef USE_JAVA
             NSApplication *pApp = [NSApplication sharedApplication];
-            if ( pApp && [pApp modalWindow] )
-                [pApp abortModal];
+            if ( pApp )
+            {
+                NSWindow *pNSWindow = [NSApp modalWindow];
+                if ( pNSWindow )
+                {
+                    [pNSWindow cancelOperation:pNSWindow];
+                    [pNSWindow orderOut:pNSWindow];
+                    [pApp abortModal];
+                }
+            }
             [mpOp setShowsProgressPanel:NO];
 #else	// USE_JAVA
             NSWindow* pNSWindow = [NSApp modalWindow];
