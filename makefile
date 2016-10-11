@@ -245,6 +245,7 @@ build.oo_patches: \
 	build.oo_sal_patch \
 	build.oo_sdext_patch \
 	build.oo_solenv_patch \
+	build.oo_svx_patch \
 	build.oo_writerperfect_patch
 	touch "$@"
 

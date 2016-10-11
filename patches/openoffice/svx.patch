@@ -1,0 +1,563 @@
+--- ./inc/svx/gridctrl.hxx	2014-02-25 00:26:26.000000000 -0800
++++ ./inc/svx/gridctrl.hxx	2016-10-10 20:42:17.000000000 -0700
+@@ -238,7 +238,7 @@
+ 
+ 					m_xEmptyRow;		// Datensatz zum einfuegen
+ 
+-	sal_uInt32			m_nAsynAdjustEvent;
++	sal_uLong		m_nAsynAdjustEvent;
+ 
+ 	// if we modify the row for the new record, we automatically insert a "new new row".
+ 	// But if somebody else inserts a new record into the data source, we have to do the same.
+@@ -278,7 +278,7 @@
+ 
+ 	BrowserMode			m_nMode;
+ 	sal_Int32			m_nCurrentPos;		// Aktuelle Position;
+-	sal_uInt32			m_nDeleteEvent;		// EventId fuer asychrone Loeschen von Zeilen
++	sal_uLong			m_nDeleteEvent;		// EventId fuer asychrone Loeschen von Zeilen
+ 	sal_uInt16			m_nOptions;			// Was kann das Control (Insert, Update, Delete)
+ 										// default readonly
+ 	sal_uInt16			m_nOptionMask;		// the mask of options to be enabled in setDataSource
+--- ./inc/svx/SvxColorValueSet.hxx	2014-02-25 00:26:34.000000000 -0800
++++ ./inc/svx/SvxColorValueSet.hxx	2016-10-11 14:43:27.000000000 -0700
+@@ -26,6 +26,8 @@
+ #include "svx/svxdllapi.h"
+ #include <boost/shared_ptr.hpp>
+ 
++#include <map>
++
+ //////////////////////////////////////////////////////////////////////////////
+ 
+ class XColorList;
+@@ -44,6 +46,7 @@
+     sal_uInt32 getColumnCount() const;
+ 
+     void addEntriesForXColorList(const XColorListSharedPtr aXColorList, sal_uInt32 nStartIndex = 1);
++    void addEntriesForXColorList(const XColorListSharedPtr aXColorList, ::std::map< ColorData, sal_uInt32 > *pColorSetMap, sal_uInt32 nStartIndex = 1);
+     Size layoutAllVisible(sal_uInt32 nEntryCount);
+     Size layoutToGivenHeight(sal_uInt32 nHeight, sal_uInt32 nEntryCount);
+ };
+--- ./inc/svx/tbcontrl.hxx	2014-02-25 00:26:26.000000000 -0800
++++ ./inc/svx/tbcontrl.hxx	2016-10-10 21:40:21.000000000 -0700
+@@ -166,6 +166,7 @@
+ class SfxStyleControllerItem_Impl;
+ class SfxStyleSheetBasePool;
+ class SfxTemplateItem;
++class SvxBoxItem;
+ 
+ namespace svx
+ {
+@@ -282,6 +283,7 @@
+ class SVX_DLLPUBLIC SvxFontColorToolBoxControl : public SfxToolBoxControl
+ {
+     ::svx::ToolboxButtonColorUpdater*   pBtnUpdater;
++    Color                               aCurColor;
+ 
+ public:
+ 	SFX_DECL_TOOLBOX_CONTROL();
+@@ -292,6 +294,8 @@
+ 											  const SfxPoolItem* pState );
+ 	virtual SfxPopupWindowType	GetPopupWindowType() const;
+ 	virtual SfxPopupWindow*		CreatePopupWindow();
++	virtual void				Select( sal_Bool bMod1 = sal_False );
++	DECL_LINK( ColorChangedHdl, Color * );
+ };
+ 
+ 
+@@ -309,6 +313,7 @@
+ 
+ 	//	SfxStatusForwarder 			aForward;
+     ::svx::ToolboxButtonColorUpdater*   pBtnUpdater;
++    Color                               aCurColor;
+ 
+ public:
+ 	SFX_DECL_TOOLBOX_CONTROL();
+@@ -333,6 +338,7 @@
+ class SVX_DLLPUBLIC SvxColorToolBoxControl : public SfxToolBoxControl
+ {
+     ::svx::ToolboxButtonColorUpdater*   pBtnUpdater;
++    Color                               aCurColor;
+ public:
+ 	SFX_DECL_TOOLBOX_CONTROL();
+ 	SvxColorToolBoxControl( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rTbx );
+@@ -342,6 +348,8 @@
+ 											  const SfxPoolItem* pState );
+ 	virtual SfxPopupWindowType	GetPopupWindowType() const;
+ 	virtual SfxPopupWindow*		CreatePopupWindow();
++	virtual void				Select( sal_Bool bMod1 = sal_False );
++	DECL_LINK( ColorChangedHdl, Color * );
+ };
+ 
+ 
+@@ -351,8 +359,12 @@
+ //========================================================================
+ 
+ 
++class SvxFrameWindowState_Impl;
++
+ class SVX_DLLPUBLIC SvxFrameToolBoxControl : public SfxToolBoxControl
+ {
++    SvxBoxItem                          aCurBorderOuter;
++    SvxBoxInfoItem                      aCurBorderInner;
+ public:
+ 	SFX_DECL_TOOLBOX_CONTROL();
+ 	SvxFrameToolBoxControl( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rTbx );
+@@ -361,7 +373,8 @@
+ 	virtual SfxPopupWindow*		CreatePopupWindow();
+ 	virtual void				StateChanged( sal_uInt16 nSID, SfxItemState eState,
+ 											  const SfxPoolItem* pState );
+-
++	virtual void				Select( sal_Bool bMod1 = sal_False );
++	DECL_LINK( BorderChangedHdl, SvxFrameWindowState_Impl * );
+ };
+ 
+ 
+--- ./source/tbxctrls/colorwindow.hxx	2014-02-25 00:26:38.000000000 -0800
++++ ./source/tbxctrls/colorwindow.hxx	2016-10-11 14:24:29.000000000 -0700
+@@ -31,6 +31,8 @@
+ #include <com/sun/star/frame/XFrame.hpp>
+ #include <svx/SvxColorValueSet.hxx>
+ 
++#include <map>
++
+ //========================================================================
+ // class SvxColorWindow_Impl --------------------------------------------------
+ //========================================================================
+@@ -43,6 +45,8 @@
+     const sal_uInt16        theSlotId;
+     SvxColorValueSet        aColorSet;
+     rtl::OUString           maCommand;
++    ::std::map< ColorData, sal_uInt32 > maColorSetMap;
++    Link                    maColorChangedHdl;
+ 
+ #if _SOLAR__PRIVATE
+ 	DECL_LINK( SelectHdl, void * );
+@@ -65,6 +69,8 @@
+     virtual void        StateChanged( sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem* pState );
+ 
+ 	virtual SfxPopupWindow* Clone() const;
++
++    void                SetColorChangedHdl( const Link& rLink ) { maColorChangedHdl = rLink; }
+ };
+ 
+ #endif
+--- ./source/tbxctrls/SvxColorValueSet.cxx	2014-02-25 00:26:38.000000000 -0800
++++ ./source/tbxctrls/SvxColorValueSet.cxx	2016-10-11 14:43:16.000000000 -0700
+@@ -63,6 +63,14 @@
+ 
+ void SvxColorValueSet::addEntriesForXColorList(const XColorListSharedPtr aXColorList, sal_uInt32 nStartIndex)
+ {
++    addEntriesForXColorList(aXColorList, NULL, nStartIndex);
++}
++
++void SvxColorValueSet::addEntriesForXColorList(const XColorListSharedPtr aXColorList, ::std::map< ColorData, sal_uInt32 > *pColorSetMap, sal_uInt32 nStartIndex)
++{
++    if(pColorSetMap)
++        pColorSetMap->clear();
++
+     const sal_uInt32 nColorCount(aXColorList ? aXColorList->Count() : 0);
+ 
+     for(sal_uInt32 nIndex(0); nIndex < nColorCount; nIndex++, nStartIndex++)
+@@ -72,6 +80,8 @@
+         if(pEntry)
+         {
+             InsertItem(nStartIndex, pEntry->GetColor(), pEntry->GetName());
++            if(pColorSetMap)
++                (*pColorSetMap)[pEntry->GetColor().GetColor()] = nStartIndex;
+         }
+         else
+         {
+--- ./source/tbxctrls/tbcontrl.cxx	2014-02-25 00:26:39.000000000 -0800
++++ ./source/tbxctrls/tbcontrl.cxx	2016-10-11 14:45:36.000000000 -0700
+@@ -241,6 +241,16 @@
+ 	ValueSet::MouseButtonUp(rMEvt);
+ }
+ 
++class SAL_DLLPRIVATE SvxFrameWindowState_Impl
++{
++public:
++	const SvxBoxItem		maBorderOuter;
++	const SvxBoxInfoItem	maBorderInner;
++
++							SvxFrameWindowState_Impl( SvxBoxItem& rBorderOuter, SvxBoxInfoItem& rBorderInner ) : maBorderOuter( rBorderOuter ), maBorderInner( rBorderInner ) {}
++							~SvxFrameWindowState_Impl() {}
++};
++
+ class SvxFrameWindow_Impl : public SfxPopupWindow
+ {
+ 	using FloatingWindow::StateChanged;
+@@ -249,6 +259,7 @@
+     SvxFrmValueSet_Impl  aFrameSet;
+ 	ImageList 		aImgList;
+     sal_Bool        bParagraphMode;
++    Link            maBorderChangedHdl;
+ 
+ #if _SOLAR__PRIVATE
+ 	DECL_LINK( SelectHdl, void * );
+@@ -271,6 +282,7 @@
+ 	virtual void	DataChanged( const DataChangedEvent& rDCEvt );
+ 
+ 	inline sal_Bool		IsHighContrast( void ) const;
++	void			SetBorderChangedHdl( const Link& rLink ) { maBorderChangedHdl = rLink; }
+ };
+ 
+ inline sal_Bool SvxFrameWindow_Impl::IsHighContrast( void ) const
+@@ -877,7 +889,7 @@
+ 
+         SetOutputSizePixel(Size(aNewSize.Width() + nAdd, aNewSize.Height() + nAdd));
+         aColorSet.Clear();
+-        aColorSet.addEntriesForXColorList(aColorTable);
++        aColorSet.addEntriesForXColorList(aColorTable, &maColorSetMap);
+ 	}
+ 
+     aColorSet.SetSelectHdl( LINK( this, SvxColorWindow_Impl, SelectHdl ) );
+@@ -886,6 +898,26 @@
+ 	SetText( rWndTitle );
+ 	aColorSet.Show();
+     AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:ColorTableState" )));
++    switch ( theSlotId )
++    {
++        case SID_ATTR_CHAR_COLOR_BACKGROUND:
++            AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:FillColor" )));
++            break;
++        case SID_ATTR_CHAR_COLOR:
++            AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Color" )));
++            break;
++        case SID_ATTR_CHAR_COLOR2:
++            AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Color" )));
++            break;
++        case SID_BACKGROUND_COLOR:
++            AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:BackgroundColor" )));
++            break;
++        case SID_EXTRUSION_3D_COLOR:
++            AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Extrusion3DColor" )));
++            break;
++        default:
++            break;
++    }
+ }
+ 
+ SvxColorWindow_Impl::~SvxColorWindow_Impl()
+@@ -923,6 +955,11 @@
+         SfxToolBoxControl::Dispatch( Reference< XDispatchProvider >( GetFrame()->getController(), UNO_QUERY ),
+                                      maCommand,
+                                      aArgs );
++        if ( maColorChangedHdl.IsSet() )
++        {
++            ::Color aColor( COL_TRANSPARENT );
++            maColorChangedHdl.Call( &aColor );
++        }
+     }
+     else if ( !nItemId && (SID_ATTR_CHAR_COLOR == theSlotId || SID_ATTR_CHAR_COLOR2  == theSlotId || SID_EXTRUSION_3D_COLOR == theSlotId) )
+     {
+@@ -937,6 +974,11 @@
+         SfxToolBoxControl::Dispatch( Reference< XDispatchProvider >( GetFrame()->getController(), UNO_QUERY ),
+                                      maCommand,
+                                      aArgs );
++        if ( maColorChangedHdl.IsSet() )
++        {
++            ::Color aColor( COL_TRANSPARENT );
++            maColorChangedHdl.Call( &aColor );
++        }
+     }
+     else
+ 	{
+@@ -950,6 +992,11 @@
+         SfxToolBoxControl::Dispatch( Reference< XDispatchProvider >( GetFrame()->getController(), UNO_QUERY ),
+                                      maCommand,
+                                      aArgs );
++        if ( maColorChangedHdl.IsSet() )
++        {
++            ::Color aColor( aColorItem.GetValue() );
++            maColorChangedHdl.Call( &aColor );
++        }
+ 	}
+ 
+ 	return 0;
+@@ -1001,7 +1048,23 @@
+ 
+                 SetOutputSizePixel(Size(aNewSize.Width() + nAdd, aNewSize.Height() + nAdd));
+                 aColorSet.Clear();
+-                aColorSet.addEntriesForXColorList(aColorTable);
++                aColorSet.addEntriesForXColorList(aColorTable, &maColorSetMap);
++			}
++		}
++		else if ( pState->ISA( SvxColorItem ) )
++		{
++			::Color aColor( ((SvxColorItem *)pState)->GetValue() );
++			if ( aColorSet.IsNoSelection() || aColor != aColorSet.GetItemColor( aColorSet.GetSelectItemId() ) )
++			{
++				aColorSet.SetNoSelection();
++				::std::map< ColorData, sal_uInt32 >::const_iterator it = maColorSetMap.find( aColor.GetColor() );
++				if ( it != maColorSetMap.end() )
++					aColorSet.SelectItem( it->second );
++				else
++					aColorSet.SelectItem( 0 );
++
++				if ( maColorChangedHdl.IsSet() )
++					maColorChangedHdl.Call( &aColor );
+ 			}
+ 		}
+ 	}
+@@ -1207,6 +1270,12 @@
+     aBorderInner.QueryValue( a );
+     aArgs[1].Value = a;
+ 
++    if ( maBorderChangedHdl.IsSet() )
++    {
++        SvxFrameWindowState_Impl aBorderState( aBorderOuter, aBorderInner );
++        maBorderChangedHdl.Call( &aBorderState );
++    }
++
+     /*  #i33380# DR 2004-09-03 Moved the following line above the Dispatch() call.
+         This instance may be deleted in the meantime (i.e. when a dialog is opened
+         while in Dispatch()), accessing members will crash in this case. */
+@@ -2282,6 +2351,8 @@
+                     nSlotId, nId, &GetToolBox(), TBX_UPDATER_MODE_CHAR_COLOR_NEW ))
+ {
+ 	rTbx.SetItemBits( nId, TIB_DROPDOWN | rTbx.GetItemBits( nId ) );
++	aCurColor = ::Color( COL_TRANSPARENT );
++	pBtnUpdater->Update( aCurColor );
+ }
+ 
+ // -----------------------------------------------------------------------
+@@ -2314,6 +2385,7 @@
+         FLOATWIN_POPUPMODE_GRABFOCUS|FLOATWIN_POPUPMODE_ALLOWTEAROFF );
+ 	pColorWin->StartSelection();
+     SetPopupWindow( pColorWin );
++    pColorWin->SetColorChangedHdl( LINK( this, SvxFontColorToolBoxControl, ColorChangedHdl ) );
+ 	return pColorWin;
+ }
+ 
+@@ -2326,18 +2398,40 @@
+ {
+ 	sal_uInt16 nId = GetId();
+ 	ToolBox& rTbx = GetToolBox();
+-	const SvxColorItem*	pItem = 0;
+-
+-	if ( SFX_ITEM_DONTCARE != eState )
+-	   pItem = PTR_CAST( SvxColorItem, pState );
+-
+-	if ( pItem )
+-		pBtnUpdater->Update( pItem->GetValue());
+ 
+ 	rTbx.EnableItem( nId, SFX_ITEM_DISABLED != eState );
+ 	rTbx.SetItemState( nId, ( SFX_ITEM_DONTCARE == eState ) ? STATE_DONTKNOW : STATE_NOCHECK );
+ }
+ 
++// -----------------------------------------------------------------------
++
++void SvxFontColorToolBoxControl::Select( sal_Bool )
++{
++    OUString aCommand( RTL_CONSTASCII_USTRINGPARAM( ".uno:Color" ) );
++    SvxColorItem aColorItem( aCurColor.GetTransparency() ? COL_AUTO : aCurColor, GetSlotId() );
++    INetURLObject aObj( aCommand );
++
++    Any a;
++    Sequence< PropertyValue > aArgs( 1 );
++    aArgs[0].Name = aObj.GetURLPath();
++    aColorItem.QueryValue( a );
++    aArgs[0].Value = a;
++    Dispatch( aCommand, aArgs );
++}
++
++// -----------------------------------------------------------------------
++
++IMPL_LINK( SvxFontColorToolBoxControl, ColorChangedHdl, ::Color *, pColor )
++{
++	if ( pColor )
++	{
++		aCurColor = *pColor;
++		pBtnUpdater->Update( aCurColor );
++	}
++
++	return 0;
++}
++
+ //========================================================================
+ // class SvxColorToolBoxControl --------------------------------
+ //========================================================================
+@@ -2346,12 +2440,11 @@
+ 
+ 	SfxToolBoxControl( nSlotId, nId, rTbx )
+ {
+-    if ( nSlotId == SID_BACKGROUND_COLOR )
+-        rTbx.SetItemBits( nId, TIB_DROPDOWNONLY | rTbx.GetItemBits( nId ) );
+-    else
+-        rTbx.SetItemBits( nId, TIB_DROPDOWN | rTbx.GetItemBits( nId ) );
++    rTbx.SetItemBits( nId, TIB_DROPDOWN | rTbx.GetItemBits( nId ) );
+ 	rTbx.Invalidate();
+     pBtnUpdater = new ::svx::ToolboxButtonColorUpdater( nSlotId, nId, &GetToolBox() );
++	aCurColor = ::Color( COL_TRANSPARENT );
++	pBtnUpdater->Update( aCurColor );
+ }
+ 
+ // -----------------------------------------------------------------------
+@@ -2385,6 +2478,7 @@
+         FLOATWIN_POPUPMODE_GRABFOCUS|FLOATWIN_POPUPMODE_ALLOWTEAROFF );
+ 	pColorWin->StartSelection();
+     SetPopupWindow( pColorWin );
++    pColorWin->SetColorChangedHdl( LINK( this, SvxColorToolBoxControl, ColorChangedHdl ) );
+ 	return pColorWin;
+ }
+ 
+@@ -2395,19 +2489,49 @@
+ 	sal_uInt16 , SfxItemState eState, const SfxPoolItem* pState )
+ 
+ {
+-	const SvxColorItem*	pItem	= 0;
+-	if ( SFX_ITEM_DONTCARE != eState )
+-		pItem = PTR_CAST( SvxColorItem, pState );
+-
+-	if ( pItem )
+-		pBtnUpdater->Update( pItem->GetValue() );
+-
+ 	sal_uInt16 nId = GetId();
+ 	ToolBox& rTbx = GetToolBox();
+ 	rTbx.EnableItem( nId, SFX_ITEM_DISABLED != eState );
+ 	rTbx.SetItemState( nId, ( SFX_ITEM_DONTCARE == eState ) ? STATE_DONTKNOW : STATE_NOCHECK );
+ }
+ 
++// -----------------------------------------------------------------------
++
++void SvxColorToolBoxControl::Select( sal_Bool )
++{
++    OUString aCommand( RTL_CONSTASCII_USTRINGPARAM( ".uno:BackgroundColor" ) );
++    if ( aCurColor.GetTransparency() )
++    {
++        Sequence< PropertyValue > aArgs;
++        Dispatch( aCommand, aArgs );
++    }
++    else
++    {
++        SvxColorItem aColorItem( aCurColor, GetSlotId() );
++        INetURLObject aObj( aCommand );
++
++        Any a;
++        Sequence< PropertyValue > aArgs( 1 );
++        aArgs[0].Name = aObj.GetURLPath();
++        aColorItem.QueryValue( a );
++        aArgs[0].Value = a;
++        Dispatch( aCommand, aArgs );
++    }
++}
++
++// -----------------------------------------------------------------------
++
++IMPL_LINK( SvxColorToolBoxControl, ColorChangedHdl, ::Color *, pColor )
++{
++	if ( pColor )
++	{
++		aCurColor = *pColor;
++		pBtnUpdater->Update( aCurColor );
++	}
++
++	return 0;
++}
++
+ //========================================================================
+ // class SvxFontColorExtToolBoxControl --------------------------------------
+ //========================================================================
+@@ -2430,6 +2554,7 @@
+     sal_uInt16 nMode =	SID_ATTR_CHAR_COLOR2 == nSlotId
+ 		? TBX_UPDATER_MODE_CHAR_COLOR_NEW :	TBX_UPDATER_MODE_CHAR_COLOR_NEW;
+     pBtnUpdater = new ::svx::ToolboxButtonColorUpdater( nSlotId, nId, &GetToolBox(), nMode );
++    aCurColor = ::Color( COL_TRANSPARENT );
+ }
+ 
+ // -----------------------------------------------------------------------
+@@ -2495,7 +2620,10 @@
+ 		   pItem = PTR_CAST( SvxColorItem, pState );
+ 
+ 		if ( pItem )
+-			pBtnUpdater->Update( pItem->GetValue() );
++		{
++			aCurColor = pItem->GetValue();
++			pBtnUpdater->Update( aCurColor );
++		}
+ 	}
+ }
+ 
+@@ -2516,10 +2644,27 @@
+         aParamName  = OUString( RTL_CONSTASCII_USTRINGPARAM( "CharBackgroundExt" ));
+     }
+ 
++    // Fix bug reported in the following NeoOffice forum post by forcefully
++    // unsetting the highlight color when it was set to transparent via the
++    // color palette:
++    // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63965#63965
++    sal_Bool bIsItemChecked = GetToolBox().IsItemChecked( GetId() );
++    if ( bIsItemChecked && GetSlotId() == SID_ATTR_CHAR_COLOR_BACKGROUND && aCurColor.GetTransparency() )
++    {
++        Sequence< PropertyValue > aColorArgs;
++        Dispatch( OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:BackColor" ) ), aColorArgs );
++    }
++
+     Sequence< PropertyValue > aArgs( 1 );
+     aArgs[0].Name  = aParamName;
+     aArgs[0].Value = makeAny( GetToolBox().IsItemChecked( GetId() ));
+     Dispatch( aCommand, aArgs );
++
++    if ( !bIsItemChecked && GetSlotId() == SID_ATTR_CHAR_COLOR_BACKGROUND && aCurColor.GetTransparency() )
++    {
++        Sequence< PropertyValue > aColorArgs;
++        Dispatch( OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:BackColor" ) ), aColorArgs );
++    }
+ }
+ 
+ //========================================================================
+@@ -2532,8 +2677,10 @@
+ 	ToolBox&    rTbx )
+ 
+     :   SfxToolBoxControl( nSlotId, nId, rTbx )
++    , aCurBorderOuter( SID_ATTR_BORDER_OUTER )
++    , aCurBorderInner( SID_ATTR_BORDER_INNER )
+ {
+-	rTbx.SetItemBits( nId, TIB_DROPDOWNONLY | rTbx.GetItemBits( nId ) );
++	rTbx.SetItemBits( nId, TIB_DROPDOWN | rTbx.GetItemBits( nId ) );
+ }
+ 
+ // -----------------------------------------------------------------------
+@@ -2553,6 +2700,7 @@
+ 	pFrameWin->StartPopupMode( &GetToolBox(), FLOATWIN_POPUPMODE_GRABFOCUS | FLOATWIN_POPUPMODE_ALLOWTEAROFF );
+ 	pFrameWin->StartSelection();
+     SetPopupWindow( pFrameWin );
++    pFrameWin->SetBorderChangedHdl( LINK( this, SvxFrameToolBoxControl, BorderChangedHdl ) );
+ 
+ 	return pFrameWin;
+ }
+@@ -2573,6 +2721,34 @@
+                             : STATE_NOCHECK );
+ }
+ 
++// -----------------------------------------------------------------------
++
++void SvxFrameToolBoxControl::Select( sal_Bool )
++{
++	Any a;
++	Sequence< PropertyValue > aArgs( 2 );
++	aArgs[0].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "OuterBorder" ));
++	aCurBorderOuter.QueryValue( a );
++	aArgs[0].Value = a;
++	aArgs[1].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "InnerBorder" ));
++	aCurBorderInner.QueryValue( a );
++	aArgs[1].Value = a;
++	Dispatch( OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:SetBorderStyle" ) ), aArgs );
++}
++
++// -----------------------------------------------------------------------
++
++IMPL_LINK( SvxFrameToolBoxControl, BorderChangedHdl, SvxFrameWindowState_Impl *, pBorderState )
++{
++	if ( pBorderState )
++	{
++		aCurBorderOuter = pBorderState->maBorderOuter;
++		aCurBorderInner = pBorderState->maBorderInner;
++	}
++
++	return 0;
++}
++
+ //========================================================================
+ // class SvxFrameLineStyleToolBoxControl ---------------------------------
+ //========================================================================
