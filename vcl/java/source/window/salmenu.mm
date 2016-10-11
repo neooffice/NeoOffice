@@ -256,6 +256,7 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 	Menu*					mpMenu;
 	MacOSBOOL				mbReallyEnabled;
 }
+- (MacOSBOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute;
 - (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(USHORT)nID menu:(Menu *)pMenu;
 - (MacOSBOOL)isReallyEnabled;
 - (void)selected;
@@ -679,6 +680,22 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 @end
 
 @implementation VCLMenuItem
+
+- (MacOSBOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute
+{
+	// Fix missing selector exception that is thrown on some macOS 10.12
+	// machines when selecting a menu item in the macOS menubar by implementing
+	// the deprecated accessibilityIsAttributeSettable: selector
+	@try
+	{
+		return [super accessibilityIsAttributeSettable:pAttribute];
+	}
+	@catch ( NSException *pExc )
+	{
+	}
+
+	return NO;
+}
 
 - (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(USHORT)nID menu:(Menu *)pMenu
 {
