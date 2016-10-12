@@ -38,15 +38,19 @@
      Size layoutToGivenHeight(sal_uInt32 nHeight, sal_uInt32 nEntryCount);
  };
 --- ./inc/svx/tbcontrl.hxx	2014-02-25 00:26:26.000000000 -0800
-+++ ./inc/svx/tbcontrl.hxx	2016-10-10 21:40:21.000000000 -0700
-@@ -166,6 +166,7 @@
- class SfxStyleControllerItem_Impl;
- class SfxStyleSheetBasePool;
- class SfxTemplateItem;
-+class SvxBoxItem;
++++ ./inc/svx/tbcontrl.hxx	2016-10-11 18:00:58.000000000 -0700
+@@ -158,9 +158,10 @@
  
- namespace svx
- {
+ #include <com/sun/star/awt/FontDescriptor.hpp>
+ 
++#include <editeng/boxitem.hxx>
++
+ // wichtig im mit HeDaBu erzeugtem tbxctrls.hxx!!!
+ class SvxLineItem;
+-class SvxBoxInfoItem;
+ class SvxFontItem;
+ class SvxFontHeightItem;
+ class SfxStyleControllerItem_Impl;
 @@ -282,6 +283,7 @@
  class SVX_DLLPUBLIC SvxFontColorToolBoxControl : public SfxToolBoxControl
  {
