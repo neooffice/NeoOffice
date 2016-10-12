@@ -2990,6 +2990,32 @@ static CFDataRef aRTFSelection = nil;
 
 @end
 
+@interface VCLMenuFallback : NSMenu
+- (MacOSBOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute;
+@end
+
+@implementation VCLMenuFallback
+
+- (MacOSBOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute
+{
+	return NO;
+}
+
+@end
+
+@interface VCLMenuItemFallback : NSMenuItem
+- (MacOSBOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute;
+@end
+
+@implementation VCLMenuItemFallback
+
+- (MacOSBOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute
+{
+	return NO;
+}
+
+@end
+
 static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 
 @interface InstallVCLEventQueueClasses : NSObject
@@ -3288,6 +3314,36 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 		IMP aNewIMP = method_getImplementation( aNewMethod );
 		if ( aOldIMP && aNewIMP && class_addMethod( [NSApplication class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
 			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	// NSMenu selectors
+
+	aSelector = @selector(accessibilityIsAttributeSettable:);
+	aOldMethod = class_getInstanceMethod( [NSMenu class], aSelector );
+	if ( !aOldMethod )
+	{
+		aNewMethod = class_getInstanceMethod( [VCLMenuFallback class], aSelector );
+		if ( aNewMethod )
+		{
+			IMP aNewIMP = method_getImplementation( aNewMethod );
+			if ( aNewIMP )
+				class_addMethod( [NSMenu class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+		}
+	}
+
+	// NSMenuItem selectors
+
+	aSelector = @selector(accessibilityIsAttributeSettable:);
+	aOldMethod = class_getInstanceMethod( [NSMenuItem class], aSelector );
+	if ( !aOldMethod )
+	{
+		aNewMethod = class_getInstanceMethod( [VCLMenuItemFallback class], aSelector );
+		if ( aNewMethod )
+		{
+			IMP aNewIMP = method_getImplementation( aNewMethod );
+			if ( aNewIMP )
+				class_addMethod( [NSMenuItem class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+		}
 	}
 
 	NSApplication *pApp = [NSApplication sharedApplication];
