@@ -127,14 +127,9 @@ using namespace vcl;
 
 @end
 
-@interface NSMenu (VCLMenu)
-- (BOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute;
-@end
-
 @interface VCLMenu : NSMenu
 {
 }
-- (BOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute;
 - (id)initWithTitle:(NSString *)pTitle;
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
 @end
@@ -169,22 +164,6 @@ static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
 static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 @implementation VCLMenu
-
-- (BOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute
-{
-	// Fix missing selector exception that is thrown on some macOS 10.12
-	// machines when selecting a menu item in the macOS menubar by implementing
-	// the deprecated accessibilityIsAttributeSettable: selector
-	@try
-	{
-		return [super accessibilityIsAttributeSettable:pAttribute];
-	}
-	@catch ( NSException *pExc )
-	{
-	}
-
-	return NO;
-}
 
 - (id)initWithTitle:(NSString *)pTitle
 {
@@ -255,17 +234,12 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 @end
 
-@interface NSMenuItem (VCLMenuItem)
-- (BOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute;
-@end
-
 @interface VCLMenuItem : NSMenuItem
 {
 	sal_uInt16				mnID;
 	Menu*					mpMenu;
 	BOOL					mbReallyEnabled;
 }
-- (BOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute;
 - (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(sal_uInt16)nID menu:(Menu *)pMenu;
 - (BOOL)isReallyEnabled;
 - (void)selected;
@@ -695,22 +669,6 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 @end
 
 @implementation VCLMenuItem
-
-- (BOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute
-{
-	// Fix missing selector exception that is thrown on some macOS 10.12
-	// machines when selecting a menu item in the macOS menubar by implementing
-	// the deprecated accessibilityIsAttributeSettable: selector
-	@try
-	{
-		return [super accessibilityIsAttributeSettable:pAttribute];
-	}
-	@catch ( NSException *pExc )
-	{
-	}
-
-	return NO;
-}
 
 - (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(sal_uInt16)nID menu:(Menu *)pMenu
 {

@@ -3006,6 +3006,36 @@ static CFDataRef aRTFSelection = nil;
 
 @end
 
+@interface VCLMenuFallback : NSMenu
+- (BOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute;
+@end
+
+@implementation VCLMenuFallback
+
+- (BOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute
+{
+	(void)pAttribute;
+
+	return NO;
+}
+
+@end
+
+@interface VCLMenuItemFallback : NSMenuItem
+- (BOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute;
+@end
+
+@implementation VCLMenuItemFallback
+
+- (BOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute
+{
+	(void)pAttribute;
+
+	return NO;
+}
+
+@end
+
 static BOOL bVCLEventQueueClassesInitialized = NO;
 
 @interface InstallVCLEventQueueClasses : NSObject
@@ -3294,6 +3324,36 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 		IMP aNewIMP = method_getImplementation( aNewMethod );
 		if ( aOldIMP && aNewIMP && class_addMethod( [NSApplication class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
 			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	// NSMenu selectors
+
+	aSelector = @selector(accessibilityIsAttributeSettable:);
+	aOldMethod = class_getInstanceMethod( [NSMenu class], aSelector );
+	if ( !aOldMethod )
+	{
+		aNewMethod = class_getInstanceMethod( [VCLMenuFallback class], aSelector );
+		if ( aNewMethod )
+		{
+			IMP aNewIMP = method_getImplementation( aNewMethod );
+			if ( aNewIMP )
+				class_addMethod( [NSMenu class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+		}
+	}
+
+	// NSMenuItem selectors
+
+	aSelector = @selector(accessibilityIsAttributeSettable:);
+	aOldMethod = class_getInstanceMethod( [NSMenuItem class], aSelector );
+	if ( !aOldMethod )
+	{
+		aNewMethod = class_getInstanceMethod( [VCLMenuItemFallback class], aSelector );
+		if ( aNewMethod )
+		{
+			IMP aNewIMP = method_getImplementation( aNewMethod );
+			if ( aNewIMP )
+				class_addMethod( [NSMenuItem class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+		}
 	}
 
 	NSApplication *pApp = [NSApplication sharedApplication];
