@@ -31,6 +31,7 @@ This version of NeoOffice fixes the following bugs:
 • When running NeoOffice on macOS Sierra, both horizontal and vertical scrolling using the trackpad was several times more sensitive than on earlier versions of OS X
 • When running NeoOffice on macOS Sierra, NeoOffice would crash when creating a database using the Database Wizard
 • NeoOffice would crash if you pressed the Command-w keys while a print dialog was displayed
+• When running NeoOfice on macOS Sierra, macOS would display an internal error dialog on some computers after selecting a menu item in NeoOffice
 
 
 Keywords:
