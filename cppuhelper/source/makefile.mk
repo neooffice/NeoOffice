@@ -154,10 +154,10 @@ SLOFILES= \
 		$(SLO)$/propertysetmixin.obj \
         $(SLO)$/findsofficepath.obj
 
-.IF "$(UPD)" == "412"
+.IF "$(UPD)" == "413"
 SLOFILES += \
         $(SLO)$/supportsservice.obj
-.ENDIF		# "$(SUPD)" == "412"
+.ENDIF		# "$(UPD)" == "413"
 
 OBJFILES = $(OBJ)$/findsofficepath.obj
 

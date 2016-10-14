@@ -20,7 +20,7 @@
  	SAL_NO_ACQUIRE
  };
 +
-+#if SUPD == 412
++#if SUPD == 413
 +
 +/** C++11 "override" feature.
 +
@@ -35,7 +35,7 @@
 +#define SAL_OVERRIDE
 +#endif
 +
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
 +
  #endif /* __cplusplus */
  

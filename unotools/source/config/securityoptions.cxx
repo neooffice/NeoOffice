@@ -1144,13 +1144,13 @@ bool SvtSecurityOptions::isTrustedLocationUri(OUString const & uri) const {
 bool SvtSecurityOptions::isTrustedLocationUriForUpdatingLinks(
     OUString const & uri) const
 {
-#if SUPD == 412
+#if SUPD == 413
     return GetMacroSecurityLevel() == 0 || !uri.getLength()
         || uri.indexOf(OUString(RTL_CONSTASCII_USTRINGPARAM("private:"))) != 0
-#else	// SUPD == 412
+#else	// SUPD == 413
     return GetMacroSecurityLevel() == 0 || uri.isEmpty()
         || uri.startsWithIgnoreAsciiCase("private:")
-#endif	// SUPD == 412
+#endif	// SUPD == 413
         || isTrustedLocationUri(uri);
 }
 

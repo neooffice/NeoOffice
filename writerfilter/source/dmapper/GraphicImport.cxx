@@ -1779,13 +1779,13 @@ uno::Reference< text::XTextContent > GraphicImport::createGraphicObject( const b
                     }
                     catch (const uno::Exception& e)
                     {
-#if SUPD == 412
+#if SUPD == 413
                         clog << __FILE__ << ":" << __LINE__ << " failed. Message :" ;
                         clog << rtl::OUStringToOString( e.Message, RTL_TEXTENCODING_UTF8 ).getStr( )  << endl;
-#else	// SUPD == 412
+#else	// SUPD == 413
 
                         SAL_WARN("writerfilter", "failed. Message :" << e.Message);
-#endif	// SUPD == 412
+#endif	// SUPD == 413
                     }
 #endif	// !NO_LIBO_4_1_GRAPHIC_IMPORT_FIXES
                 }

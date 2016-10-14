@@ -326,9 +326,9 @@ _ZNK4cppu16UnoUrlDescriptor7getNameEv;
 _ZNK4cppu6UnoUrl11getProtocolEv;
 _ZNK4cppu6UnoUrl13getConnectionEv;
 _ZNK4cppu6UnoUrl13getObjectNameEv;
-#if SUPD == 412
+#if SUPD == 413
 _ZN4cppu15supportsServiceEPN3com3sun4star4lang12XServiceInfoERKN3rtl8OUStringE;
-#endif	// SUPD == 412
+#endif	// SUPD == 413
 
 	local:
 		*;

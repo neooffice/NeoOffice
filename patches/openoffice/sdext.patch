@@ -19,11 +19,11 @@
  
          for( unsigned int n = 0; n < rStyle.SubStyles.size(); ++n )
              impl_emitStyle( rStyle.SubStyles[n], rContext, rContainedElemVisitor );
-+#if SUPD == 412
++#if SUPD == 413
 +        if( !rStyle.Contents.isEmpty() )
-+#else	// SUPD == 412
++#else	// SUPD == 413
          if( rStyle.Contents )
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
              rContext.rEmitter.write( rStyle.Contents );
          if( rStyle.ContainedElement )
              rStyle.ContainedElement->visitedBy( rContainedElemVisitor, 
@@ -48,7 +48,7 @@
  #pragma warning(push, 1)
  #endif
  
-+#if SUPD == 412
++#if SUPD == 413
 +// sigh, UTF8.h was removed in poppler-0.21.0 and put back in 0.21.1
 +// FIXME: we can't use #if POPPLER_CHECK_VERSION(0, 21, 0) && !POPPLER_CHECK_VERSION(0, 21, 1)
 +//        because the internal poppler does not provide poppler-version.h and the macro always returns 0
@@ -59,9 +59,9 @@
 +#else
 +#include "UTF8.h"
 +#endif
-+#else	// SUPD == 412
++#else	// SUPD == 413
 +#include "UTF8.h"
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
  
  #if defined __SUNPRO_CC
  #pragma enable_warn
@@ -69,15 +69,15 @@
  void writeJpeg_( OutputBuffer& o_rOutputBuf, Stream* str, bool bWithLinefeed )
  {
      // dump JPEG file as-is
-+#if SUPD == 412
++#if SUPD == 413
 +#if POPPLER_CHECK_VERSION(0, 17, 3)
 +    str = str->getNextStream();
 +#else
      str = ((DCTStream *)str)->getRawStream();
 +#endif
-+#else	// SUPD == 412
++#else	// SUPD == 413
 +    str = ((DCTStream *)str)->getRawStream();
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
      str->reset();
  
      int c;
@@ -85,10 +85,10 @@
      int nSize = 0;
  
      GooString* pFamily = gfxFont->getName();
-+#if SUPD != 412
++#if SUPD != 413
      if( ! pFamily )
          pFamily = gfxFont->getOrigName();
-+#endif	// SUPD != 412
++#endif	// SUPD != 413
      if( pFamily )
      {
          aNewFont.familyName.clear();
@@ -96,15 +96,15 @@
  {
  }
  
-+#if SUPD == 412
++#if SUPD == 413
 +void PDFOutDev::startPage(int /*pageNum*/, GfxState* state
 +#if POPPLER_CHECK_VERSION(0, 23, 0) ||  POPPLER_CHECK_VERSION(0, 24, 0)
 +                          , XRef* /*xref*/
 +#endif
 +)
-+#else	// SUPD == 412
++#else	// SUPD == 413
  void PDFOutDev::startPage(int /*pageNum*/, GfxState* state)
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
  {
      assert(state);
      printf("startPage %f %f\n",
@@ -112,7 +112,7 @@
      printf("endPage\n");
  }
  
-+#if SUPD == 412
++#if SUPD == 413
 +#if POPPLER_CHECK_VERSION(0, 19, 0)
 +void PDFOutDev::processLink(AnnotLink *link)
 +#elif POPPLER_CHECK_VERSION(0, 17, 0)
@@ -120,9 +120,9 @@
 +#else
 +void PDFOutDev::processLink(Link* link, Catalog*)
 +#endif
-+#else	// SUPD == 412
++#else	// SUPD == 413
  void PDFOutDev::processLink(Link* link, Catalog*)
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
  {
      assert(link);
  
@@ -130,11 +130,11 @@
          
  void PDFOutDev::drawImageMask(GfxState* pState, Object*, Stream* str,
                                int width, int height, GBool invert,
-+#if SUPD == 412
++#if SUPD == 413
 +#if POPPLER_CHECK_VERSION(0, 12, 0)
 +                              GBool /*interpolate*/,
 +#endif
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
                                GBool /*inlineImg*/ )
  {
      OutputBuffer aBuf; initBuf(aBuf);
@@ -142,11 +142,11 @@
  
  void PDFOutDev::drawImage(GfxState*, Object*, Stream* str,
                            int width, int height, GfxImageColorMap* colorMap,
-+#if SUPD == 412
++#if SUPD == 413
 +#if POPPLER_CHECK_VERSION(0, 12, 0)
 +                          GBool /*interpolate*/,
 +#endif
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
                            int* maskColors, GBool /*inlineImg*/ )
  {
      OutputBuffer aBuf; initBuf(aBuf);
@@ -154,22 +154,22 @@
  void PDFOutDev::drawMaskedImage(GfxState*, Object*, Stream* str,
                                  int width, int height,
                                  GfxImageColorMap* colorMap,
-+#if SUPD == 412
++#if SUPD == 413
 +#if POPPLER_CHECK_VERSION(0, 12, 0)
 +                                GBool /*interpolate*/,
 +#endif
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
                                  Stream* maskStr, 
                                  int maskWidth, int maskHeight,
-+#if SUPD == 412
++#if SUPD == 413
 +                                GBool maskInvert
 +#if POPPLER_CHECK_VERSION(0, 12, 0)
 +                                , GBool /*maskInterpolate*/
 +#endif
 +                               )
-+#else	// SUPD == 412
++#else	// SUPD == 413
                                  GBool maskInvert)
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
  {
      OutputBuffer aBuf;     initBuf(aBuf);
      printf( "drawImage %d %d 0", width, height );
@@ -177,22 +177,22 @@
  void PDFOutDev::drawSoftMaskedImage(GfxState*, Object*, Stream* str,
                                      int width, int height,
                                      GfxImageColorMap* colorMap,
-+#if SUPD == 412
++#if SUPD == 413
 +#if POPPLER_CHECK_VERSION(0, 12, 0)
 +                                    GBool /*interpolate*/,
 +#endif
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
                                      Stream* maskStr,
                                      int maskWidth, int maskHeight,
-+#if SUPD == 412
++#if SUPD == 413
 +                                    GfxImageColorMap* maskColorMap
 +#if POPPLER_CHECK_VERSION(0, 12, 0)
 +                                    , GBool /*maskInterpolate*/
 +#endif
 +                                   )
-+#else	// SUPD == 412
++#else	// SUPD == 413
                                      GfxImageColorMap* maskColorMap )
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
  {
      OutputBuffer aBuf;     initBuf(aBuf);
      printf( "drawImage %d %d 0", width, height );
@@ -215,9 +215,9 @@
  #ifndef INCLUDED_PDFI_OUTDEV_HXX
  #define INCLUDED_PDFI_OUTDEV_HXX
  
-+#if SUPD == 412
++#if SUPD == 413
 +#include <sal/types.h>
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
 +
  #if defined __GNUC__
  #pragma GCC system_header
@@ -226,13 +226,13 @@
  #ifndef SYSTEM_POPPLER
  typedef GString GooString;
  #endif
-+#if SUPD == 412
++#if SUPD == 413
 +#include <cpp/poppler-version.h>
 +#define POPPLER_CHECK_VERSION(major,minor,micro) \
 +  (POPPLER_VERSION_MAJOR > (major) || \
 +   (POPPLER_VERSION_MAJOR == (major) && POPPLER_VERSION_MINOR > (minor)) || \
 +   (POPPLER_VERSION_MAJOR == (major) && POPPLER_VERSION_MINOR == (minor) && POPPLER_VERSION_MICRO >= (micro)))
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
  
  namespace pdfi
  {
@@ -240,15 +240,15 @@
          virtual void setDefaultCTM(double *ctm);
          
          // Start a page.
-+#if SUPD == 412
++#if SUPD == 413
 +        virtual void startPage(int pageNum, GfxState *state
 +#if POPPLER_CHECK_VERSION(0, 23, 0) || POPPLER_CHECK_VERSION(0, 24, 0)
 +                               , XRef *xref
 +#endif
 +        ) SAL_OVERRIDE;
-+#else	// SUPD == 412
++#else	// SUPD == 413
          virtual void startPage(int pageNum, GfxState *state);
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
          
          // End a page.
          virtual void endPage();
@@ -256,7 +256,7 @@
          // virtual void cvtUserToDev(double ux, double uy, int *dx, int *dy);
          
          //----- link borders
-+#if SUPD == 412
++#if SUPD == 413
 +	#if POPPLER_CHECK_VERSION(0, 19, 0)
 +        virtual void processLink(AnnotLink *link) SAL_OVERRIDE;
 +    #elif POPPLER_CHECK_VERSION(0, 17, 0)
@@ -264,9 +264,9 @@
 +    #else
 +        virtual void processLink(Link *link, Catalog *catalog) SAL_OVERRIDE;
 +    #endif
-+#else	// SUPD == 412
++#else	// SUPD == 413
          virtual void processLink(Link *link, Catalog *catalog);
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
          
          //----- save/restore graphics state
          virtual void saveState(GfxState *state);
@@ -274,61 +274,61 @@
          //----- image drawing
          virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
                                     int width, int height, GBool invert,
-+#if SUPD == 412
++#if SUPD == 413
 +#if POPPLER_CHECK_VERSION(0, 12, 0)
 +                                   GBool interpolate,
 +#endif
 +                                   GBool inlineImg) SAL_OVERRIDE;
-+#else	// SUPD == 412
++#else	// SUPD == 413
                                     GBool inlineImg);
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
          virtual void drawImage(GfxState *state, Object *ref, Stream *str,
                                 int width, int height, GfxImageColorMap *colorMap,
-+#if SUPD == 412
++#if SUPD == 413
 +#if POPPLER_CHECK_VERSION(0, 12, 0)
 +                               GBool interpolate,
 +#endif
 +                               int *maskColors, GBool inlineImg) SAL_OVERRIDE;
-+#else	// SUPD == 412
++#else	// SUPD == 413
                                 int *maskColors, GBool inlineImg);
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
          virtual void drawMaskedImage(GfxState *state, Object *ref, Stream *str,
                                       int width, int height,
                                       GfxImageColorMap *colorMap,
-+#if SUPD == 412
++#if SUPD == 413
 +#if POPPLER_CHECK_VERSION(0, 12, 0)
 +                                     GBool interpolate,
 +#endif
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
                                       Stream *maskStr, int maskWidth, int maskHeight,
-+#if SUPD == 412
++#if SUPD == 413
 +                                     GBool maskInvert
 +#if POPPLER_CHECK_VERSION(0, 12, 0)
 +                                     , GBool maskInterpolate
 +#endif
 +                                    ) SAL_OVERRIDE;
-+#else	// SUPD == 412
++#else	// SUPD == 413
                                       GBool maskInvert);
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
          virtual void drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
                                           int width, int height,
                                           GfxImageColorMap *colorMap,
-+#if SUPD == 412
++#if SUPD == 413
 +#if POPPLER_CHECK_VERSION(0, 12, 0)
 +                                         GBool interpolate,
 +#endif
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
                                           Stream *maskStr,
                                           int maskWidth, int maskHeight,
-+#if SUPD == 412
++#if SUPD == 413
 +                                         GfxImageColorMap *maskColorMap
 +#if POPPLER_CHECK_VERSION(0, 12, 0)
 +                                         , GBool maskInterpolate
 +#endif
 +                                        ) SAL_OVERRIDE;
-+#else	// SUPD == 412
++#else	// SUPD == 413
                                           GfxImageColorMap *maskColorMap);
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
          
          //----- OPI functions
          // virtual void opiBegin(GfxState *state, Dict *opiDict);
@@ -353,11 +353,11 @@
  
  void PngHelper::appendFileHeader( OutputBuffer& o_rOutputBuf )
  {
-+#if SUPD == 412
++#if SUPD == 413
 +    static const unsigned char aHeader[] = { 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a };
-+#else	// SUPD == 412
++#else	// SUPD == 413
      static const Output_t aHeader[] = { 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a };
-+#endif	// SUPD == 412
++#endif	// SUPD == 413
  
      o_rOutputBuf.insert( o_rOutputBuf.end(), aHeader, aHeader + sizeof(aHeader)/sizeof(aHeader[0]) );
  }

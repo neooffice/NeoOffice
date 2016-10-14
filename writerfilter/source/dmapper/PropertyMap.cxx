@@ -927,9 +927,9 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
         //sep.dyaLinePitch
         if (nGridLinePitch < 1 || nGridLinePitch > 31680)
         {
-#if SUPD != 412
+#if SUPD != 413
             SAL_WARN("writerfilter", "sep.dyaLinePitch outside legal range: " << nGridLinePitch);
-#endif	// SUPD != 412
+#endif	// SUPD != 413
             nGridLinePitch = 1;
         }
 
