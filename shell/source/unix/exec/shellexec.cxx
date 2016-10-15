@@ -185,7 +185,7 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
                  + aCommand),
                 static_cast< cppu::OWeakObject * >(this));
         }
-
+        
 #if defined USE_JAVA && defined MACOSX
         // Fix failure to open file URL hyperlinks by obtaining a security
         // scoped bookmark before opening the URL
