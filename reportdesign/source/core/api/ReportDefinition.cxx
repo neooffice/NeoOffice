@@ -875,7 +875,6 @@ void SAL_CALL OReportDefinition::disposing()
 #else	// USE_JAVA
     m_pImpl->m_pReportModel.reset();
 #endif	// USE_JAVA
-    m_pImpl->m_pReportModel.reset();
     m_pImpl->m_pObjectContainer.reset();
     m_pImpl->m_aArgs.realloc(0);
     m_pImpl->m_xTitleHelper.clear();
