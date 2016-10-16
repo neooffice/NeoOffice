@@ -87,7 +87,6 @@ public:
 	JavaSalFrame*			mpLastResizeFrame;
 	timeval					maLastResizeTime;
 	JavaSalFrame*			mpLastMouseMoveFrame;
-	::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >	mxClipboard;
 
 							SalData();
 							~SalData();

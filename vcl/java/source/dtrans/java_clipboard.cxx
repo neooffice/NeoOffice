@@ -35,7 +35,6 @@
 
 #include <com/sun/star/datatransfer/clipboard/RenderingCapabilities.hpp>
 
-#include "java/saldata.hxx"
 #include "java/salinst.h"
 
 #include "java_clipboard.hxx"
@@ -323,12 +322,19 @@ void JavaClipboard::setPrivateClipboard( sal_Bool bPrivateClipboard )
 
 // ========================================================================
 
-uno::Reference< uno::XInterface > JavaSalInstance::CreateClipboard( const uno::Sequence< uno::Any >& /* rArguments */ )
+uno::Reference< uno::XInterface > JavaSalInstance::CreateClipboard( const uno::Sequence< uno::Any >& rArguments )
 {
-	SalData *pSalData = GetSalData();
+	bool bSystemClipboard = false;
+	OUString aClipboardName;
+	if ( rArguments.getLength() > 1 )
+	{
+		rArguments.getConstArray()[ 1 ] >>= aClipboardName;
+	}
+	else
+	{
+		aClipboardName = OUString::createFromAscii( "CLIPBOARD" );
+		bSystemClipboard = true;
+	}
 
-	if ( !pSalData->mxClipboard.is() )
-		pSalData->mxClipboard = uno::Reference< uno::XInterface >( static_cast< OWeakObject* >( new JavaClipboard() ) );
-
-	return pSalData->mxClipboard;
+	return uno::Reference< uno::XInterface >( static_cast< OWeakObject* >( new JavaClipboard( bSystemClipboard ) ) );
 }

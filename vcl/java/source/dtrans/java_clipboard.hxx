@@ -66,7 +66,7 @@ class JavaClipboard : public ::cppu::WeakComponentImplHelper4< ::com::sun::star:
 	sal_Bool				mbPrivateClipboard;
 
 public:
-							JavaClipboard( bool bSystemClipboard = true );
+							JavaClipboard( bool bSystemClipboard );
 	virtual					~JavaClipboard();
 
     virtual void			SAL_CALL flushClipboard( ) throw( ::com::sun::star::uno::RuntimeException );
