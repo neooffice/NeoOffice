@@ -949,6 +949,11 @@ SvxColorWindow_Impl::SvxColorWindow_Impl( const OUString&            rCommand,
     {
         case SID_ATTR_CHAR_COLOR_BACKGROUND:
             AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:FillColor" )));
+#ifdef USE_JAVA
+            // Writer already uses ".uno::FillColor" to set the fill color of a
+            // shape so use a custom attribute
+            AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:CharFillColor" )));
+#endif	// USE_JAVA
             break;
         case SID_ATTR_CHAR_COLOR:
             AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Color" )));

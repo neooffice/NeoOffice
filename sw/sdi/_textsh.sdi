@@ -1591,6 +1591,7 @@ interface BaseText
 	]
 	SID_ATTR_CHAR_FILLCOLOR
 	[
+        Export = FALSE;
 		StateMethod = GetState ;
 		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
 	]
