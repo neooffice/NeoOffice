@@ -40,6 +40,9 @@
 #include "java_clipboard.hxx"
 #include "DTransClipboard.hxx"
 
+static ::std::hash_map< ::rtl::OUString, ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >, ::rtl::OUStringHash > aClipboardInstancesMap;
+static ::osl::Mutex aClipboardInstancesMutex;
+
 using namespace com::sun::star;
 using namespace cppu;
 using namespace osl;
@@ -336,5 +339,14 @@ uno::Reference< uno::XInterface > JavaSalInstance::CreateClipboard( const uno::S
 		bSystemClipboard = true;
 	}
 
-	return uno::Reference< uno::XInterface >( static_cast< OWeakObject* >( new JavaClipboard( bSystemClipboard ) ) );
+	MutexGuard aGuard( aClipboardInstancesMutex );
+
+	uno::Reference< uno::XInterface > xClipboard = aClipboardInstancesMap[ aClipboardName ];
+	if ( !xClipboard.is() )
+	{
+		xClipboard = uno::Reference< uno::XInterface >( static_cast< OWeakObject* >( new JavaClipboard( bSystemClipboard ) ) );
+		aClipboardInstancesMap[ aClipboardName ] = xClipboard;
+	}
+
+	return xClipboard;
 }
