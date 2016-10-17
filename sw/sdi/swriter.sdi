@@ -10470,7 +10470,9 @@ SfxVoidItem LookupInMacDictAttributes FN_LOOKUP_IN_MACOSX_DICTIONARY
 ]
 
 //--------------------------------------------------------------------------
-SvxColorItem FillColor SID_ATTR_CHAR_FILLCOLOR
+// Use custom CharFillColor as FillColor is already used for the fill color of
+// shapes
+SvxColorItem CharFillColor SID_ATTR_CHAR_FILLCOLOR
 
 [
 	/* flags: */
