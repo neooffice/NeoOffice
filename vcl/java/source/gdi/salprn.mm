@@ -1131,8 +1131,11 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 			if ( mpSetupDataMap )
 			{
 				ImplJobSetup aSetupData;
-				int nPages = mpPrinterController->getFilteredPageCount();	
-				mnPageCount = nPages > 0 ? nPages : 0;
+				int nPages = mpPrinterController->getFilteredPageCount();
+
+				// Calc will send a zero page count when printing an empty
+				// so ensure that there is at least one page
+				mnPageCount = nPages > 0 ? nPages : 1;
 				for ( NSUInteger i = 0; i < mnPageCount; i++ )
 				{
 					mpPrinterController->getFilteredPageSize( i );
