@@ -22,16 +22,10 @@ At this time, NeoOffice will only build on Mac OS X 10.10 Yosemite.
 
 4. Install the following Mac Ports packages by downloading, compiling, and installing the following packages from the http://www.macports.org/ website. Note that you will need download and install the latest MacPorts Yosemite package to install the MacPorts "port" command. The "port" command is then used to do the downloading, compiling, and installation of the following packages:
 
-   sudo /opt/local/bin/port install coreutils -x11
-   sudo /opt/local/bin/port install pkgconfig -x11
-   sudo /opt/local/bin/port install libIDL -x11
-   sudo /opt/local/bin/port install gperf -x11
-   sudo /opt/local/bin/port install flex -x11
-   sudo /opt/local/bin/port install wget -x11
-   sudo /opt/local/bin/port install gnutar -x11
-   sudo /opt/local/bin/port install poppler -x11
-   sudo /opt/local/bin/port install libwpd@0.9.9 -x11
+   sudo /opt/local/bin/port install autoconf -x11
    sudo /opt/local/bin/port install cvs -x11
+   sudo /opt/local/bin/port install gnutar -x11
+   sudo /opt/local/bin/port install xz -x11
 
    After running the above command, add "/opt/local/bin" to the end of your shell's PATH environment variable so that the build can all of the commands installed by /opt/local/bin/port command in the previous step.
 

@@ -1,0 +1,25 @@
+--- unpack-sources	2015-11-25 04:55:38.000000000 -0800
++++ unpack-sources	2016-10-20 10:57:34.000000000 -0700
+@@ -79,13 +79,19 @@
+         echo "Error: could not create directory $lo_src_dir/$tarname"
+     fi
+     echo tar -xf "$tarball" -C "$lo_src_dir/$tarname" --strip-components=1
+-    if ! tar -xf "$tarball" -C "$lo_src_dir/$tarname" --strip-components=1; then
++    xzfile=`file "$tarball" | grep ": xz compressed data"`
++    if [ ! -z "$xzfile" ]; then
++        if ! xzcat "$tarball" | tar -xf - -C "$lo_src_dir/$tarname" --strip-components=1; then
++            echo "Error: could not unpack $tarname"
++            exit 1
++        fi
++    elif ! tar -xf "$tarball" -C "$lo_src_dir/$tarname" --strip-components=1; then
+         echo "Error: could not unpack $tarname"
+         exit 1
+     fi
+ 
+     # create symlinks for module directories; ignore git-hooks directory
+-    for dir in `find "$lo_src_dir/$tarname" -mindepth 1 -maxdepth 1 -type d -path $lo_src_dir/$tarname/git-hooks -o -printf "$tarname/%f\n"` ; do
+-        ln -sf "src/$dir" "$start_dir"
++    for dir in `find "$lo_src_dir/$tarname" -mindepth 1 -maxdepth 1 -type d -path $lo_src_dir/$tarname/git-hooks -o -exec basename {} \\;` ; do
++        ln -sf "src/$tarname/$dir" "$start_dir"
+     done
+ done

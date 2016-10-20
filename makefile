@@ -54,16 +54,16 @@ PRODUCT_DIR_PATCH_VERSION_EXTRA=
 # Custom code signing certificate macros go in the following file
 -include certs.mk
 
-# Set the shell to tcsh since the OpenOffice.org build requires it
 EMPTY:=
 SPACE:=$(EMPTY) $(EMPTY)
 ifndef TMP
 TMP:=/tmp
 endif
-SHELL:=/bin/tcsh
+# Set the shell to bash to match the LibreOffice build
+SHELL:=/bin/bash
 UNAME:=$(shell uname -p)
 ifeq ("$(shell uname -s)","Darwin")
-OS_TYPE=MacOSX
+OS_TYPE=macOS
 OS_MAJOR_VERSION:=$(shell /usr/bin/sw_vers | grep '^ProductVersion:' | awk '{ print $$2 }' | awk -F. '{ print $$1 "." $$2 }')
 ULONGNAME=Intel
 CPUNAME=I
@@ -93,23 +93,20 @@ endif
 SOURCE_HOME:=source
 CD_INSTALL_HOME:=cd_install
 APACHE_PATCHES_HOME:=patches/apache
-MOZILLA_PATCHES_HOME:=patches/mozilla
-MSWEET_PATCHES_HOME:=patches/msweet
 NEOOFFICE_PATCHES_HOME:=patches/neooffice
-OO_PATCHES_HOME:=patches/openoffice
-OO_PACKAGE=aoo-4.1.3
-OO_SOURCE_FILE=apache-openoffice-4.1.3-r1761381-src.tar.gz
-OO_BUILD_HOME=$(BUILD_HOME)/$(OO_PACKAGE)/main
-OOO-BUILD_PATCHES_HOME:=patches/ooo-build/src
+LIBO_PATCHES_HOME:=patches/libreoffice
+LIBO_PACKAGE=libreoffice-4.4.7.2
+LIBO_SOURCE_FILE=$(LIBO_PACKAGE).tar.xz
+LIBO_BUILD_HOME=$(BUILD_HOME)/$(LIBO_PACKAGE)
 REMOTECONTROL_PATCHES_HOME:=patches/remotecontrol
-ifeq ("$(OS_TYPE)","MacOSX")
+ifeq ("$(OS_TYPE)","macOS")
 OO_ENV_AQUA:=$(OO_BUILD_HOME)/MacOSXX64Env.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXX64EnvJava.Set
 else
 OO_ENV_AQUA:=$(OO_BUILD_HOME)/winenv.set
 OO_ENV_JAVA:=$(BUILD_HOME)/winenv.set
 endif
-OO_LANGUAGES:=$(shell cat '$(PWD)/etc/supportedlanguages.txt' | sed '/^\#.*$$/d' | sed 's/\#.*$$//' | awk -F, '{ print $$1 }')
+LIBO_LANGUAGES:=$(shell cat '$(PWD)/etc/supportedlanguages.txt' | sed '/^\#.*$$/d' | sed 's/\#.*$$//' | awk -F, '{ print $$1 }')
 NEOLIGHT_MDIMPORTER_ID:=org.neooffice.neolight
 NEOPEEK_QLPLUGIN_ID:=org.neooffice.quicklookplugin
 
@@ -160,7 +157,7 @@ PRODUCT_JAVA_DOWNLOAD_URL=$(PRODUCT_BASE_URL)/javadownload.php
 PRODUCT_BUNDLED_LANG_PACKS=en-US de fr it he ja ar es ru nl en-GB sv pl nb fi pt-BR da zh-TW cs th zh-CN el hu sk ko tr
 PRODUCT_BUNDLED_LANG_PACKS2=$(PRODUCT_BUNDLED_LANG_PACKS)
 PRODUCT_BUNDLED_LANG_PACKS3=$(PRODUCT_BUNDLED_LANG_PACKS)
-ifeq ("$(OS_TYPE)","MacOSX")
+ifeq ("$(OS_TYPE)","macOS")
 PRODUCT_COMPONENT_MODULES=imagecapture remotecontrol
 PRODUCT_COMPONENT_PATCH_MODULES=
 PREFLIGHT_REQUIRED_COMMANDS=defaults find id open touch
@@ -178,14 +175,6 @@ endif
 # CVS macros
 ANT_PACKAGE=apache-ant-1.9.6
 ANT_SOURCE_FILENAME=apache-ant-1.9.6-bin.tar.gz
-DMAKE_SOURCE_FILENAME=dmake-4.12.tar.bz2
-EPM_PACKAGE=epm-3.7
-EPM_SOURCE_FILENAME=epm-3.7-source.tar.gz
-JFREEREPORT_PACKAGE=ooo310-m19-extensions
-JFREEREPORT_SOURCE_FILENAME=ooo310-m19-extensions.tar.bz2
-OO_EXTENSIONS_PACKAGE=OOO330_m20
-OO_EXTENSIONS_SOURCE_FILENAME=OOo_3.3.0_src_extensions.tar.bz2
-REMOTECONTROL_PACKAGE=martinkahr-apple_remote_control-2ba0484
 REMOTECONTROL_SOURCE_FILENAME=martinkahr-apple_remote_control.tar.gz
 YOURSWAYCREATEDMG_PACKAGE=jaeggir-yoursway-create-dmg-a22ac11
 YOURSWAYCREATEDMG_SOURCE_FILENAME=yoursway-create-dmg.zip
@@ -200,10 +189,11 @@ all: build.all
 # Include dependent makefiles
 include neo_configure.mk
 
-build.oo_src_checkout: $(OO_PATCHES_HOME)/$(OO_SOURCE_FILE)
+build.libo_src_checkout: $(LIBO_PATCHES_HOME)/$(LIBO_SOURCE_FILE)
 	mkdir -p "$(BUILD_HOME)"
 	cd "$(BUILD_HOME)" ; tar zxvf "$(PWD)/$<"
-	cd "$(BUILD_HOME)" ; chmod -Rf u+rw "$(OO_PACKAGE)"
+	cd "$(BUILD_HOME)" ; chmod -Rf u+rw "$(LIBO_PACKAGE)"
+	cd "$(BUILD_HOME)" ; chmod a+x "$(LIBO_PACKAGE)/bin/unpack-sources"
 	touch "$@"
 
 build.ant_checkout: $(APACHE_PATCHES_HOME)/$(ANT_SOURCE_FILENAME)
@@ -212,26 +202,17 @@ build.ant_checkout: $(APACHE_PATCHES_HOME)/$(ANT_SOURCE_FILENAME)
 	cd "$(BUILD_HOME)" ; tar zxvf "$(PWD)/$(APACHE_PATCHES_HOME)/$(ANT_SOURCE_FILENAME)"
 	touch "$@"
 
-build.jfreereport_checkout: build.oo_src_checkout $(OO_PATCHES_HOME)/$(OO_EXTENSIONS_SOURCE_FILENAME) $(OOO-BUILD_PATCHES_HOME)/$(JFREEREPORT_SOURCE_FILENAME)
-	rm -Rf "$(OO_BUILD_HOME)/jfreereport"
-	mkdir -p "$(OO_BUILD_HOME)"
-	cd "$(OO_BUILD_HOME)" ; bunzip2 -dc "$(PWD)/$(OO_PATCHES_HOME)/$(OO_EXTENSIONS_SOURCE_FILENAME)" | tar xvf - --strip-components=1 "$(OO_EXTENSIONS_PACKAGE)/jfreereport"
-	cd "$(OO_BUILD_HOME)" ; bunzip2 -dc "$(PWD)/$(OOO-BUILD_PATCHES_HOME)/$(JFREEREPORT_SOURCE_FILENAME)" | tar xvf - --strip-components=1 "$(JFREEREPORT_PACKAGE)/jfreereport/download"
+build.libo_external_tarballs_checkout: build.libo_src_checkout
+	rm -Rf "$(LIBO_BUILD_HOME)/external/tarballs"
+	mkdir -p "$(LIBO_BUILD_HOME)/external/tarballs"
+	cd "$(LIBO_PATCHES_HOME)/external/tarballs" ; sh -c -e 'for i in `find . -type f -maxdepth 1 | grep -v /CVS/` ; do cp "$$i" "$(PWD)/$(LIBO_BUILD_HOME)/external/tarballs/$$i" ; done'
 	touch "$@"
 
-build.oo_ext_sources_checkout: build.jfreereport_checkout
-	rm -Rf "$(OO_BUILD_HOME)/../ext_sources"
-	mkdir -p "$(OO_BUILD_HOME)/../ext_sources"
-	cd "$(OO_PATCHES_HOME)/ext_sources" ; sh -c -e 'for i in `find . -type f -maxdepth 1 | grep -v /CVS/` ; do cp "$$i" "$(PWD)/$(OO_BUILD_HOME)/../ext_sources/$$i" ; done'
-	cd "$(APACHE_PATCHES_HOME)" ; sh -c -e 'for i in `find . -type f -maxdepth 1 | grep -v /CVS/` ; do cp "$$i" "$(PWD)/$(OO_BUILD_HOME)/../ext_sources/$$i" ; done'
-# OOo perl script renames the dmake and epm source filenames incorrectly so
-# copy them with the correct name
-	cd "$(APACHE_PATCHES_HOME)" ; sh -c -e 'filename=`md5 -q "$(DMAKE_SOURCE_FILENAME)"`-"$(DMAKE_SOURCE_FILENAME)" ; cp "$(DMAKE_SOURCE_FILENAME)" "$(PWD)/$(OO_BUILD_HOME)/../ext_sources/$$filename"'
-	cd "$(MSWEET_PATCHES_HOME)" ; sh -c -e 'filename=`md5 -q "$(EPM_SOURCE_FILENAME)"`-"$(EPM_PACKAGE).tar.gz" ; cp "$(EPM_SOURCE_FILENAME)" "$(PWD)/$(OO_BUILD_HOME)/../ext_sources/$$filename"'
-	cd "$(OO_BUILD_HOME)/jfreereport/download" ; sh -c -e 'for i in `find . -name "*.zip" -maxdepth 1` ; do filename=`md5 -q "$$i"`-`basename "$$i"` ; cp "$$i" "$(PWD)/$(OO_BUILD_HOME)/../ext_sources/$$filename" ; done'
+build.libo_checkout: build.libo_src_checkout build.ant_checkout build.libo_external_tarballs_checkout
 	touch "$@"
 
-build.oo_checkout: build.oo_src_checkout build.ant_checkout build.jfreereport_checkout build.oo_ext_sources_checkout
+build.libo_patches: \
+	build.libo_bin_patch
 	touch "$@"
 
 build.oo_patches: \
@@ -255,7 +236,7 @@ build.oo_%.in_patch: $(OO_PATCHES_HOME)/%.in.patch build.oo_checkout
 	touch "$@"
 
 build.oo_ext_libraries_%_patch: $(OO_PATCHES_HOME)/%.patch build.oo_checkout
-ifeq ("$(OS_TYPE)","MacOSX")
+ifeq ("$(OS_TYPE)","macOS")
 	-( cd "$(OO_BUILD_HOME)/../ext_libraries/$(@:build.oo_ext_libraries_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(OO_BUILD_HOME)/../ext_libraries/$(@:build.oo_ext_libraries_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 else
@@ -264,37 +245,33 @@ else
 endif
 	touch "$@"
 
-build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.oo_checkout
-ifeq ("$(OS_TYPE)","MacOSX")
-	-( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+build.libo_%_patch: $(LIBO_PATCHES_HOME)/%.patch build.libo_checkout
+ifeq ("$(OS_TYPE)","macOS")
+	-( cd "$(LIBO_BUILD_HOME)/$(@:build.libo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(LIBO_BUILD_HOME)/$(@:build.libo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 else
-	-cat "$<" | unix2dos | ( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" )
-	cat "$<" | unix2dos | ( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" )
+	-cat "$<" | unix2dos | ( cd "$(LIBO_BUILD_HOME)/$(@:build.libo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" )
+	cat "$<" | unix2dos | ( cd "$(LIBO_BUILD_HOME)/$(@:build.libo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" )
 endif
 	touch "$@"
 
-build.oo_configure: build.oo_patches
-ifeq ("$(OS_TYPE)","MacOSX")
-	cd "$(OO_BUILD_HOME)" ; setenv PATH "/bin:/sbin:/usr/bin:/usr/sbin:/opt/local/bin" ; unsetenv DYLD_LIBRARY_PATH ; autoconf ; ./configure --without-stlport --with-dmake-url="file://$(PWD)/$(APACHE_PATCHES_HOME)/$(DMAKE_SOURCE_FILENAME)" --with-epm-url="file://$(PWD)/$(MSWEET_PATCHES_HOME)/$(EPM_SOURCE_FILENAME)" --with-jdk-home="$(JDK_HOME)" --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --without-junit --disable-cairo --disable-cups --disable-gtk --disable-odk --with-gnu-cp=/opt/local/bin/gcp --with-system-curl --with-system-odbc --with-lang="$(OO_LANGUAGES)" --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-crashdump=no --enable-category-b --enable-bundled-dictionaries --enable-pdfimport --with-system-poppler --with-system-libwpd --enable-report-builder
+build.libo_configure: build.libo_patches
+ifeq ("$(OS_TYPE)","macOS")
+	cd "$(LIBO_BUILD_HOME)" ; PATH="/bin:/sbin:/usr/bin:/usr/sbin:/opt/local/bin" ; export PATH ; unset DYLD_LIBRARY_PATH ; autoconf ; ./configure --with-jdk-home="$(JDK_HOME)" --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --with-macosx-version-min-required="$(PRODUCT_MIN_OSVERSION)" --without-junit --disable-cups --disable-odk --with-system-curl --with-lang="$(LIBO_LANGUAGES)" --without-fonts
 else
 ifndef JDK_HOME
 	@echo "JDK_HOME must be defined in custom.mk" ; exit 1
 endif
 	@sh -c -e 'if [ ! -r "$(JDK_HOME)/lib/tools.jar" ] ; then echo "You must set JDK_HOME to the path of a valid Java Development Kit" ; exit 1 ; fi'
-	( cd "$(BUILD_HOME)/$(OO_PACKAGE)" ; unsetenv LD_LIBRARY_PATH ; ./configure TMP=$(TMP) WGET=/usr/bin/wget --with-distro=Win32 --disable-atl --disable-activex --disable-layout --with-java --with-jdk-home="$(JDK_HOME)" --with-java-target-version=1.6 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
+	@echo "$@ not implemented" ; exit 1
 endif
 	touch "$@"
 
-build.oo_all: build.oo_configure
-ifeq ("$(OS_TYPE)","MacOSX")
-	cd "$(OO_BUILD_HOME)" ; ./bootstrap
-	source "$(OO_ENV_AQUA)" ; cd "$(OO_BUILD_HOME)/instsetoo_native/util" ; perl "$$SOLARENV/bin/build.pl" --all ; dmake ooolanguagepack
+build.libo_all: build.libo_configure
+ifeq ("$(OS_TYPE)","macOS")
+	cd "$(LIBO_BUILD_HOME)" ; make
 else
-# Copy Visual Studio 9.0 dbghelp.ddl
-	sh -e -c 'if [ ! -f "$(OO_BUILD_HOME)/external/dbghelp/dbghelp.dll" ] ; then cp "/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/Common7/IDE/dbghelp.dll" "$(OO_BUILD_HOME)/external/dbghelp/dbghelp.dll" ; fi'
-# Prepend Visual Studio 9.0 tools to path
-	cd "$(BUILD_HOME)/$(OO_PACKAGE)" ; setenv PATH "/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/VC/bin:$$PATH" ; "$(MAKE)" build
+	@echo "$@ not implemented" ; exit 1
 endif
 	touch "$@"
 
@@ -360,7 +337,7 @@ build.neo_sw_patch: build.neo_unotools_patch
 build.neo_%_patch: % build.neo_configure
 	rm -Rf "$(PWD)/$</$(UOUTPUTDIR)"
 	cd "$<" ; sh -e -c '( cd "$(PWD)/$(OO_BUILD_HOME)/$<" ; find . -type d | sed "s/ /\\ /g" | grep -v /CVS$$ | grep -v /$(UOUTPUTDIR) ) | while read i ; do mkdir -p "$$i" ; done'
-ifeq ("$(OS_TYPE)","MacOSX")
+ifeq ("$(OS_TYPE)","macOS")
 	cd "$<" ; sh -e -c '( cd "$(PWD)/$(OO_BUILD_HOME)/$<" ; find . ! -type d | sed "s/ /\\ /g" | grep -v /CVS/ | grep -v /$(UOUTPUTDIR) ) | while read i ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(OO_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
 else
 # Use hardlinks for Windows
@@ -386,7 +363,7 @@ build.remotecontrol_src_untar: $(REMOTECONTROL_PATCHES_HOME)/additional_source b
 	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; ( cd "$(PWD)/$<" ; tar cf - *.h *.m *.png *.lproj *.plist *.xcodeproj ) | tar xvf -
 	touch "$@"
 
-ifeq ("$(OS_TYPE)","MacOSX")
+ifeq ("$(OS_TYPE)","macOS")
 build.remotecontrol_patches: $(REMOTECONTROL_PATCHES_HOME)/remotecontrol.patch build.remotecontrol_src_untar
 	-( cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
