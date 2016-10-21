@@ -212,37 +212,9 @@ build.libo_checkout: build.libo_src_checkout build.ant_checkout build.libo_exter
 	touch "$@"
 
 build.libo_patches: \
-	build.libo_bin_patch
-	touch "$@"
-
-build.oo_patches: \
-	build.oo_configure.in_patch \
-	build.oo_ext_libraries_serf_patch \
-	build.oo_framework_patch \
-	build.oo_instsetoo_native_patch \
-	build.oo_jfreereport_patch \
-	build.oo_oox_patch \
-	build.oo_reportbuilder_patch \
-	build.oo_sal_patch \
-	build.oo_sdext_patch \
-	build.oo_solenv_patch \
-	build.oo_svx_patch \
-	build.oo_writerperfect_patch
-	touch "$@"
-
-build.oo_%.in_patch: $(OO_PATCHES_HOME)/%.in.patch build.oo_checkout
-	-( cd "$(OO_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(OO_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	touch "$@"
-
-build.oo_ext_libraries_%_patch: $(OO_PATCHES_HOME)/%.patch build.oo_checkout
-ifeq ("$(OS_TYPE)","macOS")
-	-( cd "$(OO_BUILD_HOME)/../ext_libraries/$(@:build.oo_ext_libraries_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(OO_BUILD_HOME)/../ext_libraries/$(@:build.oo_ext_libraries_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-else
-	-cat "$<" | unix2dos | ( cd "$(OO_BUILD_HOME)/../ext_libraries/$(@:build.oo_ext_libraries_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" )
-	cat "$<" | unix2dos | ( cd "$(OO_BUILD_HOME)/../ext_libraries/$(@:build.oo_ext_libraries_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" )
-endif
+	build.libo_bin_patch \
+	build.libo_solenv_patch \
+	build.libo_sw_patch
 	touch "$@"
 
 build.libo_%_patch: $(LIBO_PATCHES_HOME)/%.patch build.libo_checkout
