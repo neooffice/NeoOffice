@@ -98,14 +98,7 @@ LIBO_PATCHES_HOME:=patches/libreoffice
 LIBO_PACKAGE=libreoffice-4.4.7.2
 LIBO_SOURCE_FILE=$(LIBO_PACKAGE).tar.xz
 LIBO_BUILD_HOME=$(BUILD_HOME)/$(LIBO_PACKAGE)
-REMOTECONTROL_PATCHES_HOME:=patches/remotecontrol
-ifeq ("$(OS_TYPE)","macOS")
-OO_ENV_AQUA:=$(OO_BUILD_HOME)/MacOSXX64Env.Set
-OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXX64EnvJava.Set
-else
-OO_ENV_AQUA:=$(OO_BUILD_HOME)/winenv.set
-OO_ENV_JAVA:=$(BUILD_HOME)/winenv.set
-endif
+LIBO_OVERRIDDEN_ENVVARS:=$(BUILD_HOME)/config_host.mk
 LIBO_LANGUAGES:=$(shell cat '$(PWD)/etc/supportedlanguages.txt' | sed '/^\#.*$$/d' | sed 's/\#.*$$//' | awk -F, '{ print $$1 }')
 NEOLIGHT_MDIMPORTER_ID:=org.neooffice.neolight
 NEOPEEK_QLPLUGIN_ID:=org.neooffice.quicklookplugin
@@ -158,7 +151,7 @@ PRODUCT_BUNDLED_LANG_PACKS=en-US de fr it he ja ar es ru nl en-GB sv pl nb fi pt
 PRODUCT_BUNDLED_LANG_PACKS2=$(PRODUCT_BUNDLED_LANG_PACKS)
 PRODUCT_BUNDLED_LANG_PACKS3=$(PRODUCT_BUNDLED_LANG_PACKS)
 ifeq ("$(OS_TYPE)","macOS")
-PRODUCT_COMPONENT_MODULES=imagecapture remotecontrol
+PRODUCT_COMPONENT_MODULES=
 PRODUCT_COMPONENT_PATCH_MODULES=
 PREFLIGHT_REQUIRED_COMMANDS=defaults find id open touch
 INSTALLATION_CHECK_REQUIRED_COMMANDS=$(PREFLIGHT_REQUIRED_COMMANDS) awk basename chmod dirname file grep mv pax rm ps pwd sed sort unzip
@@ -175,7 +168,6 @@ endif
 # CVS macros
 ANT_PACKAGE=apache-ant-1.9.6
 ANT_SOURCE_FILENAME=apache-ant-1.9.6-bin.tar.gz
-REMOTECONTROL_SOURCE_FILENAME=martinkahr-apple_remote_control.tar.gz
 YOURSWAYCREATEDMG_PACKAGE=jaeggir-yoursway-create-dmg-a22ac11
 YOURSWAYCREATEDMG_SOURCE_FILENAME=yoursway-create-dmg.zip
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
@@ -247,7 +239,7 @@ else
 endif
 	touch "$@"
 
-build.neo_configure: build.oo_all neo_configure.mk
+build.neo_configure: build.libo_all neo_configure.mk
 	$(MAKE) $(MFLAGS) build.neo_configure_phony
 	touch "$@"
 
@@ -323,31 +315,6 @@ build.neo_%_component: % build.neo_configure
 	mkdir -p "$(PWD)/$</$(UOUTPUTDIR)"
 	source "$(OO_ENV_JAVA)" ; cd "$<" ; `alias build` $(NEO_BUILD_ARGS)
 	touch "$@"
-
-build.remotecontrol_checkout: build.neo_configure
-	rm -Rf "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)"
-	mkdir -p "$(BUILD_HOME)"
-	cd "$(BUILD_HOME)" ; mkdir "$(REMOTECONTROL_PACKAGE)"
-	cd "$(BUILD_HOME)" ; tar zxvf "$(PWD)/$(REMOTECONTROL_PATCHES_HOME)/$(REMOTECONTROL_SOURCE_FILENAME)"
-	touch "$@"
-
-build.remotecontrol_src_untar: $(REMOTECONTROL_PATCHES_HOME)/additional_source build.remotecontrol_checkout
-	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; ( cd "$(PWD)/$<" ; tar cf - *.h *.m *.png *.lproj *.plist *.xcodeproj ) | tar xvf -
-	touch "$@"
-
-ifeq ("$(OS_TYPE)","macOS")
-build.remotecontrol_patches: $(REMOTECONTROL_PATCHES_HOME)/remotecontrol.patch build.remotecontrol_src_untar
-	-( cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; xcodebuild -project RemoteControlFramework.xcodeproj -target RemoteControl -configuration Release clean
-	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; xcodebuild -project RemoteControlFramework.xcodeproj -target RemoteControl -configuration Release
-	touch "$@"
-else
-build.remotecontrol_patches:
-	touch "$@"
-endif
-	
-# End of converted make rules
 
 build.package: build.neo_patches
 ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
@@ -508,7 +475,7 @@ ifdef PRODUCT_BUILD3
 endif
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf README* program/LICENSE* program/open-url program/senddoc program/startup.sh program/unoinfo readmes share/extensions/install share/readme
 # Fix bug 3273 by not installing any OOo fonts
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/fps_aqua.uno.dylib" "program/libAppleRemote.dylib" "program/libMacOSXSpell.dylib" "program/libavmediaQuickTime.dylib" "program/liboooimprovecore.dylib" "share/fonts/truetype" "share/psprint"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/fps_aqua.uno.dylib" "program/libMacOSXSpell.dylib" "program/libavmediaQuickTime.dylib" "program/liboooimprovecore.dylib" "share/fonts/truetype" "share/psprint"
 ifdef PRODUCT_BUILD3
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/jvmfwk/$(UOUTPUTDIR)/bin/javavendors.xml" "program/javavendors.xml"
 else
@@ -546,9 +513,6 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.bin"` ; do strip -S -x "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*"` ; do strip -S -x "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.so"` ; do strip -S -x "$$i" ; done'
-# Integrate the RemoteControl framework
-	mkdir -p "$(INSTALL_HOME)/package/Contents/Frameworks"
-	cd "$(INSTALL_HOME)/package" ; ( ( cd "$(PWD)/$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)/build/Release" ; gnutar cvf - --exclude Headers RemoteControl.framework ) | ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents/Frameworks" ; gnutar xvf - ; strip -S -x RemoteControl.framework/Versions/A/RemoteControl ) )
 # Shared libraries in extensions may link to OpenOffice shared libraries using
 # @executable_path so create softlinks in the MacOS directory for each shared
 # library in the program directory
