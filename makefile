@@ -95,16 +95,18 @@ LIBO_PACKAGE=libreoffice-4.4.7.2
 LIBO_SOURCE_FILE=$(LIBO_PACKAGE).tar.xz
 LIBO_BUILD_HOME=$(BUILD_HOME)/$(LIBO_PACKAGE)
 LIBO_BOOTSTRAP_MAKEFILE:=$(BUILD_HOME)/bootstrap.mk
+LIBO_INSTDIR=$(LIBO_BUILD_HOME)/instdir
 LIBO_WORKDIR=$(LIBO_BUILD_HOME)/workdir
 LIBO_LANGUAGES:=$(shell cat '$(PWD)/etc/supportedlanguages.txt' | sed '/^\#.*$$/d' | sed 's/\#.*$$//' | awk -F, '{ print $$1 }')
 NEOLIGHT_MDIMPORTER_ID:=org.neooffice.neolight
 NEOPEEK_QLPLUGIN_ID:=org.neooffice.quicklookplugin
+INSTDIR=$(BUILD_HOME)/instdir
 WORKDIR=$(BUILD_HOME)/workdir
 
 # Product information
-OO_PRODUCT_VERSION_FAMILY=4.1
-OO_PRODUCT_NAME=Apache OpenOffice
-OO_PRODUCT_VERSION=$(OO_PRODUCT_VERSION_FAMILY).3
+LIBO_PRODUCT_VERSION_FAMILY=4
+LIBO_PRODUCT_NAME=LibreOfficeDev
+LIBO_PRODUCT_VERSION=$(LIBO_PRODUCT_VERSION_FAMILY).4
 PRODUCT_INSTALL_DIR_NAME=$(PRODUCT_NAME)
 PRODUCT_VERSION_FAMILY=4.0
 PRODUCT_VERSION_BASE=2016
@@ -237,28 +239,39 @@ else
 endif
 	touch "$@"
 
+build.neo_instdir : build.libo_all $(LIBO_INSTDIR)
+	rm -Rf "$(INSTDIR)"
+	mkdir -p "$(INSTDIR)"
+	cd "$(INSTDIR)" ; ( ( cd "$(PWD)/$(LIBO_INSTDIR)" && gnutar cvf - . ) | gnutar xvf - )
+	touch "$@"
+
 build.neo_workdir : build.libo_all $(LIBO_WORKDIR)
 	rm -Rf "$(WORKDIR)"
 	mkdir -p "$(WORKDIR)"
 	cd "$(WORKDIR)" ; ( ( cd "$(PWD)/$(LIBO_WORKDIR)" && gnutar cvf - Headers LinkTarget UnoApiHeadersTarget UnoApiTarget ) | gnutar xvf - )
 	touch "$@"
 
-build.neo_configure: build.neo_workdir $(WORKDIR)
+build.neo_configure: build.neo_instdir build.neo_workdir $(INSTDIR) $(WORKDIR)
 	rm -f "$@"
+	echo "# Modify some of LibreOffice's environment variables" >> "$@"
 	echo "include "'$$(dir $$(realpath $$(firstword $$(MAKEFILE_LIST))))../$(LIBO_BUILD_HOME)/config_host.mk' >> "$@"
-	echo "export WORKDIR=$(realpath $(WORKDIR))" >> "$@"
-	echo "export GUIBASE=java" >> "$@"
-	echo "export PRODUCT_BUILD_TYPE=java" >> "$@"
-	echo "export PRODUCT_NAME=$(PRODUCT_NAME)" >> "$@"
-	echo "export PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME)" >> "$@"
-	echo "export PRODUCT_DIR_NAME2=$(PRODUCT_DIR_NAME2)" >> "$@"
-	echo "export PRODUCT_DIR_NAME3=$(PRODUCT_DIR_NAME3)" >> "$@"
-	echo "export PRODUCT_DOMAIN=$(PRODUCT_DOMAIN)" >> "$@"
-	echo "export PRODUCT_FILETYPE=$(PRODUCT_FILETYPE)" >> "$@"
-	echo "export PRODUCT_MAC_APP_STORE_URL=$(PRODUCT_MAC_APP_STORE_URL)" >> "$@"
-	echo "export PRODUCT_JAVA_DOWNLOAD_URL=$(PRODUCT_JAVA_DOWNLOAD_URL)" >> "$@"
-	echo "export PRODUCT_MIN_OSVERSION=$(PRODUCT_MIN_OSVERSION)" >> "$@"
-	echo "export PRODUCT_MAX_OSVERSION=$(PRODUCT_MAX_OSVERSION)" >> "$@"
+	echo "export GUIBASE:=java" >> "$@"
+	echo "export INSTDIR:=$(realpath $(INSTDIR))" >> "$@"
+	echo "export INSTROOT:=$(realpath $(INSTDIR))"'/$$(PRODUCTNAME).app/Contents' >> "$@"
+	echo "export SOLARINC:=-I$(realpath include)"' $$(SOLARINC)' >> "$@"
+	echo "export WORKDIR:=$(realpath $(WORKDIR))" >> "$@"
+	echo "# Add custom environment variables" >> "$@"
+	echo "export PRODUCT_BUILD_TYPE:=java" >> "$@"
+	echo "export PRODUCT_NAME:=$(PRODUCT_NAME)" >> "$@"
+	echo "export PRODUCT_DIR_NAME:=$(PRODUCT_DIR_NAME)" >> "$@"
+	echo "export PRODUCT_DIR_NAME2:=$(PRODUCT_DIR_NAME2)" >> "$@"
+	echo "export PRODUCT_DIR_NAME3:=$(PRODUCT_DIR_NAME3)" >> "$@"
+	echo "export PRODUCT_DOMAIN:=$(PRODUCT_DOMAIN)" >> "$@"
+	echo "export PRODUCT_FILETYPE:=$(PRODUCT_FILETYPE)" >> "$@"
+	echo "export PRODUCT_MAC_APP_STORE_URL:=$(PRODUCT_MAC_APP_STORE_URL)" >> "$@"
+	echo "export PRODUCT_JAVA_DOWNLOAD_URL:=$(PRODUCT_JAVA_DOWNLOAD_URL)" >> "$@"
+	echo "export PRODUCT_MIN_OSVERSION:=$(PRODUCT_MIN_OSVERSION)" >> "$@"
+	echo "export PRODUCT_MAX_OSVERSION:=$(PRODUCT_MAX_OSVERSION)" >> "$@"
 
 build.neo_patches: \
 	$(PRODUCT_COMPONENT_MODULES:%=build.neo_%_component) \
@@ -323,11 +336,13 @@ else
 # Use hardlinks for Windows
 	cd "$<" ; sh -e -c 'CYGWIN=winsymlinks ; export CYGWIN ; ( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ ) | while read i ; do if [ ! -f "$$i" ] ; then ln -f "$(PWD)/$(LIBO_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
 endif
-	cd "$<" ; $(MAKE) $(MFLAGS) $(NEO_BUILD_ARGS)
+	cd "$<" ; $(MAKE) $(MFLAGS) clean
+	cd "$<" ; $(MAKE) $(MFLAGS)
 	touch "$@"
 
 build.neo_%_component: % build.neo_configure
-	cd "$<" ; $(MAKE) $(MFLAGS) $(NEO_BUILD_ARGS)
+	cd "$<" ; $(MAKE) $(MFLAGS) clean
+	cd "$<" ; $(MAKE) $(MFLAGS)
 	touch "$@"
 
 build.package: build.neo_patches
