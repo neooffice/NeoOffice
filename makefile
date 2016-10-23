@@ -67,14 +67,10 @@ OS_TYPE=macOS
 OS_MAJOR_VERSION:=$(shell /usr/bin/sw_vers | grep '^ProductVersion:' | awk '{ print $$2 }' | awk -F. '{ print $$1 "." $$2 }')
 ULONGNAME=Intel
 CPUNAME=I
-UOUTPUTDIR=unxmaccx.pro
-DLLSUFFIX=mxi
 TARGET_MACHINE=x86_64
 TARGET_FILE_TYPE=Mach-O 64-bit executable $(TARGET_MACHINE)
 else
 OS_TYPE=Win32
-UOUTPUTDIR=wntmsci12.pro
-DLLSUFFIX=mxp
 endif
 BUILD_MACHINE=$(shell echo `id -nu`:`hostname`.`domainname`)
 
@@ -98,10 +94,12 @@ LIBO_PATCHES_HOME:=patches/libreoffice
 LIBO_PACKAGE=libreoffice-4.4.7.2
 LIBO_SOURCE_FILE=$(LIBO_PACKAGE).tar.xz
 LIBO_BUILD_HOME=$(BUILD_HOME)/$(LIBO_PACKAGE)
-LIBO_OVERRIDDEN_ENVVARS:=$(BUILD_HOME)/config_host.mk
+LIBO_BOOTSTRAP_MAKEFILE:=$(BUILD_HOME)/bootstrap.mk
+LIBO_WORKDIR=$(LIBO_BUILD_HOME)/workdir
 LIBO_LANGUAGES:=$(shell cat '$(PWD)/etc/supportedlanguages.txt' | sed '/^\#.*$$/d' | sed 's/\#.*$$//' | awk -F, '{ print $$1 }')
 NEOLIGHT_MDIMPORTER_ID:=org.neooffice.neolight
 NEOPEEK_QLPLUGIN_ID:=org.neooffice.quicklookplugin
+WORKDIR=$(BUILD_HOME)/workdir
 
 # Product information
 OO_PRODUCT_VERSION_FAMILY=4.1
@@ -176,11 +174,11 @@ NEO_TAG:=NeoOffice-2016_Beta
 NEO_TAG2:=NeoOffice-2016_Viewer_Beta
 NEO_TAG3:=NeoOffice-2016_Classic_Edition_Beta
 
+.DELETE_ON_ERROR : build.neo_configure
+
 all: build.all
 
 # Include dependent makefiles
-include neo_configure.mk
-
 build.libo_src_checkout: $(LIBO_PATCHES_HOME)/$(LIBO_SOURCE_FILE)
 	mkdir -p "$(BUILD_HOME)"
 	cd "$(BUILD_HOME)" ; tar zxvf "$(PWD)/$<"
@@ -239,9 +237,28 @@ else
 endif
 	touch "$@"
 
-build.neo_configure: build.libo_all neo_configure.mk
-	$(MAKE) $(MFLAGS) build.neo_configure_phony
+build.neo_workdir : build.libo_all $(LIBO_WORKDIR)
+	rm -Rf "$(WORKDIR)"
+	mkdir -p "$(WORKDIR)"
+	cd "$(WORKDIR)" ; ( ( cd "$(PWD)/$(LIBO_WORKDIR)" && gnutar cvf - Headers LinkTarget UnoApiHeadersTarget UnoApiTarget ) | gnutar xvf - )
 	touch "$@"
+
+build.neo_configure: build.neo_workdir $(WORKDIR)
+	rm -f "$@"
+	echo "include "'$$(dir $$(realpath $$(firstword $$(MAKEFILE_LIST))))../$(LIBO_BUILD_HOME)/config_host.mk' >> "$@"
+	echo "export WORKDIR=$(realpath $(WORKDIR))" >> "$@"
+	echo "export GUIBASE=java" >> "$@"
+	echo "export PRODUCT_BUILD_TYPE=java" >> "$@"
+	echo "export PRODUCT_NAME=$(PRODUCT_NAME)" >> "$@"
+	echo "export PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME)" >> "$@"
+	echo "export PRODUCT_DIR_NAME2=$(PRODUCT_DIR_NAME2)" >> "$@"
+	echo "export PRODUCT_DIR_NAME3=$(PRODUCT_DIR_NAME3)" >> "$@"
+	echo "export PRODUCT_DOMAIN=$(PRODUCT_DOMAIN)" >> "$@"
+	echo "export PRODUCT_FILETYPE=$(PRODUCT_FILETYPE)" >> "$@"
+	echo "export PRODUCT_MAC_APP_STORE_URL=$(PRODUCT_MAC_APP_STORE_URL)" >> "$@"
+	echo "export PRODUCT_JAVA_DOWNLOAD_URL=$(PRODUCT_JAVA_DOWNLOAD_URL)" >> "$@"
+	echo "export PRODUCT_MIN_OSVERSION=$(PRODUCT_MIN_OSVERSION)" >> "$@"
+	echo "export PRODUCT_MAX_OSVERSION=$(PRODUCT_MAX_OSVERSION)" >> "$@"
 
 build.neo_patches: \
 	$(PRODUCT_COMPONENT_MODULES:%=build.neo_%_component) \
@@ -299,21 +316,18 @@ build.neo_sfx2_patch: build.neo_sal_patch
 build.neo_sw_patch: build.neo_unotools_patch
 
 build.neo_%_patch: % build.neo_configure
-	rm -Rf "$(PWD)/$</$(UOUTPUTDIR)"
-	cd "$<" ; sh -e -c '( cd "$(PWD)/$(OO_BUILD_HOME)/$<" ; find . -type d | sed "s/ /\\ /g" | grep -v /CVS$$ | grep -v /$(UOUTPUTDIR) ) | while read i ; do mkdir -p "$$i" ; done'
+	cd "$<" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . -type d | sed "s/ /\\ /g" | grep -v /CVS$$ ) | while read i ; do mkdir -p "$$i" ; done'
 ifeq ("$(OS_TYPE)","macOS")
-	cd "$<" ; sh -e -c '( cd "$(PWD)/$(OO_BUILD_HOME)/$<" ; find . ! -type d | sed "s/ /\\ /g" | grep -v /CVS/ | grep -v /$(UOUTPUTDIR) ) | while read i ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(OO_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
+	cd "$<" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . ! -type d | sed "s/ /\\ /g" | grep -v /CVS/ ) | while read i ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(LIBO_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
 else
 # Use hardlinks for Windows
-	cd "$<" ; sh -e -c 'CYGWIN=winsymlinks ; export CYGWIN ; ( cd "$(PWD)/$(OO_BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ | grep -v /$(UOUTPUTDIR) ) | while read i ; do if [ ! -f "$$i" ] ; then ln -f "$(PWD)/$(OO_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
+	cd "$<" ; sh -e -c 'CYGWIN=winsymlinks ; export CYGWIN ; ( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ ) | while read i ; do if [ ! -f "$$i" ] ; then ln -f "$(PWD)/$(LIBO_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
 endif
-	source "$(OO_ENV_JAVA)" ; cd "$<" ; `alias build` $(NEO_BUILD_ARGS)
+	cd "$<" ; $(MAKE) $(MFLAGS) $(NEO_BUILD_ARGS)
 	touch "$@"
 
 build.neo_%_component: % build.neo_configure
-	rm -Rf "$(PWD)/$</$(UOUTPUTDIR)"
-	mkdir -p "$(PWD)/$</$(UOUTPUTDIR)"
-	source "$(OO_ENV_JAVA)" ; cd "$<" ; `alias build` $(NEO_BUILD_ARGS)
+	cd "$<" ; $(MAKE) $(MFLAGS) $(NEO_BUILD_ARGS)
 	touch "$@"
 
 build.package: build.neo_patches
@@ -354,17 +368,17 @@ build.package_shared:
 	sh -e -c 'if [ -d "/Volumes/OpenOffice" ] ; then hdiutil eject -force "/Volumes/OpenOffice" ; fi'
 	hdiutil attach -nobrowse "$(OO_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/$(subst $(SPACE),_,$(OO_PRODUCT_NAME))/dmg/install/en-US/$(subst $(SPACE),_,$(OO_PRODUCT_NAME))_$(OO_PRODUCT_VERSION)_MacOS_$(subst _,-,$(TARGET_MACHINE))_install_en-US.dmg"
 	mkdir -p "$(INSTALL_HOME)/package/Contents"
-	cd "$(INSTALL_HOME)/package" ; ( ( cd "/Volumes/OpenOffice/OpenOffice.app" ; gnutar cvf - . ) | ( cd "$(PWD)/$(INSTALL_HOME)/package" ; gnutar xvf - --exclude="._*" ) )
+	cd "$(INSTALL_HOME)/package" ; ( ( cd "/Volumes/OpenOffice/OpenOffice.app" && gnutar cvf - . ) | ( cd "$(PWD)/$(INSTALL_HOME)/package" && gnutar xvf - --exclude="._*" ) )
 	hdiutil eject -force "/Volumes/OpenOffice"
 # Regroup the OOo language packs
 	cd "$(OO_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/$(subst $(SPACE),_,$(OO_PRODUCT_NAME))_languagepack/dmg/install" ; find . -type d -maxdepth 1 -exec basename {} \; | grep -v '^\.$$' | grep -v '^follow_me$$' | grep -v '^log$$' > "$(PWD)/$(INSTALL_HOME)/language_names"
 # Include certain languages in the main installer
-	sh -e -c 'for i in $(PRODUCT_BUNDLED_LANG_PACKS) ; do if [ -d "/Volumes/OpenOffice Language Pack" ] ; then hdiutil eject -force "/Volumes/OpenOffice Language Pack" ; fi ; hdiutil attach -nobrowse "$(PWD)/$(OO_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/$(subst $(SPACE),_,$(OO_PRODUCT_NAME))_languagepack/dmg/install/$${i}/$(subst $(SPACE),_,$(OO_PRODUCT_NAME))_$(OO_PRODUCT_VERSION)_MacOS_$(subst _,-,$(TARGET_MACHINE))_langpack_$${i}.dmg" ; bunzip2 -dc "/Volumes/OpenOffice Language Pack/OpenOffice Language Pack.app/Contents/tarball.tar.bz2" | ( cd "$(PWD)/$(INSTALL_HOME)/package" ; gnutar xvf - --exclude="._*" ) ; hdiutil eject -force "/Volumes/OpenOffice Language Pack" ; helpflag=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | awk -F, "{ print \\$$2 }"` ; if [ "$${helpflag}" != "1" ] ; then rm -Rf "$(PWD)/$(INSTALL_HOME)/package/Contents/help/$${i}" ; ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents/help" ; ln -s "en" "$${i}" ) ; fi ; done'
+	sh -e -c 'for i in $(PRODUCT_BUNDLED_LANG_PACKS) ; do if [ -d "/Volumes/OpenOffice Language Pack" ] ; then hdiutil eject -force "/Volumes/OpenOffice Language Pack" ; fi ; hdiutil attach -nobrowse "$(PWD)/$(OO_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/$(subst $(SPACE),_,$(OO_PRODUCT_NAME))_languagepack/dmg/install/$${i}/$(subst $(SPACE),_,$(OO_PRODUCT_NAME))_$(OO_PRODUCT_VERSION)_MacOS_$(subst _,-,$(TARGET_MACHINE))_langpack_$${i}.dmg" ; bunzip2 -dc "/Volumes/OpenOffice Language Pack/OpenOffice Language Pack.app/Contents/tarball.tar.bz2" | ( cd "$(PWD)/$(INSTALL_HOME)/package" && gnutar xvf - --exclude="._*" ) ; hdiutil eject -force "/Volumes/OpenOffice Language Pack" ; helpflag=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | awk -F, "{ print \\$$2 }"` ; if [ "$${helpflag}" != "1" ] ; then rm -Rf "$(PWD)/$(INSTALL_HOME)/package/Contents/help/$${i}" ; ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents/help" ; ln -s "en" "$${i}" ) ; fi ; done'
 ifndef LANGPACKS
 # Bypass the language pack installers
 else
 # Create the language pack installers
-	sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names" | sed $(foreach BUNDLED_LANG_PACK,$(PRODUCT_BUNDLED_LANG_PACKS),-e "/^$(BUNDLED_LANG_PACK)\\$$/d")` ; do langname=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | sed "s/#.*$$//" | awk -F, "{ print \\$$3 }"` ; langdirname=`echo "$${langname}" | sed "s# #_#g"` ; if [ -z "$${langname}" -o -z "$${langdirname}" ] ; then echo "Skipping $${i} language..." ; continue ; fi ; mkdir -p "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents" ; if [ -d "/Volumes/OpenOffice Language Pack" ] ; then hdiutil eject -force "/Volumes/OpenOffice Language Pack" ; fi ; hdiutil attach -nobrowse "$(PWD)/$(OO_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/$(subst $(SPACE),_,$(OO_PRODUCT_NAME))_languagepack/dmg/install/$${i}/$(subst $(SPACE),_,$(OO_PRODUCT_NAME))_$(OO_PRODUCT_VERSION)_MacOS_$(subst _,-,$(TARGET_MACHINE))_langpack_$${i}.dmg" ; bunzip2 -dc "/Volumes/OpenOffice Language Pack/OpenOffice Language Pack.app/Contents/tarball.tar.bz2" | ( cd "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}" ; gnutar xvf - --exclude="._*" ) ; hdiutil eject -force "/Volumes/OpenOffice Language Pack" ; helpflag=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | awk -F, "{ print \\$$2 }"` ; if [ "$${helpflag}" != "1" ] ; then rm -Rf "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/help/$${i}" ; ( cd "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/help" ; ln -s "en" "$${i}" ) ; fi ; "$(MAKE)" $(MFLAGS) "PRODUCT_LANG_PACK_LOCALE=$${i}" "PRODUCT_LANG_PACK_VERSION=$(PRODUCT_LANG_PACK_VERSION) $${langname}" "PRODUCT_DIR_LANG_PACK_VERSION=$(PRODUCT_DIR_LANG_PACK_VERSION)_$${langdirname}" "build.package_$${langdirname}" ; done'
+	sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names" | sed $(foreach BUNDLED_LANG_PACK,$(PRODUCT_BUNDLED_LANG_PACKS),-e "/^$(BUNDLED_LANG_PACK)\\$$/d")` ; do langname=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | sed "s/#.*$$//" | awk -F, "{ print \\$$3 }"` ; langdirname=`echo "$${langname}" | sed "s# #_#g"` ; if [ -z "$${langname}" -o -z "$${langdirname}" ] ; then echo "Skipping $${i} language..." ; continue ; fi ; mkdir -p "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents" ; if [ -d "/Volumes/OpenOffice Language Pack" ] ; then hdiutil eject -force "/Volumes/OpenOffice Language Pack" ; fi ; hdiutil attach -nobrowse "$(PWD)/$(OO_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/$(subst $(SPACE),_,$(OO_PRODUCT_NAME))_languagepack/dmg/install/$${i}/$(subst $(SPACE),_,$(OO_PRODUCT_NAME))_$(OO_PRODUCT_VERSION)_MacOS_$(subst _,-,$(TARGET_MACHINE))_langpack_$${i}.dmg" ; bunzip2 -dc "/Volumes/OpenOffice Language Pack/OpenOffice Language Pack.app/Contents/tarball.tar.bz2" | ( cd "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}" && gnutar xvf - --exclude="._*" ) ; hdiutil eject -force "/Volumes/OpenOffice Language Pack" ; helpflag=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | awk -F, "{ print \\$$2 }"` ; if [ "$${helpflag}" != "1" ] ; then rm -Rf "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/help/$${i}" ; ( cd "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/help" ; ln -s "en" "$${i}" ) ; fi ; "$(MAKE)" $(MFLAGS) "PRODUCT_LANG_PACK_LOCALE=$${i}" "PRODUCT_LANG_PACK_VERSION=$(PRODUCT_LANG_PACK_VERSION) $${langname}" "PRODUCT_DIR_LANG_PACK_VERSION=$(PRODUCT_DIR_LANG_PACK_VERSION)_$${langdirname}" "build.package_$${langdirname}" ; done'
 endif
 # Remove OOo system plugins but fix bug 3381 to save standard dictionaries
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Frameworks"
@@ -413,7 +427,7 @@ endif
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Resources/cursors"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/vcl/java/com/sun/star/vcl/images/"*.gif "Resources/cursors"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -c -e 'for i in "$(PWD)/vcl/aqua/source/res/cursors/darc.png" "$(PWD)/vcl/aqua/source/res/cursors/dbezier.png" "$(PWD)/vcl/aqua/source/res/cursors/dcapt.png" "$(PWD)/vcl/aqua/source/res/cursors/dcirccut.png" "$(PWD)/vcl/aqua/source/res/cursors/dconnect.png" "$(PWD)/vcl/aqua/source/res/cursors/dellipse.png" "$(PWD)/vcl/aqua/source/res/cursors/dfree.png" "$(PWD)/vcl/aqua/source/res/cursors/dline.png" "$(PWD)/vcl/aqua/source/res/cursors/dpie.png" "$(PWD)/vcl/aqua/source/res/cursors/dpolygon.png" "$(PWD)/vcl/aqua/source/res/cursors/drect.png" "$(PWD)/vcl/aqua/source/res/cursors/dtext.png" "$(PWD)/vcl/aqua/source/res/cursors/vtext.png" ; do cp "$${i}" "Resources/cursors" ; done'
-	cd "$(INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/vcl/java/source/res" ; gnutar cvf - --exclude CVS MainMenu.nib ) | gnutar xvf - )
+	cd "$(INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/vcl/java/source/res" && gnutar cvf - --exclude CVS MainMenu.nib ) | gnutar xvf - )
 	mkdir -p "$(INSTALL_HOME)/package/Contents/tmp"
 	cd "$(INSTALL_HOME)/package/Contents/tmp" ; unzip "$(PWD)/etc/package/neo2toolbarv101.zip"
 	chmod -Rf u+rw "$(INSTALL_HOME)/package/Contents/tmp"
@@ -470,7 +484,7 @@ endif
 # Add Mac OS X localized resources
 	cd "$(INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `echo "$(PRODUCT_BUNDLED_LANG_PACKS)" | sed "s#-#_#g"` ; do mkdir -p "$${i}.lproj" ; mkdir -p `echo "$${i}" | sed "s#_.*\\$$##"`".lproj" ; done'
 ifdef PRODUCT_BUILD3
-	cd "$(INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/etc/package/l10n" ; gnutar cvf - --exclude CVS --exclude "*.html" . ) | gnutar xvf - )
+	cd "$(INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/etc/package/l10n" && gnutar cvf - --exclude CVS --exclude "*.html" . ) | gnutar xvf - )
 	cd "$(INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `cd "$(PWD)/etc/package/l10n" ; find . -name "*.html"` ; do sed "s#\$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$(PWD)/etc/package/l10n/$${i}" | sed "s#\$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" | sed "s#\$$(PRODUCT_DOWNLOAD_URL)#$(PRODUCT_DOWNLOAD_URL)#g" | sed "s#\$$(PRODUCT_MIN_OSVERSION_NAME)#$(PRODUCT_MIN_OSVERSION_NAME)#g" | sed "s#\$$(PRODUCT_MAX_OSVERSION_NAME)#$(PRODUCT_MAX_OSVERSION_NAME)#g" > "$${i}" ; done'
 endif
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf README* program/LICENSE* program/open-url program/senddoc program/startup.sh program/unoinfo readmes share/extensions/install share/readme
