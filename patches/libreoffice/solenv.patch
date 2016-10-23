@@ -1,17 +1,3 @@
---- gbuild/AllLangResTarget.mk	2015-11-25 04:55:38.000000000 -0800
-+++ gbuild/AllLangResTarget.mk	2016-10-21 13:14:42.000000000 -0700
-@@ -378,7 +378,11 @@
- 
- # ResTarget
- 
-+ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
-+gb_ResTarget_DEFIMAGESLOCATION := $(SRC_ROOT)/icon-themes/galaxy/
-+else
- gb_ResTarget_DEFIMAGESLOCATION := $(SRCDIR)/icon-themes/galaxy/
-+endif
- 
- $(call gb_ResTarget_get_clean_target,%) :
- 	$(call gb_Output_announce,$*,$(false),RES,2)
 --- gbuild/Deliver.mk	2015-11-25 04:55:38.000000000 -0800
 +++ gbuild/Deliver.mk	2016-10-21 13:35:45.000000000 -0700
 @@ -50,6 +50,11 @@
@@ -34,6 +20,30 @@
  
  define gb_Deliver_deliver
  $(if $(1),$(call gb_Deliver__deliver,$(1),$(2)),\
+--- gbuild/LinkTarget.mk	2015-11-25 04:55:38.000000000 -0800
++++ gbuild/LinkTarget.mk	2016-10-23 15:07:56.000000000 -0700
+@@ -17,6 +17,11 @@
+ #   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ #
+ 
++ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
++OLDSRCDIR:=$(SRCDIR)
++SRCDIR:=$(SRC_ROOT)
++endif
++
+ #the following user-defined variables are supported:
+ # YACCFLAGS
+ # LEXFLAGS
+@@ -1395,4 +1400,9 @@
+ 
+ endef
+ 
++ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
++SRCDIR:=$(OLDSRCDIR)
++OLDSRCDIR:=
++endif
++
+ # vim: set noet sw=4:
 --- gbuild/gbuild.mk	2015-11-25 04:55:38.000000000 -0800
 +++ gbuild/gbuild.mk	2016-10-21 13:26:05.000000000 -0700
 @@ -266,6 +266,10 @@
