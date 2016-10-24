@@ -242,13 +242,25 @@ endif
 build.neo_instdir : build.libo_all $(LIBO_INSTDIR)
 	rm -Rf "$(INSTDIR)"
 	mkdir -p "$(INSTDIR)"
-	cd "$(INSTDIR)" ; ( ( cd "$(PWD)/$(LIBO_INSTDIR)" && gnutar cvf - . ) | gnutar xvf - )
+	cd "$(INSTDIR)" ; sh -e -c '( cd "$(PWD)/$(LIBO_INSTDIR)" ; find . -type d | sed "s/ /\\ /g" ) | while read i ; do mkdir -p "$$i" ; done'
+ifeq ("$(OS_TYPE)","macOS")
+	cd "$(INSTDIR)" ; sh -e -c '( cd "$(PWD)/$(LIBO_INSTDIR)" ; find . ! -type d | sed "s/ /\\ /g" ) | while read i ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(LIBO_INSTDIR)/$$i" "$$i" 2>/dev/null ; fi ; done'
+else
+# Use hardlinks for Windows
+	cd "$(INSTDIR)" ; sh -e -c 'CYGWIN=winsymlinks ; export CYGWIN ; ( cd "$(PWD)/$(LIBO_INSTDIR)" ; find . ! -type d | sed "s/ /\\ /g" ) | while read i ; do if [ ! -f "$$i" ] ; then ln -f "$(PWD)/$(LIBO_INSTDIR)/$$i" "$$i" 2>/dev/null ; fi ; done'
+endif
 	touch "$@"
 
 build.neo_workdir : build.libo_all $(LIBO_WORKDIR)
 	rm -Rf "$(WORKDIR)"
 	mkdir -p "$(WORKDIR)"
-	cd "$(WORKDIR)" ; ( ( cd "$(PWD)/$(LIBO_WORKDIR)" && gnutar cvf - Headers LinkTarget UnoApiHeadersTarget UnoApiTarget ) | gnutar xvf - )
+	cd "$(WORKDIR)" ; sh -e -c '( cd "$(PWD)/$(LIBO_WORKDIR)" ; find . -type d | sed "s/ /\\ /g" ) | while read i ; do mkdir -p "$$i" ; done'
+ifeq ("$(OS_TYPE)","macOS")
+	cd "$(WORKDIR)" ; sh -e -c '( cd "$(PWD)/$(LIBO_WORKDIR)" ; find . ! -type d | sed "s/ /\\ /g" ) | while read i ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(LIBO_WORKDIR)/$$i" "$$i" 2>/dev/null ; fi ; done'
+else
+# Use hardlinks for Windows
+	cd "$(WORKDIR)" ; sh -e -c 'CYGWIN=winsymlinks ; export CYGWIN ; ( cd "$(PWD)/$(LIBO_WORKDIR)" ; find . ! -type d | sed "s/ /\\ /g" ) | while read i ; do if [ ! -f "$$i" ] ; then ln -f "$(PWD)/$(LIBO_WORKDIR)/$$i" "$$i" 2>/dev/null ; fi ; done'
+endif
 	touch "$@"
 
 build.neo_configure: build.neo_instdir build.neo_workdir $(INSTDIR) $(WORKDIR)
