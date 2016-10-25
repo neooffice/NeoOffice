@@ -1,49 +1,46 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified October 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *************************************************************/
-
-
+ */
 
 #include <stdio.h>
 
 #include <avmedia/mediawindow.hxx>
+#include <boost/scoped_ptr.hpp>
 #include "mediawindow_impl.hxx"
 #include "mediamisc.hxx"
 #include "mediawindow.hrc"
 #include <tools/urlobj.hxx>
-#include <vcl/msgbox.hxx>
+#include <vcl/layout.hxx>
 #include <unotools/pathoptions.hxx>
 #include <sfx2/filedlghelper.hxx>
 #include <comphelper/processfactory.hxx>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/media/XManager.hpp>
+#include "com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp"
 #include "com/sun/star/ui/dialogs/TemplateDescription.hpp"
+#include "com/sun/star/ui/dialogs/XFilePickerControlAccess.hpp"
 
 #define AVMEDIA_FRAMEGRABBER_DEFAULTFRAME_MEDIATIME 3.0
 
@@ -51,387 +48,232 @@ using namespace ::com::sun::star;
 
 namespace avmedia {
 
-// ---------------
-// - MediaWindow -
-// ---------------
 
-MediaWindow::MediaWindow( Window* parent, bool bInternalMediaControl ) :
+// - MediaWindow -
+
+
+MediaWindow::MediaWindow( vcl::Window* parent, bool bInternalMediaControl ) :
     mpImpl( new priv::MediaWindowImpl( parent, this, bInternalMediaControl ) )
 {
     mpImpl->Show();
 }
 
-// -------------------------------------------------------------------------
 
-MediaWindow::~MediaWindow()
+
+MediaWindow::~MediaWindow() {}
+
+
+
+void MediaWindow::setURL( const OUString& rURL, const OUString& rReferer )
 {
-    mpImpl->cleanUp();
-    delete mpImpl;
-    mpImpl = NULL;
+    mpImpl->setURL( rURL, OUString(), rReferer );
 }
 
-// -------------------------------------------------------------------------
 
-void MediaWindow::setURL( const ::rtl::OUString& rURL )
-{
-    if( mpImpl )
-        mpImpl->setURL( rURL );
-}
 
-// -------------------------------------------------------------------------
-
-const ::rtl::OUString& MediaWindow::getURL() const
+const OUString& MediaWindow::getURL() const
 {
     return mpImpl->getURL();
 }
 
-// -------------------------------------------------------------------------
+
 
 bool MediaWindow::isValid() const
 {
-    return( mpImpl != NULL && mpImpl->isValid() );
+    return mpImpl->isValid();
 }
 
-// -------------------------------------------------------------------------
+
 
 void MediaWindow::MouseMove( const MouseEvent& /* rMEvt */ )
 {
 }
 
-// ---------------------------------------------------------------------
+
 
 void MediaWindow::MouseButtonDown( const MouseEvent& /* rMEvt */ )
 {
 }
 
-// ---------------------------------------------------------------------
+
 
 void MediaWindow::MouseButtonUp( const MouseEvent& /* rMEvt */ )
 {
 }
 
-// -------------------------------------------------------------------------
+
 
 void MediaWindow::KeyInput( const KeyEvent& /* rKEvt */ )
 {
 }
 
-// -------------------------------------------------------------------------
+
 
 void MediaWindow::KeyUp( const KeyEvent& /* rKEvt */ )
 {
 }
 
-// -------------------------------------------------------------------------
+
 
 void MediaWindow::Command( const CommandEvent& /* rCEvt */ )
 {
 }
 
-// -------------------------------------------------------------------------
+
 
 sal_Int8 MediaWindow::AcceptDrop( const AcceptDropEvent& /* rEvt */ )
 {
     return 0;
 }
 
-// -------------------------------------------------------------------------
+
 
 sal_Int8 MediaWindow::ExecuteDrop( const ExecuteDropEvent& /* rEvt */ )
 {
     return 0;
 }
 
-// -------------------------------------------------------------------------
+
 
 void MediaWindow::StartDrag( sal_Int8 /* nAction */, const Point& /* rPosPixel */ )
 {
 }
 
-// -------------------------------------------------------------------------
 
-bool MediaWindow::hasPreferredSize() const
-{
-    return( mpImpl != NULL && mpImpl->hasPreferredSize() );
-}
-
-// -------------------------------------------------------------------------
 
 Size MediaWindow::getPreferredSize() const
 {
     return mpImpl->getPreferredSize();
 }
 
-// -------------------------------------------------------------------------
+
 
 void MediaWindow::setPosSize( const Rectangle& rNewRect )
 {
-    if( mpImpl )
-    {
-        mpImpl->setPosSize( rNewRect );
-    }
+    mpImpl->setPosSize( rNewRect );
 }
 
-// -------------------------------------------------------------------------
 
-Rectangle MediaWindow::getPosSize() const
-{
-    return Rectangle( mpImpl->GetPosPixel(), mpImpl->GetSizePixel() );
-}
-
-// -------------------------------------------------------------------------
 
 void MediaWindow::setPointer( const Pointer& rPointer )
 {
-    if( mpImpl )
-        mpImpl->setPointer( rPointer );
+    mpImpl->setPointer( rPointer );
 }
 
-// -------------------------------------------------------------------------
 
-const Pointer& MediaWindow::getPointer() const
-{
-    return mpImpl->getPointer();
-}
-
-// -------------------------------------------------------------------------
-
-bool MediaWindow::setZoom( ::com::sun::star::media::ZoomLevel eLevel )
-{
-    return( mpImpl != NULL && mpImpl->setZoom( eLevel ) );
-}
-
-// -------------------------------------------------------------------------
-
-::com::sun::star::media::ZoomLevel MediaWindow::getZoom() const
-{
-    return mpImpl->getZoom();
-}
-
-// -------------------------------------------------------------------------
 
 bool MediaWindow::start()
 {
-    return( mpImpl != NULL && mpImpl->start() );
+    return mpImpl->start();
 }
 
-// -------------------------------------------------------------------------
 
-void MediaWindow::stop()
-{
-    if( mpImpl )
-        mpImpl->stop();
-}
-
-// -------------------------------------------------------------------------
-
-bool MediaWindow::isPlaying() const
-{
-    return( mpImpl != NULL && mpImpl->isPlaying() );
-}
-
-// -------------------------------------------------------------------------
-
-double MediaWindow::getDuration() const
-{
-    return mpImpl->getDuration();
-}
-
-// -------------------------------------------------------------------------
-
-void MediaWindow::setMediaTime( double fTime )
-{
-    if( mpImpl )
-        mpImpl->setMediaTime( fTime );
-}
-
-// -------------------------------------------------------------------------
-
-double MediaWindow::getMediaTime() const
-{
-    return mpImpl->getMediaTime();
-}
-
-// -------------------------------------------------------------------------
-
-void MediaWindow::setStopTime( double fTime )
-{
-    if( mpImpl )
-        mpImpl->setStopTime( fTime );
-}
-
-// -------------------------------------------------------------------------
-
-double MediaWindow::getStopTime() const
-{
-    return mpImpl->getStopTime();
-}
-
-// -------------------------------------------------------------------------
-
-void MediaWindow::setRate( double fRate )
-{
-    if( mpImpl )
-        mpImpl->setRate( fRate );
-}
-
-// -------------------------------------------------------------------------
-
-double MediaWindow::getRate() const
-{
-    return mpImpl->getRate();
-}
-
-// -------------------------------------------------------------------------
-
-void MediaWindow::setPlaybackLoop( bool bSet )
-{
-    if( mpImpl )
-        mpImpl->setPlaybackLoop( bSet );
-}
-
-// -------------------------------------------------------------------------
-
-bool MediaWindow::isPlaybackLoop() const
-{
-    return mpImpl->isPlaybackLoop();
-}
-
-// -------------------------------------------------------------------------
-
-void MediaWindow::setMute( bool bSet )
-{
-    if( mpImpl )
-        mpImpl->setMute( bSet );
-}
-
-// -------------------------------------------------------------------------
-
-bool MediaWindow::isMute() const
-{
-    return mpImpl->isMute();
-}
-
-// -------------------------------------------------------------------------
 
 void MediaWindow::updateMediaItem( MediaItem& rItem ) const
 {
-    if( mpImpl )
-        mpImpl->updateMediaItem( rItem );
+    mpImpl->updateMediaItem( rItem );
 }
 
-// -------------------------------------------------------------------------
+
 
 void MediaWindow::executeMediaItem( const MediaItem& rItem )
 {
-    if( mpImpl )
-        mpImpl->executeMediaItem( rItem );
+    mpImpl->executeMediaItem( rItem );
 }
 
-// -------------------------------------------------------------------------
+
 
 void MediaWindow::show()
 {
-    if( mpImpl )
-        mpImpl->Show();
+    mpImpl->Show();
 }
 
-// -------------------------------------------------------------------------
+
 
 void MediaWindow::hide()
 {
-    if( mpImpl )
-        mpImpl->Hide();
+    mpImpl->Hide();
 }
 
-// -------------------------------------------------------------------------
 
-void MediaWindow::enable()
+
+vcl::Window* MediaWindow::getWindow() const
 {
-    if( mpImpl )
-        mpImpl->Enable();
+    return mpImpl.get();
 }
 
-// -------------------------------------------------------------------------
 
-void MediaWindow::disable()
-{
-    if( mpImpl )
-        mpImpl->Disable();
-}
-
-// -------------------------------------------------------------------------
-
-Window* MediaWindow::getWindow() const
-{
-    return mpImpl;
-}
-
-// -------------------------------------------------------------------------
 
 void MediaWindow::getMediaFilters( FilterNameVector& rFilterNameVector )
 {
 #ifdef USE_JAVA
-    static const char* pFilters[] = {   "3GPP Video", "3gp;3g2",
-                                        "AAC Audio", "aac;m4a;m4p",
-                                        "AIF Audio", "aif;aiff",
+    static const char* pFilters[] = { "3GPP Video", "3gp;3g2",
+                                      "Advanced Audio Coding", "aac",
 #else	// USE_JAVA
-    static const char* pFilters[] = {   "AIF Audio", "aif;aiff",
+    static const char* pFilters[] = { "Advanced Audio Coding", "aac",
 #endif	// USE_JAVA
-                                        "AU Audio", "au",
-                                        "AVI", "avi",
-                                        "CD Audio", "cda",
-                                        "FLAC Audio", "flac",
-                                        "Flash Video", "flv",
-                                        "Matroska Media", "mkv",
-                                        "MIDI Audio", "mid;midi",
+                                      "AIF Audio", "aif;aiff",
+                                      "Advanced Systems Format", "asf;wma;wmv",
+                                      "AU Audio", "au",
+                                      "AC3 Audio", "ac3",
+                                      "AVI", "avi",
+                                      "CD Audio", "cda",
+                                      "Digital Video", "dv",
+                                      "FLAC Audio", "flac",
+                                      "Flash Video", "flv",
+                                      "Matroska Media", "mkv",
+                                      "MIDI Audio", "mid;midi",
 #ifdef USE_JAVA
-                                        "MPEG Audio", "mp2;mp3;mpa;m1a;m2a",
-                                        "MPEG Video", "mpg;mpeg;mpv;mp4;m1v;m2v;m4v",
-                                        "Ogg bitstream", "ogg;oga;ogm;ogv;ogx",
+                                      "MPEG Audio", "mp2;mp3;mpa;m4a;m4p;m1a;m2a",
+                                      "MPEG Video", "mpg;mpeg;mpv;mp4;m4v;m1v;m2v",
 #else	// USE_JAVA
-                                        "MPEG Audio", "mp2;mp3;mpa",
-                                        "MPEG Video", "mpg;mpeg;mpv;mp4",
-                                        "Ogg bitstream", "ogg;oga;ogv",
+                                      "MPEG Audio", "mp2;mp3;mpa;m4a",
+                                      "MPEG Video", "mpg;mpeg;mpv;mp4;m4v",
 #endif	// USE_JAVA
-                                        "Quicktime Video", "mov",
-                                        "Vivo Video", "viv",
-                                        "WAVE Audio", "wav",
+                                      "Ogg Audio", "ogg;oga;opus",
 #ifdef USE_JAVA
-                                        "Windows Media Audio", "wma",
-                                        "Windows Media Video", "asf;wmv" };
+                                      "Ogg Video", "ogv;ogx;ogm",
 #else	// USE_JAVA
-                                        "Windows Media Video", "wmv" };
+                                      "Ogg Video", "ogv;ogx",
 #endif	// USE_JAVA
+                                      "Real Audio", "ra",
+                                      "Real Media", "rm",
+                                      "RMI MIDI Audio", "rmi",
+                                      "SND (SouND) Audio", "snd",
+                                      "Quicktime Video", "mov",
+                                      "Vivo Video", "viv",
+                                      "WAVE Audio", "wav",
+                                      "WebM Video", "webm",
+                                      "Windows Media Audio", "wma",
+                                      "Windows Media Video", "wmv"};
 
-    unsigned int i;
-	for( i = 0; i < ( sizeof( pFilters ) / sizeof( char* ) ); i += 2 )
+    for( size_t i = 0; i < SAL_N_ELEMENTS(pFilters); i += 2 )
     {
-        rFilterNameVector.push_back( ::std::make_pair< ::rtl::OUString, ::rtl::OUString >(
-                                        ::rtl::OUString::createFromAscii( pFilters[ i ] ),
-                                        ::rtl::OUString::createFromAscii( pFilters[ i + 1 ] ) ) );
+        rFilterNameVector.push_back( ::std::make_pair< OUString, OUString >(
+                                        OUString::createFromAscii(pFilters[i]),
+                                        OUString::createFromAscii(pFilters[i+1]) ) );
     }
 }
 
-// -------------------------------------------------------------------------
 
-bool MediaWindow::executeMediaURLDialog( Window* /* pParent */, ::rtl::OUString& rURL, bool bInsertDialog )
+
+bool MediaWindow::executeMediaURLDialog(vcl::Window* /* pParent */,
+        OUString& rURL, bool *const o_pbLink)
 {
-    ::sfx2::FileDialogHelper        aDlg( com::sun::star::ui::dialogs::TemplateDescription::FILEOPEN_SIMPLE, 0 );
-    static const ::rtl::OUString    aWildcard( RTL_CONSTASCII_USTRINGPARAM( "*." ) );
+    ::sfx2::FileDialogHelper        aDlg( (o_pbLink)
+            ? ui::dialogs::TemplateDescription::FILEOPEN_LINK_PREVIEW
+            : ui::dialogs::TemplateDescription::FILEOPEN_SIMPLE, 0 );
+    static const char               aWildcard[] = "*.";
     FilterNameVector                aFilters;
-    const ::rtl::OUString           aSeparator( RTL_CONSTASCII_USTRINGPARAM( ";" ) );
-    ::rtl::OUString                 aAllTypes;
+    static const char               aSeparator[] = ";";
+    OUString                        aAllTypes;
 
-    aDlg.SetTitle( AVMEDIA_RESID( bInsertDialog ? AVMEDIA_STR_INSERTMEDIA_DLG : AVMEDIA_STR_OPENMEDIA_DLG ) );
+    aDlg.SetTitle( AVMEDIA_RESSTR( (o_pbLink)
+                ? AVMEDIA_STR_INSERTMEDIA_DLG : AVMEDIA_STR_OPENMEDIA_DLG ) );
 
     getMediaFilters( aFilters );
 
-	unsigned int i;
-#ifdef USE_JAVA
-    // add filter for all types
-    aDlg.AddFilter( AVMEDIA_RESID( AVMEDIA_STR_ALL_FILES ), String( RTL_CONSTASCII_USTRINGPARAM( "*.*" ) ) );
-#else	// USE_JAVA
+    unsigned int i;
     for( i = 0; i < aFilters.size(); ++i )
     {
         for( sal_Int32 nIndex = 0; nIndex >= 0; )
@@ -444,12 +286,11 @@ bool MediaWindow::executeMediaURLDialog( Window* /* pParent */, ::rtl::OUString&
     }
 
     // add filter for all media types
-    aDlg.AddFilter( AVMEDIA_RESID( AVMEDIA_STR_ALL_MEDIAFILES ), aAllTypes );
-#endif	// USE_JAVA
+    aDlg.AddFilter( AVMEDIA_RESSTR( AVMEDIA_STR_ALL_MEDIAFILES ), aAllTypes );
 
     for( i = 0; i < aFilters.size(); ++i )
     {
-        ::rtl::OUString aTypes;
+        OUString aTypes;
 
         for( sal_Int32 nIndex = 0; nIndex >= 0; )
         {
@@ -463,34 +304,58 @@ bool MediaWindow::executeMediaURLDialog( Window* /* pParent */, ::rtl::OUString&
         aDlg.AddFilter( aFilters[ i ].first, aTypes );
     }
 
-#ifndef USE_JAVA
     // add filter for all types
-    aDlg.AddFilter( AVMEDIA_RESID( AVMEDIA_STR_ALL_FILES ), String( RTL_CONSTASCII_USTRINGPARAM( "*.*" ) ) );
-#endif	// USE_JAVA
+    aDlg.AddFilter( AVMEDIA_RESSTR( AVMEDIA_STR_ALL_FILES ), OUString( "*.*"  ) );
+
+    uno::Reference<ui::dialogs::XFilePicker> const xFP(aDlg.GetFilePicker());
+    uno::Reference<ui::dialogs::XFilePickerControlAccess> const xCtrlAcc(xFP,
+            uno::UNO_QUERY_THROW);
+    if (o_pbLink)
+    {
+        // for video link should be the default
+        xCtrlAcc->setValue(
+                ui::dialogs::ExtendedFilePickerElementIds::CHECKBOX_LINK, 0,
+                uno::makeAny(true) );
+        // disabled for now: TODO: preview?
+        xCtrlAcc->enableControl(
+                ui::dialogs::ExtendedFilePickerElementIds::CHECKBOX_PREVIEW,
+                false);
+    }
 
     if( aDlg.Execute() == ERRCODE_NONE )
     {
         const INetURLObject aURL( aDlg.GetPath() );
         rURL = aURL.GetMainURL( INetURLObject::DECODE_UNAMBIGUOUS );
+
+        if (o_pbLink)
+        {
+            uno::Any const any = xCtrlAcc->getValue(
+                ui::dialogs::ExtendedFilePickerElementIds::CHECKBOX_LINK, 0);
+            if (!(any >>= *o_pbLink))
+            {
+                SAL_WARN("avmedia", "invalid link property");
+                *o_pbLink = true;
+            }
+        }
     }
     else if( !rURL.isEmpty() )
-        rURL = ::rtl::OUString();
+        rURL.clear();
 
     return !rURL.isEmpty();
 }
 
-// -------------------------------------------------------------------------
 
-void MediaWindow::executeFormatErrorBox( Window* pParent )
+
+void MediaWindow::executeFormatErrorBox( vcl::Window* pParent )
 {
-    ErrorBox aErrBox( pParent, AVMEDIA_RESID( AVMEDIA_ERR_URL ) );
+    MessageDialog aErrBox( pParent, AVMEDIA_RESID( AVMEDIA_STR_ERR_URL ) );
 
     aErrBox.Execute();
 }
 
-// -------------------------------------------------------------------------
 
-bool MediaWindow::isMediaURL( const ::rtl::OUString& rURL, bool bDeep, Size* pPreferredSizePixel )
+
+bool MediaWindow::isMediaURL( const OUString& rURL, const OUString& rReferer, bool bDeep, Size* pPreferredSizePixel )
 {
     const INetURLObject aURL( rURL );
     bool                bRet = false;
@@ -501,12 +366,11 @@ bool MediaWindow::isMediaURL( const ::rtl::OUString& rURL, bool bDeep, Size* pPr
         {
             try
             {
-                sal_Bool bIsJavaBasedMediaWindow;
-    	        uno::Reference< media::XPlayer > xPlayer( priv::MediaWindowImpl::createPlayer(
-        	                                                aURL.GetMainURL( INetURLObject::DECODE_UNAMBIGUOUS ),
-                                                            bIsJavaBasedMediaWindow ) );
+                uno::Reference< media::XPlayer > xPlayer( priv::MediaWindowImpl::createPlayer(
+                                                            aURL.GetMainURL( INetURLObject::DECODE_UNAMBIGUOUS ),
+                                                            rReferer ) );
 
-            	if( xPlayer.is() )
+                if( xPlayer.is() )
                 {
                     bRet = true;
 
@@ -526,11 +390,11 @@ bool MediaWindow::isMediaURL( const ::rtl::OUString& rURL, bool bDeep, Size* pPr
         else
         {
             FilterNameVector        aFilters;
-            const ::rtl::OUString   aExt( aURL.getExtension() );
+            const OUString          aExt( aURL.getExtension() );
 
             getMediaFilters( aFilters );
 
-			unsigned int i;
+            unsigned int i;
             for( i = 0; ( i < aFilters.size() ) && !bRet; ++i )
             {
                 for( sal_Int32 nIndex = 0; nIndex >= 0 && !bRet; )
@@ -545,23 +409,23 @@ bool MediaWindow::isMediaURL( const ::rtl::OUString& rURL, bool bDeep, Size* pPr
     return bRet;
 }
 
-// -------------------------------------------------------------------------
 
-uno::Reference< media::XPlayer > MediaWindow::createPlayer( const ::rtl::OUString& rURL )
+
+uno::Reference< media::XPlayer > MediaWindow::createPlayer( const OUString& rURL, const OUString& rReferer, const OUString* pMimeType )
 {
-    sal_Bool bJavaBased = sal_False;
-    return priv::MediaWindowImpl::createPlayer( rURL, bJavaBased );
+    return priv::MediaWindowImpl::createPlayer( rURL, rReferer, pMimeType );
 }
 
-// -------------------------------------------------------------------------
 
-uno::Reference< graphic::XGraphic > MediaWindow::grabFrame( const ::rtl::OUString& rURL,
-                                                            bool bAllowToCreateReplacementGraphic,
+
+uno::Reference< graphic::XGraphic > MediaWindow::grabFrame( const OUString& rURL,
+                                                            const OUString& rReferer,
+                                                            const OUString& sMimeType,
                                                             double fMediaTime )
 {
-    uno::Reference< media::XPlayer >    xPlayer( createPlayer( rURL ) );
+    uno::Reference< media::XPlayer >    xPlayer( createPlayer( rURL, rReferer, &sMimeType ) );
     uno::Reference< graphic::XGraphic > xRet;
-    ::std::auto_ptr< Graphic >          apGraphic;
+    boost::scoped_ptr< Graphic > apGraphic;
 
     if( xPlayer.is() )
     {
@@ -578,21 +442,21 @@ uno::Reference< graphic::XGraphic > MediaWindow::grabFrame( const ::rtl::OUStrin
             xRet = xGrabber->grabFrame( fMediaTime );
         }
 
-        if( !xRet.is() && bAllowToCreateReplacementGraphic  )
+        if( !xRet.is() )
         {
             awt::Size aPrefSize( xPlayer->getPreferredPlayerWindowSize() );
 
             if( !aPrefSize.Width && !aPrefSize.Height )
             {
-                const BitmapEx aBmpEx( AVMEDIA_RESID( AVMEDIA_BMP_AUDIOLOGO ) );
+                const BitmapEx aBmpEx( getAudioLogo() );
                 apGraphic.reset( new Graphic( aBmpEx ) );
             }
         }
     }
 
-    if( !xRet.is() && !apGraphic.get() && bAllowToCreateReplacementGraphic )
+    if( !xRet.is() && !apGraphic.get() )
     {
-        const BitmapEx aBmpEx( AVMEDIA_RESID( AVMEDIA_BMP_EMPTYLOGO ) );
+        const BitmapEx aBmpEx( getEmptyLogo() );
         apGraphic.reset( new Graphic( aBmpEx ) );
     }
 
@@ -602,4 +466,17 @@ uno::Reference< graphic::XGraphic > MediaWindow::grabFrame( const ::rtl::OUStrin
     return xRet;
 }
 
+BitmapEx MediaWindow::getAudioLogo()
+{
+    return BitmapEx(AVMEDIA_RESID(AVMEDIA_BMP_AUDIOLOGO));
+}
+
+BitmapEx MediaWindow::getEmptyLogo()
+{
+    return BitmapEx(AVMEDIA_RESID(AVMEDIA_BMP_EMPTYLOGO));
+}
+
+
 } // namespace avemdia
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
