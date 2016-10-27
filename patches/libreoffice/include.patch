@@ -1,0 +1,11 @@
+--- vcl/svapp.hxx	2015-11-25 04:55:38.000000000 -0800
++++ vcl/svapp.hxx	2016-10-27 15:17:19.000000000 -0700
+@@ -629,6 +629,8 @@
+     */
+     static bool                 IsInExecute();
+ 
++    static sal_Bool             IsShutDown();
++
+     /** Queries whether application has a modal dialog active.
+ 
+      @returns   true if a modal dialog is active, false if not

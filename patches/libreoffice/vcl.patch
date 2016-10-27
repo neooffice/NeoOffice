@@ -1,0 +1,14 @@
+--- source/app/svapp.cxx	2015-11-25 04:55:38.000000000 -0800
++++ source/app/svapp.cxx	2016-10-27 15:19:44.000000000 -0700
+@@ -437,6 +437,11 @@
+     return ImplGetSVData()->maAppData.mbInAppExecute;
+ }
+ 
++sal_Bool Application::IsShutDown()
++{
++    return ImplGetSVData()->maAppData.mbAppQuit;
++}
++
+ bool Application::IsInModalMode()
+ {
+     return (ImplGetSVData()->maAppData.mnModalMode != 0);

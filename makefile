@@ -205,7 +205,9 @@ build.libo_checkout: build.libo_src_checkout build.ant_checkout build.libo_exter
 
 build.libo_patches: \
 	build.libo_bin_patch \
-	build.libo_sw_patch
+	build.libo_include_patch \
+	build.libo_sw_patch \
+	build.libo_vcl_patch
 	touch "$@"
 
 build.libo_%_patch: $(LIBO_PATCHES_HOME)/%.patch build.libo_checkout
