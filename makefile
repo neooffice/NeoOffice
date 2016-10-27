@@ -205,7 +205,6 @@ build.libo_checkout: build.libo_src_checkout build.ant_checkout build.libo_exter
 
 build.libo_patches: \
 	build.libo_bin_patch \
-	build.libo_solenv_patch \
 	build.libo_sw_patch
 	touch "$@"
 
@@ -271,7 +270,7 @@ build.neo_configure: build.neo_instdir build.neo_workdir $(INSTDIR) $(WORKDIR)
 	echo "export INSTDIR:=$(realpath $(INSTDIR))" >> "$@"
 	echo "export INSTROOT:=$(realpath $(INSTDIR))"'/$$(PRODUCTNAME).app/Contents' >> "$@"
 	echo "export SOLARINC:=-I. -I$(realpath include)"' $$(SOLARINC)' >> "$@"
-	echo "export SRC_ROOT:=$(realpath .)" >> "$@"
+	echo "export SRCDIR:=$(realpath .)" >> "$@"
 	echo "export WORKDIR:=$(realpath $(WORKDIR))" >> "$@"
 	echo "# Add custom environment variables" >> "$@"
 	echo "export PRODUCT_BUILD_TYPE:=java" >> "$@"
@@ -341,7 +340,17 @@ build.neo_sc_patch: build.neo_unotools_patch
 build.neo_sfx2_patch: build.neo_sal_patch
 build.neo_sw_patch: build.neo_unotools_patch
 
-build.neo_%_patch: % build.neo_configure
+build.neo_solenv_patch: solenv build.neo_configure
+	cd "$<" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . -type d | sed "s/ /\\ /g" | grep -v /CVS$$ ) | while read i ; do mkdir -p "$$i" ; done'
+ifeq ("$(OS_TYPE)","macOS")
+	cd "$<" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . ! -type d | sed "s/ /\\ /g" | grep -v /CVS/ ) | while read i ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(LIBO_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
+else
+# Use hardlinks for Windows
+	cd "$<" ; sh -e -c 'CYGWIN=winsymlinks ; export CYGWIN ; ( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ ) | while read i ; do if [ ! -f "$$i" ] ; then ln -f "$(PWD)/$(LIBO_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
+endif
+	touch "$@"
+
+build.neo_%_patch: % build.neo_configure build.neo_solenv_patch
 	cd "$<" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . -type d | sed "s/ /\\ /g" | grep -v /CVS$$ ) | while read i ; do mkdir -p "$$i" ; done'
 ifeq ("$(OS_TYPE)","macOS")
 	cd "$<" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . ! -type d | sed "s/ /\\ /g" | grep -v /CVS/ ) | while read i ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(LIBO_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'

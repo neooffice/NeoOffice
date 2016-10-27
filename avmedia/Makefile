@@ -18,11 +18,10 @@
 
 module_directory:=$(dir $(realpath $(firstword $(MAKEFILE_LIST))))
 
-ifndef NO_USE_JAVA
+ifneq ($(strip $(PRODUCT_BUILD_TYPE)),java)
 include $(module_directory)../build.neo_configure
-include $(SRCDIR)/solenv/gbuild/partial_build.mk
-else
+endif	# PRODUCT_BUILD_TYPE != java
+
 include $(module_directory)/../solenv/gbuild/partial_build.mk
-endif
 
 # vim: set noet sw=4 ts=4:
