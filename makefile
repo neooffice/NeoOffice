@@ -352,7 +352,7 @@ else
 endif
 	touch "$@"
 
-build.neo_%_patch: % build.neo_configure build.neo_solenv_patch
+build.neo_%_patch: % build.neo_solenv_patch
 	cd "$<" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . -type d | sed "s/ /\\ /g" | grep -v /CVS$$ ) | while read i ; do mkdir -p "$$i" ; done'
 ifeq ("$(OS_TYPE)","macOS")
 	cd "$<" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . ! -type d | sed "s/ /\\ /g" | grep -v /CVS/ ) | while read i ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(LIBO_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
@@ -364,7 +364,7 @@ endif
 	cd "$<" ; $(MAKE) $(MFLAGS)
 	touch "$@"
 
-build.neo_%_component: % build.neo_configure
+build.neo_%_component: % build.neo_solenv_patch
 	cd "$<" ; $(MAKE) $(MFLAGS) clean
 	cd "$<" ; $(MAKE) $(MFLAGS)
 	touch "$@"
