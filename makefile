@@ -207,7 +207,18 @@ build.libo_patches: \
 	build.libo_bin_patch \
 	build.libo_include_patch \
 	build.libo_sw_patch \
+	build.libo_src_root_patch \
 	build.libo_vcl_patch
+	touch "$@"
+
+build.libo_src_root_patch: $(LIBO_PATCHES_HOME)/src_root.patch build.libo_checkout
+ifeq ("$(OS_TYPE)","macOS")
+	-( cd "$(LIBO_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(LIBO_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+else
+	-cat "$<" | unix2dos | ( cd "$(LIBO_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" )
+	cat "$<" | unix2dos | ( cd "$(LIBO_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" )
+endif
 	touch "$@"
 
 build.libo_%_patch: $(LIBO_PATCHES_HOME)/%.patch build.libo_checkout
@@ -337,7 +348,6 @@ build.neo_patches: \
 	touch "$@"
 
 # Custom modules that need to link directly to other custom modules
-build.neo_remotecontrol_component: build.remotecontrol_patches
 build.neo_sc_patch: build.neo_unotools_patch
 build.neo_sfx2_patch: build.neo_sal_patch
 build.neo_sw_patch: build.neo_unotools_patch
