@@ -45,13 +45,10 @@ $(eval $(call gb_Library_use_system_darwin_frameworks,avmediaQuickTime,\
 	AppKit \
 ))
 
-$(eval $(call gb_Library_add_cxxobjects,avmediaQuickTime,\
-	avmedia/source/quicktime/quicktimemanager \
-))
-
 $(eval $(call gb_Library_add_objcxxobjects,avmediaQuickTime,\
 	avmedia/source/quicktime/quicktimecommon \
 	avmedia/source/quicktime/quicktimeframegrabber \
+	avmedia/source/quicktime/quicktimemanager \
 	avmedia/source/quicktime/quicktimeplayer \
 	avmedia/source/quicktime/quicktimewindow \
 ))

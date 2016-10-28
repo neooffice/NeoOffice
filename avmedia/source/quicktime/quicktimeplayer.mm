@@ -34,16 +34,12 @@
  ************************************************************************/
 
 #include "quicktimecommon.h"
+#include "quicktimecommon.hxx"
 #include "quicktimeframegrabber.hxx"
 #include "quicktimeplayer.hxx"
 #include "quicktimewindow.hxx"
 
-#ifndef _RTL_URI_HXX_
 #include <rtl/uri.hxx>
-#endif
-
-#define AVMEDIA_QUICKTIME_PLAYER_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Player_QuickTime"
-#define AVMEDIA_QUICKTIME_PLAYER_SERVICENAME "com.sun.star.media.Player_QuickTime"
 
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::lang;
@@ -87,7 +83,7 @@ Player::~Player()
 
 // ----------------------------------------------------------------------------
 
-bool Player::create( const ::rtl::OUString& rURL )
+bool Player::create( const OUString& rURL )
 {
 	bool bRet = false;
 
@@ -96,7 +92,7 @@ bool Player::create( const ::rtl::OUString& rURL )
 	if ( isValid() )
 	{
 		// The NSURL class requires URLs to be encoded
-		::rtl::OUString aURL = ::rtl::Uri::encode( rURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
+		OUString aURL = ::rtl::Uri::encode( rURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
 
 		if ( mpMoviePlayer )
 		{
@@ -124,7 +120,7 @@ bool Player::create( const ::rtl::OUString& rURL )
 			mbMute = sal_False;
 			maPreferredSize = Size( 0, 0 );
 			mfStopTime = 0;
-			maURL = ::rtl::OUString();
+			maURL = OUString();
 			mnVolumeDB = 0;
 
 			if ( aURL.getLength() )
@@ -174,7 +170,9 @@ bool Player::create( const ::rtl::OUString& rURL )
 								setPlaybackLoop( mbLooping );
 								setMediaTime( mfMediaTime );
 								setMute( mbMute );
+#ifdef USE_OLD_XPLAYER_INTERFACE
 								setStopTime( mfDuration );
+#endif	 // USE_OLD_XPLAYER_INTERFACE
 								setVolumeDB( mnVolumeDB );
 
 								bRet = true;
@@ -294,6 +292,8 @@ double SAL_CALL Player::getMediaTime() throw( RuntimeException )
 	return mfMediaTime;
 }
 
+#ifdef USE_OLD_XPLAYER_INTERFACE
+
 // ----------------------------------------------------------------------------
 
 void SAL_CALL Player::setStopTime( double fTime ) throw( RuntimeException )
@@ -361,6 +361,8 @@ double SAL_CALL Player::getRate() throw( RuntimeException )
 
 	return fRet;
 }
+
+#endif	// USE_OLD_XPLAYER_INTERFACE
 
 // ----------------------------------------------------------------------------
 
@@ -486,24 +488,24 @@ Reference< XFrameGrabber > SAL_CALL Player::createFrameGrabber() throw( RuntimeE
 
 // ----------------------------------------------------------------------------
 
-::rtl::OUString SAL_CALL Player::getImplementationName() throw( RuntimeException )
+OUString SAL_CALL Player::getImplementationName() throw( RuntimeException )
 {
-	return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( AVMEDIA_QUICKTIME_PLAYER_IMPLEMENTATIONNAME ) );
+	return OUString( AVMEDIA_QUICKTIME_PLAYER_IMPLEMENTATIONNAME );
 }
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL Player::supportsService( const ::rtl::OUString& ServiceName ) throw( RuntimeException )
+sal_Bool SAL_CALL Player::supportsService( const OUString& ServiceName ) throw( RuntimeException )
 {
-	return ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( AVMEDIA_QUICKTIME_PLAYER_SERVICENAME ) );
+	return ServiceName == AVMEDIA_QUICKTIME_PLAYER_SERVICENAME;
 }
 
 // ----------------------------------------------------------------------------
 
-Sequence< ::rtl::OUString > SAL_CALL Player::getSupportedServiceNames() throw( RuntimeException )
+Sequence< OUString > SAL_CALL Player::getSupportedServiceNames() throw( RuntimeException )
 {
-	Sequence< ::rtl::OUString > aRet(1);
-	aRet[0] = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM ( AVMEDIA_QUICKTIME_PLAYER_SERVICENAME ) );
+	Sequence< OUString > aRet(1);
+	aRet[0] = OUString( AVMEDIA_QUICKTIME_PLAYER_SERVICENAME );
 
 	return aRet;
 }

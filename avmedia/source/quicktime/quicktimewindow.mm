@@ -34,24 +34,16 @@
  ************************************************************************/
 
 #include "quicktimecommon.h"
+#include "quicktimecommon.hxx"
 #include "quicktimewindow.hxx"
 
-#ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
-#endif
-#ifndef _VOS_MUTEX_HXX_
-#include <vos/mutex.hxx>
-#endif
-
-#define AVMEDIA_QUICKTIME_WINDOW_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Window_QuickTime"
-#define AVMEDIA_QUICKTIME_WINDOW_SERVICENAME "com.sun.star.media.Window_QuickTime"
 
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::media;
 using namespace ::com::sun::star::uno;
 using namespace ::cppu;
-using namespace ::vos;
 
 namespace avmedia
 {
@@ -70,7 +62,7 @@ Window* Window::findWindowAndLockSolarMutex( void* pMoviePlayer )
 
 	if ( !Application::IsShutDown() )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
@@ -95,7 +87,7 @@ Window* Window::findWindowAndLockSolarMutex( void* pMoviePlayer )
 
 void Window::releaseSolarMutex()
 {
-	IMutex &rSolarMutex = Application::GetSolarMutex();
+	comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 	rSolarMutex.release();
 }
 
@@ -252,7 +244,7 @@ void Window::setPointerType( sal_Int32 nPointerType ) throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32 nHeight, sal_Int16 nFlags ) throw( RuntimeException )
+void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32 nHeight, sal_Int16 /* nFlags*/ ) throw( RuntimeException )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -319,7 +311,7 @@ void Window::setVisible( sal_Bool bVisible ) throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-void Window::setEnable( sal_Bool bEnable ) throw( RuntimeException )
+void Window::setEnable( sal_Bool /* bEnable */ ) throw( RuntimeException )
 {
 #ifdef DEBUG
 	fprintf( stderr, "Window::setEnable not implemented\n" );
@@ -459,24 +451,24 @@ void Window::removeEventListener( const Reference< XEventListener >& xListener )
 
 // ----------------------------------------------------------------------------
 
-::rtl::OUString SAL_CALL Window::getImplementationName() throw( RuntimeException )
+OUString SAL_CALL Window::getImplementationName() throw( RuntimeException )
 {
-	return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( AVMEDIA_QUICKTIME_WINDOW_IMPLEMENTATIONNAME ) );
+	return OUString( AVMEDIA_QUICKTIME_WINDOW_IMPLEMENTATIONNAME );
 }
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL Window::supportsService( const ::rtl::OUString& ServiceName ) throw( RuntimeException )
+sal_Bool SAL_CALL Window::supportsService( const OUString& ServiceName ) throw( RuntimeException )
 {
-	return ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( AVMEDIA_QUICKTIME_WINDOW_SERVICENAME ) );
+	return ServiceName == AVMEDIA_QUICKTIME_WINDOW_SERVICENAME;
 }
 
 // ----------------------------------------------------------------------------
 
-Sequence< ::rtl::OUString > SAL_CALL Window::getSupportedServiceNames() throw( RuntimeException )
+Sequence< OUString > SAL_CALL Window::getSupportedServiceNames() throw( RuntimeException )
 {
-	Sequence< ::rtl::OUString > aRet(1);
-	aRet[0] = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM ( AVMEDIA_QUICKTIME_WINDOW_SERVICENAME ) );
+	Sequence< OUString > aRet(1);
+	aRet[0] = OUString( AVMEDIA_QUICKTIME_WINDOW_SERVICENAME );
 
 	return aRet;
 }

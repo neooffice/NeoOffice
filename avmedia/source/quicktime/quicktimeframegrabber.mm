@@ -34,26 +34,14 @@
  ************************************************************************/
 
 #include "quicktimecommon.h"
+#include "quicktimecommon.hxx"
 #include "quicktimeframegrabber.hxx"
 
-#ifndef _SV_GEN_HXX
 #include <tools/gen.hxx>
-#endif
-#ifndef _SV_BITMAP_HXX
 #include <vcl/bitmap.hxx>
-#endif
-#ifndef _SV_BMPACC_HXX
 #include <vcl/bmpacc.hxx>
-#endif
-#ifndef _SV_GRAPH_HXX
 #include <vcl/graph.hxx>
-#endif
-#ifndef _SV_SALBTYPE_HXX
 #include <vcl/salbtype.hxx>
-#endif
-
-#define AVMEDIA_QUICKTIME_FRAMEGRABBER_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.FrameGrabber_QuickTime"
-#define AVMEDIA_QUICKTIME_FRAMEGRABBER_SERVICENAME "com.sun.star.media.FrameGrabber_QuickTime"
 
 using namespace ::com::sun::star::graphic;
 using namespace ::com::sun::star::lang;
@@ -164,24 +152,24 @@ Reference< XGraphic > SAL_CALL FrameGrabber::grabFrame( double fMediaTime ) thro
 
 // ----------------------------------------------------------------------------
 
-::rtl::OUString SAL_CALL FrameGrabber::getImplementationName() throw( RuntimeException )
+OUString SAL_CALL FrameGrabber::getImplementationName() throw( RuntimeException )
 {
-	return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( AVMEDIA_QUICKTIME_FRAMEGRABBER_IMPLEMENTATIONNAME ) );
+	return OUString( AVMEDIA_QUICKTIME_FRAMEGRABBER_IMPLEMENTATIONNAME );
 }
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL FrameGrabber::supportsService( const ::rtl::OUString& ServiceName ) throw( RuntimeException )
+sal_Bool SAL_CALL FrameGrabber::supportsService( const OUString& ServiceName ) throw( RuntimeException )
 {
-	return ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( AVMEDIA_QUICKTIME_FRAMEGRABBER_SERVICENAME ) );
+	return ServiceName == AVMEDIA_QUICKTIME_FRAMEGRABBER_SERVICENAME;
 }
 
 // ----------------------------------------------------------------------------
 
-Sequence< ::rtl::OUString > SAL_CALL FrameGrabber::getSupportedServiceNames() throw( RuntimeException )
+Sequence< OUString > SAL_CALL FrameGrabber::getSupportedServiceNames() throw( RuntimeException )
 {
-	Sequence< ::rtl::OUString > aRet(1);
-	aRet[0] = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM ( AVMEDIA_QUICKTIME_FRAMEGRABBER_SERVICENAME ) );
+	Sequence< OUString > aRet(1);
+	aRet[0] = OUString( AVMEDIA_QUICKTIME_FRAMEGRABBER_SERVICENAME );
 
 	return aRet;
 }

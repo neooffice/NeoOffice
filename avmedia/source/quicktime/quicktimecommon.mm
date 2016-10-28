@@ -316,6 +316,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)destroy:(id)pObject
 {
+	(void)pObject;
+
 	[self stop:self];
 
 	if ( mpMovieView )
@@ -453,6 +455,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)initialize:(id)pObject
 {
+	(void)pObject;
+
 	InitializeAVKit();
 	InitializeQTKit();
 
@@ -534,6 +538,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)play:(id)pObject
 {
+	(void)pObject;
+
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(play)] && [mpMovie respondsToSelector:@selector(rate)] && [mpMovie rate] == 0 )
 		[mpMovie play];
 }
@@ -611,6 +617,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)setFocus:(id)pObject
 {
+	(void)pObject;
+
 	NSWindow *pWindow = [mpMovieView window];
 	if ( pWindow )
 		[pWindow makeFirstResponder:mpMovieView];
@@ -865,6 +873,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)stop:(id)pObject
 {
+	(void)pObject;
+
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(rate)] && [mpMovie respondsToSelector:@selector(stop)] && [mpMovie rate] != 0 )
 		[mpMovie stop];
 }
@@ -969,6 +979,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (NSMenu *)menuForEvent:(NSEvent *)pEvent
 {
+	(void)pEvent;
+
 	// Suppress display of native popup menu
 	return nil;
 }
