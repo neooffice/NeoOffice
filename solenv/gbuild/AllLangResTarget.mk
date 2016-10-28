@@ -16,13 +16,6 @@
 #   except in compliance with the License. You may obtain a copy of
 #   the License at http://www.apache.org/licenses/LICENSE-2.0 .
 #
-#   Modified October 2016 by Patrick Luby. NeoOffice is only distributed
-#   under the GNU General Public License, Version 3 as allowed by Section 3.3
-#   of the Mozilla Public License, v. 2.0.
-#
-#   You should have received a copy of the GNU General Public License
-#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
 
 # Overview of dependencies and tasks of SrsTarget
@@ -385,11 +378,7 @@ endef
 
 # ResTarget
 
-ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
-gb_ResTarget_DEFIMAGESLOCATION := $(SRC_ROOT)/icon-themes/galaxy/
-else	# PRODUCT_BUILD_TYPE == java
 gb_ResTarget_DEFIMAGESLOCATION := $(SRCDIR)/icon-themes/galaxy/
-endif	# PRODUCT_BUILD_TYPE == java
 
 $(call gb_ResTarget_get_clean_target,%) :
 	$(call gb_Output_announce,$*,$(false),RES,2)
