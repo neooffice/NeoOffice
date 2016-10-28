@@ -33,6 +33,7 @@
  *
  ************************************************************************/
 
+#include "quicktimecommon.hxx"
 #include "quicktimemanager.hxx"
 #include "quicktimeplayer.hxx"
 
@@ -62,7 +63,7 @@ Manager::~Manager()
 
 // ----------------------------------------------------------------------------
 
-Reference< XPlayer > SAL_CALL Manager::createPlayer( const ::rtl::OUString& rURL ) throw( RuntimeException )
+Reference< XPlayer > SAL_CALL Manager::createPlayer( const OUString& rURL ) throw( RuntimeException )
 {
 	Reference< XPlayer > xRet;
 
@@ -81,24 +82,24 @@ Reference< XPlayer > SAL_CALL Manager::createPlayer( const ::rtl::OUString& rURL
 
 // ----------------------------------------------------------------------------
 
-::rtl::OUString SAL_CALL Manager::getImplementationName() throw( RuntimeException )
+OUString SAL_CALL Manager::getImplementationName() throw( RuntimeException )
 {
-	return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( AVMEDIA_QUICKTIME_MANAGER_IMPLEMENTATIONNAME ) );
+	return OUString( AVMEDIA_QUICKTIME_MANAGER_IMPLEMENTATIONNAME );
 }
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL Manager::supportsService( const ::rtl::OUString& ServiceName ) throw( RuntimeException )
+sal_Bool SAL_CALL Manager::supportsService( const OUString& ServiceName ) throw( RuntimeException )
 {
-	return ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( AVMEDIA_QUICKTIME_MANAGER_SERVICENAME ) );
+	return ServiceName == AVMEDIA_QUICKTIME_MANAGER_SERVICENAME;
 }
 
 // ----------------------------------------------------------------------------
 
-Sequence< ::rtl::OUString > SAL_CALL Manager::getSupportedServiceNames() throw( RuntimeException )
+Sequence< OUString > SAL_CALL Manager::getSupportedServiceNames() throw( RuntimeException )
 {
-	Sequence< ::rtl::OUString > aRet(1);
-	aRet[0] = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM ( AVMEDIA_QUICKTIME_MANAGER_SERVICENAME ) );
+	Sequence< OUString > aRet(1);
+	aRet[0] = OUString( AVMEDIA_QUICKTIME_MANAGER_SERVICENAME );
 
 	return aRet;
 }
