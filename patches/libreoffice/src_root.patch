@@ -1,5 +1,5 @@
 --- configure.ac	2015-11-25 04:55:38.000000000 -0800
-+++ configure.ac	2016-10-28 11:26:22.000000000 -0700
++++ configure.ac	2016-10-29 07:42:45.000000000 -0700
 @@ -3040,21 +3040,21 @@
  
  if test $_os = Darwin; then
@@ -10,14 +10,13 @@
      LIBO_LIB_FOLDER=Frameworks
 -    LIBO_SHARE_FOLDER=Resources
 -    LIBO_SHARE_HELP_FOLDER=Resources/help
--    LIBO_SHARE_JAVA_FOLDER=Resources/java
++    LIBO_SHARE_FOLDER=share
++    LIBO_SHARE_HELP_FOLDER=share/help
+     LIBO_SHARE_JAVA_FOLDER=Resources/java
 -    LIBO_SHARE_PRESETS_FOLDER=Resources/presets
 -    LIBO_LIB_PYUNO_FOLDER=Resources
 -    LIBO_SHARE_RESOURCE_FOLDER=Resources/resource
 -    LIBO_SHARE_SHELL_FOLDER=Resources/shell
-+    LIBO_SHARE_FOLDER=share
-+    LIBO_SHARE_HELP_FOLDER=share/help
-+    LIBO_SHARE_JAVA_FOLDER=share/java
 +    LIBO_SHARE_PRESETS_FOLDER=share/presets
 +    LIBO_LIB_PYUNO_FOLDER=share
 +    LIBO_SHARE_RESOURCE_FOLDER=share/resource
