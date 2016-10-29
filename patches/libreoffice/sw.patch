@@ -1,5 +1,5 @@
---- /NeoBuilds/neooffice-2016/neojava/build/libreoffice-4.4.7.2/sw/qa/extras/ooxmlimport/ooxmlimport.cxx.bak	2015-11-25 04:55:38.000000000 -0800
-+++ /NeoBuilds/neooffice-2016/neojava/build/libreoffice-4.4.7.2/sw/qa/extras/ooxmlimport/ooxmlimport.cxx	2016-10-21 11:14:47.000000000 -0700
+--- qa/extras/ooxmlimport/ooxmlimport.cxx.bak	2015-11-25 04:55:38.000000000 -0800
++++ qa/extras/ooxmlimport/ooxmlimport.cxx	2016-10-21 11:14:47.000000000 -0700
 @@ -1050,7 +1050,7 @@
  #if ! TEST_FONTS_MISSING
      xShape.set(xGroupShape->getByIndex(4), uno::UNO_QUERY);
