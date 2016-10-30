@@ -5,9 +5,9 @@
      fi
      echo tar -xf "$tarball" -C "$lo_src_dir/$tarname" --strip-components=1
 -    if ! tar -xf "$tarball" -C "$lo_src_dir/$tarname" --strip-components=1; then
-+    xzfile=`file "$tarball" | grep ": xz compressed data"`
++    xzfile=`echo "$tarball" | grep '\.xz$'`
 +    if [ ! -z "$xzfile" ]; then
-+        if ! xzcat "$tarball" | tar -xf - -C "$lo_src_dir/$tarname" --strip-components=1; then
++        if ! xzcat "$xzfile" | tar -xf - -C "$lo_src_dir/$tarname" --strip-components=1; then
 +            echo "Error: could not unpack $tarname"
 +            exit 1
 +        fi
