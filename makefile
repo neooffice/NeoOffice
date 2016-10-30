@@ -232,7 +232,7 @@ endif
 
 build.libo_configure: build.libo_patches
 ifeq ("$(OS_TYPE)","macOS")
-	cd "$(LIBO_BUILD_HOME)" ; PATH="/bin:/sbin:/usr/bin:/usr/sbin:/opt/local/bin" ; export PATH ; unset DYLD_LIBRARY_PATH ; autoconf ; ./configure --without-parallelism --with-jdk-home="$(JDK_HOME)" --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --with-macosx-version-min-required="$(PRODUCT_MIN_OSVERSION)" --without-junit --disable-cups --disable-odk --with-lang="$(LIBO_LANGUAGES)" --without-fonts --without-helppack-integration
+	cd "$(LIBO_BUILD_HOME)" ; PATH="/bin:/sbin:/usr/bin:/usr/sbin:/opt/local/bin" ; export PATH ; unset DYLD_LIBRARY_PATH ; autoconf ; ./configure --without-parallelism --with-jdk-home="$(JDK_HOME)" --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --with-macosx-version-min-required="$(PRODUCT_MIN_OSVERSION)" --without-junit --disable-cups --disable-odk --with-lang="$(LIBO_LANGUAGES)" --without-fonts --with-help
 else
 ifndef JDK_HOME
 	@echo "JDK_HOME must be defined in custom.mk" ; exit 1
