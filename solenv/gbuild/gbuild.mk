@@ -185,11 +185,7 @@ include $(GBUILDDIR)/TargetLocations.mk
 include $(GBUILDDIR)/Tempfile.mk
 
 $(eval $(call gb_Helper_init_registries))
-ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
-include $(SRC_ROOT)/Repository.mk
-else	# PRODUCT_BUILD_TYPE == java
 include $(SRCDIR)/Repository.mk
-endif	# PRODUCT_BUILD_TYPE == java
 include $(SRCDIR)/RepositoryExternal.mk
 $(eval $(call gb_Helper_collect_knownlibs))
 
@@ -199,11 +195,7 @@ gb_Library_DLLPOSTFIX := lo
 include $(GBUILDDIR)/platform/$(OS)_$(CPUNAME)_$(COM).mk
 
 # this is optional
-ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
-include $(SRC_ROOT)/RepositoryFixes.mk
-else	# PRODUCT_BUILD_TYPE == java
 include $(SRCDIR)/RepositoryFixes.mk
-endif	# PRODUCT_BUILD_TYPE == java
 
 # after platform; at least currently python depends on variable set in platform
 $(eval $(call gb_ExternalExecutable_collect_registrations))
