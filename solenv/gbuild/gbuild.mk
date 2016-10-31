@@ -187,11 +187,10 @@ include $(GBUILDDIR)/Tempfile.mk
 $(eval $(call gb_Helper_init_registries))
 ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
 include $(SRC_ROOT)/Repository.mk
-include $(SRC_ROOT)/RepositoryExternal.mk
 else	# PRODUCT_BUILD_TYPE == java
 include $(SRCDIR)/Repository.mk
-include $(SRCDIR)/RepositoryExternal.mk
 endif	# PRODUCT_BUILD_TYPE == java
+include $(SRCDIR)/RepositoryExternal.mk
 $(eval $(call gb_Helper_collect_knownlibs))
 
 gb_Library_DLLPOSTFIX := lo
