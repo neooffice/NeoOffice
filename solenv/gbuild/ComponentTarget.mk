@@ -55,7 +55,7 @@ $(call gb_ComponentTarget_get_target,%) : \
 		$(SRCDIR)/RepositoryFixes.mk \
 		| $(call gb_ExternalExecutable_get_dependencies,xsltproc)
 ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
-	echo "Target disabled: $(call gb_ComponentTarget_get_target,%)"
+	@echo "Target disabled: $@"
 else	# PRODUCT_BUILD_TYPE == java
 	$(call gb_ComponentTarget__command,$@,$*)
 endif	# PRODUCT_BUILD_TYPE == java
