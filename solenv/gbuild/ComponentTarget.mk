@@ -51,14 +51,10 @@ $(call gb_ComponentTarget_get_clean_target,%) :
 # when a library is renamed, the component file needs to be rebuilt to match.
 # hence simply depend on Repository{,Fixes}.mk since the command runs quickly.
 $(call gb_ComponentTarget_get_target,%) : \
-		$(SRCDIR)/Repository.mk \
-		$(SRCDIR)/RepositoryFixes.mk \
+		$(if $(filter $(PRODUCT_BUILD_TYPE),java),$(SRC_ROOT),$(SRCDIR))/Repository.mk \
+		$(if $(filter $(PRODUCT_BUILD_TYPE),java),$(SRC_ROOT),$(SRCDIR))/RepositoryFixes.mk \
 		| $(call gb_ExternalExecutable_get_dependencies,xsltproc)
-ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
-	@echo "Target disabled: $@"
-else	# PRODUCT_BUILD_TYPE == java
 	$(call gb_ComponentTarget__command,$@,$*)
-endif	# PRODUCT_BUILD_TYPE == java
 
 define gb_ComponentTarget_ComponentTarget
 $(call gb_ComponentTarget_get_target,$(1)) : COMPONENTPREFIX := $(2)
