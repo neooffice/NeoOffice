@@ -1,146 +1,121 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
+#include <config_features.h>
 
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_cui.hxx"
-#include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/loader/CannotActivateFactoryException.hpp>
-#include <com/sun/star/linguistic2/XDictionaryList.hpp>
-#include <com/sun/star/frame/XDesktop.hpp>
-#include <com/sun/star/frame/XFrame.hpp>
-#include <com/sun/star/frame/XModuleManager.hpp>
-#include <com/sun/star/util/XMacroExpander.hpp>
-#include <osl/module.hxx>
-#include <com/sun/star/util/XCloseable.hpp>
-#include <com/sun/star/frame/XLoadable.hpp>
-#include <tools/rcid.h>
-#include <tools/shl.hxx>
-#include <tools/urlobj.hxx>
-#include <comphelper/processfactory.hxx>
-#include <toolkit/helper/vclunohelper.hxx>
-#include <com/sun/star/beans/PropertyValue.hpp>
-#include <com/sun/star/container/XNameContainer.hpp>
-#include <com/sun/star/container/XNameAccess.hpp>
-#include <com/sun/star/oooimprovement/XCoreController.hpp>
-#include <comphelper/configurationhelper.hxx>
-#include <com/sun/star/awt/XDialogProvider.hpp>
-#include <com/sun/star/awt/XDialogProvider2.hpp>
-#include <com/sun/star/awt/XContainerWindowProvider.hpp>
-#include <com/sun/star/awt/XDialogEventHandler.hpp>
-#include <com/sun/star/awt/XContainerWindowEventHandler.hpp>
-#include <com/sun/star/awt/PosSize.hpp>
-#include <com/sun/star/awt/XTopWindow.hpp>
-#include <com/sun/star/awt/XControl.hpp>
-#include <com/sun/star/awt/XTabController.hpp>
-#include <vcl/help.hxx>
-#include <linguistic/misc.hxx>
-#include <svtools/helpopt.hxx>
-#include <unotools/moduleoptions.hxx>
-#include <svl/languageoptions.hxx>
-#include <unotools/optionsdlg.hxx>
-#include <sfx2/module.hxx>
-#include <vcl/msgbox.hxx>
-#include <sfx2/dispatch.hxx>
-#include <vcl/waitobj.hxx>
-#include <svl/slstitm.hxx>
-#include <sfx2/viewfrm.hxx>
-#include <unotools/viewoptions.hxx>
-#include <sfx2/printopt.hxx>
-#include <osl/module.h>
-#include <osl/process.h>
-#include <rtl/bootstrap.hxx>
-#include <unotools/misccfg.hxx>
-#include <sfx2/objsh.hxx>
-#include <sfx2/viewsh.hxx>
-#include <sfx2/tplpitem.hxx>
-#include <svtools/apearcfg.hxx>
-#include <unotools/linguprops.hxx>
-#include <sfx2/app.hxx>
-#include <svx/xdef.hxx>
-#include <svx/xflclit.hxx>
-#include <svx/xpool.hxx>
-#include "cuitabarea.hxx"
-#include <svx/ofaitem.hxx>
-#include "opthtml.hxx"
-#include "optcolor.hxx"
-#include "optctl.hxx"
-#include "optjava.hxx"
-#include "optsave.hxx"
-#include "optpath.hxx"
-#include "cuioptgenrl.hxx"
-#include "optlingu.hxx"
-#include "optinet2.hxx"
-#include "optasian.hxx"
-#include "optaccessibility.hxx"
-#include "optjsearch.hxx"
-#include "connpooloptions.hxx"
-#include "optupdt.hxx"
-#include <optimprove.hxx>
-#include "optchart.hxx"
-#include "optgdlg.hxx"
-#include "optmemory.hxx"
-#include "optfltr.hxx"
-#include <cuires.hrc>
+#include "cuires.hrc"
 #include "helpid.hrc"
-#include <dialmgr.hxx>
-#include "treeopt.hxx"
-#include "treeopt.hrc"
-#include "fontsubs.hxx"
-#include <editeng/unolingu.hxx>
-#include <svx/xtable.hxx>
-#include "connpoolconfig.hxx"
-#include "dbregister.hxx"
-#include "dbregisterednamesconfig.hxx"
-#include "cfgchart.hxx"
+
 #include <svx/dialogs.hrc>
 
-#ifndef _SVX_LANGITEM_HXX
-#define	ITEMID_LANGUAGE SID_ATTR_CHAR_LANGUAGE
-#include <editeng/langitem.hxx>
+#include "cfgchart.hxx"
+#include "connpoolconfig.hxx"
+#include "connpooloptions.hxx"
+#include "cuioptgenrl.hxx"
+#include "cuitabarea.hxx"
+#include "dbregister.hxx"
+#include "dbregisterednamesconfig.hxx"
+#include "dialmgr.hxx"
+#include "fontsubs.hxx"
+#include "optaboutconfig.hxx"
+#include "optaccessibility.hxx"
+#include "optasian.hxx"
+#include "optchart.hxx"
+#include "optcolor.hxx"
+#include "optctl.hxx"
+#include "optfltr.hxx"
+#include "optgdlg.hxx"
+#include "opthtml.hxx"
+#include "optinet2.hxx"
+#include "optjava.hxx"
+#include "optjsearch.hxx"
+#include "optlingu.hxx"
+#include "optmemory.hxx"
+#if HAVE_FEATURE_OPENCL
+#include "optopencl.hxx"
 #endif
+#include "optpath.hxx"
+#include "optsave.hxx"
+#include "optupdt.hxx"
+#include "personalization.hxx"
+#include "treeopt.hxx"
+#include "optbasic.hxx"
 
-
+#include <com/sun/star/awt/XContainerWindowEventHandler.hpp>
+#include <com/sun/star/awt/ContainerWindowProvider.hpp>
+#include <com/sun/star/awt/XControl.hpp>
+#include <com/sun/star/awt/PosSize.hpp>
+#include <com/sun/star/frame/Desktop.hpp>
+#include <com/sun/star/frame/ModuleManager.hpp>
+#include <com/sun/star/loader/CannotActivateFactoryException.hpp>
+#include <com/sun/star/linguistic2/LinguProperties.hpp>
+#include <com/sun/star/util/theMacroExpander.hpp>
+#include <com/sun/star/setup/UpdateCheck.hpp>
+#include <comphelper/processfactory.hxx>
+#include <editeng/langitem.hxx>
 #include <editeng/optitems.hxx>
-
-#include <svx/drawitem.hxx>
+#include <editeng/unolingu.hxx>
+#include <linguistic/misc.hxx>
+#include <officecfg/Office/OptionsDialog.hxx>
+#include <osl/module.hxx>
+#include <osl/process.h>
+#include <rtl/bootstrap.hxx>
 #include <rtl/uri.hxx>
+#include <sfx2/app.hxx>
+#include <sfx2/dispatch.hxx>
+#include <sfx2/module.hxx>
+#include <sfx2/printopt.hxx>
+#include <sfx2/shell.hxx>
+#include <sfx2/tplpitem.hxx>
+#include <sfx2/viewsh.hxx>
+#include <svl/languageoptions.hxx>
+#include <svtools/helpopt.hxx>
+#include <svx/drawitem.hxx>
+#include <svx/xtable.hxx>
+#include <svx/xpool.hxx>
+#include <toolkit/helper/vclunohelper.hxx>
+#include <tools/shl.hxx>
+#include <tools/urlobj.hxx>
+#include <unotools/linguprops.hxx>
+#include <unotools/misccfg.hxx>
+#include <unotools/moduleoptions.hxx>
+#include <unotools/optionsdlg.hxx>
+#include <unotools/viewoptions.hxx>
+#include <vcl/help.hxx>
+#include <vcl/layout.hxx>
+#include <vcl/msgbox.hxx>
+#include <vcl/waitobj.hxx>
+#include <vcl/settings.hxx>
+#include "svtools/treelistentry.hxx"
 
 #ifdef LINUX
-#include <string.h>
-#include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #endif
+
+#include <boost/scoped_ptr.hpp>
 
 #if defined USE_JAVA && defined MACOSX
 
@@ -161,74 +136,64 @@ using namespace ::com::sun::star::linguistic2;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::util;
 
-#ifdef C2U
-    #error  "Who define C2U before! I use it to create const ascii strings ..."
-#else
-    #define C2U(cChar)      rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( cChar ) )
-#endif
-
-#define HINT_TIMEOUT            200
-#define SELECT_FIRST_TIMEOUT	0
-#define SELECT_TIMEOUT			300
-#define COLORPAGE_UNKNOWN		((sal_uInt16)0xFFFF)
 #define EXPAND_PROTOCOL         "vnd.sun.star.expand:"
 
 LastPageSaver* OfaTreeOptionsDialog::pLastPageSaver = NULL;
 
 // some stuff for easier changes for SvtViewOptions
-static const sal_Char*		pViewOptDataName = "page data";
-#define VIEWOPT_DATANAME    rtl::OUString::createFromAscii( pViewOptDataName )
+static const sal_Char*      pViewOptDataName = "page data";
+#define VIEWOPT_DATANAME    OUString::createFromAscii( pViewOptDataName )
 
 static XOutdevItemPool* mpStaticXOutdevItemPool = 0L;
 
-static inline void SetViewOptUserItem( SvtViewOptions& rOpt, const String& rData )
+static inline void SetViewOptUserItem( SvtViewOptions& rOpt, const OUString& rData )
 {
-    rOpt.SetUserItem( VIEWOPT_DATANAME, makeAny( rtl::OUString( rData ) ) );
+    rOpt.SetUserItem( VIEWOPT_DATANAME, makeAny( OUString( rData ) ) );
 }
 
-static inline String GetViewOptUserItem( const SvtViewOptions& rOpt )
+static inline OUString GetViewOptUserItem( const SvtViewOptions& rOpt )
 {
     Any aAny( rOpt.GetUserItem( VIEWOPT_DATANAME ) );
-    rtl::OUString aUserData;
-	aAny >>= aUserData;
+    OUString aUserData;
+    aAny >>= aUserData;
 
-	return String( aUserData );
+    return aUserData;
 }
 
 struct ModuleToGroupNameMap_Impl
 {
     const char* m_pModule;
-    String      m_sGroupName;
-    sal_uInt16      m_nNodeId;
+    OUString    m_sGroupName;
+    sal_uInt16  m_nNodeId;
 };
 
 static OfaPageResource* pPageRes = NULL;
 
 static ModuleToGroupNameMap_Impl ModuleMap[] =
 {
-    { "ProductName", String::EmptyString(), SID_GENERAL_OPTIONS },
-    { "LanguageSettings", String::EmptyString(), SID_LANGUAGE_OPTIONS },
-    { "Internet", String::EmptyString(), SID_INET_DLG },
-    { "LoadSave", String::EmptyString(), SID_FILTER_DLG },
-    { "Writer", String::EmptyString(), SID_SW_EDITOPTIONS },
-    { "WriterWeb", String::EmptyString(), SID_SW_ONLINEOPTIONS },
-    { "Math", String::EmptyString(), SID_SM_EDITOPTIONS },
-    { "Calc", String::EmptyString(), SID_SC_EDITOPTIONS },
-    { "Impress", String::EmptyString(), SID_SD_EDITOPTIONS },
-    { "Draw", String::EmptyString(), SID_SD_GRAPHIC_OPTIONS },
-    { "Charts", String::EmptyString(), SID_SCH_EDITOPTIONS },
-    { "Base", String::EmptyString(), SID_SB_STARBASEOPTIONS },
+    { "ProductName", OUString(), SID_GENERAL_OPTIONS },
+    { "LanguageSettings", OUString(), SID_LANGUAGE_OPTIONS },
+    { "Internet", OUString(), SID_INET_DLG },
+    { "LoadSave", OUString(), SID_FILTER_DLG },
+    { "Writer", OUString(), SID_SW_EDITOPTIONS },
+    { "WriterWeb", OUString(), SID_SW_ONLINEOPTIONS },
+    { "Math", OUString(), SID_SM_EDITOPTIONS },
+    { "Calc", OUString(), SID_SC_EDITOPTIONS },
+    { "Impress", OUString(), SID_SD_EDITOPTIONS },
+    { "Draw", OUString(), SID_SD_GRAPHIC_OPTIONS },
+    { "Charts", OUString(), SID_SCH_EDITOPTIONS },
+    { "Base", OUString(), SID_SB_STARBASEOPTIONS },
 
-    { NULL, String::EmptyString(), 0xFFFF }
+    { NULL, OUString(), 0xFFFF }
 };
 
-static void setGroupName( const rtl::OUString& rModule, const String& rGroupName )
+static void setGroupName( const OUString& rModule, const OUString& rGroupName )
 {
     sal_uInt16 nIndex = 0;
     while ( ModuleMap[ nIndex ].m_pModule )
     {
-        rtl::OUString sTemp =
-            rtl::OUString::createFromAscii( ModuleMap[ nIndex ].m_pModule );
+        OUString sTemp =
+            OUString::createFromAscii( ModuleMap[ nIndex ].m_pModule );
         if ( sTemp == rModule )
         {
             ModuleMap[ nIndex ].m_sGroupName = rGroupName;
@@ -238,14 +203,14 @@ static void setGroupName( const rtl::OUString& rModule, const String& rGroupName
     }
 }
 
-static String getGroupName( const rtl::OUString& rModule, bool bForced )
+static OUString getGroupName( const OUString& rModule, bool bForced )
 {
-    String sGroupName;
+    OUString sGroupName;
     sal_uInt16 nIndex = 0;
     while ( ModuleMap[ nIndex ].m_pModule )
     {
-        rtl::OUString sTemp =
-            rtl::OUString::createFromAscii( ModuleMap[ nIndex ].m_pModule );
+        OUString sTemp =
+            OUString::createFromAscii( ModuleMap[ nIndex ].m_pModule );
         if ( sTemp == rModule )
         {
             sGroupName = ModuleMap[ nIndex ].m_sGroupName;
@@ -254,24 +219,24 @@ static String getGroupName( const rtl::OUString& rModule, bool bForced )
         ++nIndex;
     }
 
-    if ( sGroupName.Len() == 0 && bForced )
+    if ( sGroupName.isEmpty() && bForced )
     {
         if ( !pPageRes )
             pPageRes = new OfaPageResource;
 
-        if ( rModule == C2U("Writer") )
+        if ( rModule == "Writer" )
             sGroupName = pPageRes->GetTextArray().GetString(0);
-        else if ( rModule == C2U("WriterWeb") )
+        else if ( rModule == "WriterWeb" )
             sGroupName = pPageRes->GetHTMLArray().GetString(0);
-        else if ( rModule == C2U("Calc") )
+        else if ( rModule == "Calc" )
             sGroupName = pPageRes->GetCalcArray().GetString(0);
-        else if ( rModule == C2U("Impress") )
+        else if ( rModule == "Impress" )
             sGroupName = pPageRes->GetImpressArray().GetString(0);
-        else if ( rModule == C2U("Draw") )
+        else if ( rModule == "Draw" )
             sGroupName = pPageRes->GetDrawArray().GetString(0);
-        else if ( rModule == C2U("Math") )
+        else if ( rModule == "Math" )
             sGroupName = pPageRes->GetStarMathArray().GetString(0);
-        else if ( rModule == C2U("Base") )
+        else if ( rModule == "Base" )
             sGroupName = pPageRes->GetDatasourcesArray().GetString(0);
     }
     return sGroupName;
@@ -281,16 +246,16 @@ static void deleteGroupNames()
 {
     sal_uInt16 nIndex = 0;
     while ( ModuleMap[ nIndex ].m_pModule )
-        ModuleMap[ nIndex++ ].m_sGroupName = String::EmptyString();
+        ModuleMap[ nIndex++ ].m_sGroupName.clear();
 }
 
-static sal_uInt16 getGroupNodeId( const rtl::OUString& rModule )
+static sal_uInt16 getGroupNodeId( const OUString& rModule )
 {
     sal_uInt16 nNodeId = 0xFFFF, nIndex = 0;
     while ( ModuleMap[ nIndex ].m_pModule )
     {
-        rtl::OUString sTemp =
-            rtl::OUString::createFromAscii( ModuleMap[ nIndex ].m_pModule );
+        OUString sTemp =
+            OUString::createFromAscii( ModuleMap[ nIndex ].m_pModule );
         if ( sTemp == rModule )
         {
             nNodeId = ModuleMap[ nIndex ].m_nNodeId;
@@ -302,42 +267,35 @@ static sal_uInt16 getGroupNodeId( const rtl::OUString& rModule )
     return nNodeId;
 }
 
-/*-- 29.10.2004 13:57:25---------------------------------------------------
-
-  -----------------------------------------------------------------------*/
 class MailMergeCfg_Impl : public utl::ConfigItem
 {
     friend class SvxEMailTabPage;
     // variables
-    sal_Bool bIsEmailSupported;
+    bool bIsEmailSupported;
 
 public:
     MailMergeCfg_Impl();
     virtual ~MailMergeCfg_Impl();
 
-    virtual void    Commit();
-	virtual void Notify( const com::sun::star::uno::Sequence< rtl::OUString >& _rPropertyNames);
+    virtual void    Commit() SAL_OVERRIDE;
+    virtual void Notify( const com::sun::star::uno::Sequence< OUString >& _rPropertyNames) SAL_OVERRIDE;
 
-    sal_Bool IsEmailSupported() const {return bIsEmailSupported;}
+    bool IsEmailSupported() const {return bIsEmailSupported;}
 
 };
-/*-- 29.10.2004 13:57:25---------------------------------------------------
 
-  -----------------------------------------------------------------------*/
 MailMergeCfg_Impl::MailMergeCfg_Impl() :
-    utl::ConfigItem(C2U("Office.Writer/MailMergeWizard")),
-    bIsEmailSupported(sal_False)
+    utl::ConfigItem("Office.Writer/MailMergeWizard"),
+    bIsEmailSupported(false)
 {
-    Sequence<rtl::OUString> aNames(1);
-    aNames.getArray()[0] = C2U("EMailSupported");
+    Sequence<OUString> aNames(1);
+    aNames.getArray()[0] = "EMailSupported";
     const Sequence< Any > aValues = GetProperties(aNames);
     const Any* pValues = aValues.getConstArray();
     if(aValues.getLength() && pValues[0].hasValue())
         pValues[0] >>= bIsEmailSupported;
 }
-/*-- 29.10.2004 13:57:25---------------------------------------------------
 
-  -----------------------------------------------------------------------*/
 MailMergeCfg_Impl::~MailMergeCfg_Impl()
 {
 }
@@ -346,52 +304,55 @@ void MailMergeCfg_Impl::Commit()
 {
 }
 
-void MailMergeCfg_Impl::Notify( const com::sun::star::uno::Sequence< rtl::OUString >& )
+void MailMergeCfg_Impl::Notify( const com::sun::star::uno::Sequence< OUString >& )
 {
 }
 
-//typedef SfxTabPage* (*FNCreateTabPage)( Window *pParent, const SfxItemSet &rAttrSet );
-SfxTabPage*	CreateGeneralTabPage( sal_uInt16 nId, Window* pParent, const SfxItemSet& rSet )
+//typedef SfxTabPage* (*FNCreateTabPage)( vcl::Window *pParent, const SfxItemSet &rAttrSet );
+SfxTabPage* CreateGeneralTabPage( sal_uInt16 nId, vcl::Window* pParent, const SfxItemSet& rSet )
 {
-	CreateTabPage fnCreate = 0;
-	switch(nId)
-	{
-		case RID_SFXPAGE_SAVE:						fnCreate = &SvxSaveTabPage::Create; break;
-		case RID_SFXPAGE_PATH:						fnCreate = &SvxPathTabPage::Create; break;
-		case RID_SFXPAGE_GENERAL:					fnCreate = &SvxGeneralTabPage::Create; break;
-		case RID_SFXPAGE_PRINTOPTIONS:				fnCreate = &SfxCommonPrintOptionsTabPage::Create; break;
-		case OFA_TP_LANGUAGES:						fnCreate = &OfaLanguagesTabPage::Create; break;
-		case RID_SFXPAGE_LINGU:						fnCreate = &SvxLinguTabPage::Create; break;
-		case RID_SVXPAGE_COLOR:						fnCreate = &SvxColorTabPage::Create; break;
-		case OFA_TP_VIEW:							fnCreate = &OfaViewTabPage::Create; break;
-		case OFA_TP_MISC:							fnCreate = &OfaMiscTabPage::Create; break;
-		case OFA_TP_MEMORY:							fnCreate = &OfaMemoryOptionsPage::Create; break;
-		case RID_SVXPAGE_ASIAN_LAYOUT:				fnCreate = &SvxAsianLayoutPage::Create; break;
-		case RID_SVX_FONT_SUBSTITUTION:				fnCreate = &SvxFontSubstTabPage::Create; break;
-		case RID_SVXPAGE_INET_PROXY:				fnCreate = &SvxProxyTabPage::Create; break;
-		case RID_SVXPAGE_INET_SEARCH:				fnCreate = &SvxSearchTabPage::Create; break;
-		case RID_SVXPAGE_INET_SECURITY:				fnCreate = &SvxSecurityTabPage::Create; break;
-		case RID_SVXPAGE_INET_MAIL:					fnCreate = &SvxEMailTabPage::Create; break;
-		case RID_SVXPAGE_COLORCONFIG:				fnCreate = &SvxColorOptionsTabPage::Create; break;
-		case RID_OFAPAGE_HTMLOPT:					fnCreate = &OfaHtmlTabPage::Create; break;
-		case SID_OPTFILTER_MSOFFICE:				fnCreate = &OfaMSFilterTabPage::Create; break;
-		case RID_OFAPAGE_MSFILTEROPT2:				fnCreate = &OfaMSFilterTabPage2::Create; break;
-		case RID_SVXPAGE_JSEARCH_OPTIONS:			fnCreate = &SvxJSearchOptionsPage::Create ; break;
-		case SID_SB_CONNECTIONPOOLING:				fnCreate = &::offapp::ConnectionPoolOptionsPage::Create; break;
-		case SID_SB_DBREGISTEROPTIONS:				fnCreate = &::svx::DbRegistrationOptionsPage::Create; break;
-		case RID_SVXPAGE_ACCESSIBILITYCONFIG:		fnCreate = &SvxAccessibilityOptionsTabPage::Create; break;
-		case RID_SVXPAGE_SSO:						fnCreate = GetSSOCreator(); break;
-		case RID_SVXPAGE_OPTIONS_CTL:				fnCreate = &SvxCTLOptionsPage::Create ; break;
-		case RID_SVXPAGE_OPTIONS_JAVA:				fnCreate = &SvxJavaOptionsPage::Create ; break;
-        case RID_SVXPAGE_ONLINEUPDATE:				fnCreate = &SvxOnlineUpdateTabPage::Create; break;
-        case RID_OPTPAGE_CHART_DEFCOLORS:			fnCreate = &SvxDefaultColorOptPage::Create; break;
-        case RID_SVXPAGE_IMPROVEMENT:               fnCreate = &SvxImprovementOptionsPage::Create; break;
-	}
+    CreateTabPage fnCreate = 0;
+    switch(nId)
+    {
+        case RID_SFXPAGE_SAVE:                      fnCreate = &SvxSaveTabPage::Create; break;
+        case RID_SFXPAGE_PATH:                      fnCreate = &SvxPathTabPage::Create; break;
+        case RID_SFXPAGE_GENERAL:                   fnCreate = &SvxGeneralTabPage::Create; break;
+        case RID_SFXPAGE_PRINTOPTIONS:              fnCreate = &SfxCommonPrintOptionsTabPage::Create; break;
+        case OFA_TP_LANGUAGES:                      fnCreate = &OfaLanguagesTabPage::Create; break;
+        case RID_SFXPAGE_LINGU:                     fnCreate = &SvxLinguTabPage::Create; break;
+        case RID_SVXPAGE_COLOR:                     fnCreate = &SvxColorTabPage::Create; break;
+        case OFA_TP_VIEW:                           fnCreate = &OfaViewTabPage::Create; break;
+        case OFA_TP_MISC:                           fnCreate = &OfaMiscTabPage::Create; break;
+        case OFA_TP_MEMORY:                         fnCreate = &OfaMemoryOptionsPage::Create; break;
+        case RID_SVXPAGE_ASIAN_LAYOUT:              fnCreate = &SvxAsianLayoutPage::Create; break;
+        case RID_SVX_FONT_SUBSTITUTION:             fnCreate = &SvxFontSubstTabPage::Create; break;
+        case RID_SVXPAGE_INET_PROXY:                fnCreate = &SvxProxyTabPage::Create; break;
+        case RID_SVXPAGE_INET_SECURITY:             fnCreate = &SvxSecurityTabPage::Create; break;
+        case RID_SVXPAGE_INET_MAIL:                 fnCreate = &SvxEMailTabPage::Create; break;
+        case RID_SVXPAGE_PERSONALIZATION:           fnCreate = &SvxPersonalizationTabPage::Create; break;
+        case RID_SVXPAGE_COLORCONFIG:               fnCreate = &SvxColorOptionsTabPage::Create; break;
+        case RID_OFAPAGE_HTMLOPT:                   fnCreate = &OfaHtmlTabPage::Create; break;
+        case SID_OPTFILTER_MSOFFICE:                fnCreate = &OfaMSFilterTabPage::Create; break;
+        case RID_OFAPAGE_MSFILTEROPT2:              fnCreate = &OfaMSFilterTabPage2::Create; break;
+        case RID_SVXPAGE_JSEARCH_OPTIONS:           fnCreate = &SvxJSearchOptionsPage::Create ; break;
+        case SID_SB_CONNECTIONPOOLING:              fnCreate = &::offapp::ConnectionPoolOptionsPage::Create; break;
+        case SID_SB_DBREGISTEROPTIONS:              fnCreate = &::svx::DbRegistrationOptionsPage::Create; break;
+        case RID_SVXPAGE_ACCESSIBILITYCONFIG:       fnCreate = &SvxAccessibilityOptionsTabPage::Create; break;
+        case RID_SVXPAGE_OPTIONS_CTL:               fnCreate = &SvxCTLOptionsPage::Create ; break;
+        case RID_SVXPAGE_OPTIONS_JAVA:              fnCreate = &SvxJavaOptionsPage::Create ; break;
+#if HAVE_FEATURE_OPENCL
+        case RID_SVXPAGE_OPENCL:                    fnCreate = &SvxOpenCLTabPage::Create ; break;
+#endif
+        case RID_SVXPAGE_ONLINEUPDATE:              fnCreate = &SvxOnlineUpdateTabPage::Create; break;
+        case RID_OPTPAGE_CHART_DEFCOLORS:           fnCreate = &SvxDefaultColorOptPage::Create; break;
+#if HAVE_FEATURE_SCRIPTING
+        case RID_SVXPAGE_BASICIDE_OPTIONS:          fnCreate = &SvxBasicIDEOptionsPage::Create; break;
+#endif
+    }
 
-	SfxTabPage*	pRet = fnCreate ? (*fnCreate)( pParent, rSet ) : NULL;
-	return pRet;
+    SfxTabPage* pRet = fnCreate ? (*fnCreate)( pParent, &rSet ) : NULL;
+    return pRet;
 }
-
 
 struct OptionsMapping_Impl
 {
@@ -400,7 +361,7 @@ struct OptionsMapping_Impl
     sal_uInt16      m_nPageId;
 };
 
-static OptionsMapping_Impl __READONLY_DATA OptionsMap_Impl[] =
+static OptionsMapping_Impl const OptionsMap_Impl[] =
 {
 //    GROUP                 PAGE                    PAGE-ID
     { "ProductName",        NULL,                   SID_GENERAL_OPTIONS },
@@ -413,12 +374,12 @@ static OptionsMapping_Impl __READONLY_DATA OptionsMap_Impl[] =
     { "ProductName",        "Colors",               RID_SVXPAGE_COLOR },
     { "ProductName",        "Fonts",                RID_SVX_FONT_SUBSTITUTION },
     { "ProductName",        "Security",             RID_SVXPAGE_INET_SECURITY },
+    { "ProductName",        "Personalization",      RID_SVXPAGE_PERSONALIZATION },
     { "ProductName",        "Appearance",           RID_SVXPAGE_COLORCONFIG },
     { "ProductName",        "Accessibility",        RID_SVXPAGE_ACCESSIBILITYCONFIG },
     { "ProductName",        "Java",                 RID_SVXPAGE_OPTIONS_JAVA },
-    { "ProductName",        "NetworkIdentity",      RID_SVXPAGE_SSO },
+    { "ProductName",        "BasicIDEOptions",      RID_SVXPAGE_BASICIDE_OPTIONS },
     { "ProductName",        "OnlineUpdate",         RID_SVXPAGE_ONLINEUPDATE },
-    { "ProductName",        "ImprovementProgram",   RID_SVXPAGE_IMPROVEMENT },
     { "LanguageSettings",   NULL,                   SID_LANGUAGE_OPTIONS },
     { "LanguageSettings",   "Languages",            OFA_TP_LANGUAGES  },
     { "LanguageSettings",   "WritingAids",          RID_SFXPAGE_LINGU },
@@ -427,7 +388,6 @@ static OptionsMapping_Impl __READONLY_DATA OptionsMap_Impl[] =
     { "LanguageSettings",   "ComplexTextLayout",    RID_SVXPAGE_OPTIONS_CTL },
     { "Internet",           NULL,                   SID_INET_DLG },
     { "Internet",           "Proxy",                RID_SVXPAGE_INET_PROXY },
-    { "Internet",           "Search",               RID_SVXPAGE_INET_SEARCH },
     { "Internet",           "Email",                RID_SVXPAGE_INET_MAIL },
     { "LoadSave",           NULL,                   SID_FILTER_DLG },
     { "LoadSave",           "General",              RID_SFXPAGE_SAVE },
@@ -445,6 +405,7 @@ static OptionsMapping_Impl __READONLY_DATA OptionsMap_Impl[] =
     { "Writer",             "Print",                RID_SW_TP_OPTPRINT_PAGE },
     { "Writer",             "Table",                RID_SW_TP_OPTTABLE_PAGE },
     { "Writer",             "Changes",              RID_SW_TP_REDLINE_OPT },
+    { "Writer",             "Comparison",           RID_SW_TP_COMPARISON_OPT },
     { "Writer",             "Compatibility",        RID_SW_TP_OPTCOMPATIBILITY_PAGE },
     { "Writer",             "AutoCaption",          RID_SW_TP_OPTCAPTION_PAGE },
     { "Writer",             "MailMerge",            RID_SW_TP_MAILCONFIG },
@@ -460,10 +421,11 @@ static OptionsMapping_Impl __READONLY_DATA OptionsMap_Impl[] =
     { "Calc",               NULL,                   SID_SC_EDITOPTIONS },
     { "Calc",               "General",              SID_SC_TP_LAYOUT },
     { "Calc",               "View",                 SID_SC_TP_CONTENT },
-    { "Calc",               "International",        RID_OFA_TP_INTERNATIONAL },
     { "Calc",               "Calculate",            SID_SC_TP_CALC },
+    { "Calc",               "Formula",              SID_SC_TP_FORMULA },
     { "Calc",               "SortLists",            SID_SC_TP_USERLISTS },
     { "Calc",               "Changes",              SID_SC_TP_CHANGES },
+    { "Calc",               "Compatibility",        SID_SC_TP_COMPATIBILITY },
     { "Calc",               "Grid",                 SID_SC_TP_GRID },
     { "Calc",               "Print",                RID_SC_TP_PRINT },
     { "Impress",            NULL,                   SID_SD_EDITOPTIONS },
@@ -484,19 +446,19 @@ static OptionsMapping_Impl __READONLY_DATA OptionsMap_Impl[] =
     { NULL,                 NULL,                   0 }
 };
 
-static sal_Bool lcl_getStringFromID( sal_uInt16 _nPageId, String& _rGroupName, String& _rPageName )
+static bool lcl_getStringFromID( sal_uInt16 _nPageId, OUString& _rGroupName, OUString& _rPageName )
 {
-    sal_Bool bRet = sal_False;
+    bool bRet = false;
 
     sal_uInt16 nIdx = 0;
     while ( OptionsMap_Impl[nIdx].m_pGroupName != NULL )
     {
         if ( _nPageId == OptionsMap_Impl[nIdx].m_nPageId )
         {
-            bRet = sal_True;
-            _rGroupName = String( OptionsMap_Impl[nIdx].m_pGroupName, RTL_TEXTENCODING_ASCII_US );
+            bRet = true;
+            _rGroupName = OUString::createFromAscii( OptionsMap_Impl[nIdx].m_pGroupName );
             if ( OptionsMap_Impl[nIdx].m_pPageName != NULL )
-                _rPageName = String( OptionsMap_Impl[nIdx].m_pPageName, RTL_TEXTENCODING_ASCII_US );
+                _rPageName = OUString::createFromAscii( OptionsMap_Impl[nIdx].m_pPageName );
             break;
         }
         ++nIdx;
@@ -505,13 +467,13 @@ static sal_Bool lcl_getStringFromID( sal_uInt16 _nPageId, String& _rGroupName, S
     return bRet;
 }
 
-static sal_Bool lcl_isOptionHidden( sal_uInt16 _nPageId, const SvtOptionsDialogOptions& _rOptOptions )
+static bool lcl_isOptionHidden( sal_uInt16 _nPageId, const SvtOptionsDialogOptions& _rOptOptions )
 {
-    sal_Bool bIsHidden = sal_False;
-    String sGroupName, sPageName;
+    bool bIsHidden = false;
+    OUString sGroupName, sPageName;
     if ( lcl_getStringFromID( _nPageId, sGroupName, sPageName ) )
     {
-        if ( sPageName.Len() == 0 )
+        if ( sPageName.isEmpty() )
             bIsHidden =  _rOptOptions.IsGroupHidden( sGroupName );
         else
             bIsHidden =  _rOptOptions.IsPageHidden( sPageName, sGroupName );
@@ -519,15 +481,12 @@ static sal_Bool lcl_isOptionHidden( sal_uInt16 _nPageId, const SvtOptionsDialogO
     return bIsHidden;
 }
 
-/* -----------------11.02.99 09:56-------------------
- *
- * --------------------------------------------------*/
 struct OptionsPageInfo
 {
     SfxTabPage*         m_pPage;
     sal_uInt16          m_nPageId;
-    rtl::OUString       m_sPageURL;
-    rtl::OUString       m_sEventHdl;
+    OUString       m_sPageURL;
+    OUString       m_sEventHdl;
     ExtensionsTabPage*  m_pExtPage;
 
     OptionsPageInfo( sal_uInt16 nId ) : m_pPage( NULL ), m_nPageId( nId ), m_pExtPage( NULL ) {}
@@ -540,118 +499,93 @@ struct OptionsGroupInfo
     SfxShell*           m_pShell;       // used to create the page
     SfxModule*          m_pModule;      // used to create the ItemSet
     sal_uInt16          m_nDialogId;    // Id of the former dialog
-    sal_Bool            m_bLoadError;   // load fails?
-    rtl::OUString       m_sPageURL;
+    bool            m_bLoadError;   // load fails?
+    OUString       m_sPageURL;
     ExtensionsTabPage*  m_pExtPage;
 
-	OptionsGroupInfo( SfxShell* pSh, SfxModule* pMod, sal_uInt16 nId ) :
+    OptionsGroupInfo( SfxShell* pSh, SfxModule* pMod, sal_uInt16 nId ) :
         m_pInItemSet( NULL ), m_pOutItemSet( NULL ), m_pShell( pSh ),
-        m_pModule( pMod ), m_nDialogId( nId ), m_bLoadError( sal_False ),
-        m_sPageURL( rtl::OUString() ), m_pExtPage( NULL ) {}
+        m_pModule( pMod ), m_nDialogId( nId ), m_bLoadError( false ),
+        m_sPageURL( OUString() ), m_pExtPage( NULL ) {}
     ~OptionsGroupInfo() { delete m_pInItemSet; delete m_pOutItemSet; }
 };
 
-/* -----------------04.05.99 15:51-------------------
- *
- * --------------------------------------------------*/
-sal_Bool OfaOptionsTreeListBox::Collapse( SvLBoxEntry* pParent )
-{
-	bInCollapse = sal_True;
-	sal_Bool bRet = SvTreeListBox::Collapse(pParent);
-	bInCollapse = sal_False;
-	return bRet;
-}
-
-// -----------------------------------------------------------------------
-
 #define INI_LIST() \
-    aOkPB               ( this, CUI_RES( PB_OK ) ),\
-    aCancelPB           ( this, CUI_RES( PB_CANCEL ) ),\
-    aHelpPB             ( this, CUI_RES( PB_HELP ) ),\
-    aBackPB             ( this, CUI_RES( PB_BACK ) ),\
-    aHiddenGB           ( this, CUI_RES( FB_BORDER ) ),\
-    aPageTitleFT        ( this, CUI_RES( FT_PAGE_TITLE ) ),\
-    aLine1FL            ( this, CUI_RES( FL_LINE_1 ) ),\
-    aHelpFT             ( this, CUI_RES( FT_HELPTEXT ) ),\
-    aHelpImg            ( this, CUI_RES( IMG_HELP ) ),\
-    aHelpTextsArr       (       CUI_RES( STR_HELPTEXTS ) ),\
-    aTreeLB             ( this, CUI_RES( TLB_PAGES ) ),\
-    sTitle              ( GetText() ),\
-    sNotLoadedError     (       CUI_RES( ST_LOAD_ERROR ) ),\
     pCurrentPageEntry   ( NULL ),\
+    sTitle              ( GetText() ),\
+    sNotLoadedError     (       CUI_RES( RID_SVXSTR_LOAD_ERROR ) ),\
     pColorPageItemSet   ( NULL ),\
-    maColorTab           (),\
-    nChangeType         ( CT_NONE ),\
-    nUnknownType        ( COLORPAGE_UNKNOWN ),\
-    nUnknownPos         ( COLORPAGE_UNKNOWN ),\
-    bIsAreaTP           ( sal_False ),\
-    bForgetSelection    ( sal_False ),\
-    bImageResized       ( sal_False ),\
-    bInSelectHdl_Impl   ( false ),\
+    mpColorPage         ( NULL ),\
+    bForgetSelection    ( false ),\
     bIsFromExtensionManager( false ), \
     bIsForSetDocumentLanguage( false )
+
+void OfaTreeOptionsDialog::InitWidgets()
+{
+    get(pOkPB, "ok");
+    get(pBackPB, "revert");
+    get(pTreeLB, "pages");
+    get(pTabBox, "box");
+    Size aSize(pTabBox->LogicToPixel(Size(278, 259), MAP_APPFONT));
+    pTabBox->set_width_request(aSize.Width());
+    pTabBox->set_height_request(aSize.Height() - get_action_area()->get_preferred_size().Height());
+    pTreeLB->set_width_request(pTreeLB->approximate_char_width() * 25);
+    pTreeLB->set_height_request(pTabBox->get_height_request());
+}
 
 // Ctor() with Frame -----------------------------------------------------
 using namespace ::com::sun::star;
 OfaTreeOptionsDialog::OfaTreeOptionsDialog(
-    Window* pParent,
+    vcl::Window* pParent,
     const Reference< XFrame >& _xFrame,
     bool bActivateLastSelection ) :
 
-	SfxModalDialog( pParent, CUI_RES( RID_OFADLG_OPTIONS_TREE ) ),
+    SfxModalDialog( pParent, "OptionsDialog", "cui/ui/optionsdialog.ui" ),
     INI_LIST()
 {
-	FreeResource();
+    InitWidgets();
 
     InitTreeAndHandler();
     Initialize( _xFrame );
-    LoadExtensionOptions( rtl::OUString() );
-    ResizeTreeLB();
+    LoadExtensionOptions( OUString() );
     if (bActivateLastSelection)
         ActivateLastSelection();
 
-	aTreeLB.SetAccessibleName(GetDisplayText());
+    pTreeLB->SetAccessibleName(GetDisplayText());
 }
 
 // Ctor() with ExtensionId -----------------------------------------------
+OfaTreeOptionsDialog::OfaTreeOptionsDialog( vcl::Window* pParent, const OUString& rExtensionId ) :
 
-OfaTreeOptionsDialog::OfaTreeOptionsDialog( Window* pParent, const rtl::OUString& rExtensionId ) :
-
-    SfxModalDialog( pParent, CUI_RES( RID_OFADLG_OPTIONS_TREE ) ),
-
+    SfxModalDialog( pParent, "OptionsDialog", "cui/ui/optionsdialog.ui" ),
     INI_LIST()
-
 {
-    FreeResource();
+    InitWidgets();
 
-    bIsFromExtensionManager = ( rExtensionId.getLength() > 0 );
+    bIsFromExtensionManager = ( !rExtensionId.isEmpty() );
     InitTreeAndHandler();
     LoadExtensionOptions( rExtensionId );
-    ResizeTreeLB();
     ActivateLastSelection();
 }
 
-/* -----------------11.02.99 07:58-------------------
- *
- * --------------------------------------------------*/
-
 OfaTreeOptionsDialog::~OfaTreeOptionsDialog()
 {
-    SvLBoxEntry* pEntry = aTreeLB.First();
+    pCurrentPageEntry = NULL;
+    SvTreeListEntry* pEntry = pTreeLB->First();
     // first children
     while(pEntry)
     {
         // if Child (has parent), then OptionsPageInfo
-        if(aTreeLB.GetParent(pEntry))
+        if(pTreeLB->GetParent(pEntry))
         {
             OptionsPageInfo *pPageInfo = (OptionsPageInfo *)pEntry->GetUserData();
             if(pPageInfo->m_pPage)
             {
                 pPageInfo->m_pPage->FillUserData();
-                String aPageData(pPageInfo->m_pPage->GetUserData());
-                if ( aPageData.Len() )
+                OUString aPageData(pPageInfo->m_pPage->GetUserData());
+                if ( !aPageData.isEmpty() )
                 {
-                    SvtViewOptions aTabPageOpt( E_TABPAGE, String::CreateFromInt32( pPageInfo->m_nPageId ) );
+                    SvtViewOptions aTabPageOpt( E_TABPAGE, OUString::number( pPageInfo->m_nPageId) );
                     SetViewOptUserItem( aTabPageOpt, aPageData );
                 }
                 delete pPageInfo->m_pPage;
@@ -660,473 +594,411 @@ OfaTreeOptionsDialog::~OfaTreeOptionsDialog()
             if (pPageInfo->m_nPageId == RID_SFXPAGE_LINGU)
             {
                 // write personal dictionaries
-                Reference< XDictionaryList >  xDicList( SvxGetDictionaryList() );
+                Reference< XSearchableDictionaryList >  xDicList( SvxGetDictionaryList() );
                 if (xDicList.is())
                 {
                     linguistic::SaveDictionaries( xDicList );
                 }
             }
 
-            if( pPageInfo->m_pExtPage )
-                delete pPageInfo->m_pExtPage;
+            delete pPageInfo->m_pExtPage;
 
             delete pPageInfo;
         }
-        pEntry = aTreeLB.Next(pEntry);
+        pEntry = pTreeLB->Next(pEntry);
     }
 
     // and parents
-    pEntry = aTreeLB.First();
+    pEntry = pTreeLB->First();
     while(pEntry)
     {
-        if(!aTreeLB.GetParent(pEntry))
+        if(!pTreeLB->GetParent(pEntry))
         {
             OptionsGroupInfo* pGroupInfo = (OptionsGroupInfo*)pEntry->GetUserData();
             if ( pGroupInfo && pGroupInfo->m_pExtPage )
                 delete pGroupInfo->m_pExtPage;
             delete pGroupInfo;
         }
-        pEntry = aTreeLB.Next(pEntry);
+        pEntry = pTreeLB->Next(pEntry);
     }
-	delete pColorPageItemSet;
+    delete pColorPageItemSet;
     deleteGroupNames();
 }
 
-/* -----------------11.02.99 08:21-------------------
- *
- * --------------------------------------------------*/
 OptionsPageInfo* OfaTreeOptionsDialog::AddTabPage(
-    sal_uInt16 nId, const String& rPageName, sal_uInt16 nGroup )
+    sal_uInt16 nId, const OUString& rPageName, sal_uInt16 nGroup )
 {
     OptionsPageInfo* pPageInfo = new OptionsPageInfo( nId );
-	SvLBoxEntry* pParent = aTreeLB.GetEntry( 0, nGroup );
+    SvTreeListEntry* pParent = pTreeLB->GetEntry( 0, nGroup );
     DBG_ASSERT( pParent, "OfaTreeOptionsDialog::AddTabPage(): no group found" );
-    SvLBoxEntry* pEntry = aTreeLB.InsertEntry( rPageName, pParent );
+    SvTreeListEntry* pEntry = pTreeLB->InsertEntry( rPageName, pParent );
     pEntry->SetUserData( pPageInfo );
     return pPageInfo;
 }
 
-/* -----------------11.02.99 10:02-------------------
- *	der ItemSet* geht in den Besitz des Dialogs
- * --------------------------------------------------*/
-sal_uInt16	OfaTreeOptionsDialog::AddGroup(const String& rGroupName,
-										SfxShell* pCreateShell,
-										SfxModule* pCreateModule,
-										sal_uInt16 nDialogId )
+// the ItemSet* is passed on to the dialog's ownership
+sal_uInt16  OfaTreeOptionsDialog::AddGroup(const OUString& rGroupName,
+                                        SfxShell* pCreateShell,
+                                        SfxModule* pCreateModule,
+                                        sal_uInt16 nDialogId )
 {
-	SvLBoxEntry* pEntry = aTreeLB.InsertEntry(rGroupName);
-	OptionsGroupInfo* pInfo =
-		new OptionsGroupInfo( pCreateShell, pCreateModule, nDialogId );
-	pEntry->SetUserData(pInfo);
-	sal_uInt16 nRet = 0;
-	pEntry = aTreeLB.First();
-	while(pEntry)
-	{
-		if(!aTreeLB.GetParent(pEntry))
-			nRet++;
-		pEntry = aTreeLB.Next(pEntry);
-	}
-	return nRet - 1;
+    SvTreeListEntry* pEntry = pTreeLB->InsertEntry(rGroupName);
+    OptionsGroupInfo* pInfo =
+        new OptionsGroupInfo( pCreateShell, pCreateModule, nDialogId );
+    pEntry->SetUserData(pInfo);
+    sal_uInt16 nRet = 0;
+    pEntry = pTreeLB->First();
+    while(pEntry)
+    {
+        if(!pTreeLB->GetParent(pEntry))
+            nRet++;
+        pEntry = pTreeLB->Next(pEntry);
+    }
+    return nRet - 1;
 }
 
-/* -----------------11.02.99 10:31-------------------
- *
- * --------------------------------------------------*/
-IMPL_LINK(OfaTreeOptionsDialog, ShowPageHdl_Impl, SvTreeListBox*, EMPTYARG)
+IMPL_LINK_NOARG(OfaTreeOptionsDialog, ShowPageHdl_Impl)
 {
-	if ( aSelectTimer.GetTimeout() == SELECT_FIRST_TIMEOUT )
-	{
-		aSelectTimer.SetTimeout( SELECT_TIMEOUT );
-		SelectHdl_Impl( NULL );
-	}
-    else if ( aSelectTimer.GetTimeout() == SELECT_TIMEOUT )
-		aSelectTimer.Start();
-
-	return 0;
+    SelectHdl_Impl();
+    return 0;
 }
-/* -----------------11.02.99 10:49-------------------
- *
- * --------------------------------------------------*/
-IMPL_LINK( OfaTreeOptionsDialog, BackHdl_Impl, PushButton*, EMPTYARG )
+
+IMPL_LINK_NOARG(OfaTreeOptionsDialog, BackHdl_Impl)
 {
-    if ( pCurrentPageEntry && aTreeLB.GetParent( pCurrentPageEntry ) )
-	{
-		OptionsPageInfo* pPageInfo = (OptionsPageInfo*)pCurrentPageEntry->GetUserData();
+    if ( pCurrentPageEntry && pTreeLB->GetParent( pCurrentPageEntry ) )
+    {
+        OptionsPageInfo* pPageInfo = (OptionsPageInfo*)pCurrentPageEntry->GetUserData();
         if ( pPageInfo->m_pPage )
         {
             OptionsGroupInfo* pGroupInfo =
-                (OptionsGroupInfo*)aTreeLB.GetParent( pCurrentPageEntry )->GetUserData();
+                (OptionsGroupInfo*)pTreeLB->GetParent( pCurrentPageEntry )->GetUserData();
             if ( RID_SVXPAGE_COLOR == pPageInfo->m_nPageId )
-                pPageInfo->m_pPage->Reset( *pColorPageItemSet );
+                pPageInfo->m_pPage->Reset( pColorPageItemSet );
             else
-                pPageInfo->m_pPage->Reset( *pGroupInfo->m_pInItemSet );
+                pPageInfo->m_pPage->Reset( pGroupInfo->m_pInItemSet );
         }
         else if ( pPageInfo->m_pExtPage )
             pPageInfo->m_pExtPage->ResetPage();
-	}
-	return 0;
+    }
+    return 0;
 }
-/* -----------------11.02.99 16:45-------------------
- *
- * --------------------------------------------------*/
-IMPL_LINK( OfaTreeOptionsDialog, OKHdl_Impl, Button *, EMPTYARG )
+
+IMPL_LINK_NOARG(OfaTreeOptionsDialog, OKHdl_Impl)
 {
-	aTreeLB.EndSelection();
-    if ( pCurrentPageEntry && aTreeLB.GetParent( pCurrentPageEntry ) )
-	{
+    pTreeLB->EndSelection();
+    if ( pCurrentPageEntry && pTreeLB->GetParent( pCurrentPageEntry ) )
+    {
         OptionsPageInfo* pPageInfo = (OptionsPageInfo *)pCurrentPageEntry->GetUserData();
         if ( pPageInfo->m_pPage )
         {
             OptionsGroupInfo* pGroupInfo =
-                (OptionsGroupInfo *)aTreeLB.GetParent(pCurrentPageEntry)->GetUserData();
+                (OptionsGroupInfo *)pTreeLB->GetParent(pCurrentPageEntry)->GetUserData();
             if ( RID_SVXPAGE_COLOR != pPageInfo->m_nPageId
                 && pPageInfo->m_pPage->HasExchangeSupport() )
             {
                 int nLeave = pPageInfo->m_pPage->DeactivatePage(pGroupInfo->m_pOutItemSet);
                 if ( nLeave == SfxTabPage::KEEP_PAGE )
                 {
-                    //die Seite darf nicht verlassen werden!
-                    aTreeLB.Select(pCurrentPageEntry);
+                    // the page mustn't be left
+                    pTreeLB->Select(pCurrentPageEntry);
                     return 0;
                 }
             }
             pPageInfo->m_pPage->Hide();
         }
-	}
+    }
 
-	SvLBoxEntry* pEntry = aTreeLB.First();
+    SvTreeListEntry* pEntry = pTreeLB->First();
     while ( pEntry )
-	{
-        if ( aTreeLB.GetParent( pEntry ) )
-		{
+    {
+        if ( pTreeLB->GetParent( pEntry ) )
+        {
             OptionsPageInfo* pPageInfo = (OptionsPageInfo *)pEntry->GetUserData();
             if ( pPageInfo->m_pPage && !pPageInfo->m_pPage->HasExchangeSupport() )
-			{
+            {
                 OptionsGroupInfo* pGroupInfo =
-                    (OptionsGroupInfo*)aTreeLB.GetParent(pEntry)->GetUserData();
-                pPageInfo->m_pPage->FillItemSet(*pGroupInfo->m_pOutItemSet);
-			}
+                    (OptionsGroupInfo*)pTreeLB->GetParent(pEntry)->GetUserData();
+                pPageInfo->m_pPage->FillItemSet(pGroupInfo->m_pOutItemSet);
+            }
 
             if ( pPageInfo->m_pExtPage )
             {
                 pPageInfo->m_pExtPage->DeactivatePage();
                 pPageInfo->m_pExtPage->SavePage();
             }
-		}
-		pEntry = aTreeLB.Next(pEntry);
-	}
-	EndDialog(RET_OK);
-	return 0;
+        }
+        pEntry = pTreeLB->Next(pEntry);
+    }
+    EndDialog(RET_OK);
+    return 0;
 }
 
-/* -----------------17.02.99 09:15-------------------
- * Eine aufgeklappte Gruppe soll vollstaendig sichtbar sein
- * --------------------------------------------------*/
+// an opened group shall be completely visible
 IMPL_LINK(OfaTreeOptionsDialog, ExpandedHdl_Impl, SvTreeListBox*, pBox )
 {
-	pBox->Update();
-	pBox->InitStartEntry();
-	SvLBoxEntry* pEntry = pBox->GetHdlEntry();
-	if(pEntry && pBox->IsExpanded(pEntry))
-	{
-		sal_uInt32 nChildCount = pBox->GetChildCount( pEntry );
+    pBox->Update();
+    pBox->InitStartEntry();
+    SvTreeListEntry* pEntry = pBox->GetHdlEntry();
+    if(pEntry && pBox->IsExpanded(pEntry))
+    {
+        sal_uInt32 nChildCount = pBox->GetChildCount( pEntry );
 
-		SvLBoxEntry* pNext = pEntry;
-		for(sal_uInt32 i = 0; i < nChildCount;i++)
-		{
-			pNext = pBox->GetNextEntryInView(pNext);
-			if(!pNext)
-			{
-				pBox->ScrollOutputArea( -(short)(nChildCount - i + 1) );
-				break;
-			}
-			else
-			{
-				Size aSz(pBox->GetOutputSizePixel());
-				int nHeight = pBox->GetEntryHeight();
+        SvTreeListEntry* pNext = pEntry;
+        for(sal_uInt32 i = 0; i < nChildCount;i++)
+        {
+            pNext = pBox->GetNextEntryInView(pNext);
+            if(!pNext)
+            {
+                pBox->ScrollOutputArea( -(short)(nChildCount - i + 1) );
+                break;
+            }
+            else
+            {
+                Size aSz(pBox->GetOutputSizePixel());
+                int nHeight = pBox->GetEntryHeight();
                 Point aPos(pBox->GetEntryPosition(pNext));
-				if(aPos.Y()+nHeight > aSz.Height())
-				{
-					pBox->ScrollOutputArea( -(short)(nChildCount - i + 1) );
-					break;
-				}
-			}
-		}
-	}
-	return 0;
+                if(aPos.Y()+nHeight > aSz.Height())
+                {
+                    pBox->ScrollOutputArea( -(short)(nChildCount - i + 1) );
+                    break;
+                }
+            }
+        }
+    }
+    return 0;
 }
 
-/* -----------------11.02.99 10:49-------------------
- *
- * --------------------------------------------------*/
 void OfaTreeOptionsDialog::ApplyItemSets()
 {
-	SvLBoxEntry* pEntry = aTreeLB.First();
-	while(pEntry)
-	{
-		if(!aTreeLB.GetParent(pEntry))
-		{
-			OptionsGroupInfo* pGroupInfo = (OptionsGroupInfo *)pEntry->GetUserData();
+    SvTreeListEntry* pEntry = pTreeLB->First();
+    while(pEntry)
+    {
+        if(!pTreeLB->GetParent(pEntry))
+        {
+            OptionsGroupInfo* pGroupInfo = (OptionsGroupInfo *)pEntry->GetUserData();
             if(pGroupInfo->m_pOutItemSet)
-			{
+            {
                 if(pGroupInfo->m_pShell)
                     pGroupInfo->m_pShell->ApplyItemSet( pGroupInfo->m_nDialogId, *pGroupInfo->m_pOutItemSet);
-				else
+                else
                     ApplyItemSet( pGroupInfo->m_nDialogId, *pGroupInfo->m_pOutItemSet);
-			}
-		}
-		pEntry = aTreeLB.Next(pEntry);
-	}
+            }
+        }
+        pEntry = pTreeLB->Next(pEntry);
+    }
 }
 
 void OfaTreeOptionsDialog::InitTreeAndHandler()
 {
-    aTreeLB.SetNodeDefaultImages();
-    aPageImages = ImageList( CUI_RES( RID_IMGLIST_TREEOPT ) );
-    aPageImagesHC = ImageList( CUI_RES( RID_IMGLIST_TREEOPT_HC ) );
+    pTreeLB->SetNodeDefaultImages();
 
-    aTreeLB.SetHelpId( HID_OFADLG_TREELISTBOX );
-    aTreeLB.SetStyle( aTreeLB.GetStyle()|WB_HASBUTTONS | WB_HASBUTTONSATROOT |
+    pTreeLB->SetHelpId( HID_OFADLG_TREELISTBOX );
+    pTreeLB->SetStyle( pTreeLB->GetStyle()|WB_HASBUTTONS | WB_HASBUTTONSATROOT |
                            WB_HASLINES | WB_HASLINESATROOT |
                            WB_CLIPCHILDREN | WB_HSCROLL | WB_FORCE_MAKEVISIBLE | WB_QUICK_SEARCH );
-    aTreeLB.SetSpaceBetweenEntries( 0 );
-    aTreeLB.SetSelectionMode( SINGLE_SELECTION );
-    aTreeLB.SetSublistOpenWithLeftRight( sal_True );
-    aTreeLB.SetExpandedHdl( LINK( this, OfaTreeOptionsDialog, ExpandedHdl_Impl ) );
-    aTreeLB.SetSelectHdl( LINK( this, OfaTreeOptionsDialog, ShowPageHdl_Impl ) );
-    aBackPB.SetClickHdl( LINK( this, OfaTreeOptionsDialog, BackHdl_Impl ) );
-    aOkPB.SetClickHdl( LINK( this, OfaTreeOptionsDialog, OKHdl_Impl ) );
-
-    aHiddenGB.Show();
-    aSelectTimer.SetTimeout( SELECT_FIRST_TIMEOUT );
-    aSelectTimer.SetTimeoutHdl( LINK( this, OfaTreeOptionsDialog, SelectHdl_Impl ) );
+    pTreeLB->SetSpaceBetweenEntries( 0 );
+    pTreeLB->SetSelectionMode( SINGLE_SELECTION );
+    pTreeLB->SetSublistOpenWithLeftRight( true );
+    pTreeLB->SetExpandedHdl( LINK( this, OfaTreeOptionsDialog, ExpandedHdl_Impl ) );
+    pTreeLB->SetSelectHdl( LINK( this, OfaTreeOptionsDialog, ShowPageHdl_Impl ) );
+    pBackPB->SetClickHdl( LINK( this, OfaTreeOptionsDialog, BackHdl_Impl ) );
+    pOkPB->SetClickHdl( LINK( this, OfaTreeOptionsDialog, OKHdl_Impl ) );
 }
 
-/* -----------------17.02.99 09:51-------------------
- *
- * --------------------------------------------------*/
 void OfaTreeOptionsDialog::ActivatePage( sal_uInt16 nResId )
 {
     bIsForSetDocumentLanguage = false;
     if ( nResId == OFA_TP_LANGUAGES_FOR_SET_DOCUMENT_LANGUAGE )
-	{
+    {
         bIsForSetDocumentLanguage = true;
         nResId = OFA_TP_LANGUAGES;
-	}
+    }
 
     DBG_ASSERT( !bIsFromExtensionManager, "OfaTreeOptionsDialog::ActivatePage(): call from extension manager" );
     if ( !pLastPageSaver )
         pLastPageSaver = new LastPageSaver;
-	bForgetSelection = sal_True;
+    bForgetSelection = true;
     sal_uInt16 nTemp = pLastPageSaver->m_nLastPageId;
     pLastPageSaver->m_nLastPageId = nResId;
-	ActivateLastSelection();
+    ActivateLastSelection();
     pLastPageSaver->m_nLastPageId = nTemp;
 }
 
-void OfaTreeOptionsDialog::ActivatePage( const String& rPageURL )
+void OfaTreeOptionsDialog::ActivatePage( const OUString& rPageURL )
 {
     DBG_ASSERT( !bIsFromExtensionManager, "OfaTreeOptionsDialog::ActivatePage(): call from extension manager" );
     if ( !pLastPageSaver )
         pLastPageSaver = new LastPageSaver;
-    bForgetSelection = sal_True;
+    bForgetSelection = true;
     pLastPageSaver->m_nLastPageId = 0;
     pLastPageSaver->m_sLastPageURL_Tools = rPageURL;
     ActivateLastSelection();
 }
 
-/* -----------------16.02.99 13:17-------------------
- *
- * --------------------------------------------------*/
 void OfaTreeOptionsDialog::ActivateLastSelection()
 {
-    SvLBoxEntry* pEntry = NULL;
+    SvTreeListEntry* pEntry = NULL;
     if ( pLastPageSaver )
-	{
-        String sExpand( RTL_CONSTASCII_STRINGPARAM( EXPAND_PROTOCOL ) );
-        String sLastURL = bIsFromExtensionManager ? pLastPageSaver->m_sLastPageURL_ExtMgr
+    {
+        OUString sExpand( EXPAND_PROTOCOL );
+        OUString sLastURL = bIsFromExtensionManager ? pLastPageSaver->m_sLastPageURL_ExtMgr
                                                   : pLastPageSaver->m_sLastPageURL_Tools;
-        if ( sLastURL.Len() == 0 )
+        if ( sLastURL.isEmpty() )
         {
             sLastURL = !bIsFromExtensionManager ? pLastPageSaver->m_sLastPageURL_ExtMgr
                                                 : pLastPageSaver->m_sLastPageURL_Tools;
         }
 
         // MacroExpander to convert "expand"-URL to "file"-URL
-        Reference< XMacroExpander > m_xMacroExpander;
+        Reference< XMacroExpander > xMacroExpander;
         bool bMustExpand = ( INetURLObject( sLastURL ).GetProtocol() == INET_PROT_FILE );
 
         if ( bMustExpand )
         {
-            Reference< XComponentContext > xContext;
-            Reference< XPropertySet > xProps( ::comphelper::getProcessServiceFactory(), UNO_QUERY );
-            xProps->getPropertyValue(
-                ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "DefaultContext" ) ) ) >>= xContext;
-            if ( xContext.is() )
-                m_xMacroExpander = Reference< com::sun::star::util::XMacroExpander >(
-                    xContext->getValueByName( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM(
-                        "/singletons/com.sun.star.util.theMacroExpander" ) ) ), UNO_QUERY );
+            Reference< XComponentContext > xContext(
+                comphelper::getProcessComponentContext() );
+            xMacroExpander = theMacroExpander::get(xContext);
         }
 
-		SvLBoxEntry* pTemp = aTreeLB.First();
+        SvTreeListEntry* pTemp = pTreeLB->First();
         while( !pEntry && pTemp )
-		{
+        {
             // restore only selection of a leaf
-            if ( aTreeLB.GetParent( pTemp ) && pTemp->GetUserData() )
-			{
+            if ( pTreeLB->GetParent( pTemp ) && pTemp->GetUserData() )
+            {
                 OptionsPageInfo* pPageInfo = (OptionsPageInfo*)pTemp->GetUserData();
-                String sPageURL = pPageInfo->m_sPageURL;
+                OUString sPageURL = pPageInfo->m_sPageURL;
                 if ( bMustExpand
-                    && sPageURL.Len() > 0
-                    && sExpand.Match( sPageURL ) == STRING_MATCH )
+                    && !sPageURL.isEmpty()
+                    && sPageURL.startsWith( sExpand ) )
                 {
                     // cut protocol
-                    ::rtl::OUString sTemp( sPageURL.Copy( sizeof( EXPAND_PROTOCOL ) -1 ) );
+                    OUString sTemp( sPageURL.copy( sExpand.getLength() ) );
                     // decode uri class chars
                     sTemp = ::rtl::Uri::decode(
                         sTemp, rtl_UriDecodeWithCharset, RTL_TEXTENCODING_UTF8 );
                     // expand string
-                    sPageURL = m_xMacroExpander->expandMacros( sTemp );
+                    sPageURL = xMacroExpander->expandMacros( sTemp );
                 }
 
                 if ( ( !bIsFromExtensionManager
                         && pPageInfo->m_nPageId && pPageInfo->m_nPageId == pLastPageSaver->m_nLastPageId )
                             || ( !pPageInfo->m_nPageId && sLastURL == sPageURL ) )
                     pEntry = pTemp;
-			}
-			pTemp = aTreeLB.Next(pTemp);
-		}
-	}
+            }
+            pTemp = pTreeLB->Next(pTemp);
+        }
+    }
 
     if ( !pEntry )
     {
-        pEntry = aTreeLB.First();
-        pEntry = aTreeLB.Next(pEntry);
+        pEntry = pTreeLB->First();
+        pEntry = pTreeLB->Next(pEntry);
     }
 
-    SvLBoxEntry* pParent = aTreeLB.GetParent(pEntry);
-    aTreeLB.Expand(pParent);
-    aTreeLB.MakeVisible(pParent);
-    aTreeLB.MakeVisible(pEntry);
-    aTreeLB.Select(pEntry);
-    aTreeLB.GrabFocus();
+    if ( !pEntry )
+        return;
+
+    SvTreeListEntry* pParent = pTreeLB->GetParent(pEntry);
+    pTreeLB->Expand(pParent);
+    pTreeLB->MakeVisible(pParent);
+    pTreeLB->MakeVisible(pEntry);
+    pTreeLB->Select(pEntry);
+    pTreeLB->GrabFocus();
 }
 
-/* -----------------22.02.99 08:52-------------------
- *
- * --------------------------------------------------*/
-long	OfaTreeOptionsDialog::Notify( NotifyEvent& rNEvt )
+bool OfaTreeOptionsDialog::Notify( NotifyEvent& rNEvt )
 {
-	if ( rNEvt.GetType() == EVENT_KEYINPUT )
-	{
-		const KeyEvent* pKEvt = rNEvt.GetKeyEvent();
-		const KeyCode aKeyCode = pKEvt->GetKeyCode();
+    if ( rNEvt.GetType() == EVENT_KEYINPUT )
+    {
+        const KeyEvent* pKEvt = rNEvt.GetKeyEvent();
+        const vcl::KeyCode aKeyCode = pKEvt->GetKeyCode();
 
-		if( aKeyCode.GetCode() == KEY_PAGEUP ||
-				aKeyCode.GetCode() == KEY_PAGEDOWN)
-		{
-			SvLBoxEntry* pCurEntry = aTreeLB.FirstSelected();
-			SvLBoxEntry*  pTemp = 0;
-			if(aKeyCode.GetCode() == KEY_PAGEDOWN)
-			{
-				pTemp =  aTreeLB.Next( pCurEntry ) ;
-				if(pTemp && !aTreeLB.GetParent(pTemp))
-				{
-					pTemp =  aTreeLB.Next( pTemp ) ;
-					aTreeLB.Select(pTemp);
-				}
-			}
-			else
-			{
-				pTemp =  aTreeLB.Prev( pCurEntry ) ;
-				if(pTemp && !aTreeLB.GetParent(pTemp))
-				{
-					pTemp =  aTreeLB.Prev( pTemp ) ;
-				}
-			}
-			if(pTemp)
-			{
-				if(!aTreeLB.IsExpanded(aTreeLB.GetParent(pTemp)))
-					aTreeLB.Expand(aTreeLB.GetParent(pTemp));
-				aTreeLB.MakeVisible(pTemp);
-				aTreeLB.Select(pTemp);
-			}
-		}
-	}
-	return SfxModalDialog::Notify(rNEvt);
+        if( aKeyCode.GetCode() == KEY_PAGEUP ||
+                aKeyCode.GetCode() == KEY_PAGEDOWN)
+        {
+            SvTreeListEntry* pCurEntry = pTreeLB->FirstSelected();
+            SvTreeListEntry*  pTemp = 0;
+            if(aKeyCode.GetCode() == KEY_PAGEDOWN)
+            {
+                pTemp =  pTreeLB->Next( pCurEntry ) ;
+                if(pTemp && !pTreeLB->GetParent(pTemp))
+                {
+                    pTemp =  pTreeLB->Next( pTemp ) ;
+                    pTreeLB->Select(pTemp);
+                }
+            }
+            else
+            {
+                pTemp =  pTreeLB->Prev( pCurEntry ) ;
+                if(pTemp && !pTreeLB->GetParent(pTemp))
+                {
+                    pTemp =  pTreeLB->Prev( pTemp ) ;
+                }
+            }
+            if(pTemp)
+            {
+                if(!pTreeLB->IsExpanded(pTreeLB->GetParent(pTemp)))
+                    pTreeLB->Expand(pTreeLB->GetParent(pTemp));
+                pTreeLB->MakeVisible(pTemp);
+                pTreeLB->Select(pTemp);
+            }
+        }
+    }
+    return SfxModalDialog::Notify(rNEvt);
 }
 
-// --------------------------------------------------------------------
-
-void OfaTreeOptionsDialog::DataChanged( const DataChangedEvent& rDCEvt )
+void OfaTreeOptionsDialog::SelectHdl_Impl()
 {
-	SfxModalDialog::DataChanged( rDCEvt );
+    SvTreeListBox* pBox = pTreeLB;
 
-	SvLBoxEntry* pEntry = aTreeLB.GetCurEntry();
-	if ( ( rDCEvt.GetType() == DATACHANGED_SETTINGS ) && ( rDCEvt.GetFlags() & SETTINGS_STYLE ) &&
-		!aTreeLB.GetParent(pEntry))
-	{
-		OptionsGroupInfo* pInfo = static_cast<OptionsGroupInfo*>(pEntry->GetUserData());
-		bool bHighContrast = GetSettings().GetStyleSettings().GetHighContrastMode();
-		ImageList* pImgLst = bHighContrast ? &aPageImagesHC : &aPageImages;
-		for ( sal_uInt16 i = 0; i < aHelpTextsArr.Count(); ++i )
-		{
-            if ( aHelpTextsArr.GetValue(i) == pInfo->m_nDialogId )
-			{
-                aHelpImg.SetImage( pImgLst->GetImage( pInfo->m_nDialogId ) );
-				break;
-			}
-		}
-	}
-}
-class FlagSet_Impl
-{
-    bool & rFlag;
-    public:
-        FlagSet_Impl(bool& bFlag) : rFlag(bFlag){rFlag = true;}
-        ~FlagSet_Impl(){rFlag = false;}
-};
+    if(pCurrentPageEntry == pBox->GetCurEntry())
+    {
+        pBox->EndSelection();
+        return;
+    }
 
-IMPL_LINK( OfaTreeOptionsDialog, SelectHdl_Impl, Timer*, EMPTYARG )
-{
-	SvTreeListBox* pBox = &aTreeLB;
-	SvLBoxEntry* pEntry = pBox->GetCurEntry();
-	SvLBoxEntry* pParent = pBox->GetParent(pEntry);
-	pBox->EndSelection();
+    SvTreeListEntry* pEntry = pBox->GetCurEntry();
+    SvTreeListEntry* pParent = pBox->GetParent(pEntry);
 
-	DBG_ASSERT(!bInSelectHdl_Impl, "Timeout handler called twice");
-    if(bInSelectHdl_Impl || pCurrentPageEntry == pEntry)
-        return 0;
-    //#111938# lock the SelectHdl_Impl to prevent multiple executes
-    FlagSet_Impl aFlag(bInSelectHdl_Impl);
-	TabPage* pOldPage = NULL;
-	TabPage* pNewPage = NULL;
-    OptionsPageInfo* pOptPageInfo = ( pCurrentPageEntry && aTreeLB.GetParent( pCurrentPageEntry ) )
+    // If the user has selected a category, automatically switch to a suitable
+    // default sub-page instead.
+    if (!pParent)
+    {
+        pBox->EndSelection();
+        return;
+    }
+
+    pBox->EndSelection();
+
+    TabPage* pOldPage = NULL;
+    TabPage* pNewPage = NULL;
+    OptionsPageInfo* pOptPageInfo = ( pCurrentPageEntry && pTreeLB->GetParent( pCurrentPageEntry ) )
         ? (OptionsPageInfo*)pCurrentPageEntry->GetUserData() : NULL;
 
     if ( pOptPageInfo && pOptPageInfo->m_pPage && pOptPageInfo->m_pPage->IsVisible() )
-	{
+    {
         pOldPage = pOptPageInfo->m_pPage;
-        OptionsGroupInfo* pGroupInfo = (OptionsGroupInfo*)aTreeLB.GetParent(pCurrentPageEntry)->GetUserData();
-		int nLeave = SfxTabPage::LEAVE_PAGE;
+        OptionsGroupInfo* pGroupInfo = (OptionsGroupInfo*)pTreeLB->GetParent(pCurrentPageEntry)->GetUserData();
+        int nLeave = SfxTabPage::LEAVE_PAGE;
         if ( RID_SVXPAGE_COLOR != pOptPageInfo->m_nPageId && pOptPageInfo->m_pPage->HasExchangeSupport() )
            nLeave = pOptPageInfo->m_pPage->DeactivatePage( pGroupInfo->m_pOutItemSet );
 
         if ( nLeave == SfxTabPage::KEEP_PAGE )
-		{
+        {
             // we cannot leave this page
             pBox->Select( pCurrentPageEntry );
-			return 0;
-		}
-		else
+            return;
+        }
+        else
             pOptPageInfo->m_pPage->Hide();
-	}
+    }
     else if ( pOptPageInfo && pOptPageInfo->m_pExtPage )
     {
         pOptPageInfo->m_pExtPage->Hide();
         pOptPageInfo->m_pExtPage->DeactivatePage();
     }
-    else if ( pCurrentPageEntry && !aTreeLB.GetParent( pCurrentPageEntry ) )
+    else if ( pCurrentPageEntry && !pTreeLB->GetParent( pCurrentPageEntry ) )
     {
         OptionsGroupInfo* pGroupInfo = (OptionsGroupInfo*)pCurrentPageEntry->GetUserData();
         if ( pGroupInfo && pGroupInfo->m_pExtPage )
@@ -1135,421 +1007,225 @@ IMPL_LINK( OfaTreeOptionsDialog, SelectHdl_Impl, Timer*, EMPTYARG )
             pGroupInfo->m_pExtPage->DeactivatePage();
         }
     }
-    if ( pParent )
-	{
-		aPageTitleFT.Hide();
-		aLine1FL.Hide();
-		aHelpFT.Hide();
-		aHelpImg.Hide();
-		OptionsPageInfo *pPageInfo = (OptionsPageInfo *)pEntry->GetUserData();
-		OptionsGroupInfo* pGroupInfo = (OptionsGroupInfo *)pParent->GetUserData();
-        if(!pPageInfo->m_pPage && pPageInfo->m_nPageId > 0)
-		{
-            if(pGroupInfo->m_bLoadError)
-				return 0;
-            if ( RID_SVXPAGE_COLOR == pPageInfo->m_nPageId )
-			{
-				if(!pColorPageItemSet)
-				{
-					// Move usage of a static XOutdevItemPool instance here
-					if(!mpStaticXOutdevItemPool)
-					{
-						mpStaticXOutdevItemPool = new XOutdevItemPool();
-					}
-					pColorPageItemSet = new SfxItemSet( *mpStaticXOutdevItemPool, XATTR_FILLSTYLE, XATTR_FILLCOLOR);
-					pColorPageItemSet->Put( XFillColorItem() );
-				}
-			}
-			else
-			{
-                if(pGroupInfo->m_pModule /*&& !pGroupInfo->pModule->IsLoaded()*/)
-				{
-                    SfxModule* pOldModule = pGroupInfo->m_pModule;
-                    sal_Bool bIdentical = pGroupInfo->m_pModule == pGroupInfo->m_pShell;
 
-					WaitObject aWait(this);
-					//pGroupInfo->pModule = pGroupInfo->pModule->Load();
-                    if(!pGroupInfo->m_pModule)
-					{
-                        pGroupInfo->m_bLoadError = sal_True;
-						InfoBox(pBox, sNotLoadedError).Execute();
-						return 0;
-					}
-					if(bIdentical)
-                         pGroupInfo->m_pShell = pGroupInfo->m_pModule;
-					//jetzt noch testen, ob es auch in anderen Gruppen das gleiche Module gab (z.B. Text+HTML)
-					SvLBoxEntry* pTemp = aTreeLB.First();
-					while(pTemp)
-					{
-						if(!aTreeLB.GetParent(pTemp) && pTemp != pEntry)
-						{
-							OptionsGroupInfo* pTGInfo = (OptionsGroupInfo *)pTemp->GetUserData();
-                            if(pTGInfo->m_pModule == pOldModule)
-							{
-                                pTGInfo->m_pModule = pGroupInfo->m_pModule;
-								if(bIdentical)
-                                    pTGInfo->m_pShell = pGroupInfo->m_pModule;
-							}
-						}
-						pTemp = aTreeLB.Next(pTemp);
-					}
-				}
-
-//				if ( pPageInfo->nPageId != RID_OPTPAGE_CHART_DEFCOLORS )
-				{
-                    if(!pGroupInfo->m_pInItemSet)
-                        pGroupInfo->m_pInItemSet = pGroupInfo->m_pShell
-                            ? pGroupInfo->m_pShell->CreateItemSet( pGroupInfo->m_nDialogId )
-                            : CreateItemSet( pGroupInfo->m_nDialogId );
-                    if(!pGroupInfo->m_pOutItemSet)
-                        pGroupInfo->m_pOutItemSet = new SfxItemSet(
-                            *pGroupInfo->m_pInItemSet->GetPool(),
-                            pGroupInfo->m_pInItemSet->GetRanges());
-				}
-			}
-
-            if(pGroupInfo->m_pModule)
-			{
-                pPageInfo->m_pPage = pGroupInfo->m_pModule->CreateTabPage(
-                    pPageInfo->m_nPageId, this, *pGroupInfo->m_pInItemSet );
-			}
-            else if(RID_SVXPAGE_COLOR != pPageInfo->m_nPageId)
-                pPageInfo->m_pPage = ::CreateGeneralTabPage( pPageInfo->m_nPageId, this, *pGroupInfo->m_pInItemSet );
-			else
-			{
-                pPageInfo->m_pPage = ::CreateGeneralTabPage(
-                    pPageInfo->m_nPageId, this, *pColorPageItemSet );
-                SvxColorTabPage& rColPage = *(SvxColorTabPage*)pPageInfo->m_pPage;
-				const SvxColorTableItem* pPtr = NULL;
-				if ( SfxViewFrame::Current() && SfxViewFrame::Current()->GetDispatcher() )
-					pPtr = dynamic_cast< const SvxColorTableItem* >(SfxViewFrame::Current()->
-						GetDispatcher()->Execute(SID_GET_COLORTABLE, SFX_CALLMODE_SYNCHRON));
-				maColorTab = pPtr ? pPtr->GetColorTable() : XColorList::GetStdColorList();
-
-				rColPage.SetColorTable( maColorTab );
-				rColPage.SetPageType( &nUnknownType );
-				rColPage.SetDlgType( &nUnknownType );
-				rColPage.SetPos( &nUnknownPos );
-				rColPage.SetAreaTP( &bIsAreaTP );
-				rColPage.SetColorChgd( (ChangeType*)&nChangeType );
-				rColPage.Construct();
-			}
-
-            DBG_ASSERT( pPageInfo->m_pPage, "tabpage could not created");
-            if ( pPageInfo->m_pPage )
-			{
-                SvtViewOptions aTabPageOpt( E_TABPAGE, String::CreateFromInt32( pPageInfo->m_nPageId ) );
-                pPageInfo->m_pPage->SetUserData( GetViewOptUserItem( aTabPageOpt ) );
-
-				Point aTreePos(aTreeLB.GetPosPixel());
-				Size aTreeSize(aTreeLB.GetSizePixel());
-				Point aGBPos(aHiddenGB.GetPosPixel());
-                Size aPageSize(pPageInfo->m_pPage->GetSizePixel());
-				Size aGBSize(aHiddenGB.GetSizePixel());
-				Point aPagePos( aGBPos.X() + ( aGBSize.Width() - aPageSize.Width() ) / 2,
-								aGBPos.Y() + ( aGBSize.Height() - aPageSize.Height() ) / 2 );
-                pPageInfo->m_pPage->SetPosPixel( aPagePos );
-                if ( RID_SVXPAGE_COLOR == pPageInfo->m_nPageId )
-				{
-                    pPageInfo->m_pPage->Reset( *pColorPageItemSet );
-                    pPageInfo->m_pPage->ActivatePage( *pColorPageItemSet );
-				}
-				else
-				{
-                    pPageInfo->m_pPage->Reset( *pGroupInfo->m_pInItemSet );
-				}
-			}
-		}
-        else if ( 0 == pPageInfo->m_nPageId && !pPageInfo->m_pExtPage )
+    OptionsPageInfo *pPageInfo = (OptionsPageInfo *)pEntry->GetUserData();
+    OptionsGroupInfo* pGroupInfo = (OptionsGroupInfo *)pParent->GetUserData();
+    if(!pPageInfo->m_pPage && pPageInfo->m_nPageId > 0)
+    {
+        if(pGroupInfo->m_bLoadError)
+            return;
+        if ( RID_SVXPAGE_COLOR == pPageInfo->m_nPageId )
         {
-            if ( !m_xContainerWinProvider.is() )
+            if(!pColorPageItemSet)
             {
-                Reference < XMultiServiceFactory > xFactory( ::comphelper::getProcessServiceFactory() );
-                m_xContainerWinProvider = Reference < awt::XContainerWindowProvider >(
-                    xFactory->createInstance(
-                        C2U("com.sun.star.awt.ContainerWindowProvider") ), UNO_QUERY );
-                DBG_ASSERT( m_xContainerWinProvider.is(), "service com.sun.star.awt.ContainerWindowProvider could not be loaded" );
+                // Move usage of a static XOutdevItemPool instance here
+                if(!mpStaticXOutdevItemPool)
+                    mpStaticXOutdevItemPool = new XOutdevItemPool();
+
+                pColorPageItemSet = new SfxItemSet( *mpStaticXOutdevItemPool, XATTR_FILLSTYLE, XATTR_FILLCOLOR);
+                pColorPageItemSet->Put( XFillColorItem() );
             }
-
-            pPageInfo->m_pExtPage = new ExtensionsTabPage(
-                this, 0, pPageInfo->m_sPageURL, pPageInfo->m_sEventHdl, m_xContainerWinProvider );
-            Size aSize = aHiddenGB.GetSizePixel();
-            aSize.Width() = aSize.Width() - 4;
-            aSize.Height() = aSize.Height() - 4;
-            Point aPos = aHiddenGB.GetPosPixel();
-            aPos.X() = aPos.X() + 2;
-            aPos.Y() = aPos.Y() + 2;
-            pPageInfo->m_pExtPage->SetPosSizePixel( aPos, aSize );
-        }
-
-        if ( pPageInfo->m_pPage )
-		{
-            if ( RID_SVXPAGE_COLOR != pPageInfo->m_nPageId &&
-                 pPageInfo->m_pPage->HasExchangeSupport())
-			{
-                pPageInfo->m_pPage->ActivatePage(*pGroupInfo->m_pOutItemSet);
-			}
-            pPageInfo->m_pPage->Show();
-        }
-        else if ( pPageInfo->m_pExtPage )
-        {
-            pPageInfo->m_pExtPage->Show();
-            pPageInfo->m_pExtPage->ActivatePage();
-        }
-
-        String sTmpTitle = sTitle;
-        sTmpTitle += String::CreateFromAscii(" - ");
-        sTmpTitle += aTreeLB.GetEntryText(pParent);
-        sTmpTitle += String::CreateFromAscii(" - ");
-        sTmpTitle += aTreeLB.GetEntryText(pEntry);
-        SetText(sTmpTitle);
-        pCurrentPageEntry = pEntry;
-        if ( !bForgetSelection )
-        {
-            if ( !pLastPageSaver )
-                pLastPageSaver = new LastPageSaver;
-            if ( !bIsFromExtensionManager )
-                pLastPageSaver->m_nLastPageId = pPageInfo->m_nPageId;
-            if ( pPageInfo->m_pExtPage )
-            {
-                if ( bIsFromExtensionManager )
-                    pLastPageSaver->m_sLastPageURL_ExtMgr = pPageInfo->m_sPageURL;
-                else
-                    pLastPageSaver->m_sLastPageURL_Tools = pPageInfo->m_sPageURL;
-            }
-        }
-        pNewPage = pPageInfo->m_pPage;
-	}
-	else
-	{
-		OptionsGroupInfo* pTGInfo = (OptionsGroupInfo *)pEntry->GetUserData();
-        if ( pTGInfo->m_sPageURL.getLength() == 0 )
-        {
-            bool bHighContrast = GetSettings().GetStyleSettings().GetHighContrastMode();
-            ImageList* pImgLst = bHighContrast ? &aPageImagesHC : &aPageImages;
-            //hier den Hilfetext anzeigen
-            for ( sal_uInt16 i = 0; i < aHelpTextsArr.Count(); ++i )
-            {
-                if ( aHelpTextsArr.GetValue(i) == pTGInfo->m_nDialogId )
-                {
-                    aHelpFT.SetText(aHelpTextsArr.GetString(i));
-                    aHelpImg.SetImage(pImgLst->GetImage(pTGInfo->m_nDialogId));
-                    break;
-                }
-            }
-
-            aPageTitleFT.Show();
-            aLine1FL.Show();
-            aHelpFT.Show();
-            aHelpImg.Show();
-
-            //auf die Groesse der Bitmap anpassen
-            if(!bImageResized)
-            {
-                const long nCtrlDist = 2;
-                bImageResized = sal_True;
-                Point aImgPos(aHelpImg.GetPosPixel());
-                Size aImgSize(aHelpImg.GetSizePixel());
-                Point aTitlePos(aPageTitleFT.GetPosPixel());
-                Point aLinePos(aLine1FL.GetPosPixel());
-                Point aHelpPos(aHelpFT.GetPosPixel());
-                Size aHelpSize(aHelpFT.GetSizePixel());
-                long nXDiff = 0;
-                long nYDiff = 0;
-                if(aTitlePos.X() <= (aImgPos.X() + aImgSize.Width() + nCtrlDist))
-                {
-                    nXDiff = aImgPos.X() + aImgSize.Width() + nCtrlDist - aTitlePos.X();
-                }
-                if(aLinePos.Y() <= (aImgPos.Y() + aImgSize.Height() + nCtrlDist))
-                {
-                    nYDiff = aImgPos.Y() + aImgSize.Height() + nCtrlDist - aLinePos.Y();
-                }
-                aLinePos.Y() += nYDiff;
-                aLine1FL.SetPosPixel(aLinePos);
-
-                aTitlePos.X() += nXDiff;
-                aPageTitleFT.SetPosPixel(aTitlePos);
-
-                aHelpPos.X() += nXDiff;
-                aHelpPos.Y() += nYDiff;
-                aHelpSize.Width() -= nXDiff;
-                aHelpSize.Height() -= nYDiff;
-                aHelpFT.SetPosSizePixel(aHelpPos, aHelpSize);
-
-                Font aFont = aHelpFT.GetFont();
-                Size aSz = aFont.GetSize();
-                aSz.Height() = (aSz.Height() * 14 ) / 10;
-                aFont.SetSize(aSz);
-                aPageTitleFT.SetFont(aFont);
-            }
-
-            String sTmpTitle = sTitle;
-            sTmpTitle += String::CreateFromAscii(" - ");
-            aPageTitleFT.SetText(aTreeLB.GetEntryText(pEntry));
-            sTmpTitle += aPageTitleFT.GetText();
-            SetText(sTmpTitle);
-            pCurrentPageEntry = NULL;
         }
         else
         {
-            if ( !pTGInfo->m_pExtPage )
+            if(pGroupInfo->m_pModule /*&& !pGroupInfo->pModule->IsLoaded()*/)
             {
-                if ( !m_xContainerWinProvider.is() )
+                SfxModule* pOldModule = pGroupInfo->m_pModule;
+                bool bIdentical = pGroupInfo->m_pModule == pGroupInfo->m_pShell;
+
+                WaitObject aWait(this);
+                //pGroupInfo->pModule = pGroupInfo->pModule->Load();
+                if(!pGroupInfo->m_pModule)
                 {
-                    Reference < XMultiServiceFactory > xFactory( ::comphelper::getProcessServiceFactory() );
-                    m_xContainerWinProvider = Reference < awt::XContainerWindowProvider >(
-                        xFactory->createInstance(
-                            C2U("com.sun.star.awt.ContainerWindowProvider") ), UNO_QUERY );
-                    DBG_ASSERT( m_xContainerWinProvider.is(), "service com.sun.star.awt.ContainerWindowProvider could not be loaded" );
+                    pGroupInfo->m_bLoadError = true;
+                    InfoBox(pBox, sNotLoadedError).Execute();
+                    return;
                 }
-
-                pTGInfo->m_pExtPage =
-                    new ExtensionsTabPage( this, 0, pTGInfo->m_sPageURL, rtl::OUString(), m_xContainerWinProvider );
-                Size aSize = aHiddenGB.GetSizePixel();
-                aSize.Width() = aSize.Width() - 4;
-                aSize.Height() = aSize.Height() - 4;
-                Point aPos = aHiddenGB.GetPosPixel();
-                aPos.X() = aPos.X() + 2;
-                aPos.Y() = aPos.Y() + 2;
-                pTGInfo->m_pExtPage->SetPosSizePixel( aPos, aSize );
+                if(bIdentical)
+                    pGroupInfo->m_pShell = pGroupInfo->m_pModule;
+                // now test whether there was the same module in other groups, too (e. g. Text+HTML)
+                SvTreeListEntry* pTemp = pTreeLB->First();
+                while(pTemp)
+                {
+                    if(!pTreeLB->GetParent(pTemp) && pTemp != pEntry)
+                    {
+                        OptionsGroupInfo* pTGInfo = (OptionsGroupInfo *)pTemp->GetUserData();
+                        if(pTGInfo->m_pModule == pOldModule)
+                        {
+                            pTGInfo->m_pModule = pGroupInfo->m_pModule;
+                            if(bIdentical)
+                                pTGInfo->m_pShell = pGroupInfo->m_pModule;
+                        }
+                    }
+                    pTemp = pTreeLB->Next(pTemp);
+                }
             }
 
-            if ( pTGInfo->m_pExtPage )
-            {
-                pTGInfo->m_pExtPage->Show();
-                pTGInfo->m_pExtPage->ActivatePage();
-            }
-
-            pCurrentPageEntry = pEntry;
+            if(!pGroupInfo->m_pInItemSet)
+                pGroupInfo->m_pInItemSet = pGroupInfo->m_pShell
+                    ? pGroupInfo->m_pShell->CreateItemSet( pGroupInfo->m_nDialogId )
+                    : CreateItemSet( pGroupInfo->m_nDialogId );
+            if(!pGroupInfo->m_pOutItemSet)
+                pGroupInfo->m_pOutItemSet = new SfxItemSet(
+                    *pGroupInfo->m_pInItemSet->GetPool(),
+                    pGroupInfo->m_pInItemSet->GetRanges());
         }
-	}
 
-	// restore lost focus, if necessary
-	Window* pFocusWin = Application::GetFocusWindow();
-	// if the focused window is not the options treebox and the old page has the focus
-	if ( pFocusWin && pFocusWin != pBox && pOldPage && pOldPage->HasChildPathFocus() )
-		// then set the focus to the new page or if we are on a group set the focus to the options treebox
-		pNewPage ? pNewPage->GrabFocus() : pBox->GrabFocus();
+        if(pPageInfo->m_nPageId == RID_SVXPAGE_COLOR)
+        {
+            pPageInfo->m_pPage = ::CreateGeneralTabPage(
+                pPageInfo->m_nPageId, pTabBox, *pColorPageItemSet );
+            mpColorPage = static_cast<SvxColorTabPage*>(pPageInfo->m_pPage);
+            mpColorPage->SetupForViewFrame( SfxViewFrame::Current() );
+        }
+        else
+        {
+            pPageInfo->m_pPage = ::CreateGeneralTabPage(pPageInfo->m_nPageId, pTabBox, *pGroupInfo->m_pInItemSet );
 
-	return 0;
+            if(!pPageInfo->m_pPage && pGroupInfo->m_pModule)
+                pPageInfo->m_pPage = pGroupInfo->m_pModule->CreateTabPage(pPageInfo->m_nPageId, pTabBox, *pGroupInfo->m_pInItemSet);
+
+        }
+
+        DBG_ASSERT( pPageInfo->m_pPage, "tabpage could not created");
+        if ( pPageInfo->m_pPage )
+        {
+            SvtViewOptions aTabPageOpt( E_TABPAGE, OUString::number( pPageInfo->m_nPageId) );
+            pPageInfo->m_pPage->SetUserData( GetViewOptUserItem( aTabPageOpt ) );
+
+            if ( RID_SVXPAGE_COLOR == pPageInfo->m_nPageId )
+            {
+                pPageInfo->m_pPage->Reset( pColorPageItemSet );
+                pPageInfo->m_pPage->ActivatePage( *pColorPageItemSet );
+            }
+            else
+            {
+                pPageInfo->m_pPage->Reset( pGroupInfo->m_pInItemSet );
+            }
+        }
+    }
+    else if ( 0 == pPageInfo->m_nPageId && !pPageInfo->m_pExtPage )
+    {
+        if ( !m_xContainerWinProvider.is() )
+        {
+            m_xContainerWinProvider = awt::ContainerWindowProvider::create( ::comphelper::getProcessComponentContext() );
+        }
+
+        pPageInfo->m_pExtPage = new ExtensionsTabPage(
+            pTabBox, 0, pPageInfo->m_sPageURL, pPageInfo->m_sEventHdl, m_xContainerWinProvider );
+    }
+
+    if ( pPageInfo->m_pPage )
+    {
+        if ( RID_SVXPAGE_COLOR != pPageInfo->m_nPageId &&
+             pPageInfo->m_pPage->HasExchangeSupport())
+        {
+            pPageInfo->m_pPage->ActivatePage(*pGroupInfo->m_pOutItemSet);
+        }
+        pPageInfo->m_pPage->Show();
+    }
+    else if ( pPageInfo->m_pExtPage )
+    {
+        pPageInfo->m_pExtPage->Show();
+        pPageInfo->m_pExtPage->ActivatePage();
+    }
+
+    {
+        OUStringBuffer sTitleBuf(sTitle);
+        sTitleBuf.append(" - ");
+        sTitleBuf.append(pTreeLB->GetEntryText(pParent));
+        sTitleBuf.append(" - ");
+        sTitleBuf.append(pTreeLB->GetEntryText(pEntry));
+        SetText(sTitleBuf.makeStringAndClear());
+    }
+
+    pCurrentPageEntry = pEntry;
+    if ( !bForgetSelection )
+    {
+        if ( !pLastPageSaver )
+            pLastPageSaver = new LastPageSaver;
+        if ( !bIsFromExtensionManager )
+            pLastPageSaver->m_nLastPageId = pPageInfo->m_nPageId;
+        if ( pPageInfo->m_pExtPage )
+        {
+            if ( bIsFromExtensionManager )
+                pLastPageSaver->m_sLastPageURL_ExtMgr = pPageInfo->m_sPageURL;
+            else
+                pLastPageSaver->m_sLastPageURL_Tools = pPageInfo->m_sPageURL;
+        }
+    }
+    pNewPage = pPageInfo->m_pPage;
+
+    // restore lost focus, if necessary
+    vcl::Window* pFocusWin = Application::GetFocusWindow();
+    // if the focused window is not the options treebox and the old page has the focus
+    if ( pFocusWin && pFocusWin != pBox && pOldPage && pOldPage->HasChildPathFocus() )
+        // then set the focus to the new page or if we are on a group set the focus to the options treebox
+        pNewPage ? pNewPage->GrabFocus() : pBox->GrabFocus();
+
+    //fdo#58170 use current page's layout child HelpId, unless there isn't a
+    //current page
+    OString sHelpId(HID_OFADLG_TREELISTBOX);
+    if (::isLayoutEnabled(pNewPage))
+    {
+        vcl::Window *pFirstChild = pNewPage->GetWindow(WINDOW_FIRSTCHILD);
+        assert(pFirstChild);
+        sHelpId = pFirstChild->GetHelpId();
+    }
+    pBox->SetHelpId(sHelpId);
+
+    return;
 }
 
-/* -----------------11.02.99 15:51-------------------
- *
- * --------------------------------------------------*/
-
 OfaPageResource::OfaPageResource() :
-	Resource(CUI_RES(RID_OFADLG_OPTIONS_TREE_PAGES)),
-	aGeneralDlgAry(CUI_RES(SID_GENERAL_OPTIONS)),
+    Resource(CUI_RES(RID_OFADLG_OPTIONS_TREE_PAGES)),
+    aGeneralDlgAry(CUI_RES(SID_GENERAL_OPTIONS)),
     aInetDlgAry(CUI_RES(SID_INET_DLG)),
     aLangDlgAry(CUI_RES(SID_LANGUAGE_OPTIONS)),
     aTextDlgAry(CUI_RES(SID_SW_EDITOPTIONS)),
-	aHTMLDlgAry(CUI_RES(SID_SW_ONLINEOPTIONS)),
-	aCalcDlgAry(CUI_RES(SID_SC_EDITOPTIONS)),
-	aStarMathDlgAry(CUI_RES(SID_SM_EDITOPTIONS)),
-	aImpressDlgAry(CUI_RES(SID_SD_EDITOPTIONS)),
-	aDrawDlgAry(CUI_RES(SID_SD_GRAPHIC_OPTIONS)),
-	aChartDlgAry(CUI_RES(SID_SCH_EDITOPTIONS)),
+    aHTMLDlgAry(CUI_RES(SID_SW_ONLINEOPTIONS)),
+    aCalcDlgAry(CUI_RES(SID_SC_EDITOPTIONS)),
+    aStarMathDlgAry(CUI_RES(SID_SM_EDITOPTIONS)),
+    aImpressDlgAry(CUI_RES(SID_SD_EDITOPTIONS)),
+    aDrawDlgAry(CUI_RES(SID_SD_GRAPHIC_OPTIONS)),
+    aChartDlgAry(CUI_RES(SID_SCH_EDITOPTIONS)),
     aFilterDlgAry(CUI_RES(SID_FILTER_DLG)),
-	aDatasourcesDlgAry(CUI_RES(SID_SB_STARBASEOPTIONS))
+    aDatasourcesDlgAry(CUI_RES(SID_SB_STARBASEOPTIONS))
 {
-	FreeResource();
+    FreeResource();
 }
 
-sal_Bool EnableSSO( void )
+SfxItemSet* OfaTreeOptionsDialog::CreateItemSet( sal_uInt16 nId )
 {
-	// SSO must be enabled if the configuration manager bootstrap settings
-	// are configured as follows ...
-	//  CFG_Offline=false
-	//  CFG_ServerType=uno ( or unspecified )
-	//  CFG_BackendService=
-	//   com.sun.star.comp.configuration.backend.LdapSingleBackend
-
-    rtl::OUString theIniFile;
-	osl_getExecutableFile( &theIniFile.pData );
-	theIniFile = theIniFile.copy( 0, theIniFile.lastIndexOf( '/' ) + 1 ) +
-                 rtl::OUString::createFromAscii( SAL_CONFIGFILE( "configmgr" ) );
-	::rtl::Bootstrap theBootstrap( theIniFile );
-
-    rtl::OUString theOfflineValue;
-    rtl::OUString theDefaultOfflineValue = rtl::OUString::createFromAscii( "false" );
-    theBootstrap.getFrom( rtl::OUString::createFromAscii( "CFG_Offline" ),
-						  theOfflineValue,
-						  theDefaultOfflineValue );
-
-    rtl::OUString theServerTypeValue;
-    theBootstrap.getFrom( rtl::OUString::createFromAscii( "CFG_ServerType" ),
-						  theServerTypeValue );
-
-    rtl::OUString theBackendServiceTypeValue;
-    theBootstrap.getFrom( rtl::OUString::createFromAscii( "CFG_BackendService" ),
-						  theBackendServiceTypeValue );
-
-	sal_Bool bSSOEnabled =
-		( theOfflineValue == theDefaultOfflineValue						&&
-		  ( theServerTypeValue.getLength() == 0 ||
-          theServerTypeValue == rtl::OUString::createFromAscii( "uno" ) ) &&
-		  theBackendServiceTypeValue ==
-            rtl::OUString::createFromAscii(
-				"com.sun.star.comp.configuration.backend.LdapSingleBackend" ) );
-	if ( bSSOEnabled && GetSSOCreator() == 0 )
-	{
-		bSSOEnabled = sal_False;
-	}
-	return bSSOEnabled;
-}
-
-extern "C" { static void SAL_CALL thisModule() {} }
-
-CreateTabPage GetSSOCreator( void )
-{
-	static CreateTabPage theSymbol = 0;
-	if ( theSymbol == 0 )
-	{
-		osl::Module aModule;
-        rtl::OUString theModuleName( RTL_CONSTASCII_USTRINGPARAM( SVLIBRARY( "ssoopt" ) ) );
-		if( aModule.loadRelative(
-                &thisModule, theModuleName, SAL_LOADMODULE_DEFAULT ) )
-		{
-            rtl::OUString theSymbolName( rtl::OUString::createFromAscii( "CreateSSOTabPage" ) );
-			theSymbol = reinterpret_cast<CreateTabPage>(aModule.getFunctionSymbol( theSymbolName ));
-		}
-	}
-
-	return theSymbol;
-}
-
-SfxItemSet*	OfaTreeOptionsDialog::CreateItemSet( sal_uInt16 nId )
-{
-    Reference< XPropertySet >  xProp( SvxGetLinguPropertySet() );
-	SfxItemSet*	pRet = 0;
-	switch(nId)
-	{
+    Reference< XLinguProperties >  xProp( SvxGetLinguPropertySet() );
+    SfxItemSet* pRet = 0;
+    switch(nId)
+    {
         case SID_GENERAL_OPTIONS:
-		{
-			pRet = new SfxItemSet(
-				SFX_APP()->GetPool(),
+        {
+            pRet = new SfxItemSet(
+                SfxGetpApp()->GetPool(),
                 SID_ATTR_METRIC, SID_ATTR_SPELL,
                 SID_AUTOSPELL_CHECK, SID_AUTOSPELL_CHECK,
                 SID_ATTR_QUICKLAUNCHER, SID_ATTR_QUICKLAUNCHER,
                 SID_ATTR_YEAR2000, SID_ATTR_YEAR2000,
-				SID_HTML_MODE, SID_HTML_MODE,
+                SID_HTML_MODE, SID_HTML_MODE,
                 0 );
 
-            SfxItemSet aOptSet( SFX_APP()->GetPool(), SID_ATTR_QUICKLAUNCHER, SID_ATTR_QUICKLAUNCHER );
-            SFX_APP()->GetOptions(aOptSet);
+            SfxItemSet aOptSet( SfxGetpApp()->GetPool(), SID_ATTR_QUICKLAUNCHER, SID_ATTR_QUICKLAUNCHER );
+            SfxGetpApp()->GetOptions(aOptSet);
             pRet->Put(aOptSet);
 
-			utl::MiscCfg	aMisc;
-			const SfxPoolItem* pItem;
+            utl::MiscCfg    aMisc;
+            const SfxPoolItem* pItem;
             SfxViewFrame* pViewFrame = SfxViewFrame::Current();
             if ( pViewFrame )
             {
                 SfxDispatcher* pDispatch = pViewFrame->GetDispatcher();
 
-                // Sonstiges - Year2000
-                if( SFX_ITEM_AVAILABLE <= pDispatch->QueryState( SID_ATTR_YEAR2000, pItem ) )
-                    pRet->Put( SfxUInt16Item( SID_ATTR_YEAR2000, ((const SfxUInt16Item*)pItem)->GetValue() ) );
+                // miscellaneous - Year2000
+                if( SfxItemState::DEFAULT <= pDispatch->QueryState( SID_ATTR_YEAR2000, pItem ) )
+                    pRet->Put( SfxUInt16Item( SID_ATTR_YEAR2000, static_cast<const SfxUInt16Item*>(pItem)->GetValue() ) );
                 else
                     pRet->Put( SfxUInt16Item( SID_ATTR_YEAR2000, (sal_uInt16)aMisc.GetYear2000() ) );
             }
@@ -1557,57 +1233,55 @@ SfxItemSet*	OfaTreeOptionsDialog::CreateItemSet( sal_uInt16 nId )
                 pRet->Put( SfxUInt16Item( SID_ATTR_YEAR2000, (sal_uInt16)aMisc.GetYear2000() ) );
 
 
-			// Sonstiges - Tabulator
+            // miscellaneous - Tabulator
             pRet->Put(SfxBoolItem(SID_PRINTER_NOTFOUND_WARN, aMisc.IsNotFoundWarning()));
 
-			sal_uInt16 nFlag = aMisc.IsPaperSizeWarning() ? SFX_PRINTER_CHG_SIZE : 0;
+            sal_uInt16 nFlag = aMisc.IsPaperSizeWarning() ? SFX_PRINTER_CHG_SIZE : 0;
             nFlag  |= aMisc.IsPaperOrientationWarning()  ? SFX_PRINTER_CHG_ORIENTATION : 0;
-			pRet->Put( SfxFlagItem( SID_PRINTER_CHANGESTODOC, nFlag ));
+            pRet->Put( SfxFlagItem( SID_PRINTER_CHANGESTODOC, nFlag ));
 
         }
-		break;
+        break;
         case SID_LANGUAGE_OPTIONS :
         {
-            pRet = new SfxItemSet(SFX_APP()->GetPool(),
+            pRet = new SfxItemSet(SfxGetpApp()->GetPool(),
                     SID_ATTR_LANGUAGE, SID_AUTOSPELL_CHECK,
                     SID_ATTR_CHAR_CJK_LANGUAGE, SID_ATTR_CHAR_CTL_LANGUAGE,
                     SID_OPT_LOCALE_CHANGED, SID_OPT_LOCALE_CHANGED,
                     SID_SET_DOCUMENT_LANGUAGE, SID_SET_DOCUMENT_LANGUAGE,
-					0 );
+                    0 );
 
-			// fuer die Linguistik
+            // for linguistic
 
             Reference< XSpellChecker1 >  xSpell = SvxGetSpellChecker();
-			pRet->Put(SfxSpellCheckItem( xSpell, SID_ATTR_SPELL ));
-			SfxHyphenRegionItem aHyphen( SID_ATTR_HYPHENREGION );
+            pRet->Put(SfxSpellCheckItem( xSpell, SID_ATTR_SPELL ));
+            SfxHyphenRegionItem aHyphen( SID_ATTR_HYPHENREGION );
 
-			sal_Int16 	nMinLead  = 2,
-						nMinTrail = 2;
-			if (xProp.is())
-			{
-				xProp->getPropertyValue( String::CreateFromAscii(
-						UPN_HYPH_MIN_LEADING) ) >>= nMinLead;
-				xProp->getPropertyValue( String::CreateFromAscii(
-						UPN_HYPH_MIN_TRAILING) ) >>= nMinTrail;
-			}
-			aHyphen.GetMinLead()  = (sal_uInt8)nMinLead;
-			aHyphen.GetMinTrail() = (sal_uInt8)nMinTrail;
+            sal_Int16   nMinLead  = 2,
+                        nMinTrail = 2;
+            if (xProp.is())
+            {
+                nMinLead = xProp->getHyphMinLeading();
+                nMinTrail = xProp->getHyphMinTrailing();
+            }
+            aHyphen.GetMinLead()  = (sal_uInt8)nMinLead;
+            aHyphen.GetMinTrail() = (sal_uInt8)nMinTrail;
 
-			const SfxPoolItem* pItem;
-			SfxPoolItem* pClone;
+            const SfxPoolItem* pItem;
+            SfxPoolItem* pClone;
             SfxViewFrame* pViewFrame = SfxViewFrame::Current();
             if ( pViewFrame )
             {
                 SfxDispatcher* pDispatch = pViewFrame->GetDispatcher();
-                if(SFX_ITEM_AVAILABLE <= pDispatch->QueryState(SID_ATTR_LANGUAGE, pItem))
-                    pRet->Put(SfxUInt16Item(SID_ATTR_LANGUAGE, ((const SvxLanguageItem*)pItem)->GetLanguage()));
-                if(SFX_ITEM_AVAILABLE <= pDispatch->QueryState(SID_ATTR_CHAR_CJK_LANGUAGE, pItem))
-                    pRet->Put(SfxUInt16Item(SID_ATTR_CHAR_CJK_LANGUAGE, ((const SvxLanguageItem*)pItem)->GetLanguage()));
-                if(SFX_ITEM_AVAILABLE <= pDispatch->QueryState(SID_ATTR_CHAR_CTL_LANGUAGE, pItem))
-                    pRet->Put(SfxUInt16Item(SID_ATTR_CHAR_CTL_LANGUAGE, ((const SvxLanguageItem*)pItem)->GetLanguage()));
+                if(SfxItemState::DEFAULT <= pDispatch->QueryState(SID_ATTR_LANGUAGE, pItem))
+                    pRet->Put(SfxUInt16Item(SID_ATTR_LANGUAGE, static_cast<const SvxLanguageItem*>(pItem)->GetLanguage()));
+                if(SfxItemState::DEFAULT <= pDispatch->QueryState(SID_ATTR_CHAR_CJK_LANGUAGE, pItem))
+                    pRet->Put(SfxUInt16Item(SID_ATTR_CHAR_CJK_LANGUAGE, static_cast<const SvxLanguageItem*>(pItem)->GetLanguage()));
+                if(SfxItemState::DEFAULT <= pDispatch->QueryState(SID_ATTR_CHAR_CTL_LANGUAGE, pItem))
+                    pRet->Put(SfxUInt16Item(SID_ATTR_CHAR_CTL_LANGUAGE, static_cast<const SvxLanguageItem*>(pItem)->GetLanguage()));
 
-				pRet->Put(aHyphen);
-                if(SFX_ITEM_AVAILABLE <= pDispatch->QueryState(SID_AUTOSPELL_CHECK, pItem))
+                pRet->Put(aHyphen);
+                if(SfxItemState::DEFAULT <= pDispatch->QueryState(SID_AUTOSPELL_CHECK, pItem))
                 {
                     pClone = pItem->Clone();
                     pRet->Put(*pClone);
@@ -1615,10 +1289,10 @@ SfxItemSet*	OfaTreeOptionsDialog::CreateItemSet( sal_uInt16 nId )
                 }
                 else
                 {
-                        sal_Bool bVal = sal_False;
+                        bool bVal = false;
                         if (xProp.is())
                         {
-                            xProp->getPropertyValue( String::CreateFromAscii( UPN_IS_SPELL_AUTO) ) >>= bVal;
+                            bVal = xProp->getIsSpellAuto();
                         }
 
                         pRet->Put(SfxBoolItem(SID_AUTOSPELL_CHECK, bVal));
@@ -1628,112 +1302,112 @@ SfxItemSet*	OfaTreeOptionsDialog::CreateItemSet( sal_uInt16 nId )
         }
         break;
         case SID_INET_DLG :
-				pRet = new SfxItemSet( SFX_APP()->GetPool(),
-								SID_BASIC_ENABLED, SID_BASIC_ENABLED,
-				//SID_OPTIONS_START - ..END
-								SID_INET_EMAIL_NAME, SID_INET_PROXY_PORT,
-								SID_SAVEREL_INET, SID_SAVEREL_FSYS,
-								SID_INET_SMTPSERVER, SID_INET_SMTPSERVER,
-								SID_INET_NOPROXY, SID_INET_SOCKS_PROXY_PORT,
-								SID_INET_DNS_AUTO, SID_INET_DNS_SERVER,
-								SID_SECURE_URL, SID_SECURE_URL,
-								0L );
-				SFX_APP()->GetOptions(*pRet);
-		break;
-		case SID_FILTER_DLG:
-            pRet = new SfxItemSet( SFX_APP()->GetPool(),
+                pRet = new SfxItemSet( SfxGetpApp()->GetPool(),
+                                SID_BASIC_ENABLED, SID_BASIC_ENABLED,
+                //SID_OPTIONS_START - ..END
+                                SID_INET_PROXY_TYPE, SID_INET_PROXY_PORT,
+                                SID_SAVEREL_INET, SID_SAVEREL_FSYS,
+                                SID_INET_SMTPSERVER, SID_INET_SMTPSERVER,
+                                SID_INET_NOPROXY, SID_INET_SOCKS_PROXY_PORT,
+                                SID_INET_DNS_AUTO, SID_INET_DNS_SERVER,
+                                SID_SECURE_URL, SID_SECURE_URL,
+                                0L );
+                SfxGetpApp()->GetOptions(*pRet);
+        break;
+        case SID_FILTER_DLG:
+            pRet = new SfxItemSet( SfxGetpApp()->GetPool(),
             SID_ATTR_DOCINFO, SID_ATTR_AUTOSAVEMINUTE,
             SID_SAVEREL_INET, SID_SAVEREL_FSYS,
-			SID_ATTR_PRETTYPRINTING, SID_ATTR_PRETTYPRINTING,
+            SID_ATTR_PRETTYPRINTING, SID_ATTR_PRETTYPRINTING,
             SID_ATTR_WARNALIENFORMAT, SID_ATTR_WARNALIENFORMAT,
             0 );
-            SFX_APP()->GetOptions(*pRet);
+            SfxGetpApp()->GetOptions(*pRet);
             break;
 
-		case SID_SB_STARBASEOPTIONS:
-            pRet = new SfxItemSet( SFX_APP()->GetPool(),
+        case SID_SB_STARBASEOPTIONS:
+            pRet = new SfxItemSet( SfxGetpApp()->GetPool(),
             SID_SB_POOLING_ENABLED, SID_SB_DB_REGISTER,
             0 );
-			::offapp::ConnectionPoolConfig::GetOptions(*pRet);
-			::svx::DbRegisteredNamesConfig::GetOptions(*pRet);
-			break;
+            ::offapp::ConnectionPoolConfig::GetOptions(*pRet);
+            ::svx::DbRegisteredNamesConfig::GetOptions(*pRet);
+            break;
 
-		case SID_SCH_EDITOPTIONS:
-		{
-			SvxChartOptions aChartOpt;
-            pRet = new SfxItemSet( SFX_APP()->GetPool(), SID_SCH_EDITOPTIONS, SID_SCH_EDITOPTIONS );
-			pRet->Put( SvxChartColorTableItem( SID_SCH_EDITOPTIONS, aChartOpt.GetDefaultColors() ) );
-			break;
-		}
-	}
-	return pRet;
+        case SID_SCH_EDITOPTIONS:
+        {
+            SvxChartOptions aChartOpt;
+            pRet = new SfxItemSet( SfxGetpApp()->GetPool(), SID_SCH_EDITOPTIONS, SID_SCH_EDITOPTIONS );
+            pRet->Put( SvxChartColorTableItem( SID_SCH_EDITOPTIONS, aChartOpt.GetDefaultColors() ) );
+            break;
+        }
+    }
+    return pRet;
 }
 
 void OfaTreeOptionsDialog::ApplyItemSet( sal_uInt16 nId, const SfxItemSet& rSet )
 {
-	switch(nId)
-	{
-		case SID_GENERAL_OPTIONS:
-		{
-			utl::MiscCfg	aMisc;
-			const SfxPoolItem* pItem;
-            SfxItemSet aOptSet(SFX_APP()->GetPool(), SID_ATTR_QUICKLAUNCHER, SID_ATTR_QUICKLAUNCHER );
+    switch(nId)
+    {
+        case SID_GENERAL_OPTIONS:
+        {
+            utl::MiscCfg    aMisc;
+            const SfxPoolItem* pItem;
+            SfxItemSet aOptSet(SfxGetpApp()->GetPool(), SID_ATTR_QUICKLAUNCHER, SID_ATTR_QUICKLAUNCHER );
             aOptSet.Put(rSet);
             if(aOptSet.Count())
-                SFX_APP()->SetOptions( aOptSet );
-    		// Dispatcher neu holen, weil SetOptions() ggf. den Dispatcher zerst"ort hat
+                SfxGetpApp()->SetOptions( aOptSet );
+            // get dispatcher anew, because SetOptions() might have destroyed the dispatcher
             SfxViewFrame *pViewFrame = SfxViewFrame::Current();
-// -------------------------------------------------------------------------
-//			Year2000 auswerten
-// -------------------------------------------------------------------------
+
+//          evaluate Year2000
+
             sal_uInt16 nY2K = USHRT_MAX;
-            if( SFX_ITEM_SET == rSet.GetItemState( SID_ATTR_YEAR2000, sal_False, &pItem ) )
-                nY2K = ((const SfxUInt16Item*)pItem)->GetValue();
+            if( SfxItemState::SET == rSet.GetItemState( SID_ATTR_YEAR2000, false, &pItem ) )
+                nY2K = static_cast<const SfxUInt16Item*>(pItem)->GetValue();
             if( USHRT_MAX != nY2K )
             {
                 if ( pViewFrame )
                 {
                     SfxDispatcher* pDispatch = pViewFrame->GetDispatcher();
-                    pDispatch->Execute( SID_ATTR_YEAR2000, SFX_CALLMODE_ASYNCHRON, pItem, 0L);
+                    pDispatch->Execute( SID_ATTR_YEAR2000, SfxCallMode::ASYNCHRON, pItem, 0L);
                 }
                 aMisc.SetYear2000(nY2K);
             }
 
-// -------------------------------------------------------------------------
-//			Drucken auswerten
-// -------------------------------------------------------------------------
-			if(SFX_ITEM_SET == rSet.GetItemState(SID_PRINTER_NOTFOUND_WARN, sal_False, &pItem))
-				aMisc.SetNotFoundWarning(((const SfxBoolItem*)pItem)->GetValue());
 
-			if(SFX_ITEM_SET == rSet.GetItemState(SID_PRINTER_CHANGESTODOC, sal_False, &pItem))
-			{
-				const SfxFlagItem* pFlag = (const SfxFlagItem*)pItem;
-				aMisc.SetPaperSizeWarning(0 != (pFlag->GetValue() &  SFX_PRINTER_CHG_SIZE ));
+//          evaluate print
+
+            if(SfxItemState::SET == rSet.GetItemState(SID_PRINTER_NOTFOUND_WARN, false, &pItem))
+                aMisc.SetNotFoundWarning(static_cast<const SfxBoolItem*>(pItem)->GetValue());
+
+            if(SfxItemState::SET == rSet.GetItemState(SID_PRINTER_CHANGESTODOC, false, &pItem))
+            {
+                const SfxFlagItem* pFlag = static_cast<const SfxFlagItem*>(pItem);
+                aMisc.SetPaperSizeWarning(0 != (pFlag->GetValue() &  SFX_PRINTER_CHG_SIZE ));
                 aMisc.SetPaperOrientationWarning(0 !=  (pFlag->GetValue() & SFX_PRINTER_CHG_ORIENTATION ));
-			}
-// -------------------------------------------------------------------------
-//			evaluate help options
-// -------------------------------------------------------------------------
-			if ( SvtHelpOptions().IsHelpTips() != Help::IsQuickHelpEnabled() )
-				SvtHelpOptions().IsHelpTips() ? Help::EnableQuickHelp() : Help::DisableQuickHelp();
-			if ( SvtHelpOptions().IsExtendedHelp() != Help::IsBalloonHelpEnabled() )
-				SvtHelpOptions().IsExtendedHelp() ? Help::EnableBalloonHelp() : Help::DisableBalloonHelp();
+            }
+
+//          evaluate help options
+
+            if ( SvtHelpOptions().IsHelpTips() != Help::IsQuickHelpEnabled() )
+                SvtHelpOptions().IsHelpTips() ? Help::EnableQuickHelp() : Help::DisableQuickHelp();
+            if ( SvtHelpOptions().IsExtendedHelp() != Help::IsBalloonHelpEnabled() )
+                SvtHelpOptions().IsExtendedHelp() ? Help::EnableBalloonHelp() : Help::DisableBalloonHelp();
         }
-		break;
+        break;
         case SID_LANGUAGE_OPTIONS :
         {
             OfaTreeOptionsDialog::ApplyLanguageOptions(rSet);
         }
         break;
-		case SID_INET_DLG :
+        case SID_INET_DLG :
         case SID_FILTER_DLG:
-			SFX_APP()->SetOptions( rSet );
-		break;
+            SfxGetpApp()->SetOptions( rSet );
+        break;
 
-		case SID_SB_STARBASEOPTIONS:
-			::offapp::ConnectionPoolConfig::SetOptions( rSet );
-			::svx::DbRegisteredNamesConfig::SetOptions(rSet);
-			break;
+        case SID_SB_STARBASEOPTIONS:
+            ::offapp::ConnectionPoolConfig::SetOptions( rSet );
+            ::svx::DbRegisteredNamesConfig::SetOptions(rSet);
+            break;
 
         case SID_SCH_EDITOPTIONS:
             // nothing to do. Chart options only apply to newly created charts
@@ -1741,40 +1415,30 @@ void OfaTreeOptionsDialog::ApplyItemSet( sal_uInt16 nId, const SfxItemSet& rSet 
 
         default:
         {
-            DBG_ERROR( "Unhandled option in ApplyItemSet" );
+            OSL_FAIL( "Unhandled option in ApplyItemSet" );
         }
         break;
-	}
+    }
 
 }
 void OfaTreeOptionsDialog::ApplyLanguageOptions(const SfxItemSet& rSet)
 {
-    sal_Bool bSaveSpellCheck = sal_False;
+    bool bSaveSpellCheck = false;
     const SfxPoolItem* pItem;
 
-    if ( SFX_ITEM_SET == rSet.GetItemState( SID_SPELL_MODIFIED, sal_False, &pItem ) )
+    if ( SfxItemState::SET == rSet.GetItemState( SID_SPELL_MODIFIED, false, &pItem ) )
     {
-        bSaveSpellCheck = ( (const SfxBoolItem*)pItem )->GetValue();
+        bSaveSpellCheck = static_cast<const SfxBoolItem*>(pItem)->GetValue();
     }
-    Reference< XMultiServiceFactory >  xMgr( ::comphelper::getProcessServiceFactory() );
-    Reference< XPropertySet >  xProp(
-            xMgr->createInstance( ::rtl::OUString::createFromAscii(
-                    "com.sun.star.linguistic2.LinguProperties") ),
-            UNO_QUERY );
-    if ( SFX_ITEM_SET == rSet.GetItemState(SID_ATTR_HYPHENREGION, sal_False, &pItem ) )
+    Reference< XComponentContext >  xContext( ::comphelper::getProcessComponentContext() );
+    Reference< XLinguProperties >  xProp = LinguProperties::create( xContext );
+    if ( SfxItemState::SET == rSet.GetItemState(SID_ATTR_HYPHENREGION, false, &pItem ) )
     {
-        const SfxHyphenRegionItem* pHyphenItem = (const SfxHyphenRegionItem*)pItem;
+        const SfxHyphenRegionItem* pHyphenItem = static_cast<const SfxHyphenRegionItem*>(pItem);
 
-        if (xProp.is())
-        {
-            xProp->setPropertyValue(
-                    String::CreateFromAscii(UPN_HYPH_MIN_LEADING),
-                    makeAny((sal_Int16) pHyphenItem->GetMinLead()) );
-            xProp->setPropertyValue(
-                    String::CreateFromAscii(UPN_HYPH_MIN_TRAILING),
-                    makeAny((sal_Int16) pHyphenItem->GetMinTrail()) );
-        }
-        bSaveSpellCheck = sal_True;
+        xProp->setHyphMinLeading( (sal_Int16) pHyphenItem->GetMinLead() );
+        xProp->setHyphMinTrailing( (sal_Int16) pHyphenItem->GetMinTrail() );
+        bSaveSpellCheck = true;
     }
 
     SfxViewFrame *pViewFrame = SfxViewFrame::Current();
@@ -1782,70 +1446,62 @@ void OfaTreeOptionsDialog::ApplyLanguageOptions(const SfxItemSet& rSet)
     {
         SfxDispatcher* pDispatch = pViewFrame->GetDispatcher();
         pItem = 0;
-        if(SFX_ITEM_SET == rSet.GetItemState( SID_ATTR_LANGUAGE, sal_False, &pItem ))
+        if(SfxItemState::SET == rSet.GetItemState( SID_ATTR_LANGUAGE, false, &pItem ))
         {
-            pDispatch->Execute(pItem->Which(),    SFX_CALLMODE_ASYNCHRON, pItem, 0L);
-            bSaveSpellCheck = sal_True;
+            pDispatch->Execute(pItem->Which(),    SfxCallMode::ASYNCHRON, pItem, 0L);
+            bSaveSpellCheck = true;
         }
-        if(SFX_ITEM_SET == rSet.GetItemState( SID_ATTR_CHAR_CTL_LANGUAGE, sal_False, &pItem ))
+        if(SfxItemState::SET == rSet.GetItemState( SID_ATTR_CHAR_CTL_LANGUAGE, false, &pItem ))
         {
-            pDispatch->Execute(pItem->Which(),    SFX_CALLMODE_ASYNCHRON, pItem, 0L);
-            bSaveSpellCheck = sal_True;
+            pDispatch->Execute(pItem->Which(),    SfxCallMode::ASYNCHRON, pItem, 0L);
+            bSaveSpellCheck = true;
         }
-        if(SFX_ITEM_SET == rSet.GetItemState( SID_ATTR_CHAR_CJK_LANGUAGE, sal_False, &pItem ))
+        if(SfxItemState::SET == rSet.GetItemState( SID_ATTR_CHAR_CJK_LANGUAGE, false, &pItem ))
         {
-            pDispatch->Execute(pItem->Which(),    SFX_CALLMODE_ASYNCHRON, pItem, 0L);
-            bSaveSpellCheck = sal_True;
+            pDispatch->Execute(pItem->Which(),    SfxCallMode::ASYNCHRON, pItem, 0L);
+            bSaveSpellCheck = true;
         }
 
-        if( SFX_ITEM_SET == rSet.GetItemState(SID_AUTOSPELL_CHECK, sal_False, &pItem ))
+        if( SfxItemState::SET == rSet.GetItemState(SID_AUTOSPELL_CHECK, false, &pItem ))
         {
-            sal_Bool bOnlineSpelling = ((const SfxBoolItem*)pItem)->GetValue();
+            bool bOnlineSpelling = static_cast<const SfxBoolItem*>(pItem)->GetValue();
             pDispatch->Execute(SID_AUTOSPELL_CHECK,
-                SFX_CALLMODE_ASYNCHRON|SFX_CALLMODE_RECORD, pItem, 0L);
+                SfxCallMode::ASYNCHRON|SfxCallMode::RECORD, pItem, 0L);
 
-            if (xProp.is())
-            {
-                xProp->setPropertyValue(
-                        String::CreateFromAscii(UPN_IS_SPELL_AUTO),
-                        makeAny(bOnlineSpelling) );
-            }
+            xProp->setIsSpellAuto( bOnlineSpelling );
         }
 
         if( bSaveSpellCheck )
         {
             //! the config item has changed since we modified the
             //! property set it uses
-            pDispatch->Execute(SID_SPELLCHECKER_CHANGED, SFX_CALLMODE_ASYNCHRON);
+            pDispatch->Execute(SID_SPELLCHECKER_CHANGED, SfxCallMode::ASYNCHRON);
         }
     }
 
-    if( SFX_ITEM_SET == rSet.GetItemState(SID_OPT_LOCALE_CHANGED, sal_False, &pItem ))
+    if( SfxItemState::SET == rSet.GetItemState(SID_OPT_LOCALE_CHANGED, false, &pItem ))
     {
         SfxViewFrame* _pViewFrame = SfxViewFrame::GetFirst();
         while ( _pViewFrame )
         {
-            _pViewFrame->GetDispatcher()->Execute(pItem->Which(),    SFX_CALLMODE_ASYNCHRON, pItem, 0L);
+            _pViewFrame->GetDispatcher()->Execute(pItem->Which(),    SfxCallMode::ASYNCHRON, pItem, 0L);
             _pViewFrame = SfxViewFrame::GetNext( *_pViewFrame );
         }
     }
 }
 
-rtl::OUString getCurrentFactory_Impl( const Reference< XFrame >& _xFrame )
+OUString getCurrentFactory_Impl( const Reference< XFrame >& _xFrame )
 {
-    rtl::OUString sIdentifier;
+    OUString sIdentifier;
     Reference < XFrame > xCurrentFrame( _xFrame );
-    Reference < XModuleManager > xModuleManager( ::comphelper::getProcessServiceFactory()->createInstance(
-        DEFINE_CONST_UNICODE("com.sun.star.frame.ModuleManager") ), UNO_QUERY );
+    Reference < XModuleManager2 > xModuleManager = ModuleManager::create(::comphelper::getProcessComponentContext());
     if ( !xCurrentFrame.is() )
     {
-        Reference< XDesktop > xDesktop( ::comphelper::getProcessServiceFactory()->createInstance(
-            DEFINE_CONST_UNICODE("com.sun.star.frame.Desktop") ), UNO_QUERY );
-        if ( xDesktop.is() )
-            xCurrentFrame = xDesktop->getCurrentFrame();
+        Reference< XDesktop2 > xDesktop = Desktop::create( ::comphelper::getProcessComponentContext() );
+        xCurrentFrame = xDesktop->getCurrentFrame();
     }
 
-    if ( xCurrentFrame.is() && xModuleManager.is() )
+    if ( xCurrentFrame.is() )
     {
         try
         {
@@ -1857,7 +1513,7 @@ rtl::OUString getCurrentFactory_Impl( const Reference< XFrame >& _xFrame )
         }
         catch ( Exception& )
         {
-            DBG_ERRORFILE( "getActiveModule_Impl(): exception of XModuleManager::identify()" );
+            SAL_WARN( "cui.options", "getActiveModule_Impl(): exception of XModuleManager::identify()" );
         }
     }
 
@@ -1866,25 +1522,23 @@ rtl::OUString getCurrentFactory_Impl( const Reference< XFrame >& _xFrame )
 
 void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
 {
-	OfaPageResource aDlgResource;
-	sal_uInt16 nGroup = 0;
+    OfaPageResource aDlgResource;
+    sal_uInt16 nGroup = 0;
 
     SvtOptionsDialogOptions aOptionsDlgOpt;
     sal_uInt16 i, nPageId;
 
     // %PRODUCTNAME options
-    sal_Bool isSSOEnabled = EnableSSO();
     if ( !lcl_isOptionHidden( SID_GENERAL_OPTIONS, aOptionsDlgOpt ) )
     {
         ResStringArray& rGeneralArray = aDlgResource.GetGeneralArray();
-        setGroupName( C2U("ProductName"), rGeneralArray.GetString(0) );
+        setGroupName( "ProductName", rGeneralArray.GetString(0) );
         nGroup = AddGroup( rGeneralArray.GetString(0), 0, 0, SID_GENERAL_OPTIONS );
         sal_uInt16 nEnd = static_cast< sal_uInt16 >( rGeneralArray.Count() );
-        String sPageTitle;
 
         for ( i = 1; i < nEnd; ++i )
         {
-            String sNewTitle = rGeneralArray.GetString(i);
+            OUString sNewTitle = rGeneralArray.GetString(i);
             nPageId = (sal_uInt16)rGeneralArray.GetValue(i);
             if ( lcl_isOptionHidden( nPageId, aOptionsDlgOpt ) )
                 continue;
@@ -1903,66 +1557,18 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
             // Disable Online Update page if service not installed
             if( RID_SVXPAGE_ONLINEUPDATE == nPageId )
             {
-                const ::rtl::OUString sService = C2U("com.sun.star.setup.UpdateCheck");
-
                 try
                 {
-                    Reference < XMultiServiceFactory > xFactory( ::comphelper::getProcessServiceFactory() );
-                    Reference < XInterface > xService( xFactory->createInstance( sService ) );
-
+                    Reference < XInterface > xService( setup::UpdateCheck::create( ::comphelper::getProcessComponentContext() ) );
                     if( ! xService.is() )
                         continue;
                 }
-                catch ( ::com::sun::star::loader::CannotActivateFactoryException& )
+                catch ( ::com::sun::star::uno::DeploymentException& )
                 {
                     continue;
                 }
             }
-            // Disable OOoImprovement page if not enabled
-            if( RID_SVXPAGE_IMPROVEMENT == nPageId )
-            {
-                continue;
-            }
-            if ( nPageId != RID_SVXPAGE_SSO || isSSOEnabled )
-            {
-                AddTabPage( nPageId, sNewTitle, nGroup );
-            }
-        }
-        // private iteration hack for Improvement Program
-        // hack for OOo 3.1
-        // should not be in found in any later release
-        for(bool bOnce = false; bOnce==false; bOnce=true)
-        {
-            String sNewTitle = C2U("Improvement Program");
-            {
-                SvxImprovementPage aTempTabPage(this);
-                sNewTitle = aTempTabPage.GetTitleText();
-            }
-            nPageId = RID_SVXPAGE_IMPROVEMENT;
-            if ( lcl_isOptionHidden( nPageId, aOptionsDlgOpt ) )
-                continue;
-            // Disable OOoImprovement page if not enabled
-            {
-                const ::rtl::OUString sService = C2U("com.sun.star.oooimprovement.CoreController");
-                try
-                {
-                    Reference < XMultiServiceFactory > xFactory( ::comphelper::getProcessServiceFactory() );
-                    Reference < ::com::sun::star::oooimprovement::XCoreController > xService( xFactory->createInstance( sService ), UNO_QUERY );
-
-                    if( ! xService.is() )
-                        continue;
-                    if( ! xService->showBuiltinOptionsPage(1))
-                        continue;
-                }
-                catch ( ::com::sun::star::loader::CannotActivateFactoryException& )
-                {
-                    continue;
-                }
-            }
-            if ( nPageId != RID_SVXPAGE_SSO || isSSOEnabled )
-            {
-                AddTabPage( nPageId, sNewTitle, nGroup );
-            }
+            AddTabPage( nPageId, sNewTitle, nGroup );
         }
     }
 
@@ -1970,7 +1576,7 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
     if ( !lcl_isOptionHidden( SID_FILTER_DLG, aOptionsDlgOpt ) )
     {
         ResStringArray& rFilterArray = aDlgResource.GetFilterArray();
-        setGroupName( C2U("LoadSave"), rFilterArray.GetString(0) );
+        setGroupName( "LoadSave", rFilterArray.GetString(0) );
         nGroup = AddGroup( rFilterArray.GetString(0), 0, 0, SID_FILTER_DLG );
         for ( i = 1; i < rFilterArray.Count(); ++i )
         {
@@ -1985,7 +1591,7 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
     if ( !lcl_isOptionHidden( SID_LANGUAGE_OPTIONS, aOptionsDlgOpt ) )
     {
         ResStringArray& rLangArray = aDlgResource.GetLangArray();
-        setGroupName( C2U("LanguageSettings"), rLangArray.GetString(0) );
+        setGroupName( "LanguageSettings", rLangArray.GetString(0) );
         nGroup = AddGroup( rLangArray.GetString(0), 0, 0, SID_LANGUAGE_OPTIONS );
         for ( i = 1; i < rLangArray.Count(); ++i )
         {
@@ -2000,29 +1606,26 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
     }
 
 
-    rtl::OUString aFactory = getCurrentFactory_Impl( _xFrame );
-    rtl::OUString sTemp = GetModuleIdentifier( comphelper::getProcessServiceFactory(), _xFrame );
-    DBG_ASSERT( sTemp == aFactory, "S H I T!!!" );
+    OUString aFactory = getCurrentFactory_Impl( _xFrame );
+    DBG_ASSERT( GetModuleIdentifier( _xFrame ) == aFactory, "S H I T!!!" );
 
     // Writer and Writer/Web options
-    sal_Bool bHasAnyFilter = sal_False;
     SvtModuleOptions aModuleOpt;
     if ( aModuleOpt.IsModuleInstalled( SvtModuleOptions::E_SWRITER ) )
     {
-        // Textdokument
-        bHasAnyFilter = sal_True;
+        // text document
         ResStringArray& rTextArray = aDlgResource.GetTextArray();
-        if (   aFactory.equalsAscii( "com.sun.star.text.TextDocument" )
-            || aFactory.equalsAscii( "com.sun.star.text.WebDocument" )
-            || aFactory.equalsAscii( "com.sun.star.text.GlobalDocument" ) )
+        if (   aFactory == "com.sun.star.text.TextDocument"
+            || aFactory == "com.sun.star.text.WebDocument"
+            || aFactory == "com.sun.star.text.GlobalDocument" )
         {
             SfxModule* pSwMod = (*(SfxModule**) GetAppData(SHL_WRITER));
             if ( !lcl_isOptionHidden( SID_SW_EDITOPTIONS, aOptionsDlgOpt ) )
             {
-                if ( aFactory.equalsAscii( "com.sun.star.text.WebDocument" ) )
-                    setGroupName( C2U("WriterWeb"), rTextArray.GetString(0) );
+                if ( aFactory == "com.sun.star.text.WebDocument" )
+                    setGroupName( "WriterWeb", rTextArray.GetString(0) );
                 else
-                    setGroupName( C2U("Writer"), rTextArray.GetString(0) );
+                    setGroupName( "Writer", rTextArray.GetString(0) );
                 nGroup = AddGroup(rTextArray.GetString(0), pSwMod, pSwMod, SID_SW_EDITOPTIONS );
                 for ( i = 1; i < rTextArray.Count(); ++i )
                 {
@@ -2035,11 +1638,11 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
                         AddTabPage( nPageId, rTextArray.GetString(i), nGroup );
                 }
 #ifdef DBG_UTIL
-                AddTabPage( RID_SW_TP_OPTTEST_PAGE, String::CreateFromAscii("Interner Test"), nGroup );
+                AddTabPage( RID_SW_TP_OPTTEST_PAGE, OUString("Internal Test"), nGroup );
 #endif
             }
 
-            // HTML-Dokument
+            // HTML documents
             if ( !lcl_isOptionHidden( SID_SW_ONLINEOPTIONS, aOptionsDlgOpt ) )
             {
                 ResStringArray& rHTMLArray = aDlgResource.GetHTMLArray();
@@ -2051,7 +1654,7 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
                         AddTabPage( nPageId, rHTMLArray.GetString(i), nGroup );
                 }
 #ifdef DBG_UTIL
-                AddTabPage( RID_SW_TP_OPTTEST_PAGE, String::CreateFromAscii("Interner Test"), nGroup );
+                AddTabPage( RID_SW_TP_OPTTEST_PAGE, OUString("Internal Test"), nGroup );
 #endif
             }
         }
@@ -2060,14 +1663,13 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
     // Calc options
     if ( aModuleOpt.IsModuleInstalled( SvtModuleOptions::E_SCALC ) )
     {
-        bHasAnyFilter = sal_True;
-        if ( aFactory.equalsAscii( "com.sun.star.sheet.SpreadsheetDocument" ))
+        if ( aFactory == "com.sun.star.sheet.SpreadsheetDocument" )
         {
             if ( !lcl_isOptionHidden( SID_SC_EDITOPTIONS, aOptionsDlgOpt ) )
             {
                 ResStringArray& rCalcArray = aDlgResource.GetCalcArray();
                 SfxModule* pScMod = ( *( SfxModule** ) GetAppData( SHL_CALC ) );
-                setGroupName( C2U("Calc"), rCalcArray.GetString(0) );
+                setGroupName( "Calc", rCalcArray.GetString(0) );
                 nGroup = AddGroup( rCalcArray.GetString( 0 ), pScMod, pScMod, SID_SC_EDITOPTIONS );
                 const sal_uInt16 nCount = static_cast< const sal_uInt16 >( rCalcArray.Count() );
                 for ( i = 1; i < nCount; ++i )
@@ -2075,10 +1677,8 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
                     nPageId = (sal_uInt16)rCalcArray.GetValue(i);
                     if ( lcl_isOptionHidden( nPageId, aOptionsDlgOpt ) )
                         continue;
-//                  if( bCTL || nId != RID_OFA_TP_INTERNATIONAL )
-//                  #103755# if an international tabpage is need one day, this should be used again... ;-)
-                    if ( nPageId != RID_OFA_TP_INTERNATIONAL )
-                        AddTabPage( nPageId, rCalcArray.GetString( i ), nGroup );
+
+                    AddTabPage( nPageId, rCalcArray.GetString( i ), nGroup );
                 }
             }
         }
@@ -2088,23 +1688,21 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
     SfxModule* pSdMod = ( *( SfxModule** ) GetAppData( SHL_DRAW ) );
     if ( aModuleOpt.IsModuleInstalled( SvtModuleOptions::E_SIMPRESS ) )
     {
-        bHasAnyFilter = sal_True;
-        if ( aFactory.equalsAscii( "com.sun.star.presentation.PresentationDocument" ))
+        if ( aFactory == "com.sun.star.presentation.PresentationDocument" )
         {
             if ( !lcl_isOptionHidden( SID_SD_EDITOPTIONS, aOptionsDlgOpt ) )
             {
                 ResStringArray& rImpressArray = aDlgResource.GetImpressArray();
-                setGroupName( C2U("Impress"), rImpressArray.GetString(0) );
+                setGroupName( "Impress", rImpressArray.GetString(0) );
                 nGroup = AddGroup( rImpressArray.GetString( 0 ), pSdMod, pSdMod, SID_SD_EDITOPTIONS );
-                const sal_Bool bCTL = aLanguageOptions.IsCTLFontEnabled();
                 const sal_uInt16 nCount = static_cast< const sal_uInt16 >( rImpressArray.Count() );
                 for ( i = 1; i < nCount; ++i )
                 {
                     nPageId = (sal_uInt16)rImpressArray.GetValue(i);
                     if ( lcl_isOptionHidden( nPageId, aOptionsDlgOpt ) )
                         continue;
-                    if ( bCTL || nPageId != RID_OFA_TP_INTERNATIONAL_IMPR )
-                        AddTabPage( nPageId, rImpressArray.GetString(i), nGroup );
+
+                    AddTabPage( nPageId, rImpressArray.GetString(i), nGroup );
                 }
             }
         }
@@ -2113,22 +1711,21 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
     // Draw options
     if ( aModuleOpt.IsModuleInstalled( SvtModuleOptions::E_SDRAW ) )
     {
-        if ( aFactory.equalsAscii( "com.sun.star.drawing.DrawingDocument" ))
+        if ( aFactory == "com.sun.star.drawing.DrawingDocument" )
         {
             if ( !lcl_isOptionHidden( SID_SD_GRAPHIC_OPTIONS, aOptionsDlgOpt ) )
             {
                 ResStringArray& rDrawArray = aDlgResource.GetDrawArray();
-                setGroupName( C2U("Draw"), rDrawArray.GetString(0) );
+                setGroupName( "Draw", rDrawArray.GetString(0) );
                 nGroup = AddGroup( rDrawArray.GetString( 0 ), pSdMod, pSdMod, SID_SD_GRAPHIC_OPTIONS );
-                const sal_Bool bCTL = aLanguageOptions.IsCTLFontEnabled();
                 const sal_uInt16 nCount = static_cast< const sal_uInt16 >( rDrawArray.Count() );
                 for ( i = 1; i < nCount; ++i )
                 {
                     nPageId = (sal_uInt16)rDrawArray.GetValue(i);
                     if ( lcl_isOptionHidden( nPageId, aOptionsDlgOpt ) )
                         continue;
-                    if ( bCTL || nPageId != RID_OFA_TP_INTERNATIONAL_SD )
-                        AddTabPage( nPageId, rDrawArray.GetString(i), nGroup );
+
+                    AddTabPage( nPageId, rDrawArray.GetString(i), nGroup );
                 }
             }
         }
@@ -2137,13 +1734,13 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
     // Math options
     if ( aModuleOpt.IsModuleInstalled( SvtModuleOptions::E_SMATH ) )
     {
-        if ( aFactory.equalsAscii( "com.sun.star.formula.FormulaProperties" ))
+        if ( aFactory == "com.sun.star.formula.FormulaProperties" )
         {
             if ( !lcl_isOptionHidden( SID_SM_EDITOPTIONS, aOptionsDlgOpt ) )
             {
                 ResStringArray& rStarMathArray = aDlgResource.GetStarMathArray();
                 SfxModule* pSmMod = (*(SfxModule**) GetAppData(SHL_SM));
-                setGroupName( C2U("Math"), rStarMathArray.GetString(0) );
+                setGroupName( "Math", rStarMathArray.GetString(0) );
                 nGroup = AddGroup(rStarMathArray.GetString(0), pSmMod, pSmMod, SID_SM_EDITOPTIONS );
                 for ( i = 1; i < rStarMathArray.Count(); ++i )
                 {
@@ -2163,7 +1760,7 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
         ) )
     {
         ResStringArray& rDSArray = aDlgResource.GetDatasourcesArray();
-        setGroupName( C2U("Base"), rDSArray.GetString(0) );
+        setGroupName( "Base", rDSArray.GetString(0) );
         nGroup = AddGroup( rDSArray.GetString(0), 0, NULL, SID_SB_STARBASEOPTIONS );
         for ( i = 1; i < rDSArray.Count(); ++i )
         {
@@ -2177,7 +1774,7 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
     if ( !lcl_isOptionHidden( SID_SCH_EDITOPTIONS, aOptionsDlgOpt ) )
     {
         ResStringArray& rChartArray = aDlgResource.GetChartArray();
-        setGroupName( C2U("Charts"), rChartArray.GetString(0) );
+        setGroupName( "Charts", rChartArray.GetString(0) );
         nGroup = AddGroup( rChartArray.GetString(0), 0, 0, SID_SCH_EDITOPTIONS );
         for ( i = 1; i < rChartArray.Count(); ++i )
         {
@@ -2191,7 +1788,7 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
     if ( !lcl_isOptionHidden( SID_INET_DLG, aOptionsDlgOpt ) )
     {
         ResStringArray& rInetArray = aDlgResource.GetInetArray();
-        setGroupName( C2U("Internet"), rInetArray.GetString(0) );
+        setGroupName( "Internet", rInetArray.GetString(0) );
         nGroup = AddGroup(rInetArray.GetString(0), 0, 0, SID_INET_DLG );
 
         for ( i = 1; i < rInetArray.Count(); ++i )
@@ -2209,71 +1806,8 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
     }
 
 /*!!!
-    ResizeTreeLB();
     ActivateLastSelection();
  */
-}
-
-namespace
-{
-	void MoveControl( Control& _rCtrl, long _nDeltaPixel )
-	{
-		Point	aPt( _rCtrl.GetPosPixel() );
-		aPt.X() += _nDeltaPixel;
-		_rCtrl.SetPosPixel( aPt );
-	}
-}
-
-void OfaTreeOptionsDialog::ResizeTreeLB( void )
-{
-    const long  nMax = aHiddenGB.GetSizePixel().Width() * 42 / 100;
-                                            // don't ask where 42 comes from... but it looks / feels ok ;-)
-    long        nDelta = 50;                // min.
-    sal_uInt16      nDepth = 0;
-    const long  nIndent0 = PixelToLogic( Size( 28, 0 ) ).Width();
-    const long  nIndent1 = PixelToLogic( Size( 52, 0 ) ).Width();
-
-	SvTreeList*			pTreeList = aTreeLB.GetModel();
-	DBG_ASSERT( pTreeList, "-OfaTreeOptionsDialog::ResizeTreeLB(): no model, no cookies!" );
-
-	SvListEntry*		pEntry = pTreeList->First();
-	while( pEntry )
-	{
-        long n = aTreeLB.GetTextWidth( aTreeLB.GetEntryText( static_cast< SvLBoxEntry* >( pEntry ) ) );
-		n += ( nDepth == 0 )? nIndent0 : nIndent1;
-
-		if( n > nDelta )
-			nDelta = n;
-
-		pEntry = pTreeList->Next( pEntry, &nDepth );
-	}
-
-	nDelta = LogicToPixel( Size( nDelta + 3, 0 ) ).Width();			// + extra space [logic]
-	nDelta += GetSettings().GetStyleSettings().GetScrollBarSize();	// + scroll bar, in case it's needed
-
-	if( nDelta > nMax )
-		nDelta = nMax;
-
-	// starting resizing with this
-	Size			aSize( GetSizePixel() );
-	aSize.Width() += nDelta;
-	SetSizePixel( aSize );
-
-	// resize treelistbox
-	aSize = aTreeLB.GetSizePixel();
-	aSize.Width() += nDelta;
-	aTreeLB.SetSizePixel( aSize );
-
-	// ... and move depending controls
-	MoveControl( aOkPB, nDelta );
-	MoveControl( aCancelPB, nDelta );
-	MoveControl( aHelpPB, nDelta );
-	MoveControl( aBackPB, nDelta );
-	MoveControl( aHiddenGB, nDelta );
-	MoveControl( aPageTitleFT, nDelta );
-	MoveControl( aLine1FL, nDelta );
-	MoveControl( aHelpFT, nDelta );
-	MoveControl( aHelpImg, nDelta );
 }
 
 bool isNodeActive( OptionsNode* pNode, Module* pModule )
@@ -2285,7 +1819,7 @@ bool isNodeActive( OptionsNode* pNode, Module* pModule )
             return true;
 
         // OOo-Nodes (Writer, Calc, Impress...) are active if node is already inserted
-        if ( getGroupName( pNode->m_sId, false ).Len() > 0 )
+        if ( !getGroupName( pNode->m_sId, false ).isEmpty() )
             return true;
 
         // no module -> not active
@@ -2303,42 +1837,36 @@ bool isNodeActive( OptionsNode* pNode, Module* pModule )
     return false;
 }
 
-void OfaTreeOptionsDialog::LoadExtensionOptions( const rtl::OUString& rExtensionId )
+void OfaTreeOptionsDialog::LoadExtensionOptions( const OUString& rExtensionId )
 {
     Module* pModule = NULL;
-    Reference< XMultiServiceFactory > xMSFac = comphelper::getProcessServiceFactory();
-    // open optionsdialog.xcu
-    Reference< XNameAccess > xRoot(
-        ::comphelper::ConfigurationHelper::openConfig(
-            xMSFac, C2U("org.openoffice.Office.OptionsDialog"),
-            ::comphelper::ConfigurationHelper::E_READONLY ), UNO_QUERY );
-    DBG_ASSERT( xRoot.is(), "OfaTreeOptionsDialog::LoadExtensionOptions(): no config" );
-    // when called by Tools - Options then load nodes of active module
-    if ( rExtensionId.getLength() == 0 )
-        pModule = LoadModule( GetModuleIdentifier( xMSFac, Reference< XFrame >() ), xRoot );
 
-    VectorOfNodes aNodeList;
-    LoadNodes( xRoot, pModule, rExtensionId, aNodeList );
+    // when called by Tools - Options then load nodes of active module
+    if ( rExtensionId.isEmpty() )
+    {
+        pModule = LoadModule( GetModuleIdentifier( Reference< XFrame >() ) );
+    }
+
+    VectorOfNodes aNodeList = LoadNodes( pModule, rExtensionId );
     InsertNodes( aNodeList );
+
+    delete pModule;
 }
 
-rtl::OUString OfaTreeOptionsDialog::GetModuleIdentifier(
-    const Reference< XMultiServiceFactory >& xMFac, const Reference< XFrame >& rFrame )
+OUString OfaTreeOptionsDialog::GetModuleIdentifier( const Reference< XFrame >& rFrame )
 {
-    rtl::OUString sModule;
+    OUString sModule;
     Reference < XFrame > xCurrentFrame( rFrame );
-    Reference < XModuleManager > xModuleManager( xMFac->createInstance(
-        C2U("com.sun.star.frame.ModuleManager") ), UNO_QUERY );
+    Reference< XComponentContext > xContext = comphelper::getProcessComponentContext();
+    Reference < XModuleManager2 > xModuleManager = ModuleManager::create(xContext);
 
     if ( !xCurrentFrame.is() )
     {
-        Reference < XDesktop > xDesktop( xMFac->createInstance(
-            C2U("com.sun.star.frame.Desktop") ), UNO_QUERY );
-        if ( xDesktop.is() )
-            xCurrentFrame = xDesktop->getCurrentFrame();
+        Reference < XDesktop2 > xDesktop = Desktop::create( xContext );
+        xCurrentFrame = xDesktop->getCurrentFrame();
     }
 
-    if ( xCurrentFrame.is() && xModuleManager.is() )
+    if ( xCurrentFrame.is() )
     {
         try
         {
@@ -2350,240 +1878,230 @@ rtl::OUString OfaTreeOptionsDialog::GetModuleIdentifier(
         }
         catch ( Exception& )
         {
-            DBG_ERRORFILE( "OfaTreeOptionsDialog::GetModuleIdentifier(): exception of XModuleManager::identify()" );
+            SAL_WARN( "cui.options", "OfaTreeOptionsDialog::GetModuleIdentifier(): exception of XModuleManager::identify()" );
         }
     }
     return sModule;
 }
 
 Module* OfaTreeOptionsDialog::LoadModule(
-    const rtl::OUString& rModuleIdentifier, const Reference< XNameAccess >& xRoot )
+    const OUString& rModuleIdentifier )
 {
     Module* pModule = NULL;
-    Reference< XNameAccess > xSet;
+    Reference< XNameAccess > xSet(
+        officecfg::Office::OptionsDialog::Modules::get());
 
-    if ( xRoot->hasByName( C2U("Modules") ) )
+    Sequence< OUString > seqNames = xSet->getElementNames();
+    for ( int i = 0; i < seqNames.getLength(); ++i )
     {
-        xRoot->getByName( C2U("Modules") ) >>= xSet;
-        if ( xSet.is() )
+        OUString sModule( seqNames[i] );
+        if ( rModuleIdentifier == sModule )
         {
-            Sequence< rtl::OUString > seqNames = xSet->getElementNames();
-            for ( int i = 0; i < seqNames.getLength(); ++i )
-            {
-                rtl::OUString sModule( seqNames[i] );
-                if ( rModuleIdentifier == sModule )
-                {
-                    // current active module found
-                    pModule = new Module( sModule );
-                    pModule->m_bActive = true;
+            // current active module found
+            pModule = new Module( sModule );
+            pModule->m_bActive = true;
 
-                    Reference< XNameAccess > xModAccess;
-                    xSet->getByName( seqNames[i] ) >>= xModAccess;
-                    if ( xModAccess.is() )
+            Reference< XNameAccess > xModAccess;
+            xSet->getByName( seqNames[i] ) >>= xModAccess;
+            if ( xModAccess.is() )
+            {
+                // load the nodes of this module
+                Reference< XNameAccess > xNodeAccess;
+                xModAccess->getByName( "Nodes" ) >>= xNodeAccess;
+                if ( xNodeAccess.is() )
+                {
+                    Sequence< OUString > xTemp = xNodeAccess->getElementNames();
+                    Reference< XNameAccess > xAccess;
+                    sal_Int32 nIndex = -1;
+                    for ( int x = 0; x < xTemp.getLength(); ++x )
                     {
-                        // load the nodes of this module
-                        Reference< XNameAccess > xNodeAccess;
-                        xModAccess->getByName( C2U("Nodes") ) >>= xNodeAccess;
-                        if ( xNodeAccess.is() )
+                        xNodeAccess->getByName( xTemp[x] ) >>= xAccess;
+                        if ( xAccess.is() )
                         {
-                            Sequence< rtl::OUString > xTemp = xNodeAccess->getElementNames();
-                            Reference< XNameAccess > xAccess;
-                            sal_Int32 nIndex = -1;
-                            for ( int x = 0; x < xTemp.getLength(); ++x )
+                            xAccess->getByName( "Index" ) >>= nIndex;
+                            if ( nIndex < 0 )
+                                // append nodes with index < 0
+                                pModule->m_aNodeList.push_back(
+                                    new OrderedEntry( nIndex, xTemp[x] ) );
+                            else
                             {
-                                xNodeAccess->getByName( xTemp[x] ) >>= xAccess;
-                                if ( xAccess.is() )
+                                // search position of the node
+                                sal_uInt32 y = 0;
+                                for ( ; y < pModule->m_aNodeList.size(); ++y )
                                 {
-                                    xAccess->getByName( C2U("Index") ) >>= nIndex;
-                                    if ( nIndex < 0 )
-                                        // append nodes with index < 0
-                                        pModule->m_aNodeList.push_back(
-                                            new OrderedEntry( nIndex, xTemp[x] ) );
-                                    else
-                                    {
-                                        // search position of the node
-                                        sal_uInt32 y = 0;
-                                        for ( ; y < pModule->m_aNodeList.size(); ++y )
-                                        {
-                                            sal_Int32 nNodeIdx = pModule->m_aNodeList[y]->m_nIndex;
-                                            if ( nNodeIdx < 0 || nNodeIdx > nIndex )
-                                                break;
-                                        }
-                                        // and insert the node on this position
-                                        pModule->m_aNodeList.insert(
-                                            pModule->m_aNodeList.begin() + y,
-                                            new OrderedEntry( nIndex, xTemp[x] ) );
-                                    }
+                                    sal_Int32 nNodeIdx = pModule->m_aNodeList[y]->m_nIndex;
+                                    if ( nNodeIdx < 0 || nNodeIdx > nIndex )
+                                        break;
                                 }
+                                // and insert the node on this position
+                                pModule->m_aNodeList.insert(
+                                    pModule->m_aNodeList.begin() + y,
+                                    new OrderedEntry( nIndex, xTemp[x] ) );
                             }
                         }
                     }
                 }
             }
+            break;
         }
     }
     return pModule;
 }
 
-void OfaTreeOptionsDialog::LoadNodes(
-    const Reference< XNameAccess >& xRoot, Module* pModule,
-    const rtl::OUString& rExtensionId, VectorOfNodes& rOutNodeList )
+VectorOfNodes OfaTreeOptionsDialog::LoadNodes(
+    Module* pModule, const OUString& rExtensionId)
 {
-    Reference< XNameAccess > xSet;
-    if ( xRoot->hasByName( C2U("Nodes") ) )
+    VectorOfNodes aOutNodeList;
+
+    Reference< XNameAccess > xSet(
+        officecfg::Office::OptionsDialog::Nodes::get());
+    VectorOfNodes aNodeList;
+    Sequence< OUString > seqNames = xSet->getElementNames();
+
+    for ( int i = 0; i < seqNames.getLength(); ++i )
     {
-        xRoot->getByName( C2U("Nodes") ) >>= xSet;
-        if ( xSet.is() )
+        OUString sGroupName( seqNames[i] );
+        Reference< XNameAccess > xNodeAccess;
+        xSet->getByName( seqNames[i] ) >>= xNodeAccess;
+
+        if ( xNodeAccess.is() )
         {
-            VectorOfNodes aNodeList;
-            Sequence< rtl::OUString > seqNames = xSet->getElementNames();
+            OUString sNodeId, sLabel, sPageURL, sGroupId;
+            bool bAllModules = false;
+            sal_Int32 nGroupIndex = 0;
 
-            for ( int i = 0; i < seqNames.getLength(); ++i )
+            sNodeId = seqNames[i];
+            xNodeAccess->getByName( "Label" ) >>= sLabel;
+            xNodeAccess->getByName( "OptionsPage" ) >>= sPageURL;
+            xNodeAccess->getByName( "AllModules" ) >>= bAllModules;
+            xNodeAccess->getByName( "GroupId" ) >>= sGroupId;
+            xNodeAccess->getByName( "GroupIndex" ) >>= nGroupIndex;
+
+            if ( sLabel.isEmpty() )
+                sLabel = sGroupName;
+            OUString sTemp = getGroupName( sLabel, !rExtensionId.isEmpty() );
+            if ( !sTemp.isEmpty() )
+                sLabel = sTemp;
+            OptionsNode* pNode =
+                new OptionsNode( sNodeId, sLabel, sPageURL, bAllModules, sGroupId, nGroupIndex );
+
+            if ( rExtensionId.isEmpty() && !isNodeActive( pNode, pModule ) )
             {
-                String sGroupName( seqNames[i] );
-                Reference< XNameAccess > xNodeAccess;
-                xSet->getByName( seqNames[i] ) >>= xNodeAccess;
+                delete pNode;
+                continue;
+            }
 
-                if ( xNodeAccess.is() )
+            Reference< XNameAccess > xLeavesSet;
+            xNodeAccess->getByName( "Leaves" ) >>= xLeavesSet;
+            if ( xLeavesSet.is() )
+            {
+                Sequence< OUString > seqLeaves = xLeavesSet->getElementNames();
+                for ( int j = 0; j < seqLeaves.getLength(); ++j )
                 {
-                    rtl::OUString sNodeId, sLabel, sPageURL, sGroupId;
-                    bool bAllModules = false;
-                    sal_Int32 nGroupIndex = 0;
+                    Reference< XNameAccess > xLeaveAccess;
+                    xLeavesSet->getByName( seqLeaves[j] ) >>= xLeaveAccess;
 
-                    sNodeId = seqNames[i];
-                    xNodeAccess->getByName( C2U("Label") ) >>= sLabel;
-                    xNodeAccess->getByName( C2U("OptionsPage") ) >>= sPageURL;
-                    xNodeAccess->getByName( C2U("AllModules") ) >>= bAllModules;
-                    xNodeAccess->getByName( C2U("GroupId") ) >>= sGroupId;
-                    xNodeAccess->getByName( C2U("GroupIndex") ) >>= nGroupIndex;
-
-                    if ( sLabel.getLength() == 0 )
-                        sLabel = sGroupName;
-                    String sTemp = getGroupName( sLabel, rExtensionId.getLength() > 0 );
-                    if ( sTemp.Len() > 0 )
-                        sLabel = sTemp;
-                    OptionsNode* pNode =
-                        new OptionsNode( sNodeId, sLabel, sPageURL, bAllModules, sGroupId, nGroupIndex );
-
-                    if ( !rExtensionId.getLength() && !isNodeActive( pNode, pModule ) )
+                    if ( xLeaveAccess.is() )
                     {
-                        delete pNode;
-                        continue;
-                    }
+                        OUString sId, sLeafLabel, sEventHdl, sLeafURL, sLeafGrpId;
+                        sal_Int32 nLeafGrpIdx = 0;
 
-                    Reference< XNameAccess > xLeavesSet;
-                    xNodeAccess->getByName( C2U( "Leaves" ) ) >>= xLeavesSet;
-                    if ( xLeavesSet.is() )
-                    {
-                        Sequence< rtl::OUString > seqLeaves = xLeavesSet->getElementNames();
-                        for ( int j = 0; j < seqLeaves.getLength(); ++j )
+                        xLeaveAccess->getByName( "Id" ) >>= sId;
+                        xLeaveAccess->getByName( "Label" ) >>= sLeafLabel;
+                        xLeaveAccess->getByName( "OptionsPage" ) >>= sLeafURL;
+                        xLeaveAccess->getByName( "EventHandlerService" ) >>= sEventHdl;
+                        xLeaveAccess->getByName( "GroupId" ) >>= sLeafGrpId;
+                        xLeaveAccess->getByName( "GroupIndex" ) >>= nLeafGrpIdx;
+
+                        if ( rExtensionId.isEmpty() || sId == rExtensionId )
                         {
-                            Reference< XNameAccess > xLeaveAccess;
-                            xLeavesSet->getByName( seqLeaves[j] ) >>= xLeaveAccess;
+                            OptionsLeaf* pLeaf = new OptionsLeaf(
+                                sId, sLeafLabel, sLeafURL, sEventHdl, sLeafGrpId, nLeafGrpIdx );
 
-                            if ( xLeaveAccess.is() )
+                            if ( !sLeafGrpId.isEmpty() )
                             {
-                                rtl::OUString sId, sLeafLabel, sEventHdl, sLeafURL, sLeafGrpId;
-                                sal_Int32 nLeafGrpIdx = 0;
-
-                                xLeaveAccess->getByName( C2U("Id") ) >>= sId;
-                                xLeaveAccess->getByName( C2U("Label") ) >>= sLeafLabel;
-                                xLeaveAccess->getByName( C2U("OptionsPage") ) >>= sLeafURL;
-                                xLeaveAccess->getByName( C2U("EventHandlerService") ) >>= sEventHdl;
-                                xLeaveAccess->getByName( C2U("GroupId") ) >>= sLeafGrpId;
-                                xLeaveAccess->getByName( C2U("GroupIndex") ) >>= nLeafGrpIdx;
-
-                                if ( !rExtensionId.getLength() || sId == rExtensionId )
+                                bool bAlreadyOpened = false;
+                                if ( pNode->m_aGroupedLeaves.size() > 0 )
                                 {
-                                    OptionsLeaf* pLeaf = new OptionsLeaf(
-                                        sId, sLeafLabel, sLeafURL, sEventHdl, sLeafGrpId, nLeafGrpIdx );
-
-                                    if ( sLeafGrpId.getLength() > 0 )
+                                    for ( sal_uInt32 k = 0;
+                                          k < pNode->m_aGroupedLeaves.size(); ++k )
                                     {
-                                        bool bAlreadyOpened = false;
-                                        if ( pNode->m_aGroupedLeaves.size() > 0 )
+                                        if ( pNode->m_aGroupedLeaves[k].size() > 0 &&
+                                             pNode->m_aGroupedLeaves[k][0]->m_sGroupId
+                                             == sLeafGrpId )
                                         {
-                                            for ( sal_uInt32 k = 0;
-                                                    k < pNode->m_aGroupedLeaves.size(); ++k )
+                                            sal_uInt32 l = 0;
+                                            for ( ; l < pNode->m_aGroupedLeaves[k].size(); ++l )
                                             {
-                                                if ( pNode->m_aGroupedLeaves[k].size() > 0 &&
-                                                     pNode->m_aGroupedLeaves[k][0]->m_sGroupId
-                                                        == sLeafGrpId )
-                                                {
-                                                    sal_uInt32 l = 0;
-                                                    for ( ; l < pNode->m_aGroupedLeaves[k].size(); ++l )
-                                                    {
-                                                        if ( pNode->m_aGroupedLeaves[k][l]->
-                                                                m_nGroupIndex >= nLeafGrpIdx )
-                                                            break;
-                                                    }
-                                                    pNode->m_aGroupedLeaves[k].insert(
-                                                        pNode->m_aGroupedLeaves[k].begin() + l, pLeaf );
-                                                    bAlreadyOpened = true;
+                                                if ( pNode->m_aGroupedLeaves[k][l]->
+                                                     m_nGroupIndex >= nLeafGrpIdx )
                                                     break;
-                                                }
                                             }
-                                        }
-                                        if ( !bAlreadyOpened )
-                                        {
-                                            VectorOfLeaves aGroupedLeaves;
-                                            aGroupedLeaves.push_back( pLeaf );
-                                            pNode->m_aGroupedLeaves.push_back( aGroupedLeaves );
+                                            pNode->m_aGroupedLeaves[k].insert(
+                                                pNode->m_aGroupedLeaves[k].begin() + l, pLeaf );
+                                            bAlreadyOpened = true;
+                                            break;
                                         }
                                     }
-                                    else
-                                        pNode->m_aLeaves.push_back(
-                                            new OptionsLeaf(
-                                                sId, sLeafLabel, sLeafURL,
-                                                sEventHdl, sLeafGrpId, nLeafGrpIdx ) );
+                                }
+                                if ( !bAlreadyOpened )
+                                {
+                                    VectorOfLeaves aGroupedLeaves;
+                                    aGroupedLeaves.push_back( pLeaf );
+                                    pNode->m_aGroupedLeaves.push_back( aGroupedLeaves );
                                 }
                             }
+                            else
+                                pNode->m_aLeaves.push_back( pLeaf );
                         }
-                    }
-
-                    // do not insert nodes without leaves
-                    if ( pNode->m_aLeaves.size() > 0 || pNode->m_aGroupedLeaves.size() > 0 )
-                    {
-                        pModule ? aNodeList.push_back( pNode ) : rOutNodeList.push_back( pNode );
                     }
                 }
             }
 
-            if ( pModule && aNodeList.size() > 0 )
+            // do not insert nodes without leaves
+            if ( pNode->m_aLeaves.size() > 0 || pNode->m_aGroupedLeaves.size() > 0 )
             {
-                sal_uInt32 i = 0, j = 0;
-                for ( ; i < pModule->m_aNodeList.size(); ++i )
-                {
-                    rtl::OUString sNodeId = pModule->m_aNodeList[i]->m_sId;
-                    for ( j = 0; j < aNodeList.size(); ++j )
-                    {
-                        OptionsNode* pNode = aNodeList[j];
-                        if ( pNode->m_sId == sNodeId )
-                        {
-                            rOutNodeList.push_back( pNode );
-                            aNodeList.erase( aNodeList.begin() + j );
-                            break;
-                        }
-                    }
-                }
-
-                for ( i = 0; i < aNodeList.size(); ++i )
-                    rOutNodeList.push_back( aNodeList[i] );
+                pModule ? aNodeList.push_back( pNode ) : aOutNodeList.push_back( pNode );
             }
+            else
+                delete pNode;
         }
     }
+
+    if ( pModule && aNodeList.size() > 0 )
+    {
+        sal_uInt32 i = 0, j = 0;
+        for ( ; i < pModule->m_aNodeList.size(); ++i )
+        {
+            OUString sNodeId = pModule->m_aNodeList[i]->m_sId;
+            for ( j = 0; j < aNodeList.size(); ++j )
+            {
+                OptionsNode* pNode = aNodeList[j];
+                if ( pNode->m_sId == sNodeId )
+                {
+                    aOutNodeList.push_back( pNode );
+                    aNodeList.erase( aNodeList.begin() + j );
+                    break;
+                }
+            }
+        }
+
+        for ( i = 0; i < aNodeList.size(); ++i )
+            aOutNodeList.push_back( aNodeList[i] );
+    }
+    return aOutNodeList;
 }
 
-sal_uInt16 lcl_getGroupId( const rtl::OUString& rGroupName, const SvTreeListBox& rTreeLB )
+static sal_uInt16 lcl_getGroupId( const OUString& rGroupName, const SvTreeListBox& rTreeLB )
 {
-    String sGroupName( rGroupName );
+    OUString sGroupName( rGroupName );
     sal_uInt16 nRet = 0;
-    SvLBoxEntry* pEntry = rTreeLB.First();
+    SvTreeListEntry* pEntry = rTreeLB.First();
     while( pEntry )
     {
         if ( !rTreeLB.GetParent( pEntry ) )
         {
-            String sTemp( rTreeLB.GetEntryText( pEntry ) );
+            OUString sTemp( rTreeLB.GetEntryText( pEntry ) );
             if ( sTemp == sGroupName )
                 return nRet;
             nRet++;
@@ -2594,7 +2112,7 @@ sal_uInt16 lcl_getGroupId( const rtl::OUString& rGroupName, const SvTreeListBox&
     return USHRT_MAX;
 }
 
-void lcl_insertLeaf(
+static void lcl_insertLeaf(
     OfaTreeOptionsDialog* pDlg, OptionsNode* pNode, OptionsLeaf* pLeaf, const SvTreeListBox& rTreeLB )
 {
     sal_uInt16 nGrpId = lcl_getGroupId( pNode->m_sLabel, rTreeLB );
@@ -2602,9 +2120,9 @@ void lcl_insertLeaf(
     {
         sal_uInt16 nNodeGrpId = getGroupNodeId( pNode->m_sId );
         nGrpId = pDlg->AddGroup( pNode->m_sLabel, NULL, NULL, nNodeGrpId );
-        if ( pNode->m_sPageURL.getLength() > 0 )
+        if ( !pNode->m_sPageURL.isEmpty() )
         {
-            SvLBoxEntry* pGrpEntry = rTreeLB.GetEntry( 0, nGrpId );
+            SvTreeListEntry* pGrpEntry = rTreeLB.GetEntry( 0, nGrpId );
             DBG_ASSERT( pGrpEntry, "OfaTreeOptionsDialog::InsertNodes(): no group" );
             if ( pGrpEntry )
             {
@@ -2633,14 +2151,14 @@ void  OfaTreeOptionsDialog::InsertNodes( const VectorOfNodes& rNodeList )
                 for ( sal_uInt32 k = 0; k < pNode->m_aGroupedLeaves[j].size(); ++k )
                 {
                     OptionsLeaf* pLeaf = pNode->m_aGroupedLeaves[j][k];
-                    lcl_insertLeaf( this, pNode, pLeaf, aTreeLB );
+                    lcl_insertLeaf( this, pNode, pLeaf, *pTreeLB );
                 }
             }
 
             for ( j = 0; j < pNode->m_aLeaves.size(); ++j )
             {
                 OptionsLeaf* pLeaf = pNode->m_aLeaves[j];
-                lcl_insertLeaf( this, pNode, pLeaf, aTreeLB );
+                lcl_insertLeaf( this, pNode, pLeaf, *pTreeLB );
             }
         }
     }
@@ -2648,50 +2166,30 @@ void  OfaTreeOptionsDialog::InsertNodes( const VectorOfNodes& rNodeList )
 
 short OfaTreeOptionsDialog::Execute()
 {
-    ::std::auto_ptr< SvxDicListChgClamp > pClamp;
+    boost::scoped_ptr< SvxDicListChgClamp > pClamp;
     if ( !bIsFromExtensionManager )
     {
         // collect all DictionaryList Events while the dialog is executed
-        Reference<com::sun::star::linguistic2::XDictionaryList> xDictionaryList(SvxGetDictionaryList());
-        pClamp = ::std::auto_ptr< SvxDicListChgClamp >( new SvxDicListChgClamp( xDictionaryList ) );
+        Reference<com::sun::star::linguistic2::XSearchableDictionaryList> xDictionaryList(SvxGetDictionaryList());
+        pClamp.reset( new SvxDicListChgClamp( xDictionaryList ) );
     }
-	short nRet = SfxModalDialog::Execute();
+    short nRet = SfxModalDialog::Execute();
 
-	if( RET_OK == nRet )
-	{
-		ApplyItemSets();
-		if( GetColorTable() )
-		{
-			GetColorTable()->Save();
-
-			// notify current viewframe it it uses the same color table
-			if ( SfxViewFrame::Current() && SfxViewFrame::Current()->GetDispatcher() )
-			{
-				const SvxColorTableItem* pPtr = dynamic_cast< const SvxColorTableItem* >(
-                    SfxViewFrame::Current()->GetDispatcher()->Execute(SID_GET_COLORTABLE, SFX_CALLMODE_SYNCHRON));
-				if( pPtr )
-				{
-                    XColorListSharedPtr aColorTab = pPtr->GetColorTable();
-
-                    if( aColorTab &&
-                        aColorTab->GetPath() == GetColorTable()->GetPath() &&
-                        aColorTab->GetName() == GetColorTable()->GetName() )
-                        SfxObjectShell::Current()->PutItem( SvxColorTableItem( GetColorTable(), SID_COLOR_TABLE ) );
-				}
-			}
-		}
-
-        utl::ConfigManager::GetConfigManager()->StoreConfigItems();
+    if( RET_OK == nRet )
+    {
+        ApplyItemSets();
+        if( mpColorPage )
+            mpColorPage->SaveToViewFrame( SfxViewFrame::Current() );
+        utl::ConfigManager::storeConfigItems();
     }
 
-	return nRet;
+    return nRet;
 }
 
 // class ExtensionsTabPage -----------------------------------------------
-
 ExtensionsTabPage::ExtensionsTabPage(
-    Window* pParent, WinBits nStyle, const rtl::OUString& rPageURL,
-    const rtl::OUString& rEvtHdl, const Reference< awt::XContainerWindowProvider >& rProvider ) :
+    vcl::Window* pParent, WinBits nStyle, const OUString& rPageURL,
+    const OUString& rEvtHdl, const Reference< awt::XContainerWindowProvider >& rProvider ) :
 
     TabPage( pParent, nStyle ),
 
@@ -2703,21 +2201,35 @@ ExtensionsTabPage::ExtensionsTabPage(
 {
 }
 
-// -----------------------------------------------------------------------
-
 ExtensionsTabPage::~ExtensionsTabPage()
 {
     Hide();
     DeactivatePage();
+
+    if ( m_xPage.is() )
+    {
+        Reference< XComponent > xComponent( m_xPage, UNO_QUERY );
+        if ( xComponent.is() )
+        {
+            try
+            {
+                xComponent->dispose();
+            }
+            catch ( const Exception & )
+            {
+            }
+        }
+        m_xPage.clear();
+    }
 }
 
-// -----------------------------------------------------------------------
+
 
 void ExtensionsTabPage::CreateDialogWithHandler()
 {
     try
     {
-        bool bWithHandler = ( m_sEventHdl.getLength() > 0 );
+        bool bWithHandler = ( !m_sEventHdl.isEmpty() );
         if ( bWithHandler )
         {
             Reference < XMultiServiceFactory > xFactory( ::comphelper::getProcessServiceFactory() );
@@ -2731,7 +2243,7 @@ void ExtensionsTabPage::CreateDialogWithHandler()
             Reference< awt::XWindowPeer > xParent( VCLUnoHelper::GetInterface( this ), UNO_QUERY );
             m_xPage = Reference < awt::XWindow >(
                 m_xWinProvider->createContainerWindow(
-                    m_sPageURL, rtl::OUString(), xParent, m_xEventHdl ), UNO_QUERY );
+                    m_sPageURL, OUString(), xParent, m_xEventHdl ), UNO_QUERY );
 
             Reference< awt::XControl > xPageControl( m_xPage, UNO_QUERY );
             if ( xPageControl.is() )
@@ -2739,43 +2251,41 @@ void ExtensionsTabPage::CreateDialogWithHandler()
                 Reference< awt::XWindowPeer > xWinPeer( xPageControl->getPeer() );
                 if ( xWinPeer.is() )
                 {
-                    Window* pWindow = VCLUnoHelper::GetWindow( xWinPeer );
+                    vcl::Window* pWindow = VCLUnoHelper::GetWindow( xWinPeer );
                     if ( pWindow )
                         pWindow->SetStyle( pWindow->GetStyle() | WB_DIALOGCONTROL | WB_CHILDDLGCTRL );
                 }
             }
         }
     }
-    catch ( ::com::sun::star::lang::IllegalArgumentException& )
+    catch (const css::lang::IllegalArgumentException& e)
     {
-        DBG_ERRORFILE( "ExtensionsTabPage::CreateDialogWithHandler(): illegal argument" );
+        SAL_WARN("cui.options", "ExtensionsTabPage::CreateDialogWithHandler(): illegal argument:" << e.Message);
     }
-    catch ( Exception& )
+    catch (const Exception& e)
     {
-        DBG_ERRORFILE( "ExtensionsTabPage::CreateDialogWithHandler(): exception of XDialogProvider2::createDialogWithHandler()" );
+        SAL_WARN( "cui.options", "ExtensionsTabPage::CreateDialogWithHandler(): exception of XDialogProvider2::createDialogWithHandler(): " << e.Message);
     }
 }
 
-// -----------------------------------------------------------------------
 
-sal_Bool ExtensionsTabPage::DispatchAction( const rtl::OUString& rAction )
+
+bool ExtensionsTabPage::DispatchAction( const OUString& rAction )
 {
-    sal_Bool bRet = sal_False;
+    bool bRet = false;
     if ( m_xEventHdl.is() )
     {
         try
         {
-            bRet = m_xEventHdl->callHandlerMethod( m_xPage, makeAny( rAction ), C2U("external_event") );
+            bRet = m_xEventHdl->callHandlerMethod( m_xPage, makeAny( rAction ), "external_event" );
         }
         catch ( Exception& )
         {
-            DBG_ERRORFILE( "ExtensionsTabPage::DispatchAction(): exception of XDialogEventHandler::callHandlerMethod()" );
+            SAL_WARN( "cui.options", "ExtensionsTabPage::DispatchAction(): exception of XDialogEventHandler::callHandlerMethod()" );
         }
     }
     return bRet;
 }
-
-// -----------------------------------------------------------------------
 
 void ExtensionsTabPage::ActivatePage()
 {
@@ -2788,11 +2298,11 @@ void ExtensionsTabPage::ActivatePage()
         if ( m_xPage.is() )
         {
             Point aPos = Point();
-            Size aSize = GetSizePixel();
+            Size aSize = GetParent()->get_preferred_size();
             m_xPage->setPosSize( aPos.X() + 1, aPos.Y() + 1,
                                  aSize.Width() - 2, aSize.Height() - 2, awt::PosSize::POSSIZE );
-            if ( m_sEventHdl.getLength() > 0 )
-                DispatchAction( C2U("initialize") );
+            if ( !m_sEventHdl.isEmpty() )
+                DispatchAction( "initialize" );
         }
     }
 
@@ -2803,8 +2313,6 @@ void ExtensionsTabPage::ActivatePage()
     }
 }
 
-// -----------------------------------------------------------------------
-
 void ExtensionsTabPage::DeactivatePage()
 {
     TabPage::DeactivatePage();
@@ -2813,17 +2321,19 @@ void ExtensionsTabPage::DeactivatePage()
         m_xPage->setVisible( sal_False );
 }
 
-// -----------------------------------------------------------------------
+
 
 void ExtensionsTabPage::ResetPage()
 {
-    DispatchAction( C2U("back") );
+    DispatchAction( "back" );
     ActivatePage();
 }
 
-// -----------------------------------------------------------------------
+
 
 void ExtensionsTabPage::SavePage()
 {
-    DispatchAction( C2U("ok") );
+    DispatchAction( "ok" );
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
