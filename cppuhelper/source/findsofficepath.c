@@ -1,40 +1,35 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified June 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-#include "precompiled_cppuhelper.hxx"
-#include "sal/config.h"
+#include <sal/config.h>
 
 #include <stdlib.h>
 #include <string.h>
+
+#include <cppuhelper/findsofficepath.h>
 
 #if defined WNT
 
@@ -49,7 +44,7 @@
  * @param subKeyName  name of the subkey to open
  *
  * @return the installation path or NULL, if no installation was found or
- *         if an error occured
+ *         if an error occurred
  */
 static char* getPathFromRegistryKey( HKEY hroot, const char* subKeyName )
 {
@@ -91,32 +86,21 @@ static char* getPathFromRegistryKey( HKEY hroot, const char* subKeyName )
  * Gets the installation path from the Windows Registry.
  *
  * @return the installation path or NULL, if no installation was found or
- *         if an error occured
+ *         if an error occurred
  */
 static char* platformSpecific()
 {
-    const char* SUBKEYNAME = "Software\\OpenOffice\\UNO\\InstallPath";
-    const char* SUBKEYNAME64 = "Software\\Wow6432Node\\OpenOffice\\UNO\\InstallPath";
+    const char* SUBKEYNAME = "Software\\LibreOffice\\UNO\\InstallPath";
 
     char* path = NULL;
-    
+
     /* read the key's default value from HKEY_CURRENT_USER */
     path = getPathFromRegistryKey( HKEY_CURRENT_USER, SUBKEYNAME );
 
     if ( path == NULL )
     {
-        /* read the key's default value from HKEY_LOCAL_USER 64 */
-        path = getPathFromRegistryKey( HKEY_CURRENT_USER, SUBKEYNAME64 );
-    }
-    if ( path == NULL )
-    {
         /* read the key's default value from HKEY_LOCAL_MACHINE */
         path = getPathFromRegistryKey( HKEY_LOCAL_MACHINE, SUBKEYNAME );
-    }
-    if ( path == NULL )
-    {
-        /* read the key's default value from HKEY_LOCAL_MACHINE 64*/
-        path = getPathFromRegistryKey( HKEY_LOCAL_MACHINE, SUBKEYNAME64 );
     }
 
     return path;
@@ -126,39 +110,28 @@ static char* platformSpecific()
 
 #include <unistd.h>
 #include <limits.h>
-#include <stdio.h>
-/*     
+
+/*
  * Gets the installation path from the PATH environment variable.
  *
  * <p>An installation is found, if the executable 'soffice' or a symbolic link
  * is in one of the directories listed in the PATH environment variable.</p>
  *
- * @return the installation path or NULL, if no installation was found or 
- *         if an error occured
+ * @return the installation path or NULL, if no installation was found or
+ *         if an error occurred
  */
-static char* platformSpecific()
+static char* platformSpecific(void)
 {
-    char* path = NULL;
-
-#if defined MACOSX && !defined USE_JAVA
-    /* On MacOS we have no soffice link under /usr/bin but the default office location is known
-       and we check this only
-     */
-    const char* MACDEFAULTOFFICEPATH = "/Applications/OpenOffice.app/Contents/MacOS";
-    const char* MACDEFAULTSOFFICE = "/Applications/OpenOffice.app/Contents/MacOS/soffice";
-
-    if ( !access( MACDEFAULTSOFFICE, F_OK ) )
-    {
-        path = (char*) malloc( strlen(MACDEFAULTOFFICEPATH) + 1 );
-        strcpy( path, MACDEFAULTOFFICEPATH);
-    }
-    return path;
-#else	// MACOSX && !USE_JAVA
     const int SEPARATOR = '/';
     const char* PATHSEPARATOR = ":";
     const char* PATHVARNAME = "PATH";
+#ifdef USE_JAVA
     const char* APPENDIX = "/soffice";
+#else	// USE_JAVA
+    const char* APPENDIX = "/libreoffice";
+#endif	// USE_JAVA
 
+    char* path = NULL;
     char* env = NULL;
     char* str = NULL;
     char* dir = NULL;
@@ -169,52 +142,56 @@ static char* platformSpecific()
     char buffer[PATH_MAX];
     int pos;
 
-/* get the value of the PATH environment variable */
+    /* get the value of the PATH environment variable */
     env = getenv( PATHVARNAME );
-	str = (char*) malloc( strlen( env ) + 1 );
-	strcpy( str, env );
+    if (env == NULL)
+        return NULL;
+
+    str = strdup( env );
+    if (str == NULL)
+        return NULL;
 
     /* get the tokens separated by ':' */
     dir = strtok( str, PATHSEPARATOR );
 
-	while ( dir )
-	{
+    while ( dir )
+    {
         /* construct soffice file path */
         file = (char*) malloc( strlen( dir ) + strlen( APPENDIX ) + 1 );
-		strcpy( file, dir );
-		strcat( file, APPENDIX );
+        if (file == NULL)
+        {
+            free(str);
+            return NULL;
+        }
 
-		/* check existence of soffice file */
-		if ( !access( file, F_OK ) )
-		{
-            /* resolve symbolic link */
-			resolved = realpath( file, buffer );
+        strcpy( file, dir );
+        strcat( file, APPENDIX );
 
-            if ( resolved != NULL )
-			{
-                /* get path to program directory */
-				sep = strrchr( resolved, SEPARATOR );
+        /* resolve symbolic link */
+        resolved = realpath( file, buffer );
+        if ( resolved != NULL )
+        {
+            /* get path to program directory */
+            sep = strrchr( resolved, SEPARATOR );
 
-				if ( sep != NULL )
-				{
-                    pos = sep - resolved;
-                    path = (char*) malloc( pos + 1 );
-                    strncpy( path, resolved, pos );
-                    path[ pos ] = '\0';
-                    free( file );
-                    break;
-				}
-			}
-		}
+            if ( sep != NULL )
+            {
+                pos = sep - resolved;
+                path = (char*) malloc( pos + 1 );
+                strncpy( path, resolved, pos );
+                path[ pos ] = '\0';
+                free( file );
+                break;
+            }
+        }
 
-		dir = strtok( NULL, PATHSEPARATOR );
+        dir = strtok( NULL, PATHSEPARATOR );
         free( file );
-	}
+    }
 
-	free( str );
+    free( str );
 
     return path;
-#endif	// MACOSX && !USE_JAVA
 }
 
 #endif
@@ -228,10 +205,10 @@ char const* cppuhelper_detail_findSofficePath()
     /* get the installation path from the UNO_PATH environment variable */
     path = getenv( UNOPATHVARNAME );
 
-    if ( path == NULL || strlen( path ) == 0 )
-    {
-		path = platformSpecific();
-    }
+    if (!path || !path[0])
+        path = platformSpecific();
 
     return path;
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
