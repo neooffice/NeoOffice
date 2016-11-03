@@ -1,43 +1,33 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
-
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_dbaccess.hxx"
+ */
 
 #include "dsnItem.hxx"
 #include "generalpage.hxx"
 #include <connectivity/dbexception.hxx>
 #include "dbu_dlg.hrc"
-#include "dbadmin.hrc"
 #include "dsitems.hxx"
 #include "dbustrings.hrc"
 #include "dbadmin.hxx"
@@ -50,12 +40,14 @@
 #include <vcl/waitobj.hxx>
 #include <com/sun/star/sdbc/XDriverAccess.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
+#include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
 #include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/container/XNameAccess.hpp>
 #include "DriverSettings.hxx"
 #include "UITools.hxx"
 #include <comphelper/processfactory.hxx>
 #include <unotools/confignode.hxx>
+#include <osl/diagnose.h>
 
 #if defined USE_JAVA && defined MACOSX
 
@@ -67,129 +59,61 @@ static Application_canUseJava_Type *pApplication_canUseJava = NULL;
 
 #endif	// USE_JAVA && MACOSX
 
-//.........................................................................
 namespace dbaui
 {
-//.........................................................................
-	using namespace ::com::sun::star::uno;
-	using namespace ::com::sun::star::sdbc;
-	using namespace ::com::sun::star::beans;
-	using namespace ::com::sun::star::container;
+    using namespace ::com::sun::star;
+    using namespace ::com::sun::star::uno;
+    using namespace ::com::sun::star::sdbc;
+    using namespace ::com::sun::star::beans;
+    using namespace ::com::sun::star::container;
 
 #if defined USE_JAVA && defined MACOSX
 
-	static sal_Bool lcl_canUseJava()
-	{
-		if ( !pApplication_canUseJava )
-			pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
-		return ( pApplication_canUseJava && pApplication_canUseJava() );
-	}
+    static sal_Bool lcl_canUseJava()
+    {
+        if ( !pApplication_canUseJava )
+            pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+        return ( pApplication_canUseJava && pApplication_canUseJava() );
+    }
 
 #endif	// USE_JAVA && MACOSX
 
-    //=========================================================================
-	//= OGeneralPage
-	//=========================================================================
-	//-------------------------------------------------------------------------
-	OGeneralPage::OGeneralPage(Window* pParent, const SfxItemSet& _rItems, sal_Bool _bDBWizardMode)
-		:OGenericAdministrationPage(pParent, ModuleRes(PAGE_GENERAL), _rItems)
-        ,m_aFTHeaderText                (this, ModuleRes(FT_GENERALHEADERTEXT))
-        ,m_aFTHelpText                  (this, ModuleRes(FT_GENERALHELPTEXT))
-        ,m_aFT_DatasourceTypeHeader     (this, ModuleRes(FT_DATASOURCEHEADER))
-        ,m_aRB_CreateDatabase           (this, ModuleRes(RB_CREATEDBDATABASE))
-        ,m_aRB_OpenDocument             (this, ModuleRes(RB_OPENEXISTINGDOC))
-        ,m_aRB_GetExistingDatabase      (this, ModuleRes(RB_GETEXISTINGDATABASE))
-        ,m_aFT_DocListLabel             (this, ModuleRes(FT_DOCLISTLABEL))
-        ,m_pLB_DocumentList             ( new OpenDocumentListBox( this, "com.sun.star.sdb.OfficeDatabaseDocument", ModuleRes( LB_DOCUMENTLIST ) ) )
-        ,m_aPB_OpenDocument             (this, "com.sun.star.sdb.OfficeDatabaseDocument", ModuleRes(PB_OPENDOCUMENT))
-        ,m_aTypePreLabel		        (this, ModuleRes(FT_DATASOURCETYPE_PRE))
-		,m_aDatasourceTypeLabel	        (this, ModuleRes(FT_DATATYPE))
-		,m_pDatasourceType		        ( new ListBox(this, ModuleRes(LB_DATATYPE)))
-        ,m_aFTDataSourceAppendix        (this, ModuleRes(FT_DATATYPEAPPENDIX))
-		,m_aTypePostLabel		        (this, ModuleRes(FT_DATASOURCETYPE_POST))
-		,m_aSpecialMessage		        (this, ModuleRes(FT_SPECIAL_MESSAGE))
-        ,m_DBWizardMode                 (_bDBWizardMode)
-        ,m_sMySQLEntry					(ModuleRes(STR_MYSQLENTRY))
-        ,m_eOriginalCreationMode        (eCreateNew)
-        ,m_pCollection                  (NULL)
-		,m_eNotSupportedKnownType       ( ::dbaccess::DST_UNKNOWN)
-		,m_eLastMessage                 (smNone)
-        ,m_bDisplayingInvalid           (sal_False)
-		,m_bUserGrabFocus               (sal_True)
-        ,m_bInitTypeList                (true)
-	{
-		// fill the listbox with the UI descriptions for the possible types
-		// and remember the respective DSN prefixes
-		FreeResource();
-		// extract the datasource type collection from the item set
-		DbuTypeCollectionItem* pCollectionItem = PTR_CAST(DbuTypeCollectionItem, _rItems.GetItem(DSID_TYPECOLLECTION));
-		if (pCollectionItem)
-			m_pCollection = pCollectionItem->getCollection();
-		DBG_ASSERT(m_pCollection, "OGeneralPage::OGeneralPage : really need a DSN type collection !");
-
-        // If no driver for embedded DBs is installed, and no dBase driver, then hide the "Create new database" option
-        sal_Int32 nCreateNewDBIndex = m_pCollection->getIndexOf( m_pCollection->getEmbeddedDatabase() );
-        if ( nCreateNewDBIndex == -1 )
-            nCreateNewDBIndex = m_pCollection->getIndexOf( ::rtl::OUString::createFromAscii( "sdbc:dbase:" ) );
-        bool bHideCreateNew = ( nCreateNewDBIndex == -1 );
-
-        // also, if our application policies tell us to hide the option, do it
-        ::utl::OConfigurationTreeRoot aConfig( ::utl::OConfigurationTreeRoot::createWithServiceFactory(
-            ::comphelper::getProcessServiceFactory(),
-            ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "/org.openoffice.Office.DataAccess/Policies/Features/Base" ) )
-        ) );
-        sal_Bool bAllowCreateLocalDatabase( sal_True );
-        OSL_VERIFY( aConfig.getNodeValue( "CreateLocalDatabase" ) >>= bAllowCreateLocalDatabase );
-        if ( !bAllowCreateLocalDatabase )
-            bHideCreateNew = true;
-
-        if ( bHideCreateNew )
-        {
-            m_aRB_CreateDatabase.Hide();
-            Window* pWindowsToMove[] = {
-                &m_aRB_OpenDocument, &m_aRB_GetExistingDatabase, &m_aFT_DocListLabel, m_pLB_DocumentList.get(),
-                &m_aPB_OpenDocument, &m_aDatasourceTypeLabel, m_pDatasourceType.get(), &m_aFTDataSourceAppendix,
-                &m_aTypePostLabel
-            };
-            const long nOffset = m_aRB_OpenDocument.GetPosPixel().Y() - m_aRB_CreateDatabase.GetPosPixel().Y();
-            for ( size_t i=0; i < sizeof( pWindowsToMove ) / sizeof( pWindowsToMove[0] ); ++i )
-            {
-                Point aPos( pWindowsToMove[i]->GetPosPixel() );
-                aPos.Y() -= nOffset;
-                pWindowsToMove[i]->SetPosPixel( aPos );
-            }
-        }
-
-        if ( bHideCreateNew )
-            m_aRB_GetExistingDatabase.Check();
-        else
-            m_aRB_CreateDatabase.Check();
-
-		// do some knittings
-		m_pDatasourceType->SetSelectHdl(LINK(this, OGeneralPage, OnDatasourceTypeSelected));
-   		m_aRB_CreateDatabase.SetClickHdl(LINK(this, OGeneralPage, OnSetupModeSelected));
-   		m_aRB_GetExistingDatabase.SetClickHdl(LINK(this, OGeneralPage, OnSetupModeSelected));
-   		m_aRB_OpenDocument.SetClickHdl(LINK(this, OGeneralPage, OnSetupModeSelected));
-        m_pLB_DocumentList->SetSelectHdl( LINK( this, OGeneralPage, OnDocumentSelected ) );
-        m_aPB_OpenDocument.SetClickHdl( LINK( this, OGeneralPage, OnOpenDocument ) );
-	}
-
-    //-------------------------------------------------------------------------
-    OGeneralPage::~OGeneralPage()
+    // OGeneralPage
+    OGeneralPage::OGeneralPage( vcl::Window* pParent, const OUString& _rUIXMLDescription, const SfxItemSet& _rItems )
+        :OGenericAdministrationPage( pParent, "PageGeneral", _rUIXMLDescription, _rItems )
+        ,m_eNotSupportedKnownType       ( ::dbaccess::DST_UNKNOWN )
+        ,m_pSpecialMessage              ( NULL )
+        ,m_eLastMessage                 ( smNone )
+        ,m_bDisplayingInvalid           ( false )
+        ,m_bInitTypeList                ( true )
+        ,m_pDatasourceType              ( NULL )
+        ,m_pCollection                  ( NULL )
     {
-        m_pDatasourceType.reset();
-        m_pLB_DocumentList.reset();
+        get( m_pDatasourceType, "datasourceType" );
+        get( m_pSpecialMessage, "specialMessage" );
+
+        // extract the datasource type collection from the item set
+        const DbuTypeCollectionItem* pCollectionItem = PTR_CAST(DbuTypeCollectionItem, _rItems.GetItem(DSID_TYPECOLLECTION));
+        if (pCollectionItem)
+            m_pCollection = pCollectionItem->getCollection();
+        SAL_WARN_IF(!m_pCollection, "dbaccess", "OGeneralPage::OGeneralPage : really need a DSN type collection !");
+
+        // do some knittings
+        m_pDatasourceType->SetSelectHdl(LINK(this, OGeneralPage, OnDatasourceTypeSelected));
     }
 
-    //-------------------------------------------------------------------------
+    OGeneralPage::~OGeneralPage()
+    {
+    }
+
     namespace
     {
         struct DisplayedType
         {
-            ::rtl::OUString eType;
-            String          sDisplayName;
+            OUString eType;
+            OUString sDisplayName;
 
-            DisplayedType( const ::rtl::OUString& _eType, const String& _rDisplayName ) : eType( _eType ), sDisplayName( _rDisplayName ) { }
+            DisplayedType( const OUString& _eType, const OUString& _rDisplayName ) : eType( _eType ), sDisplayName( _rDisplayName ) { }
         };
         typedef ::std::vector< DisplayedType > DisplayedTypes;
 
@@ -199,7 +123,7 @@ namespace dbaui
             {
 #if defined USE_JAVA && defined MACOSX
                 // List MySQL last when only ODBC driver is available
-                if ( !lcl_canUseJava() && _rRHS.eType == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "sdbc:mysql:odbc:" ) ) )
+                if ( !lcl_canUseJava() && _rRHS.eType == "sdbc:mysql:odbc:" )
                     return true;
 #endif	// USE_JAVA && MACOSX
                 return _rLHS.eType < _rRHS.eType;
@@ -207,35 +131,34 @@ namespace dbaui
         };
     }
 
-    //-------------------------------------------------------------------------
-	void OGeneralPage::initializeTypeList()
-	{
+    void OGeneralPage::initializeTypeList()
+    {
         if ( m_bInitTypeList )
         {
             m_bInitTypeList = false;
             m_pDatasourceType->Clear();
 
-		    if ( m_pCollection )
-		    {
+            if ( m_pCollection )
+            {
                 DisplayedTypes aDisplayedTypes;
 
                 ::dbaccess::ODsnTypeCollection::TypeIterator aEnd = m_pCollection->end();
-			    for (	::dbaccess::ODsnTypeCollection::TypeIterator aTypeLoop =  m_pCollection->begin();
-					    aTypeLoop != aEnd;
-					    ++aTypeLoop
-				    )
-			    {
-                    const ::rtl::OUString sURLPrefix = aTypeLoop.getURLPrefix();
-                    if ( sURLPrefix.getLength() )
-                    {    				
-				        String sDisplayName = aTypeLoop.getDisplayName();
-				        if (   m_pDatasourceType->GetEntryPos( sDisplayName ) == LISTBOX_ENTRY_NOTFOUND 
-                            && approveDataSourceType( sURLPrefix, sDisplayName ) )
-				        {
+                for (   ::dbaccess::ODsnTypeCollection::TypeIterator aTypeLoop =  m_pCollection->begin();
+                        aTypeLoop != aEnd;
+                        ++aTypeLoop
+                    )
+                {
+                    const OUString sURLPrefix = aTypeLoop.getURLPrefix();
+                    if ( !sURLPrefix.isEmpty() )
+                    {
+                        OUString sDisplayName = aTypeLoop.getDisplayName();
+                        if (   m_pDatasourceType->GetEntryPos( sDisplayName ) == LISTBOX_ENTRY_NOTFOUND
+                            && approveDatasourceType( sURLPrefix, sDisplayName ) )
+                        {
                             aDisplayedTypes.push_back( DisplayedTypes::value_type( sURLPrefix, sDisplayName ) );
-				        }
+                        }
                     }
-			    }
+                }
                 ::std::sort( aDisplayedTypes.begin(), aDisplayedTypes.end(), DisplayedTypeLess() );
                 DisplayedTypes::const_iterator aDisplayEnd = aDisplayedTypes.end();
                 for (   DisplayedTypes::const_iterator loop = aDisplayedTypes.begin();
@@ -243,388 +166,556 @@ namespace dbaui
                         ++loop
                     )
                     insertDatasourceTypeEntryData( loop->eType, loop->sDisplayName );
-		    } // if ( m_pCollection )
+            }
         }
-	}
-
-
-
-	//-------------------------------------------------------------------------
-	void OGeneralPage::setParentTitle(const ::rtl::OUString& _sURLPrefix)
-	{
-        if (!m_DBWizardMode)
-        {
-		    const String sName = m_pCollection->getTypeDisplayName(_sURLPrefix);
-		    if ( m_pAdminDialog )
-		    {
-			    LocalResourceAccess aStringResAccess( PAGE_GENERAL, RSC_TABPAGE );
-			    String sMessage = String(ModuleRes(STR_PARENTTITLE));
-			    sMessage.SearchAndReplaceAscii("#",sName);
-			    m_pAdminDialog->setTitle(sMessage);
-		    }
-        }
-	}
-
-    //-------------------------------------------------------------------------
-    OGeneralPage::CreationMode OGeneralPage::GetDatabaseCreationMode() const
-    {
-        if ( m_aRB_CreateDatabase.IsChecked() )
-            return eCreateNew;
-        if ( m_aRB_GetExistingDatabase.IsChecked() )
-            return eConnectExternal;
-        return eOpenExisting;
     }
 
-    //-------------------------------------------------------------------------
-	void OGeneralPage::GetFocus()
-	{
-		OGenericAdministrationPage::GetFocus();
-        if ( m_pLB_DocumentList.get() && m_pLB_DocumentList->IsEnabled() )
-            m_pLB_DocumentList->GrabFocus();
-        else if (m_pDatasourceType.get() && m_pDatasourceType->IsEnabled())
-            m_pDatasourceType->GrabFocus();
-	}
-
-	//-------------------------------------------------------------------------
-	void OGeneralPage::switchMessage(const ::rtl::OUString& _sURLPrefix)
-	{
-		SPECIAL_MESSAGE eMessage = smNone;
-		if ( !_sURLPrefix.getLength()/*_eType == m_eNotSupportedKnownType*/ )
-		{
-			eMessage = smUnsupportedType;
-		}
-
-
-		if ( eMessage != m_eLastMessage )
-		{
-			sal_uInt16 nResId = 0;
-			if ( smUnsupportedType == eMessage )
-			    nResId = STR_UNSUPPORTED_DATASOURCE_TYPE;
-			String sMessage;
-			if ( nResId )
-			{
-				LocalResourceAccess aStringResAccess( PAGE_GENERAL, RSC_TABPAGE );
-				sMessage = String(ModuleRes(nResId));
-			}
-			m_aSpecialMessage.SetText(sMessage);
-
-			m_eLastMessage = eMessage;
-		}
-	}
-
-	//-------------------------------------------------------------------------
-	void OGeneralPage::onTypeSelected(const ::rtl::OUString& _sURLPrefix)
-	{
-		// the the new URL text as indicated by the selection history
-		implSetCurrentType( _sURLPrefix );
-
-		switchMessage(_sURLPrefix);
-
-		if ( m_aTypeSelectHandler.IsSet() )
-			m_aTypeSelectHandler.Call(this);
-	}
-
-	//-------------------------------------------------------------------------
-	void OGeneralPage::implInitControls(const SfxItemSet& _rSet, sal_Bool _bSaveValue)
-	{
-		initializeTypeList();
-
-		// first check whether or not the selection is invalid or readonly (invalid implies readonly, but not vice versa)
-		sal_Bool bValid, bReadonly;
-		getFlags(_rSet, bValid, bReadonly);
-        if (m_DBWizardMode)
+    void OGeneralPageWizard::initializeEmbeddedDBList()
+    {
+        if ( m_bInitEmbeddedDBList )
         {
-		    m_aTypePreLabel.Hide();
-		    m_aTypePostLabel.Hide();
-		    m_aSpecialMessage.Hide();
-            SetControlFontWeight(&m_aFTHeaderText);
-            SetText(String());
+            m_bInitEmbeddedDBList = false;
+            m_pEmbeddedDBType->Clear();
 
-            LayoutHelper::positionBelow( m_aRB_GetExistingDatabase, *m_pDatasourceType, RelatedControls, INDENT_BELOW_RADIO );
-
-            if ( !bValid || bReadonly )
+            if ( m_pCollection )
             {
-                m_aDatasourceTypeLabel.Enable( false );
-                m_pDatasourceType->Enable( false );
-                m_aFTDataSourceAppendix.Enable( false );
-                m_aPB_OpenDocument.Enable( false );
-                m_aFT_DocListLabel.Enable( false );
-                m_pLB_DocumentList->Enable( false );
+                DisplayedTypes aDisplayedTypes;
+
+                ::dbaccess::ODsnTypeCollection::TypeIterator aEnd = m_pCollection->end();
+                for (   ::dbaccess::ODsnTypeCollection::TypeIterator aTypeLoop =  m_pCollection->begin();
+                        aTypeLoop != aEnd;
+                        ++aTypeLoop
+                    )
+                {
+                    const OUString sURLPrefix = aTypeLoop.getURLPrefix();
+                    if ( !sURLPrefix.isEmpty() )
+                    {
+                        OUString sDisplayName = aTypeLoop.getDisplayName();
+                        if ( m_pEmbeddedDBType->GetEntryPos( sDisplayName ) == LISTBOX_ENTRY_NOTFOUND
+                            && m_pCollection->isEmbeddedDatabase( sURLPrefix ) )
+                        {
+                            aDisplayedTypes.push_back( DisplayedTypes::value_type( sURLPrefix, sDisplayName ) );
+                        }
+                    }
+                }
+                ::std::sort( aDisplayedTypes.begin(), aDisplayedTypes.end(), DisplayedTypeLess() );
+                DisplayedTypes::const_iterator aDisplayEnd = aDisplayedTypes.end();
+                for (   DisplayedTypes::const_iterator loop = aDisplayedTypes.begin();
+                        loop != aDisplayEnd;
+                        ++loop
+                    )
+                    insertEmbeddedDBTypeEntryData( loop->eType, loop->sDisplayName );
             }
-            else
-            {
-                m_aControlDependencies.enableOnRadioCheck( m_aRB_GetExistingDatabase, m_aDatasourceTypeLabel, *m_pDatasourceType, m_aFTDataSourceAppendix );
-                m_aControlDependencies.enableOnRadioCheck( m_aRB_OpenDocument, m_aPB_OpenDocument, m_aFT_DocListLabel, *m_pLB_DocumentList );
-            }
-
-            m_pLB_DocumentList->SetDropDownLineCount( 20 );
-            if ( m_pLB_DocumentList->GetEntryCount() )
-                m_pLB_DocumentList->SelectEntryPos( 0 );
-
-            m_aDatasourceTypeLabel.Hide();
-            m_aFTDataSourceAppendix.Hide();
-
-			m_eOriginalCreationMode = GetDatabaseCreationMode();
         }
-        else
+    }
+
+    void OGeneralPage::setParentTitle(const OUString&)
+    {
+    }
+
+    void OGeneralPage::switchMessage(const OUString& _sURLPrefix)
+    {
+        SPECIAL_MESSAGE eMessage = smNone;
+        if ( _sURLPrefix.isEmpty()/*_eType == m_eNotSupportedKnownType*/ )
         {
-            m_aFT_DatasourceTypeHeader.Hide();
-            m_aRB_CreateDatabase.Hide();
-            m_aRB_GetExistingDatabase.Hide();
-            m_aRB_OpenDocument.Hide();
-            m_aPB_OpenDocument.Hide();
-            m_aFT_DocListLabel.Hide();
-            m_pLB_DocumentList->Hide();
-            m_aFTHeaderText.Hide();
-            m_aFTHelpText.Hide();
-		    m_aTypePreLabel.Enable(bValid);
-		    m_aTypePostLabel.Enable(bValid);
-		    m_aDatasourceTypeLabel.Enable(bValid);
-		    m_pDatasourceType->Enable(bValid);
+            eMessage = smUnsupportedType;
         }
-		// if the selection is invalid, disable evrything
-		String sName,sConnectURL;
-		m_bDisplayingInvalid = !bValid;
-		if ( bValid )
-		{
-			// collect some items and some values
-			SFX_ITEMSET_GET(_rSet, pNameItem, SfxStringItem, DSID_NAME, sal_True);
-			SFX_ITEMSET_GET(_rSet, pUrlItem, SfxStringItem, DSID_CONNECTURL, sal_True);
-			DBG_ASSERT(pUrlItem, "OGeneralPage::implInitControls : missing the type attribute !");
-			DBG_ASSERT(pNameItem, "OGeneralPage::implInitControls : missing the type attribute !");
-			sName = pNameItem->GetValue();
-			sConnectURL = pUrlItem->GetValue();
-		}
 
-		::rtl::OUString eOldSelection = m_eCurrentSelection;
-		m_eNotSupportedKnownType =  ::dbaccess::DST_UNKNOWN;
-		implSetCurrentType(  ::rtl::OUString() );
+        if ( eMessage != m_eLastMessage )
+        {
+            sal_uInt16 nResId = 0;
+            if ( smUnsupportedType == eMessage )
+                nResId = STR_UNSUPPORTED_DATASOURCE_TYPE;
+            OUString sMessage;
+            if ( nResId )
+                sMessage = ModuleRes( nResId );
 
-		// compare the DSN prefix with the registered ones
-		String sDisplayName;
+            m_pSpecialMessage->SetText( sMessage );
+            m_eLastMessage = eMessage;
+        }
+    }
 
-		if (m_pCollection && bValid)
-		{
-			implSetCurrentType( m_pCollection->getPrefix(sConnectURL) );
-			sDisplayName = m_pCollection->getTypeDisplayName(m_eCurrentSelection);
-		}
+    void OGeneralPage::onTypeSelected(const OUString& _sURLPrefix)
+    {
+        // the new URL text as indicated by the selection history
+        implSetCurrentType( _sURLPrefix );
+
+        switchMessage(_sURLPrefix);
+
+        if ( m_aTypeSelectHandler.IsSet() )
+            m_aTypeSelectHandler.Call(this);
+    }
+
+    void OGeneralPage::implInitControls( const SfxItemSet& _rSet, bool _bSaveValue )
+    {
+        initializeTypeList();
+
+        m_pDatasourceType->SelectEntry( getDatasourceName( _rSet ) );
+
+        // notify our listener that our type selection has changed (if so)
+        // FIXME: how to detect that it did not changed? (fdo#62937)
+        setParentTitle( m_eCurrentSelection );
+        onTypeSelected( m_eCurrentSelection );
+
+        // a special message for the current page state
+        switchMessage( m_eCurrentSelection );
+
+        OGenericAdministrationPage::implInitControls( _rSet, _bSaveValue );
+    }
+
+    OUString OGeneralPageWizard::getEmbeddedDBName( const SfxItemSet& _rSet )
+    {
+        // first check whether or not the selection is invalid or readonly (invalid implies readonly, but not vice versa)
+        bool bValid, bReadonly;
+        getFlags( _rSet, bValid, bReadonly );
+
+        // if the selection is invalid, disable everything
+        OUString sName,sConnectURL;
+        if ( bValid )
+        {
+            // collect some items and some values
+            SFX_ITEMSET_GET( _rSet, pNameItem, SfxStringItem, DSID_NAME, true );
+            SFX_ITEMSET_GET( _rSet, pUrlItem, SfxStringItem, DSID_CONNECTURL, true );
+            assert( pUrlItem );
+            assert( pNameItem );
+            sName = pNameItem->GetValue();
+            sConnectURL = pUrlItem->GetValue();
+        }
+
+        m_eNotSupportedKnownType =  ::dbaccess::DST_UNKNOWN;
+        implSetCurrentType(  OUString() );
+
+        // compare the DSN prefix with the registered ones
+        OUString sDisplayName;
+
+        if (m_pCollection && bValid)
+        {
+            implSetCurrentType( m_pCollection->getEmbeddedDatabase() );
+            sDisplayName = m_pCollection->getTypeDisplayName( m_eCurrentSelection );
+        }
 
         // select the correct datasource type
-		if  (   approveDataSourceType( m_eCurrentSelection, sDisplayName )
-            &&  ( LISTBOX_ENTRY_NOTFOUND == m_pDatasourceType->GetEntryPos( sDisplayName ) )
+        if  (  m_pCollection->isEmbeddedDatabase( m_eCurrentSelection )
+            &&  ( LISTBOX_ENTRY_NOTFOUND == m_pEmbeddedDBType->GetEntryPos( sDisplayName ) )
             )
-		{	// this indicates it's really a type which is known in general, but not supported on the current platform
-			// show a message saying so
-			//	eSpecialMessage = smUnsupportedType;
-			insertDatasourceTypeEntryData(m_eCurrentSelection, sDisplayName);
-			// remember this type so we can show the special message again if the user selects this
-			// type again (without changing the data source)
-			m_eNotSupportedKnownType = m_pCollection->determineType(m_eCurrentSelection);
-		}
-
-		if (m_aRB_CreateDatabase.IsChecked() && m_DBWizardMode)
-#if defined USE_JAVA && defined MACOSX
-            if ( !lcl_canUseJava() )
-                sDisplayName = m_pCollection->getTypeDisplayName( ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("sdbc:dbase:")));
-            else
-#endif	// USE_JAVA && MACOSX
-            sDisplayName = m_pCollection->getTypeDisplayName( ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("jdbc:")));
-		m_pDatasourceType->SelectEntry(sDisplayName);
-
-		// notify our listener that our type selection has changed (if so)
-		if ( eOldSelection != m_eCurrentSelection )
-		{
-			setParentTitle(m_eCurrentSelection);
-			onTypeSelected(m_eCurrentSelection);
-		}
-
-		// a special message for the current page state
-		switchMessage(m_eCurrentSelection);
-
-		OGenericAdministrationPage::implInitControls(_rSet, _bSaveValue);
-	}
-
-
-	// For the databaseWizard we only have one entry for the MySQL Database,
-	// because we have a seperate tabpage to retrieve the respective datasource type
-	// ( ::dbaccess::DST_MYSQL_ODBC ||  ::dbaccess::DST_MYSQL_JDBC). Therefore we use  ::dbaccess::DST_MYSQL_JDBC as a temporary
-	// representative for all MySQl databases)
-    // Also, embedded databases (embedded HSQL, at the moment), are not to appear in the list of
-    // databases to connect to.
-	bool OGeneralPage::approveDataSourceType( const ::rtl::OUString& _sURLPrefix, String& _inout_rDisplayName )
-	{
-        const ::dbaccess::DATASOURCE_TYPE eType = m_pCollection->determineType(_sURLPrefix);
-
-        if ( m_DBWizardMode )
-        {
-#if defined USE_JAVA && defined MACOSX
-            sal_Bool bCanUseJava = lcl_canUseJava();
-#endif	// USE_JAVA && MACOSX
-
-            switch ( eType )
-            {
-            case ::dbaccess::DST_MYSQL_JDBC:
-#if defined USE_JAVA && defined MACOSX
-                if ( !bCanUseJava )
-                    _inout_rDisplayName = String();
-                else
-#endif	// USE_JAVA && MACOSX
-			    _inout_rDisplayName = m_sMySQLEntry;
-                break;
-            case ::dbaccess::DST_MYSQL_ODBC:
-            case ::dbaccess::DST_MYSQL_NATIVE:
-                // don't display those, the decision whether the user connects via JDBC/ODBC/C-OOo is made on another
-                // page
-#if defined USE_JAVA && defined MACOSX
-                if ( !bCanUseJava && eType == ::dbaccess::DST_MYSQL_ODBC )
-                    _inout_rDisplayName = m_sMySQLEntry;
-                else
-#endif	// USE_JAVA && MACOSX
-                _inout_rDisplayName = String();
-                break;
-            default:
-                break;
-            }
+        {   // this indicates it's really a type which is known in general, but not supported on the current platform
+            // show a message saying so
+            //  eSpecialMessage = smUnsupportedType;
+            insertEmbeddedDBTypeEntryData( m_eCurrentSelection, sDisplayName );
+            // remember this type so we can show the special message again if the user selects this
+            // type again (without changing the data source)
+            m_eNotSupportedKnownType = m_pCollection->determineType( m_eCurrentSelection ); // TODO:
         }
 
+        return sDisplayName;
+    }
+
+    OUString OGeneralPage::getDatasourceName( const SfxItemSet& _rSet )
+    {
+        // first check whether or not the selection is invalid or readonly (invalid implies readonly, but not vice versa)
+        bool bValid, bReadonly;
+        getFlags( _rSet, bValid, bReadonly );
+
+        // if the selection is invalid, disable everything
+        OUString sName,sConnectURL;
+        m_bDisplayingInvalid = !bValid;
+        if ( bValid )
+        {
+            // collect some items and some values
+            SFX_ITEMSET_GET( _rSet, pNameItem, SfxStringItem, DSID_NAME, true );
+            SFX_ITEMSET_GET( _rSet, pUrlItem, SfxStringItem, DSID_CONNECTURL, true );
+            assert( pUrlItem );
+            assert( pNameItem );
+            sName = pNameItem->GetValue();
+            sConnectURL = pUrlItem->GetValue();
+        }
+
+        m_eNotSupportedKnownType =  ::dbaccess::DST_UNKNOWN;
+        implSetCurrentType(  OUString() );
+
+        // compare the DSN prefix with the registered ones
+        OUString sDisplayName;
+
+        if (m_pCollection && bValid)
+        {
+            implSetCurrentType( m_pCollection->getPrefix( sConnectURL ) );
+#if defined USE_JAVA && defined MACOSX
+            if ( !lcl_canUseJava() )
+                sDisplayName = m_pCollection->getTypeDisplayName( "sdbc:dbase:" );
+            else
+#endif	// USE_JAVA && MACOSX
+            sDisplayName = m_pCollection->getTypeDisplayName( m_eCurrentSelection );
+        }
+
+        // select the correct datasource type
+        if  (   approveDatasourceType( m_eCurrentSelection, sDisplayName )
+            &&  ( LISTBOX_ENTRY_NOTFOUND == m_pDatasourceType->GetEntryPos( sDisplayName ) )
+            )
+        {   // this indicates it's really a type which is known in general, but not supported on the current platform
+            // show a message saying so
+            //  eSpecialMessage = smUnsupportedType;
+            insertDatasourceTypeEntryData( m_eCurrentSelection, sDisplayName );
+            // remember this type so we can show the special message again if the user selects this
+            // type again (without changing the data source)
+            m_eNotSupportedKnownType = m_pCollection->determineType( m_eCurrentSelection );
+        }
+
+        return sDisplayName;
+    }
+
+    // For the databaseWizard we only have one entry for the MySQL Database,
+    // because we have a separate tabpage to retrieve the respective datasource type
+    // ( ::dbaccess::DST_MYSQL_ODBC ||  ::dbaccess::DST_MYSQL_JDBC). Therefore we use  ::dbaccess::DST_MYSQL_JDBC as a temporary
+    // representative for all MySQl databases)
+    // Also, embedded databases (embedded HSQL, at the moment), are not to appear in the list of
+    // databases to connect to.
+    bool OGeneralPage::approveDatasourceType( const OUString& _sURLPrefix, OUString& _inout_rDisplayName )
+    {
+        return approveDatasourceType( m_pCollection->determineType(_sURLPrefix), _inout_rDisplayName );
+    }
+
+    bool OGeneralPage::approveDatasourceType( ::dbaccess::DATASOURCE_TYPE eType, OUString& _inout_rDisplayName )
+    {
         if ( eType == ::dbaccess::DST_MYSQL_NATIVE_DIRECT )
         {
             // do not display the Connector/OOo driver itself, it is always wrapped via the MySQL-Driver, if
             // this driver is installed
             if ( m_pCollection->hasDriver( "sdbc:mysql:mysqlc:" ) )
-                _inout_rDisplayName = String();
+                _inout_rDisplayName = "";
         }
 
-        if ( eType ==  ::dbaccess::DST_EMBEDDED_HSQLDB )
-            _inout_rDisplayName = String();
+        if ( eType ==  ::dbaccess::DST_EMBEDDED_HSQLDB
+                || eType ==  ::dbaccess::DST_EMBEDDED_FIREBIRD )
+            _inout_rDisplayName = "";
 
-        return _inout_rDisplayName.Len() > 0;
-	}
+        return _inout_rDisplayName.getLength() > 0;
+    }
 
-
-	// -----------------------------------------------------------------------
-	void OGeneralPage::insertDatasourceTypeEntryData(const ::rtl::OUString& _sType, String sDisplayName)
-	{
+    void OGeneralPage::insertDatasourceTypeEntryData(const OUString& _sType, const OUString& sDisplayName)
+    {
         // insert a (temporary) entry
-		sal_uInt16 nPos = m_pDatasourceType->InsertEntry(sDisplayName);
+        sal_uInt16 nPos = m_pDatasourceType->InsertEntry(sDisplayName);
         if ( nPos >= m_aURLPrefixes.size() )
             m_aURLPrefixes.resize(nPos+1);
         m_aURLPrefixes[nPos] = _sType;
-	}
+    }
 
-	// -----------------------------------------------------------------------
-	void OGeneralPage::fillWindows(::std::vector< ISaveValueWrapper* >& _rControlList)
-	{
-		_rControlList.push_back(new ODisableWrapper<FixedText>(&m_aTypePreLabel));
-		_rControlList.push_back(new ODisableWrapper<FixedText>(&m_aDatasourceTypeLabel));
-		_rControlList.push_back(new ODisableWrapper<FixedText>(&m_aTypePostLabel));
-		_rControlList.push_back(new ODisableWrapper<FixedText>(&m_aSpecialMessage));
-        _rControlList.push_back(new ODisableWrapper<FixedText>(&m_aFTDataSourceAppendix));
-	}
-	// -----------------------------------------------------------------------
-	void OGeneralPage::fillControls(::std::vector< ISaveValueWrapper* >& _rControlList)
-	{
-		_rControlList.push_back(new OSaveValueWrapper<ListBox>(m_pDatasourceType.get()));
-	}
+    void OGeneralPageWizard::insertEmbeddedDBTypeEntryData(const OUString& _sType, const OUString& sDisplayName)
+    {
+        // insert a (temporary) entry
+        sal_uInt16 nPos = m_pEmbeddedDBType->InsertEntry(sDisplayName);
+        if ( nPos >= m_aEmbeddedURLPrefixes.size() )
+            m_aEmbeddedURLPrefixes.resize(nPos+1);
+        m_aEmbeddedURLPrefixes[nPos] = _sType;
+    }
 
-	//-------------------------------------------------------------------------
-	SfxTabPage*	OGeneralPage::Create(Window* _pParent, const SfxItemSet& _rAttrSet, sal_Bool _bWizardMode)
-	{
-   		return ( new OGeneralPage( _pParent, _rAttrSet, _bWizardMode ) );
-	}
+    void OGeneralPage::fillWindows(::std::vector< ISaveValueWrapper* >& _rControlList)
+    {
+        _rControlList.push_back( new ODisableWrapper<FixedText>( m_pSpecialMessage ) );
+    }
 
-	//-------------------------------------------------------------------------
-	void OGeneralPage::implSetCurrentType( const ::rtl::OUString& _eType )
-	{
-		if ( _eType == m_eCurrentSelection )
-			return;
+    void OGeneralPage::fillControls(::std::vector< ISaveValueWrapper* >& _rControlList)
+    {
+        _rControlList.push_back( new OSaveValueWrapper<ListBox>( m_pDatasourceType ) );
+    }
 
-		m_eCurrentSelection = _eType;
-	}
+    void OGeneralPage::implSetCurrentType( const OUString& _eType )
+    {
+        if ( _eType == m_eCurrentSelection )
+            return;
 
-	//-------------------------------------------------------------------------
-	void OGeneralPage::Reset(const SfxItemSet& _rCoreAttrs)
-	{
-		// reset all locale data
-		implSetCurrentType(  ::rtl::OUString() );
-			// this ensures that our type selection link will be called, even if the new is is the same as the
-			// current one
-		OGenericAdministrationPage::Reset(_rCoreAttrs);
-	}
+        m_eCurrentSelection = _eType;
+    }
 
-	//-------------------------------------------------------------------------
-	sal_Bool OGeneralPage::FillItemSet(SfxItemSet& _rCoreAttrs)
-	{
-		sal_Bool bChangedSomething = sal_False;
+    void OGeneralPage::Reset(const SfxItemSet* _rCoreAttrs)
+    {
+        // reset all locale data
+        implSetCurrentType(  OUString() );
+            // this ensures that our type selection link will be called, even if the new one is the same as the
+            // current one
+        OGenericAdministrationPage::Reset(_rCoreAttrs);
+    }
+
+    IMPL_LINK( OGeneralPageWizard, OnEmbeddedDBTypeSelected, ListBox*, _pBox )
+    {
+        // get the type from the entry data
+        sal_uInt16 nSelected = _pBox->GetSelectEntryPos();
+        if (nSelected >= m_aEmbeddedURLPrefixes.size() )
+        {
+            SAL_WARN("dbaccess.ui.OGeneralPage", "Got out-of-range value '" << nSelected <<  "' from the DatasourceType selection ListBox's GetSelectEntryPos(): no corresponding URL prefix");
+            return 0L;
+        }
+        const OUString sURLPrefix = m_aEmbeddedURLPrefixes[ nSelected ];
+
+        setParentTitle( sURLPrefix );
+        // let the impl method do all the stuff
+        onTypeSelected( sURLPrefix );
+        // tell the listener we were modified
+        callModifiedHdl();
+        // outta here
+        return 0L;
+    }
+
+    IMPL_LINK( OGeneralPage, OnDatasourceTypeSelected, ListBox*, _pBox )
+    {
+        // get the type from the entry data
+        sal_uInt16 nSelected = _pBox->GetSelectEntryPos();
+        if (nSelected >= m_aURLPrefixes.size() )
+        {
+            SAL_WARN("dbaccess.ui.OGeneralPage", "Got out-of-range value '" << nSelected <<  "' from the DatasourceType selection ListBox's GetSelectEntryPos(): no corresponding URL prefix");
+            return 0L;
+        }
+        const OUString sURLPrefix = m_aURLPrefixes[ nSelected ];
+
+        setParentTitle( sURLPrefix );
+        // let the impl method do all the stuff
+        onTypeSelected( sURLPrefix );
+        // tell the listener we were modified
+        callModifiedHdl();
+        // outta here
+        return 0L;
+    }
+
+    // OGeneralPageDialog
+    OGeneralPageDialog::OGeneralPageDialog( vcl::Window* pParent, const SfxItemSet& _rItems )
+        :OGeneralPage( pParent, "dbaccess/ui/generalpagedialog.ui", _rItems )
+    {
+    }
+
+    void OGeneralPageDialog::setParentTitle( const OUString& _sURLPrefix )
+    {
+        const OUString sName = m_pCollection->getTypeDisplayName( _sURLPrefix );
+        if ( m_pAdminDialog )
+        {
+            OUString sMessage = OUString( ModuleRes( STR_PARENTTITLE_GENERAL ) );
+            m_pAdminDialog->setTitle( sMessage.replaceAll( "#", sName ) );
+        }
+    }
+
+    void OGeneralPageDialog::implInitControls( const SfxItemSet& _rSet, bool _bSaveValue )
+    {
+        OGeneralPage::implInitControls( _rSet, _bSaveValue );
+
+        // first check whether or not the selection is invalid or readonly (invalid implies readonly, but not vice versa)
+        bool bValid, bReadonly;
+        getFlags(_rSet, bValid, bReadonly );
+
+        m_pDatasourceType->Enable( bValid );
+    }
+
+    bool OGeneralPageDialog::FillItemSet( SfxItemSet* _rCoreAttrs )
+    {
+        bool bChangedSomething = false;
+
+        sal_uInt16 nEntry = m_pDatasourceType->GetSelectEntryPos();
+        OUString sURLPrefix = m_aURLPrefixes[ nEntry ];
+
+        if ( m_pDatasourceType->IsValueChangedFromSaved() )
+        {
+            _rCoreAttrs->Put( SfxStringItem( DSID_CONNECTURL, sURLPrefix ) );
+            bChangedSomething = true;
+        }
+
+        return bChangedSomething;
+    }
+
+    // OGeneralPageWizard
+    OGeneralPageWizard::OGeneralPageWizard( vcl::Window* pParent, const SfxItemSet& _rItems )
+        :OGeneralPage( pParent, "dbaccess/ui/generalpagewizard.ui", _rItems )
+        ,m_pRB_CreateDatabase           ( NULL )
+        ,m_pRB_OpenExistingDatabase     ( NULL )
+        ,m_pRB_ConnectDatabase          ( NULL )
+        ,m_pFT_EmbeddedDBLabel          ( NULL )
+        ,m_pEmbeddedDBType              ( NULL )
+        ,m_pFT_DocListLabel             ( NULL )
+        ,m_pLB_DocumentList             ( NULL )
+        ,m_pPB_OpenDatabase             ( NULL )
+        ,m_eOriginalCreationMode        ( eCreateNew )
+        ,m_bInitEmbeddedDBList          ( true )
+    {
+        get( m_pRB_CreateDatabase, "createDatabase" );
+        get( m_pRB_OpenExistingDatabase, "openExistingDatabase" );
+        get( m_pRB_ConnectDatabase, "connectDatabase" );
+        get( m_pFT_EmbeddedDBLabel, "embeddeddbLabel" );
+        get( m_pEmbeddedDBType, "embeddeddbList" );
+        get( m_pFT_DocListLabel, "docListLabel" );
+        get( m_pLB_DocumentList, "documentList" );
+        get( m_pPB_OpenDatabase, "openDatabase" );
+
+        // If no driver for embedded DBs is installed, and no dBase driver, then hide the "Create new database" option
+        sal_Int32 nCreateNewDBIndex = m_pCollection->getIndexOf( m_pCollection->getEmbeddedDatabase() );
+        if ( nCreateNewDBIndex == -1 )
+            nCreateNewDBIndex = m_pCollection->getIndexOf( OUString( "sdbc:dbase:" ) );
+        bool bHideCreateNew = ( nCreateNewDBIndex == -1 );
+
+        // also, if our application policies tell us to hide the option, do it
+        ::utl::OConfigurationTreeRoot aConfig( ::utl::OConfigurationTreeRoot::createWithComponentContext(
+            ::comphelper::getProcessComponentContext(),
+            OUString( "/org.openoffice.Office.DataAccess/Policies/Features/Base" )
+        ) );
+        bool bAllowCreateLocalDatabase( true );
+        OSL_VERIFY( aConfig.getNodeValue( "CreateLocalDatabase" ) >>= bAllowCreateLocalDatabase );
+        if ( !bAllowCreateLocalDatabase )
+            bHideCreateNew = true;
+
+        if ( bHideCreateNew )
+        {
+            m_pRB_CreateDatabase->Hide();
+            m_pRB_ConnectDatabase->Check();
+        }
+        else
+            m_pRB_CreateDatabase->Check();
+
+        // do some knittings
+        m_pEmbeddedDBType->SetSelectHdl(LINK(this, OGeneralPageWizard, OnEmbeddedDBTypeSelected));
+        m_pRB_CreateDatabase->SetClickHdl( LINK( this, OGeneralPageWizard, OnCreateDatabaseModeSelected ) );
+        m_pRB_ConnectDatabase->SetClickHdl( LINK( this, OGeneralPageWizard, OnSetupModeSelected ) );
+        m_pRB_OpenExistingDatabase->SetClickHdl( LINK( this, OGeneralPageWizard, OnSetupModeSelected ) );
+        m_pLB_DocumentList->SetSelectHdl( LINK( this, OGeneralPageWizard, OnDocumentSelected ) );
+        m_pPB_OpenDatabase->SetClickHdl( LINK( this, OGeneralPageWizard, OnOpenDocument ) );
+    }
+
+    OGeneralPageWizard::CreationMode OGeneralPageWizard::GetDatabaseCreationMode() const
+    {
+        if ( m_pRB_CreateDatabase->IsChecked() )
+            return eCreateNew;
+        if ( m_pRB_ConnectDatabase->IsChecked() )
+            return eConnectExternal;
+        return eOpenExisting;
+    }
+
+    void OGeneralPageWizard::GetFocus()
+    {
+        OGeneralPage::GetFocus();
+        if ( m_pLB_DocumentList && m_pLB_DocumentList->IsEnabled() )
+            m_pLB_DocumentList->GrabFocus();
+        else if ( m_pDatasourceType && m_pDatasourceType->IsEnabled() )
+            m_pDatasourceType->GrabFocus();
+    }
+
+    void OGeneralPageWizard::implInitControls( const SfxItemSet& _rSet, bool _bSaveValue )
+    {
+        OGeneralPage::implInitControls( _rSet, _bSaveValue );
+
+        initializeEmbeddedDBList();
+        m_pEmbeddedDBType->SelectEntry( getEmbeddedDBName( _rSet ) );
+
+        // first check whether or not the selection is invalid or readonly (invalid implies readonly, but not vice versa)
+        bool bValid, bReadonly;
+        getFlags( _rSet, bValid, bReadonly );
+
+        SetText( OUString() );
+
+        LayoutHelper::positionBelow( *m_pRB_ConnectDatabase, *m_pDatasourceType, RelatedControls, INDENT_BELOW_RADIO );
+
+        if ( !bValid || bReadonly )
+        {
+            m_pFT_EmbeddedDBLabel->Enable( false );
+            m_pDatasourceType->Enable( false );
+            m_pPB_OpenDatabase->Enable( false );
+            m_pFT_DocListLabel->Enable( false );
+            m_pLB_DocumentList->Enable( false );
+        }
+        else
+        {
+            m_aControlDependencies.enableOnRadioCheck( *m_pRB_CreateDatabase, *m_pEmbeddedDBType, *m_pFT_EmbeddedDBLabel );
+            m_aControlDependencies.enableOnRadioCheck( *m_pRB_ConnectDatabase, *m_pDatasourceType );
+            m_aControlDependencies.enableOnRadioCheck( *m_pRB_OpenExistingDatabase, *m_pPB_OpenDatabase, *m_pFT_DocListLabel, *m_pLB_DocumentList );
+        }
+
+        m_pLB_DocumentList->SetDropDownLineCount( 20 );
+        if ( m_pLB_DocumentList->GetEntryCount() )
+            m_pLB_DocumentList->SelectEntryPos( 0 );
+
+        m_eOriginalCreationMode = GetDatabaseCreationMode();
+    }
+
+    OUString OGeneralPageWizard::getDatasourceName(const SfxItemSet& _rSet)
+    {
+        // Sets jdbc as the default selected databse on startup.
+        if (m_pRB_CreateDatabase->IsChecked() )
+            return m_pCollection->getTypeDisplayName( OUString( "jdbc:" ) );
+
+        return OGeneralPage::getDatasourceName( _rSet );
+    }
+
+    bool OGeneralPageWizard::approveDatasourceType( ::dbaccess::DATASOURCE_TYPE eType, OUString& _inout_rDisplayName )
+    {
+#if defined USE_JAVA && defined MACOSX
+        sal_Bool bCanUseJava = lcl_canUseJava();
+#endif	// USE_JAVA && MACOSX
+
+        switch ( eType )
+        {
+        case ::dbaccess::DST_MYSQL_JDBC:
+#if defined USE_JAVA && defined MACOSX
+            if ( !bCanUseJava )
+                _inout_rDisplayName = "";
+            else
+#endif	// USE_JAVA && MACOSX
+            _inout_rDisplayName = "MySQL";
+            break;
+        case ::dbaccess::DST_MYSQL_ODBC:
+        case ::dbaccess::DST_MYSQL_NATIVE:
+            // don't display those, the decision whether the user connects via JDBC/ODBC/C-OOo is made on another
+            // page
+#if defined USE_JAVA && defined MACOSX
+            if ( !bCanUseJava && eType == ::dbaccess::DST_MYSQL_ODBC )
+                _inout_rDisplayName = "MySQL";
+            else
+#endif	// USE_JAVA && MACOSX
+            _inout_rDisplayName = "";
+            break;
+        default:
+            break;
+        }
+
+        return OGeneralPage::approveDatasourceType( eType, _inout_rDisplayName );
+    }
+
+    bool OGeneralPageWizard::FillItemSet(SfxItemSet* _rCoreAttrs)
+    {
+        bool bChangedSomething = false;
 
         bool bCommitTypeSelection = true;
-        if ( m_DBWizardMode )
-        {
-            if ( m_aRB_CreateDatabase.IsChecked() )
-            {
-                _rCoreAttrs.Put(SfxStringItem(DSID_CONNECTURL, ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("sdbc:dbase:"))));
-		        bChangedSomething = sal_True;
-                bCommitTypeSelection = false;
-            }
-            else if ( m_aRB_OpenDocument.IsChecked() )
-            {
-                if ( m_aRB_OpenDocument.GetSavedValue() != m_aRB_OpenDocument.IsChecked() )
-		            bChangedSomething = sal_True;
 
-                // TODO
-                bCommitTypeSelection = false;
-            }
+        if ( m_pRB_CreateDatabase->IsChecked() )
+        {
+            _rCoreAttrs->Put( SfxStringItem( DSID_CONNECTURL, OUString( "sdbc:dbase:" ) ) );
+            bChangedSomething = true;
+            bCommitTypeSelection = false;
+        }
+        else if ( m_pRB_OpenExistingDatabase->IsChecked() )
+        {
+            if ( m_pRB_OpenExistingDatabase->IsValueChangedFromSaved() )
+                bChangedSomething = true;
+
+            // TODO
+            bCommitTypeSelection = false;
         }
 
         if ( bCommitTypeSelection )
         {
-		    sal_uInt16 nEntry = m_pDatasourceType->GetSelectEntryPos();
-			::rtl::OUString sURLPrefix = m_aURLPrefixes[nEntry];
-			if (m_DBWizardMode)
-			{
-                if  (  ( m_pDatasourceType->GetSavedValue() != nEntry )
-                    || ( GetDatabaseCreationMode() != m_eOriginalCreationMode )
-                    )
-				{
-					_rCoreAttrs.Put(SfxStringItem(DSID_CONNECTURL,sURLPrefix ));
-					bChangedSomething = sal_True;
-				}
-				else
-					implSetCurrentType(sURLPrefix);
-			}
-			else
-			{
-				if ( m_pDatasourceType->GetSavedValue() != nEntry)
-				{
-					_rCoreAttrs.Put(SfxStringItem(DSID_CONNECTURL, sURLPrefix));
-					bChangedSomething = sal_True;
-				}
-			}
+            sal_uInt16 nEntry = m_pDatasourceType->GetSelectEntryPos();
+            OUString sURLPrefix = m_aURLPrefixes[nEntry];
+
+            if  (  m_pDatasourceType->IsValueChangedFromSaved()
+                || ( GetDatabaseCreationMode() != m_eOriginalCreationMode )
+                )
+            {
+                _rCoreAttrs->Put( SfxStringItem( DSID_CONNECTURL,sURLPrefix ) );
+                bChangedSomething = true;
+            }
+            else
+                implSetCurrentType( sURLPrefix );
         }
-		return bChangedSomething;
-	}
+        return bChangedSomething;
+    }
 
-	//-------------------------------------------------------------------------
-	IMPL_LINK(OGeneralPage, OnDatasourceTypeSelected, ListBox*, _pBox)
-	{
-		// get the type from the entry data
-		sal_Int16 nSelected = _pBox->GetSelectEntryPos();
-        const ::rtl::OUString sURLPrefix = m_aURLPrefixes[nSelected];
-
-		setParentTitle(sURLPrefix);
-		// let the impl method do all the stuff
-		onTypeSelected(sURLPrefix);
-		// tell the listener we were modified
-		callModifiedHdl();
-		// outta here
-		return 0L;
-	}
-
-	//-------------------------------------------------------------------------
-    OGeneralPage::DocumentDescriptor OGeneralPage::GetSelectedDocument() const
+    OGeneralPageWizard::DocumentDescriptor OGeneralPageWizard::GetSelectedDocument() const
     {
         DocumentDescriptor aDocument;
-        if ( m_aBrowsedDocument.sURL.Len() )
+        if ( !m_aBrowsedDocument.sURL.isEmpty() )
             aDocument = m_aBrowsedDocument;
         else
         {
@@ -634,45 +725,53 @@ namespace dbaui
         return aDocument;
     }
 
-	//-------------------------------------------------------------------------
-    IMPL_LINK(OGeneralPage, OnSetupModeSelected, RadioButton*, /*_pBox*/)
+    IMPL_LINK( OGeneralPageWizard, OnCreateDatabaseModeSelected, RadioButton*, /*_pBox*/ )
     {
-		if ( m_aCreationModeHandler.IsSet() )
-			m_aCreationModeHandler.Call(this);
+        if ( m_aCreationModeHandler.IsSet() )
+            m_aCreationModeHandler.Call( this );
+
+        OnEmbeddedDBTypeSelected( m_pEmbeddedDBType );
         return 1L;
     }
 
-	//-------------------------------------------------------------------------
-    IMPL_LINK(OGeneralPage, OnDocumentSelected, ListBox*, /*_pBox*/)
+    IMPL_LINK( OGeneralPageWizard, OnSetupModeSelected, RadioButton*, /*_pBox*/ )
+    {
+        if ( m_aCreationModeHandler.IsSet() )
+            m_aCreationModeHandler.Call( this );
+        OnDatasourceTypeSelected(m_pDatasourceType);
+        return 1L;
+    }
+
+    IMPL_LINK( OGeneralPageWizard, OnDocumentSelected, ListBox*, /*_pBox*/ )
     {
         m_aDocumentSelectionHandler.Call( this );
         return 0L;
     }
 
-    //-------------------------------------------------------------------------
-    IMPL_LINK(OGeneralPage, OnOpenDocument, PushButton*, /*_pBox*/)
+    IMPL_LINK( OGeneralPageWizard, OnOpenDocument, PushButton*, /*_pBox*/ )
     {
-        ::sfx2::FileDialogHelper aFileDlg( WB_OPEN, ::String::CreateFromAscii("sdatabase") );
+        ::sfx2::FileDialogHelper aFileDlg(
+                ui::dialogs::TemplateDescription::FILEOPEN_READONLY_VERSION,
+                0, OUString("sdatabase") );
         const SfxFilter* pFilter = getStandardDatabaseFilter();
-		if ( pFilter )
-		{
-//			aFileDlg.AddFilter(pFilter->GetUIName(),pFilter->GetDefaultExtension());
-			aFileDlg.SetCurrentFilter(pFilter->GetUIName());
-		}
-		if ( aFileDlg.Execute() == ERRCODE_NONE )
+        if ( pFilter )
         {
-            String sPath = aFileDlg.GetPath();
+            aFileDlg.SetCurrentFilter(pFilter->GetUIName());
+        }
+        if ( aFileDlg.Execute() == ERRCODE_NONE )
+        {
+            OUString sPath = aFileDlg.GetPath();
             if ( aFileDlg.GetCurrentFilter() != pFilter->GetUIName() || !pFilter->GetWildcard().Matches(sPath) )
             {
-                String sMessage(ModuleRes(STR_ERR_USE_CONNECT_TO));
-			    InfoBox aError(this, sMessage);
-			    aError.Execute();
-                m_aRB_GetExistingDatabase.Check();
-                OnSetupModeSelected(&m_aRB_GetExistingDatabase);
+                OUString sMessage(ModuleRes(STR_ERR_USE_CONNECT_TO));
+                InfoBox aError(this, sMessage);
+                aError.Execute();
+                m_pRB_ConnectDatabase->Check();
+                OnSetupModeSelected( m_pRB_ConnectDatabase );
                 return 0L;
             }
-			m_aBrowsedDocument.sURL = sPath;
-            m_aBrowsedDocument.sFilter = String();
+            m_aBrowsedDocument.sURL = sPath;
+            m_aBrowsedDocument.sFilter = "";
             m_aChooseDocumentHandler.Call( this );
             return 1L;
         }
@@ -680,7 +779,6 @@ namespace dbaui
         return 0L;
     }
 
-//.........................................................................
-}	// namespace dbaui
-//.........................................................................
+}   // namespace dbaui
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

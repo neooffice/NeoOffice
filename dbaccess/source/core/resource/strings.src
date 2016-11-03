@@ -1,190 +1,210 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
-
-
+ */
 
 #include "core_resource.hrc"
 #include "dbamiscres.hrc"
 
 String RID_STR_TRIED_OPEN_TABLE
 {
-	Text [ en-US ] = "Tried to open the table $name$.";
+    Text [ en-US ] = "Tried to open the table $name$.";
 };
+
 String RID_STR_CONNECTION_INVALID
 {
-	Text [ en-US ] = "No connection could be established.";
+    Text [ en-US ] = "No connection could be established.";
 };
 
 String RID_STR_TABLE_IS_FILTERED
 {
-	Text [ en-US ] = "The table $name$ already exists. It is not visible because it has been filtered out.";
+    Text [ en-US ] = "The table $name$ already exists. It is not visible because it has been filtered out.";
 };
 
 String RID_STR_NEED_CONFIG_WRITE_ACCESS
 {
-	Text [ en-US ] = "You have no write access to the configuration data the object is based on.";
+    Text [ en-US ] = "You have no write access to the configuration data the object is based on.";
 };
-
 
 String RID_STR_COULDNOTCONNECT_UNSPECIFIED
 {
-	Text [ en-US ] = "The connection to the external data source could not be established. An unknown error occurred. The driver is probably defective.";
+    Text [ en-US ] = "The connection to the external data source could not be established. An unknown error occurred. The driver is probably defective.";
 };
 
 String RID_STR_COULDNOTCONNECT_NODRIVER
 {
-	Text [ en-US ] = "The connection to the external data source could not be established. No SDBC driver was found for the given URL.";
+    Text [ en-US ] = "The connection to the external data source could not be established. No SDBC driver was found for the URL '$name$'.";
 };
 
 String RID_STR_COULDNOTLOAD_MANAGER
 {
-	Text [ en-US ] = "The connection to the external data source could not be established. The SDBC driver manager could not be loaded.";
+    Text [ en-US ] = "The connection to the external data source could not be established. The SDBC driver manager could not be loaded.";
 };
 
 String RID_STR_FORM
 {
-	Text [ en-US ] = "Form";
+    Text [ en-US ] = "Form";
 };
 
 String RID_STR_REPORT
 {
-	Text [ en-US ] = "Report";
+    Text [ en-US ] = "Report";
 };
 
 String RID_STR_DATASOURCE_NOT_STORED
 {
-	Text [ en-US ] = "The data source was not saved. Please use the interface XStorable to save the data source.";
+    Text [ en-US ] = "The data source was not saved. Please use the interface XStorable to save the data source.";
 };
+
 String RID_STR_ONLY_QUERY
 {
-	Text [ en-US ] = "The given command is not a SELECT statement.\nOnly queries are allowed.";	
+    Text [ en-US ] = "The given command is not a SELECT statement.\nOnly queries are allowed.";
 };
+
 String RID_STR_NO_VALUE_CHANGED
 {
-	Text [ en-US ] = "No values were modified.";
+    Text [ en-US ] = "No values were modified.";
 };
+
 String RID_STR_NO_XROWUPDATE
 {
-	Text [ en-US ] = "Values could not be inserted. The XRowUpdate interface is not supported by ResultSet.";
+    Text [ en-US ] = "Values could not be inserted. The XRowUpdate interface is not supported by ResultSet.";
 };
+
 String RID_STR_NO_XRESULTSETUPDATE
 {
-	Text [ en-US ] = "Values could not be inserted. The XResultSetUpdate interface is not supported by ResultSet.";
+    Text [ en-US ] = "Values could not be inserted. The XResultSetUpdate interface is not supported by ResultSet.";
 };
+
 String RID_STR_NO_UPDATE_MISSING_CONDITION
 {
-	Text [ en-US ] = "Values could not be modified, due to a missing condition statement.";
+    Text [ en-US ] = "Values could not be modified, due to a missing condition statement.";
 };
+
 String RID_STR_NO_COLUMN_ADD
 {
-	Text [ en-US ] = "The adding of columns is not supported.";
+    Text [ en-US ] = "The adding of columns is not supported.";
 };
+
 String RID_STR_NO_COLUMN_DROP
 {
-	Text [ en-US ] = "The dropping of columns is not supported.";
+    Text [ en-US ] = "The dropping of columns is not supported.";
 };
+
 String RID_STR_NO_CONDITION_FOR_PK
 {
-	Text [ en-US ] = "The WHERE condition could not be created for the primary key.";
+    Text [ en-US ] = "The WHERE condition could not be created for the primary key.";
 };
+
 String RID_STR_COLUMN_UNKNOWN_PROP
 {
-	Text [ en-US ] = "The column does not support the property '%value'.";
+    Text [ en-US ] = "The column does not support the property '%value'.";
 };
+
 String RID_STR_COLUMN_NOT_SEARCHABLE
 {
-	Text [ en-US ] = "The column is not searchable!";
+    Text [ en-US ] = "The column is not searchable!";
 };
+
 String RID_STR_NOT_SEQUENCE_INT8
 {
-	Text [ en-US ] = "The value of the columns is not of the type Sequence<sal_Int8>.";
+    Text [ en-US ] = "The value of the columns is not of the type Sequence<sal_Int8>.";
 };
+
 String RID_STR_COLUMN_NOT_VALID
 {
-	Text [ en-US ] = "The column is not valid.";
+    Text [ en-US ] = "The column is not valid.";
 };
+
 String RID_STR_COLUMN_MUST_VISIBLE
 {
-	Text [ en-US ] = "The column '%name' must be visible as a column.";
+    Text [ en-US ] = "The column '%name' must be visible as a column.";
 };
+
 String RID_STR_NO_XQUERIESSUPPLIER
 {
-	Text [ en-US ] = "The interface XQueriesSupplier is not available.";
+    Text [ en-US ] = "The interface XQueriesSupplier is not available.";
 };
+
 String RID_STR_NOT_SUPPORTED_BY_DRIVER
 {
-	Text [ en-US ] = "The driver does not support this function.";
+    Text [ en-US ] = "The driver does not support this function.";
 };
+
 String RID_STR_NO_ABS_ZERO
 {
-	Text [ en-US ] = "An 'absolute(0)' call is not allowed.";
+    Text [ en-US ] = "An 'absolute(0)' call is not allowed.";
 };
+
 String RID_STR_NO_RELATIVE
 {
-	Text [ en-US ] = "Relative positioning is not allowed in this state.";
+    Text [ en-US ] = "Relative positioning is not allowed in this state.";
 };
+
 String RID_STR_NO_REFESH_AFTERLAST
 {
-	Text [ en-US ] = "A row cannot be refreshed when the ResultSet is positioned after the last row.";
+    Text [ en-US ] = "A row cannot be refreshed when the ResultSet is positioned after the last row.";
 };
+
 String RID_STR_NO_MOVETOINSERTROW_CALLED
 {
-	Text [ en-US ] = "A new row cannot be inserted when the ResultSet is not first moved to the insert row.";
+    Text [ en-US ] = "A new row cannot be inserted when the ResultSet is not first moved to the insert row.";
 };
+
 String RID_STR_NO_UPDATEROW
 {
-	Text [ en-US ] = "A row cannot be modified in this state";
+    Text [ en-US ] = "A row cannot be modified in this state";
 };
+
 String RID_STR_NO_DELETEROW
 {
-	Text [ en-US ] = "A row cannot be deleted in this state.";
+    Text [ en-US ] = "A row cannot be deleted in this state.";
 };
+
 String RID_STR_NO_TABLE_RENAME
 {
-	Text [ en-US ] = "The driver does not support table renaming.";
+    Text [ en-US ] = "The driver does not support table renaming.";
 };
+
 String RID_STR_NO_ALTER_COLUMN_DEF
 {
-	Text [ en-US ] = "The driver does not support the modification of column descriptions.";
+    Text [ en-US ] = "The driver does not support the modification of column descriptions.";
 };
+
 String RID_STR_COLUMN_ALTER_BY_NAME
 {
-	Text [ en-US ] = "The driver does not support the modification of column descriptions by changing the name.";
+    Text [ en-US ] = "The driver does not support the modification of column descriptions by changing the name.";
 };
+
 String RID_STR_COLUMN_ALTER_BY_INDEX
 {
-	Text [ en-US ] = "The driver does not support the modification of column descriptions by changing the index.";
+    Text [ en-US ] = "The driver does not support the modification of column descriptions by changing the index.";
 };
+
 String RID_STR_FILE_DOES_NOT_EXIST
 {
-	Text[ en-US ] = "The file \"$file$\" does not exist.";
+    Text[ en-US ] = "The file \"$file$\" does not exist.";
 };
 
 String RID_STR_TABLE_DOES_NOT_EXIST
@@ -205,7 +225,6 @@ String RID_STR_CONFLICTING_NAMES
 String RID_STR_COMMAND_LEADING_TO_ERROR
 {
     Text [ en-US ] = "The SQL command leading to this error is:\n\n$command$";
-
 };
 
 String RID_STR_STATEMENT_WITHOUT_RESULT_SET
@@ -252,93 +271,113 @@ String RID_NO_SUCH_DATA_SOURCE
 {
     Text [ en-US ] = "Error accessing data source '$name$':\n$error$";
 };
+
 String RID_STR_NO_SUB_FOLDER
 {
     Text [ en-US ] = "There exists no folder named \"$folder$\".";
 };
+
 String RID_STR_NO_DELETE_BEFORE_AFTER
 {
-	Text [ en-US ] = "Cannot delete the before-first or after-last row.";
-};
-String RID_STR_NO_DELETE_INSERT_ROW
-{
-	Text [ en-US ] = "Cannot delete the insert-row.";
-};
-String RID_STR_RESULT_IS_READONLY
-{
-	Text [ en-US ] = "Result set is read only.";
-};
-String RID_STR_NO_DELETE_PRIVILEGE
-{
-	Text [ en-US ] = "DELETE privilege not available.";
-};
-String RID_STR_ROW_ALREADY_DELETED
-{
-	Text [ en-US ] = "Current row is already deleted.";
-};
-String RID_STR_UPDATE_FAILED
-{
-	Text [ en-US ] = "Current row could not be updated.";
-};
-//-------------------------------------------------------------------------
-String RID_STR_NO_INSERT_PRIVILEGE
-{
-	Text [ en-US ] = "INSERT privilege not available.";
-};
-String RID_STR_INTERNAL_ERROR
-{
-	Text [ en-US ] = "Internal error: no statement object provided by the database driver.";
-};
-String RID_STR_EXPRESSION1
-{
-	Text [ en-US ] = "Expression1";
-};
-String RID_STR_NO_SQL_COMMAND
-{
-	Text [ en-US ] = "No SQL command was provided.";
-};
-String RID_STR_INVALID_INDEX
-{
-	Text [ en-US ] = "Invalid column index.";
-};
-String RID_STR_INVALID_CURSOR_STATE
-{
-	Text [ en-US ] = "Invalid cursor state.";
-};
-String RID_STR_CURSOR_BEFORE_OR_AFTER
-{
-	Text [ en-US ] = "The cursor points to before the first or after the last row.";
-};
-String RID_STR_NO_BOOKMARK_BEFORE_OR_AFTER
-{
-	Text [ en-US ] = "The rows before the first and after the last row don't have a bookmark.";
-};
-String RID_STR_NO_BOOKMARK_DELETED
-{
-	Text [ en-US ] = "The current row is deleted, and thus doesn't have a bookmark.";
-};
-String RID_STR_NO_EMBEDDING
-{
-	Text [ en-US ] = "Embedding of database documents is not supported.";
-};
-String RID_STR_CONNECTION_REQUEST
-{
-	Text [ en-US ] = "A connection for the following URL was requested \"$name$\".";
-};
-String RID_STR_MISSING_EXTENSION
-{
-	Text [ en-US ] = "The extension is not installed.";
+    Text [ en-US ] = "Cannot delete the before-first or after-last row.";
 };
 
-// #ifdef USE_JAVA
+String RID_STR_NO_DELETE_INSERT_ROW
+{
+    Text [ en-US ] = "Cannot delete the insert-row.";
+};
+
+String RID_STR_RESULT_IS_READONLY
+{
+    Text [ en-US ] = "Result set is read only.";
+};
+
+String RID_STR_NO_DELETE_PRIVILEGE
+{
+    Text [ en-US ] = "DELETE privilege not available.";
+};
+
+String RID_STR_ROW_ALREADY_DELETED
+{
+    Text [ en-US ] = "Current row is already deleted.";
+};
+
+String RID_STR_UPDATE_FAILED
+{
+    Text [ en-US ] = "Current row could not be updated.";
+};
+
+String RID_STR_NO_INSERT_PRIVILEGE
+{
+    Text [ en-US ] = "INSERT privilege not available.";
+};
+
+String RID_STR_INTERNAL_ERROR
+{
+    Text [ en-US ] = "Internal error: no statement object provided by the database driver.";
+};
+
+String RID_STR_EXPRESSION1
+{
+    Text [ en-US ] = "Expression1";
+};
+
+String RID_STR_NO_SQL_COMMAND
+{
+    Text [ en-US ] = "No SQL command was provided.";
+};
+
+String RID_STR_INVALID_INDEX
+{
+    Text [ en-US ] = "Invalid column index.";
+};
+
+String RID_STR_INVALID_CURSOR_STATE
+{
+    Text [ en-US ] = "Invalid cursor state.";
+};
+
+String RID_STR_CURSOR_BEFORE_OR_AFTER
+{
+    Text [ en-US ] = "The cursor points to before the first or after the last row.";
+};
+
+String RID_STR_NO_BOOKMARK_BEFORE_OR_AFTER
+{
+    Text [ en-US ] = "The rows before the first and after the last row don't have a bookmark.";
+};
+
+String RID_STR_NO_BOOKMARK_DELETED
+{
+    Text [ en-US ] = "The current row is deleted, and thus doesn't have a bookmark.";
+};
+
+String RID_STR_NO_EMBEDDING
+{
+    Text [ en-US ] = "Embedding of database documents is not supported.";
+};
+
+String RID_STR_CONNECTION_REQUEST
+{
+    Text [ en-US ] = "A connection for the following URL was requested \"$name$\".";
+};
+
+String RID_STR_MISSING_EXTENSION
+{
+    Text [ en-US ] = "The extension is not installed.";
+};
+
+#ifdef USE_JAVA
 
 String RID_STR_COULDNOTCONNECT_NOJAVA
 {
-	Text [ en-US ] = "The database driver cannot be loaded because it requires external software that has been identified as a security risk.";
-	Text [ de ] = "Die Datenbank-Treiber kann nicht geladen werden, da externe Software, die als Sicherheitsrisiko identifiziert wurde benötigt werden.";
-	Text [ fr ] = "Le pilote de base de données ne peut pas être chargée, car il nécessite un logiciel externe qui a été identifié comme un risque de sécurité.";
-	Text [ it ] = "Il driver di database non può essere caricato perché richiede software esterno che è stato identificato come un rischio per la sicurezza.";
-	Text [ nl ] = "De database stuurprogramma kan niet worden geladen, omdat het vereist externe software die is geïdentificeerd als een veiligheidsrisico.";
+    Text [ en-US ] = "The database driver cannot be loaded because it requires external software that has been identified as a security risk.";
+    Text [ de ] = "Die Datenbank-Treiber kann nicht geladen werden, da externe Software, die als Sicherheitsrisiko identifiziert wurde benötigt werden.";
+    Text [ fr ] = "Le pilote de base de données ne peut pas être chargée, car il nécessite un logiciel externe qui a été identifié comme un risque de sécurité.";
+    Text [ it ] = "Il driver di database non può essere caricato perché richiede software esterno che è stato identificato come un rischio per la sicurezza.";
+    Text [ nl ] = "De database stuurprogramma kan niet worden geladen, omdat het vereist externe software die is geïdentificeerd als een veiligheidsrisico.";
 };
 
-// #endif	// USE_JAVA
+#endif	// USE_JAVA
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

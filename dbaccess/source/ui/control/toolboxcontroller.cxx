@@ -1,97 +1,50 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_dbaccess.hxx"
-#ifndef DBACCESS_TOOLBOXCONTROLLER_HXX
 #include "toolboxcontroller.hxx"
-#endif
-#ifndef _COM_SUN_STAR_UI_IMAGETYPE_HPP_
+#include "uiservices.hxx"
 #include <com/sun/star/ui/ImageType.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_XDISPATCHPROVIDER_HPP_
 #include <com/sun/star/frame/XDispatchProvider.hpp>
-#endif
-#ifndef _TOOLKIT_HELPER_VCLUNOHELPER_HXX_
 #include <toolkit/helper/vclunohelper.hxx>
-#endif
-#ifndef _SV_MENU_HXX
 #include <vcl/menu.hxx>
-#endif
-#ifndef _COM_SUN_STAR_UI_XUICONFIGURATIONMANAGER_HPP_
 #include <com/sun/star/ui/XUIConfigurationManager.hpp>
-#endif
-#ifndef _COM_SUN_STAR_UI_XMODULEUICONFIGURATIONMANAGERSUPPLIER_HPP_
-#include <com/sun/star/ui/XModuleUIConfigurationManagerSupplier.hpp>
-#endif
-#ifndef _COM_SUN_STAR_UI_XIMAGEMANAGER_HPP_
+#include <com/sun/star/ui/theModuleUIConfigurationManagerSupplier.hpp>
 #include <com/sun/star/ui/XImageManager.hpp>
-#endif
-#ifndef _COM_SUN_STAR_UI_IMAGETYPE_HPP_
-#include <com/sun/star/ui/ImageType.hpp>
-#endif
-#ifndef _COM_SUN_STAR_GRAPHIC_XGRAPHIC_HPP_
 #include <com/sun/star/graphic/XGraphic.hpp>
-#endif
-#ifndef _SV_SVAPP_HXX //autogen
 #include <vcl/svapp.hxx>
-#endif
-#ifndef _SV_TOOLBOX_HXX
 #include <vcl/toolbox.hxx>
-#endif
-#ifndef _DBU_RESOURCE_HRC_
 #include "dbu_resource.hrc"
-#endif
-#ifndef INCLUDED_SVTOOLS_MISCOPT_HXX
 #include <svtools/miscopt.hxx>
-#endif
-#ifndef INCLUDED_SVTOOLS_MODULEOPTIONS_HXX
 #include <unotools/moduleoptions.hxx>
-#endif
-#ifndef TOOLS_DIAGNOSE_EX_H
 #include <tools/diagnose_ex.h>
-#endif
-#ifndef INCLUDED_SVTOOLS_MENUOPTIONS_HXX
 #include <svtools/menuoptions.hxx>
-#endif
-#ifndef _VOS_MUTEX_HXX_
-#include <vos/mutex.hxx>
-#endif
-#ifndef _DBU_REGHELPER_HXX_
+#include <osl/mutex.hxx>
 #include "dbu_reghelper.hxx"
-#endif
-#ifndef DBAUI_TOOLS_HXX
 #include "UITools.hxx"
-#endif
+#include <comphelper/processfactory.hxx>
 
 #if defined USE_JAVA && defined MACOSX
 
@@ -103,27 +56,27 @@ static Application_canUseJava_Type *pApplication_canUseJava = NULL;
 
 #endif	// USE_JAVA && MACOSX
 
-
 extern "C" void SAL_CALL createRegistryInfo_OToolboxController()
 {
-	static ::dbaui::OMultiInstanceAutoRegistration< ::dbaui::OToolboxController> aAutoRegistration;
+    static ::dbaui::OMultiInstanceAutoRegistration< ::dbaui::OToolboxController> aAutoRegistration;
 }
+
 namespace dbaui
 {
-	using namespace svt;
-	using namespace ::com::sun::star::graphic;
-	using namespace com::sun::star::uno;
-	using namespace com::sun::star::beans;
-	using namespace com::sun::star::lang;
-	using namespace ::com::sun::star::frame;
-	using namespace ::com::sun::star::util;
-	using namespace ::com::sun::star::ui;
+    using namespace svt;
+    using namespace ::com::sun::star::graphic;
+    using namespace com::sun::star::uno;
+    using namespace com::sun::star::beans;
+    using namespace com::sun::star::lang;
+    using namespace ::com::sun::star::frame;
+    using namespace ::com::sun::star::util;
+    using namespace ::com::sun::star::ui;
 
     namespace
     {
-        void lcl_copy(Menu* _pMenu,sal_uInt16 _nMenuId,sal_uInt16 _nMenuPos,ToolBox* _pToolBox,sal_uInt16 _nToolId,const ::rtl::OUString& _sCommand)
+        void lcl_copy(Menu* _pMenu,sal_uInt16 _nMenuId,sal_uInt16 _nMenuPos,ToolBox* _pToolBox,sal_uInt16 _nToolId,const OUString& _sCommand)
         {
-            if ( _pMenu->GetItemType(_nMenuPos) != MENUITEM_STRING )
+            if ( _pMenu->GetItemType(_nMenuPos) != MenuItemType::STRING )
                 _pToolBox->SetItemImage(_nToolId, _pMenu->GetItemImage(_nMenuId));
             _pToolBox->SetItemCommand( _nToolId, _sCommand);
             _pToolBox->SetHelpId(_nToolId, _pMenu->GetHelpId(_nMenuId));
@@ -133,94 +86,97 @@ namespace dbaui
         }
     }
 
-	OToolboxController::OToolboxController(const Reference< XMultiServiceFactory >& _rxORB)
-		: m_nToolBoxId(1)
-	{
-		osl_incrementInterlockedCount(&m_refCount);
-		m_xServiceManager = _rxORB;
-		osl_decrementInterlockedCount(&m_refCount);
+    OToolboxController::OToolboxController(const Reference< XComponentContext >& _rxORB)
+        : m_nToolBoxId(1)
+    {
+        osl_atomic_increment(&m_refCount);
+        m_xContext = _rxORB;
+        osl_atomic_decrement(&m_refCount);
 
-	}
-	// -----------------------------------------------------------------------------
-	IMPLEMENT_SERVICE_INFO1_STATIC(OToolboxController,"com.sun.star.sdb.ApplicationToolboxController","com.sun.star.frame.ToolboxController")
-	// -----------------------------------------------------------------------------
-	// XInterface
-	Any SAL_CALL OToolboxController::queryInterface( const Type& _rType ) throw (RuntimeException)
-	{
-		Any aReturn = ToolboxController::queryInterface(_rType);
-		if (!aReturn.hasValue())
-			aReturn = TToolboxController_BASE::queryInterface(_rType);
-		return aReturn;
-	}
-	// -----------------------------------------------------------------------------
-	void SAL_CALL OToolboxController::acquire() throw ()
-	{
-		ToolboxController::acquire();
-	}
-	// -----------------------------------------------------------------------------
-	void SAL_CALL OToolboxController::release() throw ()
-	{
-		ToolboxController::release();
-	}
-	// -----------------------------------------------------------------------------
-	void SAL_CALL OToolboxController::initialize( const Sequence< Any >& _rArguments ) throw (Exception, RuntimeException)
-	{
-		ToolboxController::initialize(_rArguments);
-		vos::OGuard aSolarMutexGuard( Application::GetSolarMutex() );
-		::osl::MutexGuard aGuard(m_aMutex);
+    }
+    IMPLEMENT_SERVICE_INFO_IMPLNAME_STATIC(OToolboxController, "com.sun.star.sdb.ApplicationToolboxController")
+    IMPLEMENT_SERVICE_INFO_SUPPORTS(OToolboxController)
+    IMPLEMENT_SERVICE_INFO_GETSUPPORTED1_STATIC(OToolboxController, "com.sun.star.frame.ToolboxController")
 
-		if ( m_aCommandURL.equalsAscii(".uno:DBNewForm") )
-		{
-			m_aStates.insert(TCommandState::value_type(::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(".uno:DBNewForm"))           ,sal_True));
-			m_aStates.insert(TCommandState::value_type(::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(".uno:DBNewView"))           ,sal_True));
-			m_aStates.insert(TCommandState::value_type(::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(".uno:DBNewViewSQL"))        ,sal_True));
-			m_aStates.insert(TCommandState::value_type(::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(".uno:DBNewQuery"))          ,sal_True));
-			m_aStates.insert(TCommandState::value_type(::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(".uno:DBNewQuerySql"))       ,sal_True));
-			m_aStates.insert(TCommandState::value_type(::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(".uno:DBNewReport"))			,sal_True));
-			m_aStates.insert(TCommandState::value_type(::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(".uno:DBNewReportAutoPilot")),sal_True));
-			m_aStates.insert(TCommandState::value_type(::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(".uno:DBNewTable"))          ,sal_True));
-		}
-		else
-		{
-			m_aStates.insert(TCommandState::value_type(::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(".uno:Refresh"))         ,sal_True));
-			m_aStates.insert(TCommandState::value_type(::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(".uno:DBRebuildData"))   ,sal_True));
-		}
+    Reference< XInterface >
+        SAL_CALL OToolboxController::Create(const Reference< XMultiServiceFactory >& _rxORB)
+    {
+        return static_cast< XServiceInfo* >(new OToolboxController( comphelper::getComponentContext(_rxORB) ));
+    }
 
-		TCommandState::iterator aIter = m_aStates.begin();
+    // XInterface
+    Any SAL_CALL OToolboxController::queryInterface( const Type& _rType ) throw (RuntimeException, std::exception)
+    {
+        Any aReturn = ToolboxController::queryInterface(_rType);
+        if (!aReturn.hasValue())
+            aReturn = TToolboxController_BASE::queryInterface(_rType);
+        return aReturn;
+    }
+    void SAL_CALL OToolboxController::acquire() throw ()
+    {
+        ToolboxController::acquire();
+    }
+    void SAL_CALL OToolboxController::release() throw ()
+    {
+        ToolboxController::release();
+    }
+    void SAL_CALL OToolboxController::initialize( const Sequence< Any >& _rArguments ) throw (Exception, RuntimeException, std::exception)
+    {
+        ToolboxController::initialize(_rArguments);
+        SolarMutexGuard aSolarMutexGuard;
+        ::osl::MutexGuard aGuard(m_aMutex);
+
+        if ( m_aCommandURL == ".uno:DBNewForm" )
+        {
+            m_aStates.insert(TCommandState::value_type(OUString(".uno:DBNewForm")           ,sal_True));
+            m_aStates.insert(TCommandState::value_type(OUString(".uno:DBNewView")           ,sal_True));
+            m_aStates.insert(TCommandState::value_type(OUString(".uno:DBNewViewSQL")        ,sal_True));
+            m_aStates.insert(TCommandState::value_type(OUString(".uno:DBNewQuery")          ,sal_True));
+            m_aStates.insert(TCommandState::value_type(OUString(".uno:DBNewQuerySql")       ,sal_True));
+            m_aStates.insert(TCommandState::value_type(OUString(".uno:DBNewReport")         ,sal_True));
+            m_aStates.insert(TCommandState::value_type(OUString(".uno:DBNewReportAutoPilot"),sal_True));
+            m_aStates.insert(TCommandState::value_type(OUString(".uno:DBNewTable")          ,sal_True));
+        }
+        else
+        {
+            m_aStates.insert(TCommandState::value_type(OUString(".uno:Refresh")         ,sal_True));
+            m_aStates.insert(TCommandState::value_type(OUString(".uno:DBRebuildData")   ,sal_True));
+        }
+
+        TCommandState::iterator aIter = m_aStates.begin();
         TCommandState::iterator aEnd = m_aStates.end();
-		for (; aIter != aEnd; ++aIter)
-			addStatusListener(aIter->first);
+        for (; aIter != aEnd; ++aIter)
+            addStatusListener(aIter->first);
 
-		ToolBox*    pToolBox = static_cast<ToolBox*>(VCLUnoHelper::GetWindow(getParent()));
-		if ( pToolBox )
-		{
-			sal_uInt16 nCount = pToolBox->GetItemCount();
-			for (sal_uInt16 nPos = 0; nPos < nCount; ++nPos)
-			{
-				sal_uInt16 nItemId = pToolBox->GetItemId(nPos);
-				if ( pToolBox->GetItemCommand(nItemId) == String(m_aCommandURL) )
-				{
-					m_nToolBoxId = nItemId;
-					break;
-				}
-			}
+        ToolBox*    pToolBox = static_cast<ToolBox*>(VCLUnoHelper::GetWindow(getParent()));
+        if ( pToolBox )
+        {
+            sal_uInt16 nCount = pToolBox->GetItemCount();
+            for (sal_uInt16 nPos = 0; nPos < nCount; ++nPos)
+            {
+                sal_uInt16 nItemId = pToolBox->GetItemId(nPos);
+                if ( pToolBox->GetItemCommand(nItemId) == m_aCommandURL )
+                {
+                    m_nToolBoxId = nItemId;
+                    break;
+                }
+            }
 
             // check if paste special is allowed, when not don't add DROPDOWN
-			pToolBox->SetItemBits(m_nToolBoxId,pToolBox->GetItemBits(m_nToolBoxId) | TIB_DROPDOWN);
-		}
-	}
-	// -----------------------------------------------------------------------------
-	void SAL_CALL OToolboxController::statusChanged( const FeatureStateEvent& Event ) throw ( RuntimeException )
-	{
-        vos::OGuard aSolarMutexGuard( Application::GetSolarMutex() );
-		::osl::MutexGuard aGuard(m_aMutex);
-		TCommandState::iterator aFind = m_aStates.find( Event.FeatureURL.Complete );
-		if ( aFind != m_aStates.end() )
+            pToolBox->SetItemBits(m_nToolBoxId,pToolBox->GetItemBits(m_nToolBoxId) | ToolBoxItemBits::DROPDOWN);
+        }
+    }
+    void SAL_CALL OToolboxController::statusChanged( const FeatureStateEvent& Event ) throw ( RuntimeException, std::exception )
+    {
+        SolarMutexGuard aSolarMutexGuard;
+        ::osl::MutexGuard aGuard(m_aMutex);
+        TCommandState::iterator aFind = m_aStates.find( Event.FeatureURL.Complete );
+        if ( aFind != m_aStates.end() )
         {
-			aFind->second = Event.IsEnabled;
+            aFind->second = Event.IsEnabled;
             if ( m_aCommandURL == aFind->first && !Event.IsEnabled )
             {
-                ::std::auto_ptr<PopupMenu> pMenu = getMenu();
+                ::std::unique_ptr<PopupMenu> pMenu = getMenu();
                 sal_uInt16 nCount = pMenu->GetItemCount();
                 for (sal_uInt16 i = 0; i < nCount; ++i)
                 {
@@ -237,29 +193,28 @@ namespace dbaui
                 }
             }
         }
-	}
-    // -----------------------------------------------------------------------------
-    ::std::auto_ptr<PopupMenu> OToolboxController::getMenu()
+    }
+    ::std::unique_ptr<PopupMenu> OToolboxController::getMenu()
     {
-        ::std::auto_ptr<PopupMenu> pMenu;
-		if ( m_aStates.size() > 2 )
-		{
-			pMenu.reset( new PopupMenu( ModuleRes( RID_MENU_APP_NEW ) ) );
+        ::std::unique_ptr<PopupMenu> pMenu;
+        if ( m_aStates.size() > 2 )
+        {
+            pMenu.reset( new PopupMenu( ModuleRes( RID_MENU_APP_NEW ) ) );
 
 #if defined USE_JAVA && defined MACOSX
 			if ( !pApplication_canUseJava )
 				pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
 			if ( !pApplication_canUseJava || !pApplication_canUseJava() )
 			{
-				static XubString aDBNewReport( RTL_CONSTASCII_USTRINGPARAM( ".uno:DBNewReport" ) );
-				static XubString aDBNewReportAutoPilot( RTL_CONSTASCII_USTRINGPARAM( ".uno:DBNewReportAutoPilot" ) );
+				static OUString aDBNewReport( ".uno:DBNewReport" );
+				static OUString aDBNewReportAutoPilot( ".uno:DBNewReportAutoPilot" );
 				PopupMenu *pPopup = pMenu.get();
 				if ( pPopup )
 				{
 					sal_uInt16 i = pPopup->GetItemCount();
 					while ( i )
 					{
-						XubString aCommand( pPopup->GetItemCommand( pPopup->GetItemId( --i ) ) );
+						OUString aCommand( pPopup->GetItemCommand( pPopup->GetItemId( --i ) ) );
 						if ( aCommand == aDBNewReport || aCommand == aDBNewReportAutoPilot )
 							pPopup->RemoveItem( i );
 					}
@@ -267,91 +222,80 @@ namespace dbaui
 			}
 #endif	// USE_JAVA && MACOSX
 
-			sal_Bool bHighContrast = isHighContrast();
+            try
+            {
+                Reference<XModuleUIConfigurationManagerSupplier> xModuleCfgMgrSupplier = theModuleUIConfigurationManagerSupplier::get( getContext() );
+                Reference<XUIConfigurationManager> xUIConfigMgr = xModuleCfgMgrSupplier->getUIConfigurationManager( OUString("com.sun.star.sdb.OfficeDatabaseDocument") );
+                Reference<XImageManager> xImageMgr(xUIConfigMgr->getImageManager(),UNO_QUERY);
 
-			try
-			{
-				Reference<XModuleUIConfigurationManagerSupplier> xModuleCfgMgrSupplier(getServiceManager()->createInstance(::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.ui.ModuleUIConfigurationManagerSupplier"))),UNO_QUERY);
-				Reference<XUIConfigurationManager> xUIConfigMgr = xModuleCfgMgrSupplier->getUIConfigurationManager(::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.sdb.OfficeDatabaseDocument")));
-				Reference<XImageManager> xImageMgr(xUIConfigMgr->getImageManager(),UNO_QUERY);
-
-
-				short nImageType = hasBigImages() ? ImageType::SIZE_LARGE : ImageType::SIZE_DEFAULT;
-				if ( bHighContrast )
-					nImageType |= ImageType::COLOR_HIGHCONTRAST;
-
-				Sequence< ::rtl::OUString> aSeq(1);
-				sal_uInt16 nCount = pMenu->GetItemCount();
-				for (sal_uInt16 nPos = 0; nPos < nCount; ++nPos)
-				{
-                    if ( pMenu->GetItemType( nPos ) == MENUITEM_SEPARATOR )
+                Sequence< OUString> aSeq(1);
+                sal_uInt16 nCount = pMenu->GetItemCount();
+                for (sal_uInt16 nPos = 0; nPos < nCount; ++nPos)
+                {
+                    if ( pMenu->GetItemType( nPos ) == MenuItemType::SEPARATOR )
                         continue;
 
-					sal_uInt16 nItemId = pMenu->GetItemId(nPos);
-					aSeq[0] = pMenu->GetItemCommand(nItemId);
-					Sequence< Reference<XGraphic> > aImages = xImageMgr->getImages(nImageType,aSeq);
+                    sal_uInt16 nItemId = pMenu->GetItemId(nPos);
+                    aSeq[0] = pMenu->GetItemCommand(nItemId);
+                    Sequence< Reference<XGraphic> > aImages = xImageMgr->getImages(ImageType::SIZE_DEFAULT, aSeq);
 
-					Image aImage(aImages[0]);
-					pMenu->SetItemImage(nItemId,aImage);
-					TCommandState::iterator aFind = m_aStates.find( aSeq[0] );
-					if ( aFind != m_aStates.end() )
-					{
-						pMenu->EnableItem(nItemId,aFind->second);
-					}
-				}
-			}
-			catch(const Exception&)
-			{
+                    Image aImage(aImages[0]);
+                    pMenu->SetItemImage(nItemId,aImage);
+                    TCommandState::iterator aFind = m_aStates.find( aSeq[0] );
+                    if ( aFind != m_aStates.end() )
+                    {
+                        pMenu->EnableItem(nItemId,aFind->second);
+                    }
+                }
+            }
+            catch(const Exception&)
+            {
                 DBG_UNHANDLED_EXCEPTION();
-			}
-		}
-		else
-		{
-			pMenu.reset( new PopupMenu( ModuleRes( RID_MENU_REFRESH_DATA ) ) );
-		}
+            }
+        }
+        else
+        {
+            pMenu.reset( new PopupMenu( ModuleRes( RID_MENU_REFRESH_DATA ) ) );
+        }
         return pMenu;
     }
-	// -----------------------------------------------------------------------------
-	Reference< ::com::sun::star::awt::XWindow > SAL_CALL OToolboxController::createPopupWindow() throw (RuntimeException)
-	{
-		// execute the menu
-		vos::OGuard aSolarMutexGuard( Application::GetSolarMutex() );
-		::osl::MutexGuard aGuard(m_aMutex);
 
-		ToolBox* pToolBox = static_cast<ToolBox*>(VCLUnoHelper::GetWindow(getParent()));
-        ::std::auto_ptr<PopupMenu> pMenu = getMenu();
+    Reference< ::com::sun::star::awt::XWindow > SAL_CALL OToolboxController::createPopupWindow() throw (RuntimeException, std::exception)
+    {
+        // execute the menu
+        SolarMutexGuard aSolarMutexGuard;
+        ::osl::MutexGuard aGuard(m_aMutex);
 
-		sal_uInt16 nSelected = pMenu->Execute(pToolBox, pToolBox->GetItemRect( m_nToolBoxId ),POPUPMENU_EXECUTE_DOWN);
-		// "cleanup" the toolbox state
-		Point aPoint = pToolBox->GetItemRect( m_nToolBoxId ).TopLeft();
-		MouseEvent aLeave( aPoint, 0, MOUSE_LEAVEWINDOW | MOUSE_SYNTHETIC );
-		pToolBox->MouseMove( aLeave );
-		pToolBox->SetItemDown( m_nToolBoxId, sal_False);
+        ToolBox* pToolBox = static_cast<ToolBox*>(VCLUnoHelper::GetWindow(getParent()));
+        ::std::unique_ptr<PopupMenu> pMenu = getMenu();
 
-		if ( nSelected )
-		{
+        sal_uInt16 nSelected = pMenu->Execute(pToolBox, pToolBox->GetItemRect( m_nToolBoxId ),POPUPMENU_EXECUTE_DOWN);
+        // "cleanup" the toolbox state
+        Point aPoint = pToolBox->GetItemRect( m_nToolBoxId ).TopLeft();
+        MouseEvent aLeave( aPoint, 0, MouseEventModifiers::LEAVEWINDOW | MouseEventModifiers::SYNTHETIC );
+        pToolBox->MouseMove( aLeave );
+        pToolBox->SetItemDown( m_nToolBoxId, false);
+
+        if ( nSelected )
+        {
             m_aCommandURL = pMenu->GetItemCommand(nSelected);
             lcl_copy(pMenu.get(),nSelected,pMenu->GetItemPos(nSelected),pToolBox,m_nToolBoxId, m_aCommandURL);
 
-			Reference<XDispatch> xDispatch = m_aListenerMap.find(m_aCommandURL)->second;
-			if ( xDispatch.is() )
-			{
-				URL aUrl;
-				Sequence < PropertyValue > aArgs;
-				aUrl.Complete = m_aCommandURL;
-				OSL_ENSURE(aUrl.Complete.getLength(),"Command is empty!");
-				if ( getURLTransformer().is() )
-					getURLTransformer()->parseStrict(aUrl);
-				xDispatch->dispatch(aUrl,aArgs);
+            Reference<XDispatch> xDispatch = m_aListenerMap.find(m_aCommandURL)->second;
+            if ( xDispatch.is() )
+            {
+                URL aUrl;
+                Sequence < PropertyValue > aArgs;
+                aUrl.Complete = m_aCommandURL;
+                OSL_ENSURE(!aUrl.Complete.isEmpty(),"Command is empty!");
+                if ( getURLTransformer().is() )
+                    getURLTransformer()->parseStrict(aUrl);
+                xDispatch->dispatch(aUrl,aArgs);
 
-			}
-		}
-		return Reference< ::com::sun::star::awt::XWindow >();
-	}
-	// -----------------------------------------------------------------------------
-	// -----------------------------------------------------------------------------
-//..........................................................................
+            }
+        }
+        return Reference< ::com::sun::star::awt::XWindow >();
+    }
 } // dbaui
-//..........................................................................
 
-
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
