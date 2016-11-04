@@ -386,7 +386,7 @@ endef
 # ResTarget
 
 ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
-gb_ResTarget_DEFIMAGESLOCATION := $(SRC_ROOT)/icon-themes/galaxy/
+gb_ResTarget_DEFIMAGESLOCATION := $(LIBO_SRCDIR)/icon-themes/galaxy/
 else	# PRODUCT_BUILD_TYPE == java
 gb_ResTarget_DEFIMAGESLOCATION := $(SRCDIR)/icon-themes/galaxy/
 endif	# PRODUCT_BUILD_TYPE == java

@@ -34,5 +34,5 @@
 ##########################################################################
 
 ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
-include $(SRC_ROOT)/Repository.mk
+include $(LIBO_SRCDIR)/Repository.mk
 endif

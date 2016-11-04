@@ -91,7 +91,7 @@ else # !SYSTEM_ODBC_HEADERS
 
 define gb_LinkTarget__use_odbc_headers
 $(call gb_LinkTarget_set_include,$(1),\
-	-I$(if $(filter $(PRODUCT_BUILD_TYPE),java),$(SRC_ROOT),$(SRCDIR))/external/unixODBC/inc \
+	-I$(if $(filter $(PRODUCT_BUILD_TYPE),java),$(LIBO_SRCDIR),$(SRCDIR))/external/unixODBC/inc \
 	$$(INCLUDE) \
 )
 

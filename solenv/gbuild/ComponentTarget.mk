@@ -51,8 +51,8 @@ $(call gb_ComponentTarget_get_clean_target,%) :
 # when a library is renamed, the component file needs to be rebuilt to match.
 # hence simply depend on Repository{,Fixes}.mk since the command runs quickly.
 $(call gb_ComponentTarget_get_target,%) : \
-		$(if $(filter $(PRODUCT_BUILD_TYPE),java),$(SRC_ROOT),$(SRCDIR))/Repository.mk \
-		$(if $(filter $(PRODUCT_BUILD_TYPE),java),$(SRC_ROOT),$(SRCDIR))/RepositoryFixes.mk \
+		$(if $(filter $(PRODUCT_BUILD_TYPE),java),$(LIBO_SRCDIR),$(SRCDIR))/Repository.mk \
+		$(if $(filter $(PRODUCT_BUILD_TYPE),java),$(LIBO_SRCDIR),$(SRCDIR))/RepositoryFixes.mk \
 		| $(call gb_ExternalExecutable_get_dependencies,xsltproc)
 	$(call gb_ComponentTarget__command,$@,$*)
 
