@@ -1,327 +1,196 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
+#include <sal/config.h>
 
+#include <cassert>
 
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_desktop.hxx"
-
+#include <boost/shared_ptr.hpp>
+#include <com/sun/star/uno/Exception.hpp>
+#include <comphelper/configuration.hxx>
+#include "config_folders.h"
+#include "officecfg/Setup.hxx"
+#include <osl/file.h>
+#include <osl/file.hxx>
+#include <rtl/ustring.hxx>
+#include <sal/log.hxx>
+#include <unotools/bootstrap.hxx>
 
 #include "userinstall.hxx"
-#include "langselect.hxx"
 
-#include <stdio.h>
-#include <rtl/ustring.hxx>
-#include <rtl/ustrbuf.hxx>
-#include <osl/file.hxx>
-#include <osl/mutex.hxx>
-#include <osl/process.h>
-#include <osl/diagnose.h>
-#include <vos/security.hxx>
-#include <vos/ref.hxx>
-#include <vos/process.hxx>
+namespace desktop { namespace userinstall {
 
-#ifndef _TOOLS_RESMGR_HXX_
-#include <tools/resmgr.hxx>
-#endif
-#include <unotools/bootstrap.hxx>
-#include <svl/languageoptions.hxx>
-#ifndef _SVTOOLS_SYSLOCALEOPTIONSOPTIONS_HXX
-#include <unotools/syslocaleoptions.hxx>
-#endif
-#include <comphelper/processfactory.hxx>
-#include <com/sun/star/container/XNameAccess.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/beans/XPropertySet.hpp>
-#include <i18npool/mslangid.hxx>
-#include <com/sun/star/uno/Any.hxx>
-#include <com/sun/star/util/XChangesBatch.hpp>
-#include <com/sun/star/beans/XHierarchicalPropertySet.hpp>
-#include <com/sun/star/beans/NamedValue.hpp>
-#include <com/sun/star/container/XHierarchicalNameAccess.hpp>
-#include <com/sun/star/lang/XComponent.hpp>
-#include <com/sun/star/lang/XLocalizable.hpp>
-#include <com/sun/star/lang/Locale.hpp>
+namespace {
 
-#include "app.hxx"
-
-using namespace rtl;
-using namespace osl;
-using namespace utl;
-using namespace com::sun::star::container;
-using namespace com::sun::star::uno;
-using namespace com::sun::star::lang;
-using namespace com::sun::star::beans;
-using namespace com::sun::star::util;
-
-
-namespace desktop {
-
-    static UserInstall::UserInstallError create_user_install(OUString&);
-
-    static bool is_user_install()
-    {
-        try
-        {
-            OUString sConfigSrvc(
-                 RTL_CONSTASCII_USTRINGPARAM(
-                    "com.sun.star.configuration.ConfigurationProvider" ) );
-            OUString sAccessSrvc(
-                 RTL_CONSTASCII_USTRINGPARAM(
-                    "com.sun.star.configuration.ConfigurationAccess" ) );
-
-            // get configuration provider
-            Reference< XMultiServiceFactory > theMSF
-                = comphelper::getProcessServiceFactory();
-            Reference< XMultiServiceFactory > theConfigProvider
-                = Reference< XMultiServiceFactory >(
-                    theMSF->createInstance(sConfigSrvc), UNO_QUERY_THROW);
-
-            // localize the provider to user selection
-//            Reference< XLocalizable > localizable(theConfigProvider, UNO_QUERY_THROW);
-//            LanguageType aUserLanguageType = LanguageSelection::getLanguageType();
-//            Locale aLocale( MsLangId::convertLanguageToIsoString(aUserLanguageType));
-//            localizable->setLocale(aLocale);
-
-            Reference< XLocalizable > localizable(theConfigProvider, UNO_QUERY_THROW);
-            OUString aUserLanguage = LanguageSelection::getLanguageString();
-            Locale aLocale = LanguageSelection::IsoStringToLocale(aUserLanguage);
-            localizable->setLocale(aLocale);
-
-            Sequence< Any > theArgs(1);
-            NamedValue v;
-            v.Name = OUString::createFromAscii("NodePath");
-            v.Value = makeAny(OUString::createFromAscii("org.openoffice.Setup"));
-            theArgs[0] <<= v;
-            Reference< XHierarchicalNameAccess> hnacc(
-                theConfigProvider->createInstanceWithArguments(
-                    sAccessSrvc, theArgs), UNO_QUERY_THROW);
-
-            try
-            {
-                sal_Bool bValue = sal_False;
-                hnacc->getByHierarchicalName(
-                        OUString( RTL_CONSTASCII_USTRINGPARAM(
-                            "Office/ooSetupInstCompleted" ) ) ) >>= bValue;
-
-                return bValue ? true : false;
-            }
-            catch ( NoSuchElementException const & )
-            {
-                // just return false in this case.
-            }
-        }
-        catch (Exception const & e)
-        {
-            OString msg(OUStringToOString(e.Message, RTL_TEXTENCODING_ASCII_US));
-            OSL_ENSURE(sal_False, msg.getStr());
-        }
-
-        return false;
+#if !(defined ANDROID || defined IOS)
+osl::FileBase::RC copyRecursive(
+    OUString const & srcUri, OUString const & dstUri)
+{
+    osl::DirectoryItem item;
+    osl::FileBase::RC e = osl::DirectoryItem::get(srcUri, item);
+    if (e != osl::FileBase::E_None) {
+        return e;
     }
-
-    UserInstall::UserInstallError UserInstall::finalize()
-    {
-        OUString aUserInstallPath;
-        utl::Bootstrap::PathStatus aLocateResult =
-            utl::Bootstrap::locateUserInstallation(aUserInstallPath);
-
-        switch (aLocateResult) {
-
-            case utl::Bootstrap::DATA_INVALID:
-            case utl::Bootstrap::DATA_MISSING:
-            case utl::Bootstrap::DATA_UNKNOWN:
-                // cannot find a valid path or path is missing
-                return E_Unknown;
-
-            case utl::Bootstrap::PATH_EXISTS:
-            {
-                // path exists, check if an installation lives there
-                if ( is_user_install() )
-                {
-                    return E_None;
-                }
-                // Note: fall-thru intended.
-            }
-            case utl::Bootstrap::PATH_VALID:
-                // found a path but need to create user install
-                return create_user_install(aUserInstallPath);
-            default:
-                return E_Unknown;
-        }
+    osl::FileStatus stat1(osl_FileStatus_Mask_Type);
+    e = item.getFileStatus(stat1);
+    if (e != osl::FileBase::E_None) {
+        return e;
     }
-
-    static osl::FileBase::RC copy_recursive( const rtl::OUString& srcUnqPath, const rtl::OUString& dstUnqPath)
-    {
-
-        FileBase::RC err;
-        DirectoryItem aDirItem;
-        DirectoryItem::get(srcUnqPath, aDirItem);
-        FileStatus aFileStatus(FileStatusMask_All);
-        aDirItem.getFileStatus(aFileStatus);
-
-        if( aFileStatus.getFileType() == FileStatus::Directory)
-        {
-            // create directory if not already there
-            err = Directory::create( dstUnqPath );
-            if (err == osl::FileBase::E_EXIST)
-                err = osl::FileBase::E_None;
-
+    if (stat1.getFileType() == osl::FileStatus::Directory) {
+        e = osl::Directory::create(dstUri);
+        if (e != osl::FileBase::E_None && e != osl::FileBase::E_EXIST) {
+            return e;
+        }
 #ifdef USE_JAVA
-            if ( err == FileBase::E_None )
-            {
-                // Fix bug 1544 by ensuring that destination directory is
-                // readable, writable, and executable
-                FileStatus aDstDirStatus(FileStatusMask_Attributes);
-                aDirItem.getFileStatus( aDstDirStatus );
-                File::setAttributes( dstUnqPath, Attribute_OwnRead | Attribute_OwnWrite | Attribute_OwnExe | aDstDirStatus.getAttributes() );
-            }
-#endif	// USE_JAVA
-
-            FileBase::RC next = err;
-            if (err == osl::FileBase::E_None)
-            {
-                // iterate through directory contents
-                Directory aDir( srcUnqPath );
-                aDir.open();
-                while (err ==  osl::FileBase::E_None &&
-                    (next = aDir.getNextItem( aDirItem )) == osl::FileBase::E_None)
-                {
-                    aDirItem.getFileStatus(aFileStatus);
-                    // generate new src/dst pair and make recursive call
-                    rtl::OUString newSrcUnqPath = aFileStatus.getFileURL();
-                    rtl::OUString newDstUnqPath = dstUnqPath;
-                    rtl::OUString itemname = aFileStatus.getFileName();
-                    // append trailing '/' if needed
-                    if (newDstUnqPath.lastIndexOf(sal_Unicode('/')) != newDstUnqPath.getLength()-1)
-                        newDstUnqPath += rtl::OUString::createFromAscii("/");
-                    newDstUnqPath += itemname;
-                    // recursion
-                    err = copy_recursive(newSrcUnqPath, newDstUnqPath);
-                }
-                aDir.close();
-
-                if ( err != osl::FileBase::E_None )
-                    return err;
-                if( next != FileBase::E_NOENT )
-                    err = FileBase::E_INVAL;
-            }
-        }
         else
         {
-            // copy single file - foldback
-            err = File::copy( srcUnqPath,dstUnqPath );
-#ifdef USE_JAVA
-            if ( err == FileBase::E_None )
-            {
-                // Fix bug 1544 by ensuring that destination file is readable
-                // and writable
-                FileStatus aDstFileStatus(FileStatusMask_Attributes);
-                aDirItem.getFileStatus( aDstFileStatus );
-                File::setAttributes( dstUnqPath, Attribute_OwnRead | Attribute_OwnWrite | aDstFileStatus.getAttributes() );
-            }
+            // Fix bug 1544 by ensuring that destination directory is
+            // readable, writable, and executable
+            osl::FileStatus aDstDirStatus( osl_FileStatus_Mask_Attributes );
+            item.getFileStatus( aDstDirStatus );
+            osl::File::setAttributes( dstUri, osl_File_Attribute_OwnRead | osl_File_Attribute_OwnWrite | osl_File_Attribute_OwnExe | aDstDirStatus.getAttributes() );
+        }
 #endif	// USE_JAVA
+
+        osl::Directory dir(srcUri);
+        e = dir.open();
+        if (e != osl::FileBase::E_None) {
+            return e;
         }
-        return err;
-    }
-
-    static const char *pszSrcList[] = {
-        "/presets",
-        NULL
-    };
-    static const char *pszDstList[] = {
-        "/user",
-        NULL
-    };
-
-
-    static UserInstall::UserInstallError create_user_install(OUString& aUserPath)
-    {
-        OUString aBasePath;
-        if (utl::Bootstrap::locateBaseInstallation(aBasePath) != utl::Bootstrap::PATH_EXISTS)
-            return UserInstall::E_InvalidBaseinstall;
-
-        // create the user directory
-        FileBase::RC rc = Directory::createPath(aUserPath);
-        if ((rc != FileBase::E_None) && (rc != FileBase::E_EXIST)) return UserInstall::E_Creation;
-
-            // copy data from shared data directory of base installation
-        for (sal_Int32 i=0; pszSrcList[i]!=NULL && pszDstList[i]!=NULL; i++)
-        {
-            rc = copy_recursive(
-                    aBasePath + OUString::createFromAscii(pszSrcList[i]),
-                    aUserPath + OUString::createFromAscii(pszDstList[i]));
-            if ((rc != FileBase::E_None) && (rc != FileBase::E_EXIST))
-            {
-                if ( rc == FileBase::E_NOSPC )
-                    return UserInstall::E_NoDiskSpace;
-                else if ( rc == FileBase::E_ACCES )
-                    return UserInstall::E_NoWriteAccess;
-                else
-                    return UserInstall::E_Creation;
+        for (;;) {
+            e = dir.getNextItem(item);
+            if (e == osl::FileBase::E_NOENT) {
+                break;
+            }
+            if (e != osl::FileBase::E_None) {
+                return e;
+            }
+            osl::FileStatus stat2(
+                osl_FileStatus_Mask_FileName | osl_FileStatus_Mask_FileURL);
+            e = item.getFileStatus(stat2);
+            if (e != osl::FileBase::E_None) {
+                return e;
+            }
+            assert(!dstUri.endsWith("/"));
+            e = copyRecursive(
+                stat2.getFileURL(), dstUri + "/" + stat2.getFileName());
+                // assumes that all files under presets/ have names that can be
+                // copied unencoded into file URLs
+            if (e != osl::FileBase::E_None) {
+                return e;
             }
         }
-        try
-        {
-            OUString sConfigSrvc = OUString::createFromAscii("com.sun.star.configuration.ConfigurationProvider");
-            OUString sAccessSrvc = OUString::createFromAscii("com.sun.star.configuration.ConfigurationUpdateAccess");
-
-            // get configuration provider
-            Reference< XMultiServiceFactory > theMSF = comphelper::getProcessServiceFactory();
-            Reference< XMultiServiceFactory > theConfigProvider = Reference< XMultiServiceFactory >(
-                theMSF->createInstance(sConfigSrvc), UNO_QUERY_THROW);
-            Sequence< Any > theArgs(1);
-            NamedValue v(OUString::createFromAscii("NodePath"), makeAny(OUString::createFromAscii("org.openoffice.Setup")));
-            //v.Name = OUString::createFromAscii("NodePath");
-            //v.Value = makeAny(OUString::createFromAscii("org.openoffice.Setup"));
-            theArgs[0] <<= v;
-            Reference< XHierarchicalPropertySet> hpset(
-                theConfigProvider->createInstanceWithArguments(sAccessSrvc, theArgs), UNO_QUERY_THROW);
-            hpset->setHierarchicalPropertyValue(OUString::createFromAscii("Office/ooSetupInstCompleted"), makeAny(sal_True));
-            Reference< XChangesBatch >(hpset, UNO_QUERY_THROW)->commitChanges();
+        e = dir.close();
+    } else {
+        e = osl::File::copy(srcUri, dstUri);
+        if (e == osl::FileBase::E_EXIST) {
+            // Assume an earlier attempt failed half-way through:
+            e = osl::FileBase::E_None;
         }
-        catch ( PropertyVetoException& )
+#ifdef USE_JAVA
+        if ( e == osl::FileBase::E_None )
         {
-            // we are not allowed to change this
+            // Fix bug 1544 by ensuring that destination file is readable
+            // and writable
+            osl::FileStatus aDstFileStatus( osl_FileStatus_Mask_Attributes );
+            item.getFileStatus( aDstFileStatus );
+            osl::File::setAttributes( dstUri, osl_File_Attribute_OwnRead | osl_File_Attribute_OwnWrite | aDstFileStatus.getAttributes() );
         }
-        catch (Exception& e)
-        {
-            OString aMsg("create_user_install(): ");
-            aMsg += OUStringToOString(e.Message, RTL_TEXTENCODING_ASCII_US);
-            OSL_ENSURE(sal_False, aMsg.getStr());
-            return UserInstall::E_Creation;
-        }
+#endif	// USE_JAVA
+    }
+    return e;
+}
+#endif
 
-        return UserInstall::E_None;
+Status create(OUString const & uri) {
+    osl::FileBase::RC e = osl::Directory::createPath(uri);
+    if (e != osl::FileBase::E_None && e != osl::FileBase::E_EXIST) {
+        return ERROR_OTHER;
+    }
+#if !(defined ANDROID || defined IOS)
+#if defined UNIX
+    // Set safer permissions for the user directory by default:
+    osl::File::setAttributes(
+        uri,
+        (osl_File_Attribute_OwnWrite | osl_File_Attribute_OwnRead
+         | osl_File_Attribute_OwnExe));
+#endif
+    // As of now osl_copyFile does not work on Android => don't do this:
+    OUString baseUri;
+    if (utl::Bootstrap::locateBaseInstallation(baseUri)
+        != utl::Bootstrap::PATH_EXISTS)
+    {
+        return ERROR_OTHER;
+    }
+    switch (copyRecursive(
+                baseUri + "/" LIBO_SHARE_PRESETS_FOLDER, uri + "/user"))
+    {
+    case osl::FileBase::E_None:
+        break;
+    case osl::FileBase::E_ACCES:
+        return ERROR_CANT_WRITE;
+    case osl::FileBase::E_NOSPC:
+        return ERROR_NO_SPACE;
+    default:
+        return ERROR_OTHER;
+    }
+#endif
+    boost::shared_ptr<comphelper::ConfigurationChanges> batch(
+        comphelper::ConfigurationChanges::create());
+    officecfg::Setup::Office::ooSetupInstCompleted::set(true, batch);
+    batch->commit();
+    return CREATED;
+}
 
+bool isCreated() {
+    try {
+        return officecfg::Setup::Office::ooSetupInstCompleted::get();
+    } catch (css::uno::Exception & e) {
+        SAL_WARN("desktop.app", "ignoring Exception \"" << e.Message << "\"");
+        return false;
     }
 }
 
+}
 
+Status finalize() {
+    OUString uri;
+    switch (utl::Bootstrap::locateUserInstallation(uri)) {
+    case utl::Bootstrap::PATH_EXISTS:
+        if (isCreated()) {
+            return EXISTED;
+        }
+        // fall through
+    case utl::Bootstrap::PATH_VALID:
+        return create(uri);
+    default:
+        return ERROR_OTHER;
+    }
+}
+
+} }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

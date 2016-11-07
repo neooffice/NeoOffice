@@ -34,8 +34,6 @@
  ************************************************************************/
 
 #include <dlfcn.h>
-#include <stdio.h>
-#include <string>
 
 #import <Cocoa/Cocoa.h>
 
@@ -242,16 +240,12 @@ int java_main( int argc, char **argv )
 	// that does not support softlinks. Use a shared library for this check as
 	// many extensions are linked to shared libraries using @executable_path.
 	NSFileManager *pFileManager = [NSFileManager defaultManager];
-	NSString *pSalDylibPath = [pBundlePath stringByAppendingPathComponent:@"Contents"];
-	if ( pSalDylibPath )
+	NSString *pProgramPath = [pBundlePath stringByAppendingPathComponent:@"Contents"];
+	if ( pProgramPath )
+		pProgramPath = [pProgramPath stringByAppendingPathComponent:@"program"];
+	if ( !pFileManager || !pProgramPath || ![pFileManager destinationOfSymbolicLinkAtPath:pProgramPath error:nil] )
 	{
-		pSalDylibPath = [pSalDylibPath stringByAppendingPathComponent:@"MacOS"];
-		if ( pSalDylibPath )
-			pSalDylibPath = [pSalDylibPath stringByAppendingPathComponent:@"libuno_sal.dylib.3"];
-	}
-	if ( !pFileManager || !pSalDylibPath || ![pFileManager destinationOfSymbolicLinkAtPath:pSalDylibPath error:nil] )
-	{
-		NSLog( @"Application's main bundle path missing \"MacOS/%@\" softlink", pSalDylibPath );
+		NSLog( @"Application's main bundle path missing \"%@\" softlink", pProgramPath );
 		[pPool release];
 		_exit( 1 );
 	}
@@ -288,9 +282,9 @@ int java_main( int argc, char **argv )
 	NSString *pTmpDir = GetNSTemporaryDirectory();
 	NSString *pTmpEnv = [NSString stringWithFormat:@"TMPDIR=%@", pTmpDir];
 	putenv( strdup( [pTmpEnv UTF8String] ) );
-	pTmpEnv = [NSString stringWithFormat:@"TMP=%@", pTmpDir];
-	putenv( strdup( [pTmpEnv UTF8String] ) );
 	pTmpEnv = [NSString stringWithFormat:@"TEMP=%@", pTmpDir];
+	putenv( strdup( [pTmpEnv UTF8String] ) );
+	pTmpEnv = [NSString stringWithFormat:@"TMP=%@", pTmpDir];
 	putenv( strdup( [pTmpEnv UTF8String] ) );
 
 
@@ -311,14 +305,11 @@ int java_main( int argc, char **argv )
 	// Assign command's directory to PATH environment variable
   	const char *pEnvPath = getenv( "PATH" );
 	NSString *pPath = ( pEnvPath ? [NSString stringWithUTF8String:pEnvPath] : nil );
-	NSString *pStandardPath = [NSString stringWithFormat:@"%@/Contents/MacOS:%@/Contents/program:/bin:/sbin:/usr/bin:/usr/sbin:", pBundlePath, pBundlePath];
-	if ( !pPath || [pPath length] < [pStandardPath length] || [pPath compare:pStandardPath options:NSLiteralSearch range:NSMakeRange( 0, [pStandardPath length] )] != NSOrderedSame )
-	{
-		NSString *pPathEnv = [NSString stringWithFormat:@"PATH=%@", pStandardPath];
-		if ( pPath )
-			pPathEnv = [pPathEnv stringByAppendingFormat:@":%@", pPath];
-		putenv( strdup( [pPathEnv UTF8String] ) );
-	}
+	NSString *pStandardPath = [NSString stringWithFormat:@"%@/Contents/MacOS:/bin:/sbin:/usr/bin:/usr/sbin:", pBundlePath];
+	NSString *pPathEnv = [NSString stringWithFormat:@"PATH=%@", pStandardPath];
+	if ( pPath )
+		pPathEnv = [pPathEnv stringByAppendingFormat:@":%@", pPath];
+	putenv( strdup( [pPathEnv UTF8String] ) );
 
 	// Fix bug 1198 and eliminate "libzip.jnilib not found" crashes by
 	// unsetting DYLD_FRAMEWORK_PATH
@@ -334,7 +325,7 @@ int java_main( int argc, char **argv )
 		putenv( strdup( [pFrameworkPathEnv UTF8String] ) );
 	}
 
-	NSString *pStandardLibPath = [NSString stringWithFormat:@"%@/Contents/MacOS:%@/Contents/program:/usr/lib:/usr/local/lib:", pBundlePath, pBundlePath];
+	NSString *pStandardLibPath = [NSString stringWithFormat:@"%@/Contents/MacOS:%@/Contents/Frameworks:/usr/lib:/usr/local/lib:", pBundlePath, pBundlePath];
 	const char *pEnvLibPath = getenv( "LD_LIBRARY_PATH" );
 	NSString *pLibPath = ( pEnvLibPath ? [NSString stringWithUTF8String:pEnvLibPath] : nil );
 	const char *pEnvDyLibPath = getenv( "DYLD_LIBRARY_PATH" );
@@ -344,17 +335,14 @@ int java_main( int argc, char **argv )
 	// Always unset LD_LIBRARY_PATH and DYLD_LIBRARY_PATH
 	unsetenv( "LD_LIBRARY_PATH" );
 	unsetenv( "DYLD_LIBRARY_PATH" );
-	if ( !pDyFallbackLibPath || [pDyFallbackLibPath length] < [pStandardLibPath length] || [pDyFallbackLibPath compare:pStandardLibPath options:NSLiteralSearch range:NSMakeRange( 0, [pStandardLibPath length] )] != NSOrderedSame )
-	{
-		NSString *pDyFallbackLibPathEnv = [NSString stringWithFormat:@"DYLD_FALLBACK_LIBRARY_PATH=%@", pStandardLibPath];
-		if ( pLibPath )
-			pDyFallbackLibPathEnv = [pDyFallbackLibPathEnv stringByAppendingFormat:@":%@", pLibPath];
-		if ( pDyLibPath )
-			pDyFallbackLibPathEnv = [pDyFallbackLibPathEnv stringByAppendingFormat:@":%@", pDyLibPath];
-		if ( pDyFallbackLibPath )
-			pDyFallbackLibPathEnv = [pDyFallbackLibPathEnv stringByAppendingFormat:@":%@", pDyFallbackLibPath];
-		putenv( strdup( [pDyFallbackLibPathEnv UTF8String] ) );
-	}
+	NSString *pDyFallbackLibPathEnv = [NSString stringWithFormat:@"DYLD_FALLBACK_LIBRARY_PATH=%@", pStandardLibPath];
+	if ( pLibPath )
+		pDyFallbackLibPathEnv = [pDyFallbackLibPathEnv stringByAppendingFormat:@":%@", pLibPath];
+	if ( pDyLibPath )
+		pDyFallbackLibPathEnv = [pDyFallbackLibPathEnv stringByAppendingFormat:@":%@", pDyLibPath];
+	if ( pDyFallbackLibPath )
+		pDyFallbackLibPathEnv = [pDyFallbackLibPathEnv stringByAppendingFormat:@":%@", pDyFallbackLibPath];
+	putenv( strdup( [pDyFallbackLibPathEnv UTF8String] ) );
 
 	if ( bUnoPkg )
 	{
@@ -449,48 +437,6 @@ int java_main( int argc, char **argv )
 			}
 		}
 
-		NSString *pPageinPath = [NSString stringWithFormat:@"%@/Contents/program/pagein", pBundlePath];
-		if ( !access( [pPageinPath UTF8String], R_OK | X_OK ) )
-		{
-			int nCurrentArg = 0;
-			char *pPageinArgs[ argc + 3 ];
-			pPageinArgs[ nCurrentArg++ ] = (char *)[pPageinPath UTF8String];
-			NSString *pPageinSearchArg = [NSString stringWithFormat:@"-L%@/Contents/program", pBundlePath];
-			pPageinArgs[ nCurrentArg++ ] = (char *)[pPageinSearchArg UTF8String];
-			int i = 1;
-			for ( ; i < argc; i++ )
-			{
-				if ( !strcmp( "-calc", argv[ i ] ) )
-					pPageinArgs[ nCurrentArg++ ] = strdup( "@pagein-calc" );
-				else if ( !strcmp( "-draw", argv[ i ] ) )
-					pPageinArgs[ nCurrentArg++ ] = strdup( "@pagein-draw" );
-				else if ( !strcmp( "-impress", argv[ i ] ) )
-					pPageinArgs[ nCurrentArg++ ] = strdup( "@pagein-impress" );
-				else if ( !strcmp( "-writer", argv[ i ] ) )
-					pPageinArgs[ nCurrentArg++ ] = strdup( "@pagein-writer" );
-			}
-			if ( nCurrentArg == 1 )
-				pPageinArgs[ nCurrentArg++ ] = strdup( "@pagein-writer" );
-			pPageinArgs[ nCurrentArg++ ] = strdup( "@pagein-common" );
-			pPageinArgs[ nCurrentArg++ ] = NULL;
-
-			// Execute the pagein command in child process
-			pid_t pid = fork();
-			if ( !pid )
-			{
-				close( 0 );
-				execvp( [pPageinPath UTF8String], pPageinArgs );
-				_exit( 1 );
-			}
-			else if ( pid > 0 )
-			{
-				// Invoke waitpid to prevent zombie processes
-				int status;
-				while ( waitpid( pid, &status, 0 ) > 0 && EINTR == errno )
-					usleep( 10 );
-			}
-		}
-
 		// If this Mac OS X version is not supported, try to open the bundled
 		// "unsupported_macosx_version.html" file in the default web browser
 		if ( Application_canUseJava() && !IsSupportedMacOSXVersion() )
@@ -535,9 +481,9 @@ int java_main( int argc, char **argv )
 	// Dynamically load app's main symbol to improve startup speed
 	NSString *pAppMainLibPath = nil;
 	if ( bUnoPkg )
-		pAppMainLibPath = [NSString stringWithFormat:@"%@/Contents/program/libunopkgapp.dylib", pBundlePath];
+		pAppMainLibPath = [NSString stringWithFormat:@"%@/Contents/Frameworks/libunopkgapp.dylib", pBundlePath];
 	else
-		pAppMainLibPath = [NSString stringWithFormat:@"%@/Contents/program/libsofficeapp.dylib", pBundlePath];
+		pAppMainLibPath = [NSString stringWithFormat:@"%@/Contents/Frameworks/libsofficeapp.dylib", pBundlePath];
 
 	void *pAppMainLib = NULL;
 	if ( pAppMainLibPath )

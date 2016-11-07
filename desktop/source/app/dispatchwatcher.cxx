@@ -1,48 +1,47 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
 
+#include <sfx2/docfile.hxx>
+#include <sfx2/docfilt.hxx>
+#include <sfx2/fcontnr.hxx>
+#include <sfx2/app.hxx>
+#include <svl/fstathelper.hxx>
 
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_desktop.hxx"
-
+#include "app.hxx"
 #include "dispatchwatcher.hxx"
 #include <rtl/ustring.hxx>
-#include <tools/string.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/synchronousdispatch.hxx>
 #include <com/sun/star/util/XCloseable.hpp>
 #include <com/sun/star/util/CloseVetoException.hpp>
-#include <com/sun/star/task/XInteractionHandler.hpp>
+#include <com/sun/star/task/InteractionHandler.hpp>
 #include <com/sun/star/util/URL.hpp>
-#include <com/sun/star/frame/XDesktop.hpp>
+#include <com/sun/star/frame/Desktop.hpp>
+#include <com/sun/star/container/XContainerQuery.hpp>
 #include <com/sun/star/container/XEnumeration.hpp>
 #include <com/sun/star/frame/XFramesSupplier.hpp>
 #include <com/sun/star/frame/XDispatch.hpp>
@@ -50,16 +49,23 @@
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/view/XPrintable.hpp>
 #include <com/sun/star/frame/XDispatchProvider.hpp>
+#include <com/sun/star/util/URLTransformer.hpp>
 #include <com/sun/star/util/XURLTransformer.hpp>
 #include <com/sun/star/document/MacroExecMode.hpp>
+#include <com/sun/star/document/XTypeDetection.hpp>
 #include <com/sun/star/document/UpdateDocMode.hpp>
+#include <com/sun/star/frame/XStorable.hpp>
 
 #include <tools/urlobj.hxx>
-#include <comphelper/mediadescriptor.hxx>
+#include <unotools/mediadescriptor.hxx>
 
 #include <vector>
+#include <osl/thread.hxx>
+#include <osl/file.hxx>
+#include <osl/file.h>
+#include <rtl/instance.hxx>
+#include <iostream>
 
-using namespace ::rtl;
 using namespace ::osl;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::util;
@@ -68,38 +74,117 @@ using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::view;
+using namespace ::com::sun::star::task;
+
+namespace document = ::com::sun::star::document;
 
 namespace desktop
 {
 
-String GetURL_Impl(
-    const String& rName, boost::optional< rtl::OUString > const & cwdUrl );
-
 struct DispatchHolder
 {
-	DispatchHolder( const URL& rURL, Reference< XDispatch >& rDispatch ) :
-		aURL( rURL ), xDispatch( rDispatch ) {}
+    DispatchHolder( const URL& rURL, Reference< XDispatch >& rDispatch ) :
+        aURL( rURL ), xDispatch( rDispatch ) {}
 
-	URL	aURL;
-    rtl::OUString cwdUrl;
-	Reference< XDispatch > xDispatch;
+    URL aURL;
+    OUString cwdUrl;
+    Reference< XDispatch > xDispatch;
 };
 
-Mutex* DispatchWatcher::pWatcherMutex = NULL;
+namespace
+{
+
+const SfxFilter* impl_lookupExportFilterForUrl( const rtl::OUString& rUrl, const rtl::OUString& rFactory )
+{
+    // create the list of filters
+    OUStringBuffer sQuery(256);
+    sQuery.append("getSortedFilterList()");
+    sQuery.append(":module=");
+    sQuery.append(rFactory); // use long name here !
+    sQuery.append(":iflags=");
+    sQuery.append(OUString::number(SFX_FILTER_EXPORT));
+    sQuery.append(":eflags=");
+    sQuery.append(OUString::number(SFX_FILTER_NOTINSTALLED));
+
+    const Reference< XComponentContext > xContext( comphelper::getProcessComponentContext() );
+    const Reference< XContainerQuery > xFilterFactory(
+            xContext->getServiceManager()->createInstanceWithContext( "com.sun.star.document.FilterFactory", xContext ),
+            UNO_QUERY_THROW );
+
+    const SfxFilter* pBestMatch = 0;
+
+    const Reference< XEnumeration > xFilterEnum(
+            xFilterFactory->createSubSetEnumerationByQuery( sQuery.makeStringAndClear() ), UNO_QUERY_THROW );
+    while ( xFilterEnum->hasMoreElements() )
+    {
+        comphelper::SequenceAsHashMap aFilterProps( xFilterEnum->nextElement() );
+        const rtl::OUString aName( aFilterProps.getUnpackedValueOrDefault( "Name", rtl::OUString() ) );
+        if ( !aName.isEmpty() )
+        {
+            const SfxFilter* const pFilter( SfxFilter::GetFilterByName( aName ) );
+            if ( pFilter && pFilter->CanExport() && pFilter->GetWildcard().Matches( rUrl ) )
+            {
+                if ( !pBestMatch || ( SFX_FILTER_PREFERED & pFilter->GetFilterFlags() ) )
+                    pBestMatch = pFilter;
+            }
+        }
+    }
+
+    return pBestMatch;
+}
+
+const SfxFilter* impl_getExportFilterFromUrl( const rtl::OUString& rUrl, const rtl::OUString& rFactory ) try
+{
+    const Reference< XComponentContext > xContext( comphelper::getProcessComponentContext() );
+    const Reference< document::XTypeDetection > xTypeDetector(
+            xContext->getServiceManager()->createInstanceWithContext( "com.sun.star.document.TypeDetection", xContext ),
+            UNO_QUERY_THROW );
+    const rtl::OUString aTypeName( xTypeDetector->queryTypeByURL( rUrl ) );
+
+    const SfxFilter* pFilter( SfxFilterMatcher( rFactory ).GetFilter4EA( aTypeName, SFX_FILTER_EXPORT ) );
+    if ( !pFilter )
+        pFilter = impl_lookupExportFilterForUrl( rUrl, rFactory );
+    if ( !pFilter )
+    {
+        OUString aTempName;
+        FileBase::getSystemPathFromFileURL( rUrl, aTempName );
+        OString aSource = OUStringToOString ( aTempName, osl_getThreadTextEncoding() );
+        OString aFactory = OUStringToOString ( rFactory, osl_getThreadTextEncoding() );
+        std::cerr << "Error:  no export filter for " << aSource << " found, now using the default filter for " << aFactory << std::endl;
+
+        pFilter = SfxFilter::GetDefaultFilterFromFactory( rFactory );
+    }
+
+    return pFilter;
+}
+catch ( const Exception& )
+{
+    return 0;
+}
+
+OUString impl_GuessFilter( const OUString& rUrlOut, const OUString& rDocService )
+{
+    OUString aOutFilter;
+    const SfxFilter* pOutFilter = impl_getExportFilterFromUrl( rUrlOut, rDocService );
+    if (pOutFilter)
+        aOutFilter = pOutFilter->GetFilterName();
+
+    return aOutFilter;
+}
+
+}
+
+namespace
+{
+    class theWatcherMutex : public rtl::Static<Mutex, theWatcherMutex> {};
+}
 
 Mutex& DispatchWatcher::GetMutex()
 {
-	if ( !pWatcherMutex )
-	{
-		::osl::MutexGuard aGuard( ::osl::Mutex::getGlobalMutex() );
-		if ( !pWatcherMutex )
-			pWatcherMutex = new osl::Mutex();
-	}
-
-	return *pWatcherMutex;
+    return theWatcherMutex::get();
 }
 
-// Create or get the dispatch watcher implementation. This implementation must be 
+// Create or get the dispatch watcher implementation. This implementation must be
 // a singleton to prevent access to the framework after it wants to terminate.
 DispatchWatcher* DispatchWatcher::GetDispatchWatcher()
 {
@@ -107,17 +192,17 @@ DispatchWatcher* DispatchWatcher::GetDispatchWatcher()
     static DispatchWatcher*        pDispatchWatcher = NULL;
 
     if ( !xDispatchWatcher.is() )
-	{
-		::osl::MutexGuard aGuard( GetMutex() );
+    {
+        ::osl::MutexGuard aGuard( GetMutex() );
 
-		if ( !xDispatchWatcher.is() )
+        if ( !xDispatchWatcher.is() )
         {
-			pDispatchWatcher = new DispatchWatcher();
-            
+            pDispatchWatcher = new DispatchWatcher();
+
             // We have to hold a reference to ourself forever to prevent our own destruction.
             xDispatchWatcher = static_cast< cppu::OWeakObject *>( pDispatchWatcher );
         }
-	}
+    }
 
     return pDispatchWatcher;
 }
@@ -134,74 +219,87 @@ DispatchWatcher::~DispatchWatcher()
 }
 
 
-sal_Bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequestsList, bool bNoTerminate )
+bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequestsList, bool bNoTerminate )
 {
-    Reference< XComponentLoader > xDesktop( ::comphelper::getProcessServiceFactory()->createInstance(
-												OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop")) ),
-											UNO_QUERY );
+    Reference< XDesktop2 > xDesktop = css::frame::Desktop::create( ::comphelper::getProcessComponentContext() );
 
-	DispatchList::const_iterator	p;
-	std::vector< DispatchHolder >	aDispatches;
-	::rtl::OUString					aAsTemplateArg( RTL_CONSTASCII_USTRINGPARAM( "AsTemplate"));
+    DispatchList::const_iterator    p;
+    std::vector< DispatchHolder >   aDispatches;
+    OUString                 aAsTemplateArg( "AsTemplate" );
+    bool                     bSetInputFilter = false;
+    OUString                 aForcedInputFilter;
 
-	for ( p = aDispatchRequestsList.begin(); p != aDispatchRequestsList.end(); p++ )
-	{
-        String					aPrinterName;
-		const DispatchRequest&	aDispatchRequest = *p;
+    for ( p = aDispatchRequestsList.begin(); p != aDispatchRequestsList.end(); ++p )
+    {
+        const DispatchRequest&  aDispatchRequest = *p;
 
         // create parameter array
         sal_Int32 nCount = 4;
-        if ( aDispatchRequest.aPreselectedFactory.getLength() )
+        if ( !aDispatchRequest.aPreselectedFactory.isEmpty() )
             nCount++;
 
-		// we need more properties for a print/print to request
-		if ( aDispatchRequest.aRequestType == REQUEST_PRINT ||
-			 aDispatchRequest.aRequestType == REQUEST_PRINTTO  )
+        // Set Input Filter
+        if ( aDispatchRequest.aRequestType == REQUEST_INFILTER )
+        {
+            bSetInputFilter = true;
+            aForcedInputFilter = aDispatchRequest.aURL;
+            OfficeIPCThread::RequestsCompleted( 1 );
+            continue;
+        }
+
+        // we need more properties for a print/print to request
+        if ( aDispatchRequest.aRequestType == REQUEST_PRINT ||
+             aDispatchRequest.aRequestType == REQUEST_PRINTTO ||
+             aDispatchRequest.aRequestType == REQUEST_BATCHPRINT ||
+             aDispatchRequest.aRequestType == REQUEST_CONVERSION)
             nCount++;
 
         Sequence < PropertyValue > aArgs( nCount );
 
         // mark request as user interaction from outside
-        aArgs[0].Name = ::rtl::OUString::createFromAscii("Referer");
-        aArgs[0].Value <<= ::rtl::OUString::createFromAscii("private:OpenEvent");
+        aArgs[0].Name = "Referer";
+        aArgs[0].Value <<= OUString("private:OpenEvent");
 
         if ( aDispatchRequest.aRequestType == REQUEST_PRINT ||
-			 aDispatchRequest.aRequestType == REQUEST_PRINTTO )
+             aDispatchRequest.aRequestType == REQUEST_PRINTTO ||
+             aDispatchRequest.aRequestType == REQUEST_BATCHPRINT ||
+             aDispatchRequest.aRequestType == REQUEST_CONVERSION)
         {
-            aArgs[1].Name = ::rtl::OUString::createFromAscii("ReadOnly");
-            aArgs[2].Name = ::rtl::OUString::createFromAscii("OpenNewView");
-            aArgs[3].Name = ::rtl::OUString::createFromAscii("Hidden");
-            aArgs[4].Name = ::rtl::OUString::createFromAscii("Silent");
+            aArgs[1].Name = "ReadOnly";
+            aArgs[2].Name = "OpenNewView";
+            aArgs[3].Name = "Hidden";
+            aArgs[4].Name = "Silent";
         }
         else
         {
-            Reference < com::sun::star::task::XInteractionHandler > xInteraction(
-                ::comphelper::getProcessServiceFactory()->createInstance( OUString::createFromAscii("com.sun.star.task.InteractionHandler") ),
-                com::sun::star::uno::UNO_QUERY );
+            Reference < XInteractionHandler2 > xInteraction(
+                InteractionHandler::createWithParent(::comphelper::getProcessComponentContext(), 0) );
 
-            aArgs[1].Name = OUString::createFromAscii( "InteractionHandler" );
+            aArgs[1].Name = "InteractionHandler";
             aArgs[1].Value <<= xInteraction;
 
-			sal_Int16 nMacroExecMode = ::com::sun::star::document::MacroExecMode::USE_CONFIG;
-            aArgs[2].Name = OUString::createFromAscii( "MacroExecutionMode" );
+            sal_Int16 nMacroExecMode = ::com::sun::star::document::MacroExecMode::USE_CONFIG;
+            aArgs[2].Name = "MacroExecutionMode";
             aArgs[2].Value <<= nMacroExecMode;
 
-			sal_Int16 nUpdateDoc = ::com::sun::star::document::UpdateDocMode::ACCORDING_TO_CONFIG;
-            aArgs[3].Name = OUString::createFromAscii( "UpdateDocMode" );
+            sal_Int16 nUpdateDoc = ::com::sun::star::document::UpdateDocMode::ACCORDING_TO_CONFIG;
+            aArgs[3].Name = "UpdateDocMode";
             aArgs[3].Value <<= nUpdateDoc;
         }
 
-        if ( aDispatchRequest.aPreselectedFactory.getLength() )
+        if ( !aDispatchRequest.aPreselectedFactory.isEmpty() )
         {
-            aArgs[nCount-1].Name = ::comphelper::MediaDescriptor::PROP_DOCUMENTSERVICE();
+            aArgs[nCount-1].Name = utl::MediaDescriptor::PROP_DOCUMENTSERVICE();
             aArgs[nCount-1].Value <<= aDispatchRequest.aPreselectedFactory;
         }
 
-        String aName( GetURL_Impl( aDispatchRequest.aURL, aDispatchRequest.aCwdUrl ) );
-        ::rtl::OUString aTarget( RTL_CONSTASCII_USTRINGPARAM("_default") );
+        OUString aName( GetURL_Impl( aDispatchRequest.aURL, aDispatchRequest.aCwdUrl ) );
+        OUString aTarget("_default");
 
         if ( aDispatchRequest.aRequestType == REQUEST_PRINT ||
-			 aDispatchRequest.aRequestType == REQUEST_PRINTTO )
+             aDispatchRequest.aRequestType == REQUEST_PRINTTO ||
+             aDispatchRequest.aRequestType == REQUEST_BATCHPRINT ||
+             aDispatchRequest.aRequestType == REQUEST_CONVERSION)
         {
             // documents opened for printing are opened readonly because they must be opened as a new document and this
             // document could be open already
@@ -217,223 +315,414 @@ sal_Bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatch
             aArgs[4].Value <<= sal_True;
 
             // hidden documents should never be put into open tasks
-            aTarget = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("_blank") );
+            aTarget = "_blank";
         }
-
         // load the document ... if they are loadable!
         // Otherwise try to dispatch it ...
         Reference < XPrintable > xDoc;
         if(
-            ( aName.CompareToAscii( ".uno"  , 4 ) == COMPARE_EQUAL )  ||
-            ( aName.CompareToAscii( "slot:" , 5 ) == COMPARE_EQUAL )  ||
-            ( aName.CompareToAscii( "macro:", 6 ) == COMPARE_EQUAL )  ||
-            ( aName.CompareToAscii("vnd.sun.star.script", 19) == COMPARE_EQUAL)
+            ( aName.startsWith( ".uno" ) )  ||
+            ( aName.startsWith( "slot:" ) )  ||
+            ( aName.startsWith( "macro:" ) )  ||
+            ( aName.startsWith("vnd.sun.star.script") )
           )
         {
             // Attention: URL must be parsed full. Otherwise some detections on it will fail!
-            // It doesnt matter, if parser isn't available. Because; We try loading of URL then ...
+            // It doesn't matter, if parser isn't available. Because; We try loading of URL then ...
             URL             aURL ;
             aURL.Complete = aName;
 
             Reference < XDispatch >         xDispatcher ;
-            Reference < XDispatchProvider > xProvider   ( xDesktop, UNO_QUERY );
-            Reference < XURLTransformer >   xParser     ( ::comphelper::getProcessServiceFactory()->createInstance( OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.util.URLTransformer")) ), ::com::sun::star::uno::UNO_QUERY );
+            Reference < XURLTransformer >   xParser     ( URLTransformer::create(::comphelper::getProcessComponentContext()) );
 
-            if( xParser.is() == sal_True )
+            if( xParser.is() )
                 xParser->parseStrict( aURL );
 
-            if( xProvider.is() == sal_True )
-                xDispatcher = xProvider->queryDispatch( aURL, ::rtl::OUString(), 0 );
-
-            if( xDispatcher.is() == sal_True )
-			{
-				{
-					::osl::ClearableMutexGuard aGuard( GetMutex() );
-					// Remember request so we can find it in statusChanged!
-					m_aRequestContainer.insert( DispatchWatcherHashMap::value_type( aURL.Complete, (sal_Int32)1 ) );
+            xDispatcher = xDesktop->queryDispatch( aURL, OUString(), 0 );
+            SAL_WARN_IF(
+                !xDispatcher.is(), "desktop.app",
+                "unsupported dispatch request <" << aName << ">");
+            if( xDispatcher.is() )
+            {
+                {
+                    ::osl::ClearableMutexGuard aGuard( GetMutex() );
+                    // Remember request so we can find it in statusChanged!
+                    m_aRequestContainer.insert( DispatchWatcherHashMap::value_type( aURL.Complete, (sal_Int32)1 ) );
                     m_nRequestCount++;
-				}
+                }
 
-				// Use local vector to store dispatcher because we have to fill our request container before
-				// we can dispatch. Otherwise it would be possible that statusChanged is called before we dispatched all requests!!
-				aDispatches.push_back( DispatchHolder( aURL, xDispatcher ));
-			}
+                // Use local vector to store dispatcher because we have to fill our request container before
+                // we can dispatch. Otherwise it would be possible that statusChanged is called before we dispatched all requests!!
+                aDispatches.push_back( DispatchHolder( aURL, xDispatcher ));
+            }
         }
-        else if ( ( aName.CompareToAscii( "service:"  , 8 ) == COMPARE_EQUAL ) )
+        else if ( ( aName.startsWith( "service:" ) ) )
         {
             // TODO: the dispatch has to be done for loadComponentFromURL as well. Please ask AS for more details.
             URL             aURL ;
             aURL.Complete = aName;
 
             Reference < XDispatch >         xDispatcher ;
-            Reference < XDispatchProvider > xProvider   ( xDesktop, UNO_QUERY );
-            Reference < XURLTransformer >   xParser     ( ::comphelper::getProcessServiceFactory()->createInstance( OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.util.URLTransformer")) ), ::com::sun::star::uno::UNO_QUERY );
+            Reference < XURLTransformer >   xParser     ( URLTransformer::create(::comphelper::getProcessComponentContext()) );
 
-            if( xParser.is() == sal_True )
+            if( xParser.is() )
                 xParser->parseStrict( aURL );
 
-            if( xProvider.is() == sal_True )
-                xDispatcher = xProvider->queryDispatch( aURL, ::rtl::OUString(), 0 );
+            xDispatcher = xDesktop->queryDispatch( aURL, OUString(), 0 );
 
-            if( xDispatcher.is() == sal_True )
+            if( xDispatcher.is() )
             {
-			    try
-			    {
-				    // We have to be listener to catch errors during dispatching URLs.
-				    // Otherwise it would be possible to have an office running without an open
-				    // window!!
+                try
+                {
+                    // We have to be listener to catch errors during dispatching URLs.
+                    // Otherwise it would be possible to have an office running without an open
+                    // window!!
                     Sequence < PropertyValue > aArgs2(1);
-                    aArgs2[0].Name    = ::rtl::OUString::createFromAscii("SynchronMode");
+                    aArgs2[0].Name    = "SynchronMode";
                     aArgs2[0].Value <<= sal_True;
-				    Reference < XNotifyingDispatch > xDisp( xDispatcher, UNO_QUERY );
-				    if ( xDisp.is() )
-					    xDisp->dispatchWithNotification( aURL, aArgs2, DispatchWatcher::GetDispatchWatcher() );
-				    else
-					    xDispatcher->dispatch( aURL, aArgs2 );
-			    }
-			    catch ( ::com::sun::star::uno::Exception& )
-			    {
-				    OUString aMsg = OUString::createFromAscii(
-					    "Desktop::OpenDefault() IllegalArgumentException while calling XNotifyingDispatch: ");
-				    OSL_ENSURE( sal_False, OUStringToOString(aMsg, RTL_TEXTENCODING_ASCII_US).getStr());
-			    }
+                    Reference < XNotifyingDispatch > xDisp( xDispatcher, UNO_QUERY );
+                    if ( xDisp.is() )
+                        xDisp->dispatchWithNotification( aURL, aArgs2, DispatchWatcher::GetDispatchWatcher() );
+                    else
+                        xDispatcher->dispatch( aURL, aArgs2 );
+                }
+                catch (const ::com::sun::star::uno::Exception& e)
+                {
+                    SAL_WARN(
+                        "desktop.app",
+                        "Desktop::OpenDefault() ignoring Exception while"
+                            " calling XNotifyingDispatch: \"" << e.Message
+                            << "\"");
+                }
             }
         }
         else
         {
             INetURLObject aObj( aName );
             if ( aObj.GetProtocol() == INET_PROT_PRIVATE )
-                aTarget = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("_default") );
+                aTarget = "_default";
 
-			// Set "AsTemplate" argument according to request type
+            // Set "AsTemplate" argument according to request type
             if ( aDispatchRequest.aRequestType == REQUEST_FORCENEW ||
-				 aDispatchRequest.aRequestType == REQUEST_FORCEOPEN		)
-			{
-				sal_Int32 nIndex = aArgs.getLength();
-				aArgs.realloc( nIndex+1 );
-				aArgs[nIndex].Name = aAsTemplateArg;
-				if ( aDispatchRequest.aRequestType == REQUEST_FORCENEW )
-					aArgs[nIndex].Value <<= sal_True;
-				else
-					aArgs[nIndex].Value <<= sal_False;
-			}
+                 aDispatchRequest.aRequestType == REQUEST_FORCEOPEN     )
+            {
+                sal_Int32 nIndex = aArgs.getLength();
+                aArgs.realloc( nIndex+1 );
+                aArgs[nIndex].Name = aAsTemplateArg;
+                if ( aDispatchRequest.aRequestType == REQUEST_FORCENEW )
+                    aArgs[nIndex].Value <<= sal_True;
+                else
+                    aArgs[nIndex].Value <<= sal_False;
+            }
 
-			// if we are called in viewmode, open document read-only
-			// #95425#
-			if(aDispatchRequest.aRequestType == REQUEST_VIEW) {
-				sal_Int32 nIndex = aArgs.getLength();
-				aArgs.realloc(nIndex+1);
-				aArgs[nIndex].Name = OUString::createFromAscii("ReadOnly");
-				aArgs[nIndex].Value <<= sal_True;
-			}
+            // if we are called in viewmode, open document read-only
+            if(aDispatchRequest.aRequestType == REQUEST_VIEW) {
+                sal_Int32 nIndex = aArgs.getLength();
+                aArgs.realloc(nIndex+1);
+                aArgs[nIndex].Name = "ReadOnly";
+                aArgs[nIndex].Value <<= sal_True;
+            }
 
             // if we are called with -start set Start in mediadescriptor
-			if(aDispatchRequest.aRequestType == REQUEST_START) {
-				sal_Int32 nIndex = aArgs.getLength();
-				aArgs.realloc(nIndex+1);
-				aArgs[nIndex].Name = OUString::createFromAscii("StartPresentation");
-				aArgs[nIndex].Value <<= sal_True;
-			}
+            if(aDispatchRequest.aRequestType == REQUEST_START) {
+                sal_Int32 nIndex = aArgs.getLength();
+                aArgs.realloc(nIndex+1);
+                aArgs[nIndex].Name = "StartPresentation";
+                aArgs[nIndex].Value <<= sal_True;
+            }
 
-			// This is a synchron loading of a component so we don't have to deal with our statusChanged listener mechanism.
+            // Force input filter, if possible
+            if( bSetInputFilter )
+            {
+                sal_Int32 nIndex = aArgs.getLength();
+                aArgs.realloc(nIndex+1);
+                aArgs[nIndex].Name = "FilterName";
 
+                sal_Int32 nFilterOptionsIndex = aForcedInputFilter.indexOf( ':' );
+                if( 0 < nFilterOptionsIndex )
+                {
+                    aArgs[nIndex].Value <<= aForcedInputFilter.copy( 0, nFilterOptionsIndex );
+
+                    nIndex = aArgs.getLength();
+                    aArgs.realloc(nIndex+1);
+                    aArgs[nIndex].Name = "FilterOptions";
+                    aArgs[nIndex].Value <<= aForcedInputFilter.copy( nFilterOptionsIndex+1 );
+                }
+                else
+                {
+                    aArgs[nIndex].Value <<= aForcedInputFilter;
+                }
+            }
+
+            // This is a synchron loading of a component so we don't have to deal with our statusChanged listener mechanism.
             try
             {
                 xDoc = Reference < XPrintable >( ::comphelper::SynchronousDispatch::dispatch( xDesktop, aName, aTarget, 0, aArgs ), UNO_QUERY );
-                //xDoc = Reference < XPrintable >( xDesktop->loadComponentFromURL( aName, aTarget, 0, aArgs ), UNO_QUERY );
             }
-            catch ( ::com::sun::star::lang::IllegalArgumentException& iae)
+            catch (const ::com::sun::star::lang::IllegalArgumentException& iae)
             {
-                OUString aMsg = OUString::createFromAscii(
-                    "Dispatchwatcher IllegalArgumentException while calling loadComponentFromURL: ")
-                    + iae.Message;
-                OSL_ENSURE( sal_False, OUStringToOString(aMsg, RTL_TEXTENCODING_ASCII_US).getStr());
+                SAL_WARN(
+                    "desktop.app",
+                    "Dispatchwatcher IllegalArgumentException while calling"
+                        " loadComponentFromURL: \"" << iae.Message << "\"");
             }
-            catch (com::sun::star::io::IOException& ioe)
+            catch (const com::sun::star::io::IOException& ioe)
             {
-                OUString aMsg = OUString::createFromAscii(
-                    "Dispatchwatcher IOException while calling loadComponentFromURL: ")
-                    + ioe.Message;
-                OSL_ENSURE( sal_False, OUStringToOString(aMsg, RTL_TEXTENCODING_ASCII_US).getStr());
+                SAL_WARN(
+                    "desktop.app",
+                    "Dispatchwatcher IOException while calling"
+                        " loadComponentFromURL: \"" << ioe.Message << "\"");
             }
 #ifdef USE_JAVA
-            catch (com::sun::star::uno::Exception& e)
+            catch (const com::sun::star::uno::Exception& e)
             {
-                OUString aMsg = OUString::createFromAscii(
-                    "Dispatchwatcher IOException while calling loadComponentFromURL: ")
-                    + e.Message;
-                OSL_ENSURE( sal_False, OUStringToOString(aMsg, RTL_TEXTENCODING_ASCII_US).getStr());
+                SAL_WARN(
+                    "desktop.app",
+                    "Dispatchwatcher Exception while calling"
+                        " loadComponentFromURL: \"" << e.Message << "\"");
             }
 #endif	// USE_JAVA
-			if ( aDispatchRequest.aRequestType == REQUEST_OPEN ||
-				 aDispatchRequest.aRequestType == REQUEST_VIEW ||
+            if ( aDispatchRequest.aRequestType == REQUEST_OPEN ||
+                 aDispatchRequest.aRequestType == REQUEST_VIEW ||
                  aDispatchRequest.aRequestType == REQUEST_START ||
-				 aDispatchRequest.aRequestType == REQUEST_FORCEOPEN ||
-				 aDispatchRequest.aRequestType == REQUEST_FORCENEW		)
-			{
-				// request is completed
-				OfficeIPCThread::RequestsCompleted( 1 );
-			}
-			else if ( aDispatchRequest.aRequestType == REQUEST_PRINT ||
-					  aDispatchRequest.aRequestType == REQUEST_PRINTTO )
-			{
-				if ( xDoc.is() )
-				{
-					if ( aDispatchRequest.aRequestType == REQUEST_PRINTTO )
-					{
-						// create the printer
-						Sequence < PropertyValue > aPrinterArgs( 1 );
-						aPrinterArgs[0].Name = ::rtl::OUString::createFromAscii("Name");
-						aPrinterArgs[0].Value <<= ::rtl::OUString( aDispatchRequest.aPrinterName );
-						xDoc->setPrinter( aPrinterArgs );
-					}
+                 aDispatchRequest.aRequestType == REQUEST_FORCEOPEN ||
+                 aDispatchRequest.aRequestType == REQUEST_FORCENEW      )
+            {
+                // request is completed
+                OfficeIPCThread::RequestsCompleted( 1 );
+            }
+            else if ( aDispatchRequest.aRequestType == REQUEST_PRINT ||
+                      aDispatchRequest.aRequestType == REQUEST_PRINTTO ||
+                      aDispatchRequest.aRequestType == REQUEST_BATCHPRINT ||
+                      aDispatchRequest.aRequestType == REQUEST_CONVERSION ||
+                      aDispatchRequest.aRequestType == REQUEST_CAT )
+            {
+                if ( xDoc.is() )
+                {
+                    if ( aDispatchRequest.aRequestType == REQUEST_CONVERSION || aDispatchRequest.aRequestType == REQUEST_CAT ) {
+                        Reference< XStorable > xStorable( xDoc, UNO_QUERY );
+                        if ( xStorable.is() ) {
+                            OUString aParam = aDispatchRequest.aPrinterName;
+                            sal_Int32 nPathIndex =  aParam.lastIndexOf( ';' );
+                            sal_Int32 nFilterIndex = aParam.indexOf( ':' );
+                            if( nPathIndex < nFilterIndex )
+                                nFilterIndex = -1;
+                            OUString aFilterOut=aParam.copy( nPathIndex+1 );
+                            OUString aFilter;
+                            OUString aFilterExt;
+                            bool bGuess = false;
 
-					// print ( also without user interaction )
-					Sequence < PropertyValue > aPrinterArgs( 1 );
-					aPrinterArgs[0].Name = ::rtl::OUString::createFromAscii("Wait");
-					aPrinterArgs[0].Value <<= ( sal_Bool ) sal_True;
-					xDoc->print( aPrinterArgs );
-				}
-				else
-				{
-					// place error message here ...
-				}
+                            if( nFilterIndex >= 0 )
+                            {
+                                aFilter = aParam.copy( nFilterIndex+1, nPathIndex-nFilterIndex-1 );
+                                aFilterExt = aParam.copy( 0, nFilterIndex );
+                            }
+                            else
+                            {
+                                // Guess
+                                bGuess = true;
+                                aFilterExt = aParam.copy( 0, nPathIndex );
+                            }
+                            INetURLObject aOutFilename( aObj );
+                            aOutFilename.SetExtension( aFilterExt );
+                            FileBase::getFileURLFromSystemPath( aFilterOut, aFilterOut );
+                            OUString aOutFile = aFilterOut+
+                                                     "/" +
+                                                     aOutFilename.getName();
 
-				// remove the document
-				try
-				{
-					Reference < XCloseable > xClose( xDoc, UNO_QUERY );
-					if ( xClose.is() )
-						xClose->close( sal_True );
-					else
-					{
-						Reference < XComponent > xComp( xDoc, UNO_QUERY );
-						if ( xComp.is() )
-							xComp->dispose();
-					}
-				}
-				catch ( com::sun::star::util::CloseVetoException& )
-				{
-				}
+                            OUString fileForCat;
+                            if( aDispatchRequest.aRequestType == REQUEST_CAT )
+                            {
+                                if( ::osl::FileBase::createTempFile(0, 0, &fileForCat) != ::osl::FileBase::E_None )
+                                    std::cerr << "Error: Cannot create temporary file..." << std::endl ;
+                                aOutFile = fileForCat;
+                            }
 
-				// request is completed
-				OfficeIPCThread::RequestsCompleted( 1 );
-			}
-		}
-	}
+                            if ( bGuess )
+                            {
+                                OUString aDocService;
+                                Reference< XModel > xModel( xDoc, UNO_QUERY );
+                                if ( xModel.is() )
+                                {
+                                    utl::MediaDescriptor aMediaDesc( xModel->getArgs() );
+                                    aDocService = aMediaDesc.getUnpackedValueOrDefault(utl::MediaDescriptor::PROP_DOCUMENTSERVICE(), OUString() );
+                                }
+                                aFilter = impl_GuessFilter( aOutFile, aDocService );
+                            }
 
-    if ( aDispatches.size() > 0 )
-	{
-		// Execute all asynchronous dispatches now after we placed them into our request container!
-		Sequence < PropertyValue > aArgs( 2 );
-		aArgs[0].Name = ::rtl::OUString::createFromAscii("Referer");
-        aArgs[0].Value <<= ::rtl::OUString::createFromAscii("private:OpenEvent");
-		aArgs[1].Name = ::rtl::OUString::createFromAscii("SynchronMode");
+                            sal_Int32 nFilterOptionsIndex = aFilter.indexOf( ':' );
+                            Sequence<PropertyValue> conversionProperties( 0 < nFilterOptionsIndex ? 3 : 2 );
+                            conversionProperties[0].Name = "Overwrite";
+                            conversionProperties[0].Value <<= sal_True;
+
+                            conversionProperties[1].Name = "FilterName";
+                            if( 0 < nFilterOptionsIndex )
+                            {
+                                conversionProperties[1].Value <<= aFilter.copy( 0, nFilterOptionsIndex );
+
+                                conversionProperties[2].Name = "FilterOptions";
+                                conversionProperties[2].Value <<= aFilter.copy( nFilterOptionsIndex+1 );
+                            }
+                            else
+                            {
+                                conversionProperties[1].Value <<= aFilter;
+                            }
+
+                            OUString aTempName;
+                            FileBase::getSystemPathFromFileURL( aName, aTempName );
+                            OString aSource8 = OUStringToOString ( aTempName, osl_getThreadTextEncoding() );
+                            FileBase::getSystemPathFromFileURL( aOutFile, aTempName );
+                            OString aTargetURL8 = OUStringToOString(aTempName, osl_getThreadTextEncoding() );
+                            if( aDispatchRequest.aRequestType != REQUEST_CAT )
+                            {
+                                std::cout << "convert " << aSource8 << " -> " << aTargetURL8;
+                                std::cout << " using filter : " << OUStringToOString( aFilter, osl_getThreadTextEncoding() ) << std::endl;
+                                if( FStatHelper::IsDocument( aOutFile ) )
+                                    std::cout << "Overwriting: " << OUStringToOString( aTempName, osl_getThreadTextEncoding() ) << std::endl ;
+                            }
+                            try
+                            {
+                                xStorable->storeToURL( aOutFile, conversionProperties );
+                            }
+                            catch (const Exception& rException)
+                            {
+                                std::cerr << "Error: Please verify input parameters...";
+                                if (!rException.Message.isEmpty())
+                                    std::cerr << " (" << rException.Message << ")";
+                                std::cerr << std::endl;
+                            }
+
+                            if( aDispatchRequest.aRequestType == REQUEST_CAT )
+                            {
+                                osl::File aFile( fileForCat );
+                                osl::File::RC aRC = aFile.open( osl_File_OpenFlag_Read );
+                                if( aRC != osl::File::E_None )
+                                {
+                                    std::cerr << "Error: Cannot read from temp file" << std::endl;
+                                }
+                                else
+                                {
+                                    sal_Bool eof;
+                                    for( ;; )
+                                    {
+                                        aFile.isEndOfFile( &eof );
+                                        if( eof )
+                                            break;
+                                        rtl::ByteSequence bseq;
+                                        aFile.readLine( bseq );
+                                        unsigned const char * aStr = reinterpret_cast< unsigned char const * >( bseq.getConstArray() );
+                                        for( sal_Int32 i = 0; i < bseq.getLength(); i++ )
+                                        {
+                                            std::cout << aStr[i];
+                                        }
+                                        std::cout << std::endl;
+                                    }
+                                    aFile.close();
+                                    osl::File::remove( fileForCat );
+                                }
+                            }
+                        }
+                    } else if ( aDispatchRequest.aRequestType == REQUEST_BATCHPRINT ) {
+                        OUString aParam = aDispatchRequest.aPrinterName;
+                        sal_Int32 nPathIndex =  aParam.lastIndexOf( ';' );
+
+                        OUString aFilterOut;
+                        OUString aPrinterName;
+                        if( nPathIndex != -1 )
+                            aFilterOut=aParam.copy( nPathIndex+1 );
+                        if( nPathIndex != 0 )
+                            aPrinterName=aParam.copy( 0, nPathIndex );
+
+                        INetURLObject aOutFilename( aObj );
+                        aOutFilename.SetExtension( "ps" );
+                        FileBase::getFileURLFromSystemPath( aFilterOut, aFilterOut );
+                        OUString aOutFile = aFilterOut+
+                            "/" +
+                            aOutFilename.getName();
+
+                        OUString aTempName;
+                        FileBase::getSystemPathFromFileURL( aName, aTempName );
+                        OString aSource8 = OUStringToOString ( aTempName, osl_getThreadTextEncoding() );
+                        FileBase::getSystemPathFromFileURL( aOutFile, aTempName );
+                        OString aTargetURL8 = OUStringToOString(aTempName, osl_getThreadTextEncoding() );
+
+                        std::cout << "print " << aSource8 << " -> " << aTargetURL8;
+                        std::cout << " using " << (aPrinterName.isEmpty() ? "<default_printer>" : OUStringToOString( aPrinterName, osl_getThreadTextEncoding() ));
+                        std::cout << std::endl;
+
+                        // create the custom printer, if given
+                        Sequence < PropertyValue > aPrinterArgs( 1 );
+                        if( !aPrinterName.isEmpty() )
+                        {
+                            aPrinterArgs[0].Name = "Name";
+                            aPrinterArgs[0].Value <<= aPrinterName;
+                            xDoc->setPrinter( aPrinterArgs );
+                        }
+
+                        // print ( also without user interaction )
+                        aPrinterArgs.realloc(2);
+                        aPrinterArgs[0].Name = "FileName";
+                        aPrinterArgs[0].Value <<= aOutFile;
+                        aPrinterArgs[1].Name = "Wait";
+                        aPrinterArgs[1].Value <<= true;
+                        xDoc->print( aPrinterArgs );
+                    } else {
+                        if ( aDispatchRequest.aRequestType == REQUEST_PRINTTO )
+                        {
+                            // create the printer
+                            Sequence < PropertyValue > aPrinterArgs( 1 );
+                            aPrinterArgs[0].Name = "Name";
+                            aPrinterArgs[0].Value <<= OUString( aDispatchRequest.aPrinterName );
+                            xDoc->setPrinter( aPrinterArgs );
+                        }
+
+                        // print ( also without user interaction )
+                        Sequence < PropertyValue > aPrinterArgs( 1 );
+                        aPrinterArgs[0].Name = "Wait";
+                        aPrinterArgs[0].Value <<= true;
+                        xDoc->print( aPrinterArgs );
+                    }
+                }
+                else
+                {
+                    std::cerr << "Error: source file could not be loaded" << std::endl;
+                }
+
+                // remove the document
+                try
+                {
+                    Reference < XCloseable > xClose( xDoc, UNO_QUERY );
+                    if ( xClose.is() )
+                        xClose->close( sal_True );
+                    else
+                    {
+                        Reference < XComponent > xComp( xDoc, UNO_QUERY );
+                        if ( xComp.is() )
+                            xComp->dispose();
+                    }
+                }
+                catch (const com::sun::star::util::CloseVetoException&)
+                {
+                }
+
+                // request is completed
+                OfficeIPCThread::RequestsCompleted( 1 );
+            }
+        }
+    }
+
+    if ( !aDispatches.empty() )
+    {
+        // Execute all asynchronous dispatches now after we placed them into our request container!
+        Sequence < PropertyValue > aArgs( 2 );
+        aArgs[0].Name = "Referer";
+        aArgs[0].Value <<= OUString("private:OpenEvent");
+        aArgs[1].Name = "SynchronMode";
         aArgs[1].Value <<= sal_True;
 
-		for ( sal_uInt32 n = 0; n < aDispatches.size(); n++ )
-		{
-			Reference< XDispatch > xDispatch = aDispatches[n].xDispatch;
+        for ( sal_uInt32 n = 0; n < aDispatches.size(); n++ )
+        {
+            Reference< XDispatch > xDispatch = aDispatches[n].xDispatch;
             Reference < XNotifyingDispatch > xDisp( xDispatch, UNO_QUERY );
             if ( xDisp.is() )
                 xDisp->dispatchWithNotification( aDispatches[n].aURL, aArgs, this );
@@ -444,77 +733,57 @@ sal_Bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatch
                 aGuard.clear();
                 xDispatch->dispatch( aDispatches[n].aURL, aArgs );
             }
-		}
-	}
+        }
+    }
 
-	::osl::ClearableMutexGuard aGuard( GetMutex() );
+    ::osl::ClearableMutexGuard aGuard( GetMutex() );
     bool bEmpty = (m_nRequestCount == 0);
     aGuard.clear();
 
-	// No more asynchronous requests?
-	// The requests are removed from the request container after they called back to this
-	// implementation via statusChanged!!
+    // No more asynchronous requests?
+    // The requests are removed from the request container after they called back to this
+    // implementation via statusChanged!!
     if ( bEmpty && !bNoTerminate /*m_aRequestContainer.empty()*/ )
-	{
-		// We have to check if we have an open task otherwise we have to shutdown the office.
-        Reference< XFramesSupplier > xTasksSupplier( xDesktop, UNO_QUERY );
+    {
+        // We have to check if we have an open task otherwise we have to shutdown the office.
         aGuard.clear();
-
-        Reference< XElementAccess > xList( xTasksSupplier->getFrames(), UNO_QUERY );
+        Reference< XElementAccess > xList( xDesktop->getFrames(), UNO_QUERY );
 
         if ( !xList->hasElements() )
-		{
-			// We don't have any task open so we have to shutdown ourself!!
-			Reference< XDesktop > xDesktop2( xTasksSupplier, UNO_QUERY );
-			if ( xDesktop2.is() )
-				return xDesktop2->terminate();
-		}
-	}
+        {
+            // We don't have any task open so we have to shutdown ourself!!
+            return xDesktop->terminate();
+        }
+    }
 
-	return sal_False;
+    return false;
 }
 
 
 void SAL_CALL DispatchWatcher::disposing( const ::com::sun::star::lang::EventObject& )
-throw(::com::sun::star::uno::RuntimeException)
+throw(::com::sun::star::uno::RuntimeException, std::exception)
 {
 }
 
 
-void SAL_CALL DispatchWatcher::dispatchFinished( const DispatchResultEvent& ) throw( RuntimeException )
+void SAL_CALL DispatchWatcher::dispatchFinished( const DispatchResultEvent& ) throw( RuntimeException, std::exception )
 {
-	osl::ClearableMutexGuard aGuard( GetMutex() );
+    osl::ClearableMutexGuard aGuard( GetMutex() );
     sal_Int16 nCount = --m_nRequestCount;
     aGuard.clear();
     OfficeIPCThread::RequestsCompleted( 1 );
-/*
-	// Find request in our hash map and remove it as a pending request
-    DispatchWatcherHashMap::iterator pDispatchEntry = m_aRequestContainer.find( rEvent.FeatureURL.Complete ) ;
-    if ( pDispatchEntry != m_aRequestContainer.end() )
-	{
-        m_aRequestContainer.erase( pDispatchEntry );
-        aGuard.clear();
-		OfficeIPCThread::RequestsCompleted( 1 );
-	}
-	else
-		aGuard.clear();
-*/
     if ( !nCount && !OfficeIPCThread::AreRequestsPending() )
-	{
-		// We have to check if we have an open task otherwise we have to shutdown the office.
-        Reference< XFramesSupplier > xTasksSupplier( ::comphelper::getProcessServiceFactory()->createInstance(
-													OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop")) ),
-												UNO_QUERY );
-        Reference< XElementAccess > xList( xTasksSupplier->getFrames(), UNO_QUERY );
+    {
+        // We have to check if we have an open task otherwise we have to shutdown the office.
+        Reference< XDesktop2 > xDesktop = css::frame::Desktop::create( ::comphelper::getProcessComponentContext() );
+        Reference< XElementAccess > xList( xDesktop->getFrames(), UNO_QUERY );
 
         if ( !xList->hasElements() )
-		{
-			// We don't have any task open so we have to shutdown ourself!!
-			Reference< XDesktop > xDesktop( xTasksSupplier, UNO_QUERY );
-			if ( xDesktop.is() )
-				xDesktop->terminate();
-		}
-	}
+        {
+            // We don't have any task open so we have to shutdown ourself!!
+            xDesktop->terminate();
+        }
+    }
 }
 
 }
@@ -526,3 +795,4 @@ void SAL_CALL DispatchWatcher::dispatchFinished( const DispatchResultEvent& ) th
 
 
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

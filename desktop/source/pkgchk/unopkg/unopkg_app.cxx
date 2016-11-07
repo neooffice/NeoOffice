@@ -1,73 +1,67 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
 
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-
+#include "desktopdllapi.h"
 #include "dp_misc.h"
 #if !defined USE_JAVA || !defined MACOSX
 #include "unopkg_main.h"
 #endif	// !USE_JAVA || !MACOSX
 #include "unopkg_shared.h"
 #include "dp_identifier.hxx"
-#include "sal/main.h"
-#include "tools/extendapplicationenvironment.hxx"
-#include "rtl/ustrbuf.hxx"
-#include "rtl/uri.hxx"
-#include "rtl/bootstrap.hxx"
-#include "osl/thread.h"
-#include "osl/process.h"
-#include "osl/conditn.hxx"
-#include "osl/file.hxx"
-#include "cppuhelper/implbase1.hxx"
-#include "cppuhelper/exc_hlp.hxx"
-#include "comphelper/anytostring.hxx"
-#include "comphelper/sequence.hxx"
-#include "com/sun/star/deployment/ExtensionManager.hpp"
+#include <tools/extendapplicationenvironment.hxx>
+#include <rtl/ustrbuf.hxx>
+#include <rtl/uri.hxx>
+#include <rtl/bootstrap.hxx>
+#include <osl/thread.h>
+#include <osl/process.h>
+#include <osl/conditn.hxx>
+#include <osl/file.hxx>
+#include <cppuhelper/implbase1.hxx>
+#include <cppuhelper/exc_hlp.hxx>
+#include <comphelper/anytostring.hxx>
+#include <comphelper/sequence.hxx>
+#include <com/sun/star/deployment/ExtensionManager.hpp>
 
-#include "com/sun/star/deployment/ui/PackageManagerDialog.hpp"
-#include "com/sun/star/ui/dialogs/XExecutableDialog.hpp"
-#include "com/sun/star/lang/DisposedException.hpp"
-#include "boost/scoped_array.hpp"
-#include "com/sun/star/ui/dialogs/XDialogClosedListener.hpp"
-#include "com/sun/star/bridge/XBridgeFactory.hpp"
+#include <com/sun/star/deployment/ui/PackageManagerDialog.hpp>
+#include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
+#include <boost/scoped_array.hpp>
+#include <com/sun/star/ui/dialogs/XDialogClosedListener.hpp>
+#include <com/sun/star/bridge/BridgeFactory.hpp>
 #include <stdio.h>
 #include <vector>
+
+#if defined USE_JAVA && defined MACOSX
+#include <sal/main.h>
+#endif	// USE_JAVA && MACOSX
 
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 using namespace ::unopkg;
-using ::rtl::OUString;
-namespace css = ::com::sun::star;
 namespace {
 
 struct ExtensionName
@@ -83,11 +77,11 @@ struct ExtensionName
     }
 };
 
-//------------------------------------------------------------------------------
+
 const char s_usingText [] =
 "\n"
 "using: " APP_NAME " add <options> extension-path...\n"
-"       " APP_NAME " validate <options> extension-identifier...\n"    
+"       " APP_NAME " validate <options> extension-identifier...\n"
 "       " APP_NAME " remove <options> extension-identifier...\n"
 "       " APP_NAME " list <options> extension-identifier...\n"
 "       " APP_NAME " reinstall <options>\n"
@@ -109,8 +103,7 @@ const char s_usingText [] =
 " -V, --version           version information\n"
 " -v, --verbose           verbose output to stdout\n"
 " -f, --force             force overwriting existing extensions\n"
-" -s, --suppress-license  prevents showing the license provided that\n"
-"                         the extension allows it\n"
+" -s, --suppress-license  prevents showing the license\n"
 " --log-file <file>       custom log file; default: <cache-dir>/log.txt\n"
 " --shared                expert feature: operate on shared installation\n"
 "                                         deployment context;\n"
@@ -122,9 +115,9 @@ const char s_usingText [] =
 "     <context>\n"
 "\n"
 "To learn more about the Extension Manager and extensions, see:\n"
-"http://wiki.services.openoffice.org/wiki/Documentation/DevGuide/Extensions/Extensions\n\n";
+"http://wiki.openoffice.org/wiki/Documentation/DevGuide/Extensions/Extensions\n\n";
 
-//------------------------------------------------------------------------------
+
 const OptionInfo s_option_infos [] = {
     { RTL_CONSTASCII_STRINGPARAM("help"), 'h', false },
     { RTL_CONSTASCII_STRINGPARAM("version"), 'V', false },
@@ -150,17 +143,17 @@ public:
 
     // XEventListener (base of XDialogClosedListener)
     virtual void SAL_CALL disposing( lang::EventObject const & Source )
-        throw (RuntimeException);
+        throw (RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XDialogClosedListener
     virtual void SAL_CALL dialogClosed(
         ui::dialogs::DialogClosedEvent const & aEvent )
-        throw (RuntimeException);
+        throw (RuntimeException, std::exception) SAL_OVERRIDE;
 };
 
 // XEventListener (base of XDialogClosedListener)
 void DialogClosedListenerImpl::disposing( lang::EventObject const & )
-    throw (RuntimeException)
+    throw (RuntimeException, std::exception)
 {
     // nothing to do
 }
@@ -168,7 +161,7 @@ void DialogClosedListenerImpl::disposing( lang::EventObject const & )
 // XDialogClosedListener
 void DialogClosedListenerImpl::dialogClosed(
     ui::dialogs::DialogClosedEvent const & )
-    throw (RuntimeException)
+    throw (RuntimeException, std::exception)
 {
     m_rDialogClosedCondition.set();
 }
@@ -197,39 +190,6 @@ Reference<deployment::XPackage> findPackage(
 
 } // anon namespace
 
-
-//workaround for some reason the bridge threads which communicate with the uno.exe
-//process are not releases on time
-void disposeBridges(Reference<css::uno::XComponentContext> ctx)
-{
-    if (!ctx.is())
-        return;
-
-    Reference<css::bridge::XBridgeFactory> bridgeFac(
-        ctx->getServiceManager()->createInstanceWithContext(
-            OUSTR("com.sun.star.bridge.BridgeFactory"), ctx),
-        UNO_QUERY);
-
-    if (bridgeFac.is())
-    {
-        const Sequence< Reference<css::bridge::XBridge> >seqBridges = bridgeFac->getExistingBridges();
-        for (sal_Int32 i = 0; i < seqBridges.getLength(); i++)
-        {        
-            Reference<css::lang::XComponent> comp(seqBridges[i], UNO_QUERY);
-            if (comp.is())
-            {
-                try {
-                    comp->dispose();
-                }
-                catch (css::lang::DisposedException& )
-                {
-                }
-            }
-        }
-    }
-}
-
-//##############################################################################
 #if defined USE_JAVA && defined MACOSX
 // All references to main() need to be redefined to unopkg_main()
 #define main unopkg_main
@@ -238,11 +198,10 @@ extern "C"
 SAL_IMPLEMENT_MAIN_WITH_ARGS( argc, argv )
 #undef main
 #else	// USE_JAVA && MACOSX
-extern "C" int unopkg_main()
+extern "C" DESKTOP_DLLPUBLIC int unopkg_main()
 #endif	// USE_JAVA && MACOSX
 {
     tools::extendApplicationEnvironment();
-    DisposeGuard disposeGuard;
     bool bNoOtherErrorMsg = false;
     OUString subCommand;
     bool option_shared = false;
@@ -251,35 +210,35 @@ extern "C" int unopkg_main()
     bool option_bundled = false;
     bool option_suppressLicense = false;
     bool subcmd_add = false;
-	bool subcmd_gui = false;
+    bool subcmd_gui = false;
     OUString logFile;
     OUString repository;
     OUString cmdArg;
     ::std::vector<OUString> cmdPackages;
-    
-    OptionInfo const * info_shared = getOptionInfo(
-        s_option_infos, OUSTR("shared") );
-    OptionInfo const * info_force = getOptionInfo(
-        s_option_infos, OUSTR("force") );
-    OptionInfo const * info_verbose = getOptionInfo(
-        s_option_infos, OUSTR("verbose") );
-    OptionInfo const * info_log = getOptionInfo(
-        s_option_infos, OUSTR("log-file") );
-    OptionInfo const * info_context = getOptionInfo(
-        s_option_infos, OUSTR("deployment-context") );
-    OptionInfo const * info_help = getOptionInfo(
-        s_option_infos, OUSTR("help") );
-    OptionInfo const * info_version = getOptionInfo(
-        s_option_infos, OUSTR("version") );
-    OptionInfo const * info_bundled = getOptionInfo(
-        s_option_infos, OUSTR("bundled") );
-    OptionInfo const * info_suppressLicense = getOptionInfo(
-        s_option_infos, OUSTR("suppress-license") );
 
-    
+    OptionInfo const * info_shared = getOptionInfo(
+        s_option_infos, "shared" );
+    OptionInfo const * info_force = getOptionInfo(
+        s_option_infos, "force" );
+    OptionInfo const * info_verbose = getOptionInfo(
+        s_option_infos, "verbose" );
+    OptionInfo const * info_log = getOptionInfo(
+        s_option_infos, "log-file" );
+    OptionInfo const * info_context = getOptionInfo(
+        s_option_infos, "deployment-context" );
+    OptionInfo const * info_help = getOptionInfo(
+        s_option_infos, "help" );
+    OptionInfo const * info_version = getOptionInfo(
+        s_option_infos, "version" );
+    OptionInfo const * info_bundled = getOptionInfo(
+        s_option_infos, "bundled" );
+    OptionInfo const * info_suppressLicense = getOptionInfo(
+        s_option_infos, "suppress-license" );
+
+
     Reference<XComponentContext> xComponentContext;
     Reference<XComponentContext> xLocalComponentContext;
-    
+
     try {
         sal_uInt32 nPos = 0;
         sal_uInt32 nCount = osl_getCommandArgCount();
@@ -289,7 +248,7 @@ extern "C" int unopkg_main()
             return 0;
         }
         else if (isOption( info_version, &nPos )) {
-            dp_misc::writeConsole( "\n" APP_NAME " Version 3.3\n");
+            dp_misc::writeConsole("\n" APP_NAME " Version 3.3\n");
             return 0;
         }
 #if defined USE_JAVA && defined MACOSX
@@ -299,19 +258,18 @@ extern "C" int unopkg_main()
         }
 #endif	// USE_JAVA && MACOSX
         //consume all bootstrap variables which may occur before the subcommannd
-        while(isBootstrapVariable(&nPos));
-       
+        while(isBootstrapVariable(&nPos))
+            ;
+
         if(nPos >= nCount)
             return 0;
         //get the sub command
         osl_getCommandArg( nPos, &subCommand.pData );
         ++nPos;
         subCommand = subCommand.trim();
-        subcmd_add = subCommand.equalsAsciiL(
-            RTL_CONSTASCII_STRINGPARAM("add") );
-		subcmd_gui = subCommand.equalsAsciiL(
-            RTL_CONSTASCII_STRINGPARAM("gui") );
-        
+        subcmd_add = subCommand == "add";
+        subcmd_gui = subCommand == "gui";
+
         // sun-command options and packages:
         while (nPos < nCount)
         {
@@ -330,18 +288,17 @@ extern "C" int unopkg_main()
                 osl_getCommandArg( nPos, &cmdArg.pData );
                 ++nPos;
                 cmdArg = cmdArg.trim();
-                if (cmdArg.getLength() > 0)
+                if (!cmdArg.isEmpty())
                 {
                     if (cmdArg[ 0 ] == '-')
                     {
                         // is option:
                         dp_misc::writeConsoleError(
-                                 OUSTR("\nERROR: unexpected option ") +
+                                 "\nERROR: unexpected option " +
                                  cmdArg +
-                                 OUSTR("!\n") +
-                                 OUSTR("       Use " APP_NAME " ") + 
+                                 "!\n       Use " APP_NAME " " +
                                  toString(info_help) +
-                                 OUSTR(" to print all options.\n"));
+                                 " to print all options.\n");
                         return 1;
                     }
                     else
@@ -356,113 +313,67 @@ extern "C" int unopkg_main()
                 }
             }
         }
-        
-        if (repository.getLength() == 0) 
+
+        if (repository.isEmpty())
         {
             if (option_shared)
-                repository = OUSTR("shared");
+                repository = "shared";
             else if (option_bundled)
-                repository = OUSTR("bundled"); 
-            else 
-                repository = OUSTR("user");
+                repository = "bundled";
+            else
+                repository = "user";
         }
         else
         {
-            if (repository.equalsAsciiL(
-                    RTL_CONSTASCII_STRINGPARAM("shared") )) {
+            if ( repository == "shared" ) {
                 option_shared = true;
             }
             else if (option_shared) {
                 dp_misc::writeConsoleError(
-                    OUSTR("WARNING: explicit context given!  ") +
-                    OUSTR("Ignoring option ") +
-                    toString( info_shared ) +
-                    OUSTR("!\n") );
+                    OUString("WARNING: explicit context given!  ") +
+                    "Ignoring option " + toString( info_shared ) + "!\n" );
             }
         }
 
-        if (subCommand.equals(OUSTR("reinstall")))
+        if (subCommand == "reinstall")
         {
             //We must prevent that services and types are loaded by UNO,
             //otherwise we cannot delete the registry data folder.
             OUString extensionUnorc;
-            if (repository.equals(OUSTR("user")))
-                extensionUnorc = OUSTR("$UNO_USER_PACKAGES_CACHE/registry/com.sun.star.comp.deployment.component.PackageRegistryBackend/unorc");
-            else if (repository.equals(OUSTR("shared")))
-                extensionUnorc = OUSTR("$SHARED_EXTENSIONS_USER/registry/com.sun.star.comp.deployment.component.PackageRegistryBackend/unorc");
-            else if (repository.equals(OUSTR("bundled")))
-                extensionUnorc = OUSTR("$BUNDLED_EXTENSIONS_USER/registry/com.sun.star.comp.deployment.component.PackageRegistryBackend/unorc");
+            if (repository == "user")
+                extensionUnorc = "$UNO_USER_PACKAGES_CACHE/registry/com.sun.star.comp.deployment.component.PackageRegistryBackend/unorc";
+            else if (repository == "shared")
+                extensionUnorc = "$SHARED_EXTENSIONS_USER/registry/com.sun.star.comp.deployment.component.PackageRegistryBackend/unorc";
+            else if (repository == "bundled")
+                extensionUnorc = "$BUNDLED_EXTENSIONS_USER/registry/com.sun.star.comp.deployment.component.PackageRegistryBackend/unorc";
             else
-                OSL_ASSERT(0);
+                OSL_ASSERT(false);
 
             ::rtl::Bootstrap::expandMacros(extensionUnorc);
             oslFileError e = osl_removeFile(extensionUnorc.pData);
             if (e != osl_File_E_None && e != osl_File_E_NOENT)
-                throw Exception(OUSTR("Could not delete ") + extensionUnorc, 0);
-        }
-        else if (subCommand.equals(OUSTR("sync")))
-        {
-            //sync is private!!!! Only to be called from setup!!!
-            //The UserInstallation is diverted to the prereg folder. But only
-            //the lock file is written! This requires that
-            //-env:UNO_JAVA_JFW_INSTALL_DATA is passed to javaldx and unopkg otherwise the
-            //javasettings file is written to the prereg folder. 
-            //
-            //For performance reasons unopkg sync is called during the setup and
-            //creates the registration data for the repository of the bundled
-            //extensions. It is then copied to the user installation during
-            //startup of OOo (userdata/extensions/bundled).  The registration
-            //data is in the brand installation and must be removed when
-            //uninstalling OOo.  We do this here, before UNO is
-            //bootstrapped. Otherwies files could be locked by this process.
-
-            //If there is no folder left in
-            //$OOO_BASE_DIR/share/extensions
-            //then we can delete the registration data at
-            //$BUNDLED_EXTENSIONS_USER
-            if (hasNoFolder(OUSTR("$OOO_BASE_DIR/share/extensions")))
-            {
-                removeFolder(OUSTR("$BUNDLED_EXTENSIONS_PREREG"));
-                //return otherwise we create the registration data again
-                return 0;
-            }
-            //redirect the UserInstallation, so we do not create a
-            //user installation for the admin and we also do not need
-            //to call unopkg with -env:UserInstallation
-            ::rtl::Bootstrap::set(OUSTR("UserInstallation"),
-                                  OUSTR("$BUNDLED_EXTENSIONS_PREREG/.."));
-            //Setting UNO_JAVA_JFW_INSTALL_DATA causes the javasettings to be written
-            //in the office installation. We do not want to create the user data folder
-            //for the admin. The value must also be set in the unopkg script (Linux, etc.)
-            //when calling javaldx
-            ::rtl::Bootstrap::set(OUSTR("UNO_JAVA_JFW_INSTALL_DATA"),
-                                  OUSTR("$OOO_BASE_DIR/share/config/javasettingsunopkginstall.xml"));
-
+                throw Exception("Could not delete " + extensionUnorc, 0);
         }
 
         xComponentContext = getUNO(
-            disposeGuard, option_verbose, option_shared, subcmd_gui,
-            xLocalComponentContext );
- 
+            option_verbose, option_shared, subcmd_gui, xLocalComponentContext );
+
         Reference<deployment::XExtensionManager> xExtensionManager(
             deployment::ExtensionManager::get( xComponentContext ) );
 
         Reference< ::com::sun::star::ucb::XCommandEnvironment > xCmdEnv(
             createCmdEnv( xComponentContext, logFile,
-                          option_force, option_verbose) );
-        
+                          option_force, option_verbose, option_suppressLicense) );
+
         //synchronize bundled/shared extensions
         //Do not synchronize when command is "reinstall". This could add types and services to UNO and
         //prevent the deletion of the registry data folder
         //synching is done in XExtensionManager.reinstall
-        if (!subcmd_gui && ! subCommand.equals(OUSTR("reinstall"))
-            && ! subCommand.equals(OUSTR("sync"))
+        if (!subcmd_gui && ! (subCommand == "reinstall")
             && ! dp_misc::office_is_running())
-            dp_misc::syncRepositories(xCmdEnv);
+            dp_misc::syncRepositories(false, xCmdEnv);
 
-        if (subcmd_add ||
-            subCommand.equalsAsciiL(
-                RTL_CONSTASCII_STRINGPARAM("remove") ))
+        if ( subcmd_add || subCommand == "remove" )
         {
             for ( ::std::size_t pos = 0; pos < cmdPackages.size(); ++pos )
             {
@@ -470,8 +381,8 @@ extern "C" int unopkg_main()
                 if (subcmd_add)
                 {
                     beans::NamedValue nvSuppress(
-                        OUSTR("SUPPRESS_LICENSE"), option_suppressLicense ?
-                        makeAny(OUSTR("1")):makeAny(OUSTR("0")));
+                        OUString("SUPPRESS_LICENSE"), option_suppressLicense ?
+                        makeAny(OUString("1")):makeAny(OUString("0")));
                         xExtensionManager->addExtension(
                             cmdPackage, Sequence<beans::NamedValue>(&nvSuppress, 1),
                             repository, Reference<task::XAbortChannel>(), xCmdEnv);
@@ -484,7 +395,7 @@ extern "C" int unopkg_main()
                             cmdPackage, cmdPackage, repository,
                             Reference<task::XAbortChannel>(), xCmdEnv );
                     }
-                    catch (lang::IllegalArgumentException &)
+                    catch (const lang::IllegalArgumentException &)
                     {
                         Reference<deployment::XPackage> p(
                              findPackage(repository,
@@ -493,39 +404,38 @@ extern "C" int unopkg_main()
                             throw;
                         else if (p.is())
                             xExtensionManager->removeExtension(
-                                ::dp_misc::getIdentifier(p), p->getName(), 
+                                ::dp_misc::getIdentifier(p), p->getName(),
                                 repository,
                                 Reference<task::XAbortChannel>(), xCmdEnv );
                     }
                 }
             }
         }
-        else if (subCommand.equalsAsciiL(
-                     RTL_CONSTASCII_STRINGPARAM("reinstall") ))
+        else if ( subCommand == "reinstall" )
         {
             xExtensionManager->reinstallDeployedExtensions(
-                repository, Reference<task::XAbortChannel>(), xCmdEnv);
+                false, repository, Reference<task::XAbortChannel>(), xCmdEnv);
         }
-        else if (subCommand.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM("list") ))
+        else if ( subCommand == "list" )
         {
             ::std::vector<Reference<deployment::XPackage> > vecExtUnaccepted;
             ::comphelper::sequenceToContainer(vecExtUnaccepted,
                     xExtensionManager->getExtensionsWithUnacceptedLicenses(
                         repository, xCmdEnv));
-            
+
             //This vector tells what XPackage  in allExtensions has an
             //unaccepted license.
             std::vector<bool> vecUnaccepted;
             std::vector<Reference<deployment::XPackage> > allExtensions;
             if (cmdPackages.empty())
             {
-                Sequence< Reference<deployment::XPackage> > 
+                Sequence< Reference<deployment::XPackage> >
                     packages = xExtensionManager->getDeployedExtensions(
                         repository, Reference<task::XAbortChannel>(), xCmdEnv );
 
                 ::std::vector<Reference<deployment::XPackage> > vec_packages;
                 ::comphelper::sequenceToContainer(vec_packages, packages);
-                
+
                 //First copy the extensions with the unaccepted license
                 //to vector allExtensions.
                 allExtensions.resize(vecExtUnaccepted.size() + vec_packages.size());
@@ -539,12 +449,12 @@ extern "C" int unopkg_main()
                 //Now prepare the vector which tells what extension has an
                 //unaccepted license
                 vecUnaccepted.resize(vecExtUnaccepted.size() + vec_packages.size());
-                ::std::fill_n( vecUnaccepted.begin(), vecExtUnaccepted.size(), true);
-                std::vector<bool>::iterator i_unaccepted = vecUnaccepted.begin() + vecExtUnaccepted.size();
-                ::std::fill_n(i_unaccepted, vec_packages.size(), false);
-                
+                ::std::fill_n(vecUnaccepted.begin(), vecExtUnaccepted.size(), true);
+                ::std::fill_n(vecUnaccepted.begin() + vecExtUnaccepted.size(),
+                      vec_packages.size(), false);
+
                 dp_misc::writeConsole(
-                    OUSTR("All deployed ") + repository + OUSTR(" extensions:\n\n"));
+                    OUString("All deployed ") + repository + " extensions:\n\n");
             }
             else
             {
@@ -558,7 +468,7 @@ extern "C" int unopkg_main()
                         extension = xExtensionManager->getDeployedExtension(
                             repository, cmdPackages[ pos ], cmdPackages[ pos ], xCmdEnv );
                     }
-                    catch (lang::IllegalArgumentException &)
+                    catch (const lang::IllegalArgumentException &)
                     {
                         extension = findPackage(repository,
                             xExtensionManager, xCmdEnv, cmdPackages[ pos ] );
@@ -584,18 +494,18 @@ extern "C" int unopkg_main()
                         allExtensions.push_back(extension);
                         vecUnaccepted.push_back(bUnacceptedLic);
                     }
-                        
+
                     else
                         throw lang::IllegalArgumentException(
-                            OUSTR("There is no such extension deployed: ") +
+                            "There is no such extension deployed: " +
                             cmdPackages[pos],0,-1);
                 }
-                
+
             }
-            
+
             printf_packages(allExtensions, vecUnaccepted, xCmdEnv );
         }
-        else if (subCommand.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM("validate") ))
+        else if ( subCommand == "validate" )
         {
             ::std::vector<Reference<deployment::XPackage> > vecExtUnaccepted;
             ::comphelper::sequenceToContainer(
@@ -610,7 +520,7 @@ extern "C" int unopkg_main()
                     extension = xExtensionManager->getDeployedExtension(
                         repository, cmdPackages[ pos ], cmdPackages[ pos ], xCmdEnv );
                 }
-                catch (lang::IllegalArgumentException &)
+                catch (const lang::IllegalArgumentException &)
                 {
                     extension = findPackage(
                         repository, xExtensionManager, xCmdEnv, cmdPackages[ pos ] );
@@ -633,11 +543,11 @@ extern "C" int unopkg_main()
                         extension, Reference<task::XAbortChannel>(), xCmdEnv);
             }
         }
-        else if (subCommand.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM("gui") ))
+        else if ( subCommand == "gui" )
         {
             Reference<ui::dialogs::XAsynchronousExecutableDialog> xDialog(
                 deployment::ui::PackageManagerDialog::createAndInstall(
-                    xComponentContext, 
+                    xComponentContext,
                     cmdPackages.size() > 0 ? cmdPackages[0] : OUString() ));
 
             osl::Condition dialogEnded;
@@ -648,84 +558,66 @@ extern "C" int unopkg_main()
 
             xDialog->startExecuteModal(xListener);
             dialogEnded.wait();
-        }
-        else if (subCommand.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM("sync")))
-        {
-            if (! dp_misc::office_is_running())
-            {
-                xExtensionManager->synchronizeBundledPrereg(
-                    Reference<task::XAbortChannel>(), xCmdEnv);
-            }
-            else
-            {
-                dp_misc::writeConsoleError(OUSTR("\nError: office is running"));
-            }            
+            return 0;
         }
         else
         {
             dp_misc::writeConsoleError(
-                OUSTR("\nERROR: unknown sub-command ") + 
-                subCommand +
-                OUSTR("!\n") + 
-                OUSTR("       Use " APP_NAME " ") + 
-                toString(info_help) +
-                OUSTR(" to print all options.\n"));
+                "\nERROR: unknown sub-command " +
+                subCommand + "!\n       Use " APP_NAME " " +
+                toString(info_help) + " to print all options.\n");
             return 1;
         }
-        
+
         if (option_verbose)
-            dp_misc::writeConsole( OUSTR( "\n" APP_NAME " done.\n"));
+            dp_misc::writeConsole("\n" APP_NAME " done.\n");
         //Force to release all bridges which connect us to the child processes
-        disposeBridges(xLocalComponentContext);
+        dp_misc::disposeBridges(xLocalComponentContext);
         return 0;
     }
-    catch (ucb::CommandFailedException &e) 
+    catch (const ucb::CommandFailedException &e)
     {
-        dp_misc::writeConsoleError(e.Message + OUSTR("\n"));
-        bNoOtherErrorMsg = true;    
+        dp_misc::writeConsoleError(e.Message + "\n");
+        bNoOtherErrorMsg = true;
     }
-    catch (ucb::CommandAbortedException &) 
+    catch (const ucb::CommandAbortedException &)
     {
-        dp_misc::writeConsoleError( "\n" APP_NAME " aborted!\n");
+        dp_misc::writeConsoleError("\n" APP_NAME " aborted!\n");
     }
-    catch (deployment::DeploymentException & exc) 
+    catch (const deployment::DeploymentException & exc)
     {
-		OUString cause;
-		if (option_verbose)
-		{
-			cause = ::comphelper::anyToString(exc.Cause);
-		}
-		else
-		{
-			css::uno::Exception e;
-			if (exc.Cause >>= e)
-				cause = e.Message; 
-		}
+        OUString cause;
+        if (option_verbose)
+        {
+            cause = ::comphelper::anyToString(exc.Cause);
+        }
+        else
+        {
+            css::uno::Exception e;
+            if (exc.Cause >>= e)
+                cause = e.Message;
+        }
 
-		dp_misc::writeConsoleError(
-            OUSTR("\nERROR: ") + exc.Message + OUSTR("\n"));
-		if (cause.getLength())
-			dp_misc::writeConsoleError(
-				OUSTR("       Cause: ") + cause + OUSTR("\n"));
+        dp_misc::writeConsoleError("\nERROR: " + exc.Message + "\n");
+        if (!cause.isEmpty())
+            dp_misc::writeConsoleError("       Cause: " + cause + "\n");
     }
-    catch (LockFileException & e) 
+    catch (const LockFileException & e)
     {
         if (!subcmd_gui)
             dp_misc::writeConsoleError(e.Message);
         bNoOtherErrorMsg = true;
     }
-    catch (::com::sun::star::uno::Exception & e ) {
+    catch (const ::com::sun::star::uno::Exception & e ) {
         Any exc( ::cppu::getCaughtException() );
- 
-        dp_misc::writeConsoleError(
-            OUSTR("\nERROR: ") +  
-            OUString(option_verbose  ? e.Message + OUSTR("\nException details: \n") + 
-            ::comphelper::anyToString(exc) : e.Message) +
-            OUSTR("\n"));
+
+        dp_misc::writeConsoleError("\nERROR: " +
+            OUString(option_verbose ? e.Message + "\nException details: \n" +
+            ::comphelper::anyToString(exc) : e.Message) + "\n");
     }
     if (!bNoOtherErrorMsg)
-        dp_misc::writeConsoleError( "\n" APP_NAME " failed.\n");
-    disposeBridges(xLocalComponentContext);
+        dp_misc::writeConsoleError("\n" APP_NAME " failed.\n");
+    dp_misc::disposeBridges(xLocalComponentContext);
     return 1;
 }
 #if defined USE_JAVA && defined MACOSX
@@ -733,3 +625,4 @@ extern "C" int unopkg_main()
 #endif	// USE_JAVA && MACOSX
 
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

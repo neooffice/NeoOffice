@@ -1,45 +1,39 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
+#include <sal/config.h>
 
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_desktop.hxx"
-
+#include <algorithm>
+#include <iterator>
 #include <map>
 #include <new>
 #include <set>
 
 #include "migration.hxx"
 #include "migration_impl.hxx"
-#include "cfgfilter.hxx"
 
 #include <unotools/textsearch.hxx>
 #include <comphelper/processfactory.hxx>
@@ -47,16 +41,15 @@
 #include <unotools/bootstrap.hxx>
 #include <rtl/bootstrap.hxx>
 #include <rtl/uri.hxx>
-#include <tools/config.hxx>
-#include <i18npool/lang.h>
+#include <i18nlangtag/lang.h>
 #include <tools/urlobj.hxx>
 #include <osl/file.hxx>
 #include <osl/mutex.hxx>
-#include <ucbhelper/content.hxx>
 #include <osl/security.hxx>
 #include <unotools/configmgr.hxx>
 
 #include <com/sun/star/configuration/Update.hpp>
+#include <com/sun/star/configuration/theDefaultProvider.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/task/XJob.hpp>
 #include <com/sun/star/beans/NamedValue.hpp>
@@ -65,12 +58,15 @@
 #include <com/sun/star/util/XChangesBatch.hpp>
 #include <com/sun/star/util/XStringSubstitution.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
+#include <com/sun/star/embed/FileSystemStorageFactory.hpp>
 #include <com/sun/star/embed/XStorage.hpp>
+#include <com/sun/star/ui/theModuleUIConfigurationManagerSupplier.hpp>
+#include <com/sun/star/frame/theUICommandDescription.hpp>
+#include <com/sun/star/ui/UIConfigurationManager.hpp>
 #include <com/sun/star/ui/XUIConfiguration.hpp>
 #include <com/sun/star/ui/XUIConfigurationStorage.hpp>
 #include <com/sun/star/ui/XUIConfigurationPersistence.hpp>
 
-using namespace rtl;
 using namespace osl;
 using namespace std;
 using namespace com::sun::star::task;
@@ -81,330 +77,307 @@ using namespace com::sun::star::container;
 using com::sun::star::uno::Exception;
 using namespace com::sun::star;
 
+
 namespace desktop {
 
-static const ::rtl::OUString ITEM_DESCRIPTOR_COMMANDURL = ::rtl::OUString::createFromAscii("CommandURL");
-static const ::rtl::OUString ITEM_DESCRIPTOR_CONTAINER = ::rtl::OUString::createFromAscii("ItemDescriptorContainer");
-static const ::rtl::OUString ITEM_DESCRIPTOR_LABEL = ::rtl::OUString::createFromAscii("Label");
+static const char ITEM_DESCRIPTOR_COMMANDURL[] = "CommandURL";
+static const char ITEM_DESCRIPTOR_CONTAINER[] = "ItemDescriptorContainer";
+static const char ITEM_DESCRIPTOR_LABEL[] = "Label";
 
-static const ::rtl::OUString MENU_SEPERATOR = ::rtl::OUString::createFromAscii(" | ");
-static const ::rtl::OUString MENU_SUBMENU = ::rtl::OUString::createFromAscii("...");
-
-::rtl::OUString retrieveLabelFromCommand(const ::rtl::OUString& sCommand, const ::rtl::OUString& sModuleIdentifier)
+OUString retrieveLabelFromCommand(const OUString& sCommand, const OUString& sModuleIdentifier)
 {
-	::rtl::OUString sLabel;
+    OUString sLabel;
 
-	uno::Reference< container::XNameAccess > xUICommands;
-	uno::Reference< container::XNameAccess > xNameAccess( ::comphelper::getProcessServiceFactory()->createInstance( ::rtl::OUString::createFromAscii("com.sun.star.frame.UICommandDescription") ), uno::UNO_QUERY );
-	if ( xNameAccess.is() )
-	{
-		uno::Any a = xNameAccess->getByName( sModuleIdentifier );
-		a >>= xUICommands;
-	}
-	if (xUICommands.is())
-	{
-		if ( sCommand.getLength() > 0 )
-		{
-			rtl::OUString aStr;
-			::uno::Sequence< beans::PropertyValue > aPropSeq;
-			try
-			{
-				uno::Any a( xUICommands->getByName( sCommand ));
-				if ( a >>= aPropSeq )
-				{
-					for ( sal_Int32 i = 0; i < aPropSeq.getLength(); i++ )
-					{
-						if ( aPropSeq[i].Name.equalsAscii( "Label" ))
-						{
-							aPropSeq[i].Value >>= aStr;
-							break;
-						}
-					}
-				}
-
-				sLabel = aStr;
-			}
-
-			catch(container::NoSuchElementException&)
-			{
-				sLabel = sCommand;
-				sal_Int32 nIndex = sLabel.indexOf(':');
-				if (nIndex>=0 && nIndex <= sLabel.getLength()-1)
-					sLabel = sLabel.copy(nIndex+1);
-			}
-
-		}
-	}
-
-	return sLabel;
-}
-
-::rtl::OUString stripHotKey( const ::rtl::OUString& str )
-{
-	sal_Int32 index = str.indexOf( '~' );
-	if ( index == -1 )
-	{
-		return str;
-	}
-	else
-	{
-		return str.replaceAt( index, 1, ::rtl::OUString() );
-	}
-}
-
-::rtl::OUString mapModuleShortNameToIdentifier(const ::rtl::OUString& sShortName)
-{
-	::rtl::OUString sIdentifier;
-
-	if (sShortName.equals(::rtl::OUString::createFromAscii("StartModule")))
-		sIdentifier = ::rtl::OUString::createFromAscii("com.sun.star.frame.StartModule");
-
-	else if (sShortName.equals(::rtl::OUString::createFromAscii("swriter")))
-		sIdentifier = ::rtl::OUString::createFromAscii("com.sun.star.text.TextDocument");
-
-	else if (sShortName.equals(::rtl::OUString::createFromAscii("scalc")))
-		sIdentifier = ::rtl::OUString::createFromAscii("com.sun.star.sheet.SpreadsheetDocument");
-
-	else if (sShortName.equals(::rtl::OUString::createFromAscii("sdraw")))
-		sIdentifier = ::rtl::OUString::createFromAscii("com.sun.star.drawing.DrawingDocument");
-
-	else if (sShortName.equals(::rtl::OUString::createFromAscii("simpress")))
-		sIdentifier = ::rtl::OUString::createFromAscii("com.sun.star.presentation.PresentationDocument");
-
-	else if (sShortName.equals(::rtl::OUString::createFromAscii("smath")))
-		sIdentifier = ::rtl::OUString::createFromAscii("com.sun.star.formula.FormulaProperties");
-
-	else if (sShortName.equals(::rtl::OUString::createFromAscii("schart")))
-		sIdentifier = ::rtl::OUString::createFromAscii("com.sun.star.chart2.ChartDocument");
-
-	else if (sShortName.equals(::rtl::OUString::createFromAscii("BasicIDE")))
-		sIdentifier = ::rtl::OUString::createFromAscii("com.sun.star.script.BasicIDE");
-
-	else if (sShortName.equals(::rtl::OUString::createFromAscii("dbapp")))
-		sIdentifier = ::rtl::OUString::createFromAscii("com.sun.star.sdb.OfficeDatabaseDocument");
-
-	else if (sShortName.equals(::rtl::OUString::createFromAscii("sglobal")))
-		sIdentifier = ::rtl::OUString::createFromAscii("com.sun.star.text.GlobalDocument");
-
-	else if (sShortName.equals(::rtl::OUString::createFromAscii("sweb")))
-		sIdentifier = ::rtl::OUString::createFromAscii("com.sun.star.text.WebDocument");
-
-	else if (sShortName.equals(::rtl::OUString::createFromAscii("swxform")))
-		sIdentifier = ::rtl::OUString::createFromAscii("com.sun.star.xforms.XMLFormDocument");
-
-	else if (sShortName.equals(::rtl::OUString::createFromAscii("sbibliography")))
-		sIdentifier = ::rtl::OUString::createFromAscii("com.sun.star.frame.Bibliography");
-
-	return sIdentifier;
-}
-
-static MigrationImpl *pImpl = 0;
-static Mutex aMutex;
-static MigrationImpl *getImpl()
-{
-    MutexGuard aGuard(aMutex);
-    if (pImpl == 0)
-        pImpl = new MigrationImpl(comphelper::getProcessServiceFactory());
-    return pImpl;
-}
-
-static void releaseImpl()
-{
-    MutexGuard aGuard(aMutex);
-    if (pImpl != 0)
+    uno::Reference< container::XNameAccess > xUICommands;
+    uno::Reference< container::XNameAccess > const xNameAccess(
+            frame::theUICommandDescription::get(
+                ::comphelper::getProcessComponentContext()) );
+    xNameAccess->getByName( sModuleIdentifier ) >>= xUICommands;
+    if (xUICommands.is())
     {
-        delete pImpl;
-        pImpl = 0;
+        if ( !sCommand.isEmpty() )
+        {
+            OUString aStr;
+            ::uno::Sequence< beans::PropertyValue > aPropSeq;
+            try
+            {
+                uno::Any a( xUICommands->getByName( sCommand ));
+                if ( a >>= aPropSeq )
+                {
+                    for ( sal_Int32 i = 0; i < aPropSeq.getLength(); i++ )
+                    {
+                        if ( aPropSeq[i].Name == "Label" )
+                        {
+                            aPropSeq[i].Value >>= aStr;
+                            break;
+                        }
+                    }
+                }
+
+                sLabel = aStr;
+            }
+            catch (const container::NoSuchElementException&)
+            {
+                sLabel = sCommand;
+                sal_Int32 nIndex = sLabel.indexOf(':');
+                if (nIndex>=0 && nIndex <= sLabel.getLength()-1)
+                    sLabel = sLabel.copy(nIndex+1);
+            }
+
+        }
     }
+
+    return sLabel;
 }
 
-// static main entry point for the migration process
-void Migration::doMigration()
+OUString mapModuleShortNameToIdentifier(const OUString& sShortName)
 {
-    sal_Bool bResult = sal_False;
-    try {
-        bResult = getImpl()->doMigration();
-    } catch (Exception& e)
+    OUString sIdentifier;
+
+    if ( sShortName == "StartModule" )
+        sIdentifier = "com.sun.star.frame.StartModule";
+
+    else if ( sShortName == "swriter" )
+        sIdentifier = "com.sun.star.text.TextDocument";
+
+    else if ( sShortName == "scalc" )
+        sIdentifier = "com.sun.star.sheet.SpreadsheetDocument";
+
+    else if ( sShortName == "sdraw" )
+        sIdentifier = "com.sun.star.drawing.DrawingDocument";
+
+    else if ( sShortName == "simpress" )
+        sIdentifier = "com.sun.star.presentation.PresentationDocument";
+
+    else if ( sShortName == "smath" )
+        sIdentifier = "com.sun.star.formula.FormulaProperties";
+
+    else if ( sShortName == "schart" )
+        sIdentifier = "com.sun.star.chart2.ChartDocument";
+
+    else if ( sShortName == "BasicIDE" )
+        sIdentifier = "com.sun.star.script.BasicIDE";
+
+    else if ( sShortName == "dbapp" )
+        sIdentifier = "com.sun.star.sdb.OfficeDatabaseDocument";
+
+    else if ( sShortName == "sglobal" )
+        sIdentifier = "com.sun.star.text.GlobalDocument";
+
+    else if ( sShortName == "sweb" )
+        sIdentifier = "com.sun.star.text.WebDocument";
+
+    else if ( sShortName == "swxform" )
+        sIdentifier = "com.sun.star.xforms.XMLFormDocument";
+
+    else if ( sShortName == "sbibliography" )
+        sIdentifier = "com.sun.star.frame.Bibliography";
+
+    return sIdentifier;
+}
+
+bool MigrationImpl::alreadyMigrated()
+{
+    OUString MIGRATION_STAMP_NAME("/MIGRATED4");
+    OUString aStr = m_aInfo.userdata + MIGRATION_STAMP_NAME;
+    File aFile(aStr);
+    // create migration stamp, and/or check its existence
+    bool bRet = aFile.open (osl_File_OpenFlag_Write | osl_File_OpenFlag_Create | osl_File_OpenFlag_NoLock) == FileBase::E_EXIST;
+    OSL_TRACE( "File '%s' exists? %d\n",
+             OUStringToOString(aStr, RTL_TEXTENCODING_ASCII_US).getStr(),
+             bRet );
+    return bRet;
+}
+
+bool MigrationImpl::initializeMigration()
+{
+    bool bRet = false;
+
+    if (!checkMigrationCompleted()) {
+        readAvailableMigrations(m_vMigrationsAvailable);
+        sal_Int32 nIndex = findPreferredMigrationProcess(m_vMigrationsAvailable);
+        // m_aInfo is now set to the preferred migration source
+        if ( nIndex >= 0 ) {
+            if (alreadyMigrated())
+                return false;
+            m_vrMigrations = readMigrationSteps(m_vMigrationsAvailable[nIndex].name);
+        }
+
+        bRet = !m_aInfo.userdata.isEmpty();
+    }
+
+    OSL_TRACE( "Migration %s", bRet ? "needed" : "not required" );
+
+    return bRet;
+}
+
+void Migration::migrateSettingsIfNecessary()
+{
+    MigrationImpl aImpl;
+
+    if (! aImpl.initializeMigration() )
+        return;
+
+    bool bResult = false;
+    try
+    {
+        bResult = aImpl.doMigration();
+    }
+    catch (const Exception& e)
     {
         OString aMsg("doMigration() exception: ");
         aMsg += OUStringToOString(e.Message, RTL_TEXTENCODING_ASCII_US);
-        OSL_ENSURE(sal_False, aMsg.getStr());
+        OSL_FAIL(aMsg.getStr());
     }
-    OSL_ENSURE(bResult, "Migration has not been successfull");
-    // shut down migration framework
-    releaseImpl();
+    OSL_ENSURE(bResult, "Migration has not been successful");
+    (void)bResult;
 }
 
-void Migration::cancelMigration()
-{
-    releaseImpl();
-}
-
-sal_Bool Migration::checkMigration()
-{
-    return getImpl()->checkMigration();
-}
-
-OUString Migration::getOldVersionName()
-{
-    return getImpl()->getOldVersionName();
-}
-
-OUString MigrationImpl::getOldVersionName()
-{
-    return m_aInfo.productname;
-}
-
-sal_Bool MigrationImpl::checkMigration()
-{
-    if (m_aInfo.userdata.getLength() > 0 && ! checkMigrationCompleted())
-        return sal_True;
-    else
-        return sal_False;
-}
-
-MigrationImpl::MigrationImpl(const uno::Reference< XMultiServiceFactory >& xFactory)
+MigrationImpl::MigrationImpl()
     : m_vrVersions(new strings_v)
-    , m_xFactory(xFactory)
 {
-    readAvailableMigrations(m_vMigrationsAvailable);
-    sal_Int32 nIndex = findPreferedMigrationProcess(m_vMigrationsAvailable);
-    if ( nIndex >= 0 )
-        m_vrMigrations = readMigrationSteps(m_vMigrationsAvailable[nIndex].name);
 }
 
 MigrationImpl::~MigrationImpl()
 {
-
 }
 
-sal_Bool MigrationImpl::doMigration()
+// The main entry point for migrating settings
+bool MigrationImpl::doMigration()
 {
     // compile file list for migration
     m_vrFileList = compileFileList();
-    
-    sal_Bool result = sal_False;
+
+    bool result = false;
     try
-	{
-		NewVersionUIInfo aNewVersionUIInfo;		
-		::std::vector< MigrationModuleInfo > vModulesInfo = dectectUIChangesForAllModules();
-		aNewVersionUIInfo.init(vModulesInfo);
+    {
+        NewVersionUIInfo aNewVersionUIInfo;
+        ::std::vector< MigrationModuleInfo > vModulesInfo = dectectUIChangesForAllModules();
+        aNewVersionUIInfo.init(vModulesInfo);
 
         copyFiles();
 
-		const ::rtl::OUString sMenubarResourceURL = ::rtl::OUString::createFromAscii("private:resource/menubar/menubar");
-		const ::rtl::OUString sToolbarResourcePre = ::rtl::OUString::createFromAscii("private:resource/toolbar/");
-		for (sal_uInt32 i=0; i<vModulesInfo.size(); ++i)
-		{
-			::rtl::OUString sModuleIdentifier = mapModuleShortNameToIdentifier(vModulesInfo[i].sModuleShortName);
-			if (sModuleIdentifier.getLength()==0)
-				continue;
+        const OUString sMenubarResourceURL("private:resource/menubar/menubar");
+        const OUString sToolbarResourcePre("private:resource/toolbar/");
+        for (sal_uInt32 i=0; i<vModulesInfo.size(); ++i)
+        {
+            OUString sModuleIdentifier = mapModuleShortNameToIdentifier(vModulesInfo[i].sModuleShortName);
+            if (sModuleIdentifier.isEmpty())
+                continue;
 
-			uno::Sequence< uno::Any > lArgs(2);
-			::rtl::OUString aOldCfgDataPath = m_aInfo.userdata + ::rtl::OUString::createFromAscii("/user/config/soffice.cfg/modules/");
-			lArgs[0] <<= aOldCfgDataPath + vModulesInfo[i].sModuleShortName;
-			lArgs[1] <<= embed::ElementModes::READ;
+            uno::Sequence< uno::Any > lArgs(2);
+            OUString aOldCfgDataPath = m_aInfo.userdata + "/user/config/soffice.cfg/modules/";
+            lArgs[0] <<= aOldCfgDataPath + vModulesInfo[i].sModuleShortName;
+            lArgs[1] <<= embed::ElementModes::READ;
 
-			uno::Reference< lang::XSingleServiceFactory > xStorageFactory(m_xFactory->createInstance(::rtl::OUString::createFromAscii("com.sun.star.embed.FileSystemStorageFactory")), uno::UNO_QUERY);
-			uno::Reference< embed::XStorage >             xModules;
+            uno::Reference< uno::XComponentContext > xContext(comphelper::getProcessComponentContext());
+            uno::Reference< lang::XSingleServiceFactory > xStorageFactory(embed::FileSystemStorageFactory::create(xContext));
+            uno::Reference< embed::XStorage >             xModules(xStorageFactory->createInstanceWithArguments(lArgs), uno::UNO_QUERY);
+            uno::Reference< ui::XUIConfigurationManager2 > xOldCfgManager = ui::UIConfigurationManager::create(xContext);
 
-			xModules = uno::Reference< embed::XStorage >(xStorageFactory->createInstanceWithArguments(lArgs), uno::UNO_QUERY);
-			uno::Reference< ui::XUIConfigurationManager > xOldCfgManager( m_xFactory->createInstance( rtl::OUString::createFromAscii("com.sun.star.ui.UIConfigurationManager")), uno::UNO_QUERY );
-			uno::Reference< ui::XUIConfigurationStorage > xOldCfgStorage( xOldCfgManager, uno::UNO_QUERY );
-			uno::Reference< ui::XUIConfigurationPersistence > xOldCfgPersistence( xOldCfgManager, uno::UNO_QUERY );
-
-			if ( xOldCfgStorage.is() && xOldCfgPersistence.is() && xModules.is() )
-			{
-					xOldCfgStorage->setStorage( xModules );
-					xOldCfgPersistence->reload();
-			}
-
-			uno::Reference< ui::XUIConfigurationManager > xCfgManager = aNewVersionUIInfo.getConfigManager(vModulesInfo[i].sModuleShortName);
-
-			if (vModulesInfo[i].bHasMenubar)
-			{
-				uno::Reference< container::XIndexContainer > xOldVersionMenuSettings = uno::Reference< container::XIndexContainer >(xOldCfgManager->getSettings(sMenubarResourceURL, sal_True), uno::UNO_QUERY);
-				uno::Reference< container::XIndexContainer > xNewVersionMenuSettings = aNewVersionUIInfo.getNewMenubarSettings(vModulesInfo[i].sModuleShortName);
-				::rtl::OUString sParent;
-				compareOldAndNewConfig(sParent, xOldVersionMenuSettings, xNewVersionMenuSettings, sMenubarResourceURL);
-				mergeOldToNewVersion(xCfgManager, xNewVersionMenuSettings, sModuleIdentifier, sMenubarResourceURL);
-			}
-
-			sal_Int32 nToolbars = vModulesInfo[i].m_vToolbars.size();
-			if (nToolbars >0)
+            if ( xModules.is() )
             {
-				for (sal_Int32 j=0; j<nToolbars; ++j)
-				{
-					::rtl::OUString sToolbarName = vModulesInfo[i].m_vToolbars[j];
-					::rtl::OUString sToolbarResourceURL = sToolbarResourcePre + sToolbarName;
+                    xOldCfgManager->setStorage( xModules );
+                    xOldCfgManager->reload();
+            }
 
-					uno::Reference< container::XIndexContainer > xOldVersionToolbarSettings = uno::Reference< container::XIndexContainer >(xOldCfgManager->getSettings(sToolbarResourceURL, sal_True), uno::UNO_QUERY);
-					uno::Reference< container::XIndexContainer > xNewVersionToolbarSettings = aNewVersionUIInfo.getNewToolbarSettings(vModulesInfo[i].sModuleShortName, sToolbarName);
-					::rtl::OUString sParent;
-					compareOldAndNewConfig(sParent, xOldVersionToolbarSettings, xNewVersionToolbarSettings, sToolbarResourceURL);
-					mergeOldToNewVersion(xCfgManager, xNewVersionToolbarSettings, sModuleIdentifier, sToolbarResourceURL);
-				}                
-			}
+            uno::Reference< ui::XUIConfigurationManager > xCfgManager = aNewVersionUIInfo.getConfigManager(vModulesInfo[i].sModuleShortName);
 
-			m_aOldVersionItemsHashMap.clear();
-			m_aNewVersionItemsHashMap.clear();
-		}
+            if (vModulesInfo[i].bHasMenubar)
+            {
+                uno::Reference< container::XIndexContainer > xOldVersionMenuSettings = uno::Reference< container::XIndexContainer >(xOldCfgManager->getSettings(sMenubarResourceURL, sal_True), uno::UNO_QUERY);
+                uno::Reference< container::XIndexContainer > xNewVersionMenuSettings = aNewVersionUIInfo.getNewMenubarSettings(vModulesInfo[i].sModuleShortName);
+                OUString sParent;
+                compareOldAndNewConfig(sParent, xOldVersionMenuSettings, xNewVersionMenuSettings, sMenubarResourceURL);
+                mergeOldToNewVersion(xCfgManager, xNewVersionMenuSettings, sModuleIdentifier, sMenubarResourceURL);
+            }
 
-		// execute the migration items from Setup.xcu
+            sal_Int32 nToolbars = vModulesInfo[i].m_vToolbars.size();
+            if (nToolbars >0)
+            {
+                for (sal_Int32 j=0; j<nToolbars; ++j)
+                {
+                    OUString sToolbarName = vModulesInfo[i].m_vToolbars[j];
+                    OUString sToolbarResourceURL = sToolbarResourcePre + sToolbarName;
+
+                    uno::Reference< container::XIndexContainer > xOldVersionToolbarSettings = uno::Reference< container::XIndexContainer >(xOldCfgManager->getSettings(sToolbarResourceURL, sal_True), uno::UNO_QUERY);
+                    uno::Reference< container::XIndexContainer > xNewVersionToolbarSettings = aNewVersionUIInfo.getNewToolbarSettings(vModulesInfo[i].sModuleShortName, sToolbarName);
+                    OUString sParent;
+                    compareOldAndNewConfig(sParent, xOldVersionToolbarSettings, xNewVersionToolbarSettings, sToolbarResourceURL);
+                    mergeOldToNewVersion(xCfgManager, xNewVersionToolbarSettings, sModuleIdentifier, sToolbarResourceURL);
+                }
+            }
+
+            m_aOldVersionItemsHashMap.clear();
+            m_aNewVersionItemsHashMap.clear();
+        }
+
+        // execute the migration items from Setup.xcu
         copyConfig();
 
-		// execute custom migration services from Setup.xcu
-		// and refresh the cache
+        // execute custom migration services from Setup.xcu
+        // and refresh the cache
         runServices();
         refresh();
 
-        result = sal_True;
-    } catch (...)
+        result = true;
+    }
+    catch (css::uno::Exception & e)
     {
-        OString aMsg("An unexpected exception was thrown during migration");
-        aMsg += "\nOldVersion: " + OUStringToOString(m_aInfo.productname, RTL_TEXTENCODING_ASCII_US);
-        aMsg += "\nDataPath  : " + OUStringToOString(m_aInfo.userdata, RTL_TEXTENCODING_ASCII_US);
-        OSL_ENSURE(sal_False, aMsg.getStr());
+        SAL_WARN(
+            "desktop.migration",
+            "ignored Exception \"" << e.Message
+                << "\" while migrating from version \"" << m_aInfo.productname
+                << "\" data \"" << m_aInfo.userdata << "\"");
     }
 
-	// prevent running the migration multiple times
-	setMigrationCompleted();
+    // prevent running the migration multiple times
+    setMigrationCompleted();
     return result;
 }
 
 void MigrationImpl::refresh()
 {
-	uno::Reference< XRefreshable > xRefresh(m_xFactory->createInstance(
-                OUString::createFromAscii("com.sun.star.configuration.ConfigurationProvider")), uno::UNO_QUERY);
-    if (xRefresh.is())
-        xRefresh->refresh();
-    else
-        OSL_ENSURE(sal_False, "could not get XRefresh interface from default config provider. No refresh done.");
-
+    uno::Reference< XRefreshable >(
+        configuration::theDefaultProvider::get(comphelper::getProcessComponentContext()),
+        uno::UNO_QUERY_THROW)->refresh();
 }
 
 void MigrationImpl::setMigrationCompleted()
 {
-	try {
-		uno::Reference< XPropertySet > aPropertySet(getConfigAccess("org.openoffice.Setup/Office", true), uno::UNO_QUERY_THROW);
-		aPropertySet->setPropertyValue(OUString::createFromAscii("MigrationCompleted"), uno::makeAny(sal_True));
-		uno::Reference< XChangesBatch >(aPropertySet, uno::UNO_QUERY_THROW)->commitChanges();
-	} catch (...) {
-		// fail silently
-	}
+    try
+    {
+        uno::Reference< XPropertySet > aPropertySet(getConfigAccess("org.openoffice.Setup/Office", true), uno::UNO_QUERY_THROW);
+        aPropertySet->setPropertyValue("MigrationCompleted", uno::makeAny(sal_True));
+        uno::Reference< XChangesBatch >(aPropertySet, uno::UNO_QUERY_THROW)->commitChanges();
+    }
+    catch (...)
+    {
+        // fail silently
+    }
 }
 
-sal_Bool MigrationImpl::checkMigrationCompleted()
+bool MigrationImpl::checkMigrationCompleted()
 {
-    sal_Bool bMigrationCompleted = sal_False;
+    bool bMigrationCompleted = false;
     try {
-		uno::Reference< XPropertySet > aPropertySet(
+        uno::Reference< XPropertySet > aPropertySet(
             getConfigAccess("org.openoffice.Setup/Office"), uno::UNO_QUERY_THROW);
-        aPropertySet->getPropertyValue(
-            OUString::createFromAscii("MigrationCompleted")) >>= bMigrationCompleted;
-    } catch (Exception&) {
+        aPropertySet->getPropertyValue("MigrationCompleted") >>= bMigrationCompleted;
+
+        if( !bMigrationCompleted && getenv("SAL_DISABLE_USERMIGRATION" ) )
+        {
+            // migration prevented - fake it's success
+            setMigrationCompleted();
+            bMigrationCompleted = true;
+        }
+    }
+    catch (const Exception&)
+    {
         // just return false...
     }
+    OSL_TRACE( "Migration %s", bMigrationCompleted ? "already completed" : "not done" );
+
     return bMigrationCompleted;
 }
 
@@ -429,11 +402,11 @@ static void insertSorted(migrations_available& rAvailableMigrations, supported_m
 bool MigrationImpl::readAvailableMigrations(migrations_available& rAvailableMigrations)
 {
     // get supported version names
-	uno::Reference< XNameAccess > aMigrationAccess(getConfigAccess("org.openoffice.Setup/Migration/SupportedVersions"), uno::UNO_QUERY_THROW);
+    uno::Reference< XNameAccess > aMigrationAccess(getConfigAccess("org.openoffice.Setup/Migration/SupportedVersions"), uno::UNO_QUERY_THROW);
     uno::Sequence< OUString > seqSupportedVersions = aMigrationAccess->getElementNames();
-    
-    const OUString aVersionIdentifiers( RTL_CONSTASCII_USTRINGPARAM( "VersionIdentifiers" ));
-    const OUString aPriorityIdentifier( RTL_CONSTASCII_USTRINGPARAM( "Priority" ));
+
+    const OUString aVersionIdentifiers( "VersionIdentifiers" );
+    const OUString aPriorityIdentifier( "Priority" );
 
     for (sal_Int32 i=0; i<seqSupportedVersions.getLength(); i++)
     {
@@ -449,37 +422,38 @@ bool MigrationImpl::readAvailableMigrations(migrations_available& rAvailableMigr
         for (sal_Int32 j=0; j<seqVersions.getLength(); j++)
             aSupportedMigration.supported_versions.push_back(seqVersions[j].trim());
         insertSorted( rAvailableMigrations, aSupportedMigration );
+        OSL_TRACE( " available migration '%s'\n",
+                   OUStringToOString( aSupportedMigration.name, RTL_TEXTENCODING_ASCII_US ).getStr() );
     }
 
     return true;
 }
 
-migrations_vr MigrationImpl::readMigrationSteps(const ::rtl::OUString& rMigrationName)
+migrations_vr MigrationImpl::readMigrationSteps(const OUString& rMigrationName)
 {
     // get migration access
-	uno::Reference< XNameAccess > aMigrationAccess(getConfigAccess("org.openoffice.Setup/Migration/SupportedVersions"), uno::UNO_QUERY_THROW);
+    uno::Reference< XNameAccess > aMigrationAccess(getConfigAccess("org.openoffice.Setup/Migration/SupportedVersions"), uno::UNO_QUERY_THROW);
     uno::Reference< XNameAccess > xMigrationData( aMigrationAccess->getByName(rMigrationName), uno::UNO_QUERY_THROW );
-    
-    // get migration description from from org.openoffice.Setup/Migration
+
+    // get migration description from org.openoffice.Setup/Migration
     // and build vector of migration steps
-	OUString aMigrationSteps( RTL_CONSTASCII_USTRINGPARAM( "MigrationSteps" ));
+    OUString aMigrationSteps( "MigrationSteps" );
     uno::Reference< XNameAccess > theNameAccess(xMigrationData->getByName(aMigrationSteps), uno::UNO_QUERY_THROW);
-	uno::Sequence< OUString > seqMigrations = theNameAccess->getElementNames();
-	uno::Reference< XNameAccess > tmpAccess;
-	uno::Reference< XNameAccess > tmpAccess2;
-	uno::Sequence< OUString > tmpSeq;
+    uno::Sequence< OUString > seqMigrations = theNameAccess->getElementNames();
+    uno::Reference< XNameAccess > tmpAccess;
+    uno::Reference< XNameAccess > tmpAccess2;
+    uno::Sequence< OUString > tmpSeq;
     migrations_vr vrMigrations(new migrations_v);
     for (sal_Int32 i = 0; i < seqMigrations.getLength(); i++)
     {
         // get current migration step
         theNameAccess->getByName(seqMigrations[i]) >>= tmpAccess;
-        // tmpStepPtr = new migration_step();
         migration_step tmpStep;
         tmpStep.name = seqMigrations[i];
 
         // read included files from current step description
-        ::rtl::OUString aSeqEntry;
-        if (tmpAccess->getByName(OUString::createFromAscii("IncludedFiles")) >>= tmpSeq)
+        OUString aSeqEntry;
+        if (tmpAccess->getByName("IncludedFiles") >>= tmpSeq)
         {
             for (sal_Int32 j=0; j<tmpSeq.getLength(); j++)
             {
@@ -489,35 +463,35 @@ migrations_vr MigrationImpl::readMigrationSteps(const ::rtl::OUString& rMigratio
         }
 
         // exluded files...
-        if (tmpAccess->getByName(OUString::createFromAscii("ExcludedFiles")) >>= tmpSeq)
+        if (tmpAccess->getByName("ExcludedFiles") >>= tmpSeq)
         {
             for (sal_Int32 j=0; j<tmpSeq.getLength(); j++)
                 tmpStep.excludeFiles.push_back(tmpSeq[j]);
         }
 
         // included nodes...
-        if (tmpAccess->getByName(OUString::createFromAscii("IncludedNodes")) >>= tmpSeq)
+        if (tmpAccess->getByName("IncludedNodes") >>= tmpSeq)
         {
             for (sal_Int32 j=0; j<tmpSeq.getLength(); j++)
                 tmpStep.includeConfig.push_back(tmpSeq[j]);
         }
 
         // excluded nodes...
-        if (tmpAccess->getByName(OUString::createFromAscii("ExcludedNodes")) >>= tmpSeq)
+        if (tmpAccess->getByName("ExcludedNodes") >>= tmpSeq)
         {
             for (sal_Int32 j=0; j<tmpSeq.getLength(); j++)
                 tmpStep.excludeConfig.push_back(tmpSeq[j]);
         }
 
         // included extensions...
-        if (tmpAccess->getByName(OUString::createFromAscii("IncludedExtensions")) >>= tmpSeq)
+        if (tmpAccess->getByName("IncludedExtensions") >>= tmpSeq)
         {
             for (sal_Int32 j=0; j<tmpSeq.getLength(); j++)
                 tmpStep.includeExtensions.push_back(tmpSeq[j]);
         }
 
         // excluded extensions...
-        if (tmpAccess->getByName(OUString::createFromAscii("ExcludedExtensions")) >>= tmpSeq)
+        if (tmpAccess->getByName("ExcludedExtensions") >>= tmpSeq)
         {
             for (sal_Int32 j=0; j<tmpSeq.getLength(); j++)
             {
@@ -527,7 +501,7 @@ migrations_vr MigrationImpl::readMigrationSteps(const ::rtl::OUString& rMigratio
         }
 
         // generic service
-        tmpAccess->getByName(OUString::createFromAscii("MigrationService")) >>= tmpStep.service;
+        tmpAccess->getByName("MigrationService") >>= tmpStep.service;
 
         vrMigrations->push_back(tmpStep);
     }
@@ -548,24 +522,81 @@ static FileBase::RC _checkAndCreateDirectory(INetURLObject& dirURL)
     {
         // Fix bug 1544 by ensuring that destination directory is
         // readable, writable, and executable
-        ::osl::FileStatus aDirStatus( FileStatusMask_Attributes );
+        ::osl::FileStatus aDirStatus( osl_FileStatus_Mask_Attributes );
         ::osl::DirectoryItem aDirItem;
         ::osl::DirectoryItem::get( dirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ), aDirItem );
         aDirItem.getFileStatus( aDirStatus );
-        ::osl::File::setAttributes( dirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ), Attribute_OwnRead | Attribute_OwnWrite | Attribute_OwnExe | aDirStatus.getAttributes() );
-        return result;
-    }
-#else	// USE_JAVA
-        return result;
+        ::osl::File::setAttributes( dirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ), osl_File_Attribute_OwnRead | osl_File_Attribute_OwnWrite | osl_File_Attribute_OwnExe | aDirStatus.getAttributes() );
 #endif	// USE_JAVA
+        return result;
+#ifdef USE_JAVA
+    }
+#endif	// USE_JAVA
+}
+
+#if defined UNX && ! defined MACOSX
+
+static const char XDG_CONFIG_PART[] = "/.config/";
+
+OUString MigrationImpl::preXDGConfigDir(const OUString& rConfigDir)
+{
+    OUString aPreXDGConfigPath;
+    const char* pXDGCfgHome = getenv("XDG_CONFIG_HOME");
+
+    // cater for XDG_CONFIG_HOME change
+    // If XDG_CONFIG_HOME is set then we;
+    // assume the user knows what they are doing ( room for improvement here, we could
+    // of course search the default config dir etc. also  - but this is more complex,
+    // we would need to weigh results from the current config dir against matches in
+    // the 'old' config dir etc. ) - currently we just use the returned config dir.
+    // If XDG_CONFIG_HOME is NOT set;
+    // assume then we should now using the default $HOME/,config config location for
+    // our user profiles, however *all* previous libreoffice and openoffice.org
+    // configurations will be in the 'old' config directory and that's where we need
+    // to search - we convert the returned config dir to the 'old' dir
+    if ( !pXDGCfgHome && rConfigDir.endsWithAsciiL( XDG_CONFIG_PART, sizeof( XDG_CONFIG_PART ) - 1 )  )
+        // remove trailing '.config/' but leave the terminating '/'
+        aPreXDGConfigPath = rConfigDir.copy( 0, rConfigDir.getLength() - sizeof(  XDG_CONFIG_PART ) + 2 );
+    else
+        aPreXDGConfigPath = rConfigDir;
+
+    // the application-specific config dir is not longer prefixed by '.' because it is hidden under ".config"
+    // we have to add the '.' for the pre-XDG directory names
+    aPreXDGConfigPath += ".";
+
+   return aPreXDGConfigPath;
+}
+#endif
+
+void MigrationImpl::setInstallInfoIfExist(
+    install_info& aInfo,
+    const OUString& rConfigDir,
+    const OUString& rVersion)
+{
+    OUString url(INetURLObject(rConfigDir).GetMainURL(INetURLObject::NO_DECODE));
+    osl::DirectoryItem item;
+    osl::FileStatus stat(osl_FileStatus_Mask_Type);
+
+    if (osl::DirectoryItem::get(url, item) == osl::FileBase::E_None
+            && item.getFileStatus(stat) == osl::FileBase::E_None
+            && stat.getFileType() == osl::FileStatus::Directory)
+    {
+        aInfo.userdata = url;
+        aInfo.productname = rVersion;
+    }
 }
 
 install_info MigrationImpl::findInstallation(const strings_v& rVersions)
 {
-    rtl::OUString aProductName;
-	uno::Any aRet = ::utl::ConfigManager::GetDirectConfigProperty( ::utl::ConfigManager::PRODUCTNAME );
-    aRet >>= aProductName;
-	aProductName = aProductName.toAsciiLowerCase();
+
+    OUString aTopConfigDir;
+    osl::Security().getConfigDir( aTopConfigDir );
+    if ( !aTopConfigDir.isEmpty() && aTopConfigDir[ aTopConfigDir.getLength()-1 ] != '/' )
+        aTopConfigDir += "/";
+
+#if defined UNX && ! defined MACOSX
+    OUString aPreXDGTopConfigDir = preXDGConfigDir(aTopConfigDir);
+#endif
 
     install_info aInfo;
 #if defined PRODUCT_DIR_NAME || defined PRODUCT_DIR_NAME2 || defined PRODUCT_DIR_NAME3
@@ -575,105 +606,69 @@ install_info MigrationImpl::findInstallation(const strings_v& rVersions)
     if ( usAltInstall.getLength() )
     {
         if ( usAltInstall[ usAltInstall.getLength() - 1 ] != '/' )
-            usAltInstall += OUString::createFromAscii( "/" );
-		// Check last product first as it is very unlikely to exist for the
-		// first product
+            usAltInstall += "/";
+        // Check last product first as it is very unlikely to exist for the
+        // first product
 #ifdef PRODUCT_DIR_NAME3
-        OUString usAltInstallPrefs3 = usAltInstall + OUString::createFromAscii( PRODUCT_DIR_NAME3 "-3.0" );
-        try
-        {
-       	    INetURLObject aObj( usAltInstallPrefs3 );
-       	    ::ucbhelper::Content aCnt( aObj.GetMainURL( INetURLObject::NO_DECODE ), uno::Reference< ucb::XCommandEnvironment > () );
-       	    aCnt.isDocument();
-       	    aInfo.userdata = aObj.GetMainURL( INetURLObject::NO_DECODE );
-            // Explicitly use the "OpenOffice.org 3" filter
-            aInfo.productname = OUString::createFromAscii( "OpenOffice.org 3" );
- 	        return aInfo;
-       	}
-       	catch( uno::Exception& ){}
+        // Explicitly use the "Openofice.org 3" filter
+        setInstallInfoIfExist( aInfo, usAltInstall + PRODUCT_DIR_NAME3 + "-3.0", "Openofice.org 3" );
+        if ( aInfo.userdata.getLength() )
+            return aInfo;
 #endif	// PRODUCT_DIR_NAME3
 #ifdef PRODUCT_DIR_NAME2
-        OUString usAltInstallPrefs2 = usAltInstall + OUString::createFromAscii( PRODUCT_DIR_NAME2 );
-        try
-        {
-       	    INetURLObject aObj( usAltInstallPrefs2 );
-       	    ::ucbhelper::Content aCnt( aObj.GetMainURL( INetURLObject::NO_DECODE ), uno::Reference< ucb::XCommandEnvironment > () );
-       	    aCnt.isDocument();
-       	    aInfo.userdata = aObj.GetMainURL( INetURLObject::NO_DECODE );
-            // Explicitly use the "OpenOffice.org 3" filter
-            aInfo.productname = OUString::createFromAscii( "OpenOffice.org 3" );
- 	        return aInfo;
-       	}
-       	catch( uno::Exception& ){}
+        // Explicitly use the "Openofice.org 3" filter
+        setInstallInfoIfExist( aInfo, usAltInstall + PRODUCT_DIR_NAME2, "Openofice.org 3" );
+        if ( aInfo.userdata.getLength() )
+            return aInfo;
 #endif	// PRODUCT_DIR_NAME2
 #ifdef PRODUCT_DIR_NAME
-        OUString usAltInstallPrefs = usAltInstall + OUString::createFromAscii( PRODUCT_DIR_NAME );
-        try
-        {
-       	    INetURLObject aObj( usAltInstallPrefs );
-       	    ::ucbhelper::Content aCnt( aObj.GetMainURL( INetURLObject::NO_DECODE ), uno::Reference< ucb::XCommandEnvironment > () );
-       	    aCnt.isDocument();
-       	    aInfo.userdata = aObj.GetMainURL( INetURLObject::NO_DECODE );
-            // Explicitly use the "OpenOffice.org 3" filter
-            aInfo.productname = OUString::createFromAscii( "OpenOffice.org 3" );
- 	        return aInfo;
-       	}
-       	catch( uno::Exception& ){}
+        // Explicitly use the "Openofice.org 3" filter
+        setInstallInfoIfExist( aInfo, usAltInstall + PRODUCT_DIR_NAME, "Openofice.org 3" );
+        if ( aInfo.userdata.getLength() )
+            return aInfo;
 #endif	// PRODUCT_DIR_NAME
-   	}
+    }
 #else	// PRODUCT_DIR_NAME || PRODUCT_DIR_NAME2 || PRODUCT_DIR_NAME3
     strings_v::const_iterator i_ver = rVersions.begin();
-	uno::Reference < util::XStringSubstitution > xSubst( ::comphelper::getProcessServiceFactory()->createInstance(::rtl::OUString::createFromAscii("com.sun.star.util.PathSubstitution")), uno::UNO_QUERY );
     while (i_ver != rVersions.end())
-	{
-		::rtl::OUString aVersion, aProfileName;
-		sal_Int32 nSeparatorIndex = (*i_ver).indexOf('=');
-		if ( nSeparatorIndex != -1 )
-		{
-			aVersion = (*i_ver).copy( 0, nSeparatorIndex );
-			aProfileName = (*i_ver).copy( nSeparatorIndex+1 );
-		}
+    {
+        OUString aVersion, aProfileName;
+        sal_Int32 nSeparatorIndex = (*i_ver).indexOf('=');
+        if ( nSeparatorIndex != -1 )
+        {
+            aVersion = (*i_ver).copy( 0, nSeparatorIndex );
+            aProfileName = (*i_ver).copy( nSeparatorIndex+1 );
+        }
 
-		if ( aVersion.getLength() && aProfileName.getLength() && 
-				( !aInfo.userdata.getLength() || !aProfileName.toAsciiLowerCase().compareTo( aProductName, aProductName.getLength() ) )
-		   )
-		{
-			::rtl::OUString aUserInst;
-			osl::Security().getConfigDir( aUserInst );
-			if ( aUserInst.getLength() && aUserInst[ aUserInst.getLength()-1 ] != '/' )
-				aUserInst += ::rtl::OUString::createFromAscii("/");
+        if ( !aVersion.isEmpty() && !aProfileName.isEmpty() &&
+             ( aInfo.userdata.isEmpty() ||
+               aProfileName.equalsIgnoreAsciiCase(
+                   utl::ConfigManager::getProductName() ) ) )
+        {
+            setInstallInfoIfExist(aInfo, aTopConfigDir + aProfileName, aVersion);
 #if defined UNX && ! defined MACOSX
-            // tribute to whoever had the "great" idea to use different names on Windows and Unix
-            aUserInst += ::rtl::OUString::createFromAscii(".");
+            //try preXDG path if the new one does not exist
+            if ( aInfo.userdata.isEmpty())
+                setInstallInfoIfExist(aInfo, aPreXDGTopConfigDir + aProfileName, aVersion);
 #endif
-			aUserInst += aProfileName;
-			try
-			{
-				INetURLObject aObj(aUserInst);
-				::ucbhelper::Content aCnt( aObj.GetMainURL( INetURLObject::NO_DECODE ), uno::Reference< ucb::XCommandEnvironment > () );
-				aCnt.isDocument();
-				aInfo.userdata = aObj.GetMainURL( INetURLObject::NO_DECODE );
-				aInfo.productname = aVersion;
-			}
-			catch( uno::Exception& ){}
-		}
-		++i_ver;
-	}
+        }
+        ++i_ver;
+    }
 #endif	// PRODUCT_DIR_NAME || PRODUCT_DIR_NAME2 || PRODUCT_DIR_NAME3
 
-	return aInfo;
+    return aInfo;
 }
 
-sal_Int32 MigrationImpl::findPreferedMigrationProcess(const migrations_available& rAvailableMigrations)
+sal_Int32 MigrationImpl::findPreferredMigrationProcess(const migrations_available& rAvailableMigrations)
 {
     sal_Int32    nIndex( -1 );
     sal_Int32    i( 0 );
-    
+
     migrations_available::const_iterator rIter = rAvailableMigrations.begin();
     while ( rIter != rAvailableMigrations.end() )
     {
         install_info aInstallInfo = findInstallation(rIter->supported_versions);
-        if (aInstallInfo.productname.getLength() > 0 )
+        if (!aInstallInfo.productname.isEmpty() )
         {
             m_aInfo = aInstallInfo;
             nIndex  = i;
@@ -682,6 +677,11 @@ sal_Int32 MigrationImpl::findPreferedMigrationProcess(const migrations_available
         ++i;
         ++rIter;
     }
+
+    OSL_TRACE( " preferred migration is from product '%s'\n",
+               OUStringToOString( m_aInfo.productname, RTL_TEXTENCODING_ASCII_US ).getStr() );
+    OSL_TRACE( " and settings directory '%s'\n",
+               OUStringToOString( m_aInfo.userdata, RTL_TEXTENCODING_ASCII_US ).getStr() );
 
     return nIndex;
 }
@@ -699,16 +699,16 @@ strings_vr MigrationImpl::applyPatterns(const strings_v& vSet, const strings_v& 
         SearchParam param(*i_pat, SearchParam::SRCH_REGEXP);
         TextSearch ts(param, LANGUAGE_DONTKNOW);
         i_set = vSet.begin();
-        xub_StrLen start = 0;
-        xub_StrLen end = 0;
+        sal_Int32 start = 0;
+        sal_Int32 end = 0;
         while (i_set != vSet.end())
         {
-            end = (xub_StrLen)(i_set->getLength());
-            if (ts.SearchFrwrd(*i_set, &start, &end))
+            end = i_set->getLength();
+            if (ts.SearchForward(*i_set, &start, &end))
                 vrResult->push_back(*i_set);
-            i_set++;
+            ++i_set;
         }
-        i_pat++;
+        ++i_pat;
     }
     return vrResult;
 }
@@ -727,7 +727,7 @@ strings_vr MigrationImpl::getAllFiles(const OUString& baseURL) const
 
         // work through directory contents...
         DirectoryItem item;
-        FileStatus fs(FileStatusMask_Type | FileStatusMask_FileURL);
+        FileStatus fs(osl_FileStatus_Mask_Type | osl_FileStatus_Mask_FileURL);
         while (dir.getNextItem(item) == FileBase::E_None)
         {
             if (item.getFileStatus(fs) == FileBase::E_None)
@@ -745,10 +745,27 @@ strings_vr MigrationImpl::getAllFiles(const OUString& baseURL) const
         {
             vrSubResult = getAllFiles(*i);
             vrResult->insert(vrResult->end(), vrSubResult->begin(), vrSubResult->end());
-            i++;
+            ++i;
         }
     }
     return vrResult;
+}
+
+namespace {
+
+// removes elements of vector 2 in vector 1
+strings_v subtract(strings_v const & va, strings_v const & vb) {
+    strings_v a(va);
+    std::sort(a.begin(), a.end());
+    strings_v::iterator ae(std::unique(a.begin(), a.end()));
+    strings_v b(vb);
+    std::sort(b.begin(), b.end());
+    strings_v::iterator be(std::unique(b.begin(), b.end()));
+    strings_v c;
+    std::set_difference(a.begin(), ae, b.begin(), be, std::back_inserter(c));
+    return c;
+}
+
 }
 
 strings_vr MigrationImpl::compileFileList()
@@ -757,12 +774,6 @@ strings_vr MigrationImpl::compileFileList()
     strings_vr vrResult(new strings_v);
     strings_vr vrInclude;
     strings_vr vrExclude;
-    strings_vr vrTemp;
-
-#ifdef SAL_OS2
-    if (m_aInfo.userdata.getLength() == 0)
-        return vrResult;
-#endif
 
     // get a list of all files:
     strings_vr vrFiles = getAllFiles(m_aInfo.userdata);
@@ -773,9 +784,9 @@ strings_vr MigrationImpl::compileFileList()
     {
         vrInclude = applyPatterns(*vrFiles, i_migr->includeFiles);
         vrExclude = applyPatterns(*vrFiles, i_migr->excludeFiles);
-        substract(*vrInclude, *vrExclude);
-        vrResult->insert(vrResult->end(), vrInclude->begin(), vrInclude->end());
-        i_migr++;
+        strings_v sub(subtract(*vrInclude, *vrExclude));
+        vrResult->insert(vrResult->end(), sub.begin(), sub.end());
+        ++i_migr;
     }
     return vrResult;
 }
@@ -783,19 +794,19 @@ strings_vr MigrationImpl::compileFileList()
 namespace {
 
 struct componentParts {
-    std::set< rtl::OUString > includedPaths;
-    std::set< rtl::OUString > excludedPaths;
+    std::set< OUString > includedPaths;
+    std::set< OUString > excludedPaths;
 };
 
-typedef std::map< rtl::OUString, componentParts > Components;
+typedef std::map< OUString, componentParts > Components;
 
-bool getComponent(rtl::OUString const & path, rtl::OUString * component) {
+bool getComponent(OUString const & path, OUString * component) {
     OSL_ASSERT(component != 0);
-    if (path.getLength() == 0 || path[0] != '/') {
+    if (path.isEmpty() || path[0] != '/') {
         OSL_TRACE(
             ("configuration migration in/exclude path %s ignored (does not"
              " start with slash)"),
-            rtl::OUStringToOString(path, RTL_TEXTENCODING_UTF8).getStr());
+            OUStringToOString(path, RTL_TEXTENCODING_UTF8).getStr());
         return false;
     }
     sal_Int32 i = path.indexOf('/', 1);
@@ -803,14 +814,14 @@ bool getComponent(rtl::OUString const & path, rtl::OUString * component) {
     return true;
 }
 
-uno::Sequence< rtl::OUString > setToSeq(std::set< rtl::OUString > const & set) {
-    std::set< rtl::OUString >::size_type n = set.size();
+uno::Sequence< OUString > setToSeq(std::set< OUString > const & set) {
+    std::set< OUString >::size_type n = set.size();
     if (n > SAL_MAX_INT32) {
         throw std::bad_alloc();
     }
-    uno::Sequence< rtl::OUString > seq(static_cast< sal_Int32 >(n));
+    uno::Sequence< OUString > seq(static_cast< sal_Int32 >(n));
     sal_Int32 i = 0;
-    for (std::set< rtl::OUString >::const_iterator j(set.begin());
+    for (std::set< OUString >::const_iterator j(set.begin());
          j != set.end(); ++j)
     {
         seq[i++] = *j;
@@ -828,7 +839,7 @@ void MigrationImpl::copyConfig() {
         for (strings_v::const_iterator j(i->includeConfig.begin());
              j != i->includeConfig.end(); ++j)
         {
-            rtl::OUString comp;
+            OUString comp;
             if (getComponent(*j, &comp)) {
                 comps[comp].includedPaths.insert(*j);
             }
@@ -836,122 +847,96 @@ void MigrationImpl::copyConfig() {
         for (strings_v::const_iterator j(i->excludeConfig.begin());
              j != i->excludeConfig.end(); ++j)
         {
-            rtl::OUString comp;
+            OUString comp;
             if (getComponent(*j, &comp)) {
                 comps[comp].excludedPaths.insert(*j);
             }
         }
     }
+
+    // check if the shared registrymodifications.xcu file exists
+    bool bRegistryModificationsXcuExists = false;
+    OUString regFilePath(m_aInfo.userdata);
+    regFilePath += "/user/registrymodifications.xcu";
+    File regFile(regFilePath);
+    ::osl::FileBase::RC nError = regFile.open(osl_File_OpenFlag_Read);
+    if ( nError == ::osl::FileBase::E_None ) {
+        bRegistryModificationsXcuExists = true;
+        regFile.close();
+    }
+
     for (Components::const_iterator i(comps.begin()); i != comps.end(); ++i) {
         if (!i->second.includedPaths.empty()) {
-            rtl::OUStringBuffer buf(m_aInfo.userdata);
-            if ( m_aInfo.productname.equals( OUString::createFromAscii("OpenOffice.org 3") ) )
-            {
-                // OpenOffice.org 3 configuration file
-                buf.appendAscii(RTL_CONSTASCII_STRINGPARAM("/user/registrymodifications.xcu"));
-            }
-            else
-            {
-                // OpenOffice.org 2 configuration files
-                buf.appendAscii(RTL_CONSTASCII_STRINGPARAM("/user/registry/data"));
+            if (!bRegistryModificationsXcuExists) {
+                // shared registrymodifications.xcu does not exists
+                // the configuration is split in many registry files
+                // determine the file names from the first element in included paths
+                OUStringBuffer buf(m_aInfo.userdata);
+                buf.appendAscii("/user/registry/data");
                 sal_Int32 n = 0;
                 do {
-                    rtl::OUString seg(i->first.getToken(0, '.', n));
-                    rtl::OUString enc(
+                    OUString seg(i->first.getToken(0, '.', n));
+                    OUString enc(
                         rtl::Uri::encode(
                             seg, rtl_UriCharClassPchar, rtl_UriEncodeStrict,
                             RTL_TEXTENCODING_UTF8));
-                    if (enc.getLength() == 0 && seg.getLength() != 0) {
+                    if (enc.isEmpty() && !seg.isEmpty()) {
                         OSL_TRACE(
                             ("configuration migration component %s ignored (cannot"
-                             " be encoded as file path)"),
-                            rtl::OUStringToOString(
+                            " be encoded as file path)"),
+                            OUStringToOString(
                                 i->first, RTL_TEXTENCODING_UTF8).getStr());
                         goto next;
                     }
-                    buf.append(sal_Unicode('/'));
+                    buf.append('/');
                     buf.append(enc);
                 } while (n >= 0);
-                buf.appendAscii(RTL_CONSTASCII_STRINGPARAM(".xcu"));
+                buf.appendAscii(".xcu");
+                regFilePath = buf.toString();
             }
             configuration::Update::get(
                 comphelper::getProcessComponentContext())->
                 insertModificationXcuFile(
-                    buf.makeStringAndClear(), setToSeq(i->second.includedPaths),
+                    regFilePath, setToSeq(i->second.includedPaths),
                     setToSeq(i->second.excludedPaths));
         } else {
             OSL_TRACE(
                 ("configuration migration component %s ignored (only excludes,"
                  " no includes)"),
-                rtl::OUStringToOString(
+                OUStringToOString(
                     i->first, RTL_TEXTENCODING_UTF8).getStr());
         }
     next:;
     }
 }
 
-// removes elements of vector 2 in vector 1
-void MigrationImpl::substract(strings_v& va, const strings_v& vb_c) const
+uno::Reference< XNameAccess > MigrationImpl::getConfigAccess(const sal_Char* pPath, bool bUpdate)
 {
-    strings_v vb(vb_c);
-    // ensure uniqueness of entries
-    sort(va.begin(), va.end());
-    sort(vb.begin(), vb.end());
-    unique(va.begin(), va.end());
-    unique(vb.begin(), vb.end());
-
-    strings_v::const_iterator i_ex = vb.begin();
-    strings_v::iterator i_in;
-    strings_v::iterator i_next;
-    while (i_ex != vb.end())
-    {
-        i_in = va.begin();
-        while (i_in != va.end())
-        {
-            if ( *i_in == *i_ex)
-            {
-                i_next = i_in+1;
-                va.erase(i_in);
-                i_in = i_next;
-                // we can only find one match since we
-                // ensured uniquness of the entries. ergo:
-                break;
-            }
-            else
-                i_in++;
-        }
-        i_ex++;
-    }
-}
-
-uno::Reference< XNameAccess > MigrationImpl::getConfigAccess(const sal_Char* pPath, sal_Bool bUpdate)
-{
-	uno::Reference< XNameAccess > xNameAccess;
+    uno::Reference< XNameAccess > xNameAccess;
     try{
-        OUString sConfigSrvc = OUString::createFromAscii("com.sun.star.configuration.ConfigurationProvider");
         OUString sAccessSrvc;
         if (bUpdate)
-            sAccessSrvc = OUString::createFromAscii("com.sun.star.configuration.ConfigurationUpdateAccess");
+            sAccessSrvc = "com.sun.star.configuration.ConfigurationUpdateAccess";
         else
-            sAccessSrvc = OUString::createFromAscii("com.sun.star.configuration.ConfigurationAccess");
+            sAccessSrvc = "com.sun.star.configuration.ConfigurationAccess";
 
         OUString sConfigURL = OUString::createFromAscii(pPath);
 
-        // get configuration provider
-		uno::Reference< XMultiServiceFactory > theMSF = comphelper::getProcessServiceFactory();
-		uno::Reference< XMultiServiceFactory > theConfigProvider = uno::Reference< XMultiServiceFactory > (
-                theMSF->createInstance( sConfigSrvc ),uno::UNO_QUERY_THROW );
+        uno::Reference< XMultiServiceFactory > theConfigProvider(
+            configuration::theDefaultProvider::get(
+                comphelper::getProcessComponentContext()));
 
         // access the provider
         uno::Sequence< uno::Any > theArgs(1);
         theArgs[ 0 ] <<= sConfigURL;
-		xNameAccess = uno::Reference< XNameAccess > (
+        xNameAccess = uno::Reference< XNameAccess > (
                 theConfigProvider->createInstanceWithArguments(
                 sAccessSrvc, theArgs ), uno::UNO_QUERY_THROW );
-    } catch (com::sun::star::uno::Exception& e)
+    }
+    catch (const com::sun::star::uno::Exception& e)
     {
-        OString aMsg = OUStringToOString(e.Message, RTL_TEXTENCODING_ASCII_US);
-        OSL_ENSURE(sal_False, aMsg.getStr());
+        SAL_WARN(
+            "desktop.migration", "ignoring Exception \"" << e.Message << "\"");
     }
     return xNameAccess;
 }
@@ -968,9 +953,16 @@ void MigrationImpl::copyFiles()
     {
         while (i_file != m_vrFileList->end())
         {
-
             // remove installation prefix from file
             localName = i_file->copy(m_aInfo.userdata.getLength());
+            if (localName.endsWith( "/autocorr/acor_.dat"))
+            {
+                // Previous versions used an empty language tag for
+                // LANGUAGE_DONTKNOW with the "[All]" autocorrection entry.
+                // As of LibreOffice 4.0 it is 'und' for LANGUAGE_UNDETERMINED
+                // so the file name is "acor_und.dat".
+                localName = localName.copy( 0, localName.getLength() - 4) + "und.dat";
+            }
             destName = userInstall + localName;
             INetURLObject aURL(destName);
             // check whether destination directory exists
@@ -982,26 +974,26 @@ void MigrationImpl::copyFiles()
                 OString msg("Cannot copy ");
                 msg += OUStringToOString(*i_file, RTL_TEXTENCODING_UTF8) + " to "
                     +  OUStringToOString(destName, RTL_TEXTENCODING_UTF8);
-                OSL_ENSURE(sal_False, msg.getStr());
+                OSL_FAIL(msg.getStr());
             }
 #ifdef USE_JAVA
             else
             {
                 // Fix bug 1544 by ensuring that destination file is
                 // readable and writable
-                ::osl::FileStatus aDestFileStatus( FileStatusMask_Attributes );
+                ::osl::FileStatus aDestFileStatus( osl_FileStatus_Mask_Attributes );
                 ::osl::DirectoryItem aDirItem;
                 ::osl::DirectoryItem::get( destName, aDirItem );
                 aDirItem.getFileStatus( aDestFileStatus );
-                ::osl::File::setAttributes( destName, Attribute_OwnRead | Attribute_OwnWrite | aDestFileStatus.getAttributes() );
+                ::osl::File::setAttributes( destName, osl_File_Attribute_OwnRead | osl_File_Attribute_OwnWrite | aDestFileStatus.getAttributes() );
             }
 #endif	// USE_JAVA
-            i_file++;
+            ++i_file;
         }
     }
     else
     {
-        OSL_ENSURE(sal_False, "copyFiles: UserInstall does not exist");
+        OSL_FAIL("copyFiles: UserInstall does not exist");
     }
 }
 
@@ -1009,451 +1001,455 @@ void MigrationImpl::runServices()
 {
     // Build argument array
     uno::Sequence< uno::Any > seqArguments(3);
-    seqArguments[0] = uno::makeAny(NamedValue(
-        OUString::createFromAscii("Productname"),
+    seqArguments[0] = uno::makeAny(NamedValue("Productname",
         uno::makeAny(m_aInfo.productname)));
-    seqArguments[1] = uno::makeAny(NamedValue(
-        OUString::createFromAscii("UserData"),
+    seqArguments[1] = uno::makeAny(NamedValue("UserData",
         uno::makeAny(m_aInfo.userdata)));
 
 
     // create an instance of every migration service
     // and execute the migration job
-	uno::Reference< XJob > xMigrationJob;
+    uno::Reference< XJob > xMigrationJob;
 
+    uno::Reference< uno::XComponentContext > xContext(comphelper::getProcessComponentContext());
     migrations_v::const_iterator i_mig  = m_vrMigrations->begin();
     while (i_mig != m_vrMigrations->end())
     {
-        if( i_mig->service.getLength() > 0)
+        if( !i_mig->service.isEmpty())
         {
 
             try
             {
                 // set black list for extension migration
-                uno::Sequence< rtl::OUString > seqExtBlackList;
+                uno::Sequence< OUString > seqExtBlackList;
                 sal_uInt32 nSize = i_mig->excludeExtensions.size();
                 if ( nSize > 0 )
-                    seqExtBlackList = comphelper::arrayToSequence< ::rtl::OUString >( 
-                        &i_mig->excludeExtensions[0], nSize ); 
-                seqArguments[2] = uno::makeAny(NamedValue(
-                    OUString::createFromAscii("ExtensionBlackList"),
+                    seqExtBlackList = comphelper::arrayToSequence< OUString >(
+                        &i_mig->excludeExtensions[0], nSize );
+                seqArguments[2] = uno::makeAny(NamedValue("ExtensionBlackList",
                     uno::makeAny( seqExtBlackList )));
 
-				xMigrationJob = uno::Reference< XJob >(m_xFactory->createInstanceWithArguments(
-                    i_mig->service, seqArguments), uno::UNO_QUERY_THROW);
+                xMigrationJob = uno::Reference< XJob >(
+                    xContext->getServiceManager()->createInstanceWithArgumentsAndContext(i_mig->service, seqArguments, xContext),
+                    uno::UNO_QUERY_THROW);
 
                 xMigrationJob->execute(uno::Sequence< NamedValue >());
 
 
-            } catch (Exception& e)
+            }
+            catch (const Exception& e)
             {
                 OString aMsg("Execution of migration service failed (Exception caught).\nService: ");
                 aMsg += OUStringToOString(i_mig->service, RTL_TEXTENCODING_ASCII_US) + "\nMessage: ";
                 aMsg += OUStringToOString(e.Message, RTL_TEXTENCODING_ASCII_US);
-                OSL_ENSURE(sal_False, aMsg.getStr());
-            } catch (...)
+                OSL_FAIL(aMsg.getStr());
+            }
+            catch (...)
             {
                 OString aMsg("Execution of migration service failed (Exception caught).\nService: ");
                 aMsg += OUStringToOString(i_mig->service, RTL_TEXTENCODING_ASCII_US) +
-					"\nNo message available";
-                OSL_ENSURE(sal_False, aMsg.getStr());
+                    "\nNo message available";
+                OSL_FAIL(aMsg.getStr());
             }
 
         }
-        i_mig++;
+        ++i_mig;
     }
 }
 
 ::std::vector< MigrationModuleInfo > MigrationImpl::dectectUIChangesForAllModules() const
 {
-	::std::vector< MigrationModuleInfo > vModulesInfo;
-	const ::rtl::OUString MENUBAR = ::rtl::OUString::createFromAscii("menubar");
-	const ::rtl::OUString TOOLBAR = ::rtl::OUString::createFromAscii("toolbar");
+    ::std::vector< MigrationModuleInfo > vModulesInfo;
+    const OUString MENUBAR("menubar");
+    const OUString TOOLBAR("toolbar");
 
-	uno::Sequence< uno::Any > lArgs(2);
-	lArgs[0] <<= m_aInfo.userdata + ::rtl::OUString::createFromAscii("/user/config/soffice.cfg/modules");
-	lArgs[1] <<= embed::ElementModes::READ;
+    uno::Sequence< uno::Any > lArgs(2);
+    lArgs[0] <<= m_aInfo.userdata + "/user/config/soffice.cfg/modules";
+    lArgs[1] <<= embed::ElementModes::READ;
 
-	uno::Reference< lang::XSingleServiceFactory > xStorageFactory(m_xFactory->createInstance(::rtl::OUString::createFromAscii("com.sun.star.embed.FileSystemStorageFactory")), uno::UNO_QUERY);
-	uno::Reference< embed::XStorage >             xModules;
+    uno::Reference< lang::XSingleServiceFactory > xStorageFactory(
+                     embed::FileSystemStorageFactory::create(comphelper::getProcessComponentContext()));
+    uno::Reference< embed::XStorage >             xModules;
 
-	xModules = uno::Reference< embed::XStorage >(xStorageFactory->createInstanceWithArguments(lArgs), uno::UNO_QUERY);
-	if (!xModules.is())
-		return vModulesInfo;
+    xModules = uno::Reference< embed::XStorage >(xStorageFactory->createInstanceWithArguments(lArgs), uno::UNO_QUERY);
+    if (!xModules.is())
+        return vModulesInfo;
 
-	uno::Reference< container::XNameAccess > xAccess = uno::Reference< container::XNameAccess >(xModules, uno::UNO_QUERY);
-	uno::Sequence< ::rtl::OUString > lNames = xAccess->getElementNames();
-	sal_Int32 nLength = lNames.getLength();
-	for (sal_Int32 i=0; i<nLength; ++i)
-	{
-        ::rtl::OUString sModuleShortName = lNames[i];
+    uno::Reference< container::XNameAccess > xAccess = uno::Reference< container::XNameAccess >(xModules, uno::UNO_QUERY);
+    uno::Sequence< OUString > lNames = xAccess->getElementNames();
+    sal_Int32 nLength = lNames.getLength();
+    for (sal_Int32 i=0; i<nLength; ++i)
+    {
+        OUString sModuleShortName = lNames[i];
         uno::Reference< embed::XStorage > xModule = xModules->openStorageElement(sModuleShortName, embed::ElementModes::READ);
-		if (xModule.is())
-		{
-			MigrationModuleInfo aModuleInfo;
+        if (xModule.is())
+        {
+            MigrationModuleInfo aModuleInfo;
 
-			uno::Reference< embed::XStorage > xMenubar = xModule->openStorageElement(MENUBAR, embed::ElementModes::READ);
-			if (xMenubar.is())
-			{
-				uno::Reference< container::XNameAccess > xNameAccess = uno::Reference< container::XNameAccess >(xMenubar, uno::UNO_QUERY);
-				if (xNameAccess->getElementNames().getLength() > 0)
-				{
-					aModuleInfo.sModuleShortName = sModuleShortName;
-					aModuleInfo.bHasMenubar = sal_True;
-				}
-			}
+            uno::Reference< embed::XStorage > xMenubar = xModule->openStorageElement(MENUBAR, embed::ElementModes::READ);
+            if (xMenubar.is())
+            {
+                uno::Reference< container::XNameAccess > xNameAccess = uno::Reference< container::XNameAccess >(xMenubar, uno::UNO_QUERY);
+                if (xNameAccess->getElementNames().getLength() > 0)
+                {
+                    aModuleInfo.sModuleShortName = sModuleShortName;
+                    aModuleInfo.bHasMenubar = true;
+                }
+            }
 
-			uno::Reference< embed::XStorage > xToolbar = xModule->openStorageElement(TOOLBAR, embed::ElementModes::READ);
-			if (xToolbar.is())
-			{
-				const ::rtl::OUString RESOURCEURL_CUSTOM_ELEMENT = ::rtl::OUString::createFromAscii("custom_");
-				sal_Int32 nCustomLen = 7;
+            uno::Reference< embed::XStorage > xToolbar = xModule->openStorageElement(TOOLBAR, embed::ElementModes::READ);
+            if (xToolbar.is())
+            {
+                const OUString RESOURCEURL_CUSTOM_ELEMENT("custom_");
+                sal_Int32 nCustomLen = 7;
 
-				uno::Reference< container::XNameAccess > xNameAccess = uno::Reference< container::XNameAccess >(xToolbar, uno::UNO_QUERY);
-				::uno::Sequence< ::rtl::OUString > lToolbars = xNameAccess->getElementNames();
-				for (sal_Int32 j=0; j<lToolbars.getLength(); ++j)
-				{
-                    ::rtl::OUString sToolbarName = lToolbars[j];
-                    if (sToolbarName.getLength()>=nCustomLen && 
-						sToolbarName.copy(0, nCustomLen).equals(RESOURCEURL_CUSTOM_ELEMENT))
-						continue;
+                uno::Reference< container::XNameAccess > xNameAccess = uno::Reference< container::XNameAccess >(xToolbar, uno::UNO_QUERY);
+                ::uno::Sequence< OUString > lToolbars = xNameAccess->getElementNames();
+                for (sal_Int32 j=0; j<lToolbars.getLength(); ++j)
+                {
+                    OUString sToolbarName = lToolbars[j];
+                    if (sToolbarName.getLength()>=nCustomLen &&
+                        sToolbarName.copy(0, nCustomLen).equals(RESOURCEURL_CUSTOM_ELEMENT))
+                        continue;
 
-					aModuleInfo.sModuleShortName = sModuleShortName;
-					sal_Int32 nIndex = sToolbarName.lastIndexOf('.');
-					if (nIndex > 0)
-					{
-						::rtl::OUString sExtension(sToolbarName.copy(nIndex));
-						::rtl::OUString sToolbarResourceName(sToolbarName.copy(0, nIndex));
-						if (sToolbarResourceName.getLength()>0 && sExtension.equalsAsciiL(".xml", 4))
-							aModuleInfo.m_vToolbars.push_back(sToolbarResourceName);
-					}
-				}
-			}
+                    aModuleInfo.sModuleShortName = sModuleShortName;
+                    sal_Int32 nIndex = sToolbarName.lastIndexOf('.');
+                    if (nIndex > 0)
+                    {
+                        OUString sExtension(sToolbarName.copy(nIndex));
+                        OUString sToolbarResourceName(sToolbarName.copy(0, nIndex));
+                        if (!sToolbarResourceName.isEmpty() && sExtension == ".xml")
+                            aModuleInfo.m_vToolbars.push_back(sToolbarResourceName);
+                    }
+                }
+            }
 
-			if (aModuleInfo.sModuleShortName.getLength()>0)
-				vModulesInfo.push_back(aModuleInfo);
-		}
-	}
+            if (!aModuleInfo.sModuleShortName.isEmpty())
+                vModulesInfo.push_back(aModuleInfo);
+        }
+    }
 
-	return vModulesInfo;
+    return vModulesInfo;
 }
 
-void MigrationImpl::compareOldAndNewConfig(const ::rtl::OUString& sParent,
-										   const uno::Reference< container::XIndexContainer >& xIndexOld,
-										   const uno::Reference< container::XIndexContainer >& xIndexNew,
-										   const ::rtl::OUString& sResourceURL)
+void MigrationImpl::compareOldAndNewConfig(const OUString& sParent,
+                                           const uno::Reference< container::XIndexContainer >& xIndexOld,
+                                           const uno::Reference< container::XIndexContainer >& xIndexNew,
+                                           const OUString& sResourceURL)
 {
-	::std::vector< MigrationItem > vOldItems;
-	::std::vector< MigrationItem > vNewItems;
-	uno::Sequence< beans::PropertyValue > aProp;
-	sal_Int32 nOldCount = xIndexOld->getCount();
-	sal_Int32 nNewCount = xIndexNew->getCount();
+    const OUString MENU_SEPARATOR(" | ");
 
-	for (int n=0; n<nOldCount; ++n)
-	{
-		MigrationItem aMigrationItem;
-		if (xIndexOld->getByIndex(n) >>= aProp)
-		{
-			for(int i=0; i<aProp.getLength(); ++i)
-			{
-				if (aProp[i].Name.equals(ITEM_DESCRIPTOR_COMMANDURL))
-					aProp[i].Value >>= aMigrationItem.m_sCommandURL;
-				else if (aProp[i].Name.equals(ITEM_DESCRIPTOR_CONTAINER))
-					aProp[i].Value >>= aMigrationItem.m_xPopupMenu;
-			}
+    ::std::vector< MigrationItem > vOldItems;
+    ::std::vector< MigrationItem > vNewItems;
+    uno::Sequence< beans::PropertyValue > aProp;
+    sal_Int32 nOldCount = xIndexOld->getCount();
+    sal_Int32 nNewCount = xIndexNew->getCount();
 
-			if (aMigrationItem.m_sCommandURL.getLength())
-				vOldItems.push_back(aMigrationItem);
-		}
-	}
+    for (int n=0; n<nOldCount; ++n)
+    {
+        MigrationItem aMigrationItem;
+        if (xIndexOld->getByIndex(n) >>= aProp)
+        {
+            for(int i=0; i<aProp.getLength(); ++i)
+            {
+                if ( aProp[i].Name == ITEM_DESCRIPTOR_COMMANDURL )
+                    aProp[i].Value >>= aMigrationItem.m_sCommandURL;
+                else if ( aProp[i].Name == ITEM_DESCRIPTOR_CONTAINER )
+                    aProp[i].Value >>= aMigrationItem.m_xPopupMenu;
+            }
 
-	for (int n=0; n<nNewCount; ++n)
-	{
-		MigrationItem aMigrationItem;
-		if (xIndexNew->getByIndex(n) >>= aProp)
-		{
-			for(int i=0; i<aProp.getLength(); ++i)
-			{
-				if (aProp[i].Name.equals(ITEM_DESCRIPTOR_COMMANDURL))
-					aProp[i].Value >>= aMigrationItem.m_sCommandURL;
-				else if (aProp[i].Name.equals(ITEM_DESCRIPTOR_CONTAINER))
-					aProp[i].Value >>= aMigrationItem.m_xPopupMenu;
-			}
+            if (!aMigrationItem.m_sCommandURL.isEmpty())
+                vOldItems.push_back(aMigrationItem);
+        }
+    }
 
-			if (aMigrationItem.m_sCommandURL.getLength())
-				vNewItems.push_back(aMigrationItem);
-		}
-	}
+    for (int n=0; n<nNewCount; ++n)
+    {
+        MigrationItem aMigrationItem;
+        if (xIndexNew->getByIndex(n) >>= aProp)
+        {
+            for(int i=0; i<aProp.getLength(); ++i)
+            {
+                if ( aProp[i].Name == ITEM_DESCRIPTOR_COMMANDURL )
+                    aProp[i].Value >>= aMigrationItem.m_sCommandURL;
+                else if ( aProp[i].Name == ITEM_DESCRIPTOR_CONTAINER )
+                    aProp[i].Value >>= aMigrationItem.m_xPopupMenu;
+            }
 
-	::std::vector< MigrationItem >::iterator it;
+            if (!aMigrationItem.m_sCommandURL.isEmpty())
+                vNewItems.push_back(aMigrationItem);
+        }
+    }
 
-	::rtl::OUString sSibling;
-	for (it = vOldItems.begin(); it!=vOldItems.end(); ++it)
-	{
-		::std::vector< MigrationItem >::iterator pFound = ::std::find(vNewItems.begin(), vNewItems.end(), *it);
-		if (pFound != vNewItems.end() && it->m_xPopupMenu.is())
-		{
-			::rtl::OUString sName;
-			if (sParent.getLength()>0)
-				sName = sParent + MENU_SEPERATOR + it->m_sCommandURL;
-			else
-				sName = it->m_sCommandURL;
-			compareOldAndNewConfig(sName, it->m_xPopupMenu, pFound->m_xPopupMenu, sResourceURL);
-		}
-		else if (pFound == vNewItems.end())
-		{
-			MigrationItem aMigrationItem(sParent, sSibling, it->m_sCommandURL, it->m_xPopupMenu);	
-			if (m_aOldVersionItemsHashMap.find(sResourceURL)==m_aOldVersionItemsHashMap.end())
-			{
-				::std::vector< MigrationItem > vMigrationItems;
-				m_aOldVersionItemsHashMap.insert(MigrationHashMap::value_type(sResourceURL, vMigrationItems));
-				m_aOldVersionItemsHashMap[sResourceURL].push_back(aMigrationItem);
-			}
-			else
-			{
-				if (::std::find(m_aOldVersionItemsHashMap[sResourceURL].begin(), m_aOldVersionItemsHashMap[sResourceURL].end(), aMigrationItem)==m_aOldVersionItemsHashMap[sResourceURL].end())
-					m_aOldVersionItemsHashMap[sResourceURL].push_back(aMigrationItem);
-			}
-		}
+    ::std::vector< MigrationItem >::iterator it;
 
-		sSibling = it->m_sCommandURL;
-	}
+    OUString sSibling;
+    for (it = vOldItems.begin(); it!=vOldItems.end(); ++it)
+    {
+        ::std::vector< MigrationItem >::iterator pFound = ::std::find(vNewItems.begin(), vNewItems.end(), *it);
+        if (pFound != vNewItems.end() && it->m_xPopupMenu.is())
+        {
+            OUString sName;
+            if (!sParent.isEmpty())
+                sName = sParent + MENU_SEPARATOR + it->m_sCommandURL;
+            else
+                sName = it->m_sCommandURL;
+            compareOldAndNewConfig(sName, it->m_xPopupMenu, pFound->m_xPopupMenu, sResourceURL);
+        }
+        else if (pFound == vNewItems.end())
+        {
+            MigrationItem aMigrationItem(sParent, sSibling, it->m_sCommandURL, it->m_xPopupMenu);
+            if (m_aOldVersionItemsHashMap.find(sResourceURL)==m_aOldVersionItemsHashMap.end())
+            {
+                ::std::vector< MigrationItem > vMigrationItems;
+                m_aOldVersionItemsHashMap.insert(MigrationHashMap::value_type(sResourceURL, vMigrationItems));
+                m_aOldVersionItemsHashMap[sResourceURL].push_back(aMigrationItem);
+            }
+            else
+            {
+                if (::std::find(m_aOldVersionItemsHashMap[sResourceURL].begin(), m_aOldVersionItemsHashMap[sResourceURL].end(), aMigrationItem)==m_aOldVersionItemsHashMap[sResourceURL].end())
+                    m_aOldVersionItemsHashMap[sResourceURL].push_back(aMigrationItem);
+            }
+        }
 
-	::rtl::OUString sNewSibling;
-	uno::Reference< container::XIndexContainer > xPopup;
-	for (it = vNewItems.begin(); it!=vNewItems.end(); ++it)
-	{
-		::std::vector< MigrationItem >::iterator pFound = ::std::find(vOldItems.begin(), vOldItems.end(), *it);
-		if (pFound != vOldItems.end() && it->m_xPopupMenu.is())
-		{
-			::rtl::OUString sName;
-			if (sParent.getLength()>0)
-				sName = sParent + MENU_SEPERATOR + it->m_sCommandURL;
-			else
-				sName = it->m_sCommandURL;
-			compareOldAndNewConfig(sName, pFound->m_xPopupMenu, it->m_xPopupMenu, sResourceURL);
-		}
-		else if (::std::find(vOldItems.begin(), vOldItems.end(), *it) == vOldItems.end())
-		{
-			MigrationItem aMigrationItem(sParent, sSibling, it->m_sCommandURL, it->m_xPopupMenu);	
-			if (m_aNewVersionItemsHashMap.find(sResourceURL)==m_aNewVersionItemsHashMap.end())
-			{
-				::std::vector< MigrationItem > vMigrationItems;
-				m_aNewVersionItemsHashMap.insert(MigrationHashMap::value_type(sResourceURL, vMigrationItems));
-				m_aNewVersionItemsHashMap[sResourceURL].push_back(aMigrationItem);
-			}
-			else
-			{
-				if (::std::find(m_aNewVersionItemsHashMap[sResourceURL].begin(), m_aNewVersionItemsHashMap[sResourceURL].end(), aMigrationItem)==m_aNewVersionItemsHashMap[sResourceURL].end())
-					m_aNewVersionItemsHashMap[sResourceURL].push_back(aMigrationItem);
-			}
-		}
-	}
+        sSibling = it->m_sCommandURL;
+    }
+
+    uno::Reference< container::XIndexContainer > xPopup;
+    for (it = vNewItems.begin(); it!=vNewItems.end(); ++it)
+    {
+        ::std::vector< MigrationItem >::iterator pFound = ::std::find(vOldItems.begin(), vOldItems.end(), *it);
+        if (pFound != vOldItems.end() && it->m_xPopupMenu.is())
+        {
+            OUString sName;
+            if (!sParent.isEmpty())
+                sName = sParent + MENU_SEPARATOR + it->m_sCommandURL;
+            else
+                sName = it->m_sCommandURL;
+            compareOldAndNewConfig(sName, pFound->m_xPopupMenu, it->m_xPopupMenu, sResourceURL);
+        }
+        else if (::std::find(vOldItems.begin(), vOldItems.end(), *it) == vOldItems.end())
+        {
+            MigrationItem aMigrationItem(sParent, sSibling, it->m_sCommandURL, it->m_xPopupMenu);
+            if (m_aNewVersionItemsHashMap.find(sResourceURL)==m_aNewVersionItemsHashMap.end())
+            {
+                ::std::vector< MigrationItem > vMigrationItems;
+                m_aNewVersionItemsHashMap.insert(MigrationHashMap::value_type(sResourceURL, vMigrationItems));
+                m_aNewVersionItemsHashMap[sResourceURL].push_back(aMigrationItem);
+            }
+            else
+            {
+                if (::std::find(m_aNewVersionItemsHashMap[sResourceURL].begin(), m_aNewVersionItemsHashMap[sResourceURL].end(), aMigrationItem)==m_aNewVersionItemsHashMap[sResourceURL].end())
+                    m_aNewVersionItemsHashMap[sResourceURL].push_back(aMigrationItem);
+            }
+        }
+    }
 }
 
-void MigrationImpl::mergeOldToNewVersion(const uno::Reference< ui::XUIConfigurationManager >& xCfgManager, 
-										 const uno::Reference< container::XIndexContainer>& xIndexContainer, 
-										 const ::rtl::OUString& sModuleIdentifier, 
-										 const ::rtl::OUString& sResourceURL)
+void MigrationImpl::mergeOldToNewVersion(const uno::Reference< ui::XUIConfigurationManager >& xCfgManager,
+                                         const uno::Reference< container::XIndexContainer>& xIndexContainer,
+                                         const OUString& sModuleIdentifier,
+                                         const OUString& sResourceURL)
 {
-	MigrationHashMap::iterator pFound = m_aOldVersionItemsHashMap.find(sResourceURL);
-	if (pFound==m_aOldVersionItemsHashMap.end())
-		return;
+    MigrationHashMap::iterator pFound = m_aOldVersionItemsHashMap.find(sResourceURL);
+    if (pFound==m_aOldVersionItemsHashMap.end())
+        return;
 
-	::std::vector< MigrationItem >::iterator it;
-	for (it=pFound->second.begin(); it!=pFound->second.end(); ++it)
-	{
-		uno::Reference< container::XIndexContainer > xTemp = xIndexContainer;
+    ::std::vector< MigrationItem >::iterator it;
+    for (it=pFound->second.begin(); it!=pFound->second.end(); ++it)
+    {
+        uno::Reference< container::XIndexContainer > xTemp = xIndexContainer;
 
-		::rtl::OUString sParentNodeName = it->m_sParentNodeName;
-		sal_Int32 nIndex = 0;
-		do 
-		{
-			::rtl::OUString sToken = sParentNodeName.getToken(0, '|', nIndex).trim();
-			if (sToken.getLength()<=0)
-				break;
+        OUString sParentNodeName = it->m_sParentNodeName;
+        sal_Int32 nIndex = 0;
+        do
+        {
+            OUString sToken = sParentNodeName.getToken(0, '|', nIndex).trim();
+            if (sToken.isEmpty())
+                break;
 
-			sal_Int32 nCount = xTemp->getCount();
-			for (sal_Int32 i=0; i<nCount; ++i)
-			{
-				::rtl::OUString sCommandURL;
-				::rtl::OUString sLabel;
-				uno::Reference< container::XIndexContainer > xChild;
+            sal_Int32 nCount = xTemp->getCount();
+            for (sal_Int32 i=0; i<nCount; ++i)
+            {
+                OUString sCommandURL;
+                OUString sLabel;
+                uno::Reference< container::XIndexContainer > xChild;
 
-				uno::Sequence< beans::PropertyValue > aPropSeq;					
-				xTemp->getByIndex(i) >>= aPropSeq;
-				for (sal_Int32 j=0; j<aPropSeq.getLength(); ++j)
-				{
-					::rtl::OUString sPropName = aPropSeq[j].Name;
-					if (sPropName.equals(ITEM_DESCRIPTOR_COMMANDURL))
-						aPropSeq[j].Value >>= sCommandURL;
-					else if (sPropName.equals(ITEM_DESCRIPTOR_LABEL))
-						aPropSeq[j].Value >>= sLabel;
-					else if (sPropName.equals(ITEM_DESCRIPTOR_CONTAINER))
-						aPropSeq[j].Value >>= xChild;
-				}
+                uno::Sequence< beans::PropertyValue > aPropSeq;
+                xTemp->getByIndex(i) >>= aPropSeq;
+                for (sal_Int32 j=0; j<aPropSeq.getLength(); ++j)
+                {
+                    OUString sPropName = aPropSeq[j].Name;
+                    if ( sPropName == ITEM_DESCRIPTOR_COMMANDURL )
+                        aPropSeq[j].Value >>= sCommandURL;
+                    else if ( sPropName == ITEM_DESCRIPTOR_LABEL )
+                        aPropSeq[j].Value >>= sLabel;
+                    else if ( sPropName == ITEM_DESCRIPTOR_CONTAINER )
+                        aPropSeq[j].Value >>= xChild;
+                }
 
-				if (sCommandURL == sToken)
-				{
-					xTemp = xChild;
-					break;
-				}
-			}
+                if (sCommandURL == sToken)
+                {
+                    xTemp = xChild;
+                    break;
+                }
+            }
 
-		} while (nIndex>=0);
+        } while (nIndex>=0);
 
-		if (nIndex == -1)
-		{
-			uno::Sequence< beans::PropertyValue > aPropSeq(3);
+        if (nIndex == -1)
+        {
+            uno::Sequence< beans::PropertyValue > aPropSeq(3);
 
-			aPropSeq[0].Name = ITEM_DESCRIPTOR_COMMANDURL;
-			aPropSeq[0].Value <<= it->m_sCommandURL;
-			aPropSeq[1].Name = ITEM_DESCRIPTOR_LABEL;
-			aPropSeq[1].Value <<= retrieveLabelFromCommand(it->m_sCommandURL, sModuleIdentifier);
-			aPropSeq[2].Name = ITEM_DESCRIPTOR_CONTAINER;
-			aPropSeq[2].Value <<= it->m_xPopupMenu;
+            aPropSeq[0].Name = OUString(ITEM_DESCRIPTOR_COMMANDURL);
+            aPropSeq[0].Value <<= it->m_sCommandURL;
+            aPropSeq[1].Name = OUString(ITEM_DESCRIPTOR_LABEL);
+            aPropSeq[1].Value <<= retrieveLabelFromCommand(it->m_sCommandURL, sModuleIdentifier);
+            aPropSeq[2].Name = OUString(ITEM_DESCRIPTOR_CONTAINER);
+            aPropSeq[2].Value <<= it->m_xPopupMenu;
 
-			if (it->m_sPrevSibling.getLength() == 0)
-				xTemp->insertByIndex(0, uno::makeAny(aPropSeq));
-			else if (it->m_sPrevSibling.getLength() > 0)
-			{
-				sal_Int32 nCount = xTemp->getCount();
-				sal_Int32 i = 0;
-				for (; i<nCount; ++i)
-				{
-					::rtl::OUString sCmd;
-					uno::Sequence< beans::PropertyValue > aTempPropSeq;			
-					xTemp->getByIndex(i) >>= aTempPropSeq;
-					for (sal_Int32 j=0; j<aTempPropSeq.getLength(); ++j)
-					{
-						if (aTempPropSeq[j].Name.equals(ITEM_DESCRIPTOR_COMMANDURL))
-						{
-							aTempPropSeq[j].Value >>= sCmd;
-							break;
-						}
-					}
+            if (it->m_sPrevSibling.isEmpty())
+                xTemp->insertByIndex(0, uno::makeAny(aPropSeq));
+            else if (!it->m_sPrevSibling.isEmpty())
+            {
+                sal_Int32 nCount = xTemp->getCount();
+                sal_Int32 i = 0;
+                for (; i<nCount; ++i)
+                {
+                    OUString sCmd;
+                    uno::Sequence< beans::PropertyValue > aTempPropSeq;
+                    xTemp->getByIndex(i) >>= aTempPropSeq;
+                    for (sal_Int32 j=0; j<aTempPropSeq.getLength(); ++j)
+                    {
+                        if ( aTempPropSeq[j].Name == ITEM_DESCRIPTOR_COMMANDURL )
+                        {
+                            aTempPropSeq[j].Value >>= sCmd;
+                            break;
+                        }
+                    }
 
-					if (sCmd.equals(it->m_sPrevSibling))
-						break;
-				}
+                    if (sCmd.equals(it->m_sPrevSibling))
+                        break;
+                }
 
-				xTemp->insertByIndex(i+1, uno::makeAny(aPropSeq));
-			}
-		}
-	}
+                xTemp->insertByIndex(i+1, uno::makeAny(aPropSeq));
+            }
+        }
+    }
 
-	uno::Reference< container::XIndexAccess > xIndexAccess(xIndexContainer, uno::UNO_QUERY);
-	if (xIndexAccess.is())
-		xCfgManager->replaceSettings(sResourceURL, xIndexAccess);
+    uno::Reference< container::XIndexAccess > xIndexAccess(xIndexContainer, uno::UNO_QUERY);
+    if (xIndexAccess.is())
+        xCfgManager->replaceSettings(sResourceURL, xIndexAccess);
 
-	uno::Reference< ui::XUIConfigurationPersistence > xUIConfigurationPersistence(xCfgManager, uno::UNO_QUERY);
-	if (xUIConfigurationPersistence.is())
-		xUIConfigurationPersistence->store();
+    uno::Reference< ui::XUIConfigurationPersistence > xUIConfigurationPersistence(xCfgManager, uno::UNO_QUERY);
+    if (xUIConfigurationPersistence.is())
+        xUIConfigurationPersistence->store();
 }
 
-uno::Reference< ui::XUIConfigurationManager > NewVersionUIInfo::getConfigManager(const ::rtl::OUString& sModuleShortName) const
-{ 
-	uno::Reference< ui::XUIConfigurationManager > xCfgManager;
-
-	for (sal_Int32 i=0; i<m_lCfgManagerSeq.getLength(); ++i)
-	{
-		if (m_lCfgManagerSeq[i].Name.equals(sModuleShortName))
-		{
-			m_lCfgManagerSeq[i].Value >>= xCfgManager; 
-			break;
-		}
-	}
-
-	return xCfgManager;
-}
-
-uno::Reference< container::XIndexContainer > NewVersionUIInfo::getNewMenubarSettings(const ::rtl::OUString& sModuleShortName) const
+uno::Reference< ui::XUIConfigurationManager > NewVersionUIInfo::getConfigManager(const OUString& sModuleShortName) const
 {
-	uno::Reference< container::XIndexContainer > xNewMenuSettings;
+    uno::Reference< ui::XUIConfigurationManager > xCfgManager;
 
-	for (sal_Int32 i=0; i<m_lNewVersionMenubarSettingsSeq.getLength(); ++i)
-	{
-		if (m_lNewVersionMenubarSettingsSeq[i].Name.equals(sModuleShortName))
-		{
-			m_lNewVersionMenubarSettingsSeq[i].Value >>= xNewMenuSettings;
-			break;
-		}
-	}
+    for (sal_Int32 i=0; i<m_lCfgManagerSeq.getLength(); ++i)
+    {
+        if (m_lCfgManagerSeq[i].Name.equals(sModuleShortName))
+        {
+            m_lCfgManagerSeq[i].Value >>= xCfgManager;
+            break;
+        }
+    }
 
-	return xNewMenuSettings;
+    return xCfgManager;
 }
 
-uno::Reference< container::XIndexContainer > NewVersionUIInfo::getNewToolbarSettings(const ::rtl::OUString& sModuleShortName, const ::rtl::OUString& sToolbarName) const
+uno::Reference< container::XIndexContainer > NewVersionUIInfo::getNewMenubarSettings(const OUString& sModuleShortName) const
 {
-	uno::Reference< container::XIndexContainer > xNewToolbarSettings;
+    uno::Reference< container::XIndexContainer > xNewMenuSettings;
 
-	for (sal_Int32 i=0; i<m_lNewVersionToolbarSettingsSeq.getLength(); ++i)
-	{
-		if (m_lNewVersionToolbarSettingsSeq[i].Name.equals(sModuleShortName))
-		{
-			uno::Sequence< beans::PropertyValue > lToolbarSettingsSeq;
-			m_lNewVersionToolbarSettingsSeq[i].Value >>= lToolbarSettingsSeq;
-			for (sal_Int32 j=0; j<lToolbarSettingsSeq.getLength(); ++j)
-			{
-				if (lToolbarSettingsSeq[j].Name.equals(sToolbarName))
-				{
-					lToolbarSettingsSeq[j].Value >>= xNewToolbarSettings;
-					break;
-				}
-			}
+    for (sal_Int32 i=0; i<m_lNewVersionMenubarSettingsSeq.getLength(); ++i)
+    {
+        if (m_lNewVersionMenubarSettingsSeq[i].Name.equals(sModuleShortName))
+        {
+            m_lNewVersionMenubarSettingsSeq[i].Value >>= xNewMenuSettings;
+            break;
+        }
+    }
 
-			break;
-		}
-	}
+    return xNewMenuSettings;
+}
 
-	return xNewToolbarSettings;
+uno::Reference< container::XIndexContainer > NewVersionUIInfo::getNewToolbarSettings(const OUString& sModuleShortName, const OUString& sToolbarName) const
+{
+    uno::Reference< container::XIndexContainer > xNewToolbarSettings;
+
+    for (sal_Int32 i=0; i<m_lNewVersionToolbarSettingsSeq.getLength(); ++i)
+    {
+        if (m_lNewVersionToolbarSettingsSeq[i].Name.equals(sModuleShortName))
+        {
+            uno::Sequence< beans::PropertyValue > lToolbarSettingsSeq;
+            m_lNewVersionToolbarSettingsSeq[i].Value >>= lToolbarSettingsSeq;
+            for (sal_Int32 j=0; j<lToolbarSettingsSeq.getLength(); ++j)
+            {
+                if (lToolbarSettingsSeq[j].Name.equals(sToolbarName))
+                {
+                    lToolbarSettingsSeq[j].Value >>= xNewToolbarSettings;
+                    break;
+                }
+            }
+
+            break;
+        }
+    }
+
+    return xNewToolbarSettings;
 }
 
 void NewVersionUIInfo::init(const ::std::vector< MigrationModuleInfo >& vModulesInfo)
 {
-	m_lCfgManagerSeq.realloc(vModulesInfo.size());
-	m_lNewVersionMenubarSettingsSeq.realloc(vModulesInfo.size());
-	m_lNewVersionToolbarSettingsSeq.realloc(vModulesInfo.size());
+    m_lCfgManagerSeq.realloc(vModulesInfo.size());
+    m_lNewVersionMenubarSettingsSeq.realloc(vModulesInfo.size());
+    m_lNewVersionToolbarSettingsSeq.realloc(vModulesInfo.size());
 
-	const ::rtl::OUString sModuleCfgSupplier = ::rtl::OUString::createFromAscii("com.sun.star.ui.ModuleUIConfigurationManagerSupplier");
-	const ::rtl::OUString sMenubarResourceURL = ::rtl::OUString::createFromAscii("private:resource/menubar/menubar");
-	const ::rtl::OUString sToolbarResourcePre = ::rtl::OUString::createFromAscii("private:resource/toolbar/");
+    const OUString sMenubarResourceURL("private:resource/menubar/menubar");
+    const OUString sToolbarResourcePre("private:resource/toolbar/");
 
-	uno::Reference< ui::XModuleUIConfigurationManagerSupplier > xModuleCfgSupplier = uno::Reference< ui::XModuleUIConfigurationManagerSupplier >(::comphelper::getProcessServiceFactory()->createInstance(sModuleCfgSupplier), uno::UNO_QUERY);
+    uno::Reference< ui::XModuleUIConfigurationManagerSupplier > xModuleCfgSupplier = ui::theModuleUIConfigurationManagerSupplier::get( ::comphelper::getProcessComponentContext() );
 
-	for (sal_uInt32 i=0; i<vModulesInfo.size(); ++i)
-	{
-		::rtl::OUString sModuleIdentifier = mapModuleShortNameToIdentifier(vModulesInfo[i].sModuleShortName);
-		if (sModuleIdentifier.getLength() > 0)
-		{
-			uno::Reference< ui::XUIConfigurationManager > xCfgManager = xModuleCfgSupplier->getUIConfigurationManager(sModuleIdentifier);
-			m_lCfgManagerSeq[i].Name = vModulesInfo[i].sModuleShortName;
-			m_lCfgManagerSeq[i].Value <<= xCfgManager;
+    for (sal_uInt32 i=0; i<vModulesInfo.size(); ++i)
+    {
+        OUString sModuleIdentifier = mapModuleShortNameToIdentifier(vModulesInfo[i].sModuleShortName);
+        if (!sModuleIdentifier.isEmpty())
+        {
+            uno::Reference< ui::XUIConfigurationManager > xCfgManager = xModuleCfgSupplier->getUIConfigurationManager(sModuleIdentifier);
+            m_lCfgManagerSeq[i].Name = vModulesInfo[i].sModuleShortName;
+            m_lCfgManagerSeq[i].Value <<= xCfgManager;
 
-			if (vModulesInfo[i].bHasMenubar)
-			{
-				m_lNewVersionMenubarSettingsSeq[i].Name = vModulesInfo[i].sModuleShortName;
-				m_lNewVersionMenubarSettingsSeq[i].Value <<= xCfgManager->getSettings(sMenubarResourceURL, sal_True);
-			}
+            if (vModulesInfo[i].bHasMenubar)
+            {
+                m_lNewVersionMenubarSettingsSeq[i].Name = vModulesInfo[i].sModuleShortName;
+                m_lNewVersionMenubarSettingsSeq[i].Value <<= xCfgManager->getSettings(sMenubarResourceURL, sal_True);
+            }
 
-			sal_Int32 nToolbars = vModulesInfo[i].m_vToolbars.size();
-			if (nToolbars > 0)
-			{
-				uno::Sequence< beans::PropertyValue > lPropSeq(nToolbars);
-				for (sal_Int32 j=0; j<nToolbars; ++j)
-				{
-					::rtl::OUString sToolbarName = vModulesInfo[i].m_vToolbars[j];
-					::rtl::OUString sToolbarResourceURL = sToolbarResourcePre + sToolbarName;
+            sal_Int32 nToolbars = vModulesInfo[i].m_vToolbars.size();
+            if (nToolbars > 0)
+            {
+                uno::Sequence< beans::PropertyValue > lPropSeq(nToolbars);
+                for (sal_Int32 j=0; j<nToolbars; ++j)
+                {
+                    OUString sToolbarName = vModulesInfo[i].m_vToolbars[j];
+                    OUString sToolbarResourceURL = sToolbarResourcePre + sToolbarName;
 
-					lPropSeq[j].Name = sToolbarName;
-					lPropSeq[j].Value <<= xCfgManager->getSettings(sToolbarResourceURL, sal_True);
-				}
+                    lPropSeq[j].Name = sToolbarName;
+                    lPropSeq[j].Value <<= xCfgManager->getSettings(sToolbarResourceURL, sal_True);
+                }
 
-				m_lNewVersionToolbarSettingsSeq[i].Name = vModulesInfo[i].sModuleShortName;
-				m_lNewVersionToolbarSettingsSeq[i].Value <<= lPropSeq;
-			}
-		}
-	}
+                m_lNewVersionToolbarSettingsSeq[i].Name = vModulesInfo[i].sModuleShortName;
+                m_lNewVersionToolbarSettingsSeq[i].Value <<= lPropSeq;
+            }
+        }
+    }
 }
 
 } // namespace desktop
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

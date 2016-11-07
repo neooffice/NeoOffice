@@ -1,38 +1,31 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_desktop.hxx"
 #include "basicmigration.hxx"
+#include <cppuhelper/supportsservice.hxx>
 #include <tools/urlobj.hxx>
 #include <unotools/bootstrap.hxx>
 
@@ -41,70 +34,50 @@ using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 
 
-//.........................................................................
+
 namespace migration
 {
-//.........................................................................
 
 
-    static ::rtl::OUString sSourceUserBasic = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "/user/basic" ) );
-    static ::rtl::OUString sTargetUserBasic = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "/user/__basic_80" ) );
+
+    #define sSourceUserBasic OUString( "/user/basic" )
+    #define sTargetUserBasic OUString( "/user/__basic_80" )
 
 
-    // =============================================================================
     // component operations
-    // =============================================================================
 
-    ::rtl::OUString BasicMigration_getImplementationName()
+
+    OUString BasicMigration_getImplementationName()
     {
-        static ::rtl::OUString* pImplName = 0;
-	    if ( !pImplName )
-	    {
-            ::osl::MutexGuard aGuard( ::osl::Mutex::getGlobalMutex() );
-            if ( !pImplName )
-		    {
-                static ::rtl::OUString aImplName( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.comp.desktop.migration.Basic" ) );
-			    pImplName = &aImplName;
-		    }
-	    }
-	    return *pImplName;
+        return OUString("com.sun.star.comp.desktop.migration.Basic");
     }
 
-    // -----------------------------------------------------------------------------
 
-    Sequence< ::rtl::OUString > BasicMigration_getSupportedServiceNames()
+
+    Sequence< OUString > BasicMigration_getSupportedServiceNames()
     {
-        static Sequence< ::rtl::OUString >* pNames = 0;
-	    if ( !pNames )
-	    {
-            ::osl::MutexGuard aGuard( ::osl::Mutex::getGlobalMutex() );
-		    if ( !pNames )
-		    {
-                static Sequence< ::rtl::OUString > aNames(1);
-                aNames.getArray()[0] = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.migration.Basic" ) );
-                pNames = &aNames;
-		    }
-	    }
-	    return *pNames;
+        Sequence< OUString > aNames(1);
+        aNames.getArray()[0] = "com.sun.star.migration.Basic";
+        return aNames;
     }
 
-    // =============================================================================
+
     // BasicMigration
-    // =============================================================================
+
 
     BasicMigration::BasicMigration()
     {
     }
 
-    // -----------------------------------------------------------------------------
+
 
     BasicMigration::~BasicMigration()
     {
     }
 
-    // -----------------------------------------------------------------------------
 
-    TStringVectorPtr BasicMigration::getFiles( const ::rtl::OUString& rBaseURL ) const
+
+    TStringVectorPtr BasicMigration::getFiles( const OUString& rBaseURL ) const
     {
         TStringVectorPtr aResult( new TStringVector );
         ::osl::Directory aDir( rBaseURL);
@@ -116,7 +89,7 @@ namespace migration
             ::osl::DirectoryItem aItem;
             while ( aDir.getNextItem( aItem ) == ::osl::FileBase::E_None )
             {
-                ::osl::FileStatus aFileStatus( FileStatusMask_Type | FileStatusMask_FileURL );
+                ::osl::FileStatus aFileStatus( osl_FileStatus_Mask_Type | osl_FileStatus_Mask_FileURL );
                 if ( aItem.getFileStatus( aFileStatus ) == ::osl::FileBase::E_None )
                 {
                     if ( aFileStatus.getFileType() == ::osl::FileStatus::Directory )
@@ -139,7 +112,7 @@ namespace migration
         return aResult;
     }
 
-    // -----------------------------------------------------------------------------
+
 
     ::osl::FileBase::RC BasicMigration::checkAndCreateDirectory( INetURLObject& rDirURL )
     {
@@ -156,22 +129,22 @@ namespace migration
 #ifdef USE_JAVA
             // Fix bug 1544 by ensuring that destination directory is
             // readable, writable, and executable
-            ::osl::FileStatus aDirStatus( FileStatusMask_Attributes );
+            ::osl::FileStatus aDirStatus( osl_FileStatus_Mask_Attributes );
             ::osl::DirectoryItem aDirItem;
             ::osl::DirectoryItem::get( rDirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ), aDirItem );
             aDirItem.getFileStatus( aDirStatus );
-            ::osl::File::setAttributes( rDirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ), Attribute_OwnRead | Attribute_OwnWrite | Attribute_OwnExe | aDirStatus.getAttributes() );
+            ::osl::File::setAttributes( rDirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ), osl_File_Attribute_OwnRead | osl_File_Attribute_OwnWrite | osl_File_Attribute_OwnExe | aDirStatus.getAttributes() );
 #endif	// USE_JAVA
 
             return aResult;
         }
-    }       
+    }
 
-    // -----------------------------------------------------------------------------
+
 
     void BasicMigration::copyFiles()
     {
-        ::rtl::OUString sTargetDir;
+        OUString sTargetDir;
         ::utl::Bootstrap::PathStatus aStatus = ::utl::Bootstrap::locateUserInstallation( sTargetDir );
         if ( aStatus == ::utl::Bootstrap::PATH_EXISTS )
         {
@@ -179,75 +152,70 @@ namespace migration
             TStringVectorPtr aFileList = getFiles( m_sSourceDir );
             TStringVector::const_iterator aI = aFileList->begin();
             while ( aI != aFileList->end() )
-            {                
-                ::rtl::OUString sLocalName = aI->copy( m_sSourceDir.getLength() );
-                ::rtl::OUString sTargetName = sTargetDir + sLocalName;
+            {
+                OUString sLocalName = aI->copy( m_sSourceDir.getLength() );
+                OUString sTargetName = sTargetDir + sLocalName;
                 INetURLObject aURL( sTargetName );
                 aURL.removeSegment();
-                checkAndCreateDirectory( aURL );            
+                checkAndCreateDirectory( aURL );
                 ::osl::FileBase::RC aResult = ::osl::File::copy( *aI, sTargetName );
                 if ( aResult != ::osl::FileBase::E_None )
                 {
-                    ::rtl::OString aMsg( "BasicMigration::copyFiles: cannot copy " );
-                    aMsg += ::rtl::OUStringToOString( *aI, RTL_TEXTENCODING_UTF8 ) + " to "
-                         +  ::rtl::OUStringToOString( sTargetName, RTL_TEXTENCODING_UTF8 );
-                    OSL_ENSURE( sal_False, aMsg.getStr() );
+                    OString aMsg( "BasicMigration::copyFiles: cannot copy " );
+                    aMsg += OUStringToOString( *aI, RTL_TEXTENCODING_UTF8 ) + " to "
+                         +  OUStringToOString( sTargetName, RTL_TEXTENCODING_UTF8 );
+                    OSL_FAIL( aMsg.getStr() );
                 }
 #ifdef USE_JAVA
                 else
                 {
                     // Fix bug 1544 by ensuring that destination file is
                     // readable and writable
-                    ::osl::FileStatus aTargetFileStatus( FileStatusMask_Attributes );
+                    ::osl::FileStatus aTargetFileStatus( osl_FileStatus_Mask_Attributes );
                     ::osl::DirectoryItem aDirItem;
                     ::osl::DirectoryItem::get( sTargetName, aDirItem );
                     aDirItem.getFileStatus( aTargetFileStatus );
-                    ::osl::File::setAttributes( sTargetName, Attribute_OwnRead | Attribute_OwnWrite | aTargetFileStatus.getAttributes() );
+                    ::osl::File::setAttributes( sTargetName, osl_File_Attribute_OwnRead | osl_File_Attribute_OwnWrite | aTargetFileStatus.getAttributes() );
                 }
 #endif	// USE_JAVA
                 ++aI;
             }
-        } 
+        }
         else
         {
-            OSL_ENSURE( sal_False, "BasicMigration::copyFiles: no user installation!" );
+            OSL_FAIL( "BasicMigration::copyFiles: no user installation!" );
         }
     }
 
-    // -----------------------------------------------------------------------------
-    // XServiceInfo
-    // -----------------------------------------------------------------------------
 
-    ::rtl::OUString BasicMigration::getImplementationName() throw (RuntimeException)
+    // XServiceInfo
+
+
+    OUString BasicMigration::getImplementationName() throw (RuntimeException, std::exception)
     {
         return BasicMigration_getImplementationName();
     }
 
-    // -----------------------------------------------------------------------------
 
-    sal_Bool BasicMigration::supportsService( const ::rtl::OUString& rServiceName ) throw (RuntimeException)
+
+    sal_Bool BasicMigration::supportsService(OUString const & ServiceName)
+        throw (css::uno::RuntimeException, std::exception)
     {
-	    Sequence< ::rtl::OUString > aNames( getSupportedServiceNames() );
-	    const ::rtl::OUString* pNames = aNames.getConstArray();
-	    const ::rtl::OUString* pEnd = pNames + aNames.getLength();
-	    for ( ; pNames != pEnd && !pNames->equals( rServiceName ); ++pNames )
-		    ;
-
-	    return pNames != pEnd;
+        return cppu::supportsService(this, ServiceName);
     }
 
-    // -----------------------------------------------------------------------------
 
-    Sequence< ::rtl::OUString > BasicMigration::getSupportedServiceNames() throw (RuntimeException)
+
+    Sequence< OUString > BasicMigration::getSupportedServiceNames() throw (RuntimeException, std::exception)
     {
         return BasicMigration_getSupportedServiceNames();
     }
 
-    // -----------------------------------------------------------------------------
-    // XInitialization
-    // -----------------------------------------------------------------------------
 
-    void BasicMigration::initialize( const Sequence< Any >& aArguments ) throw (Exception, RuntimeException)
+    // XInitialization
+
+
+    void BasicMigration::initialize( const Sequence< Any >& aArguments ) throw (Exception, RuntimeException, std::exception)
     {
         ::osl::MutexGuard aGuard( m_aMutex );
 
@@ -257,11 +225,11 @@ namespace migration
         {
             beans::NamedValue aValue;
             *pIter >>= aValue;
-            if ( aValue.Name.equalsAscii( "UserData" ) )
+            if ( aValue.Name == "UserData" )
             {
                 if ( !(aValue.Value >>= m_sSourceDir) )
                 {
-                    OSL_ENSURE( false, "BasicMigration::initialize: argument UserData has wrong type!" );
+                    OSL_FAIL( "BasicMigration::initialize: argument UserData has wrong type!" );
                 }
                 m_sSourceDir += sSourceUserBasic;
                 break;
@@ -269,12 +237,12 @@ namespace migration
         }
     }
 
-    // -----------------------------------------------------------------------------
+
     // XJob
-    // -----------------------------------------------------------------------------
+
 
     Any BasicMigration::execute( const Sequence< beans::NamedValue >& )
-        throw (lang::IllegalArgumentException, Exception, RuntimeException)
+        throw (lang::IllegalArgumentException, Exception, RuntimeException, std::exception)
     {
         ::osl::MutexGuard aGuard( m_aMutex );
 
@@ -283,19 +251,20 @@ namespace migration
         return Any();
     }
 
-    // =============================================================================
+
     // component operations
-    // =============================================================================
+
 
     Reference< XInterface > SAL_CALL BasicMigration_create(
         Reference< XComponentContext > const & )
-        SAL_THROW( () )
     {
         return static_cast< lang::XTypeProvider * >( new BasicMigration() );
     }
 
-    // -----------------------------------------------------------------------------
 
-//.........................................................................
-}	// namespace migration
-//.........................................................................
+
+
+}   // namespace migration
+
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
