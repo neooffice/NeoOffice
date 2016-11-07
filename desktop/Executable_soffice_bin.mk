@@ -67,17 +67,23 @@ endif	# GUIBASE == java
 
 ifeq ($(OS),MACOSX)
 
-$(eval $(call gb_Executable_set_ldflags,\
-    $(filter-out -bind_at_load,$$(LDFLAGS)) \
-))
-
-endif
-
 ifeq ($(strip $(GUIBASE)),java)
 $(eval $(call gb_Executable_use_system_darwin_frameworks,soffice_bin,\
     AppKit \
 ))
+
+gb_Executable_TARGETTYPEFLAGS := \
+    $(filter-out -bind_at_load,$(gb_Executable_TARGETTYPEFLAGS)) \
+    -Wl,-rpath,@executable_path/../Frameworks \
+    -Wl,-rpath,/usr/lib \
+    -Wl,-rpath,/usr/local/lib
+else	# GUIBASE == java
+$(eval $(call gb_Executable_set_ldflags,\
+    $(filter-out -bind_at_load,$$(LDFLAGS)) \
+))
 endif	# GUIBASE == java
+
+endif
 
 ifeq ($(OS),WNT)
 
