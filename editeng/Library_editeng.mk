@@ -1,62 +1,47 @@
-#**************************************************************
-#  
-#  Licensed to the Apache Software Foundation (ASF) under one
-#  or more contributor license agreements.  See the NOTICE file
-#  distributed with this work for additional information
-#  regarding copyright ownership.  The ASF licenses this file
-#  to you under the Apache License, Version 2.0 (the
-#  "License"); you may not use this file except in compliance
-#  with the License.  You may obtain a copy of the License at
-#  
-#    http://www.apache.org/licenses/LICENSE-2.0
-#  
-#  Unless required by applicable law or agreed to in writing,
-#  software distributed under the License is distributed on an
-#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#  KIND, either express or implied.  See the License for the
-#  specific language governing permissions and limitations
-#  under the License.
-#  
-#  This file incorporates work covered by the following license notice:
-# 
-#    Modified May 2016 by Patrick Luby. NeoOffice is only distributed
-#    under the GNU General Public License, Version 3 as allowed by Section 4
-#    of the Apache License, Version 2.0.
+# -*- Mode: makefile-gmake; tab-width: 4; indent-tabs-mode: t -*-
 #
-#    You should have received a copy of the GNU General Public License
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# This file is part of the LibreOffice project.
 #
-#**************************************************************
-
-
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# This file incorporates work covered by the following license notice:
+#
+#   Licensed to the Apache Software Foundation (ASF) under one or more
+#   contributor license agreements. See the NOTICE file distributed
+#   with this work for additional information regarding copyright
+#   ownership. The ASF licenses this file to you under the Apache
+#   License, Version 2.0 (the "License"); you may not use this file
+#   except in compliance with the License. You may obtain a copy of
+#   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+#
+#   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+#   under the GNU General Public License, Version 3 as allowed by Section 3.3
+#   of the Mozilla Public License, v. 2.0.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 
 $(eval $(call gb_Library_Library,editeng))
 
-$(eval $(call gb_Library_add_package_headers,editeng,editeng_inc))
-
-$(eval $(call gb_Library_add_precompiled_header,editeng,$(SRCDIR)/editeng/inc/pch/precompiled_editeng))
-
 $(eval $(call gb_Library_set_include,editeng,\
-	$$(INCLUDE) \
-	-I$(SRCDIR)/editeng/inc/pch \
+    $$(INCLUDE) \
     -I$(SRCDIR)/editeng/inc \
-    -I$(OUTDIR)/inc/offuh \
 ))
 
-$(eval $(call gb_Library_set_defs,editeng,\
-	$$(DEFS) \
-	-DEDITENG_DLLIMPLEMENTATION \
+$(eval $(call gb_Library_use_custom_headers,editeng,editeng/generated))
+
+$(eval $(call gb_Library_set_precompiled_header,editeng,$(SRCDIR)/editeng/inc/pch/precompiled_editeng))
+
+$(eval $(call gb_Library_add_defs,editeng,\
+    -DEDITENG_DLLIMPLEMENTATION \
 ))
 
-ifneq ($(strip $(EDITDEBUG)),)
-$(eval $(call gb_Library_set_defs,editeng,\
-	$$(DEFS) \
-	-DEDITDEBUG \
-))
-endif
+$(eval $(call gb_Library_use_sdk_api,editeng))
 
 $(eval $(call gb_Library_add_exception_objects,editeng,\
-    editeng/inc/pch/precompiled_editeng \
     editeng/source/accessibility/AccessibleComponentBase \
     editeng/source/accessibility/AccessibleContextBase \
     editeng/source/accessibility/AccessibleEditableTextPara \
@@ -67,9 +52,9 @@ $(eval $(call gb_Library_add_exception_objects,editeng,\
     editeng/source/accessibility/AccessibleStaticTextBase \
     editeng/source/accessibility/AccessibleStringWrap \
     editeng/source/editeng/editattr \
+    editeng/source/editeng/editdata \
     editeng/source/editeng/editdbg \
     editeng/source/editeng/editdoc \
-    editeng/source/editeng/editdoc2 \
     editeng/source/editeng/editeng \
     editeng/source/editeng/editobj \
     editeng/source/editeng/editsel \
@@ -77,21 +62,25 @@ $(eval $(call gb_Library_add_exception_objects,editeng,\
     editeng/source/editeng/editview \
     editeng/source/editeng/edtspell \
     editeng/source/editeng/eehtml \
-    editeng/source/editeng/eeng_pch \
     editeng/source/editeng/eeobj \
     editeng/source/editeng/eerdll \
     editeng/source/editeng/eertfpar \
+    editeng/source/editeng/fieldupdater \
     editeng/source/editeng/impedit \
     editeng/source/editeng/impedit2 \
     editeng/source/editeng/impedit3 \
     editeng/source/editeng/impedit4 \
     editeng/source/editeng/impedit5 \
+    editeng/source/editeng/misspellrange \
+    editeng/source/editeng/section \
     editeng/source/editeng/textconv \
+    editeng/source/items/borderline \
     editeng/source/items/bulitem \
     editeng/source/items/charhiddenitem \
     editeng/source/items/flditem \
     editeng/source/items/frmitems \
     editeng/source/items/itemtype \
+    editeng/source/items/justifyitem \
     editeng/source/items/numitem \
     editeng/source/items/optitems \
     editeng/source/items/paperinf \
@@ -107,6 +96,7 @@ $(eval $(call gb_Library_add_exception_objects,editeng,\
     editeng/source/misc/hangulhanja \
     editeng/source/misc/splwrap \
     editeng/source/misc/svxacorr \
+    editeng/source/misc/SvXMLAutoCorrectTokenHandler \
     editeng/source/misc/SvXMLAutoCorrectExport \
     editeng/source/misc/SvXMLAutoCorrectImport \
     editeng/source/misc/swafopt \
@@ -118,9 +108,7 @@ $(eval $(call gb_Library_add_exception_objects,editeng,\
     editeng/source/outliner/outlobj \
     editeng/source/outliner/outlundo \
     editeng/source/outliner/outlvw \
-    editeng/source/outliner/outl_pch \
     editeng/source/outliner/paralist \
-    editeng/source/rtf/rtfgrf \
     editeng/source/rtf/rtfitem \
     editeng/source/rtf/svxrtf \
     editeng/source/uno/unoedhlp \
@@ -136,23 +124,22 @@ $(eval $(call gb_Library_add_exception_objects,editeng,\
     editeng/source/uno/unopracc \
     editeng/source/uno/unotext \
     editeng/source/uno/unotext2 \
-    editeng/source/uno/unoviwed \
     editeng/source/uno/unoviwou \
     editeng/source/xml/xmltxtexp \
     editeng/source/xml/xmltxtimp \
+    editeng/source/lookuptree/Trie \
 ))
 
 # add libraries to be linked to editeng; again these names need to be given as
 # specified in Repository.mk
-$(eval $(call gb_Library_add_linked_libs,editeng,\
+$(eval $(call gb_Library_use_libraries,editeng,\
     xo \
     basegfx \
     lng \
     svt \
-    ootk \
+    tk \
     vcl \
     svl \
-    stl \
     sot \
     utl \
     tl \
@@ -160,21 +147,27 @@ $(eval $(call gb_Library_add_linked_libs,editeng,\
     ucbhelper \
     cppuhelper \
     cppu \
-    vos3 \
     sal \
-    icuuc \
-    i18nisolang1 \
-    i18npaper \
-	$(gb_STDLIBS) \
+    salhelper \
+    sax \
+    i18nlangtag \
+    i18nutil \
+	$(gb_UWINAPI) \
 ))
 
 ifeq ($(strip $(GUIBASE)),java)
-$(eval $(call gb_Library_add_linked_libs,editeng,\
+$(eval $(call gb_Library_use_system_darwin_frameworks,editeng,\
 	CoreFoundation \
 ))
-gb_Library__FRAMEWORKS += \
-	CoreFoundation
-endif
+endif	# GUIBASE == java
+
+$(eval $(call gb_Library_use_externals,editeng,\
+	boost_headers \
+	icuuc \
+	icu_headers \
+))
+
+# Runtime dependency for unit-tests
+$(eval $(call gb_Library_use_restarget,editeng,editeng))
 
 # vim: set noet sw=4 ts=4:
-
