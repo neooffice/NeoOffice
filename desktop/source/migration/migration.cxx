@@ -598,7 +598,6 @@ install_info MigrationImpl::findInstallation(const strings_v& rVersions)
     OUString aPreXDGTopConfigDir = preXDGConfigDir(aTopConfigDir);
 #endif
 
-    install_info aInfo;
 #if defined PRODUCT_DIR_NAME || defined PRODUCT_DIR_NAME2 || defined PRODUCT_DIR_NAME3
     // Use old installation if it exists
     OUString usAltInstall;
@@ -607,28 +606,10 @@ install_info MigrationImpl::findInstallation(const strings_v& rVersions)
     {
         if ( usAltInstall[ usAltInstall.getLength() - 1 ] != '/' )
             usAltInstall += "/";
-        // Check last product first as it is very unlikely to exist for the
-        // first product
-#ifdef PRODUCT_DIR_NAME3
-        // Explicitly use the "Openofice.org 3" filter
-        setInstallInfoIfExist( aInfo, usAltInstall + PRODUCT_DIR_NAME3 + "-3.0", "Openofice.org 3" );
-        if ( aInfo.userdata.getLength() )
-            return aInfo;
-#endif	// PRODUCT_DIR_NAME3
-#ifdef PRODUCT_DIR_NAME2
-        // Explicitly use the "Openofice.org 3" filter
-        setInstallInfoIfExist( aInfo, usAltInstall + PRODUCT_DIR_NAME2, "Openofice.org 3" );
-        if ( aInfo.userdata.getLength() )
-            return aInfo;
-#endif	// PRODUCT_DIR_NAME2
-#ifdef PRODUCT_DIR_NAME
-        // Explicitly use the "Openofice.org 3" filter
-        setInstallInfoIfExist( aInfo, usAltInstall + PRODUCT_DIR_NAME, "Openofice.org 3" );
-        if ( aInfo.userdata.getLength() )
-            return aInfo;
-#endif	// PRODUCT_DIR_NAME
     }
-#else	// PRODUCT_DIR_NAME || PRODUCT_DIR_NAME2 || PRODUCT_DIR_NAME3
+#endif	// PRODUCT_DIR_NAME || PRODUCT_DIR_NAME2 || PRODUCT_DIR_NAME3
+
+    install_info aInfo;
     strings_v::const_iterator i_ver = rVersions.begin();
     while (i_ver != rVersions.end())
     {
@@ -640,6 +621,37 @@ install_info MigrationImpl::findInstallation(const strings_v& rVersions)
             aProfileName = (*i_ver).copy( nSeparatorIndex+1 );
         }
 
+#if defined PRODUCT_DIR_NAME || defined PRODUCT_DIR_NAME2 || defined PRODUCT_DIR_NAME3
+        // Explicitly match a version in main.xcd
+        if ( aVersion == "Openofice.org 3" )
+        {
+            // Check last product first as it is very unlikely to exist for
+            // the first product
+#ifdef PRODUCT_DIR_NAME3
+            setInstallInfoIfExist( aInfo, usAltInstall + PRODUCT_DIR_NAME3 + "-3.0", aVersion );
+            if ( !aInfo.userdata.isEmpty() )
+                break;
+#endif	// PRODUCT_DIR_NAME3
+#ifdef PRODUCT_DIR_NAME2
+            setInstallInfoIfExist( aInfo, usAltInstall + PRODUCT_DIR_NAME2, aVersion );
+            if ( !aInfo.userdata.isEmpty() )
+                break;
+#endif	// PRODUCT_DIR_NAME2
+#ifdef PRODUCT_DIR_NAME
+            setInstallInfoIfExist( aInfo, usAltInstall + PRODUCT_DIR_NAME, aVersion );
+            if ( !aInfo.userdata.isEmpty() )
+                break;
+#endif	// PRODUCT_DIR_NAME
+        }
+#ifdef PRODUCT_DIR_NAME3
+        else if ( aVersion == "OpenOffice.org 2" )
+        {
+            setInstallInfoIfExist( aInfo, usAltInstall + PRODUCT_DIR_NAME3 + "-2.2", aVersion );
+            if ( !aInfo.userdata.isEmpty() )
+                break;
+        }
+#endif	// PRODUCT_DIR_NAME3
+#else	// PRODUCT_DIR_NAME || PRODUCT_DIR_NAME2 || PRODUCT_DIR_NAME3
         if ( !aVersion.isEmpty() && !aProfileName.isEmpty() &&
              ( aInfo.userdata.isEmpty() ||
                aProfileName.equalsIgnoreAsciiCase(
@@ -652,9 +664,9 @@ install_info MigrationImpl::findInstallation(const strings_v& rVersions)
                 setInstallInfoIfExist(aInfo, aPreXDGTopConfigDir + aProfileName, aVersion);
 #endif
         }
+#endif	// PRODUCT_DIR_NAME || PRODUCT_DIR_NAME2 || PRODUCT_DIR_NAME3
         ++i_ver;
     }
-#endif	// PRODUCT_DIR_NAME || PRODUCT_DIR_NAME2 || PRODUCT_DIR_NAME3
 
     return aInfo;
 }
