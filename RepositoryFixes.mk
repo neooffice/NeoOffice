@@ -47,6 +47,14 @@ else
 gb_Executable_FILENAMES := $(patsubst soffice_bin:soffice_bin%,soffice_bin:soffice.bin,$(gb_Executable_FILENAMES))
 endif
 
+ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
+ifeq ($(OS),MACOSX)
+gb_Executable_FILENAMES := $(patsubst updateruninstallers_bin:updateruninstallers_bin,updateruninstallers_bin:updateruninstallers,$(gb_Executable_FILENAMES))
+else
+gb_Executable_FILENAMES := $(patsubst updateruninstallers_bin:updateruninstallers_bin%,updateruninstallers_bin:updateruninstallers.bin,$(gb_Executable_FILENAMES))
+endif
+endif	# PRODUCT_BUILD_TYPE == java
+
 gb_Executable_FILENAMES_FOR_BUILD := $(subst $(gb_Executable_EXT),$(gb_Executable_EXT_for_build),$(gb_Executable_FILENAMES))
 
 # fixes for .jnilibs on Mac OS X that are not also needed as .dylibs:

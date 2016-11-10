@@ -105,6 +105,7 @@ $(eval $(call gb_Helper_register_executables_for_install,OOO,brand, \
 		unopkg \
 		unopkg_com \
 	) \
+	$(if $(filter $(PRODUCT_BUILD_TYPE),java),updateruninstallers_bin) \
 ))
 
 $(eval $(call gb_Helper_register_executables_for_install,OOO,base_brand, \
