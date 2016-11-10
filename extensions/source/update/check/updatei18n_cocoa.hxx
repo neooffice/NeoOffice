@@ -40,9 +40,9 @@
 
 #include <com/sun/star/lang/Locale.hpp>
 #include <sal/types.h>
+#include <svids.hrc>
 
 #include "updatehdl.hrc"
-#include "../../../../vcl/inc/svids.hrc"
 
 #define UPDATEBACK "back"
 #define UPDATEDOWNLOADCANCELED "download.canceled"

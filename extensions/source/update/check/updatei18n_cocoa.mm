@@ -33,14 +33,14 @@
 
 #include <map>
 
-#include <sfx2/app.hxx>
 #include <tools/rcid.h>
 #include <unotools/localedatawrapper.hxx>
+#include <vcl/settings.hxx>
 #include <vcl/svapp.hxx>
 
 #include "updatei18n_cocoa.hxx"
 
-static ::std::map< ::rtl::OUString, NSDictionary* > aLocalizationMap;
+static ::std::map< OUString, NSDictionary* > aLocalizationMap;
 static NSDictionary *pDefaultLocaleDict = nil;
 static NSDictionary *pPrimaryLocaleDict = nil;
 static NSDictionary *pSecondaryLocaleDict = nil;
@@ -50,7 +50,6 @@ static ResMgr *pUPDResMgr = NULL;
 static ResMgr *pVCLResMgr = NULL;
 
 using namespace com::sun::star::lang;
-using namespace rtl;
 
 /**
  * Translated strings for de locale
@@ -212,21 +211,21 @@ NSString *UpdateGetLocalizedString( const sal_Char *key )
 	if ( !aLocalizationMap.size() )
 	{
 		// Initialize dictionaries
-		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "de" ) ), OUString(), OUString() ) ), pEntries_de );
-		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "en" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "US" ) ), OUString() ) ), pEntries_en_US );
-		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "es" ) ), OUString(), OUString() ) ), pEntries_es );
-		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "fr" ) ), OUString(), OUString() ) ), pEntries_fr );
-		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "it" ) ), OUString(), OUString() ) ), pEntries_it );
-		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "nl" ) ), OUString(), OUString() ) ), pEntries_nl );
-		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "pt" ) ), OUString(), OUString() ) ), pEntries_pt );
+		InitializeLocale( ImplGetLocaleString( Locale( "de", "", "" ) ), pEntries_de );
+		InitializeLocale( ImplGetLocaleString( Locale( "en", "US", "" ) ), pEntries_en_US );
+		InitializeLocale( ImplGetLocaleString( Locale( "es", "", "" ) ), pEntries_es );
+		InitializeLocale( ImplGetLocaleString( Locale( "fr", "", "" ) ), pEntries_fr );
+		InitializeLocale( ImplGetLocaleString( Locale( "it", "", "" ) ), pEntries_it );
+		InitializeLocale( ImplGetLocaleString( Locale( "nl", "", "" ) ), pEntries_nl );
+		InitializeLocale( ImplGetLocaleString( Locale( "pt", "", "" ) ), pEntries_pt );
 
 		// Set locale dictionaries based on default locale
-		Locale aLocale( Application::GetSettings().GetUILocale() );
+		Locale aLocale( Application::GetSettings().GetUILanguageTag().getLocale() );
 
 		// Check if locale exists in our list of locales. Note that we ignore
 		// variant at this time as no variant-specific localizations are
 		// planned for this component yet.
-		OUString aDefaultLocale = ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "en" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "US" ) ), OUString() ) );
+		OUString aDefaultLocale = ImplGetLocaleString( Locale( "en", "US", "" ) );
 		::std::map< OUString, NSDictionary* >::const_iterator it = aLocalizationMap.find( aDefaultLocale );
 		if ( it != aLocalizationMap.end() )
 			pDefaultLocaleDict = it->second;
@@ -236,12 +235,12 @@ NSString *UpdateGetLocalizedString( const sal_Char *key )
 		if ( it != aLocalizationMap.end() && pDefaultLocaleDict != it->second )
 			pPrimaryLocaleDict = it->second;
 
-		OUString aSecondaryLocale = ImplGetLocaleString( Locale( aLocale.Language, aLocale.Country, OUString() ) );
+		OUString aSecondaryLocale = ImplGetLocaleString( Locale( aLocale.Language, aLocale.Country, "" ) );
 		it = aLocalizationMap.find( aSecondaryLocale );
 		if ( it != aLocalizationMap.end() && pDefaultLocaleDict != it->second && pPrimaryLocaleDict != it->second )
 			pSecondaryLocaleDict = it->second;
 
-		OUString aTertiaryLocale = ImplGetLocaleString( Locale( aLocale.Language, OUString(), OUString() ) );
+		OUString aTertiaryLocale = ImplGetLocaleString( Locale( aLocale.Language, "", "" ) );
 		it = aLocalizationMap.find( aTertiaryLocale );
 		if ( it != aLocalizationMap.end() && pDefaultLocaleDict != it->second && pPrimaryLocaleDict != it->second && pSecondaryLocaleDict != it->second )
 			pTertiaryLocaleDict = it->second;
@@ -271,7 +270,7 @@ NSString *UpdateGetLocalizedDecimalSeparator()
 	{
 		OUString aDecimalSep( Application::GetAppLocaleDataWrapper().getNumDecimalSep() );
 		if ( !aDecimalSep.getLength() )
-			aDecimalSep = OUString( RTL_CONSTASCII_USTRINGPARAM( "." ) );
+			aDecimalSep = ".";
 		pDecimalSep = [NSString stringWithCharacters:aDecimalSep.getStr() length:aDecimalSep.getLength()];
 		if ( pDecimalSep )
 			[pDecimalSep retain];
@@ -284,7 +283,7 @@ NSString *UpdateGetUPDResString( int nId )
 {
 	if ( !pUPDResMgr )
 	{
-		pUPDResMgr = SfxApplication::CreateResManager( "upd" );
+		pUPDResMgr = ResMgr::CreateResMgr( "upd" );
 		if ( !pUPDResMgr )
 			return @"";
 	}
@@ -294,16 +293,16 @@ NSString *UpdateGetUPDResString( int nId )
 	if ( !pUPDResMgr->IsAvailable( aResId ) )
 		return @"";
  
-	XubString aResString( ResId( nId, *pUPDResMgr ) );
-	aResString.EraseAllChars('~');
-	return [NSString stringWithCharacters:aResString.GetBuffer() length:aResString.Len()];
+	OUString aResString( ResId( nId, *pUPDResMgr ) );
+	aResString = aResString.replaceAll( "~", "" );
+	return [NSString stringWithCharacters:aResString.getStr() length:aResString.getLength()];
 }
 
 NSString *UpdateGetVCLResString( int nId )
 {
 	if ( !pVCLResMgr )
 	{
-		pVCLResMgr = SfxApplication::CreateResManager( "vcl" );
+		pVCLResMgr = ResMgr::CreateResMgr( "vcl" );
 		if ( !pVCLResMgr )
 			return @"";
 	}
@@ -313,7 +312,7 @@ NSString *UpdateGetVCLResString( int nId )
 	if ( !pVCLResMgr->IsAvailable( aResId ) )
 		return @"";
  
-	XubString aResString( ResId( nId, *pVCLResMgr ) );
-	aResString.EraseAllChars('~');
-	return [NSString stringWithCharacters:aResString.GetBuffer() length:aResString.Len()];
+	OUString aResString( ResId( nId, *pVCLResMgr ) );
+	aResString = aResString.replaceAll( "~", "" );
+	return [NSString stringWithCharacters:aResString.getStr() length:aResString.getLength()];
 }

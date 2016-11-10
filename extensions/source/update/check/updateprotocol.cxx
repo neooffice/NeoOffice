@@ -1,45 +1,37 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
+#include <config_folders.h>
 
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_extensions.hxx"
-#include <com/sun/star/xml/xpath/XXPathAPI.hpp>
+#include <com/sun/star/xml/xpath/XPathAPI.hpp>
 
 #include "updateprotocol.hxx"
 #include "updatecheckconfig.hxx"
 
-#ifndef _COM_SUN_STAR_DEPLOYMENT_UPDATEINFORMATINENTRY_HPP_
 #include <com/sun/star/deployment/UpdateInformationEntry.hpp>
-#endif
 #include <com/sun/star/deployment/XPackageInformationProvider.hpp>
 
 
@@ -48,6 +40,7 @@
 #include <rtl/strbuf.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <rtl/bootstrap.hxx>
+#include <osl/diagnose.h>
 #include <osl/process.h>
 
 #include <cppuhelper/implbase1.hxx>
@@ -71,7 +64,6 @@ typedef OSErr Gestalt_Type( OSType selector, SInt32 *response );
 
 #endif	// USE_JAVA
 
-namespace css = com::sun::star ;
 namespace container = css::container ;
 namespace deployment = css::deployment ;
 namespace lang = css::lang ;
@@ -79,13 +71,13 @@ namespace uno = css::uno ;
 namespace task = css::task ;
 namespace xml = css::xml ;
 
-#define UNISTRING(s) rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(s))
+
 
 #ifdef USE_JAVA
 
-static const rtl::OUString GetOSVersion()
+static const OUString GetOSVersion()
 {
-    static rtl::OUString aOSVersion;
+    static OUString aOSVersion;
     static bool nInitialized = false;
 
     if ( !nInitialized )
@@ -103,11 +95,11 @@ static const rtl::OUString GetOSVersion()
                 pGestalt( gestaltSystemVersionMajor, &nMajor);
                 pGestalt( gestaltSystemVersionMinor, &nMinor);
                 pGestalt( gestaltSystemVersionBugFix, &nBugFix);
-                aOSVersion = rtl::OUString::valueOf( (sal_Int32)nMajor );
-                aOSVersion += UNISTRING( "." );
-                aOSVersion += rtl::OUString::valueOf( (sal_Int32)nMinor );
-                aOSVersion += UNISTRING( "." );
-                aOSVersion += rtl::OUString::valueOf( (sal_Int32)nBugFix );
+                aOSVersion = OUString::number( (sal_Int32)nMajor );
+                aOSVersion += ".";
+                aOSVersion += OUString::number( (sal_Int32)nMinor );
+                aOSVersion += ".";
+                aOSVersion += OUString::number( (sal_Int32)nBugFix );
             }
 
             dlclose( pLib );
@@ -122,41 +114,40 @@ static const rtl::OUString GetOSVersion()
 
 #endif	// USE_JAVA
 
-//------------------------------------------------------------------------------
-
-static bool 
+static bool
 getBootstrapData(
-    uno::Sequence< ::rtl::OUString > & rRepositoryList,
-    ::rtl::OUString & rBuildID,
-    ::rtl::OUString & rInstallSetID)
+    uno::Sequence< OUString > & rRepositoryList,
+    OUString & rGitID,
+    OUString & rInstallSetID)
 {
-    rBuildID = UNISTRING( "${$OOO_BASE_DIR/program/" SAL_CONFIGFILE("version") ":ProductBuildid}" );
-    rtl::Bootstrap::expandMacros( rBuildID );
-    if ( ! rBuildID.getLength() )
+    rGitID = "${$BRAND_BASE_DIR/" LIBO_ETC_FOLDER "/" SAL_CONFIGFILE("version") ":buildid}";
+    rtl::Bootstrap::expandMacros( rGitID );
+    if ( rGitID.isEmpty() )
         return false;
 
-    rInstallSetID = UNISTRING( "${$OOO_BASE_DIR/program/" SAL_CONFIGFILE("version") ":UpdateID}" );
+    rInstallSetID = "${$BRAND_BASE_DIR/" LIBO_ETC_FOLDER "/" SAL_CONFIGFILE("version") ":UpdateID}";
     rtl::Bootstrap::expandMacros( rInstallSetID );
-    if ( ! rInstallSetID.getLength() )
+    if ( rInstallSetID.isEmpty() )
         return false;
 
-    rtl::OUString aValue( UNISTRING( "${$OOO_BASE_DIR/program/" SAL_CONFIGFILE("version") ":UpdateURL}" ) );
+    OUString aValue( "${$BRAND_BASE_DIR/" LIBO_ETC_FOLDER "/" SAL_CONFIGFILE("version") ":UpdateURL}" );
     rtl::Bootstrap::expandMacros( aValue );
 
 #ifdef USE_JAVA
+    const OUString aOSVersionTag("<OSVERSION>");
     for (sal_Int32 i = 0;;)
     {
-        i = aValue.indexOfAsciiL(RTL_CONSTASCII_STRINGPARAM("<OSVERSION>"), i);
+        i = aValue.indexOf(aOSVersionTag, i);
         if (i == -1) {
             break;
         }
-        rtl::OUString aOSVersion = GetOSVersion();
-        aValue = aValue.replaceAt(i, RTL_CONSTASCII_LENGTH("<OSVERSION>"), aOSVersion);
+        OUString aOSVersion = GetOSVersion();
+        aValue = aValue.replaceAt(i, aOSVersionTag.getLength(), aOSVersion);
         i += aOSVersion.getLength();
     }
 #endif	// USE_JAVA
 
-    if( aValue.getLength() > 0 )
+    if( !aValue.isEmpty() )
     {
         rRepositoryList.realloc(1);
         rRepositoryList[0] = aValue;
@@ -165,29 +156,29 @@ getBootstrapData(
     return true;
 }
 
-//------------------------------------------------------------------------------
+
 
 // Returns 'true' if successfully connected to the update server
-bool 
+bool
 checkForUpdates(
     UpdateInfo& o_rUpdateInfo,
     uno::Reference< uno::XComponentContext > const & rxContext,
     uno::Reference< task::XInteractionHandler > const & rxInteractionHandler,
     const uno::Reference< deployment::XUpdateInformationProvider >& rUpdateInfoProvider)
 {
-    OSL_TRACE("checking for updates ..\n");
-   
-    ::rtl::OUString myArch;
-    ::rtl::OUString myOS;
-  
-    rtl::Bootstrap::get(UNISTRING("_OS"), myOS);
-    rtl::Bootstrap::get(UNISTRING("_ARCH"), myArch);
-    
-    uno::Sequence< ::rtl::OUString > aRepositoryList;
-    ::rtl::OUString aBuildID;
-    ::rtl::OUString aInstallSetID;
-    
-    if( ! ( getBootstrapData(aRepositoryList, aBuildID, aInstallSetID) && (aRepositoryList.getLength() > 0) ) )
+    OSL_TRACE("checking for updates ..");
+
+    OUString myArch;
+    OUString myOS;
+
+    rtl::Bootstrap::get("_OS", myOS);
+    rtl::Bootstrap::get("_ARCH", myArch);
+
+    uno::Sequence< OUString > aRepositoryList;
+    OUString aGitID;
+    OUString aInstallSetID;
+
+    if( ! ( getBootstrapData(aRepositoryList, aGitID, aInstallSetID) && (aRepositoryList.getLength() > 0) ) )
         return false;
 
 #if defined USE_NATIVE_ADMIN_USER_CHECK && defined MACOSX
@@ -242,72 +233,81 @@ checkForUpdates(
     }
 #endif	// USE_NATIVE_ADMIN_USER_CHECK && MACOSX
 
+    return checkForUpdates( o_rUpdateInfo, rxContext, rxInteractionHandler, rUpdateInfoProvider,
+            myOS, myArch,
+            aRepositoryList, aGitID, aInstallSetID );
+}
+
+bool
+checkForUpdates(
+    UpdateInfo& o_rUpdateInfo,
+    const uno::Reference< uno::XComponentContext > & rxContext,
+    const uno::Reference< task::XInteractionHandler > & rxInteractionHandler,
+    const uno::Reference< deployment::XUpdateInformationProvider >& rUpdateInfoProvider,
+    const OUString &rOS,
+    const OUString &rArch,
+    const uno::Sequence< OUString > &rRepositoryList,
+    const OUString &rGitID,
+    const OUString &rInstallSetID )
+{
     if( !rxContext.is() )
-        throw uno::RuntimeException( 
-            UNISTRING( "checkForUpdates: empty component context" ), uno::Reference< uno::XInterface >() );
-            
+        throw uno::RuntimeException( "checkForUpdates: empty component context" );
+
     OSL_ASSERT( rxContext->getServiceManager().is() );
-			
-    // XPath implementation 
-    uno::Reference< xml::xpath::XXPathAPI > xXPath( 
-        rxContext->getServiceManager()->createInstanceWithContext( UNISTRING( "com.sun.star.xml.xpath.XPathAPI" ), rxContext ), 
-        uno::UNO_QUERY_THROW);    
-    
-    xXPath->registerNS( UNISTRING("inst"), UNISTRING("http://installation.openoffice.org/description") );
+
+    // XPath implementation
+    uno::Reference< xml::xpath::XXPathAPI > xXPath = xml::xpath::XPathAPI::create(rxContext);
+
+    xXPath->registerNS( "inst", "http://update.libreoffice.org/description" );
 
     if( rxInteractionHandler.is() )
         rUpdateInfoProvider->setInteractionHandler(rxInteractionHandler);
-	
+
     try
     {
-		uno::Reference< container::XEnumeration > aUpdateInfoEnumeration =
-            rUpdateInfoProvider->getUpdateInformationEnumeration( aRepositoryList, aInstallSetID );
+        uno::Reference< container::XEnumeration > aUpdateInfoEnumeration =
+            rUpdateInfoProvider->getUpdateInformationEnumeration( rRepositoryList, rInstallSetID );
 
         if ( !aUpdateInfoEnumeration.is() )
             return false; // something went wrong ..
 
-        rtl::OUStringBuffer aBuffer;
+        OUStringBuffer aBuffer;
         aBuffer.appendAscii("/child::inst:description[inst:os=\'");
-        aBuffer.append( myOS );
+        aBuffer.append( rOS );
         aBuffer.appendAscii("\' and inst:arch=\'");
-        aBuffer.append( myArch );
-        aBuffer.appendAscii("\' and inst:buildid>");
-        aBuffer.append( aBuildID );
-        aBuffer.appendAscii("]");
-        
-        rtl::OUString aXPathExpression = aBuffer.makeStringAndClear();
+        aBuffer.append( rArch );
+        aBuffer.appendAscii("\' and inst:gitid!=\'");
+        aBuffer.append( rGitID );
+        aBuffer.appendAscii("\']");
+
+        OUString aXPathExpression = aBuffer.makeStringAndClear();
 
         while( aUpdateInfoEnumeration->hasMoreElements() )
         {
             deployment::UpdateInformationEntry aEntry;
-            
+
             if( aUpdateInfoEnumeration->nextElement() >>= aEntry )
             {
                 uno::Reference< xml::dom::XNode > xNode( aEntry.UpdateDocument.get() );
                 uno::Reference< xml::dom::XNodeList > xNodeList;
                 try {
                     xNodeList = xXPath->selectNodeList(xNode, aXPathExpression
-                        + UNISTRING("/inst:update/attribute::src"));
-                } catch (css::xml::xpath::XPathException &) {
+                        + "/inst:update/attribute::src");
+                } catch (const css::xml::xpath::XPathException &) {
                     // ignore
                 }
 
-/*                
-                o_rUpdateInfo.Sources.push_back( DownloadSource(true, 
-                    UNISTRING("http://openoffice.bouncer.osuosl.org/?product=OpenOffice.org&os=solarissparcwjre&lang=en-US&version=2.2.1") ) );
-*/
-                
                 sal_Int32 i, imax = xNodeList->getLength();
                 for( i = 0; i < imax; ++i )
                 {
                     uno::Reference< xml::dom::XNode > xNode2( xNodeList->item(i) );
-                
+
                     if( xNode2.is() )
                     {
                         uno::Reference< xml::dom::XElement > xParent(xNode2->getParentNode(), uno::UNO_QUERY_THROW);
-                        rtl::OUString aType = xParent->getAttribute(UNISTRING("type"));
-                        bool bIsDirect = ( sal_False == aType.equalsIgnoreAsciiCaseAscii("text/html") );
-                    
+                        OUString aType = xParent->getAttribute("type");
+                        bool bIsDirect = !aType.equalsIgnoreAsciiCase("text/html");
+
                         o_rUpdateInfo.Sources.push_back( DownloadSource(bIsDirect, xNode2->getNodeValue()) );
                     }
                 }
@@ -315,8 +315,8 @@ checkForUpdates(
                 uno::Reference< xml::dom::XNode > xNode2;
                 try {
                     xNode2 = xXPath->selectSingleNode(xNode, aXPathExpression
-                        + UNISTRING("/inst:version/text()"));
-                } catch (css::xml::xpath::XPathException &) {
+                        + "/inst:version/text()");
+                } catch (const css::xml::xpath::XPathException &) {
                     // ignore
                 }
 
@@ -325,8 +325,8 @@ checkForUpdates(
 
                 try {
                     xNode2 = xXPath->selectSingleNode(xNode, aXPathExpression
-                        + UNISTRING("/inst:buildid/text()"));
-                } catch (css::xml::xpath::XPathException &) {
+                        + "/inst:buildid/text()");
+                } catch (const css::xml::xpath::XPathException &) {
                     // ignore
                 }
 
@@ -338,8 +338,8 @@ checkForUpdates(
                 // Release Notes
                 try {
                     xNodeList = xXPath->selectNodeList(xNode, aXPathExpression
-                        + UNISTRING("/inst:relnote"));
-                } catch (css::xml::xpath::XPathException &) {
+                        + "/inst:relnote");
+                } catch (const css::xml::xpath::XPathException &) {
                     // ignore
                 }
                 imax = xNodeList->getLength();
@@ -348,27 +348,22 @@ checkForUpdates(
                     uno::Reference< xml::dom::XElement > xRelNote(xNodeList->item(i), uno::UNO_QUERY);
                     if( xRelNote.is() )
                     {
-                        sal_Int32 pos = xRelNote->getAttribute(UNISTRING("pos")).toInt32();
-                        
-                        ReleaseNote aRelNote((sal_uInt8) pos, xRelNote->getAttribute(UNISTRING("src")));
-                        
-                        if( xRelNote->hasAttribute(UNISTRING("src2")) )
+                        sal_Int32 pos = xRelNote->getAttribute("pos").toInt32();
+
+                        ReleaseNote aRelNote((sal_uInt8) pos, xRelNote->getAttribute("src"));
+
+                        if( xRelNote->hasAttribute("src2") )
                         {
-                            pos = xRelNote->getAttribute(UNISTRING("pos2")).toInt32();
+                            pos = xRelNote->getAttribute("pos2").toInt32();
                             aRelNote.Pos2 = (sal_Int8) pos;
-                            aRelNote.URL2 = xRelNote->getAttribute(UNISTRING("src2"));
+                            aRelNote.URL2 = xRelNote->getAttribute("src2");
                         }
-                        
+
                         o_rUpdateInfo.ReleaseNotes.push_back(aRelNote);
                     }
                 }
-/*
-                o_rUpdateInfo.ReleaseNotes.push_back(
-                    ReleaseNote(1, UNISTRING("http://qa.openoffice.org/tests/online_update_test.html"))
-                );
-*/
-                
-                if( o_rUpdateInfo.Sources.size() > 0 )
+
+                if( !o_rUpdateInfo.Sources.empty() )
                     return true;
             }
         }
@@ -377,13 +372,13 @@ checkForUpdates(
     {
         return false;
     }
-    
+
     return true;
 }
 
-//------------------------------------------------------------------------------
+
 bool storeExtensionUpdateInfos( const uno::Reference< uno::XComponentContext > & rxContext,
-                                const uno::Sequence< uno::Sequence< rtl::OUString > > &rUpdateInfos )
+                                const uno::Sequence< uno::Sequence< OUString > > &rUpdateInfos )
 {
     bool bNotify = false;
 
@@ -399,49 +394,49 @@ bool storeExtensionUpdateInfos( const uno::Reference< uno::XComponentContext > &
     return bNotify;
 }
 
-//------------------------------------------------------------------------------
+
 // Returns 'true' if there are updates for any extension
 
 bool checkForExtensionUpdates( const uno::Reference< uno::XComponentContext > & rxContext )
 {
-    uno::Sequence< uno::Sequence< rtl::OUString > > aUpdateList;
+    uno::Sequence< uno::Sequence< OUString > > aUpdateList;
 
     uno::Reference< deployment::XPackageInformationProvider > xInfoProvider;
     try
     {
         uno::Any aValue( rxContext->getValueByName(
-                UNISTRING( "/singletons/com.sun.star.deployment.PackageInformationProvider" ) ) );
+                "/singletons/com.sun.star.deployment.PackageInformationProvider" ) );
         OSL_VERIFY( aValue >>= xInfoProvider );
     }
     catch( const uno::Exception& )
     {
-        OSL_ENSURE( false, "checkForExtensionUpdates: could not create the PackageInformationProvider!" );
+        OSL_FAIL( "checkForExtensionUpdates: could not create the PackageInformationProvider!" );
     }
 
     if ( !xInfoProvider.is() ) return false;
 
-    aUpdateList = xInfoProvider->isUpdateAvailable( ::rtl::OUString() );
+    aUpdateList = xInfoProvider->isUpdateAvailable( OUString() );
     bool bNotify = storeExtensionUpdateInfos( rxContext, aUpdateList );
 
     return bNotify;
 }
 
-//------------------------------------------------------------------------------
+
 // Returns 'true' if there are any pending updates for any extension (offline check)
 
 bool checkForPendingUpdates( const uno::Reference< uno::XComponentContext > & rxContext )
 {
-    uno::Sequence< uno::Sequence< rtl::OUString > > aExtensionList;
+    uno::Sequence< uno::Sequence< OUString > > aExtensionList;
     uno::Reference< deployment::XPackageInformationProvider > xInfoProvider;
     try
     {
         uno::Any aValue( rxContext->getValueByName(
-                UNISTRING( "/singletons/com.sun.star.deployment.PackageInformationProvider" ) ) );
+                "/singletons/com.sun.star.deployment.PackageInformationProvider" ) );
         OSL_VERIFY( aValue >>= xInfoProvider );
     }
     catch( const uno::Exception& )
     {
-        OSL_ENSURE( false, "checkForExtensionUpdates: could not create the PackageInformationProvider!" );
+        OSL_FAIL( "checkForExtensionUpdates: could not create the PackageInformationProvider!" );
     }
 
     if ( !xInfoProvider.is() ) return false;
@@ -463,3 +458,5 @@ bool checkForPendingUpdates( const uno::Reference< uno::XComponentContext > & rx
 
     return bPendingUpdateFound;
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -36,8 +36,6 @@
 #include "updatei18n_cocoa.hxx"
 #include "updatewebview_cocoa.h"
 
-using namespace rtl;
-
 //========================================================================
 
 NSString *kUpdateLastURLPref = @"updateLastURL";
@@ -91,6 +89,8 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 
 - (void)showWebView:(id)obj
 {
+	(void)obj;
+
 	// If the OOo update check URL is out of sync with the server type that
 	// the web view is using, do not use the web view to handle updates
 	NSURL *pURL = [NSURL URLWithString:mpURL];
@@ -190,6 +190,8 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 
 - (void)quitWebView:(id)obj
 {
+	(void)obj;
+
 	if (pSharedPanel)
 	{
  		if ([pSharedPanel isVisible])
@@ -203,7 +205,7 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 	if (!mbWebViewRequestedQuitApp && UpdateHasPackagePaths())
 	{
 		NSAlert *pAlert = [NSAlert alertWithMessageText:UpdateGetLocalizedString(UPDATEINSTALLUPDATES) defaultButton:UpdateGetVCLResString(SV_BUTTONTEXT_YES) alternateButton:UpdateGetVCLResString(SV_BUTTONTEXT_NO) otherButton:nil informativeTextWithFormat:@""];
-		if ( pAlert && [pAlert runModal] == NSAlertDefaultReturn )
+		if ( pAlert && [pAlert runModal] == NSAlertFirstButtonReturn )
 		{
 			mbWebViewRequestedQuitApp = YES;
 			CFPreferencesSetAppValue( kUpdateSuppressLaunchAfterInstallationPref
@@ -252,7 +254,7 @@ sal_Bool UpdateQuitNativeDownloadWebView()
 	return bRet;
 }
 
-sal_Bool UpdateShowNativeDownloadWebView( ::rtl::OUString aURL, ::rtl::OUString aUserAgent, ::rtl::OUString aTitle )
+sal_Bool UpdateShowNativeDownloadWebView( OUString aURL, OUString aUserAgent, OUString aTitle )
 {
 	sal_Bool bRet = sal_False;
 

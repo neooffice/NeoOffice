@@ -40,12 +40,10 @@
 #include <osl/mutex.hxx>
 #include <osl/process.h>
 
-static std::set< rtl::OUString > aPackageNamesSet;
-static std::map< rtl::OUString, rtl::OUString > aDownloadPathsMap;
-static std::map< rtl::OUString, rtl::OUString > aPackagePathsMap;
+static std::set< OUString > aPackageNamesSet;
+static std::map< OUString, OUString > aDownloadPathsMap;
+static std::map< OUString, OUString > aPackagePathsMap;
 static osl::Mutex aPackagesMutex;
-
-using namespace rtl;
 
 void UpdateAddInstallerPackage(OUString aName, OUString aDownloadPath, OUString aPackagePath)
 {
@@ -79,14 +77,14 @@ void UpdateInstallNextBatchOfInstallerPackagePaths()
 	if (nLastIndex > 0)
 	{
 		aExeURL = aExeURL.copy(0, nLastIndex+1);
-		aExeURL += OUString(RTL_CONSTASCII_USTRINGPARAM("updchkruninstallers" SAL_PRGEXTENSION));
+		aExeURL += "updchkruninstallers";
 
 		osl::ClearableMutexGuard aGuard(aPackagesMutex);
 
 #ifdef MACOSX
-		OUString aMountPackageExeURL(RTL_CONSTASCII_USTRINGPARAM("file:///usr/bin/hdiutil"));
-		OUString aMountPackageAttachArg(RTL_CONSTASCII_USTRINGPARAM("attach"));
-		OUString aMountPackagePlistArg(RTL_CONSTASCII_USTRINGPARAM("-plist"));
+		OUString aMountPackageExeURL("file:///usr/bin/hdiutil");
+		OUString aMountPackageAttachArg("attach");
+		OUString aMountPackagePlistArg("-plist");
 		rtl_uString *pMountPackageArgs[ 3 ];
 		pMountPackageArgs[ 0 ] = aMountPackageAttachArg.pData;
 		pMountPackageArgs[ 1 ] = aMountPackagePlistArg.pData;
@@ -97,8 +95,8 @@ void UpdateInstallNextBatchOfInstallerPackagePaths()
 		// package path with "Language_Pack" or "Patch" are not full installers
 		// and that we assume that the product and version numbers lower in
 		// sort order should be installed first.
-		const OUString aLanguagePack(RTL_CONSTASCII_USTRINGPARAM("Language_Pack"));
-		const OUString aPatch(RTL_CONSTASCII_USTRINGPARAM("Patch"));
+		const OUString aLanguagePack("Language_Pack");
+		const OUString aPatch("Patch");
 		std::list< oslProcess > aMountPackageProcessList;
 		std::list< OUString > aPackagePathsRunList;
 		std::set< OUString >::iterator it = aPackageNamesSet.begin();
@@ -203,6 +201,6 @@ void UpdateInstallNextBatchOfInstallerPackagePaths()
 
 void UpdateShutdownApp()
 {
-	Reference< UpdateCheck > aController(UpdateCheck::get());
+	rtl::Reference< UpdateCheck > aController(UpdateCheck::get());
 	aController->shutdownApp();
 }

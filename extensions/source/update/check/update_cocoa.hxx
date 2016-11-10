@@ -51,7 +51,7 @@ extern NSString *kUpdateHeightPref;
 extern NSString *kUpdateVisiblePref;
 extern NSString *kUpdateServerTypePref;
 
-SAL_DLLPRIVATE ::rtl::OUString UpdateNSStringToOUString( NSString *pString );
+SAL_DLLPRIVATE OUString UpdateNSStringToOUString( NSString *pString );
 
 #else	// __OBJC__
 
@@ -60,6 +60,6 @@ typedef void* id;
 #endif	// __OBJC__
 
 SAL_DLLPRIVATE sal_Bool UpdateQuitNativeDownloadWebView();
-SAL_DLLPRIVATE sal_Bool UpdateShowNativeDownloadWebView( ::rtl::OUString aURL, ::rtl::OUString aUserAgent, ::rtl::OUString aTitle );
+SAL_DLLPRIVATE sal_Bool UpdateShowNativeDownloadWebView( OUString aURL, OUString aUserAgent, OUString aTitle );
 
 #endif	// _UPDATE_COCOA_HXX

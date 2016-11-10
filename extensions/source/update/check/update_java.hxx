@@ -47,7 +47,7 @@ static const CFStringRef kUpdateSuppressLaunchAfterInstallationPref = CFSTR( "up
 
 #endif	// MACOSX
 
-SAL_DLLPRIVATE void UpdateAddInstallerPackage(rtl::OUString aName, rtl::OUString aDownloadPath, rtl::OUString aPackagePath);
+SAL_DLLPRIVATE void UpdateAddInstallerPackage(OUString aName, OUString aDownloadPath, OUString aPackagePath);
 SAL_DLLPRIVATE sal_Bool UpdateHasPackagePaths();
 SAL_DLLPRIVATE void UpdateInstallNextBatchOfInstallerPackagePaths();
 SAL_DLLPRIVATE void UpdateShutdownApp();
