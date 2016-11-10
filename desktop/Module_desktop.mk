@@ -48,12 +48,12 @@ $(eval $(call gb_Module_add_targets,desktop,\
     Package_scripts \
 ))
 
-ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
+ifeq ($(strip $(GUIBASE)),java)
 $(eval $(call gb_Module_add_targets,desktop,\
     Executable_soffice2_bin \
     Executable_soffice3_bin \
 ))
-endif	# PRODUCT_BUILD_TYPE == java
+endif	# GUIBASE == java
 
 ifneq ($(OS),MACOSX)
 ifneq ($(OS),WNT)
