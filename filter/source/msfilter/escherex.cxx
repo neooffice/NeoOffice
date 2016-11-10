@@ -1,42 +1,35 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_filter.hxx"
 #include "eschesdo.hxx"
 #include <svx/svdxcgv.hxx>
 #include <svx/svdomedia.hxx>
 #include <svx/xflftrit.hxx>
 #include <filter/msfilter/escherex.hxx>
+#include <filter/msfilter/util.hxx>
 #include <svx/unoapi.hxx>
 #include <svx/svdobj.hxx>
 #include <svx/svdoashp.hxx>
@@ -52,7 +45,7 @@
 #include <tools/zcodec.hxx>
 #include <svx/svdopath.hxx>
 #include <stdlib.h>
-#include <svtools/filter.hxx>
+#include <vcl/graphicfilter.hxx>
 #include "svx/EnhancedCustomShapeTypeNames.hxx"
 #include "svx/EnhancedCustomShapeGeometry.hxx"
 #include <svx/EnhancedCustomShapeFunctionParser.hxx>
@@ -99,60 +92,56 @@
 #include <com/sun/star/text/GraphicCrop.hpp>
 #include <unotools/ucbstreamhelper.hxx>
 #include <unotools/localfilehelper.hxx>
-#include <comphelper/extract.hxx>
-#include <toolkit/unohlp.hxx>
+#include <comphelper/string.hxx>
+#include <toolkit/helper/vclunohelper.hxx>
 #include <vcl/virdev.hxx>
 #include <rtl/crc.h>
-#include <vos/xception.hxx>
-using namespace vos;
+#include <rtl/strbuf.hxx>
+#include <boost/scoped_array.hpp>
+#include <boost/scoped_ptr.hpp>
 
 #if defined USE_JAVA && defined MACOSX
 #include <vcl/metaact.hxx>
 #endif	// USE_JAVA && MACOSX
 
-using namespace ::rtl;
 using namespace ::com::sun::star;
 
 
-// ---------------------------------------------------------------------------------------------
-
 EscherExContainer::EscherExContainer( SvStream& rSt, const sal_uInt16 nRecType, const sal_uInt16 nInstance ) :
-	rStrm	( rSt )
+    rStrm   ( rSt )
 {
-	rStrm << (sal_uInt32)( ( 0xf | ( nInstance << 4 ) ) | ( nRecType << 16 ) ) << (sal_uInt32)0;
-	nContPos = rStrm.Tell();
+    rStrm.WriteUInt32( ( ( 0xf | ( nInstance << 4 ) ) | ( nRecType << 16 ) ) ).WriteUInt32( 0 );
+    nContPos = rStrm.Tell();
 }
 EscherExContainer::~EscherExContainer()
 {
-	sal_uInt32 nPos = rStrm.Tell();
-	sal_uInt32 nSize= nPos - nContPos;
-	if ( nSize )
-	{
-		rStrm.Seek( nContPos - 4 );
-		rStrm << nSize;
-		rStrm.Seek( nPos );
-	}
+    sal_uInt32 nPos = rStrm.Tell();
+    sal_uInt32 nSize= nPos - nContPos;
+    if ( nSize )
+    {
+        rStrm.Seek( nContPos - 4 );
+        rStrm.WriteUInt32( nSize );
+        rStrm.Seek( nPos );
+    }
 }
 
 EscherExAtom::EscherExAtom( SvStream& rSt, const sal_uInt16 nRecType, const sal_uInt16 nInstance, const sal_uInt8 nVersion ) :
-	rStrm	( rSt )
+    rStrm   ( rSt )
 {
-	rStrm << (sal_uInt32)( ( nVersion | ( nInstance << 4 ) ) | ( nRecType << 16 ) ) << (sal_uInt32)0;
-	nContPos = rStrm.Tell();
+    rStrm.WriteUInt32( ( ( nVersion | ( nInstance << 4 ) ) | ( nRecType << 16 ) ) ).WriteUInt32( 0 );
+    nContPos = rStrm.Tell();
 }
 EscherExAtom::~EscherExAtom()
 {
-	sal_uInt32 nPos = rStrm.Tell();
-	sal_uInt32 nSize= nPos - nContPos;
-	if ( nSize )
-	{
-		rStrm.Seek( nContPos - 4 );
-		rStrm << nSize;
-		rStrm.Seek( nPos );
-	}
+    sal_uInt32 nPos = rStrm.Tell();
+    sal_uInt32 nSize= nPos - nContPos;
+    if ( nSize )
+    {
+        rStrm.Seek( nContPos - 4 );
+        rStrm.WriteUInt32( nSize );
+        rStrm.Seek( nPos );
+    }
 }
-
-// ---------------------------------------------------------------------------------------------
 
 EscherExClientRecord_Base::~EscherExClientRecord_Base()
 {
@@ -162,237 +151,236 @@ EscherExClientAnchor_Base::~EscherExClientAnchor_Base()
 {
 }
 
-// ---------------------------------------------------------------------------------------------
-
 void EscherPropertyContainer::ImplInit()
 {
-	nSortCount = 0;
-	nCountCount = 0;
-	nCountSize = 0;
-	nSortBufSize = 64;
-	bHasComplexData	= sal_False;
-	pSortStruct = new EscherPropSortStruct[ nSortBufSize ];
+    nSortCount = 0;
+    nCountCount = 0;
+    nCountSize = 0;
+    nSortBufSize = 64;
+    bHasComplexData = false;
+    pSortStruct = new EscherPropSortStruct[ nSortBufSize ];
 }
 
-EscherPropertyContainer::EscherPropertyContainer() :
-	pGraphicProvider	( NULL ),
-	pPicOutStrm			( NULL )
+EscherPropertyContainer::EscherPropertyContainer()
+    : pGraphicProvider(NULL)
+    , pPicOutStrm(NULL)
+    , pShapeBoundRect(NULL)
 {
-	ImplInit();
-};
+    ImplInit();
+}
 
 EscherPropertyContainer::EscherPropertyContainer(
-	EscherGraphicProvider& rGraphProv,
-			SvStream* pPiOutStrm,
-				Rectangle& rBoundRect ) :
+    EscherGraphicProvider& rGraphProv,
+            SvStream* pPiOutStrm,
+                Rectangle& rBoundRect ) :
 
-	pGraphicProvider	( &rGraphProv ),
-	pPicOutStrm			( pPiOutStrm ),
-	pShapeBoundRect		( &rBoundRect )
+    pGraphicProvider    ( &rGraphProv ),
+    pPicOutStrm         ( pPiOutStrm ),
+    pShapeBoundRect     ( &rBoundRect )
 {
-	ImplInit();
+    ImplInit();
 }
 
 EscherPropertyContainer::~EscherPropertyContainer()
 {
-	if ( bHasComplexData )
-	{
-		while ( nSortCount-- )
-			delete[] pSortStruct[ nSortCount ].pBuf;
-	}
-	delete[] pSortStruct;
+    if ( bHasComplexData )
+    {
+        while ( nSortCount-- )
+            delete[] pSortStruct[ nSortCount ].pBuf;
+    }
+    delete[] pSortStruct;
 };
 
-void EscherPropertyContainer::AddOpt( sal_uInt16 nPropID, sal_uInt32 nPropValue, sal_Bool bBlib )
+void EscherPropertyContainer::AddOpt( sal_uInt16 nPropID, sal_uInt32 nPropValue, bool bBlib )
 {
-	AddOpt( nPropID, bBlib, nPropValue, NULL, 0 );
+    AddOpt( nPropID, bBlib, nPropValue, NULL, 0 );
 }
 
-void EscherPropertyContainer::AddOpt( sal_uInt16 nPropID, const rtl::OUString& rString )
+void EscherPropertyContainer::AddOpt( sal_uInt16 nPropID, const OUString& rString )
 {
-	sal_Int32 j, i, nLen = rString.getLength() * 2 + 2;
-	sal_uInt8* pBuf = new sal_uInt8[ nLen ];
-	for ( j = i = 0; i < rString.getLength(); i++ )
-	{
-		sal_uInt16 nChar = (sal_uInt16)rString[ i ];
-		pBuf[ j++ ] = (sal_uInt8)nChar;
-		pBuf[ j++ ] = (sal_uInt8)( nChar >> 8 );
-	}
-	pBuf[ j++ ] = 0;
-	pBuf[ j++ ] = 0;
-	AddOpt( nPropID, sal_True, nLen, pBuf, nLen );
+    sal_Int32 j, i, nLen = rString.getLength() * 2 + 2;
+    sal_uInt8* pBuf = new sal_uInt8[ nLen ];
+    for ( j = i = 0; i < rString.getLength(); i++ )
+    {
+        sal_uInt16 nChar = (sal_uInt16)rString[ i ];
+        pBuf[ j++ ] = (sal_uInt8)nChar;
+        pBuf[ j++ ] = (sal_uInt8)( nChar >> 8 );
+    }
+    pBuf[ j++ ] = 0;
+    pBuf[ j++ ] = 0;
+    AddOpt( nPropID, true, nLen, pBuf, nLen );
 }
 
-void EscherPropertyContainer::AddOpt( sal_uInt16 nPropID, sal_Bool bBlib, sal_uInt32 nPropValue, sal_uInt8* pProp, sal_uInt32 nPropSize )
+void EscherPropertyContainer::AddOpt( sal_uInt16 nPropID, bool bBlib, sal_uInt32 nPropValue, sal_uInt8* pProp, sal_uInt32 nPropSize )
 {
-	if ( bBlib )				// bBlib is only valid when fComplex = 0
-		nPropID |= 0x4000;
-	if ( pProp )
-		nPropID |= 0x8000;		// fComplex = sal_True;
+    if ( bBlib )                // bBlib is only valid when fComplex = 0
+        nPropID |= 0x4000;
+    if ( pProp )
+        nPropID |= 0x8000;      // fComplex = sal_True;
 
-	sal_uInt32 i;
-	for( i = 0; i < nSortCount; i++ )
-	{
-		if ( ( pSortStruct[ i ].nPropId &~0xc000 ) == ( nPropID &~0xc000 ) )	// pruefen, ob Property nur ersetzt wird
-		{
-			pSortStruct[ i ].nPropId = nPropID;
-			if ( pSortStruct[ i ].pBuf )
-			{
-				nCountSize -= pSortStruct[ i ].nPropSize;
-				delete[] pSortStruct[ i ].pBuf;
-			}
-			pSortStruct[ i ].pBuf = pProp;
-			pSortStruct[ i ].nPropSize = nPropSize;
-			pSortStruct[ i ].nPropValue = nPropValue;
-			if ( pProp )
-				nCountSize += nPropSize;
-			return;
-		}
-	}
-	nCountCount++;
-	nCountSize += 6;
-	if ( nSortCount == nSortBufSize )											// buffer vergroessern
-	{
-		nSortBufSize <<= 1;
-		EscherPropSortStruct* pTemp = new EscherPropSortStruct[ nSortBufSize ];
-		for( i = 0; i < nSortCount; i++ )
-		{
-			pTemp[ i ] = pSortStruct[ i ];
-		}
-		delete pSortStruct;
-		pSortStruct = pTemp;
-	}
-	pSortStruct[ nSortCount ].nPropId = nPropID;								// property einfuegen
-	pSortStruct[ nSortCount ].pBuf = pProp;
-	pSortStruct[ nSortCount ].nPropSize = nPropSize;
-	pSortStruct[ nSortCount++ ].nPropValue = nPropValue;
+    sal_uInt32 i;
+    for( i = 0; i < nSortCount; i++ )
+    {
+        if ( ( pSortStruct[ i ].nPropId &~0xc000 ) == ( nPropID &~0xc000 ) )    // check, whether the Property only gets replaced
+        {
+            pSortStruct[ i ].nPropId = nPropID;
+            if ( pSortStruct[ i ].pBuf )
+            {
+                nCountSize -= pSortStruct[ i ].nPropSize;
+                delete[] pSortStruct[ i ].pBuf;
+            }
+            pSortStruct[ i ].pBuf = pProp;
+            pSortStruct[ i ].nPropSize = nPropSize;
+            pSortStruct[ i ].nPropValue = nPropValue;
+            if ( pProp )
+                nCountSize += nPropSize;
+            return;
+        }
+    }
+    nCountCount++;
+    nCountSize += 6;
+    if ( nSortCount == nSortBufSize )                                           // increase buffer
+    {
+        nSortBufSize <<= 1;
+        EscherPropSortStruct* pTemp = new EscherPropSortStruct[ nSortBufSize ];
+        for( i = 0; i < nSortCount; i++ )
+        {
+            pTemp[ i ] = pSortStruct[ i ];
+        }
+        delete[] pSortStruct;
+        pSortStruct = pTemp;
+    }
+    pSortStruct[ nSortCount ].nPropId = nPropID;                                // insert property
+    pSortStruct[ nSortCount ].pBuf = pProp;
+    pSortStruct[ nSortCount ].nPropSize = nPropSize;
+    pSortStruct[ nSortCount++ ].nPropValue = nPropValue;
 
-	if ( pProp )
-	{
-		nCountSize += nPropSize;
-		bHasComplexData = sal_True;
-	}
+    if ( pProp )
+    {
+        nCountSize += nPropSize;
+        bHasComplexData = true;
+    }
 }
 
-sal_Bool EscherPropertyContainer::GetOpt( sal_uInt16 nPropId, sal_uInt32& rPropValue ) const
+bool EscherPropertyContainer::GetOpt( sal_uInt16 nPropId, sal_uInt32& rPropValue ) const
 {
     EscherPropSortStruct aPropStruct;
 
     if ( GetOpt( nPropId, aPropStruct ) )
     {
         rPropValue = aPropStruct.nPropValue;
-        return sal_True;
+        return true;
     }
-    return sal_False;
+    return false;
 }
 
-sal_Bool EscherPropertyContainer::GetOpt( sal_uInt16 nPropId, EscherPropSortStruct& rPropValue ) const
+bool EscherPropertyContainer::GetOpt( sal_uInt16 nPropId, EscherPropSortStruct& rPropValue ) const
 {
-	for( sal_uInt32 i = 0; i < nSortCount; i++ )
-	{
-		if ( ( pSortStruct[ i ].nPropId &~0xc000 ) == ( nPropId &~0xc000 ) )
-		{
-			rPropValue = pSortStruct[ i ];
-			return sal_True;
-		}
-	}
-	return sal_False;
+    for( sal_uInt32 i = 0; i < nSortCount; i++ )
+    {
+        if ( ( pSortStruct[ i ].nPropId &~0xc000 ) == ( nPropId &~0xc000 ) )
+        {
+            rPropValue = pSortStruct[ i ];
+            return true;
+        }
+    }
+    return false;
 }
 
 EscherProperties EscherPropertyContainer::GetOpts() const
 {
-	EscherProperties aVector;
+    EscherProperties aVector;
 
-	for ( sal_uInt32 i = 0; i < nSortCount; ++i )
-		aVector.push_back( pSortStruct[ i ] );
+    for ( sal_uInt32 i = 0; i < nSortCount; ++i )
+        aVector.push_back( pSortStruct[ i ] );
 
-	return aVector;
+    return aVector;
 }
 
-extern "C" int __LOADONCALLAPI EscherPropSortFunc( const void* p1, const void* p2 )
+extern "C" int SAL_CALL EscherPropSortFunc( const void* p1, const void* p2 )
 {
-	sal_Int16	nID1 = ((EscherPropSortStruct*)p1)->nPropId &~0xc000;
-	sal_Int16	nID2 = ((EscherPropSortStruct*)p2)->nPropId &~0xc000;
+    sal_Int16   nID1 = ((EscherPropSortStruct*)p1)->nPropId &~0xc000;
+    sal_Int16   nID2 = ((EscherPropSortStruct*)p2)->nPropId &~0xc000;
 
-	if( nID1  < nID2 )
-		return -1;
-	else if( nID1 > nID2 )
-		return 1;
-	else
-		return 0;
+    if( nID1  < nID2 )
+        return -1;
+    else if( nID1 > nID2 )
+        return 1;
+    else
+        return 0;
 }
 
 void EscherPropertyContainer::Commit( SvStream& rSt, sal_uInt16 nVersion, sal_uInt16 nRecType )
 {
-	rSt << (sal_uInt16)( ( nCountCount << 4 ) | ( nVersion & 0xf ) ) << nRecType << nCountSize;
-	if ( nSortCount )
-	{
-		qsort( pSortStruct, nSortCount, sizeof( EscherPropSortStruct ), EscherPropSortFunc );
-		sal_uInt32 i;
+    rSt.WriteUInt16( ( ( nCountCount << 4 ) | ( nVersion & 0xf ) ) ).WriteUInt16( nRecType ).WriteUInt32( nCountSize );
+    if ( nSortCount )
+    {
+        qsort( pSortStruct, nSortCount, sizeof( EscherPropSortStruct ), EscherPropSortFunc );
+        sal_uInt32 i;
 
-		for ( i = 0; i < nSortCount; i++ )
-		{
-			sal_uInt32 nPropValue = pSortStruct[ i ].nPropValue;
-			sal_uInt16 nPropId = pSortStruct[ i ].nPropId;
+        for ( i = 0; i < nSortCount; i++ )
+        {
+            sal_uInt32 nPropValue = pSortStruct[ i ].nPropValue;
+            sal_uInt16 nPropId = pSortStruct[ i ].nPropId;
 
-			rSt << nPropId
-				<< nPropValue;
-		}
-		if ( bHasComplexData )
-		{
-			for ( i = 0; i < nSortCount; i++ )
-			{
-				if ( pSortStruct[ i ].pBuf )
-					rSt.Write( pSortStruct[ i ].pBuf, pSortStruct[ i ].nPropSize );
-			}
-		}
-	}
+            rSt.WriteUInt16( nPropId )
+               .WriteUInt32( nPropValue );
+        }
+        if ( bHasComplexData )
+        {
+            for ( i = 0; i < nSortCount; i++ )
+            {
+                if ( pSortStruct[ i ].pBuf )
+                    rSt.Write( pSortStruct[ i ].pBuf, pSortStruct[ i ].nPropSize );
+            }
+        }
+    }
 }
 
-sal_Bool EscherPropertyContainer::IsFontWork() const
+bool EscherPropertyContainer::IsFontWork() const
 {
-	sal_uInt32 nTextPathFlags = 0;
-	GetOpt( DFF_Prop_gtextFStrikethrough, nTextPathFlags );
-	return ( nTextPathFlags & 0x4000 ) != 0;
+    sal_uInt32 nTextPathFlags = 0;
+    GetOpt( DFF_Prop_gtextFStrikethrough, nTextPathFlags );
+    return ( nTextPathFlags & 0x4000 ) != 0;
 }
 
-sal_uInt32 EscherPropertyContainer::ImplGetColor( const sal_uInt32 nSOColor, sal_Bool bSwap )
+sal_uInt32 EscherPropertyContainer::ImplGetColor( const sal_uInt32 nSOColor, bool bSwap )
 {
-	if ( bSwap )
-	{
-		sal_uInt32 nColor = nSOColor & 0xff00;		// GRUEN
-		nColor |= (sal_uInt8)( nSOColor ) << 16;	// ROT
-		nColor |= (sal_uInt8)( nSOColor >> 16 );	// BLAU
-		return nColor;
-	}
-	else
-		return nSOColor & 0xffffff;
+    if ( bSwap )
+    {
+        sal_uInt32 nColor = nSOColor & 0xff00;      // green
+        nColor |= (sal_uInt8)( nSOColor ) << 16;    // red
+        nColor |= (sal_uInt8)( nSOColor >> 16 );    // blue
+        return nColor;
+    }
+    else
+        return nSOColor & 0xffffff;
 }
 
 sal_uInt32 EscherPropertyContainer::GetGradientColor(
-	const ::com::sun::star::awt::Gradient* pGradient,
-		sal_uInt32 nStartColor )
+    const ::com::sun::star::awt::Gradient* pGradient,
+        sal_uInt32 nStartColor )
 {
-	sal_uInt32	nIntensity = 100;
-	Color		aColor;
+    sal_uInt32  nIntensity = 100;
+    Color       aColor;
 
-	if ( pGradient )
-	{
-		if ( nStartColor & 1 )
-		{
-			nIntensity = pGradient->StartIntensity;
-			aColor = pGradient->StartColor;
-		}
-		else
-		{
-			nIntensity = pGradient->EndIntensity;
-			aColor = pGradient->EndColor;
-		}
-	}
-	sal_uInt32	nRed = ( ( aColor.GetRed() * nIntensity ) / 100 );
-	sal_uInt32	nGreen = ( ( aColor.GetGreen() * nIntensity ) / 100 ) << 8;
-	sal_uInt32	nBlue = ( ( aColor.GetBlue() * nIntensity ) / 100 ) << 16;
-	return nRed | nGreen | nBlue;
+    if ( pGradient )
+    {
+        if ( nStartColor & 1 )
+        {
+            nIntensity = pGradient->StartIntensity;
+            aColor = pGradient->StartColor;
+        }
+        else
+        {
+            nIntensity = pGradient->EndIntensity;
+            aColor = pGradient->EndColor;
+        }
+    }
+    sal_uInt32  nRed = ( ( aColor.GetRed() * nIntensity ) / 100 );
+    sal_uInt32  nGreen = ( ( aColor.GetGreen() * nIntensity ) / 100 ) << 8;
+    sal_uInt32  nBlue = ( ( aColor.GetBlue() * nIntensity ) / 100 ) << 16;
+    return nRed | nGreen | nBlue;
 }
 
 void EscherPropertyContainer::CreateGradientProperties(
@@ -449,318 +437,293 @@ void EscherPropertyContainer::CreateGradientProperties(
 }
 
 void EscherPropertyContainer::CreateGradientProperties(
-	const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet , sal_Bool bTransparentGradient)
+    const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet , bool bTransparentGradient)
 {
-	::com::sun::star::uno::Any			aAny;
-	::com::sun::star::awt::Gradient*	pGradient = NULL;
+    ::com::sun::star::uno::Any          aAny;
+    ::com::sun::star::awt::Gradient*    pGradient = NULL;
 
-	sal_uInt32  nFillType = ESCHER_FillShadeScale;
-	sal_Int32  nAngle = 0;
-	sal_uInt32  nFillFocus = 0;
-	sal_uInt32  nFillLR = 0;
-	sal_uInt32  nFillTB = 0;
-	sal_uInt32	nFirstColor = 0;//like the control var nChgColors in import logic
-	bool        bWriteFillTo = false;
+    sal_uInt32  nFillType = ESCHER_FillShadeScale;
+    sal_Int32  nAngle = 0;
+    sal_uInt32  nFillFocus = 0;
+    sal_uInt32  nFillLR = 0;
+    sal_uInt32  nFillTB = 0;
+    sal_uInt32  nFirstColor = 0;// like the control var nChgColors in import logic
+    bool        bWriteFillTo = false;
 
-	//Transparency gradient: Means the third setting in transparency page is set
-	if (bTransparentGradient &&  EscherPropertyValueHelper::GetPropertyValue(
-		aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "FillTransparenceGradient" ) ), sal_False ) )
-	{
-		pGradient = (::com::sun::star::awt::Gradient*)aAny.getValue();
-				
-		::com::sun::star::uno::Any			aAnyTemp;
-		const rtl::OUString aPropName( String( RTL_CONSTASCII_USTRINGPARAM( "FillStyle" ) ) );
-		if ( EscherPropertyValueHelper::GetPropertyValue(
-			aAnyTemp, rXPropSet, aPropName, sal_False ) )
-		{
-			::com::sun::star::drawing::FillStyle eFS;
-			if ( ! ( aAnyTemp >>= eFS ) )
-				eFS = ::com::sun::star::drawing::FillStyle_SOLID;
-			//solid and transparency
-			if ( eFS == ::com::sun::star::drawing::FillStyle_SOLID)
-			{
-				if ( EscherPropertyValueHelper::GetPropertyValue(
-					aAnyTemp, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "FillColor" ) ), sal_False ) )
-				{
-					pGradient->StartColor = ImplGetColor( *((sal_uInt32*)aAnyTemp.getValue()), sal_False );
-					pGradient->EndColor = ImplGetColor( *((sal_uInt32*)aAnyTemp.getValue()), sal_False );
-				}
-			}
-			//gradient and transparency.
-			else if( eFS == ::com::sun::star::drawing::FillStyle_GRADIENT )
-			{
-				if ( EscherPropertyValueHelper::GetPropertyValue(
-					aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "FillGradient" ) ), sal_False ) )
-					pGradient = (::com::sun::star::awt::Gradient*)aAny.getValue();
-			}
-		}
-		
-	}
-	//Not transparency gradient
-	else if ( EscherPropertyValueHelper::GetPropertyValue(
-		aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "FillGradient" ) ), sal_False ) )
-	{
-		pGradient = (::com::sun::star::awt::Gradient*)aAny.getValue();
-	}
-	
-	if ( pGradient )
-	{
-		switch ( pGradient->Style )
-		{
-		case ::com::sun::star::awt::GradientStyle_LINEAR :
-		case ::com::sun::star::awt::GradientStyle_AXIAL :
-			{
-				nFillType = ESCHER_FillShadeScale;
-				nAngle = pGradient->Angle;
-				while ( nAngle > 0 ) nAngle -= 3600;
-				while ( nAngle <= -3600 ) nAngle += 3600;
-				//Value of the real number = Integral + (Fractional / 65536.0)
-				nAngle = ( nAngle * 0x10000) / 10;
+    // Transparency gradient: Means the third setting in transparency page is set
+    if (bTransparentGradient &&  EscherPropertyValueHelper::GetPropertyValue(
+        aAny, rXPropSet, OUString( "FillTransparenceGradient" ), false ) )
+    {
+        pGradient = (::com::sun::star::awt::Gradient*)aAny.getValue();
 
-				nFillFocus = (pGradient->Style == ::com::sun::star::awt::GradientStyle_LINEAR) ? 
-							( pGradient->XOffset + pGradient->YOffset )/2 : -50;
-				if( !nFillFocus )
-					nFirstColor=nFirstColor ^ 1;
-				if ( !nAngle )
-					nFirstColor=nFirstColor ^ 1;
-			}
-			break;
-		case ::com::sun::star::awt::GradientStyle_RADIAL :
-		case ::com::sun::star::awt::GradientStyle_ELLIPTICAL :
-		case ::com::sun::star::awt::GradientStyle_SQUARE :
-		case ::com::sun::star::awt::GradientStyle_RECT :
-			{
-				//according to the import logic and rect type fill** value
-				nFillLR = (pGradient->XOffset * 0x10000) / 100;
-				nFillTB = (pGradient->YOffset * 0x10000) / 100;
-				if ( ((nFillLR > 0) && (nFillLR < 0x10000)) || ((nFillTB > 0) && (nFillTB < 0x10000)) )
-					nFillType = ESCHER_FillShadeShape;
-				else
-					nFillType = ESCHER_FillShadeCenter;
-				nFirstColor = 1;
-				bWriteFillTo = true;
-			}
-			break;
-		default: break;
-		}
-	}
-	
-	AddOpt( ESCHER_Prop_fillType, nFillType );
-	AddOpt( ESCHER_Prop_fillAngle, nAngle );
-	AddOpt( ESCHER_Prop_fillColor, GetGradientColor( pGradient, nFirstColor ) );
-	AddOpt( ESCHER_Prop_fillBackColor, GetGradientColor( pGradient, nFirstColor ^ 1 ) );
-	AddOpt( ESCHER_Prop_fillFocus, nFillFocus );
-	if ( bWriteFillTo )
-	{
-		//according to rect type fillTo** value
-		if(nFillLR)
-		{
-			AddOpt( ESCHER_Prop_fillToLeft, nFillLR );
-			AddOpt( ESCHER_Prop_fillToRight, nFillLR );
-		}
-		if(nFillTB)
-		{
-			AddOpt( ESCHER_Prop_fillToTop, nFillTB );
-			AddOpt( ESCHER_Prop_fillToBottom, nFillTB );
-		}
-	}
+        ::com::sun::star::uno::Any          aAnyTemp;
+        const rtl::OUString aPropName( "FillStyle" );
+        if ( EscherPropertyValueHelper::GetPropertyValue(
+            aAnyTemp, rXPropSet, aPropName, false ) )
+        {
+            ::com::sun::star::drawing::FillStyle eFS;
+            if ( ! ( aAnyTemp >>= eFS ) )
+                eFS = ::com::sun::star::drawing::FillStyle_SOLID;
+            // solid and transparency
+            if ( eFS == ::com::sun::star::drawing::FillStyle_SOLID)
+            {
+                if ( EscherPropertyValueHelper::GetPropertyValue(
+                    aAnyTemp, rXPropSet, OUString( "FillColor" ), false ) )
+                {
+                    pGradient->StartColor = ImplGetColor( *((sal_uInt32*)aAnyTemp.getValue()), false );
+                    pGradient->EndColor = ImplGetColor( *((sal_uInt32*)aAnyTemp.getValue()), false );
+                }
+            }
+            // gradient and transparency.
+            else if( eFS == ::com::sun::star::drawing::FillStyle_GRADIENT )
+            {
+                if ( EscherPropertyValueHelper::GetPropertyValue(
+                    aAny, rXPropSet, OUString( "FillGradient" ), false ) )
+                    pGradient = (::com::sun::star::awt::Gradient*)aAny.getValue();
+            }
+        }
 
-	//Transparency gradient
-	if (bTransparentGradient &&  EscherPropertyValueHelper::GetPropertyValue(
-		aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "FillTransparenceGradient" ) ), sal_False ) )
-	{
-		pGradient = (::com::sun::star::awt::Gradient*)aAny.getValue();
-		if ( pGradient )
-		{
-			sal_uInt32	nBlue =	 GetGradientColor( pGradient, nFirstColor ) >> 16;
-			AddOpt( ESCHER_Prop_fillOpacity,( ( 100 - ( nBlue * 100 / 255 ) ) << 16 ) / 100 );
-			nBlue =	 GetGradientColor( pGradient, nFirstColor ^ 1 ) >>16 ;
-			AddOpt( ESCHER_Prop_fillBackOpacity,( ( 100 - ( nBlue * 100 / 255 ) ) << 16 )/ 100 );
-		}
-	}
+    }
+    // Not transparency gradient
+    else if ( EscherPropertyValueHelper::GetPropertyValue(
+        aAny, rXPropSet, OUString( "FillGradient" ), false ) )
+    {
+        pGradient = (::com::sun::star::awt::Gradient*)aAny.getValue();
+    }
+
+    if ( pGradient )
+    {
+        switch ( pGradient->Style )
+        {
+        case ::com::sun::star::awt::GradientStyle_LINEAR :
+        case ::com::sun::star::awt::GradientStyle_AXIAL :
+            {
+                nFillType = ESCHER_FillShadeScale;
+                nAngle = pGradient->Angle;
+                while ( nAngle > 0 ) nAngle -= 3600;
+                while ( nAngle <= -3600 ) nAngle += 3600;
+                // Value of the real number = Integral + (Fractional / 65536.0)
+                nAngle = ( nAngle * 0x10000) / 10;
+
+                nFillFocus = (pGradient->Style == ::com::sun::star::awt::GradientStyle_LINEAR) ?
+                            ( pGradient->XOffset + pGradient->YOffset )/2 : -50;
+                if( !nFillFocus )
+                    nFirstColor=nFirstColor ^ 1;
+                if ( !nAngle )
+                    nFirstColor=nFirstColor ^ 1;
+            }
+            break;
+        case ::com::sun::star::awt::GradientStyle_RADIAL :
+        case ::com::sun::star::awt::GradientStyle_ELLIPTICAL :
+        case ::com::sun::star::awt::GradientStyle_SQUARE :
+        case ::com::sun::star::awt::GradientStyle_RECT :
+            {
+                // according to the import logic and rect type fill** value
+                nFillLR = (pGradient->XOffset * 0x10000) / 100;
+                nFillTB = (pGradient->YOffset * 0x10000) / 100;
+                if ( ((nFillLR > 0) && (nFillLR < 0x10000)) || ((nFillTB > 0) && (nFillTB < 0x10000)) )
+                    nFillType = ESCHER_FillShadeShape;
+                else
+                    nFillType = ESCHER_FillShadeCenter;
+                nFirstColor = 1;
+                bWriteFillTo = true;
+            }
+            break;
+        default: break;
+        }
+    }
+
+    AddOpt( ESCHER_Prop_fillType, nFillType );
+    AddOpt( ESCHER_Prop_fillAngle, nAngle );
+    AddOpt( ESCHER_Prop_fillColor, GetGradientColor( pGradient, nFirstColor ) );
+    AddOpt( ESCHER_Prop_fillBackColor, GetGradientColor( pGradient, nFirstColor ^ 1 ) );
+    AddOpt( ESCHER_Prop_fillFocus, nFillFocus );
+    if ( bWriteFillTo )
+    {
+        // according to rect type fillTo** value
+        if(nFillLR)
+        {
+            AddOpt( ESCHER_Prop_fillToLeft, nFillLR );
+            AddOpt( ESCHER_Prop_fillToRight, nFillLR );
+        }
+        if(nFillTB)
+        {
+            AddOpt( ESCHER_Prop_fillToTop, nFillTB );
+            AddOpt( ESCHER_Prop_fillToBottom, nFillTB );
+        }
+    }
+
+    // Transparency gradient
+    if (bTransparentGradient &&  EscherPropertyValueHelper::GetPropertyValue(
+        aAny, rXPropSet, OUString( "FillTransparenceGradient" ), false ) )
+    {
+        pGradient = (::com::sun::star::awt::Gradient*)aAny.getValue();
+        if ( pGradient )
+        {
+            sal_uInt32  nBlue =  GetGradientColor( pGradient, nFirstColor ) >> 16;
+            AddOpt( ESCHER_Prop_fillOpacity,( ( 100 - ( nBlue * 100 / 255 ) ) << 16 ) / 100 );
+            nBlue =  GetGradientColor( pGradient, nFirstColor ^ 1 ) >>16 ;
+            AddOpt( ESCHER_Prop_fillBackOpacity,( ( 100 - ( nBlue * 100 / 255 ) ) << 16 )/ 100 );
+        }
+    }
 }
 
-void	EscherPropertyContainer::CreateFillProperties( 
-	const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet,
-	sal_Bool bEdge ,  const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rXShape )
+void    EscherPropertyContainer::CreateFillProperties(
+    const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet,
+    bool bEdge ,  const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rXShape )
 {
-	if ( rXShape.is() )
-	{
-		SdrObject* pObj = GetSdrObjectFromXShape( rXShape );
-		if ( pObj )
-		{
-			SfxItemSet aAttr( pObj->GetMergedItemSet() );
-			//tranparency with gradient. Means the third setting in transparency page is set
-			sal_Bool bTransparentGradient =  ( aAttr.GetItemState( XATTR_FILLFLOATTRANSPARENCE ) == SFX_ITEM_SET ) &&
-				( (const XFillFloatTransparenceItem&) aAttr.Get( XATTR_FILLFLOATTRANSPARENCE ) ).IsEnabled();
-			CreateFillProperties(  rXPropSet, bEdge, bTransparentGradient );
-		}
-	}
+    if ( rXShape.is() )
+    {
+        SdrObject* pObj = GetSdrObjectFromXShape( rXShape );
+        if ( pObj )
+        {
+            SfxItemSet aAttr( pObj->GetMergedItemSet() );
+            // tranparency with gradient. Means the third setting in transparency page is set
+            bool bTransparentGradient =  ( aAttr.GetItemState( XATTR_FILLFLOATTRANSPARENCE ) == SfxItemState::SET ) &&
+                static_cast<const XFillFloatTransparenceItem&>( aAttr.Get( XATTR_FILLFLOATTRANSPARENCE ) ).IsEnabled();
+            CreateFillProperties(  rXPropSet, bEdge, bTransparentGradient );
+        }
+    }
 }
 
 void EscherPropertyContainer::CreateFillProperties(
-	const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet,
-	sal_Bool bEdge , sal_Bool bTransparentGradient)
+    const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet,
+    bool bEdge , bool bTransparentGradient)
 
 {
-	::com::sun::star::uno::Any aAny;
+    ::com::sun::star::uno::Any aAny;
     AddOpt( ESCHER_Prop_WrapText, ESCHER_WrapNone );
     AddOpt( ESCHER_Prop_AnchorText, ESCHER_AnchorMiddle );
+    const OUString aPropName( "FillStyle" );
 
-    sal_uInt32 nFillBackColor = 0;
-
-	const rtl::OUString aPropName( String( RTL_CONSTASCII_USTRINGPARAM( "FillStyle" ) ) );
     if ( EscherPropertyValueHelper::GetPropertyValue(
-			aAny, rXPropSet, aPropName, sal_False ) )
+            aAny, rXPropSet, aPropName, false ) )
     {
-		::com::sun::star::drawing::FillStyle eFS;
-		if ( ! ( aAny >>= eFS ) )
-			eFS = ::com::sun::star::drawing::FillStyle_SOLID;
+        ::com::sun::star::drawing::FillStyle eFS;
+        if ( ! ( aAny >>= eFS ) )
+            eFS = ::com::sun::star::drawing::FillStyle_SOLID;
+        sal_uInt32 nFillBackColor = 0;
         switch( eFS )
         {
             case ::com::sun::star::drawing::FillStyle_GRADIENT :
             {
-				CreateGradientProperties( rXPropSet , bTransparentGradient );
+                CreateGradientProperties( rXPropSet , bTransparentGradient );
                 AddOpt( ESCHER_Prop_fNoFillHitTest, 0x140014 );
             }
             break;
 
             case ::com::sun::star::drawing::FillStyle_BITMAP :
             {
-                CreateGraphicProperties( rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "FillBitmapURL" ) ), sal_True );
+                CreateGraphicProperties( rXPropSet, OUString( "FillBitmapURL" ), true );
                 AddOpt( ESCHER_Prop_fNoFillHitTest, 0x140014 );
                 AddOpt( ESCHER_Prop_fillBackColor, nFillBackColor  );
             }
             break;
             case ::com::sun::star::drawing::FillStyle_HATCH :
-			{
-				CreateGraphicProperties( rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "FillHatch" ) ), sal_True );
-			}
-			break;
+            {
+                CreateGraphicProperties( rXPropSet, OUString( "FillHatch" ), true );
+            }
+            break;
             case ::com::sun::star::drawing::FillStyle_SOLID :
             default:
             {
-				if ( bTransparentGradient )
-					CreateGradientProperties( rXPropSet , bTransparentGradient );
-				else
-				{
-					::com::sun::star::beans::PropertyState ePropState = EscherPropertyValueHelper::GetPropertyState(
-						rXPropSet, aPropName );
-					if ( ePropState == ::com::sun::star::beans::PropertyState_DIRECT_VALUE )
-						AddOpt( ESCHER_Prop_fillType, ESCHER_FillSolid );
+                if ( bTransparentGradient )
+                    CreateGradientProperties( rXPropSet , bTransparentGradient );
+                else
+                {
+                    ::com::sun::star::beans::PropertyState ePropState = EscherPropertyValueHelper::GetPropertyState(
+                        rXPropSet, aPropName );
+                    if ( ePropState == ::com::sun::star::beans::PropertyState_DIRECT_VALUE )
+                        AddOpt( ESCHER_Prop_fillType, ESCHER_FillSolid );
 
-					if ( EscherPropertyValueHelper::GetPropertyValue(
-							aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "FillColor" ) ), sal_False ) )
-					{
-						sal_uInt32 nFillColor = ImplGetColor( *((sal_uInt32*)aAny.getValue()) );
-						nFillBackColor = nFillColor ^ 0xffffff;
-						AddOpt( ESCHER_Prop_fillColor, nFillColor );
-					}
-					AddOpt( ESCHER_Prop_fNoFillHitTest, 0x100010 );
-					AddOpt( ESCHER_Prop_fillBackColor, nFillBackColor );
-				}
+                    if ( EscherPropertyValueHelper::GetPropertyValue(
+                            aAny, rXPropSet, OUString( "FillColor" ), false ) )
+                    {
+                        sal_uInt32 nFillColor = ImplGetColor( *((sal_uInt32*)aAny.getValue()) );
+                        nFillBackColor = nFillColor ^ 0xffffff;
+                        AddOpt( ESCHER_Prop_fillColor, nFillColor );
+                    }
+                    AddOpt( ESCHER_Prop_fNoFillHitTest, 0x100010 );
+                    AddOpt( ESCHER_Prop_fillBackColor, nFillBackColor );
+                }
                 break;
             }
             case ::com::sun::star::drawing::FillStyle_NONE :
                 AddOpt( ESCHER_Prop_fNoFillHitTest, 0x100000 );
             break;
         }
-		if ( eFS != ::com::sun::star::drawing::FillStyle_NONE )
-		{
-			sal_uInt16 nTransparency = ( EscherPropertyValueHelper::GetPropertyValue(
-									aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "FillTransparence" ) ), sal_True ) )
-									? *((sal_Int16*)aAny.getValue() )
-									: 0;
-			if (  nTransparency )
-				AddOpt( ESCHER_Prop_fillOpacity, ( ( 100 - nTransparency ) << 16 ) / 100 );
-		}
+        if ( eFS != ::com::sun::star::drawing::FillStyle_NONE )
+        {
+            sal_uInt16 nTransparency = ( EscherPropertyValueHelper::GetPropertyValue(
+                aAny, rXPropSet, OUString( "FillTransparence" ), true ) )
+                ? *((sal_Int16*)aAny.getValue() ) : 0;
+            if (  nTransparency )
+                AddOpt( ESCHER_Prop_fillOpacity, ( ( 100 - nTransparency ) << 16 ) / 100 );
+        }
     }
     CreateLineProperties( rXPropSet, bEdge );
 }
 
 void EscherPropertyContainer::CreateTextProperties(
-	const uno::Reference< beans::XPropertySet > & rXPropSet, sal_uInt32 nTextId,
-		const sal_Bool bIsCustomShape, const sal_Bool bIsTextFrame )
+    const uno::Reference< beans::XPropertySet > & rXPropSet, sal_uInt32 nTextId,
+        const bool bIsCustomShape, const bool bIsTextFrame )
 {
     uno::Any aAny;
-	text::WritingMode				eWM( text::WritingMode_LR_TB );
-    drawing::TextVerticalAdjust		eVA( drawing::TextVerticalAdjust_TOP );
-    drawing::TextHorizontalAdjust	eHA( drawing::TextHorizontalAdjust_LEFT );
+    text::WritingMode               eWM( text::WritingMode_LR_TB );
+    drawing::TextVerticalAdjust     eVA( drawing::TextVerticalAdjust_TOP );
+    drawing::TextHorizontalAdjust   eHA( drawing::TextHorizontalAdjust_LEFT );
 
     sal_Int32 nLeft             ( 0 );
     sal_Int32 nTop              ( 0 );
     sal_Int32 nRight            ( 0 );
     sal_Int32 nBottom           ( 0 );
 
-	// used with normal shapes:
-	sal_Bool bAutoGrowWidth     ( sal_False );
-    sal_Bool bAutoGrowHeight    ( sal_False );
-	// used with ashapes:
-	sal_Bool bWordWrap			( sal_False );
-	sal_Bool bAutoGrowSize		( sal_False );
+    // used with normal shapes:
+    bool bAutoGrowWidth     ( false );
+    const bool bAutoGrowHeight    ( false ); //#ii63936 not setting autogrowheight, because minframeheight would be ignored
+    // used with ashapes:
+    bool bWordWrap          ( false );
+    bool bAutoGrowSize      ( false );
 
-    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "TextWritingMode" ) ), sal_True ) )
+    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "TextWritingMode" ), true ) )
         aAny >>= eWM;
-    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "TextVerticalAdjust" ) ), sal_True ) )
+    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "TextVerticalAdjust" ), true ) )
         aAny >>= eVA;
-    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "TextHorizontalAdjust" ) ), sal_True ) )
+    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "TextHorizontalAdjust" ), true ) )
         aAny >>= eHA;
-	if ( bIsCustomShape )
-	{
-		if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "TextWordWrap" ) ), sal_False ) )
-			aAny >>= bWordWrap;
-		if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "TextAutoGrowHeight" ) ), sal_True ) )
-			aAny >>= bAutoGrowSize;
-	}
-	else if ( bIsTextFrame )
-	{
-		if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "TextAutoGrowWidth" ) ), sal_True ) )
-			aAny >>= bAutoGrowWidth;
+    if ( bIsCustomShape )
+    {
+        if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "TextWordWrap" ), false ) )
+            aAny >>= bWordWrap;
+        if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "TextAutoGrowHeight" ), true ) )
+            aAny >>= bAutoGrowSize;
+    }
+    else if ( bIsTextFrame )
+    {
+        if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "TextAutoGrowWidth" ), true ) )
+            aAny >>= bAutoGrowWidth;
 
 // i63936 not setting autogrowheight, because otherwise
 // the minframeheight of the text will be ignored
 //
-//		if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "TextAutoGrowHeight" ) ), sal_True ) )
-//			aAny >>= bAutoGrowHeight;
-	}
-    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "TextLeftDistance" ) ) ) )
-        aAny >>= nLeft;
-    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "TextUpperDistance" ) ) ) )
-        aAny >>= nTop;
-    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "TextRightDistance" ) ) ) )
-        aAny >>= nRight;
-    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "TextLowerDistance" ) ) ) )
-        aAny >>= nBottom;
-
-/*
-    if ( rObj.ImplGetPropertyValue(
-        ::rtl::OUString::createFromAscii("TextWritingMode") ) )
-    {
-        ::com::sun::star::text::WritingMode eMode;
-        rObj.GetUsrAny() >>= eMode;
-        switch (eMode)
-        {
-            case ::com::sun::star::text::WritingMode_TB_RL:
-                //Well if it so happens that we are fliped 180 we can use
-                //this instead.
-                if (rObj.GetAngle() == 18000)
-                    eFlow = ESCHER_txflBtoT;
-                else
-                    eFlow = ESCHER_txflTtoBA;
-                break;
-            case ::com::sun::star::text::WritingMode_RL_TB:
-                eDir = ESCHER_txdirRTL;
-                break;
-        }
+//      if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, "TextAutoGrowHeight", sal_True ) )
+//          aAny >>= bAutoGrowHeight;
     }
-*/
+    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "TextLeftDistance" ) ) )
+        aAny >>= nLeft;
+    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "TextUpperDistance" ) ) )
+        aAny >>= nTop;
+    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "TextRightDistance" ) ) )
+        aAny >>= nRight;
+    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "TextLowerDistance" ) ) )
+        aAny >>= nBottom;
 
     ESCHER_AnchorText eAnchor = ESCHER_AnchorTop;
     ESCHER_WrapMode eWrapMode = ESCHER_WrapSquare;
     sal_uInt32 nTextAttr = 0x40004;     // rotate text with shape
 
     if ( eWM == text::WritingMode_TB_RL )
-    {   // verical writing
+    {   // vertical writing
         switch ( eHA )
         {
             case drawing::TextHorizontalAdjust_LEFT :
@@ -791,24 +754,24 @@ void EscherPropertyContainer::CreateTextProperties(
                 break;
             }
         }
-		if ( bIsCustomShape )
-		{
-			if ( bWordWrap )
-				eWrapMode = ESCHER_WrapSquare;
-			else
-				eWrapMode = ESCHER_WrapNone;
-			if ( bAutoGrowSize )
-				nTextAttr |= 0x20002;
-		}
-		else
-		{
-			if ( bAutoGrowHeight )
-				eWrapMode = ESCHER_WrapNone;
-			if ( bAutoGrowWidth )
-				nTextAttr |= 0x20002;
-		}
+        if ( bIsCustomShape )
+        {
+            if ( bWordWrap )
+                eWrapMode = ESCHER_WrapSquare;
+            else
+                eWrapMode = ESCHER_WrapNone;
+            if ( bAutoGrowSize )
+                nTextAttr |= 0x20002;
+        }
+        else
+        {
+            if ( bAutoGrowHeight )
+                eWrapMode = ESCHER_WrapNone;
+            if ( bAutoGrowWidth )
+                nTextAttr |= 0x20002;
+        }
 
-		AddOpt( ESCHER_Prop_txflTextFlow, ESCHER_txflTtoBA ); // rotate text within shape by 90
+        AddOpt( ESCHER_Prop_txflTextFlow, ESCHER_txflTtoBA ); // rotate text within shape by 90
     }
     else
     {   // normal from left to right
@@ -840,183 +803,198 @@ void EscherPropertyContainer::CreateTextProperties(
                 case ESCHER_AnchorTop :
                     eAnchor = ESCHER_AnchorTopCentered;
                 break;
-				default: break;
+                default: break;
             }
         }
-		if ( bIsCustomShape )
-		{
-			if ( bWordWrap )
-				eWrapMode = ESCHER_WrapSquare;
-			else
-				eWrapMode = ESCHER_WrapNone;
-			if ( bAutoGrowSize )
-				nTextAttr |= 0x20002;
-		}
-		else
-		{
-			if ( bAutoGrowWidth )
-				eWrapMode = ESCHER_WrapNone;
-			if ( bAutoGrowHeight )
-				nTextAttr |= 0x20002;
-		}
+        if ( bIsCustomShape )
+        {
+            if ( bWordWrap )
+                eWrapMode = ESCHER_WrapSquare;
+            else
+                eWrapMode = ESCHER_WrapNone;
+            if ( bAutoGrowSize )
+                nTextAttr |= 0x20002;
+        }
+        else
+        {
+            if ( bAutoGrowWidth )
+                eWrapMode = ESCHER_WrapNone;
+            if ( bAutoGrowHeight )
+                nTextAttr |= 0x20002;
+        }
     }
     AddOpt( ESCHER_Prop_dxTextLeft, nLeft * 360 );
     AddOpt( ESCHER_Prop_dxTextRight, nRight * 360 );
     AddOpt( ESCHER_Prop_dyTextTop, nTop * 360 );
     AddOpt( ESCHER_Prop_dyTextBottom, nBottom * 360 );
 
-	AddOpt( ESCHER_Prop_WrapText, eWrapMode );
-	AddOpt( ESCHER_Prop_AnchorText, eAnchor );
+    AddOpt( ESCHER_Prop_WrapText, eWrapMode );
+    AddOpt( ESCHER_Prop_AnchorText, eAnchor );
     AddOpt( ESCHER_Prop_FitTextToShape, nTextAttr );
 
-	if ( nTextId )
-		AddOpt( ESCHER_Prop_lTxid, nTextId );
+    if ( nTextId )
+        AddOpt( ESCHER_Prop_lTxid, nTextId );
+
+    // n#404221: In case of rotation we need to write the txtflTextFlow
+    // attribute too.
+    // fdo#58204: not custom shapes (TODO: other cases when it doesn't work?)
+    if (bIsTextFrame && !bIsCustomShape)
+    {
+        sal_uInt16 nAngle = EscherPropertyValueHelper::GetPropertyValue(
+            aAny, rXPropSet, OUString( "RotateAngle" ), true ) ?
+                (sal_uInt16)( ( *((sal_Int32*)aAny.getValue() ) ) + 5 ) / 10 : 0;
+        if (nAngle==900)
+        {
+            AddOpt( ESCHER_Prop_txflTextFlow, ESCHER_txflBtoT );
+        }
+        if (nAngle==2700)
+        {
+            AddOpt( ESCHER_Prop_txflTextFlow, ESCHER_txflTtoBA );
+        }
+    }
 }
 
-sal_Bool EscherPropertyContainer::GetLineArrow( const sal_Bool bLineStart,
-	const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet,
-		ESCHER_LineEnd& reLineEnd, sal_Int32& rnArrowLength, sal_Int32& rnArrowWidth )
+bool EscherPropertyContainer::GetLineArrow( const bool bLineStart,
+    const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet,
+        ESCHER_LineEnd& reLineEnd, sal_Int32& rnArrowLength, sal_Int32& rnArrowWidth )
 {
-	static String sLineStart	( RTL_CONSTASCII_USTRINGPARAM( "LineStart" ) );
-	static String sLineStartName( RTL_CONSTASCII_USTRINGPARAM( "LineStartName" ) );
-	static String sLineEnd		( RTL_CONSTASCII_USTRINGPARAM( "LineEnd" ) );
-	static String sLineEndName	( RTL_CONSTASCII_USTRINGPARAM( "LineEndName" ) );
+    static const char sLineStart    [] = "LineStart";
+    static const char sLineStartName[] = "LineStartName";
+    static const char sLineEnd      [] = "LineEnd";
+    static const char sLineEndName  [] = "LineEndName";
 
-	const String sLine		( bLineStart ? sLineStart : sLineEnd );
-	const String sLineName	( bLineStart ? sLineStartName : sLineEndName );
+    const OUString sLine      ( bLineStart ? OUString(sLineStart) : OUString(sLineEnd) );
+    const OUString sLineName  ( bLineStart ? OUString(sLineStartName) : OUString(sLineEndName) );
 
-	sal_Bool bIsArrow = sal_False;
+    bool bIsArrow = false;
 
-	::com::sun::star::uno::Any aAny;
+    ::com::sun::star::uno::Any aAny;
     if ( EscherPropertyValueHelper::GetPropertyValue(
-			aAny, rXPropSet, sLine, sal_False ) )
+            aAny, rXPropSet, sLine, false ) )
     {
-		PolyPolygon aPolyPoly( EscherPropertyContainer::GetPolyPolygon( aAny ) );
-		if ( aPolyPoly.Count() && aPolyPoly[ 0 ].GetSize() )
-		{
-			bIsArrow = sal_True;
+        tools::PolyPolygon aPolyPoly( EscherPropertyContainer::GetPolyPolygon( aAny ) );
+        if ( aPolyPoly.Count() && aPolyPoly[ 0 ].GetSize() )
+        {
+            bIsArrow = true;
 
-			reLineEnd     = ESCHER_LineArrowEnd;
-			rnArrowLength = 1;
-			rnArrowWidth  = 1;
+            reLineEnd     = ESCHER_LineArrowEnd;
+            rnArrowLength = 1;
+            rnArrowWidth  = 1;
 
-			if ( EscherPropertyValueHelper::GetPropertyValue(
-				aAny, rXPropSet, sLineName, sal_False ) )
-			{
-				String			aArrowStartName = *(::rtl::OUString*)aAny.getValue();
-				rtl::OUString	aApiName;
-				sal_Int16		nWhich = bLineStart ? XATTR_LINESTART : XATTR_LINEEND;
+            if ( EscherPropertyValueHelper::GetPropertyValue(
+                aAny, rXPropSet, sLineName, false ) )
+            {
+                OUString        aArrowStartName = *(OUString*)aAny.getValue();
+                sal_Int16       nWhich = bLineStart ? XATTR_LINESTART : XATTR_LINEEND;
 
-				SvxUnogetApiNameForItem( nWhich, aArrowStartName, aApiName );
-				sal_Bool bIsMapped = sal_True;
-				if ( aApiName.getLength() )
-				{
+                OUString aApiName = SvxUnogetApiNameForItem(nWhich, aArrowStartName);
+                bool bIsMapped = true;
+                if ( !aApiName.isEmpty() )
+                {
 
-					/* todo:
-					calculate the best option for ArrowLenght and ArrowWidth
-					*/
-					if ( aApiName.equalsAscii( "Arrow concave" ) )
-						reLineEnd = ESCHER_LineArrowStealthEnd;
-					else if ( aApiName.equalsAscii( "Square 45" ) )
-						reLineEnd = ESCHER_LineArrowDiamondEnd;
-					else if ( aApiName.equalsAscii( "Small Arrow" ) )
-						reLineEnd = ESCHER_LineArrowEnd;
-					else if ( aApiName.equalsAscii( "Dimension Lines" ) )
-					{
-						rnArrowLength = 0;
-						rnArrowWidth  = 2;
-						reLineEnd = ESCHER_LineArrowOvalEnd;
-					}
-					else if ( aApiName.equalsAscii( "Double Arrow" ) )
-						reLineEnd = ESCHER_LineArrowEnd;
-					else if ( aApiName.equalsAscii( "Rounded short Arrow" ) )
-						reLineEnd = ESCHER_LineArrowEnd;
-					else if ( aApiName.equalsAscii( "Symmetric Arrow" ) )
-						reLineEnd = ESCHER_LineArrowEnd;
-					else if ( aApiName.equalsAscii( "Line Arrow" ) )
-						reLineEnd = ESCHER_LineArrowOpenEnd;
-					else if ( aApiName.equalsAscii( "Rounded large Arrow" ) )
-						reLineEnd = ESCHER_LineArrowEnd;
-					else if ( aApiName.equalsAscii( "Circle" ) )
-						reLineEnd = ESCHER_LineArrowOvalEnd;
-					else if ( aApiName.equalsAscii( "Square" ) )
-						reLineEnd = ESCHER_LineArrowDiamondEnd;
-					else if ( aApiName.equalsAscii( "Arrow" ) )
-						reLineEnd = ESCHER_LineArrowEnd;
-					else
-						bIsMapped = sal_False;
+                    // TODO: calculate the best option for ArrowLength and ArrowWidth
+                    if ( aApiName == "Arrow concave" )
+                        reLineEnd = ESCHER_LineArrowStealthEnd;
+                    else if ( aApiName == "Square 45" )
+                        reLineEnd = ESCHER_LineArrowDiamondEnd;
+                    else if ( aApiName == "Small Arrow" )
+                        reLineEnd = ESCHER_LineArrowEnd;
+                    else if ( aApiName == "Dimension Lines" )
+                    {
+                        rnArrowLength = 0;
+                        rnArrowWidth  = 2;
+                        reLineEnd = ESCHER_LineArrowOvalEnd;
+                    }
+                    else if ( aApiName == "Double Arrow" )
+                        reLineEnd = ESCHER_LineArrowEnd;
+                    else if ( aApiName == "Rounded short Arrow" )
+                        reLineEnd = ESCHER_LineArrowEnd;
+                    else if ( aApiName == "Symmetric Arrow" )
+                        reLineEnd = ESCHER_LineArrowEnd;
+                    else if ( aApiName == "Line Arrow" )
+                        reLineEnd = ESCHER_LineArrowOpenEnd;
+                    else if ( aApiName == "Rounded large Arrow" )
+                        reLineEnd = ESCHER_LineArrowEnd;
+                    else if ( aApiName == "Circle" )
+                        reLineEnd = ESCHER_LineArrowOvalEnd;
+                    else if ( aApiName == "Square" )
+                        reLineEnd = ESCHER_LineArrowDiamondEnd;
+                    else if ( aApiName == "Arrow" )
+                        reLineEnd = ESCHER_LineArrowEnd;
+                    else
+                        bIsMapped = false;
 
-				}
-				if ( !bIsMapped && aArrowStartName.GetTokenCount( ' ' ) == 2 )
-				{
-					sal_Bool b = sal_True;
-					String aArrowName( aArrowStartName.GetToken( 0, ' ' ) );
-					if (  aArrowName.EqualsAscii( "msArrowEnd" ) )
-						reLineEnd = ESCHER_LineArrowEnd;
-					else if (  aArrowName.EqualsAscii( "msArrowOpenEnd" ) )
-						reLineEnd = ESCHER_LineArrowOpenEnd;
-					else if ( aArrowName.EqualsAscii( "msArrowStealthEnd" ) )
-						reLineEnd = ESCHER_LineArrowStealthEnd;
-					else if ( aArrowName.EqualsAscii( "msArrowDiamondEnd" ) )
-						reLineEnd = ESCHER_LineArrowDiamondEnd;
-					else if ( aArrowName.EqualsAscii( "msArrowOvalEnd" ) )
-						reLineEnd = ESCHER_LineArrowOvalEnd;
-					else
-						b = sal_False;
+                }
+                if ( !bIsMapped && comphelper::string::getTokenCount(aArrowStartName, ' ') == 2 )
+                {
+                    bool b = true;
+                    OUString aArrowName( aArrowStartName.getToken( 0, ' ' ) );
+                    if (  aArrowName == "msArrowEnd" )
+                        reLineEnd = ESCHER_LineArrowEnd;
+                    else if (  aArrowName == "msArrowOpenEnd" )
+                        reLineEnd = ESCHER_LineArrowOpenEnd;
+                    else if ( aArrowName == "msArrowStealthEnd" )
+                        reLineEnd = ESCHER_LineArrowStealthEnd;
+                    else if ( aArrowName == "msArrowDiamondEnd" )
+                        reLineEnd = ESCHER_LineArrowDiamondEnd;
+                    else if ( aArrowName == "msArrowOvalEnd" )
+                        reLineEnd = ESCHER_LineArrowOvalEnd;
+                    else
+                        b = false;
 
-					// now we have the arrow, and try to determine the arrow size;
-					if ( b )
-					{
-						String aArrowSize( aArrowStartName.GetToken( 1, ' ' ) );
-						sal_Int32 nArrowSize = aArrowSize.ToInt32();
-						rnArrowWidth = ( nArrowSize - 1 ) / 3;
-						rnArrowLength = nArrowSize - ( rnArrowWidth * 3 ) - 1;
-					}
-				}
-			}
-		}
+                    // now we have the arrow, and try to determine the arrow size;
+                    if ( b )
+                    {
+                        OUString aArrowSize( aArrowStartName.getToken( 1, ' ' ) );
+                        sal_Int32 nArrowSize = aArrowSize.toInt32();
+                        rnArrowWidth = ( nArrowSize - 1 ) / 3;
+                        rnArrowLength = nArrowSize - ( rnArrowWidth * 3 ) - 1;
+                    }
+                }
+            }
+        }
     }
-	return bIsArrow;
+    return bIsArrow;
 }
 
 void EscherPropertyContainer::CreateLineProperties(
-	const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet,
-		sal_Bool bEdge )
+    const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet,
+        bool bEdge )
 {
-	::com::sun::star::uno::Any aAny;
+    ::com::sun::star::uno::Any aAny;
     sal_uInt32 nLineFlags = 0x80008;
 
-	ESCHER_LineEnd eLineEnd;
-	sal_Int32 nArrowLength;
-	sal_Int32 nArrowWidth;
+    ESCHER_LineEnd eLineEnd;
+    sal_Int32 nArrowLength;
+    sal_Int32 nArrowWidth;
 
-	sal_Bool bSwapLineEnds = sal_False;
-	if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "CircleKind" ) ), sal_True ) )
-	{
-		::com::sun::star::drawing::CircleKind  eCircleKind;
-		if ( aAny >>= eCircleKind )
-		{
+    bool bSwapLineEnds = false;
+    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "CircleKind" ), true ) )
+    {
+        ::com::sun::star::drawing::CircleKind  eCircleKind;
+        if ( aAny >>= eCircleKind )
+        {
             if ( eCircleKind == ::com::sun::star::drawing::CircleKind_ARC )
-				bSwapLineEnds = sal_True;
-		}
-	}
-	if ( GetLineArrow( bSwapLineEnds ? sal_False : sal_True, rXPropSet, eLineEnd, nArrowLength, nArrowWidth ) )
-	{
+                bSwapLineEnds = true;
+        }
+    }
+    if ( GetLineArrow( bSwapLineEnds ? sal_False : sal_True, rXPropSet, eLineEnd, nArrowLength, nArrowWidth ) )
+    {
         AddOpt( ESCHER_Prop_lineStartArrowLength, nArrowLength );
         AddOpt( ESCHER_Prop_lineStartArrowWidth, nArrowWidth );
         AddOpt( ESCHER_Prop_lineStartArrowhead, eLineEnd );
         nLineFlags |= 0x100010;
-	}
-	if ( GetLineArrow( bSwapLineEnds ? sal_True : sal_False, rXPropSet, eLineEnd, nArrowLength, nArrowWidth ) )
-	{
+    }
+    if ( GetLineArrow( bSwapLineEnds ? sal_True : sal_False, rXPropSet, eLineEnd, nArrowLength, nArrowWidth ) )
+    {
         AddOpt( ESCHER_Prop_lineEndArrowLength, nArrowLength );
         AddOpt( ESCHER_Prop_lineEndArrowWidth, nArrowWidth );
         AddOpt( ESCHER_Prop_lineEndArrowhead, eLineEnd );
         nLineFlags |= 0x100010;
-	}
+    }
 
     // support LineCaps
-    if(EscherPropertyValueHelper::GetPropertyValue(aAny, rXPropSet, String(RTL_CONSTASCII_USTRINGPARAM("LineCap")), sal_False))
+    if(EscherPropertyValueHelper::GetPropertyValue(aAny, rXPropSet, OUString( "LineCap" ), false))
     {
         ::com::sun::star::drawing::LineCap aLineCap(com::sun::star::drawing::LineCap_BUTT);
 
@@ -1043,78 +1021,75 @@ void EscherPropertyContainer::CreateLineProperties(
         }
     }
 
-	if ( EscherPropertyValueHelper::GetPropertyValue(
-		aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "LineStyle"  ) ), sal_False ) )
+    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "LineStyle" ), false ) )
     {
-		::com::sun::star::drawing::LineStyle eLS;
-		if ( aAny >>= eLS )
-		{
-			switch ( eLS )
-			{
-				case ::com::sun::star::drawing::LineStyle_NONE :
-					AddOpt( ESCHER_Prop_fNoLineDrawDash, 0x90000 );           // 80000
-				break;
+        ::com::sun::star::drawing::LineStyle eLS;
+        if ( aAny >>= eLS )
+        {
+            switch ( eLS )
+            {
+                case ::com::sun::star::drawing::LineStyle_NONE :
+                    AddOpt( ESCHER_Prop_fNoLineDrawDash, 0x90000 );           // 80000
+                break;
 
-				case ::com::sun::star::drawing::LineStyle_DASH :
-				{
-					if ( EscherPropertyValueHelper::GetPropertyValue(
-						aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "LineDash" ) ), sal_False ) )
-					{
-						ESCHER_LineDashing eDash = ESCHER_LineSolid;
-						::com::sun::star::drawing::LineDash* pLineDash = (::com::sun::star::drawing::LineDash*)aAny.getValue();
-						sal_Int32 nDistance = pLineDash->Distance << 1;
-						switch ( pLineDash->Style )
-						{
-							case ::com::sun::star::drawing::DashStyle_ROUND :
-							case ::com::sun::star::drawing::DashStyle_ROUNDRELATIVE :
-								AddOpt( ESCHER_Prop_lineEndCapStyle, 0 ); // Style Round setzen
-							break;
-							default : break;
-						}
-						if ( ((!(pLineDash->Dots )) || (!(pLineDash->Dashes )) ) || ( pLineDash->DotLen == pLineDash->DashLen ) )
-						{
-							sal_Int32 nLen = pLineDash->DotLen;
-							if ( pLineDash->Dashes )
-								nLen = pLineDash->DashLen;
+                case ::com::sun::star::drawing::LineStyle_DASH :
+                {
+                    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "LineDash" ), false ) )
+                    {
+                        ESCHER_LineDashing eDash = ESCHER_LineSolid;
+                        ::com::sun::star::drawing::LineDash* pLineDash = (::com::sun::star::drawing::LineDash*)aAny.getValue();
+                        sal_Int32 nDistance = pLineDash->Distance << 1;
+                        switch ( pLineDash->Style )
+                        {
+                            case ::com::sun::star::drawing::DashStyle_ROUND :
+                            case ::com::sun::star::drawing::DashStyle_ROUNDRELATIVE :
+                                AddOpt( ESCHER_Prop_lineEndCapStyle, 0 ); // set Style Round
+                            break;
+                            default : break;
+                        }
+                        if ( ((!(pLineDash->Dots )) || (!(pLineDash->Dashes )) ) || ( pLineDash->DotLen == pLineDash->DashLen ) )
+                        {
+                            sal_Int32 nLen = pLineDash->DotLen;
+                            if ( pLineDash->Dashes )
+                                nLen = pLineDash->DashLen;
 
-							if ( nLen >= nDistance )
-								eDash = ESCHER_LineLongDashGEL;
-							else if ( pLineDash->Dots )
-								eDash = ESCHER_LineDotSys;
-							else
-								eDash = ESCHER_LineDashGEL;
-						}
-						else                                                            // X Y
-						{
-							if ( pLineDash->Dots != pLineDash->Dashes )
-							{
-								if ( ( pLineDash->DashLen > nDistance ) || ( pLineDash->DotLen > nDistance ) )
-									eDash = ESCHER_LineLongDashDotDotGEL;
-								else
-									eDash = ESCHER_LineDashDotDotSys;
-							}
-							else                                                        // X Y Y
-							{
-								if ( ( pLineDash->DashLen > nDistance ) || ( pLineDash->DotLen > nDistance ) )
-									eDash = ESCHER_LineLongDashDotGEL;
-								else
-									eDash = ESCHER_LineDashDotGEL;
+                            if ( nLen >= nDistance )
+                                eDash = ESCHER_LineLongDashGEL;
+                            else if ( pLineDash->Dots )
+                                eDash = ESCHER_LineDotSys;
+                            else
+                                eDash = ESCHER_LineDashGEL;
+                        }
+                        else                                                            // X Y
+                        {
+                            if ( pLineDash->Dots != pLineDash->Dashes )
+                            {
+                                if ( ( pLineDash->DashLen > nDistance ) || ( pLineDash->DotLen > nDistance ) )
+                                    eDash = ESCHER_LineLongDashDotDotGEL;
+                                else
+                                    eDash = ESCHER_LineDashDotDotSys;
+                            }
+                            else                                                        // X Y Y
+                            {
+                                if ( ( pLineDash->DashLen > nDistance ) || ( pLineDash->DotLen > nDistance ) )
+                                    eDash = ESCHER_LineLongDashDotGEL;
+                                else
+                                    eDash = ESCHER_LineDashDotGEL;
 
-							}
-						}
-						AddOpt( ESCHER_Prop_lineDashing, eDash );
-					}
-				}
-				case ::com::sun::star::drawing::LineStyle_SOLID :
-				default:
-				{
-					AddOpt( ESCHER_Prop_fNoLineDrawDash, nLineFlags );
-				}
-				break;
-			}
-		}
-		if ( EscherPropertyValueHelper::GetPropertyValue(
-			aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "LineColor"  ) ), sal_False ) )
+                            }
+                        }
+                        AddOpt( ESCHER_Prop_lineDashing, eDash );
+                    }
+                }
+                case ::com::sun::star::drawing::LineStyle_SOLID :
+                default:
+                {
+                    AddOpt( ESCHER_Prop_fNoLineDrawDash, nLineFlags );
+                }
+                break;
+            }
+        }
+        if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "LineColor" ), false ) )
         {
             sal_uInt32 nLineColor = ImplGetColor( *((sal_uInt32*)aAny.getValue()) );
             AddOpt( ESCHER_Prop_lineColor, nLineColor );
@@ -1122,49 +1097,46 @@ void EscherPropertyContainer::CreateLineProperties(
         }
     }
 
-	sal_uInt32 nLineSize = ( EscherPropertyValueHelper::GetPropertyValue(
-		aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "LineWidth"  ) ), sal_False ) )
-		? *((sal_uInt32*)aAny.getValue())
-		: 0;
+    sal_uInt32 nLineSize = ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "LineWidth" ), false ) )
+        ? *((sal_uInt32*)aAny.getValue()) : 0;
     if ( nLineSize > 1 )
-        AddOpt( ESCHER_Prop_lineWidth, nLineSize * 360 );		// 100TH MM -> PT , 1PT = 12700 EMU
+        AddOpt( ESCHER_Prop_lineWidth, nLineSize * 360 );       // 100TH MM -> PT , 1PT = 12700 EMU
 
-	ESCHER_LineJoin eLineJoin = ESCHER_LineJoinMiter;
-	if ( EscherPropertyValueHelper::GetPropertyValue(
-		aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "LineJoint" ) ), sal_True ) )
-	{
-		::com::sun::star::drawing::LineJoint eLJ;
-		if ( aAny >>= eLJ )
-		{
-			switch ( eLJ )
-			{
-				case com::sun::star::drawing::LineJoint_NONE :
-				case com::sun::star::drawing::LineJoint_MIDDLE :
-				case com::sun::star::drawing::LineJoint_BEVEL :
-					eLineJoin = ESCHER_LineJoinBevel;
-				break;
-				default:
-				case com::sun::star::drawing::LineJoint_MITER :
-					eLineJoin = ESCHER_LineJoinMiter;
-				break;
-				case com::sun::star::drawing::LineJoint_ROUND :
-					eLineJoin = ESCHER_LineJoinRound;
-				break;
-			}
-		}
-	}
-	AddOpt( ESCHER_Prop_lineJoinStyle, eLineJoin );
-	
-	if ( EscherPropertyValueHelper::GetPropertyValue(
-		aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "LineTransparence" ) ), sal_True ) )
-	{	
-		sal_Int16 nTransparency = 0;
-		if ( aAny >>= nTransparency )
-			AddOpt( ESCHER_Prop_lineOpacity, ( ( 100 - nTransparency ) << 16 ) / 100 );		
-	}
+    ESCHER_LineJoin eLineJoin = ESCHER_LineJoinMiter;
+    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "LineJoint" ), true ) )
+    {
+        ::com::sun::star::drawing::LineJoint eLJ;
+        if ( aAny >>= eLJ )
+        {
+            switch ( eLJ )
+            {
+                case com::sun::star::drawing::LineJoint_NONE :
+                case com::sun::star::drawing::LineJoint_MIDDLE :
+                case com::sun::star::drawing::LineJoint_BEVEL :
+                    eLineJoin = ESCHER_LineJoinBevel;
+                break;
+                default:
+                case com::sun::star::drawing::LineJoint_MITER :
+                    eLineJoin = ESCHER_LineJoinMiter;
+                break;
+                case com::sun::star::drawing::LineJoint_ROUND :
+                    eLineJoin = ESCHER_LineJoinRound;
+                break;
+            }
+        }
+    }
+    AddOpt( ESCHER_Prop_lineJoinStyle, eLineJoin );
+
+    if ( EscherPropertyValueHelper::GetPropertyValue(
+        aAny, rXPropSet, "LineTransparence", true ) )
+    {
+        sal_Int16 nTransparency = 0;
+        if ( aAny >>= nTransparency )
+            AddOpt( ESCHER_Prop_lineOpacity, ( ( 100 - nTransparency ) << 16 ) / 100 );
+    }
 
 
-    if ( bEdge == sal_False )
+    if ( !bEdge )
     {
         AddOpt( ESCHER_Prop_fFillOK, 0x1001 );
         AddOpt( ESCHER_Prop_fNoFillHitTest, 0x100000 );
@@ -1177,207 +1149,203 @@ static Size lcl_SizeToEmu(Size aPrefSize, MapMode aPrefMapMode)
     if (aPrefMapMode == MAP_PIXEL)
         aRetSize = Application::GetDefaultDevice()->PixelToLogic( aPrefSize, MAP_100TH_MM );
     else
-        aRetSize = Application::GetDefaultDevice()->LogicToLogic( aPrefSize, aPrefMapMode, MAP_100TH_MM );
+        aRetSize = OutputDevice::LogicToLogic( aPrefSize, aPrefMapMode, MAP_100TH_MM );
     return aRetSize;
 }
 
 void EscherPropertyContainer::ImplCreateGraphicAttributes( const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet,
-															sal_uInt32 nBlibId, sal_Bool bCreateCroppingAttributes )
+                                                            sal_uInt32 nBlibId, bool bCreateCroppingAttributes )
 {
-	::com::sun::star::uno::Any aAny;
+    ::com::sun::star::uno::Any aAny;
 
-	sal_uInt32 nPicFlags = 0;
-	::com::sun::star::drawing::ColorMode eColorMode( ::com::sun::star::drawing::ColorMode_STANDARD );
-	sal_Int16 nLuminance = 0;
-	sal_Int32 nContrast = 0;
+    sal_uInt32 nPicFlags = 0;
+    ::com::sun::star::drawing::ColorMode eColorMode( ::com::sun::star::drawing::ColorMode_STANDARD );
+    sal_Int16 nLuminance = 0;
+    sal_Int32 nContrast = 0;
 
-	if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "GraphicColorMode" ) ) ) )
-		aAny >>= eColorMode;
-	if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "AdjustLuminance" ) ) ) )
-		aAny >>= nLuminance;
-	if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "AdjustContrast" ) ) ) )
-	{
-		sal_Int16 nC = sal_Int16();
-		aAny >>= nC;
-		nContrast = nC;
-	}
+    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "GraphicColorMode" ) ) )
+        aAny >>= eColorMode;
+    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "AdjustLuminance" ) ) )
+        aAny >>= nLuminance;
+    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "AdjustContrast" ) ) )
+    {
+        sal_Int16 nC = sal_Int16();
+        aAny >>= nC;
+        nContrast = nC;
+    }
 
-	if ( eColorMode == ::com::sun::star::drawing::ColorMode_WATERMARK )
-	{
-		eColorMode = ::com::sun::star::drawing::ColorMode_STANDARD;
-		nLuminance += 70;
-		if ( nLuminance > 100 )
-			nLuminance = 100;
-		nContrast -= 70;
-		if ( nContrast < -100 )
-			nContrast = -100;
-	}
-	if ( eColorMode == ::com::sun::star::drawing::ColorMode_GREYS )
-		nPicFlags |= 0x40004;
-	else if ( eColorMode == ::com::sun::star::drawing::ColorMode_MONO )
-		nPicFlags |= 0x60006;
+    if ( eColorMode == ::com::sun::star::drawing::ColorMode_WATERMARK )
+    {
+        eColorMode = ::com::sun::star::drawing::ColorMode_STANDARD;
+        nLuminance += 70;
+        if ( nLuminance > 100 )
+            nLuminance = 100;
+        nContrast -= 70;
+        if ( nContrast < -100 )
+            nContrast = -100;
+    }
+    if ( eColorMode == ::com::sun::star::drawing::ColorMode_GREYS )
+        nPicFlags |= 0x40004;
+    else if ( eColorMode == ::com::sun::star::drawing::ColorMode_MONO )
+        nPicFlags |= 0x60006;
 
-	if ( nContrast )
-	{
-		nContrast += 100;
-		if ( nContrast == 100)
-			nContrast = 0x10000;
-		else if ( nContrast < 100 )
-		{
-			nContrast *= 0x10000;
-			nContrast /= 100;
-		}
-		else if ( nContrast < 200 )
-			nContrast = ( 100 * 0x10000 ) / ( 200 - nContrast );
-		else
-			nContrast = 0x7fffffff;
-		AddOpt( ESCHER_Prop_pictureContrast, nContrast );
-	}
-	if ( nLuminance )
-		AddOpt( ESCHER_Prop_pictureBrightness, nLuminance * 327 );
-	if ( nPicFlags )
-		AddOpt( ESCHER_Prop_pictureActive, nPicFlags );
+    if ( nContrast )
+    {
+        nContrast += 100;
+        if ( nContrast == 100)
+            nContrast = 0x10000;
+        else if ( nContrast < 100 )
+        {
+            nContrast *= 0x10000;
+            nContrast /= 100;
+        }
+        else if ( nContrast < 200 )
+            nContrast = ( 100 * 0x10000 ) / ( 200 - nContrast );
+        else
+            nContrast = 0x7fffffff;
+        AddOpt( ESCHER_Prop_pictureContrast, nContrast );
+    }
+    if ( nLuminance )
+        AddOpt( ESCHER_Prop_pictureBrightness, nLuminance * 327 );
+    if ( nPicFlags )
+        AddOpt( ESCHER_Prop_pictureActive, nPicFlags );
 
-	if ( bCreateCroppingAttributes && pGraphicProvider )
-	{
-		Size	aPrefSize;
-		MapMode	aPrefMapMode;
-		if ( pGraphicProvider->GetPrefSize( nBlibId, aPrefSize, aPrefMapMode ) )
-		{
+    if ( bCreateCroppingAttributes && pGraphicProvider )
+    {
+        Size    aPrefSize;
+        MapMode aPrefMapMode;
+        if ( pGraphicProvider->GetPrefSize( nBlibId, aPrefSize, aPrefMapMode ) )
+        {
             Size aCropSize(lcl_SizeToEmu(aPrefSize, aPrefMapMode));
-			if ( aCropSize.Width() && aCropSize.Height() )
-			{
-				if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "GraphicCrop" ) ) ) )
-				{
-					::com::sun::star::text::GraphicCrop aGraphCrop;
-					if ( aAny >>= aGraphCrop )
-					{
-						if ( aGraphCrop.Left )
-						{
-							sal_uInt32 nLeft = ( aGraphCrop.Left * 65536 ) / aCropSize.Width();
-							AddOpt( ESCHER_Prop_cropFromLeft, nLeft );
-						}
-						if ( aGraphCrop.Top )
-						{
-							sal_uInt32 nTop = ( aGraphCrop.Top * 65536 ) / aCropSize.Height();
-							AddOpt( ESCHER_Prop_cropFromTop, nTop );
-						}
-						if ( aGraphCrop.Right )
-						{
-							sal_uInt32 nRight = ( aGraphCrop.Right * 65536 ) / aCropSize.Width();
-							AddOpt( ESCHER_Prop_cropFromRight, nRight );
-						}
-						if ( aGraphCrop.Bottom )
-						{
-							sal_uInt32 nBottom = ( aGraphCrop.Bottom * 65536 ) / aCropSize.Height();
-							AddOpt( ESCHER_Prop_cropFromBottom, nBottom );
-						}
-					}
-				}
-			}
-		}
-	}
+            if ( aCropSize.Width() && aCropSize.Height() )
+            {
+                if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "GraphicCrop" ) ) )
+                {
+                    ::com::sun::star::text::GraphicCrop aGraphCrop;
+                    if ( aAny >>= aGraphCrop )
+                    {
+                        if ( aGraphCrop.Left )
+                        {
+                            sal_uInt32 nLeft = ( aGraphCrop.Left * 65536 ) / aCropSize.Width();
+                            AddOpt( ESCHER_Prop_cropFromLeft, nLeft );
+                        }
+                        if ( aGraphCrop.Top )
+                        {
+                            sal_uInt32 nTop = ( aGraphCrop.Top * 65536 ) / aCropSize.Height();
+                            AddOpt( ESCHER_Prop_cropFromTop, nTop );
+                        }
+                        if ( aGraphCrop.Right )
+                        {
+                            sal_uInt32 nRight = ( aGraphCrop.Right * 65536 ) / aCropSize.Width();
+                            AddOpt( ESCHER_Prop_cropFromRight, nRight );
+                        }
+                        if ( aGraphCrop.Bottom )
+                        {
+                            sal_uInt32 nBottom = ( aGraphCrop.Bottom * 65536 ) / aCropSize.Height();
+                            AddOpt( ESCHER_Prop_cropFromBottom, nBottom );
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
-sal_Bool EscherPropertyContainer::CreateShapeProperties( const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rXShape )
+bool EscherPropertyContainer::CreateShapeProperties( const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rXShape )
 {
-	uno::Reference< beans::XPropertySet > aXPropSet( rXShape, uno::UNO_QUERY );
-	if ( aXPropSet.is() )
-	{
-		sal_Bool bVal = false;
-		::com::sun::star::uno::Any aAny;
-		sal_uInt32 nShapeAttr = 0;
-		EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "Visible" ) ), sal_True );
-		if ( aAny >>= bVal )
-		{
-			if ( !bVal )
-				nShapeAttr |= 0x20002;	// set fHidden = true
-		}
-		EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "Printable" ) ), sal_True );
-		if ( aAny >>= bVal )
-		{
-			if ( !bVal )
-				nShapeAttr |= 0x10000;	// set fPrint = false;
-		}
-		if ( nShapeAttr )
-		    AddOpt( ESCHER_Prop_fPrint, nShapeAttr );
-	}
-	return sal_True;
+    uno::Reference< beans::XPropertySet > aXPropSet( rXShape, uno::UNO_QUERY );
+    if ( aXPropSet.is() )
+    {
+        bool bVal = false;
+        ::com::sun::star::uno::Any aAny;
+        sal_uInt32 nShapeAttr = 0;
+        if (EscherPropertyValueHelper::GetPropertyValue(aAny, aXPropSet, OUString("Visible"), true) && (aAny >>= bVal))
+        {
+            if ( !bVal )
+                nShapeAttr |= 0x20002;  // set fHidden = true
+        }
+        if (EscherPropertyValueHelper::GetPropertyValue(aAny, aXPropSet, OUString( "Printable"), true) && (aAny >>= bVal))
+        {
+            if ( !bVal )
+                nShapeAttr |= 0x10000;  // set fPrint = false;
+        }
+        if ( nShapeAttr )
+            AddOpt( ESCHER_Prop_fPrint, nShapeAttr );
+    }
+    return true;
 }
 
-sal_Bool EscherPropertyContainer::CreateOLEGraphicProperties(
-	const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rXShape )
+bool EscherPropertyContainer::CreateOLEGraphicProperties(
+    const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rXShape )
 {
-	sal_Bool	bRetValue = sal_False;
+    bool    bRetValue = false;
 
-	if ( rXShape.is() )
-	{
-		SdrObject* pSdrOLE2( GetSdrObjectFromXShape( rXShape ) );	// SJ: leaving unoapi, because currently there is
-		if ( pSdrOLE2 && pSdrOLE2->ISA( SdrOle2Obj ) )				// no access to the native graphic object
-		{
-			Graphic* pGraphic = ((SdrOle2Obj*)pSdrOLE2)->GetGraphic();
-			if ( pGraphic )
-			{
-				GraphicObject aGraphicObject( *pGraphic );
+    if ( rXShape.is() )
+    {
+        SdrObject* pSdrOLE2( GetSdrObjectFromXShape( rXShape ) );   // SJ: leaving unoapi, because currently there is
+        if ( pSdrOLE2 && pSdrOLE2->ISA( SdrOle2Obj ) )              // no access to the native graphic object
+        {
+            const Graphic* pGraphic = static_cast<SdrOle2Obj*>(pSdrOLE2)->GetGraphic();
+            if ( pGraphic )
+            {
+                GraphicObject aGraphicObject( *pGraphic );
                 bRetValue = CreateGraphicProperties( rXShape,aGraphicObject );
-				// End
-			}
-		}
-	}
-	return bRetValue;
+            }
+        }
+    }
+    return bRetValue;
 }
 
-sal_Bool EscherPropertyContainer::CreateGraphicProperties( const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rXShape ,const GraphicObject& rGraphicObj )
+bool EscherPropertyContainer::CreateGraphicProperties( const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rXShape, const GraphicObject& rGraphicObj )
 {
-	sal_Bool	bRetValue = sal_False;
-	ByteString aUniqueId( rGraphicObj.GetUniqueID() );
-	if ( aUniqueId.Len() )
-	{
-		AddOpt( ESCHER_Prop_fillType, ESCHER_FillPicture );
-		uno::Reference< beans::XPropertySet > aXPropSet( rXShape, uno::UNO_QUERY );
+    bool    bRetValue = false;
+    OString aUniqueId( rGraphicObj.GetUniqueID() );
+    if ( !aUniqueId.isEmpty() )
+    {
+        AddOpt( ESCHER_Prop_fillType, ESCHER_FillPicture );
+        uno::Reference< beans::XPropertySet > aXPropSet( rXShape, uno::UNO_QUERY );
 
-		if ( pGraphicProvider && pPicOutStrm && pShapeBoundRect && aXPropSet.is() )
-		{
-			::com::sun::star::uno::Any aAny;
-			::com::sun::star::awt::Rectangle* pVisArea = NULL;
-			if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "VisibleArea" ) ) ) )
-			{
-				pVisArea = new ::com::sun::star::awt::Rectangle;
-				aAny >>= (*pVisArea);
-			}
-			Rectangle aRect( Point( 0, 0 ), pShapeBoundRect->GetSize() );
-			sal_uInt32 nBlibId = pGraphicProvider->GetBlibID( *pPicOutStrm, aUniqueId, aRect, pVisArea, NULL );
-			if ( nBlibId )
-			{
-				AddOpt( ESCHER_Prop_pib, nBlibId, sal_True );
-				ImplCreateGraphicAttributes( aXPropSet, nBlibId, sal_False );
-				bRetValue = sal_True;
-			}
-			delete pVisArea;
-		}
-	}
-	return bRetValue;
+        if ( pGraphicProvider && pPicOutStrm && pShapeBoundRect && aXPropSet.is() )
+        {
+            ::com::sun::star::uno::Any aAny;
+            boost::scoped_ptr< ::com::sun::star::awt::Rectangle> pVisArea;
+            if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, OUString("VisibleArea" ) ) )
+            {
+                pVisArea.reset(new ::com::sun::star::awt::Rectangle);
+                aAny >>= (*pVisArea);
+            }
+            Rectangle aRect( Point( 0, 0 ), pShapeBoundRect->GetSize() );
+            sal_uInt32 nBlibId = pGraphicProvider->GetBlibID( *pPicOutStrm, aUniqueId, aRect, pVisArea.get(), NULL );
+            if ( nBlibId )
+            {
+                AddOpt( ESCHER_Prop_pib, nBlibId, true );
+                ImplCreateGraphicAttributes( aXPropSet, nBlibId, false );
+                bRetValue = true;
+            }
+        }
+    }
+    return bRetValue;
 }
 
-sal_Bool EscherPropertyContainer::CreateMediaGraphicProperties(
-	const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rXShape )
+bool EscherPropertyContainer::CreateMediaGraphicProperties(
+    const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rXShape )
 {
-	sal_Bool	bRetValue = sal_False;
-	if ( rXShape.is() )
-	{
-		SdrObject* pSdrMedia( GetSdrObjectFromXShape( rXShape ) );	// SJ: leaving unoapi, because currently there is
-		if ( pSdrMedia && pSdrMedia->ISA( SdrMediaObj ) )				// no access to the native graphic object
-		{			
-			GraphicObject aGraphicObject( ((SdrMediaObj*)pSdrMedia)->getGraphic() );
-			bRetValue = CreateGraphicProperties( rXShape, aGraphicObject );
-		}
-	}
-	return bRetValue;
+    bool    bRetValue = false;
+    if ( rXShape.is() )
+    {
+        SdrObject* pSdrMedia( GetSdrObjectFromXShape( rXShape ) );  // SJ: leaving unoapi, because currently there is
+        if ( pSdrMedia && pSdrMedia->ISA( SdrMediaObj ) )               // no access to the native graphic object
+        {
+            GraphicObject aGraphicObject( static_cast<SdrMediaObj*>(pSdrMedia)->getSnapshot() );
+            bRetValue = CreateGraphicProperties( rXShape, aGraphicObject );
+        }
+    }
+    return bRetValue;
 }
 
-sal_Bool EscherPropertyContainer::ImplCreateEmbeddedBmp( const ByteString& rUniqueId )
+bool EscherPropertyContainer::ImplCreateEmbeddedBmp( const OString& rUniqueId )
 {
-    if( rUniqueId.Len() > 0 )
+    if( !rUniqueId.isEmpty() )
     {
         EscherGraphicProvider aProvider;
         SvMemoryStream aMemStrm;
@@ -1386,30 +1354,29 @@ sal_Bool EscherPropertyContainer::ImplCreateEmbeddedBmp( const ByteString& rUniq
         {
             // grab BLIP from stream and insert directly as complex property
             // ownership of stream memory goes to complex property
-            aMemStrm.ObjectOwnsMemory( sal_False );
+            aMemStrm.ObjectOwnsMemory( false );
             sal_uInt8* pBuf = (sal_uInt8*) aMemStrm.GetData();
             sal_uInt32 nSize = aMemStrm.Seek( STREAM_SEEK_TO_END );
-            AddOpt( ESCHER_Prop_fillBlip, sal_True, nSize, pBuf, nSize );
-            return sal_True;
+            AddOpt( ESCHER_Prop_fillBlip, true, nSize, pBuf, nSize );
+            return true;
         }
     }
-    return sal_False;
+    return false;
 }
 
-sal_Bool EscherPropertyContainer::CreateEmbeddedBitmapProperties(
-    const ::rtl::OUString& rBitmapUrl, ::com::sun::star::drawing::BitmapMode eBitmapMode )
+bool EscherPropertyContainer::CreateEmbeddedBitmapProperties(
+    const OUString& rBitmapUrl, ::com::sun::star::drawing::BitmapMode eBitmapMode )
 {
-    sal_Bool bRetValue = sal_False;
-    String aVndUrl( RTL_CONSTASCII_USTRINGPARAM( "vnd.sun.star.GraphicObject:" ) );
-    String aBmpUrl( rBitmapUrl );
-    xub_StrLen nIndex = aBmpUrl.Search( aVndUrl, 0 );
-    if( nIndex != STRING_NOTFOUND )
+    bool bRetValue = false;
+    OUString aVndUrl( "vnd.sun.star.GraphicObject:" );
+    OUString aBmpUrl( rBitmapUrl );
+    sal_Int32 nIndex = aBmpUrl.indexOf( aVndUrl, 0 );
+    if( nIndex != -1 )
     {
-        // note: += ist not defined for xub_StrLen -> conversion to int and back to xub_StrLen
-        nIndex = nIndex + aVndUrl.Len();
-        if( aBmpUrl.Len() > nIndex )
+        nIndex += aVndUrl.getLength();
+        if( aBmpUrl.getLength() > nIndex )
         {
-            ByteString aUniqueId( aBmpUrl, nIndex, aBmpUrl.Len() - nIndex, RTL_TEXTENCODING_UTF8 );
+            OString aUniqueId(OUStringToOString(aBmpUrl.copy(nIndex, aBmpUrl.getLength() - nIndex), RTL_TEXTENCODING_UTF8));
             bRetValue = ImplCreateEmbeddedBmp( aUniqueId );
             if( bRetValue )
             {
@@ -1427,7 +1394,7 @@ namespace {
 
 GraphicObject lclDrawHatch( const ::com::sun::star::drawing::Hatch& rHatch, const Color& rBackColor, bool bFillBackground, const Rectangle& rRect )
 {
-    // #121183# For hatch, do no longer create a bitmap with the fixed size of 28x28 pixels. Also
+    // #i121183# For hatch, do no longer create a bitmap with the fixed size of 28x28 pixels. Also
     // do not create a bitmap in page size, that would explode file sizes (and have no good quality).
     // Better use a MetaFile graphic in page size; thus we have good quality due to vector format and
     // no bit file sizes.
@@ -1442,7 +1409,7 @@ GraphicObject lclDrawHatch( const ::com::sun::star::drawing::Hatch& rHatch, cons
     aOut.SetLineColor();
     aOut.SetFillColor(bFillBackground ? rBackColor : Color(COL_TRANSPARENT));
     aOut.DrawRect(rRect);
-    aOut.DrawHatch(PolyPolygon(rRect), Hatch((HatchStyle)rHatch.Style, Color(rHatch.Color), rHatch.Distance, (sal_uInt16)rHatch.Angle));
+    aOut.DrawHatch(tools::PolyPolygon(rRect), Hatch((HatchStyle)rHatch.Style, Color(rHatch.Color), rHatch.Distance, (sal_uInt16)rHatch.Angle));
     aMtf.Stop();
     aMtf.WindStart();
     aMtf.SetPrefMapMode(MapMode(MAP_100TH_MM));
@@ -1454,36 +1421,35 @@ GraphicObject lclDrawHatch( const ::com::sun::star::drawing::Hatch& rHatch, cons
 } // namespace
 
 
-sal_Bool EscherPropertyContainer::CreateEmbeddedHatchProperties( const ::com::sun::star::drawing::Hatch& rHatch, const Color& rBackColor, bool bFillBackground )
+bool EscherPropertyContainer::CreateEmbeddedHatchProperties( const ::com::sun::star::drawing::Hatch& rHatch, const Color& rBackColor, bool bFillBackground )
 {
     const Rectangle aRect(pShapeBoundRect ? *pShapeBoundRect : Rectangle(Point(0,0), Size(28000, 21000)));
     GraphicObject aGraphicObject = lclDrawHatch( rHatch, rBackColor, bFillBackground, aRect );
-    ByteString aUniqueId = aGraphicObject.GetUniqueID();
-    sal_Bool bRetValue = ImplCreateEmbeddedBmp( aUniqueId );
+    OString aUniqueId = aGraphicObject.GetUniqueID();
+    bool bRetValue = ImplCreateEmbeddedBmp( aUniqueId );
     if ( bRetValue )
         AddOpt( ESCHER_Prop_fillType, ESCHER_FillTexture );
     return bRetValue;
 }
 
 
-sal_Bool EscherPropertyContainer::CreateGraphicProperties(
-	const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet,
-		const String& rSource, const sal_Bool bCreateFillBitmap, const sal_Bool bCreateCroppingAttributes,
-			const sal_Bool bFillBitmapModeAllowed )
+bool EscherPropertyContainer::CreateGraphicProperties(
+    const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet,
+        const OUString& rSource, const bool bCreateFillBitmap, const bool bCreateCroppingAttributes,
+            const bool bFillBitmapModeAllowed, const bool bOOxmlExport )
 {
-	sal_Bool		bRetValue = sal_False;
-	sal_Bool		bCreateFillStyles = sal_False;
+    bool        bRetValue = false;
+    bool        bCreateFillStyles = false;
 
-    sal_Bool        bMirrored = sal_False;
-    sal_Bool        bRotate   = sal_True;
-    sal_uInt16      nAngle    = 0;
-    GraphicAttr*    pGraphicAttr = NULL;
+    bool        bMirrored = false;
+    bool        bRotate   = true;
+    boost::scoped_ptr<GraphicAttr> pGraphicAttr;
     GraphicObject   aGraphicObject;
-    String          aGraphicUrl;
-    ByteString      aUniqueId;
+    OUString        aGraphicUrl;
+    OString         aUniqueId;
     bool            bIsGraphicMtf(false);
     // #121074#
-    sal_Int16 nTransparency(0); 
+    sal_Int16 nTransparency(0);
     sal_Int16 nRed(0);
     sal_Int16 nGreen(0);
     sal_Int16 nBlue(0);
@@ -1494,14 +1460,15 @@ sal_Bool EscherPropertyContainer::CreateGraphicProperties(
 
     if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, rSource ) )
     {
-        if ( rSource == String( RTL_CONSTASCII_USTRINGPARAM( "MetaFile" ) ) )
+        sal_uInt16 nAngle = 0;
+        if ( rSource == "MetaFile" )
         {
             ::com::sun::star::uno::Sequence<sal_uInt8> aSeq = *(::com::sun::star::uno::Sequence<sal_uInt8>*)aAny.getValue();
             const sal_uInt8*    pAry = aSeq.getArray();
             sal_uInt32          nAryLen = aSeq.getLength();
 
             // the metafile is already rotated
-            bRotate = sal_False;
+            bRotate = false;
 
             if ( pAry && nAryLen )
             {
@@ -1516,10 +1483,11 @@ sal_Bool EscherPropertyContainer::CreateGraphicProperties(
                 }
             }
         }
-        else if ( rSource == String( RTL_CONSTASCII_USTRINGPARAM( "Bitmap" ) ) )
+        else if ( rSource == "Bitmap" )
         {
-            ::com::sun::star::uno::Reference< ::com::sun::star::awt::XBitmap >xBitmap;
-            if ( ::cppu::extractInterface( xBitmap, aAny ) )
+            ::com::sun::star::uno::Reference< ::com::sun::star::awt::XBitmap >xBitmap(
+                aAny, css::uno::UNO_QUERY);
+            if (xBitmap.is())
             {
                 ::com::sun::star::uno::Reference< ::com::sun::star::awt::XBitmap > xBmp;
                 if ( aAny >>= xBmp )
@@ -1532,29 +1500,27 @@ sal_Bool EscherPropertyContainer::CreateGraphicProperties(
                 }
             }
         }
-        else if ( rSource == String( RTL_CONSTASCII_USTRINGPARAM( "FillBitmapURL" ) ) )
+        else if ( rSource == "FillBitmapURL" )
         {
-            aGraphicUrl = *(::rtl::OUString*)aAny.getValue();
+            aGraphicUrl = *(OUString*)aAny.getValue();
         }
-        else if ( rSource == String( RTL_CONSTASCII_USTRINGPARAM( "GraphicURL" ) ) )
+        else if ( rSource == "GraphicURL" )
         {
-            aGraphicUrl = *(::rtl::OUString*)aAny.getValue();
-			bCreateFillStyles = sal_True;
+            aGraphicUrl = *(OUString*)aAny.getValue();
+            bCreateFillStyles = true;
         }
-        else if ( rSource == String( RTL_CONSTASCII_USTRINGPARAM( "FillHatch" ) ) )
+        else if ( rSource == "FillHatch" )
         {
             ::com::sun::star::drawing::Hatch aHatch;
             if ( aAny >>= aHatch )
             {
                 Color aBackColor;
-                if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet,
-                    String( RTL_CONSTASCII_USTRINGPARAM( "FillColor" ) ), sal_False ) )
+                if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "FillColor" ), false ) )
                 {
-                    aBackColor = ImplGetColor( *((sal_uInt32*)aAny.getValue()), sal_False );
+                    aBackColor = ImplGetColor( *((sal_uInt32*)aAny.getValue()), false );
                 }
                 bool bFillBackground = false;
-                if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet,
-                        String( RTL_CONSTASCII_USTRINGPARAM( "FillBackground" ) ), sal_True ) )
+                if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "FillBackground" ), true ) )
                 {
                     aAny >>= bFillBackground;
                 }
@@ -1567,58 +1533,57 @@ sal_Bool EscherPropertyContainer::CreateGraphicProperties(
             }
         }
 
-        if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "IsMirrored" ) ), sal_True ) )
+        if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "IsMirrored" ), true ) )
             aAny >>= bMirrored;
 
         // #121074# transparency of graphic is not supported in MS formats, get and apply it
         // in the GetTransformedGraphic call in GetBlibID
-        if(EscherPropertyValueHelper::GetPropertyValue(aAny, rXPropSet, String(RTL_CONSTASCII_USTRINGPARAM("Transparency"))))
+        if(EscherPropertyValueHelper::GetPropertyValue(aAny, rXPropSet, OUString("Transparency")))
         {
             aAny >>= nTransparency;
         }
 
-        if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "AdjustRed" ) ) ) )
+        if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString("AdjustRed") ) )
         {
             aAny >>= nRed;
         }
 
-        if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "AdjustGreen" ) ) ) )
+        if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString("AdjustGreen" ) ) )
         {
             aAny >>= nGreen;
         }
 
-        if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "AdjustBlue" ) ) ) )
+        if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString("AdjustBlue" ) ) )
         {
             aAny >>= nBlue;
         }
 
-        if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "Gamma" ) ) ) )
+        if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "Gamma" ) ) )
         {
             aAny >>= fGamma;
         }
 
         if ( bCreateFillBitmap && bFillBitmapModeAllowed )
         {
-            if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "FillBitmapMode" ) ), sal_True ) )
+            if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "FillBitmapMode" ), true ) )
                 aAny >>= eBitmapMode;
         }
         else
         {
-            nAngle = bRotate && EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet,
-                                                                             String( RTL_CONSTASCII_USTRINGPARAM( "RotateAngle" ) ), sal_True )
+            nAngle = bRotate && EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "RotateAngle" ), true )
                 ? (sal_uInt16)( ( *((sal_Int32*)aAny.getValue() ) ) + 5 ) / 10
                 : 0;
         }
 
-        if ( aGraphicUrl.Len() )
+        if ( aGraphicUrl.getLength() )
         {
-            String aVndUrl( RTL_CONSTASCII_USTRINGPARAM( "vnd.sun.star.GraphicObject:" ) );
-            xub_StrLen nIndex = aGraphicUrl.Search( aVndUrl, 0 );
-            if ( nIndex != STRING_NOTFOUND )
+            OUString aVndUrl( "vnd.sun.star.GraphicObject:" );
+            sal_Int32 nIndex = aGraphicUrl.indexOf( aVndUrl, 0 );
+            if ( nIndex != -1 )
             {
-                nIndex = nIndex + aVndUrl.Len();
-                if ( aGraphicUrl.Len() > nIndex  )
-                    aUniqueId = ByteString( aGraphicUrl, nIndex, aGraphicUrl.Len() - nIndex, RTL_TEXTENCODING_UTF8 );
+                nIndex = nIndex + aVndUrl.getLength();
+                if ( aGraphicUrl.getLength() > nIndex  )
+                    aUniqueId = OUStringToOString(aGraphicUrl.copy(nIndex, aGraphicUrl.getLength() - nIndex), RTL_TEXTENCODING_UTF8);
             }
             else
             {
@@ -1644,8 +1609,8 @@ sal_Bool EscherPropertyContainer::CreateGraphicProperties(
                       nFormat != GFF_WMF &&
                       nFormat != GFF_EMF) )
                 {
-                    SvStream* pIn = ::utl::UcbStreamHelper::CreateStream(
-                        aTmp.GetMainURL( INetURLObject::NO_DECODE ), STREAM_READ );
+                    boost::scoped_ptr<SvStream> pIn(::utl::UcbStreamHelper::CreateStream(
+                        aTmp.GetMainURL( INetURLObject::NO_DECODE ), STREAM_READ ));
                     if ( pIn )
                     {
                         Graphic aGraphic;
@@ -1653,37 +1618,36 @@ sal_Bool EscherPropertyContainer::CreateGraphicProperties(
 
                         if ( nErrCode == ERRCODE_NONE )
                         {
-                            // no.
+                            // no
                             aGraphicObject = aGraphic;
                             aUniqueId = aGraphicObject.GetUniqueID();
                         }
                         // else: simply keep the graphic link
-                        delete pIn;
                     }
                 }
-				if ( !aUniqueId.Len() )
-				{
-					if ( pGraphicProvider )
-					{
-						const rtl::OUString& rBaseURI( pGraphicProvider->GetBaseURI() );
-						INetURLObject aBaseURI( rBaseURI );
-						if( aBaseURI.GetProtocol() == aTmp.GetProtocol() )
-						{
-							rtl::OUString aRelUrl( INetURLObject::GetRelURL( rBaseURI, aGraphicUrl, 
-								INetURLObject::WAS_ENCODED, INetURLObject::DECODE_TO_IURI, RTL_TEXTENCODING_UTF8, INetURLObject::FSYS_DETECT ) );
-							if ( aRelUrl.getLength() )
-								aGraphicUrl = aRelUrl;
-						}
-					}
-				}
+                if ( aUniqueId.isEmpty() )
+                {
+                    if ( pGraphicProvider )
+                    {
+                        const OUString& rBaseURI( pGraphicProvider->GetBaseURI() );
+                        INetURLObject aBaseURI( rBaseURI );
+                        if( aBaseURI.GetProtocol() == aTmp.GetProtocol() )
+                        {
+                            OUString aRelUrl( INetURLObject::GetRelURL( rBaseURI, aGraphicUrl,
+                                                    INetURLObject::WAS_ENCODED, INetURLObject::DECODE_TO_IURI, RTL_TEXTENCODING_UTF8, INetURLObject::FSYS_DETECT ) );
+                            if ( !aRelUrl.isEmpty() )
+                                aGraphicUrl = aRelUrl;
+                        }
+                    }
+                }
             }
         }
 
-        if ( aGraphicUrl.Len() || aUniqueId.Len() )
+        if ( aGraphicUrl.getLength() || !aUniqueId.isEmpty() )
         {
             if(bMirrored || nTransparency || nRed || nGreen || nBlue || (1.0 != fGamma))
             {
-                pGraphicAttr = new GraphicAttr;
+                pGraphicAttr.reset(new GraphicAttr);
 
                 if(bMirrored)
                 {
@@ -1691,7 +1655,7 @@ sal_Bool EscherPropertyContainer::CreateGraphicProperties(
                 }
 
                 // #121074#
-                if(nTransparency) 
+                if(nTransparency)
                 {
                     pGraphicAttr->SetTransparency((nTransparency * 255) / 100);
                 }
@@ -1723,67 +1687,61 @@ sal_Bool EscherPropertyContainer::CreateGraphicProperties(
             }
 
             if ( eBitmapMode == ::com::sun::star::drawing::BitmapMode_REPEAT )
-			{
-				sal_Int32 nSizeX = 0,nSizeY = 0,nOffsetX = 0,nOffsetY = 0,nPosOffsetX = 0,nPosOffsetY = 0;
-                if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet,
-                        String( RTL_CONSTASCII_USTRINGPARAM( "FillBitmapSizeX" ) ), sal_True ) )
+            {
+                sal_Int32 nSizeX = 0,nSizeY = 0,nOffsetX = 0,nOffsetY = 0,nPosOffsetX = 0,nPosOffsetY = 0;
+                if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, "FillBitmapSizeX", true ) )
                 {
                     aAny >>= nSizeX;
                 }
-                if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet,
-                        String( RTL_CONSTASCII_USTRINGPARAM( "FillBitmapSizeY" ) ), sal_True ) )
+                if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, "FillBitmapSizeY", true ) )
                 {
                     aAny >>= nSizeY;
                 }
-	            if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet,
-                        String( RTL_CONSTASCII_USTRINGPARAM( "FillBitmapOffsetX" ) ), sal_True ) )
+                if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, "FillBitmapOffsetX", true ) )
                 {
                     aAny >>= nOffsetX;
                 }
-                if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet,
-                        String( RTL_CONSTASCII_USTRINGPARAM( "FillBitmapOffsetY" ) ), sal_True ) )
+                if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, "FillBitmapOffsetY", true ) )
                 {
                     aAny >>= nOffsetY;
                 }
-                if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet,
-                        String( RTL_CONSTASCII_USTRINGPARAM( "FillBitmapPositionOffsetX" ) ), sal_True ) )
+                if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, "FillBitmapPositionOffsetX", true ) )
                 {
                     aAny >>= nPosOffsetX;
                 }
-                if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet,
-                        String( RTL_CONSTASCII_USTRINGPARAM( "FillBitmapPositionOffsetY" ) ), sal_True ) )
+                if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, "FillBitmapPositionOffsetY", true ) )
                 {
                     aAny >>= nPosOffsetY;
                 }
-				if(nSizeX == -100 && nSizeY == -100 && nOffsetX == 0 && nOffsetY == 0 && nPosOffsetX == 0 && nPosOffsetY == 0)
-					AddOpt( ESCHER_Prop_fillType, ESCHER_FillPicture );	
-				else
-					AddOpt( ESCHER_Prop_fillType, ESCHER_FillTexture );
-			}
+                if(nSizeX == -100 && nSizeY == -100 && nOffsetX == 0 && nOffsetY == 0 && nPosOffsetX == 0 && nPosOffsetY == 0)
+                    AddOpt( ESCHER_Prop_fillType, ESCHER_FillPicture );
+                else
+                    AddOpt( ESCHER_Prop_fillType, ESCHER_FillTexture );
+            }
             else
                 AddOpt( ESCHER_Prop_fillType, ESCHER_FillPicture );
 
-            if ( aUniqueId.Len() )
+            if ( !aUniqueId.isEmpty() )
             {
                 // write out embedded graphic
                 if ( pGraphicProvider && pPicOutStrm && pShapeBoundRect )
                 {
                     Rectangle aRect( Point( 0, 0 ), pShapeBoundRect->GetSize() );
-                    const sal_uInt32 nBlibId(pGraphicProvider->GetBlibID(*pPicOutStrm, aUniqueId, aRect, NULL, pGraphicAttr));
-                    
+                    const sal_uInt32 nBlibId(pGraphicProvider->GetBlibID(*pPicOutStrm, aUniqueId, aRect, NULL, pGraphicAttr.get()));
+
                     if(nBlibId)
                     {
                         if(bCreateFillBitmap)
-                        {                            
-                            AddOpt(ESCHER_Prop_fillBlip, nBlibId, sal_True);
+                        {
+                            AddOpt(ESCHER_Prop_fillBlip, nBlibId, true);
                         }
                         else
                         {
-                            AddOpt( ESCHER_Prop_pib, nBlibId, sal_True );
+                            AddOpt( ESCHER_Prop_pib, nBlibId, true );
                             ImplCreateGraphicAttributes( rXPropSet, nBlibId, bCreateCroppingAttributes );
                         }
 
-                        bRetValue = sal_True;
+                        bRetValue = true;
                     }
                 }
                 else
@@ -1792,331 +1750,423 @@ sal_Bool EscherPropertyContainer::CreateGraphicProperties(
                     SvMemoryStream aMemStrm;
                     Rectangle aRect;
 
-                    if ( aProvider.GetBlibID( aMemStrm, aUniqueId, aRect, NULL, pGraphicAttr ) )
+                    if ( aProvider.GetBlibID( aMemStrm, aUniqueId, aRect, NULL, pGraphicAttr.get(), bOOxmlExport ) )
                     {
                         // grab BLIP from stream and insert directly as complex property
                         // ownership of stream memory goes to complex property
-                        aMemStrm.ObjectOwnsMemory( sal_False );
+                        aMemStrm.ObjectOwnsMemory( false );
                         sal_uInt8* pBuf = (sal_uInt8*) aMemStrm.GetData();
                         sal_uInt32 nSize = aMemStrm.Seek( STREAM_SEEK_TO_END );
-                        AddOpt( ESCHER_Prop_fillBlip, sal_True, nSize, pBuf, nSize );
-                        bRetValue = sal_True;
+                        AddOpt( ESCHER_Prop_fillBlip, true, nSize, pBuf, nSize );
+                        bRetValue = true;
                     }
                 }
             }
             // write out link to graphic
             else
             {
-                OSL_ASSERT(aGraphicUrl.Len());
+                OSL_ASSERT(aGraphicUrl.getLength());
 
                 AddOpt( ESCHER_Prop_pibName, aGraphicUrl );
-                sal_uInt32	nPibFlags=0;
+                sal_uInt32  nPibFlags=0;
                 GetOpt( ESCHER_Prop_pibFlags, nPibFlags );
                 AddOpt( ESCHER_Prop_pibFlags,
                         ESCHER_BlipFlagLinkToFile|ESCHER_BlipFlagFile|ESCHER_BlipFlagDoNotSave | nPibFlags );
             }
         }
     }
-    delete pGraphicAttr;
-	if ( bCreateFillStyles )
-		CreateFillProperties( rXPropSet, sal_True );
+    pGraphicAttr.reset();
+    if ( bCreateFillStyles )
+        CreateFillProperties( rXPropSet, true );
 
-	return bRetValue;
+    return bRetValue;
 }
 
-PolyPolygon EscherPropertyContainer::GetPolyPolygon( const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rXShape )
+tools::PolyPolygon EscherPropertyContainer::GetPolyPolygon( const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rXShape )
 {
-    PolyPolygon aRetPolyPoly;
+    tools::PolyPolygon aRetPolyPoly;
     ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > aXPropSet;
     ::com::sun::star::uno::Any aAny( rXShape->queryInterface(
-        ::getCppuType( (const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet >*) 0 ) ));
+        cppu::UnoType<com::sun::star::beans::XPropertySet>::get()));
 
-    String sPolyPolygonBezier( RTL_CONSTASCII_USTRINGPARAM( "PolyPolygonBezier" ) );
-    String sPolyPolygon		( RTL_CONSTASCII_USTRINGPARAM( "PolyPolygon" ) );
-    String sPolygon		    ( RTL_CONSTASCII_USTRINGPARAM( "Polygon" ) );
+    OUString sPolyPolygonBezier ( "PolyPolygonBezier" );
+    OUString sPolyPolygon       ( "PolyPolygon" );
+    OUString sPolygon           ( "Polygon" );
+    OUString sCustomShapeGeometry   ( "CustomShapeGeometry" );
 
     if ( aAny >>= aXPropSet )
     {
-        sal_Bool bHasProperty = EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sPolyPolygonBezier, sal_True );
+        bool bHasProperty = EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sPolyPolygonBezier, true );
         if ( !bHasProperty )
-            bHasProperty = EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sPolyPolygon, sal_True );
+            bHasProperty = EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sPolyPolygon, true );
         if ( !bHasProperty )
-            bHasProperty = EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sPolygon, sal_True );
+            bHasProperty = EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sPolygon, true );
+        if ( !bHasProperty )
+            bHasProperty = EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sCustomShapeGeometry, true );
         if ( bHasProperty )
             aRetPolyPoly = GetPolyPolygon( aAny );
     }
     return aRetPolyPoly;
 }
 
-PolyPolygon EscherPropertyContainer::GetPolyPolygon( const ::com::sun::star::uno::Any& rAny )
+tools::PolyPolygon EscherPropertyContainer::GetPolyPolygon( const ::com::sun::star::uno::Any& rAny )
 {
-	sal_Bool bNoError = sal_True;
+    bool bNoError = true;
 
-	Polygon aPolygon;
-	PolyPolygon aPolyPolygon;
+    Polygon aPolygon;
+    tools::PolyPolygon aPolyPolygon;
 
-	if ( rAny.getValueType() == ::getCppuType( ( const ::com::sun::star::drawing::PolyPolygonBezierCoords* ) 0 ) )
-	{
-		::com::sun::star::drawing::PolyPolygonBezierCoords* pSourcePolyPolygon
-			= (::com::sun::star::drawing::PolyPolygonBezierCoords*)rAny.getValue();
-		sal_uInt16 nOuterSequenceCount = (sal_uInt16)pSourcePolyPolygon->Coordinates.getLength();
+    if ( rAny.getValueType() == cppu::UnoType<com::sun::star::drawing::PolyPolygonBezierCoords>::get())
+    {
+        ::com::sun::star::drawing::PolyPolygonBezierCoords* pSourcePolyPolygon
+            = (::com::sun::star::drawing::PolyPolygonBezierCoords*)rAny.getValue();
+        sal_uInt16 nOuterSequenceCount = (sal_uInt16)pSourcePolyPolygon->Coordinates.getLength();
 
-		// Zeiger auf innere sequences holen
-		::com::sun::star::drawing::PointSequence* pOuterSequence = pSourcePolyPolygon->Coordinates.getArray();
-		::com::sun::star::drawing::FlagSequence*  pOuterFlags = pSourcePolyPolygon->Flags.getArray();
+        // get pointer of inner sequences
+        ::com::sun::star::drawing::PointSequence* pOuterSequence = pSourcePolyPolygon->Coordinates.getArray();
+        ::com::sun::star::drawing::FlagSequence*  pOuterFlags = pSourcePolyPolygon->Flags.getArray();
 
-		bNoError = pOuterSequence && pOuterFlags;
-		if ( bNoError )
-		{
-			sal_uInt16  a, b, nInnerSequenceCount;
-			::com::sun::star::awt::Point* pArray;
+        bNoError = pOuterSequence && pOuterFlags;
+        if ( bNoError )
+        {
+            sal_uInt16  a, b, nInnerSequenceCount;
+            ::com::sun::star::awt::Point* pArray;
 
-			// dies wird ein Polygon set
-			for ( a = 0; a < nOuterSequenceCount; a++ )
-			{
-				::com::sun::star::drawing::PointSequence* pInnerSequence = pOuterSequence++;
-				::com::sun::star::drawing::FlagSequence*  pInnerFlags = pOuterFlags++;
+            // this will be a polygon set
+            for ( a = 0; a < nOuterSequenceCount; a++ )
+            {
+                ::com::sun::star::drawing::PointSequence* pInnerSequence = pOuterSequence++;
+                ::com::sun::star::drawing::FlagSequence*  pInnerFlags = pOuterFlags++;
 
-				bNoError = pInnerSequence && pInnerFlags;
-				if  ( bNoError )
-				{
-					// Zeiger auf Arrays holen
-					pArray = pInnerSequence->getArray();
-					::com::sun::star::drawing::PolygonFlags* pFlags = pInnerFlags->getArray();
+                bNoError = pInnerSequence && pInnerFlags;
+                if  ( bNoError )
+                {
+                    // get pointer to arrays
+                    pArray = pInnerSequence->getArray();
+                    ::com::sun::star::drawing::PolygonFlags* pFlags = pInnerFlags->getArray();
 
-					if ( pArray && pFlags )
-					{
-						nInnerSequenceCount = (sal_uInt16)pInnerSequence->getLength();
-						aPolygon = Polygon( nInnerSequenceCount );
-						for( b = 0; b < nInnerSequenceCount; b++)
-						{
-							PolyFlags   ePolyFlags( *( (PolyFlags*)pFlags++ ) );
-							::com::sun::star::awt::Point aPoint( (::com::sun::star::awt::Point)*(pArray++) );
-							aPolygon[ b ] = Point( aPoint.X, aPoint.Y );
-							aPolygon.SetFlags( b, ePolyFlags );
+                    if ( pArray && pFlags )
+                    {
+                        nInnerSequenceCount = (sal_uInt16)pInnerSequence->getLength();
+                        aPolygon = Polygon( nInnerSequenceCount );
+                        for( b = 0; b < nInnerSequenceCount; b++)
+                        {
+                            PolyFlags   ePolyFlags( *( (PolyFlags*)pFlags++ ) );
+                            ::com::sun::star::awt::Point aPoint( *(pArray++) );
+                            aPolygon[ b ] = Point( aPoint.X, aPoint.Y );
+                            aPolygon.SetFlags( b, ePolyFlags );
 
-							if ( ePolyFlags == POLY_CONTROL )
-								continue;
-						}
-						aPolyPolygon.Insert( aPolygon, POLYPOLY_APPEND );
-					}
-				}
-			}
-		}
-	}
-	else if ( rAny.getValueType() == ::getCppuType( ( const ::com::sun::star::drawing::PointSequenceSequence* ) 0 ) )
-	{
-		::com::sun::star::drawing::PointSequenceSequence* pSourcePolyPolygon
-			= (::com::sun::star::drawing::PointSequenceSequence*)rAny.getValue();
-		sal_uInt16 nOuterSequenceCount = (sal_uInt16)pSourcePolyPolygon->getLength();
+                            if ( ePolyFlags == POLY_CONTROL )
+                                continue;
+                        }
+                        aPolyPolygon.Insert( aPolygon, POLYPOLY_APPEND );
+                    }
+                }
+            }
+        }
+    }
+    else if ( rAny.getValueType() == ::getCppuType( ( const ::com::sun::star::drawing::PointSequenceSequence* ) 0 ) )
+    {
+        ::com::sun::star::drawing::PointSequenceSequence* pSourcePolyPolygon
+            = (::com::sun::star::drawing::PointSequenceSequence*)rAny.getValue();
+        sal_uInt16 nOuterSequenceCount = (sal_uInt16)pSourcePolyPolygon->getLength();
 
-		// Zeiger auf innere sequences holen
-		::com::sun::star::drawing::PointSequence* pOuterSequence = pSourcePolyPolygon->getArray();
-		bNoError = pOuterSequence != NULL;
-		if ( bNoError )
-		{
-			sal_uInt16 a, b, nInnerSequenceCount;
+        // get pointer to inner sequences
+        ::com::sun::star::drawing::PointSequence* pOuterSequence = pSourcePolyPolygon->getArray();
+        bNoError = pOuterSequence != NULL;
+        if ( bNoError )
+        {
+            sal_uInt16 a, b, nInnerSequenceCount;
 
-			// dies wird ein Polygon set
-			for( a = 0; a < nOuterSequenceCount; a++ )
-			{
-				::com::sun::star::drawing::PointSequence* pInnerSequence = pOuterSequence++;
-				bNoError = pInnerSequence != NULL;
-				if ( bNoError )
-				{
-					// Zeiger auf Arrays holen
+            // this will be a polygon set
+            for( a = 0; a < nOuterSequenceCount; a++ )
+            {
+                ::com::sun::star::drawing::PointSequence* pInnerSequence = pOuterSequence++;
+                bNoError = pInnerSequence != NULL;
+                if ( bNoError )
+                {
+                    // get pointer to arrays
                     ::com::sun::star::awt::Point* pArray =
                           pInnerSequence->getArray();
-					if ( pArray != NULL )
-					{
-						nInnerSequenceCount = (sal_uInt16)pInnerSequence->getLength();
-						aPolygon = Polygon( nInnerSequenceCount );
-						for( b = 0; b < nInnerSequenceCount; b++)
-						{
-							aPolygon[ b ] = Point( pArray->X, pArray->Y );
-							pArray++;
-						}
-						aPolyPolygon.Insert( aPolygon, POLYPOLY_APPEND );
-					}
-				}
-			}
-		}
-	}
-	else if ( rAny.getValueType() == ::getCppuType( ( const ::com::sun::star::drawing::PointSequence* ) 0 ) )
-	{
+                    if ( pArray != NULL )
+                    {
+                        nInnerSequenceCount = (sal_uInt16)pInnerSequence->getLength();
+                        aPolygon = Polygon( nInnerSequenceCount );
+                        for( b = 0; b < nInnerSequenceCount; b++)
+                        {
+                            aPolygon[ b ] = Point( pArray->X, pArray->Y );
+                            pArray++;
+                        }
+                        aPolyPolygon.Insert( aPolygon, POLYPOLY_APPEND );
+                    }
+                }
+            }
+        }
+    }
+    else if ( rAny.getValueType() == ::getCppuType( ( const ::com::sun::star::drawing::PointSequence* ) 0 ) )
+    {
         ::com::sun::star::drawing::PointSequence* pInnerSequence =
-			(::com::sun::star::drawing::PointSequence*)rAny.getValue();
+            (::com::sun::star::drawing::PointSequence*)rAny.getValue();
 
-		bNoError = pInnerSequence != NULL;
-		if ( bNoError )
-		{
-			sal_uInt16 a, nInnerSequenceCount;
+        bNoError = pInnerSequence != NULL;
+        if ( bNoError )
+        {
+            sal_uInt16 a, nInnerSequenceCount;
 
-			// Zeiger auf Arrays holen
-			::com::sun::star::awt::Point* pArray = pInnerSequence->getArray();
-			if ( pArray != NULL )
-			{
-				nInnerSequenceCount = (sal_uInt16)pInnerSequence->getLength();
-				aPolygon = Polygon( nInnerSequenceCount );
-				for( a = 0; a < nInnerSequenceCount; a++)
-				{
-					aPolygon[ a ] = Point( pArray->X, pArray->Y );
-					pArray++;
-				}
-				aPolyPolygon.Insert( aPolygon, POLYPOLY_APPEND );
-			}
-		}
-	}
-	return aPolyPolygon;
+            // get pointer to arrays
+            ::com::sun::star::awt::Point* pArray = pInnerSequence->getArray();
+            if ( pArray != NULL )
+            {
+                nInnerSequenceCount = (sal_uInt16)pInnerSequence->getLength();
+                aPolygon = Polygon( nInnerSequenceCount );
+                for( a = 0; a < nInnerSequenceCount; a++)
+                {
+                    aPolygon[ a ] = Point( pArray->X, pArray->Y );
+                    pArray++;
+                }
+                aPolyPolygon.Insert( aPolygon, POLYPOLY_APPEND );
+            }
+        }
+    }
+    else if ( rAny.getValueType() == ::getCppuType( ( const uno::Sequence< beans::PropertyValue >* ) 0 ) )
+    {
+        uno::Sequence< beans::PropertyValue >* pGeometrySeq =
+            (uno::Sequence< beans::PropertyValue >*)rAny.getValue();
+
+        if ( pGeometrySeq )
+        {
+            for( int i = 0; i < pGeometrySeq->getLength(); ++i )
+            {
+                const beans::PropertyValue& rProp = (*pGeometrySeq)[ i ];
+                if ( rProp.Name == "Path" )
+                {
+                    uno::Sequence<beans::PropertyValue> aPathProp;
+                    rProp.Value >>= aPathProp;
+
+                    uno::Sequence<drawing::EnhancedCustomShapeParameterPair> aPairs;
+                    uno::Sequence<drawing::EnhancedCustomShapeSegment> aSegments;
+                    for (int j = 0; j < aPathProp.getLength(); ++j )
+                    {
+                        const beans::PropertyValue& rPathProp = aPathProp[j];
+                        if (rPathProp.Name == "Coordinates")
+                            rPathProp.Value >>= aPairs;
+                        else if (rPathProp.Name == "Segments")
+                            rPathProp.Value >>= aSegments;
+                    }
+
+                    aPolygon = Polygon( aPairs.getLength() );
+                    for( int j = 0; j < aPairs.getLength(); ++j )
+                    {
+                        aPolygon[j] = Point( aPairs[j].First.Value.get<sal_Int32>(), aPairs[j].Second.Value.get<sal_Int32>() );
+                    }
+
+                    int nPointIndex = 0;
+                    for( int j = 0; j < aSegments.getLength(); ++j )
+                    {
+                        for ( int k = 0; k < aSegments[j].Count; ++k )
+                        {
+                            switch( aSegments[ j ].Command )
+                            {
+                                case drawing::EnhancedCustomShapeSegmentCommand::UNKNOWN: break;
+                                case drawing::EnhancedCustomShapeSegmentCommand::MOVETO :
+                                case drawing::EnhancedCustomShapeSegmentCommand::LINETO :
+                                    nPointIndex++;
+                                    break;
+                                case drawing::EnhancedCustomShapeSegmentCommand::CURVETO :
+                                {
+                                    aPolygon.SetFlags( nPointIndex, POLY_CONTROL);
+                                    aPolygon.SetFlags( nPointIndex+1, POLY_CONTROL);
+                                    aPolygon.SetFlags( nPointIndex+2, POLY_NORMAL);
+                                    nPointIndex += 3;
+                                    break;
+                                }
+                                case drawing::EnhancedCustomShapeSegmentCommand::CLOSESUBPATH :
+                                case drawing::EnhancedCustomShapeSegmentCommand::ENDSUBPATH :
+                                case drawing::EnhancedCustomShapeSegmentCommand::NOFILL :
+                                case drawing::EnhancedCustomShapeSegmentCommand::NOSTROKE :
+                                    break;
+                                case drawing::EnhancedCustomShapeSegmentCommand::ANGLEELLIPSETO :
+                                case drawing::EnhancedCustomShapeSegmentCommand::ANGLEELLIPSE :
+                                    nPointIndex += 3;
+                                    break;
+                                case drawing::EnhancedCustomShapeSegmentCommand::ARCTO :
+                                case drawing::EnhancedCustomShapeSegmentCommand::ARC :
+                                case drawing::EnhancedCustomShapeSegmentCommand::CLOCKWISEARCTO :
+                                case drawing::EnhancedCustomShapeSegmentCommand::CLOCKWISEARC :
+                                    nPointIndex += 4;
+                                    break;
+                                case drawing::EnhancedCustomShapeSegmentCommand::ELLIPTICALQUADRANTX :
+                                case drawing::EnhancedCustomShapeSegmentCommand::ELLIPTICALQUADRANTY :
+                                    nPointIndex++;
+                                    break;
+                                case drawing::EnhancedCustomShapeSegmentCommand::QUADRATICCURVETO :
+                                case drawing::EnhancedCustomShapeSegmentCommand::ARCANGLETO :
+                                    nPointIndex += 2;
+                                    break;
+                                case drawing::EnhancedCustomShapeSegmentCommand::DARKEN :
+                                case drawing::EnhancedCustomShapeSegmentCommand::DARKENLESS :
+                                case drawing::EnhancedCustomShapeSegmentCommand::LIGHTEN :
+                                case drawing::EnhancedCustomShapeSegmentCommand::LIGHTENLESS :
+                                    break;
+                            }
+                        }
+                    }
+                    aPolyPolygon.Insert( aPolygon, POLYPOLY_APPEND );
+                }
+            }
+        }
+    }
+    return aPolyPolygon;
 }
 
-sal_Bool EscherPropertyContainer::CreatePolygonProperties(
-	const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet,
-		sal_uInt32 nFlags,
-			sal_Bool bBezier,
-				::com::sun::star::awt::Rectangle& rGeoRect,
-					Polygon* pPolygon )
+bool EscherPropertyContainer::CreatePolygonProperties(
+    const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet,
+          sal_uInt32 nFlags,
+          bool bBezier,
+          ::com::sun::star::awt::Rectangle& rGeoRect,
+          Polygon* pPolygon )
 {
-	static String sPolyPolygonBezier( RTL_CONSTASCII_USTRINGPARAM( "PolyPolygonBezier" ) );
-	static String sPolyPolygon		( RTL_CONSTASCII_USTRINGPARAM( "PolyPolygon" ) );
+    static const char sPolyPolygonBezier [] = "PolyPolygonBezier";
+    static const char sPolyPolygon       [] = "PolyPolygon";
 
-	sal_Bool	bRetValue = sal_True;
-	sal_Bool	bLine = ( nFlags & ESCHER_CREATEPOLYGON_LINE ) != 0;
+    bool    bRetValue = true;
+    bool    bLine = ( nFlags & ESCHER_CREATEPOLYGON_LINE ) != 0;
 
-    PolyPolygon aPolyPolygon;
+    tools::PolyPolygon aPolyPolygon;
 
     if ( pPolygon )
         aPolyPolygon.Insert( *pPolygon, POLYPOLY_APPEND );
     else
     {
-		::com::sun::star::uno::Any aAny;
-		bRetValue = EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet,
-						( bBezier ) ? sPolyPolygonBezier : sPolyPolygon, sal_True );
-		if ( bRetValue )
-		{
-			aPolyPolygon = GetPolyPolygon( aAny );
-			bRetValue = aPolyPolygon.Count() != 0;
-		}
+        ::com::sun::star::uno::Any aAny;
+        bRetValue = EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet,
+                        ( bBezier ) ? OUString(sPolyPolygonBezier) : OUString(sPolyPolygon), true );
+        if ( bRetValue )
+        {
+            aPolyPolygon = GetPolyPolygon( aAny );
+            bRetValue = aPolyPolygon.Count() != 0;
+        }
     }
-	if ( bRetValue )
-	{
-		if ( bLine )
-		{
-			if ( ( aPolyPolygon.Count() == 1 ) && ( aPolyPolygon[ 0 ].GetSize() == 2 ) )
-			{
-				const Polygon& rPoly = aPolyPolygon[ 0 ];
-				rGeoRect = ::com::sun::star::awt::Rectangle(
-					rPoly[ 0 ].X(),
-						rPoly[ 0 ].Y(),
-							rPoly[ 1 ].X() - rPoly[ 0 ].X(),
-								rPoly[ 1 ].Y() - rPoly[ 0 ].Y() );
-			}
-			else
-				bRetValue = sal_False;
-		}
-		else
-		{
-			Polygon aPolygon;
+    if ( bRetValue )
+    {
+        if ( bLine )
+        {
+            if ( ( aPolyPolygon.Count() == 1 ) && ( aPolyPolygon[ 0 ].GetSize() == 2 ) )
+            {
+                const Polygon& rPoly = aPolyPolygon[ 0 ];
+                rGeoRect = ::com::sun::star::awt::Rectangle(
+                    rPoly[ 0 ].X(),
+                        rPoly[ 0 ].Y(),
+                            rPoly[ 1 ].X() - rPoly[ 0 ].X(),
+                                rPoly[ 1 ].Y() - rPoly[ 0 ].Y() );
+            }
+            else
+                bRetValue = false;
+        }
+        else
+        {
+            Polygon aPolygon;
 
-			sal_uInt16 i, j, k, nPoints, nBezPoints, nPolyCount = aPolyPolygon.Count();
-			Rectangle aRect( aPolyPolygon.GetBoundRect() );
-			rGeoRect = ::com::sun::star::awt::Rectangle( aRect.Left(), aRect.Top(), aRect.GetWidth(), aRect.GetHeight() );
+            sal_uInt16 nPolyCount = aPolyPolygon.Count();
+            sal_uInt32 nTotalPoints(0), nTotalBezPoints(0);
+            Rectangle aRect( aPolyPolygon.GetBoundRect() );
+            rGeoRect = ::com::sun::star::awt::Rectangle( aRect.Left(), aRect.Top(), aRect.GetWidth(), aRect.GetHeight() );
 
-			for ( nBezPoints = nPoints = i = 0; i < nPolyCount; i++ )
-			{
-				k = aPolyPolygon[ i ].GetSize();
-				nPoints = nPoints + k;
-				for ( j = 0; j < k; j++ )
-				{
-					if ( aPolyPolygon[ i ].GetFlags( j ) != POLY_CONTROL )
-						nBezPoints++;
-				}
-			}
-			sal_uInt32 nVerticesBufSize = ( nPoints << 2 ) + 6;
-			sal_uInt8* pVerticesBuf = new sal_uInt8[ nVerticesBufSize ];
+            for (sal_uInt16 i = 0; i < nPolyCount; ++i)
+            {
+                sal_uInt16 k = aPolyPolygon[ i ].GetSize();
+                nTotalPoints += k;
+                for (sal_uInt16 j = 0; j < k; ++j)
+                {
+                    if ( aPolyPolygon[ i ].GetFlags( j ) != POLY_CONTROL )
+                        nTotalBezPoints++;
+                }
+            }
+            sal_uInt32 nVerticesBufSize = ( nTotalPoints << 2 ) + 6;
+            sal_uInt8* pVerticesBuf = new sal_uInt8[ nVerticesBufSize ];
 
 
-			sal_uInt32 nSegmentBufSize = ( ( nBezPoints << 2 ) + 8 );
-			if ( nPolyCount > 1 )
-				nSegmentBufSize += ( nPolyCount << 1 );
-			sal_uInt8* pSegmentBuf = new sal_uInt8[ nSegmentBufSize ];
+            sal_uInt32 nSegmentBufSize = ( ( nTotalBezPoints << 2 ) + 8 );
+            if ( nPolyCount > 1 )
+                nSegmentBufSize += ( nPolyCount << 1 );
+            sal_uInt8* pSegmentBuf = new sal_uInt8[ nSegmentBufSize ];
 
-			sal_uInt8* pPtr = pVerticesBuf;
-			*pPtr++ = (sal_uInt8)( nPoints );                    // Little endian
-			*pPtr++ = (sal_uInt8)( nPoints >> 8 );
-			*pPtr++ = (sal_uInt8)( nPoints );
-			*pPtr++ = (sal_uInt8)( nPoints >> 8 );
-			*pPtr++ = (sal_uInt8)0xf0;
-			*pPtr++ = (sal_uInt8)0xff;
+            sal_uInt8* pPtr = pVerticesBuf;
+            *pPtr++ = (sal_uInt8)( nTotalPoints );                    // Little endian
+            *pPtr++ = (sal_uInt8)( nTotalPoints >> 8 );
+            *pPtr++ = (sal_uInt8)( nTotalPoints );
+            *pPtr++ = (sal_uInt8)( nTotalPoints >> 8 );
+            *pPtr++ = (sal_uInt8)0xf0;
+            *pPtr++ = (sal_uInt8)0xff;
 
-			for ( j = 0; j < nPolyCount; j++ )
-			{
-				aPolygon = aPolyPolygon[ j ];
-				nPoints = aPolygon.GetSize();
-				for ( i = 0; i < nPoints; i++ )             // Punkte aus Polygon in Buffer schreiben
-				{
-					Point aPoint = aPolygon[ i ];
-					aPoint.X() -= rGeoRect.X;
-					aPoint.Y() -= rGeoRect.Y;
+            for (sal_uInt16 j = 0; j < nPolyCount; ++j)
+            {
+                aPolygon = aPolyPolygon[ j ];
+                sal_uInt16 nPoints = aPolygon.GetSize();
+                for (sal_uInt16 i = 0; i < nPoints; ++i)             // write points from polygon to buffer
+                {
+                    Point aPoint = aPolygon[ i ];
+                    aPoint.X() -= rGeoRect.X;
+                    aPoint.Y() -= rGeoRect.Y;
 
-					*pPtr++ = (sal_uInt8)( aPoint.X() );
-					*pPtr++ = (sal_uInt8)( aPoint.X() >> 8 );
-					*pPtr++ = (sal_uInt8)( aPoint.Y() );
-					*pPtr++ = (sal_uInt8)( aPoint.Y() >> 8 );
-				}
-			}
+                    *pPtr++ = (sal_uInt8)( aPoint.X() );
+                    *pPtr++ = (sal_uInt8)( aPoint.X() >> 8 );
+                    *pPtr++ = (sal_uInt8)( aPoint.Y() );
+                    *pPtr++ = (sal_uInt8)( aPoint.Y() >> 8 );
+                }
+            }
 
-			pPtr = pSegmentBuf;
-			*pPtr++ = (sal_uInt8)( ( nSegmentBufSize - 6 ) >> 1 );
-			*pPtr++ = (sal_uInt8)( ( nSegmentBufSize - 6 ) >> 9 );
-			*pPtr++ = (sal_uInt8)( ( nSegmentBufSize - 6 ) >> 1 );
-			*pPtr++ = (sal_uInt8)( ( nSegmentBufSize - 6 ) >> 9 );
-			*pPtr++ = (sal_uInt8)2;
-			*pPtr++ = (sal_uInt8)0;
+            pPtr = pSegmentBuf;
+            *pPtr++ = (sal_uInt8)( ( nSegmentBufSize - 6 ) >> 1 );
+            *pPtr++ = (sal_uInt8)( ( nSegmentBufSize - 6 ) >> 9 );
+            *pPtr++ = (sal_uInt8)( ( nSegmentBufSize - 6 ) >> 1 );
+            *pPtr++ = (sal_uInt8)( ( nSegmentBufSize - 6 ) >> 9 );
+            *pPtr++ = (sal_uInt8)2;
+            *pPtr++ = (sal_uInt8)0;
 
-			for ( j = 0; j < nPolyCount; j++ )
-			{
-				*pPtr++ = 0x0;          // Polygon start
-				*pPtr++ = 0x40;
-				aPolygon = aPolyPolygon[ j ];
-				nPoints = aPolygon.GetSize();
-				for ( i = 0; i < nPoints; i++ )         // Polyflags in Buffer schreiben
-				{
-					*pPtr++ = 0;
-					if ( bBezier )
-						*pPtr++ = 0xb3;
-					else
-						*pPtr++ = 0xac;
-					if ( ( i + 1 ) != nPoints )
-					{
-						*pPtr++ = 1;
-						if ( aPolygon.GetFlags( i + 1 ) == POLY_CONTROL )
-						{
-							*pPtr++ = 0x20;
-							i += 2;
-						}
-						else
-							*pPtr++ = 0;
-					}
-				}
-				if ( nPolyCount > 1 )
-				{
-					*pPtr++ = 1;                        // end of polygon
-					*pPtr++ = 0x60;
-				}
-			}
-			*pPtr++ = 0;
-			*pPtr++ = 0x80;
+            for (sal_uInt16 j = 0; j < nPolyCount; ++j)
+            {
+                *pPtr++ = 0x0;          // Polygon start
+                *pPtr++ = 0x40;
+                aPolygon = aPolyPolygon[ j ];
+                sal_uInt16 nPoints = aPolygon.GetSize();
+                for (sal_uInt16 i = 0; i < nPoints; ++i)         // write Polyflags to Buffer
+                {
+                    *pPtr++ = 0;
+                    if ( bBezier )
+                        *pPtr++ = 0xb3;
+                    else
+                        *pPtr++ = 0xac;
+                    if ( ( i + 1 ) != nPoints )
+                    {
+                        *pPtr++ = 1;
+                        if ( aPolygon.GetFlags( i + 1 ) == POLY_CONTROL )
+                        {
+                            *pPtr++ = 0x20;
+                            i += 2;
+                        }
+                        else
+                            *pPtr++ = 0;
+                    }
+                }
+                if ( nPolyCount > 1 )
+                {
+                    *pPtr++ = 1;                        // end of polygon
+                    *pPtr++ = 0x60;
+                }
+            }
+            *pPtr++ = 0;
+            *pPtr++ = 0x80;
 
-			AddOpt( ESCHER_Prop_geoRight, rGeoRect.Width );
-			AddOpt( ESCHER_Prop_geoBottom, rGeoRect.Height );
+            AddOpt( ESCHER_Prop_geoRight, rGeoRect.Width );
+            AddOpt( ESCHER_Prop_geoBottom, rGeoRect.Height );
 
-			AddOpt( ESCHER_Prop_shapePath, ESCHER_ShapeComplex );
-			AddOpt( ESCHER_Prop_pVertices, sal_True, nVerticesBufSize - 6, (sal_uInt8*)pVerticesBuf, nVerticesBufSize );
-			AddOpt( ESCHER_Prop_pSegmentInfo, sal_True, nSegmentBufSize, (sal_uInt8*)pSegmentBuf, nSegmentBufSize );
-		}
-	}
-	return bRetValue;
+            AddOpt( ESCHER_Prop_shapePath, ESCHER_ShapeComplex );
+            AddOpt( ESCHER_Prop_pVertices, true, nVerticesBufSize - 6, (sal_uInt8*)pVerticesBuf, nVerticesBufSize );
+            AddOpt( ESCHER_Prop_pSegmentInfo, true, nSegmentBufSize, (sal_uInt8*)pSegmentBuf, nSegmentBufSize );
+        }
+    }
+    return bRetValue;
 }
 
 
@@ -2131,527 +2181,508 @@ when save as MS file, the connector must be convert to corresponding type.
 "standard" <->  "bentConnector2-5"
 "curve" <-> "curvedConnector2-5"
 */
-sal_Int32 lcl_GetAdjustValueCount( const XPolygon& rPoly ) 
+sal_Int32 lcl_GetAdjustValueCount( const XPolygon& rPoly )
 {
-	int nRet = 0;
-	switch (  rPoly.GetSize() )
-	{
-	case 2 :
-	case 3:
-		nRet =  0;
-		break;
-	case 4:
-		nRet = 1;
-		break;
-	case 5:
-		nRet = 2;
-		break;
-	default:
-		if ( rPoly.GetSize()>=6 )
-			nRet = 3;
-		break;
-	}
-	return nRet;
+    int nRet = 0;
+    switch (  rPoly.GetSize() )
+    {
+    case 2 :
+    case 3:
+        nRet =  0;
+        break;
+    case 4:
+        nRet = 1;
+        break;
+    case 5:
+        nRet = 2;
+        break;
+    default:
+        if ( rPoly.GetSize()>=6 )
+            nRet = 3;
+        break;
+    }
+    return nRet;
 }
-/*
- Adjust value decide the position which connector should turn a corner
-*/
+
+// Adjust value decide the position which connector should turn a corner
 sal_Int32 lcl_GetConnectorAdjustValue ( const XPolygon& rPoly, sal_uInt16 nIndex )
 {
-	sal_uInt16 k =  rPoly.GetSize();
-	OSL_ASSERT ( k >= ( 3 + nIndex ) );
+    sal_uInt16 k =  rPoly.GetSize();
+    OSL_ASSERT ( k >= ( 3 + nIndex ) );
 
-	Point aPt;
-	Point aStart = rPoly[0];
-	Point aEnd = rPoly[k-1];
-	if ( aEnd.Y() == aStart.Y() ) 
-		aEnd.Y() = aStart.Y() +4;
-	if ( aEnd.X() == aStart.X() )
-		aEnd.X() = aStart.X() +4;
+    Point aPt;
+    Point aStart = rPoly[0];
+    Point aEnd = rPoly[k-1];
+    if ( aEnd.Y() == aStart.Y() )
+        aEnd.Y() = aStart.Y() +4;
+    if ( aEnd.X() == aStart.X() )
+        aEnd.X() = aStart.X() +4;
 
-	sal_Bool bVertical = ( rPoly[1].X()-aStart.X() ) == 0 ;
-	//vertical and horizon alternate  
-	if ( nIndex%2 == 1 ) bVertical = !bVertical;
-	aPt = rPoly[ nIndex + 1];
+    bool bVertical = ( rPoly[1].X()-aStart.X() ) == 0 ;
+    // vertical and horizon alternate
+    if ( nIndex%2 == 1 ) bVertical = !bVertical;
+    aPt = rPoly[ nIndex + 1];
 
-	sal_Int32 nAdjustValue;
-	if ( bVertical ) 
-		nAdjustValue = ( aPt.Y()-aStart.Y())* 21600 /(aEnd.Y()-aStart.Y());
-	else
-		nAdjustValue = ( aPt.X()-aStart.X() )* 21600 /(aEnd.X()-aStart.X());
+    sal_Int32 nAdjustValue;
+    if ( bVertical )
+        nAdjustValue = ( aPt.Y()-aStart.Y())* 21600 /(aEnd.Y()-aStart.Y());
+    else
+        nAdjustValue = ( aPt.X()-aStart.X() )* 21600 /(aEnd.X()-aStart.X());
 
-	return nAdjustValue;
+    return nAdjustValue;
 }
 
 
 void lcl_Rotate(sal_Int32 nAngle, Point center, Point& pt)
 {
-	while ( nAngle<0)
-		nAngle +=36000;
-	while (nAngle>=36000)
-		nAngle -=36000;
+    while ( nAngle<0)
+        nAngle +=36000;
+    while (nAngle>=36000)
+        nAngle -=36000;
 
-	int cs, sn;
-	switch (nAngle)
-	{
-	case 0:
-		cs =1;
-		sn =0;
-		break;
-	case 9000:
-		cs =0;
-		sn =1;
-		break;
-	case 18000:
-		cs = -1;
-		sn = 0;
-		break;
-	case 27000:
-		cs = 0;
-		sn = -1;
-		break;
-	default:
-		return;
-		break;
-	}
-	sal_Int32 x0 =pt.X()-center.X();
-	sal_Int32 y0 =pt.Y()-center.Y();
-	pt.X()=center.X()+ x0*cs-y0*sn;
-	pt.Y()=center.Y()+ y0*cs+x0*sn;
+    int cs, sn;
+    switch (nAngle)
+    {
+    case 0:
+        cs =1;
+        sn =0;
+        break;
+    case 9000:
+        cs =0;
+        sn =1;
+        break;
+    case 18000:
+        cs = -1;
+        sn = 0;
+        break;
+    case 27000:
+        cs = 0;
+        sn = -1;
+        break;
+    default:
+        return;
+        break;
+    }
+    sal_Int32 x0 =pt.X()-center.X();
+    sal_Int32 y0 =pt.Y()-center.Y();
+    pt.X()=center.X()+ x0*cs-y0*sn;
+    pt.Y()=center.Y()+ y0*cs+x0*sn;
 }
 /*
  FlipV defines that the shape will be flipped vertically about the center of its bounding box.
 Generally, draw the connector from top to bottom, from left to right when meet the adjust value,
 but when (X1>X2 or Y1>Y2),the draw director must be reverse, FlipV or FlipH should be set to true.
 */
-sal_Bool lcl_GetAngle(Polygon &rPoly,sal_uInt16& rShapeFlags,sal_Int32& nAngle )
+bool lcl_GetAngle(Polygon &rPoly,sal_uInt16& rShapeFlags,sal_Int32& nAngle )
 {
-	Point aStart = rPoly[0];
-	Point aEnd = rPoly[rPoly.GetSize()-1];
-	nAngle = ( rPoly[1].X() == aStart.X() ) ? 9000: 0 ;
-	Point p1(aStart.X(),aStart.Y());
-	Point p2(aEnd.X(),aEnd.Y());
-	if ( nAngle )
-	{
-		Point center((aEnd.X()+aStart.X())>>1,(aEnd.Y()+aStart.Y())>>1);
-		lcl_Rotate(-nAngle, center,p1);	
-		lcl_Rotate(-nAngle, center,p2);
-	}
-	if (  p1.X() > p2.X() )
-	{
-		if ( nAngle )
-			rShapeFlags |= SHAPEFLAG_FLIPV;
-		else 
-			rShapeFlags |= SHAPEFLAG_FLIPH;
+    Point aStart = rPoly[0];
+    Point aEnd = rPoly[rPoly.GetSize()-1];
+    nAngle = ( rPoly[1].X() == aStart.X() ) ? 9000: 0 ;
+    Point p1(aStart.X(),aStart.Y());
+    Point p2(aEnd.X(),aEnd.Y());
+    if ( nAngle )
+    {
+        Point center((aEnd.X()+aStart.X())>>1,(aEnd.Y()+aStart.Y())>>1);
+        lcl_Rotate(-nAngle, center,p1);
+        lcl_Rotate(-nAngle, center,p2);
+    }
+    if (  p1.X() > p2.X() )
+    {
+        if ( nAngle )
+            rShapeFlags |= SHAPEFLAG_FLIPV;
+        else
+            rShapeFlags |= SHAPEFLAG_FLIPH;
 
-	}
-	if (  p1.Y() > p2.Y()  )
-	{
-		if ( nAngle )
-			rShapeFlags |= SHAPEFLAG_FLIPH;
-		else 
-			rShapeFlags |= SHAPEFLAG_FLIPV;
-	}
+    }
+    if (  p1.Y() > p2.Y()  )
+    {
+        if ( nAngle )
+            rShapeFlags |= SHAPEFLAG_FLIPH;
+        else
+            rShapeFlags |= SHAPEFLAG_FLIPV;
+    }
 
-	if ( (rShapeFlags&SHAPEFLAG_FLIPH) && (rShapeFlags&SHAPEFLAG_FLIPV) )
-	{
-		rShapeFlags  &= ~( SHAPEFLAG_FLIPH | SHAPEFLAG_FLIPV );
-		nAngle +=18000;
-	}
+    if ( (rShapeFlags&SHAPEFLAG_FLIPH) && (rShapeFlags&SHAPEFLAG_FLIPV) )
+    {
+        rShapeFlags  &= ~( SHAPEFLAG_FLIPH | SHAPEFLAG_FLIPV );
+        nAngle +=18000;
+    }
 
-	if ( nAngle )
-	{
-		// Set angle properties
-		nAngle *= 655;
-		nAngle += 0x8000;
-		nAngle &=~0xffff;                                  // nAngle auf volle Gradzahl runden
-		return sal_True;
-	}
-	return sal_False;
+    if ( nAngle )
+    {
+        // Set angle properties
+        nAngle *= 655;
+        nAngle += 0x8000;
+        nAngle &=~0xffff;                                  // round nAngle to whole number of degrees
+        return true;
+    }
+    return false;
 }
-sal_Bool EscherPropertyContainer::CreateConnectorProperties(
-	const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rXShape,
-	EscherSolverContainer& rSolverContainer, ::com::sun::star::awt::Rectangle& rGeoRect,
-			sal_uInt16& rShapeType, sal_uInt16& rShapeFlags )
+bool EscherPropertyContainer::CreateConnectorProperties(
+    const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rXShape,
+    EscherSolverContainer& rSolverContainer, ::com::sun::star::awt::Rectangle& rGeoRect,
+            sal_uInt16& rShapeType, sal_uInt16& rShapeFlags )
 {
-	static String sEdgeKind				( RTL_CONSTASCII_USTRINGPARAM( "EdgeKind" ) );
-	static String sEdgeStartPoint		( RTL_CONSTASCII_USTRINGPARAM( "EdgeStartPoint" ) );
-	static String sEdgeEndPoint			( RTL_CONSTASCII_USTRINGPARAM( "EdgeEndPoint" ) );
-	static String sEdgeStartConnection	( RTL_CONSTASCII_USTRINGPARAM( "EdgeStartConnection" ) );
-	static String sEdgeEndConnection	( RTL_CONSTASCII_USTRINGPARAM( "EdgeEndConnection" ) );
-	static String sEdgePath	            ( RTL_CONSTASCII_USTRINGPARAM( "PolyPolygonBezier") );
-	sal_Bool bRetValue = sal_False;
-	rShapeType = rShapeFlags = 0;
+    static const char sEdgeKind            [] = "EdgeKind";
+    static const char sEdgeStartPoint      [] = "EdgeStartPoint";
+    static const char sEdgeEndPoint        [] = "EdgeEndPoint";
+    static const char sEdgeStartConnection [] = "EdgeStartConnection";
+    static const char sEdgeEndConnection   [] = "EdgeEndConnection";
+    static const char sEdgePath            [] = "PolyPolygonBezier";
 
-	if ( rXShape.is() )
-	{
-		::com::sun::star::awt::Point aStartPoint, aEndPoint;
-		::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > aXPropSet;
-		::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > aShapeA, aShapeB;
-		::com::sun::star::uno::Any aAny( rXShape->queryInterface( ::getCppuType( (const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet >*) 0 ) ));
-		if ( aAny >>= aXPropSet )
-		{
-			if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sEdgeKind, sal_True ) )
-			{
-				::com::sun::star::drawing::ConnectorType eCt;
-				aAny >>= eCt;
-				if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sEdgeStartPoint ) )
-				{
-					aStartPoint = *(::com::sun::star::awt::Point*)aAny.getValue();
-					if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sEdgeEndPoint ) )
-					{
-						aEndPoint = *(::com::sun::star::awt::Point*)aAny.getValue();
+    bool bRetValue = false;
+    rShapeType = rShapeFlags = 0;
 
-						rShapeFlags = SHAPEFLAG_HAVEANCHOR | SHAPEFLAG_HAVESPT | SHAPEFLAG_CONNECTOR;
-						rGeoRect = ::com::sun::star::awt::Rectangle( aStartPoint.X, aStartPoint.Y,
-															( aEndPoint.X - aStartPoint.X ) + 1, ( aEndPoint.Y - aStartPoint.Y ) + 1 );
-						//set standard's FLIP in below code
-						if ( eCt != ::com::sun::star::drawing::ConnectorType_STANDARD)
-						{
-							if ( rGeoRect.Height < 0 )			// justify
-							{
-								rShapeFlags |= SHAPEFLAG_FLIPV;
-								rGeoRect.Y = aEndPoint.Y;
-								rGeoRect.Height = -rGeoRect.Height;
-							}
-							if ( rGeoRect.Width < 0 )
-							{
-								rShapeFlags |= SHAPEFLAG_FLIPH;
-								rGeoRect.X = aEndPoint.X;
-								rGeoRect.Width = -rGeoRect.Width;
-							}
-						}
-						sal_uInt32 nAdjustValue1, nAdjustValue2, nAdjustValue3;
-						nAdjustValue1 = nAdjustValue2 = nAdjustValue3 = 0x2a30;
-
-						if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sEdgeStartConnection ) )
-							aAny >>= aShapeA;
-						if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sEdgeEndConnection ) )
-							aAny >>= aShapeB;
-/*
-						if ( ImplGetPropertyValue( String( RTL_CONSTASCII_USTRINGPARAM( "EdgeLine1Delta" ) ) ) )
-						{
-						}
-						if ( ImplGetPropertyValue( String( RTL_CONSTASCII_USTRINGPARAM( "EdgeLine2Delta" ) ) ) )
-						{
-						}
-						if ( ImplGetPropertyValue( String( RTL_CONSTASCII_USTRINGPARAM( "EdgeLine3Delta" ) ) ) )
-						{
-						}
-						if ( ImplGetPropertyValue( String( RTL_CONSTASCII_USTRINGPARAM( "EdgeNode1HorzDist" ) ) ) )
-						{
-						}
-						if ( ImplGetPropertyValue( String( RTL_CONSTASCII_USTRINGPARAM( "EdgeNode1VertDist" ) ) ) )
-						{
-						}
-						if ( ImplGetPropertyValue( String( RTL_CONSTASCII_USTRINGPARAM( "EdgeNode2HorzDist" ) ) ) )
-						{
-						}
-						if ( ImplGetPropertyValue( String( RTL_CONSTASCII_USTRINGPARAM( "EdgeNode2VertDist" ) ) ) )
-						{
-						}
-*/
-						rSolverContainer.AddConnector( rXShape, aStartPoint, aShapeA, aEndPoint, aShapeB );
-						switch ( eCt )
-						{
-							case ::com::sun::star::drawing::ConnectorType_CURVE :
-							{
-								rShapeType = ESCHER_ShpInst_CurvedConnector3;
-								AddOpt( ESCHER_Prop_cxstyle, ESCHER_cxstyleCurved );
-								AddOpt( ESCHER_Prop_adjustValue, nAdjustValue1 );
-								AddOpt( ESCHER_Prop_adjust2Value, -(sal_Int32)nAdjustValue2 );
-							}
-							break;
-
-							case ::com::sun::star::drawing::ConnectorType_STANDARD :// Connector 2->5
-								{
-									if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sEdgePath ) )
-									{
-										PolyPolygon aPolyPolygon = GetPolyPolygon( aAny );
-										Polygon aPoly;
-										if ( aPolyPolygon.Count() > 0 )
-										{
-											AddOpt( ESCHER_Prop_cxstyle, ESCHER_cxstyleBent );
-											aPoly = aPolyPolygon[ 0 ];
-											sal_Int32 nAdjCount = lcl_GetAdjustValueCount( aPoly );
-											rShapeType = ( sal_uInt16 )( ESCHER_ShpInst_BentConnector2 + nAdjCount);	
-											for ( sal_Int32 i = 0 ; i < nAdjCount; ++ i) 
-												AddOpt( (sal_uInt16) ( ESCHER_Prop_adjustValue+i) , lcl_GetConnectorAdjustValue( aPoly, i ) );
-											bRetValue = sal_True; 
-										}
-										sal_Int32 nAngle=0;
-										if (lcl_GetAngle(aPoly,rShapeFlags,nAngle ))
-										{
-											AddOpt( ESCHER_Prop_Rotation, nAngle );
-										}
-									}
-									else 
-									{
-										rShapeType = ESCHER_ShpInst_BentConnector3;
-										AddOpt( ESCHER_Prop_cxstyle, ESCHER_cxstyleBent );
-									}
-								}
-								break;
-							default:
-							case ::com::sun::star::drawing::ConnectorType_LINE :
-							case ::com::sun::star::drawing::ConnectorType_LINES :	// Connector 2->5
-							{
-								rShapeType = ESCHER_ShpInst_StraightConnector1;
-								AddOpt( ESCHER_Prop_cxstyle, ESCHER_cxstyleStraight );
-							}
-							break;
-						}
-						CreateLineProperties( aXPropSet, sal_False );
-						bRetValue = sal_True;
-					}
-				}
-			}
-		}
-	}
-	return bRetValue;
-}
-
-sal_Bool EscherPropertyContainer::CreateShadowProperties(
-	const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet )
-{
-	::com::sun::star::uno::Any aAny;
-
-	sal_Bool	bHasShadow = sal_False;	// shadow is possible only if at least a fillcolor, linecolor or graphic is set
-	sal_uInt32	nLineFlags = 0;			// default : shape has no line
-	sal_uInt32	nFillFlags = 0x10;		//			 shape is filled
-
-	GetOpt( ESCHER_Prop_fNoLineDrawDash, nLineFlags );
-	GetOpt( ESCHER_Prop_fNoFillHitTest, nFillFlags );
-
-	sal_uInt32 nDummy;
-	sal_Bool bGraphic = GetOpt( DFF_Prop_pib, nDummy ) || GetOpt( DFF_Prop_pibName, nDummy ) || GetOpt( DFF_Prop_pibFlags, nDummy );
-
-	sal_uInt32 nShadowFlags = 0x20000;
-	if ( ( nLineFlags & 8 ) || ( nFillFlags & 0x10 ) || bGraphic )
-	{
-		if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet,
-				String( RTL_CONSTASCII_USTRINGPARAM( "Shadow" ) ), sal_True ) )
-		{
-			if ( aAny >>= bHasShadow )
+    if ( rXShape.is() )
+    {
+        ::com::sun::star::awt::Point aStartPoint, aEndPoint;
+        ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > aXPropSet;
+        ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > aShapeA, aShapeB;
+        ::com::sun::star::uno::Any aAny( rXShape->queryInterface( cppu::UnoType<com::sun::star::beans::XPropertySet>::get()));
+        if ( aAny >>= aXPropSet )
+        {
+            if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sEdgeKind, true ) )
             {
-				if ( bHasShadow )
-				{
-					nShadowFlags |= 2;
-					if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet,
-							String( RTL_CONSTASCII_USTRINGPARAM( "ShadowColor" ) ), sal_False ) )
-						AddOpt( ESCHER_Prop_shadowColor, ImplGetColor( *((sal_uInt32*)aAny.getValue()) ) );
-					if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet,
-							String( RTL_CONSTASCII_USTRINGPARAM( "ShadowXDistance" ) ), sal_False ) )
-						AddOpt( ESCHER_Prop_shadowOffsetX, *((sal_Int32*)aAny.getValue()) * 360 );
-					if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet,
-							String( RTL_CONSTASCII_USTRINGPARAM( "ShadowYDistance" ) ), sal_False ) )
-						AddOpt( ESCHER_Prop_shadowOffsetY, *((sal_Int32*)aAny.getValue()) * 360 );
-					if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet,
-							String( RTL_CONSTASCII_USTRINGPARAM( "ShadowTransparence" ) ), sal_False ) )
-						AddOpt( ESCHER_Prop_shadowOpacity,  0x10000 - (((sal_uInt32)*((sal_uInt16*)aAny.getValue())) * 655 ) );
-				}
+                ::com::sun::star::drawing::ConnectorType eCt;
+                aAny >>= eCt;
+                if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sEdgeStartPoint ) )
+                {
+                    aStartPoint = *(::com::sun::star::awt::Point*)aAny.getValue();
+                    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sEdgeEndPoint ) )
+                    {
+                        aEndPoint = *(::com::sun::star::awt::Point*)aAny.getValue();
+
+                        rShapeFlags = SHAPEFLAG_HAVEANCHOR | SHAPEFLAG_HAVESPT | SHAPEFLAG_CONNECTOR;
+                        rGeoRect = ::com::sun::star::awt::Rectangle( aStartPoint.X, aStartPoint.Y,
+                                                            ( aEndPoint.X - aStartPoint.X ) + 1, ( aEndPoint.Y - aStartPoint.Y ) + 1 );
+                        // set standard's FLIP in below code
+                        if ( eCt != ::com::sun::star::drawing::ConnectorType_STANDARD)
+                        {
+                            if ( rGeoRect.Height < 0 )          // justify
+                            {
+                                rShapeFlags |= SHAPEFLAG_FLIPV;
+                                rGeoRect.Y = aEndPoint.Y;
+                                rGeoRect.Height = -rGeoRect.Height;
+                            }
+                            if ( rGeoRect.Width < 0 )
+                            {
+                                rShapeFlags |= SHAPEFLAG_FLIPH;
+                                rGeoRect.X = aEndPoint.X;
+                                rGeoRect.Width = -rGeoRect.Width;
+                            }
+                        }
+                        sal_uInt32 nAdjustValue1, nAdjustValue2, nAdjustValue3;
+                        nAdjustValue1 = nAdjustValue2 = nAdjustValue3 = 0x2a30;
+
+                        if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sEdgeStartConnection ) )
+                            aAny >>= aShapeA;
+                        if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sEdgeEndConnection ) )
+                            aAny >>= aShapeB;
+                        rSolverContainer.AddConnector( rXShape, aStartPoint, aShapeA, aEndPoint, aShapeB );
+                        switch ( eCt )
+                        {
+                            case ::com::sun::star::drawing::ConnectorType_CURVE :
+                            {
+                                rShapeType = ESCHER_ShpInst_CurvedConnector3;
+                                AddOpt( ESCHER_Prop_cxstyle, ESCHER_cxstyleCurved );
+                                AddOpt( ESCHER_Prop_adjustValue, nAdjustValue1 );
+                                AddOpt( ESCHER_Prop_adjust2Value, -(sal_Int32)nAdjustValue2 );
+                            }
+                            break;
+
+                            case ::com::sun::star::drawing::ConnectorType_STANDARD :// Connector 2->5
+                                {
+                                    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, sEdgePath ) )
+                                    {
+                                        tools::PolyPolygon aPolyPolygon = GetPolyPolygon( aAny );
+                                        Polygon aPoly;
+                                        if ( aPolyPolygon.Count() > 0 )
+                                        {
+                                            AddOpt( ESCHER_Prop_cxstyle, ESCHER_cxstyleBent );
+                                            aPoly = aPolyPolygon[ 0 ];
+                                            sal_Int32 nAdjCount = lcl_GetAdjustValueCount( aPoly );
+                                            rShapeType = ( sal_uInt16 )( ESCHER_ShpInst_BentConnector2 + nAdjCount);
+                                            for ( sal_Int32 i = 0 ; i < nAdjCount; ++ i)
+                                                AddOpt( (sal_uInt16) ( ESCHER_Prop_adjustValue+i) , lcl_GetConnectorAdjustValue( aPoly, i ) );
+                                            bRetValue = true;
+                                        }
+                                        sal_Int32 nAngle=0;
+                                        if (lcl_GetAngle(aPoly,rShapeFlags,nAngle ))
+                                        {
+                                            AddOpt( ESCHER_Prop_Rotation, nAngle );
+                                        }
+                                    }
+                                    else
+                                    {
+                                        rShapeType = ESCHER_ShpInst_BentConnector3;
+                                        AddOpt( ESCHER_Prop_cxstyle, ESCHER_cxstyleBent );
+                                    }
+                                }
+                                break;
+                            default:
+                            case ::com::sun::star::drawing::ConnectorType_LINE :
+                            case ::com::sun::star::drawing::ConnectorType_LINES :   // Connector 2->5
+                            {
+                                rShapeType = ESCHER_ShpInst_StraightConnector1;
+                                AddOpt( ESCHER_Prop_cxstyle, ESCHER_cxstyleStraight );
+                            }
+                            break;
+                        }
+                        CreateLineProperties( aXPropSet, false );
+                        bRetValue = true;
+                    }
+                }
             }
         }
-	}
-	AddOpt( ESCHER_Prop_fshadowObscured, nShadowFlags );
-	return bHasShadow;
+    }
+    return bRetValue;
 }
 
-// ---------------------------------------------------------------------------------------------
-
-sal_Int32 EscherPropertyContainer::GetValueForEnhancedCustomShapeParameter( const ::com::sun::star::drawing::EnhancedCustomShapeParameter& rParameter, 
-								const std::vector< sal_Int32 >& rEquationOrder, sal_Bool bAdjustTrans )
+bool EscherPropertyContainer::CreateShadowProperties(
+    const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet )
 {
-	sal_Int32 nValue = 0;
-	if ( rParameter.Value.getValueTypeClass() == uno::TypeClass_DOUBLE )
-	{
-		double fValue;
-		if ( rParameter.Value >>= fValue )
-			nValue = (sal_Int32)fValue;
-	}
-	else
-		rParameter.Value >>= nValue;
+    ::com::sun::star::uno::Any aAny;
 
-	switch( rParameter.Type )
-	{
-		case com::sun::star::drawing::EnhancedCustomShapeParameterType::EQUATION :
-		{
-			OSL_ASSERT((sal_uInt32)nValue < rEquationOrder.size());
-			if ( (sal_uInt32)nValue < rEquationOrder.size() )
-			{
-				nValue = (sal_uInt16)rEquationOrder[ nValue ];
-				nValue |= (sal_uInt32)0x80000000;
-			}
-		}
-		break;
-		case com::sun::star::drawing::EnhancedCustomShapeParameterType::ADJUSTMENT:
-		{
-			if(bAdjustTrans)
-			{
-				sal_uInt32 nAdjustValue = 0;
-				sal_Bool bGot = GetOpt((sal_uInt16)( DFF_Prop_adjustValue + nValue ), nAdjustValue);
-				if(bGot) nValue = (sal_Int32)nAdjustValue;
-			}
-		}
-		break;
-		case com::sun::star::drawing::EnhancedCustomShapeParameterType::NORMAL :
-		default: 
-		break;
+    bool    bHasShadow = false; // shadow is possible only if at least a fillcolor, linecolor or graphic is set
+    sal_uInt32  nLineFlags = 0;         // default : shape has no line
+    sal_uInt32  nFillFlags = 0x10;      //           shape is filled
+
+    GetOpt( ESCHER_Prop_fNoLineDrawDash, nLineFlags );
+    GetOpt( ESCHER_Prop_fNoFillHitTest, nFillFlags );
+
+    sal_uInt32 nDummy;
+    bool bGraphic = GetOpt( DFF_Prop_pib, nDummy ) || GetOpt( DFF_Prop_pibName, nDummy ) || GetOpt( DFF_Prop_pibFlags, nDummy );
+
+    sal_uInt32 nShadowFlags = 0x20000;
+    if ( ( nLineFlags & 8 ) || ( nFillFlags & 0x10 ) || bGraphic )
+    {
+        if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "Shadow" ), true ) )
+        {
+            if ( aAny >>= bHasShadow )
+            {
+                if ( bHasShadow )
+                {
+                    nShadowFlags |= 2;
+                    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "ShadowColor" ), false ) )
+                        AddOpt( ESCHER_Prop_shadowColor, ImplGetColor( *((sal_uInt32*)aAny.getValue()) ) );
+                    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "ShadowXDistance" ), false ) )
+                        AddOpt( ESCHER_Prop_shadowOffsetX, *((sal_Int32*)aAny.getValue()) * 360 );
+                    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "ShadowYDistance" ), false ) )
+                        AddOpt( ESCHER_Prop_shadowOffsetY, *((sal_Int32*)aAny.getValue()) * 360 );
+                    if ( EscherPropertyValueHelper::GetPropertyValue( aAny, rXPropSet, OUString( "ShadowTransparence" ), false ) )
+                        AddOpt( ESCHER_Prop_shadowOpacity,  0x10000 - (((sal_uInt32)*((sal_uInt16*)aAny.getValue())) * 655 ) );
+                }
+            }
+        }
+    }
+    AddOpt( ESCHER_Prop_fshadowObscured, nShadowFlags );
+    return bHasShadow;
+}
+
+sal_Int32 EscherPropertyContainer::GetValueForEnhancedCustomShapeParameter( const ::com::sun::star::drawing::EnhancedCustomShapeParameter& rParameter,
+                                const std::vector< sal_Int32 >& rEquationOrder, bool bAdjustTrans )
+{
+    sal_Int32 nValue = 0;
+    if ( rParameter.Value.getValueTypeClass() == uno::TypeClass_DOUBLE )
+    {
+        double fValue(0.0);
+        if ( rParameter.Value >>= fValue )
+            nValue = (sal_Int32)fValue;
+    }
+    else
+        rParameter.Value >>= nValue;
+
+    switch( rParameter.Type )
+    {
+        case com::sun::star::drawing::EnhancedCustomShapeParameterType::EQUATION :
+        {
+            size_t nIndex = (size_t) nValue;
+            OSL_ASSERT(nIndex < rEquationOrder.size());
+            if ( nIndex < rEquationOrder.size() )
+            {
+                nValue = (sal_uInt16)rEquationOrder[ nIndex ];
+                nValue |= (sal_uInt32)0x80000000;
+            }
+        }
+        break;
+        case com::sun::star::drawing::EnhancedCustomShapeParameterType::ADJUSTMENT:
+        {
+            if(bAdjustTrans)
+            {
+                sal_uInt32 nAdjustValue = 0;
+                bool bGot = GetOpt((sal_uInt16)( DFF_Prop_adjustValue + nValue ), nAdjustValue);
+                if(bGot) nValue = (sal_Int32)nAdjustValue;
+            }
+        }
+        break;
+        case com::sun::star::drawing::EnhancedCustomShapeParameterType::NORMAL :
+        default:
+        break;
 /* not sure if it is allowed to set following values
 (but they are not yet used)
-		case com::sun::star::drawing::EnhancedCustomShapeParameterType::BOTTOM :
-		case com::sun::star::drawing::EnhancedCustomShapeParameterType::RIGHT :
-		case com::sun::star::drawing::EnhancedCustomShapeParameterType::TOP :
-		case com::sun::star::drawing::EnhancedCustomShapeParameterType::LEFT :
+        case com::sun::star::drawing::EnhancedCustomShapeParameterType::BOTTOM :
+        case com::sun::star::drawing::EnhancedCustomShapeParameterType::RIGHT :
+        case com::sun::star::drawing::EnhancedCustomShapeParameterType::TOP :
+        case com::sun::star::drawing::EnhancedCustomShapeParameterType::LEFT :
 */
-	}
-	return nValue;
+    }
+    return nValue;
 }
 
-sal_Bool GetValueForEnhancedCustomShapeHandleParameter( sal_Int32& nRetValue, const com::sun::star::drawing::EnhancedCustomShapeParameter& rParameter )
+bool GetValueForEnhancedCustomShapeHandleParameter( sal_Int32& nRetValue, const com::sun::star::drawing::EnhancedCustomShapeParameter& rParameter )
 {
-	sal_Bool bSpecial = sal_False;
-	nRetValue = 0;
-	if ( rParameter.Value.getValueTypeClass() == uno::TypeClass_DOUBLE )
-	{
-		double fValue;
-		if ( rParameter.Value >>= fValue )
-			nRetValue = (sal_Int32)fValue;
-	}
-	else
-		rParameter.Value >>= nRetValue;
+    bool bSpecial = false;
+    nRetValue = 0;
+    if ( rParameter.Value.getValueTypeClass() == uno::TypeClass_DOUBLE )
+    {
+        double fValue(0.0);
+        if ( rParameter.Value >>= fValue )
+            nRetValue = (sal_Int32)fValue;
+    }
+    else
+        rParameter.Value >>= nRetValue;
 
-	switch( rParameter.Type )
-	{
-		case com::sun::star::drawing::EnhancedCustomShapeParameterType::EQUATION :
-		{
-			nRetValue += 3;
-			bSpecial = sal_True;
-		}
-		break;
-		case com::sun::star::drawing::EnhancedCustomShapeParameterType::ADJUSTMENT :
-		{
-			nRetValue += 0x100;
-			bSpecial = sal_True;
-		}
-		break;
-		case com::sun::star::drawing::EnhancedCustomShapeParameterType::TOP :
-		case com::sun::star::drawing::EnhancedCustomShapeParameterType::LEFT :
-		{
-			nRetValue = 0;
-			bSpecial = sal_True;
-		}
-		break;
-		case com::sun::star::drawing::EnhancedCustomShapeParameterType::RIGHT :
-		case com::sun::star::drawing::EnhancedCustomShapeParameterType::BOTTOM :
-		{
-			nRetValue = 1;
-			bSpecial = sal_True;
-		}
-		break;
-		case com::sun::star::drawing::EnhancedCustomShapeParameterType::NORMAL :
-		{
+    switch( rParameter.Type )
+    {
+        case com::sun::star::drawing::EnhancedCustomShapeParameterType::EQUATION :
+        {
+            nRetValue += 3;
+            bSpecial = true;
+        }
+        break;
+        case com::sun::star::drawing::EnhancedCustomShapeParameterType::ADJUSTMENT :
+        {
+            nRetValue += 0x100;
+            bSpecial = true;
+        }
+        break;
+        case com::sun::star::drawing::EnhancedCustomShapeParameterType::TOP :
+        case com::sun::star::drawing::EnhancedCustomShapeParameterType::LEFT :
+        {
+            nRetValue = 0;
+            bSpecial = true;
+        }
+        break;
+        case com::sun::star::drawing::EnhancedCustomShapeParameterType::RIGHT :
+        case com::sun::star::drawing::EnhancedCustomShapeParameterType::BOTTOM :
+        {
+            nRetValue = 1;
+            bSpecial = true;
+        }
+        break;
+        case com::sun::star::drawing::EnhancedCustomShapeParameterType::NORMAL :
+        {
 
-		}
-		break;
-	}
-	return bSpecial;
+        }
+        break;
+    }
+    return bSpecial;
 }
 
 void ConvertEnhancedCustomShapeEquation( SdrObjCustomShape* pCustoShape,
-		std::vector< EnhancedCustomShapeEquation >& rEquations, std::vector< sal_Int32 >& rEquationOrder )
+        std::vector< EnhancedCustomShapeEquation >& rEquations, std::vector< sal_Int32 >& rEquationOrder )
 {
-	if ( pCustoShape )
-	{
-		uno::Sequence< rtl::OUString > sEquationSource;
-		const rtl::OUString	sEquations( RTL_CONSTASCII_USTRINGPARAM( "Equations" ) );
-		SdrCustomShapeGeometryItem& rGeometryItem = (SdrCustomShapeGeometryItem&)(const SdrCustomShapeGeometryItem&)
-			pCustoShape->GetMergedItem( SDRATTR_CUSTOMSHAPE_GEOMETRY );
-		const uno::Any* pAny = ((SdrCustomShapeGeometryItem&)rGeometryItem).GetPropertyValueByName( sEquations );
-		if ( pAny )
-			*pAny >>= sEquationSource;
-		sal_Int32 nEquationSourceCount = sEquationSource.getLength();
-		if ( nEquationSourceCount )
-		{
-			sal_Int32 i;
-			for ( i = 0; i < nEquationSourceCount; i++ )
-			{
-				EnhancedCustomShape2d aCustoShape2d( pCustoShape );
-				try
-				{
-					::boost::shared_ptr< EnhancedCustomShape::ExpressionNode > aExpressNode(
-						EnhancedCustomShape::FunctionParser::parseFunction( sEquationSource[ i ], aCustoShape2d ) );
-					com::sun::star::drawing::EnhancedCustomShapeParameter aPara( aExpressNode->fillNode( rEquations, NULL, 0 ) );
-					if ( aPara.Type != com::sun::star::drawing::EnhancedCustomShapeParameterType::EQUATION )
-					{
-						EnhancedCustomShapeEquation	aEquation;
-						aEquation.nOperation = 0;
-						EnhancedCustomShape::FillEquationParameter( aPara, 0, aEquation );
-						rEquations.push_back( aEquation );
-					}
-				}
-				catch ( EnhancedCustomShape::ParseError& )
-				{
-					EnhancedCustomShapeEquation	aEquation;		// ups, we should not be here,
-					aEquation.nOperation = 0;					// creating a default equation with value 1
-					aEquation.nPara[ 0 ] = 1;					// hoping that this will not break anything
-					rEquations.push_back( aEquation );
-				}
-				catch ( ... )
-				{
-					EnhancedCustomShapeEquation	aEquation;		// #i112309# EnhancedCustomShape::Parse error
-					aEquation.nOperation = 0;					// not catched on linux platform
-					aEquation.nPara[ 0 ] = 1;
-					rEquations.push_back( aEquation );
-				}
-				rEquationOrder.push_back( rEquations.size() - 1 );
-			}
-			// now updating our old equation indices, they are marked with a bit in the hiword of nOperation
-			std::vector< EnhancedCustomShapeEquation >::iterator aIter( rEquations.begin() );
-			std::vector< EnhancedCustomShapeEquation >::iterator aEnd ( rEquations.end() );
-			while( aIter != aEnd )
-			{
-				sal_Int32 nMask = 0x20000000;
-				for( i = 0; i < 3; i++ )
-				{
-					if ( aIter->nOperation & nMask )
-					{
-						aIter->nOperation ^= nMask;
-						aIter->nPara[ i ] = rEquationOrder[ aIter->nPara[ i ] & 0x3ff ] | 0x400;
-					}
-					nMask <<= 1;
-				}
-				aIter++;
-			}
-		}
-	}
-}
-
-sal_Bool EscherPropertyContainer::IsDefaultObject( SdrObjCustomShape* pCustoShape , const MSO_SPT eShapeType )
-{
-    sal_Bool bIsDefaultObject = sal_False;
-	switch(eShapeType)
-	{
-		//if the custom shape is not default shape of ppt, return sal_Fasle;
-		case mso_sptTearDrop:
-			return bIsDefaultObject;
-			
-		default:
-			break;
-	}
-	
     if ( pCustoShape )
     {
-	if (   pCustoShape->IsDefaultGeometry( SdrObjCustomShape::DEFAULT_EQUATIONS )
-	       && pCustoShape->IsDefaultGeometry( SdrObjCustomShape::DEFAULT_VIEWBOX )
-	       && pCustoShape->IsDefaultGeometry( SdrObjCustomShape::DEFAULT_PATH )
-	       && pCustoShape->IsDefaultGeometry( SdrObjCustomShape::DEFAULT_GLUEPOINTS )
-	       && pCustoShape->IsDefaultGeometry( SdrObjCustomShape::DEFAULT_SEGMENTS )
-	       && pCustoShape->IsDefaultGeometry( SdrObjCustomShape::DEFAULT_STRETCHX )
-	       && pCustoShape->IsDefaultGeometry( SdrObjCustomShape::DEFAULT_STRETCHY )
-//					&& pCustoShape->IsDefaultGeometry( SdrObjCustomShape::DEFAULT_HANDLES )
-	       && pCustoShape->IsDefaultGeometry( SdrObjCustomShape::DEFAULT_TEXTFRAMES ) )
-	    bIsDefaultObject = sal_True;
+        uno::Sequence< OUString > sEquationSource;
+        const OUString sEquations( "Equations"  );
+        const SdrCustomShapeGeometryItem& rGeometryItem = static_cast<const SdrCustomShapeGeometryItem&>(
+            pCustoShape->GetMergedItem( SDRATTR_CUSTOMSHAPE_GEOMETRY ));
+        const uno::Any* pAny = rGeometryItem.GetPropertyValueByName( sEquations );
+        if ( pAny )
+            *pAny >>= sEquationSource;
+        sal_Int32 nEquationSourceCount = sEquationSource.getLength();
+        if ( nEquationSourceCount && (nEquationSourceCount <= 128) )
+        {
+            sal_Int32 i;
+            for ( i = 0; i < nEquationSourceCount; i++ )
+            {
+                EnhancedCustomShape2d aCustoShape2d( pCustoShape );
+                try
+                {
+                    ::boost::shared_ptr< EnhancedCustomShape::ExpressionNode > aExpressNode(
+                        EnhancedCustomShape::FunctionParser::parseFunction( sEquationSource[ i ], aCustoShape2d ) );
+                    com::sun::star::drawing::EnhancedCustomShapeParameter aPara( aExpressNode->fillNode( rEquations, NULL, 0 ) );
+                    if ( aPara.Type != com::sun::star::drawing::EnhancedCustomShapeParameterType::EQUATION )
+                    {
+                        EnhancedCustomShapeEquation aEquation;
+                        aEquation.nOperation = 0;
+                        EnhancedCustomShape::FillEquationParameter( aPara, 0, aEquation );
+                        rEquations.push_back( aEquation );
+                    }
+                }
+                catch ( const EnhancedCustomShape::ParseError& )
+                {
+                    EnhancedCustomShapeEquation aEquation;      // ups, we should not be here,
+                    aEquation.nOperation = 0;                   // creating a default equation with value 1
+                    aEquation.nPara[ 0 ] = 1;                   // hoping that this will not break anything
+                    rEquations.push_back( aEquation );
+                }
+                catch ( ... )
+                {
+                    EnhancedCustomShapeEquation aEquation;      // #i112309# EnhancedCustomShape::Parse error
+                    aEquation.nOperation = 0;                   // not catched on linux platform
+                    aEquation.nPara[ 0 ] = 1;
+                    rEquations.push_back( aEquation );
+                }
+                rEquationOrder.push_back( rEquations.size() - 1 );
+            }
+            // now updating our old equation indices, they are marked with a bit in the hiword of nOperation
+            std::vector< EnhancedCustomShapeEquation >::iterator aIter( rEquations.begin() );
+            std::vector< EnhancedCustomShapeEquation >::iterator aEnd ( rEquations.end() );
+            while( aIter != aEnd )
+            {
+                sal_uInt32 nMask = 0x20000000;
+                for( i = 0; i < 3; i++ )
+                {
+                    if ( aIter->nOperation & nMask )
+                    {
+                        aIter->nOperation ^= nMask;
+                        const size_t nIndex(aIter->nPara[ i ] & 0x3ff);
+
+                        // #i124661# check index access, there are cases where this is out of bound leading
+                        // to errors up to crashes when executed
+                        if(nIndex < rEquationOrder.size())
+                        {
+                            aIter->nPara[ i ] = rEquationOrder[ nIndex ] | 0x400;
+                        }
+                        else
+                        {
+                            OSL_ENSURE(false, "Attempted out of bound access to rEquationOrder of CustomShape (!)");
+                        }
+                    }
+                    nMask <<= 1;
+                }
+                ++aIter;
+            }
+        }
+    }
+}
+
+bool EscherPropertyContainer::IsDefaultObject( SdrObjCustomShape* pCustoShape , const MSO_SPT eShapeType )
+{
+    bool bIsDefaultObject = false;
+    switch(eShapeType)
+    {
+        // if the custom shape is not default shape of ppt, return sal_Fasle;
+        case mso_sptTearDrop:
+            return bIsDefaultObject;
+
+        default:
+            break;
+    }
+
+    if ( pCustoShape )
+    {
+    if (   pCustoShape->IsDefaultGeometry( SdrObjCustomShape::DEFAULT_EQUATIONS )
+           && pCustoShape->IsDefaultGeometry( SdrObjCustomShape::DEFAULT_VIEWBOX )
+           && pCustoShape->IsDefaultGeometry( SdrObjCustomShape::DEFAULT_PATH )
+           && pCustoShape->IsDefaultGeometry( SdrObjCustomShape::DEFAULT_GLUEPOINTS )
+           && pCustoShape->IsDefaultGeometry( SdrObjCustomShape::DEFAULT_SEGMENTS )
+           && pCustoShape->IsDefaultGeometry( SdrObjCustomShape::DEFAULT_STRETCHX )
+           && pCustoShape->IsDefaultGeometry( SdrObjCustomShape::DEFAULT_STRETCHY )
+           && pCustoShape->IsDefaultGeometry( SdrObjCustomShape::DEFAULT_TEXTFRAMES ) )
+        bIsDefaultObject = true;
     }
 
     return bIsDefaultObject;
@@ -2662,1732 +2693,1694 @@ void EscherPropertyContainer::LookForPolarHandles( const MSO_SPT eShapeType, sal
     const mso_CustomShape* pDefCustomShape = GetCustomShapeContent( eShapeType );
     if ( pDefCustomShape && pDefCustomShape->nHandles && pDefCustomShape->pHandles )
     {
-	sal_Int32 k, nkCount = pDefCustomShape->nHandles;
-	const SvxMSDffHandle* pData = pDefCustomShape->pHandles;
-	for ( k = 0; k < nkCount; k++, pData++ )
-	{
-	    if ( pData->nFlags & MSDFF_HANDLE_FLAGS_POLAR )
-	    {
-		if ( ( pData->nPositionY >= 0x256 ) || ( pData->nPositionY <= 0x107 ) )
-		    nAdjustmentsWhichNeedsToBeConverted |= ( 1 << k );
-	    }
-	}
+    sal_Int32 k, nkCount = pDefCustomShape->nHandles;
+    const SvxMSDffHandle* pData = pDefCustomShape->pHandles;
+    for ( k = 0; k < nkCount; k++, pData++ )
+    {
+        if ( pData->nFlags & MSDFF_HANDLE_FLAGS_POLAR )
+        {
+        if ( ( pData->nPositionY >= 0x256 ) || ( pData->nPositionY <= 0x107 ) )
+            nAdjustmentsWhichNeedsToBeConverted |= ( 1 << k );
+        }
+    }
     }
 }
 
-sal_Bool EscherPropertyContainer::GetAdjustmentValue( const com::sun::star::drawing::EnhancedCustomShapeAdjustmentValue & rkProp, sal_Int32 nIndex, sal_Int32 nAdjustmentsWhichNeedsToBeConverted, sal_Int32& nValue )
+bool EscherPropertyContainer::GetAdjustmentValue( const com::sun::star::drawing::EnhancedCustomShapeAdjustmentValue & rkProp, sal_Int32 nIndex, sal_Int32 nAdjustmentsWhichNeedsToBeConverted, sal_Int32& nValue )
 {
     if ( rkProp.State != beans::PropertyState_DIRECT_VALUE )
-	return sal_False;
+        return false;
 
-    sal_Bool bUseFixedFloat = ( nAdjustmentsWhichNeedsToBeConverted & ( 1 << nIndex ) ) != 0;
+    bool bUseFixedFloat = ( nAdjustmentsWhichNeedsToBeConverted & ( 1 << nIndex ) ) != 0;
     if ( rkProp.Value.getValueTypeClass() == uno::TypeClass_DOUBLE )
     {
-	double fValue(0.0);
-	rkProp.Value >>= fValue;
-	if ( bUseFixedFloat )
-	    fValue *= 65536.0;
-	nValue = (sal_Int32)fValue;
+        double fValue(0.0);
+        rkProp.Value >>= fValue;
+        if ( bUseFixedFloat )
+            fValue *= 65536.0;
+        nValue = (sal_Int32)fValue;
     }
     else
     {
-	rkProp.Value >>= nValue;
-	if ( bUseFixedFloat )
-	    nValue <<= 16;
+        rkProp.Value >>= nValue;
+        if ( bUseFixedFloat )
+             nValue <<= 16;
     }
 
-    return sal_True;
+    return true;
 }
 
 void EscherPropertyContainer::CreateCustomShapeProperties( const MSO_SPT eShapeType, const uno::Reference< drawing::XShape > & rXShape )
 {
-	uno::Reference< beans::XPropertySet > aXPropSet( rXShape, uno::UNO_QUERY );
+    uno::Reference< beans::XPropertySet > aXPropSet( rXShape, uno::UNO_QUERY );
     if ( aXPropSet.is() )
     {
-		SdrObjCustomShape* pCustoShape = (SdrObjCustomShape*)GetSdrObjectFromXShape( rXShape );
-		if ( !pCustoShape ) return;
-		const rtl::OUString	sCustomShapeGeometry( RTL_CONSTASCII_USTRINGPARAM( "CustomShapeGeometry" ) );
-		uno::Any aGeoPropSet = aXPropSet->getPropertyValue( sCustomShapeGeometry );
-		uno::Sequence< beans::PropertyValue > aGeoPropSeq;
-		if ( aGeoPropSet >>= aGeoPropSeq )
-		{
-			const rtl::OUString	sViewBox			( RTL_CONSTASCII_USTRINGPARAM( "ViewBox" ) );
-			const rtl::OUString	sTextRotateAngle	( RTL_CONSTASCII_USTRINGPARAM( "TextRotateAngle" ) );
-			const rtl::OUString	sExtrusion			( RTL_CONSTASCII_USTRINGPARAM( "Extrusion" ) );
-			const rtl::OUString	sEquations			( RTL_CONSTASCII_USTRINGPARAM( "Equations" ) );
-			const rtl::OUString	sPath				( RTL_CONSTASCII_USTRINGPARAM( "Path" ) );
-			const rtl::OUString	sTextPath			( RTL_CONSTASCII_USTRINGPARAM( "TextPath" ) );
-			const rtl::OUString	sHandles			( RTL_CONSTASCII_USTRINGPARAM( "Handles" ) );
-			const rtl::OUString sAdjustmentValues	( RTL_CONSTASCII_USTRINGPARAM( "AdjustmentValues" ) );
+        SdrObjCustomShape* pCustoShape = static_cast<SdrObjCustomShape*>(GetSdrObjectFromXShape( rXShape ));
+        if ( !pCustoShape ) return;
+        const OUString sCustomShapeGeometry( "CustomShapeGeometry"  );
+        uno::Any aGeoPropSet = aXPropSet->getPropertyValue( sCustomShapeGeometry );
+        uno::Sequence< beans::PropertyValue > aGeoPropSeq;
+        if ( aGeoPropSet >>= aGeoPropSeq )
+        {
+            const OUString sViewBox            ( "ViewBox"  );
+            const OUString sTextRotateAngle    ( "TextRotateAngle"  );
+            const OUString sExtrusion          ( "Extrusion"  );
+            const OUString sEquations          ( "Equations"  );
+            const OUString sPath               ( "Path"  );
+            const OUString sTextPath           ( "TextPath"  );
+            const OUString sHandles            ( "Handles"  );
+            const OUString sAdjustmentValues   ( "AdjustmentValues"  );
 
-            bool bHasAdjustmentValuesProp = false;
+            bool bAdjustmentValuesProp = false;
             uno::Any aAdjustmentValuesProp;
-            bool bHasPathCoordinatesProp = false;
+            bool bPathCoordinatesProp = false;
             uno::Any aPathCoordinatesProp;
-			sal_Int32 nAdjustmentsWhichNeedsToBeConverted = 0;
-			uno::Sequence< beans::PropertyValues > aHandlesPropSeq;
-			sal_Bool bPredefinedHandlesUsed = sal_True;
-			sal_Bool bIsDefaultObject = IsDefaultObject( pCustoShape , eShapeType);
 
-			// convert property "Equations" into std::vector< EnhancedCustomShapeEquationEquation >
-			std::vector< EnhancedCustomShapeEquation >	aEquations;
-			std::vector< sal_Int32 >					aEquationOrder;
-			ConvertEnhancedCustomShapeEquation( pCustoShape, aEquations, aEquationOrder );
+            sal_Int32 nAdjustmentsWhichNeedsToBeConverted = 0;
+            uno::Sequence< beans::PropertyValues > aHandlesPropSeq;
+            bool bPredefinedHandlesUsed = true;
+            bool bIsDefaultObject = IsDefaultObject( pCustoShape , eShapeType);
 
-			sal_Int32 i, nCount = aGeoPropSeq.getLength();
-			for ( i = 0; i < nCount; i++ )
-			{
-				const beans::PropertyValue& rProp = aGeoPropSeq[ i ];
-				if ( rProp.Name.equals( sViewBox ) )
-				{
-					if ( !bIsDefaultObject )
-					{
-						awt::Rectangle aViewBox;
-						if ( rProp.Value >>= aViewBox )
-						{
-							AddOpt( DFF_Prop_geoLeft,  aViewBox.X );
-							AddOpt( DFF_Prop_geoTop,   aViewBox.Y );
-							AddOpt( DFF_Prop_geoRight, aViewBox.X + aViewBox.Width );
-							AddOpt( DFF_Prop_geoBottom,aViewBox.Y + aViewBox.Height );
-						}
-					}
-				}
-				else if ( rProp.Name.equals( sTextRotateAngle ) )
-				{
-					double f = 0, fTextRotateAngle;
-					if ( rProp.Value >>= f )
-					{
-						fTextRotateAngle = fmod( f, 360.0 );
-						if ( fTextRotateAngle < 0 )
-							fTextRotateAngle = 360 + fTextRotateAngle;
-						if ( ( fTextRotateAngle < 271.0 ) && ( fTextRotateAngle > 269.0 ) )
-					        AddOpt( DFF_Prop_cdirFont, mso_cdir90 );
-						else if ( ( fTextRotateAngle < 181.0 ) && ( fTextRotateAngle > 179.0 ) )
-							AddOpt( DFF_Prop_cdirFont, mso_cdir180 );
-						else if ( ( fTextRotateAngle < 91.0 ) && ( fTextRotateAngle > 79.0 ) )
-							AddOpt( DFF_Prop_cdirFont, mso_cdir270 );
-					}
-				}
-				else if ( rProp.Name.equals( sExtrusion ) )
-				{
-					uno::Sequence< beans::PropertyValue > aExtrusionPropSeq;
-					if ( rProp.Value >>= aExtrusionPropSeq )
-					{
-						sal_uInt32 nLightFaceFlagsOrg, nLightFaceFlags;
-						sal_uInt32 nFillHarshFlagsOrg, nFillHarshFlags;
-						nLightFaceFlagsOrg = nLightFaceFlags = 0x000001;
-						nFillHarshFlagsOrg = nFillHarshFlags = 0x00001e;
-						if ( GetOpt( DFF_Prop_fc3DLightFace, nLightFaceFlags ) )
-							nLightFaceFlagsOrg = nLightFaceFlags;
-						if ( GetOpt( DFF_Prop_fc3DFillHarsh, nFillHarshFlags ) )
-							nFillHarshFlagsOrg = nFillHarshFlags;
+            // convert property "Equations" into std::vector< EnhancedCustomShapeEquationEquation >
+            std::vector< EnhancedCustomShapeEquation >  aEquations;
+            std::vector< sal_Int32 >                    aEquationOrder;
+            ConvertEnhancedCustomShapeEquation( pCustoShape, aEquations, aEquationOrder );
 
-						sal_Int32 r, nrCount = aExtrusionPropSeq.getLength();
-						for ( r = 0; r < nrCount; r++ )
-						{
-							const beans::PropertyValue& rrProp = aExtrusionPropSeq[ r ];
-							const rtl::OUString	sExtrusionBrightness			( RTL_CONSTASCII_USTRINGPARAM( "Brightness" ) );
-							const rtl::OUString	sExtrusionDepth					( RTL_CONSTASCII_USTRINGPARAM( "Depth" ) );
-							const rtl::OUString	sExtrusionDiffusion				( RTL_CONSTASCII_USTRINGPARAM( "Diffusion" ) );
-							const rtl::OUString	sExtrusionNumberOfLineSegments	( RTL_CONSTASCII_USTRINGPARAM( "NumberOfLineSegments" ) );
-							const rtl::OUString	sExtrusionLightFace				( RTL_CONSTASCII_USTRINGPARAM( "LightFace" ) );
-							const rtl::OUString	sExtrusionFirstLightHarsh		( RTL_CONSTASCII_USTRINGPARAM( "FirstLightHarsh" ) );
-							const rtl::OUString	sExtrusionSecondLightHarsh		( RTL_CONSTASCII_USTRINGPARAM( "SecondLightHarsh" ) );
-							const rtl::OUString	sExtrusionFirstLightLevel		( RTL_CONSTASCII_USTRINGPARAM( "FirstLightLevel" ) );
-							const rtl::OUString	sExtrusionSecondLightLevel		( RTL_CONSTASCII_USTRINGPARAM( "SecondLightLevel" ) );
-							const rtl::OUString	sExtrusionFirstLightDirection	( RTL_CONSTASCII_USTRINGPARAM( "FirstLightDirection" ) );
-							const rtl::OUString	sExtrusionSecondLightDirection	( RTL_CONSTASCII_USTRINGPARAM( "SecondLightDirection" ) );
-							const rtl::OUString	sExtrusionMetal					( RTL_CONSTASCII_USTRINGPARAM( "Metal" ) );
-							const rtl::OUString	sExtrusionShadeMode				( RTL_CONSTASCII_USTRINGPARAM( "ShadeMode" ) );
-							const rtl::OUString	sExtrusionRotateAngle			( RTL_CONSTASCII_USTRINGPARAM( "RotateAngle" ) );
-							const rtl::OUString	sExtrusionRotationCenter		( RTL_CONSTASCII_USTRINGPARAM( "RotationCenter" ) );
-							const rtl::OUString	sExtrusionShininess				( RTL_CONSTASCII_USTRINGPARAM( "Shininess" ) );
-							const rtl::OUString	sExtrusionSkew					( RTL_CONSTASCII_USTRINGPARAM( "Skew" ) );
-							const rtl::OUString	sExtrusionSpecularity			( RTL_CONSTASCII_USTRINGPARAM( "Specularity" ) );
-							const rtl::OUString	sExtrusionProjectionMode		( RTL_CONSTASCII_USTRINGPARAM( "ProjectionMode" ) );
-							const rtl::OUString	sExtrusionViewPoint				( RTL_CONSTASCII_USTRINGPARAM( "ViewPoint" ) );
-							const rtl::OUString	sExtrusionOrigin				( RTL_CONSTASCII_USTRINGPARAM( "Origin" ) );
-							const rtl::OUString	sExtrusionColor					( RTL_CONSTASCII_USTRINGPARAM( "Color" ) );
+            sal_Int32 i, nCount = aGeoPropSeq.getLength();
+            for ( i = 0; i < nCount; i++ )
+            {
+                const beans::PropertyValue& rProp = aGeoPropSeq[ i ];
+                if ( rProp.Name.equals( sViewBox ) )
+                {
+                    if ( !bIsDefaultObject )
+                    {
+                        awt::Rectangle aViewBox;
+                        if ( rProp.Value >>= aViewBox )
+                        {
+                            AddOpt( DFF_Prop_geoLeft,  aViewBox.X );
+                            AddOpt( DFF_Prop_geoTop,   aViewBox.Y );
+                            AddOpt( DFF_Prop_geoRight, aViewBox.X + aViewBox.Width );
+                            AddOpt( DFF_Prop_geoBottom,aViewBox.Y + aViewBox.Height );
+                        }
+                    }
+                }
+                else if ( rProp.Name.equals( sTextRotateAngle ) )
+                {
+                    double f = 0;
+                    if ( rProp.Value >>= f )
+                    {
+                        double fTextRotateAngle = fmod( f, 360.0 );
+                        if ( fTextRotateAngle < 0 )
+                            fTextRotateAngle = 360 + fTextRotateAngle;
+                        if ( ( fTextRotateAngle < 271.0 ) && ( fTextRotateAngle > 269.0 ) )
+                            AddOpt( DFF_Prop_cdirFont, mso_cdir90 );
+                        else if ( ( fTextRotateAngle < 181.0 ) && ( fTextRotateAngle > 179.0 ) )
+                            AddOpt( DFF_Prop_cdirFont, mso_cdir180 );
+                        else if ( ( fTextRotateAngle < 91.0 ) && ( fTextRotateAngle > 79.0 ) )
+                            AddOpt( DFF_Prop_cdirFont, mso_cdir270 );
+                    }
+                }
+                else if ( rProp.Name.equals( sExtrusion ) )
+                {
+                    uno::Sequence< beans::PropertyValue > aExtrusionPropSeq;
+                    if ( rProp.Value >>= aExtrusionPropSeq )
+                    {
+                        sal_uInt32 nLightFaceFlagsOrg, nLightFaceFlags;
+                        sal_uInt32 nFillHarshFlagsOrg, nFillHarshFlags;
+                        nLightFaceFlagsOrg = nLightFaceFlags = 0x000001;
+                        nFillHarshFlagsOrg = nFillHarshFlags = 0x00001e;
+                        if ( GetOpt( DFF_Prop_fc3DLightFace, nLightFaceFlags ) )
+                            nLightFaceFlagsOrg = nLightFaceFlags;
+                        if ( GetOpt( DFF_Prop_fc3DFillHarsh, nFillHarshFlags ) )
+                            nFillHarshFlagsOrg = nFillHarshFlags;
 
-							if ( rrProp.Name.equals( sExtrusion ) )
-							{
-								sal_Bool bExtrusionOn = sal_Bool();
-								if ( rrProp.Value >>= bExtrusionOn )
-								{
-									nLightFaceFlags |= 0x80000;
-									if ( bExtrusionOn )
-										nLightFaceFlags |= 8;
-									else
-										nLightFaceFlags &=~8;
-								}
-							}
-							else if ( rrProp.Name.equals( sExtrusionBrightness ) )
-							{
-								double fExtrusionBrightness = 0;
-								if ( rrProp.Value >>= fExtrusionBrightness )
-									AddOpt( DFF_Prop_c3DAmbientIntensity, (sal_Int32)( fExtrusionBrightness * 655.36 ) );
-							}
-							else if ( rrProp.Name.equals( sExtrusionDepth ) )
-							{
-								double fDepth = 0;
-								double fFraction = 0;
-								com::sun::star::drawing::EnhancedCustomShapeParameterPair aDepthParaPair;
-								if ( ( rrProp.Value >>= aDepthParaPair ) && ( aDepthParaPair.First.Value >>= fDepth ) && ( aDepthParaPair.Second.Value >>= fFraction ) )
-								{
-									double fForeDepth = fDepth * fFraction;
-									double fBackDepth = fDepth - fForeDepth;
+                        sal_Int32 r, nrCount = aExtrusionPropSeq.getLength();
+                        for ( r = 0; r < nrCount; r++ )
+                        {
+                            const beans::PropertyValue& rrProp = aExtrusionPropSeq[ r ];
+                            const OUString sExtrusionBrightness            ( "Brightness"  );
+                            const OUString sExtrusionDepth                 ( "Depth"  );
+                            const OUString sExtrusionDiffusion             ( "Diffusion"  );
+                            const OUString sExtrusionNumberOfLineSegments  ( "NumberOfLineSegments"  );
+                            const OUString sExtrusionLightFace             ( "LightFace"  );
+                            const OUString sExtrusionFirstLightHarsh       ( "FirstLightHarsh"  );
+                            const OUString sExtrusionSecondLightHarsh      ( "SecondLightHarsh"  );
+                            const OUString sExtrusionFirstLightLevel       ( "FirstLightLevel"  );
+                            const OUString sExtrusionSecondLightLevel      ( "SecondLightLevel"  );
+                            const OUString sExtrusionFirstLightDirection   ( "FirstLightDirection"  );
+                            const OUString sExtrusionSecondLightDirection  ( "SecondLightDirection"  );
+                            const OUString sExtrusionMetal                 ( "Metal"  );
+                            const OUString sExtrusionShadeMode             ( "ShadeMode"  );
+                            const OUString sExtrusionRotateAngle           ( "RotateAngle"  );
+                            const OUString sExtrusionRotationCenter        ( "RotationCenter"  );
+                            const OUString sExtrusionShininess             ( "Shininess"  );
+                            const OUString sExtrusionSkew                  ( "Skew"  );
+                            const OUString sExtrusionSpecularity           ( "Specularity"  );
+                            const OUString sExtrusionProjectionMode        ( "ProjectionMode"  );
+                            const OUString sExtrusionViewPoint             ( "ViewPoint"  );
+                            const OUString sExtrusionOrigin                ( "Origin"  );
+                            const OUString sExtrusionColor                 ( "Color"  );
 
-									fBackDepth *= 360.0;
-									AddOpt( DFF_Prop_c3DExtrudeBackward, (sal_Int32)fBackDepth );
-
-									if ( fForeDepth != 0.0 )
-									{
-										fForeDepth *= 360.0;
-										AddOpt( DFF_Prop_c3DExtrudeForward, (sal_Int32)fForeDepth );
-									}
-								}
-							}
-							else if ( rrProp.Name.equals( sExtrusionDiffusion ) )
-							{
-								double fExtrusionDiffusion = 0;
-								if ( rrProp.Value >>= fExtrusionDiffusion )
-									AddOpt( DFF_Prop_c3DDiffuseAmt, (sal_Int32)( fExtrusionDiffusion * 655.36 ) );
-							}
-							else if ( rrProp.Name.equals( sExtrusionNumberOfLineSegments ) )
-							{
-								sal_Int32 nExtrusionNumberOfLineSegments = 0;
-								if ( rrProp.Value >>= nExtrusionNumberOfLineSegments )
-									AddOpt( DFF_Prop_c3DTolerance, nExtrusionNumberOfLineSegments );
-							}
-							else if ( rrProp.Name.equals( sExtrusionLightFace ) )
-							{
-								sal_Bool bExtrusionLightFace = sal_Bool();
-								if ( rrProp.Value >>= bExtrusionLightFace )
-								{
-									nLightFaceFlags |= 0x10000;
-									if ( bExtrusionLightFace )
-										nLightFaceFlags |= 1;
-									else
-										nLightFaceFlags &=~1;
-								}
-							}
-							else if ( rrProp.Name.equals( sExtrusionFirstLightHarsh ) )
-							{
-								sal_Bool bExtrusionFirstLightHarsh = sal_Bool();
-								if ( rrProp.Value >>= bExtrusionFirstLightHarsh )
-								{
-									nFillHarshFlags |= 0x20000;
-									if ( bExtrusionFirstLightHarsh )
-										nFillHarshFlags |= 2;
-									else
-										nFillHarshFlags &=~2;
-								}
-							}
-							else if ( rrProp.Name.equals( sExtrusionSecondLightHarsh ) )
-							{
-								sal_Bool bExtrusionSecondLightHarsh = sal_Bool();
-								if ( rrProp.Value >>= bExtrusionSecondLightHarsh )
-								{
-									nFillHarshFlags |= 0x10000;
-									if ( bExtrusionSecondLightHarsh )
-										nFillHarshFlags |= 1;
-									else
-										nFillHarshFlags &=~1;
-								}
-							}
-							else if ( rrProp.Name.equals( sExtrusionFirstLightLevel ) )
-							{
-								double fExtrusionFirstLightLevel = 0;
-								if ( rrProp.Value >>= fExtrusionFirstLightLevel )
-									AddOpt( DFF_Prop_c3DKeyIntensity, (sal_Int32)( fExtrusionFirstLightLevel * 655.36 ) );
-							}
-							else if ( rrProp.Name.equals( sExtrusionSecondLightLevel ) )
-							{
-								double fExtrusionSecondLightLevel = 0;
-								if ( rrProp.Value >>= fExtrusionSecondLightLevel )
-									AddOpt( DFF_Prop_c3DFillIntensity, (sal_Int32)( fExtrusionSecondLightLevel * 655.36 ) );
-							}
-							else if ( rrProp.Name.equals( sExtrusionFirstLightDirection ) )
-							{
-								drawing::Direction3D aExtrusionFirstLightDirection;
-								if ( rrProp.Value >>= aExtrusionFirstLightDirection )
-								{
-									AddOpt( DFF_Prop_c3DKeyX, (sal_Int32)aExtrusionFirstLightDirection.DirectionX  );
-									AddOpt( DFF_Prop_c3DKeyY, (sal_Int32)aExtrusionFirstLightDirection.DirectionY  );
-									AddOpt( DFF_Prop_c3DKeyZ, (sal_Int32)aExtrusionFirstLightDirection.DirectionZ  );
-								}
-							}
-							else if ( rrProp.Name.equals( sExtrusionSecondLightDirection ) )
-							{
-								drawing::Direction3D aExtrusionSecondLightPosition;
-								if ( rrProp.Value >>= aExtrusionSecondLightPosition )
-								{
-									AddOpt( DFF_Prop_c3DFillX, (sal_Int32)aExtrusionSecondLightPosition.DirectionX  );
-									AddOpt( DFF_Prop_c3DFillY, (sal_Int32)aExtrusionSecondLightPosition.DirectionY  );
-									AddOpt( DFF_Prop_c3DFillZ, (sal_Int32)aExtrusionSecondLightPosition.DirectionZ  );
-								}
-							}
-							else if ( rrProp.Name.equals( sExtrusionMetal ) )
-							{
-								sal_Bool bExtrusionMetal = sal_Bool();
-								if ( rrProp.Value >>= bExtrusionMetal )
-								{
-									nLightFaceFlags |= 0x40000;
-									if ( bExtrusionMetal )
-										nLightFaceFlags |= 4;
-									else
-										nLightFaceFlags &=~4;
-								}
-							}
-							else if ( rrProp.Name.equals( sExtrusionShadeMode ) )
-							{
-								drawing::ShadeMode eExtrusionShadeMode;
-								if ( rrProp.Value >>= eExtrusionShadeMode )
-								{
-									sal_uInt32 nRenderMode;
-									switch( eExtrusionShadeMode )
-									{
-										default:
-										case drawing::ShadeMode_FLAT :
-										case drawing::ShadeMode_PHONG :
-										case drawing::ShadeMode_SMOOTH :
-											nRenderMode = mso_FullRender;
-										break;
-										case drawing::ShadeMode_DRAFT :
-										{
-											nRenderMode = mso_Wireframe;
-										}
-										break;
-									}
-									AddOpt( DFF_Prop_c3DRenderMode, nRenderMode );
-								}
-							}
-							else if ( rrProp.Name.equals( sExtrusionRotateAngle ) )
-							{
-								double fExtrusionAngleX = 0;
-								double fExtrusionAngleY = 0;
-								com::sun::star::drawing::EnhancedCustomShapeParameterPair aRotateAnglePair;
-								if ( ( rrProp.Value >>= aRotateAnglePair ) && ( aRotateAnglePair.First.Value >>= fExtrusionAngleX ) && ( aRotateAnglePair.Second.Value >>= fExtrusionAngleY ) )
-								{
-									fExtrusionAngleX *= 65536;
-									fExtrusionAngleY *= 65536;
-									AddOpt( DFF_Prop_c3DXRotationAngle, (sal_Int32)fExtrusionAngleX );
-									AddOpt( DFF_Prop_c3DYRotationAngle, (sal_Int32)fExtrusionAngleY );
-								}
-							}
-							else if ( rrProp.Name.equals( sExtrusionRotationCenter ) )
-							{
-								drawing::Direction3D aExtrusionRotationCenter;
-								if ( rrProp.Value >>= aExtrusionRotationCenter )
-								{
-									AddOpt( DFF_Prop_c3DRotationCenterX, (sal_Int32)( aExtrusionRotationCenter.DirectionX * 360.0 ) );
-									AddOpt( DFF_Prop_c3DRotationCenterY, (sal_Int32)( aExtrusionRotationCenter.DirectionY * 360.0 ) );
-									AddOpt( DFF_Prop_c3DRotationCenterZ, (sal_Int32)( aExtrusionRotationCenter.DirectionZ * 360.0 ) );
-									nFillHarshFlags &=~8; // don't use AutoRotationCenter;
-								}
-							}
-							else if ( rrProp.Name.equals( sExtrusionShininess ) )
-							{
-								double fExtrusionShininess = 0;
-								if ( rrProp.Value >>= fExtrusionShininess )
-									AddOpt( DFF_Prop_c3DShininess, (sal_Int32)( fExtrusionShininess * 655.36 ) );
-							}
-							else if ( rrProp.Name.equals( sExtrusionSkew ) )
-							{
-								double fSkewAmount = 0;
-								double fSkewAngle = 0;
-								com::sun::star::drawing::EnhancedCustomShapeParameterPair aSkewParaPair;
-								if ( ( rrProp.Value >>= aSkewParaPair ) && ( aSkewParaPair.First.Value >>= fSkewAmount ) && ( aSkewParaPair.Second.Value >>= fSkewAngle ) )
-								{
-									AddOpt( DFF_Prop_c3DSkewAmount, (sal_Int32)fSkewAmount );
-									AddOpt( DFF_Prop_c3DSkewAngle, (sal_Int32)( fSkewAngle * 65536 ) );
-								}
-							}
-							else if ( rrProp.Name.equals( sExtrusionSpecularity ) )
-							{
-								double fExtrusionSpecularity = 0;
-								if ( rrProp.Value >>= fExtrusionSpecularity )
-									AddOpt( DFF_Prop_c3DSpecularAmt, (sal_Int32)( fExtrusionSpecularity * 1333 ) );
-							}
-							else if ( rrProp.Name.equals( sExtrusionProjectionMode ) )
-							{
-								drawing::ProjectionMode eExtrusionProjectionMode;
-								if ( rrProp.Value >>= eExtrusionProjectionMode )
-								{
-									nFillHarshFlags |= 0x40000;
-									if ( eExtrusionProjectionMode == drawing::ProjectionMode_PARALLEL )
-										nFillHarshFlags |= 4;
-									else
-										nFillHarshFlags &=~4;
-								}
-							}
-							else if ( rrProp.Name.equals( sExtrusionViewPoint ) )
-							{
-								drawing::Position3D aExtrusionViewPoint;
-								if ( rrProp.Value >>= aExtrusionViewPoint )
-								{
-									aExtrusionViewPoint.PositionX *= 360.0;
-									aExtrusionViewPoint.PositionY *= 360.0;
-									aExtrusionViewPoint.PositionZ *= 360.0;
-									AddOpt( DFF_Prop_c3DXViewpoint, (sal_Int32)aExtrusionViewPoint.PositionX  );
-									AddOpt( DFF_Prop_c3DYViewpoint, (sal_Int32)aExtrusionViewPoint.PositionY  );
-									AddOpt( DFF_Prop_c3DZViewpoint, (sal_Int32)aExtrusionViewPoint.PositionZ  );
-								}
-							}
-							else if ( rrProp.Name.equals( sExtrusionOrigin ) )
-							{
-								double fExtrusionOriginX = 0;
-								double fExtrusionOriginY = 0;
-								com::sun::star::drawing::EnhancedCustomShapeParameterPair aOriginPair;
-								if ( ( rrProp.Value >>= aOriginPair ) && ( aOriginPair.First.Value >>= fExtrusionOriginX ) && ( aOriginPair.Second.Value >>= fExtrusionOriginY ) )
-								{
-									AddOpt( DFF_Prop_c3DOriginX, (sal_Int32)( fExtrusionOriginX * 65536 ) );
-									AddOpt( DFF_Prop_c3DOriginY, (sal_Int32)( fExtrusionOriginY * 65536 ) );
-								}
-							}
-							else if ( rrProp.Name.equals( sExtrusionColor ) )
-							{
-								sal_Bool bExtrusionColor = sal_Bool();
-								if ( rrProp.Value >>= bExtrusionColor )
-								{
-									nLightFaceFlags |= 0x20000;
-									if ( bExtrusionColor )
-									{
-										nLightFaceFlags |= 2;
-										uno::Any aFillColor2;
-										if ( EscherPropertyValueHelper::GetPropertyValue( aFillColor2, aXPropSet,
-											String( RTL_CONSTASCII_USTRINGPARAM( "FillColor2" ) ), sal_True ) )
-										{
-											sal_uInt32 nFillColor = ImplGetColor( *((sal_uInt32*)aFillColor2.getValue()) );
-											AddOpt( DFF_Prop_c3DExtrusionColor, nFillColor );
-										}
-									}
-									else
-										nLightFaceFlags &=~2;
-								}
-							}
-						}
-						if ( nLightFaceFlags != nLightFaceFlagsOrg )
-							AddOpt( DFF_Prop_fc3DLightFace, nLightFaceFlags );
-						if ( nFillHarshFlags != nFillHarshFlagsOrg )
-							AddOpt( DFF_Prop_fc3DFillHarsh, nFillHarshFlags );
-					}
-				}
-				else if ( rProp.Name.equals( sEquations ) )
-				{
-					if ( !bIsDefaultObject )
-					{
-						sal_uInt16 nElements = (sal_uInt16)aEquations.size();
-						if ( nElements )
-						{
-							sal_uInt16 nElementSize = 8;
-							sal_uInt32 nStreamSize = nElementSize * nElements + 6;
-							SvMemoryStream aOut( nStreamSize );
-							aOut << nElements
-								<< nElements
-								<< nElementSize;
-
-							std::vector< EnhancedCustomShapeEquation >::const_iterator aIter( aEquations.begin() );
-							std::vector< EnhancedCustomShapeEquation >::const_iterator aEnd ( aEquations.end() );
-							while( aIter != aEnd )
-							{
-								aOut << (sal_uInt16)aIter->nOperation
-									 << (sal_Int16)aIter->nPara[ 0 ]
-									 << (sal_Int16)aIter->nPara[ 1 ]
-									 << (sal_Int16)aIter->nPara[ 2 ];
-								aIter++;
-							}
-							sal_uInt8* pBuf = new sal_uInt8[ nStreamSize ];
-							memcpy( pBuf, aOut.GetData(), nStreamSize );
-							AddOpt( DFF_Prop_pFormulas, sal_True, nStreamSize - 6, pBuf, nStreamSize );
-						}
-						else
-						{
-							sal_uInt8* pBuf = new sal_uInt8[ 1 ];
-							AddOpt( DFF_Prop_pFormulas, sal_True, 0, pBuf, 0 );
-						}
-					}
-				}
-				else if ( rProp.Name.equals( sPath ) )
-				{
-					uno::Sequence< beans::PropertyValue > aPathPropSeq;
-					if ( rProp.Value >>= aPathPropSeq )
-					{
-						sal_uInt32 nPathFlags, nPathFlagsOrg;
-						nPathFlagsOrg = nPathFlags = 0x39;
-						if ( GetOpt( DFF_Prop_fFillOK, nPathFlags ) )
-							nPathFlagsOrg = nPathFlags;
-
-						sal_Int32 r, nrCount = aPathPropSeq.getLength();
-						for ( r = 0; r < nrCount; r++ )
-						{
-							const beans::PropertyValue& rrProp = aPathPropSeq[ r ];
-							const rtl::OUString	sPathExtrusionAllowed				( RTL_CONSTASCII_USTRINGPARAM( "ExtrusionAllowed" ) );
-							const rtl::OUString	sPathConcentricGradientFillAllowed	( RTL_CONSTASCII_USTRINGPARAM( "ConcentricGradientFillAllowed" ) );
-							const rtl::OUString	sPathTextPathAllowed				( RTL_CONSTASCII_USTRINGPARAM( "TextPathAllowed" ) );
-							const rtl::OUString	sPathCoordinates					( RTL_CONSTASCII_USTRINGPARAM( "Coordinates" ) );
-							const rtl::OUString sPathGluePoints						( RTL_CONSTASCII_USTRINGPARAM( "GluePoints" ) );
-							const rtl::OUString sPathGluePointType					( RTL_CONSTASCII_USTRINGPARAM( "GluePointType" ) );
-							const rtl::OUString	sPathSegments						( RTL_CONSTASCII_USTRINGPARAM( "Segments" ) );
-							const rtl::OUString	sPathStretchX						( RTL_CONSTASCII_USTRINGPARAM( "StretchX" ) );
-							const rtl::OUString	sPathStretchY						( RTL_CONSTASCII_USTRINGPARAM( "StretchY" ) );
-							const rtl::OUString	sPathTextFrames						( RTL_CONSTASCII_USTRINGPARAM( "TextFrames" ) );
-
-							if ( rrProp.Name.equals( sPathExtrusionAllowed ) )
-							{
-								sal_Bool bExtrusionAllowed = sal_Bool();
-								if ( rrProp.Value >>= bExtrusionAllowed )
-								{
-									nPathFlags |= 0x100000;
-									if ( bExtrusionAllowed )
-										nPathFlags |= 16;
-									else
-										nPathFlags &=~16;
-								}
-							}
-							else if ( rrProp.Name.equals( sPathConcentricGradientFillAllowed ) )
-							{
-								sal_Bool bConcentricGradientFillAllowed = sal_Bool();
-								if ( rrProp.Value >>= bConcentricGradientFillAllowed )
-								{
-									nPathFlags |= 0x20000;
-									if ( bConcentricGradientFillAllowed )
-										nPathFlags |= 2;
-									else
-										nPathFlags &=~2;
-								}
-							}
-							else if ( rrProp.Name.equals( sPathTextPathAllowed ) )
-							{
-								sal_Bool bTextPathAllowed = sal_Bool();
-								if ( rrProp.Value >>= bTextPathAllowed )
-								{
-									nPathFlags |= 0x40000;
-									if ( bTextPathAllowed )
-										nPathFlags |= 4;
-									else
-										nPathFlags &=~4;
-								}
-							}
-							else if ( rrProp.Name.equals( sPathCoordinates ) )
-							{
-								if ( !bIsDefaultObject )
+                            if ( rrProp.Name.equals( sExtrusion ) )
+                            {
+                                bool bExtrusionOn;
+                                if ( rrProp.Value >>= bExtrusionOn )
                                 {
-									aPathCoordinatesProp = rrProp.Value;
-                                    bHasPathCoordinatesProp = true;
+                                    nLightFaceFlags |= 0x80000;
+                                    if ( bExtrusionOn )
+                                        nLightFaceFlags |= 8;
+                                    else
+                                        nLightFaceFlags &=~8;
                                 }
-							}
-							else if ( rrProp.Name.equals( sPathGluePoints ) )
-							{
-								if ( !bIsDefaultObject )
-								{
-									com::sun::star::uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeParameterPair> aGluePoints;
-									if ( rrProp.Value >>= aGluePoints )
-									{
-										// creating the vertices
-										sal_uInt16 nElements = (sal_uInt16)aGluePoints.getLength();
-										if ( nElements )
-										{
-											sal_uInt16 j, nElementSize = 8;
-											sal_uInt32 nStreamSize = nElementSize * nElements + 6;
-											SvMemoryStream aOut( nStreamSize );
-											aOut << nElements
-												<< nElements
-												<< nElementSize;
-											for( j = 0; j < nElements; j++ )
-											{
-												sal_Int32 X = GetValueForEnhancedCustomShapeParameter( aGluePoints[ j ].First, aEquationOrder );
-												sal_Int32 Y = GetValueForEnhancedCustomShapeParameter( aGluePoints[ j ].Second, aEquationOrder );
-												aOut << X
-													<< Y;
-											}
-											sal_uInt8* pBuf = new sal_uInt8[ nStreamSize ];
-											memcpy( pBuf, aOut.GetData(), nStreamSize );
-											AddOpt( DFF_Prop_connectorPoints, sal_True, nStreamSize - 6, pBuf, nStreamSize );	// -6
-										}
-										else
-										{
-											sal_uInt8* pBuf = new sal_uInt8[ 1 ];
-											AddOpt( DFF_Prop_connectorPoints, sal_True, 0, pBuf, 0 );
-										}
-									}
-								}
-							}
-							else if ( rrProp.Name.equals( sPathGluePointType ) )
-							{
-								sal_Int16 nGluePointType = sal_Int16();
-								if ( rrProp.Value >>= nGluePointType )
-									AddOpt( DFF_Prop_connectorType, (sal_uInt16)nGluePointType );
-							}
-							else if ( rrProp.Name.equals( sPathSegments ) )
-							{
-								if ( !bIsDefaultObject )
-								{
-									com::sun::star::uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeSegment > aSegments;
-									if ( rrProp.Value >>= aSegments )
-									{
-										// creating seginfo
-										if ( (sal_uInt16)aSegments.getLength() )
-										{
-											sal_uInt16 j, nElements = (sal_uInt16)aSegments.getLength();
-											sal_uInt16 nElementSize = 2;
-											sal_uInt32 nStreamSize = nElementSize * nElements + 6;
-											SvMemoryStream aOut( nStreamSize );
-											aOut << nElements
-												<< nElements
-												<< nElementSize;
-											for ( j = 0; j < nElements; j++ )
-											{
-												sal_uInt16 nVal = (sal_uInt16)aSegments[ j ].Count;
-												switch( aSegments[ j ].Command )
-												{
-													case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::UNKNOWN :
-													case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::LINETO : break;
-													case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::MOVETO :
-													{
-														nVal = 0x4000;
-													}
-													break;
-													case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::CURVETO :
-													{
-														nVal |= 0x2000;
-													}
-													break;
-													case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::CLOSESUBPATH :
-													{
-														nVal = 0x6001;
-													}
-													break;
-													case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::ENDSUBPATH :
-													{
-														nVal = 0x8000;
-													}
-													break;
-													case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::NOFILL :
-													{
-														nVal = 0xaa00;
-													}
-													break;
-													case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::NOSTROKE :
-													{
-														nVal = 0xab00;
-													}
-													break;
-													case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::ANGLEELLIPSETO :
-													{
-														nVal *= 3;
-														nVal |= 0xa100;
-													}
-													break;
-													case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::ANGLEELLIPSE :
-													{
-														nVal *= 3;
-														nVal |= 0xa200;
-													}
-													break;
-													case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::ARCTO :
-													{
-														nVal <<= 2;
-														nVal |= 0xa300;
-													}
-													break;
-													case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::ARC :
-													{
-														nVal <<= 2;
-														nVal |= 0xa400;
-													}
-													break;
-													case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::CLOCKWISEARCTO :
-													{
-														nVal <<= 2;
-														nVal |= 0xa500;
-													}
-													break;
-													case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::CLOCKWISEARC :
-													{
-														nVal <<= 2;
-														nVal |= 0xa600;
-													}
-													break;
-													case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::ELLIPTICALQUADRANTX :
-													{
-														nVal |= 0xa700;
-													}
-													break;
-													case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::ELLIPTICALQUADRANTY :
-													{
-														nVal |= 0xa800;
-													}
-													break;
-												}
-												aOut << nVal;
-											}
-											sal_uInt8* pBuf = new sal_uInt8[ nStreamSize ];
-											memcpy( pBuf, aOut.GetData(), nStreamSize );
-											AddOpt( DFF_Prop_pSegmentInfo, sal_False, nStreamSize - 6, pBuf, nStreamSize );
-										}
-										else
-										{
-											sal_uInt8* pBuf = new sal_uInt8[ 1 ];
-											AddOpt( DFF_Prop_pSegmentInfo, sal_True, 0, pBuf, 0 );
-										}
-									}
-								}
-							}
-							else if ( rrProp.Name.equals( sPathStretchX ) )
-							{
-								if ( !bIsDefaultObject )
-								{
-									sal_Int32 nStretchX = 0;
-									if ( rrProp.Value >>= nStretchX )
-										AddOpt( DFF_Prop_stretchPointX, nStretchX );
-								}
-							}
-							else if ( rrProp.Name.equals( sPathStretchY ) )
-							{
-								if ( !bIsDefaultObject )
-								{
-									sal_Int32 nStretchY = 0;
-									if ( rrProp.Value >>= nStretchY )
-										AddOpt( DFF_Prop_stretchPointY, nStretchY );
-								}
-							}
-							else if ( rrProp.Name.equals( sPathTextFrames ) )
-							{
-								if ( !bIsDefaultObject )
-								{
-									com::sun::star::uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeTextFrame > aPathTextFrames;
-									if ( rrProp.Value >>= aPathTextFrames )
-									{
-										if ( (sal_uInt16)aPathTextFrames.getLength() )
-										{
-											sal_uInt16 j, nElements = (sal_uInt16)aPathTextFrames.getLength();
-											sal_uInt16 nElementSize = 16;
-											sal_uInt32 nStreamSize = nElementSize * nElements + 6;
-											SvMemoryStream aOut( nStreamSize );
-											aOut << nElements
-												<< nElements
-												<< nElementSize;
-											for ( j = 0; j < nElements; j++ )
-											{
-												sal_Int32 nLeft = GetValueForEnhancedCustomShapeParameter( aPathTextFrames[ j ].TopLeft.First, aEquationOrder );
-												sal_Int32 nTop  = GetValueForEnhancedCustomShapeParameter( aPathTextFrames[ j ].TopLeft.Second, aEquationOrder );
-												sal_Int32 nRight = GetValueForEnhancedCustomShapeParameter( aPathTextFrames[ j ].BottomRight.First, aEquationOrder );
-												sal_Int32 nBottom = GetValueForEnhancedCustomShapeParameter( aPathTextFrames[ j ].BottomRight.Second, aEquationOrder );
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionBrightness ) )
+                            {
+                                double fExtrusionBrightness = 0;
+                                if ( rrProp.Value >>= fExtrusionBrightness )
+                                    AddOpt( DFF_Prop_c3DAmbientIntensity, (sal_Int32)( fExtrusionBrightness * 655.36 ) );
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionDepth ) )
+                            {
+                                double fDepth = 0;
+                                double fFraction = 0;
+                                com::sun::star::drawing::EnhancedCustomShapeParameterPair aDepthParaPair;
+                                if ( ( rrProp.Value >>= aDepthParaPair ) && ( aDepthParaPair.First.Value >>= fDepth ) && ( aDepthParaPair.Second.Value >>= fFraction ) )
+                                {
+                                    double fForeDepth = fDepth * fFraction;
+                                    double fBackDepth = fDepth - fForeDepth;
 
-												aOut << nLeft
-													<< nTop
-													<< nRight
-													<< nBottom;
-											}
-											sal_uInt8* pBuf = new sal_uInt8[ nStreamSize ];
-											memcpy( pBuf, aOut.GetData(), nStreamSize );
-											AddOpt( DFF_Prop_textRectangles, sal_True, nStreamSize - 6, pBuf, nStreamSize );
-										}
-										else
-										{
-											sal_uInt8* pBuf = new sal_uInt8[ 1 ];
-											AddOpt( DFF_Prop_textRectangles, sal_True, 0, pBuf, 0 );
-										}
-									}
-								}
-							}
-						}
-						if ( nPathFlags != nPathFlagsOrg )
-							AddOpt( DFF_Prop_fFillOK, nPathFlags );
-					}
-				}
-				else if ( rProp.Name.equals( sTextPath ) )
-				{
-					uno::Sequence< beans::PropertyValue > aTextPathPropSeq;
-					if ( rProp.Value >>= aTextPathPropSeq )
-					{
-						sal_uInt32 nTextPathFlagsOrg, nTextPathFlags;
-						nTextPathFlagsOrg = nTextPathFlags = 0xffff1000;		// default
-						if ( GetOpt( DFF_Prop_gtextFStrikethrough, nTextPathFlags ) )
-							nTextPathFlagsOrg = nTextPathFlags;
+                                    fBackDepth *= 360.0;
+                                    AddOpt( DFF_Prop_c3DExtrudeBackward, (sal_Int32)fBackDepth );
 
-						sal_Int32 r, nrCount = aTextPathPropSeq.getLength();
-						for ( r = 0; r < nrCount; r++ )
-						{
-							const beans::PropertyValue& rrProp = aTextPathPropSeq[ r ];
-							const rtl::OUString	sTextPathMode		( RTL_CONSTASCII_USTRINGPARAM( "TextPathMode" ) );
-							const rtl::OUString	sTextPathScaleX		( RTL_CONSTASCII_USTRINGPARAM( "ScaleX" ) );
-							const rtl::OUString sSameLetterHeights	( RTL_CONSTASCII_USTRINGPARAM( "SameLetterHeights" ) );
+                                    if ( fForeDepth != 0.0 )
+                                    {
+                                        fForeDepth *= 360.0;
+                                        AddOpt( DFF_Prop_c3DExtrudeForward, (sal_Int32)fForeDepth );
+                                    }
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionDiffusion ) )
+                            {
+                                double fExtrusionDiffusion = 0;
+                                if ( rrProp.Value >>= fExtrusionDiffusion )
+                                    AddOpt( DFF_Prop_c3DDiffuseAmt, (sal_Int32)( fExtrusionDiffusion * 655.36 ) );
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionNumberOfLineSegments ) )
+                            {
+                                sal_Int32 nExtrusionNumberOfLineSegments = 0;
+                                if ( rrProp.Value >>= nExtrusionNumberOfLineSegments )
+                                    AddOpt( DFF_Prop_c3DTolerance, nExtrusionNumberOfLineSegments );
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionLightFace ) )
+                            {
+                                bool bExtrusionLightFace;
+                                if ( rrProp.Value >>= bExtrusionLightFace )
+                                {
+                                    nLightFaceFlags |= 0x10000;
+                                    if ( bExtrusionLightFace )
+                                        nLightFaceFlags |= 1;
+                                    else
+                                        nLightFaceFlags &=~1;
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionFirstLightHarsh ) )
+                            {
+                                bool bExtrusionFirstLightHarsh;
+                                if ( rrProp.Value >>= bExtrusionFirstLightHarsh )
+                                {
+                                    nFillHarshFlags |= 0x20000;
+                                    if ( bExtrusionFirstLightHarsh )
+                                        nFillHarshFlags |= 2;
+                                    else
+                                        nFillHarshFlags &=~2;
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionSecondLightHarsh ) )
+                            {
+                                bool bExtrusionSecondLightHarsh;
+                                if ( rrProp.Value >>= bExtrusionSecondLightHarsh )
+                                {
+                                    nFillHarshFlags |= 0x10000;
+                                    if ( bExtrusionSecondLightHarsh )
+                                        nFillHarshFlags |= 1;
+                                    else
+                                        nFillHarshFlags &=~1;
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionFirstLightLevel ) )
+                            {
+                                double fExtrusionFirstLightLevel = 0;
+                                if ( rrProp.Value >>= fExtrusionFirstLightLevel )
+                                    AddOpt( DFF_Prop_c3DKeyIntensity, (sal_Int32)( fExtrusionFirstLightLevel * 655.36 ) );
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionSecondLightLevel ) )
+                            {
+                                double fExtrusionSecondLightLevel = 0;
+                                if ( rrProp.Value >>= fExtrusionSecondLightLevel )
+                                    AddOpt( DFF_Prop_c3DFillIntensity, (sal_Int32)( fExtrusionSecondLightLevel * 655.36 ) );
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionFirstLightDirection ) )
+                            {
+                                drawing::Direction3D aExtrusionFirstLightDirection;
+                                if ( rrProp.Value >>= aExtrusionFirstLightDirection )
+                                {
+                                    AddOpt( DFF_Prop_c3DKeyX, (sal_Int32)aExtrusionFirstLightDirection.DirectionX  );
+                                    AddOpt( DFF_Prop_c3DKeyY, (sal_Int32)aExtrusionFirstLightDirection.DirectionY  );
+                                    AddOpt( DFF_Prop_c3DKeyZ, (sal_Int32)aExtrusionFirstLightDirection.DirectionZ  );
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionSecondLightDirection ) )
+                            {
+                                drawing::Direction3D aExtrusionSecondLightPosition;
+                                if ( rrProp.Value >>= aExtrusionSecondLightPosition )
+                                {
+                                    AddOpt( DFF_Prop_c3DFillX, (sal_Int32)aExtrusionSecondLightPosition.DirectionX  );
+                                    AddOpt( DFF_Prop_c3DFillY, (sal_Int32)aExtrusionSecondLightPosition.DirectionY  );
+                                    AddOpt( DFF_Prop_c3DFillZ, (sal_Int32)aExtrusionSecondLightPosition.DirectionZ  );
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionMetal ) )
+                            {
+                                bool bExtrusionMetal;
+                                if ( rrProp.Value >>= bExtrusionMetal )
+                                {
+                                    nLightFaceFlags |= 0x40000;
+                                    if ( bExtrusionMetal )
+                                        nLightFaceFlags |= 4;
+                                    else
+                                        nLightFaceFlags &=~4;
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionShadeMode ) )
+                            {
+                                drawing::ShadeMode eExtrusionShadeMode;
+                                if ( rrProp.Value >>= eExtrusionShadeMode )
+                                {
+                                    sal_uInt32 nRenderMode;
+                                    switch( eExtrusionShadeMode )
+                                    {
+                                        default:
+                                        case drawing::ShadeMode_FLAT :
+                                        case drawing::ShadeMode_PHONG :
+                                        case drawing::ShadeMode_SMOOTH :
+                                            nRenderMode = mso_FullRender;
+                                        break;
+                                        case drawing::ShadeMode_DRAFT :
+                                        {
+                                            nRenderMode = mso_Wireframe;
+                                        }
+                                        break;
+                                    }
+                                    AddOpt( DFF_Prop_c3DRenderMode, nRenderMode );
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionRotateAngle ) )
+                            {
+                                double fExtrusionAngleX = 0;
+                                double fExtrusionAngleY = 0;
+                                com::sun::star::drawing::EnhancedCustomShapeParameterPair aRotateAnglePair;
+                                if ( ( rrProp.Value >>= aRotateAnglePair ) && ( aRotateAnglePair.First.Value >>= fExtrusionAngleX ) && ( aRotateAnglePair.Second.Value >>= fExtrusionAngleY ) )
+                                {
+                                    fExtrusionAngleX *= 65536;
+                                    fExtrusionAngleY *= 65536;
+                                    AddOpt( DFF_Prop_c3DXRotationAngle, (sal_Int32)fExtrusionAngleX );
+                                    AddOpt( DFF_Prop_c3DYRotationAngle, (sal_Int32)fExtrusionAngleY );
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionRotationCenter ) )
+                            {
+                                drawing::Direction3D aExtrusionRotationCenter;
+                                if ( rrProp.Value >>= aExtrusionRotationCenter )
+                                {
+                                    AddOpt( DFF_Prop_c3DRotationCenterX, (sal_Int32)( aExtrusionRotationCenter.DirectionX * 360.0 ) );
+                                    AddOpt( DFF_Prop_c3DRotationCenterY, (sal_Int32)( aExtrusionRotationCenter.DirectionY * 360.0 ) );
+                                    AddOpt( DFF_Prop_c3DRotationCenterZ, (sal_Int32)( aExtrusionRotationCenter.DirectionZ * 360.0 ) );
+                                    nFillHarshFlags &=~8; // don't use AutoRotationCenter;
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionShininess ) )
+                            {
+                                double fExtrusionShininess = 0;
+                                if ( rrProp.Value >>= fExtrusionShininess )
+                                    AddOpt( DFF_Prop_c3DShininess, (sal_Int32)( fExtrusionShininess * 655.36 ) );
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionSkew ) )
+                            {
+                                double fSkewAmount = 0;
+                                double fSkewAngle = 0;
+                                com::sun::star::drawing::EnhancedCustomShapeParameterPair aSkewParaPair;
+                                if ( ( rrProp.Value >>= aSkewParaPair ) && ( aSkewParaPair.First.Value >>= fSkewAmount ) && ( aSkewParaPair.Second.Value >>= fSkewAngle ) )
+                                {
+                                    AddOpt( DFF_Prop_c3DSkewAmount, (sal_Int32)fSkewAmount );
+                                    AddOpt( DFF_Prop_c3DSkewAngle, (sal_Int32)( fSkewAngle * 65536 ) );
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionSpecularity ) )
+                            {
+                                double fExtrusionSpecularity = 0;
+                                if ( rrProp.Value >>= fExtrusionSpecularity )
+                                    AddOpt( DFF_Prop_c3DSpecularAmt, (sal_Int32)( fExtrusionSpecularity * 1333 ) );
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionProjectionMode ) )
+                            {
+                                drawing::ProjectionMode eExtrusionProjectionMode;
+                                if ( rrProp.Value >>= eExtrusionProjectionMode )
+                                {
+                                    nFillHarshFlags |= 0x40000;
+                                    if ( eExtrusionProjectionMode == drawing::ProjectionMode_PARALLEL )
+                                        nFillHarshFlags |= 4;
+                                    else
+                                        nFillHarshFlags &=~4;
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionViewPoint ) )
+                            {
+                                drawing::Position3D aExtrusionViewPoint;
+                                if ( rrProp.Value >>= aExtrusionViewPoint )
+                                {
+                                    aExtrusionViewPoint.PositionX *= 360.0;
+                                    aExtrusionViewPoint.PositionY *= 360.0;
+                                    aExtrusionViewPoint.PositionZ *= 360.0;
+                                    AddOpt( DFF_Prop_c3DXViewpoint, (sal_Int32)aExtrusionViewPoint.PositionX  );
+                                    AddOpt( DFF_Prop_c3DYViewpoint, (sal_Int32)aExtrusionViewPoint.PositionY  );
+                                    AddOpt( DFF_Prop_c3DZViewpoint, (sal_Int32)aExtrusionViewPoint.PositionZ  );
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionOrigin ) )
+                            {
+                                double fExtrusionOriginX = 0;
+                                double fExtrusionOriginY = 0;
+                                com::sun::star::drawing::EnhancedCustomShapeParameterPair aOriginPair;
+                                if ( ( rrProp.Value >>= aOriginPair ) && ( aOriginPair.First.Value >>= fExtrusionOriginX ) && ( aOriginPair.Second.Value >>= fExtrusionOriginY ) )
+                                {
+                                    AddOpt( DFF_Prop_c3DOriginX, (sal_Int32)( fExtrusionOriginX * 65536 ) );
+                                    AddOpt( DFF_Prop_c3DOriginY, (sal_Int32)( fExtrusionOriginY * 65536 ) );
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sExtrusionColor ) )
+                            {
+                                bool bExtrusionColor;
+                                if ( rrProp.Value >>= bExtrusionColor )
+                                {
+                                    nLightFaceFlags |= 0x20000;
+                                    if ( bExtrusionColor )
+                                    {
+                                        nLightFaceFlags |= 2;
+                                        uno::Any aFillColor2;
+                                        if ( EscherPropertyValueHelper::GetPropertyValue( aFillColor2, aXPropSet, OUString( "FillColor2" ), true ) )
+                                        {
+                                            sal_uInt32 nFillColor = ImplGetColor( *((sal_uInt32*)aFillColor2.getValue()) );
+                                            AddOpt( DFF_Prop_c3DExtrusionColor, nFillColor );
+                                        }
+                                    }
+                                    else
+                                        nLightFaceFlags &=~2;
+                                }
+                            }
+                        }
+                        if ( nLightFaceFlags != nLightFaceFlagsOrg )
+                            AddOpt( DFF_Prop_fc3DLightFace, nLightFaceFlags );
+                        if ( nFillHarshFlags != nFillHarshFlagsOrg )
+                            AddOpt( DFF_Prop_fc3DFillHarsh, nFillHarshFlags );
+                    }
+                }
+                else if ( rProp.Name.equals( sEquations ) )
+                {
+                    if ( !bIsDefaultObject )
+                    {
+                        sal_uInt16 nElements = (sal_uInt16)aEquations.size();
+                        if ( nElements )
+                        {
+                            sal_uInt16 nElementSize = 8;
+                            sal_uInt32 nStreamSize = nElementSize * nElements + 6;
+                            SvMemoryStream aOut( nStreamSize );
+                            aOut.WriteUInt16( nElements )
+                               .WriteUInt16( nElements )
+                               .WriteUInt16( nElementSize );
 
-							if ( rrProp.Name.equals( sTextPath ) )
-							{
-								sal_Bool bTextPathOn = sal_Bool();
-								if ( rrProp.Value >>= bTextPathOn )
-								{
-									nTextPathFlags |= 0x40000000;
-									if ( bTextPathOn )
-									{
-										nTextPathFlags |= 0x4000;
+                            std::vector< EnhancedCustomShapeEquation >::const_iterator aIter( aEquations.begin() );
+                            std::vector< EnhancedCustomShapeEquation >::const_iterator aEnd ( aEquations.end() );
+                            while( aIter != aEnd )
+                            {
+                                aOut.WriteUInt16( aIter->nOperation )
+                                    .WriteInt16( aIter->nPara[ 0 ] )
+                                    .WriteInt16( aIter->nPara[ 1 ] )
+                                    .WriteInt16( aIter->nPara[ 2 ] );
+                                ++aIter;
+                            }
+                            sal_uInt8* pBuf = new sal_uInt8[ nStreamSize ];
+                            memcpy( pBuf, aOut.GetData(), nStreamSize );
+                            AddOpt( DFF_Prop_pFormulas, true, nStreamSize - 6, pBuf, nStreamSize );
+                        }
+                        else
+                        {
+                            sal_uInt8* pBuf = new sal_uInt8[ 1 ];
+                            AddOpt( DFF_Prop_pFormulas, true, 0, pBuf, 0 );
+                        }
+                    }
+                }
+                else if ( rProp.Name.equals( sPath ) )
+                {
+                    uno::Sequence< beans::PropertyValue > aPathPropSeq;
+                    if ( rProp.Value >>= aPathPropSeq )
+                    {
+                        sal_uInt32 nPathFlags, nPathFlagsOrg;
+                        nPathFlagsOrg = nPathFlags = 0x39;
+                        if ( GetOpt( DFF_Prop_fFillOK, nPathFlags ) )
+                            nPathFlagsOrg = nPathFlags;
 
-										sal_uInt32 nPathFlags = 0x39;
-										GetOpt( DFF_Prop_fFillOK, nPathFlags );	// SJ: can be removed if we are supporting the TextPathAllowed property in XML
-										nPathFlags |= 0x40004;
-										AddOpt( DFF_Prop_fFillOK, nPathFlags );
-									}
-									else
-										nTextPathFlags &=~0x4000;
-								}
-							}
-							else if ( rrProp.Name.equals( sTextPathMode ) )
-							{
-								com::sun::star::drawing::EnhancedCustomShapeTextPathMode eTextPathMode;
-								if ( rrProp.Value >>= eTextPathMode )
-								{
-									nTextPathFlags |= 0x05000000;
-									nTextPathFlags &=~0x500;	// TextPathMode_NORMAL
-									if ( eTextPathMode == com::sun::star::drawing::EnhancedCustomShapeTextPathMode_PATH )
-										nTextPathFlags |= 0x100;
-									else if ( eTextPathMode == com::sun::star::drawing::EnhancedCustomShapeTextPathMode_SHAPE )
-										nTextPathFlags |= 0x500;
-								}
-							}
-							else if ( rrProp.Name.equals( sTextPathScaleX ) )
-							{
-								sal_Bool bTextPathScaleX = sal_Bool();
-								if ( rrProp.Value >>= bTextPathScaleX )
-								{
-									nTextPathFlags |= 0x00400000;
-									if ( bTextPathScaleX )
-										nTextPathFlags |= 0x40;
-									else
-										nTextPathFlags &=~0x40;
-								}
-							}
-							else if ( rrProp.Name.equals( sSameLetterHeights ) )
-							{
-								sal_Bool bSameLetterHeights = sal_Bool();
-								if ( rrProp.Value >>= bSameLetterHeights )
-								{
-									nTextPathFlags |= 0x00800000;
-									if ( bSameLetterHeights )
-										nTextPathFlags |= 0x80;
-									else
-										nTextPathFlags &=~0x80;
-								}
-							}
-						}
-						if ( nTextPathFlags & 0x4000 )		// Is FontWork ?
-						{
-							// FontWork Text
-							rtl::OUString aText;
-							uno::Reference< text::XSimpleText > xText( rXShape, uno::UNO_QUERY );
-							if ( xText.is() )
-								aText = xText->getString();
-							if ( !aText.getLength() )
-								aText = ::rtl::OUString::createFromAscii( "your text" );	// todo: moving into a resource
-							AddOpt( DFF_Prop_gtextUNICODE, aText );
+                        sal_Int32 r, nrCount = aPathPropSeq.getLength();
+                        for ( r = 0; r < nrCount; r++ )
+                        {
+                            const beans::PropertyValue& rrProp = aPathPropSeq[ r ];
+                            const OUString sPathExtrusionAllowed               ( "ExtrusionAllowed"  );
+                            const OUString sPathConcentricGradientFillAllowed  ( "ConcentricGradientFillAllowed"  );
+                            const OUString sPathTextPathAllowed                ( "TextPathAllowed"  );
+                            const OUString sPathCoordinates                    ( "Coordinates"  );
+                            const OUString sPathGluePoints                     ( "GluePoints"  );
+                            const OUString sPathGluePointType                  ( "GluePointType"  );
+                            const OUString sPathSegments                       ( "Segments"  );
+                            const OUString sPathStretchX                       ( "StretchX"  );
+                            const OUString sPathStretchY                       ( "StretchY"  );
+                            const OUString sPathTextFrames                     ( "TextFrames"  );
 
-							// FontWork Font
-							rtl::OUString aFontName;
-							const rtl::OUString	sCharFontName			( RTL_CONSTASCII_USTRINGPARAM( "CharFontName" ) );
-				    		uno::Any aAny = aXPropSet->getPropertyValue( sCharFontName );
-							aAny >>= aFontName;
-							if ( !aFontName.getLength() )
-								aFontName = ::rtl::OUString::createFromAscii( "Arial Black" );
-							AddOpt( DFF_Prop_gtextFont, aFontName );
+                            if ( rrProp.Name.equals( sPathExtrusionAllowed ) )
+                            {
+                                bool bExtrusionAllowed;
+                                if ( rrProp.Value >>= bExtrusionAllowed )
+                                {
+                                    nPathFlags |= 0x100000;
+                                    if ( bExtrusionAllowed )
+                                        nPathFlags |= 16;
+                                    else
+                                        nPathFlags &=~16;
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sPathConcentricGradientFillAllowed ) )
+                            {
+                                bool bConcentricGradientFillAllowed;
+                                if ( rrProp.Value >>= bConcentricGradientFillAllowed )
+                                {
+                                    nPathFlags |= 0x20000;
+                                    if ( bConcentricGradientFillAllowed )
+                                        nPathFlags |= 2;
+                                    else
+                                        nPathFlags &=~2;
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sPathTextPathAllowed ) )
+                            {
+                                bool bTextPathAllowed;
+                                if ( rrProp.Value >>= bTextPathAllowed )
+                                {
+                                    nPathFlags |= 0x40000;
+                                    if ( bTextPathAllowed )
+                                        nPathFlags |= 4;
+                                    else
+                                        nPathFlags &=~4;
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sPathCoordinates ) )
+                            {
+                                if ( !bIsDefaultObject )
+                                {
+                                    aPathCoordinatesProp = rrProp.Value;
+                                    bPathCoordinatesProp = true;
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sPathGluePoints ) )
+                            {
+                                if ( !bIsDefaultObject )
+                                {
+                                    com::sun::star::uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeParameterPair> aGluePoints;
+                                    if ( rrProp.Value >>= aGluePoints )
+                                    {
+                                        // creating the vertices
+                                        sal_uInt16 nElements = (sal_uInt16)aGluePoints.getLength();
+                                        if ( nElements )
+                                        {
+                                            sal_uInt16 j, nElementSize = 8;
+                                            sal_uInt32 nStreamSize = nElementSize * nElements + 6;
+                                            SvMemoryStream aOut( nStreamSize );
+                                            aOut.WriteUInt16( nElements )
+                                               .WriteUInt16( nElements )
+                                               .WriteUInt16( nElementSize );
+                                            for( j = 0; j < nElements; j++ )
+                                            {
+                                                sal_Int32 X = GetValueForEnhancedCustomShapeParameter( aGluePoints[ j ].First, aEquationOrder );
+                                                sal_Int32 Y = GetValueForEnhancedCustomShapeParameter( aGluePoints[ j ].Second, aEquationOrder );
+                                                aOut.WriteInt32( X )
+                                                   .WriteInt32( Y );
+                                            }
+                                            sal_uInt8* pBuf = new sal_uInt8[ nStreamSize ];
+                                            memcpy( pBuf, aOut.GetData(), nStreamSize );
+                                            AddOpt( DFF_Prop_connectorPoints, true, nStreamSize - 6, pBuf, nStreamSize );   // -6
+                                        }
+                                        else
+                                        {
+                                            sal_uInt8* pBuf = new sal_uInt8[ 1 ];
+                                            AddOpt( DFF_Prop_connectorPoints, true, 0, pBuf, 0 );
+                                        }
+                                    }
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sPathGluePointType ) )
+                            {
+                                sal_Int16 nGluePointType = sal_Int16();
+                                if ( rrProp.Value >>= nGluePointType )
+                                    AddOpt( DFF_Prop_connectorType, (sal_uInt16)nGluePointType );
+                            }
+                            else if ( rrProp.Name.equals( sPathSegments ) )
+                            {
+                                if ( !bIsDefaultObject )
+                                {
+                                    com::sun::star::uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeSegment > aSegments;
+                                    if ( rrProp.Value >>= aSegments )
+                                    {
+                                        // creating seginfo
+                                        if ( (sal_uInt16)aSegments.getLength() )
+                                        {
+                                            sal_uInt16 j, nElements = (sal_uInt16)aSegments.getLength();
+                                            sal_uInt16 nElementSize = 2;
+                                            sal_uInt32 nStreamSize = nElementSize * nElements + 6;
+                                            SvMemoryStream aOut( nStreamSize );
+                                            aOut.WriteUInt16( nElements )
+                                               .WriteUInt16( nElements )
+                                               .WriteUInt16( nElementSize );
+                                            for ( j = 0; j < nElements; j++ )
+                                            {
+                                                sal_uInt16 nVal = (sal_uInt16)aSegments[ j ].Count;
+                                                switch( aSegments[ j ].Command )
+                                                {
+                                                    case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::UNKNOWN :
+                                                    case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::LINETO : break;
+                                                    case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::MOVETO :
+                                                    {
+                                                        nVal = 0x4000;
+                                                    }
+                                                    break;
+                                                    case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::CURVETO :
+                                                    {
+                                                        nVal |= 0x2000;
+                                                    }
+                                                    break;
+                                                    case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::CLOSESUBPATH :
+                                                    {
+                                                        nVal = 0x6001;
+                                                    }
+                                                    break;
+                                                    case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::ENDSUBPATH :
+                                                    {
+                                                        nVal = 0x8000;
+                                                    }
+                                                    break;
+                                                    case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::NOFILL :
+                                                    {
+                                                        nVal = 0xaa00;
+                                                    }
+                                                    break;
+                                                    case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::NOSTROKE :
+                                                    {
+                                                        nVal = 0xab00;
+                                                    }
+                                                    break;
+                                                    case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::ANGLEELLIPSETO :
+                                                    {
+                                                        nVal *= 3;
+                                                        nVal |= 0xa100;
+                                                    }
+                                                    break;
+                                                    case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::ANGLEELLIPSE :
+                                                    {
+                                                        nVal *= 3;
+                                                        nVal |= 0xa200;
+                                                    }
+                                                    break;
+                                                    case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::ARCTO :
+                                                    {
+                                                        nVal <<= 2;
+                                                        nVal |= 0xa300;
+                                                    }
+                                                    break;
+                                                    case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::ARC :
+                                                    {
+                                                        nVal <<= 2;
+                                                        nVal |= 0xa400;
+                                                    }
+                                                    break;
+                                                    case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::CLOCKWISEARCTO :
+                                                    {
+                                                        nVal <<= 2;
+                                                        nVal |= 0xa500;
+                                                    }
+                                                    break;
+                                                    case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::CLOCKWISEARC :
+                                                    {
+                                                        nVal <<= 2;
+                                                        nVal |= 0xa600;
+                                                    }
+                                                    break;
+                                                    case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::ELLIPTICALQUADRANTX :
+                                                    {
+                                                        nVal |= 0xa700;
+                                                    }
+                                                    break;
+                                                    case com::sun::star::drawing::EnhancedCustomShapeSegmentCommand::ELLIPTICALQUADRANTY :
+                                                    {
+                                                        nVal |= 0xa800;
+                                                    }
+                                                    break;
+                                                }
+                                                aOut.WriteUInt16( nVal );
+                                            }
+                                            sal_uInt8* pBuf = new sal_uInt8[ nStreamSize ];
+                                            memcpy( pBuf, aOut.GetData(), nStreamSize );
+                                            AddOpt( DFF_Prop_pSegmentInfo, false, nStreamSize - 6, pBuf, nStreamSize );
+                                        }
+                                        else
+                                        {
+                                            sal_uInt8* pBuf = new sal_uInt8[ 1 ];
+                                            AddOpt( DFF_Prop_pSegmentInfo, true, 0, pBuf, 0 );
+                                        }
+                                    }
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sPathStretchX ) )
+                            {
+                                if ( !bIsDefaultObject )
+                                {
+                                    sal_Int32 nStretchX = 0;
+                                    if ( rrProp.Value >>= nStretchX )
+                                        AddOpt( DFF_Prop_stretchPointX, nStretchX );
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sPathStretchY ) )
+                            {
+                                if ( !bIsDefaultObject )
+                                {
+                                    sal_Int32 nStretchY = 0;
+                                    if ( rrProp.Value >>= nStretchY )
+                                        AddOpt( DFF_Prop_stretchPointY, nStretchY );
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sPathTextFrames ) )
+                            {
+                                if ( !bIsDefaultObject )
+                                {
+                                    com::sun::star::uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeTextFrame > aPathTextFrames;
+                                    if ( rrProp.Value >>= aPathTextFrames )
+                                    {
+                                        if ( (sal_uInt16)aPathTextFrames.getLength() )
+                                        {
+                                            sal_uInt16 j, nElements = (sal_uInt16)aPathTextFrames.getLength();
+                                            sal_uInt16 nElementSize = 16;
+                                            sal_uInt32 nStreamSize = nElementSize * nElements + 6;
+                                            SvMemoryStream aOut( nStreamSize );
+                                            aOut.WriteUInt16( nElements )
+                                               .WriteUInt16( nElements )
+                                               .WriteUInt16( nElementSize );
+                                            for ( j = 0; j < nElements; j++ )
+                                            {
+                                                sal_Int32 nLeft = GetValueForEnhancedCustomShapeParameter( aPathTextFrames[ j ].TopLeft.First, aEquationOrder );
+                                                sal_Int32 nTop  = GetValueForEnhancedCustomShapeParameter( aPathTextFrames[ j ].TopLeft.Second, aEquationOrder );
+                                                sal_Int32 nRight = GetValueForEnhancedCustomShapeParameter( aPathTextFrames[ j ].BottomRight.First, aEquationOrder );
+                                                sal_Int32 nBottom = GetValueForEnhancedCustomShapeParameter( aPathTextFrames[ j ].BottomRight.Second, aEquationOrder );
 
-							sal_Int16 nCharScaleWidth = 100;
-							if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "CharScaleWidth" ) ), sal_True ) )
-							{
-								if ( aAny >>= nCharScaleWidth )
-								{
-									if ( nCharScaleWidth != 100 )
-									{
-										sal_Int32 nVal = nCharScaleWidth * 655;
-										AddOpt( DFF_Prop_gtextSpacing, nVal );
-									}
-								}
-							}
-							if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "CharHeight" ) ), sal_True ) )
-							{
-								float fCharHeight = 0.0;
-								if ( aAny >>= fCharHeight )
-								{
-									sal_Int32 nTextSize = static_cast< sal_Int32 > ( fCharHeight * 65536 );
-									AddOpt(ESCHER_Prop_gtextSize, nTextSize);
-								}
-							}
-							if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "CharKerning" ) ), sal_True ) )
-							{
-								sal_Int16 nCharKerning = sal_Int16();
-								if ( aAny >>= nCharKerning )
-							{
-									nTextPathFlags |= 0x10000000;
-									if ( nCharKerning )
-										nTextPathFlags |= 0x1000;
-									else
-										nTextPathFlags &=~0x1000;
-								}
-							}
-							if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "CharPosture" ) ), sal_True ) )
-							{
-								awt::FontSlant eFontSlant;
-								if ( aAny >>= eFontSlant )
-								{
-									nTextPathFlags |= 0x100010;
-									if ( eFontSlant != awt::FontSlant_NONE )
-										nTextPathFlags |= 0x10;
-									else
-										nTextPathFlags &=~0x10;
-								}
-							}
-							if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "CharWeight" ) ), sal_True ) )
-							{
-								float fFontWidth = 0;
-								if ( aAny >>= fFontWidth )
-								{
-									nTextPathFlags |= 0x200020;
-									if ( fFontWidth > awt::FontWeight::NORMAL )
-										nTextPathFlags |= 0x20;
-									else
-										nTextPathFlags &=~0x20;
-								}
-							}
-							//export gTextAlign attr
-							if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, String( RTL_CONSTASCII_USTRINGPARAM( "TextHorizontalAdjust" ) ), sal_True ) )
-							{
-								MSO_GeoTextAlign  gTextAlign = mso_alignTextCenter;
-								// SdrFitToSizeType  eFTS( ((SdrTextFitToSizeTypeItem&)pCustoShape->GetMergedItem( SDRATTR_TEXT_FITTOSIZE )).GetValue() );
-								drawing::TextHorizontalAdjust	eHA( drawing::TextHorizontalAdjust_LEFT );
-								aAny >>= eHA;
-								switch( eHA )
-								{
-								case drawing::TextHorizontalAdjust_LEFT :
-									gTextAlign = mso_alignTextLeft;
-									break;
-								case drawing::TextHorizontalAdjust_CENTER:
-									gTextAlign = mso_alignTextCenter;
-									break;
-								case drawing::TextHorizontalAdjust_RIGHT:
-									gTextAlign = mso_alignTextRight;
-									break;
-								case drawing::TextHorizontalAdjust_BLOCK:
-									{
-										SdrFitToSizeType  eFTS( ((SdrTextFitToSizeTypeItem&)pCustoShape->GetMergedItem( SDRATTR_TEXT_FITTOSIZE )).GetValue() );
-										if ( eFTS == SDRTEXTFIT_ALLLINES)
-										{
-											gTextAlign = mso_alignTextStretch;
-										}
-										else
-										{
-											gTextAlign = mso_alignTextWordJust;
-										}
-										break;
-									}
-								default:
-									break;
-								}
-								AddOpt(DFF_Prop_gtextAlign,gTextAlign);
-							}
-						}
-						if((nTextPathFlags & 0x4000) != 0)  //Is Font work
-						{
-							OutlinerParaObject* pOutlinerParaObject = pCustoShape->GetOutlinerParaObject();
-							if ( pOutlinerParaObject && pOutlinerParaObject->IsVertical() )
-								nTextPathFlags |= 0x2000;
-						}
-						if ( nTextPathFlags != nTextPathFlagsOrg )
-							AddOpt( DFF_Prop_gtextFStrikethrough, nTextPathFlags );
-					}
-				}
-				else if ( rProp.Name.equals( sHandles ) )
-				{
-					if ( !bIsDefaultObject )
-					{
-						bPredefinedHandlesUsed = sal_False;
-						if ( rProp.Value >>= aHandlesPropSeq )
-						{
-							sal_uInt16 nElements = (sal_uInt16)aHandlesPropSeq.getLength();
-							if ( nElements )
-							{
-								const rtl::OUString	sHandle ( RTL_CONSTASCII_USTRINGPARAM( "Handle" ) );
+                                                aOut.WriteInt32( nLeft )
+                                                   .WriteInt32( nTop )
+                                                   .WriteInt32( nRight )
+                                                   .WriteInt32( nBottom );
+                                            }
+                                            sal_uInt8* pBuf = new sal_uInt8[ nStreamSize ];
+                                            memcpy( pBuf, aOut.GetData(), nStreamSize );
+                                            AddOpt( DFF_Prop_textRectangles, true, nStreamSize - 6, pBuf, nStreamSize );
+                                        }
+                                        else
+                                        {
+                                            sal_uInt8* pBuf = new sal_uInt8[ 1 ];
+                                            AddOpt( DFF_Prop_textRectangles, true, 0, pBuf, 0 );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if ( nPathFlags != nPathFlagsOrg )
+                            AddOpt( DFF_Prop_fFillOK, nPathFlags );
+                    }
+                }
+                else if ( rProp.Name.equals( sTextPath ) )
+                {
+                    uno::Sequence< beans::PropertyValue > aTextPathPropSeq;
+                    if ( rProp.Value >>= aTextPathPropSeq )
+                    {
+                        sal_uInt32 nTextPathFlagsOrg, nTextPathFlags;
+                        nTextPathFlagsOrg = nTextPathFlags = 0xffff1000;        // default
+                        if ( GetOpt( DFF_Prop_gtextFStrikethrough, nTextPathFlags ) )
+                            nTextPathFlagsOrg = nTextPathFlags;
 
-								sal_uInt16 k, j, nElementSize = 36;
-								sal_uInt32 nStreamSize = nElementSize * nElements + 6;
-								SvMemoryStream aOut( nStreamSize );
-								aOut << nElements
-									<< nElements
-									<< nElementSize;
+                        sal_Int32 r, nrCount = aTextPathPropSeq.getLength();
+                        for ( r = 0; r < nrCount; r++ )
+                        {
+                            const beans::PropertyValue& rrProp = aTextPathPropSeq[ r ];
+                            const OUString sTextPathMode       ( "TextPathMode"  );
+                            const OUString sTextPathScaleX     ( "ScaleX"  );
+                            const OUString sSameLetterHeights  ( "SameLetterHeights"  );
 
-								for ( k = 0; k < nElements; k++ )
-								{
-									sal_uInt32 nFlags = 0;
-									sal_Int32 nXPosition = 0;
-									sal_Int32 nYPosition = 0;
-									sal_Int32 nXMap = 0;
-									sal_Int32 nYMap = 0;
-									sal_Int32 nXRangeMin = 0x80000000;
-									sal_Int32 nXRangeMax = 0x7fffffff;
-									sal_Int32 nYRangeMin = 0x80000000;
-									sal_Int32 nYRangeMax = 0x7fffffff;
+                            if ( rrProp.Name.equals( sTextPath ) )
+                            {
+                                bool bTextPathOn;
+                                if ( rrProp.Value >>= bTextPathOn )
+                                {
+                                    nTextPathFlags |= 0x40000000;
+                                    if ( bTextPathOn )
+                                    {
+                                        nTextPathFlags |= 0x4000;
 
-									const uno::Sequence< beans::PropertyValue >& rPropSeq = aHandlesPropSeq[ k ];
-									for ( j = 0; j < rPropSeq.getLength(); j++ )
-									{
-										const beans::PropertyValue& rPropVal = rPropSeq[ j ];
+                                        sal_uInt32 nPathFlags = 0x39;
+                                        GetOpt( DFF_Prop_fFillOK, nPathFlags ); // SJ: can be removed if we are supporting the TextPathAllowed property in XML
+                                        nPathFlags |= 0x40004;
+                                        AddOpt( DFF_Prop_fFillOK, nPathFlags );
+                                    }
+                                    else
+                                        nTextPathFlags &=~0x4000;
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sTextPathMode ) )
+                            {
+                                com::sun::star::drawing::EnhancedCustomShapeTextPathMode eTextPathMode;
+                                if ( rrProp.Value >>= eTextPathMode )
+                                {
+                                    nTextPathFlags |= 0x05000000;
+                                    nTextPathFlags &=~0x500;    // TextPathMode_NORMAL
+                                    if ( eTextPathMode == com::sun::star::drawing::EnhancedCustomShapeTextPathMode_PATH )
+                                        nTextPathFlags |= 0x100;
+                                    else if ( eTextPathMode == com::sun::star::drawing::EnhancedCustomShapeTextPathMode_SHAPE )
+                                        nTextPathFlags |= 0x500;
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sTextPathScaleX ) )
+                            {
+                                bool bTextPathScaleX;
+                                if ( rrProp.Value >>= bTextPathScaleX )
+                                {
+                                    nTextPathFlags |= 0x00400000;
+                                    if ( bTextPathScaleX )
+                                        nTextPathFlags |= 0x40;
+                                    else
+                                        nTextPathFlags &=~0x40;
+                                }
+                            }
+                            else if ( rrProp.Name.equals( sSameLetterHeights ) )
+                            {
+                                bool bSameLetterHeights;
+                                if ( rrProp.Value >>= bSameLetterHeights )
+                                {
+                                    nTextPathFlags |= 0x00800000;
+                                    if ( bSameLetterHeights )
+                                        nTextPathFlags |= 0x80;
+                                    else
+                                        nTextPathFlags &=~0x80;
+                                }
+                            }
+                        }
+                        if ( nTextPathFlags & 0x4000 )      // Is FontWork ?
+                        {
+                            // FontWork Text
+                            OUString aText;
+                            uno::Reference< text::XSimpleText > xText( rXShape, uno::UNO_QUERY );
+                            if ( xText.is() )
+                                aText = xText->getString();
+                            if ( aText.isEmpty() )
+                                aText = "your text";   // TODO: moving into a resource
+                            AddOpt( DFF_Prop_gtextUNICODE, aText );
 
-										const rtl::OUString	sPosition			( RTL_CONSTASCII_USTRINGPARAM( "Position" ) );
-										const rtl::OUString	sMirroredX			( RTL_CONSTASCII_USTRINGPARAM( "MirroredX" ) );
-										const rtl::OUString	sMirroredY			( RTL_CONSTASCII_USTRINGPARAM( "MirroredY" ) );
-										const rtl::OUString	sSwitched			( RTL_CONSTASCII_USTRINGPARAM( "Switched" ) );
-										const rtl::OUString	sPolar				( RTL_CONSTASCII_USTRINGPARAM( "Polar" ) );
-	//									const rtl::OUString	sMap				( RTL_CONSTASCII_USTRINGPARAM( "Map" ) );
-										const rtl::OUString	sRadiusRangeMinimum	( RTL_CONSTASCII_USTRINGPARAM( "RadiusRangeMinimum" ) );
-										const rtl::OUString	sRadiusRangeMaximum	( RTL_CONSTASCII_USTRINGPARAM( "RadiusRangeMaximum" ) );
-										const rtl::OUString	sRangeXMinimum		( RTL_CONSTASCII_USTRINGPARAM( "RangeXMinimum" ) );
-										const rtl::OUString	sRangeXMaximum		( RTL_CONSTASCII_USTRINGPARAM( "RangeXMaximum" ) );
-										const rtl::OUString	sRangeYMinimum		( RTL_CONSTASCII_USTRINGPARAM( "RangeYMinimum" ) );
-										const rtl::OUString	sRangeYMaximum		( RTL_CONSTASCII_USTRINGPARAM( "RangeYMaximum" ) );
+                            // FontWork Font
+                            OUString aFontName;
+                            const OUString sCharFontName( "CharFontName"  );
+                            uno::Any aAny = aXPropSet->getPropertyValue( sCharFontName );
+                            aAny >>= aFontName;
+                            if ( aFontName.isEmpty() )
+                                aFontName = "Arial Black";
+                            AddOpt( DFF_Prop_gtextFont, aFontName );
 
-										if ( rPropVal.Name.equals( sPosition ) )
-										{
-											com::sun::star::drawing::EnhancedCustomShapeParameterPair aPosition;
-											if ( rPropVal.Value >>= aPosition )
-											{
-												GetValueForEnhancedCustomShapeHandleParameter( nXPosition, aPosition.First );
-												GetValueForEnhancedCustomShapeHandleParameter( nYPosition, aPosition.Second );
-											}
-										}
-										else if ( rPropVal.Name.equals( sMirroredX ) )
-										{
-											sal_Bool bMirroredX = sal_Bool();
-											if ( rPropVal.Value >>= bMirroredX )
-											{
-												if ( bMirroredX )
-													nFlags |= 1;
-											}
-										}
-										else if ( rPropVal.Name.equals( sMirroredY ) )
-										{
-											sal_Bool bMirroredY = sal_Bool();
-											if ( rPropVal.Value >>= bMirroredY )
-											{
-												if ( bMirroredY )
-													nFlags |= 2;
-											}
-										}
-										else if ( rPropVal.Name.equals( sSwitched ) )
-										{
-											sal_Bool bSwitched = sal_Bool();
-											if ( rPropVal.Value >>= bSwitched )
-											{
-												if ( bSwitched )
-													nFlags |= 4;
-											}
-										}
-										else if ( rPropVal.Name.equals( sPolar ) )
-										{
-											com::sun::star::drawing::EnhancedCustomShapeParameterPair aPolar;
-											if ( rPropVal.Value >>= aPolar )
-											{
-												if ( GetValueForEnhancedCustomShapeHandleParameter( nXMap, aPolar.First ) )
-													nFlags |= 0x800;
-												if ( GetValueForEnhancedCustomShapeHandleParameter( nYMap, aPolar.Second ) )
-													nFlags |= 0x1000;
-												nFlags |= 8;
-											}
-										}
-	/* seems not to be used.
-										else if ( rPropVal.Name.equals( sMap ) )
-										{
-											com::sun::star::drawing::EnhancedCustomShapeParameterPair aMap;
-											if ( rPropVal.Value >>= aMap )
-											{
-												if ( GetValueForEnhancedCustomShapeHandleParameter( nXMap, aMap.First ) )
-													nFlags |= 0x800;
-												if ( GetValueForEnhancedCustomShapeHandleParameter( nYMap, aMap.Second ) )
-													nFlags |= 0x1000;
-												nFlags |= 0x10;
-											}
-										}
-	*/
-										else if ( rPropVal.Name.equals( sRadiusRangeMinimum ) )
-										{
-											nYRangeMin = (sal_Int32)0xff4c0000;	// the range of angles seems to be a not
-											nYRangeMax = (sal_Int32)0x00b40000;	// used feature, so we are defaulting this
+                            if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, OUString( "CharScaleWidth" ), true ) )
+                            {
+                                sal_Int16 nCharScaleWidth = 100;
+                                if ( aAny >>= nCharScaleWidth )
+                                {
+                                    if ( nCharScaleWidth != 100 )
+                                    {
+                                        sal_Int32 nVal = nCharScaleWidth * 655;
+                                        AddOpt( DFF_Prop_gtextSpacing, nVal );
+                                    }
+                                }
+                            }
+                            if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, OUString( "CharHeight" ), true ) )
+                            {
+                                float fCharHeight = 0.0;
+                                if ( aAny >>= fCharHeight )
+                                {
+                                    sal_Int32 nTextSize = static_cast< sal_Int32 > ( fCharHeight * 65536 );
+                                    AddOpt(ESCHER_Prop_gtextSize, nTextSize);
+                                }
+                            }
+                            if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, OUString( "CharKerning" ), true ) )
+                            {
+                                sal_Int16 nCharKerning = sal_Int16();
+                                if ( aAny >>= nCharKerning )
+                                {
+                                    nTextPathFlags |= 0x10000000;
+                                    if ( nCharKerning )
+                                        nTextPathFlags |= 0x1000;
+                                    else
+                                        nTextPathFlags &=~0x1000;
+                                }
+                            }
+                            if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, OUString( "CharPosture" ), true ) )
+                            {
+                                awt::FontSlant eFontSlant;
+                                if ( aAny >>= eFontSlant )
+                                {
+                                    nTextPathFlags |= 0x100010;
+                                    if ( eFontSlant != awt::FontSlant_NONE )
+                                        nTextPathFlags |= 0x10;
+                                    else
+                                        nTextPathFlags &=~0x10;
+                                }
+                            }
+                            if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, OUString( "CharWeight" ), true ) )
+                            {
+                                float fFontWidth = 0;
+                                if ( aAny >>= fFontWidth )
+                                {
+                                    nTextPathFlags |= 0x200020;
+                                    if ( fFontWidth > awt::FontWeight::NORMAL )
+                                        nTextPathFlags |= 0x20;
+                                    else
+                                        nTextPathFlags &=~0x20;
+                                }
+                            }
+                            // export gTextAlign attr
+                            if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aXPropSet, "TextHorizontalAdjust", true ) )
+                            {
+                                MSO_GeoTextAlign  gTextAlign = mso_alignTextCenter;
+                                drawing::TextHorizontalAdjust   eHA( drawing::TextHorizontalAdjust_LEFT );
+                                aAny >>= eHA;
+                                switch( eHA )
+                                {
+                                case drawing::TextHorizontalAdjust_LEFT :
+                                    gTextAlign = mso_alignTextLeft;
+                                    break;
+                                case drawing::TextHorizontalAdjust_CENTER:
+                                    gTextAlign = mso_alignTextCenter;
+                                    break;
+                                case drawing::TextHorizontalAdjust_RIGHT:
+                                    gTextAlign = mso_alignTextRight;
+                                    break;
+                                case drawing::TextHorizontalAdjust_BLOCK:
+                                    {
+                                        SdrFitToSizeType  eFTS( static_cast<const SdrTextFitToSizeTypeItem&>(pCustoShape->GetMergedItem( SDRATTR_TEXT_FITTOSIZE )).GetValue() );
+                                        if ( eFTS == SDRTEXTFIT_ALLLINES)
+                                        {
+                                            gTextAlign = mso_alignTextStretch;
+                                        }
+                                        else
+                                        {
+                                            gTextAlign = mso_alignTextWordJust;
+                                        }
+                                        break;
+                                    }
+                                default:
+                                    break;
+                                }
+                                AddOpt(DFF_Prop_gtextAlign,gTextAlign);
+                            }
+                        }
+                        if((nTextPathFlags & 0x4000) != 0)  // Is Font work
+                        {
+                            OutlinerParaObject* pOutlinerParaObject = pCustoShape->GetOutlinerParaObject();
+                            if ( pOutlinerParaObject && pOutlinerParaObject->IsVertical() )
+                                nTextPathFlags |= 0x2000;
+                        }
+                        if ( nTextPathFlags != nTextPathFlagsOrg )
+                            AddOpt( DFF_Prop_gtextFStrikethrough, nTextPathFlags );
+                    }
+                }
+                else if ( rProp.Name.equals( sHandles ) )
+                {
+                    if ( !bIsDefaultObject )
+                    {
+                        bPredefinedHandlesUsed = false;
+                        if ( rProp.Value >>= aHandlesPropSeq )
+                        {
+                            sal_uInt16 nElements = (sal_uInt16)aHandlesPropSeq.getLength();
+                            if ( nElements )
+                            {
+                                sal_uInt16 k, j, nElementSize = 36;
+                                sal_uInt32 nStreamSize = nElementSize * nElements + 6;
+                                SvMemoryStream aOut( nStreamSize );
+                                aOut.WriteUInt16( nElements )
+                                   .WriteUInt16( nElements )
+                                   .WriteUInt16( nElementSize );
 
-											com::sun::star::drawing::EnhancedCustomShapeParameter aRadiusRangeMinimum;
-											if ( rPropVal.Value >>= aRadiusRangeMinimum )
-											{
-												if ( GetValueForEnhancedCustomShapeHandleParameter( nXRangeMin, aRadiusRangeMinimum ) )
-													nFlags |= 0x80;
-												nFlags |= 0x2000;
-											}
-										}
-										else if ( rPropVal.Name.equals( sRadiusRangeMaximum ) )
-										{
-											nYRangeMin = (sal_Int32)0xff4c0000;	// the range of angles seems to be a not
-											nYRangeMax = (sal_Int32)0x00b40000;	// used feature, so we are defaulting this
+                                for ( k = 0; k < nElements; k++ )
+                                {
+                                    sal_uInt32 nFlags = 0;
+                                    sal_Int32 nXPosition = 0;
+                                    sal_Int32 nYPosition = 0;
+                                    sal_Int32 nXMap = 0;
+                                    sal_Int32 nYMap = 0;
+                                    sal_Int32 nXRangeMin = 0x80000000;
+                                    sal_Int32 nXRangeMax = 0x7fffffff;
+                                    sal_Int32 nYRangeMin = 0x80000000;
+                                    sal_Int32 nYRangeMax = 0x7fffffff;
 
-											com::sun::star::drawing::EnhancedCustomShapeParameter aRadiusRangeMaximum;
-											if ( rPropVal.Value >>= aRadiusRangeMaximum )
-											{
-												if ( GetValueForEnhancedCustomShapeHandleParameter( nXRangeMax, aRadiusRangeMaximum ) )
-													nFlags |= 0x100;
-												nFlags |= 0x2000;
-											}
-										}
-										else if ( rPropVal.Name.equals( sRangeXMinimum ) )
-										{
-											com::sun::star::drawing::EnhancedCustomShapeParameter aXRangeMinimum;
-											if ( rPropVal.Value >>= aXRangeMinimum )
-											{
-												if ( GetValueForEnhancedCustomShapeHandleParameter( nXRangeMin, aXRangeMinimum ) )
-													nFlags |= 0x80;
-												nFlags |= 0x20;
-											}
-										}
-										else if ( rPropVal.Name.equals( sRangeXMaximum ) )
-										{
-											com::sun::star::drawing::EnhancedCustomShapeParameter aXRangeMaximum;
-											if ( rPropVal.Value >>= aXRangeMaximum )
-											{
-												if ( GetValueForEnhancedCustomShapeHandleParameter( nXRangeMax, aXRangeMaximum ) )
-													nFlags |= 0x100;
-												nFlags |= 0x20;
-											}
-										}
-										else if ( rPropVal.Name.equals( sRangeYMinimum ) )
-										{
-											com::sun::star::drawing::EnhancedCustomShapeParameter aYRangeMinimum;
-											if ( rPropVal.Value >>= aYRangeMinimum )
-											{
-												if ( GetValueForEnhancedCustomShapeHandleParameter( nYRangeMin, aYRangeMinimum ) )
-													nFlags |= 0x200;
-												nFlags |= 0x20;
-											}
-										}
-										else if ( rPropVal.Name.equals( sRangeYMaximum ) )
-										{
-											com::sun::star::drawing::EnhancedCustomShapeParameter aYRangeMaximum;
-											if ( rPropVal.Value >>= aYRangeMaximum )
-											{
-												if ( GetValueForEnhancedCustomShapeHandleParameter( nYRangeMax, aYRangeMaximum ) )
-													nFlags |= 0x400;
-												nFlags |= 0x20;
-											}
-										}
-									}
-									aOut << nFlags
-										<< nXPosition
-										<< nYPosition
-										<< nXMap
-										<< nYMap
-										<< nXRangeMin
-										<< nXRangeMax
-										<< nYRangeMin
-										<< nYRangeMax;
+                                    const uno::Sequence< beans::PropertyValue >& rPropSeq = aHandlesPropSeq[ k ];
+                                    for ( j = 0; j < rPropSeq.getLength(); j++ )
+                                    {
+                                        const beans::PropertyValue& rPropVal = rPropSeq[ j ];
 
-									if ( nFlags & 8 )
-										nAdjustmentsWhichNeedsToBeConverted |= ( 1 << ( nYPosition - 0x100 ) );
-								}
-								sal_uInt8* pBuf = new sal_uInt8[ nStreamSize ];
-								memcpy( pBuf, aOut.GetData(), nStreamSize );
-								AddOpt( DFF_Prop_Handles, sal_True, nStreamSize - 6, pBuf, nStreamSize );
-							}
-							else
-							{
-								sal_uInt8* pBuf = new sal_uInt8[ 1 ];
-								AddOpt( DFF_Prop_Handles, sal_True, 0, pBuf, 0 );
-							}
-						}
-					}
-				}
-				else if ( rProp.Name.equals( sAdjustmentValues ) )
-				{
-					// it is required, that the information which handle is polar has already be read,
-					// so we are able to change the polar value to a fixed float
-					aAdjustmentValuesProp = rProp.Value;
-                    bHasAdjustmentValuesProp = true;
-				}
-			}
-			if ( bHasAdjustmentValuesProp )
-			{
-				uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeAdjustmentValue > aAdjustmentSeq;
-				if ( aAdjustmentValuesProp >>= aAdjustmentSeq )
-				{
-					if ( bPredefinedHandlesUsed )
-					    LookForPolarHandles( eShapeType, nAdjustmentsWhichNeedsToBeConverted );
+                                        const OUString sPosition           ( "Position"  );
+                                        const OUString sMirroredX          ( "MirroredX"  );
+                                        const OUString sMirroredY          ( "MirroredY"  );
+                                        const OUString sSwitched           ( "Switched"  );
+                                        const OUString sPolar              ( "Polar"  );
+                                        const OUString sRadiusRangeMinimum ( "RadiusRangeMinimum"  );
+                                        const OUString sRadiusRangeMaximum ( "RadiusRangeMaximum"  );
+                                        const OUString sRangeXMinimum      ( "RangeXMinimum"  );
+                                        const OUString sRangeXMaximum      ( "RangeXMaximum"  );
+                                        const OUString sRangeYMinimum      ( "RangeYMinimum"  );
+                                        const OUString sRangeYMaximum      ( "RangeYMaximum"  );
 
-					sal_Int32 k, nValue = 0, nAdjustmentValues = aAdjustmentSeq.getLength();
-					for ( k = 0; k < nAdjustmentValues; k++ )
-					    if( GetAdjustmentValue( aAdjustmentSeq[ k ], k, nAdjustmentsWhichNeedsToBeConverted, nValue ) )
-							AddOpt( (sal_uInt16)( DFF_Prop_adjustValue + k ), (sal_uInt32)nValue );
-				}
-			}
-			if( bHasPathCoordinatesProp )
-			{
-				com::sun::star::uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeParameterPair > aCoordinates;
-				if ( aPathCoordinatesProp >>= aCoordinates )
-				{
-					// creating the vertices
-					if ( (sal_uInt16)aCoordinates.getLength() )
-					{
-						sal_uInt16 j, nElements = (sal_uInt16)aCoordinates.getLength();
-						sal_uInt16 nElementSize = 8;
-						sal_uInt32 nStreamSize = nElementSize * nElements + 6;
-						SvMemoryStream aOut( nStreamSize );
-						aOut << nElements
-							<< nElements
-							<< nElementSize;
-						for( j = 0; j < nElements; j++ )
-						{
-							sal_Int32 X = GetValueForEnhancedCustomShapeParameter( aCoordinates[ j ].First, aEquationOrder, sal_True );
-							sal_Int32 Y = GetValueForEnhancedCustomShapeParameter( aCoordinates[ j ].Second, aEquationOrder, sal_True );
-							aOut << X
-								<< Y;
-						}
-						sal_uInt8* pBuf = new sal_uInt8[ nStreamSize ];
-						memcpy( pBuf, aOut.GetData(), nStreamSize );
-						AddOpt( DFF_Prop_pVertices, sal_True, nStreamSize - 6, pBuf, nStreamSize );	// -6
-					}
-					else
-					{
-						sal_uInt8* pBuf = new sal_uInt8[ 1 ];
-						AddOpt( DFF_Prop_pVertices, sal_True, 0, pBuf, 0 );
-					}
-				}
-			}
-		}
-	}
+                                        if ( rPropVal.Name.equals( sPosition ) )
+                                        {
+                                            com::sun::star::drawing::EnhancedCustomShapeParameterPair aPosition;
+                                            if ( rPropVal.Value >>= aPosition )
+                                            {
+                                                GetValueForEnhancedCustomShapeHandleParameter( nXPosition, aPosition.First );
+                                                GetValueForEnhancedCustomShapeHandleParameter( nYPosition, aPosition.Second );
+                                            }
+                                        }
+                                        else if ( rPropVal.Name.equals( sMirroredX ) )
+                                        {
+                                            bool bMirroredX;
+                                            if ( rPropVal.Value >>= bMirroredX )
+                                            {
+                                                if ( bMirroredX )
+                                                    nFlags |= 1;
+                                            }
+                                        }
+                                        else if ( rPropVal.Name.equals( sMirroredY ) )
+                                        {
+                                            bool bMirroredY;
+                                            if ( rPropVal.Value >>= bMirroredY )
+                                            {
+                                                if ( bMirroredY )
+                                                    nFlags |= 2;
+                                            }
+                                        }
+                                        else if ( rPropVal.Name.equals( sSwitched ) )
+                                        {
+                                            bool bSwitched;
+                                            if ( rPropVal.Value >>= bSwitched )
+                                            {
+                                                if ( bSwitched )
+                                                    nFlags |= 4;
+                                            }
+                                        }
+                                        else if ( rPropVal.Name.equals( sPolar ) )
+                                        {
+                                            com::sun::star::drawing::EnhancedCustomShapeParameterPair aPolar;
+                                            if ( rPropVal.Value >>= aPolar )
+                                            {
+                                                if ( GetValueForEnhancedCustomShapeHandleParameter( nXMap, aPolar.First ) )
+                                                    nFlags |= 0x800;
+                                                if ( GetValueForEnhancedCustomShapeHandleParameter( nYMap, aPolar.Second ) )
+                                                    nFlags |= 0x1000;
+                                                nFlags |= 8;
+                                            }
+                                        }
+                                        else if ( rPropVal.Name.equals( sRadiusRangeMinimum ) )
+                                        {
+                                            nYRangeMin = (sal_Int32)0xff4c0000; // the range of angles seems to be a not
+                                            nYRangeMax = (sal_Int32)0x00b40000; // used feature, so we are defaulting this
+
+                                            com::sun::star::drawing::EnhancedCustomShapeParameter aRadiusRangeMinimum;
+                                            if ( rPropVal.Value >>= aRadiusRangeMinimum )
+                                            {
+                                                if ( GetValueForEnhancedCustomShapeHandleParameter( nXRangeMin, aRadiusRangeMinimum ) )
+                                                    nFlags |= 0x80;
+                                                nFlags |= 0x2000;
+                                            }
+                                        }
+                                        else if ( rPropVal.Name.equals( sRadiusRangeMaximum ) )
+                                        {
+                                            nYRangeMin = (sal_Int32)0xff4c0000; // the range of angles seems to be a not
+                                            nYRangeMax = (sal_Int32)0x00b40000; // used feature, so we are defaulting this
+
+                                            com::sun::star::drawing::EnhancedCustomShapeParameter aRadiusRangeMaximum;
+                                            if ( rPropVal.Value >>= aRadiusRangeMaximum )
+                                            {
+                                                if ( GetValueForEnhancedCustomShapeHandleParameter( nXRangeMax, aRadiusRangeMaximum ) )
+                                                    nFlags |= 0x100;
+                                                nFlags |= 0x2000;
+                                            }
+                                        }
+                                        else if ( rPropVal.Name.equals( sRangeXMinimum ) )
+                                        {
+                                            com::sun::star::drawing::EnhancedCustomShapeParameter aXRangeMinimum;
+                                            if ( rPropVal.Value >>= aXRangeMinimum )
+                                            {
+                                                if ( GetValueForEnhancedCustomShapeHandleParameter( nXRangeMin, aXRangeMinimum ) )
+                                                    nFlags |= 0x80;
+                                                nFlags |= 0x20;
+                                            }
+                                        }
+                                        else if ( rPropVal.Name.equals( sRangeXMaximum ) )
+                                        {
+                                            com::sun::star::drawing::EnhancedCustomShapeParameter aXRangeMaximum;
+                                            if ( rPropVal.Value >>= aXRangeMaximum )
+                                            {
+                                                if ( GetValueForEnhancedCustomShapeHandleParameter( nXRangeMax, aXRangeMaximum ) )
+                                                    nFlags |= 0x100;
+                                                nFlags |= 0x20;
+                                            }
+                                        }
+                                        else if ( rPropVal.Name.equals( sRangeYMinimum ) )
+                                        {
+                                            com::sun::star::drawing::EnhancedCustomShapeParameter aYRangeMinimum;
+                                            if ( rPropVal.Value >>= aYRangeMinimum )
+                                            {
+                                                if ( GetValueForEnhancedCustomShapeHandleParameter( nYRangeMin, aYRangeMinimum ) )
+                                                    nFlags |= 0x200;
+                                                nFlags |= 0x20;
+                                            }
+                                        }
+                                        else if ( rPropVal.Name.equals( sRangeYMaximum ) )
+                                        {
+                                            com::sun::star::drawing::EnhancedCustomShapeParameter aYRangeMaximum;
+                                            if ( rPropVal.Value >>= aYRangeMaximum )
+                                            {
+                                                if ( GetValueForEnhancedCustomShapeHandleParameter( nYRangeMax, aYRangeMaximum ) )
+                                                    nFlags |= 0x400;
+                                                nFlags |= 0x20;
+                                            }
+                                        }
+                                    }
+                                    aOut.WriteUInt32( nFlags )
+                                       .WriteInt32( nXPosition )
+                                       .WriteInt32( nYPosition )
+                                       .WriteInt32( nXMap )
+                                       .WriteInt32( nYMap )
+                                       .WriteInt32( nXRangeMin )
+                                       .WriteInt32( nXRangeMax )
+                                       .WriteInt32( nYRangeMin )
+                                       .WriteInt32( nYRangeMax );
+
+                                    if ( nFlags & 8 )
+                                        nAdjustmentsWhichNeedsToBeConverted |= ( 1 << ( nYPosition - 0x100 ) );
+                                }
+                                sal_uInt8* pBuf = new sal_uInt8[ nStreamSize ];
+                                memcpy( pBuf, aOut.GetData(), nStreamSize );
+                                AddOpt( DFF_Prop_Handles, true, nStreamSize - 6, pBuf, nStreamSize );
+                            }
+                            else
+                            {
+                                sal_uInt8* pBuf = new sal_uInt8[ 1 ];
+                                AddOpt( DFF_Prop_Handles, true, 0, pBuf, 0 );
+                            }
+                        }
+                    }
+                }
+                else if ( rProp.Name.equals( sAdjustmentValues ) )
+                {
+                    // it is required, that the information which handle is polar has already be read,
+                    // so we are able to change the polar value to a fixed float
+                    aAdjustmentValuesProp = rProp.Value;
+                    bAdjustmentValuesProp = true;
+                }
+            }
+            if ( bAdjustmentValuesProp )
+            {
+                uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeAdjustmentValue > aAdjustmentSeq;
+                if ( aAdjustmentValuesProp >>= aAdjustmentSeq )
+                {
+                    if ( bPredefinedHandlesUsed )
+                        LookForPolarHandles( eShapeType, nAdjustmentsWhichNeedsToBeConverted );
+
+                    sal_Int32 k, nValue = 0, nAdjustmentValues = aAdjustmentSeq.getLength();
+                    for ( k = 0; k < nAdjustmentValues; k++ )
+                        if( GetAdjustmentValue( aAdjustmentSeq[ k ], k, nAdjustmentsWhichNeedsToBeConverted, nValue ) )
+                            AddOpt( (sal_uInt16)( DFF_Prop_adjustValue + k ), (sal_uInt32)nValue );
+                }
+            }
+            if( bPathCoordinatesProp )
+            {
+                com::sun::star::uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeParameterPair > aCoordinates;
+                if ( aPathCoordinatesProp >>= aCoordinates )
+                {
+                    // creating the vertices
+                    if ( (sal_uInt16)aCoordinates.getLength() )
+                    {
+                        sal_uInt16 j, nElements = (sal_uInt16)aCoordinates.getLength();
+                        sal_uInt16 nElementSize = 8;
+                        sal_uInt32 nStreamSize = nElementSize * nElements + 6;
+                        SvMemoryStream aOut( nStreamSize );
+                        aOut.WriteUInt16( nElements )
+                           .WriteUInt16( nElements )
+                           .WriteUInt16( nElementSize );
+                        for( j = 0; j < nElements; j++ )
+                        {
+                            sal_Int32 X = GetValueForEnhancedCustomShapeParameter( aCoordinates[ j ].First, aEquationOrder, true );
+                            sal_Int32 Y = GetValueForEnhancedCustomShapeParameter( aCoordinates[ j ].Second, aEquationOrder, true );
+                            aOut.WriteInt32( X )
+                               .WriteInt32( Y );
+                        }
+                        sal_uInt8* pBuf = new sal_uInt8[ nStreamSize ];
+                        memcpy( pBuf, aOut.GetData(), nStreamSize );
+                        AddOpt( DFF_Prop_pVertices, true, nStreamSize - 6, pBuf, nStreamSize ); // -6
+                    }
+                    else
+                    {
+                        sal_uInt8* pBuf = new sal_uInt8[ 1 ];
+                        AddOpt( DFF_Prop_pVertices, true, 0, pBuf, 0 );
+                    }
+                }
+            }
+        }
+    }
 }
 
-// ---------------------------------------------------------------------------------------------
-
-MSO_SPT EscherPropertyContainer::GetCustomShapeType( const uno::Reference< drawing::XShape > & rXShape, sal_uInt32& nMirrorFlags, rtl::OUString& rShapeType )
+MSO_SPT EscherPropertyContainer::GetCustomShapeType( const uno::Reference< drawing::XShape > & rXShape, sal_uInt32& nMirrorFlags, OUString& rShapeType, bool bOOXML )
 {
-	MSO_SPT eShapeType = mso_sptNil;
-	nMirrorFlags = 0;
-	uno::Reference< beans::XPropertySet > aXPropSet( rXShape, uno::UNO_QUERY );
+    MSO_SPT eShapeType = mso_sptNil;
+    nMirrorFlags = 0;
+    uno::Reference< beans::XPropertySet > aXPropSet( rXShape, uno::UNO_QUERY );
     if ( aXPropSet.is() )
     {
-		try
-		{
-			const OUString	sCustomShapeGeometry( RTL_CONSTASCII_USTRINGPARAM ( "CustomShapeGeometry" ) );
-			uno::Any aGeoPropSet = aXPropSet->getPropertyValue( sCustomShapeGeometry );
-			uno::Sequence< beans::PropertyValue > aGeoPropSeq;
-			if ( aGeoPropSet >>= aGeoPropSeq )
-			{
-				sal_Int32 i, nCount = aGeoPropSeq.getLength();
-				for ( i = 0; i < nCount; i++ )
-				{
-					const beans::PropertyValue& rProp = aGeoPropSeq[ i ];
-					if ( rProp.Name.equalsAscii( "Type" ) )
-					{
-						if ( rProp.Value >>= rShapeType )
-							eShapeType = EnhancedCustomShapeTypeNames::Get( rShapeType );
-					}
-					else if ( rProp.Name.equalsAscii( "MirroredX" ) )
-					{
-						sal_Bool bMirroredX = sal_Bool();
-						if ( ( rProp.Value >>= bMirroredX ) && bMirroredX )
-							nMirrorFlags  |= SHAPEFLAG_FLIPH;
-					}
-					else if ( rProp.Name.equalsAscii( "MirroredY" ) )
-					{
-						sal_Bool bMirroredY = sal_Bool();
-						if ( ( rProp.Value >>= bMirroredY ) && bMirroredY )
-							nMirrorFlags  |= SHAPEFLAG_FLIPV;
-					}
-				}
-			}
-		}
-		catch( ::com::sun::star::uno::Exception& )
-		{
-		}
-	}
-	return eShapeType;
+        try
+        {
+            const OUString  sCustomShapeGeometry( "CustomShapeGeometry" );
+            uno::Any aGeoPropSet = aXPropSet->getPropertyValue( sCustomShapeGeometry );
+            uno::Sequence< beans::PropertyValue > aGeoPropSeq;
+            if ( aGeoPropSet >>= aGeoPropSeq )
+            {
+                sal_Int32 i, nCount = aGeoPropSeq.getLength();
+                for ( i = 0; i < nCount; i++ )
+                {
+                    const beans::PropertyValue& rProp = aGeoPropSeq[ i ];
+                    if ( rProp.Name == "Type" )
+                    {
+                        if ( rProp.Value >>= rShapeType )
+                        {
+                            if (bOOXML)
+                            {
+                                // In case of VML export, try to handle the
+                                // ooxml- prefix in rShapeType. If that fails,
+                                // just do the same as the binary export.
+                                OString aType = OUStringToOString(rShapeType, RTL_TEXTENCODING_UTF8);
+                                eShapeType = msfilter::util::GETVMLShapeType(aType);
+                                if (eShapeType == mso_sptNil)
+                                    eShapeType = EnhancedCustomShapeTypeNames::Get(rShapeType);
+                            }
+                            else
+                                eShapeType = EnhancedCustomShapeTypeNames::Get( rShapeType );
+                        }
+                    }
+                    else if ( rProp.Name == "MirroredX" )
+                    {
+                        bool bMirroredX;
+                        if ( ( rProp.Value >>= bMirroredX ) && bMirroredX )
+                            nMirrorFlags  |= SHAPEFLAG_FLIPH;
+                    }
+                    else if ( rProp.Name == "MirroredY" )
+                    {
+                        bool bMirroredY;
+                        if ( ( rProp.Value >>= bMirroredY ) && bMirroredY )
+                            nMirrorFlags  |= SHAPEFLAG_FLIPV;
+                    }
+                }
+            }
+        }
+        catch( const ::com::sun::star::uno::Exception& )
+        {
+        }
+    }
+    return eShapeType;
 }
 
 MSO_SPT EscherPropertyContainer::GetCustomShapeType( const uno::Reference< drawing::XShape > & rXShape, sal_uInt32& nMirrorFlags )
 {
-	rtl::OUString aShapeType;
-	return GetCustomShapeType( rXShape, nMirrorFlags, aShapeType );
+    OUString aShapeType;
+    return GetCustomShapeType( rXShape, nMirrorFlags, aShapeType );
 }
 
-// ---------------------------------------------------------------------------------------------
-//Implement for form control export
-sal_Bool   EscherPropertyContainer::CreateBlipPropertiesforOLEControl(const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet, const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rXShape)
+// Implement for form control export
+bool   EscherPropertyContainer::CreateBlipPropertiesforOLEControl(const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet, const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rXShape)
 {
-	SdrObject* pShape = GetSdrObjectFromXShape( rXShape );
-	if ( pShape )
-	{
-		SdrModel* pMod = pShape->GetModel();
-		Graphic aGraphic(SdrExchangeView::GetObjGraphic( pMod, pShape));
-		
+    SdrObject* pShape = GetSdrObjectFromXShape( rXShape );
+    if ( pShape )
+    {
+        SdrModel* pMod = pShape->GetModel();
+        Graphic aGraphic(SdrExchangeView::GetObjGraphic( pMod, pShape));
+
         GraphicObject   aGraphicObject = aGraphic;
-        ByteString  aUniqueId = aGraphicObject.GetUniqueID();
-		if ( aUniqueId.Len() )
-		{
-			if ( pGraphicProvider && pPicOutStrm && pShapeBoundRect )
-			{
-				Rectangle aRect( Point( 0, 0 ), pShapeBoundRect->GetSize() );
-				
-				sal_uInt32 nBlibId = pGraphicProvider->GetBlibID( *pPicOutStrm, aUniqueId, aRect, NULL );
-				if ( nBlibId )
-				{					
-					AddOpt( ESCHER_Prop_pib, nBlibId, sal_True );
-					ImplCreateGraphicAttributes( rXPropSet, nBlibId, sal_False );
-					return sal_True;
-				}
-			}
-		}
-	}
+        OString  aUniqueId = aGraphicObject.GetUniqueID();
+        if ( aUniqueId.getLength() )
+        {
+            if ( pGraphicProvider && pPicOutStrm && pShapeBoundRect )
+            {
+                Rectangle aRect( Point( 0, 0 ), pShapeBoundRect->GetSize() );
 
-	return sal_False;
+                sal_uInt32 nBlibId = pGraphicProvider->GetBlibID( *pPicOutStrm, aUniqueId, aRect, NULL );
+                if ( nBlibId )
+                {
+                    AddOpt( ESCHER_Prop_pib, nBlibId, true );
+                    ImplCreateGraphicAttributes( rXPropSet, nBlibId, false );
+                    return true;
+                }
+            }
+        }
+    }
 
+    return false;
 }
 
 EscherPersistTable::EscherPersistTable()
 {
 }
 
-// ---------------------------------------------------------------------------------------------
-
 EscherPersistTable::~EscherPersistTable()
 {
-	for ( void* pPtr = maPersistTable.First(); pPtr; pPtr = maPersistTable.Next() )
-		delete (EscherPersistEntry*)pPtr;
+    for( size_t i = 0, n = maPersistTable.size(); i < n; ++i ) {
+        delete maPersistTable[ i ];
+    }
 }
 
-// ---------------------------------------------------------------------------------------------
-
-sal_Bool EscherPersistTable::PtIsID( sal_uInt32 nID )
+bool EscherPersistTable::PtIsID( sal_uInt32 nID )
 {
-	for ( void* pPtr = maPersistTable.First(); pPtr; pPtr = maPersistTable.Next() )
-	{
-		if ( ((EscherPersistEntry*)pPtr)->mnID == nID )
-			return sal_True;
-	}
-	return sal_False;
+    for( size_t i = 0, n = maPersistTable.size(); i < n; ++i ) {
+        EscherPersistEntry* pPtr = maPersistTable[ i ];
+        if ( pPtr->mnID == nID ) {
+            return true;
+        }
+    }
+    return false;
 }
-
-// ---------------------------------------------------------------------------------------------
 
 void EscherPersistTable::PtInsert( sal_uInt32 nID, sal_uInt32 nOfs )
 {
-	maPersistTable.Insert( new EscherPersistEntry( nID, nOfs ) );
+    maPersistTable.push_back( new EscherPersistEntry( nID, nOfs ) );
 }
-
-// ---------------------------------------------------------------------------------------------
 
 sal_uInt32 EscherPersistTable::PtDelete( sal_uInt32 nID )
 {
-	for ( void* pPtr = maPersistTable.First(); pPtr; pPtr = maPersistTable.Next() )
-	{
-		if ( ((EscherPersistEntry*)pPtr)->mnID == nID )
-		{
-//			sal_uInt32 nRetValue = ((EscherPersistEntry*)pPtr)->mnOffset;
-			delete (EscherPersistEntry*) maPersistTable.Remove();
-		}
-	}
-	return 0;
+    EscherPersistTable_impl::iterator it = maPersistTable.begin();
+    for( ; it != maPersistTable.end() ; ++it )
+    {
+        if ( (*it)->mnID == nID ) {
+            delete *it;
+            maPersistTable.erase( it );
+            break;
+        }
+    }
+    return 0;
 }
-
-// ---------------------------------------------------------------------------------------------
 
 sal_uInt32 EscherPersistTable::PtGetOffsetByID( sal_uInt32 nID )
 {
-	for ( void* pPtr = maPersistTable.First(); pPtr; pPtr = maPersistTable.Next() )
-	{
-		if ( ((EscherPersistEntry*)pPtr)->mnID == nID )
-			return ((EscherPersistEntry*)pPtr)->mnOffset;
-	}
-	return 0;
+    for( size_t i = 0, n = maPersistTable.size(); i < n; ++i ) {
+        EscherPersistEntry* pPtr = maPersistTable[ i ];
+        if ( pPtr->mnID == nID ) {
+            return pPtr->mnOffset;
+        }
+    }
+    return 0;
 };
-
-// ---------------------------------------------------------------------------------------------
 
 sal_uInt32 EscherPersistTable::PtReplace( sal_uInt32 nID, sal_uInt32 nOfs )
 {
-	for ( void* pPtr = maPersistTable.First(); pPtr; pPtr = maPersistTable.Next() )
-	{
-		if ( ((EscherPersistEntry*)pPtr)->mnID == nID )
-		{
-			sal_uInt32 nRetValue = ((EscherPersistEntry*)pPtr)->mnOffset;
-			((EscherPersistEntry*)pPtr)->mnOffset = nOfs;
-			return nRetValue;
-		}
-	}
-	return 0;
+    for( size_t i = 0, n = maPersistTable.size(); i < n; ++i ) {
+        EscherPersistEntry* pPtr = maPersistTable[ i ];
+        if ( pPtr->mnID == nID ) {
+            sal_uInt32 nRetValue = pPtr->mnOffset;
+            pPtr->mnOffset = nOfs;
+            return nRetValue;
+        }
+    }
+    return 0;
 }
-
-// ---------------------------------------------------------------------------------------------
 
 sal_uInt32 EscherPersistTable::PtReplaceOrInsert( sal_uInt32 nID, sal_uInt32 nOfs )
 {
-	for ( void* pPtr = maPersistTable.First(); pPtr; pPtr = maPersistTable.Next() )
-	{
-		if ( ((EscherPersistEntry*)pPtr)->mnID == nID )
-		{
-			sal_uInt32 nRetValue = ((EscherPersistEntry*)pPtr)->mnOffset;
-			((EscherPersistEntry*)pPtr)->mnOffset = nOfs;
-			return nRetValue;
-		}
-	}
-	PtInsert( nID, nOfs );
-	return 0;
+    for( size_t i = 0, n = maPersistTable.size(); i < n; ++i ) {
+        EscherPersistEntry* pPtr = maPersistTable[ i ];
+        if ( pPtr->mnID == nID ) {
+            sal_uInt32 nRetValue = pPtr->mnOffset;
+            pPtr->mnOffset = nOfs;
+            return nRetValue;
+        }
+    }
+    PtInsert( nID, nOfs );
+    return 0;
 }
 
-sal_Bool EscherPropertyValueHelper::GetPropertyValue(
-	::com::sun::star::uno::Any& rAny,
-		const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet,
-			const String& rString,
-					sal_Bool bTestPropertyAvailability )
+bool EscherPropertyValueHelper::GetPropertyValue(
+    ::com::sun::star::uno::Any& rAny,
+    const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet,
+    const OUString& rString,
+    bool bTestPropertyAvailability)
 {
-    sal_Bool bRetValue = sal_True;
-	if ( bTestPropertyAvailability )
-	{
-		bRetValue = sal_False;
-		try
-		{
-			::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySetInfo >
-				aXPropSetInfo( rXPropSet->getPropertySetInfo() );
-			if ( aXPropSetInfo.is() )
-				bRetValue = aXPropSetInfo->hasPropertyByName( rString );
-		}
-		catch( ::com::sun::star::uno::Exception& )
-		{
-			bRetValue = sal_False;
-		}
-	}
-	if ( bRetValue )
-	{
-		try
-		{
-			rAny = rXPropSet->getPropertyValue( rString );
-			if ( !rAny.hasValue() )
-				bRetValue = sal_False;
-		}
-		catch( ::com::sun::star::uno::Exception& )
-		{
-			bRetValue = sal_False;
-		}
-	}
+    bool bRetValue = true;
+    if ( bTestPropertyAvailability )
+    {
+        bRetValue = false;
+        try
+        {
+            ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySetInfo >
+                aXPropSetInfo( rXPropSet->getPropertySetInfo() );
+            if ( aXPropSetInfo.is() )
+                bRetValue = aXPropSetInfo->hasPropertyByName( rString );
+        }
+        catch( const ::com::sun::star::uno::Exception& )
+        {
+            bRetValue = false;
+        }
+    }
+    if ( bRetValue )
+    {
+        try
+        {
+            rAny = rXPropSet->getPropertyValue( rString );
+            if ( !rAny.hasValue() )
+                bRetValue = false;
+        }
+        catch( const ::com::sun::star::uno::Exception& )
+        {
+            bRetValue = false;
+        }
+    }
     return bRetValue;
 }
 
-// ---------------------------------------------------------------------------------------------
-
 ::com::sun::star::beans::PropertyState EscherPropertyValueHelper::GetPropertyState(
-	const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet,
-		const String& rPropertyName )
+    const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet,
+        const OUString& rPropertyName )
 {
-	::com::sun::star::beans::PropertyState eRetValue = ::com::sun::star::beans::PropertyState_AMBIGUOUS_VALUE;
-	try
-	{
-		::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertyState >	aXPropState
-				( rXPropSet, ::com::sun::star::uno::UNO_QUERY );
-		if ( aXPropState.is() )
+    ::com::sun::star::beans::PropertyState eRetValue = ::com::sun::star::beans::PropertyState_AMBIGUOUS_VALUE;
+    try
+    {
+        ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertyState > aXPropState
+                ( rXPropSet, ::com::sun::star::uno::UNO_QUERY );
+        if ( aXPropState.is() )
             eRetValue = aXPropState->getPropertyState( rPropertyName );
-	}
-	catch( ::com::sun::star::uno::Exception& )
-	{
-		//...
-	}
-	return eRetValue;
+    }
+    catch( const ::com::sun::star::uno::Exception& )
+    {
+    }
+    return eRetValue;
 }
 
-// ---------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------
-
-EscherBlibEntry::EscherBlibEntry( sal_uInt32 nPictureOffset, const GraphicObject& rObject, const ByteString& rId,
-										const GraphicAttr* pGraphicAttr ) :
-	mnPictureOffset ( nPictureOffset ),
-	mnRefCount		( 1 ),
-	mnSizeExtra		( 0 ),
-	maPrefSize		( rObject.GetPrefSize() ),
-	maPrefMapMode	( rObject.GetPrefMapMode() ),
-	mbIsEmpty		( sal_True )
+EscherBlibEntry::EscherBlibEntry( sal_uInt32 nPictureOffset, const GraphicObject& rObject, const OString& rId,
+                                        const GraphicAttr* pGraphicAttr ) :
+    mnPictureOffset ( nPictureOffset ),
+    mnRefCount      ( 1 ),
+    mnSizeExtra     ( 0 ),
+    maPrefSize      ( rObject.GetPrefSize() ),
+    maPrefMapMode   ( rObject.GetPrefMapMode() ),
+    mbIsEmpty       ( true )
 {
-	mbIsNativeGraphicPossible = ( pGraphicAttr == NULL );
-	meBlibType = UNKNOWN;
-	mnSize = 0;
+    mbIsNativeGraphicPossible = ( pGraphicAttr == NULL );
+    meBlibType = UNKNOWN;
+    mnSize = 0;
 
-	sal_uInt32		nLen = rId.Len();
-	const sal_Char* pData = rId.GetBuffer();
-	GraphicType		eType( rObject.GetType() );
-	if ( nLen && pData && ( eType != GRAPHIC_NONE ) )
-	{
-		mnIdentifier[ 0 ] = rtl_crc32( 0,pData, nLen );
-		mnIdentifier[ 1 ] = 0;
+    sal_uInt32      nLen = static_cast<sal_uInt32>(rId.getLength());
+    const sal_Char* pData = rId.getStr();
+    GraphicType     eType( rObject.GetType() );
+    if ( nLen && pData && ( eType != GRAPHIC_NONE ) )
+    {
+        mnIdentifier[ 0 ] = rtl_crc32( 0,pData, nLen );
+        mnIdentifier[ 1 ] = 0;
 
-		if ( pGraphicAttr )
-		{
-			if ( pGraphicAttr->IsSpecialDrawMode()
-					|| pGraphicAttr->IsMirrored()
-						 || pGraphicAttr->IsCropped()
-							|| pGraphicAttr->IsRotated()
-								|| pGraphicAttr->IsTransparent()
-									|| pGraphicAttr->IsAdjusted() )
-			{
-				SvMemoryStream aSt( sizeof( GraphicAttr ) );
-				aSt << static_cast<sal_uInt16>(pGraphicAttr->GetDrawMode())
-					<< static_cast<sal_uInt32>(pGraphicAttr->GetMirrorFlags())
-					<< pGraphicAttr->GetLeftCrop()
-					<< pGraphicAttr->GetTopCrop()
-					<< pGraphicAttr->GetRightCrop()
-					<< pGraphicAttr->GetBottomCrop()
-					<< pGraphicAttr->GetRotation()
-					<< pGraphicAttr->GetLuminance()
-					<< pGraphicAttr->GetContrast()
-					<< pGraphicAttr->GetChannelR()
-					<< pGraphicAttr->GetChannelG()
-					<< pGraphicAttr->GetChannelB()
-					<< pGraphicAttr->GetGamma()
-					<< (sal_Bool)( pGraphicAttr->IsInvert() == sal_True )
-					<< pGraphicAttr->GetTransparency();
-				mnIdentifier[ 1 ] = rtl_crc32( 0, aSt.GetData(), aSt.Tell() );
-			}
-			else
-				mbIsNativeGraphicPossible = sal_True;
-		}
-		sal_uInt32 i, nTmp, n1, n2;
-		n1 = n2 = 0;
-		for ( i = 0; i < nLen; i++ )
-		{
-			nTmp = n2 >> 28;	// rotating 4 bit
-			n2 <<= 4;
-			n2 |= n1 >> 28;
-			n1 <<= 4;
-			n1 |= nTmp;
-			n1 ^= *pData++ - '0';
-		}
-		mnIdentifier[ 2 ] = n1;
-		mnIdentifier[ 3 ] = n2;
-		mbIsEmpty = sal_False;
-	}
+        if ( pGraphicAttr )
+        {
+            if ( pGraphicAttr->IsSpecialDrawMode()
+                    || pGraphicAttr->IsMirrored()
+                         || pGraphicAttr->IsCropped()
+                            || pGraphicAttr->IsRotated()
+                                || pGraphicAttr->IsTransparent()
+                                    || pGraphicAttr->IsAdjusted() )
+            {
+                SvMemoryStream aSt( sizeof( GraphicAttr ) );
+                aSt.WriteUInt16( pGraphicAttr->GetDrawMode() )
+                   .WriteUInt32( pGraphicAttr->GetMirrorFlags() )
+                   .WriteInt32( pGraphicAttr->GetLeftCrop() )
+                   .WriteInt32( pGraphicAttr->GetTopCrop() )
+                   .WriteInt32( pGraphicAttr->GetRightCrop() )
+                   .WriteInt32( pGraphicAttr->GetBottomCrop() )
+                   .WriteUInt16( pGraphicAttr->GetRotation() )
+                   .WriteInt16( pGraphicAttr->GetLuminance() )
+                   .WriteInt16( pGraphicAttr->GetContrast() )
+                   .WriteInt16( pGraphicAttr->GetChannelR() )
+                   .WriteInt16( pGraphicAttr->GetChannelG() )
+                   .WriteInt16( pGraphicAttr->GetChannelB() )
+                   .WriteDouble( pGraphicAttr->GetGamma() );
+                aSt.WriteUChar( pGraphicAttr->IsInvert() )
+                   .WriteUChar( pGraphicAttr->GetTransparency() );
+                mnIdentifier[ 1 ] = rtl_crc32( 0, aSt.GetData(), aSt.Tell() );
+            }
+            else
+                mbIsNativeGraphicPossible = true;
+        }
+        sal_uInt32 i, nTmp, n1, n2;
+        n1 = n2 = 0;
+        for ( i = 0; i < nLen; i++ )
+        {
+            nTmp = n2 >> 28;    // rotating 4 bit
+            n2 <<= 4;
+            n2 |= n1 >> 28;
+            n1 <<= 4;
+            n1 |= nTmp;
+            n1 ^= *pData++ - '0';
+        }
+        mnIdentifier[ 2 ] = n1;
+        mnIdentifier[ 3 ] = n2;
+        mbIsEmpty = false;
+    }
 };
 
-// ---------------------------------------------------------------------------------------------
-
-void EscherBlibEntry::WriteBlibEntry( SvStream& rSt, sal_Bool bWritePictureOffset, sal_uInt32 nResize )
+void EscherBlibEntry::WriteBlibEntry( SvStream& rSt, bool bWritePictureOffset, sal_uInt32 nResize )
 {
-	sal_uInt32	nPictureOffset = ( bWritePictureOffset ) ? mnPictureOffset : 0;
+    sal_uInt32  nPictureOffset = ( bWritePictureOffset ) ? mnPictureOffset : 0;
 
-	rSt << (sal_uInt32)( ( ESCHER_BSE << 16 ) | ( ( (sal_uInt16)meBlibType << 4 ) | 2 ) )
-		<< (sal_uInt32)( 36 + nResize )
-		<< (sal_uInt8)meBlibType;
+    rSt.WriteUInt32( ( ( ESCHER_BSE << 16 ) | ( ( (sal_uInt16)meBlibType << 4 ) | 2 ) ) )
+       .WriteUInt32( ( 36 + nResize ) )
+       .WriteUChar( meBlibType );
 
-	switch ( meBlibType )
-	{
-		case EMF :
-		case WMF :	// EMF/WMF auf OS2 zu Pict Konvertieren
-			rSt << (sal_uInt8)PICT;
-		break;
-		default:
-			rSt << (sal_uInt8)meBlibType;
-	};
+    switch ( meBlibType )
+    {
+        case EMF :
+        case WMF :  // converting EMF/WMF on OS2 to Pict
+            rSt.WriteUChar( PICT );
+        break;
+        default:
+            rSt.WriteUChar( meBlibType );
+    }
 
-	rSt.Write( &mnIdentifier[ 0 ], 16 );
-	rSt << (sal_uInt16)0
-		<< (sal_uInt32)( mnSize + mnSizeExtra )
-		<< mnRefCount
-		<< nPictureOffset
-		<< (sal_uInt32)0;
+    rSt.Write( &mnIdentifier[ 0 ], 16 );
+    rSt.WriteUInt16( 0 )
+       .WriteUInt32( ( mnSize + mnSizeExtra ) )
+       .WriteUInt32( mnRefCount )
+       .WriteUInt32( nPictureOffset )
+       .WriteUInt32( 0 );
 }
-
-// ---------------------------------------------------------------------------------------------
 
 EscherBlibEntry::~EscherBlibEntry()
 {
 };
 
-// ---------------------------------------------------------------------------------------------
-
-sal_Bool EscherBlibEntry::operator==( const EscherBlibEntry& rEscherBlibEntry ) const
+bool EscherBlibEntry::operator==( const EscherBlibEntry& rEscherBlibEntry ) const
 {
-	for ( int i = 0; i < 3; i++ )
-	{
-		if ( mnIdentifier[ i ] != rEscherBlibEntry.mnIdentifier[ i ] )
-			return sal_False;
-	}
-	return sal_True;
+    for ( int i = 0; i < 3; i++ )
+    {
+        if ( mnIdentifier[ i ] != rEscherBlibEntry.mnIdentifier[ i ] )
+            return false;
+    }
+    return true;
 }
 
-// ---------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------
-
 EscherGraphicProvider::EscherGraphicProvider( sal_uInt32 nFlags ) :
-	mnFlags			( nFlags ),
-	mpBlibEntrys	( NULL ),
-	mnBlibBufSize	( 0 ),
-	mnBlibEntrys	( 0 )
+    mnFlags         ( nFlags ),
+    mpBlibEntrys    ( NULL ),
+    mnBlibBufSize   ( 0 ),
+    mnBlibEntrys    ( 0 )
 {
 }
 
 EscherGraphicProvider::~EscherGraphicProvider()
 {
-	for ( sal_uInt32 i = 0; i < mnBlibEntrys; delete mpBlibEntrys[ i++ ] ) ;
-	delete[] mpBlibEntrys;
+    for ( sal_uInt32 i = 0; i < mnBlibEntrys; delete mpBlibEntrys[ i++ ] ) ;
+    delete[] mpBlibEntrys;
 }
 
 void EscherGraphicProvider::SetNewBlipStreamOffset( sal_Int32 nOffset )
 {
-	for( sal_uInt32 i = 0; i < mnBlibEntrys; i++ )
-	{
-		EscherBlibEntry* pBlibEntry = mpBlibEntrys[ i ];
-		pBlibEntry->mnPictureOffset += nOffset;
-	}
+    for( sal_uInt32 i = 0; i < mnBlibEntrys; i++ )
+    {
+        EscherBlibEntry* pBlibEntry = mpBlibEntrys[ i ];
+        pBlibEntry->mnPictureOffset += nOffset;
+    }
 }
 
 sal_uInt32 EscherGraphicProvider::ImplInsertBlib( EscherBlibEntry* p_EscherBlibEntry )
 {
-	if ( mnBlibBufSize == mnBlibEntrys )
-	{
-		mnBlibBufSize += 64;
-		EscherBlibEntry** pTemp = new EscherBlibEntry*[ mnBlibBufSize ];
-		for ( sal_uInt32 i = 0; i < mnBlibEntrys; i++ )
-		{
-			pTemp[ i ] = mpBlibEntrys[ i ];
-		}
-		delete[] mpBlibEntrys;
-		mpBlibEntrys = pTemp;
-	}
-	mpBlibEntrys[ mnBlibEntrys++ ] = p_EscherBlibEntry;
-	return mnBlibEntrys;
+    if ( mnBlibBufSize == mnBlibEntrys )
+    {
+        mnBlibBufSize += 64;
+        EscherBlibEntry** pTemp = new EscherBlibEntry*[ mnBlibBufSize ];
+        for ( sal_uInt32 i = 0; i < mnBlibEntrys; i++ )
+        {
+            pTemp[ i ] = mpBlibEntrys[ i ];
+        }
+        delete[] mpBlibEntrys;
+        mpBlibEntrys = pTemp;
+    }
+    mpBlibEntrys[ mnBlibEntrys++ ] = p_EscherBlibEntry;
+    return mnBlibEntrys;
 }
 
 sal_uInt32 EscherGraphicProvider::GetBlibStoreContainerSize( SvStream* pMergePicStreamBSE ) const
 {
-	sal_uInt32 nSize = 44 * mnBlibEntrys + 8;
-	if ( pMergePicStreamBSE )
-	{
-		for ( sal_uInt32 i = 0; i < mnBlibEntrys; i++ )
-			nSize += mpBlibEntrys[ i ]->mnSize + mpBlibEntrys[ i ]->mnSizeExtra;
-	}
-	return nSize;
+    sal_uInt32 nSize = 44 * mnBlibEntrys + 8;
+    if ( pMergePicStreamBSE )
+    {
+        for ( sal_uInt32 i = 0; i < mnBlibEntrys; i++ )
+            nSize += mpBlibEntrys[ i ]->mnSize + mpBlibEntrys[ i ]->mnSizeExtra;
+    }
+    return nSize;
 }
 
-sal_Bool EscherGraphicProvider::WriteBlibStoreEntry(SvStream& rSt,
-    sal_uInt32 nBlipId, sal_Bool bWritePictureOffSet, sal_uInt32 nResize)
+bool EscherGraphicProvider::WriteBlibStoreEntry(SvStream& rSt,
+    sal_uInt32 nBlipId, bool bWritePictureOffSet, sal_uInt32 nResize)
 {
     if (nBlipId > mnBlibEntrys || nBlipId == 0)
-        return sal_False;
+        return false;
     mpBlibEntrys[nBlipId-1]->WriteBlibEntry(rSt, bWritePictureOffSet, nResize);
-    return sal_True;
+    return true;
 }
 
 void EscherGraphicProvider::WriteBlibStoreContainer( SvStream& rSt, SvStream* pMergePicStreamBSE )
 {
-	sal_uInt32	nSize = GetBlibStoreContainerSize( pMergePicStreamBSE );
-	if ( nSize )
-	{
-		rSt << (sal_uInt32)( ( ESCHER_BstoreContainer << 16 ) | 0x1f )
-			<< (sal_uInt32)( nSize - 8 );
+    sal_uInt32  nSize = GetBlibStoreContainerSize( pMergePicStreamBSE );
+    if ( nSize )
+    {
+        rSt.WriteUInt32( ( ( ESCHER_BstoreContainer << 16 ) | 0x1f ) )
+           .WriteUInt32( ( nSize - 8 ) );
 
-		if ( pMergePicStreamBSE )
-		{
-			sal_uInt32 i, nBlipSize, nOldPos = pMergePicStreamBSE->Tell();
-			const sal_uInt32 nBuf = 0x40000;	// 256KB buffer
-			sal_uInt8* pBuf = new sal_uInt8[ nBuf ];
+        if ( pMergePicStreamBSE )
+        {
+            sal_uInt32 i, nBlipSize, nOldPos = pMergePicStreamBSE->Tell();
+            const sal_uInt32 nBuf = 0x40000;    // 256KB buffer
+            boost::scoped_array<sal_uInt8> pBuf(new sal_uInt8[ nBuf ]);
 
-			for ( i = 0; i < mnBlibEntrys; i++ )
-			{
-				EscherBlibEntry* pBlibEntry = mpBlibEntrys[ i ];
+            for ( i = 0; i < mnBlibEntrys; i++ )
+            {
+                EscherBlibEntry* pBlibEntry = mpBlibEntrys[ i ];
 
-				ESCHER_BlibType nBlibType = pBlibEntry->meBlibType;
-				nBlipSize = pBlibEntry->mnSize + pBlibEntry->mnSizeExtra;
-				pBlibEntry->WriteBlibEntry( rSt, sal_False, nBlipSize );
+                ESCHER_BlibType nBlibType = pBlibEntry->meBlibType;
+                nBlipSize = pBlibEntry->mnSize + pBlibEntry->mnSizeExtra;
+                pBlibEntry->WriteBlibEntry( rSt, false, nBlipSize );
 
-				// BLIP
-				pMergePicStreamBSE->Seek( pBlibEntry->mnPictureOffset );
-				sal_uInt16 n16;
-				// record version and instance
-				*pMergePicStreamBSE >> n16;
-				rSt << n16;
-				// record type
-				*pMergePicStreamBSE >> n16;
-				rSt << sal_uInt16( ESCHER_BlipFirst + nBlibType );
+                // BLIP
+                pMergePicStreamBSE->Seek( pBlibEntry->mnPictureOffset );
+                sal_uInt16 n16;
+                // record version and instance
+                pMergePicStreamBSE->ReadUInt16( n16 );
+                rSt.WriteUInt16( n16 );
+                // record type
+                pMergePicStreamBSE->ReadUInt16( n16 );
+                rSt.WriteUInt16( ESCHER_BlipFirst + nBlibType );
                 DBG_ASSERT( n16 == ESCHER_BlipFirst + nBlibType , "EscherGraphicProvider::WriteBlibStoreContainer: BLIP record types differ" );
-				sal_uInt32 n32;
-				// record size
-				*pMergePicStreamBSE >> n32;
-				nBlipSize -= 8;
-				rSt << nBlipSize;
+                sal_uInt32 n32;
+                // record size
+                pMergePicStreamBSE->ReadUInt32( n32 );
+                nBlipSize -= 8;
+                rSt.WriteUInt32( nBlipSize );
                 DBG_ASSERT( nBlipSize == n32, "EscherGraphicProvider::WriteBlibStoreContainer: BLIP sizes differ" );
-				// record
-				while ( nBlipSize )
-				{
-					sal_uInt32 nBytes = ( nBlipSize > nBuf ? nBuf : nBlipSize );
-					pMergePicStreamBSE->Read( pBuf, nBytes );
-					rSt.Write( pBuf, nBytes );
-					nBlipSize -= nBytes;
-				}
-			}
-			delete[] pBuf;
-			pMergePicStreamBSE->Seek( nOldPos );
-		}
-		else
-		{
+                // record
+                while ( nBlipSize )
+                {
+                    sal_uInt32 nBytes = ( nBlipSize > nBuf ? nBuf : nBlipSize );
+                    pMergePicStreamBSE->Read( pBuf.get(), nBytes );
+                    rSt.Write( pBuf.get(), nBytes );
+                    nBlipSize -= nBytes;
+                }
+            }
+            pMergePicStreamBSE->Seek( nOldPos );
+        }
+        else
+        {
             for ( sal_uInt32 i = 0; i < mnBlibEntrys; i++ )
-                mpBlibEntrys[ i ]->WriteBlibEntry( rSt, sal_True );
-		}
-	}
+                mpBlibEntrys[ i ]->WriteBlibEntry( rSt, true );
+        }
+    }
 }
 
-sal_Bool EscherGraphicProvider::GetPrefSize( const sal_uInt32 nBlibId, Size& rPrefSize, MapMode& rPrefMapMode )
+bool EscherGraphicProvider::GetPrefSize( const sal_uInt32 nBlibId, Size& rPrefSize, MapMode& rPrefMapMode )
 {
-	sal_Bool bInRange = nBlibId && ( ( nBlibId - 1 ) < mnBlibEntrys );
-	if ( bInRange )
-	{
-		EscherBlibEntry* pEntry = mpBlibEntrys[ nBlibId - 1 ];
-		rPrefSize = pEntry->maPrefSize;
-		rPrefMapMode = pEntry->maPrefMapMode;
-	}
-	return bInRange;
+    bool bInRange = nBlibId && ( ( nBlibId - 1 ) < mnBlibEntrys );
+    if ( bInRange )
+    {
+        EscherBlibEntry* pEntry = mpBlibEntrys[ nBlibId - 1 ];
+        rPrefSize = pEntry->maPrefSize;
+        rPrefMapMode = pEntry->maPrefMapMode;
+    }
+    return bInRange;
 }
 
-sal_uInt32 EscherGraphicProvider::GetBlibID( SvStream& rPicOutStrm, const ByteString& rId,
-											const Rectangle& /* rBoundRect */, const com::sun::star::awt::Rectangle* pVisArea, const GraphicAttr* pGraphicAttr )
+sal_uInt32 EscherGraphicProvider::GetBlibID( SvStream& rPicOutStrm, const OString& rId,
+                                            const Rectangle& /* rBoundRect */, const com::sun::star::awt::Rectangle* pVisArea,
+                                            const GraphicAttr* pGraphicAttr, const bool bOOxmlExport )
 {
-	sal_uInt32			nBlibId = 0;
-	GraphicObject		aGraphicObject( rId );
+    sal_uInt32          nBlibId = 0;
+    GraphicObject       aGraphicObject( rId );
 
-	EscherBlibEntry* p_EscherBlibEntry = new EscherBlibEntry( rPicOutStrm.Tell(), aGraphicObject, rId, pGraphicAttr );
-	if ( !p_EscherBlibEntry->IsEmpty() )
-	{
-		for ( sal_uInt32 i = 0; i < mnBlibEntrys; i++ )
-		{
-			if ( *( mpBlibEntrys[ i ] )	== *p_EscherBlibEntry )
-			{
-				mpBlibEntrys[ i ]->mnRefCount++;
-				delete p_EscherBlibEntry;
-				return i + 1;
-			}
-		}
+    EscherBlibEntry* p_EscherBlibEntry = new EscherBlibEntry( rPicOutStrm.Tell(), aGraphicObject, rId, pGraphicAttr );
+    if ( !p_EscherBlibEntry->IsEmpty() )
+    {
+        for ( sal_uInt32 i = 0; i < mnBlibEntrys; i++ )
+        {
+            if ( *( mpBlibEntrys[ i ] ) == *p_EscherBlibEntry )
+            {
+                mpBlibEntrys[ i ]->mnRefCount++;
+                delete p_EscherBlibEntry;
+                return i + 1;
+            }
+        }
 
-		sal_Bool			bUseNativeGraphic( sal_False );
+        bool            bUseNativeGraphic( false );
 
-		Graphic				aGraphic( aGraphicObject.GetTransformedGraphic( pGraphicAttr ) );
-		GfxLink				aGraphicLink;
-		SvMemoryStream		aStream;
+        Graphic             aGraphic( aGraphicObject.GetTransformedGraphic( pGraphicAttr ) );
+        GfxLink             aGraphicLink;
+        SvMemoryStream      aStream;
 
-		const sal_uInt8*	pGraphicAry = NULL;
+        const sal_uInt8*    pGraphicAry = NULL;
 
-		if ( p_EscherBlibEntry->mbIsNativeGraphicPossible && aGraphic.IsLink() )
-		{
-			aGraphicLink = aGraphic.GetLink();
+        if ( p_EscherBlibEntry->mbIsNativeGraphicPossible && aGraphic.IsLink() )
+        {
+            aGraphicLink = aGraphic.GetLink();
 
-			p_EscherBlibEntry->mnSize = aGraphicLink.GetDataSize();
-			pGraphicAry = aGraphicLink.GetData();
+            p_EscherBlibEntry->mnSize = aGraphicLink.GetDataSize();
+            pGraphicAry = aGraphicLink.GetData();
 
-			if ( p_EscherBlibEntry->mnSize && pGraphicAry )
-			{
-				switch ( aGraphicLink.GetType() )
-				{
-					case GFX_LINK_TYPE_NATIVE_JPG : p_EscherBlibEntry->meBlibType = PEG; break;
-					case GFX_LINK_TYPE_NATIVE_PNG : p_EscherBlibEntry->meBlibType = PNG; break;
+            if ( p_EscherBlibEntry->mnSize && pGraphicAry )
+            {
+                switch ( aGraphicLink.GetType() )
+                {
+                    case GFX_LINK_TYPE_NATIVE_JPG : p_EscherBlibEntry->meBlibType = PEG; break;
+                    case GFX_LINK_TYPE_NATIVE_PNG : p_EscherBlibEntry->meBlibType = PNG; break;
 
-                    // #15508# added BMP type for better exports; need to check this
+                    // #i15508# added BMP type for better exports; need to check this
                     // checked - does not work that way, so keep out for now. It may
                     // work somehow with direct DIB data, but that would need to be checked
                     // carefully
@@ -4395,143 +4388,138 @@ sal_uInt32 EscherGraphicProvider::GetBlibID( SvStream& rPicOutStrm, const ByteSt
                     //
                     // case GFX_LINK_TYPE_NATIVE_BMP : p_EscherBlibEntry->meBlibType = DIB; break;
 
-					case GFX_LINK_TYPE_NATIVE_WMF :
-					{
-						if ( pGraphicAry && ( p_EscherBlibEntry->mnSize > 0x2c ) )
-						{
-							if ( ( pGraphicAry[ 0x28 ] == 0x20 ) && ( pGraphicAry[ 0x29 ] == 0x45 )		// check the magic
-								&& ( pGraphicAry[ 0x2a ] == 0x4d ) && ( pGraphicAry[ 0x2b ] == 0x46 ) )	// number ( emf detection )
-							{
-								p_EscherBlibEntry->meBlibType = EMF;
-							}
-							else
-							{
-								p_EscherBlibEntry->meBlibType = WMF;
-								if ( ( pGraphicAry[ 0 ] == 0xd7 ) && ( pGraphicAry[ 1 ] == 0xcd )
-									&& ( pGraphicAry[ 2 ] == 0xc6 ) && ( pGraphicAry[ 3 ] == 0x9a ) )
-								{	// we have to get rid of the metafileheader
-									pGraphicAry += 22;
-									p_EscherBlibEntry->mnSize -= 22;
-								}
-							}
-						}
-					}
-					break;
-					default: break;
-				}
-				if ( p_EscherBlibEntry->meBlibType != UNKNOWN )
-					bUseNativeGraphic = sal_True;
-			}
-		}
-		if ( !bUseNativeGraphic )
-		{
-			GraphicType eGraphicType = aGraphic.GetType();
-			if ( ( eGraphicType == GRAPHIC_BITMAP ) || ( eGraphicType == GRAPHIC_GDIMETAFILE ) )
-			{
-				sal_uInt32 nErrCode;
-				if ( !aGraphic.IsAnimated() )
+                    case GFX_LINK_TYPE_NATIVE_WMF :
+                    {
+                        if ( pGraphicAry && ( p_EscherBlibEntry->mnSize > 0x2c ) )
+                        {
+                            if ( ( pGraphicAry[ 0x28 ] == 0x20 ) && ( pGraphicAry[ 0x29 ] == 0x45 )     // check the magic
+                                && ( pGraphicAry[ 0x2a ] == 0x4d ) && ( pGraphicAry[ 0x2b ] == 0x46 ) ) // number ( emf detection )
+                            {
+                                p_EscherBlibEntry->meBlibType = EMF;
+                            }
+                            else
+                            {
+                                p_EscherBlibEntry->meBlibType = WMF;
+                                if ( ( pGraphicAry[ 0 ] == 0xd7 ) && ( pGraphicAry[ 1 ] == 0xcd )
+                                    && ( pGraphicAry[ 2 ] == 0xc6 ) && ( pGraphicAry[ 3 ] == 0x9a ) )
+                                {   // we have to get rid of the metafileheader
+                                    pGraphicAry += 22;
+                                    p_EscherBlibEntry->mnSize -= 22;
+                                }
+                            }
+                        }
+                    }
+                    break;
+                    default: break;
+                }
+                if ( p_EscherBlibEntry->meBlibType != UNKNOWN )
+                    bUseNativeGraphic = true;
+            }
+        }
+        if ( !bUseNativeGraphic )
+        {
+            GraphicType eGraphicType = aGraphic.GetType();
+            if ( ( eGraphicType == GRAPHIC_BITMAP ) || ( eGraphicType == GRAPHIC_GDIMETAFILE ) )
+            {
+                sal_uInt32 nErrCode;
+                if ( !aGraphic.IsAnimated() )
 #if defined USE_JAVA && defined MACOSX
-				{
-					// If this is an EPS image, draw to a bitmap and export that
-					GDIMetaFile aMtf( aGraphic.GetGDIMetaFile() );
-					for( MetaAction* pAct = aMtf.FirstAction(); pAct; pAct = aMtf.NextAction() )
-					{
-						if ( pAct->GetType() == META_EPS_ACTION )
-						{
-							const MetaEPSAction *pA = (const MetaEPSAction *)pAct;
-							const Size& rSize = pA->GetSize();
-							if ( rSize.Width() && rSize.Height() )
-							{
-								// Draw EPS at 300 DPI
-								sal_Int32 nEPSRes = 300;
-								Size aDstSizePixel( rSize.Width() * nEPSRes / 72, rSize.Height() * nEPSRes / 72 );
-								VirtualDevice* pVDev = new VirtualDevice;
-								if ( pVDev->SetOutputSizePixel( aDstSizePixel ) )
-								{
-									// Convert EPS to bitmap
-									Point aPoint;
-									pVDev->DrawEPS( aPoint, aDstSizePixel, pA->GetLink() );
-									aGraphic = Graphic( pVDev->GetBitmapEx( Point( 0, 0 ), aDstSizePixel ) );
-									eGraphicType = aGraphic.GetType();
-								}
-								delete pVDev;
-							}
-						}
-					}
+                {
+                    // If this is an EPS image, draw to a bitmap and export that
+                    GDIMetaFile aMtf( aGraphic.GetGDIMetaFile() );
+                    for( MetaAction* pAct = aMtf.FirstAction(); pAct; pAct = aMtf.NextAction() )
+                    {
+                        if ( pAct->GetType() == META_EPS_ACTION )
+                        {
+                            const MetaEPSAction *pA = (const MetaEPSAction *)pAct;
+                            const Size& rSize = pA->GetSize();
+                            if ( rSize.Width() && rSize.Height() )
+                            {
+                                // Draw EPS at 300 DPI
+                                sal_Int32 nEPSRes = 300;
+                                Size aDstSizePixel( rSize.Width() * nEPSRes / 72, rSize.Height() * nEPSRes / 72 );
+                                VirtualDevice* pVDev = new VirtualDevice;
+                                if ( pVDev->SetOutputSizePixel( aDstSizePixel ) )
+                                {
+                                    // Convert EPS to bitmap
+                                    Point aPoint;
+                                    pVDev->DrawEPS( aPoint, aDstSizePixel, pA->GetLink() );
+                                    aGraphic = Graphic( pVDev->GetBitmapEx( Point( 0, 0 ), aDstSizePixel ) );
+                                    eGraphicType = aGraphic.GetType();
+                                }
+                                delete pVDev;
+                            }
+                        }
+                    }
 #endif	// USE_JAVA || MACOSX
-// !EMF				nErrCode = GraphicConverter::Export( aStream, aGraphic, ( eGraphicType == GRAPHIC_BITMAP ) ? CVT_PNG  : CVT_WMF );
-					nErrCode = GraphicConverter::Export( aStream, aGraphic, ( eGraphicType == GRAPHIC_BITMAP ) ? CVT_PNG  : CVT_EMF );
+                    nErrCode = GraphicConverter::Export( aStream, aGraphic, ( eGraphicType == GRAPHIC_BITMAP ) ? CVT_PNG  : CVT_EMF );
 #if defined USE_JAVA && defined MACOSX
-				}
+                }
 #endif	// USE_JAVA || MACOSX
-				else
-				{	// to store a animation, a gif has to be included into the msOG chunk of a png	#I5583#
-					GraphicFilter*	pFilter = GraphicFilter::GetGraphicFilter();
-					SvMemoryStream  aGIFStream;
-					ByteString		aVersion( "MSOFFICE9.0" );
-					aGIFStream.Write( aVersion.GetBuffer(), aVersion.Len() );
-					nErrCode = pFilter->ExportGraphic( aGraphic, String(), aGIFStream,
-						pFilter->GetExportFormatNumberForShortName( String( RTL_CONSTASCII_USTRINGPARAM( "GIF" ) ) ), NULL );
-					com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aFilterData( 1 );
-					com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aAdditionalChunkSequence( 1 );
-					sal_uInt32 nGIFSreamLen = aGIFStream.Tell();
-					com::sun::star::uno::Sequence< sal_Int8 > aGIFSeq( nGIFSreamLen );
-					sal_Int8* pSeq = aGIFSeq.getArray();
-					aGIFStream.Seek( STREAM_SEEK_TO_BEGIN );
-					aGIFStream.Read( pSeq, nGIFSreamLen );
-					com::sun::star::beans::PropertyValue aChunkProp, aFilterProp;
-					aChunkProp.Name = String( RTL_CONSTASCII_USTRINGPARAM( "msOG" ) );
-					aChunkProp.Value <<= aGIFSeq;
-					aAdditionalChunkSequence[ 0 ] = aChunkProp;
-					aFilterProp.Name = String( RTL_CONSTASCII_USTRINGPARAM( "AdditionalChunks" ) );
-					aFilterProp.Value <<= aAdditionalChunkSequence;
-					aFilterData[ 0 ] = aFilterProp;
-					nErrCode = pFilter->ExportGraphic( aGraphic, String(), aStream,
-						pFilter->GetExportFormatNumberForShortName( String( RTL_CONSTASCII_USTRINGPARAM( "PNG" ) ) ), &aFilterData );
-				}
-				if ( nErrCode == ERRCODE_NONE )
-				{
-// !EMF				p_EscherBlibEntry->meBlibType = ( eGraphicType == GRAPHIC_BITMAP ) ? PNG : WMF;
-					p_EscherBlibEntry->meBlibType = ( eGraphicType == GRAPHIC_BITMAP ) ? PNG : EMF;
-					aStream.Seek( STREAM_SEEK_TO_END );
-					p_EscherBlibEntry->mnSize = aStream.Tell();
-					pGraphicAry = (sal_uInt8*)aStream.GetData();
+                else
+                {   // to store a animation, a gif has to be included into the msOG chunk of a png  #I5583#
+                    GraphicFilter &rFilter = GraphicFilter::GetGraphicFilter();
+                    SvMemoryStream  aGIFStream;
+                    const char* pString = "MSOFFICE9.0";
+                    aGIFStream.Write( pString, strlen(pString) );
+                    nErrCode = rFilter.ExportGraphic( aGraphic, OUString(), aGIFStream,
+                        rFilter.GetExportFormatNumberForShortName( OUString( "GIF" ) ), NULL );
+                    com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aFilterData( 1 );
+                    com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aAdditionalChunkSequence( 1 );
+                    sal_uInt32 nGIFSreamLen = aGIFStream.Tell();
+                    com::sun::star::uno::Sequence< sal_Int8 > aGIFSeq( nGIFSreamLen );
+                    sal_Int8* pSeq = aGIFSeq.getArray();
+                    aGIFStream.Seek( STREAM_SEEK_TO_BEGIN );
+                    aGIFStream.Read( pSeq, nGIFSreamLen );
+                    com::sun::star::beans::PropertyValue aChunkProp, aFilterProp;
+                    aChunkProp.Name = "msOG";
+                    aChunkProp.Value <<= aGIFSeq;
+                    aAdditionalChunkSequence[ 0 ] = aChunkProp;
+                    aFilterProp.Name = "AdditionalChunks";
+                    aFilterProp.Value <<= aAdditionalChunkSequence;
+                    aFilterData[ 0 ] = aFilterProp;
+                    nErrCode = rFilter.ExportGraphic( aGraphic, OUString(), aStream,
+                        rFilter.GetExportFormatNumberForShortName( OUString( "PNG" ) ), &aFilterData );
+                }
+                if ( nErrCode == ERRCODE_NONE )
+                {
+                    p_EscherBlibEntry->meBlibType = ( eGraphicType == GRAPHIC_BITMAP ) ? PNG : EMF;
+                    aStream.Seek( STREAM_SEEK_TO_END );
+                    p_EscherBlibEntry->mnSize = aStream.Tell();
+                    pGraphicAry = (sal_uInt8*)aStream.GetData();
+                }
+            }
+        }
 
-					if ( p_EscherBlibEntry->meBlibType == WMF )		// the fileheader is not used
-					{
-						p_EscherBlibEntry->mnSize -= 22;
-						pGraphicAry += 22;
-					}
-				}
-			}
-		}
+        ESCHER_BlibType eBlibType = p_EscherBlibEntry->meBlibType;
+        if ( p_EscherBlibEntry->mnSize && pGraphicAry && ( eBlibType != UNKNOWN ) )
+        {
+            sal_uInt32 nExtra, nAtomSize = 0;
+            sal_uInt32 nInstance, nUncompressedSize = p_EscherBlibEntry->mnSize;
 
-		ESCHER_BlibType	eBlibType = p_EscherBlibEntry->meBlibType;
-		if ( p_EscherBlibEntry->mnSize && pGraphicAry && ( eBlibType != UNKNOWN ) )
-		{
-			sal_uInt32 nExtra, nAtomSize = 0;
-			sal_uInt32 nInstance, nUncompressedSize = p_EscherBlibEntry->mnSize;
+            if ( mnFlags & _E_GRAPH_PROV_USE_INSTANCES )
+            {
+                rPicOutStrm.WriteUInt32( ( 0x7f90000 | (sal_uInt16)( mnBlibEntrys << 4 ) ) )
+                           .WriteUInt32( 0 );
+                nAtomSize = rPicOutStrm.Tell();
+                 if ( eBlibType == PNG )
+                    rPicOutStrm.WriteUInt16( 0x0606 );
+                else if ( eBlibType == WMF )
+                    rPicOutStrm.WriteUInt16( 0x0403 );
+                else if ( eBlibType == EMF )
+                    rPicOutStrm.WriteUInt16( 0x0402 );
+                else if ( eBlibType == PEG )
+                    rPicOutStrm.WriteUInt16( 0x0505 );
+            }
 
-			if ( mnFlags & _E_GRAPH_PROV_USE_INSTANCES )
-			{
-				rPicOutStrm << (sal_uInt32)( 0x7f90000 | (sal_uInt16)( mnBlibEntrys << 4 ) )
-							<< (sal_uInt32)0;
-				nAtomSize = rPicOutStrm.Tell();
- 				if ( eBlibType == PNG )
-					rPicOutStrm << (sal_uInt16)0x0606;
-				else if ( eBlibType == WMF )
-					rPicOutStrm << (sal_uInt16)0x0403;
-				else if ( eBlibType == EMF )
-					rPicOutStrm << (sal_uInt16)0x0402;
-				else if ( eBlibType == PEG )
-					rPicOutStrm << (sal_uInt16)0x0505;
-			}
-			if ( ( eBlibType == PEG ) || ( eBlibType == PNG ) ) // || ( eBlibType == DIB )) // #15508#
-			{
-				nExtra = 17;
-				p_EscherBlibEntry->mnSizeExtra = nExtra + 8;
+            // fdo#69607 do not compress WMF files if we are in OOXML export
+            if ( ( eBlibType == PEG ) || ( eBlibType == PNG ) // || ( eBlibType == DIB )) // #i15508#
+                || ( ( ( eBlibType == WMF ) || ( eBlibType == EMF ) ) && bOOxmlExport ) )
+            {
+                nExtra = 17;
+                p_EscherBlibEntry->mnSizeExtra = nExtra + 8;
 
-                // #15508# type see SvxMSDffManager::GetBLIPDirect (checked, does not work this way)
+                // #i15508# type see SvxMSDffManager::GetBLIPDirect (checked, does not work this way)
                 // see RtfAttributeOutput::FlyFrameGraphic for more comments
                 // maybe it would work with direct DIB data, but that would need thorough testing
                 if( eBlibType == PNG )
@@ -4547,33 +4535,34 @@ sal_uInt32 EscherGraphicProvider::GetBlibID( SvStream& rPicOutStrm, const ByteSt
                 //    nInstance = 0xf01d7A80;
                 //}
 
-                // #15508#
+                // #i15508#
                 //nInstance = ( eBlibType == PNG ) ? 0xf01e6e00 : 0xf01d46a0;
 
-				rPicOutStrm << nInstance << (sal_uInt32)( p_EscherBlibEntry->mnSize + nExtra );
-				rPicOutStrm.Write( p_EscherBlibEntry->mnIdentifier, 16 );
-				rPicOutStrm << (sal_uInt8)0xff;
-				rPicOutStrm.Write( pGraphicAry, p_EscherBlibEntry->mnSize );
-			}
-			else
-			{
-				ZCodec aZCodec( 0x8000, 0x8000 );
-				aZCodec.BeginCompression();
-				SvMemoryStream aDestStrm;
-				aZCodec.Write( aDestStrm, pGraphicAry, p_EscherBlibEntry->mnSize );
-				aZCodec.EndCompression();
-				aDestStrm.Seek( STREAM_SEEK_TO_END );
-				p_EscherBlibEntry->mnSize = aDestStrm.Tell();
-				pGraphicAry = (sal_uInt8*)aDestStrm.GetData();
-				if ( p_EscherBlibEntry->mnSize && pGraphicAry )
-				{
-					nExtra = eBlibType == WMF ? 0x42 : 0x32;									// !EMF -> no change
-					p_EscherBlibEntry->mnSizeExtra = nExtra + 8;
-					nInstance = ( eBlibType == WMF ) ? 0xf01b2170 : 0xf01a3d40;					// !EMF -> no change
-					rPicOutStrm << nInstance << (sal_uInt32)( p_EscherBlibEntry->mnSize + nExtra );
-					if ( eBlibType == WMF )														// !EMF -> no change
-						rPicOutStrm.Write( p_EscherBlibEntry->mnIdentifier, 16 );
-					rPicOutStrm.Write( p_EscherBlibEntry->mnIdentifier, 16 );
+
+                rPicOutStrm.WriteUInt32( nInstance ).WriteUInt32( ( p_EscherBlibEntry->mnSize + nExtra ) );
+                rPicOutStrm.Write( p_EscherBlibEntry->mnIdentifier, 16 );
+                rPicOutStrm.WriteUChar( 0xff );
+                rPicOutStrm.Write( pGraphicAry, p_EscherBlibEntry->mnSize );
+            }
+            else
+            {
+                ZCodec aZCodec( 0x8000, 0x8000 );
+                aZCodec.BeginCompression();
+                SvMemoryStream aDestStrm;
+                aZCodec.Write( aDestStrm, pGraphicAry, p_EscherBlibEntry->mnSize );
+                aZCodec.EndCompression();
+                aDestStrm.Seek( STREAM_SEEK_TO_END );
+                p_EscherBlibEntry->mnSize = aDestStrm.Tell();
+                pGraphicAry = (sal_uInt8*)aDestStrm.GetData();
+                if ( p_EscherBlibEntry->mnSize && pGraphicAry )
+                {
+                    nExtra = eBlibType == WMF ? 0x42 : 0x32;                                    // !EMF -> no change
+                    p_EscherBlibEntry->mnSizeExtra = nExtra + 8;
+                    nInstance = ( eBlibType == WMF ) ? 0xf01b2170 : 0xf01a3d40;                 // !EMF -> no change
+                    rPicOutStrm.WriteUInt32( nInstance ).WriteUInt32( ( p_EscherBlibEntry->mnSize + nExtra ) );
+                    if ( eBlibType == WMF )                                                     // !EMF -> no change
+                        rPicOutStrm.Write( p_EscherBlibEntry->mnIdentifier, 16 );
+                    rPicOutStrm.Write( p_EscherBlibEntry->mnIdentifier, 16 );
 
                     /*
                      ##913##
@@ -4588,122 +4577,118 @@ sal_uInt32 EscherGraphicProvider::GetBlibID( SvStream& rPicOutStrm, const ByteSt
                     */
                     sal_uInt32 nPrefWidth = p_EscherBlibEntry->maPrefSize.Width();
                     sal_uInt32 nPrefHeight = p_EscherBlibEntry->maPrefSize.Height();
-					sal_uInt32 nWidth, nHeight;
-					if ( pVisArea )
-					{
-						nWidth = pVisArea->Width * 360;
-						nHeight = pVisArea->Height * 360;
-					}
-					else
-					{
-						Size aPrefSize(lcl_SizeToEmu(p_EscherBlibEntry->maPrefSize, p_EscherBlibEntry->maPrefMapMode));
-						nWidth = aPrefSize.Width() * 360;
-	                    nHeight = aPrefSize.Height() * 360;
-					}
-                    rPicOutStrm	<< nUncompressedSize // WMFSize without FileHeader
-                    << (sal_Int32)0		// da die Originalgroesse des WMF's (ohne FileHeader)
-                    << (sal_Int32)0		// nicht mehr feststellbar ist, schreiben wir 10cm / x
-                    << nPrefWidth
-                    << nPrefHeight
-                    << nWidth
-                    << nHeight
-                    << p_EscherBlibEntry->mnSize
-                    << (sal_uInt16)0xfe00;	// compression Flags
+                    sal_uInt32 nWidth, nHeight;
+                    if ( pVisArea )
+                    {
+                        nWidth = pVisArea->Width * 360;
+                        nHeight = pVisArea->Height * 360;
+                    }
+                    else
+                    {
+                        Size aPrefSize(lcl_SizeToEmu(p_EscherBlibEntry->maPrefSize, p_EscherBlibEntry->maPrefMapMode));
+                        nWidth = aPrefSize.Width() * 360;
+                        nHeight = aPrefSize.Height() * 360;
+                    }
+                    rPicOutStrm.WriteUInt32( nUncompressedSize ) // WMFSize without FileHeader
+                   .WriteInt32( 0 )     // since we can't find out anymore what the original size of
+                   .WriteInt32( 0 )     // the WMF (without Fileheader) was we write 10cm / x
+                   .WriteUInt32( nPrefWidth )
+                   .WriteUInt32( nPrefHeight )
+                   .WriteUInt32( nWidth )
+                   .WriteUInt32( nHeight )
+                   .WriteUInt32( p_EscherBlibEntry->mnSize )
+                   .WriteUInt16( 0xfe00 );  // compression Flags
                     rPicOutStrm.Write( pGraphicAry, p_EscherBlibEntry->mnSize );
-				}
-			}
-			if ( nAtomSize )
-			{
-				sal_uInt32	nPos = rPicOutStrm.Tell();
-				rPicOutStrm.Seek( nAtomSize - 4 );
-				rPicOutStrm << (sal_uInt32)( nPos - nAtomSize );
-				rPicOutStrm.Seek( nPos );
-			}
-			nBlibId = ImplInsertBlib( p_EscherBlibEntry ), p_EscherBlibEntry = NULL;
-		}
-	}
-	if ( p_EscherBlibEntry )
-		delete p_EscherBlibEntry;
-	return nBlibId;
+                }
+            }
+            if ( nAtomSize )
+            {
+                sal_uInt32  nPos = rPicOutStrm.Tell();
+                rPicOutStrm.Seek( nAtomSize - 4 );
+                rPicOutStrm.WriteUInt32( ( nPos - nAtomSize ) );
+                rPicOutStrm.Seek( nPos );
+            }
+            nBlibId = ImplInsertBlib( p_EscherBlibEntry ), p_EscherBlibEntry = NULL;
+        }
+    }
+    if ( p_EscherBlibEntry )
+        delete p_EscherBlibEntry;
+    return nBlibId;
 }
-
-// ---------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------
 
 struct EscherConnectorRule
 {
-	sal_uInt32	nRuleId;
-	sal_uInt32	nShapeA;		// SPID of shape A
-	sal_uInt32	nShapeB;		// SPID of shape B
-	sal_uInt32	nShapeC;		// SPID of connector shape
-	sal_uInt32	ncptiA;			// Connection site Index of shape A
-	sal_uInt32	ncptiB;			// Connection site Index of shape B
+    sal_uInt32  nRuleId;
+    sal_uInt32  nShapeA;        // SPID of shape A
+    sal_uInt32  nShapeB;        // SPID of shape B
+    sal_uInt32  nShapeC;        // SPID of connector shape
+    sal_uInt32  ncptiA;         // Connection site Index of shape A
+    sal_uInt32  ncptiB;         // Connection site Index of shape B
 };
 
 struct EscherShapeListEntry
 {
-	::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape	>	aXShape;
-	sal_uInt32			n_EscherId;
+    ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape >   aXShape;
+    sal_uInt32          n_EscherId;
 
-						EscherShapeListEntry( const ::com::sun::star::uno::Reference
-							< ::com::sun::star::drawing::XShape > & rShape, sal_uInt32 nId ) :
-										aXShape		( rShape ),
-										n_EscherId	( nId ) {}
+                        EscherShapeListEntry( const ::com::sun::star::uno::Reference
+                            < ::com::sun::star::drawing::XShape > & rShape, sal_uInt32 nId ) :
+                                        aXShape     ( rShape ),
+                                        n_EscherId  ( nId ) {}
 };
 
 sal_uInt32 EscherConnectorListEntry::GetClosestPoint( const Polygon& rPoly, const ::com::sun::star::awt::Point& rPoint )
 {
-	sal_uInt16 nCount = rPoly.GetSize();
-	sal_uInt16 nClosest = nCount;
-	double fDist = (sal_uInt32)0xffffffff;
-	while( nCount-- )
-	{
-		double fDistance = hypot( rPoint.X - rPoly[ nCount ].X(), rPoint.Y - rPoly[ nCount ].Y() );
-		if ( fDistance < fDist )
-		{
-			nClosest =  nCount;
-			fDist = fDistance;
-		}
-	}
-	return nClosest;
+    sal_uInt16 nCount = rPoly.GetSize();
+    sal_uInt16 nClosest = nCount;
+    double fDist = (sal_uInt32)0xffffffff;
+    while( nCount-- )
+    {
+        double fDistance = hypot( rPoint.X - rPoly[ nCount ].X(), rPoint.Y - rPoly[ nCount ].Y() );
+        if ( fDistance < fDist )
+        {
+            nClosest =  nCount;
+            fDist = fDistance;
+        }
+    }
+    return nClosest;
 };
 
-// ---------------------------------------------------------------------------------------------
-// bei Rechtecken           bei Ellipsen    bei Polygonen
+
+// for rectangles          for ellipses     for polygons
 //
 // nRule =  0 ->Top         0 ->Top         nRule = Index auf ein (Poly)Polygon Punkt
 //          1 ->Left        2 ->Left
 //          2 ->Bottom      4 ->Bottom
 //          3 ->Right       6 ->Right
 
-sal_uInt32 EscherConnectorListEntry::GetConnectorRule( sal_Bool bFirst )
+sal_uInt32 EscherConnectorListEntry::GetConnectorRule( bool bFirst )
 {
     sal_uInt32 nRule = 0;
 
-	::com::sun::star::uno::Any aAny;
+    ::com::sun::star::uno::Any aAny;
     ::com::sun::star::awt::Point aRefPoint( ( bFirst ) ? maPointA : maPointB );
     ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape >
-		aXShape( ( bFirst ) ? mXConnectToA : mXConnectToB );
+        aXShape( ( bFirst ) ? mXConnectToA : mXConnectToB );
 
-	String aString( (::rtl::OUString)aXShape->getShapeType() );
-    ByteString aType( aString, RTL_TEXTENCODING_UTF8 );
-    aType.Erase( 0, 13 );   // removing "com.sun.star."
-    sal_uInt16 nPos = aType.Search( "Shape" );
-    aType.Erase( nPos, 5 );
+    OUString aString(aXShape->getShapeType());
+    OStringBuffer aBuf(OUStringToOString(aString, RTL_TEXTENCODING_UTF8));
+    aBuf.remove( 0, 13 );   // removing "com.sun.star."
+    sal_Int16 nPos = aBuf.toString().indexOf("Shape");
+    aBuf.remove(nPos, 5);
+    OString aType = aBuf.makeStringAndClear();
 
     ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet >
-		aPropertySet( aXShape, ::com::sun::star::uno::UNO_QUERY );
+        aPropertySet( aXShape, ::com::sun::star::uno::UNO_QUERY );
 
-    if ( aType == "drawing.PolyPolygon" || aType == "drawing.PolyLine" )
+    if ((aType == OString( "drawing.PolyPolygon" )) || (aType == OString( "drawing.PolyLine"  )))
     {
         if ( aPropertySet.is() )
         {
-			if ( EscherPropertyValueHelper::GetPropertyValue( aAny,
-					aPropertySet, String( RTL_CONSTASCII_USTRINGPARAM( "PolyPolygon" ) ) ) )
-			{
+            if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aPropertySet, "PolyPolygon" ) )
+            {
                 ::com::sun::star::drawing::PointSequenceSequence* pSourcePolyPolygon =
-					(::com::sun::star::drawing::PointSequenceSequence*)aAny.getValue();
+                    (::com::sun::star::drawing::PointSequenceSequence*)aAny.getValue();
                 sal_Int32 nOuterSequenceCount = pSourcePolyPolygon->getLength();
                 ::com::sun::star::drawing::PointSequence* pOuterSequence = pSourcePolyPolygon->getArray();
 
@@ -4732,28 +4717,27 @@ sal_uInt32 EscherConnectorListEntry::GetConnectorRule( sal_Bool bFirst )
                         }
                     }
                 }
-			}
+            }
         }
     }
-    else if ( ( aType == "drawing.OpenBezier" ) || ( aType == "drawing.OpenFreeHand" ) || ( aType == "drawing.PolyLinePath" )
-        || ( aType == "drawing.ClosedBezier" ) || ( aType == "drawing.ClosedFreeHand" ) || ( aType == "drawing.PolyPolygonPath" ) )
+    else if ((aType == OString( "drawing.OpenBezier" )) || (aType == OString( "drawing.OpenFreeHand" )) || (aType == OString( "drawing.PolyLinePath" ))
+        || (aType == OString( "drawing.ClosedBezier" )) || ( aType == OString( "drawing.ClosedFreeHand" )) || (aType == OString( "drawing.PolyPolygonPath" )) )
     {
         ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet >
-			aPropertySet2( aXShape, ::com::sun::star::uno::UNO_QUERY );
+            aPropertySet2( aXShape, ::com::sun::star::uno::UNO_QUERY );
         if ( aPropertySet2.is() )
         {
-			if ( EscherPropertyValueHelper::GetPropertyValue( aAny,
-					aPropertySet2, String( RTL_CONSTASCII_USTRINGPARAM( "PolyPolygonBezier" ) ) ) )
-			{
-				::com::sun::star::drawing::PolyPolygonBezierCoords* pSourcePolyPolygon =
-					(::com::sun::star::drawing::PolyPolygonBezierCoords*)aAny.getValue();
+            if ( EscherPropertyValueHelper::GetPropertyValue( aAny, aPropertySet2, "PolyPolygonBezier" ) )
+            {
+                ::com::sun::star::drawing::PolyPolygonBezierCoords* pSourcePolyPolygon =
+                    (::com::sun::star::drawing::PolyPolygonBezierCoords*)aAny.getValue();
                 sal_Int32 nOuterSequenceCount = pSourcePolyPolygon->Coordinates.getLength();
 
                 // Zeiger auf innere sequences holen
                 ::com::sun::star::drawing::PointSequence* pOuterSequence =
-					pSourcePolyPolygon->Coordinates.getArray();
+                    pSourcePolyPolygon->Coordinates.getArray();
                 ::com::sun::star::drawing::FlagSequence*  pOuterFlags =
-					pSourcePolyPolygon->Flags.getArray();
+                    pSourcePolyPolygon->Flags.getArray();
 
                 if ( pOuterSequence && pOuterFlags )
                 {
@@ -4792,73 +4776,73 @@ sal_uInt32 EscherConnectorListEntry::GetConnectorRule( sal_Bool bFirst )
     }
     else
     {
-		bool bRectangularConnection = true;
+        bool bRectangularConnection = true;
 
-		if ( aType == "drawing.Custom" )
-		{
-			SdrObject* pCustoShape( GetSdrObjectFromXShape( aXShape ) );
-			if ( pCustoShape && pCustoShape->ISA( SdrObjCustomShape ) )
-			{
-				SdrCustomShapeGeometryItem& rGeometryItem = (SdrCustomShapeGeometryItem&)(const SdrCustomShapeGeometryItem&)
-					pCustoShape->GetMergedItem( SDRATTR_CUSTOMSHAPE_GEOMETRY );
+        if (aType == "drawing.Custom")
+        {
+            SdrObject* pCustoShape( GetSdrObjectFromXShape( aXShape ) );
+            if ( pCustoShape && pCustoShape->ISA( SdrObjCustomShape ) )
+            {
+                const SdrCustomShapeGeometryItem& rGeometryItem = static_cast<const SdrCustomShapeGeometryItem&>(
+                    pCustoShape->GetMergedItem( SDRATTR_CUSTOMSHAPE_GEOMETRY ));
 
-				const rtl::OUString sPath( RTL_CONSTASCII_USTRINGPARAM( "Path" ) );
-				const rtl::OUString	sType( RTL_CONSTASCII_USTRINGPARAM ( "Type" ) );
-				const rtl::OUString sGluePointType( RTL_CONSTASCII_USTRINGPARAM( "GluePointType" ) );
+                const OUString sPath( "Path"  );
+                const OUString sType( "Type"  );
+                const OUString sGluePointType( "GluePointType"  );
 
-				rtl::OUString sShapeType;
-				uno::Any* pType = rGeometryItem.GetPropertyValueByName( sType );
-				if ( pType )
-					*pType >>= sShapeType;
-				MSO_SPT eSpType = EnhancedCustomShapeTypeNames::Get( sShapeType );
+                OUString sShapeType;
+                const uno::Any* pType = rGeometryItem.GetPropertyValueByName( sType );
+                if ( pType )
+                    *pType >>= sShapeType;
+                MSO_SPT eSpType = EnhancedCustomShapeTypeNames::Get( sShapeType );
 
-				uno::Any* pGluePointType = ((SdrCustomShapeGeometryItem&)rGeometryItem).GetPropertyValueByName( sPath, sGluePointType );
+                uno::Any* pGluePointType = ((SdrCustomShapeGeometryItem&)rGeometryItem).GetPropertyValueByName( sPath, sGluePointType );
 
-				sal_Int16 nGluePointType = sal_Int16();
-				if ( !( pGluePointType &&
+                sal_Int16 nGluePointType = sal_Int16();
+                if ( !( pGluePointType &&
                         ( *pGluePointType >>= nGluePointType ) ) )
-					nGluePointType = GetCustomShapeConnectionTypeDefault( eSpType );
+                    nGluePointType = GetCustomShapeConnectionTypeDefault( eSpType );
 
-				if ( nGluePointType == com::sun::star::drawing::EnhancedCustomShapeGluePointType::CUSTOM )
-				{
-					const SdrGluePointList* pList = pCustoShape->GetGluePointList();
-					if ( pList )
-					{
-						Polygon aPoly;
-						sal_uInt16 nNum, nAnz = pList->GetCount();
-						if ( nAnz )
-						{
-							for ( nNum = 0; nNum < nAnz; nNum++ )
-							{
-								const SdrGluePoint& rGP = (*pList)[ nNum ];
-								Point aPt( rGP.GetAbsolutePos( *pCustoShape ) );
-								aPoly.Insert( POLY_APPEND, aPt );
-							}
-							nRule = GetClosestPoint( aPoly, aRefPoint );
-							bRectangularConnection = false;
-						}
-					}
-				}
-				else if ( nGluePointType == com::sun::star::drawing::EnhancedCustomShapeGluePointType::SEGMENTS )
-				{
-					SdrObject* pPoly = pCustoShape->DoConvertToPolyObj( sal_True, true );
-					if ( pPoly && pPoly->ISA( SdrPathObj ) )
-					{
-						sal_Int16 a, b, nIndex = 0;
-						sal_uInt32 nDistance = 0xffffffff;
+                if ( nGluePointType == com::sun::star::drawing::EnhancedCustomShapeGluePointType::CUSTOM )
+                {
+                    const SdrGluePointList* pList = pCustoShape->GetGluePointList();
+                    if ( pList )
+                    {
+                        Polygon aPoly;
+                        sal_uInt16 nNum, nAnz = pList->GetCount();
+                        if ( nAnz )
+                        {
+                            for ( nNum = 0; nNum < nAnz; nNum++ )
+                            {
+                                const SdrGluePoint& rGP = (*pList)[ nNum ];
+                                Point aPt( rGP.GetAbsolutePos( *pCustoShape ) );
+                                aPoly.Insert( POLY_APPEND, aPt );
+                            }
+                            nRule = GetClosestPoint( aPoly, aRefPoint );
+                            bRectangularConnection = false;
+                        }
+                    }
+                }
+                else if ( nGluePointType == com::sun::star::drawing::EnhancedCustomShapeGluePointType::SEGMENTS )
+                {
+                    SdrObject* pPoly = pCustoShape->DoConvertToPolyObj( true, true );
+                    if ( pPoly && pPoly->ISA( SdrPathObj ) )
+                    {
+                        sal_Int16 a, b, nIndex = 0;
+                        sal_uInt32 nDistance = 0xffffffff;
 
-						// #i74631# use explicit constructor here. Also XPolyPolygon is not necessary,
-						// reducing to PolyPolygon
-						const PolyPolygon aPolyPoly(((SdrPathObj*)pPoly)->GetPathPoly());
+                        // #i74631# use explicit constructor here. Also XPolyPolygon is not necessary,
+                        // reducing to PolyPolygon
+                        const tools::PolyPolygon aPolyPoly(static_cast<SdrPathObj*>(pPoly)->GetPathPoly());
 
-						for ( a = 0; a < aPolyPoly.Count(); a++ )
-						{
-							const Polygon& rPoly = aPolyPoly.GetObject( a );
-							for ( b = 0; b < rPoly.GetSize(); b++ )
-							{
-								if ( rPoly.GetFlags( b ) != POLY_NORMAL )
-									continue;
-								const Point& rPt = rPoly[ b ];
+                        for ( a = 0; a < aPolyPoly.Count(); a++ )
+                        {
+                            const Polygon& rPoly = aPolyPoly.GetObject( a );
+                            for ( b = 0; b < rPoly.GetSize(); b++ )
+                            {
+                                if ( rPoly.GetFlags( b ) != POLY_NORMAL )
+                                    continue;
+                                const Point& rPt = rPoly[ b ];
                                 sal_uInt32 nDist = (sal_uInt32)hypot( aRefPoint.X - rPt.X(), aRefPoint.Y - rPt.Y() );
                                 if ( nDist < nDistance )
                                 {
@@ -4866,72 +4850,72 @@ sal_uInt32 EscherConnectorListEntry::GetConnectorRule( sal_Bool bFirst )
                                     nDistance = nDist;
                                 }
                                 nIndex++;
-							}
-						}
-						if ( nDistance != 0xffffffff )
-							bRectangularConnection = false;
-					}
-				}
-			}
-		}
-		if ( bRectangularConnection )
-		{
-			::com::sun::star::awt::Point aPoint( aXShape->getPosition() );
-			::com::sun::star::awt::Size	 aSize( aXShape->getSize() );
+                            }
+                        }
+                        if ( nDistance != 0xffffffff )
+                            bRectangularConnection = false;
+                    }
+                }
+            }
+        }
+        if ( bRectangularConnection )
+        {
+            ::com::sun::star::awt::Point aPoint( aXShape->getPosition() );
+            ::com::sun::star::awt::Size  aSize( aXShape->getSize() );
 
-			Rectangle	aRect( Point( aPoint.X, aPoint.Y ), Size( aSize.Width, aSize.Height ) );
-			Point		aCenter( aRect.Center() );
-			Polygon		aPoly( 4 );
+            Rectangle   aRect( Point( aPoint.X, aPoint.Y ), Size( aSize.Width, aSize.Height ) );
+            Point       aCenter( aRect.Center() );
+            Polygon     aPoly( 4 );
 
-			aPoly[ 0 ] = Point( aCenter.X(), aRect.Top() );
-			aPoly[ 1 ] = Point( aRect.Left(), aCenter.Y() );
-			aPoly[ 2 ] = Point( aCenter.X(), aRect.Bottom() );
-			aPoly[ 3 ] = Point( aRect.Right(), aCenter.Y() );
+            aPoly[ 0 ] = Point( aCenter.X(), aRect.Top() );
+            aPoly[ 1 ] = Point( aRect.Left(), aCenter.Y() );
+            aPoly[ 2 ] = Point( aCenter.X(), aRect.Bottom() );
+            aPoly[ 3 ] = Point( aRect.Right(), aCenter.Y() );
 
-			sal_Int32 nAngle = ( EscherPropertyValueHelper::GetPropertyValue( aAny,
-				aPropertySet, String( RTL_CONSTASCII_USTRINGPARAM( "RotateAngle" ) ), sal_True ) )
-					? *((sal_Int32*)aAny.getValue() )
-					: 0;
-			if ( nAngle )
-				aPoly.Rotate( aRect.TopLeft(), (sal_uInt16)( ( nAngle + 5 ) / 10 ) );
-			nRule = GetClosestPoint( aPoly, aRefPoint );
+            sal_Int32 nAngle = ( EscherPropertyValueHelper::GetPropertyValue( aAny, aPropertySet, OUString( "RotateAngle" ), true ) )
+                    ? *((sal_Int32*)aAny.getValue() ) : 0;
+            if ( nAngle )
+                aPoly.Rotate( aRect.TopLeft(), (sal_uInt16)( ( nAngle + 5 ) / 10 ) );
+            nRule = GetClosestPoint( aPoly, aRefPoint );
 
-			if ( aType == "drawing.Ellipse" )
-				nRule <<= 1;    // In PPT hat eine Ellipse 8 M?glichkeiten sich zu connecten
-		}
+            if (aType == OString( "drawing.Ellipse" ))
+                nRule <<= 1;    // In PPT an ellipse has 8 ways to connect
+        }
     }
     return nRule;
 }
 
 EscherSolverContainer::~EscherSolverContainer()
 {
-    void* pP;
-
-    for( pP = maShapeList.First(); pP; pP = maShapeList.Next() )
-        delete (EscherShapeListEntry*)pP;
-    for( pP = maConnectorList.First(); pP; pP = maConnectorList.Next() )
-        delete (EscherConnectorListEntry*)pP;
+    for( size_t i = 0, n = maShapeList.size(); i < n; ++i ) {
+        delete maShapeList[ i ];
+    }
+    for( size_t i = 0, n = maConnectorList.size(); i < n; ++i ) {
+        delete maConnectorList[ i ];
+    }
 }
 
 void EscherSolverContainer::AddShape( const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rXShape, sal_uInt32 nId )
 {
-    maShapeList.Insert( new EscherShapeListEntry( rXShape, nId ), LIST_APPEND );
+    maShapeList.push_back( new EscherShapeListEntry( rXShape, nId ) );
 }
 
-void EscherSolverContainer::AddConnector( const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rConnector,
-										const ::com::sun::star::awt::Point& rPA,
-									::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rConA,
-										const ::com::sun::star::awt::Point& rPB,
-									::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rConB )
+void EscherSolverContainer::AddConnector(
+    const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rConnector,
+    const ::com::sun::star::awt::Point& rPA,
+    ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rConA,
+    const ::com::sun::star::awt::Point& rPB,
+    ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rConB
+)
 {
-    maConnectorList.Insert( new EscherConnectorListEntry( rConnector, rPA, rConA, rPB, rConB ), LIST_APPEND );
+    maConnectorList.push_back( new EscherConnectorListEntry( rConnector, rPA, rConA, rPB, rConB ) );
 }
 
 sal_uInt32 EscherSolverContainer::GetShapeId( const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & rXShape ) const
 {
-    for ( EscherShapeListEntry* pPtr = (EscherShapeListEntry*)((List&)maShapeList).First();
-			pPtr; pPtr = (EscherShapeListEntry*)((List&)maShapeList).Next() )
+    for ( size_t i = 0, n = maShapeList.size(); i < n; ++i )
     {
+        EscherShapeListEntry* pPtr = maShapeList[ i ];
         if ( rXShape == pPtr->aXShape )
             return ( pPtr->n_EscherId );
     }
@@ -4940,22 +4924,22 @@ sal_uInt32 EscherSolverContainer::GetShapeId( const ::com::sun::star::uno::Refer
 
 void EscherSolverContainer::WriteSolver( SvStream& rStrm )
 {
-    sal_uInt32 nCount = maConnectorList.Count();
+    sal_uInt32 nCount = maConnectorList.size();
     if ( nCount )
     {
-		sal_uInt32	nRecHdPos, nCurrentPos, nSize;
-		rStrm	<< (sal_uInt16)( ( nCount << 4 ) | 0xf )	// open an ESCHER_SolverContainer
-				<< (sal_uInt16)ESCHER_SolverContainer		//
-				<< (sal_uInt32)0;							//
+        sal_uInt32  nRecHdPos, nCurrentPos, nSize;
+        rStrm  .WriteUInt16( ( ( nCount << 4 ) | 0xf ) )    // open an ESCHER_SolverContainer
+               .WriteUInt16( ESCHER_SolverContainer )
+               .WriteUInt32( 0 );
 
-		nRecHdPos = rStrm.Tell() - 4;
+        nRecHdPos = rStrm.Tell() - 4;
 
         EscherConnectorRule aConnectorRule;
         aConnectorRule.nRuleId = 2;
-        for ( EscherConnectorListEntry* pPtr = (EscherConnectorListEntry*)maConnectorList.First();
-				pPtr; pPtr = (EscherConnectorListEntry*)maConnectorList.Next() )
+        for ( size_t i = 0, n = maConnectorList.size(); i < n; ++i )
         {
-            aConnectorRule.ncptiA = aConnectorRule.ncptiB = 0xffffffff;
+            EscherConnectorListEntry* pPtr = maConnectorList[ i ];
+            aConnectorRule.ncptiA  = aConnectorRule.ncptiB = 0xffffffff;
             aConnectorRule.nShapeC = GetShapeId( pPtr->mXConnector );
             aConnectorRule.nShapeA = GetShapeId( pPtr->mXConnectToA );
             aConnectorRule.nShapeB = GetShapeId( pPtr->mXConnectToB );
@@ -4963,31 +4947,29 @@ void EscherSolverContainer::WriteSolver( SvStream& rStrm )
             if ( aConnectorRule.nShapeC )
             {
                 if ( aConnectorRule.nShapeA )
-                    aConnectorRule.ncptiA = pPtr->GetConnectorRule( sal_True );
+                    aConnectorRule.ncptiA = pPtr->GetConnectorRule( true );
                 if ( aConnectorRule.nShapeB )
-                    aConnectorRule.ncptiB = pPtr->GetConnectorRule( sal_False );
+                    aConnectorRule.ncptiB = pPtr->GetConnectorRule( false );
             }
-			rStrm	<< (sal_uInt32)( ( ESCHER_ConnectorRule << 16 ) | 1 )	// atom hd
-					<< (sal_uInt32)24										//
-					<< aConnectorRule.nRuleId
-                    << aConnectorRule.nShapeA
-                    << aConnectorRule.nShapeB
-                    << aConnectorRule.nShapeC
-                    << aConnectorRule.ncptiA
-                    << aConnectorRule.ncptiB;
+            rStrm  .WriteUInt32( ( ( ESCHER_ConnectorRule << 16 ) | 1 ) )   // atom hd
+                   .WriteUInt32( 24 )
+                   .WriteUInt32( aConnectorRule.nRuleId )
+                   .WriteUInt32( aConnectorRule.nShapeA )
+                   .WriteUInt32( aConnectorRule.nShapeB )
+                   .WriteUInt32( aConnectorRule.nShapeC )
+                   .WriteUInt32( aConnectorRule.ncptiA )
+                   .WriteUInt32( aConnectorRule.ncptiB );
 
             aConnectorRule.nRuleId += 2;
         }
 
-		nCurrentPos = rStrm.Tell();				// close the ESCHER_SolverContainer
-		nSize = ( nCurrentPos - nRecHdPos ) - 4;//
-		rStrm.Seek( nRecHdPos );				//
-		rStrm << nSize;							//
-		rStrm.Seek( nCurrentPos );				//
+        nCurrentPos = rStrm.Tell();             // close the ESCHER_SolverContainer
+        nSize = ( nCurrentPos - nRecHdPos ) - 4;
+        rStrm.Seek( nRecHdPos );
+        rStrm.WriteUInt32( nSize );
+        rStrm.Seek( nCurrentPos );
     }
 }
-
-// ---------------------------------------------------------------------------------------------
 
 EscherExGlobal::EscherExGlobal( sal_uInt32 nGraphicProvFlags ) :
     EscherGraphicProvider( nGraphicProvFlags ),
@@ -5017,6 +4999,10 @@ sal_uInt32 EscherExGlobal::GenerateDrawingId()
 sal_uInt32 EscherExGlobal::GenerateShapeId( sal_uInt32 nDrawingId, bool bIsInSpgr )
 {
     // drawing identifier is one-based
+    // make sure the drawing is valid (bnc#656503)
+    if ( nDrawingId == 0 )
+        return 0;
+    // create index from the identifier
     size_t nDrawingIdx = nDrawingId - 1;
     OSL_ENSURE( nDrawingIdx < maDrawingInfos.size(), "EscherExGlobal::GenerateShapeId - invalid drawing ID" );
     if( nDrawingIdx >= maDrawingInfos.size() )
@@ -5074,7 +5060,7 @@ void EscherExGlobal::WriteDggAtom( SvStream& rStrm ) const
     sal_uInt32 nDggSize = GetDggAtomSize();
 
     // write the DGG record header (do not include the 8 bytes of the header in the data size)
-    rStrm << static_cast< sal_uInt32 >( ESCHER_Dgg << 16 ) << static_cast< sal_uInt32 >( nDggSize - 8 );
+    rStrm.WriteUInt32( ESCHER_Dgg << 16 ).WriteUInt32( nDggSize - 8 );
 
     // claculate and write the fixed DGG data
     sal_uInt32 nShapeCount = 0;
@@ -5087,11 +5073,11 @@ void EscherExGlobal::WriteDggAtom( SvStream& rStrm ) const
     // the non-existing cluster with index #0 is counted too
     sal_uInt32 nClusterCount = static_cast< sal_uInt32 >( maClusterTable.size() + 1 );
     sal_uInt32 nDrawingCount = static_cast< sal_uInt32 >( maDrawingInfos.size() );
-    rStrm << nLastShapeId << nClusterCount << nShapeCount << nDrawingCount;
+    rStrm.WriteUInt32( nLastShapeId ).WriteUInt32( nClusterCount ).WriteUInt32( nShapeCount ).WriteUInt32( nDrawingCount );
 
     // write the cluster table
     for( ClusterTable::const_iterator aIt = maClusterTable.begin(), aEnd = maClusterTable.end(); aIt != aEnd; ++aIt )
-        rStrm << aIt->mnDrawingId << aIt->mnNextShapeId;
+        rStrm.WriteUInt32( aIt->mnDrawingId ).WriteUInt32( aIt->mnNextShapeId );
 }
 
 SvStream* EscherExGlobal::QueryPictureStream()
@@ -5109,38 +5095,61 @@ SvStream* EscherExGlobal::ImplQueryPictureStream()
     return 0;
 }
 
-// ---------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------
-
-EscherEx::EscherEx( const EscherExGlobalRef& rxGlobal, SvStream& rOutStrm ) :
-    mxGlobal                ( rxGlobal ),
-	mpOutStrm				( &rOutStrm ),
-
-	mnGroupLevel			( 0 ),
-	mnHellLayerId			( USHRT_MAX ),
-
-	mbEscherSpgr			( sal_False ),
-    mbEscherDg              ( sal_False )
+// /Implementation of an empty stream that silently succeeds, but does nothing.
+// /
+// /In fact, this is a hack.  The right solution is to abstract EscherEx to be
+// /able to work without SvStream; but at the moment it is better to live with
+// /this I guess.
+class SvNullStream : public SvStream
 {
-	mnStrmStartOfs = mpOutStrm->Tell();
+protected:
+    virtual sal_Size GetData( void* pData, sal_Size nSize ) SAL_OVERRIDE { memset( pData, 0, nSize ); return nSize; }
+    virtual sal_Size PutData( const void*, sal_Size nSize ) SAL_OVERRIDE { return nSize; }
+    virtual sal_uInt64 SeekPos( sal_uInt64 nPos ) SAL_OVERRIDE { return nPos; }
+    virtual void SetSize( sal_uInt64 ) SAL_OVERRIDE {}
+    virtual void FlushData() SAL_OVERRIDE {}
+
+public:
+    SvNullStream() : SvStream() {}
+    virtual ~SvNullStream() {}
+};
+
+EscherEx::EscherEx(const EscherExGlobalRef& rxGlobal, SvStream* pOutStrm, bool bOOXML)
+    : mxGlobal(rxGlobal)
+    , mpOutStrm(pOutStrm)
+    , mbOwnsStrm(false)
+    , mnCurrentDg(0)
+    , mnCountOfs(0)
+    , mnGroupLevel(0)
+    , mnHellLayerId(USHRT_MAX)
+    , mbEscherSpgr(false)
+    , mbEscherDg(false)
+    , mbOleEmf(false)
+    , mbOOXML(bOOXML)
+{
+    if (!mpOutStrm)
+    {
+        mpOutStrm = new SvNullStream();
+        mbOwnsStrm = true;
+    }
+    mnStrmStartOfs = mpOutStrm->Tell();
     mpImplEscherExSdr.reset( new ImplEscherExSdr( *this ) );
 }
 
 EscherEx::~EscherEx()
 {
+    if (mbOwnsStrm)
+        delete mpOutStrm;
 }
-
-// ---------------------------------------------------------------------------------------------
 
 void EscherEx::Flush( SvStream* pPicStreamMergeBSE /* = NULL */ )
 {
     if ( mxGlobal->HasDggContainer() )
-	{
+    {
         // store the current stream position at ESCHER_Persist_CurrentPosition key
-		PtReplaceOrInsert( ESCHER_Persist_CurrentPosition, mpOutStrm->Tell() );
-		if ( DoSeek( ESCHER_Persist_Dgg ) )
-		{
+        PtReplaceOrInsert( ESCHER_Persist_CurrentPosition, mpOutStrm->Tell() );
+        if ( DoSeek( ESCHER_Persist_Dgg ) )
+        {
             /*  The DGG record is still not written. ESCHER_Persist_Dgg seeks
                 to the place where the complete record has to be inserted. */
             InsertAtCurrentPos( mxGlobal->GetDggAtomSize(), false );
@@ -5164,97 +5173,68 @@ void EscherEx::Flush( SvStream* pPicStreamMergeBSE /* = NULL */ )
             PtDelete( ESCHER_Persist_Dgg );
         }
         // seek to initial position (may be different due to inserted DGG and BLIPs)
-		mpOutStrm->Seek( PtGetOffsetByID( ESCHER_Persist_CurrentPosition ) );
-	}
+        mpOutStrm->Seek( PtGetOffsetByID( ESCHER_Persist_CurrentPosition ) );
+    }
 }
-
-// ---------------------------------------------------------------------------------------------
 
 void EscherEx::InsertAtCurrentPos( sal_uInt32 nBytes, bool bExpandEndOfAtom )
 {
-	sal_uInt32	nSize, nType, nSource, nBufSize, nToCopy, nCurPos = mpOutStrm->Tell();
-	sal_uInt8*	pBuf;
+    sal_uInt32  nSize, nType, nSource, nBufSize, nToCopy, nCurPos = mpOutStrm->Tell();
 
-	// Persist table anpassen
-	for ( void* pPtr = maPersistTable.First(); pPtr; pPtr = maPersistTable.Next() )
-	{
-		sal_uInt32 nOfs = ((EscherPersistEntry*)pPtr)->mnOffset;
-		if ( nOfs >= nCurPos )
-			((EscherPersistEntry*)pPtr)->mnOffset += nBytes;
-	}
+    // adjust persist table
+    for( size_t i = 0, n = maPersistTable.size(); i < n; ++i ) {
+        EscherPersistEntry* pPtr = maPersistTable[ i ];
+        sal_uInt32 nOfs = pPtr->mnOffset;
+        if ( nOfs >= nCurPos ) {
+            pPtr->mnOffset += nBytes;
+        }
+    }
 
-	// container und atom sizes anpassen
-	mpOutStrm->Seek( mnStrmStartOfs );
-	while ( mpOutStrm->Tell() < nCurPos )
-	{
-		*mpOutStrm >> nType >> nSize;
+    // adapt container and atom sizes
+    mpOutStrm->Seek( mnStrmStartOfs );
+    while ( mpOutStrm->Tell() < nCurPos )
+    {
+        mpOutStrm->ReadUInt32( nType ).ReadUInt32( nSize );
         sal_uInt32 nEndOfRecord = mpOutStrm->Tell() + nSize;
         bool bContainer = (nType & 0x0F) == 0x0F;
         /*  Expand the record, if the insertion position is inside, or if the
             position is at the end of a container (expands always), or at the
             end of an atom and bExpandEndOfAtom is set. */
         if ( (nCurPos < nEndOfRecord) || ((nCurPos == nEndOfRecord) && (bContainer || bExpandEndOfAtom)) )
-		{
-			mpOutStrm->SeekRel( -4 );
-			*mpOutStrm << (sal_uInt32)( nSize + nBytes );
+        {
+            mpOutStrm->SeekRel( -4 );
+            mpOutStrm->WriteUInt32( ( nSize + nBytes ) );
             if ( !bContainer )
-				mpOutStrm->SeekRel( nSize );
-		}
-		else
-			mpOutStrm->SeekRel( nSize );
-	}
-	std::vector< sal_uInt32 >::iterator aIter( mOffsets.begin() );
-	std::vector< sal_uInt32 >::iterator aEnd( mOffsets.end() );
-	while( aIter != aEnd )
-	{
-		if ( *aIter > nCurPos )
-			*aIter += nBytes;
-		aIter++;
-	}
-	mpOutStrm->Seek( STREAM_SEEK_TO_END );
-	nSource = mpOutStrm->Tell();
-	nToCopy = nSource - nCurPos;						// Stream um nBytes vergroessern
-	pBuf = new sal_uInt8[ 0x40000 ];							// 256KB Buffer
-	while ( nToCopy )
-	{
-		nBufSize = ( nToCopy >= 0x40000 ) ? 0x40000 : nToCopy;
-		nToCopy -= nBufSize;
-		nSource -= nBufSize;
-		mpOutStrm->Seek( nSource );
-		mpOutStrm->Read( pBuf, nBufSize );
-		mpOutStrm->Seek( nSource + nBytes );
-		mpOutStrm->Write( pBuf, nBufSize );
-	}
-	delete[] pBuf;
-	mpOutStrm->Seek( nCurPos );
+                mpOutStrm->SeekRel( nSize );
+        }
+        else
+            mpOutStrm->SeekRel( nSize );
+    }
+    for (std::vector< sal_uInt32 >::iterator aIter( mOffsets.begin() ), aEnd( mOffsets.end() ); aIter != aEnd ; ++aIter)
+    {
+        if ( *aIter > nCurPos )
+            *aIter += nBytes;
+    }
+    mpOutStrm->Seek( STREAM_SEEK_TO_END );
+    nSource = mpOutStrm->Tell();
+    nToCopy = nSource - nCurPos;                        // increase the size of the tream by nBytes
+    boost::scoped_array<sal_uInt8> pBuf(new sal_uInt8[ 0x40000 ]); // 256KB Buffer
+    while ( nToCopy )
+    {
+        nBufSize = ( nToCopy >= 0x40000 ) ? 0x40000 : nToCopy;
+        nToCopy -= nBufSize;
+        nSource -= nBufSize;
+        mpOutStrm->Seek( nSource );
+        mpOutStrm->Read( pBuf.get(), nBufSize );
+        mpOutStrm->Seek( nSource + nBytes );
+        mpOutStrm->Write( pBuf.get(), nBufSize );
+    }
+    mpOutStrm->Seek( nCurPos );
 }
-
-// ---------------------------------------------------------------------------------------------
-
-sal_Bool EscherEx::SeekBehindRecHeader( sal_uInt16 nRecType )
-{
-	sal_uInt32	nOldPos, nStreamEnd, nType, nSize;
-
-	nOldPos = mpOutStrm->Tell();
-	nStreamEnd = mpOutStrm->Seek( STREAM_SEEK_TO_END );
-	mpOutStrm->Seek( nOldPos );
-	while ( mpOutStrm->Tell() < nStreamEnd )
-	{
-		*mpOutStrm >> nType >> nSize;
-		if ( ( nType >> 16 ) == nRecType )
-			return sal_True;
-		if ( ( nType & 0xf ) != 0xf )
-			mpOutStrm->SeekRel( nSize );
-	}
-	mpOutStrm->Seek( nOldPos );
-	return sal_False;
-}
-
-// ---------------------------------------------------------------------------------------------
 
 void EscherEx::InsertPersistOffset( sal_uInt32 nKey, sal_uInt32 nOffset )
 {
-	PtInsert( ESCHER_Persist_PrivateEntry | nKey, nOffset );
+    PtInsert( ESCHER_Persist_PrivateEntry | nKey, nOffset );
 }
 
 void EscherEx::ReplacePersistOffset( sal_uInt32 nKey, sal_uInt32 nOffset )
@@ -5262,355 +5242,321 @@ void EscherEx::ReplacePersistOffset( sal_uInt32 nKey, sal_uInt32 nOffset )
     PtReplace( ESCHER_Persist_PrivateEntry | nKey, nOffset );
 }
 
+void EscherEx::SetEditAs( const OUString& rEditAs )
+{
+    mEditAs = rEditAs;
+}
+
 sal_uInt32 EscherEx::GetPersistOffset( sal_uInt32 nKey )
 {
     return PtGetOffsetByID( ESCHER_Persist_PrivateEntry | nKey );
 }
 
-// ---------------------------------------------------------------------------------------------
-
-sal_Bool EscherEx::DoSeek( sal_uInt32 nKey )
+bool EscherEx::DoSeek( sal_uInt32 nKey )
 {
-	sal_uInt32 nPos = PtGetOffsetByID( nKey );
-	if ( nPos )
-		mpOutStrm->Seek( nPos );
-	else
-	{
-		if (! PtIsID( nKey ) )
-			return sal_False;
-		mpOutStrm->Seek( 0 );
-	}
-	return sal_True;
+    sal_uInt32 nPos = PtGetOffsetByID( nKey );
+    if ( nPos )
+        mpOutStrm->Seek( nPos );
+    else
+    {
+        if (! PtIsID( nKey ) )
+            return false;
+        mpOutStrm->Seek( 0 );
+    }
+    return true;
 }
 
-// ---------------------------------------------------------------------------------------------
-
-sal_Bool EscherEx::SeekToPersistOffset( sal_uInt32 nKey )
+bool EscherEx::SeekToPersistOffset( sal_uInt32 nKey )
 {
-	return DoSeek( ESCHER_Persist_PrivateEntry | nKey );
+    return DoSeek( ESCHER_Persist_PrivateEntry | nKey );
 }
 
-// ---------------------------------------------------------------------------------------------
-
-sal_Bool EscherEx::InsertAtPersistOffset( sal_uInt32 nKey, sal_uInt32 nValue )
+bool EscherEx::InsertAtPersistOffset( sal_uInt32 nKey, sal_uInt32 nValue )
 {
-	sal_uInt32	nOldPos = mpOutStrm->Tell();
-	sal_Bool	bRetValue = SeekToPersistOffset( nKey );
-	if ( bRetValue )
-	{
-		*mpOutStrm << nValue;
-		mpOutStrm->Seek( nOldPos );
-	}
-	return bRetValue;
+    sal_uInt32  nOldPos = mpOutStrm->Tell();
+    bool        bRetValue = SeekToPersistOffset( nKey );
+    if ( bRetValue )
+    {
+        mpOutStrm->WriteUInt32( nValue );
+        mpOutStrm->Seek( nOldPos );
+    }
+    return bRetValue;
 }
-
-// ---------------------------------------------------------------------------------------------
 
 void EscherEx::OpenContainer( sal_uInt16 nEscherContainer, int nRecInstance )
 {
-	*mpOutStrm << (sal_uInt16)( ( nRecInstance << 4 ) | 0xf  ) << nEscherContainer << (sal_uInt32)0;
-	mOffsets.push_back( mpOutStrm->Tell() - 4 );
-	mRecTypes.push_back( nEscherContainer );
-	switch( nEscherContainer )
-	{
-		case ESCHER_DggContainer :
-		{
+    mpOutStrm->WriteUInt16( ( ( nRecInstance << 4 ) | 0xf  ) ).WriteUInt16( nEscherContainer ).WriteUInt32( 0 );
+    mOffsets.push_back( mpOutStrm->Tell() - 4 );
+    mRecTypes.push_back( nEscherContainer );
+    switch( nEscherContainer )
+    {
+        case ESCHER_DggContainer :
+        {
             mxGlobal->SetDggContainer();
-			mnCurrentDg	= 0;
+            mnCurrentDg = 0;
             /*  Remember the current position as start position of the DGG
                 record and BSTORECONTAINER, but do not write them actually.
                 This will be done later in Flush() when the number of drawings,
                 the size and contents of the FIDCL cluster table, and the size
                 of the BLIP container are known. */
-			PtReplaceOrInsert( ESCHER_Persist_Dgg, mpOutStrm->Tell() );
-		}
-		break;
+            PtReplaceOrInsert( ESCHER_Persist_Dgg, mpOutStrm->Tell() );
+        }
+        break;
 
-		case ESCHER_DgContainer :
-		{
+        case ESCHER_DgContainer :
+        {
             if ( mxGlobal->HasDggContainer() )
-			{
-				if ( !mbEscherDg )
-				{
-					mbEscherDg = sal_True;
+            {
+                if ( !mbEscherDg )
+                {
+                    mbEscherDg = true;
                     mnCurrentDg = mxGlobal->GenerateDrawingId();
-					AddAtom( 8, ESCHER_Dg, 0, mnCurrentDg );
-					PtReplaceOrInsert( ESCHER_Persist_Dg | mnCurrentDg, mpOutStrm->Tell() );
-					*mpOutStrm << (sal_uInt32)0		// The number of shapes in this drawing
-							   << (sal_uInt32)0;	// The last MSOSPID given to an SP in this DG
-				}
-			}
-		}
-		break;
+                    AddAtom( 8, ESCHER_Dg, 0, mnCurrentDg );
+                    PtReplaceOrInsert( ESCHER_Persist_Dg | mnCurrentDg, mpOutStrm->Tell() );
+                    mpOutStrm->WriteUInt32( 0 )     // The number of shapes in this drawing
+                              .WriteUInt32( 0 );    // The last MSOSPID given to an SP in this DG
+                }
+            }
+        }
+        break;
 
-		case ESCHER_SpgrContainer :
-		{
-			if ( mbEscherDg )
-			{
-				mbEscherSpgr = sal_True;
-			}
-		}
-		break;
+        case ESCHER_SpgrContainer :
+        {
+            if ( mbEscherDg )
+            {
+                mbEscherSpgr = true;
+            }
+        }
+        break;
 
-		case ESCHER_SpContainer :
-		{
-		}
-		break;
+        case ESCHER_SpContainer :
+        {
+        }
+        break;
 
-		default:
-		break;
-	}
+        default:
+        break;
+    }
 }
-
-// ---------------------------------------------------------------------------------------------
 
 void EscherEx::CloseContainer()
 {
-	sal_uInt32 nSize, nPos = mpOutStrm->Tell();
-	nSize = ( nPos - mOffsets.back() ) - 4;
-	mpOutStrm->Seek( mOffsets.back() );
-	*mpOutStrm << nSize;
+    sal_uInt32 nSize, nPos = mpOutStrm->Tell();
+    nSize = ( nPos - mOffsets.back() ) - 4;
+    mpOutStrm->Seek( mOffsets.back() );
+    mpOutStrm->WriteUInt32( nSize );
 
-	switch( mRecTypes.back() )
-	{
-		case ESCHER_DgContainer :
-		{
-			if ( mbEscherDg )
-			{
-				mbEscherDg = sal_False;
-				if ( DoSeek( ESCHER_Persist_Dg | mnCurrentDg ) )
-                    *mpOutStrm << mxGlobal->GetDrawingShapeCount( mnCurrentDg ) << mxGlobal->GetLastShapeId( mnCurrentDg );
-			}
-		}
-		break;
+    switch( mRecTypes.back() )
+    {
+        case ESCHER_DgContainer :
+        {
+            if ( mbEscherDg )
+            {
+                mbEscherDg = false;
+                if ( DoSeek( ESCHER_Persist_Dg | mnCurrentDg ) )
+                    mpOutStrm->WriteUInt32( mxGlobal->GetDrawingShapeCount( mnCurrentDg ) ).WriteUInt32( mxGlobal->GetLastShapeId( mnCurrentDg ) );
+            }
+        }
+        break;
 
-		case ESCHER_SpgrContainer :
-		{
-			if ( mbEscherSpgr )
-			{
-				mbEscherSpgr = sal_False;
+        case ESCHER_SpgrContainer :
+        {
+            if ( mbEscherSpgr )
+            {
+                mbEscherSpgr = false;
 
-			}
-		}
-		break;
+            }
+        }
+        break;
 
-		default:
-		break;
-	}
-	mOffsets.pop_back();
-	mRecTypes.pop_back();
-	mpOutStrm->Seek( nPos );
+        default:
+        break;
+    }
+    mOffsets.pop_back();
+    mRecTypes.pop_back();
+    mpOutStrm->Seek( nPos );
 }
-
-// ---------------------------------------------------------------------------------------------
 
 void EscherEx::BeginAtom()
 {
-	mnCountOfs = mpOutStrm->Tell();
-	*mpOutStrm << (sal_uInt32)0 << (sal_uInt32)0;		// record header wird spaeter geschrieben
+    mnCountOfs = mpOutStrm->Tell();
+    mpOutStrm->WriteUInt32( 0 ).WriteUInt32( 0 );       // record header wird spaeter geschrieben
 }
-
-// ---------------------------------------------------------------------------------------------
 
 void EscherEx::EndAtom( sal_uInt16 nRecType, int nRecVersion, int nRecInstance )
 {
-	sal_uInt32	nOldPos = mpOutStrm->Tell();
-	mpOutStrm->Seek( mnCountOfs );
-	sal_uInt32 nSize = nOldPos - mnCountOfs;
-	*mpOutStrm << (sal_uInt16)( ( nRecInstance << 4 ) | ( nRecVersion & 0xf ) ) << nRecType << (sal_uInt32)( nSize - 8 );
-	mpOutStrm->Seek( nOldPos );
+    sal_uInt32  nOldPos = mpOutStrm->Tell();
+    mpOutStrm->Seek( mnCountOfs );
+    sal_uInt32 nSize = nOldPos - mnCountOfs;
+    mpOutStrm->WriteUInt16( ( ( nRecInstance << 4 ) | ( nRecVersion & 0xf ) ) ).WriteUInt16( nRecType ).WriteUInt32( ( nSize - 8 ) );
+    mpOutStrm->Seek( nOldPos );
 }
-
-// ---------------------------------------------------------------------------------------------
 
 void EscherEx::AddAtom( sal_uInt32 nAtomSize, sal_uInt16 nRecType, int nRecVersion, int nRecInstance )
 {
-	*mpOutStrm << (sal_uInt16)( ( nRecInstance << 4 ) | ( nRecVersion & 0xf ) ) << nRecType << nAtomSize;
+    mpOutStrm->WriteUInt16( ( ( nRecInstance << 4 ) | ( nRecVersion & 0xf ) ) ).WriteUInt16( nRecType ).WriteUInt32( nAtomSize );
 }
-
-// ---------------------------------------------------------------------------------------------
 
 void EscherEx::AddChildAnchor( const Rectangle& rRect )
 {
     AddAtom( 16, ESCHER_ChildAnchor );
-    *mpOutStrm  << (sal_Int32)rRect.Left()
-                << (sal_Int32)rRect.Top()
-                << (sal_Int32)rRect.Right()
-                << (sal_Int32)rRect.Bottom();
+    mpOutStrm ->WriteInt32( rRect.Left() )
+               .WriteInt32( rRect.Top() )
+               .WriteInt32( rRect.Right() )
+               .WriteInt32( rRect.Bottom() );
 }
-
-// ---------------------------------------------------------------------------------------------
 
 void EscherEx::AddClientAnchor( const Rectangle& rRect )
 {
-	AddAtom( 8, ESCHER_ClientAnchor );
-    *mpOutStrm << (sal_Int16)rRect.Top()
-               << (sal_Int16)rRect.Left()
-               << (sal_Int16)( rRect.GetWidth()  + rRect.Left() )
-               << (sal_Int16)( rRect.GetHeight() + rRect.Top() );
+    AddAtom( 8, ESCHER_ClientAnchor );
+    mpOutStrm->WriteInt16( rRect.Top() )
+              .WriteInt16( rRect.Left() )
+              .WriteInt16( ( rRect.GetWidth()  + rRect.Left() ) )
+              .WriteInt16( ( rRect.GetHeight() + rRect.Top() ) );
 }
-
-// ---------------------------------------------------------------------------------------------
 
 EscherExHostAppData* EscherEx::EnterAdditionalTextGroup()
 {
-	return NULL;
+    return NULL;
 }
 
-// ---------------------------------------------------------------------------------------------
-
-sal_uInt32 EscherEx::EnterGroup( const String& rShapeName, const Rectangle* pBoundRect )
+sal_uInt32 EscherEx::EnterGroup( const OUString& rShapeName, const Rectangle* pBoundRect )
 {
-	Rectangle aRect;
-	if( pBoundRect )
-		aRect = *pBoundRect;
+    Rectangle aRect;
+    if( pBoundRect )
+        aRect = *pBoundRect;
 
-	OpenContainer( ESCHER_SpgrContainer );
-	OpenContainer( ESCHER_SpContainer );
-	AddAtom( 16, ESCHER_Spgr, 1 );
-	PtReplaceOrInsert( ESCHER_Persist_Grouping_Snap | mnGroupLevel,
-						mpOutStrm->Tell() );
-	*mpOutStrm	<< (sal_Int32)aRect.Left()	// Bounding box fuer die Gruppierten shapes an die sie attached werden
-				<< (sal_Int32)aRect.Top()
-				<< (sal_Int32)aRect.Right()
-				<< (sal_Int32)aRect.Bottom();
+    OpenContainer( ESCHER_SpgrContainer );
+    OpenContainer( ESCHER_SpContainer );
+    AddAtom( 16, ESCHER_Spgr, 1 );
+    PtReplaceOrInsert( ESCHER_Persist_Grouping_Snap | mnGroupLevel,
+                        mpOutStrm->Tell() );
+    mpOutStrm ->WriteInt32( aRect.Left() )  // Bounding box for the grouped shapes to which they will be attached
+               .WriteInt32( aRect.Top() )
+               .WriteInt32( aRect.Right() )
+               .WriteInt32( aRect.Bottom() );
 
     sal_uInt32 nShapeId = GenerateShapeId();
-	if ( !mnGroupLevel )
+    if ( !mnGroupLevel )
         AddShape( ESCHER_ShpInst_Min, 5, nShapeId );                    // Flags: Group | Patriarch
-	else
-	{
+    else
+    {
         AddShape( ESCHER_ShpInst_Min, 0x201, nShapeId );                // Flags: Group | HaveAnchor
-		EscherPropertyContainer aPropOpt;
-		aPropOpt.AddOpt( ESCHER_Prop_LockAgainstGrouping, 0x00040004 );
+        EscherPropertyContainer aPropOpt;
+        aPropOpt.AddOpt( ESCHER_Prop_LockAgainstGrouping, 0x00040004 );
         aPropOpt.AddOpt( ESCHER_Prop_dxWrapDistLeft, 0 );
         aPropOpt.AddOpt( ESCHER_Prop_dxWrapDistRight, 0 );
 
         // #i51348# shape name
-        if( rShapeName.Len() > 0 )
+        if( rShapeName.getLength() > 0 )
             aPropOpt.AddOpt( ESCHER_Prop_wzName, rShapeName );
 
-		Commit( aPropOpt, aRect );
-		if ( mnGroupLevel > 1 )
+        Commit( aPropOpt, aRect );
+        if ( mnGroupLevel > 1 )
             AddChildAnchor( aRect );
 
-		EscherExHostAppData* pAppData = mpImplEscherExSdr->ImplGetHostData();
-		if( pAppData )
-		{
-			if ( mnGroupLevel <= 1 )
-				pAppData->WriteClientAnchor( *this, aRect );
-			pAppData->WriteClientData( *this );
-		}
-	}
-	CloseContainer();												// ESCHER_SpContainer
-	mnGroupLevel++;
+        EscherExHostAppData* pAppData = mpImplEscherExSdr->ImplGetHostData();
+        if( pAppData )
+        {
+            if ( mnGroupLevel <= 1 )
+                pAppData->WriteClientAnchor( *this, aRect );
+            pAppData->WriteClientData( *this );
+        }
+    }
+    CloseContainer();                                               // ESCHER_SpContainer
+    mnGroupLevel++;
     return nShapeId;
 }
 
 sal_uInt32 EscherEx::EnterGroup( const Rectangle* pBoundRect )
 {
-    return EnterGroup( String::EmptyString(), pBoundRect );
+    return EnterGroup( OUString(), pBoundRect );
 }
 
-// ---------------------------------------------------------------------------------------------
-
-sal_Bool EscherEx::SetGroupSnapRect( sal_uInt32 nGroupLevel, const Rectangle& rRect )
+bool EscherEx::SetGroupSnapRect( sal_uInt32 nGroupLevel, const Rectangle& rRect )
 {
-	sal_Bool bRetValue = sal_False;
-	if ( nGroupLevel )
-	{
-		sal_uInt32 nCurrentPos = mpOutStrm->Tell();
-		if ( DoSeek( ESCHER_Persist_Grouping_Snap | ( nGroupLevel - 1 ) ) )
-		{
-			*mpOutStrm	<< (sal_Int32)rRect.Left()	// Bounding box fuer die Gruppierten shapes an die sie attached werden
-						<< (sal_Int32)rRect.Top()
-						<< (sal_Int32)rRect.Right()
-						<< (sal_Int32)rRect.Bottom();
-			mpOutStrm->Seek( nCurrentPos );
-		}
-	}
-	return bRetValue;
+    bool bRetValue = false;
+    if ( nGroupLevel )
+    {
+        sal_uInt32 nCurrentPos = mpOutStrm->Tell();
+        if ( DoSeek( ESCHER_Persist_Grouping_Snap | ( nGroupLevel - 1 ) ) )
+        {
+            mpOutStrm ->WriteInt32( rRect.Left() )  // Bounding box for the grouped shapes to which they will be attached
+                       .WriteInt32( rRect.Top() )
+                       .WriteInt32( rRect.Right() )
+                       .WriteInt32( rRect.Bottom() );
+            mpOutStrm->Seek( nCurrentPos );
+        }
+    }
+    return bRetValue;
 }
 
-// ---------------------------------------------------------------------------------------------
-
-sal_Bool EscherEx::SetGroupLogicRect( sal_uInt32 nGroupLevel, const Rectangle& rRect )
+bool EscherEx::SetGroupLogicRect( sal_uInt32 nGroupLevel, const Rectangle& rRect )
 {
-	sal_Bool bRetValue = sal_False;
-	if ( nGroupLevel )
-	{
-		sal_uInt32 nCurrentPos = mpOutStrm->Tell();
-		if ( DoSeek( ESCHER_Persist_Grouping_Logic | ( nGroupLevel - 1 ) ) )
-		{
-			*mpOutStrm << (sal_Int16)rRect.Top() << (sal_Int16)rRect.Left() << (sal_Int16)rRect.Right() << (sal_Int16)rRect.Bottom();
-			mpOutStrm->Seek( nCurrentPos );
-		}
-	}
-	return bRetValue;
+    bool bRetValue = false;
+    if ( nGroupLevel )
+    {
+        sal_uInt32 nCurrentPos = mpOutStrm->Tell();
+        if ( DoSeek( ESCHER_Persist_Grouping_Logic | ( nGroupLevel - 1 ) ) )
+        {
+            mpOutStrm->WriteInt16( rRect.Top() ).WriteInt16( rRect.Left() ).WriteInt16( rRect.Right() ).WriteInt16( rRect.Bottom() );
+            mpOutStrm->Seek( nCurrentPos );
+        }
+    }
+    return bRetValue;
 }
-
-// ---------------------------------------------------------------------------------------------
 
 void EscherEx::LeaveGroup()
 {
-	--mnGroupLevel;
-	PtDelete( ESCHER_Persist_Grouping_Snap | mnGroupLevel );
-	PtDelete( ESCHER_Persist_Grouping_Logic | mnGroupLevel );
-	CloseContainer();
+    --mnGroupLevel;
+    PtDelete( ESCHER_Persist_Grouping_Snap | mnGroupLevel );
+    PtDelete( ESCHER_Persist_Grouping_Logic | mnGroupLevel );
+    CloseContainer();
 }
-
-// ---------------------------------------------------------------------------------------------
 
 void EscherEx::AddShape( sal_uInt32 nShpInstance, sal_uInt32 nFlags, sal_uInt32 nShapeID )
 {
-	AddAtom( 8, ESCHER_Sp, 2, nShpInstance );
+    AddAtom( 8, ESCHER_Sp, 2, nShpInstance );
 
-	if ( !nShapeID )
+    if ( !nShapeID )
         nShapeID = GenerateShapeId();
 
-	if ( nFlags ^ 1 )							// is this a group shape ?
-	{											// if not
-		if ( mnGroupLevel > 1 )
-			nFlags |= 2;						// this not a topmost shape
-	}
-	*mpOutStrm << nShapeID << nFlags;
+    if ( nFlags ^ 1 )                           // is this a group shape ?
+    {                                           // if not
+        if ( mnGroupLevel > 1 )
+            nFlags |= 2;                        // this not a topmost shape
+    }
+    mpOutStrm->WriteUInt32( nShapeID ).WriteUInt32( nFlags );
 }
-
-// ---------------------------------------------------------------------------------------------
 
 void EscherEx::Commit( EscherPropertyContainer& rProps, const Rectangle& )
 {
-	rProps.Commit( GetStream() );
+    rProps.Commit( GetStream() );
 }
 
-// ---------------------------------------------------------------------------------------------
-
-sal_uInt32 EscherEx::GetColor( const sal_uInt32 nSOColor, sal_Bool bSwap )
+sal_uInt32 EscherEx::GetColor( const sal_uInt32 nSOColor, bool bSwap )
 {
-	if ( bSwap )
-	{
-		sal_uInt32 nColor = nSOColor & 0xff00;		// GRUEN
-		nColor |= (sal_uInt8)( nSOColor ) << 16;		// ROT
-		nColor |= (sal_uInt8)( nSOColor >> 16 );		// BLAU
-		return nColor;
-	}
-	else
-		return nSOColor & 0xffffff;
+    if ( bSwap )
+    {
+        sal_uInt32 nColor = nSOColor & 0xff00;          // Green
+        nColor |= (sal_uInt8)( nSOColor ) << 16;        // Red
+        nColor |= (sal_uInt8)( nSOColor >> 16 );        // Blue
+        return nColor;
+    }
+    else
+        return nSOColor & 0xffffff;
 }
 
-// ---------------------------------------------------------------------------------------------
-
-sal_uInt32 EscherEx::GetColor( const Color& rSOColor, sal_Bool bSwap )
+sal_uInt32 EscherEx::GetColor( const Color& rSOColor, bool bSwap )
 {
-	sal_uInt32 nColor = ( rSOColor.GetRed() << 16 );
-	nColor |= ( rSOColor.GetGreen() << 8 );
-	nColor |= rSOColor.GetBlue();
+    sal_uInt32 nColor = ( rSOColor.GetRed() << 16 );
+    nColor |= ( rSOColor.GetGreen() << 8 );
+    nColor |= rSOColor.GetBlue();
 
-	if ( !bSwap )
-		nColor = GetColor( nColor, sal_True );
+    if ( !bSwap )
+        nColor = GetColor( nColor, true );
 
-	return nColor;
+    return nColor;
 }
 
-// ---------------------------------------------------------------------------------------------
-
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

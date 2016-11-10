@@ -1,37 +1,29 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_filter.hxx"
 
 #include "pdfexport.hxx"
 #include "impdialog.hxx"
@@ -45,14 +37,13 @@
 #include "vcl/metaact.hxx"
 #include "vcl/gdimtf.hxx"
 #include "vcl/jobset.hxx"
-#include "vcl/salbtype.hxx"
 #include "vcl/bmpacc.hxx"
 #include "vcl/svapp.hxx"
 #include "toolkit/awt/vclxdevice.hxx"
 #include "unotools/localfilehelper.hxx"
-#include "unotools/processfactory.hxx"
-#include "svtools/FilterConfigItem.hxx"
-#include "svtools/filter.hxx"
+#include <vcl/FilterConfigItem.hxx>
+#include <vcl/graphicfilter.hxx>
+#include <vcl/settings.hxx>
 #include "svl/solar.hrc"
 #include "comphelper/string.hxx"
 #include "comphelper/storagehelper.hxx"
@@ -63,15 +54,16 @@
 #include "basegfx/polygon/b2dpolypolygon.hxx"
 #include "basegfx/polygon/b2dpolygontools.hxx"
 
-#include "unotools/saveopt.hxx" // only for testing of relative saving options in PDF
+#include "unotools/saveopt.hxx"
 
 #include "vcl/graphictools.hxx"
 #include "com/sun/star/beans/XPropertySet.hpp"
+#include "com/sun/star/configuration/theDefaultProvider.hpp"
 #include "com/sun/star/awt/Rectangle.hpp"
 #include "com/sun/star/awt/XDevice.hpp"
 #include "com/sun/star/util/MeasureUnit.hpp"
 #include "com/sun/star/frame/XModel.hpp"
-#include "com/sun/star/frame/XModuleManager.hpp"
+#include "com/sun/star/frame/ModuleManager.hpp"
 #include "com/sun/star/frame/XStorable.hpp"
 #include "com/sun/star/frame/XController.hpp"
 #include "com/sun/star/document/XDocumentProperties.hpp"
@@ -89,12 +81,8 @@
 #include "com/sun/star/lang/XServiceInfo.hpp"
 #include "com/sun/star/drawing/XShapes.hpp"
 #include "com/sun/star/graphic/XGraphicProvider.hpp"
+#include <boost/scoped_ptr.hpp>
 
-#ifdef USE_JAVA
-#include <com/sun/star/view/XViewSettingsSupplier.hpp>
-#endif	// USE_JAVA
-
-using namespace ::rtl;
 using namespace ::vcl;
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -103,184 +91,182 @@ using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::view;
 using namespace ::com::sun::star::graphic;
 
-// -------------
+
 // - PDFExport -
-// -------------
+
 
 PDFExport::PDFExport( const Reference< XComponent >& rxSrcDoc,
                       const Reference< task::XStatusIndicator >& rxStatusIndicator,
                       const Reference< task::XInteractionHandler >& rxIH,
-                      const Reference< lang::XMultiServiceFactory >& xFactory ) :
-    mxSrcDoc				    ( rxSrcDoc ),
-    mxMSF                       ( xFactory ),
-	mxStatusIndicator		    ( rxStatusIndicator ),
-	mxIH                        ( rxIH ),
-	mbUseTaggedPDF			    ( sal_False ),
+                      const Reference< XComponentContext >& xContext ) :
+    mxSrcDoc                    ( rxSrcDoc ),
+    mxContext                   ( xContext ),
+    mxStatusIndicator           ( rxStatusIndicator ),
+    mxIH                        ( rxIH ),
+    mbUseTaggedPDF              ( false ),
     mnPDFTypeSelection          ( 0 ),
-	mbExportNotes			    ( sal_True ),
-	mbExportNotesPages		    ( sal_False ),
-	mbEmbedStandardFonts        ( sal_False ),//in preparation for i54636 and i76458.
-                                              //already used for i59651 (PDF/A-1)
-	mbUseTransitionEffects	    ( sal_True ),
-    mbExportBookmarks           ( sal_True ),
+    mbExportNotes               ( true ),
+    mbViewPDF                   ( true ),
+    mbExportNotesPages          ( false ),
+    mbUseTransitionEffects      ( true ),
+    mbExportBookmarks           ( true ),
+    mbExportHiddenSlides        ( false ),
     mnOpenBookmarkLevels        ( -1 ),
 #ifdef USE_JAVA
-    mbThumbnail                 ( sal_False ),
+    mbThumbnail                 ( false ),
 #endif	// USE_JAVA
-	mbUseLosslessCompression    ( sal_False ),
-	mbReduceImageResolution	    ( sal_False ),
-    mbSkipEmptyPages            ( sal_True ),
-    mbAddStream                 ( sal_False ),
-	mnMaxImageResolution	    ( 300 ),
-	mnQuality				    ( 90 ),
-	mnFormsFormat			    ( 0 ),
-    mbExportFormFields          ( sal_True ),
-    mbAllowDuplicateFieldNames  ( sal_False ),
-	mnProgressValue			    ( 0 ),
-    mbRemoveTransparencies      ( sal_False ),
-    mbWatermark                 ( sal_False ),
+    mbUseLosslessCompression    ( false ),
+    mbReduceImageResolution     ( true ),
+    mbSkipEmptyPages            ( true ),
+    mbAddStream                 ( false ),
+    mnMaxImageResolution        ( 300 ),
+    mnQuality                   ( 90 ),
+    mnFormsFormat               ( 0 ),
+    mbExportFormFields          ( true ),
+    mbAllowDuplicateFieldNames  ( false ),
+    mnProgressValue             ( 0 ),
+    mbRemoveTransparencies      ( false ),
+    mbWatermark                 ( false ),
 
-    mbHideViewerToolbar			( sal_False ),
-    mbHideViewerMenubar			( sal_False ),
-    mbHideViewerWindowControls	( sal_False ),
-    mbFitWindow					( sal_False ),
-    mbCenterWindow				( sal_False ),
-    mbOpenInFullScreenMode		( sal_False ),
-    mbDisplayPDFDocumentTitle	( sal_True ),
-    mnPDFDocumentMode       	( 0 ),
-    mnPDFDocumentAction     	( 0 ),
+    mbHideViewerToolbar         ( false ),
+    mbHideViewerMenubar         ( false ),
+    mbHideViewerWindowControls  ( false ),
+    mbFitWindow                 ( false ),
+    mbCenterWindow              ( false ),
+    mbOpenInFullScreenMode      ( false ),
+    mbDisplayPDFDocumentTitle   ( true ),
+    mnPDFDocumentMode           ( 0 ),
+    mnPDFDocumentAction         ( 0 ),
     mnZoom                      ( 100 ),
     mnInitialPage               ( 1 ),
-    mnPDFPageLayout         	( 0 ),
-    mbFirstPageLeft				( sal_False ),
+    mnPDFPageLayout             ( 0 ),
+    mbFirstPageLeft             ( false ),
 
-    mbEncrypt               	( sal_False ),
-	mbRestrictPermissions		( sal_False ),
-    mnPrintAllowed				( 2 ),
-    mnChangesAllowed			( 4 ),
-    mbCanCopyOrExtract			( sal_True ),
-    mbCanExtractForAccessibility( sal_True ),
-
-    mnCachePatternId            ( -1 ),
+    mbEncrypt                   ( false ),
+    mbRestrictPermissions       ( false ),
+    mnPrintAllowed              ( 2 ),
+    mnChangesAllowed            ( 4 ),
+    mbCanCopyOrExtract          ( true ),
+    mbCanExtractForAccessibility( true ),
 
 //--->i56629
-    mbExportRelativeFsysLinks	    ( sal_False ),
+    mbExportRelativeFsysLinks       ( false ),
     mnDefaultLinkAction         ( 0 ),
-    mbConvertOOoTargetToPDFTarget( sal_False ),
-    mbExportBmkToDest			( sal_False )
-//<---
+    mbConvertOOoTargetToPDFTarget( false ),
+    mbExportBmkToDest           ( false ),
+    mbSignPDF                   ( false )
 {
 }
 
-// -----------------------------------------------------------------------------
+
 
 PDFExport::~PDFExport()
 {
 }
 
-// -----------------------------------------------------------------------------
 
-sal_Bool PDFExport::ExportSelection( vcl::PDFWriter& rPDFWriter, Reference< com::sun::star::view::XRenderable >& rRenderable, Any& rSelection,
-    MultiSelection aMultiSelection, Sequence< PropertyValue >& rRenderOptions, sal_Int32 nPageCount )
+
+bool PDFExport::ExportSelection( vcl::PDFWriter& rPDFWriter,
+    Reference< com::sun::star::view::XRenderable >& rRenderable,
+    const Any& rSelection,
+    const StringRangeEnumerator& rRangeEnum,
+    Sequence< PropertyValue >& rRenderOptions,
+    sal_Int32 nPageCount )
 {
-    sal_Bool        bRet = sal_False;
+    bool        bRet = false;
     try
     {
-		Any* pFirstPage = NULL;
+        Any* pFirstPage = NULL;
         Any* pLastPage = NULL;
 
-		sal_Bool bExportNotesPages = sal_False;
+        bool bExportNotesPages = false;
 
-		for( sal_Int32 nData = 0, nDataCount = rRenderOptions.getLength(); nData < nDataCount; ++nData )
+        for( sal_Int32 nData = 0, nDataCount = rRenderOptions.getLength(); nData < nDataCount; ++nData )
         {
-            if( rRenderOptions[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "IsFirstPage" ) ) )
-				pFirstPage = &rRenderOptions[ nData ].Value;
-            else if( rRenderOptions[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "IsLastPage" ) ) )
+            if ( rRenderOptions[ nData ].Name == "IsFirstPage" )
+                pFirstPage = &rRenderOptions[ nData ].Value;
+            else if ( rRenderOptions[ nData ].Name == "IsLastPage" )
                 pLastPage = &rRenderOptions[ nData ].Value;
-			else if( rRenderOptions[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "ExportNotesPages" ) ) )
-				rRenderOptions[ nData ].Value >>= bExportNotesPages;
+            else if ( rRenderOptions[ nData ].Name == "ExportNotesPages" )
+                rRenderOptions[ nData ].Value >>= bExportNotesPages;
         }
 
-		OutputDevice* pOut = rPDFWriter.GetReferenceDevice();
+        OutputDevice* pOut = rPDFWriter.GetReferenceDevice();
 
         if( pOut )
         {
-			vcl::PDFExtOutDevData* pPDFExtOutDevData = PTR_CAST( vcl::PDFExtOutDevData, pOut->GetExtOutDevData() );
-			if ( nPageCount )
-			{
-				pPDFExtOutDevData->SetIsExportNotesPages( bExportNotesPages );
+            vcl::PDFExtOutDevData* pPDFExtOutDevData = PTR_CAST( vcl::PDFExtOutDevData, pOut->GetExtOutDevData() );
+            if ( nPageCount )
+            {
+                pPDFExtOutDevData->SetIsExportNotesPages( bExportNotesPages );
 
-                sal_Int32 nSel = aMultiSelection.FirstSelected();
-                sal_Int32 nIncreasingPageNumber(0);
-
-                while ( nSel != sal_Int32(SFX_ENDOFSELECTION) )
+                sal_Int32 nCurrentPage(0);
+                StringRangeEnumerator::Iterator aIter = rRangeEnum.begin();
+                StringRangeEnumerator::Iterator aEnd  = rRangeEnum.end();
+                while ( aIter != aEnd )
                 {
-					Sequence< PropertyValue >   aRenderer( rRenderable->getRenderer( nSel - 1, rSelection, rRenderOptions ) );
-					awt::Size                   aPageSize;
+                    Sequence< PropertyValue >   aRenderer( rRenderable->getRenderer( *aIter, rSelection, rRenderOptions ) );
+                    awt::Size                   aPageSize;
 
-            		for( sal_Int32 nProperty = 0, nPropertyCount = aRenderer.getLength(); nProperty < nPropertyCount; ++nProperty )
-					{
-						if( aRenderer[ nProperty ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "PageSize" ) ) )
-							aRenderer[ nProperty].Value >>= aPageSize;
-					}
+                    for( sal_Int32 nProperty = 0, nPropertyCount = aRenderer.getLength(); nProperty < nPropertyCount; ++nProperty )
+                    {
+                        if ( aRenderer[ nProperty ].Name == "PageSize" )
+                            aRenderer[ nProperty].Value >>= aPageSize;
+                    }
 
-                    // #119348# The PageNumber at PDFExtOutDevDatahas to be the target page number,
-                    // e.g. when exporting only page#2 from two pages, the old mechanism would
-                    // have set it to '1', but a üpage '1' does not yet exist in the export. This
-                    // will make PDFWriterImpl::createLink and PDFWriterImpl::setLinkURL fail (see there).
-                    pPDFExtOutDevData->SetCurrentPageNumber(nIncreasingPageNumber++ /* nSel - 1 */);
+                    pPDFExtOutDevData->SetCurrentPageNumber( nCurrentPage );
 
-					GDIMetaFile	                aMtf;
-					const MapMode               aMapMode( MAP_100TH_MM );
-					const Size                  aMtfSize( aPageSize.Width, aPageSize.Height );
+                    GDIMetaFile                 aMtf;
+                    const MapMode               aMapMode( MAP_100TH_MM );
+                    const Size                  aMtfSize( aPageSize.Width, aPageSize.Height );
 
-					pOut->Push();
-					pOut->EnableOutput( sal_False );
-					pOut->SetMapMode( aMapMode );
+                    pOut->Push();
+                    pOut->EnableOutput( false );
+                    pOut->SetMapMode( aMapMode );
 
-    				aMtf.SetPrefSize( aMtfSize );
-					aMtf.SetPrefMapMode( aMapMode );
-					aMtf.Record( pOut );
+                    aMtf.SetPrefSize( aMtfSize );
+                    aMtf.SetPrefMapMode( aMapMode );
+                    aMtf.Record( pOut );
 
-                    // --> FME 2004-10-08 #i35176#
+                    // #i35176#
                     // IsLastPage property.
-                    const sal_Int32 nCurrentRenderer = nSel - 1;
-                    nSel = aMultiSelection.NextSelected();
-                    if ( pLastPage && sal_Int32(SFX_ENDOFSELECTION) == nSel )
+                    const sal_Int32 nCurrentRenderer = *aIter;
+                    ++aIter;
+                    if ( pLastPage && aIter == aEnd )
                         *pLastPage <<= sal_True;
-                    // <--
 
                     rRenderable->render( nCurrentRenderer, rSelection, rRenderOptions );
 
-					aMtf.Stop();
-					aMtf.WindStart();
+                    aMtf.Stop();
+                    aMtf.WindStart();
 
-                    if( aMtf.GetActionCount() &&
+                    if( aMtf.GetActionSize() &&
                              ( !mbSkipEmptyPages || aPageSize.Width || aPageSize.Height ) )
                         bRet = ImplExportPage( rPDFWriter, *pPDFExtOutDevData, aMtf ) || bRet;
 
-					pOut->Pop();
+                    pOut->Pop();
 
-					if ( mxStatusIndicator.is() )
-						mxStatusIndicator->setValue( mnProgressValue );
-					if ( pFirstPage )
-						*pFirstPage <<= sal_False;
+                    if ( mxStatusIndicator.is() )
+                        mxStatusIndicator->setValue( mnProgressValue );
+                    if ( pFirstPage )
+                        *pFirstPage <<= sal_False;
 
                     ++mnProgressValue;
+                    ++nCurrentPage;
                 }
-			}
-			else
-			{
-				bRet = sal_True;						// #i18334# SJ: nPageCount == 0,
-				rPDFWriter.NewPage( 10000, 10000 );		// creating dummy page
-				rPDFWriter.SetMapMode( MAP_100TH_MM );	//
-			}
+            }
+            else
+            {
+                bRet = true;                        // #i18334# SJ: nPageCount == 0,
+                rPDFWriter.NewPage( 10000, 10000 );     // creating dummy page
+                rPDFWriter.SetMapMode( MAP_100TH_MM );
+            }
         }
     }
-    catch( RuntimeException )
+    catch(const RuntimeException &)
     {
     }
-	return bRet;
+    return bRet;
 }
 
 class PDFExportStreamDoc : public vcl::PDFOutputStream
@@ -294,7 +280,7 @@ class PDFExportStreamDoc : public vcl::PDFOutputStream
     {}
     virtual ~PDFExportStreamDoc();
 
-    virtual void write( const Reference< XOutputStream >& xStream );
+    virtual void write( const Reference< XOutputStream >& xStream ) SAL_OVERRIDE;
 };
 
 PDFExportStreamDoc::~PDFExportStreamDoc()
@@ -307,90 +293,84 @@ void PDFExportStreamDoc::write( const Reference< XOutputStream >& xStream )
     if( xStore.is() )
     {
         Sequence< beans::PropertyValue > aArgs( 2 + ((m_aPreparedPassword.getLength() > 0) ? 1 : 0) );
-        aArgs.getArray()[0].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "FilterName" ) );
-        aArgs.getArray()[1].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "OutputStream" ) );
+        aArgs.getArray()[0].Name = "FilterName";
+        aArgs.getArray()[1].Name = "OutputStream";
         aArgs.getArray()[1].Value <<= xStream;
         if( m_aPreparedPassword.getLength() )
         {
-            aArgs.getArray()[2].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "EncryptionData" ) );
+            aArgs.getArray()[2].Name = "EncryptionData";
             aArgs.getArray()[2].Value <<= m_aPreparedPassword;
         }
-        
+
         try
         {
-            xStore->storeToURL( OUString( RTL_CONSTASCII_USTRINGPARAM( "private:stream" ) ),
-                                aArgs );
+            xStore->storeToURL( "private:stream", aArgs );
         }
-        catch( IOException& )
+        catch( const IOException& )
         {
         }
     }
 }
 
-static OUString getMimetypeForDocument( const Reference< XMultiServiceFactory >& xFactory,
+static OUString getMimetypeForDocument( const Reference< XComponentContext >& xContext,
                                         const Reference< XComponent >& xDoc ) throw()
 {
     OUString aDocMimetype;
-        // get document service name
-    Reference< com::sun::star::frame::XStorable > xStore( xDoc, UNO_QUERY );
-    Reference< frame::XModuleManager > xModuleManager(
-        xFactory->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.ModuleManager" ) ) ),
-                               uno::UNO_QUERY );
-    if( xModuleManager.is() && xStore.is() )
+    try
     {
-        OUString aDocServiceName = xModuleManager->identify( Reference< XInterface >( xStore, uno::UNO_QUERY ) );
-        if ( aDocServiceName.getLength() )
+        // get document service name
+        Reference< com::sun::star::frame::XStorable > xStore( xDoc, UNO_QUERY );
+        Reference< frame::XModuleManager2 > xModuleManager = frame::ModuleManager::create(xContext);
+        if( xStore.is() )
         {
-            // get the actual filter name
-            OUString aFilterName;
-            Reference< lang::XMultiServiceFactory > xConfigProvider(
-                xFactory->createInstance(
-                        OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.configuration.ConfigurationProvider" ) ) ),
-                        uno::UNO_QUERY );
-            if( xConfigProvider.is() )
+            OUString aDocServiceName = xModuleManager->identify( Reference< XInterface >( xStore, uno::UNO_QUERY ) );
+            if ( !aDocServiceName.isEmpty() )
             {
+                // get the actual filter name
+                OUString aFilterName;
+                Reference< lang::XMultiServiceFactory > xConfigProvider =
+                    configuration::theDefaultProvider::get( xContext );
                 uno::Sequence< uno::Any > aArgs( 1 );
-                beans::PropertyValue aPathProp;
-                aPathProp.Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "nodepath" ) );
-                aPathProp.Value <<= OUString( RTL_CONSTASCII_USTRINGPARAM( "/org.openoffice.Setup/Office/Factories/" ) );
+                beans::NamedValue aPathProp;
+                aPathProp.Name = "nodepath";
+                aPathProp.Value <<= OUString( "/org.openoffice.Setup/Office/Factories/" );
                 aArgs[0] <<= aPathProp;
 
                 Reference< container::XNameAccess > xSOFConfig(
                     xConfigProvider->createInstanceWithArguments(
-                        OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.configuration.ConfigurationAccess" ) ),
-                        aArgs ),
-                        uno::UNO_QUERY );
+                        "com.sun.star.configuration.ConfigurationAccess", aArgs ),
+                    uno::UNO_QUERY );
 
                 Reference< container::XNameAccess > xApplConfig;
                 xSOFConfig->getByName( aDocServiceName ) >>= xApplConfig;
                 if ( xApplConfig.is() )
                 {
-                    xApplConfig->getByName( OUString( RTL_CONSTASCII_USTRINGPARAM( "ooSetupFactoryActualFilter" ) ) ) >>= aFilterName;
-                    if( aFilterName.getLength() )
+                    xApplConfig->getByName( "ooSetupFactoryActualFilter" ) >>= aFilterName;
+                    if( !aFilterName.isEmpty() )
                     {
                         // find the related type name
                         OUString aTypeName;
                         Reference< container::XNameAccess > xFilterFactory(
-                            xFactory->createInstance( ::rtl::OUString::createFromAscii( "com.sun.star.document.FilterFactory" ) ),
+                            xContext->getServiceManager()->createInstanceWithContext("com.sun.star.document.FilterFactory", xContext),
                             uno::UNO_QUERY );
 
                         Sequence< beans::PropertyValue > aFilterData;
                         xFilterFactory->getByName( aFilterName ) >>= aFilterData;
                         for ( sal_Int32 nInd = 0; nInd < aFilterData.getLength(); nInd++ )
-                            if ( aFilterData[nInd].Name.equalsAscii( "Type" ) )
+                            if ( aFilterData[nInd].Name == "Type" )
                                 aFilterData[nInd].Value >>= aTypeName;
 
-                        if ( aTypeName.getLength() )
+                        if ( !aTypeName.isEmpty() )
                         {
                             // find the mediatype
                             Reference< container::XNameAccess > xTypeDetection(
-                                xFactory->createInstance( ::rtl::OUString::createFromAscii( "com.sun.star.document.TypeDetection" ) ),
+                                xContext->getServiceManager()->createInstanceWithContext("com.sun.star.document.TypeDetection", xContext),
                                 UNO_QUERY );
 
                             Sequence< beans::PropertyValue > aTypeData;
                             xTypeDetection->getByName( aTypeName ) >>= aTypeData;
                             for ( sal_Int32 nInd = 0; nInd < aTypeData.getLength(); nInd++ )
-                                if ( aTypeData[nInd].Name.equalsAscii( "MediaType" ) )
+                                if ( aTypeData[nInd].Name == "MediaType" )
                                     aTypeData[nInd].Value >>= aDocMimetype;
                         }
                     }
@@ -398,23 +378,25 @@ static OUString getMimetypeForDocument( const Reference< XMultiServiceFactory >&
             }
         }
     }
+    catch (...)
+    {
+    }
     return aDocMimetype;
 }
 
-sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue >& rFilterData )
+bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue >& rFilterData )
 {
     INetURLObject   aURL( rFile );
-    OUString        aFile;
-    sal_Bool        bRet = sal_False;
+    bool        bRet = false;
 
     std::set< PDFWriter::ErrorCode > aErrors;
 
     if( aURL.GetProtocol() != INET_PROT_FILE )
     {
-        String aTmp;
+        OUString aTmp;
 
         if( ::utl::LocalFileHelper::ConvertPhysicalNameToURL( rFile, aTmp ) )
-			aURL = INetURLObject(aTmp);
+            aURL = INetURLObject(aTmp);
     }
 
     if( aURL.GetProtocol() == INET_PROT_FILE )
@@ -427,204 +409,204 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
             OUString                    aPageRange;
             Any                         aSelection;
             PDFWriter::PDFWriterContext aContext;
-            rtl::OUString aOpenPassword, aPermissionPassword;
+            OUString aOpenPassword, aPermissionPassword;
             Reference< beans::XMaterialHolder > xEnc;
             Sequence< beans::NamedValue > aPreparedPermissionPassword;
 
 
-			// getting the string for the creator
-			String aCreator;
-			Reference< XServiceInfo > xInfo( mxSrcDoc, UNO_QUERY );
-			if ( xInfo.is() )
-			{
-				if ( xInfo->supportsService( rtl::OUString::createFromAscii( "com.sun.star.presentation.PresentationDocument" ) ) )
-					aCreator.AppendAscii( "Impress" );
-				else if ( xInfo->supportsService( rtl::OUString::createFromAscii( "com.sun.star.drawing.DrawingDocument" ) ) )
-					aCreator.AppendAscii( "Draw" );
-				else if ( xInfo->supportsService( rtl::OUString::createFromAscii( "com.sun.star.text.TextDocument" ) ) )
-					aCreator.AppendAscii( "Writer" );
-				else if ( xInfo->supportsService( rtl::OUString::createFromAscii( "com.sun.star.sheet.SpreadsheetDocument" ) ) )
-					aCreator.AppendAscii( "Calc" );
-				else if ( xInfo->supportsService( rtl::OUString::createFromAscii( "com.sun.star.formula.FormulaProperties" ) ) )
-					aCreator.AppendAscii( "Math" );
-			}
+            // getting the string for the creator
+            OUString aCreator;
+            Reference< XServiceInfo > xInfo( mxSrcDoc, UNO_QUERY );
+            if ( xInfo.is() )
+            {
+                if ( xInfo->supportsService( "com.sun.star.presentation.PresentationDocument" ) )
+                    aCreator += "Impress";
+                else if ( xInfo->supportsService( "com.sun.star.drawing.DrawingDocument" ) )
+                    aCreator += "Draw";
+                else if ( xInfo->supportsService( "com.sun.star.text.TextDocument" ) )
+                    aCreator += "Writer";
+                else if ( xInfo->supportsService( "com.sun.star.sheet.SpreadsheetDocument" ) )
+                    aCreator += "Calc";
+                else if ( xInfo->supportsService( "com.sun.star.formula.FormulaProperties"  ) )
+                    aCreator += "Math";
+            }
 
-			Reference< document::XDocumentPropertiesSupplier > xDocumentPropsSupplier( mxSrcDoc, UNO_QUERY );
-			if ( xDocumentPropsSupplier.is() )
-			{
-				Reference< document::XDocumentProperties > xDocumentProps( xDocumentPropsSupplier->getDocumentProperties() );
-				if ( xDocumentProps.is() )
-				{
+            Reference< document::XDocumentPropertiesSupplier > xDocumentPropsSupplier( mxSrcDoc, UNO_QUERY );
+            if ( xDocumentPropsSupplier.is() )
+            {
+                Reference< document::XDocumentProperties > xDocumentProps( xDocumentPropsSupplier->getDocumentProperties() );
+                if ( xDocumentProps.is() )
+                {
                     aContext.DocumentInfo.Title = xDocumentProps->getTitle();
                     aContext.DocumentInfo.Author = xDocumentProps->getAuthor();
                     aContext.DocumentInfo.Subject = xDocumentProps->getSubject();
                     aContext.DocumentInfo.Keywords = ::comphelper::string::convertCommaSeparated(xDocumentProps->getKeywords());
-				}
-			}
-			// getting the string for the producer
-			String aProducer;
-			::utl::ConfigManager* pMgr = ::utl::ConfigManager::GetConfigManager();
-			if ( pMgr )
-			{
-				Any aProductName = pMgr->GetDirectConfigProperty( ::utl::ConfigManager::PRODUCTNAME );
-				::rtl::OUString sProductName;
-				aProductName >>= sProductName;
-				aProducer = sProductName;
-				aProductName = pMgr->GetDirectConfigProperty( ::utl::ConfigManager::PRODUCTVERSION );
-				aProductName >>= sProductName;
-				aProducer.AppendAscii(" ");
-				aProducer += String( sProductName );
-			}
-			aContext.DocumentInfo.Producer = aProducer;
-			aContext.DocumentInfo.Creator = aCreator;
+                }
+            }
+            // getting the string for the producer
+            aContext.DocumentInfo.Producer =
+                utl::ConfigManager::getProductName() +
+                " " +
+                utl::ConfigManager::getProductVersion();
+            aContext.DocumentInfo.Creator = aCreator;
 
             for( sal_Int32 nData = 0, nDataCount = rFilterData.getLength(); nData < nDataCount; ++nData )
             {
-				if( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "PageRange" ) ) )
-				    rFilterData[ nData ].Value >>= aPageRange;
-				else if( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "Selection" ) ) )
-				    rFilterData[ nData ].Value >>= aSelection;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "UseLosslessCompression" ) ) )
-					rFilterData[ nData ].Value >>= mbUseLosslessCompression;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "Quality" ) ) )
-					rFilterData[ nData ].Value >>= mnQuality;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "ReduceImageResolution" ) ) )
-					rFilterData[ nData ].Value >>= mbReduceImageResolution;
-                else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "IsSkipEmptyPages" ) ) )
+                if ( rFilterData[ nData ].Name == "PageRange" )
+                    rFilterData[ nData ].Value >>= aPageRange;
+                else if ( rFilterData[ nData ].Name == "Selection" )
+                    rFilterData[ nData ].Value >>= aSelection;
+                else if ( rFilterData[ nData ].Name == "UseLosslessCompression" )
+                    rFilterData[ nData ].Value >>= mbUseLosslessCompression;
+                else if ( rFilterData[ nData ].Name == "Quality" )
+                    rFilterData[ nData ].Value >>= mnQuality;
+                else if ( rFilterData[ nData ].Name == "ReduceImageResolution" )
+                    rFilterData[ nData ].Value >>= mbReduceImageResolution;
+                else if ( rFilterData[ nData ].Name == "IsSkipEmptyPages" )
                     rFilterData[ nData ].Value >>= mbSkipEmptyPages;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "MaxImageResolution" ) ) )
-					rFilterData[ nData ].Value >>= mnMaxImageResolution;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "UseTaggedPDF" ) ) )
-					rFilterData[ nData ].Value >>= mbUseTaggedPDF;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "SelectPdfVersion" ) ) )
-					rFilterData[ nData ].Value >>= mnPDFTypeSelection;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "ExportNotes" ) ) )
-					rFilterData[ nData ].Value >>= mbExportNotes;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "ExportNotesPages" ) ) )
-					rFilterData[ nData ].Value >>= mbExportNotesPages;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "EmbedStandardFonts" ) ) )
-					rFilterData[ nData ].Value >>= mbEmbedStandardFonts;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "UseTransitionEffects" ) ) )
-					rFilterData[ nData ].Value >>= mbUseTransitionEffects;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "ExportFormFields" ) ) )
-					rFilterData[ nData ].Value >>= mbExportFormFields;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "FormsType" ) ) )
-					rFilterData[ nData ].Value >>= mnFormsFormat;
-                else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "AllowDuplicateFieldNames" ) ) )
-					rFilterData[ nData ].Value >>= mbAllowDuplicateFieldNames;
+                else if ( rFilterData[ nData ].Name == "MaxImageResolution" )
+                    rFilterData[ nData ].Value >>= mnMaxImageResolution;
+                else if ( rFilterData[ nData ].Name == "UseTaggedPDF" )
+                    rFilterData[ nData ].Value >>= mbUseTaggedPDF;
+                else if ( rFilterData[ nData ].Name == "SelectPdfVersion" )
+                    rFilterData[ nData ].Value >>= mnPDFTypeSelection;
+                else if ( rFilterData[ nData ].Name == "ExportNotes" )
+                    rFilterData[ nData ].Value >>= mbExportNotes;
+                else if ( rFilterData[ nData ].Name == "ViewPDFAfterExport" )
+                    rFilterData[ nData ].Value >>= mbViewPDF;
+                else if ( rFilterData[ nData ].Name == "ExportNotesPages" )
+                    rFilterData[ nData ].Value >>= mbExportNotesPages;
+                else if ( rFilterData[ nData ].Name == "UseTransitionEffects" )
+                    rFilterData[ nData ].Value >>= mbUseTransitionEffects;
+                else if ( rFilterData[ nData ].Name == "ExportFormFields" )
+                    rFilterData[ nData ].Value >>= mbExportFormFields;
+                else if ( rFilterData[ nData ].Name == "FormsType" )
+                    rFilterData[ nData ].Value >>= mnFormsFormat;
+                else if ( rFilterData[ nData ].Name == "AllowDuplicateFieldNames" )
+                    rFilterData[ nData ].Value >>= mbAllowDuplicateFieldNames;
 //viewer properties
-                else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "HideViewerToolbar" ) ) )
+                else if ( rFilterData[ nData ].Name == "HideViewerToolbar" )
                     rFilterData[ nData ].Value >>= mbHideViewerToolbar;
-                else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "HideViewerMenubar" ) ) )
+                else if ( rFilterData[ nData ].Name == "HideViewerMenubar" )
                     rFilterData[ nData ].Value >>= mbHideViewerMenubar;
-                else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "HideViewerWindowControls" ) ) )
+                else if ( rFilterData[ nData ].Name == "HideViewerWindowControls" )
                     rFilterData[ nData ].Value >>= mbHideViewerWindowControls;
-                else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "ResizeWindowToInitialPage" ) ) )
+                else if ( rFilterData[ nData ].Name == "ResizeWindowToInitialPage" )
                     rFilterData[ nData ].Value >>= mbFitWindow;
-                else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "CenterWindow" ) ) )
+                else if ( rFilterData[ nData ].Name == "CenterWindow" )
                     rFilterData[ nData ].Value >>= mbCenterWindow;
-                else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "OpenInFullScreenMode" ) ) )
+                else if ( rFilterData[ nData ].Name == "OpenInFullScreenMode" )
                     rFilterData[ nData ].Value >>= mbOpenInFullScreenMode;
-                else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "DisplayPDFDocumentTitle" ) ) )
+                else if ( rFilterData[ nData ].Name == "DisplayPDFDocumentTitle" )
                     rFilterData[ nData ].Value >>= mbDisplayPDFDocumentTitle;
-                else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "InitialView" ) ) )
+                else if ( rFilterData[ nData ].Name == "InitialView" )
                     rFilterData[ nData ].Value >>= mnPDFDocumentMode;
-                else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "Magnification" ) ) )
+                else if ( rFilterData[ nData ].Name == "Magnification" )
                     rFilterData[ nData ].Value >>= mnPDFDocumentAction;
-                else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "Zoom" ) ) )
+                else if ( rFilterData[ nData ].Name == "Zoom" )
                     rFilterData[ nData ].Value >>= mnZoom;
-                else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "InitialPage" ) ) )
+                else if ( rFilterData[ nData ].Name == "InitialPage" )
                     rFilterData[ nData ].Value >>= mnInitialPage;
-                else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "PageLayout" ) ) )
+                else if ( rFilterData[ nData ].Name == "PageLayout" )
                     rFilterData[ nData ].Value >>= mnPDFPageLayout;
-                else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "FirstPageOnLeft" ) ) )
+                else if ( rFilterData[ nData ].Name == "FirstPageOnLeft" )
                     rFilterData[ nData ].Value >>= aContext.FirstPageLeft;
-                else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "IsAddStream" ) ) )
+                else if ( rFilterData[ nData ].Name == "IsAddStream" )
                     rFilterData[ nData ].Value >>= mbAddStream;
-                else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "Watermark" ) ) )
+                else if ( rFilterData[ nData ].Name == "Watermark" )
                 {
                     maWatermark = rFilterData[ nData ].Value;
-                    mbWatermark = sal_True;
+                    mbWatermark = true;
                 }
 //now all the security related properties...
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "EncryptFile" ) ) )
-					rFilterData[ nData ].Value >>= mbEncrypt;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "DocumentOpenPassword" ) ) )
-					rFilterData[ nData ].Value >>= aOpenPassword;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "RestrictPermissions" ) ) )
-					rFilterData[ nData ].Value >>= mbRestrictPermissions;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "PermissionPassword" ) ) )
-					rFilterData[ nData ].Value >>= aPermissionPassword;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "PreparedPasswords" ) ) )
-				    rFilterData[ nData ].Value >>= xEnc;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "PreparedPermissionPassword" ) ) )
-				    rFilterData[ nData ].Value >>= aPreparedPermissionPassword;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "Printing" ) ) )
-					rFilterData[ nData ].Value >>= mnPrintAllowed;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "Changes" ) ) )
-					rFilterData[ nData ].Value >>= mnChangesAllowed;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "EnableCopyingOfContent" ) ) )
-					rFilterData[ nData ].Value >>= mbCanCopyOrExtract;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "EnableTextAccessForAccessibilityTools" ) ) )
-					rFilterData[ nData ].Value >>= mbCanExtractForAccessibility;
+                else if ( rFilterData[ nData ].Name == "EncryptFile" )
+                    rFilterData[ nData ].Value >>= mbEncrypt;
+                else if ( rFilterData[ nData ].Name == "DocumentOpenPassword" )
+                    rFilterData[ nData ].Value >>= aOpenPassword;
+                else if ( rFilterData[ nData ].Name == "RestrictPermissions" )
+                    rFilterData[ nData ].Value >>= mbRestrictPermissions;
+                else if ( rFilterData[ nData ].Name == "PermissionPassword" )
+                    rFilterData[ nData ].Value >>= aPermissionPassword;
+                else if ( rFilterData[ nData ].Name == "PreparedPasswords" )
+                    rFilterData[ nData ].Value >>= xEnc;
+                else if ( rFilterData[ nData ].Name == "PreparedPermissionPassword" )
+                    rFilterData[ nData ].Value >>= aPreparedPermissionPassword;
+                else if ( rFilterData[ nData ].Name == "Printing" )
+                    rFilterData[ nData ].Value >>= mnPrintAllowed;
+                else if ( rFilterData[ nData ].Name == "Changes" )
+                    rFilterData[ nData ].Value >>= mnChangesAllowed;
+                else if ( rFilterData[ nData ].Name == "EnableCopyingOfContent" )
+                    rFilterData[ nData ].Value >>= mbCanCopyOrExtract;
+                else if ( rFilterData[ nData ].Name == "EnableTextAccessForAccessibilityTools" )
+                    rFilterData[ nData ].Value >>= mbCanExtractForAccessibility;
 //--->i56629 links extra (relative links and other related stuff)
- 				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "ExportLinksRelativeFsys" ) ) )
- 					rFilterData[ nData ].Value >>= mbExportRelativeFsysLinks;
- 				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "PDFViewSelection" ) ) )
- 					rFilterData[ nData ].Value >>= mnDefaultLinkAction;
- 				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "ConvertOOoTargetToPDFTarget" ) ) )
- 					rFilterData[ nData ].Value >>= mbConvertOOoTargetToPDFTarget;
-  				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "ExportBookmarksToPDFDestination" ) ) )
-  					rFilterData[ nData ].Value >>= mbExportBmkToDest;
-//<---
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "ExportBookmarks" ) ) )
-					rFilterData[ nData ].Value >>= mbExportBookmarks;
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "OpenBookmarkLevels" ) ) )
-					rFilterData[ nData ].Value >>= mnOpenBookmarkLevels;
+                 else if ( rFilterData[ nData ].Name == "ExportLinksRelativeFsys" )
+                     rFilterData[ nData ].Value >>= mbExportRelativeFsysLinks;
+                 else if ( rFilterData[ nData ].Name == "PDFViewSelection" )
+                     rFilterData[ nData ].Value >>= mnDefaultLinkAction;
+                 else if ( rFilterData[ nData ].Name == "ConvertOOoTargetToPDFTarget" )
+                     rFilterData[ nData ].Value >>= mbConvertOOoTargetToPDFTarget;
+                  else if ( rFilterData[ nData ].Name == "ExportBookmarksToPDFDestination" )
+                      rFilterData[ nData ].Value >>= mbExportBmkToDest;
+                else if ( rFilterData[ nData ].Name == "ExportBookmarks" )
+                    rFilterData[ nData ].Value >>= mbExportBookmarks;
+                else if ( rFilterData[ nData ].Name == "ExportHiddenSlides" )
+                    rFilterData[ nData ].Value >>= mbExportHiddenSlides;
+                else if ( rFilterData[ nData ].Name == "OpenBookmarkLevels" )
+                    rFilterData[ nData ].Value >>= mnOpenBookmarkLevels;
 #ifdef USE_JAVA
-				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "IsThumbnail" ) ) )
-					rFilterData[ nData ].Value >>= mbThumbnail;
+                else if ( rFilterData[ nData ].Name == "IsThumbnail" )
+                    rFilterData[ nData ].Value >>= mbThumbnail;
 #endif	// USE_JAVA
+                else if ( rFilterData[ nData ].Name == "SignPDF" )
+                    rFilterData[ nData ].Value >>= mbSignPDF;
+                else if ( rFilterData[ nData ].Name == "SignatureLocation" )
+                    rFilterData[ nData ].Value >>= msSignLocation;
+                else if ( rFilterData[ nData ].Name == "SignatureReason" )
+                    rFilterData[ nData ].Value >>= msSignReason;
+                else if ( rFilterData[ nData ].Name == "SignatureContactInfo" )
+                    rFilterData[ nData ].Value >>= msSignContact;
+                else if ( rFilterData[ nData ].Name == "SignaturePassword" )
+                    rFilterData[ nData ].Value >>= msSignPassword;
+                else if ( rFilterData[ nData ].Name == "SignatureCertificate" )
+                    rFilterData[ nData ].Value >>= maSignCertificate;
             }
-            aContext.URL		= aURL.GetMainURL(INetURLObject::DECODE_TO_IURI);
+            aContext.URL        = aURL.GetMainURL(INetURLObject::DECODE_TO_IURI);
 
 //set the correct version, depending on user request
             switch( mnPDFTypeSelection )
             {
             default:
             case 0:
-                aContext.Version	= PDFWriter::PDF_1_4;
+                aContext.Version    = PDFWriter::PDF_1_4;
                 break;
             case 1:
-                aContext.Version	= PDFWriter::PDF_A_1;
+                aContext.Version    = PDFWriter::PDF_A_1;
                 //force the tagged PDF as well
-                mbUseTaggedPDF = sal_True;
-                //force embedding of standard fonts
-                mbEmbedStandardFonts = sal_True;
+                mbUseTaggedPDF = true;
                 //force disabling of form conversion
-                mbExportFormFields = sal_False;
+                mbExportFormFields = false;
                 // PDF/A does not allow transparencies
-                mbRemoveTransparencies = sal_True;
+                mbRemoveTransparencies = true;
                 // no encryption
-                mbEncrypt = sal_False;
+                mbEncrypt = false;
                 xEnc.clear();
                 break;
             }
 
 //copy in context the values default in the contructor or set by the FilterData sequence of properties
-			aContext.Tagged		= mbUseTaggedPDF;
+            aContext.Tagged     = mbUseTaggedPDF;
 
 //values used in viewer
-            aContext.HideViewerToolbar			= mbHideViewerToolbar;
-            aContext.HideViewerMenubar			= mbHideViewerMenubar;
-            aContext.HideViewerWindowControls	= mbHideViewerWindowControls;
-            aContext.FitWindow					= mbFitWindow;
-            aContext.CenterWindow				= mbCenterWindow;
-            aContext.OpenInFullScreenMode		= mbOpenInFullScreenMode;
-            aContext.DisplayPDFDocumentTitle	= mbDisplayPDFDocumentTitle;
+            aContext.HideViewerToolbar          = mbHideViewerToolbar;
+            aContext.HideViewerMenubar          = mbHideViewerMenubar;
+            aContext.HideViewerWindowControls   = mbHideViewerWindowControls;
+            aContext.FitWindow                  = mbFitWindow;
+            aContext.CenterWindow               = mbCenterWindow;
+            aContext.OpenInFullScreenMode       = mbOpenInFullScreenMode;
+            aContext.DisplayPDFDocumentTitle    = mbDisplayPDFDocumentTitle;
             aContext.InitialPage                = mnInitialPage-1;
             aContext.OpenBookmarkLevels         = mnOpenBookmarkLevels;
-            aContext.EmbedStandardFonts         = mbEmbedStandardFonts;
 
             switch( mnPDFDocumentMode )
             {
@@ -687,22 +669,22 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
 // true is 128 bit, false 40
 //note that in 40 bit mode the UI needs reworking, since the current UI is meaningfull only for
 //128bit security mode
-                aContext.Encryption.Security128bit = sal_True;
+                aContext.Encryption.Security128bit = true;
 
 //set check for permission change password
 // if not enabled and no permission password, force permissions to default as if PDF where without encryption
-                if( mbRestrictPermissions && (xEnc.is() || aPermissionPassword.getLength() > 0) )
+                if( mbRestrictPermissions && (xEnc.is() || !aPermissionPassword.isEmpty()) )
                 {
-                    mbEncrypt = sal_True;
+                    mbEncrypt = true;
 //permission set as desired, done after
                 }
                 else
                 {
 //force permission to default
-                    mnPrintAllowed					= 2 ;
-                    mnChangesAllowed				= 4 ;
-                    mbCanCopyOrExtract				= sal_True;
-                    mbCanExtractForAccessibility 	= sal_True ;
+                    mnPrintAllowed                  = 2 ;
+                    mnChangesAllowed                = 4 ;
+                    mbCanCopyOrExtract              = true;
+                    mbCanExtractForAccessibility    = true ;
                 }
 
                 switch( mnPrintAllowed )
@@ -711,9 +693,9 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
                     break;
                 default:
                 case 2:
-                    aContext.Encryption.CanPrintFull			= sal_True;
+                    aContext.Encryption.CanPrintFull            = true;
                 case 1:
-                    aContext.Encryption.CanPrintTheDocument	    = sal_True;
+                    aContext.Encryption.CanPrintTheDocument     = true;
                     break;
                 }
 
@@ -722,36 +704,36 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
                 case 0: //already in struct PDFSecPermissions CTOR
                     break;
                 case 1:
-                    aContext.Encryption.CanAssemble				= sal_True;
+                    aContext.Encryption.CanAssemble             = true;
                     break;
                 case 2:
-                    aContext.Encryption.CanFillInteractive		= sal_True;
+                    aContext.Encryption.CanFillInteractive      = true;
                     break;
                 case 3:
-                    aContext.Encryption.CanAddOrModify			= sal_True;
+                    aContext.Encryption.CanAddOrModify          = true;
                     break;
                 default:
                 case 4:
-                    aContext.Encryption.CanModifyTheContent		=
-                        aContext.Encryption.CanCopyOrExtract	=
-                        aContext.Encryption.CanAddOrModify		=
-                        aContext.Encryption.CanFillInteractive	= sal_True;
+                    aContext.Encryption.CanModifyTheContent     =
+                        aContext.Encryption.CanCopyOrExtract    =
+                        aContext.Encryption.CanAddOrModify      =
+                        aContext.Encryption.CanFillInteractive  = true;
                     break;
                 }
 
-                aContext.Encryption.CanCopyOrExtract				= mbCanCopyOrExtract;
-                aContext.Encryption.CanExtractForAccessibility	= mbCanExtractForAccessibility;
+                aContext.Encryption.CanCopyOrExtract                = mbCanCopyOrExtract;
+                aContext.Encryption.CanExtractForAccessibility  = mbCanExtractForAccessibility;
                 if( mbEncrypt && ! xEnc.is() )
                     xEnc = PDFWriter::InitEncryption( aPermissionPassword, aOpenPassword, aContext.Encryption.Security128bit );
-                if( mbEncrypt && aPermissionPassword.getLength() && ! aPreparedPermissionPassword.getLength() )
+                if( mbEncrypt && !aPermissionPassword.isEmpty() && ! aPreparedPermissionPassword.getLength() )
                     aPreparedPermissionPassword = comphelper::OStorageHelper::CreatePackageEncryptionData( aPermissionPassword );
             }
             // after this point we don't need the legacy clear passwords anymore
             // however they are still inside the passed filter data sequence
             // which is sadly out out our control
-            aPermissionPassword = rtl::OUString();
-            aOpenPassword = rtl::OUString();
-            
+            aPermissionPassword.clear();
+            aOpenPassword.clear();
+
             /*
             * FIXME: the entries are only implicitly defined by the resource file. Should there
             * ever be an additional form submit format this could get invalid.
@@ -776,13 +758,13 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
 
             //get model
             Reference< frame::XModel > xModel( mxSrcDoc, UNO_QUERY );
-			{
+            {
 //---> i56629 Relative link stuff
 //set the base URL of the file:
 //then base URL
-				aContext.BaseURL = xModel->getURL();
+                aContext.BaseURL = xModel->getURL();
 //relative link option is private to PDF Export filter and limited to local filesystem only
-				aContext.RelFsys = mbExportRelativeFsysLinks;
+                aContext.RelFsys = mbExportRelativeFsysLinks;
 //determine the default acton for PDF links
                 switch( mnDefaultLinkAction )
                 {
@@ -793,7 +775,7 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
                     break;
 //view PDF through the reader application
                 case 1:
-                    aContext.ForcePDFAction = sal_True;
+                    aContext.ForcePDFAction = true;
                     aContext.DefaultLinkAction = PDFWriter::LaunchAction;
                     break;
 //view PDF through an Internet browser
@@ -809,14 +791,20 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
                 {   //force the similar allowed URI action
                     aContext.DefaultLinkAction = PDFWriter::URIActionDestination;
                     //and remove the remote goto action forced on PDF file
-                    aContext.ForcePDFAction = sal_False;
+                    aContext.ForcePDFAction = false;
                 }
-//<---
-			}
+            }
+
+            aContext.SignPDF = mbSignPDF;
+            aContext.SignLocation = msSignLocation;
+            aContext.SignContact = msSignContact;
+            aContext.SignReason = msSignReason;
+            aContext.SignPassword = msSignPassword;
+            aContext.SignCertificate = maSignCertificate;
+
 // all context data set, time to create the printing device
-            PDFWriter*			pPDFWriter = new PDFWriter( aContext, xEnc );
-            OutputDevice*		pOut = pPDFWriter->GetReferenceDevice();
-			vcl::PDFExtOutDevData* pPDFExtOutDevData = NULL;
+            boost::scoped_ptr<PDFWriter> pPDFWriter(new PDFWriter( aContext, xEnc ));
+            OutputDevice*       pOut = pPDFWriter->GetReferenceDevice();
 
             DBG_ASSERT( pOut, "PDFExport::Export: no reference device" );
             pXDevice->SetOutputDevice( pOut );
@@ -825,26 +813,27 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
             {
                 // export stream
                 // get mimetype
-                OUString aSrcMimetype = getMimetypeForDocument( mxMSF, mxSrcDoc );
+                OUString aSrcMimetype = getMimetypeForDocument( mxContext, mxSrcDoc );
                 pPDFWriter->AddStream( aSrcMimetype,
                                        new PDFExportStreamDoc( mxSrcDoc, aPreparedPermissionPassword ),
                                        false
                                        );
             }
 
-			if ( pOut )
-			{
-				DBG_ASSERT( pOut->GetExtOutDevData() == NULL, "PDFExport: ExtOutDevData already set!!!" );
-				pPDFExtOutDevData = new vcl::PDFExtOutDevData( *pOut );
-				pOut->SetExtOutDevData( pPDFExtOutDevData );
-				pPDFExtOutDevData->SetIsExportNotes( mbExportNotes );
-				pPDFExtOutDevData->SetIsExportTaggedPDF( mbUseTaggedPDF );
-				pPDFExtOutDevData->SetIsExportTransitionEffects( mbUseTransitionEffects );
-				pPDFExtOutDevData->SetFormsFormat( mnFormsFormat );
+            if ( pOut )
+            {
+                DBG_ASSERT( pOut->GetExtOutDevData() == NULL, "PDFExport: ExtOutDevData already set!!!" );
+                boost::scoped_ptr<vcl::PDFExtOutDevData> pPDFExtOutDevData(new vcl::PDFExtOutDevData( *pOut ));
+                pOut->SetExtOutDevData( pPDFExtOutDevData.get() );
+                pPDFExtOutDevData->SetIsExportNotes( mbExportNotes );
+                pPDFExtOutDevData->SetIsExportTaggedPDF( mbUseTaggedPDF );
+                pPDFExtOutDevData->SetIsExportTransitionEffects( mbUseTransitionEffects );
+                pPDFExtOutDevData->SetFormsFormat( mnFormsFormat );
                 pPDFExtOutDevData->SetIsExportFormFields( mbExportFormFields );
                 pPDFExtOutDevData->SetIsExportBookmarks( mbExportBookmarks );
-				pPDFExtOutDevData->SetIsLosslessCompression( mbUseLosslessCompression );
-				pPDFExtOutDevData->SetIsReduceImageResolution( mbReduceImageResolution );
+                pPDFExtOutDevData->SetIsExportHiddenSlides( mbExportHiddenSlides );
+                pPDFExtOutDevData->SetIsLosslessCompression( mbUseLosslessCompression );
+                pPDFExtOutDevData->SetIsReduceImageResolution( mbReduceImageResolution );
                 pPDFExtOutDevData->SetIsExportNamedDestinations( mbExportBmkToDest );
 
 #ifdef USE_JAVA
@@ -852,149 +841,105 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
 #else	// USE_JAVA
                 Sequence< PropertyValue > aRenderOptions( 6 );
 #endif	// USE_JAVA
-				aRenderOptions[ 0 ].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "RenderDevice" ) );
-				aRenderOptions[ 0 ].Value <<= Reference< awt::XDevice >( pXDevice );
-				aRenderOptions[ 1 ].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "ExportNotesPages" ) );
-				aRenderOptions[ 1 ].Value <<= sal_False;
-				Any& rExportNotesValue = aRenderOptions[ 1 ].Value;
-                aRenderOptions[ 2 ].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "IsFirstPage" ) );
-				aRenderOptions[ 2 ].Value <<= sal_True;
-                aRenderOptions[ 3 ].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "IsLastPage" ) );
+                aRenderOptions[ 0 ].Name = "RenderDevice";
+                aRenderOptions[ 0 ].Value <<= Reference< awt::XDevice >( pXDevice );
+                aRenderOptions[ 1 ].Name = "ExportNotesPages";
+                aRenderOptions[ 1 ].Value <<= sal_False;
+                Any& rExportNotesValue = aRenderOptions[ 1 ].Value;
+                aRenderOptions[ 2 ].Name = "IsFirstPage";
+                aRenderOptions[ 2 ].Value <<= sal_True;
+                aRenderOptions[ 3 ].Name = "IsLastPage";
                 aRenderOptions[ 3 ].Value <<= sal_False;
-                aRenderOptions[ 4 ].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "IsSkipEmptyPages" ) );
+                aRenderOptions[ 4 ].Name = "IsSkipEmptyPages";
                 aRenderOptions[ 4 ].Value <<= mbSkipEmptyPages;
-                aRenderOptions[ 5 ].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "PageRange" ) );
+                aRenderOptions[ 5 ].Name = "PageRange";
                 aRenderOptions[ 5 ].Value <<= aPageRange;
 #ifdef USE_JAVA
-                aRenderOptions[ 6 ].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "IsThumbnail" ) );
+                aRenderOptions[ 6 ].Name = "IsThumbnail";
                 aRenderOptions[ 6 ].Value <<= mbThumbnail;
 #endif	// USE_JAVA
 
-				if( aPageRange.getLength() || !aSelection.hasValue() )
-				{
-					aSelection = Any();
-					aSelection <<= mxSrcDoc;
-				}
-#ifdef USE_JAVA
-				// Determine if we need to toggle back to browser mode after
-				// PDF export has finished
-				sal_Bool bToggleBrowserMode = sal_False;
-				uno::Reference< frame::XModel > xModel( mxSrcDoc, UNO_QUERY );
-				if ( xModel.is() )
-				{
-					uno::Reference< frame::XController > xController = xModel->getCurrentController();
-					if ( xController.is() )
-					{
-						OUString aShowOnlineLayoutKey = OUString( RTL_CONSTASCII_USTRINGPARAM( "ShowOnlineLayout" ) );
-						Reference < XViewSettingsSupplier > xSettings( xController, UNO_QUERY );
-						if ( xSettings.is() )
-						{
-							Reference < XPropertySet > xViewProps = xSettings->getViewSettings();
-							Any aShowOnlineLayout = xViewProps->getPropertyValue( aShowOnlineLayoutKey );
-							aShowOnlineLayout >>= bToggleBrowserMode;
-						}
-					}
-				}
-#endif	// USE_JAVA
+                if( !aPageRange.isEmpty() || !aSelection.hasValue() )
+                {
+                    aSelection = Any();
+                    aSelection <<= mxSrcDoc;
+                }
+                bool        bSecondPassForImpressNotes = false;
+                bool bReChangeToNormalView = false;
+                  OUString sShowOnlineLayout( "ShowOnlineLayout" );
+                  uno::Reference< beans::XPropertySet > xViewProperties;
 
-				sal_Bool		bSecondPassForImpressNotes = sal_False;
-				bool bReChangeToNormalView = false;
-              	::rtl::OUString sShowOnlineLayout( RTL_CONSTASCII_USTRINGPARAM( "ShowOnlineLayout"));
-              	uno::Reference< beans::XPropertySet > xViewProperties;
-
-				if ( aCreator.EqualsAscii( "Writer" ) )
-				{
-				    //i92835 if Writer is in web layout mode this has to be switched to normal view and back to web view in the end
+                if ( aCreator.equalsAscii( "Writer" ) )
+                {
+                    //i92835 if Writer is in web layout mode this has to be switched to normal view and back to web view in the end
                     try
                     {
                         Reference< view::XViewSettingsSupplier > xVSettingsSupplier( xModel->getCurrentController(), uno::UNO_QUERY_THROW );
                         xViewProperties =  xVSettingsSupplier->getViewSettings();
-                    	xViewProperties->getPropertyValue( sShowOnlineLayout ) >>= bReChangeToNormalView;
-                    	if( bReChangeToNormalView )
-                    	{
-                    	    xViewProperties->setPropertyValue( sShowOnlineLayout, uno::makeAny( false ) );
-                    	}
+                        xViewProperties->getPropertyValue( sShowOnlineLayout ) >>= bReChangeToNormalView;
+                        if( bReChangeToNormalView )
+                        {
+                            xViewProperties->setPropertyValue( sShowOnlineLayout, uno::makeAny( false ) );
+                        }
                     }
                     catch( const uno::Exception& )
                     {
                     }
 
-				}
+                }
 
                 const sal_Int32 nPageCount = xRenderable->getRendererCount( aSelection, aRenderOptions );
-				const Range     aRange( 1, nPageCount );
-				MultiSelection  aMultiSelection;
 
-				if ( mbExportNotesPages && aCreator.EqualsAscii( "Impress" ) )
-				{
-		            uno::Reference< drawing::XShapes > xShapes;		// sj: do not allow to export notes when
-		            if ( ! ( aSelection >>= xShapes ) )				// exporting a selection -> todo: in the dialog
-						bSecondPassForImpressNotes = sal_True;		// the export notes checkbox needs to be disabled
-				}
+                if ( mbExportNotesPages && aCreator.equalsAscii( "Impress" ) )
+                {
+                    uno::Reference< drawing::XShapes > xShapes;     // sj: do not allow to export notes when
+                    if ( ! ( aSelection >>= xShapes ) )             // exporting a selection -> todo: in the dialog
+                        bSecondPassForImpressNotes = true;      // the export notes checkbox needs to be disabled
+                }
 
-				if( !aPageRange.getLength() )
-				{
-    				aMultiSelection.SetTotalRange( aRange );
-					aMultiSelection.Select( aRange );
-				}
-    			else
-    			{
-    				aMultiSelection = MultiSelection( aPageRange );
-        			aMultiSelection.SetTotalRange( aRange );
-    			}
-				if ( mxStatusIndicator.is() )
-				{
-					ByteString aResMgrName( "pdffilter" );
-					ResMgr* pResMgr = ResMgr::CreateResMgr( aResMgrName.GetBuffer(), Application::GetSettings().GetUILocale() );
-					if ( pResMgr )
-					{
-						sal_Int32 nTotalPageCount = aMultiSelection.GetSelectCount();
-						if ( bSecondPassForImpressNotes )
-							nTotalPageCount *= 2;
-						mxStatusIndicator->start( String( ResId( PDF_PROGRESS_BAR, *pResMgr ) ), nTotalPageCount );
-						delete pResMgr;
-					}
-				}
+                if( aPageRange.isEmpty() )
+                {
+                    aPageRange = OUString::number( 1 ) + "-" + OUString::number(nPageCount );
+                }
+                StringRangeEnumerator aRangeEnum( aPageRange, 0, nPageCount-1 );
+
+                if ( mxStatusIndicator.is() )
+                {
+                    boost::scoped_ptr<ResMgr> pResMgr(ResMgr::CreateResMgr( "pdffilter", Application::GetSettings().GetUILanguageTag() ));
+                    if ( pResMgr )
+                    {
+                        sal_Int32 nTotalPageCount = aRangeEnum.size();
+                        if ( bSecondPassForImpressNotes )
+                            nTotalPageCount *= 2;
+                        mxStatusIndicator->start( OUString( ResId( PDF_PROGRESS_BAR, *pResMgr ) ), nTotalPageCount );
+                    }
+                }
 
                 if( nPageCount > 0 )
-                    bRet = ExportSelection( *pPDFWriter, xRenderable, aSelection, aMultiSelection, aRenderOptions, nPageCount );
+                    bRet = ExportSelection( *pPDFWriter, xRenderable, aSelection, aRangeEnum, aRenderOptions, nPageCount );
                 else
-                    bRet = sal_False;
+                    bRet = false;
 
-				if ( bRet && bSecondPassForImpressNotes )
-				{
-					rExportNotesValue <<= sal_True;
-                    bRet = ExportSelection( *pPDFWriter, xRenderable, aSelection, aMultiSelection, aRenderOptions, nPageCount );
-				}
-				if ( mxStatusIndicator.is() )
-					mxStatusIndicator->end();
-
-#ifdef USE_JAVA
-				// Fix bugs 2462 and 2548 by reverting to browser mode at the
-				// end of PDF export
-				if ( bToggleBrowserMode )
-				{
-					aRenderOptions.realloc( 2 );
-					aRenderOptions[ 0 ].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "ToggleBrowserMode" ) );
-					aRenderOptions[ 0 ].Value <<= sal_True;
-					aRenderOptions[ 1 ].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "IsThumbnail" ) );
-					aRenderOptions[ 1 ].Value <<= mbThumbnail;
-					xRenderable->render( 0, aSelection, aRenderOptions );
-				}
-#endif	// USE_JAVA
+                if ( bRet && bSecondPassForImpressNotes )
+                {
+                    rExportNotesValue <<= sal_True;
+                    bRet = ExportSelection( *pPDFWriter, xRenderable, aSelection, aRangeEnum, aRenderOptions, nPageCount );
+                }
+                if ( mxStatusIndicator.is() )
+                    mxStatusIndicator->end();
 
                 // if during the export the doc locale was set copy it to PDF writer
                 const com::sun::star::lang::Locale& rLoc( pPDFExtOutDevData->GetDocumentLocale() );
-                if( rLoc.Language.getLength() )
+                if( !rLoc.Language.isEmpty() )
                     pPDFWriter->SetDocumentLocale( rLoc );
 
-				if( bRet )
-				{
-					pPDFExtOutDevData->PlayGlobalActions( *pPDFWriter );
-					pPDFWriter->Emit();
+                if( bRet )
+                {
+                    pPDFExtOutDevData->PlayGlobalActions( *pPDFWriter );
+                    bRet = pPDFWriter->Emit();
                     aErrors = pPDFWriter->GetErrors();
-				}
-				pOut->SetExtOutDevData( NULL );
+                }
+                pOut->SetExtOutDevData( NULL );
                 if( bReChangeToNormalView )
                 {
                     try
@@ -1005,10 +950,7 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
                     {
                     }
                 }
-			}
-
-			delete pPDFExtOutDevData;
-            delete pPDFWriter;
+            }
         }
     }
 
@@ -1031,8 +973,8 @@ public:
     PDFErrorRequest( const task::PDFExportException& i_rExc );
 
     // XInteractionRequest
-    virtual uno::Any SAL_CALL getRequest() throw (uno::RuntimeException);
-    virtual uno::Sequence< uno::Reference< task::XInteractionContinuation > > SAL_CALL getContinuations() throw (uno::RuntimeException);
+    virtual uno::Any SAL_CALL getRequest() throw (uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual uno::Sequence< uno::Reference< task::XInteractionContinuation > > SAL_CALL getContinuations() throw (uno::RuntimeException, std::exception) SAL_OVERRIDE;
 };
 
 PDFErrorRequest::PDFErrorRequest( const task::PDFExportException& i_rExc ) :
@@ -1041,7 +983,7 @@ PDFErrorRequest::PDFErrorRequest( const task::PDFExportException& i_rExc ) :
 {
 }
 
-uno::Any SAL_CALL PDFErrorRequest::getRequest() throw (uno::RuntimeException)
+uno::Any SAL_CALL PDFErrorRequest::getRequest() throw (uno::RuntimeException, std::exception)
 {
     osl::MutexGuard const guard( m_aMutex );
 
@@ -1050,7 +992,7 @@ uno::Any SAL_CALL PDFErrorRequest::getRequest() throw (uno::RuntimeException)
     return aRet;
 }
 
-uno::Sequence< uno::Reference< task::XInteractionContinuation > > SAL_CALL PDFErrorRequest::getContinuations() throw (uno::RuntimeException)
+uno::Sequence< uno::Reference< task::XInteractionContinuation > > SAL_CALL PDFErrorRequest::getContinuations() throw (uno::RuntimeException, std::exception)
 {
     return uno::Sequence< uno::Reference< task::XInteractionContinuation > >();
 }
@@ -1074,14 +1016,14 @@ void PDFExport::showErrors( const std::set< PDFWriter::ErrorCode >& rErrors )
     }
 }
 
-// -----------------------------------------------------------------------------
 
-sal_Bool PDFExport::ImplExportPage( PDFWriter& rWriter, PDFExtOutDevData& rPDFExtOutDevData, const GDIMetaFile& rMtf )
+
+bool PDFExport::ImplExportPage( PDFWriter& rWriter, PDFExtOutDevData& rPDFExtOutDevData, const GDIMetaFile& rMtf )
 {
     const Size      aSizePDF( OutputDevice::LogicToLogic( rMtf.GetPrefSize(), rMtf.GetPrefMapMode(), MAP_POINT ) );
     Point           aOrigin;
     Rectangle       aPageRect( aOrigin, rMtf.GetPrefSize() );
-    sal_Bool        bRet = sal_True;
+    bool        bRet = true;
 
     rWriter.NewPage( aSizePDF.Width(), aSizePDF.Height() );
     rWriter.SetMapMode( rMtf.GetPrefMapMode() );
@@ -1105,10 +1047,10 @@ sal_Bool PDFExport::ImplExportPage( PDFWriter& rWriter, PDFExtOutDevData& rPDFEx
 
     basegfx::B2DRectangle aB2DRect( aPageRect.Left(), aPageRect.Top(), aPageRect.Right(), aPageRect.Bottom() );
     rWriter.SetClipRegion( basegfx::B2DPolyPolygon( basegfx::tools::createPolygonFromRect( aB2DRect ) ) );
-    
+
     rWriter.PlayMetafile( aMtf, aCtx, &rPDFExtOutDevData );
 
-	rPDFExtOutDevData.ResetSyncData();
+    rPDFExtOutDevData.ResetSyncData();
 
     if( mbWatermark )
         ImplWriteWatermark( rWriter, aSizePDF );
@@ -1116,12 +1058,12 @@ sal_Bool PDFExport::ImplExportPage( PDFWriter& rWriter, PDFExtOutDevData& rPDFEx
     return bRet;
 }
 
-// -----------------------------------------------------------------------------
+
 
 void PDFExport::ImplWriteWatermark( PDFWriter& rWriter, const Size& rPageSize )
 {
-    OUString aText( RTL_CONSTASCII_USTRINGPARAM( "Watermark" ) );
-    Font aFont( OUString( RTL_CONSTASCII_USTRINGPARAM( "Helvetica" ) ), Size( 0, 3*rPageSize.Height()/4 ) );
+    OUString aText( "Watermark" );
+    Font aFont( OUString( "Helvetica" ), Size( 0, 3*rPageSize.Height()/4 ) );
     aFont.SetItalic( ITALIC_NONE );
     aFont.SetWidthType( WIDTH_NORMAL );
     aFont.SetWeight( WEIGHT_NORMAL );
@@ -1140,12 +1082,14 @@ void PDFExport::ImplWriteWatermark( PDFWriter& rWriter, const Size& rPageSize )
 
     // adjust font height for text to fit
     OutputDevice* pDev = rWriter.GetReferenceDevice();
-    pDev->Push( PUSH_ALL );
+    pDev->Push( PushFlags::ALL );
     pDev->SetFont( aFont );
     pDev->SetMapMode( MapMode( MAP_POINT ) );
     int w = 0;
     while( ( w = pDev->GetTextWidth( aText ) ) > nTextWidth )
     {
+        if (w == 0)
+            break;
         long nNewHeight = aFont.GetHeight() * nTextWidth / w;
         if( nNewHeight == aFont.GetHeight() )
         {
@@ -1162,10 +1106,10 @@ void PDFExport::ImplWriteWatermark( PDFWriter& rWriter, const Size& rPageSize )
     nTextHeight += nTextHeight/20;
     pDev->Pop();
 
-    rWriter.Push( PUSH_ALL );
+    rWriter.Push( PushFlags::ALL );
     rWriter.SetMapMode( MapMode( MAP_POINT ) );
     rWriter.SetFont( aFont );
-    rWriter.SetTextColor( COL_RED );
+    rWriter.SetTextColor( COL_LIGHTGREEN );
     Point aTextPoint;
     Rectangle aTextRect;
     if( rPageSize.Width() > rPageSize.Height() )
@@ -1190,3 +1134,4 @@ void PDFExport::ImplWriteWatermark( PDFWriter& rWriter, const Size& rPageSize )
 }
 
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
