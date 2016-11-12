@@ -134,17 +134,7 @@ getBootstrapData(
     rtl::Bootstrap::expandMacros( aValue );
 
 #ifdef USE_JAVA
-    const OUString aOSVersionTag("<OSVERSION>");
-    for (sal_Int32 i = 0;;)
-    {
-        i = aValue.indexOf(aOSVersionTag, i);
-        if (i == -1) {
-            break;
-        }
-        OUString aOSVersion = GetOSVersion();
-        aValue = aValue.replaceAt(i, aOSVersionTag.getLength(), aOSVersion);
-        i += aOSVersion.getLength();
-    }
+    aValue = aValue.replaceAll("<OSVERSION>", GetOSVersion());
 #endif	// USE_JAVA
 
     if( !aValue.isEmpty() )

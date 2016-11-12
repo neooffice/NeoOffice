@@ -1556,10 +1556,7 @@ UpdateCheck::showReleaseNote(const OUString& rURL) const
         aGuard.clear();
     
         OUString aDownloadText(aUpdateHandler->getDownloadingText());
-        OUString aEllipses("...");
-        sal_Int32 nIndex;
-        while ((nIndex = aDownloadText.indexOf(aEllipses)) >= 0)
-            aDownloadText = aDownloadText.replaceAt(nIndex, aEllipses.getLength(), "");
+        aDownloadText = aDownloadText.replaceAll("...", "");
 
         static OUString aUserAgent;
         if ( !aUserAgent.getLength() )
