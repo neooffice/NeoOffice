@@ -44,7 +44,6 @@
 
 #import <vcl/svapp.hxx>
 #import <vcl/msgbox.hxx>
-#import <vos/mutex.hxx>
 
 // Uncomment the following line to implement the panel:shouldEnableURL:
 // delegate selector. Note: implementing that selector will cause hanging in
@@ -62,8 +61,6 @@ static Application_postWakeUpEvent_Type *pApplication_postWakeUpEvent = NULL;
 static Application_cacheSecurityScopedURL_Type *pApplication_cacheSecurityScopedURL = NULL;
 
 static NSString *pBlankItem = @" ";
-
-using namespace vos;
 
 @interface ShowFileDialogArgs : NSObject
 {
@@ -290,8 +287,10 @@ using namespace vos;
 	}
 }
 
-- (void)cancel:(id)pObject;
+- (void)cancel:(id)pObject
 {
+	(void)pObject;
+
 	if ( mpFilePanel && !mbCancelled && !mbFinished )
 	{
 		// Prevent crashing by only allowing cancellation to be requested once
@@ -311,8 +310,10 @@ using namespace vos;
 	}
 }
 
-- (void)checkForErrors:(id)pObject;
+- (void)checkForErrors:(id)pObject
 {
+	(void)pObject;
+
 	// Detect if the sheet window has been closed without any call to the
 	// completion handler. Fix inability to change file name in Save As dialog
 	// on OS X 10.8 by not cancelling if the URL has been validated.
@@ -360,6 +361,8 @@ using namespace vos;
 
 - (void)destroy:(id)pObject
 {
+	(void)pObject;
+
 	mpPicker = NULL;
 
 	if ( !mbFinished )
@@ -461,6 +464,8 @@ using namespace vos;
 
 - (void)dismissFileTypePopUp:(id)pObject
 {
+	(void)pObject;
+
 	if ( mpFilePanel && mpPicker && !mbCancelled && !mbFinished )
 	{
 		BOOL bOldInControlChange = mbInControlChange;
@@ -555,6 +560,8 @@ using namespace vos;
 
 - (id)initWithPicker:(void *)pPicker useFileOpenDialog:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelection:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion
 {
+	(void)bShowVersion;
+
 	[super init];
 
 	mpAttachedSheet = nil;
@@ -603,6 +610,8 @@ using namespace vos;
 
 - (void)initialize:(id)pObject
 {
+	(void)pObject;
+
 	// Create file type popup
 	if ( mbChooseFiles )
 	{
@@ -881,6 +890,8 @@ using namespace vos;
 
 - (void)panel:(id)pObject didChangeToDirectoryURL:(NSURL *)pURL
 {
+	(void)pObject;
+
 	// Fix bug 3568 by forcefully setting the directory when it has been
 	// changed by the user. Note that we only do this if the file URL is
 	// different than the panel's directory URL or else on Mac OS X 10.7 the
@@ -1002,6 +1013,9 @@ using namespace vos;
 
 - (BOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError **)ppError
 {
+	(void)pSender;
+	(void)pURL;
+
 	if ( ppError )
 		*ppError = nil;
 
@@ -1011,6 +1025,9 @@ using namespace vos;
 
 - (void)panel:(id)pObject willExpand:(BOOL)bExpanding
 {
+	(void)pObject;
+	(void)bExpanding;
+
 	// Stop exceptions from being logged on Mac OS X 10.9
 }
 
@@ -1436,6 +1453,7 @@ using namespace vos;
 
 - (void)setTitle:(ShowFileDialogArgs *)pArgs
 {
+	(void)pArgs;
 }
 
 - (void)showFileDialog:(ShowFileDialogArgs *)pArgs
@@ -2243,7 +2261,7 @@ short NSFileDialog_showFileDialog( id pDialog )
 				if ( Application::IsShutDown() )
 					break;
 
-				IMutex &rSolarMutex = Application::GetSolarMutex();
+				comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 				rSolarMutex.acquire();
 				if ( !Application::IsShutDown() )
 					Application::Yield();

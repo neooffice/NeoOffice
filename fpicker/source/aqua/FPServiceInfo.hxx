@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!--
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
  * This file is part of the LibreOffice project.
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -22,14 +22,24 @@
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- -->
+ */
 
-<component loader="com.sun.star.loader.SharedLibrary" environment="@CPPU_ENV@"
-    prefix="fps_aqua" xmlns="http://openoffice.org/2010/uno-components">
-  <implementation name="com.sun.star.ui.dialogs.JavaFilePicker">
-    <service name="com.sun.star.ui.dialogs.AquaFilePicker"/>
-  </implementation>
-  <implementation name="com.sun.star.ui.dialogs.JavaFolderPicker">
-    <service name="com.sun.star.ui.dialogs.AquaFolderPicker"/>
-  </implementation>
-</component>
+#ifndef INCLUDED_FPICKER_SOURCE_AQUA_FPSERVICEINFO_HXX
+#define INCLUDED_FPICKER_SOURCE_AQUA_FPSERVICEINFO_HXX
+
+// the service names
+#define FILE_PICKER_SERVICE_NAME "com.sun.star.ui.dialogs.AquaFilePicker"
+#define FOLDER_PICKER_SERVICE_NAME "com.sun.star.ui.dialogs.AquaFolderPicker"
+
+// the implementation names
+#ifdef USE_JAVA
+#define FILE_PICKER_IMPL_NAME    "com.sun.star.ui.dialogs.JavaFilePicker"
+#define FOLDER_PICKER_IMPL_NAME    "com.sun.star.ui.dialogs.JavaFolderPicker"
+#else	// USE_JAVA
+#define FILE_PICKER_IMPL_NAME    "com.sun.star.ui.dialogs.SalAquaFilePicker"
+#define FOLDER_PICKER_IMPL_NAME    "com.sun.star.ui.dialogs.SalAquaFolderPicker"
+#endif	// USE_JAVA
+
+#endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

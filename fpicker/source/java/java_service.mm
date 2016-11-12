@@ -33,9 +33,4 @@
  *
  ************************************************************************/
 
-#ifndef _JAVA_SERVICE_HXX_
-#define _JAVA_SERVICE_HXX_
-
-#include "../aqua/FPServiceInfo.hxx"
-
-#endif	// _JAVA_SERVICE_HXX_
+#include "../aqua/FPentry.mm"

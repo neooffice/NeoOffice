@@ -73,7 +73,7 @@ enum CocoaControlID {
 };
 
 #ifdef __cplusplus
-BEGIN_C
+extern "C" {
 #endif
 void JavaFilePicker_controlStateChanged( int nID, void *pPicker );
 void NSFileDialog_addFilter( id pDialog, CFStringRef aItem, CFStringRef aFilter );
@@ -104,7 +104,7 @@ void NSFileDialog_setSelectedItem( id pDialog, int nID, int nItem );
 void NSFileDialog_setTitle( id pDialog, CFStringRef aTitle );
 short NSFileDialog_showFileDialog( id pDialog );
 #ifdef __cplusplus
-END_C
+}
 #endif
 
 #endif	// _COCOA_FILEDIALOG_H_

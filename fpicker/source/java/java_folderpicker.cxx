@@ -35,15 +35,9 @@
 
 #include <stdio.h>
 
-#ifndef _JAVA_FOLDERPICKER_HXX_
 #include "java_folderpicker.hxx"
-#endif
-#ifndef _JAVA_SERVICE_HXX_
 #include "java_service.hxx"
-#endif
-#ifndef _COM_SUN_STAR_LANG_NULLPOINTEREXCEPTION_HPP_
 #include <com/sun/star/lang/NullPointerException.hpp>
-#endif
 
 #include "cocoa_dialog.h"
 
@@ -52,7 +46,6 @@ using namespace com::sun::star::lang;
 using namespace com::sun::star::uno;
 using namespace com::sun::star::ui::dialogs;
 using namespace com::sun::star::util;
-using namespace rtl;
 using namespace java;
 
 // ========================================================================
@@ -62,9 +55,9 @@ namespace java {
 Sequence< OUString > SAL_CALL JavaFolderPicker_getSupportedServiceNames()
 {
 	Sequence< OUString > aRet( 3 );
-	aRet[0] = OUString::createFromAscii( "com.sun.star.ui.dialogs.FolderPicker" );
-	aRet[1] = OUString::createFromAscii( "com.sun.star.ui.dialogs.SystemFolderPicker" );
-	aRet[2] = OUString::createFromAscii( FOLDER_PICKER_SERVICE_NAME );
+	aRet[0] = "com.sun.star.ui.dialogs.FolderPicker";
+	aRet[1] = "com.sun.star.ui.dialogs.SystemFolderPicker";
+	aRet[2] = FOLDER_PICKER_SERVICE_NAME;
 	return aRet;
 }
  
@@ -79,7 +72,7 @@ Reference< XInterface > SAL_CALL JavaFolderPicker_createInstance( const Referenc
 
 // ========================================================================
 
-JavaFolderPicker::JavaFolderPicker( const Reference< XMultiServiceFactory >& xServiceMgr ) : WeakComponentImplHelper3< XFolderPicker, XServiceInfo, XCancellable >( maMutex )
+JavaFolderPicker::JavaFolderPicker( const Reference< XMultiServiceFactory >& /* xServiceMgr */ ) : WeakComponentImplHelper3< XFolderPicker, XServiceInfo, XCancellable >( maMutex )
 {
 	mpDialog = NSFileDialog_create( NULL, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE );
 	if ( !mpDialog )
@@ -177,7 +170,7 @@ OUString SAL_CALL JavaFolderPicker::getDirectory() throw( RuntimeException )
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFolderPicker::setDescription( const OUString& rDescription ) throw( RuntimeException )
+void SAL_CALL JavaFolderPicker::setDescription( const OUString& /* rDescription */ ) throw( RuntimeException )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaFolderPicker::setDescription not implemented\n" );
@@ -188,7 +181,7 @@ void SAL_CALL JavaFolderPicker::setDescription( const OUString& rDescription ) t
 
 OUString SAL_CALL JavaFolderPicker::getImplementationName() throw( RuntimeException )
 {
-	return OUString::createFromAscii( FOLDER_PICKER_IMPL_NAME );
+	return FOLDER_PICKER_IMPL_NAME;
 }
 
 // ------------------------------------------------------------------------
@@ -220,6 +213,6 @@ void SAL_CALL JavaFolderPicker::cancel() throw( RuntimeException )
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFolderPicker::disposing( const EventObject& aEvent ) throw( RuntimeException )
+void SAL_CALL JavaFolderPicker::disposing( const EventObject& /* aEvent */ ) throw( RuntimeException )
 {
 }
