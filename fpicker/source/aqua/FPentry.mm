@@ -46,14 +46,10 @@ using namespace ::cppu;
 using ::com::sun::star::ui::dialogs::XFilePicker;
 
 
-#ifdef USE_JAVA
-static Reference< XInterface > SAL_CALL createFileInstance( const Reference< XMultiServiceFactory >& rServiceManager )
-#else	// USE_JAVA
 static Reference< XInterface > SAL_CALL createFileInstance( const Reference< XMultiServiceFactory >&  )
-#endif	// USE_JAVA
 {
 #ifdef USE_JAVA
-    return Reference< XInterface >( *new ::java::JavaFilePicker( rServiceManager ) );
+    return Reference< XInterface >( *new ::java::JavaFilePicker );
 #else	// USE_JAVA
     return Reference< XInterface >( *new SalAquaFilePicker );
 #endif	// USE_JAVA

@@ -151,9 +151,7 @@ void JavaFilePicker_controlStateChanged( int nID, void *pPicker )
 
 // ========================================================================
 
-namespace java {
-
-Sequence< OUString > SAL_CALL JavaFilePicker_getSupportedServiceNames()
+static Sequence< OUString > SAL_CALL JavaFilePicker_getSupportedServiceNames()
 {
 	Sequence< OUString > aRet( 3 );
 	aRet[0] = "com.sun.star.ui.dialogs.FilePicker";
@@ -162,18 +160,9 @@ Sequence< OUString > SAL_CALL JavaFilePicker_getSupportedServiceNames()
 	return aRet;
 }
 
-// ------------------------------------------------------------------------
-
-Reference< XInterface > SAL_CALL JavaFilePicker_createInstance( const Reference< XMultiServiceFactory >& xMultiServiceFactory )
-{
-	return Reference< XInterface >( static_cast< XFilePicker* >( new JavaFilePicker( xMultiServiceFactory ) ) );
-}
-
-}
-
 // ========================================================================
 
-JavaFilePicker::JavaFilePicker( const Reference< XMultiServiceFactory >& /* xServiceMgr */ ) : WeakComponentImplHelper9< XFilterManager, XFilterGroupManager, XFilePickerControlAccess, XFilePickerNotifier, XFilePreview, XInitialization, XCancellable, XEventListener, XServiceInfo >( maMutex ), mpDialog( NULL ), mbInExecute( false ), mpResMgr( NULL ), mnType( TemplateDescription::FILEOPEN_SIMPLE )
+JavaFilePicker::JavaFilePicker() :  WeakComponentImplHelper4< XFilePicker3, XFilePickerControlAccess, XInitialization, XServiceInfo >( maMutex ), mpDialog( NULL ), mbInExecute( false ), mpResMgr( NULL ), mnType( TemplateDescription::FILEOPEN_SIMPLE )
 {
 }
 
@@ -663,67 +652,6 @@ OUString SAL_CALL JavaFilePicker::getLabel( sal_Int16 nControlId ) throw( Runtim
 
 // ------------------------------------------------------------------------
 
-Sequence< sal_Int16 > SAL_CALL JavaFilePicker::getSupportedImageFormats() throw( RuntimeException )
-{
-	// The native Cocoa file dialog does all previewing for us
-	return Sequence< sal_Int16 >();
-}
-
-// ------------------------------------------------------------------------
-
-sal_Int32 SAL_CALL JavaFilePicker::getTargetColorDepth() throw( RuntimeException )
-{
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::getTargetColorDepth not implemented\n" );
-#endif
-	return 0;
-}
-
-// ------------------------------------------------------------------------
-
-sal_Int32 SAL_CALL JavaFilePicker::getAvailableWidth() throw( RuntimeException )
-{
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::getAvailableWidth not implemented\n" );
-#endif
-	return 0;
-}
-
-// ------------------------------------------------------------------------
-
-sal_Int32 SAL_CALL JavaFilePicker::getAvailableHeight() throw( RuntimeException )
-{
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::getAvailableHeight not implemented\n" );
-#endif
-	return 0;
-}
-
-// ------------------------------------------------------------------------
-
-void SAL_CALL JavaFilePicker::setImage( sal_Int16 /* aImageFormat */, const Any& /* aImage */ ) throw( IllegalArgumentException, RuntimeException )
-{
-	// The native Cocoa file dialog does all previewing for us
-}
-
-// ------------------------------------------------------------------------
-
-sal_Bool SAL_CALL JavaFilePicker::setShowState( sal_Bool /* bShowState */ ) throw( RuntimeException )
-{
-	// Previewing is done by the native Cocoa file dialog
-	return sal_False;
-}
-
-// ------------------------------------------------------------------------
-
-sal_Bool SAL_CALL JavaFilePicker::getShowState() throw( RuntimeException )
-{
-	// Previewing is done by the native Cocoa file dialog
-	return sal_False;
-}
-
-// ------------------------------------------------------------------------
-
 void JavaFilePicker::implInit() throw( Exception )
 {
 	// Check if this instance has already been initialized
@@ -794,7 +722,7 @@ void JavaFilePicker::implInit() throw( Exception )
 			bShowAutoExtension = sal_True;
 			break;
 		default:
-			throw IllegalArgumentException( "Unknown template", static_cast< XFilePicker* >( this ), 1 );
+			throw IllegalArgumentException( "Unknown template", static_cast< XFilePicker* >( static_cast< XFilePicker3* >( this ) ), 1 );
 	}
 
 	mpDialog = NSFileDialog_create( this, bUseFileOpenDialog, sal_True, bShowAutoExtension, bShowFilterOptions, bShowImageTemplate, bShowLink, bShowPassword, bShowReadOnly, bShowSelection, bShowTemplate, bShowVersion );
@@ -863,11 +791,11 @@ void JavaFilePicker::implInit() throw( Exception )
 void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) throw( Exception, RuntimeException )
 {
 	if ( !aArguments.getLength() )
-		throw IllegalArgumentException( "no arguments", static_cast< XFilePicker* >( this ), 1 );
+		throw IllegalArgumentException( "no arguments", static_cast< XFilePicker* >( static_cast< XFilePicker3* >( this ) ), 1 );
 
 	Any aAny = aArguments[0];
 	if ( ( aAny.getValueType() != getCppuType( (sal_Int16*)0) ) && ( aAny.getValueType() != getCppuType( (sal_Int8*)0 ) ) )
-		throw IllegalArgumentException( "invalid argument type", static_cast< XFilePicker* >( this ), 1 );
+		throw IllegalArgumentException( "invalid argument type", static_cast< XFilePicker* >( static_cast< XFilePicker3* >( this ) ), 1 );
 
 	aAny >>= mnType;
 

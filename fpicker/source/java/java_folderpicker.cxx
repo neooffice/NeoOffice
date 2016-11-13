@@ -50,9 +50,7 @@ using namespace java;
 
 // ========================================================================
 
-namespace java {
-
-Sequence< OUString > SAL_CALL JavaFolderPicker_getSupportedServiceNames()
+static Sequence< OUString > SAL_CALL JavaFolderPicker_getSupportedServiceNames()
 {
 	Sequence< OUString > aRet( 3 );
 	aRet[0] = "com.sun.star.ui.dialogs.FolderPicker";
@@ -60,19 +58,10 @@ Sequence< OUString > SAL_CALL JavaFolderPicker_getSupportedServiceNames()
 	aRet[2] = FOLDER_PICKER_SERVICE_NAME;
 	return aRet;
 }
- 
-// ------------------------------------------------------------------------
-
-Reference< XInterface > SAL_CALL JavaFolderPicker_createInstance( const Reference< XMultiServiceFactory >& xMultiServiceFactory )
-{
-	return Reference< XInterface >( static_cast< XFolderPicker* >( new JavaFolderPicker( xMultiServiceFactory ) ) );
-}
-
-}
 
 // ========================================================================
 
-JavaFolderPicker::JavaFolderPicker( const Reference< XMultiServiceFactory >& /* xServiceMgr */ ) : WeakComponentImplHelper3< XFolderPicker, XServiceInfo, XCancellable >( maMutex )
+JavaFolderPicker::JavaFolderPicker( const Reference< XMultiServiceFactory >& /* xServiceMgr */ ) : WeakImplHelper3< XFolderPicker2, XServiceInfo, XEventListener >()
 {
 	mpDialog = NSFileDialog_create( NULL, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE );
 	if ( !mpDialog )
