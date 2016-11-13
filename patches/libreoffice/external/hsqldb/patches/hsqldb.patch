@@ -1,4 +1,4 @@
---- misc/build/hsqldb/src/org/hsqldb/Database.java	2007-10-20 15:57:55.000000000 -0700
+--- misc/hsqldb/src/org/hsqldb/Database.java	2007-10-20 15:57:55.000000000 -0700
 +++ misc/build/hsqldb/src/org/hsqldb/Database.java	2016-02-28 08:25:10.000000000 -0800
 @@ -227,7 +227,7 @@
                      fileAccessClass =
@@ -9,7 +9,7 @@
                      fileAccessClass = Class.forName(fileaccess_class_name);
                  }
                  Constructor constructor =
---- misc/build/hsqldb/src/org/hsqldb/DatabaseCommandInterpreter.java	2008-05-27 05:26:44.000000000 -0700
+--- misc/hsqldb/src/org/hsqldb/DatabaseCommandInterpreter.java	2008-05-27 05:26:44.000000000 -0700
 +++ misc/build/hsqldb/src/org/hsqldb/DatabaseCommandInterpreter.java	2016-02-28 08:24:27.000000000 -0800
 @@ -1224,9 +1224,7 @@
              t.createPrimaryKey(null, primaryConst.core.mainColArray, true);
@@ -22,7 +22,7 @@
  
                  Constraint newconstraint =
                      new Constraint(primaryConst.constName, t,
---- misc/build/hsqldb/src/org/hsqldb/persist/HsqlDatabaseProperties.java	2016-02-27 08:53:13.000000000 -0800
+--- misc/hsqldb/src/org/hsqldb/persist/HsqlDatabaseProperties.java	2016-02-27 08:53:13.000000000 -0800
 +++ misc/build/hsqldb/src/org/hsqldb/persist/HsqlDatabaseProperties.java	2016-02-28 08:20:55.000000000 -0800
 @@ -61,7 +61,9 @@
  
@@ -35,7 +35,7 @@
  
              if (prop != null) {
                  accessibleJavaMethodNames = new HashSet();
---- misc/build/hsqldb/src/org/hsqldb/persist/LockFile.java	2008-03-17 08:02:50.000000000 -0700
+--- misc/hsqldb/src/org/hsqldb/persist/LockFile.java	2008-03-17 08:02:50.000000000 -0700
 +++ misc/build/hsqldb/src/org/hsqldb/persist/LockFile.java	2016-02-28 08:19:11.000000000 -0800
 @@ -604,6 +604,21 @@
  
@@ -59,7 +59,7 @@
          return lockFile;
      }
  
---- misc/build/hsqldb/src/org/hsqldb/persist/ScaledRAFile.java	2016-02-27 08:53:17.000000000 -0800
+--- misc/hsqldb/src/org/hsqldb/persist/ScaledRAFile.java	2016-02-27 08:53:17.000000000 -0800
 +++ misc/build/hsqldb/src/org/hsqldb/persist/ScaledRAFile.java	2016-02-28 08:17:31.000000000 -0800
 @@ -97,7 +97,7 @@
                      storageClass =

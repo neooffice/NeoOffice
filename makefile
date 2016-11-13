@@ -200,24 +200,23 @@ build.libo_external_tarballs_checkout: build.libo_src_checkout
 	cd "$(LIBO_PATCHES_HOME)/external/tarballs" ; sh -c -e 'for i in `find . -type f -maxdepth 1 | grep -v /CVS/` ; do cp "$$i" "$(PWD)/$(LIBO_BUILD_HOME)/external/tarballs/$$i" ; done'
 	touch "$@"
 
-build.libo_checkout: build.libo_src_checkout build.ant_checkout build.libo_external_tarballs_checkout
+build.libo_external_patches_checkout: build.libo_src_checkout
+	cd "$(LIBO_PATCHES_HOME)/external/hsqldb/patches" ; sh -c -e 'for i in `find . -type f -maxdepth 1 | grep -v /CVS/` ; do cp "$$i" "$(PWD)/$(LIBO_BUILD_HOME)/external/hsqldb/patches/$$i" ; done'
+	touch "$@"
+
+build.libo_checkout: \
+	build.libo_src_checkout \
+	build.ant_checkout \
+	build.libo_external_tarballs_checkout \
+	build.libo_external_patches_checkout
 	touch "$@"
 
 build.libo_patches: \
 	build.libo_bin_patch \
+	build.libo_external_patch \
 	build.libo_include_patch \
 	build.libo_sw_patch \
 	build.libo_vcl_patch
-	touch "$@"
-
-build.libo_src_root_patch: $(LIBO_PATCHES_HOME)/src_root.patch build.libo_checkout
-ifeq ("$(OS_TYPE)","macOS")
-	-( cd "$(LIBO_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(LIBO_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-else
-	-cat "$<" | unix2dos | ( cd "$(LIBO_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" )
-	cat "$<" | unix2dos | ( cd "$(LIBO_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" )
-endif
 	touch "$@"
 
 build.libo_%_patch: $(LIBO_PATCHES_HOME)/%.patch build.libo_checkout
@@ -322,7 +321,6 @@ build.neo_patches: \
 	build.neo_filter_patch \
 	build.neo_fpicker_patch \
 	build.neo_framework_patch \
-	build.neo_hsqldb_patch \
 	build.neo_i18npool_patch \
 	build.neo_jvmfwk_patch \
 	build.neo_lingucomponent_patch \

@@ -1,0 +1,10 @@
+--- hsqldb/UnpackedTarball_hsqldb.mk	2015-11-25 04:55:38.000000000 -0800
++++ hsqldb/UnpackedTarball_hsqldb.mk	2016-11-13 13:52:01.000000000 -0800
+@@ -27,6 +27,7 @@
+ 	$(if $(HSQLDB_USE_JDBC_4_1),\
+ 		external/hsqldb/patches/jdbc-4.1.patch \
+ 	) \
++	external/hsqldb/patches/hsqldb.patch \
+ ))
+ 
+ # vim: set noet sw=4 ts=4:
