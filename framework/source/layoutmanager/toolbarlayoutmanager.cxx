@@ -1143,7 +1143,7 @@ void ToolbarLayoutManager::implts_createAddonsToolBars()
                     {
                         if ( aFirstButtonData[ j ].Name == ADDONSMENUITEM_PROPERTYNAME_TITLE )
                         {
-                            rtl::OUString aTitle;
+                            OUString aTitle;
                             aFirstButtonData[ j ].Value >>= aTitle;
                             if ( aTitle.getLength() )
                             {
