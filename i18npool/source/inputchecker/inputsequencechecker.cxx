@@ -1,105 +1,97 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
-
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_i18npool.hxx"
+ */
 
 #include <inputsequencechecker.hxx>
 #include <com/sun/star/i18n/InputSequenceCheckMode.hpp>
 #include <com/sun/star/i18n/UnicodeType.hpp>
+#include <cppuhelper/supportsservice.hxx>
 #include <i18nutil/unicode.hxx>
-#include <rtl/ustrbuf.hxx>
 
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
-using namespace ::rtl;
 
 namespace com { namespace sun { namespace star { namespace i18n {
 
-InputSequenceCheckerImpl::InputSequenceCheckerImpl( const Reference < XMultiServiceFactory >& rxMSF ) : xMSF( rxMSF )
+InputSequenceCheckerImpl::InputSequenceCheckerImpl( const Reference < XComponentContext >& rxContext ) : m_xContext( rxContext )
 {
-        serviceName = "com.sun.star.i18n.InputSequenceCheckerImpl";
-        cachedItem = NULL;
+    serviceName = "com.sun.star.i18n.InputSequenceChecker";
+    cachedItem = NULL;
 }
 
-InputSequenceCheckerImpl::InputSequenceCheckerImpl()
+InputSequenceCheckerImpl::InputSequenceCheckerImpl(const char *pServiceName)
+    : serviceName(pServiceName)
+    , cachedItem(NULL)
 {
 }
 
 InputSequenceCheckerImpl::~InputSequenceCheckerImpl()
 {
-        // Clear lookuptable
-        for (size_t l = 0; l < lookupTable.size(); l++)
-            delete lookupTable[l];
+    // Clear lookuptable
+    for (size_t l = 0; l < lookupTable.size(); l++)
+        delete lookupTable[l];
 
-        lookupTable.clear();
+    lookupTable.clear();
 }
 
-sal_Bool SAL_CALL 
+sal_Bool SAL_CALL
 InputSequenceCheckerImpl::checkInputSequence(const OUString& Text, sal_Int32 nStartPos,
-        sal_Unicode inputChar, sal_Int16 inputCheckMode) throw(RuntimeException)
+        sal_Unicode inputChar, sal_Int16 inputCheckMode) throw(RuntimeException, std::exception)
 {
-        if (inputCheckMode == InputSequenceCheckMode::PASSTHROUGH)
-            return sal_True;
+    if (inputCheckMode == InputSequenceCheckMode::PASSTHROUGH)
+        return sal_True;
 
+    sal_Char* language = getLanguageByScripType(Text[nStartPos], inputChar);
+
+    if (language)
+        return getInputSequenceChecker(language)->checkInputSequence(Text, nStartPos, inputChar, inputCheckMode);
+    else
+        return sal_True; // not a checkable languages.
+}
+
+sal_Int32 SAL_CALL
+InputSequenceCheckerImpl::correctInputSequence(OUString& Text, sal_Int32 nStartPos,
+        sal_Unicode inputChar, sal_Int16 inputCheckMode) throw(RuntimeException, std::exception)
+{
+    if (inputCheckMode != InputSequenceCheckMode::PASSTHROUGH) {
         sal_Char* language = getLanguageByScripType(Text[nStartPos], inputChar);
 
         if (language)
-            return getInputSequenceChecker(language)->checkInputSequence(Text, nStartPos, inputChar, inputCheckMode);
-        else
-            return sal_True; // not a checkable languages.
-}
-
-sal_Int32 SAL_CALL 
-InputSequenceCheckerImpl::correctInputSequence(OUString& Text, sal_Int32 nStartPos,
-        sal_Unicode inputChar, sal_Int16 inputCheckMode) throw(RuntimeException)
-{
-        if (inputCheckMode != InputSequenceCheckMode::PASSTHROUGH) {
-            sal_Char* language = getLanguageByScripType(Text[nStartPos], inputChar);
-
-            if (language)
-                return getInputSequenceChecker(language)->correctInputSequence(Text, nStartPos, inputChar, inputCheckMode);
-        }
-        Text = Text.replaceAt(++nStartPos, 0, OUString(inputChar));
-        return nStartPos;
+            return getInputSequenceChecker(language)->correctInputSequence(Text, nStartPos, inputChar, inputCheckMode);
+    }
+    Text = Text.replaceAt(++nStartPos, 0, OUString(inputChar));
+    return nStartPos;
 }
 
 static ScriptTypeList typeList[] = {
-        //{ UnicodeScript_kHebrew,              UnicodeScript_kHebrew },        // 10,
-        //{ UnicodeScript_kArabic,              UnicodeScript_kArabic },        // 11,
-        { UnicodeScript_kDevanagari,UnicodeScript_kDevanagari,          UnicodeScript_kDevanagari },    // 14,
-        { UnicodeScript_kThai,  UnicodeScript_kThai,                  UnicodeScript_kThai },          // 24,
+    //{ UnicodeScript_kHebrew,              UnicodeScript_kHebrew },        // 10,
+    //{ UnicodeScript_kArabic,              UnicodeScript_kArabic },        // 11,
+    { UnicodeScript_kDevanagari,UnicodeScript_kDevanagari,          UnicodeScript_kDevanagari },    // 14,
+    { UnicodeScript_kThai,  UnicodeScript_kThai,                  UnicodeScript_kThai },          // 24,
 
-        { UnicodeScript_kScriptCount,   UnicodeScript_kScriptCount,           UnicodeScript_kScriptCount }    // 88
+    { UnicodeScript_kScriptCount,   UnicodeScript_kScriptCount,           UnicodeScript_kScriptCount }    // 88
 };
 
 sal_Char* SAL_CALL
@@ -107,12 +99,12 @@ InputSequenceCheckerImpl::getLanguageByScripType(sal_Unicode cChar, sal_Unicode 
 {
     sal_Int16 type = unicode::getUnicodeScriptType( cChar, typeList, UnicodeScript_kScriptCount );
 
-    if (type != UnicodeScript_kScriptCount && 
+    if (type != UnicodeScript_kScriptCount &&
             type == unicode::getUnicodeScriptType( nChar, typeList, UnicodeScript_kScriptCount )) {
         switch(type) {
             case UnicodeScript_kThai:           return (sal_Char*)"th";
-            //case UnicodeScript_kArabic:       return (sal_Char*)"ar";
-            //case UnicodeScript_kHebrew:       return (sal_Char*)"he";
+                                                //case UnicodeScript_kArabic:       return (sal_Char*)"ar";
+                                                //case UnicodeScript_kHebrew:       return (sal_Char*)"he";
 #ifdef USE_JAVA
             // Disable sequence checking for Devanagari as the implementation
             // is broken. For example, typing valid Hindi words (see bug 1429)
@@ -128,50 +120,60 @@ InputSequenceCheckerImpl::getLanguageByScripType(sal_Unicode cChar, sal_Unicode 
 Reference< XExtendedInputSequenceChecker >& SAL_CALL
 InputSequenceCheckerImpl::getInputSequenceChecker(sal_Char* rLanguage) throw (RuntimeException)
 {
-        if (cachedItem && cachedItem->aLanguage == rLanguage) {
-            return cachedItem->xISC;
+    if (cachedItem && cachedItem->aLanguage == rLanguage) {
+        return cachedItem->xISC;
+    }
+    else {
+        for (size_t l = 0; l < lookupTable.size(); l++) {
+            cachedItem = lookupTable[l];
+            if (cachedItem->aLanguage == rLanguage)
+                return cachedItem->xISC;
         }
-        else if (xMSF.is()) {
-            for (size_t l = 0; l < lookupTable.size(); l++) {
-                cachedItem = lookupTable[l];
-                if (cachedItem->aLanguage == rLanguage)
-                    return cachedItem->xISC;
-            }
 
-            Reference < uno::XInterface > xI = xMSF->createInstance(
-                        OUString::createFromAscii("com.sun.star.i18n.InputSequenceChecker_") + 
-                        OUString::createFromAscii(rLanguage));
+        Reference < uno::XInterface > xI = m_xContext->getServiceManager()->createInstanceWithContext(
+                OUString("com.sun.star.i18n.InputSequenceChecker_") +
+                OUString::createFromAscii(rLanguage),
+                m_xContext);
 
-            if ( xI.is() ) {
-                Reference< XExtendedInputSequenceChecker > xISC;
-                xI->queryInterface( getCppuType((const Reference< XExtendedInputSequenceChecker>*)0) ) >>= xISC;
-                if (xISC.is()) {
-                    lookupTable.push_back(cachedItem = new lookupTableItem(rLanguage, xISC));
-                    return cachedItem->xISC;
-                }
+        if ( xI.is() ) {
+            Reference< XExtendedInputSequenceChecker > xISC( xI, uno::UNO_QUERY );
+            if (xISC.is()) {
+                lookupTable.push_back(cachedItem = new lookupTableItem(rLanguage, xISC));
+                return cachedItem->xISC;
             }
         }
-        throw RuntimeException();
+    }
+    throw RuntimeException();
 }
 
 OUString SAL_CALL
-InputSequenceCheckerImpl::getImplementationName(void) throw( RuntimeException )
+InputSequenceCheckerImpl::getImplementationName(void) throw( RuntimeException, std::exception )
 {
-        return OUString::createFromAscii(serviceName);
+    return OUString::createFromAscii(serviceName);
 }
 
 sal_Bool SAL_CALL
-InputSequenceCheckerImpl::supportsService(const OUString& rServiceName) throw( RuntimeException )
+InputSequenceCheckerImpl::supportsService(const OUString& rServiceName) throw( RuntimeException, std::exception )
 {
-        return !rServiceName.compareToAscii(serviceName);
+    return cppu::supportsService(this, rServiceName);
 }
 
 Sequence< OUString > SAL_CALL
-InputSequenceCheckerImpl::getSupportedServiceNames(void) throw( RuntimeException )
+InputSequenceCheckerImpl::getSupportedServiceNames(void) throw( RuntimeException, std::exception )
 {
-        Sequence< OUString > aRet(1);
-        aRet[0] = OUString::createFromAscii(serviceName);
-        return aRet;
+    Sequence< OUString > aRet(1);
+    aRet[0] = OUString::createFromAscii(serviceName);
+    return aRet;
 }
 
 } } } }
+
+extern "C" SAL_DLLPUBLIC_EXPORT css::uno::XInterface * SAL_CALL
+com_sun_star_i18n_InputSequenceChecker_get_implementation(
+    css::uno::XComponentContext *context,
+    css::uno::Sequence<css::uno::Any> const &)
+{
+    return cppu::acquire(new css::i18n::InputSequenceCheckerImpl(context));
+}
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
