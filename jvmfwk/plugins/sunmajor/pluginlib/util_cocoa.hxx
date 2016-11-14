@@ -36,6 +36,6 @@
 #ifndef __UTIL_COCOA_H__
 #define __UTIL_COCOA_H__
 
-sal_Bool JvmfwkUtil_isLoadableJVM( ::rtl::OUString aURL );
+sal_Bool JvmfwkUtil_isLoadableJVM( OUString aURL );
 
 #endif

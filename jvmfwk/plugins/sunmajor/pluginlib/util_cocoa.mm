@@ -41,8 +41,6 @@
 
 #import "util_cocoa.hxx"
 
-using namespace rtl;
-
 sal_Bool JvmfwkUtil_isLoadableJVM( OUString aURL )
 {
 	sal_Bool bRet = sal_False;

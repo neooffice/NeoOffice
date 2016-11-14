@@ -1,37 +1,29 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_jvmfwk.hxx"
 
 #include "osl/thread.h"
 #include "sunjre.hxx"
@@ -40,7 +32,6 @@
 
 using namespace std;
 
-#define OUSTR(x) ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM(x) )
 namespace jfw_plugin
 {
 
@@ -52,17 +43,17 @@ rtl::Reference<VendorBase> SunInfo::createInstance()
 char const* const* SunInfo::getJavaExePaths(int * size)
 {
     static char const * ar[] = {
-#if defined(WNT) || defined(OS2)
+#if defined(WNT)
         "java.exe",
         "bin/java.exe",
         "jre/bin/java.exe"
-#elif UNX
+#elif defined UNX
         "java",
         "bin/java",
         "jre/bin/java"
 #endif
     };
-        *size = sizeof (ar) / sizeof (char*);
+    *size = SAL_N_ELEMENTS(ar);
     return ar;
 }
 
@@ -73,60 +64,58 @@ char const* const* SunInfo::getRuntimePaths(int * size)
         "/bin/client/jvm.dll",
         "/bin/hotspot/jvm.dll",
         "/bin/classic/jvm.dll",
-        "/bin/jrockit/jvm.dll"
-#elif defined(OS2)
-        "/bin/classic/jvm.dll",
-        "/bin/client/jvm.dll",
-        // TODO add jrockit here
-#elif defined(MACOSX)
+        "/bin/jrockit/jvm.dll",
+        // The 64-bit JRE has the jvm in bin/server
+        "/bin/server/jvm.dll"
+#elif defined USE_JAVA && defined MACOSX
+        "/lib/server/libjvm.dylib",
+        "/lib/jli/libjli.dylib"
+#elif defined MACOSX && defined X86_64
+        // Oracle Java 7, under /Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home
         "/lib/server/libjvm.dylib"
-#ifdef USE_JAVA
-        , "/lib/jli/libjli.dylib"
-#endif	// USE_JAVA
-#elif defined(UNX)
+#elif defined UNX
         "/lib/" JFW_PLUGIN_ARCH "/client/libjvm.so",
         "/lib/" JFW_PLUGIN_ARCH "/server/libjvm.so",
         "/lib/" JFW_PLUGIN_ARCH "/classic/libjvm.so",
         "/lib/" JFW_PLUGIN_ARCH "/jrockit/libjvm.so"
 #endif
     };
-    *size = sizeof(ar) / sizeof (char*);
+    *size = SAL_N_ELEMENTS(ar);
     return ar;
 }
 
 char const* const* SunInfo::getLibraryPaths(int* size)
 {
-#ifdef UNX
+#if defined UNX && !defined MACOSX
     static char const * ar[] = {
-
         "/lib/" JFW_PLUGIN_ARCH "/client",
-        "/lib/" JFW_PLUGIN_ARCH "/native_threads", 
+        "/lib/" JFW_PLUGIN_ARCH "/server",
+        "/lib/" JFW_PLUGIN_ARCH "/native_threads",
         "/lib/" JFW_PLUGIN_ARCH
-
     };
-    *size = sizeof(ar) / sizeof (char*);
+    *size = SAL_N_ELEMENTS(ar);
     return ar;
 #else
-    size = 0;
+    *size = 0;
     return NULL;
 #endif
 }
 
-int SunInfo::compareVersions(const rtl::OUString& sSecond) const
+int SunInfo::compareVersions(const OUString& sSecond) const
 {
-    rtl::OUString sFirst = getVersion();
+    OUString sFirst = getVersion();
 
     SunVersion version1(sFirst);
-    JFW_ENSURE(version1, OUSTR("[Java framework] sunjavaplugin" SAL_DLLEXTENSION
-                               " does not know the version: ")
-               + sFirst + OUSTR(" as valid for a SUN/Oracle JRE."));
+    JFW_ENSURE(version1, "[Java framework] sunjavaplugin" SAL_DLLEXTENSION
+                         " does not know the version: "
+               + sFirst + " as valid for a SUN/Oracle JRE.");
     SunVersion version2(sSecond);
     if ( ! version2)
         throw MalformedVersionException();
 
-    if(version1 == version2)
+    if (version1 == version2)
         return 0;
-    if(version1 > version2)
+    if (version1 > version2)
         return 1;
     else
         return -1;
@@ -134,3 +123,5 @@ int SunInfo::compareVersions(const rtl::OUString& sSecond) const
 
 
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

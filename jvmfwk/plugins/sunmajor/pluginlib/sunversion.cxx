@@ -1,36 +1,22 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- * This file incorporates work covered by the following license notice:
- * 
- *   Portions of this file are part of the LibreOffice project.
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
  *
- *   This Source Code Form is subject to the terms of the Mozilla Public
- *   License, v. 2.0. If a copy of the MPL was not distributed with this
- *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
- * 
- *************************************************************/
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_jvmfwk.hxx"
 
 #include "sunversion.hxx"
 #include "osl/thread.h"
@@ -39,13 +25,10 @@
 #include <string.h>
 #include <ctype.h>
 #include "diagnostics.h"
-using namespace rtl;
 using namespace osl;
+
 namespace jfw_plugin  { //stoc_javadetect
 
-
-//extern OUString ::Impl::usPathDelim();
-#define OUSTR( x )  ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM( x ))
 
 #if OSL_DEBUG_LEVEL >= 2
 class SelfTest
@@ -53,45 +36,45 @@ class SelfTest
 public:
     SelfTest();
 } test;
-#endif    
+#endif
 
-SunVersion::SunVersion(const rtl::OUString &usVer): 
+SunVersion::SunVersion(const OUString &usVer):
     m_nUpdateSpecial(0), m_preRelease(Rel_NONE),
     usVersion(usVer)
 {
     memset(m_arVersionParts, 0, sizeof(m_arVersionParts));
-    rtl::OString sVersion= rtl::OUStringToOString(usVer, osl_getThreadTextEncoding());
+    OString sVersion= OUStringToOString(usVer, osl_getThreadTextEncoding());
     m_bValid = init(sVersion.getStr());
 }
-SunVersion::SunVersion(const char * szVer): 
+SunVersion::SunVersion(const char * szVer):
     m_nUpdateSpecial(0), m_preRelease(Rel_NONE)
 {
     memset(m_arVersionParts, 0, sizeof(m_arVersionParts));
     m_bValid = init(szVer);
-    usVersion= rtl::OUString(szVer,strlen(szVer),osl_getThreadTextEncoding());
+    usVersion= OUString(szVer,strlen(szVer),osl_getThreadTextEncoding());
 }
 
 
-/**Format major.minor.maintainance_update
+/**Format major.minor.maintenance_update
  */
 bool SunVersion::init(const char *szVersion)
 {
     if ( ! szVersion || strlen(szVersion) == 0)
         return false;
-    
-    //first get the major,minor,maintainance
+
+    //first get the major,minor,maintenance
     const char * pLast = szVersion;
     const char * pCur = szVersion;
-	//pEnd point to the position after the last character
+    //pEnd point to the position after the last character
     const char * pEnd = szVersion + strlen(szVersion);
-    // 0 = major, 1 = minor, 2 = maintainance, 3 = update
+    // 0 = major, 1 = minor, 2 = maintenance, 3 = update
     int nPart = 0;
     // position within part beginning with 0
     int nPartPos = 0;
     char buf[128];
 
     //char must me a number 0 - 999 and no leading
-    while (1)
+    while (true)
     {
         if (pCur < pEnd && isdigit(*pCur))
         {
@@ -103,36 +86,36 @@ bool SunVersion::init(const char *szVersion)
         else if (
             ! (nPartPos == 0) // prevents: ".4.1", "..1", part must start with digit
             && (
-                //seperators after maintainance (1.4.1_01, 1.4.1-beta, or1.4.1
+                //separators after maintenance (1.4.1_01, 1.4.1-beta, or 1.4.1)
                 ((pCur == pEnd || *pCur == '_' || *pCur == '-') && (nPart == 2 ))
                 ||
-                //separators between major-minor and minor-maintainance
+                //separators between major-minor and minor-maintenance
                 (nPart < 2 && *pCur == '.') )
             && (
                 //prevent 1.4.0. 1.4.0-
                 pCur + 1 == pEnd ? isdigit(*(pCur)) : 1) )
         {
             int len = pCur - pLast;
-            if (len >= 127) 
+            if (len >= 127)
                 return false;
 
             strncpy(buf, pLast, len);
             buf[len] = 0;
-            pCur ++; 
+            pCur ++;
             pLast = pCur;
-            
+
             m_arVersionParts[nPart] = atoi(buf);
             nPart ++;
             nPartPos = 0;
             if (nPart == 3)
                 break;
-            
+
             //check next character
-            if (! ( (pCur < pEnd) 
-                    && ( (nPart < 3) && isdigit(*pCur)))) //(*pCur >= 48 && *pCur <=57))))
-                return false;                    
+            if (! ( (pCur < pEnd)
+                    && ( (nPart < 3) && isdigit(*pCur))))
+                return false;
         }
-        else 
+        else
         {
             return false;
         }
@@ -145,7 +128,7 @@ bool SunVersion::init(const char *szVersion)
     if (* (pCur - 1) == '_')
     {// _01, _02
         // update is the last part _01, _01a, part 0 is the digits parts and 1 the trailing alpha
-        while (1)
+        while (true)
         {
             if (pCur <= pEnd)
             {
@@ -155,12 +138,12 @@ bool SunVersion::init(const char *szVersion)
                     //1.4.1_01-, 1.4.1_01a, the numerical part may only be 2 chars.
                     int len = pCur - pLast;
                     if (len > 2)
+                        return false;
 #else	// NO_LIBO_BUG_101057_FIX
                     //1.8.0_102-, 1.8.0_01a,
                     size_t len = pCur - pLast;
                     if (len > sizeof(buf) - 1)
 #endif	// NO_LIBO_BUG_101057_FIX
-                        return false;
                     //we've got the update: 01, 02 etc
                     strncpy(buf, pLast, len);
                     buf[len] = 0;
@@ -192,9 +175,9 @@ bool SunVersion::init(const char *szVersion)
                 if (pCur < pEnd)
                     pCur ++;
                 else
-                    break;   
+                    break;
             }
-        }           
+        }
     }
     // 1.4.1-ea
     else if (*(pCur - 1) == '-')
@@ -202,21 +185,21 @@ bool SunVersion::init(const char *szVersion)
         m_preRelease = getPreRelease(pCur);
         if (m_preRelease == Rel_NONE)
             return false;
-#if defined(FREEBSD)        
+#if defined(FREEBSD)
       if (m_preRelease == Rel_FreeBSD)
       {
-          pCur++; //elemnate `p'
+          pCur++; //eliminate 'p'
           if (pCur < pEnd && isdigit(*pCur))
               pCur ++;
-          int len = pCur - pLast -1; //elemenate `p'
+          int len = pCur - pLast -1; //eliminate 'p'
           if (len >= 127)
               return false;
-          strncpy(buf, (pLast+1), len); //elemenate `p'
+          strncpy(buf, (pLast+1), len); //eliminate 'p'
           buf[len] = 0;
           m_nUpdateSpecial = atoi(buf)+100; //hack for FBSD #i56953#
           return true;
       }
-#endif        
+#endif
     }
     else
     {
@@ -229,11 +212,9 @@ SunVersion::PreRelease SunVersion::getPreRelease(const char *szRelease)
 {
     if (szRelease == NULL)
         return Rel_NONE;
-#ifdef OS2
-	// all prerelases codes are threated the same way (-ga1, -ga2, ...)
-        return Rel_OS2;
-#endif
-    if( ! strcmp(szRelease,"ea"))
+    if( ! strcmp(szRelease,"internal"))
+        return  Rel_INTERNAL;
+    else if( ! strcmp(szRelease,"ea"))
         return  Rel_EA;
     else if( ! strcmp(szRelease,"ea1"))
         return Rel_EA1;
@@ -260,7 +241,7 @@ SunVersion::PreRelease SunVersion::getPreRelease(const char *szRelease)
 #if defined (FREEBSD)
     else if (! strncmp(szRelease, "p", 1))
         return Rel_FreeBSD;
-#endif    
+#endif
     else
         return Rel_NONE;
 }
@@ -274,15 +255,15 @@ SunVersion::~SunVersion()
    a) 1.0 < 1.1
    b) 1.0 < 1.0.0
    c)  1.0 < 1.0_00
-   
+
    returns false if both values are equal
 */
 bool SunVersion::operator > (const SunVersion& ver) const
 {
     if( &ver == this)
         return false;
-    
-    //compare major.minor.maintainance
+
+    //compare major.minor.maintenance
     for( int i= 0; i < 4; i ++)
     {
         // 1.4 > 1.3
@@ -295,28 +276,28 @@ bool SunVersion::operator > (const SunVersion& ver) const
             return false;
         }
     }
-    //major.minor.maintainance_update are equal. test for a trailing char
+    //major.minor.maintenance_update are equal. Test for a trailing char
     if (m_nUpdateSpecial > ver.m_nUpdateSpecial)
-    {   
+    {
         return true;
     }
 
-	//Until here the versions are equal
+    //Until here the versions are equal
     //compare pre -release values
-	if ((m_preRelease == Rel_NONE && ver.m_preRelease == Rel_NONE) 
-		||
-		(m_preRelease != Rel_NONE && ver.m_preRelease == Rel_NONE))
-		return false;
-	else if (m_preRelease == Rel_NONE && ver.m_preRelease != Rel_NONE)
-		return true;
+    if ((m_preRelease == Rel_NONE && ver.m_preRelease == Rel_NONE)
+        ||
+        (m_preRelease != Rel_NONE && ver.m_preRelease == Rel_NONE))
+        return false;
+    else if (m_preRelease == Rel_NONE && ver.m_preRelease != Rel_NONE)
+        return true;
     else if (m_preRelease > ver.m_preRelease)
         return true;
-    
+
     return false;
 }
 
 bool SunVersion::operator < (const SunVersion& ver) const
-{        
+{
     return (! operator > (ver)) && (! operator == (ver));
 }
 
@@ -336,10 +317,6 @@ bool SunVersion::operator == (const SunVersion& ver) const
     return bRet;
 }
 
-SunVersion::operator bool()
-{
-    return m_bValid;
-}
 
 #if OSL_DEBUG_LEVEL >= 2
 SelfTest::SelfTest()
@@ -349,7 +326,7 @@ SelfTest::SelfTest()
     char const * versions[] = {"1.4.0", "1.4.1", "1.0.0", "10.0.0", "10.10.0",
                          "10.2.2", "10.10.0", "10.10.10", "111.0.999",
                          "1.4.1_01", "9.90.99_09", "1.4.1_99",
-                         "1.4.1_00a", 
+                         "1.4.1_00a",
                          "1.4.1-ea", "1.4.1-beta", "1.4.1-rc1",
                          "1.5.0_01-ea", "1.5.0_01-rc2"};
     char const * badVersions[] = {".4.0", "..1", "", "10.0", "10.10.0.", "10.10.0-", "10.10.0.",
@@ -366,16 +343,16 @@ SelfTest::SelfTest()
     int numOrdered = sizeof (orderedVer) / sizeof(char*);
     //parsing test (positive)
     for (int i = 0; i < num; i++)
-	{
+    {
         SunVersion ver(versions[i]);
         if ( ! ver)
         {
             bRet = false;
             break;
-        }            
-	}
+        }
+    }
     OSL_ENSURE(bRet, "SunVersion selftest failed");
-	//Parsing test (negative)    
+    //Parsing test (negative)
     for ( int i = 0; i < numBad; i++)
     {
         SunVersion ver(badVersions[i]);
@@ -407,7 +384,7 @@ SelfTest::SelfTest()
                 {
                     bRet = false;
                     break;
-                }      
+                }
             }
             else if ( i == j)
             {
@@ -432,10 +409,12 @@ SelfTest::SelfTest()
             break;
     }
     if (bRet)
-        JFW_TRACE2("[Java framework] sunjavaplugin: Testing class SunVersion succeeded.\n");
+        JFW_TRACE2("Testing class SunVersion succeeded.");
     else
         OSL_ENSURE(bRet, "[Java framework] sunjavaplugin: SunVersion self test failed.\n");
 }
 #endif
 
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
