@@ -1,44 +1,37 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
+#ifndef INCLUDED_LINGUCOMPONENT_SOURCE_SPELLCHECK_SPELL_SSPELLIMP_HXX
+#define INCLUDED_LINGUCOMPONENT_SOURCE_SPELLCHECK_SPELL_SSPELLIMP_HXX
 
-
-#ifndef _LINGU2_SPELLIMP_HXX_
-#define _LINGU2_SPELLIMP_HXX_
-
-#include <uno/lbnames.h>			// CPPU_CURRENT_LANGUAGE_BINDING_NAME macro, which specify the environment type
-#include <cppuhelper/implbase1.hxx>	// helper for implementations
+#include <cppuhelper/implbase1.hxx>
 #if defined USE_JAVA && defined MACOSX
-#include <cppuhelper/implbase7.hxx>	// helper for implementations
+#include <cppuhelper/implbase7.hxx>
 #else	// USE_JAVA && MACOSX
-#include <cppuhelper/implbase6.hxx>	// helper for implementations
+#include <cppuhelper/implbase6.hxx>
 #endif	// USE_JAVA && MACOSX
 #include <com/sun/star/lang/XComponent.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
@@ -49,7 +42,6 @@
 #include <com/sun/star/linguistic2/XSpellChecker.hpp>
 #include <com/sun/star/linguistic2/XSearchableDictionaryList.hpp>
 #include <com/sun/star/linguistic2/XLinguServiceEventBroadcaster.hpp>
-#include <tools/table.hxx>
 
 #include <linguistic/misc.hxx>
 #include <linguistic/lngprophelp.hxx>
@@ -65,104 +57,99 @@
  
 #endif	// USE_JAVA && MACOSX
 
-using namespace ::rtl;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::linguistic2;
 
-
-///////////////////////////////////////////////////////////////////////////
-
+class Hunspell;
 
 class SpellChecker :
 #if defined USE_JAVA && defined MACOSX
-	public cppu::WeakImplHelper7
+    public cppu::WeakImplHelper7
 #else	// USE_JAVA && MACOSX
-	public cppu::WeakImplHelper6
+    public cppu::WeakImplHelper6
 #endif	// USE_JAVA && MACOSX
-	<
-		XSpellChecker,
-		XLinguServiceEventBroadcaster,
-		XInitialization,
-		XComponent,
-		XServiceInfo,
-		XServiceDisplayName
+    <
+        XSpellChecker,
+        XLinguServiceEventBroadcaster,
+        XInitialization,
+        XComponent,
+        XServiceInfo,
+        XServiceDisplayName
 #if defined USE_JAVA && defined MACOSX
-		, XProofreader
+        , XProofreader
 #endif	// USE_JAVA && MACOSX
-	>
+    >
 {
-	Sequence< Locale >                 aSuppLocales;
+    Sequence< Locale >                 aSuppLocales;
     Hunspell **                        aDicts;
     rtl_TextEncoding *                 aDEncs;
     Locale *                           aDLocs;
     OUString *                         aDNames;
     sal_Int32                          numdict;
 
+    ::cppu::OInterfaceContainerHelper       aEvtListeners;
+    linguistic::PropertyHelper_Spelling*    pPropHelper;
+    bool                                    bDisposing;
 #if defined USE_JAVA && defined MACOSX
-	CFArrayRef								maLocales;
-	::std::map< ::rtl::OUString, CFStringRef >	maPrimaryNativeLocaleMap;
-	::std::map< ::rtl::OUString, CFStringRef >	maSecondaryNativeLocaleMap;
+    CFArrayRef                              maLocales;
+    ::std::map< OUString, CFStringRef >     maPrimaryNativeLocaleMap;
+    ::std::map< OUString, CFStringRef >     maSecondaryNativeLocaleMap;
 #endif	// USE_JAVA && MACOSX
-	::cppu::OInterfaceContainerHelper		aEvtListeners;
-	Reference< XPropertyChangeListener >	xPropHelper;
-    linguistic::PropertyHelper_Spell *      pPropHelper;
-	sal_Bool									bDisposing;
 
-	// disallow copy-constructor and assignment-operator for now
-	SpellChecker(const SpellChecker &);
-	SpellChecker & operator = (const SpellChecker &);
+    // disallow copy-constructor and assignment-operator for now
+    SpellChecker(const SpellChecker &);
+    SpellChecker & operator = (const SpellChecker &);
 
-    linguistic::PropertyHelper_Spell &  GetPropHelper_Impl();
-    linguistic::PropertyHelper_Spell &  GetPropHelper()
-	{
-		return pPropHelper ? *pPropHelper : GetPropHelper_Impl();
-	}
+    linguistic::PropertyHelper_Spelling&  GetPropHelper_Impl();
+    linguistic::PropertyHelper_Spelling&  GetPropHelper()
+    {
+        return pPropHelper ? *pPropHelper : GetPropHelper_Impl();
+    }
 
-	sal_Int16	GetSpellFailure( const OUString &rWord, const Locale &rLocale );
+    sal_Int16   GetSpellFailure( const OUString &rWord, const Locale &rLocale );
     Reference< XSpellAlternatives > GetProposals( const OUString &rWord, const Locale &rLocale );
 
 public:
-	SpellChecker();
-	virtual ~SpellChecker();
+    SpellChecker();
+    virtual ~SpellChecker();
 
-	// XSupportedLocales (for XSpellChecker)
-    virtual Sequence< Locale > SAL_CALL getLocales() throw(RuntimeException);
-    virtual sal_Bool SAL_CALL hasLocale( const Locale& rLocale ) throw(RuntimeException);
+    // XSupportedLocales (for XSpellChecker)
+    virtual Sequence< Locale > SAL_CALL getLocales() throw(RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual sal_Bool SAL_CALL hasLocale( const Locale& rLocale ) throw(RuntimeException, std::exception) SAL_OVERRIDE;
 
-	// XSpellChecker
-    virtual sal_Bool SAL_CALL isValid( const OUString& rWord, const Locale& rLocale, const PropertyValues& rProperties ) throw(IllegalArgumentException, RuntimeException);
-    virtual Reference< XSpellAlternatives > SAL_CALL spell( const OUString& rWord, const Locale& rLocale, const PropertyValues& rProperties ) throw(IllegalArgumentException, RuntimeException);
+    // XSpellChecker
+    virtual sal_Bool SAL_CALL isValid( const OUString& rWord, const Locale& rLocale, const PropertyValues& rProperties ) throw(IllegalArgumentException, RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual Reference< XSpellAlternatives > SAL_CALL spell( const OUString& rWord, const Locale& rLocale, const PropertyValues& rProperties ) throw(IllegalArgumentException, RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XLinguServiceEventBroadcaster
-    virtual sal_Bool SAL_CALL addLinguServiceEventListener( const Reference< XLinguServiceEventListener >& rxLstnr ) throw(RuntimeException);
-    virtual sal_Bool SAL_CALL removeLinguServiceEventListener( const Reference< XLinguServiceEventListener >& rxLstnr ) throw(RuntimeException);
-	
-	// XServiceDisplayName
-    virtual OUString SAL_CALL getServiceDisplayName( const Locale& rLocale ) throw(RuntimeException);
+    virtual sal_Bool SAL_CALL addLinguServiceEventListener( const Reference< XLinguServiceEventListener >& rxLstnr ) throw(RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual sal_Bool SAL_CALL removeLinguServiceEventListener( const Reference< XLinguServiceEventListener >& rxLstnr ) throw(RuntimeException, std::exception) SAL_OVERRIDE;
 
-	// XInitialization
-    virtual void SAL_CALL initialize( const Sequence< Any >& rArguments ) throw(Exception, RuntimeException);
+    // XServiceDisplayName
+    virtual OUString SAL_CALL getServiceDisplayName( const Locale& rLocale ) throw(RuntimeException, std::exception) SAL_OVERRIDE;
 
-	// XComponent
-    virtual void SAL_CALL dispose() throw(RuntimeException);
-    virtual void SAL_CALL addEventListener( const Reference< XEventListener >& rxListener ) throw(RuntimeException);
-    virtual void SAL_CALL removeEventListener( const Reference< XEventListener >& rxListener ) throw(RuntimeException);
+    // XInitialization
+    virtual void SAL_CALL initialize( const Sequence< Any >& rArguments ) throw(Exception, RuntimeException, std::exception) SAL_OVERRIDE;
 
-	// XServiceInfo
-    virtual OUString SAL_CALL getImplementationName() throw(RuntimeException);
-    virtual sal_Bool SAL_CALL supportsService( const OUString& rServiceName ) throw(RuntimeException);
-    virtual Sequence< OUString > SAL_CALL getSupportedServiceNames() throw(RuntimeException);
+    // XComponent
+    virtual void SAL_CALL dispose() throw(RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL addEventListener( const Reference< XEventListener >& rxListener ) throw(RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL removeEventListener( const Reference< XEventListener >& rxListener ) throw(RuntimeException, std::exception) SAL_OVERRIDE;
+
+    // XServiceInfo
+    virtual OUString SAL_CALL getImplementationName() throw(RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual sal_Bool SAL_CALL supportsService( const OUString& rServiceName ) throw(RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual Sequence< OUString > SAL_CALL getSupportedServiceNames() throw(RuntimeException, std::exception) SAL_OVERRIDE;
 
 #if defined USE_JAVA && defined MACOSX
-	// XProofreader
-	virtual sal_Bool SAL_CALL isSpellChecker() throw(RuntimeException);
-	virtual ProofreadingResult SAL_CALL doProofreading( const OUString& aDocumentIdentifier, const OUString& aText, const Locale& aLocale, sal_Int32 nStartOfSentencePosition, sal_Int32 nSuggestedBehindEndOfSentencePosition, const Sequence< PropertyValue >& aProperties ) throw (IllegalArgumentException, RuntimeException);
-	virtual void SAL_CALL ignoreRule( const OUString& aRuleIdentifier, const Locale& aLocale ) throw (IllegalArgumentException, RuntimeException);
-	virtual void SAL_CALL resetIgnoreRules() throw(RuntimeException);
+    // XProofreader
+    virtual sal_Bool SAL_CALL isSpellChecker() throw(RuntimeException) SAL_OVERRIDE;
+    virtual ProofreadingResult SAL_CALL doProofreading( const OUString& aDocumentIdentifier, const OUString& aText, const Locale& aLocale, sal_Int32 nStartOfSentencePosition, sal_Int32 nSuggestedBehindEndOfSentencePosition, const Sequence< PropertyValue >& aProperties ) throw (IllegalArgumentException, RuntimeException) SAL_OVERRIDE;
+    virtual void SAL_CALL ignoreRule( const OUString& aRuleIdentifier, const Locale& aLocale ) throw (IllegalArgumentException, RuntimeException) SAL_OVERRIDE;
+    virtual void SAL_CALL resetIgnoreRules() throw(RuntimeException) SAL_OVERRIDE;
 #endif	// USE_JAVA && MACOSX
-
 
     static inline OUString  getImplementationName_Static() throw();
     static Sequence< OUString > getSupportedServiceNames_Static() throw();
@@ -170,11 +157,13 @@ public:
 
 inline OUString SpellChecker::getImplementationName_Static() throw()
 {
-	return A2OU( "org.openoffice.lingu.MySpellSpellChecker" );
+    return OUString( "org.openoffice.lingu.MySpellSpellChecker" );
 }
 
-
-///////////////////////////////////////////////////////////////////////////
+void * SAL_CALL SpellChecker_getFactory(
+    char const * pImplName, css::lang::XMultiServiceFactory * pServiceManager,
+    void *);
 
 #endif
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -39,13 +39,8 @@
 
 #include "sspellimp_cocoa.h"
 
-#ifndef BOOL
-#define BOOL MacOSBOOL
-#endif
-
 using namespace ::com::sun::star::linguistic2;
 using namespace ::com::sun::star::text;
-using namespace ::rtl;
 
 static OUString NSStringToOUString( NSString *pString )
 {
