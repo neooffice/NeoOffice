@@ -1,37 +1,31 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-#ifndef _LINGUISTIC_GRAMMARCHECKINGITERATOR_HXX_
-#define _LINGUISTIC_GRAMMARCHECKINGITERATOR_HXX_
+#ifndef INCLUDED_LINGUISTIC_SOURCE_GCITERATOR_HXX
+#define INCLUDED_LINGUISTIC_SOURCE_GCITERATOR_HXX
 
 #include <com/sun/star/i18n/XBreakIterator.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
@@ -47,6 +41,7 @@
 #include <cppuhelper/weakref.hxx>
 #include <osl/mutex.hxx>
 #include <osl/conditn.hxx>
+#include <osl/thread.h>
 #include <rtl/instance.hxx>
 
 #include <map>
@@ -58,7 +53,6 @@
 #include <vcl/timer.hxx>
 #endif	// USE_JAVA
 
-//////////////////////////////////////////////////////////////////////
 
 
 struct FPEntry
@@ -70,24 +64,23 @@ struct FPEntry
     ::com::sun::star::uno::WeakReference< ::com::sun::star::text::XFlatParagraph > m_xPara;
 
     // document ID to identify different documents
-    ::rtl::OUString	m_aDocId;
+    OUString m_aDocId;
 
     // the starting position to be checked
-    sal_Int32     	m_nStartIndex;
+    sal_Int32       m_nStartIndex;
 
     // the flag to identify whether the document does automatical grammar checking
-    sal_Bool      	m_bAutomatic;
+    bool        m_bAutomatic;
 
-    FPEntry() 
+    FPEntry()
         : m_aDocId()
         , m_nStartIndex( 0 )
-        , m_bAutomatic( 0 )
+        , m_bAutomatic( false )
     {
     }
 };
 
 
-///////////////////////////////////////////////////////////////////////////
 
 
 class GrammarCheckingIterator:
@@ -101,73 +94,65 @@ class GrammarCheckingIterator:
     >,
     public LinguDispatcher
 {
-    com::sun::star::uno::Reference< com::sun::star::lang::XMultiServiceFactory >    m_xMSF;
-
-
-	//the queue is keeping track of all senteces to be checked
-	//every element of this queue is a FlatParagraphEntry struct-object
+    //the queue is keeping track of all senteces to be checked
+    //every element of this queue is a FlatParagraphEntry struct-object
     typedef std::deque< FPEntry > FPQueue_t;
 
     // queue for entries to be processed
     FPQueue_t       m_aFPEntriesQueue;
 
     // the flag to end the endless loop
-    sal_Bool        m_bEnd;
+    bool        m_bEnd;
 
     // Note that it must be the pointer and not the uno-reference to check if it is the same implementation object
-    typedef std::map< XComponent *, ::rtl::OUString > DocMap_t;
+    typedef std::map< XComponent *, OUString > DocMap_t;
     DocMap_t        m_aDocIdMap;
 
-    // parameter ::rtl::OUString --> implementation name
-    // parameter ::com::sun::star::uno::Sequence< ::com::sun::star::lang::Locale > --> list of locales supported by service
-//    typedef std::map< ::rtl::OUString, ::com::sun::star::uno::Sequence< ::com::sun::star::lang::Locale > > GCLocales_t;
-//    GCLocales_t     m_aGCLocalesByService;
 
     // language -> implname mapping
-    typedef std::map< LanguageType, ::rtl::OUString > GCImplNames_t;
+    typedef std::map< LanguageType, OUString > GCImplNames_t;
     GCImplNames_t   m_aGCImplNamesByLang;
-    
+
     // implname -> UNO reference mapping
-    typedef std::map< ::rtl::OUString, ::com::sun::star::uno::Reference< ::com::sun::star::linguistic2::XProofreader > > GCReferences_t;
+    typedef std::map< OUString, ::com::sun::star::uno::Reference< ::com::sun::star::linguistic2::XProofreader > > GCReferences_t;
     GCReferences_t  m_aGCReferencesByService;
 
-    ::rtl::OUString m_aCurCheckedDocId;
-    sal_Bool        m_bGCServicesChecked;
+    OUString m_aCurCheckedDocId;
+    bool        m_bGCServicesChecked;
     sal_Int32       m_nDocIdCounter;
     sal_Int32       m_nLastEndOfSentencePos;
 #ifdef USE_JAVA
     AutoTimer       m_aDequeueAndCheckTimer;
 #else	// USE_JAVA
     osl::Condition  m_aWakeUpThread;
-    osl::Condition  m_aRequestEndThread;
+    oslThread       m_thread;
 #endif	// USE_JAVA
-    
+
     //! beware of initilization order !
     struct MyMutex : public rtl::Static< osl::Mutex, MyMutex > {};
-	//
     cppu::OInterfaceContainerHelper     m_aEventListeners;
     cppu::OInterfaceContainerHelper     m_aNotifyListeners;
-    
+
     ::com::sun::star::uno::Reference< ::com::sun::star::i18n::XBreakIterator > m_xBreakIterator;
     mutable ::com::sun::star::uno::Reference< ::com::sun::star::util::XChangesBatch >  m_xUpdateAccess;
 
+    void TerminateThread();
+
     sal_Int32 NextDocId();
-    ::rtl::OUString GetOrCreateDocId( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XComponent > &xComp );
+    OUString GetOrCreateDocId( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XComponent > &xComp );
 
     void AddEntry(
             ::com::sun::star::uno::WeakReference< ::com::sun::star::text::XFlatParagraphIterator > xFlatParaIterator,
             ::com::sun::star::uno::WeakReference< ::com::sun::star::text::XFlatParagraph > xFlatPara,
-            const ::rtl::OUString &rDocId, sal_Int32 nStartIndex, sal_Bool bAutomatic );
+            const OUString &rDocId, sal_Int32 nStartIndex, bool bAutomatic );
 
-    void ProcessResult( const ::com::sun::star::linguistic2::ProofreadingResult &rRes, 
+    void ProcessResult( const ::com::sun::star::linguistic2::ProofreadingResult &rRes,
             const ::com::sun::star::uno::Reference< ::com::sun::star::text::XFlatParagraphIterator > &rxFlatParagraphIterator,
             bool bIsAutomaticChecking );
 
-    sal_Int32 GetSuggestedEndOfSentence( const ::rtl::OUString &rText, sal_Int32 nSentenceStartPos, const ::com::sun::star::lang::Locale &rLocale );
+    sal_Int32 GetSuggestedEndOfSentence( const OUString &rText, sal_Int32 nSentenceStartPos, const ::com::sun::star::lang::Locale &rLocale );
 
     void GetConfiguredGCSvcs_Impl();
-//    void GetMatchingGCSvcs_Impl();
-//    void GetAvailableGCSvcs_Impl();
     ::com::sun::star::uno::Reference< ::com::sun::star::linguistic2::XProofreader > GetGrammarChecker( const ::com::sun::star::lang::Locale & rLocale );
 
     ::com::sun::star::uno::Reference< ::com::sun::star::util::XChangesBatch >   GetUpdateAccess() const;
@@ -184,43 +169,43 @@ public:
     void DequeueAndCheck();
 #endif	// USE_JAVA
 
-    explicit GrammarCheckingIterator( const com::sun::star::uno::Reference< com::sun::star::lang::XMultiServiceFactory > & rxMgr );
+    explicit GrammarCheckingIterator();
     virtual ~GrammarCheckingIterator();
 
     // XProofreadingIterator
-    virtual void SAL_CALL startProofreading( const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >& xDocument, const ::com::sun::star::uno::Reference< ::com::sun::star::text::XFlatParagraphIteratorProvider >& xIteratorProvider ) throw (::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException);
-    virtual ::com::sun::star::linguistic2::ProofreadingResult SAL_CALL checkSentenceAtPosition( const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >& xDocument, const ::com::sun::star::uno::Reference< ::com::sun::star::text::XFlatParagraph >& xFlatParagraph, const ::rtl::OUString& aText, const ::com::sun::star::lang::Locale& aLocale, ::sal_Int32 nStartOfSentencePosition, ::sal_Int32 nSuggestedBehindEndOfSentencePosition, ::sal_Int32 nErrorPositionInParagraph ) throw (::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException);
-    virtual void SAL_CALL resetIgnoreRules(  ) throw (::com::sun::star::uno::RuntimeException);
-    virtual ::sal_Bool SAL_CALL isProofreading( const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >& xDocument ) throw (::com::sun::star::uno::RuntimeException);
+    virtual void SAL_CALL startProofreading( const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >& xDocument, const ::com::sun::star::uno::Reference< ::com::sun::star::text::XFlatParagraphIteratorProvider >& xIteratorProvider ) throw (::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual ::com::sun::star::linguistic2::ProofreadingResult SAL_CALL checkSentenceAtPosition( const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >& xDocument, const ::com::sun::star::uno::Reference< ::com::sun::star::text::XFlatParagraph >& xFlatParagraph, const OUString& aText, const ::com::sun::star::lang::Locale& aLocale, ::sal_Int32 nStartOfSentencePosition, ::sal_Int32 nSuggestedBehindEndOfSentencePosition, ::sal_Int32 nErrorPositionInParagraph ) throw (::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL resetIgnoreRules(  ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual sal_Bool SAL_CALL isProofreading( const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >& xDocument ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
-    // XLinguServiceEventListener 
-    virtual void SAL_CALL processLinguServiceEvent( const ::com::sun::star::linguistic2::LinguServiceEvent& aLngSvcEvent ) throw (::com::sun::star::uno::RuntimeException);
+    // XLinguServiceEventListener
+    virtual void SAL_CALL processLinguServiceEvent( const ::com::sun::star::linguistic2::LinguServiceEvent& aLngSvcEvent ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
-    // XLinguServiceEventBroadcaster 
-    virtual ::sal_Bool SAL_CALL addLinguServiceEventListener( const ::com::sun::star::uno::Reference< ::com::sun::star::linguistic2::XLinguServiceEventListener >& xLstnr ) throw (::com::sun::star::uno::RuntimeException);
-    virtual ::sal_Bool SAL_CALL removeLinguServiceEventListener( const ::com::sun::star::uno::Reference< ::com::sun::star::linguistic2::XLinguServiceEventListener >& xLstnr ) throw (::com::sun::star::uno::RuntimeException);
+    // XLinguServiceEventBroadcaster
+    virtual sal_Bool SAL_CALL addLinguServiceEventListener( const ::com::sun::star::uno::Reference< ::com::sun::star::linguistic2::XLinguServiceEventListener >& xLstnr ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual sal_Bool SAL_CALL removeLinguServiceEventListener( const ::com::sun::star::uno::Reference< ::com::sun::star::linguistic2::XLinguServiceEventListener >& xLstnr ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XComponent
-    virtual void SAL_CALL dispose(  ) throw (::com::sun::star::uno::RuntimeException);
-    virtual void SAL_CALL addEventListener( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XEventListener >& xListener ) throw (::com::sun::star::uno::RuntimeException);
-    virtual void SAL_CALL removeEventListener( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XEventListener >& aListener ) throw (::com::sun::star::uno::RuntimeException);
+    virtual void SAL_CALL dispose(  ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL addEventListener( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XEventListener >& xListener ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL removeEventListener( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XEventListener >& aListener ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XEventListener
-    virtual void SAL_CALL disposing( const ::com::sun::star::lang::EventObject& Source ) throw (::com::sun::star::uno::RuntimeException);
+    virtual void SAL_CALL disposing( const ::com::sun::star::lang::EventObject& Source ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XServiceInfo
-    virtual ::rtl::OUString SAL_CALL getImplementationName(  ) throw (::com::sun::star::uno::RuntimeException);
-    virtual sal_Bool SAL_CALL supportsService( const ::rtl::OUString& ServiceName ) throw (::com::sun::star::uno::RuntimeException);
-    virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getSupportedServiceNames(  ) throw (::com::sun::star::uno::RuntimeException);
+    virtual OUString SAL_CALL getImplementationName(  ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual sal_Bool SAL_CALL supportsService( const OUString& ServiceName ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual ::com::sun::star::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames(  ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
     // LinguDispatcher
-    virtual void SetServiceList( const ::com::sun::star::lang::Locale &rLocale, const ::com::sun::star::uno::Sequence< rtl::OUString > &rSvcImplNames );
-    virtual ::com::sun::star::uno::Sequence< rtl::OUString > GetServiceList( const ::com::sun::star::lang::Locale &rLocale ) const;
-    virtual DspType GetDspType() const;
+    virtual void SetServiceList( const ::com::sun::star::lang::Locale &rLocale, const ::com::sun::star::uno::Sequence< OUString > &rSvcImplNames ) SAL_OVERRIDE;
+    virtual ::com::sun::star::uno::Sequence< OUString > GetServiceList( const ::com::sun::star::lang::Locale &rLocale ) const SAL_OVERRIDE;
+    virtual DspType GetDspType() const SAL_OVERRIDE;
 };
 
 
-///////////////////////////////////////////////////////////////////////////
 
 #endif
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
