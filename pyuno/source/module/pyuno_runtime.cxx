@@ -1,37 +1,35 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; eval:(c-set-style "bsd"); tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
+#include <config_features.h>
+#include <config_folders.h>
 
 #include "pyuno_impl.hxx"
 
+#include <osl/diagnose.h>
 #include <osl/thread.h>
 #include <osl/module.h>
 #include <osl/process.h>
@@ -42,19 +40,17 @@
 
 #include <typelib/typedescription.hxx>
 
+#include <com/sun/star/lang/WrappedTargetRuntimeException.hpp>
 #include <com/sun/star/beans/XMaterialHolder.hpp>
-
-#include <vector>
+#include <com/sun/star/beans/theIntrospection.hpp>
+#include <com/sun/star/script/Converter.hpp>
+#include <com/sun/star/script/InvocationAdapterFactory.hpp>
+#include <com/sun/star/reflection/theCoreReflection.hpp>
 
 #ifdef USE_JAVA
 #include <tools/solarmutex.hxx>
 #endif	// USE_JAVA
 
-using rtl::OUString;
-using rtl::OUStringToOString;
-using rtl::OUStringBuffer;
-using rtl::OStringBuffer;
-using rtl::OString;
 
 using com::sun::star::uno::Reference;
 using com::sun::star::uno::XInterface;
@@ -63,36 +59,39 @@ using com::sun::star::uno::TypeDescription;
 using com::sun::star::uno::Sequence;
 using com::sun::star::uno::Type;
 using com::sun::star::uno::UNO_QUERY;
+using com::sun::star::uno::Exception;
 using com::sun::star::uno::RuntimeException;
 using com::sun::star::uno::XComponentContext;
+using com::sun::star::lang::WrappedTargetRuntimeException;
 using com::sun::star::lang::XSingleServiceFactory;
 using com::sun::star::lang::XUnoTunnel;
+using com::sun::star::reflection::theCoreReflection;
 using com::sun::star::reflection::XIdlReflection;
+using com::sun::star::reflection::InvocationTargetException;
+using com::sun::star::script::Converter;
 using com::sun::star::script::XTypeConverter;
 using com::sun::star::script::XInvocationAdapterFactory2;
 using com::sun::star::script::XInvocation;
 using com::sun::star::beans::XMaterialHolder;
 using com::sun::star::beans::XIntrospection;
+using com::sun::star::beans::theIntrospection;
+
+#include <vector>
 
 namespace pyuno
 {
-#define USTR_ASCII(x) OUString( RTL_CONSTASCII_USTRINGPARAM( x ) )
 
 static PyTypeObject RuntimeImpl_Type =
 {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
-    const_cast< char * >("pyuno_runtime"),
+    PyVarObject_HEAD_INIT (&PyType_Type, 0)
+    "pyuno_runtime",
     sizeof (RuntimeImpl),
     0,
     (destructor) RuntimeImpl::del,
     (printfunc) 0,
     (getattrfunc) 0,
     (setattrfunc) 0,
-#if PY_MAJOR_VERSION >= 3
-    0, 
-#else
-    (cmpfunc) 0,
-#endif
+    0,
     (reprfunc) 0,
     0,
     0,
@@ -133,6 +132,9 @@ static PyTypeObject RuntimeImpl_Type =
 #if PY_VERSION_HEX >= 0x02060000
     , 0
 #endif
+#if PY_VERSION_HEX >= 0x03040000
+    , 0
+#endif
 };
 
 /*----------------------------------------------------------------------
@@ -144,39 +146,45 @@ static void getRuntimeImpl( PyRef & globalDict, PyRef &runtimeImpl )
     PyThreadState * state = PyThreadState_Get();
     if( ! state )
     {
-        throw RuntimeException( OUString( RTL_CONSTASCII_USTRINGPARAM(
-            "python global interpreter must be held (thread must be attached)" )),
-                                Reference< XInterface > () );
+        throw RuntimeException( "python global interpreter must be held (thread must be attached)" );
     }
 
-    globalDict = PyRef( PyModule_GetDict(PyImport_AddModule(const_cast< char * >("__main__"))));
+    PyObject* pModule = PyImport_AddModule("__main__");
+
+    if (!pModule)
+    {
+        throw RuntimeException("can't import __main__ module");
+    }
+
+    globalDict = PyRef( PyModule_GetDict(pModule));
 
     if( ! globalDict.is() ) // FATAL !
     {
-        throw RuntimeException( OUString( RTL_CONSTASCII_USTRINGPARAM(
-            "can't find __main__ module" )), Reference< XInterface > ());
+        throw RuntimeException("can't find __main__ module");
     }
     runtimeImpl = PyDict_GetItemString( globalDict.get() , "pyuno_runtime" );
 }
 
 static PyRef importUnoModule( ) throw ( RuntimeException )
 {
-    PyRef globalDict = PyRef( PyModule_GetDict(PyImport_AddModule(const_cast< char * >("__main__"))));
     // import the uno module
-    PyRef module( PyImport_ImportModule( const_cast< char * >("uno") ), SAL_NO_ACQUIRE );
+    PyRef module( PyImport_ImportModule( "uno" ), SAL_NO_ACQUIRE, NOT_NULL );
     if( PyErr_Occurred() )
     {
         PyRef excType, excValue, excTraceback;
         PyErr_Fetch( (PyObject **)&excType, (PyObject**)&excValue,(PyObject**)&excTraceback);
-        PyRef str( PyObject_Repr( excTraceback.get() ), SAL_NO_ACQUIRE );
+        // As of Python 2.7 this gives a rather non-useful "<traceback object at 0xADDRESS>",
+        // but it is the best we can do in the absence of uno._uno_extract_printable_stacktrace
+        // Who knows, a future Python might print something better.
+        PyRef str( PyObject_Str( excTraceback.get() ), SAL_NO_ACQUIRE );
 
         OUStringBuffer buf;
         buf.appendAscii( "python object raised an unknown exception (" );
         PyRef valueRep( PyObject_Repr( excValue.get() ), SAL_NO_ACQUIRE );
-        
-        buf.append( pyString2ustring( valueRep.get() ) ).appendAscii( ", traceback follows\n" );
-        buf.append( pyString2ustring( str.get() ) );
-        throw RuntimeException( buf.makeStringAndClear(), Reference< XInterface > () );
+        buf.appendAscii( PyStr_AsString( valueRep.get())).appendAscii( ", traceback follows\n" );
+        buf.appendAscii( PyStr_AsString( str.get() ) );
+        buf.appendAscii( ")" );
+        throw RuntimeException( buf.makeStringAndClear() );
     }
     PyRef dict( PyModule_GetDict( module.get() ) );
     return dict;
@@ -190,18 +198,21 @@ static void readLoggingConfig( sal_Int32 *pLevel, FILE **ppFile )
     osl_getModuleURLFromFunctionAddress(
         reinterpret_cast< oslGenericFunction >(readLoggingConfig),
         (rtl_uString **) &fileName );
-    fileName = OUString( fileName.getStr(), fileName.lastIndexOf( '/' )+1 );
-    fileName += OUString::createFromAscii(  SAL_CONFIGFILE("pyuno") );
+    fileName = fileName.copy( fileName.lastIndexOf( '/' )+1 );
+#ifdef MACOSX
+    fileName += "../" LIBO_ETC_FOLDER "/";
+#endif
+    fileName += SAL_CONFIGFILE("pyuno" );
     rtl::Bootstrap bootstrapHandle( fileName );
 
     OUString str;
-    if( bootstrapHandle.getFrom( USTR_ASCII( "PYUNO_LOGLEVEL" ), str ) )
+    if( bootstrapHandle.getFrom( "PYUNO_LOGLEVEL", str ) )
     {
-        if( str.equalsAscii( "NONE" ) )
+        if ( str == "NONE" )
             *pLevel = LogLevel::NONE;
-        else if( str.equalsAscii( "CALL" ) )
+        else if ( str == "CALL" )
             *pLevel = LogLevel::CALL;
-        else if( str.equalsAscii( "ARGS" ) )
+        else if ( str == "ARGS" )
             *pLevel = LogLevel::ARGS;
         else
         {
@@ -212,12 +223,12 @@ static void readLoggingConfig( sal_Int32 *pLevel, FILE **ppFile )
     if( *pLevel > LogLevel::NONE )
     {
         *ppFile = stdout;
-        if( bootstrapHandle.getFrom( USTR_ASCII( "PYUNO_LOGTARGET" ), str ) )
+        if( bootstrapHandle.getFrom( "PYUNO_LOGTARGET", str ) )
         {
-            if( str.equalsAscii( "stdout" ) )
-                *ppFile = stdout; 
-            else if( str.equalsAscii( "stderr" ) )
-                *ppFile = stderr; 
+            if ( str == "stdout" )
+                *ppFile = stdout;
+            else if ( str == "stderr" )
+                *ppFile = stderr;
             else
             {
                 oslProcessInfo data;
@@ -227,19 +238,19 @@ static void readLoggingConfig( sal_Int32 *pLevel, FILE **ppFile )
                 osl_getSystemPathFromFileURL( str.pData, &str.pData);
                 OString o = OUStringToOString( str, osl_getThreadTextEncoding() );
                 o += ".";
-                o += OString::valueOf( (sal_Int32)data.Ident );
-                
+                o += OString::number( data.Ident );
+
                 *ppFile = fopen( o.getStr() , "w" );
                 if ( *ppFile )
                 {
                     // do not buffer (useful if e.g. analyzing a crash)
-                    setvbuf( *ppFile, 0, _IONBF, 0 ); 
+                    setvbuf( *ppFile, 0, _IONBF, 0 );
                 }
                 else
                 {
                     fprintf( stderr, "couldn't create file %s\n",
                              OUStringToOString( str, RTL_TEXTENCODING_UTF8 ).getStr() );
-                    
+
                 }
             }
         }
@@ -254,76 +265,39 @@ PyRef stRuntimeImpl::create( const Reference< XComponentContext > &ctx )
 {
     RuntimeImpl *me = PyObject_New (RuntimeImpl, &RuntimeImpl_Type);
     if( ! me )
-        throw RuntimeException(
-            OUString( RTL_CONSTASCII_USTRINGPARAM( "cannot instantiate pyuno::RuntimeImpl" ) ),
-            Reference< XInterface > () );
+        throw RuntimeException( "cannot instantiate pyuno::RuntimeImpl" );
     me->cargo = 0;
     // must use a different struct here, as the PyObject_New
     // makes C++ unusable
     RuntimeCargo *c = new RuntimeCargo();
     readLoggingConfig( &(c->logLevel) , &(c->logFile) );
     log( c, LogLevel::CALL, "Instantiating pyuno bridge" );
-    
-    c->valid = 1;
+
+    c->valid = true;
     c->xContext = ctx;
     c->xInvocation = Reference< XSingleServiceFactory > (
         ctx->getServiceManager()->createInstanceWithContext(
-            OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.script.Invocation" ) ),
+            OUString(  "com.sun.star.script.Invocation"  ),
             ctx ),
         UNO_QUERY );
     if( ! c->xInvocation.is() )
-        throw RuntimeException(
-            OUString( RTL_CONSTASCII_USTRINGPARAM( "pyuno: couldn't instantiate invocation service" ) ),
-            Reference< XInterface > () );
+        throw RuntimeException( "pyuno: couldn't instantiate invocation service" );
 
-    c->xTypeConverter = Reference< XTypeConverter > (
-        ctx->getServiceManager()->createInstanceWithContext(
-            OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.script.Converter" ) ),
-            ctx ),
-        UNO_QUERY );
+    c->xTypeConverter = Converter::create(ctx);
     if( ! c->xTypeConverter.is() )
-        throw RuntimeException(
-            OUString( RTL_CONSTASCII_USTRINGPARAM( "pyuno: couldn't instantiate typeconverter service" )),
-            Reference< XInterface > () );
+        throw RuntimeException( "pyuno: couldn't instantiate typeconverter service" );
 
-    c->xCoreReflection = Reference< XIdlReflection > (
-        ctx->getServiceManager()->createInstanceWithContext(
-            OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.reflection.CoreReflection" ) ),
-            ctx ),
-        UNO_QUERY );
-    if( ! c->xCoreReflection.is() )
-        throw RuntimeException(
-            OUString( RTL_CONSTASCII_USTRINGPARAM( "pyuno: couldn't instantiate corereflection service" )),
-            Reference< XInterface > () );
+    c->xCoreReflection = theCoreReflection::get(ctx);
 
-    c->xAdapterFactory = Reference< XInvocationAdapterFactory2 > (
-        ctx->getServiceManager()->createInstanceWithContext(
-            OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.script.InvocationAdapterFactory" ) ),
-            ctx ),
-        UNO_QUERY );
-    if( ! c->xAdapterFactory.is() )
-        throw RuntimeException(
-            OUString( RTL_CONSTASCII_USTRINGPARAM( "pyuno: couldn't instantiate invocation adapter factory service" )),
-            Reference< XInterface > () );
+    c->xAdapterFactory = css::script::InvocationAdapterFactory::create(ctx);
 
-    c->xIntrospection = Reference< XIntrospection > (
-        ctx->getServiceManager()->createInstanceWithContext(
-            OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.beans.Introspection" ) ),
-            ctx ),
-        UNO_QUERY );
-    if( ! c->xIntrospection.is() )
-        throw RuntimeException(
-            OUString( RTL_CONSTASCII_USTRINGPARAM( "pyuno: couldn't instantiate introspection service" )),
-            Reference< XInterface > () );
-    
-    Any a = ctx->getValueByName(OUString(
-        RTL_CONSTASCII_USTRINGPARAM("/singletons/com.sun.star.reflection.theTypeDescriptionManager" )) );
+    c->xIntrospection = theIntrospection::get(ctx);
+
+    Any a = ctx->getValueByName("/singletons/com.sun.star.reflection.theTypeDescriptionManager");
     a >>= c->xTdMgr;
     if( ! c->xTdMgr.is() )
-        throw RuntimeException(
-            OUString( RTL_CONSTASCII_USTRINGPARAM( "pyuno: couldn't retrieve typedescriptionmanager" )),
-            Reference< XInterface > () );
-            
+        throw RuntimeException( "pyuno: couldn't retrieve typedescriptionmanager" );
+
     me->cargo =c;
     return PyRef( reinterpret_cast< PyObject * > ( me ), SAL_NO_ACQUIRE );
 }
@@ -344,12 +318,10 @@ void Runtime::initialize( const Reference< XComponentContext > & ctx )
     PyRef globalDict, runtime;
     getRuntimeImpl( globalDict , runtime );
     RuntimeImpl *impl = reinterpret_cast< RuntimeImpl * > (runtime.get());
-    
+
     if( runtime.is() && impl->cargo->valid )
     {
-        throw RuntimeException( OUString( RTL_CONSTASCII_USTRINGPARAM(
-            "pyuno runtime has already been initialized before" ) ),
-                                Reference< XInterface > () );
+        throw RuntimeException("pyuno runtime has already been initialized before" );
     }
     PyRef keep( RuntimeImpl::create( ctx ) );
     PyDict_SetItemString( globalDict.get(), "pyuno_runtime" , keep.get() );
@@ -365,23 +337,6 @@ bool Runtime::isInitialized() throw ( RuntimeException )
     return runtime.is() && impl->cargo->valid;
 }
 
-void Runtime::finalize() throw (RuntimeException)
-{
-    PyRef globalDict, runtime;
-    getRuntimeImpl( globalDict , runtime );
-    RuntimeImpl *impl = reinterpret_cast< RuntimeImpl * > (runtime.get());
-    if( !runtime.is() || ! impl->cargo->valid )
-    {
-        throw RuntimeException( OUString( RTL_CONSTASCII_USTRINGPARAM(
-            "pyuno bridge must have been initialized before finalizing" )),
-                                Reference< XInterface > () );
-    }
-    impl->cargo->valid = false;
-    impl->cargo->xInvocation.clear();
-    impl->cargo->xContext.clear();
-    impl->cargo->xTypeConverter.clear();
-}
-
 Runtime::Runtime() throw(  RuntimeException )
     : impl( 0 )
 {
@@ -390,9 +345,8 @@ Runtime::Runtime() throw(  RuntimeException )
     if( ! runtime.is() )
     {
         throw RuntimeException(
-            OUString( RTL_CONSTASCII_USTRINGPARAM("pyuno runtime is not initialized, "
-                                                  "(the pyuno.bootstrap needs to be called before using any uno classes)")),
-            Reference< XInterface > () );
+            "pyuno runtime is not initialized, "
+            "(the pyuno.bootstrap needs to be called before using any uno classes)" );
     }
     impl = reinterpret_cast< RuntimeImpl * > (runtime.get());
     Py_XINCREF( runtime.get() );
@@ -425,82 +379,76 @@ PyRef Runtime::any2PyObject (const Any &a ) const
 {
     if( ! impl->cargo->valid )
     {
-        throw RuntimeException( OUString( RTL_CONSTASCII_USTRINGPARAM(
-            "pyuno runtime must be initialized before calling any2PyObject" )),
-                                Reference< XInterface > () );
+        throw RuntimeException("pyuno runtime must be initialized before calling any2PyObject" );
     }
-    
+
     switch (a.getValueTypeClass ())
     {
     case typelib_TypeClass_VOID:
-	{
+    {
         Py_INCREF (Py_None);
         return PyRef(Py_None);
-	}
+    }
     case typelib_TypeClass_CHAR:
-	{
+    {
         sal_Unicode c = *(sal_Unicode*)a.getValue();
         return PyRef( PyUNO_char_new( c , *this ), SAL_NO_ACQUIRE );
-	}
+    }
     case typelib_TypeClass_BOOLEAN:
-	{
-        sal_Bool b = sal_Bool();
+    {
+        bool b;
         if ((a >>= b) && b)
-            return Py_True; 
+            return Py_True;
         else
             return Py_False;
-	}
+    }
     case typelib_TypeClass_BYTE:
     case typelib_TypeClass_SHORT:
     case typelib_TypeClass_UNSIGNED_SHORT:
     case typelib_TypeClass_LONG:
-	{
+    {
         sal_Int32 l = 0;
         a >>= l;
-#if PY_MAJOR_VERSION >= 3
         return PyRef( PyLong_FromLong (l), SAL_NO_ACQUIRE );
-#else
-        return PyRef( PyInt_FromLong (l), SAL_NO_ACQUIRE );
-#endif
-	}
+    }
     case typelib_TypeClass_UNSIGNED_LONG:
-	{
+    {
         sal_uInt32 l = 0;
         a >>= l;
         return PyRef( PyLong_FromUnsignedLong (l), SAL_NO_ACQUIRE );
-	}
+    }
     case typelib_TypeClass_HYPER:
-	{
+    {
         sal_Int64 l = 0;
         a >>= l;
         return PyRef( PyLong_FromLongLong (l), SAL_NO_ACQUIRE);
-	}
+    }
     case typelib_TypeClass_UNSIGNED_HYPER:
-	{
+    {
         sal_uInt64 l = 0;
         a >>= l;
         return PyRef( PyLong_FromUnsignedLongLong (l), SAL_NO_ACQUIRE);
-	}
+    }
     case typelib_TypeClass_FLOAT:
-	{
+    {
         float f = 0.0;
         a >>= f;
         return PyRef(PyFloat_FromDouble (f), SAL_NO_ACQUIRE);
-	}
+    }
     case typelib_TypeClass_DOUBLE:
-	{
+    {
         double d = 0.0;
         a >>= d;
         return PyRef( PyFloat_FromDouble (d), SAL_NO_ACQUIRE);
-	}
+    }
     case typelib_TypeClass_STRING:
-	{
+    {
         OUString tmp_ostr;
         a >>= tmp_ostr;
         return ustring2PyUnicode( tmp_ostr );
-	}
+    }
     case typelib_TypeClass_TYPE:
-	{
+    {
         Type t;
         a >>= t;
         OString o = OUStringToOString( t.getTypeName(), RTL_TEXTENCODING_ASCII_US );
@@ -508,15 +456,15 @@ PyRef Runtime::any2PyObject (const Any &a ) const
             PyUNO_Type_new (
                 o.getStr(),  (com::sun::star::uno::TypeClass)t.getTypeClass(), *this),
             SAL_NO_ACQUIRE);
-	}
+    }
     case typelib_TypeClass_ANY:
-	{
+    {
         //I don't think this can happen.
         Py_INCREF (Py_None);
         return Py_None;
-	}
+    }
     case typelib_TypeClass_ENUM:
-	{
+    {
         sal_Int32 l = *(sal_Int32 *) a.getValue();
         TypeDescription desc( a.getValueType() );
         if( desc.is() )
@@ -538,14 +486,14 @@ PyRef Runtime::any2PyObject (const Any &a ) const
         buf.appendAscii( "Any carries enum " );
         buf.append( a.getValueType().getTypeName());
         buf.appendAscii( " with invalid value " ).append( l );
-        throw RuntimeException( buf.makeStringAndClear() , Reference< XInterface > ()  );
-	}
+        throw RuntimeException( buf.makeStringAndClear() );
+    }
     case typelib_TypeClass_EXCEPTION:
     case typelib_TypeClass_STRUCT:
     {
         PyRef excClass = getClass( a.getValueType().getTypeName(), *this );
         PyRef value = PyRef( PyUNO_new_UNCHECKED (a, getImpl()->cargo->xInvocation), SAL_NO_ACQUIRE);
-        PyRef argsTuple( PyTuple_New( 1 ) , SAL_NO_ACQUIRE );
+        PyRef argsTuple( PyTuple_New( 1 ) , SAL_NO_ACQUIRE, NOT_NULL );
         PyTuple_SetItem( argsTuple.get() , 0 , value.getAcquired() );
         PyRef ret( PyObject_CallObject( excClass.get() , argsTuple.get() ), SAL_NO_ACQUIRE );
         if( ! ret.is() )
@@ -553,27 +501,27 @@ PyRef Runtime::any2PyObject (const Any &a ) const
             OUStringBuffer buf;
             buf.appendAscii( "Couldn't instantiate python representation of structered UNO type " );
             buf.append( a.getValueType().getTypeName() );
-            throw RuntimeException( buf.makeStringAndClear(), Reference< XInterface > () );
+            throw RuntimeException( buf.makeStringAndClear() );
         }
 
         if( com::sun::star::uno::TypeClass_EXCEPTION == a.getValueTypeClass() )
         {
             // add the message in a standard python way !
-            PyRef args( PyTuple_New( 1 ), SAL_NO_ACQUIRE );
-            
+            PyRef args( PyTuple_New( 1 ), SAL_NO_ACQUIRE, NOT_NULL );
+
             // assuming that the Message is always the first member, wuuuu
             void *pData = (void*)a.getValue();
             OUString message = *(OUString * )pData;
-            PyRef pymsg = USTR_TO_PYSTR( message );
+            PyRef pymsg = ustring2PyString( message );
             PyTuple_SetItem( args.get(), 0 , pymsg.getAcquired() );
             // the exception base functions want to have an "args" tuple,
             // which contains the message
-            PyObject_SetAttrString( ret.get(), const_cast< char * >("args"), args.get() );
+            PyObject_SetAttrString( ret.get(), "args", args.get() );
         }
         return ret;
     }
     case typelib_TypeClass_SEQUENCE:
-	{
+    {
         Sequence<Any> s;
 
         Sequence< sal_Int8 > byteSequence;
@@ -588,9 +536,8 @@ PyRef Runtime::any2PyObject (const Any &a ) const
             Reference< XTypeConverter > tc = getImpl()->cargo->xTypeConverter;
             Reference< XSingleServiceFactory > ssf = getImpl()->cargo->xInvocation;
             tc->convertTo (a, ::getCppuType (&s)) >>= s;
-            PyRef tuple( PyTuple_New (s.getLength()), SAL_NO_ACQUIRE);
+            PyRef tuple( PyTuple_New (s.getLength()), SAL_NO_ACQUIRE, NOT_NULL);
             int i=0;
-            OUString errMsg;
             try
             {
                 for ( i = 0; i < s.getLength (); i++)
@@ -611,39 +558,42 @@ PyRef Runtime::any2PyObject (const Any &a ) const
                 throw;
             }
             return tuple;
-	    }
-	}
+        }
+    }
     case typelib_TypeClass_INTERFACE:
-	{
-        Reference< XUnoTunnel > tunnel;
-        a >>= tunnel;
-        if( tunnel.is() )
+    {
+        // fdo#46678 must unlock GIL because getSomething could acquire locks,
+        // and queryInterface too...
         {
-            sal_Int64 that = tunnel->getSomething( ::pyuno::Adapter::getUnoTunnelImplementationId() );
-            if( that )
-                return ((Adapter*)sal::static_int_cast< sal_IntPtr >(that))->getWrappedObject();
+            PyThreadDetach d;
+
+            Reference<XUnoTunnel> tunnel;
+            a >>= tunnel;
+            if (tunnel.is())
+            {
+                sal_Int64 that = tunnel->getSomething( ::pyuno::Adapter::getUnoTunnelImplementationId() );
+                if( that )
+                    return reinterpret_cast<Adapter*>(that)->getWrappedObject();
+            }
         }
         //This is just like the struct case:
         return PyRef( PyUNO_new (a, getImpl()->cargo->xInvocation), SAL_NO_ACQUIRE );
-	}
-    default:
-	{
-        OUStringBuffer buf;
-        buf.appendAscii( "Unknonwn UNO type class " );
-        buf.append( (sal_Int32 ) a.getValueTypeClass() );
-        throw RuntimeException(buf.makeStringAndClear( ), Reference< XInterface > () );
-	}
     }
-    //We shouldn't be here...
-    Py_INCREF( Py_None );
-    return Py_None;
+    default:
+    {
+        OUStringBuffer buf;
+        buf.appendAscii( "Unknown UNO type class " );
+        buf.append( (sal_Int32 ) a.getValueTypeClass() );
+        throw RuntimeException(buf.makeStringAndClear( ) );
+    }
+    }
 }
 
 static Sequence< Type > invokeGetTypes( const Runtime & r , PyObject * o )
 {
     Sequence< Type > ret;
 
-    PyRef method( PyObject_GetAttrString( o , const_cast< char * >("getTypes") ), SAL_NO_ACQUIRE );
+    PyRef method( PyObject_GetAttrString( o , "getTypes" ), SAL_NO_ACQUIRE );
     raiseInvocationTargetExceptionWhenNeeded( r );
     if( method.is() && PyCallable_Check( method.get() ) )
     {
@@ -660,10 +610,26 @@ static Sequence< Type > invokeGetTypes( const Runtime & r , PyObject * o )
                 Any a = r.pyObject2Any(PyTuple_GetItem(types.get(),i));
                 a >>= ret[i];
             }
-            ret[size] = getCppuType( (Reference< com::sun::star::lang::XUnoTunnel> *) 0 );
+            ret[size] = cppu::UnoType<com::sun::star::lang::XUnoTunnel>::get();
         }
     }
     return ret;
+}
+
+static OUString
+lcl_ExceptionMessage(PyObject *const o, OUString const*const pWrapped)
+{
+    OUStringBuffer buf;
+    buf.appendAscii("Couldn't convert ");
+    PyRef reprString( PyObject_Str(o), SAL_NO_ACQUIRE );
+    buf.appendAscii( PyStr_AsString(reprString.get()) );
+    buf.appendAscii(" to a UNO type");
+    if (pWrapped)
+    {
+        buf.appendAscii("; caught exception: ");
+        buf.append(*pWrapped);
+    }
+    return buf.makeStringAndClear();
 }
 
 Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) const
@@ -671,9 +637,7 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
 {
     if( ! impl->cargo->valid )
     {
-        throw RuntimeException( OUString( RTL_CONSTASCII_USTRINGPARAM(
-            "pyuno runtime must be initialized before calling any2PyObject" )),
-                                Reference< XInterface > () );
+        throw RuntimeException("pyuno runtime must be initialized before calling any2PyObject" );
     }
 
     Any a;
@@ -682,21 +646,8 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
     {
 
     }
-#if PY_MAJOR_VERSION >= 3	// Python 3 has no PyInt
-    else if (PyBool_Check(o))
-    {
-        if( o == Py_True )
-        {
-            sal_Bool b = sal_True;
-            a = Any( &b, getBooleanCppuType() );
-        }
-        else
-        {
-            sal_Bool b = sal_False;
-            a = Any( &b, getBooleanCppuType() );
-        }
-    }
-#else
+    // In Python 3, there is no PyInt type.
+#if PY_MAJOR_VERSION < 3
     else if (PyInt_Check (o))
     {
         if( o == Py_True )
@@ -711,7 +662,7 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
         }
         else
         {
-            sal_Int32 l = (sal_Int32) PyInt_AsLong( o );
+            sal_Int32 l = (sal_Int32) PyLong_AsLong( o );
             if( l < 128 && l >= -128 )
             {
                 sal_Int8 b = (sal_Int8 ) l;
@@ -728,9 +679,24 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
             }
         }
     }
-#endif				// Python 3 has no PyInt
+#endif /* PY_MAJOR_VERSION < 3 */
     else if (PyLong_Check (o))
     {
+#if PY_MAJOR_VERSION >= 3
+        // Convert the Python 3 booleans that are actually of type PyLong.
+        if(o == Py_True)
+        {
+            sal_Bool b = sal_True;
+            a = Any(&b, getBooleanCppuType());
+        }
+        else if(o == Py_False)
+        {
+            sal_Bool b = sal_False;
+            a = Any(&b, getBooleanCppuType());
+        }
+        else
+        {
+#endif /* PY_MAJOR_VERSION >= 3 */
         sal_Int64 l = (sal_Int64)PyLong_AsLong (o);
         if( l < 128 && l >= -128 )
         {
@@ -752,18 +718,19 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
         {
             a <<= l;
         }
+#if PY_MAJOR_VERSION >= 3
+        }
+#endif
     }
     else if (PyFloat_Check (o))
     {
         double d = PyFloat_AsDouble (o);
         a <<= d;
     }
-#if PY_MAJOR_VERSION < 3
-    else if (PyBytes_Check (o))
-	a <<= pyString2ustring(o);
-#endif
-    else if( PyUnicode_Check( o ) )
-	a <<= pyString2ustring(o);
+    else if (PyStrBytes_Check(o) || PyUnicode_Check(o))
+    {
+        a <<= pyString2ustring(o);
+    }
     else if (PyTuple_Check (o))
     {
         Sequence<Any> s (PyTuple_Size (o));
@@ -776,24 +743,17 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
     else
     {
         Runtime runtime;
-        // should be removed, in case ByteSequence gets derived from String 
+        // should be removed, in case ByteSequence gets derived from String
         if( PyObject_IsInstance( o, getByteSequenceClass( runtime ).get() ) )
         {
-            PyRef str(PyObject_GetAttrString( o , const_cast< char * >("value") ),SAL_NO_ACQUIRE);
+            PyRef str(PyObject_GetAttrString( o , "value" ),SAL_NO_ACQUIRE);
             Sequence< sal_Int8 > seq;
-            if( PyBytes_Check( str.get() ) )
+            if( PyStrBytes_Check( str.get() ) )
             {
                 seq = Sequence<sal_Int8 > (
-                    (sal_Int8*) PyBytes_AsString(str.get()), PyBytes_Size(str.get()));
+                    (sal_Int8*) PyStrBytes_AsString(str.get()), PyStrBytes_Size(str.get()));
             }
-#if PY_MAJOR_VERSION >= 3
-            else if ( PyByteArray_Check( str.get() ) )
-            {
-                seq = Sequence< sal_Int8 >(
-                    (sal_Int8 *) PyByteArray_AS_STRING(str.get()), PyByteArray_GET_SIZE(str.get()));
-            }
-#endif
-            a <<= seq;                                                          
+            a <<= seq;
         }
         else
         if( PyObject_IsInstance( o, getTypeClass( runtime ).get() ) )
@@ -807,7 +767,7 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
         }
         else if( isInstanceOfStructOrException( o ) )
         {
-            PyRef struc(PyObject_GetAttrString( o , const_cast< char * >("value") ),SAL_NO_ACQUIRE);
+            PyRef struc(PyObject_GetAttrString( o , "value" ),SAL_NO_ACQUIRE);
             PyUNO * obj = (PyUNO*)struc.get();
             Reference< XMaterialHolder > holder( obj->members->xInvocation, UNO_QUERY );
             if( holder.is( ) )
@@ -815,8 +775,7 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
             else
             {
                 throw RuntimeException(
-                    USTR_ASCII( "struct or exception wrapper does not support XMaterialHolder" ),
-                    Reference< XInterface > () );
+                    "struct or exception wrapper does not support XMaterialHolder" );
             }
         }
         else if( PyObject_IsInstance( o, getPyUnoClass().get() ) )
@@ -833,8 +792,7 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
                 if (!my_mh.is ())
                 {
                     throw RuntimeException(
-                        USTR_ASCII( "struct wrapper does not support XMaterialHolder" ),
-                        Reference< XInterface > () );
+                        "struct wrapper does not support XMaterialHolder" );
                 }
                 else
                     a = my_mh->getMaterial ();
@@ -853,33 +811,32 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
         {
             if( ACCEPT_UNO_ANY == mode )
             {
-                a = pyObject2Any( PyRef( PyObject_GetAttrString( o , const_cast< char * >("value") ), SAL_NO_ACQUIRE) );
+                a = pyObject2Any( PyRef( PyObject_GetAttrString( o , "value" ), SAL_NO_ACQUIRE) );
                 Type t;
-                pyObject2Any( PyRef( PyObject_GetAttrString( o, const_cast< char * >("type") ), SAL_NO_ACQUIRE ) ) >>= t;
+                pyObject2Any( PyRef( PyObject_GetAttrString( o, "type" ), SAL_NO_ACQUIRE ) ) >>= t;
 
                 try
                 {
                     a = getImpl()->cargo->xTypeConverter->convertTo( a, t );
                 }
-                catch( com::sun::star::uno::Exception & e )
+                catch( const com::sun::star::uno::Exception & e )
                 {
-                    throw RuntimeException( e.Message, e.Context );
+                    throw WrappedTargetRuntimeException(
+                            e.Message, e.Context, makeAny(e));
                 }
             }
             else
             {
                 throw RuntimeException(
-                    OUString( RTL_CONSTASCII_USTRINGPARAM(
-                                  "uno.Any instance not accepted during method call, "
-                                  "use uno.invoke instead" ) ),
-                    Reference< XInterface > () );
+                    "uno.Any instance not accepted during method call, "
+                    "use uno.invoke instead" );
             }
         }
         else
         {
             Reference< XInterface > mappedObject;
             Reference< XInvocation > adapterObject;
-            
+
             // instance already mapped out to the world ?
             PyRef2Adapter::iterator ii = impl->cargo->mappedObjects.find( PyRef( o ) );
             if( ii != impl->cargo->mappedObjects.end() )
@@ -891,28 +848,33 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
             {
                 // object got already bridged !
                 Reference< com::sun::star::lang::XUnoTunnel > tunnel( adapterObject, UNO_QUERY );
-                
-                Adapter *pAdapter = ( Adapter * )
-                    sal::static_int_cast< sal_IntPtr >(
+
+                Adapter *pAdapter = reinterpret_cast<Adapter*>(
                         tunnel->getSomething(
                             ::pyuno::Adapter::getUnoTunnelImplementationId() ) );
-                
+
                 mappedObject = impl->cargo->xAdapterFactory->createAdapter(
                     adapterObject, pAdapter->getWrappedTypes() );
             }
-            else 
+            else
             {
-                Sequence< Type > interfaces = invokeGetTypes( *this, o );
-                if( interfaces.getLength() )
-                {
-                    Adapter *pAdapter = new Adapter( o, interfaces );
-                    mappedObject = 
-                        getImpl()->cargo->xAdapterFactory->createAdapter(
-                            pAdapter, interfaces );
-                    
-                    // keep a list of exported objects to ensure object identity !
-                    impl->cargo->mappedObjects[ PyRef(o) ] =
-                        com::sun::star::uno::WeakReference< XInvocation > ( pAdapter );
+                try {
+                    Sequence<Type> interfaces = invokeGetTypes(*this, o);
+                    if (interfaces.getLength())
+                    {
+                        Adapter *pAdapter = new Adapter( o, interfaces );
+                        mappedObject =
+                            getImpl()->cargo->xAdapterFactory->createAdapter(
+                                pAdapter, interfaces );
+
+                        // keep a list of exported objects to ensure object identity !
+                        impl->cargo->mappedObjects[ PyRef(o) ] =
+                            com::sun::star::uno::WeakReference< XInvocation > ( pAdapter );
+                    }
+                } catch (InvocationTargetException const& e) {
+                    OUString const msg(lcl_ExceptionMessage(o, &e.Message));
+                    throw WrappedTargetRuntimeException( // re-wrap that
+                            msg, e.Context, e.TargetException);
                 }
             }
             if( mappedObject.is() )
@@ -921,12 +883,8 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
             }
             else
             {
-                OUStringBuffer buf;
-                buf.appendAscii( "Couldn't convert " );
-                PyRef reprString( PyObject_Str( o ) , SAL_NO_ACQUIRE );
-                buf.append( pyString2ustring( reprString.get() ) );
-                buf.appendAscii( " to a UNO type" );
-                throw RuntimeException( buf.makeStringAndClear(), Reference< XInterface > () );
+                OUString const msg(lcl_ExceptionMessage(o, 0));
+                throw RuntimeException(msg);
             }
         }
     }
@@ -935,43 +893,58 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
 
 Any Runtime::extractUnoException( const PyRef & excType, const PyRef &excValue, const PyRef &excTraceback) const
 {
-    PyRef str;
+    OUString str;
     Any ret;
     if( excTraceback.is() )
     {
-        PyRef unoModule( impl ? impl->cargo->getUnoModule() : 0 );
+        Exception e;
+        PyRef unoModule;
+        if ( impl )
+        {
+            try
+            {
+                unoModule = impl->cargo->getUnoModule();
+            }
+            catch (const Exception &ei)
+            {
+                e=ei;
+            }
+        }
         if( unoModule.is() )
         {
             PyRef extractTraceback(
                 PyDict_GetItemString(unoModule.get(),"_uno_extract_printable_stacktrace" ) );
-            
-            if( extractTraceback.is() )
+
+            if( PyCallable_Check(extractTraceback.get()) )
             {
-                PyRef args( PyTuple_New( 1), SAL_NO_ACQUIRE );
+                PyRef args( PyTuple_New( 1), SAL_NO_ACQUIRE, NOT_NULL );
                 PyTuple_SetItem( args.get(), 0, excTraceback.getAcquired() );
-                str = PyRef( PyObject_CallObject( extractTraceback.get(),args.get() ), SAL_NO_ACQUIRE);
+                PyRef pyStr( PyObject_CallObject( extractTraceback.get(),args.get() ), SAL_NO_ACQUIRE);
+                str = OUString::createFromAscii( PyStr_AsString(pyStr.get()) );
             }
             else
             {
-                str = PyRef(
-                    PyBytes_FromString( "Couldn't find uno._uno_extract_printable_stacktrace" ),
-                    SAL_NO_ACQUIRE );
+                str = "Couldn't find uno._uno_extract_printable_stacktrace";
             }
         }
         else
         {
-            str = PyRef(
-                PyBytes_FromString( "Couldn't find uno.py, no stacktrace available" ),
-                SAL_NO_ACQUIRE );
+            str = "Could not load uno.py, no stacktrace available";
+            if ( !e.Message.isEmpty() )
+            {
+                str += OUString (" (Error loading uno.py: ");
+                str += e.Message;
+                str += OUString (")");
+            }
         }
 
     }
     else
     {
         // it may occur, that no traceback is given (e.g. only native code below)
-        str = PyRef( PyBytes_FromString( "no traceback available" ), SAL_NO_ACQUIRE);
+        str = "no traceback available";
     }
-    
+
     if( isInstanceOfStructOrException( excValue.get() ) )
     {
         ret = pyObject2Any( excValue );
@@ -982,7 +955,7 @@ Any Runtime::extractUnoException( const PyRef & excType, const PyRef &excValue, 
         PyRef typeName( PyObject_Str( excType.get() ), SAL_NO_ACQUIRE );
         if( typeName.is() )
         {
-            buf.append( pyString2ustring( typeName.get() ) );
+            buf.appendAscii( PyStr_AsString( typeName.get() ) );
         }
         else
         {
@@ -992,16 +965,17 @@ Any Runtime::extractUnoException( const PyRef & excType, const PyRef &excValue, 
         PyRef valueRep( PyObject_Str( excValue.get() ), SAL_NO_ACQUIRE );
         if( valueRep.is() )
         {
-            buf.append( pyString2ustring( valueRep.get()));
+            buf.appendAscii( PyStr_AsString( valueRep.get()));
         }
         else
         {
             buf.appendAscii( "Couldn't convert exception value to a string" );
         }
         buf.appendAscii( ", traceback follows\n" );
-        if( str.is() )
+        if( !str.isEmpty() )
         {
-            buf.append( pyString2ustring( str.get() ) );
+            buf.append( str );
+            buf.appendAscii( "\n" );
         }
         else
         {
@@ -1009,6 +983,10 @@ Any Runtime::extractUnoException( const PyRef & excType, const PyRef &excValue, 
         }
         RuntimeException e;
         e.Message = buf.makeStringAndClear();
+#if OSL_DEBUG_LEVEL > 0
+        fprintf( stderr, "Python exception: %s\n",
+                 OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr() );
+#endif
         ret = com::sun::star::uno::makeAny( e );
     }
     return ret;
@@ -1016,7 +994,7 @@ Any Runtime::extractUnoException( const PyRef & excType, const PyRef &excValue, 
 
 
 static const char * g_NUMERICID = "pyuno.lcNumeric";
-static ::std::vector< rtl::OString > g_localeList;
+static ::std::vector< OString > g_localeList;
 
 static const char *ensureUnlimitedLifetime( const char *str )
 {
@@ -1040,21 +1018,17 @@ PyThreadAttach::PyThreadAttach( PyInterpreterState *interp)
 {
     tstate = PyThreadState_New( interp );
     if( !tstate  )
-        throw RuntimeException(
-            OUString(RTL_CONSTASCII_USTRINGPARAM( "Couldn't create a pythreadstate" ) ),
-            Reference< XInterface > () );
+        throw RuntimeException( "Couldn't create a pythreadstate" );
 #ifdef USE_JAVA
     // Fix deadlock reported in the following NeoOffice forum topic by locking
     // the application mutex before locking the Python thread lock:
     // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63412#63412
-    ::vos::IMutex *pSolarMutex = ::tools::SolarMutex::GetSolarMutex();
-    if ( pSolarMutex )
-        pSolarMutex->acquire();
+    bool bAcquired = ::tools::SolarMutex::Acquire();
 #endif	// USE_JAVA
     PyEval_AcquireThread( tstate);
 #ifdef USE_JAVA
-    if ( pSolarMutex )
-        pSolarMutex->release();
+    if ( bAcquired )
+        ::tools::SolarMutex::Release();
 #endif	// USE_JAVA
     // set LC_NUMERIC to "C"
     const char * oldLocale =
@@ -1075,7 +1049,7 @@ PyThreadAttach::~PyThreadAttach()
     PyThreadState_Clear( tstate );
     PyEval_ReleaseThread( tstate );
     PyThreadState_Delete( tstate );
-    
+
 }
 
 PyThreadDetach::PyThreadDetach() throw ( com::sun::star::uno::RuntimeException )
@@ -1097,21 +1071,19 @@ PyThreadDetach::~PyThreadDetach()
     // Fix deadlock reported in the following NeoOffice forum topic by locking
     // the application mutex before locking the Python thread lock:
     // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63412#63412
-    ::vos::IMutex *pSolarMutex = ::tools::SolarMutex::GetSolarMutex();
-    if ( pSolarMutex )
-        pSolarMutex->acquire();
+    bool bAcquired = ::tools::SolarMutex::Acquire();
 #endif	// USE_JAVA
     PyEval_AcquireThread( tstate );
 #ifdef USE_JAVA
-    if ( pSolarMutex )
-        pSolarMutex->release();
+    if ( bAcquired )
+        ::tools::SolarMutex::Release();
 #endif	// USE_JAVA
 //     PyObject *value =
 //         PyDict_GetItemString( PyThreadState_GetDict( ), g_NUMERICID );
 
     // python requires C LC_NUMERIC locale,
     // always set even when it is already "C"
-    setlocale( LC_NUMERIC, "C" );    
+    setlocale( LC_NUMERIC, "C" );
 }
 
 
@@ -1124,3 +1096,5 @@ PyRef RuntimeCargo::getUnoModule()
     return dictUnoModule;
 }
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
