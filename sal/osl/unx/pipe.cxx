@@ -323,7 +323,7 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
             addr.sin_port = htons( nPort );
 #else	// USE_JAVA
         struct stat status;
- 
+
         /* check if there exists an orphan filesystem entry */
         if ( ( stat(name, &status) == 0) &&
              ( S_ISSOCK(status.st_mode) || S_ISFIFO(status.st_mode) ) )
