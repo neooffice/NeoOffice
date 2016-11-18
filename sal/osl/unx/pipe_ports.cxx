@@ -33,37 +33,37 @@
  *
  ************************************************************************/
 
+#include <config_folders.h>
 #include <osl/file.hxx>
 #include <osl/mutex.hxx>
 #include <osl/thread.h>
 #include <rtl/bootstrap.hxx>
 
-#include "pipe_ports.h"
+#include "pipe_ports.hxx"
 
 using namespace osl;
-using namespace rtl;
 
-static OUString ImplParentURL( const OUString& aURL )
+static rtl::OUString ImplParentURL( const rtl::OUString& aURL )
 {
 	sal_Int32 nLastIndex = aURL.lastIndexOf( sal_Unicode( '/' ) );
-	OUString aParentURL = aURL.copy( 0, nLastIndex );
+	rtl::OUString aParentURL = aURL.copy( 0, nLastIndex );
 
-	if ( aParentURL[ aParentURL.getLength() - 1 ] == sal_Unicode(':') && aParentURL.getLength() == 6 )
-		aParentURL += OUString( RTL_CONSTASCII_USTRINGPARAM( "/" ) );
+	if ( aParentURL.getLength() == 6 && aParentURL[ aParentURL.getLength() - 1 ] == sal_Unicode(':') )
+		aParentURL += "/";
 
-	if ( !aParentURL.compareToAscii( "file://" ) )
-		aParentURL = OUString( RTL_CONSTASCII_USTRINGPARAM( "file:///" ) );
+	if ( aParentURL == "file://" )
+		aParentURL = "file:///";
 
 	return aParentURL;
 }
 
-static sal_Bool ImplEnsureDirURL( const OUString& rURL )
+static sal_Bool ImplEnsureDirURL( const rtl::OUString& rURL )
 {
 	if ( !rURL.getLength() )
 		return sal_False;
 
 	// Remove trailing slash
-	OUString aURL;
+	rtl::OUString aURL;
 	if ( rURL[ rURL.getLength() - 1 ] == sal_Unicode( '/' ) )
 		aURL = rURL.copy( 0, rURL.getLength() - 1 );
 	else
@@ -85,7 +85,7 @@ static sal_Bool ImplEnsureDirURL( const OUString& rURL )
 	sal_Bool bRet = ( nError == File::E_None || nError == FileBase::E_EXIST );
 	if ( !bRet )
 	{
-		OUString aParentURL = ImplParentURL( aURL );
+		rtl::OUString aParentURL = ImplParentURL( aURL );
 		if ( aParentURL != aURL )
 		{
 			// Try to create parent directories and then try again
@@ -101,13 +101,13 @@ static sal_Bool ImplEnsureDirURL( const OUString& rURL )
 	return bRet;
 }
 
-static OUString ImplPipePortFileURLForName( const OUString& rName )
+static rtl::OUString ImplPipePortFileURLForName( const rtl::OUString& rName )
 {
 	static bool bUserInstallInitialized = false;
-	static OUString aUserInstallURL;
+	static rtl::OUString aUserInstallURL;
 	static Mutex aUserInstallMutex;
 
-	OUString aRet;
+	rtl::OUString aRet;
 
 	if ( !bUserInstallInitialized )
 	{
@@ -115,10 +115,8 @@ static OUString ImplPipePortFileURLForName( const OUString& rName )
 
 		if ( !bUserInstallInitialized )
 		{
-			OUString aURI;
-			Bootstrap::get( OUString( RTL_CONSTASCII_USTRINGPARAM( "OOO_BASE_DIR" ) ), aURI );
-			Bootstrap aData( aURI + OUString( RTL_CONSTASCII_USTRINGPARAM( "/program/" SAL_CONFIGFILE( "bootstrap" ) ) ) );
-			aData.getFrom( OUString( RTL_CONSTASCII_USTRINGPARAM( "UserInstallation" ) ), aUserInstallURL );
+			rtl::OUString aUserInstallURL( "${$BRAND_BASE_DIR/" LIBO_ETC_FOLDER "/" SAL_CONFIGFILE("bootstrap") ":UserInstallation}" );
+			rtl::Bootstrap::expandMacros( aUserInstallURL );
 
 			// Make sure that the user installation directory is created
 			bUserInstallInitialized = ImplEnsureDirURL( aUserInstallURL );
@@ -126,11 +124,7 @@ static OUString ImplPipePortFileURLForName( const OUString& rName )
 	}
 
 	if ( rName.getLength() && aUserInstallURL.getLength() )
-	{
-		aRet = aUserInstallURL;
-		aRet += OUString( RTL_CONSTASCII_USTRINGPARAM( "/.pipe_port_" ) );
-		aRet += rName;
-	}
+		aRet = aUserInstallURL + "/.pipe_port_" + rName;
 
 	return aRet;
 }
@@ -142,7 +136,7 @@ sal_Bool osl_createPortFileForPipe( oslPipe pPipe )
 	if ( !pPipe || pPipe->m_bClosed )
 		return bRet;
 
-	OUString aName( pPipe->m_Name, strlen( pPipe->m_Name ), osl_getThreadTextEncoding() );
+	rtl::OUString aName( pPipe->m_Name, strlen( pPipe->m_Name ), osl_getThreadTextEncoding() );
 	if ( !aName.getLength() )
 		return bRet;
 
@@ -152,11 +146,11 @@ sal_Bool osl_createPortFileForPipe( oslPipe pPipe )
 	if (getsockname(pPipe->m_Socket, (struct sockaddr *)&addr, &len) < 0 || addr.sin_family != AF_INET || ntohs( addr.sin_port ) == 0 )
 		return bRet;
 
-	OString aPort = OString::valueOf( (sal_Int32)ntohs( addr.sin_port ) );
+	rtl::OString aPort = rtl::OString::number( (sal_Int32)ntohs( addr.sin_port ) );
 	if ( !aPort.getLength() )
 		return bRet;
 
-	OUString aPipePortFileURL( ImplPipePortFileURLForName( aName ) );
+	rtl::OUString aPipePortFileURL( ImplPipePortFileURLForName( aName ) );
 	if ( !aPipePortFileURL.getLength() )
 		return bRet;
 
@@ -186,11 +180,11 @@ sal_uInt16 osl_getPortForPipeName( const sal_Char *pName )
 	if ( !pName )
 		return nRet;
 
-	OUString aName( pName, strlen( pName ), osl_getThreadTextEncoding() );
+	rtl::OUString aName( pName, strlen( pName ), osl_getThreadTextEncoding() );
 	if ( !aName.getLength() )
 		return nRet;
 
-	OUString aPipePortFileURL( ImplPipePortFileURLForName( aName ) );
+	rtl::OUString aPipePortFileURL( ImplPipePortFileURLForName( aName ) );
 	if ( !aPipePortFileURL.getLength() )
 		return nRet;
 
@@ -199,10 +193,10 @@ sal_uInt16 osl_getPortForPipeName( const sal_Char *pName )
 	FileBase::RC nError = aFile.open( osl_File_OpenFlag_Read );
 	if ( nError == FileBase::E_None )
 	{
-		ByteSequence aBytes;
+		rtl::ByteSequence aBytes;
 		if ( aFile.readLine( aBytes ) == FileBase::E_None )
 		{
-			OString aLine( (sal_Char *)aBytes.getArray(), aBytes.getLength() );
+			rtl::OString aLine( (sal_Char *)aBytes.getArray(), aBytes.getLength() );
 			sal_Int32 nPort = aLine.toInt32();
 			if ( nPort > 0 && nPort <= SAL_MAX_UINT16 )
 				nRet = (sal_uInt16)nPort;
@@ -218,15 +212,15 @@ void osl_unlinkPortFileForPipeName( const sal_Char *pName )
 	if ( !pName )
 		return;
 
-	OUString aName( pName, strlen( pName ), osl_getThreadTextEncoding() );
+	rtl::OUString aName( pName, strlen( pName ), osl_getThreadTextEncoding() );
 	if ( !aName.getLength() )
 		return;
 
-	OUString aPipePortFileURL( ImplPipePortFileURLForName( aName ) );
+	rtl::OUString aPipePortFileURL( ImplPipePortFileURLForName( aName ) );
 	if ( !aPipePortFileURL.getLength() )
 		return;
 
-	OUString aPipePortFilePath;
+	rtl::OUString aPipePortFilePath;
 	FileBase::getSystemPathFromFileURL( aPipePortFileURL, aPipePortFilePath );
 	if ( !aPipePortFilePath.getLength() )
 		return;

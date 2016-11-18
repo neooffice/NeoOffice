@@ -1,35 +1,32 @@
-###############################################################
-#  
-#  Licensed to the Apache Software Foundation (ASF) under one
-#  or more contributor license agreements.  See the NOTICE file
-#  distributed with this work for additional information
-#  regarding copyright ownership.  The ASF licenses this file
-#  to you under the Apache License, Version 2.0 (the
-#  "License"); you may not use this file except in compliance
-#  with the License.  You may obtain a copy of the License at
-#  
-#    http://www.apache.org/licenses/LICENSE-2.0
-#  
-#  Unless required by applicable law or agreed to in writing,
-#  software distributed under the License is distributed on an
-#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#  KIND, either express or implied.  See the License for the
-#  specific language governing permissions and limitations
-#  under the License.
-#  
-#  This file incorporates work covered by the following license notice:
-# 
-#    Modified March 2016 by Patrick Luby. NeoOffice is only distributed
-#    under the GNU General Public License, Version 3 as allowed by Section 4
-#    of the Apache License, Version 2.0.
 #
-#    You should have received a copy of the GNU General Public License
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#  
-###############################################################
+# This file is part of the LibreOffice project.
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# This file incorporates work covered by the following license notice:
+#
+#   Licensed to the Apache Software Foundation (ASF) under one or more
+#   contributor license agreements. See the NOTICE file distributed
+#   with this work for additional information regarding copyright
+#   ownership. The ASF licenses this file to you under the Apache
+#   License, Version 2.0 (the "License"); you may not use this file
+#   except in compliance with the License. You may obtain a copy of
+#   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+#
+#   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+#   under the GNU General Public License, Version 3 as allowed by Section 3.3
+#   of the Mozilla Public License, v. 2.0.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
 UDK_3_0_0 {
     global:
-        GetVersionInfo;
+        _ZTI*; _ZTS*; # weak RTTI symbols for C++ exceptions
+
         osl_acceptConnectionOnSocket;
         osl_acceptPipe;
         osl_acquireSocket;
@@ -102,7 +99,7 @@ UDK_3_0_0 {
         osl_getLastSocketErrorDescription;
         osl_getLocalAddrOfSocket;
         osl_getLocalHostname;
-		osl_getModuleURLFromAddress;
+        osl_getModuleURLFromAddress;
         osl_getNextDirectoryItem;
         osl_getPeerAddrOfSocket;
         osl_getProcess;
@@ -267,6 +264,7 @@ UDK_3_0_0 {
         rtl_string_newConcat;
         rtl_string_newFromStr;
         rtl_string_newFromStr_WithLength;
+        rtl_string_newFromLiteral;
         rtl_string_newFromString;
         rtl_string_newReplace;
         rtl_string_newReplaceStrAt;
@@ -333,6 +331,7 @@ UDK_3_0_0 {
         rtl_uString_newFromStr;
         rtl_uString_newFromStr_WithLength;
         rtl_uString_newFromAscii;
+        rtl_uString_newFromLiteral;
         rtl_uString_newFromString;
         rtl_uString_newReplace;
         rtl_uString_newReplaceStrAt;
@@ -464,15 +463,13 @@ UDK_3_0_0 {
 
         osl_acquireDirectoryItem;
 
-		osl_abbreviateSystemPath;
+        osl_abbreviateSystemPath;
         osl_getDateTimeFromTimeValue;
         osl_getTimeValueFromDateTime;
         osl_getLocalTimeFromSystemTime;
         osl_getSystemTimeFromLocalTime;
         osl_getAbsoluteFileURL;
 
-        osl_unmountVolumeDevice;
-        osl_automountVolumeDevice;
         osl_releaseVolumeDeviceHandle;
         osl_getVolumeDeviceMountPath;
         osl_acquireVolumeDeviceHandle;
@@ -496,8 +493,8 @@ UDK_3_0_0 {
         rtl_bootstrap_args_close;
         rtl_bootstrap_get_from_handle;
         rtl_bootstrap_get_iniName_from_handle;
-	rtl_bootstrap_expandMacros_from_handle;
-	rtl_bootstrap_expandMacros;
+    rtl_bootstrap_expandMacros_from_handle;
+    rtl_bootstrap_expandMacros;
         rtl_getAppCommandArgCount;
         rtl_getAppCommandArg;
 
@@ -511,13 +508,11 @@ UDK_3_0_0 {
         rtl_removeUnloadingListener;
 
         rtl_logfile_trace;
-        rtl_tres_create;
-        rtl_tres_destroy;
-		osl_getProcessLocale;
-		osl_setProcessLocale;
+        osl_getProcessLocale;
+        osl_setProcessLocale;
 #ifdef USE_JAVA
-		osl_getOpenFilePath;
-		osl_setLockedFilesLock;
+        osl_getOpenFilePath;
+        osl_setLockedFilesLock;
 #endif	// USE_JAVA
     local:
         *;
@@ -525,7 +520,7 @@ UDK_3_0_0 {
 
 UDK_3.1 {
     global:
-		osl_getTempDirURL;
+        osl_getTempDirURL;
         osl_createTempFile;
 
         rtl_math_doubleToString;
@@ -544,7 +539,7 @@ UDK_3.1 {
 
 UDK_3.2 {
     global:
-		osl_syncFile;
+        osl_syncFile;
 } UDK_3.1;
 
 UDK_3.3 {
@@ -563,29 +558,30 @@ UDK_3.3 {
         rtl_uStringbuffer_insertUtf32;
         rtl_ustr_ascii_compareIgnoreAsciiCase_WithLengths;
         rtl_logfile_longTrace;
-		rtl_ustr_asciil_reverseEquals_WithLength;
+        rtl_ustr_asciil_reverseEquals_WithLength;
 } UDK_3.2;
 
 UDK_3.4 {
     global:
-		osl_setErrorReporting;
+        osl_setErrorReporting;
 } UDK_3.3;
 
 UDK_3.5 {
     global:
-		rtl_arena_create;
-		rtl_arena_destroy;
-		rtl_arena_alloc;
-		rtl_arena_free;
+        rtl_arena_create;
+        rtl_arena_destroy;
+        rtl_arena_alloc;
+        rtl_arena_free;
 
-		rtl_cache_create;
-		rtl_cache_destroy;
-		rtl_cache_alloc;
-		rtl_cache_free;
+        rtl_cache_create;
+        rtl_cache_destroy;
+        rtl_cache_alloc;
+        rtl_cache_free;
 } UDK_3.4;
 
 UDK_3.6 { # OOo 2.3
     global:
+        osl_loadModuleAscii;
         osl_getAsciiFunctionSymbol;
         osl_getModuleHandle;
         rtl_uString_intern;
@@ -630,19 +626,68 @@ UDK_3.10 { # OOo 3.2
         rtl_math_acosh;
 } UDK_3.9;
 
-
-UDK_3.11 { # AOO 3.4
+UDK_3.11 { # symbols available in >= OOo/LibO 3.4
     global:
         osl_setEnvironment;
         osl_clearEnvironment;
         osl_setThreadName;
 } UDK_3.10;
 
-UDK_3.12 { # AOO 3.5
+LIBO_UDK_3.5 { # symbols available in >= LibO 3.5
     global:
-        osl_loadAsciiModule;
-        osl_loadAsciiModuleRelative;
-} UDK_3.11;
+        rtl_stringbuffer_remove;
+        rtl_uStringbuffer_remove;
+} UDK_3.10;
+
+LIBO_UDK_3.6 { # symbols available in >= LibO 3.6
+    global:
+        osl_unmapMappedFile;
+        osl_identicalDirectoryItem;
+        osl_loadModuleRelativeAscii;
+        rtl_string_newReplaceAll;
+        rtl_string_newReplaceFirst;
+        rtl_uString_newReplaceAll;
+        rtl_uString_newReplaceAllAsciiL;
+        rtl_uString_newReplaceAllAsciiLAsciiL;
+        rtl_uString_newReplaceFirst;
+        rtl_uString_newReplaceFirstAsciiL;
+        rtl_uString_newReplaceFirstAsciiLAsciiL;
+	rtl_uStringBuffer_refReturn;
+	rtl_uStringBuffer_makeStringAndClear;
+} UDK_3.10;
+
+LIBO_UDK_4.0 { # symbols available in >= LibO 4.0
+    global:
+        rtl_string_newFromSubString;
+        rtl_uString_newFromSubString;
+        rtl_uString_newReplaceAllFromIndex;
+} LIBO_UDK_3.6;
+
+LIBO_UDK_4.1 { # symbols available in >= LibO 4.1
+    global:
+        rtl_string_ensureCapacity;
+        rtl_uString_ensureCapacity;
+        rtl_string_alloc;
+        rtl_uString_alloc;
+        rtl_str_toUInt64;
+        rtl_str_valueOfUInt64;
+        rtl_ustr_valueOfUInt64;
+        rtl_ustr_toUInt64;
+} LIBO_UDK_4.0;
+
+LIBO_UDK_4.2 { # symbols available in >= LibO 4.2
+    global:
+        rtl_str_toUInt32;
+        rtl_ustr_toUInt32;
+} LIBO_UDK_4.1;
+
+LIBO_UDK_4.3 { # symbols available in >= LibO 4.3
+    global:
+        osl_createDirectoryWithFlags;
+        rtl_allocateAlignedMemory;
+        rtl_freeAlignedMemory;
+        osl_areCommandArgsSet;
+} LIBO_UDK_4.2;
 
 PRIVATE_1.0 {
     global:
@@ -658,3 +703,25 @@ PRIVATE_1.1 {
         sal_detail_initialize;
         sal_detail_deinitialize;
 } PRIVATE_1.0;
+
+PRIVATE_1.2 { # LibreOffice 3.5
+    global:
+        sal_detail_log;
+        sal_detail_logFormat;
+} PRIVATE_1.1;
+
+PRIVATE_textenc.1 { # LibreOffice 3.6
+    global:
+        _ZN3sal6detail7textenc20convertCharToUnicode*;
+        _ZN3sal6detail7textenc20convertUnicodeToChar*;
+        _ZN3sal6detail7textenc32handleUndefinedUnicodeToTextChar*;
+        _ZN3sal6detail7textenc37handleBadInputTextToUnicodeConversion*;
+        _ZN3sal6detail7textenc37handleBadInputUnicodeToTextConversion*;
+};
+
+# Unique libstdc++ symbols:
+GLIBCXX_3.4 {
+    global:
+        _ZGVNSt7num_put*; _ZNSt7num_put*;
+        _ZNSs4_Rep20_S_empty_rep_storageE;
+};

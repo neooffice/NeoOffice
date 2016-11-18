@@ -37,7 +37,7 @@
 #import <Foundation/Foundation.h>
 #include <postmac.h>
 
-#include "system.h"
+#include "system.hxx"
 
 static NSURL *macxp_resolveAliasImpl( NSURL *url )
 {

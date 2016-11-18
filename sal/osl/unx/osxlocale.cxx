@@ -1,163 +1,138 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
-
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_sal.hxx"
+ */
 
 #include <sal/types.h>
 #include <assert.h>
 
 #include <premac.h>
+#ifndef IOS
 #include <CoreServices/CoreServices.h>
+#endif
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
 
-namespace /* private */
+#include <rtl/ustrbuf.hxx>
+
+#include <nlsupport.hxx>
+
+namespace
 {
-	template <typename T>
-	class CFGuard
-	{
-	public:
-		explicit CFGuard(T& rT) : rT_(rT) {}
-		~CFGuard() { if (rT_) CFRelease(rT_); }
-	private:
-		T& rT_;
-	};
-		
-	typedef CFGuard<CFArrayRef> CFArrayGuard;
-	typedef CFGuard<CFStringRef> CFStringGuard;
-	typedef CFGuard<CFPropertyListRef> CFPropertyListGuard;
-	
-	/** Get the current process locale from system 
-	*/
-	CFStringRef getProcessLocale()
-	{
-		CFPropertyListRef pref = CFPreferencesCopyAppValue(CFSTR("AppleLocale"), kCFPreferencesCurrentApplication);
-		CFPropertyListGuard proplGuard(pref);
-		
-		if (pref == NULL) // return fallback value 'en_US'
-			 return CFStringCreateWithCString(kCFAllocatorDefault, "en_US", kCFStringEncodingASCII);
-		
-		CFStringRef sref = (CFGetTypeID(pref) == CFArrayGetTypeID()) ? (CFStringRef)CFArrayGetValueAtIndex((CFArrayRef)pref, 0) : (CFStringRef)pref;
-		
-		// NOTE: this API is only available with Mac OS X >=10.3. We need to use it because
-		// Apple used non-ISO values on systems <10.2 like "German" for instance but didn't
-		// upgrade those values during upgrade to newer Mac OS X versions. See also #i54337#
-		return CFLocaleCreateCanonicalLocaleIdentifierFromString(kCFAllocatorDefault, sref);	
-	}	
-} // namespace private
-	
+    template <typename T>
+    class CFGuard
+    {
+    public:
+        explicit CFGuard(T& rT) : rT_(rT) {}
+        ~CFGuard() { if (rT_) CFRelease(rT_); }
+    private:
+        T& rT_;
+    };
+
+    typedef CFGuard<CFArrayRef> CFArrayGuard;
+    typedef CFGuard<CFStringRef> CFStringGuard;
+    typedef CFGuard<CFPropertyListRef> CFPropertyListGuard;
+
+    /** Get the current process locale from system
+    */
+    CFStringRef getProcessLocale()
+    {
+        CFPropertyListRef pref = CFPreferencesCopyAppValue(CFSTR("AppleLanguages"), kCFPreferencesCurrentApplication);
+        CFPropertyListGuard proplGuard(pref);
+
+        if (pref == NULL) // return fallback value 'en_US'
+             return CFStringCreateWithCString(kCFAllocatorDefault, "en_US", kCFStringEncodingASCII);
+
+        CFStringRef sref = (CFGetTypeID(pref) == CFArrayGetTypeID()) ? (CFStringRef)CFArrayGetValueAtIndex((CFArrayRef)pref, 0) : (CFStringRef)pref;
+
+        return CFLocaleCreateCanonicalLocaleIdentifierFromString(kCFAllocatorDefault, sref);
+    }
+
+    void append(rtl::OUStringBuffer & buffer, CFStringRef string) {
+        CFIndex n = CFStringGetLength(string);
+        CFStringGetCharacters(
+            string, CFRangeMake(0, n), buffer.appendUninitialized(n));
+    }
+}
+
 /** Grab current locale from system.
 */
-extern "C" {
-int macosx_getLocale(char *locale, sal_uInt32 bufferLen)
-{	
-	CFStringRef sref = getProcessLocale();
-	CFStringGuard sGuard(sref);
-	
-	assert(sref != NULL && "osxlocale.cxx: getProcessLocale must return a non-NULL value");
-	
-	// split the string into substrings; the first two (if there are two) substrings 
-	// are language and country
-	CFArrayRef subs = CFStringCreateArrayBySeparatingStrings(NULL, sref, CFSTR("_"));	
-#ifdef USE_JAVA
-	if (CFArrayGetCount(subs) < 2)
-	{
-		CFRelease(subs);
+rtl::OUString macosx_getLocale()
+{
+    CFStringRef sref = getProcessLocale();
+    CFStringGuard sGuard(sref);
 
-		// Mac OS X will sometimes use "-" as its delimiter
-		subs = CFStringCreateArrayBySeparatingStrings(NULL, sref, CFSTR("-"));	
-	}
+    assert(sref != NULL && "osxlocale.cxx: getProcessLocale must return a non-NULL value");
+
+    // split the string into substrings; the first two (if there are two) substrings
+    // are language and country
+    CFArrayRef subs = CFStringCreateArrayBySeparatingStrings(NULL, sref, CFSTR("-"));
+#ifdef USE_JAVA
+    if (CFArrayGetCount(subs) < 2)
+    {
+        CFRelease(subs);
+
+        // Mac OS X will sometimes use "_" as its delimiter
+        subs = CFStringCreateArrayBySeparatingStrings(NULL, sref, CFSTR("_"));
+    }
 #endif	// USE_JAVA
-	CFArrayGuard arrGuard(subs);
-		
-	CFStringRef lang = (CFStringRef)CFArrayGetValueAtIndex(subs, 0);
-	CFStringGetCString(lang, locale, bufferLen, kCFStringEncodingASCII);
-		
-	// country also available? Assumption: if the array contains more than one
-	// value the second value is always the country!
-	if (CFArrayGetCount(subs) > 1)
-	{
-#ifndef USE_JAVA
-		strlcat(locale, "_", bufferLen - strlen(locale));
-#endif	// !USE_JAVA
-			
-		CFStringRef country = (CFStringRef)CFArrayGetValueAtIndex(subs, 1);
-#ifdef USE_JAVA
-		if (CFStringGetLength(country) > 2)
-		{
-			if (CFStringCompare(country, CFSTR("Hans"), 0) == kCFCompareEqualTo)
-				country = CFSTR("CN");
-			else if (CFStringCompare(country, CFSTR("Hant"), 0) == kCFCompareEqualTo)
-				country = CFSTR("TW");
-			else
-				country = NULL;
-		}
+    CFArrayGuard arrGuard(subs);
 
-		if (country)
-		{
-			strlcat(locale, "_", bufferLen - strlen(locale));
-			CFStringGetCString(country, locale + strlen(locale), bufferLen - strlen(locale), kCFStringEncodingASCII);
-		}
+    rtl::OUStringBuffer buf;
+    append(buf, (CFStringRef)CFArrayGetValueAtIndex(subs, 0));
+
+    // country also available? Assumption: if the array contains more than one
+    // value the second value is always the country!
+    if (CFArrayGetCount(subs) > 1)
+    {
+#ifdef USE_JAVA
+        CFStringRef country = (CFStringRef)CFArrayGetValueAtIndex(subs, 1);
+        if (CFStringGetLength(country) > 2)
+        {
+            if (CFStringCompare(country, CFSTR("Hans"), 0) == kCFCompareEqualTo)
+                country = CFSTR("CN");
+            else if (CFStringCompare(country, CFSTR("Hant"), 0) == kCFCompareEqualTo)
+                country = CFSTR("TW");
+            else
+                country = NULL;
+        }
+
+        if (country)
+        {
+            buf.append("_");
+            append(buf, country);
+        }
 #else	// USE_JAVA
-		CFStringGetCString(country, locale + strlen(locale), bufferLen - strlen(locale), kCFStringEncodingASCII);			
+        buf.append("_");
+        append(buf, (CFStringRef)CFArrayGetValueAtIndex(subs, 1));
 #endif	// USE_JAVA
-	}	    
+    }
     // Append 'UTF-8' to the locale because the Mac OS X file
     // system interface is UTF-8 based and sal tries to determine
-    // the file system locale from the locale information 
-	strlcat(locale, ".UTF-8", bufferLen - strlen(locale));							
-		
-	return noErr;
-}
+    // the file system locale from the locale information
+    buf.append(".UTF-8");
+    return buf.makeStringAndClear();
 }
 
-
-
-/*
- * macxp_OSXConvertCFEncodingToIANACharSetName
- *
- * Convert a CoreFoundation text encoding to an IANA charset name.
- */
-extern "C" int macxp_OSXConvertCFEncodingToIANACharSetName( char *buffer, unsigned int bufferLen, CFStringEncoding cfEncoding )
-{
-	CFStringRef	sCFEncodingName;
-
-	sCFEncodingName = CFStringConvertEncodingToIANACharSetName( cfEncoding );
-	CFStringGetCString( sCFEncodingName, buffer, bufferLen, cfEncoding );
-
-	if ( sCFEncodingName )
-	    CFRelease( sCFEncodingName );
-
-	return( noErr );
-}
-
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

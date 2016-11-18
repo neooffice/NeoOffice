@@ -36,16 +36,9 @@
 #include <sys/socket.h>
 #include <sal/types.h>
 
-#include "system.h"
-#include "sockimpl.h"
+#include "system.hxx"
+#include "sockimpl.hxx"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif	/* __cplusplus */
 SAL_DLLPRIVATE sal_Bool osl_createPortFileForPipe( oslPipe pPipe );
 SAL_DLLPRIVATE sal_uInt16 osl_getPortForPipeName( const sal_Char *pName );
 SAL_DLLPRIVATE void osl_unlinkPortFileForPipeName( const sal_Char *pName );
-#ifdef __cplusplus
-}
-#endif	/* __cplusplus */

@@ -1,148 +1,381 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: ObjC; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
+#include <config_features.h>
 
+#include "uunxapi.hxx"
+#include "system.hxx"
+#include <limits.h>
+#include <rtl/ustring.hxx>
+#include <osl/thread.h>
 
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_sal.hxx"
- 
- #ifndef _OSL_UUNXAPI_H_
- #include "uunxapi.h"
- #endif 
+#ifdef ANDROID
+#include <osl/detail/android-bootstrap.h>
+#endif
 
- #ifndef __OSL_SYSTEM_H__
- #include "system.h"
- #endif
+inline rtl::OString OUStringToOString(const rtl_uString* s)
+{
+    return rtl::OUStringToOString(rtl::OUString(const_cast<rtl_uString*>(s)),
+                                  osl_getThreadTextEncoding());
+}
 
- #ifndef _LIMITS_H
- #include <limits.h>
- #endif
-  
- #ifndef _RTL_USTRING_HXX_
- #include <rtl/ustring.hxx>
- #endif
- 
- #ifndef _OSL_THREAD_H_
- #include <osl/thread.h>
- #endif
- 
- //###########################
- inline rtl::OString OUStringToOString(const rtl_uString* s)
- {
-    return rtl::OUStringToOString(
-        rtl::OUString(const_cast<rtl_uString*>(s)),
-        osl_getThreadTextEncoding());
- }
- 
- //###########################
+#if HAVE_FEATURE_MACOSX_SANDBOX
+
+#include <Foundation/Foundation.h>
+#include <Security/Security.h>
+#include <mach-o/dyld.h>
+
+static NSUserDefaults *userDefaults = NULL;
+static bool isSandboxed = false;
+
+static void do_once()
+{
+    SecCodeRef code;
+    OSStatus rc = SecCodeCopySelf(kSecCSDefaultFlags, &code);
+
+    SecStaticCodeRef staticCode;
+    if (rc == errSecSuccess)
+        rc = SecCodeCopyStaticCode(code, kSecCSDefaultFlags, &staticCode);
+
+    CFDictionaryRef signingInformation;
+    if (rc == errSecSuccess)
+        rc = SecCodeCopySigningInformation(staticCode, kSecCSRequirementInformation, &signingInformation);
+
+    CFDictionaryRef entitlements = NULL;
+    if (rc == errSecSuccess)
+        entitlements = (CFDictionaryRef) CFDictionaryGetValue(signingInformation, kSecCodeInfoEntitlementsDict);
+
+    if (entitlements != NULL)
+        if (CFDictionaryGetValue(entitlements, CFSTR("com.apple.security.app-sandbox")) != NULL)
+            isSandboxed = true;
+
+    if (isSandboxed)
+        userDefaults = [NSUserDefaults standardUserDefaults];
+}
+
+typedef struct {
+    NSURL *scopeURL;
+    NSAutoreleasePool *pool;
+} accessFilePathState;
+
+static accessFilePathState *
+prepare_to_access_file_path( const char *cpFilePath )
+{
+    static pthread_once_t once = PTHREAD_ONCE_INIT;
+    pthread_once(&once, &do_once);
+    NSURL *fileURL = nil;
+    NSData *data = nil;
+    BOOL stale;
+    accessFilePathState *state;
+
+    if (!isSandboxed)
+        return NULL;
+
+    // If malloc() fails we are screwed anyway
+    state = (accessFilePathState*) malloc(sizeof(accessFilePathState));
+
+    state->pool = [[NSAutoreleasePool alloc] init];
+    state->scopeURL = nil;
+
+    if (userDefaults != nil)
+        fileURL = [NSURL fileURLWithPath:[NSString stringWithUTF8String:cpFilePath]];
+
+    if (fileURL != nil)
+        data = [userDefaults dataForKey:[@"bookmarkFor:" stringByAppendingString:[fileURL absoluteString]]];
+
+    if (data != nil)
+        state->scopeURL = [NSURL URLByResolvingBookmarkData:data
+                                                    options:NSURLBookmarkResolutionWithSecurityScope
+                                              relativeToURL:nil
+                                        bookmarkDataIsStale:&stale
+                                                      error:nil];
+    if (state->scopeURL != nil)
+        [state->scopeURL startAccessingSecurityScopedResource];
+
+    return state;
+}
+
+static void
+done_accessing_file_path( const char * /*cpFilePath*/, accessFilePathState *state )
+{
+    if (!isSandboxed)
+        return;
+
+    int saved_errno = errno;
+
+    if (state->scopeURL != nil)
+        [state->scopeURL stopAccessingSecurityScopedResource];
+    [state->pool release];
+    free(state);
+
+    errno = saved_errno;
+}
+
+#else
+
+typedef void accessFilePathState;
+
+#define prepare_to_access_file_path( cpFilePath ) NULL
+
+#define done_accessing_file_path( cpFilePath, state ) ((void) cpFilePath, (void) state)
+
+#endif
+
 #ifdef MACOSX
 /*
- * Helper function for resolving Mac native alias files (not the same as unix alias files)  
+ * Helper function for resolving Mac native alias files (not the same as unix alias files)
  * and to return the resolved alias as rtl::OString
  */
- inline rtl::OString macxp_resolveAliasAndConvert(const rtl_uString* s)
- {
-  rtl::OString p = OUStringToOString(s);
-  sal_Char path[PATH_MAX];
-  if (p.getLength() < PATH_MAX)
+static rtl::OString macxp_resolveAliasAndConvert(rtl::OString const & p)
+{
+    sal_Char path[PATH_MAX];
+    if (p.getLength() < PATH_MAX)
     {
-      strcpy(path, p.getStr());
+        strcpy(path, p.getStr());
 #ifdef USE_JAVA
-      macxp_resolveAlias(path, PATH_MAX, sal_False);
+        macxp_resolveAlias(path, PATH_MAX, sal_False);
 #else	// USE_JAVA
-      macxp_resolveAlias(path, PATH_MAX);
+        macxp_resolveAlias(path, PATH_MAX);
 #endif	// USE_JAVA
-      p = rtl::OString(path);
+        return rtl::OString(path);
     }
-  return p;
- }
+    return p;
+}
 #endif /* MACOSX */
- 
- //###########################
- //access_u     
- int access_u(const rtl_uString* pustrPath, int mode)
- {
-#ifndef MACOSX // not MACOSX  
-	return access(OUStringToOString(pustrPath).getStr(), mode);
-#else
-	return access(macxp_resolveAliasAndConvert(pustrPath).getStr(), mode);
+
+int access_u(const rtl_uString* pustrPath, int mode)
+{
+    rtl::OString fn = OUStringToOString(pustrPath);
+#ifdef ANDROID
+    if (fn == "/assets" || fn.startsWith("/assets/"))
+    {
+        struct stat stat;
+        if (lo_apk_lstat(fn.getStr(), &stat) == -1)
+            return -1;
+        if (mode & W_OK)
+        {
+            errno = EACCES;
+            return -1;
+        }
+        return 0;
+    }
 #endif
- }
- 
- //#########################
- //realpath_u  
- sal_Bool realpath_u(const rtl_uString* pustrFileName, rtl_uString** ppustrResolvedName)
- {
-#ifndef MACOSX // not MACOSX  
-        rtl::OString fn = OUStringToOString(pustrFileName);
-#else
-	rtl::OString fn = macxp_resolveAliasAndConvert(pustrFileName);
+
+#ifdef MACOSX
+    fn = macxp_resolveAliasAndConvert(fn);
 #endif
-	char  rp[PATH_MAX];
-	bool  bRet = realpath(fn.getStr(), rp); 
-	
-	if (bRet)
-	{
-		rtl::OUString resolved = rtl::OStringToOUString(
-			rtl::OString(static_cast<sal_Char*>(rp)),
-			osl_getThreadTextEncoding());
-			
-		rtl_uString_assign(ppustrResolvedName, resolved.pData);
-	}
-	return bRet;
- }
- 
- //#########################
- //lstat_u 
-  int lstat_u(const rtl_uString* pustrPath, struct stat* buf)
- { 	
-#ifndef MACOSX  // not MACOSX  
-	return lstat(OUStringToOString(pustrPath).getStr(), buf);
-#else
-	return lstat(macxp_resolveAliasAndConvert(pustrPath).getStr(), buf);
+
+    accessFilePathState *state = prepare_to_access_file_path(fn.getStr());
+
+    int result = access(fn.getStr(), mode);
+
+    done_accessing_file_path(fn.getStr(), state);
+
+    return result;
+}
+
+bool realpath_u(const rtl_uString* pustrFileName, rtl_uString** ppustrResolvedName)
+{
+    rtl::OString fn = OUStringToOString(pustrFileName);
+#ifdef ANDROID
+    if (fn == "/assets" || fn.startsWith("/assets/"))
+    {
+        if (access_u(pustrFileName, F_OK) == -1)
+            return false;
+
+        rtl_uString silly(*pustrFileName);
+        rtl_uString_assign(ppustrResolvedName, &silly);
+
+        return true;
+    }
 #endif
- } 
- 
- //#########################
- // @see mkdir
- int mkdir_u(const rtl_uString* path, mode_t mode)
- {    
+
+#ifdef MACOSX
+    fn = macxp_resolveAliasAndConvert(fn);
+#endif
+
+    accessFilePathState *state = prepare_to_access_file_path(fn.getStr());
+
+    char  rp[PATH_MAX];
+    bool  bRet = realpath(fn.getStr(), rp);
+
+    done_accessing_file_path(fn.getStr(), state);
+
+    if (bRet)
+    {
+        rtl::OUString resolved = rtl::OStringToOUString(rtl::OString(static_cast<sal_Char*>(rp)),
+                                                        osl_getThreadTextEncoding());
+
+        rtl_uString_assign(ppustrResolvedName, resolved.pData);
+    }
+    return bRet;
+}
+
+int stat_c(const char* cpPath, struct stat* buf)
+{
+#ifdef ANDROID
+    if (strncmp(cpPath, "/assets", sizeof("/assets")-1) == 0 &&
+        (cpPath[sizeof("/assets")-1] == '\0' ||
+         cpPath[sizeof("/assets")-1] == '/'))
+        return lo_apk_lstat(cpPath, buf);
+#endif
+
+    accessFilePathState *state = prepare_to_access_file_path(cpPath);
+
+    int result = stat(cpPath, buf);
+
+    done_accessing_file_path(cpPath, state);
+
+    return result;
+}
+
+int lstat_c(const char* cpPath, struct stat* buf)
+{
+#ifdef ANDROID
+    if (strncmp(cpPath, "/assets", sizeof("/assets")-1) == 0 &&
+        (cpPath[sizeof("/assets")-1] == '\0' ||
+         cpPath[sizeof("/assets")-1] == '/'))
+        return lo_apk_lstat(cpPath, buf);
+#endif
+
+    accessFilePathState *state = prepare_to_access_file_path(cpPath);
+
+    int result = lstat(cpPath, buf);
+
+    done_accessing_file_path(cpPath, state);
+
+    return result;
+}
+
+int lstat_u(const rtl_uString* pustrPath, struct stat* buf)
+{
+    rtl::OString fn = OUStringToOString(pustrPath);
+
+#ifdef MACOSX
+    fn = macxp_resolveAliasAndConvert(fn);
+#endif
+
+    return lstat_c(fn.getStr(), buf);
+}
+
+int mkdir_u(const rtl_uString* path, mode_t mode)
+{
+    rtl::OString fn = OUStringToOString(path);
+
+    accessFilePathState *state = prepare_to_access_file_path(fn.getStr());
+
 #ifdef USE_JAVA
-    if ( !macxp_checkCreateDirectory( OUStringToOString( path ).getStr() ) )
+    if (!macxp_checkCreateDirectory(fn.getStr()))
     { 
         errno = EACCES;
         return -1;
     } 
-    return mkdir(macxp_resolveAliasAndConvert(path).getStr(), mode);
+    int result = mkdir(macxp_resolveAliasAndConvert(fn).getStr(), mode);
 #else	/* USE_JAVA */
-    return mkdir(OUStringToOString(path).getStr(), mode);     
+    int result = mkdir(OUStringToOString(path).getStr(), mode);
 #endif	/* USE_JAVA */
- }
- 
+
+    done_accessing_file_path(fn.getStr(), state);
+
+    return result;
+}
+
+int open_c(const char *cpPath, int oflag, int mode)
+{
+    accessFilePathState *state = prepare_to_access_file_path(cpPath);
+
+    int result = open(cpPath, oflag, mode);
+
+#if HAVE_FEATURE_MACOSX_SANDBOX
+    if (isSandboxed && result != -1 && (oflag & O_CREAT) && (oflag & O_EXCL))
+    {
+        // A new file was created. Check if it is outside the sandbox.
+        // (In that case it must be one the user selected as export or
+        // save destination in a file dialog, otherwise we wouldn't
+        // have been able to crete it.) Create and store a security
+        // scoped bookmark for it so that we can access the file in
+        // the future, too. (For the "Recent Files" functionality.)
+        const char *sandbox = [NSHomeDirectory() UTF8String];
+        if (!(strncmp(sandbox, cpPath, strlen(sandbox)) == 0 &&
+              cpPath[strlen(sandbox)] == '/'))
+        {
+            NSURL *url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:cpPath]];
+            NSData *data = [url bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope
+                         includingResourceValuesForKeys:nil
+                                          relativeToURL:nil
+                                                  error:nil];
+            if (data != NULL)
+            {
+                [userDefaults setObject:data
+                                 forKey:[@"bookmarkFor:" stringByAppendingString:[url absoluteString]]];
+            }
+        }
+    }
+#endif
+
+    done_accessing_file_path(cpPath, state);
+
+    return result;
+}
+
+int utime_c(const char *cpPath, struct utimbuf *times)
+{
+    accessFilePathState *state = prepare_to_access_file_path(cpPath);
+
+    int result = utime(cpPath, times);
+
+    done_accessing_file_path(cpPath, state);
+
+    return result;
+}
+
+int ftruncate_with_name(int fd, sal_uInt64 uSize, rtl_String* path)
+{
+    /* When sandboxed on OS X, ftruncate(), even if it takes an
+     * already open file descriptor which was retuned from an open()
+     * call already checked by the sandbox, still requires a security
+     * scope bookmark for the file to be active in case the file is
+     * one that the sandbox doesn't otherwise allow access to. Luckily
+     * LibreOffice usually calls ftruncate() through the helpful C++
+     * abstraction layer that keeps the pathname around.
+     */
+
+    rtl::OString fn = rtl::OString(path);
+
+#ifdef MACOSX
+    fn = macxp_resolveAliasAndConvert(fn);
+#endif
+
+    accessFilePathState *state = prepare_to_access_file_path(fn.getStr());
+
+    int result = ftruncate(fd, uSize);
+
+    done_accessing_file_path(fn.getStr(), state);
+
+    return result;
+}
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

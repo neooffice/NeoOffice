@@ -1,64 +1,51 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
+#include "sal/config.h"
 
+#include <cstddef>
+#include <cstring>
 
 #include "rtl/tencinfo.h"
-#include "gettextencodingdata.h"
-#include "tenchelp.h"
 
-#ifndef _RTL_ALLOC_H
-#include "rtl/alloc.h"
-#endif
-
-#ifndef INCLUDED_STDDEF_H
-#include <stddef.h>
-#define INCLUDED_STDDEF_H
-#endif
-#ifndef INCLUDED_STRING_H
-#include <string.h>
-#define INCLUDED_STRING_H
-#endif
+#include "gettextencodingdata.hxx"
+#include "tenchelp.hxx"
+#include <boost/scoped_array.hpp>
 
 sal_Bool SAL_CALL rtl_isOctetTextEncoding(rtl_TextEncoding nEncoding)
 {
-    return (sal_Bool)
-        (nEncoding > RTL_TEXTENCODING_DONTKNOW
-         && (nEncoding <= RTL_TEXTENCODING_ADOBE_DINGBATS)
-             /* always update this! */
-         && nEncoding != 9); /* RTL_TEXTENCODING_SYSTEM */
+    return
+        nEncoding > RTL_TEXTENCODING_DONTKNOW
+        && nEncoding != 9 // RTL_TEXTENCODING_SYSTEM
+        && nEncoding <= RTL_TEXTENCODING_ADOBE_DINGBATS; // always update this!
 }
 
 /* ======================================================================= */
 
-static void Impl_toAsciiLower( const sal_Char* pName, sal_Char* pBuf )
+static void Impl_toAsciiLower( const char* pName, char* pBuf )
 {
     while ( *pName )
     {
@@ -77,7 +64,7 @@ static void Impl_toAsciiLower( const sal_Char* pName, sal_Char* pBuf )
 
 /* ----------------------------------------------------------------------- */
 
-static void Impl_toAsciiLowerAndRemoveNonAlphanumeric( const sal_Char* pName, sal_Char* pBuf )
+static void Impl_toAsciiLowerAndRemoveNonAlphanumeric( const char* pName, char* pBuf )
 {
     while ( *pName )
     {
@@ -104,39 +91,41 @@ static void Impl_toAsciiLowerAndRemoveNonAlphanumeric( const sal_Char* pName, sa
 /* ----------------------------------------------------------------------- */
 
 /* pMatchStr must match with all characters in pCompStr */
-static sal_Bool Impl_matchString( const sal_Char* pCompStr, const sal_Char* pMatchStr )
+static bool Impl_matchString( const char* pCompStr, const char* pMatchStr )
 {
     /* We test only for end in MatchStr, because the last 0 character from */
     /* pCompStr is unequal a character in MatchStr, so the loop terminates */
     while ( *pMatchStr )
     {
         if ( *pCompStr != *pMatchStr )
-            return sal_False;
+            return false;
 
         pCompStr++;
         pMatchStr++;
     }
 
-    return sal_True;
+    return true;
 }
 
 /* ======================================================================= */
 
-typedef struct
+struct ImplStrCharsetDef
 {
-    const sal_Char*             mpCharsetStr;
+    const char*             mpCharsetStr;
     rtl_TextEncoding            meTextEncoding;
-} ImplStrCharsetDef;
+};
 
-typedef struct
+struct ImplStrFirstPartCharsetDef
 {
-    const sal_Char*             mpCharsetStr;
+    const char*             mpCharsetStr;
     const ImplStrCharsetDef*    mpSecondPartTab;
-} ImplStrFirstPartCharsetDef;
+};
 
+#ifndef NO_OOO_4_1_3_MAC_TEXT_ENCODING
 #ifdef USE_JAVA
 rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromMacTextEncoding( sal_uInt32 nMacTextEncoding );
-#endif	/* USE_JAVA */
+#endif	// USE_JAVA
+#endif	// !NO_OOO_4_1_3_MAC_TEXT_ENCODING
 
 /* ======================================================================= */
 
@@ -150,41 +139,41 @@ sal_Bool SAL_CALL rtl_getTextEncodingInfo( rtl_TextEncoding eTextEncoding, rtl_T
         /* HACK: For not implemented encoding, because not all
            calls handle the errors */
         if ( pEncInfo->StructSize < 5 )
-            return sal_False;
+            return false;
         pEncInfo->MinimumCharSize = 1;
 
         if ( pEncInfo->StructSize < 6 )
-            return sal_True;
+            return true;
         pEncInfo->MaximumCharSize = 1;
 
         if ( pEncInfo->StructSize < 7 )
-            return sal_True;
+            return true;
         pEncInfo->AverageCharSize = 1;
 
         if ( pEncInfo->StructSize < 12 )
-            return sal_True;
+            return true;
         pEncInfo->Flags = 0;
 
-        return sal_False;
+        return false;
     }
 
     if ( pEncInfo->StructSize < 5 )
-        return sal_False;
+        return false;
     pEncInfo->MinimumCharSize = pData->mnMinCharSize;
 
     if ( pEncInfo->StructSize < 6 )
-        return sal_True;
+        return true;
     pEncInfo->MaximumCharSize = pData->mnMaxCharSize;
 
     if ( pEncInfo->StructSize < 7 )
-        return sal_True;
+        return true;
     pEncInfo->AverageCharSize = pData->mnAveCharSize;
 
     if ( pEncInfo->StructSize < 12 )
-        return sal_True;
+        return true;
     pEncInfo->Flags = pData->mnInfoFlags;
 
-    return sal_True;
+    return true;
 }
 
 /* ======================================================================= */
@@ -214,20 +203,22 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromWindowsCharset( sal_uInt8 nWinC
         case 238:   eTextEncoding = RTL_TEXTENCODING_MS_1250; break;    /* EASTEUROPE_CHARSET */
         case 255:   eTextEncoding = RTL_TEXTENCODING_IBM_850; break;    /* OEM_CHARSET */
         default:    eTextEncoding = RTL_TEXTENCODING_DONTKNOW; break;
-    };
+    }
 
+#ifndef NO_OOO_4_1_3_MAC_TEXT_ENCODING
 #ifdef USE_JAVA
-    /* Mac OS X sets the encoding in RTF files to 77 + nWinCharset */
+    // Mac OS X sets the encoding in RTF files to 77 + nWinCharset
     if ( eTextEncoding == RTL_TEXTENCODING_DONTKNOW && nWinCharset >= 77 )
         eTextEncoding = rtl_getTextEncodingFromMacTextEncoding( nWinCharset - 77 );
-#endif	/* USE_JAVA */
+#endif	// USE_JAVA
+#endif	// !NO_OOO_4_1_3_MAC_TEXT_ENCODING
 
     return eTextEncoding;
 }
 
-/* ----------------------------------------------------------------------- */
+#ifndef NO_OOO_4_1_3_MAC_TEXT_ENCODING
 
-#ifdef USE_JAVA
+/* ----------------------------------------------------------------------- */
 
 rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromMacTextEncoding( sal_uInt32 nMacTextEncoding )
 {
@@ -383,11 +374,11 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromMacTextEncoding( sal_uInt32 nMa
     return eTextEncoding;
 }
 
-#endif	/* USE_JAVA */
+#endif	// !NO_OOO_4_1_3_MAC_TEXT_ENCODING
 
 /* ----------------------------------------------------------------------- */
 
-rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromUnixCharset( const sal_Char* pUnixCharset )
+rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromUnixCharset( const char* pUnixCharset )
 {
     /* See <ftp://ftp.x.org/pub/DOCS/registry>, section 14 ("Font Charset
      * (Registry and Encoding) Names").
@@ -485,32 +476,32 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromUnixCharset( const sal_Char* pU
         { NULL, RTL_TEXTENCODING_DONTKNOW }
     };
 
-    static ImplStrCharsetDef aUnixCharsetJISX0208Tab[] =
+    static ImplStrCharsetDef const aUnixCharsetJISX0208Tab[] =
     {
         { NULL, RTL_TEXTENCODING_JIS_X_0208 }
     };
 
-    static ImplStrCharsetDef aUnixCharsetJISX0201Tab[] =
+    static ImplStrCharsetDef const aUnixCharsetJISX0201Tab[] =
     {
         { NULL, RTL_TEXTENCODING_JIS_X_0201 }
     };
 
-    static ImplStrCharsetDef aUnixCharsetJISX0212Tab[] =
+    static ImplStrCharsetDef const aUnixCharsetJISX0212Tab[] =
     {
         { NULL, RTL_TEXTENCODING_JIS_X_0212 }
     };
 
-    static ImplStrCharsetDef aUnixCharsetGBTab[] =
+    static ImplStrCharsetDef const aUnixCharsetGBTab[] =
     {
         { NULL, RTL_TEXTENCODING_GB_2312 }
     };
 
-    static ImplStrCharsetDef aUnixCharsetGBKTab[] =
+    static ImplStrCharsetDef const aUnixCharsetGBKTab[] =
     {
         { NULL, RTL_TEXTENCODING_GBK }
     };
 
-    static ImplStrCharsetDef aUnixCharsetBIG5Tab[] =
+    static ImplStrCharsetDef const aUnixCharsetBIG5Tab[] =
     {
         { NULL, RTL_TEXTENCODING_BIG5 }
     };
@@ -598,20 +589,19 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromUnixCharset( const sal_Char* pU
     };
 
     rtl_TextEncoding    eEncoding = RTL_TEXTENCODING_DONTKNOW;
-    sal_Char*           pBuf;
-    sal_Char*           pTempBuf;
+    char*           pTempBuf;
     sal_uInt32          nBufLen = strlen( pUnixCharset )+1;
-    const sal_Char*     pFirstPart;
-    const sal_Char*     pSecondPart;
+    const char*     pFirstPart;
+    const char*     pSecondPart;
 
     /* Alloc Buffer and map to lower case */
-    pBuf = (char*)rtl_allocateMemory( nBufLen );
-    Impl_toAsciiLower( pUnixCharset, pBuf );
+    boost::scoped_array<char> pBuf(new char[nBufLen]);
+    Impl_toAsciiLower( pUnixCharset, pBuf.get() );
 
     /* Search FirstPart */
-    pFirstPart = pBuf;
+    pFirstPart = pBuf.get();
     pSecondPart = NULL;
-    pTempBuf = pBuf;
+    pTempBuf = pBuf.get();
     while ( *pTempBuf )
     {
         if ( *pTempBuf == '-' )
@@ -639,7 +629,6 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromUnixCharset( const sal_Char* pU
                 {
                     if ( Impl_matchString( pSecondPart, pData->mpCharsetStr ) )
                     {
-                        eEncoding = pData->meTextEncoding;
                         break;
                     }
 
@@ -655,14 +644,12 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromUnixCharset( const sal_Char* pU
         }
     }
 
-    rtl_freeMemory( pBuf );
-
     return eEncoding;
 }
 
 /* ----------------------------------------------------------------------- */
 
-rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromMimeCharset( const sal_Char* pMimeCharset )
+rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromMimeCharset( const char* pMimeCharset )
 {
     /* All Identifiers are in lower case and contain only alphanumeric */
     /* characters. The function search for the first equal string in */
@@ -926,24 +913,23 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromMimeCharset( const sal_Char* pM
         { "pt154", RTL_TEXTENCODING_PT154 },
         { "cp154", RTL_TEXTENCODING_PT154 },
         { "xisciide", RTL_TEXTENCODING_ISCII_DEVANAGARI },
-            /* This is no official MIME character set name, but is in use by
+            /* This is not an official MIME character set name, but is in use by
                various windows APIs. */
         { NULL, RTL_TEXTENCODING_DONTKNOW }
     };
 
     rtl_TextEncoding            eEncoding = RTL_TEXTENCODING_DONTKNOW;
-    sal_Char*                   pBuf;
     const ImplStrCharsetDef*    pData = aVIPMimeCharsetTab;
     sal_uInt32                  nBufLen = strlen( pMimeCharset )+1;
 
     /* Alloc Buffer and map to lower case and remove non alphanumeric chars */
-    pBuf = (char*)rtl_allocateMemory( nBufLen );
-    Impl_toAsciiLowerAndRemoveNonAlphanumeric( pMimeCharset, pBuf );
+    boost::scoped_array<char> pBuf(new char[nBufLen]);
+    Impl_toAsciiLowerAndRemoveNonAlphanumeric( pMimeCharset, pBuf.get() );
 
     /* Search for equal in the VIP table */
     while ( pData->mpCharsetStr )
     {
-        if ( strcmp( pBuf, pData->mpCharsetStr ) == 0 )
+        if ( strcmp( pBuf.get(), pData->mpCharsetStr ) == 0 )
         {
             eEncoding = pData->meTextEncoding;
             break;
@@ -958,7 +944,7 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromMimeCharset( const sal_Char* pM
         pData = aMimeCharsetTab;
         while ( pData->mpCharsetStr )
         {
-            if ( Impl_matchString( pBuf, pData->mpCharsetStr ) )
+            if ( Impl_matchString( pBuf.get(), pData->mpCharsetStr ) )
             {
                 eEncoding = pData->meTextEncoding;
                 break;
@@ -967,8 +953,6 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromMimeCharset( const sal_Char* pM
             pData++;
         }
     }
-
-    rtl_freeMemory( pBuf );
 
     return eEncoding;
 }
@@ -986,13 +970,13 @@ sal_uInt8 SAL_CALL rtl_getBestWindowsCharsetFromTextEncoding( rtl_TextEncoding e
 
 /* ----------------------------------------------------------------------- */
 
-const sal_Char* SAL_CALL rtl_getBestUnixCharsetFromTextEncoding( rtl_TextEncoding eTextEncoding  )
+const char* SAL_CALL rtl_getBestUnixCharsetFromTextEncoding( rtl_TextEncoding eTextEncoding  )
 {
     const ImplTextEncodingData* pData = Impl_getTextEncodingData( eTextEncoding );
     if ( pData )
-        return (sal_Char const *) pData->mpBestUnixCharset;
+        return (char const *) pData->mpBestUnixCharset;
     else if( eTextEncoding == RTL_TEXTENCODING_UNICODE )
-        return (sal_Char const *) "iso10646-1";
+        return (char const *) "iso10646-1";
     else
         return 0;
 }
@@ -1007,11 +991,11 @@ char const * SAL_CALL rtl_getMimeCharsetFromTextEncoding(rtl_TextEncoding
                p->mpBestMimeCharset : NULL;
 }
 
-const sal_Char* SAL_CALL rtl_getBestMimeCharsetFromTextEncoding( rtl_TextEncoding eTextEncoding )
+const char* SAL_CALL rtl_getBestMimeCharsetFromTextEncoding( rtl_TextEncoding eTextEncoding )
 {
     const ImplTextEncodingData* pData = Impl_getTextEncodingData( eTextEncoding );
     if ( pData )
-        return (sal_Char const *) pData->mpBestMimeCharset;
+        return (char const *) pData->mpBestMimeCharset;
     else
         return 0;
 }
@@ -1172,3 +1156,5 @@ rtl_getWindowsCodePageFromTextEncoding(rtl_TextEncoding nEncoding)
     default: return 0;
     }
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
