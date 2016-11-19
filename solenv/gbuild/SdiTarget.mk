@@ -1,0 +1,87 @@
+# -*- Mode: makefile-gmake; tab-width: 4; indent-tabs-mode: t -*-
+#
+# This file is part of the LibreOffice project.
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# This file incorporates work covered by the following license notice:
+#
+#   Licensed to the Apache Software Foundation (ASF) under one or more
+#   contributor license agreements. See the NOTICE file distributed
+#   with this work for additional information regarding copyright
+#   ownership. The ASF licenses this file to you under the Apache
+#   License, Version 2.0 (the "License"); you may not use this file
+#   except in compliance with the License. You may obtain a copy of
+#   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+#
+#   Modified October 2016 by Patrick Luby. NeoOffice is only distributed
+#   under the GNU General Public License, Version 3 as allowed by Section 3.3
+#   of the Mozilla Public License, v. 2.0.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# SdiTarget class
+gb_SdiTarget_SVIDLDEPS := $(call gb_Executable_get_runtime_dependencies,svidl)
+gb_SdiTarget_SVIDLCOMMAND := $(call gb_Executable_get_command,svidl)
+
+$(call gb_SdiTarget_get_target,%) : $(SRCDIR)/%.sdi $(gb_SdiTarget_SVIDLDEPS)
+	$(call gb_Output_announce,$*,$(true),SDI,1)
+	$(call gb_Helper_abbreviate_dirs,\
+		mkdir -p $(dir $@))
+	$(call gb_Helper_abbreviate_dirs,\
+		cd $(dir $<) && \
+		$(gb_SdiTarget_SVIDLCOMMAND) -quiet \
+			$(INCLUDE) \
+			$(if $(filter $(PRODUCT_BUILD_TYPE),java),-I$(LIBO_SRCDIR)/svx/sdi -I$(LIBO_SRCDIR)/sfx2/sdi) \
+			-fs$@.hxx \
+			-fx$(EXPORTS) \
+			-fm$@ \
+			$(if $(gb_FULLDEPS),-fM$(call gb_SdiTarget_get_dep_target,$*)) \
+			$< \
+		&& touch $@.hxx)
+# touch the hxx file so it's newer than the target - the .hxx only occurs in
+# generated .d files, so it's not a target yet when building from scratch!
+
+# rule necessary to rebuild cxx files that include the header
+$(call gb_SdiTarget_get_target,%.hxx) : $(call gb_SdiTarget_get_target,%)
+	touch $@
+
+ifeq ($(gb_FULLDEPS),$(true))
+$(dir $(call gb_SdiTarget_get_dep_target,%)).dir :
+	$(if $(wildcard $(dir $@)),,mkdir -p $(dir $@))
+
+$(dir $(call gb_SdiTarget_get_dep_target,%))%/.dir :
+	$(if $(wildcard $(dir $@)),,mkdir -p $(dir $@))
+
+$(call gb_SdiTarget_get_dep_target,%) :
+	$(if $(wildcard $@),touch $@)
+endif
+
+.PHONY : $(call gb_SdiTarget_get_clean_target,%)
+$(call gb_SdiTarget_get_clean_target,%) :
+	$(call gb_Output_announce,$*,$(false),SDI,1)
+	-$(call gb_Helper_abbreviate_dirs,\
+		rm -f \
+			$(call gb_SdiTarget_get_target,$*).hxx \
+			$(call gb_SdiTarget_get_dep_target,$*) \
+			$(call gb_SdiTarget_get_target,$*))
+
+define gb_SdiTarget_SdiTarget
+$(call gb_SdiTarget_get_target,$(1)) : INCLUDE := $$(subst -I. ,-I$$(dir $(SRCDIR)/$(1)) ,$$(SOLARINC))
+$(call gb_SdiTarget_get_target,$(1)) : EXPORTS := $(SRCDIR)/$(2).sdi
+ifeq ($(gb_FULLDEPS),$(true))
+-include $(call gb_SdiTarget_get_dep_target,$(1))
+$(call gb_SdiTarget_get_dep_target,$(1)) :| $(dir $(call gb_SdiTarget_get_dep_target,$(1))).dir
+endif
+endef
+
+define gb_SdiTarget_set_include
+$(call gb_SdiTarget_get_target,$(1)) : INCLUDE := $(2)
+
+endef
+
+# vim: set noet sw=4:
