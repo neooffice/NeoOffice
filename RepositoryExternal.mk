@@ -193,7 +193,7 @@ else # !SYSTEM_BLUEZ
 
 define gb_LinkTarget__use_bluez_bluetooth_headers
 $(call gb_LinkTarget_set_include,$(1),\
-	-I$(SRCDIR)/external/bluez_bluetooth/inc \
+	-I$(if $(filter $(PRODUCT_BUILD_TYPE),java),$(LIBO_SRCDIR),$(SRCDIR))/external/bluez_bluetooth/inc \
 	$$(INCLUDE) \
 )
 
