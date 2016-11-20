@@ -1,130 +1,119 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-#ifndef SC_INSCODLG_HXX
-#define SC_INSCODLG_HXX
+#ifndef INCLUDED_SC_SOURCE_UI_INC_INSCODLG_HXX
+#define INCLUDED_SC_SOURCE_UI_INC_INSCODLG_HXX
 
 #include <vcl/dialog.hxx>
 #include <vcl/button.hxx>
 #include <vcl/fixed.hxx>
 #include "global.hxx"
 
-//------------------------------------------------------------------------
-//CHINA001 #define INS_CONT_NOEMPTY		0x0100
-//CHINA001 #define INS_CONT_TRANS		0x0200
-//CHINA001 #define INS_CONT_LINK		0x0400
-//CHINA001 
-//CHINA001 #define SC_CELL_SHIFT_DISABLE_DOWN	0x01
-//CHINA001 #define SC_CELL_SHIFT_DISABLE_RIGHT	0x02
 #include "scui_def.hxx"
 
 class ScInsertContentsDlg : public ModalDialog
 {
 public:
-			ScInsertContentsDlg( Window*		pParent,
-								 sal_uInt16  		nCheckDefaults = 0,
-								 const String*	pStrTitle = NULL );
-			~ScInsertContentsDlg();
+            ScInsertContentsDlg( vcl::Window*          pParent,
+                                 InsertDeleteFlags nCheckDefaults = IDF_NONE,
+                                 const OUString*  pStrTitle = NULL );
+            virtual ~ScInsertContentsDlg();
 
-	sal_uInt16		GetInsContentsCmdBits() const;
-	sal_uInt16		GetFormulaCmdBits() const;
-	sal_Bool		IsSkipEmptyCells() const {return aBtnSkipEmptyCells.IsChecked();}
-	sal_Bool 		IsTranspose() const {return aBtnTranspose.IsChecked();}
-	sal_Bool 		IsLink() const {return aBtnLink.IsChecked();}
-	InsCellCmd	GetMoveMode();
+    InsertDeleteFlags GetInsContentsCmdBits() const;
+    sal_uInt16      GetFormulaCmdBits() const;
+    bool            IsSkipEmptyCells() const;
+    bool            IsTranspose() const;
+    bool            IsLink() const;
+    InsCellCmd      GetMoveMode();
 
-	void	SetOtherDoc( sal_Bool bSet );
-	void	SetFillMode( sal_Bool bSet );
-	void	SetChangeTrack( sal_Bool bSet );
-	void	SetCellShiftDisabled( int nDisable );
+    void    SetOtherDoc( bool bSet );
+    void    SetFillMode( bool bSet );
+    void    SetChangeTrack( bool bSet );
+    void    SetCellShiftDisabled( int nDisable );
 
 private:
-    FixedLine       aFlFrame;
-	CheckBox		aBtnInsAll;
-	CheckBox		aBtnInsStrings;
-	CheckBox		aBtnInsNumbers;
-	CheckBox		aBtnInsDateTime;
-	CheckBox		aBtnInsFormulas;
-	CheckBox		aBtnInsNotes;
-	CheckBox		aBtnInsAttrs;
-	CheckBox		aBtnInsObjects;
+    CheckBox*        mpBtnInsAll;
+    CheckBox*        mpBtnInsStrings;
+    CheckBox*        mpBtnInsNumbers;
+    CheckBox*        mpBtnInsDateTime;
+    CheckBox*        mpBtnInsFormulas;
+    CheckBox*        mpBtnInsNotes;
+    CheckBox*        mpBtnInsAttrs;
+    CheckBox*        mpBtnInsObjects;
 
-    FixedLine       aFlSep1;
-    FixedLine       aFlOptions;
-	CheckBox		aBtnSkipEmptyCells;
-	CheckBox		aBtnTranspose;
-	CheckBox		aBtnLink;
+    CheckBox*        mpBtnSkipEmptyCells;
+    CheckBox*        mpBtnTranspose;
+    CheckBox*        mpBtnLink;
 
-    FixedLine       aFlOperation;
-	RadioButton 	aRbNoOp;
-	RadioButton 	aRbAdd;
-	RadioButton 	aRbSub;
-	RadioButton 	aRbMul;
-	RadioButton 	aRbDiv;
+    RadioButton*     mpRbNoOp;
+    RadioButton*     mpRbAdd;
+    RadioButton*     mpRbSub;
+    RadioButton*     mpRbMul;
+    RadioButton*     mpRbDiv;
 
-    FixedLine       aFlSep2;
-    FixedLine       aFlMove;
-	RadioButton 	aRbMoveNone;
-	RadioButton 	aRbMoveDown;
-	RadioButton 	aRbMoveRight;
+    RadioButton*     mpRbMoveNone;
+    RadioButton*     mpRbMoveDown;
+    RadioButton*     mpRbMoveRight;
 
-	OKButton		aBtnOk;
-	CancelButton	aBtnCancel;
-	HelpButton		aBtnHelp;
+    PushButton*      mpBtnShortCutPasteValuesOnly;
+    PushButton*      mpBtnShortCutPasteValuesFormats;
+    PushButton*      mpBtnShortCutPasteTranspose;
 
-	sal_Bool			bOtherDoc;
-	sal_Bool			bFillMode;
-	sal_Bool			bChangeTrack;
-	sal_Bool			bMoveDownDisabled;
-	sal_Bool			bMoveRightDisabled;
+    bool              bOtherDoc;
+    bool              bFillMode;
+    bool              bChangeTrack;
+    bool              bMoveDownDisabled;
+    bool              bMoveRightDisabled;
+    bool              bUsedShortCut;
 
-	static sal_Bool		bPreviousAllCheck;
-	static sal_uInt16	nPreviousChecks;
-	static sal_uInt16	nPreviousChecks2;
-	static sal_uInt16	nPreviousFormulaChecks;
-	static sal_uInt16	nPreviousMoveMode;			// enum InsCellCmd
+    InsertDeleteFlags nShortCutInsContentsCmdBits;
+    sal_uInt16        nShortCutFormulaCmdBits;
+    bool              bShortCutSkipEmptyCells;
+    bool              bShortCutTranspose;
+    bool              bShortCutIsLink;
+    InsCellCmd        nShortCutMoveMode;
+
+    static bool         bPreviousAllCheck;
+    static InsertDeleteFlags nPreviousChecks;
+    static sal_uInt16   nPreviousChecks2;
+    static sal_uInt16   nPreviousFormulaChecks;
+    static sal_uInt16   nPreviousMoveMode;          // enum InsCellCmd
 #ifdef USE_JAVA
-	static sal_Bool		bPreviousValuesInitialized;
+    static sal_Bool     bPreviousValuesInitialized;
 #endif	// USE_JAVA
 
-	void DisableChecks( sal_Bool bInsAllChecked = sal_True );
-	void TestModes();
+    void DisableChecks( bool bInsAllChecked = true );
+    void TestModes();
 
-	// Handler
-	DECL_LINK( InsAllHdl, void* );
-	DECL_LINK( LinkBtnHdl, void* );
+    // Handler
+    DECL_LINK( InsAllHdl, void* );
+    DECL_LINK( LinkBtnHdl, void* );
+    DECL_LINK( ShortCutHdl, PushButton* );
 };
 
+#endif // INCLUDED_SC_SOURCE_UI_INC_INSCODLG_HXX
 
-#endif // SC_INSCODLG_HXX
-
-
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

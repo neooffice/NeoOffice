@@ -1,2091 +1,3067 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_sc.hxx"
-// INCLUDE ---------------------------------------------------------------
-
-
-
-#include <sfx2/objsh.hxx>
-#include <svl/zforlist.hxx>
-#include <svl/zformat.hxx>
-
-#include "boost/tuple/tuple.hpp"
-#include <boost/function.hpp>
-#include "boost/lambda/bind.hpp"
-#include "boost/bind.hpp"
-#include "boost/lambda/lambda.hpp"
-#include "scitems.hxx"
 #include "column.hxx"
-#include "cell.hxx"
+
+#include "scitems.hxx"
+#include "formulacell.hxx"
 #include "document.hxx"
 #include "attarray.hxx"
 #include "patattr.hxx"
 #include "cellform.hxx"
-#include "collect.hxx"
-#include "formula/errorcodes.hxx"
-#include "formula/token.hxx"
+#include "typedstrdata.hxx"
+#include <formula/errorcodes.hxx>
+#include <formula/token.hxx>
 #include "brdcst.hxx"
-#include "docoptio.hxx"			// GetStdPrecision fuer GetMaxNumberStringLen
+#include "docoptio.hxx"
 #include "subtotal.hxx"
 #include "markdata.hxx"
-#include "detfunc.hxx"			// fuer Notizen bei DeleteRange
+#include "detfunc.hxx"
 #include "postit.hxx"
 #include "stringutil.hxx"
-#include "dpglobal.hxx"
-#include <dptablecache.hxx>
+#include "docpool.hxx"
+#include "globalnames.hxx"
+#include "cellvalue.hxx"
+#include "tokenarray.hxx"
+#include "stlalgorithm.hxx"
+#include "clipcontext.hxx"
+#include "columnspanset.hxx"
+#include "mtvcellfunc.hxx"
+#include "scopetools.hxx"
+#include "editutil.hxx"
+#include "sharedformula.hxx"
+#include <listenercontext.hxx>
+
 #include <com/sun/star/i18n/LocaleDataItem.hpp>
+
+#include <boost/scoped_ptr.hpp>
+
+#include <mdds/flat_segment_tree.hpp>
+
+#include <sfx2/objsh.hxx>
+#include <svl/zforlist.hxx>
+#include <svl/zformat.hxx>
+#include <svl/broadcast.hxx>
+#include <svl/sharedstringpool.hxx>
+#include <editeng/editstat.hxx>
+
+#include <cstdio>
+
 using ::com::sun::star::i18n::LocaleDataItem;
-using ::rtl::OUString;
-using ::rtl::OUStringBuffer;
 
-// Err527 Workaround
-extern const ScFormulaCell* pLastFormulaTreeTop;	// in cellform.cxx
+// Err527 Workaroand
+extern const ScFormulaCell* pLastFormulaTreeTop; // in cellform.cxx
 using namespace formula;
-// STATIC DATA -----------------------------------------------------------
 
-sal_Bool ScColumn::bDoubleAlloc = sal_False;	// fuer Import: Groesse beim Allozieren verdoppeln
-
-
-void ScColumn::Insert( SCROW nRow, ScBaseCell* pNewCell )
+void ScColumn::Broadcast( SCROW nRow )
 {
-	sal_Bool bIsAppended = sal_False;
-	if (pItems && nCount>0)
-	{
-		if (pItems[nCount-1].nRow < nRow)
-		{
-			Append(nRow, pNewCell );
-			bIsAppended = sal_True;
-		}
-	}
-	if ( !bIsAppended )
-	{
-		SCSIZE	nIndex;
-		if (Search(nRow, nIndex))
-		{
-			ScBaseCell* pOldCell = pItems[nIndex].pCell;
-
-            // move broadcaster and note to new cell, if not existing in new cell
-            if (pOldCell->HasBroadcaster() && !pNewCell->HasBroadcaster())
-                pNewCell->TakeBroadcaster( pOldCell->ReleaseBroadcaster() );
-            if (pOldCell->HasNote() && !pNewCell->HasNote())
-				pNewCell->TakeNote( pOldCell->ReleaseNote() );
-
-            if ( pOldCell->GetCellType() == CELLTYPE_FORMULA && !pDocument->IsClipOrUndo() )
-			{
-				pOldCell->EndListeningTo( pDocument );
-				// falls in EndListening NoteCell in gleicher Col zerstoert
-				if ( nIndex >= nCount || pItems[nIndex].nRow != nRow )
-					Search(nRow, nIndex);
-			}
-			pOldCell->Delete();
-			pItems[nIndex].pCell = pNewCell;
-		}
-		else
-		{
-			if (nCount + 1 > nLimit)
-			{
-				if (bDoubleAlloc)
-				{
-					if (nLimit < COLUMN_DELTA)
-						nLimit = COLUMN_DELTA;
-					else
-					{
-						nLimit *= 2;
-                        if ( nLimit > sal::static_int_cast<SCSIZE>(MAXROWCOUNT) )
-							nLimit = MAXROWCOUNT;
-					}
-				}
-				else
-					nLimit += COLUMN_DELTA;
-
-				ColEntry* pNewItems = new ColEntry[nLimit];
-				if (pItems)
-				{
-					memmove( pNewItems, pItems, nCount * sizeof(ColEntry) );
-					delete[] pItems;
-				}
-				pItems = pNewItems;
-			}
-			memmove( &pItems[nIndex + 1], &pItems[nIndex], (nCount - nIndex) * sizeof(ColEntry) );
-			pItems[nIndex].pCell = pNewCell;
-			pItems[nIndex].nRow  = nRow;
-			++nCount;
-		}
-	}
-	// Bei aus Clipboard sind hier noch falsche (alte) Referenzen!
-	// Werden in CopyBlockFromClip per UpdateReference umgesetzt,
-	// danach StartListeningFromClip und BroadcastFromClip gerufen.
-	// Wird ins Clipboard/UndoDoc gestellt, wird kein Broadcast gebraucht.
-	// Nach Import wird CalcAfterLoad gerufen, dort Listening.
-	if ( !(pDocument->IsClipOrUndo() || pDocument->IsInsertingFromOtherDoc()) )
-	{
-		pNewCell->StartListeningTo( pDocument );
-		CellType eCellType = pNewCell->GetCellType();
-		// Notizzelle entsteht beim Laden nur durch StartListeningCell,
-		// ausloesende Formelzelle muss sowieso dirty sein.
-		if ( !(pDocument->IsCalcingAfterLoad() && eCellType == CELLTYPE_NOTE) )
-		{
-			if ( eCellType == CELLTYPE_FORMULA )
-				((ScFormulaCell*)pNewCell)->SetDirty();
-			else
-				pDocument->Broadcast( ScHint( SC_HINT_DATACHANGED,
-					ScAddress( nCol, nRow, nTab ), pNewCell ) );
-		}
-	}
+    ScHint aHint(SC_HINT_DATACHANGED, ScAddress(nCol, nRow, nTab));
+    pDocument->Broadcast(aHint);
 }
 
-
-void ScColumn::Insert( SCROW nRow, sal_uLong nNumberFormat, ScBaseCell* pCell )
+void ScColumn::BroadcastCells( const std::vector<SCROW>& rRows, sal_uLong nHint )
 {
-	Insert(nRow, pCell);
-	short eOldType = pDocument->GetFormatTable()->
-						GetType( (sal_uLong)
-							((SfxUInt32Item*)GetAttr( nRow, ATTR_VALUE_FORMAT ))->
-								GetValue() );
-	short eNewType = pDocument->GetFormatTable()->GetType(nNumberFormat);
-	if (!pDocument->GetFormatTable()->IsCompatible(eOldType, eNewType))
-		ApplyAttr( nRow, SfxUInt32Item( ATTR_VALUE_FORMAT, (sal_uInt32) nNumberFormat) );
+    if (rRows.empty())
+        return;
+
+    // Broadcast the changes.
+    ScHint aHint(nHint, ScAddress(nCol, 0, nTab));
+    std::vector<SCROW>::const_iterator itRow = rRows.begin(), itRowEnd = rRows.end();
+    for (; itRow != itRowEnd; ++itRow)
+    {
+        aHint.GetAddress().SetRow(*itRow);
+        pDocument->Broadcast(aHint);
+    }
 }
 
-
-void ScColumn::Append( SCROW nRow, ScBaseCell* pCell )
+struct DirtyCellInterpreter
 {
-	if (nCount + 1 > nLimit)
-	{
-		if (bDoubleAlloc)
-		{
-			if (nLimit < COLUMN_DELTA)
-				nLimit = COLUMN_DELTA;
-			else
-			{
-				nLimit *= 2;
-                if ( nLimit > sal::static_int_cast<SCSIZE>(MAXROWCOUNT) )
-					nLimit = MAXROWCOUNT;
-			}
-		}
-		else
-			nLimit += COLUMN_DELTA;
+    void operator() (size_t, ScFormulaCell* p)
+    {
+        if (p->GetDirty())
+            p->Interpret();
+    }
+};
 
-		ColEntry* pNewItems = new ColEntry[nLimit];
-		if (pItems)
-		{
-			memmove( pNewItems, pItems, nCount * sizeof(ColEntry) );
-			delete[] pItems;
-		}
-		pItems = pNewItems;
-	}
-	pItems[nCount].pCell = pCell;
-	pItems[nCount].nRow  = nRow;
-	++nCount;
+void ScColumn::InterpretDirtyCells( SCROW nRow1, SCROW nRow2 )
+{
+    if (!ValidRow(nRow1) || !ValidRow(nRow2) || nRow1 > nRow2)
+        return;
+
+    DirtyCellInterpreter aFunc;
+    sc::ProcessFormula(maCells.begin(), maCells, nRow1, nRow2, aFunc);
 }
 
+void ScColumn::DeleteContent( SCROW nRow, bool bBroadcast )
+{
+    sc::CellStoreType::position_type aPos = maCells.position(nRow);
+    sc::CellStoreType::iterator it = aPos.first;
+    if (it == maCells.end())
+        return;
+
+    if (it->type == sc::element_type_formula)
+    {
+        ScFormulaCell* p = sc::formula_block::at(*it->data, aPos.second);
+        p->EndListeningTo(pDocument);
+        sc::SharedFormulaUtil::unshareFormulaCell(aPos, *p);
+    }
+    maCells.set_empty(nRow, nRow);
+
+    if (bBroadcast)
+    {
+        Broadcast(nRow);
+        CellStorageModified();
+    }
+}
 
 void ScColumn::Delete( SCROW nRow )
 {
-	SCSIZE	nIndex;
+    DeleteContent(nRow, false);
+    maCellTextAttrs.set_empty(nRow, nRow);
+    maCellNotes.set_empty(nRow, nRow);
 
-	if (Search(nRow, nIndex))
-	{
-		ScBaseCell* pCell = pItems[nIndex].pCell;
-		ScNoteCell* pNoteCell = new ScNoteCell;
-		pItems[nIndex].pCell = pNoteCell;		// Dummy fuer Interpret
-		pDocument->Broadcast( ScHint( SC_HINT_DYING,
-			ScAddress( nCol, nRow, nTab ), pCell ) );
-        if ( SvtBroadcaster* pBC = pCell->ReleaseBroadcaster() )
-		{
-            pNoteCell->TakeBroadcaster( pBC );
-		}
-		else
-		{
-			delete pNoteCell;
-			--nCount;
-			memmove( &pItems[nIndex], &pItems[nIndex + 1], (nCount - nIndex) * sizeof(ColEntry) );
-			pItems[nCount].nRow = 0;
-			pItems[nCount].pCell = NULL;
-			//	Soll man hier den Speicher freigeben (delta)? Wird dann langsamer!
-		}
-		pCell->EndListeningTo( pDocument );
-		pCell->Delete();
-	}
+    Broadcast(nRow);
+    CellStorageModified();
 }
-
-
-void ScColumn::DeleteAtIndex( SCSIZE nIndex )
-{
-	ScBaseCell* pCell = pItems[nIndex].pCell;
-	ScNoteCell* pNoteCell = new ScNoteCell;
-	pItems[nIndex].pCell = pNoteCell;		// Dummy fuer Interpret
-	pDocument->Broadcast( ScHint( SC_HINT_DYING,
-		ScAddress( nCol, pItems[nIndex].nRow, nTab ), pCell ) );
-	delete pNoteCell;
-	--nCount;
-	memmove( &pItems[nIndex], &pItems[nIndex + 1], (nCount - nIndex) * sizeof(ColEntry) );
-	pItems[nCount].nRow = 0;
-	pItems[nCount].pCell = NULL;
-	pCell->EndListeningTo( pDocument );
-	pCell->Delete();
-}
-
 
 void ScColumn::FreeAll()
 {
-	if (pItems)
-	{
-		for (SCSIZE i = 0; i < nCount; i++)
-			pItems[i].pCell->Delete();
-		delete[] pItems;
-		pItems = NULL;
-	}
-	nCount = 0;
-	nLimit = 0;
+    // Keep a logical empty range of 0-MAXROW at all times.
+    maCells.clear();
+    maCells.resize(MAXROWCOUNT);
+    maCellTextAttrs.clear();
+    maCellTextAttrs.resize(MAXROWCOUNT);
+    maCellNotes.clear();
+    maCellNotes.resize(MAXROWCOUNT);
+    CellStorageModified();
 }
 
-
-void ScColumn::DeleteRow( SCROW nStartRow, SCSIZE nSize )
+void ScColumn::FreeNotes()
 {
-	pAttrArray->DeleteRow( nStartRow, nSize );
-
-	if ( !pItems || !nCount )
-		return ;
-
-	SCSIZE nFirstIndex;
-	Search( nStartRow, nFirstIndex );
-	if ( nFirstIndex >= nCount )
-		return ;
-
-	sal_Bool bOldAutoCalc = pDocument->GetAutoCalc();
-	pDocument->SetAutoCalc( sal_False );	// Mehrfachberechnungen vermeiden
-
-	sal_Bool bFound=sal_False;
-	SCROW nEndRow = nStartRow + nSize - 1;
-    SCSIZE nStartIndex = 0;
-    SCSIZE nEndIndex = 0;
-	SCSIZE i;
-
-	for ( i = nFirstIndex; i < nCount && pItems[i].nRow <= nEndRow; i++ )
-	{
-		if (!bFound)
-		{
-			nStartIndex = i;
-			bFound = sal_True;
-		}
-		nEndIndex = i;
-
-		ScBaseCell* pCell = pItems[i].pCell;
-		SvtBroadcaster* pBC = pCell->GetBroadcaster();
-		if (pBC)
-		{
-// gibt jetzt invalid reference, kein Aufruecken der direkten Referenzen
-//			MoveListeners( *pBC, nRow+nSize );
-            pCell->DeleteBroadcaster();
-			//	in DeleteRange werden leere Broadcaster geloescht
-		}
-	}
-	if (bFound)
-	{
-		DeleteRange( nStartIndex, nEndIndex, IDF_CONTENTS );
-		Search( nStartRow, i );
-		if ( i >= nCount )
-		{
-			pDocument->SetAutoCalc( bOldAutoCalc );
-			return ;
-		}
-	}
-	else
-		i = nFirstIndex;
-
-	ScAddress aAdr( nCol, 0, nTab );
-    ScHint aHint( SC_HINT_DATACHANGED, aAdr, NULL );    // only areas (ScBaseCell* == NULL)
-    ScAddress& rAddress = aHint.GetAddress();
-    // for sparse occupation use single broadcasts, not ranges
-    sal_Bool bSingleBroadcasts = (((pItems[nCount-1].nRow - pItems[i].nRow) /
-                (nCount - i)) > 1);
-    if ( bSingleBroadcasts )
-    {
-        SCROW nLastBroadcast = MAXROW+1;
-        for ( ; i < nCount; i++ )
-        {
-            SCROW nOldRow = pItems[i].nRow;
-            // #43940# Aenderung Quelle broadcasten
-            rAddress.SetRow( nOldRow );
-            pDocument->AreaBroadcast( aHint );
-            SCROW nNewRow = (pItems[i].nRow -= nSize);
-            // #43940# Aenderung Ziel broadcasten
-            if ( nLastBroadcast != nNewRow )
-            {   // direkt aufeinanderfolgende nicht doppelt broadcasten
-                rAddress.SetRow( nNewRow );
-                pDocument->AreaBroadcast( aHint );
-            }
-            nLastBroadcast = nOldRow;
-            ScBaseCell* pCell = pItems[i].pCell;
-            if ( pCell->GetCellType() == CELLTYPE_FORMULA )
-                ((ScFormulaCell*)pCell)->aPos.SetRow( nNewRow );
-        }
-    }
-    else
-    {
-        rAddress.SetRow( pItems[i].nRow );
-        ScRange aRange( rAddress );
-        aRange.aEnd.SetRow( pItems[nCount-1].nRow );
-        for ( ; i < nCount; i++ )
-        {
-            SCROW nNewRow = (pItems[i].nRow -= nSize);
-            ScBaseCell* pCell = pItems[i].pCell;
-            if ( pCell->GetCellType() == CELLTYPE_FORMULA )
-                ((ScFormulaCell*)pCell)->aPos.SetRow( nNewRow );
-        }
-        pDocument->AreaBroadcastInRange( aRange, aHint );
-    }
-
-	pDocument->SetAutoCalc( bOldAutoCalc );
+    maCellNotes.clear();
+    maCellNotes.resize(MAXROWCOUNT);
 }
-
-
-void ScColumn::DeleteRange( SCSIZE nStartIndex, SCSIZE nEndIndex, sal_uInt16 nDelFlag )
-{
-    /*  If caller specifies to not remove the note caption objects, all cells
-        have to forget the pointers to them. This is used e.g. while undoing a
-        "paste cells" operation, which removes the caption objects later in
-        drawing undo. */
-    bool bDeleteNote = (nDelFlag & IDF_NOTE) != 0;
-    bool bNoCaptions = (nDelFlag & IDF_NOCAPTIONS) != 0;
-    if (bDeleteNote && bNoCaptions)
-		for ( SCSIZE nIdx = nStartIndex; nIdx <= nEndIndex; ++nIdx )
-			if ( ScPostIt* pNote = pItems[ nIdx ].pCell->GetNote() )
-				pNote->ForgetCaption();
-
-    // special simple mode if all contents are deleted and cells do not contain broadcasters
-	bool bSimple = ((nDelFlag & IDF_CONTENTS) == IDF_CONTENTS);
-	if (bSimple)
-		for ( SCSIZE nIdx = nStartIndex; bSimple && (nIdx <= nEndIndex); ++nIdx )
-			if (pItems[ nIdx ].pCell->GetBroadcaster())
-				bSimple = false;
-
-    ScHint aHint( SC_HINT_DYING, ScAddress( nCol, 0, nTab ), 0 );
-
-    // cache all formula cells, they will be deleted at end of this function
-	typedef ::std::vector< ScFormulaCell* > FormulaCellVector;
-	FormulaCellVector aDelCells;
-    aDelCells.reserve( nEndIndex - nStartIndex + 1 );
-
-    // simple deletion of the cell objects
-	if (bSimple)
-	{
-        // pNoteCell: dummy replacement for old cells, to prevent that interpreter uses old cell
-		ScNoteCell* pNoteCell = new ScNoteCell;
-		for ( SCSIZE nIdx = nStartIndex; nIdx <= nEndIndex; ++nIdx )
-		{
-			ScBaseCell* pOldCell = pItems[ nIdx ].pCell;
-			if (pOldCell->GetCellType() == CELLTYPE_FORMULA)
-            {
-                // cache formula cell, will be deleted below
-				aDelCells.push_back( static_cast< ScFormulaCell* >( pOldCell ) );
-            }
-			else
-			{
-				// interpret in broadcast must not use the old cell
-				pItems[ nIdx ].pCell = pNoteCell;
-                aHint.GetAddress().SetRow( pItems[ nIdx ].nRow );
-                aHint.SetCell( pOldCell );
-				pDocument->Broadcast( aHint );
-				pOldCell->Delete();
-			}
-		}
-		delete pNoteCell;
-		memmove( &pItems[nStartIndex], &pItems[nEndIndex + 1], (nCount - nEndIndex - 1) * sizeof(ColEntry) );
-		nCount -= nEndIndex-nStartIndex+1;
-	}
-
-    // else: delete some contents of the cells
-	else
-	{
-		SCSIZE j = nStartIndex;
-        for ( SCSIZE nIdx = nStartIndex; nIdx <= nEndIndex; ++nIdx )
-		{
-            // decide whether to delete the cell object according to passed flags
-			bool bDelete = false;
-			ScBaseCell* pOldCell = pItems[j].pCell;
-			CellType eCellType = pOldCell->GetCellType();
-			switch ( eCellType )
-			{
-				case CELLTYPE_VALUE:
-                {
-                    sal_uInt16 nValFlags = nDelFlag & (IDF_DATETIME|IDF_VALUE);
-                    // delete values and dates?
-					bDelete = nValFlags == (IDF_DATETIME|IDF_VALUE);
-                    // if not, decide according to cell number format
-					if( !bDelete && (nValFlags != 0) )
-					{
-						sal_uLong nIndex = (sal_uLong)((SfxUInt32Item*)GetAttr( pItems[j].nRow, ATTR_VALUE_FORMAT ))->GetValue();
-						short nType = pDocument->GetFormatTable()->GetType(nIndex);
-						bool bIsDate = (nType == NUMBERFORMAT_DATE) || (nType == NUMBERFORMAT_TIME) || (nType == NUMBERFORMAT_DATETIME);
-                        bDelete = nValFlags == (bIsDate ? IDF_DATETIME : IDF_VALUE);
-					}
-                }
-                break;
-
-				case CELLTYPE_STRING:
-				case CELLTYPE_EDIT:
-                    bDelete = (nDelFlag & IDF_STRING) != 0;
-                break;
-
-				case CELLTYPE_FORMULA:
-                    bDelete = (nDelFlag & IDF_FORMULA) != 0;
-                break;
-
-				case CELLTYPE_NOTE:
-                    // do note delete note cell with broadcaster
-					bDelete = bDeleteNote && !pOldCell->GetBroadcaster();
-                break;
-
-                default:;   // added to avoid warnings
-			}
-
-			if (bDelete)
-			{
-                // try to create a replacement note cell, if note or broadcaster exists
-				ScNoteCell* pNoteCell = 0;
-				if (eCellType != CELLTYPE_NOTE)
-				{
-                    // do not rescue note if it has to be deleted according to passed flags
-					ScPostIt* pNote = bDeleteNote ? 0 : pOldCell->ReleaseNote();
-                    // #i99844# do not release broadcaster from old cell, it still has to notify deleted content
-                    SvtBroadcaster* pBC = pOldCell->GetBroadcaster();
-                    if( pNote || pBC )
-                        pNoteCell = new ScNoteCell( pNote, pBC );
-				}
-
-                // remove cell entry in cell item list
-				SCROW nOldRow = pItems[j].nRow;
-				if (pNoteCell)
-				{
-                    // replace old cell with the replacement note cell
-					pItems[j].pCell = pNoteCell;
-					++j;
-				}
-				else
-				{
-                    // remove the old cell from the cell item list
-					--nCount;
-					memmove( &pItems[j], &pItems[j + 1], (nCount - j) * sizeof(ColEntry) );
-					pItems[nCount].nRow = 0;
-					pItems[nCount].pCell = 0;
-				}
-
-                // cache formula cells (will be deleted later), delete cell of other type
-				if (eCellType == CELLTYPE_FORMULA)
-				{
-					aDelCells.push_back( static_cast< ScFormulaCell* >( pOldCell ) );
-				}
-				else
-				{
-                    aHint.GetAddress().SetRow( nOldRow );
-                    aHint.SetCell( pOldCell );
-					pDocument->Broadcast( aHint );
-                    // #i99844# after broadcasting, old cell has to forget the broadcaster (owned by pNoteCell)
-                    pOldCell->ReleaseBroadcaster();
-					pOldCell->Delete();
-				}
-			}
-			else
-			{
-                // delete cell note
-				if (bDeleteNote)
-					pItems[j].pCell->DeleteNote();
-                // cell not deleted, move index to next cell
-				++j;
-			}
-		}
-	}
-
-    // *** delete all formula cells ***
-
-	// first, all cells stop listening, may save unneeded recalcualtions
-	for ( FormulaCellVector::iterator aIt = aDelCells.begin(), aEnd = aDelCells.end(); aIt != aEnd; ++aIt )
-		(*aIt)->EndListeningTo( pDocument );
-
-    // #i101869# if the note cell with the broadcaster was deleted in EndListening,
-    // forget the pointer to the broadcaster
-    for ( FormulaCellVector::iterator aIt = aDelCells.begin(), aEnd = aDelCells.end(); aIt != aEnd; ++aIt )
-    {
-        SCSIZE nIndex;
-        if ( !Search( (*aIt)->aPos.Row(), nIndex ) )
-            (*aIt)->ReleaseBroadcaster();
-    }
-
-    // broadcast SC_HINT_DYING for all cells and delete them
-	for ( FormulaCellVector::iterator aIt = aDelCells.begin(), aEnd = aDelCells.end(); aIt != aEnd; ++aIt )
-	{
-        aHint.SetAddress( (*aIt)->aPos );
-        aHint.SetCell( *aIt );
-		pDocument->Broadcast( aHint );
-        // #i99844# after broadcasting, old cell has to forget the broadcaster (owned by replacement note cell)
-        (*aIt)->ReleaseBroadcaster();
-		(*aIt)->Delete();
-	}
-}
-
-
-void ScColumn::DeleteArea(SCROW nStartRow, SCROW nEndRow, sal_uInt16 nDelFlag)
-{
-	//	FreeAll darf hier nicht gerufen werden wegen Broadcastern
-
-	//	Attribute erst am Ende, damit vorher noch zwischen Zahlen und Datum
-	//	unterschieden werden kann (#47901#)
-
-    sal_uInt16 nContMask = IDF_CONTENTS;
-    //  IDF_NOCAPTIONS needs to be passed too, if IDF_NOTE is set
-    if( nDelFlag & IDF_NOTE )
-        nContMask |= IDF_NOCAPTIONS;
-    sal_uInt16 nContFlag = nDelFlag & nContMask;
-
-	if (pItems && nCount>0 && nContFlag)
-	{
-		if (nStartRow==0 && nEndRow==MAXROW)
-            DeleteRange( 0, nCount-1, nContFlag );
-		else
-		{
-			sal_Bool bFound=sal_False;
-            SCSIZE nStartIndex = 0;
-            SCSIZE nEndIndex = 0;
-			for (SCSIZE i = 0; i < nCount; i++)
-				if ((pItems[i].nRow >= nStartRow) && (pItems[i].nRow <= nEndRow))
-				{
-					if (!bFound)
-					{
-						nStartIndex = i;
-						bFound = sal_True;
-					}
-					nEndIndex = i;
-				}
-			if (bFound)
-                DeleteRange( nStartIndex, nEndIndex, nContFlag );
-		}
-	}
-
-	if ( nDelFlag & IDF_EDITATTR )
-	{
-		DBG_ASSERT( nContFlag == 0, "DeleteArea: falsche Flags" );
-		RemoveEditAttribs( nStartRow, nEndRow );
-	}
-
-	//	Attribute erst hier
-	if ((nDelFlag & IDF_ATTRIB) == IDF_ATTRIB) pAttrArray->DeleteArea( nStartRow, nEndRow );
-	else if ((nDelFlag & IDF_ATTRIB) != 0) pAttrArray->DeleteHardAttr( nStartRow, nEndRow );
-}
-
-
-ScFormulaCell* ScColumn::CreateRefCell( ScDocument* pDestDoc, const ScAddress& rDestPos,
-											SCSIZE nIndex, sal_uInt16 nFlags ) const
-{
-	sal_uInt16 nContFlags = nFlags & IDF_CONTENTS;
-	if (!nContFlags)
-		return NULL;
-
-	//	Testen, ob Zelle kopiert werden soll
-	//	auch bei IDF_CONTENTS komplett, wegen Notes / Broadcastern
-
-	sal_Bool bMatch = sal_False;
-	ScBaseCell* pCell = pItems[nIndex].pCell;
-	CellType eCellType = pCell->GetCellType();
-	switch ( eCellType )
-	{
-		case CELLTYPE_VALUE:
-			{
-				sal_uInt16 nValFlags = nFlags & (IDF_DATETIME|IDF_VALUE);
-
-				if ( nValFlags == (IDF_DATETIME|IDF_VALUE) )
-					bMatch = sal_True;
-				else if ( nValFlags )
-				{
-					sal_uLong nNumIndex = (sal_uLong)((SfxUInt32Item*)GetAttr(
-									pItems[nIndex].nRow, ATTR_VALUE_FORMAT ))->GetValue();
-					short nTyp = pDocument->GetFormatTable()->GetType(nNumIndex);
-					if ((nTyp == NUMBERFORMAT_DATE) || (nTyp == NUMBERFORMAT_TIME) || (nTyp == NUMBERFORMAT_DATETIME))
-						bMatch = ((nFlags & IDF_DATETIME) != 0);
-					else
-						bMatch = ((nFlags & IDF_VALUE) != 0);
-				}
-			}
-			break;
-		case CELLTYPE_STRING:
-		case CELLTYPE_EDIT:		bMatch = ((nFlags & IDF_STRING) != 0); break;
-		case CELLTYPE_FORMULA:	bMatch = ((nFlags & IDF_FORMULA) != 0); break;
-        default:
-        {
-            // added to avoid warnings
-        }
-	}
-	if (!bMatch)
-		return NULL;
-
-
-	//	Referenz einsetzen
-	ScSingleRefData aRef;
-	aRef.nCol = nCol;
-	aRef.nRow = pItems[nIndex].nRow;
-	aRef.nTab = nTab;
-	aRef.InitFlags();							// -> alles absolut
-	aRef.SetFlag3D(sal_True);
-
-	//!	3D(sal_False) und TabRel(sal_True), wenn die endgueltige Position auf der selben Tabelle ist?
-	//!	(bei TransposeClip ist die Zielposition noch nicht bekannt)
-
-	aRef.CalcRelFromAbs( rDestPos );
-
-	ScTokenArray aArr;
-	aArr.AddSingleReference( aRef );
-
-	return new ScFormulaCell( pDestDoc, rDestPos, &aArr );
-}
-
-
-//	rColumn = Quelle
-//	nRow1, nRow2 = Zielposition
-
-void ScColumn::CopyFromClip(SCROW nRow1, SCROW nRow2, long nDy,
-								sal_uInt16 nInsFlag, sal_Bool bAsLink, sal_Bool bSkipAttrForEmpty,
-								ScColumn& rColumn)
-{
-	if ((nInsFlag & IDF_ATTRIB) != 0)
-	{
-		if ( bSkipAttrForEmpty )
-		{
-			//	copy only attributes for non-empty cells
-			//	(notes are not counted as non-empty here, to match the content behavior)
-
-			SCSIZE nStartIndex;
-			rColumn.Search( nRow1-nDy, nStartIndex );
-			while ( nStartIndex < rColumn.nCount && rColumn.pItems[nStartIndex].nRow <= nRow2-nDy )
-			{
-				SCSIZE nEndIndex = nStartIndex;
-				if ( rColumn.pItems[nStartIndex].pCell->GetCellType() != CELLTYPE_NOTE )
-				{
-					SCROW nStartRow = rColumn.pItems[nStartIndex].nRow;
-					SCROW nEndRow = nStartRow;
-
-					//	find consecutive non-empty cells
-
-					while ( nEndRow < nRow2-nDy &&
-							nEndIndex+1 < rColumn.nCount &&
-							rColumn.pItems[nEndIndex+1].nRow == nEndRow+1 &&
-							rColumn.pItems[nEndIndex+1].pCell->GetCellType() != CELLTYPE_NOTE )
-					{
-						++nEndIndex;
-						++nEndRow;
-					}
-
-					rColumn.pAttrArray->CopyAreaSafe( nStartRow+nDy, nEndRow+nDy, nDy, *pAttrArray );
-				}
-				nStartIndex = nEndIndex + 1;
-			}
-		}
-		else
-			rColumn.pAttrArray->CopyAreaSafe( nRow1, nRow2, nDy, *pAttrArray );
-	}
-    if ((nInsFlag & IDF_CONTENTS) == 0)
-		return;
-
-	if ( bAsLink && nInsFlag == IDF_ALL )
-	{
-		//	bei "alles" werden auch leere Zellen referenziert
-		//!	IDF_ALL muss immer mehr Flags enthalten, als bei "Inhalte Einfuegen"
-		//!	einzeln ausgewaehlt werden koennen!
-
-		Resize( nCount + static_cast<SCSIZE>(nRow2-nRow1+1) );
-
-		ScAddress aDestPos( nCol, 0, nTab );		// Row wird angepasst
-
-		//	Referenz erzeugen (Quell-Position)
-		ScSingleRefData aRef;
-		aRef.nCol = rColumn.nCol;
-		//	nRow wird angepasst
-		aRef.nTab = rColumn.nTab;
-		aRef.InitFlags();							// -> alles absolut
-		aRef.SetFlag3D(sal_True);
-
-		for (SCROW nDestRow = nRow1; nDestRow <= nRow2; nDestRow++)
-		{
-			aRef.nRow = nDestRow - nDy;				// Quell-Zeile
-			aDestPos.SetRow( nDestRow );
-
-			aRef.CalcRelFromAbs( aDestPos );
-			ScTokenArray aArr;
-			aArr.AddSingleReference( aRef );
-			Insert( nDestRow, new ScFormulaCell( pDocument, aDestPos, &aArr ) );
-		}
-
-		return;
-	}
-
-	SCSIZE nColCount = rColumn.nCount;
-
-    // ignore IDF_FORMULA - "all contents but no formulas" results in the same number of cells
-	if ((nInsFlag & ( IDF_CONTENTS & ~IDF_FORMULA )) == ( IDF_CONTENTS & ~IDF_FORMULA ) && nRow2-nRow1 >= 64)
-	{
-        //! Always do the Resize from the outside, where the number of repetitions is known
-        //! (then it can be removed here)
-
-		SCSIZE nNew = nCount + nColCount;
-		if ( nLimit < nNew )
-			Resize( nNew );
-	}
-
-    // IDF_ADDNOTES must be passed without other content flags than IDF_NOTE
-    bool bAddNotes = (nInsFlag & (IDF_CONTENTS | IDF_ADDNOTES)) == (IDF_NOTE | IDF_ADDNOTES);
-
-	sal_Bool bAtEnd = sal_False;
-	for (SCSIZE i = 0; i < nColCount && !bAtEnd; i++)
-	{
-		SCsROW nDestRow = rColumn.pItems[i].nRow + nDy;
-		if ( nDestRow > (SCsROW) nRow2 )
-			bAtEnd = sal_True;
-		else if ( nDestRow >= (SCsROW) nRow1 )
-		{
-			//	rows at the beginning may be skipped if filtered rows are left out,
-			//	nDestRow may be negative then
-
-            ScAddress aDestPos( nCol, (SCROW)nDestRow, nTab );
-
-            /*  #i102056# Paste from clipboard needs to paste the cell notes in
-                a second pass. This must not overwrite the existing cells
-                already copied to the destination position in the first pass.
-                To indicate this special case, the modifier IDF_ADDNOTES is
-                passed together with IDF_NOTE in nInsFlag. Of course, there is
-                still the need to create a new cell, if there is no cell at the
-                destination position at all. */
-            ScBaseCell* pAddNoteCell = bAddNotes ? GetCell( aDestPos.Row() ) : 0;
-            if (pAddNoteCell)
-            {
-                // do nothing if source cell does not contain a note
-                const ScBaseCell* pSourceCell = rColumn.pItems[i].pCell;
-                const ScPostIt* pSourceNote = pSourceCell ? pSourceCell->GetNote() : 0;
-                if (pSourceNote)
-                {
-                    DBG_ASSERT( !pAddNoteCell->HasNote(), "ScColumn::CopyFromClip - unexpected note at destination cell" );
-                    bool bCloneCaption = (nInsFlag & IDF_NOCAPTIONS) == 0;
-                    // #i52342# if caption is cloned, the note must be constructed with the destination document
-                    ScAddress aSourcePos( rColumn.nCol, rColumn.pItems[i].nRow, rColumn.nTab );
-                    ScPostIt* pNewNote = pSourceNote->Clone( aSourcePos, *pDocument, aDestPos, bCloneCaption );
-                    pAddNoteCell->TakeNote( pNewNote );
-                }
-            }
-            else
-            {
-                ScBaseCell* pNewCell = bAsLink ?
-                    rColumn.CreateRefCell( pDocument, aDestPos, i, nInsFlag ) :
-                    rColumn.CloneCell( i, nInsFlag, *pDocument, aDestPos );
-                if (pNewCell)
-                    Insert( aDestPos.Row(), pNewCell );
-            }
-		}
-	}
-}
-
 
 namespace {
 
-/** Helper for ScColumn::CloneCell - decides whether to clone a value cell depending on clone flags and number format. */
-bool lclCanCloneValue( ScDocument& rDoc, const ScColumn& rCol, SCROW nRow, bool bCloneValue, bool bCloneDateTime )
+class ShiftFormulaPosHandler
 {
-    // values and dates, or nothing to be cloned -> not needed to check number format
-    if( bCloneValue == bCloneDateTime )
-        return bCloneValue;
+public:
 
-    // check number format of value cell
-    sal_uLong nNumIndex = (sal_uLong)((SfxUInt32Item*)rCol.GetAttr( nRow, ATTR_VALUE_FORMAT ))->GetValue();
-    short nTyp = rDoc.GetFormatTable()->GetType( nNumIndex );
-    bool bIsDateTime = (nTyp == NUMBERFORMAT_DATE) || (nTyp == NUMBERFORMAT_TIME) || (nTyp == NUMBERFORMAT_DATETIME);
-    return bIsDateTime ? bCloneDateTime : bCloneValue;
+    void operator() (size_t nRow, ScFormulaCell* pCell)
+    {
+        pCell->aPos.SetRow(nRow);
+    }
+};
+
 }
 
-} // namespace
-
-
-ScBaseCell* ScColumn::CloneCell(SCSIZE nIndex, sal_uInt16 nFlags, ScDocument& rDestDoc, const ScAddress& rDestPos)
+void ScColumn::DeleteRow( SCROW nStartRow, SCSIZE nSize, std::vector<ScAddress>* pGroupPos )
 {
-    bool bCloneValue    = (nFlags & IDF_VALUE) != 0;
-    bool bCloneDateTime = (nFlags & IDF_DATETIME) != 0;
-    bool bCloneString   = (nFlags & IDF_STRING) != 0;
-    bool bCloneFormula  = (nFlags & IDF_FORMULA) != 0;
-    bool bCloneNote     = (nFlags & IDF_NOTE) != 0;
+    pAttrArray->DeleteRow( nStartRow, nSize );
 
-    ScBaseCell* pNew = 0;
-    ScBaseCell& rSource = *pItems[nIndex].pCell;
-    switch (rSource.GetCellType())
-	{
-		case CELLTYPE_NOTE:
-            // note will be cloned below
-        break;
+    SCROW nEndRow = nStartRow + nSize - 1;
 
-        case CELLTYPE_STRING:
-		case CELLTYPE_EDIT:
-            // note will be cloned below
-            if (bCloneString)
-                pNew = rSource.CloneWithoutNote( rDestDoc, rDestPos );
-        break;
+    maBroadcasters.erase(nStartRow, nEndRow);
+    maBroadcasters.resize(MAXROWCOUNT);
 
-		case CELLTYPE_VALUE:
-            // note will be cloned below
-            if (lclCanCloneValue( *pDocument, *this, pItems[nIndex].nRow, bCloneValue, bCloneDateTime ))
-                pNew = rSource.CloneWithoutNote( rDestDoc, rDestPos );
-        break;
+    maCellNotes.erase(nStartRow, nEndRow);
+    maCellNotes.resize(MAXROWCOUNT);
 
-		case CELLTYPE_FORMULA:
-            if (bCloneFormula)
-            {
-                // note will be cloned below
-                pNew = rSource.CloneWithoutNote( rDestDoc, rDestPos );
-            }
-            else if ( (bCloneValue || bCloneDateTime || bCloneString) && !rDestDoc.IsUndo() )
-            {
-                //  #48491# ins Undo-Dokument immer nur die Original-Zelle kopieren,
-                //  aus Formeln keine Value/String-Zellen erzeugen
-                ScFormulaCell& rForm = (ScFormulaCell&)rSource;
-                sal_uInt16 nErr = rForm.GetErrCode();
-                if ( nErr )
-                {
-                    // error codes are cloned with values
-                    if (bCloneValue)
-                    {
-                        ScFormulaCell* pErrCell = new ScFormulaCell( &rDestDoc, rDestPos );
-                        pErrCell->SetErrCode( nErr );
-                        pNew = pErrCell;
-                    }
-                }
-                else if (rForm.IsValue())
-                {
-                    if (lclCanCloneValue( *pDocument, *this, pItems[nIndex].nRow, bCloneValue, bCloneDateTime ))
-                    {
-                        double nVal = rForm.GetValue();
-                        pNew = new ScValueCell(nVal);
-                    }
-                }
-                else if (bCloneString)
-                {
-                    String aString;
-                    rForm.GetString( aString );
-                    // #33224# do not clone empty string
-                    if (aString.Len() > 0)
-                    {
-                        if ( rForm.IsMultilineResult() )
-                        {
-                            pNew = new ScEditCell( aString, &rDestDoc );
-                        }
-                        else
-                        {
-                            pNew = new ScStringCell( aString );
-                        }
-                    }
-                }
-            }
-        break;
-
-        default: DBG_ERRORFILE( "ScColumn::CloneCell - unknown cell type" );
-	}
-
-    // clone the cell note
-    if (bCloneNote)
+    // See if we have any cells that would get deleted or shifted by deletion.
+    sc::CellStoreType::position_type aPos = maCells.position(nStartRow);
+    sc::CellStoreType::iterator itCell = aPos.first;
+    if (itCell->type == sc::element_type_empty)
     {
-        if (ScPostIt* pNote = rSource.GetNote())
+        // This is an empty block. If this is the last block, then there is no cells to delete or shift.
+        sc::CellStoreType::iterator itTest = itCell;
+        ++itTest;
+        if (itTest == maCells.end())
         {
-            bool bCloneCaption = (nFlags & IDF_NOCAPTIONS) == 0;
-            // #i52342# if caption is cloned, the note must be constructed with the destination document
-            ScAddress aOwnPos( nCol, pItems[nIndex].nRow, nTab );
-            ScPostIt* pNewNote = pNote->Clone( aOwnPos, rDestDoc, rDestPos, bCloneCaption );
-            if (!pNew)
-                pNew = new ScNoteCell( pNewNote );
-            else
-                pNew->TakeNote( pNewNote );
+            // No cells are affected by this deletion. Bail out.
+            CellStorageModified(); // broadcast array has been modified.
+            return;
         }
     }
 
-	return pNew;
+    // Check if there are any cells below the end row that will get shifted.
+    bool bShiftCells = false;
+    if (nEndRow < MAXROW) //only makes sense to do this if there *is* a row after the end row
+    {
+        aPos = maCells.position(itCell, nEndRow+1);
+        itCell = aPos.first;
+        if (itCell->type == sc::element_type_empty)
+        {
+            // This block is empty. See if there is any block that follows.
+            sc::CellStoreType::iterator itTest = itCell;
+            ++itTest;
+            if (itTest != maCells.end())
+                // Non-empty block follows -> cells that will get shifted.
+                bShiftCells = true;
+        }
+        else
+            bShiftCells = true;
+    }
+
+    sc::SingleColumnSpanSet aNonEmptySpans;
+    if (bShiftCells)
+    {
+        // Mark all non-empty cell positions below the end row.
+        sc::ColumnBlockConstPosition aBlockPos;
+        aBlockPos.miCellPos = itCell;
+        aNonEmptySpans.scan(aBlockPos, *this, nEndRow+1, MAXROW);
+    }
+
+    sc::AutoCalcSwitch aACSwitch(*pDocument, false);
+
+    // Remove the cells.
+    maCells.erase(nStartRow, nEndRow);
+    maCells.resize(MAXROWCOUNT);
+
+    // Get the position again after the container change.
+    aPos = maCells.position(nStartRow);
+
+    // Shift the formula cell positions below the start row.
+    ShiftFormulaPosHandler aShiftFormulaFunc;
+    sc::ProcessFormula(aPos.first, maCells, nStartRow, MAXROW, aShiftFormulaFunc);
+
+    bool bJoined = sc::SharedFormulaUtil::joinFormulaCellAbove(aPos);
+    if (bJoined && pGroupPos)
+        pGroupPos->push_back(ScAddress(nCol, nStartRow, nTab));
+
+    // Shift the text attribute array too (before the broadcast).
+    maCellTextAttrs.erase(nStartRow, nEndRow);
+    maCellTextAttrs.resize(MAXROWCOUNT);
+
+    CellStorageModified();
 }
 
-
-void ScColumn::MixMarked( const ScMarkData& rMark, sal_uInt16 nFunction,
-							sal_Bool bSkipEmpty, ScColumn& rSrcCol )
+sc::CellStoreType::iterator ScColumn::GetPositionToInsert( SCROW nRow )
 {
-	SCROW nRow1, nRow2;
-
-	if (rMark.IsMultiMarked())
-	{
-		ScMarkArrayIter aIter( rMark.GetArray()+nCol );
-		while (aIter.Next( nRow1, nRow2 ))
-			MixData( nRow1, nRow2, nFunction, bSkipEmpty, rSrcCol );
-	}
+    return GetPositionToInsert(maCells.begin(), nRow);
 }
 
-
-//	Ergebnis in rVal1
-
-sal_Bool lcl_DoFunction( double& rVal1, double nVal2, sal_uInt16 nFunction )
+void ScColumn::JoinNewFormulaCell(
+    const sc::CellStoreType::position_type& aPos, ScFormulaCell& rCell ) const
 {
-	sal_Bool bOk = sal_False;
-	switch (nFunction)
-	{
-		case PASTE_ADD:
-			bOk = SubTotal::SafePlus( rVal1, nVal2 );
-			break;
-		case PASTE_SUB:
-			nVal2 = -nVal2;		//! geht das immer ohne Fehler?
-			bOk = SubTotal::SafePlus( rVal1, nVal2 );
-			break;
-		case PASTE_MUL:
-			bOk = SubTotal::SafeMult( rVal1, nVal2 );
-			break;
-		case PASTE_DIV:
-			bOk = SubTotal::SafeDiv( rVal1, nVal2 );
-			break;
-	}
-	return bOk;
+    // Check the previous row position for possible grouping.
+    if (aPos.first->type == sc::element_type_formula && aPos.second > 0)
+    {
+        ScFormulaCell& rPrev = *sc::formula_block::at(*aPos.first->data, aPos.second-1);
+        sc::CellStoreType::position_type aPosPrev = aPos;
+        --aPosPrev.second;
+        sc::SharedFormulaUtil::joinFormulaCells(aPosPrev, rPrev, rCell);
+    }
+
+    // Check the next row position for possible grouping.
+    if (aPos.first->type == sc::element_type_formula && aPos.second+1 < aPos.first->size)
+    {
+        ScFormulaCell& rNext = *sc::formula_block::at(*aPos.first->data, aPos.second+1);
+        sc::SharedFormulaUtil::joinFormulaCells(aPos, rCell, rNext);
+    }
 }
 
-
-void lcl_AddCode( ScTokenArray& rArr, ScFormulaCell* pCell )
+void ScColumn::DetachFormulaCell(
+    const sc::CellStoreType::position_type& aPos, ScFormulaCell& rCell )
 {
-	rArr.AddOpCode(ocOpen);
+    if (!pDocument->IsClipOrUndo())
+        // Have the dying formula cell stop listening.
+        rCell.EndListeningTo(pDocument);
 
-	ScTokenArray* pCode = pCell->GetCode();
-	if (pCode)
-	{
+    sc::SharedFormulaUtil::unshareFormulaCell(aPos, rCell);
+}
+
+namespace {
+
+class AttachFormulaCellsHandler
+{
+    sc::StartListeningContext& mrCxt;
+
+public:
+    AttachFormulaCellsHandler( sc::StartListeningContext& rCxt ) :
+        mrCxt(rCxt) {}
+
+    void operator() (size_t /*nRow*/, ScFormulaCell* pCell)
+    {
+        pCell->StartListeningTo(mrCxt);
+    }
+};
+
+class DetachFormulaCellsHandler
+{
+    ScDocument* mpDoc;
+    sc::EndListeningContext* mpCxt;
+
+public:
+    DetachFormulaCellsHandler( ScDocument* pDoc, sc::EndListeningContext* pCxt ) :
+        mpDoc(pDoc), mpCxt(pCxt) {}
+
+    void operator() (size_t /*nRow*/, ScFormulaCell* pCell)
+    {
+        if (mpCxt)
+            pCell->EndListeningTo(*mpCxt);
+        else
+            pCell->EndListeningTo(mpDoc);
+    }
+};
+
+}
+
+void ScColumn::DetachFormulaCells(
+    const sc::CellStoreType::position_type& aPos, size_t nLength )
+{
+    // Split formula grouping at the top and bottom boundaries.
+    sc::SharedFormulaUtil::splitFormulaCellGroup(aPos, nullptr);
+    size_t nRow = aPos.first->position + aPos.second;
+    size_t nNextTopRow = nRow + nLength; // start row of next formula group.
+    if (ValidRow(nNextTopRow))
+    {
+        sc::CellStoreType::position_type aPos2 = maCells.position(aPos.first, nNextTopRow);
+        sc::SharedFormulaUtil::splitFormulaCellGroup(aPos2, nullptr);
+    }
+
+    if (pDocument->IsClipOrUndo())
+        return;
+
+    DetachFormulaCellsHandler aFunc(pDocument, NULL);
+    sc::ProcessFormula(aPos.first, maCells, nRow, nNextTopRow-1, aFunc);
+}
+
+void ScColumn::AttachFormulaCells( sc::StartListeningContext& rCxt, SCROW nRow1, SCROW nRow2 )
+{
+    sc::CellStoreType::position_type aPos = maCells.position(nRow1);
+    sc::CellStoreType::iterator it = aPos.first;
+
+    sc::SharedFormulaUtil::joinFormulaCellAbove(aPos);
+    if (ValidRow(nRow2+1))
+    {
+        aPos = maCells.position(it, nRow2+1);
+        sc::SharedFormulaUtil::joinFormulaCellAbove(aPos);
+    }
+
+    if (pDocument->IsClipOrUndo())
+        return;
+
+    AttachFormulaCellsHandler aFunc(rCxt);
+    sc::ProcessFormula(it, maCells, nRow1, nRow2, aFunc);
+}
+
+void ScColumn::DetachFormulaCells( sc::EndListeningContext& rCxt, SCROW nRow1, SCROW nRow2 )
+{
+    sc::CellStoreType::position_type aPos = maCells.position(nRow1);
+    sc::CellStoreType::iterator it = aPos.first;
+
+    // Split formula grouping at the top and bottom boundaries.
+    sc::SharedFormulaUtil::splitFormulaCellGroup(aPos, &rCxt);
+    if (ValidRow(nRow2+1))
+    {
+        aPos = maCells.position(it, nRow2+1);
+        sc::SharedFormulaUtil::splitFormulaCellGroup(aPos, &rCxt);
+    }
+
+    if (pDocument->IsClipOrUndo())
+        return;
+
+    DetachFormulaCellsHandler aFunc(pDocument, &rCxt);
+    sc::ProcessFormula(it, maCells, nRow1, nRow2, aFunc);
+}
+
+sc::CellStoreType::iterator ScColumn::GetPositionToInsert( const sc::CellStoreType::iterator& it, SCROW nRow )
+{
+    // See if we are overwriting an existing formula cell.
+    sc::CellStoreType::position_type aPos = maCells.position(it, nRow);
+    sc::CellStoreType::iterator itRet = aPos.first;
+    if (itRet->type == sc::element_type_formula)
+    {
+        ScFormulaCell& rCell = *sc::formula_block::at(*itRet->data, aPos.second);
+        DetachFormulaCell(aPos, rCell);
+    }
+
+    return itRet;
+}
+
+void ScColumn::AttachNewFormulaCell(
+    const sc::CellStoreType::iterator& itPos, SCROW nRow, ScFormulaCell& rCell,
+    bool bJoin, sc::StartListeningType eListenType )
+{
+    AttachNewFormulaCell(maCells.position(itPos, nRow), rCell, bJoin, eListenType);
+}
+
+void ScColumn::AttachNewFormulaCell(
+    const sc::CellStoreType::position_type& aPos, ScFormulaCell& rCell,
+    bool bJoin, sc::StartListeningType eListenType )
+{
+    if (bJoin)
+        // See if this new formula cell can join an existing shared formula group.
+        JoinNewFormulaCell(aPos, rCell);
+
+    // When we insert from the Clipboard we still have wrong (old) References!
+    // First they are rewired in CopyBlockFromClip via UpdateReference and the
+    // we call StartListeningFromClip and BroadcastFromClip.
+    // If we insert into the Clipboard/andoDoc, we do not use a Broadcast.
+    // After Import we call CalcAfterLoad and in there Listening.
+    if (pDocument->IsClipOrUndo() || pDocument->IsInsertingFromOtherDoc())
+        return;
+
+    switch (eListenType)
+    {
+        case sc::ConvertToGroupListening:
+        {
+            boost::shared_ptr<sc::ColumnBlockPositionSet> pPosSet(new sc::ColumnBlockPositionSet(*pDocument));
+            sc::StartListeningContext aStartCxt(*pDocument, pPosSet);
+            sc::EndListeningContext aEndCxt(*pDocument, pPosSet);
+            SCROW nRow = aPos.first->position + aPos.second;
+            StartListeningFormulaCells(aStartCxt, aEndCxt, nRow, nRow);
+        }
+        break;
+        case sc::SingleCellListening:
+            rCell.StartListeningTo(pDocument);
+        break;
+        case sc::NoListening:
+        default:
+            ;
+
+    }
+
+    if (!pDocument->IsCalcingAfterLoad())
+        rCell.SetDirty();
+}
+
+void ScColumn::AttachNewFormulaCells( const sc::CellStoreType::position_type& aPos, size_t nLength )
+{
+    // Make sure the whole length consists of formula cells.
+    if (aPos.first->type != sc::element_type_formula)
+        return;
+
+    if (aPos.first->size < aPos.second + nLength)
+        // Block is shorter than specified length.
+        return;
+
+    // Join the top and bottom cells only.
+    ScFormulaCell* pCell = sc::formula_block::at(*aPos.first->data, aPos.second);
+    JoinNewFormulaCell(aPos, *pCell);
+
+    sc::CellStoreType::position_type aPosLast = aPos;
+    aPosLast.second += nLength - 1;
+    pCell = sc::formula_block::at(*aPosLast.first->data, aPosLast.second);
+    JoinNewFormulaCell(aPosLast, *pCell);
+
+    if (!pDocument->IsClipOrUndo() && !pDocument->IsInsertingFromOtherDoc())
+    {
+        sc::StartListeningContext aCxt(*pDocument);
+        ScFormulaCell** pp = &sc::formula_block::at(*aPos.first->data, aPos.second);
+        ScFormulaCell** ppEnd = pp + nLength;
+        for (; pp != ppEnd; ++pp)
+        {
+            pCell = *pp;
+            pCell->StartListeningTo(aCxt);
+            if (!pDocument->IsCalcingAfterLoad())
+                pCell->SetDirty();
+        }
+    }
+}
+
+void ScColumn::BroadcastNewCell( SCROW nRow )
+{
+    // When we insert from the Clipboard we still have wrong (old) References!
+    // First they are rewired in CopyBlockFromClip via UpdateReference and the
+    // we call StartListeningFromClip and BroadcastFromClip.
+    // If we insert into the Clipboard/andoDoc, we do not use a Broadcast.
+    // After Import we call CalcAfterLoad and in there Listening.
+    if (pDocument->IsClipOrUndo() || pDocument->IsInsertingFromOtherDoc() || pDocument->IsCalcingAfterLoad())
+        return;
+
+    Broadcast(nRow);
+}
+
+bool ScColumn::UpdateScriptType( sc::CellTextAttr& rAttr, SCROW nRow, const sc::CellStoreType::iterator& itr )
+{
+    if (rAttr.mnScriptType != SC_SCRIPTTYPE_UNKNOWN)
+        // Already updated. Nothing to do.
+        return false;
+
+    // Script type not yet determined. Determine the real script
+    // type, and store it.
+    const ScPatternAttr* pPattern = GetPattern(nRow);
+    if (!pPattern)
+        return false;
+
+    sc::CellStoreType::position_type pos = maCells.position(itr, nRow);
+    sc::CellStoreType::iterator itr2 = pos.first;
+    size_t nOffset = pos.second;
+    ScRefCellValue aCell = GetCellValue( itr2, nOffset );
+    ScAddress aPos(nCol, nRow, nTab);
+
+    const SfxItemSet* pCondSet = NULL;
+    ScConditionalFormatList* pCFList = pDocument->GetCondFormList(nTab);
+    if (pCFList)
+    {
+        const ScCondFormatItem& rItem =
+            static_cast<const ScCondFormatItem&>(pPattern->GetItem(ATTR_CONDITIONAL));
+        const std::vector<sal_uInt32>& rData = rItem.GetCondFormatData();
+        pCondSet = pDocument->GetCondResult(aCell, aPos, *pCFList, rData);
+    }
+
+    SvNumberFormatter* pFormatter = pDocument->GetFormatTable();
+
+    OUString aStr;
+    Color* pColor;
+    sal_uLong nFormat = pPattern->GetNumberFormat(pFormatter, pCondSet);
+    ScCellFormat::GetString(aCell, nFormat, aStr, &pColor, *pFormatter, pDocument);
+
+    // Store the real script type to the array.
+    rAttr.mnScriptType = pDocument->GetStringScriptType(aStr);
+    return true;
+}
+
+namespace {
+
+class DeleteAreaHandler
+{
+    ScDocument& mrDoc;
+    std::vector<ScFormulaCell*> maFormulaCells;
+    sc::SingleColumnSpanSet maDeleteRanges;
+
+    bool mbNumeric:1;
+    bool mbString:1;
+    bool mbFormula:1;
+
+public:
+    DeleteAreaHandler(ScDocument& rDoc, InsertDeleteFlags nDelFlag) :
+        mrDoc(rDoc),
+        mbNumeric(nDelFlag & IDF_VALUE),
+        mbString(nDelFlag & IDF_STRING),
+        mbFormula(nDelFlag & IDF_FORMULA) {}
+
+    void operator() (const sc::CellStoreType::value_type& node, size_t nOffset, size_t nDataSize)
+    {
+        switch (node.type)
+        {
+            case sc::element_type_numeric:
+                if (!mbNumeric)
+                    return;
+            break;
+            case sc::element_type_string:
+            case sc::element_type_edittext:
+                if (!mbString)
+                    return;
+            break;
+            case sc::element_type_formula:
+            {
+                if (!mbFormula)
+                    return;
+
+                sc::formula_block::iterator it = sc::formula_block::begin(*node.data);
+                std::advance(it, nOffset);
+                sc::formula_block::iterator itEnd = it;
+                std::advance(itEnd, nDataSize);
+
+                for (; it != itEnd; ++it)
+                    maFormulaCells.push_back(*it);
+            }
+            break;
+            case sc::element_type_empty:
+            default:
+                return;
+        }
+
+        // Tag these cells for deletion.
+        SCROW nRow1 = node.position + nOffset;
+        SCROW nRow2 = nRow1 + nDataSize - 1;
+        maDeleteRanges.set(nRow1, nRow2, true);
+    }
+
+    void endFormulas()
+    {
+        mrDoc.EndListeningFormulaCells(maFormulaCells);
+    }
+
+    sc::SingleColumnSpanSet& getSpans()
+    {
+        return maDeleteRanges;
+    }
+};
+
+class EmptyCells
+{
+    ScColumn& mrColumn;
+    sc::ColumnBlockPosition& mrPos;
+
+    void splitFormulaGrouping(const sc::CellStoreType::position_type& rPos)
+    {
+        if (rPos.first->type == sc::element_type_formula)
+        {
+            ScFormulaCell& rCell = *sc::formula_block::at(*rPos.first->data, rPos.second);
+            sc::SharedFormulaUtil::unshareFormulaCell(rPos, rCell);
+        }
+    }
+
+public:
+    EmptyCells( sc::ColumnBlockPosition& rPos, ScColumn& rColumn ) :
+        mrColumn(rColumn), mrPos(rPos) {}
+
+    void operator() (const sc::RowSpan& rSpan)
+    {
+        sc::CellStoreType& rCells = mrColumn.GetCellStore();
+
+        // First, split formula grouping at the top and bottom boundaries
+        // before emptying the cells.
+        sc::CellStoreType::position_type aPos = rCells.position(mrPos.miCellPos, rSpan.mnRow1);
+        splitFormulaGrouping(aPos);
+        aPos = rCells.position(aPos.first, rSpan.mnRow2);
+        splitFormulaGrouping(aPos);
+
+        mrPos.miCellPos = rCells.set_empty(mrPos.miCellPos, rSpan.mnRow1, rSpan.mnRow2);
+        mrPos.miCellTextAttrPos = mrColumn.GetCellAttrStore().set_empty(mrPos.miCellTextAttrPos, rSpan.mnRow1, rSpan.mnRow2);
+    }
+};
+
+}
+
+void ScColumn::DeleteCells(
+    sc::ColumnBlockPosition& rBlockPos, SCROW nRow1, SCROW nRow2, InsertDeleteFlags nDelFlag,
+    sc::SingleColumnSpanSet& rDeleted )
+{
+    // Determine which cells to delete based on the deletion flags.
+    DeleteAreaHandler aFunc(*pDocument, nDelFlag);
+    sc::CellStoreType::iterator itPos = maCells.position(rBlockPos.miCellPos, nRow1).first;
+    sc::ProcessBlock(itPos, maCells, aFunc, nRow1, nRow2);
+    aFunc.endFormulas(); // Have the formula cells stop listening.
+
+    // Get the deletion spans.
+    sc::SingleColumnSpanSet::SpansType aSpans;
+    aFunc.getSpans().getSpans(aSpans);
+
+    // Delete the cells for real.
+    std::for_each(aSpans.begin(), aSpans.end(), EmptyCells(rBlockPos, *this));
+    CellStorageModified();
+
+    aFunc.getSpans().swap(rDeleted);
+}
+
+void ScColumn::DeleteArea(
+    SCROW nStartRow, SCROW nEndRow, InsertDeleteFlags nDelFlag, bool bBroadcast,
+    sc::ColumnSpanSet* pBroadcastSpans )
+{
+    InsertDeleteFlags nContMask = IDF_CONTENTS;
+    // IDF_NOCAPTIONS needs to be passed too, if IDF_NOTE is set
+    if( nDelFlag & IDF_NOTE )
+        nContMask |= IDF_NOCAPTIONS;
+    InsertDeleteFlags nContFlag = nDelFlag & nContMask;
+
+    sc::SingleColumnSpanSet aDeletedRows;
+
+    sc::ColumnBlockPosition aBlockPos;
+    InitBlockPosition(aBlockPos);
+
+    if (!IsEmptyData() && nContFlag)
+    {
+        DeleteCells(aBlockPos, nStartRow, nEndRow, nDelFlag, aDeletedRows);
+        if (pBroadcastSpans)
+        {
+            sc::SingleColumnSpanSet::SpansType aSpans;
+            aDeletedRows.getSpans(aSpans);
+            sc::SingleColumnSpanSet::SpansType::const_iterator it = aSpans.begin(), itEnd = aSpans.end();
+            for (; it != itEnd; ++it)
+                pBroadcastSpans->set(nTab, nCol, it->mnRow1, it->mnRow2, true);
+        }
+    }
+
+    if (nDelFlag & IDF_NOTE)
+    {
+        bool bForgetCaptionOwnership = ((nDelFlag & IDF_FORGETCAPTIONS) != IDF_NONE);
+        DeleteCellNotes(aBlockPos, nStartRow, nEndRow, bForgetCaptionOwnership);
+    }
+
+    if ( nDelFlag & IDF_EDITATTR )
+    {
+        OSL_ENSURE( nContFlag == IDF_NONE, "DeleteArea: Wrong Flags" );
+        RemoveEditAttribs( nStartRow, nEndRow );
+    }
+
+    // Delete attributes just now
+    if ((nDelFlag & IDF_ATTRIB) == IDF_ATTRIB)
+        pAttrArray->DeleteArea( nStartRow, nEndRow );
+    else if ((nDelFlag & IDF_HARDATTR) == IDF_HARDATTR)
+        pAttrArray->DeleteHardAttr( nStartRow, nEndRow );
+
+    if (bBroadcast)
+    {
+        // Broadcast on only cells that were deleted; no point broadcasting on
+        // cells that were already empty before the deletion.
+        std::vector<SCROW> aRows;
+        aDeletedRows.getRows(aRows);
+        BroadcastCells(aRows, SC_HINT_DATACHANGED);
+    }
+}
+
+bool ScColumn::InitBlockPosition( sc::ColumnBlockPosition& rBlockPos )
+{
+    rBlockPos.miBroadcasterPos = maBroadcasters.begin();
+    rBlockPos.miCellNotePos = maCellNotes.begin();
+    rBlockPos.miCellTextAttrPos = maCellTextAttrs.begin();
+    rBlockPos.miCellPos = maCells.begin();
+    return true;
+}
+
+bool ScColumn::InitBlockPosition( sc::ColumnBlockConstPosition& rBlockPos ) const
+{
+    rBlockPos.miBroadcasterPos = maBroadcasters.begin();
+    rBlockPos.miCellNotePos = maCellNotes.begin();
+    rBlockPos.miCellTextAttrPos = maCellTextAttrs.begin();
+    rBlockPos.miCellPos = maCells.begin();
+    return true;
+}
+
+namespace {
+
+class CopyAttrArrayByRange : std::unary_function<sc::RowSpan, void>
+{
+    ScAttrArray& mrDestAttrArray;
+    ScAttrArray& mrSrcAttrArray;
+    long mnRowOffset;
+public:
+    CopyAttrArrayByRange(ScAttrArray& rDestAttrArray, ScAttrArray& rSrcAttrArray, long nRowOffset) :
+        mrDestAttrArray(rDestAttrArray), mrSrcAttrArray(rSrcAttrArray), mnRowOffset(nRowOffset) {}
+
+    void operator() (const sc::RowSpan& rSpan)
+    {
+        mrDestAttrArray.CopyAreaSafe(
+            rSpan.mnRow1+mnRowOffset, rSpan.mnRow2+mnRowOffset, mnRowOffset, mrSrcAttrArray);
+    }
+};
+
+class CopyCellsFromClipHandler
+{
+    sc::CopyFromClipContext& mrCxt;
+    ScColumn& mrSrcCol;
+    ScColumn& mrDestCol;
+    SCTAB mnTab;
+    SCCOL mnCol;
+    SCTAB mnSrcTab;
+    SCCOL mnSrcCol;
+    long mnRowOffset;
+    sc::ColumnBlockPosition maDestBlockPos;
+    sc::ColumnBlockPosition* mpDestBlockPos; // to save it for next iteration.
+    svl::SharedStringPool* mpSharedStringPool;
+
+    void insertRefCell(SCROW nSrcRow, SCROW nDestRow)
+    {
+        ScAddress aSrcPos(mnSrcCol, nSrcRow, mnSrcTab);
+        ScAddress aDestPos(mnCol, nDestRow, mnTab);
+        ScSingleRefData aRef;
+        aRef.InitAddress(aSrcPos);
+        aRef.SetFlag3D(true);
+
+        ScTokenArray aArr;
+        aArr.AddSingleReference(aRef);
+
+        mrDestCol.SetFormulaCell(
+            maDestBlockPos, nDestRow, new ScFormulaCell(&mrDestCol.GetDoc(), aDestPos, aArr));
+    }
+
+    void duplicateNotes(SCROW nStartRow, size_t nDataSize, bool bCloneCaption )
+    {
+        mrSrcCol.DuplicateNotes(nStartRow, nDataSize, mrDestCol, maDestBlockPos, bCloneCaption, mnRowOffset);
+    }
+
+public:
+    CopyCellsFromClipHandler(sc::CopyFromClipContext& rCxt, ScColumn& rSrcCol, ScColumn& rDestCol, SCTAB nDestTab, SCCOL nDestCol, long nRowOffset, svl::SharedStringPool* pSharedStringPool) :
+        mrCxt(rCxt),
+        mrSrcCol(rSrcCol),
+        mrDestCol(rDestCol),
+        mnTab(nDestTab),
+        mnCol(nDestCol),
+        mnSrcTab(rSrcCol.GetTab()),
+        mnSrcCol(rSrcCol.GetCol()),
+        mnRowOffset(nRowOffset),
+        mpDestBlockPos(mrCxt.getBlockPosition(nDestTab, nDestCol)),
+        mpSharedStringPool(pSharedStringPool)
+    {
+        if (mpDestBlockPos)
+            maDestBlockPos = *mpDestBlockPos;
+        else
+            mrDestCol.InitBlockPosition(maDestBlockPos);
+    }
+
+    ~CopyCellsFromClipHandler()
+    {
+        if (mpDestBlockPos)
+            // Don't forget to save this to the context!
+            *mpDestBlockPos = maDestBlockPos;
+    }
+
+    void operator() (const sc::CellStoreType::value_type& node, size_t nOffset, size_t nDataSize)
+    {
+        SCROW nSrcRow1 = node.position + nOffset;
+        bool bCopyCellNotes = mrCxt.isCloneNotes();
+
+        InsertDeleteFlags nFlags = mrCxt.getInsertFlag();
+
+        if (node.type == sc::element_type_empty)
+        {
+            if (bCopyCellNotes && !mrCxt.isSkipAttrForEmptyCells())
+            {
+                bool bCloneCaption = (nFlags & IDF_NOCAPTIONS) == IDF_NONE;
+                duplicateNotes(nSrcRow1, nDataSize, bCloneCaption );
+            }
+            return;
+        }
+
+        bool bNumeric = (nFlags & IDF_VALUE) != IDF_NONE;
+        bool bDateTime = (nFlags & IDF_DATETIME) != IDF_NONE;
+        bool bString   = (nFlags & IDF_STRING) != IDF_NONE;
+        bool bBoolean  = (nFlags & IDF_SPECIAL_BOOLEAN) != IDF_NONE;
+        bool bFormula  = (nFlags & IDF_FORMULA) != IDF_NONE;
+
+        bool bAsLink = mrCxt.isAsLink();
+
+        switch (node.type)
+        {
+            case sc::element_type_numeric:
+            {
+                // We need to copy numeric cells individually because of date type check.
+                sc::numeric_block::const_iterator it = sc::numeric_block::begin(*node.data);
+                std::advance(it, nOffset);
+                sc::numeric_block::const_iterator itEnd = it;
+                std::advance(itEnd, nDataSize);
+                for (SCROW nSrcRow = nSrcRow1; it != itEnd; ++it, ++nSrcRow)
+                {
+                    bool bCopy = mrCxt.isDateCell(mrSrcCol, nSrcRow) ? bDateTime : bNumeric;
+                    if (!bCopy)
+                        continue;
+
+                    if (bAsLink)
+                        insertRefCell(nSrcRow, nSrcRow + mnRowOffset);
+                    else
+                        mrDestCol.SetValue(maDestBlockPos, nSrcRow + mnRowOffset, *it);
+                }
+            }
+            break;
+            case sc::element_type_string:
+            {
+                if (!bString)
+                    break;
+
+                sc::string_block::const_iterator it = sc::string_block::begin(*node.data);
+                std::advance(it, nOffset);
+                sc::string_block::const_iterator itEnd = it;
+                std::advance(itEnd, nDataSize);
+                for (SCROW nSrcRow = nSrcRow1; it != itEnd; ++it, ++nSrcRow)
+                {
+                    if (bAsLink)
+                        insertRefCell(nSrcRow, nSrcRow + mnRowOffset);
+                    else if (mpSharedStringPool)
+                    {
+                        // Re-intern the string if source is a different document.
+                        svl::SharedString aInterned = mpSharedStringPool->intern( (*it).getString());
+                        mrDestCol.SetRawString(maDestBlockPos, nSrcRow + mnRowOffset, aInterned);
+                    }
+                    else
+                        mrDestCol.SetRawString(maDestBlockPos, nSrcRow + mnRowOffset, *it);
+                }
+            }
+            break;
+            case sc::element_type_edittext:
+            {
+                if (!bString)
+                    break;
+
+                sc::edittext_block::const_iterator it = sc::edittext_block::begin(*node.data);
+                std::advance(it, nOffset);
+                sc::edittext_block::const_iterator itEnd = it;
+                std::advance(itEnd, nDataSize);
+                for (SCROW nSrcRow = nSrcRow1; it != itEnd; ++it, ++nSrcRow)
+                {
+
+                    if (bAsLink)
+                        insertRefCell(nSrcRow, nSrcRow + mnRowOffset);
+                    else
+                        mrDestCol.SetEditText(maDestBlockPos, nSrcRow + mnRowOffset, **it);
+                }
+            }
+            break;
+            case sc::element_type_formula:
+            {
+                sc::formula_block::const_iterator it = sc::formula_block::begin(*node.data);
+                std::advance(it, nOffset);
+                sc::formula_block::const_iterator itEnd = it;
+                std::advance(itEnd, nDataSize);
+                for (SCROW nSrcRow = nSrcRow1; it != itEnd; ++it, ++nSrcRow)
+                {
+                    ScFormulaCell& rSrcCell = const_cast<ScFormulaCell&>(**it);
+                    bool bForceFormula = false;
+                    if (bBoolean)
+                    {
+                        // See if the formula consists of =TRUE() or =FALSE().
+                        ScTokenArray* pCode = rSrcCell.GetCode();
+                        if (pCode && pCode->GetLen() == 1)
+                        {
+                            const formula::FormulaToken* p = pCode->First();
+                            if (p->GetOpCode() == ocTrue || p->GetOpCode() == ocFalse)
+                                // This is a boolean formula.
+                                bForceFormula = true;
+                        }
+                    }
+
+                    ScAddress aDestPos(mnCol, nSrcRow + mnRowOffset, mnTab);
+                    if (bFormula || bForceFormula)
+                    {
+                        if (bAsLink)
+                            insertRefCell(nSrcRow, nSrcRow + mnRowOffset);
+                        else
+                        {
+                            mrDestCol.SetFormulaCell(
+                                maDestBlockPos, nSrcRow + mnRowOffset,
+                                new ScFormulaCell(rSrcCell, mrDestCol.GetDoc(), aDestPos));
+                        }
+                    }
+                    else if (bNumeric || bDateTime || bString)
+                    {
+                        // Always just copy the original row to the Undo Documen;
+                        // do not create Value/string cells from formulas
+
+                        sal_uInt16 nErr = rSrcCell.GetErrCode();
+                        if (nErr)
+                        {
+                            // error codes are cloned with values
+                            if (bNumeric)
+                            {
+                                if (bAsLink)
+                                    insertRefCell(nSrcRow, nSrcRow + mnRowOffset);
+                                else
+                                {
+                                    ScFormulaCell* pErrCell = new ScFormulaCell(&mrDestCol.GetDoc(), aDestPos);
+                                    pErrCell->SetErrCode(nErr);
+                                    mrDestCol.SetFormulaCell(
+                                        maDestBlockPos, nSrcRow + mnRowOffset, pErrCell);
+                                }
+                            }
+                        }
+                        else if (rSrcCell.IsValue())
+                        {
+                            bool bCopy = mrCxt.isDateCell(mrSrcCol, nSrcRow) ? bDateTime : bNumeric;
+                            if (!bCopy)
+                                continue;
+
+                            if (bAsLink)
+                                insertRefCell(nSrcRow, nSrcRow + mnRowOffset);
+                            else
+                                mrDestCol.SetValue(maDestBlockPos, nSrcRow + mnRowOffset, rSrcCell.GetValue());
+                        }
+                        else if (bString)
+                        {
+                            svl::SharedString aStr = rSrcCell.GetString();
+                            if (aStr.isEmpty())
+                                // do not clone empty string
+                                continue;
+
+                            if (bAsLink)
+                                insertRefCell(nSrcRow, nSrcRow + mnRowOffset);
+                            else if (rSrcCell.IsMultilineResult())
+                            {
+                                // Clone as an edit text object.
+                                ScFieldEditEngine& rEngine = mrDestCol.GetDoc().GetEditEngine();
+                                rEngine.SetText(aStr.getString());
+                                mrDestCol.SetEditText(maDestBlockPos, nSrcRow + mnRowOffset, rEngine.CreateTextObject());
+                            }
+                            else if (mpSharedStringPool)
+                            {
+                                // Re-intern the string if source is a different document.
+                                svl::SharedString aInterned = mpSharedStringPool->intern( aStr.getString());
+                                mrDestCol.SetRawString(maDestBlockPos, nSrcRow + mnRowOffset, aInterned);
+                            }
+                            else
+                            {
+                                mrDestCol.SetRawString(maDestBlockPos, nSrcRow + mnRowOffset, aStr);
+                            }
+                        }
+                    }
+                }
+            }
+            break;
+            default:
+                ;
+        }
+        if (bCopyCellNotes)
+        {
+            bool bCloneCaption = (nFlags & IDF_NOCAPTIONS) == IDF_NONE;
+            duplicateNotes(nSrcRow1, nDataSize, bCloneCaption );
+        }
+    }
+};
+
+class CopyTextAttrsFromClipHandler
+{
+    sc::CellTextAttrStoreType& mrAttrs;
+    sc::CellTextAttrStoreType::iterator miPos;
+    size_t mnDelta;
+
+public:
+    CopyTextAttrsFromClipHandler( sc::CellTextAttrStoreType& rAttrs, size_t nDelta ) :
+        mrAttrs(rAttrs), miPos(mrAttrs.begin()), mnDelta(nDelta) {}
+
+    void operator() ( const sc::CellTextAttrStoreType::value_type& aNode, size_t nOffset, size_t nDataSize )
+    {
+        if (aNode.type != sc::element_type_celltextattr)
+            return;
+
+        sc::celltextattr_block::const_iterator it = sc::celltextattr_block::begin(*aNode.data);
+        std::advance(it, nOffset);
+        sc::celltextattr_block::const_iterator itEnd = it;
+        std::advance(itEnd, nDataSize);
+
+        size_t nPos = aNode.position + nOffset + mnDelta;
+        miPos = mrAttrs.set(miPos, nPos, it, itEnd);
+    }
+};
+
+}
+
+//  rColumn = source
+//  nRow1, nRow2 = target position
+
+void ScColumn::CopyFromClip(
+    sc::CopyFromClipContext& rCxt, SCROW nRow1, SCROW nRow2, long nDy, ScColumn& rColumn )
+{
+    if ((rCxt.getInsertFlag() & IDF_ATTRIB) != IDF_NONE)
+    {
+        if (rCxt.isSkipAttrForEmptyCells())
+        {
+            //  copy only attributes for non-empty cells between nRow1-nDy and nRow2-nDy.
+            sc::SingleColumnSpanSet aSpanSet;
+            aSpanSet.scan(rColumn, nRow1-nDy, nRow2-nDy);
+            sc::SingleColumnSpanSet::SpansType aSpans;
+            aSpanSet.getSpans(aSpans);
+            std::for_each(
+                aSpans.begin(), aSpans.end(), CopyAttrArrayByRange(*rColumn.pAttrArray, *pAttrArray, nDy));
+        }
+        else
+            rColumn.pAttrArray->CopyAreaSafe( nRow1, nRow2, nDy, *pAttrArray );
+    }
+    if ((rCxt.getInsertFlag() & IDF_CONTENTS) == IDF_NONE)
+        return;
+
+    if (rCxt.isAsLink() && rCxt.getInsertFlag() == IDF_ALL)
+    {
+        // We also reference empty cells for "ALL"
+        // IDF_ALL must always contain more flags when compared to "Insert contents" as
+        // contents can be selected one by one!
+
+        ScAddress aDestPos( nCol, 0, nTab ); // Adapt Row
+
+        //  Create reference (Source Position)
+        ScSingleRefData aRef;
+        aRef.InitFlags(); // -> All absolute
+        aRef.SetAbsCol(rColumn.nCol);
+        aRef.SetAbsTab(rColumn.nTab);
+        aRef.SetFlag3D(true);
+
+        for (SCROW nDestRow = nRow1; nDestRow <= nRow2; nDestRow++)
+        {
+            aRef.SetAbsRow(nDestRow - nDy); // Source row
+            aDestPos.SetRow( nDestRow );
+
+            ScTokenArray aArr;
+            aArr.AddSingleReference( aRef );
+            SetFormulaCell(nDestRow, new ScFormulaCell(pDocument, aDestPos, aArr));
+        }
+
+        // Don't forget to copy the cell text attributes.
+        CopyTextAttrsFromClipHandler aFunc(maCellTextAttrs, nDy);
+        sc::ParseBlock(rColumn.maCellTextAttrs.begin(), rColumn.maCellTextAttrs, aFunc, nRow1-nDy, nRow2-nDy);
+
+        return;
+    }
+
+    // Compare the ScDocumentPool* to determine if we are copying within the
+    // same document. If not, re-intern shared strings.
+    svl::SharedStringPool* pSharedStringPool = (rColumn.pDocument->GetPool() != pDocument->GetPool()) ?
+        &pDocument->GetSharedStringPool() : NULL;
+
+    // nRow1 to nRow2 is for destination (this) column. Subtract nDy to get the source range.
+    // Copy all cells in the source column (rColumn) from nRow1-nDy to nRow2-nDy to this column.
+    {
+        CopyCellsFromClipHandler aFunc(rCxt, rColumn, *this, nTab, nCol, nDy, pSharedStringPool);
+        sc::ParseBlock(rColumn.maCells.begin(), rColumn.maCells, aFunc, nRow1-nDy, nRow2-nDy);
+    }
+
+    {
+        // Don't forget to copy the cell text attributes.
+        CopyTextAttrsFromClipHandler aFunc(maCellTextAttrs, nDy);
+        sc::ParseBlock(rColumn.maCellTextAttrs.begin(), rColumn.maCellTextAttrs, aFunc, nRow1-nDy, nRow2-nDy);
+    }
+}
+
+void ScColumn::MixMarked(
+    sc::MixDocContext& rCxt, const ScMarkData& rMark, sal_uInt16 nFunction,
+    bool bSkipEmpty, const ScColumn& rSrcCol )
+{
+    SCROW nRow1, nRow2;
+
+    if (rMark.IsMultiMarked())
+    {
+        ScMarkArrayIter aIter( rMark.GetArray()+nCol );
+        while (aIter.Next( nRow1, nRow2 ))
+            MixData(rCxt, nRow1, nRow2, nFunction, bSkipEmpty, rSrcCol);
+    }
+}
+
+namespace {
+
+// Result in rVal1
+bool lcl_DoFunction( double& rVal1, double nVal2, sal_uInt16 nFunction )
+{
+    bool bOk = false;
+    switch (nFunction)
+    {
+        case PASTE_ADD:
+            bOk = SubTotal::SafePlus( rVal1, nVal2 );
+            break;
+        case PASTE_SUB:
+            nVal2 = -nVal2;     // FIXME: Can we do this always without error?
+            bOk = SubTotal::SafePlus( rVal1, nVal2 );
+            break;
+        case PASTE_MUL:
+            bOk = SubTotal::SafeMult( rVal1, nVal2 );
+            break;
+        case PASTE_DIV:
+            bOk = SubTotal::SafeDiv( rVal1, nVal2 );
+            break;
+    }
+    return bOk;
+}
+
+void lcl_AddCode( ScTokenArray& rArr, const ScFormulaCell* pCell )
+{
+    rArr.AddOpCode(ocOpen);
+
+    ScTokenArray* pCode = const_cast<ScFormulaCell*>(pCell)->GetCode();
+    if (pCode)
+    {
         const formula::FormulaToken* pToken = pCode->First();
-		while (pToken)
-		{
-			rArr.AddToken( *pToken );
-			pToken = pCode->Next();
-		}
-	}
+        while (pToken)
+        {
+            rArr.AddToken( *pToken );
+            pToken = pCode->Next();
+        }
+    }
 
-	rArr.AddOpCode(ocClose);
+    rArr.AddOpCode(ocClose);
 }
 
-
-void ScColumn::MixData( SCROW nRow1, SCROW nRow2,
-							sal_uInt16 nFunction, sal_Bool bSkipEmpty,
-							ScColumn& rSrcCol )
+class MixDataHandler
 {
-	SCSIZE nSrcCount = rSrcCol.nCount;
+    ScColumn& mrDestColumn;
+    sc::ColumnBlockPosition& mrBlockPos;
 
-	SCSIZE nIndex;
-	Search( nRow1, nIndex );
+    sc::CellStoreType maNewCells;
+    sc::CellStoreType::iterator miNewCellsPos;
 
-//	SCSIZE nSrcIndex = 0;
-	SCSIZE nSrcIndex;
-	rSrcCol.Search( nRow1, nSrcIndex );			//! Testen, ob Daten ganz vorne
+    size_t mnRowOffset;
+    sal_uInt16 mnFunction;
 
-	SCROW nNextThis = MAXROW+1;
-	if ( nIndex < nCount )
-		nNextThis = pItems[nIndex].nRow;
-	SCROW nNextSrc = MAXROW+1;
-	if ( nSrcIndex < nSrcCount )
-		nNextSrc = rSrcCol.pItems[nSrcIndex].nRow;
+    bool mbSkipEmpty;
 
-	while ( nNextThis <= nRow2 || nNextSrc <= nRow2 )
-	{
-		SCROW nRow = Min( nNextThis, nNextSrc );
+    void doFunction( size_t nDestRow, double fVal1, double fVal2 )
+    {
+        bool bOk = lcl_DoFunction(fVal1, fVal2, mnFunction);
 
-		ScBaseCell* pSrc = NULL;
-		ScBaseCell* pDest = NULL;
-		ScBaseCell* pNew = NULL;
-		sal_Bool bDelete = sal_False;
+        if (bOk)
+            miNewCellsPos = maNewCells.set(miNewCellsPos, nDestRow-mnRowOffset, fVal1);
+        else
+        {
+            ScAddress aPos(mrDestColumn.GetCol(), nDestRow, mrDestColumn.GetTab());
 
-		if ( nSrcIndex < nSrcCount && nNextSrc == nRow )
-			pSrc = rSrcCol.pItems[nSrcIndex].pCell;
+            ScFormulaCell* pFC = new ScFormulaCell(&mrDestColumn.GetDoc(), aPos);
+            pFC->SetErrCode(errNoValue);
 
-		if ( nIndex < nCount && nNextThis == nRow )
-			pDest = pItems[nIndex].pCell;
+            miNewCellsPos = maNewCells.set(miNewCellsPos, nDestRow-mnRowOffset, pFC);
+        }
+    }
 
-        DBG_ASSERT( pSrc || pDest, "Nanu ?" );
+public:
+    MixDataHandler(
+        sc::ColumnBlockPosition& rBlockPos,
+        ScColumn& rDestColumn,
+        SCROW nRow1, SCROW nRow2,
+        sal_uInt16 nFunction, bool bSkipEmpty) :
+        mrDestColumn(rDestColumn),
+        mrBlockPos(rBlockPos),
+        maNewCells(nRow2 - nRow1 + 1),
+        miNewCellsPos(maNewCells.begin()),
+        mnRowOffset(nRow1),
+        mnFunction(nFunction),
+        mbSkipEmpty(bSkipEmpty)
+    {
+    }
 
-		CellType eSrcType  = pSrc  ? pSrc->GetCellType()  : CELLTYPE_NONE;
-		CellType eDestType = pDest ? pDest->GetCellType() : CELLTYPE_NONE;
+    void operator() (size_t nRow, double f)
+    {
+        sc::CellStoreType::position_type aPos = mrDestColumn.GetCellStore().position(mrBlockPos.miCellPos, nRow);
+        mrBlockPos.miCellPos = aPos.first;
+        switch (aPos.first->type)
+        {
+            case sc::element_type_empty:
+            case sc::element_type_numeric:
+            {
+                double fSrcVal = 0.0;
+                if (aPos.first->type == sc::element_type_numeric)
+                    fSrcVal = sc::numeric_block::at(*aPos.first->data, aPos.second);
 
-		sal_Bool bSrcEmpty = ( eSrcType == CELLTYPE_NONE || eSrcType == CELLTYPE_NOTE );
-		sal_Bool bDestEmpty = ( eDestType == CELLTYPE_NONE || eDestType == CELLTYPE_NOTE );
+                // Both src and dest are of numeric type.
+                doFunction(nRow, f, fSrcVal);
+            }
+            break;
+            case sc::element_type_formula:
+            {
+                // Combination of value and at least one formula -> Create formula
+                ScTokenArray aArr;
 
-		if ( bSkipEmpty && bDestEmpty )		// Originalzelle wiederherstellen
-		{
-			if ( pSrc )						// war da eine Zelle?
-			{
-                pNew = pSrc->CloneWithoutNote( *pDocument );
-			}
-		}
-		else if ( nFunction )				// wirklich Rechenfunktion angegeben
-		{
-			double nVal1;
-			double nVal2;
-			if ( eSrcType == CELLTYPE_VALUE )
-				nVal1 = ((ScValueCell*)pSrc)->GetValue();
-			else
-				nVal1 = 0.0;
-			if ( eDestType == CELLTYPE_VALUE )
-				nVal2 = ((ScValueCell*)pDest)->GetValue();
-			else
-				nVal2 = 0.0;
+                // First row
+                aArr.AddDouble(f);
 
-			//	leere Zellen werden als Werte behandelt
+                // Operator
+                OpCode eOp = ocAdd;
+                switch (mnFunction)
+                {
+                    case PASTE_ADD: eOp = ocAdd; break;
+                    case PASTE_SUB: eOp = ocSub; break;
+                    case PASTE_MUL: eOp = ocMul; break;
+                    case PASTE_DIV: eOp = ocDiv; break;
+                }
+                aArr.AddOpCode(eOp); // Function
 
-			sal_Bool bSrcVal  = ( bSrcEmpty || eSrcType == CELLTYPE_VALUE );
-			sal_Bool bDestVal  = ( bDestEmpty || eDestType == CELLTYPE_VALUE );
+                // Second row
+                ScFormulaCell* pDest = sc::formula_block::at(*aPos.first->data, aPos.second);
+                lcl_AddCode(aArr, pDest);
 
-			sal_Bool bSrcText = ( eSrcType == CELLTYPE_STRING ||
-								eSrcType == CELLTYPE_EDIT );
-			sal_Bool bDestText = ( eDestType == CELLTYPE_STRING ||
-								eDestType == CELLTYPE_EDIT );
+                miNewCellsPos = maNewCells.set(
+                    miNewCellsPos, nRow-mnRowOffset,
+                    new ScFormulaCell(
+                        &mrDestColumn.GetDoc(), ScAddress(mrDestColumn.GetCol(), nRow, mrDestColumn.GetTab()), aArr));
+            }
+            break;
+            case sc::element_type_string:
+            case sc::element_type_edittext:
+            {
+                // Destination cell is not a number. Just take the source cell.
+                miNewCellsPos = maNewCells.set(miNewCellsPos, nRow-mnRowOffset, f);
+            }
+            break;
+            default:
+                ;
+        }
+    }
 
-			//	sonst bleibt nur Formel...
+    void operator() (size_t nRow, const svl::SharedString& rStr)
+    {
+        miNewCellsPos = maNewCells.set(miNewCellsPos, nRow-mnRowOffset, rStr);
+    }
 
-			if ( bSrcEmpty && bDestEmpty )
-			{
-				//	beide leer -> nix
-			}
-			else if ( bSrcVal && bDestVal )
-			{
-				//	neuen Wert eintragen, oder Fehler bei Ueberlauf
+    void operator() (size_t nRow, const EditTextObject* p)
+    {
+        miNewCellsPos = maNewCells.set(miNewCellsPos, nRow-mnRowOffset, p->Clone());
+    }
 
-				sal_Bool bOk = lcl_DoFunction( nVal1, nVal2, nFunction );
+    void operator() (size_t nRow, const ScFormulaCell* p)
+    {
+        sc::CellStoreType::position_type aPos = mrDestColumn.GetCellStore().position(mrBlockPos.miCellPos, nRow);
+        mrBlockPos.miCellPos = aPos.first;
+        switch (aPos.first->type)
+        {
+            case sc::element_type_numeric:
+            {
+                // Source is formula, and dest is value.
+                ScTokenArray aArr;
 
-				if (bOk)
-					pNew = new ScValueCell( nVal1 );
-				else
-				{
-					ScFormulaCell* pFC = new ScFormulaCell( pDocument,
-												ScAddress( nCol, nRow, nTab ) );
-					pFC->SetErrCode( errNoValue );
-					//!	oder NOVALUE, dann auch in consoli,
-					//!	sonst in Interpreter::GetCellValue die Abfrage auf errNoValue raus
-					//!	(dann geht Stringzelle+Wertzelle nicht mehr)
-					pNew = pFC;
-				}
-			}
-			else if ( bSrcText || bDestText )
-			{
-				//	mit Texten wird nicht gerechnet - immer "alte" Zelle, also pSrc
+                // First row
+                lcl_AddCode(aArr, p);
 
-				if (pSrc)
-                    pNew = pSrc->CloneWithoutNote( *pDocument );
-				else if (pDest)
-					bDelete = sal_True;
-			}
-			else
-			{
-				//	Kombination aus Wert und mindestens einer Formel -> Formel erzeugen
+                // Operator
+                OpCode eOp = ocAdd;
+                switch (mnFunction)
+                {
+                    case PASTE_ADD: eOp = ocAdd; break;
+                    case PASTE_SUB: eOp = ocSub; break;
+                    case PASTE_MUL: eOp = ocMul; break;
+                    case PASTE_DIV: eOp = ocDiv; break;
+                }
+                aArr.AddOpCode(eOp); // Function
 
-				ScTokenArray aArr;
+                // Second row
+                aArr.AddDouble(sc::numeric_block::at(*aPos.first->data, aPos.second));
 
-				//	erste Zelle
-				if ( eSrcType == CELLTYPE_FORMULA )
-					lcl_AddCode( aArr, (ScFormulaCell*)pSrc );
-				else
-					aArr.AddDouble( nVal1 );
+                miNewCellsPos = maNewCells.set(
+                    miNewCellsPos, nRow-mnRowOffset,
+                    new ScFormulaCell(
+                        &mrDestColumn.GetDoc(), ScAddress(mrDestColumn.GetCol(), nRow, mrDestColumn.GetTab()), aArr));
+            }
+            break;
+            case sc::element_type_formula:
+            {
+                // Both are formulas.
+                ScTokenArray aArr;
 
-				//	Operator
-				OpCode eOp = ocAdd;
-				switch ( nFunction )
-				{
-					case PASTE_ADD:	eOp = ocAdd; break;
-					case PASTE_SUB:	eOp = ocSub; break;
-					case PASTE_MUL:	eOp = ocMul; break;
-					case PASTE_DIV:	eOp = ocDiv; break;
-				}
-				aArr.AddOpCode(eOp);				// Funktion
+                // First row
+                lcl_AddCode(aArr, p);
 
-				//	zweite Zelle
-				if ( eDestType == CELLTYPE_FORMULA )
-					lcl_AddCode( aArr, (ScFormulaCell*)pDest );
-				else
-					aArr.AddDouble( nVal2 );
+                // Operator
+                OpCode eOp = ocAdd;
+                switch (mnFunction)
+                {
+                    case PASTE_ADD: eOp = ocAdd; break;
+                    case PASTE_SUB: eOp = ocSub; break;
+                    case PASTE_MUL: eOp = ocMul; break;
+                    case PASTE_DIV: eOp = ocDiv; break;
+                }
+                aArr.AddOpCode(eOp); // Function
 
-				pNew = new ScFormulaCell( pDocument, ScAddress( nCol, nRow, nTab ), &aArr );
-			}
-		}
+                // Second row
+                ScFormulaCell* pDest = sc::formula_block::at(*aPos.first->data, aPos.second);
+                lcl_AddCode(aArr, pDest);
 
+                miNewCellsPos = maNewCells.set(
+                    miNewCellsPos, nRow-mnRowOffset,
+                    new ScFormulaCell(
+                        &mrDestColumn.GetDoc(), ScAddress(mrDestColumn.GetCol(), nRow, mrDestColumn.GetTab()), aArr));
+            }
+            break;
+            case sc::element_type_string:
+            case sc::element_type_edittext:
+            case sc::element_type_empty:
+            {
+                // Destination cell is not a number. Just take the source cell.
+                ScAddress aDestPos(mrDestColumn.GetCol(), nRow, mrDestColumn.GetTab());
+                miNewCellsPos = maNewCells.set(
+                    miNewCellsPos, nRow-mnRowOffset, new ScFormulaCell(*p, mrDestColumn.GetDoc(), aDestPos));
+            }
+            break;
+            default:
+                ;
+        }
+    }
 
-		if ( pNew || bDelete )			// neues Ergebnis ?
-		{
-			if (pDest && !pNew)						// alte Zelle da ?
-			{
-				if ( pDest->GetBroadcaster() )
-					pNew = new ScNoteCell;			// Broadcaster uebernehmen
-				else
-					Delete(nRow);					// -> loeschen
-			}
-			if (pNew)
-				Insert(nRow, pNew);		// neue einfuegen
+    /**
+     * Empty cell series in the source (clip) document.
+     */
+    void operator() (mdds::mtv::element_t, size_t nTopRow, size_t nDataSize)
+    {
+        if (mbSkipEmpty)
+            return;
 
-			Search( nRow, nIndex );		// alles kann sich verschoben haben
-			if (pNew)
-				nNextThis = nRow;		// nIndex zeigt jetzt genau auf nRow
-			else
-				nNextThis = ( nIndex < nCount ) ? pItems[nIndex].nRow : MAXROW+1;
-		}
+        // Source cells are empty. Treat them as if they have a value of 0.0.
+        for (size_t i = 0; i < nDataSize; ++i)
+        {
+            size_t nDestRow = nTopRow + i;
+            sc::CellStoreType::position_type aPos = mrDestColumn.GetCellStore().position(mrBlockPos.miCellPos, nDestRow);
+            mrBlockPos.miCellPos = aPos.first;
+            switch (aPos.first->type)
+            {
+                case sc::element_type_numeric:
+                {
+                    double fVal1 = 0.0;
+                    double fVal2 = sc::numeric_block::at(*aPos.first->data, aPos.second);
+                    doFunction(nDestRow, fVal1, fVal2);
+                }
+                break;
+                case sc::element_type_string:
+                {
+                    const svl::SharedString& aVal = sc::string_block::at(*aPos.first->data, aPos.second);
+                    miNewCellsPos = maNewCells.set(
+                            miNewCellsPos, nDestRow-mnRowOffset, aVal);
+                }
+                break;
+                case sc::element_type_edittext:
+                {
+                    EditTextObject* pObj = sc::edittext_block::at(*aPos.first->data, aPos.second);
+                    miNewCellsPos = maNewCells.set(
+                            miNewCellsPos, nDestRow-mnRowOffset, pObj->Clone());
+                }
+                break;
+                case sc::element_type_formula:
+                {
+                    ScTokenArray aArr;
 
-		if ( nNextThis == nRow )
-		{
-			++nIndex;
-			nNextThis = ( nIndex < nCount ) ? pItems[nIndex].nRow : MAXROW+1;
-		}
-		if ( nNextSrc == nRow )
-		{
-			++nSrcIndex;
-			nNextSrc = ( nSrcIndex < nSrcCount ) ?
-							rSrcCol.pItems[nSrcIndex].nRow :
-							MAXROW+1;
-		}
-	}
+                    // First row
+                    ScFormulaCell* pSrc = sc::formula_block::at(*aPos.first->data, aPos.second);
+                    lcl_AddCode( aArr, pSrc);
+
+                    // Operator
+                    OpCode eOp = ocAdd;
+                    switch (mnFunction)
+                    {
+                        case PASTE_ADD: eOp = ocAdd; break;
+                        case PASTE_SUB: eOp = ocSub; break;
+                        case PASTE_MUL: eOp = ocMul; break;
+                        case PASTE_DIV: eOp = ocDiv; break;
+                    }
+
+                    aArr.AddOpCode(eOp); // Function
+                    aArr.AddDouble(0.0);
+
+                    miNewCellsPos = maNewCells.set(
+                        miNewCellsPos, nDestRow-mnRowOffset,
+                        new ScFormulaCell(
+                            &mrDestColumn.GetDoc(), ScAddress(mrDestColumn.GetCol(), nDestRow, mrDestColumn.GetTab()), aArr));
+                }
+                break;
+                default:
+                    ;
+            }
+        }
+    }
+
+    /**
+     * Set the new cells to the destination (this) column.
+     */
+    void commit()
+    {
+        sc::CellStoreType& rDestCells = mrDestColumn.GetCellStore();
+
+        // Stop all formula cells in the destination range first.
+        sc::CellStoreType::position_type aPos = rDestCells.position(mrBlockPos.miCellPos, mnRowOffset);
+        mrDestColumn.DetachFormulaCells(aPos, maNewCells.size());
+
+        // Move the new cells to the destination range.
+        sc::CellStoreType::iterator& itDestPos = mrBlockPos.miCellPos;
+        sc::CellTextAttrStoreType::iterator& itDestAttrPos = mrBlockPos.miCellTextAttrPos;
+
+        sc::CellStoreType::iterator it = maNewCells.begin(), itEnd = maNewCells.end();
+        for (; it != itEnd; ++it)
+        {
+            bool bHasContent = true;
+            size_t nDestRow = mnRowOffset + it->position;
+
+            switch (it->type)
+            {
+                case sc::element_type_numeric:
+                {
+                    sc::numeric_block::iterator itData = sc::numeric_block::begin(*it->data);
+                    sc::numeric_block::iterator itDataEnd = sc::numeric_block::end(*it->data);
+                    itDestPos = mrDestColumn.GetCellStore().set(itDestPos, nDestRow, itData, itDataEnd);
+                }
+                break;
+                case sc::element_type_string:
+                {
+                    sc::string_block::iterator itData = sc::string_block::begin(*it->data);
+                    sc::string_block::iterator itDataEnd = sc::string_block::end(*it->data);
+                    itDestPos = rDestCells.set(itDestPos, nDestRow, itData, itDataEnd);
+                }
+                break;
+                case sc::element_type_edittext:
+                {
+                    sc::edittext_block::iterator itData = sc::edittext_block::begin(*it->data);
+                    sc::edittext_block::iterator itDataEnd = sc::edittext_block::end(*it->data);
+                    itDestPos = rDestCells.set(itDestPos, nDestRow, itData, itDataEnd);
+                }
+                break;
+                case sc::element_type_formula:
+                {
+                    sc::formula_block::iterator itData = sc::formula_block::begin(*it->data);
+                    sc::formula_block::iterator itDataEnd = sc::formula_block::end(*it->data);
+
+                    // Group new formula cells before inserting them.
+                    sc::SharedFormulaUtil::groupFormulaCells(itData, itDataEnd);
+
+                    // Insert the formula cells to the column.
+                    itDestPos = rDestCells.set(itDestPos, nDestRow, itData, itDataEnd);
+
+                    // Merge with the previous formula group (if any).
+                    aPos = rDestCells.position(itDestPos, nDestRow);
+                    sc::SharedFormulaUtil::joinFormulaCellAbove(aPos);
+
+                    // Merge with the next formula group (if any).
+                    size_t nNextRow = nDestRow + it->size;
+                    if (ValidRow(nNextRow))
+                    {
+                        aPos = rDestCells.position(aPos.first, nNextRow);
+                        sc::SharedFormulaUtil::joinFormulaCellAbove(aPos);
+                    }
+                }
+                break;
+                case sc::element_type_empty:
+                {
+                    itDestPos = rDestCells.set_empty(itDestPos, nDestRow, nDestRow+it->size-1);
+                    bHasContent = false;
+                }
+                break;
+                default:
+                    ;
+            }
+
+            sc::CellTextAttrStoreType& rDestAttrs = mrDestColumn.GetCellAttrStore();
+            if (bHasContent)
+            {
+                std::vector<sc::CellTextAttr> aAttrs(it->size, sc::CellTextAttr());
+                itDestAttrPos = rDestAttrs.set(itDestAttrPos, nDestRow, aAttrs.begin(), aAttrs.end());
+            }
+            else
+                itDestAttrPos = rDestAttrs.set_empty(itDestAttrPos, nDestRow, nDestRow+it->size-1);
+        }
+
+        maNewCells.release();
+    }
+};
+
 }
 
+void ScColumn::MixData(
+    sc::MixDocContext& rCxt, SCROW nRow1, SCROW nRow2, sal_uInt16 nFunction,
+    bool bSkipEmpty, const ScColumn& rSrcCol )
+{
+    // destination (this column) block position.
+
+    sc::ColumnBlockPosition* p = rCxt.getBlockPosition(nTab, nCol);
+    if (!p)
+        return;
+
+    MixDataHandler aFunc(*p, *this, nRow1, nRow2, nFunction, bSkipEmpty);
+    sc::ParseAll(rSrcCol.maCells.begin(), rSrcCol.maCells, nRow1, nRow2, aFunc, aFunc);
+
+    aFunc.commit();
+    CellStorageModified();
+}
 
 ScAttrIterator* ScColumn::CreateAttrIterator( SCROW nStartRow, SCROW nEndRow ) const
 {
 #ifdef USE_JAVA
-	// Attempt to fix bug 2677 by returning NULL if pAttrArray is NULL
-	if ( !pAttrArray )
-		return NULL;
+    // Attempt to fix bug 2677 by returning NULL if pAttrArray is NULL
+    if ( !pAttrArray )
+        return NULL;
 #endif	// USE_JAVA
 
-	return new ScAttrIterator( pAttrArray, nStartRow, nEndRow );
+    return new ScAttrIterator( pAttrArray, nStartRow, nEndRow );
 }
 
+namespace {
 
-void ScColumn::StartAllListeners()
+class StartListenersHandler
 {
-	if (pItems)
-		for (SCSIZE i = 0; i < nCount; i++)
-		{
-			ScBaseCell* pCell = pItems[i].pCell;
-			if ( pCell->GetCellType() == CELLTYPE_FORMULA )
-			{
-				SCROW nRow = pItems[i].nRow;
-				((ScFormulaCell*)pCell)->StartListeningTo( pDocument );
-				if ( nRow != pItems[i].nRow )
-					Search( nRow, i );		// Listener eingefuegt?
-			}
-		}
-}
+    sc::StartListeningContext* mpCxt;
+    bool mbAllListeners;
 
+public:
+    StartListenersHandler( sc::StartListeningContext& rCxt, bool bAllListeners ) :
+        mpCxt(&rCxt), mbAllListeners(bAllListeners) {}
 
-void ScColumn::StartNeededListeners()
-{
-	if (pItems)
+    void operator() ( sc::CellStoreType::value_type& aBlk )
     {
-		for (SCSIZE i = 0; i < nCount; i++)
-		{
-			ScBaseCell* pCell = pItems[i].pCell;
-			if ( pCell->GetCellType() == CELLTYPE_FORMULA )
-			{
-                ScFormulaCell* pFCell = static_cast<ScFormulaCell*>(pCell);
-                if (pFCell->NeedsListening())
-                {
-                    SCROW nRow = pItems[i].nRow;
-                    pFCell->StartListeningTo( pDocument );
-                    if ( nRow != pItems[i].nRow )
-                        Search( nRow, i );		// Listener eingefuegt?
-                }
-			}
-		}
+        if (aBlk.type != sc::element_type_formula)
+            return;
+
+        ScFormulaCell** pp = &sc::formula_block::at(*aBlk.data, 0);
+        ScFormulaCell** ppEnd = pp + aBlk.size;
+
+        for (; pp != ppEnd; ++pp)
+        {
+            ScFormulaCell& rFC = **pp;
+            if (!mbAllListeners && !rFC.NeedsListening())
+                continue;
+
+            if (rFC.IsSharedTop())
+            {
+                sc::SharedFormulaUtil::startListeningAsGroup(*mpCxt, pp);
+                pp += rFC.GetSharedLength() - 1; // Move to the last cell in the group.
+            }
+            else
+                rFC.StartListeningTo(*mpCxt);
+        }
     }
+};
+
 }
 
-
-void ScColumn::BroadcastInArea( SCROW nRow1, SCROW nRow2 )
+void ScColumn::StartListeners( sc::StartListeningContext& rCxt, bool bAll )
 {
-	if ( pItems )
-	{
-        SCROW nRow;
-        SCSIZE nIndex;
-		Search( nRow1, nIndex );
-		while ( nIndex < nCount && (nRow = pItems[nIndex].nRow) <= nRow2 )
-		{
-			ScBaseCell* pCell = pItems[nIndex].pCell;
-			if ( pCell->GetCellType() == CELLTYPE_FORMULA )
-				((ScFormulaCell*)pCell)->SetDirty();
-			else
-				pDocument->Broadcast( ScHint( SC_HINT_DATACHANGED,
-					ScAddress( nCol, nRow, nTab ), pCell ) );
-			nIndex++;
-		}
-	}
+    std::for_each(maCells.begin(), maCells.end(), StartListenersHandler(rCxt, bAll));
 }
 
+namespace {
 
-void ScColumn::StartListeningInArea( SCROW nRow1, SCROW nRow2 )
+void applyTextNumFormat( ScColumn& rCol, SCROW nRow, SvNumberFormatter* pFormatter )
 {
-	if ( pItems )
-	{
-        SCROW nRow;
-        SCSIZE nIndex;
-		Search( nRow1, nIndex );
-		while ( nIndex < nCount && (nRow = pItems[nIndex].nRow) <= nRow2 )
-		{
-			ScBaseCell* pCell = pItems[nIndex].pCell;
-			if ( pCell->GetCellType() == CELLTYPE_FORMULA )
-				((ScFormulaCell*)pCell)->StartListeningTo( pDocument );
-			if ( nRow != pItems[nIndex].nRow )
-				Search( nRow, nIndex );		// durch Listening eingefuegt
-			nIndex++;
-		}
-	}
+    sal_uInt32 nFormat = pFormatter->GetStandardFormat(NUMBERFORMAT_TEXT);
+    ScPatternAttr aNewAttrs(rCol.GetDoc().GetPool());
+    SfxItemSet& rSet = aNewAttrs.GetItemSet();
+    rSet.Put(SfxUInt32Item(ATTR_VALUE_FORMAT, nFormat));
+    rCol.ApplyPattern(nRow, aNewAttrs);
 }
 
+}
 
-//	sal_True = Zahlformat gesetzt
-sal_Bool ScColumn::SetString( SCROW nRow, SCTAB nTabP, const String& rString,
-                          formula::FormulaGrammar::AddressConvention eConv,
-                          SvNumberFormatter* pLangFormatter, bool bDetectNumberFormat )
+bool ScColumn::ParseString(
+    ScCellValue& rCell, SCROW nRow, SCTAB nTabP, const OUString& rString,
+    formula::FormulaGrammar::AddressConvention eConv,
+    ScSetStringParam* pParam )
 {
-	sal_Bool bNumFmtSet = sal_False;
-	if (VALIDROW(nRow))
-	{
-		ScBaseCell* pNewCell = NULL;
-		sal_Bool bIsLoading = sal_False;
-		if (rString.Len() > 0)
-		{
-			double nVal;
-            sal_uInt32 nIndex, nOldIndex = 0;
-			sal_Unicode cFirstChar;
-            // #i110979# If a different NumberFormatter is passed in (pLangFormatter),
-            // its formats aren't valid in the document.
-            // Only use the language / LocaleDataWrapper from pLangFormatter,
-            // always the document's number formatter for IsNumberFormat.
-            SvNumberFormatter* pFormatter = pDocument->GetFormatTable();
-			SfxObjectShell* pDocSh = pDocument->GetDocumentShell();
-			if ( pDocSh )
-				bIsLoading = pDocSh->IsLoading();
-			// IsLoading bei ConvertFrom Import
-			if ( !bIsLoading )
-			{
-				nIndex = nOldIndex = GetNumberFormat( nRow );
-				if ( rString.Len() > 1
-						&& pFormatter->GetType(nIndex) != NUMBERFORMAT_TEXT )
-					cFirstChar = rString.GetChar(0);
-				else
-					cFirstChar = 0;								// Text
-			}
-			else
-			{	// waehrend ConvertFrom Import gibt es keine gesetzten Formate
-				cFirstChar = rString.GetChar(0);
-			}
+    if (rString.isEmpty())
+        return false;
 
-			if ( cFirstChar == '=' )
-			{
-				if ( rString.Len() == 1 )						// = Text
-					pNewCell = new ScStringCell( rString );
-				else											// =Formel
-					pNewCell = new ScFormulaCell( pDocument,
-                        ScAddress( nCol, nRow, nTabP ), rString,
-                        formula::FormulaGrammar::mergeToGrammar( formula::FormulaGrammar::GRAM_DEFAULT,
-                            eConv), MM_NONE );
-			}
-			else if ( cFirstChar == '\'')						// 'Text
-				pNewCell = new ScStringCell( rString.Copy(1) );
-			else
-			{
-				sal_Bool bIsText = sal_False;
-				if ( bIsLoading )
-				{
-					if ( pItems && nCount )
-					{
-						String aStr;
-						SCSIZE i = nCount;
-						SCSIZE nStop = (i >= 3 ? i - 3 : 0);
-						// die letzten Zellen vergleichen, ob gleicher String
-						// und IsNumberFormat eingespart werden kann
-						do
-						{
-							i--;
-							ScBaseCell* pCell = pItems[i].pCell;
-							switch ( pCell->GetCellType() )
-							{
-								case CELLTYPE_STRING :
-									((ScStringCell*)pCell)->GetString( aStr );
-									if ( rString == aStr )
-										bIsText = sal_True;
-								break;
-								case CELLTYPE_NOTE :	// durch =Formel referenziert
-								break;
-								default:
-									if ( i == nCount - 1 )
-										i = 0;
-										// wahrscheinlich ganze Spalte kein String
-							}
-						} while ( i && i > nStop && !bIsText );
-					}
-					// nIndex fuer IsNumberFormat vorbelegen
-					if ( !bIsText )
-						nIndex = nOldIndex = pFormatter->GetStandardIndex();
-				}
+    bool bNumFmtSet = false;
 
-                do
+    ScSetStringParam aParam;
+
+    if (pParam)
+        aParam = *pParam;
+
+    sal_uInt32 nIndex = 0;
+    sal_uInt32 nOldIndex = 0;
+    sal_Unicode cFirstChar;
+    if (!aParam.mpNumFormatter)
+        aParam.mpNumFormatter = pDocument->GetFormatTable();
+
+    nIndex = nOldIndex = GetNumberFormat( nRow );
+    if ( rString.getLength() > 1
+            && aParam.mpNumFormatter->GetType(nIndex) != NUMBERFORMAT_TEXT )
+        cFirstChar = rString[0];
+    else
+        cFirstChar = 0; // Text
+
+    svl::SharedStringPool& rPool = pDocument->GetSharedStringPool();
+
+    if ( cFirstChar == '=' )
+    {
+        if ( rString.getLength() == 1 ) // = Text
+        {
+            rCell.set(rPool.intern(rString));
+        }
+        else if (aParam.meSetTextNumFormat == ScSetStringParam::Always)
+        {
+            // Set the cell format type to Text.
+            applyTextNumFormat(*this, nRow, aParam.mpNumFormatter);
+            rCell.set(rPool.intern(rString));
+        }
+        else // = Formula
+            rCell.set(
+                new ScFormulaCell(
+                    pDocument, ScAddress(nCol, nRow, nTabP), rString,
+                    formula::FormulaGrammar::mergeToGrammar(formula::FormulaGrammar::GRAM_DEFAULT, eConv),
+                    MM_NONE));
+    }
+    else if ( cFirstChar == '\'') // 'Text
+    {
+        bool bNumeric = false;
+        if (aParam.mbHandleApostrophe)
+        {
+            // Cell format is not 'Text', and the first char
+            // is an apostrophe. Check if the input is considered a number.
+            OUString aTest = rString.copy(1);
+            double fTest;
+            bNumeric = aParam.mpNumFormatter->IsNumberFormat(aTest, nIndex, fTest);
+            if (bNumeric)
+                // This is a number. Strip out the first char.
+                rCell.set(rPool.intern(aTest));
+        }
+        if (!bNumeric)
+            // This is normal text. Take it as-is.
+            rCell.set(rPool.intern(rString));
+    }
+    else
+    {
+        double nVal;
+
+        do
+        {
+            if (aParam.mbDetectNumberFormat)
+            {
+                if (!aParam.mpNumFormatter->IsNumberFormat(rString, nIndex, nVal))
+                    break;
+
+                // convert back to the original language if a built-in format was detected
+                const SvNumberformat* pOldFormat = aParam.mpNumFormatter->GetEntry( nOldIndex );
+                if ( pOldFormat )
+                    nIndex = aParam.mpNumFormatter->GetFormatForLanguageIfBuiltIn( nIndex, pOldFormat->GetLanguage() );
+
+                rCell.set(nVal);
+                if ( nIndex != nOldIndex)
                 {
-                    if (bIsText)
-                        break;
+                    // #i22345# New behavior: Apply the detected number format only if
+                    // the old one was the default number, date, time or boolean format.
+                    // Exception: If the new format is boolean, always apply it.
 
-                    if (bDetectNumberFormat)
+                    bool bOverwrite = false;
+                    if ( pOldFormat )
                     {
-                        if ( pLangFormatter )
+                        short nOldType = pOldFormat->GetType() & ~NUMBERFORMAT_DEFINED;
+                        if ( nOldType == NUMBERFORMAT_NUMBER || nOldType == NUMBERFORMAT_DATE ||
+                             nOldType == NUMBERFORMAT_TIME || nOldType == NUMBERFORMAT_LOGICAL )
                         {
-                            // for number detection: valid format index for selected language
-                            nIndex = pFormatter->GetStandardIndex( pLangFormatter->GetLanguage() );
-                        }
-
-                        if (!pFormatter->IsNumberFormat(rString, nIndex, nVal))
-                            break;
-
-                        if ( pLangFormatter )
-                        {
-                            // convert back to the original language if a built-in format was detected
-                            const SvNumberformat* pOldFormat = pFormatter->GetEntry( nOldIndex );
-                            if ( pOldFormat )
-                                nIndex = pFormatter->GetFormatForLanguageIfBuiltIn( nIndex, pOldFormat->GetLanguage() );
-                        }
-
-                        pNewCell = new ScValueCell( nVal );
-                        if ( nIndex != nOldIndex)
-                        {
-                            // #i22345# New behavior: Apply the detected number format only if
-                            // the old one was the default number, date, time or boolean format.
-                            // Exception: If the new format is boolean, always apply it.
-
-                            sal_Bool bOverwrite = sal_False;
-                            const SvNumberformat* pOldFormat = pFormatter->GetEntry( nOldIndex );
-                            if ( pOldFormat )
+                            if ( nOldIndex == aParam.mpNumFormatter->GetStandardFormat(
+                                                nOldType, pOldFormat->GetLanguage() ) )
                             {
-                                short nOldType = pOldFormat->GetType() & ~NUMBERFORMAT_DEFINED;
-                                if ( nOldType == NUMBERFORMAT_NUMBER || nOldType == NUMBERFORMAT_DATE ||
-                                     nOldType == NUMBERFORMAT_TIME || nOldType == NUMBERFORMAT_LOGICAL )
-                                {
-                                    if ( nOldIndex == pFormatter->GetStandardFormat(
-                                                        nOldType, pOldFormat->GetLanguage() ) )
-                                    {
-                                        bOverwrite = sal_True;      // default of these types can be overwritten
-                                    }
-                                }
-                            }
-                            if ( !bOverwrite && pFormatter->GetType( nIndex ) == NUMBERFORMAT_LOGICAL )
-                            {
-                                bOverwrite = sal_True;              // overwrite anything if boolean was detected
-                            }
-
-                            if ( bOverwrite )
-                            {
-                                ApplyAttr( nRow, SfxUInt32Item( ATTR_VALUE_FORMAT,
-                                    (sal_uInt32) nIndex) );
-                                bNumFmtSet = sal_True;
+                                bOverwrite = true; // default of these types can be overwritten
                             }
                         }
                     }
-                    else
+                    if ( !bOverwrite && aParam.mpNumFormatter->GetType( nIndex ) == NUMBERFORMAT_LOGICAL )
                     {
-                        // Only check if the string is a regular number.
-                        SvNumberFormatter* pLocaleSource = pLangFormatter ? pLangFormatter : pFormatter;
-                        const LocaleDataWrapper* pLocale = pLocaleSource->GetLocaleData();
-                        if (!pLocale)
-                            break;
-                        
-                        LocaleDataItem aLocaleItem = pLocale->getLocaleItem();
-                        const OUString& rDecSep = aLocaleItem.decimalSeparator;
-                        const OUString& rGroupSep = aLocaleItem.thousandSeparator;
-                        if (rDecSep.getLength() != 1 || rGroupSep.getLength() != 1)
-                            break;
+                        bOverwrite = true; // overwrite anything if boolean was detected
+                    }
 
-                        sal_Unicode dsep = rDecSep.getStr()[0];
-                        sal_Unicode gsep = rGroupSep.getStr()[0];
-
-                        if (!ScStringUtil::parseSimpleNumber(rString, dsep, gsep, nVal))
-                            break;
-
-                        pNewCell = new ScValueCell(nVal);
+                    if ( bOverwrite )
+                    {
+                        ApplyAttr( nRow, SfxUInt32Item( ATTR_VALUE_FORMAT,
+                            (sal_uInt32) nIndex) );
+                        bNumFmtSet = true;
                     }
                 }
-                while (false);
+            }
+            else if (aParam.meSetTextNumFormat != ScSetStringParam::Always)
+            {
+                // Only check if the string is a regular number.
+                const LocaleDataWrapper* pLocale = aParam.mpNumFormatter->GetLocaleData();
+                if (!pLocale)
+                    break;
 
-                if (!pNewCell)
-                    pNewCell = new ScStringCell(rString);
+                LocaleDataItem aLocaleItem = pLocale->getLocaleItem();
+                const OUString& rDecSep = aLocaleItem.decimalSeparator;
+                const OUString& rGroupSep = aLocaleItem.thousandSeparator;
+                if (rDecSep.getLength() != 1 || rGroupSep.getLength() != 1)
+                    break;
+
+                sal_Unicode dsep = rDecSep[0];
+                sal_Unicode gsep = rGroupSep[0];
+
+                if (!ScStringUtil::parseSimpleNumber(rString, dsep, gsep, nVal))
+                    break;
+
+                rCell.set(nVal);
             }
         }
+        while (false);
 
-		if ( bIsLoading && (!nCount || nRow > pItems[nCount-1].nRow) )
-		{	// Search einsparen und ohne Umweg ueber Insert, Listener aufbauen
-			// und Broadcast kommt eh erst nach dem Laden
-			if ( pNewCell )
-				Append( nRow, pNewCell );
-		}
-		else
-		{
-			SCSIZE i;
-			if (Search(nRow, i))
-			{
-				ScBaseCell* pOldCell = pItems[i].pCell;
-				ScPostIt* pNote = pOldCell->ReleaseNote();
-                SvtBroadcaster* pBC = pOldCell->ReleaseBroadcaster();
-				if (pNewCell || pNote || pBC)
-				{
-					if (pNewCell)
-                        pNewCell->TakeNote( pNote );
-                    else
-						pNewCell = new ScNoteCell( pNote );
-					if (pBC)
-					{
-                        pNewCell->TakeBroadcaster(pBC);
-						pLastFormulaTreeTop = 0;	// Err527 Workaround
-					}
-
-					if ( pOldCell->GetCellType() == CELLTYPE_FORMULA )
-					{
-						pOldCell->EndListeningTo( pDocument );
-						// falls in EndListening NoteCell in gleicher Col zerstoert
-						if ( i >= nCount || pItems[i].nRow != nRow )
-							Search(nRow, i);
-					}
-					pOldCell->Delete();
-					pItems[i].pCell = pNewCell;			// ersetzen
-					if ( pNewCell->GetCellType() == CELLTYPE_FORMULA )
-					{
-						pNewCell->StartListeningTo( pDocument );
-						((ScFormulaCell*)pNewCell)->SetDirty();
-					}
-					else
-						pDocument->Broadcast( ScHint( SC_HINT_DATACHANGED,
-                            ScAddress( nCol, nRow, nTabP ), pNewCell ) );
-				}
-				else
-				{
-					DeleteAtIndex(i);					// loeschen und Broadcast
-				}
-			}
-			else if (pNewCell)
-			{
-				Insert(nRow, pNewCell);					// neu eintragen und Broadcast
-			}
-		}
-
-		//	hier keine Formate mehr fuer Formeln setzen!
-		//	(werden bei der Ausgabe abgefragt)
-
-	}
-	return bNumFmtSet;
-}
-
-
-void ScColumn::GetFilterEntries(SCROW nStartRow, SCROW nEndRow, TypedScStrCollection& rStrings, bool& rHasDates)
-{
-    bool bHasDates = false;
-	SvNumberFormatter* pFormatter = pDocument->GetFormatTable();
-	String aString;
-    SCROW nRow = 0;
-	SCSIZE nIndex;
-
-	Search( nStartRow, nIndex );
-
-	while ( (nIndex < nCount) ? ((nRow=pItems[nIndex].nRow) <= nEndRow) : sal_False )
-	{
-		ScBaseCell*			 pCell	  = pItems[nIndex].pCell;
-		TypedStrData*		 pData;
-		sal_uLong				 nFormat  = GetNumberFormat( nRow );
-
-		ScCellFormat::GetInputString( pCell, nFormat, aString, *pFormatter );
-
-		if ( pDocument->HasStringData( nCol, nRow, nTab ) )
-			pData = new TypedStrData( aString );
-		else
-		{
-			double nValue;
-
-			switch ( pCell->GetCellType() )
-			{
-				case CELLTYPE_VALUE:
-					nValue = ((ScValueCell*)pCell)->GetValue();
-					break;
-
-				case CELLTYPE_FORMULA:
-					nValue = ((ScFormulaCell*)pCell)->GetValue();
-					break;
-
-				default:
-					nValue = 0.0;
-			}
-
-            if (pFormatter)
+        if (rCell.meType == CELLTYPE_NONE)
+        {
+            if (aParam.meSetTextNumFormat != ScSetStringParam::Never && aParam.mpNumFormatter->IsNumberFormat(rString, nIndex, nVal))
             {
-                short nType = pFormatter->GetType(nFormat);
-                if ((nType & NUMBERFORMAT_DATE) && !(nType & NUMBERFORMAT_TIME))
-                {    
-                    // special case for date values.  Disregard the time
-                    // element if the number format is of date type.
-                    nValue = ::rtl::math::approxFloor(nValue);
-                    bHasDates = true;
-                }
+                // Set the cell format type to Text.
+                applyTextNumFormat(*this, nRow, aParam.mpNumFormatter);
             }
 
-			pData = new TypedStrData( aString, nValue, SC_STRTYPE_VALUE );
-		}
-#if 0 // DR
-		ScPostIt aCellNote( ScPostIt::UNINITIALIZED );
-		// Hide visible notes during Filtering.
-		if(pCell->GetNote(aCellNote) && aCellNote.IsCaptionShown())
-		{
-		    ScDetectiveFunc( pDocument, nTab ).HideComment( nCol, nRow );
-		    aCellNote.SetShown( false );
-		    pCell->SetNote(aCellNote);
-		}
-#endif
+            rCell.set(rPool.intern(rString));
+        }
+    }
 
-		if ( !rStrings.Insert( pData ) )
-			delete pData;								// doppelt
-
-		++nIndex;
-	}
-
-    rHasDates = bHasDates;
+    return bNumFmtSet;
 }
 
-//
-//	GetDataEntries - Strings aus zusammenhaengendem Bereich um nRow
-//
+/**
+ * Returns true if the cell format was set as well
+ */
+bool ScColumn::SetString( SCROW nRow, SCTAB nTabP, const OUString& rString,
+                          formula::FormulaGrammar::AddressConvention eConv,
+                          ScSetStringParam* pParam )
+{
+    if (!ValidRow(nRow))
+        return false;
 
-//	DATENT_MAX		- max. Anzahl Eintrage in Liste fuer Auto-Eingabe
-//	DATENT_SEARCH	- max. Anzahl Zellen, die durchsucht werden - neu: nur Strings zaehlen
+    ScCellValue aNewCell;
+    bool bNumFmtSet = ParseString(aNewCell, nRow, nTabP, rString, eConv, pParam);
+    if (pParam)
+        aNewCell.release(*this, nRow, pParam->meStartListening);
+    else
+        aNewCell.release(*this, nRow);
+
+    // Do not set Formats and Formulas here anymore!
+    // These are queried during output
+
+    return bNumFmtSet;
+}
+
+void ScColumn::SetEditText( SCROW nRow, EditTextObject* pEditText )
+{
+    pEditText->NormalizeString(pDocument->GetSharedStringPool());
+    sc::CellStoreType::iterator it = GetPositionToInsert(nRow);
+    maCells.set(it, nRow, pEditText);
+    maCellTextAttrs.set(nRow, sc::CellTextAttr());
+    CellStorageModified();
+
+    BroadcastNewCell(nRow);
+}
+
+void ScColumn::SetEditText( sc::ColumnBlockPosition& rBlockPos, SCROW nRow, EditTextObject* pEditText )
+{
+    pEditText->NormalizeString(pDocument->GetSharedStringPool());
+    rBlockPos.miCellPos = GetPositionToInsert(rBlockPos.miCellPos, nRow);
+    rBlockPos.miCellPos = maCells.set(rBlockPos.miCellPos, nRow, pEditText);
+    rBlockPos.miCellTextAttrPos = maCellTextAttrs.set(
+        rBlockPos.miCellTextAttrPos, nRow, sc::CellTextAttr());
+
+    CellStorageModified();
+
+    BroadcastNewCell(nRow);
+}
+
+void ScColumn::SetEditText( sc::ColumnBlockPosition& rBlockPos, SCROW nRow, const EditTextObject& rEditText )
+{
+    if (pDocument->GetEditPool() == rEditText.GetPool())
+    {
+        SetEditText(rBlockPos, nRow, rEditText.Clone());
+        return;
+    }
+
+    //! another "spool"
+    // Sadly there is no other way to change the Pool than to
+    // "spool" the Object through a corresponding Engine
+    EditEngine& rEngine = pDocument->GetEditEngine();
+    rEngine.SetText(rEditText);
+    SetEditText(rBlockPos, nRow, rEngine.CreateTextObject());
+    return;
+}
+
+void ScColumn::SetEditText( SCROW nRow, const EditTextObject& rEditText, const SfxItemPool* pEditPool )
+{
+    if (pEditPool && pDocument->GetEditPool() == pEditPool)
+    {
+        SetEditText(nRow, rEditText.Clone());
+        return;
+    }
+
+    //! another "spool"
+    // Sadly there is no other way to change the Pool than to
+    // "spool" the Object through a corresponding Engine
+    EditEngine& rEngine = pDocument->GetEditEngine();
+    rEngine.SetText(rEditText);
+    SetEditText(nRow, rEngine.CreateTextObject());
+    return;
+}
+
+void ScColumn::SetFormula( SCROW nRow, const ScTokenArray& rArray, formula::FormulaGrammar::Grammar eGram )
+{
+    ScAddress aPos(nCol, nRow, nTab);
+
+    sc::CellStoreType::iterator it = GetPositionToInsert(nRow);
+    ScFormulaCell* pCell = new ScFormulaCell(pDocument, aPos, rArray, eGram);
+    sal_uInt32 nCellFormat = GetNumberFormat(nRow);
+    if( (nCellFormat % SV_COUNTRY_LANGUAGE_OFFSET) == 0)
+        pCell->SetNeedNumberFormat(true);
+    it = maCells.set(it, nRow, pCell);
+    maCellTextAttrs.set(nRow, sc::CellTextAttr());
+
+    CellStorageModified();
+
+    AttachNewFormulaCell(it, nRow, *pCell);
+}
+
+void ScColumn::SetFormula( SCROW nRow, const OUString& rFormula, formula::FormulaGrammar::Grammar eGram )
+{
+    ScAddress aPos(nCol, nRow, nTab);
+
+    sc::CellStoreType::iterator it = GetPositionToInsert(nRow);
+    ScFormulaCell* pCell = new ScFormulaCell(pDocument, aPos, rFormula, eGram);
+    sal_uInt32 nCellFormat = GetNumberFormat(nRow);
+    if( (nCellFormat % SV_COUNTRY_LANGUAGE_OFFSET) == 0)
+        pCell->SetNeedNumberFormat(true);
+    it = maCells.set(it, nRow, pCell);
+    maCellTextAttrs.set(nRow, sc::CellTextAttr());
+
+    CellStorageModified();
+
+    AttachNewFormulaCell(it, nRow, *pCell);
+}
+
+ScFormulaCell* ScColumn::SetFormulaCell(
+    SCROW nRow, ScFormulaCell* pCell, sc::StartListeningType eListenType )
+{
+    sc::CellStoreType::iterator it = GetPositionToInsert(nRow);
+    sal_uInt32 nCellFormat = GetNumberFormat(nRow);
+    if( (nCellFormat % SV_COUNTRY_LANGUAGE_OFFSET) == 0)
+        pCell->SetNeedNumberFormat(true);
+    it = maCells.set(it, nRow, pCell);
+    maCellTextAttrs.set(nRow, sc::CellTextAttr());
+
+    CellStorageModified();
+
+    AttachNewFormulaCell(it, nRow, *pCell, true, eListenType);
+    return pCell;
+}
+
+ScFormulaCell* ScColumn::SetFormulaCell(
+    sc::ColumnBlockPosition& rBlockPos, SCROW nRow, ScFormulaCell* pCell,
+    sc::StartListeningType eListenType )
+{
+    rBlockPos.miCellPos = GetPositionToInsert(rBlockPos.miCellPos, nRow);
+    sal_uInt32 nCellFormat = GetNumberFormat(nRow);
+    if( (nCellFormat % SV_COUNTRY_LANGUAGE_OFFSET) == 0)
+        pCell->SetNeedNumberFormat(true);
+    rBlockPos.miCellPos = maCells.set(rBlockPos.miCellPos, nRow, pCell);
+    rBlockPos.miCellTextAttrPos = maCellTextAttrs.set(
+        rBlockPos.miCellTextAttrPos, nRow, sc::CellTextAttr());
+
+    CellStorageModified();
+
+    AttachNewFormulaCell(rBlockPos.miCellPos, nRow, *pCell, true, eListenType);
+    return pCell;
+}
+
+bool ScColumn::SetFormulaCells( SCROW nRow, std::vector<ScFormulaCell*>& rCells )
+{
+    if (!ValidRow(nRow))
+        return false;
+
+    SCROW nEndRow = nRow + rCells.size() - 1;
+    if (!ValidRow(nEndRow))
+        return false;
+
+    sc::CellStoreType::position_type aPos = maCells.position(nRow);
+
+    // Detach all formula cells that will be overwritten.
+    DetachFormulaCells(aPos, rCells.size());
+
+    for (size_t i = 0, n = rCells.size(); i < n; ++i)
+    {
+        SCROW nThisRow = nRow + i;
+        sal_uInt32 nFmt = GetNumberFormat(nThisRow);
+        if ((nFmt % SV_COUNTRY_LANGUAGE_OFFSET) == 0)
+            rCells[i]->SetNeedNumberFormat(true);
+    }
+
+    std::vector<sc::CellTextAttr> aDefaults(rCells.size(), sc::CellTextAttr());
+    maCellTextAttrs.set(nRow, aDefaults.begin(), aDefaults.end());
+
+    maCells.set(aPos.first, nRow, rCells.begin(), rCells.end());
+
+    CellStorageModified();
+
+    AttachNewFormulaCells(aPos, rCells.size());
+
+    return true;
+}
+
+svl::SharedString ScColumn::GetSharedString( SCROW nRow ) const
+{
+    sc::CellStoreType::const_position_type aPos = maCells.position(nRow);
+    switch (aPos.first->type)
+    {
+        case sc::element_type_string:
+            return sc::string_block::at(*aPos.first->data, aPos.second);
+        case sc::element_type_edittext:
+        {
+            const EditTextObject* pObj = sc::edittext_block::at(*aPos.first->data, aPos.second);
+            std::vector<svl::SharedString> aSSs = pObj->GetSharedStrings();
+            if (aSSs.size() != 1)
+                // We don't handle multiline content for now.
+                return svl::SharedString();
+
+            return aSSs[0];
+        }
+        break;
+        default:
+            ;
+    }
+    return svl::SharedString();
+}
+
+namespace {
+
+class FilterEntriesHandler
+{
+    ScColumn& mrColumn;
+    std::vector<ScTypedStrData>& mrStrings;
+    bool mbHasDates;
+
+    void processCell(SCROW nRow, ScRefCellValue& rCell)
+    {
+        SvNumberFormatter* pFormatter = mrColumn.GetDoc().GetFormatTable();
+        OUString aStr;
+        sal_uLong nFormat = mrColumn.GetNumberFormat(nRow);
+        ScCellFormat::GetInputString(rCell, nFormat, aStr, *pFormatter, &mrColumn.GetDoc());
+
+        if (rCell.hasString())
+        {
+            mrStrings.push_back(ScTypedStrData(aStr));
+            return;
+        }
+
+        double fVal = 0.0;
+
+        switch (rCell.meType)
+        {
+            case CELLTYPE_VALUE:
+                fVal = rCell.mfValue;
+                break;
+
+            case CELLTYPE_FORMULA:
+            {
+                ScFormulaCell* pFC = rCell.mpFormula;
+                sal_uInt16 nErr = pFC->GetErrCode();
+                if (nErr)
+                {
+                    // Error cell is evaluated as string (for now).
+                    OUString aErr = ScGlobal::GetErrorString(nErr);
+                    if (!aErr.isEmpty())
+                    {
+                        mrStrings.push_back(ScTypedStrData(aErr));
+                        return;
+                    }
+                }
+                else
+                    fVal = pFC->GetValue();
+            }
+            break;
+            default:
+                ;
+        }
+
+        short nType = pFormatter->GetType(nFormat);
+        bool bDate = false;
+        if ((nType & NUMBERFORMAT_DATE) && !(nType & NUMBERFORMAT_TIME))
+        {
+            // special case for date values.  Disregard the time
+            // element if the number format is of date type.
+            fVal = rtl::math::approxFloor(fVal);
+            mbHasDates = true;
+            bDate = true;
+            // Convert string representation to ISO 8601 date to eliminate
+            // locale dependent behaviour later when filtering for dates.
+            sal_uInt32 nIndex = pFormatter->GetFormatIndex( NF_DATE_DIN_YYYYMMDD);
+            pFormatter->GetInputLineString( fVal, nIndex, aStr);
+        }
+        // maybe extend ScTypedStrData enum is also an option here
+        mrStrings.push_back(ScTypedStrData(aStr, fVal, ScTypedStrData::Value,bDate));
+    }
+
+public:
+    FilterEntriesHandler(ScColumn& rColumn, std::vector<ScTypedStrData>& rStrings) :
+        mrColumn(rColumn), mrStrings(rStrings), mbHasDates(false) {}
+
+    void operator() (size_t nRow, double fVal)
+    {
+        ScRefCellValue aCell(fVal);
+        processCell(nRow, aCell);
+    }
+
+    void operator() (size_t nRow, const svl::SharedString& rStr)
+    {
+        ScRefCellValue aCell(&rStr);
+        processCell(nRow, aCell);
+    }
+
+    void operator() (size_t nRow, const EditTextObject* p)
+    {
+        ScRefCellValue aCell(p);
+        processCell(nRow, aCell);
+    }
+
+    void operator() (size_t nRow, const ScFormulaCell* p)
+    {
+        ScRefCellValue aCell(const_cast<ScFormulaCell*>(p));
+        processCell(nRow, aCell);
+    }
+
+    bool hasDates() const { return mbHasDates; }
+};
+
+}
+
+void ScColumn::GetFilterEntries(
+    sc::ColumnBlockConstPosition& rBlockPos, SCROW nStartRow, SCROW nEndRow,
+    std::vector<ScTypedStrData>& rStrings, bool& rHasDates )
+{
+    FilterEntriesHandler aFunc(*this, rStrings);
+    rBlockPos.miCellPos =
+        sc::ParseAllNonEmpty(rBlockPos.miCellPos, maCells, nStartRow, nEndRow, aFunc);
+    rHasDates = aFunc.hasDates();
+}
+
+namespace {
+
+/**
+ * Iterate over only string and edit-text cells.
+ */
+class StrCellIterator
+{
+    typedef std::pair<sc::CellStoreType::const_iterator,size_t> PosType;
+    PosType maPos;
+    sc::CellStoreType::const_iterator miBeg;
+    sc::CellStoreType::const_iterator miEnd;
+    const ScDocument* mpDoc;
+public:
+    StrCellIterator(const sc::CellStoreType& rCells, SCROW nStart, const ScDocument* pDoc) :
+        miBeg(rCells.begin()), miEnd(rCells.end()), mpDoc(pDoc)
+    {
+        if (ValidRow(nStart))
+            maPos = rCells.position(nStart);
+        else
+            // Make this iterator invalid.
+            maPos.first = miEnd;
+    }
+
+    bool valid() const { return (maPos.first != miEnd); }
+
+    bool has() const
+    {
+        return (maPos.first->type == sc::element_type_string || maPos.first->type == sc::element_type_edittext);
+    }
+
+    bool prev()
+    {
+        if (!has())
+        {
+            // Not in a string block. Move back until we hit a string block.
+            while (!has())
+            {
+                if (maPos.first == miBeg)
+                    return false;
+
+                --maPos.first; // move to the preceding block.
+                maPos.second = maPos.first->size - 1; // last cell in the block.
+            }
+            return true;
+        }
+
+        // We are in a string block.
+        if (maPos.second > 0)
+        {
+            // Move back one cell in the same block.
+            --maPos.second;
+        }
+        else
+        {
+            // Move back to the preceding string block.
+            while (true)
+            {
+                if (maPos.first == miBeg)
+                    return false;
+
+                // Move to the last cell of the previous block.
+                --maPos.first;
+                maPos.second = maPos.first->size - 1;
+                if (has())
+                    break;
+            }
+        }
+        return true;
+    }
+
+    bool next()
+    {
+        if (!has())
+        {
+            // Not in a string block. Move forward until we hit a string block.
+            while (!has())
+            {
+                ++maPos.first;
+                if (maPos.first == miEnd)
+                    return false;
+
+                maPos.second = 0; // First cell in this block.
+            }
+            return true;
+        }
+
+        // We are in a string block.
+        ++maPos.second;
+        if (maPos.second >= maPos.first->size)
+        {
+            // Move to the next string block.
+            while (true)
+            {
+                ++maPos.first;
+                if (maPos.first == miEnd)
+                    return false;
+
+                maPos.second = 0;
+                if (has())
+                    break;
+            }
+        }
+        return true;
+    }
+
+    OUString get() const
+    {
+        switch (maPos.first->type)
+        {
+            case sc::element_type_string:
+                return sc::string_block::at(*maPos.first->data, maPos.second).getString();
+            case sc::element_type_edittext:
+            {
+                const EditTextObject* p = sc::edittext_block::at(*maPos.first->data, maPos.second);
+                return ScEditUtil::GetString(*p, mpDoc);
+            }
+            default:
+                ;
+        }
+        return OUString();
+    }
+};
+
+}
+
+// GetDataEntries - Strings from continuous Section around nRow
+
+// DATENT_MAX      - max. number of entries in list for auto entry
+// DATENT_SEARCH   - max. number of cells that get transparent - new: only count Strings
 #ifdef USE_JAVA
 // Increase overly restrictive autocorrection limits found in the following
 // NeoOffice support forum post:
 // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63752#63752
-#define DATENT_MAX		MAXCOLLECTIONSIZE
+#define DATENT_MAX		16384
 #define DATENT_SEARCH	USHRT_MAX
 #else	// USE_JAVA
-#define DATENT_MAX		200
-#define DATENT_SEARCH	2000
+#define DATENT_MAX      200
+#define DATENT_SEARCH   2000
 #endif	// USE_JAVA
 
-
-sal_Bool ScColumn::GetDataEntries(SCROW nStartRow, TypedScStrCollection& rStrings, sal_Bool bLimit)
+bool ScColumn::GetDataEntries(
+    SCROW nStartRow, std::set<ScTypedStrData>& rStrings, bool bLimit ) const
 {
-	sal_Bool bFound = sal_False;
-	SCSIZE nThisIndex;
-	sal_Bool bThisUsed = Search( nStartRow, nThisIndex );
-	String aString;
-	sal_uInt16 nCells = 0;
+    // Start at the specified row position, and collect all string values
+    // going upward and downward directions in parallel. The start position
+    // cell must be skipped.
 
-	//	Die Beschraenkung auf angrenzende Zellen (ohne Luecken) ist nicht mehr gewollt
-	//	(Featurekommission zur 5.1), stattdessen abwechselnd nach oben und unten suchen,
-	//	damit naheliegende Zellen wenigstens zuerst gefunden werden.
-	//!	Abstaende der Zeilennummern vergleichen? (Performance??)
+    StrCellIterator aItrUp(maCells, nStartRow, pDocument);
+    StrCellIterator aItrDown(maCells, nStartRow+1, pDocument);
 
-	SCSIZE nUpIndex = nThisIndex;		// zeigt hinter die Zelle
-	SCSIZE nDownIndex = nThisIndex;		// zeigt auf die Zelle
-	if (bThisUsed)
-		++nDownIndex;					// Startzelle ueberspringen
+    bool bMoveUp = aItrUp.valid();
+    if (!bMoveUp)
+        // Current cell is invalid.
+        return false;
 
-	while ( nUpIndex || nDownIndex < nCount )
-	{
-		if ( nUpIndex )					// nach oben
-		{
-			ScBaseCell* pCell = pItems[nUpIndex-1].pCell;
-			CellType eType = pCell->GetCellType();
-			if (eType == CELLTYPE_STRING || eType == CELLTYPE_EDIT)		// nur Strings interessieren
-			{
-				if (eType == CELLTYPE_STRING)
-					((ScStringCell*)pCell)->GetString(aString);
-				else
-					((ScEditCell*)pCell)->GetString(aString);
+    // Skip the start position cell.
+    bMoveUp = aItrUp.prev(); // Find the previous string cell position.
 
-				TypedStrData* pData = new TypedStrData(aString);
-				if ( !rStrings.Insert( pData ) )
-					delete pData;											// doppelt
-				else if ( bLimit && rStrings.GetCount() >= DATENT_MAX )
-					break;													// Maximum erreicht
-				bFound = sal_True;
+    bool bMoveDown = aItrDown.valid();
+    if (bMoveDown && !aItrDown.has())
+        bMoveDown = aItrDown.next(); // Find the next string cell position.
 
-				if ( bLimit )
-					if (++nCells >= DATENT_SEARCH)
-						break;									// genug gesucht
-			}
-			--nUpIndex;
-		}
+    bool bFound = false;
+    size_t nCellsSearched = 0;
+    while (bMoveUp || bMoveDown)
+    {
+        if (bMoveUp)
+        {
+            // Get the current string and move up.
+            OUString aStr = aItrUp.get();
+            if (!aStr.isEmpty())
+            {
+                bool bInserted = rStrings.insert(ScTypedStrData(aStr)).second;
+                if (bInserted && bLimit && rStrings.size() >= DATENT_MAX)
+                    return true; // Maximum reached
+                bFound = true;
+            }
 
-		if ( nDownIndex < nCount )		// nach unten
-		{
-			ScBaseCell* pCell = pItems[nDownIndex].pCell;
-			CellType eType = pCell->GetCellType();
-			if (eType == CELLTYPE_STRING || eType == CELLTYPE_EDIT)		// nur Strings interessieren
-			{
-				if (eType == CELLTYPE_STRING)
-					((ScStringCell*)pCell)->GetString(aString);
-				else
-					((ScEditCell*)pCell)->GetString(aString);
+            if (bLimit && ++nCellsSearched >= DATENT_SEARCH)
+                return bFound; // max search cell count reached.
 
-				TypedStrData* pData = new TypedStrData(aString);
-				if ( !rStrings.Insert( pData ) )
-					delete pData;											// doppelt
-				else if ( bLimit && rStrings.GetCount() >= DATENT_MAX )
-					break;													// Maximum erreicht
-				bFound = sal_True;
+            bMoveUp = aItrUp.prev();
+        }
 
-				if ( bLimit )
-					if (++nCells >= DATENT_SEARCH)
-						break;									// genug gesucht
-			}
-			++nDownIndex;
-		}
-	}
+        if (bMoveDown)
+        {
+            // Get the current string and move down.
+            OUString aStr = aItrDown.get();
+            if (!aStr.isEmpty())
+            {
+                bool bInserted = rStrings.insert(ScTypedStrData(aStr)).second;
+                if (bInserted && bLimit && rStrings.size() >= DATENT_MAX)
+                    return true; // Maximum reached
+                bFound = true;
+            }
 
-	return bFound;
+            if (bLimit && ++nCellsSearched >= DATENT_SEARCH)
+                return bFound; // max search cell count reached.
+
+            bMoveDown = aItrDown.next();
+        }
+    }
+
+    return bFound;
 }
 
-#undef DATENT_MAX
-#undef DATENT_SEARCH
+namespace {
 
+class FormulaToValueHandler
+{
+    struct Entry
+    {
+        SCROW mnRow;
+        ScCellValue maValue;
+
+        Entry(SCROW nRow, double f) : mnRow(nRow), maValue(f) {}
+        Entry(SCROW nRow, const svl::SharedString& rStr) : mnRow(nRow), maValue(rStr) {}
+    };
+
+    typedef std::vector<Entry> EntriesType;
+    EntriesType maEntries;
+
+public:
+
+    void operator() (size_t nRow, const ScFormulaCell* p)
+    {
+        ScFormulaCell* p2 = const_cast<ScFormulaCell*>(p);
+        if (p2->IsValue())
+            maEntries.push_back(Entry(nRow, p2->GetValue()));
+        else
+            maEntries.push_back(Entry(nRow, p2->GetString()));
+    }
+
+    void commitCells(ScColumn& rColumn)
+    {
+        sc::ColumnBlockPosition aBlockPos;
+        rColumn.InitBlockPosition(aBlockPos);
+
+        EntriesType::iterator it = maEntries.begin(), itEnd = maEntries.end();
+        for (; it != itEnd; ++it)
+        {
+            Entry& r = *it;
+            switch (r.maValue.meType)
+            {
+                case CELLTYPE_VALUE:
+                    rColumn.SetValue(aBlockPos, r.mnRow, r.maValue.mfValue, false);
+                break;
+                case CELLTYPE_STRING:
+                    rColumn.SetRawString(aBlockPos, r.mnRow, *r.maValue.mpString, false);
+                default:
+                    ;
+            }
+        }
+    }
+};
+
+}
 
 void ScColumn::RemoveProtected( SCROW nStartRow, SCROW nEndRow )
 {
-	ScAttrIterator aAttrIter( pAttrArray, nStartRow, nEndRow );
-	SCROW nTop = -1;
-	SCROW nBottom = -1;
-	SCSIZE nIndex;
-	const ScPatternAttr* pPattern = aAttrIter.Next( nTop, nBottom );
-	while (pPattern)
-	{
-		const ScProtectionAttr* pAttr = (const ScProtectionAttr*)&pPattern->GetItem(ATTR_PROTECTION);
-		if ( pAttr->GetHideCell() )
-			DeleteArea( nTop, nBottom, IDF_CONTENTS );
-		else if ( pAttr->GetHideFormula() )
-		{
-			Search( nTop, nIndex );
-			while ( nIndex<nCount && pItems[nIndex].nRow<=nBottom )
-			{
-				if ( pItems[nIndex].pCell->GetCellType() == CELLTYPE_FORMULA )
-				{
-					ScFormulaCell* pFormula = (ScFormulaCell*)pItems[nIndex].pCell;
-					if (pFormula->IsValue())
-					{
-						double nVal = pFormula->GetValue();
-						pItems[nIndex].pCell = new ScValueCell( nVal );
-					}
-					else
-					{
-						String aString;
-						pFormula->GetString(aString);
-						pItems[nIndex].pCell = new ScStringCell( aString );
-					}
-					delete pFormula;
-				}
-				++nIndex;
-			}
-		}
+    FormulaToValueHandler aFunc;
+    sc::CellStoreType::const_iterator itPos = maCells.begin();
 
-		pPattern = aAttrIter.Next( nTop, nBottom );
-	}
+    ScAttrIterator aAttrIter( pAttrArray, nStartRow, nEndRow );
+    SCROW nTop = -1;
+    SCROW nBottom = -1;
+    const ScPatternAttr* pPattern = aAttrIter.Next( nTop, nBottom );
+    while (pPattern)
+    {
+        const ScProtectionAttr* pAttr = static_cast<const ScProtectionAttr*>(&pPattern->GetItem(ATTR_PROTECTION));
+        if ( pAttr->GetHideCell() )
+            DeleteArea( nTop, nBottom, IDF_CONTENTS );
+        else if ( pAttr->GetHideFormula() )
+        {
+            // Replace all formula cells between nTop and nBottom with raw value cells.
+            itPos = sc::ParseFormula(itPos, maCells, nTop, nBottom, aFunc);
+        }
+
+        pPattern = aAttrIter.Next( nTop, nBottom );
+    }
+
+    aFunc.commitCells(*this);
 }
-
 
 void ScColumn::SetError( SCROW nRow, const sal_uInt16 nError)
 {
-	if (VALIDROW(nRow))
-	{
-		ScFormulaCell* pCell = new ScFormulaCell
-			( pDocument, ScAddress( nCol, nRow, nTab ) );
-		pCell->SetErrCode( nError );
-		Insert( nRow, pCell );
-	}
+    if (!ValidRow(nRow))
+        return;
+
+    ScFormulaCell* pCell = new ScFormulaCell(pDocument, ScAddress(nCol, nRow, nTab));
+    pCell->SetErrCode(nError);
+
+    sc::CellStoreType::iterator it = GetPositionToInsert(nRow);
+    it = maCells.set(it, nRow, pCell);
+    maCellTextAttrs.set(nRow, sc::CellTextAttr());
+
+    CellStorageModified();
+
+    AttachNewFormulaCell(it, nRow, *pCell);
 }
 
-
-void ScColumn::SetValue( SCROW nRow, const double& rVal)
+void ScColumn::SetRawString( SCROW nRow, const OUString& rStr, bool bBroadcast )
 {
-	if (VALIDROW(nRow))
-	{
-		ScBaseCell* pCell = new ScValueCell(rVal);
-		Insert( nRow, pCell );
-	}
+    if (!ValidRow(nRow))
+        return;
+
+    svl::SharedString aSS = pDocument->GetSharedStringPool().intern(rStr);
+    if (!aSS.getData())
+        return;
+
+    SetRawString(nRow, aSS, bBroadcast);
 }
 
-
-void ScColumn::GetString( SCROW nRow, String& rString ) const
+void ScColumn::SetRawString( SCROW nRow, const svl::SharedString& rStr, bool bBroadcast )
 {
-	SCSIZE	nIndex;
-	Color* pColor;
-	if (Search(nRow, nIndex))
-	{
-		ScBaseCell* pCell = pItems[nIndex].pCell;
-		if (pCell->GetCellType() != CELLTYPE_NOTE)
-		{
-			sal_uLong nFormat = GetNumberFormat( nRow );
-			ScCellFormat::GetString( pCell, nFormat, rString, &pColor, *(pDocument->GetFormatTable()) );
-		}
-		else
-			rString.Erase();
-	}
-	else
-		rString.Erase();
+    if (!ValidRow(nRow))
+        return;
+
+    sc::CellStoreType::iterator it = GetPositionToInsert(nRow);
+    maCells.set(it, nRow, rStr);
+    maCellTextAttrs.set(nRow, sc::CellTextAttr());
+
+    CellStorageModified();
+
+    if (bBroadcast)
+        BroadcastNewCell(nRow);
 }
 
-template<>
-void  ScColumn::FillDPCacheT( long nDim, SCROW nStartRow, SCROW nEndRow, const boost::function<void(ScDPItemData*)> & rAddLabel, const boost::function<sal_Bool(long,ScDPItemData*, bool)> & rAddData )
+void ScColumn::SetRawString(
+    sc::ColumnBlockPosition& rBlockPos, SCROW nRow, const svl::SharedString& rStr, bool bBroadcast )
 {
-    SCROW nPattenRowStart = -1, nPatternRowEnd = -1;
-    SvNumberFormatter* pFormatter = pDocument->GetFormatTable();
-    sal_uLong nNumberFormat = 0;
-    sal_uLong nNumberFormatType = NUMBERFORMAT_NUMBER;
-    SCROW nCurRow = nStartRow;
-    ScDPItemData * pDPItemData = NULL;
+    if (!ValidRow(nRow))
+        return;
 
-    if ( pItems )
-    {
-        SCSIZE nIndex;
-        
-        for ( Search( nStartRow, nIndex ) ? void( ) : void(nIndex = nCount); nIndex < nCount && pItems[nIndex].nRow <= nEndRow; ++nIndex, ++nCurRow )
-        {
-            for( ; nCurRow < pItems[nIndex].nRow; nCurRow++ )
-                if( nCurRow == nStartRow )
-                    rAddLabel( new ScDPItemData() );
-                else
-                    rAddData( nDim, new ScDPItemData(), false); 
+    rBlockPos.miCellPos = GetPositionToInsert(rBlockPos.miCellPos, nRow);
+    rBlockPos.miCellPos = maCells.set(rBlockPos.miCellPos, nRow, rStr);
+    rBlockPos.miCellTextAttrPos = maCellTextAttrs.set(
+        rBlockPos.miCellTextAttrPos, nRow, sc::CellTextAttr());
 
-            if( nCurRow > nPatternRowEnd )
-                if( const ScPatternAttr* pPattern = pAttrArray ? pAttrArray->GetPatternRange( nPattenRowStart, nPatternRowEnd, nCurRow ) : NULL )
-                    nNumberFormatType = pFormatter->GetType( nNumberFormat = pPattern->GetNumberFormat( pFormatter ) );
-                else
-                    nNumberFormatType = NUMBERFORMAT_NUMBER, nNumberFormat = 0;
+    CellStorageModified();
 
-            if( ScBaseCell* pCell = pItems[nIndex].pCell )
-                if( pCell->GetCellType() == CELLTYPE_FORMULA && ((ScFormulaCell*)pCell)->GetErrCode() )
-		{
-		    String str( GetStringFromCell( pCell, nNumberFormat, pFormatter ) );
-		    sal_uInt8 bFlag = ScDPItemData::MK_ERR;
-                    pDPItemData = new ScDPItemData( 0, str, 0.0, bFlag );
-		}
-                else if( pCell->HasValueData() )
-                {
-                    double fVal = GetValueFromCell( pCell );
-                    String str( GetStringFromCell( pCell, nNumberFormat, pFormatter ) );
-                    sal_uInt8 bFlag = ScDPItemData::MK_VAL|ScDPItemData::MK_DATA|(ScDPItemData::MK_DATE * isDateFormat( nNumberFormatType ));
-                    pDPItemData = new ScDPItemData( nNumberFormat, str, fVal, bFlag );
-                }
-                else if( !pCell->IsBlank() )
-                    pDPItemData = new ScDPItemData( GetStringFromCell( pCell, nNumberFormat, pFormatter ) );
-                else
-                    pDPItemData = new ScDPItemData();
-            else
-                pDPItemData = new ScDPItemData();
-
-            if( nCurRow == nStartRow )
-                rAddLabel( pDPItemData );
-            else
-                rAddData( nDim, pDPItemData, false );
-        }
-    }
-
-    for( ; nCurRow <= nEndRow; nCurRow++ )
-        if( nCurRow == nStartRow )
-            rAddLabel( new ScDPItemData() );
-        else
-            rAddData( nDim, new ScDPItemData(), false );
+    if (bBroadcast)
+        BroadcastNewCell(nRow);
 }
-void  ScColumn::FillDPCache( ScDPTableDataCache * pCache, long nDim, SCROW nStartRow, SCROW nEndRow )
+
+void ScColumn::SetValue( SCROW nRow, double fVal )
 {
-    FillDPCacheT<boost::function<void(ScDPItemData*)>, boost::function<sal_Bool(long,ScDPItemData*, bool)> >( nDim, nStartRow, nEndRow, boost::bind( &ScDPTableDataCache::AddLabel, pCache, _1 ), boost::bind( &ScDPTableDataCache::AddData, pCache, _1, _2, _3 ) );
+    if (!ValidRow(nRow))
+        return;
+
+    sc::CellStoreType::iterator it = GetPositionToInsert(nRow);
+    maCells.set(it, nRow, fVal);
+    maCellTextAttrs.set(nRow, sc::CellTextAttr());
+
+    CellStorageModified();
+
+    BroadcastNewCell(nRow);
 }
 
-void ScColumn::GetInputString( SCROW nRow, String& rString ) const
+void ScColumn::SetValue(
+    sc::ColumnBlockPosition& rBlockPos, SCROW nRow, double fVal, bool bBroadcast )
 {
-	SCSIZE	nIndex;
-	if (Search(nRow, nIndex))
-	{
-		ScBaseCell* pCell = pItems[nIndex].pCell;
-		if (pCell->GetCellType() != CELLTYPE_NOTE)
-		{
-			sal_uLong nFormat = GetNumberFormat( nRow );
-			ScCellFormat::GetInputString( pCell, nFormat, rString, *(pDocument->GetFormatTable()) );
-		}
-		else
-			rString.Erase();
-	}
-	else
-		rString.Erase();
+    if (!ValidRow(nRow))
+        return;
+
+    rBlockPos.miCellPos = GetPositionToInsert(rBlockPos.miCellPos, nRow);
+    rBlockPos.miCellPos = maCells.set(rBlockPos.miCellPos, nRow, fVal);
+    rBlockPos.miCellTextAttrPos = maCellTextAttrs.set(
+        rBlockPos.miCellTextAttrPos, nRow, sc::CellTextAttr());
+
+    CellStorageModified();
+
+    if (bBroadcast)
+        BroadcastNewCell(nRow);
 }
 
+void ScColumn::GetString( SCROW nRow, OUString& rString ) const
+{
+    ScRefCellValue aCell = GetCellValue(nRow);
+
+    // ugly hack for ordering problem with GetNumberFormat and missing inherited formats
+    if (aCell.meType == CELLTYPE_FORMULA)
+        aCell.mpFormula->MaybeInterpret();
+
+    sal_uLong nFormat = GetNumberFormat(nRow);
+    Color* pColor = NULL;
+    ScCellFormat::GetString(aCell, nFormat, rString, &pColor, *(pDocument->GetFormatTable()), pDocument);
+}
+
+double* ScColumn::GetValueCell( SCROW nRow )
+{
+    std::pair<sc::CellStoreType::iterator,size_t> aPos = maCells.position(nRow);
+    sc::CellStoreType::iterator it = aPos.first;
+    if (it == maCells.end())
+        return NULL;
+
+    if (it->type != sc::element_type_numeric)
+        return NULL;
+
+    return &sc::numeric_block::at(*it->data, aPos.second);
+}
+
+void ScColumn::GetInputString( SCROW nRow, OUString& rString ) const
+{
+    ScRefCellValue aCell = GetCellValue(nRow);
+    sal_uLong nFormat = GetNumberFormat(nRow);
+    ScCellFormat::GetInputString(aCell, nFormat, rString, *(pDocument->GetFormatTable()), pDocument);
+}
 
 double ScColumn::GetValue( SCROW nRow ) const
 {
-	SCSIZE	nIndex;
-	if (Search(nRow, nIndex))
-	{
-		ScBaseCell* pCell = pItems[nIndex].pCell;
-		switch (pCell->GetCellType())
-		{
-			case CELLTYPE_VALUE:
-				return ((ScValueCell*)pCell)->GetValue();
-//                break;
-			case CELLTYPE_FORMULA:
-				{
-					if (((ScFormulaCell*)pCell)->IsValue())
-						return ((ScFormulaCell*)pCell)->GetValue();
-					else
-						return 0.0;
-				}
-//                break;
-			default:
-				return 0.0;
-//                break;
-		}
-	}
-	return 0.0;
+    std::pair<sc::CellStoreType::const_iterator,size_t> aPos = maCells.position(nRow);
+    sc::CellStoreType::const_iterator it = aPos.first;
+    switch (it->type)
+    {
+        case sc::element_type_numeric:
+            return sc::numeric_block::at(*it->data, aPos.second);
+        case sc::element_type_formula:
+        {
+            const ScFormulaCell* p = sc::formula_block::at(*it->data, aPos.second);
+            ScFormulaCell* p2 = const_cast<ScFormulaCell*>(p);
+            return p2->IsValue() ? p2->GetValue() : 0.0;
+        }
+        default:
+            ;
+    }
+
+    return 0.0;
 }
 
-
-void ScColumn::GetFormula( SCROW nRow, String& rFormula, sal_Bool ) const
+const EditTextObject* ScColumn::GetEditText( SCROW nRow ) const
 {
-	SCSIZE	nIndex;
-	if (Search(nRow, nIndex))
-	{
-		ScBaseCell* pCell = pItems[nIndex].pCell;
-		if (pCell->GetCellType() == CELLTYPE_FORMULA)
-			((ScFormulaCell*)pCell)->GetFormula( rFormula );
-		else
-			rFormula.Erase();
-	}
-	else
-		rFormula.Erase();
+    std::pair<sc::CellStoreType::const_iterator,size_t> aPos = maCells.position(nRow);
+    sc::CellStoreType::const_iterator it = aPos.first;
+    if (it == maCells.end())
+        return NULL;
+
+    if (it->type != sc::element_type_edittext)
+        return NULL;
+
+    return sc::edittext_block::at(*it->data, aPos.second);
 }
 
+void ScColumn::RemoveEditTextCharAttribs( SCROW nRow, const ScPatternAttr& rAttr )
+{
+    std::pair<sc::CellStoreType::iterator,size_t> aPos = maCells.position(nRow);
+    sc::CellStoreType::iterator it = aPos.first;
+    if (it == maCells.end())
+        return;
+
+    if (it->type != sc::element_type_edittext)
+        return;
+
+    EditTextObject* p = sc::edittext_block::at(*it->data, aPos.second);
+    ScEditUtil::RemoveCharAttribs(*p, rAttr);
+}
+
+void ScColumn::GetFormula( SCROW nRow, OUString& rFormula ) const
+{
+    const ScFormulaCell* p = FetchFormulaCell(nRow);
+    if (p)
+        p->GetFormula(rFormula);
+    else
+        rFormula = EMPTY_OUSTRING;
+}
+
+const ScFormulaCell* ScColumn::GetFormulaCell( SCROW nRow ) const
+{
+    return FetchFormulaCell(nRow);
+}
+
+ScFormulaCell* ScColumn::GetFormulaCell( SCROW nRow )
+{
+    return const_cast<ScFormulaCell*>(FetchFormulaCell(nRow));
+}
 
 CellType ScColumn::GetCellType( SCROW nRow ) const
 {
-	SCSIZE	nIndex;
-	if (Search(nRow, nIndex))
-		return pItems[nIndex].pCell->GetCellType();
-	return CELLTYPE_NONE;
+    switch (maCells.get_type(nRow))
+    {
+        case sc::element_type_numeric:
+            return CELLTYPE_VALUE;
+        case sc::element_type_string:
+            return CELLTYPE_STRING;
+        case sc::element_type_edittext:
+            return CELLTYPE_EDIT;
+        case sc::element_type_formula:
+            return CELLTYPE_FORMULA;
+        default:
+            ;
+    }
+    return CELLTYPE_NONE;
 }
 
+namespace {
+
+/**
+ * Count the number of all non-empty cells.
+ */
+class CellCounter
+{
+    size_t mnCount;
+public:
+    CellCounter() : mnCount(0) {}
+
+    void operator() (const sc::CellStoreType::value_type& node)
+    {
+        if (node.type == sc::element_type_empty)
+            return;
+
+        mnCount += node.size;
+    }
+
+    size_t getCount() const { return mnCount; }
+};
+
+}
+
+SCSIZE ScColumn::GetCellCount() const
+{
+    CellCounter aFunc;
+    aFunc = std::for_each(maCells.begin(), maCells.end(), aFunc);
+    return aFunc.getCount();
+}
 
 sal_uInt16 ScColumn::GetErrCode( SCROW nRow ) const
 {
-	SCSIZE	nIndex;
-	if (Search(nRow, nIndex))
-	{
-		ScBaseCell* pCell = pItems[nIndex].pCell;
-		if (pCell->GetCellType() == CELLTYPE_FORMULA)
-			return ((ScFormulaCell*)pCell)->GetErrCode();
-	}
-	return 0;
+    std::pair<sc::CellStoreType::const_iterator,size_t> aPos = maCells.position(nRow);
+    sc::CellStoreType::const_iterator it = aPos.first;
+    if (it == maCells.end())
+        return 0;
+
+    if (it->type != sc::element_type_formula)
+        return 0;
+
+    const ScFormulaCell* p = sc::formula_block::at(*it->data, aPos.second);
+    return const_cast<ScFormulaCell*>(p)->GetErrCode();
 }
 
-
-sal_Bool ScColumn::HasStringData( SCROW nRow ) const
+bool ScColumn::HasStringData( SCROW nRow ) const
 {
-	SCSIZE	nIndex;
-	if (Search(nRow, nIndex))
-		return (pItems[nIndex].pCell)->HasStringData();
-	return sal_False;
+    std::pair<sc::CellStoreType::const_iterator,size_t> aPos = maCells.position(nRow);
+    switch (aPos.first->type)
+    {
+        case sc::element_type_string:
+        case sc::element_type_edittext:
+            return true;
+        case sc::element_type_formula:
+        {
+            const ScFormulaCell* p = sc::formula_block::at(*aPos.first->data, aPos.second);
+            return !const_cast<ScFormulaCell*>(p)->IsValue();
+        }
+        default:
+            ;
+    }
+
+    return false;
 }
 
-
-sal_Bool ScColumn::HasValueData( SCROW nRow ) const
+bool ScColumn::HasValueData( SCROW nRow ) const
 {
-	SCSIZE	nIndex;
-	if (Search(nRow, nIndex))
-		return (pItems[nIndex].pCell)->HasValueData();
-	return sal_False;
+    std::pair<sc::CellStoreType::const_iterator,size_t> aPos = maCells.position(nRow);
+    switch (aPos.first->type)
+    {
+        case sc::element_type_numeric:
+            return true;
+        case sc::element_type_formula:
+        {
+            const ScFormulaCell* p = sc::formula_block::at(*aPos.first->data, aPos.second);
+            return const_cast<ScFormulaCell*>(p)->IsValue();
+        }
+        default:
+            ;
+    }
+
+    return false;
 }
 
-sal_Bool ScColumn::HasStringCells( SCROW nStartRow, SCROW nEndRow ) const
+/**
+ * Return true if there is a string or editcell in the range
+ */
+bool ScColumn::HasStringCells( SCROW nStartRow, SCROW nEndRow ) const
 {
-	//	sal_True, wenn String- oder Editzellen im Bereich
+    std::pair<sc::CellStoreType::const_iterator,size_t> aPos = maCells.position(nStartRow);
+    sc::CellStoreType::const_iterator it = aPos.first;
+    size_t nOffset = aPos.second;
+    SCROW nRow = nStartRow;
+    for (; it != maCells.end() && nRow <= nEndRow; ++it)
+    {
+        if (it->type == sc::element_type_string || it->type == sc::element_type_edittext)
+            return true;
 
-	if ( pItems )
-	{
-		SCSIZE nIndex;
-		Search( nStartRow, nIndex );
-		while ( nIndex < nCount && pItems[nIndex].nRow <= nEndRow )
-		{
-			CellType eType = pItems[nIndex].pCell->GetCellType();
-			if ( eType == CELLTYPE_STRING || eType == CELLTYPE_EDIT )
-				return sal_True;
-			++nIndex;
-		}
-	}
-	return sal_False;
+        nRow += it->size - nOffset;
+        nOffset = 0;
+    }
+
+    return false;
 }
 
+namespace {
 
-ScPostIt* ScColumn::GetNote( SCROW nRow )
+class MaxStringLenHandler
 {
-	SCSIZE nIndex;
-	return Search( nRow, nIndex ) ? pItems[ nIndex ].pCell->GetNote() : 0;
+    sal_Int32 mnMaxLen;
+    const ScColumn& mrColumn;
+    SvNumberFormatter* mpFormatter;
+    rtl_TextEncoding meCharSet;
+    bool mbOctetEncoding;
+
+    void processCell(size_t nRow, ScRefCellValue& rCell)
+    {
+        Color* pColor;
+        OUString aString;
+        sal_uInt32 nFormat = static_cast<const SfxUInt32Item*>(mrColumn.GetAttr(nRow, ATTR_VALUE_FORMAT))->GetValue();
+        ScCellFormat::GetString(rCell, nFormat, aString, &pColor, *mpFormatter, &mrColumn.GetDoc());
+        sal_Int32 nLen = 0;
+        if (mbOctetEncoding)
+        {
+            OString aOString;
+            if (!aString.convertToString(&aOString, meCharSet,
+                        RTL_UNICODETOTEXT_FLAGS_UNDEFINED_ERROR |
+                        RTL_UNICODETOTEXT_FLAGS_INVALID_ERROR))
+            {
+                // TODO: anything? this is used by the dBase export filter
+                // that throws an error anyway, but in case of another
+                // context we might want to indicate a conversion error
+                // early.
+            }
+            nLen = aOString.getLength();
+        }
+        else
+            nLen = aString.getLength() * sizeof(sal_Unicode);
+
+        if (mnMaxLen < nLen)
+            mnMaxLen = nLen;
+    }
+
+public:
+    MaxStringLenHandler(const ScColumn& rColumn, rtl_TextEncoding eCharSet) :
+        mnMaxLen(0),
+        mrColumn(rColumn),
+        mpFormatter(rColumn.GetDoc().GetFormatTable()),
+        meCharSet(eCharSet),
+        mbOctetEncoding(rtl_isOctetTextEncoding(eCharSet))
+    {
+    }
+
+    void operator() (size_t nRow, double fVal)
+    {
+        ScRefCellValue aCell(fVal);
+        processCell(nRow, aCell);
+    }
+
+    void operator() (size_t nRow, const svl::SharedString& rStr)
+    {
+        ScRefCellValue aCell(&rStr);
+        processCell(nRow, aCell);
+    }
+
+    void operator() (size_t nRow, const EditTextObject* p)
+    {
+        ScRefCellValue aCell(p);
+        processCell(nRow, aCell);
+    }
+
+    void operator() (size_t nRow, const ScFormulaCell* p)
+    {
+        ScRefCellValue aCell(const_cast<ScFormulaCell*>(p));
+        processCell(nRow, aCell);
+    }
+
+    sal_Int32 getMaxLen() const { return mnMaxLen; }
+};
+
 }
 
-
-void ScColumn::TakeNote( SCROW nRow, ScPostIt* pNote )
+sal_Int32 ScColumn::GetMaxStringLen( SCROW nRowStart, SCROW nRowEnd, rtl_TextEncoding eCharSet ) const
 {
-	SCSIZE nIndex;
-	if( Search( nRow, nIndex ) )
-		pItems[ nIndex ].pCell->TakeNote( pNote );
-    else
-        Insert( nRow, new ScNoteCell( pNote ) );
+    MaxStringLenHandler aFunc(*this, eCharSet);
+    sc::ParseAllNonEmpty(maCells.begin(), maCells, nRowStart, nRowEnd, aFunc);
+    return aFunc.getMaxLen();
 }
 
+namespace {
 
-ScPostIt* ScColumn::ReleaseNote( SCROW nRow )
+class MaxNumStringLenHandler
 {
-    ScPostIt* pNote = 0;
-	SCSIZE nIndex;
-	if( Search( nRow, nIndex ) )
-	{
-		ScBaseCell* pCell = pItems[ nIndex ].pCell;
-        pNote = pCell->ReleaseNote();
-		if( (pCell->GetCellType() == CELLTYPE_NOTE) && !pCell->GetBroadcaster() )
-			DeleteAtIndex( nIndex );
-	}
-    return pNote;
+    const ScColumn& mrColumn;
+    SvNumberFormatter* mpFormatter;
+    sal_Int32 mnMaxLen;
+    sal_uInt16 mnPrecision;
+    sal_uInt16 mnMaxGeneralPrecision;
+    bool mbHaveSigned;
+
+    void processCell(size_t nRow, ScRefCellValue& rCell)
+    {
+        sal_uInt16 nCellPrecision = mnMaxGeneralPrecision;
+        if (rCell.meType == CELLTYPE_FORMULA)
+        {
+            if (!rCell.mpFormula->IsValue())
+                return;
+
+            // Limit unformatted formula cell precision to precision
+            // encountered so far, if any, otherwise we'd end up with 15 just
+            // because of =1/3 ...  If no precision yet then arbitrarily limit
+            // to a maximum of 4 unless a maximum general precision is set.
+            if (mnPrecision)
+                nCellPrecision = mnPrecision;
+            else
+                nCellPrecision = (mnMaxGeneralPrecision >= 15) ? 4 : mnMaxGeneralPrecision;
+        }
+
+        double fVal = rCell.getValue();
+        if (!mbHaveSigned && fVal < 0.0)
+            mbHaveSigned = true;
+
+        OUString aString;
+        OUString aSep;
+        sal_uInt16 nPrec;
+        sal_uInt32 nFormat = static_cast<const SfxUInt32Item*>(
+                mrColumn.GetAttr(nRow, ATTR_VALUE_FORMAT))->GetValue();
+        if (nFormat % SV_COUNTRY_LANGUAGE_OFFSET)
+        {
+            aSep = mpFormatter->GetFormatDecimalSep(nFormat);
+            ScCellFormat::GetInputString(rCell, nFormat, aString, *mpFormatter, &mrColumn.GetDoc());
+            const SvNumberformat* pEntry = mpFormatter->GetEntry(nFormat);
+            if (pEntry)
+            {
+                bool bThousand, bNegRed;
+                sal_uInt16 nLeading;
+                pEntry->GetFormatSpecialInfo(bThousand, bNegRed, nPrec, nLeading);
+            }
+            else
+                nPrec = mpFormatter->GetFormatPrecision(nFormat);
+        }
+        else
+        {
+            if (mnPrecision >= mnMaxGeneralPrecision)
+                return;     // early bail out for nothing changes here
+
+            if (!fVal)
+            {
+                // 0 doesn't change precision, but set a maximum length if none yet.
+                if (!mnMaxLen)
+                    mnMaxLen = 1;
+                return;
+            }
+
+            // Simple number string with at most 15 decimals and trailing
+            // decimal zeros eliminated.
+            aSep = ".";
+            aString = rtl::math::doubleToUString( fVal, rtl_math_StringFormat_F, nCellPrecision, '.', true);
+            nPrec = SvNumberFormatter::UNLIMITED_PRECISION;
+        }
+
+        sal_Int32 nLen = aString.getLength();
+        if (nLen <= 0)
+            // Ignore empty string.
+            return;
+
+        if (nPrec == SvNumberFormatter::UNLIMITED_PRECISION && mnPrecision < mnMaxGeneralPrecision)
+        {
+            if (nFormat % SV_COUNTRY_LANGUAGE_OFFSET)
+            {
+                // For some reason we couldn't obtain a precision from the
+                // format, retry with simple number string.
+                aSep = ".";
+                aString = rtl::math::doubleToUString( fVal, rtl_math_StringFormat_F, nCellPrecision, '.', true);
+                nLen = aString.getLength();
+            }
+            sal_Int32 nSep = aString.indexOf( aSep);
+            if (nSep != -1)
+                nPrec = aString.getLength() - nSep - 1;
+
+        }
+
+        if (nPrec != SvNumberFormatter::UNLIMITED_PRECISION && nPrec > mnPrecision)
+            mnPrecision = nPrec;
+
+        if (mnPrecision)
+        {   // less than mnPrecision in string => widen it
+            // more => shorten it
+            sal_Int32 nTmp = aString.indexOf(aSep);
+            if ( nTmp == -1 )
+                nLen += mnPrecision + aSep.getLength();
+            else
+            {
+                nTmp = aString.getLength() - (nTmp + aSep.getLength());
+                if (nTmp != mnPrecision)
+                    nLen += mnPrecision - nTmp;
+                    // nPrecision > nTmp : nLen + Diff
+                    // nPrecision < nTmp : nLen - Diff
+            }
+        }
+
+        // Enlarge for sign if necessary. Bear in mind that
+        // GetMaxNumberStringLen() is for determining dBase decimal field width
+        // and precision where the overall field width must include the sign.
+        // Fitting -1 into "#.##" (width 4, 2 decimals) does not work.
+        if (mbHaveSigned && fVal >= 0.0)
+            ++nLen;
+
+        if (mnMaxLen < nLen)
+            mnMaxLen = nLen;
+    }
+
+public:
+    MaxNumStringLenHandler(const ScColumn& rColumn, sal_uInt16 nMaxGeneralPrecision) :
+        mrColumn(rColumn), mpFormatter(rColumn.GetDoc().GetFormatTable()),
+        mnMaxLen(0), mnPrecision(0), mnMaxGeneralPrecision(nMaxGeneralPrecision),
+        mbHaveSigned(false)
+    {
+        // Limit the decimals passed to doubleToUString().
+        // Also, the dBaseIII maximum precision is 15.
+        if (mnMaxGeneralPrecision > 15)
+            mnMaxGeneralPrecision = 15;
+    }
+
+    void operator() (size_t nRow, double fVal)
+    {
+        ScRefCellValue aCell(fVal);
+        processCell(nRow, aCell);
+    }
+
+    void operator() (size_t nRow, const ScFormulaCell* p)
+    {
+        ScRefCellValue aCell(const_cast<ScFormulaCell*>(p));
+        processCell(nRow, aCell);
+    }
+
+    sal_Int32 getMaxLen() const { return mnMaxLen; }
+
+    sal_uInt16 getPrecision() const { return mnPrecision; }
+};
+
 }
 
-
-void ScColumn::DeleteNote( SCROW nRow )
-{
-    delete ReleaseNote( nRow );
-}
-
-
-sal_Int32 ScColumn::GetMaxStringLen( SCROW nRowStart, SCROW nRowEnd, CharSet eCharSet ) const
-{
-	sal_Int32 nStringLen = 0;
-	if ( pItems )
-	{
-		String aString;
-        rtl::OString aOString;
-        bool bIsOctetTextEncoding = rtl_isOctetTextEncoding( eCharSet);
-		SvNumberFormatter* pNumFmt = pDocument->GetFormatTable();
-        SCSIZE nIndex;
-        SCROW nRow;
-		Search( nRowStart, nIndex );
-		while ( nIndex < nCount && (nRow = pItems[nIndex].nRow) <= nRowEnd )
-		{
-			ScBaseCell* pCell = pItems[nIndex].pCell;
-			if ( pCell->GetCellType() != CELLTYPE_NOTE )
-			{
-				Color* pColor;
-				sal_uLong nFormat = (sal_uLong) ((SfxUInt32Item*) GetAttr(
-					nRow, ATTR_VALUE_FORMAT ))->GetValue();
-				ScCellFormat::GetString( pCell, nFormat, aString, &pColor,
-					*pNumFmt );
-                sal_Int32 nLen;
-                if (bIsOctetTextEncoding)
-                {
-                    rtl::OUString aOUString( aString);
-                    if (!aOUString.convertToString( &aOString, eCharSet,
-                                RTL_UNICODETOTEXT_FLAGS_UNDEFINED_ERROR |
-                                RTL_UNICODETOTEXT_FLAGS_INVALID_ERROR))
-                    {
-                        // TODO: anything? this is used by the dBase export filter
-                        // that throws an error anyway, but in case of another
-                        // context we might want to indicate a conversion error
-                        // early.
-                    }
-                    nLen = aOString.getLength();
-                }
-                else
-                    nLen = aString.Len() * sizeof(sal_Unicode);
-				if ( nStringLen < nLen)
-					nStringLen = nLen;
-			}
-			nIndex++;
-		}
-	}
-	return nStringLen;
-}
-
-
-xub_StrLen ScColumn::GetMaxNumberStringLen( 
+sal_Int32 ScColumn::GetMaxNumberStringLen(
     sal_uInt16& nPrecision, SCROW nRowStart, SCROW nRowEnd ) const
 {
-    xub_StrLen nStringLen = 0;
-    nPrecision = pDocument->GetDocOptions().GetStdPrecision();
-    if ( nPrecision == SvNumberFormatter::UNLIMITED_PRECISION )
-        // In case of unlimited precision, use 2 instead.
-        nPrecision = 2;
-
-    if ( pItems )
-    {
-        String aString;
-        SvNumberFormatter* pNumFmt = pDocument->GetFormatTable();
-        SCSIZE nIndex;
-        SCROW nRow;
-        Search( nRowStart, nIndex );
-        while ( nIndex < nCount && (nRow = pItems[nIndex].nRow) <= nRowEnd )
-        {
-            ScBaseCell* pCell = pItems[nIndex].pCell;
-            CellType eType = pCell->GetCellType();
-            if ( eType == CELLTYPE_VALUE || (eType == CELLTYPE_FORMULA
-                    && ((ScFormulaCell*)pCell)->IsValue()) )
-            {
-                sal_uLong nFormat = (sal_uLong) ((SfxUInt32Item*) GetAttr(
-                    nRow, ATTR_VALUE_FORMAT ))->GetValue();
-                ScCellFormat::GetInputString( pCell, nFormat, aString, *pNumFmt );
-                xub_StrLen nLen = aString.Len();
-                if ( nLen )
-                {
-                    if ( nFormat )
-                    {   // more decimals than standard?
-                        sal_uInt16 nPrec = pNumFmt->GetFormatPrecision( nFormat );
-                        if ( nPrec != SvNumberFormatter::UNLIMITED_PRECISION && nPrec > nPrecision )
-                            nPrecision = nPrec;
-                    }
-                    if ( nPrecision )
-                    {   // less than nPrecision in string => widen it
-                        // more => shorten it
-                        String aSep = pNumFmt->GetFormatDecimalSep( nFormat );
-                        xub_StrLen nTmp = aString.Search( aSep );
-                        if ( nTmp == STRING_NOTFOUND )
-                            nLen += nPrecision + aSep.Len();
-                        else
-                        {
-                            nTmp = aString.Len() - (nTmp + aSep.Len());
-                            if ( nTmp != nPrecision )
-                                nLen += nPrecision - nTmp;
-                                // nPrecision > nTmp : nLen + Diff
-                                // nPrecision < nTmp : nLen - Diff
-                        }
-                    }
-                    if ( nStringLen < nLen )
-                        nStringLen = nLen;
-                }
-            }
-            nIndex++;
-        }
-    }
-    return nStringLen;
+    sal_uInt16 nMaxGeneralPrecision = pDocument->GetDocOptions().GetStdPrecision();
+    MaxNumStringLenHandler aFunc(*this, nMaxGeneralPrecision);
+    sc::ParseFormulaNumeric(maCells.begin(), maCells, nRowStart, nRowEnd, aFunc);
+    nPrecision = aFunc.getPrecision();
+    return aFunc.getMaxLen();
 }
 
+namespace {
+
+class GroupFormulaCells
+{
+    ScFormulaCellGroupRef mxNone;
+    std::vector<ScAddress>* mpGroupPos;
+
+public:
+    GroupFormulaCells( std::vector<ScAddress>* pGroupPos ) :
+        mpGroupPos(pGroupPos) {}
+
+    void operator() (sc::CellStoreType::value_type& node)
+    {
+        if (node.type != sc::element_type_formula)
+            // We are only interested in formula cells.
+            return;
+
+        size_t nRow = node.position; // start row position.
+
+        sc::formula_block::iterator it = sc::formula_block::begin(*node.data);
+        sc::formula_block::iterator itEnd = sc::formula_block::end(*node.data);
+
+        // This block should never be empty.
+
+        ScFormulaCell* pPrev = *it;
+        ScFormulaCellGroupRef xPrevGrp = pPrev->GetCellGroup();
+        if (xPrevGrp)
+        {
+            // Move to the cell after the last cell of the current group.
+            std::advance(it, xPrevGrp->mnLength);
+            nRow += xPrevGrp->mnLength;
+        }
+        else
+        {
+            ++it;
+            ++nRow;
+        }
+
+        ScFormulaCell* pCur = NULL;
+        ScFormulaCellGroupRef xCurGrp;
+        for (; it != itEnd; pPrev = pCur, xPrevGrp = xCurGrp)
+        {
+            pCur = *it;
+            xCurGrp = pCur->GetCellGroup();
+
+            ScFormulaCell::CompareState eCompState = pPrev->CompareByTokenArray(*pCur);
+            if (eCompState == ScFormulaCell::NotEqual)
+            {
+                // different formula tokens.
+                if (xCurGrp)
+                {
+                    // Move to the cell after the last cell of the current group.
+                    std::advance(it, xCurGrp->mnLength);
+                    nRow += xCurGrp->mnLength;
+                }
+                else
+                {
+                    ++it;
+                    ++nRow;
+                }
+
+                continue;
+            }
+
+            // Formula tokens equal those of the previous formula cell or cell group.
+            if (xPrevGrp)
+            {
+                // Previous cell is a group.
+                if (xCurGrp)
+                {
+                    // The current cell is a group.  Merge these two groups.
+                    xPrevGrp->mnLength += xCurGrp->mnLength;
+                    pCur->SetCellGroup(xPrevGrp);
+                    sc::formula_block::iterator itGrpEnd = it;
+                    std::advance(itGrpEnd, xCurGrp->mnLength);
+                    for (++it; it != itGrpEnd; ++it)
+                    {
+                        ScFormulaCell* pCell = *it;
+                        pCell->SetCellGroup(xPrevGrp);
+                    }
+                    nRow += xCurGrp->mnLength;
+                }
+                else
+                {
+                    // Add this cell to the previous group.
+                    pCur->SetCellGroup(xPrevGrp);
+                    ++xPrevGrp->mnLength;
+                    ++nRow;
+                    ++it;
+                }
+
+            }
+            else if (xCurGrp)
+            {
+                // Previous cell is a regular cell and current cell is a group.
+                nRow += xCurGrp->mnLength;
+                std::advance(it, xCurGrp->mnLength);
+                pPrev->SetCellGroup(xCurGrp);
+                xCurGrp->mpTopCell = pPrev;
+                ++xCurGrp->mnLength;
+                xPrevGrp = xCurGrp;
+            }
+            else
+            {
+                // Both previous and current cells are regular cells.
+                assert(pPrev->aPos.Row() == (SCROW)(nRow - 1));
+                xPrevGrp = pPrev->CreateCellGroup(2, eCompState == ScFormulaCell::EqualInvariant);
+                pCur->SetCellGroup(xPrevGrp);
+                ++nRow;
+                ++it;
+            }
+
+            if (mpGroupPos)
+                mpGroupPos->push_back(pCur->aPos);
+
+            pCur = pPrev;
+            xCurGrp = xPrevGrp;
+        }
+    }
+};
+
+}
+
+void ScColumn::RegroupFormulaCells( std::vector<ScAddress>* pGroupPos )
+{
+    // re-build formula groups.
+    std::for_each(maCells.begin(), maCells.end(), GroupFormulaCells(pGroupPos));
+}
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,83 +1,72 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-#ifndef SC_OUTPUT_HXX
-#define SC_OUTPUT_HXX
+#ifndef INCLUDED_SC_SOURCE_UI_INC_OUTPUT_HXX
+#define INCLUDED_SC_SOURCE_UI_INC_OUTPUT_HXX
 
 #include "address.hxx"
-#include <tools/list.hxx>
+#include "cellvalue.hxx"
 #include <tools/color.hxx>
 #include <tools/fract.hxx>
 #include <com/sun/star/embed/XEmbeddedObject.hpp>
+#include <drawinglayer/processor2d/baseprocessor2d.hxx>
 
 #ifdef USE_JAVA
 #include "gridwin.hxx"
 #endif	// USE_JAVA
 
+namespace sc {
+    struct SpellCheckContext;
+}
+
+namespace editeng {
+    struct MisspellRanges;
+}
+
 class Rectangle;
-class Font;
+namespace vcl { class Font; }
 class OutputDevice;
-class Window;
 class EditEngine;
 class ScDocument;
-class ScBaseCell;
 class ScPatternAttr;
-class SvxMarginItem;
 class SdrObject;
-class SdrOle2Obj;
 struct RowInfo;
 struct ScTableInfo;
 class ScTabViewShell;
 class ScPageBreakData;
 class FmFormView;
 class ScFieldEditEngine;
-
-// #i74769# SdrPaintWindow predefine
 class SdrPaintWindow;
 
-// ---------------------------------------------------------------------------
-
-#define SC_SCENARIO_HSPACE		60
-#define SC_SCENARIO_VSPACE		50
-
-// ---------------------------------------------------------------------------
-
-#define SC_OBJECTS_NONE			0
-#define SC_OBJECTS_DRAWING		1
-#define SC_OBJECTS_OLE			2
-#define SC_OBJECTS_CHARTS		4
-#define SC_OBJECTS_ALL			( SC_OBJECTS_DRAWING | SC_OBJECTS_OLE | SC_OBJECTS_CHARTS )
+#define SC_SCENARIO_HSPACE      60
+#define SC_SCENARIO_VSPACE      50
 
 enum ScOutputType { OUTTYPE_WINDOW, OUTTYPE_PRINTER };
+
+class ScFieldEditEngine;
 
 class ScOutputData
 {
@@ -88,94 +77,164 @@ private:
         Rectangle   maAlignRect;
         Rectangle   maClipRect;
         long        mnColWidth;
+        long        mnLeftClipLength; /// length of the string getting cut off on the left.
+        long        mnRightClipLength; /// length of the string getting cut off on the right.
         bool        mbLeftClip;
         bool        mbRightClip;
     };
 
-	OutputDevice* pDev;			// Device
-	OutputDevice* pRefDevice;	// printer if used for preview
-	OutputDevice* pFmtDevice;	// reference for text formatting
+    class DrawEditParam
+    {
+    public:
+        SvxCellHorJustify       meHorJustAttr;      ///< alignment attribute
+        SvxCellHorJustify       meHorJustContext;   ///< context depending on attribute, content and direction
+        SvxCellHorJustify       meHorJustResult;    ///< result for EditEngine
+        SvxCellVerJustify       meVerJust;
+        SvxCellJustifyMethod    meHorJustMethod;
+        SvxCellJustifyMethod    meVerJustMethod;
+        SvxCellOrientation      meOrient;
+        SCSIZE                  mnArrY;
+        SCCOL                   mnX;
+        SCROW                   mnY;
+        SCCOL                   mnCellX;
+        SCROW                   mnCellY;
+        SCTAB                   mnTab;
+        long                    mnPosX;
+        long                    mnPosY;
+        long                    mnInitPosX;
+        bool                    mbBreak:1;
+        bool                    mbCellIsValue:1;
+        bool                    mbAsianVertical:1;
+        bool                    mbPixelToLogic:1;
+        bool                    mbHyphenatorSet:1;
+        ScFieldEditEngine*      mpEngine;
+        ScRefCellValue          maCell;
+        const ScPatternAttr*    mpPattern;
+        const SfxItemSet*       mpCondSet;
+        const SfxItemSet*       mpPreviewFontSet;
+        const ScPatternAttr*    mpOldPattern;
+        const SfxItemSet*       mpOldCondSet;
+        const SfxItemSet*       mpOldPreviewFontSet;
+        const RowInfo*          mpThisRowInfo;
+        const std::vector<editeng::MisspellRanges>* mpMisspellRanges;
+
+        explicit DrawEditParam(const ScPatternAttr* pPattern, const SfxItemSet* pCondSet, bool bCellIsValue);
+
+        bool readCellContent(ScDocument* pDoc, bool bShowNullValues, bool bShowFormulas, bool bSyntaxMode, bool bUseStyleColor, bool bForceAutoColor, bool& rWrapFields);
+        void setPatternToEngine(bool bUseStyleColor);
+        void calcMargins(long& rTop, long& rLeft, long& rBottom, long& rRight, double nPPTX, double nPPTY) const;
+        void calcPaperSize(Size& rPaperSize, const Rectangle& rAlignRect, double nPPTX, double nPPTY) const;
+        void getEngineSize(ScFieldEditEngine* pEngine, long& rWidth, long& rHeight) const;
+        bool hasLineBreak() const;
+        bool isHyperlinkCell() const;
+
+        /**
+         * When the text is vertically oriented, the text is either rotated 90
+         * degrees to the right or 90 degrees to the left.   Note that this is
+         * different from being vertically stacked.
+         */
+        bool isVerticallyOriented() const;
+
+        /**
+         * Calculate offset position for vertically oriented (either
+         * top-bottom or bottom-top orientation) text.
+         *
+         * @param rLogicStart initial position in pixels.  When the call is
+         *                    finished, this parameter will store the new
+         *                    position.
+         */
+        void calcStartPosForVertical(Point& rLogicStart, long nCellWidth, long nEngineWidth, long nTopM, OutputDevice* pRefDevice);
+
+        void setAlignmentToEngine();
+        bool adjustHorAlignment(ScFieldEditEngine* pEngine);
+        void adjustForRTL();
+        void adjustForHyperlinkInPDF(Point aURLStart, OutputDevice* pDev);
+    };
+
+    OutputDevice* mpDev;        // Device
+    OutputDevice* mpRefDevice;  // printer if used for preview
+    OutputDevice* pFmtDevice;   // reference for text formatting
     ScTableInfo& mrTabInfo;
-	RowInfo* pRowInfo;			// Info-Block
-	SCSIZE nArrCount;			// belegte Zeilen im Info-Block
-	ScDocument* pDoc;			// Dokument
-	SCTAB nTab;				    // Tabelle
-	long nScrX; 				// Ausgabe Startpos. (Pixel)
-	long nScrY;
-	long nScrW; 				// Ausgabe Groesse (Pixel)
-	long nScrH;
-	long nMirrorW;				// Visible output width for mirroring (default: nScrW)
-	SCCOL nX1;					// Start-/Endkoordinaten
-	SCROW nY1;					//	( incl. versteckte )
-	SCCOL nX2;
-	SCROW nY2;
-	SCCOL nVisX1; 				// Start-/Endkoordinaten
-	SCROW nVisY1;				//	( sichtbarer Bereich )
-	SCCOL nVisX2;
-	SCROW nVisY2;
-	ScOutputType eType;			// Bildschirm/Drucker ...
-	double nPPTX;				// Pixel per Twips
-	double nPPTY;
-//	sal_uInt16 nZoom;				// Zoom-Faktor (Prozent) - fuer GetFont
-	Fraction aZoomX;
-	Fraction aZoomY;
+    RowInfo* pRowInfo;          // Info block
+    SCSIZE nArrCount;           // occupied lines in info block
+    ScDocument* mpDoc;          // Document
+    SCTAB nTab;                 // sheet
+    long nScrX;                 // Output Startpos. (Pixel)
+    long nScrY;
+    long nScrW;                 // Output size (Pixel)
+    long nScrH;
+    long nMirrorW;              // Visible output width for mirroring (default: nScrW)
+    SCCOL nX1;                  // Start-/End coordinates
+    SCROW nY1;                  //  ( incl. hidden )
+    SCCOL nX2;
+    SCROW nY2;
+    SCCOL nVisX1;               // Start-/End coordinates
+    SCROW nVisY1;               //  ( visible range )
+    SCCOL nVisX2;
+    SCROW nVisY2;
+    ScOutputType eType;         // Screen/Printer ...
+    double mnPPTX;              // Pixel per Twips
+    double mnPPTY;
+    Fraction aZoomX;
+    Fraction aZoomY;
 
-	SdrObject* pEditObj;		// beim Painten auslassen
+    SdrObject* pEditObj;        // Omit when painting
 
-	ScTabViewShell* pViewShell;	// zum Connecten von sichtbaren Plug-Ins
+    ScTabViewShell* pViewShell; // for connect from visible plug-ins
 
-	// #114135#
-	FmFormView* pDrawView;		// SdrView to paint to
+    // #114135#
+    FmFormView* pDrawView;      // SdrView to paint to
 
-	sal_Bool bEditMode;				// InPlace editierte Zelle - nicht ausgeben
-	SCCOL nEditCol;
-	SCROW nEditRow;
+    bool bEditMode;             // InPlace edited cell - do not output
+    SCCOL nEditCol;
+    SCROW nEditRow;
 
-	sal_Bool bMetaFile;				// Ausgabe auf Metafile (nicht in Pixeln!)
-	sal_Bool bSingleGrid;			// beim Gitter bChanged auswerten
+    bool bMetaFile;             // Output to metafile (not pixels!)
+    bool bSingleGrid;           // beim Gitter bChanged auswerten
 
-	sal_Bool bPagebreakMode;		// Seitenumbruch-Vorschau
-	sal_Bool bSolidBackground;		// weiss statt transparent
+    bool bPagebreakMode;        // Page break preview
+    bool bSolidBackground;      // white instead of transparant
 
-	sal_Bool bUseStyleColor;
-	sal_Bool bForceAutoColor;
+    bool mbUseStyleColor;
+    bool mbForceAutoColor;
 
-	sal_Bool bSyntaxMode;			// Syntax-Highlighting
-	Color* pValueColor;
-	Color* pTextColor;
-	Color* pFormulaColor;
+    bool mbSyntaxMode;          // Syntax highlighting
+    Color* pValueColor;
+    Color* pTextColor;
+    Color* pFormulaColor;
 
-	Color	aGridColor;
+    Color   aGridColor;
 
-	sal_Bool	bShowNullValues;
-	sal_Bool	bShowFormulas;
-	sal_Bool	bShowSpellErrors;	// Spell-Errors in EditObjekten anzeigen
-	sal_Bool	bMarkClipped;
+    bool    mbShowNullValues;
+    bool    mbShowFormulas;
+    bool    bShowSpellErrors;   // Show spelling errors in EditObjects
+    bool    bMarkClipped;
 
-	sal_Bool	bSnapPixel;
+    bool    bSnapPixel;
 
-	sal_Bool	bAnyRotated;		// intern
-	sal_Bool	bAnyClipped;		// intern
-	sal_Bool	bTabProtected;
-	sal_uInt8	nTabTextDirection;	// EEHorizontalTextDirection values
-	sal_Bool	bLayoutRTL;
+    bool    bAnyRotated;        // internal
+    bool    bAnyClipped;        // internal
+    bool    bTabProtected;
+    sal_uInt8   nTabTextDirection;  // EEHorizontalTextDirection values
+    bool    bLayoutRTL;
 
-	// #i74769# use SdrPaintWindow direct, remember it during BeginDrawLayers/EndDrawLayers
-	SdrPaintWindow*		mpTargetPaintWindow;
+    // #i74769# use SdrPaintWindow direct, remember it during BeginDrawLayers/EndDrawLayers
+    SdrPaintWindow*     mpTargetPaintWindow;
+    const sc::SpellCheckContext* mpSpellCheckCxt;
 #ifdef USE_JAVA
-	ScGridWindow*	mpGridWindow;
+    ScGridWindow*       mpGridWindow;
 #endif	// USE_JAVA
 
-							// private methods
+                            // private methods
 
-	sal_Bool			GetMergeOrigin( SCCOL nX, SCROW nY, SCSIZE nArrY,
-									SCCOL& rOverX, SCROW& rOverY, sal_Bool bVisRowChanged );
-	sal_Bool			IsEmptyCellText( RowInfo* pThisRowInfo, SCCOL nX, SCROW nY );
-	void			GetVisibleCell( SCCOL nCol, SCROW nRow, SCTAB nTab, ScBaseCell*& rpCell );
+    bool            GetMergeOrigin( SCCOL nX, SCROW nY, SCSIZE nArrY,
+                                    SCCOL& rOverX, SCROW& rOverY, bool bVisRowChanged );
+    bool IsEmptyCellText( RowInfo* pThisRowInfo, SCCOL nX, SCROW nY );
+    void GetVisibleCell( SCCOL nCol, SCROW nRow, SCTAB nTab, ScRefCellValue& rCell );
 
-	sal_Bool			IsAvailable( SCCOL nX, SCROW nY );
+    bool IsAvailable( SCCOL nX, SCROW nY );
 
-	void			GetOutputArea( SCCOL nX, SCSIZE nArrY, long nPosX, long nPosY,
+    void            GetOutputArea( SCCOL nX, SCSIZE nArrY, long nPosX, long nPosY,
                                    SCCOL nCellX, SCROW nCellY, long nNeeded,
                                    const ScPatternAttr& rPattern,
                                    sal_uInt16 nHorJustify, bool bCellIsValue,
@@ -184,107 +243,119 @@ private:
 
     void            ShrinkEditEngine( EditEngine& rEngine, const Rectangle& rAlignRect,
                                     long nLeftM, long nTopM, long nRightM, long nBottomM,
-                                    sal_Bool bWidth, sal_uInt16 nOrient, long nAttrRotate, sal_Bool bPixelToLogic,
+                                    bool bWidth, sal_uInt16 nOrient, long nAttrRotate, bool bPixelToLogic,
                                     long& rEngineWidth, long& rEngineHeight, long& rNeededPixel,
                                     bool& rLeftClip, bool& rRightClip );
 
-	void			SetSyntaxColor( Font* pFont, ScBaseCell* pCell );
-	void			SetEditSyntaxColor( EditEngine& rEngine, ScBaseCell* pCell );
+    void SetSyntaxColor( vcl::Font* pFont, const ScRefCellValue& rCell );
+    void SetEditSyntaxColor( EditEngine& rEngine, ScRefCellValue& rCell );
 
-	double			GetStretch();
+    double          GetStretch();
 
-	void			DrawRotatedFrame( const Color* pForceColor );		// pixel
+    void            DrawRotatedFrame( const Color* pForceColor );       // pixel
+
+    drawinglayer::processor2d::BaseProcessor2D*  CreateProcessor2D( );
+
+    void DrawEditStandard(DrawEditParam& rParam);
+    void DrawEditBottomTop(DrawEditParam& rParam);
+    void DrawEditTopBottom(DrawEditParam& rParam);
+    void DrawEditStacked(DrawEditParam& rParam);
+    void DrawEditAsianVertical(DrawEditParam& rParam);
 
     ScFieldEditEngine* CreateOutputEditEngine();
 
+    void ShowClipMarks( DrawEditParam& rParam, long nEngineHeight, const Size& aCellSize,
+                        bool bMerged, OutputAreaParam& aAreaParam );
+
+    bool Clip( DrawEditParam& rParam, const Size& aCellSize, OutputAreaParam& aAreaParam,
+               long nEngineHeight, bool bWrapFields);
+
 public:
-					ScOutputData( OutputDevice* pNewDev, ScOutputType eNewType,
+                    ScOutputData( OutputDevice* pNewDev, ScOutputType eNewType,
                                     ScTableInfo& rTabInfo, ScDocument* pNewDoc,
-									SCTAB nNewTab, long nNewScrX, long nNewScrY,
-									SCCOL nNewX1, SCROW nNewY1, SCCOL nNewX2, SCROW nNewY2,
-									double nPixelPerTwipsX, double nPixelPerTwipsY,
-									const Fraction* pZoomX = NULL,
-									const Fraction* pZoomY = NULL );
+                                    SCTAB nNewTab, long nNewScrX, long nNewScrY,
+                                    SCCOL nNewX1, SCROW nNewY1, SCCOL nNewX2, SCROW nNewY2,
+                                    double nPixelPerTwipsX, double nPixelPerTwipsY,
+                                    const Fraction* pZoomX = NULL,
+                                    const Fraction* pZoomY = NULL );
 
-					~ScOutputData();
+                    ~ScOutputData();
 
+    void SetSpellCheckContext( const sc::SpellCheckContext* pCxt );
     void    SetContentDevice( OutputDevice* pContentDev );
 
-	void	SetRefDevice( OutputDevice* pRDev ) { pRefDevice = pFmtDevice = pRDev; }
-	void	SetFmtDevice( OutputDevice* pRDev ) { pFmtDevice = pRDev; }
-	void	SetEditObject( SdrObject* pObj )	{ pEditObj = pObj; }
-	void	SetViewShell( ScTabViewShell* pSh ) { pViewShell = pSh; }
+    void    SetRefDevice( OutputDevice* pRDev ) { mpRefDevice = pFmtDevice = pRDev; }
+    void    SetFmtDevice( OutputDevice* pRDev ) { pFmtDevice = pRDev; }
+    void    SetEditObject( SdrObject* pObj )    { pEditObj = pObj; }
+    void    SetViewShell( ScTabViewShell* pSh ) { pViewShell = pSh; }
 
-	// #114135#
-	void	SetDrawView( FmFormView* pNew )		{ pDrawView = pNew; }
+    // #114135#
+    void    SetDrawView( FmFormView* pNew )     { pDrawView = pNew; }
 
-	void	SetSolidBackground( sal_Bool bSet )		{ bSolidBackground = bSet; }
-	void	SetUseStyleColor( sal_Bool bSet )		{ bUseStyleColor = bSet; }
+    void    SetSolidBackground( bool bSet )     { bSolidBackground = bSet; }
+    void    SetUseStyleColor( bool bSet )       { mbUseStyleColor = bSet; }
 
-	void	SetEditCell( SCCOL nCol, SCROW nRow );
-	void	SetSyntaxMode( sal_Bool bNewMode );
-	void	SetMetaFileMode( sal_Bool bNewMode );
-	void	SetSingleGrid( sal_Bool bNewMode );
-	void	SetGridColor( const Color& rColor );
-	void	SetMarkClipped( sal_Bool bSet );
-	void	SetShowNullValues ( sal_Bool bSet = sal_True );
-	void	SetShowFormulas   ( sal_Bool bSet = sal_True );
-	void	SetShowSpellErrors( sal_Bool bSet = sal_True );
-	void	SetMirrorWidth( long nNew );
-	long	GetScrW() const		{ return nScrW; }
-	long	GetScrH() const		{ return nScrH; }
+    void    SetEditCell( SCCOL nCol, SCROW nRow );
+    void    SetSyntaxMode( bool bNewMode );
+    void    SetMetaFileMode( bool bNewMode );
+    void    SetSingleGrid( bool bNewMode );
+    void    SetGridColor( const Color& rColor );
+    void    SetMarkClipped( bool bSet );
+    void    SetShowNullValues ( bool bSet = true );
+    void    SetShowFormulas   ( bool bSet = true );
+    void    SetShowSpellErrors( bool bSet = true );
+    void    SetMirrorWidth( long nNew );
+    long    GetScrW() const     { return nScrW; }
+    long    GetScrH() const     { return nScrH; }
 
-	void	SetSnapPixel( sal_Bool bSet = sal_True );
+    void    SetSnapPixel( bool bSet = true );
 
-	void	DrawGrid( sal_Bool bGrid, sal_Bool bPage );
-	void	DrawStrings( sal_Bool bPixelToLogic = sal_False );
-	void	DrawBackground();
-	void	DrawShadow();
-	void	DrawExtraShadow(sal_Bool bLeft, sal_Bool bTop, sal_Bool bRight, sal_Bool bBottom);
-	void	DrawFrame();
+    void    DrawGrid( bool bGrid, bool bPage );
+    void    DrawStrings( bool bPixelToLogic = false );
+    void    DrawDocumentBackground();
+    void    DrawBackground();
+    void    DrawShadow();
+    void    DrawExtraShadow(bool bLeft, bool bTop, bool bRight, bool bBottom);
+    void    DrawFrame();
 
-					// with logic MapMode set!
-	void	DrawEdit(sal_Bool bPixelToLogic);
+                    // with logic MapMode set!
+    void    DrawEdit(bool bPixelToLogic);
 
-	void	FindRotated();
-	void	DrawRotated(sal_Bool bPixelToLogic);		// logisch
+    void    FindRotated();
+    void    DrawRotated(bool bPixelToLogic);        // logical
 
-	void	DrawClear();
+    void    DrawClear();
 
-	// #i72502# printer only command set
-	Point PrePrintDrawingLayer(long nLogStX, long nLogStY );
-	void PostPrintDrawingLayer(const Point& rMMOffset); // #i74768# need offset for FormLayer
-	void PrintDrawingLayer(const sal_uInt16 nLayer, const Point& rMMOffset);
+    // #i72502# printer only command set
+    Point PrePrintDrawingLayer(long nLogStX, long nLogStY );
+    void PostPrintDrawingLayer(const Point& rMMOffset); // #i74768# need offset for FormLayer
+    void PrintDrawingLayer(const sal_uInt16 nLayer, const Point& rMMOffset);
 
-	// nur Bildschirm:
-	void	DrawingSingle(const sal_uInt16 nLayer);
-	void	DrawSelectiveObjects(const sal_uInt16 nLayer);
+    // only screen:
+    void    DrawingSingle(const sal_uInt16 nLayer);
+    void    DrawSelectiveObjects(const sal_uInt16 nLayer);
 
-	sal_Bool	SetChangedClip();		// sal_False = nix
-    Region      GetChangedAreaRegion();
+    bool    SetChangedClip();       // sal_False = not
+    vcl::Region  GetChangedAreaRegion();
 
-	void	FindChanged();
-	void	SetPagebreakMode( ScPageBreakData* pPageData );
-#ifdef OLD_SELECTION_PAINT
-    void    DrawMark( Window* pWin );
-#endif    
-	void	DrawRefMark( SCCOL nRefStartX, SCROW nRefStartY,
-						 SCCOL nRefEndX, SCROW nRefEndY,
-						 const Color& rColor, sal_Bool bHandle );
-	void	DrawOneChange( SCCOL nRefStartX, SCROW nRefStartY,
-							SCCOL nRefEndX, SCROW nRefEndY,
-							const Color& rColor, sal_uInt16 nType );
-	void	DrawChangeTrack();
-	void	DrawClipMarks();
+    void    FindChanged();
+    void    SetPagebreakMode( ScPageBreakData* pPageData );
+    void    DrawRefMark( SCCOL nRefStartX, SCROW nRefStartY,
+                         SCCOL nRefEndX, SCROW nRefEndY,
+                         const Color& rColor, bool bHandle );
+    void    DrawOneChange( SCCOL nRefStartX, SCROW nRefStartY,
+                            SCCOL nRefEndX, SCROW nRefEndY,
+                            const Color& rColor, sal_uInt16 nType );
+    void    DrawChangeTrack();
+    void    DrawClipMarks();
 
-	void	DrawNoteMarks();
+    void    DrawNoteMarks();
     void    AddPDFNotes();
 #ifdef USE_JAVA
     void    SetGridWindow( ScGridWindow *pGridWindow ) { mpGridWindow = pGridWindow; }
 #endif	// USE_JAVA
 };
 
-
-
 #endif
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

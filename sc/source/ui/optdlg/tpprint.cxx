@@ -1,37 +1,28 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified October 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
-
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_sc.hxx"
+ */
 
 #undef SC_DLLIMPLEMENTATION
 
@@ -42,114 +33,97 @@
 #include "scmod.hxx"
 #include "scresid.hxx"
 #include "sc.hrc"
-#include "optdlg.hrc"
 
-// -----------------------------------------------------------------------
-
-static sal_uInt16 pPrintOptRanges[] =
+ScTpPrintOptions::ScTpPrintOptions( vcl::Window*           pParent,
+                                    const SfxItemSet& rCoreAttrs )
+    :   SfxTabPage      ( pParent,
+                          "optCalcPrintPage",
+                          "modules/scalc/ui/optdlg.ui",
+                          &rCoreAttrs )
 {
-	SID_SCPRINTOPTIONS,
-	SID_SCPRINTOPTIONS,
-	0
-};
-
-// -----------------------------------------------------------------------
-
-ScTpPrintOptions::ScTpPrintOptions( Window*			  pParent,
-									const SfxItemSet& rCoreAttrs )
-	:	SfxTabPage		( pParent,
-						  ScResId( RID_SCPAGE_PRINT ),
-						  rCoreAttrs ),
-		aPagesFL	     ( this, ScResId( FL_PAGES ) ),
-		aSkipEmptyPagesCB( this, ScResId( BTN_SKIPEMPTYPAGES ) ),
-		aSheetsFL		 ( this, ScResId( FL_SHEETS ) ),
-		aSelectedSheetsCB( this, ScResId( BTN_SELECTEDSHEETS ) )
-{
-	FreeResource();
+    get( m_pSkipEmptyPagesCB , "suppressCB" );
+    get( m_pSelectedSheetsCB , "printCB" );
+    get( m_pForceBreaksCB, "forceBreaksCB" );
 }
 
 ScTpPrintOptions::~ScTpPrintOptions()
 {
 }
 
-sal_uInt16* ScTpPrintOptions::GetRanges()
-{
-	return pPrintOptRanges;
-}
-
-SfxTabPage* ScTpPrintOptions::Create( Window* pParent, const SfxItemSet& rAttrSet )
+SfxTabPage* ScTpPrintOptions::Create( vcl::Window* pParent, const SfxItemSet* rAttrSet )
 {
 #if defined USE_JAVA && defined MACOSX
 	// Do not display the printer settings dialog as the settings will not be
 	// used in print jobs
 	return NULL;
 #else	// USE_JAVA && MACOSX
-	return new ScTpPrintOptions( pParent, rAttrSet );
+    return new ScTpPrintOptions( pParent, *rAttrSet );
 #endif	// USE_JAVA && MACOSX
 }
 
 int ScTpPrintOptions::DeactivatePage( SfxItemSet* pSetP )
 {
     if ( pSetP )
-        FillItemSet( *pSetP );
+        FillItemSet( pSetP );
 
-	return LEAVE_PAGE;
+    return LEAVE_PAGE;
 }
 
-// -----------------------------------------------------------------------
-
-void ScTpPrintOptions::Reset( const SfxItemSet& rCoreSet )
+void ScTpPrintOptions::Reset( const SfxItemSet* rCoreSet )
 {
-	ScPrintOptions aOptions;
+    ScPrintOptions aOptions;
 
-	const SfxPoolItem* pItem;
-	if(SFX_ITEM_SET == rCoreSet.GetItemState(SID_SCPRINTOPTIONS, sal_False , &pItem))
-		aOptions = ((const ScTpPrintItem*)pItem)->GetPrintOptions();
-	else
-	{
-		// when called from print dialog and no options set, use configuration
-		aOptions = SC_MOD()->GetPrintOptions();
-	}
-
-    if ( SFX_ITEM_SET == rCoreSet.GetItemState( SID_PRINT_SELECTEDSHEET, sal_False , &pItem ) )
+    const SfxPoolItem* pItem;
+    if(SfxItemState::SET == rCoreSet->GetItemState(SID_SCPRINTOPTIONS, false , &pItem))
+        aOptions = static_cast<const ScTpPrintItem*>(pItem)->GetPrintOptions();
+    else
     {
-        sal_Bool bChecked = ( (const SfxBoolItem*)pItem )->GetValue();
-        aSelectedSheetsCB.Check( bChecked );
+        // when called from print dialog and no options set, use configuration
+        aOptions = SC_MOD()->GetPrintOptions();
+    }
+
+    if ( SfxItemState::SET == rCoreSet->GetItemState( SID_PRINT_SELECTEDSHEET, false , &pItem ) )
+    {
+        bool bChecked = static_cast<const SfxBoolItem*>(pItem)->GetValue();
+        m_pSelectedSheetsCB->Check( bChecked );
     }
     else
     {
-        aSelectedSheetsCB.Check( !aOptions.GetAllSheets() );
+        m_pSelectedSheetsCB->Check( !aOptions.GetAllSheets() );
     }
 
-	aSkipEmptyPagesCB.Check( aOptions.GetSkipEmpty() );
-	aSkipEmptyPagesCB.SaveValue();
-	aSelectedSheetsCB.SaveValue();
+    m_pSkipEmptyPagesCB->Check( aOptions.GetSkipEmpty() );
+    m_pSkipEmptyPagesCB->SaveValue();
+    m_pSelectedSheetsCB->SaveValue();
+    m_pForceBreaksCB->Check( aOptions.GetForceBreaks() );
+    m_pForceBreaksCB->SaveValue();
 }
 
-// -----------------------------------------------------------------------
-
-sal_Bool ScTpPrintOptions::FillItemSet( SfxItemSet& rCoreAttrs )
+bool ScTpPrintOptions::FillItemSet( SfxItemSet* rCoreAttrs )
 {
-    rCoreAttrs.ClearItem( SID_PRINT_SELECTEDSHEET );
+    rCoreAttrs->ClearItem( SID_PRINT_SELECTEDSHEET );
 
-    bool bSkipEmptyChanged = ( aSkipEmptyPagesCB.GetSavedValue() != aSkipEmptyPagesCB.IsChecked() );
-    bool bSelectedSheetsChanged = ( aSelectedSheetsCB.GetSavedValue() != aSelectedSheetsCB.IsChecked() );
+    bool bSkipEmptyChanged = m_pSkipEmptyPagesCB->IsValueChangedFromSaved();
+    bool bSelectedSheetsChanged = m_pSelectedSheetsCB->IsValueChangedFromSaved();
+    bool bForceBreaksChanged = m_pForceBreaksCB->IsValueChangedFromSaved();
 
-    if ( bSkipEmptyChanged || bSelectedSheetsChanged )
+    if ( bSkipEmptyChanged || bSelectedSheetsChanged || bForceBreaksChanged )
     {
         ScPrintOptions aOpt;
-        aOpt.SetSkipEmpty( aSkipEmptyPagesCB.IsChecked() );
-        aOpt.SetAllSheets( !aSelectedSheetsCB.IsChecked() );
-        rCoreAttrs.Put( ScTpPrintItem( SID_SCPRINTOPTIONS, aOpt ) );
+        aOpt.SetSkipEmpty( m_pSkipEmptyPagesCB->IsChecked() );
+        aOpt.SetAllSheets( !m_pSelectedSheetsCB->IsChecked() );
+        aOpt.SetForceBreaks( m_pForceBreaksCB->IsChecked() );
+        rCoreAttrs->Put( ScTpPrintItem( SID_SCPRINTOPTIONS, aOpt ) );
         if ( bSelectedSheetsChanged )
         {
-            rCoreAttrs.Put( SfxBoolItem( SID_PRINT_SELECTEDSHEET, aSelectedSheetsCB.IsChecked() ) );
+            rCoreAttrs->Put( SfxBoolItem( SID_PRINT_SELECTEDSHEET, m_pSelectedSheetsCB->IsChecked() ) );
         }
-        return sal_True;
+        return true;
     }
     else
     {
-        return sal_False;
+        return false;
     }
 }
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
