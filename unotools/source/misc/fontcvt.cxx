@@ -1,54 +1,44 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_unotools.hxx"
 #include <unotools/fontcvt.hxx>
 #include <unotools/fontdefs.hxx>
+#include <sal/macros.h>
 
-#ifndef _STLP_MAP
 #include <map>
-#endif
-#ifndef _STLP_VECTOR
 #include <vector>
-#endif
-#ifndef _STLP_ALGORITHM
 #include <algorithm>
-#endif
-#ifndef _STLP_FUNCTIONAL
 #include <functional>
-#endif
 
-//=======================================================================
+//These conversion tables were designed for StarSymbol. OpenSymbol
+//originally didn't have the same code points as StarSymbol, and
+//then gained some extra code points, but there are still potentially
+//various holes in OpenSymbol which were filled by StarSymbol, i.e.
+//destination mapping points which are empty in OpenSymbol
+
 // note: the character mappings that are only approximations
 //       are marked (with an empty comment)
 
@@ -126,8 +116,6 @@ static const sal_Unicode aStarBatsTab[224] =
              0,         0,         0,    0xE03a
 };
 
-// -----------------------------------------------------------------------
-
 static const sal_Unicode aStarMathTab[224] =
 {
     // F020
@@ -201,8 +189,6 @@ static const sal_Unicode aStarMathTab[224] =
         0xe0db,     0xe0dc,   0xe0dd,    0x2115,
         0x2124,     0x211a,   0x211d,    0x2102
 };
-
-// -----------------------------------------------------------------------
 
 static const sal_Unicode aWingDingsTab[224] =
 {
@@ -278,8 +264,6 @@ static const sal_Unicode aWingDingsTab[224] =
         0xe4c2,    0xe4c3,    0xe4c4,    0xe4c5
 };
 
-// -----------------------------------------------------------------------
-
 static const sal_Unicode aWingDings2Tab[224] =
 {
     // F020
@@ -321,17 +305,17 @@ static const sal_Unicode aWingDings2Tab[224] =
         0xe569,    0xe56a,    0xe56b,    0xe56c,
         0xe56d,    0xe56e,    0xe56f,    0xe570,
         0xe571,    0xe572,    0xe573,    0xe574,
-        0xe575,    0xe576,    0xe577,    0xe578,
+        0xe575,         0,         0,    0xe578,
     // F0a0
         0xe579,    0xe57a,    0xe57b,    0xe57c,
-        0xe57d,    0xe57e,    0xe57f,    0xe580,
-        0xe581,    0xe582,    0xe583,    0xe584,
-        0xe585,    0xe586,    0xe587,    0xe588,
+             0,         0,         0,         0,
+             0,         0,         0,    0xe584,
+        0xe585,         0,    0xe586,         0,
     // F0b0
-        0xe589,    0xe58a,    0xe58b,    0xe58c,
+             0,         0,         0,         0,
         0xe58d,    0xe58e,    0xe58f,    0xe590,
-        0xe591,    0xe592,    0xe593,    0xe594,
-        0xe595,    0xe596,    0xe597,    0xe598,
+             0,         0,    0xe593,    0xe594,
+             0,         0,         0,    0xe587,
     // F0c0
         0xe599,    0xe59a,    0xe59b,    0xe59c,
         0xe59d,    0xe59e,    0xe59f,    0xe5a0,
@@ -348,13 +332,11 @@ static const sal_Unicode aWingDings2Tab[224] =
         0xe5c1,    0xe5c2,    0xe5c3,    0xe5c4,
         0xe5c5,    0xe5c6,    0xe5c7,    0xe5c8,
     // F0f0
-        0xe5c9,    0,    0xe5cb,    0xe5cc,
+        0xe5c9,    0,         0xe5cb,    0xe477,
         0xe5cd,    0xe5ce,    0xe5cf,    0xe5d0,
         0x203b,    0x2042,         0,         0,
              0,         0,         0,         0
 };
-
-// -----------------------------------------------------------------------
 
 static const sal_Unicode aWingDings3Tab[224] =
 {
@@ -430,8 +412,6 @@ static const sal_Unicode aWingDings3Tab[224] =
              0,         0,         0,         0
 };
 
-// -----------------------------------------------------------------------
-
 static const sal_Unicode aWebDingsTab[224] =
 {
     // F020
@@ -505,8 +485,6 @@ static const sal_Unicode aWebDingsTab[224] =
         0xe3d7,    0xe3d8,    0xe3d9,    0xe3da,
         0xe3db,    0xe3dc,    0xe3dd,    0xe3de
 };
-
-// -----------------------------------------------------------------------
 
 static const sal_Unicode aAdobeSymbolTab[224] =
 {
@@ -594,8 +572,6 @@ static const sal_Unicode aAdobeSymbolTab[224] =
         0xe167,    0xe168,    0xe169,         0,
 };
 
-// -----------------------------------------------------------------------
-
 static const sal_Unicode aMonotypeSortsTab[224] =
 {
     // F020
@@ -670,121 +646,42 @@ static const sal_Unicode aMonotypeSortsTab[224] =
         0x27bc,    0x27bd,    0x27be,         0,
 };
 
-// -----------------------------------------------------------------------
-
-/*
-static const sal_Unicode aMonotypeSorts2Tab[224] =
-{
-//TODO:
-    // F020
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F030
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F040
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F050
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F060
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F070
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F080
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F090
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F0a0
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F0b0
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F0c0
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F0d0
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F0e0
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F0f0
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-};
-*/
-
 static const sal_Unicode aMTExtraTab[224] =
 {
     // F020
-        0x0020,         0,         0,    0xE095,
-        0xE091,    0xE096,    0x02D9,         0,
-        0xE093,         0,         0,         0,
+        0x0020,         0,         0,    0x0300,
+        0x0302,    0x0303,    0x0307,         0,
+        0x2323,    0x2322,         0,         0,
              0,         0,         0,         0,
     // F030
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-        0x25C1,         0,    0x25B7,         0,
+             0,    0xEC00,    0xEC01,    0xEC02,
+        0xEC03,    0xEC0B,    0xEC04,    0xEC05,
+        0xEC06,         0,    0x223C,    0x2243,
+        0x22B2,    0x226A,    0x22B3,    0x226B,
     // F040
-             0,         0,    0x2210,    0x019b,
-             0,         0,         0,         0,
-             0,    0x2229,         0,    0xE08B,
+        0x225C,    0x2259,    0x2250,    0x2210,
+        0x019B,    0xEC0E,    0xEC0F,    0xEC10,
+        0xEC11,    0x2229,    0x2127,    0x2026,
         0x22EF,    0x22EE,    0x22F0,    0x22F1,
     // F050
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
+        0x2225,    0x2235,    0x2221,    0x2222,
+             0,    0x222A,    0x25B3,    0x25A1,
+        0x25AD,    0x25B1,    0x2197,    0x2199,
+        0xEB05,    0x2198,    0x2196,    0xEB06,
     // F060
-        0xE095,         0,    0xE25C,    0xE4BA,
-             0,         0,    0x210F,         0,
-             0,         0,         0,         0,
-        0x2113,    0x2213,         0,    0x00B0,
+        0x2035,    0x21A6,    0x2195,    0x21D5,
+        0x25CB,    0x2299,    0x227B,    0xE98F,
+        0x210F,    0xEE00,    0xEE01,         0,
+        0x2113,    0x2213,    0xFFFD,    0x2218,
     // F070
-             0,         0,    0xE098,         0,
-             0,    0xE097,         0,         0,
-             0,         0,         0,    0xE081,
-             0,    0xE082,         0,         0,
+        0x227A,    0xEB1A,    0x20D7,    0x20D6,
+        0x20E1,    0xEB00,    0x20D1,    0x20D0,
+        0xEB19,         0,         0,    0xFE38,
+        0xEC0C,    0xFE37,    0xEC0D,         0,
     // F080
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
+        0x21C4,    0xEB01,    0xEB02,    0x21CC,
+        0xEB03,    0xEB04,    0x21C0,    0x21BD,
+        0xF8E7,         0,         0,         0,
              0,         0,         0,         0,
     // F090
              0,         0,         0,         0,
@@ -792,39 +689,110 @@ static const sal_Unicode aMTExtraTab[224] =
              0,         0,         0,         0,
              0,         0,         0,         0,
     // F0a0
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
+             0,    0x211D,    0x2124,    0x2102,
+        0x211A,    0x2115,         0,    0x301A,
+        0x301B,    0xEC22,    0xEC23,    0xEC24,
+        0xEC25,    0xEC26,    0xEC27,         0,
     // F0b0
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
+        0xEE04,    0xEE05,    0xEE06,         0,
+             0,    0xEE07,    0xEE08,    0xEE09,
+             0,         0,    0xEE0A,    0xEE0B,
+        0xEE0C,         0,         0,         0,
     // F0c0
-             0,         0,         0,         0,
+        0xEE0D,    0xEE0E,    0xEE0F,    0xEE10,
              0,         0,         0,         0,
              0,         0,         0,         0,
              0,         0,         0,         0,
     // F0d0
-             0,         0,         0,         0,
-             0,         0,         0,         0,
+             0,    0xEE11,    0xEE12,    0xEE13,
+             0,    0xEE15,    0xEE16,         0,
              0,         0,         0,         0,
              0,         0,         0,         0,
     // F0e0
              0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
+             0,         0,         0,    0xF8FF,
+        0x0160,    0x00DD,    0x00DE,    0x00D0,
+        0x0161,    0x00FD,    0x00FE,    0x00F0,
     // F0f0
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0
+        0xFB01,    0xFB02,    0x0131,    0x00B9,
+        0x00B2,    0x00B3,    0x00BD,    0x00BC,
+        0x00BE,    0x2044,    0x00A6,    0x02DD,
+        0x02D8,    0x02C7,    0x02DA,    0x02DB,
 };
 
-
-//=======================================================================
+static const sal_Unicode aAdobeSymbolToAppleSymbolTab[224] =
+{
+    // F020
+        0x0020,    0x0021,    0x2200,    0x0023,
+        0x2203,    0x0025,    0x0026,    0x220D,
+        0x0028,    0x0029,    0x2217,    0x002B,
+        0x002C,    0x2212,    0x002E,    0x002F,
+    // F030
+        0x0030,    0x0031,    0x0032,    0x0033,
+        0x0034,    0x0035,    0x0036,    0x0037,
+        0x0038,    0x0039,    0x003A,    0x003B,
+        0x003C,    0x003D,    0x003E,    0x003F,
+    // F040
+        0x2245,    0x0391,    0x0392,    0x03A7,
+        0x0394,    0x0395,    0x03A6,    0x0393,
+        0x0397,    0x0399,    0x03D1,    0x039A,
+        0x039B,    0x039C,    0x039D,    0x039F,
+    // F050
+        0x03A0,    0x0398,    0x03A1,    0x03A3,
+        0x03A4,    0x03A5,    0x03C2,    0x03A9,
+        0x039E,    0x03A8,    0x0396,    0x005B,
+        0x2234,    0x005D,    0x22A5,    0x005F,
+    // F060
+        0xF8E5,    0x03B1,    0x03B2,    0x03C7,
+        0x03B4,    0x03B5,    0x03C6,    0x03B3,
+        0x03B7,    0x03B9,    0x03D5,    0x03BA,
+        0x03BB,    0x03BC,    0x03BD,    0x03BF,
+    // F070
+        0x03C0,    0x03B8,    0x03C1,    0x03C3,
+        0x03C4,    0x03C5,    0x03D6,    0x03C9,
+        0x03BE,    0x03C8,    0x03B6,    0x007B,
+        0x007C,    0x007D,    0x223C,    0x007F,
+    // F080
+        0x0080,    0x0081,    0x0082,    0x0083,
+        0x0084,    0x0085,    0x0086,    0x0087,
+        0x0088,    0x0089,    0x008A,    0x008B,
+        0x008C,    0x008D,    0x008E,    0x008F,
+    // F090
+        0x0090,    0x0091,    0x0092,    0x0093,
+        0x0094,    0x0095,    0x0096,    0x0097,
+        0x0098,    0x0099,    0x009A,    0x009B,
+        0x009C,    0x009D,    0x009E,    0x009F,
+    // F0a0
+        0x20AC,    0x03D2,    0x2032,    0x2264,
+        0x2044,    0x221E,    0x0192,    0x2663,
+        0x2666,    0x2665,    0x2660,    0x2194,
+        0x2190,    0x2191,    0x2192,    0x2193,
+    // F0b0
+        0x00B0,    0x00B1,    0x2033,    0x2065,
+        0x00D7,    0x221D,    0x2202,    0x2022,
+        0x00F7,    0x2260,    0x2261,    0x2248,
+        0x2026,    0x23D0,    0x23AF,    0x21B5,
+    // F0c0
+        0x2135,    0x2111,    0x211C,    0x2118,
+        0x2297,    0x2295,    0x2205,    0x2229,
+        0x222A,    0x2283,    0x2287,    0x2284,
+        0x2282,    0x2286,    0x2208,    0x2209,
+    // F0d0
+        0x2220,    0x2207,    0x00AE,    0x00A9,
+        0x2122,    0x220F,    0x221A,    0x22C5,
+        0x00AC,    0x2227,    0x2228,    0x21D4,
+        0x21D0,    0x21D1,    0x21D2,    0x21D3,
+    // F0e0
+        0x25CA,    0x3008,    0x00AE,    0x00A9,
+        0x2122,    0x2211,    0x239B,    0x239C,
+        0x239D,    0x23A1,    0x23A2,    0x23A3,
+        0x23A7,    0x23A8,    0x23A9,    0x23AA,
+    // F0f0
+        0xF8FF,    0x3009,    0x222B,    0x2320,
+        0x23AE,    0x2321,    0x239E,    0x239F,
+        0x23A0,    0x23A4,    0x23A5,    0x23A6,
+        0x23AB,    0x23AC,    0x23AD,    0x00FF
+};
 
 static sal_Unicode ImplStarSymbolToStarBats( sal_Unicode c )
 {
@@ -1080,8 +1048,8 @@ private:
     ::std::multimap<sal_Unicode, SymbolEntry> maMagicMap;
 public:
     StarSymbolToMSMultiFontImpl(bool bPerfectOnly);
-    String ConvertChar(sal_Unicode &rChar);
-    String ConvertString(String &rString, xub_StrLen& rIndex);
+    OUString ConvertChar(sal_Unicode &rChar) SAL_OVERRIDE;
+    OUString ConvertString(OUString &rString, sal_Int32& rIndex) SAL_OVERRIDE;
 };
 
 struct ExtraTable { sal_Unicode cStar; sal_uInt8 cMS;};
@@ -1203,7 +1171,7 @@ StarSymbolToMSMultiFontImpl::StarSymbolToMSMultiFontImpl(bool bPerfectOnly)
 
     //Reverse map from a given starsymbol char to exact matches in ms symbol
     //fonts.
-    int nEntries = sizeof(aConservativeTable) / sizeof(aConservativeTable[0]);
+    int nEntries = SAL_N_ELEMENTS(aConservativeTable);
     int i;
     for (i = 0; i < nEntries; ++i)
     {
@@ -1234,7 +1202,7 @@ StarSymbolToMSMultiFontImpl::StarSymbolToMSMultiFontImpl(bool bPerfectOnly)
 
      //Allow extra conversions that are not perfect, but "good enough"
     if (!bPerfectOnly)
-        nEntries = sizeof(aAgressiveTable) / sizeof(aAgressiveTable[0]);
+        nEntries = SAL_N_ELEMENTS(aAgressiveTable);
     else
         nEntries = 1;
 
@@ -1243,7 +1211,7 @@ StarSymbolToMSMultiFontImpl::StarSymbolToMSMultiFontImpl(bool bPerfectOnly)
         const ExtendedConvertTable& r = aAgressiveTable[i];
         SymbolEntry aEntry;
         aEntry.eFont = r.meFont;
-        for (int j = r.mnSize / sizeof(r.mpTable[0]); j >=0; --j)
+        for (int j = r.mnSize / sizeof(r.mpTable[0]) - 1; j >=0; --j)
         {
             aEntry.cIndex = r.mpTable[j].cMS;
             maMagicMap.insert(
@@ -1268,9 +1236,9 @@ const char *SymbolFontToString(int nResult)
     return *ppName;
 }
 
-String StarSymbolToMSMultiFontImpl::ConvertChar(sal_Unicode &rChar)
+OUString StarSymbolToMSMultiFontImpl::ConvertChar(sal_Unicode &rChar)
 {
-    String sRet;
+    OUString sRet;
 
     ::std::multimap<sal_Unicode, SymbolEntry>::const_iterator aResult =
         maMagicMap.find(rChar);
@@ -1278,32 +1246,33 @@ String StarSymbolToMSMultiFontImpl::ConvertChar(sal_Unicode &rChar)
     if (aResult != maMagicMap.end())
     {
         const SymbolEntry &rEntry = (*aResult).second;
-    	sRet.AssignAscii(SymbolFontToString(rEntry.eFont));
+        const char* pc = SymbolFontToString(rEntry.eFont);
+        sRet = OUString(pc, strlen(pc), RTL_TEXTENCODING_ASCII_US);
         rChar = rEntry.cIndex;
     }
 
     return sRet;
 }
 
-String StarSymbolToMSMultiFontImpl::ConvertString(String &rString,
-    xub_StrLen& rIndex)
+OUString StarSymbolToMSMultiFontImpl::ConvertString(OUString &rString,
+                                                    sal_Int32& rIndex)
 {
     typedef ::std::multimap<sal_Unicode, SymbolEntry>::iterator MI;
     typedef ::std::pair<MI, MI> Result;
 
-    String sRet;
+    OUString sRet;
 
-    xub_StrLen nLen = rString.Len();
+    sal_Int32 nLen = rString.getLength();
     if (rIndex >= nLen)
         return sRet;
 
     int nTotal = 0, nResult = 0;
     ::std::vector<Result> aPossibilities;
     aPossibilities.reserve(nLen - rIndex);
-    xub_StrLen nStart = rIndex;
+    sal_Int32 nStart = rIndex;
     do
     {
-        Result aResult = maMagicMap.equal_range(rString.GetChar(rIndex));
+        Result aResult = maMagicMap.equal_range(rString[rIndex]);
         int nBitfield = 0;
         for (MI aIndex = aResult.first; aIndex != aResult.second; ++aIndex)
             nBitfield |= aIndex->second.eFont;
@@ -1335,10 +1304,12 @@ String StarSymbolToMSMultiFontImpl::ConvertString(String &rString,
             else
                 break;
         }
-        sRet.AssignAscii(SymbolFontToString(nI));
+        const char* pc = SymbolFontToString(nI);
+        sRet = OUString(pc, strlen(pc), RTL_TEXTENCODING_ASCII_US);
 
-        xub_StrLen nSize = sal::static_int_cast<xub_StrLen>(aPossibilities.size());
-        for(xub_StrLen nPos = 0; nPos < nSize; ++nPos)
+        sal_Int32 nSize = aPossibilities.size();
+        OUStringBuffer sBuff(rString);
+        for(sal_Int32 nPos = 0; nPos < nSize; ++nPos)
         {
             const Result &rResult = aPossibilities[nPos];
 
@@ -1346,11 +1317,12 @@ String StarSymbolToMSMultiFontImpl::ConvertString(String &rString,
             {
                 if (aIndex->second.eFont == nI)
                 {
-                    rString.SetChar(nPos+nStart, aIndex->second.cIndex);
+                    sBuff[nPos + nStart] = aIndex->second.cIndex;
                     break;
                 }
             }
         }
+        rString = sBuff.makeStringAndClear();
     }
 
     return sRet;
@@ -1360,8 +1332,6 @@ StarSymbolToMSMultiFont *CreateStarSymbolToMSMultiFont(bool bPerfectOnly)
 {
     return new StarSymbolToMSMultiFontImpl(bPerfectOnly);
 }
-
-//=======================================================================
 
 sal_Unicode ConvertChar::RecodeChar( sal_Unicode cChar ) const
 {
@@ -1380,25 +1350,38 @@ sal_Unicode ConvertChar::RecodeChar( sal_Unicode cChar ) const
             cIndex -= 0xF000;
         // recode the symbol
         if( cIndex>=0x0020 && cIndex<=0x00FF )
+        {
             cRetVal = mpCvtTab[ cIndex - 0x0020 ];
+
+            if (!cRetVal && mpSubsFontName)
+            {
+                if ( IsStarSymbol( OUString::createFromAscii(mpSubsFontName) ) )
+                {
+                    cRetVal = 0xE12C;
+                    SAL_WARN( "unotools.misc", "Forcing a bullet substition from 0x" <<
+                        OString::number(cChar, 16) << " to 0x" <<
+                        OString::number(cRetVal, 16));
+                }
+            }
+        }
     }
 
     return cRetVal ? cRetVal : cChar;
 }
 
-// -----------------------------------------------------------------------
-
 // recode the string assuming the character codes are symbol codes
 // from an traditional symbol font (i.e. U+F020..U+F0FF)
-void ConvertChar::RecodeString( String& rStr, xub_StrLen nIndex, xub_StrLen nLen ) const
+void ConvertChar::RecodeString( OUString& rStr, sal_Int32 nIndex, sal_Int32 nLen ) const
 {
-    sal_uLong nLastIndex = (sal_uLong)nIndex + nLen;
-    if( nLastIndex > rStr.Len() )
-        nLastIndex = rStr.Len();
+    sal_Int32 nLastIndex = nIndex + nLen;
+    OUStringBuffer    aTmpStr(rStr);
+
+    if( nLastIndex > aTmpStr.getLength() )
+        nLastIndex = aTmpStr.getLength();
 
     for(; nIndex < nLastIndex; ++nIndex )
     {
-        sal_Unicode cOrig = rStr.GetChar( nIndex );
+        sal_Unicode cOrig = rStr[ nIndex ];
         // only recode symbols and their U+00xx aliases
         if( ((cOrig < 0x0020) || (cOrig > 0x00FF))
         &&  ((cOrig < 0xF020) || (cOrig > 0xF0FF)) )
@@ -1407,15 +1390,14 @@ void ConvertChar::RecodeString( String& rStr, xub_StrLen nIndex, xub_StrLen nLen
         // recode a symbol
         sal_Unicode cNew = RecodeChar( cOrig );
         if( cOrig != cNew )
-            rStr.SetChar( nIndex, cNew );
+            aTmpStr[ nIndex ] = cNew;
     }
+    rStr = aTmpStr.makeStringAndClear();
 }
-
-//=======================================================================
 
 struct RecodeTable { const char* pOrgName; ConvertChar aCvt;};
 
-static RecodeTable aRecodeTable[] =
+static const RecodeTable aStarSymbolRecodeTable[] =
 {
     // the first two entries must be StarMath and StarBats; do not reorder!
     // reason: fgrep for FONTTOSUBSFONT_ONLYOLDSOSYMBOLFONTS
@@ -1439,80 +1421,88 @@ static RecodeTable aRecodeTable[] =
     {"mtextra",         {aMTExtraTab, "StarSymbol", NULL}}
 };
 
+static const RecodeTable aAppleSymbolRecodeTable[] = {
+    {"symbol",         {aAdobeSymbolToAppleSymbolTab, "AppleSymbol", NULL}}
+};
+
 static ConvertChar aImplStarSymbolCvt = { NULL, "StarBats", ImplStarSymbolToStarBats };
 
-// -----------------------------------------------------------------------
-
-const ConvertChar* ConvertChar::GetRecodeData( const String& rOrgFontName, const String& rMapFontName )
+const ConvertChar* ConvertChar::GetRecodeData( const OUString& rOrgFontName, const OUString& rMapFontName )
 {
     const ConvertChar* pCvt = NULL;
-    String aOrgName( rOrgFontName );
-    GetEnglishSearchFontName( aOrgName );
-    String aMapName( rMapFontName );
-    GetEnglishSearchFontName( aMapName );
 
-    if( aMapName.EqualsAscii( "starsymbol" )
-     || aMapName.EqualsAscii( "opensymbol" ) )
+    // clean up and lowercase font name
+    OUString aOrgName( GetEnglishSearchFontName( rOrgFontName ) );
+    OUString aMapName( GetEnglishSearchFontName( rMapFontName ) );
+
+    if( aMapName == "starsymbol"
+     || aMapName == "opensymbol" )
     {
-        int nEntries = sizeof(aRecodeTable) / sizeof(aRecodeTable[0]);
+        int nEntries = SAL_N_ELEMENTS(aStarSymbolRecodeTable);
         for( int i = 0; i < nEntries; ++i)
         {
-            RecodeTable& r = aRecodeTable[i];
-            if( aOrgName.EqualsAscii( r.pOrgName ) )
+            const RecodeTable& r = aStarSymbolRecodeTable[i];
+            if( aOrgName.equalsAscii( r.pOrgName ) )
                 { pCvt = &r.aCvt; break; }
         }
     }
-    else if( aMapName.EqualsAscii( "starbats" ) )
+    //It's plausible that it's better to implement this
+    //as an additional encoding alongside the existing
+    //adobe-symbol to unicode conversion in rtl instead
+    else if( aMapName == "applesymbol" )
     {
-        if( aOrgName.EqualsAscii( "starsymbol" ) )
+        int nEntries = SAL_N_ELEMENTS(aAppleSymbolRecodeTable);
+        for( int i = 0; i < nEntries; ++i)
+        {
+            const RecodeTable& r = aAppleSymbolRecodeTable[i];
+            if( aOrgName.equalsAscii( r.pOrgName ) )
+                { pCvt = &r.aCvt; break; }
+        }
+    }
+    else if( aMapName == "starbats" )
+    {
+        if( aOrgName == "starsymbol" )
             pCvt = &aImplStarSymbolCvt;
-        else if( aOrgName.EqualsAscii( "opensymbol" ) )
+        else if( aOrgName == "opensymbol" )
             pCvt = &aImplStarSymbolCvt;
     }
 
     return pCvt;
 }
 
-//=======================================================================
-
-FontToSubsFontConverter CreateFontToSubsFontConverter(
-    const String& rOrgName, sal_uLong nFlags )
+FontToSubsFontConverter CreateFontToSubsFontConverter( const OUString& rOrgName, sal_uLong nFlags )
 {
     const ConvertChar* pCvt = NULL;
 
-    String aName = rOrgName;
-    GetEnglishSearchFontName( aName );
+    OUString aName = GetEnglishSearchFontName( rOrgName );
 
     if ( nFlags & FONTTOSUBSFONT_IMPORT )
     {
-        int nEntries = sizeof(aRecodeTable) / sizeof(aRecodeTable[0]);
+        int nEntries = SAL_N_ELEMENTS(aStarSymbolRecodeTable);
         if ( nFlags & FONTTOSUBSFONT_ONLYOLDSOSYMBOLFONTS ) // only StarMath+StarBats
             nEntries = 2;
         for( int i = 0; i < nEntries; ++i )
         {
-            RecodeTable& r = aRecodeTable[i];
-            if( aName.EqualsAscii( r.pOrgName ) )
+            const RecodeTable& r = aStarSymbolRecodeTable[i];
+            if( aName.equalsAscii( r.pOrgName ) )
                 { pCvt = &r.aCvt; break; }
         }
     }
     else
     {
         // TODO: FONTTOSUBSFONT_ONLYOLDSOSYMBOLFONTS
-        if( aName.EqualsAscii( "starsymbol" ) )       pCvt = &aImplStarSymbolCvt;
-        else if( aName.EqualsAscii( "opensymbol" ) )  pCvt = &aImplStarSymbolCvt;
+        if( aName == "starsymbol" )       pCvt = &aImplStarSymbolCvt;
+        else if( aName == "opensymbol" )  pCvt = &aImplStarSymbolCvt;
     }
 
     return (FontToSubsFontConverter)pCvt;
 }
 
-// -----------------------------------------------------------------------
-
-void DestroyFontToSubsFontConverter( FontToSubsFontConverter )
+void DestroyFontToSubsFontConverter(
+    SAL_UNUSED_PARAMETER FontToSubsFontConverter )
 {
-    // nothing to do for now, because we use static ImplCvtChars
+    //TODO: nothing to do for now, because we use static ImplCvtChars
 }
-
-// -----------------------------------------------------------------------
 
 sal_Unicode ConvertFontToSubsFontChar(
     FontToSubsFontConverter hConverter, sal_Unicode cChar )
@@ -1523,14 +1513,13 @@ sal_Unicode ConvertFontToSubsFontChar(
         return cChar;
 }
 
-// -----------------------------------------------------------------------
-
-String GetFontToSubsFontName( FontToSubsFontConverter hConverter )
+OUString GetFontToSubsFontName( FontToSubsFontConverter hConverter )
 {
     if ( !hConverter )
-        return String();
+        return OUString();
 
     const char* pName = ((ConvertChar*)hConverter)->mpSubsFontName;
-    return String::CreateFromAscii( pName );
+    return OUString::createFromAscii( pName );
 }
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
