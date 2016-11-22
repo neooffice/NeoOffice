@@ -357,7 +357,16 @@ IMPL_LINK( SwContentOptPage, AnyRulerHdl, CheckBox*, pBox)
 -------------------------------------------------------*/
 SwAddPrinterTabPage::SwAddPrinterTabPage( Window* pParent,
 									  const SfxItemSet& rCoreSet) :
+#ifdef USE_JAVA
+	// Fix crash in the SwAddPrinterTabPage::Reset() method reported in the
+	// following NeoOffice forum topic that occurs when selecting the
+	// File > Printer Settings menu and then cancelling the OOo dialog by
+	// cloning the item set:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8598
+	SfxTabPage( pParent, SW_RES( TP_OPTPRINT_PAGE ), *rCoreSet.Clone()),
+#else	// USE_JAVA
 	SfxTabPage( pParent, SW_RES( TP_OPTPRINT_PAGE ), rCoreSet),
+#endif	// USE_JAVA
     aFL1          (this, SW_RES(FL_1)),
 	aGrfCB           (this, SW_RES(CB_PGRF)),
 	aTabCB           (this, SW_RES(CB_PTAB)),
@@ -439,6 +448,19 @@ SwAddPrinterTabPage::SwAddPrinterTabPage( Window* pParent,
     aProspectCB_RTL.Show(aCTLOptions.IsCTLFontEnabled());
 }
 
+#ifdef USE_JAVA
+
+//------------------------------------------------------------------------
+
+SwAddPrinterTabPage::~SwAddPrinterTabPage()
+{
+	// Delete item set that was cloned in the constructor
+	const SfxItemSet& rSet = GetItemSet();
+	delete &rSet;
+}
+
+#endif	// USE_JAVA
+
 //------------------------------------------------------------------------
 
 void SwAddPrinterTabPage::SetPreview(BOOL bPrev)
@@ -515,18 +537,7 @@ void 	SwAddPrinterTabPage::Reset( const SfxItemSet&  )
 	const 	SfxItemSet&			rSet = GetItemSet();
 	const 	SwAddPrinterItem*	pAddPrinterAttr = 0;
 
-#ifdef USE_JAVA
-	// Fix crash when selecting the File :: Printer Settings menu and then
-	// cancelling the OOo dialog by checking if the FN_PARAM_ADDPRINTER was
-	// actually set before retrieving its value. Fix the inability to save
-	// settings changes from the original crashing fix reported in the
-	// following NeoOffice forum topic by checking if the item set is actually
-	// backed by an item pool:
-	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8598
-	if( rSet.GetPool() && SFX_ITEM_SET == rSet.GetItemState( FN_PARAM_ADDPRINTER , FALSE,
-#else	// USE_JAVA
 	if( SFX_ITEM_SET == rSet.GetItemState( FN_PARAM_ADDPRINTER , FALSE,
-#endif	// USE_JAVA
 									(const SfxPoolItem**)&pAddPrinterAttr ))
 	{
 		aGrfCB.Check(			pAddPrinterAttr->bPrintGraphic);
