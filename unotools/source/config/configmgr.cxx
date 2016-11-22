@@ -127,6 +127,12 @@ OUString utl::ConfigManager::getLocale() {
 }
 
 OUString utl::ConfigManager::getProductExtension() {
+    return getConfigurationString(
+        OUString("/org.openoffice.Setup"),
+        OUString("Product/ooSetupExtension"));
+}
+
+OUString utl::ConfigManager::getProductName() {
 #if defined USE_JAVA && defined MACOSX
     // Use CFBundleName for product name if it exists
     CFBundleRef aBundle = CFBundleGetMainBundle();
@@ -143,20 +149,14 @@ OUString utl::ConfigManager::getProductExtension() {
                 sal_Unicode pValueBuffer[ nValueLen + 1 ];
                 CFStringGetCharacters( aValue, aValueRange, pValueBuffer );
                 pValueBuffer[ nValueLen ] = 0;
-                OUString aBrandName( pValueBuffer );
-                if ( aBrandName.getLength() )
-                    return aBrandName;
+                OUString aProductName( pValueBuffer );
+                if ( aProductName.getLength() )
+                    return aProductName;
             }
         }
     }
 #endif	// USE_JAVA && MACOSX
 
-    return getConfigurationString(
-        OUString("/org.openoffice.Setup"),
-        OUString("Product/ooSetupExtension"));
-}
-
-OUString utl::ConfigManager::getProductName() {
     return getConfigurationString(
         OUString("/org.openoffice.Setup"),
         OUString("Product/ooName"));
