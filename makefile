@@ -352,7 +352,7 @@ build.neo_patches: \
 	touch "$@"
 
 # Custom modules that need to link directly to other custom modules
-build.neo_sfx2_patch: build.neo_sal_patch
+build.neo_sfx2_patch: build.neo_sal_patch build.neo_unotools_patch
 build.neo_sw_patch: build.neo_unotools_patch
 
 build.neo_solenv_patch: solenv build.neo_configure
