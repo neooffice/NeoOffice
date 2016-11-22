@@ -1,38 +1,30 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
-
-
-#ifndef _SFX_OBJSHIMP_HXX
-#define _SFX_OBJSHIMP_HXX
-
-//#include <hash_map>
+ */
+#ifndef INCLUDED_SFX2_SOURCE_INC_OBJSHIMP_HXX
+#define INCLUDED_SFX2_SOURCE_INC_OBJSHIMP_HXX
 
 #include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/uno/Sequence.hxx>
@@ -43,61 +35,54 @@
 
 #include <unotools/securityoptions.hxx>
 #include <sfx2/objsh.hxx>
-#include "sfx2/docmacromode.hxx"
+#include <sfx2/docmacromode.hxx>
 #include "bitset.hxx"
 
+#include <appbaslib.hxx>
+
 namespace svtools { class AsynchronLink; }
-
-//====================================================================
-
-DBG_NAMEEX(SfxObjectShell)
 
 class SfxViewFrame;
 struct MarkData_Impl
 {
-	String aMark;
-	String aUserData;
-	SfxViewFrame* pFrame;
+    OUString aMark;
+    OUString aUserData;
+    SfxViewFrame* pFrame;
 };
 
-class SfxFrame;
-class SfxToolBoxConfig;
 class SfxBasicManagerHolder;
 
 struct SfxObjectShell_Impl : public ::sfx2::IMacroDocumentAccess
 {
     ::comphelper::EmbeddedObjectContainer* mpObjectContainer;
-    SfxBasicManagerHolder*
-                        pBasicManager;
+    SfxBasicManagerHolder aBasicManager;
     SfxObjectShell&     rDocShell;
     ::com::sun::star::uno::Reference< ::com::sun::star::script::XLibraryContainer >
                         xBasicLibraries;
     ::com::sun::star::uno::Reference< ::com::sun::star::script::XLibraryContainer >
                         xDialogLibraries;
-	com::sun::star::uno::Sequence < rtl::OUString > xEventNames;
+    com::sun::star::uno::Sequence < OUString > xEventNames;
     ::sfx2::DocumentMacroMode
                         aMacroMode;
-	SfxProgress*		pProgress;
-	String				aTitle;
-    String              aTempName;
-	DateTime			nTime;
+    SfxProgress*        pProgress;
+    OUString            aTitle;
+    OUString            aTempName;
+    DateTime            nTime;
     sal_uInt16          nVisualDocumentNumber;
     sal_Int16           nDocumentSignatureState;
     sal_Int16           nScriptingSignatureState;
-    sal_Bool            bInList:1,  		// ob per First/Next erreichbar
-						bClosing:1,         // sal_True w"aehrend Close(), um Benachrichtigungs-Rekursionen zu verhindern
-						bIsSaving:1,
-						bPasswd:1,
-						bIsTmp:1,
-						bIsNamedVisible:1,
-						bIsTemplate:1,
-						bIsAbortingImport:1,  // Importvorgang soll abgebrochen werden.
-                        bImportDone : 1, //Import schon fertig? Fuer AutoReload von Docs.
-						bInPrepareClose : 1,
-						bPreparedForClose : 1,
-						bWaitingForPicklist : 1,// Muss noch in die Pickliste
-						bForbidReload : 1,
-						bBasicInitialized :1,
+    bool            bInList:1,          // if reachable by First/Next
+                        bClosing:1,         // sal_True while Close(), to prevent recurrences Notification
+                        bIsSaving:1,
+                        bPasswd:1,
+                        bIsNamedVisible:1,
+                        bIsTemplate:1,
+                        bIsAbortingImport:1,  // Import operation should be canceled.
+                        bImportDone : 1, // Import finished already? For auto reload of Docs.
+                        bInPrepareClose : 1,
+                        bPreparedForClose : 1,
+                        bForbidReload : 1,
+                        bBasicInitialized :1,
                         bIsPrintJobCancelable :1, // Stampit disable/enable cancel button for print jobs ... default = true = enable!
                         bOwnsStorage:1,
                         bNoBaseURL:1,
@@ -105,80 +90,78 @@ struct SfxObjectShell_Impl : public ::sfx2::IMacroDocumentAccess
                         bSignatureErrorIsShown:1,
                         bModelInitialized:1, // whether the related model is initialized
                         bPreserveVersions:1,
-						m_bMacroSignBroken:1, // whether the macro signature was explicitly broken
+                        m_bMacroSignBroken:1, // whether the macro signature was explicitly broken
                         m_bNoBasicCapabilities:1,
                         m_bDocRecoverySupport:1,
-						bQueryLoadTemplate:1,
-						bLoadReadonly:1,
-						bUseUserData:1,
-						bSaveVersionOnClose:1,
+                        bQueryLoadTemplate:1,
+                        bLoadReadonly:1,
+                        bUseUserData:1,
+                        bSaveVersionOnClose:1,
                         m_bSharedXMLFlag:1, // whether the flag should be stored in xml file
-                        m_bAllowShareControlFileClean:1; // whether the flag should be stored in xml file
+                        m_bAllowShareControlFileClean:1, // whether the flag should be stored in xml file
+                        m_bConfigOptionsChecked:1; // whether or not the user options are checked after the Options dialog is closed.
 
-	IndexBitSet         aBitSet;
-	sal_uInt32               lErr;
-	sal_uInt16				nEventId;			// falls vor Activate noch ein
-											// Open/Create gesendet werden mu/s
-	AutoReloadTimer_Impl *pReloadTimer;
-	MarkData_Impl*      pMarkData;
-	sal_uInt16              nLoadedFlags;
-	sal_uInt16              nFlagsInProgress;
-	sal_Bool				bModalMode;
-    sal_Bool                bRunningMacro;
-	sal_Bool                bReloadAvailable;
-	sal_uInt16				nAutoLoadLocks;
-	SfxModule*              pModule;
-	SfxObjectShellFlags     eFlags;
-	sal_Bool				bReadOnlyUI;
-	SvRefBaseRef            xHeaderAttributes;
-	sal_Bool				bHiddenLockedByAPI;
+    IndexBitSet         aBitSet;
+    sal_uInt32               lErr;
+    sal_uInt16          nEventId;           // If Open/Create as to be sent
+                                            // before Activate
+    AutoReloadTimer_Impl *pReloadTimer;
+    MarkData_Impl*      pMarkData;
+    sal_uInt16              nLoadedFlags;
+    sal_uInt16              nFlagsInProgress;
+    bool                bModalMode;
+    bool                bRunningMacro;
+    bool                bReloadAvailable;
+    sal_uInt16              nAutoLoadLocks;
+    SfxModule*              pModule;
+    SfxObjectShellFlags     eFlags;
+    bool                bReadOnlyUI;
+    tools::SvRef<SvRefBase>  xHeaderAttributes;
     ::rtl::Reference< SfxBaseModel >
                             pBaseModel;
-	sal_uInt16				nStyleFilter;
-	sal_Bool				bDisposing;
+    sal_uInt16              nStyleFilter;
+    bool                bDisposing;
 
-	sal_Bool				m_bEnableSetModified;
-	sal_Bool				m_bIsModified;
+    bool                m_bEnableSetModified;
+    bool                m_bIsModified;
 
-	Rectangle				m_aVisArea;
-	MapUnit					m_nMapUnit;
+    Rectangle               m_aVisArea;
+    MapUnit                 m_nMapUnit;
 
-	sal_Bool				m_bCreateTempStor;
-	::com::sun::star::uno::Reference< ::com::sun::star::embed::XStorage > m_xDocStorage;
+    bool                m_bCreateTempStor;
+    ::com::sun::star::uno::Reference< ::com::sun::star::embed::XStorage > m_xDocStorage;
 
-	sal_Bool				m_bIsInit;
+    bool                m_bIsInit;
 
-    ::rtl::OUString         m_aSharedFileURL;
+    OUString         m_aSharedFileURL;
 
     ::com::sun::star::uno::Reference< ::com::sun::star::logging::XSimpleLogRing > m_xLogRing;
 
-    sal_Bool                m_bIncomplEncrWarnShown;
+    bool                m_bIncomplEncrWarnShown;
 
     // TODO/LATER: m_aModifyPasswordInfo should completely replace m_nModifyPasswordHash in future
     sal_uInt32              m_nModifyPasswordHash;
     ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue > m_aModifyPasswordInfo;
-    sal_Bool                m_bModifyPasswordEntered;
-
+    bool                m_bModifyPasswordEntered;
 #ifdef USE_JAVA
-    sal_Bool                m_bIsDeleted;
+    sal_Bool            m_bIsDeleted;
 #endif	// USE_JAVA
 
-	SfxObjectShell_Impl( SfxObjectShell& _rDocShell );
-	virtual ~SfxObjectShell_Impl();
 
-    static sal_Bool NeedsOfficeUpdateDialog();
+    SfxObjectShell_Impl( SfxObjectShell& _rDocShell );
+    virtual ~SfxObjectShell_Impl();
 
     // IMacroDocumentAccess overridables
-    virtual sal_Int16 getCurrentMacroExecMode() const;
-    virtual sal_Bool setCurrentMacroExecMode( sal_uInt16 nMacroMode );
-    virtual ::rtl::OUString getDocumentLocation() const;
-    virtual ::com::sun::star::uno::Reference< ::com::sun::star::embed::XStorage > getZipStorageToSign();
-    virtual sal_Bool documentStorageHasMacros() const;
-    virtual ::com::sun::star::uno::Reference< ::com::sun::star::document::XEmbeddedScripts > getEmbeddedDocumentScripts() const;
-    virtual sal_Int16 getScriptingSignatureState();
+    virtual sal_Int16 getCurrentMacroExecMode() const SAL_OVERRIDE;
+    virtual bool setCurrentMacroExecMode( sal_uInt16 nMacroMode ) SAL_OVERRIDE;
+    virtual OUString getDocumentLocation() const SAL_OVERRIDE;
+    virtual ::com::sun::star::uno::Reference< ::com::sun::star::embed::XStorage > getZipStorageToSign() SAL_OVERRIDE;
+    virtual bool documentStorageHasMacros() const SAL_OVERRIDE;
+    virtual ::com::sun::star::uno::Reference< ::com::sun::star::document::XEmbeddedScripts > getEmbeddedDocumentScripts() const SAL_OVERRIDE;
+    virtual sal_Int16 getScriptingSignatureState() SAL_OVERRIDE;
 
-    virtual sal_Bool hasTrustedScriptingSignature( sal_Bool bAllowUIToAddAuthor );
-    virtual void showBrokenSignatureWarning( const ::com::sun::star::uno::Reference< ::com::sun::star::task::XInteractionHandler >& _rxInteraction ) const;
+    virtual bool hasTrustedScriptingSignature( bool bAllowUIToAddAuthor ) SAL_OVERRIDE;
+    virtual void showBrokenSignatureWarning( const ::com::sun::star::uno::Reference< ::com::sun::star::task::XInteractionHandler >& _rxInteraction ) const SAL_OVERRIDE;
 
 #if defined USE_JAVA && defined MACOSX
     sal_Bool IsDeleted() const { return m_bIsDeleted; }
@@ -188,3 +171,4 @@ struct SfxObjectShell_Impl : public ::sfx2::IMacroDocumentAccess
 
 #endif
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

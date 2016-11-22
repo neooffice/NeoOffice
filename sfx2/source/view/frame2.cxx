@@ -1,60 +1,52 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_sfx2.hxx"
 
 #include "impframe.hxx"
 #include "objshimp.hxx"
-#include "sfx2/sfxhelp.hxx"
+#include <sfx2/sfxhelp.hxx>
 #include "workwin.hxx"
 
-#include "sfx2/app.hxx"
-#include "sfx2/bindings.hxx"
-#include "sfx2/dispatch.hxx"
-#include "sfx2/docfac.hxx"
-#include "sfx2/docfile.hxx"
-#include "sfx2/event.hxx"
-#include "sfx2/objface.hxx"
-#include "sfx2/request.hxx"
+#include <sfx2/app.hxx>
+#include <sfx2/bindings.hxx>
+#include <sfx2/dispatch.hxx>
+#include <sfx2/docfac.hxx>
+#include <sfx2/docfile.hxx>
+#include <sfx2/event.hxx>
+#include <sfx2/objface.hxx>
+#include <sfx2/request.hxx>
 
 #include <com/sun/star/awt/XWindow2.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/frame/Desktop.hpp>
 #include <com/sun/star/frame/XComponentLoader.hpp>
-#include <com/sun/star/frame/XFrame.hpp>
+#include <com/sun/star/frame/Frame.hpp>
 #include <com/sun/star/frame/XFramesSupplier.hpp>
 #include <com/sun/star/frame/XLayoutManager.hpp>
 
-#include <comphelper/componentcontext.hxx>
 #include <comphelper/namedvaluecollection.hxx>
 #include <comphelper/processfactory.hxx>
 #include <svl/eitem.hxx>
@@ -75,27 +67,26 @@ using ::com::sun::star::lang::XMultiServiceFactory;
 using ::com::sun::star::lang::XComponent;
 using ::com::sun::star::frame::XComponentLoader;
 
-//------------------------------------------------------------------------
 
-class SfxFrameWindow_Impl : public Window
+
+class SfxFrameWindow_Impl : public vcl::Window
 {
 public:
-	SfxFrame*           pFrame;
+    SfxFrame*           pFrame;
 
-    SfxFrameWindow_Impl( SfxFrame* pF, Window& i_rContainerWindow );
-    ~SfxFrameWindow_Impl( );
+    SfxFrameWindow_Impl( SfxFrame* pF, vcl::Window& i_rContainerWindow );
+    virtual ~SfxFrameWindow_Impl( );
 
-    virtual void        DataChanged( const DataChangedEvent& rDCEvt );
-	virtual void		StateChanged( StateChangedType nStateChange );
-	virtual long 		PreNotify( NotifyEvent& rNEvt );
-	virtual long		Notify( NotifyEvent& rEvt );
-	virtual void        Resize();
-    virtual void        GetFocus();
-	void				DoResize();
-	DECL_LINK(			CloserHdl, void* );
+    virtual void        DataChanged( const DataChangedEvent& rDCEvt ) SAL_OVERRIDE;
+    virtual void        StateChanged( StateChangedType nStateChange ) SAL_OVERRIDE;
+    virtual bool        PreNotify( NotifyEvent& rNEvt ) SAL_OVERRIDE;
+    virtual bool        Notify( NotifyEvent& rEvt ) SAL_OVERRIDE;
+    virtual void        Resize() SAL_OVERRIDE;
+    virtual void        GetFocus() SAL_OVERRIDE;
+    void                DoResize();
 };
 
-SfxFrameWindow_Impl::SfxFrameWindow_Impl( SfxFrame* pF, Window& i_rContainerWindow )
+SfxFrameWindow_Impl::SfxFrameWindow_Impl( SfxFrame* pF, vcl::Window& i_rContainerWindow )
         : Window( &i_rContainerWindow, WB_BORDER | WB_CLIPCHILDREN | WB_NODIALOGCONTROL | WB_3DLOOK )
         , pFrame( pF )
 {
@@ -113,10 +104,10 @@ void SfxFrameWindow_Impl::DataChanged( const DataChangedEvent& rDCEvt )
         pWorkWin->DataChanged_Impl( rDCEvt );
 }
 
-long SfxFrameWindow_Impl::Notify( NotifyEvent& rNEvt )
+bool SfxFrameWindow_Impl::Notify( NotifyEvent& rNEvt )
 {
-	if ( pFrame->IsClosing_Impl() || !pFrame->GetFrameInterface().is() )
-		return sal_False;
+    if ( pFrame->IsClosing_Impl() || !pFrame->GetFrameInterface().is() )
+        return false;
 
     SfxViewFrame* pView = pFrame->GetCurrentViewFrame();
     if ( !pView || !pView->GetObjectShell() )
@@ -126,21 +117,9 @@ long SfxFrameWindow_Impl::Notify( NotifyEvent& rNEvt )
     {
         if ( pView->GetViewShell() && !pView->GetViewShell()->GetUIActiveIPClient_Impl() && !pFrame->IsInPlace() )
         {
-            DBG_TRACE("SfxFrame: GotFocus");
-            pView->MakeActive_Impl( sal_False );
+            OSL_TRACE("SfxFrame: GotFocus");
+            pView->MakeActive_Impl( false );
         }
-
-        // TODO/LATER: do we still need this code?
-        Window* pWindow = rNEvt.GetWindow();
-        rtl::OString sHelpId;
-        while ( !sHelpId.getLength() && pWindow )
-        {
-            sHelpId = pWindow->GetHelpId();
-            pWindow = pWindow->GetParent();
-        }
-
-        if ( sHelpId.getLength() )
-            SfxHelp::OpenHelpAgent( pFrame, sHelpId );
 
 #if defined USE_JAVA && defined MACOSX
         // Opening .docx files only calls SfxViewFrame::UpdateTitle() before
@@ -151,55 +130,54 @@ long SfxFrameWindow_Impl::Notify( NotifyEvent& rNEvt )
             pTopViewFrame->UpdateTitle();
 #endif	// USE_JAVA && MACOSX
 
-		// if focus was on an external window, the clipboard content might have been changed
-		pView->GetBindings().Invalidate( SID_PASTE );
-		pView->GetBindings().Invalidate( SID_PASTE_SPECIAL );
-		return sal_True;
-	}
+        // if focus was on an external window, the clipboard content might have been changed
+        pView->GetBindings().Invalidate( SID_PASTE );
+        pView->GetBindings().Invalidate( SID_PASTE_SPECIAL );
+        return true;
+    }
     else if( rNEvt.GetType() == EVENT_KEYINPUT )
-	{
+    {
         if ( pView->GetViewShell()->KeyInput( *rNEvt.GetKeyEvent() ) )
-            return sal_True;
-	}
+            return true;
+    }
     else if ( rNEvt.GetType() == EVENT_EXECUTEDIALOG /*|| rNEvt.GetType() == EVENT_INPUTDISABLE*/ )
-	{
-        pView->SetModalMode( sal_True );
-		return sal_True;
-	}
-	else if ( rNEvt.GetType() == EVENT_ENDEXECUTEDIALOG /*|| rNEvt.GetType() == EVENT_INPUTENABLE*/ )
-	{
-		//EnableInput( sal_True, sal_True );
-        pView->SetModalMode( sal_False );
-		return sal_True;
-	}
+    {
+        pView->SetModalMode( true );
+        return true;
+    }
+    else if ( rNEvt.GetType() == EVENT_ENDEXECUTEDIALOG /*|| rNEvt.GetType() == EVENT_INPUTENABLE*/ )
+    {
+        pView->SetModalMode( false );
+        return true;
+    }
 
     return Window::Notify( rNEvt );
 }
 
-long SfxFrameWindow_Impl::PreNotify( NotifyEvent& rNEvt )
+bool SfxFrameWindow_Impl::PreNotify( NotifyEvent& rNEvt )
 {
-	sal_uInt16 nType = rNEvt.GetType();
-	if ( nType == EVENT_KEYINPUT || nType == EVENT_KEYUP )
+    sal_uInt16 nType = rNEvt.GetType();
+    if ( nType == EVENT_KEYINPUT || nType == EVENT_KEYUP )
     {
-		SfxViewFrame* pView = pFrame->GetCurrentViewFrame();
-		SfxViewShell* pShell = pView ? pView->GetViewShell() : NULL;
-		if ( pShell && pShell->HasKeyListeners_Impl() && pShell->HandleNotifyEvent_Impl( rNEvt ) )
-			return sal_True;
-	}
-	else if ( nType == EVENT_MOUSEBUTTONUP || nType == EVENT_MOUSEBUTTONDOWN )
+        SfxViewFrame* pView = pFrame->GetCurrentViewFrame();
+        SfxViewShell* pShell = pView ? pView->GetViewShell() : NULL;
+        if ( pShell && pShell->HasKeyListeners_Impl() && pShell->HandleNotifyEvent_Impl( rNEvt ) )
+            return true;
+    }
+    else if ( nType == EVENT_MOUSEBUTTONUP || nType == EVENT_MOUSEBUTTONDOWN )
     {
-		Window* pWindow = rNEvt.GetWindow();
-		SfxViewFrame* pView = pFrame->GetCurrentViewFrame();
-		SfxViewShell* pShell = pView ? pView->GetViewShell() : NULL;
-		if ( pShell )
-			if ( pWindow == pShell->GetWindow() || pShell->GetWindow()->IsChild( pWindow ) )
-				if ( pShell->HasMouseClickListeners_Impl() && pShell->HandleNotifyEvent_Impl( rNEvt ) )
-					return sal_True;
-	}
+        vcl::Window* pWindow = rNEvt.GetWindow();
+        SfxViewFrame* pView = pFrame->GetCurrentViewFrame();
+        SfxViewShell* pShell = pView ? pView->GetViewShell() : NULL;
+        if ( pShell )
+            if ( pWindow == pShell->GetWindow() || pShell->GetWindow()->IsChild( pWindow ) )
+                if ( pShell->HasMouseClickListeners_Impl() && pShell->HandleNotifyEvent_Impl( rNEvt ) )
+                    return true;
+    }
 
-	if ( nType == EVENT_MOUSEBUTTONDOWN )
+    if ( nType == EVENT_MOUSEBUTTONDOWN )
     {
-        Window* pWindow = rNEvt.GetWindow();
+        vcl::Window* pWindow = rNEvt.GetWindow();
         const MouseEvent* pMEvent = rNEvt.GetMouseEvent();
         Point aPos = pWindow->OutputToScreenPixel( pMEvent->GetPosPixel() );
         SfxWorkWindow *pWorkWin = pFrame->GetWorkWindow_Impl();
@@ -207,37 +185,37 @@ long SfxFrameWindow_Impl::PreNotify( NotifyEvent& rNEvt )
             pWorkWin->EndAutoShow_Impl( aPos );
     }
 
-	return Window::PreNotify( rNEvt );
+    return Window::PreNotify( rNEvt );
 }
 
 void SfxFrameWindow_Impl::GetFocus()
 {
     if ( pFrame && !pFrame->IsClosing_Impl() && pFrame->GetCurrentViewFrame() && pFrame->GetFrameInterface().is() )
-        pFrame->GetCurrentViewFrame()->MakeActive_Impl( sal_True );
+        pFrame->GetCurrentViewFrame()->MakeActive_Impl( true );
 }
 
 void SfxFrameWindow_Impl::Resize()
 {
     if ( IsReallyVisible() || IsReallyShown() || GetOutputSizePixel().Width() )
-		DoResize();
+        DoResize();
 }
 
 void SfxFrameWindow_Impl::StateChanged( StateChangedType nStateChange )
 {
-	if ( nStateChange == STATE_CHANGE_INITSHOW )
-	{
-        pFrame->pImp->bHidden = sal_False;
+    if ( nStateChange == StateChangedType::INITSHOW )
+    {
+        pFrame->pImp->bHidden = false;
         if ( pFrame->IsInPlace() )
             // TODO/MBA: workaround for bug in LayoutManager: the final resize does not get through because the
             // LayoutManager works asynchronously and between resize and time execution the DockingAcceptor was exchanged so that
             // the resize event never is sent to the component
             SetSizePixel( GetParent()->GetOutputSizePixel() );
 
-		DoResize();
+        DoResize();
         SfxViewFrame* pView = pFrame->GetCurrentViewFrame();
         if ( pView )
-            pView->GetBindings().GetWorkWindow_Impl()->ShowChilds_Impl();
-	}
+            pView->GetBindings().GetWorkWindow_Impl()->ShowChildren_Impl();
+    }
 
     Window::StateChanged( nStateChange );
 }
@@ -253,32 +231,31 @@ Reference < XFrame > SfxFrame::CreateBlankFrame()
     Reference < XFrame > xFrame;
     try
     {
-        ::comphelper::ComponentContext aContext( ::comphelper::getProcessServiceFactory() );
-        Reference < XFrame > xDesktop( aContext.createComponent( "com.sun.star.frame.Desktop" ), UNO_QUERY_THROW );
-        xFrame.set( xDesktop->findFrame( DEFINE_CONST_UNICODE("_blank"), 0 ), UNO_SET_THROW );
+        Reference < XDesktop2 > xDesktop = Desktop::create( ::comphelper::getProcessComponentContext() );
+        xFrame.set( xDesktop->findFrame( "_blank", 0 ), UNO_SET_THROW );
     }
     catch( const Exception& )
     {
-    	DBG_UNHANDLED_EXCEPTION();
+        DBG_UNHANDLED_EXCEPTION();
     }
     return xFrame;
 }
 
-SfxFrame* SfxFrame::Create( SfxObjectShell& rDoc, Window& rWindow, sal_uInt16 nViewId, bool bHidden )
+SfxFrame* SfxFrame::Create( SfxObjectShell& rDoc, vcl::Window& rWindow, sal_uInt16 nViewId, bool bHidden )
 {
     SfxFrame* pFrame = NULL;
     try
     {
         // create and initialize new top level frame for this window
-        ::comphelper::ComponentContext aContext( ::comphelper::getProcessServiceFactory() );
-        Reference < XFramesSupplier > xDesktop( aContext.createComponent( "com.sun.star.frame.Desktop" ), UNO_QUERY_THROW );
-        Reference < XFrame > xFrame( aContext.createComponent( "com.sun.star.frame.Frame"), UNO_QUERY_THROW );
+        Reference < XComponentContext > xContext( ::comphelper::getProcessComponentContext() );
+        Reference < XDesktop2 > xDesktop = Desktop::create( xContext );
+        Reference < XFrame2 > xFrame = Frame::create( xContext );
 
         Reference< awt::XWindow2 > xWin( VCLUnoHelper::GetInterface ( &rWindow ), uno::UNO_QUERY_THROW );
         xFrame->initialize( xWin.get() );
         xDesktop->getFrames()->append( xFrame );
 
-	    if ( xWin->isActive() )
+        if ( xWin->isActive() )
             xFrame->activate();
 
         // create load arguments
@@ -294,11 +271,11 @@ SfxFrame* SfxFrame::Create( SfxObjectShell& rDoc, Window& rWindow, sal_uInt16 nV
         aLoadArgs = aArgs.getPropertyValues();
 
         // load the doc into that frame
-        ::rtl::OUString sLoaderURL( RTL_CONSTASCII_USTRINGPARAM( "private:object" ) );
+        OUString sLoaderURL( "private:object" );
         Reference< XComponentLoader > xLoader( xFrame, UNO_QUERY_THROW );
         xLoader->loadComponentFromURL(
             sLoaderURL,
-            ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ),
+            OUString( "_self" ),
             0,
             aLoadArgs
         );
@@ -316,7 +293,7 @@ SfxFrame* SfxFrame::Create( SfxObjectShell& rDoc, Window& rWindow, sal_uInt16 nV
     }
     catch( const Exception& )
     {
-    	DBG_UNHANDLED_EXCEPTION();
+        DBG_UNHANDLED_EXCEPTION();
     }
 
     return pFrame;
@@ -326,7 +303,7 @@ SfxFrame* SfxFrame::Create( const Reference < XFrame >& i_rFrame )
 {
     // create a new TopFrame to an external XFrame object ( wrap controller )
     ENSURE_OR_THROW( i_rFrame.is(), "NULL frame not allowed" );
-    Window* pWindow = VCLUnoHelper::GetWindow( i_rFrame->getContainerWindow() );
+    vcl::Window* pWindow = VCLUnoHelper::GetWindow( i_rFrame->getContainerWindow() );
     ENSURE_OR_THROW( pWindow, "frame without container window not allowed" );
 
     SfxFrame* pFrame = new SfxFrame( *pWindow, false );
@@ -334,16 +311,17 @@ SfxFrame* SfxFrame::Create( const Reference < XFrame >& i_rFrame )
     return pFrame;
 }
 
-SfxFrame::SfxFrame( Window& i_rContainerWindow, bool i_bHidden )
-    :pParentFrame( NULL )
+SfxFrame::SfxFrame( vcl::Window& i_rContainerWindow, bool i_bHidden )
+    :SvCompatWeakBase<SfxFrame>( this )
+    ,pParentFrame( NULL )
     ,pChildArr( NULL )
     ,pImp( NULL )
-	,pWindow( NULL )
+    ,pWindow( NULL )
 {
     Construct_Impl();
 
     pImp->bHidden = i_bHidden;
-	InsertTopFrame_Impl( this );
+    InsertTopFrame_Impl( this );
     pImp->pExternalContainerWindow = &i_rContainerWindow;
 
     pWindow = new SfxFrameWindow_Impl( this, i_rContainerWindow );
@@ -355,18 +333,18 @@ SfxFrame::SfxFrame( Window& i_rContainerWindow, bool i_bHidden )
     pWindow->Show();
 }
 
-void SfxFrame::SetPresentationMode( sal_Bool bSet )
+void SfxFrame::SetPresentationMode( bool bSet )
 {
     if ( GetCurrentViewFrame() )
-        GetCurrentViewFrame()->GetWindow().SetBorderStyle( bSet ? WINDOW_BORDER_NOBORDER : WINDOW_BORDER_NORMAL );
+        GetCurrentViewFrame()->GetWindow().SetBorderStyle( bSet ? WindowBorderStyle::NOBORDER : WindowBorderStyle::NORMAL );
 
     Reference< com::sun::star::beans::XPropertySet > xPropSet( GetFrameInterface(), UNO_QUERY );
     Reference< ::com::sun::star::frame::XLayoutManager > xLayoutManager;
 
-	if ( xPropSet.is() )
-	{
-		Any aValue = xPropSet->getPropertyValue( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "LayoutManager" )));
-		aValue >>= xLayoutManager;
+    if ( xPropSet.is() )
+    {
+        Any aValue = xPropSet->getPropertyValue("LayoutManager");
+        aValue >>= xLayoutManager;
     }
 
     if ( xLayoutManager.is() )
@@ -376,64 +354,50 @@ void SfxFrame::SetPresentationMode( sal_Bool bSet )
     if ( GetWorkWindow_Impl() )
         GetWorkWindow_Impl()->SetDockingAllowed( !bSet );
     if ( GetCurrentViewFrame() )
-        GetCurrentViewFrame()->GetDispatcher()->Update_Impl( sal_True );
+        GetCurrentViewFrame()->GetDispatcher()->Update_Impl( true );
 }
 
 SystemWindow* SfxFrame::GetSystemWindow() const
 {
-	return GetTopWindow_Impl();
+    return GetTopWindow_Impl();
 }
 
 SystemWindow* SfxFrame::GetTopWindow_Impl() const
 {
     if ( pImp->pExternalContainerWindow->IsSystemWindow() )
-        return (SystemWindow*) pImp->pExternalContainerWindow;
+        return static_cast<SystemWindow*>( pImp->pExternalContainerWindow );
     else
         return NULL;
 }
 
-Window& SfxFrame::GetWindow() const
+
+bool SfxFrame::Close()
 {
-    return *pWindow;
+    delete this;
+    return true;
 }
 
-sal_Bool SfxFrame::Close()
-{
-	delete this;
-	return sal_True;
-}
-
-void SfxFrame::LockResize_Impl( sal_Bool bLock )
+void SfxFrame::LockResize_Impl( bool bLock )
 {
     pImp->bLockResize = bLock;
 }
 
-IMPL_LINK( SfxFrameWindow_Impl, CloserHdl, void*, EMPTYARG )
-{
-	if ( pFrame && !pFrame->PrepareClose_Impl( sal_True ) )
-		return 0L;
-
-	if ( pFrame )
-		pFrame->GetCurrentViewFrame()->GetBindings().Execute( SID_CLOSEWIN, 0, 0, SFX_CALLMODE_ASYNCHRON );
-	return 0L;
-}
-
-void SfxFrame::SetMenuBarOn_Impl( sal_Bool bOn )
+void SfxFrame::SetMenuBarOn_Impl( bool bOn )
 {
     pImp->bMenuBarOn = bOn;
 
     Reference< com::sun::star::beans::XPropertySet > xPropSet( GetFrameInterface(), UNO_QUERY );
     Reference< ::com::sun::star::frame::XLayoutManager > xLayoutManager;
 
-	if ( xPropSet.is() )
-	{
-		Any aValue = xPropSet->getPropertyValue( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "LayoutManager" )));
-		aValue >>= xLayoutManager;
+    if ( xPropSet.is() )
+    {
+        Any aValue = xPropSet->getPropertyValue("LayoutManager");
+        aValue >>= xLayoutManager;
     }
 
     if ( xLayoutManager.is() )
     {
-        rtl::OUString aMenuBarURL( RTL_CONSTASCII_USTRINGPARAM( "private:resource/menubar/menubar" ));
+        OUString aMenuBarURL( "private:resource/menubar/menubar" );
 
         if ( bOn )
             xLayoutManager->showElement( aMenuBarURL );
@@ -442,34 +406,9 @@ void SfxFrame::SetMenuBarOn_Impl( sal_Bool bOn )
     }
 }
 
-sal_Bool SfxFrame::IsMenuBarOn_Impl() const
+bool SfxFrame::IsMenuBarOn_Impl() const
 {
     return pImp->bMenuBarOn;
-}
-
-void SfxFrame::PositionWindow_Impl( const Rectangle& rWinArea ) const
-{
-    Window *pWin = pImp->pExternalContainerWindow;
-
-	// Groesse setzen
-    const Size aAppWindow( pImp->pExternalContainerWindow->GetDesktopRectPixel().GetSize() );
-	Point aPos( rWinArea.TopLeft() );
-	Size aSz( rWinArea.GetSize() );
-	if ( aSz.Width() && aSz.Height() )
-	{
-		aPos.X() = Min(aPos.X(),
-						long(aAppWindow.Width() - aSz.Width() + aSz.Width() / 2) );
-		aPos.Y() = Min(aPos.Y(),
-						long( aAppWindow.Height() - aSz.Height() + aSz.Height() / 2) );
-		if ( aPos.X() + aSz.Width() <
-				aAppWindow.Width() + aSz.Width() / 2 &&
-				aPos.Y() + aSz.Height() <
-				aAppWindow.Height() + aSz.Height() / 2 )
-		{
-			pWin->SetPosPixel( aPos );
-			pWin->SetOutputSizePixel( aSz );
-		}
-	}
 }
 
 void SfxFrame::PrepareForDoc_Impl( SfxObjectShell& i_rDoc )
@@ -486,10 +425,12 @@ void SfxFrame::PrepareForDoc_Impl( SfxObjectShell& i_rDoc )
     // plugin mode
     sal_Int16 nPluginMode = aDocumentArgs.getOrDefault( "PluginMode", sal_Int16( 0 ) );
     if ( nPluginMode && ( nPluginMode != 2 ) )
-        SetInPlace_Impl( sal_True );
+        SetInPlace_Impl( true );
 }
 
 bool SfxFrame::IsMarkedHidden_Impl() const
 {
     return pImp->bHidden;
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -53,7 +53,9 @@
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
-#include "../view/topfrm_cocoa.h"
+#include "../view/topfrm_cocoa.hxx"
+
+#define DEFAULT_URL						"_default"
 
 #define WRITER_COMMAND_ID				'SDI1'
 #define CALC_COMMAND_ID					'SDI2'
@@ -81,7 +83,6 @@ static const NSString *kMenuItemValueIsDefaultForPrefKey = @"MenuItemValueIsDefa
 
 using namespace com::sun::star::beans;
 using namespace com::sun::star::uno;
-using namespace rtl;
 
 @interface NSObject (ShutdownIconDelegate)
 - (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
@@ -130,15 +131,15 @@ using namespace rtl;
 class QuickstartMenuItemDescriptor
 {
 	SEL							maSelector;
-	XubString					maText;
+	OUString					maText;
 	::std::vector< QuickstartMenuItemDescriptor >	maItems;
 	CFStringRef					maPrefName;
 	CFPropertyListRef			maCheckedPrefValue;
 	BOOL						mbValueIsDefaultForPref;
 
 public:
-								QuickstartMenuItemDescriptor( SEL aSelector, XubString aText, CFStringRef aPrefName = NULL, CFPropertyListRef aCheckedPrefValue = NULL, BOOL bValueIsDefaultForPref = FALSE ) : maSelector( aSelector ), maText( aText ), maPrefName( aPrefName ), maCheckedPrefValue( aCheckedPrefValue ), mbValueIsDefaultForPref( bValueIsDefaultForPref ) {}
-								QuickstartMenuItemDescriptor( ::std::vector< QuickstartMenuItemDescriptor > &rItems, XubString aText ) : maSelector( NULL ), maText( aText ), maItems( rItems ), maPrefName( NULL ), maCheckedPrefValue( NULL ), mbValueIsDefaultForPref( FALSE ) {}
+								QuickstartMenuItemDescriptor( SEL aSelector, OUString aText, CFStringRef aPrefName = NULL, CFPropertyListRef aCheckedPrefValue = NULL, BOOL bValueIsDefaultForPref = FALSE ) : maSelector( aSelector ), maText( aText ), maPrefName( aPrefName ), maCheckedPrefValue( aCheckedPrefValue ), mbValueIsDefaultForPref( bValueIsDefaultForPref ) {}
+								QuickstartMenuItemDescriptor( ::std::vector< QuickstartMenuItemDescriptor > &rItems, OUString aText ) : maSelector( NULL ), maText( aText ), maItems( rItems ), maPrefName( NULL ), maCheckedPrefValue( NULL ), mbValueIsDefaultForPref( FALSE ) {}
 								~QuickstartMenuItemDescriptor() {};
 	NSMenuItem*					CreateMenuItem( const ShutdownIconDelegate *pDelegate ) const;
 };
@@ -147,9 +148,9 @@ NSMenuItem *QuickstartMenuItemDescriptor::QuickstartMenuItemDescriptor::CreateMe
 {
 	NSMenuItem *pRet = nil;
 
-	if ( maText.Len() )
+	if ( maText.getLength() )
 	{
-		NSString *pTitle = [NSString stringWithCharacters:maText.GetBuffer() length:maText.Len()];
+		NSString *pTitle = [NSString stringWithCharacters:maText.getStr() length:maText.getLength()];
 		if ( pTitle )
 		{
 			pRet = [[NSMenuItem alloc] initWithTitle:pTitle action:maSelector keyEquivalent:@""];
@@ -224,22 +225,22 @@ IMPL_LINK( ShutdownIconEvent, DispatchEvent, void*, pData )
 	switch ( mnCommand )
 	{
 		case WRITER_COMMAND_ID:
-			ShutdownIcon::OpenURL( OUString::createFromAscii( WRITER_URL ), OUString::createFromAscii( "_default" ) );
+			ShutdownIcon::OpenURL( WRITER_URL, DEFAULT_URL );
 			break;
 		case CALC_COMMAND_ID:
-			ShutdownIcon::OpenURL( OUString::createFromAscii( CALC_URL ), OUString::createFromAscii( "_default" ) );
+			ShutdownIcon::OpenURL( CALC_URL, DEFAULT_URL );
 			break;
 		case IMPRESS_COMMAND_ID:
-			ShutdownIcon::OpenURL( OUString::createFromAscii( IMPRESS_WIZARD_URL ), OUString::createFromAscii( "_default" ) );
+			ShutdownIcon::OpenURL( IMPRESS_WIZARD_URL, DEFAULT_URL );
 			break;
 		case DRAW_COMMAND_ID:
-			ShutdownIcon::OpenURL( OUString::createFromAscii( DRAW_URL ), OUString::createFromAscii( "_default" ) );
+			ShutdownIcon::OpenURL( DRAW_URL, DEFAULT_URL );
 			break;
 		case MATH_COMMAND_ID:
-			ShutdownIcon::OpenURL( OUString::createFromAscii( MATH_URL ), OUString::createFromAscii( "_default" ) );
+			ShutdownIcon::OpenURL( MATH_URL, DEFAULT_URL );
 			break;
 		case BASE_COMMAND_ID:
-			ShutdownIcon::OpenURL( OUString::createFromAscii( BASE_URL ), OUString::createFromAscii( "_default" ) );
+			ShutdownIcon::OpenURL( BASE_URL, DEFAULT_URL );
 			break;
 		case FROMTEMPLATE_COMMAND_ID:
 			ShutdownIcon::FromTemplate();
@@ -635,7 +636,7 @@ extern "C" void java_init_systray()
 	::std::set< OUString > aFileNewAppsAvailable;
 	SvtDynamicMenuOptions aOpt;
 	Sequence < Sequence < PropertyValue > > aNewMenu = aOpt.GetMenu( E_NEWMENU );
-	const OUString sURLKey( RTL_CONSTASCII_USTRINGPARAM( "URL" ) );
+	const OUString sURLKey( "URL" );
 
 	const Sequence< PropertyValue >* pNewMenu = aNewMenu.getConstArray();
 	const Sequence< PropertyValue >* pNewMenuEnd = aNewMenu.getConstArray() + aNewMenu.getLength();
@@ -673,7 +674,7 @@ extern "C" void java_init_systray()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	::std::vector< QuickstartMenuItemDescriptor > aAppMenuItems;
-	XubString aDesc;
+	OUString aDesc;
 
 	// Insert the new document and default launch submenu entries
 	::std::vector< QuickstartMenuItemDescriptor > aNewSubmenuItems;
@@ -681,7 +682,7 @@ extern "C" void java_init_systray()
 
 	// None menu item is only used in default launch submenu
 	aDesc = pShutdownIcon->GetResString( STR_NONE );
-	aDesc.EraseAllChars( '~' );
+	aDesc = aDesc.replaceAll( "~", "" );
 	aOpenAtLaunchSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DefaultLaunchOptions" ), CFSTR( "-nodefault" ), FALSE ) );
 
 	SvtModuleOptions aModuleOptions;
@@ -691,7 +692,7 @@ extern "C" void java_init_systray()
 		if ( !aModuleOptions.IsModuleInstalled( aMenuItems[i].eModuleIdentifier ) )
 			continue;
 
-		OUString sURL( OUString::createFromAscii( aMenuItems[i].pAsciiURLDescription ) );
+		OUString sURL = OUString::createFromAscii( aMenuItems[i].pAsciiURLDescription );
 
 		// the application is installed, but the entry has been
 		// configured to *not* appear in the File/New menu =>
@@ -700,92 +701,92 @@ extern "C" void java_init_systray()
 			continue;
 
 		aDesc = pShutdownIcon->GetUrlDescription( sURL );
-		aDesc.EraseAllChars( '~' );
+		aDesc = aDesc.replaceAll( "~", "" );
 		// Fix bug 2206 by putting in some default text if the
 		// description is an empty string
-		if ( !aDesc.Len() )
+		if ( !aDesc.getLength() )
 		{
-			aDesc = XubString::CreateFromAscii( aMenuItems[i].pFallbackDescription );
-			aDesc.EraseAllChars( '~' );
+			aDesc = OUString::createFromAscii( aMenuItems[i].pFallbackDescription );
+			aDesc = aDesc.replaceAll( "~", "" );
 		}
 		aNewSubmenuItems.push_back( QuickstartMenuItemDescriptor( aMenuItems[i].aNewSelector, aDesc ) );
 
 		// Add module name to open at launch submenu
 		aDesc = aModuleOptions.GetModuleName( aMenuItems[i].eModuleIdentifier );
-		aDesc.EraseAllChars( '~' );
-		if ( aDesc.Len() )
+		aDesc = aDesc.replaceAll( "~", "" );
+		if ( aDesc.getLength() )
 			aOpenAtLaunchSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DefaultLaunchOptions" ), aMenuItems[i].aCheckedPrefValue, aMenuItems[i].bValueIsDefaultForPref ) );
 	}
 
 	// Open template menu item is only used in new document submenu
 	aDesc = pShutdownIcon->GetResString( STR_QUICKSTART_FROMTEMPLATE );
-	aDesc.EraseAllChars( '~' );
+	aDesc = aDesc.replaceAll( "~", "" );
 	aNewSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handleFromTemplateCommand:), aDesc ) );
 
 	// Insert the new document submenu. TODO: get localized "New" string by
 	// loading the label for uno:AddDirect in main.xcd.
 	aDesc = pShutdownIcon->GetResString( STR_QUICKSTART_FILEOPEN );
-	aDesc.EraseAllChars( '~' );
+	aDesc = aDesc.replaceAll( "~", "" );
 	aAppMenuItems.push_back( QuickstartMenuItemDescriptor( aNewSubmenuItems, aDesc ) );
 
 	// Insert the open document menu item into the application menu
 	aDesc = pShutdownIcon->GetResString( STR_QUICKSTART_FILEOPEN );
-	aDesc.EraseAllChars( '~' );
+	aDesc = aDesc.replaceAll( "~", "" );
 	aAppMenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handleFileOpenCommand:), aDesc ) );
 
 	// Insert the open at launch submenu
 	aDesc = SfxResId( STR_OPENATLAUNCH );
-	aDesc.EraseAllChars( '~' );
+	aDesc = aDesc.replaceAll( "~", "" );
 	aAppMenuItems.push_back( QuickstartMenuItemDescriptor( aOpenAtLaunchSubmenuItems, aDesc ) );
 
 	// Insert the Mac OS X submenu entries
 	::std::vector< QuickstartMenuItemDescriptor > aMacOSXSubmenuItems;
 
 	aDesc = SfxResId( STR_IGNORETRACKPADGESTURES );
-	aDesc.EraseAllChars( '~' );
+	aDesc = aDesc.replaceAll( "~", "" );
 	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "IgnoreTrackpadGestures" ), kCFBooleanTrue, FALSE ) );
 
 	aDesc = SfxResId( STR_DISABLEMACOSXSERVICESMENU );
-	aDesc.EraseAllChars( '~' );
+	aDesc = aDesc.replaceAll( "~", "" );
 	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableServicesMenu" ), kCFBooleanTrue, FALSE ) );
 
 	aDesc = SfxResId( STR_DISABLEMACOSXTEXTHIGHLIGHTING );
-	aDesc.EraseAllChars( '~' );
+	aDesc = aDesc.replaceAll( "~", "" );
 	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "UseNativeHighlightColor" ), kCFBooleanFalse, FALSE ) );
 
 	// Insert the Quick Look submenu entries
 	::std::vector< QuickstartMenuItemDescriptor > aQuickLookSubmenuItems;
 
 	aDesc = SfxResId( STR_QUICKLOOKDISABLED );
-	aDesc.EraseAllChars( '~' );
+	aDesc = aDesc.replaceAll( "~", "" );
 	aQuickLookSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), kCFBooleanTrue, FALSE ) );
 
 	aDesc = SfxResId( STR_QUICKLOOKFIRSTPAGEONLY );
-	aDesc.EraseAllChars( '~' );
+	aDesc = aDesc.replaceAll( "~", "" );
 	aQuickLookSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), kCFBooleanFalse, TRUE ) );
 
 	aDesc = SfxResId( STR_QUICKLOOKALLPAGES );
-	aDesc.EraseAllChars( '~' );
+	aDesc = aDesc.replaceAll( "~", "" );
 	aQuickLookSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), CFSTR( "All" ), TRUE ) );
 
 	aDesc = SfxResId( STR_QUICKLOOKSUPPORT );
-	aDesc.EraseAllChars( '~' );
+	aDesc = aDesc.replaceAll( "~", "" );
 	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( aQuickLookSubmenuItems, aDesc ) );
 
 	if ( NSDocument_versionsSupported() )
 	{
 		aDesc = SfxResId( STR_DISABLEVERSIONSSUPPORT );
-		aDesc.EraseAllChars( '~' );
+		aDesc = aDesc.replaceAll( "~", "" );
 		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableVersions" ), kCFBooleanTrue, FALSE ) );
 
 		aDesc = SfxResId( STR_DISABLERESUMESUPPORT );
-		aDesc.EraseAllChars( '~' );
+		aDesc = aDesc.replaceAll( "~", "" );
 		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableResume" ), kCFBooleanTrue, FALSE ) );
 	}
 
 	// Insert the Mac OS X submenu
 	aDesc = SfxResId( STR_MACOSXOPTIONS );
-	aDesc.EraseAllChars( '~' );
+	aDesc = aDesc.replaceAll( "~", "" );
 	aAppMenuItems.push_back( QuickstartMenuItemDescriptor( aMacOSXSubmenuItems, aDesc ) );
 
 	sal_uLong nCount = Application::ReleaseSolarMutex();

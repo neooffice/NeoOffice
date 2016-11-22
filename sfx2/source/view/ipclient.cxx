@@ -1,37 +1,29 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_sfx2.hxx"
 #include <com/sun/star/embed/EmbedStates.hpp>
 #include <com/sun/star/embed/XVisualObject.hpp>
 #include <com/sun/star/embed/XEmbeddedClient.hpp>
@@ -48,7 +40,8 @@
 #include <com/sun/star/embed/StateChangeInProgressException.hpp>
 #include <com/sun/star/embed/XLinkageSupport.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
-#include <com/sun/star/task/XStatusIndicatorFactory.hpp>
+#include <com/sun/star/task/ErrorCodeIOException.hpp>
+#include <com/sun/star/task/StatusIndicatorFactory.hpp>
 #include <com/sun/star/task/XStatusIndicator.hpp>
 
 #include <com/sun/star/embed/EmbedMisc.hpp>
@@ -62,9 +55,7 @@
 #include <sfx2/dispatch.hxx>
 #include "workwin.hxx"
 #include "guisaveas.hxx"
-#include <sfx2/viewfrm.hxx>
 #include <cppuhelper/implbase5.hxx>
-#include <vcl/salbtype.hxx>
 #include <svtools/ehdl.hxx>
 
 #include <vcl/timer.hxx>
@@ -86,35 +77,35 @@
 
 using namespace com::sun::star;
 
-//====================================================================
+
 // SfxEmbedResizeGuard
 class SfxBooleanFlagGuard
 {
-	sal_Bool& m_rFlag;
-	sal_Bool m_bLifeValue;
+    bool& m_rFlag;
+    bool  m_bLifeValue;
 public:
-	SfxBooleanFlagGuard( sal_Bool& bFlag, sal_Bool bLifeValue )
-	: m_rFlag( bFlag )
-	, m_bLifeValue( bLifeValue )
-	{
-		m_rFlag = m_bLifeValue;
-	}
+    SfxBooleanFlagGuard( bool& bFlag, bool bLifeValue )
+    : m_rFlag( bFlag )
+    , m_bLifeValue( bLifeValue )
+    {
+        m_rFlag = m_bLifeValue;
+    }
 
-	~SfxBooleanFlagGuard()
-	{
-		m_rFlag = !m_bLifeValue;
-	}
+    ~SfxBooleanFlagGuard()
+    {
+        m_rFlag = !m_bLifeValue;
+    }
 };
 
-//====================================================================
+
 // SfxInPlaceClient_Impl
 
-//--------------------------------------------------------------------
+
 class SfxInPlaceClient_Impl : public ::cppu::WeakImplHelper5< embed::XEmbeddedClient,
-															  embed::XInplaceClient,
+                                                              embed::XInplaceClient,
                                                               document::XEventListener,
                                                               embed::XStateChangeListener,
-															  embed::XWindowSupplier >
+                                                              embed::XWindowSupplier >
 {
 public:
     Timer                           m_aTimer;               // activation timeout, starts after object connection
@@ -124,59 +115,59 @@ public:
     SfxInPlaceClient*               m_pClient;
     sal_Int64                       m_nAspect;              // ViewAspect that is assigned from the container
     Rectangle                       m_aLastObjAreaPixel;    // area of object in coordinate system of the container (without scaling)
-    sal_Bool                        m_bStoreObject;
-    sal_Bool                        m_bUIActive;            // set and cleared when notification for UI (de)activation is sent
-	sal_Bool						m_bResizeNoScale;
+    bool                            m_bStoreObject;
+    bool                            m_bUIActive;            // set and cleared when notification for UI (de)activation is sent
+    bool                            m_bResizeNoScale;
 
     uno::Reference < embed::XEmbeddedObject > m_xObject;
     uno::Reference < embed::XEmbeddedClient > m_xClient;
 
 
-	SfxInPlaceClient_Impl()
-	: m_pClient( NULL )
-	, m_nAspect( 0 )
-	, m_bStoreObject( sal_True )
-	, m_bUIActive( sal_False )
-	, m_bResizeNoScale( sal_False )
-	{}
+    SfxInPlaceClient_Impl()
+    : m_pClient( NULL )
+    , m_nAspect( 0 )
+    , m_bStoreObject( true )
+    , m_bUIActive( false )
+    , m_bResizeNoScale( false )
+    {}
 
-	~SfxInPlaceClient_Impl();
+    virtual ~SfxInPlaceClient_Impl();
 
-	void SizeHasChanged();
-    DECL_LINK           (TimerHdl, Timer*);
+    void SizeHasChanged();
+    DECL_LINK(TimerHdl, void *);
     uno::Reference < frame::XFrame > GetFrame() const;
 
-	// XEmbeddedClient
-    virtual void SAL_CALL saveObject() throw ( embed::ObjectSaveVetoException, uno::Exception, uno::RuntimeException );
-    virtual void SAL_CALL visibilityChanged( sal_Bool bVisible ) throw ( embed::WrongStateException, uno::RuntimeException );
+    // XEmbeddedClient
+    virtual void SAL_CALL saveObject() throw ( embed::ObjectSaveVetoException, uno::Exception, uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL visibilityChanged( sal_Bool bVisible ) throw ( embed::WrongStateException, uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
-	// XInplaceClient
-    virtual sal_Bool SAL_CALL canInplaceActivate() throw ( uno::RuntimeException );
-    virtual void SAL_CALL activatingInplace() throw ( embed::WrongStateException, uno::RuntimeException );
-    virtual void SAL_CALL activatingUI() throw ( embed::WrongStateException, uno::RuntimeException );
-    virtual void SAL_CALL deactivatedInplace() throw ( embed::WrongStateException, uno::RuntimeException );
-    virtual void SAL_CALL deactivatedUI() throw ( embed::WrongStateException, uno::RuntimeException );
-    virtual uno::Reference< ::com::sun::star::frame::XLayoutManager > SAL_CALL getLayoutManager() throw ( embed::WrongStateException, uno::RuntimeException );
-    virtual uno::Reference< frame::XDispatchProvider > SAL_CALL getInplaceDispatchProvider() throw ( embed::WrongStateException, uno::RuntimeException );
-    virtual awt::Rectangle SAL_CALL getPlacement() throw ( embed::WrongStateException, uno::RuntimeException );
-    virtual awt::Rectangle SAL_CALL getClipRectangle() throw ( embed::WrongStateException, uno::RuntimeException );
-    virtual void SAL_CALL translateAccelerators( const uno::Sequence< awt::KeyEvent >& aKeys ) throw ( embed::WrongStateException, uno::RuntimeException );
-    virtual void SAL_CALL scrollObject( const awt::Size& aOffset ) throw ( embed::WrongStateException, uno::RuntimeException );
-    virtual void SAL_CALL changedPlacement( const awt::Rectangle& aPosRect ) throw ( embed::WrongStateException, uno::Exception, uno::RuntimeException );
+    // XInplaceClient
+    virtual sal_Bool SAL_CALL canInplaceActivate() throw ( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL activatingInplace() throw ( embed::WrongStateException, uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL activatingUI() throw ( embed::WrongStateException, uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL deactivatedInplace() throw ( embed::WrongStateException, uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL deactivatedUI() throw ( embed::WrongStateException, uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual uno::Reference< ::com::sun::star::frame::XLayoutManager > SAL_CALL getLayoutManager() throw ( embed::WrongStateException, uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual uno::Reference< frame::XDispatchProvider > SAL_CALL getInplaceDispatchProvider() throw ( embed::WrongStateException, uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual awt::Rectangle SAL_CALL getPlacement() throw ( embed::WrongStateException, uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual awt::Rectangle SAL_CALL getClipRectangle() throw ( embed::WrongStateException, uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL translateAccelerators( const uno::Sequence< awt::KeyEvent >& aKeys ) throw ( embed::WrongStateException, uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL scrollObject( const awt::Size& aOffset ) throw ( embed::WrongStateException, uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL changedPlacement( const awt::Rectangle& aPosRect ) throw ( embed::WrongStateException, uno::Exception, uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
-	// XComponentSupplier
-    virtual uno::Reference< util::XCloseable > SAL_CALL getComponent() throw ( uno::RuntimeException );
+    // XComponentSupplier
+    virtual uno::Reference< util::XCloseable > SAL_CALL getComponent() throw ( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
-	// XWindowSupplier
-    virtual uno::Reference< awt::XWindow > SAL_CALL getWindow() throw ( uno::RuntimeException );
+    // XWindowSupplier
+    virtual uno::Reference< awt::XWindow > SAL_CALL getWindow() throw ( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
     // document::XEventListener
-    virtual void SAL_CALL       notifyEvent( const document::EventObject& aEvent ) throw( uno::RuntimeException );
+    virtual void SAL_CALL       notifyEvent( const document::EventObject& aEvent ) throw( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
     // XStateChangeListener
-    virtual void SAL_CALL changingState( const ::com::sun::star::lang::EventObject& aEvent, ::sal_Int32 nOldState, ::sal_Int32 nNewState ) throw (::com::sun::star::embed::WrongStateException, ::com::sun::star::uno::RuntimeException);
-    virtual void SAL_CALL stateChanged( const ::com::sun::star::lang::EventObject& aEvent, ::sal_Int32 nOldState, ::sal_Int32 nNewState ) throw (::com::sun::star::uno::RuntimeException);
-    virtual void SAL_CALL disposing( const ::com::sun::star::lang::EventObject& aEvent ) throw (::com::sun::star::uno::RuntimeException);
+    virtual void SAL_CALL changingState( const ::com::sun::star::lang::EventObject& aEvent, ::sal_Int32 nOldState, ::sal_Int32 nNewState ) throw (::com::sun::star::embed::WrongStateException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL stateChanged( const ::com::sun::star::lang::EventObject& aEvent, ::sal_Int32 nOldState, ::sal_Int32 nNewState ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL disposing( const ::com::sun::star::lang::EventObject& aEvent ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 };
 
 SfxInPlaceClient_Impl::~SfxInPlaceClient_Impl()
@@ -187,7 +178,7 @@ void SAL_CALL SfxInPlaceClient_Impl::changingState(
     const ::com::sun::star::lang::EventObject& /*aEvent*/,
     ::sal_Int32 /*nOldState*/,
     ::sal_Int32 /*nNewState*/ )
-throw (::com::sun::star::embed::WrongStateException, ::com::sun::star::uno::RuntimeException)
+throw (::com::sun::star::embed::WrongStateException, ::com::sun::star::uno::RuntimeException, std::exception)
 {
 }
 
@@ -195,7 +186,7 @@ void SAL_CALL SfxInPlaceClient_Impl::stateChanged(
     const ::com::sun::star::lang::EventObject& /*aEvent*/,
     ::sal_Int32 nOldState,
     ::sal_Int32 nNewState )
-throw (::com::sun::star::uno::RuntimeException)
+throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
     if ( m_pClient && nOldState != embed::EmbedStates::LOADED && nNewState == embed::EmbedStates::RUNNING )
     {
@@ -205,29 +196,13 @@ throw (::com::sun::star::uno::RuntimeException)
             xDocument = m_pClient->GetViewShell()->GetObjectShell()->GetModel();
         SfxObjectShell::SetCurrentComponent( xDocument );
     }
-    else if ( m_pClient && nNewState == embed::EmbedStates::UI_ACTIVE )
-    {
-/*
-        uno::Reference < lang::XUnoTunnel > xObj( m_xObject->getComponent(), uno::UNO_QUERY );
-        uno::Sequence < sal_Int8 > aSeq( SvGlobalName( SFX_GLOBAL_CLASSID ).GetByteSequence() );
-        sal_Int64 nHandle = xObj.is() ? xObj->getSomething( aSeq ) : 0;
-        if ( nHandle )
-        {
-            // currently needs SFX code
-            SfxObjectShell* pDoc = reinterpret_cast< SfxObjectShell* >( sal::static_int_cast< sal_IntPtr >( nHandle ));
-            SfxViewFrame* pFrame = SfxViewFrame::GetFirst( pDoc );
-            SfxWorkWindow *pWorkWin = pFrame->GetFrame().GetWorkWindow_Impl();
-            pWorkWin->UpdateObjectBars_Impl();
-        }
-*/
-    }
 }
 
-void SAL_CALL SfxInPlaceClient_Impl::notifyEvent( const document::EventObject& aEvent ) throw( uno::RuntimeException )
+void SAL_CALL SfxInPlaceClient_Impl::notifyEvent( const document::EventObject& aEvent ) throw( uno::RuntimeException, std::exception )
 {
-	::vos::OGuard aGuard( Application::GetSolarMutex() );
+    SolarMutexGuard aGuard;
 
-    if ( m_pClient && aEvent.EventName.equalsAscii("OnVisAreaChanged") && m_nAspect != embed::Aspects::MSOLE_ICON )
+    if ( m_pClient && aEvent.EventName == "OnVisAreaChanged" && m_nAspect != embed::Aspects::MSOLE_ICON )
     {
         m_pClient->FormatChanged(); // for Writer when format of the object is changed with the area
         m_pClient->ViewChanged();
@@ -236,39 +211,39 @@ void SAL_CALL SfxInPlaceClient_Impl::notifyEvent( const document::EventObject& a
 }
 
 void SAL_CALL SfxInPlaceClient_Impl::disposing( const ::com::sun::star::lang::EventObject& /*aEvent*/ )
-throw (::com::sun::star::uno::RuntimeException)
+throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
     DELETEZ( m_pClient );
 }
 
 // XEmbeddedClient
-//--------------------------------------------------------------------
+
 uno::Reference < frame::XFrame > SfxInPlaceClient_Impl::GetFrame() const
 {
-	if ( !m_pClient )
-		throw uno::RuntimeException();
+    if ( !m_pClient )
+        throw uno::RuntimeException();
     return m_pClient->GetViewShell()->GetViewFrame()->GetFrame().GetFrameInterface();
 }
 
 void SAL_CALL SfxInPlaceClient_Impl::saveObject()
-	throw ( embed::ObjectSaveVetoException,
-			uno::Exception,
-			uno::RuntimeException )
+    throw ( embed::ObjectSaveVetoException,
+            uno::Exception,
+            uno::RuntimeException, std::exception )
 {
     if ( !m_bStoreObject )
         // client wants to discard the object (usually it means the container document is closed while an object is active
         // and the user didn't request saving the changes
         return;
 
-	// the common persistance is supported by objects and links
-	uno::Reference< embed::XCommonEmbedPersist > xPersist( m_xObject, uno::UNO_QUERY );
-	if ( !xPersist.is() )
-		throw uno::RuntimeException();
+    // the common persistence is supported by objects and links
+    uno::Reference< embed::XCommonEmbedPersist > xPersist( m_xObject, uno::UNO_QUERY );
+    if ( !xPersist.is() )
+        throw uno::RuntimeException();
 
     uno::Reference< frame::XFrame >              xFrame;
     uno::Reference< task::XStatusIndicator >     xStatusIndicator;
     uno::Reference< frame::XModel >              xModel( m_xObject->getComponent(), uno::UNO_QUERY );
-    uno::Reference< lang::XMultiServiceFactory > xSrvMgr( ::comphelper::getProcessServiceFactory() );
+    uno::Reference< uno::XComponentContext >     xContext( ::comphelper::getProcessComponentContext() );
 
     if ( xModel.is() )
     {
@@ -277,37 +252,24 @@ void SAL_CALL SfxInPlaceClient_Impl::saveObject()
             xFrame = xController->getFrame();
     }
 
-    if ( xSrvMgr.is() && xFrame.is() )
+    if ( xFrame.is() )
     {
         // set non-reschedule progress to prevent problems when asynchronous calls are made
         // during storing of the embedded object
-        uno::Reference< lang::XInitialization > xInit(
-            xSrvMgr->createInstance(
-                rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.comp.framework.StatusIndicatorFactory" ))),
-            uno::UNO_QUERY_THROW );
-        beans::PropertyValue aProperty;
-        uno::Sequence< uno::Any > aArgs( 2 );
-        aProperty.Name  = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "DisableReschedule" ));
-        aProperty.Value = uno::makeAny( sal_True );
-        aArgs[0] = uno::makeAny( aProperty );
-        aProperty.Name  = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "Frame" ));
-        aProperty.Value = uno::makeAny( xFrame );
-        aArgs[1] = uno::makeAny( aProperty );
-
-        xInit->initialize( aArgs );
+        uno::Reference< task::XStatusIndicatorFactory > xStatusIndicatorFactory =
+               task::StatusIndicatorFactory::createWithFrame( xContext, xFrame, sal_True/*DisableReschedule*/, sal_False/*AllowParentShow*/ );
 
         uno::Reference< beans::XPropertySet > xPropSet( xFrame, uno::UNO_QUERY );
         if ( xPropSet.is() )
         {
             try
             {
-                uno::Reference< task::XStatusIndicatorFactory > xStatusIndicatorFactory( xInit, uno::UNO_QUERY_THROW );
                 xStatusIndicator = xStatusIndicatorFactory->createStatusIndicator();
-                xPropSet->setPropertyValue( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "IndicatorInterception" )), uno::makeAny( xStatusIndicator ));
+                xPropSet->setPropertyValue( "IndicatorInterception" , uno::makeAny( xStatusIndicator ));
             }
-            catch ( uno::RuntimeException& e )
+            catch ( const uno::RuntimeException& )
             {
-                throw e;
+                throw;
             }
             catch ( uno::Exception& )
             {
@@ -332,203 +294,203 @@ void SAL_CALL SfxInPlaceClient_Impl::saveObject()
         if ( xPropSet.is() )
         {
             xStatusIndicator.clear();
-            xPropSet->setPropertyValue( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "IndicatorInterception" )), uno::makeAny( xStatusIndicator ));
+            xPropSet->setPropertyValue( "IndicatorInterception" , uno::makeAny( xStatusIndicator ));
         }
     }
-    catch ( uno::RuntimeException& e )
+    catch ( const uno::RuntimeException& )
     {
-        throw e;
+        throw;
     }
     catch ( uno::Exception& )
     {
     }
 
     // the client can exist only in case there is a view shell
-	if ( !m_pClient || !m_pClient->GetViewShell() )
-		throw uno::RuntimeException();
+    if ( !m_pClient || !m_pClient->GetViewShell() )
+        throw uno::RuntimeException();
 
-	SfxObjectShell* pDocShell = m_pClient->GetViewShell()->GetObjectShell();
-	if ( !pDocShell )
-		throw uno::RuntimeException();
+    SfxObjectShell* pDocShell = m_pClient->GetViewShell()->GetObjectShell();
+    if ( !pDocShell )
+        throw uno::RuntimeException();
 
-	pDocShell->SetModified( sal_True );
+    pDocShell->SetModified( true );
 
     //TODO/LATER: invalidation might be necessary when object was modified, but is not
     //saved through this method
     // m_pClient->Invalidate();
 }
 
-//--------------------------------------------------------------------
+
 void SAL_CALL SfxInPlaceClient_Impl::visibilityChanged( sal_Bool bVisible )
-	throw ( embed::WrongStateException,
-			uno::RuntimeException )
+    throw ( embed::WrongStateException,
+            uno::RuntimeException, std::exception )
 {
-	::vos::OGuard aGuard( Application::GetSolarMutex() );
+    SolarMutexGuard aGuard;
 
-	if ( !m_pClient || !m_pClient->GetViewShell() )
-		throw uno::RuntimeException();
+    if ( !m_pClient || !m_pClient->GetViewShell() )
+        throw uno::RuntimeException();
 
-	m_pClient->GetViewShell()->OutplaceActivated( bVisible, m_pClient );
-	m_pClient->Invalidate();
+    m_pClient->GetViewShell()->OutplaceActivated( bVisible, m_pClient );
+    m_pClient->Invalidate();
 }
 
 
 // XInplaceClient
-//--------------------------------------------------------------------
+
 sal_Bool SAL_CALL SfxInPlaceClient_Impl::canInplaceActivate()
-	throw ( uno::RuntimeException )
+    throw ( uno::RuntimeException, std::exception )
 {
-	if ( !m_xObject.is() )
-		throw uno::RuntimeException();
+    if ( !m_xObject.is() )
+        throw uno::RuntimeException();
 
     // we don't want to switch directly from outplace to inplace mode
     if ( m_xObject->getCurrentState() == embed::EmbedStates::ACTIVE || m_nAspect == embed::Aspects::MSOLE_ICON )
         return sal_False;
 
-	return sal_True;
+    return sal_True;
 }
 
-//--------------------------------------------------------------------
+
 void SAL_CALL SfxInPlaceClient_Impl::activatingInplace()
-	throw ( embed::WrongStateException,
-			uno::RuntimeException )
+    throw ( embed::WrongStateException,
+            uno::RuntimeException, std::exception )
 {
-	if ( !m_pClient || !m_pClient->GetViewShell() )
-		throw uno::RuntimeException();
+    if ( !m_pClient || !m_pClient->GetViewShell() )
+        throw uno::RuntimeException();
 
-	m_pClient->GetViewShell()->InplaceActivating( m_pClient );
+    m_pClient->GetViewShell()->InplaceActivating( m_pClient );
 }
 
-//--------------------------------------------------------------------
+
 void SAL_CALL SfxInPlaceClient_Impl::activatingUI()
-	throw ( embed::WrongStateException,
-			uno::RuntimeException )
+    throw ( embed::WrongStateException,
+            uno::RuntimeException, std::exception )
 {
-	if ( !m_pClient || !m_pClient->GetViewShell() )
-		throw uno::RuntimeException();
+    if ( !m_pClient || !m_pClient->GetViewShell() )
+        throw uno::RuntimeException();
 
     m_pClient->GetViewShell()->ResetAllClients_Impl(m_pClient);
-    m_bUIActive = sal_True;
+    m_bUIActive = true;
     m_pClient->GetViewShell()->UIActivating( m_pClient );
 }
 
-//--------------------------------------------------------------------
-void SAL_CALL SfxInPlaceClient_Impl::deactivatedInplace()
-	throw ( embed::WrongStateException,
-			uno::RuntimeException )
-{
-	if ( !m_pClient || !m_pClient->GetViewShell() )
-		throw uno::RuntimeException();
 
-	m_pClient->GetViewShell()->InplaceDeactivated( m_pClient );
+void SAL_CALL SfxInPlaceClient_Impl::deactivatedInplace()
+    throw ( embed::WrongStateException,
+            uno::RuntimeException, std::exception )
+{
+    if ( !m_pClient || !m_pClient->GetViewShell() )
+        throw uno::RuntimeException();
+
+    m_pClient->GetViewShell()->InplaceDeactivated( m_pClient );
 }
 
-//--------------------------------------------------------------------
+
 void SAL_CALL SfxInPlaceClient_Impl::deactivatedUI()
-	throw ( embed::WrongStateException,
-			uno::RuntimeException )
+    throw ( embed::WrongStateException,
+            uno::RuntimeException, std::exception )
 {
-	if ( !m_pClient || !m_pClient->GetViewShell() )
-		throw uno::RuntimeException();
+    if ( !m_pClient || !m_pClient->GetViewShell() )
+        throw uno::RuntimeException();
 
     m_pClient->GetViewShell()->UIDeactivated( m_pClient );
-    m_bUIActive = sal_False;
+    m_bUIActive = false;
 }
 
-//--------------------------------------------------------------------
+
 uno::Reference< ::com::sun::star::frame::XLayoutManager > SAL_CALL SfxInPlaceClient_Impl::getLayoutManager()
-	throw ( embed::WrongStateException,
-			uno::RuntimeException )
+    throw ( embed::WrongStateException,
+            uno::RuntimeException, std::exception )
 {
     uno::Reference < beans::XPropertySet > xFrame( GetFrame(), uno::UNO_QUERY );
     if ( !xFrame.is() )
-		throw uno::RuntimeException();
+        throw uno::RuntimeException();
 
     uno::Reference< ::com::sun::star::frame::XLayoutManager > xMan;
     try
     {
-        uno::Any aAny = xFrame->getPropertyValue( ::rtl::OUString::createFromAscii("LayoutManager") );
+        uno::Any aAny = xFrame->getPropertyValue( "LayoutManager" );
         aAny >>= xMan;
     }
     catch ( uno::Exception& )
     {
-		throw uno::RuntimeException();
+        throw uno::RuntimeException();
     }
 
     return xMan;
 }
 
-//--------------------------------------------------------------------
+
 uno::Reference< frame::XDispatchProvider > SAL_CALL SfxInPlaceClient_Impl::getInplaceDispatchProvider()
-	throw ( embed::WrongStateException,
-			uno::RuntimeException )
+    throw ( embed::WrongStateException,
+            uno::RuntimeException, std::exception )
 {
-	return uno::Reference < frame::XDispatchProvider >( GetFrame(), uno::UNO_QUERY_THROW );
+    return uno::Reference < frame::XDispatchProvider >( GetFrame(), uno::UNO_QUERY_THROW );
 }
 
-//--------------------------------------------------------------------
+
 awt::Rectangle SAL_CALL SfxInPlaceClient_Impl::getPlacement()
-	throw ( embed::WrongStateException,
-			uno::RuntimeException )
+    throw ( embed::WrongStateException,
+            uno::RuntimeException, std::exception )
 {
-	if ( !m_pClient || !m_pClient->GetViewShell() )
-		throw uno::RuntimeException();
+    if ( !m_pClient || !m_pClient->GetViewShell() )
+        throw uno::RuntimeException();
 
     // apply scaling to object area and convert to pixels
     Rectangle aRealObjArea( m_aObjArea );
     aRealObjArea.SetSize( Size( Fraction( aRealObjArea.GetWidth() ) * m_aScaleWidth,
-                    			Fraction( aRealObjArea.GetHeight() ) * m_aScaleHeight ) );
+                                Fraction( aRealObjArea.GetHeight() ) * m_aScaleHeight ) );
 
     aRealObjArea = m_pClient->GetEditWin()->LogicToPixel( aRealObjArea );
-	return AWTRectangle( aRealObjArea );
+    return AWTRectangle( aRealObjArea );
 }
 
-//--------------------------------------------------------------------
+
 awt::Rectangle SAL_CALL SfxInPlaceClient_Impl::getClipRectangle()
-	throw ( embed::WrongStateException,
-			uno::RuntimeException )
+    throw ( embed::WrongStateException,
+            uno::RuntimeException, std::exception )
 {
-	if ( !m_pClient || !m_pClient->GetViewShell() )
-		throw uno::RuntimeException();
+    if ( !m_pClient || !m_pClient->GetViewShell() )
+        throw uno::RuntimeException();
 
     // currently(?) same as placement
-	Rectangle aRealObjArea( m_aObjArea );
+    Rectangle aRealObjArea( m_aObjArea );
     aRealObjArea.SetSize( Size( Fraction( aRealObjArea.GetWidth() ) * m_aScaleWidth,
-                    			Fraction( aRealObjArea.GetHeight() ) * m_aScaleHeight ) );
+                                Fraction( aRealObjArea.GetHeight() ) * m_aScaleHeight ) );
 
     aRealObjArea = m_pClient->GetEditWin()->LogicToPixel( aRealObjArea );
-	return AWTRectangle( aRealObjArea );
+    return AWTRectangle( aRealObjArea );
 }
 
-//--------------------------------------------------------------------
+
 void SAL_CALL SfxInPlaceClient_Impl::translateAccelerators( const uno::Sequence< awt::KeyEvent >& /*aKeys*/ )
-	throw ( embed::WrongStateException,
-			uno::RuntimeException )
+    throw ( embed::WrongStateException,
+            uno::RuntimeException, std::exception )
 {
-	if ( !m_pClient || !m_pClient->GetViewShell() )
-		throw uno::RuntimeException();
+    if ( !m_pClient || !m_pClient->GetViewShell() )
+        throw uno::RuntimeException();
 
     // TODO/MBA: keyboard accelerators
 }
 
-//--------------------------------------------------------------------
+
 void SAL_CALL SfxInPlaceClient_Impl::scrollObject( const awt::Size& /*aOffset*/ )
-	throw ( embed::WrongStateException,
-			uno::RuntimeException )
+    throw ( embed::WrongStateException,
+            uno::RuntimeException, std::exception )
 {
-	if ( !m_pClient || !m_pClient->GetViewShell() )
-		throw uno::RuntimeException();
+    if ( !m_pClient || !m_pClient->GetViewShell() )
+        throw uno::RuntimeException();
 }
 
-//--------------------------------------------------------------------
+
 void SAL_CALL SfxInPlaceClient_Impl::changedPlacement( const awt::Rectangle& aPosRect )
-	throw ( embed::WrongStateException,
-			uno::Exception,
-			uno::RuntimeException )
+    throw ( embed::WrongStateException,
+            uno::Exception,
+            uno::RuntimeException, std::exception )
 {
-	uno::Reference< embed::XInplaceObject > xInplace( m_xObject, uno::UNO_QUERY );
+    uno::Reference< embed::XInplaceObject > xInplace( m_xObject, uno::UNO_QUERY );
     if ( !xInplace.is() || !m_pClient || !m_pClient->GetEditWin() || !m_pClient->GetViewShell() )
-		throw uno::RuntimeException();
+        throw uno::RuntimeException();
 
     // check if the change is at least one pixel in size
     awt::Rectangle aOldRect = getPlacement();
@@ -541,127 +503,127 @@ void SAL_CALL SfxInPlaceClient_Impl::changedPlacement( const awt::Rectangle& aPo
     // new scaled object area
     Rectangle aNewLogicRect = m_pClient->GetEditWin()->PixelToLogic( aNewPixelRect );
 
-	// all the size changes in this method should happen without scaling
-	// SfxBooleanFlagGuard aGuard( m_bResizeNoScale, sal_True );
+    // all the size changes in this method should happen without scaling
+    // SfxBooleanFlagGuard aGuard( m_bResizeNoScale, sal_True );
 
     // allow container to apply restrictions on the requested new area;
-	// the container might change the object view during size calculation;
-	// currently only writer does it
+    // the container might change the object view during size calculation;
+    // currently only writer does it
     m_pClient->RequestNewObjectArea( aNewLogicRect);
 
     if ( aNewLogicRect != m_pClient->GetScaledObjArea() )
-	{
-		// the calculation of the object area has not changed the object size
-		// it should be done here then
-		SfxBooleanFlagGuard aGuard( m_bResizeNoScale, sal_True );
+    {
+        // the calculation of the object area has not changed the object size
+        // it should be done here then
+        SfxBooleanFlagGuard aGuard( m_bResizeNoScale, true );
 
-    	// new size of the object area without scaling
-    	Size aNewObjSize( Fraction( aNewLogicRect.GetWidth() ) / m_aScaleWidth,
+        // new size of the object area without scaling
+        Size aNewObjSize( Fraction( aNewLogicRect.GetWidth() ) / m_aScaleWidth,
                           Fraction( aNewLogicRect.GetHeight() ) / m_aScaleHeight );
 
-    	// now remove scaling from new placement and keep this a the new object area
-    	aNewLogicRect.SetSize( aNewObjSize );
-    	m_aObjArea = aNewLogicRect;
+        // now remove scaling from new placement and keep this a the new object area
+        aNewLogicRect.SetSize( aNewObjSize );
+        m_aObjArea = aNewLogicRect;
 
-		// let the window size be recalculated
-		SizeHasChanged();
-	}
+        // let the window size be recalculated
+        SizeHasChanged();
+    }
 
     // notify container view about changes
     m_pClient->ObjectAreaChanged();
 }
 
 // XComponentSupplier
-//--------------------------------------------------------------------
+
 uno::Reference< util::XCloseable > SAL_CALL SfxInPlaceClient_Impl::getComponent()
-	throw ( uno::RuntimeException )
+    throw ( uno::RuntimeException, std::exception )
 {
-	if ( !m_pClient || !m_pClient->GetViewShell() )
-		throw uno::RuntimeException();
+    if ( !m_pClient || !m_pClient->GetViewShell() )
+        throw uno::RuntimeException();
 
-	SfxObjectShell* pDocShell = m_pClient->GetViewShell()->GetObjectShell();
-	if ( !pDocShell )
-		throw uno::RuntimeException();
+    SfxObjectShell* pDocShell = m_pClient->GetViewShell()->GetObjectShell();
+    if ( !pDocShell )
+        throw uno::RuntimeException();
 
-	// all the components must implement XCloseable
-	uno::Reference< util::XCloseable > xComp( pDocShell->GetModel(), uno::UNO_QUERY );
-	if ( !xComp.is() )
-		throw uno::RuntimeException();
+    // all the components must implement XCloseable
+    uno::Reference< util::XCloseable > xComp( pDocShell->GetModel(), uno::UNO_QUERY );
+    if ( !xComp.is() )
+        throw uno::RuntimeException();
 
-	return xComp;
+    return xComp;
 }
 
 
 // XWindowSupplier
-//--------------------------------------------------------------------
+
 uno::Reference< awt::XWindow > SAL_CALL SfxInPlaceClient_Impl::getWindow()
-	throw ( uno::RuntimeException )
+    throw ( uno::RuntimeException, std::exception )
 {
-	if ( !m_pClient || !m_pClient->GetEditWin() )
-		throw uno::RuntimeException();
+    if ( !m_pClient || !m_pClient->GetEditWin() )
+        throw uno::RuntimeException();
 
     uno::Reference< awt::XWindow > xWin( m_pClient->GetEditWin()->GetComponentInterface(), uno::UNO_QUERY );
     return xWin;
 }
 
-//--------------------------------------------------------------------
+
 // notification to the client implementation that either the object area or the scaling has been changed
 // as a result the logical size of the window has changed also
 void SfxInPlaceClient_Impl::SizeHasChanged()
 {
-	if ( !m_pClient || !m_pClient->GetViewShell() )
-		throw uno::RuntimeException();
+    if ( !m_pClient || !m_pClient->GetViewShell() )
+        throw uno::RuntimeException();
 
-	try {
-    	if ( m_xObject.is()
-		  && ( m_xObject->getCurrentState() == embed::EmbedStates::INPLACE_ACTIVE
-    	 	   || m_xObject->getCurrentState() == embed::EmbedStates::UI_ACTIVE ) )
-		{
+    try {
+        if ( m_xObject.is()
+          && ( m_xObject->getCurrentState() == embed::EmbedStates::INPLACE_ACTIVE
+                || m_xObject->getCurrentState() == embed::EmbedStates::UI_ACTIVE ) )
+        {
             // only possible in active states
-			uno::Reference< embed::XInplaceObject > xInplace( m_xObject, uno::UNO_QUERY );
-			if ( !xInplace.is() )
-				throw uno::RuntimeException();
+            uno::Reference< embed::XInplaceObject > xInplace( m_xObject, uno::UNO_QUERY );
+            if ( !xInplace.is() )
+                throw uno::RuntimeException();
 
-			if ( m_bResizeNoScale )
-			{
-				// the resizing should be done without scaling
-				// set the correct size to the object to avoid the scaling
-        		MapMode aObjectMap( VCLUnoHelper::UnoEmbed2VCLMapUnit( m_xObject->getMapUnit( m_nAspect ) ) );
-				MapMode aClientMap( m_pClient->GetEditWin()->GetMapMode().GetMapUnit() );
+            if ( m_bResizeNoScale )
+            {
+                // the resizing should be done without scaling
+                // set the correct size to the object to avoid the scaling
+                MapMode aObjectMap( VCLUnoHelper::UnoEmbed2VCLMapUnit( m_xObject->getMapUnit( m_nAspect ) ) );
+                MapMode aClientMap( m_pClient->GetEditWin()->GetMapMode().GetMapUnit() );
 
-        		// convert to logical coordinates of the embedded object
-        		Size aNewSize = m_pClient->GetEditWin()->LogicToLogic( m_aObjArea.GetSize(), &aClientMap, &aObjectMap );
-        		m_xObject->setVisualAreaSize( m_nAspect, awt::Size( aNewSize.Width(), aNewSize.Height() ) );
-			}
-	
-			xInplace->setObjectRectangles( getPlacement(), getClipRectangle() );
-		}
-	}
-	catch( uno::Exception& )
-	{
-		// TODO/LATER: handle error
-	}
+                // convert to logical coordinates of the embedded object
+                Size aNewSize = m_pClient->GetEditWin()->LogicToLogic( m_aObjArea.GetSize(), &aClientMap, &aObjectMap );
+                m_xObject->setVisualAreaSize( m_nAspect, awt::Size( aNewSize.Width(), aNewSize.Height() ) );
+            }
+
+            xInplace->setObjectRectangles( getPlacement(), getClipRectangle() );
+        }
+    }
+    catch( uno::Exception& )
+    {
+        // TODO/LATER: handle error
+    }
 }
 
-//--------------------------------------------------------------------
-IMPL_LINK( SfxInPlaceClient_Impl, TimerHdl, Timer*, EMPTYARG )
+
+IMPL_LINK_NOARG(SfxInPlaceClient_Impl, TimerHdl)
 {
     if ( m_pClient && m_xObject.is() )
         m_pClient->GetViewShell()->CheckIPClient_Impl( m_pClient, m_pClient->GetViewShell()->GetObjectShell()->GetVisArea() );
-	return 0;
+    return 0;
 }
 
 
-//====================================================================
+
 // SfxInPlaceClient
 
-//--------------------------------------------------------------------
-SfxInPlaceClient::SfxInPlaceClient( SfxViewShell* pViewShell, Window *pDraw, sal_Int64 nAspect ) :
-	m_pImp( new SfxInPlaceClient_Impl ),
+
+SfxInPlaceClient::SfxInPlaceClient( SfxViewShell* pViewShell, vcl::Window *pDraw, sal_Int64 nAspect ) :
+    m_pImp( new SfxInPlaceClient_Impl ),
     m_pViewSh( pViewShell ),
     m_pEditWin( pDraw )
 {
-	m_pImp->acquire();
+    m_pImp->acquire();
     m_pImp->m_pClient = this;
     m_pImp->m_nAspect = nAspect;
     m_pImp->m_aScaleWidth = m_pImp->m_aScaleHeight = Fraction(1,1);
@@ -671,39 +633,39 @@ SfxInPlaceClient::SfxInPlaceClient( SfxViewShell* pViewShell, Window *pDraw, sal
     m_pImp->m_aTimer.SetTimeoutHdl( LINK( m_pImp, SfxInPlaceClient_Impl, TimerHdl ) );
 }
 
-//--------------------------------------------------------------------
+
 
 SfxInPlaceClient::~SfxInPlaceClient()
 {
     m_pViewSh->IPClientGone_Impl(this);
 
     // deleting the client before storing the object means discarding all changes
-    m_pImp->m_bStoreObject = sal_False;
+    m_pImp->m_bStoreObject = false;
     SetObject(0);
 
     m_pImp->m_pClient = NULL;
 
     // the next call will destroy m_pImp if no other reference to it exists
     m_pImp->m_xClient = uno::Reference < embed::XEmbeddedClient >();
-	m_pImp->release();
+    m_pImp->release();
 
-	// TODO/LATER:
-	// the class is not intended to be used in multithreaded environment;
-	// if it will this disconnection and all the parts that use the m_pClient
+    // TODO/LATER:
+    // the class is not intended to be used in multithreaded environment;
+    // if it will this disconnection and all the parts that use the m_pClient
     // must be guarded with mutex
 }
 
-//--------------------------------------------------------------------
+
 void SfxInPlaceClient::SetObjectState( sal_Int32 nState )
 {
     if ( GetObject().is() )
     {
-    	if ( m_pImp->m_nAspect == embed::Aspects::MSOLE_ICON
-		  && ( nState == embed::EmbedStates::UI_ACTIVE || nState == embed::EmbedStates::INPLACE_ACTIVE ) )
-		{
-			OSL_ENSURE( sal_False, "Iconified object should not be activated inplace!\n" );
-			return;
-		}
+        if ( m_pImp->m_nAspect == embed::Aspects::MSOLE_ICON
+          && ( nState == embed::EmbedStates::UI_ACTIVE || nState == embed::EmbedStates::INPLACE_ACTIVE ) )
+        {
+            OSL_FAIL( "Iconified object should not be activated inplace!\n" );
+            return;
+        }
 
         try
         {
@@ -714,7 +676,7 @@ void SfxInPlaceClient::SetObjectState( sal_Int32 nState )
     }
 }
 
-//--------------------------------------------------------------------
+
 sal_Int64 SfxInPlaceClient::GetObjectMiscStatus() const
 {
     if ( GetObject().is() )
@@ -722,13 +684,13 @@ sal_Int64 SfxInPlaceClient::GetObjectMiscStatus() const
     return 0;
 }
 
-//--------------------------------------------------------------------
+
 uno::Reference < embed::XEmbeddedObject > SfxInPlaceClient::GetObject() const
 {
     return m_pImp->m_xObject;
 }
 
-//--------------------------------------------------------------------
+
 void SfxInPlaceClient::SetObject( const uno::Reference < embed::XEmbeddedObject >& rObject )
 {
     if ( m_pImp->m_xObject.is() && rObject != m_pImp->m_xObject )
@@ -740,18 +702,18 @@ void SfxInPlaceClient::SetObject( const uno::Reference < embed::XEmbeddedObject 
                 SetObjectState( embed::EmbedStates::RUNNING );
             m_pImp->m_xObject->removeEventListener( uno::Reference < document::XEventListener >( m_pImp->m_xClient, uno::UNO_QUERY ) );
             m_pImp->m_xObject->removeStateChangeListener( uno::Reference < embed::XStateChangeListener >( m_pImp->m_xClient, uno::UNO_QUERY ) );
-			try
-			{
-            	m_pImp->m_xObject->setClientSite( 0 );
-			}
-			catch( uno::Exception& )
-			{
-				OSL_ENSURE( sal_False, "Can not clean the client site!\n" );
-			}
+            try
+            {
+                m_pImp->m_xObject->setClientSite( 0 );
+            }
+            catch( uno::Exception& )
+            {
+                OSL_FAIL( "Can not clean the client site!\n" );
+            }
         }
     }
 
-    if ( !m_pViewSh || m_pViewSh->GetViewFrame()->GetFrame().IsClosing_Impl() )
+    if ( m_pViewSh->GetViewFrame()->GetFrame().IsClosing_Impl() )
         // sometimes applications reconnect clients on shutting down because it happens in their Paint methods
         return;
 
@@ -759,19 +721,19 @@ void SfxInPlaceClient::SetObject( const uno::Reference < embed::XEmbeddedObject 
 
     if ( rObject.is() )
     {
-        // as soon as an object was connected to a client it has to be checked wether the object wants
+        // as soon as an object was connected to a client it has to be checked whether the object wants
         // to be activated
         rObject->addStateChangeListener( uno::Reference < embed::XStateChangeListener >( m_pImp->m_xClient, uno::UNO_QUERY ) );
         rObject->addEventListener( uno::Reference < document::XEventListener >( m_pImp->m_xClient, uno::UNO_QUERY ) );
 
-		try
-		{
-        	rObject->setClientSite( m_pImp->m_xClient );
-		}
-		catch( uno::Exception& )
-		{
-			OSL_ENSURE( sal_False, "Can not set the client site!\n" );
-		}
+        try
+        {
+            rObject->setClientSite( m_pImp->m_xClient );
+        }
+        catch( uno::Exception& )
+        {
+            OSL_FAIL( "Can not set the client site!\n" );
+        }
 
         m_pImp->m_aTimer.Start();
     }
@@ -779,22 +741,22 @@ void SfxInPlaceClient::SetObject( const uno::Reference < embed::XEmbeddedObject 
         m_pImp->m_aTimer.Stop();
 }
 
-//--------------------------------------------------------------------
-sal_Bool SfxInPlaceClient::SetObjArea( const Rectangle& rArea )
+
+bool SfxInPlaceClient::SetObjArea( const Rectangle& rArea )
 {
     if( rArea != m_pImp->m_aObjArea )
     {
         m_pImp->m_aObjArea = rArea;
-		m_pImp->SizeHasChanged();
+        m_pImp->SizeHasChanged();
 
         Invalidate();
-        return sal_True;
+        return true;
     }
 
-    return sal_False;
+    return false;
 }
 
-//--------------------------------------------------------------------
+
 Rectangle SfxInPlaceClient::GetObjArea() const
 {
     return m_pImp->m_aObjArea;
@@ -808,85 +770,85 @@ Rectangle SfxInPlaceClient::GetScaledObjArea() const
     return aRealObjArea;
 }
 
-//--------------------------------------------------------------------
+
 void SfxInPlaceClient::SetSizeScale( const Fraction & rScaleWidth, const Fraction & rScaleHeight )
 {
-	if ( m_pImp->m_aScaleWidth != rScaleWidth || m_pImp->m_aScaleHeight != rScaleHeight )
-	{
-    	m_pImp->m_aScaleWidth = rScaleWidth;
-    	m_pImp->m_aScaleHeight = rScaleHeight;
+    if ( m_pImp->m_aScaleWidth != rScaleWidth || m_pImp->m_aScaleHeight != rScaleHeight )
+    {
+        m_pImp->m_aScaleWidth = rScaleWidth;
+        m_pImp->m_aScaleHeight = rScaleHeight;
 
-		m_pImp->SizeHasChanged();
+        m_pImp->SizeHasChanged();
 
         // TODO/LATER: Invalidate seems to trigger (wrong) recalculations of the ObjArea, so it's better
         // not to call it here, but maybe it sounds reasonable to do so.
         //Invalidate();
-	}
+    }
 }
 
-//--------------------------------------------------------------------
-sal_Bool SfxInPlaceClient::SetObjAreaAndScale( const Rectangle& rArea, const Fraction& rScaleWidth, const Fraction& rScaleHeight )
+
+bool SfxInPlaceClient::SetObjAreaAndScale( const Rectangle& rArea, const Fraction& rScaleWidth, const Fraction& rScaleHeight )
 {
     if( rArea != m_pImp->m_aObjArea || m_pImp->m_aScaleWidth != rScaleWidth || m_pImp->m_aScaleHeight != rScaleHeight )
     {
         m_pImp->m_aObjArea = rArea;
-    	m_pImp->m_aScaleWidth = rScaleWidth;
-    	m_pImp->m_aScaleHeight = rScaleHeight;
+        m_pImp->m_aScaleWidth = rScaleWidth;
+        m_pImp->m_aScaleHeight = rScaleHeight;
 
-		m_pImp->SizeHasChanged();
+        m_pImp->SizeHasChanged();
 
         Invalidate();
-        return sal_True;
+        return true;
     }
 
-    return sal_False;
+    return false;
 }
 
-//--------------------------------------------------------------------
+
 const Fraction& SfxInPlaceClient::GetScaleWidth() const
 {
     return m_pImp->m_aScaleWidth;
 }
 
-//--------------------------------------------------------------------
+
 const Fraction& SfxInPlaceClient::GetScaleHeight() const
 {
     return m_pImp->m_aScaleHeight;
 }
 
-//--------------------------------------------------------------------
+
 void SfxInPlaceClient::Invalidate()
 {
     // TODO/LATER: do we need both?
 
-	// the object area is provided in logical coordinates of the window but without scaling applied
+    // the object area is provided in logical coordinates of the window but without scaling applied
     Rectangle aRealObjArea( m_pImp->m_aObjArea );
     aRealObjArea.SetSize( Size( Fraction( aRealObjArea.GetWidth() ) * m_pImp->m_aScaleWidth,
-                    			Fraction( aRealObjArea.GetHeight() ) * m_pImp->m_aScaleHeight ) );
+                                Fraction( aRealObjArea.GetHeight() ) * m_pImp->m_aScaleHeight ) );
     m_pEditWin->Invalidate( aRealObjArea );
 
     ViewChanged();
 }
 
-//--------------------------------------------------------------------
-sal_Bool SfxInPlaceClient::IsObjectUIActive() const
-{
-	try {
-    	return ( m_pImp->m_xObject.is() && ( m_pImp->m_xObject->getCurrentState() == embed::EmbedStates::UI_ACTIVE ) );
-	}
-	catch( uno::Exception& )
-	{}
 
-	return sal_False;
+bool SfxInPlaceClient::IsObjectUIActive() const
+{
+    try {
+        return ( m_pImp->m_xObject.is() && ( m_pImp->m_xObject->getCurrentState() == embed::EmbedStates::UI_ACTIVE ) );
+    }
+    catch( uno::Exception& )
+    {}
+
+    return false;
 }
 
-//--------------------------------------------------------------------
-sal_Bool SfxInPlaceClient::IsObjectInPlaceActive() const
+
+bool SfxInPlaceClient::IsObjectInPlaceActive() const
 {
-	try {
+    try {
         return(
                (
-                m_pImp->m_xObject.is() && 
+                m_pImp->m_xObject.is() &&
                 (m_pImp->m_xObject->getCurrentState() == embed::EmbedStates::INPLACE_ACTIVE)
                ) ||
                (
@@ -894,45 +856,24 @@ sal_Bool SfxInPlaceClient::IsObjectInPlaceActive() const
                 (m_pImp->m_xObject->getCurrentState() == embed::EmbedStates::UI_ACTIVE)
                )
               );
-	}
-	catch( uno::Exception& )
-	{}
+    }
+    catch( uno::Exception& )
+    {}
 
-	return sal_False;
+    return false;
 }
 
-//--------------------------------------------------------------------
-sal_Bool SfxInPlaceClient::IsObjectActive() const
-{
-	try {
-    	return ( m_pImp->m_xObject.is() && ( m_pImp->m_xObject->getCurrentState() == embed::EmbedStates::ACTIVE ) );
-	}
-	catch( uno::Exception& )
-	{}
 
-	return sal_False;
-}
-
-//--------------------------------------------------------------------
-Window* SfxInPlaceClient::GetActiveWindow( SfxObjectShell* pDoc, const com::sun::star::uno::Reference < com::sun::star::embed::XEmbeddedObject >& xObject )
-{
-    SfxInPlaceClient* pClient = GetClient( pDoc, xObject );
-    if ( pClient )
-        return pClient->GetEditWin();
-    return NULL;
-}
-
-//--------------------------------------------------------------------
 SfxInPlaceClient* SfxInPlaceClient::GetClient( SfxObjectShell* pDoc, const com::sun::star::uno::Reference < com::sun::star::embed::XEmbeddedObject >& xObject )
 {
     for ( SfxViewFrame* pFrame = SfxViewFrame::GetFirst(pDoc); pFrame; pFrame=SfxViewFrame::GetNext(*pFrame,pDoc) )
     {
-		if( pFrame->GetViewShell() )
-		{
-	        SfxInPlaceClient* pClient = pFrame->GetViewShell()->FindIPClient( xObject, NULL );
-		    if ( pClient )
-			    return pClient;
-		}
+        if( pFrame->GetViewShell() )
+        {
+            SfxInPlaceClient* pClient = pFrame->GetViewShell()->FindIPClient( xObject, NULL );
+            if ( pClient )
+                return pClient;
+        }
     }
 
     return NULL;
@@ -940,7 +881,7 @@ SfxInPlaceClient* SfxInPlaceClient::GetClient( SfxObjectShell* pDoc, const com::
 
 sal_Int64 SfxInPlaceClient::GetAspect() const
 {
-	return m_pImp->m_nAspect;
+    return m_pImp->m_nAspect;
 }
 
 ErrCode SfxInPlaceClient::DoVerb( long nVerb )
@@ -950,79 +891,77 @@ ErrCode SfxInPlaceClient::DoVerb( long nVerb )
 
     if ( m_pImp->m_xObject.is() )
     {
-		sal_Bool bSaveCopyAs = sal_False;
-		if ( nVerb == -8 ) // "Save Copy as..."
-		{
+        bool bSaveCopyAs = false;
+        if ( nVerb == -8 ) // "Save Copy as..."
+        {
             svt::EmbeddedObjectRef::TryRunningState( m_pImp->m_xObject );
-			// TODO/LATER: this special verb should disappear when outplace activation is completely available
-			uno::Reference< frame::XModel > xEmbModel( m_pImp->m_xObject->getComponent(), uno::UNO_QUERY );
-			if ( xEmbModel.is() )
-			{
-				bSaveCopyAs = sal_True;
+            // TODO/LATER: this special verb should disappear when outplace activation is completely available
+            uno::Reference< frame::XModel > xEmbModel( m_pImp->m_xObject->getComponent(), uno::UNO_QUERY );
+            if ( xEmbModel.is() )
+            {
+                bSaveCopyAs = true;
 
 #if defined USE_JAVA && defined MACOSX
-				if( SfxObjectShell_canSave( m_pViewSh->GetObjectShell(), SID_SAVEASDOC ) )
-				{
+                if( SfxObjectShell_canSave( m_pViewSh->GetObjectShell(), SID_SAVEASDOC ) )
+                {
 #endif	// USE_JAVA && MACOSX
-				try
-				{
-					uno::Reference< lang::XMultiServiceFactory > xEmptyFactory;
-					SfxStoringHelper aHelper( xEmptyFactory );
-					uno::Sequence< beans::PropertyValue > aDispatchArgs( 1 );
-					aDispatchArgs[0].Name = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "SaveTo" ) );
-					aDispatchArgs[0].Value <<= (sal_Bool)sal_True;
+                try
+                {
+                    SfxStoringHelper aHelper;
+                    uno::Sequence< beans::PropertyValue > aDispatchArgs( 1 );
+                    aDispatchArgs[0].Name = "SaveTo";
+                    aDispatchArgs[0].Value <<= true;
 
-					aHelper.GUIStoreModel( xEmbModel,
-											::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "SaveAs" ) ),
-											aDispatchArgs,
-                                            sal_False,
-                                            ::rtl::OUString() );
-				}
-				catch( task::ErrorCodeIOException& aErrorEx )
-				{
-					nError = (sal_uInt32)aErrorEx.ErrCode;
-				}
-				catch( uno::Exception& )
-				{
-					nError = ERRCODE_IO_GENERAL;
-					// TODO/LATER: better error handling
-				}
+                    aHelper.GUIStoreModel( xEmbModel,
+                                            "SaveAs",
+                                            aDispatchArgs,
+                                            false,
+                                            "" );
+                }
+                catch( const task::ErrorCodeIOException& aErrorEx )
+                {
+                    nError = (sal_uInt32)aErrorEx.ErrCode;
+                }
+                catch( uno::Exception& )
+                {
+                    nError = ERRCODE_IO_GENERAL;
+                    // TODO/LATER: better error handling
+                }
 #if defined USE_JAVA && defined MACOSX
-				}
+                }
 #endif	// USE_JAVA && MACOSX
-			}
-		}
+            }
+        }
 
-		if ( !bSaveCopyAs )
-		{
-    		if ( m_pImp->m_nAspect == embed::Aspects::MSOLE_ICON )
-			{
-				if ( nVerb == embed::EmbedVerbs::MS_OLEVERB_PRIMARY || nVerb == embed::EmbedVerbs::MS_OLEVERB_SHOW )
-					nVerb = embed::EmbedVerbs::MS_OLEVERB_OPEN; // outplace activation
-				else if ( nVerb == embed::EmbedVerbs::MS_OLEVERB_UIACTIVATE
-					   || nVerb == embed::EmbedVerbs::MS_OLEVERB_IPACTIVATE )
-					nError = ERRCODE_SO_GENERALERROR;
-			}
+        if ( !bSaveCopyAs )
+        {
+            if ( m_pImp->m_nAspect == embed::Aspects::MSOLE_ICON )
+            {
+                if ( nVerb == embed::EmbedVerbs::MS_OLEVERB_PRIMARY || nVerb == embed::EmbedVerbs::MS_OLEVERB_SHOW )
+                    nVerb = embed::EmbedVerbs::MS_OLEVERB_OPEN; // outplace activation
+                else if ( nVerb == embed::EmbedVerbs::MS_OLEVERB_UIACTIVATE
+                       || nVerb == embed::EmbedVerbs::MS_OLEVERB_IPACTIVATE )
+                    nError = ERRCODE_SO_GENERALERROR;
+            }
 
-			if ( !nError )
-			{
+            if ( !nError )
+            {
 
-                if ( m_pViewSh )
-                    m_pViewSh->GetViewFrame()->GetTopFrame().LockResize_Impl(sal_True);
-        		try
-        		{
-        			m_pImp->m_xObject->setClientSite( m_pImp->m_xClient );
+                m_pViewSh->GetViewFrame()->GetTopFrame().LockResize_Impl(true);
+                try
+                {
+                    m_pImp->m_xObject->setClientSite( m_pImp->m_xClient );
 
-            		m_pImp->m_xObject->doVerb( nVerb );
-        		}
-				catch ( embed::UnreachableStateException& )
-				{
-					if ( nVerb == 0 || nVerb == embed::EmbedVerbs::MS_OLEVERB_OPEN )
-					{
-						// a workaround for the default verb, usually makes sence for alien objects
-						try
-						{
-							m_pImp->m_xObject->doVerb( -9 ); // open own view, a workaround verb that is not visible
+                    m_pImp->m_xObject->doVerb( nVerb );
+                }
+                catch ( embed::UnreachableStateException& )
+                {
+                    if ( nVerb == 0 || nVerb == embed::EmbedVerbs::MS_OLEVERB_OPEN )
+                    {
+                        // a workaround for the default verb, usually makes sense for alien objects
+                        try
+                        {
+                            m_pImp->m_xObject->doVerb( -9 ); // open own view, a workaround verb that is not visible
 
                             if ( m_pImp->m_xObject->getCurrentState() == embed::EmbedStates::UI_ACTIVE )
                             {
@@ -1037,32 +976,34 @@ ErrCode SfxInPlaceClient::DoVerb( long nVerb )
                                 m_pImp->m_aScaleWidth = Fraction( aScaledArea.GetWidth(), aNewSize.Width() );
                                 m_pImp->m_aScaleHeight = Fraction( aScaledArea.GetHeight(), aNewSize.Height() );
                             }
-						}
-						catch ( uno::Exception& )
-						{
-							nError = ERRCODE_SO_GENERALERROR;
-						}
-					}
-				}
-				catch ( embed::StateChangeInProgressException& )
-				{
-					// TODO/LATER: it would be nice to be able to provide the current target state outside
-					nError = ERRCODE_SO_CANNOT_DOVERB_NOW;
-				}
-        		catch ( uno::Exception& )
-        		{
-					nError = ERRCODE_SO_GENERALERROR;
-            		//TODO/LATER: better error handling
-        		}
-
-                if ( m_pViewSh )
-                {
-                    SfxViewFrame* pFrame = m_pViewSh->GetViewFrame();
-                    pFrame->GetTopFrame().LockResize_Impl(sal_False);
-                    pFrame->GetTopFrame().Resize();
+                        }
+                        catch (uno::Exception const& e)
+                        {
+                            SAL_WARN("embeddedobj", "SfxInPlaceClient::DoVerb:"
+                                " -9 fallback path: exception caught: "
+                                << e.Message);
+                            nError = ERRCODE_SO_GENERALERROR;
+                        }
+                    }
                 }
+                catch ( embed::StateChangeInProgressException& )
+                {
+                    // TODO/LATER: it would be nice to be able to provide the current target state outside
+                    nError = ERRCODE_SO_CANNOT_DOVERB_NOW;
+                }
+                catch (uno::Exception const& e)
+                {
+                    SAL_WARN("embeddedobj", "SfxInPlaceClient::DoVerb:"
+                            " exception caught: " << e.Message);
+                    nError = ERRCODE_SO_GENERALERROR;
+                    //TODO/LATER: better error handling
+                }
+
+                SfxViewFrame* pFrame = m_pViewSh->GetViewFrame();
+                pFrame->GetTopFrame().LockResize_Impl(false);
+                pFrame->GetTopFrame().Resize();
             }
-		}
+        }
     }
 
     if( nError )
@@ -1076,27 +1017,27 @@ void SfxInPlaceClient::VisAreaChanged()
     uno::Reference < embed::XInplaceObject > xObj( m_pImp->m_xObject, uno::UNO_QUERY );
     uno::Reference < embed::XInplaceClient > xClient( m_pImp->m_xClient, uno::UNO_QUERY );
     if ( xObj.is() && xClient.is() )
-		m_pImp->SizeHasChanged();
+        m_pImp->SizeHasChanged();
 }
 
 void SfxInPlaceClient::ObjectAreaChanged()
 {
-	// dummy implementation
+    // dummy implementation
 }
 
 void SfxInPlaceClient::RequestNewObjectArea( Rectangle& )
 {
-	// dummy implementation
+    // dummy implementation
 }
 
 void SfxInPlaceClient::ViewChanged()
 {
-	// dummy implementation
+    // dummy implementation
 }
 
 void SfxInPlaceClient::MakeVisible()
 {
-	// dummy implementation
+    // dummy implementation
 }
 
 void SfxInPlaceClient::FormatChanged()
@@ -1110,26 +1051,26 @@ void SfxInPlaceClient::DeactivateObject()
     {
         try
         {
-            m_pImp->m_bUIActive = sal_False;
-            sal_Bool bHasFocus = sal_False;
+            m_pImp->m_bUIActive = false;
+            bool bHasFocus = false;
             uno::Reference< frame::XModel > xModel( m_pImp->m_xObject->getComponent(), uno::UNO_QUERY );
             if ( xModel.is() )
             {
                 uno::Reference< frame::XController > xController = xModel->getCurrentController();
                 if ( xController.is() )
                 {
-                    Window* pWindow = VCLUnoHelper::GetWindow( xController->getFrame()->getContainerWindow() );
-                    bHasFocus = pWindow->HasChildPathFocus( sal_True );
+                    vcl::Window* pWindow = VCLUnoHelper::GetWindow( xController->getFrame()->getContainerWindow() );
+                    bHasFocus = pWindow->HasChildPathFocus( true );
                 }
             }
 
-            if ( m_pViewSh )
-                m_pViewSh->GetViewFrame()->GetTopFrame().LockResize_Impl(sal_True);
+            m_pViewSh->GetViewFrame()->GetTopFrame().LockResize_Impl(true);
 
-            if ( m_pImp->m_xObject->getStatus( m_pImp->m_nAspect ) & embed::EmbedMisc::MS_EMBED_ACTIVATEWHENVISIBLE )
+            if ( (m_pImp->m_xObject->getStatus( m_pImp->m_nAspect ) & embed::EmbedMisc::MS_EMBED_ACTIVATEWHENVISIBLE) ||
+                 svt::EmbeddedObjectRef::IsGLChart(m_pImp->m_xObject) )
             {
                 m_pImp->m_xObject->changeState( embed::EmbedStates::INPLACE_ACTIVE );
-                if ( bHasFocus && m_pViewSh )
+                if (bHasFocus)
                     m_pViewSh->GetWindow()->GrabFocus();
             }
             else
@@ -1142,13 +1083,10 @@ void SfxInPlaceClient::DeactivateObject()
                     m_pImp->m_xObject->changeState( embed::EmbedStates::RUNNING );
             }
 
-            if ( m_pViewSh )
-            {
-                SfxViewFrame* pFrame = m_pViewSh->GetViewFrame();
-                SfxViewFrame::SetViewFrame( pFrame );
-                pFrame->GetTopFrame().LockResize_Impl(sal_False);
-                pFrame->GetTopFrame().Resize();
-            }
+            SfxViewFrame* pFrame = m_pViewSh->GetViewFrame();
+            SfxViewFrame::SetViewFrame( pFrame );
+            pFrame->GetTopFrame().LockResize_Impl(false);
+            pFrame->GetTopFrame().Resize();
         }
         catch (com::sun::star::uno::Exception& )
         {}
@@ -1161,8 +1099,9 @@ void SfxInPlaceClient::ResetObject()
     {
         try
         {
-            m_pImp->m_bUIActive = sal_False;
-            if ( m_pImp->m_xObject->getStatus( m_pImp->m_nAspect ) & embed::EmbedMisc::MS_EMBED_ACTIVATEWHENVISIBLE )
+            m_pImp->m_bUIActive = false;
+            if ( (m_pImp->m_xObject->getStatus( m_pImp->m_nAspect ) & embed::EmbedMisc::MS_EMBED_ACTIVATEWHENVISIBLE) ||
+                svt::EmbeddedObjectRef::IsGLChart(m_pImp->m_xObject) )
                 m_pImp->m_xObject->changeState( embed::EmbedStates::INPLACE_ACTIVE );
             else
             {
@@ -1179,7 +1118,9 @@ void SfxInPlaceClient::ResetObject()
     }
 }
 
-sal_Bool SfxInPlaceClient::IsUIActive()
+bool SfxInPlaceClient::IsUIActive()
 {
     return m_pImp->m_bUIActive;
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

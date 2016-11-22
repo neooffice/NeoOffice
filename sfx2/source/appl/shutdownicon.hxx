@@ -1,61 +1,46 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
-
+ */
 
 #ifndef __SHUTDOWNICON_HXX__
 #define __SHUTDOWNICON_HXX__
 
 #include <com/sun/star/frame/XTerminateListener.hpp>
-#include <com/sun/star/frame/XDesktop.hpp>
-#include <com/sun/star/lang/XSingleServiceFactory.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/lang/XComponent.hpp>
+#include <com/sun/star/frame/XDesktop2.hpp>
 #include <com/sun/star/lang/XEventListener.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
-#include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/beans/XFastPropertySet.hpp>
-#ifndef _RTL_STRING_HXX
 #include <rtl/string.hxx>
-#endif
-#ifndef _RTL_USTRING_HXX
 #include <rtl/ustring.hxx>
-#endif
 #include <osl/mutex.hxx>
-#include <osl/module.hxx>
 #include <sfx2/sfxuno.hxx>
 #include <cppuhelper/compbase4.hxx>
 #include <sfx2/dllapi.h>
 #include <tools/link.hxx>
 
-struct AsyncDesktopTerminationData;
 class ResMgr;
 namespace sfx2
 {
@@ -63,9 +48,9 @@ namespace sfx2
 }
 
 typedef ::cppu::WeakComponentImplHelper4<
-	::com::sun::star::lang::XInitialization,
-	::com::sun::star::frame::XTerminateListener,
-	::com::sun::star::lang::XServiceInfo,
+    ::com::sun::star::lang::XInitialization,
+    ::com::sun::star::frame::XTerminateListener,
+    ::com::sun::star::lang::XServiceInfo,
     ::com::sun::star::beans::XFastPropertySet > ShutdownIconServiceBase;
 
 #if defined(USE_APP_SHORTCUTS)
@@ -79,7 +64,7 @@ typedef ::cppu::WeakComponentImplHelper4<
 #define STARTMODULE_URL ".uno:ShowStartModule"
 #endif
 
-class SFX2_DLLPUBLIC ShutdownIcon :	public ShutdownIconServiceBase
+class SFX2_DLLPUBLIC ShutdownIcon : public ShutdownIconServiceBase
 {
         ::osl::Mutex            m_aMutex;
         bool                    m_bVeto;
@@ -87,85 +72,80 @@ class SFX2_DLLPUBLIC ShutdownIcon :	public ShutdownIconServiceBase
         bool                    m_bSystemDialogs;
         ResMgr*                 m_pResMgr;
         sfx2::FileDialogHelper* m_pFileDlg;
-		::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory > m_xServiceManager;
+        ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext > m_xContext;
 
         static ShutdownIcon *pShutdownIcon; // one instance
 
-		oslGenericFunction m_pInitSystray;
-		oslGenericFunction m_pDeInitSystray;
-		::osl::Module  *m_pPlugin;
+        bool m_bInitialized;
+        void initSystray();
+        void deInitSystray();
 
-		bool m_bInitialized;
-		void initSystray();
-		void deInitSystray();
+        static void EnterModalMode();
+        static void LeaveModalMode();
+        static OUString getShortcutName();
 
-		static bool LoadModule( osl::Module **pModule,
-								oslGenericFunction *pInit,
-								oslGenericFunction *pDeInit );
-		static void EnterModalMode();
-		static void LeaveModalMode();
-		static rtl::OUString getShortcutName();
+        friend class SfxNotificationListener_Impl;
 
-		friend class SfxNotificationListener_Impl;
+    public:
+        ShutdownIcon( const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext > & rxContext );
 
-	public:
-		ShutdownIcon( ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory > aSMgr );
+        virtual ~ShutdownIcon();
 
-		virtual ~ShutdownIcon();
+        virtual OUString SAL_CALL getImplementationName()
+            throw (css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
-        DECL_STATIC_LINK( ShutdownIcon, AsyncDesktopTermination, AsyncDesktopTerminationData* );
+        virtual sal_Bool SAL_CALL supportsService(OUString const & ServiceName)
+            throw (css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
-        SFX_DECL_XSERVICEINFO
+        virtual css::uno::Sequence<OUString> SAL_CALL getSupportedServiceNames()
+            throw (css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
-		static ShutdownIcon* getInstance();
-		static ShutdownIcon* createInstance();
+        static ShutdownIcon* getInstance();
+        static ShutdownIcon* createInstance();
 
         static void terminateDesktop();
-		static void addTerminateListener();
+        static void addTerminateListener();
 
         static void FileOpen();
-        static void OpenURL( const ::rtl::OUString& aURL, const ::rtl::OUString& rTarget, const ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& =
-			::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >( 0 ) );
+        static void OpenURL( const OUString& aURL, const OUString& rTarget, const ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& =
+            ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >( 0 ) );
         static void FromTemplate();
 
         static void SetAutostart( bool bActivate );
         static bool GetAutostart();
-		static bool bModalMode;
+        static bool bModalMode;
 
-		void init() throw( ::com::sun::star::uno::Exception );
+        void init() throw( ::com::sun::star::uno::Exception );
 
-		static ::com::sun::star::uno::Reference< ::com::sun::star::lang::XSingleServiceFactory >
-					GetWrapperFactory( ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory > & xSMgr );
-		static ::rtl::OUString  GetImplementationName_static();
-
-        ::rtl::OUString GetResString( int id );
-        ::rtl::OUString GetUrlDescription( const ::rtl::OUString& aUrl );
+        OUString GetResString( int id );
+        OUString GetUrlDescription( const OUString& aUrl );
 
         void SetVeto( bool bVeto )  { m_bVeto = bVeto;}
         bool GetVeto()              { return m_bVeto; }
 
         void                    StartFileDialog();
         sfx2::FileDialogHelper* GetFileDialog() const { return m_pFileDlg; }
-        static long DialogClosedHdl_Impl( ShutdownIcon*, sfx2::FileDialogHelper* );
+        DECL_STATIC_LINK(
+            ShutdownIcon, DialogClosedHdl_Impl, sfx2::FileDialogHelper*);
 
         static bool IsQuickstarterInstalled();
 
-		// Component Helper - force override
-		virtual void SAL_CALL disposing();
+        // Component Helper - force override
+        virtual void SAL_CALL disposing() SAL_OVERRIDE;
 
-		// XEventListener
-		virtual void SAL_CALL disposing( const ::com::sun::star::lang::EventObject& Source )
-			throw(::com::sun::star::uno::RuntimeException);
+        // XEventListener
+        virtual void SAL_CALL disposing( const ::com::sun::star::lang::EventObject& Source )
+            throw(::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
-		// XTerminateListener
-		virtual void SAL_CALL queryTermination( const ::com::sun::star::lang::EventObject& aEvent )
-			throw(::com::sun::star::frame::TerminationVetoException, ::com::sun::star::uno::RuntimeException);
-		virtual void SAL_CALL notifyTermination( const ::com::sun::star::lang::EventObject& aEvent )
-			throw(::com::sun::star::uno::RuntimeException);
+        // XTerminateListener
+        virtual void SAL_CALL queryTermination( const ::com::sun::star::lang::EventObject& aEvent )
+            throw(::com::sun::star::frame::TerminationVetoException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+        virtual void SAL_CALL notifyTermination( const ::com::sun::star::lang::EventObject& aEvent )
+            throw(::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
-		// XInitialization
-		virtual void SAL_CALL initialize( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& aArguments )
-			throw( ::com::sun::star::uno::Exception );
+        // XInitialization
+        virtual void SAL_CALL initialize( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& aArguments )
+            throw( ::com::sun::star::uno::Exception, std::exception ) SAL_OVERRIDE;
 
         // XFastPropertySet
         virtual void SAL_CALL setFastPropertyValue(       ::sal_Int32                  nHandle,
@@ -174,30 +154,26 @@ class SFX2_DLLPUBLIC ShutdownIcon :	public ShutdownIconServiceBase
                     ::com::sun::star::beans::PropertyVetoException,
                     ::com::sun::star::lang::IllegalArgumentException,
                     ::com::sun::star::lang::WrappedTargetException,
-                    ::com::sun::star::uno::RuntimeException);
+                    ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
         virtual ::com::sun::star::uno::Any SAL_CALL getFastPropertyValue( ::sal_Int32 nHandle )
             throw (::com::sun::star::beans::UnknownPropertyException,
                     ::com::sun::star::lang::WrappedTargetException,
-                    ::com::sun::star::uno::RuntimeException);
+                    ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
-		::com::sun::star::uno::Reference< ::com::sun::star::frame::XDesktop > m_xDesktop;
+        ::com::sun::star::uno::Reference< ::com::sun::star::frame::XDesktop2 > m_xDesktop;
 
 #ifdef WNT
-		static void EnableAutostartW32( const rtl::OUString &aShortcutName );
-		static rtl::OUString GetAutostartFolderNameW32();
-#endif
-#ifdef OS2
-	        static void SetAutostartOs2( bool bActivate );
-	        static bool GetAutostartOs2( );
+        static void EnableAutostartW32( const OUString &aShortcutName );
+        static OUString GetAutostartFolderNameW32();
 #endif
 };
 
 extern "C" {
 #  ifdef WNT
-	// builtin win32 systray
-	void win32_init_sys_tray();
-	void win32_shutdown_sys_tray();
-#  elif defined QUARTZ
+    // builtin win32 systray
+    void win32_init_sys_tray();
+    void win32_shutdown_sys_tray();
+#  elif defined MACOSX
 #ifdef USE_JAVA
     void java_init_systray();
     void java_shutdown_systray();
@@ -206,9 +182,11 @@ extern "C" {
     void aqua_shutdown_systray();
 #endif	// USE_JAVA
 #  endif
-	// external plugin systray impl.
-	void plugin_init_sys_tray();
-	void plugin_shutdown_sys_tray();
+    // external plugin systray impl.
+    void plugin_init_sys_tray();
+    void plugin_shutdown_sys_tray();
 }
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

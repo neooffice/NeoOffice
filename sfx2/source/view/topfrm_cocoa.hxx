@@ -33,10 +33,10 @@
  *
  ************************************************************************/
  
-#ifndef __TOPFRM_COCOA_H__
-#define __TOPFRM_COCOA_H__
+#ifndef __TOPFRM_COCOA_HXX__
+#define __TOPFRM_COCOA_HXX__
 
-#if defined __cplusplus && !defined __OBJC__
+#ifndef __OBJC__
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
@@ -48,18 +48,15 @@ class SfxViewFrame;
 // Comment out the following line to disable native versions support
 #define USE_NATIVE_VERSIONS
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-SAL_DLLPUBLIC_EXPORT ::rtl::OUString NSDocument_revertToSavedLocalizedString( Window *pWindow );
-SAL_DLLPUBLIC_EXPORT ::rtl::OUString NSDocument_saveAVersionLocalizedString( Window *pWindow );
-sal_Bool NSDocument_isValidMoveToPath( ::rtl::OUString aPath );
+SAL_DLLPUBLIC_EXPORT OUString NSDocument_revertToSavedLocalizedString( vcl::Window *pWindow );
+SAL_DLLPUBLIC_EXPORT OUString NSDocument_saveAVersionLocalizedString( vcl::Window *pWindow );
+sal_Bool NSDocument_isValidMoveToPath( OUString aPath );
 sal_Bool NSDocument_versionsEnabled();
 sal_Bool NSDocument_versionsSupported();
 void SFXDocument_createDocument( SfxViewFrame *pFrame, NSView *pView, CFURLRef aURL, sal_Bool bReadOnly );
 void SFXDocument_documentHasBeenDeleted( SfxViewFrame *pFrame );
 void SFXDocument_documentHasBeenModified( SfxViewFrame *pFrame );
-void SFXDocument_documentHasMoved( SfxViewFrame *pFrame, ::rtl::OUString aNewURL );
+void SFXDocument_documentHasMoved( SfxViewFrame *pFrame, OUString aNewURL );
 sal_Bool SFXDocument_documentIsReliquished( SfxViewFrame *pFrame );
 void SFXDocument_duplicate( SfxViewFrame *pFrame, sal_Bool bWaitForRevertCall, sal_Bool bSetModified );
 sal_Bool SFXDocument_hasDocument( SfxViewFrame *pFrame );
@@ -69,8 +66,5 @@ void SFXDocument_reload( SfxViewFrame *pFrame, sal_Bool bSilent );
 void SFXDocument_revertDocumentToSaved( SfxViewFrame *pFrame );
 void SFXDocument_saveVersionOfDocument( SfxViewFrame *pFrame );
 sal_Bool SFXDocument_setDocumentModified( SfxViewFrame *pFrame, sal_Bool bModified );
-#ifdef __cplusplus
-}
-#endif
 
 #endif

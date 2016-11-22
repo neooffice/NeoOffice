@@ -43,28 +43,23 @@
 #include <sfx2/viewfrm.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/syswin.hxx>
-#include <vos/mutex.hxx>
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 #import <objc/objc-runtime.h>
 #include <postmac.h>
-#import "topfrm_cocoa.h"
+#import "topfrm_cocoa.hxx"
 
 #define PDF_BUF_SIZE ( 128 * 1024 )
 
-typedef sal_Bool osl_setLockedFilesLock_Type( const char *pOrigPath, sal_Bool bLock );
 typedef void Application_cacheSecurityScopedURL_Type( id pURL );
 
 static Application_cacheSecurityScopedURL_Type *pApplication_cacheSecurityScopedURL = NULL;
 static NSString *pNoTranslationValue = @" ";
 
 using namespace com::sun::star;
-using namespace rtl;
-using namespace osl;
-using namespace vos;
 
-static BOOL HasNativeVersion( Window *pWindow )
+static BOOL HasNativeVersion( vcl::Window *pWindow )
 {
 	SfxViewFrame *pFrame = SfxViewFrame::GetFirst();
 	while ( pFrame )
@@ -270,7 +265,7 @@ static SFXDocument *GetDocumentForFrame( SfxViewFrame *pFrame )
 {
 	SFXDocument *pRet = nil;
 
-	MutexGuard aGuard( aFrameDictMutex );
+	osl::MutexGuard aGuard( aFrameDictMutex );
 
 	if ( pFrame && pFrameDict )
 	{
@@ -287,7 +282,7 @@ static void SetDocumentForFrame( SfxViewFrame *pFrame, SFXDocument *pDoc )
 	if ( !pFrame )
 		return;
 
-	MutexGuard aGuard( aFrameDictMutex );
+	osl::MutexGuard aGuard( aFrameDictMutex );
 
 	if ( !pFrameDict )
 	{
@@ -465,7 +460,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 {
 	if ( NSDocument_versionsSupported() && !Application::IsShutDown() )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
@@ -548,7 +543,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 			if ( ![self isRelinquished] )
 			{
-				IMutex& rSolarMutex = Application::GetSolarMutex();
+				comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 				rSolarMutex.acquire();
 				if ( !Application::IsShutDown() )
 				{
@@ -597,7 +592,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	id pFileID = nil;
 	NSURL *pURL = [self fileURL];
 
-	IMutex& rSolarMutex = Application::GetSolarMutex();
+	comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 	rSolarMutex.acquire();
 
 	if ( !Application::IsShutDown() )
@@ -609,7 +604,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 			while ( pObjSh && !pObjSh->IsLoadingFinished() )
 			{
 				sal_uLong nCount = Application::ReleaseSolarMutex();
-				OThread::yield();
+				osl::Thread::yield();
 				Application::AcquireSolarMutex( nCount );
 
 				pDoc = GetDocumentForFrame( mpFrame );
@@ -656,7 +651,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	rSolarMutex.release();
 
 	aReacquirer(^{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 
 		sal_Bool bRelocked = !bWriter;
@@ -693,7 +688,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 				while ( pNewObjSh && !pNewObjSh->IsLoadingFinished() )
 				{
 					sal_uLong nCount = Application::ReleaseSolarMutex();
-					OThread::yield();
+					osl::Thread::yield();
 					Application::AcquireSolarMutex( nCount );
 
 					pNewDoc = GetDocumentForFrame( mpFrame );
@@ -779,7 +774,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 		}
 		else
 		{
-			IMutex& rSolarMutex = Application::GetSolarMutex();
+			comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 			rSolarMutex.acquire();
 			if ( !Application::IsShutDown() )
 			{
@@ -878,7 +873,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 	if ( !mbInSetDocumentModified && nChangeType == NSChangeDone && !bIsEdited && [self isDocumentEdited] )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
@@ -998,10 +993,10 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 				uno::Reference< embed::XStorage > xStorage( aMedium.GetStorage() );
 				if ( xStorage.is() )
 				{
-					uno::Reference< embed::XStorage > xThumbnails = xStorage->openStorageElement( OUString( RTL_CONSTASCII_USTRINGPARAM( "Thumbnails" ) ), embed::ElementModes::READ );
+					uno::Reference< embed::XStorage > xThumbnails = xStorage->openStorageElement( "Thumbnails", embed::ElementModes::READ );
 					if ( xThumbnails.is() )
 					{
-						uno::Reference< io::XStream > xPDFStream = xThumbnails->openStreamElement( OUString( RTL_CONSTASCII_USTRINGPARAM( "thumbnail.pdf" ) ), embed::ElementModes::READ );
+						uno::Reference< io::XStream > xPDFStream = xThumbnails->openStreamElement( "thumbnail.pdf", embed::ElementModes::READ );
 						if ( xPDFStream.is() )
 						{
 							uno::Reference< io::XInputStream > xPDFInputStream = xPDFStream->getInputStream();
@@ -1387,10 +1382,10 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 @end
 
-OUString NSDocument_revertToSavedLocalizedString( Window *pWindow )
+OUString NSDocument_revertToSavedLocalizedString( vcl::Window *pWindow )
 {
 	if ( !pWindow || !NSDocument_versionsEnabled() || !HasNativeVersion( pWindow ) )
-		return OUString();
+		return "";
 
 	if ( !aRevertToSavedLocalizedString.getLength() )
 	{
@@ -1413,10 +1408,10 @@ OUString NSDocument_revertToSavedLocalizedString( Window *pWindow )
 	return aRevertToSavedLocalizedString;
 }
 
-OUString NSDocument_saveAVersionLocalizedString( Window *pWindow )
+OUString NSDocument_saveAVersionLocalizedString( vcl::Window *pWindow )
 {
 	if ( !pWindow || !NSDocument_versionsEnabled() || !HasNativeVersion( pWindow ) )
-		return OUString();
+		return "";
 
 	if ( !aSaveAVersionLocalizedString.getLength() )
 	{
@@ -1448,7 +1443,7 @@ OUString NSDocument_saveAVersionLocalizedString( Window *pWindow )
 	return aSaveAVersionLocalizedString;
 }
 
-sal_Bool NSDocument_isValidMoveToPath( ::rtl::OUString aPath )
+sal_Bool NSDocument_isValidMoveToPath( OUString aPath )
 {
 	if ( !aPath.getLength() )
 		return sal_False;

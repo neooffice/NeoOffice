@@ -55,21 +55,21 @@ typedef sal_Bool Application_canSave_Type();
 static Application_canSave_Type *pApplication_canSave = NULL;
 static ResMgr *pUpdResMgr = NULL;
 
-static XubString GetUpdResString( int nId )
+static OUString GetUpdResString( int nId )
 {
 	if ( !pUpdResMgr )
 	{
-		pUpdResMgr = SfxApplication::CreateResManager( "upd" );
+		pUpdResMgr = ResMgr::CreateResMgr( "upd" );
 		if ( !pUpdResMgr )
-			return XubString();
+			return "";
 	}
 
 	ResId aResId( nId, *pUpdResMgr );
 	aResId.SetRT( RSC_STRING );
 	if ( !pUpdResMgr->IsAvailable( aResId ) )
-		return XubString();
+		return "";
  
-	return XubString( ResId( nId, *pUpdResMgr ) );
+	return OUString( ResId( nId, *pUpdResMgr ) );
 }
 
 static NSAlert *pSaveDisabledAlert = nil;
@@ -169,7 +169,7 @@ static NSAlert *pSaveDisabledAlert = nil;
 					}
 				}
 
-				if ( [pSaveDisabledAlert runModal] == NSAlertDefaultReturn )
+				if ( [pSaveDisabledAlert runModal] == NSAlertFirstButtonReturn )
 				{
 					// The OS X sandbox will sometimes fail to open URLs when
 					// the default browser is not Safari and the browser is not
@@ -209,21 +209,21 @@ sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, sal_uInt16 nID )
 
 			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-			XubString aDesc = SfxResId( STR_SAVEDISABLEDCANNOTSAVE );
-			aDesc.EraseAllChars( '~' );
-			NSString *pMessageText = [NSString stringWithCharacters:aDesc.GetBuffer() length:aDesc.Len()];
+			OUString aDesc = SfxResId( STR_SAVEDISABLEDCANNOTSAVE );
+			aDesc = aDesc.replaceAll( "~", "" );
+			NSString *pMessageText = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
 
 			aDesc = SfxResId( STR_SAVEDISABLEDDOWNLOADPRODUCTTOSAVE );
-			aDesc.EraseAllChars( '~' );
-			NSString *pInformativeText = [NSString stringWithCharacters:aDesc.GetBuffer() length:aDesc.Len()];
+			aDesc = aDesc.replaceAll( "~", "" );
+			NSString *pInformativeText = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
 
 			aDesc = GetUpdResString( RID_UPDATE_BTN_DOWNLOAD );
-			aDesc.EraseAllChars( '~' );
-			NSString *pDefaultButton = [NSString stringWithCharacters:aDesc.GetBuffer() length:aDesc.Len()];
+			aDesc = aDesc.replaceAll( "~", "" );
+			NSString *pDefaultButton = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
 
 			aDesc = GetUpdResString( RID_UPDATE_BTN_CANCEL );
-			aDesc.EraseAllChars( '~' );
-			NSString *pAlternateButton = [NSString stringWithCharacters:aDesc.GetBuffer() length:aDesc.Len()];
+			aDesc = aDesc.replaceAll( "~", "" );
+			NSString *pAlternateButton = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
 
 			ShowSaveDisabledDialog *pShowSaveDisabledDialog = [ShowSaveDisabledDialog createWithMessageText:pMessageText defaultButton:pDefaultButton alternateButton:pAlternateButton informativeText:pInformativeText];
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];

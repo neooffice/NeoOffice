@@ -1,73 +1,71 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
 
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_sfx2.hxx"
-
-#include "frmload.hxx"
+#include <sal/macros.h>
 #include "objshimp.hxx"
-#include "sfx2/app.hxx"
-#include "sfx2/dispatch.hxx"
-#include "sfx2/docfac.hxx"
-#include "sfx2/docfile.hxx"
-#include "sfx2/docfilt.hxx"
-#include "sfx2/doctempl.hxx"
-#include "sfx2/fcontnr.hxx"
-#include "sfx2/frame.hxx"
-#include "sfx2/request.hxx"
-#include "sfx2/sfx.hrc"
-#include "sfx2/sfxsids.hrc"
-#include "sfx2/sfxuno.hxx"
-#include "sfx2/viewfrm.hxx"
-#include "sfx2/viewsh.hxx"
-#include "sfx2/viewfac.hxx"
+#include <sfx2/app.hxx>
+#include <sfx2/dispatch.hxx>
+#include <sfx2/docfac.hxx>
+#include <sfx2/docfile.hxx>
+#include <sfx2/docfilt.hxx>
+#include <sfx2/doctempl.hxx>
+#include <sfx2/fcontnr.hxx>
+#include <sfx2/frame.hxx>
+#include <sfx2/objsh.hxx>
+#include <sfx2/request.hxx>
+#include <sfx2/sfx.hrc>
+#include <sfx2/sfxsids.hrc>
+#include <sfx2/sfxuno.hxx>
+#include <sfx2/viewfrm.hxx>
+#include <sfx2/viewsh.hxx>
+#include <sfx2/viewfac.hxx>
 
-/** === begin UNO includes === **/
 #include <com/sun/star/container/XContainerQuery.hpp>
 #include <com/sun/star/document/XTypeDetection.hpp>
 #include <com/sun/star/frame/XFrame.hpp>
 #include <com/sun/star/frame/XLoadable.hpp>
 #include <com/sun/star/frame/XModel.hpp>
+#include <com/sun/star/task/XInteractionHandler.hpp>
 #include <com/sun/star/task/XInteractionHandler2.hpp>
 #include <com/sun/star/document/XViewDataSupplier.hpp>
 #include <com/sun/star/container/XIndexAccess.hpp>
-/** === end UNO includes === **/
+#include <com/sun/star/frame/XSynchronousFrameLoader.hpp>
+#include <com/sun/star/frame/XController2.hpp>
+#include <com/sun/star/frame/XModel2.hpp>
+#include <com/sun/star/lang/XServiceInfo.hpp>
+#include <com/sun/star/lang/XInitialization.hpp>
 
 #include <comphelper/interaction.hxx>
 #include <comphelper/namedvaluecollection.hxx>
-#include <comphelper/sequenceashashmap.hxx>
 #include <cppuhelper/exc_hlp.hxx>
+#include <cppuhelper/implbase2.hxx>
+#include <cppuhelper/supportsservice.hxx>
 #include <framework/interaction.hxx>
-#include <rtl/logfile.hxx>
+#include <rtl/ref.hxx>
 #include <rtl/ustring.h>
 #include <sot/storinfo.hxx>
 #include <svtools/ehdl.hxx>
@@ -79,13 +77,13 @@
 #include <toolkit/helper/vclunohelper.hxx>
 #include <tools/diagnose_ex.h>
 #include <ucbhelper/simpleinteractionrequest.hxx>
-#include <vos/mutex.hxx>
+#include <osl/mutex.hxx>
 
 #ifdef USE_JAVA
 #include "frmload_cocoa.h"
 #endif	// USE_JAVA
 
-/** === begin UNO using === **/
+using namespace com::sun::star;
 using ::com::sun::star::beans::PropertyValue;
 using ::com::sun::star::container::XContainerQuery;
 using ::com::sun::star::container::XEnumeration;
@@ -113,10 +111,102 @@ using ::com::sun::star::container::XIndexAccess;
 using ::com::sun::star::frame::XController2;
 using ::com::sun::star::frame::XController;
 using ::com::sun::star::frame::XModel2;
-/** === end UNO using === **/
 
-SfxFrameLoader_Impl::SfxFrameLoader_Impl( const Reference< XMultiServiceFactory >& _rxFactory )
-    :m_aContext( _rxFactory )
+namespace {
+
+class SfxFrameLoader_Impl : public ::cppu::WeakImplHelper2< css::frame::XSynchronousFrameLoader, css::lang::XServiceInfo >
+{
+    css::uno::Reference < css::uno::XComponentContext >  m_aContext;
+
+public:
+    SfxFrameLoader_Impl( const css::uno::Reference < css::uno::XComponentContext >& _rxContext );
+
+    virtual OUString SAL_CALL getImplementationName()
+        throw (css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+
+    virtual sal_Bool SAL_CALL supportsService(OUString const & ServiceName)
+        throw (css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+
+    virtual css::uno::Sequence<OUString> SAL_CALL getSupportedServiceNames()
+        throw (css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+
+
+    // XSynchronousFrameLoader
+
+    virtual sal_Bool SAL_CALL load( const css::uno::Sequence< css::beans::PropertyValue >& _rArgs, const css::uno::Reference< css::frame::XFrame >& _rxFrame ) throw( css::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL cancel() throw( css::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+
+protected:
+    virtual                 ~SfxFrameLoader_Impl();
+
+private:
+    const SfxFilter*    impl_getFilterFromServiceName_nothrow(
+                            const OUString& i_rServiceName
+                        ) const;
+
+    OUString     impl_askForFilter_nothrow(
+                            const css::uno::Reference< css::task::XInteractionHandler >& i_rxHandler,
+                            const OUString& i_rDocumentURL
+                        ) const;
+
+    const SfxFilter*    impl_detectFilterForURL(
+                            const OUString& _rURL,
+                            const ::comphelper::NamedValueCollection& i_rDescriptor,
+                            const SfxFilterMatcher& rMatcher
+                        ) const;
+
+    bool            impl_createNewDocWithSlotParam(
+                            const sal_uInt16 _nSlotID,
+                            const css::uno::Reference< css::frame::XFrame >& i_rxFrame,
+                            const bool i_bHidden
+                        );
+
+    void                impl_determineFilter(
+                                  ::comphelper::NamedValueCollection& io_rDescriptor
+                        ) const;
+
+    bool                impl_determineTemplateDocument(
+                            ::comphelper::NamedValueCollection& io_rDescriptor
+                        ) const;
+
+    sal_uInt16              impl_findSlotParam(
+                            const OUString& i_rFactoryURL
+                        ) const;
+
+    SfxObjectShellRef   impl_findObjectShell(
+                            const css::uno::Reference< css::frame::XModel2 >& i_rxDocument
+                        ) const;
+
+    void                impl_handleCaughtError_nothrow(
+                            const css::uno::Any& i_rCaughtError,
+                            const ::comphelper::NamedValueCollection& i_rDescriptor
+                        ) const;
+
+    void                impl_removeLoaderArguments(
+                            ::comphelper::NamedValueCollection& io_rDescriptor
+                        );
+
+    sal_Int16           impl_determineEffectiveViewId_nothrow(
+                            const SfxObjectShell& i_rDocument,
+                            const ::comphelper::NamedValueCollection& i_rDescriptor
+                        );
+
+    ::comphelper::NamedValueCollection
+                        impl_extractViewCreationArgs(
+                                  ::comphelper::NamedValueCollection& io_rDescriptor
+                        );
+
+    css::uno::Reference< css::frame::XController2 >
+                        impl_createDocumentView(
+                            const css::uno::Reference< css::frame::XModel2 >& i_rModel,
+                            const css::uno::Reference< css::frame::XFrame >& i_rFrame,
+                            const ::comphelper::NamedValueCollection& i_rViewFactoryArgs,
+                            const OUString& i_rViewName
+                        );
+};
+
+SfxFrameLoader_Impl::SfxFrameLoader_Impl( const Reference< css::uno::XComponentContext >& _rxContext )
+    :m_aContext( _rxContext )
 {
 }
 
@@ -124,18 +214,18 @@ SfxFrameLoader_Impl::~SfxFrameLoader_Impl()
 {
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-const SfxFilter* SfxFrameLoader_Impl::impl_detectFilterForURL( const ::rtl::OUString& sURL,
+
+const SfxFilter* SfxFrameLoader_Impl::impl_detectFilterForURL( const OUString& sURL,
         const ::comphelper::NamedValueCollection& i_rDescriptor, const SfxFilterMatcher& rMatcher ) const
 {
-    ::rtl::OUString sFilter;
+    OUString sFilter;
     try
     {
-        if ( !sURL.getLength() )
+        if ( sURL.isEmpty() )
             return 0;
 
         Reference< XTypeDetection > xDetect(
-            m_aContext.createComponent( "com.sun.star.document.TypeDetection" ),
+            m_aContext->getServiceManager()->createInstanceWithContext("com.sun.star.document.TypeDetection", m_aContext),
             UNO_QUERY_THROW);
 
         ::comphelper::NamedValueCollection aNewArgs;
@@ -147,8 +237,8 @@ const SfxFilter* SfxFrameLoader_Impl::impl_detectFilterForURL( const ::rtl::OUSt
             aNewArgs.put( "StatusIndicator", i_rDescriptor.get( "StatusIndicator" ) );
 
         Sequence< PropertyValue > aQueryArgs( aNewArgs.getPropertyValues() );
-        ::rtl::OUString sType = xDetect->queryTypeByDescriptor( aQueryArgs, sal_True );
-        if ( sType.getLength() )
+        OUString sType = xDetect->queryTypeByDescriptor( aQueryArgs, sal_True );
+        if ( !sType.isEmpty() )
         {
             const SfxFilter* pFilter = rMatcher.GetFilter4EA( sType );
             if ( pFilter )
@@ -162,17 +252,17 @@ const SfxFilter* SfxFrameLoader_Impl::impl_detectFilterForURL( const ::rtl::OUSt
     catch( const Exception& )
     {
         DBG_UNHANDLED_EXCEPTION();
-        sFilter = ::rtl::OUString();
+        sFilter.clear();
     }
 
     const SfxFilter* pFilter = 0;
-    if (sFilter.getLength())
+    if (!sFilter.isEmpty())
         pFilter = rMatcher.GetFilter4FilterName(sFilter);
     return pFilter;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-const SfxFilter* SfxFrameLoader_Impl::impl_getFilterFromServiceName_nothrow( const ::rtl::OUString& i_rServiceName ) const
+
+const SfxFilter* SfxFrameLoader_Impl::impl_getFilterFromServiceName_nothrow( const OUString& i_rServiceName ) const
 {
     try
     {
@@ -180,10 +270,10 @@ const SfxFilter* SfxFrameLoader_Impl::impl_getFilterFromServiceName_nothrow( con
         aQuery.put( "DocumentService", i_rServiceName );
 
         const Reference< XContainerQuery > xQuery(
-            m_aContext.createComponent( "com.sun.star.document.FilterFactory" ),
+            m_aContext->getServiceManager()->createInstanceWithContext("com.sun.star.document.FilterFactory", m_aContext),
             UNO_QUERY_THROW );
 
-        const SfxFilterMatcher& rMatcher = SFX_APP()->GetFilterMatcher();
+        const SfxFilterMatcher& rMatcher = SfxGetpApp()->GetFilterMatcher();
         const SfxFilterFlags nMust = SFX_FILTER_IMPORT;
         const SfxFilterFlags nDont = SFX_FILTER_NOTINSTALLED;
 
@@ -192,8 +282,8 @@ const SfxFilter* SfxFrameLoader_Impl::impl_getFilterFromServiceName_nothrow( con
         while ( xEnum->hasMoreElements() )
         {
             ::comphelper::NamedValueCollection aType( xEnum->nextElement() );
-            ::rtl::OUString sFilterName = aType.getOrDefault( "Name", ::rtl::OUString() );
-            if ( !sFilterName.getLength() )
+            OUString sFilterName = aType.getOrDefault( "Name", OUString() );
+            if ( sFilterName.isEmpty() )
                 continue;
 
             const SfxFilter* pFilter = rMatcher.GetFilter4FilterName( sFilterName );
@@ -211,18 +301,18 @@ const SfxFilter* SfxFrameLoader_Impl::impl_getFilterFromServiceName_nothrow( con
     }
     catch( const Exception& )
     {
-    	DBG_UNHANDLED_EXCEPTION();
+        DBG_UNHANDLED_EXCEPTION();
     }
     return NULL;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-::rtl::OUString SfxFrameLoader_Impl::impl_askForFilter_nothrow( const Reference< XInteractionHandler >& i_rxHandler,
-                                                                 const ::rtl::OUString& i_rDocumentURL ) const
+
+OUString SfxFrameLoader_Impl::impl_askForFilter_nothrow( const Reference< XInteractionHandler >& i_rxHandler,
+                                                                 const OUString& i_rDocumentURL ) const
 {
     ENSURE_OR_THROW( i_rxHandler.is(), "invalid interaction handler" );
 
-    ::rtl::OUString sFilterName;
+    OUString sFilterName;
     try
     {
         ::framework::RequestFilterSelect aRequest( i_rDocumentURL );
@@ -232,27 +322,27 @@ const SfxFilter* SfxFrameLoader_Impl::impl_getFilterFromServiceName_nothrow( con
     }
     catch( const Exception& )
     {
-    	DBG_UNHANDLED_EXCEPTION();
+        DBG_UNHANDLED_EXCEPTION();
     }
 
     return sFilterName;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+
 namespace
 {
-    sal_Bool lcl_getDispatchResult( const SfxPoolItem* _pResult )
+    bool lcl_getDispatchResult( const SfxPoolItem* _pResult )
     {
         if ( !_pResult )
-            return sal_False;
+            return false;
 
         // default must be set to true, because some return values
-        // cant be checked, but nonetheless indicate "success"!
-	    sal_Bool bSuccess = sal_True;
+        // can't be checked, but nonetheless indicate "success"!
+        bool bSuccess = true;
 
-	    // On the other side some special slots return a boolean state,
+        // On the other side some special slots return a boolean state,
         // which can be set to FALSE.
-        SfxBoolItem *pItem = PTR_CAST( SfxBoolItem, _pResult );
+        const SfxBoolItem *pItem = PTR_CAST( SfxBoolItem, _pResult );
         if ( pItem )
             bSuccess = pItem->GetValue();
 
@@ -260,146 +350,152 @@ namespace
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-sal_Bool SfxFrameLoader_Impl::impl_createNewDocWithSlotParam( const sal_uInt16 _nSlotID, const Reference< XFrame >& i_rxFrame,
+
+bool SfxFrameLoader_Impl::impl_createNewDocWithSlotParam( const sal_uInt16 _nSlotID, const Reference< XFrame >& i_rxFrame,
                                                               const bool i_bHidden )
 {
-    SfxRequest aRequest( _nSlotID, SFX_CALLMODE_SYNCHRON, SFX_APP()->GetPool() );
+    SfxRequest aRequest( _nSlotID, SfxCallMode::SYNCHRON, SfxGetpApp()->GetPool() );
     aRequest.AppendItem( SfxUnoFrameItem( SID_FILLFRAME, i_rxFrame ) );
     if ( i_bHidden )
-        aRequest.AppendItem( SfxBoolItem( SID_HIDDEN, sal_True ) );
-    return lcl_getDispatchResult( SFX_APP()->ExecuteSlot( aRequest ) );
+        aRequest.AppendItem( SfxBoolItem( SID_HIDDEN, true ) );
+    return lcl_getDispatchResult( SfxGetpApp()->ExecuteSlot( aRequest ) );
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+
 void SfxFrameLoader_Impl::impl_determineFilter( ::comphelper::NamedValueCollection& io_rDescriptor ) const
 {
-    const ::rtl::OUString     sURL         = io_rDescriptor.getOrDefault( "URL",                ::rtl::OUString() );
-    const ::rtl::OUString     sTypeName    = io_rDescriptor.getOrDefault( "TypeName",           ::rtl::OUString() );
-    const ::rtl::OUString     sFilterName  = io_rDescriptor.getOrDefault( "FilterName",         ::rtl::OUString() );
-    const ::rtl::OUString     sServiceName = io_rDescriptor.getOrDefault( "DocumentService",    ::rtl::OUString() );
+    const OUString     sURL         = io_rDescriptor.getOrDefault( "URL",                OUString() );
+    const OUString     sTypeName    = io_rDescriptor.getOrDefault( "TypeName",           OUString() );
+    const OUString     sFilterName  = io_rDescriptor.getOrDefault( "FilterName",         OUString() );
+    const OUString     sServiceName = io_rDescriptor.getOrDefault( "DocumentService",    OUString() );
     const Reference< XInteractionHandler >
                               xInteraction = io_rDescriptor.getOrDefault( "InteractionHandler", Reference< XInteractionHandler >() );
 
-    const SfxFilterMatcher& rMatcher = SFX_APP()->GetFilterMatcher();
+    const SfxFilterMatcher& rMatcher = SfxGetpApp()->GetFilterMatcher();
     const SfxFilter* pFilter = NULL;
 
     // get filter by its name directly ...
-    if ( sFilterName.getLength() )
+    if ( !sFilterName.isEmpty() )
         pFilter = rMatcher.GetFilter4FilterName( sFilterName );
 
     // or search the preferred filter for the detected type ...
-    if ( !pFilter && sTypeName.getLength() )
+    if ( !pFilter && !sTypeName.isEmpty() )
         pFilter = rMatcher.GetFilter4EA( sTypeName );
 
     // or use given document service for detection, too
-    if ( !pFilter && sServiceName.getLength() )
+    if ( !pFilter && !sServiceName.isEmpty() )
         pFilter = impl_getFilterFromServiceName_nothrow( sServiceName );
 
     // or use interaction to ask user for right filter.
-    if ( !pFilter && xInteraction.is() && sURL.getLength() )
+    if ( !pFilter && xInteraction.is() && !sURL.isEmpty() )
     {
-        ::rtl::OUString sSelectedFilter = impl_askForFilter_nothrow( xInteraction, sURL );
-        if ( sSelectedFilter.getLength() )
+        OUString sSelectedFilter = impl_askForFilter_nothrow( xInteraction, sURL );
+        if ( !sSelectedFilter.isEmpty() )
             pFilter = rMatcher.GetFilter4FilterName( sSelectedFilter );
     }
 
     if ( pFilter )
     {
-        io_rDescriptor.put( "FilterName", ::rtl::OUString( pFilter->GetFilterName() ) );
+        io_rDescriptor.put( "FilterName", OUString( pFilter->GetFilterName() ) );
 
         // If detected filter indicates using of an own template format
         // add property "AsTemplate" to descriptor. But suppress this step
         // if such property already exists.
         if ( pFilter->IsOwnTemplateFormat() && !io_rDescriptor.has( "AsTemplate" ) )
-            io_rDescriptor.put( "AsTemplate", sal_Bool( sal_True ) );
+            io_rDescriptor.put( "AsTemplate", true );
 
         // The DocumentService property will finally be used to determine the document type to create, so
         // override it with the service name as indicated by the found filter.
-        io_rDescriptor.put( "DocumentService", ::rtl::OUString( pFilter->GetServiceName() ) );
+        io_rDescriptor.put( "DocumentService", OUString( pFilter->GetServiceName() ) );
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+
 SfxObjectShellRef SfxFrameLoader_Impl::impl_findObjectShell( const Reference< XModel2 >& i_rxDocument ) const
 {
-	for ( SfxObjectShell* pDoc = SfxObjectShell::GetFirst( NULL, sal_False ); pDoc; pDoc = SfxObjectShell::GetNext( *pDoc, NULL, sal_False ) )
-	{
-		if ( i_rxDocument == pDoc->GetModel() )
+    for ( SfxObjectShell* pDoc = SfxObjectShell::GetFirst( NULL, false ); pDoc; pDoc = SfxObjectShell::GetNext( *pDoc, NULL, false ) )
+    {
+        if ( i_rxDocument == pDoc->GetModel() )
         {
             return pDoc;
         }
-	}
+    }
 
-    DBG_ERROR( "SfxFrameLoader_Impl::impl_findObjectShell: model is not based on SfxObjectShell - wrong frame loader usage!" );
+    SAL_WARN( "sfx.view", "SfxFrameLoader_Impl::impl_findObjectShell: model is not based on SfxObjectShell - wrong frame loader usage!" );
     return NULL;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+
 bool SfxFrameLoader_Impl::impl_determineTemplateDocument( ::comphelper::NamedValueCollection& io_rDescriptor ) const
 {
-    const ::rtl::OUString sTemplateRegioName = io_rDescriptor.getOrDefault( "TemplateRegionName", ::rtl::OUString() );
-    const ::rtl::OUString sTemplateName      = io_rDescriptor.getOrDefault( "TemplateName",       ::rtl::OUString() );
-    const ::rtl::OUString sServiceName       = io_rDescriptor.getOrDefault( "DocumentService",    ::rtl::OUString() );
-    const ::rtl::OUString sURL               = io_rDescriptor.getOrDefault( "URL",                ::rtl::OUString() );
-
-    // determine the full URL of the template to use, if any
-    String sTemplateURL;
-	if ( sTemplateRegioName.getLength() && sTemplateName.getLength() )
-	{
-		SfxDocumentTemplates aTmpFac;
-		aTmpFac.GetFull( sTemplateRegioName, sTemplateName, sTemplateURL );
-	}
-	else
-	{
-	    if ( sServiceName.getLength() )
-            sTemplateURL = SfxObjectFactory::GetStandardTemplate( sServiceName );
-        else
-            sTemplateURL = SfxObjectFactory::GetStandardTemplate( SfxObjectShell::GetServiceNameFromFactory( sURL ) );
-	}
-
-    if ( sTemplateURL.Len() > 0 )
+    try
     {
-        // detect the filter for the template. Might still be NULL (if the template is broken, or does not
-        // exist, or some such), but this is handled by our caller the same way as if no template/URL was present.
-        const SfxFilter* pTemplateFilter = impl_detectFilterForURL( sTemplateURL, io_rDescriptor, SFX_APP()->GetFilterMatcher() );
-        if ( pTemplateFilter )
-        {
-            // load the template document, but, well, "as template"
-            io_rDescriptor.put( "FilterName", ::rtl::OUString( pTemplateFilter->GetName() ) );
-            io_rDescriptor.put( "FileName", ::rtl::OUString( sTemplateURL ) );
-            io_rDescriptor.put( "AsTemplate", sal_True );
+        const OUString sTemplateRegioName = io_rDescriptor.getOrDefault( "TemplateRegionName", OUString() );
+        const OUString sTemplateName      = io_rDescriptor.getOrDefault( "TemplateName",       OUString() );
+        const OUString sServiceName       = io_rDescriptor.getOrDefault( "DocumentService",    OUString() );
+        const OUString sURL               = io_rDescriptor.getOrDefault( "URL",                OUString() );
 
-            // #i21583#
-            // the DocumentService property will finally be used to create the document. Thus, override any possibly
-            // present value with the document service of the template.
-            io_rDescriptor.put( "DocumentService", ::rtl::OUString( pTemplateFilter->GetServiceName() ) );
-            return true;
+        // determine the full URL of the template to use, if any
+        OUString sTemplateURL;
+        if ( !sTemplateRegioName.isEmpty() && !sTemplateName.isEmpty() )
+        {
+            SfxDocumentTemplates aTmpFac;
+            aTmpFac.GetFull( sTemplateRegioName, sTemplateName, sTemplateURL );
         }
+        else
+        {
+            if ( !sServiceName.isEmpty() )
+                sTemplateURL = SfxObjectFactory::GetStandardTemplate( sServiceName );
+            else
+                sTemplateURL = SfxObjectFactory::GetStandardTemplate( SfxObjectShell::GetServiceNameFromFactory( sURL ) );
+        }
+
+        if ( !sTemplateURL.isEmpty() )
+        {
+            // detect the filter for the template. Might still be NULL (if the template is broken, or does not
+            // exist, or some such), but this is handled by our caller the same way as if no template/URL was present.
+            const SfxFilter* pTemplateFilter = impl_detectFilterForURL( sTemplateURL, io_rDescriptor, SfxGetpApp()->GetFilterMatcher() );
+            if ( pTemplateFilter )
+            {
+                // load the template document, but, well, "as template"
+                io_rDescriptor.put( "FilterName", OUString( pTemplateFilter->GetName() ) );
+                io_rDescriptor.put( "FileName", OUString( sTemplateURL ) );
+                io_rDescriptor.put( "AsTemplate", sal_True );
+
+                // #i21583#
+                // the DocumentService property will finally be used to create the document. Thus, override any possibly
+                // present value with the document service of the template.
+                io_rDescriptor.put( "DocumentService", OUString( pTemplateFilter->GetServiceName() ) );
+                return true;
+            }
+        }
+    }
+    catch (...)
+    {
     }
     return false;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-sal_uInt16 SfxFrameLoader_Impl::impl_findSlotParam( const ::rtl::OUString& i_rFactoryURL ) const
+
+sal_uInt16 SfxFrameLoader_Impl::impl_findSlotParam( const OUString& i_rFactoryURL ) const
 {
-    ::rtl::OUString sSlotParam;
+    OUString sSlotParam;
     const sal_Int32 nParamPos = i_rFactoryURL.indexOf( '?' );
     if ( nParamPos >= 0 )
     {
         // currently only the "slot" parameter is supported
-        const sal_Int32 nSlotPos = i_rFactoryURL.indexOfAsciiL( RTL_CONSTASCII_STRINGPARAM( "slot=" ), nParamPos );
+        const sal_Int32 nSlotPos = i_rFactoryURL.indexOf( "slot=", nParamPos );
         if ( nSlotPos > 0 )
             sSlotParam = i_rFactoryURL.copy( nSlotPos + 5 );
     }
 
-    if ( sSlotParam.getLength() )
+    if ( !sSlotParam.isEmpty() )
         return sal_uInt16( sSlotParam.toInt32() );
 
     return 0;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+
 void SfxFrameLoader_Impl::impl_handleCaughtError_nothrow( const Any& i_rCaughtError, const ::comphelper::NamedValueCollection& i_rDescriptor ) const
 {
     try
@@ -414,7 +510,7 @@ void SfxFrameLoader_Impl::impl_handleCaughtError_nothrow( const Any& i_rCaughtEr
 
         const Reference< XInteractionHandler2 > xHandler( xInteraction, UNO_QUERY );
     #if OSL_DEBUG_LEVEL > 0
-        const sal_Bool bHandled =
+        const bool bHandled =
     #endif
         xHandler.is() && xHandler->handleInteractionRequest( pRequest.get() );
 
@@ -427,11 +523,11 @@ void SfxFrameLoader_Impl::impl_handleCaughtError_nothrow( const Any& i_rCaughtEr
     }
     catch( const Exception& )
     {
-    	DBG_UNHANDLED_EXCEPTION();
+        DBG_UNHANDLED_EXCEPTION();
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+
 void SfxFrameLoader_Impl::impl_removeLoaderArguments( ::comphelper::NamedValueCollection& io_rDescriptor )
 {
     // remove the arguments which are for the loader only, and not for a call to attachResource
@@ -439,7 +535,7 @@ void SfxFrameLoader_Impl::impl_removeLoaderArguments( ::comphelper::NamedValueCo
     io_rDescriptor.remove( "Model" );
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+
 ::comphelper::NamedValueCollection SfxFrameLoader_Impl::impl_extractViewCreationArgs( ::comphelper::NamedValueCollection& io_rDescriptor )
 {
     const sal_Char* pKnownViewArgs[] = {
@@ -458,7 +554,7 @@ void SfxFrameLoader_Impl::impl_removeLoaderArguments( ::comphelper::NamedValueCo
     return aViewArgs;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+
 sal_Int16 SfxFrameLoader_Impl::impl_determineEffectiveViewId_nothrow( const SfxObjectShell& i_rDocument, const ::comphelper::NamedValueCollection& i_rDescriptor )
 {
     sal_Int16 nViewId = i_rDescriptor.getOrDefault( "ViewId", sal_Int16( 0 ) );
@@ -469,11 +565,11 @@ sal_Int16 SfxFrameLoader_Impl::impl_determineEffectiveViewId_nothrow( const SfxO
             Reference< XViewDataSupplier > xViewDataSupplier( i_rDocument.GetModel(), UNO_QUERY );
             Reference< XIndexAccess > xViewData;
             if ( xViewDataSupplier.is() )
-	            xViewData.set( xViewDataSupplier->getViewData() );
+                xViewData.set( xViewDataSupplier->getViewData() );
 
             if ( !xViewData.is() || ( xViewData->getCount() == 0 ) )
                 // no view data stored together with the model
-	            break;
+                break;
 
             // obtain the ViewID from the view data
             Sequence< PropertyValue > aViewData;
@@ -481,8 +577,8 @@ sal_Int16 SfxFrameLoader_Impl::impl_determineEffectiveViewId_nothrow( const SfxO
                 break;
 
             ::comphelper::NamedValueCollection aNamedViewData( aViewData );
-            ::rtl::OUString sViewId = aNamedViewData.getOrDefault( "ViewId", ::rtl::OUString() );
-            if ( !sViewId.getLength() )
+            OUString sViewId = aNamedViewData.getOrDefault( "ViewId", OUString() );
+            if ( sViewId.isEmpty() )
                 break;
 
             // somewhat weird convention here ... in the view data, the ViewId is a string, effectively describing
@@ -496,7 +592,7 @@ sal_Int16 SfxFrameLoader_Impl::impl_determineEffectiveViewId_nothrow( const SfxO
     }
     catch( const Exception& )
     {
-    	DBG_UNHANDLED_EXCEPTION();
+        DBG_UNHANDLED_EXCEPTION();
     }
 
     if ( nViewId == 0 )
@@ -504,10 +600,10 @@ sal_Int16 SfxFrameLoader_Impl::impl_determineEffectiveViewId_nothrow( const SfxO
     return nViewId;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+
 Reference< XController2 > SfxFrameLoader_Impl::impl_createDocumentView( const Reference< XModel2 >& i_rModel,
         const Reference< XFrame >& i_rFrame, const ::comphelper::NamedValueCollection& i_rViewFactoryArgs,
-        const ::rtl::OUString& i_rViewName )
+        const OUString& i_rViewName )
 {
     // let the model create a new controller
     const Reference< XController2 > xController( i_rModel->createViewController(
@@ -526,40 +622,34 @@ Reference< XController2 > SfxFrameLoader_Impl::impl_createDocumentView( const Re
     return xController;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+
 sal_Bool SAL_CALL SfxFrameLoader_Impl::load( const Sequence< PropertyValue >& rArgs,
                                              const Reference< XFrame >& _rTargetFrame )
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
     ENSURE_OR_THROW( _rTargetFrame.is(), "illegal NULL frame" );
 
-    ::vos::OGuard aGuard( Application::GetSolarMutex() );
+    SolarMutexGuard aGuard;
 
-	RTL_LOGFILE_CONTEXT( aLog, "sfx2 (mb93783) ::SfxFrameLoader::load" );
+    SAL_INFO( "sfx.view", "SfxFrameLoader::load" );
 
     ::comphelper::NamedValueCollection aDescriptor( rArgs );
 
     // ensure the descriptor contains a referrer
     if ( !aDescriptor.has( "Referer" ) )
-        aDescriptor.put( "Referer", ::rtl::OUString() );
-
-    // TODO: is this needed? finally, when loading is successfull, then there should be no need for this item,
-    // as the document can always obtain its frame. In particular, there might be situations where this frame
-    // is accessed, but already disposed: Imagine the user loading a document, opening a second view on it, and
-    // then closing the first view/frame.
-    aDescriptor.put( "Frame", _rTargetFrame );
+        aDescriptor.put( "Referer", OUString() );
 
     // did the caller already pass a model?
     Reference< XModel2 > xModel = aDescriptor.getOrDefault( "Model", Reference< XModel2 >() );
     const bool bExternalModel = xModel.is();
 
     // check for factory URLs to create a new doc, instead of loading one
-    const ::rtl::OUString sURL = aDescriptor.getOrDefault( "URL", ::rtl::OUString() );
-    const bool bIsFactoryURL = ( sURL.compareToAscii( RTL_CONSTASCII_STRINGPARAM( "private:factory/" ) ) == 0 );
+    const OUString sURL = aDescriptor.getOrDefault( "URL", OUString() );
+    const bool bIsFactoryURL = sURL.startsWith( "private:factory/" );
     bool bInitNewModel = bIsFactoryURL;
     if ( bIsFactoryURL && !bExternalModel )
     {
-        const ::rtl::OUString sFactory = sURL.copy( sizeof( "private:factory/" ) -1 );
+        const OUString sFactory = sURL.copy( sizeof( "private:factory/" ) -1 );
         // special handling for some weird factory URLs a la private:factory/swriter?slot=21053
         const sal_uInt16 nSlotParam = impl_findSlotParam( sFactory );
         if ( nSlotParam != 0 )
@@ -577,55 +667,59 @@ sal_Bool SAL_CALL SfxFrameLoader_Impl::load( const Sequence< PropertyValue >& rA
         }
         else
         {
-            const ::rtl::OUString sServiceName = SfxObjectShell::GetServiceNameFromFactory( sFactory );
+            const OUString sServiceName = SfxObjectShell::GetServiceNameFromFactory( sFactory );
             aDescriptor.put( "DocumentService", sServiceName );
         }
-	}
+    }
     else
     {
         // compatibility
         aDescriptor.put( "FileName", aDescriptor.get( "URL" ) );
     }
 
-    sal_Bool bLoadSuccess = sal_False;
+    bool bLoadSuccess = false;
 #ifdef USE_JAVA
     // Avoid deadlocking when dropping a file on a document window while the
     // document is being loaded by not allow reentrant document loading
     static sal_Bool bInLoad = sal_False;
     if ( bInLoad )
         return bLoadSuccess;
-	bInLoad = sal_True;
+    bInLoad = sal_True;
 #endif	// USE_JAVA
-	try
-	{
+    try
+    {
         // extract view releant arguments from the loader args
         ::comphelper::NamedValueCollection aViewCreationArgs( impl_extractViewCreationArgs( aDescriptor ) );
 
         // no model passed from outside? => create one from scratch
-	    if ( !xModel.is() )
+        if ( !xModel.is() )
         {
-            // beforehand, determine the filter to use, and update the descriptor with its information
-            if ( !bInitNewModel )
+            bool bInternalFilter = aDescriptor.getOrDefault<OUString>("FilterProvider", OUString()).isEmpty();
+
+            if (bInternalFilter && !bInitNewModel)
             {
-                impl_determineFilter( aDescriptor );
+                // Ensure that the current SfxFilter instance is loaded before
+                // going further.  We don't need to do this for external
+                // filter providers.
+                impl_determineFilter(aDescriptor);
             }
 
             // create the new doc
-            const ::rtl::OUString sServiceName = aDescriptor.getOrDefault( "DocumentService", ::rtl::OUString() );
-            xModel.set( m_aContext.createComponent( sServiceName ), UNO_QUERY_THROW );
+            const OUString sServiceName = aDescriptor.getOrDefault( "DocumentService", OUString() );
+            xModel.set( m_aContext->getServiceManager()->createInstanceWithContext(sServiceName, m_aContext), UNO_QUERY_THROW );
 
             // load resp. init it
             const Reference< XLoadable > xLoadable( xModel, UNO_QUERY_THROW );
             if ( bInitNewModel )
             {
-	            xLoadable->initNew();
+                xLoadable->initNew();
 
                 impl_removeLoaderArguments( aDescriptor );
-                xModel->attachResource( ::rtl::OUString(), aDescriptor.getPropertyValues() );
+                xModel->attachResource( OUString(), aDescriptor.getPropertyValues() );
             }
             else
             {
-		        xLoadable->load( aDescriptor.getPropertyValues() );
+                xLoadable->load( aDescriptor.getPropertyValues() );
             }
         }
         else
@@ -644,18 +738,27 @@ sal_Bool SAL_CALL SfxFrameLoader_Impl::load( const Sequence< PropertyValue >& rA
         // ensure the ID of the to-be-created view is in the descriptor, if possible
         const sal_Int16 nViewId = impl_determineEffectiveViewId_nothrow( *xDoc, aDescriptor );
         const sal_Int16 nViewNo = xDoc->GetFactory().GetViewNo_Impl( nViewId, 0 );
-        const ::rtl::OUString sViewName( xDoc->GetFactory().GetViewFactory( nViewNo ).GetAPIViewName() );
+        const OUString sViewName( xDoc->GetFactory().GetViewFactory( nViewNo ).GetAPIViewName() );
 
         // plug the document into the frame
-        impl_createDocumentView( xModel, _rTargetFrame, aViewCreationArgs, sViewName );
-		bLoadSuccess = sal_True;
-	}
-	catch ( Exception& )
-	{
+        Reference<XController2> xController =
+            impl_createDocumentView( xModel, _rTargetFrame, aViewCreationArgs, sViewName );
+
+        Reference<lang::XInitialization> xInit(xController, UNO_QUERY);
+        if (xInit.is())
+        {
+            uno::Sequence<uno::Any> aArgs; // empty for now.
+            xInit->initialize(aArgs);
+        }
+
+        bLoadSuccess = true;
+    }
+    catch ( Exception& )
+    {
         const Any aError( ::cppu::getCaughtException() );
         if ( !aDescriptor.getOrDefault( "Silent", sal_False ) )
             impl_handleCaughtError_nothrow( aError, aDescriptor );
-	}
+    }
 
 #ifdef USE_JAVA
     if ( bLoadSuccess )
@@ -666,71 +769,53 @@ sal_Bool SAL_CALL SfxFrameLoader_Impl::load( const Sequence< PropertyValue >& rA
     // if loading was not successful, close the document
     if ( !bLoadSuccess && !bExternalModel )
     {
-	    try
+        try
         {
             const Reference< XCloseable > xCloseable( xModel, UNO_QUERY_THROW );
-		    xCloseable->close( sal_True );
-	    }
+            xCloseable->close( sal_True );
+        }
         catch ( Exception& )
-	    {
+        {
             DBG_UNHANDLED_EXCEPTION();
         }
     }
 
-	return bLoadSuccess;
+    return bLoadSuccess;
 }
 
-void SfxFrameLoader_Impl::cancel() throw( RuntimeException )
+void SfxFrameLoader_Impl::cancel() throw( RuntimeException, std::exception )
 {
 }
-
-SFX_IMPL_SINGLEFACTORY( SfxFrameLoader_Impl )
 
 /* XServiceInfo */
-UNOOUSTRING SAL_CALL SfxFrameLoader_Impl::getImplementationName() throw( RuntimeException )
+OUString SAL_CALL SfxFrameLoader_Impl::getImplementationName() throw( RuntimeException, std::exception )
 {
-    return impl_getStaticImplementationName();
+    return OUString("com.sun.star.comp.office.FrameLoader");
 }
                                                                                                                                 \
 /* XServiceInfo */
-sal_Bool SAL_CALL SfxFrameLoader_Impl::supportsService( const UNOOUSTRING& sServiceName ) throw( RuntimeException )
+sal_Bool SAL_CALL SfxFrameLoader_Impl::supportsService( const OUString& sServiceName ) throw( RuntimeException, std::exception )
 {
-    UNOSEQUENCE< UNOOUSTRING >  seqServiceNames =   getSupportedServiceNames();
-    const UNOOUSTRING*          pArray          =   seqServiceNames.getConstArray();
-    for ( sal_Int32 nCounter=0; nCounter<seqServiceNames.getLength(); nCounter++ )
-    {
-        if ( pArray[nCounter] == sServiceName )
-        {
-            return sal_True ;
-        }
-    }
-    return sal_False ;
+    return cppu::supportsService(this, sServiceName);
 }
 
 /* XServiceInfo */
-UNOSEQUENCE< UNOOUSTRING > SAL_CALL SfxFrameLoader_Impl::getSupportedServiceNames() throw( RuntimeException )
+Sequence< OUString > SAL_CALL SfxFrameLoader_Impl::getSupportedServiceNames() throw( RuntimeException, std::exception )
 {
-    return impl_getStaticSupportedServiceNames();
-}
-
-/* Helper for XServiceInfo */
-UNOSEQUENCE< UNOOUSTRING > SfxFrameLoader_Impl::impl_getStaticSupportedServiceNames()
-{
-    UNOMUTEXGUARD aGuard( UNOMUTEX::getGlobalMutex() );
-    UNOSEQUENCE< UNOOUSTRING > seqServiceNames( 1 );
-    seqServiceNames.getArray() [0] = UNOOUSTRING::createFromAscii( "com.sun.star.frame.SynchronousFrameLoader" );
+    Sequence< OUString > seqServiceNames( 2 );
+    seqServiceNames.getArray() [0] = "com.sun.star.frame.SynchronousFrameLoader";
+    seqServiceNames.getArray() [1] = "com.sun.star.frame.OfficeFrameLoader";
     return seqServiceNames ;
 }
 
-/* Helper for XServiceInfo */
-UNOOUSTRING SfxFrameLoader_Impl::impl_getStaticImplementationName()
-{
-    return UNOOUSTRING::createFromAscii( "com.sun.star.comp.office.FrameLoader" );
 }
 
-/* Helper for registry */
-UNOREFERENCE< UNOXINTERFACE > SAL_CALL SfxFrameLoader_Impl::impl_createInstance( const UNOREFERENCE< UNOXMULTISERVICEFACTORY >& xServiceManager ) throw( UNOEXCEPTION )
+extern "C" SAL_DLLPUBLIC_EXPORT css::uno::XInterface * SAL_CALL
+com_sun_star_comp_office_FrameLoader_get_implementation(
+    css::uno::XComponentContext *context,
+    css::uno::Sequence<css::uno::Any> const &)
 {
-    return UNOREFERENCE< UNOXINTERFACE >( *new SfxFrameLoader_Impl( xServiceManager ) );
+    return cppu::acquire(new SfxFrameLoader_Impl(context));
 }
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

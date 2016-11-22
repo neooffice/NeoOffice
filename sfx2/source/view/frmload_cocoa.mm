@@ -33,7 +33,7 @@
  *
  ************************************************************************/
 
-#include <tools/string.hxx>
+#include <rtl/ustring.hxx>
 
 #include <premac.h>
 #import <Foundation/Foundation.h>
@@ -47,7 +47,7 @@
 
 static NSDictionary *pDocTypeLaunchOptions = nil;
 
-void SfxFrameLoader_openDocumentOfType( ::rtl::OUString aDocType )
+void SfxFrameLoader_openDocumentOfType( OUString aDocType )
 {
 	if ( !aDocType.getLength() )
 		return;
