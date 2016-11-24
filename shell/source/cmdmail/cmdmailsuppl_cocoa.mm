@@ -39,7 +39,7 @@
 
 #include <osl/file.hxx>
 
-#import "syscmdmail.hxx"
+#import "cmdmailsuppl.hxx"
 #import "cmdmailsuppl_cocoa.h"
 
 using namespace com::sun::star::uno;
@@ -94,6 +94,8 @@ using namespace com::sun::star::uno;
 
 - (void)openURLs:(id)pSender
 {
+	(void)pSender;
+
 	mbResult = NO;
 
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
@@ -128,7 +130,7 @@ using namespace com::sun::star::uno;
 
 @end
 
-sal_Bool CmdMailSuppl_sendSimpleMailMessage( Sequence< ::rtl::OUString > &rStringList, ::rtl::OUString aMailerPath )
+sal_Bool CmdMailSuppl_sendSimpleMailMessage( Sequence< OUString > &rStringList, OUString aMailerPath )
 {
 	sal_Bool bRet = sal_False;
 
@@ -144,7 +146,7 @@ sal_Bool CmdMailSuppl_sendSimpleMailMessage( Sequence< ::rtl::OUString > &rStrin
 		sal_Int32 i = 0;
 		for ( ; i < nLen; i++ )
 		{
-			::rtl::OUString aSystemPath;
+			OUString aSystemPath;
 			if ( ::osl::FileBase::E_None == ::osl::FileBase::getSystemPathFromFileURL( rStringList[ i ], aSystemPath ) )
 			{
 				NSString *pAttachPath = [NSString stringWithCharacters:aSystemPath.getStr() length:aSystemPath.getLength()];

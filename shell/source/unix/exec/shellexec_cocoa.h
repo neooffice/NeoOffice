@@ -38,7 +38,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-sal_Bool ShellExec_openURL( ::rtl::OUString &rURL );
+sal_Bool ShellExec_openURL( OUString &rURL );
 #endif
 #ifdef __cplusplus
 }

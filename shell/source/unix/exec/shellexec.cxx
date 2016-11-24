@@ -1,61 +1,52 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
+#include <config_folders.h>
 
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_shell.hxx"
 #include <osl/diagnose.h>
 #include <osl/thread.h>
 #include <osl/process.h>
 #include <osl/file.hxx>
 #include <rtl/ustrbuf.hxx>
 
-#ifndef _RTL_URI_H_
 #include <rtl/uri.hxx>
-#endif
 #include "shellexec.hxx"
 #include <com/sun/star/system/SystemShellExecuteFlags.hpp>
 
-#include <com/sun/star/util/XMacroExpander.hpp>
+#include <com/sun/star/util/theMacroExpander.hpp>
 #include <com/sun/star/uri/XExternalUriReferenceTranslator.hpp>
 #include <com/sun/star/uri/ExternalUriReferenceTranslator.hpp>
+#include <com/sun/star/uri/UriReferenceFactory.hpp>
+#include <cppuhelper/supportsservice.hxx>
 
 #include "uno/current_context.hxx"
 
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#ifdef OS2
-#include <process.h>
-#endif
 
 #if defined USE_JAVA && defined MACOSX
 
@@ -64,7 +55,7 @@
 #import "shellexec_cocoa.h"
 
 typedef void* id;
-typedef id Application_acquireSecurityScopedURLFromOUString_Type( const ::rtl::OUString *pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const ::rtl::OUString *pDialogTitle );
+typedef id Application_acquireSecurityScopedURLFromOUString_Type( const OUString *pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const OUString *pDialogTitle );
 typedef void Application_releaseSecurityScopedURL_Type( id pSecurityScopedURLs );
 
 static Application_acquireSecurityScopedURLFromOUString_Type *pApplication_acquireSecurityScopedURLFromOUString = NULL;
@@ -72,17 +63,13 @@ static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecuritySc
 
 #endif	// USE_JAVA && MACOSX
 
-//------------------------------------------------------------------------
+
 // namespace directives
-//------------------------------------------------------------------------
+
 
 using com::sun::star::system::XSystemShellExecute;
 using com::sun::star::system::SystemShellExecuteException;
 
-using rtl::OString;
-using rtl::OUString;
-using rtl::OStringBuffer;
-using rtl::OUStringBuffer;
 using osl::FileBase;
 
 using namespace ::com::sun::star::uno;
@@ -90,84 +77,74 @@ using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::system::SystemShellExecuteFlags;
 using namespace cppu;
 
-//------------------------------------------------------------------------
-// defines
-//------------------------------------------------------------------------
-
 #define SHELLEXEC_IMPL_NAME  "com.sun.star.comp.system.SystemShellExecute2"
 
-//------------------------------------------------------------------------
+
 // helper functions
-//------------------------------------------------------------------------
+
 
 namespace // private
 {
     Sequence< OUString > SAL_CALL ShellExec_getSupportedServiceNames()
     {
         Sequence< OUString > aRet(1);
-        aRet[0] = OUString::createFromAscii("com.sun.star.sys.shell.SystemShellExecute");
+        aRet[0] = "com.sun.star.sys.shell.SystemShellExecute";
         return aRet;
     }
 }
 
-void escapeForShell( rtl::OStringBuffer & rBuffer, const rtl::OString & rURL)
+void escapeForShell( OStringBuffer & rBuffer, const OString & rURL)
 {
     sal_Int32 nmax = rURL.getLength();
     for(sal_Int32 n=0; n < nmax; ++n)
     {
         // escape every non alpha numeric characters (excluding a few "known good") by prepending a '\'
         sal_Char c = rURL[n];
-#ifndef OS2 // YD shell does not support escaped chars
         if( ( c < 'A' || c > 'Z' ) && ( c < 'a' || c > 'z' ) && ( c < '0' || c > '9' )  && c != '/' && c != '.' )
             rBuffer.append( '\\' );
-#endif
-        
+
         rBuffer.append( c );
     }
 }
 
-//-----------------------------------------------------------------------------------------
-// 
-//-----------------------------------------------------------------------------------------
 
-ShellExec::ShellExec( const Reference< XComponentContext >& xContext ) : 
+
+ShellExec::ShellExec( const Reference< XComponentContext >& xContext ) :
     WeakImplHelper2< XSystemShellExecute, XServiceInfo >(),
     m_xContext(xContext)
 {
     try {
         Reference< XCurrentContext > xCurrentContext(getCurrentContext());
-        
+
         if (xCurrentContext.is())
         {
             Any aValue = xCurrentContext->getValueByName(
-                OUString( RTL_CONSTASCII_USTRINGPARAM( "system.desktop-environment" ) ) );
-        
+                OUString( "system.desktop-environment"  ) );
+
             OUString aDesktopEnvironment;
             if (aValue >>= aDesktopEnvironment)
             {
                 m_aDesktopEnvironment = OUStringToOString(aDesktopEnvironment, RTL_TEXTENCODING_ASCII_US);
             }
         }
-    } catch (RuntimeException e) {
+    } catch (const RuntimeException &) {
     }
 }
 
-//-------------------------------------------------
-//
-//-------------------------------------------------
 
-void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aParameter, sal_Int32 nFlags ) 
-    throw (IllegalArgumentException, SystemShellExecuteException, RuntimeException)
+
+void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aParameter, sal_Int32 nFlags )
+    throw (IllegalArgumentException, SystemShellExecuteException, RuntimeException, std::exception)
 {
     OStringBuffer aBuffer, aLaunchBuffer;
 
     // DESKTOP_LAUNCH, see http://freedesktop.org/pipermail/xdg/2004-August/004489.html
     static const char *pDesktopLaunch = getenv( "DESKTOP_LAUNCH" );
-    
-    // Check wether aCommand contains a document url or not
-    sal_Int32 nIndex = aCommand.indexOf( OUString( RTL_CONSTASCII_USTRINGPARAM(":/") ) );
-    
-    if( nIndex > 0 || 0 == aCommand.compareToAscii("mailto:", 7) )
+
+    // Check whether aCommand contains an absolute URI reference:
+    css::uno::Reference< css::uri::XUriReference > uri(
+        css::uri::UriReferenceFactory::create(m_xContext)->parse(aCommand));
+    if (uri.is() && uri->isAbsolute())
     {
         // It seems to be a url ..
         // We need to re-encode file urls because osl_getFileURLFromSystemPath converts
@@ -176,16 +153,14 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
         OUString aURL(
             com::sun::star::uri::ExternalUriReferenceTranslator::create(
                 m_xContext)->translateToExternal(aCommand));
-        if ( aURL.getLength() == 0 && aCommand.getLength() != 0 )
+        if ( aURL.isEmpty() && !aCommand.isEmpty() )
         {
             throw RuntimeException(
-                (OUString(
-                    RTL_CONSTASCII_USTRINGPARAM(
-                        "Cannot translate URI reference to external format: "))
-                 + aCommand),
+                OUString("Cannot translate URI reference to external format: ")
+                 + aCommand,
                 static_cast< cppu::OWeakObject * >(this));
         }
-        
+
 #if defined USE_JAVA && defined MACOSX
         // Fix failure to open file URL hyperlinks by obtaining a security
         // scoped bookmark before opening the URL
@@ -207,60 +182,53 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
             pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
 #else	// USE_JAVA && MACOSX
 #ifdef MACOSX
-        aBuffer.append("open");
+        //TODO: Using open(1) with an argument that syntactically is an absolute
+        // URI reference does not necessarily give expected results:
+        // 1  If the given URI reference matches a supported scheme (e.g.,
+        //  "mailto:foo"):
+        // 1.1  If it matches an existing pathname (relative to CWD):  Results
+        //  in "mailto:foo?\n[0]\tcancel\n[1]\tOpen the file\tmailto:foo\n[2]\t
+        //  Open the URL\tmailto:foo\n\nWhich did you mean? Cancelled." on
+        //  stderr and SystemShellExecuteException.
+        // 1.2  If it does not match an exitsting pathname (relative to CWD):
+        //  Results in the corresponding application being opened with the given
+        //  document (e.g., Mail with a New Message).
+        // 2  If the given URI reference does not match a supported scheme
+        //  (e.g., "foo:bar"):
+        // 2.1  If it matches an existing pathname (relative to CWD) pointing to
+        //  an executable:  Results in execution of that executable.
+        // 2.2  If it matches an existing pathname (relative to CWD) pointing to
+        //  a non-executable regular file:  Results in opening it in TextEdit.
+        // 2.3  If it matches an existing pathname (relative to CWD) pointing to
+        //  a directory:  Results in opening it in Finder.
+        // 2.4  If it does not match an exitsting pathname (relative to CWD):
+        //  Results in "The file /.../foo:bar does not exits." (where "/..." is
+        //  the CWD) on stderr and SystemShellExecuteException.
+        aBuffer.append("open --");
 #else
-        // The url launchers are expected to be in the $OOO_BASE_DIR/program
+        // The url launchers are expected to be in the $BRAND_BASE_DIR/LIBO_LIBEXEC_FOLDER
         // directory:
         com::sun::star::uno::Reference< com::sun::star::util::XMacroExpander >
-            exp;
-        if (!(m_xContext->getValueByName(
-                  rtl::OUString(
-                      RTL_CONSTASCII_USTRINGPARAM(
-                          "/singletons/com.sun.star.util.theMacroExpander")))
-              >>= exp)
-            || !exp.is())
-        {
-            throw SystemShellExecuteException(
-                rtl::OUString(
-                    RTL_CONSTASCII_USTRINGPARAM(
-                        "component context fails to supply singleton"
-                        " com.sun.star.util.theMacroExpander of type"
-                        " com.sun.star.util.XMacroExpander")),
-                static_cast< XSystemShellExecute * >(this), ENOENT);
-        }
+            exp = com::sun::star::util::theMacroExpander::get(m_xContext);
         OUString aProgramURL;
         try {
             aProgramURL = exp->expandMacros(
-                rtl::OUString(
-                    RTL_CONSTASCII_USTRINGPARAM("$OOO_BASE_DIR/program/")));
+                OUString( "$BRAND_BASE_DIR/" LIBO_LIBEXEC_FOLDER "/"));
         } catch (com::sun::star::lang::IllegalArgumentException &)
         {
             throw SystemShellExecuteException(
-                OUString(RTL_CONSTASCII_USTRINGPARAM("Could not expand $OOO_BASE_DIR path")), 
+                "Could not expand $BRAND_BASE_DIR path",
                 static_cast < XSystemShellExecute * > (this), ENOENT );
         }
-        
+
         OUString aProgram;
         if ( FileBase::E_None != FileBase::getSystemPathFromFileURL(aProgramURL, aProgram))
         {
             throw SystemShellExecuteException(
-                OUString(RTL_CONSTASCII_USTRINGPARAM("Cound not convert executable path")), 
+                "Cound not convert executable path",
                 static_cast < XSystemShellExecute * > (this), ENOENT );
         }
 
-#ifdef OS2
-        OStringBuffer aProg = OUStringToOString(aProgram, osl_getThreadTextEncoding());
-        aProg.append("open-url.exe");
-        OString aUrl = OUStringToOString(aURL, osl_getThreadTextEncoding());
-        if ( -1 == spawnl(P_NOWAIT, aProg.getStr(), aProg.getStr(), aUrl.getStr() , NULL) )
-        {
-            int nerr = errno;
-            throw SystemShellExecuteException(OUString::createFromAscii( strerror( nerr ) ), 
-                static_cast < XSystemShellExecute * > (this), nerr );
-        }
-        return;
-#endif
-        
         OString aTmp = OUStringToOString(aProgram, osl_getThreadTextEncoding());
         escapeForShell(aBuffer, aTmp);
 
@@ -268,42 +236,40 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
         if ( m_aDesktopEnvironment.getLength() == 0 )
              m_aDesktopEnvironment = OString("GNOME");
 #endif
-            
-        // Respect the desktop environment - if there is an executable named 
+
+        // Respect the desktop environment - if there is an executable named
         // <desktop-environement-is>-open-url, pass the url to this one instead
         // of the default "open-url" script.
-        if ( m_aDesktopEnvironment.getLength() > 0 )
+        if ( !m_aDesktopEnvironment.isEmpty() )
         {
             OString aDesktopEnvironment(m_aDesktopEnvironment.toAsciiLowerCase());
             OStringBuffer aCopy(aTmp);
-            
-            aCopy.append(aDesktopEnvironment);
-            aCopy.append("-open-url");
-            
+
+            aCopy.append(aDesktopEnvironment + "-open-url");
+
             if ( 0 == access( aCopy.getStr(), X_OK) )
             {
-                aBuffer.append(aDesktopEnvironment);
-                aBuffer.append("-");
-
-                /* CDE requires file urls to be decoded */                
-                if ( m_aDesktopEnvironment.equals("CDE") && 0 == aURL.compareToAscii("file://", 7) )
-                {
-                    aURL = rtl::Uri::decode(aURL, rtl_UriDecodeWithCharset, osl_getThreadTextEncoding());
-                }
+                aBuffer.append(aDesktopEnvironment + "-");
             }
         }
-             
+
         aBuffer.append("open-url");
 #endif
         aBuffer.append(" ");
         escapeForShell(aBuffer, OUStringToOString(aURL, osl_getThreadTextEncoding()));
-        
+
         if ( pDesktopLaunch && *pDesktopLaunch )
         {
-            aLaunchBuffer.append( pDesktopLaunch );
-            aLaunchBuffer.append(" ");
+            aLaunchBuffer.append( OString(pDesktopLaunch) + " ");
             escapeForShell(aLaunchBuffer, OUStringToOString(aURL, osl_getThreadTextEncoding()));
         }
+    } else if ((nFlags & css::system::SystemShellExecuteFlags::URIS_ONLY) != 0)
+    {
+        throw css::lang::IllegalArgumentException(
+            OUString("XSystemShellExecute.execute URIS_ONLY with non-absolute"
+                     " URI reference ")
+             + aCommand,
+            static_cast< cppu::OWeakObject * >(this), 0);
 #endif	// USE_JAVA && MACOSX
     } else {
         escapeForShell(aBuffer, OUStringToOString(aCommand, osl_getThreadTextEncoding()));
@@ -313,10 +279,10 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
         else
             aBuffer.append(OUStringToOString(aParameter, osl_getThreadTextEncoding()));
     }
-    
+
 #ifndef USE_JAVA
     // Prefer DESKTOP_LAUNCH when available
-    if ( aLaunchBuffer.getLength() > 0 )
+    if ( !aLaunchBuffer.isEmpty() )
     {
         FILE *pLaunch = popen( aLaunchBuffer.makeStringAndClear().getStr(), "w" );
         if ( pLaunch != NULL )
@@ -329,49 +295,44 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
     }
 #endif	// !USE_JAVA
 
-    OString cmd = aBuffer.makeStringAndClear();
-    if ( 0 != pclose(popen(cmd.getStr(), "w")) )
+    OString cmd =
+#ifdef LINUX
+        // avoid blocking (call it in background)
+        "( " + aBuffer.makeStringAndClear() +  " ) &";
+#else
+        aBuffer.makeStringAndClear();
+#endif
+    FILE *pLaunch = popen(cmd.getStr(), "w");
+    if ( pLaunch != NULL )
     {
-        int nerr = errno;
-        throw SystemShellExecuteException(OUString::createFromAscii( strerror( nerr ) ), 
-            static_cast < XSystemShellExecute * > (this), nerr );
+        if ( 0 == pclose( pLaunch ) )
+            return;
     }
+
+    int nerr = errno;
+    throw SystemShellExecuteException(OUString::createFromAscii( strerror( nerr ) ),
+        static_cast < XSystemShellExecute * > (this), nerr );
 }
 
-
-// -------------------------------------------------
 // XServiceInfo
-// -------------------------------------------------
-
-OUString SAL_CALL ShellExec::getImplementationName(  ) 
-    throw( RuntimeException )
+OUString SAL_CALL ShellExec::getImplementationName(  )
+    throw( RuntimeException, std::exception )
 {
-	return OUString::createFromAscii( SHELLEXEC_IMPL_NAME );
+    return OUString(SHELLEXEC_IMPL_NAME );
 }
 
-// -------------------------------------------------
-//	XServiceInfo
-// -------------------------------------------------
-
-sal_Bool SAL_CALL ShellExec::supportsService( const OUString& ServiceName ) 
-    throw( RuntimeException )
+//  XServiceInfo
+sal_Bool SAL_CALL ShellExec::supportsService( const OUString& ServiceName )
+    throw( RuntimeException, std::exception )
 {
-    Sequence < OUString > SupportedServicesNames = ShellExec_getSupportedServiceNames();
-
-    for ( sal_Int32 n = SupportedServicesNames.getLength(); n--; )
-        if (SupportedServicesNames[n].compareTo(ServiceName) == 0)
-            return sal_True;
-
-    return sal_False;
+    return cppu::supportsService(this, ServiceName);
 }
 
-// -------------------------------------------------
-//	XServiceInfo
-// -------------------------------------------------
-
-Sequence< OUString > SAL_CALL ShellExec::getSupportedServiceNames(	 ) 
-    throw( RuntimeException )
+//  XServiceInfo
+Sequence< OUString > SAL_CALL ShellExec::getSupportedServiceNames(   )
+    throw( RuntimeException, std::exception )
 {
     return ShellExec_getSupportedServiceNames();
 }
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

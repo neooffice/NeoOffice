@@ -38,7 +38,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-sal_Bool CmdMailSuppl_sendSimpleMailMessage( ::com::sun::star::uno::Sequence< ::rtl::OUString > &rStringList, ::rtl::OUString aMailerPath );
+sal_Bool CmdMailSuppl_sendSimpleMailMessage( ::com::sun::star::uno::Sequence< OUString > &rStringList, OUString aMailerPath );
 #endif
 #ifdef __cplusplus
 }

@@ -1,53 +1,48 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_shell.hxx"
 
 // For MAXHOSTNAMELEN constant
 #include <sys/param.h>
 
 #include <premac.h>
 #include <SystemConfiguration/SystemConfiguration.h>
-#include <Foundation/NSPathUtilities.h>
 #ifdef USE_JAVA
-#include <Cocoa/Cocoa.h>
+#include <Foundation/Foundation.h>
+#else	// USE_JAVA
+#include <Foundation/NSPathUtilities.h>
 #endif	// USE_JAVA
 #include <postmac.h>
 
 #include "macbackend.hxx"
 
 #include "com/sun/star/beans/Optional.hpp"
+#include <cppuhelper/supportsservice.hxx>
 #include "rtl/ustrbuf.hxx"
+#include <osl/diagnose.h>
 #include "osl/file.h"
 
 #define SPACE      ' '
@@ -61,13 +56,13 @@ typedef struct
 
 typedef enum {
     sHTTP,
-	sHTTPS,
+    sHTTPS,
     sFTP
 } ServiceType;
 
-//------------------------------------------------------------------------
+
 // helper functions
-//------------------------------------------------------------------------
+
 
 namespace // private
 {
@@ -93,25 +88,25 @@ bool GetProxySetting(ServiceType sType, char *host, size_t hostSize, UInt16 *por
     if (!proxyDict)
         return false;
 
-	CFStringRef proxiesEnable;
-	CFStringRef proxiesProxy;
-	CFStringRef proxiesPort;
+    CFStringRef proxiesEnable;
+    CFStringRef proxiesProxy;
+    CFStringRef proxiesPort;
 
-	switch ( sType )
-	{
-		case sHTTP : proxiesEnable =  kSCPropNetProxiesHTTPEnable;
-					 proxiesProxy = kSCPropNetProxiesHTTPProxy;
-					 proxiesPort = kSCPropNetProxiesHTTPPort;
-			break;
-		case sHTTPS: proxiesEnable = kSCPropNetProxiesHTTPSEnable;
-					 proxiesProxy = kSCPropNetProxiesHTTPSProxy;
-					 proxiesPort = kSCPropNetProxiesHTTPSPort;
-			break;
-		default: proxiesEnable = kSCPropNetProxiesFTPEnable;
-				 proxiesProxy = kSCPropNetProxiesFTPProxy;
-				 proxiesPort = kSCPropNetProxiesFTPPort;
-			break;
-	}
+    switch ( sType )
+    {
+        case sHTTP : proxiesEnable =  kSCPropNetProxiesHTTPEnable;
+                     proxiesProxy = kSCPropNetProxiesHTTPProxy;
+                     proxiesPort = kSCPropNetProxiesHTTPPort;
+            break;
+        case sHTTPS: proxiesEnable = kSCPropNetProxiesHTTPSEnable;
+                     proxiesProxy = kSCPropNetProxiesHTTPSProxy;
+                     proxiesPort = kSCPropNetProxiesHTTPSPort;
+            break;
+        default: proxiesEnable = kSCPropNetProxiesFTPEnable;
+                 proxiesProxy = kSCPropNetProxiesFTPProxy;
+                 proxiesPort = kSCPropNetProxiesFTPPort;
+            break;
+    }
     // Proxy enabled?
     enableNum = (CFNumberRef) CFDictionaryGetValue( proxyDict,
                                                    proxiesEnable );
@@ -167,26 +162,26 @@ bool GetProxySetting(ServiceType sType, char *host, size_t hostSize, UInt16 *por
 
 } // end private namespace
 
-//------------------------------------------------------------------------------
+
 
 MacOSXBackend::MacOSXBackend()
 {
 }
 
-//------------------------------------------------------------------------------
+
 
 MacOSXBackend::~MacOSXBackend(void)
 {
 }
 
-//------------------------------------------------------------------------------
+
 
 MacOSXBackend* MacOSXBackend::createInstance()
 {
     return new MacOSXBackend;
 }
 
-// ---------------------------------------------------------------------------------------
+
 
 rtl::OUString CFStringToOUString(const CFStringRef sOrig) {
     CFRetain(sOrig);
@@ -210,7 +205,7 @@ rtl::OUString GetOUString( NSString* pStr )
     int nLen = [pStr length];
     if( nLen == 0 )
         return rtl::OUString();
-    
+
     rtl::OUStringBuffer aBuf( nLen+1 );
     aBuf.setLength( nLen );
     [pStr getCharacters: const_cast<sal_Unicode*>(aBuf.getStr())];
@@ -222,11 +217,11 @@ void MacOSXBackend::setPropertyValue(
     throw (
         css::beans::UnknownPropertyException, css::beans::PropertyVetoException,
         css::lang::IllegalArgumentException, css::lang::WrappedTargetException,
-        css::uno::RuntimeException)
+        css::uno::RuntimeException, std::exception)
 {
     throw css::lang::IllegalArgumentException(
         rtl::OUString(
-            RTL_CONSTASCII_USTRINGPARAM("setPropertyValue not supported")),
+            "setPropertyValue not supported"),
         static_cast< cppu::OWeakObject * >(this), -1);
 }
 
@@ -234,10 +229,9 @@ css::uno::Any MacOSXBackend::getPropertyValue(
     rtl::OUString const & PropertyName)
     throw (
         css::beans::UnknownPropertyException, css::lang::WrappedTargetException,
-        css::uno::RuntimeException)
+        css::uno::RuntimeException, std::exception)
 {
-    if (PropertyName.equalsAsciiL(
-            RTL_CONSTASCII_STRINGPARAM("WorkPathVariable")))
+    if ( PropertyName == "WorkPathVariable" )
     {
 #ifdef USE_JAVA
         NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -247,7 +241,7 @@ css::uno::Any MacOSXBackend::getPropertyValue(
         if( pPaths && [pPaths count] > 0 )
         {
             aDocDir = GetOUString( [pPaths objectAtIndex: 0] );
-            
+
             rtl::OUString aDocURL;
             if( aDocDir.getLength() > 0 &&
                 osl_getFileURLFromSystemPath( aDocDir.pData, &aDocURL.pData ) == osl_File_E_None )
@@ -269,8 +263,7 @@ css::uno::Any MacOSXBackend::getPropertyValue(
         [pPool release];
 #endif	// USE_JAVA
         return css::uno::makeAny(css::beans::Optional< css::uno::Any >());
-    } else if (PropertyName.equalsAsciiL(
-                   RTL_CONSTASCII_STRINGPARAM("ooInetFTPProxyName")))
+    } else if ( PropertyName == "ooInetFTPProxyName" )
     {
         ProxyEntry aFtpProxy;
 
@@ -293,8 +286,7 @@ css::uno::Any MacOSXBackend::getPropertyValue(
                     true, uno::makeAny( aFtpProxy.Server ) ) );
         }
         return css::uno::makeAny(css::beans::Optional< css::uno::Any >());
-    } else if (PropertyName.equalsAsciiL(
-                   RTL_CONSTASCII_STRINGPARAM("ooInetFTPProxyPort")))
+    } else if ( PropertyName == "ooInetFTPProxyPort" )
     {
         ProxyEntry aFtpProxy;
 
@@ -317,8 +309,7 @@ css::uno::Any MacOSXBackend::getPropertyValue(
                     true, uno::makeAny( aFtpProxy.Port ) ) );
         }
         return css::uno::makeAny(css::beans::Optional< css::uno::Any >());
-    } else if (PropertyName.equalsAsciiL(
-                   RTL_CONSTASCII_STRINGPARAM("ooInetHTTPProxyName")))
+    } else if ( PropertyName == "ooInetHTTPProxyName" )
     {
         ProxyEntry aHttpProxy;
 
@@ -341,8 +332,7 @@ css::uno::Any MacOSXBackend::getPropertyValue(
                     true, uno::makeAny( aHttpProxy.Server ) ) );
         }
         return css::uno::makeAny(css::beans::Optional< css::uno::Any >());
-    } else if (PropertyName.equalsAsciiL(
-                   RTL_CONSTASCII_STRINGPARAM("ooInetHTTPProxyPort")))
+    } else if ( PropertyName == "ooInetHTTPProxyPort" )
     {
         ProxyEntry aHttpProxy;
 
@@ -365,8 +355,7 @@ css::uno::Any MacOSXBackend::getPropertyValue(
                     true, uno::makeAny( aHttpProxy.Port ) ) );
         }
         return css::uno::makeAny(css::beans::Optional< css::uno::Any >());
-    } else if (PropertyName.equalsAsciiL(
-                   RTL_CONSTASCII_STRINGPARAM("ooInetHTTPSProxyName")))
+    } else if ( PropertyName == "ooInetHTTPSProxyName" )
     {
         ProxyEntry aHttpsProxy;
 
@@ -389,8 +378,7 @@ css::uno::Any MacOSXBackend::getPropertyValue(
                     true, uno::makeAny( aHttpsProxy.Server ) ) );
         }
         return css::uno::makeAny(css::beans::Optional< css::uno::Any >());
-    } else if (PropertyName.equalsAsciiL(
-                   RTL_CONSTASCII_STRINGPARAM("ooInetHTTPSProxyPort")))
+    } else if ( PropertyName == "ooInetHTTPSProxyPort" )
     {
         ProxyEntry aHttpsProxy;
 
@@ -413,16 +401,14 @@ css::uno::Any MacOSXBackend::getPropertyValue(
                     true, uno::makeAny( aHttpsProxy.Port ) ) );
         }
         return css::uno::makeAny(css::beans::Optional< css::uno::Any >());
-    } else if (PropertyName.equalsAsciiL(
-                   RTL_CONSTASCII_STRINGPARAM("ooInetProxyType")))
+    } else if ( PropertyName == "ooInetProxyType" )
     {
         // override default for ProxyType, which is "0" meaning "No proxies".
         sal_Int32 nProperties = 1;
         return css::uno::makeAny(
             css::beans::Optional< css::uno::Any >(
                 true, uno::makeAny( nProperties ) ) );
-    } else if (PropertyName.equalsAsciiL(
-                   RTL_CONSTASCII_STRINGPARAM("ooInetNoProxy")))
+    } else if ( PropertyName == "ooInetNoProxy" )
     {
         rtl::OUString aProxyBypassList;
 
@@ -430,7 +416,7 @@ css::uno::Any MacOSXBackend::getPropertyValue(
         CFDictionaryRef rProxyDict = SCDynamicStoreCopyProxies(NULL);
 
         if (!rProxyDict)
-            rExceptionsList = nil;
+            rExceptionsList = 0;
         else
             rExceptionsList = (CFArrayRef) CFDictionaryGetValue(rProxyDict, kSCPropNetProxiesExceptionsList);
 
@@ -441,7 +427,7 @@ css::uno::Any MacOSXBackend::getPropertyValue(
                 CFStringRef rException = (CFStringRef) CFArrayGetValueAtIndex(rExceptionsList, idx);
 
                 if (idx>0)
-                    aProxyBypassList += rtl::OUString::createFromAscii( ";" );
+                    aProxyBypassList += rtl::OUString(";");
 
                 aProxyBypassList += CFStringToOUString(rException);
             }
@@ -465,49 +451,39 @@ css::uno::Any MacOSXBackend::getPropertyValue(
     }
 }
 
-//------------------------------------------------------------------------------
+
 
 rtl::OUString SAL_CALL MacOSXBackend::getBackendName(void)
 {
-	return rtl::OUString::createFromAscii("com.sun.star.comp.configuration.backend.MacOSXBackend");
+    return rtl::OUString("com.sun.star.comp.configuration.backend.MacOSXBackend");
 }
 
-//------------------------------------------------------------------------------
+
 
 rtl::OUString SAL_CALL MacOSXBackend::getImplementationName(void)
-    throw (uno::RuntimeException)
+    throw (uno::RuntimeException, std::exception)
 {
     return getBackendName();
 }
 
-//------------------------------------------------------------------------------
-
 uno::Sequence<rtl::OUString> SAL_CALL MacOSXBackend::getBackendServiceNames(void)
 {
     uno::Sequence<rtl::OUString> aServiceNameList(1);
-    aServiceNameList[0] = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("com.sun.star.configuration.backend.MacOSXBackend"));
+    aServiceNameList[0] = rtl::OUString( "com.sun.star.configuration.backend.MacOSXBackend");
 
     return aServiceNameList;
 }
 
-//------------------------------------------------------------------------------
-
 sal_Bool SAL_CALL MacOSXBackend::supportsService(const rtl::OUString& aServiceName)
-    throw (uno::RuntimeException)
+    throw (uno::RuntimeException, std::exception)
 {
-    uno::Sequence< rtl::OUString > const svc = getBackendServiceNames();
-
-    for(sal_Int32 i = 0; i < svc.getLength(); ++i )
-        if(svc[i] == aServiceName)
-            return true;
-
-    return false;
+    return cppu::supportsService(this, aServiceName);
 }
 
-//------------------------------------------------------------------------------
-
 uno::Sequence<rtl::OUString> SAL_CALL MacOSXBackend::getSupportedServiceNames(void)
-    throw (uno::RuntimeException)
+    throw (uno::RuntimeException, std::exception)
 {
     return getBackendServiceNames();
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

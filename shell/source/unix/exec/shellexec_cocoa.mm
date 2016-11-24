@@ -87,6 +87,8 @@ using namespace com::sun::star::uno;
 
 - (void)openURL:(id)pSender
 {
+	(void)pSender;
+
 	mbResult = NO;
 
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
@@ -116,7 +118,7 @@ using namespace com::sun::star::uno;
 
 @end
 
-sal_Bool ShellExec_openURL( ::rtl::OUString &rURL )
+sal_Bool ShellExec_openURL( OUString &rURL )
 {
 	sal_Bool bRet = sal_False;
 
