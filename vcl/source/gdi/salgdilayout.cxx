@@ -874,14 +874,10 @@ bool SalGraphics::DrawAlphaRect( long nX, long nY, long nWidth, long nHeight,
 
 #ifdef USE_JAVA
 
-sal_Bool SalGraphics::GetNativeControlTextColor( ControlType nType, 
-                                     ControlPart nPart, 
-                                     ControlState nState, 
-                                     const ImplControlValue& aValue, 
-                                     Color& nTextColor )
+bool SalGraphics::GetNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& aValue, Color& nTextColor )
 {
     SalColor aSalColor;
-    sal_Bool bRet = getNativeControlTextColor( nType, nPart, nState, aValue, aSalColor );
+    bool bRet = getNativeControlTextColor( nType, nPart, nState, aValue, aSalColor );
     if ( bRet )
         nTextColor = Color( aSalColor );
     return bRet;

@@ -410,7 +410,7 @@ void ScrollBar::ImplUpdateRects( sal_Bool bUpdate )
 
 // -----------------------------------------------------------------------
 
-void ScrollBar::ImplUpdateRectsNative( sal_Bool bUpdate )
+void ScrollBar::ImplUpdateRectsNative( bool bUpdate )
 {
     sal_uInt16  nOldStateFlags  = mnStateFlags;
     Rectangle   aOldPage1Rect = maPage1Rect;

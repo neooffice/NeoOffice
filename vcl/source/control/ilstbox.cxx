@@ -2953,7 +2953,7 @@ void ImplWin::ImplDraw( bool bLayout )
 	    }
 
 #ifdef USE_JAVA
-        sal_Bool bNativeTextOK = false;
+        bool bNativeTextOK = false;
         Color aTextColor;
 
         if ( IsNativeControlSupported( CTRL_LISTBOX, PART_ENTIRE_CONTROL ) )

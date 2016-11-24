@@ -2926,9 +2926,9 @@ unsigned int JavaSalFrame::GetScreenCount()
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalFrame::GetAlternateSelectedControlTextColor( SalColor& rSalColor )
+bool JavaSalFrame::GetAlternateSelectedControlTextColor( SalColor& rSalColor )
 {
-	sal_Bool bRet = sal_False;
+	bool bRet = false;
 
 	// Update colors if any system colors have not yet been set
 	InitializeSystemColors();
@@ -2936,7 +2936,7 @@ sal_Bool JavaSalFrame::GetAlternateSelectedControlTextColor( SalColor& rSalColor
 	if ( pVCLAlternateSelectedControlTextColor )
 	{
 		rSalColor = *pVCLAlternateSelectedControlTextColor;
-		bRet = sal_True;
+		bRet = true;
 	}
 
 	return bRet;
@@ -2944,9 +2944,9 @@ sal_Bool JavaSalFrame::GetAlternateSelectedControlTextColor( SalColor& rSalColor
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalFrame::GetControlTextColor( SalColor& rSalColor )
+bool JavaSalFrame::GetControlTextColor( SalColor& rSalColor )
 {
-	sal_Bool bRet = sal_False;
+	bool bRet = false;
 
 	// Update colors if any system colors have not yet been set
 	InitializeSystemColors();
@@ -2954,7 +2954,7 @@ sal_Bool JavaSalFrame::GetControlTextColor( SalColor& rSalColor )
 	if ( pVCLControlTextColor )
 	{
 		rSalColor = *pVCLControlTextColor;
-		bRet = sal_True;
+		bRet = true;
 	}
 
 	return bRet;
@@ -2962,9 +2962,9 @@ sal_Bool JavaSalFrame::GetControlTextColor( SalColor& rSalColor )
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalFrame::GetDisabledControlTextColor( SalColor& rSalColor )
+bool JavaSalFrame::GetDisabledControlTextColor( SalColor& rSalColor )
 {
-	sal_Bool bRet = sal_False;
+	bool bRet = false;
 
 	// Update colors if any system colors have not yet been set
 	InitializeSystemColors();
@@ -2972,7 +2972,7 @@ sal_Bool JavaSalFrame::GetDisabledControlTextColor( SalColor& rSalColor )
 	if ( pVCLDisabledControlTextColor )
 	{
 		rSalColor = *pVCLDisabledControlTextColor;
-		bRet = sal_True;
+		bRet = true;
 	}
 
 	return bRet;
@@ -2982,7 +2982,7 @@ sal_Bool JavaSalFrame::GetDisabledControlTextColor( SalColor& rSalColor )
 
 sal_Bool JavaSalFrame::GetSelectedControlTextColor( SalColor& rSalColor )
 {
-	sal_Bool bRet = sal_False;
+	bool bRet = false;
 
 	// Update colors if any system colors have not yet been set
 	InitializeSystemColors();
@@ -2990,7 +2990,7 @@ sal_Bool JavaSalFrame::GetSelectedControlTextColor( SalColor& rSalColor )
 	if ( pVCLSelectedControlTextColor )
 	{
 		rSalColor = *pVCLSelectedControlTextColor;
-		bRet = sal_True;
+		bRet = true;
 	}
 
 	return bRet;
@@ -3000,7 +3000,7 @@ sal_Bool JavaSalFrame::GetSelectedControlTextColor( SalColor& rSalColor )
 
 sal_Bool JavaSalFrame::GetSelectedMenuItemTextColor( SalColor& rSalColor )
 {
-	sal_Bool bRet = sal_False;
+	bool bRet = false;
 
 	// Update colors if any system colors have not yet been set
 	InitializeSystemColors();
@@ -3008,7 +3008,7 @@ sal_Bool JavaSalFrame::GetSelectedMenuItemTextColor( SalColor& rSalColor )
 	if ( pVCLSelectedMenuItemTextColor )
 	{
 		rSalColor = *pVCLSelectedMenuItemTextColor;
-		bRet = sal_True;
+		bRet = true;
 	}
 
 	return bRet;

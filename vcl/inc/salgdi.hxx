@@ -181,7 +181,7 @@ protected:
                                                 Rectangle &rNativeBoundingRegion, Rectangle &rNativeContentRegion );
 
 #ifdef USE_JAVA
-    virtual sal_Bool        getNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& aValue, SalColor& nTextColor );
+    virtual bool            getNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& aValue, SalColor& nTextColor );
 #endif	// USE_JAVA
 
     /** Render bitmap with alpha channel
@@ -501,7 +501,7 @@ public:
 
 #ifdef USE_JAVA
     // Query the VCL implementation for the text color that should be used to draw a native control
-    sal_Bool GetNativeControlTextColor( ControlType nType,
+    bool GetNativeControlTextColor( ControlType nType,
                                          ControlPart nPart,
                                          ControlState nState,
                                          const ImplControlValue& aValue,

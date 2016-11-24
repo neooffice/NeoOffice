@@ -94,11 +94,7 @@ void Window::ImplAdjustNWFSizes()
 
 // -----------------------------------------------------------------------
 
-sal_Bool Window::GetNativeControlTextColor( ControlType nType, 
-                                     ControlPart nPart, 
-                                     ControlState nState, 
-                                     const ImplControlValue& aValue, 
-                                     Color& nTextColor )
+bool Window::GetNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& aValue, Color& nTextColor )
 {
     if( !IsNativeWidgetEnabled() )
         return sal_False;

@@ -149,9 +149,9 @@ sal_Bool SalGraphics::getNativeControlRegion(  ControlType,
  *
  *  aValue:		An optional value (tristate/numerical/string)
  */
-sal_Bool SalGraphics::getNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& aValue, SalColor& nTextColor )
+bool SalGraphics::getNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& aValue, SalColor& nTextColor )
 {
-    return( sal_False );
+    return( false );
 }
 
 #endif	// USE_JAVA

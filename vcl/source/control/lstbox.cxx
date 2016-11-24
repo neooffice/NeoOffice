@@ -485,7 +485,7 @@ void ListBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, sa
 	}
 
 #ifdef USE_JAVA
-	sal_Bool bNativeOK = false;
+	bool bNativeOK = false;
 	Color aTextColor;
 	
 	if ( IsNativeControlSupported( CTRL_LISTBOX, PART_ENTIRE_CONTROL ) )

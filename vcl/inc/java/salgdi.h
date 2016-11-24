@@ -320,7 +320,7 @@ public:
 	void					drawUndrawnNativeOps( CGContextRef aContext, CGRect aRect );
 	sal_uLong				getBitmapDirectionFormat();
 	CGLayerRef				getLayer() { return maLayer; }
-	sal_Bool				getNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& aValue, SalColor& textColor );
+	bool					getNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& aValue, SalColor& textColor );
 	float					getNativeLineWidth();
 	::osl::Mutex&			getUndrawnNativeOpsMutex() { return maUndrawnNativeOpsMutex; }
 	void					setBackgroundColor( SalColor nBackgroundColor );
