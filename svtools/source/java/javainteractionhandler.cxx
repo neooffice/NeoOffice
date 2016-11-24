@@ -198,8 +198,8 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
             MessageDialog aWarningBox(NULL, SvtResId(STR_WARNING_INVALIDJAVASETTINGS_MAC), VCL_MESSAGE_WARNING);
 #else
             MessageDialog aWarningBox(NULL, SvtResId(STR_WARNING_INVALIDJAVASETTINGS), VCL_MESSAGE_WARNING);
-            aWarningBox.SetText(SvtResId(STR_WARNING_INVALIDJAVASETTINGS_TITLE));
 #endif
+            aWarningBox.SetText(SvtResId(STR_WARNING_INVALIDJAVASETTINGS_TITLE));
 #if defined PRODUCT_JAVA_DOWNLOAD_URL && defined USE_JAVA && defined MACOSX
             OUString aDownload = GetUpdResString(RID_UPDATE_BTN_DOWNLOAD);
             aDownload = aDownload.replaceAll("~", "");
