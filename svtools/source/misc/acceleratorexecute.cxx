@@ -1,109 +1,64 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_svtools.hxx"
 #include <svtools/acceleratorexecute.hxx>
 
-//===============================================
-// includes
-
-#ifndef __COM_SUN_STAR_FRAME_XMODULEMANAGER_HPP_
-#include <com/sun/star/frame/XModuleManager.hpp>
-#endif
-
-#ifndef __COM_SUN_STAR_FRAME_XDESKTOP_HPP_
-#include <com/sun/star/frame/XDesktop.hpp>
-#endif
-
-#ifndef __COM_SUN_STAR_UI_XUICONFIGURATIONMANAGER_HPP_
+#include <com/sun/star/frame/ModuleManager.hpp>
+#include <com/sun/star/frame/Desktop.hpp>
+#include <com/sun/star/ui/GlobalAcceleratorConfiguration.hpp>
 #include <com/sun/star/ui/XUIConfigurationManager.hpp>
-#endif
-
-#ifndef __COM_SUN_STAR_UI_XMODULEUICONFIGURATIONMANAGERSUPPLIER_HPP_
-#include <com/sun/star/ui/XModuleUIConfigurationManagerSupplier.hpp>
-#endif
-
-#ifndef __COM_SUN_STAR_UI_XUICONFIGURATIONMANAGERSUPPLIER_HPP_
+#include <com/sun/star/ui/theModuleUIConfigurationManagerSupplier.hpp>
 #include <com/sun/star/ui/XUIConfigurationManagerSupplier.hpp>
-#endif
-
-#ifndef __COM_SUN_STAR_AWT_XTOPWINDOW_HPP_
 #include <com/sun/star/awt/XTopWindow.hpp>
-#endif
-
-#ifndef __COM_SUN_STAR_AWT_KEYMODIFIER_HPP_
 #include <com/sun/star/awt/KeyModifier.hpp>
-#endif
-
-#ifndef __COM_SUN_STAR_UNO_SEQUENCE_HXX_
 #include <com/sun/star/uno/Sequence.hxx>
-#endif
-
-#ifndef __COM_SUN_STAR_BEANS_PROPERTYVALUE_HPP_
 #include <com/sun/star/beans/PropertyValue.hpp>
-#endif
-
-#ifndef __COM_SUN_STAR_LANG_DISPOSEDEXCEPTION_HPP_
 #include <com/sun/star/lang/DisposedException.hpp>
-#endif
+#include <com/sun/star/util/URLTransformer.hpp>
 #include <toolkit/helper/vclunohelper.hxx>
+#include <comphelper/processfactory.hxx>
 
 #include <vcl/window.hxx>
 #include <vcl/svapp.hxx>
-#include <vos/mutex.hxx>
-#include <comphelper/uieventslogger.hxx>
+#include <osl/mutex.hxx>
 
 #ifdef USE_JAVA
 #include <com/sun/star/uno/XReference.hpp>
 #endif	// USE_JAVA
 
-//===============================================
-// namespace
-
-namespace  css = ::com::sun::star;
 
 namespace svt
 {
 
-//===============================================
-// definitions
 
-//-----------------------------------------------
+
 class SVT_DLLPRIVATE AsyncAccelExec
 {
     public:
 
-        //---------------------------------------
         /** creates a new instance of this class, which can be used
             one times only!
 
@@ -117,7 +72,6 @@ class SVT_DLLPRIVATE AsyncAccelExec
 
     private:
 
-        //---------------------------------------
         /** @short  allow creation of instances of this class
                     by using our factory only!
          */
@@ -127,20 +81,19 @@ class SVT_DLLPRIVATE AsyncAccelExec
         DECL_DLLPRIVATE_LINK(impl_ts_asyncCallback, void*);
 
     private:
-
         ::vcl::EventPoster m_aAsyncCallback;
         css::uno::Reference< css::frame::XDispatch > m_xDispatch;
         css::util::URL m_aURL;
 };
 
-//-----------------------------------------------
+
 AcceleratorExecute::AcceleratorExecute()
     : TMutexInit      (                                                     )
     , m_aAsyncCallback(LINK(this, AcceleratorExecute, impl_ts_asyncCallback))
 {
 }
 
-//-----------------------------------------------
+
 AcceleratorExecute::AcceleratorExecute(const AcceleratorExecute&)
     : TMutexInit      (                                                     )
     , m_aAsyncCallback(LINK(this, AcceleratorExecute, impl_ts_asyncCallback))
@@ -149,7 +102,7 @@ AcceleratorExecute::AcceleratorExecute(const AcceleratorExecute&)
     // but we need this ctor to init our async callback ...
 }
 
-//-----------------------------------------------
+
 AcceleratorExecute::~AcceleratorExecute()
 {
     // does nothing real
@@ -172,41 +125,39 @@ AcceleratorExecute::~AcceleratorExecute()
 #endif	// USE_JAVA
 }
 
-//-----------------------------------------------
+
 AcceleratorExecute* AcceleratorExecute::createAcceleratorHelper()
 {
     AcceleratorExecute* pNew = new AcceleratorExecute();
     return pNew;
 }
 
-//-----------------------------------------------
-void AcceleratorExecute::init(const css::uno::Reference< css::lang::XMultiServiceFactory >& xSMGR,
+
+void AcceleratorExecute::init(const css::uno::Reference< css::uno::XComponentContext >& rxContext,
                               const css::uno::Reference< css::frame::XFrame >&              xEnv )
 {
     // SAFE -> ----------------------------------
     ::osl::ResettableMutexGuard aLock(m_aLock);
 
     // take over the uno service manager
-    m_xSMGR = xSMGR;
+    m_xContext = rxContext;
 
     // specify our internal dispatch provider
     // frame or desktop?! => document or global config.
-    sal_Bool bDesktopIsUsed = sal_False;
-             m_xDispatcher  = css::uno::Reference< css::frame::XDispatchProvider >(xEnv, css::uno::UNO_QUERY);
+    bool bDesktopIsUsed = false;
+    m_xDispatcher  = css::uno::Reference< css::frame::XDispatchProvider >(xEnv, css::uno::UNO_QUERY);
     if (!m_xDispatcher.is())
     {
         aLock.clear();
         // <- SAFE ------------------------------
 
-        css::uno::Reference< css::frame::XDispatchProvider > xDispatcher(
-                            xSMGR->createInstance(::rtl::OUString::createFromAscii("com.sun.star.frame.Desktop")),
-                            css::uno::UNO_QUERY_THROW);
+        css::uno::Reference< css::frame::XDispatchProvider > xDispatcher(css::frame::Desktop::create(rxContext), css::uno::UNO_QUERY_THROW);
 
         // SAFE -> ------------------------------
         aLock.reset();
 
         m_xDispatcher  = xDispatcher;
-        bDesktopIsUsed = sal_True;
+        bDesktopIsUsed = true;
     }
 
     aLock.clear();
@@ -218,11 +169,11 @@ void AcceleratorExecute::init(const css::uno::Reference< css::lang::XMultiServic
     css::uno::Reference< css::ui::XAcceleratorConfiguration > xDocCfg   ;
 
     // global cfg
-    xGlobalCfg = AcceleratorExecute::st_openGlobalConfig(xSMGR);
+    xGlobalCfg = css::ui::GlobalAcceleratorConfiguration::create(rxContext);
     if (!bDesktopIsUsed)
     {
         // module cfg
-        xModuleCfg = AcceleratorExecute::st_openModuleConfig(xSMGR, xEnv);
+        xModuleCfg = AcceleratorExecute::st_openModuleConfig(rxContext, xEnv);
 
         // doc cfg
         css::uno::Reference< css::frame::XController > xController;
@@ -245,21 +196,24 @@ void AcceleratorExecute::init(const css::uno::Reference< css::lang::XMultiServic
     // <- SAFE ----------------------------------
 }
 
-//-----------------------------------------------
-sal_Bool AcceleratorExecute::execute(const KeyCode& aVCLKey)
+
+bool AcceleratorExecute::execute(const vcl::KeyCode& aVCLKey)
 {
     css::awt::KeyEvent aAWTKey = AcceleratorExecute::st_VCLKey2AWTKey(aVCLKey);
     return execute(aAWTKey);
 }
 
-//-----------------------------------------------
-sal_Bool AcceleratorExecute::execute(const css::awt::KeyEvent& aAWTKey)
-{
-    ::rtl::OUString sCommand = impl_ts_findCommand(aAWTKey);
 
-    // No Command found? Do nothing! User isnt interested on any error handling .-)
-    if (!sCommand.getLength())
-        return sal_False;
+bool AcceleratorExecute::execute(const css::awt::KeyEvent& aAWTKey)
+{
+    OUString sCommand = impl_ts_findCommand(aAWTKey);
+
+    // No Command found? Do nothing! User is not interested on any error handling .-)
+    // or for some reason m_xContext is NULL (which would crash impl_ts_getURLParser()
+    if (sCommand.isEmpty() || !m_xContext.is())
+    {
+        return false;
+    }
 
     // SAFE -> ----------------------------------
     ::osl::ResettableMutexGuard aLock(m_aLock);
@@ -275,33 +229,17 @@ sal_Bool AcceleratorExecute::execute(const css::awt::KeyEvent& aAWTKey)
     // Fix crashing reported in the following LibreOffice bug:
     // https://bugs.freedesktop.org/show_bug.cgi?id=69162
     if ( !xParser.is() )
-        return sal_False;
+        return false;
 #endif	// USE_JAVA
     css::util::URL aURL;
     aURL.Complete = sCommand;
     xParser->parseStrict(aURL);
-    
+
     // ask for dispatch object
-    css::uno::Reference< css::frame::XDispatch > xDispatch = xProvider->queryDispatch(aURL, ::rtl::OUString(), 0);
-    sal_Bool bRet = xDispatch.is();
+    css::uno::Reference< css::frame::XDispatch > xDispatch = xProvider->queryDispatch(aURL, OUString(), 0);
+    bool bRet = xDispatch.is();
     if ( bRet )
     {
-        if(::comphelper::UiEventsLogger::isEnabled() && m_xSMGR.is() && m_xDispatcher.is()) //#i88653#
-        {
-            try
-            {
-                css::uno::Reference< css::frame::XModuleManager > xModuleDetection(
-                    m_xSMGR->createInstance(::rtl::OUString::createFromAscii("com.sun.star.frame.ModuleManager")),
-                    css::uno::UNO_QUERY_THROW);
-
-                const ::rtl::OUString sModule = xModuleDetection->identify(m_xDispatcher);
-                css::uno::Sequence<css::beans::PropertyValue> source;
-                ::comphelper::UiEventsLogger::appendDispatchOrigin(source, sModule, ::rtl::OUString::createFromAscii("AcceleratorExecute"));
-                ::comphelper::UiEventsLogger::logDispatch(aURL, source);
-            }
-            catch(const css::uno::Exception&)
-                { }
-        }
         // Note: Such instance can be used one times only and destroy itself afterwards .-)
         AsyncAccelExec* pExec = AsyncAccelExec::createOnShotInstance(xDispatch, aURL);
         pExec->execAsync();
@@ -310,60 +248,60 @@ sal_Bool AcceleratorExecute::execute(const css::awt::KeyEvent& aAWTKey)
     return bRet;
 }
 
-//-----------------------------------------------
-css::awt::KeyEvent AcceleratorExecute::st_VCLKey2AWTKey(const KeyCode& aVCLKey)
+
+css::awt::KeyEvent AcceleratorExecute::st_VCLKey2AWTKey(const vcl::KeyCode& aVCLKey)
 {
     css::awt::KeyEvent aAWTKey;
     aAWTKey.Modifiers = 0;
     aAWTKey.KeyCode   = (sal_Int16)aVCLKey.GetCode();
-    
-	if (aVCLKey.IsShift())
-        aAWTKey.Modifiers |= css::awt::KeyModifier::SHIFT; 
-	if (aVCLKey.IsMod1())
-        aAWTKey.Modifiers |= css::awt::KeyModifier::MOD1; 
-	if (aVCLKey.IsMod2())
+
+    if (aVCLKey.IsShift())
+        aAWTKey.Modifiers |= css::awt::KeyModifier::SHIFT;
+    if (aVCLKey.IsMod1())
+        aAWTKey.Modifiers |= css::awt::KeyModifier::MOD1;
+    if (aVCLKey.IsMod2())
         aAWTKey.Modifiers |= css::awt::KeyModifier::MOD2;
-        if (aVCLKey.IsMod3())
-        aAWTKey.Modifiers |= css::awt::KeyModifier::MOD3; 
-    return aAWTKey;    
+    if (aVCLKey.IsMod3())
+        aAWTKey.Modifiers |= css::awt::KeyModifier::MOD3;
+    return aAWTKey;
 }
 
-//-----------------------------------------------
-KeyCode AcceleratorExecute::st_AWTKey2VCLKey(const css::awt::KeyEvent& aAWTKey)
+
+vcl::KeyCode AcceleratorExecute::st_AWTKey2VCLKey(const css::awt::KeyEvent& aAWTKey)
 {
-    sal_Bool bShift = ((aAWTKey.Modifiers & css::awt::KeyModifier::SHIFT) == css::awt::KeyModifier::SHIFT );
-    sal_Bool bMod1  = ((aAWTKey.Modifiers & css::awt::KeyModifier::MOD1 ) == css::awt::KeyModifier::MOD1  );
-    sal_Bool bMod2  = ((aAWTKey.Modifiers & css::awt::KeyModifier::MOD2 ) == css::awt::KeyModifier::MOD2  );
-    sal_Bool bMod3  = ((aAWTKey.Modifiers & css::awt::KeyModifier::MOD3 ) == css::awt::KeyModifier::MOD3  );
+    bool bShift = ((aAWTKey.Modifiers & css::awt::KeyModifier::SHIFT) == css::awt::KeyModifier::SHIFT );
+    bool bMod1  = ((aAWTKey.Modifiers & css::awt::KeyModifier::MOD1 ) == css::awt::KeyModifier::MOD1  );
+    bool bMod2  = ((aAWTKey.Modifiers & css::awt::KeyModifier::MOD2 ) == css::awt::KeyModifier::MOD2  );
+    bool bMod3  = ((aAWTKey.Modifiers & css::awt::KeyModifier::MOD3 ) == css::awt::KeyModifier::MOD3  );
     sal_uInt16   nKey   = (sal_uInt16)aAWTKey.KeyCode;
-    
-    return KeyCode(nKey, bShift, bMod1, bMod2, bMod3);
+
+    return vcl::KeyCode(nKey, bShift, bMod1, bMod2, bMod3);
 }
-//-----------------------------------------------
-::rtl::OUString AcceleratorExecute::findCommand(const css::awt::KeyEvent& aKey)
+
+OUString AcceleratorExecute::findCommand(const css::awt::KeyEvent& aKey)
 {
     return impl_ts_findCommand(aKey);
 }
-//-----------------------------------------------
-::rtl::OUString AcceleratorExecute::impl_ts_findCommand(const css::awt::KeyEvent& aKey)
+
+OUString AcceleratorExecute::impl_ts_findCommand(const css::awt::KeyEvent& aKey)
 {
     // SAFE -> ----------------------------------
     ::osl::ResettableMutexGuard aLock(m_aLock);
-    
+
     css::uno::Reference< css::ui::XAcceleratorConfiguration > xGlobalCfg = m_xGlobalCfg;
     css::uno::Reference< css::ui::XAcceleratorConfiguration > xModuleCfg = m_xModuleCfg;
     css::uno::Reference< css::ui::XAcceleratorConfiguration > xDocCfg    = m_xDocCfg   ;
-    
-    aLock.clear();    
+
+    aLock.clear();
     // <- SAFE ----------------------------------
 
-    ::rtl::OUString sCommand;
+    OUString sCommand;
 
     try
     {
         if (xDocCfg.is())
             sCommand = xDocCfg->getCommandByKeyEvent(aKey);
-        if (sCommand.getLength())
+        if (!sCommand.isEmpty())
             return sCommand;
     }
     catch(const css::container::NoSuchElementException&)
@@ -373,7 +311,7 @@ KeyCode AcceleratorExecute::st_AWTKey2VCLKey(const css::awt::KeyEvent& aAWTKey)
     {
         if (xModuleCfg.is())
             sCommand = xModuleCfg->getCommandByKeyEvent(aKey);
-        if (sCommand.getLength())
+        if (!sCommand.isEmpty())
             return sCommand;
     }
     catch(const css::container::NoSuchElementException&)
@@ -383,157 +321,117 @@ KeyCode AcceleratorExecute::st_AWTKey2VCLKey(const css::awt::KeyEvent& aAWTKey)
     {
         if (xGlobalCfg.is())
             sCommand = xGlobalCfg->getCommandByKeyEvent(aKey);
-        if (sCommand.getLength())
+        if (!sCommand.isEmpty())
             return sCommand;
     }
     catch(const css::container::NoSuchElementException&)
         {}
-        
+
     // fall back to functional key codes
     if( aKey.Modifiers == 0 )
     {
         switch( aKey.KeyCode )
         {
         case com::sun::star::awt::Key::DELETE_TO_BEGIN_OF_LINE:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:DelToStartOfLine" ) );
-            
+            return OUString( ".uno:DelToStartOfLine" );
         case com::sun::star::awt::Key::DELETE_TO_END_OF_LINE:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:DelToEndOfLine" ) );
-            
+            return OUString( ".uno:DelToEndOfLine" );
         case com::sun::star::awt::Key::DELETE_TO_BEGIN_OF_PARAGRAPH:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:DelToStartOfPara" ) );
-            
+            return OUString( ".uno:DelToStartOfPara" );
         case com::sun::star::awt::Key::DELETE_TO_END_OF_PARAGRAPH:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:DelToEndOfPara" ) );
-            
+            return OUString( ".uno:DelToEndOfPara" );
         case com::sun::star::awt::Key::DELETE_WORD_BACKWARD:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:DelToStartOfWord" ) );
-            
+            return OUString( ".uno:DelToStartOfWord" );
         case com::sun::star::awt::Key::DELETE_WORD_FORWARD:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:DelToEndOfWord" ) );
-            
+            return OUString( ".uno:DelToEndOfWord" );
         case com::sun::star::awt::Key::INSERT_LINEBREAK:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:InsertLinebreak" ) );
-            
+            return OUString( ".uno:InsertLinebreak" );
         case com::sun::star::awt::Key::INSERT_PARAGRAPH:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:InsertPara" ) );
-            
+            return OUString( ".uno:InsertPara" );
         case com::sun::star::awt::Key::MOVE_WORD_BACKWARD:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:GoToPrevWord" ) );
-            
+            return OUString( ".uno:GoToPrevWord" );
         case com::sun::star::awt::Key::MOVE_WORD_FORWARD:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:GoToNextWord" ) );
-            
+            return OUString( ".uno:GoToNextWord" );
         case com::sun::star::awt::Key::MOVE_TO_BEGIN_OF_LINE:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:GoToStartOfLine" ) );
-            
+            return OUString( ".uno:GoToStartOfLine" );
         case com::sun::star::awt::Key::MOVE_TO_END_OF_LINE:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:GoToEndOfLine" ) );
-            
+            return OUString( ".uno:GoToEndOfLine" );
         case com::sun::star::awt::Key::MOVE_TO_BEGIN_OF_PARAGRAPH:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:GoToStartOfPara" ) );
-            
+            return OUString( ".uno:GoToStartOfPara" );
         case com::sun::star::awt::Key::MOVE_TO_END_OF_PARAGRAPH:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:GoToEndOfPara" ) );
-            
+            return OUString( ".uno:GoToEndOfPara" );
         case com::sun::star::awt::Key::MOVE_TO_BEGIN_OF_DOCUMENT:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:GoToStartOfDoc" ) );
-            
+            return OUString( ".uno:GoToStartOfDoc" );
         case com::sun::star::awt::Key::MOVE_TO_END_OF_DOCUMENT:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:GoToEndOfDoc" ) );
-            
+            return OUString( ".uno:GoToEndOfDoc" );
         case com::sun::star::awt::Key::SELECT_BACKWARD:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:CharLeftSel" ) );
-            
+            return OUString( ".uno:CharLeftSel" );
         case com::sun::star::awt::Key::SELECT_FORWARD:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:CharRightSel" ) );
-            
+            return OUString( ".uno:CharRightSel" );
         case com::sun::star::awt::Key::SELECT_WORD_BACKWARD:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:WordLeftSel" ) );
-            
+            return OUString( ".uno:WordLeftSel" );
         case com::sun::star::awt::Key::SELECT_WORD_FORWARD:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:WordRightSel" ) );
-            
+            return OUString( ".uno:WordRightSel" );
         case com::sun::star::awt::Key::SELECT_WORD:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:SelectWord" ) );
-            
+            return OUString( ".uno:SelectWord" );
         case com::sun::star::awt::Key::SELECT_LINE:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "" ) );
-            
+            return OUString();
         case com::sun::star::awt::Key::SELECT_PARAGRAPH:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:SelectText" ) );
-            
+            return OUString( ".uno:SelectText" );
         case com::sun::star::awt::Key::SELECT_TO_BEGIN_OF_LINE:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:StartOfLineSel" ) );
-            
+            return OUString( ".uno:StartOfLineSel" );
         case com::sun::star::awt::Key::SELECT_TO_END_OF_LINE:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:EndOfLineSel" ) );
-
+            return OUString( ".uno:EndOfLineSel" );
         case com::sun::star::awt::Key::SELECT_TO_BEGIN_OF_PARAGRAPH:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:StartOfParaSel" ) );
-            
+            return OUString( ".uno:StartOfParaSel" );
         case com::sun::star::awt::Key::SELECT_TO_END_OF_PARAGRAPH:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:EndOfParaSel" ) );
-            
+            return OUString( ".uno:EndOfParaSel" );
         case com::sun::star::awt::Key::SELECT_TO_BEGIN_OF_DOCUMENT:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:StartOfDocumentSel" ) );
-            
+            return OUString( ".uno:StartOfDocumentSel" );
         case com::sun::star::awt::Key::SELECT_TO_END_OF_DOCUMENT:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:EndOfDocumentSel" ) );
-            
+            return OUString( ".uno:EndOfDocumentSel" );
         case com::sun::star::awt::Key::SELECT_ALL:
-            return rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:SelectAll" ) );
+            return OUString( ".uno:SelectAll" );
         default:
             break;
         }
     }
 
-    return ::rtl::OUString();
+    return OUString();
 }
 
-//-----------------------------------------------
-css::uno::Reference< css::ui::XAcceleratorConfiguration > AcceleratorExecute::st_openGlobalConfig(const css::uno::Reference< css::lang::XMultiServiceFactory >& xSMGR)
-{
-    css::uno::Reference< css::ui::XAcceleratorConfiguration > xAccCfg(
-        xSMGR->createInstance(::rtl::OUString::createFromAscii("com.sun.star.ui.GlobalAcceleratorConfiguration")),
-        css::uno::UNO_QUERY_THROW);
-    return xAccCfg;
-}
 
-//-----------------------------------------------
-css::uno::Reference< css::ui::XAcceleratorConfiguration > AcceleratorExecute::st_openModuleConfig(const css::uno::Reference< css::lang::XMultiServiceFactory >& xSMGR ,
+css::uno::Reference< css::ui::XAcceleratorConfiguration > AcceleratorExecute::st_openModuleConfig(const css::uno::Reference< css::uno::XComponentContext >& rxContext,
                                                                                                    const css::uno::Reference< css::frame::XFrame >&              xFrame)
 {
-    css::uno::Reference< css::frame::XModuleManager > xModuleDetection(
-        xSMGR->createInstance(::rtl::OUString::createFromAscii("com.sun.star.frame.ModuleManager")),
-        css::uno::UNO_QUERY_THROW);
+    css::uno::Reference< css::frame::XModuleManager2 > xModuleDetection(
+        css::frame::ModuleManager::create(rxContext));
 
-    ::rtl::OUString sModule;
+    OUString sModule;
     try
     {
         sModule = xModuleDetection->identify(xFrame);
     }
     catch(const css::uno::RuntimeException&rEx)
-    	{ (void) rEx; throw; }
+        { (void) rEx; throw; }
     catch(const css::uno::Exception&)
         { return css::uno::Reference< css::ui::XAcceleratorConfiguration >(); }
 
     css::uno::Reference< css::ui::XModuleUIConfigurationManagerSupplier > xUISupplier(
-        xSMGR->createInstance(::rtl::OUString::createFromAscii("com.sun.star.ui.ModuleUIConfigurationManagerSupplier")),
-        css::uno::UNO_QUERY_THROW);
+        css::ui::theModuleUIConfigurationManagerSupplier::get(rxContext) );
 
     css::uno::Reference< css::ui::XAcceleratorConfiguration > xAccCfg;
-	try
-	{
-    	css::uno::Reference< css::ui::XUIConfigurationManager >   xUIManager = xUISupplier->getUIConfigurationManager(sModule);
-	    xAccCfg = css::uno::Reference< css::ui::XAcceleratorConfiguration >(xUIManager->getShortCutManager(), css::uno::UNO_QUERY_THROW);
-	}
+    try
+    {
+        css::uno::Reference< css::ui::XUIConfigurationManager >   xUIManager = xUISupplier->getUIConfigurationManager(sModule);
+        xAccCfg = xUIManager->getShortCutManager();
+    }
     catch(const css::container::NoSuchElementException&)
         {}
     return xAccCfg;
 }
 
-//-----------------------------------------------
+
 css::uno::Reference< css::ui::XAcceleratorConfiguration > AcceleratorExecute::st_openDocConfig(const css::uno::Reference< css::frame::XModel >& xModel)
 {
     css::uno::Reference< css::ui::XAcceleratorConfiguration >       xAccCfg;
@@ -541,12 +439,12 @@ css::uno::Reference< css::ui::XAcceleratorConfiguration > AcceleratorExecute::st
     if (xUISupplier.is())
     {
         css::uno::Reference< css::ui::XUIConfigurationManager >     xUIManager = xUISupplier->getUIConfigurationManager();
-        xAccCfg.set(xUIManager->getShortCutManager(), css::uno::UNO_QUERY_THROW);
+        xAccCfg = xUIManager->getShortCutManager();
     }
     return xAccCfg;
 }
 
-//-----------------------------------------------
+
 css::uno::Reference< css::util::XURLTransformer > AcceleratorExecute::impl_ts_getURLParser()
 {
     // SAFE -> ----------------------------------
@@ -557,17 +455,15 @@ css::uno::Reference< css::util::XURLTransformer > AcceleratorExecute::impl_ts_ge
 #ifdef USE_JAVA
     // Fix crashing reported in the following LibreOffice bug:
     // https://bugs.freedesktop.org/show_bug.cgi?id=69162
-    else if (!m_xSMGR.is())
+    else if (!m_xContext.is())
         return m_xURLParser;
 #endif	// USE_JAVA
-    css::uno::Reference< css::lang::XMultiServiceFactory > xSMGR = m_xSMGR;
+    css::uno::Reference< css::uno::XComponentContext > xContext = m_xContext;
 
     aLock.clear();
     // <- SAFE ----------------------------------
 
-    css::uno::Reference< css::util::XURLTransformer > xParser(
-                xSMGR->createInstance(::rtl::OUString::createFromAscii("com.sun.star.util.URLTransformer")),
-                css::uno::UNO_QUERY_THROW);
+    css::uno::Reference< css::util::XURLTransformer > xParser =  css::util::URLTransformer::create( xContext );
 
     // SAFE -> ----------------------------------
     aLock.reset();
@@ -578,14 +474,14 @@ css::uno::Reference< css::util::XURLTransformer > AcceleratorExecute::impl_ts_ge
     return xParser;
 }
 
-//-----------------------------------------------
-IMPL_LINK(AcceleratorExecute, impl_ts_asyncCallback, void*, EMPTYARG)
+
+IMPL_LINK_NOARG(AcceleratorExecute, impl_ts_asyncCallback)
 {
     // replaced by AsyncAccelExec!
     return 0;
 }
 
-//-----------------------------------------------
+
 AsyncAccelExec::AsyncAccelExec(const css::uno::Reference< css::frame::XDispatch >& xDispatch,
                                const css::util::URL&                               aURL     )
     : m_aAsyncCallback(LINK(this, AsyncAccelExec, impl_ts_asyncCallback))
@@ -594,7 +490,7 @@ AsyncAccelExec::AsyncAccelExec(const css::uno::Reference< css::frame::XDispatch 
 {
 }
 
-//-----------------------------------------------
+
 AsyncAccelExec* AsyncAccelExec::createOnShotInstance(const css::uno::Reference< css::frame::XDispatch >& xDispatch,
                                                      const css::util::URL&                               aURL     )
 {
@@ -602,13 +498,13 @@ AsyncAccelExec* AsyncAccelExec::createOnShotInstance(const css::uno::Reference< 
     return pExec;
 }
 
-//-----------------------------------------------
+
 void AsyncAccelExec::execAsync()
 {
     m_aAsyncCallback.Post(0);
 }
 
-//-----------------------------------------------
+
 IMPL_LINK(AsyncAccelExec, impl_ts_asyncCallback, void*,)
 {
     if (! m_xDispatch.is())
@@ -631,3 +527,5 @@ IMPL_LINK(AsyncAccelExec, impl_ts_asyncCallback, void*,)
 }
 
 } // namespace svt
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

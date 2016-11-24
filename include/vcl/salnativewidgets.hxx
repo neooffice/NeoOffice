@@ -1,37 +1,31 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-#ifndef _SV_NATIVEWIDGETS_HXX
-#define _SV_NATIVEWIDGETS_HXX
+#ifndef INCLUDED_VCL_SALNATIVEWIDGETS_HXX
+#define INCLUDED_VCL_SALNATIVEWIDGETS_HXX
 
 #include <rtl/ustring.hxx>
 #include <vcl/dllapi.h>
@@ -44,94 +38,89 @@
  *   control if it were composite).
  */
 
-typedef sal_uInt32		ControlType;
+typedef sal_uInt32      ControlType;
 
 // for use in general purpose ImplControlValue
 #define CTRL_GENERIC            0
 
 // Normal PushButton/Command Button
-#define CTRL_PUSHBUTTON			1
+#define CTRL_PUSHBUTTON         1
 
 // Normal single radio button
-#define CTRL_RADIOBUTTON			2
+#define CTRL_RADIOBUTTON            2
 
 // Normal single checkbox
-#define CTRL_CHECKBOX			10
+#define CTRL_CHECKBOX           10
 
 // Combobox, i.e. a ListBox
 // that allows data entry by user
-#define CTRL_COMBOBOX			20
+#define CTRL_COMBOBOX           20
 
 // Control that allows text entry
-#define CTRL_EDITBOX			30
+#define CTRL_EDITBOX            30
 
 // Control that allows text entry, but without the usual border
 // Has to be handled separately, because this one cannot handle
 // HAS_BACKGROUND_TEXTURE, which is drawn in the edit box'es
 // border window.
-#define CTRL_EDITBOX_NOBORDER	31
+#define CTRL_EDITBOX_NOBORDER   31
 
 // Control that allows text entry
-// ( some systems distingish between single and multi line edit boxes )
+// ( some systems distinguish between single and multi line edit boxes )
 #define CTRL_MULTILINE_EDITBOX 32
 
 // Control that pops up a menu,
 // but does NOT allow data entry
-#define CTRL_LISTBOX			35
+#define CTRL_LISTBOX            35
 
-// An edit field together with two little 
+// An edit field together with two little
 // buttons on the side (aka spin field)
-#define CTRL_SPINBOX			40
+#define CTRL_SPINBOX            40
 
 // Two standalone spin buttons
 // without an edit field
-#define CTRL_SPINBUTTONS		45
+#define CTRL_SPINBUTTONS        45
 
 // A single tab
-#define CTRL_TAB_ITEM			50
+#define CTRL_TAB_ITEM           50
 
 // The border around a tab area,
 // but without the tabs themselves.
 // May have a gap at the top for
 // the active tab
-#define CTRL_TAB_PANE			55
+#define CTRL_TAB_PANE           55
 
 // Background of a Tab Pane
-#define CTRL_TAB_BODY			56
+#define CTRL_TAB_BODY           56
 
 // Normal scrollbar, including
 // all parts like slider, buttons
-#define CTRL_SCROLLBAR			60
+#define CTRL_SCROLLBAR          60
 
 #define CTRL_SLIDER             65
 
 // Border around a group of related
 // items, perhaps also displaying
 // a label of identification
-#define CTRL_GROUPBOX			70
+#define CTRL_GROUPBOX           70
 
 // A separator line
-#define CTRL_FIXEDLINE			80
-
-// A rectangular border, like a
-// Tab Pane, but without the
-// possible gap for a tab
-#define CTRL_FIXEDBORDER		90
+#define CTRL_FIXEDLINE          80
 
 // A toolbar control with buttons and a grip
-#define CTRL_TOOLBAR		    100
+#define CTRL_TOOLBAR            100
 
 // The menubar
-#define CTRL_MENUBAR		    120
+#define CTRL_MENUBAR            120
 // popup menu
 #define CTRL_MENU_POPUP         121
 
 // The statusbar
-#define CTRL_STATUSBAR		    130
+#define CTRL_STATUSBAR          130
 #define CTRL_PROGRESS           131
 // Progress bar for the intro window
 // (aka splash screen), in case some
-// wants native progress bar in the 
+// wants native progress bar in the
 // application but not for the splash
 // screen (used in desktop/)
 #define CTRL_INTROPROGRESS      132
@@ -151,15 +140,13 @@ typedef sal_uInt32		ControlType;
 // nets between elements of listviews
 // with nodes
 #define CTRL_LISTNET            171
-
+// for list headers
+#define CTRL_LISTHEADER         172
 #ifdef USE_JAVA
-
 // list view header cell appearing above columns in lists
-#define CTRL_LISTVIEWHEADER		240
-
+#define CTRL_LISTVIEWHEADER     240
 // native frame to draw around list views.  Default is sunken Win95 well.
-#define CTRL_LISTVIEWBOX		250
-
+#define CTRL_LISTVIEWBOX        250
 #endif	// USE_JAVA
 
 
@@ -169,30 +156,34 @@ typedef sal_uInt32		ControlType;
  *   for example the slider of a scroll bar.
  */
 
-typedef sal_uInt32		ControlPart;
+typedef sal_uInt32      ControlPart;
 
-#define PART_ENTIRE_CONTROL		1
-#define PART_WINDOW             5       // the static listbox window containing the list
-#define PART_BUTTON				100
-#define PART_BUTTON_UP			101
-#define PART_BUTTON_DOWN			102	// Also for ComboBoxes/ListBoxes
-#define PART_BUTTON_LEFT			103
-#define PART_BUTTON_RIGHT		104
-#define PART_ALL_BUTTONS    		105
-#define PART_TRACK_HORZ_LEFT		200
-#define PART_TRACK_VERT_UPPER		201
-#define PART_TRACK_HORZ_RIGHT		202
-#define PART_TRACK_VERT_LOWER		203
-#define PART_TRACK_HORZ_AREA		204
-#define PART_TRACK_VERT_AREA		205
-#define PART_THUMB_HORZ			210 // Also used as toolbar grip
-#define PART_THUMB_VERT			211 // Also used as toolbar grip
+#define PART_ENTIRE_CONTROL         1
+#define PART_WINDOW                 5       // the static listbox window containing the list
+#define PART_BUTTON                 100
+#define PART_BUTTON_UP              101
+#define PART_BUTTON_DOWN            102 // Also for ComboBoxes/ListBoxes
+#define PART_BUTTON_LEFT            103
+#define PART_BUTTON_RIGHT           104
+#define PART_ALL_BUTTONS            105
+#define PART_SEPARATOR_HORZ         106
+#define PART_SEPARATOR_VERT         107
+#define PART_TRACK_HORZ_LEFT        200
+#define PART_TRACK_VERT_UPPER       201
+#define PART_TRACK_HORZ_RIGHT       202
+#define PART_TRACK_VERT_LOWER       203
+#define PART_TRACK_HORZ_AREA        204
+#define PART_TRACK_VERT_AREA        205
+#define PART_THUMB_HORZ             210 // Also used as toolbar grip
+#define PART_THUMB_VERT             211 // Also used as toolbar grip
+#define PART_ARROW                  220
 #define PART_MENU_ITEM              250
 #define PART_MENU_ITEM_CHECK_MARK   251
 #define PART_MENU_ITEM_RADIO_MARK   252
 #define PART_MENU_SEPARATOR         253
+#define PART_MENU_SUBMENU_ARROW     254
 #ifdef USE_JAVA
-#define PART_LISTVIEWHEADER_SORT_MARK	260	// used for list view headers to indicate whether they draw an ascending/descending sort indicator or whether VCL should handle the indicator
+#define PART_LISTVIEWHEADER_SORT_MARK 260	// used for list view headers to indicate whether they draw an ascending/descending sort indicator or whether VCL should handle the indicator
 #endif	// USE_JAVA
 
 /*  #i77549#
@@ -202,10 +193,10 @@ typedef sal_uInt32		ControlPart;
     However aqua draws a little outside. The canonical way would be to enhance the
     HitTestNativeControl passing a ScrollbarValue additionally so all necessary
     information is available in the call.
-    .    
+    .
     However since there is only this one small exception we will deviate a little and
     instead pass the respective rect as control region to allow for a small correction.
-    
+
     So all places using HitTestNativeControl on PART_THUMB_HORZ, PART_THUMB_VERT,
     PART_TRACK_HORZ_LEFT, PART_TRACK_HORZ_RIGHT, PART_TRACK_VERT_UPPER, PART_TRACK_VERT_LOWER
     do not use the control rectangle as region but the actuall part rectangle, making
@@ -226,12 +217,12 @@ typedef sal_uInt32		ControlPart;
 // in to draw this part is expected to be the entire
 // area of the control.
 // A control may respond to one or both.
-#define PART_DRAW_BACKGROUND_HORZ		1000
-#define PART_DRAW_BACKGROUND_VERT		1001
+#define PART_DRAW_BACKGROUND_HORZ       1000
+#define PART_DRAW_BACKGROUND_VERT       1001
 
-// GTK+ also draws tabs right->left since there is a 
+// GTK+ also draws tabs right->left since there is a
 // hardcoded 2 pixel overlap between adjacent tabs
-#define PART_TABS_DRAW_RTL			3000
+#define PART_TABS_DRAW_RTL          3000
 
 // For themes that do not want to have the focus
 // rectangle part drawn by VCL but take care of the
@@ -258,19 +249,19 @@ typedef sal_uInt32		ControlPart;
  *   in the ControlState.
  */
 
-typedef sal_uInt32		ControlState;
+typedef sal_uInt32      ControlState;
 
-#define CTRL_STATE_ENABLED		0x0001
-#define CTRL_STATE_FOCUSED		0x0002
-#define CTRL_STATE_PRESSED		0x0004
-#define CTRL_STATE_ROLLOVER		0x0008
-#define CTRL_STATE_HIDDEN		0x0010
-#define CTRL_STATE_DEFAULT		0x0020
-#define CTRL_STATE_SELECTED		0x0040
+#define CTRL_STATE_ENABLED      0x0001
+#define CTRL_STATE_FOCUSED      0x0002
+#define CTRL_STATE_PRESSED      0x0004
+#define CTRL_STATE_ROLLOVER     0x0008
+#define CTRL_STATE_HIDDEN       0x0010
+#define CTRL_STATE_DEFAULT      0x0020
+#define CTRL_STATE_SELECTED     0x0040
 #if defined USE_JAVA && defined MACOSX
 #define CTRL_STATE_INACTIVE		0x0100
 #endif	// USE_JAVA && MACOSX
-#define CTRL_CACHING_ALLOWED	0x8000  // set when the control is completely visible (i.e. not clipped)
+#define CTRL_CACHING_ALLOWED    0x8000  // set when the control is completely visible (i.e. not clipped)
 
 /* ButtonValue:
  *
@@ -279,10 +270,10 @@ typedef sal_uInt32		ControlState;
  */
 
 enum ButtonValue {
-	BUTTONVALUE_DONTKNOW,
-	BUTTONVALUE_ON,
-	BUTTONVALUE_OFF,
-	BUTTONVALUE_MIXED
+    BUTTONVALUE_DONTKNOW,
+    BUTTONVALUE_ON,
+    BUTTONVALUE_OFF,
+    BUTTONVALUE_MIXED
 };
 
 /* ImplControlValue:
@@ -292,12 +283,12 @@ enum ButtonValue {
 
 class VCL_DLLPUBLIC ImplControlValue
 {
-	friend class SalFrame;
+    friend class SalFrame;
 
-	private:
-	    ControlType     mType;
-		ButtonValue     mTristate;    // Tristate value: on, off, mixed
-		long			mNumber;      // numeric value
+    private:
+        ControlType     mType;
+        ButtonValue     mTristate;    // Tristate value: on, off, mixed
+        long            mNumber;      // numeric value
     protected:
         ImplControlValue( ControlType i_eType, ButtonValue i_eTriState, long i_nNumber )
         : mType( i_eType )
@@ -305,69 +296,73 @@ class VCL_DLLPUBLIC ImplControlValue
         , mNumber( i_nNumber )
         {}
 
-	public:
-		explicit ImplControlValue( ButtonValue nTristate )
-			: mType( CTRL_GENERIC ), mTristate(nTristate), mNumber(0) {}
-		explicit ImplControlValue( long nNumeric )
-			: mType( CTRL_GENERIC ), mTristate(BUTTONVALUE_DONTKNOW), mNumber( nNumeric) {}
-		inline ImplControlValue()
-			: mType( CTRL_GENERIC ), mTristate(BUTTONVALUE_DONTKNOW), mNumber(0) {}
+    public:
+        explicit ImplControlValue( ButtonValue nTristate )
+            : mType( CTRL_GENERIC ), mTristate(nTristate), mNumber(0) {}
+        explicit ImplControlValue( long nNumeric )
+            : mType( CTRL_GENERIC ), mTristate(BUTTONVALUE_DONTKNOW), mNumber( nNumeric) {}
+        inline ImplControlValue()
+            : mType( CTRL_GENERIC ), mTristate(BUTTONVALUE_DONTKNOW), mNumber(0) {}
 
-		virtual ~ImplControlValue();
-		
-		ControlType getType() const { return mType; }
+        virtual ~ImplControlValue();
 
-		inline ButtonValue		getTristateVal( void ) const { return mTristate; }
-		inline void			setTristateVal( ButtonValue nTristate ) { mTristate = nTristate; }
+        virtual ImplControlValue* clone() const;
 
-		inline long			getNumericVal( void ) const { return mNumber; }
-		inline void			setNumericVal( long nNumeric ) { mNumber = nNumeric; }
+        ControlType getType() const { return mType; }
+
+        inline ButtonValue      getTristateVal( void ) const { return mTristate; }
+        inline void         setTristateVal( ButtonValue nTristate ) { mTristate = nTristate; }
+
+        inline long         getNumericVal( void ) const { return mNumber; }
+        inline void         setNumericVal( long nNumeric ) { mNumber = nNumeric; }
 };
 
 /* ScrollbarValue:
  *
  *   Value container for scrollbars.
  */
-class VCL_DLLPUBLIC ScrollbarValue : public ImplControlValue 
+class VCL_DLLPUBLIC ScrollbarValue : public ImplControlValue
 {
-	public:
-		long			mnMin;
-		long			mnMax;
-		long			mnCur;
-		long			mnVisibleSize;
-		Rectangle		maThumbRect;
-		Rectangle		maButton1Rect;
-		Rectangle		maButton2Rect;
-		ControlState	mnButton1State;
-		ControlState	mnButton2State;
-		ControlState	mnThumbState;
-		ControlState	mnPage1State;
-		ControlState	mnPage2State;
+    public:
+        long            mnMin;
+        long            mnMax;
+        long            mnCur;
+        long            mnVisibleSize;
+        Rectangle       maThumbRect;
+        Rectangle       maButton1Rect;
+        Rectangle       maButton2Rect;
+        ControlState    mnButton1State;
+        ControlState    mnButton2State;
+        ControlState    mnThumbState;
+        ControlState    mnPage1State;
+        ControlState    mnPage2State;
 
-		inline ScrollbarValue()
-		: ImplControlValue( CTRL_SCROLLBAR, BUTTONVALUE_DONTKNOW, 0 )
+        inline ScrollbarValue()
+        : ImplControlValue( CTRL_SCROLLBAR, BUTTONVALUE_DONTKNOW, 0 )
         {
             mnMin = 0; mnMax = 0; mnCur = 0; mnVisibleSize = 0;
             mnButton1State = 0; mnButton2State = 0;
             mnThumbState = 0; mnPage1State = 0; mnPage2State = 0;
         };
-		virtual ~ScrollbarValue();
+        virtual ~ScrollbarValue();
+        virtual ScrollbarValue* clone() const SAL_OVERRIDE;
 };
 
 class VCL_DLLPUBLIC SliderValue : public ImplControlValue
 {
-	public:
-		long			mnMin;
-		long			mnMax;
-		long			mnCur;
-		Rectangle       maThumbRect;
-		ControlState    mnThumbState;
-		
-		SliderValue()
-		: ImplControlValue( CTRL_SLIDER, BUTTONVALUE_DONTKNOW, 0 )
-		, mnMin( 0 ), mnMax( 0 ), mnCur( 0 ), mnThumbState( 0 )
-		{}
-		virtual ~SliderValue();
+    public:
+        long            mnMin;
+        long            mnMax;
+        long            mnCur;
+        Rectangle       maThumbRect;
+        ControlState    mnThumbState;
+
+        SliderValue()
+        : ImplControlValue( CTRL_SLIDER, BUTTONVALUE_DONTKNOW, 0 )
+        , mnMin( 0 ), mnMax( 0 ), mnCur( 0 ), mnThumbState( 0 )
+        {}
+        virtual ~SliderValue();
+        virtual SliderValue* clone() const SAL_OVERRIDE;
 };
 
 /* TabitemValue:
@@ -384,22 +379,23 @@ class VCL_DLLPUBLIC SliderValue : public ImplControlValue
 
 class VCL_DLLPUBLIC TabitemValue : public ImplControlValue
 {
-	public:
+    public:
         unsigned int    mnAlignment;
 
-		inline TabitemValue()
-		: ImplControlValue( CTRL_TAB_ITEM, BUTTONVALUE_DONTKNOW, 0 )
+        inline TabitemValue()
+        : ImplControlValue( CTRL_TAB_ITEM, BUTTONVALUE_DONTKNOW, 0 )
         {
             mnAlignment = 0;
         };
-		virtual ~TabitemValue();
+        virtual ~TabitemValue();
+        virtual TabitemValue* clone() const SAL_OVERRIDE;
 
-        sal_Bool isLeftAligned() const  { return (mnAlignment & TABITEM_LEFTALIGNED) != 0; }
-        sal_Bool isRightAligned() const { return (mnAlignment & TABITEM_RIGHTALIGNED) != 0; }
-        sal_Bool isBothAligned() const  { return isLeftAligned() && isRightAligned(); }
-        sal_Bool isNotAligned() const   { return (mnAlignment & (TABITEM_LEFTALIGNED | TABITEM_RIGHTALIGNED)) == 0; }
-        sal_Bool isFirst() const        { return (mnAlignment & TABITEM_FIRST_IN_GROUP) != 0; }
-        sal_Bool isLast() const         { return (mnAlignment & TABITEM_LAST_IN_GROUP) != 0; }
+        bool isLeftAligned() const  { return (mnAlignment & TABITEM_LEFTALIGNED) != 0; }
+        bool isRightAligned() const { return (mnAlignment & TABITEM_RIGHTALIGNED) != 0; }
+        bool isBothAligned() const  { return isLeftAligned() && isRightAligned(); }
+        bool isNotAligned() const   { return (mnAlignment & (TABITEM_LEFTALIGNED | TABITEM_RIGHTALIGNED)) == 0; }
+        bool isFirst() const        { return (mnAlignment & TABITEM_FIRST_IN_GROUP) != 0; }
+        bool isLast() const         { return (mnAlignment & TABITEM_LAST_IN_GROUP) != 0; }
 };
 
 /* SpinbuttonValue:
@@ -410,47 +406,54 @@ class VCL_DLLPUBLIC TabitemValue : public ImplControlValue
  */
 class VCL_DLLPUBLIC SpinbuttonValue : public ImplControlValue
 {
-	public:
-		Rectangle		maUpperRect;
-		Rectangle		maLowerRect;
-		ControlState	mnUpperState;
-		ControlState	mnLowerState;
-		int			mnUpperPart;
-		int			mnLowerPart;
+    public:
+        Rectangle       maUpperRect;
+        Rectangle       maLowerRect;
+        ControlState    mnUpperState;
+        ControlState    mnLowerState;
+        int         mnUpperPart;
+        int         mnLowerPart;
 
-		inline SpinbuttonValue()
-		: ImplControlValue( CTRL_SPINBUTTONS, BUTTONVALUE_DONTKNOW, 0 )
+        SpinbuttonValue()
+            : ImplControlValue( CTRL_SPINBUTTONS, BUTTONVALUE_DONTKNOW, 0 )
+            , mnUpperState(0)
+            , mnLowerState(0)
+            , mnUpperPart(0)
+            , mnLowerPart(0)
         {
-            mnUpperState = mnLowerState = 0;
-        };
-		virtual ~SpinbuttonValue();
+        }
+
+        virtual ~SpinbuttonValue();
+        virtual SpinbuttonValue* clone() const SAL_OVERRIDE;
 };
 
-/*	Toolbarvalue:
+/*  Toolbarvalue:
  *
  *  Value container for toolbars detailing the grip position
  */
-class ToolbarValue : public ImplControlValue
+class VCL_DLLPUBLIC ToolbarValue : public ImplControlValue
 {
 public:
     ToolbarValue() : ImplControlValue( CTRL_TOOLBAR, BUTTONVALUE_DONTKNOW, 0 )
-    { mbIsTopDockingArea = sal_False; }
+    { mbIsTopDockingArea = false; }
     virtual ~ToolbarValue();
-    Rectangle			maGripRect;
-    sal_Bool                mbIsTopDockingArea; // indicates that this is the top aligned dockingarea
+    virtual ToolbarValue* clone() const SAL_OVERRIDE;
+    Rectangle           maGripRect;
+    bool                mbIsTopDockingArea; // indicates that this is the top aligned dockingarea
                                             // adjacent to the menubar
 };
 
-/*	MenubarValue:
+/*  MenubarValue:
  *
  *  Value container for menubars specifying height of adjacent docking area
  */
-class MenubarValue : public ImplControlValue
+class VCL_DLLPUBLIC MenubarValue : public ImplControlValue
 {
 public:
     MenubarValue() : ImplControlValue( CTRL_MENUBAR, BUTTONVALUE_DONTKNOW, 0 )
     { maTopDockingAreaHeight=0; }
     virtual ~MenubarValue();
+    virtual MenubarValue* clone() const SAL_OVERRIDE;
     int             maTopDockingAreaHeight;
 };
 
@@ -459,7 +462,7 @@ public:
  * Value container for menu items; specifies the rectangle for the whole item which
  * may be useful when drawing parts with a smaller rectangle.
  */
-class MenupopupValue : public ImplControlValue
+class VCL_DLLPUBLIC MenupopupValue : public ImplControlValue
 {
 public:
     MenupopupValue() : ImplControlValue( CTRL_MENU_POPUP, BUTTONVALUE_DONTKNOW, 0 )
@@ -469,21 +472,23 @@ public:
     , maItemRect( i_rItemRect )
     {}
     virtual ~MenupopupValue();
+    virtual MenupopupValue* clone() const SAL_OVERRIDE;
     Rectangle       maItemRect;
 };
 
-/*	PushButtonValue:
+/*  PushButtonValue:
  *
  *  Value container for pushbuttons specifying additional drawing hints
  */
-class PushButtonValue : public ImplControlValue
+class VCL_DLLPUBLIC PushButtonValue : public ImplControlValue
 {
 public:
     PushButtonValue()
     : ImplControlValue( CTRL_PUSHBUTTON, BUTTONVALUE_DONTKNOW, 0 )
     , mbBevelButton( false ), mbSingleLine( true ) {}
     virtual ~PushButtonValue();
-    
+    virtual PushButtonValue* clone() const SAL_OVERRIDE;
+
     bool            mbBevelButton:1;
     bool            mbSingleLine:1;
 };
@@ -497,27 +502,28 @@ public:
  */
 
 enum ListViewHeaderSortValue {
-	LISTVIEWHEADER_SORT_DONTKNOW,
-	LISTVIEWHEADER_SORT_DESCENDING,
-	LISTVIEWHEADER_SORT_ASCENDING,
-	LISTVIEWHEADER_SORT_UNSORTED
+    LISTVIEWHEADER_SORT_DONTKNOW,
+    LISTVIEWHEADER_SORT_DESCENDING,
+    LISTVIEWHEADER_SORT_ASCENDING,
+    LISTVIEWHEADER_SORT_UNSORTED
 };
 
-/*	ListViewHeaderValue
+/*    ListViewHeaderValue
  *
- *	Value container for list view header cells drawn above columns of scrollable
- *	lists.  Indicates whether the clumn is the primary sort column and
- *	any direction of the sort
+ *    Value container for list view header cells drawn above columns of scrollable
+ *    lists.  Indicates whether the clumn is the primary sort column and
+ *    any direction of the sort
  */
-class ListViewHeaderValue : public ImplControlValue
+class VCL_DLLPUBLIC ListViewHeaderValue : public ImplControlValue
 {
-	public:
+public:
     ListViewHeaderValue()
     : ImplControlValue( CTRL_LISTVIEWHEADER, BUTTONVALUE_DONTKNOW, 0 )
     , mbPrimarySortColumn( false ), mnSortDirection( LISTVIEWHEADER_SORT_DONTKNOW ) {}
     virtual ~ListViewHeaderValue() {}
+    virtual ListViewHeaderValue* clone() const SAL_OVERRIDE;
     
-    bool            mbPrimarySortColumn;
+    bool                    mbPrimarySortColumn;
     ListViewHeaderSortValue mnSortDirection;
 };
 
@@ -526,3 +532,4 @@ class ListViewHeaderValue : public ImplControlValue
 
 #endif
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

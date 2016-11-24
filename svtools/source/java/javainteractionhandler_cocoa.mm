@@ -65,6 +65,8 @@
 
 - (void)openJavaDownloadURL:(id)pObject
 {
+	(void)pObject;
+
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
 #ifdef PRODUCT_JAVA_DOWNLOAD_URL
 	NSURL *pURL = [NSURL URLWithString:(NSString *)CFSTR( PRODUCT_JAVA_DOWNLOAD_URL )];
