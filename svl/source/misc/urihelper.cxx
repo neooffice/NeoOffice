@@ -1,132 +1,88 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_svl.hxx"
 #include <svl/urihelper.hxx>
-#include <com/sun/star/beans/XPropertySet.hpp>
-#include "com/sun/star/lang/WrappedTargetRuntimeException.hpp"
-#include "com/sun/star/lang/XMultiComponentFactory.hpp"
-#include "com/sun/star/ucb/Command.hpp"
-#include <com/sun/star/ucb/FileSystemNotation.hpp>
-#include "com/sun/star/ucb/IllegalIdentifierException.hpp"
-#include "com/sun/star/ucb/UnsupportedCommandException.hpp"
-#include "com/sun/star/ucb/XCommandEnvironment.hpp"
-#include "com/sun/star/ucb/XCommandProcessor.hpp"
-#include "com/sun/star/ucb/XContent.hpp"
-#include "com/sun/star/ucb/XContentIdentifierFactory.hpp"
-#include "com/sun/star/ucb/XContentProvider.hpp"
-#include <com/sun/star/ucb/XContentProviderManager.hpp>
-#include "com/sun/star/uno/Any.hxx"
-#include "com/sun/star/uno/Exception.hpp"
-#include "com/sun/star/uno/Reference.hxx"
-#include "com/sun/star/uno/RuntimeException.hpp"
-#include "com/sun/star/uno/Sequence.hxx"
-#include "com/sun/star/uno/XComponentContext.hpp"
-#include "com/sun/star/uno/XInterface.hpp"
-#include "com/sun/star/uri/UriReferenceFactory.hpp"
-#include "com/sun/star/uri/XUriReference.hpp"
-#include "com/sun/star/uri/XUriReferenceFactory.hpp"
-#include "cppuhelper/exc_hlp.hxx"
-#include "comphelper/processfactory.hxx"
-#include "osl/diagnose.h"
-#include "rtl/ustrbuf.hxx"
-#include "rtl/ustring.h"
-#include "rtl/ustring.hxx"
-#include "sal/types.h"
-#include <tools/debug.hxx>
+#include <com/sun/star/ucb/Command.hpp>
+#include <com/sun/star/ucb/IllegalIdentifierException.hpp>
+#include <com/sun/star/ucb/UniversalContentBroker.hpp>
+#include <com/sun/star/ucb/UnsupportedCommandException.hpp>
+#include <com/sun/star/ucb/XCommandEnvironment.hpp>
+#include <com/sun/star/ucb/XCommandProcessor.hpp>
+#include <com/sun/star/ucb/XContent.hpp>
+#include <com/sun/star/ucb/XUniversalContentBroker.hpp>
+#include <com/sun/star/uno/Any.hxx>
+#include <com/sun/star/uno/Exception.hpp>
+#include <com/sun/star/uno/Reference.hxx>
+#include <com/sun/star/uno/RuntimeException.hpp>
+#include <com/sun/star/uno/XComponentContext.hpp>
+#include <com/sun/star/uri/UriReferenceFactory.hpp>
+#include <com/sun/star/uri/XUriReference.hpp>
+#include <com/sun/star/uri/XUriReferenceFactory.hpp>
+#include <comphelper/processfactory.hxx>
+#include <osl/diagnose.h>
+#include <rtl/ustrbuf.hxx>
+#include <rtl/ustring.h>
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
 #include <tools/inetmime.hxx>
-#include <ucbhelper/contentbroker.hxx>
 #include <unotools/charclass.hxx>
-#include "rtl/instance.hxx"
+#include <rtl/instance.hxx>
 
 #if defined USE_JAVA && defined MACOSX
 
 #include <osl/file.hxx>
+#include <osl/thread.h>
 #include <sys/stat.h>
 
 #endif	// USE_JAVA && MACOSX
 
-namespace unnamed_svl_urihelper {}
-using namespace unnamed_svl_urihelper;
-	// unnamed namespaces don't work well yet...
-
-namespace css = com::sun::star;
 using namespace com::sun::star;
 
-//============================================================================
-//
-//  SmartRel2Abs
-//
-//============================================================================
-
-namespace unnamed_svl_urihelper {
-
-inline UniString toUniString(ByteString const & rString)
+OUString URIHelper::SmartRel2Abs(INetURLObject const & rTheBaseURIRef,
+                                 OUString const & rTheRelURIRef,
+                                 Link const & rMaybeFileHdl,
+                                 bool bCheckFileExists,
+                                 bool bIgnoreFragment,
+                                 INetURLObject::EncodeMechanism eEncodeMechanism,
+                                 INetURLObject::DecodeMechanism eDecodeMechanism,
+                                 rtl_TextEncoding eCharset,
+                                 bool bRelativeNonURIs,
+                                 INetURLObject::FSysStyle eStyle)
 {
-	return UniString(rString, RTL_TEXTENCODING_ISO_8859_1);
-}
+    // Backwards compatibility:
+    if( rTheRelURIRef.startsWith("#") )
+        return rTheRelURIRef;
 
-inline UniString toUniString(UniString const & rString)
-{
-	return rString;
-}
-
-template< typename Str >
-inline UniString SmartRel2Abs_Impl(INetURLObject const & rTheBaseURIRef,
-								   Str const & rTheRelURIRef,
-								   Link const & rMaybeFileHdl,
-								   bool bCheckFileExists,
-								   bool bIgnoreFragment,
-								   INetURLObject::EncodeMechanism
-								       eEncodeMechanism,
-								   INetURLObject::DecodeMechanism
-								       eDecodeMechanism,
-								   rtl_TextEncoding eCharset,
-								   bool bRelativeNonURIs,
-								   INetURLObject::FSysStyle eStyle)
-{
-	// Backwards compatibility:
-	if (rTheRelURIRef.Len() != 0 && rTheRelURIRef.GetChar(0) == '#')
-		return toUniString(rTheRelURIRef);
-
-	INetURLObject aAbsURIRef;
+    INetURLObject aAbsURIRef;
     if (rTheBaseURIRef.HasError())
-        aAbsURIRef.
-            SetSmartURL(rTheRelURIRef, eEncodeMechanism, eCharset, eStyle);
+        aAbsURIRef. SetSmartURL(rTheRelURIRef, eEncodeMechanism, eCharset, eStyle);
     else
     {
         bool bWasAbsolute;
-		aAbsURIRef = rTheBaseURIRef.smartRel2Abs(rTheRelURIRef,
+        aAbsURIRef = rTheBaseURIRef.smartRel2Abs(rTheRelURIRef,
                                                  bWasAbsolute,
                                                  bIgnoreFragment,
                                                  eEncodeMechanism,
@@ -148,7 +104,7 @@ inline UniString SmartRel2Abs_Impl(INetURLObject const & rTheBaseURIRef,
                 bool bMaybeFile = false;
                 if (rMaybeFileHdl.IsSet())
                 {
-                    UniString aFilePath(toUniString(rTheRelURIRef));
+                    OUString aFilePath(rTheRelURIRef);
                     bMaybeFile = rMaybeFileHdl.Call(&aFilePath) != 0;
                 }
                 if (!bMaybeFile)
@@ -156,69 +112,19 @@ inline UniString SmartRel2Abs_Impl(INetURLObject const & rTheBaseURIRef,
             }
         }
     }
-	return aAbsURIRef.GetMainURL(eDecodeMechanism, eCharset);
+    return aAbsURIRef.GetMainURL(eDecodeMechanism, eCharset);
 }
-
-}
-
-UniString
-URIHelper::SmartRel2Abs(INetURLObject const & rTheBaseURIRef,
-						ByteString const & rTheRelURIRef,
-						Link const & rMaybeFileHdl,
-						bool bCheckFileExists,
-						bool bIgnoreFragment,
-						INetURLObject::EncodeMechanism eEncodeMechanism,
-						INetURLObject::DecodeMechanism eDecodeMechanism,
-						rtl_TextEncoding eCharset,
-						bool bRelativeNonURIs,
-						INetURLObject::FSysStyle eStyle)
-{
-	return SmartRel2Abs_Impl(rTheBaseURIRef, rTheRelURIRef, rMaybeFileHdl,
-							 bCheckFileExists, bIgnoreFragment,
-							 eEncodeMechanism, eDecodeMechanism, eCharset,
-							 bRelativeNonURIs, eStyle);
-}
-
-UniString
-URIHelper::SmartRel2Abs(INetURLObject const & rTheBaseURIRef,
-						UniString const & rTheRelURIRef,
-						Link const & rMaybeFileHdl,
-						bool bCheckFileExists,
-						bool bIgnoreFragment,
-						INetURLObject::EncodeMechanism eEncodeMechanism,
-						INetURLObject::DecodeMechanism eDecodeMechanism,
-						rtl_TextEncoding eCharset,
-						bool bRelativeNonURIs,
-						INetURLObject::FSysStyle eStyle)
-{
-	return SmartRel2Abs_Impl(rTheBaseURIRef, rTheRelURIRef, rMaybeFileHdl,
-							 bCheckFileExists, bIgnoreFragment,
-							 eEncodeMechanism, eDecodeMechanism, eCharset,
-							 bRelativeNonURIs, eStyle);
-}
-
-//============================================================================
-//
-//  SetMaybeFileHdl
-//
-//============================================================================
 
 namespace { struct MaybeFileHdl : public rtl::Static< Link, MaybeFileHdl > {}; }
 
 void URIHelper::SetMaybeFileHdl(Link const & rTheMaybeFileHdl)
 {
-	MaybeFileHdl::get() = rTheMaybeFileHdl;
+    MaybeFileHdl::get() = rTheMaybeFileHdl;
 }
-
-//============================================================================
-//
-//  GetMaybeFileHdl
-//
-//============================================================================
 
 Link URIHelper::GetMaybeFileHdl()
 {
-	return MaybeFileHdl::get();
+    return MaybeFileHdl::get();
 }
 
 namespace {
@@ -236,9 +142,8 @@ bool isAbsoluteHierarchicalUriReference(
 // any other prefix URL of the given URL, too:
 enum Result { Success, GeneralFailure, SpecificFailure };
 
-Result normalizePrefix(
-    css::uno::Reference< css::ucb::XContentProvider > const & broker,
-    rtl::OUString const & uri, rtl::OUString * normalized)
+Result normalizePrefix( css::uno::Reference< css::ucb::XUniversalContentBroker > const & broker,
+                        OUString const & uri, OUString * normalized)
 {
     OSL_ASSERT(broker.is() && normalized != 0);
 #if defined USE_JAVA && defined MACOSX
@@ -248,19 +153,16 @@ Result normalizePrefix(
     // through to the OOo code as the OOo code in this function does not appear
     // to return the resolved path for paths with softlinks:
     // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8573
-    rtl::OUString systemPath;
+    OUString systemPath;
     struct stat systemPathStat;
-    if ( ::osl::FileBase::getSystemPathFromFileURL( uri, systemPath ) == ::osl::FileBase::E_None && !stat( rtl::OUStringToOString( systemPath, osl_getThreadTextEncoding() ), &systemPathStat ) )
+    if ( osl::FileBase::getSystemPathFromFileURL( uri, systemPath ) == osl::FileBase::E_None && !stat( OUStringToOString( systemPath, osl_getThreadTextEncoding() ).getStr(), &systemPathStat ) )
         return Success;
     else
         return SpecificFailure;
 #else	// USE_JAVA && MACOSX
     css::uno::Reference< css::ucb::XContent > content;
     try {
-        content = broker->queryContent(
-            css::uno::Reference< css::ucb::XContentIdentifierFactory >(
-                broker, css::uno::UNO_QUERY_THROW)->createContentIdentifier(
-                    uri));
+        content = broker->queryContent(broker->createContentIdentifier(uri));
     } catch (css::ucb::IllegalIdentifierException &) {}
     if (!content.is()) {
         return GeneralFailure;
@@ -271,10 +173,7 @@ Result normalizePrefix(
         #endif
             (css::uno::Reference< css::ucb::XCommandProcessor >(
                    content, css::uno::UNO_QUERY_THROW)->execute(
-                       css::ucb::Command(
-                           rtl::OUString(
-                               RTL_CONSTASCII_USTRINGPARAM(
-                                   "getCasePreservingURL")),
+                       css::ucb::Command("getCasePreservingURL",
                            -1, css::uno::Any()),
                        0,
                        css::uno::Reference< css::ucb::XCommandEnvironment >())
@@ -291,16 +190,16 @@ Result normalizePrefix(
 #endif	// USE_JAVA && MACOSX
 }
 
-rtl::OUString normalize(
-    css::uno::Reference< css::ucb::XContentProvider > const & broker,
+OUString normalize(
+    css::uno::Reference< css::ucb::XUniversalContentBroker > const & broker,
     css::uno::Reference< css::uri::XUriReferenceFactory > const & uriFactory,
-    rtl::OUString const & uriReference)
+    OUString const & uriReference)
 {
     // normalizePrefix can potentially fail (a typically example being a file
     // URL that denotes a non-existing resource); in such a case, try to
     // normalize as long a prefix of the given URL as possible (i.e., normalize
     // all the existing directories within the path):
-    rtl::OUString normalized;
+    OUString normalized;
     sal_Int32 n = uriReference.indexOf('#');
     normalized = n == -1 ? uriReference : uriReference.copy(0, n);
     switch (normalizePrefix(broker, normalized, &normalized)) {
@@ -321,16 +220,16 @@ rtl::OUString normalize(
     if (count < 2) {
         return uriReference;
     }
-    rtl::OUStringBuffer head(ref->getScheme());
-    head.append(static_cast< sal_Unicode >(':'));
+    OUStringBuffer head(ref->getScheme());
+    head.append(':');
     if (ref->hasAuthority()) {
-        head.appendAscii(RTL_CONSTASCII_STRINGPARAM("//"));
+        head.append("//");
         head.append(ref->getAuthority());
     }
     for (sal_Int32 i = count - 1; i > 0; --i) {
-        rtl::OUStringBuffer buf(head);
+        OUStringBuffer buf(head);
         for (sal_Int32 j = 0; j < i; ++j) {
-            buf.append(static_cast< sal_Unicode >('/'));
+            buf.append('/');
             buf.append(ref->getPathSegment(j));
         }
         normalized = buf.makeStringAndClear();
@@ -347,9 +246,9 @@ rtl::OUString normalize(
             // normalizePrefix may have added or removed a final slash:
             if (preCount != i) {
                 if (preCount == i - 1) {
-                    buf.append(static_cast< sal_Unicode >('/'));
-                } else if (preCount - 1 == i && buf.getLength() > 0
-                           && buf.charAt(buf.getLength() - 1) == '/')
+                    buf.append('/');
+                } else if (preCount - 1 == i && !buf.isEmpty()
+                           && buf[buf.getLength() - 1] == '/')
                 {
                     buf.setLength(buf.getLength() - 1);
                 } else {
@@ -358,15 +257,15 @@ rtl::OUString normalize(
                 }
             }
             for (sal_Int32 j = i; j < count; ++j) {
-                buf.append(static_cast< sal_Unicode >('/'));
+                buf.append('/');
                 buf.append(ref->getPathSegment(j));
             }
             if (ref->hasQuery()) {
-                buf.append(static_cast< sal_Unicode >('?'));
+                buf.append('?');
                 buf.append(ref->getQuery());
             }
             if (ref->hasFragment()) {
-                buf.append(static_cast< sal_Unicode >('#'));
+                buf.append('#');
                 buf.append(ref->getFragment());
             }
             return buf.makeStringAndClear();
@@ -380,41 +279,11 @@ rtl::OUString normalize(
 css::uno::Reference< css::uri::XUriReference >
 URIHelper::normalizedMakeRelative(
     css::uno::Reference< css::uno::XComponentContext > const & context,
-    rtl::OUString const & baseUriReference, rtl::OUString const & uriReference)
+    OUString const & baseUriReference, OUString const & uriReference)
 {
     OSL_ASSERT(context.is());
-    css::uno::Reference< css::lang::XMultiComponentFactory > componentFactory(
-        context->getServiceManager());
-    if (!componentFactory.is()) {
-        throw css::uno::RuntimeException(
-            rtl::OUString(
-                RTL_CONSTASCII_USTRINGPARAM(
-                    "component context has no service manager")),
-            css::uno::Reference< css::uno::XInterface >());
-    }
-    css::uno::Sequence< css::uno::Any > args(2);
-    args[0] <<= rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("Local"));
-    args[1] <<= rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("Office"));
-    css::uno::Reference< css::ucb::XContentProvider > broker;
-    try {
-        broker = css::uno::Reference< css::ucb::XContentProvider >(
-            componentFactory->createInstanceWithArgumentsAndContext(
-                rtl::OUString(
-                    RTL_CONSTASCII_USTRINGPARAM(
-                        "com.sun.star.ucb.UniversalContentBroker")),
-                args, context),
-            css::uno::UNO_QUERY_THROW);
-    } catch (css::uno::RuntimeException &) {
-        throw;
-    } catch (css::uno::Exception &) {
-        css::uno::Any exception(cppu::getCaughtException());
-        throw css::lang::WrappedTargetRuntimeException(
-            rtl::OUString(
-                RTL_CONSTASCII_USTRINGPARAM(
-                    "creating com.sun.star.ucb.UniversalContentBroker failed")),
-            css::uno::Reference< css::uno::XInterface >(),
-            exception);
-    }
+    css::uno::Reference< css::ucb::XUniversalContentBroker > broker(
+        css::ucb::UniversalContentBroker::create(context));
     css::uno::Reference< css::uri::XUriReferenceFactory > uriFactory(
         css::uri::UriReferenceFactory::create(context));
     return uriFactory->makeRelative(
@@ -423,49 +292,38 @@ URIHelper::normalizedMakeRelative(
         true, false);
 }
 
-rtl::OUString URIHelper::simpleNormalizedMakeRelative(
-    rtl::OUString const & baseUriReference, rtl::OUString const & uriReference)
+OUString URIHelper::simpleNormalizedMakeRelative(
+    OUString const & baseUriReference, OUString const & uriReference)
 {
     com::sun::star::uno::Reference< com::sun::star::uri::XUriReference > rel(
         URIHelper::normalizedMakeRelative(
-            com::sun::star::uno::Reference<
-            com::sun::star::uno::XComponentContext >(
-                (com::sun::star::uno::Reference<
-                 com::sun::star::beans::XPropertySet >(
-                    comphelper::getProcessServiceFactory(),
-                    com::sun::star::uno::UNO_QUERY_THROW)->
-                 getPropertyValue(
-                     rtl::OUString(
-                         RTL_CONSTASCII_USTRINGPARAM("DefaultContext")))),
-                com::sun::star::uno::UNO_QUERY_THROW),
-            baseUriReference, uriReference));
+            comphelper::getProcessComponentContext(), baseUriReference,
+            uriReference));
     return rel.is() ? rel->getUriReference() : uriReference;
 }
 
-//============================================================================
-//
+
 //  FindFirstURLInText
-//
-//============================================================================
 
-namespace unnamed_svl_urihelper {
 
-inline xub_StrLen nextChar(UniString const & rStr, xub_StrLen nPos)
+namespace {
+
+inline sal_Int32 nextChar(OUString const & rStr, sal_Int32 nPos)
 {
-	return INetMIME::isHighSurrogate(rStr.GetChar(nPos))
-		   && rStr.Len() - nPos >= 2
-		   && INetMIME::isLowSurrogate(rStr.GetChar(nPos + 1)) ?
-		       nPos + 2 : nPos + 1;
+    return INetMIME::isHighSurrogate(rStr[nPos])
+           && rStr.getLength() - nPos >= 2
+           && INetMIME::isLowSurrogate(rStr[nPos + 1]) ?
+        nPos + 2 : nPos + 1;
 }
 
-bool isBoundary1(CharClass const & rCharClass, UniString const & rStr,
-                 xub_StrLen nPos, xub_StrLen nEnd)
+bool isBoundary1(CharClass const & rCharClass, OUString const & rStr,
+                 sal_Int32 nPos, sal_Int32 nEnd)
 {
     if (nPos == nEnd)
         return true;
     if (rCharClass.isLetterNumeric(rStr, nPos))
         return false;
-    switch (rStr.GetChar(nPos))
+    switch (rStr[nPos])
     {
     case '$':
     case '%':
@@ -480,14 +338,14 @@ bool isBoundary1(CharClass const & rCharClass, UniString const & rStr,
     }
 }
 
-bool isBoundary2(CharClass const & rCharClass, UniString const & rStr,
-                 xub_StrLen nPos, xub_StrLen nEnd)
+bool isBoundary2(CharClass const & rCharClass, OUString const & rStr,
+                 sal_Int32 nPos, sal_Int32 nEnd)
 {
     if (nPos == nEnd)
         return true;
     if (rCharClass.isLetterNumeric(rStr, nPos))
         return false;
-    switch (rStr.GetChar(nPos))
+    switch (rStr[nPos])
     {
     case '!':
     case '#':
@@ -515,127 +373,126 @@ bool isBoundary2(CharClass const & rCharClass, UniString const & rStr,
     }
 }
 
-bool checkWChar(CharClass const & rCharClass, UniString const & rStr,
-                xub_StrLen * pPos, xub_StrLen * pEnd, bool bBackslash = false,
+bool checkWChar(CharClass const & rCharClass, OUString const & rStr,
+                sal_Int32 * pPos, sal_Int32 * pEnd, bool bBackslash = false,
                 bool bPipe = false)
 {
-	sal_Unicode c = rStr.GetChar(*pPos);
-	if (INetMIME::isUSASCII(c))
-	{
-		static sal_uInt8 const aMap[128]
-			= { 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0, 0, 0, 0, 0,
-				0, 1, 0, 0, 4, 4, 4, 1,   //  !"#$%&'
-				1, 1, 1, 1, 1, 4, 1, 4,   // ()*+,-./
-				4, 4, 4, 4, 4, 4, 4, 4,   // 01234567
-				4, 4, 1, 1, 0, 1, 0, 1,   // 89:;<=>?
-				4, 4, 4, 4, 4, 4, 4, 4,   // @ABCDEFG
-				4, 4, 4, 4, 4, 4, 4, 4,   // HIJKLMNO
-				4, 4, 4, 4, 4, 4, 4, 4,   // PQRSTUVW
-				4, 4, 4, 1, 2, 1, 0, 1,   // XYZ[\]^_
-				0, 4, 4, 4, 4, 4, 4, 4,   // `abcdefg
-				4, 4, 4, 4, 4, 4, 4, 4,   // hijklmno
-				4, 4, 4, 4, 4, 4, 4, 4,   // pqrstuvw
-				4, 4, 4, 0, 3, 0, 1, 0 }; // xyz{|}~
-		switch (aMap[c])
-		{
-			default: // not uric
-				return false;
+    sal_Unicode c = rStr[*pPos];
+    if (rtl::isAscii(c))
+    {
+        static sal_uInt8 const aMap[128]
+            = { 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 1, 0, 0, 4, 4, 4, 1,   //  !"#$%&'
+                1, 1, 1, 1, 1, 4, 1, 4,   // ()*+,-./
+                4, 4, 4, 4, 4, 4, 4, 4,   // 01234567
+                4, 4, 1, 1, 0, 1, 0, 1,   // 89:;<=>?
+                4, 4, 4, 4, 4, 4, 4, 4,   // @ABCDEFG
+                4, 4, 4, 4, 4, 4, 4, 4,   // HIJKLMNO
+                4, 4, 4, 4, 4, 4, 4, 4,   // PQRSTUVW
+                4, 4, 4, 1, 2, 1, 0, 1,   // XYZ[\]^_
+                0, 4, 4, 4, 4, 4, 4, 4,   // `abcdefg
+                4, 4, 4, 4, 4, 4, 4, 4,   // hijklmno
+                4, 4, 4, 4, 4, 4, 4, 4,   // pqrstuvw
+                4, 4, 4, 0, 3, 0, 1, 0 }; // xyz{|}~
+        switch (aMap[c])
+        {
+            default: // not uric
+                return false;
 
-			case 1: // uric
-				++(*pPos);
-				return true;
+            case 1: // uric
+                ++(*pPos);
+                return true;
 
-			case 2: // "\"
-				if (bBackslash)
-				{
-					*pEnd = ++(*pPos);
-					return true;
-				}
-				else
-					return false;
+            case 2: // "\"
+                if (bBackslash)
+                {
+                    *pEnd = ++(*pPos);
+                    return true;
+                }
+                else
+                    return false;
 
-			case 3: // "|"
-				if (bPipe)
-				{
-					*pEnd = ++(*pPos);
-					return true;
-				}
-				else
-					return false;
+            case 3: // "|"
+                if (bPipe)
+                {
+                    *pEnd = ++(*pPos);
+                    return true;
+                }
+                else
+                    return false;
 
-			case 4: // alpha, digit, "$", "%", "&", "-", "/", "@" (see
+            case 4: // alpha, digit, "$", "%", "&", "-", "/", "@" (see
                     // isBoundary1)
-				*pEnd = ++(*pPos);
-				return true;
-		}
-	}
-	else if (rCharClass.isLetterNumeric(rStr, *pPos))
-	{
-		*pEnd = *pPos = nextChar(rStr, *pPos);
-		return true;
-	}
-	else
-		return false;
+                *pEnd = ++(*pPos);
+                return true;
+        }
+    }
+    else if (rCharClass.isLetterNumeric(rStr, *pPos))
+    {
+        *pEnd = *pPos = nextChar(rStr, *pPos);
+        return true;
+    }
+    else
+        return false;
 }
 
-sal_uInt32 scanDomain(UniString const & rStr, xub_StrLen * pPos,
-                      xub_StrLen nEnd)
+sal_uInt32 scanDomain(OUString const & rStr, sal_Int32 * pPos,
+                      sal_Int32 nEnd)
 {
-	sal_Unicode const * pBuffer = rStr.GetBuffer();
-	sal_Unicode const * p = pBuffer + *pPos;
-	sal_uInt32 nLabels = INetURLObject::scanDomain(p, pBuffer + nEnd, false);
-	*pPos = sal::static_int_cast< xub_StrLen >(p - pBuffer);
-	return nLabels;
+    sal_Unicode const * pBuffer = rStr.getStr();
+    sal_Unicode const * p = pBuffer + *pPos;
+    sal_uInt32 nLabels = INetURLObject::scanDomain(p, pBuffer + nEnd, false);
+    *pPos = sal::static_int_cast< sal_Int32 >(p - pBuffer);
+    return nLabels;
 }
 
 }
 
-UniString
-URIHelper::FindFirstURLInText(UniString const & rText,
-                              xub_StrLen & rBegin,
-                              xub_StrLen & rEnd,
-                              CharClass const & rCharClass,
-                              INetURLObject::EncodeMechanism eMechanism,
-                              rtl_TextEncoding eCharset,
-                              INetURLObject::FSysStyle eStyle)
+OUString URIHelper::FindFirstURLInText(OUString const & rText,
+                                       sal_Int32 & rBegin,
+                                       sal_Int32 & rEnd,
+                                       CharClass const & rCharClass,
+                                       INetURLObject::EncodeMechanism eMechanism,
+                                       rtl_TextEncoding eCharset,
+                                       INetURLObject::FSysStyle eStyle)
 {
-    if (!(rBegin <= rEnd && rEnd <= rText.Len()))
-        return UniString();
+    if (!(rBegin <= rEnd && rEnd <= rText.getLength()))
+        return OUString();
 
     // Search for the first substring of [rBegin..rEnd[ that matches any of the
     // following productions (for which the appropriate style bit is set in
     // eStyle, if applicable).
-    //
+
     // 1st Production (known scheme):
     //    \B1 <one of the known schemes, except file> ":" 1*wchar ["#" 1*wchar]
     //        \B1
-    //
+
     // 2nd Production (file):
     //    \B1 "FILE:" 1*(wchar / "\" / "|") ["#" 1*wchar] \B1
-    //
+
     // 3rd Production (ftp):
     //    \B1 "FTP" 2*("." label) ["/" *wchar] ["#" 1*wchar] \B1
-    //
+
     // 4th Production (http):
     //    \B1 "WWW" 2*("." label) ["/" *wchar] ["#" 1*wchar] \B1
-    //
+
     // 5th Production (mailto):
     //    \B2 local-part "@" domain \B1
-    //
+
     // 6th Production (UNC file):
     //    \B1 "\\" domain "\" *(wchar / "\") \B1
-    //
+
     // 7th Production (DOS file):
     //    \B1 ALPHA ":\" *(wchar / "\") \B1
-    //
+
     // 8th Production (Unix-like DOS file):
     //    \B1 ALPHA ":/" *(wchar / "\") \B1
-    //
+
     // The productions use the following auxiliary rules.
-    //
+
     //    local-part = atom *("." atom)
     //    atom = 1*(alphanum / "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+"
     //              / "-" / "/" / "=" / "?" / "^" / "_" / "`" / "{" / "|" / "}"
@@ -645,52 +502,50 @@ URIHelper::FindFirstURLInText(UniString const & rText,
     //    alphanum = ALPHA / DIGIT
     //    wchar = <any uric character (ignoring the escaped rule), or "%", or
     //             a letter or digit (according to rCharClass)>
-    //
+
     // "\B1" (boundary 1) stands for the beginning or end of the block of text,
     // or a character that is neither (a) a letter or digit (according to
     // rCharClass), nor (b) any of "$", "%", "&", "-", "/", "@", or "\".
     // (FIXME:  What was the rationale for this set of punctuation characters?)
-    //
+
     // "\B2" (boundary 2) stands for the beginning or end of the block of text,
     // or a character that is neither (a) a letter or digit (according to
     // rCharClass), nor (b) any of "!", "#", "$", "%", "&", "'", "*", "+", "-",
     // "/", "=", "?", "@", "^", "_", "`", "{", "|", "}", or "~" (i.e., an RFC
     // 822 <atom> character, or "@" from \B1's set above).
-    //
+
     // Productions 1--4, and 6--8 try to find a maximum-length match, but they
     // stop at the first <wchar> character that is a "\B1" character which is
     // only followed by "\B1" characters (taking "\" and "|" characters into
     // account appropriately).  Production 5 simply tries to find a maximum-
     // length match.
-    //
+
     // Productions 1--4 use the given eMechanism and eCharset.  Productions 5--9
     // use ENCODE_ALL.
-    //
+
     // Productions 6--9 are only applicable if the FSYS_DOS bit is set in
     // eStyle.
 
     bool bBoundary1 = true;
     bool bBoundary2 = true;
-    for (xub_StrLen nPos = rBegin; nPos != rEnd; nPos = nextChar(rText, nPos))
+    for (sal_Int32 nPos = rBegin; nPos != rEnd; nPos = nextChar(rText, nPos))
     {
-        sal_Unicode c = rText.GetChar(nPos);
+        sal_Unicode c = rText[nPos];
         if (bBoundary1)
         {
-            if (INetMIME::isAlpha(c))
+            if (rtl::isAsciiAlpha(c))
             {
-                xub_StrLen i = nPos;
-                INetProtocol eScheme
-                    = INetURLObject::CompareProtocolScheme(UniString(rText, i,
-                                                                     rEnd));
+                sal_Int32 i = nPos;
+                INetProtocol eScheme = INetURLObject::CompareProtocolScheme(rText.copy(i, rEnd - i));
                 if (eScheme == INET_PROT_FILE) // 2nd
                 {
-                    while (rText.GetChar(i++) != ':') ;
-                    xub_StrLen nPrefixEnd = i;
-                    xub_StrLen nUriEnd = i;
+                    while (rText[i++] != ':') ;
+                    sal_Int32 nPrefixEnd = i;
+                    sal_Int32 nUriEnd = i;
                     while (i != rEnd
                            && checkWChar(rCharClass, rText, &i, &nUriEnd, true,
                                          true)) ;
-                    if (i != nPrefixEnd && rText.GetChar(i) == '#')
+                    if (i != nPrefixEnd && i != rEnd && rText[i] == '#')
                     {
                         ++i;
                         while (i != rEnd
@@ -699,8 +554,7 @@ URIHelper::FindFirstURLInText(UniString const & rText,
                     if (nUriEnd != nPrefixEnd
                         && isBoundary1(rCharClass, rText, nUriEnd, rEnd))
                     {
-                        INetURLObject aUri(UniString(rText, nPos,
-                                                     nUriEnd - nPos),
+                        INetURLObject aUri(rText.copy(nPos, nUriEnd - nPos),
                                            INET_PROT_FILE, eMechanism, eCharset,
                                            eStyle);
                         if (!aUri.HasError())
@@ -714,12 +568,12 @@ URIHelper::FindFirstURLInText(UniString const & rText,
                 }
                 else if (eScheme != INET_PROT_NOT_VALID) // 1st
                 {
-                    while (rText.GetChar(i++) != ':') ;
-                    xub_StrLen nPrefixEnd = i;
-                    xub_StrLen nUriEnd = i;
+                    while (rText[i++] != ':') ;
+                    sal_Int32 nPrefixEnd = i;
+                    sal_Int32 nUriEnd = i;
                     while (i != rEnd
                            && checkWChar(rCharClass, rText, &i, &nUriEnd)) ;
-                    if (i != nPrefixEnd && rText.GetChar(i) == '#')
+                    if (i != nPrefixEnd && i != rEnd && rText[i] == '#')
                     {
                         ++i;
                         while (i != rEnd
@@ -727,10 +581,9 @@ URIHelper::FindFirstURLInText(UniString const & rText,
                     }
                     if (nUriEnd != nPrefixEnd
                         && (isBoundary1(rCharClass, rText, nUriEnd, rEnd)
-                            || rText.GetChar(nUriEnd) == '\\'))
+                            || rText[nUriEnd] == '\\'))
                     {
-                        INetURLObject aUri(UniString(rText, nPos,
-                                                     nUriEnd - nPos),
+                        INetURLObject aUri(rText.copy(nPos, nUriEnd - nPos),
                                            INET_PROT_HTTP, eMechanism,
                                            eCharset);
                         if (!aUri.HasError())
@@ -747,40 +600,39 @@ URIHelper::FindFirstURLInText(UniString const & rText,
                 i = nPos;
                 sal_uInt32 nLabels = scanDomain(rText, &i, rEnd);
                 if (nLabels >= 3
-                    && rText.GetChar(nPos + 3) == '.'
-                    && (((rText.GetChar(nPos) == 'w'
-                          || rText.GetChar(nPos) == 'W')
-                         && (rText.GetChar(nPos + 1) == 'w'
-                             || rText.GetChar(nPos + 1) == 'W')
-                         && (rText.GetChar(nPos + 2) == 'w'
-                             || rText.GetChar(nPos + 2) == 'W'))
-                        || ((rText.GetChar(nPos) == 'f'
-                             || rText.GetChar(nPos) == 'F')
-                            && (rText.GetChar(nPos + 1) == 't'
-                                || rText.GetChar(nPos + 1) == 'T')
-                            && (rText.GetChar(nPos + 2) == 'p'
-                                || rText.GetChar(nPos + 2) == 'P'))))
+                    && rText[nPos + 3] == '.'
+                    && (((rText[nPos] == 'w'
+                          || rText[nPos] == 'W')
+                         && (rText[nPos + 1] == 'w'
+                             || rText[nPos + 1] == 'W')
+                         && (rText[nPos + 2] == 'w'
+                             || rText[nPos + 2] == 'W'))
+                        || ((rText[nPos] == 'f'
+                             || rText[nPos] == 'F')
+                            && (rText[nPos + 1] == 't'
+                                || rText[nPos + 1] == 'T')
+                            && (rText[nPos + 2] == 'p'
+                                || rText[nPos + 2] == 'P'))))
                     // (note that rText.GetChar(nPos + 3) is guaranteed to be
                     // valid)
                 {
-                    xub_StrLen nUriEnd = i;
-                    if (i != rEnd && rText.GetChar(i) == '/')
+                    sal_Int32 nUriEnd = i;
+                    if (i != rEnd && rText[i] == '/')
                     {
                         nUriEnd = ++i;
                         while (i != rEnd
                                && checkWChar(rCharClass, rText, &i, &nUriEnd)) ;
                     }
-                    if (i != rEnd && rText.GetChar(i) == '#')
+                    if (i != rEnd && rText[i] == '#')
                     {
                         ++i;
                         while (i != rEnd
                                && checkWChar(rCharClass, rText, &i, &nUriEnd)) ;
                     }
                     if (isBoundary1(rCharClass, rText, nUriEnd, rEnd)
-                        || rText.GetChar(nUriEnd) == '\\')
+                        || rText[nUriEnd] == '\\')
                     {
-                        INetURLObject aUri(UniString(rText, nPos,
-                                                     nUriEnd - nPos),
+                        INetURLObject aUri(rText.copy(nPos, nUriEnd - nPos),
                                            INET_PROT_HTTP, eMechanism,
                                            eCharset);
                         if (!aUri.HasError())
@@ -794,18 +646,17 @@ URIHelper::FindFirstURLInText(UniString const & rText,
                 }
 
                 if ((eStyle & INetURLObject::FSYS_DOS) != 0 && rEnd - nPos >= 3
-                    && rText.GetChar(nPos + 1) == ':'
-                    && (rText.GetChar(nPos + 2) == '/'
-                        || rText.GetChar(nPos + 2) == '\\')) // 7th, 8th
+                    && rText[nPos + 1] == ':'
+                    && (rText[nPos + 2] == '/'
+                        || rText[nPos + 2] == '\\')) // 7th, 8th
                 {
                     i = nPos + 3;
-                    xub_StrLen nUriEnd = i;
+                    sal_Int32 nUriEnd = i;
                     while (i != rEnd
                            && checkWChar(rCharClass, rText, &i, &nUriEnd)) ;
                     if (isBoundary1(rCharClass, rText, nUriEnd, rEnd))
                     {
-                        INetURLObject aUri(UniString(rText, nPos,
-                                                     nUriEnd - nPos),
+                        INetURLObject aUri(rText.copy(nPos, nUriEnd - nPos),
                                            INET_PROT_FILE,
                                            INetURLObject::ENCODE_ALL,
                                            RTL_TEXTENCODING_UTF8,
@@ -821,21 +672,20 @@ URIHelper::FindFirstURLInText(UniString const & rText,
                 }
             }
             else if ((eStyle & INetURLObject::FSYS_DOS) != 0 && rEnd - nPos >= 2
-                     && rText.GetChar(nPos) == '\\'
-                     && rText.GetChar(nPos + 1) == '\\') // 6th
+                     && rText[nPos] == '\\'
+                     && rText[nPos + 1] == '\\') // 6th
             {
-                xub_StrLen i = nPos + 2;
+                sal_Int32 i = nPos + 2;
                 sal_uInt32 nLabels = scanDomain(rText, &i, rEnd);
-                if (nLabels >= 1 && i != rEnd && rText.GetChar(i) == '\\')
+                if (nLabels >= 1 && i != rEnd && rText[i] == '\\')
                 {
-                    xub_StrLen nUriEnd = ++i;
+                    sal_Int32 nUriEnd = ++i;
                     while (i != rEnd
                            && checkWChar(rCharClass, rText, &i, &nUriEnd,
                                          true)) ;
                     if (isBoundary1(rCharClass, rText, nUriEnd, rEnd))
                     {
-                        INetURLObject aUri(UniString(rText, nPos,
-                                                     nUriEnd - nPos),
+                        INetURLObject aUri(rText.copy(nPos, nUriEnd - nPos),
                                            INET_PROT_FILE,
                                            INetURLObject::ENCODE_ALL,
                                            RTL_TEXTENCODING_UTF8,
@@ -854,9 +704,9 @@ URIHelper::FindFirstURLInText(UniString const & rText,
         if (bBoundary2 && INetMIME::isAtomChar(c)) // 5th
         {
             bool bDot = false;
-            for (xub_StrLen i = nPos + 1; i != rEnd; ++i)
+            for (sal_Int32 i = nPos + 1; i != rEnd; ++i)
             {
-                sal_Unicode c2 = rText.GetChar(i);
+                sal_Unicode c2 = rText[i];
                 if (INetMIME::isAtomChar(c2))
                     bDot = false;
                 else if (bDot)
@@ -872,7 +722,7 @@ URIHelper::FindFirstURLInText(UniString const & rText,
                         if (nLabels >= 1
                             && isBoundary1(rCharClass, rText, i, rEnd))
                         {
-                            INetURLObject aUri(UniString(rText, nPos, i - nPos),
+                            INetURLObject aUri(rText.copy(nPos, i - nPos),
                                                INET_PROT_MAILTO,
                                                INetURLObject::ENCODE_ALL);
                             if (!aUri.HasError())
@@ -892,84 +742,18 @@ URIHelper::FindFirstURLInText(UniString const & rText,
         bBoundary2 = isBoundary2(rCharClass, rText, nPos, rEnd);
     }
     rBegin = rEnd;
-    return UniString();
+    return OUString();
 }
 
-//============================================================================
-//
-//  removePassword
-//
-//============================================================================
-
-UniString
-URIHelper::removePassword(UniString const & rURI,
-						  INetURLObject::EncodeMechanism eEncodeMechanism,
-						  INetURLObject::DecodeMechanism eDecodeMechanism,
-						  rtl_TextEncoding eCharset)
+OUString URIHelper::removePassword(OUString const & rURI,
+                                   INetURLObject::EncodeMechanism eEncodeMechanism,
+                                   INetURLObject::DecodeMechanism eDecodeMechanism,
+                                   rtl_TextEncoding eCharset)
 {
-	INetURLObject aObj(rURI, eEncodeMechanism, eCharset);
-	return aObj.HasError() ?
-		       rURI :
-		       String(aObj.GetURLNoPass(eDecodeMechanism, eCharset));
+    INetURLObject aObj(rURI, eEncodeMechanism, eCharset);
+    return aObj.HasError() ?
+               rURI :
+               aObj.GetURLNoPass(eDecodeMechanism, eCharset);
 }
 
-//============================================================================
-//
-//  queryFSysStyle
-//
-//============================================================================
-
-INetURLObject::FSysStyle URIHelper::queryFSysStyle(UniString const & rFileUrl,
-												   bool bAddConvenienceStyles)
-	throw (uno::RuntimeException)
-{
-	::ucbhelper::ContentBroker const * pBroker = ::ucbhelper::ContentBroker::get();
-	uno::Reference< ucb::XContentProviderManager > xManager;
-	if (pBroker)
-		xManager = pBroker->getContentProviderManagerInterface();
-	uno::Reference< beans::XPropertySet > xProperties;
-	if (xManager.is())
-		xProperties
-			= uno::Reference< beans::XPropertySet >(
-				  xManager->queryContentProvider(rFileUrl), uno::UNO_QUERY);
-	sal_Int32 nNotation = ucb::FileSystemNotation::UNKNOWN_NOTATION;
-	if (xProperties.is())
-		try
-		{
-			xProperties->getPropertyValue(rtl::OUString(
-				                              RTL_CONSTASCII_USTRINGPARAM(
-												  "FileSystemNotation")))
-				>>= nNotation;
-		}
-		catch (beans::UnknownPropertyException const &) {}
-		catch (lang::WrappedTargetException const &) {}
-
-	// The following code depends on the fact that the
-	// com::sun::star::ucb::FileSystemNotation constants range from UNKNOWN to
-	// MAC, without any holes.  The table below has two entries per notation,
-	// the first is used if bAddConvenienceStyles == false, while the second
-	// is used if bAddConvenienceStyles == true:
-	static INetURLObject::FSysStyle const aMap[][2]
-		= { { INetURLObject::FSysStyle(0),
-			  INetURLObject::FSYS_DETECT },
-			    // UNKNOWN
-			{ INetURLObject::FSYS_UNX,
-			  INetURLObject::FSysStyle(INetURLObject::FSYS_VOS
-									       | INetURLObject::FSYS_UNX) },
-			    // UNIX
-			{ INetURLObject::FSYS_DOS,
-			  INetURLObject::FSysStyle(INetURLObject::FSYS_VOS
-									       | INetURLObject::FSYS_UNX
-									       | INetURLObject::FSYS_DOS) },
-			    // DOS
-			{ INetURLObject::FSYS_MAC,
-			  INetURLObject::FSysStyle(INetURLObject::FSYS_VOS
-									       | INetURLObject::FSYS_UNX
-									       | INetURLObject::FSYS_MAC) } };
-	return aMap[nNotation < ucb::FileSystemNotation::UNKNOWN_NOTATION
-			    || nNotation > ucb::FileSystemNotation::MAC_NOTATION ?
-			            0 :
-			            nNotation
-			                - ucb::FileSystemNotation::UNKNOWN_NOTATION]
-		           [bAddConvenienceStyles];
-}
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,37 +1,29 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_svl.hxx"
 
 #include <stdio.h>
 
@@ -40,6 +32,7 @@
 #include <com/sun/star/ucb/InsertCommandArgument.hpp>
 #include <com/sun/star/ucb/NameClashException.hpp>
 #include <com/sun/star/io/WrongFormatException.hpp>
+#include <com/sun/star/io/TempFile.hpp>
 
 #include <osl/time.h>
 #include <osl/security.hxx>
@@ -52,7 +45,6 @@
 
 #include <comphelper/processfactory.hxx>
 
-#include <tools/urlobj.hxx>
 #include <unotools/bootstrap.hxx>
 
 #include <ucbhelper/content.hxx>
@@ -64,6 +56,7 @@
 #if defined USE_JAVA && defined MACOSX
 
 #include <osl/file.hxx>
+#include <osl/thread.h>
 #include <sys/stat.h>
 
 #endif	// USE_JAVA && MACOSX
@@ -72,49 +65,49 @@ using namespace ::com::sun::star;
 
 namespace svt {
 
-sal_Bool DocumentLockFile::m_bAllowInteraction = sal_True;
+bool DocumentLockFile::m_bAllowInteraction = true;
 
-// ----------------------------------------------------------------------
-DocumentLockFile::DocumentLockFile( const ::rtl::OUString& aOrigURL, const uno::Reference< lang::XMultiServiceFactory >& xFactory )
-: LockFileCommon( aOrigURL, xFactory, ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".~lock." ) ) )
+
+DocumentLockFile::DocumentLockFile( const OUString& aOrigURL )
+: LockFileCommon( aOrigURL, OUString( ".~lock."  ) )
 {
 }
 
-// ----------------------------------------------------------------------
+
 DocumentLockFile::~DocumentLockFile()
 {
 }
 
-// ----------------------------------------------------------------------
-void DocumentLockFile::WriteEntryToStream( uno::Sequence< ::rtl::OUString > aEntry, uno::Reference< io::XOutputStream > xOutput )
+
+void DocumentLockFile::WriteEntryToStream( const uno::Sequence< OUString >& aEntry, uno::Reference< io::XOutputStream > xOutput )
 {
     ::osl::MutexGuard aGuard( m_aMutex );
 
-    ::rtl::OUStringBuffer aBuffer;
+    OUStringBuffer aBuffer;
 
     for ( sal_Int32 nEntryInd = 0; nEntryInd < aEntry.getLength(); nEntryInd++ )
     {
         aBuffer.append( EscapeCharacters( aEntry[nEntryInd] ) );
         if ( nEntryInd < aEntry.getLength() - 1 )
-            aBuffer.append( (sal_Unicode)',' );
+            aBuffer.append( ',' );
         else
-            aBuffer.append( (sal_Unicode)';' );
+            aBuffer.append( ';' );
     }
 
-    ::rtl::OString aStringData( ::rtl::OUStringToOString( aBuffer.makeStringAndClear(), RTL_TEXTENCODING_UTF8 ) );
+    OString aStringData( OUStringToOString( aBuffer.makeStringAndClear(), RTL_TEXTENCODING_UTF8 ) );
     uno::Sequence< sal_Int8 > aData( (sal_Int8*)aStringData.getStr(), aStringData.getLength() );
     xOutput->writeBytes( aData );
 }
 
-// ----------------------------------------------------------------------
-sal_Bool DocumentLockFile::CreateOwnLockFile()
+
+bool DocumentLockFile::CreateOwnLockFile()
 {
     ::osl::MutexGuard aGuard( m_aMutex );
 
     try
     {
         uno::Reference< io::XStream > xTempFile(
-            m_xFactory->createInstance( ::rtl::OUString::createFromAscii( "com.sun.star.io.TempFile" ) ),
+            io::TempFile::create( comphelper::getProcessComponentContext() ),
             uno::UNO_QUERY_THROW );
         uno::Reference< io::XSeekable > xSeekable( xTempFile, uno::UNO_QUERY_THROW );
 
@@ -124,46 +117,46 @@ sal_Bool DocumentLockFile::CreateOwnLockFile()
         if ( !xInput.is() || !xOutput.is() )
             throw uno::RuntimeException();
 
-        uno::Sequence< ::rtl::OUString > aNewEntry = GenerateOwnEntry();
+        uno::Sequence< OUString > aNewEntry = GenerateOwnEntry();
         WriteEntryToStream( aNewEntry, xOutput );
         xOutput->closeOutput();
 
         xSeekable->seek( 0 );
 
         uno::Reference < ::com::sun::star::ucb::XCommandEnvironment > xEnv;
-        ::ucbhelper::Content aTargetContent( m_aURL, xEnv );
+        ::ucbhelper::Content aTargetContent( m_aURL, xEnv, comphelper::getProcessComponentContext() );
 
         ucb::InsertCommandArgument aInsertArg;
         aInsertArg.Data = xInput;
         aInsertArg.ReplaceExisting = sal_False;
         uno::Any aCmdArg;
         aCmdArg <<= aInsertArg;
-        aTargetContent.executeCommand( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "insert" ) ), aCmdArg );
+        aTargetContent.executeCommand( OUString( "insert"  ), aCmdArg );
 
         // try to let the file be hidden if possible
         try {
-            aTargetContent.setPropertyValue( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "IsHidden" ) ), uno::makeAny( sal_True ) );
+            aTargetContent.setPropertyValue("IsHidden", uno::makeAny( sal_True ) );
         } catch( uno::Exception& ) {}
     }
     catch( ucb::NameClashException& )
     {
-        return sal_False;
+        return false;
     }
 
-    return sal_True;
+    return true;
 }
 
-// ----------------------------------------------------------------------
-uno::Sequence< ::rtl::OUString > DocumentLockFile::GetLockData()
+
+uno::Sequence< OUString > DocumentLockFile::GetLockData()
 {
     ::osl::MutexGuard aGuard( m_aMutex );
 
 #if defined USE_JAVA && defined MACOSX
     // Fix unexpected display of native open dialog when no lock file exists
     // by throwing an exception if the stat() function fails
-    ::rtl::OUString aSystemPath;
+    OUString aSystemPath;
     struct stat aSystemPathStat;
-    if ( ::osl::FileBase::getSystemPathFromFileURL( m_aURL, aSystemPath ) != ::osl::FileBase::E_None || stat( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), &aSystemPathStat ) )
+    if ( osl::FileBase::getSystemPathFromFileURL( m_aURL, aSystemPath ) != osl::FileBase::E_None || stat( OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ).getStr(), &aSystemPathStat ) )
         throw uno::RuntimeException();
 #endif	// USE_JAVA && MACOSX
 
@@ -186,30 +179,28 @@ uno::Sequence< ::rtl::OUString > DocumentLockFile::GetLockData()
     return ParseEntry( aBuffer, nCurPos );
 }
 
-// ----------------------------------------------------------------------
+
 uno::Reference< io::XInputStream > DocumentLockFile::OpenStream()
 {
     ::osl::MutexGuard aGuard( m_aMutex );
 
-    uno::Reference< lang::XMultiServiceFactory > xFactory = ::comphelper::getProcessServiceFactory();
-        uno::Reference< ::com::sun::star::ucb::XSimpleFileAccess > xSimpleFileAccess(
-            xFactory->createInstance( ::rtl::OUString::createFromAscii("com.sun.star.ucb.SimpleFileAccess") ),
-            uno::UNO_QUERY_THROW );
+    uno::Reference < ::com::sun::star::ucb::XCommandEnvironment > xEnv;
+    ::ucbhelper::Content aSourceContent( m_aURL, xEnv, comphelper::getProcessComponentContext() );
 
     // the file can be opened readonly, no locking will be done
-    return xSimpleFileAccess->openFileRead( m_aURL );
+    return aSourceContent.openStream();
 }
 
-// ----------------------------------------------------------------------
-sal_Bool DocumentLockFile::OverwriteOwnLockFile()
+
+bool DocumentLockFile::OverwriteOwnLockFile()
 {
     // allows to overwrite the lock file with the current data
     try
     {
         uno::Reference < ::com::sun::star::ucb::XCommandEnvironment > xEnv;
-        ::ucbhelper::Content aTargetContent( m_aURL, xEnv );
+        ::ucbhelper::Content aTargetContent( m_aURL, xEnv, comphelper::getProcessComponentContext() );
 
-        uno::Sequence< ::rtl::OUString > aNewEntry = GenerateOwnEntry();
+        uno::Sequence< OUString > aNewEntry = GenerateOwnEntry();
 
         uno::Reference< io::XStream > xStream = aTargetContent.openWriteableStreamNoLock();
         uno::Reference< io::XOutputStream > xOutput = xStream->getOutputStream();
@@ -221,20 +212,20 @@ sal_Bool DocumentLockFile::OverwriteOwnLockFile()
     }
     catch( uno::Exception& )
     {
-        return sal_False;
+        return false;
     }
 
-    return sal_True;
+    return true;
 }
 
-// ----------------------------------------------------------------------
+
 void DocumentLockFile::RemoveFile()
 {
     ::osl::MutexGuard aGuard( m_aMutex );
 
-    // TODO/LATER: the removing is not atomar, is it possible in general to make it atomar?
-    uno::Sequence< ::rtl::OUString > aNewEntry = GenerateOwnEntry();
-    uno::Sequence< ::rtl::OUString > aFileData = GetLockData();
+    // TODO/LATER: the removing is not atomic, is it possible in general to make it atomic?
+    uno::Sequence< OUString > aNewEntry = GenerateOwnEntry();
+    uno::Sequence< OUString > aFileData = GetLockData();
 
     if ( aFileData.getLength() < LOCKFILE_ENTRYSIZE )
         throw io::WrongFormatException();
@@ -244,12 +235,12 @@ void DocumentLockFile::RemoveFile()
       || !aFileData[LOCKFILE_USERURL_ID].equals( aNewEntry[LOCKFILE_USERURL_ID] ) )
         throw io::IOException(); // not the owner, access denied
 
-    uno::Reference< lang::XMultiServiceFactory > xFactory = ::comphelper::getProcessServiceFactory();
-    uno::Reference< ::com::sun::star::ucb::XSimpleFileAccess > xSimpleFileAccess(
-        xFactory->createInstance( ::rtl::OUString::createFromAscii("com.sun.star.ucb.SimpleFileAccess") ),
-        uno::UNO_QUERY_THROW );
-    xSimpleFileAccess->kill( m_aURL );
+    uno::Reference < ::com::sun::star::ucb::XCommandEnvironment > xEnv;
+    ::ucbhelper::Content aCnt(m_aURL, xEnv, comphelper::getProcessComponentContext());
+    aCnt.executeCommand(OUString("delete"),
+        uno::makeAny(true));
 }
 
 } // namespace svt
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
