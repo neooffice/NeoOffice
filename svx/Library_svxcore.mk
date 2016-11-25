@@ -1,107 +1,120 @@
-#**************************************************************
-#  
-#  Licensed to the Apache Software Foundation (ASF) under one
-#  or more contributor license agreements.  See the NOTICE file
-#  distributed with this work for additional information
-#  regarding copyright ownership.  The ASF licenses this file
-#  to you under the Apache License, Version 2.0 (the
-#  "License"); you may not use this file except in compliance
-#  with the License.  You may obtain a copy of the License at
-#  
-#    http://www.apache.org/licenses/LICENSE-2.0
-#  
-#  Unless required by applicable law or agreed to in writing,
-#  software distributed under the License is distributed on an
-#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#  KIND, either express or implied.  See the License for the
-#  specific language governing permissions and limitations
-#  under the License.
-#  
-#  This file incorporates work covered by the following license notice:
+# -*- Mode: makefile-gmake; tab-width: 4; indent-tabs-mode: t -*-
+#
+# This file is part of the LibreOffice project.
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# This file incorporates work covered by the following license notice:
+#
+#   Licensed to the Apache Software Foundation (ASF) under one or more
+#   contributor license agreements. See the NOTICE file distributed
+#   with this work for additional information regarding copyright
+#   ownership. The ASF licenses this file to you under the Apache
+#   License, Version 2.0 (the "License"); you may not use this file
+#   except in compliance with the License. You may obtain a copy of
+#   the License at http://www.apache.org/licenses/LICENSE-2.0 .
 # 
-#    Modified May 2016 by Patrick Luby. NeoOffice is only distributed
-#    under the GNU General Public License, Version 3 as allowed by Section 4
-#    of the Apache License, Version 2.0.
+#   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+#   under the GNU General Public License, Version 3 as allowed by Section 3.3
+#   of the Mozilla Public License, v. 2.0.
 #
-#    You should have received a copy of the GNU General Public License
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-#**************************************************************
-
-
 
 $(eval $(call gb_Library_Library,svxcore))
 
 $(eval $(call gb_Library_set_componentfile,svxcore,svx/util/svxcore))
 
-$(eval $(call gb_Library_add_sdi_headers,svx,svx/sdi/svxslots))
+$(eval $(call gb_Library_add_sdi_headers,svxcore,svx/sdi/svxslots))
 
-$(eval $(call gb_Library_add_package_headers,svxcore,\
-	svx_inc \
-	svx_sdi \
+$(eval $(call gb_Library_use_custom_headers,svxcore,\
+	officecfg/registry \
 ))
+
+$(eval $(call gb_Library_use_sdk_api,svxcore))
 
 $(eval $(call gb_Library_set_include,svxcore,\
-	-I$(SRCDIR)/svx/inc \
-	-I$(SRCDIR)/svx/inc/pch \
-	-I$(SRCDIR)/svx/source/inc \
-	$$(INCLUDE) \
-	-I$(OUTDIR)/inc/offuh \
-	-I$(WORKDIR)/SdiTarget/svx/sdi \
+    -I$(SRCDIR)/svx/inc \
+    -I$(SRCDIR)/svx/source/inc \
+    $$(INCLUDE) \
+    -I$(WORKDIR)/SdiTarget/svx/sdi \
 ))
 
+$(eval $(call gb_Library_set_precompiled_header,svxcore,$(SRCDIR)/svx/inc/pch/precompiled_svxcore))
+
 #BOOST switch in customshapes
-#dialog: 
-#.IF "$(GUI)"=="WNT"
+#dialog:
+#.IF "$(OS)"=="WNT"
 #CFLAGS+= -DUNICODE -D_UNICODE
 #.ENDIF
 
-$(eval $(call gb_Library_set_defs,svxcore,\
-	$$(DEFS) \
-	-DSVX_DLLIMPLEMENTATION \
-	-DBOOST_SPIRIT_USE_OLD_NAMESPACE \
+$(eval $(call gb_Library_add_defs,svxcore,\
+    -DSVX_DLLIMPLEMENTATION \
+    -DBOOST_SPIRIT_USE_OLD_NAMESPACE \
+    -DDBTOOLS_DLL_NAME=\"$(call gb_Library_get_runtime_filename,$(call gb_Library__get_name,dbtools))\" \
 ))
 
-$(eval $(call gb_Library_add_linked_libs,svxcore,\
-	avmedia \
-	basegfx \
-	sb \
-	comphelper \
-	cppuhelper \
-	cppu \
-	drawinglayer \
-	editeng \
-	fwe \
-	i18nisolang1 \
+$(eval $(call gb_Library_use_libraries,svxcore,\
+    $(call gb_Helper_optional,AVMEDIA,avmedia) \
+    basegfx \
+    sb \
+    comphelper \
+    cppuhelper \
+    cppu \
+    $(call gb_Helper_optional,DBCONNECTIVITY, \
+        dbtools) \
+    drawinglayer \
+    editeng \
+    fwe \
+    i18nlangtag \
+    i18nutil \
+    lng \
+    sal \
+    salhelper \
+    sax \
+    sfx \
+    sot \
+    svl \
+    svt \
+    tk \
+    tl \
+    ucbhelper \
+    utl \
+    vcl \
+    xo \
+	$(gb_UWINAPI) \
+))
+
+$(eval $(call gb_Library_use_externals,svxcore,\
+	boost_headers \
 	icuuc \
-	lng \
-	sal \
-	sfx \
-	sot \
-    stl \
-	svl \
-	svt \
-	ootk \
-	tl \
-	ucbhelper \
-	utl \
-	vcl \
-	vos3 \
-	xo \
-    $(gb_STDLIBS) \
+	icu_headers \
+	mesa_headers \
+	glew \
 ))
 
-ifeq ($(strip $(GUIBASE)),java)
-$(eval $(call gb_Library_add_linked_libs,svxcore,\
-	CoreFoundation \
+ifeq ($(OS),MACOSX)
+
+$(eval $(call gb_Library_add_cxxflags,svxcore,\
+    $(gb_OBJCXXFLAGS) \
 ))
-gb_Library__FRAMEWORKS += \
-	CoreFoundation
+
+$(eval $(call gb_Library_use_system_darwin_frameworks,svxcore,\
+	Foundation \
+	$(if $(filter $(GUIBASE),java),CoreFoundation) \
+))
+
 endif
 
 $(eval $(call gb_Library_add_exception_objects,svxcore,\
-	svx/source/core/coreservices \
+    svx/source/core/coreservices \
+    svx/source/core/extedit \
+    svx/source/core/graphichelper \
     svx/source/customshapes/EnhancedCustomShape2d \
+    svx/source/customshapes/EnhancedCustomShapeFunctionParser \
     svx/source/customshapes/EnhancedCustomShapeGeometry \
     svx/source/customshapes/EnhancedCustomShapeTypeNames \
     svx/source/dialog/checklbx \
@@ -109,7 +122,6 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/dialog/dlgutil \
     svx/source/dialog/framelink \
     svx/source/dialog/langbox \
-    svx/source/dialog/simptabl \
     svx/source/dialog/stddlg \
     svx/source/dialog/svxdlg \
     svx/source/engine3d/camera3d \
@@ -132,64 +144,12 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/engine3d/view3d \
     svx/source/engine3d/view3d1 \
     svx/source/engine3d/viewpt3d2 \
-    svx/source/fmcomp/dbaexchange \
-    svx/source/fmcomp/fmgridcl \
-    svx/source/fmcomp/fmgridif \
-    svx/source/fmcomp/gridcell \
-    svx/source/fmcomp/gridcols \
-    svx/source/fmcomp/gridctrl \
-    svx/source/fmcomp/trace \
-    svx/source/fmcomp/xmlexchg \
-    svx/source/form/dataaccessdescriptor \
-    svx/source/form/datalistener \
-    svx/source/form/datanavi \
-    svx/source/form/dbtoolsclient \
-    svx/source/form/delayedevent \
-    svx/source/form/fmcontrolbordermanager \
-    svx/source/form/fmcontrollayout \
-    svx/source/form/fmdmod \
-    svx/source/form/fmdocumentclassification \
-    svx/source/form/fmdpage \
-    svx/source/form/fmexch \
-    svx/source/form/fmexpl \
-    svx/source/form/fmitems \
-    svx/source/form/fmmodel \
-    svx/source/form/fmobj \
-    svx/source/form/fmpage \
-    svx/source/form/fmpgeimp \
-    svx/source/form/fmscriptingenv \
-    svx/source/form/fmservs \
-    svx/source/form/fmshell \
-    svx/source/form/fmshimp \
-    svx/source/form/fmtextcontroldialogs \
-    svx/source/form/fmtextcontrolfeature \
-    svx/source/form/fmtextcontrolshell \
-    svx/source/form/fmtools \
-    svx/source/form/fmundo \
-    svx/source/form/fmview \
-    svx/source/form/fmvwimp \
-    svx/source/form/formcontrolfactory \
-    svx/source/form/formcontroller \
-    svx/source/form/formcontrolling \
-    svx/source/form/formdispatchinterceptor \
-    svx/source/form/formfeaturedispatcher \
-    svx/source/form/formtoolbars \
-    svx/source/form/legacyformcontroller \
-    svx/source/form/navigatortree \
-    svx/source/form/navigatortreemodel \
-    svx/source/form/ParseContext \
-    svx/source/form/sdbdatacolumn \
-    svx/source/form/sqlparserclient \
-    svx/source/form/stringlistresource \
-    svx/source/form/typeconversionclient \
-    svx/source/form/typemap \
-    svx/source/form/xfm_addcondition \
     svx/source/gallery2/codec \
-    svx/source/gallery2/galbrws \
     svx/source/gallery2/galbrws1 \
     svx/source/gallery2/galbrws2 \
     svx/source/gallery2/galctrl \
     svx/source/gallery2/galexpl \
+    svx/source/gallery2/galini \
     svx/source/gallery2/gallery1 \
     svx/source/gallery2/galmisc \
     svx/source/gallery2/galobj \
@@ -206,6 +166,7 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/sdr/animation/scheduler \
     svx/source/sdr/animation/objectanimator \
     svx/source/sdr/animation/animationstate \
+    svx/source/sdr/attribute/sdrallfillattributeshelper \
     svx/source/sdr/attribute/sdrlinefillshadowtextattribute \
     svx/source/sdr/attribute/sdrfilltextattribute \
     svx/source/sdr/attribute/sdrshadowtextattribute \
@@ -223,6 +184,7 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/sdr/contact/viewobjectcontactofpageobj \
     svx/source/sdr/contact/viewobjectcontactofe3dscene \
     svx/source/sdr/contact/viewcontactofgraphic \
+    svx/source/sdr/contact/viewcontactofopenglobj \
     svx/source/sdr/contact/viewobjectcontactredirector \
     svx/source/sdr/contact/viewcontactofsdrcircobj \
     svx/source/sdr/contact/viewcontactofgroup \
@@ -257,6 +219,7 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/sdr/contact/viewcontactofsdrmeasureobj \
     svx/source/sdr/contact/objectcontactofobjlistpainter \
     svx/source/sdr/contact/viewobjectcontactofe3d \
+    svx/source/sdr/contact/viewobjectcontactofopenglobj \
     svx/source/sdr/event/eventhandler \
     svx/source/sdr/overlay/overlayline \
     svx/source/sdr/overlay/overlaycrosshair \
@@ -313,16 +276,15 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/sdr/properties/connectorproperties \
     svx/source/sdr/properties/e3dcompoundproperties \
     svx/source/sdr/properties/oleproperties \
-    svx/source/svdraw/charthelper \
     svx/source/svdraw/clonelist \
+    svx/source/svdraw/charthelper \
     svx/source/svdraw/gradtrns \
     svx/source/svdraw/polypolygoneditor \
-    svx/source/svdraw/sdrcomment \
-    svx/source/svdraw/sdrundomanager \
     svx/source/svdraw/sdrhittesthelper \
     svx/source/svdraw/sdrmasterpagedescriptor \
     svx/source/svdraw/sdrpagewindow \
     svx/source/svdraw/sdrpaintwindow \
+    svx/source/svdraw/sdrundomanager \
     svx/source/svdraw/selectioncontroller \
     svx/source/svdraw/svdattr \
     svx/source/svdraw/svdcrtv \
@@ -349,6 +311,8 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/svdraw/svdoashp \
     svx/source/svdraw/svdoattr \
     svx/source/svdraw/svdobj \
+    svx/source/svdraw/svdobjplusdata \
+    svx/source/svdraw/svdobjuserdatalist \
     svx/source/svdraw/svdocapt \
     svx/source/svdraw/svdocirc \
     svx/source/svdraw/svdoedge \
@@ -357,6 +321,7 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/svdraw/svdomeas \
     svx/source/svdraw/svdomedia \
     svx/source/svdraw/svdoole2 \
+    svx/source/svdraw/svdoopengl \
     svx/source/svdraw/svdopage \
     svx/source/svdraw/svdopath \
     svx/source/svdraw/svdorect \
@@ -401,6 +366,8 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/table/viewcontactoftableobj \
     svx/source/tbxctrls/extrusioncontrols \
     svx/source/tbxctrls/fontworkgallery \
+    svx/source/tbxctrls/Palette \
+    svx/source/tbxctrls/PaletteManager \
     svx/source/tbxctrls/tbcontrl \
     svx/source/tbxctrls/tbxcolorupdate \
     svx/source/tbxctrls/SvxColorValueSet \
@@ -409,6 +376,7 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/unodraw/gluepts \
     svx/source/unodraw/shapepropertynotifier \
     svx/source/unodraw/tableshape \
+    svx/source/unodraw/unobrushitemhelper \
     svx/source/unodraw/unobtabl \
     svx/source/unodraw/unodtabl \
     svx/source/unodraw/UnoGraphicExporter \
@@ -449,26 +417,69 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/xoutdev/xtablend \
 ))
 
-# the following source file can't be compiled with optimization by some compilers (crash or endless loop):
-# Solaris Sparc with Sun compiler, gcc on MacOSX and Linux PPC
-# the latter is currently not supported by gbuild and needs a fix here later
-ifeq ($(OS),$(filter-out SOLARIS MACOSX,$(OS)))
 $(eval $(call gb_Library_add_exception_objects,svxcore,\
-    svx/source/customshapes/EnhancedCustomShapeFunctionParser \
+    svx/source/fmcomp/dbaexchange \
+    svx/source/fmcomp/fmgridcl \
+    svx/source/fmcomp/fmgridif \
+    svx/source/fmcomp/gridcell \
+    svx/source/fmcomp/gridcols \
+    svx/source/fmcomp/gridctrl \
+    svx/source/fmcomp/xmlexchg \
+    svx/source/form/dataaccessdescriptor \
+    svx/source/form/datalistener \
+    svx/source/form/datanavi \
+    svx/source/form/dbtoolsclient \
+    svx/source/form/delayedevent \
+    svx/source/form/fmcontrolbordermanager \
+    svx/source/form/fmcontrollayout \
+    svx/source/form/fmdmod \
+    svx/source/form/fmdocumentclassification \
+    svx/source/form/fmdpage \
+    svx/source/form/fmexch \
+    svx/source/form/fmexpl \
+    svx/source/form/fmitems \
+    svx/source/form/fmmodel \
+    svx/source/form/fmobj \
+    svx/source/form/fmpage \
+    svx/source/form/fmpgeimp \
+    svx/source/form/fmscriptingenv \
+    svx/source/form/fmservs \
+    svx/source/form/fmshell \
+    svx/source/form/fmshimp \
+    svx/source/form/fmtextcontroldialogs \
+    svx/source/form/fmtextcontrolfeature \
+    svx/source/form/fmtextcontrolshell \
+    svx/source/form/fmtools \
+    svx/source/form/fmundo \
+    svx/source/form/fmview \
+    svx/source/form/fmvwimp \
+    svx/source/form/formcontrolfactory \
+    svx/source/form/formcontroller \
+    svx/source/form/formcontrolling \
+    svx/source/form/formdispatchinterceptor \
+    svx/source/form/formfeaturedispatcher \
+    svx/source/form/formtoolbars \
+    svx/source/form/legacyformcontroller \
+    svx/source/form/navigatortree \
+    svx/source/form/navigatortreemodel \
+    svx/source/form/ParseContext \
+    svx/source/form/sdbdatacolumn \
+    svx/source/form/sqlparserclient \
+    svx/source/form/stringlistresource \
+    svx/source/form/typemap \
+    svx/source/form/xfm_addcondition \
 ))
-else
-$(eval $(call gb_Library_add_cxxobjects,svxcore,\
-    svx/source/customshapes/EnhancedCustomShapeFunctionParser \
-    , $(gb_COMPILERNOOPTFLAGS) $(gb_LinkTarget_EXCEPTIONFLAGS) \
-))
-endif
 
 $(eval $(call gb_SdiTarget_SdiTarget,svx/sdi/svxslots,svx/sdi/svx))
 
 $(eval $(call gb_SdiTarget_set_include,svx/sdi/svxslots,\
-	$$(INCLUDE) \
-	-I$(SRCDIR)/svx/inc \
-	-I$(SRCDIR)/svx/sdi \
+    $$(INCLUDE) \
+    -I$(SRCDIR)/svx/inc \
+    -I$(SRCDIR)/svx/sdi \
+    -I$(SRCDIR)/sfx2/sdi \
 ))
+
+# Runtime dependency for unit-tests
+$(eval $(call gb_Library_use_restarget,svxcore,svx))
 
 # vim: set noet sw=4 ts=4:

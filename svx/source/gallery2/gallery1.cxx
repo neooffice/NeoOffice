@@ -1,40 +1,43 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
+#include <config_features.h>
 
+#if defined(MACOSX) && HAVE_FEATURE_READONLY_INSTALLSET
+#define __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES 0
+#include <premac.h>
+#include <Foundation/Foundation.h>
+#include <postmac.h>
+#endif
 
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_svx.hxx"
+#include "sal/config.h"
 
-#define ENABLE_BYTESTRING_STREAM_OPERATORS
-
+#include <comphelper/processfactory.hxx>
+#include <comphelper/string.hxx>
+#include <osl/thread.h>
 #include <tools/vcompat.hxx>
 #include <ucbhelper/content.hxx>
 #include <unotools/ucbstreamhelper.hxx>
@@ -47,6 +50,7 @@
 #include "svx/gallery1.hxx"
 #include <com/sun/star/sdbc/XResultSet.hpp>
 #include <com/sun/star/ucb/XContentAccess.hpp>
+#include <boost/scoped_ptr.hpp>
 
 #if defined USE_JAVA && defined MACOSX
 
@@ -55,920 +59,665 @@
 
 #endif	// USE_JAVA && MACOSX
 
-#define ENABLE_BYTESTRING_STREAM_OPERATORS
-
-// --------------
 // - Namespaces -
-// --------------
 
-using namespace ::rtl;
 using namespace ::com::sun::star;
 
-// ---------------------
 // - GalleryThemeEntry -
-// ---------------------
 
-GalleryThemeEntry::GalleryThemeEntry( const INetURLObject& rBaseURL, const String& rName,
-									  sal_uInt32 _nFileNumber, sal_Bool _bReadOnly, sal_Bool _bImported,
-									  sal_Bool _bNewFile, sal_uInt32 _nId, sal_Bool _bThemeNameFromResource ) :
-		nFileNumber                             ( _nFileNumber ),
-		nId                                     ( _nId ),
-		bReadOnly                               ( _bReadOnly || _bImported ),
-		bImported                               ( _bImported ),
-		bThemeNameFromResource  ( _bThemeNameFromResource )
+static bool FileExists( const INetURLObject &rURL, const rtl::OUString &rExt )
 {
-	INetURLObject aURL( rBaseURL );
-	DBG_ASSERT( aURL.GetProtocol() != INET_PROT_NOT_VALID, "invalid URL" );
-	String aFileName( String( RTL_CONSTASCII_USTRINGPARAM( "sg" ) ) );
-
-	aURL.Append( ( aFileName += String::CreateFromInt32( nFileNumber ) ) += String( RTL_CONSTASCII_USTRINGPARAM( ".thm" ) ) );
-	aThmURL = ImplGetURLIgnoreCase( aURL );
-
-	aURL.setExtension( String( RTL_CONSTASCII_USTRINGPARAM( "sdg" ) ) );
-	aSdgURL = ImplGetURLIgnoreCase( aURL );
-
-	aURL.setExtension( String( RTL_CONSTASCII_USTRINGPARAM( "sdv" ) ) );
-	aSdvURL = ImplGetURLIgnoreCase( aURL );
-
-	SetModified( _bNewFile );
-
-	if( nId && bThemeNameFromResource )
-    {
-        const ResId aId (GAL_RESID( RID_GALLERYSTR_THEME_START + (sal_uInt16) nId));
-        if (aId.GetpResource() == NULL)
-            OSL_TRACE("");
-        aName = String(aId);
-    }
-
-	if( !aName.Len() )
-		aName = rName;
+    INetURLObject aURL( rURL );
+    aURL.setExtension( rExt );
+    return FileExists( aURL );
 }
 
-// -----------------------------------------------------------------------------
+GalleryThemeEntry::GalleryThemeEntry( bool bCreateUniqueURL,
+                                      const INetURLObject& rBaseURL, const OUString& rName,
+                                      bool _bReadOnly, bool _bNewFile,
+                                      sal_uInt32 _nId, bool _bThemeNameFromResource ) :
+        nId                     ( _nId ),
+        bReadOnly               ( _bReadOnly ),
+        bThemeNameFromResource  ( _bThemeNameFromResource )
+{
+    INetURLObject aURL( rBaseURL );
+    DBG_ASSERT( aURL.GetProtocol() != INET_PROT_NOT_VALID, "invalid URL" );
+
+    if (bCreateUniqueURL)
+    {
+        INetURLObject aBaseNoCase( ImplGetURLIgnoreCase( rBaseURL ) );
+        aURL = aBaseNoCase;
+        static sal_Int32 nIdx = 0;
+        while( FileExists( aURL, "thm" ) )
+        { // create new URLs
+            nIdx++;
+            aURL = aBaseNoCase;
+            aURL.setName( aURL.getName() + OUString::number(nIdx));
+        }
+    }
+
+    aURL.setExtension( "thm" );
+    aThmURL = ImplGetURLIgnoreCase( aURL );
+
+    aURL.setExtension( "sdg" );
+    aSdgURL = ImplGetURLIgnoreCase( aURL );
+
+    aURL.setExtension( "sdv" );
+    aSdvURL = ImplGetURLIgnoreCase( aURL );
+
+    aURL.setExtension( "str" );
+    aStrURL = ImplGetURLIgnoreCase( aURL );
+
+    SetModified( _bNewFile );
+
+    aName = ReadStrFromIni( "name" );
+
+    // This is awful - we shouldn't use these resources if we
+    // possibly can avoid them
+    if( aName.isEmpty() && nId && bThemeNameFromResource )
+        aName = GAL_RESSTR( RID_GALLERYSTR_THEME_START + (sal_uInt16) nId );
+
+    if( aName.isEmpty() )
+        aName = rName;
+}
 
 INetURLObject GalleryThemeEntry::ImplGetURLIgnoreCase( const INetURLObject& rURL ) const
 {
-	INetURLObject	aURL( rURL );
-	String			aFileName;
-	sal_Bool			bExists = sal_False;
+    INetURLObject   aURL( rURL );
 
-	// check original file name
-	if( FileExists( aURL ) )
-		bExists = sal_True;
-	else
-	{
-		// check upper case file name
-		aURL.setName( aURL.getName().toAsciiUpperCase() );
+    // check original file name
+    if( !FileExists( aURL ) )
+    {
+        // check upper case file name
+        aURL.setName( aURL.getName().toAsciiUpperCase() );
 
-		if( FileExists( aURL ) )
-			bExists = sal_True;
-		else
-		{
-			// check lower case file name
-			aURL.setName( aURL.getName().toAsciiLowerCase() );
+        if(!FileExists( aURL ) )
+        {
+            // check lower case file name
+            aURL.setName( aURL.getName().toAsciiLowerCase() );
+        }
+    }
 
-			if( FileExists( aURL ) )
-				bExists = sal_True;
-		}
-	}
-
-	return aURL;
+    return aURL;
 }
 
-// -----------------------------------------------------------------------------
-
-void GalleryThemeEntry::SetName( const String& rNewName )
+void GalleryThemeEntry::SetName( const OUString& rNewName )
 {
-	if( aName != rNewName )
-	{
-		aName = rNewName;
-		SetModified( sal_True );
-		bThemeNameFromResource = sal_False;
-	}
+    if( aName != rNewName )
+    {
+        aName = rNewName;
+        SetModified( true );
+        bThemeNameFromResource = false;
+    }
 }
 
-// -----------------------------------------------------------------------------
-
-void GalleryThemeEntry::SetId( sal_uInt32 nNewId, sal_Bool bResetThemeName )
+void GalleryThemeEntry::SetId( sal_uInt32 nNewId, bool bResetThemeName )
 {
-	nId = nNewId;
-	SetModified( sal_True );
-	bThemeNameFromResource = ( nId && bResetThemeName );
+    nId = nNewId;
+    SetModified( true );
+    bThemeNameFromResource = ( nId && bResetThemeName );
 }
 
-// ---------------------------
-// - GalleryImportThemeEntry -
-// ---------------------------
-
-SvStream& operator<<( SvStream& rOut, const GalleryImportThemeEntry& rEntry )
-{
-	ByteString aDummy;
-
-	rOut << ByteString( rEntry.aThemeName, RTL_TEXTENCODING_UTF8 ) <<
-			ByteString( rEntry.aUIName, RTL_TEXTENCODING_UTF8 ) <<
-			ByteString( String(rEntry.aURL.GetMainURL( INetURLObject::NO_DECODE )), RTL_TEXTENCODING_UTF8 ) <<
-			ByteString( rEntry.aImportName, RTL_TEXTENCODING_UTF8 ) <<
-			aDummy;
-
-	return rOut;
-}
-
-// ------------------------------------------------------------------------
-
-SvStream& operator>>( SvStream& rIn, GalleryImportThemeEntry& rEntry )
-{
-	ByteString aTmpStr;
-
-	rIn >> aTmpStr; rEntry.aThemeName = String( aTmpStr, RTL_TEXTENCODING_UTF8 );
-	rIn >> aTmpStr; rEntry.aUIName = String( aTmpStr, RTL_TEXTENCODING_UTF8 );
-	rIn >> aTmpStr; rEntry.aURL = INetURLObject( String( aTmpStr, RTL_TEXTENCODING_UTF8 ) );
-	rIn >> aTmpStr; rEntry.aImportName = String( aTmpStr, RTL_TEXTENCODING_UTF8 );
-	rIn >> aTmpStr;
-
-	return rIn;
-}
-
-// --------------------------
 // - GalleryThemeCacheEntry -
-// --------------------------
 
-class GalleryThemeCacheEntry;
-DBG_NAME(GalleryThemeCacheEntry)
 class GalleryThemeCacheEntry
 {
 private:
 
-	const GalleryThemeEntry*        mpThemeEntry;
-	GalleryTheme*                           mpTheme;
+    const GalleryThemeEntry*        mpThemeEntry;
+    GalleryTheme*                           mpTheme;
 
 public:
 
-								GalleryThemeCacheEntry( const GalleryThemeEntry* pThemeEntry, GalleryTheme* pTheme ) :
-									mpThemeEntry( pThemeEntry ), mpTheme( pTheme ) {DBG_CTOR(GalleryThemeCacheEntry,NULL);}
-								~GalleryThemeCacheEntry() { delete mpTheme;DBG_DTOR(GalleryThemeCacheEntry,NULL); }
+                                GalleryThemeCacheEntry( const GalleryThemeEntry* pThemeEntry, GalleryTheme* pTheme ) :
+                                    mpThemeEntry( pThemeEntry ), mpTheme( pTheme ) {}
+                                ~GalleryThemeCacheEntry() { delete mpTheme; }
 
-	const GalleryThemeEntry*        GetThemeEntry() const { return mpThemeEntry; }
-	GalleryTheme*                           GetTheme() const { return mpTheme; }
+    const GalleryThemeEntry*        GetThemeEntry() const { return mpThemeEntry; }
+    GalleryTheme*                           GetTheme() const { return mpTheme; }
 };
 
-// -----------
 // - Gallery -
-// -----------
-Gallery::Gallery( const String& rMultiPath )
-:		nReadTextEncoding	( gsl_getSystemTextEncoding() )
-,		nLastFileNumber		( 0 )
-,		bMultiPath			( sal_False )
-{
-	ImplLoad( rMultiPath );
-}
 
-// ------------------------------------------------------------------------
+Gallery::Gallery( const OUString& rMultiPath )
+:       nReadTextEncoding   ( osl_getThreadTextEncoding() )
+,       bMultiPath          ( false )
+{
+    ImplLoad( rMultiPath );
+}
 
 Gallery::~Gallery()
 {
-	// Themen-Liste loeschen
-	for( GalleryThemeEntry* pThemeEntry = aThemeList.First(); pThemeEntry; pThemeEntry = aThemeList.Next() )
-		delete pThemeEntry;
-
-	// Import-Liste loeschen
-	for( GalleryImportThemeEntry* pImportEntry = aImportList.First(); pImportEntry; pImportEntry = aImportList.Next() )
-		delete pImportEntry;
+    // erase theme list
+    for ( size_t i = 0, n = aThemeList.size(); i < n; ++i )
+        delete aThemeList[ i ];
+    aThemeList.clear();
 }
-
-// ------------------------------------------------------------------------
 
 Gallery* Gallery::GetGalleryInstance()
 {
-	static Gallery* pGallery = NULL;
+    static Gallery* pGallery = NULL;
 
-	if( !pGallery )
-	{
-	    ::osl::MutexGuard aGuard( ::osl::Mutex::getGlobalMutex() );
-		if( !pGallery )
-		{
-			pGallery = new Gallery( SvtPathOptions().GetGalleryPath() );
-		}
-	}
+    if( !pGallery )
+    {
+        ::osl::MutexGuard aGuard( ::osl::Mutex::getGlobalMutex() );
+        if( !pGallery )
+        {
+            pGallery = new Gallery( SvtPathOptions().GetGalleryPath() );
+        }
+    }
 
-	return pGallery;
+    return pGallery;
 }
 
-// ------------------------------------------------------------------------
-
-void Gallery::ImplLoad( const String& rMultiPath )
+void Gallery::ImplLoad( const OUString& rMultiPath )
 {
-	const sal_uInt16    nTokenCount = rMultiPath.GetTokenCount( ';' );
-    sal_Bool        bIsReadOnlyDir;
+    const sal_Int32 nTokenCount = comphelper::string::getTokenCount(rMultiPath, ';');
+    bool            bIsReadOnlyDir;
 
-	bMultiPath = ( nTokenCount > 0 );
+    bMultiPath = ( nTokenCount > 0 );
 
     INetURLObject aCurURL(SvtPathOptions().GetConfigPath());
-	ImplLoadSubDirs( aCurURL, bIsReadOnlyDir );
+    ImplLoadSubDirs( aCurURL, bIsReadOnlyDir );
 
-	if( !bIsReadOnlyDir )
-	    aUserURL = aCurURL;
+    if( !bIsReadOnlyDir )
+        aUserURL = aCurURL;
 
-	if( bMultiPath )
-	{
-		aRelURL = INetURLObject( rMultiPath.GetToken( 0, ';' ) );
+    if( bMultiPath )
+    {
+        aRelURL = INetURLObject( comphelper::string::getToken(rMultiPath, 0, ';') );
 
-		for( sal_uInt16 i = 0UL; i < nTokenCount; i++ )
-		{
-		    aCurURL = INetURLObject(rMultiPath.GetToken( i, ';' ));
+        for( sal_Int32 i = 0; i < nTokenCount; ++i )
+        {
+            aCurURL = INetURLObject(comphelper::string::getToken(rMultiPath, i, ';'));
 
-			ImplLoadSubDirs( aCurURL, bIsReadOnlyDir );
+            ImplLoadSubDirs( aCurURL, bIsReadOnlyDir );
 
-			if( !bIsReadOnlyDir )
-			    aUserURL = aCurURL;
-	    }
-	}
-	else
-		aRelURL = INetURLObject( rMultiPath );
+            if( !bIsReadOnlyDir )
+                aUserURL = aCurURL;
+        }
+    }
+    else
+        aRelURL = INetURLObject( rMultiPath );
 
-	DBG_ASSERT( aUserURL.GetProtocol() != INET_PROT_NOT_VALID, "no writable Gallery user directory available" );
-	DBG_ASSERT( aRelURL.GetProtocol() != INET_PROT_NOT_VALID, "invalid URL" );
-
-	ImplLoadImports();
+    DBG_ASSERT( aUserURL.GetProtocol() != INET_PROT_NOT_VALID, "no writable Gallery user directory available" );
+    DBG_ASSERT( aRelURL.GetProtocol() != INET_PROT_NOT_VALID, "invalid URL" );
 }
 
-// ------------------------------------------------------------------------
-
-void Gallery::ImplLoadSubDirs( const INetURLObject& rBaseURL, sal_Bool& rbDirIsReadOnly )
+void Gallery::ImplLoadSubDirs( const INetURLObject& rBaseURL, bool& rbDirIsReadOnly )
 {
-    rbDirIsReadOnly = sal_False;
+    rbDirIsReadOnly = false;
 
-	try
-	{
-		uno::Reference< ucb::XCommandEnvironment > xEnv;
-		::ucbhelper::Content					   aCnt( rBaseURL.GetMainURL( INetURLObject::NO_DECODE ), xEnv );
+    try
+    {
+        uno::Reference< ucb::XCommandEnvironment > xEnv;
+        ::ucbhelper::Content                       aCnt( rBaseURL.GetMainURL( INetURLObject::NO_DECODE ), xEnv, comphelper::getProcessComponentContext() );
 
-		uno::Sequence< OUString > aProps( 1 );
-		aProps.getArray()[ 0 ] = OUString::createFromAscii( "Url" );
+        uno::Sequence< OUString > aProps( 1 );
+        aProps.getArray()[ 0 ] = "Url";
 
-		uno::Reference< sdbc::XResultSet > xResultSet( aCnt.createCursor( aProps, ::ucbhelper::INCLUDE_DOCUMENTS_ONLY ) );
+        uno::Reference< sdbc::XResultSet > xResultSet( aCnt.createCursor( aProps, ::ucbhelper::INCLUDE_DOCUMENTS_ONLY ) );
 
 #if defined USE_JAVA && defined MACOSX
-		// Eliminate sandbox deny file-write-create messages by checking if the
-		// directory is writable before trying to create a file in that
-		// directory. Only do this if the stat() function indicates that the
-		// directory exists. Otherwise, use the original OOo code so that any
-		// folder aliases in the path can be resolved.
-		::rtl::OUString aSystemPath;
-		struct stat aSystemPathStat;
-		if ( ::osl::FileBase::getSystemPathFromFileURL( rBaseURL.GetMainURL( INetURLObject::NO_DECODE ), aSystemPath ) == ::osl::FileBase::E_None && !stat( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), &aSystemPathStat ) && S_ISDIR( aSystemPathStat.st_mode ) )
-		{
-			if ( access( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ).getStr(), W_OK ) )
-				rbDirIsReadOnly = sal_True;
-		}
-		else
-		{
+        // Eliminate sandbox deny file-write-create messages by checking if the
+        // directory is writable before trying to create a file in that
+        // directory. Only do this if the stat() function indicates that the
+        // directory exists. Otherwise, use the original OOo code so that any
+        // folder aliases in the path can be resolved.
+        OUString aSystemPath;
+        struct stat aSystemPathStat;
+        if ( osl::FileBase::getSystemPathFromFileURL( rBaseURL.GetMainURL( INetURLObject::NO_DECODE ), aSystemPath ) == osl::FileBase::E_None && !stat( OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ).getStr(), &aSystemPathStat ) && S_ISDIR( aSystemPathStat.st_mode ) )
+        {
+            if ( access( OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ).getStr(), W_OK ) )
+                rbDirIsReadOnly = sal_True;
+        }
+        else
+        {
 #endif	// USE_JAVA && MACOSX
-		try
-		{
-		    // check readonlyness the very hard way
-        	INetURLObject   aTestURL( rBaseURL );
-	        String          aTestFile( RTL_CONSTASCII_USTRINGPARAM( "cdefghij.klm" ) );
-
-    	    aTestURL.Append( aTestFile );
-	        SvStream* pTestStm = ::utl::UcbStreamHelper::CreateStream( aTestURL.GetMainURL( INetURLObject::NO_DECODE ), STREAM_WRITE );
-
-	        if( pTestStm )
-	        {
-	            *pTestStm << 1;
-
-	            if( pTestStm->GetError() )
-	                rbDirIsReadOnly = sal_True;
-
-	            delete pTestStm;
-	            KillFile( aTestURL );
-	        }
-	        else
-	            rbDirIsReadOnly = sal_True;
-	    }
-	    catch( const ucb::ContentCreationException& )
-	    {
-	    }
-	    catch( const uno::RuntimeException& )
-	    {
-	    }
-	    catch( const uno::Exception& )
-	    {
-	    }
-#if defined USE_JAVA && defined MACOSX
-		}
-#endif	// USE_JAVA && MACOSX
-
-		if( xResultSet.is() )
-		{
-			uno::Reference< ucb::XContentAccess > xContentAccess( xResultSet, uno::UNO_QUERY );
-
-			if( xContentAccess.is() )
-			{
-                static const ::rtl::OUString s_sTitle(RTL_CONSTASCII_USTRINGPARAM("Title"));
-                static const ::rtl::OUString s_sIsReadOnly(RTL_CONSTASCII_USTRINGPARAM("IsReadOnly"));
-                static const ::rtl::OUString s_sSDG_EXT(RTL_CONSTASCII_USTRINGPARAM("sdg"));
-                static const ::rtl::OUString s_sSDV_EXT(RTL_CONSTASCII_USTRINGPARAM("sdv"));
-                
-				while( xResultSet->next() )
-				{
-					INetURLObject aThmURL( xContentAccess->queryContentIdentifierString() );
-
-					if(aThmURL.GetExtension().equalsIgnoreAsciiCaseAscii("thm"))
-					{
-						INetURLObject	aSdgURL( aThmURL); aSdgURL.SetExtension( s_sSDG_EXT );
-						INetURLObject	aSdvURL( aThmURL ); aSdvURL.SetExtension( s_sSDV_EXT );
-						
-						OUString		aTitle;
-						sal_Bool		bReadOnly = sal_False;
-
-						try
-						{
-						    ::ucbhelper::Content aThmCnt( aThmURL.GetMainURL( INetURLObject::NO_DECODE ), xEnv );
-						    ::ucbhelper::Content aSdgCnt( aSdgURL.GetMainURL( INetURLObject::NO_DECODE ), xEnv );
-						    ::ucbhelper::Content aSdvCnt( aSdvURL.GetMainURL( INetURLObject::NO_DECODE ), xEnv );
-
-						    try
-						    {
-						        aThmCnt.getPropertyValue( s_sTitle ) >>= aTitle;
-						    }
-	                        catch( const uno::RuntimeException& )
-	                        {
-	                        }
-	                        catch( const uno::Exception& )
-	                        {
-	                        }
-
-						    if( aTitle.getLength() )
-						    {
-						        try
-						        {
-							        aThmCnt.getPropertyValue( s_sIsReadOnly ) >>= bReadOnly;
-						        }
-	                            catch( const uno::RuntimeException& )
-	                            {
-	                            }
-	                            catch( const uno::Exception& )
-	                            {
-	                            }
-
-							    if( !bReadOnly )
-							    {
-							        try
-							        {
-								        aSdgCnt.getPropertyValue( s_sTitle ) >>= aTitle;
-						            }
-	                                catch( const ::com::sun::star::uno::RuntimeException& )
-	                                {
-	                                }
-	                                catch( const ::com::sun::star::uno::Exception& )
-	                                {
-	                                }
-
-								    if( aTitle.getLength() )
-								    {
-								        try
-								        {
-	    								    aSdgCnt.getPropertyValue( s_sIsReadOnly ) >>= bReadOnly;
-    					                }
-	                                    catch( const uno::RuntimeException& )
-	                                    {
-	                                    }
-	                                    catch( const uno::Exception& )
-	                                    {
-	                                    }
-							        }
-							    }
-
-							    if( !bReadOnly )
-							    {
-							        try
-							        {
-								        aSdvCnt.getPropertyValue( s_sTitle ) >>= aTitle;
-    					            }
-	                                catch( const ::com::sun::star::uno::RuntimeException& )
-	                                {
-	                                }
-	                                catch( const ::com::sun::star::uno::Exception& )
-	                                {
-	                                }
-
-								    if( aTitle.getLength() )
-								    {
-								        try
-								        {
-    									    aSdvCnt.getPropertyValue( s_sIsReadOnly ) >>= bReadOnly;
-    					                }
-	                                    catch( const uno::RuntimeException& )
-	                                    {
-	                                    }
-	                                    catch( const uno::Exception& )
-	                                    {
-	                                    }
-								    }
-							    }
-
-							    GalleryThemeEntry* pEntry = GalleryTheme::CreateThemeEntry( aThmURL, rbDirIsReadOnly || bReadOnly );
-
-							    if( pEntry )
-							    {
-								    const sal_uIntPtr nFileNumber = (sal_uIntPtr) String(aThmURL.GetBase()).Erase( 0, 2 ).Erase( 6 ).ToInt32();
-
-								    aThemeList.Insert( pEntry, LIST_APPEND );
-
-								    if( nFileNumber > nLastFileNumber )
-									    nLastFileNumber = nFileNumber;
-							    }
-						    }
-						}
-	                    catch( const ucb::ContentCreationException& )
-	                    {
-	                    }
-	                    catch( const uno::RuntimeException& )
-	                    {
-	                    }
-	                    catch( const uno::Exception& )
-	                    {
-	                    }
-					}
-				}
-			}
-		}
-	}
-	catch( const ucb::ContentCreationException& )
-	{
-	}
-	catch( const uno::RuntimeException& )
-	{
-	}
-	catch( const uno::Exception& )
-	{
-	}
-}
-
-// ------------------------------------------------------------------------
-
-void Gallery::ImplLoadImports()
-{
-	INetURLObject aURL( GetUserURL() );
-
-	aURL.Append( String( RTL_CONSTASCII_USTRINGPARAM( "gallery.sdi" ) ) );
-
-	if( FileExists( aURL ) )
-	{
-		SvStream* pIStm = ::utl::UcbStreamHelper::CreateStream( aURL.GetMainURL( INetURLObject::NO_DECODE ), STREAM_READ );
-
-		if( pIStm )
-		{
-			GalleryThemeEntry*			pThemeEntry;
-			GalleryImportThemeEntry*	pImportEntry;
-			INetURLObject               aFile;
-			sal_uInt32                      nInventor;
-			sal_uInt32                      nCount;
-			sal_uInt16                      nId;
-			sal_uInt16                      i;
-			sal_uInt16                      nTempCharSet;
-
-			for( pImportEntry = aImportList.First(); pImportEntry; pImportEntry = aImportList.Next() )
-				delete pImportEntry;
-
-			aImportList.Clear();
-			*pIStm >> nInventor;
-
-			if( nInventor == COMPAT_FORMAT( 'S', 'G', 'A', '3' ) )
-			{
-				*pIStm >> nId >> nCount >> nTempCharSet;
-
-				for( i = 0; i < nCount; i++ )
-				{
-					pImportEntry = new GalleryImportThemeEntry;
-
-					*pIStm >> *pImportEntry;
-					aImportList.Insert( pImportEntry, LIST_APPEND );
-					aFile = INetURLObject( pImportEntry->aURL );
-					pThemeEntry = new GalleryThemeEntry( aFile,
-														 pImportEntry->aUIName,
-														 String(aFile.GetBase()).Erase( 0, 2 ).Erase( 6 ).ToInt32(),
-														 sal_True, sal_True, sal_False, 0, sal_False );
-
-					aThemeList.Insert( pThemeEntry, LIST_APPEND );
-				}
-			}
-
-			delete pIStm;
-		}
-	}
-}
-
-// ------------------------------------------------------------------------
-
-void Gallery::ImplWriteImportList()
-{
-	INetURLObject aURL( GetUserURL() );
-	aURL.Append( ( String( "gallery.sdi", RTL_TEXTENCODING_UTF8 ) ) );
-	SvStream* pOStm = ::utl::UcbStreamHelper::CreateStream( aURL.GetMainURL( INetURLObject::NO_DECODE ), STREAM_WRITE | STREAM_TRUNC );
-
-	if( pOStm )
-	{
-		const sal_uInt32 nInventor = (sal_uInt32) COMPAT_FORMAT( 'S', 'G', 'A', '3' );
-		const sal_uInt16 nId = 0x0004;
-
-		*pOStm << nInventor << nId << (sal_uInt32) aImportList.Count() << (sal_uInt16) gsl_getSystemTextEncoding();
-
-		for( GalleryImportThemeEntry* pImportEntry = aImportList.First(); pImportEntry; pImportEntry = aImportList.Next() )
-			*pOStm << *pImportEntry;
-
-		if( pOStm->GetError() )
-			ErrorHandler::HandleError( ERRCODE_IO_GENERAL );
-
-		delete pOStm;
-	}
-}
-
-// ------------------------------------------------------------------------
-
-GalleryThemeEntry* Gallery::ImplGetThemeEntry( const String& rThemeName )
-{
-	GalleryThemeEntry* pFound = NULL;
-
-	if( rThemeName.Len() )
-		for( GalleryThemeEntry* pEntry = aThemeList.First(); pEntry && !pFound; pEntry = aThemeList.Next() )
-			if( rThemeName == pEntry->GetThemeName() )
-				pFound = pEntry;
-
-	return pFound;
-}
-
-// ------------------------------------------------------------------------
-
-GalleryImportThemeEntry* Gallery::ImplGetImportThemeEntry( const String& rImportName )
-{
-	GalleryImportThemeEntry* pFound = NULL;
-
-	for( GalleryImportThemeEntry* pImportEntry = aImportList.First(); pImportEntry && !pFound; pImportEntry = aImportList.Next() )
-		if ( rImportName == pImportEntry->aUIName )
-			pFound = pImportEntry;
-
-	return pFound;
-}
-
-// ------------------------------------------------------------------------
-
-String Gallery::GetThemeName( sal_uIntPtr nThemeId ) const
-{
-	GalleryThemeEntry* pFound = NULL;
-
-	for( sal_uIntPtr n = 0, nCount = aThemeList.Count(); n < nCount; n++ )
-	{
-		GalleryThemeEntry* pEntry = aThemeList.GetObject( n );
-
-		if( nThemeId == pEntry->GetId() )
-			pFound = pEntry;
-	}
-
-	// try fallback, if no entry was found
-	if( !pFound )
-	{
-		ByteString      aFallback;
-
-		switch( nThemeId )
-		{
-			case( GALLERY_THEME_3D ): aFallback = "3D"; break;
-			case( GALLERY_THEME_BULLETS ): aFallback = "Bullets"; break;
-			case( GALLERY_THEME_HOMEPAGE ): aFallback = "Homepage"; break;
-			case( GALLERY_THEME_POWERPOINT ): aFallback = "private://gallery/hidden/imgppt"; break;
-			case( GALLERY_THEME_FONTWORK ): aFallback = "private://gallery/hidden/fontwork"; break;
-			case( GALLERY_THEME_FONTWORK_VERTICAL ): aFallback = "private://gallery/hidden/fontworkvertical"; break;
-			case( GALLERY_THEME_RULERS ): aFallback = "Rulers"; break;
-			case( GALLERY_THEME_SOUNDS ): aFallback = "Sounds"; break;
-
-            case( RID_GALLERYSTR_THEME_ARROWS ): aFallback = "Arrows"; break;
-            case( RID_GALLERYSTR_THEME_COMPUTERS ): aFallback = "Computers"; break;
-            case( RID_GALLERYSTR_THEME_DIAGRAMS ): aFallback = "Diagrams"; break;
-            case( RID_GALLERYSTR_THEME_EDUCATION ): aFallback = "Education"; break;
-            case( RID_GALLERYSTR_THEME_ENVIRONMENT ): aFallback = "Environment"; break;
-            case( RID_GALLERYSTR_THEME_FINANCE ): aFallback = "Finance"; break;
-            case( RID_GALLERYSTR_THEME_PEOPLE ): aFallback = "People"; break;
-            case( RID_GALLERYSTR_THEME_SYMBOLS ): aFallback = "Symbols"; break;
-            case( RID_GALLERYSTR_THEME_TRANSPORT ): aFallback = "Transport"; break;
-            case( RID_GALLERYSTR_THEME_TXTSHAPES ): aFallback = "Textshapes"; break;
-
-            default:
-			break;
-		}
-
-		pFound = ( (Gallery*) this )->ImplGetThemeEntry( String::CreateFromAscii( aFallback.GetBuffer() ) );
-	}
-
-	return( pFound ? pFound->GetThemeName() : String() );
-}
-
-// ------------------------------------------------------------------------
-
-sal_Bool Gallery::HasTheme( const String& rThemeName )
-{
-	return( ImplGetThemeEntry( rThemeName ) != NULL );
-}
-
-// ------------------------------------------------------------------------
-
-sal_Bool Gallery::CreateTheme( const String& rThemeName, sal_uInt32 nNumFrom )
-{
-	sal_Bool bRet = sal_False;
-
-	if( !HasTheme( rThemeName ) && ( GetUserURL().GetProtocol() != INET_PROT_NOT_VALID ) )
-	{
-		nLastFileNumber = nNumFrom > nLastFileNumber ? nNumFrom : nLastFileNumber + 1;
-		GalleryThemeEntry* pNewEntry = new GalleryThemeEntry( GetUserURL(), rThemeName,
-															  nLastFileNumber,
-															  sal_False, sal_False, sal_True, 0, sal_False );
-
-		aThemeList.Insert( pNewEntry, LIST_APPEND );
-		delete( new GalleryTheme( this, pNewEntry ) );
-		Broadcast( GalleryHint( GALLERY_HINT_THEME_CREATED, rThemeName ) );
-		bRet = sal_True;
-	}
-
-	return bRet;
-}
-
-// ------------------------------------------------------------------------
-
-sal_Bool Gallery::CreateImportTheme( const INetURLObject& rURL, const String& rImportName )
-{
-	INetURLObject	aURL( rURL );
-	sal_Bool			bRet = sal_False;
-
-	DBG_ASSERT( aURL.GetProtocol() != INET_PROT_NOT_VALID, "invalid URL" );
-
-	if( FileExists( aURL ) )
-	{
-		SvStream* pIStm = ::utl::UcbStreamHelper::CreateStream( aURL.GetMainURL( INetURLObject::NO_DECODE ), STREAM_READ );
-
-		if( pIStm )
-		{
-			sal_uIntPtr   nStmErr;
-			sal_uInt16  nId;
-
-			*pIStm >> nId;
-
-			if( nId > 0x0004 )
-				ErrorHandler::HandleError( ERRCODE_IO_GENERAL );
-			else
-			{
-				ByteString				aTmpStr;
-				String                  aThemeName; *pIStm >> aTmpStr; aThemeName = String( aTmpStr, RTL_TEXTENCODING_UTF8 );
-				GalleryThemeEntry*      pThemeEntry = new GalleryThemeEntry( aURL, rImportName,
-																			 String(aURL.GetBase()).Erase( 0, 2 ).Erase( 6 ).ToInt32(),
-																			 sal_True, sal_True, sal_True, 0, sal_False );
-				GalleryTheme*           pImportTheme = new GalleryTheme( this, pThemeEntry );
-
-				pIStm->Seek( STREAM_SEEK_TO_BEGIN );
-				*pIStm >> *pImportTheme;
-				nStmErr = pIStm->GetError();
-
-				if( nStmErr )
-				{
-					delete pThemeEntry;
-					ErrorHandler::HandleError( ERRCODE_IO_GENERAL );
-				}
-				else
-				{
-					String  aName( rImportName );
-					String  aNewName( aName );
-					sal_uIntPtr   nCount = 0;
-
-					aName += ' ';
-
-					while ( HasTheme( aNewName ) && ( nCount++ < 16000 ) )
-					{
-						aNewName = aName;
-						aNewName += String::CreateFromInt32( nCount );
-					}
-
-					pImportTheme->SetImportName( aNewName );
-					aThemeList.Insert( pThemeEntry, LIST_APPEND );
-
-					// Thema in Import-Liste eintragen und Import-Liste     speichern
-					GalleryImportThemeEntry* pImportEntry = new GalleryImportThemeEntry;
-					pImportEntry->aThemeName = pImportEntry->aUIName = aNewName;
-					pImportEntry->aURL = rURL;
-					pImportEntry->aImportName = rImportName;
-					aImportList.Insert( pImportEntry, LIST_APPEND );
-					ImplWriteImportList();
-					bRet = sal_True;
-				}
-
-				delete pImportTheme;
-			}
-
-			delete pIStm;
-		}
-	}
-
-	return bRet;
-}
-
-// ------------------------------------------------------------------------
-
-sal_Bool Gallery::RenameTheme( const String& rOldName, const String& rNewName )
-{
-	GalleryThemeEntry*      pThemeEntry = ImplGetThemeEntry( rOldName );
-	sal_Bool                            bRet = sal_False;
-
-	// Ueberpruefen, ob neuer Themenname schon vorhanden ist
-	if( pThemeEntry && !HasTheme( rNewName ) && ( !pThemeEntry->IsReadOnly() || pThemeEntry->IsImported() ) )
-	{
-		SfxListener   aListener;
-		GalleryTheme* pThm = AcquireTheme( rOldName, aListener );
-
-		if( pThm )
-		{
-			const String aOldName( rOldName );
-
-			pThemeEntry->SetName( rNewName );
-			pThm->ImplWrite();
-
-			if( pThemeEntry->IsImported() )
-			{
-				pThm->SetImportName( rNewName );
-
-				GalleryImportThemeEntry* pImportEntry = ImplGetImportThemeEntry( rOldName );
-
-				if( pImportEntry )
-				{
-					pImportEntry->aUIName = rNewName;
-					ImplWriteImportList();
-				}
-			}
-
-			Broadcast( GalleryHint( GALLERY_HINT_THEME_RENAMED, aOldName, pThm->GetName() ) );
-			ReleaseTheme( pThm, aListener );
-			bRet = sal_True;
-		}
-	}
-
-	return bRet;
-}
-
-// ------------------------------------------------------------------------
-
-sal_Bool Gallery::RemoveTheme( const String& rThemeName )
-{
-	GalleryThemeEntry*	pThemeEntry = ImplGetThemeEntry( rThemeName );
-	sal_Bool                bRet = sal_False;
-
-	if( pThemeEntry && ( !pThemeEntry->IsReadOnly() || pThemeEntry->IsImported() ) )
-	{
-		Broadcast( GalleryHint( GALLERY_HINT_CLOSE_THEME, rThemeName ) );
-
-		if( pThemeEntry->IsImported() )
-		{
-			GalleryImportThemeEntry* pImportEntry = ImplGetImportThemeEntry( rThemeName );
-
-			if( pImportEntry )
-			{
-				delete aImportList.Remove( pImportEntry );
-				ImplWriteImportList();
-			}
-		}
-		else
-		{
-			SfxListener		aListener;
-			GalleryTheme*	pThm = AcquireTheme( rThemeName, aListener );
-
-            if( pThm )
+#if defined(MACOSX) && HAVE_FEATURE_READONLY_INSTALLSET
+        if( rBaseURL.GetProtocol() == INET_PROT_FILE )
+        {
+            const char *appBundle = [[[NSBundle mainBundle] bundlePath] UTF8String];
+            OUString path = rBaseURL.GetURLPath();
+            if( path.startsWith( OUString( appBundle, strlen( appBundle ), RTL_TEXTENCODING_UTF8 ) + "/" ) )
+                rbDirIsReadOnly = true;
+        }
+#else
+        try
+        {
+            // check readonlyness the very hard way
+            INetURLObject   aTestURL( rBaseURL );
+            OUString        aTestFile( "cdefghij.klm" );
+
+            aTestURL.Append( aTestFile );
+            boost::scoped_ptr<SvStream> pTestStm(::utl::UcbStreamHelper::CreateStream( aTestURL.GetMainURL( INetURLObject::NO_DECODE ), STREAM_WRITE ));
+
+            if( pTestStm )
             {
-                INetURLObject	aThmURL( pThm->GetThmURL() );
-                INetURLObject	aSdgURL( pThm->GetSdgURL() );
-                INetURLObject	aSdvURL( pThm->GetSdvURL() );
+                pTestStm->WriteInt32( sal_Int32(1) );
 
-                ReleaseTheme( pThm, aListener );
+                if( pTestStm->GetError() )
+                    rbDirIsReadOnly = true;
 
-                KillFile( aThmURL );
-                KillFile( aSdgURL );
-                KillFile( aSdvURL );
+                pTestStm.reset();
+                KillFile( aTestURL );
             }
-		}
+            else
+                rbDirIsReadOnly = true;
+        }
+        catch( const ucb::ContentCreationException& )
+        {
+        }
+        catch( const uno::RuntimeException& )
+        {
+        }
+        catch( const uno::Exception& )
+        {
+        }
+#endif
+#if defined USE_JAVA && defined MACOSX
+        }
+#endif	// USE_JAVA && MACOSX
+        if( xResultSet.is() )
+        {
+            uno::Reference< ucb::XContentAccess > xContentAccess( xResultSet, uno::UNO_QUERY );
 
-		delete aThemeList.Remove( pThemeEntry );
-		Broadcast( GalleryHint( GALLERY_HINT_THEME_REMOVED, rThemeName ) );
+            if( xContentAccess.is() )
+            {
+                static const char s_sTitle[] = "Title";
+                static const char s_sIsReadOnly[] = "IsReadOnly";
+                static const char s_sSDG_EXT[] = "sdg";
+                static const char s_sSDV_EXT[] = "sdv";
 
-		bRet = sal_True;
-	}
+                while( xResultSet->next() )
+                {
+                    INetURLObject aThmURL( xContentAccess->queryContentIdentifierString() );
 
-	return bRet;
+                    if(aThmURL.GetExtension().equalsIgnoreAsciiCase("thm"))
+                    {
+                        INetURLObject   aSdgURL( aThmURL); aSdgURL.SetExtension( s_sSDG_EXT );
+                        INetURLObject   aSdvURL( aThmURL ); aSdvURL.SetExtension( s_sSDV_EXT );
+                        OUString        aTitle;
+                        bool        bReadOnly = false;
+
+                        try
+                        {
+                            ::ucbhelper::Content aThmCnt( aThmURL.GetMainURL( INetURLObject::NO_DECODE ), xEnv, comphelper::getProcessComponentContext() );
+                            ::ucbhelper::Content aSdgCnt( aSdgURL.GetMainURL( INetURLObject::NO_DECODE ), xEnv, comphelper::getProcessComponentContext() );
+                            ::ucbhelper::Content aSdvCnt( aSdvURL.GetMainURL( INetURLObject::NO_DECODE ), xEnv, comphelper::getProcessComponentContext() );
+
+                            try
+                            {
+                                aThmCnt.getPropertyValue( s_sTitle ) >>= aTitle;
+                            }
+                            catch( const uno::RuntimeException& )
+                            {
+                            }
+                            catch( const uno::Exception& )
+                            {
+                            }
+
+                            if( !aTitle.isEmpty() )
+                            {
+                                try
+                                {
+                                    aThmCnt.getPropertyValue( s_sIsReadOnly ) >>= bReadOnly;
+                                }
+                                catch( const uno::RuntimeException& )
+                                {
+                                }
+                                catch( const uno::Exception& )
+                                {
+                                }
+
+                                if( !bReadOnly )
+                                {
+                                    try
+                                    {
+                                        aSdgCnt.getPropertyValue( s_sTitle ) >>= aTitle;
+                                    }
+                                    catch( const ::com::sun::star::uno::RuntimeException& )
+                                    {
+                                    }
+                                    catch( const ::com::sun::star::uno::Exception& )
+                                    {
+                                    }
+
+                                    if( !aTitle.isEmpty() )
+                                    {
+                                        try
+                                        {
+                                            aSdgCnt.getPropertyValue( s_sIsReadOnly ) >>= bReadOnly;
+                                        }
+                                        catch( const uno::RuntimeException& )
+                                        {
+                                        }
+                                        catch( const uno::Exception& )
+                                        {
+                                        }
+                                    }
+                                }
+
+                                if( !bReadOnly )
+                                {
+                                    try
+                                    {
+                                        aSdvCnt.getPropertyValue( s_sTitle ) >>= aTitle;
+                                    }
+                                    catch( const ::com::sun::star::uno::RuntimeException& )
+                                    {
+                                    }
+                                    catch( const ::com::sun::star::uno::Exception& )
+                                    {
+                                    }
+
+                                    if( !aTitle.isEmpty() )
+                                    {
+                                        try
+                                        {
+                                            aSdvCnt.getPropertyValue( s_sIsReadOnly ) >>= bReadOnly;
+                                        }
+                                        catch( const uno::RuntimeException& )
+                                        {
+                                        }
+                                        catch( const uno::Exception& )
+                                        {
+                                        }
+                                    }
+                                }
+
+                                GalleryThemeEntry* pEntry = GalleryTheme::CreateThemeEntry( aThmURL, rbDirIsReadOnly || bReadOnly );
+
+                                if( pEntry )
+                                    aThemeList.push_back( pEntry );
+                            }
+                        }
+                        catch( const ucb::ContentCreationException& )
+                        {
+                        }
+                        catch( const uno::RuntimeException& )
+                        {
+                        }
+                        catch( const uno::Exception& )
+                        {
+                        }
+                    }
+                }
+            }
+        }
+    }
+    catch( const ucb::ContentCreationException& )
+    {
+    }
+    catch( const uno::RuntimeException& )
+    {
+    }
+    catch( const uno::Exception& )
+    {
+    }
 }
 
-// ------------------------------------------------------------------------
-
-INetURLObject Gallery::GetImportURL( const String& rThemeName )
+GalleryThemeEntry* Gallery::ImplGetThemeEntry( const OUString& rThemeName )
 {
-	INetURLObject				aURL;
-	GalleryImportThemeEntry*	pImportEntry = ImplGetImportThemeEntry( rThemeName );
+    GalleryThemeEntry* pFound = NULL;
 
-	if( pImportEntry )
-	{
-		aURL = pImportEntry->aURL;
-		DBG_ASSERT( aURL.GetProtocol() != INET_PROT_NOT_VALID, "invalid URL" );
-	}
+    if( !rThemeName.isEmpty() )
+    {
+        for ( size_t i = 0, n = aThemeList.size(); i < n && !pFound; ++i )
+            if( rThemeName == aThemeList[ i ]->GetThemeName() )
+                pFound = aThemeList[ i ];
+    }
 
-	return aURL;
+    return pFound;
 }
 
-// ------------------------------------------------------------------------
-
-GalleryTheme* Gallery::ImplGetCachedTheme( const GalleryThemeEntry* pThemeEntry )
+OUString Gallery::GetThemeName( sal_uIntPtr nThemeId ) const
 {
-	GalleryTheme* pTheme = NULL;
+    GalleryThemeEntry* pFound = NULL;
 
-	if( pThemeEntry )
-	{
-		GalleryThemeCacheEntry* pEntry;
+    for ( size_t i = 0, n = aThemeList.size(); i < n && !pFound; ++i )
+    {
+        GalleryThemeEntry* pEntry = aThemeList[ i ];
+        if( nThemeId == pEntry->GetId() )
+            pFound = pEntry;
+    }
 
-		for( pEntry = (GalleryThemeCacheEntry*) aThemeCache.First(); pEntry && !pTheme; pEntry = (GalleryThemeCacheEntry*) aThemeCache.Next() )
-			if( pThemeEntry == pEntry->GetThemeEntry() )
-				pTheme = pEntry->GetTheme();
+    // try fallback, if no entry was found
+    if( !pFound )
+    {
+        OUString aFallback;
 
-		if( !pTheme )
-		{
-			INetURLObject aURL;
+        switch( nThemeId )
+        {
+            case( GALLERY_THEME_3D ):
+                aFallback = GAL_RESSTR(RID_GALLERYSTR_THEME_3D);
+                break;
+            case( GALLERY_THEME_BULLETS ):
+                aFallback = GAL_RESSTR(RID_GALLERYSTR_THEME_BULLETS);
+                break;
+            case( GALLERY_THEME_HOMEPAGE ):
+                aFallback = GAL_RESSTR(RID_GALLERYSTR_THEME_HOMEPAGE);
+                break;
+            case( GALLERY_THEME_POWERPOINT ):
+                aFallback = GAL_RESSTR(RID_GALLERYSTR_THEME_POWERPOINT);
+                break;
+            case( GALLERY_THEME_FONTWORK ):
+                aFallback = GAL_RESSTR(RID_GALLERYSTR_THEME_FONTWORK);
+                break;
+            case( GALLERY_THEME_FONTWORK_VERTICAL ):
+                aFallback = GAL_RESSTR(RID_GALLERYSTR_THEME_FONTWORK_VERTICAL);
+                break;
+            case( GALLERY_THEME_SOUNDS ):
+                aFallback = GAL_RESSTR(RID_GALLERYSTR_THEME_SOUNDS);
+                break;
+            case( RID_GALLERYSTR_THEME_ARROWS ):
+            case( RID_GALLERYSTR_THEME_COMPUTERS ):
+            case( RID_GALLERYSTR_THEME_DIAGRAMS ):
+            case( RID_GALLERYSTR_THEME_EDUCATION ):
+            case( RID_GALLERYSTR_THEME_ENVIRONMENT ):
+            case( RID_GALLERYSTR_THEME_FINANCE ):
+            case( RID_GALLERYSTR_THEME_PEOPLE ):
+            case( RID_GALLERYSTR_THEME_SYMBOLS ):
+            case( RID_GALLERYSTR_THEME_TRANSPORT ):
+            case( RID_GALLERYSTR_THEME_TXTSHAPES ):
+                aFallback = GAL_RESSTR(static_cast<sal_uInt32>(nThemeId));
+                break;
+            default:
+                break;
+        }
 
-			if( !pThemeEntry->IsImported() )
-				aURL = pThemeEntry->GetThmURL();
-			else
-				aURL = GetImportURL( pThemeEntry->GetThemeName() );
+        pFound = const_cast<Gallery*>(this)->ImplGetThemeEntry(aFallback);
+    }
 
-			DBG_ASSERT( aURL.GetProtocol() != INET_PROT_NOT_VALID, "invalid URL" );
-
-			if( FileExists( aURL ) )
-			{
-				SvStream* pIStm = ::utl::UcbStreamHelper::CreateStream( aURL.GetMainURL( INetURLObject::NO_DECODE ), STREAM_READ );
-
-				if( pIStm )
-				{
-					pTheme = new GalleryTheme( this, (GalleryThemeEntry*) pThemeEntry );
-					*pIStm >> *pTheme;
-
-					if( pIStm->GetError() )
-						delete pTheme, pTheme = NULL;
-					else if( pThemeEntry->IsImported() )
-						pTheme->SetImportName( pThemeEntry->GetThemeName() );
-
-					delete pIStm;
-				}
-			}
-
-			if( pTheme )
-				aThemeCache.Insert( new GalleryThemeCacheEntry( pThemeEntry, pTheme ), LIST_APPEND );
-		}
-	}
-
-	return pTheme;
+    return( pFound ? pFound->GetThemeName() : OUString() );
 }
 
-// ------------------------------------------------------------------------
+bool Gallery::HasTheme( const OUString& rThemeName )
+{
+    return( ImplGetThemeEntry( rThemeName ) != NULL );
+}
+
+bool Gallery::CreateTheme( const OUString& rThemeName )
+{
+    bool bRet = false;
+
+    if( !HasTheme( rThemeName ) && ( GetUserURL().GetProtocol() != INET_PROT_NOT_VALID ) )
+    {
+        INetURLObject aURL( GetUserURL() );
+        aURL.Append( rThemeName );
+        GalleryThemeEntry* pNewEntry = new GalleryThemeEntry(
+                true, aURL, rThemeName,
+                false, true, 0, false );
+
+        aThemeList.push_back( pNewEntry );
+        delete( new GalleryTheme( this, pNewEntry ) );
+        Broadcast( GalleryHint( GALLERY_HINT_THEME_CREATED, rThemeName ) );
+        bRet = true;
+    }
+
+    return bRet;
+}
+
+bool Gallery::RenameTheme( const OUString& rOldName, const OUString& rNewName )
+{
+    GalleryThemeEntry*      pThemeEntry = ImplGetThemeEntry( rOldName );
+    bool                    bRet = false;
+
+    // check if the new theme name is already present
+    if( pThemeEntry && !HasTheme( rNewName ) && !pThemeEntry->IsReadOnly() )
+    {
+        SfxListener   aListener;
+        GalleryTheme* pThm = AcquireTheme( rOldName, aListener );
+
+        if( pThm )
+        {
+            const OUString aOldName( rOldName );
+
+            pThemeEntry->SetName( rNewName );
+            pThm->ImplWrite();
+
+            Broadcast( GalleryHint( GALLERY_HINT_THEME_RENAMED, aOldName, pThm->GetName() ) );
+            ReleaseTheme( pThm, aListener );
+            bRet = true;
+        }
+    }
+
+    return bRet;
+}
+
+bool Gallery::RemoveTheme( const OUString& rThemeName )
+{
+    GalleryThemeEntry*  pThemeEntry = ImplGetThemeEntry( rThemeName );
+    bool                bRet = false;
+
+    if( pThemeEntry && !pThemeEntry->IsReadOnly() )
+    {
+        Broadcast( GalleryHint( GALLERY_HINT_CLOSE_THEME, rThemeName ) );
+
+        SfxListener     aListener;
+        GalleryTheme*   pThm = AcquireTheme( rThemeName, aListener );
+
+        if( pThm )
+        {
+            INetURLObject   aThmURL( pThm->GetThmURL() );
+            INetURLObject   aSdgURL( pThm->GetSdgURL() );
+            INetURLObject   aSdvURL( pThm->GetSdvURL() );
+            INetURLObject   aStrURL( pThm->GetSdvURL() );
+
+            ReleaseTheme( pThm, aListener );
+
+            KillFile( aThmURL );
+            KillFile( aSdgURL );
+            KillFile( aSdvURL );
+            KillFile( aStrURL );
+        }
+
+        for ( GalleryThemeList::iterator it = aThemeList.begin(); it != aThemeList.end(); ++it )
+        {
+            if ( pThemeEntry == *it ) {
+                delete pThemeEntry;
+                aThemeList.erase( it );
+                break;
+            }
+        }
+
+        Broadcast( GalleryHint( GALLERY_HINT_THEME_REMOVED, rThemeName ) );
+
+        bRet = true;
+    }
+
+    return bRet;
+}
+
+GalleryTheme* Gallery::ImplGetCachedTheme(const GalleryThemeEntry* pThemeEntry)
+{
+    GalleryTheme* pTheme = NULL;
+
+    if( pThemeEntry )
+    {
+        for (GalleryCacheThemeList::const_iterator it = aThemeCache.begin(); it != aThemeCache.end(); ++it)
+        {
+            if (pThemeEntry == (*it)->GetThemeEntry())
+            {
+                pTheme = (*it)->GetTheme();
+                break;
+            }
+        }
+
+        if( !pTheme )
+        {
+            INetURLObject aURL = pThemeEntry->GetThmURL();
+
+            DBG_ASSERT( aURL.GetProtocol() != INET_PROT_NOT_VALID, "invalid URL" );
+
+            if( FileExists( aURL ) )
+            {
+                boost::scoped_ptr<SvStream> pIStm(::utl::UcbStreamHelper::CreateStream( aURL.GetMainURL( INetURLObject::NO_DECODE ), STREAM_READ ));
+
+                if( pIStm )
+                {
+                    try
+                    {
+                        pTheme = new GalleryTheme( this, (GalleryThemeEntry*) pThemeEntry );
+                        ReadGalleryTheme( *pIStm, *pTheme );
+
+                        if( pIStm->GetError() )
+                        {
+                            delete pTheme, pTheme = NULL;
+                        }
+                    }
+                    catch (const css::ucb::ContentCreationException&)
+                    {
+                    }
+                }
+            }
+
+            if( pTheme )
+                aThemeCache.push_back( new GalleryThemeCacheEntry( pThemeEntry, pTheme ));
+        }
+    }
+
+    return pTheme;
+}
 
 void Gallery::ImplDeleteCachedTheme( GalleryTheme* pTheme )
 {
-	GalleryThemeCacheEntry* pEntry;
-	sal_Bool                                    bDone = sal_False;
-
-	for( pEntry = (GalleryThemeCacheEntry*) aThemeCache.First(); pEntry && !bDone; pEntry = (GalleryThemeCacheEntry*) aThemeCache.Next() )
-	{
-		if( pTheme == pEntry->GetTheme() )
-		{
-			delete (GalleryThemeCacheEntry*) aThemeCache.Remove( pEntry );
-			bDone = sal_True;
-		}
-	}
+    for (GalleryCacheThemeList::iterator it = aThemeCache.begin(); it != aThemeCache.end(); ++it)
+    {
+        if (pTheme == (*it)->GetTheme())
+        {
+            delete *it;
+            aThemeCache.erase(it);
+            break;
+        }
+    }
 }
 
-// ------------------------------------------------------------------------
-
-GalleryTheme* Gallery::AcquireTheme( const String& rThemeName, SfxListener& rListener )
+GalleryTheme* Gallery::AcquireTheme( const OUString& rThemeName, SfxListener& rListener )
 {
-	GalleryTheme*           pTheme = NULL;
-	GalleryThemeEntry*      pThemeEntry = ImplGetThemeEntry( rThemeName );
+    GalleryTheme*           pTheme = NULL;
+    GalleryThemeEntry*      pThemeEntry = ImplGetThemeEntry( rThemeName );
 
-	if( pThemeEntry && ( ( pTheme = ImplGetCachedTheme( pThemeEntry ) ) != NULL ) )
-		rListener.StartListening( *pTheme );
+    if( pThemeEntry && ( ( pTheme = ImplGetCachedTheme( pThemeEntry ) ) != NULL ) )
+        rListener.StartListening( *pTheme );
 
-	return pTheme;
+    return pTheme;
 }
-
-// ------------------------------------------------------------------------
 
 void Gallery::ReleaseTheme( GalleryTheme* pTheme, SfxListener& rListener )
 {
-	if( pTheme )
-	{
-		rListener.EndListening( *pTheme );
+    if( pTheme )
+    {
+        rListener.EndListening( *pTheme );
 
-		if( !pTheme->HasListeners() )
-			ImplDeleteCachedTheme( pTheme );
-	}
+        if( !pTheme->HasListeners() )
+            ImplDeleteCachedTheme( pTheme );
+    }
 }
 
-sal_Bool GalleryThemeEntry::IsDefault() const 
-{ return( ( nId > 0 ) && ( nId != ( RID_GALLERYSTR_THEME_MYTHEME - RID_GALLERYSTR_THEME_START ) ) ); }
+bool GalleryThemeEntry::IsDefault() const
+{
+    return ( nId > 0 ) && ( nId != ( RID_GALLERYSTR_THEME_MYTHEME - RID_GALLERYSTR_THEME_START ) );
+}
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
