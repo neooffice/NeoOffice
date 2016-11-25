@@ -1,5 +1,5 @@
---- source/tbxctrls/tbcontrl.cxx	2015-11-25 04:55:38.000000000 -0800
-+++ source/tbxctrls/tbcontrl.cxx	2016-11-24 16:35:04.000000000 -0800
+--- source/tbxctrls/tbcontrl.cxx	2016-11-24 17:01:14.000000000 -0800
++++ source/tbxctrls/tbcontrl.cxx	2016-11-24 17:51:10.000000000 -0800
 @@ -239,6 +239,16 @@
      ValueSet::MouseButtonUp(rMEvt);
  }
@@ -78,7 +78,7 @@
                              : TRISTATE_FALSE );
  }
  
-+void SvxFrameToolBoxControl::Select( sal_Bool )
++void SvxFrameToolBoxControl::Select(sal_uInt16 /*nSelectModifier*/)
 +{
 +    Any a;
 +    Sequence< PropertyValue > aArgs( 2 );

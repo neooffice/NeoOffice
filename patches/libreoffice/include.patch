@@ -1,5 +1,5 @@
---- svx/tbcontrl.hxx	2015-11-25 04:55:38.000000000 -0800
-+++ svx/tbcontrl.hxx	2016-11-24 16:42:05.000000000 -0800
+--- svx/tbcontrl.hxx	2016-11-24 17:01:14.000000000 -0800
++++ svx/tbcontrl.hxx	2016-11-24 17:50:13.000000000 -0800
 @@ -141,6 +141,7 @@
  
  // important im tbxctrls.hxx created HeDaBu !!!
@@ -26,7 +26,7 @@
      virtual void                StateChanged( sal_uInt16 nSID, SfxItemState eState,
                                                const SfxPoolItem* pState ) SAL_OVERRIDE;
  
-+   virtual void                 Select( BOOL bMod1 = FALSE );
++   virtual void                 Select(sal_uInt16 nSelectModifier) SAL_OVERRIDE;
 +   DECL_LINK( BorderChangedHdl, SvxFrameWindowState_Impl* );
  };
  
