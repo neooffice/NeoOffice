@@ -1,5 +1,5 @@
---- svx/tbcontrl.hxx.orig	2016-11-24 17:55:56.000000000 -0800
-+++ svx/tbcontrl.hxx	2016-11-24 18:42:50.000000000 -0800
+--- svx/tbcontrl.hxx	2016-11-24 18:45:24.000000000 -0800
++++ svx/tbcontrl.hxx	2016-11-24 19:25:29.000000000 -0800
 @@ -138,10 +138,10 @@
  #include <boost/scoped_ptr.hpp>
  #include <com/sun/star/awt/FontDescriptor.hpp>
@@ -26,7 +26,7 @@
  public:
      SFX_DECL_TOOLBOX_CONTROL();
      SvxFrameToolBoxControl( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rTbx );
-+    virtual ~SvxFrameToolBoxControl();
++    virtual ~SvxFrameToolBoxControl() {}
  
      virtual SfxPopupWindowType  GetPopupWindowType() const SAL_OVERRIDE;
      virtual SfxPopupWindow*     CreatePopupWindow() SAL_OVERRIDE;
