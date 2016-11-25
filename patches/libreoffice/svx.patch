@@ -1,0 +1,107 @@
+--- source/tbxctrls/tbcontrl.cxx	2015-11-25 04:55:38.000000000 -0800
++++ source/tbxctrls/tbcontrl.cxx	2016-11-24 16:35:04.000000000 -0800
+@@ -239,6 +239,16 @@
+     ValueSet::MouseButtonUp(rMEvt);
+ }
+ 
++class SAL_DLLPRIVATE SvxFrameWindowState_Impl
++{
++public:
++    const SvxBoxItem        maBorderOuter;
++    const SvxBoxInfoItem    maBorderInner;
++
++                            SvxFrameWindowState_Impl( SvxBoxItem& rBorderOuter, SvxBoxInfoItem& rBorderInner ) : maBorderOuter( rBorderOuter ), maBorderInner( rBorderInner ) {}
++                            ~SvxFrameWindowState_Impl() {}
++};
++
+ class SvxFrameWindow_Impl : public SfxPopupWindow
+ {
+     using FloatingWindow::StateChanged;
+@@ -247,6 +257,7 @@
+     SvxFrmValueSet_Impl  aFrameSet;
+     ImageList       aImgList;
+     bool        bParagraphMode;
++    Link            aBorderChangedHdl;
+ 
+     DECL_LINK( SelectHdl, void * );
+ 
+@@ -265,6 +276,7 @@
+                                   const SfxPoolItem* pState ) SAL_OVERRIDE;
+     virtual SfxPopupWindow* Clone() const SAL_OVERRIDE;
+     virtual void    DataChanged( const DataChangedEvent& rDCEvt ) SAL_OVERRIDE;
++    void            SetBorderChangedHdl( const Link& rLink ) { aBorderChangedHdl = rLink; }
+ };
+ 
+ class SvxLineWindow_Impl : public SfxPopupWindow
+@@ -1696,6 +1708,12 @@
+     aBorderInner.QueryValue( a );
+     aArgs[1].Value = a;
+ 
++    if ( aBorderChangedHdl.IsSet() )
++    {
++        SvxFrameWindowState_Impl aBorderState( aBorderOuter, aBorderInner );
++        aBorderChangedHdl.Call( &aBorderState );
++    }
++
+     /*  #i33380# DR 2004-09-03 Moved the following line above the Dispatch() call.
+         This instance may be deleted in the meantime (i.e. when a dialog is opened
+         while in Dispatch()), accessing members will crash in this case. */
+@@ -2502,6 +2520,7 @@
+         case SID_BACKGROUND_COLOR:
+             addStatusListener( OUString( ".uno:BackgroundColor" ));
+             mPaletteManager.SetLastColor( COL_YELLOW );
++            bSidebarType = false;
+             break;
+ 
+         case SID_ATTR_CHAR_COLOR_BACKGROUND:
+@@ -2719,8 +2738,10 @@
+     sal_uInt16      nId,
+     ToolBox&    rTbx )
+     :   SfxToolBoxControl( nSlotId, nId, rTbx )
++    , aCurBorderOuter( SID_ATTR_BORDER_OUTER )
++    , aCurBorderInner( SID_ATTR_BORDER_INNER )
+ {
+-    rTbx.SetItemBits( nId, ToolBoxItemBits::DROPDOWNONLY | rTbx.GetItemBits( nId ) );
++    rTbx.SetItemBits( nId, ToolBoxItemBits::DROPDOWN | rTbx.GetItemBits( nId ) );
+ }
+ 
+ SfxPopupWindowType SvxFrameToolBoxControl::GetPopupWindowType() const
+@@ -2739,6 +2760,7 @@
+                                FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE );
+     pFrameWin->StartSelection();
+     SetPopupWindow( pFrameWin );
++    pFrameWin->SetBorderChangedHdl( LINK( this, SvxFrameToolBoxControl, BorderChangedHdl ) );
+ 
+     return pFrameWin;
+ }
+@@ -2755,6 +2777,30 @@
+                             : TRISTATE_FALSE );
+ }
+ 
++void SvxFrameToolBoxControl::Select( sal_Bool )
++{
++    Any a;
++    Sequence< PropertyValue > aArgs( 2 );
++    aArgs[0].Name = "OuterBorder";
++    aCurBorderOuter.QueryValue( a );
++    aArgs[0].Value = a;
++    aArgs[1].Name = "InnerBorder";
++    aCurBorderInner.QueryValue( a );
++    aArgs[1].Value = a;
++    Dispatch( ".uno:SetBorderStyle", aArgs );
++}
++
++IMPL_LINK( SvxFrameToolBoxControl, BorderChangedHdl, SvxFrameWindowState_Impl *, pBorderState )
++{
++    if ( pBorderState )
++    {
++        aCurBorderOuter = pBorderState->maBorderOuter;
++        aCurBorderInner = pBorderState->maBorderInner;
++    }
++
++    return 0;
++}
++
+ SvxFrameLineStyleToolBoxControl::SvxFrameLineStyleToolBoxControl(
+     sal_uInt16          nSlotId,
+     sal_uInt16          nId,

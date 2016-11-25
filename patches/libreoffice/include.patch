@@ -1,3 +1,36 @@
+--- svx/tbcontrl.hxx	2015-11-25 04:55:38.000000000 -0800
++++ svx/tbcontrl.hxx	2016-11-24 16:42:05.000000000 -0800
+@@ -141,6 +141,7 @@
+ 
+ // important im tbxctrls.hxx created HeDaBu !!!
+ class SvxLineItem;
++class SvxBoxItem;
+ class SvxBoxInfoItem;
+ class SvxFontItem;
+ class SfxStyleControllerItem_Impl;
+@@ -256,8 +257,13 @@
+ 
+ // class SvxFrameToolBoxControl ------------------------------------------
+ 
++class SvxFrameWindowState_Impl;
++
+ class SVX_DLLPUBLIC SvxFrameToolBoxControl : public SfxToolBoxControl
+ {
++    SvxBoxItem                  aCurBorderOuter;
++    SvxBoxInfoItem              aCurBorderInner;
++
+ public:
+     SFX_DECL_TOOLBOX_CONTROL();
+     SvxFrameToolBoxControl( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rTbx );
+@@ -267,6 +273,8 @@
+     virtual void                StateChanged( sal_uInt16 nSID, SfxItemState eState,
+                                               const SfxPoolItem* pState ) SAL_OVERRIDE;
+ 
++   virtual void                 Select( BOOL bMod1 = FALSE );
++   DECL_LINK( BorderChangedHdl, SvxFrameWindowState_Impl* );
+ };
+ 
+ 
 --- vcl/svapp.hxx	2015-11-25 04:55:38.000000000 -0800
 +++ vcl/svapp.hxx	2016-10-27 15:17:19.000000000 -0700
 @@ -629,6 +629,8 @@

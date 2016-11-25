@@ -215,6 +215,7 @@ build.libo_patches: \
 	build.libo_bin_patch \
 	build.libo_external_patch \
 	build.libo_include_patch \
+	build.libo_svx_patch \
 	build.libo_sw_patch \
 	build.libo_vcl_patch
 	touch "$@"
