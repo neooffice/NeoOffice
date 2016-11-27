@@ -355,7 +355,6 @@ build.neo_patches: \
 # Custom modules that need to link directly to other custom modules
 build.neo_sfx2_patch: build.neo_sal_patch build.neo_unotools_patch
 build.neo_svtools_patch: build.neo_extensions_patch build.neo_vcl_patch
-build.neo_sw_patch: build.neo_unotools_patch
 
 build.neo_solenv_patch: solenv build.neo_configure
 	cd "$<" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . -type d | sed "s/ /\\ /g" | grep -v /CVS$$ ) | while read i ; do mkdir -p "$$i" ; done'
