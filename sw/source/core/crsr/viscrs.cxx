@@ -1,47 +1,35 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_sw.hxx"
-
-
-#ifndef _SVSTDARR_HXX
-#define _SVSTDARR_USHORTS
-#include <svl/svstdarr.hxx>
-#endif
+#include <config_features.h>
 
 #include <vcl/dialog.hxx>
-#include <vcl/msgbox.hxx>
+#include <vcl/layout.hxx>
 #include <vcl/wrkwin.hxx>
+#include <vcl/settings.hxx>
 #include <viewopt.hxx>
 #include <frmtool.hxx>
 #include <viscrs.hxx>
@@ -58,9 +46,9 @@
 #include <txtfld.hxx>
 #include <scriptinfo.hxx>
 #include <mdiexp.hxx>
-#ifndef _COMCORE_HRC
-#include <comcore.hrc>			// ResId fuer Abfrage wenn zu Search & Replaces
-#endif
+#include <wrtsh.hxx>
+#include <comcore.hrc>
+#include <view.hxx>
 
 #include <svx/sdr/overlay/overlaymanager.hxx>
 #include <svx/sdrpaintwindow.hxx>
@@ -70,16 +58,8 @@
 
 #include <boost/scoped_ptr.hpp>
 
-extern void SwCalcPixStatics( OutputDevice *pOut );
-
-//Damit beim ShowCrsr nicht immer wieder die gleiche Size teuer ermittelt
-//werden muss, hier statische Member, die beim Wechsel des MapModes
-// angepasst werden
-
-long SwSelPaintRects::nPixPtX = 0;
-long SwSelPaintRects::nPixPtY = 0;
-MapMode* SwSelPaintRects::pMapMode = 0;
-
+#include <touch/touch.h>
+#include <paintfrm.hxx>
 
 #ifdef USE_JAVA
 
@@ -93,11 +73,11 @@ MapMode* SwSelPaintRects::pMapMode = 0;
 #define USE_NATIVE_HIGHLIGHT_COLOR
 
 static std::map< SwSelPaintRects*, bool > aUseNativeHighlightColorMap;
-static std::map< SwSelPaintRects*, Window* > aWindowMap;
+static std::map< SwSelPaintRects*, vcl::Window* > aWindowMap;
 
 static bool UseNativeHighlightColor()
 {
-	bool bUseNativeHighlightColor = true;
+    bool bUseNativeHighlightColor = true;
 
 #ifdef MACOSX
     CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "UseNativeHighlightColor" ), kCFPreferencesCurrentApplication );
@@ -109,409 +89,107 @@ static bool UseNativeHighlightColor()
     }
 #endif	// MACOSX
 
-	return bUseNativeHighlightColor;
+    return bUseNativeHighlightColor;
 }
 
 #endif	// USE_JAVA
 
-#ifdef SHOW_BOOKMARKS
-// #include <IMark.hxx>
-//
-// class SwBookmarkRects : public SwSelPaintRects
-// {
-// 	virtual void Paint( const Rectangle& rRect );
-// 	virtual void FillRects();
-//
-// public:
-// 	SwBookmarkRects( const SwCrsrShell& rSh ) : SwSelPaintRects( rSh ) {}
-// };
-//
-// void SwBookmarkRects::Paint( const Rectangle& rRect )
-// {
-// 	Window* pWin = GetShell()->GetWin();
-//
-// 	RasterOp eOld( pWin->GetRasterOp() );
-// 	sal_Bool bLCol = pWin->IsLineColor();
-// 	Color aLCol( pWin->GetLineColor() );
-// 	sal_Bool bFCol = pWin->IsFillColor();
-// 	Color aFCol( pWin->GetFillColor() );
-//
-// 	pWin->SetRasterOp( ROP_XOR );
-// 	Color aCol( RGB_COLORDATA( 0xF0, 0xC8, 0xF0 ) ^ COL_WHITE );
-// 	pWin->SetFillColor( aCol );
-// 	pWin->SetLineColor( aCol );
-//
-// 	pWin->DrawRect( rRect );
-//
-// 	if( bLCol ) pWin->SetLineColor( aLCol ); else pWin->SetLineColor();
-// 	if( bFCol ) pWin->SetFillColor( aFCol ); else pWin->SetFillColor();
-// 	pWin->SetRasterOp( eOld );
-// }
-//
-// void SwBookmarkRects::FillRects()
-// {
-// 	SwRegionRects aReg( GetShell()->VisArea() );
-//
-//     const SwBookmarks& rBkmkTbl = GetShell()->getIDocumentMarkAccess()->getBookmarks();
-// 	SwShellCrsr* pCrsr = 0;
-// 	for( sal_uInt16 n = 0; n < rBkmkTbl.Count(); ++n )
-// 	{
-// 		const SwBookmark& rBkmk = *rBkmkTbl[ n ];
-// 		if( rBkmk.IsBookMark() && rBkmk.GetOtherPos() )
-// 		{
-// 			if( !pCrsr )
-// 			{
-// 				pCrsr = new SwShellCrsr( *GetShell(), rBkmk.GetPos() );
-// 				pCrsr->SetMark();
-// 			}
-// 			else
-// 				*pCrsr->GetPoint() = rBkmk.GetPos();
-// 			*pCrsr->GetMark() = *rBkmk.GetOtherPos();
-// 			pCrsr->FillRects();
-// 			for( sal_uInt16 i = 0; i < pCrsr->Count(); ++i )
-// 				aReg -= (*pCrsr)[ i ];
-//
-// 			pCrsr->Remove( 0, i );
-// 		}
-// 	}
-// 	if( pCrsr ) delete pCrsr;
-//
-// 	aReg.Invert();
-// 	SwRects::Insert( &aReg, 0 );
-// }
-//
-// SwBookmarkRects* pBookMarkRects = 0;
-//
-// void ShowBookmarks( const SwCrsrShell* pSh, int nAction, const SwRect* pRect = 0 )
-// {
-//     if( !pBookMarkRects && pSh->getIDocumentMarkAccess()->getBookmarks().Count() )
-// 		pBookMarkRects = new SwBookmarkRects( *pSh );
-//
-// 	if( pBookMarkRects )
-// 	{
-// 		switch( nAction )
-// 		{
-// 		case 1: pBookMarkRects->Show(); break;
-// 		case 2:	pBookMarkRects->Hide(); break;
-// 		case 3: pBookMarkRects->Invalidate( *pRect ); break;
-// 		}
-//
-// 		if( !pBookMarkRects->Count() )
-// 			delete pBookMarkRects, pBookMarkRects = 0;
-// 	}
-// }
-//
-// #define SHOWBOOKMARKS1( nAct )			ShowBookmarks( GetShell(),nAct );
-// #define SHOWBOOKMARKS2( nAct, pRect )	ShowBookmarks( GetShell(),nAct, pRect );
+// Here static members are defined. They will get changed on alteration of the
+// MapMode. This is done so that on ShowCrsr the same size does not have to be
+// expensively determined again and again.
 
-#else
+long SwSelPaintRects::nPixPtX = 0;
+long SwSelPaintRects::nPixPtY = 0;
+MapMode* SwSelPaintRects::pMapMode = 0;
 
-#define SHOWBOOKMARKS1( nAct )
-#define SHOWBOOKMARKS2( nAct, pRect )
-
-#endif
-
-#ifdef SHOW_REDLINES
-#include <redline.hxx>
-
-class SwRedlineRects : public SwSelPaintRects
-{
-	sal_uInt16 nMode;
-	sal_uInt16 nNm;
-
-	virtual void Paint( const Rectangle& rRect );
-	virtual void FillRects();
-
-public:
-	SwRedlineRects( const SwCrsrShell& rSh, sal_uInt16 nName, sal_uInt16 n )
-		: SwSelPaintRects( rSh ), nMode( n ), nNm( nName )
-	{}
-};
-
-void SwRedlineRects::Paint( const Rectangle& rRect )
-{
-	Window* pWin = GetShell()->GetWin();
-
-	RasterOp eOld( pWin->GetRasterOp() );
-	sal_Bool bLCol = pWin->IsLineColor();
-	Color aLCol( pWin->GetLineColor() );
-	sal_Bool bFCol = pWin->IsFillColor();
-	Color aFCol( pWin->GetFillColor() );
-
-	pWin->SetRasterOp( ROP_XOR );
-	Color aCol;
-
-	sal_uInt8 nVal = 0xc8 - ( (nMode / 4) * 16 );
-	switch( nMode % 4 )
-	{
-	case 0: aCol = RGB_COLORDATA( nVal, nVal, 0xFF );	break;
-	case 1: aCol = RGB_COLORDATA( 0xFF, 0xc8, nVal );	break;
-	case 2: aCol = RGB_COLORDATA( nVal, 0xFF, nVal );	break;
-	case 3: aCol = RGB_COLORDATA( 0xFF, nVal, nVal );	break;
-	}
-	aCol = aCol.GetColor() ^ COL_WHITE;
-
-	pWin->SetFillColor( aCol );
-	pWin->SetLineColor( aCol );
-
-	pWin->DrawRect( rRect );
-
-	if( bLCol ) pWin->SetLineColor( aLCol ); else pWin->SetLineColor();
-	if( bFCol ) pWin->SetFillColor( aFCol ); else pWin->SetFillColor();
-	pWin->SetRasterOp( eOld );
-}
-
-void SwRedlineRects::FillRects()
-{
-	SwRegionRects aReg( GetShell()->VisArea() );
-
-	const SwRedlineTbl& rTbl = GetShell()->GetDoc()->GetRedlineTbl();
-	SwShellCrsr* pCrsr = 0;
-	for( sal_uInt16 n = 0; n < rTbl.Count(); ++n )
-	{
-		const SwRedline& rRed = *rTbl[ n ];
-		if( rRed.HasMark() && (nMode % 4 ) == rRed.GetType() &&
-			nNm == rRed.GetAuthor() )
-		{
-			if( !pCrsr )
-			{
-				pCrsr = new SwShellCrsr( *GetShell(), *rRed.GetPoint() );
-				pCrsr->SetMark();
-			}
-			else
-				*pCrsr->GetPoint() = *rRed.GetPoint();
-			*pCrsr->GetMark() = *rRed.GetMark();
-			pCrsr->FillRects();
-			for( sal_uInt16 i = 0; i < pCrsr->Count(); ++i )
-				aReg -= (*pCrsr)[ i ];
-
-			pCrsr->Remove( 0, i );
-		}
-	}
-	if( pCrsr ) delete pCrsr;
-
-	aReg.Invert();
-	SwRects::Insert( &aReg, 0 );
-}
-
-SwRedlineRects* aRedlines[ 10 * 4 ];
-static int bFirstCall = sal_True;
-
-void ShowRedlines( const SwCrsrShell* pSh, int nAction, const SwRect* pRect = 0 )
-{
-	if( bFirstCall )
-	{
-		memset( aRedlines, 0, sizeof(aRedlines));
-		bFirstCall = sal_False;
-	}
-
-	const SwRedlineTbl& rTbl = pSh->GetDoc()->GetRedlineTbl();
-	const SwRedlineAuthorTbl& rAuthorTbl = pSh->GetDoc()->GetRedlineAuthorTbl();
-
-	for( sal_uInt16 n = 0; n < rAuthorTbl.Count(); ++n )
-	{
-		for( int i = 0; i < 4; ++i  )
-		{
-			SwRedlineRects** ppRedRect = &aRedlines[ n * 4 + i ];
-			if( rTbl.Count() && !*ppRedRect )
-				*ppRedRect = new SwRedlineRects( *pSh, n, n * 4 + i );
-
-			if( *ppRedRect )
-			{
-				switch( nAction )
-				{
-				case 1: (*ppRedRect)->Show(); break;
-				case 2:	(*ppRedRect)->Hide(); break;
-				case 3: (*ppRedRect)->Invalidate( *pRect ); break;
-				}
-
-				if( !(*ppRedRect)->Count() )
-					delete *ppRedRect, *ppRedRect = 0;
-			}
-		}
-	}
-}
-
-#define SHOWREDLINES1( nAct )			ShowRedlines( GetShell(),nAct );
-#define SHOWREDLINES2( nAct, pRect )	ShowRedlines( GetShell(),nAct, pRect );
-
-#else
-
-#define SHOWREDLINES1( nAct )
-#define SHOWREDLINES2( nAct, pRect )
-
-#endif
-
-#ifdef JP_REDLINE
-	if( GetDoc()->GetRedlineTbl().Count() )
-	{
-		SwRedlineTbl& rRedlineTbl = (SwRedlineTbl&)GetDoc()->GetRedlineTbl();
-		for( sal_uInt16 i = 0; i < rRedlineTbl.Count(); ++i )
-			rRedlineTbl[ i ]->HideRects( *GetShell() );
-	}
-#endif
-
-// --------  Ab hier Klassen / Methoden fuer den nicht Text-Cursor ------
-
+// Starting from here: classes / methods for the non-text-cursor
 SwVisCrsr::SwVisCrsr( const SwCrsrShell * pCShell )
-	: pCrsrShell( pCShell )
+    : m_pCrsrShell( pCShell )
 {
-	pCShell->GetWin()->SetCursor( &aTxtCrsr );
-	bIsVisible = aTxtCrsr.IsVisible();
-	bIsDragCrsr = sal_False;
-	aTxtCrsr.SetWidth( 0 );
-
-#ifdef SW_CRSR_TIMER
-	bTimerOn = sal_True;
-	SetTimeout( 50 );       // 50msec Verzoegerung
-#endif
+    pCShell->GetWin()->SetCursor( &m_aTxtCrsr );
+    m_bIsVisible = m_aTxtCrsr.IsVisible();
+    m_bIsDragCrsr = false;
+    m_aTxtCrsr.SetWidth( 0 );
 }
-
-
 
 SwVisCrsr::~SwVisCrsr()
 {
-#ifdef SW_CRSR_TIMER
-	if( bTimerOn )
-		Stop();		// Timer stoppen
-#endif
+    if( m_bIsVisible && m_aTxtCrsr.IsVisible() )
+        m_aTxtCrsr.Hide();
 
-	if( bIsVisible && aTxtCrsr.IsVisible() )
-		aTxtCrsr.Hide();
-
-	pCrsrShell->GetWin()->SetCursor( 0 );
+    m_pCrsrShell->GetWin()->SetCursor( 0 );
 }
-
-
-
 
 void SwVisCrsr::Show()
 {
-	if( !bIsVisible )
-	{
-		bIsVisible = sal_True;
+    if( !m_bIsVisible )
+    {
+        m_bIsVisible = true;
 
-		// muss ueberhaupt angezeigt werden ?
-		if( pCrsrShell->VisArea().IsOver( pCrsrShell->aCharRect ) )
-#ifdef SW_CRSR_TIMER
-		{
-			if( bTimerOn )
-				Start();            // Timer aufsetzen
-			else
-			{
-				if( IsActive() )
-					Stop();         // Timer Stoppen
-
-				_SetPosAndShow();
-			}
-		}
-#else
-			_SetPosAndShow();
-#endif
-	}
+        // display at all?
+        if( m_pCrsrShell->VisArea().IsOver( m_pCrsrShell->m_aCharRect ) )
+            _SetPosAndShow();
+    }
 }
-
-
 
 void SwVisCrsr::Hide()
 {
-	if( bIsVisible )
-	{
-		bIsVisible = sal_False;
+    if( m_bIsVisible )
+    {
+        m_bIsVisible = false;
 
-#ifdef SW_CRSR_TIMER
-		if( IsActive() )
-			Stop();         // Timer Stoppen
-#endif
-
-		if( aTxtCrsr.IsVisible() )		// sollten die Flags nicht gueltig sein?
-			aTxtCrsr.Hide();
-	}
+        if( m_aTxtCrsr.IsVisible() )      // Shouldn't the flags be in effect?
+            m_aTxtCrsr.Hide();
+    }
 }
-
-#ifdef SW_CRSR_TIMER
-
-void __EXPORT SwVisCrsr::Timeout()
-{
-	ASSERT( !bIsDragCrsr, "Timer vorher abschalten" );
-	if( bIsVisible )
-	{
-		if ( !pCrsrShell->GetWin() ) //SwFrmFmt::GetGraphic setzt das Win temp aus!
-			Start();
-		else
-			_SetPosAndShow();
-	}
-}
-
-sal_Bool SwCrsrShell::ChgCrsrTimerFlag( sal_Bool bTimerOn )
-{
-	return pVisCrsr->ChgTimerFlag( bTimerOn );
-}
-
-
-sal_Bool SwVisCrsr::ChgTimerFlag( sal_Bool bFlag )
-{
-	bOld = bTimerOn;
-	if( !bFlag && bIsVisible && IsActive() )
-	{
-		Stop();			// Timer Stoppen
-		_SetPosAndShow();
-	}
-	bTimerOn = bFlag;
-	return bOld;
-}
-
-#endif
-
 
 void SwVisCrsr::_SetPosAndShow()
 {
-	SwRect aRect;
-    long nTmpY = pCrsrShell->aCrsrHeight.Y();
+    SwRect aRect;
+    long nTmpY = m_pCrsrShell->m_aCrsrHeight.getY();
     if( 0 > nTmpY )
-	{
-        nTmpY = -nTmpY;
-        aTxtCrsr.SetOrientation( 900 );
-		aRect = SwRect( pCrsrShell->aCharRect.Pos(),
-           Size( pCrsrShell->aCharRect.Height(), nTmpY ) );
-		aRect.Pos().X() += pCrsrShell->aCrsrHeight.X();
-        if( pCrsrShell->IsOverwriteCrsr() )
-            aRect.Pos().Y() += aRect.Width();
-	}
-	else
     {
-        aTxtCrsr.SetOrientation( 0 );
-		aRect = SwRect( pCrsrShell->aCharRect.Pos(),
-           Size( pCrsrShell->aCharRect.Width(), nTmpY ) );
-		aRect.Pos().Y() += pCrsrShell->aCrsrHeight.X();
+        nTmpY = -nTmpY;
+        m_aTxtCrsr.SetOrientation( 900 );
+        aRect = SwRect( m_pCrsrShell->m_aCharRect.Pos(),
+           Size( m_pCrsrShell->m_aCharRect.Height(), nTmpY ) );
+        aRect.Pos().setX(aRect.Pos().getX() + m_pCrsrShell->m_aCrsrHeight.getX());
+        if( m_pCrsrShell->IsOverwriteCrsr() )
+            aRect.Pos().setY(aRect.Pos().getY() + aRect.Width());
+    }
+    else
+    {
+        m_aTxtCrsr.SetOrientation( 0 );
+        aRect = SwRect( m_pCrsrShell->m_aCharRect.Pos(),
+           Size( m_pCrsrShell->m_aCharRect.Width(), nTmpY ) );
+        aRect.Pos().setY(aRect.Pos().getY() + m_pCrsrShell->m_aCrsrHeight.getX());
     }
 
     // check if cursor should show the current cursor bidi level
-    aTxtCrsr.SetDirection( CURSOR_DIRECTION_NONE );
-    const SwCursor* pTmpCrsr = pCrsrShell->_GetCrsr();
+    m_aTxtCrsr.SetDirection( CURSOR_DIRECTION_NONE );
+    const SwCursor* pTmpCrsr = m_pCrsrShell->_GetCrsr();
 
-    if ( pTmpCrsr && !pCrsrShell->IsOverwriteCrsr() )
+    if ( pTmpCrsr && !m_pCrsrShell->IsOverwriteCrsr() )
     {
         SwNode& rNode = pTmpCrsr->GetPoint()->nNode.GetNode();
         if( rNode.IsTxtNode() )
         {
             const SwTxtNode& rTNd = *rNode.GetTxtNode();
-            const SwFrm* pFrm = rTNd.getLayoutFrm( pCrsrShell->GetLayout(), 0, 0, sal_False );
+            const SwFrm* pFrm = rTNd.getLayoutFrm( m_pCrsrShell->GetLayout(), 0, 0, false );
             if ( pFrm )
             {
-                const SwScriptInfo* pSI = ((SwTxtFrm*)pFrm)->GetScriptInfo();
+                const SwScriptInfo* pSI = static_cast<const SwTxtFrm*>(pFrm)->GetScriptInfo();
                  // cursor level has to be shown
                 if ( pSI && pSI->CountDirChg() > 1 )
                 {
-                    aTxtCrsr.SetDirection(
+                    m_aTxtCrsr.SetDirection(
                         ( pTmpCrsr->GetCrsrBidiLevel() % 2 ) ?
                           CURSOR_DIRECTION_RTL :
                           CURSOR_DIRECTION_LTR );
                 }
-
                 if ( pFrm->IsRightToLeft() )
                 {
-                    const OutputDevice *pOut = pCrsrShell->GetOut();
+                    const OutputDevice *pOut = m_pCrsrShell->GetOut();
                     if ( pOut )
                     {
                         long nSize = pOut->GetSettings().GetStyleSettings().GetCursorSize();
@@ -526,41 +204,41 @@ void SwVisCrsr::_SetPosAndShow()
 
     if( aRect.Height() )
     {
-        ::SwCalcPixStatics( pCrsrShell->GetOut() );
-        ::SwAlignRect( aRect, (ViewShell*)pCrsrShell );
+        ::SwCalcPixStatics( m_pCrsrShell->GetOut() );
+        ::SwAlignRect( aRect, (SwViewShell*)m_pCrsrShell );
     }
-    if( !pCrsrShell->IsOverwriteCrsr() || bIsDragCrsr ||
-        pCrsrShell->IsSelection() )
+    if( !m_pCrsrShell->IsOverwriteCrsr() || m_bIsDragCrsr ||
+        m_pCrsrShell->IsSelection() )
         aRect.Width( 0 );
 
-	aTxtCrsr.SetSize( aRect.SSize() );
+    m_aTxtCrsr.SetSize( aRect.SSize() );
 
-	aTxtCrsr.SetPos( aRect.Pos() );
-    if ( !pCrsrShell->IsCrsrReadonly()  || pCrsrShell->GetViewOptions()->IsSelectionInReadonly() )
-	{
-		if ( pCrsrShell->GetDrawView() )
-			((SwDrawView*)pCrsrShell->GetDrawView())->SetAnimationEnabled(
-					!pCrsrShell->IsSelection() );
+    m_aTxtCrsr.SetPos( aRect.Pos() );
+    if ( !m_pCrsrShell->IsCrsrReadonly()  || m_pCrsrShell->GetViewOptions()->IsSelectionInReadonly() )
+    {
+        if ( m_pCrsrShell->GetDrawView() )
+            const_cast<SwDrawView*>(static_cast<const SwDrawView*>(m_pCrsrShell->GetDrawView()))->SetAnimationEnabled(
+                    !m_pCrsrShell->IsSelection() );
 
-		sal_uInt16 nStyle = bIsDragCrsr ? CURSOR_SHADOW : 0;
-		if( nStyle != aTxtCrsr.GetStyle() )
-		{
-			aTxtCrsr.SetStyle( nStyle );
-			aTxtCrsr.SetWindow( bIsDragCrsr ? pCrsrShell->GetWin() : 0 );
-		}
+        sal_uInt16 nStyle = m_bIsDragCrsr ? CURSOR_SHADOW : 0;
+        if( nStyle != m_aTxtCrsr.GetStyle() )
+        {
+            m_aTxtCrsr.SetStyle( nStyle );
+            m_aTxtCrsr.SetWindow( m_bIsDragCrsr ? m_pCrsrShell->GetWin() : 0 );
+        }
 
-		aTxtCrsr.Show();
-	}
+        m_aTxtCrsr.Show();
+    }
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
 SwSelPaintRects::SwSelPaintRects( const SwCrsrShell& rCSh )
-    : SwRects( 0 )
+    : SwRects()
     , pCShell( &rCSh )
+#if HAVE_FEATURE_DESKTOP
     , mpCursorOverlay( 0 )
     , mbShowTxtInputFldOverlay( true )
     , mpTxtInputFldOverlay( NULL )
+#endif
 {
 #ifdef USE_JAVA
     aUseNativeHighlightColorMap[ this ] = UseNativeHighlightColor();
@@ -569,30 +247,24 @@ SwSelPaintRects::SwSelPaintRects( const SwCrsrShell& rCSh )
 
 SwSelPaintRects::~SwSelPaintRects()
 {
-	Hide();
+    Hide();
 
 #if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
-	std::map< SwSelPaintRects*, bool >::const_iterator it = aUseNativeHighlightColorMap.find( this );
-	if ( it != aUseNativeHighlightColorMap.end() )
-		aUseNativeHighlightColorMap.erase( this );
+    std::map< SwSelPaintRects*, bool >::const_iterator it = aUseNativeHighlightColorMap.find( this );
+    if ( it != aUseNativeHighlightColorMap.end() )
+        aUseNativeHighlightColorMap.erase( this );
 
-	std::map< SwSelPaintRects*, Window* >::const_iterator wit = aWindowMap.find( this );
-	if ( wit != aWindowMap.end() )
-		aWindowMap.erase( this );
+    std::map< SwSelPaintRects*, vcl::Window* >::const_iterator wit = aWindowMap.find( this );
+    if ( wit != aWindowMap.end() )
+        aWindowMap.erase( this );
 #endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
 }
 
 void SwSelPaintRects::swapContent(SwSelPaintRects& rSwap)
 {
-    SwRects aTempRects;
-    aTempRects.Insert(this, 0);
+    SwRects::swap(rSwap);
 
-    Remove(0, Count());
-    Insert(&rSwap, 0);
-
-    rSwap.Remove(0, rSwap.Count());
-    rSwap.Insert(&aTempRects, 0);
-
+#if HAVE_FEATURE_DESKTOP
     // #i75172# also swap mpCursorOverlay
     sdr::overlay::OverlayObject* pTempOverlay = getCursorOverlay();
     setCursorOverlay(rSwap.getCursorOverlay());
@@ -605,10 +277,12 @@ void SwSelPaintRects::swapContent(SwSelPaintRects& rSwap)
     sw::overlay::OverlayRangesOutline* pTempTxtInputFldOverlay = mpTxtInputFldOverlay;
     mpTxtInputFldOverlay = rSwap.mpTxtInputFldOverlay;
     rSwap.mpTxtInputFldOverlay = pTempTxtInputFldOverlay;
+#endif
 }
 
 void SwSelPaintRects::Hide()
 {
+#if HAVE_FEATURE_DESKTOP
     if(mpCursorOverlay)
     {
         delete mpCursorOverlay;
@@ -625,10 +299,10 @@ void SwSelPaintRects::Hide()
     std::map< SwSelPaintRects*, bool >::const_iterator it = aUseNativeHighlightColorMap.find( this );
     if ( it != aUseNativeHighlightColorMap.end() && it->second )
     {
-        std::map< SwSelPaintRects*, Window* >::const_iterator wit = aWindowMap.find( this );
+        std::map< SwSelPaintRects*, vcl::Window* >::const_iterator wit = aWindowMap.find( this );
         if ( wit != aWindowMap.end() )
         {
-            Window *pWin = wit->second;
+            vcl::Window *pWin = wit->second;
             aWindowMap.erase( this );
             if ( pWin )
             {
@@ -639,7 +313,7 @@ void SwSelPaintRects::Hide()
                         pWin->Invalidate( Rectangle( Point( aPaintRect.Left() - 10, aPaintRect.Top() - 10 ), Size( aPaintRect.GetWidth() + 20, aPaintRect.GetHeight() + 20 ) ) );
                 }
 
-                for( sal_uInt16 n = 0; n < Count(); ++n )
+                for( sal_uInt16 n = 0; n < size(); ++n )
                 {
                     const SwRect aNextRect( (*this)[n] );
                     Rectangle aPaintRect( aNextRect.SVRect() );
@@ -651,8 +325,9 @@ void SwSelPaintRects::Hide()
         aLastSelectionPixelRects.clear();
     }
 #endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
+#endif
 
-    SwRects::Remove( 0, Count() );
+    SwRects::clear();
 }
 
 void SwSelPaintRects::Show()
@@ -662,9 +337,10 @@ void SwSelPaintRects::Show()
     if(pView && pView->PaintWindowCount())
     {
         // reset rects
-        SwRects::Remove( 0, SwRects::Count() );
+        SwRects::clear();
         FillRects();
 
+#if HAVE_FEATURE_DESKTOP
         // get new rects
         std::vector< basegfx::B2DRange > aNewRanges;
 
@@ -678,21 +354,21 @@ void SwSelPaintRects::Show()
 
         if ( it != aUseNativeHighlightColorMap.end() && it->second )
         {
-            Window* pWin = GetShell()->GetWin();
-            if ( pWin && !GetShell()->IsPreView() )
+            vcl::Window* pWin = GetShell()->GetWin();
+            if ( pWin && !GetShell()->IsPreview() )
             {
                 aWindowMap[ this ] = pWin;
 
                 bool bInvalidate = false;
 
                 // Check if the highlighed range has changed
-                if ( aLastSelectionPixelRects.size() != Count() )
+                if ( aLastSelectionPixelRects.size() != size() )
                 {
                     bInvalidate = true;
                 }
                 else
                 {
-                    for( sal_uInt16 n = 0; n < Count(); ++n )
+                    for( sal_uInt16 n = 0; n < size(); ++n )
                     {
                         const SwRect aNextRect( (*this)[n] );
                         if ( aNextRect != aLastSelectionPixelRects[ n ] )
@@ -714,7 +390,7 @@ void SwSelPaintRects::Show()
 
                     aLastSelectionPixelRects.clear();
 
-                    for( sal_uInt16 n = 0; n < Count(); ++n )
+                    for( sal_uInt16 n = 0; n < size(); ++n )
                     {
                         const SwRect aNextRect( (*this)[n] );
                         Rectangle aPaintRect( aNextRect.SVRect() );
@@ -734,7 +410,7 @@ void SwSelPaintRects::Show()
         else
         {
 #endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
-        for(sal_uInt16 a(0); a < Count(); a++)
+        for(sal_uInt16 a(0); a < size(); a++)
         {
             const SwRect aNextRect((*this)[a]);
             const Rectangle aPntRect(aNextRect.SVRect());
@@ -746,7 +422,7 @@ void SwSelPaintRects::Show()
 
         if(mpCursorOverlay)
         {
-            if(aNewRanges.size())
+            if(!aNewRanges.empty())
             {
                 static_cast< sdr::overlay::OverlaySelection* >(mpCursorOverlay)->setRanges(aNewRanges);
             }
@@ -756,25 +432,25 @@ void SwSelPaintRects::Show()
                 mpCursorOverlay = 0;
             }
         }
-        else if(Count())
+        else if(!empty())
         {
             SdrPaintWindow* pCandidate = pView->GetPaintWindow(0);
-            sdr::overlay::OverlayManager* pTargetOverlay = pCandidate->GetOverlayManager();
+            rtl::Reference< ::sdr::overlay::OverlayManager > xTargetOverlay = pCandidate->GetOverlayManager();
 
-            if(pTargetOverlay)
+            if (xTargetOverlay.is())
             {
-                // get the system's hilight color
+                // get the system's highlight color
                 const SvtOptionsDrawinglayer aSvtOptionsDrawinglayer;
                 const Color aHighlight(aSvtOptionsDrawinglayer.getHilightColor());
 
                 // create correct selection
                 mpCursorOverlay = new sdr::overlay::OverlaySelection(
                     sdr::overlay::OVERLAY_TRANSPARENT,
-                    aHighlight, 
+                    aHighlight,
                     aNewRanges,
                     true);
 
-                pTargetOverlay->add(*mpCursorOverlay);
+                xTargetOverlay->add(*mpCursorOverlay);
             }
         }
 #if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
@@ -782,9 +458,51 @@ void SwSelPaintRects::Show()
 #endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
 
         HighlightInputFld();
+#else
+        const OutputDevice* pOut = GetShell()->GetWin();
+        if ( ! pOut )
+            pOut = GetShell()->GetOut();
+        SwWrtShell *pWrtShell = dynamic_cast<SwWrtShell*>(const_cast<SwCrsrShell*>(GetShell()));
+        if (!empty())
+        {
+            if (pWrtShell)
+            {
+                // Buffer will be deallocated in the UI layer
+                MLORect *rects = (MLORect *) malloc((sizeof(MLORect))*size());
+                for (size_t i = 0; i < size(); ++i)
+                {
+                    Point origin = pOut->LogicToPixel((*this)[i].Pos());
+                    Size ssize = pOut->LogicToPixel((*this)[i].SSize());
+#ifdef IOS
+                    rects[i] = CGRectMake(origin.X(), origin.Y(),
+                                          ssize.Width(), ssize.Height());
+#else
+                    // Not yet implemented
+                    (void) origin;
+                    (void) ssize;
+#endif
+                }
+                // GetShell returns a SwCrsrShell which actually is a SwWrtShell
+                touch_ui_selection_start(MLOSelectionText, pWrtShell, rects, size(), NULL);
+            }
+        }
+        else
+        {
+            touch_ui_selection_none();
+        }
+#endif
     }
 }
 
+#if !HAVE_FEATURE_DESKTOP
+
+extern "C" void touch_lo_selection_attempt_resize(const void * /* documentHandle */,
+                                                  MLORect * /* selectedRectangles */,
+                                                  int /* numberOfRectangles */)
+{
+}
+
+#endif
 
 void SwSelPaintRects::HighlightInputFld()
 {
@@ -798,14 +516,14 @@ void SwSelPaintRects::HighlightInputFld()
         {
             SwTxtNode* pTxtNode = pCurTxtInputFldAtCrsr->GetpTxtNode();
             ::boost::scoped_ptr<SwShellCrsr> pCrsrForInputTxtFld(
-                new SwShellCrsr( *GetShell(), SwPosition( *pTxtNode, *(pCurTxtInputFldAtCrsr->GetStart()) ) ) );
+                new SwShellCrsr( *GetShell(), SwPosition( *pTxtNode, pCurTxtInputFldAtCrsr->GetStart() ) ) );
             pCrsrForInputTxtFld->SetMark();
             pCrsrForInputTxtFld->GetMark()->nNode = *pTxtNode;
             pCrsrForInputTxtFld->GetMark()->nContent.Assign( pTxtNode, *(pCurTxtInputFldAtCrsr->End()) );
 
             pCrsrForInputTxtFld->FillRects();
 
-            for( sal_uInt16 a(0); a < pCrsrForInputTxtFld->Count(); ++a )
+            for (size_t a(0); a < pCrsrForInputTxtFld->size(); ++a)
             {
                 const SwRect aNextRect((*pCrsrForInputTxtFld)[a]);
                 const Rectangle aPntRect(aNextRect.SVRect());
@@ -827,17 +545,17 @@ void SwSelPaintRects::HighlightInputFld()
         {
             SdrView* pView = (SdrView*)GetShell()->GetDrawView();
             SdrPaintWindow* pCandidate = pView->GetPaintWindow(0);
-            sdr::overlay::OverlayManager* pTargetOverlay = pCandidate->GetOverlayManager();
+            rtl::Reference<sdr::overlay::OverlayManager> xTargetOverlay = pCandidate->GetOverlayManager();
 
-            if(pTargetOverlay)
+            if (xTargetOverlay.is())
             {
-                // use system's hilight color with decreased luminance as highlight color
+                // use system's highlight color with decreased luminance as highlight color
                 const SvtOptionsDrawinglayer aSvtOptionsDrawinglayer;
                 Color aHighlight(aSvtOptionsDrawinglayer.getHilightColor());
                 aHighlight.DecreaseLuminance( 128 );
 
                 mpTxtInputFldOverlay = new sw::overlay::OverlayRangesOutline( aHighlight, aInputFldRanges );
-                pTargetOverlay->add( *mpTxtInputFldOverlay );
+                xTargetOverlay->add( *mpTxtInputFldOverlay );
             }
         }
     }
@@ -851,37 +569,35 @@ void SwSelPaintRects::HighlightInputFld()
     }
 }
 
-
 void SwSelPaintRects::Invalidate( const SwRect& rRect )
 {
-	sal_uInt16 nSz = Count();
-	if( !nSz )
-		return;
+    sal_uInt16 nSz = size();
+    if( !nSz )
+        return;
 
-	SwRegionRects aReg( GetShell()->VisArea() );
-	aReg.Remove( 0, aReg.Count() );
-	aReg.Insert( this, 0 );
-	aReg -= rRect;
-	SwRects::Remove( 0, nSz );
-	SwRects::Insert( &aReg, 0 );
+    SwRegionRects aReg( GetShell()->VisArea() );
+    aReg.assign( begin(), end() );
+    aReg -= rRect;
+    SwRects::erase( begin(), begin() + nSz );
+    SwRects::insert( begin(), aReg.begin(), aReg.end() );
 
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// Liegt die Selection rechts oder unten ausserhalb des sichtbaren
-	// Bereiches, so ist diese nie auf eine Pixel rechts/unten aligned.
-	// Das muss hier erkannt und ggf. das Rechteckt erweitert werden.
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	if( GetShell()->bVisPortChgd && 0 != ( nSz = Count()) )
-	{
-		SwSelPaintRects::Get1PixelInLogic( *GetShell() );
-		SwRect* pRect = (SwRect*)GetData();
-		for( ; nSz--; ++pRect )
-		{
-			if( pRect->Right() == GetShell()->aOldRBPos.X() )
-				pRect->Right( pRect->Right() + nPixPtX );
-			if( pRect->Bottom() == GetShell()->aOldRBPos.Y() )
-				pRect->Bottom( pRect->Bottom() + nPixPtY );
-		}
-	}
+    // If the selection is to the right or at the bottom, outside the
+    // visible area, it is never aligned on one pixel at the right/bottom.
+    // This has to be determined here and if that is the case the
+    // rectangle has to be expanded.
+    if( GetShell()->m_bVisPortChgd && 0 != ( nSz = size()) )
+    {
+        SwSelPaintRects::Get1PixelInLogic( *GetShell() );
+        iterator it = begin();
+        for( ; nSz--; ++it )
+        {
+            SwRect& rRectIt = *it;
+            if( rRectIt.Right() == GetShell()->m_aOldRBPos.X() )
+                rRectIt.Right( rRectIt.Right() + nPixPtX );
+            if( rRectIt.Bottom() == GetShell()->m_aOldRBPos.Y() )
+                rRectIt.Bottom( rRectIt.Bottom() + nPixPtY );
+        }
+    }
 }
 
 void SwSelPaintRects::Paint( const Rectangle& /*rRect*/ )
@@ -889,35 +605,31 @@ void SwSelPaintRects::Paint( const Rectangle& /*rRect*/ )
     // nothing to do with overlays
 }
 
-
 // check current MapMode of the shell and set possibly the static members.
 // Optional set the parameters pX, pY
-void SwSelPaintRects::Get1PixelInLogic( const ViewShell& rSh,
-										long* pX, long* pY )
+void SwSelPaintRects::Get1PixelInLogic( const SwViewShell& rSh,
+                                        long* pX, long* pY )
 {
-	const OutputDevice* pOut = rSh.GetWin();
-	if ( ! pOut )
-		pOut = rSh.GetOut();
+    const OutputDevice* pOut = rSh.GetWin();
+    if ( ! pOut )
+        pOut = rSh.GetOut();
 
-	const MapMode& rMM = pOut->GetMapMode();
-	if( pMapMode->GetMapUnit() != rMM.GetMapUnit() ||
-		pMapMode->GetScaleX() != rMM.GetScaleX() ||
-		pMapMode->GetScaleY() != rMM.GetScaleY() )
-	{
-		*pMapMode = rMM;
-		Size aTmp( 1, 1 );
-		aTmp = pOut->PixelToLogic( aTmp );
-		nPixPtX = aTmp.Width();
-		nPixPtY = aTmp.Height();
-	}
-	if( pX )
-		*pX = nPixPtX;
-	if( pY )
-		*pY = nPixPtY;
+    const MapMode& rMM = pOut->GetMapMode();
+    if( pMapMode->GetMapUnit() != rMM.GetMapUnit() ||
+        pMapMode->GetScaleX() != rMM.GetScaleX() ||
+        pMapMode->GetScaleY() != rMM.GetScaleY() )
+    {
+        *pMapMode = rMM;
+        Size aTmp( 1, 1 );
+        aTmp = pOut->PixelToLogic( aTmp );
+        nPixPtX = aTmp.Width();
+        nPixPtY = aTmp.Height();
+    }
+    if( pX )
+        *pX = nPixPtX;
+    if( pY )
+        *pY = nPixPtY;
 }
-
-
-/*  */
 
 SwShellCrsr::SwShellCrsr(
     const SwCrsrShell& rCShell,
@@ -926,7 +638,6 @@ SwShellCrsr::SwShellCrsr(
     , SwSelPaintRects(rCShell)
     , pPt(SwPaM::GetPoint())
 {}
-
 
 SwShellCrsr::SwShellCrsr(
     const SwCrsrShell& rCShell,
@@ -940,7 +651,6 @@ SwShellCrsr::SwShellCrsr(
     , pPt(SwPaM::GetPoint())
 {}
 
-
 SwShellCrsr::SwShellCrsr( SwShellCrsr& rICrsr )
     : SwCursor(rICrsr)
     , SwSelPaintRects(*rICrsr.GetShell())
@@ -952,7 +662,6 @@ SwShellCrsr::SwShellCrsr( SwShellCrsr& rICrsr )
 SwShellCrsr::~SwShellCrsr()
 {}
 
-
 bool SwShellCrsr::IsReadOnlyAvailable() const
 {
     return GetShell()->IsReadOnlyAvailable();
@@ -960,54 +669,46 @@ bool SwShellCrsr::IsReadOnlyAvailable() const
 
 void SwShellCrsr::SetMark()
 {
-	if( SwPaM::GetPoint() == pPt )
-		aMkPt = aPtPt;
-	else
-		aPtPt = aMkPt;
-	SwPaM::SetMark();
+    if( SwPaM::GetPoint() == pPt )
+        aMkPt = aPtPt;
+    else
+        aPtPt = aMkPt;
+    SwPaM::SetMark();
 }
 
 void SwShellCrsr::FillRects()
 {
-    // die neuen Rechtecke berechnen
-    if ( HasMark()
-         && GetPoint()->nNode.GetNode().IsCntntNode()
-         && GetPoint()->nNode.GetNode().GetCntntNode()->getLayoutFrm( GetShell()->GetLayout() )
-         && ( GetMark()->nNode == GetPoint()->nNode
-              || ( GetMark()->nNode.GetNode().IsCntntNode()
-                   && GetMark()->nNode.GetNode().GetCntntNode()->getLayoutFrm( GetShell()->GetLayout() ) ) ) )
-    {
+    // calculate the new rectangles
+    if( HasMark() &&
+        GetPoint()->nNode.GetNode().IsCntntNode() &&
+        GetPoint()->nNode.GetNode().GetCntntNode()->getLayoutFrm( GetShell()->GetLayout() ) &&
+        (GetMark()->nNode == GetPoint()->nNode ||
+        (GetMark()->nNode.GetNode().IsCntntNode() &&
+         GetMark()->nNode.GetNode().GetCntntNode()->getLayoutFrm( GetShell()->GetLayout() ) )   ))
         GetShell()->GetLayout()->CalcFrmRects( *this );
-    }
 }
-
 
 void SwShellCrsr::Show()
 {
-	SwShellCrsr * pTmp = this;
-	do {
-		pTmp->SwSelPaintRects::Show();
+    SwShellCrsr * pTmp = this;
+    do {
+        if (pTmp)
+            pTmp->SwSelPaintRects::Show();
     } while( this != ( pTmp = dynamic_cast<SwShellCrsr*>(pTmp->GetNext()) ) );
-
-	SHOWBOOKMARKS1( 1 )
-	SHOWREDLINES1( 1 )
 }
 
-
-	// Dieses Rechteck wird neu gepaintet, also ist die SSelection in
-	// dem Bereich ungueltig
+// This rectangle gets painted anew, therefore the SSelection in this
+// area is invalid.
 void SwShellCrsr::Invalidate( const SwRect& rRect )
 {
-	SwShellCrsr * pTmp = this;
+    SwShellCrsr * pTmp = this;
 
-	do
+    do
     {
-		pTmp->SwSelPaintRects::Invalidate( rRect );
+        pTmp->SwSelPaintRects::Invalidate( rRect );
 
-        // --> FME 2005-08-18 #125102#
         // skip any non SwShellCrsr objects in the ring
-        // (see:SwAutoFormat::DeleteSel()
-        // <--
+        // see also: SwAutoFormat::DeleteSel()
         Ring* pTmpRing = pTmp;
         pTmp = 0;
         do
@@ -1016,280 +717,246 @@ void SwShellCrsr::Invalidate( const SwRect& rRect )
             pTmp = dynamic_cast<SwShellCrsr*>(pTmpRing);
         }
         while ( !pTmp );
-	}
+    }
     while( this != pTmp );
-
-	SHOWBOOKMARKS2( 3, &rRect )
-	SHOWREDLINES2( 3, &rRect )
 }
-
 
 void SwShellCrsr::Hide()
 {
-	SwShellCrsr * pTmp = this;
-	do {
-		pTmp->SwSelPaintRects::Hide();
+    SwShellCrsr * pTmp = this;
+    do {
+        if (pTmp)
+            pTmp->SwSelPaintRects::Hide();
     } while( this != ( pTmp = dynamic_cast<SwShellCrsr*>(pTmp->GetNext()) ) );
-
-	SHOWBOOKMARKS1( 2 )
-	SHOWREDLINES1( 2 )
 }
 
 SwCursor* SwShellCrsr::Create( SwPaM* pRing ) const
 {
-	return new SwShellCrsr( *GetShell(), *GetPoint(), GetPtPos(), pRing );
+    return new SwShellCrsr( *GetShell(), *GetPoint(), GetPtPos(), pRing );
 }
-
 
 short SwShellCrsr::MaxReplaceArived()
 {
     short nRet = RET_YES;
-	Window* pDlg = LAYOUT_THIS_WINDOW (::GetSearchDialog());
-	if( pDlg )
-	{
-		// alte Actions beenden; die Tabellen-Frames werden angelegt und
-		// eine SSelection kann erzeugt werden
-		SvUShorts aArr;
-		sal_uInt16 nActCnt;
-		ViewShell *pShell = const_cast< SwCrsrShell* >( GetShell() ),
-				  *pSh = pShell;
-		do {
-			for( nActCnt = 0; pSh->ActionPend(); ++nActCnt )
-				pSh->EndAction();
-			aArr.Insert( nActCnt, aArr.Count() );
-		} while( pShell != ( pSh = (ViewShell*)pSh->GetNext() ) );
+    vcl::Window* pDlg = (vcl::Window*) SwView::GetSearchDialog();
+    if( pDlg )
+    {
+        // Terminate old actions. The table-frames get constructed and
+        // a SSelection can be created.
+        std::vector<sal_uInt16> aArr;
+        sal_uInt16 nActCnt;
+        SwViewShell *pShell = const_cast< SwCrsrShell* >( GetShell() ),
+                  *pSh = pShell;
+        do {
+            for( nActCnt = 0; pSh->ActionPend(); ++nActCnt )
+                pSh->EndAction();
+            aArr.push_back( nActCnt );
+        } while( pShell != ( pSh = static_cast<SwViewShell*>(pSh->GetNext()) ) );
 
-		{
-			nRet = QueryBox( pDlg, SW_RES( MSG_COMCORE_ASKSEARCH )).Execute();
-		}
+        {
+            nRet = MessageDialog(pDlg, "AskSearchDialog",
+                                 "modules/swriter/ui/asksearchdialog.ui").Execute();
+        }
 
-		for( sal_uInt16 n = 0; n < aArr.Count(); ++n )
-		{
+        for( sal_uInt16 n = 0; n < aArr.size(); ++n )
+        {
             for( nActCnt = aArr[n]; nActCnt--; )
-				pSh->StartAction();
-			pSh = (ViewShell*)pSh->GetNext();
-		}	//swmod 071107//swmod 071225
-	}
-	else
-		// ansonsten aus dem Basic, und dann auf RET_YES schalten
-		nRet = RET_YES;
+                pSh->StartAction();
+            pSh = static_cast<SwViewShell*>(pSh->GetNext());
+        }
+    }
+    else
+        // otherwise from the Basic, and than switch to RET_YES
+        nRet = RET_YES;
 
     return nRet;
 }
 
 void SwShellCrsr::SaveTblBoxCntnt( const SwPosition* pPos )
 {
-	((SwCrsrShell*)GetShell())->SaveTblBoxCntnt( pPos );
+    ((SwCrsrShell*)GetShell())->SaveTblBoxCntnt( pPos );
 }
 
-sal_Bool SwShellCrsr::UpDown( sal_Bool bUp, sal_uInt16 nCnt )
+bool SwShellCrsr::UpDown( bool bUp, sal_uInt16 nCnt )
 {
-	return SwCursor::UpDown( bUp, nCnt,
-							&GetPtPos(), GetShell()->GetUpDownX() );
+    return SwCursor::UpDown( bUp, nCnt,
+                            &GetPtPos(), GetShell()->GetUpDownX() );
 }
 
-#ifdef DBG_UTIL
-
-// JP 05.03.98: zum Testen des UNO-Crsr Verhaltens hier die Implementierung
-//				am sichtbaren Cursor
-
-sal_Bool SwShellCrsr::IsSelOvr( int eFlags )
+// if <true> than the cursor can be set to the position.
+bool SwShellCrsr::IsAtValidPos( bool bPoint ) const
 {
-	return SwCursor::IsSelOvr( eFlags );
-}
+    if( GetShell() && ( GetShell()->IsAllProtect() ||
+        GetShell()->GetViewOptions()->IsReadonly() ||
+        ( GetShell()->Imp()->GetDrawView() &&
+          GetShell()->Imp()->GetDrawView()->GetMarkedObjectList().GetMarkCount() )))
+        return true;
 
-#endif
-
-// sal_True: an die Position kann der Cursor gesetzt werden
-sal_Bool SwShellCrsr::IsAtValidPos( sal_Bool bPoint ) const
-{
-	if( GetShell() && ( GetShell()->IsAllProtect() ||
-		GetShell()->GetViewOptions()->IsReadonly() ||
-		( GetShell()->Imp()->GetDrawView() &&
-		  GetShell()->Imp()->GetDrawView()->GetMarkedObjectList().GetMarkCount() )))
-		return sal_True;
-
-	return SwCursor::IsAtValidPos( bPoint );
+    return SwCursor::IsAtValidPos( bPoint );
 }
 
 #ifdef USE_JAVA
 
 void SwShellCrsr::GetNativeHightlightColorRects( std::vector< Rectangle >& rPixelRects )
 {
-	rPixelRects.clear();
+    rPixelRects.clear();
 
 #ifdef USE_NATIVE_HIGHLIGHT_COLOR
-	std::map< SwSelPaintRects*, Window* >::const_iterator wit = aWindowMap.find( this );
-	if ( wit != aWindowMap.end() )
-	{
-		Window *pWin = wit->second;
-		if ( pWin )
-		{
-			// Fix bug 3579 by including all SwSelPaintRects that share the same
-			// window as this instance
-			for ( wit = aWindowMap.begin(); wit != aWindowMap.end(); ++wit )
-			{
-				if ( pWin == wit->second )
-				{
-					std::map< SwSelPaintRects*, bool >::const_iterator it = aUseNativeHighlightColorMap.find( wit->first );
-					if ( it != aUseNativeHighlightColorMap.end() && it->second )
-					{
-						SwSelPaintRects *pSelPaintRects = wit->first;
-						for( sal_uInt16 n = 0; n < pSelPaintRects->Count(); ++n )
-						{
-							const SwRect aNextRect( (*pSelPaintRects)[n] );
-							rPixelRects.push_back( aNextRect.SVRect() );
-						}
-					}
-				}
-			}
-		}
-		else
-		{
-			std::map< SwSelPaintRects*, bool >::const_iterator it = aUseNativeHighlightColorMap.find( this );
-			if ( it != aUseNativeHighlightColorMap.end() && it->second )
-			{
-				for( sal_uInt16 n = 0; n < Count(); ++n )
-				{
-					const SwRect aNextRect( (*this)[n] );
-					rPixelRects.push_back( aNextRect.SVRect() );
-				}
-			}
-		}
-	}
+    std::map< SwSelPaintRects*, vcl::Window* >::const_iterator wit = aWindowMap.find( this );
+    if ( wit != aWindowMap.end() )
+    {
+        vcl::Window *pWin = wit->second;
+        if ( pWin )
+        {
+            // Fix bug 3579 by including all SwSelPaintRects that share the same
+            // window as this instance
+            for ( wit = aWindowMap.begin(); wit != aWindowMap.end(); ++wit )
+            {
+                if ( pWin == wit->second )
+                {
+                    std::map< SwSelPaintRects*, bool >::const_iterator it = aUseNativeHighlightColorMap.find( wit->first );
+                    if ( it != aUseNativeHighlightColorMap.end() && it->second )
+                    {
+                        SwSelPaintRects *pSelPaintRects = wit->first;
+                        for( sal_uInt16 n = 0; n < pSelPaintRects->size(); ++n )
+                        {
+                            const SwRect aNextRect( (*pSelPaintRects)[n] );
+                            rPixelRects.push_back( aNextRect.SVRect() );
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            std::map< SwSelPaintRects*, bool >::const_iterator it = aUseNativeHighlightColorMap.find( this );
+            if ( it != aUseNativeHighlightColorMap.end() && it->second )
+            {
+                for( sal_uInt16 n = 0; n < size(); ++n )
+                {
+                    const SwRect aNextRect( (*this)[n] );
+                    rPixelRects.push_back( aNextRect.SVRect() );
+                }
+            }
+        }
+    }
 #endif	// USE_NATIVE_HIGHLIGHT_COLOR
 }
 
 #endif	// USE_JAVA
 
-/*  */
-
 SwShellTableCrsr::SwShellTableCrsr( const SwCrsrShell& rCrsrSh,
-									const SwPosition& rPos )
-	: SwCursor(rPos,0,false), SwShellCrsr(rCrsrSh, rPos), SwTableCursor(rPos)
+                                    const SwPosition& rPos )
+    : SwCursor(rPos,0,false), SwShellCrsr(rCrsrSh, rPos), SwTableCursor(rPos)
 {
 }
 
 SwShellTableCrsr::SwShellTableCrsr( const SwCrsrShell& rCrsrSh,
-					const SwPosition& rMkPos, const Point& rMkPt,
-					const SwPosition& rPtPos, const Point& rPtPt )
-	: SwCursor(rPtPos,0,false), SwShellCrsr(rCrsrSh, rPtPos), SwTableCursor(rPtPos)
+                    const SwPosition& rMkPos, const Point& rMkPt,
+                    const SwPosition& rPtPos, const Point& rPtPt )
+    : SwCursor(rPtPos,0,false), SwShellCrsr(rCrsrSh, rPtPos), SwTableCursor(rPtPos)
 {
-	SetMark();
-	*GetMark() = rMkPos;
-	GetMkPos() = rMkPt;
-	GetPtPos() = rPtPt;
+    SetMark();
+    *GetMark() = rMkPos;
+    GetMkPos() = rMkPt;
+    GetPtPos() = rPtPt;
 }
 
 SwShellTableCrsr::~SwShellTableCrsr() {}
 
-void SwShellTableCrsr::SetMark() 				{ SwShellCrsr::SetMark(); }
+void SwShellTableCrsr::SetMark()                { SwShellCrsr::SetMark(); }
 
 SwCursor* SwShellTableCrsr::Create( SwPaM* pRing ) const
 {
-	return SwShellCrsr::Create( pRing );
-}
-short SwShellTableCrsr::MaxReplaceArived()
-{
-	return SwShellCrsr::MaxReplaceArived();
-}
-void SwShellTableCrsr::SaveTblBoxCntnt( const SwPosition* pPos )
-{
-	SwShellCrsr::SaveTblBoxCntnt( pPos );
+    return SwShellCrsr::Create( pRing );
 }
 
+short SwShellTableCrsr::MaxReplaceArived()
+{
+    return SwShellCrsr::MaxReplaceArived();
+}
+
+void SwShellTableCrsr::SaveTblBoxCntnt( const SwPosition* pPos )
+{
+    SwShellCrsr::SaveTblBoxCntnt( pPos );
+}
 
 void SwShellTableCrsr::FillRects()
 {
-	// die neuen Rechtecke berechnen
-	// JP 16.01.98: wenn der Cursor noch "geparkt" ist nichts machen!!
-	if( !aSelBoxes.Count() || bParked ||
-		!GetPoint()->nNode.GetIndex() )
-		return;
+    // Calculate the new rectangles. If the cursor is still "parked" do nothing
+    if (m_SelectedBoxes.empty() || bParked || !GetPoint()->nNode.GetIndex())
+        return;
 
-	SwRegionRects aReg( GetShell()->VisArea() );
-	SwNodes& rNds = GetDoc()->GetNodes();
-	for( sal_uInt16 n = 0; n < aSelBoxes.Count(); ++n )
-	{
-        const SwStartNode* pSttNd = (*(aSelBoxes.GetData() + n ))->GetSttNd();
+    SwRegionRects aReg( GetShell()->VisArea() );
+    SwNodes& rNds = GetDoc()->GetNodes();
+    for (size_t n = 0; n < m_SelectedBoxes.size(); ++n)
+    {
+        const SwStartNode* pSttNd = m_SelectedBoxes[n]->GetSttNd();
         const SwTableNode* pSelTblNd = pSttNd->FindTableNode();
 
         SwNodeIndex aIdx( *pSttNd );
-       	SwCntntNode* pCNd = rNds.GoNextSection( &aIdx, sal_True, sal_False );
+        SwCntntNode* pCNd = rNds.GoNextSection( &aIdx, true, false );
 
-        // TABLE IN TABLE
+        // table in table
         // (see also lcl_FindTopLevelTable in unoobj2.cxx for a different
         // version to do this)
-        const SwTableNode* pCurTblNd = pCNd->FindTableNode();
+        const SwTableNode* pCurTblNd = pCNd ? pCNd->FindTableNode() : NULL;
         while ( pSelTblNd != pCurTblNd && pCurTblNd )
         {
             aIdx = pCurTblNd->EndOfSectionIndex();
-            pCNd = rNds.GoNextSection( &aIdx, sal_True, sal_False );
+            pCNd = rNds.GoNextSection( &aIdx, true, false );
             pCurTblNd = pCNd->FindTableNode();
         }
 
-		if( !pCNd )
-			continue;
+        if( !pCNd )
+            continue;
 
-		SwFrm* pFrm = pCNd->getLayoutFrm( GetShell()->GetLayout(), &GetSttPos() );
-		while( pFrm && !pFrm->IsCellFrm() )
-			pFrm = pFrm->GetUpper();
+        SwFrm* pFrm = pCNd->getLayoutFrm( GetShell()->GetLayout(), &GetSttPos() );
+        while( pFrm && !pFrm->IsCellFrm() )
+            pFrm = pFrm->GetUpper();
 
-        ASSERT( pFrm, "Node nicht in einer Tabelle" );
+        OSL_ENSURE( pFrm, "Node not in a table" );
 
         while ( pFrm )
         {
-    		if( pFrm && aReg.GetOrigin().IsOver( pFrm->Frm() ) )
-	    		aReg -= pFrm->Frm();
+            if( aReg.GetOrigin().IsOver( pFrm->Frm() ) )
+                aReg -= pFrm->Frm();
 
             pFrm = pFrm->GetNextCellLeaf( MAKEPAGE_NONE );
         }
     }
-	aReg.Invert();
-	Insert( &aReg, 0 );
+    aReg.Invert();
+    insert( begin(), aReg.begin(), aReg.end() );
 }
 
-
-// Pruefe, ob sich der SPoint innerhalb der Tabellen-SSelection befindet
-sal_Bool SwShellTableCrsr::IsInside( const Point& rPt ) const
+// Check if the SPoint is within the Table-SSelection.
+bool SwShellTableCrsr::IsInside( const Point& rPt ) const
 {
-	// die neuen Rechtecke berechnen
-	// JP 16.01.98: wenn der Cursor noch "geparkt" ist nichts machen!!
-	if( !aSelBoxes.Count() || bParked ||
-		!GetPoint()->nNode.GetIndex()  )
-		return sal_False;
+    // Calculate the new rectangles. If the cursor is still "parked" do nothing
+    if (m_SelectedBoxes.empty() || bParked || !GetPoint()->nNode.GetIndex())
+        return false;
 
-	SwNodes& rNds = GetDoc()->GetNodes();
-	for( sal_uInt16 n = 0; n < aSelBoxes.Count(); ++n )
-	{
-		SwNodeIndex aIdx( *(*(aSelBoxes.GetData() + n ))->GetSttNd() );
-		SwCntntNode* pCNd = rNds.GoNextSection( &aIdx, sal_True, sal_False );
-		if( !pCNd )
-			continue;
+    SwNodes& rNds = GetDoc()->GetNodes();
+    for (size_t n = 0; n < m_SelectedBoxes.size(); ++n)
+    {
+        SwNodeIndex aIdx( *m_SelectedBoxes[n]->GetSttNd() );
+        SwCntntNode* pCNd = rNds.GoNextSection( &aIdx, true, false );
+        if( !pCNd )
+            continue;
 
-		SwFrm* pFrm = pCNd->getLayoutFrm( GetShell()->GetLayout(), &GetPtPos() );
-		while( pFrm && !pFrm->IsCellFrm() )
-			pFrm = pFrm->GetUpper();
-		ASSERT( pFrm, "Node nicht in einer Tabelle" );
-		if( pFrm && pFrm->Frm().IsInside( rPt ) )
-			return sal_True;
-	}
-	return sal_False;
+        SwFrm* pFrm = pCNd->getLayoutFrm( GetShell()->GetLayout(), &GetPtPos() );
+        while( pFrm && !pFrm->IsCellFrm() )
+            pFrm = pFrm->GetUpper();
+        OSL_ENSURE( pFrm, "Node not in a table" );
+        if( pFrm && pFrm->Frm().IsInside( rPt ) )
+            return true;
+    }
+    return false;
 }
 
-#ifdef DBG_UTIL
-
-// JP 05.03.98: zum Testen des UNO-Crsr Verhaltens hier die Implementierung
-//				am sichtbaren Cursor
-sal_Bool SwShellTableCrsr::IsSelOvr( int eFlags )
+bool SwShellTableCrsr::IsAtValidPos( bool bPoint ) const
 {
-	return SwShellCrsr::IsSelOvr( eFlags );
+    return SwShellCrsr::IsAtValidPos( bPoint );
 }
 
-#endif
-
-sal_Bool SwShellTableCrsr::IsAtValidPos( sal_Bool bPoint ) const
-{
-	return SwShellCrsr::IsAtValidPos( bPoint );
-}
-
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

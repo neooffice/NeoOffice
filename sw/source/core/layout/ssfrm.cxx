@@ -1,66 +1,43 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_sw.hxx"
-
-#include <ftnfrm.hxx>
 #include <pagefrm.hxx>
 #include <rootfrm.hxx>
-#include <cntfrm.hxx>
-#include <doc.hxx>
-#include <node.hxx>
-#include <dview.hxx>
 #include <dcontact.hxx>
-#include <dflyobj.hxx>
 #include <flyfrm.hxx>
-#include <txtfrm.hxx>		// ClearPara()
+#include <txtfrm.hxx>
 #include <cellfrm.hxx>
 #include <swtable.hxx>
 #include <fmtfsize.hxx>
-#include <ftnidx.hxx>
-#include <txtftn.hxx>
-#include <ndtxt.hxx>
-#include <ndindex.hxx>
-#include <frmtool.hxx>
-#include <pagedesc.hxx>
 #include <editeng/boxitem.hxx>
 #include <editeng/shaditem.hxx>
 #include <fmtclds.hxx>
-#include <viewsh.hxx>
 #include <viewimp.hxx>
 #include <sortedobjs.hxx>
 #include <hints.hxx>
-#include <switerator.hxx>
 
     // No inline cause we need the function pointers
 long SwFrm::GetTopMargin() const
@@ -80,118 +57,118 @@ long SwFrm::GetPrtRight() const
 long SwFrm::GetPrtTop() const
     { return Frm().Top() + Prt().Top(); }
 
-sal_Bool SwFrm::SetMinLeft( long nDeadline )
+bool SwFrm::SetMinLeft( long nDeadline )
 {
     SwTwips nDiff = nDeadline - Frm().Left();
     if( nDiff > 0 )
     {
         Frm().Left( nDeadline );
         Prt().Width( Prt().Width() - nDiff );
-        return sal_True;
+        return true;
     }
-    return sal_False;
+    return false;
 }
 
-sal_Bool SwFrm::SetMaxBottom( long nDeadline )
+bool SwFrm::SetMaxBottom( long nDeadline )
 {
     SwTwips nDiff = Frm().Top() + Frm().Height() - nDeadline;
     if( nDiff > 0 )
     {
         Frm().Height( Frm().Height() - nDiff );
         Prt().Height( Prt().Height() - nDiff );
-        return sal_True;
+        return true;
     }
-    return sal_False;
+    return false;
 }
 
-sal_Bool SwFrm::SetMinTop( long nDeadline )
+bool SwFrm::SetMinTop( long nDeadline )
 {
     SwTwips nDiff = nDeadline - Frm().Top();
     if( nDiff > 0 )
     {
         Frm().Top( nDeadline );
         Prt().Height( Prt().Height() - nDiff );
-        return sal_True;
+        return true;
     }
-    return sal_False;
+    return false;
 }
 
-sal_Bool SwFrm::SetMaxRight( long nDeadline )
+bool SwFrm::SetMaxRight( long nDeadline )
 {
     SwTwips nDiff = Frm().Left() + Frm().Width() - nDeadline;
     if( nDiff > 0 )
     {
         Frm().Width( Frm().Width() - nDiff );
         Prt().Width( Prt().Width() - nDiff );
-        return sal_True;
+        return true;
     }
-    return sal_False;
+    return false;
 }
 
-void SwFrm::MakeBelowPos( const SwFrm* pUp, const SwFrm* pPrv, sal_Bool bNotify )
+void SwFrm::MakeBelowPos( const SwFrm* pUp, const SwFrm* pPrv, bool bNotify )
 {
     if( pPrv )
     {
-        aFrm.Pos( pPrv->Frm().Pos() );
-        aFrm.Pos().Y() += pPrv->Frm().Height();
+        maFrm.Pos( pPrv->Frm().Pos() );
+        maFrm.Pos().Y() += pPrv->Frm().Height();
     }
     else
     {
-        aFrm.Pos( pUp->Frm().Pos() );
-        aFrm.Pos() += pUp->Prt().Pos();
+        maFrm.Pos( pUp->Frm().Pos() );
+        maFrm.Pos() += pUp->Prt().Pos();
     }
     if( bNotify )
-        aFrm.Pos().Y() += 1;
+        maFrm.Pos().Y() += 1;
 }
 
-void SwFrm::MakeUpperPos( const SwFrm* pUp, const SwFrm* pPrv, sal_Bool bNotify )
+void SwFrm::MakeUpperPos( const SwFrm* pUp, const SwFrm* pPrv, bool bNotify )
 {
     if( pPrv )
     {
-        aFrm.Pos( pPrv->Frm().Pos() );
-        aFrm.Pos().Y() -= Frm().Height();
+        maFrm.Pos( pPrv->Frm().Pos() );
+        maFrm.Pos().Y() -= Frm().Height();
     }
     else
     {
-        aFrm.Pos( pUp->Frm().Pos() );
-        aFrm.Pos() += pUp->Prt().Pos();
-        aFrm.Pos().Y() += pUp->Prt().Height() - aFrm.Height();
+        maFrm.Pos( pUp->Frm().Pos() );
+        maFrm.Pos() += pUp->Prt().Pos();
+        maFrm.Pos().Y() += pUp->Prt().Height() - maFrm.Height();
     }
     if( bNotify )
-        aFrm.Pos().Y() -= 1;
+        maFrm.Pos().Y() -= 1;
 }
 
-void SwFrm::MakeLeftPos( const SwFrm* pUp, const SwFrm* pPrv, sal_Bool bNotify )
+void SwFrm::MakeLeftPos( const SwFrm* pUp, const SwFrm* pPrv, bool bNotify )
 {
     if( pPrv )
     {
-        aFrm.Pos( pPrv->Frm().Pos() );
-        aFrm.Pos().X() -= Frm().Width();
+        maFrm.Pos( pPrv->Frm().Pos() );
+        maFrm.Pos().X() -= Frm().Width();
     }
     else
     {
-        aFrm.Pos( pUp->Frm().Pos() );
-        aFrm.Pos() += pUp->Prt().Pos();
-        aFrm.Pos().X() += pUp->Prt().Width() - aFrm.Width();
+        maFrm.Pos( pUp->Frm().Pos() );
+        maFrm.Pos() += pUp->Prt().Pos();
+        maFrm.Pos().X() += pUp->Prt().Width() - maFrm.Width();
     }
     if( bNotify )
-        aFrm.Pos().X() -= 1;
+        maFrm.Pos().X() -= 1;
 }
 
-void SwFrm::MakeRightPos( const SwFrm* pUp, const SwFrm* pPrv, sal_Bool bNotify )
+void SwFrm::MakeRightPos( const SwFrm* pUp, const SwFrm* pPrv, bool bNotify )
 {
     if( pPrv )
     {
-        aFrm.Pos( pPrv->Frm().Pos() );
-        aFrm.Pos().X() += pPrv->Frm().Width();
+        maFrm.Pos( pPrv->Frm().Pos() );
+        maFrm.Pos().X() += pPrv->Frm().Width();
     }
     else
     {
-        aFrm.Pos( pUp->Frm().Pos() );
-        aFrm.Pos() += pUp->Prt().Pos();
+        maFrm.Pos( pUp->Frm().Pos() );
+        maFrm.Pos() += pUp->Prt().Pos();
     }
     if( bNotify )
-        aFrm.Pos().X() += 1;
+        maFrm.Pos().X() += 1;
 }
 
 void SwFrm::SetTopBottomMargins( long nTop, long nBot )
@@ -218,24 +195,16 @@ void SwFrm::SetRightLeftMargins( long nRight, long nLeft)
     Prt().Width( Frm().Width() - nLeft - nRight );
 }
 
-const sal_uInt16 nMinVertCellHeight = 1135;
-
-/*-----------------------------------
- * SwFrm::CheckDirChange(..)
- * checks the layout direction and
- * invalidates the lower frames rekursivly, if necessary.
- * --------------------------------------------------*/
-
+/// checks the layout direction and invalidates the lower frames rekursivly, if necessary.
 void SwFrm::CheckDirChange()
 {
-    sal_Bool bOldVert = GetVerticalFlag();
-    sal_Bool bOldRev = IsReverse();
-    sal_Bool bOldR2L = GetRightToLeftFlag();
-    SetInvalidVert( sal_True );
-    SetInvalidR2L( sal_True );
-    sal_Bool bChg = bOldR2L != IsRightToLeft();
-    //Badaa: 2008-04-18 * Support for Classical Mongolian Script (SCMS) joint with Jiayanmin
-    sal_Bool bOldVertL2R = IsVertLR();   
+    bool bOldVert = GetVerticalFlag();
+    bool bOldRev = IsReverse();
+    bool bOldR2L = GetRightToLeftFlag();
+    SetInvalidVert( true );
+    SetInvalidR2L( true );
+    bool bChg = bOldR2L != IsRightToLeft();
+    bool bOldVertL2R = IsVertLR();
     if( ( IsVertical() != bOldVert ) || bChg || IsReverse() != bOldRev || bOldVertL2R != IsVertLR() )
     {
         InvalidateAll();
@@ -247,13 +216,17 @@ void SwFrm::CheckDirChange()
                 if ( IsVertical() != GetUpper()->IsVertical() &&
                      ((SwCellFrm*)this)->GetTabBox()->getRowSpan() == 1 )
                 {
+                    enum {
+                        MIN_VERT_CELL_HEIGHT = 1135
+                    };
+
                     SwTableLine* pLine = (SwTableLine*)((SwCellFrm*)this)->GetTabBox()->GetUpper();
                     SwFrmFmt* pFrmFmt = pLine->GetFrmFmt();
                     SwFmtFrmSize aNew( pFrmFmt->GetFrmSize() );
                     if ( ATT_FIX_SIZE != aNew.GetHeightSizeType() )
                         aNew.SetHeightSizeType( ATT_MIN_SIZE );
-                    if ( aNew.GetHeight() < nMinVertCellHeight )
-                        aNew.SetHeight( nMinVertCellHeight );
+                    if ( aNew.GetHeight() < MIN_VERT_CELL_HEIGHT )
+                        aNew.SetHeight( MIN_VERT_CELL_HEIGHT );
                     SwDoc* pDoc = pFrmFmt->GetDoc();
                     pDoc->SetAttr( aNew, *pLine->ClaimFrmFmt() );
                 }
@@ -286,18 +259,18 @@ void SwFrm::CheckDirChange()
                 pFrm = pFrm->GetNext();
             }
             if( pCol )
-                pBody->AdjustColumns( pCol, sal_True );
+                pBody->AdjustColumns( pCol, true );
         }
         else if( IsTxtFrm() )
             ((SwTxtFrm*)this)->Prepare( PREP_CLEAR );
 
-        // --> OD 2004-07-27 #i31698# - notify anchored objects also for page frames.
+        // #i31698# - notify anchored objects also for page frames.
         // Remove code above for special handling of page frames
         if ( GetDrawObjs() )
         {
             const SwSortedObjs *pObjs = GetDrawObjs();
-            sal_uInt32 nCnt = pObjs->Count();
-            for ( sal_uInt32 i = 0; i < nCnt; ++i )
+            const size_t nCnt = pObjs->size();
+            for ( size_t i = 0; i < nCnt; ++i )
             {
                 SwAnchoredObject* pAnchoredObj = (*pObjs)[i];
                 if( pAnchoredObj->ISA(SwFlyFrm) )
@@ -309,31 +282,27 @@ void SwFrm::CheckDirChange()
                     // invalidate
                     pAnchoredObj->InvalidateObjPos();
                 }
-                // --> OD 2004-07-27 #i31698# - update layout direction of
+                // #i31698# - update layout direction of
                 // anchored object
                 {
                     ::setContextWritingMode( pAnchoredObj->DrawObj(), pAnchoredObj->GetAnchorFrmContainingAnchPos() );
                     pAnchoredObj->UpdateLayoutDir();
                 }
-                // <--
             }
         }
     }
 }
 
-/*-----------------------------------
- * SwFrm::GetFrmAnchorPos(..)
- * returns the position for anchors based on frame direction
- * --------------------------------------------------*/
+/// returns the position for anchors based on frame direction
 // OD 2004-03-10 #i11860# - consider lower space and line spacing of
 // previous frame according to new option 'Use former object positioning'
-Point SwFrm::GetFrmAnchorPos( sal_Bool bIgnoreFlysAnchoredAtThisFrame ) const
+Point SwFrm::GetFrmAnchorPos( bool bIgnoreFlysAnchoredAtThisFrame ) const
 {
     Point aAnchor = Frm().Pos();
-    //Badaa: 2008-04-18 * Support for Classical Mongolian Script (SCMS) joint with Jiayanmin
+
     if ( ( IsVertical() && !IsVertLR() ) || IsRightToLeft() )
-		aAnchor.X() += Frm().Width();
-	
+        aAnchor.X() += Frm().Width();
+
     if ( IsTxtFrm() )
     {
         SwTwips nBaseOfstForFly =
@@ -362,40 +331,31 @@ Point SwFrm::GetFrmAnchorPos( sal_Bool bIgnoreFlysAnchoredAtThisFrame ) const
     return aAnchor;
 }
 
-
-/*************************************************************************
-|*
-|*	SwFrm::~SwFrm()
-|*
-|*************************************************************************/
-
-SwFrm::~SwFrm()
+void SwFrm::Destroy()
 {
-#ifdef USE_JAVA
-	RemoveFromStopFormatInvalidateMap( this );
-#endif	// USE_JAVA
+    mbInDtor = true;
 
-	// accessible objects for fly and cell frames have been already disposed
-	// by the destructors of the derived classes.
-	if( IsAccessibleFrm() && !(IsFlyFrm() || IsCellFrm()) && GetDep() )
-	{
-		SwRootFrm *pRootFrm = getRootFrm();
-		if( pRootFrm && pRootFrm->IsAnyShellAccessible() )
-		{
-			ViewShell *pVSh = pRootFrm->GetCurrShell();
-			if( pVSh && pVSh->Imp() )
-			{
-				ASSERT( !GetLower(), "Lowers should be dispose already!" );
-				pVSh->Imp()->DisposeAccessibleFrm( this );
-			}
-		}
-	}
+    // accessible objects for fly and cell frames have been already disposed
+    // by the destructors of the derived classes.
+    if( IsAccessibleFrm() && !(IsFlyFrm() || IsCellFrm()) && GetDep() )
+    {
+        SwRootFrm *pRootFrm = getRootFrm();
+        if( pRootFrm && pRootFrm->IsAnyShellAccessible() )
+        {
+            SwViewShell *pVSh = pRootFrm->GetCurrShell();
+            if( pVSh && pVSh->Imp() )
+            {
+                OSL_ENSURE( !GetLower(), "Lowers should be dispose already!" );
+                pVSh->Imp()->DisposeAccessibleFrm( this );
+            }
+        }
+    }
 
-	if( pDrawObjs )
-	{
-        for ( sal_uInt32 i = pDrawObjs->Count(); i; )
-		{
-            SwAnchoredObject* pAnchoredObj = (*pDrawObjs)[--i];
+    if( mpDrawObjs )
+    {
+        for ( size_t i = mpDrawObjs->size(); i; )
+        {
+            SwAnchoredObject* pAnchoredObj = (*mpDrawObjs)[--i];
             if ( pAnchoredObj->ISA(SwFlyFrm) )
                 delete pAnchoredObj;
             else
@@ -403,105 +363,77 @@ SwFrm::~SwFrm()
                 SdrObject* pSdrObj = pAnchoredObj->DrawObj();
                 SwDrawContact* pContact =
                         static_cast<SwDrawContact*>(pSdrObj->GetUserCall());
-                ASSERT( pContact,
+                OSL_ENSURE( pContact,
                         "<SwFrm::~SwFrm> - missing contact for drawing object" );
                 if ( pContact )
                 {
                     pContact->DisconnectObjFromLayout( pSdrObj );
                 }
             }
-		}
-		if ( pDrawObjs )
-			delete pDrawObjs;
-	}
+        }
+        delete mpDrawObjs;
+        mpDrawObjs = 0;
+    }
+}
 
-#ifdef DBG_UTIL
-	// JP 15.10.2001: for detection of access to deleted frames
-    pDrawObjs = (SwSortedObjs*)0x33333333;
+SwFrm::~SwFrm()
+{
+#ifdef USE_JAVA
+    RemoveFromStopFormatInvalidateMap( this );
+#endif	// USE_JAVA
+
+    if (!IsRootFrm()) // ~SwRootFrm already calls Destroy!
+    {
+        Destroy();
+    }
+
+#if OSL_DEBUG_LEVEL > 0
+    // JP 15.10.2001: for detection of access to deleted frames
+    mpDrawObjs = (SwSortedObjs*)0x33333333;
 #endif
 }
 
-/*************************************************************************/
-
 const SwFrmFmt * SwLayoutFrm::GetFmt() const
-{ 
-    return static_cast< const SwFlyFrmFmt * >( GetDep() );
+{
+    return static_cast< const SwFrmFmt * >( GetDep() );
 }
 
 SwFrmFmt * SwLayoutFrm::GetFmt()
 {
-    return static_cast< SwFlyFrmFmt * >( GetDep() );
+    return static_cast< SwFrmFmt * >( GetDep() );
 }
-
-
-/*************************************************************************
-|*
-|*	  SwLayoutFrm::SetFrmFmt()
-|*
-|*************************************************************************/
-
 
 void SwLayoutFrm::SetFrmFmt( SwFrmFmt *pNew )
 {
-	if ( pNew != GetFmt() )
-	{
-		SwFmtChg aOldFmt( GetFmt() );
-		pNew->Add( this );
-		SwFmtChg aNewFmt( pNew );
-		ModifyNotification( &aOldFmt, &aNewFmt );
-	}
+    if ( pNew != GetFmt() )
+    {
+        SwFmtChg aOldFmt( GetFmt() );
+        pNew->Add( this );
+        SwFmtChg aNewFmt( pNew );
+        ModifyNotification( &aOldFmt, &aNewFmt );
+    }
 }
 
-/*************************************************************************
-|*                  SwCntntFrm::SwCntntFrm()
-|*************************************************************************/
 SwCntntFrm::SwCntntFrm( SwCntntNode * const pCntnt, SwFrm* pSib ) :
-	SwFrm( pCntnt, pSib ),
-	SwFlowFrm( (SwFrm&)*this )
+    SwFrm( pCntnt, pSib ),
+    SwFlowFrm( (SwFrm&)*this )
 {
 }
 
-/*************************************************************************
-|*                  SwCntntFrm::~SwCntntFrm()
-|*************************************************************************/
 SwCntntFrm::~SwCntntFrm()
 {
-	SwCntntNode* pCNd;
-	if( 0 != ( pCNd = PTR_CAST( SwCntntNode, GetRegisteredIn() )) &&
-		!pCNd->GetDoc()->IsInDtor() )
-	{
-		//Bei der Root abmelden wenn ich dort noch im Turbo stehe.
-		SwRootFrm *pRoot = getRootFrm();
-		if( pRoot && pRoot->GetTurbo() == this )
-		{
-			pRoot->DisallowTurbo();
-			pRoot->ResetTurbo();
-		}
-        if( IsTxtFrm() && ((SwTxtFrm*)this)->HasFtn() )
+    const SwCntntNode* pCNd;
+    if( 0 != ( pCNd = PTR_CAST( SwCntntNode, GetRegisteredIn() )) &&
+        !pCNd->GetDoc()->IsInDtor() )
+    {
+        //Unregister from root if I'm still in turbo there.
+        SwRootFrm *pRoot = getRootFrm();
+        if( pRoot && pRoot->GetTurbo() == this )
         {
-            SwTxtNode *pTxtNd = ((SwTxtFrm*)this)->GetTxtNode();
-            const SwFtnIdxs &rFtnIdxs = pCNd->GetDoc()->GetFtnIdxs();
-            sal_uInt16 nPos;
-            sal_uLong nIndex = pCNd->GetIndex();
-            rFtnIdxs.SeekEntry( *pTxtNd, &nPos );
-            SwTxtFtn* pTxtFtn;
-            if( nPos < rFtnIdxs.Count() )
-            {
-                while( nPos && pTxtNd == &(rFtnIdxs[ nPos ]->GetTxtNode()) )
-                    --nPos;
-                if( nPos || pTxtNd != &(rFtnIdxs[ nPos ]->GetTxtNode()) )
-                    ++nPos;
-            }
-            while( nPos < rFtnIdxs.Count() )
-            {
-                pTxtFtn = rFtnIdxs[ nPos ];
-                if( pTxtFtn->GetTxtNode().GetIndex() > nIndex )
-                    break;
-                pTxtFtn->DelFrms( this );
-                ++nPos;
-            }
+            pRoot->DisallowTurbo();
+            pRoot->ResetTurbo();
         }
-	}
+    }
 }
 
 void SwCntntFrm::RegisterToNode( SwCntntNode& rNode )
@@ -509,86 +441,31 @@ void SwCntntFrm::RegisterToNode( SwCntntNode& rNode )
     rNode.Add( this );
 }
 
-void SwCntntFrm::DelFrms( const SwCntntNode& rNode )
+void SwLayoutFrm::Destroy()
 {
-	SwIterator<SwCntntFrm,SwCntntNode> aIter( rNode );    
-	for( SwCntntFrm* pFrm = aIter.First(); pFrm; pFrm = aIter.Next() )
-	{
-        // --> OD 2005-12-01 #i27138#
-        // notify accessibility paragraphs objects about changed
-        // CONTENT_FLOWS_FROM/_TO relation.
-        // Relation CONTENT_FLOWS_FROM for current next paragraph will change
-        // and relation CONTENT_FLOWS_TO for current previous paragraph will change.
-        if ( pFrm->IsTxtFrm() )
-        {
-            ViewShell* pViewShell( pFrm->getRootFrm()->GetCurrShell() );
-            if ( pViewShell && pViewShell->GetLayout() &&
-                 pViewShell->GetLayout()->IsAnyShellAccessible() )
-            {
-                pViewShell->InvalidateAccessibleParaFlowRelation(
-                            dynamic_cast<SwTxtFrm*>(pFrm->FindNextCnt( true )),
-                            dynamic_cast<SwTxtFrm*>(pFrm->FindPrevCnt( true )) );
-            }
-        }
-        // <--
-        if( pFrm->HasFollow() )
-            pFrm->GetFollow()->_SetIsFollow( pFrm->IsFollow() );
-        if( pFrm->IsFollow() )
-        {
-            SwCntntFrm* pMaster = (SwTxtFrm*)pFrm->FindMaster();
-            pMaster->SetFollow( pFrm->GetFollow() );
-            pFrm->_SetIsFollow( sal_False );
-        }
-		pFrm->SetFollow( 0 );//Damit er nicht auf dumme Gedanken kommt.
-								//Andernfalls kann es sein, dass ein Follow
-								//vor seinem Master zerstoert wird, der Master
-								//greift dann ueber den ungueltigen
-								//Follow-Pointer auf fremdes Memory zu.
-								//Die Kette darf hier zerknauscht werden, weil
-								//sowieso alle zerstoert werden.
-		if( pFrm->GetUpper() && pFrm->IsInFtn() && !pFrm->GetIndNext() &&
-			!pFrm->GetIndPrev() )
-		{
-			SwFtnFrm *pFtn = pFrm->FindFtnFrm();
-			ASSERT( pFtn, "You promised a FtnFrm?" );
-			SwCntntFrm* pCFrm;
-			if( !pFtn->GetFollow() && !pFtn->GetMaster() &&
-				0 != ( pCFrm = pFtn->GetRefFromAttr()) && pCFrm->IsFollow() )
-			{
-				ASSERT( pCFrm->IsTxtFrm(), "NoTxtFrm has Footnote?" );
-				((SwTxtFrm*)pCFrm->FindMaster())->Prepare( PREP_FTN_GONE );
-			}
-		}
-		pFrm->Cut();
-		delete pFrm;
-	}
-}
+    while (!aVertPosOrientFrmsFor.empty())
+    {
+        SwAnchoredObject *pObj = *aVertPosOrientFrmsFor.begin();
+        pObj->ClearVertPosOrientFrm();
+    }
 
-/*************************************************************************
-|*
-|*	SwLayoutFrm::~SwLayoutFrm
-|*
-|*************************************************************************/
+    assert(aVertPosOrientFrmsFor.empty());
 
+    SwFrm *pFrm = pLower;
 
-SwLayoutFrm::~SwLayoutFrm()
-{
-	SwFrm *pFrm = pLower;
-
-	if( GetFmt() && !GetFmt()->GetDoc()->IsInDtor() )
-	{
+    if( GetFmt() && !GetFmt()->GetDoc()->IsInDtor() )
+    {
         while ( pFrm )
-		{
-			//Erst die Objs des Frm vernichten, denn diese koennen sich sonst nach
-			//dem Remove nicht mehr bei der Seite abmelden.
-			//Falls sich einer nicht abmeldet wollen wir nicht gleich
-			//endlos schleifen.
+        {
+            //First delete the Objs of the Frm because they can't unregister
+            //from the page after remove.
+            //We don't want to create an endless loop only because one couldn't
+            //unregister.
 
-            sal_uInt32 nCnt;
-			while ( pFrm->GetDrawObjs() && pFrm->GetDrawObjs()->Count() )
-			{
-				nCnt = pFrm->GetDrawObjs()->Count();
-                // --> OD 2004-06-30 #i28701#
+            while ( pFrm->GetDrawObjs() && pFrm->GetDrawObjs()->size() )
+            {
+                const size_t nCnt = pFrm->GetDrawObjs()->size();
+                // #i28701#
                 SwAnchoredObject* pAnchoredObj = (*pFrm->GetDrawObjs())[0];
                 if ( pAnchoredObj->ISA(SwFlyFrm) )
                     delete pAnchoredObj;
@@ -597,31 +474,29 @@ SwLayoutFrm::~SwLayoutFrm()
                     SdrObject* pSdrObj = pAnchoredObj->DrawObj();
                     SwDrawContact* pContact =
                             static_cast<SwDrawContact*>(pSdrObj->GetUserCall());
-                    ASSERT( pContact,
+                    OSL_ENSURE( pContact,
                             "<SwFrm::~SwFrm> - missing contact for drawing object" );
                     if ( pContact )
                     {
                         pContact->DisconnectObjFromLayout( pSdrObj );
                     }
                 }
-				if ( pFrm->GetDrawObjs() &&
-					 nCnt == pFrm->GetDrawObjs()->Count() )
+                if ( pFrm->GetDrawObjs() &&
+                     nCnt == pFrm->GetDrawObjs()->size() )
                 {
                     pFrm->GetDrawObjs()->Remove( *pAnchoredObj );
                 }
-                // <--
-			}
-			pFrm->Remove();
-			delete pFrm;
-			pFrm = pLower;
-		}
-		//Fly's vernichten. Der letzte loescht gleich das Array.
-        sal_uInt32 nCnt;
-		while ( GetDrawObjs() && GetDrawObjs()->Count() )
-		{
-			nCnt = GetDrawObjs()->Count();
+            }
+            pFrm->Remove();
+            delete pFrm;
+            pFrm = pLower;
+        }
+        //Delete the Flys, the last one also deletes the array.
+        while ( GetDrawObjs() && GetDrawObjs()->size() )
+        {
+            const size_t nCnt = GetDrawObjs()->size();
 
-            // --> OD 2004-06-30 #i28701#
+            // #i28701#
             SwAnchoredObject* pAnchoredObj = (*GetDrawObjs())[0];
             if ( pAnchoredObj->ISA(SwFlyFrm) )
                 delete pAnchoredObj;
@@ -630,57 +505,58 @@ SwLayoutFrm::~SwLayoutFrm()
                 SdrObject* pSdrObj = pAnchoredObj->DrawObj();
                 SwDrawContact* pContact =
                         static_cast<SwDrawContact*>(pSdrObj->GetUserCall());
-                ASSERT( pContact,
+                OSL_ENSURE( pContact,
                         "<SwFrm::~SwFrm> - missing contact for drawing object" );
                 if ( pContact )
                 {
                     pContact->DisconnectObjFromLayout( pSdrObj );
                 }
             }
-            if ( GetDrawObjs() && nCnt == GetDrawObjs()->Count() )
+            if ( GetDrawObjs() && nCnt == GetDrawObjs()->size() )
             {
                 GetDrawObjs()->Remove( *pAnchoredObj );
             }
-            // <--
-		}
-	}
-	else
-	{
-		while( pFrm )
-		{
-			SwFrm *pNxt = pFrm->GetNext();
-			delete pFrm;
-			pFrm = pNxt;
-		}
-	}
+        }
+    }
+    else
+    {
+        while( pFrm )
+        {
+            SwFrm *pNxt = pFrm->GetNext();
+            delete pFrm;
+            pFrm = pNxt;
+        }
+    }
 }
 
-/*************************************************************************
-|*
-|*	SwFrm::PaintArea()
-|*
+SwLayoutFrm::~SwLayoutFrm()
+{
+    if (!IsRootFrm()) // ~SwRootFrm already calls Destroy!
+    {
+        Destroy();
+    }
+}
+
+/**
 |*  The paintarea is the area, in which the content of a frame is allowed
 |*  to be displayed. This region could be larger than the printarea (Prt())
 |*  of the upper, it includes e.g. often the margin of the page.
-|*
-|*************************************************************************/
-
+|*/
 const SwRect SwFrm::PaintArea() const
 {
     // NEW TABLES
     // Cell frames may not leave their upper:
     SwRect aRect = IsRowFrm() ? GetUpper()->Frm() : Frm();
-    const sal_Bool bVert = IsVertical();
-    //Badaa: 2008-04-18 * Support for Classical Mongolian Script (SCMS) joint with Jiayanmin
+    const bool bVert = IsVertical();
     SwRectFn fnRect = bVert ? ( IsVertLR() ? fnRectVertL2R : fnRectVert ) : fnRectHori;
     long nRight = (aRect.*fnRect->fnGetRight)();
     long nLeft  = (aRect.*fnRect->fnGetLeft)();
-	const SwFrm* pTmp = this;
-	sal_Bool bLeft = sal_True;
-	sal_Bool bRight = sal_True;
+    const SwFrm* pTmp = this;
+    bool bLeft = true;
+    bool bRight = true;
     long nRowSpan = 0;
-	while( pTmp )
-	{
+    while( pTmp )
+    {
         if( pTmp->IsCellFrm() && pTmp->GetUpper() &&
             pTmp->GetUpper()->IsVertical() != pTmp->IsVertical() )
             nRowSpan = ((SwCellFrm*)pTmp)->GetTabBox()->getRowSpan();
@@ -696,38 +572,38 @@ const SwRect SwFrm::PaintArea() const
             else
                 nTmpRight = (pNxt->Frm().*fnRect->fnGetRight)();
         }
-		ASSERT( pTmp, "PaintArea lost in time and space" );
-		if( pTmp->IsPageFrm() || pTmp->IsFlyFrm() ||
-			pTmp->IsCellFrm() || pTmp->IsRowFrm() || //nobody leaves a table!
-			pTmp->IsRootFrm() )
-		{
+        OSL_ENSURE( pTmp, "PaintArea lost in time and space" );
+        if( pTmp->IsPageFrm() || pTmp->IsFlyFrm() ||
+            pTmp->IsCellFrm() || pTmp->IsRowFrm() || //nobody leaves a table!
+            pTmp->IsRootFrm() )
+        {
             if( bLeft || nLeft < nTmpLeft )
                 nLeft = nTmpLeft;
             if( bRight || nTmpRight < nRight )
-				nRight = nTmpRight;
-			if( pTmp->IsPageFrm() || pTmp->IsFlyFrm() || pTmp->IsRootFrm() )
-				break;
-			bLeft = sal_False;
-			bRight = sal_False;
-		}
-		else if( pTmp->IsColumnFrm() )  // nobody enters neightbour columns
-		{
-            sal_Bool bR2L = pTmp->IsRightToLeft();
+                nRight = nTmpRight;
+            if( pTmp->IsPageFrm() || pTmp->IsFlyFrm() || pTmp->IsRootFrm() )
+                break;
+            bLeft = false;
+            bRight = false;
+        }
+        else if( pTmp->IsColumnFrm() )  // nobody enters neightbour columns
+        {
+            bool bR2L = pTmp->IsRightToLeft();
             // the first column has _no_ influence to the left range
             if( bR2L ? pTmp->GetNext() : pTmp->GetPrev() )
             {
                 if( bLeft || nLeft < nTmpLeft )
                     nLeft = nTmpLeft;
-				bLeft = sal_False;
-			}
+                bLeft = false;
+            }
              // the last column has _no_ influence to the right range
             if( bR2L ? pTmp->GetPrev() : pTmp->GetNext() )
             {
-				if( bRight || nTmpRight < nRight )
+                if( bRight || nTmpRight < nRight )
                     nRight = nTmpRight;
-				bRight = sal_False;
-			}
-		}
+                bRight = false;
+            }
+        }
         else if( bVert && pTmp->IsBodyFrm() )
         {
             // Header and footer frames have always horizontal direction and
@@ -739,36 +615,30 @@ const SwRect SwFrm::PaintArea() const
             if( pTmp->GetPrev() && ( bLeft || nLeft < nTmpLeft ) )
             {
                 nLeft = nTmpLeft;
-                bLeft = sal_False;
+                bLeft = false;
             }
             if( pTmp->GetNext() &&
                 ( pTmp->GetNext()->IsFooterFrm() || pTmp->GetNext()->GetNext() )
                 && ( bRight || nTmpRight < nRight ) )
             {
                 nRight = nTmpRight;
-                bRight = sal_False;
-			}
+                bRight = false;
+            }
         }
-		pTmp = pTmp->GetUpper();
-	}
+        pTmp = pTmp->GetUpper();
+    }
     (aRect.*fnRect->fnSetLeft)( nLeft );
     (aRect.*fnRect->fnSetRight)( nRight );
-	return aRect;
+    return aRect;
 }
 
-/*************************************************************************
-|*
-|*	SwFrm::UnionFrm()
-|*
+/**
 |*  The unionframe is the framearea (Frm()) of a frame expanded by the
 |*  printarea, if there's a negative margin at the left or right side.
-|*
-|*************************************************************************/
-
-const SwRect SwFrm::UnionFrm( sal_Bool bBorder ) const
+|*/
+const SwRect SwFrm::UnionFrm( bool bBorder ) const
 {
-    sal_Bool bVert = IsVertical();
-    //Badaa: 2008-04-18 * Support for Classical Mongolian Script (SCMS) joint with Jiayanmin
+    bool bVert = IsVertical();
     SwRectFn fnRect = bVert ? ( IsVertLR() ? fnRectVertL2R : fnRectVert ) : fnRectHori;
     long nLeft = (Frm().*fnRect->fnGetLeft)();
     long nWidth = (Frm().*fnRect->fnGetWidth)();
@@ -783,26 +653,26 @@ const SwRect SwFrm::UnionFrm( sal_Bool bBorder ) const
     }
     SwTwips nRight = nLeft + nWidth;
     long nAdd = 0;
-	if( bBorder )
-	{
-		SwBorderAttrAccess aAccess( SwFrm::GetCache(), this );
-		const SwBorderAttrs &rAttrs = *aAccess.Get();
-		const SvxBoxItem &rBox = rAttrs.GetBox();
-		if ( rBox.GetLeft() )
+    if( bBorder )
+    {
+        SwBorderAttrAccess aAccess( SwFrm::GetCache(), this );
+        const SwBorderAttrs &rAttrs = *aAccess.Get();
+        const SvxBoxItem &rBox = rAttrs.GetBox();
+        if ( rBox.GetLeft() )
             nLeft -= rBox.CalcLineSpace( BOX_LINE_LEFT );
-		else if ( rAttrs.IsBorderDist() )
+        else if ( rAttrs.IsBorderDist() )
             nLeft -= rBox.GetDistance( BOX_LINE_LEFT ) + 1;
-		if ( rBox.GetRight() )
+        if ( rBox.GetRight() )
             nAdd += rBox.CalcLineSpace( BOX_LINE_RIGHT );
-		else if ( rAttrs.IsBorderDist() )
+        else if ( rAttrs.IsBorderDist() )
             nAdd += rBox.GetDistance( BOX_LINE_RIGHT ) + 1;
-		if( rAttrs.GetShadow().GetLocation() != SVX_SHADOW_NONE )
-		{
-			const SvxShadowItem &rShadow = rAttrs.GetShadow();
+        if( rAttrs.GetShadow().GetLocation() != SVX_SHADOW_NONE )
+        {
+            const SvxShadowItem &rShadow = rAttrs.GetShadow();
             nLeft -= rShadow.CalcShadowSpace( SHADOW_LEFT );
             nAdd += rShadow.CalcShadowSpace( SHADOW_RIGHT );
-		}
-	}
+        }
+    }
     if( IsTxtFrm() && ((SwTxtFrm*)this)->HasPara() )
     {
         long nTmp = ((SwTxtFrm*)this)->HangingMargin();
@@ -810,12 +680,10 @@ const SwRect SwFrm::UnionFrm( sal_Bool bBorder ) const
             nAdd = nTmp;
     }
     nWidth = nRight + nAdd - nLeft;
-	SwRect aRet( Frm() );
+    SwRect aRet( Frm() );
     (aRet.*fnRect->fnSetPosX)( nLeft );
     (aRet.*fnRect->fnSetWidth)( nWidth );
-	return aRet;
+    return aRet;
 }
 
-
-
-
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

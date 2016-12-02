@@ -1,36 +1,32 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
+#ifndef INCLUDED_SW_INC_VISCRS_HXX
+#define INCLUDED_SW_INC_VISCRS_HXX
 
-
-#ifndef _VISCRS_HXX
-#define _VISCRS_HXX
+#include <config_features.h>
 
 #include <vcl/cursor.hxx>
 #include "swcrsr.hxx"
@@ -45,76 +41,60 @@ class SwCrsrShell;
 class SwShellCrsr;
 class SwTxtInputFld;
 
-// --------  Ab hier Klassen / Methoden fuer den nicht Text-Cursor ------
+// From here classes/methods for non-text cursor.
 
 class SwVisCrsr
-#ifdef SW_CRSR_TIMER
-				: private Timer
-#endif
 {
-	friend void _InitCore();
-	friend void _FinitCore();
+    friend void _InitCore();
+    friend void _FinitCore();
 
-	sal_Bool bIsVisible : 1;
-	sal_Bool bIsDragCrsr : 1;
+    bool m_bIsVisible;
+    bool m_bIsDragCrsr;
 
-#ifdef SW_CRSR_TIMER
-	sal_Bool bTimerOn : 1;
-#endif
+    vcl::Cursor m_aTxtCrsr;
+    const SwCrsrShell* m_pCrsrShell;
 
-	Cursor aTxtCrsr;
-	const SwCrsrShell* pCrsrShell;
-
-#ifdef SW_CRSR_TIMER
-	virtual void Timeout();
-#endif
-	void _SetPosAndShow();
+    void _SetPosAndShow();
 
 public:
-	SwVisCrsr( const SwCrsrShell * pCShell );
-	~SwVisCrsr();
+    SwVisCrsr( const SwCrsrShell * pCShell );
+    ~SwVisCrsr();
 
-	void Show();
-	void Hide();
+    void Show();
+    void Hide();
 
-	sal_Bool IsVisible() const { return bIsVisible; }
-    void SetDragCrsr( sal_Bool bFlag = sal_True ) { bIsDragCrsr = bFlag; }
-
-#ifdef SW_CRSR_TIMER
-	sal_Bool ChgTimerFlag( sal_Bool bTimerOn = sal_True );
-#endif
+    bool IsVisible() const { return m_bIsVisible; }
+    void SetDragCrsr( bool bFlag = true ) { m_bIsDragCrsr = bFlag; }
 };
 
+// From here classes/methods for selections.
 
-// ------ Ab hier Klassen / Methoden fuer die Selectionen -------
-
-// #i75172# predefines
 namespace sdr { namespace overlay { class OverlayObject; }}
 namespace sw { namespace overlay { class OverlayRangesOutline; }}
 
 class SwSelPaintRects : public SwRects
 {
-	friend void _InitCore();
-	friend void _FinitCore();
+    friend void _InitCore();
+    friend void _FinitCore();
 
-	static long nPixPtX, nPixPtY;
-	static MapMode *pMapMode;
+    static long nPixPtX, nPixPtY;
+    static MapMode *pMapMode;
 
-	// die Shell
-	const SwCrsrShell* pCShell;
+    const SwCrsrShell* pCShell;
 
 #ifdef USE_JAVA
-	::std::vector< SwRect > aLastSelectionPixelRects;
+    ::std::vector< SwRect > aLastSelectionPixelRects;
 #endif  // USE_JAVA
 
-	virtual void Paint( const Rectangle& rRect );
+    virtual void Paint( const Rectangle& rRect );
 
-	// #i75172#
-	sdr::overlay::OverlayObject*	mpCursorOverlay;
+#if HAVE_FEATURE_DESKTOP
+    sdr::overlay::OverlayObject*    mpCursorOverlay;
 
-	// #i75172# access to mpCursorOverlay for swapContent
-	sdr::overlay::OverlayObject* getCursorOverlay() const { return mpCursorOverlay; }
-	void setCursorOverlay(sdr::overlay::OverlayObject* pNew) { mpCursorOverlay = pNew; }
+    // access to mpCursorOverlay for swapContent
+    sdr::overlay::OverlayObject* getCursorOverlay() const { return mpCursorOverlay; }
+    void setCursorOverlay(sdr::overlay::OverlayObject* pNew) { mpCursorOverlay = pNew; }
+#endif
 
     bool mbShowTxtInputFldOverlay;
     sw::overlay::OverlayRangesOutline* mpTxtInputFldOverlay;
@@ -122,131 +102,111 @@ class SwSelPaintRects : public SwRects
     void HighlightInputFld();
 
 public:
-	SwSelPaintRects( const SwCrsrShell& rCSh );
-	virtual ~SwSelPaintRects();
+    SwSelPaintRects( const SwCrsrShell& rCSh );
+    virtual ~SwSelPaintRects();
 
-	virtual void FillRects() = 0;
+    virtual void FillRects() = 0;
 
     // #i75172# in SwCrsrShell::CreateCrsr() the content of SwSelPaintRects is exchanged. To
-	// make a complete swap access to mpCursorOverlay is needed there
-	void swapContent(SwSelPaintRects& rSwap);
+    // make a complete swap access to mpCursorOverlay is needed there
+    void swapContent(SwSelPaintRects& rSwap);
 
-	void Show();
-	void Hide();
-	void Invalidate( const SwRect& rRect );
+    void Show();
+    void Hide();
+    void Invalidate( const SwRect& rRect );
 
     inline void SetShowTxtInputFldOverlay( const bool bShow )
     {
         mbShowTxtInputFldOverlay = bShow;
     }
 
-	const SwCrsrShell* GetShell() const { return pCShell; }
-	// check current MapMode of the shell and set possibly the static members.
-	// Optional set the parameters pX, pY
-	static void Get1PixelInLogic( const ViewShell& rSh,
-									long* pX = 0, long* pY = 0 );
+    const SwCrsrShell* GetShell() const { return pCShell; }
+    // check current MapMode of the shell and set possibly the static members.
+    // Optional set the parameters pX, pY
+    static void Get1PixelInLogic( const SwViewShell& rSh,
+                                    long* pX = 0, long* pY = 0 );
 };
-
 
 class SwShellCrsr : public virtual SwCursor, public SwSelPaintRects
 {
-	// Dokument-Positionen der Start/End-Charakter einer SSelection
-	Point aMkPt, aPtPt;
-	const SwPosition* pPt;		// fuer Zuordung vom GetPoint() zum aPtPt
+    // Document positions of start/end characters of a SSelection.
+    Point aMkPt, aPtPt;
+    const SwPosition* pPt;      // For assignment of GetPoint() to aPtPt.
 
     using SwCursor::UpDown;
 
 public:
-	SwShellCrsr( const SwCrsrShell& rCrsrSh, const SwPosition &rPos );
-	SwShellCrsr( const SwCrsrShell& rCrsrSh, const SwPosition &rPos,
-					const Point& rPtPos, SwPaM* pRing = 0 );
-	SwShellCrsr( SwShellCrsr& );
-	virtual ~SwShellCrsr();
+    SwShellCrsr( const SwCrsrShell& rCrsrSh, const SwPosition &rPos );
+    SwShellCrsr( const SwCrsrShell& rCrsrSh, const SwPosition &rPos,
+                    const Point& rPtPos, SwPaM* pRing = 0 );
+    SwShellCrsr( SwShellCrsr& );
+    virtual ~SwShellCrsr();
 
-	virtual void FillRects();	// fuer Table- und normalen Crsr
+    virtual void FillRects() SAL_OVERRIDE;   // For Table- und normal cursors.
 
-	void Show();			// Update und zeige alle Selektionen an
-	void Hide();	  		// verstecke alle Selektionen
-	void Invalidate( const SwRect& rRect );
+    void Show();            // Update and display all selections.
+    void Hide();            // Hide all selections.
+    void Invalidate( const SwRect& rRect );
 
-	const Point& GetPtPos() const	{ return( SwPaM::GetPoint() == pPt ? aPtPt : aMkPt ); }
-		  Point& GetPtPos() 		{ return( SwPaM::GetPoint() == pPt ? aPtPt : aMkPt ); }
-	const Point& GetMkPos() const 	{ return( SwPaM::GetMark() == pPt ? aPtPt : aMkPt ); }
-		  Point& GetMkPos() 		{ return( SwPaM::GetMark() == pPt ? aPtPt : aMkPt ); }
-	const Point& GetSttPos() const	{ return( SwPaM::Start() == pPt ? aPtPt : aMkPt ); }
-		  Point& GetSttPos() 		{ return( SwPaM::Start() == pPt ? aPtPt : aMkPt ); }
-	const Point& GetEndPos() const	{ return( SwPaM::End() == pPt ? aPtPt : aMkPt ); }
-		  Point& GetEndPos() 		{ return( SwPaM::End() == pPt ? aPtPt : aMkPt ); }
+    const Point& GetPtPos() const   { return( SwPaM::GetPoint() == pPt ? aPtPt : aMkPt ); }
+          Point& GetPtPos()         { return( SwPaM::GetPoint() == pPt ? aPtPt : aMkPt ); }
+    const Point& GetMkPos() const   { return( SwPaM::GetMark() == pPt ? aPtPt : aMkPt ); }
+          Point& GetMkPos()         { return( SwPaM::GetMark() == pPt ? aPtPt : aMkPt ); }
+    const Point& GetSttPos() const  { return( SwPaM::Start() == pPt ? aPtPt : aMkPt ); }
+          Point& GetSttPos()        { return( SwPaM::Start() == pPt ? aPtPt : aMkPt ); }
+    const Point& GetEndPos() const  { return( SwPaM::End() == pPt ? aPtPt : aMkPt ); }
+          Point& GetEndPos()        { return( SwPaM::End() == pPt ? aPtPt : aMkPt ); }
 
-	virtual void SetMark();
+    virtual void SetMark() SAL_OVERRIDE;
 
-	virtual SwCursor* Create( SwPaM* pRing = 0 ) const;
+    virtual SwCursor* Create( SwPaM* pRing = 0 ) const SAL_OVERRIDE;
 
-    virtual short MaxReplaceArived(); //returns RET_YES/RET_CANCEL/RET_NO
-	virtual void SaveTblBoxCntnt( const SwPosition* pPos = 0 );
+    virtual short MaxReplaceArived() SAL_OVERRIDE; //returns RET_YES/RET_CANCEL/RET_NO
+    virtual void SaveTblBoxCntnt( const SwPosition* pPos = 0 ) SAL_OVERRIDE;
 
-	sal_Bool UpDown( sal_Bool bUp, sal_uInt16 nCnt = 1 );
+    bool UpDown( bool bUp, sal_uInt16 nCnt = 1 );
 
-	// sal_True: an die Position kann der Cursor gesetzt werden
-	virtual sal_Bool IsAtValidPos( sal_Bool bPoint = sal_True ) const;
+    // true: Cursor can be set to this position.
+    virtual bool IsAtValidPos( bool bPoint = true ) const SAL_OVERRIDE;
 
-#ifdef DBG_UTIL
-// JP 05.03.98: zum Testen des UNO-Crsr Verhaltens hier die Implementierung
-//				am sichtbaren Cursor
-	virtual sal_Bool IsSelOvr( int eFlags =
-                                ( nsSwCursorSelOverFlags::SELOVER_CHECKNODESSECTION |
-                                  nsSwCursorSelOverFlags::SELOVER_TOGGLE |
-                                  nsSwCursorSelOverFlags::SELOVER_CHANGEPOS ));
-#endif
+    virtual bool IsReadOnlyAvailable() const SAL_OVERRIDE;
 
-	virtual bool IsReadOnlyAvailable() const;
-
-	DECL_FIXEDMEMPOOL_NEWDEL( SwShellCrsr )
+    DECL_FIXEDMEMPOOL_NEWDEL( SwShellCrsr )
 
 #ifdef USE_JAVA
-	virtual void GetNativeHightlightColorRects( ::std::vector< Rectangle >& rPixelRects );
+    virtual void GetNativeHightlightColorRects( ::std::vector< Rectangle >& rPixelRects );
 #endif	// USE_JAVA
 };
 
-
-
 class SwShellTableCrsr : public virtual SwShellCrsr, public virtual SwTableCursor
 {
-	// die Selection hat die gleiche Reihenfolge wie die
-	// TabellenBoxen. D.h., wird aus dem einen Array an einer Position
-	// etwas geloescht, dann muss es auch im anderen erfolgen!!
+    // The Selection has the same order as the table boxes, i.e.
+    // if something is deleted from the one array at a certain position
+    // it has to be deleted from the other one as well!!
 
 public:
-	SwShellTableCrsr( const SwCrsrShell& rCrsrSh, const SwPosition& rPos );
-	SwShellTableCrsr( const SwCrsrShell& rCrsrSh,
-					const SwPosition &rMkPos, const Point& rMkPt,
-					const SwPosition &rPtPos, const Point& rPtPt );
-	virtual ~SwShellTableCrsr();
+    SwShellTableCrsr( const SwCrsrShell& rCrsrSh, const SwPosition& rPos );
+    SwShellTableCrsr( const SwCrsrShell& rCrsrSh,
+                    const SwPosition &rMkPos, const Point& rMkPt,
+                    const SwPosition &rPtPos, const Point& rPtPt );
+    virtual ~SwShellTableCrsr();
 
-	virtual void FillRects();	// fuer Table- und normalen Crsr
+    virtual void FillRects() SAL_OVERRIDE;   // For table and normal cursor.
 
-	// Pruefe, ob sich der SPoint innerhalb der Tabellen-SSelection befindet
-	sal_Bool IsInside( const Point& rPt ) const;
+    // Check if SPoint is within table SSelection.
+    bool IsInside( const Point& rPt ) const;
 
-	virtual void SetMark();
-	virtual SwCursor* Create( SwPaM* pRing = 0 ) const;
+    virtual void SetMark() SAL_OVERRIDE;
+    virtual SwCursor* Create( SwPaM* pRing = 0 ) const SAL_OVERRIDE;
 
-    virtual short MaxReplaceArived(); //returns RET_YES/RET_CANCEL/RET_NO
-    virtual void SaveTblBoxCntnt( const SwPosition* pPos = 0 );
+    virtual short MaxReplaceArived() SAL_OVERRIDE; //returns RET_YES/RET_CANCEL/RET_NO
+    virtual void SaveTblBoxCntnt( const SwPosition* pPos = 0 ) SAL_OVERRIDE;
 
-	// sal_True: an die Position kann der Cursor gesetzt werden
-	virtual sal_Bool IsAtValidPos( sal_Bool bPoint = sal_True ) const;
+    // true: Cursor can be set to this position.
+    virtual bool IsAtValidPos( bool bPoint = true ) const SAL_OVERRIDE;
 
-#ifdef DBG_UTIL
-// JP 05.03.98: zum Testen des UNO-Crsr Verhaltens hier die Implementierung
-//				am sichtbaren Cursor
-	virtual sal_Bool IsSelOvr( int eFlags =
-                                ( nsSwCursorSelOverFlags::SELOVER_CHECKNODESSECTION |
-                                  nsSwCursorSelOverFlags::SELOVER_TOGGLE |
-                                  nsSwCursorSelOverFlags::SELOVER_CHANGEPOS ));
-#endif
 };
 
+#endif // INCLUDED_SW_INC_VISCRS_HXX
 
-
-#endif	// _VISCRS_HXX
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

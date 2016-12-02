@@ -1,37 +1,28 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
-
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_sw.hxx"
+ */
 
 #include "WW8FFData.hxx"
 #include <tools/stream.hxx>
@@ -39,13 +30,13 @@
 #include "writerwordglue.hxx"
 #include "wrtww8.hxx"
 
-namespace sw 
+namespace sw
 {
 
 using sw::types::msword_cast;
 
 WW8FFData::WW8FFData()
-    : 
+    :
     mnType(0),
     mnResult(0),
     mbOwnHelp(false),
@@ -65,36 +56,36 @@ WW8FFData::~WW8FFData()
 {
 }
 
-void WW8FFData::setHelp(const ::rtl::OUString & rHelp)
+void WW8FFData::setHelp(const OUString & rHelp)
 {
     msHelp = rHelp;
     mbOwnHelp = true;
 }
-    
-void WW8FFData::setStatus(const ::rtl::OUString & rStatus)
+
+void WW8FFData::setStatus(const OUString & rStatus)
 {
     msStatus = rStatus;
     mbOwnStat = true;
 }
 
-void WW8FFData::addListboxEntry(const ::rtl::OUString & rEntry)
+void WW8FFData::addListboxEntry(const OUString & rEntry)
 {
     mbListBox = true;
     msListEntries.push_back(rEntry);
 }
 
-void WW8FFData::WriteOUString(SvStream * pDataStrm, const ::rtl::OUString & rStr,
+void WW8FFData::WriteOUString(SvStream * pDataStrm, const OUString & rStr,
     bool bAddZero)
 {
     sal_uInt16 nStrLen = msword_cast<sal_uInt16>(rStr.getLength());
-    *pDataStrm << nStrLen;
-    SwWW8Writer::WriteString16(*pDataStrm, rStr, bAddZero);    
+    pDataStrm->WriteUInt16( nStrLen );
+    SwWW8Writer::WriteString16(*pDataStrm, rStr, bAddZero);
 }
 
 void WW8FFData::Write(SvStream * pDataStrm)
 {
     sal_uLong nDataStt = pDataStrm->Tell();
-    
+
     static const sal_uInt8 aHeader[] =
     {
         0,0,0,0,        // len of struct
@@ -111,9 +102,9 @@ void WW8FFData::Write(SvStream * pDataStrm)
         0xff, 0xff, 0xff, 0xff,
         0x0, 0x0, 0x0, 0x0, 0x0, 0x0
     };
-    
+
     aData[4] = mnType | (mnResult << 2);
-    
+
 #ifdef USE_JAVA 
     // Fix bug 3594 by never setting the help bit checkboxes as all versions
     // of OpenOffice.org do not mask the help bit when importing files
@@ -122,66 +113,67 @@ void WW8FFData::Write(SvStream * pDataStrm)
     if (mbOwnHelp)
 #endif	// USE_JAVA 
         aData[4] |= (1 << 7);
-        
+
     aData[5] = (mnTextType << 3);
 
     if (mbOwnStat)
         aData[5] |= 1;
-        
+
     if (mbProtected)
         aData[5] |= (1 << 1);
-            
+
     if (mbSize)
         aData[5] |= (1 << 2);
-    
+
     if (mbRecalc)
         aData[5] |= (1 << 6);
-    
+
     if (mbListBox)
         aData[5] |= (1 << 7);
-            
+
     aData[6] = ::sal::static_int_cast<sal_uInt8>(mnMaxLen & 0xffff);
     aData[7] = ::sal::static_int_cast<sal_uInt8>(mnMaxLen >> 8);
     aData[8] = ::sal::static_int_cast<sal_uInt8>(mnCheckboxHeight & 0xffff);
     aData[9] = ::sal::static_int_cast<sal_uInt8>(mnCheckboxHeight >> 8);
-    
+
     pDataStrm->Write(aData, sizeof(aData));
-    
+
     WriteOUString(pDataStrm, msName, true);
-    
+
     if (mnType == 0)
         WriteOUString(pDataStrm, msDefault, true);
     else
-        *pDataStrm << mnDefault;
-    
+        pDataStrm->WriteUInt16( mnDefault );
+
     WriteOUString(pDataStrm, msFormat, true);
     WriteOUString(pDataStrm, msHelp, true);
     WriteOUString(pDataStrm, msStatus, true);
     WriteOUString(pDataStrm, msMacroEnter, true);
     WriteOUString(pDataStrm, msMacroExit, true);
-    
+
     if (mnType == 2)
     {
         sal_uInt8 aData1[2] = { 0xff, 0xff };
         pDataStrm->Write(aData1, sizeof(aData1));
-        
+
         sal_uInt32 nListboxEntries = msListEntries.size();
-        *pDataStrm << nListboxEntries;
-        
-        ::std::vector< ::rtl::OUString >::const_iterator aIt = msListEntries.begin();
-        
+        pDataStrm->WriteUInt32( nListboxEntries );
+
+        ::std::vector< OUString >::const_iterator aIt = msListEntries.begin();
+
         while (aIt != msListEntries.end())
         {
-            const ::rtl::OUString & rEntry = *aIt;
+            const OUString & rEntry = *aIt;
             WriteOUString(pDataStrm, rEntry, false);
-            
-            aIt++;
+
+            ++aIt;
         }
     }
-    
+
     SwWW8Writer::WriteLong( *pDataStrm, nDataStt,
                            pDataStrm->Tell() - nDataStt );
 }
-    
+
 }
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
