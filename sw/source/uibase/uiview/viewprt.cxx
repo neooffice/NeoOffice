@@ -166,12 +166,12 @@ SfxTabPage* SwView::CreatePrintOptionsPage(vcl::Window* pParent,
     SfxPrinter *pPrinter = pIDDA->getPrinter( false );
     if ( pPrinter )
     {
-        SFX_ITEMSET_GET( pPrinter->GetOptions(), pAddPrinterAttr, SwAddPrinterItem, FN_PARAM_ADDPRINTER, sal_False );
+        SFX_ITEMSET_GET( pPrinter->GetOptions(), pAddPrinterAttr, SwAddPrinterItem, FN_PARAM_ADDPRINTER, false );
         if ( pAddPrinterAttr )
         {
-           SfxItemSet aSet( rSet );
+            SfxItemSet aSet( rSet );
             aSet.Put( *pAddPrinterAttr );
-            return ::CreatePrintOptionsPage( pParent, aSet, sal_False );
+            return ::CreatePrintOptionsPage( pParent, aSet, false );
         }
     }
 #endif	// USE_JAVA
