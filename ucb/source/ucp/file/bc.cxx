@@ -1,46 +1,36 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_ucb.hxx"
 #include <rtl/uri.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <osl/file.hxx>
 
 #include "osl/diagnose.h"
 #include <com/sun/star/ucb/OpenMode.hpp>
-#ifndef _COM_SUN_STAR_BEANS_PROPERTYATTRIBBUTE_HPP_
 #include <com/sun/star/beans/PropertyAttribute.hpp>
-#endif
 #include <com/sun/star/ucb/XProgressHandler.hpp>
 #include <com/sun/star/task/XInteractionHandler.hpp>
 #include <com/sun/star/io/XActiveDataStreamer.hpp>
@@ -51,14 +41,13 @@
 #include <com/sun/star/beans/PropertySetInfoChange.hpp>
 #include <com/sun/star/ucb/ContentAction.hpp>
 #include <com/sun/star/ucb/NameClash.hpp>
+#include <cppuhelper/supportsservice.hxx>
 #include "filglob.hxx"
 #include "filid.hxx"
 #include "filrow.hxx"
 #include "bc.hxx"
 #include "prov.hxx"
-#ifndef _FILERROR_HXX_
 #include "filerror.hxx"
-#endif
 #include "filinsreq.hxx"
 
 #if defined USE_JAVA && defined MACOSX
@@ -73,17 +62,19 @@ static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecuritySc
 
 #endif	// USE_JAVA && MACOSX
 
-
 using namespace fileaccess;
 using namespace com::sun::star;
 using namespace com::sun::star::uno;
 using namespace com::sun::star::ucb;
 
-// PropertyListeners
+#if OSL_DEBUG_LEVEL > 0
+#define THROW_WHERE SAL_WHERE
+#else
+#define THROW_WHERE ""
+#endif
 
-
-typedef cppu::OMultiTypeInterfaceContainerHelperVar< rtl::OUString,hashOUString,equalOUString >
-PropertyListeners_impl;
+typedef cppu::OMultiTypeInterfaceContainerHelperVar<OUString>
+    PropertyListeners_impl;
 
 class fileaccess::PropertyListeners
     : public PropertyListeners_impl
@@ -102,12 +93,12 @@ public:
 /*                                                                                      */
 /****************************************************************************************/
 
-////////////////////////////////////////////////////////////////////////////////
+
 // Private Constructor for just inserted Contents
 
 BaseContent::BaseContent( shell* pMyShell,
-                          const rtl::OUString& parentName,
-                          sal_Bool bFolder )
+                          const OUString& parentName,
+                          bool bFolder )
     : m_pMyShell( pMyShell ),
       m_xContentIdentifier( 0 ),
       m_aUncPath( parentName ),
@@ -135,12 +126,12 @@ BaseContent::BaseContent( shell* pMyShell,
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
+
 // Constructor for full featured Contents
 
 BaseContent::BaseContent( shell* pMyShell,
                           const Reference< XContentIdentifier >& xContentIdentifier,
-                          const rtl::OUString& aUncPath )
+                          const OUString& aUncPath )
     : m_pMyShell( pMyShell ),
       m_xContentIdentifier( xContentIdentifier ),
       m_aUncPath( aUncPath ),
@@ -189,9 +180,9 @@ BaseContent::~BaseContent( )
 }
 
 
-//////////////////////////////////////////////////////////////////////////
+
 // XInterface
-//////////////////////////////////////////////////////////////////////////
+
 
 void SAL_CALL
 BaseContent::acquire( void )
@@ -211,32 +202,32 @@ BaseContent::release( void )
 
 Any SAL_CALL
 BaseContent::queryInterface( const Type& rType )
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
     Any aRet = cppu::queryInterface( rType,
-                                     SAL_STATIC_CAST( lang::XComponent*, this ),
-                                     SAL_STATIC_CAST( lang::XTypeProvider*, this ),
-                                     SAL_STATIC_CAST( lang::XServiceInfo*, this ),
-                                     SAL_STATIC_CAST( XCommandProcessor*, this ),
-                                     SAL_STATIC_CAST( container::XChild*, this ),
-                                     SAL_STATIC_CAST( beans::XPropertiesChangeNotifier*, this ),
-                                     SAL_STATIC_CAST( beans::XPropertyContainer*, this ),
-                                     SAL_STATIC_CAST( XContentCreator*,this ),
-                                     SAL_STATIC_CAST( beans::XPropertySetInfoChangeNotifier*, this ),
-                                     SAL_STATIC_CAST( XContent*,this) );
+                                     (static_cast< lang::XComponent* >(this)),
+                                     (static_cast< lang::XTypeProvider* >(this)),
+                                     (static_cast< lang::XServiceInfo* >(this)),
+                                     (static_cast< XCommandProcessor* >(this)),
+                                     (static_cast< container::XChild* >(this)),
+                                     (static_cast< beans::XPropertiesChangeNotifier* >(this)),
+                                     (static_cast< beans::XPropertyContainer* >(this)),
+                                     (static_cast< XContentCreator* >(this)),
+                                     (static_cast< beans::XPropertySetInfoChangeNotifier* >(this)),
+                                     (static_cast< XContent* >(this)) );
     return aRet.hasValue() ? aRet : OWeakObject::queryInterface( rType );
 }
 
 
 
 
-//////////////////////////////////////////////////////////////////////////////////////////
+
 // XComponent
-////////////////////////////////////////////////////////////////////////////////////////
+
 
 void SAL_CALL
 BaseContent::addEventListener( const Reference< lang::XEventListener >& Listener )
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
     osl::MutexGuard aGuard( m_aMutex );
 
@@ -250,7 +241,7 @@ BaseContent::addEventListener( const Reference< lang::XEventListener >& Listener
 
 void SAL_CALL
 BaseContent::removeEventListener( const Reference< lang::XEventListener >& Listener )
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
     osl::MutexGuard aGuard( m_aMutex );
 
@@ -261,7 +252,7 @@ BaseContent::removeEventListener( const Reference< lang::XEventListener >& Liste
 
 void SAL_CALL
 BaseContent::dispose()
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
     lang::EventObject aEvt;
     cppu::OInterfaceContainerHelper* pDisposeEventListeners;
@@ -306,48 +297,31 @@ BaseContent::dispose()
     delete pPropertySetInfoChangeListeners;
 }
 
-
-
-//////////////////////////////////////////////////////////////////////////////////////////
 //  XServiceInfo
-//////////////////////////////////////////////////////////////////////////////////////////
-
-rtl::OUString SAL_CALL
+OUString SAL_CALL
 BaseContent::getImplementationName()
-    throw( RuntimeException)
+    throw( RuntimeException, std::exception)
 {
-    return rtl::OUString::createFromAscii( "com.sun.star.comp.ucb.FileContent" );
+    return OUString("com.sun.star.comp.ucb.FileContent");
 }
-
-
 
 sal_Bool SAL_CALL
-BaseContent::supportsService( const rtl::OUString& ServiceName )
-    throw( RuntimeException)
+BaseContent::supportsService( const OUString& ServiceName )
+    throw( RuntimeException, std::exception)
 {
-    if( ServiceName.compareToAscii( "com.sun.star.ucb.FileContent" ) == 0 )
-        return true;
-    else
-        return false;
+    return cppu::supportsService( this, ServiceName );
 }
 
-
-
-Sequence< rtl::OUString > SAL_CALL
+Sequence< OUString > SAL_CALL
 BaseContent::getSupportedServiceNames()
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
-    Sequence< rtl::OUString > ret( 1 );
-    ret[0] = rtl::OUString::createFromAscii( "com.sun.star.ucb.FileContent" );
+    Sequence< OUString > ret( 1 );
+    ret[0] = "com.sun.star.ucb.FileContent";
     return ret;
 }
 
-
-
-//////////////////////////////////////////////////////////////////////////////////////////
 //  XTypeProvider
-//////////////////////////////////////////////////////////////////////////////////////////
-
 XTYPEPROVIDER_IMPL_10( BaseContent,
                        lang::XComponent,
                        lang::XTypeProvider,
@@ -361,13 +335,13 @@ XTYPEPROVIDER_IMPL_10( BaseContent,
                        beans::XPropertySetInfoChangeNotifier )
 
 
-//////////////////////////////////////////////////////////////////////////////////////////
+
 //  XCommandProcessor
-//////////////////////////////////////////////////////////////////////////////////////////
+
 
 sal_Int32 SAL_CALL
 BaseContent::createCommandIdentifier( void )
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
     return m_pMyShell->getCommandId();
 }
@@ -375,7 +349,7 @@ BaseContent::createCommandIdentifier( void )
 
 void SAL_CALL
 BaseContent::abort( sal_Int32 CommandId )
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
     m_pMyShell->abort( CommandId );
 }
@@ -387,7 +361,7 @@ BaseContent::execute( const Command& aCommand,
                       const Reference< XCommandEnvironment >& Environment )
     throw( Exception,
            CommandAbortedException,
-           RuntimeException )
+           RuntimeException, std::exception )
 {
     if( ! CommandId )
         // A Command with commandid zero cannot be aborted
@@ -398,15 +372,15 @@ BaseContent::execute( const Command& aCommand,
 
     Any aAny;
 
-    if( ! aCommand.Name.compareToAscii( "getPropertySetInfo" ) )  // No exceptions
+    if (aCommand.Name == "getPropertySetInfo")  // No exceptions
     {
         aAny <<= getPropertySetInfo( CommandId );
     }
-    else if( ! aCommand.Name.compareToAscii( "getCommandInfo" ) )  // no exceptions
+    else if (aCommand.Name == "getCommandInfo")  // no exceptions
     {
         aAny <<= getCommandInfo();
     }
-    else if( ! aCommand.Name.compareToAscii( "setPropertyValues" ) )
+    else if ( aCommand.Name == "setPropertyValues" )
     {
         Sequence< beans::PropertyValue > sPropertyValues;
 
@@ -416,7 +390,7 @@ BaseContent::execute( const Command& aCommand,
         else
             aAny <<= setPropertyValues( CommandId,sPropertyValues );  // calls endTask by itself
     }
-    else if( ! aCommand.Name.compareToAscii( "getPropertyValues" ) )
+    else if ( aCommand.Name == "getPropertyValues" )
     {
         Sequence< beans::Property > ListOfRequestedProperties;
 
@@ -427,7 +401,7 @@ BaseContent::execute( const Command& aCommand,
             aAny <<= getPropertyValues( CommandId,
                                         ListOfRequestedProperties );
     }
-    else if( ! aCommand.Name.compareToAscii( "open" ) )
+    else if ( aCommand.Name == "open" )
     {
         OpenCommandArgument2 aOpenArgument;
         if( ! ( aCommand.Argument >>= aOpenArgument ) )
@@ -440,7 +414,7 @@ BaseContent::execute( const Command& aCommand,
                 aAny <<= result;
         }
     }
-    else if( ! aCommand.Name.compareToAscii( "delete" ) )
+    else if ( aCommand.Name == "delete" )
     {
         if( ! aCommand.Argument.has< sal_Bool >() )
             m_pMyShell->installError( CommandId,
@@ -448,7 +422,7 @@ BaseContent::execute( const Command& aCommand,
         else
             deleteContent( CommandId );
     }
-    else if( ! aCommand.Name.compareToAscii( "transfer" ) )
+    else if ( aCommand.Name == "transfer" )
     {
         TransferInfo aTransferInfo;
         if( ! ( aCommand.Argument >>= aTransferInfo ) )
@@ -457,7 +431,7 @@ BaseContent::execute( const Command& aCommand,
         else
             transfer( CommandId, aTransferInfo );
     }
-    else if( ! aCommand.Name.compareToAscii( "insert" ) )
+    else if ( aCommand.Name == "insert" )
     {
         InsertCommandArgument aInsertArgument;
         if( ! ( aCommand.Argument >>= aInsertArgument ) )
@@ -466,20 +440,20 @@ BaseContent::execute( const Command& aCommand,
         else
             insert( CommandId,aInsertArgument );
     }
-    else if( ! aCommand.Name.compareToAscii( "getCasePreservingURL" ) )
+    else if ( aCommand.Name == "getCasePreservingURL" )
     {
         Sequence< beans::Property > seq(1);
         seq[0] = beans::Property(
-            rtl::OUString::createFromAscii("CasePreservingURL"),
+            OUString("CasePreservingURL"),
             -1,
-            getCppuType( static_cast< sal_Bool* >(0) ),
+            cppu::UnoType<sal_Bool>::get(),
             0 );
         Reference< sdbc::XRow > xRow = getPropertyValues( CommandId,seq );
-        rtl::OUString CasePreservingURL = xRow->getString(1);
+        OUString CasePreservingURL = xRow->getString(1);
         if(!xRow->wasNull())
             aAny <<= CasePreservingURL;
     }
-    else if( ! aCommand.Name.compareToAscii( "createNewContent" ) )
+    else if ( aCommand.Name == "createNewContent" )
     {
         ucb::ContentInfo aArg;
         if ( !( aCommand.Argument >>= aArg ) )
@@ -503,9 +477,9 @@ BaseContent::execute( const Command& aCommand,
 
 void SAL_CALL
 BaseContent::addPropertiesChangeListener(
-    const Sequence< rtl::OUString >& PropertyNames,
+    const Sequence< OUString >& PropertyNames,
     const Reference< beans::XPropertiesChangeListener >& Listener )
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
     if( ! Listener.is() )
         return;
@@ -517,7 +491,7 @@ BaseContent::addPropertiesChangeListener(
 
 
     if( PropertyNames.getLength() == 0 )
-        m_pPropertyListener->addInterface( rtl::OUString(),Listener );
+        m_pPropertyListener->addInterface( OUString(),Listener );
     else
     {
         Reference< beans::XPropertySetInfo > xProp = m_pMyShell->info_p( m_aUncPath );
@@ -529,9 +503,9 @@ BaseContent::addPropertiesChangeListener(
 
 
 void SAL_CALL
-BaseContent::removePropertiesChangeListener( const Sequence< rtl::OUString >& PropertyNames,
+BaseContent::removePropertiesChangeListener( const Sequence< OUString >& PropertyNames,
                                              const Reference< beans::XPropertiesChangeListener >& Listener )
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
     if( ! Listener.is() )
         return;
@@ -544,25 +518,25 @@ BaseContent::removePropertiesChangeListener( const Sequence< rtl::OUString >& Pr
     for( sal_Int32 i = 0; i < PropertyNames.getLength(); ++i )
         m_pPropertyListener->removeInterface( PropertyNames[i],Listener );
 
-    m_pPropertyListener->removeInterface( rtl::OUString(), Listener );
+    m_pPropertyListener->removeInterface( OUString(), Listener );
 }
 
 
-/////////////////////////////////////////////////////////////////////////////////////////
+
 // XContent
-/////////////////////////////////////////////////////////////////////////////////////////
+
 
 Reference< ucb::XContentIdentifier > SAL_CALL
 BaseContent::getIdentifier()
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
     return m_xContentIdentifier;
 }
 
 
-rtl::OUString SAL_CALL
+OUString SAL_CALL
 BaseContent::getContentType()
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
     if( !( m_nState & Deleted ) )
     {
@@ -579,12 +553,12 @@ BaseContent::getContentType()
             {
                 // Who am I ?
                 Sequence< beans::Property > seq(1);
-                seq[0] = beans::Property( rtl::OUString::createFromAscii("IsDocument"),
+                seq[0] = beans::Property( OUString("IsDocument"),
                                           -1,
-                                          getCppuType( static_cast< sal_Bool* >(0) ),
+                                          cppu::UnoType<sal_Bool>::get(),
                                           0 );
                 Reference< sdbc::XRow > xRow = getPropertyValues( -1,seq );
-                sal_Bool IsDocument = xRow->getBoolean( 1 );
+                bool IsDocument = xRow->getBoolean( 1 );
 
                 if ( !xRow->wasNull() )
                 {
@@ -595,19 +569,17 @@ BaseContent::getContentType()
                 }
                 else
                 {
-                    OSL_ENSURE( false,
-                                "BaseContent::getContentType - Property value was null!" );
+                    OSL_FAIL( "BaseContent::getContentType - Property value was null!" );
                 }
             }
-            catch ( sdbc::SQLException const & )
+            catch (const sdbc::SQLException&)
             {
-                OSL_ENSURE( false,
-                            "BaseContent::getContentType - Caught SQLException!" );
+                OSL_FAIL( "BaseContent::getContentType - Caught SQLException!" );
             }
         }
     }
 
-    return rtl::OUString();
+    return OUString();
 }
 
 
@@ -615,7 +587,7 @@ BaseContent::getContentType()
 void SAL_CALL
 BaseContent::addContentEventListener(
     const Reference< XContentEventListener >& Listener )
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
     osl::MutexGuard aGuard( m_aMutex );
 
@@ -631,7 +603,7 @@ BaseContent::addContentEventListener(
 void SAL_CALL
 BaseContent::removeContentEventListener(
     const Reference< XContentEventListener >& Listener )
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
     osl::MutexGuard aGuard( m_aMutex );
 
@@ -641,24 +613,24 @@ BaseContent::removeContentEventListener(
 
 
 
-////////////////////////////////////////////////////////////////////////////////
+
 // XPropertyContainer
-////////////////////////////////////////////////////////////////////////////////
+
 
 
 void SAL_CALL
 BaseContent::addProperty(
-    const rtl::OUString& Name,
+    const OUString& Name,
     sal_Int16 Attributes,
     const Any& DefaultValue )
     throw( beans::PropertyExistException,
            beans::IllegalTypeException,
            lang::IllegalArgumentException,
-           RuntimeException)
+           RuntimeException, std::exception)
 {
-    if( ( m_nState & JustInserted ) || ( m_nState & Deleted ) || Name == rtl::OUString() )
+    if( ( m_nState & JustInserted ) || ( m_nState & Deleted ) || Name.isEmpty() )
     {
-        throw lang::IllegalArgumentException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >(), 0 );
+        throw lang::IllegalArgumentException( THROW_WHERE, uno::Reference< uno::XInterface >(), 0 );
     }
 
     m_pMyShell->associate( m_aUncPath,Name,DefaultValue,Attributes );
@@ -667,26 +639,26 @@ BaseContent::addProperty(
 
 void SAL_CALL
 BaseContent::removeProperty(
-    const rtl::OUString& Name )
+    const OUString& Name )
     throw( beans::UnknownPropertyException,
            beans::NotRemoveableException,
-           RuntimeException)
+           RuntimeException, std::exception)
 {
 
     if( m_nState & Deleted )
-        throw beans::UnknownPropertyException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+        throw beans::UnknownPropertyException( THROW_WHERE );
 
     m_pMyShell->deassociate( m_aUncPath, Name );
 }
 
-////////////////////////////////////////////////////////////////////////////////
+
 // XContentCreator
-////////////////////////////////////////////////////////////////////////////////
+
 
 Sequence< ContentInfo > SAL_CALL
 BaseContent::queryCreatableContentsInfo(
     void )
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
     return m_pMyShell->queryCreatableContentsInfo();
 }
@@ -695,17 +667,16 @@ BaseContent::queryCreatableContentsInfo(
 Reference< XContent > SAL_CALL
 BaseContent::createNewContent(
     const ContentInfo& Info )
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
     // Check type.
-    if ( !Info.Type.getLength() )
+    if ( Info.Type.isEmpty() )
         return Reference< XContent >();
 
-    sal_Bool bFolder
-        = ( Info.Type.compareTo( m_pMyShell->FolderContentType ) == 0 );
+    bool bFolder = Info.Type == m_pMyShell->FolderContentType;
     if ( !bFolder )
     {
-        if ( Info.Type.compareTo( m_pMyShell->FileContentType ) != 0 )
+        if ( Info.Type != m_pMyShell->FileContentType )
         {
             // Neither folder nor file to create!
             return Reference< XContent >();
@@ -713,14 +684,14 @@ BaseContent::createNewContent(
     }
 
     // Who am I ?
-    sal_Bool IsDocument = false;
+    bool IsDocument = false;
 
     try
     {
         Sequence< beans::Property > seq(1);
-        seq[0] = beans::Property( rtl::OUString::createFromAscii("IsDocument"),
+        seq[0] = beans::Property( OUString("IsDocument"),
                                   -1,
-                                  getCppuType( static_cast< sal_Bool* >(0) ),
+                                  cppu::UnoType<sal_Bool>::get(),
                                   0 );
         Reference< sdbc::XRow > xRow = getPropertyValues( -1,seq );
         IsDocument = xRow->getBoolean( 1 );
@@ -728,19 +699,17 @@ BaseContent::createNewContent(
         if ( xRow->wasNull() )
         {
             IsDocument = false;
-//              OSL_ENSURE( false,
-//                          "BaseContent::createNewContent - Property value was null!" );
+//              OSL_FAIL( //                          "BaseContent::createNewContent - Property value was null!" );
 //              return Reference< XContent >();
         }
     }
-    catch ( sdbc::SQLException const & )
+    catch (const sdbc::SQLException&)
     {
-        OSL_ENSURE( false,
-                    "BaseContent::createNewContent - Caught SQLException!" );
+        OSL_FAIL( "BaseContent::createNewContent - Caught SQLException!" );
         return Reference< XContent >();
     }
 
-    rtl::OUString dstUncPath;
+    OUString dstUncPath;
 
     if( IsDocument )
     {
@@ -755,15 +724,15 @@ BaseContent::createNewContent(
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
+
 // XPropertySetInfoChangeNotifier
-////////////////////////////////////////////////////////////////////////////////
+
 
 
 void SAL_CALL
 BaseContent::addPropertySetInfoChangeListener(
     const Reference< beans::XPropertySetInfoChangeListener >& Listener )
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
     osl::MutexGuard aGuard( m_aMutex );
     if( ! m_pPropertySetInfoChangeListeners )
@@ -776,7 +745,7 @@ BaseContent::addPropertySetInfoChangeListener(
 void SAL_CALL
 BaseContent::removePropertySetInfoChangeListener(
     const Reference< beans::XPropertySetInfoChangeListener >& Listener )
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
     osl::MutexGuard aGuard( m_aMutex );
 
@@ -785,20 +754,20 @@ BaseContent::removePropertySetInfoChangeListener(
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
+
 // XChild
-////////////////////////////////////////////////////////////////////////////////
+
 
 Reference< XInterface > SAL_CALL
 BaseContent::getParent(
     void )
-    throw( RuntimeException )
+    throw( RuntimeException, std::exception )
 {
-    rtl::OUString ParentUnq = getParentName( m_aUncPath );
-    rtl::OUString ParentUrl;
+    OUString ParentUnq = getParentName( m_aUncPath );
+    OUString ParentUrl;
 
 
-    sal_Bool err = m_pMyShell->getUrlFromUnq( ParentUnq, ParentUrl );
+    bool err = m_pMyShell->getUrlFromUnq( ParentUnq, ParentUrl );
     if( err )
         return Reference< XInterface >( 0 );
 
@@ -807,10 +776,9 @@ BaseContent::getParent(
 
     try
     {
-        Reference< XContent > content = m_pMyShell->m_pProvider->queryContent( Identifier );
-        return Reference<XInterface>(content,UNO_QUERY);
+        return Reference<XInterface>( m_pMyShell->m_pProvider->queryContent( Identifier ), UNO_QUERY );
     }
-    catch( IllegalIdentifierException )
+    catch (const IllegalIdentifierException&)
     {
         return Reference< XInterface >();
     }
@@ -821,15 +789,15 @@ void SAL_CALL
 BaseContent::setParent(
     const Reference< XInterface >& )
     throw( lang::NoSupportException,
-           RuntimeException)
+           RuntimeException, std::exception)
 {
-    throw lang::NoSupportException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+    throw lang::NoSupportException( THROW_WHERE );
 }
 
 
-//////////////////////////////////////////////////////////////////////////////////////////
+
 // Private Methods
-//////////////////////////////////////////////////////////////////////////////////////////
+
 
 
 Reference< XCommandInfo > SAL_CALL
@@ -885,18 +853,18 @@ BaseContent::getPropertyValues(
             const beans::Property& rProp = pProps[ n ];
             Any& rValue = pValues[ n ];
 
-            if( rProp.Name.compareToAscii( "ContentType" ) == 0 )
+            if ( rProp.Name == "ContentType" )
             {
                 rValue <<= m_bFolder ? m_pMyShell->FolderContentType
                     : m_pMyShell->FileContentType;
             }
-            else if( rProp.Name.compareToAscii( "IsFolder" ) == 0 )
+            else if ( rProp.Name == "IsFolder" )
             {
                 rValue <<= m_bFolder;
             }
-            else if( rProp.Name.compareToAscii( "IsDocument" ) == 0 )
+            else if ( rProp.Name == "IsDocument" )
             {
-                rValue <<= sal_Bool( !m_bFolder );
+                rValue <<= !m_bFolder;
             }
         }
 
@@ -921,7 +889,7 @@ BaseContent::setPropertyValues(
         return Sequence< Any >( Values.getLength() );
     }
 
-    const rtl::OUString Title = rtl::OUString::createFromAscii( "Title" );
+    const OUString Title("Title");
 
     // Special handling for files which have to be inserted
     if( m_nState & JustInserted )
@@ -930,7 +898,7 @@ BaseContent::setPropertyValues(
         {
             if( Values[i].Name == Title )
             {
-                rtl::OUString NewTitle;
+                OUString NewTitle;
                 if( Values[i].Value >>= NewTitle )
                 {
                     if ( m_nState & NameForInsertionSet )
@@ -951,14 +919,14 @@ BaseContent::setPropertyValues(
                                     "BaseContent::setPropertyValues: "
                                     "Invalid URL!" );
 
-                        rtl::OUStringBuffer aBuf(
+                        OUStringBuffer aBuf(
                             m_aUncPath.copy( 0, nLastSlash + 1 ) );
 
-                        if ( NewTitle.getLength() > 0 )
+                        if ( !NewTitle.isEmpty() )
                         {
                             aBuf.append( NewTitle );
                             if ( bTrailingSlash )
-                                aBuf.append( sal_Unicode( '/' ) );
+                                aBuf.append( '/' );
                         }
                         else
                         {
@@ -969,13 +937,13 @@ BaseContent::setPropertyValues(
                     }
                     else
                     {
-                        if ( NewTitle.getLength() > 0 )
+                        if ( !NewTitle.isEmpty() )
                         {
                             // Initial Title before "insert".
                             // m_aUncPath contains parent's URI.
 
-                            if( m_aUncPath.lastIndexOf( sal_Unicode('/') ) != m_aUncPath.getLength() - 1 )
-                                m_aUncPath += rtl::OUString::createFromAscii("/");
+                            if( !m_aUncPath.endsWith( "/" ) )
+                                m_aUncPath += "/";
 
                             m_aUncPath += rtl::Uri::encode( NewTitle,
                                                             rtl_UriCharClassPchar,
@@ -1001,29 +969,29 @@ BaseContent::setPropertyValues(
             if( Values[i].Name != Title )
                 continue;                  // handled by setv
 
-            rtl::OUString NewTitle;
+            OUString NewTitle;
             if( !( Values[i].Value >>= NewTitle ) )
             {
-                ret[i] <<= beans::IllegalTypeException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+                ret[i] <<= beans::IllegalTypeException( THROW_WHERE );
                 break;
             }
-            else if( ! NewTitle.getLength() )
+            else if( NewTitle.isEmpty() )
             {
-                ret[i] <<= lang::IllegalArgumentException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >(), 0 );
+                ret[i] <<= lang::IllegalArgumentException( THROW_WHERE, uno::Reference< uno::XInterface >(), 0 );
                 break;
             }
 
 
-            rtl::OUString aDstName = getParentName( m_aUncPath );
-            if( aDstName.lastIndexOf( sal_Unicode('/') ) != aDstName.getLength() - 1 )
-                aDstName += rtl::OUString::createFromAscii("/");
+            OUString aDstName = getParentName( m_aUncPath );
+            if( !aDstName.endsWith("/") )
+                aDstName += "/";
 
             aDstName += rtl::Uri::encode( NewTitle,
                                           rtl_UriCharClassPchar,
                                           rtl_UriEncodeIgnoreEscapes,
                                           RTL_TEXTENCODING_UTF8 );
 
-            m_pMyShell->move( nMyCommandIdentifier,     // move notifies the childs also;
+            m_pMyShell->move( nMyCommandIdentifier,     // move notifies the children also;
                               m_aUncPath,
                               aDstName,
                               NameClash::KEEP );
@@ -1032,7 +1000,7 @@ BaseContent::setPropertyValues(
             {
                 endTask( nMyCommandIdentifier );
             }
-            catch( const Exception& e )
+            catch(const Exception& e)
             {
                 ret[i] <<= e;
             }
@@ -1079,7 +1047,7 @@ BaseContent::open(
                                   outputStream );
             }
 
-            sal_Bool bLock = ( aCommandArgument.Mode != OpenMode::DOCUMENT_SHARE_DENY_NONE );
+            bool bLock = ( aCommandArgument.Mode != OpenMode::DOCUMENT_SHARE_DENY_NONE );
 
             Reference< io::XActiveDataSink > activeDataSink( aCommandArgument.Sink,UNO_QUERY );
             if( activeDataSink.is() )
@@ -1149,14 +1117,14 @@ BaseContent::transfer( sal_Int32 nMyCommandIdentifier,
     if( m_nState & Deleted )
         return;
 
-    if( aTransferInfo.SourceURL.compareToAscii( "file:",5 ) != 0 )
+    if( !aTransferInfo.SourceURL.startsWith( "file:" ) )
     {
         m_pMyShell->installError( nMyCommandIdentifier,
                                   TASKHANDLING_TRANSFER_INVALIDSCHEME );
         return;
     }
 
-    rtl::OUString srcUnc;
+    OUString srcUnc;
     if( m_pMyShell->getUnqFromUrl( aTransferInfo.SourceURL,srcUnc ) )
     {
         m_pMyShell->installError( nMyCommandIdentifier,
@@ -1164,26 +1132,26 @@ BaseContent::transfer( sal_Int32 nMyCommandIdentifier,
         return;
     }
 
-    rtl::OUString srcUncPath = srcUnc;
+    OUString srcUncPath = srcUnc;
 
     // Determine the new title !
-    rtl::OUString NewTitle;
-    if( aTransferInfo.NewTitle.getLength() )
+    OUString NewTitle;
+    if( !aTransferInfo.NewTitle.isEmpty() )
         NewTitle = rtl::Uri::encode( aTransferInfo.NewTitle,
                                      rtl_UriCharClassPchar,
                                      rtl_UriEncodeIgnoreEscapes,
                                      RTL_TEXTENCODING_UTF8 );
     else
-        NewTitle = srcUncPath.copy( 1 + srcUncPath.lastIndexOf( sal_Unicode('/') ) );
+        NewTitle = srcUncPath.copy( 1 + srcUncPath.lastIndexOf( '/' ) );
 
     // Is destination a document or a folder ?
     Sequence< beans::Property > seq(1);
-    seq[0] = beans::Property( rtl::OUString::createFromAscii("IsDocument"),
+    seq[0] = beans::Property( OUString("IsDocument"),
                               -1,
-                              getCppuType( static_cast< sal_Bool* >(0) ),
+                              cppu::UnoType<sal_Bool>::get(),
                               0 );
     Reference< sdbc::XRow > xRow = getPropertyValues( nMyCommandIdentifier,seq );
-    sal_Bool IsDocument = xRow->getBoolean( 1 );
+    bool IsDocument = xRow->getBoolean( 1 );
     if( xRow->wasNull() )
     {   // Destination file type could not be determined
         m_pMyShell->installError( nMyCommandIdentifier,
@@ -1191,17 +1159,17 @@ BaseContent::transfer( sal_Int32 nMyCommandIdentifier,
         return;
     }
 
-    rtl::OUString dstUncPath;
+    OUString dstUncPath;
     if( IsDocument )
     {   // as sibling
-        sal_Int32 lastSlash = m_aUncPath.lastIndexOf( sal_Unicode('/') );
+        sal_Int32 lastSlash = m_aUncPath.lastIndexOf( '/' );
         dstUncPath = m_aUncPath.copy(0,lastSlash );
     }
     else
         // as child
         dstUncPath = m_aUncPath;
 
-    dstUncPath += ( rtl::OUString::createFromAscii( "/" ) + NewTitle );
+    dstUncPath += ( OUString("/") + NewTitle );
 
     sal_Int32 NameClash = aTransferInfo.NameClash;
 
@@ -1236,7 +1204,7 @@ void SAL_CALL BaseContent::insert( sal_Int32 nMyCommandIdentifier,
 
     // Inserts the content, which has the flag m_bIsFresh
 
-    if ( !m_nState | !NameForInsertionSet )
+    if( ! (m_nState & NameForInsertionSet) )
     {
         m_pMyShell->installError( nMyCommandIdentifier,
                                   TASKHANDLING_NONAMESET_INSERT_COMMAND );
@@ -1244,12 +1212,12 @@ void SAL_CALL BaseContent::insert( sal_Int32 nMyCommandIdentifier,
     }
 
     // Inserting a document or a file?
-    sal_Bool bDocument = false;
+    bool bDocument = false;
 
     Sequence< beans::Property > seq(1);
-    seq[0] = beans::Property( rtl::OUString::createFromAscii("IsDocument"),
+    seq[0] = beans::Property( OUString("IsDocument"),
                               -1,
-                              getCppuType( static_cast< sal_Bool* >(0) ),
+                              cppu::UnoType<sal_Bool>::get(),
                               0 );
 
     Reference< sdbc::XRow > xRow = getPropertyValues( -1,seq );
@@ -1262,10 +1230,9 @@ void SAL_CALL BaseContent::insert( sal_Int32 nMyCommandIdentifier,
             contentTypeSet = false;
 
     }
-    catch ( sdbc::SQLException const & )
+    catch (const sdbc::SQLException&)
     {
-        OSL_ENSURE( false,
-                    "BaseContent::insert - Caught SQLException!" );
+        OSL_FAIL( "BaseContent::insert - Caught SQLException!" );
         contentTypeSet = false;
     }
 
@@ -1277,7 +1244,7 @@ void SAL_CALL BaseContent::insert( sal_Int32 nMyCommandIdentifier,
     }
 
 
-    sal_Bool success = false;
+    bool success = false;
     if( bDocument )
         success = m_pMyShell->mkfil( nMyCommandIdentifier,
                                      m_aUncPath,
@@ -1305,15 +1272,15 @@ void SAL_CALL BaseContent::insert( sal_Int32 nMyCommandIdentifier,
 
             m_pMyShell->handleTask( nMyCommandIdentifier,aReq );
             if(  aRequestImpl->aborted() ||
-                 !aRequestImpl->newName().getLength() )
+                 aRequestImpl->newName().isEmpty() )
                 // means aborting
                 break;
 
             // determine new uncpath
             m_pMyShell->clearError( nMyCommandIdentifier );
             m_aUncPath = getParentName( m_aUncPath );
-            if( m_aUncPath.lastIndexOf( sal_Unicode('/') ) != m_aUncPath.getLength() - 1 )
-                m_aUncPath += rtl::OUString::createFromAscii("/");
+            if( !m_aUncPath.endsWith( "/" ) )
+                m_aUncPath += "/";
 
             m_aUncPath += rtl::Uri::encode( aRequestImpl->newName(),
                                             rtl_UriCharClassPchar,
@@ -1366,7 +1333,7 @@ BaseContent::cDEL( void )
 
 
 ContentEventNotifier*
-BaseContent::cEXC( const rtl::OUString aNewName )
+BaseContent::cEXC( const OUString& aNewName )
 {
     osl::MutexGuard aGuard( m_aMutex );
 
@@ -1407,8 +1374,7 @@ BaseContent::cPSL( void )
     osl::MutexGuard aGuard( m_aMutex );
     PropertySetInfoChangeNotifier* p = 0;
     if( m_pPropertySetInfoChangeListeners  )
-        p = new PropertySetInfoChangeNotifier( m_pMyShell,
-                                               this,
+        p = new PropertySetInfoChangeNotifier( this,
                                                m_xContentIdentifier,
                                                m_pPropertySetInfoChangeListeners->getElements() );
 
@@ -1422,10 +1388,10 @@ BaseContent::cPCL( void )
 {
     osl::MutexGuard aGuard( m_aMutex );
 
-    Sequence< rtl::OUString > seqNames;
+    if (!m_pPropertyListener)
+        return NULL;
 
-    if( m_pPropertyListener )
-        seqNames = m_pPropertyListener->getContainedTypes();
+    Sequence< OUString > seqNames = m_pPropertyListener->getContainedTypes();
 
     PropertyChangeNotifier* p = 0;
 
@@ -1436,11 +1402,13 @@ BaseContent::cPCL( void )
         ListenerMap* listener = new ListenerMap();
         for( sal_Int32 i = 0; i < length; ++i )
         {
-            (*listener)[seqNames[i]] = m_pPropertyListener->getContainer( seqNames[i] )->getElements();
+            cppu::OInterfaceContainerHelper* pContainer = m_pPropertyListener->getContainer(seqNames[i]);
+            if (!pContainer)
+                continue;
+            (*listener)[seqNames[i]] = pContainer->getElements();
         }
 
-        p = new PropertyChangeNotifier( m_pMyShell,
-                                        this,
+        p = new PropertyChangeNotifier( this,
                                         m_xContentIdentifier,
                                         listener );
     }
@@ -1449,7 +1417,9 @@ BaseContent::cPCL( void )
 }
 
 
-rtl::OUString BaseContent::getKey( void )
+OUString BaseContent::getKey( void )
 {
     return m_aUncPath;
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
