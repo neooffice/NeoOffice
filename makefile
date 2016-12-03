@@ -331,6 +331,7 @@ build.neo_patches: \
 	build.neo_pyuno_patch \
 	build.neo_reportdesign_patch \
 	build.neo_sal_patch \
+	build.neo_salhelper_patch \
 	build.neo_sc_patch \
 	build.neo_sd_patch \
 	build.neo_sdext_patch \
@@ -341,13 +342,12 @@ build.neo_patches: \
 	build.neo_svx_patch \
 	build.neo_sw_patch \
 	build.neo_tools_patch \
-	build.neo_vcl_patch \
 	build.neo_ucb_patch \
 	build.neo_ucbhelper_patch \
 	build.neo_unotools_patch \
 	build.neo_unoxml_patch \
 	build.neo_uui_patch \
-	build.neo_vos_patch \
+	build.neo_vcl_patch \
 	build.neo_writerfilter_patch \
 	build.neo_xmloff_patch
 	touch "$@"
