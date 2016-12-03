@@ -1,52 +1,40 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
-
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_ucbhelper.hxx"
-
-/**************************************************************************
-                                TODO
- **************************************************************************
-
- *************************************************************************/
+ */
 
 #include <utility>
 #include <vector>
 #include <list>
+
+#include <osl/diagnose.h>
 #include <osl/mutex.hxx>
 #include <rtl/ref.hxx>
 #include <osl/socket.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <com/sun/star/container/XNameAccess.hpp>
+#include <com/sun/star/configuration/theDefaultProvider.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/util/XChangesListener.hpp>
 #include <com/sun/star/util/XChangesNotifier.hpp>
@@ -74,11 +62,11 @@ using namespace ucbhelper;
 #define FTP_PROXY_NAME_KEY   "ooInetFTPProxyName"
 #define FTP_PROXY_PORT_KEY   "ooInetFTPProxyPort"
 
-//=========================================================================
+
 namespace ucbhelper
 {
 
-//=========================================================================
+
 namespace proxydecider_impl
 {
 
@@ -86,25 +74,25 @@ namespace proxydecider_impl
 class WildCard
 {
 private:
-    rtl::OString m_aWildString;
+    OString m_aWildString;
 
 public:
-    WildCard( const rtl::OUString& rWildCard )
+    WildCard( const OUString& rWildCard )
     : m_aWildString(
-        rtl::OUStringToOString(
+        OUStringToOString(
             rWildCard, RTL_TEXTENCODING_UTF8 ).toAsciiLowerCase() ) {}
 
-    bool Matches( const rtl::OUString & rStr ) const;
+    bool Matches( const OUString & rStr ) const;
 };
 
-//=========================================================================
+
 typedef std::pair< WildCard, WildCard > NoProxyListEntry;
 
-//=========================================================================
+
 
 class HostnameCache
 {
-    typedef std::pair< rtl::OUString, rtl::OUString > HostListEntry;
+    typedef std::pair< OUString, OUString > HostListEntry;
 
     std::list< HostListEntry >     m_aHostList;
     sal_uInt32                     m_nCapacity;
@@ -113,7 +101,7 @@ public:
     explicit HostnameCache( sal_uInt32 nCapacity )
         : m_nCapacity( nCapacity ) {}
 
-    bool get( const rtl::OUString & rKey, rtl::OUString & rValue ) const
+    bool get( const OUString & rKey, OUString & rValue ) const
     {
         std::list< HostListEntry >::const_iterator it
             = m_aHostList.begin();
@@ -127,12 +115,12 @@ public:
                 rValue = (*it).second;
                 return true;
             }
-            it++;
+            ++it;
         }
         return false;
     }
 
-    void put( const rtl::OUString & rKey, const rtl::OUString & rValue )
+    void put( const OUString & rKey, const OUString & rValue )
     {
         if ( m_aHostList.size() == m_nCapacity )
             m_aHostList.resize( m_nCapacity / 2 );
@@ -141,7 +129,7 @@ public:
     }
 };
 
-//=========================================================================
+
 class InternetProxyDecider_Impl :
     public cppu::WeakImplHelper1< util::XChangesListener >
 {
@@ -161,47 +149,44 @@ class InternetProxyDecider_Impl :
     mutable HostnameCache                    m_aHostnames;
 
 private:
-    bool shouldUseProxy( const rtl::OUString & rHost,
+    bool shouldUseProxy( const OUString & rHost,
                          sal_Int32 nPort,
                          bool bUseFullyQualified ) const;
 public:
     InternetProxyDecider_Impl(
-        const uno::Reference< lang::XMultiServiceFactory >& rxSMgr );
+        const uno::Reference< uno::XComponentContext >& rxContext );
     virtual ~InternetProxyDecider_Impl();
-
-    static rtl::Reference< InternetProxyDecider_Impl > createInstance(
-        const uno::Reference< lang::XMultiServiceFactory >& rxSMgr );
 
     void dispose();
 
-    const InternetProxyServer & getProxy( const rtl::OUString & rProtocol,
-                                          const rtl::OUString & rHost,
+    const InternetProxyServer & getProxy( const OUString & rProtocol,
+                                          const OUString & rHost,
                                           sal_Int32 nPort ) const;
 
     // XChangesListener
     virtual void SAL_CALL changesOccurred( const util::ChangesEvent& Event )
-        throw( uno::RuntimeException );
+        throw( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
     // XEventListener ( base of XChangesLisetenr )
     virtual void SAL_CALL disposing( const lang::EventObject& Source )
-        throw( uno::RuntimeException );
+        throw( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
 private:
-    void setNoProxyList( const rtl::OUString & rNoProxyList );
+    void setNoProxyList( const OUString & rNoProxyList );
 };
 
-//=========================================================================
-//=========================================================================
-//
-// WildCard Implementation.
-//
-//=========================================================================
-//=========================================================================
 
-bool WildCard::Matches( const rtl::OUString& rString ) const
+
+
+// WildCard Implementation.
+
+
+
+
+bool WildCard::Matches( const OUString& rString ) const
 {
-    rtl::OString aString
-        = rtl::OUStringToOString(
+    OString aString
+        = OUStringToOString(
                     rString, RTL_TEXTENCODING_UTF8 ).toAsciiLowerCase();
     const char * pStr  = aString.getStr();
     const char * pWild = m_aWildString.getStr();
@@ -215,7 +200,7 @@ bool WildCard::Matches( const rtl::OUString& rString ) const
         {
             case '?':
                 if ( *pStr == '\0' )
-                    return 0;
+                    return false;
                 break;
 
             default:
@@ -224,19 +209,19 @@ bool WildCard::Matches( const rtl::OUString& rString ) const
                     pWild++;
                 if ( *pWild != *pStr )
                     if ( !pos )
-                        return 0;
+                        return false;
                     else
                         pWild += pos;
                 else
                     break;
 
-                // Note: fall-thru's are intended!
+                // Note: fall-through are intended!
 
             case '*':
                 while ( *pWild == '*' )
                     pWild++;
                 if ( *pWild == '\0' )
-                    return 1;
+                    return true;
                 flag = 1;
                 pos  = 0;
                 if ( *pStr == '\0' )
@@ -266,19 +251,18 @@ bool WildCard::Matches( const rtl::OUString& rString ) const
     return ( *pStr == '\0' ) && ( *pWild == '\0' );
 }
 
-//=========================================================================
+
 bool getConfigStringValue(
     const uno::Reference< container::XNameAccess > & xNameAccess,
     const char * key,
-    rtl::OUString & value )
+    OUString & value )
 {
     try
     {
-        if ( !( xNameAccess->getByName( rtl::OUString::createFromAscii( key ) )
+        if ( !( xNameAccess->getByName( OUString::createFromAscii( key ) )
                 >>= value ) )
         {
-            OSL_ENSURE( sal_False,
-                        "InternetProxyDecider - "
+            OSL_FAIL( "InternetProxyDecider - "
                         "Error getting config item value!" );
             return false;
         }
@@ -294,7 +278,7 @@ bool getConfigStringValue(
     return true;
 }
 
-//=========================================================================
+
 bool getConfigInt32Value(
     const uno::Reference< container::XNameAccess > & xNameAccess,
     const char * key,
@@ -303,11 +287,10 @@ bool getConfigInt32Value(
     try
     {
         uno::Any aValue = xNameAccess->getByName(
-            rtl::OUString::createFromAscii( key ) );
+            OUString::createFromAscii( key ) );
         if ( aValue.hasValue() && !( aValue >>= value ) )
         {
-            OSL_ENSURE( sal_False,
-                        "InternetProxyDecider - "
+            OSL_FAIL( "InternetProxyDecider - "
                         "Error getting config item value!" );
             return false;
         }
@@ -323,37 +306,34 @@ bool getConfigInt32Value(
     return true;
 }
 
-//=========================================================================
-//=========================================================================
-//
+
+
+
 // InternetProxyDecider_Impl Implementation.
-//
-//=========================================================================
-//=========================================================================
+
+
+
 
 InternetProxyDecider_Impl::InternetProxyDecider_Impl(
-    const uno::Reference< lang::XMultiServiceFactory >& rxSMgr )
+    const uno::Reference< uno::XComponentContext >& rxContext )
     : m_nProxyType( 0 ),
       m_aHostnames( 256 ) // cache size
 {
     try
     {
-        //////////////////////////////////////////////////////////////
-        // Read proxy configuration from config db.
-        //////////////////////////////////////////////////////////////
 
-        uno::Reference< lang::XMultiServiceFactory > xConfigProv(
-                rxSMgr->createInstance(
-                    rtl::OUString::createFromAscii(
-                        "com.sun.star.configuration.ConfigurationProvider" ) ),
-                uno::UNO_QUERY );
+        // Read proxy configuration from config db.
+
+
+        uno::Reference< lang::XMultiServiceFactory > xConfigProv =
+                configuration::theDefaultProvider::get( rxContext );
 
         uno::Sequence< uno::Any > aArguments( 1 );
-        aArguments[ 0 ] <<= rtl::OUString::createFromAscii( CONFIG_ROOT_KEY );
+        aArguments[ 0 ] <<= OUString( CONFIG_ROOT_KEY );
 
         uno::Reference< uno::XInterface > xInterface(
                     xConfigProv->createInstanceWithArguments(
-                        rtl::OUString::createFromAscii(
+                        OUString(
                             "com.sun.star.configuration.ConfigurationAccess" ),
                     aArguments ) );
 
@@ -374,7 +354,7 @@ InternetProxyDecider_Impl::InternetProxyDecider_Impl(
                     xNameAccess, PROXY_TYPE_KEY, m_nProxyType );
 
                 // *** No proxy list ***
-                rtl::OUString aNoProxyList;
+                OUString aNoProxyList;
                 getConfigStringValue(
                     xNameAccess, NO_PROXY_LIST_KEY, aNoProxyList );
                 setNoProxyList( aNoProxyList );
@@ -423,17 +403,17 @@ InternetProxyDecider_Impl::InternetProxyDecider_Impl(
     catch ( uno::Exception const & )
     {
         // createInstance, createInstanceWithArguments
-        OSL_ENSURE( sal_False, "InternetProxyDecider - Exception!" );
+        OSL_FAIL( "InternetProxyDecider - Exception!" );
     }
 }
 
-//=========================================================================
+
 // virtual
 InternetProxyDecider_Impl::~InternetProxyDecider_Impl()
 {
 }
 
-//=========================================================================
+
 void InternetProxyDecider_Impl::dispose()
 {
     uno::Reference< util::XChangesNotifier > xNotifier;
@@ -454,15 +434,15 @@ void InternetProxyDecider_Impl::dispose()
         xNotifier->removeChangesListener( this );
 }
 
-//=========================================================================
-bool InternetProxyDecider_Impl::shouldUseProxy( const rtl::OUString & rHost,
+
+bool InternetProxyDecider_Impl::shouldUseProxy( const OUString & rHost,
                                                 sal_Int32 nPort,
                                                 bool bUseFullyQualified ) const
 {
-    rtl::OUStringBuffer aBuffer;
+    OUStringBuffer aBuffer;
 
     if ( ( rHost.indexOf( ':' ) != -1 ) &&
-         ( rHost[ 0 ] != sal_Unicode( '[' ) ) )
+         ( rHost[ 0 ] != '[' ) )
     {
         // host is given as numeric IPv6 address
         aBuffer.appendAscii( "[" );
@@ -475,9 +455,9 @@ bool InternetProxyDecider_Impl::shouldUseProxy( const rtl::OUString & rHost,
         aBuffer.append( rHost );
     }
 
-    aBuffer.append( sal_Unicode( ':' ) );
-    aBuffer.append( rtl::OUString::valueOf( nPort ) );
-    const rtl::OUString aHostAndPort( aBuffer.makeStringAndClear() );
+    aBuffer.append( ':' );
+    aBuffer.append( OUString::number( nPort ) );
+    const OUString aHostAndPort( aBuffer.makeStringAndClear() );
 
     std::vector< NoProxyListEntry >::const_iterator it
         = m_aNoProxyList.begin();
@@ -496,16 +476,16 @@ bool InternetProxyDecider_Impl::shouldUseProxy( const rtl::OUString & rHost,
             if ( (*it).first.Matches( aHostAndPort ) )
                 return false;
         }
-        it++;
+        ++it;
     }
 
     return true;
 }
 
-//=========================================================================
+
 const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
-                                            const rtl::OUString & rProtocol,
-                                            const rtl::OUString & rHost,
+                                            const OUString & rProtocol,
+                                            const OUString & rHost,
                                             sal_Int32 nPort ) const
 {
     osl::Guard< osl::Mutex > aGuard( m_aMutex );
@@ -521,7 +501,7 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
             if ( rHost.getLength() && aExcList )
             {
                 CFIndex nCount = CFArrayGetCount( aExcList );
-                rtl::OUString aFullyQualifiedHost;
+                OUString aFullyQualifiedHost;
                 for ( CFIndex i = 0; i < nCount; i++ )
                 {
                     CFStringRef aHostString = (CFStringRef)CFArrayGetValueAtIndex( aExcList, i );
@@ -533,7 +513,7 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
                     sal_Unicode pHostBuffer[ nHostLen + 1 ];
                     CFStringGetCharacters( aHostString, aHostRange, pHostBuffer );
                     pHostBuffer[ nHostLen ] = 0;
-                    rtl::OUString aHostName( pHostBuffer );
+                    OUString aHostName( pHostBuffer );
                     if ( !aHostName.getLength() )
                         continue;
 
@@ -568,7 +548,7 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
                 }
             }
 
-            if ( rProtocol.toAsciiLowerCase().equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "ftp" ) ) )
+            if ( rProtocol.toAsciiLowerCase() == "ftp" )
             {
                 int nNumber;
                 CFNumberRef aNumber = (CFNumberRef)CFDictionaryGetValue( aDict, kSCPropNetProxiesFTPEnable );
@@ -582,7 +562,7 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
                         sal_Unicode pProxyBuffer[ nProxyLen + 1 ];
                         CFStringGetCharacters( aProxyString, aProxyRange, pProxyBuffer );
                         pProxyBuffer[ nProxyLen ] = 0;
-                        rtl::OUString aProxyName( pProxyBuffer );
+                        OUString aProxyName( pProxyBuffer );
                         if ( aProxyName.getLength() )
                         {
                             m_aFtpSystemProxy.aName = aProxyName;
@@ -595,7 +575,7 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
                     }
                 }
             }
-            else if ( rProtocol.toAsciiLowerCase().equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "https" ) ) )
+            else if ( rProtocol.toAsciiLowerCase() == "https" )
             {
                 int nNumber;
                 CFNumberRef aNumber = (CFNumberRef)CFDictionaryGetValue( aDict, kSCPropNetProxiesHTTPSEnable );
@@ -609,7 +589,7 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
                         sal_Unicode pProxyBuffer[ nProxyLen + 1 ];
                         CFStringGetCharacters( aProxyString, aProxyRange, pProxyBuffer );
                         pProxyBuffer[ nProxyLen ] = 0;
-                        rtl::OUString aProxyName( pProxyBuffer );
+                        OUString aProxyName( pProxyBuffer );
                         if ( aProxyName.getLength() )
                         {
                             m_aHttpsSystemProxy.aName = aProxyName;
@@ -637,7 +617,7 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
                         sal_Unicode pProxyBuffer[ nProxyLen + 1 ];
                         CFStringGetCharacters( aProxyString, aProxyRange, pProxyBuffer );
                         pProxyBuffer[ nProxyLen ] = 0;
-                        rtl::OUString aProxyName( pProxyBuffer );
+                        OUString aProxyName( pProxyBuffer );
                         if ( aProxyName.getLength() )
                         {
                             m_aHttpSystemProxy.aName = aProxyName;
@@ -664,23 +644,23 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
     }
 #endif	// USE_JAVA && MACOSX
 
-    if ( rHost.getLength() && m_aNoProxyList.size() )
+    if ( !rHost.isEmpty() && !m_aNoProxyList.empty() )
     {
-        //////////////////////////////////////////////////////////////////
+
         // First, try direct hostname match - #110515#
-        //////////////////////////////////////////////////////////////////
+
 
         if ( !shouldUseProxy( rHost, nPort, false ) )
             return m_aEmptyProxy;
 
-        //////////////////////////////////////////////////////////////////
+
         // Second, try match against full qualified hostname - #104401#
-        //////////////////////////////////////////////////////////////////
 
-        rtl::OUString aHost;
 
-        if ( ( rHost[ 0 ] == sal_Unicode( '[' ) ) &&
-             ( rHost.getLength() > 1 ) )
+        OUString aHost;
+
+        if ( ( rHost.getLength() > 1 ) &&
+             ( rHost[ 0 ] == '[' ))
         {
             // host is given as numeric IPv6 address. name resolution
             // functions need hostname without square brackets.
@@ -691,7 +671,7 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
             aHost = rHost;
         }
 
-        rtl::OUString aFullyQualifiedHost;
+        OUString aFullyQualifiedHost;
         if ( !m_aHostnames.get( aHost, aFullyQualifiedHost ) )
         {
             // This might be quite expensive (DNS lookup).
@@ -701,7 +681,7 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
         }
 
         // Error resolving name? -> fallback.
-        if ( !aFullyQualifiedHost.getLength() )
+        if ( aFullyQualifiedHost.isEmpty() )
             aFullyQualifiedHost = aHost;
 
         if ( aFullyQualifiedHost != aHost )
@@ -710,33 +690,31 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
                 return m_aEmptyProxy;
         }
 
-        //////////////////////////////////////////////////////////////////
+
         // Third, try match of fully qualified entries in no-proxy list
         // against full qualified hostname
-        //
+
         // Example:
         // list: staroffice-doc -> full: xyz.germany.sun.com
         // in:   staroffice-doc.germany.sun.com -> full: xyz.germany.sun.com
-        //
-        //////////////////////////////////////////////////////////////////
+
+
 
         if ( !shouldUseProxy( aFullyQualifiedHost, nPort, true ) )
             return m_aEmptyProxy;
     }
 
-    if ( rProtocol.toAsciiLowerCase()
-            .equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "ftp" ) ) )
+    if ( rProtocol.toAsciiLowerCase() == "ftp" )
     {
-        if ( m_aFtpProxy.aName.getLength() > 0 && m_aFtpProxy.nPort >= 0 )
+        if ( !m_aFtpProxy.aName.isEmpty() && m_aFtpProxy.nPort >= 0 )
             return m_aFtpProxy;
     }
-    else if ( rProtocol.toAsciiLowerCase()
-                  .equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "https" ) ) )
+    else if ( rProtocol.toAsciiLowerCase() == "https" )
     {
-        if ( m_aHttpsProxy.aName.getLength() )
+        if ( !m_aHttpsProxy.aName.isEmpty() )
             return m_aHttpsProxy;
     }
-    else if ( m_aHttpProxy.aName.getLength() )
+    else if ( !m_aHttpProxy.aName.isEmpty() )
     {
         // All other protocols use the HTTP proxy.
         return m_aHttpProxy;
@@ -744,11 +722,11 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
     return m_aEmptyProxy;
 }
 
-//=========================================================================
+
 // virtual
 void SAL_CALL InternetProxyDecider_Impl::changesOccurred(
                                         const util::ChangesEvent& Event )
-    throw( uno::RuntimeException )
+    throw( uno::RuntimeException, std::exception )
 {
     osl::Guard< osl::Mutex > aGuard( m_aMutex );
 
@@ -760,95 +738,79 @@ void SAL_CALL InternetProxyDecider_Impl::changesOccurred(
         for ( sal_Int32 n = 0; n < nCount; ++n )
         {
             const util::ElementChange& rElem = pElementChanges[ n ];
-            rtl::OUString aKey;
-            if ( ( rElem.Accessor >>= aKey ) && aKey.getLength() )
+            OUString aKey;
+            if ( ( rElem.Accessor >>= aKey ) && !aKey.isEmpty() )
             {
-                if ( aKey.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM(
-                                                    PROXY_TYPE_KEY ) ) )
+                if ( aKey == PROXY_TYPE_KEY )
                 {
                     if ( !( rElem.Element >>= m_nProxyType ) )
                     {
-                        OSL_ENSURE( sal_False,
-                                    "InternetProxyDecider - changesOccurred - "
+                        OSL_FAIL( "InternetProxyDecider - changesOccurred - "
                                     "Error getting config item value!" );
                     }
                 }
-                else if ( aKey.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM(
-                                                    NO_PROXY_LIST_KEY ) ) )
+                else if ( aKey == NO_PROXY_LIST_KEY )
                 {
-                    rtl::OUString aNoProxyList;
+                    OUString aNoProxyList;
                     if ( !( rElem.Element >>= aNoProxyList ) )
                     {
-                        OSL_ENSURE( sal_False,
-                                    "InternetProxyDecider - changesOccurred - "
+                        OSL_FAIL( "InternetProxyDecider - changesOccurred - "
                                     "Error getting config item value!" );
                     }
 
                     setNoProxyList( aNoProxyList );
                 }
-                else if ( aKey.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM(
-                                                    HTTP_PROXY_NAME_KEY ) ) )
+                else if ( aKey == HTTP_PROXY_NAME_KEY )
                 {
                     if ( !( rElem.Element >>= m_aHttpProxy.aName ) )
                     {
-                        OSL_ENSURE( sal_False,
-                                    "InternetProxyDecider - changesOccurred - "
+                        OSL_FAIL( "InternetProxyDecider - changesOccurred - "
                                     "Error getting config item value!" );
                     }
                 }
-                else if ( aKey.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM(
-                                                    HTTP_PROXY_PORT_KEY ) ) )
+                else if ( aKey == HTTP_PROXY_PORT_KEY )
                 {
                     if ( !( rElem.Element >>= m_aHttpProxy.nPort ) )
                     {
-                        OSL_ENSURE( sal_False,
-                                    "InternetProxyDecider - changesOccurred - "
+                        OSL_FAIL( "InternetProxyDecider - changesOccurred - "
                                     "Error getting config item value!" );
                     }
 
                     if ( m_aHttpProxy.nPort == -1 )
                         m_aHttpProxy.nPort = 80; // standard HTTP port.
                 }
-                else if ( aKey.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM(
-                                                    HTTPS_PROXY_NAME_KEY ) ) )
+                else if ( aKey == HTTPS_PROXY_NAME_KEY )
                 {
                     if ( !( rElem.Element >>= m_aHttpsProxy.aName ) )
                     {
-                        OSL_ENSURE( sal_False,
-                                    "InternetProxyDecider - changesOccurred - "
+                        OSL_FAIL( "InternetProxyDecider - changesOccurred - "
                                     "Error getting config item value!" );
                     }
                 }
-                else if ( aKey.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM(
-                                                    HTTPS_PROXY_PORT_KEY ) ) )
+                else if ( aKey == HTTPS_PROXY_PORT_KEY )
                 {
                     if ( !( rElem.Element >>= m_aHttpsProxy.nPort ) )
                     {
-                        OSL_ENSURE( sal_False,
-                                    "InternetProxyDecider - changesOccurred - "
+                        OSL_FAIL( "InternetProxyDecider - changesOccurred - "
                                     "Error getting config item value!" );
                     }
 
                     if ( m_aHttpsProxy.nPort == -1 )
                         m_aHttpsProxy.nPort = 443; // standard HTTPS port.
                 }
-                else if ( aKey.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM(
-                                                    FTP_PROXY_NAME_KEY ) ) )
+                else if ( aKey == FTP_PROXY_NAME_KEY )
                 {
                     if ( !( rElem.Element >>= m_aFtpProxy.aName ) )
                     {
-                        OSL_ENSURE( sal_False,
-                                    "InternetProxyDecider - changesOccurred - "
+                        OSL_FAIL( "InternetProxyDecider - changesOccurred - "
                                     "Error getting config item value!" );
                     }
                 }
-                else if ( aKey.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM(
-                                                    FTP_PROXY_PORT_KEY ) ) )
+                else if ( aKey == FTP_PROXY_PORT_KEY )
                 {
                     if ( !( rElem.Element >>= m_aFtpProxy.nPort ) )
                     {
-                        OSL_ENSURE( sal_False,
-                                    "InternetProxyDecider - changesOccurred - "
+                        OSL_FAIL( "InternetProxyDecider - changesOccurred - "
                                     "Error getting config item value!" );
                     }
                 }
@@ -857,10 +819,10 @@ void SAL_CALL InternetProxyDecider_Impl::changesOccurred(
     }
 }
 
-//=========================================================================
+
 // virtual
 void SAL_CALL InternetProxyDecider_Impl::disposing(const lang::EventObject&)
-    throw( uno::RuntimeException )
+    throw( uno::RuntimeException, std::exception )
 {
     if ( m_xNotifier.is() )
     {
@@ -871,15 +833,15 @@ void SAL_CALL InternetProxyDecider_Impl::disposing(const lang::EventObject&)
     }
 }
 
-//=========================================================================
+
 void InternetProxyDecider_Impl::setNoProxyList(
-                                        const rtl::OUString & rNoProxyList )
+                                        const OUString & rNoProxyList )
 {
     osl::Guard< osl::Mutex > aGuard( m_aMutex );
 
     m_aNoProxyList.clear();
 
-    if ( rNoProxyList.getLength() )
+    if ( !rNoProxyList.isEmpty() )
     {
         // List of connection endpoints hostname[:port],
         // separated by semicolon. Wilcards allowed.
@@ -893,12 +855,12 @@ void InternetProxyDecider_Impl::setNoProxyList(
             if ( nEnd == -1 )
                 nEnd = nLen;
 
-            rtl::OUString aToken = rNoProxyList.copy( nPos, nEnd - nPos );
+            OUString aToken = rNoProxyList.copy( nPos, nEnd - nPos );
 
-            if ( aToken.getLength() )
+            if ( !aToken.isEmpty() )
             {
-                rtl::OUString aServer;
-                rtl::OUString aPort;
+                OUString aServer;
+                OUString aPort;
 
                 // numerical IPv6 address?
                 bool bIPv6Address = false;
@@ -912,29 +874,29 @@ void InternetProxyDecider_Impl::setNoProxyList(
                 if ( nColonPos == -1 )
                 {
                     // No port given, server pattern equals current token
-                    aPort = rtl::OUString::createFromAscii( "*" );
+                    aPort = "*";
                     if ( aToken.indexOf( '*' ) == -1 )
                     {
                         // pattern describes exactly one server
                         aServer = aToken;
                     }
 
-                    aToken += rtl::OUString::createFromAscii( ":*" );
+                    aToken += ":*";
                 }
                 else
                 {
                     // Port given, extract server pattern
-                    sal_Int32 nAsterixPos = aToken.indexOf( '*' );
+                    sal_Int32 nAsteriskPos = aToken.indexOf( '*' );
                     aPort = aToken.copy( nColonPos + 1 );
-                    if ( nAsterixPos < nColonPos )
+                    if ( nAsteriskPos < nColonPos )
                     {
                         // pattern describes exactly one server
                         aServer = aToken.copy( 0, nColonPos );
                     }
                 }
 
-                rtl::OUStringBuffer aFullyQualifiedHost;
-                if ( aServer.getLength() )
+                OUStringBuffer aFullyQualifiedHost;
+                if ( !aServer.isEmpty() )
                 {
                     // Remember fully qualified server name if current list
                     // entry specifies exactly one non-fully qualified server
@@ -947,7 +909,7 @@ void InternetProxyDecider_Impl::setNoProxyList(
 
                     // This might be quite expensive (DNS lookup).
                     const osl::SocketAddr aAddr( aServer, 0 );
-                    rtl::OUString aTmp = aAddr.getHostname().toAsciiLowerCase();
+                    OUString aTmp = aAddr.getHostname().toAsciiLowerCase();
                     if ( aTmp != aServer.toAsciiLowerCase() )
                     {
                         if ( bIPv6Address )
@@ -984,22 +946,22 @@ void InternetProxyDecider_Impl::setNoProxyList(
 
 } // namespace proxydecider_impl
 
-//=========================================================================
-//=========================================================================
-//
+
+
+
 // InternetProxyDecider Implementation.
-//
-//=========================================================================
-//=========================================================================
+
+
+
 
 InternetProxyDecider::InternetProxyDecider(
-    const uno::Reference< lang::XMultiServiceFactory >& rxSMgr )
-: m_pImpl( new proxydecider_impl::InternetProxyDecider_Impl( rxSMgr ) )
+    const uno::Reference< uno::XComponentContext>& rxContext )
+: m_pImpl( new proxydecider_impl::InternetProxyDecider_Impl( rxContext ) )
 {
     m_pImpl->acquire();
 }
 
-//=========================================================================
+
 InternetProxyDecider::~InternetProxyDecider()
 {
     // Break circular reference between config listener and notifier.
@@ -1009,24 +971,26 @@ InternetProxyDecider::~InternetProxyDecider()
     m_pImpl->release();
 }
 
-//=========================================================================
-bool InternetProxyDecider::shouldUseProxy( const rtl::OUString & rProtocol,
-                                           const rtl::OUString & rHost,
+
+bool InternetProxyDecider::shouldUseProxy( const OUString & rProtocol,
+                                           const OUString & rHost,
                                            sal_Int32 nPort ) const
 {
     const InternetProxyServer & rData = m_pImpl->getProxy( rProtocol,
                                                            rHost,
                                                            nPort );
-    return ( rData.aName.getLength() > 0 );
+    return !rData.aName.isEmpty();
 }
 
-//=========================================================================
+
 const InternetProxyServer & InternetProxyDecider::getProxy(
-                                            const rtl::OUString & rProtocol,
-                                            const rtl::OUString & rHost,
+                                            const OUString & rProtocol,
+                                            const OUString & rHost,
                                             sal_Int32 nPort ) const
 {
     return m_pImpl->getProxy( rProtocol, rHost, nPort );
 }
 
 } // namespace ucbhelper
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
