@@ -345,7 +345,6 @@ build.neo_patches: \
 	build.neo_ucb_patch \
 	build.neo_ucbhelper_patch \
 	build.neo_unotools_patch \
-	build.neo_unoxml_patch \
 	build.neo_uui_patch \
 	build.neo_vcl_patch \
 	build.neo_writerfilter_patch \
