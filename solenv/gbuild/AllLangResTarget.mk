@@ -245,7 +245,7 @@ endif
 
 $(call gb_SrsTarget_get_headers_target,%) :
 	$(call gb_Helper_abbreviate_dirs,\
-	    mkdir -p $(dir $@) && touch $@)
+	    mkdir -p $(dir $@) && $(if $(filter $(PRODUCT_BUILD_TYPE),java),rm -f $@ &&) touch $@)
 
 # This recipe actually also builds the dep-target as a side-effect, which
 # is an optimization to reduce incremental build time.
