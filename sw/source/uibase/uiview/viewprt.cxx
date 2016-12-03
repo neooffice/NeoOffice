@@ -160,7 +160,7 @@ SfxTabPage* SwView::CreatePrintOptionsPage(vcl::Window* pParent,
 #ifdef USE_JAVA
     // Fix bug 3636 by fetching the actual attributes that the printer options
     // page uses
-    sal_Bool bWeb = 0 != PTR_CAST(SwWebView, this);
+    bool bWeb = 0 != PTR_CAST(SwWebView, this);
     ::SetAppPrintOptions( &GetWrtShell(), bWeb );
     const IDocumentDeviceAccess* pIDDA = ((SwViewShell*)&GetWrtShell())->getIDocumentDeviceAccess();
     SfxPrinter *pPrinter = pIDDA->getPrinter( false );
