@@ -1,44 +1,52 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
-
-
+ */
 #include <DomainMapperTableHandler.hxx>
 #include <DomainMapper_Impl.hxx>
 #include <StyleSheetTable.hxx>
+#include <com/sun/star/beans/XPropertyState.hpp>
+#include <com/sun/star/container/XEnumerationAccess.hpp>
 #include <com/sun/star/table/TableBorderDistances.hpp>
 #include <com/sun/star/table/TableBorder.hpp>
+#include <com/sun/star/table/BorderLine2.hpp>
+#include <com/sun/star/table/BorderLineStyle.hpp>
+#include <com/sun/star/table/XCellRange.hpp>
 #include <com/sun/star/text/HoriOrientation.hpp>
+#include <com/sun/star/text/RelOrientation.hpp>
+#include <com/sun/star/text/SizeType.hpp>
+#include <com/sun/star/text/VertOrientation.hpp>
+#include <com/sun/star/text/XTextRangeCompare.hpp>
+#include <com/sun/star/style/ParagraphAdjust.hpp>
 #include <dmapperLoggers.hxx>
+#include <TablePositionHandler.hxx>
+#include <ConversionHelper.hxx>
+#include <osl/diagnose.h>
 
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
+#ifdef DEBUG_WRITERFILTER
 #include <PropertyMapHelper.hxx>
+#include <rtl/ustring.hxx>
 #endif
 
 namespace writerfilter {
@@ -48,56 +56,18 @@ using namespace ::com::sun::star;
 using namespace ::std;
 
 #define DEF_BORDER_DIST 190  //0,19cm
-#define DEFAULT_CELL_MARGIN 108 //default cell margin, not documented 
 
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
-static void  lcl_printProperties( PropertyMapPtr pProps )
-{
-    if( pProps.get() )
-    {
-        dmapper_logger->startElement("properties");
-
-        PropertyMap::const_iterator aMapIter = pProps->begin();
-        PropertyMap::const_iterator aEndIter = pProps->end();
-        PropertyNameSupplier& rPropSupplier = PropertyNameSupplier::GetPropertyNameSupplier();
-        for( ; aMapIter != aEndIter; ++aMapIter )
-        {
-            rtl::OUString aOUStr = rPropSupplier.GetName( aMapIter->first.eId );
-            rtl::OString aOStr(aOUStr.getStr(), aOUStr.getLength(),  RTL_TEXTENCODING_ASCII_US );
-            clog << aOStr.getStr();
-
-            table::BorderLine aLine;
-            sal_Int32 nColor; 
-            if ( aMapIter->second >>= aLine )
-            {
-                dmapper_logger->startElement("borderline");
-                dmapper_logger->attribute("color", aLine.Color);
-                dmapper_logger->attribute("inner", aLine.InnerLineWidth);
-                dmapper_logger->attribute("outer", aLine.OuterLineWidth);
-                dmapper_logger->endElement("borderline");
-            }
-            else if ( aMapIter->second >>= nColor )
-            {
-                dmapper_logger->startElement("color");
-                dmapper_logger->attribute("number", nColor);
-                dmapper_logger->endElement("color");
-            }
-        }
-        
-        dmapper_logger->endElement("properties");
-    }
-}
-#endif
-
-DomainMapperTableHandler::DomainMapperTableHandler(TextReference_t xText, DomainMapper_Impl& rDMapper_Impl)
+DomainMapperTableHandler::DomainMapperTableHandler(TextReference_t const& xText,
+            DomainMapper_Impl& rDMapper_Impl)
     : m_xText(xText),
         m_rDMapper_Impl( rDMapper_Impl ),
         m_nCellIndex(0),
-        m_nRowIndex(0)
+        m_nRowIndex(0),
+        m_bHadFootOrEndnote(false)
 {
 }
 
-DomainMapperTableHandler::~DomainMapperTableHandler() 
+DomainMapperTableHandler::~DomainMapperTableHandler()
 {
 }
 
@@ -109,135 +79,137 @@ void DomainMapperTableHandler::startTable(unsigned int nRows,
     m_pTableSeq = TableSequencePointer_t(new TableSequence_t(nRows));
     m_nRowIndex = 0;
 
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->startElement("tablehandler.table");
     dmapper_logger->attribute("rows", nRows);
-    
-    if (pProps.get() != NULL)
-        dmapper_logger->addTag(pProps->toTag());
+
+    if (pProps.get() != nullptr)
+        pProps->dumpXml( dmapper_logger );
 #endif
 }
 
-/*-- 22.02.2008 10:18:37---------------------------------------------------
 
-  -----------------------------------------------------------------------*/
+
 PropertyMapPtr lcl_SearchParentStyleSheetAndMergeProperties(const StyleSheetEntryPtr pStyleSheet, StyleSheetTablePtr pStyleSheetTable)
 {
     PropertyMapPtr pRet;
-    if( pStyleSheet->sBaseStyleIdentifier.getLength())
+
+    if (!pStyleSheet)
+        return pRet;
+
+    if(!pStyleSheet->sBaseStyleIdentifier.isEmpty())
     {
         const StyleSheetEntryPtr pParentStyleSheet = pStyleSheetTable->FindStyleSheetByISTD( pStyleSheet->sBaseStyleIdentifier );
+        //a loop in the style hierarchy, bail out
+        if (pParentStyleSheet == pStyleSheet)
+            return pRet;
+
         pRet = lcl_SearchParentStyleSheetAndMergeProperties( pParentStyleSheet, pStyleSheetTable );
-    }    
+    }
     else
     {
         pRet.reset( new PropertyMap );
     }
 
-    pRet->insert(  pStyleSheet->pProperties, true );
-    
+    if (pRet)
+    {
+        pRet->InsertProps(pStyleSheet->pProperties);
+    }
+
     return pRet;
 }
 
 void lcl_mergeBorder( PropertyIds nId, PropertyMapPtr pOrig, PropertyMapPtr pDest )
 {
-    PropertyDefinition aDef( nId, false );
-    PropertyMap::iterator pOrigIt = pOrig->find( aDef );
+    boost::optional<PropertyMap::Property> pOrigVal = pOrig->getProperty(nId);
 
-    if ( pOrigIt != pOrig->end( ) )
+    if ( pOrigVal )
     {
-        pDest->Insert( nId, false, pOrigIt->second, false );
+        pDest->Insert( nId, pOrigVal->second, false );
     }
 }
 
-void lcl_computeCellBorders( PropertyMapPtr pTableBorders, PropertyMapPtr pCellProps, 
+void lcl_computeCellBorders( PropertyMapPtr pTableBorders, PropertyMapPtr pCellProps,
         sal_Int32 nCell, sal_Int32 nRow, bool bIsEndCol, bool bIsEndRow )
 {
-    PropertyDefinition aVertPDef( META_PROP_VERTICAL_BORDER, false );
-    PropertyDefinition aHorizPDef( META_PROP_HORIZONTAL_BORDER, false );
+    boost::optional<PropertyMap::Property> pVerticalVal = pCellProps->getProperty(META_PROP_VERTICAL_BORDER);
+    boost::optional<PropertyMap::Property> pHorizontalVal = pCellProps->getProperty(META_PROP_HORIZONTAL_BORDER);
 
-    PropertyMap::iterator aVerticalIter = pCellProps->find( aVertPDef );
-    PropertyMap::iterator aHorizontalIter = pCellProps->find( aHorizPDef );
-
-    // Handle the vertical and horizontal borders  
-    bool bHasVert = ( aVerticalIter != pCellProps->end(  ) );
+    // Handle the vertical and horizontal borders
     uno::Any aVertProp;
-    if ( !bHasVert )
+    if ( !pVerticalVal)
     {
-        aVerticalIter = pTableBorders->find( aVertPDef );
-        bHasVert = ( aVerticalIter != pTableBorders->end( ) );
-        if ( bHasVert )
-            aVertProp = aVerticalIter->second;
+        pVerticalVal = pTableBorders->getProperty(META_PROP_VERTICAL_BORDER);
+        if ( pVerticalVal )
+            aVertProp = pVerticalVal->second;
     }
     else
     {
-        aVertProp = aVerticalIter->second;
-        pCellProps->erase( aVerticalIter );
+        aVertProp = pVerticalVal->second;
+        pCellProps->Erase( pVerticalVal->first );
     }
 
-    bool bHasHoriz = ( aHorizontalIter != pCellProps->end(  ) );
     uno::Any aHorizProp;
-    if ( !bHasHoriz )
+    if ( !pHorizontalVal )
     {
-        aHorizontalIter = pTableBorders->find( aHorizPDef );
-        bHasHoriz = ( aHorizontalIter != pTableBorders->end( ) );
-        if ( bHasHoriz )
-            aHorizProp = aHorizontalIter->second;
+        pHorizontalVal = pTableBorders->getProperty(META_PROP_HORIZONTAL_BORDER);
+        if ( pHorizontalVal )
+            aHorizProp = pHorizontalVal->second;
     }
     else
     {
-        aHorizProp = aHorizontalIter->second;
-        pCellProps->erase( aHorizontalIter );
+        aHorizProp = pHorizontalVal->second;
+        pCellProps->Erase( pHorizontalVal->first );
     }
 
     if ( nCell == 0 )
     {
         lcl_mergeBorder( PROP_LEFT_BORDER, pTableBorders, pCellProps );
-        if ( bHasVert )
-            pCellProps->Insert( PROP_RIGHT_BORDER, false, aVertProp, false );
+        if ( pVerticalVal )
+            pCellProps->Insert( PROP_RIGHT_BORDER, aVertProp, false );
     }
-    
+
     if ( bIsEndCol )
     {
         lcl_mergeBorder( PROP_RIGHT_BORDER, pTableBorders, pCellProps );
-        if ( bHasVert )
-            pCellProps->Insert( PROP_LEFT_BORDER, false, aVertProp, false );
+        if ( pVerticalVal )
+            pCellProps->Insert( PROP_LEFT_BORDER, aVertProp, false );
     }
-    
+
     if ( nCell > 0 && !bIsEndCol )
     {
-        if ( bHasVert )
+        if ( pVerticalVal )
         {
-            pCellProps->Insert( PROP_RIGHT_BORDER, false, aVertProp, false );
-            pCellProps->Insert( PROP_LEFT_BORDER, false, aVertProp, false );
+            pCellProps->Insert( PROP_RIGHT_BORDER, aVertProp, false );
+            pCellProps->Insert( PROP_LEFT_BORDER, aVertProp, false );
         }
     }
 
     if ( nRow == 0 )
     {
         lcl_mergeBorder( PROP_TOP_BORDER, pTableBorders, pCellProps );
-        if ( bHasHoriz )
-            pCellProps->Insert( PROP_BOTTOM_BORDER, false, aHorizProp, false );
+        if ( pHorizontalVal )
+            pCellProps->Insert( PROP_BOTTOM_BORDER, aHorizProp, false );
     }
 
     if ( bIsEndRow )
     {
         lcl_mergeBorder( PROP_BOTTOM_BORDER, pTableBorders, pCellProps );
-        if ( bHasHoriz )
-            pCellProps->Insert( PROP_TOP_BORDER, false, aHorizProp, false );
+        if ( pHorizontalVal )
+            pCellProps->Insert( PROP_TOP_BORDER, aHorizProp, false );
     }
-    
+
     if ( nRow > 0 && !bIsEndRow )
     {
-        if ( bHasHoriz )
+        if ( pHorizontalVal )
         {
-            pCellProps->Insert( PROP_TOP_BORDER, false, aHorizProp, false );
-            pCellProps->Insert( PROP_BOTTOM_BORDER, false, aHorizProp, false );
+            pCellProps->Insert( PROP_TOP_BORDER, aHorizProp, false );
+            pCellProps->Insert( PROP_BOTTOM_BORDER, aHorizProp, false );
         }
     }
 }
 
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
+#ifdef DEBUG_WRITERFILTER
 
 void lcl_debug_BorderLine(table::BorderLine & rLine)
 {
@@ -246,7 +218,7 @@ void lcl_debug_BorderLine(table::BorderLine & rLine)
     dmapper_logger->attribute("InnerLineWidth", rLine.InnerLineWidth);
     dmapper_logger->attribute("OuterLineWidth", rLine.OuterLineWidth);
     dmapper_logger->attribute("LineDistance", rLine.LineDistance);
-    dmapper_logger->endElement("BorderLine");
+    dmapper_logger->endElement();
 }
 
 void lcl_debug_TableBorder(table::TableBorder & rBorder)
@@ -266,16 +238,18 @@ void lcl_debug_TableBorder(table::TableBorder & rBorder)
     dmapper_logger->attribute("IsHorizontalLineValid", rBorder.IsHorizontalLineValid);
     dmapper_logger->attribute("Distance", rBorder.Distance);
     dmapper_logger->attribute("IsDistanceValid", rBorder.IsDistanceValid);
-    dmapper_logger->endElement("TableBorder");
+    dmapper_logger->endElement();
 }
 #endif
 
-struct WRITERFILTER_DLLPRIVATE TableInfo
+struct TableInfo
 {
     sal_Int32 nLeftBorderDistance;
     sal_Int32 nRightBorderDistance;
     sal_Int32 nTopBorderDistance;
     sal_Int32 nBottomBorderDistance;
+    sal_Int32 nTblLook;
+    sal_Int32 nNestLevel;
     PropertyMapPtr pTableDefaults;
     PropertyMapPtr pTableBorders;
     TableStyleSheetEntry* pTableStyle;
@@ -286,41 +260,138 @@ struct WRITERFILTER_DLLPRIVATE TableInfo
     , nRightBorderDistance(DEF_BORDER_DIST)
     , nTopBorderDistance(0)
     , nBottomBorderDistance(0)
+    , nTblLook(0x4a0)
+    , nNestLevel(0)
     , pTableDefaults(new PropertyMap)
     , pTableBorders(new PropertyMap)
-    , pTableStyle(NULL)
+    , pTableStyle(nullptr)
     {
     }
 
 };
 
-TableStyleSheetEntry * DomainMapperTableHandler::endTableGetTableStyle(
-    TableInfo & rInfo,
-    const bool bAdjustLeftMarginByDefaultValue )
+namespace
+{
+
+bool lcl_extractTableBorderProperty(PropertyMapPtr pTableProperties, const PropertyIds nId, TableInfo& rInfo, table::BorderLine2& rLine)
+{
+    if (!pTableProperties)
+        return false;
+
+    const boost::optional<PropertyMap::Property> aTblBorder = pTableProperties->getProperty(nId);
+    if( aTblBorder )
+    {
+        OSL_VERIFY(aTblBorder->second >>= rLine);
+
+        rInfo.pTableBorders->Insert( nId, uno::makeAny( rLine ) );
+        rInfo.pTableDefaults->Erase( nId );
+
+        return true;
+    }
+
+    return false;
+}
+
+}
+
+bool lcl_extractHoriOrient(comphelper::SequenceAsVector<beans::PropertyValue>& rFrameProperties, sal_Int32& nHoriOrient)
+{
+    // Shifts the frame left by the given value.
+    for (size_t i = 0; i < rFrameProperties.size(); ++i)
+    {
+        if (rFrameProperties[i].Name == "HoriOrient")
+        {
+            nHoriOrient = rFrameProperties[i].Value.get<sal_Int32>();
+            return true;
+        }
+    }
+    return false;
+}
+
+void lcl_DecrementHoriOrientPosition(comphelper::SequenceAsVector<beans::PropertyValue>& rFrameProperties, sal_Int32 nAmount)
+{
+    // Shifts the frame left by the given value.
+    for (size_t i = 0; i < rFrameProperties.size(); ++i)
+    {
+        beans::PropertyValue& rPropertyValue = rFrameProperties[i];
+        if (rPropertyValue.Name == "HoriOrientPosition")
+        {
+            sal_Int32 nValue = rPropertyValue.Value.get<sal_Int32>();
+            nValue -= nAmount;
+            rPropertyValue.Value <<= nValue;
+            return;
+        }
+    }
+}
+
+TableStyleSheetEntry * DomainMapperTableHandler::endTableGetTableStyle(TableInfo & rInfo, comphelper::SequenceAsVector<beans::PropertyValue>& rFrameProperties)
 {
     // will receive the table style if any
-    TableStyleSheetEntry* pTableStyle = NULL;
-            
+    TableStyleSheetEntry* pTableStyle = nullptr;
+
     if( m_aTableProperties.get() )
     {
         //create properties from the table attributes
-        //...pPropMap->Insert( PROP_LEFT_MARGIN, false, uno::makeAny( m_nLeftMargin - m_nGapHalf ));
-        //pPropMap->Insert( PROP_HORI_ORIENT, false, uno::makeAny( text::HoriOrientation::RIGHT ));
+        //...pPropMap->Insert( PROP_LEFT_MARGIN, uno::makeAny( m_nLeftMargin - m_nGapHalf ));
+        //pPropMap->Insert( PROP_HORI_ORIENT, uno::makeAny( text::HoriOrientation::RIGHT ));
         sal_Int32 nGapHalf = 0;
         sal_Int32 nLeftMargin = 0;
         sal_Int32 nTableWidth = 0;
-        
-        PropertyMap::iterator aTableStyleIter = 
-        m_aTableProperties->find( PropertyDefinition( META_PROP_TABLE_STYLE_NAME, false ) );
-        if(aTableStyleIter != m_aTableProperties->end())
+        sal_Int32 nTableWidthType = text::SizeType::FIX;
+
+        comphelper::SequenceAsHashMap aGrabBag;
+
+        if (nullptr != m_rDMapper_Impl.getTableManager().getCurrentTableRealPosition())
+        {
+            TablePositionHandler *pTablePositions = m_rDMapper_Impl.getTableManager().getCurrentTableRealPosition();
+
+            uno::Sequence< beans::PropertyValue  > aGrabBagTS( 10 );
+
+            aGrabBagTS[0].Name = "bottomFromText";
+            aGrabBagTS[0].Value = uno::makeAny(pTablePositions->getBottomFromText() );
+
+            aGrabBagTS[1].Name = "horzAnchor";
+            aGrabBagTS[1].Value = uno::makeAny( pTablePositions->getHorzAnchor() );
+
+            aGrabBagTS[2].Name = "leftFromText";
+            aGrabBagTS[2].Value = uno::makeAny( pTablePositions->getLeftFromText() );
+
+            aGrabBagTS[3].Name = "rightFromText";
+            aGrabBagTS[3].Value = uno::makeAny( pTablePositions->getRightFromText() );
+
+            aGrabBagTS[4].Name = "tblpX";
+            aGrabBagTS[4].Value = uno::makeAny( pTablePositions->getX() );
+
+            aGrabBagTS[5].Name = "tblpXSpec";
+            aGrabBagTS[5].Value = uno::makeAny( pTablePositions->getXSpec() );
+
+            aGrabBagTS[6].Name = "tblpY";
+            aGrabBagTS[6].Value = uno::makeAny( pTablePositions->getY() );
+
+            aGrabBagTS[7].Name = "tblpYSpec";
+            aGrabBagTS[7].Value = uno::makeAny( pTablePositions->getYSpec() );
+
+            aGrabBagTS[8].Name = "topFromText";
+            aGrabBagTS[8].Value = uno::makeAny( pTablePositions->getTopFromText() );
+
+            aGrabBagTS[9].Name = "vertAnchor";
+            aGrabBagTS[9].Value = uno::makeAny( pTablePositions->getVertAnchor() );
+
+            aGrabBag["TablePosition"] = uno::makeAny( aGrabBagTS );
+        }
+
+        boost::optional<PropertyMap::Property> aTableStyleVal = m_aTableProperties->getProperty(META_PROP_TABLE_STYLE_NAME);
+        if(aTableStyleVal)
         {
             // Apply table style properties recursively
-            ::rtl::OUString sTableStyleName; 
-            aTableStyleIter->second >>= sTableStyleName;
+            OUString sTableStyleName;
+            aTableStyleVal->second >>= sTableStyleName;
             StyleSheetTablePtr pStyleSheetTable = m_rDMapper_Impl.GetStyleSheetTable();
             const StyleSheetEntryPtr pStyleSheet = pStyleSheetTable->FindStyleSheetByISTD( sTableStyleName );
             pTableStyle = dynamic_cast<TableStyleSheetEntry*>( pStyleSheet.get( ) );
-            m_aTableProperties->erase( aTableStyleIter );
+            m_aTableProperties->Erase( aTableStyleVal->first );
+
+            aGrabBag["TableStyleName"] = uno::makeAny( sTableStyleName );
 
             if( pStyleSheet )
             {
@@ -332,452 +403,740 @@ TableStyleSheetEntry * DomainMapperTableHandler::endTableGetTableStyle(
 
                 PropertyMapPtr pMergedProperties = lcl_SearchParentStyleSheetAndMergeProperties(pStyleSheet, pStyleSheetTable);
 
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
+                table::BorderLine2 aBorderLine;
+                TableInfo rStyleInfo;
+                if (lcl_extractTableBorderProperty(pMergedProperties, PROP_TOP_BORDER, rStyleInfo, aBorderLine))
+                {
+                    aGrabBag["TableStyleTopBorder"] = uno::makeAny( aBorderLine );
+                }
+                if (lcl_extractTableBorderProperty(pMergedProperties, PROP_BOTTOM_BORDER, rStyleInfo, aBorderLine))
+                {
+                    aGrabBag["TableStyleBottomBorder"] = uno::makeAny( aBorderLine );
+                }
+                if (lcl_extractTableBorderProperty(pMergedProperties, PROP_LEFT_BORDER, rStyleInfo, aBorderLine))
+                {
+                    aGrabBag["TableStyleLeftBorder"] = uno::makeAny( aBorderLine );
+                }
+                if (lcl_extractTableBorderProperty(pMergedProperties, PROP_RIGHT_BORDER, rStyleInfo, aBorderLine))
+                {
+                    aGrabBag["TableStyleRightBorder"] = uno::makeAny( aBorderLine );
+                }
+
+#ifdef DEBUG_WRITERFILTER
                 dmapper_logger->startElement("mergedProps");
-                dmapper_logger->addTag(pMergedProperties->toTag());
-                dmapper_logger->endElement("mergedProps");
+                if (pMergedProperties)
+                    pMergedProperties->dumpXml( dmapper_logger );
+                dmapper_logger->endElement();
 #endif
-                
-                m_aTableProperties->insert( pMergedProperties );
-                m_aTableProperties->insert( pTableProps );
-                
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
+
+                m_aTableProperties->InsertProps(pMergedProperties);
+                m_aTableProperties->InsertProps(pTableProps);
+
+#ifdef DEBUG_WRITERFILTER
                 dmapper_logger->startElement("TableProperties");
-                dmapper_logger->addTag(m_aTableProperties->toTag());
-                dmapper_logger->endElement("TableProperties");
+                m_aTableProperties->dumpXml( dmapper_logger );
+                dmapper_logger->endElement();
 #endif
             }
         }
 
-        // Set the table default attributes for the cells
-        rInfo.pTableDefaults->insert( m_aTableProperties );
+        // This is the one preserving just all the table look attributes.
+        boost::optional<PropertyMap::Property> oTableLook = m_aTableProperties->getProperty(META_PROP_TABLE_LOOK);
+        if (oTableLook)
+        {
+            aGrabBag["TableStyleLook"] = oTableLook->second;
+            m_aTableProperties->Erase(oTableLook->first);
+        }
 
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
+        // This is just the "val" attribute's numeric value.
+        const boost::optional<PropertyMap::Property> aTblLook = m_aTableProperties->getProperty(PROP_TBL_LOOK);
+        if(aTblLook)
+        {
+            aTblLook->second >>= rInfo.nTblLook;
+            m_aTableProperties->Erase( aTblLook->first );
+        }
+
+        // Set the table default attributes for the cells
+        rInfo.pTableDefaults->InsertProps(m_aTableProperties);
+
+#ifdef DEBUG_WRITERFILTER
         dmapper_logger->startElement("TableDefaults");
-        dmapper_logger->addTag(rInfo.pTableDefaults->toTag());
-        dmapper_logger->endElement("TableDefaults");
+        rInfo.pTableDefaults->dumpXml( dmapper_logger );
+        dmapper_logger->endElement();
 #endif
-        
+
+        if (!aGrabBag.empty())
+        {
+            m_aTableProperties->Insert( PROP_TABLE_INTEROP_GRAB_BAG, uno::makeAny( aGrabBag.getAsConstPropertyValueList() ) );
+        }
+
         m_aTableProperties->getValue( TablePropertyMap::GAP_HALF, nGapHalf );
         m_aTableProperties->getValue( TablePropertyMap::LEFT_MARGIN, nLeftMargin );
-        
-        m_aTableProperties->getValue( TablePropertyMap::CELL_MAR_LEFT, 
+
+        m_aTableProperties->getValue( TablePropertyMap::CELL_MAR_LEFT,
                                      rInfo.nLeftBorderDistance );
-        m_aTableProperties->getValue( TablePropertyMap::CELL_MAR_RIGHT, 
+        m_aTableProperties->getValue( TablePropertyMap::CELL_MAR_RIGHT,
                                      rInfo.nRightBorderDistance );
-        m_aTableProperties->getValue( TablePropertyMap::CELL_MAR_TOP, 
+        m_aTableProperties->getValue( TablePropertyMap::CELL_MAR_TOP,
                                      rInfo.nTopBorderDistance );
-        m_aTableProperties->getValue( TablePropertyMap::CELL_MAR_BOTTOM, 
+        m_aTableProperties->getValue( TablePropertyMap::CELL_MAR_BOTTOM,
                                      rInfo.nBottomBorderDistance );
-        
+
         table::TableBorderDistances aDistances;
-        aDistances.IsTopDistanceValid = 
-        aDistances.IsBottomDistanceValid = 
-        aDistances.IsLeftDistanceValid = 
+        aDistances.IsTopDistanceValid =
+        aDistances.IsBottomDistanceValid =
+        aDistances.IsLeftDistanceValid =
         aDistances.IsRightDistanceValid = sal_True;
         aDistances.TopDistance = static_cast<sal_Int16>( rInfo.nTopBorderDistance );
         aDistances.BottomDistance = static_cast<sal_Int16>( rInfo.nBottomBorderDistance );
         aDistances.LeftDistance = static_cast<sal_Int16>( rInfo.nLeftBorderDistance );
         aDistances.RightDistance = static_cast<sal_Int16>( rInfo.nRightBorderDistance );
-        
-        m_aTableProperties->Insert( PROP_TABLE_BORDER_DISTANCES, false, uno::makeAny( aDistances ) );
-        
+
+        m_aTableProperties->Insert( PROP_TABLE_BORDER_DISTANCES, uno::makeAny( aDistances ) );
+
+        if (!rFrameProperties.empty())
+            lcl_DecrementHoriOrientPosition(rFrameProperties, rInfo.nLeftBorderDistance);
+
+        // Set table above/bottom spacing to 0.
+        m_aTableProperties->Insert( PROP_TOP_MARGIN, uno::makeAny( sal_Int32( 0 ) ) );
+        m_aTableProperties->Insert( PROP_BOTTOM_MARGIN, uno::makeAny( sal_Int32( 0 ) ) );
+
         //table border settings
         table::TableBorder aTableBorder;
-        
-        PropertyMap::iterator aTblBorderIter = m_aTableProperties->find( PropertyDefinition(PROP_TOP_BORDER, false) );
-        if( aTblBorderIter != m_aTableProperties->end() )
-        {    
-            aTblBorderIter->second >>= aTableBorder.TopLine;
-            aTableBorder.IsTopLineValid = true;
-            m_aTableProperties->erase( aTblBorderIter );
-            
-            rInfo.pTableBorders->Insert( PROP_TOP_BORDER, false, 
-                                        uno::makeAny( aTableBorder.TopLine ) );
-            PropertyMap::iterator pIt = rInfo.pTableDefaults->find( PropertyDefinition( PROP_TOP_BORDER, false ) );
-            if ( pIt != rInfo.pTableDefaults->end( ) )
-                rInfo.pTableDefaults->erase( pIt );
+        table::BorderLine2 aBorderLine, aLeftBorder;
+
+        if (lcl_extractTableBorderProperty(m_aTableProperties, PROP_TOP_BORDER, rInfo, aBorderLine))
+        {
+            aTableBorder.TopLine = aBorderLine;
+            aTableBorder.IsTopLineValid = sal_True;
         }
-        aTblBorderIter = m_aTableProperties->find( PropertyDefinition(PROP_BOTTOM_BORDER, false) );
-        if( aTblBorderIter != m_aTableProperties->end() )
-        {    
-            aTblBorderIter->second >>= aTableBorder.BottomLine;
-            aTableBorder.IsBottomLineValid = true;
-            m_aTableProperties->erase( aTblBorderIter );
-            
-            rInfo.pTableBorders->Insert( PROP_BOTTOM_BORDER, false, 
-                                        uno::makeAny( aTableBorder.BottomLine));
-            PropertyMap::iterator pIt = rInfo.pTableDefaults->find( PropertyDefinition( PROP_BOTTOM_BORDER, false ) );
-            if ( pIt != rInfo.pTableDefaults->end( ) )
-                rInfo.pTableDefaults->erase( pIt );
+        if (lcl_extractTableBorderProperty(m_aTableProperties, PROP_BOTTOM_BORDER, rInfo, aBorderLine))
+        {
+            aTableBorder.BottomLine = aBorderLine;
+            aTableBorder.IsBottomLineValid = sal_True;
         }
-        aTblBorderIter = m_aTableProperties->find( PropertyDefinition(PROP_LEFT_BORDER, false) );
-        if( aTblBorderIter != m_aTableProperties->end() )
-        {    
-            aTblBorderIter->second >>= aTableBorder.LeftLine;
-            aTableBorder.IsLeftLineValid = true;
-            m_aTableProperties->erase( aTblBorderIter );
-            
-            rInfo.pTableBorders->Insert( PROP_LEFT_BORDER, false, 
-                                        uno::makeAny( aTableBorder.LeftLine ) );
-            PropertyMap::iterator pIt = rInfo.pTableDefaults->find( PropertyDefinition( PROP_LEFT_BORDER, false ) );
-            if ( pIt != rInfo.pTableDefaults->end( ) )
-                rInfo.pTableDefaults->erase( pIt );
+        if (lcl_extractTableBorderProperty(m_aTableProperties, PROP_LEFT_BORDER, rInfo, aLeftBorder))
+        {
+            aTableBorder.LeftLine = aLeftBorder;
+            aTableBorder.IsLeftLineValid = sal_True;
+            // Only top level table position depends on border width
+            if (rInfo.nNestLevel == 1)
+            {
+                if (rFrameProperties.empty())
+                    rInfo.nLeftBorderDistance += aLeftBorder.LineWidth * 0.5;
+                else
+                    lcl_DecrementHoriOrientPosition(rFrameProperties, aLeftBorder.LineWidth * 0.5);
+            }
         }
-        aTblBorderIter = m_aTableProperties->find( PropertyDefinition(PROP_RIGHT_BORDER, false) );
-        if( aTblBorderIter != m_aTableProperties->end() )
-        {                                               
-            aTblBorderIter->second >>= aTableBorder.RightLine;
-            aTableBorder.IsRightLineValid = true;
-            m_aTableProperties->erase( aTblBorderIter );
-            
-            rInfo.pTableBorders->Insert( PROP_RIGHT_BORDER, false, 
-                                        uno::makeAny( aTableBorder.RightLine ) );
-            PropertyMap::iterator pIt = rInfo.pTableDefaults->find( PropertyDefinition( PROP_RIGHT_BORDER, false ) );
-            if ( pIt != rInfo.pTableDefaults->end( ) )
-                rInfo.pTableDefaults->erase( pIt );
+        if (lcl_extractTableBorderProperty(m_aTableProperties, PROP_RIGHT_BORDER, rInfo, aBorderLine))
+        {
+            aTableBorder.RightLine = aBorderLine;
+            aTableBorder.IsRightLineValid = sal_True;
         }
-        aTblBorderIter = m_aTableProperties->find( PropertyDefinition(META_PROP_HORIZONTAL_BORDER, false) );
-        if( aTblBorderIter != m_aTableProperties->end() )
-        {    
-            aTblBorderIter->second >>= aTableBorder.HorizontalLine;
-            aTableBorder.IsHorizontalLineValid = true;
-            m_aTableProperties->erase( aTblBorderIter );
-            
-            rInfo.pTableBorders->Insert
-                (META_PROP_HORIZONTAL_BORDER, false, 
-                 uno::makeAny( aTableBorder.HorizontalLine ) );
-            PropertyMap::iterator pIt = rInfo.pTableDefaults->find( PropertyDefinition( META_PROP_HORIZONTAL_BORDER, false ) );
-            if ( pIt != rInfo.pTableDefaults->end( ) )
-                rInfo.pTableDefaults->erase( pIt );
+        if (lcl_extractTableBorderProperty(m_aTableProperties, META_PROP_HORIZONTAL_BORDER, rInfo, aBorderLine))
+        {
+            aTableBorder.HorizontalLine = aBorderLine;
+            aTableBorder.IsHorizontalLineValid = sal_True;
         }
-        aTblBorderIter = m_aTableProperties->find( PropertyDefinition(META_PROP_VERTICAL_BORDER, false) );
-        if( aTblBorderIter != m_aTableProperties->end() )
-        {    
-            aTblBorderIter->second >>= aTableBorder.VerticalLine;
-            aTableBorder.IsVerticalLineValid = true;
-            m_aTableProperties->erase( aTblBorderIter );
-            
-            rInfo.pTableBorders->Insert
-                (META_PROP_VERTICAL_BORDER, false, 
-                 uno::makeAny( aTableBorder.VerticalLine ) );
-            PropertyMap::iterator pIt = rInfo.pTableDefaults->find( PropertyDefinition( META_PROP_VERTICAL_BORDER, false ) );
-            if ( pIt != rInfo.pTableDefaults->end( ) )
-                rInfo.pTableDefaults->erase( pIt );
+        if (lcl_extractTableBorderProperty(m_aTableProperties, META_PROP_VERTICAL_BORDER, rInfo, aBorderLine))
+        {
+            aTableBorder.VerticalLine = aBorderLine;
+            aTableBorder.IsVerticalLineValid = sal_True;
         }
+
         aTableBorder.Distance = 0;
-        aTableBorder.IsDistanceValid = false;
-        
-        m_aTableProperties->Insert( PROP_TABLE_BORDER, false, uno::makeAny( aTableBorder ) );
-        
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
+        aTableBorder.IsDistanceValid = sal_False;
+
+        m_aTableProperties->Insert( PROP_TABLE_BORDER, uno::makeAny( aTableBorder ) );
+
+#ifdef DEBUG_WRITERFILTER
         lcl_debug_TableBorder(aTableBorder);
 #endif
-        
-        m_aTableProperties->Insert(
-            PROP_LEFT_MARGIN,
-            false,
-            uno::makeAny( nLeftMargin - nGapHalf - ( bAdjustLeftMarginByDefaultValue ? rInfo.nLeftBorderDistance : 0 ) ) );
 
-        // no bottom margin - set it explicitly to avoid inheritance from a set dynamic pool default
-        // which might be provided via document default paragraph properties.
-        m_aTableProperties->Insert( PROP_BOTTOM_MARGIN, false, uno::makeAny( (sal_Int32)0 ) );
+        // Table position in Office is computed in 2 different ways :
+        // - top level tables: the goal is to have in-cell text starting at table indent pos (tblInd),
+        //   so table's position depends on table's cells margin
+        // - nested tables: the goal is to have left-most border starting at table_indent pos
+        if (rInfo.nNestLevel > 1)
+        {
+            m_aTableProperties->Insert( PROP_LEFT_MARGIN, uno::makeAny( nLeftMargin - nGapHalf ));
+        }
+        else
+        {
+            m_aTableProperties->Insert( PROP_LEFT_MARGIN, uno::makeAny( nLeftMargin - nGapHalf - rInfo.nLeftBorderDistance ));
+        }
 
         m_aTableProperties->getValue( TablePropertyMap::TABLE_WIDTH, nTableWidth );
-        if( nTableWidth > 0 )
-            m_aTableProperties->Insert( PROP_WIDTH, false, uno::makeAny( nTableWidth ));
+        m_aTableProperties->getValue( TablePropertyMap::TABLE_WIDTH_TYPE, nTableWidthType );
+        if( nTableWidthType == text::SizeType::FIX )
+        {
+            if( nTableWidth > 0 )
+                m_aTableProperties->Insert( PROP_WIDTH, uno::makeAny( nTableWidth ));
+        }
+        else
+        {
+            m_aTableProperties->Insert( PROP_RELATIVE_WIDTH, uno::makeAny( sal_Int16( nTableWidth ) ) );
+            m_aTableProperties->Insert( PROP_IS_WIDTH_RELATIVE, uno::makeAny( true ) );
+        }
 
         sal_Int32 nHoriOrient = text::HoriOrientation::LEFT_AND_WIDTH;
-        m_aTableProperties->getValue( TablePropertyMap::HORI_ORIENT, nHoriOrient ) ;
-        m_aTableProperties->Insert( PROP_HORI_ORIENT, false, uno::makeAny( sal_Int16(nHoriOrient) ) );
-        
+        // Fetch Horizontal Orientation in rFrameProperties if not set in m_aTableProperties
+        if ( !m_aTableProperties->getValue( TablePropertyMap::HORI_ORIENT, nHoriOrient ) )
+            lcl_extractHoriOrient( rFrameProperties, nHoriOrient );
+        m_aTableProperties->Insert( PROP_HORI_ORIENT, uno::makeAny( sal_Int16(nHoriOrient) ) );
         //fill default value - if not available
-        const PropertyMap::const_iterator aRepeatIter = 
-        m_aTableProperties->find( PropertyDefinition( PROP_HEADER_ROW_COUNT, false ) );
-        if( aRepeatIter == m_aTableProperties->end() )
-            m_aTableProperties->Insert( PROP_HEADER_ROW_COUNT, false, uno::makeAny( (sal_Int32)0 ));
-
-        // Remove the PROP_HEADER_ROW_COUNT from the table default to avoid
-        // propagating it to the cells
-        PropertyMap::iterator aDefaultRepeatIt =
-        rInfo.pTableDefaults->find( PropertyDefinition( PROP_HEADER_ROW_COUNT, false ) );
-        if ( aDefaultRepeatIt != rInfo.pTableDefaults->end( ) )
-            rInfo.pTableDefaults->erase( aDefaultRepeatIt );
+        m_aTableProperties->Insert( PROP_HEADER_ROW_COUNT, uno::makeAny( (sal_Int32)0), false);
 
         rInfo.aTableProperties = m_aTableProperties->GetPropertyValues();
 
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
+#ifdef DEBUG_WRITERFILTER
         dmapper_logger->startElement("debug.tableprops");
-        dmapper_logger->addTag(m_aTableProperties->toTag());
-        dmapper_logger->endElement("debug.tableprops");
+        m_aTableProperties->dumpXml( dmapper_logger );
+        dmapper_logger->endElement();
 #endif
 
     }
- 
+
     return pTableStyle;
 }
 
-CellPropertyValuesSeq_t DomainMapperTableHandler::endTableGetCellProperties(TableInfo & rInfo)
+#define CNF_FIRST_ROW               0x800
+#define CNF_LAST_ROW                0x400
+#define CNF_FIRST_COLUMN            0x200
+#define CNF_LAST_COLUMN             0x100
+#define CNF_ODD_VBAND               0x080
+#define CNF_EVEN_VBAND              0x040
+#define CNF_ODD_HBAND               0x020
+#define CNF_EVEN_HBAND              0x010
+#define CNF_FIRST_ROW_LAST_COLUMN   0x008
+#define CNF_FIRST_ROW_FIRST_COLUMN  0x004
+#define CNF_LAST_ROW_LAST_COLUMN    0x002
+#define CNF_LAST_ROW_FIRST_COLUMN   0x001
+
+CellPropertyValuesSeq_t DomainMapperTableHandler::endTableGetCellProperties(TableInfo & rInfo, std::vector<HorizontallyMergedCell>& rMerges)
 {
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->startElement("getCellProperties");
 #endif
 
     CellPropertyValuesSeq_t aCellProperties( m_aCellProperties.size() );
 
-    if ( ! m_aCellProperties.empty())
+    if ( !m_aCellProperties.size() )
     {
-    
-        // std::vector< std::vector<PropertyMapPtr> > m_aCellProperties
-        PropertyMapVector2::const_iterator aRowOfCellsIterator = m_aCellProperties.begin();
-        PropertyMapVector2::const_iterator aRowOfCellsIteratorEnd = m_aCellProperties.end();
-        PropertyMapVector2::const_iterator aLastRowIterator = m_aCellProperties.end() - 1;
-        sal_Int32 nRow = 0;
-    
-        //it's a uno::Sequence< beans::PropertyValues >*
-        RowPropertyValuesSeq_t* pCellProperties = aCellProperties.getArray();
-        while( aRowOfCellsIterator != aRowOfCellsIteratorEnd )
+        #ifdef DEBUG_WRITERFILTER
+        dmapper_logger->endElement();
+        #endif
+        return aCellProperties;
+    }
+    // std::vector< std::vector<PropertyMapPtr> > m_aCellProperties
+    PropertyMapVector2::const_iterator aRowOfCellsIterator = m_aCellProperties.begin();
+    PropertyMapVector2::const_iterator aRowOfCellsIteratorEnd = m_aCellProperties.end();
+    PropertyMapVector2::const_iterator aLastRowIterator = m_aCellProperties.end() - 1;
+    sal_Int32 nRow = 0;
+
+    //it's a uno::Sequence< beans::PropertyValues >*
+    RowPropertyValuesSeq_t* pCellProperties = aCellProperties.getArray();
+    PropertyMapVector1::const_iterator aRowIter = m_aRowProperties.begin();
+    while( aRowOfCellsIterator != aRowOfCellsIteratorEnd )
+    {
+        //aRowOfCellsIterator points to a vector of PropertyMapPtr
+        PropertyMapVector1::const_iterator aCellIterator = aRowOfCellsIterator->begin();
+        PropertyMapVector1::const_iterator aCellIteratorEnd = aRowOfCellsIterator->end();
+
+        sal_Int32 nRowStyleMask = 0;
+
+        if (aRowOfCellsIterator==m_aCellProperties.begin())
         {
-            if ( ! aRowOfCellsIterator->empty())
-            {
-                //aRowOfCellsIterator points to a vector of PropertyMapPtr
-                PropertyMapVector1::const_iterator aCellIterator = aRowOfCellsIterator->begin();
-                PropertyMapVector1::const_iterator aCellIteratorEnd = aRowOfCellsIterator->end();
-                PropertyMapVector1::const_iterator aLastCellIterator = aRowOfCellsIterator->end() - 1;
-        
-                // Get the row style properties
-                sal_Int32 nRowStyleMask = sal_Int32( 0 );
-                PropertyMapPtr pRowProps = m_aRowProperties[nRow];
-                if ( pRowProps.get( ) )
-                {
-                    PropertyMap::iterator pTcCnfStyleIt = pRowProps->find( PropertyDefinition( PROP_CNF_STYLE, true ) );
-                    if ( pTcCnfStyleIt != pRowProps->end( ) )
-                    {
-                        if ( rInfo.pTableStyle )
-                        {
-                            rtl::OUString sMask;
-                            pTcCnfStyleIt->second >>= sMask;
-                            nRowStyleMask = sMask.toInt32( 2 );
-                        }
-                        pRowProps->erase( pTcCnfStyleIt );
-                    }
-                }
-        
-                sal_Int32 nCell = 0;
-                pCellProperties[nRow].realloc( aRowOfCellsIterator->size() );
-                beans::PropertyValues* pSingleCellProperties = pCellProperties[nRow].getArray();
-                while( aCellIterator != aCellIteratorEnd )
-                {
-                    PropertyMapPtr pAllCellProps( new PropertyMap );
-            
-                    bool bIsEndCol = aCellIterator == aLastCellIterator;
-                    bool bIsEndRow = aRowOfCellsIterator == aLastRowIterator;
-            
-                    //aCellIterator points to a PropertyMapPtr;
-                    if( aCellIterator->get() )
-                    {
-                        if ( rInfo.pTableDefaults->size( ) )
-                            pAllCellProps->insert( rInfo.pTableDefaults );
-                    
-                        // Fill the cell properties with the ones of the style
-                        sal_Int32 nCellStyleMask = 0;
-                        const PropertyMap::iterator aCnfStyleIter = 
-                            aCellIterator->get()->find( PropertyDefinition( PROP_CNF_STYLE, false ) );
-                        if ( aCnfStyleIter != aCellIterator->get( )->end( ) )
-                        {
-                            if ( rInfo.pTableStyle ) {
-                                rtl::OUString sMask;
-                                aCnfStyleIter->second >>= sMask;
-                                nCellStyleMask = sMask.toInt32( 2 );
-                            }
-                            aCellIterator->get( )->erase( aCnfStyleIter );
-                        }
-                
-                        if ( rInfo.pTableStyle )
-                        {
-                            PropertyMapPtr pStyleProps = rInfo.pTableStyle->GetProperties( nCellStyleMask + nRowStyleMask );
-                            pAllCellProps->insert( pStyleProps );
-                        }
-                
-                        // Then add the cell properties
-                        pAllCellProps->insert( *aCellIterator );
-                        aCellIterator->get( )->swap( *pAllCellProps.get( ) );
-                
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
-                        dmapper_logger->startElement("cell");
-                        dmapper_logger->attribute("cell", nCell);
-                        dmapper_logger->attribute("row", nRow);
-#endif
-                
-                        lcl_computeCellBorders( rInfo.pTableBorders, *aCellIterator, nCell, nRow, bIsEndCol, bIsEndRow );
-                
-                        //now set the default left+right border distance TODO: there's an sprm containing the default distance!
-                        const PropertyMap::const_iterator aLeftDistanceIter = 
-                            aCellIterator->get()->find( PropertyDefinition(PROP_LEFT_BORDER_DISTANCE, false) );
-                        if( aLeftDistanceIter == aCellIterator->get()->end() )
-                            aCellIterator->get()->Insert( PROP_LEFT_BORDER_DISTANCE, false, 
-                                uno::makeAny(rInfo.nLeftBorderDistance ) );
-                        const PropertyMap::const_iterator aRightDistanceIter = 
-                            aCellIterator->get()->find( PropertyDefinition(PROP_RIGHT_BORDER_DISTANCE, false) );
-                        if( aRightDistanceIter == aCellIterator->get()->end() )
-                            aCellIterator->get()->Insert( PROP_RIGHT_BORDER_DISTANCE, false, 
-                                uno::makeAny((sal_Int32) rInfo.nRightBorderDistance ) );
-                
-                        const PropertyMap::const_iterator aTopDistanceIter = 
-                            aCellIterator->get()->find( PropertyDefinition(PROP_TOP_BORDER_DISTANCE, false) );
-                        if( aTopDistanceIter == aCellIterator->get()->end() )
-                            aCellIterator->get()->Insert( PROP_TOP_BORDER_DISTANCE, false, 
-                                uno::makeAny((sal_Int32) rInfo.nTopBorderDistance ) );
-                
-                        const PropertyMap::const_iterator aBottomDistanceIter = 
-                            aCellIterator->get()->find( PropertyDefinition(PROP_BOTTOM_BORDER_DISTANCE, false) );
-                        if( aBottomDistanceIter == aCellIterator->get()->end() )
-                            aCellIterator->get()->Insert( PROP_BOTTOM_BORDER_DISTANCE, false, 
-                                uno::makeAny((sal_Int32) rInfo.nBottomBorderDistance ) );
-                
-                        pSingleCellProperties[nCell] = aCellIterator->get()->GetPropertyValues();
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
-                        dmapper_logger->endElement("cell");
-#endif
-                    }
-                    ++nCell;
-                    ++aCellIterator;
-                }    
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
-                //-->debug cell properties
-                {
-                    ::rtl::OUString sNames;
-                    const uno::Sequence< beans::PropertyValues > aDebugCurrentRow = aCellProperties[nRow];
-                    sal_Int32 nDebugCells = aDebugCurrentRow.getLength();
-                    (void) nDebugCells;
-                    for( sal_Int32  nDebugCell = 0; nDebugCell < nDebugCells; ++nDebugCell)
-                    {
-                        const uno::Sequence< beans::PropertyValue >& aDebugCellProperties = aDebugCurrentRow[nDebugCell];
-                        sal_Int32 nDebugCellProperties = aDebugCellProperties.getLength();
-                        for( sal_Int32  nDebugProperty = 0; nDebugProperty < nDebugCellProperties; ++nDebugProperty)
-                        {
-                            const ::rtl::OUString sName = aDebugCellProperties[nDebugProperty].Name;
-                            sNames += sName;
-                            sNames += ::rtl::OUString('-');
-                        }
-                        sNames += ::rtl::OUString('\n');
-                    }
-                    (void)sNames;
-                }
-                //--<
-#endif
-                ++nRow;
-                ++aRowOfCellsIterator;
+            if(rInfo.nTblLook&0x20)
+                nRowStyleMask |= CNF_FIRST_ROW;     // first row style used
+        }
+        else if (aRowOfCellsIterator==aLastRowIterator)
+        {
+            if(rInfo.nTblLook&0x40)
+                nRowStyleMask |= CNF_LAST_ROW;      // last row style used
+        }
+        else if (*aRowIter && (*aRowIter)->isSet(PROP_TBL_HEADER))
+            nRowStyleMask |= CNF_FIRST_ROW; // table header implies first row
+        if(!nRowStyleMask)                          // if no row style used yet
+        {
+            // banding used only if not first and or last row style used
+            if(!(rInfo.nTblLook&0x200))
+            {   // hbanding used
+                int n = nRow + 1;
+                if(rInfo.nTblLook&0x20)
+                    n++;
+                if(n & 1)
+                    nRowStyleMask = CNF_ODD_HBAND;
+                else
+                    nRowStyleMask = CNF_EVEN_HBAND;
             }
         }
-    }
-    
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
-    dmapper_logger->endElement("getCellProperties");
+
+        sal_Int32 nCell = 0;
+        pCellProperties[nRow].realloc( aRowOfCellsIterator->size() );
+        beans::PropertyValues* pSingleCellProperties = pCellProperties[nRow].getArray();
+        while( aCellIterator != aCellIteratorEnd )
+        {
+            PropertyMapPtr pAllCellProps( new PropertyMap );
+
+            PropertyMapVector1::const_iterator aLastCellIterator = aRowOfCellsIterator->end() - 1;
+            bool bIsEndCol = aCellIterator == aLastCellIterator;
+            bool bIsEndRow = aRowOfCellsIterator == aLastRowIterator;
+
+            //aCellIterator points to a PropertyMapPtr;
+            if( *aCellIterator )
+            {
+                pAllCellProps->InsertProps(rInfo.pTableDefaults);
+
+                sal_Int32 nCellStyleMask = 0;
+                if (aCellIterator==aRowOfCellsIterator->begin())
+                {
+                    if(rInfo.nTblLook&0x80)
+                        nCellStyleMask = CNF_FIRST_COLUMN;      // first col style used
+                }
+                else if (bIsEndCol)
+                {
+                    if(rInfo.nTblLook&0x100)
+                        nCellStyleMask = CNF_LAST_COLUMN;       // last col style used
+                }
+                if(!nCellStyleMask)                 // if no cell style is used yet
+                {
+                    if(!(rInfo.nTblLook&0x400))
+                    {   // vbanding used
+                        int n = nCell + 1;
+                        if(rInfo.nTblLook&0x80)
+                            n++;
+                        if(n & 1)
+                            nCellStyleMask = CNF_ODD_VBAND;
+                        else
+                            nCellStyleMask = CNF_EVEN_VBAND;
+                    }
+                }
+                sal_Int32 nCnfStyleMask = nCellStyleMask + nRowStyleMask;
+                if(nCnfStyleMask == CNF_FIRST_COLUMN + CNF_FIRST_ROW)
+                    nCnfStyleMask |= CNF_FIRST_ROW_FIRST_COLUMN;
+                else if(nCnfStyleMask == CNF_FIRST_COLUMN + CNF_LAST_ROW)
+                    nCnfStyleMask |= CNF_LAST_ROW_FIRST_COLUMN;
+                else if(nCnfStyleMask == CNF_LAST_COLUMN + CNF_FIRST_ROW)
+                    nCnfStyleMask |= CNF_FIRST_ROW_LAST_COLUMN;
+                else if(nCnfStyleMask == CNF_LAST_COLUMN + CNF_LAST_ROW)
+                    nCnfStyleMask |= CNF_LAST_ROW_LAST_COLUMN;
+
+                if ( rInfo.pTableStyle )
+                {
+                    PropertyMapPtr pStyleProps = rInfo.pTableStyle->GetProperties( nCnfStyleMask );
+
+                    // Check if we need to clean up some empty border definitions to match what Word does.
+                    static const PropertyIds pBorders[] =
+                    {
+                        PROP_TOP_BORDER, PROP_LEFT_BORDER, PROP_BOTTOM_BORDER, PROP_RIGHT_BORDER
+                    };
+                    for (size_t i = 0; i < SAL_N_ELEMENTS(pBorders); ++i)
+                    {
+                        boost::optional<PropertyMap::Property> oStyleCellBorder = pStyleProps->getProperty(pBorders[i]);
+                        boost::optional<PropertyMap::Property> oDirectCellBorder = (*aCellIterator)->getProperty(pBorders[i]);
+                        if (oStyleCellBorder && oDirectCellBorder)
+                        {
+                            // We have a cell border from the table style and as direct formatting as well.
+                            table::BorderLine2 aStyleCellBorder = oStyleCellBorder->second.get<table::BorderLine2>();
+                            table::BorderLine2 aDirectCellBorder = oDirectCellBorder->second.get<table::BorderLine2>();
+                            if (aStyleCellBorder.LineStyle != table::BorderLineStyle::NONE && aDirectCellBorder.LineStyle == table::BorderLineStyle::NONE)
+                            {
+                                // The style one would be visible, but then cleared away as direct formatting.
+                                // Delete both, so that table formatting can become visible.
+                                pStyleProps->Erase(pBorders[i]);
+                                (*aCellIterator)->Erase(pBorders[i]);
+                            }
+                            else
+                            {
+                                boost::optional<PropertyMap::Property> oTableBorder = rInfo.pTableBorders->getProperty(pBorders[i]);
+                                if (oTableBorder)
+                                {
+                                    table::BorderLine2 aTableBorder = oTableBorder->second.get<table::BorderLine2>();
+                                    // Both style and direct formatting says that the cell has no border.
+                                    bool bNoCellBorder = aStyleCellBorder.LineStyle == table::BorderLineStyle::NONE && aDirectCellBorder.LineStyle == table::BorderLineStyle::NONE;
+                                    if (aTableBorder.LineStyle != table::BorderLineStyle::NONE && bNoCellBorder)
+                                    {
+                                        // But at a table-level, there is a border, then again delete both cell properties.
+                                        pStyleProps->Erase(pBorders[i]);
+                                        (*aCellIterator)->Erase(pBorders[i]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    pAllCellProps->InsertProps( pStyleProps );
+                }
+
+                // Remove properties from style/row that aren't allowed in cells
+                pAllCellProps->Erase( PROP_HEADER_ROW_COUNT );
+                pAllCellProps->Erase( PROP_TBL_HEADER );
+
+                // Then add the cell properties
+                pAllCellProps->InsertProps(*aCellIterator);
+                std::swap(*(*aCellIterator), *pAllCellProps );
+
+#ifdef DEBUG_WRITERFILTER
+                dmapper_logger->startElement("cell");
+                dmapper_logger->attribute("cell", nCell);
+                dmapper_logger->attribute("row", nRow);
 #endif
-    
+
+                lcl_computeCellBorders( rInfo.pTableBorders, *aCellIterator, nCell, nRow, bIsEndCol, bIsEndRow );
+
+                //now set the default left+right border distance TODO: there's an sprm containing the default distance!
+                aCellIterator->get()->Insert( PROP_LEFT_BORDER_DISTANCE,
+                                                 uno::makeAny(rInfo.nLeftBorderDistance ), false);
+                aCellIterator->get()->Insert( PROP_RIGHT_BORDER_DISTANCE,
+                                                 uno::makeAny((sal_Int32) rInfo.nRightBorderDistance ), false);
+                aCellIterator->get()->Insert( PROP_TOP_BORDER_DISTANCE,
+                                                 uno::makeAny((sal_Int32) rInfo.nTopBorderDistance ), false);
+                aCellIterator->get()->Insert( PROP_BOTTOM_BORDER_DISTANCE,
+                                                 uno::makeAny((sal_Int32) rInfo.nBottomBorderDistance ), false);
+
+                // Horizontal merge is not an UNO property, extract that info here to rMerges, and then remove it from the map.
+                const boost::optional<PropertyMap::Property> aHorizontalMergeVal = (*aCellIterator)->getProperty(PROP_HORIZONTAL_MERGE);
+                if (aHorizontalMergeVal)
+                {
+                    if (aHorizontalMergeVal->second.get<sal_Bool>())
+                    {
+                        // first cell in a merge
+                        HorizontallyMergedCell aMerge(nRow, nCell);
+                        rMerges.push_back(aMerge);
+                    }
+                    else if (!rMerges.empty())
+                    {
+                        // resuming an earlier merge
+                        HorizontallyMergedCell& rMerge = rMerges.back();
+                        rMerge.m_nLastRow = nRow;
+                        rMerge.m_nLastCol = nCell;
+                    }
+                    (*aCellIterator)->Erase(PROP_HORIZONTAL_MERGE);
+                }
+
+                // Cell direction is not an UNO Property, either.
+                const boost::optional<PropertyMap::Property> aCellDirectionVal = (*aCellIterator)->getProperty(PROP_CELL_DIRECTION);
+                if (aCellDirectionVal)
+                {
+                    if (aCellDirectionVal->second.get<sal_Int32>() == static_cast<sal_Int32>(NS_ooxml::LN_Value_ST_TextDirection_btLr))
+                    {
+                        // btLr, so map ParagraphAdjust_CENTER to VertOrientation::CENTER.
+                        uno::Reference<beans::XPropertySet> xPropertySet((*m_pTableSeq)[nRow][nCell][0], uno::UNO_QUERY);
+                        if (xPropertySet->getPropertyValue("ParaAdjust").get<sal_Int16>() == style::ParagraphAdjust_CENTER)
+                            (*aCellIterator)->Insert(PROP_VERT_ORIENT, uno::makeAny(text::VertOrientation::CENTER));
+                    }
+                    (*aCellIterator)->Erase(PROP_CELL_DIRECTION);
+                }
+
+                pSingleCellProperties[nCell] = (*aCellIterator)->GetPropertyValues();
+#ifdef DEBUG_WRITERFILTER
+                dmapper_logger->endElement();
+#endif
+            }
+            ++nCell;
+            ++aCellIterator;
+        }
+#ifdef DEBUG_WRITERFILTER
+        //-->debug cell properties
+        {
+            OUString sNames;
+            const uno::Sequence< beans::PropertyValues > aDebugCurrentRow = aCellProperties[nRow];
+            sal_Int32 nDebugCells = aDebugCurrentRow.getLength();
+            (void) nDebugCells;
+            for( sal_Int32  nDebugCell = 0; nDebugCell < nDebugCells; ++nDebugCell)
+            {
+                const uno::Sequence< beans::PropertyValue >& aDebugCellProperties = aDebugCurrentRow[nDebugCell];
+                sal_Int32 nDebugCellProperties = aDebugCellProperties.getLength();
+                for( sal_Int32  nDebugProperty = 0; nDebugProperty < nDebugCellProperties; ++nDebugProperty)
+                {
+                    const OUString sName = aDebugCellProperties[nDebugProperty].Name;
+                    sNames += sName;
+                    sNames += OUString('-');
+                }
+                sNames += OUString('\n');
+            }
+            (void)sNames;
+        }
+        //--<
+#endif
+        ++nRow;
+        ++aRowOfCellsIterator;
+        ++aRowIter;
+    }
+
+#ifdef DEBUG_WRITERFILTER
+    dmapper_logger->endElement();
+#endif
+
     return aCellProperties;
+}
+
+/// Do all cells in this row have a CellHideMark property?
+bool lcl_hideMarks(PropertyMapVector1& rCellProperties)
+{
+    for (size_t nCell = 0; nCell < rCellProperties.size(); ++nCell)
+        if (!rCellProperties[nCell]->isSet(PROP_CELL_HIDE_MARK))
+            return false;
+    return true;
+}
+
+/// Are all cells in this row empty?
+bool lcl_emptyRow(TableSequence_t& rTableSeq, sal_Int32 nRow)
+{
+    if (nRow >= rTableSeq.getLength())
+    {
+        SAL_WARN("writerfilter", "m_aCellProperties not in sync with m_pTableSeq?");
+        return false;
+    }
+
+    RowSequence_t rRowSeq = rTableSeq[nRow];
+    if (rRowSeq.getLength() == 0)
+    {
+        SAL_WARN("writerfilter", "m_aCellProperties not in sync with m_pTableSeq?");
+        return false;
+    }
+
+    uno::Reference<text::XTextRangeCompare> xTextRangeCompare(rRowSeq[0][0]->getText(), uno::UNO_QUERY);
+    try
+    {
+        for (sal_Int32 nCell = 0; nCell < rRowSeq.getLength(); ++nCell)
+            // See SwXText::Impl::ConvertCell(), we need to compare the start of
+            // the start and the end of the end. However for our text ranges, only
+            // the starts are set, so compareRegionStarts() does what we need.
+            if (xTextRangeCompare->compareRegionStarts(rRowSeq[nCell][0], rRowSeq[nCell][1]) != 0)
+                return false;
+    }
+    catch (const lang::IllegalArgumentException& e)
+    {
+        SAL_WARN("writerfilter", "compareRegionStarts() failed: " << e.Message);
+        return false;
+    }
+    return true;
 }
 
 RowPropertyValuesSeq_t DomainMapperTableHandler::endTableGetRowProperties()
 {
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->startElement("getRowProperties");
 #endif
 
+    static const int MINLAY = 23; // sw/inc/swtypes.hxx, minimal possible size of frames.
     RowPropertyValuesSeq_t aRowProperties( m_aRowProperties.size() );
     PropertyMapVector1::const_iterator aRowIter = m_aRowProperties.begin();
     PropertyMapVector1::const_iterator aRowIterEnd = m_aRowProperties.end();
     sal_Int32 nRow = 0;
     while( aRowIter != aRowIterEnd )
     {
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
+#ifdef DEBUG_WRITERFILTER
         dmapper_logger->startElement("rowProps.row");
 #endif
         if( aRowIter->get() )
         {
             //set default to 'break across pages"
-            if( aRowIter->get()->find( PropertyDefinition( PROP_IS_SPLIT_ALLOWED, false )) == aRowIter->get()->end()) 
-                aRowIter->get()->Insert( PROP_IS_SPLIT_ALLOWED, false, uno::makeAny(sal_True ) );
-            
+            (*aRowIter)->Insert( PROP_IS_SPLIT_ALLOWED, uno::makeAny(sal_True ), false );
+            // tblHeader is only our property, remove before the property map hits UNO
+            (*aRowIter)->Erase(PROP_TBL_HEADER);
+
+            if (lcl_hideMarks(m_aCellProperties[nRow]) && lcl_emptyRow(*m_pTableSeq, nRow))
+            {
+                // We have CellHideMark on all cells, and also all cells are empty:
+                // Set the row height to minimal as Word does.
+                (*aRowIter)->Insert(PROP_SIZE_TYPE, uno::makeAny(text::SizeType::FIX));
+                (*aRowIter)->Insert(PROP_HEIGHT, uno::makeAny(static_cast<sal_Int32>(ConversionHelper::convertTwipToMM100(MINLAY))));
+            }
+
             aRowProperties[nRow] = (*aRowIter)->GetPropertyValues();
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
-            dmapper_logger->addTag((*aRowIter)->toTag());
-            dmapper_logger->addTag(lcl_PropertyValuesToTag(aRowProperties[nRow]));
+#ifdef DEBUG_WRITERFILTER
+            ((*aRowIter)->dumpXml( dmapper_logger ));
+            lcl_DumpPropertyValues(dmapper_logger, aRowProperties[nRow]);
 #endif
         }
         ++nRow;
         ++aRowIter;
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
-        dmapper_logger->endElement("rowProps.row");
+#ifdef DEBUG_WRITERFILTER
+        dmapper_logger->endElement();
 #endif
     }
- 
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
-    dmapper_logger->endElement("getRowProperties");
+
+#ifdef DEBUG_WRITERFILTER
+    dmapper_logger->endElement();
 #endif
 
     return aRowProperties;
 }
-    
-void DomainMapperTableHandler::endTable(
-    const unsigned int nDepth )
+
+// Apply paragraph property to each paragraph within a cell.
+static void lcl_ApplyCellParaProps(uno::Reference<table::XCell> const& xCell,
+        uno::Any aBottomMargin)
 {
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
+    uno::Reference<container::XEnumerationAccess> xEnumerationAccess(xCell, uno::UNO_QUERY);
+    uno::Reference<container::XEnumeration> xEnumeration = xEnumerationAccess->createEnumeration();
+    while (xEnumeration->hasMoreElements())
+    {
+        uno::Reference<beans::XPropertySet> xParagraph(xEnumeration->nextElement(), uno::UNO_QUERY);
+        uno::Reference<beans::XPropertyState> xPropertyState(xParagraph, uno::UNO_QUERY);
+        // Don't apply in case direct formatting is already present.
+        // TODO: probably paragraph style has priority over table style here.
+        if (xPropertyState.is() && xPropertyState->getPropertyState("ParaBottomMargin") == beans::PropertyState_DEFAULT_VALUE)
+            xParagraph->setPropertyValue("ParaBottomMargin", aBottomMargin);
+    }
+}
+
+void DomainMapperTableHandler::endTable(unsigned int nestedTableLevel)
+{
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->startElement("tablehandler.endTable");
 #endif
 
+    // If we want to make this table a floating one.
+    comphelper::SequenceAsVector<beans::PropertyValue> aFrameProperties = m_rDMapper_Impl.getTableManager().getCurrentTablePosition();
     TableInfo aTableInfo;
-    // adjust left margin only for tables in the body text, not for sub tables.
-    const bool bAdjustLeftMarginByDefaultValue = (nDepth == 0);
-    aTableInfo.pTableStyle =
-            endTableGetTableStyle( aTableInfo, bAdjustLeftMarginByDefaultValue );
-    //  expands to uno::Sequence< Sequence< beans::PropertyValues > > 
+    aTableInfo.nNestLevel = nestedTableLevel;
+    aTableInfo.pTableStyle = endTableGetTableStyle(aTableInfo, aFrameProperties);
+    //  expands to uno::Sequence< Sequence< beans::PropertyValues > >
 
-    CellPropertyValuesSeq_t aCellProperties = endTableGetCellProperties(aTableInfo);
-    
+    std::vector<HorizontallyMergedCell> aMerges;
+    CellPropertyValuesSeq_t aCellProperties = endTableGetCellProperties(aTableInfo, aMerges);
+
     RowPropertyValuesSeq_t aRowProperties = endTableGetRowProperties();
-    
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
-    dmapper_logger->addTag(lcl_PropertyValueSeqToTag(aRowProperties));
+
+#ifdef DEBUG_WRITERFILTER
+    lcl_DumpPropertyValueSeq(dmapper_logger, aRowProperties);
 #endif
-    
+
     if (m_pTableSeq->getLength() > 0)
     {
+        uno::Reference<text::XTextRange> xStart;
+        uno::Reference<text::XTextRange> xEnd;
+
+        bool bFloating = !aFrameProperties.empty();
+        // Additional checks: if we can do this.
+        if (bFloating && (*m_pTableSeq)[0].getLength() > 0 && (*m_pTableSeq)[0][0].getLength() > 0)
+        {
+            xStart = (*m_pTableSeq)[0][0][0];
+            uno::Sequence< uno::Sequence< uno::Reference<text::XTextRange> > >& rLastRow = (*m_pTableSeq)[m_pTableSeq->getLength() - 1];
+            uno::Sequence< uno::Reference<text::XTextRange> >& rLastCell = rLastRow[rLastRow.getLength() - 1];
+            xEnd = rLastCell[1];
+        }
+        uno::Reference<text::XTextTable> xTable;
         try
         {
-            uno::Reference< text::XTextTable > xTable =
-                    m_xText->convertToTable(
-                        *m_pTableSeq,
+            if (m_xText.is())
+            {
+                xTable = m_xText->convertToTable(*m_pTableSeq,
                         aCellProperties,
                         aRowProperties,
-                        aTableInfo.aTableProperties );
+                        aTableInfo.aTableProperties);
 
-            m_xTableRange = xTable->getAnchor( );
+                if (xTable.is())
+                {
+                    m_xTableRange = xTable->getAnchor( );
+
+                    if (!aMerges.empty())
+                    {
+                        // Perform horizontal merges in reverse order, so the fact that merging changes the position of cells won't cause a problem for us.
+                        for (std::vector<HorizontallyMergedCell>::reverse_iterator it = aMerges.rbegin(); it != aMerges.rend(); ++it)
+                        {
+                            uno::Reference<table::XCellRange> xCellRange(xTable, uno::UNO_QUERY_THROW);
+                            uno::Reference<beans::XPropertySet> xCell(xCellRange->getCellByPosition(it->m_nFirstCol, it->m_nFirstRow), uno::UNO_QUERY_THROW);
+                            OUString aFirst = xCell->getPropertyValue("CellName").get<OUString>();
+                            xCell.set(xCellRange->getCellByPosition(it->m_nLastCol, it->m_nLastRow), uno::UNO_QUERY_THROW);
+                            OUString aLast = xCell->getPropertyValue("CellName").get<OUString>();
+
+                            uno::Reference<text::XTextTableCursor> xCursor = xTable->createCursorByCellName(aFirst);
+                            xCursor->gotoCellByName(aLast, true);
+                            xCursor->mergeRange();
+                        }
+                    }
+                }
+
+                // OOXML table style may container paragraph properties, apply these now.
+                for (int i = 0; i < aTableInfo.aTableProperties.getLength(); ++i)
+                {
+                    if (aTableInfo.aTableProperties[i].Name == "ParaBottomMargin")
+                    {
+                        uno::Reference<table::XCellRange> xCellRange(xTable, uno::UNO_QUERY);
+                        uno::Any aBottomMargin = aTableInfo.aTableProperties[i].Value;
+                        sal_Int32 nRows = aCellProperties.getLength();
+                        for (sal_Int32 nRow = 0; nRow < nRows; ++nRow)
+                        {
+                            const uno::Sequence< beans::PropertyValues > aCurrentRow = aCellProperties[nRow];
+                            sal_Int32 nCells = aCurrentRow.getLength();
+                            for (sal_Int32 nCell = 0; nCell < nCells; ++nCell)
+                                lcl_ApplyCellParaProps(xCellRange->getCellByPosition(nCell, nRow), aBottomMargin);
+                        }
+                        break;
+                    }
+                }
+            }
         }
-        catch (lang::IllegalArgumentException e)
+        catch ( const lang::IllegalArgumentException &e )
         {
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
-            dmapper_logger->chars("failed to import table!");
+            SAL_INFO("writerfilter.dmapper",
+                    "Conversion to table error: " << e.Message);
+#ifdef DEBUG_WRITERFILTER
+            dmapper_logger->chars(std::string("failed to import table!"));
 #endif
         }
-        catch ( uno::Exception e )
+        catch ( const uno::Exception &e )
         {
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
-            dmapper_logger->startElement("exception");
-            dmapper_logger->chars(rtl::OUStringToOString( e.Message, RTL_TEXTENCODING_UTF8 ).getStr( ));
-            dmapper_logger->endElement("exeception");
-#endif
+            SAL_INFO("writerfilter.dmapper",
+                    "Exception during table creation: " << e.Message);
+        }
+
+        // If we have a table with a start and an end position, we should make it a floating one.
+        // Unless the table had a foot or endnote, as Writer doesn't support those in TextFrames.
+        if (xTable.is() && xStart.is() && xEnd.is() && !m_bHadFootOrEndnote)
+        {
+            uno::Reference<beans::XPropertySet> xTableProperties(xTable, uno::UNO_QUERY);
+            bool bIsRelative = false;
+            xTableProperties->getPropertyValue("IsWidthRelative") >>= bIsRelative;
+            if (!bIsRelative)
+            {
+                beans::PropertyValue aValue;
+                aValue.Name = "Width";
+                aValue.Value = xTableProperties->getPropertyValue("Width");
+                aFrameProperties.push_back(aValue);
+            }
+            else
+            {
+                beans::PropertyValue aValue;
+                aValue.Name = "FrameWidthPercent";
+                aValue.Value = xTableProperties->getPropertyValue("RelativeWidth");
+                aFrameProperties.push_back(aValue);
+
+                // Applying the relative width to the frame, needs to have the table width to be 100% of the frame width
+                xTableProperties->setPropertyValue("RelativeWidth", uno::makeAny(sal_Int16(100)));
+            }
+
+            // A non-zero left margin would move the table out of the frame, move the frame itself instead.
+            xTableProperties->setPropertyValue("LeftMargin", uno::makeAny(sal_Int32(0)));
+
+            // In case the document ends with a table, we're called after
+            // SectionPropertyMap::CloseSectionGroup(), so we'll have no idea
+            // about the text area width, nor can fix this by delaying the text
+            // frame conversion: just do it here.
+            // Also, when the anchor is within a table, then do it here as well,
+            // as xStart/xEnd would not point to the start/end at conversion
+            // time anyway.
+            sal_Int32 nTableWidth = 0;
+            m_aTableProperties->getValue(TablePropertyMap::TABLE_WIDTH, nTableWidth);
+            if (m_rDMapper_Impl.GetSectionContext() && nestedTableLevel <= 1)
+                m_rDMapper_Impl.m_aPendingFloatingTables.push_back(FloatingTableInfo(xStart, xEnd, aFrameProperties.getAsConstList(), nTableWidth));
+            else
+                m_xText->convertToTextFrame(xStart, xEnd, aFrameProperties.getAsConstList());
         }
     }
 
     m_aTableProperties.reset();
     m_aCellProperties.clear();
     m_aRowProperties.clear();
-    
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
-    dmapper_logger->endElement("tablehandler.endTable");
-    dmapper_logger->endElement("tablehandler.table");
+    m_bHadFootOrEndnote = false;
+
+#ifdef DEBUG_WRITERFILTER
+    dmapper_logger->endElement();
+    dmapper_logger->endElement();
 #endif
 }
 
@@ -786,12 +1145,12 @@ void DomainMapperTableHandler::startRow(unsigned int nCells,
 {
     m_aRowProperties.push_back( pProps );
     m_aCellProperties.push_back( PropertyMapVector1() );
-    
-#if DEBUG_DMAPPER_TABLE_HANDLER
+
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->startElement("table.row");
     dmapper_logger->attribute("cells", nCells);
-    if (pProps != NULL)
-        dmapper_logger->addTag(pProps->toTag());
+    if (pProps != nullptr)
+        pProps->dumpXml(dmapper_logger);
 #endif
 
 #ifdef USE_JAVA
@@ -810,8 +1169,8 @@ void DomainMapperTableHandler::endRow()
     (*m_pTableSeq)[m_nRowIndex] = *m_pRowSeq;
     ++m_nRowIndex;
     m_nCellIndex = 0;
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
-    dmapper_logger->endElement("table.row");
+#ifdef DEBUG_WRITERFILTER
+    dmapper_logger->endElement();
 #endif
 }
 
@@ -828,40 +1187,44 @@ void DomainMapperTableHandler::startCell(const Handle_t & start,
         TablePropertyMapPtr pEmptyProps( new TablePropertyMap( ) );
         m_aCellProperties[nRow - 1].push_back( pEmptyProps );
     }
-    
-#if DEBUG_DMAPPER_TABLE_HANDLER
+
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->startElement("table.cell");
     dmapper_logger->startElement("table.cell.start");
     dmapper_logger->chars(toString(start));
-    dmapper_logger->endElement("table.cell.start");
-    lcl_printProperties( pProps );
+    dmapper_logger->endElement();
+    if (pProps.get())
+        pProps->printProperties();
 #endif
 
     //add a new 'row' of properties
-//    if( m_pCellProperties.size() <= sal::static_int_cast< sal_uInt32, sal_Int32>(m_nRowIndex) )
-//        m_pCellProperties.push_back( RowProperties_t() );
-//    m_pCellProperties[m_nRowIndex].push_back( pProps );
     m_pCellSeq = CellSequencePointer_t(new CellSequence_t(2));
-    if (!start.get()) 
+    if (!start.get())
         return;
     (*m_pCellSeq)[0] = start->getStart();
 }
 
 void DomainMapperTableHandler::endCell(const Handle_t & end)
 {
-#ifdef DEBUG_DMAPPER_TABLE_HANDLER
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->startElement("table.cell.end");
     dmapper_logger->chars(toString(end));
-    dmapper_logger->endElement("table.cell.end");
-    dmapper_logger->endElement("table.cell");
-    clog << "</table.cell>" << endl;
+    dmapper_logger->endElement();
+    dmapper_logger->endElement();
 #endif
 
-    if (!end.get()) 
+    if (!end.get())
         return;
     (*m_pCellSeq)[1] = end->getEnd();
     (*m_pRowSeq)[m_nCellIndex] = *m_pCellSeq;
     ++m_nCellIndex;
 }
 
+void DomainMapperTableHandler::setHadFootOrEndnote(bool bHadFootOrEndnote)
+{
+    m_bHadFootOrEndnote = bHadFootOrEndnote;
+}
+
 }}
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
