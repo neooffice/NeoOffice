@@ -246,7 +246,7 @@ void SAL_CALL JavaClipboard::removeClipboardListener( const uno::Reference< data
 
 OUString SAL_CALL JavaClipboard::getImplementationName() throw( uno::RuntimeException )
 {
-	return OUString::createFromAscii( "com.sun.star.datatransfer.clipboard.JavaClipboard" );
+	return OUString::createFromAscii( "com.sun.star.datatransfer.clipboard.AquaClipboard" );
 }
 
 // ------------------------------------------------------------------------

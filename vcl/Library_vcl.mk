@@ -33,11 +33,7 @@
 $(eval $(call gb_Library_Library,vcl))
 
 ifeq ($(OS),MACOSX)
-ifeq ($(strip $(GUIBASE)),java)
-$(eval $(call gb_Library_set_componentfile,vcl,vcl/vcl.java))
-else
 $(eval $(call gb_Library_set_componentfile,vcl,vcl/vcl.macosx))
-endif
 else ifeq ($(OS),WNT)
 $(eval $(call gb_Library_set_componentfile,vcl,vcl/vcl.windows))
 else ifeq ($(OS),OS2)

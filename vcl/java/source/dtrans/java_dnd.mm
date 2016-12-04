@@ -1168,7 +1168,7 @@ void JavaDragSource::startDrag( const datatransfer::dnd::DragGestureEvent& /* tr
 
 OUString JavaDragSource::getImplementationName() throw( uno::RuntimeException )
 {
-	return OUString::createFromAscii( "com.sun.star.datatransfer.dnd.JavaDragSource" );
+	return OUString::createFromAscii( "com.sun.star.comp.datatransfer.dnd.OleDragSource_V1" );
 }
 
 // ------------------------------------------------------------------------
@@ -1340,8 +1340,7 @@ void JavaDropTarget::setDefaultActions( sal_Int8 actions ) throw( uno::RuntimeEx
 
 OUString JavaDropTarget::getImplementationName() throw( uno::RuntimeException )
 {
-	return OUString::createFromAscii( "com.sun.star.datatransfer.dnd.JavaDropTarget"
- );
+	return OUString::createFromAscii( "com.sun.star.comp.datatransfer.dnd.OleDropTarget_V1" );
 }
 
 // ------------------------------------------------------------------------
