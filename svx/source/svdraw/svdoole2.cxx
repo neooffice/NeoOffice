@@ -26,6 +26,13 @@
  * <http://www.openoffice.org/license.html>
  * for a copy of the LGPLv3 License.
  *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
@@ -611,6 +618,7 @@ void SdrLightEmbeddedClient_Impl::setWindow(const uno::Reference< awt::XWindow >
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef NO_LIBO_UPDATE_EMBEDDED_OBJECTS_FIX
 class SdrEmbedObjectLink : public sfx2::SvBaseLink
 {
 	SdrOle2Obj*			pObj;
@@ -625,6 +633,7 @@ public:
 
 	sal_Bool			Connect() { return GetRealObject() != NULL; }
 };
+#endif	// NO_LIBO_UPDATE_EMBEDDED_OBJECTS_FIX
 
 // -----------------------------------------------------------------------------
 
