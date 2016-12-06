@@ -679,9 +679,14 @@ Printer::~Printer()
 // -----------------------------------------------------------------------
 void Printer::SetNextJobIsQuick( bool bQuick )
 {
+#if defined USE_JAVA && defined MACOSX
+    // Fix crash when this method is called after the printer's printer data
+    // has already been deleted by always setting the quick status to false
+#else	// USE_JAVA && MACOSX
     mpPrinterData->mbNextJobIsQuick = bQuick;
     if( mpQPrinter )
         mpQPrinter->SetNextJobIsQuick( bQuick );
+#endif	// USE_JAVA && MACOSX
 }
 
 // -----------------------------------------------------------------------
@@ -1360,14 +1365,12 @@ IMPL_LINK( Printer, ImplDestroyPrinterAsync, void*, pSalPrinter )
 
 void Printer::ImplUpdateQuickStatus()
 {
-    // remove possibly added "IsQuickJob"
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     // Fix crash when this method is called after the printer's printer data
-    // has already been deleted
-    if( mpPrinterData && mpPrinterData->mbNextJobIsQuick )
-#else	// USE_JAVA
+    // has already been deleted by always setting the quick status to false
+#else	// USE_JAVA && MACOSX
+    // remove possibly added "IsQuickJob"
     if( mpPrinterData->mbNextJobIsQuick )
-#endif	// USE_JAVA
     {
         rtl::OUString aKey( RTL_CONSTASCII_USTRINGPARAM( "IsQuickJob" ) );
         // const data means not really const, but change all references
@@ -1376,6 +1379,7 @@ void Printer::ImplUpdateQuickStatus()
         pImpSetup->maValueMap.erase( aKey );
         mpPrinterData->mbNextJobIsQuick = false;
     }
+#endif	// USE_JAVA && MACOSX
 }
 
 class QuickGuard
@@ -1385,7 +1389,12 @@ class QuickGuard
     QuickGuard( Printer* pPrn ) : mpPrinter( pPrn ) {}
     ~QuickGuard()
     {
+#if defined USE_JAVA && defined MACOSX
+        // Fix crash when this method is called after the printer's printer data
+        // has already been deleted by always setting the quick status to false
+#else	// USE_JAVA && MACOSX
         mpPrinter->ImplUpdateQuickStatus();
+#endif	// USE_JAVA && MACOSX
     }
 };
 
@@ -1399,12 +1408,17 @@ BOOL Printer::StartJob( const XubString& rJobName )
 	if ( IsJobActive() || IsPrinting() )
 		return FALSE;
     
+#if defined USE_JAVA && defined MACOSX
+    // Fix crash when this method is called after the printer's printer data
+    // has already been deleted by always setting the quick status to false
+#else	// USE_JAVA && MACOSX
     if( mpPrinterData->mbNextJobIsQuick )
     {
         String aKey( RTL_CONSTASCII_USTRINGPARAM( "IsQuickJob" ) );
         if( maJobSetup.GetValue( aKey ).Len() == 0 )
             maJobSetup.SetValue( aKey, String( RTL_CONSTASCII_USTRINGPARAM( "true" ) ) );
     }
+#endif	// USE_JAVA && MACOSX
     
     QuickGuard aQGuard( this );
 
