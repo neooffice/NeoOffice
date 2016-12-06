@@ -234,18 +234,35 @@ void NSApplication_run()
 	[pPool release];
 }
 
-void NSApplication_terminate()
+@interface GetExitCode: NSObject
 {
-	int nRet = 173;
+	int						mnExitCode;
+}
++ (id)create;
+- (void)getExitCode:(id)pObject;
+- (int)exitCode;
+- (id)init;
+@end
 
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+@implementation GetExitCode
+
++ (id)create
+{
+	GetExitCode *pRet = [[GetExitCode alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (void)getExitCode:(id)pObject
+{
+	mnExitCode = 173;
 
 	NSBundle *pBundle = [NSBundle mainBundle];
 	if ( !pApplication_canUseJava )
 		pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
 	if ( pApplication_canUseJava && pApplication_canUseJava() )
 	{
-		nRet = 0;
+		mnExitCode = 0;
 	}
 	else if ( pBundle )
 	{
@@ -387,7 +404,7 @@ void NSApplication_terminate()
 													CC_SHA1_Update( &aContext, pIdentifierData.bytes, pIdentifierData.length );
 													CC_SHA1_Final( aDigest, &aContext );
 													if ( !memcmp( aDigest, pHash.bytes, CC_SHA1_DIGEST_LENGTH ) )
-														nRet = 0;
+														mnExitCode = 0;
 												}
 											}
 										}
@@ -401,6 +418,32 @@ void NSApplication_terminate()
 			}
 		}
 	}
+}
+
+- (int)exitCode
+{
+	return mnExitCode;
+}
+
+- (id)init
+{
+	[super init];
+
+	mnExitCode = 0;
+
+	return self;
+}
+
+@end
+
+void NSApplication_terminate()
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	GetExitCode *pGetExitCode = [GetExitCode create];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pGetExitCode performSelectorOnMainThread:@selector(getExitCode:) withObject:pGetExitCode waitUntilDone:YES modes:pModes];
+	int nRet = [pGetExitCode exitCode];
 
 	[pPool release];
 
