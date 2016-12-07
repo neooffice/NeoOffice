@@ -1006,7 +1006,11 @@ IGrammarContact* getGrammarContact( const SwTxtNode& rTxtNode )
 
 // --> FME 2005-02-25 #i42634# Moved common code of SwReader::Read() and
 // SwDocShell::UpdateLinks() to new SwDoc::UpdateLinks():
+#ifdef NO_LIBO_LINKUPDATEMODE_FIX
 void SwDoc::UpdateLinks( BOOL bUI )
+#else	// NO_LIBO_LINKUPDATEMODE_FIX
+void SwDoc::UpdateLinks()
+#endif	// NO_LIBO_LINKUPDATEMODE_FIX
 {
     SfxObjectCreateMode eMode;
     USHORT nLinkMode = getLinkUpdateMode( true );
@@ -1036,12 +1040,21 @@ void SwDoc::UpdateLinks( BOOL bUI )
                 if (!SvtSecurityOptions().isTrustedLocationUriForUpdatingLinks(
                         medium == NULL ? String() : medium->GetName()))
                 {
-                    bAskUpdate = true;
+                    bAskUpdate = TRUE;
                 }
             }
 #endif	// !NO_LIBO_LINKUPDATEMODE_FIX
+#ifdef NO_LIBO_LINKUPDATEMODE_FIX
         if( bUpdate && (bUI || !bAskUpdate) )
+#else	// NO_LIBO_LINKUPDATEMODE_FIX
+        comphelper::EmbeddedObjectContainer& rEmbeddedObjectContainer = GetDocShell()->getEmbeddedObjectContainer();
+        if (bUpdate)
+#endif	// NO_LIBO_LINKUPDATEMODE_FIX
         {
+#ifndef NO_LIBO_LINKUPDATEMODE_FIX
+            rEmbeddedObjectContainer.setUserAllowsLinkUpdate(true);
+#endif	// !NO_LIBO_LINKUPDATEMODE_FIX
+
             SfxMedium* pMedium = GetDocShell()->GetMedium();
             SfxFrame* pFrm = pMedium ? pMedium->GetLoadTargetFrame() : 0;
             Window* pDlgParent = pFrm ? &pFrm->GetWindow() : 0;
@@ -1055,6 +1068,12 @@ void SwDoc::UpdateLinks( BOOL bUI )
             else
                 GetLinkManager().UpdateAllLinks( bAskUpdate, TRUE, FALSE, pDlgParent );
         }
+#ifndef NO_LIBO_LINKUPDATEMODE_FIX
+        else
+        {
+            rEmbeddedObjectContainer.setUserAllowsLinkUpdate(false);
+        }
+#endif	// !NO_LIBO_LINKUPDATEMODE_FIX
     }
 
 }

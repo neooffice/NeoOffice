@@ -25,6 +25,14 @@
  * Modified February 2013 by Patrick Luby. NeoOffice is distributed under
  * GPL only under modification term 2 of the LGPL.
  *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  ************************************************************************/
 #ifndef _DOC_HXX
 #define _DOC_HXX
@@ -873,7 +881,11 @@ public:
 	virtual void SetVisibleLinks(bool bFlag);
     virtual SvxLinkManager& GetLinkManager();
 	virtual const SvxLinkManager& GetLinkManager() const;
+#ifdef NO_LIBO_UPDATE_EMBEDDED_OBJECTS_FIX
     virtual void UpdateLinks(BOOL bUI);
+#else	// NO_LIBO_UPDATE_EMBEDDED_OBJECTS_FIX
+    virtual void UpdateLinks();
+#endif	// NO_LIBO_UPDATE_EMBEDDED_OBJECTS_FIX
 	virtual bool GetData(const String& rItem, const String& rMimeType, ::com::sun::star::uno::Any& rValue) const;
 	virtual bool SetData(const String& rItem, const String& rMimeType, const ::com::sun::star::uno::Any& rValue);
     virtual ::sfx2::SvLinkSource* CreateLinkSource(const String& rItem);
