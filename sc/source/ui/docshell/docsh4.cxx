@@ -492,6 +492,11 @@ void ScDocShell::Execute( SfxRequest& rReq )
 			break;
 		case SID_UPDATETABLINKS:
 			{
+#ifndef NO_LIBO_UPDATE_EMBEDDED_OBJECTS_FIX
+                comphelper::EmbeddedObjectContainer& rEmbeddedObjectContainer = getEmbeddedObjectContainer();
+                rEmbeddedObjectContainer.setUserAllowsLinkUpdate(true);
+#endif	// !NO_LIBO_UPDATE_EMBEDDED_OBJECTS_FIX
+
 				ScDocument* pDoc = GetDocument();
 
 				ScLkUpdMode nSet=pDoc->GetLinkMode();
@@ -541,14 +546,25 @@ void ScDocShell::Execute( SfxRequest& rReq )
 				{
 					ReloadTabLinks();
                     aDocument.UpdateExternalRefLinks();
+#ifdef NO_LIBO_LINKUPDATEMODE_FIX
 					aDocument.UpdateDdeLinks();
+#else	// NO_LIBO_LINKUPDATEMODE_FIX
+                    aDocument.updateDdeOrOleLinks();
+#endif	// NO_LIBO_LINKUPDATEMODE_FIX
 					aDocument.UpdateAreaLinks();
 
 					//! Test, ob Fehler
 					rReq.Done();
 				}
 				else
+#ifndef NO_LIBO_LINKUPDATEMODE_FIX
+                {
+                    rEmbeddedObjectContainer.setUserAllowsLinkUpdate(false);
+#endif	// !NO_LIBO_LINKUPDATEMODE_FIX
 					rReq.Ignore();
+#ifndef NO_LIBO_LINKUPDATEMODE_FIX
+                }
+#endif	// !NO_LIBO_LINKUPDATEMODE_FIX
 			}
 			break;
 

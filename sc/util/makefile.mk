@@ -45,7 +45,9 @@ LINKFLAGS+=-Wl,-LD_LAYOUT:lgot_buffer=30
 .ENDIF
 
 .IF "$(UPD)" == "310"
-PREPENDLIBS=$(PRJ)$/..$/svtools$/$(INPATH)$/lib
+PREPENDLIBS=$(PRJ)$/..$/comphelper$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/svtools$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/svx$/$(INPATH)$/lib
 
 # Link to modified libraries
 SOLARLIB:=-L$(PREPENDLIBS) $(SOLARLIB)

@@ -43,6 +43,7 @@ LIBTARGET=no
 
 .IF "$(UPD)" == "310"
 INCLOCAL += \
+	-I$(PRJ)$/..$/comphelper$/inc \
 	-I$(PRJ)$/..$/svtools$/inc
 .ENDIF		# "$(UPD)" == "310"
 
