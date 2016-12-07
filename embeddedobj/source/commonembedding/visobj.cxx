@@ -79,15 +79,7 @@ void SAL_CALL OCommonEmbeddedObject::setVisualAreaSize( sal_Int64 nAspect, const
     sal_Bool bBackToLoaded = sal_False;
 	if ( m_nObjectState == embed::EmbedStates::LOADED )
     {
-#ifdef NO_LIBO_UPDATE_EMBEDDED_OBJECTS_FIX
 		changeState( embed::EmbedStates::RUNNING );
-#else	// NO_LIBO_UPDATE_EMBEDDED_OBJECTS_FIX
-        awt::Size aOrigSize = getVisualAreaSize(nAspect);
-        changeState(embed::EmbedStates::RUNNING);
-        awt::Size aNewSize = getVisualAreaSize(nAspect);
-        if (aOrigSize.Width != aNewSize.Width || aOrigSize.Height != aNewSize.Height)
-            setVisualAreaSize(nAspect, aOrigSize);
-#endif	// NO_LIBO_UPDATE_EMBEDDED_OBJECTS_FIX
 
         // the links should be switched back to loaded state for now to avoid locking problems
         bBackToLoaded = m_bIsLink;
@@ -211,7 +203,15 @@ embed::VisualRepresentation SAL_CALL OCommonEmbeddedObject::getPreferredVisualRe
     sal_Bool bBackToLoaded = sal_False;
 	if ( m_nObjectState == embed::EmbedStates::LOADED )
     {
+#ifdef NO_LIBO_UPDATE_EMBEDDED_OBJECTS_FIX
 		changeState( embed::EmbedStates::RUNNING );
+#else	// NO_LIBO_UPDATE_EMBEDDED_OBJECTS_FIX
+        awt::Size aOrigSize = getVisualAreaSize(nAspect);
+        changeState(embed::EmbedStates::RUNNING);
+        awt::Size aNewSize = getVisualAreaSize(nAspect);
+        if (aOrigSize.Width != aNewSize.Width || aOrigSize.Height != aNewSize.Height)
+            setVisualAreaSize(nAspect, aOrigSize);
+#endif	// NO_LIBO_UPDATE_EMBEDDED_OBJECTS_FIX
 
         // the links should be switched back to loaded state for now to avoid locking problems
         bBackToLoaded = m_bIsLink;
