@@ -45,6 +45,14 @@ ENABLE_EXCEPTIONS=TRUE
 
 USE_LDUMP2=TRUE
 
+.IF "$(UPD)" == "310"
+PREPENDLIBS=$(PRJ)$/..$/comphelper$/$(INPATH)$/lib
+
+# Link to modified libraries
+SOLARLIB:=-L$(PREPENDLIBS) $(SOLARLIB)
+SOLARLIBDIR:=$(PREPENDLIBS) -L$(SOLARLIBDIR)
+.ENDIF		# "$(UPD)" == "310"
+
 # --- general section ----------------------------------------------------
 
 .IF "$(GUI)"!="UNX"
