@@ -48,6 +48,14 @@ SOLARLIB:=-L$(PRJ)$/..$/shell$/$(INPATH)$/slb $(SOLARLIB)
 .INCLUDE :  settings.mk
 .INCLUDE :  $(PRJ)$/util$/makefile.pmk
 
+.IF "$(UPD)" == "310"
+PREPENDLIBS=$(PRJ)$/..$/comphelper$/$(INPATH)$/lib
+
+# Link to modified libraries
+SOLARLIB:=-L$(PREPENDLIBS) $(SOLARLIB)
+SOLARLIBDIR:=$(PREPENDLIBS) -L$(SOLARLIBDIR)
+.ENDIF		# "$(UPD)" == "310"
+
 # --- Allgemein ----------------------------------------------------
 
 LIB1TARGET= $(SLB)$/$(TARGET).lib

@@ -65,6 +65,11 @@ CFLAGS+=-DENABLE_QUICKSTART_APPLET
         CDEFS+=-DDLL_NAME=sfx$(DLLPOSTFIX)$(DLLPOST)
 .ENDIF
 
+.IF "$(UPD)" == "310"
+INCLOCAL += \
+	-I$(PRJ)$/..$/comphelper$/inc
+.ENDIF		# "$(UPD)" == "310"
+
 # --- Files --------------------------------------------------------
 
 SRS1NAME=appl
