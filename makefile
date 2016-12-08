@@ -213,8 +213,11 @@ build.libo_checkout: \
 
 build.libo_patches: \
 	build.libo_bin_patch \
+	build.libo_embeddedobj_patch \
 	build.libo_external_patch \
 	build.libo_include_patch \
+	build.libo_sc_patch \
+	build.libo_sd_patch \
 	build.libo_svx_patch \
 	build.libo_sw_patch \
 	build.libo_vcl_patch
