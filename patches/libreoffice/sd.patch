@@ -1,4 +1,4 @@
---- source/core/drawdoc.cxx.bak	2015-11-25 04:55:38.000000000 -0800
+--- source/core/drawdoc.cxx	2015-11-25 04:55:38.000000000 -0800
 +++ source/core/drawdoc.cxx	2016-12-08 17:07:22.000000000 -0800
 @@ -691,6 +691,12 @@
      {
@@ -13,7 +13,7 @@
          pLinkManager->UpdateAllLinks();  // query box: update all links?
  
          if( pDocLockedInsertingLinks == this )
---- source/ui/docshell/docshel4.cxx.bak	2015-11-25 04:55:38.000000000 -0800
+--- source/ui/docshell/docshel4.cxx	2015-11-25 04:55:38.000000000 -0800
 +++ source/ui/docshell/docshel4.cxx	2016-12-08 17:08:54.000000000 -0800
 @@ -288,8 +288,11 @@
      }
