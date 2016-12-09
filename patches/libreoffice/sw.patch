@@ -1,4 +1,4 @@
---- qa/extras/ooxmlimport/ooxmlimport.cxx.bak	2015-11-25 04:55:38.000000000 -0800
+--- qa/extras/ooxmlimport/ooxmlimport.cxx	2015-11-25 04:55:38.000000000 -0800
 +++ qa/extras/ooxmlimport/ooxmlimport.cxx	2016-10-21 11:14:47.000000000 -0700
 @@ -1050,7 +1050,7 @@
  #if ! TEST_FONTS_MISSING
@@ -9,3 +9,157 @@
  #endif
  
      uno::Reference<drawing::XShapeDescriptor> xShapeDescriptor(xGroupShape->getByIndex(5), uno::UNO_QUERY);
+--- inc/IDocumentLinksAdministration.hxx	2016-12-08 17:13:31.000000000 -0800
++++ inc/IDocumentLinksAdministration.hxx	2016-12-08 17:16:11.000000000 -0800
+@@ -46,7 +46,7 @@
+     /** #i42634# Moved common code of SwReader::Read() and
+         SwDocShell::UpdateLinks() to new SwDoc::UpdateLinks():
+     */
+-    virtual void UpdateLinks(bool bUI) = 0;
++    virtual void UpdateLinks() = 0;
+ 
+     /** SS fuers Linken von Dokumentteilen  / ?? for linking of parts of documents.
+     */
+--- source/core/doc/DocumentLinksAdministrationManager.cxx	2015-11-25 04:55:38.000000000 -0800
++++ source/core/doc/DocumentLinksAdministrationManager.cxx	2016-12-08 17:28:21.000000000 -0800
+@@ -202,46 +202,57 @@
+ 
+ // #i42634# Moved common code of SwReader::Read() and SwDocShell::UpdateLinks()
+ // to new SwDoc::UpdateLinks():
+-void DocumentLinksAdministrationManager::UpdateLinks( bool bUI )
++void DocumentLinksAdministrationManager::UpdateLinks()
+ {
+-    SfxObjectCreateMode eMode;
+-    sal_uInt16 nLinkMode = m_rDoc.GetDocumentSettingManager().getLinkUpdateMode( true );
+-    if ( m_rDoc.GetDocShell()) {
+-        sal_uInt16 nUpdateDocMode = m_rDoc.GetDocShell()->GetUpdateDocMode();
+-        if( (nLinkMode != NEVER ||  document::UpdateDocMode::FULL_UPDATE == nUpdateDocMode) &&
+-            !GetLinkManager().GetLinks().empty() &&
+-            SFX_CREATE_MODE_INTERNAL !=
+-                        ( eMode = m_rDoc.GetDocShell()->GetCreateMode()) &&
+-            SFX_CREATE_MODE_ORGANIZER != eMode &&
+-            SFX_CREATE_MODE_PREVIEW != eMode &&
+-            !m_rDoc.GetDocShell()->IsPreview() )
+-        {
+-            bool bAskUpdate = nLinkMode == MANUAL;
+-            bool bUpdate = true;
+-            switch(nUpdateDocMode)
+-            {
+-                case document::UpdateDocMode::NO_UPDATE:   bUpdate = false;break;
+-                case document::UpdateDocMode::QUIET_UPDATE:bAskUpdate = false; break;
+-                case document::UpdateDocMode::FULL_UPDATE: bAskUpdate = true; break;
+-            }
+-            if (nLinkMode == AUTOMATIC && !bAskUpdate)
+-            {
+-                SfxMedium * medium = m_rDoc.GetDocShell()->GetMedium();
+-                if (!SvtSecurityOptions().isTrustedLocationUriForUpdatingLinks(
+-                        medium == nullptr ? OUString() : medium->GetName()))
+-                {
+-                    bAskUpdate = true;
+-                }
+-            }
+-            if( bUpdate && (bUI || !bAskUpdate) )
+-            {
+-                SfxMedium* pMedium = m_rDoc.GetDocShell()->GetMedium();
+-                SfxFrame* pFrm = pMedium ? pMedium->GetLoadTargetFrame() : 0;
+-                vcl::Window* pDlgParent = pFrm ? &pFrm->GetWindow() : 0;
++    if (!m_rDoc.GetDocShell())
++        return;
++    SfxObjectCreateMode eMode = m_rDoc.GetDocShell()->GetCreateMode();
++    if (eMode == SFX_CREATE_MODE_INTERNAL)
++        return;
++    if (eMode == SFX_CREATE_MODE_ORGANIZER)
++        return;
++    if (eMode == SFX_CREATE_MODE_PREVIEW)
++        return;
++    if (m_rDoc.GetDocShell()->IsPreview())
++        return;
++    if (GetLinkManager().GetLinks().empty())
++        return;
++    sal_uInt16 nLinkMode = m_rDoc.GetDocumentSettingManager().getLinkUpdateMode(true);
++    sal_uInt16 nUpdateDocMode = m_rDoc.GetDocShell()->GetUpdateDocMode();
++    if (nLinkMode == NEVER && nUpdateDocMode != document::UpdateDocMode::FULL_UPDATE)
++        return;
++
++    bool bAskUpdate = nLinkMode == MANUAL;
++    bool bUpdate = true;
++    switch(nUpdateDocMode)
++    {
++        case document::UpdateDocMode::NO_UPDATE:   bUpdate = false;break;
++        case document::UpdateDocMode::QUIET_UPDATE:bAskUpdate = false; break;
++        case document::UpdateDocMode::FULL_UPDATE: bAskUpdate = true; break;
++    }
++    if (nLinkMode == AUTOMATIC && !bAskUpdate)
++    {
++        SfxMedium * medium = m_rDoc.GetDocShell()->GetMedium();
++        if (!SvtSecurityOptions().isTrustedLocationUriForUpdatingLinks(
++                medium == nullptr ? OUString() : medium->GetName()))
++        {
++            bAskUpdate = true;
++        }
++    }
++    comphelper::EmbeddedObjectContainer& rEmbeddedObjectContainer = m_rDoc.GetDocShell()->getEmbeddedObjectContainer();
++    if (bUpdate)
++    {
++        rEmbeddedObjectContainer.setUserAllowsLinkUpdate(true);
++
++        SfxMedium* pMedium = m_rDoc.GetDocShell()->GetMedium();
++        SfxFrame* pFrame = pMedium ? pMedium->GetLoadTargetFrame() : nullptr;
++        vcl::Window* pDlgParent = pFrame ? &pFrame->GetWindow() : nullptr;
+ 
+-                GetLinkManager().UpdateAllLinks( bAskUpdate, true, false, pDlgParent );
+-            }
+-        }
++        GetLinkManager().UpdateAllLinks( bAskUpdate, true, false, pDlgParent );
++    }
++    else
++    {
++        rEmbeddedObjectContainer.setUserAllowsLinkUpdate(false);
+     }
+ }
+ 
+--- source/core/inc/DocumentLinksAdministrationManager.hxx	2015-11-25 04:55:38.000000000 -0800
++++ source/core/inc/DocumentLinksAdministrationManager.hxx	2016-12-08 17:20:51.000000000 -0800
+@@ -47,7 +47,7 @@
+ 
+     const sfx2::LinkManager& GetLinkManager() const SAL_OVERRIDE;
+ 
+-    void UpdateLinks(bool bUI) SAL_OVERRIDE;
++    void UpdateLinks() SAL_OVERRIDE;
+ 
+     bool GetData(const OUString& rItem, const OUString& rMimeType, ::com::sun::star::uno::Any& rValue) const SAL_OVERRIDE;
+ 
+--- source/filter/basflt/shellio.cxx	2015-11-25 04:55:38.000000000 -0800
++++ source/filter/basflt/shellio.cxx	2016-12-08 17:21:25.000000000 -0800
+@@ -363,7 +363,7 @@
+         // #i42634# Moved common code of SwReader::Read() and
+         // SwDocShell::UpdateLinks() to new SwDoc::UpdateLinks():
+     // ATM still with Update
+-        pDoc->getIDocumentLinksAdministration().UpdateLinks( true );
++        pDoc->getIDocumentLinksAdministration().UpdateLinks();
+ 
+         // not insert: set the redline mode read from settings.xml
+         eOld = static_cast<RedlineMode_t>(
+--- source/uibase/app/docsh.cxx	2015-11-25 04:55:38.000000000 -0800
++++ source/uibase/app/docsh.cxx	2016-12-08 17:22:09.000000000 -0800
+@@ -1191,7 +1191,7 @@
+ // read by the binary filter:
+ void SwDocShell::UpdateLinks()
+ {
+-    GetDoc()->getIDocumentLinksAdministration().UpdateLinks(true);
++    GetDoc()->getIDocumentLinksAdministration().UpdateLinks();
+     // #i50703# Update footnote numbers
+     SwTxtFtn::SetUniqueSeqRefNo( *GetDoc() );
+     SwNodeIndex aTmp( GetDoc()->GetNodes() );
+--- source/uibase/app/docshini.cxx	2015-11-25 04:55:38.000000000 -0800
++++ source/uibase/app/docshini.cxx	2016-12-08 17:22:50.000000000 -0800
+@@ -477,6 +477,9 @@
+     bool bRet = false;
+     if( SfxObjectShell::Load( rMedium ))
+     {
++        comphelper::EmbeddedObjectContainer& rEmbeddedObjectContainer = getEmbeddedObjectContainer();
++        rEmbeddedObjectContainer.setUserAllowsLinkUpdate(false);
++
+         SAL_INFO( "sw.ui", "after SfxInPlaceObject::Load" );
+         if (mpDoc)              // for last version!!
+             RemoveLink();       // release the existing
