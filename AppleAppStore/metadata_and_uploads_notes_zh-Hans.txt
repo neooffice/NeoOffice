@@ -24,14 +24,11 @@ What's New in this Version:
 Before you buy NeoOffice, please click on the "NeoOffice 支持" link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
-• When selecting a menu item while running autospellcheck, NeoOffice would sometimes freeze until autospellcheck finished spellchecking the entire document
-• NeoOffice would crash or hang when opening some .rtf files that contain data that does not conform to Microsoft's Rich Text Format specification
-• NeoOffice would take 20 - 30 minutes to open spreadsheet documents that contain thousands of unique cell styles
-• NeoOffice would sometimes freeze when unlocking a Dropbox or iCloud document in the document's titlebar popup window
-• When running NeoOffice on macOS Sierra, both horizontal and vertical scrolling using the trackpad was several times more sensitive than on earlier versions of OS X
-• When running NeoOffice on macOS Sierra, NeoOffice would crash when creating a database using the Database Wizard
-• NeoOffice would crash if you pressed the Command-w keys while a print dialog was displayed
-• When running NeoOfice on macOS Sierra, macOS would display an internal error dialog on some computers after selecting a menu item in NeoOffice
+• NeoOffice would fail to change the fill color of a shape in a Writer document after changing the fill color in the toolbar
+• NeoOffice would sometimes crash when dragging a table within an Impress document
+• NeoOffice would sometimes crash when running a print job on OS X Yosemite
+• NeoOffice would sometimes crash when cancelling both dialogs that appear after selecting the File > Printer Settings menu item in a Writer document
+• When opening a document that contains linked OLE objects, NeoOffice would fail to display the "Update all links?" dialog and would automatically reload all linked OLE objects
 
 
 Keywords:
