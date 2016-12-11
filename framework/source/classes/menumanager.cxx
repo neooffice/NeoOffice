@@ -65,9 +65,9 @@
 
 #if defined USE_JAVA && defined MACOSX
 
-#include <dlfcn.h>
-
 typedef sal_Bool IsShowOnlyMenusWindow_Type( void* );
+
+static ::osl::Module aModule;
 
 static IsShowOnlyMenusWindow_Type *pIsShowOnlyMenusWindow = NULL;
 
@@ -647,8 +647,12 @@ void MenuManager::UpdateSpecialWindowMenu( Menu* pMenu,const Reference< XCompone
             if ( pWin && pWin->IsVisible() )
             {
 #if defined USE_JAVA && defined MACOSX
+                // Local libvcl and invoke the IsShowOnlyMenusWindow function
                 if ( !pIsShowOnlyMenusWindow )
-                    pIsShowOnlyMenusWindow = (IsShowOnlyMenusWindow_Type *)dlsym( RTLD_DEFAULT, "IsShowOnlyMenusWindow" );
+                {
+                    if ( aModule.load( "libvcllo.dylib" ) )
+                        pIsShowOnlyMenusWindow = (IsShowOnlyMenusWindow_Type *)aModule.getSymbol( "IsShowOnlyMenusWindow" );
+                }
 
                 if ( !pIsShowOnlyMenusWindow || !pIsShowOnlyMenusWindow( pWin ) )
                 {
