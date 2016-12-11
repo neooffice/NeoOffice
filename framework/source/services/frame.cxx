@@ -95,9 +95,9 @@
 
 #if defined USE_JAVA && defined MACOSX
 
-#include <dlfcn.h>
-
 typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
+
+static ::osl::Module aModule;
 
 static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 
@@ -1622,8 +1622,12 @@ sal_Bool SAL_CALL Frame::setComponent(  const   css::uno::Reference< css::awt::X
 #if defined USE_JAVA && defined MACOSX
     aReadLock.reset();
 
+    // Local libvcl and invoke the ShowOnlyMenusForWindow function
     if ( !pShowOnlyMenusForWindow )
-        pShowOnlyMenusForWindow = (ShowOnlyMenusForWindow_Type *)dlsym( RTLD_DEFAULT, "ShowOnlyMenusForWindow" );
+    {
+        if ( aModule.load( "libvcllo.dylib" ) )
+            pShowOnlyMenusForWindow = (ShowOnlyMenusForWindow_Type *)aModule.getSymbol( "ShowOnlyMenusForWindow" );
+    }
 
     // Prevent flashing of backing window on close without causing bug 2903 to
     // reappear by only changing window state if this task is connected

@@ -86,12 +86,12 @@
 
 #if defined USE_JAVA && defined MACOSX
 
-#include <dlfcn.h>
-
 typedef sal_Bool IsShowOnlyMenusWindow_Type( void* );
 typedef OUString NSDocument_revertToSavedLocalizedString_Type( vcl::Window *pWindow );
 typedef OUString NSDocument_saveAVersionLocalizedString_Type( vcl::Window *pWindow );
 
+static ::osl::Module aVCLModule;
+static ::osl::Module aSFXModule;
 static IsShowOnlyMenusWindow_Type *pIsShowOnlyMenusWindow = NULL;
 static NSDocument_revertToSavedLocalizedString_Type *pNSDocument_revertToSavedLocalizedString = NULL;
 static NSDocument_saveAVersionLocalizedString_Type *pNSDocument_saveAVersionLocalizedString = NULL;
@@ -990,10 +990,11 @@ IMPL_LINK( MenuBarManager, Activate, Menu *, pMenu )
                 bool bVersionsCommand = ( aCommand == ".uno:VersionDialog" );
                 if ( bSaveCommand || bVersionsCommand )
                 {
-                    if ( !pNSDocument_revertToSavedLocalizedString )
-                        pNSDocument_revertToSavedLocalizedString = (NSDocument_revertToSavedLocalizedString_Type *)dlsym( RTLD_DEFAULT, "NSDocument_revertToSavedLocalizedString" );
-                    if ( !pNSDocument_saveAVersionLocalizedString )
-                        pNSDocument_saveAVersionLocalizedString = (NSDocument_saveAVersionLocalizedString_Type *)dlsym( RTLD_DEFAULT, "NSDocument_saveAVersionLocalizedString" );
+                    if ( aSFXModule.load( "libsfxlo.dylib" ) )
+                    {
+                        pNSDocument_revertToSavedLocalizedString = (NSDocument_revertToSavedLocalizedString_Type *)aSFXModule.getSymbol( "NSDocument_revertToSavedLocalizedString" );
+                        pNSDocument_saveAVersionLocalizedString = (NSDocument_saveAVersionLocalizedString_Type *)aSFXModule.getSymbol( "NSDocument_saveAVersionLocalizedString" );
+                    }
 
                     // Reset save and versions menu item text based on whether
                     // native version support is enabled
@@ -1077,8 +1078,12 @@ IMPL_LINK( MenuBarManager, Select, Menu *, pMenu )
                 Reference< XDesktop2 > xDesktop = Desktop::create( m_xContext );
 
 #if defined USE_JAVA && defined MACOSX
+                // Load libvcl and invoke the IsShowOnlyMenusWindow function
                 if ( !pIsShowOnlyMenusWindow )
-                    pIsShowOnlyMenusWindow = (IsShowOnlyMenusWindow_Type *)dlsym( RTLD_DEFAULT, "IsShowOnlyMenusWindow" );
+                {
+                    if ( aVCLModule.load( "libvcllo.dylib" ) )
+                        pIsShowOnlyMenusWindow = (IsShowOnlyMenusWindow_Type *)aVCLModule.getSymbol( "IsShowOnlyMenusWindow" );
+                }
 #endif	// USE_JAVA && MACOSX
 
                 sal_uInt16 nTaskId = START_ITEMID_WINDOWLIST;
