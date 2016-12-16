@@ -3162,7 +3162,7 @@ long SvTreeListBox::PaintEntry1(SvTreeListEntry* pEntry,long nLine,sal_uInt16 nT
 
                     // Fix bug 1646 by adjusting for the map mode's origin
                     Rectangle aCtrlDrawRegion( Point( aPos.X() + GetMapMode().GetOrigin().X(), aPos.Y() ), aBoundingRgn.GetSize() );
-                    DrawNativeControl( CTRL_LISTNODE, PART_ENTIRE_CONTROL, aCtrlDrawRegion, nState, aControlValue, "" );
+                    DrawNativeControl( CTRL_LISTNODE, PART_ENTIRE_CONTROL, aCtrlDrawRegion, nState, aControlValue, OUString() );
                 }
                 else
                 {
