@@ -3156,7 +3156,7 @@ long SvTreeListBox::PaintEntry1(SvTreeListEntry* pEntry,long nLine,sal_uInt16 nT
                     Rectangle aCtrlRegion( Point( 0, 0 ), Size( nTempEntryHeight, nTempEntryHeight ) );
                     Rectangle aBoundingRgn, aContentRgn;
 
-                    GetNativeControlRegion( CTRL_LISTNODE, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, "", aBoundingRgn, aContentRgn );
+                    GetNativeControlRegion( CTRL_LISTNODE, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, OUString(), aBoundingRgn, aContentRgn );
                     if( aBoundingRgn.GetHeight() < nTempEntryHeight )
                         aPos.Y() += ( nTempEntryHeight - aBoundingRgn.GetHeight() ) / 2;
 
