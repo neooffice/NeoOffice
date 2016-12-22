@@ -460,6 +460,11 @@ SalInstance* CreateSalInstance()
 {
 	SalData *pSalData = GetSalData();
 
+	// If we are running unit tests, initialize the native classes here since
+	// NSApplication_run() will never be called
+	if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
+		VCLEventQueue_installVCLEventQueueClasses();
+
 	JavaSalInstance *pInst = new JavaSalInstance();
 	pSalData->mpFirstInstance = pInst;
 
