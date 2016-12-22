@@ -342,7 +342,12 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( BitmapAccessMode nMode )
 	{
 		try
 		{
-			mpBits = new sal_uInt8[ pBuffer->mnScanlineSize * pBuffer->mnHeight ];
+			// If the total bytes is more than 32 bits, loading the
+			// vcl/qa/cppunit/graphicfilter/data/bmp/pass/CVE-2007-3741-1.bmp
+			// image will cause the unit tests to crash when memset() is called
+			// on the allocated buffer
+			if ( pBuffer->mnScanlineSize <= std::numeric_limits< sal_uInt32 >::max() / pBuffer->mnHeight )
+				mpBits = new sal_uInt8[ pBuffer->mnScanlineSize * pBuffer->mnHeight ];
 		}
 		catch( const std::bad_alloc& ) {}
 		if ( mpBits )
