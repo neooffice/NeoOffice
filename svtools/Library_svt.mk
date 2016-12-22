@@ -277,7 +277,7 @@ $(eval $(call gb_Library_use_system_win32_libs,svt,\
 endif
 
 ifeq ($(strip $(GUIBASE)),java)
-(eval $(call gb_Library_use_system_darwin_frameworks,svt,\
+$(eval $(call gb_Library_use_system_darwin_frameworks,svt,\
     Cocoa \
 ))
 endif	# GUIBASE == java
