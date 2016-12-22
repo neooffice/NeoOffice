@@ -379,7 +379,11 @@ bool InitVCL()
     pSVData->mnMainThreadId = ::osl::Thread::getCurrentIdentifier();
 
     // Initialize Sal
+#if defined USE_JAVA && defined MACOSX
+    pSVData->mpDefInst = CreateSalInstance( bInImplSVMain );
+#else	// USE_JAVA && MACOSX
     pSVData->mpDefInst = CreateSalInstance();
+#endif	// USE_JAVA && MACOSX
     if ( !pSVData->mpDefInst )
         return false;
 

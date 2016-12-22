@@ -94,6 +94,7 @@ public:
 typedef void NativeAboutMenuHandler_Type();
 typedef void NativePreferencesMenuHandler_Type();
 
+static bool bInUnitTest = false;
 static ::osl::Module aAboutHandlerModule;
 static ::osl::Module aPreferencesHandlerModule;
 static NativeAboutMenuHandler_Type *pAboutHandler = NULL;
@@ -456,13 +457,14 @@ void InitSalMain()
 
 // -----------------------------------------------------------------------
 
-SalInstance* CreateSalInstance()
+SalInstance* CreateSalInstance( bool bInImplSVMain )
 {
 	SalData *pSalData = GetSalData();
 
 	// If we are running unit tests, initialize the native classes here since
 	// NSApplication_run() will never be called
-	if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
+	bInUnitTest = !bInImplSVMain;
+	if ( bInUnitTest )
 		VCLEventQueue_installVCLEventQueueClasses();
 
 	JavaSalInstance *pInst = new JavaSalInstance();
@@ -549,7 +551,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 {
 	sal_uLong nCount = 0;
 	SalData *pSalData = GetSalData();
-	bool bMainEventLoop = ( CFRunLoopGetCurrent() == CFRunLoopGetMain() );
+	bool bMainEventLoop = ( !bInUnitTest && CFRunLoopGetCurrent() == CFRunLoopGetMain() );
 
 	// Fix bug 2575 by manually dispatching native events.
 	if ( bMainEventLoop )
@@ -1206,7 +1208,7 @@ sal_uLong SalYieldMutex::ReleaseAcquireCount()
 	// Never release the mutex in the main thread as it can cause crashing
 	// when dragging when the OOo code's VCL event dispatching thread runs
 	// while we are in the middle of a native drag event
-	if ( ( !bAllowReleaseYieldMutex || bInNativeDragPrint ) && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
+	if ( ( ( !bAllowReleaseYieldMutex && !bInUnitTest ) || bInNativeDragPrint ) && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 		return nRet;
 
 	if ( mnThreadId == Thread::getCurrentIdentifier() )
