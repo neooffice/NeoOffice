@@ -50,7 +50,7 @@
 #include <vcl/ctrl.hxx>
 #include <vcl/floatwin.hxx>
 #include <vcl/salbtype.hxx>
-#include <vos/module.hxx>
+#include <vcl/settings.hxx>
 #include <com/sun/star/frame/XDispatchHelper.hpp>
 #include <com/sun/star/frame/XDispatchProvider.hpp>
 #include <com/sun/star/frame/XFramesSupplier.hpp>
@@ -94,8 +94,8 @@ public:
 typedef void NativeAboutMenuHandler_Type();
 typedef void NativePreferencesMenuHandler_Type();
 
-static ::vos::OModule aAboutHandlerModule;
-static ::vos::OModule aPreferencesHandlerModule;
+static ::osl::Module aAboutHandlerModule;
+static ::osl::Module aPreferencesHandlerModule;
 static NativeAboutMenuHandler_Type *pAboutHandler = NULL;
 static NativePreferencesMenuHandler_Type *pPreferencesHandler = NULL;
 static bool bAllowReleaseYieldMutex = false;
@@ -106,9 +106,7 @@ static NSMutableArray *pObjectsRetainedDuringDragPrintLock = nil;
 
 using namespace com::sun::star;
 using namespace osl;
-using namespace rtl;
 using namespace vcl;
-using namespace vos;
 
 // ============================================================================
 
@@ -151,7 +149,7 @@ static void InvalidateControls( Window *pWindow )
 
 static sal_uLong ReleaseEventQueueMutex()
 {
-	if ( aEventQueueMutex.GetThreadId() == OThread::getCurrentIdentifier() )
+	if ( aEventQueueMutex.GetThreadId() == Thread::getCurrentIdentifier() )
 	{
 		sal_uLong nCount = aEventQueueMutex.ReleaseAcquireCount();
 		sal_uLong n = nCount;
@@ -246,7 +244,7 @@ sal_Bool VCLInstance_setDragPrintLock( sal_Bool bLock )
 	{
 		if ( !Application::IsShutDown() && !bInNativeDragPrint )
 		{
-			IMutex& rSolarMutex = Application::GetSolarMutex();
+			comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 			rSolarMutex.acquire();
 			if ( !Application::IsShutDown() && !bInNativeDragPrint )
 			{	
@@ -265,7 +263,7 @@ sal_Bool VCLInstance_setDragPrintLock( sal_Bool bLock )
 		bInNativeDragPrint = sal_False;
 		if ( pObjectsRetainedDuringDragPrintLock )
 			[pObjectsRetainedDuringDragPrintLock removeAllObjects];
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.release();
 		bRet = sal_True;
 	}
@@ -304,7 +302,7 @@ sal_Bool VCLInstance_updateNativeMenus()
 	aEventQueueMutex.acquire();
 	Application::AcquireSolarMutex( nCount );
 
-	IMutex& rSolarMutex = Application::GetSolarMutex();
+	comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 	rSolarMutex.acquire();
 
 	ImplSVData *pSVData = ImplGetSVData();
@@ -348,7 +346,7 @@ sal_Bool VCLInstance_updateNativeMenus()
 			{
 				// Fix bug 3571 by only cancelling when at least one visible
 				// non-backing, non-floating, and non-floating frame
-				if ( (*it)->mbVisible && !(*it)->mbShowOnlyMenus && !(*it)->IsFloatingFrame() && (*it)->GetState() != SAL_FRAMESTATE_MINIMIZED )
+				if ( (*it)->mbVisible && !(*it)->mbShowOnlyMenus && !(*it)->IsFloatingFrame() && (*it)->GetState() != WINDOWSTATE_STATE_MINIMIZED )
 				{
 					bRet = sal_False;
 					break;
@@ -388,7 +386,7 @@ sal_Bool VCLInstance_updateNativeMenus()
 
 // -----------------------------------------------------------------------
 
-// Note: this must not be static as the symbol will be loaded by the vos
+// Note: this must not be static as the symbol will be loaded by the salhelper 
 // module
 extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool Application_acquireSolarMutex()
 {
@@ -405,7 +403,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool Application_acquireSolarMutex()
 
 // -----------------------------------------------------------------------
 
-// Note: this must not be static as the symbol will be loaded by the vos
+// Note: this must not be static as the symbol will be loaded by the salhelper
 // module
 extern "C" SAL_DLLPUBLIC_EXPORT void Application_releaseSolarMutex()
 {
@@ -415,21 +413,21 @@ extern "C" SAL_DLLPUBLIC_EXPORT void Application_releaseSolarMutex()
 
 // =======================================================================
 
-void SalAbort( const XubString& rErrorText )
+void SalAbort( const OUString& rErrorText, bool /* bDumpCore */ )
 {
-	if ( !rErrorText.Len() )
-		fprintf( stderr, "Application Error" );
+	if ( rErrorText.getLength() )
+		fprintf( stderr, "%s", OUStringToOString( rErrorText, osl_getThreadTextEncoding() ).getStr() );
 	else
-		fprintf( stderr, "%s", ByteString( rErrorText, gsl_getSystemTextEncoding() ).GetBuffer() );
+		fprintf( stderr, "Application Error" );
 	fprintf( stderr, "\n" );
 	abort();
 }
 
 // -----------------------------------------------------------------------
 
-const ::rtl::OUString& SalGetDesktopEnvironment()
+const OUString& SalGetDesktopEnvironment()
 {
-	static ::rtl::OUString aDesktopEnvironment( RTL_CONSTASCII_USTRINGPARAM( "MacOSX" ) );
+	static OUString aDesktopEnvironment( "MacOSX" );
 	return aDesktopEnvironment;
 }
 
@@ -458,12 +456,6 @@ void InitSalMain()
 
 // -----------------------------------------------------------------------
 
-void DeInitSalMain()
-{
-}
-
-// -----------------------------------------------------------------------
-
 SalInstance* CreateSalInstance()
 {
 	SalData *pSalData = GetSalData();
@@ -475,9 +467,6 @@ SalInstance* CreateSalInstance()
 	ImplGetSVData()->maNWFData.mbNoFocusRects = true;
 	ImplGetSVData()->maNWFData.mbProgressNeedsErase = true;
 	ImplGetSVData()->maNWFData.mbCheckBoxNeedsErase = true;
-
-	// Avoid expensive XORing to draw transparent objects
-	ImplGetSVData()->maGDIData.mbNoXORClipping = true;
 
 	return pInst;
 }
@@ -518,7 +507,7 @@ JavaSalInstance::~JavaSalInstance()
 
 // -----------------------------------------------------------------------
 
-IMutex* JavaSalInstance::GetYieldMutex()
+comphelper::SolarMutex* JavaSalInstance::GetYieldMutex()
 {
 	return mpSalYieldMutex;
 }
@@ -546,7 +535,7 @@ void JavaSalInstance::AcquireYieldMutex( sal_uLong nCount )
 
 bool JavaSalInstance::CheckYieldMutex()
 {
-	return ( mpSalYieldMutex->GetThreadId() == OThread::getCurrentIdentifier() );
+	return ( mpSalYieldMutex->GetThreadId() == Thread::getCurrentIdentifier() );
 }
 
 // -----------------------------------------------------------------------
@@ -603,7 +592,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	{
 		sal_uLong nEventQueueMutexCount = ReleaseEventQueueMutex();
 		nCount = ReleaseYieldMutex();
-		OThread::yield();
+		Thread::yield();
 		AcquireEventQueueMutex( nEventQueueMutexCount );
 		AcquireYieldMutex( nCount );
 	}
@@ -694,7 +683,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 				// Fix bugs 437 and 2264 by ensuring that if the next
 				// event is a matching event, it will be dispatched before
 				// the painting timer runs.
-				OThread::yield();
+				Thread::yield();
 				break;
 			case SALEVENT_KEYUP:
 				// Fix bug 3390 by letting any timers run when releasing
@@ -770,7 +759,7 @@ bool JavaSalInstance::AnyInput( sal_uInt16 nType )
 {
 	bool bRet = false;
 
-	if ( nType & INPUT_TIMER )
+	if ( nType & VCL_INPUT_TIMER )
 	{
 		// Check timer
 		SalData *pSalData = GetSalData();
@@ -889,7 +878,7 @@ void JavaSalInstance::DestroyFrame( SalFrame* pFrame )
 
 // -----------------------------------------------------------------------
 
-SalObject* JavaSalInstance::CreateObject( SalFrame* pParent, SystemWindowData* /* pWindowData */, sal_Bool bShow )
+SalObject* JavaSalInstance::CreateObject( SalFrame* pParent, SystemWindowData* /* pWindowData */, bool bShow )
 {
 	JavaSalObject *pObject = new JavaSalObject( pParent );
 	pObject->Show( bShow );
@@ -961,19 +950,19 @@ void JavaSalInstance::DestroyInfoPrinter( SalInfoPrinter* pPrinter )
 
 // -----------------------------------------------------------------------
 
-XubString JavaSalInstance::GetDefaultPrinter()
+OUString JavaSalInstance::GetDefaultPrinter()
 {
 	// Create a dummy default printer
 	SalData *pSalData = GetSalData();
-	if ( !pSalData->maDefaultPrinter.Len() )
+	if ( !pSalData->maDefaultPrinter.getLength() )
 	{
 		ResMgr *pResMgr = ImplGetResMgr();
 		if ( pResMgr )
-			pSalData->maDefaultPrinter = XubString( ResId( DEFAULT_PRINTER, *pResMgr ) );
+			pSalData->maDefaultPrinter = OUString( ResId( SV_PRINT_DEFAULT_PRINTER_TXT, *pResMgr ) );
 	}
 
-	if ( !pSalData->maDefaultPrinter.Len() )
-		pSalData->maDefaultPrinter = XubString::CreateFromAscii( "Printer" );
+	if ( !pSalData->maDefaultPrinter.getLength() )
+		pSalData->maDefaultPrinter = "Printer";
 
 	return pSalData->maDefaultPrinter;
 }
@@ -996,32 +985,27 @@ void JavaSalInstance::DestroyPrinter( SalPrinter* pPrinter )
 // -----------------------------------------------------------------------
 
 SalVirtualDevice* JavaSalInstance::CreateVirtualDevice( SalGraphics* /* pGraphics */,
-                                                    long nDX, long nDY,
+                                                    long& rDX, long& rDY,
                                                     sal_uInt16 /* nBitCount - ignore as Mac OS X bit count is always 32 */,
                                                     const SystemGraphicsData* /* pData */ )
 {
 	JavaSalVirtualDevice *pDevice = NULL;
 
-	if ( nDX > 0 && nDY > 0 )
+	pDevice = new JavaSalVirtualDevice();
+	if ( pDevice->SetSize( rDX, rDY ) )
 	{
-		pDevice = new JavaSalVirtualDevice();
-
-		if ( !pDevice->SetSize( nDX, nDY ) )
-		{
-			delete pDevice;
-			pDevice = NULL;
-		}
+		rDX = pDevice->GetWidth();
+		rDY = pDevice->GetHeight();
+	}
+	else
+	{
+		rDX = 0;
+		rDY = 0;
+		delete pDevice;
+		pDevice = NULL;
 	}
 
    	return pDevice;
-}
-
-// -----------------------------------------------------------------------
-
-void JavaSalInstance::DestroyVirtualDevice( SalVirtualDevice* pDevice )
-{
-	if ( pDevice )
-		delete pDevice;
 }
 
 // -----------------------------------------------------------------------
@@ -1070,7 +1054,7 @@ void* JavaSalInstance::GetConnectionIdentifier( ConnectionIdentifierType& rRetur
 
 // -----------------------------------------------------------------------
 
-void JavaSalInstance::AddToRecentDocumentList( const rtl::OUString& /* rFileUrl */, const rtl::OUString& /* rMimeType */ )
+void JavaSalInstance::AddToRecentDocumentList( const OUString& /* rFileUrl */, const OUString& /* rMimeType */, const OUString& /* rDocumentService */ )
 {
 	// Do not do anything as each document's NSDocument instance created in
 	// sfx2/source/view/topfrm_cocoa.mm updates the OS X recent items menu
@@ -1091,7 +1075,7 @@ SalYieldMutex::SalYieldMutex() :
 
 void SalYieldMutex::acquire()
 {
-	if ( mnThreadId != OThread::getCurrentIdentifier() )
+	if ( mnThreadId != Thread::getCurrentIdentifier() )
 	{
 		// If we are in a signal handler and we don't have the mutex, don't
 		// block waiting for the mutex as most likely the thread with the mutex
@@ -1115,7 +1099,7 @@ void SalYieldMutex::acquire()
 				// a potentially long wait. Fix hanging when selecting a menu
 				// while Writer is doing a background spellcheck run by posting
 				// a wake up event so that
-				// JavaSalInstance::AnyEvent( INPUT_OTHER ) will eventually
+				// JavaSalInstance::AnyEvent( VCL_INPUT_OTHER ) will eventually
 				// succeed.
 				if ( ++nIterationsSinceLastWakeUpEvent % 10000 == 0 || nCurrentTimeout > 100 )
 				{
@@ -1153,10 +1137,10 @@ void SalYieldMutex::acquire()
 
 	WaitForReacquireThread();
 
-	OMutex::acquire();
-	mnThreadId = OThread::getCurrentIdentifier();
+	maMutex.acquire();
+	mnThreadId = Thread::getCurrentIdentifier();
 	mnCount++;
-	if ( mnReacquireThreadId == OThread::getCurrentIdentifier() )
+	if ( mnReacquireThreadId == Thread::getCurrentIdentifier() )
 	{
 		mnReacquireThreadId = 0;
 		maReacquireThreadCondition.set();
@@ -1167,7 +1151,7 @@ void SalYieldMutex::acquire()
 
 void SalYieldMutex::release()
 {
-	if ( mnThreadId == OThread::getCurrentIdentifier() )
+	if ( mnThreadId == Thread::getCurrentIdentifier() )
 	{
 		if ( mnCount == 1 )
 			mnThreadId = 0;
@@ -1179,33 +1163,33 @@ void SalYieldMutex::release()
 		if ( !mnCount && !maMainThreadCondition.check() )
 		{
 			maMainThreadCondition.set();
-			OThread::yield();
+			Thread::yield();
 		}
 	}
 
-	OMutex::release();
+	maMutex.release();
 }
 
 // -------------------------------------------------------------------------
 
-sal_Bool SalYieldMutex::tryToAcquire()
+bool SalYieldMutex::tryToAcquire()
 {
 	WaitForReacquireThread();
 
-	if ( OMutex::tryToAcquire() )
+	if ( maMutex.tryToAcquire() )
 	{
-		mnThreadId = OThread::getCurrentIdentifier();
+		mnThreadId = Thread::getCurrentIdentifier();
 		mnCount++;
-		if ( mnReacquireThreadId == OThread::getCurrentIdentifier() )
+		if ( mnReacquireThreadId == Thread::getCurrentIdentifier() )
 		{
 			mnReacquireThreadId = 0;
 			maReacquireThreadCondition.set();
 		}
 
-		return sal_True;
+		return true;
 	}
 	else
-		return sal_False;
+		return false;
 }
 
 // -------------------------------------------------------------------------
@@ -1220,7 +1204,7 @@ sal_uLong SalYieldMutex::ReleaseAcquireCount()
 	if ( ( !bAllowReleaseYieldMutex || bInNativeDragPrint ) && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 		return nRet;
 
-	if ( mnThreadId == OThread::getCurrentIdentifier() )
+	if ( mnThreadId == Thread::getCurrentIdentifier() )
 	{
 		if ( mnCount )
 		{
@@ -1228,12 +1212,12 @@ sal_uLong SalYieldMutex::ReleaseAcquireCount()
 			// that this thread should have priority for reacquiring the mutex
 			if ( CFRunLoopGetCurrent() != CFRunLoopGetMain() )
 			{
-				mnReacquireThreadId = OThread::getCurrentIdentifier();
+				mnReacquireThreadId = Thread::getCurrentIdentifier();
 				maReacquireThreadCondition.reset();
 			}
 
 			nRet = mnCount;
-			while ( mnCount && mnThreadId == OThread::getCurrentIdentifier() )
+			while ( mnCount && mnThreadId == Thread::getCurrentIdentifier() )
 				release();
 		}
 	}
@@ -1245,7 +1229,7 @@ sal_uLong SalYieldMutex::ReleaseAcquireCount()
 
 void SalYieldMutex::WaitForReacquireThread()
 {
-	if ( mnReacquireThreadId && mnReacquireThreadId != OThread::getCurrentIdentifier() && mnThreadId != OThread::getCurrentIdentifier() && CFRunLoopGetCurrent() != CFRunLoopGetMain() )
+	if ( mnReacquireThreadId && mnReacquireThreadId != Thread::getCurrentIdentifier() && mnThreadId != Thread::getCurrentIdentifier() && CFRunLoopGetCurrent() != CFRunLoopGetMain() )
 	{
 		// Fix hang that occurs when the native frame is being created on a
     	// thread other than the OOo event dispatch thread while opening a Base
@@ -1265,7 +1249,7 @@ void SalYieldMutex::WaitForReacquireThread()
 
 // =========================================================================
 
-JavaSalEvent::JavaSalEvent( sal_uInt16 nID, JavaSalFrame *pFrame, void *pData, const ::rtl::OString& rPath, sal_uLong nCommittedCharacters, sal_uLong nCursorPosition ) :
+JavaSalEvent::JavaSalEvent( sal_uInt16 nID, JavaSalFrame *pFrame, void *pData, const OString& rPath, sal_uLong nCommittedCharacters, sal_uLong nCursorPosition ) :
 	mnID( nID  ),
 	mpFrame( pFrame ),
 	mbNative( false ),
@@ -1511,8 +1495,9 @@ void JavaSalEvent::dispatch()
 			ImplSVData *pSVData = ImplGetSVData();
 			if ( pSVData && pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet )
 			{
-				String aEmptyStr;
-				ApplicationEvent aAppEvt( aEmptyStr, ApplicationAddress(), nID == SALEVENT_OPENDOCUMENT ? APPEVENT_OPEN_STRING : APPEVENT_PRINT_STRING, getPath() );
+				std::vector< OUString > aAppEvtData;
+				aAppEvtData.push_back( getPath() );
+				ApplicationEvent aAppEvt( nID == SALEVENT_OPENDOCUMENT ? ApplicationEvent::TYPE_OPEN : ApplicationEvent::TYPE_PRINT, aAppEvtData );
 				pSVData->mpApp->AppEvent( aAppEvt );
 			}
 			else
@@ -1568,9 +1553,8 @@ void JavaSalEvent::dispatch()
 			// Load libsfx and invoke the native preferences handler
 			if ( !pAboutHandler )
 			{
-				OUString aLibName( RTL_CONSTASCII_USTRINGPARAM( "libsfx.dylib" ) );
-				if ( aAboutHandlerModule.load( aLibName ) )
-					pAboutHandler = (NativeAboutMenuHandler_Type *)aAboutHandlerModule.getSymbol( OUString::createFromAscii( "NativeAboutMenuHandler" ) );
+				if ( aAboutHandlerModule.load( "libsfxlo.dylib" ) )
+					pAboutHandler = (NativeAboutMenuHandler_Type *)aAboutHandlerModule.getSymbol( "NativeAboutMenuHandler" );
 			}
 
 			if ( pAboutHandler && !pSalData->mbInNativeModalSheet )
@@ -1583,9 +1567,8 @@ void JavaSalEvent::dispatch()
 			// Load libofa and invoke the native preferences handler
 			if ( !pPreferencesHandler )
 			{
-				OUString aLibName( RTL_CONSTASCII_USTRINGPARAM( "libsfx.dylib" ) );
-				if ( aPreferencesHandlerModule.load( aLibName ) )
-					pPreferencesHandler = (NativePreferencesMenuHandler_Type *)aPreferencesHandlerModule.getSymbol( OUString::createFromAscii( "NativePreferencesMenuHandler" ) );
+				if ( aPreferencesHandlerModule.load( "libsfxlo.dylib" ) )
+					pPreferencesHandler = (NativePreferencesMenuHandler_Type *)aPreferencesHandlerModule.getSymbol( "NativePreferencesMenuHandler" );
 			}
 
 			if ( pPreferencesHandler && !pSalData->mbInNativeModalSheet )
@@ -1671,7 +1654,7 @@ void JavaSalEvent::dispatch()
 
 				if ( pWindow )
 				{
-					uno::Reference< frame::XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), uno::UNO_QUERY );
+					uno::Reference< frame::XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( "com.sun.star.frame.Desktop" ), uno::UNO_QUERY );
 					if ( xFramesSupplier.is() )
 					{
 						uno::Reference< container::XIndexAccess > xList( xFramesSupplier->getFrames(), uno::UNO_QUERY );
@@ -1696,7 +1679,7 @@ void JavaSalEvent::dispatch()
 											uno::Reference< frame::XDispatchProvider > xDispatchProvider( xFrame, uno::UNO_QUERY );
 											if ( xDispatchProvider.is() )
 											{
-												uno::Reference< frame::XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" ) ) ), uno::UNO_QUERY );
+												uno::Reference< frame::XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( "com.sun.star.frame.DispatchHelper" ), uno::UNO_QUERY );
 												if ( xDispatchHelper.is() )
 												{
 													pFrame->mbInWindowDidExitFullScreen = !bFullScreen;
@@ -1704,7 +1687,7 @@ void JavaSalEvent::dispatch()
 
 													try
 													{
-														uno::Any aRet = xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:FullScreen" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, uno::Sequence< beans::PropertyValue >() );
+														xDispatchHelper->executeDispatch( xDispatchProvider, ".uno:FullScreen", "_self", 0, uno::Sequence< beans::PropertyValue >() );
 													}
 													catch ( ... )
 													{
@@ -1770,8 +1753,7 @@ void JavaSalEvent::dispatch()
 					pInputEvent->maText = getText();
 					pInputEvent->mpTextAttr = getTextAttributes();
 					pInputEvent->mnCursorPos = nCursorPos > nCommitted ? nCursorPos : nCommitted;
-					pInputEvent->mnDeltaStart = 0;
-					pInputEvent->mbOnlyCursor = sal_False;
+					pInputEvent->mbOnlyCursor = false;
 					pInputEvent->mnCursorFlags = 0;
 
 					mpData = pInputEvent;
@@ -1786,7 +1768,7 @@ void JavaSalEvent::dispatch()
 				pFrame->CallCallback( nID, pInputEvent );
 				pFrame = FindValidFrame( pFrame );
 				// If there is no text, the character is committed
-				if ( pFrame && pInputEvent->maText.Len() == nCommitted )
+				if ( pFrame && (sal_uLong)pInputEvent->maText.getLength() == nCommitted )
 					pFrame->CallCallback( SALEVENT_ENDEXTTEXTINPUT, NULL );
 			}
 			break;
@@ -2474,9 +2456,9 @@ sal_uInt16 JavaSalEvent::getRepeatCount()
 
 // -------------------------------------------------------------------------
 
-XubString JavaSalEvent::getText()
+OUString JavaSalEvent::getText()
 {
-	XubString aRet;
+	OUString aRet;
 
 	if ( mpData && mnID == SALEVENT_EXTTEXTINPUT )
 	{
@@ -2763,20 +2745,20 @@ JavaSalEventQueueItem::JavaSalEventQueueItem( JavaSalEvent *pEvent, const ::std:
 			case SALEVENT_KEYINPUT:
 			case SALEVENT_KEYMODCHANGE:
 			case SALEVENT_KEYUP:
-				mnType = INPUT_KEYBOARD;
+				mnType = VCL_INPUT_KEYBOARD;
 				break;
 			case SALEVENT_MOUSEMOVE:
 			case SALEVENT_MOUSELEAVE:
 			case SALEVENT_MOUSEBUTTONUP:
 			case SALEVENT_MOUSEBUTTONDOWN:
 			case SALEVENT_WHEELMOUSE:
-				mnType = INPUT_MOUSE;
+				mnType = VCL_INPUT_MOUSE;
 				break;
 			case SALEVENT_PAINT:
-				mnType = INPUT_PAINT;
+				mnType = VCL_INPUT_PAINT;
 				break;
 			default:
-				mnType = INPUT_OTHER;
+				mnType = VCL_INPUT_OTHER;
 				break;
 		}
 	}
@@ -3005,7 +2987,7 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 					if ( pEventQueue->size() )
 					{
 						JavaSalEvent *pOldEvent = pEventQueue->back()->getEvent();
-						if ( pOldEvent && pOldEvent->getID() == nID && pOldEvent->getFrame() == pFrame && !pEventQueue->back()->isRemove() && !pOldEvent->getText().Len() )
+						if ( pOldEvent && pOldEvent->getID() == nID && pOldEvent->getFrame() == pFrame && !pEventQueue->back()->isRemove() && !pOldEvent->getText().getLength() )
 							pEventQueue->back()->remove();
 					}
 

@@ -36,7 +36,6 @@
 #ifndef _SV_SALOBJ_H
 #define _SV_SALOBJ_H
 
-#include <vcl/sv.h>
 #include <vcl/sysdata.hxx>
 
 #include "salobj.hxx"
@@ -56,7 +55,7 @@ class JavaSalObject : public SalObject
 	sal_Bool				mbInFlush;
 	JavaSalFrame*			mpParent;
 	SystemEnvData			maSysData;
-	sal_Bool				mbVisible;
+	bool					mbVisible;
 
 public:
 							JavaSalObject( SalFrame *pParent );
@@ -65,19 +64,16 @@ public:
 	void					Destroy();
 	void					Flush();
 
-	virtual void			ResetClipRegion();
-	virtual sal_uInt16		GetClipRegionType();
-	virtual void			BeginSetClipRegion( sal_uLong nRects );
-	virtual void			UnionClipRegion( long nX, long nY, long nWidth, long nHeight );
-	virtual void			EndSetClipRegion();
-	virtual void			SetPosSize( long nX, long nY, long nWidth, long nHeight );
-	virtual void			Show( sal_Bool bVisible );
-	virtual void			Enable( sal_Bool nEnable );
-	virtual void			GrabFocus();
-	virtual void			SetBackground();
-	virtual void			SetBackground( SalColor nSalColor );
-	virtual const SystemEnvData*	GetSystemData() const;
-	virtual void			InterceptChildWindowKeyDown( sal_Bool bIntercept );
+	virtual void			ResetClipRegion() SAL_OVERRIDE;
+	virtual sal_uInt16		GetClipRegionType() SAL_OVERRIDE;
+	virtual void			BeginSetClipRegion( sal_uLong nRects ) SAL_OVERRIDE;
+	virtual void			UnionClipRegion( long nX, long nY, long nWidth, long nHeight ) SAL_OVERRIDE;
+	virtual void			EndSetClipRegion() SAL_OVERRIDE;
+	virtual void			SetPosSize( long nX, long nY, long nWidth, long nHeight ) SAL_OVERRIDE;
+	virtual void			Show( bool bVisible ) SAL_OVERRIDE;
+	virtual void			SetBackground() SAL_OVERRIDE;
+	virtual void			SetBackground( SalColor nSalColor ) SAL_OVERRIDE;
+	virtual const SystemEnvData*	GetSystemData() const SAL_OVERRIDE;
 };
 
 #endif // _SV_SALOBJ_H

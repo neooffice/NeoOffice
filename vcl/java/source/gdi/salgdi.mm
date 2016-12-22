@@ -608,7 +608,7 @@ JavaSalGraphics::~JavaSalGraphics()
 	if ( mpFont )
 		delete mpFont;
 
-	for ( ::std::hash_map< int, JavaImplFont* >::const_iterator it = maFallbackFonts.begin(); it != maFallbackFonts.end(); ++it )
+	for ( ::boost::unordered_map< int, JavaImplFont* >::const_iterator it = maFallbackFonts.begin(); it != maFallbackFonts.end(); ++it )
 		delete it->second;
 
 	if ( maFrameClipPath )
@@ -631,7 +631,7 @@ void JavaSalGraphics::GetResolution( sal_Int32& rDPIX, sal_Int32& rDPIY )
 
 // -----------------------------------------------------------------------
 
-sal_uInt16 JavaSalGraphics::GetBitCount()
+sal_uInt16 JavaSalGraphics::GetBitCount() const
 {
 	return 32;
 }
@@ -659,7 +659,7 @@ void JavaSalGraphics::ResetClipRegion()
 
 // -----------------------------------------------------------------------
 
-bool JavaSalGraphics::setClipRegion( const Region& rRegion )
+bool JavaSalGraphics::setClipRegion( const vcl::Region& rRegion )
 {
 	if ( maNativeClipPath )
 	{
@@ -1039,30 +1039,30 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, double /
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalGraphics::drawPolyLineBezier( sal_uInt32 /* nPoints */, const SalPoint* /* pPtAry */, const sal_uInt8* /* pFlgAry */ )
+bool JavaSalGraphics::drawPolyLineBezier( sal_uInt32 /* nPoints */, const SalPoint* /* pPtAry */, const sal_uInt8* /* pFlgAry */ )
 {
-	return sal_False;
+	return false;
 }
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalGraphics::drawPolygonBezier( sal_uInt32 /* nPoints */, const SalPoint* /* pPtAry */, const sal_uInt8* /* pFlgAry */ )
+bool JavaSalGraphics::drawPolygonBezier( sal_uInt32 /* nPoints */, const SalPoint* /* pPtAry */, const sal_uInt8* /* pFlgAry */ )
 {
-	return sal_False;
+	return false;
 }
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalGraphics::drawPolyPolygonBezier( sal_uInt32 /* nPoly */, const sal_uInt32* /* nPoints */, const SalPoint* const* /* pPtAry */, const sal_uInt8* const* /* pFlgAry */ )
+bool JavaSalGraphics::drawPolyPolygonBezier( sal_uInt32 /* nPoly */, const sal_uInt32* /* nPoints */, const SalPoint* const* /* pPtAry */, const sal_uInt8* const* /* pFlgAry */ )
 {
-	return sal_False;
+	return false;
 }
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void* pPtr, sal_uLong nSize )
+bool JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void* pPtr, sal_uLong nSize )
 {
-	sal_Bool bRet = sal_False;
+	bool bRet = false;
 
 	if ( pPtr && nSize )
 	{
@@ -1080,7 +1080,7 @@ sal_Bool JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, 
 				CFRelease( aData );
 			}
 
-			bRet = sal_True;
+			bRet = true;
 		}
 	}
 

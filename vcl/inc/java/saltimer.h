@@ -36,8 +36,6 @@
 #ifndef _SV_SALTIMER_H
 #define _SV_SALTIMER_H
 
-#include <vcl/sv.h>
-
 #include "saltimer.hxx"
 
 // ----------------
@@ -50,8 +48,8 @@ public:
 							JavaSalTimer();
 	virtual					~JavaSalTimer();
 
-	virtual void			Start( sal_uLong nMS );
-	virtual void			Stop();
+	virtual void			Start( sal_uLong nMS ) SAL_OVERRIDE;
+	virtual void			Stop() SAL_OVERRIDE;
 };
 
 #endif // _SV_SALTIMER_H

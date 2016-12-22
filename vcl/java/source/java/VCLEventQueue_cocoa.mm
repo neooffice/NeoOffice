@@ -35,8 +35,6 @@
 
 #include <dlfcn.h>
 
-#include <vos/mutex.hxx>
-
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 // Need to include for virtual key constants but we don't link to it
@@ -44,6 +42,8 @@
 #import <objc/objc-class.h>
 #include <postmac.h>
 #undef check
+
+#include <vcl/cmdevt.hxx>
 
 #include "java/saldata.hxx"
 
@@ -2104,7 +2104,7 @@ static CFDataRef aRTFSelection = nil;
 	NSWindow *pWindow = [self window];
 	if ( pWindow && [pWindow isVisible] && mpFrame )
 	{
-		XubString aText;
+		OUString aText;
 		NSString *pChars = nil;
 		if ( mpTextInput )
 		{
@@ -2119,11 +2119,11 @@ static CFDataRef aRTFSelection = nil;
 				sal_Unicode aBuf[ nLen + 1 ];
 				[pChars getCharacters:aBuf];
 				aBuf[ nLen ] = 0;
-				aText = XubString( aBuf );
+				aText = OUString( aBuf );
 			}
 		}
 
-		sal_uLong nLen = aText.Len();
+		sal_uLong nLen = aText.getLength();
 		sal_uLong nCursorPos = ( maSelectedRange.location == NSNotFound ? nLen : maSelectedRange.location );
 		if ( nCursorPos > nLen )
 			nCursorPos = nLen;
@@ -2146,9 +2146,9 @@ static CFDataRef aRTFSelection = nil;
 				for ( sal_uInt16 i = 0; i < nLen; i++ )
 				{
 					if ( i >= nStartHighlightPos && i < nEndHighlightPos )
-						pAttr[ i ] = SAL_EXTTEXTINPUT_ATTR_HIGHLIGHT;
+						pAttr[ i ] = EXTTEXTINPUT_ATTR_HIGHLIGHT;
 					else
-						pAttr[ i ] = SAL_EXTTEXTINPUT_ATTR_UNDERLINE;
+						pAttr[ i ] = EXTTEXTINPUT_ATTR_UNDERLINE;
 				}
 			}
 		}
@@ -2158,7 +2158,6 @@ static CFDataRef aRTFSelection = nil;
 		pInputEvent->maText = aText;
 		pInputEvent->mpTextAttr = pAttr;
 		pInputEvent->mnCursorPos = nCursorPos;
-		pInputEvent->mnDeltaStart = 0;
 		pInputEvent->mbOnlyCursor = sal_False;
 		pInputEvent->mnCursorFlags = 0;
 
@@ -2196,10 +2195,9 @@ static CFDataRef aRTFSelection = nil;
 		{
 			SalExtTextInputEvent *pInputEvent = new SalExtTextInputEvent();
 			pInputEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
-			pInputEvent->maText = XubString();
+			pInputEvent->maText = "";
 			pInputEvent->mpTextAttr = NULL;
 			pInputEvent->mnCursorPos = 0;
-			pInputEvent->mnDeltaStart = 0;
 			pInputEvent->mbOnlyCursor = sal_False;
 			pInputEvent->mnCursorFlags = 0;
 
@@ -2279,23 +2277,22 @@ static CFDataRef aRTFSelection = nil;
 			else if ( [aString isKindOfClass:[NSString class]] )
 				pChars = (NSString *)aString;
 
-			XubString aText;
+			OUString aText;
 			if ( pChars && [pChars length] )
 			{
 				NSUInteger nLen = [pChars length];
 				sal_Unicode aBuf[ nLen + 1 ];
 				[pChars getCharacters:aBuf];
 				aBuf[ nLen ] = 0;
-				aText = XubString( aBuf );
+				aText = OUString( aBuf );
 			}
 
-			sal_uLong nLen = aText.Len();
+			sal_uLong nLen = aText.getLength();
 			SalExtTextInputEvent *pInputEvent = new SalExtTextInputEvent();
 			pInputEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 			pInputEvent->maText = aText;
 			pInputEvent->mpTextAttr = NULL;
 			pInputEvent->mnCursorPos = nLen;
-			pInputEvent->mnDeltaStart = 0;
 			pInputEvent->mbOnlyCursor = sal_False;
 			pInputEvent->mnCursorFlags = 0;
 
@@ -2383,7 +2380,7 @@ static CFDataRef aRTFSelection = nil;
 	NSWindow *pWindow = [self window];
 	if ( pWindow && [pWindow isVisible] && mpFrame )
 	{
-		::vos::IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{

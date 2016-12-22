@@ -1,55 +1,44 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
+#include <sal/config.h>
 
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_vcl.hxx"
+#include <cassert>
 
 #include "rtl/logfile.hxx"
 
-#include "osl/file.hxx"
+#include <osl/file.hxx>
+#include <osl/signal.h>
 
-#include "vos/signal.hxx"
-#include "vos/process.hxx"
-
-#include "tools/tools.h"
 #include "tools/debug.hxx"
-#include "tools/unqid.hxx"
 #include "tools/resmgr.hxx"
 
 #include "comphelper/processfactory.hxx"
 
 #include "unotools/syslocaleoptions.hxx"
-#include "unotools/fontcfg.hxx"
-
 #include "vcl/svapp.hxx"
 #include "vcl/wrkwin.hxx"
 #include "vcl/cvtgrf.hxx"
@@ -58,44 +47,44 @@
 #include "vcl/unowrap.hxx"
 #include "vcl/configsettings.hxx"
 #include "vcl/lazydelete.hxx"
+#include "vcl/embeddedfontshelper.hxx"
+#include "vcl/debugevent.hxx"
 
 #ifdef WNT
-#include <tools/prewin.h>
-#include <process.h>    // for _beginthreadex
-#include <ole2.h>   // for _beginthreadex
-#include <tools/postwin.h>
-#include <com/sun/star/accessibility/XMSAAService.hpp>
-#include <win/g_msaasvc.h>
-using namespace com::sun::star::accessibility;
+#include <svsys.h>
+#include <process.h>
+#include <ole2.h>
 #endif
 
-// [ed 5/14/02 Add in explicit check for quartz graphics.  OS X will define
-// unx for both quartz and X11 graphics, but we include svunx.h only if we're
-// building X11 graphics layers.
-
-#if defined UNX && ! defined QUARTZ
-//#include "svunx.h"
+#ifdef ANDROID
+#include <cppuhelper/bootstrap.hxx>
+#include <jni.h>
 #endif
-
-//#include "svsys.h"
 
 #include "salinst.hxx"
 #include "salwtype.hxx"
 #include "svdata.hxx"
+#include "vcl/svmain.hxx"
 #include "dbggui.hxx"
 #include "accmgr.hxx"
 #include "idlemgr.hxx"
 #include "outdev.h"
 #include "outfont.hxx"
+#include "PhysicalFontCollection.hxx"
 #include "print.h"
+#include "salgdi.hxx"
 #include "salsys.hxx"
 #include "saltimer.hxx"
 #include "salimestatus.hxx"
 #include "impimagetree.hxx"
 #include "xconnection.hxx"
 
+#include "vcl/opengl/OpenGLContext.hxx"
+
+#include "osl/process.h"
 #include "com/sun/star/lang/XMultiServiceFactory.hpp"
 #include "com/sun/star/lang/XComponent.hpp"
+#include "com/sun/star/frame/Desktop.hpp"
 
 #include "cppuhelper/implbase1.hxx"
 #include "uno/current_context.hxx"
@@ -107,8 +96,6 @@ using namespace com::sun::star::accessibility;
 
 #if defined USE_JAVA && defined MACOSX
 
-#include <dlfcn.h>
-
 #include <unotools/bootstrap.hxx>
 
 #include <premac.h>
@@ -119,86 +106,64 @@ using namespace com::sun::star::accessibility;
  
 #include "java/saldata.hxx"
 
-using namespace utl;
- 
 #endif	// USE_JAVA && MACOSX
 
-namespace {
-
-namespace css = com::sun::star;
-
-}
-
-using namespace ::rtl;
-using namespace ::com::sun::star::uno;
-using namespace ::com::sun::star::lang;
-
-
+using namespace ::com::sun::star;
 
 #if defined USE_JAVA && defined MACOSX
 
 static void ImplLoadNativeFont( OUString aPath )
 {
-	if ( !aPath.getLength() )
-		return;
+    if ( !aPath.getLength() )
+        return;
 
-	oslDirectory aDir = NULL;
-	if ( osl_openDirectory( aPath.pData, &aDir ) == osl_File_E_None )
-	{
-		oslDirectoryItem aDirItem = NULL;
-		while ( osl_getNextDirectoryItem( aDir, &aDirItem, 16 ) == osl_File_E_None )
-		{
-			oslFileStatus aStatus;
-			memset( &aStatus, 0, sizeof( oslFileStatus ) );
-			if ( osl_getFileStatus( aDirItem, &aStatus, osl_FileStatus_Mask_FileURL ) == osl_File_E_None )
-				ImplLoadNativeFont( OUString( aStatus.ustrFileURL ) );
-		}
-		if ( aDirItem )
-			osl_releaseDirectoryItem( aDirItem );
-	}
-	else
-	{
-		OUString aSysPath;
-		if ( osl_getSystemPathFromFileURL( aPath.pData, &aSysPath.pData ) == osl_File_E_None )
-		{
-			CFStringRef aString = CFStringCreateWithCharacters( NULL, aSysPath.getStr(), aSysPath.getLength() );
-			if ( aString )
-			{
-				CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, aString, kCFURLPOSIXPathStyle, false );
-				if ( aURL )
-				{
-					CTFontManagerRegisterFontsForURL( aURL, kCTFontManagerScopeUser, NULL );
+    oslDirectory aDir = NULL;
+    if ( osl_openDirectory( aPath.pData, &aDir ) == osl_File_E_None )
+    {
+        oslDirectoryItem aDirItem = NULL;
+        while ( osl_getNextDirectoryItem( aDir, &aDirItem, 16 ) == osl_File_E_None )
+        {
+            oslFileStatus aStatus;
+            memset( &aStatus, 0, sizeof( oslFileStatus ) );
+            if ( osl_getFileStatus( aDirItem, &aStatus, osl_FileStatus_Mask_FileURL ) == osl_File_E_None )
+                ImplLoadNativeFont( OUString( aStatus.ustrFileURL ) );
+        }
+        if ( aDirItem )
+            osl_releaseDirectoryItem( aDirItem );
+    }
+    else
+    {
+        OUString aSysPath;
+        if ( osl_getSystemPathFromFileURL( aPath.pData, &aSysPath.pData ) == osl_File_E_None )
+        {
+            CFStringRef aString = CFStringCreateWithCharacters( NULL, aSysPath.getStr(), aSysPath.getLength() );
+            if ( aString )
+            {
+                CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, aString, kCFURLPOSIXPathStyle, false );
+                if ( aURL )
+                {
+                    CTFontManagerRegisterFontsForURL( aURL, kCTFontManagerScopeUser, NULL );
 
-					// Loading our private fonts is a bit flaky so try loading
-					// using the process context just to be safe
-					CTFontManagerRegisterFontsForURL( aURL, kCTFontManagerScopeProcess, NULL );
+                    // Loading our private fonts is a bit flaky so try loading
+                    // using the process context just to be safe
+                    CTFontManagerRegisterFontsForURL( aURL, kCTFontManagerScopeProcess, NULL );
 
-					CFRelease( aURL );
-				}
+                    CFRelease( aURL );
+                }
 
-				CFRelease( aString );
-			}
-		}
-	}
+                CFRelease( aString );
+            }
+        }
+    }
 }
 
 #endif	// USE_JAVA && MACOSX
 
-// =======================================================================
-
-class ImplVCLExceptionHandler : public ::vos::OSignalHandler
+oslSignalAction SAL_CALL VCLExceptionSignal_impl( void* /*pData*/, oslSignalInfo* pInfo)
 {
-public:
-    virtual ::vos::OSignalHandler::TSignalAction SAL_CALL signal( ::vos::OSignalHandler::TSignalInfo* pInfo );
-};
+    static bool bIn = false;
 
-// -----------------------------------------------------------------------
-
-::vos::OSignalHandler::TSignalAction SAL_CALL ImplVCLExceptionHandler::signal( ::vos::OSignalHandler::TSignalInfo* pInfo )
-{
-    static sal_Bool bIn = sal_False;
-
-    // Wenn wir nocheinmal abstuerzen, verabschieden wir uns gleich
+    // if we crash again, bail out immediately
     if ( !bIn )
     {
         sal_uInt16 nVCLException = 0;
@@ -227,15 +192,14 @@ public:
 
         if ( nVCLException )
         {
-            bIn = sal_True;
+            bIn = true;
 #if defined USE_JAVA && defined MACOSX
-            GetAppSalData()->mbInSignalHandler = true;
+            GetSalData()->mbInSignalHandler = true;
 #endif	// USE_JAVA && MACOSX
-        
-            ::vos::OGuard aLock(&Application::GetSolarMutex());
-        
-            // Timer nicht mehr anhalten, da ansonsten die UAE-Box
-            // auch nicht mehr gepaintet wird
+
+            SolarMutexGuard aLock;
+
+            // do not stop timer because otherwise the UAE-Box will not be painted as well
             ImplSVData* pSVData = ImplGetSVData();
             if ( pSVData->mpApp )
             {
@@ -245,40 +209,37 @@ public:
                 Application::SetSystemWindowMode( nOldMode );
             }
 #if defined USE_JAVA && defined MACOSX
-            GetAppSalData()->mbInSignalHandler = false;
+            GetSalData()->mbInSignalHandler = false;
 #endif	// USE_JAVA && MACOSX
-            bIn = sal_False;
+            bIn = false;
 
-            return vos::OSignalHandler::TAction_CallNextHandler;
+            return osl_Signal_ActCallNextHdl;
         }
     }
 
-    return vos::OSignalHandler::TAction_CallNextHandler;
+    return osl_Signal_ActCallNextHdl;
+
 }
 
-// =======================================================================
-sal_Bool ImplSVMain()
+int ImplSVMain()
 {
     // The 'real' SVMain()
-    RTL_LOGFILE_CONTEXT( aLog, "vcl (ss112471) ::SVMain" );
-
     ImplSVData* pSVData = ImplGetSVData();
 
     DBG_ASSERT( pSVData->mpApp, "no instance of class Application" );
 
-    css::uno::Reference<XMultiServiceFactory> xMS;
+    int nReturn = EXIT_FAILURE;
 
-
-    sal_Bool bInit = InitVCL( xMS );
+    bool bInit = InitVCL();
 
     if( bInit )
     {
-        // Application-Main rufen
-        pSVData->maAppData.mbInAppMain = sal_True;
-        pSVData->mpApp->Main();
-        pSVData->maAppData.mbInAppMain = sal_False;
+        // call application main
+        pSVData->maAppData.mbInAppMain = true;
+        nReturn = pSVData->mpApp->Main();
+        pSVData->maAppData.mbInAppMain = false;
     }
-    
+
     if( pSVData->mxDisplayConnection.is() )
     {
         pSVData->mxDisplayConnection->terminate();
@@ -286,32 +247,24 @@ sal_Bool ImplSVMain()
     }
 
     // This is a hack to work around the problem of the asynchronous nature
-    // of bridging accessibility through Java: on shutdown there might still 
+    // of bridging accessibility through Java: on shutdown there might still
     // be some events in the AWT EventQueue, which need the SolarMutex which
     // - on the other hand - is destroyed in DeInitVCL(). So empty the queue
     // here ..
-	css::uno::Reference< XComponent > xComponent(pSVData->mxAccessBridge, UNO_QUERY);
-	if( xComponent.is() )
-	{
-	  sal_uLong nCount = Application::ReleaseSolarMutex();
-	  xComponent->dispose();
-	  Application::AcquireSolarMutex(nCount);
-	  pSVData->mxAccessBridge.clear();
-	}
+    if( pSVData->mxAccessBridge.is() )
+    {
+      sal_uLong nCount = Application::ReleaseSolarMutex();
+      pSVData->mxAccessBridge->dispose();
+      Application::AcquireSolarMutex(nCount);
+      pSVData->mxAccessBridge.clear();
+    }
 
     DeInitVCL();
-	#ifdef WNT
-		if( g_acc_manager1 )
-			g_acc_manager1->release();
-	#endif 
-    return bInit;
+    return nReturn;
 }
 
-sal_Bool SVMain()
+int SVMain()
 {
-    // #i47888# allow for alternative initialization as required for e.g. MacOSX
-    extern sal_Bool ImplSVMainHook( sal_Bool* );
-
 #if defined USE_JAVA && defined MACOSX
     // Attempt to fix haxie bugs that cause bug 2912 by calling
     // CFRunLoopGetMain() in the main thread before we have created a
@@ -322,7 +275,7 @@ sal_Bool SVMain()
         // Activate the fonts in the "user/fonts" directory. Fix bug 2733 on
         // Leopard by loading the fonts before Java is ever loaded.
         OUString aUserPath;
-        if ( Bootstrap::locateUserInstallation( aUserPath ) == Bootstrap::PATH_EXISTS )
+        if ( utl::Bootstrap::locateUserInstallation( aUserPath ) == utl::Bootstrap::PATH_EXISTS )
         {
             if ( aUserPath.getLength() )
             {
@@ -333,7 +286,7 @@ sal_Bool SVMain()
 
         // Activate the fonts in the "share/fonts/truetype" directory
         OUString aBasePath;
-        if ( Bootstrap::locateBaseInstallation( aBasePath ) == Bootstrap::PATH_EXISTS )
+        if ( utl::Bootstrap::locateBaseInstallation( aBasePath ) == utl::Bootstrap::PATH_EXISTS )
         {
             if ( aBasePath.getLength() )
             {
@@ -344,22 +297,24 @@ sal_Bool SVMain()
     }
 #endif	// USE_JAVA && MACOSX
 
-    sal_Bool bInit;
-    if( ImplSVMainHook( &bInit ) )
-        return bInit;
+    int nRet;
+    if( !Application::IsConsoleOnly() && ImplSVMainHook( &nRet ) )
+        return nRet;
     else
         return ImplSVMain();
 }
-// This variable is set, when no Application object is instantiated
-// before SVInit is called
-static Application *        pOwnSvApp = NULL;
-// Exception handler. pExceptionHandler != NULL => VCL already inited
-ImplVCLExceptionHandler *   pExceptionHandler = NULL;
 
-class Application_Impl : public Application
+// This variable is set when no Application object has been instantiated
+// before InitVCL is called
+static Application *        pOwnSvApp = NULL;
+
+// Exception handler. pExceptionHandler != NULL => VCL already inited
+oslSignalHandler   pExceptionHandler = NULL;
+
+class DummyApplication : public Application
 {
 public:
-    void                Main(){};
+    int                Main() SAL_OVERRIDE { return EXIT_SUCCESS; };
 };
 
 class DesktopEnvironmentContext: public cppu::WeakImplHelper1< com::sun::star::uno::XCurrentContext >
@@ -369,20 +324,20 @@ public:
         : m_xNextContext( ctx ) {}
 
     // XCurrentContext
-    virtual com::sun::star::uno::Any SAL_CALL getValueByName( const rtl::OUString& Name )
-            throw (com::sun::star::uno::RuntimeException);
+    virtual com::sun::star::uno::Any SAL_CALL getValueByName( const OUString& Name )
+            throw (com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
 private:
     com::sun::star::uno::Reference< com::sun::star::uno::XCurrentContext > m_xNextContext;
 };
 
-Any SAL_CALL DesktopEnvironmentContext::getValueByName( const rtl::OUString& Name) throw (RuntimeException)
+uno::Any SAL_CALL DesktopEnvironmentContext::getValueByName( const OUString& Name) throw (uno::RuntimeException, std::exception)
 {
-    Any retVal;
+    uno::Any retVal;
 
-    if ( 0 == Name.compareToAscii( "system.desktop-environment" ) )
+    if ( Name == "system.desktop-environment" )
     {
-        retVal = makeAny( Application::GetDesktopEnvironment() );
+        retVal = uno::makeAny( Application::GetDesktopEnvironment() );
     }
     else if( m_xNextContext.is() )
     {
@@ -392,99 +347,133 @@ Any SAL_CALL DesktopEnvironmentContext::getValueByName( const rtl::OUString& Nam
     return retVal;
 }
 
-sal_Bool InitVCL( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory > & rSMgr )
+bool InitVCL()
 {
-    RTL_LOGFILE_CONTEXT( aLog, "vcl (ss112471) ::InitVCL" );
-
     if( pExceptionHandler != NULL )
-        return sal_False;
-    
+        return false;
+
+    EmbeddedFontsHelper::clearTemporaryFontFiles();
+
     if( ! ImplGetSVData() )
         ImplInitSVData();
 
     if( !ImplGetSVData()->mpApp )
     {
-        pOwnSvApp = new Application_Impl();
+        pOwnSvApp = new DummyApplication();
     }
     InitSalMain();
 
-    /*AllSettings aAS;
-    Application::SetSettings( aAS );// ???
-    */
     ImplSVData* pSVData = ImplGetSVData();
 
-    // SV bei den Tools anmelden
-    InitTools();
+    // remember Main-Thread-Id
+    pSVData->mnMainThreadId = ::osl::Thread::getCurrentIdentifier();
 
-    DBG_ASSERT( !pSVData->maAppData.mxMSF.is(), "VCL service factory already set" );
-    pSVData->maAppData.mxMSF = rSMgr;
-
-    // Main-Thread-Id merken
-    pSVData->mnMainThreadId = ::vos::OThread::getCurrentIdentifier();
-
-    vos::OStartupInfo   aStartInfo;
-    rtl::OUString       aExeFileName;
-
-
-    // Sal initialisieren
-    RTL_LOGFILE_CONTEXT_TRACE( aLog, "{ ::CreateSalInstance" );
+    // Initialize Sal
     pSVData->mpDefInst = CreateSalInstance();
     if ( !pSVData->mpDefInst )
-        return sal_False;
-    RTL_LOGFILE_CONTEXT_TRACE( aLog, "} ::CreateSalInstance" );
+        return false;
 
     // Desktop Environment context (to be able to get value of "system.desktop-environment" as soon as possible)
     com::sun::star::uno::setCurrentContext(
         new DesktopEnvironmentContext( com::sun::star::uno::getCurrentContext() ) );
 
-	// Initialize application instance (should be done after initialization of VCL SAL part)
+    // Initialize application instance (should be done after initialization of VCL SAL part)
     if( pSVData->mpApp )
         // call init to initialize application class
         // soffice/sfx implementation creates the global service manager
         pSVData->mpApp->Init();
 
-    // Den AppFileName gleich holen und absolut machen, bevor das
-    // WorkingDirectory sich aendert...
-    aStartInfo.getExecutableFile( aExeFileName );
+    pSVData->mpDefInst->AfterAppInit();
+
+    // Fetch AppFileName and make it absolute before the workdir changes...
+    OUString aExeFileName;
+    osl_getExecutableFile( &aExeFileName.pData );
 
     // convert path to native file format
-    rtl::OUString aNativeFileName;
+    OUString aNativeFileName;
     osl::FileBase::getSystemPathFromFileURL( aExeFileName, aNativeFileName );
-    pSVData->maAppData.mpAppFileName = new String( aNativeFileName );
+    pSVData->maAppData.mpAppFileName = new OUString( aNativeFileName );
 
     // Initialize global data
-    pSVData->maGDIData.mpScreenFontList     = new ImplDevFontList;
-    pSVData->maGDIData.mpScreenFontCache    = new ImplFontCache( sal_False );
+    pSVData->maGDIData.mpScreenFontList     = new PhysicalFontCollection;
+    pSVData->maGDIData.mpScreenFontCache    = new ImplFontCache;
     pSVData->maGDIData.mpGrfConverter       = new GraphicConverter;
 
-    // Exception-Handler setzen
-    pExceptionHandler = new ImplVCLExceptionHandler();
+    // Set exception handler
+    pExceptionHandler = osl_addSignalHandler(VCLExceptionSignal_impl, NULL);
 
-    // Debug-Daten initialisieren
-    DBGGUI_INIT();
+    DBGGUI_INIT_SOLARMUTEXCHECK();
 
-    return sal_True;
+#if OSL_DEBUG_LEVEL > 0
+    DebugEventInjector::getCreate();
+#endif
+
+    return true;
+}
+
+#ifdef ANDROID
+
+extern "C" __attribute__ ((visibility("default"))) void
+InitVCLWrapper()
+{
+    uno::Reference<uno::XComponentContext> xContext( cppu::defaultBootstrap_InitialComponentContext() );
+    uno::Reference<lang::XMultiComponentFactory> xFactory( xContext->getServiceManager() );
+
+    uno::Reference<lang::XMultiServiceFactory> xSM( xFactory, uno::UNO_QUERY_THROW );
+
+    comphelper::setProcessServiceFactory( xSM );
+
+    InitVCL();
+}
+
+#endif
+
+namespace
+{
+
+/** Serves for destroying the VCL UNO wrapper as late as possible. This avoids
+  crash at exit in some special cases when a11y is enabled (e.g., when
+  a bundled extension is registered/deregistered during startup, forcing exit
+  while the app is still in splash screen.)
+ */
+class VCLUnoWrapperDeleter : public cppu::WeakImplHelper1<com::sun::star::lang::XEventListener>
+{
+    virtual void SAL_CALL disposing(lang::EventObject const& rSource) throw(uno::RuntimeException, std::exception) SAL_OVERRIDE;
+};
+
+void
+VCLUnoWrapperDeleter::disposing(lang::EventObject const& /* rSource */)
+    throw(uno::RuntimeException, std::exception)
+{
+    ImplSVData* const pSVData = ImplGetSVData();
+    if (pSVData && pSVData->mpUnoWrapper)
+    {
+        pSVData->mpUnoWrapper->Destroy();
+        pSVData->mpUnoWrapper = NULL;
+    }
+}
+
 }
 
 void DeInitVCL()
 {
     ImplSVData* pSVData = ImplGetSVData();
-    pSVData->mbDeInit = sal_True;
-    
+    pSVData->mbDeInit = true;
+
     vcl::DeleteOnDeinitBase::ImplDeleteOnDeInit();
 
     // give ime status a chance to destroy its own windows
-	delete pSVData->mpImeStatus;
-	pSVData->mpImeStatus = NULL;
+    delete pSVData->mpImeStatus;
+    pSVData->mpImeStatus = NULL;
 
-    #if OSL_DEBUG_LEVEL > 0
-    rtl::OStringBuffer aBuf( 256 );
+#if OSL_DEBUG_LEVEL > 0
+    OStringBuffer aBuf( 256 );
     aBuf.append( "DeInitVCL: some top Windows are still alive\n" );
     long nTopWindowCount = Application::GetTopWindowCount();
     long nBadTopWindows = nTopWindowCount;
     for( long i = 0; i < nTopWindowCount; i++ )
     {
-        Window* pWin = Application::GetTopWindow( i );
+        vcl::Window* pWin = Application::GetTopWindow( i );
         // default window will be destroyed further down
         // but may still be useful during deinit up to that point
         if( pWin == pSVData->mpDefaultWin )
@@ -492,7 +481,7 @@ void DeInitVCL()
         else
         {
             aBuf.append( "text = \"" );
-            aBuf.append( rtl::OUStringToOString( pWin->GetText(), osl_getThreadTextEncoding() ) );
+            aBuf.append( OUStringToOString( pWin->GetText(), osl_getThreadTextEncoding() ) );
             aBuf.append( "\" type = \"" );
             aBuf.append( typeid(*pWin).name() );
             aBuf.append( "\", ptr = 0x" );
@@ -501,25 +490,18 @@ void DeInitVCL()
         }
     }
     DBG_ASSERT( nBadTopWindows==0, aBuf.getStr() );
-    #endif
+#endif
 
     ImplImageTreeSingletonRef()->shutDown();
 
-    delete pExceptionHandler;
+    osl_removeSignalHandler( pExceptionHandler);
     pExceptionHandler = NULL;
-
-    // Debug Daten zuruecksetzen
-    DBGGUI_DEINIT();
 
     // free global data
     delete pSVData->maGDIData.mpGrfConverter;
 
     if( pSVData->mpSettingsConfigItem )
         delete pSVData->mpSettingsConfigItem, pSVData->mpSettingsConfigItem = NULL;
-    if( pSVData->maGDIData.mpDefaultFontConfiguration )
-        delete pSVData->maGDIData.mpDefaultFontConfiguration, pSVData->maGDIData.mpDefaultFontConfiguration = NULL;
-    if( pSVData->maGDIData.mpFontSubstConfiguration )
-        delete pSVData->maGDIData.mpFontSubstConfiguration, pSVData->maGDIData.mpFontSubstConfiguration = NULL;
 
     if ( pSVData->maAppData.mpIdleMgr )
         delete pSVData->maAppData.mpIdleMgr;
@@ -529,11 +511,6 @@ void DeInitVCL()
     {
         delete pSVData->maWinData.mpMsgBoxImgList;
         pSVData->maWinData.mpMsgBoxImgList = NULL;
-    }
-    if ( pSVData->maWinData.mpMsgBoxHCImgList )
-    {
-        delete pSVData->maWinData.mpMsgBoxHCImgList;
-        pSVData->maWinData.mpMsgBoxHCImgList = NULL;
     }
     if ( pSVData->maCtrlData.mpCheckImgList )
     {
@@ -575,62 +552,67 @@ void DeInitVCL()
         delete pSVData->maCtrlData.mpDisclosurePlus;
         pSVData->maCtrlData.mpDisclosurePlus = NULL;
     }
-    if ( pSVData->maCtrlData.mpDisclosurePlusHC )
-    {
-        delete pSVData->maCtrlData.mpDisclosurePlusHC;
-        pSVData->maCtrlData.mpDisclosurePlusHC = NULL;
-    }
     if ( pSVData->maCtrlData.mpDisclosureMinus )
     {
         delete pSVData->maCtrlData.mpDisclosureMinus;
         pSVData->maCtrlData.mpDisclosureMinus = NULL;
     }
-    if ( pSVData->maCtrlData.mpDisclosureMinusHC )
-    {
-        delete pSVData->maCtrlData.mpDisclosureMinusHC;
-        pSVData->maCtrlData.mpDisclosureMinusHC = NULL;
-    }
-#if defined USE_JAVA && defined MACOSX
-    if ( pSVData->maCtrlData.mpNonNativeCheckImgList )
-    {
-        delete pSVData->maCtrlData.mpNonNativeCheckImgList;
-        pSVData->maCtrlData.mpNonNativeCheckImgList = NULL;
-    }
-    if ( pSVData->maCtrlData.mpNonNativeRadioImgList )
-    {
-        delete pSVData->maCtrlData.mpNonNativeRadioImgList;
-        pSVData->maCtrlData.mpNonNativeRadioImgList = NULL;
-    }
-#endif	// USE_JAVA && MACOSX
     if ( pSVData->mpDefaultWin )
     {
+        OpenGLContext* pContext = pSVData->mpDefaultWin->GetGraphics()->GetOpenGLContext();
+        if( pContext )
+        {
+#ifdef DBG_UTIL
+            pContext->DeRef(NULL);
+#else
+            pContext->DeRef();
+#endif
+        }
         delete pSVData->mpDefaultWin;
         pSVData->mpDefaultWin = NULL;
     }
 
-	// #114285# Moved here from ImplDeInitSVData...
+    DBGGUI_DEINIT_SOLARMUTEXCHECK();
+
     if ( pSVData->mpUnoWrapper )
     {
-        pSVData->mpUnoWrapper->Destroy();
-        pSVData->mpUnoWrapper = NULL;
+        try
+        {
+            uno::Reference<frame::XDesktop2> const xDesktop = frame::Desktop::create(
+                    comphelper::getProcessComponentContext() );
+            xDesktop->addEventListener(new VCLUnoWrapperDeleter());
+        }
+        catch (uno::Exception const&)
+        {
+            // ignore
+        }
     }
 
-    pSVData->maAppData.mxMSF.clear();
-
-    if( pSVData->mpApp )
+    if( pSVData->mpApp || pSVData->maDeInitHook.IsSet() )
+    {
+        sal_uLong nCount = Application::ReleaseSolarMutex();
         // call deinit to deinitialize application class
         // soffice/sfx implementation disposes the global service manager
         // Warning: After this call you can't call uno services
-        pSVData->mpApp->DeInit();
+        if( pSVData->mpApp )
+        {
+            pSVData->mpApp->DeInit();
+        }
+        if( pSVData->maDeInitHook.IsSet() )
+        {
+            pSVData->maDeInitHook.Call(0);
+        }
+        Application::AcquireSolarMutex(nCount);
+    }
 
     if ( pSVData->maAppData.mpSettings )
     {
-		if ( pSVData->maAppData.mpCfgListener )
-		{
-			pSVData->maAppData.mpSettings->GetSysLocale().GetOptions().RemoveListener( pSVData->maAppData.mpCfgListener );
-			delete pSVData->maAppData.mpCfgListener;
-		}
-		
+        if ( pSVData->maAppData.mpCfgListener )
+        {
+            pSVData->maAppData.mpSettings->GetSysLocale().GetOptions().RemoveListener( pSVData->maAppData.mpCfgListener );
+            delete pSVData->maAppData.mpCfgListener;
+        }
+
         delete pSVData->maAppData.mpSettings;
         pSVData->maAppData.mpSettings = NULL;
     }
@@ -638,11 +620,6 @@ void DeInitVCL()
     {
         delete pSVData->maAppData.mpAccelMgr;
         pSVData->maAppData.mpAccelMgr = NULL;
-    }
-    if ( pSVData->maAppData.mpUniqueIdCont )
-    {
-        delete pSVData->maAppData.mpUniqueIdCont;
-        pSVData->maAppData.mpUniqueIdCont = NULL;
     }
     if ( pSVData->maAppData.mpAppFileName )
     {
@@ -669,18 +646,25 @@ void DeInitVCL()
         delete pSVData->maAppData.mpKeyListeners;
         pSVData->maAppData.mpKeyListeners = NULL;
     }
+    if ( pSVData->maAppData.mpPostYieldListeners )
+    {
+        delete pSVData->maAppData.mpPostYieldListeners;
+        pSVData->maAppData.mpPostYieldListeners = NULL;
+    }
 
     if ( pSVData->maAppData.mpFirstHotKey )
         ImplFreeHotKeyData();
     if ( pSVData->maAppData.mpFirstEventHook )
         ImplFreeEventHookData();
 
+    if (pSVData->mpBlendFrameCache)
+        delete pSVData->mpBlendFrameCache, pSVData->mpBlendFrameCache = NULL;
+
     ImplDeletePrnQueueList();
     delete pSVData->maGDIData.mpScreenFontList;
     pSVData->maGDIData.mpScreenFontList = NULL;
     delete pSVData->maGDIData.mpScreenFontCache;
     pSVData->maGDIData.mpScreenFontCache = NULL;
-    ImplFreeOutDevFontData();
 
     if ( pSVData->mpResMgr )
     {
@@ -690,33 +674,31 @@ void DeInitVCL()
 
     ResMgr::DestroyAllResMgr();
 
-	// destroy all Sal interfaces before destorying the instance
-	// and thereby unloading the plugin
-	delete pSVData->mpSalSystem;
-	pSVData->mpSalSystem = NULL;
-	delete pSVData->mpSalTimer;
-	pSVData->mpSalTimer = NULL;
+    // destroy all Sal interfaces before destorying the instance
+    // and thereby unloading the plugin
+    delete pSVData->mpSalSystem;
+    pSVData->mpSalSystem = NULL;
+    delete pSVData->mpSalTimer;
+    pSVData->mpSalTimer = NULL;
 
-    // Sal deinitialisieren
+    // Deinit Sal
 #if defined USE_JAVA && defined MACOSX
     // Fix random crashing in native callbacks that get called after destroying
     // the SalInstance by setting it to NULL
     SalInstance *pDefInst = pSVData->mpDefInst;
     pSVData->mpDefInst = NULL;
     DestroySalInstance( pDefInst );
-#else	// USE_JAVA && MACOSX
+#else   // USE_JAVA && MACOSX
     DestroySalInstance( pSVData->mpDefInst );
-#endif	// USE_JAVA && MACOSX
-
-    DeInitTools();
-
-    DeInitSalMain();
+#endif  // USE_JAVA && MACOSX
 
     if( pOwnSvApp )
     {
         delete pOwnSvApp;
         pOwnSvApp = NULL;
     }
+
+    EmbeddedFontsHelper::clearTemporaryFontFiles();
 }
 
 // only one call is allowed
@@ -758,7 +740,7 @@ static void SAL_CALL MainWorkerFunction( void* pArgs )
 void CreateMainLoopThread( oslWorkerFunction pWorker, void * pThreadData )
 {
 #ifdef WNT
-    // sal thread alway call CoInitializeEx, so a sysdepen implementation is necessary
+    // sal thread always call CoInitializeEx, so a sysdepen implementation is necessary
 
     unsigned uThreadID;
     hThreadID = (HANDLE)_beginthreadex(
@@ -766,7 +748,7 @@ void CreateMainLoopThread( oslWorkerFunction pWorker, void * pThreadData )
         0,          // stacksize 0 means default
         _threadmain,    // thread worker function
         new WorkerThreadData( pWorker, pThreadData ),       // arguments for worker function
-        0,          // 0 means: create immediatly otherwise use CREATE_SUSPENDED
+        0,          // 0 means: create immediately otherwise use CREATE_SUSPENDED
         &uThreadID );   // thread id to fill
 #else
     hThreadID = osl_createThread( MainWorkerFunction, new WorkerThreadData( pWorker, pThreadData ) );
@@ -785,3 +767,5 @@ void JoinMainLoopThread()
 #endif
     }
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

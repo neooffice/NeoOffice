@@ -37,12 +37,12 @@
 #define _SV_SALDATA_HXX
 
 #include <list>
-#include <hash_map>
 #include <map>
 
+#include <boost/unordered_map.hpp>
 #include <osl/conditn.hxx>
 
-class JavaImplFontData;
+class JavaPhysicalFontFace;
 class JavaSalBitmap;
 class JavaSalEvent;
 class JavaSalFrame;
@@ -65,14 +65,14 @@ public:
 	JavaSalFrame*			mpFocusFrame;
 	timeval					maTimeout;
 	sal_uLong				mnTimerInterval;
-	XubString				maDefaultPrinter;
-	::std::map< String, JavaImplFontData* >	maFontNameMapping;
-	::std::hash_map< ::rtl::OUString, JavaImplFontData*, ::rtl::OUStringHash >	maJavaFontNameMapping;
-	::std::hash_map< OUString, sal_IntPtr, OUStringHash >	maJavaNativeFontMapping;
-	::std::hash_map< sal_IntPtr, JavaImplFontData* >	maNativeFontMapping;
-	::std::hash_map< sal_IntPtr, JavaImplFontData* >	maPlainFamilyNativeFontMapping;
-	::std::hash_map< sal_IntPtr, ::std::hash_map< sal_IntPtr, JavaImplFontData* > >	maItalicNativeFontMapping;
-	::std::hash_map< sal_IntPtr, ::std::hash_map< sal_IntPtr, JavaImplFontData* > >	maUnitalicNativeFontMapping;
+	OUString				maDefaultPrinter;
+	::std::map< OUString, JavaPhysicalFontFace* >	maFontNameMapping;
+	::boost::unordered_map< OUString, JavaPhysicalFontFace*, OUStringHash >	maJavaFontNameMapping;
+	::boost::unordered_map< OUString, sal_IntPtr, OUStringHash >	maJavaNativeFontMapping;
+	::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >	maNativeFontMapping;
+	::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >	maPlainFamilyNativeFontMapping;
+	::boost::unordered_map< sal_IntPtr, ::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* > >	maItalicNativeFontMapping;
+	::boost::unordered_map< sal_IntPtr, ::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* > >	maUnitalicNativeFontMapping;
 	JavaSalFrame*			mpPresentationFrame;
 	::osl::Condition		maNativeEventCondition;
 	bool					mbInNativeModalSheet;
@@ -94,17 +94,12 @@ public:
 
 inline void SetSalData( SalData* pData )
 {
-	ImplGetSVData()->mpSalData = (void*)pData;
+	ImplGetSVData()->mpSalData = pData;
 }
 
 inline SalData* GetSalData()
 {
-	return (SalData*)ImplGetSVData()->mpSalData;
-}
-
-inline SalData* GetAppSalData()
-{
-	return (SalData*)ImplGetAppSVData()->mpSalData;
+	return ImplGetSVData()->mpSalData;
 }
 
 #endif // _SV_SALDATA_HXX

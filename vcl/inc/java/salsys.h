@@ -36,8 +36,6 @@
 #ifndef _SV_SALSYS_H
 #define _SV_SALSYS_H
 
-#include <vcl/sv.h>
-
 #include "salsys.hxx"
 
 // -----------------
@@ -50,13 +48,12 @@ public:
 							JavaSalSystem();
 	virtual					~JavaSalSystem();
 
-	virtual unsigned int	GetDisplayScreenCount();
-	virtual bool			IsMultiDisplay();
-	virtual unsigned int	GetDefaultDisplayNumber();
-	virtual Rectangle		GetDisplayScreenPosSizePixel( unsigned int nScreen );
-	virtual Rectangle		GetDisplayWorkAreaPosSizePixel( unsigned int nScreen );
-	virtual rtl::OUString	GetScreenName( unsigned int nScreen );
-	virtual int				ShowNativeMessageBox( const String& rTitle, const String& rMessage, int nButtonCombination, int nDefaultButton );
+	virtual unsigned int	GetDisplayScreenCount() SAL_OVERRIDE;
+	virtual bool			IsUnifiedDisplay() SAL_OVERRIDE { return false; }
+	virtual unsigned int	GetDisplayBuiltInScreen() SAL_OVERRIDE;
+	virtual Rectangle		GetDisplayScreenPosSizePixel( unsigned int nScreen ) SAL_OVERRIDE;
+	virtual OUString		GetDisplayScreenName( unsigned int nScreen ) SAL_OVERRIDE;
+	virtual int				ShowNativeMessageBox( const OUString& rTitle, const OUString& rMessage, int nButtonCombination, int nDefaultButton, bool bUseResources ) SAL_OVERRIDE;
 };
 
 #endif // _SV_SALSYS_H

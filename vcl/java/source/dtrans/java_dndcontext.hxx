@@ -49,10 +49,11 @@ public:
 							JavaDragSourceContext();
 	virtual					~JavaDragSourceContext();
 
-	virtual sal_Int32		SAL_CALL getCurrentCursor() throw( ::com::sun::star::uno::RuntimeException );
-	virtual void			SAL_CALL setCursor( sal_Int32 cursorId ) throw( ::com::sun::star::uno::RuntimeException );
-	virtual void			SAL_CALL setImage( sal_Int32 imageId ) throw( ::com::sun::star::uno::RuntimeException );
-	virtual void			SAL_CALL transferablesFlavorsChanged() throw( ::com::sun::star::uno::RuntimeException );
+	// XDragSourceContext
+	virtual sal_Int32		SAL_CALL getCurrentCursor() throw( ::com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual void			SAL_CALL setCursor( sal_Int32 cursorId ) throw( ::com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual void			SAL_CALL setImage( sal_Int32 imageId ) throw( ::com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual void			SAL_CALL transferablesFlavorsChanged() throw( ::com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 };
 
 class JavaDropTargetDropContext : public ::cppu::WeakImplHelper1< ::com::sun::star::datatransfer::dnd::XDropTargetDropContext >
@@ -65,9 +66,10 @@ public:
 							JavaDropTargetDropContext( sal_Int8 nAction );
 	virtual					~JavaDropTargetDropContext();
 
-	virtual void			SAL_CALL acceptDrop( sal_Int8 dragOperation ) throw( ::com::sun::star::uno::RuntimeException );
-	virtual void			SAL_CALL rejectDrop() throw( ::com::sun::star::uno::RuntimeException );
-	virtual void			SAL_CALL dropComplete( sal_Bool success ) throw( ::com::sun::star::uno::RuntimeException );
+	// XDropTargetDropContext
+	virtual void			SAL_CALL acceptDrop( sal_Int8 dragOperation ) throw( ::com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual void			SAL_CALL rejectDrop() throw( ::com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual void			SAL_CALL dropComplete( sal_Bool success ) throw( ::com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
 	bool					getDropComplete();
 	bool					isRejected();
@@ -82,8 +84,9 @@ public:
 							JavaDropTargetDragContext( sal_Int8 nAction );
 	virtual					~JavaDropTargetDragContext();
 
-	virtual void			SAL_CALL acceptDrag( sal_Int8 dragOperation ) throw( ::com::sun::star::uno::RuntimeException );
-	virtual void			SAL_CALL rejectDrag() throw( ::com::sun::star::uno::RuntimeException );
+	// XDropTargetDragContext
+	virtual void			SAL_CALL acceptDrag( sal_Int8 dragOperation ) throw( ::com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual void			SAL_CALL rejectDrag() throw( ::com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
 	bool					isRejected();
 };

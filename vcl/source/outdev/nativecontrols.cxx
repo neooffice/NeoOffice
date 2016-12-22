@@ -1,55 +1,57 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified July 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
+#include <vcl/outdev.hxx>
+#include <vcl/window.hxx>
 
+#include <vcl/salnativewidgets.hxx>
+#include <vcl/pdfextoutdevdata.hxx>
 
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_vcl.hxx"
+#include <salgdi.hxx>
 
-#include "vcl/outdev.hxx"
-#include "vcl/window.hxx"
-#include "vcl/salnativewidgets.hxx"
-#include "vcl/pdfextoutdevdata.hxx"
-
-#include "salgdi.hxx"
-
-// -----------------------------------------------------------------------
-
-static bool lcl_enableNativeWidget( const OutputDevice& i_rDevice )
+static bool EnableNativeWidget( const OutputDevice& i_rDevice )
 {
     const OutDevType eType( i_rDevice.GetOutDevType() );
     switch ( eType )
     {
 
     case OUTDEV_WINDOW:
-        return dynamic_cast< const Window* >( &i_rDevice )->IsNativeWidgetEnabled();
+        {
+            const vcl::Window* pWindow = dynamic_cast< const vcl::Window* >( &i_rDevice );
+            if (pWindow)
+            {
+                return pWindow->IsNativeWidgetEnabled();
+            }
+            else
+            {
+                SAL_WARN ("vcl.gdi", "Could not cast i_rDevice to Window");
+                assert (pWindow);
+                return false;
+            }
+        }
 
     case OUTDEV_VIRDEV:
     {
@@ -69,72 +71,129 @@ ImplControlValue::~ImplControlValue()
 {
 }
 
+ImplControlValue* ImplControlValue::clone() const
+{
+    assert( typeid( const ImplControlValue ) == typeid( *this ));
+    return new ImplControlValue( *this );
+}
+
 ScrollbarValue::~ScrollbarValue()
 {
+}
+
+ScrollbarValue* ScrollbarValue::clone() const
+{
+    assert( typeid( const ScrollbarValue ) == typeid( *this ));
+    return new ScrollbarValue( *this );
 }
 
 SliderValue::~SliderValue()
 {
 }
 
+SliderValue* SliderValue::clone() const
+{
+    assert( typeid( const SliderValue ) == typeid( *this ));
+    return new SliderValue( *this );
+}
+
 TabitemValue::~TabitemValue()
 {
+}
+
+TabitemValue* TabitemValue::clone() const
+{
+    assert( typeid( const TabitemValue ) == typeid( *this ));
+    return new TabitemValue( *this );
 }
 
 SpinbuttonValue::~SpinbuttonValue()
 {
 }
 
+SpinbuttonValue* SpinbuttonValue::clone() const
+{
+    assert( typeid( const SpinbuttonValue ) == typeid( *this ));
+    return new SpinbuttonValue( *this );
+}
+
 ToolbarValue::~ToolbarValue()
 {
+}
+
+ToolbarValue* ToolbarValue::clone() const
+{
+    assert( typeid( const ToolbarValue ) == typeid( *this ));
+    return new ToolbarValue( *this );
 }
 
 MenubarValue::~MenubarValue()
 {
 }
 
+MenubarValue* MenubarValue::clone() const
+{
+    assert( typeid( const MenubarValue ) == typeid( *this ));
+    return new MenubarValue( *this );
+}
+
 MenupopupValue::~MenupopupValue()
 {
+}
+
+MenupopupValue* MenupopupValue::clone() const
+{
+    assert( typeid( const MenupopupValue ) == typeid( *this ));
+    return new MenupopupValue( *this );
 }
 
 PushButtonValue::~PushButtonValue()
 {
 }
 
-// -----------------------------------------------------------------------
+PushButtonValue* PushButtonValue::clone() const
+{
+    assert( typeid( const PushButtonValue ) == typeid( *this ));
+    return new PushButtonValue( *this );
+}
+
+#ifdef USE_JAVA
+
+ListViewHeaderValue* ListViewHeaderValue::clone() const
+{
+    assert( typeid( const ListViewHeaderValue ) == typeid( *this ));
+    return new ListViewHeaderValue( *this );
+}
+
+#endif	// USE_JAVA
+
 // These functions are mainly passthrough functions that allow access to
 // the SalFrame behind a Window object for native widget rendering purposes.
-// -----------------------------------------------------------------------
 
-// -----------------------------------------------------------------------
-
-sal_Bool OutputDevice::IsNativeControlSupported( ControlType nType, ControlPart nPart )
+bool OutputDevice::IsNativeControlSupported( ControlType nType, ControlPart nPart ) const
 {
-    if( !lcl_enableNativeWidget( *this ) )
-        return sal_False;
+    if( !EnableNativeWidget( *this ) )
+        return false;
 
     if ( !mpGraphics )
-        if ( !ImplGetGraphics() )
-            return sal_False;
+        if ( !AcquireGraphics() )
+            return false;
 
     return( mpGraphics->IsNativeControlSupported(nType, nPart) );
 }
 
-
-// -----------------------------------------------------------------------
-
-sal_Bool OutputDevice::HitTestNativeControl( ControlType nType,
+bool OutputDevice::HitTestNativeControl( ControlType nType,
                               ControlPart nPart,
                               const Rectangle& rControlRegion,
                               const Point& aPos,
-                              sal_Bool& rIsInside )
+                              bool& rIsInside ) const
 {
-    if( !lcl_enableNativeWidget( *this ) )
-        return sal_False;
+    if( !EnableNativeWidget( *this ) )
+        return false;
 
     if ( !mpGraphics )
-        if ( !ImplGetGraphics() )
-            return sal_False;
+        if ( !AcquireGraphics() )
+            return false;
 
     Point aWinOffs( mnOutOffX, mnOutOffY );
     Rectangle screenRegion( rControlRegion );
@@ -144,9 +203,7 @@ sal_Bool OutputDevice::HitTestNativeControl( ControlType nType,
         rIsInside, this ) );
 }
 
-// -----------------------------------------------------------------------
-
-static boost::shared_ptr< ImplControlValue > lcl_transformControlValue( const ImplControlValue& rVal, OutputDevice& rDev )
+static boost::shared_ptr< ImplControlValue > TransformControlValue( const ImplControlValue& rVal, const OutputDevice& rDev )
 {
     boost::shared_ptr< ImplControlValue > aResult;
     switch( rVal.getType() )
@@ -210,138 +267,96 @@ static boost::shared_ptr< ImplControlValue > lcl_transformControlValue( const Im
     case CTRL_GENERIC:
             aResult.reset( new ImplControlValue( rVal ) );
             break;
-	case CTRL_MENU_POPUP:
-		{
-			const MenupopupValue* pMVal = static_cast<const MenupopupValue*>(&rVal);
-			MenupopupValue* pNew = new MenupopupValue( *pMVal );
+    case CTRL_MENU_POPUP:
+        {
+            const MenupopupValue* pMVal = static_cast<const MenupopupValue*>(&rVal);
+            MenupopupValue* pNew = new MenupopupValue( *pMVal );
             pNew->maItemRect = rDev.ImplLogicToDevicePixel( pMVal->maItemRect );
-			aResult.reset( pNew );
-		}
-		break;
+            aResult.reset( pNew );
+        }
+        break;
 #ifdef USE_JAVA
-	case CTRL_LISTVIEWHEADER:
-		{
+    case CTRL_LISTVIEWHEADER:
+        {
             const ListViewHeaderValue* pLVal = static_cast<const ListViewHeaderValue*>(&rVal);
             ListViewHeaderValue* pNew = new ListViewHeaderValue( *pLVal );
             aResult.reset( pNew );
-		}
-		break;
+        }
+        break;
 #endif	// USE_JAVA
     default:
-        OSL_ENSURE( 0, "unknown ImplControlValue type !" );
+        OSL_FAIL( "unknown ImplControlValue type !" );
         break;
     }
     return aResult;
 }
-
-sal_Bool OutputDevice::DrawNativeControl( ControlType nType,
+bool OutputDevice::DrawNativeControl( ControlType nType,
                             ControlPart nPart,
                             const Rectangle& rControlRegion,
                             ControlState nState,
                             const ImplControlValue& aValue,
-                            ::rtl::OUString aCaption )
+                            const OUString& aCaption )
 {
-    if( !lcl_enableNativeWidget( *this ) )
-        return sal_False;
+    if( !EnableNativeWidget( *this ) )
+        return false;
 
     // make sure the current clip region is initialized correctly
     if ( !mpGraphics )
-        if ( !ImplGetGraphics() )
-            return sal_False;
-
-    if ( mbInitClipRegion )
-        ImplInitClipRegion();
-    if ( mbOutputClipped )
-        return sal_True;
-
-    if ( mbInitLineColor )
-        ImplInitLineColor();
-    if ( mbInitFillColor )
-        ImplInitFillColor();
-
-    // Convert the coordinates from relative to Window-absolute, so we draw
-    // in the correct place in platform code
-    boost::shared_ptr< ImplControlValue > aScreenCtrlValue( lcl_transformControlValue( aValue, *this ) );
-    Rectangle screenRegion( ImplLogicToDevicePixel( rControlRegion ) );
-
-    Region aTestRegion( GetActiveClipRegion() );
-    aTestRegion.Intersect( rControlRegion );
-    if( aTestRegion == rControlRegion )
-        nState |= CTRL_CACHING_ALLOWED;   // control is not clipped, caching allowed
-    
-    sal_Bool bRet = mpGraphics->DrawNativeControl(nType, nPart, screenRegion, nState, *aScreenCtrlValue, aCaption, this );
-
-    return bRet;
-}
-
-
-// -----------------------------------------------------------------------
-
-sal_Bool OutputDevice::DrawNativeControlText(ControlType nType,
-                            ControlPart nPart,
-                            const Rectangle& rControlRegion,
-                            ControlState nState,
-                            const ImplControlValue& aValue,
-                            ::rtl::OUString aCaption )
-{
-    if( !lcl_enableNativeWidget( *this ) )
-        return sal_False;
-
-    // make sure the current clip region is initialized correctly
-    if ( !mpGraphics )
-        if ( !ImplGetGraphics() )
+        if ( !AcquireGraphics() )
             return false;
 
     if ( mbInitClipRegion )
-        ImplInitClipRegion();
+        InitClipRegion();
     if ( mbOutputClipped )
         return true;
 
     if ( mbInitLineColor )
-        ImplInitLineColor();
+        InitLineColor();
     if ( mbInitFillColor )
-        ImplInitFillColor();
+        InitFillColor();
 
     // Convert the coordinates from relative to Window-absolute, so we draw
     // in the correct place in platform code
-    boost::shared_ptr< ImplControlValue > aScreenCtrlValue( lcl_transformControlValue( aValue, *this ) );
+    boost::shared_ptr< ImplControlValue > aScreenCtrlValue( TransformControlValue( aValue, *this ) );
     Rectangle screenRegion( ImplLogicToDevicePixel( rControlRegion ) );
 
-    sal_Bool bRet = mpGraphics->DrawNativeControlText(nType, nPart, screenRegion, nState, *aScreenCtrlValue, aCaption, this );
-    
+    vcl::Region aTestRegion( GetActiveClipRegion() );
+    aTestRegion.Intersect( rControlRegion );
+    if (aTestRegion == vcl::Region(rControlRegion))
+        nState |= CTRL_CACHING_ALLOWED;   // control is not clipped, caching allowed
+
+    bool bRet = mpGraphics->DrawNativeControl(nType, nPart, screenRegion, nState, *aScreenCtrlValue, aCaption, this );
+
     return bRet;
 }
 
-
-// -----------------------------------------------------------------------
-
-sal_Bool OutputDevice::GetNativeControlRegion(  ControlType nType,
+bool OutputDevice::GetNativeControlRegion(  ControlType nType,
                                 ControlPart nPart,
                                 const Rectangle& rControlRegion,
                                 ControlState nState,
                                 const ImplControlValue& aValue,
-                                ::rtl::OUString aCaption,
+                                const OUString& aCaption,
                                 Rectangle &rNativeBoundingRegion,
-                                Rectangle &rNativeContentRegion )
+                                Rectangle &rNativeContentRegion ) const
 {
-    if( !lcl_enableNativeWidget( *this ) )
-        return sal_False;
+    if( !EnableNativeWidget( *this ) )
+        return false;
 
     if ( !mpGraphics )
-        if ( !ImplGetGraphics() )
-            return sal_False;
+        if ( !AcquireGraphics() )
+            return false;
 
     // Convert the coordinates from relative to Window-absolute, so we draw
     // in the correct place in platform code
-    boost::shared_ptr< ImplControlValue > aScreenCtrlValue( lcl_transformControlValue( aValue, *this ) );
+    boost::shared_ptr< ImplControlValue > aScreenCtrlValue( TransformControlValue( aValue, *this ) );
     Rectangle screenRegion( ImplLogicToDevicePixel( rControlRegion ) );
 
-    sal_Bool bRet = mpGraphics->GetNativeControlRegion(nType, nPart, screenRegion, nState, *aScreenCtrlValue,
+    bool bRet = mpGraphics->GetNativeControlRegion(nType, nPart, screenRegion, nState, *aScreenCtrlValue,
                                 aCaption, rNativeBoundingRegion,
                                 rNativeContentRegion, this );
     if( bRet )
     {
-        // transform back native regions    
+        // transform back native regions
         rNativeBoundingRegion = ImplDevicePixelToLogic( rNativeBoundingRegion );
         rNativeContentRegion = ImplDevicePixelToLogic( rNativeContentRegion );
     }
@@ -349,4 +364,4 @@ sal_Bool OutputDevice::GetNativeControlRegion(  ControlType nType,
     return bRet;
 }
 
-
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

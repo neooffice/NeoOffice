@@ -39,7 +39,6 @@
 #include <vcl/svapp.hxx>
 #include <vcl/unohelp.hxx>
 #include <vcl/window.hxx>
-#include <vos/mutex.hxx>
 #include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
 #include <com/sun/star/frame/XDispatchHelper.hpp>
 #include <com/sun/star/frame/XDispatchProvider.hpp>
@@ -63,8 +62,8 @@
 using namespace com::sun::star::awt;
 using namespace com::sun::star::beans;
 using namespace com::sun::star;
+using namespace osl;
 using namespace vcl;
-using namespace vos;
 
 // ============================================================================
 
@@ -87,7 +86,7 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 
 	if ( pNSWindow && !Application::IsShutDown() )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 
 		if ( !Application::IsShutDown() )
@@ -123,7 +122,7 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 						{
 							xClipboard->setContents( uno::Reference< datatransfer::XTransferable >(), uno::Reference< datatransfer::clipboard::XClipboardOwner >() );
 
-							uno::Reference< frame::XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), uno::UNO_QUERY );
+							uno::Reference< frame::XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( "com.sun.star.frame.Desktop" ), uno::UNO_QUERY );
 							if ( xFramesSupplier.is() )
 							{
 								uno::Reference< container::XIndexAccess > xList( xFramesSupplier->getFrames(), uno::UNO_QUERY );
@@ -148,9 +147,9 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 													uno::Reference< frame::XDispatchProvider > xDispatchProvider( xFrame, uno::UNO_QUERY );
 													if ( xDispatchProvider.is() )
 													{
-														uno::Reference< frame::XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" ) ) ), uno::UNO_QUERY );
+														uno::Reference< frame::XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( "com.sun.star.frame.DispatchHelper" ), uno::UNO_QUERY );
 														if ( xDispatchHelper.is() )
-															xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Copy" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, uno::Sequence< PropertyValue >() );
+															xDispatchHelper->executeDispatch( xDispatchProvider, ".uno:Copy", "_self", 0, uno::Sequence< PropertyValue >() );
 													}
 
 													break;
@@ -175,7 +174,7 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 								if ( pTextSelection )
 								{
 									uno::Type aType( getCppuType( ( OUString* )0 ) );
-									aFlavor.MimeType = OUString( RTL_CONSTASCII_USTRINGPARAM( "text/plain;charset=utf-16" ) );
+									aFlavor.MimeType = "text/plain;charset=utf-16";
 									aFlavor.DataType = aType;
 									if ( xTransferable->isDataFlavorSupported( aFlavor ) )
 									{
@@ -194,7 +193,7 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 								if ( pRTFSelection )
 								{
 									uno::Type aType( getCppuType( ( uno::Sequence< sal_Int8 >* )0 ) );
-									aFlavor.MimeType = OUString( RTL_CONSTASCII_USTRINGPARAM( "text/richtext" ) );
+									aFlavor.MimeType = "text/richtext";
 									aFlavor.DataType = aType;
 									if ( xTransferable->isDataFlavorSupported( aFlavor ) )
 									{
@@ -233,7 +232,7 @@ sal_Bool VCLEventQueue_paste( void *pNSWindow )
 
 	if ( !Application::IsShutDown() )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 
 		if ( !Application::IsShutDown() )
@@ -257,7 +256,7 @@ sal_Bool VCLEventQueue_paste( void *pNSWindow )
 
 				if ( pWindow )
 				{
-					uno::Reference< frame::XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), uno::UNO_QUERY );
+					uno::Reference< frame::XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( "com.sun.star.frame.Desktop" ), uno::UNO_QUERY );
 					if ( xFramesSupplier.is() )
 					{
 						uno::Reference< container::XIndexAccess > xList( xFramesSupplier->getFrames(), uno::UNO_QUERY );
@@ -282,10 +281,10 @@ sal_Bool VCLEventQueue_paste( void *pNSWindow )
 											uno::Reference< frame::XDispatchProvider > xDispatchProvider( xFrame, uno::UNO_QUERY );
 											if ( xDispatchProvider.is() )
 											{
-												uno::Reference< frame::XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" ) ) ), uno::UNO_QUERY );
+												uno::Reference< frame::XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( "com.sun.star.frame.DispatchHelper" ), uno::UNO_QUERY );
 												if ( xDispatchHelper.is() )
 												{
-													uno::Any aRet = xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Paste" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, uno::Sequence< PropertyValue >() );
+													uno::Any aRet = xDispatchHelper->executeDispatch( xDispatchProvider, ".uno:Paste", "_self", 0, uno::Sequence< PropertyValue >() );
 													bRet = ( aRet.getValue() ? sal_True : sal_False );
 												}
 											}
@@ -313,13 +312,13 @@ void VCLEventQueue_removeCachedEvents()
 {
 	if ( !Application::IsShutDown() )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 
 		if ( !Application::IsShutDown() )
 		{
 			// Yield to give Java event dispatch thread a chance to finish
-			OThread::yield();
+			Thread::yield();
 
 			SalData *pSalData = GetSalData();
 			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )

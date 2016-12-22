@@ -40,12 +40,13 @@
 
 // =======================================================================
 
-JavaSalObject::JavaSalObject( SalFrame *pParent )
+JavaSalObject::JavaSalObject( SalFrame *pParent ) :
+	mbInFlush( sal_False ),
+	mpParent( (JavaSalFrame *)pParent ),
+	mbVisible( false )
+
 {
 	mpChildView = VCLChildView_create();
-	mbInFlush = sal_False;
-	mpParent = (JavaSalFrame *)pParent;
-	mbVisible = sal_False;
 
 	memset( &maSysData, 0, sizeof( SystemEnvData ) );
 	maSysData.nSize = sizeof( SystemEnvData );
@@ -69,7 +70,7 @@ JavaSalObject::~JavaSalObject()
 
 void JavaSalObject::Destroy()
 {
-	Show( sal_False );
+	Show( false );
 
 	if ( mpParent )
 	{
@@ -88,7 +89,7 @@ void JavaSalObject::Flush()
 	if ( mbVisible )
 	{
 		mbInFlush = sal_True;
-		Show( sal_True );
+		Show( true );
 		mbInFlush = sal_False;
 	}
 }
@@ -135,7 +136,7 @@ void JavaSalObject::EndSetClipRegion()
 {
 	if ( !maClipRect.IsEmpty() )
 	{
-		VCLChildView_setClip( mpChildView, NSMakeRect( maClipRect.nLeft, maSize.Height() - maClipRect.GetHeight() - maClipRect.nTop, maClipRect.GetWidth(), maClipRect.GetHeight() ) );
+		VCLChildView_setClip( mpChildView, NSMakeRect( maClipRect.Left(), maSize.Height() - maClipRect.GetHeight() - maClipRect.Top(), maClipRect.GetWidth(), maClipRect.GetHeight() ) );
 	}
 	else
 	{
@@ -157,7 +158,7 @@ void JavaSalObject::SetPosSize( long nX, long nY, long nWidth, long nHeight )
 
 // -----------------------------------------------------------------------
 
-void JavaSalObject::Show( sal_Bool bVisible )
+void JavaSalObject::Show( bool bVisible )
 {
 	mbVisible = bVisible;
 
@@ -179,24 +180,6 @@ void JavaSalObject::Show( sal_Bool bVisible )
 
 // -----------------------------------------------------------------------
 
-void JavaSalObject::Enable( sal_Bool /* bEnable */ )
-{
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalObject::Enable not implemented\n" );
-#endif
-}
-
-// -----------------------------------------------------------------------
-
-void JavaSalObject::GrabFocus()
-{
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalObject::GrabFocus not implemented\n" );
-#endif
-}
-
-// -----------------------------------------------------------------------
-
 void JavaSalObject::SetBackground()
 {
 	VCLChildView_setBackgroundColor( mpChildView, 0xffffffff );
@@ -214,13 +197,4 @@ void JavaSalObject::SetBackground( SalColor nSalColor )
 const SystemEnvData* JavaSalObject::GetSystemData() const
 {
 	return &maSysData;
-}
-
-// -----------------------------------------------------------------------
-
-void JavaSalObject::InterceptChildWindowKeyDown( sal_Bool /* bIntercept */ )
-{
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalObject::InterceptChildWindowKeyDown not implemented\n" );
-#endif
 }

@@ -1,37 +1,28 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
-
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_vcl.hxx"
+ */
 
 #include "vcl/window.hxx"
 #include "vcl/waitobj.hxx"
@@ -41,45 +32,33 @@
 #include "salgdi.hxx"
 #endif	// USE_JAVA
 
-// -----------------------------------------------------------------------
-
 WaitObject::~WaitObject()
 {
     if ( mpWindow )
         mpWindow->LeaveWait();
 }
 
-// -----------------------------------------------------------------------
+namespace vcl {
 
-Size Window::GetOptimalSize(WindowSizeType eType) const
+Size Window::GetOptimalSize() const
 {
-    switch (eType) {
-    case WINDOWSIZE_MINIMUM:
-        return Size();
-    case WINDOWSIZE_PREFERRED:
-        return GetOptimalSize( WINDOWSIZE_MINIMUM );
-    case WINDOWSIZE_MAXIMUM:
-    default:
-        return Size( LONG_MAX, LONG_MAX );
-    }
+    return Size();
 }
-
-// -----------------------------------------------------------------------
 
 void Window::ImplAdjustNWFSizes()
 {
     switch( GetType() )
     {
     case WINDOW_CHECKBOX:
-        ((CheckBox*)this)->ImplSetMinimumNWFSize();
+        static_cast<CheckBox*>(this)->ImplSetMinimumNWFSize();
         break;
     case WINDOW_RADIOBUTTON:
-        ((RadioButton*)this)->ImplSetMinimumNWFSize();
+        static_cast<RadioButton*>(this)->ImplSetMinimumNWFSize();
         break;
     default:
         {
             // iterate over children
-            Window* pWin = GetWindow( WINDOW_FIRSTCHILD );
+            vcl::Window* pWin = GetWindow( WINDOW_FIRSTCHILD );
             while( pWin )
             {
                 pWin->ImplAdjustNWFSizes();
@@ -92,18 +71,20 @@ void Window::ImplAdjustNWFSizes()
 
 #ifdef USE_JAVA
 
-// -----------------------------------------------------------------------
-
 bool Window::GetNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& aValue, Color& nTextColor )
 {
     if( !IsNativeWidgetEnabled() )
-        return sal_False;
+        return false;
 
-    if ( !mpGraphics )
-        if ( !ImplGetGraphics() )
-            return sal_False;
+    if ( !mpGraphics && !AcquireGraphics() )
+        return false;
 
     return mpGraphics->GetNativeControlTextColor( nType, nPart, nState, aValue, nTextColor );
 }
 
 #endif	// USE_JAVA
+
+} /* namespace vcl */
+
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

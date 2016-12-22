@@ -36,8 +36,9 @@
 #ifndef _SV_SALATSLAYOUT_HXX
 #define _SV_SALATSLAYOUT_HXX
 
-#include <hash_map>
 #include <vector>
+
+#include <boost/unordered_map.hpp>
 
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
@@ -66,7 +67,7 @@ class SalATSLayout : public GenericSalLayout
 	::std::vector< ImplATSLayoutData* >	maLayoutData;
 	::std::vector< int >	maLayoutMinCharPos;
 	ImplATSLayoutData*	mpKashidaLayoutData;
-	::std::hash_map< sal_Unicode, ImplATSLayoutData* >	maMirroredLayoutData;
+	::boost::unordered_map< sal_Unicode, ImplATSLayoutData* >	maMirroredLayoutData;
 	long				mnOrigWidth;
 	float				mfGlyphScaleX;
 
@@ -77,11 +78,11 @@ public:
 						SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel );
 	virtual				~SalATSLayout();
 
-	virtual void		AdjustLayout( ImplLayoutArgs& rArgs );
-	virtual bool		LayoutText( ImplLayoutArgs& rArgs );
-	virtual void		DrawText( SalGraphics& rGraphics ) const;
-	virtual bool		GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) const;
-	virtual bool		GetOutline( SalGraphics& rGraphics, ::basegfx::B2DPolyPolygonVector& rVector ) const;
+	virtual void		AdjustLayout( ImplLayoutArgs& rArgs ) SAL_OVERRIDE;
+	virtual bool		LayoutText( ImplLayoutArgs& rArgs ) SAL_OVERRIDE;
+	virtual void		DrawText( SalGraphics& rGraphics ) const SAL_OVERRIDE;
+	virtual bool		GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) const SAL_OVERRIDE;
+	virtual bool		GetOutline( SalGraphics& rGraphics, ::basegfx::B2DPolyPolygonVector& rVector ) const SAL_OVERRIDE;
 
 	ImplATSLayoutData*	GetVerticalGlyphTranslation( sal_Int32 nGlyph, int nCharPos, long& nX, long& nY ) const;
 	sal_Int32			GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharPos ) const;

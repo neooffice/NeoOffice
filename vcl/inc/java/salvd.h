@@ -36,8 +36,6 @@
 #ifndef _SV_SALVD_H
 #define _SV_SALVD_H
 
-#include <vcl/sv.h>
-
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
 #include <postmac.h>
@@ -64,10 +62,11 @@ public:
 							JavaSalVirtualDevice();
 	virtual					~JavaSalVirtualDevice();
 
-	virtual SalGraphics*	GetGraphics();
-	virtual void			ReleaseGraphics( SalGraphics* pGraphics );
-	virtual sal_Bool		SetSize( long nNewDX, long nNewDY );
-	virtual void			GetSize( long& rWidth, long& rHeight );
+	virtual SalGraphics*	AcquireGraphics() SAL_OVERRIDE;
+	virtual void			ReleaseGraphics( SalGraphics* pGraphics ) SAL_OVERRIDE;
+	virtual bool			SetSize( long nNewDX, long nNewDY ) SAL_OVERRIDE;
+	virtual long			GetWidth() const SAL_OVERRIDE;
+	virtual long			GetHeight() const SAL_OVERRIDE;
 };
 
 #endif // _SV_SALVD_H

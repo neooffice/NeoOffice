@@ -148,10 +148,12 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraph
 	JavaSalInstance *pInst = GetSalData()->mpFirstInstance;
 	if ( pInst )
 	{
-		mpVirDev = (JavaSalVirtualDevice *)pInst->CreateVirtualDevice( pSrcGraphics, maSize.Width() + ( maPoint.X() * 2 ), maSize.Height() + ( maPoint.Y() * 2 ), mnBitCount, NULL );
+		long nWidth = maSize.Width() + ( maPoint.X() * 2 );
+		long nHeight = maSize.Height() + ( maPoint.Y() * 2 );
+		mpVirDev = (JavaSalVirtualDevice *)pInst->CreateVirtualDevice( pSrcGraphics, nWidth, nHeight, mnBitCount, NULL );
 		if ( mpVirDev )
 		{
-			mpGraphics = (JavaSalGraphics *)mpVirDev->GetGraphics();
+			mpGraphics = (JavaSalGraphics *)mpVirDev->AcquireGraphics();
 			if ( mpGraphics )
 			{
 				CGRect aUnflippedSrcRect = UnflipFlippedRect( CGRectMake( rPoint.X(), rPoint.Y(), maSize.Width(), maSize.Height() ), pSrcGraphics->maNativeBounds );
@@ -208,23 +210,23 @@ bool JavaSalBitmap::Create( const SalBitmap& rSalBmp )
 
 	if ( bRet )
 	{
-		BitmapBuffer *pSrcBuffer = rJavaSalBmp.AcquireBuffer( true );
+		BitmapBuffer *pSrcBuffer = rJavaSalBmp.AcquireBuffer( BITMAP_WRITE_ACCESS );
 		if ( pSrcBuffer )
 		{
-			BitmapBuffer *pDestBuffer = AcquireBuffer( false );
+			BitmapBuffer *pDestBuffer = AcquireBuffer( BITMAP_READ_ACCESS );
 			if ( pDestBuffer && pDestBuffer->mpBits && pDestBuffer->mnScanlineSize == pSrcBuffer->mnScanlineSize && pDestBuffer->mnHeight == pSrcBuffer->mnHeight )
 			{
 				memcpy( pDestBuffer->mpBits, pSrcBuffer->mpBits, pDestBuffer->mnScanlineSize * pDestBuffer->mnHeight );
 				pDestBuffer->maColorMask = pSrcBuffer->maColorMask;
 				pDestBuffer->maPalette = pSrcBuffer->maPalette;
-				ReleaseBuffer( pDestBuffer, false );
+				ReleaseBuffer( pDestBuffer, BITMAP_READ_ACCESS );
 			}
 			else
 			{
 				Destroy();
 				bRet = false;
 			}
-			rJavaSalBmp.ReleaseBuffer( pSrcBuffer, false );
+			rJavaSalBmp.ReleaseBuffer( pSrcBuffer, BITMAP_READ_ACCESS );
 		}
 		else
 		{
@@ -246,6 +248,13 @@ bool JavaSalBitmap::Create( const SalBitmap& /* rSalBmp */, SalGraphics* /* pGra
 // ------------------------------------------------------------------
 
 bool JavaSalBitmap::Create( const SalBitmap& /* rSalBmp */, sal_uInt16 /* nNewBitCount */ )
+{
+	return false;
+}
+
+// ------------------------------------------------------------------
+
+bool JavaSalBitmap::Create( const ::com::sun::star::uno::Reference< ::com::sun::star::rendering::XBitmapCanvas > /* xBitmapCanvas */, Size& /* rSize */, bool /** bMask */ )
 {
 	return false;
 }
@@ -276,10 +285,7 @@ void JavaSalBitmap::Destroy()
 	{
 		if ( mpGraphics )
 			mpVirDev->ReleaseGraphics( mpGraphics );
-
-		JavaSalInstance *pInst = GetSalData()->mpFirstInstance;
-		if ( pInst )
-			pInst->DestroyVirtualDevice( mpVirDev );
+		delete mpVirDev;
 	}
 
 	mpGraphics = NULL;
@@ -295,7 +301,7 @@ sal_uInt16 JavaSalBitmap::GetBitCount() const
 
 // ------------------------------------------------------------------
 
-BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
+BitmapBuffer* JavaSalBitmap::AcquireBuffer( BitmapAccessMode nMode )
 {
 	BitmapBuffer *pBuffer = new BitmapBuffer();
 
@@ -369,17 +375,14 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 		}
 	}
 
-	if ( !bReadOnly )
+	if ( nMode == BITMAP_WRITE_ACCESS )
 	{
 		// Release the virtual device if the bits will change
 		if ( mpVirDev )
 		{
 			if ( mpGraphics )
 				mpVirDev->ReleaseGraphics( mpGraphics );
-
-			JavaSalInstance *pInst = GetSalData()->mpFirstInstance;
-			if ( pInst )
-				pInst->DestroyVirtualDevice( mpVirDev );
+			delete mpVirDev;
 		}
 
 		maPoint = Point( 0, 0 );
@@ -394,11 +397,11 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 
 // ------------------------------------------------------------------
 
-void JavaSalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, bool bReadOnly )
+void JavaSalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, BitmapAccessMode nMode )
 {
 	if ( pBuffer )
 	{
-		if ( !bReadOnly )
+		if ( nMode == BITMAP_WRITE_ACCESS )
 		{
 			// Save the palette
 			sal_uInt16 nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
@@ -420,5 +423,33 @@ bool JavaSalBitmap::GetSystemData( BitmapSystemData& /* rData */ )
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalBitmap::GetSystemData not implemented\n" );
 #endif
+	return false;
+}
+
+// ------------------------------------------------------------------
+
+bool JavaSalBitmap::Crop( const Rectangle& /* rRectPixel */ )
+{
+	return false;
+}
+
+// ------------------------------------------------------------------
+
+bool JavaSalBitmap::Erase( const Color& /* rFillColor */ )
+{
+	return false;
+}
+
+// ------------------------------------------------------------------
+
+bool JavaSalBitmap::Scale( const double& /* rScaleX */, const double& /* rScaleY */, sal_uInt32 /* nScaleFlag */ )
+{
+	return false;
+}
+
+// ------------------------------------------------------------------
+
+bool JavaSalBitmap::Replace( const Color& /* rSearchColor */, const Color& /* rReplaceColor */, sal_uLong /* nTol */ )
+{
 	return false;
 }

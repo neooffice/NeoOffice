@@ -41,7 +41,6 @@
 
 #include <rtl/ustring.hxx>
 #include <vcl/svapp.hxx>
-#include <vos/mutex.hxx>
 
 #include "svids.hrc"
 #include "java/saldata.hxx"
@@ -55,10 +54,10 @@
 
 struct ImplPendingOpenPrintFileRequest
 {
-	::rtl::OString		maPath;
+	OString				maPath;
 	sal_Bool			mbPrint;
 
-						ImplPendingOpenPrintFileRequest( const ::rtl::OString &rPath, sal_Bool bPrint ) : maPath( rPath ), mbPrint( bPrint ) {}
+						ImplPendingOpenPrintFileRequest( const OString &rPath, sal_Bool bPrint ) : maPath( rPath ), mbPrint( bPrint ) {}
 						~ImplPendingOpenPrintFileRequest() {};
 };
 
@@ -66,9 +65,7 @@ static std::list< ImplPendingOpenPrintFileRequest* > aPendingOpenPrintFileReques
 static NSString *pSFXDocument = @"SFXDocument";
 static NSString *pSFXDocumentRevision = @"SFXDocumentRevision";
 
-using namespace rtl;
 using namespace vcl;
-using namespace vos;
 
 static void HandleAboutRequest()
 {
@@ -123,7 +120,7 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 	// crash
 	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 
 		if ( !Application::IsShutDown() && !JavaSalEventQueue::isShutdownDisabled() )
@@ -632,7 +629,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 					{
 						if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
 						{
-							IMutex& rSolarMutex = Application::GetSolarMutex();
+							comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 							rSolarMutex.acquire();
 							mbAppMenuInitialized = YES;
 
@@ -649,33 +646,33 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 								ResMgr *pResMgr = ImplGetResMgr();
 								if ( pResMgr )
 								{
-									String aAbout( ResId( SV_STDTEXT_ABOUT, *pResMgr ) );
-									if ( aAbout.Len() )
-										pAbout = [NSString stringWithCharacters:aAbout.GetBuffer() length:aAbout.Len()];
+									OUString aAbout( ResId( SV_STDTEXT_ABOUT, *pResMgr ) );
+									if ( aAbout.getLength() )
+										pAbout = [NSString stringWithCharacters:aAbout.getStr() length:aAbout.getLength()];
 
-									String aPreferences( ResId( SV_STDTEXT_PREFERENCES, *pResMgr ) );
-									if ( aPreferences.Len() )
-										pPreferences = [NSString stringWithCharacters:aPreferences.GetBuffer() length:aPreferences.Len()];
+									OUString aPreferences( ResId( SV_STDTEXT_PREFERENCES, *pResMgr ) );
+									if ( aPreferences.getLength() )
+										pPreferences = [NSString stringWithCharacters:aPreferences.getStr() length:aPreferences.getLength()];
 
-									String aServices( ResId( SV_MENU_MAC_SERVICES, *pResMgr ) );
-									if ( aServices.Len() )
-										pServices = [NSString stringWithCharacters:aServices.GetBuffer() length:aServices.Len()];
+									OUString aServices( ResId( SV_MENU_MAC_SERVICES, *pResMgr ) );
+									if ( aServices.getLength() )
+										pServices = [NSString stringWithCharacters:aServices.getStr() length:aServices.getLength()];
 
-									String aHide( ResId( SV_MENU_MAC_HIDEAPP, *pResMgr ) );
-									if ( aHide.Len() )
-										pHide = [NSString stringWithCharacters:aHide.GetBuffer() length:aHide.Len()];
+									OUString aHide( ResId( SV_MENU_MAC_HIDEAPP, *pResMgr ) );
+									if ( aHide.getLength() )
+										pHide = [NSString stringWithCharacters:aHide.getStr() length:aHide.getLength()];
 
-									String aHideOthers( ResId( SV_MENU_MAC_HIDEALL, *pResMgr ) );
-									if ( aHideOthers.Len() )
-										pHideOthers = [NSString stringWithCharacters:aHideOthers.GetBuffer() length:aHideOthers.Len()];
+									OUString aHideOthers( ResId( SV_MENU_MAC_HIDEALL, *pResMgr ) );
+									if ( aHideOthers.getLength() )
+										pHideOthers = [NSString stringWithCharacters:aHideOthers.getStr() length:aHideOthers.getLength()];
 
-									String aShowAll( ResId( SV_MENU_MAC_SHOWALL, *pResMgr ) );
-									if ( aShowAll.Len() )
-										pShowAll = [NSString stringWithCharacters:aShowAll.GetBuffer() length:aShowAll.Len()];
+									OUString aShowAll( ResId( SV_MENU_MAC_SHOWALL, *pResMgr ) );
+									if ( aShowAll.getLength() )
+										pShowAll = [NSString stringWithCharacters:aShowAll.getStr() length:aShowAll.getLength()];
 
-									String aQuit( ResId( SV_MENU_MAC_QUITAPP, *pResMgr ) );
-									if ( aQuit.Len() )
-										pQuit = [NSString stringWithCharacters:aQuit.GetBuffer() length:aQuit.Len()];
+									OUString aQuit( ResId( SV_MENU_MAC_QUITAPP, *pResMgr ) );
+									if ( aQuit.getLength() )
+										pQuit = [NSString stringWithCharacters:aQuit.getStr() length:aQuit.getLength()];
 								}
 
 								NSUInteger nItems = [pAppMenu numberOfItems];

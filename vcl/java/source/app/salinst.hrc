@@ -35,4 +35,4 @@
 
 #include "svids.hrc"
 
-#define DEFAULT_PRINTER			(SV_PRINT_NOCONTENT + 1)
+#define SV_PRINT_DEFAULT_PRINTER_TXT	(SV_PRINT_CUSTOM_TXT + 1)

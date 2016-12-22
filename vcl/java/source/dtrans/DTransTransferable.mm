@@ -37,12 +37,11 @@
 #include <mach-o/dyld.h>
 
 #include <vcl/svapp.hxx>
-#include <vos/mutex.hxx>
 
 #include "DTransClipboard.hxx"
 #include "DTransTransferable.hxx"
 
-#include "HtmlFmtFlt.hxx"
+#include "../../../osx/HtmlFmtFlt.hxx"
 
 #include <premac.h>
 #import <AppKit/AppKit.h>
@@ -56,9 +55,7 @@
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::io;
 using namespace com::sun::star::uno;
-using namespace rtl;
 using namespace vcl;
-using namespace vos;
 
 const NSString *kNeoOfficeInternalPboardType = @"NeoOfficeInternalPboardType";
 
@@ -114,14 +111,14 @@ static bool aSupportedTextTypes[] = {
 
 // List of supported mime types in priority order
 static OUString aSupportedMimeTypes[] = {
-	OUString::createFromAscii( "application/x-openoffice-file;windows_formatname=\"FileName\"" ),
-	OUString::createFromAscii( "text/richtext" ),
-	OUString::createFromAscii( "text/html" ),
-	OUString::createFromAscii( "text/plain;charset=utf-16" ),
-	OUString::createFromAscii( "image/bmp" ),
-	OUString::createFromAscii( "image/bmp" ),
-	OUString::createFromAscii( "image/bmp" ),
-	OUString::createFromAscii( "image/bmp" )
+	"application/x-openoffice-file;windows_formatname=\"FileName\"",
+	"text/richtext",
+	"text/html",
+	"text/plain;charset=utf-16",
+	"image/bmp",
+	"image/bmp",
+	"image/bmp",
+	"image/bmp"
 };
 
 // List of supported data types in priority order
@@ -743,7 +740,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 
 	if ( mpTransferable )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
@@ -837,7 +834,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 
 	if ( pTransferable && pType && !Application::IsShutDown() )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
@@ -992,7 +989,7 @@ int DTransTransferable::getChangeCount()
 
 // ----------------------------------------------------------------------------
 
-Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( UnsupportedFlavorException, IOException, RuntimeException )
+Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( UnsupportedFlavorException, IOException, RuntimeException, std::exception )
 {
 	if ( mxTransferable.is() )
 		return mxTransferable->getTransferData( aFlavor );
@@ -1194,7 +1191,7 @@ DTransTransferable::~DTransTransferable()
 
 // ----------------------------------------------------------------------------
 
-Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors() throw ( RuntimeException )
+Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors() throw ( RuntimeException, std::exception )
 {
 	if ( mxTransferable.is() )
 		return mxTransferable->getTransferDataFlavors();
@@ -1264,7 +1261,7 @@ sal_Bool DTransTransferable::hasOwnership()
 
 // ----------------------------------------------------------------------------
 
-sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) throw ( RuntimeException )
+sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) throw ( RuntimeException, std::exception )
 {
 	if ( mxTransferable.is() )
 		return mxTransferable->isDataFlavorSupported( aFlavor );

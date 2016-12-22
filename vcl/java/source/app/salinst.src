@@ -35,7 +35,7 @@
 
 #include "salinst.hrc"
 
-String DEFAULT_PRINTER
+String SV_PRINT_DEFAULT_PRINTER_TXT
 {
 	Text[ de ] = "Drucker";
 	Text[ en-US ] = "Printer";

@@ -38,7 +38,6 @@
 
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::uno;
-using namespace rtl;
 
 // ============================================================================
 

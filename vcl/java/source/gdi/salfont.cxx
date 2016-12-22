@@ -37,8 +37,6 @@
 #include "java/saldata.hxx"
 #include "java/salgdi.h"
 
-using namespace rtl;
-
 // ============================================================================
 
 void JavaImplFont::clearNativeFonts()
@@ -77,10 +75,10 @@ sal_IntPtr JavaImplFont::getNativeFont()
 		SalData *pSalData = GetSalData();
 
 		OUString aPSName( getPSName() );
-		::std::hash_map< OUString, sal_IntPtr, OUStringHash >::iterator it = pSalData->maJavaNativeFontMapping.find( aPSName );
+		::boost::unordered_map< OUString, sal_IntPtr, OUStringHash >::iterator it = pSalData->maJavaNativeFontMapping.find( aPSName );
 		if ( it == pSalData->maJavaNativeFontMapping.end() )
 		{
-			::std::hash_map< OUString, JavaImplFontData*, OUStringHash >::iterator jit = pSalData->maJavaFontNameMapping.find( aPSName );
+			::boost::unordered_map< OUString, JavaPhysicalFontFace*, OUStringHash >::iterator jit = pSalData->maJavaFontNameMapping.find( aPSName );
 			if ( jit != pSalData->maJavaFontNameMapping.end() && jit->second->mnNativeFontID )
 			{
 				mnNativeFont = jit->second->mnNativeFontID;

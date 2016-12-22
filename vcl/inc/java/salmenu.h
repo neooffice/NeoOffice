@@ -36,8 +36,6 @@
 #ifndef _SV_SALMENU_H
 #define _SV_SALMENU_H
 
-#include <vcl/sv.h>
-
 #include "image.h"
 #include "salmenu.hxx"
 #include "java/salframe.h"
@@ -56,24 +54,23 @@ public:
 
 	// Generic data
 	JavaSalFrame*			mpParentFrame;		// pointer to the parent frame
-	sal_Bool				mbIsMenuBarMenu;	// true for menu bars
+	bool					mbIsMenuBarMenu;	// true for menu bars
 	Menu*					mpParentVCLMenu;
-	XubString				maText;
 
 							JavaSalMenu();
 	virtual					~JavaSalMenu();
 
-	virtual sal_Bool		VisibleMenuBar();
-	virtual void			InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos );
-	virtual void			RemoveItem( unsigned nPos );
-	virtual void			SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsigned nPos );
-	virtual void			SetFrame( const SalFrame* pFrame );
-	virtual void			CheckItem( unsigned nPos, sal_Bool bCheck );
-	virtual void			EnableItem( unsigned nPos, sal_Bool bEnable );
-	virtual void			SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const XubString& rText );
-	virtual void			SetItemImage( unsigned nPos, SalMenuItem* pSalMenuItem, const Image& rImage );
-	virtual void			SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const KeyCode& rKeyCode, const XubString& rKeyName );
-	virtual void			GetSystemMenuData( SystemMenuData* pData );
+	virtual bool			VisibleMenuBar() SAL_OVERRIDE;
+	virtual void			InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos ) SAL_OVERRIDE;
+	virtual void			RemoveItem( unsigned nPos ) SAL_OVERRIDE;
+	virtual void			SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsigned nPos ) SAL_OVERRIDE;
+	virtual void			SetFrame( const SalFrame* pFrame ) SAL_OVERRIDE;
+	virtual void			CheckItem( unsigned nPos, bool bCheck ) SAL_OVERRIDE;
+	virtual void			EnableItem( unsigned nPos, bool bEnable ) SAL_OVERRIDE;
+	virtual void			SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const OUString& rText ) SAL_OVERRIDE;
+	virtual void			SetItemImage( unsigned nPos, SalMenuItem* pSalMenuItem, const Image& rImage ) SAL_OVERRIDE;
+	virtual void			SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const vcl::KeyCode& rKeyCode, const OUString& rKeyName ) SAL_OVERRIDE;
+	virtual void			GetSystemMenuData( SystemMenuData* pData ) SAL_OVERRIDE;
 };
 
 class JavaSalMenuItem : public SalMenuItem

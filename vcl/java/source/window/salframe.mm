@@ -37,7 +37,6 @@
 #include <vcl/settings.hxx>
 #include <vcl/status.hxx>
 #include <vcl/svapp.hxx>
-#include <vos/mutex.hxx>
 
 #include <premac.h>
 #import <AppKit/AppKit.h>
@@ -57,7 +56,6 @@
 #include "../java/VCLEventQueue_cocoa.h"
 
 #define MIN_CONTENT_WIDTH 130
-#define PRESENTATION_OPTIONS_CHECK_INTERVAL ( (NSTimeInterval)0.25f )
 
 static ::std::map< NSWindow*, JavaSalGraphics* > aNativeWindowMap;
 static ::std::map< NSWindow*, NSCursor* > aNativeCursorMap;
@@ -84,9 +82,7 @@ static ::osl::Mutex aSystemColorsMutex;
 static NSString *pVCLTrackingAreaWindowKey = @"VCLTrackingAreaWindow";
 
 using namespace osl;
-using namespace rtl;
 using namespace vcl;
-using namespace vos;
 
 static NSRect GetTotalScreenBounds()
 {
@@ -1633,9 +1629,9 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	{
 		unsigned long nState;
 		if ( [mpWindow styleMask] & NSMiniaturizableWindowMask && [mpWindow isMiniaturized] )
-			nState = SAL_FRAMESTATE_MINIMIZED;
+			nState = WINDOWSTATE_STATE_MINIMIZED;
 		else
-			nState = SAL_FRAMESTATE_NORMAL;
+			nState = WINDOWSTATE_STATE_NORMAL;
 
 		[pArgs setResult:[NSNumber numberWithUnsignedLong:nState]];
 	}
@@ -1909,7 +1905,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	unsigned long nState = [pState unsignedLongValue];
 	if ( !mbUtility && !mbShowOnlyMenus && !mbUndecorated && !mpParent && mpWindow && ( [mpWindow isVisible] || [mpWindow isMiniaturized] ) )
 	{
-		if ( nState == SAL_FRAMESTATE_MINIMIZED && [mpWindow styleMask] & NSMiniaturizableWindowMask )
+		if ( nState == WINDOWSTATE_STATE_MINIMIZED && [mpWindow styleMask] & NSMiniaturizableWindowMask )
 			[mpWindow miniaturize:self];
 		else if ( [mpWindow isMiniaturized] )
 			[mpWindow deminiaturize:self];
@@ -2342,10 +2338,10 @@ JavaSalFrame::JavaSalFrame( sal_uLong nSalFrameStyle, JavaSalFrame *pParent ) :
 	mnStyle( nSalFrameStyle ),
 	mpParent( NULL ),
 	mbGraphics( sal_False ),
-	mbVisible( sal_False ),
+	mbVisible( false ),
 	mbCenter( sal_True ),
-	mbFullScreen( sal_False ),
-	mbPresentation( sal_False ),
+	mbFullScreen( false ),
+	mbPresentation( false ),
 	mpMenuBar( NULL ),
 	mbInSetPosSize( sal_False ),
 	mbInShow( sal_False ),
@@ -2387,10 +2383,10 @@ JavaSalFrame::JavaSalFrame( sal_uLong nSalFrameStyle, JavaSalFrame *pParent ) :
 
 	// Cache the insets
 	Rectangle aRect = GetInsets();
-	maGeometry.nLeftDecoration = aRect.nLeft;
-	maGeometry.nTopDecoration = aRect.nTop;
-	maGeometry.nRightDecoration = aRect.nRight;
-	maGeometry.nBottomDecoration = aRect.nBottom;
+	maGeometry.nLeftDecoration = aRect.Left();
+	maGeometry.nTopDecoration = aRect.Top();
+	maGeometry.nRightDecoration = aRect.Right();
+	maGeometry.nBottomDecoration = aRect.Bottom();
 
 	// Insert this window into the window list
 	GetSalData()->maFrameList.push_front( this );
@@ -2409,9 +2405,9 @@ JavaSalFrame::~JavaSalFrame()
 	maSysData.mpNSView = NULL;
 	UpdateLayer();
 
-	Show( sal_False );
-	StartPresentation( sal_False );
-	CaptureMouse( sal_False );
+	Show( false );
+	StartPresentation( false );
+	CaptureMouse( false );
 
 	if ( mpMenuBar )
 		mpMenuBar->SetFrame( NULL );
@@ -2473,7 +2469,7 @@ OUString JavaSalFrame::ConvertVCLKeyCode( sal_uInt16 nKeyCode, bool bIsMenuShort
 {
 	OUString aRet;
 
-	nKeyCode &= KEY_CODE;
+	nKeyCode &= KEY_CODE_MASK;
 	switch ( nKeyCode )
 	{
 		case KEY_0:
@@ -2520,157 +2516,157 @@ OUString JavaSalFrame::ConvertVCLKeyCode( sal_uInt16 nKeyCode, bool bIsMenuShort
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF1FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F1" ) );
+				aRet = "F1";
 			break;
 		case KEY_F2:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF2FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F2" ) );
+				aRet = "F2";
 			break;
 		case KEY_F3:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF3FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F3" ) );
+				aRet = "F3";
 			break;
 		case KEY_F4:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF4FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F4" ) );
+				aRet = "F4";
 			break;
 		case KEY_F5:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF5FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F5" ) );
+				aRet = "F5";
 			break;
 		case KEY_F6:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF6FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F6" ) );
+				aRet = "F6";
 			break;
 		case KEY_F7:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF7FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F7" ) );
+				aRet = "F7";
 			break;
 		case KEY_F8:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF8FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F8" ) );
+				aRet = "F8";
 			break;
 		case KEY_F9:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF9FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F9" ) );
+				aRet = "F9";
 			break;
 		case KEY_F10:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF10FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F10" ) );
+				aRet = "F10";
 			break;
 		case KEY_F11:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF11FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F11" ) );
+				aRet = "F11";
 			break;
 		case KEY_F12:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF12FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F12" ) );
+				aRet = "F12";
 			break;
 		case KEY_F13:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF13FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F13" ) );
+				aRet = "F13";
 			break;
 		case KEY_F14:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF14FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F14" ) );
+				aRet = "F14";
 			break;
 		case KEY_F15:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF15FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F15" ) );
+				aRet = "F15";
 			break;
 		case KEY_F16:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF16FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F16" ) );
+				aRet = "F16";
 			break;
 		case KEY_F17:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF17FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F17" ) );
+				aRet = "F17";
 			break;
 		case KEY_F18:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF18FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F18" ) );
+				aRet = "F18";
 			break;
 		case KEY_F19:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF19FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F19" ) );
+				aRet = "F19";
 			break;
 		case KEY_F20:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF20FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F20" ) );
+				aRet = "F20";
 			break;
 		case KEY_F21:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF21FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F21" ) );
+				aRet = "F21";
 			break;
 		case KEY_F22:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF22FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F22" ) );
+				aRet = "F22";
 			break;
 		case KEY_F23:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF23FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F23" ) );
+				aRet = "F23";
 			break;
 		case KEY_F24:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF24FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F24" ) );
+				aRet = "F24";
 			break;
 		case KEY_F25:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF25FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F25" ) );
+				aRet = "F25";
 			break;
 		case KEY_F26:
 			if ( bIsMenuShortcut )
 				aRet = OUString( (sal_Unicode)NSF26FunctionKey );
 			else
-				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F26" ) );
+				aRet = "F26";
 			break;
 		case KEY_DOWN:
 			if ( bIsMenuShortcut )
@@ -2796,6 +2792,15 @@ OUString JavaSalFrame::ConvertVCLKeyCode( sal_uInt16 nKeyCode, bool bIsMenuShort
 		case KEY_QUOTELEFT:
 			aRet = OUString( (sal_Unicode)'`' );
 			break;
+		case KEY_BRACKETLEFT:
+			aRet = OUString( (sal_Unicode)'[' );
+		case KEY_BRACKETRIGHT:
+			aRet = OUString( (sal_Unicode)']' );
+		case KEY_SEMICOLON:
+			aRet = OUString( (sal_Unicode)';' );
+		case KEY_QUOTERIGHT:
+			aRet = OUString( (sal_Unicode)'\'' );
+			break;
 		case KEY_REPEAT:
 		case KEY_CUT:
 		case KEY_COPY:
@@ -2805,8 +2810,10 @@ OUString JavaSalFrame::ConvertVCLKeyCode( sal_uInt16 nKeyCode, bool bIsMenuShort
 		case KEY_FRONT:
 		case KEY_CONTEXTMENU:
 		case KEY_MENU:
-		case KEY_CODE:
 		case KEY_HANGUL_HANJA:
+		case KEY_CAPSLOCK:
+		case KEY_NUMLOCK:
+		case KEY_SCROLLLOCK:
 		default:
 			break;
 	}
@@ -2980,7 +2987,7 @@ bool JavaSalFrame::GetDisabledControlTextColor( SalColor& rSalColor )
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalFrame::GetSelectedControlTextColor( SalColor& rSalColor )
+bool JavaSalFrame::GetSelectedControlTextColor( SalColor& rSalColor )
 {
 	bool bRet = false;
 
@@ -2998,7 +3005,7 @@ sal_Bool JavaSalFrame::GetSelectedControlTextColor( SalColor& rSalColor )
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalFrame::GetSelectedMenuItemTextColor( SalColor& rSalColor )
+bool JavaSalFrame::GetSelectedMenuItemTextColor( SalColor& rSalColor )
 {
 	bool bRet = false;
 
@@ -3243,12 +3250,12 @@ void JavaSalFrame::SetState( sal_uLong nFrameState )
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		sal_uLong nState;
-		if ( nFrameState & SAL_FRAMESTATE_MINIMIZED )
-			nState = SAL_FRAMESTATE_MINIMIZED;
-		else if ( nFrameState & SAL_FRAMESTATE_MAXIMIZED )
-			nState = SAL_FRAMESTATE_MAXIMIZED;
+		if ( nFrameState & WINDOWSTATE_STATE_MINIMIZED )
+			nState = WINDOWSTATE_STATE_MINIMIZED;
+		else if ( nFrameState & WINDOWSTATE_STATE_MAXIMIZED )
+			nState = WINDOWSTATE_STATE_MAXIMIZED;
 		else
-			nState = SAL_FRAMESTATE_NORMAL;
+			nState = WINDOWSTATE_STATE_NORMAL;
 
 		VCLWindowWrapperArgs *pSetStateArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithUnsignedLong:nState]]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -3260,7 +3267,7 @@ void JavaSalFrame::SetState( sal_uLong nFrameState )
 
 // -----------------------------------------------------------------------
 
-void JavaSalFrame::SetVisible( sal_Bool bVisible, sal_Bool bNoActivate )
+void JavaSalFrame::SetVisible( bool bVisible, bool bNoActivate )
 {
 	if ( mpWindow )
 	{
@@ -3394,7 +3401,7 @@ void JavaSalFrame::RemoveTrackingRect( Window *pWindow )
 
 // -----------------------------------------------------------------------
 
-SalGraphics* JavaSalFrame::GetGraphics()
+SalGraphics* JavaSalFrame::AcquireGraphics()
 {
 	if ( mbGraphics )
 		return NULL;
@@ -3416,19 +3423,19 @@ void JavaSalFrame::ReleaseGraphics( SalGraphics* pGraphics )
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalFrame::PostEvent( void *pData )
+bool JavaSalFrame::PostEvent( void *pData )
 {
 	JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_USEREVENT, this, pData );
 	JavaSalEventQueue::postCachedEvent( pEvent );
 	pEvent->release();
-	return sal_True;
+	return true;
 }
 
 // -----------------------------------------------------------------------
 
-void JavaSalFrame::SetTitle( const XubString& rTitle )
+void JavaSalFrame::SetTitle( const OUString& rTitle )
 {
-	maTitle = OUString( rTitle );
+	maTitle = rTitle;
 	if ( mpWindow )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -3453,7 +3460,7 @@ void JavaSalFrame::SetIcon( sal_uInt16 /* nIcon */ )
 
 // -----------------------------------------------------------------------
 
-void JavaSalFrame::Show( sal_Bool bVisible, sal_Bool bNoActivate )
+void JavaSalFrame::Show( bool bVisible, bool bNoActivate )
 {
 	// Don't allow floating children of a show only menus frame to ever show
 	if ( mpParent && mpParent->mbShowOnlyMenus && IsFloatingFrame() )
@@ -3477,7 +3484,7 @@ void JavaSalFrame::Show( sal_Bool bVisible, sal_Bool bNoActivate )
 		// Close any attached objects
 		::std::list< JavaSalObject* > aObjects( maVisibleObjects );
 		for ( ::std::list< JavaSalObject* >::const_iterator it = aObjects.begin(); it != aObjects.end(); ++it )
-			(*it)->Show( sal_False );
+			(*it)->Show( false );
 
 		Window *pWindow = Application::GetFirstTopLevelWindow();
 		while ( pWindow && pWindow->ImplGetFrame() != this )
@@ -3570,7 +3577,7 @@ void JavaSalFrame::Show( sal_Bool bVisible, sal_Bool bNoActivate )
 		// Reattach visible objects
 		::std::list< JavaSalObject* > aReshowObjects( maVisibleObjects );
 		for ( ::std::list< JavaSalObject* >::const_iterator it = aReshowObjects.begin(); it != aReshowObjects.end(); ++it )
-			(*it)->Show( sal_True );
+			(*it)->Show( true );
 
 		// Explicitly set focus to this frame since Java may set the focus
 		// to the child frame
@@ -3637,7 +3644,7 @@ void JavaSalFrame::Show( sal_Bool bVisible, sal_Bool bNoActivate )
 			if ( pShowOnlyMenusFrame->mbVisible )
 				pShowOnlyMenusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
 			else
-				pShowOnlyMenusFrame->Show( sal_True, sal_False );
+				pShowOnlyMenusFrame->Show( true, false );
 		}
 	}
 
@@ -3661,15 +3668,6 @@ void JavaSalFrame::Show( sal_Bool bVisible, sal_Bool bNoActivate )
 
 		[pPool release];
 	}
-}
-
-// -----------------------------------------------------------------------
-
-void JavaSalFrame::Enable( sal_Bool /* bEnable */ )
-{
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalFrame::Enable not implemented\n" );
-#endif
 }
 
 // -----------------------------------------------------------------------
@@ -3701,9 +3699,9 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_
 	Rectangle aPosSize( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
 
 	if ( ! ( nFlags & SAL_FRAME_POSSIZE_X ) )
-		nX = aPosSize.nLeft;
+		nX = aPosSize.Left();
 	if ( ! ( nFlags & SAL_FRAME_POSSIZE_Y ) )
-		nY = aPosSize.nTop;
+		nY = aPosSize.Top();
 	if ( ! ( nFlags & SAL_FRAME_POSSIZE_WIDTH ) )
 		nWidth = aPosSize.GetWidth();
 	if ( ! ( nFlags & SAL_FRAME_POSSIZE_HEIGHT ) )
@@ -3715,8 +3713,8 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_
 	if ( mpParent )
 	{
 		Rectangle aParentBounds( mpParent->GetBounds() );
-		nParentX = aParentBounds.nLeft + mpParent->maGeometry.nLeftDecoration;
-		nParentY = aParentBounds.nTop + mpParent->maGeometry.nTopDecoration;
+		nParentX = aParentBounds.Left() + mpParent->maGeometry.nLeftDecoration;
+		nParentY = aParentBounds.Top() + mpParent->maGeometry.nTopDecoration;
 
 		if ( nFlags & ( SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y ) && Application::GetSettings().GetLayoutRTL() )
 			nX = mpParent->maGeometry.nWidth - nWidth - nX - 1;
@@ -3743,8 +3741,8 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_
 			aWorkArea = Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) );
 			GetWorkArea( aWorkArea );
 
-			nX = aWorkArea.nLeft + ( ( aWorkArea.GetWidth() - nWidth ) / 2 );
-			nY = aWorkArea.nTop + ( ( aWorkArea.GetHeight() - nHeight ) / 2 );
+			nX = aWorkArea.Left() + ( ( aWorkArea.GetWidth() - nWidth ) / 2 );
+			nY = aWorkArea.Top() + ( ( aWorkArea.GetHeight() - nHeight ) / 2 );
 		}
 
 		mbCenter = sal_False;
@@ -3768,8 +3766,8 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_
 	}
 
 	// Make sure window does not spill off of the screen
-	long nMinX = aWorkArea.nLeft;
-	long nMinY = aWorkArea.nTop;
+	long nMinX = aWorkArea.Left();
+	long nMinY = aWorkArea.Top();
 	if ( mbPresentation )
 	{
 		nMinX -= 1;
@@ -3777,10 +3775,10 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_
 	}
 	nWidth += maGeometry.nLeftDecoration + maGeometry.nRightDecoration;
 	nHeight += maGeometry.nTopDecoration + maGeometry.nBottomDecoration;
-	if ( nMinX + nWidth > aWorkArea.nLeft + aWorkArea.GetWidth() )
-		nWidth = aWorkArea.nLeft + aWorkArea.GetWidth() - nMinX;
-	if ( nMinY + nHeight > aWorkArea.nTop + aWorkArea.GetHeight() )
-		nHeight = aWorkArea.nTop + aWorkArea.GetHeight() - nMinY;
+	if ( nMinX + nWidth > aWorkArea.Left() + aWorkArea.GetWidth() )
+		nWidth = aWorkArea.Left() + aWorkArea.GetWidth() - nMinX;
+	if ( nMinY + nHeight > aWorkArea.Top() + aWorkArea.GetHeight() )
+		nHeight = aWorkArea.Top() + aWorkArea.GetHeight() - nMinY;
 	if ( nX < nMinX )
 		nX = nMinX;
 	if ( nY < nMinY )
@@ -3790,10 +3788,10 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_
 	// drag frame
 	if ( this != GetSalData()->mpLastDragFrame )
 	{
-		if ( nX + nWidth > aWorkArea.nLeft + aWorkArea.GetWidth() )
-			nX = aWorkArea.nLeft + aWorkArea.GetWidth() - nWidth;
-		if ( nY + nHeight > aWorkArea.nTop + aWorkArea.GetHeight() )
-			nY = aWorkArea.nTop + aWorkArea.GetHeight() - nHeight;
+		if ( nX + nWidth > aWorkArea.Left() + aWorkArea.GetWidth() )
+			nX = aWorkArea.Left() + aWorkArea.GetWidth() - nWidth;
+		if ( nY + nHeight > aWorkArea.Top() + aWorkArea.GetHeight() )
+			nY = aWorkArea.Top() + aWorkArea.GetHeight() - nHeight;
 	}
 
 	if ( mpWindow )
@@ -3876,8 +3874,8 @@ void JavaSalFrame::GetWorkArea( Rectangle &rRect )
 	// bounds when in full screen mode:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8663
 	sal_Bool bFullScreenMode = ( mbFullScreen || pSalData->mpPresentationFrame || ( this == pSalData->mpLastDragFrame ) );
-	long nX = rRect.nLeft;
-	long nY = rRect.nTop;
+	long nX = rRect.Left();
+	long nY = rRect.Top();
 	long nWidth = rRect.GetWidth();
 	long nHeight = rRect.GetHeight();
     
@@ -3919,13 +3917,13 @@ void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 	mbInSetWindowState = sal_True;
 
 	sal_uInt16 nFlags = 0;
-	if ( pState->mnMask & SAL_FRAMESTATE_MASK_X )
+	if ( pState->mnMask & WINDOWSTATE_MASK_X )
 		nFlags |= SAL_FRAME_POSSIZE_X;
-	if ( pState->mnMask & SAL_FRAMESTATE_MASK_Y )
+	if ( pState->mnMask & WINDOWSTATE_MASK_Y )
 		nFlags |= SAL_FRAME_POSSIZE_Y;
-	if ( pState->mnMask & SAL_FRAMESTATE_MASK_WIDTH )
+	if ( pState->mnMask & WINDOWSTATE_MASK_WIDTH )
 		nFlags |= SAL_FRAME_POSSIZE_WIDTH;
-	if ( pState->mnMask & SAL_FRAMESTATE_MASK_HEIGHT )
+	if ( pState->mnMask & WINDOWSTATE_MASK_HEIGHT )
 		nFlags |= SAL_FRAME_POSSIZE_HEIGHT;
 	if ( nFlags )
 	{
@@ -3936,7 +3934,7 @@ void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 	}
 
 	// Fix bug 3078 by setting the state after setting the size
-	if ( pState->mnMask & SAL_FRAMESTATE_MASK_STATE )
+	if ( pState->mnMask & WINDOWSTATE_MASK_STATE )
 		SetState( pState->mnState );
 
 	mbInSetWindowState = bOldInSetWindowState;
@@ -3944,10 +3942,10 @@ void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalFrame::GetWindowState( SalFrameState* pState )
+bool JavaSalFrame::GetWindowState( SalFrameState* pState )
 {
 	Rectangle aBounds( GetBounds( NULL, sal_True ) );
-	pState->mnMask = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT | SAL_FRAMESTATE_MASK_STATE;
+	pState->mnMask = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT | WINDOWSTATE_MASK_STATE;
 	pState->mnX = aBounds.Left();
 	pState->mnY = aBounds.Top();
 	pState->mnWidth = aBounds.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration;
@@ -3957,14 +3955,14 @@ sal_Bool JavaSalFrame::GetWindowState( SalFrameState* pState )
 	// Fix bug 3012 by returning false if the frame size is not larger than
 	// the frame's minimum size
 	if ( !maGeometry.nWidth || !maGeometry.nHeight )
-		return sal_False;
+		return false;
 	else
-		return sal_True;
+		return true;
 }
 
 // -----------------------------------------------------------------------
 
-void JavaSalFrame::ShowFullScreen( sal_Bool bFullScreen, sal_Int32 nDisplay )
+void JavaSalFrame::ShowFullScreen( bool bFullScreen, sal_Int32 nDisplay )
 {
 	if ( mbInShowFullScreen || bFullScreen == mbFullScreen )
 		return;
@@ -3992,14 +3990,11 @@ void JavaSalFrame::ShowFullScreen( sal_Bool bFullScreen, sal_Int32 nDisplay )
 		{
 			memcpy( &maOriginalGeometry, &maGeometry, sizeof( SalFrameGeometry ) );
 
-			JavaSalSystem *pSalSystem = (JavaSalSystem *)ImplGetSalSystem();
-			Rectangle aWorkArea;
-			if ( pSalSystem )
-				aWorkArea = pSalSystem->GetDisplayWorkAreaPosSizePixel( nDisplay );
+			Rectangle aWorkArea( JavaSalFrame::GetScreenBounds( nDisplay, sal_True ) );
 			if ( aWorkArea.IsEmpty() )
 				aWorkArea = Rectangle( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
 			GetWorkArea( aWorkArea );
-			SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
+			SetPosSize( aWorkArea.Left(), aWorkArea.Top(), aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
 		}
 		else
 		{
@@ -4033,7 +4028,7 @@ void JavaSalFrame::ShowFullScreen( sal_Bool bFullScreen, sal_Int32 nDisplay )
 
 // -----------------------------------------------------------------------
 
-void JavaSalFrame::StartPresentation( sal_Bool bStart )
+void JavaSalFrame::StartPresentation( bool bStart )
 {
 	if ( bStart == mbPresentation )
 		return;
@@ -4061,7 +4056,7 @@ void JavaSalFrame::StartPresentation( sal_Bool bStart )
 		Rectangle aWorkArea( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
 		GetWorkArea( aWorkArea );
 
-		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
+		SetPosSize( aWorkArea.Left(), aWorkArea.Top(), aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
 	}
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -4080,7 +4075,7 @@ void JavaSalFrame::StartPresentation( sal_Bool bStart )
 
 // -----------------------------------------------------------------------
 
-void JavaSalFrame::SetAlwaysOnTop( sal_Bool /* bOnTop */ )
+void JavaSalFrame::SetAlwaysOnTop( bool /* bOnTop */ )
 {
 }
 
@@ -4153,7 +4148,7 @@ void JavaSalFrame::SetPointer( PointerStyle ePointerStyle )
 
 // -----------------------------------------------------------------------
 
-void JavaSalFrame::CaptureMouse( sal_Bool bCapture )
+void JavaSalFrame::CaptureMouse( bool bCapture )
 {
 	SalData *pSalData = GetSalData();
 	if ( bCapture )
@@ -4188,6 +4183,13 @@ void JavaSalFrame::Flush()
 
 // -----------------------------------------------------------------------
 
+void JavaSalFrame::Flush( const Rectangle& /* rRect */ )
+{
+	Flush();
+}
+
+// -----------------------------------------------------------------------
+
 void JavaSalFrame::Sync()
 {
 	Flush();
@@ -4215,33 +4217,26 @@ void JavaSalFrame::EndExtTextInput( sal_uInt16 /* nFlags */ )
 
 // -----------------------------------------------------------------------
 
-String JavaSalFrame::GetKeyName( sal_uInt16 nKeyCode )
+OUString JavaSalFrame::GetKeyName( sal_uInt16 nKeyCode )
 {
-	String aRet;
+	OUString aRet;
 
-	String aKeyName( ConvertVCLKeyCode( nKeyCode, false ) );
-	if ( aKeyName.Len() )
+	OUString aKeyName( ConvertVCLKeyCode( nKeyCode, false ) );
+	if ( aKeyName.getLength() )
 	{
 		if ( nKeyCode & KEY_SHIFT )
-			aRet += (sal_Unicode)0x21e7;
+			aRet += OUString( (sal_Unicode)0x21e7 );
 		if ( nKeyCode & KEY_MOD3 )
-			aRet += (sal_Unicode)0x2303;
+			aRet += OUString( (sal_Unicode)0x2303 );
 		if ( nKeyCode & KEY_MOD1 )
-			aRet += (sal_Unicode)0x2318;
+			aRet += OUString( (sal_Unicode)0x2318 );
 		if ( nKeyCode & KEY_MOD2 )
-			aRet += (sal_Unicode)0x2325;
+			aRet += OUString( (sal_Unicode)0x2325 );
 
 		aRet += aKeyName;
 	}
 
 	return aRet;
-}
-
-// -----------------------------------------------------------------------
-
-XubString JavaSalFrame::GetSymbolKeyName( const XubString&, sal_uInt16 nKeyCode )
-{
-	return GetKeyName( nKeyCode );
 }
 
 // -----------------------------------------------------------------------
@@ -4355,16 +4350,6 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 
 // -----------------------------------------------------------------------
 
-SalBitmap* JavaSalFrame::SnapShot()
-{
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalFrame::Snapshot not implemented\n" );
-#endif
-	return NULL;
-}
-
-// -----------------------------------------------------------------------
-
 const SystemEnvData* JavaSalFrame::GetSystemData() const
 {
 	return &maSysData;
@@ -4372,7 +4357,7 @@ const SystemEnvData* JavaSalFrame::GetSystemData() const
 
 // -----------------------------------------------------------------------
 
-void JavaSalFrame::Beep( SoundType /* eSoundType */ )
+void JavaSalFrame::Beep()
 {
 	NSBeep();
 }
@@ -4413,7 +4398,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		::std::list< JavaSalObject* > aReshowObjects( maVisibleObjects );
 		bool bReshow = mbVisible;
 		if ( bReshow )
-			Show( sal_False );
+			Show( false );
 
 		// Fix bug 1310 by creating a new native window with the new parent
 		maSysData.mpNSView = NULL;
@@ -4451,9 +4436,9 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 
 		if ( bReshow )
 		{
-			Show( sal_True, sal_False );
+			Show( true, false );
 			for ( ::std::list< JavaSalObject* >::const_iterator it = aReshowObjects.begin(); it != aReshowObjects.end(); ++it )
-				(*it)->Show( sal_True );
+				(*it)->Show( true );
 		}
 	}
 
@@ -4523,20 +4508,14 @@ SalFrame::SalPointerState JavaSalFrame::GetPointerState()
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalFrame::MapUnicodeToKeyCode( sal_Unicode /* aUnicode */, LanguageType /* aLangType */, KeyCode& /* rKeyCode */ )
+bool JavaSalFrame::MapUnicodeToKeyCode( sal_Unicode /* aUnicode */, LanguageType /* aLangType */, KeyCode& /* rKeyCode */ )
 {
-	return sal_False;
+	return false;
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalFrame::SetExtendedFrameStyle( SalExtStyle /* nExtStyle */ )
-{
-}
-
-// -----------------------------------------------------------------------
-
-void JavaSalFrame::SetBackgroundBitmap( SalBitmap* /* pBitmap */ )
 {
 }
 
@@ -4597,4 +4576,25 @@ void JavaSalFrame::SetScreenNumber( unsigned int /* nScreen */ )
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalFrame::SetScreenNumber not implemented\n" );
 #endif
+}
+
+// -----------------------------------------------------------------------
+
+SalFrame::SalIndicatorState JavaSalFrame::GetIndicatorState()
+{
+	SalFrame::SalIndicatorState aState;
+	aState.mnState = 0;
+	return aState;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::SimulateKeyPress( sal_uInt16 /* nKeyCode */ )
+{
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::SetApplicationID( const OUString& /* rApplicationID */ )
+{
 }

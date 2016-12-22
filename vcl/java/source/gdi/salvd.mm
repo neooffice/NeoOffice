@@ -176,7 +176,7 @@ JavaSalVirtualDevice::~JavaSalVirtualDevice()
 
 // -----------------------------------------------------------------------
 
-SalGraphics* JavaSalVirtualDevice::GetGraphics()
+SalGraphics* JavaSalVirtualDevice::AcquireGraphics()
 {
 	if ( mbGraphics )
 		return NULL;
@@ -198,14 +198,14 @@ void JavaSalVirtualDevice::ReleaseGraphics( SalGraphics* pGraphics )
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalVirtualDevice::SetSize( long nDX, long nDY )
+bool JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 {
 	if ( nDX < 1 )
 		nDX = 1;
 	if ( nDY < 1 )
 		nDY = 1;
 
-	sal_Bool bRet = sal_False;
+	bool bRet = false;
 
 	mnWidth = 0;
 	mnHeight = 0;
@@ -254,7 +254,7 @@ sal_Bool JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 		mpGraphics->setLayer( maVirDevLayer );
 		mnWidth = nDX;
 		mnHeight = nDY;
-		bRet = sal_True;
+		bRet = true;
 	}
 
 	[pPool release];
@@ -264,8 +264,14 @@ sal_Bool JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 
 // -----------------------------------------------------------------------
 
-void JavaSalVirtualDevice::GetSize( long& rWidth, long& rHeight )
+long JavaSalVirtualDevice::GetWidth() const
 {
-	rWidth = mnWidth;
-	rHeight = mnHeight;
+	return mnWidth;
+}
+
+// -----------------------------------------------------------------------
+
+long JavaSalVirtualDevice::GetHeight() const
+{
+	return mnHeight;
 }

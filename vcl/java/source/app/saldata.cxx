@@ -37,7 +37,6 @@
 #include "java/salgdi.h"
 #include "java/salinst.h"
 
-using namespace rtl;
 using namespace vcl;
 
 // ========================================================================
@@ -71,7 +70,7 @@ SalData::SalData() :
 
 SalData::~SalData()
 {
-	for ( ::std::map< String, JavaImplFontData* >::const_iterator it = maFontNameMapping.begin(); it != maFontNameMapping.end(); ++it )
+	for ( ::std::map< OUString, JavaPhysicalFontFace* >::const_iterator it = maFontNameMapping.begin(); it != maFontNameMapping.end(); ++it )
 		delete it->second;
 
 	while ( maPendingDocumentEventsList.size() )

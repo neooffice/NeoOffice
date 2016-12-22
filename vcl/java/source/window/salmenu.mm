@@ -598,8 +598,8 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 			// This selector should not have been called if there is no key
 			// code or command key modifier. Also, the only modifiers allowed
 			// are command and shift keys.
-			NSInteger nTag = [pTag unsignedShortValue] & ( KEY_CODE | KEY_MOD1 | KEY_SHIFT );
-			if ( nTag & KEY_CODE && nTag & KEY_MOD1 )
+			NSInteger nTag = [pTag unsignedShortValue] & ( KEY_CODE_MASK | KEY_MOD1 | KEY_SHIFT );
+			if ( nTag & KEY_CODE_MASK && nTag & KEY_MOD1 )
 			{
 				NSUInteger nMask = NSCommandKeyMask;
     			if ( nTag & KEY_SHIFT )
@@ -702,7 +702,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	{
 		// Prevent flooding of the OOo event queue when holding down a native
 		// menu shortcut by by locking the application mutex
-		::vos::IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 
 		if ( !Application::IsShutDown() )
@@ -870,7 +870,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	if ( mpMenuItem )
 		return;
 
-	if ( meType == MENUITEM_SEPARATOR )
+	if ( meType == MenuItemType::SEPARATOR )
 	{
 		mpMenuItem = [NSMenuItem separatorItem];
 		if ( mpMenuItem )
@@ -932,7 +932,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 JavaSalMenu::JavaSalMenu() :
 	mpMenu( NULL ),
 	mpParentFrame( NULL ),
-	mbIsMenuBarMenu( sal_False ),
+	mbIsMenuBarMenu( false ),
 	mpParentVCLMenu( NULL )
 {
 	aMenuMap[ this ] = this;
@@ -1010,9 +1010,9 @@ void JavaSalMenu::SetMenuBarToFocusFrame()
 
 //-----------------------------------------------------------------------------
 
-sal_Bool JavaSalMenu::VisibleMenuBar()
+bool JavaSalMenu::VisibleMenuBar()
 {
-	return sal_True;
+	return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -1097,7 +1097,7 @@ void JavaSalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsi
 
 //-----------------------------------------------------------------------------
 
-void JavaSalMenu::CheckItem( unsigned nPos, sal_Bool bCheck )
+void JavaSalMenu::CheckItem( unsigned nPos, bool bCheck )
 {
 	if ( mpMenu )
 	{
@@ -1113,7 +1113,7 @@ void JavaSalMenu::CheckItem( unsigned nPos, sal_Bool bCheck )
 
 //-----------------------------------------------------------------------------
 
-void JavaSalMenu::EnableItem( unsigned nPos, sal_Bool bEnable )
+void JavaSalMenu::EnableItem( unsigned nPos, bool bEnable )
 {
 	if ( mpMenu )
 	{
@@ -1137,15 +1137,14 @@ void JavaSalMenu::SetItemImage( unsigned /* nPos */, SalMenuItem* /* pSalMenuIte
 
 //-----------------------------------------------------------------------------
 
-void JavaSalMenu::SetItemText( unsigned /* nPos */, SalMenuItem* pSalMenuItem, const XubString& rText )
+void JavaSalMenu::SetItemText( unsigned /* nPos */, SalMenuItem* pSalMenuItem, const OUString& rText )
 {
 	// assume pSalMenuItem is a pointer to the menu item object already at nPos
 	JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pSalMenuItem;
 
 	// remove accelerator character
-	XubString theText(rText);
-	theText.EraseAllChars('~');
-	OUString aText( theText );
+	OUString aText( rText );
+	aText = aText.replaceAll("~", "");
 
 	if ( mpMenu && pJavaSalMenuItem && pJavaSalMenuItem->mpMenuItem )
 	{
@@ -1162,7 +1161,7 @@ void JavaSalMenu::SetItemText( unsigned /* nPos */, SalMenuItem* pSalMenuItem, c
 
 //-----------------------------------------------------------------------------
 
-void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const KeyCode& rKeyCode, const XubString& /* rKeyName */ )
+void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const vcl::KeyCode& rKeyCode, const OUString& /* rKeyName */ )
 {
 	// Only pass through keycodes that are using the command key as Java will
 	// always add a command key to any shortcut. Also, ignore any shortcuts
@@ -1233,7 +1232,7 @@ JavaSalMenuItem::~JavaSalMenuItem()
 
 //-----------------------------------------------------------------------------
 
-SalMenu* JavaSalInstance::CreateMenu( sal_Bool bMenuBar, Menu *pVCLMenuWrapper )
+SalMenu* JavaSalInstance::CreateMenu( bool bMenuBar, Menu *pVCLMenuWrapper )
 {
 #ifndef NO_NATIVE_MENUS
 	JavaSalMenu *pSalMenu = new JavaSalMenu();
@@ -1286,9 +1285,8 @@ SalMenuItem* JavaSalInstance::CreateMenuItem( const SalItemParams* pItemData )
 		return NULL;
 
 	JavaSalMenuItem *pSalMenuItem = new JavaSalMenuItem();
-	XubString title(pItemData->aText);
-	title.EraseAllChars('~');
-	OUString aTitle( title );
+	OUString aTitle(pItemData->aText.replaceAll("~", ""));
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSString *pTitle = [NSString stringWithCharacters:aTitle.getStr() length:aTitle.getLength()];

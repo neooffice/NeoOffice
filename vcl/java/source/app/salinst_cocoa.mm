@@ -42,7 +42,6 @@
 
 #include <vcl/svapp.hxx>
 #include <vcl/window.hxx>
-#include <vos/mutex.hxx>
 
 #include "java/saldata.hxx"
 
@@ -57,7 +56,6 @@ static ::osl::Mutex aCurrentInstanceSecurityURLCacheMutex;
 static NSMutableDictionary *pCurrentInstanceSecurityURLCacheDictionary = nil;
 
 using namespace osl;
-using namespace vos;
 
 static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookmark, BOOL bResolveAliasURLs, NSString *pTitle, NSMutableArray *pSecurityScopedURLs );
 
@@ -974,7 +972,7 @@ sal_Bool Application_beginModalSheet( id *pNSWindowForSheet )
 	JavaSalFrame *pFocusFrame = NULL;
 
 	// Get the active document window
-	Window *pWindow = Application::GetActiveTopWindow();
+	vcl::Window *pWindow = Application::GetActiveTopWindow();
 	if ( pWindow )
 		pFocusFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
 

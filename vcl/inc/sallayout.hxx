@@ -1,77 +1,53 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
+#ifndef INCLUDED_VCL_INC_SALLAYOUT_HXX
+#define INCLUDED_VCL_INC_SALLAYOUT_HXX
 
-
-#ifndef _SV_SALLAYOUT_HXX
-#define _SV_SALLAYOUT_HXX
-
-#include <tools/gen.hxx>
+#include <iostream>
+#include <list>
 #include <vector>
+
 #include <basegfx/polygon/b2dpolypolygon.hxx>
+#include <i18nlangtag/languagetag.hxx>
+#include <tools/gen.hxx>
+#include <vcl/dllapi.h>
+#include <vcl/vclenum.hxx> // for typedef sal_UCS4
+#include <vcl/devicecoordinate.hxx>
 
 #ifndef _TOOLS_LANG_HXX
 typedef unsigned short LanguageType;
 #endif
 
-#include <vector>
-#include <list>
-#include <vcl/dllapi.h>
-
-// for typedef sal_UCS4
-#include <vcl/vclenum.hxx>
+#include "magic.h"
 #include "salglyphid.hxx"
 
 class SalGraphics;
-class ImplFontData;
+class PhysicalFontFace;
 
-#define MAX_FALLBACK 16
-
-// ----------------
-// - LayoutOption -
-// ----------------
-
-#define SAL_LAYOUT_BIDI_RTL                 0x0001
-#define SAL_LAYOUT_BIDI_STRONG              0x0002
-#define SAL_LAYOUT_RIGHT_ALIGN              0x0004
-#define SAL_LAYOUT_KERNING_PAIRS            0x0010
-#define SAL_LAYOUT_KERNING_ASIAN            0x0020
-#define SAL_LAYOUT_VERTICAL                 0x0040
-#define SAL_LAYOUT_COMPLEX_DISABLED         0x0100
-#define SAL_LAYOUT_ENABLE_LIGATURES         0x0200
-#define SAL_LAYOUT_SUBSTITUTE_DIGITS        0x0400
-#define SAL_LAYOUT_KASHIDA_JUSTIFICATON     0x0800
-#define SAL_LAYOUT_DISABLE_GLYPH_PROCESSING 0x1000
-#define SAL_LAYOUT_FOR_FALLBACK             0x2000
-
-// -----------------
 
 // used for managing runs e.g. for BiDi, glyph and script fallback
 class VCL_PLUGIN_PUBLIC ImplLayoutRuns
@@ -96,33 +72,33 @@ public:
     bool    PosIsInAnyRun( int nCharPos ) const;
 };
 
-// -----------------
-
 class ImplLayoutArgs
 {
 public:
     // string related inputs
+    LanguageTag         maLanguageTag;
     int                 mnFlags;
     int                 mnLength;
     int                 mnMinCharPos;
     int                 mnEndCharPos;
-    const xub_Unicode*  mpStr;
+    const sal_Unicode*  mpStr;
 
     // positioning related inputs
-    const sal_Int32*    mpDXArray;          // in pixel units
-    long                mnLayoutWidth;      // in pixel units
+    const DeviceCoordinate* mpDXArray;     // in pixel units
+    DeviceCoordinate    mnLayoutWidth;      // in pixel units
     int                 mnOrientation;      // in 0-3600 system
 
     // data for bidi and glyph+script fallback
     ImplLayoutRuns      maRuns;
-    ImplLayoutRuns      maReruns;
+    ImplLayoutRuns      maFallbackRuns;
 
 public:
-                ImplLayoutArgs( const xub_Unicode* pStr, int nLength,
-                    int nMinCharPos, int nEndCharPos, int nFlags );
+                ImplLayoutArgs( const sal_Unicode* pStr, int nLength,
+                                int nMinCharPos, int nEndCharPos, int nFlags,
+                                const LanguageTag& rLanguageTag );
 
-    void        SetLayoutWidth( long nWidth )       { mnLayoutWidth = nWidth; }
-    void        SetDXArray( const sal_Int32* pDXArray )  { mpDXArray = pDXArray; }
+    void        SetLayoutWidth( DeviceCoordinate nWidth )       { mnLayoutWidth = nWidth; }
+    void        SetDXArray( const DeviceCoordinate* pDXArray )  { mpDXArray = pDXArray; }
     void        SetOrientation( int nOrientation )  { mnOrientation = nOrientation; }
 
     void        ResetPos()
@@ -131,33 +107,55 @@ public:
                     { return maRuns.GetNextPos( nCharPos, bRTL ); }
     bool        GetNextRun( int* nMinRunPos, int* nEndRunPos, bool* bRTL );
     bool        NeedFallback( int nCharPos, bool bRTL )
-                    { return maReruns.AddPos( nCharPos, bRTL ); }
+                    { return maFallbackRuns.AddPos( nCharPos, bRTL ); }
     bool        NeedFallback( int nMinRunPos, int nEndRunPos, bool bRTL )
-                    { return maReruns.AddRun( nMinRunPos, nEndRunPos, bRTL ); }
+                    { return maFallbackRuns.AddRun( nMinRunPos, nEndRunPos, bRTL ); }
     // methods used by BiDi and glyph fallback
     bool        NeedFallback() const
-                    { return !maReruns.IsEmpty(); }
+                    { return !maFallbackRuns.IsEmpty(); }
     bool        PrepareFallback();
 
 protected:
     void        AddRun( int nMinCharPos, int nEndCharPos, bool bRTL );
 };
 
+// For nice SAL_INFO logging of ImplLayoutArgs values
+std::ostream &operator <<(std::ostream& s, ImplLayoutArgs &rArgs);
+
 // helper functions often used with ImplLayoutArgs
 bool IsDiacritic( sal_UCS4 );
 int GetVerticalFlags( sal_UCS4 );
 sal_UCS4 GetVerticalChar( sal_UCS4 );
-// #i80090# GetMirroredChar also needed outside vcl, moved to svapp.hxx
-// VCL_DLLPUBLIC sal_UCS4 GetMirroredChar( sal_UCS4 );
-sal_UCS4 GetLocalizedChar( sal_UCS4, LanguageType );
-VCL_PLUGIN_PUBLIC const char* GetAutofallback( sal_UCS4 ) ;
-
-// -------------
-// - SalLayout -
-// -------------
 
 // all positions/widths are in font units
 // one exception: drawposition is in pixel units
+
+// Unfortunately there is little documentation to help implementors of
+// new classes derived from SalLayout ("layout engines"), and the code
+// and data structures are far from obvious.
+
+// For instance, I *think* the important virtual functions in the
+// layout engines are called in this order:
+
+// * InitFont()
+// * LayoutText()
+// * AdjustLayout(), any number of times (but presumably
+// usually not at all or just once)
+// * Optionally, DrawText()
+
+// Functions that just return information like GetTexWidth() and
+// FillDXArray() are called after LayoutText() and before DrawText().
+
+// Another important questions is which parts of an ImplLayoutArgs can
+// be changed by callers between LayoutText() and AdjustLayout()
+// calls. It probably makes sense only if one assumes that the "string
+// related inputs" part are not changed after LayoutText().
+
+// But why use the same ImplLayoutArgs structure as parameter for both
+// LayoutText() and AdjustLayout() in the first place? And why
+// duplicate some of the fields in both SalLayout and ImplLayoutArgs
+// (mnMinCharPos, mnEndCharPos, mnLayoutFlags==mnFlags,
+// mnOrientation)? Lost in history...
 
 class VCL_PLUGIN_PUBLIC SalLayout
 {
@@ -173,29 +171,29 @@ public:
     virtual void    AdjustLayout( ImplLayoutArgs& );    // adjusting after fallback etc.
     virtual void    InitFont() const {}
     virtual void    DrawText( SalGraphics& ) const = 0;
+    virtual bool    DrawTextSpecial( SalGraphics& /* rGraphics */, sal_uInt32 /* flags */ ) const { return false; }
+#define DRAWTEXT_F_OUTLINE ((sal_uInt32)(1<<0))
 
     int             GetUnitsPerPixel() const                { return mnUnitsPerPixel; }
     int             GetOrientation() const                  { return mnOrientation; }
-    
-    virtual const ImplFontData* GetFallbackFontData( sal_GlyphId ) const;
 
     // methods using string indexing
-    virtual int     GetTextBreak( long nMaxWidth, long nCharExtra=0, int nFactor=1 ) const = 0;
-    virtual long    FillDXArray( sal_Int32* pDXArray ) const = 0;
-    virtual long    GetTextWidth() const { return FillDXArray( NULL ); }
-    virtual void    GetCaretPositions( int nArraySize, sal_Int32* pCaretXArray ) const = 0;
+    virtual sal_Int32 GetTextBreak(DeviceCoordinate nMaxWidth, DeviceCoordinate nCharExtra=0, int nFactor=1) const = 0;
+    virtual DeviceCoordinate FillDXArray( DeviceCoordinate* pDXArray ) const = 0;
+    virtual DeviceCoordinate GetTextWidth() const { return FillDXArray( NULL ); }
+    virtual void    GetCaretPositions( int nArraySize, long* pCaretXArray ) const = 0;
     virtual bool    IsKashidaPosValid ( int /*nCharPos*/ ) const { return true; } // i60594
 
     // methods using glyph indexing
     virtual int     GetNextGlyphs( int nLen, sal_GlyphId* pGlyphIdAry, Point& rPos, int&,
-                        sal_Int32* pGlyphAdvAry = NULL, int* pCharPosAry = NULL ) const = 0;
+                                   DeviceCoordinate* pGlyphAdvAry = NULL, int* pCharPosAry = NULL,
+                                   const PhysicalFontFace** pFallbackFonts = NULL ) const = 0;
     virtual bool    GetOutline( SalGraphics&, ::basegfx::B2DPolyPolygonVector& ) const;
     virtual bool    GetBoundRect( SalGraphics&, Rectangle& ) const;
 
     virtual bool    IsSpacingGlyph( sal_GlyphId ) const;
 
     // reference counting
-    void            Reference() const;
     void            Release() const;
 
     // used by glyph+font+script fallback
@@ -238,32 +236,26 @@ protected:
 #endif	// USE_JAVA
 };
 
-// ------------------
-// - MultiSalLayout -
-// ------------------
-
 class VCL_PLUGIN_PUBLIC MultiSalLayout : public SalLayout
 {
 public:
-    virtual void    DrawText( SalGraphics& ) const;
-    virtual int     GetTextBreak( long nMaxWidth, long nCharExtra, int nFactor ) const;
-    virtual long    FillDXArray( sal_Int32* pDXArray ) const;
-    virtual void    GetCaretPositions( int nArraySize, sal_Int32* pCaretXArray ) const;
+    virtual void    DrawText( SalGraphics& ) const SAL_OVERRIDE;
+    virtual sal_Int32 GetTextBreak(DeviceCoordinate nMaxWidth, DeviceCoordinate nCharExtra, int nFactor) const SAL_OVERRIDE;
+    virtual DeviceCoordinate FillDXArray( DeviceCoordinate* pDXArray ) const SAL_OVERRIDE;
+    virtual void    GetCaretPositions( int nArraySize, long* pCaretXArray ) const SAL_OVERRIDE;
     virtual int     GetNextGlyphs( int nLen, sal_GlyphId* pGlyphIdxAry, Point& rPos,
-                        int&, sal_Int32* pGlyphAdvAry, int* pCharPosAry ) const;
-    virtual bool    GetOutline( SalGraphics&, ::basegfx::B2DPolyPolygonVector& ) const;
-    virtual bool    GetBoundRect( SalGraphics&, Rectangle& ) const;
+                                   int&, DeviceCoordinate* pGlyphAdvAry, int* pCharPosAry,
+                                   const PhysicalFontFace** pFallbackFonts ) const SAL_OVERRIDE;
+    virtual bool    GetOutline( SalGraphics&, ::basegfx::B2DPolyPolygonVector& ) const SAL_OVERRIDE;
 
     // used only by OutputDevice::ImplLayout, TODO: make friend
     explicit        MultiSalLayout( SalLayout& rBaseLayout,
-                         const ImplFontData* pBaseFont = NULL );
+                                    const PhysicalFontFace* pBaseFont = NULL );
     virtual bool    AddFallback( SalLayout& rFallbackLayout,
-                         ImplLayoutRuns&, const ImplFontData* pFallbackFont );
-    virtual bool    LayoutText( ImplLayoutArgs& );
-    virtual void    AdjustLayout( ImplLayoutArgs& );
-    virtual void    InitFont() const;
-
-    virtual const ImplFontData* GetFallbackFontData( sal_GlyphId ) const;
+                                 ImplLayoutRuns&, const PhysicalFontFace* pFallbackFont );
+    virtual bool    LayoutText( ImplLayoutArgs& ) SAL_OVERRIDE;
+    virtual void    AdjustLayout( ImplLayoutArgs& ) SAL_OVERRIDE;
+    virtual void    InitFont() const SAL_OVERRIDE;
 
     void SetInComplete(bool bInComplete = true);
 
@@ -276,9 +268,9 @@ protected:
 
 private:
     // dummy implementations
-    virtual void    MoveGlyph( int, long ) {}
-    virtual void    DropGlyph( int ) {}
-    virtual void    Simplify( bool ) {}
+    virtual void    MoveGlyph( int, long ) SAL_OVERRIDE {}
+    virtual void    DropGlyph( int ) SAL_OVERRIDE {}
+    virtual void    Simplify( bool ) SAL_OVERRIDE {}
 
     // enforce proper copy semantic
     SAL_DLLPRIVATE  MultiSalLayout( const MultiSalLayout& );
@@ -286,15 +278,11 @@ private:
 
 private:
     SalLayout*      mpLayouts[ MAX_FALLBACK ];
-    const ImplFontData* mpFallbackFonts[ MAX_FALLBACK ];
+    const PhysicalFontFace* mpFallbackFonts[ MAX_FALLBACK ];
     ImplLayoutRuns  maFallbackRuns[ MAX_FALLBACK ];
     int             mnLevel;
     bool            mbInComplete;
 };
-
-// --------------------
-// - GenericSalLayout -
-// --------------------
 
 struct GlyphItem
 {
@@ -302,16 +290,33 @@ struct GlyphItem
     int     mnCharPos;      // index in string
     int     mnOrigWidth;    // original glyph width
     int     mnNewWidth;     // width after adjustments
+    int     mnXOffset;
     sal_GlyphId maGlyphId;
     Point   maLinearPos;    // absolute position of non rotated string
 
 public:
-            GlyphItem() {}
+            GlyphItem()
+                : mnFlags(0)
+                , mnCharPos(0)
+                , mnOrigWidth(0)
+                , mnNewWidth(0)
+                , mnXOffset(0)
+                , maGlyphId(0)
+            {}
 
             GlyphItem( int nCharPos, sal_GlyphId aGlyphId, const Point& rLinearPos,
                 long nFlags, int nOrigWidth )
             :   mnFlags(nFlags), mnCharPos(nCharPos),
                 mnOrigWidth(nOrigWidth), mnNewWidth(nOrigWidth),
+                mnXOffset(0),
+                maGlyphId(aGlyphId), maLinearPos(rLinearPos)
+            {}
+
+            GlyphItem( int nCharPos, sal_GlyphId aGlyphId, const Point& rLinearPos,
+                long nFlags, int nOrigWidth, int nXOffset )
+            :   mnFlags(nFlags), mnCharPos(nCharPos),
+                mnOrigWidth(nOrigWidth), mnNewWidth(nOrigWidth),
+                mnXOffset(nXOffset),
                 maGlyphId(aGlyphId), maLinearPos(rLinearPos)
             {}
 
@@ -321,62 +326,56 @@ public:
     enum{ FALLBACK_MASK=0xFF, IS_IN_CLUSTER=0x100, IS_RTL_GLYPH=0x200, IS_DIACRITIC=0x400 };
 #endif	// USE_JAVA
 
-    bool    IsClusterStart() const	{ return ((mnFlags & IS_IN_CLUSTER) == 0); }
-    bool    IsRTLGlyph() const		{ return ((mnFlags & IS_RTL_GLYPH) != 0); }
-    bool    IsDiacritic() const		{ return ((mnFlags & IS_DIACRITIC) != 0); }
+    bool    IsClusterStart() const  { return ((mnFlags & IS_IN_CLUSTER) == 0); }
+    bool    IsRTLGlyph() const      { return ((mnFlags & IS_RTL_GLYPH) != 0); }
+    bool    IsDiacritic() const     { return ((mnFlags & IS_DIACRITIC) != 0); }
 #ifdef USE_JAVA
     bool    IsKashidaAllowedAfterGlyph() const { return ((mnFlags & IS_KASHIDA_ALLOWED_AFTER_GLYPH) != 0); }
     bool    IsNonprintingChar() const { return ((mnFlags & IS_NONPRINTING_CHAR) != 0); }
 #endif	// USE_JAVA
 };
 
-// ---------------
-
 typedef std::list<GlyphItem> GlyphList;
 typedef std::vector<GlyphItem> GlyphVector;
-
-// ---------------
 
 class VCL_PLUGIN_PUBLIC GenericSalLayout : public SalLayout
 {
 public:
     // used by layout engines
     void            AppendGlyph( const GlyphItem& );
-    virtual void    AdjustLayout( ImplLayoutArgs& );
+    void            Reserve(int size) { m_GlyphItems.reserve(size + 1); }
+    virtual void    AdjustLayout( ImplLayoutArgs& ) SAL_OVERRIDE;
     virtual void    ApplyDXArray( ImplLayoutArgs& );
-    virtual void    Justify( long nNewWidth );
+    virtual void    Justify( DeviceCoordinate nNewWidth );
     void            KashidaJustify( long nIndex, int nWidth );
     void            ApplyAsianKerning( const sal_Unicode*, int nLength );
     void            SortGlyphItems();
 
     // used by upper layers
-    virtual long    GetTextWidth() const;
-    virtual long    FillDXArray( sal_Int32* pDXArray ) const;
-    virtual int     GetTextBreak( long nMaxWidth, long nCharExtra, int nFactor ) const;
-    virtual void    GetCaretPositions( int nArraySize, sal_Int32* pCaretXArray ) const;
+    virtual DeviceCoordinate GetTextWidth() const SAL_OVERRIDE;
+    virtual DeviceCoordinate FillDXArray( DeviceCoordinate* pDXArray ) const SAL_OVERRIDE;
+    virtual sal_Int32 GetTextBreak(DeviceCoordinate nMaxWidth, DeviceCoordinate nCharExtra, int nFactor) const SAL_OVERRIDE;
+    virtual void    GetCaretPositions( int nArraySize, long* pCaretXArray ) const SAL_OVERRIDE;
 
     // used by display layers
     virtual int     GetNextGlyphs( int nLen, sal_GlyphId* pGlyphIdxAry, Point& rPos, int&,
-                        sal_Int32* pGlyphAdvAry = NULL, int* pCharPosAry = NULL ) const;
+                                   DeviceCoordinate* pGlyphAdvAry = NULL, int* pCharPosAry = NULL,
+                                   const PhysicalFontFace** pFallbackFonts = NULL ) const SAL_OVERRIDE;
 
 protected:
                     GenericSalLayout();
     virtual         ~GenericSalLayout();
 
     // for glyph+font+script fallback
-    virtual void    MoveGlyph( int nStart, long nNewXPos );
-    virtual void    DropGlyph( int nStart );
-    virtual void    Simplify( bool bIsBase );
+    virtual void    MoveGlyph( int nStart, long nNewXPos ) SAL_OVERRIDE;
+    virtual void    DropGlyph( int nStart ) SAL_OVERRIDE;
+    virtual void    Simplify( bool bIsBase ) SAL_OVERRIDE;
 
-    bool            GetCharWidths( sal_Int32* pCharWidths ) const;
-#ifdef USE_JAVA
-    void            SetGlyphCapacity( int nGlyphCapacity );
-#endif	// USE_JAVA
+    bool            GetCharWidths( DeviceCoordinate* pCharWidths ) const;
+
+    GlyphVector     m_GlyphItems;
 
 private:
-    GlyphItem*      mpGlyphItems;   // TODO: change to GlyphList
-    int             mnGlyphCount;
-    int             mnGlyphCapacity;
     mutable Point   maBasePoint;
 
     // enforce proper copy semantic
@@ -386,4 +385,6 @@ private:
 
 #undef SalGraphics
 
-#endif // _SV_SALLAYOUT_HXX
+#endif // INCLUDED_VCL_INC_SALLAYOUT_HXX
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

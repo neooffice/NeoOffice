@@ -1,49 +1,42 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
+#include <sal/config.h>
 
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_vcl.hxx"
-#include <tools/tools.h>
+#include <vcl/svmain.hxx>
 
 #ifndef MACOSX
+// MacOSX implementation of ImplSVMainHook is in osx/salinst.cxx
 
-sal_Bool ImplSVMainHook( sal_Bool * )
+bool ImplSVMainHook( int * )
 {
-    return sal_False;   // indicate that ImplSVMainHook is not implemented
+    return false;   // indicate that ImplSVMainHook is not implemented
 }
 
-#else
-// MACOSX cocoa implementation of ImplSVMainHook is in aqua/source/app/salinst.cxx
-#if !defined QUARTZ || defined USE_JAVA // MACOSX (X11) needs the CFRunLoop()
+#elif !defined QUARTZ || defined USE_JAVA
 #include <osl/thread.h>
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
@@ -68,7 +61,7 @@ static bool bInCreateSVMainThread = false;
 
 #endif	// USE_JAVA
 
-extern sal_Bool ImplSVMain();
+extern int ImplSVMain();
 
 // ============================================================================
 
@@ -116,7 +109,7 @@ static void SourceContextCallBack( void *pInfo )
 
 struct ThreadContext
 {
-    sal_Bool* pRet;
+    int* pRet;
     CFRunLoopRef* pRunLoopRef;
 };
 
@@ -139,7 +132,7 @@ static void RunSVMain(void *pData)
     _exit( 0 );
 }
 
-sal_Bool ImplSVMainHook( sal_Bool *pbInit )
+bool ImplSVMainHook( int* pbInit )
 {
     // Mac OS X requires that any Cocoa code have a CFRunLoop started in the
     // primordial thread. Since all of the AWT classes in Java 1.4 and higher
@@ -151,7 +144,7 @@ sal_Bool ImplSVMainHook( sal_Bool *pbInit )
     CFRunLoopRef runLoopRef = CFRunLoopGetCurrent();
 #ifdef USE_JAVA
     if ( runLoopRef != CFRunLoopGetMain() )
-        return sal_False;
+        return false;
 #endif	// USE_JAVA
     ThreadContext tcx;
     tcx.pRet = pbInit;  // the return value
@@ -187,8 +180,9 @@ sal_Bool ImplSVMainHook( sal_Bool *pbInit )
     osl_joinWithThread( hThreadID );
     osl_destroyThread( hThreadID );
 
-    return sal_True;    // indicate that ImplSVMainHook is implemented
+    return true;    // indicate that ImplSVMainHook is implemented
 }
 
-#endif // !QUARTZ || USE_JAVA
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,37 +1,30 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified October 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
+ */
 
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_vcl.hxx"
+#include "sal/config.h"
 
 #include "tools/resary.hxx"
 
@@ -40,9 +33,11 @@
 #include "vcl/virdev.hxx"
 #include "vcl/svapp.hxx"
 #include "vcl/unohelp.hxx"
+#include <vcl/settings.hxx>
 
-#include "aqua/aquaprintview.h"
-#include "aqua/salinst.h"
+#include "osx/printview.h"
+#include "osx/salinst.h"
+#include "quartz/utils.h"
 
 #include "svdata.hxx"
 #include "svids.hrc"
@@ -138,15 +133,15 @@ class ControllerProperties
     rtl::OUString getMoreString()
     {
         return maLocalizedStrings.Count() >= 4
-               ? rtl::OUString( maLocalizedStrings.GetString( 3 ) )
-               : rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "More" ) );
+               ? OUString( maLocalizedStrings.GetString( 3 ) )
+               : OUString( "More" );
     }
     
     rtl::OUString getPrintSelectionString()
     {
         return maLocalizedStrings.Count() >= 5
-               ? rtl::OUString( maLocalizedStrings.GetString( 4 ) )
-               : rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "Print selection only" ) );
+               ? OUString( maLocalizedStrings.GetString( 4 ) )
+               : OUString( "Print selection only" );
     }
     
     void updatePrintJob()
@@ -266,7 +261,7 @@ class ControllerProperties
         }
     }
     
-    void changePropertyWithBoolValue( int i_nTag, sal_Bool i_bValue )
+    void changePropertyWithBoolValue( int i_nTag, bool i_bValue )
     {
         std::map< int, rtl::OUString >::const_iterator name_it = maTagToPropertyName.find( i_nTag );
         if( name_it != maTagToPropertyName.end() )
@@ -275,7 +270,7 @@ class ControllerProperties
             if( pVal )
             {
                 // ugly
-                if( name_it->second.equalsAscii( "PrintContent" ) )
+                if( name_it->second.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("PrintContent")) )
                    pVal->Value <<= i_bValue ? sal_Int32(2) : sal_Int32(0);
                else
                    pVal->Value <<= i_bValue;
@@ -315,7 +310,7 @@ class ControllerProperties
                        -1;
             
             std::map< int, rtl::OUString >::const_iterator name_it = maTagToPropertyName.find( nTag );
-            if( name_it != maTagToPropertyName.end() && ! name_it->second.equalsAscii( "PrintContent" ) )
+            if( name_it != maTagToPropertyName.end() && ! name_it->second.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("PrintContent")) )
             {
                 BOOL bEnabled = mpController->isUIOptionEnabled( name_it->second ) ? YES : NO;
                 if( pCtrl )
@@ -403,7 +398,7 @@ class ControllerProperties
         aPreviewFrame.size.width -= 2*(aMargins.width+1);
         aPreviewFrame.size.height -= 61;
         mpPreview = [[NSImageView alloc] initWithFrame: aPreviewFrame];
-        [mpPreview setImageScaling: NSScaleProportionally];
+        [mpPreview setImageScaling: NSImageScaleProportionallyDown];
         [mpPreview setImageAlignment: NSImageAlignCenter];
         [mpPreview setImageFrameStyle: NSImageFrameNone];
         [mpPreviewBox addSubview: [mpPreview autorelease]];
@@ -412,7 +407,7 @@ class ControllerProperties
         sal_Int32 nPages = mpController->getFilteredPageCount();
         rtl::OUStringBuffer aBuf( 16 );
         aBuf.appendAscii( "/ " );
-        aBuf.append( rtl::OUString::valueOf( nPages ) );
+        aBuf.append( rtl::OUString::number( nPages ) );
     
         NSString* pText = CreateNSString( aBuf.makeStringAndClear() );
         NSRect aTextRect = { { 100, 5 }, { 100, 22 } };
@@ -491,12 +486,12 @@ class ControllerProperties
 #endif	// !USE_JAVA
 };
 
-static void filterAccelerator( rtl::OUString& io_rText )
+static OUString filterAccelerator( rtl::OUString const & rText )
 {
-    rtl::OUStringBuffer aBuf( io_rText.getLength() );
+    rtl::OUStringBuffer aBuf( rText.getLength() );
     for( sal_Int32 nIndex = 0; nIndex != -1; )
-        aBuf.append( io_rText.getToken( 0, '~', nIndex ) );
-    io_rText = aBuf.makeStringAndClear();
+        aBuf.append( rText.getToken( 0, '~', nIndex ) );
+    return aBuf.makeStringAndClear();
 }
 
 @implementation ControlTarget
@@ -545,7 +540,7 @@ static void filterAccelerator( rtl::OUString& io_rText )
     }
     else
     {
-        DBG_ERROR( "unsupported class" );
+        SAL_INFO( "vcl.osx.print", "Unsupported class" << ([pSender class] ? [NSStringFromClass([pSender class]) UTF8String] : "nil"));
     }
     mpController->updateEnableState();
 }
@@ -577,7 +572,7 @@ static void filterAccelerator( rtl::OUString& io_rText )
     }
     else
     {
-        DBG_ERROR( "unsupported class" );
+        SAL_INFO( "vcl.osx.print", "Unsupported class" << ([pSender class] ? [NSStringFromClass([pSender class]) UTF8String] : "nil"));
     }
     mpController->updateEnableState();
 }
@@ -776,7 +771,7 @@ static sal_Int32 findBreak( const rtl::OUString& i_rText, sal_Int32 i_nPos )
     if( xBI.is() )
     {
         i18n::Boundary aBoundary = xBI->getWordBoundary( i_rText, i_nPos,
-                                                         Application::GetSettings().GetLocale(),
+                                                         Application::GetSettings().GetLanguageTag().getLocale(),
                                                          i18n::WordType::ANYWORD_IGNOREWHITESPACES,
                                                          sal_True );
         nRet = aBoundary.endPos;
@@ -799,7 +794,7 @@ static void linebreakCell( NSCell* pBtn, const rtl::OUString& i_rText )
         if( nIndex < nLen )
         {
             rtl::OUStringBuffer aBuf( i_rText );
-            aBuf.setCharAt( nIndex, '\n' );
+            aBuf[nIndex] = '\n';
             pText = CreateNSString( aBuf.makeStringAndClear() );
             [pBtn setTitle: pText];
             [pText release];
@@ -826,14 +821,14 @@ static void addSubgroup( NSView* pCurParent, long& rCurY, const rtl::OUString& r
 }
 
 static void addBool( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachOffset,
-                    const rtl::OUString& rText, sal_Bool bEnabled,
-                    const rtl::OUString& rProperty, sal_Bool bValue,
+                    const rtl::OUString& rText, bool bEnabled,
+                    const rtl::OUString& rProperty, bool bValue,
                     std::vector<ColumnItem >& rRightColumn,
                     ControllerProperties* pControllerProperties,
                     ControlTarget* pCtrlTarget
                     )
 {
-    NSRect aCheckRect = NSMakeRect( rCurX + nAttachOffset, 0, 0, 15);
+    NSRect aCheckRect = { { static_cast<CGFloat>(rCurX + nAttachOffset), 0 }, { 0, 15 } };
     NSButton* pBtn = [[NSButton alloc] initWithFrame: aCheckRect];
     [pBtn setButtonType: NSSwitchButton];                
     [pBtn setState: bValue ? NSOnState : NSOffState];
@@ -870,7 +865,7 @@ static void addBool( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
 
 static void addRadio( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachOffset,
                      const rtl::OUString& rText,
-                     const rtl::OUString& rProperty, Sequence< rtl::OUString > rChoices, sal_Int32 nSelectValue,
+                     const rtl::OUString& rProperty, Sequence<rtl::OUString> const & rChoices, sal_Int32 nSelectValue,
                      std::vector<ColumnItem >& rLeftColumn,
                      std::vector<ColumnItem >& rRightColumn,
                      ControllerProperties* pControllerProperties,
@@ -902,7 +897,7 @@ static void addRadio( NSView* pCurParent, long& rCurX, long& rCurY, long nAttach
     // setup radio matrix
     NSButtonCell* pProto = [[NSButtonCell alloc] init];
     
-    NSRect aRadioRect = NSMakeRect( rCurX + nOff, 0, 280 - rCurX, 5*rChoices.getLength());
+    NSRect aRadioRect = { { static_cast<CGFloat>(rCurX + nOff), 0 }, { static_cast<CGFloat>(280 - rCurX), static_cast<CGFloat>(5*rChoices.getLength()) } };
     [pProto setTitle: @"RadioButtonGroup"];
     [pProto setButtonType: NSRadioButton];
     NSMatrix* pMatrix = [[NSMatrix alloc] initWithFrame: aRadioRect
@@ -915,8 +910,7 @@ static void addRadio( NSView* pCurParent, long& rCurX, long& rCurY, long nAttach
     for( sal_Int32 m = 0; m < rChoices.getLength(); m++ )
     {
         NSCell* pCell = [pCells objectAtIndex: m];
-        filterAccelerator( rChoices[m] );
-        linebreakCell( pCell, rChoices[m] );
+        linebreakCell( pCell, filterAccelerator( rChoices[m] ) );
         // connect target and action
         [pCell setTarget: pCtrlTarget];
         [pCell setAction: @selector(triggered:)];
@@ -945,7 +939,7 @@ static void addRadio( NSView* pCurParent, long& rCurX, long& rCurY, long nAttach
 
 static void addList( NSView* pCurParent, long& rCurX, long& rCurY, long /*nAttachOffset*/,
                     const rtl::OUString& rText,
-                    const rtl::OUString& rProperty, const Sequence< rtl::OUString > rChoices, sal_Int32 nSelectValue,
+                    const rtl::OUString& rProperty, Sequence<rtl::OUString> const & rChoices, sal_Int32 nSelectValue,
                     std::vector<ColumnItem >& rLeftColumn,
                     std::vector<ColumnItem >& rRightColumn,
                     ControllerProperties* pControllerProperties,
@@ -960,7 +954,7 @@ static void addList( NSView* pCurParent, long& rCurX, long& rCurY, long /*nAttac
     aTextRect.origin.x = rCurX /* + nAttachOffset*/;
 
     // don't indent attached lists, looks bad in the existing cases
-    NSRect aBtnRect = NSMakeRect( rCurX /*+ nAttachOffset*/ + aTextRect.size.width, 0, 0, 15);
+    NSRect aBtnRect = { { rCurX /*+ nAttachOffset*/ + aTextRect.size.width, 0 }, { 0, 15 } };
     NSPopUpButton* pBtn = [[NSPopUpButton alloc] initWithFrame: aBtnRect pullsDown: NO];
 
     // iterate options
@@ -1004,7 +998,7 @@ static void addList( NSView* pCurParent, long& rCurX, long& rCurY, long /*nAttac
 }
 
 static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachOffset,
-                    const rtl::OUString rCtrlType,
+                    const rtl::OUString& rCtrlType,
                     const rtl::OUString& rText,
                     const rtl::OUString& rProperty, const PropertyValue* pValue,
                     sal_Int64 nMinValue, sal_Int64 nMaxValue,
@@ -1036,7 +1030,7 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
         nOff = aTextRect.size.width + 5;
     }
     
-    NSRect aFieldRect = NSMakeRect( rCurX + nOff + nAttachOffset, 0, 100, 25);
+    NSRect aFieldRect = { { static_cast<CGFloat>(rCurX + nOff + nAttachOffset), 0 }, { 100, 25 } };
     NSTextField* pFieldView = [[NSTextField alloc] initWithFrame: aFieldRect];
     [pFieldView setEditable: YES];
     [pFieldView setSelectable: YES];
@@ -1057,12 +1051,12 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
     aFieldRect.origin.y = rCurY - aFieldRect.size.height;
     [pFieldView setFrame: aFieldRect];
 
-    if( rCtrlType.equalsAscii( "Range" ) )
+    if( rCtrlType.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "Range" ) ) )
     {
         // add a stepper control
-        NSRect aStepFrame = NSMakeRect(
-                                aFieldRect.origin.x + aFieldRect.size.width + 5, aFieldRect.origin.y,
-                                15, aFieldRect.size.height);
+        NSRect aStepFrame = { { aFieldRect.origin.x + aFieldRect.size.width + 5,
+                                aFieldRect.origin.y },
+                            { 15, aFieldRect.size.height } };
         NSStepper* pStep = [[NSStepper alloc] initWithFrame: aStepFrame];
         [pStep setIncrement: 1];
         [pStep setValueWraps: NO];
@@ -1127,6 +1121,16 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
     rCurY = aFieldRect.origin.y - 5;
 }
 
+// In 10.5 and later:
+// 'setAccessoryView:' is deprecated
+
+// Make deprecation warnings just warnings in a -Werror compilation.
+
+#ifdef __GNUC__
+// #pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
+#endif
+
 #ifdef USE_JAVA
 
 @interface VCLPrintPanelAccessoryViewController : NSViewController <NSPrintPanelAccessorizing>
@@ -1179,7 +1183,7 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
     NSTabView* pTabView = [[NSTabView alloc] initWithFrame: aTabViewFrame];
     [pAccessoryView addSubview: [pTabView autorelease]];
     
-    sal_Bool bIgnoreSubgroup = sal_False;
+    bool bIgnoreSubgroup = false;
     
     ControllerProperties* pControllerProperties = new ControllerProperties( pController, pOp, pAccessoryView, pTabView, pState );
     ControlTarget* pCtrlTarget = [[ControlTarget alloc] initWithControllerMap: pControllerProperties];
@@ -1202,36 +1206,36 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
         for( int n = 0; n < aOptProp.getLength(); n++ )
         {
             const beans::PropertyValue& rEntry( aOptProp[ n ] );
-            if( rEntry.Name.equalsAscii( "ControlType" ) )
+            if( rEntry.Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("ControlType")) )
             {
                 rEntry.Value >>= aCtrlType;
             }
-            else if( rEntry.Name.equalsAscii( "Choices" ) )
+            else if( rEntry.Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Choices")) )
             {
                 rEntry.Value >>= aChoices;
             }
-            else if( rEntry.Name.equalsAscii( "ChoicesDisabled" ) )
+            else if( rEntry.Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("ChoicesDisabled")) )
             {
                 rEntry.Value >>= aChoicesDisabled;
             }
-            else if( rEntry.Name.equalsAscii( "Property" ) )
+            else if( rEntry.Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Property")) )
             {
                 PropertyValue aVal;
                 rEntry.Value >>= aVal;
                 aPropertyName = aVal.Name;
-                if( aPropertyName.equalsAscii( "PrintContent" ) )
+                if( aPropertyName.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("PrintContent")) )
                     aVal.Value >>= aSelectionChecked;
             }
         }
-        if( aCtrlType.equalsAscii( "Radio" ) &&
-            aPropertyName.equalsAscii( "PrintContent" ) &&
+        if( aCtrlType.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Radio")) &&
+            aPropertyName.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("PrintContent")) &&
             aChoices.getLength() > 2 )
         {
 #ifdef USE_JAVA
             // Fix incorrect checkbox state after a restart by loading the
             // this property from where it was updated in the
             // ControllerProperties::changePropertyWithBoolValue() method
-            const PropertyValue* pVal = pController->getValue( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "PrintSelectionOnly" ) ) );
+            const PropertyValue* pVal = pController->getValue( "PrintSelectionOnly" );
             if ( pVal )
             {
                 sal_Bool bPrintSelectionOnly;
@@ -1272,70 +1276,70 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
         for( int n = 0; n < aOptProp.getLength(); n++ )
         {
             const beans::PropertyValue& rEntry( aOptProp[ n ] );
-            if( rEntry.Name.equalsAscii( "Text" ) )
+            if( rEntry.Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Text")) )
             {
                 rEntry.Value >>= aText;
-                filterAccelerator( aText );
+                aText = filterAccelerator( aText );
             }
-            else if( rEntry.Name.equalsAscii( "ControlType" ) )
+            else if( rEntry.Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("ControlType")) )
             {
                 rEntry.Value >>= aCtrlType;
             }
-            else if( rEntry.Name.equalsAscii( "Choices" ) )
+            else if( rEntry.Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Choices")) )
             {
                 rEntry.Value >>= aChoices;
             }
-            else if( rEntry.Name.equalsAscii( "Property" ) )
+            else if( rEntry.Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Property")) )
             {
                 PropertyValue aVal;
                 rEntry.Value >>= aVal;
                 aPropertyName = aVal.Name;
             }
-            else if( rEntry.Name.equalsAscii( "Enabled" ) )
+            else if( rEntry.Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Enabled")) )
             {
                 sal_Bool bValue = sal_True;
                 rEntry.Value >>= bValue;
                 bEnabled = bValue;
             }
-            else if( rEntry.Name.equalsAscii( "MinValue" ) )
+            else if( rEntry.Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("MinValue")) )
             {
                 rEntry.Value >>= nMinValue;
             }
-            else if( rEntry.Name.equalsAscii( "MaxValue" ) )
+            else if( rEntry.Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("MaxValue")) )
             {
                 rEntry.Value >>= nMaxValue;
             }
-            else if( rEntry.Name.equalsAscii( "AttachToDependency" ) )
+            else if( rEntry.Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("AttachToDependency")) )
             {
                 nAttachOffset = 20;
             }
-            else if( rEntry.Name.equalsAscii( "InternalUIOnly" ) )
+            else if( rEntry.Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("InternalUIOnly")) )
             {
                 rEntry.Value >>= bIgnore;
             }
-            else if( rEntry.Name.equalsAscii( "GroupingHint" ) )
+            else if( rEntry.Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("GroupingHint")) )
             {
                 rEntry.Value >>= aGroupHint;
             }
         }
 
-        if( aCtrlType.equalsAscii( "Group" ) ||
-            aCtrlType.equalsAscii( "Subgroup" ) ||
-            aCtrlType.equalsAscii( "Radio" ) ||
-            aCtrlType.equalsAscii( "List" )  ||
-            aCtrlType.equalsAscii( "Edit" )  ||
-            aCtrlType.equalsAscii( "Range" )  ||
-            aCtrlType.equalsAscii( "Bool" ) )
+        if( aCtrlType.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Group")) ||
+            aCtrlType.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Subgroup")) ||
+            aCtrlType.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Radio")) ||
+            aCtrlType.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("List"))  ||
+            aCtrlType.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Edit"))  ||
+            aCtrlType.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Range"))  ||
+            aCtrlType.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Bool")) )
         {
             // since our build target is MacOSX 10.4 we can have only one accessory view
             // so we have a single accessory view that is tabbed for grouping
-            if( aCtrlType.equalsAscii( "Group" )
+            if( aCtrlType.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Group"))
                 || ! pCurParent
-                || ( aCtrlType.equalsAscii( "Subgroup" ) && nCurY < -250 && ! bIgnore ) 
+                || ( aCtrlType.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Subgroup")) && nCurY < -250 && ! bIgnore ) 
                )
             {
                 rtl::OUString aGroupTitle( aText );
-                if( aCtrlType.equalsAscii( "Subgroup" ) )
+                if( aCtrlType.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Subgroup")) )
                     aGroupTitle = pControllerProperties->getMoreString();
                 // set size of current parent
                 if( pCurParent )
@@ -1343,7 +1347,7 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
                 
                 // new tab item
                 if( ! aText.getLength() )
-                    aText = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "OOo" ) );
+                    aText = OUString( "OOo" );
                 NSString* pLabel = CreateNSString( aGroupTitle );
                 NSTabViewItem* pItem = [[NSTabViewItem alloc] initWithIdentifier: pLabel ];
                 [pItem setLabel: pLabel];
@@ -1364,13 +1368,13 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
                 {
                     addBool( pCurParent, nCurX, nCurY, 0,
                              pControllerProperties->getPrintSelectionString(), bSelectionBoxEnabled,
-                             rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "PrintContent" ) ), bSelectionBoxChecked,
+                             OUString( "PrintContent" ), bSelectionBoxChecked,
                              aRightColumn, pControllerProperties, pCtrlTarget );
                     bAddSelectionCheckBox = false;
                 }
             }
             
-            if( aCtrlType.equalsAscii( "Subgroup" ) && pCurParent )
+            if( aCtrlType.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Subgroup")) && pCurParent )
             {
                 bIgnoreSubgroup = bIgnore;
                 if( bIgnore )
@@ -1382,7 +1386,7 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
             {
                 continue;
             }
-            else if( aCtrlType.equalsAscii( "Bool" ) && pCurParent )
+            else if( aCtrlType.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Bool")) && pCurParent )
             {
                 sal_Bool bVal = sal_False;                
                 PropertyValue* pVal = pController->getValue( aPropertyName );
@@ -1392,7 +1396,7 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
                          aText, true, aPropertyName, bVal,
                          aRightColumn, pControllerProperties, pCtrlTarget );
             }
-            else if( aCtrlType.equalsAscii( "Radio" ) && pCurParent )
+            else if( aCtrlType.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Radio")) && pCurParent )
             {
                 // get currently selected value
                 sal_Int32 nSelectVal = 0;
@@ -1405,7 +1409,7 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
                           aLeftColumn, aRightColumn,
                           pControllerProperties, pCtrlTarget );
             }
-            else if( aCtrlType.equalsAscii( "List" ) && pCurParent )
+            else if( aCtrlType.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("List")) && pCurParent )
             {
                 PropertyValue* pVal = pController->getValue( aPropertyName );
                 sal_Int32 aSelectVal = 0;
@@ -1417,7 +1421,7 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
                          aLeftColumn, aRightColumn,
                          pControllerProperties, pCtrlTarget );
             }
-            else if( (aCtrlType.equalsAscii( "Edit" ) || aCtrlType.equalsAscii( "Range" )) && pCurParent )
+            else if( (aCtrlType.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Edit")) || aCtrlType.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Range"))) && pCurParent )
             {
                 // current value
                 PropertyValue* pVal = pController->getValue( aPropertyName );
@@ -1430,7 +1434,7 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
         }
         else
         {
-            DBG_ERROR( "Unsupported UI option" );
+            SAL_INFO( "vcl.osx.print", "Unsupported UI option \"" << aCtrlType << "\"");
         }
     }
         
@@ -1485,7 +1489,7 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
 #else	// USE_JAVA
     [pOp setAccessoryView: [pAccessoryView autorelease]];
 #endif	// USE_JAVA
-    
+
     // set the current selecte tab item
     if( pState->nLastPage >= 0 && pState->nLastPage < [pTabView numberOfTabViewItems] )
         [pTabView selectTabViewItemAtIndex: pState->nLastPage];
@@ -1493,4 +1497,8 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
     return pCtrlTarget;
 }
 
+// #pragma GCC diagnostic pop
+
 @end
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

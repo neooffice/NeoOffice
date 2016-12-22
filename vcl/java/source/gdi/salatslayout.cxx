@@ -69,33 +69,33 @@ static bool UseIndicFontHack();
 
 static bool bUseIndicFontHackInitialized = false;
 static bool bUseIndicFontHack = false;
-static const String aAlBayanPlain( RTL_CONSTASCII_USTRINGPARAM( "Al Bayan Plain" ) );
-static const String aAppleSymbols( RTL_CONSTASCII_USTRINGPARAM( "Apple Symbols" ) );
-static const String aArialUnicodeMS( RTL_CONSTASCII_USTRINGPARAM( "Arial Unicode MS" ) );
-static const String aBanglaMN( RTL_CONSTASCII_USTRINGPARAM( "Bangla MN" ) );
-static const String aBanglaSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Bangla Sangam MN" ) );
-static const String aDevanagariMT( RTL_CONSTASCII_USTRINGPARAM( "Devanagari MT" ) );
-static const String aDevanagariSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Devanagari Sangam MT" ) );
-static const String aGeezaPro( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) );
-static const String aGeezaProRegular( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro Regular" ) );
-static const String aGujaratiMN( RTL_CONSTASCII_USTRINGPARAM( "Gujarati MN" ) );
-static const String aGujaratiSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Gujarati Sangam MN" ) );
-static const String aGurmukhiMN( RTL_CONSTASCII_USTRINGPARAM( "Gurmukhi MN" ) );
-static const String aGurmukhiSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Gurmukhi Sangam MN" ) );
-static const String aHeitiSCMedium( RTL_CONSTASCII_USTRINGPARAM( "Heiti SC Medium" ) );
-static const String aHelvetica( RTL_CONSTASCII_USTRINGPARAM( "Helvetica" ) );
-static const String aHiraginoKakuGothicProW3( RTL_CONSTASCII_USTRINGPARAM( "Hiragino Kaku Gothic Pro W3" ) );
-static const String aHiraginoMinchoProW3( RTL_CONSTASCII_USTRINGPARAM( "Hiragino Mincho Pro W3" ) );
-static const String aLucidaGrande( RTL_CONSTASCII_USTRINGPARAM( "Lucida Grande" ) );
-static const String aOpenSymbol( RTL_CONSTASCII_USTRINGPARAM( "OpenSymbol" ) );
-static const String aOriyaMN( RTL_CONSTASCII_USTRINGPARAM( "Oriya MN" ) );
-static const String aOriyaSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Oriya Sangam MN" ) );
-static const String aTamilMN( RTL_CONSTASCII_USTRINGPARAM( "Tamil MN" ) );
-static const String aTamilSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Tamil Sangam MN" ) );
-static const String aTeluguMN( RTL_CONSTASCII_USTRINGPARAM( "Telugu MN" ) );
-static const String aTeluguSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Telugu Sangam MN" ) );
-static const String aTimesNewRoman( RTL_CONSTASCII_USTRINGPARAM( "Times New Roman" ) );
-static const String aTimesRoman( RTL_CONSTASCII_USTRINGPARAM( "Times Roman" ) );
+static const OUString aAlBayanPlain( "Al Bayan Plain" );
+static const OUString aAppleSymbols( "Apple Symbols" );
+static const OUString aArialUnicodeMS( "Arial Unicode MS" );
+static const OUString aBanglaMN( "Bangla MN" );
+static const OUString aBanglaSangamMN( "Bangla Sangam MN" );
+static const OUString aDevanagariMT( "Devanagari MT" );
+static const OUString aDevanagariSangamMN( "Devanagari Sangam MT" );
+static const OUString aGeezaPro( "Geeza Pro" );
+static const OUString aGeezaProRegular( "Geeza Pro Regular" );
+static const OUString aGujaratiMN( "Gujarati MN" );
+static const OUString aGujaratiSangamMN( "Gujarati Sangam MN" );
+static const OUString aGurmukhiMN( "Gurmukhi MN" );
+static const OUString aGurmukhiSangamMN( "Gurmukhi Sangam MN" );
+static const OUString aHeitiSCMedium( "Heiti SC Medium" );
+static const OUString aHelvetica( "Helvetica" );
+static const OUString aHiraginoKakuGothicProW3( "Hiragino Kaku Gothic Pro W3" );
+static const OUString aHiraginoMinchoProW3( "Hiragino Mincho Pro W3" );
+static const OUString aLucidaGrande( "Lucida Grande" );
+static const OUString aOpenSymbol( "OpenSymbol" );
+static const OUString aOriyaMN( "Oriya MN" );
+static const OUString aOriyaSangamMN( "Oriya Sangam MN" );
+static const OUString aTamilMN( "Tamil MN" );
+static const OUString aTamilSangamMN( "Tamil Sangam MN" );
+static const OUString aTeluguMN( "Telugu MN" );
+static const OUString aTeluguSangamMN( "Telugu Sangam MN" );
+static const OUString aTimesNewRoman( "Times New Roman" );
+static const OUString aTimesRoman( "Times Roman" );
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
@@ -130,7 +130,7 @@ struct SAL_DLLPRIVATE ImplATSLayoutDataHashEquality
 };
 
 struct SAL_DLLPRIVATE ImplATSLayoutData {
-	static ::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplATSLayoutDataHashHash, ImplATSLayoutDataHashEquality >	maLayoutCache;
+	static ::boost::unordered_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplATSLayoutDataHashHash, ImplATSLayoutDataHashEquality >	maLayoutCache;
 	static ::std::list< ImplATSLayoutData* >	maLayoutCacheList;
 	static int			mnLayoutCacheSize;
 	static sal_uInt32	mnSharedContextData;
@@ -154,8 +154,8 @@ struct SAL_DLLPRIVATE ImplATSLayoutData {
 	long*				mpGlyphAdvances;
 	long				mnBaselineDelta;
 	bool				mbValid;
-	::std::hash_map< GlyphID, Point >	maVerticalGlyphTranslations;
-	::std::hash_map< GlyphID, long >	maNativeGlyphWidths;
+	::boost::unordered_map< GlyphID, Point >	maVerticalGlyphTranslations;
+	::boost::unordered_map< GlyphID, long >	maNativeGlyphWidths;
 
 	static CGContextRef			GetSharedContext();
 	static void					ClearLayoutDataCache();
@@ -190,7 +190,7 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawGlyphsOp : public JavaSalGraphicsOp
 	float					mfScaleY;
 
 public:
-							JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, const CGPoint aStartPoint, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, JavaImplFont *pFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX );
+							JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, const CGPoint aStartPoint, int nGlyphCount, const sal_GlyphId *pGlyphs, const DeviceCoordinate *pAdvances, JavaImplFont *pFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX );
 	virtual					~JavaSalGraphicsDrawGlyphsOp();
 
 	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds );
@@ -198,7 +198,6 @@ public:
 
 using namespace basegfx;
 using namespace osl;
-using namespace rtl;
 using namespace vcl;
 
 // ============================================================================
@@ -247,7 +246,7 @@ bool ImplATSLayoutDataHashEquality::operator()( const ImplATSLayoutDataHash *p1,
 
 // ============================================================================
 
-::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplATSLayoutDataHashHash, ImplATSLayoutDataHashEquality > ImplATSLayoutData::maLayoutCache;
+::boost::unordered_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplATSLayoutDataHashHash, ImplATSLayoutDataHashEquality > ImplATSLayoutData::maLayoutCache;
 
 // ----------------------------------------------------------------------------
 
@@ -305,7 +304,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, in
 	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash( pStr, nLen, nMinCharPos, nEndCharPos, nFlags, pFont );
 
 	// Search cache for matching layout
-	::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplATSLayoutDataHashHash, ImplATSLayoutDataHashEquality >::const_iterator it = maLayoutCache.find( pLayoutHash );
+	::boost::unordered_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplATSLayoutDataHashHash, ImplATSLayoutDataHashEquality >::const_iterator it = maLayoutCache.find( pLayoutHash );
 	if ( it != maLayoutCache.end() )
 	{
 		pLayoutData = it->second;
@@ -367,7 +366,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, in
 		}
 
 		mnLayoutCacheSize += pLayoutData->mpHash->mnLen;
-		maLayoutCache.insert( ::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplATSLayoutDataHashHash, ImplATSLayoutDataHashEquality >::value_type( pLayoutData->mpHash, pLayoutData ) );
+		maLayoutCache.insert( ::boost::unordered_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplATSLayoutDataHashHash, ImplATSLayoutDataHashEquality >::value_type( pLayoutData->mpHash, pLayoutData ) );
 		maLayoutCacheList.push_front( pLayoutData );
 	}
 
@@ -412,8 +411,8 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 			{
 				SalData *pSalData = GetSalData();
 
-				::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (sal_IntPtr)mpHash->mnFontID );
-				if ( it == pSalData->maNativeFontMapping.end() || JavaImplFontData::IsBadFont( it->second ) )
+				::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >::const_iterator it = pSalData->maNativeFontMapping.find( (sal_IntPtr)mpHash->mnFontID );
+				if ( it == pSalData->maNativeFontMapping.end() || JavaPhysicalFontFace::IsBadFont( it->second ) )
 				{
 					Destroy();
 					return;
@@ -785,7 +784,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 								aPSName = OUString( pPSBuffer );
 							}
 
-							::std::hash_map< OUString, JavaImplFontData*, OUStringHash >::const_iterator ffit = pSalData->maJavaFontNameMapping.find( aPSName );
+							::boost::unordered_map< OUString, JavaPhysicalFontFace*, OUStringHash >::const_iterator ffit = pSalData->maJavaFontNameMapping.find( aPSName );
 							if ( ffit != pSalData->maJavaFontNameMapping.end() )
 								pFallbackFont = new JavaImplFont( ffit->second->maFontName, mpHash->mfFontSize, mpFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
 						}
@@ -794,7 +793,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 						{
 							// Look through our application font list for
 							// a font that has glyphs for the current char
-							for ( ::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator nit = pSalData->maNativeFontMapping.begin(); !pFallbackFont && nit != pSalData->maNativeFontMapping.end(); nit++ )
+							for ( ::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >::const_iterator nit = pSalData->maNativeFontMapping.begin(); !pFallbackFont && nit != pSalData->maNativeFontMapping.end(); nit++ )
 							{
 								for ( j = 0; j < aRange.length; j++ )
 								{
@@ -1055,7 +1054,7 @@ static void SalCGPathApplier( void *pInfo, const CGPathElement *pElement )
 
 // ============================================================================
 
-JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, const CGPoint aStartPoint, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, JavaImplFont *pFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX ) :
+JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, const CGPoint aStartPoint, int nGlyphCount, const sal_GlyphId *pGlyphs, const DeviceCoordinate *pAdvances, JavaImplFont *pFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX ) :
 	JavaSalGraphicsOp( aFrameClipPath, aNativeClipPath ),
 	maStartPoint( aStartPoint ),
 	mnGlyphCount( nGlyphCount ),
@@ -1291,7 +1290,7 @@ SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 
 	if ( mnFallbackLevel )
 	{
-		::std::hash_map< int, JavaImplFont* >::const_iterator it = mpGraphics->maFallbackFonts.find( mnFallbackLevel );
+		::boost::unordered_map< int, JavaImplFont* >::const_iterator it = mpGraphics->maFallbackFonts.find( mnFallbackLevel );
 		if ( it != mpGraphics->maFallbackFonts.end() && mnFallbackLevel < MAX_FALLBACK )
 			mpFont = new JavaImplFont( it->second );
 	}
@@ -1354,7 +1353,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 	JavaImplFont *pSymbolFallbackFont = NULL;
 	bool bUseNativeFallback = false;
-	int nEstimatedGlyphs = 0;
 
 	// Aggregate runs
 	bool bRunRTL;
@@ -1401,7 +1399,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			{
 				// Improve BIDI analysis speed by trimming layout args string
 				int nMinArgsLen = rArgs.mnMinCharPos - nMinCharPos;
-				ImplLayoutArgs aMinArgs( rArgs.mpStr + nMinCharPos, nMinArgsLen, 0, nMinArgsLen, rArgs.mnFlags & ~( SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) );
+				ImplLayoutArgs aMinArgs( rArgs.mpStr + nMinCharPos, nMinArgsLen, 0, nMinArgsLen, rArgs.mnFlags & ~( SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ), rArgs.maLanguageTag );
 				aMinArgs.ResetPos();
 				while ( aMinArgs.GetNextRun( &nStrongMinCharPos, &nStrongEndCharPos, &bStrongRunRTL ) )
 				{
@@ -1421,7 +1419,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			{
 				// Improve BIDI analysis speed by trimming layout args string
 				int nEndArgsLen = nEndCharPos - rArgs.mnEndCharPos;
-				ImplLayoutArgs aEndArgs( rArgs.mpStr + rArgs.mnEndCharPos, nEndArgsLen, 0, nEndArgsLen, rArgs.mnFlags & ~( SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) );
+				ImplLayoutArgs aEndArgs( rArgs.mpStr + rArgs.mnEndCharPos, nEndArgsLen, 0, nEndArgsLen, rArgs.mnFlags & ~( SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ), rArgs.maLanguageTag );
 				aEndArgs.ResetPos();
 				while ( aEndArgs.GetNextRun( &nStrongMinCharPos, &nStrongEndCharPos, &bStrongRunRTL ) )
 				{
@@ -1440,7 +1438,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 		if ( bDeleteArgs )
 		{
-			pArgs = new ImplLayoutArgs( rArgs.mpStr, rArgs.mnLength, nMinCharPos, nEndCharPos, rArgs.mnFlags & ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING );
+			pArgs = new ImplLayoutArgs( rArgs.mpStr, rArgs.mnLength, nMinCharPos, nEndCharPos, rArgs.mnFlags & ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING, rArgs.maLanguageTag );
 			if ( !pArgs )
 			{
 				pArgs = &rArgs;
@@ -1468,7 +1466,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					for ( ; i > nMinCharPos && ( IsNonprintingChar( pArgs->mpStr[ i - 1 ] ) || IsSpacingGlyph( pArgs->mpStr[ i - 1 ] | GF_ISCHAR ) ); i-- )
 						;
 					mpGraphics->maFallbackRuns.AddRun( i, nStart, bRunRTL );
-					nEstimatedGlyphs += nStart - i;
 					nStart = i;
 				}
 			}
@@ -1483,7 +1480,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					for ( ; i < nEndCharPos && ( IsNonprintingChar( pArgs->mpStr[ i ] ) || IsSpacingGlyph( pArgs->mpStr[ i ] | GF_ISCHAR ) ); i++ )
 						;
 					mpGraphics->maFallbackRuns.AddRun( nStart, i, bRunRTL );
-					nEstimatedGlyphs += i - nStart;
 					nStart = i;
 				}
 			}
@@ -1522,15 +1518,12 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			if ( nMaxMinCharPos < nMinEndCharPos )
 			{
 				maRuns.AddRun( nMaxMinCharPos, nMinEndCharPos, bRunRTL );
-				nEstimatedGlyphs += nMinEndCharPos - nMaxMinCharPos;
 
 				if ( bExactMatch )
 					break;
 			}
 		}
 	}
-
-	SetGlyphCapacity( (int)( nEstimatedGlyphs * 1.1 ) );
 
 	JavaImplFont *pFallbackFont = NULL;
 	Point aPos;
@@ -1611,7 +1604,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							{
 								SalData *pSalData = GetSalData();
 
-								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aGeezaPro );
+								::std::map< OUString, JavaPhysicalFontFace* >::const_iterator it = pSalData->maFontNameMapping.find( aGeezaPro );
 								if ( it == pSalData->maFontNameMapping.end() )
 								{
 									it = pSalData->maFontNameMapping.find( aGeezaProRegular );
@@ -1754,7 +1747,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					sal_Unicode nMirroredChar = (sal_Unicode)GetMirroredChar( nChar );
 					if ( nMirroredChar != nChar )
 					{
-						::std::hash_map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.find( nChar );
+						::boost::unordered_map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.find( nChar );
 						if ( mit == maMirroredLayoutData.end() )
 						{
 							sal_Unicode aMirrored[ 1 ];
@@ -1808,7 +1801,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							{
 								SalData *pSalData = GetSalData();
 
-								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( mpGraphics->mpFontData->meFamily == FAMILY_ROMAN ? aTimesRoman : aHelvetica );
+								::std::map< OUString, JavaPhysicalFontFace* >::const_iterator it = pSalData->maFontNameMapping.find( mpGraphics->mpFontData->GetFamilyType() == FAMILY_ROMAN ? aTimesRoman : aHelvetica );
 								if ( it != pSalData->maFontNameMapping.end() )
 								{
 									pSymbolFallbackFont = new JavaImplFont( it->second->maFontName, mpFont->getSize(), mpFont->getOrientation(), mpFont->isAntialiased(), mpFont->isVertical(), mpFont->getScaleX() );
@@ -1831,7 +1824,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							{
 								SalData *pSalData = GetSalData();
 
-								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aTimesNewRoman );
+								::std::map< OUString, JavaPhysicalFontFace* >::const_iterator it = pSalData->maFontNameMapping.find( aTimesNewRoman );
 								if ( it == pSalData->maFontNameMapping.end() )
 									it = pSalData->maFontNameMapping.find( aLucidaGrande );
 								if ( it != pSalData->maFontNameMapping.end() )
@@ -1856,8 +1849,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							{
 								SalData *pSalData = GetSalData();
 
-								String aFirstFontName;
-								String aSecondFontName;
+								OUString aFirstFontName;
+								OUString aSecondFontName;
 								if ( nChar < 0x0980 )
 								{
 									aFirstFontName = aDevanagariMT;
@@ -1894,7 +1887,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 									aSecondFontName = aTeluguSangamMN;
 								}
 
-								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aFirstFontName );
+								::std::map< OUString, JavaPhysicalFontFace* >::const_iterator it = pSalData->maFontNameMapping.find( aFirstFontName );
 								if ( it == pSalData->maFontNameMapping.end() )
 									it = pSalData->maFontNameMapping.find( aSecondFontName );
 								if ( it != pSalData->maFontNameMapping.end() )
@@ -1921,7 +1914,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							{
 								SalData *pSalData = GetSalData();
 
-								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aAppleSymbols );
+								::std::map< OUString, JavaPhysicalFontFace* >::const_iterator it = pSalData->maFontNameMapping.find( aAppleSymbols );
 								if ( it == pSalData->maFontNameMapping.end() )
 									it = pSalData->maFontNameMapping.find( aArialUnicodeMS );
 								if ( it != pSalData->maFontNameMapping.end() )
@@ -1946,7 +1939,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							{
 								SalData *pSalData = GetSalData();
 
-								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aOpenSymbol );
+								::std::map< OUString, JavaPhysicalFontFace* >::const_iterator it = pSalData->maFontNameMapping.find( aOpenSymbol );
 								if ( it != pSalData->maFontNameMapping.end() )
 								{
 									pSymbolFallbackFont = new JavaImplFont( it->second->maFontName, mpFont->getSize(), mpFont->getOrientation(), mpFont->isAntialiased(), mpFont->isVertical(), mpFont->getScaleX() );
@@ -1970,7 +1963,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							{
 								SalData *pSalData = GetSalData();
 
-								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( mpGraphics->mpFontData->meFamily == FAMILY_ROMAN ? aHiraginoMinchoProW3 : aHiraginoKakuGothicProW3 );
+								::std::map< OUString, JavaPhysicalFontFace* >::const_iterator it = pSalData->maFontNameMapping.find( mpGraphics->mpFontData->GetFamilyType() == FAMILY_ROMAN ? aHiraginoMinchoProW3 : aHiraginoKakuGothicProW3 );
 								if ( it == pSalData->maFontNameMapping.end() )
 									it = pSalData->maFontNameMapping.find( aHeitiSCMedium );
 								if ( it != pSalData->maFontNameMapping.end() )
@@ -2092,14 +2085,14 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 		// If this is the first fallback, first try using a font that most
 		// closely matches the currently requested font
-		JavaImplFontData *pHighScoreFontData = NULL;
-		::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator nfit = pSalData->maNativeFontMapping.find( pSymbolFallbackFont ? pSymbolFallbackFont->getNativeFont() : 0 );
+		JavaPhysicalFontFace *pHighScoreFontData = NULL;
+		::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >::const_iterator nfit = pSalData->maNativeFontMapping.find( pSymbolFallbackFont ? pSymbolFallbackFont->getNativeFont() : 0 );
 		if ( nfit != pSalData->maNativeFontMapping.end() )
 			pHighScoreFontData = nfit->second;
 		
 		if ( !pHighScoreFontData && !bUseNativeFallback && !mnFallbackLevel && ( !mpKashidaLayoutData || !mpKashidaLayoutData->mpFallbackFont ) )
 		{
-			::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pFallbackFont ? pFallbackFont->getNativeFont() : 0 );
+			::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >::const_iterator it = pSalData->maNativeFontMapping.find( pFallbackFont ? pFallbackFont->getNativeFont() : 0 );
 			if ( it == pSalData->maNativeFontMapping.end() || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetWeight() != mpGraphics->mnFontWeight || ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) != mpGraphics->mbFontItalic || it->second->GetPitch() != mpGraphics->mnFontPitch )
 			{
 				sal_uInt16 nHighScore = 0;
@@ -2128,7 +2121,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		}
 
 		int nNextLevel = mnFallbackLevel + 1;
-		::std::hash_map< int, JavaImplFont* >::iterator it = mpGraphics->maFallbackFonts.find( nNextLevel );
+		::boost::unordered_map< int, JavaImplFont* >::iterator it = mpGraphics->maFallbackFonts.find( nNextLevel );
 		if ( it != mpGraphics->maFallbackFonts.end() )
 		{
 			delete it->second;
@@ -2156,7 +2149,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 {
 	int nMaxGlyphs = 256;
 	sal_GlyphId aGlyphArray[ nMaxGlyphs ];
-	sal_Int32 aDXArray[ nMaxGlyphs ];
+	DeviceCoordinate aDXArray[ nMaxGlyphs ];
 	int aCharPosArray[ nMaxGlyphs ];
 
 	Point aPos;
@@ -2264,7 +2257,7 @@ bool SalATSLayout::GetBoundRect( SalGraphics& /* rGraphics */, Rectangle& rRect 
 
 	int nMaxGlyphs = 256;
 	sal_GlyphId aGlyphArray[ nMaxGlyphs ];
-	sal_Int32 aDXArray[ nMaxGlyphs ];
+	DeviceCoordinate aDXArray[ nMaxGlyphs ];
 	int aCharPosArray[ nMaxGlyphs ];
 
 	Point aPos;
@@ -2410,7 +2403,7 @@ bool SalATSLayout::GetOutline( SalGraphics& /* rGraphics */, B2DPolyPolygonVecto
 {
 	int nMaxGlyphs = 256;
 	sal_GlyphId aGlyphArray[ nMaxGlyphs ];
-	sal_Int32 aDXArray[ nMaxGlyphs ];
+	DeviceCoordinate aDXArray[ nMaxGlyphs ];
 	int aCharPosArray[ nMaxGlyphs ];
 
 	Point aPos;
@@ -2520,7 +2513,7 @@ bool SalATSLayout::GetOutline( SalGraphics& /* rGraphics */, B2DPolyPolygonVecto
 						CGPathApply( aPath, (void *)&aPolygonList, SalCGPathApplier );
 						CGPathRelease( aPath );
 
-						PolyPolygon aPolyPolygon;
+						tools::PolyPolygon aPolyPolygon;
 						while ( aPolygonList.size() )
 						{
 							aPolyPolygon.Insert( aPolygonList.front() );
@@ -2582,7 +2575,7 @@ void SalATSLayout::Destroy()
 
 	if ( maMirroredLayoutData.size() )
 	{
-		for ( ::std::hash_map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.begin(); mit != maMirroredLayoutData.end(); ++mit )
+		for ( ::boost::unordered_map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.begin(); mit != maMirroredLayoutData.end(); ++mit )
 			mit->second->Release();
 		maMirroredLayoutData.clear();
 	}
@@ -2636,7 +2629,7 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, 
 	sal_Unicode nChar = pRet->mpHash->mpStr[ nIndex ];
 	if ( pRet->mpHash->mbRTL )
 	{
-		::std::hash_map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.find( nChar );
+		::boost::unordered_map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.find( nChar );
 		if ( mit != maMirroredLayoutData.end() )
 		{
 			pRet = mit->second;
@@ -2650,7 +2643,7 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, 
 	{
 		GlyphID nGlyphID = (GlyphID)( nGlyph & GF_IDXMASK );
 
-		::std::hash_map< GlyphID, Point >::const_iterator it = pRet->maVerticalGlyphTranslations.find( nGlyphID );
+		::boost::unordered_map< GlyphID, Point >::const_iterator it = pRet->maVerticalGlyphTranslations.find( nGlyphID );
 		if ( it == pRet->maVerticalGlyphTranslations.end() )
 		{
 			CGGlyph aGlyph = (CGGlyph)nGlyphID;
@@ -2714,7 +2707,7 @@ sal_Int32 SalATSLayout::GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharPos ) co
 	sal_Unicode nChar = pLayoutData->mpHash->mpStr[ nIndex ];
 	if ( pLayoutData->mpHash->mbRTL )
 	{
-		::std::hash_map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.find( nChar );
+		::boost::unordered_map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.find( nChar );
 		if ( mit != maMirroredLayoutData.end() )
 		{
 			pLayoutData = mit->second;
@@ -2724,7 +2717,7 @@ sal_Int32 SalATSLayout::GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharPos ) co
 
 	GlyphID nGlyphID = (GlyphID)( nGlyph & GF_IDXMASK );
 
-	::std::hash_map< GlyphID, long >::const_iterator it = pLayoutData->maNativeGlyphWidths.find( nGlyphID );
+	::boost::unordered_map< GlyphID, long >::const_iterator it = pLayoutData->maNativeGlyphWidths.find( nGlyphID );
 	if ( it == pLayoutData->maNativeGlyphWidths.end() )
 	{
 		CGGlyph aGlyph = (CGGlyph)nGlyphID;

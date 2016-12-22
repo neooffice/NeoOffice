@@ -33,6 +33,8 @@
  *
  ************************************************************************/
 
+#include <boost/unordered_map.hpp>
+
 #include <com/sun/star/datatransfer/clipboard/RenderingCapabilities.hpp>
 
 #include "java/salinst.h"
@@ -40,7 +42,8 @@
 #include "java_clipboard.hxx"
 #include "DTransClipboard.hxx"
 
-static ::std::hash_map< ::rtl::OUString, ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >, ::rtl::OUStringHash > aClipboardInstancesMap;
+static ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface > aSystemClipboard;
+static ::boost::unordered_map< ::rtl::OUString, ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >, ::rtl::OUStringHash > aClipboardInstancesMap;
 static ::osl::Mutex aClipboardInstancesMutex;
 
 using namespace com::sun::star;
@@ -53,7 +56,7 @@ using namespace rtl;
 static uno::Sequence< OUString > JavaClipboard_getSupportedServiceNames()
 {
 	uno::Sequence< OUString > aRet( 1 );
-	aRet[0] = OUString::createFromAscii( "com.sun.star.datatransfer.clipboard.SystemClipboard" );
+	aRet[0] = "com.sun.star.datatransfer.clipboard.SystemClipboard";
 	return aRet;
 }
 
@@ -73,7 +76,7 @@ JavaClipboard::~JavaClipboard()
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaClipboard::flushClipboard( ) throw( uno::RuntimeException )
+void SAL_CALL JavaClipboard::flushClipboard( ) throw( uno::RuntimeException, std::exception )
 {
 	uno::Reference< datatransfer::XTransferable > aContents;
 
@@ -97,7 +100,7 @@ void SAL_CALL JavaClipboard::flushClipboard( ) throw( uno::RuntimeException )
 
 // ------------------------------------------------------------------------
 
-uno::Reference< datatransfer::XTransferable > SAL_CALL JavaClipboard::getContents() throw( uno::RuntimeException )
+uno::Reference< datatransfer::XTransferable > SAL_CALL JavaClipboard::getContents() throw( uno::RuntimeException, std::exception )
 {
 	MutexGuard aGuard( maMutex );
 
@@ -167,7 +170,7 @@ uno::Reference< datatransfer::XTransferable > SAL_CALL JavaClipboard::getContent
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaClipboard::setContents( const uno::Reference< datatransfer::XTransferable >& xTransferable, const uno::Reference< datatransfer::clipboard::XClipboardOwner >& xClipboardOwner ) throw( uno::RuntimeException )
+void SAL_CALL JavaClipboard::setContents( const uno::Reference< datatransfer::XTransferable >& xTransferable, const uno::Reference< datatransfer::clipboard::XClipboardOwner >& xClipboardOwner ) throw( uno::RuntimeException, std::exception )
 {
 	ClearableMutexGuard aGuard( maMutex );
 
@@ -212,21 +215,21 @@ void SAL_CALL JavaClipboard::setContents( const uno::Reference< datatransfer::XT
 
 // ------------------------------------------------------------------------
 
-OUString SAL_CALL JavaClipboard::getName() throw( uno::RuntimeException )
+OUString SAL_CALL JavaClipboard::getName() throw( uno::RuntimeException, std::exception )
 {
 	return OUString();
 }
 
 // ------------------------------------------------------------------------
 
-sal_Int8 SAL_CALL JavaClipboard::getRenderingCapabilities() throw( uno::RuntimeException )
+sal_Int8 SAL_CALL JavaClipboard::getRenderingCapabilities() throw( uno::RuntimeException, std::exception )
 {
 	return datatransfer::clipboard::RenderingCapabilities::Delayed;
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaClipboard::addClipboardListener( const uno::Reference< datatransfer::clipboard::XClipboardListener >& listener ) throw( uno::RuntimeException )
+void SAL_CALL JavaClipboard::addClipboardListener( const uno::Reference< datatransfer::clipboard::XClipboardListener >& listener ) throw( uno::RuntimeException, std::exception )
 {
 	MutexGuard aGuard( maMutex );
 
@@ -235,7 +238,7 @@ void SAL_CALL JavaClipboard::addClipboardListener( const uno::Reference< datatra
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaClipboard::removeClipboardListener( const uno::Reference< datatransfer::clipboard::XClipboardListener >& listener ) throw( uno::RuntimeException )
+void SAL_CALL JavaClipboard::removeClipboardListener( const uno::Reference< datatransfer::clipboard::XClipboardListener >& listener ) throw( uno::RuntimeException, std::exception )
 {
 	MutexGuard aGuard( maMutex );
 
@@ -244,14 +247,14 @@ void SAL_CALL JavaClipboard::removeClipboardListener( const uno::Reference< data
 
 // ------------------------------------------------------------------------
 
-OUString SAL_CALL JavaClipboard::getImplementationName() throw( uno::RuntimeException )
+OUString SAL_CALL JavaClipboard::getImplementationName() throw( uno::RuntimeException, std::exception )
 {
-	return OUString::createFromAscii( "com.sun.star.datatransfer.clipboard.AquaClipboard" );
+	return "com.sun.star.datatransfer.clipboard.AquaClipboard";
 }
 
 // ------------------------------------------------------------------------
 
-sal_Bool SAL_CALL JavaClipboard::supportsService( const OUString& ServiceName ) throw( uno::RuntimeException )
+sal_Bool SAL_CALL JavaClipboard::supportsService( const OUString& ServiceName ) throw( uno::RuntimeException, std::exception )
 {
 	uno::Sequence < OUString > aSupportedServicesNames = JavaClipboard_getSupportedServiceNames();
 
@@ -264,7 +267,7 @@ sal_Bool SAL_CALL JavaClipboard::supportsService( const OUString& ServiceName ) 
 
 // ------------------------------------------------------------------------
 
-uno::Sequence< OUString > SAL_CALL JavaClipboard::getSupportedServiceNames() throw( uno::RuntimeException )
+uno::Sequence< OUString > SAL_CALL JavaClipboard::getSupportedServiceNames() throw( uno::RuntimeException, std::exception )
 {
 	return JavaClipboard_getSupportedServiceNames();
 }
@@ -327,25 +330,28 @@ void JavaClipboard::setPrivateClipboard( sal_Bool bPrivateClipboard )
 
 uno::Reference< uno::XInterface > JavaSalInstance::CreateClipboard( const uno::Sequence< uno::Any >& rArguments )
 {
-	bool bSystemClipboard = false;
+	MutexGuard aGuard( aClipboardInstancesMutex );
+
+	uno::Reference< uno::XInterface > xClipboard;
 	OUString aClipboardName;
 	if ( rArguments.getLength() > 1 )
 	{
 		rArguments.getConstArray()[ 1 ] >>= aClipboardName;
+		xClipboard = aClipboardInstancesMap[ aClipboardName ];
+		if ( !xClipboard.is() )
+		{
+			xClipboard = uno::Reference< uno::XInterface >( static_cast< OWeakObject* >( new JavaClipboard( false ) ) );
+			aClipboardInstancesMap[ aClipboardName ] = xClipboard;
+		}
 	}
 	else
 	{
-		aClipboardName = OUString::createFromAscii( "CLIPBOARD" );
-		bSystemClipboard = true;
-	}
-
-	MutexGuard aGuard( aClipboardInstancesMutex );
-
-	uno::Reference< uno::XInterface > xClipboard = aClipboardInstancesMap[ aClipboardName ];
-	if ( !xClipboard.is() )
-	{
-		xClipboard = uno::Reference< uno::XInterface >( static_cast< OWeakObject* >( new JavaClipboard( bSystemClipboard ) ) );
-		aClipboardInstancesMap[ aClipboardName ] = xClipboard;
+		xClipboard = aSystemClipboard;
+		if ( !xClipboard.is() )
+		{
+			xClipboard = uno::Reference< uno::XInterface >( static_cast< OWeakObject* >( new JavaClipboard( true ) ) );
+			aSystemClipboard = xClipboard;
+		}
 	}
 
 	return xClipboard;

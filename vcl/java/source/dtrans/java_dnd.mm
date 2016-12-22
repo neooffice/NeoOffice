@@ -38,7 +38,6 @@
 #include <com/sun/star/datatransfer/dnd/DNDConstants.hpp>
 #include <vcl/svapp.hxx>
 #include <vcl/sysdata.hxx>
-#include <vos/mutex.hxx>
 
 #include <premac.h>
 #import <AppKit/AppKit.h>
@@ -55,8 +54,6 @@
 using namespace com::sun::star;
 using namespace cppu;
 using namespace osl;
-using namespace rtl;
-using namespace vos;
 
 static ::std::list< JavaDragSource* > aDragSources;
 static ::std::list< JavaDropTarget* > aDropTargets;
@@ -67,7 +64,7 @@ static sal_Int8 ImplGetActionsFromDragOperationMask( NSDragOperation nMask );
 static NSDragOperation ImplGetOperationMaskFromActions( sal_Int8 nActions );
 static NSDragOperation ImplGetOperationFromActions( sal_Int8 nActions );
 static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool bSame );
-static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
+static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 
 // ========================================================================
@@ -422,7 +419,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( [pSender draggingLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
@@ -458,7 +455,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( [pSender draggingLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
@@ -494,7 +491,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( [pSender draggingLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
@@ -553,7 +550,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( [pSender draggingLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
@@ -627,7 +624,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( aPoint, pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
@@ -682,7 +679,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( aPoint, pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
@@ -715,7 +712,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
  
 	if ( !Application::IsShutDown() )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( pTrackDragOwner && !Application::IsShutDown() )
 		{
@@ -753,7 +750,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( aPoint, pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
@@ -921,7 +918,7 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool 
 
 // ------------------------------------------------------------------------
 
-static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow )
+static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow )
 {
 	bool bSet = false;
 
@@ -983,7 +980,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow )
 static uno::Sequence< OUString > JavaDragSource_getSupportedServiceNames()
 {
     uno::Sequence< OUString > aRet( 1 );
-    aRet[0] = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.OleDragSource" );
+    aRet[0] = "com.sun.star.datatransfer.dnd.OleDragSource";
     return aRet;
 }
  
@@ -992,7 +989,7 @@ static uno::Sequence< OUString > JavaDragSource_getSupportedServiceNames()
 static uno::Sequence< OUString > JavaDropTarget_getSupportedServiceNames()
 {
     uno::Sequence< OUString > aRet( 1 );
-    aRet[0] = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.OleDropTarget" );
+    aRet[0] = "com.sun.star.datatransfer.dnd.OleDropTarget";
     return aRet;
 }
  
@@ -1056,7 +1053,7 @@ JavaDragSource::~JavaDragSource()
 
 // ------------------------------------------------------------------------
 
-void JavaDragSource::initialize( const uno::Sequence< uno::Any >& arguments ) throw( uno::RuntimeException )
+void JavaDragSource::initialize( const uno::Sequence< uno::Any >& arguments ) throw( uno::RuntimeException, std::exception )
 {
 	NSView *pView = nil;
 	if ( arguments.getLength() > 1 )
@@ -1067,7 +1064,7 @@ void JavaDragSource::initialize( const uno::Sequence< uno::Any >& arguments ) th
 			pView = (NSView *)nPtr;
 		arguments.getConstArray()[1] >>= nPtr;
 		if ( nPtr )
-			mpWindow = (Window *)nPtr;
+			mpWindow = (vcl::Window *)nPtr;
 	}
 
 	if ( !pView || !mpWindow )
@@ -1093,21 +1090,21 @@ void JavaDragSource::initialize( const uno::Sequence< uno::Any >& arguments ) th
 
 // ------------------------------------------------------------------------
 
-sal_Bool JavaDragSource::isDragImageSupported() throw( uno::RuntimeException )
+sal_Bool JavaDragSource::isDragImageSupported() throw( uno::RuntimeException, std::exception )
 {
 	return sal_False;
 }
 
 // ------------------------------------------------------------------------
 
-sal_Int32 JavaDragSource::getDefaultCursor( sal_Int8 /* dragAction */ ) throw( lang::IllegalArgumentException, uno::RuntimeException )
+sal_Int32 JavaDragSource::getDefaultCursor( sal_Int8 /* dragAction */ ) throw( lang::IllegalArgumentException, uno::RuntimeException, std::exception )
 {
 	return 0;
 }
 
 // ------------------------------------------------------------------------
 
-void JavaDragSource::startDrag( const datatransfer::dnd::DragGestureEvent& /* trigger */, sal_Int8 sourceActions, sal_Int32 /* cursor */, sal_Int32 /* image */, const uno::Reference< datatransfer::XTransferable >& transferable, const uno::Reference< datatransfer::dnd::XDragSourceListener >& listener ) throw( uno::RuntimeException )
+void JavaDragSource::startDrag( const datatransfer::dnd::DragGestureEvent& /* trigger */, sal_Int8 sourceActions, sal_Int32 /* cursor */, sal_Int32 /* image */, const uno::Reference< datatransfer::XTransferable >& transferable, const uno::Reference< datatransfer::dnd::XDragSourceListener >& listener ) throw( uno::RuntimeException, std::exception )
 {
 	datatransfer::dnd::DragSourceDropEvent aDragEvent;
 	aDragEvent.Source = uno::Reference< uno::XInterface >( static_cast< OWeakObject* >( this ) );
@@ -1166,14 +1163,14 @@ void JavaDragSource::startDrag( const datatransfer::dnd::DragGestureEvent& /* tr
 
 // ------------------------------------------------------------------------
 
-OUString JavaDragSource::getImplementationName() throw( uno::RuntimeException )
+OUString JavaDragSource::getImplementationName() throw( uno::RuntimeException, std::exception )
 {
-	return OUString::createFromAscii( "com.sun.star.comp.datatransfer.dnd.OleDragSource_V1" );
+	return "com.sun.star.comp.datatransfer.dnd.OleDragSource_V1";
 }
 
 // ------------------------------------------------------------------------
 
-sal_Bool JavaDragSource::supportsService( const OUString& serviceName ) throw( uno::RuntimeException )
+sal_Bool JavaDragSource::supportsService( const OUString& serviceName ) throw( uno::RuntimeException, std::exception )
 {
 	uno::Sequence < OUString > aSupportedServicesNames = JavaDragSource_getSupportedServiceNames();
 
@@ -1186,7 +1183,7 @@ sal_Bool JavaDragSource::supportsService( const OUString& serviceName ) throw( u
 
 // ------------------------------------------------------------------------
 
-uno::Sequence< OUString > JavaDragSource::getSupportedServiceNames() throw( uno::RuntimeException )
+uno::Sequence< OUString > JavaDragSource::getSupportedServiceNames() throw( uno::RuntimeException, std::exception )
 {
 	return JavaDragSource_getSupportedServiceNames();
 }
@@ -1258,7 +1255,7 @@ void JavaDropTarget::disposing()
 
 // --------------------------------------------------------------------------
 
-void JavaDropTarget::initialize( const uno::Sequence< uno::Any >& arguments ) throw( uno::RuntimeException )
+void JavaDropTarget::initialize( const uno::Sequence< uno::Any >& arguments ) throw( uno::RuntimeException, std::exception )
 {
 	NSView *pView = nil;
 
@@ -1270,7 +1267,7 @@ void JavaDropTarget::initialize( const uno::Sequence< uno::Any >& arguments ) th
 			pView = (NSView *)nPtr;
 		arguments.getConstArray()[1] >>= nPtr;
 		if ( nPtr )
-			mpWindow = (Window *)nPtr;
+			mpWindow = (vcl::Window *)nPtr;
 	}
 
 	if ( !pView || !mpWindow )
@@ -1296,56 +1293,56 @@ void JavaDropTarget::initialize( const uno::Sequence< uno::Any >& arguments ) th
 
 // --------------------------------------------------------------------------
 
-void JavaDropTarget::addDropTargetListener( const uno::Reference< datatransfer::dnd::XDropTargetListener >& xListener ) throw( uno::RuntimeException )
+void JavaDropTarget::addDropTargetListener( const uno::Reference< datatransfer::dnd::XDropTargetListener >& xListener ) throw( uno::RuntimeException, std::exception )
 {
 	maListeners.push_back( xListener );
 }
 
 // --------------------------------------------------------------------------
 
-void JavaDropTarget::removeDropTargetListener( const uno::Reference< datatransfer::dnd::XDropTargetListener >& xListener ) throw( uno::RuntimeException )
+void JavaDropTarget::removeDropTargetListener( const uno::Reference< datatransfer::dnd::XDropTargetListener >& xListener ) throw( uno::RuntimeException, std::exception )
 {
 	maListeners.remove( xListener );
 }
 
 // --------------------------------------------------------------------------
 
-sal_Bool JavaDropTarget::isActive() throw( uno::RuntimeException )
+sal_Bool JavaDropTarget::isActive() throw( uno::RuntimeException, std::exception )
 {
 	return mbActive;
 }
 
 // --------------------------------------------------------------------------
 
-void JavaDropTarget::setActive( sal_Bool active ) throw( uno::RuntimeException )
+void JavaDropTarget::setActive( sal_Bool active ) throw( uno::RuntimeException, std::exception, std::exception )
 {
 	mbActive = active;
 }
 
 // --------------------------------------------------------------------------
 
-sal_Int8 JavaDropTarget::getDefaultActions() throw( uno::RuntimeException )
+sal_Int8 JavaDropTarget::getDefaultActions() throw( uno::RuntimeException, std::exception )
 {
 	return mnDefaultActions;
 }
 
 // --------------------------------------------------------------------------
 
-void JavaDropTarget::setDefaultActions( sal_Int8 actions ) throw( uno::RuntimeException )
+void JavaDropTarget::setDefaultActions( sal_Int8 actions ) throw( uno::RuntimeException, std::exception )
 {
 	mnDefaultActions = actions;
 }
 
 // --------------------------------------------------------------------------
 
-OUString JavaDropTarget::getImplementationName() throw( uno::RuntimeException )
+OUString JavaDropTarget::getImplementationName() throw( uno::RuntimeException, std::exception )
 {
-	return OUString::createFromAscii( "com.sun.star.comp.datatransfer.dnd.OleDropTarget_V1" );
+	return "com.sun.star.comp.datatransfer.dnd.OleDropTarget_V1";
 }
 
 // ------------------------------------------------------------------------
 
-sal_Bool JavaDropTarget::supportsService( const OUString& ServiceName ) throw( uno::RuntimeException )
+sal_Bool JavaDropTarget::supportsService( const OUString& ServiceName ) throw( uno::RuntimeException, std::exception )
 {
 	uno::Sequence < OUString > aSupportedServicesNames = JavaDropTarget_getSupportedServiceNames();
 
@@ -1358,7 +1355,7 @@ sal_Bool JavaDropTarget::supportsService( const OUString& ServiceName ) throw( u
 
 // ------------------------------------------------------------------------
 
-uno::Sequence< OUString > JavaDropTarget::getSupportedServiceNames() throw( uno::RuntimeException )
+uno::Sequence< OUString > JavaDropTarget::getSupportedServiceNames() throw( uno::RuntimeException, std::exception )
 {
 	return JavaDropTarget_getSupportedServiceNames();
 }

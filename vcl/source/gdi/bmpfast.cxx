@@ -1,49 +1,36 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
-
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_vcl.hxx"
+ */
 
 #include <bmpfast.hxx>
-
-#ifndef NO_OPTIMIZED_BITMAP_ACCESS
-
 #include <tools/debug.hxx>
 #include <vcl/bmpacc.hxx>
 
 #define FAST_ARGB_BGRA
 
 #include <stdlib.h>
-static bool bDisableFastBitops = (getenv( "SAL_DISABLE_BITMAPS_OPTS" ) != NULL);
 
 typedef unsigned char PIXBYTE;
 
@@ -54,7 +41,6 @@ public:
     void    SetRawPtr( PIXBYTE* pRawPtr )               { mpPixel = pRawPtr; }
     PIXBYTE* GetRawPtr( void ) const                    { return mpPixel; }
     void    AddByteOffset( int nByteOffset )            { mpPixel += nByteOffset; }
-    bool    operator<( const BasePixelPtr& rCmp ) const { return (mpPixel < rCmp.mpPixel); }
 
 protected:
    PIXBYTE* mpPixel;
@@ -74,9 +60,7 @@ public:
     void    operator++(int);
 };
 
-// =======================================================================
 // template specializations for truecolor pixel formats
-
 template <>
 class TrueColorPixelPtr<BMP_FORMAT_24BIT_TC_RGB> : public BasePixelPtr
 {
@@ -247,8 +231,6 @@ public:
     }
 };
 
-// -----------------------------------------------------------------------
-
 template <>
 class TrueColorPixelPtr<BMP_FORMAT_8BIT_TC_MASK> : public BasePixelPtr
 {
@@ -266,66 +248,7 @@ class TrueColorPixelPtr<BMP_FORMAT_8BIT_PAL>
 : public TrueColorPixelPtr<BMP_FORMAT_8BIT_TC_MASK>
 {};
 
-#if 0
-template <>
-class TrueColorPixelPtr<BMP_FORMAT_24BIT_TC_MASK> : public BasePixelPtr
-{
-public:
-    void operator++()   { mpPixel += 3; }
-
-    unsigned GetAlpha() const
-    {
-        unsigned nAlpha = mpPixel[0];
-        nAlpha |= mpPixel[1] << 8U;
-        nAlpha |= mpPixel[2] << 16U;
-        return nAlpha;
-    }
-
-    void SetAlpha( unsigned nAlpha ) const
-    {
-        mpPixel[0] = nAlpha;
-        mpPixel[1] = nAlpha >> 8U;
-        mpPixel[2] = nAlpha >> 16U;
-    }
-};
-
-template <>
-class TrueColorPixelPtr<BMP_FORMAT_32BIT_TC_MASK> : public BasePixelPtr
-{
-public:
-    void operator++()   { mpPixel += 4; }
-
-    unsigned GetAlpha() const
-    {
-#ifdef OSL_BIGENDIAN
-        unsigned nAlpha = *reinterpret_cast<unsigned*>( mpPixel );
-#else
-        unsigned nAlpha = mpPixel[0];
-        nAlpha |= mpPixel[1] << 8U;
-        nAlpha |= mpPixel[2] << 16U;
-        nAlpha |= mpPixel[3] << 24U;
-#endif
-        return nAlpha;
-    }
-
-    void SetAlpha( unsigned nAlpha ) const
-    {
-#ifdef OSL_BIGENDIAN
-        *reinterpret_cast<unsigned*>( mpPixel ) = nAlpha;
-#else
-        mpPixel[0] = nAlpha;
-        mpPixel[1] = nAlpha >> 8U;
-        mpPixel[2] = nAlpha >> 16U;
-        mpPixel[3] = nAlpha >> 24U;
-#endif
-    }
-};
-
-#endif
-
-// =======================================================================
 // converting truecolor formats
-
 template <sal_uLong SRCFMT, sal_uLong DSTFMT>
 inline void ImplConvertPixel( const TrueColorPixelPtr<DSTFMT>& rDst,
     const TrueColorPixelPtr<SRCFMT>& rSrc )
@@ -333,8 +256,6 @@ inline void ImplConvertPixel( const TrueColorPixelPtr<DSTFMT>& rDst,
     rDst.SetColor( rSrc.GetRed(), rSrc.GetGreen(), rSrc.GetBlue() );
     rDst.SetAlpha( rSrc.GetAlpha() );
 }
-
-// -----------------------------------------------------------------------
 
 template <>
 inline void ImplConvertPixel<BMP_FORMAT_16BIT_TC_LSB_MASK, BMP_FORMAT_16BIT_TC_MSB_MASK> (
@@ -347,8 +268,6 @@ inline void ImplConvertPixel<BMP_FORMAT_16BIT_TC_LSB_MASK, BMP_FORMAT_16BIT_TC_M
     pDst[1] = pSrc[0];
     pDst[0] = pSrc[1];
 }
-
-// -----------------------------------------------------------------------
 
 template <sal_uLong SRCFMT, sal_uLong DSTFMT>
 inline void ImplConvertLine( const TrueColorPixelPtr<DSTFMT>& rDst,
@@ -364,21 +283,16 @@ inline void ImplConvertLine( const TrueColorPixelPtr<DSTFMT>& rDst,
     }
 }
 
-// =======================================================================
 // alpha blending truecolor pixels
-
-template <unsigned ALPHABITS, sal_uLong SRCFMT, sal_uLong DSTFMT>
+template <sal_uLong SRCFMT, sal_uLong DSTFMT>
 inline void ImplBlendPixels( const TrueColorPixelPtr<DSTFMT>& rDst,
     const TrueColorPixelPtr<SRCFMT>& rSrc, unsigned nAlphaVal )
 {
+    static const unsigned nAlphaShift = 8;
     if( !nAlphaVal )
         ImplConvertPixel( rDst, rSrc );
-    else if( nAlphaVal != ~(~0 << ALPHABITS) )
+    else if( nAlphaVal != ~(~0U << nAlphaShift) )
     {
-        static const unsigned nAlphaShift = (ALPHABITS > 8) ? 8 : ALPHABITS;
-        if( ALPHABITS > nAlphaShift )
-            nAlphaVal >>= ALPHABITS - nAlphaShift;
-
         int nR = rDst.GetRed();
         int nS = rSrc.GetRed();
         nR = nS + (((nR - nS) * nAlphaVal) >> nAlphaShift);
@@ -397,9 +311,7 @@ inline void ImplBlendPixels( const TrueColorPixelPtr<DSTFMT>& rDst,
     }
 }
 
-// -----------------------------------------------------------------------
-
-template <unsigned ALPHABITS, sal_uLong MASKFMT, sal_uLong SRCFMT, sal_uLong DSTFMT>
+template <sal_uLong MASKFMT, sal_uLong SRCFMT, sal_uLong DSTFMT>
 inline void ImplBlendLines( const TrueColorPixelPtr<DSTFMT>& rDst,
     const TrueColorPixelPtr<SRCFMT>& rSrc, const TrueColorPixelPtr<MASKFMT>& rMsk,
     int nPixelCount )
@@ -409,36 +321,12 @@ inline void ImplBlendLines( const TrueColorPixelPtr<DSTFMT>& rDst,
     TrueColorPixelPtr<SRCFMT> aSrc( rSrc );
     while( --nPixelCount >= 0 )
     {
-        ImplBlendPixels<ALPHABITS>( aDst, aSrc, aMsk.GetAlpha() );
+        ImplBlendPixels(aDst, aSrc, aMsk.GetAlpha());
         ++aDst;
         ++aSrc;
         ++aMsk;
     }
 }
-
-// -----------------------------------------------------------------------
-
-template <unsigned ALPHABITS, sal_uLong SRCFMT, sal_uLong DSTFMT>
-inline void ImplBlendLines( const TrueColorPixelPtr<DSTFMT>& rDst,
-    const TrueColorPixelPtr<SRCFMT>& rSrc, unsigned nAlphaVal,
-    int nPixelCount )
-{
-    if( nAlphaVal == ~(~0 << ALPHABITS) )
-        ImplConvertLine( rDst, rSrc, nPixelCount );
-    else if( nAlphaVal )
-    {
-        TrueColorPixelPtr<SRCFMT> aSrc( rSrc );
-        TrueColorPixelPtr<DSTFMT> aDst( rDst );
-        while( --nPixelCount >= 0 )
-        {
-            ImplBlendPixels<ALPHABITS>( aDst, aSrc, nAlphaVal );
-            ++aDst;
-            ++aSrc;
-        }
-    }
-}
-
-// =======================================================================
 
 static bool ImplCopyImage( BitmapBuffer& rDstBuffer, const BitmapBuffer& rSrcBuffer )
 {
@@ -473,8 +361,6 @@ static bool ImplCopyImage( BitmapBuffer& rDstBuffer, const BitmapBuffer& rSrcBuf
 
     return true;
 }
-
-// -----------------------------------------------------------------------
 
 template <sal_uLong DSTFMT,sal_uLong SRCFMT>
 bool ImplConvertToBitmap( TrueColorPixelPtr<SRCFMT>& rSrcLine,
@@ -514,8 +400,6 @@ bool ImplConvertToBitmap( TrueColorPixelPtr<SRCFMT>& rSrcLine,
 
     return true;
 }
-
-// -----------------------------------------------------------------------
 
 template <sal_uLong SRCFMT>
 inline bool ImplConvertFromBitmap( BitmapBuffer& rDst, const BitmapBuffer& rSrc )
@@ -561,32 +445,21 @@ inline bool ImplConvertFromBitmap( BitmapBuffer& rDst, const BitmapBuffer& rSrc 
         case BMP_FORMAT_32BIT_TC_RGBA:
             return ImplConvertToBitmap<BMP_FORMAT_32BIT_TC_RGBA>( aSrcType, rDst, rSrc );
     }
-    
-#ifdef DEBUG
+
     static int nNotAccelerated = 0;
-    if( rSrc.mnWidth * rSrc.mnHeight >= 4000 )
-        if( ++nNotAccelerated == 100 )
-		{
-			int foo = 0; (void)foo; // so no warning is created when building on pro with debug
-            DBG_WARNING2( "ImplConvertFromBitmap for not accelerated case (0x%04X->0x%04X)",
-                rSrc.mnFormat, rDst.mnFormat );
-		}
-#endif
+    SAL_WARN_IF( rSrc.mnWidth * rSrc.mnHeight >= 4000 && ++nNotAccelerated == 100,
+                 "vcl.gdi",
+                 "ImplConvertFromBitmap for not accelerated case (" << std::hex << rSrc.mnFormat << "->" << rDst.mnFormat << ")" );
 
     return false;
 }
 
-// =======================================================================
-
-// an universal stretching conversion is overkill in most common situations
+// A universal stretching conversion is overkill in most common situations
 // => performance benefits for speeding up the non-stretching cases
 bool ImplFastBitmapConversion( BitmapBuffer& rDst, const BitmapBuffer& rSrc,
     const SalTwoRect& rTR )
 {
-    if( bDisableFastBitops )
-        return false;
-
-    // horizontal mirroring not implemented yet
+    // TODO:horizontal mirroring not implemented yet
     if( rTR.mnDestWidth < 0 )
         return false;
     // vertical mirroring
@@ -688,29 +561,19 @@ bool ImplFastBitmapConversion( BitmapBuffer& rDst, const BitmapBuffer& rSrc,
             return ImplConvertFromBitmap<BMP_FORMAT_32BIT_TC_RGBA>( rDst, rSrc );
     }
 
-#ifdef DEBUG
     static int nNotAccelerated = 0;
-    if( rSrc.mnWidth * rSrc.mnHeight >= 4000 )
-	{
-        if( ++nNotAccelerated == 100 )
-		{
-			int foo = 0; (void)foo; // so no warning is created when building on pro with debug
-            DBG_WARNING2( "ImplFastBitmapConversion for not accelerated case (0x%04X->0x%04X)", rSrc.mnFormat, rDst.mnFormat );
-		}
-	}
-#endif
+    SAL_WARN_IF( rSrc.mnWidth * rSrc.mnHeight >= 4000 && ++nNotAccelerated == 100,
+                 "vcl.gdi",
+                 "ImplFastBitmapConversion for not accelerated case (" << std::hex << rSrc.mnFormat << "->" << rDst.mnFormat << ")" );
 
     return false;
 }
-
-// =======================================================================
 
 template <sal_uLong DSTFMT,sal_uLong SRCFMT> //,sal_uLong MSKFMT>
 bool ImplBlendToBitmap( TrueColorPixelPtr<SRCFMT>& rSrcLine,
     BitmapBuffer& rDstBuffer, const BitmapBuffer& rSrcBuffer,
     const BitmapBuffer& rMskBuffer )
 {
-    //DBG_ASSERT( rMskBuffer.mnFormat == MSKFMT, "FastBmp BlendImage: wrong MSKFMT" );
     DBG_ASSERT( rMskBuffer.mnFormat == BMP_FORMAT_8BIT_PAL, "FastBmp BlendImage: unusual MSKFMT" );
 
     const int nSrcLinestep = rSrcBuffer.mnScanlineSize;
@@ -734,13 +597,14 @@ bool ImplBlendToBitmap( TrueColorPixelPtr<SRCFMT>& rSrcLine,
     // source and destination don't match: upside down
     if( (rSrcBuffer.mnFormat ^ rDstBuffer.mnFormat) & BMP_FORMAT_TOP_DOWN )
     {
-        aDstLine.AddByteOffset( (rSrcBuffer.mnHeight - 1) * nDstLinestep );
+        aDstLine.AddByteOffset( (rDstBuffer.mnHeight - 1) * nDstLinestep );
         nDstLinestep = -nDstLinestep;
     }
 
-    for( int y = rSrcBuffer.mnHeight; --y >= 0; )
+    assert(rDstBuffer.mnHeight <= rSrcBuffer.mnHeight && "not sure about that?");
+    for (int y = rDstBuffer.mnHeight; --y >= 0;)
     {
-        ImplBlendLines<8>( aDstLine, rSrcLine, aMskLine, rDstBuffer.mnWidth );
+        ImplBlendLines(aDstLine, rSrcLine, aMskLine, rDstBuffer.mnWidth);
         aDstLine.AddByteOffset( nDstLinestep );
         rSrcLine.AddByteOffset( nSrcLinestep );
         aMskLine.AddByteOffset( nMskLinestep );
@@ -779,8 +643,6 @@ inline bool ImplBlendToBitmap<BMP_FORMAT_32BIT_TC_BGRA,BMP_FORMAT_32BIT_TC_BGRA>
     TrueColorPixelPtr<BMP_FORMAT_32BIT_TC_RGBA> aSrcType; aSrcType.SetRawPtr( rSrcBuffer.mpBits );
     return ImplBlendToBitmap<BMP_FORMAT_32BIT_TC_RGBA>( aSrcType, rDstBuffer, rSrcBuffer, rMskBuffer );
  }
-
-// -----------------------------------------------------------------------
 
 template <sal_uLong SRCFMT>
 bool ImplBlendFromBitmap( BitmapBuffer& rDst, const BitmapBuffer& rSrc, const BitmapBuffer& rMsk )
@@ -827,29 +689,17 @@ bool ImplBlendFromBitmap( BitmapBuffer& rDst, const BitmapBuffer& rSrc, const Bi
             return ImplBlendToBitmap<BMP_FORMAT_32BIT_TC_RGBA>( aSrcType, rDst, rSrc, rMsk );
     }
 
-#ifdef DEBUG
     static int nNotAccelerated = 0;
-    if( rSrc.mnWidth * rSrc.mnHeight >= 4000 )
-        if( ++nNotAccelerated == 100 )
-		{
-			int foo = 0; (void)foo; // so no warning is created when building on pro with debug
-            DBG_WARNING3( "ImplBlendFromBitmap for not accelerated case (0x%04X*0x%04X->0x%04X)",
-                rSrc.mnFormat, rMsk.mnFormat, rDst.mnFormat );
-		}
-#endif
-
+    SAL_WARN_IF( rSrc.mnWidth * rSrc.mnHeight >= 4000 && ++nNotAccelerated == 100,
+                 "vcl.gdi",
+                 "ImplBlendFromBitmap for not accelerated case (" << std::hex << rSrc.mnFormat << "*" << rMsk.mnFormat << "->" << rDst.mnFormat );
     return false;
 }
-
-// -----------------------------------------------------------------------
 
 bool ImplFastBitmapBlending( BitmapWriteAccess& rDstWA,
     const BitmapReadAccess& rSrcRA, const BitmapReadAccess& rMskRA,
     const SalTwoRect& rTR )
 {
-    if( bDisableFastBitops )
-        return false;
-
     // accelerated blending of paletted bitmaps not implemented yet
     if( rSrcRA.HasPalette() )
         return false;
@@ -955,25 +805,16 @@ bool ImplFastBitmapBlending( BitmapWriteAccess& rDstWA,
             return ImplBlendFromBitmap<BMP_FORMAT_32BIT_TC_RGBA>( rDst, rSrc, rMsk );
     }
 
-#ifdef DEBUG
     static int nNotAccelerated = 0;
-    if( rSrc.mnWidth * rSrc.mnHeight >= 4000 )
-        if( ++nNotAccelerated == 100 )
-		{
-			int foo = 0; (void)foo; // so no warning is created when building on pro with debug
-            DBG_WARNING3( "ImplFastBlend for not accelerated case (0x%04X*0x%04X->0x%04X)",
-                rSrc.mnFormat, rMsk.mnFormat, rDst.mnFormat );
-		}
-#endif
+    SAL_WARN_IF( rSrc.mnWidth * rSrc.mnHeight >= 4000 && ++nNotAccelerated == 100,
+                 "vcl.gdi",
+                 "ImplFastBlend for not accelerated case (" << std::hex << rSrc.mnFormat << "*" << rMsk.mnFormat << "->" << rDst.mnFormat << ")" );
 
     return false;
 }
 
 bool ImplFastEraseBitmap( BitmapBuffer& rDst, const BitmapColor& rColor )
 {
-    if( bDisableFastBitops )
-        return false;
-
     const sal_uLong nDstFormat = rDst.mnFormat & ~BMP_FORMAT_TOP_DOWN;
 
     // erasing a bitmap is often just a byte-wise memory fill
@@ -1016,7 +857,7 @@ bool ImplFastEraseBitmap( BitmapBuffer& rDst, const BitmapColor& rColor )
     if( bByteFill )
     {
         long nByteCount = rDst.mnHeight * rDst.mnScanlineSize;
-        rtl_fillMemory( rDst.mpBits, nByteCount, nFillByte );
+        memset( rDst.mpBits, nFillByte, nByteCount );
         return true;
     }
 
@@ -1045,25 +886,4 @@ bool ImplFastEraseBitmap( BitmapBuffer& rDst, const BitmapColor& rColor )
     return false;
 }
 
-// =======================================================================
-
-#else // NO_OPTIMIZED_BITMAP_ACCESS
-
-bool ImplFastBitmapConversion( BitmapBuffer&, const BitmapBuffer& )
-{
-    return false;
-}
-
-bool ImplFastBitmapBlending( BitmapWriteAccess&,
-    const BitmapReadAccess&, const BitmapReadAccess&,
-    const Size&, const Point& )
-{
-    return false;
-}
-
-bool ImplFastEraseBitmap( BitmapBuffer&, const BitmapColor& )
-{
-    return false;
-}
-
-#endif
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

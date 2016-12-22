@@ -38,10 +38,9 @@
 
 #include <osl/conditn.hxx>
 #include <osl/interlck.h>
-#include <vcl/sv.h>
+#include <osl/mutex.hxx>
+#include <osl/thread.hxx>
 #include <vcl/svapp.hxx>
-#include <vos/mutex.hxx>
-#include <vos/thread.hxx>
 
 #include "salinst.hxx"
 #include "java/salframe.h"
@@ -63,21 +62,22 @@
 // - SalYieldMutex -
 // -----------------
 
-class SalYieldMutex : public ::vos::OMutex
+class SalYieldMutex : public comphelper::SolarMutex
 {
+	::osl::Mutex			maMutex;
 	sal_uLong				mnCount;
 	::osl::Condition		maMainThreadCondition;
 	::osl::Condition		maReacquireThreadCondition;
-	::vos::OThread::TThreadIdentifier	mnThreadId;
-	::vos::OThread::TThreadIdentifier	mnReacquireThreadId;
+	oslThreadIdentifier		mnThreadId;
+	oslThreadIdentifier		mnReacquireThreadId;
 
 public:
 							SalYieldMutex();
-	virtual void			acquire();
-	virtual void			release();
-	virtual sal_Bool		tryToAcquire();
-	::vos::OThread::TThreadIdentifier	GetThreadId() { return mnThreadId; }
-	::vos::OThread::TThreadIdentifier	GetReacquireThreadId() { return mnReacquireThreadId; }
+	virtual void			acquire() SAL_OVERRIDE;
+	virtual void			release() SAL_OVERRIDE;
+	virtual bool			tryToAcquire() SAL_OVERRIDE;
+	oslThreadIdentifier		GetThreadId() { return mnThreadId; }
+	oslThreadIdentifier		GetReacquireThreadId() { return mnReacquireThreadId; }
 	sal_uLong				ReleaseAcquireCount();
 	void					WaitForReacquireThread();
 };
@@ -94,42 +94,41 @@ public:
 							JavaSalInstance();
 	virtual					~JavaSalInstance();
 
-	virtual SalFrame*		CreateChildFrame( SystemParentData* pParent, sal_uLong nStyle );
-	virtual SalFrame*		CreateFrame( SalFrame* pParent, sal_uLong nStyle );
-	virtual void			DestroyFrame( SalFrame* pFrame );
-	virtual SalObject*		CreateObject( SalFrame* pParent, SystemWindowData* pWindowData, sal_Bool bShow = sal_True );
-	virtual void			DestroyObject( SalObject* pObject );
-	virtual SalVirtualDevice*	CreateVirtualDevice( SalGraphics* pGraphics, long nDX, long nDY, sal_uInt16 nBitCount, const SystemGraphicsData *pData = NULL );
-	virtual void			DestroyVirtualDevice( SalVirtualDevice* pDevice );
-	virtual SalInfoPrinter* CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo, ImplJobSetup* pSetupData );
-	virtual void			DestroyInfoPrinter( SalInfoPrinter* pPrinter );
-	virtual SalPrinter*		CreatePrinter( SalInfoPrinter* pInfoPrinter );
-	virtual void			DestroyPrinter( SalPrinter* pPrinter );
+	virtual SalFrame*		CreateChildFrame( SystemParentData* pParent, sal_uLong nStyle ) SAL_OVERRIDE;
+	virtual SalFrame*		CreateFrame( SalFrame* pParent, sal_uLong nStyle ) SAL_OVERRIDE;
+	virtual void			DestroyFrame( SalFrame* pFrame ) SAL_OVERRIDE;
+	virtual SalObject*		CreateObject( SalFrame* pParent, SystemWindowData* pWindowData, bool bShow = true ) SAL_OVERRIDE;
+	virtual void			DestroyObject( SalObject* pObject ) SAL_OVERRIDE;
+	virtual SalVirtualDevice*	CreateVirtualDevice( SalGraphics* pGraphics, long& rDX, long& rDY, sal_uInt16 nBitCount, const SystemGraphicsData *pData = NULL ) SAL_OVERRIDE;
+	virtual SalInfoPrinter* CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo, ImplJobSetup* pSetupData ) SAL_OVERRIDE;
+	virtual void			DestroyInfoPrinter( SalInfoPrinter* pPrinter ) SAL_OVERRIDE;
+	virtual SalPrinter*		CreatePrinter( SalInfoPrinter* pInfoPrinter ) SAL_OVERRIDE;
+	virtual void			DestroyPrinter( SalPrinter* pPrinter ) SAL_OVERRIDE;
 
-	virtual void			GetPrinterQueueInfo( ImplPrnQueueList* pList );
-	virtual void			GetPrinterQueueState( SalPrinterQueueInfo* pInfo );
-	virtual void			DeletePrinterQueueInfo( SalPrinterQueueInfo* pInfo );
-	virtual String			GetDefaultPrinter();
-	virtual SalTimer*		CreateSalTimer();
-	virtual SalI18NImeStatus*	CreateI18NImeStatus();
-	virtual SalSystem*		CreateSalSystem();
-	virtual SalBitmap*		CreateSalBitmap();
-	virtual vos::IMutex*	GetYieldMutex();
-	virtual sal_uLong		ReleaseYieldMutex();
-	virtual void			AcquireYieldMutex( sal_uLong nCount );
-	virtual bool			CheckYieldMutex();
-	virtual void			Yield( bool bWait, bool bHandleAllCurrentEvents );
-	virtual bool			AnyInput( sal_uInt16 nType );
-	virtual SalMenu*		CreateMenu( sal_Bool bMenuBar, Menu* pVCLMenu );
-	virtual void			DestroyMenu( SalMenu* pMenu);
-	virtual SalMenuItem*	CreateMenuItem( const SalItemParams* pItemData );
-	virtual void			DestroyMenuItem( SalMenuItem* pItem );
-	virtual SalSession*		CreateSalSession();
-	virtual void*			GetConnectionIdentifier( ConnectionIdentifierType& rReturnedType, int& rReturnedBytes );
-    virtual com::sun::star::uno::Reference< com::sun::star::uno::XInterface >	CreateClipboard( const com::sun::star::uno::Sequence< com::sun::star::uno::Any >& rArguments );
-    virtual com::sun::star::uno::Reference< com::sun::star::uno::XInterface >	CreateDragSource();
-    virtual com::sun::star::uno::Reference< com::sun::star::uno::XInterface >	CreateDropTarget();
-	virtual void			AddToRecentDocumentList( const rtl::OUString& rFileUrl, const rtl::OUString& rMimeType );
+	virtual void			GetPrinterQueueInfo( ImplPrnQueueList* pList ) SAL_OVERRIDE;
+	virtual void			GetPrinterQueueState( SalPrinterQueueInfo* pInfo ) SAL_OVERRIDE;
+	virtual void			DeletePrinterQueueInfo( SalPrinterQueueInfo* pInfo ) SAL_OVERRIDE;
+	virtual OUString		GetDefaultPrinter() SAL_OVERRIDE;
+	virtual SalTimer*		CreateSalTimer() SAL_OVERRIDE;
+	virtual SalI18NImeStatus*	CreateI18NImeStatus() SAL_OVERRIDE;
+	virtual SalSystem*		CreateSalSystem() SAL_OVERRIDE;
+	virtual SalBitmap*		CreateSalBitmap() SAL_OVERRIDE;
+	virtual comphelper::SolarMutex*	GetYieldMutex() SAL_OVERRIDE;
+	virtual sal_uLong		ReleaseYieldMutex() SAL_OVERRIDE;
+	virtual void			AcquireYieldMutex( sal_uLong nCount ) SAL_OVERRIDE;
+	virtual bool			CheckYieldMutex() SAL_OVERRIDE;
+	virtual void			Yield( bool bWait, bool bHandleAllCurrentEvents ) SAL_OVERRIDE;
+	virtual bool			AnyInput( sal_uInt16 nType ) SAL_OVERRIDE;
+	virtual SalMenu*		CreateMenu( bool bMenuBar, Menu* pVCLMenu ) SAL_OVERRIDE;
+	virtual void			DestroyMenu( SalMenu* pMenu ) SAL_OVERRIDE;
+	virtual SalMenuItem*	CreateMenuItem( const SalItemParams* pItemData ) SAL_OVERRIDE;
+	virtual void			DestroyMenuItem( SalMenuItem* pItem ) SAL_OVERRIDE;
+	virtual SalSession*		CreateSalSession() SAL_OVERRIDE;
+	virtual void*			GetConnectionIdentifier( ConnectionIdentifierType& rReturnedType, int& rReturnedBytes ) SAL_OVERRIDE;
+    virtual css::uno::Reference< css::uno::XInterface >	CreateClipboard( const css::uno::Sequence< css::uno::Any >& rArguments ) SAL_OVERRIDE;
+    virtual css::uno::Reference< css::uno::XInterface >	CreateDragSource() SAL_OVERRIDE;
+    virtual css::uno::Reference< css::uno::XInterface >	CreateDropTarget() SAL_OVERRIDE;
+	virtual void			AddToRecentDocumentList( const OUString& rFileUrl, const OUString& rMimeType, const OUString& rDocumentService ) SAL_OVERRIDE;
 };
 
 // ----------------
@@ -140,7 +139,7 @@ class JavaSalEvent
 {
 	sal_uInt16				mnID;
 	JavaSalFrame*			mpFrame;
-	::rtl::OUString			maPath;
+	OUString				maPath;
 	bool					mbNative;
 	sal_Bool				mbShutdownCancelled;
 	::std::list< JavaSalEvent* >	maOriginalKeyEvents;
@@ -150,7 +149,7 @@ class JavaSalEvent
 	mutable oslInterlockedCount	mnRefCount;
 
 public:
-							JavaSalEvent( sal_uInt16 nID, JavaSalFrame *pFrame, void *pData, const ::rtl::OString& rPath = ::rtl::OString(), sal_uLong nCommittedCharacters = 0, sal_uLong nCursorPosition = 0 );
+							JavaSalEvent( sal_uInt16 nID, JavaSalFrame *pFrame, void *pData, const OString& rPath = OString(), sal_uLong nCommittedCharacters = 0, sal_uLong nCursorPosition = 0 );
 
 protected:
 	virtual					~JavaSalEvent();
@@ -170,10 +169,10 @@ public:
 	sal_uInt16				getID();
 	sal_uInt16				getModifiers();
 	JavaSalEvent*			getNextOriginalKeyEvent();
-	::rtl::OUString			getPath();
+	OUString				getPath();
 	sal_uInt16				getRepeatCount();
-	XubString				getText();
-	const sal_uInt16*			getTextAttributes();
+	OUString				getText();
+	const sal_uInt16*		getTextAttributes();
 	const Rectangle			getUpdateRect();
 	sal_uLong				getWhen();
 	long					getX();

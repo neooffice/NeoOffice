@@ -38,8 +38,6 @@
 #include "java/salframe.h"
 #include "java/salsys.h"
 
-using namespace rtl;
-
 // =======================================================================
 
 JavaSalSystem::JavaSalSystem()
@@ -61,14 +59,7 @@ unsigned int JavaSalSystem::GetDisplayScreenCount()
 
 // -----------------------------------------------------------------------
 
-bool JavaSalSystem::IsMultiDisplay()
-{
-	return true;
-}
-
-// -----------------------------------------------------------------------
-
-unsigned int JavaSalSystem::GetDefaultDisplayNumber()
+unsigned int JavaSalSystem::GetDisplayBuiltInScreen()
 {
 	return JavaSalFrame::GetDefaultScreenNumber();
 }
@@ -82,21 +73,14 @@ Rectangle JavaSalSystem::GetDisplayScreenPosSizePixel( unsigned int nScreen )
 
 // -----------------------------------------------------------------------
 
-Rectangle JavaSalSystem::GetDisplayWorkAreaPosSizePixel( unsigned int nScreen )
+OUString JavaSalSystem::GetDisplayScreenName( unsigned int nScreen )
 {
-	return JavaSalFrame::GetScreenBounds( nScreen, sal_True );
+	return OUString::number( (sal_Int32)nScreen );
 }
 
 // -----------------------------------------------------------------------
 
-OUString JavaSalSystem::GetScreenName( unsigned int nScreen )
-{
-	return OUString::valueOf( (sal_Int32)nScreen );
-}
-
-// -----------------------------------------------------------------------
-
-int JavaSalSystem::ShowNativeMessageBox( const String& /* rTitle */, const String& /* rMessage */, int /* nButtonCombination */, int /* nDefaultButton */ )
+int JavaSalSystem::ShowNativeMessageBox( const OUString& /* rTitle */, const OUString& /* rMessage */, int /* nButtonCombination */, int /* nDefaultButton */, bool /* bUseResources */ )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalSystem::ShowNativeMessageBox not implemented\n" );

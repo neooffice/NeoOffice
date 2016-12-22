@@ -39,7 +39,6 @@
 #include <tools/rcid.h>
 #include <vcl/print.hxx>
 #include <vcl/svapp.hxx>
-#include <vos/mutex.hxx>
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
@@ -47,24 +46,22 @@
 
 #include "jobset.h"
 #include "salptype.hxx"
-#include "aqua/aquaprintview.h"
 #include "java/salframe.h"
 #include "java/salgdi.h"
 #include "java/salinst.h"
 #include "java/salprn.h"
 #include "java/salvd.h"
+#include "osx/printview.h"
 
 #include "../app/salinst_cocoa.h"
 #include "../../../../sfx2/source/doc/doc.hrc"
 
-static rtl::OUString aPageScalingFactorKey( RTL_CONSTASCII_USTRINGPARAM( "PAGE_SCALING_FACTOR" ) );
+static OUString aPageScalingFactorKey( "PAGE_SCALING_FACTOR" );
 static ResMgr *pSfxResMgr = NULL;
 
 using namespace com::sun::star;
 using namespace osl;
-using namespace rtl;
 using namespace vcl;
-using namespace vos;
 
 inline float Impl100thMMToPixel( long n ) { return (float)n * 72 / 2540; }
 
@@ -74,22 +71,21 @@ inline float ImplPrinterToPixel( long n ) { return (float)n * 72 / MIN_PRINTER_R
 
 inline long ImplPixelToPrinter( float n ) { return (long)( n * MIN_PRINTER_RESOLUTION / 72 ); }
 
-static XubString GetSfxResString( int nId )
+static OUString GetSfxResString( int nId )
 {
 	if ( !pSfxResMgr )
 	{
-		::com::sun::star::lang::Locale aLocale = Application::GetSettings().GetUILocale();
-        pSfxResMgr = ResMgr::SearchCreateResMgr( "sfx", aLocale );
+        pSfxResMgr = ResMgr::CreateResMgr( "sfx" );
 		if ( !pSfxResMgr )
-			return OUString();
+			return "";
 	}
 
 	ResId aResId( nId, *pSfxResMgr );
 	aResId.SetRT( RSC_STRING );
 	if ( !pSfxResMgr->IsAvailable( aResId ) )
-		return OUString();
+		return "";
 
-	return XubString( ResId( nId, *pSfxResMgr ) );
+	return OUString( ResId( nId, *pSfxResMgr ) );
 }
 
 static Paper ImplPrintInfoGetPaperType( NSPrintInfo *pInfo )
@@ -208,19 +204,19 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	{
 		rPageWidth = aSize.Height();
 		rPageHeight = aSize.Width();
-		rPageOffX = aRect.nTop;
-		rPageOffY = aRect.nLeft;
-		rOutWidth = aRect.nBottom - aRect.nTop + 1;
-		rOutHeight = aRect.nRight - aRect.nLeft + 1;
+		rPageOffX = aRect.Top();
+		rPageOffY = aRect.Left();
+		rOutWidth = aRect.GetHeight();
+		rOutHeight = aRect.GetWidth();
 	}
 	else
 	{
 		rPageWidth = aSize.Width();
 		rPageHeight = aSize.Height();
-		rPageOffX = aRect.nLeft;
-		rPageOffY = aRect.nTop;
-		rOutWidth = aRect.nRight - aRect.nLeft + 1;
-		rOutHeight = aRect.nBottom - aRect.nTop + 1;
+		rPageOffX = aRect.Left();
+		rPageOffY = aRect.Top();
+		rOutWidth = aRect.GetWidth();
+		rOutHeight = aRect.GetHeight();
 	}
 
 	[pPool release];
@@ -1114,7 +1110,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		mbMonitorVisible = mpPrinterController->isShowDialogs();
 		if ( mbMonitorVisible )
 		{
-			beans::PropertyValue* pMonitorVisible = mpPrinterController->getValue( OUString( RTL_CONSTASCII_USTRINGPARAM( "MonitorVisible" ) ) );
+			beans::PropertyValue* pMonitorVisible = mpPrinterController->getValue( "MonitorVisible" );
 			if ( pMonitorVisible )
 				pMonitorVisible->Value >>= mbMonitorVisible;
 		}
@@ -1330,7 +1326,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		mpPrintOperation = pPrintOperation;
 		[mpPrintOperation retain];
 
-		IMutex &rSolarMutex = Application::GetSolarMutex();
+		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
@@ -1505,7 +1501,7 @@ JavaSalInfoPrinter::JavaSalInfoPrinter( ImplJobSetup* pSetupData ) :
 	mpVirDev->SetSize( 1, 1 );
 
 	// Set graphics resolution to match printer resolution
-	JavaSalGraphics *pGraphics = (JavaSalGraphics *)GetGraphics();
+	JavaSalGraphics *pGraphics = (JavaSalGraphics *)AcquireGraphics();
 	if ( pGraphics )
 	{
 		pGraphics->mnDPIX = MIN_PRINTER_RESOLUTION;
@@ -1533,9 +1529,9 @@ JavaSalInfoPrinter::~JavaSalInfoPrinter()
 
 // -----------------------------------------------------------------------
 
-SalGraphics* JavaSalInfoPrinter::GetGraphics()
+SalGraphics* JavaSalInfoPrinter::AcquireGraphics()
 {
-	return mpVirDev->GetGraphics();
+	return mpVirDev->AcquireGraphics();
 }
 
 // -----------------------------------------------------------------------
@@ -1547,9 +1543,9 @@ void JavaSalInfoPrinter::ReleaseGraphics( SalGraphics* pGraphics )
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalInfoPrinter::Setup( SalFrame* /* pFrame */, ImplJobSetup* pSetupData )
+bool JavaSalInfoPrinter::Setup( SalFrame* /* pFrame */, ImplJobSetup* pSetupData )
 {
-	sal_Bool bRet = sal_False;
+	bool bRet = false;
 
 	// Display a native page setup dialog
 	if ( !mpInfo )
@@ -1575,7 +1571,7 @@ sal_Bool JavaSalInfoPrinter::Setup( SalFrame* /* pFrame */, ImplJobSetup* pSetup
 			if ( Application::IsShutDown() )
 				break;
 
-			IMutex &rSolarMutex = Application::GetSolarMutex();
+			comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 			rSolarMutex.acquire();
 			if ( !Application::IsShutDown() )
 				Application::Yield();
@@ -1593,7 +1589,7 @@ sal_Bool JavaSalInfoPrinter::Setup( SalFrame* /* pFrame */, ImplJobSetup* pSetup
 				[mpInfo retain];
 			}
 
-			bRet = sal_True;
+			bRet = true;
 		}
 
 		[pJavaSalInfoPrinterShowPageLayoutDialog performSelectorOnMainThread:@selector(destroy:) withObject:pJavaSalInfoPrinterShowPageLayoutDialog waitUntilDone:YES modes:pModes];
@@ -1618,7 +1614,7 @@ sal_Bool JavaSalInfoPrinter::Setup( SalFrame* /* pFrame */, ImplJobSetup* pSetup
 			if ( pValue )
 				fScaleFactor = [pValue floatValue];
 		}
-		pSetupData->maValueMap[ aPageScalingFactorKey ] = OUString::valueOf( fScaleFactor );
+		pSetupData->maValueMap[ aPageScalingFactorKey ] = OUString::number( fScaleFactor );
 	}
 
 	[pPool release];
@@ -1628,7 +1624,7 @@ sal_Bool JavaSalInfoPrinter::Setup( SalFrame* /* pFrame */, ImplJobSetup* pSetup
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
+bool JavaSalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 {
 	// Clear driver data
 	if ( pSetupData->mpDriverData )
@@ -1639,14 +1635,12 @@ sal_Bool JavaSalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 	}
 
 	// Set but don't update values
-	SetData( SAL_JOBSET_ALL, pSetupData );
-
-	return sal_True;
+	return SetData( SAL_JOBSET_ALL, pSetupData );
 }
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalInfoPrinter::SetData( sal_uLong nFlags, ImplJobSetup* pSetupData )
+bool JavaSalInfoPrinter::SetData( sal_uLong nFlags, ImplJobSetup* pSetupData )
 {
 	// Set or update values
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -1709,7 +1703,7 @@ sal_Bool JavaSalInfoPrinter::SetData( sal_uLong nFlags, ImplJobSetup* pSetupData
 
 	[pPool release];
 
-	return sal_True;
+	return true;
 }
 
 // -----------------------------------------------------------------------
@@ -1722,10 +1716,10 @@ sal_uLong JavaSalInfoPrinter::GetPaperBinCount( const ImplJobSetup* /* pSetupDat
 
 // -----------------------------------------------------------------------
 
-XubString JavaSalInfoPrinter::GetPaperBinName( const ImplJobSetup* /* pSetupData */, sal_uLong /* nPaperBin */ )
+OUString JavaSalInfoPrinter::GetPaperBinName( const ImplJobSetup* /* pSetupData */, sal_uLong /* nPaperBin */ )
 {
 	// Return a dummy value
-	return XubString();
+	return "";
 }
 
 // -----------------------------------------------------------------------
@@ -1838,16 +1832,16 @@ JavaSalPrinter::~JavaSalPrinter()
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& /* rJobName */, const String& /* rAppName */, sal_uLong /* nCopies */, bool /* bCollate */, bool /* bDirect */, ImplJobSetup* /* pSetupData */ )
+bool JavaSalPrinter::StartJob( const OUString* /* pFileName */, const OUString& /* rJobName */, const OUString& /* rAppName */, sal_uLong /* nCopies */, bool /* bCollate */, bool /* bDirect */, ImplJobSetup* /* pSetupData */ )
 {
-	return sal_False;
+	return false;
 }
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& rJobName, const String& /* rAppName */, ImplJobSetup* pSetupData, vcl::PrinterController& rController )
+bool JavaSalPrinter::StartJob( const OUString* /* pFileName */, const OUString& rJobName, const OUString& /* rAppName */, ImplJobSetup* pSetupData, vcl::PrinterController& rController )
 {
-	sal_Bool bRet = sal_False;
+	bool bRet = false;
 	BOOL bAborted = NO;
 
 	if ( mpInfo && !mpPrintJob )
@@ -1856,14 +1850,14 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 
 		// Set paper type
 		float fScaleFactor = 1.0f;
-		::std::hash_map< OUString, OUString, OUStringHash >::const_iterator it = pSetupData->maValueMap.find( aPageScalingFactorKey );
+		::boost::unordered_map< OUString, OUString, OUStringHash >::const_iterator it = pSetupData->maValueMap.find( aPageScalingFactorKey );
 		if ( it != pSetupData->maValueMap.end() )
 			fScaleFactor = it->second.toFloat();
 
 		// Fix bug by detecting when an OOo printer job is being reused for
 		// serial print jobs
-		String aJobName = rJobName;
-		if ( !aJobName.Len() )
+		OUString aJobName( rJobName );
+		if ( !aJobName.getLength() )
 			aJobName = GetSfxResString( STR_NONAME );
 
 		// Update print info settings
@@ -1872,7 +1866,7 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 		BOOL bNeedsRestart = YES;
 		while ( bNeedsRestart )
 		{
-			mpPrintJob = [[JavaSalPrinterPrintJob alloc] initWithPrintInfo:mpInfo jobName:[NSString stringWithCharacters:aJobName.GetBuffer() length:aJobName.Len()] infoPrinter:mpInfoPrinter printerController:&rController scaleFactor:fScaleFactor];
+			mpPrintJob = [[JavaSalPrinterPrintJob alloc] initWithPrintInfo:mpInfo jobName:[NSString stringWithCharacters:aJobName.getStr() length:aJobName.getLength()] infoPrinter:mpInfoPrinter printerController:&rController scaleFactor:fScaleFactor];
 			if ( mpPrintJob )
 			{
 				// Don't lock mutex as we expect callbacks to this object
@@ -1943,7 +1937,7 @@ sal_Bool JavaSalPrinter::StartJob( const String* /* pFileName */, const String& 
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalPrinter::EndJob()
+bool JavaSalPrinter::EndJob()
 {
 	if ( mpPrintJob )
 	{
@@ -1956,12 +1950,12 @@ sal_Bool JavaSalPrinter::EndJob()
 	}
 
 
-	return sal_True;
+	return true;
 }
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalPrinter::AbortJob()
+bool JavaSalPrinter::AbortJob()
 {
 	if ( mpPrintJob )
 	{
@@ -1973,12 +1967,12 @@ sal_Bool JavaSalPrinter::AbortJob()
 		[pPool release];
 	}
 
-	return sal_True;
+	return true;
 }
 
 // -----------------------------------------------------------------------
 
-SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, sal_Bool /* bNewJobData */ )
+SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, bool /* bNewJobData */ )
 {
 	if ( mbGraphics )
 		return NULL;
@@ -2014,7 +2008,7 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, sal_Bool /* bN
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalPrinter::EndPage()
+bool JavaSalPrinter::EndPage()
 {
 	if ( mpGraphics )
 	{
@@ -2031,7 +2025,7 @@ sal_Bool JavaSalPrinter::EndPage()
 	}
 
 	mbGraphics = sal_False;
-	return sal_True;
+	return true;
 }
 
 // -----------------------------------------------------------------------

@@ -1,37 +1,28 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+ *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
  *
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *************************************************************/
-
-
-
-// MARKER(update_precomp.py): autogen include statement, do not remove
-#include "precompiled_vcl.hxx"
+ */
 
 #include <pdfwriter_impl.hxx>
 #include <vcl/bitmapex.hxx>
@@ -42,584 +33,500 @@
 #include <vcl/gdimtf.hxx>
 #include <vcl/metaact.hxx>
 
-#define META_TEXTLINE_PDF_ACTION				META_TEXTLINE_ACTION
-#define META_NEW_PAGE_PDF_ACTION				(10000)
-#define META_PIXEL_PDF_ACTION					(10001)
-#define META_JPG_PDF_ACTION						(10002)
-#define META_ANTIALIAS_PDF_ACTION				(10003)
-#define META_POLYLINE_PDF_ACTION				(10004)
-#define META_CREATELINK_PDF_ACTION				(10005)
-#define META_CREATEDEST_PDF_ACTION				(10006)
-#define META_SETLINKDEST_PDF_ACTION				(10007)
-#define META_SETLINKURL_PDF_ACTION				(10008)
-#define META_SETLINKPROPERTYID_PDF_ACTION		(10009)
-#define META_CREATEOUTLINEITEM_PDF_ACTION		(10010)
-#define META_SETOUTLINEITEMPARENT_PDF_ACTION	(10011)
-#define META_SETOUTLINEITEMTEXT_PDF_ACTION		(10012)
-#define META_SETOUTLINEITEMDEST_PDF_ACTION		(10013)
-#define META_CREATENOTE_PDF_ACTION				(10014)
-#define META_BEGINSTRUCTUREELEMENT_PDF_ACTION	(10015)
-#define META_ENDSTRUCTUREELEMENT_PDF_ACTION		(10016)
-#define META_SETCURRENTSTRUCTUREELEMENT_PDF_ACTION	(10017)
-#define META_SETSTRUCTUREATTRIBUTE_PDF_ACTION	(10018)
-#define META_SETSTRUCTUREATTRIBUTENUMERICAL_PDF_ACTION	(10019)
-#define META_SETSTRUCTUREBOUNDINGBOX_PDF_ACTION	(10020)
-#define META_SETACTUALTEXT_PDF_ACTION			(10021)
-#define META_SETALTERNATETEXT_PDF_ACTION		(10022)
-#define META_SETAUTOADVANCETIME_PDF_ACTION		(10023)
-#define META_SETPAGETRANSITION_PDF_ACTION		(10024)
-#define META_CREATECONTROL_PDF_ACTION			(10025)
-#define META_DIGITLANGUAGE_PDF_ACTION			(10026)
-#define META_BEGINPATTERN_PDF_ACTION			(10027)
-#define META_ENDPATTERN_PDF_ACTION				(10028)
-#define META_POLYPOLYGON_PDF_ACTION				(10029)
-#define META_BEGINTRANSPARENCYGROUP_PDF_ACTION	(10030)
-#define META_ENDTRANSPARENCYGROUP_PDF_ACTION	(10031)
-#define META_ENDTRANSPARENCYGROUPMASK_PDF_ACTION	(10032)
-#define META_SETLOCALE_PDF_ACTION				(10033)
-#define META_CREATENAMEDDEST_PDF_ACTION			(10034)
-#define META_ADDSTREAM_PDF_ACTION				(10035)
-#define META_REGISTERDESTREFERENCE_PDF_ACTION	(10036)
-#define META_PLAYMETAFILE_PDF_ACTION			(10037)
+#define META_TEXTLINE_PDF_ACTION                        META_TEXTLINE_ACTION
+#define META_NEW_PAGE_PDF_ACTION                        (10000)
+#define META_JPG_PDF_ACTION                             (10001)
+#define META_POLYLINE_PDF_ACTION                        (10002)
+#define META_CREATELINK_PDF_ACTION                      (10003)
+#define META_CREATEDEST_PDF_ACTION                      (10004)
+#define META_SETLINKDEST_PDF_ACTION                     (10005)
+#define META_SETLINKURL_PDF_ACTION                      (10006)
+#define META_SETLINKPROPERTYID_PDF_ACTION               (10007)
+#define META_CREATEOUTLINEITEM_PDF_ACTION               (10008)
+#define META_SETOUTLINEITEMPARENT_PDF_ACTION            (10009)
+#define META_SETOUTLINEITEMTEXT_PDF_ACTION              (10010)
+#define META_SETOUTLINEITEMDEST_PDF_ACTION              (10011)
+#define META_CREATENOTE_PDF_ACTION                      (10012)
+#define META_BEGINSTRUCTUREELEMENT_PDF_ACTION           (10013)
+#define META_ENDSTRUCTUREELEMENT_PDF_ACTION             (10014)
+#define META_SETCURRENTSTRUCTUREELEMENT_PDF_ACTION      (10015)
+#define META_SETSTRUCTUREATTRIBUTE_PDF_ACTION           (10016)
+#define META_SETSTRUCTUREATTRIBUTENUMERICAL_PDF_ACTION  (10017)
+#define META_SETSTRUCTUREBOUNDINGBOX_PDF_ACTION         (10018)
+#define META_SETACTUALTEXT_PDF_ACTION                   (10019)
+#define META_SETALTERNATETEXT_PDF_ACTION                (10020)
+#define META_SETAUTOADVANCETIME_PDF_ACTION              (10021)
+#define META_SETPAGETRANSITION_PDF_ACTION               (10022)
+#define META_CREATECONTROL_PDF_ACTION                   (10023)
+#define META_DIGITLANGUAGE_PDF_ACTION                   (10024)
+#define META_BEGINTRANSPARENCYGROUP_PDF_ACTION          (10025)
+#define META_ENDTRANSPARENCYGROUP_PDF_ACTION            (10026)
+#define META_SETLOCALE_PDF_ACTION                       (10027)
+#define META_CREATENAMEDDEST_PDF_ACTION                 (10028)
+#define META_ADDSTREAM_PDF_ACTION                       (10029)
+#define META_REGISTERDESTREFERENCE_PDF_ACTION           (10030)
+#define META_PLAYMETAFILE_PDF_ACTION                    (10031)
 
 class SAL_DLLPRIVATE MetaTextLinePDFAction : public MetaTextLineAction
 {
 private:
-    sal_Bool            mbUnderlineAbove;
+    bool                mbUnderlineAbove;
 
 public:
-    					MetaTextLinePDFAction( const Point& rPos, long nWidth, FontStrikeout eStrikeout, FontUnderline eUnderline, FontUnderline eOverline, sal_Bool bUnderlineAbove ) : MetaTextLineAction( rPos, nWidth, eStrikeout, eUnderline, eOverline ), mbUnderlineAbove( bUnderlineAbove ) {}
-    virtual				~MetaTextLinePDFAction() {}
+                        MetaTextLinePDFAction( const Point& rPos, long nWidth, FontStrikeout eStrikeout, FontUnderline eUnderline, FontUnderline eOverline, bool bUnderlineAbove ) : MetaTextLineAction( rPos, nWidth, eStrikeout, eUnderline, eOverline ), mbUnderlineAbove( bUnderlineAbove ) {}
+    virtual             ~MetaTextLinePDFAction() {}
 
-    sal_Bool			IsUnderlineAbove() const { return mbUnderlineAbove; }
+    bool                IsUnderlineAbove() const { return mbUnderlineAbove; }
 };
 
 class SAL_DLLPRIVATE MetaNewPagePDFAction : public MetaAction
 {
 private:
-    sal_Int32			mnPageWidth;
-    sal_Int32			mnPageHeight;
-    ::vcl::PDFWriter::Orientation	meOrientation;
+    sal_Int32           mnPageWidth;
+    sal_Int32           mnPageHeight;
+    ::vcl::PDFWriter::Orientation meOrientation;
 
 public:
-    					MetaNewPagePDFAction( sal_Int32 nPageWidth, sal_Int32 nPageHeight, ::vcl::PDFWriter::Orientation eOrientation ) : MetaAction( META_NEW_PAGE_PDF_ACTION ), mnPageWidth( nPageWidth ), mnPageHeight( nPageHeight ), meOrientation( eOrientation ) {}
-    virtual				~MetaNewPagePDFAction() {}
+                        MetaNewPagePDFAction( sal_Int32 nPageWidth, sal_Int32 nPageHeight, ::vcl::PDFWriter::Orientation eOrientation ) : MetaAction( META_NEW_PAGE_PDF_ACTION ), mnPageWidth( nPageWidth ), mnPageHeight( nPageHeight ), meOrientation( eOrientation ) {}
+    virtual             ~MetaNewPagePDFAction() {}
 
-    sal_Int32			GetPageWidth() const { return mnPageWidth; }
-    sal_Int32			GetPageHeight() const { return mnPageHeight; }
-    ::vcl::PDFWriter::Orientation	GetOrientation() const { return meOrientation; }
-};
-
-class SAL_DLLPRIVATE MetaPixelPDFAction : public MetaAction
-{
-private:
-    Polygon				maPoints;
-    Color*				mpColors;
-
-public:
-    					MetaPixelPDFAction( const Polygon& rPoints, const Color* pColors ) : MetaAction( META_PIXEL_PDF_ACTION ), maPoints( rPoints ), mpColors( NULL ) { int nPoints = rPoints.GetSize(); if ( nPoints ) { mpColors = new Color[ nPoints ]; for ( int i = 0; i < nPoints; i++ ) mpColors[ i ] = pColors[ i ]; } }
-    virtual				~MetaPixelPDFAction() { if ( mpColors ) delete mpColors; }
-
-    const Polygon&		GetPoints() const { return maPoints; }
-    const Color*		GetColors() const { return mpColors; }
+    sal_Int32           GetPageWidth() const { return mnPageWidth; }
+    sal_Int32           GetPageHeight() const { return mnPageHeight; }
+    ::vcl::PDFWriter::Orientation GetOrientation() const { return meOrientation; }
 };
 
 class SAL_DLLPRIVATE MetaJpgPDFAction : public MetaAction
 {
 private:
-    SvMemoryStream		maStream;
-    bool				mbTrueColor;
-    Size				maSize;
-    Rectangle			maRect;
-    Bitmap				maMask;
+    SvMemoryStream      maStream;
+    bool                mbTrueColor;
+    Size                maSize;
+    Rectangle           maRect;
+    Bitmap              maMask;
 
 public:
-    					MetaJpgPDFAction( SvStream& rStream, bool bTrueColor, const Size& rSize, const Rectangle& rRect, const Bitmap& rMask ) : MetaAction( META_JPG_PDF_ACTION ), mbTrueColor( bTrueColor ), maSize( rSize ), maRect( rRect ), maMask( rMask ) { rStream.Seek( 0 ); maStream << rStream; }
-    virtual				~MetaJpgPDFAction() {}
+                        MetaJpgPDFAction( SvStream& rStream, bool bTrueColor, const Size& rSize, const Rectangle& rRect, const Bitmap& rMask ) : MetaAction( META_JPG_PDF_ACTION ), mbTrueColor( bTrueColor ), maSize( rSize ), maRect( rRect ), maMask( rMask ) { rStream.Seek( 0 ); maStream.WriteStream( rStream ); }
+    virtual             ~MetaJpgPDFAction() {}
 
-    const SvStream&		GetStream() const { return maStream; }
-    bool				IsTrueColor() const { return mbTrueColor; }
-    const Size&			GetSize() const { return maSize; }
-    const Rectangle&	GetRect() const { return maRect; }
-    const Bitmap&		GetMask() const { return maMask; }
-};
-
-class SAL_DLLPRIVATE MetaAntiAliasPDFAction : public MetaAction
-{
-private:
-    sal_uInt16			mnAntiAlias;
-
-public:
-    					MetaAntiAliasPDFAction( sal_uInt16 nAntiAlias ) : MetaAction( META_ANTIALIAS_PDF_ACTION ), mnAntiAlias( nAntiAlias ) {}
-    virtual				~MetaAntiAliasPDFAction() {}
-
-    sal_uInt16			GetAntiAlias() const { return mnAntiAlias; }
+    const SvStream&     GetStream() const { return maStream; }
+    bool                IsTrueColor() const { return mbTrueColor; }
+    const Size&         GetSize() const { return maSize; }
+    const Rectangle&    GetRect() const { return maRect; }
+    const Bitmap&       GetMask() const { return maMask; }
 };
 
 class SAL_DLLPRIVATE MetaPolyLinePDFAction : public MetaAction
 {
 private:
-    Polygon				maPoly;
-    ::vcl::PDFWriter::ExtLineInfo	maInfo;
+    Polygon             maPoly;
+    ::vcl::PDFWriter::ExtLineInfo maInfo;
 
 public:
-    					MetaPolyLinePDFAction( const Polygon& rPoly, const ::vcl::PDFWriter::ExtLineInfo& rInfo ) : MetaAction( META_POLYLINE_PDF_ACTION ), maPoly( rPoly ), maInfo( rInfo ) {}
-    virtual				~MetaPolyLinePDFAction() {}
+                        MetaPolyLinePDFAction( const Polygon& rPoly, const ::vcl::PDFWriter::ExtLineInfo& rInfo ) : MetaAction( META_POLYLINE_PDF_ACTION ), maPoly( rPoly ), maInfo( rInfo ) {}
+    virtual             ~MetaPolyLinePDFAction() {}
 
-    const Polygon&		GetPolygon() const { return maPoly; }
-    const ::vcl::PDFWriter::ExtLineInfo&	GetExtLineInfo() const { return maInfo; }
+    const Polygon&      GetPolygon() const { return maPoly; }
+    const ::vcl::PDFWriter::ExtLineInfo& GetExtLineInfo() const { return maInfo; }
 };
 
 class SAL_DLLPRIVATE MetaCreateLinkPDFAction : public MetaAction
 {
 private:
-    Rectangle			maRect;
-    sal_Int32			mnPage;
+    Rectangle           maRect;
+    sal_Int32           mnPage;
 
 public:
-    					MetaCreateLinkPDFAction( const Rectangle& rRect, sal_Int32 nPage ) : MetaAction( META_CREATELINK_PDF_ACTION ), maRect( rRect ), mnPage( nPage ) {}
-    virtual				~MetaCreateLinkPDFAction() {}
+                        MetaCreateLinkPDFAction( const Rectangle& rRect, sal_Int32 nPage ) : MetaAction( META_CREATELINK_PDF_ACTION ), maRect( rRect ), mnPage( nPage ) {}
+    virtual             ~MetaCreateLinkPDFAction() {}
 
-    const Rectangle&	GetRect() const { return maRect; }
-    sal_Int32			GetPage() const { return mnPage; }
+    const Rectangle&    GetRect() const { return maRect; }
+    sal_Int32           GetPage() const { return mnPage; }
 };
 
 class SAL_DLLPRIVATE MetaCreateDestPDFAction : public MetaAction
 {
 private:
-    Rectangle			maRect;
-    sal_Int32			mnPage;
-    ::vcl::PDFWriter::DestAreaType	meType;
+    Rectangle           maRect;
+    sal_Int32           mnPage;
+    ::vcl::PDFWriter::DestAreaType meType;
 
 public:
-    					MetaCreateDestPDFAction( const Rectangle& rRect, sal_Int32 nPage, ::vcl::PDFWriter::DestAreaType eType ) : MetaAction( META_CREATEDEST_PDF_ACTION ), maRect( rRect ), mnPage( nPage ), meType( eType ) {}
-    virtual				~MetaCreateDestPDFAction() {}
+                        MetaCreateDestPDFAction( const Rectangle& rRect, sal_Int32 nPage, ::vcl::PDFWriter::DestAreaType eType ) : MetaAction( META_CREATEDEST_PDF_ACTION ), maRect( rRect ), mnPage( nPage ), meType( eType ) {}
+    virtual             ~MetaCreateDestPDFAction() {}
 
-    const Rectangle&	GetRect() const { return maRect; }
-    sal_Int32			GetPage() const { return mnPage; }
-    ::vcl::PDFWriter::DestAreaType	GetType() const { return meType; }
+    const Rectangle&    GetRect() const { return maRect; }
+    sal_Int32           GetPage() const { return mnPage; }
+    ::vcl::PDFWriter::DestAreaType GetType() const { return meType; }
 };
 
 class SAL_DLLPRIVATE MetaSetLinkDestPDFAction : public MetaAction
 {
 private:
-    sal_Int32			mnLink;
-    sal_Int32			mnDest;
+    sal_Int32           mnLink;
+    sal_Int32           mnDest;
 
 public:
-    					MetaSetLinkDestPDFAction( sal_Int32 nLink, sal_Int32 nDest ) : MetaAction( META_SETLINKDEST_PDF_ACTION ), mnLink( nLink ), mnDest( nDest ) {}
-    virtual				~MetaSetLinkDestPDFAction() {}
+                        MetaSetLinkDestPDFAction( sal_Int32 nLink, sal_Int32 nDest ) : MetaAction( META_SETLINKDEST_PDF_ACTION ), mnLink( nLink ), mnDest( nDest ) {}
+    virtual             ~MetaSetLinkDestPDFAction() {}
 
-    sal_Int32			GetLink() const { return mnLink; }
-    sal_Int32			GetDest() const { return mnDest; }
+    sal_Int32           GetLink() const { return mnLink; }
+    sal_Int32           GetDest() const { return mnDest; }
 };
 
 class SAL_DLLPRIVATE MetaSetLinkUrlPDFAction : public MetaAction
 {
 private:
-    sal_Int32			mnLink;
-    rtl::OUString		maURL;
+    sal_Int32           mnLink;
+    OUString            maURL;
 
 public:
-    					MetaSetLinkUrlPDFAction( sal_Int32 nLink, const rtl::OUString& rURL ) : MetaAction( META_SETLINKURL_PDF_ACTION ), mnLink( nLink ), maURL( rURL ) {}
-    virtual				~MetaSetLinkUrlPDFAction() {}
+                        MetaSetLinkUrlPDFAction( sal_Int32 nLink, const OUString& rURL ) : MetaAction( META_SETLINKURL_PDF_ACTION ), mnLink( nLink ), maURL( rURL ) {}
+    virtual             ~MetaSetLinkUrlPDFAction() {}
 
-    sal_Int32			GetLink() const { return mnLink; }
-    const rtl::OUString&	GetURL() const { return maURL; }
+    sal_Int32           GetLink() const { return mnLink; }
+    const OUString&     GetURL() const { return maURL; }
 };
 
 class SAL_DLLPRIVATE MetaSetLinkPropertyIdPDFAction : public MetaAction
 {
 private:
-    sal_Int32			mnLink;
-    sal_Int32			mnProp;
+    sal_Int32           mnLink;
+    sal_Int32           mnProp;
 
 public:
-    					MetaSetLinkPropertyIdPDFAction( sal_Int32 nLink, sal_Int32 nProp ) : MetaAction( META_SETLINKPROPERTYID_PDF_ACTION ), mnLink( nLink ), mnProp( nProp ) {}
-    virtual				~MetaSetLinkPropertyIdPDFAction() {}
+                        MetaSetLinkPropertyIdPDFAction( sal_Int32 nLink, sal_Int32 nProp ) : MetaAction( META_SETLINKPROPERTYID_PDF_ACTION ), mnLink( nLink ), mnProp( nProp ) {}
+    virtual             ~MetaSetLinkPropertyIdPDFAction() {}
 
-    sal_Int32			GetLink() const { return mnLink; }
-    sal_Int32			GetProperty() const { return mnProp; }
+    sal_Int32           GetLink() const { return mnLink; }
+    sal_Int32           GetProperty() const { return mnProp; }
 };
 
 class SAL_DLLPRIVATE MetaCreateOutlineItemPDFAction : public MetaAction
 {
 private:
-    sal_Int32			mnParent;
-    rtl::OUString		maText;
-    sal_Int32			mnDest;
+    sal_Int32           mnParent;
+    OUString            maText;
+    sal_Int32           mnDest;
 
 public:
-    					MetaCreateOutlineItemPDFAction( sal_Int32 nParent, const rtl::OUString& rText, sal_Int32 nDest ) : MetaAction( META_CREATEOUTLINEITEM_PDF_ACTION ), mnParent( nParent ), maText( rText ), mnDest( nDest ) {}
-    virtual				~MetaCreateOutlineItemPDFAction() {}
+                        MetaCreateOutlineItemPDFAction( sal_Int32 nParent, const OUString& rText, sal_Int32 nDest ) : MetaAction( META_CREATEOUTLINEITEM_PDF_ACTION ), mnParent( nParent ), maText( rText ), mnDest( nDest ) {}
+    virtual             ~MetaCreateOutlineItemPDFAction() {}
 
-    sal_Int32			GetParent() const { return mnParent; }
-    const rtl::OUString&	GetText() const { return maText; }
-    sal_Int32			GetDest() const { return mnDest; }
+    sal_Int32           GetParent() const { return mnParent; }
+    const OUString&     GetText() const { return maText; }
+    sal_Int32           GetDest() const { return mnDest; }
 };
 
 class SAL_DLLPRIVATE MetaSetOutlineItemParentPDFAction : public MetaAction
 {
 private:
-    sal_Int32			mnItem;
-    sal_Int32			mnParent;
+    sal_Int32           mnItem;
+    sal_Int32           mnParent;
 
 public:
-    					MetaSetOutlineItemParentPDFAction( sal_Int32 nItem, sal_Int32 nParent ) : MetaAction( META_SETOUTLINEITEMPARENT_PDF_ACTION ), mnItem( nItem ), mnParent( nParent ) {}
-    virtual				~MetaSetOutlineItemParentPDFAction() {}
+                        MetaSetOutlineItemParentPDFAction( sal_Int32 nItem, sal_Int32 nParent ) : MetaAction( META_SETOUTLINEITEMPARENT_PDF_ACTION ), mnItem( nItem ), mnParent( nParent ) {}
+    virtual             ~MetaSetOutlineItemParentPDFAction() {}
 
-    sal_Int32			GetItem() const { return mnItem; }
-    sal_Int32			GetParent() const { return mnParent; }
+    sal_Int32           GetItem() const { return mnItem; }
+    sal_Int32           GetParent() const { return mnParent; }
 };
 
 class SAL_DLLPRIVATE MetaSetOutlineItemTextPDFAction : public MetaAction
 {
 private:
-    sal_Int32			mnItem;
-    rtl::OUString		maText;
+    sal_Int32           mnItem;
+    OUString            maText;
 
 public:
-    					MetaSetOutlineItemTextPDFAction( sal_Int32 nItem, const rtl::OUString& rText ) : MetaAction( META_SETOUTLINEITEMTEXT_PDF_ACTION ), mnItem( nItem ), maText( rText ) {}
-    virtual				~MetaSetOutlineItemTextPDFAction() {}
+                        MetaSetOutlineItemTextPDFAction( sal_Int32 nItem, const OUString& rText ) : MetaAction( META_SETOUTLINEITEMTEXT_PDF_ACTION ), mnItem( nItem ), maText( rText ) {}
+    virtual             ~MetaSetOutlineItemTextPDFAction() {}
 
-    sal_Int32			GetItem() const { return mnItem; }
-    const rtl::OUString&	GetText() const { return maText; }
+    sal_Int32           GetItem() const { return mnItem; }
+    const OUString&     GetText() const { return maText; }
 };
 
 class SAL_DLLPRIVATE MetaSetOutlineItemDestPDFAction : public MetaAction
 {
 private:
-    sal_Int32			mnItem;
-    sal_Int32			mnDest;
+    sal_Int32           mnItem;
+    sal_Int32           mnDest;
 
 public:
-    					MetaSetOutlineItemDestPDFAction( sal_Int32 nItem, sal_Int32 nDest ) : MetaAction( META_SETOUTLINEITEMDEST_PDF_ACTION ), mnItem( nItem ), mnDest( nDest ) {}
-    virtual				~MetaSetOutlineItemDestPDFAction() {}
+                        MetaSetOutlineItemDestPDFAction( sal_Int32 nItem, sal_Int32 nDest ) : MetaAction( META_SETOUTLINEITEMDEST_PDF_ACTION ), mnItem( nItem ), mnDest( nDest ) {}
+    virtual             ~MetaSetOutlineItemDestPDFAction() {}
 
-    sal_Int32			GetItem() const { return mnItem; }
-    sal_Int32			GetDest() const { return mnDest; }
+    sal_Int32           GetItem() const { return mnItem; }
+    sal_Int32           GetDest() const { return mnDest; }
 };
 
 class SAL_DLLPRIVATE MetaCreateNotePDFAction : public MetaAction
 {
 private:
-    Rectangle			maRect;
-    ::vcl::PDFNote		maNote;
-    sal_Int32			mnPage;
+    Rectangle           maRect;
+    ::vcl::PDFNote      maNote;
+    sal_Int32           mnPage;
 
 public:
-    					MetaCreateNotePDFAction( const Rectangle& rRect, const ::vcl::PDFNote& rNote, sal_Int32 nPage ) : MetaAction( META_CREATENOTE_PDF_ACTION ), maRect( rRect ), maNote( rNote ), mnPage( nPage ) {}
-    virtual				~MetaCreateNotePDFAction() {}
+                        MetaCreateNotePDFAction( const Rectangle& rRect, const ::vcl::PDFNote& rNote, sal_Int32 nPage ) : MetaAction( META_CREATENOTE_PDF_ACTION ), maRect( rRect ), maNote( rNote ), mnPage( nPage ) {}
+    virtual             ~MetaCreateNotePDFAction() {}
 
-    const Rectangle&	GetRect() const { return maRect; }
-    sal_Int32			GetPage() const { return mnPage; }
-    const ::vcl::PDFNote&	GetNote() const { return maNote; }
+    const Rectangle&    GetRect() const { return maRect; }
+    sal_Int32           GetPage() const { return mnPage; }
+    const ::vcl::PDFNote& GetNote() const { return maNote; }
 };
 
 class SAL_DLLPRIVATE MetaCreateControlPDFAction : public MetaAction
 {
 private:
-    ::vcl::PDFWriter::AnyWidget*	mpControl;
-    sal_Int32			mnPage;
+    ::vcl::PDFWriter::AnyWidget* mpControl;
+    sal_Int32           mnPage;
 
 public:
-						MetaCreateControlPDFAction( const ::vcl::PDFWriter::AnyWidget& rControl, sal_Int32 nPage ) : MetaAction( META_CREATECONTROL_PDF_ACTION ), mnPage( nPage ) { mpControl = rControl.Clone(); }
-    virtual				~MetaCreateControlPDFAction() { if ( mpControl ) delete mpControl; }
+                        MetaCreateControlPDFAction( const ::vcl::PDFWriter::AnyWidget& rControl, sal_Int32 nPage ) : MetaAction( META_CREATECONTROL_PDF_ACTION ), mnPage( nPage ) { mpControl = rControl.Clone(); }
+    virtual             ~MetaCreateControlPDFAction() { if ( mpControl ) delete mpControl; }
 
-    const ::vcl::PDFWriter::AnyWidget&	GetControl() const { return *mpControl; }
-    sal_Int32			GetPage() const { return mnPage; }
+    const ::vcl::PDFWriter::AnyWidget& GetControl() const { return *mpControl; }
+    sal_Int32           GetPage() const { return mnPage; }
 };
 
 class SAL_DLLPRIVATE MetaBeginStructureElementPDFAction : public MetaAction
 {
 private:
     ::vcl::PDFWriter::StructElement meType;
+    OUString            maAlias;
 
 public:
-    					MetaBeginStructureElementPDFAction( ::vcl::PDFWriter::StructElement eType ) : MetaAction( META_BEGINSTRUCTUREELEMENT_PDF_ACTION ), meType( eType ) {}
-    virtual				~MetaBeginStructureElementPDFAction() {}
+                        MetaBeginStructureElementPDFAction( ::vcl::PDFWriter::StructElement eType, const OUString& rAlias ) : MetaAction( META_BEGINSTRUCTUREELEMENT_PDF_ACTION ), meType( eType ), maAlias( rAlias ) {}
+    virtual             ~MetaBeginStructureElementPDFAction() {}
 
-    ::vcl::PDFWriter::StructElement	GetType() const { return meType; }
+    ::vcl::PDFWriter::StructElement GetType() const { return meType; }
+    const OUString&     GetAlias() const { return maAlias; }
 };
 
 class SAL_DLLPRIVATE MetaEndStructureElementPDFAction : public MetaAction
 {
 public:
-    					MetaEndStructureElementPDFAction() : MetaAction( META_ENDSTRUCTUREELEMENT_PDF_ACTION ) {}
-    virtual				~MetaEndStructureElementPDFAction() {}
+                        MetaEndStructureElementPDFAction() : MetaAction( META_ENDSTRUCTUREELEMENT_PDF_ACTION ) {}
+    virtual             ~MetaEndStructureElementPDFAction() {}
 };
 
 class SAL_DLLPRIVATE MetaSetCurrentStructureElementPDFAction : public MetaAction
 {
 private:
-    sal_Int32			mnElement;
+    sal_Int32           mnElement;
 
 public:
-    					MetaSetCurrentStructureElementPDFAction( sal_Int32 nElement ) : MetaAction( META_SETCURRENTSTRUCTUREELEMENT_PDF_ACTION ), mnElement( nElement ) {}
-    virtual				~MetaSetCurrentStructureElementPDFAction() {}
+                        MetaSetCurrentStructureElementPDFAction( sal_Int32 nElement ) : MetaAction( META_SETCURRENTSTRUCTUREELEMENT_PDF_ACTION ), mnElement( nElement ) {}
+    virtual             ~MetaSetCurrentStructureElementPDFAction() {}
 
-    sal_Int32			GetElement() const { return mnElement; }
+    sal_Int32           GetElement() const { return mnElement; }
 };
 
 class SAL_DLLPRIVATE MetaSetStructureAttributePDFAction : public MetaAction
 {
 private:
-    enum ::vcl::PDFWriter::StructAttribute	meAttr;
-    enum ::vcl::PDFWriter::StructAttributeValue	meValue;
+    enum ::vcl::PDFWriter::StructAttribute meAttr;
+    enum ::vcl::PDFWriter::StructAttributeValue meValue;
 
 public:
-    					MetaSetStructureAttributePDFAction( enum ::vcl::PDFWriter::StructAttribute eAttr, enum ::vcl::PDFWriter::StructAttributeValue eValue ) : MetaAction( META_SETSTRUCTUREATTRIBUTE_PDF_ACTION ), meAttr( eAttr ), meValue( eValue ) {}
-    virtual				~MetaSetStructureAttributePDFAction() {}
+                        MetaSetStructureAttributePDFAction( enum ::vcl::PDFWriter::StructAttribute eAttr, enum ::vcl::PDFWriter::StructAttributeValue eValue ) : MetaAction( META_SETSTRUCTUREATTRIBUTE_PDF_ACTION ), meAttr( eAttr ), meValue( eValue ) {}
+    virtual             ~MetaSetStructureAttributePDFAction() {}
 
-    enum ::vcl::PDFWriter::StructAttribute	GetAttribute() const { return meAttr; }
-    enum ::vcl::PDFWriter::StructAttributeValue	GetValue() const { return meValue; }
+    enum ::vcl::PDFWriter::StructAttribute GetAttribute() const { return meAttr; }
+    enum ::vcl::PDFWriter::StructAttributeValue GetValue() const { return meValue; }
 };
 
 class SAL_DLLPRIVATE MetaSetStructureAttributeNumericalPDFAction : public MetaAction
 {
 private:
-    enum ::vcl::PDFWriter::StructAttribute	meAttr;
-    sal_Int32			mnValue;
+    enum ::vcl::PDFWriter::StructAttribute meAttr;
+    sal_Int32           mnValue;
 
 public:
-    					MetaSetStructureAttributeNumericalPDFAction( enum ::vcl::PDFWriter::StructAttribute eAttr, sal_Int32 nValue ) : MetaAction( META_SETSTRUCTUREATTRIBUTENUMERICAL_PDF_ACTION ), meAttr( eAttr ), mnValue( nValue ) {}
-    virtual				~MetaSetStructureAttributeNumericalPDFAction() {}
+                        MetaSetStructureAttributeNumericalPDFAction( enum ::vcl::PDFWriter::StructAttribute eAttr, sal_Int32 nValue ) : MetaAction( META_SETSTRUCTUREATTRIBUTENUMERICAL_PDF_ACTION ), meAttr( eAttr ), mnValue( nValue ) {}
+    virtual             ~MetaSetStructureAttributeNumericalPDFAction() {}
 
-    enum ::vcl::PDFWriter::StructAttribute	GetAttribute() const { return meAttr; }
-    sal_Int32			GetValue() const { return mnValue; }
+    enum ::vcl::PDFWriter::StructAttribute GetAttribute() const { return meAttr; }
+    sal_Int32           GetValue() const { return mnValue; }
 };
 
 class SAL_DLLPRIVATE MetaSetStructureBoundingBoxPDFAction : public MetaAction
 {
 private:
-    Rectangle			maRect;
+    Rectangle           maRect;
 
 public:
-    					MetaSetStructureBoundingBoxPDFAction( const Rectangle& rRect ) : MetaAction( META_SETSTRUCTUREBOUNDINGBOX_PDF_ACTION ), maRect( rRect ) {}
-    virtual				~MetaSetStructureBoundingBoxPDFAction() {}
+                        MetaSetStructureBoundingBoxPDFAction( const Rectangle& rRect ) : MetaAction( META_SETSTRUCTUREBOUNDINGBOX_PDF_ACTION ), maRect( rRect ) {}
+    virtual             ~MetaSetStructureBoundingBoxPDFAction() {}
 
-    const Rectangle&	GetRect() const { return maRect; }
+    const Rectangle&    GetRect() const { return maRect; }
 };
 
 class SAL_DLLPRIVATE MetaSetActualTextPDFAction : public MetaAction
 {
 private:
-    String				maText;
+    OUString            maText;
 
 public:
-    					MetaSetActualTextPDFAction( const String& rText ) : MetaAction( META_SETACTUALTEXT_PDF_ACTION ), maText( rText ) {}
-    virtual				~MetaSetActualTextPDFAction() {}
+                        MetaSetActualTextPDFAction( const OUString& rText ) : MetaAction( META_SETACTUALTEXT_PDF_ACTION ), maText( rText ) {}
+    virtual             ~MetaSetActualTextPDFAction() {}
 
-    const String&		GetText() const { return maText; }
+    const OUString&     GetText() const { return maText; }
 };
 
 class SAL_DLLPRIVATE MetaSetAlternateTextPDFAction : public MetaAction
 {
 private:
-    String				maText;
+    OUString            maText;
 
 public:
-    					MetaSetAlternateTextPDFAction( const String& rText ) : MetaAction( META_SETALTERNATETEXT_PDF_ACTION ), maText( rText ) {}
-    virtual				~MetaSetAlternateTextPDFAction() {}
+                        MetaSetAlternateTextPDFAction( const OUString& rText ) : MetaAction( META_SETALTERNATETEXT_PDF_ACTION ), maText( rText ) {}
+    virtual             ~MetaSetAlternateTextPDFAction() {}
 
-    const String&		GetText() const { return maText; }
+    const OUString&     GetText() const { return maText; }
 };
 
 class SAL_DLLPRIVATE MetaSetAutoAdvanceTimePDFAction : public MetaAction
 {
 private:
-    sal_uInt32			mnSeconds;
-    sal_Int32			mnPage;
+    sal_uInt32          mnSeconds;
+    sal_Int32           mnPage;
 
 public:
-    					MetaSetAutoAdvanceTimePDFAction( sal_uInt32 nSeconds, sal_Int32 nPage ) : MetaAction( META_SETAUTOADVANCETIME_PDF_ACTION ), mnSeconds( nSeconds ), mnPage( nPage ) {}
-    virtual				~MetaSetAutoAdvanceTimePDFAction() {}
+                        MetaSetAutoAdvanceTimePDFAction( sal_uInt32 nSeconds, sal_Int32 nPage ) : MetaAction( META_SETAUTOADVANCETIME_PDF_ACTION ), mnSeconds( nSeconds ), mnPage( nPage ) {}
+    virtual             ~MetaSetAutoAdvanceTimePDFAction() {}
 
-    sal_uInt32			GetSeconds() const { return mnSeconds; }
-    sal_Int32			GetPage() const { return mnPage; }
+    sal_uInt32          GetSeconds() const { return mnSeconds; }
+    sal_Int32           GetPage() const { return mnPage; }
 };
 
 class SAL_DLLPRIVATE MetaSetPageTransitionPDFAction : public MetaAction
 {
 private:
-	::vcl::PDFWriter::PageTransition	meType;
-    sal_uInt32			mnMilliSeconds;
-    sal_Int32			mnPage;
+    ::vcl::PDFWriter::PageTransition meType;
+    sal_uInt32          mnMilliSeconds;
+    sal_Int32           mnPage;
 
 public:
-    					MetaSetPageTransitionPDFAction( ::vcl::PDFWriter::PageTransition eType, sal_uInt32 nMilliSeconds, sal_Int32 nPage ) : MetaAction( META_SETPAGETRANSITION_PDF_ACTION ), meType( eType ), mnMilliSeconds( nMilliSeconds ), mnPage( nPage ) {}
-    virtual				~MetaSetPageTransitionPDFAction() {}
+                        MetaSetPageTransitionPDFAction( ::vcl::PDFWriter::PageTransition eType, sal_uInt32 nMilliSeconds, sal_Int32 nPage ) : MetaAction( META_SETPAGETRANSITION_PDF_ACTION ), meType( eType ), mnMilliSeconds( nMilliSeconds ), mnPage( nPage ) {}
+    virtual             ~MetaSetPageTransitionPDFAction() {}
 
-    ::vcl::PDFWriter::PageTransition	GetType() const { return meType; }
-    sal_uInt32			GetMilliSeconds() const { return mnMilliSeconds; }
-    sal_Int32			GetPage() const { return mnPage; }
+    ::vcl::PDFWriter::PageTransition GetType() const { return meType; }
+    sal_uInt32          GetMilliSeconds() const { return mnMilliSeconds; }
+    sal_Int32           GetPage() const { return mnPage; }
 };
 
 class SAL_DLLPRIVATE MetaDigitLanguagePDFAction : public MetaAction
 {
 private:
-    LanguageType		meLang;
+    LanguageType        meLang;
 
 public:
-    					MetaDigitLanguagePDFAction( LanguageType eLang ) : MetaAction( META_DIGITLANGUAGE_PDF_ACTION ), meLang( eLang ) {}
-    virtual				~MetaDigitLanguagePDFAction() {}
+                        MetaDigitLanguagePDFAction( LanguageType eLang ) : MetaAction( META_DIGITLANGUAGE_PDF_ACTION ), meLang( eLang ) {}
+    virtual             ~MetaDigitLanguagePDFAction() {}
 
-    LanguageType		GetLanguage() const { return meLang; }
-};
-
-class SAL_DLLPRIVATE MetaBeginPatternPDFAction : public MetaAction
-{
-private:
-	Rectangle			maCellRect;
-
-public:
-    					MetaBeginPatternPDFAction( const Rectangle& rCellRect ) : MetaAction( META_BEGINPATTERN_PDF_ACTION ), maCellRect( rCellRect ) {}
-    virtual				~MetaBeginPatternPDFAction() {}
-
-    const Rectangle&	GetCellRect() const { return maCellRect; }
-};
-
-class SAL_DLLPRIVATE MetaEndPatternPDFAction : public MetaAction
-{
-private:
-    SvtGraphicFill::Transform	maTransform;
-
-public:
-    					MetaEndPatternPDFAction( const SvtGraphicFill::Transform& rTransform ) : MetaAction( META_ENDPATTERN_PDF_ACTION ), maTransform( rTransform ) {}
-    virtual				~MetaEndPatternPDFAction() {}
-
-    const SvtGraphicFill::Transform&	GetTransform() const { return maTransform; }
-};
-
-class SAL_DLLPRIVATE MetaPolyPolygonPDFAction : public MetaAction
-{
-private:
-    PolyPolygon			maPolyPoly;
-    sal_Int32			mnPattern;
-    bool				mbEOFill;
-
-public:
-						MetaPolyPolygonPDFAction( const PolyPolygon& rPolyPoly, sal_Int32 nPattern, bool bEOFill ) : MetaAction( META_POLYPOLYGON_PDF_ACTION ), maPolyPoly( rPolyPoly ), mnPattern( nPattern ), mbEOFill( bEOFill ) {}
-    virtual				~MetaPolyPolygonPDFAction() {}
-
-    const PolyPolygon&	GetPolyPolygon() const { return maPolyPoly; }
-    sal_Int32			GetPattern() const { return mnPattern; }
-    bool				IsEOFill() const { return mbEOFill; }
+    LanguageType        GetLanguage() const { return meLang; }
 };
 
 class SAL_DLLPRIVATE MetaBeginTransparencyGroupPDFAction : public MetaAction
 {
 public:
-    					MetaBeginTransparencyGroupPDFAction() : MetaAction( META_BEGINTRANSPARENCYGROUP_PDF_ACTION ) {}
-    virtual				~MetaBeginTransparencyGroupPDFAction() {}
+                        MetaBeginTransparencyGroupPDFAction() : MetaAction( META_BEGINTRANSPARENCYGROUP_PDF_ACTION ) {}
+    virtual             ~MetaBeginTransparencyGroupPDFAction() {}
 };
 
 class SAL_DLLPRIVATE MetaEndTransparencyGroupPDFAction : public MetaAction
 {
 private:
-    Rectangle			maBoundingRect;
-    sal_uInt16			mnTransparentPercent;
+    Rectangle           maBoundingRect;
+    sal_uInt16          mnTransparentPercent;
 
 public:
-    					MetaEndTransparencyGroupPDFAction( const Rectangle& rBoundingRect, sal_uInt16 nTransparentPercent ) : MetaAction( META_ENDTRANSPARENCYGROUP_PDF_ACTION ), maBoundingRect( rBoundingRect ), mnTransparentPercent( nTransparentPercent ) {}
-    virtual				~MetaEndTransparencyGroupPDFAction() {}
+                        MetaEndTransparencyGroupPDFAction( const Rectangle& rBoundingRect, sal_uInt16 nTransparentPercent ) : MetaAction( META_ENDTRANSPARENCYGROUP_PDF_ACTION ), maBoundingRect( rBoundingRect ), mnTransparentPercent( nTransparentPercent ) {}
+    virtual             ~MetaEndTransparencyGroupPDFAction() {}
 
-    const Rectangle&	GetBoundingRect() const { return maBoundingRect; }
-    sal_uInt16			GetTransparentPercent() const { return mnTransparentPercent; }
-};
-
-class SAL_DLLPRIVATE MetaEndTransparencyGroupMaskPDFAction : public MetaAction
-{
-private:
-    Rectangle			maBoundingRect;
-    Bitmap				maAlphaMask;
-
-public:
-    					MetaEndTransparencyGroupMaskPDFAction( const Rectangle& rBoundingRect, const Bitmap& rAlphaMask ) : MetaAction( META_ENDTRANSPARENCYGROUPMASK_PDF_ACTION ), maBoundingRect( rBoundingRect ), maAlphaMask( rAlphaMask ) {}
-    virtual				~MetaEndTransparencyGroupMaskPDFAction() {}
-
-    const Rectangle&	GetBoundingRect() const { return maBoundingRect; }
-    const Bitmap&		GetAlphaMask() const { return maAlphaMask; }
+    const Rectangle&    GetBoundingRect() const { return maBoundingRect; }
+    sal_uInt16          GetTransparentPercent() const { return mnTransparentPercent; }
 };
 
 class SAL_DLLPRIVATE MetaSetLocalePDFAction : public MetaAction
 {
 private:
-    com::sun::star::lang::Locale	maLocale;
+    com::sun::star::lang::Locale maLocale;
 
 public:
-    					MetaSetLocalePDFAction( const com::sun::star::lang::Locale& rLoc ) : MetaAction( META_SETLOCALE_PDF_ACTION ), maLocale( rLoc ) {}
-    virtual				~MetaSetLocalePDFAction() {}
+                        MetaSetLocalePDFAction( const com::sun::star::lang::Locale& rLoc ) : MetaAction( META_SETLOCALE_PDF_ACTION ), maLocale( rLoc ) {}
+    virtual             ~MetaSetLocalePDFAction() {}
 
-    const com::sun::star::lang::Locale&	GetLocale() const { return maLocale; }
+    const com::sun::star::lang::Locale& GetLocale() const { return maLocale; }
 };
  
 class SAL_DLLPRIVATE MetaCreateNamedDestPDFAction : public MetaAction
 {
 private:
-    rtl::OUString		maDestName;
-    Rectangle			maRect;
-    sal_Int32			mnPage;
-    ::vcl::PDFWriter::DestAreaType	meType;
+    OUString            maDestName;
+    Rectangle           maRect;
+    sal_Int32           mnPage;
+    ::vcl::PDFWriter::DestAreaType meType;
 
 public:
-    					MetaCreateNamedDestPDFAction( const rtl::OUString& rDestName, const Rectangle& rRect, sal_Int32 nPage, ::vcl::PDFWriter::DestAreaType eType ) : MetaAction( META_CREATENAMEDDEST_PDF_ACTION ), maDestName( rDestName ), maRect( rRect ), mnPage( nPage ), meType( eType ) {}
-    virtual				~MetaCreateNamedDestPDFAction() {}
+                        MetaCreateNamedDestPDFAction( const OUString& rDestName, const Rectangle& rRect, sal_Int32 nPage, ::vcl::PDFWriter::DestAreaType eType ) : MetaAction( META_CREATENAMEDDEST_PDF_ACTION ), maDestName( rDestName ), maRect( rRect ), mnPage( nPage ), meType( eType ) {}
+    virtual             ~MetaCreateNamedDestPDFAction() {}
 
-    const rtl::OUString&	GetDestName() const { return maDestName; }
-    const Rectangle&	GetRect() const { return maRect; }
-    sal_Int32			GetPage() const { return mnPage; }
-    ::vcl::PDFWriter::DestAreaType	GetType() const { return meType; }
+    const OUString&     GetDestName() const { return maDestName; }
+    const Rectangle&    GetRect() const { return maRect; }
+    sal_Int32           GetPage() const { return mnPage; }
+    ::vcl::PDFWriter::DestAreaType GetType() const { return meType; }
 };
 
 class SAL_DLLPRIVATE MetaAddStreamPDFAction : public MetaAction
 {
 private:
-	String				maMimeType;
-	::vcl::PDFOutputStream*	mpStream;
-	bool				mbCompress;
+    OUString             maMimeType;
+    ::vcl::PDFOutputStream* mpStream;
+    bool                mbCompress;
 
 public:
-    					MetaAddStreamPDFAction( const String& rMimeType, ::vcl::PDFOutputStream *pStream, bool bCompress ) : MetaAction( META_ADDSTREAM_PDF_ACTION ), maMimeType( rMimeType ), mpStream( pStream ), mbCompress( bCompress ) {}
-    virtual				~MetaAddStreamPDFAction() {}
+                        MetaAddStreamPDFAction( const OUString& rMimeType, ::vcl::PDFOutputStream *pStream, bool bCompress ) : MetaAction( META_ADDSTREAM_PDF_ACTION ), maMimeType( rMimeType ), mpStream( pStream ), mbCompress( bCompress ) {}
+    virtual             ~MetaAddStreamPDFAction() {}
 
-    const String&		GetMimeType() const { return maMimeType; }
-    ::vcl::PDFOutputStream*	GetPDFOutputStream() const { return mpStream; }
-    bool				IsCompress() const { return mbCompress; }
+    const OUString&     GetMimeType() const { return maMimeType; }
+    ::vcl::PDFOutputStream* GetPDFOutputStream() const { return mpStream; }
+    bool                IsCompress() const { return mbCompress; }
 };
 
 class SAL_DLLPRIVATE MetaRegisterDestReferencePDFAction : public MetaAction
 {
 private:
-    sal_Int32			mnDestId;
-    Rectangle			maRect;
-    sal_Int32			mnPage;
-    ::vcl::PDFWriter::DestAreaType	meType;
+    sal_Int32           mnDestId;
+    Rectangle           maRect;
+    sal_Int32           mnPage;
+    ::vcl::PDFWriter::DestAreaType meType;
 
 public:
-    					MetaRegisterDestReferencePDFAction( sal_Int32 nDestId, const Rectangle& rRect, sal_Int32 nPage, ::vcl::PDFWriter::DestAreaType eType ) : MetaAction( META_REGISTERDESTREFERENCE_PDF_ACTION ), mnDestId( nDestId ), maRect( rRect ), mnPage( nPage ), meType( eType ) {}
-    virtual				~MetaRegisterDestReferencePDFAction() {}
+                        MetaRegisterDestReferencePDFAction( sal_Int32 nDestId, const Rectangle& rRect, sal_Int32 nPage, ::vcl::PDFWriter::DestAreaType eType ) : MetaAction( META_REGISTERDESTREFERENCE_PDF_ACTION ), mnDestId( nDestId ), maRect( rRect ), mnPage( nPage ), meType( eType ) {}
+    virtual             ~MetaRegisterDestReferencePDFAction() {}
 
-    sal_Int32			GetDestId() const { return mnDestId; }
-    const Rectangle&	GetRect() const { return maRect; }
-    sal_Int32			GetPage() const { return mnPage; }
-    ::vcl::PDFWriter::DestAreaType	GetType() const { return meType; }
+    sal_Int32           GetDestId() const { return mnDestId; }
+    const Rectangle&    GetRect() const { return maRect; }
+    sal_Int32           GetPage() const { return mnPage; }
+    ::vcl::PDFWriter::DestAreaType GetType() const { return meType; }
 };
 
 class SAL_DLLPRIVATE MetaPlayMetafilePDFAction : public MetaAction
 {
 private:
-    GDIMetaFile			maMtf;
-    ::vcl::PDFWriter::PlayMetafileContext	maPlayContext;
-    ::vcl::PDFExtOutDevData*	mpData;
+    GDIMetaFile         maMtf;
+    ::vcl::PDFWriter::PlayMetafileContext maPlayContext;
+    ::vcl::PDFExtOutDevData* mpData;
 
 public:
-    					MetaPlayMetafilePDFAction( const GDIMetaFile& rMtf, const ::vcl::PDFWriter::PlayMetafileContext& rPlayContext, ::vcl::PDFExtOutDevData* pData ) : MetaAction( META_PLAYMETAFILE_PDF_ACTION ), maMtf( rMtf ), maPlayContext( rPlayContext ), mpData( pData ) {}
-    virtual				~MetaPlayMetafilePDFAction() {}
+                        MetaPlayMetafilePDFAction( const GDIMetaFile& rMtf, const ::vcl::PDFWriter::PlayMetafileContext& rPlayContext, ::vcl::PDFExtOutDevData* pData ) : MetaAction( META_PLAYMETAFILE_PDF_ACTION ), maMtf( rMtf ), maPlayContext( rPlayContext ), mpData( pData ) {}
+    virtual             ~MetaPlayMetafilePDFAction() {}
 
-    const GDIMetaFile&	GetMetaFile() const { return maMtf; }
-    const ::vcl::PDFWriter::PlayMetafileContext&	GetPlayContext() const { return maPlayContext; }
-    ::vcl::PDFExtOutDevData*	GetData() const { return mpData; }
+    const GDIMetaFile&  GetMetaFile() const { return maMtf; }
+    const ::vcl::PDFWriter::PlayMetafileContext& GetPlayContext() const { return maPlayContext; }
+    ::vcl::PDFExtOutDevData* GetData() const { return mpData; }
 };
 
 #endif	// USE_JAVA && MACOSX
@@ -630,7 +537,7 @@ using namespace vcl;
 
 static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
 {
-    for ( sal_uLong i = 0, nCount = rMtf.GetActionCount(); i < nCount; i++ )
+    for ( size_t i = 0, nCount = rMtf.GetActionSize(); i < nCount; i++ )
     {
         const MetaAction *pAction = rMtf.GetAction( i );
         const sal_uInt16 nType = pAction->GetType();
@@ -770,20 +677,6 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
             }
             break;
 
-            case( META_PIXEL_PDF_ACTION ):
-            {
-                const MetaPixelPDFAction* pA = (const MetaPixelPDFAction*) pAction;
-                aWriter.DrawPixel( pA->GetPoints(), pA->GetColors() );
-            }
-            break;
-
-            case( META_BMP_ACTION ):
-            {
-                const MetaBmpAction* pA = (const MetaBmpAction*) pAction;
-                aWriter.DrawBitmap( pA->GetPoint(), pA->GetBitmap() );
-            }
-            break;
-
             case( META_BMPSCALE_ACTION ):
             {
                 const MetaBmpScaleAction* pA = (const MetaBmpScaleAction*) pAction;
@@ -791,31 +684,10 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
             }
             break;
 
-            case( META_BMPEX_ACTION ):
-            {
-                const MetaBmpExAction* pA = (const MetaBmpExAction*) pAction;
-                aWriter.DrawBitmapEx( pA->GetPoint(), pA->GetBitmapEx() );
-            }
-            break;
-
             case( META_BMPEXSCALE_ACTION ):
             {
                 const MetaBmpExScaleAction* pA = (const MetaBmpExScaleAction*) pAction;
                 aWriter.DrawBitmapEx( pA->GetPoint(), pA->GetSize(), pA->GetBitmapEx() );
-            }
-            break;
-
-            case( META_MASK_ACTION ):
-            {
-                const MetaMaskScaleAction* pA = (const MetaMaskScaleAction*) pAction;
-                aWriter.DrawMask( pA->GetPoint(), pA->GetBitmap(), pA->GetColor() );
-            }
-            break;
-
-            case( META_MASKSCALE_ACTION ):
-            {
-                const MetaMaskScaleAction* pA = (const MetaMaskScaleAction*) pAction;
-                aWriter.DrawMask( pA->GetPoint(), pA->GetSize(), pA->GetBitmap(), pA->GetColor() );
             }
             break;
 
@@ -833,7 +705,7 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
             }
             break;
 
-            case META_HATCH_ACTION:
+            case( META_HATCH_ACTION ):
             {
                 const MetaHatchAction* pA = (const MetaHatchAction*) pAction;
                 aWriter.DrawHatch( pA->GetPolyPolygon(), pA->GetHatch() );
@@ -917,13 +789,6 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
             {
                const MetaISectRegionClipRegionAction* pA = (const MetaISectRegionClipRegionAction*) pAction;
                aWriter.IntersectClipRegion( pA->GetRegion().GetAsB2DPolyPolygon() );
-            }
-            break;
-
-            case( META_ANTIALIAS_PDF_ACTION ):
-            {
-                const MetaAntiAliasPDFAction* pA = (const MetaAntiAliasPDFAction*) pAction;
-                aWriter.SetAntialiasing( pA->GetAntiAlias() );
             }
             break;
 
@@ -1058,7 +923,7 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
             case( META_BEGINSTRUCTUREELEMENT_PDF_ACTION ):
             {
                 const MetaBeginStructureElementPDFAction* pA = (const MetaBeginStructureElementPDFAction*) pAction;
-                aWriter.BeginStructureElement( pA->GetType() );
+                aWriter.BeginStructureElement( pA->GetType(), pA->GetAlias() );
             }
             break;
 
@@ -1138,27 +1003,6 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
             }
             break;
 
-            case( META_BEGINPATTERN_PDF_ACTION ):
-            {
-                const MetaBeginPatternPDFAction* pA = (const MetaBeginPatternPDFAction*) pAction;
-                aWriter.BeginPattern( pA->GetCellRect() );
-            }
-            break;
-
-            case( META_ENDPATTERN_PDF_ACTION ):
-            {
-                const MetaEndPatternPDFAction* pA = (const MetaEndPatternPDFAction*) pAction;
-                aWriter.EndPattern( pA->GetTransform() );
-            }
-            break;
-
-            case( META_POLYPOLYGON_PDF_ACTION ):
-            {
-                const MetaPolyPolygonPDFAction* pA = (const MetaPolyPolygonPDFAction*) pAction;
-                aWriter.DrawPolyPolygon( pA->GetPolyPolygon(), pA->GetPattern(), pA->IsEOFill() );
-            }
-            break;
-
             case( META_BEGINTRANSPARENCYGROUP_PDF_ACTION ):
             {
                 aWriter.BeginTransparencyGroup();
@@ -1169,13 +1013,6 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
             {
                 const MetaEndTransparencyGroupPDFAction* pA = (const MetaEndTransparencyGroupPDFAction*) pAction;
                 aWriter.EndTransparencyGroup( pA->GetBoundingRect(), pA->GetTransparentPercent() );
-            }
-            break;
-
-            case( META_ENDTRANSPARENCYGROUPMASK_PDF_ACTION ):
-            {
-                const MetaEndTransparencyGroupMaskPDFAction* pA = (const MetaEndTransparencyGroupMaskPDFAction*) pAction;
-                aWriter.EndTransparencyGroup( pA->GetBoundingRect(), pA->GetAlphaMask() );
             }
             break;
 
@@ -1215,7 +1052,9 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
             break;
 
             default:
-                DBG_ERROR( "PDFWriterImpl::emit: unsupported MetaAction #" );
+#ifdef DBG_UTIL
+                OSL_FAIL( "PDFWriterImpl::emit: unsupported MetaAction #" );
+#endif	// DBG_UTIL
             break;
         }
     }
@@ -1235,21 +1074,20 @@ PDFWriter::PDFWriter( const PDFWriter::PDFWriterContext& rContext, const com::su
 
 PDFWriter::~PDFWriter()
 {
-    delete (PDFWriterImpl*)pImplementation;
 }
 
 OutputDevice* PDFWriter::GetReferenceDevice()
 {
-    return ((PDFWriterImpl*)pImplementation)->getReferenceDevice();
+    return pImplementation->getReferenceDevice();
 }
 
 sal_Int32 PDFWriter::NewPage( sal_Int32 nPageWidth, sal_Int32 nPageHeight, Orientation eOrientation )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaNewPagePDFAction( nPageWidth, nPageHeight, eOrientation ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaNewPagePDFAction( nPageWidth, nPageHeight, eOrientation ) );
 #endif	// USE_JAVA && MACOSX
-    return ((PDFWriterImpl*)pImplementation)->newPage( nPageWidth, nPageHeight, eOrientation );
+    return pImplementation->newPage( nPageWidth, nPageHeight, eOrientation );
 }
 
 bool PDFWriter::Emit()
@@ -1258,69 +1096,63 @@ bool PDFWriter::Emit()
     bool bRet = false;
 
     // Replay meta actions
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() && ((PDFWriterImpl*)pImplementation)->emit() )
+    if ( !pImplementation->isReplayWriter() && pImplementation->emit() )
     {
-        GDIMetaFile aMtf( ((PDFWriterImpl*)pImplementation)->getReplayMetaFile() );
-        const PDFWriter::PDFWriterContext& rContext = ((PDFWriterImpl*)pImplementation)->getContext();
-        PDFWriter& rPDFWriter = ((PDFWriterImpl*)pImplementation)->getPDFWriter();
-        void *pOldImplementation = pImplementation;
+        GDIMetaFile aMtf( pImplementation->getReplayMetaFile() );
+        const PDFWriter::PDFWriterContext& rContext = pImplementation->getContext();
+        PDFWriter& rPDFWriter = pImplementation->getPDFWriter();
 
         // Fix bug 3061 by making a substitute writer and copying the actions
         // into that as the current writer seems to get mangled layouts in some
         // cases
-        PDFWriterImpl aSubstituteWriter( rContext, com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >(), rPDFWriter );
-        pImplementation = &aSubstituteWriter;
+        boost::scoped_ptr<PDFWriterImpl> pSubstituteImplementation( new PDFWriterImpl( rContext, com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >(), rPDFWriter ) );
+        pSubstituteImplementation.swap( pImplementation );
         ReplayMetaFile( *this, aMtf );
-        bRet = aSubstituteWriter.emit();
-        pImplementation = pOldImplementation;
+        bRet = pImplementation->emit();
+        pImplementation.swap( pSubstituteImplementation );
 
         // Now replay the same meta file into the final destination
         if ( bRet )
         {
-            PDFWriterImpl aFinalWriter( rContext, com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >(), rPDFWriter, &aSubstituteWriter );
-            pImplementation = &aFinalWriter;
+            boost::scoped_ptr<PDFWriterImpl> pFinalImplementation( new PDFWriterImpl( rContext, com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >(), rPDFWriter, pSubstituteImplementation.get() ) );
+            pFinalImplementation.swap( pImplementation );
             ReplayMetaFile( *this, aMtf );
-            bRet = aFinalWriter.emit();
-            pImplementation = pOldImplementation;
+            bRet = pImplementation->emit();
+            pImplementation.swap( pFinalImplementation );
         }
     }
 
     return bRet;
 #else	// USE_JAVA && MACOSX
-    return ((PDFWriterImpl*)pImplementation)->emit();
+    return pImplementation->emit();
 #endif	// USE_JAVA && MACOSX
-}
-
-PDFWriter::PDFVersion PDFWriter::GetVersion() const
-{
-    return ((PDFWriterImpl*)pImplementation)->getVersion();
 }
 
 void PDFWriter::SetDocumentLocale( const com::sun::star::lang::Locale& rLoc )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetLocalePDFAction( rLoc ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaSetLocalePDFAction( rLoc ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setDocumentLocale( rLoc );
+    pImplementation->setDocumentLocale( rLoc );
 }
 
-void PDFWriter::SetFont( const Font& rFont )
+void PDFWriter::SetFont( const vcl::Font& rFont )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaFontAction( rFont ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaFontAction( rFont ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setFont( rFont );
+    pImplementation->setFont( rFont );
 }
 
-void PDFWriter::DrawText( const Point& rPos, const String& rText )
+void PDFWriter::DrawText( const Point& rPos, const OUString& rText )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextAction( rPos, rText, 0, STRING_LEN ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaTextAction( rPos, rText, 0, rText.getLength() ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawText( rPos, rText );
+    pImplementation->drawText( rPos, rText, 0, rText.getLength() );
 }
 
 void PDFWriter::DrawTextLine(
@@ -1329,827 +1161,680 @@ void PDFWriter::DrawTextLine(
                              FontStrikeout eStrikeout,
                              FontUnderline eUnderline,
                              FontUnderline eOverline,
-                             sal_Bool bUnderlineAbove )
+                             bool bUnderlineAbove )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextLinePDFAction( rPos, nWidth, eStrikeout, eUnderline, eOverline, bUnderlineAbove ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaTextLinePDFAction( rPos, nWidth, eStrikeout, eUnderline, eOverline, bUnderlineAbove ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawTextLine( rPos, nWidth, eStrikeout, eUnderline, eOverline, bUnderlineAbove );
+    pImplementation->drawTextLine( rPos, nWidth, eStrikeout, eUnderline, eOverline, bUnderlineAbove );
 }
 
 void PDFWriter::DrawTextArray(
                               const Point& rStartPt,
-                              const XubString& rStr,
-                              const sal_Int32* pDXAry,
-                              xub_StrLen nIndex,
-                              xub_StrLen nLen )
+                              const OUString& rStr,
+                              const long* pDXAry,
+                              sal_Int32 nIndex,
+                              sal_Int32 nLen )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextArrayAction( rStartPt, rStr, pDXAry, nIndex, nLen ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaTextArrayAction( rStartPt, rStr, pDXAry, nIndex, nLen ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawTextArray( rStartPt, rStr, pDXAry, nIndex, nLen );
+    pImplementation->drawTextArray( rStartPt, rStr, pDXAry, nIndex, nLen );
 }
 
 void PDFWriter::DrawStretchText(
                                 const Point& rStartPt,
                                 sal_uLong nWidth,
-                                const XubString& rStr,
-                                xub_StrLen nIndex,
-                                xub_StrLen nLen )
+                                const OUString& rStr,
+                                sal_Int32 nIndex,
+                                sal_Int32 nLen )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaStretchTextAction( rStartPt, nWidth, rStr, nIndex, nLen ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaStretchTextAction( rStartPt, nWidth, rStr, nIndex, nLen ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawStretchText( rStartPt, nWidth, rStr, nIndex, nLen );
+    pImplementation->drawStretchText( rStartPt, nWidth, rStr, nIndex, nLen );
 }
 
 void PDFWriter::DrawText(
                          const Rectangle& rRect,
-                         const XubString& rStr,
+                         const OUString& rStr,
                          sal_uInt16 nStyle )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextRectAction( rRect, rStr, nStyle ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaTextRectAction( rRect, rStr, nStyle ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawText( rRect, rStr, nStyle );
+    pImplementation->drawText( rRect, rStr, nStyle );
 }
 
 void PDFWriter::DrawLine( const Point& rStart, const Point& rStop )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaLineAction( rStart, rStop ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaLineAction( rStart, rStop ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawLine( rStart, rStop );
+    pImplementation->drawLine( rStart, rStop );
 }
 
 void PDFWriter::DrawLine( const Point& rStart, const Point& rStop, const LineInfo& rInfo )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaLineAction( rStart, rStop, rInfo ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaLineAction( rStart, rStop, rInfo ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawLine( rStart, rStop, rInfo );
+    pImplementation->drawLine( rStart, rStop, rInfo );
 }
 
 void PDFWriter::DrawPolygon( const Polygon& rPoly )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolygonAction( rPoly ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaPolygonAction( rPoly ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawPolygon( rPoly );
+    pImplementation->drawPolygon( rPoly );
 }
 
 void PDFWriter::DrawPolyLine( const Polygon& rPoly )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolyLineAction( rPoly ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaPolyLineAction( rPoly ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawPolyLine( rPoly );
+    pImplementation->drawPolyLine( rPoly );
 }
 
 void PDFWriter::DrawRect( const Rectangle& rRect )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaRectAction( rRect ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaRectAction( rRect ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawRectangle( rRect );
+    pImplementation->drawRectangle( rRect );
 }
 
 void PDFWriter::DrawRect( const Rectangle& rRect, sal_uLong nHorzRound, sal_uLong nVertRound )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaRoundRectAction( rRect, nHorzRound, nVertRound ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaRoundRectAction( rRect, nHorzRound, nVertRound ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawRectangle( rRect, nHorzRound, nVertRound );
+    pImplementation->drawRectangle( rRect, nHorzRound, nVertRound );
 }
 
 void PDFWriter::DrawEllipse( const Rectangle& rRect )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaEllipseAction( rRect ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaEllipseAction( rRect ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawEllipse( rRect );
+    pImplementation->drawEllipse( rRect );
 }
 
 void PDFWriter::DrawArc( const Rectangle& rRect, const Point& rStart, const Point& rStop )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaArcAction( rRect, rStart, rStop ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaArcAction( rRect, rStart, rStop ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawArc( rRect, rStart, rStop, false, false );
+    pImplementation->drawArc( rRect, rStart, rStop, false, false );
 }
 
 void PDFWriter::DrawPie( const Rectangle& rRect, const Point& rStart, const Point& rStop )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaPieAction( rRect, rStart, rStop ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaPieAction( rRect, rStart, rStop ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawArc( rRect, rStart, rStop, true, false );
+    pImplementation->drawArc( rRect, rStart, rStop, true, false );
 }
 
 void PDFWriter::DrawChord( const Rectangle& rRect, const Point& rStart, const Point& rStop )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaChordAction( rRect, rStart, rStop ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaChordAction( rRect, rStart, rStop ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawArc( rRect, rStart, rStop, false, true );
+    pImplementation->drawArc( rRect, rStart, rStop, false, true );
 }
 
 void PDFWriter::DrawPolyLine( const Polygon& rPoly, const LineInfo& rInfo )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolyLineAction( rPoly, rInfo ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaPolyLineAction( rPoly, rInfo ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawPolyLine( rPoly, rInfo );
+    pImplementation->drawPolyLine( rPoly, rInfo );
 }
 
 void PDFWriter::DrawPolyLine( const Polygon& rPoly, const ExtLineInfo& rInfo )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolyLinePDFAction( rPoly, rInfo ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaPolyLinePDFAction( rPoly, rInfo ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawPolyLine( rPoly, rInfo );
+    pImplementation->drawPolyLine( rPoly, rInfo );
 }
 
-void PDFWriter::DrawPolyPolygon( const PolyPolygon& rPolyPoly )
+void PDFWriter::DrawPolyPolygon( const tools::PolyPolygon& rPolyPoly )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolyPolygonAction( rPolyPoly ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaPolyPolygonAction( rPolyPoly ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawPolyPolygon( rPolyPoly );
+    pImplementation->drawPolyPolygon( rPolyPoly );
 }
 
 void PDFWriter::DrawPixel( const Point& rPos, const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaPixelAction( rPos, rColor ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaPixelAction( rPos, rColor ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawPixel( rPos, rColor );
-}
-
-void PDFWriter::DrawPixel( const Polygon& rPts, const Color* pColors )
-{
-#if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaPixelPDFAction( rPts, pColors ) );
-#endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawPixel( rPts, pColors );
-}
-
-void PDFWriter::DrawBitmap( const Point& rDestPt, const Bitmap& rBitmap )
-{
-    Size aSize = OutputDevice::LogicToLogic( rBitmap.GetPrefSize(),
-                                             rBitmap.GetPrefMapMode(),
-                                             ((PDFWriterImpl*)pImplementation)->getMapMode() );
-#if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpAction( rDestPt, rBitmap ) );
-#endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, aSize, rBitmap );
+    pImplementation->drawPixel( rPos, rColor );
 }
 
 void PDFWriter::DrawBitmap( const Point& rDestPt, const Size& rDestSize, const Bitmap& rBitmap )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpScaleAction( rDestPt, rDestSize, rBitmap ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaBmpScaleAction( rDestPt, rDestSize, rBitmap ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, rDestSize, rBitmap );
-}
-
-void PDFWriter::DrawBitmap( const Point& rDestPt, const Size& rDestSize, const Point& rSrcPtPixel, const Size& rSrcSizePixel, const Bitmap& rBitmap )
-{
-    Bitmap aBitmap( rBitmap );
-    aBitmap.Crop( Rectangle( rSrcPtPixel, rSrcSizePixel ) );
-#if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpScaleAction( rDestPt, rDestSize, aBitmap ) );
-#endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, rDestSize, aBitmap );
-}
-
-void PDFWriter::DrawBitmapEx( const Point& rDestPt, const BitmapEx& rBitmap )
-{
-    Size aSize = OutputDevice::LogicToLogic( rBitmap.GetPrefSize(),
-                                             rBitmap.GetPrefMapMode(),
-                                             ((PDFWriterImpl*)pImplementation)->getMapMode() );
-#if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpExAction( rDestPt, rBitmap ) );
-#endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, aSize, rBitmap );
+    pImplementation->drawBitmap( rDestPt, rDestSize, rBitmap );
 }
 
 void PDFWriter::DrawBitmapEx( const Point& rDestPt, const Size& rDestSize, const BitmapEx& rBitmap )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpExScaleAction( rDestPt, rDestSize, rBitmap ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaBmpExScaleAction( rDestPt, rDestSize, rBitmap ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, rDestSize, rBitmap );
+    pImplementation->drawBitmap( rDestPt, rDestSize, rBitmap );
 }
 
-void PDFWriter::DrawBitmapEx( const Point& rDestPt, const Size& rDestSize, const Point& rSrcPtPixel, const Size& rSrcSizePixel, const BitmapEx& rBitmap )
-{
-    if ( !!rBitmap )
-    {
-	BitmapEx aBitmap( rBitmap );
-	aBitmap.Crop( Rectangle( rSrcPtPixel, rSrcSizePixel ) );
-#if defined USE_JAVA && defined MACOSX
-	if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-		((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpExScaleAction( rDestPt, rDestSize, aBitmap ) );
-#endif	// USE_JAVA && MACOSX
-	((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, rDestSize, aBitmap );
-    }
-}
-
-void PDFWriter::DrawMask( const Point& rDestPt, const Bitmap& rBitmap, const Color& rMaskColor )
-{
-    Size aSize = OutputDevice::LogicToLogic( rBitmap.GetPrefSize(),
-                                             rBitmap.GetPrefMapMode(),
-                                             ((PDFWriterImpl*)pImplementation)->getMapMode() );
-#if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaMaskAction( rDestPt, rBitmap, rMaskColor ) );
-#endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawMask( rDestPt, aSize, rBitmap, rMaskColor );
-}
-
-void PDFWriter::DrawMask( const Point& rDestPt, const Size& rDestSize, const Bitmap& rBitmap, const Color& rMaskColor )
+void PDFWriter::DrawHatch( const tools::PolyPolygon& rPolyPoly, const Hatch& rHatch )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaMaskAction( rDestPt, rBitmap, rMaskColor ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaHatchAction( rPolyPoly, rHatch ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawMask( rDestPt, rDestSize, rBitmap, rMaskColor );
-}
-
-void PDFWriter::DrawMask( const Point& rDestPt, const Size& rDestSize, const Point& rSrcPtPixel, const Size& rSrcSizePixel, const Bitmap& rBitmap, const Color& rMaskColor )
-{
-    Bitmap aBitmap( rBitmap );
-    aBitmap.Crop( Rectangle( rSrcPtPixel, rSrcSizePixel ) );
-#if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaMaskScaleAction( rDestPt, rDestSize, aBitmap, rMaskColor ) );
-#endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawMask( rDestPt, rDestSize, aBitmap, rMaskColor );
+    pImplementation->drawHatch( rPolyPoly, rHatch );
 }
 
 void PDFWriter::DrawGradient( const Rectangle& rRect, const Gradient& rGradient )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaGradientAction( rRect, rGradient ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaGradientAction( rRect, rGradient ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawGradient( rRect, rGradient );
+    pImplementation->drawGradient( rRect, rGradient );
 }
 
-void PDFWriter::DrawGradient( const PolyPolygon& rPolyPoly, const Gradient& rGradient )
+void PDFWriter::DrawGradient( const tools::PolyPolygon& rPolyPoly, const Gradient& rGradient )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaGradientExAction( rPolyPoly, rGradient ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaGradientExAction( rPolyPoly, rGradient ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawGradient( rPolyPoly, rGradient );
-}
-
-void PDFWriter::DrawHatch( const PolyPolygon& rPolyPoly, const Hatch& rHatch )
-{
-#if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaHatchAction( rPolyPoly, rHatch ) );
-#endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawHatch( rPolyPoly, rHatch );
+    pImplementation->push(PushFlags::CLIPREGION);
+    pImplementation->setClipRegion( rPolyPoly.getB2DPolyPolygon() );
+    pImplementation->drawGradient( rPolyPoly.GetBoundRect(), rGradient );
+    pImplementation->pop();
 }
 
 void PDFWriter::DrawWallpaper( const Rectangle& rRect, const Wallpaper& rWallpaper )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaWallpaperAction( rRect, rWallpaper ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaWallpaperAction( rRect, rWallpaper ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawWallpaper( rRect, rWallpaper );
+    pImplementation->drawWallpaper( rRect, rWallpaper );
 }
 
-void PDFWriter::DrawTransparent( const PolyPolygon& rPolyPoly, sal_uInt16 nTransparencePercent )
+void PDFWriter::DrawTransparent( const tools::PolyPolygon& rPolyPoly, sal_uInt16 nTransparencePercent )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTransparentAction( rPolyPoly, nTransparencePercent ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaTransparentAction( rPolyPoly, nTransparencePercent ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawTransparent( rPolyPoly, nTransparencePercent );
+    pImplementation->drawTransparent( rPolyPoly, nTransparencePercent );
 }
 
 void PDFWriter::BeginTransparencyGroup()
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaBeginTransparencyGroupPDFAction() );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaBeginTransparencyGroupPDFAction() );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->beginTransparencyGroup();
+    pImplementation->beginTransparencyGroup();
 }
 
 void PDFWriter::EndTransparencyGroup( const Rectangle& rRect, sal_uInt16 nTransparentPercent )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaEndTransparencyGroupPDFAction( rRect, nTransparentPercent ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaEndTransparencyGroupPDFAction( rRect, nTransparentPercent ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->endTransparencyGroup( rRect, nTransparentPercent );
+    pImplementation->endTransparencyGroup( rRect, nTransparentPercent );
 }
 
-void PDFWriter::EndTransparencyGroup( const Rectangle& rRect, const Bitmap& rAlphaMask )
+void PDFWriter::Push( PushFlags nFlags )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaEndTransparencyGroupMaskPDFAction( rRect, rAlphaMask ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaPushAction( nFlags ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->endTransparencyGroup( rRect, rAlphaMask );
-}
-
-void PDFWriter::Push( sal_uInt16 nFlags )
-{
-#if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaPushAction( nFlags ) );
-#endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->push( nFlags );
+    pImplementation->push( nFlags );
 }
 
 void PDFWriter::Pop()
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaPopAction() ); 
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaPopAction() ); 
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->pop();
+    pImplementation->pop();
 }
 
 void PDFWriter::SetMapMode( const MapMode& rMapMode )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaMapModeAction( rMapMode ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaMapModeAction( rMapMode ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setMapMode( rMapMode );
-}
-
-void PDFWriter::SetMapMode()
-{
-#if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaMapModeAction( ((PDFWriterImpl*)pImplementation)->getMapMode() ) );
-#endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setMapMode();
+    pImplementation->setMapMode( rMapMode );
 }
 
 void PDFWriter::SetLineColor( const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaLineColorAction( rColor, sal_True ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaLineColorAction( rColor, true ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setLineColor( rColor );
+    pImplementation->setLineColor( rColor );
 }
 
 void PDFWriter::SetFillColor( const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaFillColorAction( rColor, sal_True ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaFillColorAction( rColor, true ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setFillColor( rColor );
+    pImplementation->setFillColor( rColor );
 }
 
 void PDFWriter::SetClipRegion()
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaClipRegionAction( Region(), sal_False ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaClipRegionAction( Region(), false ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->clearClipRegion();
+    pImplementation->clearClipRegion();
 }
 
 void PDFWriter::SetClipRegion( const basegfx::B2DPolyPolygon& rRegion )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaClipRegionAction( Region( rRegion ), sal_True ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaClipRegionAction( Region( rRegion ), true ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setClipRegion( rRegion );
+    pImplementation->setClipRegion( rRegion );
 }
 
 void PDFWriter::MoveClipRegion( long nHorzMove, long nVertMove )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaMoveClipRegionAction( nHorzMove, nVertMove ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaMoveClipRegionAction( nHorzMove, nVertMove ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->moveClipRegion( nHorzMove, nVertMove );
+    pImplementation->moveClipRegion( nHorzMove, nVertMove );
 }
 
 void PDFWriter::IntersectClipRegion( const basegfx::B2DPolyPolygon& rRegion )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaISectRegionClipRegionAction( Region( rRegion ) ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaISectRegionClipRegionAction( Region( rRegion ) ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->intersectClipRegion( rRegion );
+    pImplementation->intersectClipRegion( rRegion );
 }
 
 void PDFWriter::IntersectClipRegion( const Rectangle& rRect )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaISectRectClipRegionAction( rRect ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaISectRectClipRegionAction( rRect ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->intersectClipRegion( rRect );
+    pImplementation->intersectClipRegion( rRect );
 }
 
-void PDFWriter::SetAntialiasing( sal_uInt16 nMode )
+void PDFWriter::SetLayoutMode( ComplexTextLayoutMode nMode )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaAntiAliasPDFAction( nMode ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaLayoutModeAction( nMode ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setAntiAlias( (sal_Int32)nMode );
-}
-
-void PDFWriter::SetLayoutMode( sal_uLong nMode )
-{
-#if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaLayoutModeAction( (sal_uInt32)nMode ) );
-#endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setLayoutMode( (sal_Int32)nMode );
+    pImplementation->setLayoutMode( nMode );
 }
 
 void PDFWriter::SetDigitLanguage( LanguageType eLang )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaDigitLanguagePDFAction( eLang ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaDigitLanguagePDFAction( eLang ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setDigitLanguage( eLang );
+    pImplementation->setDigitLanguage( eLang );
 }
 
 void PDFWriter::SetTextColor( const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextColorAction( rColor ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaTextColorAction( rColor ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setTextColor( rColor );
+    pImplementation->setTextColor( rColor );
 }
 
 void PDFWriter::SetTextFillColor()
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextFillColorAction( Color( COL_TRANSPARENT ), sal_False ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaTextFillColorAction( Color( COL_TRANSPARENT ), false ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setTextFillColor();
+    pImplementation->setTextFillColor();
 }
 
 void PDFWriter::SetTextFillColor( const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextFillColorAction( rColor, sal_True ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaTextFillColorAction( rColor, true ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setTextFillColor( rColor );
+    pImplementation->setTextFillColor( rColor );
 }
 
 void PDFWriter::SetTextLineColor()
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextLineColorAction( Color( COL_TRANSPARENT ), sal_False ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaTextLineColorAction( Color( COL_TRANSPARENT ), false ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setTextLineColor();
+    pImplementation->setTextLineColor();
 }
 
 void PDFWriter::SetTextLineColor( const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextLineColorAction( rColor, sal_True ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaTextLineColorAction( rColor, true ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setTextLineColor( rColor );
+    pImplementation->setTextLineColor( rColor );
 }
 
 void PDFWriter::SetOverlineColor()
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaOverlineColorAction( Color( COL_TRANSPARENT ), sal_False ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaOverlineColorAction( Color( COL_TRANSPARENT ), false ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setOverlineColor();
+    pImplementation->setOverlineColor();
 }
 
 void PDFWriter::SetOverlineColor( const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaOverlineColorAction( rColor, sal_True ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaOverlineColorAction( rColor, true ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setOverlineColor( rColor );
+    pImplementation->setOverlineColor( rColor );
 }
 
 void PDFWriter::SetTextAlign( ::TextAlign eAlign )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextAlignAction( eAlign ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaTextAlignAction( eAlign ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setTextAlign( eAlign );
+    pImplementation->setTextAlign( eAlign );
 }
 
 void PDFWriter::DrawJPGBitmap( SvStream& rStreamData, bool bIsTrueColor, const Size& rSrcSizePixel, const Rectangle& rTargetArea, const Bitmap& rMask )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaJpgPDFAction( rStreamData, bIsTrueColor, rSrcSizePixel, rTargetArea, rMask ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaJpgPDFAction( rStreamData, bIsTrueColor, rSrcSizePixel, rTargetArea, rMask ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawJPGBitmap( rStreamData, bIsTrueColor, rSrcSizePixel, rTargetArea, rMask );
+    pImplementation->drawJPGBitmap( rStreamData, bIsTrueColor, rSrcSizePixel, rTargetArea, rMask );
 }
 
 sal_Int32 PDFWriter::CreateLink( const Rectangle& rRect, sal_Int32 nPageNr )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateLinkPDFAction( rRect, nPageNr ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaCreateLinkPDFAction( rRect, nPageNr ) );
 #endif	// USE_JAVA && MACOSX
-    return ((PDFWriterImpl*)pImplementation)->createLink( rRect, nPageNr );
+    return pImplementation->createLink( rRect, nPageNr );
 }
 sal_Int32 PDFWriter::RegisterDestReference( sal_Int32 nDestId, const Rectangle& rRect, sal_Int32 nPageNr, DestAreaType eType )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaRegisterDestReferencePDFAction( nDestId, rRect, nPageNr, eType ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaRegisterDestReferencePDFAction( nDestId, rRect, nPageNr, eType ) );
 #endif	// USE_JAVA && MACOSX
-    return ((PDFWriterImpl*)pImplementation)->registerDestReference( nDestId, rRect, nPageNr, eType );
+    return pImplementation->registerDestReference( nDestId, rRect, nPageNr, eType );
 }
 //--->i56629
-sal_Int32 PDFWriter::CreateNamedDest( const rtl::OUString& sDestName, const Rectangle& rRect, sal_Int32 nPageNr, PDFWriter::DestAreaType eType )
+sal_Int32 PDFWriter::CreateNamedDest( const OUString& sDestName, const Rectangle& rRect, sal_Int32 nPageNr, PDFWriter::DestAreaType eType )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateNamedDestPDFAction( sDestName, rRect, nPageNr, eType ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaCreateNamedDestPDFAction( sDestName, rRect, nPageNr, eType ) );
 #endif	// USE_JAVA && MACOSX
-    return ((PDFWriterImpl*)pImplementation)->createNamedDest( sDestName, rRect, nPageNr, eType );
+    return pImplementation->createNamedDest( sDestName, rRect, nPageNr, eType );
 }
-//<---
 sal_Int32 PDFWriter::CreateDest( const Rectangle& rRect, sal_Int32 nPageNr, PDFWriter::DestAreaType eType )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateDestPDFAction( rRect, nPageNr, eType ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaCreateDestPDFAction( rRect, nPageNr, eType ) );
 #endif	// USE_JAVA && MACOSX
-    return ((PDFWriterImpl*)pImplementation)->createDest( rRect, nPageNr, eType );
+    return pImplementation->createDest( rRect, nPageNr, eType );
 }
 
 sal_Int32 PDFWriter::SetLinkDest( sal_Int32 nLinkId, sal_Int32 nDestId )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetLinkDestPDFAction( nLinkId, nDestId ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaSetLinkDestPDFAction( nLinkId, nDestId ) );
 #endif	// USE_JAVA && MACOSX
-    return ((PDFWriterImpl*)pImplementation)->setLinkDest( nLinkId, nDestId );
+    return pImplementation->setLinkDest( nLinkId, nDestId );
 }
 
-sal_Int32 PDFWriter::SetLinkURL( sal_Int32 nLinkId, const rtl::OUString& rURL )
+sal_Int32 PDFWriter::SetLinkURL( sal_Int32 nLinkId, const OUString& rURL )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetLinkUrlPDFAction( nLinkId, rURL ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaSetLinkUrlPDFAction( nLinkId, rURL ) );
 #endif	// USE_JAVA && MACOSX
-    return ((PDFWriterImpl*)pImplementation)->setLinkURL( nLinkId, rURL );
+    return pImplementation->setLinkURL( nLinkId, rURL );
 }
 
 void PDFWriter::SetLinkPropertyID( sal_Int32 nLinkId, sal_Int32 nPropertyId )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetLinkPropertyIdPDFAction( nLinkId, nPropertyId ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaSetLinkPropertyIdPDFAction( nLinkId, nPropertyId ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setLinkPropertyId( nLinkId, nPropertyId );
+    pImplementation->setLinkPropertyId( nLinkId, nPropertyId );
 }
 
-sal_Int32 PDFWriter::CreateOutlineItem( sal_Int32 nParent, const rtl::OUString& rText, sal_Int32 nDestID )
+sal_Int32 PDFWriter::CreateOutlineItem( sal_Int32 nParent, const OUString& rText, sal_Int32 nDestID )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateOutlineItemPDFAction( nParent, rText, nDestID ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaCreateOutlineItemPDFAction( nParent, rText, nDestID ) );
 #endif	// USE_JAVA && MACOSX
-    return ((PDFWriterImpl*)pImplementation)->createOutlineItem( nParent, rText, nDestID );
+    return pImplementation->createOutlineItem( nParent, rText, nDestID );
 }
 
 sal_Int32 PDFWriter::SetOutlineItemParent( sal_Int32 nItem, sal_Int32 nNewParent )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetOutlineItemParentPDFAction( nItem, nNewParent ) ); 
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaSetOutlineItemParentPDFAction( nItem, nNewParent ) ); 
 #endif	// USE_JAVA && MACOSX
-    return ((PDFWriterImpl*)pImplementation)->setOutlineItemParent( nItem, nNewParent );
+    return pImplementation->setOutlineItemParent( nItem, nNewParent );
 }
 
-sal_Int32 PDFWriter::SetOutlineItemText( sal_Int32 nItem, const rtl::OUString& rText )
+sal_Int32 PDFWriter::SetOutlineItemText( sal_Int32 nItem, const OUString& rText )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetOutlineItemTextPDFAction( nItem, rText ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaSetOutlineItemTextPDFAction( nItem, rText ) );
 #endif	// USE_JAVA && MACOSX
-    return  ((PDFWriterImpl*)pImplementation)->setOutlineItemText( nItem, rText );
+    return  pImplementation->setOutlineItemText( nItem, rText );
 }
 
 sal_Int32 PDFWriter::SetOutlineItemDest( sal_Int32 nItem, sal_Int32 nDest )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetOutlineItemDestPDFAction( nItem, nDest ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaSetOutlineItemDestPDFAction( nItem, nDest ) );
 #endif	// USE_JAVA && MACOSX
-    return ((PDFWriterImpl*)pImplementation)->setOutlineItemDest( nItem, nDest );
+    return pImplementation->setOutlineItemDest( nItem, nDest );
 }
 
 void PDFWriter::CreateNote( const Rectangle& rRect, const PDFNote& rNote, sal_Int32 nPageNr )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateNotePDFAction( rRect, rNote, nPageNr ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaCreateNotePDFAction( rRect, rNote, nPageNr ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->createNote( rRect, rNote, nPageNr );
+    pImplementation->createNote( rRect, rNote, nPageNr );
 }
 
-sal_Int32 PDFWriter::BeginStructureElement( PDFWriter::StructElement eType, const rtl::OUString& rAlias )
+sal_Int32 PDFWriter::BeginStructureElement( PDFWriter::StructElement eType, const OUString& rAlias )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaBeginStructureElementPDFAction( eType ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaBeginStructureElementPDFAction( eType, rAlias ) );
 #endif	// USE_JAVA && MACOSX
-    return ((PDFWriterImpl*)pImplementation)->beginStructureElement( eType, rAlias );
+    return pImplementation->beginStructureElement( eType, rAlias );
 }
 
 void PDFWriter::EndStructureElement()
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaEndStructureElementPDFAction() );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaEndStructureElementPDFAction() );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->endStructureElement();
+    pImplementation->endStructureElement();
 }
 
 bool PDFWriter::SetCurrentStructureElement( sal_Int32 nID )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetCurrentStructureElementPDFAction( nID ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaSetCurrentStructureElementPDFAction( nID ) );
 #endif	// USE_JAVA && MACOSX
-    return ((PDFWriterImpl*)pImplementation)->setCurrentStructureElement( nID );
-}
-
-sal_Int32 PDFWriter::GetCurrentStructureElement()
-{
-    return ((PDFWriterImpl*)pImplementation)->getCurrentStructureElement();
+    return pImplementation->setCurrentStructureElement( nID );
 }
 
 bool PDFWriter::SetStructureAttribute( enum StructAttribute eAttr, enum StructAttributeValue eVal )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetStructureAttributePDFAction( eAttr, eVal ) );          
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaSetStructureAttributePDFAction( eAttr, eVal ) );          
 #endif	// USE_JAVA && MACOSX
-    return ((PDFWriterImpl*)pImplementation)->setStructureAttribute( eAttr, eVal );
+    return pImplementation->setStructureAttribute( eAttr, eVal );
 }
 
 bool PDFWriter::SetStructureAttributeNumerical( enum StructAttribute eAttr, sal_Int32 nValue )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetStructureAttributeNumericalPDFAction( eAttr, nValue ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaSetStructureAttributeNumericalPDFAction( eAttr, nValue ) );
 #endif	// USE_JAVA && MACOSX
-    return ((PDFWriterImpl*)pImplementation)->setStructureAttributeNumerical( eAttr, nValue );
+    return pImplementation->setStructureAttributeNumerical( eAttr, nValue );
 }
 
 void PDFWriter::SetStructureBoundingBox( const Rectangle& rRect )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetStructureBoundingBoxPDFAction( rRect ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaSetStructureBoundingBoxPDFAction( rRect ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setStructureBoundingBox( rRect );
+    pImplementation->setStructureBoundingBox( rRect );
 }
 
-void PDFWriter::SetActualText( const String& rText )
+void PDFWriter::SetActualText( const OUString& rText )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetActualTextPDFAction( rText ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaSetActualTextPDFAction( rText ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setActualText( rText );
+    pImplementation->setActualText( rText );
 }
 
-void PDFWriter::SetAlternateText( const String& rText )
+void PDFWriter::SetAlternateText( const OUString& rText )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetAlternateTextPDFAction( rText ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaSetAlternateTextPDFAction( rText ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setAlternateText( rText );
+    pImplementation->setAlternateText( rText );
 }
 
 void PDFWriter::SetAutoAdvanceTime( sal_uInt32 nSeconds, sal_Int32 nPageNr )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetAutoAdvanceTimePDFAction( nSeconds, nPageNr ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaSetAutoAdvanceTimePDFAction( nSeconds, nPageNr ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setAutoAdvanceTime( nSeconds, nPageNr );
+    pImplementation->setAutoAdvanceTime( nSeconds, nPageNr );
 }
 
 void PDFWriter::SetPageTransition( PDFWriter::PageTransition eType, sal_uInt32 nMilliSec, sal_Int32 nPageNr )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetPageTransitionPDFAction( eType, nMilliSec, nPageNr ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaSetPageTransitionPDFAction( eType, nMilliSec, nPageNr ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->setPageTransition( eType, nMilliSec, nPageNr );
+    pImplementation->setPageTransition( eType, nMilliSec, nPageNr );
 }
 
 sal_Int32 PDFWriter::CreateControl( const PDFWriter::AnyWidget& rControl, sal_Int32 nPageNr )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateControlPDFAction( rControl, nPageNr ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaCreateControlPDFAction( rControl, nPageNr ) );
 #endif	// USE_JAVA && MACOSX
-    return ((PDFWriterImpl*)pImplementation)->createControl( rControl, nPageNr );
+    return pImplementation->createControl( rControl, nPageNr );
 }
 
 PDFOutputStream::~PDFOutputStream()
 {
 }
 
-void PDFWriter::AddStream( const String& rMimeType, PDFOutputStream* pStream, bool bCompress )
+void PDFWriter::AddStream( const OUString& rMimeType, PDFOutputStream* pStream, bool bCompress )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaAddStreamPDFAction( rMimeType, pStream, bCompress ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaAddStreamPDFAction( rMimeType, pStream, bCompress ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->addStream( rMimeType, pStream, bCompress );
-}
-
-void PDFWriter::BeginPattern( const Rectangle& rCellRect )
-{
-#if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaBeginPatternPDFAction( rCellRect ) );
-#endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->beginPattern( rCellRect );
-}
-
-sal_Int32 PDFWriter::EndPattern( const SvtGraphicFill::Transform& rTransform )
-{
-#if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaEndPatternPDFAction( rTransform ) );
-#endif	// USE_JAVA && MACOSX
-    return ((PDFWriterImpl*)pImplementation)->endPattern( rTransform );
-}
-
-void PDFWriter::DrawPolyPolygon( const PolyPolygon& rPolyPoly, sal_Int32 nPattern, bool bEOFill )
-{
-#if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolyPolygonPDFAction( rPolyPoly, nPattern, bEOFill ) );
-#endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->drawPolyPolygon( rPolyPoly, nPattern, bEOFill );
+    pImplementation->addStream( rMimeType, pStream, bCompress );
 }
 
 std::set< PDFWriter::ErrorCode > PDFWriter::GetErrors()
 {
-    return ((PDFWriterImpl*)pImplementation)->getErrors();
+    return pImplementation->getErrors();
 }
 
 com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >
-PDFWriter::InitEncryption( const rtl::OUString& i_rOwnerPassword,
-                           const rtl::OUString& i_rUserPassword,
+PDFWriter::InitEncryption( const OUString& i_rOwnerPassword,
+                           const OUString& i_rUserPassword,
                            bool b128Bit
                           )
 {
@@ -2159,9 +1844,10 @@ PDFWriter::InitEncryption( const rtl::OUString& i_rOwnerPassword,
 void PDFWriter::PlayMetafile( const GDIMetaFile& i_rMTF, const vcl::PDFWriter::PlayMetafileContext& i_rPlayContext, PDFExtOutDevData* i_pData )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaPlayMetafilePDFAction( i_rMTF, i_rPlayContext, i_pData ) );
+    if ( !pImplementation->isReplayWriter() )
+        pImplementation->addAction( new MetaPlayMetafilePDFAction( i_rMTF, i_rPlayContext, i_pData ) );
 #endif	// USE_JAVA && MACOSX
-    ((PDFWriterImpl*)pImplementation)->playMetafile( i_rMTF, i_pData, i_rPlayContext, NULL);
+    pImplementation->playMetafile( i_rMTF, i_pData, i_rPlayContext, NULL);
 }
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

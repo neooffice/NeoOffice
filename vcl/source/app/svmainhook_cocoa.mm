@@ -144,8 +144,6 @@ void ImplHandleAbort( int /* nSig */ )
     _exit( 0 );
 }
 
-using namespace rtl;
-
 #ifdef PRODUCT_CHECKSUM
 extern "C" FUNCTION( PRODUCT_CHECKSUM )
 {

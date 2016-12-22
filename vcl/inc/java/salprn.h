@@ -39,7 +39,6 @@
 #include <list>
 
 #include <vcl/prntypes.hxx>
-#include <vcl/sv.h>
 
 #include "salprn.hxx"
 
@@ -64,17 +63,17 @@ public:
 							JavaSalInfoPrinter( ImplJobSetup* pSetupData );
 	virtual					~JavaSalInfoPrinter();
 
-	virtual SalGraphics*	GetGraphics();
-	virtual void			ReleaseGraphics( SalGraphics* pGraphics );
-	virtual sal_Bool		Setup( SalFrame* pFrame, ImplJobSetup* pSetupData );
-	virtual sal_Bool		SetPrinterData( ImplJobSetup* pSetupData );
-	virtual sal_Bool		SetData( sal_uLong nFlags, ImplJobSetup* pSetupData );
-	virtual void			GetPageInfo( const ImplJobSetup* pSetupData, long& rOutWidth, long& rOutHeight, long& rPageOffX, long& rPageOffY, long& rPageWidth, long& rPageHeight );
-	virtual sal_uLong		GetCapabilities( const ImplJobSetup* pSetupData, sal_uInt16 nType );
-	virtual sal_uLong		GetPaperBinCount( const ImplJobSetup* pSetupData );
-	virtual String			GetPaperBinName( const ImplJobSetup* pSetupData, sal_uLong nPaperBin );
-	virtual void			InitPaperFormats( const ImplJobSetup* pSetupData );
-	virtual int				GetLandscapeAngle( const ImplJobSetup* pSetupData );
+	virtual SalGraphics*	AcquireGraphics() SAL_OVERRIDE;
+	virtual void			ReleaseGraphics( SalGraphics* pGraphics ) SAL_OVERRIDE;
+	virtual bool			Setup( SalFrame* pFrame, ImplJobSetup* pSetupData ) SAL_OVERRIDE;
+	virtual bool			SetPrinterData( ImplJobSetup* pSetupData ) SAL_OVERRIDE;
+	virtual bool			SetData( sal_uLong nFlags, ImplJobSetup* pSetupData ) SAL_OVERRIDE;
+	virtual void			GetPageInfo( const ImplJobSetup* pSetupData, long& rOutWidth, long& rOutHeight, long& rPageOffX, long& rPageOffY, long& rPageWidth, long& rPageHeight ) SAL_OVERRIDE;
+	virtual sal_uLong		GetCapabilities( const ImplJobSetup* pSetupData, sal_uInt16 nType ) SAL_OVERRIDE;
+	virtual sal_uLong		GetPaperBinCount( const ImplJobSetup* pSetupData ) SAL_OVERRIDE;
+	virtual OUString		GetPaperBinName( const ImplJobSetup* pSetupData, sal_uLong nPaperBin ) SAL_OVERRIDE;
+	virtual void			InitPaperFormats( const ImplJobSetup* pSetupData ) SAL_OVERRIDE;
+	virtual int				GetLandscapeAngle( const ImplJobSetup* pSetupData ) SAL_OVERRIDE;
 
 	id						GetPrintInfo() { return mpInfo; }
 	sal_Bool				IsPaperRotated() { return mbPaperRotated; }
@@ -101,13 +100,13 @@ public:
 							JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter );
 	virtual					~JavaSalPrinter();
 
-	virtual sal_Bool		StartJob( const String* pFileName, const String& rJobName, const String& rAppName, sal_uLong nCopies, bool bCollate, bool bDirect, ImplJobSetup* pSetupData );
-	virtual sal_Bool		StartJob( const String* pFileName, const String& rJobName, const String& rAppName, ImplJobSetup* pSetupData, vcl::PrinterController& rController );
-	virtual sal_Bool		EndJob();
-	virtual sal_Bool		AbortJob();
-	virtual SalGraphics*	StartPage( ImplJobSetup* pSetupData, sal_Bool bNewJobData );
-	virtual sal_Bool		EndPage();
-	virtual sal_uLong		GetErrorCode();
+	virtual bool			StartJob( const OUString* pFileName, const OUString& rJobName, const OUString& rAppName, sal_uLong nCopies, bool bCollate, bool bDirect, ImplJobSetup* pSetupData ) SAL_OVERRIDE;
+	virtual bool			StartJob( const OUString* pFileName, const OUString& rJobName, const OUString& rAppName, ImplJobSetup* pSetupData, vcl::PrinterController& rController ) SAL_OVERRIDE;
+	virtual bool			EndJob() SAL_OVERRIDE;
+	virtual bool			AbortJob() SAL_OVERRIDE;
+	virtual SalGraphics*	StartPage( ImplJobSetup* pSetupData, bool bNewJobData ) SAL_OVERRIDE;
+	virtual bool			EndPage() SAL_OVERRIDE;
+	virtual sal_uLong		GetErrorCode() SAL_OVERRIDE;
 
 	void					UpdatePageInfo( const ImplJobSetup* pSetupData );
 };
