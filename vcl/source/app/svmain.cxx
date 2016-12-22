@@ -106,6 +106,8 @@
  
 #include "java/saldata.hxx"
 
+static bool bInImplSVMain = false;
+
 #endif	// USE_JAVA && MACOSX
 
 using namespace ::com::sun::star;
@@ -223,6 +225,11 @@ oslSignalAction SAL_CALL VCLExceptionSignal_impl( void* /*pData*/, oslSignalInfo
 
 int ImplSVMain()
 {
+#if defined USE_JAVA && defined MACOSX
+    bool bOldInImplSVMain = bInImplSVMain;
+    bInImplSVMain = true;
+#endif	// USE_JAVA && MACOSX
+
     // The 'real' SVMain()
     ImplSVData* pSVData = ImplGetSVData();
 
@@ -260,6 +267,9 @@ int ImplSVMain()
     }
 
     DeInitVCL();
+#if defined USE_JAVA && defined MACOSX
+    bInImplSVMain = bOldInImplSVMain;
+#endif	// USE_JAVA && MACOSX
     return nReturn;
 }
 
@@ -684,10 +694,15 @@ void DeInitVCL()
     // Deinit Sal
 #if defined USE_JAVA && defined MACOSX
     // Fix random crashing in native callbacks that get called after destroying
-    // the SalInstance by setting it to NULL
-    SalInstance *pDefInst = pSVData->mpDefInst;
-    pSVData->mpDefInst = NULL;
-    DestroySalInstance( pDefInst );
+    // the SalInstance by setting it to NULL. Do not execute this code when
+    // running unit tests as it will cause some tests to crash.
+    if ( bInImplSVMain )
+    {
+        SalInstance *pDefInst = pSVData->mpDefInst;
+        pSVData->mpDefInst = NULL;
+        DestroySalInstance( pDefInst );
+    }
+    else
 #else   // USE_JAVA && MACOSX
     DestroySalInstance( pSVData->mpDefInst );
 #endif  // USE_JAVA && MACOSX
