@@ -94,6 +94,7 @@ $(eval $(call gb_Helper_register_executables_for_install,SDK,sdk, \
 ))
 
 $(eval $(call gb_Helper_register_executables_for_install,OOO,brand, \
+	$(if $(filter $(GUIBASE),java),checknativefont) \
 	$(if $(filter-out ANDROID IOS MACOSX WNT,$(OS)),oosplash) \
 	soffice_bin \
 	$(if $(filter $(GUIBASE),java),soffice2_bin) \
