@@ -175,6 +175,51 @@ NEO_PACKAGE:=NeoOffice
 NEO_TAG:=NeoOffice-2017_Beta
 NEO_TAG2:=NeoOffice-2017_Viewer_Beta
 NEO_TAG3:=NeoOffice-2017_Classic_Edition_Beta
+PRODUCT_MODULES = \
+	jvmfwk \
+	vcl \
+	avmedia \
+	basic \
+	canvas \
+	connectivity \
+	cppcanvas \
+	cppuhelper \
+	cui \
+	dbaccess \
+	desktop \
+	drawinglayer \
+	editeng \
+	extensions \
+	filter \
+	fpicker \
+	framework \
+	i18npool \
+	lingucomponent \
+	linguistic \
+	oox \
+	package \
+	pyuno \
+	reportdesign \
+	sal \
+	salhelper \
+	sc \
+	sd \
+	sdext \
+	sfx2 \
+	shell \
+	svl \
+	svtools \
+	svx \
+	sw \
+	tools \
+	ucb \
+	ucbhelper \
+	unotools \
+	uui \
+	writerfilter \
+	xmloff
+
+.PHONY : build.neo_tests
 
 .DELETE_ON_ERROR : build.neo_configure
 
@@ -310,48 +355,7 @@ build.neo_configure: build.neo_instdir build.neo_workdir $(INSTDIR) $(WORKDIR)
 build.neo_patches: \
 	$(PRODUCT_COMPONENT_MODULES:%=build.neo_%_component) \
 	$(PRODUCT_COMPONENT_PATCH_MODULES:%=build.neo_%_component) \
-	build.neo_jvmfwk_patch \
-	build.neo_vcl_patch \
-	build.neo_avmedia_patch \
-	build.neo_basic_patch \
-	build.neo_canvas_patch \
-	build.neo_connectivity_patch \
-	build.neo_cppcanvas_patch \
-	build.neo_cppuhelper_patch \
-	build.neo_cui_patch \
-	build.neo_dbaccess_patch \
-	build.neo_desktop_patch \
-	build.neo_drawinglayer_patch \
-	build.neo_editeng_patch \
-	build.neo_extensions_patch \
-	build.neo_filter_patch \
-	build.neo_fpicker_patch \
-	build.neo_framework_patch \
-	build.neo_i18npool_patch \
-	build.neo_lingucomponent_patch \
-	build.neo_linguistic_patch \
-	build.neo_oox_patch \
-	build.neo_package_patch \
-	build.neo_pyuno_patch \
-	build.neo_reportdesign_patch \
-	build.neo_sal_patch \
-	build.neo_salhelper_patch \
-	build.neo_sc_patch \
-	build.neo_sd_patch \
-	build.neo_sdext_patch \
-	build.neo_sfx2_patch \
-	build.neo_shell_patch \
-	build.neo_svl_patch \
-	build.neo_svtools_patch \
-	build.neo_svx_patch \
-	build.neo_sw_patch \
-	build.neo_tools_patch \
-	build.neo_ucb_patch \
-	build.neo_ucbhelper_patch \
-	build.neo_unotools_patch \
-	build.neo_uui_patch \
-	build.neo_writerfilter_patch \
-	build.neo_xmloff_patch
+	$(PRODUCT_MODULES:%=build.neo_%_patch)
 	touch "$@"
 
 # Custom modules that need to link directly to other custom modules
@@ -385,7 +389,14 @@ build.neo_%_component: % build.neo_solenv_patch
 	cd "$<" ; $(MAKE) $(MFLAGS)
 	touch "$@"
 
-build.package: build.neo_patches
+build.neo_tests: build.neo_patches \
+	$(PRODUCT_MODULES:%=build.neo_%_test)
+	touch "$@"
+
+build.neo_%_test: % build.neo_%_patch
+	cd "$<" ; $(MAKE) $(MFLAGS) check
+
+build.package: build.neo_tests
 ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
 	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.package"
 else
@@ -394,7 +405,7 @@ else
 	touch "$@"
 endif
 
-build.package2: build.neo_patches
+build.package2: build.neo_tests
 ifndef PRODUCT_BUILD2
 ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
 	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.package2"
@@ -405,7 +416,7 @@ else
 endif
 endif
 
-build.package3: build.neo_patches
+build.package3: build.neo_tests
 ifndef PRODUCT_BUILD3
 ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
 	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.package3"
