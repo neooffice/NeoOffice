@@ -310,6 +310,8 @@ build.neo_configure: build.neo_instdir build.neo_workdir $(INSTDIR) $(WORKDIR)
 build.neo_patches: \
 	$(PRODUCT_COMPONENT_MODULES:%=build.neo_%_component) \
 	$(PRODUCT_COMPONENT_PATCH_MODULES:%=build.neo_%_component) \
+	build.neo_jvmfwk_patch \
+	build.neo_vcl_patch \
 	build.neo_avmedia_patch \
 	build.neo_basic_patch \
 	build.neo_canvas_patch \
@@ -326,7 +328,6 @@ build.neo_patches: \
 	build.neo_fpicker_patch \
 	build.neo_framework_patch \
 	build.neo_i18npool_patch \
-	build.neo_jvmfwk_patch \
 	build.neo_lingucomponent_patch \
 	build.neo_linguistic_patch \
 	build.neo_oox_patch \
@@ -349,7 +350,6 @@ build.neo_patches: \
 	build.neo_ucbhelper_patch \
 	build.neo_unotools_patch \
 	build.neo_uui_patch \
-	build.neo_vcl_patch \
 	build.neo_writerfilter_patch \
 	build.neo_xmloff_patch
 	touch "$@"
