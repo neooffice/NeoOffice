@@ -386,7 +386,15 @@ SwPrintOptions*     SwModule::GetPrtOptions(bool bWeb)
     // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8598
     static SwPrintOptionsReset *pReset = NULL;
     if (!pReset )
-        pReset = new SwPrintOptionsReset();
+    {
+        // Fix unit tests failure in sd/qa/unit/export-tests.cxx by catching
+        // any exceptions
+        try
+        {
+            pReset = new SwPrintOptionsReset();
+        }
+        catch ( ... ) {}
+    }
 #endif	// USE_JAVA
 
     if(bWeb && !pWebPrtOpt)
