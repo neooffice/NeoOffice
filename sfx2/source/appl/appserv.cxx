@@ -144,7 +144,7 @@ using namespace ::com::sun::star::document;
 
 // [ed] 1/25/05 handler for About events.  Bug #396
 // Note: this must not be static as the symbol will be loaded by the vcl module
-extern "C" void SAL_DLLPUBLIC_EXPORT NativeAboutMenuHandler()
+extern "C" SAL_DLLPUBLIC_EXPORT void NativeAboutMenuHandler()
 {
     SfxRequest aReq( SID_ABOUT, SfxCallMode::SLOT, SfxGetpApp()->GetPool() );
     SfxGetpApp()->MiscExec_Impl( aReq );
@@ -152,7 +152,7 @@ extern "C" void SAL_DLLPUBLIC_EXPORT NativeAboutMenuHandler()
 
 // [ed] 1/26/05 handler for preferences events.
 // Note: this must not be static as the symbol will be loaded by the vcl module
-extern "C" void SAL_DLLPUBLIC_EXPORT NativePreferencesMenuHandler()
+extern "C" SAL_DLLPUBLIC_EXPORT void NativePreferencesMenuHandler()
 {
     SfxRequest aReq( SID_OPTIONS_TREEDIALOG, SfxCallMode::SLOT, SfxGetpApp()->GetPool() );
     SfxGetpApp()->OfaExec_Impl( aReq );
