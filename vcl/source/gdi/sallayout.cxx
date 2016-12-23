@@ -1080,13 +1080,14 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                 // Apply unshifted delta to previous clusters
                 if( nUnshiftedWidth && nUnshiftedDelta && nFirstUnshiftedGlyph >= 0 && nFirstUnshiftedGlyph < p )
                 {
-                    for( j = p - 1; j >= (size_t)nFirstUnshiftedGlyph; --j )
+                    j = p - 1;
+                    while ( j >= (size_t)nFirstUnshiftedGlyph )
                     {
                         if( pNewGlyphWidths[ j ] )
                         {
-                            // Apply delta proportionally to width of glyph so that
-                            // glyphs following narrow characters such as "i" and
-                            // "l" will not be shifted too far left
+                            // Apply delta proportionally to width of glyph so
+                            // that glyphs following narrow characters such as
+                            // "i" and "l" will not be shifted too far left
                             int nShift = (int)((float)m_GlyphItems[j].mnNewWidth * nUnshiftedDelta / nUnshiftedWidth );
                             if( nShift > pNewGlyphWidths[ j ] )
                                 nShift = pNewGlyphWidths[ j ];
@@ -1099,6 +1100,9 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                             nUnshiftedWidth -= m_GlyphItems[j].mnNewWidth;
                             nUnshiftedDelta -= nShift;
                         }
+
+                        if( !j-- )
+                            break;
                     }
                 }
 
