@@ -1194,6 +1194,36 @@ void createJavaInfoDirScan(vector<rtl::Reference<VendorBase> >& vecInfos)
     getJREInfoByPath("file:////usr/jdk/latest", vecInfos);
 }
 
+#elif defined USE_JAVA && defined MACOSX
+
+void createJavaInfoDirScan(vector<rtl::Reference<VendorBase> >& vecInfos)
+{
+    // Ignore all but Oracle's JDK as loading Apple's Java and Oracle's JRE
+    // will cause OS X's JavaVM framework to display a dialog and invoke
+    // exit() when loaded via JNI on OS X 10.10
+    Directory aDir("file:///Library/Java/JavaVirtualMachines");
+    if (aDir.open() == File::E_None)
+    {
+        DirectoryItem aItem;
+        while (aDir.getNextItem(aItem) == File::E_None)
+        {
+            FileStatus aStatus(osl_FileStatus_Mask_FileURL);
+            if (aItem.getFileStatus(aStatus) == File::E_None)
+            {
+                OUString aItemURL(aStatus.getFileURL());
+                if (aItemURL.getLength())
+                {
+                    aItemURL += "/Contents/Home";
+                    if (DirectoryItem::get(aItemURL, aItem) == File::E_None)
+                        getJREInfoByPath(aItemURL, vecInfos);   
+                }
+            }
+         }
+
+        aDir.close();
+    }
+}
+
 #elif defined MACOSX && defined X86_64
 
 void createJavaInfoDirScan(vector<rtl::Reference<VendorBase> >& vecInfos)
@@ -1207,32 +1237,6 @@ void createJavaInfoDirScan(vector<rtl::Reference<VendorBase> >& vecInfos)
 {
     OUString excMessage = "[Java framework] sunjavaplugin: "
                           "Error in function createJavaInfoDirScan in util.cxx.";
-#if defined USE_JAVA && defined MACOSX
-    // Ignore all but Oracle's JDK as loading Apple's Java and Oracle's JRE
-    // will cause OS X's JavaVM framework to display a dialog and invoke
-    // exit() when loaded via JNI on OS X 10.10
-    Directory aDir("file:///Library/Java/JavaVirtualMachines");
-    if (aDir.open() == File::E_None)
-    {
-        DirectoryItem aItem;
-        while (aDir.getNextItem(aItem) == File::E_None)
-        {
-            FileStatus aStatus(FileStatusMask_FileURL);
-            if (aItem.getFileStatus(aStatus) == File::E_None)
-            {
-                OUString aItemURL( aStatus.getFileURL() );
-                if (aItemURL.getLength())
-                {
-                    aItemURL += "/Contents/Home";
-                    if (DirectoryItem::get(aItemURL, aItem) == File::E_None)
-                        getJREInfoByPath(aItemURL, vecInfos);   
-                }
-            }
-         }
-
-        aDir.close();
-    }
-#else	// USE_JAVA && MACOSX
     int cJavaNames= sizeof(g_arJavaNames) / sizeof(char*);
     boost::scoped_array<OUString> sarJavaNames(new OUString[cJavaNames]);
     OUString *arNames = sarJavaNames.get();
@@ -1342,7 +1346,6 @@ void createJavaInfoDirScan(vector<rtl::Reference<VendorBase> >& vecInfos)
             }
         }
     }
-#endif	// USE_JAVA && MACOSX
 }
 #endif // ifdef SOLARIS
 #endif // ifdef UNX
