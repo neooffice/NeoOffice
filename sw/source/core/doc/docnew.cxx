@@ -602,15 +602,6 @@ SwDoc::~SwDoc()
 
     delete mpStyleAccess;
 
-#ifdef USE_JAVA
-    // Fix bug 3556 by not leaking memory if GetDepends() is not NULL
-    SwCharFmts aCharFmtTblCopy( *mpCharFmtTbl );
-    for ( std::vector< SwCharFmt* >::const_iterator it = aCharFmtTblCopy.begin(); it != aCharFmtTblCopy.end(); ++it )
-    {
-        if ( !(*it)->GetDepends() )
-            mpCharFmtTbl->push_back( *it );
-    }
-#endif	// USE_JAVA
     delete mpCharFmtTbl;
     delete mpSectionFmtTbl;
     delete mpTblFrmFmtTbl;
@@ -628,10 +619,6 @@ SwDoc::~SwDoc()
     delete mpTOXTypes;
     delete mpEmptyPageFmt;
     delete mpColumnContFmt;
-#ifdef USE_JAVA
-    // Fix bug 3556 by not leaking memory if GetDepends() is not NULL
-    if ( !mpDfltCharFmt->GetDepends() )
-#endif	// USE_JAVA
     delete mpDfltCharFmt;
     delete mpDfltFrmFmt;
     delete mpLayoutCache;
