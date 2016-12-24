@@ -176,6 +176,7 @@ NEO_TAG:=NeoOffice-2017_Beta
 NEO_TAG2:=NeoOffice-2017_Viewer_Beta
 NEO_TAG3:=NeoOffice-2017_Classic_Edition_Beta
 PRODUCT_MODULES = \
+	unotest \
 	sal \
 	jvmfwk \
 	vcl \
