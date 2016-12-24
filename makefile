@@ -147,7 +147,7 @@ PRODUCT_UPDATE_CHECK_URL=$(PRODUCT_BASE_URL)/patchcheck.php
 PRODUCT_MAC_APP_STORE_URL=macappstores://itunes.apple.com/app/neooffice/id639210716?mt=12
 PRODUCT_DOWNLOAD_URL=$(PRODUCT_BASE_URL)/downloadfromproduct.php
 PRODUCT_JAVA_DOWNLOAD_URL=$(PRODUCT_BASE_URL)/javadownload.php
-PRODUCT_BUNDLED_LANG_PACKS=en-US de fr it he ja ar es ru nl en-GB sv pl nb fi pt-BR da zh-TW cs th zh-CN el hu sk ko tr
+PRODUCT_BUNDLED_LANG_PACKS=$(LIBO_LANGUAGES)
 PRODUCT_BUNDLED_LANG_PACKS2=$(PRODUCT_BUNDLED_LANG_PACKS)
 PRODUCT_BUNDLED_LANG_PACKS3=$(PRODUCT_BUNDLED_LANG_PACKS)
 ifeq ("$(OS_TYPE)","macOS")
@@ -371,28 +371,28 @@ else
 endif
 	touch "$@"
 
-build.neo_%_patch: % build.neo_solenv_patch
-	cd "$<" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . -type d | sed "s/ /\\ /g" | grep -v /CVS$$ ) | while read i ; do mkdir -p "$$i" ; done'
+build.neo_%_patch: build.neo_solenv_patch
+	cd "$(@:build.neo_%_patch=%)" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$(@:build.neo_%_patch=%)" ; find . -type d | sed "s/ /\\ /g" | grep -v /CVS$$ ) | while read i ; do mkdir -p "$$i" ; done'
 ifeq ("$(OS_TYPE)","macOS")
-	cd "$<" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . ! -type d | sed "s/ /\\ /g" | grep -v /CVS/ ) | while read i ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(LIBO_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
+	cd "$(@:build.neo_%_patch=%)" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$(@:build.neo_%_patch=%)" ; find . ! -type d | sed "s/ /\\ /g" | grep -v /CVS/ ) | while read i ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(LIBO_BUILD_HOME)/$(@:build.neo_%_patch=%)/$$i" "$$i" 2>/dev/null ; fi ; done'
 else
 # Use hardlinks for Windows
-	cd "$<" ; sh -e -c 'CYGWIN=winsymlinks ; export CYGWIN ; ( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ ) | while read i ; do if [ ! -f "$$i" ] ; then ln -f "$(PWD)/$(LIBO_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
+	cd "$(@:build.neo_%_patch=%)" ; sh -e -c 'CYGWIN=winsymlinks ; export CYGWIN ; ( cd "$(PWD)/$(LIBO_BUILD_HOME)/$(@:build.neo_%_patch=%)" ; find . ! -type d | grep -v /CVS/ ) | while read i ; do if [ ! -f "$$i" ] ; then ln -f "$(PWD)/$(LIBO_BUILD_HOME)/$(@:build.neo_%_patch=%)/$$i" "$$i" 2>/dev/null ; fi ; done'
 endif
-	cd "$<" ; $(MAKE) $(MFLAGS) clean
-	cd "$<" ; $(MAKE) $(MFLAGS)
+	cd "$(@:build.neo_%_patch=%)" ; $(MAKE) $(MFLAGS) clean
+	cd "$(@:build.neo_%_patch=%)" ; $(MAKE) $(MFLAGS)
 	touch "$@"
 
-build.neo_%_component: % build.neo_solenv_patch
-	cd "$<" ; $(MAKE) $(MFLAGS) clean
-	cd "$<" ; $(MAKE) $(MFLAGS)
+build.neo_%_component: build.neo_solenv_patch
+	cd "$(@:build.neo_%_component=%)" ; $(MAKE) $(MFLAGS) clean
+	cd "$(@:build.neo_%_component=%)" ; $(MAKE) $(MFLAGS)
 	touch "$@"
 
 build.neo_tests: $(PRODUCT_MODULES:%=build.neo_%_test)
 	touch "$@"
 
-build.neo_%_test: % build.neo_patches
-	cd "$<" ; $(MAKE) $(MFLAGS) check
+build.neo_%_test: build.neo_patches
+	cd "$(@:build.neo_%_test=%)" ; $(MAKE) $(MFLAGS) check
 	touch "$@"
 
 build.package: build.neo_tests
@@ -430,32 +430,34 @@ build.package_shared:
 # Check that codesign and productsign executables exist before proceeding
 	@sh -e -c 'for i in codesign productsign ; do if [ -z "`which $$i`" ] ; then echo "$$i command not found" ; exit 1 ; fi ; done'
 	sh -e -c 'if [ -d "$(INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(INSTALL_HOME)" ; fi'
-	sh -e -c 'if [ -d "/Volumes/OpenOffice" ] ; then hdiutil eject -force "/Volumes/OpenOffice" ; fi'
-	hdiutil attach -nobrowse "$(OO_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/$(subst $(SPACE),_,$(OO_PRODUCT_NAME))/dmg/install/en-US/$(subst $(SPACE),_,$(OO_PRODUCT_NAME))_$(OO_PRODUCT_VERSION)_MacOS_$(subst _,-,$(TARGET_MACHINE))_install_en-US.dmg"
-	mkdir -p "$(INSTALL_HOME)/package/Contents"
-	cd "$(INSTALL_HOME)/package" ; ( ( cd "/Volumes/OpenOffice/OpenOffice.app" && gnutar cvf - . ) | ( cd "$(PWD)/$(INSTALL_HOME)/package" && gnutar xvf - --exclude="._*" ) )
-	hdiutil eject -force "/Volumes/OpenOffice"
+	mkdir -p "$(INSTALL_HOME)/package"
+	sh -e -c '( cd "$(LIBO_INSTDIR)/$(LIBO_PRODUCT_NAME).app" && tar cf - . ) | ( cd "$(PWD)/$(INSTALL_HOME)/package" && tar xvf - )'
+	sh -e -c '( cd "$(INSTDIR)/$(LIBO_PRODUCT_NAME).app" && ( find . -type f | tar cf - -T - ) ) | ( cd "$(PWD)/$(INSTALL_HOME)/package" && tar xvf - )'
 # Remove OOo system plugins but fix bug 3381 to save standard dictionaries
-	rm -Rf "$(INSTALL_HOME)/package/Contents/Frameworks"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Library"
-	rm -Rf "$(INSTALL_HOME)/package/Contents/share/extension"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/share/uno_packages"
-	mkdir -p "$(INSTALL_HOME)/package/Contents/share/extension"
+	rm -Rf "$(INSTALL_HOME)/package/Contents/user"
 	mkdir -p "$(INSTALL_HOME)/package/Contents/share/uno_packages"
 	chmod -Rf u+w,a+r "$(INSTALL_HOME)/package"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program" ; mv -f "MacOS" "program" ; mkdir -p "MacOS"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/avmedia/$(UOUTPUTDIR)/lib/libavmedia.dylib" "$(PWD)/avmedia/$(UOUTPUTDIR)/lib/libavmediajava.dylib" "$(PWD)/basic/$(UOUTPUTDIR)/lib/libsb.dylib" "$(PWD)/canvas/$(UOUTPUTDIR)/lib/vclcanvas.uno.dylib" "$(PWD)/connectivity/$(UOUTPUTDIR)/lib/libcalc.dylib" "$(PWD)/connectivity/$(UOUTPUTDIR)/lib/libdbtools.dylib" "$(PWD)/connectivity/$(UOUTPUTDIR)/lib/libmacab1.dylib" "$(PWD)/connectivity/$(UOUTPUTDIR)/lib/libmacabdrv1.dylib" "$(PWD)/connectivity/$(UOUTPUTDIR)/lib/libodbc.uno.dylib" "$(PWD)/connectivity/$(UOUTPUTDIR)/lib/libodbcbase.dylib" "$(PWD)/cppcanvas/$(UOUTPUTDIR)/lib/libcppcanvas.dylib" "$(PWD)/cppuhelper/$(UOUTPUTDIR)/lib/libuno_cppuhelpers5abi.dylib.3" "$(PWD)/cui/$(UOUTPUTDIR)/lib/libcui.dylib" "$(PWD)/dbaccess/$(UOUTPUTDIR)/lib/libdba.dylib" "$(PWD)/dbaccess/$(UOUTPUTDIR)/lib/libdbu.dylib" "$(PWD)/desktop/$(UOUTPUTDIR)/lib/deployment.uno.dylib" "$(PWD)/desktop/$(UOUTPUTDIR)/lib/libdeploymentgui.uno.dylib" "$(PWD)/desktop/$(UOUTPUTDIR)/lib/libdeploymentmisc.dylib" "$(PWD)/desktop/$(UOUTPUTDIR)/lib/libsofficeapp.dylib" "$(PWD)/desktop/$(UOUTPUTDIR)/lib/libspl.dylib" "$(PWD)/desktop/$(UOUTPUTDIR)/lib/libunopkgapp.dylib" "$(PWD)/desktop/$(UOUTPUTDIR)/lib/migrationoo2.uno.dylib" "$(PWD)/drawinglayer/$(UOUTPUTDIR)/LinkTarget/Library/libdrawinglayer.dylib" "$(PWD)/editeng/$(UOUTPUTDIR)/LinkTarget/Library/libediteng.dylib" "$(PWD)/extensions/$(UOUTPUTDIR)/lib/libscn.dylib" "$(PWD)/filter/$(UOUTPUTDIR)/lib/libipt.dylib" "$(PWD)/filter/$(UOUTPUTDIR)/lib/libmsfilter.dylib" "$(PWD)/filter/$(UOUTPUTDIR)/lib/libpdffilter.dylib" "$(PWD)/fpicker/$(UOUTPUTDIR)/lib/fpicker.uno.dylib" "$(PWD)/fpicker/$(UOUTPUTDIR)/lib/fps_java.uno.dylib" "$(PWD)/framework/$(UOUTPUTDIR)/LinkTarget/Library/libfwe.dylib" "$(PWD)/framework/$(UOUTPUTDIR)/LinkTarget/Library/libfwk.dylib" "$(PWD)/i18npool/$(UOUTPUTDIR)/lib/i18npool.uno.dylib" "$(PWD)/jvmfwk/$(UOUTPUTDIR)/lib/libjvmfwk.dylib.3" "$(PWD)/lingucomponent/$(UOUTPUTDIR)/lib/libspell.uno.dylib" "$(PWD)/linguistic/$(UOUTPUTDIR)/lib/liblng.dylib" "$(PWD)/oox/$(UOUTPUTDIR)/lib/liboox.dylib" "$(PWD)/package/$(UOUTPUTDIR)/lib/libpackage2.dylib" "$(PWD)/reportdesign/$(UOUTPUTDIR)/lib/librpt.dylib" "$(PWD)/sal/$(UOUTPUTDIR)/lib/libuno_sal.dylib.3" "$(PWD)/sc/$(UOUTPUTDIR)/lib/libsc.dylib" "$(PWD)/sc/$(UOUTPUTDIR)/lib/libscui.dylib" "$(PWD)/sd/$(UOUTPUTDIR)/lib/libsd.dylib" "$(PWD)/sfx2/$(UOUTPUTDIR)/LinkTarget/Library/libsfx.dylib" "$(PWD)/shell/$(UOUTPUTDIR)/lib/cmdmail.uno.dylib" "$(PWD)/shell/$(UOUTPUTDIR)/lib/localebe1.uno.dylib" "$(PWD)/shell/$(UOUTPUTDIR)/lib/macbe1.uno.dylib" "$(PWD)/shell/$(UOUTPUTDIR)/lib/syssh.uno.dylib" "$(PWD)/svl/$(UOUTPUTDIR)/LinkTarget/Library/libsvl.dylib" "$(PWD)/svtools/$(UOUTPUTDIR)/LinkTarget/Library/libsvt.dylib" "$(PWD)/svx/$(UOUTPUTDIR)/LinkTarget/Library/libsvx.dylib" "$(PWD)/svx/$(UOUTPUTDIR)/LinkTarget/Library/libsvxcore.dylib" "$(PWD)/sw/$(UOUTPUTDIR)/LinkTarget/Library/libmsword.dylib" "$(PWD)/sw/$(UOUTPUTDIR)/LinkTarget/Library/libsw.dylib" "$(PWD)/sw/$(UOUTPUTDIR)/LinkTarget/Library/libswui.dylib" "$(PWD)/sw/$(UOUTPUTDIR)/LinkTarget/Library/vbaswobj.uno.dylib" "$(PWD)/tools/$(UOUTPUTDIR)/LinkTarget/Library/libtl.dylib" "$(PWD)/vcl/$(UOUTPUTDIR)/LinkTarget/Library/libvcl.dylib" "$(PWD)/ucb/$(UOUTPUTDIR)/lib/libucpdav1.dylib" "$(PWD)/ucb/$(UOUTPUTDIR)/lib/libucpfile1.dylib" "$(PWD)/ucbhelper/$(UOUTPUTDIR)/lib/libucbhelper4s5abi.dylib" "$(PWD)/unotools/$(UOUTPUTDIR)/lib/libutl.dylib" "$(PWD)/unoxml/$(UOUTPUTDIR)/LinkTarget/Library/libunoxml.dylib" "$(PWD)/uui/$(UOUTPUTDIR)/lib/libuui.dylib" "$(PWD)/vos/$(UOUTPUTDIR)/lib/libvos3s5abi.dylib" "$(PWD)/writerfilter/$(UOUTPUTDIR)/lib/libwriterfilter.dylib" "$(PWD)/xmloff/$(UOUTPUTDIR)/LinkTarget/Library/libxo.dylib" "program"
 ifdef PRODUCT_BUILD3
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/extensions/$(UOUTPUTDIR)/lib/libupdchk.dylib" "$(PWD)/extensions/$(UOUTPUTDIR)/lib/updchk.uno.dylib" "$(PWD)/jvmfwk/$(UOUTPUTDIR)/lib/sunjavaplugin.dylib" "$(PWD)/pyuno/$(UOUTPUTDIR)/lib/libpyuno.dylib" "program"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/hsqldb/$(UOUTPUTDIR)/misc/build/hsqldb/lib/hsqldb.jar" "program/classes"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/bin/soffice3" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/extensions/$(UOUTPUTDIR)/bin/updchkruninstallers" "MacOS/updchkruninstallers.bin" ; chmod a+x "MacOS/updchkruninstallers.bin"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice2"
+	cd "$(INSTALL_HOME)/package/Contents" ; mv "program/soffice3" "MacOS/soffice.bin"
+	cd "$(INSTALL_HOME)/package/Contents" ; mv "program/updateruninstallers" "MacOS/updchkruninstallers.bin"
 else ifdef PRODUCT_BUILD2
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/bin/soffice2" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice"
+	cd "$(INSTALL_HOME)/package/Contents" ; mv "program/soffice2" "MacOS/soffice.bin"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice3"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/updateruninstallers"
 else
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/bin/soffice" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
+	cd "$(INSTALL_HOME)/package/Contents" ; mv "program/soffice" "MacOS/soffice.bin"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice2"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice3"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/updateruninstallers"
 endif
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/vcl/$(UOUTPUTDIR)/LinkTarget/Executable/checknativefont" "program/checknativefont" ; chmod a+x "program/checknativefont"
+	echo "End of update installer build steps"
+	exit 1
 # Mac App Store will reject apps with shell scripts
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice.bin" ; ln -sf "../MacOS/soffice.bin" "program/soffice.bin"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in sbase scalc sdraw simpress smath soffice swriter unopkg unopkg.bin ; do rm -f "program/$$i" ; ln -sf "soffice.bin" "MacOS/$$i" ; done'
