@@ -36,7 +36,7 @@ bool ImplSVMainHook( int * )
     return false;   // indicate that ImplSVMainHook is not implemented
 }
 
-#elif !defined QUARTZ || defined USE_JAVA
+#elif !defined NO_OOO_4_1_3_IMPLSVMAINHOOK
 #include <osl/thread.h>
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
