@@ -220,8 +220,6 @@ PRODUCT_MODULES = \
 	writerfilter \
 	xmloff
 
-.PHONY : build.neo_tests
-
 .DELETE_ON_ERROR : build.neo_configure
 
 all: build.all
@@ -390,12 +388,12 @@ build.neo_%_component: % build.neo_solenv_patch
 	cd "$<" ; $(MAKE) $(MFLAGS)
 	touch "$@"
 
-build.neo_tests: build.neo_patches \
-	$(PRODUCT_MODULES:%=build.neo_%_test)
+build.neo_tests: $(PRODUCT_MODULES:%=build.neo_%_test)
 	touch "$@"
 
-build.neo_%_test: % build.neo_%_patch
+build.neo_%_test: % build.neo_patches
 	cd "$<" ; $(MAKE) $(MFLAGS) check
+	touch "$@"
 
 build.package: build.neo_tests
 ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
