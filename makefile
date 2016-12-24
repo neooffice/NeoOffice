@@ -97,7 +97,7 @@ LIBO_BUILD_HOME=$(BUILD_HOME)/$(LIBO_PACKAGE)
 LIBO_BOOTSTRAP_MAKEFILE:=$(BUILD_HOME)/bootstrap.mk
 LIBO_INSTDIR=$(LIBO_BUILD_HOME)/instdir
 LIBO_WORKDIR=$(LIBO_BUILD_HOME)/workdir
-LIBO_LANGUAGES:=$(shell cat '$(PWD)/etc/supportedlanguages.txt' | sed '/^\#.*$$/d' | sed 's/\#.*$$//' | awk -F, '{ print $$1 }')
+LIBO_LANGUAGES:=en-US de fr it he ja ar es ru nl en-GB sv pl nb fi pt-BR da zh-TW cs th zh-CN el hu sk ko tr
 NEOLIGHT_MDIMPORTER_ID:=org.neooffice.neolight
 NEOPEEK_QLPLUGIN_ID:=org.neooffice.quicklookplugin
 INSTDIR=$(BUILD_HOME)/instdir
@@ -435,16 +435,6 @@ build.package_shared:
 	mkdir -p "$(INSTALL_HOME)/package/Contents"
 	cd "$(INSTALL_HOME)/package" ; ( ( cd "/Volumes/OpenOffice/OpenOffice.app" && gnutar cvf - . ) | ( cd "$(PWD)/$(INSTALL_HOME)/package" && gnutar xvf - --exclude="._*" ) )
 	hdiutil eject -force "/Volumes/OpenOffice"
-# Regroup the OOo language packs
-	cd "$(OO_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/$(subst $(SPACE),_,$(OO_PRODUCT_NAME))_languagepack/dmg/install" ; find . -type d -maxdepth 1 -exec basename {} \; | grep -v '^\.$$' | grep -v '^follow_me$$' | grep -v '^log$$' > "$(PWD)/$(INSTALL_HOME)/language_names"
-# Include certain languages in the main installer
-	sh -e -c 'for i in $(PRODUCT_BUNDLED_LANG_PACKS) ; do if [ -d "/Volumes/OpenOffice Language Pack" ] ; then hdiutil eject -force "/Volumes/OpenOffice Language Pack" ; fi ; hdiutil attach -nobrowse "$(PWD)/$(OO_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/$(subst $(SPACE),_,$(OO_PRODUCT_NAME))_languagepack/dmg/install/$${i}/$(subst $(SPACE),_,$(OO_PRODUCT_NAME))_$(OO_PRODUCT_VERSION)_MacOS_$(subst _,-,$(TARGET_MACHINE))_langpack_$${i}.dmg" ; bunzip2 -dc "/Volumes/OpenOffice Language Pack/OpenOffice Language Pack.app/Contents/tarball.tar.bz2" | ( cd "$(PWD)/$(INSTALL_HOME)/package" && gnutar xvf - --exclude="._*" ) ; hdiutil eject -force "/Volumes/OpenOffice Language Pack" ; helpflag=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | awk -F, "{ print \\$$2 }"` ; if [ "$${helpflag}" != "1" ] ; then rm -Rf "$(PWD)/$(INSTALL_HOME)/package/Contents/help/$${i}" ; ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents/help" ; ln -s "en" "$${i}" ) ; fi ; done'
-ifndef LANGPACKS
-# Bypass the language pack installers
-else
-# Create the language pack installers
-	sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names" | sed $(foreach BUNDLED_LANG_PACK,$(PRODUCT_BUNDLED_LANG_PACKS),-e "/^$(BUNDLED_LANG_PACK)\\$$/d")` ; do langname=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | sed "s/#.*$$//" | awk -F, "{ print \\$$3 }"` ; langdirname=`echo "$${langname}" | sed "s# #_#g"` ; if [ -z "$${langname}" -o -z "$${langdirname}" ] ; then echo "Skipping $${i} language..." ; continue ; fi ; mkdir -p "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents" ; if [ -d "/Volumes/OpenOffice Language Pack" ] ; then hdiutil eject -force "/Volumes/OpenOffice Language Pack" ; fi ; hdiutil attach -nobrowse "$(PWD)/$(OO_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/$(subst $(SPACE),_,$(OO_PRODUCT_NAME))_languagepack/dmg/install/$${i}/$(subst $(SPACE),_,$(OO_PRODUCT_NAME))_$(OO_PRODUCT_VERSION)_MacOS_$(subst _,-,$(TARGET_MACHINE))_langpack_$${i}.dmg" ; bunzip2 -dc "/Volumes/OpenOffice Language Pack/OpenOffice Language Pack.app/Contents/tarball.tar.bz2" | ( cd "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}" && gnutar xvf - --exclude="._*" ) ; hdiutil eject -force "/Volumes/OpenOffice Language Pack" ; helpflag=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | awk -F, "{ print \\$$2 }"` ; if [ "$${helpflag}" != "1" ] ; then rm -Rf "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/help/$${i}" ; ( cd "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/help" ; ln -s "en" "$${i}" ) ; fi ; "$(MAKE)" $(MFLAGS) "PRODUCT_LANG_PACK_LOCALE=$${i}" "PRODUCT_LANG_PACK_VERSION=$(PRODUCT_LANG_PACK_VERSION) $${langname}" "PRODUCT_DIR_LANG_PACK_VERSION=$(PRODUCT_DIR_LANG_PACK_VERSION)_$${langdirname}" "build.package_$${langdirname}" ; done'
-endif
 # Remove OOo system plugins but fix bug 3381 to save standard dictionaries
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Frameworks"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Library"
@@ -847,86 +837,6 @@ else
 	sync ; "$(PATCH_INSTALL_HOME)/tmp/$(YOURSWAYCREATEDMG_PACKAGE)/create-dmg" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME)"
 endif
 	rm -Rf "$(PATCH_INSTALL_HOME)/tmp"
-
-build.package_%: $(INSTALL_HOME)/package_%
-	chmod -Rf u+w,a+r "$<"
-	cd "$</Contents" ; rm -Rf readmes share/readme
-	cd "$</Contents" ; rm -f "program/resource/dba"*.res
-	cd "$</Contents" ; rm -f "program/resource/deploymentgui"*.res
-	cd "$</Contents" ; rm -f "program/resource/sfx"*.res
-	cd "$</Contents" ; rm -f "program/resource/sw"*.res
-	cd "$</Contents" ; rm -f "program/resource/vcl"*.res
-	cd "$</Contents" ; xmllint --noblanks "$(PWD)/etc/share/registry/res/fcfg_langpack_$*" > "share/registry/res/fcfg_langpack_$*"
-ifndef PRODUCT_BUILD3
-	cd "$</Contents" ; xmllint --noblanks "$(PWD)/etc/sandbox/share/registry/res/fcfg_langpack_$*" > "share/registry/res/fcfg_langpack_$*"
-	cd "$</Contents" ; xmllint --noblanks "$(PWD)/etc/sandbox/share/registry/res/registry_$*" > "share/registry/res/registry_$*"
-endif
-	rm -Rf "$</Contents/Resources"
-	mkdir -p "$</Contents/Resources"
-# Add Mac OS X localized resources
-	cd "$</Contents/Resources" ; sh -e -c 'for i in `echo "$(PRODUCT_LANG_PACK_LOCALE)" | sed "s#-#_#g"` ; do mkdir -p "$${i}.lproj" ; mkdir -p `echo "$${i}" | sed "s#_.*\\$$##"`".lproj" ; done'
-	cd "$<" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
-	xattr -rcs "$<"
-# Mac App Store requires files to be writable by root
-	chmod -Rf u+w,og-w,a+r "$<"
-# Mark certain directories writable for group
-	chmod -f 775 "$<"
-	chmod -f 775 "$</Contents/Resources"
-	echo "Running sudo to chown $(@:build.package_%=%) installation files..."
-	sudo chown -Rf root:admin "$<"
-	mkdir -p "$<.pkg/Resources"
-	mkdir -p "$<.pkg/contents.pkg/Scripts"
-	cd "$<.pkg/Resources" ; sh -e -c 'for i in `cd "/System/Library/PrivateFrameworks/Install.framework/Resources" ; find . -type d -name "*.lproj" -maxdepth 1` ; do mkdir -p "$${i}" ; done'
-	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/PackageInfo.langpack" | sed 's#$$(PRODUCT_DOMAIN)#$(PRODUCT_DOMAIN)#g' | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_LANG_PACK_VERSION)#$(PRODUCT_LANG_PACK_VERSION)#g' | sed 's#$$(PRODUCT_SHORT_VERSION)#$(PRODUCT_SHORT_VERSION)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$<.pkg/contents.pkg/PackageInfo"
-	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/Distribution.langpack" | sed 's#$$(PRODUCT_DOMAIN)#$(PRODUCT_DOMAIN)#g' | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_LANG_PACK_VERSION)#$(PRODUCT_LANG_PACK_VERSION)#g' | sed 's#$$(PRODUCT_SHORT_VERSION)#$(PRODUCT_SHORT_VERSION)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' | sed 's#$$(TARGET_MACHINE)#$(TARGET_MACHINE)#g' > "$<.pkg/Distribution"
-ifeq ("$(PRODUCT_NAME)","NeoOffice")
-	cp "etc/package/ship.tiff" "$<.pkg/Resources/background.tiff"
-	echo '<background file="background.tiff" alignment="bottomleft" scaling="proportional"/>' >> "$<.pkg/Distribution"
-endif
-# Make empty BOM so that nothing gets extracted in the temporary installation
-	mkdir "$(INSTALL_HOME)/emptydir"
-	mkbom "$(INSTALL_HOME)/emptydir" "$<.pkg/contents.pkg/Bom" >& /dev/null
-	( cd "$(INSTALL_HOME)/emptydir" ; pax -w -z -x cpio . ) > "$<.pkg/contents.pkg/Payload"
-	( cd "$<" ; pax -w -z -x cpio . ) > "$<.pkg/contents.pkg/Scripts/Archive.pax.gz"
-	rm -Rf "$(INSTALL_HOME)/emptydir"
-	echo '<payload installKBytes="'`du -sk "$<" | awk '{ print $$1 }'`'" numberOfFiles="'`lsbom "$<.pkg/contents.pkg/Bom" | wc -l`'"/>' >> "$<.pkg/contents.pkg/PackageInfo"
-	echo '</pkg-info>' >> "$<.pkg/contents.pkg/PackageInfo"
-	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "bin/installutils.langpack" | sed 's#$$(PRODUCT_USER_INSTALL_DIR)#$(PRODUCT_USER_INSTALL_DIR)#g' | sed 's#$$(PRODUCT_VERSION_BASE)#$(PRODUCT_VERSION_BASE)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_VERSION_EXT)#$(PRODUCT_VERSION_EXT)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(BUILD_MACHINE)#$(BUILD_MACHINE)#g' | sed 's#$$(PREVIOUS_PRODUCT_VERSION_BASE)#$(PREVIOUS_PRODUCT_VERSION_BASE)#g' | sed 's#$$(TARGET_FILE_TYPE)#$(TARGET_FILE_TYPE)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$(INSTALL_HOME)/installutils.langpack"
-	cat "$(INSTALL_HOME)/installutils.langpack" "bin/InstallationCheck" | sed 's#$$(INSTALLATION_CHECK_REQUIRED_COMMANDS)#$(INSTALLATION_CHECK_REQUIRED_COMMANDS)#g' > "$(INSTALL_HOME)/InstallationCheck.langpack" ; chmod a+x "$(INSTALL_HOME)/InstallationCheck.langpack"
-	cat "$(INSTALL_HOME)/installutils.langpack" "bin/VolumeCheck.langpack" > "$(INSTALL_HOME)/VolumeCheck.langpack" ; chmod a+x "$(INSTALL_HOME)/VolumeCheck.langpack"
-	cd "bin" ; sh -e -c 'for i in `find . -type d -name "*.lproj"` ; do mkdir -p "$${i}" ; cat "$(PWD)/bin/$${i}/InstallationCheck.strings" "$(PWD)/bin/$${i}/VolumeCheck.strings.langpack" | sed "s#\$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g" | sed "s#\$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" | sed "s#\$$(INSTALLATION_CHECK_REQUIRED_COMMANDS)#$(INSTALLATION_CHECK_REQUIRED_COMMANDS)#g" > "$(PWD)/$<.pkg/Resources/$${i}/Localizable.strings" ; done'
-	cd "$<.pkg/Resources" ; sh -e -c 'for i in `find . -type d -name "*.lproj"` ; do if [ ! -e "$${i}/Localizable.strings" ] ; then cp -f "English.lproj/Localizable.strings" "$${i}/Localizable.strings" ; fi ; done'
-	sh -e "etc/convertscripttojsstring.sh" "$(INSTALL_HOME)/InstallationCheck.langpack" > "$(INSTALL_HOME)/InstallationCheck.js.langpack"
-	sh -e "etc/convertscripttojsstring.sh" "$(INSTALL_HOME)/VolumeCheck.langpack" > "$(INSTALL_HOME)/VolumeCheck.js.langpack"
-	sed 's#$$(PRODUCT_NAME_AND_VERSION)#$(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_LANG_PACK_VERSION)#g' "etc/Distribution.js" | sed 's#$$(PRODUCT_MIN_OSVERSION)#$(PRODUCT_MIN_OSVERSION)#g' | sed 's#$$(INSTALLATION_CHECK_REQUIRED_COMMANDS)#$(INSTALLATION_CHECK_REQUIRED_COMMANDS)#g' | sh -e -c 'sed "s#var.*installationCheckBashScript.*=.*;#var installationCheckBashScript = unescape(\""`cat "$(INSTALL_HOME)/InstallationCheck.js.langpack"`"\");#" | sed "s#var.*volumeCheckBashScript.*=.*;#var volumeCheckBashScript = unescape(\""`cat "$(INSTALL_HOME)/VolumeCheck.js.langpack"`"\");#"' >> "$<.pkg/Distribution"
-	cat "$(INSTALL_HOME)/installutils.langpack" "bin/preflight.langpack" > "$<.pkg/contents.pkg/Scripts/preflight" ; chmod a+x "$<.pkg/contents.pkg/Scripts/preflight"
-	cat "$(INSTALL_HOME)/installutils.langpack" "bin/postflight.langpack" | sed 's#$$(PRODUCT_DOMAIN)#$(PRODUCT_DOMAIN)#g' | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION_EXT)#$(PRODUCT_VERSION_EXT)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$<.pkg/contents.pkg/Scripts/postflight" ; chmod a+x "$<.pkg/contents.pkg/Scripts/postflight"
-	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)"
-	cat "etc/ReadMe.rtf" | sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_TRADEMARKED_NAME_RTF)#'"$(PRODUCT_TRADEMARKED_NAME_RTF)"'#g' | sed 's#$$(PRODUCT_BASE_URL)#'"$(PRODUCT_BASE_URL)"'#g' | sed 's#$$(PRODUCT_SUPPORT_URL)#$(PRODUCT_SUPPORT_URL)#g' | sed 's#$$(PRODUCT_SUPPORT_URL_TEXT)#$(PRODUCT_SUPPORT_URL_TEXT)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)/ReadMe.rtf"
-	echo '</installer-gui-script>' >> "$<.pkg/Distribution"
-	pkgutil --flatten "$<.pkg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)/Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_LANG_PACK_VERSION).pkg"
-# Sign package
-	mv -f "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)/Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_LANG_PACK_VERSION).pkg" "$(INSTALL_HOME)/unsigned_$(@:build.package_%=%).pkg"
-	productsign --sign "$(CERTPKGIDENTITY)" "$(INSTALL_HOME)/unsigned_$(@:build.package_%=%).pkg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)/Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_LANG_PACK_VERSION).pkg"
-	rm -f "$(INSTALL_HOME)/unsigned_$(@:build.package_%=%).pkg"
-ifeq ("$(PRODUCT_NAME)","NeoOffice")
-	rm -Rf "$(INSTALL_HOME)/tmp"
-	mkdir -p "$(INSTALL_HOME)/tmp"
-	cd "$(INSTALL_HOME)/tmp" ; unzip "$(PWD)/etc/package/SetFileIcon.zip" ; $(CC) -o "SetFileIcon/SetFileIcon" -framework AppKit "SetFileIcon/SetFileIcon.m" ; "SetFileIcon/SetFileIcon" -image "$(PWD)/etc/package/ship.icns" -file "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)/Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_LANG_PACK_VERSION).pkg"
-	rm -Rf "$(INSTALL_HOME)/tmp"
-endif
-	chmod -Rf a-w,a+r "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)"
-	chmod -f u+w "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)"
-# Use YourSway fancy .dmg tool to create .dmg file
-	rm -Rf "$(INSTALL_HOME)/tmp"
-	mkdir -p "$(INSTALL_HOME)/tmp"
-	cd "$(INSTALL_HOME)/tmp" ; unzip "$(PWD)/etc/package/$(YOURSWAYCREATEDMG_SOURCE_FILENAME)"
-ifeq ("$(PRODUCT_NAME)","NeoOffice")
-	sync ; "$(INSTALL_HOME)/tmp/$(YOURSWAYCREATEDMG_PACKAGE)/create-dmg" --volname "Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_LANG_PACK_VERSION)" --volicon "etc/package/ship.icns" --icon-size 128 --icon "Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_LANG_PACK_VERSION).pkg" 150 100 --icon "ReadMe.rtf" 350 100 --icon "Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_LANG_PACK_VERSION).pkg" 150 100 --icon "ReadMe.rtf" 350 100 --window-pos 400 300 --window-size 500 250 "$(INSTALL_HOME)/$(PRODUCT_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME).dmg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)"
-else
-	sync ; "$(INSTALL_HOME)/tmp/$(YOURSWAYCREATEDMG_PACKAGE)/create-dmg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME).dmg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)"
-endif
-	rm -Rf "$(INSTALL_HOME)/tmp"
 
 build.source_zip:
 	"$(MAKE)" $(MFLAGS) "build.source_zip_shared"
