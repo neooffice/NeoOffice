@@ -41,20 +41,17 @@
 
 #include <cppuhelper/factory.hxx>
 #include <cppuhelper/compbase1.hxx>
-#include <cppuhelper/compbase4.hxx>
+#include <cppuhelper/compbase3.hxx>
 #include <com/sun/star/datatransfer/XTransferable.hpp>
-#include <com/sun/star/datatransfer/clipboard/XClipboardEx.hpp>
-#include <com/sun/star/datatransfer/clipboard/XClipboardOwner.hpp>
-#include <com/sun/star/datatransfer/clipboard/XClipboardListener.hpp>
-#include <com/sun/star/datatransfer/clipboard/XClipboardNotifier.hpp>
 #include <com/sun/star/datatransfer/clipboard/XFlushableClipboard.hpp>
+#include <com/sun/star/datatransfer/clipboard/XSystemClipboard.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <rtl/ustring.hxx>
 #include <sal/types.h>
 
 #include "DTransClipboard.hxx"
 
-class JavaClipboard : public ::cppu::WeakComponentImplHelper4< ::com::sun::star::datatransfer::clipboard::XClipboardEx, ::com::sun::star::datatransfer::clipboard::XFlushableClipboard, ::com::sun::star::datatransfer::clipboard::XClipboardNotifier, ::com::sun::star::lang::XServiceInfo >
+class JavaClipboard : public ::cppu::WeakComponentImplHelper3< ::com::sun::star::datatransfer::clipboard::XSystemClipboard, ::com::sun::star::datatransfer::clipboard::XFlushableClipboard, ::com::sun::star::lang::XServiceInfo >
 {
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	maContents;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::clipboard::XClipboardOwner >	maOwner;

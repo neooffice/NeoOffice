@@ -62,7 +62,7 @@ static uno::Sequence< OUString > JavaClipboard_getSupportedServiceNames()
 
 // ========================================================================
 
-JavaClipboard::JavaClipboard( bool bSystemClipboard ) : WeakComponentImplHelper4< datatransfer::clipboard::XClipboardEx, XFlushableClipboard, datatransfer::clipboard::XClipboardNotifier, XServiceInfo >( maMutex ),
+JavaClipboard::JavaClipboard( bool bSystemClipboard ) : WeakComponentImplHelper3< datatransfer::clipboard::XSystemClipboard, datatransfer::clipboard::XFlushableClipboard, lang::XServiceInfo >( maMutex ),
 	mbSystemClipboard( bSystemClipboard ),
 	mbPrivateClipboard( sal_False )
 {
