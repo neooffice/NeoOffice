@@ -35,6 +35,12 @@
 #include "tenchelp.hxx"
 #include <boost/scoped_array.hpp>
 
+#ifdef USE_JAVA
+// Disable Mac text encodings as it will cause an infinite loop in the sw
+// module's unit tests
+#define NO_OOO_4_1_3_MAC_TEXT_ENCODING
+#endif	// USE_JAVA
+
 sal_Bool SAL_CALL rtl_isOctetTextEncoding(rtl_TextEncoding nEncoding)
 {
     return
