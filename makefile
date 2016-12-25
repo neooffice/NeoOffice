@@ -436,7 +436,7 @@ build.package_shared:
 	mkdir -p "$(INSTALL_HOME)/package"
 	sh -e -c '( cd "$(LIBO_INSTDIR)/$(LIBO_PRODUCT_NAME).app" && tar cf - . ) | ( cd "$(PWD)/$(INSTALL_HOME)/package" && tar xvf - )'
 	sh -e -c '( cd "$(INSTDIR)/$(LIBO_PRODUCT_NAME).app" && ( find . -type f | tar cf - -T - ) ) | ( cd "$(PWD)/$(INSTALL_HOME)/package" && tar xvf - )'
-# Remove OOo system plugins but fix bug 3381 to save standard dictionaries
+# Remove LibO system plugins but fix bug 3381 to save standard dictionaries
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Library"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/share/uno_packages"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/user"
@@ -459,19 +459,12 @@ else
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice3"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/updateruninstallers"
 endif
-	echo "End of update installer build steps"
-	exit 1
-# Mac App Store will reject apps with shell scripts
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice.bin" ; ln -sf "../MacOS/soffice.bin" "program/soffice.bin"
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in sbase scalc sdraw simpress smath soffice swriter unopkg unopkg.bin ; do rm -f "program/$$i" ; ln -sf "soffice.bin" "MacOS/$$i" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in regcomp uno ; do rm -f "program/$$i" ; ln -sf "$$i.bin" "program/$$i" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/resource/dba"*.res ; cp -f "$(PWD)/dbaccess/$(UOUTPUTDIR)/bin/dba"*.res "program/resource"
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/resource/deploymentgui"*.res ; cp -f "$(PWD)/desktop/$(UOUTPUTDIR)/bin/deploymentgui"*.res "program/resource"
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/resource/sfx"*.res ; cp -f "$(PWD)/sfx2/$(UOUTPUTDIR)/ResTarget/sfx"*.res "program/resource"
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/resource/sw"*.res ; cp -f "$(PWD)/sw/$(UOUTPUTDIR)/ResTarget/sw"*.res "program/resource"
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/resource/vcl"*.res ; cp -f "$(PWD)/vcl/$(UOUTPUTDIR)/ResTarget/vcl"*.res "program/resource"
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in editpic.pl poll.pl savepic.pl show.pl ; do rm -f "share/config/webcast/$$i" ; cp -f "$(PWD)/sd/res/webview/$$i" "share/config/webcast/$$i" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "share/config/webcast/webcast.pl" ; cp -f "$(PWD)/sd/res/webview/webview.pl" "share/config/webcast/webcast.pl"
+# Remove unnecessary executables and files
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf CREDITS* LICENSE* program/gengal program/gengal.bin program/python program/regmerge program/regview program/senddoc program/ui-previewer program/unoinfo program/unpack_update
+# Add executable softlinks
+	cd "$(INSTALL_HOME)/package/Contents" ; ln -sf "soffice.bin" "MacOS/soffice"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/unopkg" ; ln -sf "soffice.bin" "MacOS/unopkg"
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd program && ls` ; do ln -sf "../program/$$i" "MacOS/$$i" ; done'
 ifdef PRODUCT_BUILD2
 # Set build version by appending zero instead of date so that it will always be
 # less than the Mac App Store version's build version
@@ -483,6 +476,8 @@ else
 	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/package/Info.plist" | sed 's#$$(PRODUCT_DOMAIN)#$(PRODUCT_DOMAIN)#g' | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_SHORT_VERSION)#$(PRODUCT_SHORT_VERSION)#g' | sed 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' | sed 's#$$(ULONGNAME)#$(ULONGNAME)#g' | sed 's#$$(BUILD_MACHINE)#$(BUILD_MACHINE)#g' | sed 's#$$(PRODUCT_MIN_OSVERSION)#$(PRODUCT_MIN_OSVERSION)#g' | sed 's#$$(PRODUCT_FILETYPE)#$(PRODUCT_FILETYPE)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' | sed 's#$$(PRODUCT_BUILD_VERSION)#$(PRODUCT_VERSION_BASE).'"`date -u '+%Y%m%d%H'`"'#g' > "Info.plist"
 endif
 	cd "$(INSTALL_HOME)/package/Contents" ; printf '%s' 'APPL$(PRODUCT_FILETYPE)' > "PkgInfo"
+	echo "End of update installer build steps"
+	exit 1
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Resources"
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Resources/cursors"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/vcl/java/com/sun/star/vcl/images/"*.gif "Resources/cursors"
@@ -547,7 +542,6 @@ ifdef PRODUCT_BUILD3
 	cd "$(INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/etc/package/l10n" && gnutar cvf - --exclude CVS --exclude "*.html" . ) | gnutar xvf - )
 	cd "$(INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `cd "$(PWD)/etc/package/l10n" ; find . -name "*.html"` ; do sed "s#\$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$(PWD)/etc/package/l10n/$${i}" | sed "s#\$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" | sed "s#\$$(PRODUCT_DOWNLOAD_URL)#$(PRODUCT_DOWNLOAD_URL)#g" | sed "s#\$$(PRODUCT_MIN_OSVERSION_NAME)#$(PRODUCT_MIN_OSVERSION_NAME)#g" | sed "s#\$$(PRODUCT_MAX_OSVERSION_NAME)#$(PRODUCT_MAX_OSVERSION_NAME)#g" > "$${i}" ; done'
 endif
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf README* program/LICENSE* program/open-url program/senddoc program/startup.sh program/unoinfo readmes share/extensions/install share/readme
 # Fix bug 3273 by not installing any OOo fonts
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/fps_aqua.uno.dylib" "program/libMacOSXSpell.dylib" "program/libavmediaQuickTime.dylib" "program/liboooimprovecore.dylib" "share/fonts/truetype" "share/psprint"
 ifdef PRODUCT_BUILD3
@@ -628,7 +622,7 @@ endif
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.so"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 	cd "$(INSTALL_HOME)/package" ; codesign --force -s "$(CERTAPPIDENTITY)" "Contents/NOTICE"
 ifdef PRODUCT_BUILD3
-	cd "$(INSTALL_HOME)/package" ; codesign --force -s "$(CERTAPPIDENTITY)" "Contents/MacOS/updchkruninstallers.bin"
+	cd "$(INSTALL_HOME)/package" ; codesign --force -s "$(CERTAPPIDENTITY)" "Contents/MacOS/updateruninstallers.bin"
 	cd "$(INSTALL_HOME)/package" ; codesign --force -s "$(CERTAPPIDENTITY)" .
 else
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.bin" \! -name "soffice.bin"` "Contents/program/checknativefont" "Contents/program/pagein" "Contents/program/regmerge" "Contents/program/regview" "Contents/program/uri-encode" `find "Contents/share/uno_packages/cache/uno_packages" -type f -name "xpdfimport"` ; do codesign --force -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/etc/package/Entitlements_inherit_only.plist" "$$i" ; done'
