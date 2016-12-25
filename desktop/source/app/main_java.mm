@@ -242,7 +242,9 @@ int java_main( int argc, char **argv )
 	NSFileManager *pFileManager = [NSFileManager defaultManager];
 	NSString *pProgramPath = [pBundlePath stringByAppendingPathComponent:@"Contents"];
 	if ( pProgramPath )
-		pProgramPath = [pProgramPath stringByAppendingPathComponent:@"program"];
+		pProgramPath = [pProgramPath stringByAppendingPathComponent:@"MacOS"];
+	if ( pProgramPath )
+		pProgramPath = [pProgramPath stringByAppendingPathComponent:@"soffice"];
 	if ( !pFileManager || !pProgramPath || ![pFileManager destinationOfSymbolicLinkAtPath:pProgramPath error:nil] )
 	{
 		NSLog( @"Application's main bundle path missing \"%@\" softlink", pProgramPath );
