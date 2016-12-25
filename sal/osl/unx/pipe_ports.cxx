@@ -115,11 +115,13 @@ static rtl::OUString ImplPipePortFileURLForName( const rtl::OUString& rName )
 
 		if ( !bUserInstallInitialized )
 		{
-			rtl::OUString aUserInstallURL( "${$BRAND_BASE_DIR/" LIBO_ETC_FOLDER "/" SAL_CONFIGFILE("bootstrap") ":UserInstallation}" );
-			rtl::Bootstrap::expandMacros( aUserInstallURL );
+			rtl::OUString aURL( "${$BRAND_BASE_DIR/" LIBO_ETC_FOLDER "/" SAL_CONFIGFILE("bootstrap") ":UserInstallation}" );
+			rtl::Bootstrap::expandMacros( aURL );
 
 			// Make sure that the user installation directory is created
-			bUserInstallInitialized = ImplEnsureDirURL( aUserInstallURL );
+			bUserInstallInitialized = ImplEnsureDirURL( aURL );
+			if ( bUserInstallInitialized )
+				aUserInstallURL = aURL;
 		}
 	}
 
