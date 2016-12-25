@@ -77,7 +77,7 @@ void UpdateInstallNextBatchOfInstallerPackagePaths()
 	if (nLastIndex > 0)
 	{
 		aExeURL = aExeURL.copy(0, nLastIndex+1);
-		aExeURL += "updchkruninstallers";
+		aExeURL += "updateruninstallers";
 
 		osl::ClearableMutexGuard aGuard(aPackagesMutex);
 
