@@ -366,17 +366,17 @@ int java_main( int argc, char **argv )
 		// Insert module argument if missing
 		const char *pNewArg = NULL;
 		if ( [@"sbase" isEqualToString:pCmdName] )
-			pNewArg = "-base";
+			pNewArg = "--base";
 		else if ( [@"scalc" isEqualToString:pCmdName] )
-			pNewArg = "-calc";
+			pNewArg = "--calc";
 		else if ( [@"sdraw" isEqualToString:pCmdName] )
-			pNewArg = "-draw";
+			pNewArg = "--draw";
 		else if ( [@"simpress" isEqualToString:pCmdName] )
-			pNewArg = "-impress";
+			pNewArg = "--impress";
 		else if ( [@"smath" isEqualToString:pCmdName] )
-			pNewArg = "-math";
+			pNewArg = "--math";
 		else if ( [@"swriter" isEqualToString:pCmdName] )
-			pNewArg = "-writer";
+			pNewArg = "--writer";
 
 		if ( pNewArg )
 		{
