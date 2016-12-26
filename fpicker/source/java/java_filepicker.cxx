@@ -36,7 +36,7 @@
 #include <stdio.h>
 
 #include "java_filepicker.hxx"
-#include "java_service.hxx"
+#include "../aqua/FPServiceInfo.hxx"
 #include <com/sun/star/lang/NullPointerException.hpp>
 #include <com/sun/star/ui/dialogs/CommonFilePickerElementIds.hpp>
 #include <com/sun/star/ui/dialogs/ControlActions.hpp>

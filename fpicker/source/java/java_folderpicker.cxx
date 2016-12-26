@@ -36,7 +36,7 @@
 #include <stdio.h>
 
 #include "java_folderpicker.hxx"
-#include "java_service.hxx"
+#include "../aqua/FPServiceInfo.hxx"
 #include <com/sun/star/lang/NullPointerException.hpp>
 
 #include "cocoa_dialog.h"

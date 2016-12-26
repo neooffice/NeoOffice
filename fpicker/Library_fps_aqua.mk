@@ -19,11 +19,7 @@
 
 $(eval $(call gb_Library_Library,fps_aqua))
 
-ifeq ($(strip $(GUIBASE)),java)
-$(eval $(call gb_Library_set_componentfile,fps_aqua,fpicker/source/java/fps_java))
-else	# GUIBASE == java
 $(eval $(call gb_Library_set_componentfile,fps_aqua,fpicker/source/aqua/fps_aqua))
-endif	# GUIBASE == java
 
 $(eval $(call gb_Library_use_external,fps_aqua,boost_headers))
 
@@ -51,8 +47,8 @@ $(eval $(call gb_Library_add_exception_objects,fps_aqua,\
 ))
 
 $(eval $(call gb_Library_add_objcxxobjects,fps_aqua,\
+	fpicker/source/aqua/FPentry \
 	fpicker/source/java/cocoa_dialog \
-	fpicker/source/java/java_service \
 ))
 
 else	# GUIBASE == java

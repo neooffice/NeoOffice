@@ -28,8 +28,8 @@
 #include <com/sun/star/container/XSet.hpp>
 
 #ifdef USE_JAVA
-#include "java_filepicker.hxx"
-#include "java_folderpicker.hxx"
+#include "../java/java_filepicker.hxx"
+#include "../java/java_folderpicker.hxx"
 #else	// USE_JAVA
 #include "SalAquaFilePicker.hxx"
 #include "SalAquaFolderPicker.hxx"
