@@ -572,8 +572,10 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 
 	JavaSalEvent *pEvent = NULL;
 
-	// Dispatch next pending non-AWT event
-	if ( !Application::IsShutDown() && ( pEvent = JavaSalEventQueue::getNextCachedEvent( 0, sal_False ) ) != NULL )
+	// Dispatch next pending non-AWT event. Also dispatch events if
+	// Desktop::doShutdown() displays a modal dialog.
+	ImplSVData *pSVData = ImplGetSVData();
+	if ( ( !Application::IsShutDown() || pSVData->maWinData.mpLastExecuteDlg ) && ( pEvent = JavaSalEventQueue::getNextCachedEvent( 0, sal_False ) ) != NULL )
 	{
 		pEvent->dispatch();
 		pEvent->release();
@@ -583,7 +585,6 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	}
 
 	// Dispatch the next pending document event
-	ImplSVData *pSVData = ImplGetSVData();
 	if ( !Application::IsShutDown() && pSalData->maPendingDocumentEventsList.size() && pSVData && pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet )
 	{
 		pEvent = pSalData->maPendingDocumentEventsList.front();
@@ -665,11 +666,12 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	nCurrentTimeout = nTimeout;
 
 	// Dispatch any pending AWT events. Fix bug 2126 by always acting as if
-	// the bHandleAllCurrentEvents parameter is true
+	// the bHandleAllCurrentEvents parameter is true. Also dispatch events if
+	// Desktop::doShutdown() displays a modal dialog.
 	size_t nFrames = pSalData->maFrameList.size();
 	bool bContinue = true;
 	bool bFlushAllFrames = false;
-	while ( bContinue && !Application::IsShutDown() && ( pEvent = JavaSalEventQueue::getNextCachedEvent( nTimeout, sal_True ) ) != NULL )
+	while ( bContinue && ( !Application::IsShutDown() || pSVData->maWinData.mpLastExecuteDlg ) && ( pEvent = JavaSalEventQueue::getNextCachedEvent( nTimeout, sal_True ) ) != NULL )
 	{
 		nTimeout = 0;
 		nCurrentTimeout = 0;
