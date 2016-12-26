@@ -48,6 +48,8 @@ SAL_DLLPRIVATE sal_Bool VCLInstance_setDragPrintLock( sal_Bool bLock );
 SAL_DLLPRIVATE sal_Bool VCLInstance_updateNativeMenus();
 
 // Note: these must not be static as the symbol will be loaded by various
+extern "C"
+{
 // modules
 SAL_DLLPUBLIC_EXPORT sal_Bool Application_beginModalSheet( id *pNSWindowForSheet );
 SAL_DLLPUBLIC_EXPORT void Application_endModalSheet();
@@ -57,5 +59,6 @@ SAL_DLLPUBLIC_EXPORT id Application_acquireSecurityScopedURLFromNSURL( const id 
 SAL_DLLPUBLIC_EXPORT void Application_cacheSecurityScopedURLFromOUString( const OUString *pNonSecurityScopedURL );
 SAL_DLLPUBLIC_EXPORT void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL );
 SAL_DLLPUBLIC_EXPORT void Application_releaseSecurityScopedURL( id pSecurityScopedURLs );
+}
 
 #endif
