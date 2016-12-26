@@ -56,7 +56,7 @@ void SfxFrameLoader_openDocumentOfType( OUString aDocType )
 
 	if ( !pDocTypeLaunchOptions )
 	{
-		pDocTypeLaunchOptions = [NSDictionary dictionaryWithObjectsAndKeys:@"-writer", @"com.sun.star.text.TextDocument", @"-calc", @"com.sun.star.sheet.SpreadsheetDocument", @"-impress", @"com.sun.star.presentation.PresentationDocument", @"-draw", @"com.sun.star.drawing.DrawingDocument", @"-math", @"com.sun.star.formula.FormulaProperties", nil];
+		pDocTypeLaunchOptions = [NSDictionary dictionaryWithObjectsAndKeys:@"--writer", @"com.sun.star.text.TextDocument", @"--calc", @"com.sun.star.sheet.SpreadsheetDocument", @"--impress", @"com.sun.star.presentation.PresentationDocument", @"--draw", @"com.sun.star.drawing.DrawingDocument", @"--math", @"com.sun.star.formula.FormulaProperties", nil];
 		if ( pDocTypeLaunchOptions )
 			[pDocTypeLaunchOptions retain];
 	}
