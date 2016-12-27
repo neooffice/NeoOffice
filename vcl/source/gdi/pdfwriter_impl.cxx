@@ -7627,11 +7627,11 @@ void PDFWriterImpl::drawVerticalGlyphs(
 
             if ( pATSLayout )
             {
-                long nX;
-                long nY;
-                pATSLayout->GetVerticalGlyphTranslation( rGlyphs[i].m_nGlyphId, rGlyphs[i].m_nCharPos, nX, nY );
-                aDeltaPos.X() = m_pReferenceDevice->ImplDevicePixelToLogicHeight( (double)nY / pATSLayout->GetUnitsPerPixel() );
-                aDeltaPos.Y() = m_pReferenceDevice->ImplDevicePixelToLogicWidth( (long)( ( fXScale * nX * -1 / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) );
+                DeviceCoordinate fX;
+                DeviceCoordinate fY;
+                pATSLayout->GetVerticalGlyphTranslation( rGlyphs[i].m_nGlyphId, rGlyphs[i].m_nCharPos, fX, fY );
+                aDeltaPos.X() = m_pReferenceDevice->ImplDevicePixelToLogicHeight( fY / pATSLayout->GetUnitsPerPixel() );
+                aDeltaPos.Y() = m_pReferenceDevice->ImplDevicePixelToLogicWidth( (long)( ( fXScale * fX * -1 / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) );
             }
             else
             {
@@ -7659,11 +7659,11 @@ void PDFWriterImpl::drawVerticalGlyphs(
 
             if ( pATSLayout )
             {
-                long nX;
-                long nY;
-                pATSLayout->GetVerticalGlyphTranslation( rGlyphs[i].m_nGlyphId, rGlyphs[i].m_nCharPos, nX, nY );
-                aDeltaPos.X() = m_pReferenceDevice->ImplDevicePixelToLogicHeight( (long)( ( (double)( rGlyphs[i].m_nNativeWidth - nY ) / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) );
-                aDeltaPos.Y() = m_pReferenceDevice->ImplDevicePixelToLogicWidth( (long)( ( fXScale * nX * -1 / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) );
+                DeviceCoordinate fX;
+                DeviceCoordinate fY;
+                pATSLayout->GetVerticalGlyphTranslation( rGlyphs[i].m_nGlyphId, rGlyphs[i].m_nCharPos, fX, fY );
+                aDeltaPos.X() = m_pReferenceDevice->ImplDevicePixelToLogicHeight( (long)( ( ( (DeviceCoordinate)rGlyphs[i].m_nNativeWidth - fY ) / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) );
+                aDeltaPos.Y() = m_pReferenceDevice->ImplDevicePixelToLogicWidth( (long)( ( fXScale * fY * -1 / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) );
             }
             else
             {

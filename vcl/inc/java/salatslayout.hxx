@@ -68,7 +68,7 @@ class SalATSLayout : public GenericSalLayout
 	::std::vector< int >	maLayoutMinCharPos;
 	ImplATSLayoutData*	mpKashidaLayoutData;
 	::boost::unordered_map< sal_Unicode, ImplATSLayoutData* >	maMirroredLayoutData;
-	long				mnOrigWidth;
+	DeviceCoordinate	mfOrigWidth;
 	float				mfGlyphScaleX;
 
 public:
@@ -84,8 +84,8 @@ public:
 	virtual bool		GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) const SAL_OVERRIDE;
 	virtual bool		GetOutline( SalGraphics& rGraphics, ::basegfx::B2DPolyPolygonVector& rVector ) const SAL_OVERRIDE;
 
-	ImplATSLayoutData*	GetVerticalGlyphTranslation( sal_Int32 nGlyph, int nCharPos, long& nX, long& nY ) const;
-	sal_Int32			GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharPos ) const;
+	ImplATSLayoutData*	GetVerticalGlyphTranslation( sal_Int32 nGlyph, int nCharPos, DeviceCoordinate& fX, DeviceCoordinate& fY ) const;
+	DeviceCoordinate	GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharPos ) const;
 
 	void				Destroy();
 };
