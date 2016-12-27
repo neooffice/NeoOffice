@@ -1059,10 +1059,20 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
             p = pLogCluster[ n ];
         if( p >= 0 )
         {
+#ifdef USE_JAVA
+            // Fix rounding down of nDelta on platforms where rArgs.mpDXArray
+            // is a floating point array
+            double fUnitMul = mnUnitsPerPixel;
+            long nDelta = (long)( ( rArgs.mpDXArray[ n ] * fUnitMul ) + 0.5 );
+            if( n > 0 )
+                nDelta -= (long)( ( rArgs.mpDXArray[ n-1 ] * fUnitMul ) + 0.5 );
+            pNewGlyphWidths[ p ] += nDelta;
+#else	// USE_JAVA
             long nDelta = rArgs.mpDXArray[ n ] ;
             if( n > 0 )
                 nDelta -= rArgs.mpDXArray[ n-1 ];
             pNewGlyphWidths[ p ] += nDelta * mnUnitsPerPixel;
+#endif	// USE_JAVA
 
 #if defined USE_JAVA && defined USE_SUBPIXEL_TEXT_RENDERING
             size_t j;
