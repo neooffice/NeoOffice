@@ -77,6 +77,7 @@ static SalColor *pVCLAlternateSelectedControlTextColor = NULL;
 static SalColor *pVCLSelectedControlTextColor = NULL;
 static SalColor *pVCLSelectedMenuItemColor = NULL;
 static SalColor *pVCLSelectedMenuItemTextColor = NULL;
+static SalColor *pVCLShadowColor = NULL;
 
 static ::osl::Mutex aSystemColorsMutex;
 static NSString *pVCLTrackingAreaWindowKey = @"VCLTrackingAreaWindow";
@@ -195,7 +196,6 @@ static void HandleSystemColorsChangedRequest()
 
 	SetSalColorFromNSColor( [NSColor controlTextColor], &pVCLControlTextColor );
 	SetSalColorFromNSColor( [NSColor textColor], &pVCLTextColor );
-	SetSalColorFromNSColor( [NSColor textColor], &pVCLTextColor );
 	SetSalColorFromNSColor( [NSColor selectedTextBackgroundColor], &pVCLHighlightColor );
 	SetSalColorFromNSColor( [NSColor selectedTextColor], &pVCLHighlightTextColor );
 	SetSalColorFromNSColor( [NSColor disabledControlTextColor], &pVCLDisabledControlTextColor );
@@ -204,6 +204,7 @@ static void HandleSystemColorsChangedRequest()
 	SetSalColorFromNSColor( [NSColor selectedControlTextColor], &pVCLSelectedControlTextColor );
 	SetSalColorFromNSColor( [NSColor selectedMenuItemColor], &pVCLSelectedMenuItemColor );
 	SetSalColorFromNSColor( [NSColor selectedMenuItemTextColor], &pVCLSelectedMenuItemTextColor );
+	SetSalColorFromNSColor( [NSColor controlShadowColor], &pVCLShadowColor );
 }
 
 @interface VCLSetSystemUIMode : NSObject
@@ -4270,84 +4271,87 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	InitializeSystemColors();
 
 	MutexGuard aGuard( aSystemColorsMutex );
-	Color themeDialogColor;
-	sal_Bool useThemeDialogColor = sal_False;
-	if ( pVCLControlTextColor )
-	{
-		themeDialogColor = Color( *pVCLControlTextColor );
-		useThemeDialogColor = sal_True;
-	}
-
-	Color aTextColor;
 	if ( pVCLTextColor )
-		aTextColor = Color( *pVCLTextColor );
-	aStyleSettings.SetDialogTextColor( ( useThemeDialogColor ) ? themeDialogColor : aTextColor );
-	aStyleSettings.SetMenuTextColor( aTextColor );
-	aStyleSettings.SetButtonTextColor( ( useThemeDialogColor) ? themeDialogColor : aTextColor );
-	aStyleSettings.SetRadioCheckTextColor( ( useThemeDialogColor ) ? themeDialogColor : aTextColor );
-	aStyleSettings.SetGroupTextColor( ( useThemeDialogColor ) ? themeDialogColor : aTextColor );
-	aStyleSettings.SetLabelTextColor( ( useThemeDialogColor ) ? themeDialogColor : aTextColor );
-	aStyleSettings.SetInfoTextColor( aTextColor );
-	aStyleSettings.SetWindowTextColor( aTextColor );
-	aStyleSettings.SetFieldTextColor( aTextColor );
-
-	useThemeDialogColor = sal_False;
-	if ( pVCLSelectedMenuItemColor )
 	{
-		themeDialogColor = Color( *pVCLSelectedMenuItemColor );
-		useThemeDialogColor = sal_True;
+		Color aTextColor( *pVCLTextColor );
+		Color aThemeDialogColor = aTextColor;
+		if ( pVCLControlTextColor )
+			aThemeDialogColor = Color( *pVCLControlTextColor );
+
+		aStyleSettings.SetDialogTextColor( aThemeDialogColor );
+		aStyleSettings.SetMenuTextColor( aTextColor );
+		aStyleSettings.SetMenuBarTextColor( aTextColor );
+		aStyleSettings.SetMenuBarRolloverTextColor( aTextColor );
+		aStyleSettings.SetButtonTextColor( aThemeDialogColor );
+		aStyleSettings.SetRadioCheckTextColor( aThemeDialogColor );
+		aStyleSettings.SetGroupTextColor( aThemeDialogColor );
+		aStyleSettings.SetLabelTextColor( aThemeDialogColor );
+		aStyleSettings.SetInfoTextColor( aTextColor );
+		aStyleSettings.SetWindowTextColor( aTextColor );
+		aStyleSettings.SetFieldTextColor( aTextColor );
 	}
 
-	Color aHighlightColor;
 	if ( pVCLHighlightColor )
-		aHighlightColor = Color( *pVCLHighlightColor );
-	aStyleSettings.SetActiveBorderColor( aHighlightColor );
-	aStyleSettings.SetActiveColor( aHighlightColor );
-	aStyleSettings.SetActiveTextColor( aHighlightColor );
-	aStyleSettings.SetHighlightColor( aHighlightColor );
-	aStyleSettings.SetMenuHighlightColor( ( useThemeDialogColor ) ? themeDialogColor : aHighlightColor );
+	{
+		Color aHighlightColor( *pVCLHighlightColor );
 
-	Color aHighlightTextColor;
+		aStyleSettings.SetActiveBorderColor( aHighlightColor );
+		aStyleSettings.SetActiveColor( aHighlightColor );
+		aStyleSettings.SetActiveTextColor( aHighlightColor );
+		aStyleSettings.SetHighlightColor( aHighlightColor );
+		aStyleSettings.SetMenuHighlightColor( pVCLSelectedMenuItemColor ? Color( *pVCLSelectedMenuItemColor ) : aHighlightColor );
+	}
+
 	if ( pVCLHighlightTextColor )
-		aHighlightTextColor = Color( *pVCLHighlightTextColor );
-	aStyleSettings.SetHighlightTextColor( aHighlightTextColor );
-	aStyleSettings.SetMenuHighlightTextColor( aHighlightTextColor );
-
-	useThemeDialogColor = sal_False;
-	if ( pVCLDisabledControlTextColor )
 	{
-		themeDialogColor = Color( *pVCLDisabledControlTextColor );
-		useThemeDialogColor = sal_True;
+		Color aHighlightTextColor( *pVCLHighlightTextColor );
+
+		aStyleSettings.SetHighlightTextColor( aHighlightTextColor );
+		aStyleSettings.SetMenuHighlightTextColor( pVCLSelectedMenuItemTextColor ? Color( *pVCLSelectedMenuItemTextColor ) : aHighlightTextColor );
 	}
 
-	Color aBackColor;
 	if ( pVCLBackColor )
-		aBackColor = Color( *pVCLBackColor );
-	aStyleSettings.Set3DColors( aBackColor );
-	aStyleSettings.SetDeactiveBorderColor( aBackColor );
-	aStyleSettings.SetDeactiveColor( aBackColor );
-	aStyleSettings.SetDeactiveTextColor( ( useThemeDialogColor ) ? themeDialogColor : aBackColor );
-	aStyleSettings.SetDialogColor( aBackColor );
-	aStyleSettings.SetDisableColor( aBackColor );
-	aStyleSettings.SetFaceColor( aBackColor );
-	aStyleSettings.SetLightBorderColor( aBackColor );
-	aStyleSettings.SetMenuColor( aBackColor );
-	aStyleSettings.SetMenuBarColor( aBackColor );
-	if( aBackColor == COL_LIGHTGRAY )
 	{
-		aStyleSettings.SetCheckedColor( Color( 0xCC, 0xCC, 0xCC ) );
+		Color aBackColor( *pVCLBackColor );
+		Color aThemeDialogColor = aBackColor;
+		if ( pVCLDisabledControlTextColor )
+			aThemeDialogColor = Color( *pVCLDisabledControlTextColor );
+
+		aStyleSettings.Set3DColors( aBackColor );
+		aStyleSettings.SetDeactiveBorderColor( aBackColor );
+		aStyleSettings.SetDeactiveColor( aBackColor );
+		aStyleSettings.SetDeactiveTextColor( aThemeDialogColor );
+		aStyleSettings.SetDialogColor( aBackColor );
+		aStyleSettings.SetDisableColor( aBackColor );
+		aStyleSettings.SetFaceColor( aBackColor );
+		aStyleSettings.SetInactiveTabColor( aBackColor );
+		aStyleSettings.SetLightBorderColor( aBackColor );
+		aStyleSettings.SetMenuColor( aBackColor );
+		aStyleSettings.SetMenuBarColor( aBackColor );
+
+		if( aBackColor == COL_LIGHTGRAY )
+		{
+			aStyleSettings.SetCheckedColor( Color( 0xCC, 0xCC, 0xCC ) );
+		}
+		else
+		{
+			Color aColor2 = aStyleSettings.GetLightColor();
+			aStyleSettings.SetCheckedColor( Color( (sal_uInt8)( ( (sal_uInt16)aBackColor.GetRed() + (sal_uInt16)aColor2.GetRed() ) / 2 ), (sal_uInt8)( ( (sal_uInt16)aBackColor.GetGreen() + (sal_uInt16)aColor2.GetGreen() ) / 2 ), (sal_uInt8)( ( (sal_uInt16)aBackColor.GetBlue() + (sal_uInt16)aColor2.GetBlue() ) / 2 ) ) );
+		}
 	}
-	else
-	{
-		Color aColor2 = aStyleSettings.GetLightColor();
-		aStyleSettings.SetCheckedColor( Color( (sal_uInt8)( ( (sal_uInt16)aBackColor.GetRed() + (sal_uInt16)aColor2.GetRed() ) / 2 ), (sal_uInt8)( ( (sal_uInt16)aBackColor.GetGreen() + (sal_uInt16)aColor2.GetGreen() ) / 2 ), (sal_uInt8)( ( (sal_uInt16)aBackColor.GetBlue() + (sal_uInt16)aColor2.GetBlue() ) / 2 ) ) );
-	}
+
+	if ( pVCLShadowColor )
+		aStyleSettings.SetShadowColor( Color( *pVCLShadowColor ) );
+
+	// Disable mnemonics
+	aStyleSettings.SetOptions( aStyleSettings.GetOptions() | STYLE_OPTION_NOMNEMONICS );
 
 	// Use large icons by default
 	aStyleSettings.SetToolbarIconSize( STYLE_TOOLBAR_ICONSIZE_LARGE );
 
 	// Hide images in popup menus
 	aStyleSettings.SetPreferredUseImagesInMenus( false );
+	aStyleSettings.SetAcceleratorsInContextMenus( false );
 
 	rSettings.SetStyleSettings( aStyleSettings );
 
