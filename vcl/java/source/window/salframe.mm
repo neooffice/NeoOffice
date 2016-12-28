@@ -4343,6 +4343,12 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 		aStyleSettings.SetCheckedColor( Color( (sal_uInt8)( ( (sal_uInt16)aBackColor.GetRed() + (sal_uInt16)aColor2.GetRed() ) / 2 ), (sal_uInt8)( ( (sal_uInt16)aBackColor.GetGreen() + (sal_uInt16)aColor2.GetGreen() ) / 2 ), (sal_uInt8)( ( (sal_uInt16)aBackColor.GetBlue() + (sal_uInt16)aColor2.GetBlue() ) / 2 ) ) );
 	}
 
+	// Use large icons by default
+	aStyleSettings.SetToolbarIconSize( STYLE_TOOLBAR_ICONSIZE_LARGE );
+
+	// Hide images in popup menus
+	aStyleSettings.SetPreferredUseImagesInMenus( false );
+
 	rSettings.SetStyleSettings( aStyleSettings );
 
 	[pPool release];
