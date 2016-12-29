@@ -349,11 +349,8 @@ static void ImplFontListChanged()
 							aMapName += aFontSeparator + "Cambria Italic" + aFontSeparator + "Cambria-Italic";
 						}
 
-						OUString aXubMapName( aMapName );
-						OUString aXubDisplayName( aDisplayName );
-
 						// Skip the font if we already have it
-						::std::map< OUString, JavaPhysicalFontFace* >::iterator it = pSalData->maFontNameMapping.find( aXubDisplayName );
+						::std::map< OUString, JavaPhysicalFontFace* >::iterator it = pSalData->maFontNameMapping.find( aDisplayName );
 						if ( it != pSalData->maFontNameMapping.end() )
 							continue;
 
@@ -370,14 +367,14 @@ static void ImplFontListChanged()
 						else
 							nFamily = FAMILY_SWISS;
 
-						aAttributes.SetFamilyName( aXubDisplayName );
+						aAttributes.SetFamilyName( aDisplayName );
 						aAttributes.SetWeight( nWeight );
 						aAttributes.SetItalic( nItalic );
 						aAttributes.SetFamilyType( nFamily );
 						aAttributes.SetPitch( nPitch );
 						aAttributes.SetWidthType( nWidth );
 						aAttributes.SetSymbolFlag( false );
-						aAttributes.maMapNames = aXubMapName;
+						aAttributes.maMapNames = aMapName;
 						aAttributes.mnQuality = 0;
 						aAttributes.mbOrientation = true;
 						aAttributes.mbDevice = false;
@@ -401,7 +398,7 @@ static void ImplFontListChanged()
 							}
 						}
 
-						pSalData->maFontNameMapping[ aXubDisplayName ] = pFontData;
+						pSalData->maFontNameMapping[ aDisplayName ] = pFontData;
 
 						// Multiple native fonts can map to the same font
 						// due to disabling and reenabling of fonts with
