@@ -40,6 +40,7 @@
 #include <com/sun/star/lang/NullPointerException.hpp>
 
 #include "cocoa_dialog.h"
+#include "../aqua/CFStringUtilities.hxx"
 
 using namespace cppu;
 using namespace com::sun::star::lang;
@@ -119,13 +120,8 @@ OUString SAL_CALL JavaFolderPicker::getDisplayDirectory() throw( RuntimeExceptio
 	CFStringRef aString = NSFileDialog_directory( mpDialog );
 	if ( aString )
 	{
-		CFIndex nLen = CFStringGetLength( aString );
-		CFRange aRange = CFRangeMake( 0, nLen );
-		sal_Unicode pBuffer[ nLen + 1 ];
-		CFStringGetCharacters( aString, aRange, pBuffer );
-		pBuffer[ nLen ] = 0;
+		aRet = CFStringToOUString( aString );
 		CFRelease( aString );
-		aRet = OUString( pBuffer );
 	}
 
 	return aRet;
@@ -141,15 +137,7 @@ OUString SAL_CALL JavaFolderPicker::getDirectory() throw( RuntimeException )
 	if ( pURLs )
 	{
 		if ( pURLs[ 0 ] )
-		{
-			CFStringRef aString = pURLs[ 0 ];
-			CFIndex nLen = CFStringGetLength( aString );
-			CFRange aRange = CFRangeMake( 0, nLen );
-			sal_Unicode pBuffer[ nLen + 1 ];
-			CFStringGetCharacters( aString, aRange, pBuffer ); 
-			pBuffer[ nLen ] = 0;
-			aRet = OUString( pBuffer );
-		}
+			aRet = CFStringToOUString( pURLs[ 0 ] );
 
 		NSFileManager_releaseURLs( pURLs );
 	}

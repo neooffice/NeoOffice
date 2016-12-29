@@ -47,11 +47,15 @@
 #include <rtl/ustring.hxx>
 #include <tools/resmgr.hxx>
 
+#include <premac.h>
+#include <objc/objc.h>
+#include <postmac.h>
+
 namespace java {
 
 class JavaFilePicker : public ::cppu::WeakComponentImplHelper4< ::com::sun::star::ui::dialogs::XFilePicker3, ::com::sun::star::ui::dialogs::XFilePickerControlAccess, ::com::sun::star::lang::XInitialization, ::com::sun::star::lang::XServiceInfo >
 {
-	void*				mpDialog;
+	id					mpDialog;
 	bool				mbInExecute;
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::ui::dialogs::XFilePickerListener > >	maListeners;
 	::osl::Mutex		maMutex;

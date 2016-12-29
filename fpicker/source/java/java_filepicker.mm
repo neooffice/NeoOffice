@@ -51,6 +51,7 @@
 #include <postmac.h>
 
 #include "cocoa_dialog.h"
+#include "../aqua/CFStringUtilities.hxx"
 
 using namespace cppu;
 using namespace com::sun::star::beans;
@@ -281,13 +282,8 @@ OUString SAL_CALL JavaFilePicker::getDisplayDirectory() throw( RuntimeException 
 	CFStringRef aString = NSFileDialog_directory( mpDialog );
 	if ( aString )
 	{
-		CFIndex nLen = CFStringGetLength( aString );
-		CFRange aRange = CFRangeMake( 0, nLen );
-		sal_Unicode pBuffer[ nLen + 1 ];
-		CFStringGetCharacters( aString, aRange, pBuffer );
-		pBuffer[ nLen ] = 0;
+		aRet = CFStringToOUString( aString );
 		CFRelease( aString );
-		aRet = OUString( pBuffer );
 	}
 
 	return aRet;
@@ -311,13 +307,7 @@ Sequence< OUString > SAL_CALL JavaFilePicker::getFiles() throw( RuntimeException
 		if ( nCount == 1 )
 		{
 			aRet = Sequence< OUString >( nCount );
-			CFStringRef aString = pURLs[ 0 ];
-			CFIndex nLen = CFStringGetLength( aString );
-			CFRange aRange = CFRangeMake( 0, nLen );
-			sal_Unicode pBuffer[ nLen + 1 ];
-			CFStringGetCharacters( aString, aRange, pBuffer ); 
-			pBuffer[ nLen ] = 0;
-			aRet[ 0 ] = OUString( pBuffer );
+			aRet[ 0 ] = CFStringToOUString( pURLs[ 0 ] );
 		}
 		else if ( nCount > 1 )
 		{
@@ -350,13 +340,8 @@ Sequence< OUString > SAL_CALL JavaFilePicker::getFiles() throw( RuntimeException
 
 					if ( aSplitString )
 					{
-						CFIndex nLen = CFStringGetLength( aSplitString );
-						CFRange aRange = CFRangeMake( 0, nLen );
-						sal_Unicode pBuffer[ nLen + 1 ];
-						CFStringGetCharacters( aSplitString, aRange, pBuffer ); 
-						pBuffer[ nLen ] = 0;
+						aRet[ i ] = CFStringToOUString( aSplitString );
 						CFRelease( aSplitString );
-						aRet[ i ] = OUString( pBuffer );
 					}
 				}
 			}
@@ -413,13 +398,8 @@ OUString SAL_CALL JavaFilePicker::getCurrentFilter() throw( RuntimeException )
 	CFStringRef aString = NSFileDialog_selectedFilter( mpDialog );
 	if ( aString )
 	{
-		CFIndex nLen = CFStringGetLength( aString );
-		CFRange aRange = CFRangeMake( 0, nLen );
-		sal_Unicode pBuffer[ nLen + 1 ];
-		CFStringGetCharacters( aString, aRange, pBuffer );
-		pBuffer[ nLen ] = 0;
+		aRet = CFStringToOUString( aString );
 		CFRelease( aString );
-		aRet = OUString( pBuffer );
 	}
 
 	return aRet;
@@ -557,16 +537,7 @@ Any SAL_CALL JavaFilePicker::getValue( sal_Int16 nControlId, sal_Int16 nControlA
 							{
 								Sequence< OUString > aItems( nCount );
 								for ( int i = 0; i < nCount; i++ )
-								{
-									CFStringRef aString = pItems[ i ];
-									CFIndex nLen = CFStringGetLength( aString );
-									CFRange aRange = CFRangeMake( 0, nLen );
-									sal_Unicode pBuffer[ nLen + 1 ];
-									CFStringGetCharacters( aString, aRange, pBuffer ); 
-									pBuffer[ nLen ] = 0;
-									aItems[ i ] = OUString( pBuffer );
-								}
-
+									aItems[ i ] = CFStringToOUString( pItems[ i ] );
 								aRet <<= aItems;
 							}
 
@@ -579,13 +550,8 @@ Any SAL_CALL JavaFilePicker::getValue( sal_Int16 nControlId, sal_Int16 nControlA
 						CFStringRef aString = NSFileDialog_selectedItem( mpDialog, nCocoaControlId );
 						if ( aString )
 						{
-							CFIndex nLen = CFStringGetLength( aString );
-							CFRange aRange = CFRangeMake( 0, nLen );
-							sal_Unicode pBuffer[ nLen + 1 ];
-							CFStringGetCharacters( aString, aRange, pBuffer ); 
-							pBuffer[ nLen ] = 0;
+							aRet <<= CFStringToOUString( aString );
 							CFRelease( aString );
-							aRet <<= OUString( pBuffer );
 						}
 					}
 					break;
@@ -638,13 +604,8 @@ OUString SAL_CALL JavaFilePicker::getLabel( sal_Int16 nControlId ) throw( Runtim
 	CFStringRef aString = NSFileDialog_label( mpDialog, GetCocoaControlId( nControlId ) );
 	if ( aString )
 	{
-		CFIndex nLen = CFStringGetLength( aString );
-		CFRange aRange = CFRangeMake( 0, nLen );
-		sal_Unicode pBuffer[ nLen + 1 ];
-		CFStringGetCharacters( aString, aRange, pBuffer );
-		pBuffer[ nLen ] = 0;
+		aRet = CFStringToOUString( aString );
 		CFRelease( aString );
-		aRet = OUString( pBuffer );
 	}
 
 	return aRet;

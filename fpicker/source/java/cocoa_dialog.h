@@ -42,10 +42,6 @@
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
-
-#ifndef __OBJC__
-typedef void* id;
-#endif
 #endif
 
 enum CocoaControlType {

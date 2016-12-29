@@ -41,14 +41,12 @@ $(eval $(call gb_Library_use_libraries,fps_aqua,\
 
 ifeq ($(strip $(GUIBASE)),java)
 
-$(eval $(call gb_Library_add_exception_objects,fps_aqua,\
-	fpicker/source/java/java_filepicker \
-	fpicker/source/java/java_folderpicker \
-))
-
 $(eval $(call gb_Library_add_objcxxobjects,fps_aqua,\
+	fpicker/source/aqua/CFStringUtilities \
 	fpicker/source/aqua/FPentry \
 	fpicker/source/java/cocoa_dialog \
+	fpicker/source/java/java_filepicker \
+	fpicker/source/java/java_folderpicker \
 ))
 
 else	# GUIBASE == java

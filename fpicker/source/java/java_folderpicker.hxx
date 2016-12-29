@@ -43,11 +43,15 @@
 #include <com/sun/star/ui/dialogs/XFolderPicker2.hpp>
 #include <rtl/ustring.hxx>
 
+#include <premac.h>
+#include <objc/objc.h>
+#include <postmac.h>
+
 namespace java {
 
 class JavaFolderPicker : public ::cppu::WeakImplHelper3< ::com::sun::star::ui::dialogs::XFolderPicker2, ::com::sun::star::lang::XServiceInfo, ::com::sun::star::lang::XEventListener >
 {
-	void*				mpDialog;
+	id					mpDialog;
 	::osl::Mutex		maMutex;
 
 public:
