@@ -49,6 +49,7 @@
 #include "java/saldata.hxx"
 #include "java/salgdi.h"
 #include "java/salinst.h"
+#include "quartz/utils.h"
 
 #include "salgdi3_cocoa.h"
 
@@ -131,16 +132,11 @@ static void ImplCachePlainFontMappings( NSFont *pNSFont )
 		CFStringRef aPlainPSString = CTFontCopyPostScriptName( (CTFontRef)pPlainFont );
 		if ( aPlainPSString )
 		{
-			CFIndex nPlainPSLen = CFStringGetLength( aPlainPSString );
-			CFRange aPlainPSRange = CFRangeMake( 0, nPlainPSLen );
-			sal_Unicode pPlainPSBuffer[ nPlainPSLen + 1 ];
-			CFStringGetCharacters( aPlainPSString, aPlainPSRange, pPlainPSBuffer );
-			pPlainPSBuffer[ nPlainPSLen ] = 0;
+			OUString aPlainPSName = GetOUString( aPlainPSString );
 			CFRelease( aPlainPSString );
-			OUString aPlainPSName = OUString( pPlainPSBuffer );
 			if ( aPlainPSName.getLength() )
 			{
-				::boost::unordered_map< OUString, JavaPhysicalFontFace*, OUStringHash >::const_iterator jfnit = pSalData->maJavaFontNameMapping.find( OUString( pPlainPSBuffer ) );
+				::boost::unordered_map< OUString, JavaPhysicalFontFace*, OUStringHash >::const_iterator jfnit = pSalData->maJavaFontNameMapping.find( aPlainPSName );
 				if ( jfnit != pSalData->maJavaFontNameMapping.end() )
 				{
 					pSalData->maPlainFamilyNativeFontMapping[ nNativeFont ] = jfnit->second;
@@ -246,13 +242,8 @@ static void ImplFontListChanged()
 						OUString aPSName;
 						if ( aPSString )
 						{
-							CFIndex nPSLen = CFStringGetLength( aPSString );
-							CFRange aPSRange = CFRangeMake( 0, nPSLen );
-							sal_Unicode pPSBuffer[ nPSLen + 1 ];
-							CFStringGetCharacters( aPSString, aPSRange, pPSBuffer );
-							pPSBuffer[ nPSLen ] = 0;
+							aPSName = GetOUString( aPSString );
 							CFRelease( aPSString );
-							aPSName = OUString( pPSBuffer );
 						}
 
 						if ( !aPSName.getLength() )
@@ -260,37 +251,32 @@ static void ImplFontListChanged()
 
 						// Get the font family name
 						CFStringRef aFamilyString = CTFontCopyFamilyName( aFont );
-						if ( !aFamilyString )
-							continue;
-
-						CFIndex nFamilyLen = CFStringGetLength( aFamilyString );
-						CFRange aFamilyRange = CFRangeMake( 0, nFamilyLen );
-						sal_Unicode pFamilyBuffer[ nFamilyLen + 1 ];
-						CFStringGetCharacters( aFamilyString, aFamilyRange, pFamilyBuffer );
-						pFamilyBuffer[ nFamilyLen ] = 0;
-						CFRelease( aFamilyString );
+						OUString aFamilyName;
+						if ( aFamilyString )
+						{
+							aFamilyName = GetOUString( aFamilyString );
+							CFRelease( aFamilyString );
+						}
 
 						// Ignore empty family names or family names that
 						// start with a "."
-						OUString aFamilyName( pFamilyBuffer );
 						if ( !aFamilyName.getLength() || aFamilyName.toChar() == (sal_Unicode)'.' )
 							continue;
 
 						sal_IntPtr nNativeFont = (sal_IntPtr)aFont;
 
+						OUString aDisplayName;
 						CFStringRef aDisplayString = CTFontCopyFullName( aFont );
-						if ( !aDisplayString )
+						if ( aDisplayString )
+						{
+							aDisplayName = GetOUString( aDisplayString );
+							CFRelease( aDisplayString );
+						}
+
+						if ( !aDisplayName.getLength() )
 							continue;
 
-						CFIndex nDisplayLen = CFStringGetLength( aDisplayString );
-						CFRange aDisplayRange = CFRangeMake( 0, nDisplayLen );
-						sal_Unicode pDisplayBuffer[ nDisplayLen + 1 ];
-						CFStringGetCharacters( aDisplayString, aDisplayRange, pDisplayBuffer );
-						pDisplayBuffer[ nDisplayLen ] = 0;
-						CFRelease( aDisplayString );
-
 						OUString aMapName( aPSName );
-						OUString aDisplayName( pDisplayBuffer );
 						sal_Int32 nColon = aDisplayName.indexOf( (sal_Unicode)':' );
 						if ( nColon >= 0 )
 						{

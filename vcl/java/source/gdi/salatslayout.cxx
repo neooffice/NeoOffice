@@ -55,6 +55,7 @@
 #include "java/saldata.hxx"
 #include "java/salgdi.h"
 #include "java/salinst.h"
+#include "quartz/utils.h"
 
 #define MAXEXTRACHARS 100
 #ifdef USE_SUBPIXEL_TEXT_RENDERING
@@ -775,13 +776,8 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 							CFStringRef aPSString = CTFontCopyPostScriptName( aFont );
 							if ( aPSString )
 							{
-								CFIndex nPSLen = CFStringGetLength( aPSString );
-								CFRange aPSRange = CFRangeMake( 0, nPSLen );
-								sal_Unicode pPSBuffer[ nPSLen + 1 ];
-								CFStringGetCharacters( aPSString, aPSRange, pPSBuffer );
-								pPSBuffer[ nPSLen ] = 0;
+								aPSName = GetOUString( aPSString );
 								CFRelease( aPSString );
-								aPSName = OUString( pPSBuffer );
 							}
 
 							::boost::unordered_map< OUString, JavaPhysicalFontFace*, OUStringHash >::const_iterator ffit = pSalData->maJavaFontNameMapping.find( aPSName );
