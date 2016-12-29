@@ -872,6 +872,10 @@ static bool IsRunningElCapitanOrLower()
 
 	[pScroller autorelease];
 
+	// Always use NSScrollerStyleLegacy scrollbars as we do not support
+	// autohiding scrollbars
+	pScroller.scrollerStyle = NSScrollerStyleLegacy;
+
 	// For scrollers, the inactive state is the same as the disabled state
 	if ( mnControlState & CTRL_STATE_ENABLED && ! ( mnControlState & CTRL_STATE_INACTIVE ) )
 		[pScroller setEnabled:YES];

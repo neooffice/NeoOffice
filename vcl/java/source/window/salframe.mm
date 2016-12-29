@@ -78,6 +78,7 @@ static SalColor *pVCLSelectedControlTextColor = NULL;
 static SalColor *pVCLSelectedMenuItemColor = NULL;
 static SalColor *pVCLSelectedMenuItemTextColor = NULL;
 static SalColor *pVCLShadowColor = NULL;
+static long nVCLScrollbarSize = 0;
 
 static ::osl::Mutex aSystemColorsMutex;
 static NSString *pVCLTrackingAreaWindowKey = @"VCLTrackingAreaWindow";
@@ -205,6 +206,10 @@ static void HandleSystemColorsChangedRequest()
 	SetSalColorFromNSColor( [NSColor selectedMenuItemColor], &pVCLSelectedMenuItemColor );
 	SetSalColorFromNSColor( [NSColor selectedMenuItemTextColor], &pVCLSelectedMenuItemTextColor );
 	SetSalColorFromNSColor( [NSColor controlShadowColor], &pVCLShadowColor );
+
+	// Always use NSScrollerStyleLegacy scrollbars as we always draw scrollbars 
+	// with that style in vcl/java/source/gdi/salnativewidgets.mm
+	nVCLScrollbarSize = (long)( [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy] + 0.5f );
 }
 
 @interface VCLSetSystemUIMode : NSObject
@@ -4352,6 +4357,9 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	// Hide images in popup menus
 	aStyleSettings.SetPreferredUseImagesInMenus( false );
 	aStyleSettings.SetAcceleratorsInContextMenus( false );
+
+	if ( nVCLScrollbarSize > 0 )
+		aStyleSettings.SetScrollBarSize( nVCLScrollbarSize );
 
 	rSettings.SetStyleSettings( aStyleSettings );
 
