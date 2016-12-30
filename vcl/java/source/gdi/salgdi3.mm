@@ -258,11 +258,6 @@ static void ImplFontListChanged()
 							CFRelease( aFamilyString );
 						}
 
-						// Ignore empty family names or family names that
-						// start with a "."
-						if ( !aFamilyName.getLength() || aFamilyName.toChar() == (sal_Unicode)'.' )
-							continue;
-
 						sal_IntPtr nNativeFont = (sal_IntPtr)aFont;
 
 						OUString aDisplayName;
@@ -286,7 +281,7 @@ static void ImplFontListChanged()
 
 						// Ignore empty font names or font names that start
 						// with a "."
-						if ( !aDisplayName.getLength() || aDisplayName.toChar() == (sal_Unicode)'.' )
+						if ( !aDisplayName.getLength() || aDisplayName.startsWith( "." ) )
 							continue;
 
 						if ( aDisplayName == aOpenSymbol || aDisplayName == aStarSymbol || aDisplayName == aNeoSymbol )
@@ -424,6 +419,62 @@ static void ImplFontListChanged()
 					}
 
 					[pFonts release];
+				}
+
+				// Cache system font
+				CTFontRef aSystemFont = (CTFontRef)[NSFont systemFontOfSize:0];
+				if ( aSystemFont )
+				{
+					CFStringRef aDisplayString = CTFontCopyFullName( aSystemFont );
+					if ( aDisplayString )
+					{
+						OUString aDisplayName = GetOUString( aDisplayString );
+						CFRelease( aDisplayString );
+						if ( aDisplayName.getLength() )
+							pSalData->maSystemFont = vcl::Font( aDisplayName, Size( 0, (long)( CTFontGetSize( aSystemFont ) + 0.5f ) ) );
+					}
+				}
+
+				// Cache label font
+				CTFontRef aLabelFont = (CTFontRef)[NSFont labelFontOfSize:0];
+				if ( aLabelFont )
+				{
+					CFStringRef aDisplayString = CTFontCopyFullName( aLabelFont );
+					if ( aDisplayString )
+					{
+						OUString aDisplayName = GetOUString( aDisplayString );
+						CFRelease( aDisplayString );
+						if ( aDisplayName.getLength() )
+							pSalData->maLabelFont = vcl::Font( aDisplayName, Size( 0, (long)( CTFontGetSize( aLabelFont ) + 0.5f ) ) );
+					}
+				}
+
+				// Cache menu font
+				CTFontRef aMenuFont = (CTFontRef)[NSFont menuFontOfSize:0];
+				if ( aMenuFont )
+				{
+					CFStringRef aDisplayString = CTFontCopyFullName( aMenuFont );
+					if ( aDisplayString )
+					{
+						OUString aDisplayName = GetOUString( aDisplayString );
+						CFRelease( aDisplayString );
+						if ( aDisplayName.getLength() )
+							pSalData->maMenuFont = vcl::Font( aDisplayName, Size( 0, (long)( CTFontGetSize( aMenuFont ) + 0.5f ) ) );
+					}
+				}
+
+				// Cache titlebar font
+				CTFontRef aTitleBarFont = (CTFontRef)[NSFont titleBarFontOfSize:0];
+				if ( aTitleBarFont )
+				{
+					CFStringRef aDisplayString = CTFontCopyFullName( aTitleBarFont );
+					if ( aDisplayString )
+					{
+						OUString aDisplayName = GetOUString( aDisplayString );
+						CFRelease( aDisplayString );
+						if ( aDisplayName.getLength() )
+							pSalData->maTitleBarFont = vcl::Font( aDisplayName, Size( 0, (long)( CTFontGetSize( aTitleBarFont ) + 0.5f ) ) );
+					}
 				}
 
 				[pPool release];
@@ -759,18 +810,31 @@ sal_uInt16 JavaSalGraphics::SetFont( FontSelectPattern* pFont, int nFallbackLeve
 
 	SalData *pSalData = GetSalData();
 
-	const JavaPhysicalFontFace *pFontData = dynamic_cast<const JavaPhysicalFontFace *>( pFont->mpFontData );
+	const JavaPhysicalFontFace *pFontData = NULL;
+
+	// System font names returned by NSFont are usually excluded from the
+	// font list in JavaSalGraphics::GetDevFontList() but such fonts are set
+	// as the default fonts in JavaSalFrame::UpdateSettings() so, if the
+	// requested font name matches an excluded font, use the excluded font
+	::std::map< OUString, JavaPhysicalFontFace* >::const_iterator fnit = pSalData->maFontNameMapping.find( pFont->GetFamilyName() );
+	if ( fnit != pSalData->maFontNameMapping.end() && ( !fnit->second->maFamilyName.getLength() || fnit->second->maFamilyName.startsWith( "." ) ) )
+		pFontData = fnit->second;
+
 	if ( !pFontData )
 	{
-		if ( pSalData->maJavaFontNameMapping.size() )
+		pFontData = dynamic_cast<const JavaPhysicalFontFace *>( pFont->mpFontData );
+		if ( !pFontData )
 		{
-			pFontData = pSalData->maJavaFontNameMapping.begin()->second;
-		}
-		else
-		{
-			// We should never get here as there should always be at least one
-			// font
-			return SAL_SETFONT_BADFONT;
+			if ( pSalData->maJavaFontNameMapping.size() )
+			{
+				pFontData = pSalData->maJavaFontNameMapping.begin()->second;
+			}
+			else
+			{
+				// We should never get here as there should always be at least
+				// one font
+				return SAL_SETFONT_BADFONT;
+			}
 		}
 	}
 
@@ -1054,7 +1118,11 @@ void JavaSalGraphics::GetDevFontList( PhysicalFontCollection* pList )
 
 	// Iterate through fonts and add each to the font list
 	for ( ::std::map< OUString, JavaPhysicalFontFace* >::const_iterator it = pSalData->maFontNameMapping.begin(); it != pSalData->maFontNameMapping.end(); ++it )
-		pList->Add( it->second->Clone() );
+	{
+		// Ignore empty family names or family names that start with a "."
+		if ( it->second->maFamilyName.getLength() && !it->second->maFamilyName.startsWith( "." ) )
+			pList->Add( it->second->Clone() );
+	}
 }
 
 // -----------------------------------------------------------------------

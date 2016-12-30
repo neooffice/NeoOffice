@@ -83,6 +83,8 @@ static long nVCLScrollbarSize = 0;
 static ::osl::Mutex aSystemColorsMutex;
 static NSString *pVCLTrackingAreaWindowKey = @"VCLTrackingAreaWindow";
 
+inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
+
 using namespace osl;
 using namespace vcl;
 
@@ -209,7 +211,7 @@ static void HandleSystemColorsChangedRequest()
 
 	// Always use NSScrollerStyleLegacy scrollbars as we always draw scrollbars 
 	// with that style in vcl/java/source/gdi/salnativewidgets.mm
-	nVCLScrollbarSize = (long)( [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy] + 0.5f );
+	nVCLScrollbarSize = Float32ToLong( [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy] );
 }
 
 @interface VCLSetSystemUIMode : NSObject
@@ -4360,6 +4362,49 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 
 	if ( nVCLScrollbarSize > 0 )
 		aStyleSettings.SetScrollBarSize( nVCLScrollbarSize );
+
+	SalData *pSalData = GetSalData();
+
+	vcl::Font aSystemFont( pSalData->maSystemFont );
+	aSystemFont.SetHeight( Float32ToLong( (float)aSystemFont.GetHeight() * 72 / mpGraphics->mnDPIY ) );
+	if ( aSystemFont.GetHeight() > 0 )
+	{
+		aStyleSettings.SetAppFont( aSystemFont );
+		aStyleSettings.SetHelpFont( aSystemFont );
+		aStyleSettings.SetPushButtonFont( aSystemFont );
+		aStyleSettings.SetToolFont( aSystemFont );
+	}
+
+	vcl::Font aLabelFont( pSalData->maLabelFont );
+	aLabelFont.SetHeight( Float32ToLong( (float)aLabelFont.GetHeight() * 72 / mpGraphics->mnDPIY ) );
+	if ( aLabelFont.GetHeight() <= 0 )
+		aLabelFont = aSystemFont;
+	if ( aLabelFont.GetHeight() > 0 )
+	{
+		aStyleSettings.SetFieldFont( aLabelFont );
+		aStyleSettings.SetGroupFont( aLabelFont );
+		aStyleSettings.SetIconFont( aLabelFont );
+		aStyleSettings.SetInfoFont( aLabelFont );
+		aStyleSettings.SetLabelFont( aLabelFont );
+		aStyleSettings.SetRadioCheckFont( aLabelFont );
+	}
+
+	vcl::Font aMenuFont( pSalData->maMenuFont );
+	aMenuFont.SetHeight( Float32ToLong( (float)aMenuFont.GetHeight() * 72 / mpGraphics->mnDPIY ) );
+	if ( aMenuFont.GetHeight() <= 0 )
+		aMenuFont = aSystemFont;
+	if ( aMenuFont.GetHeight() > 0 )
+		aStyleSettings.SetMenuFont( aMenuFont );
+
+	vcl::Font aTitleBarFont( pSalData->maTitleBarFont );
+	aTitleBarFont.SetHeight( Float32ToLong( (float)aTitleBarFont.GetHeight() * 72 / mpGraphics->mnDPIY ) );
+	if ( aTitleBarFont.GetHeight() <= 0 )
+		aTitleBarFont = aSystemFont;
+	if ( aTitleBarFont.GetHeight() > 0 )
+	{
+		aStyleSettings.SetTitleFont( aTitleBarFont );
+		aStyleSettings.SetFloatTitleFont( aTitleBarFont );
+	}
 
 	rSettings.SetStyleSettings( aStyleSettings );
 

@@ -87,6 +87,10 @@ public:
 	JavaSalFrame*			mpLastResizeFrame;
 	timeval					maLastResizeTime;
 	JavaSalFrame*			mpLastMouseMoveFrame;
+	::vcl::Font				maSystemFont;
+	::vcl::Font				maLabelFont;
+	::vcl::Font				maMenuFont;
+	::vcl::Font				maTitleBarFont;
 
 							SalData();
 							~SalData();
