@@ -376,7 +376,7 @@ void SidebarTxtControl::Command( const CommandEvent& rCEvt )
             OutlinerView *pOutlinerView = mrSidebarWin.GetOutlinerView();
             if ( pOutlinerView )
             {
-                ((PopupMenu *)pMgr->GetSVMenu())->InsertSeparator( 0 );
+                ((PopupMenu *)pMgr->GetSVMenu())->InsertSeparator( OString(), 0 );
                 ((PopupMenu *)pMgr->GetSVMenu())->InsertItem( FN_LOOKUP_IN_MACOSX_DICTIONARY, GetMacDictLoookupResString( STR_LOOKUP_IN_MACOSX_DICTIONARY ), MenuItemBits::NONE, OString(), 0 );
                 ((PopupMenu *)pMgr->GetSVMenu())->EnableItem( FN_LOOKUP_IN_MACOSX_DICTIONARY, false );
 

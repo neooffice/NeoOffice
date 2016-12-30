@@ -5253,7 +5253,7 @@ void SwEditWin::Command( const CommandEvent& rCEvt )
                         SfxPopupMenuManager *pPopupMenuManager = SfxDispatcher::Popup( 0, this, &aPixPos );
                         if ( pPopupMenuManager )
                         {
-                            ((PopupMenu *)pPopupMenuManager->GetSVMenu())->InsertSeparator( 0 );
+                            ((PopupMenu *)pPopupMenuManager->GetSVMenu())->InsertSeparator( OString(), 0 );
                             ((PopupMenu *)pPopupMenuManager->GetSVMenu())->InsertItem( FN_LOOKUP_IN_MACOSX_DICTIONARY, GetMacDictLoookupResString( STR_LOOKUP_IN_MACOSX_DICTIONARY ), MenuItemBits::NONE, OString(), 0 );
                             ((PopupMenu *)pPopupMenuManager->GetSVMenu())->EnableItem( FN_LOOKUP_IN_MACOSX_DICTIONARY, false );
 
