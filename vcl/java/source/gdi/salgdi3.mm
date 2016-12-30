@@ -185,6 +185,10 @@ static void ImplFontListChanged()
 			pSalData->maPlainFamilyNativeFontMapping.clear();
 			pSalData->maItalicNativeFontMapping.clear();
 			pSalData->maUnitalicNativeFontMapping.clear();
+			pSalData->maSystemFont = vcl::Font();
+			pSalData->maLabelFont = vcl::Font();
+			pSalData->maMenuFont = vcl::Font();
+			pSalData->maTitleBarFont = vcl::Font();
 
 			if ( !Application::IsShutDown() )
 			{
