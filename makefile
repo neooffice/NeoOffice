@@ -541,20 +541,19 @@ endif
 # Remove LibO native spellchecker and all OpenGL libraries. Fix bug 3273 by not
 # installing any LibO fonts.
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "Frameworks/libMacOSXSpelllo.dylib" "Frameworks/libOGLTranslo.dylib" "Frameworks/libavmediaMacAVFlo.dylib" "Frameworks/libavmediaogl.dylib" "Frameworks/liboglcanvaslo.dylib" "Resources/fonts/truetype"
-	echo "End of update installer build steps"
-	exit 1
 ifndef PRODUCT_BUILD3
 # Remove update check files since the Mac App Store has its own update
 # check. Do not remove updatefeed.uno.dylib as it is needed by the pdfimport
 # extension.
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/libupdchk.dylib"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "Frameworks/libupdchklo.dylib"
 # Remove Java files
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/classes" "program/libhsqldb.dylib" "program/libjdbc.dylib" "share/Scripts/beanshell" "share/Scripts/java" "program/JREProperties.class" "program/javaloader.uno.dylib" "program/javavm.uno.dylib" "program/javavendors.xml" "program/libjava_uno.dylib" "program/libjuh.dylib" "program/libjuhx.dylib" "program/sunjavaplugin.dylib"
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . ! -type d -name "*.jnilib"` ; do rm -f $${i} ; done'
-	cd "$(INSTALL_HOME)/package/Contents/help" ; sh -e -c 'for i in `find . -type d -name "*.idxl"` ; do rm -Rf $${i} ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "Frameworks/libhsqldb.jnilib" "Frameworks/libjava_uno.dylib" "Frameworks/libjava_uno.jnilib" "Frameworks/libjavaloaderlo.dylib" "Frameworks/libjavavmlo.dylib" "Frameworks/libjdbclo.dylib" "Frameworks/libjpipe.jnilib" "Frameworks/libjuh.jnilib" "Frameworks/libjuhx.dylib" "Resources/Scripts/beanshell" "Resources/Scripts/java" "Resources/Scripts/javascript" "Resources/config/soffice.cfg/modules/dbapp/toolbar/reportobjectbar.xml" "Resources/config/soffice.cfg/cui/ui/javaclasspathdialog.ui" "Resources/config/soffice.cfg/cui/ui/javastartparametersdialog.ui" "Resources/config/soffice.cfg/svt/ui/javadisableddialog.ui" "Resources/java" "Resources/registry/reportbuilder.xcd" "Resources/services/scriptproviderforbeanshell.rdb" "Resources/services/scriptproviderforjavascript.rdb" "Resources/ure/share/misc/javavendors.xml"
+	cd "$(INSTALL_HOME)/package/Contents/Resources/help" ; sh -e -c 'for i in `find . -type d -name "*.idxl"` ; do rm -Rf "$${i}" ; done'
 # Remove Python files
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/libpyuno.dylib" "program/mailmerge.py" "program/officehelper.py" "program/pythonloader.py" "program/pythonscript.py" "program/pythonloader.uno.dylib" "program/pythonloader.unorc" "program/pythonscript.py" "program/pyuno.so" "program/uno.py" "program/unohelper.py" "share/Scripts/python" "share/registry/pyuno.xcd"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "Frameworks/LibreOfficePython.framework" "Frameworks/libpythonloaderlo.dylib" "Frameworks/pyuno.so" "Frameworks/libpyuno.dylib" "Resources/Scripts/python" "Resources/mailmerge.py" "Resources/msgbox.py" "Resources/officehelper.py" "Resources/pythonloader.py" "Resources/pythonloader.unorc" "Resources/pythonscript.py" "Resources/registry/pyuno.xcd" "Resources/uno.py" "Resources/unohelper.py" "Resources/services/pyuno.rdb" "Resources/services/scriptproviderforpython.rdb" "Resources/wizards/__init__.py" "Resources/wizards/agenda" "Resources/wizards/common" "Resources/wizards/document" "Resources/wizards/fax" "Resources/wizards/letter" "Resources/wizards/text" "Resources/wizards/ui" "Resources/wizards/web"
 endif
+	@echo "End of update installer build steps"
+	@exit 1
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -name "*.xcd" -not -path "*/CVS/*"` ; do xmllint --noblanks "$(PWD)/etc/$${i}" > "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -not -name "*.xcd" -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
@@ -562,8 +561,6 @@ ifndef PRODUCT_BUILD3
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find share -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find share -type f -name "*.xcd" -not -path "*/CVS/*"` ; do xmllint --noblanks "$(PWD)/etc/sandbox/$${i}" > "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find share -type f -not -name "*.xcd" -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/sandbox/$${i}" "$${i}" ; done'
-# Remove report toolbar from Base since reports require Java support
-	rm "$(INSTALL_HOME)/package/Contents/share/config/soffice.cfg/modules/dbapp/toolbar/reportobjectbar.xml"
 endif
 	cd "$(INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' | sed 's#BuildMachine=.*$$#BuildMachine=$(BUILD_MACHINE)#g' > "../../out" ; mv -f "../../out" "program/bootstraprc"
 	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(TARGET_MACHINE)#$(TARGET_MACHINE)#g' "$(PWD)/etc/program/fundamentalrc" > "program/fundamentalrc"
