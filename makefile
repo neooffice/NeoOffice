@@ -485,7 +485,6 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Toolbar & Preferences Icons 1.0.1/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_galaxy.zip" ; find . -exec touch {} \; ; zip -ruD "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_galaxy.zip" .
 	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Toolbar & Preferences Icons 1.0.1/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_hicontrast.zip" ; find . -exec touch {} \; ; zip -ruD "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_hicontrast.zip" .
 	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Toolbar & Preferences Icons 1.0.1/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_oxygen.zip" ; find . -exec touch {} \; ; zip -ruD "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_oxygen.zip" .
-	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Toolbar & Preferences Icons 1.0.1/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_sifr.zip" ; find . -exec touch {} \; ; zip -ruD "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_sifr.zip" .
 	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Toolbar & Preferences Icons 1.0.1/images" ; find svtools svx -type f > "$(PWD)/$(INSTALL_HOME)/toolbaricons"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "tmp/NeoOffice Toolbar & Preferences Icons 1.0.1/source/Generic Template.icns" "Resources/generic.icns"
 	chmod -Rf u+rw "$(INSTALL_HOME)/package/Contents/tmp"
@@ -502,7 +501,6 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents/tmp/Akua_2012_Release/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_galaxy.zip" ; find . -exec touch {} \; ; zip -ruD "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_galaxy.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"`
 	cd "$(INSTALL_HOME)/package/Contents/tmp/Akua_2012_Release/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_hicontrast.zip" ; find . -exec touch {} \; ; zip -ruD "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_hicontrast.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"`
 	cd "$(INSTALL_HOME)/package/Contents/tmp/Akua_2012_Release/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_oxygen.zip" ; find . -exec touch {} \; ; zip -ruD "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_oxygen.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"`
-	cd "$(INSTALL_HOME)/package/Contents/tmp/Akua_2012_Release/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_sifr.zip" ; find . -exec touch {} \; ; zip -ruD "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_sifr.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"`
 	chmod -Rf u+rw "$(INSTALL_HOME)/package/Contents/tmp"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/tmp"
 	mkdir -p "$(INSTALL_HOME)/package/Contents/tmp"
@@ -527,15 +525,12 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Aqua Elements 3/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_galaxy.zip" ; find . -exec touch {} \; ; zip -ruD "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_galaxy.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"`
 	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Aqua Elements 3/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_hicontrast.zip" ; find . -exec touch {} \; ; zip -ruD "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_hicontrast.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"`
 	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Aqua Elements 3/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_oxygen.zip" ; find . -exec touch {} \; ; zip -ruD "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_oxygen.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"`
-	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Aqua Elements 3/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_sifr.zip" ; find . -exec touch {} \; ; zip -ruD "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources/config/images_sifr.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"`
 	chmod -Rf u+rw "$(INSTALL_HOME)/package/Contents/tmp"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/tmp"
-	echo "End of update installer build steps"
-	exit 1
 ifdef PRODUCT_BUILD3
-	cd "$(INSTALL_HOME)/package/Contents" ; xmllint --noblanks "$(PWD)/etc/program/services.rdb" > "program/services.rdb"
+	cd "$(INSTALL_HOME)/package/Contents" ; xmllint --noblanks "$(PWD)/etc/Resources/services/services.rdb" > "Resources/services/services.rdb"
 else
-	cd "$(INSTALL_HOME)/package/Contents" ; xmllint --noblanks "$(PWD)/etc/sandbox/program/services.rdb" > "program/services.rdb"
+	cd "$(INSTALL_HOME)/package/Contents" ; xmllint --noblanks "$(PWD)/etc/sandbox/Resources/services/services.rdb" > "Resources/services/services.rdb"
 endif
 # Add Mac OS X localized resources
 	cd "$(INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `echo "$(PRODUCT_BUNDLED_LANG_PACKS)" | sed "s#-#_#g"` ; do mkdir -p "$${i}.lproj" ; mkdir -p `echo "$${i}" | sed "s#_.*\\$$##"`".lproj" ; done'
@@ -543,8 +538,11 @@ ifdef PRODUCT_BUILD3
 	cd "$(INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/etc/package/l10n" && gnutar cvf - --exclude CVS --exclude "*.html" . ) | gnutar xvf - )
 	cd "$(INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `cd "$(PWD)/etc/package/l10n" ; find . -name "*.html"` ; do sed "s#\$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$(PWD)/etc/package/l10n/$${i}" | sed "s#\$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" | sed "s#\$$(PRODUCT_DOWNLOAD_URL)#$(PRODUCT_DOWNLOAD_URL)#g" | sed "s#\$$(PRODUCT_MIN_OSVERSION_NAME)#$(PRODUCT_MIN_OSVERSION_NAME)#g" | sed "s#\$$(PRODUCT_MAX_OSVERSION_NAME)#$(PRODUCT_MAX_OSVERSION_NAME)#g" > "$${i}" ; done'
 endif
-# Fix bug 3273 by not installing any OOo fonts
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "program/fps_aqua.uno.dylib" "program/libMacOSXSpell.dylib" "program/libavmediaQuickTime.dylib" "program/liboooimprovecore.dylib" "share/fonts/truetype" "share/psprint"
+# Remove LibO native spellchecker and all OpenGL libraries. Fix bug 3273 by not
+# installing any LibO fonts.
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "Frameworks/libMacOSXSpelllo.dylib" "Frameworks/libOGLTranslo.dylib" "Frameworks/libavmediaMacAVFlo.dylib" "Frameworks/libavmediaogl.dylib" "Frameworks/liboglcanvaslo.dylib" "Resources/fonts/truetype"
+	echo "End of update installer build steps"
+	exit 1
 ifdef PRODUCT_BUILD3
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/jvmfwk/$(UOUTPUTDIR)/bin/javavendors.xml" "program/javavendors.xml"
 else
