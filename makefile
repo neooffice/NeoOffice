@@ -528,9 +528,9 @@ endif
 	chmod -Rf u+rw "$(INSTALL_HOME)/package/Contents/tmp"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/tmp"
 ifdef PRODUCT_BUILD3
-	cd "$(INSTALL_HOME)/package/Contents" ; xmllint --noblanks "$(PWD)/etc/Resources/services/services.rdb" > "Resources/services/services.rdb"
+	cd "$(INSTALL_HOME)/package/Contents" ; tidy -quiet -xml -utf8 -wrap 4096 --hide-comments 1 "$(PWD)/etc/Resources/services/services.rdb" | xmllint --noblanks - > "Resources/services/services.rdb"
 else
-	cd "$(INSTALL_HOME)/package/Contents" ; xmllint --noblanks "$(PWD)/etc/sandbox/Resources/services/services.rdb" > "Resources/services/services.rdb"
+	cd "$(INSTALL_HOME)/package/Contents" ; tidy -quiet -xml -utf8 -wrap 4096 --hide-comments 1 "$(PWD)/etc/sandbox/Resources/services/services.rdb" | xmllint --noblanks - > "Resources/services/services.rdb"
 endif
 # Add Mac OS X localized resources
 	cd "$(INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `echo "$(PRODUCT_BUNDLED_LANG_PACKS)" | sed "s#-#_#g"` ; do mkdir -p "$${i}.lproj" ; mkdir -p `echo "$${i}" | sed "s#_.*\\$$##"`".lproj" ; done'
@@ -543,9 +543,7 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "Frameworks/libMacOSXSpelllo.dylib" "Frameworks/libOGLTranslo.dylib" "Frameworks/libavmediaMacAVFlo.dylib" "Frameworks/libavmediaogl.dylib" "Frameworks/liboglcanvaslo.dylib" "Resources/fonts/truetype"
 	echo "End of update installer build steps"
 	exit 1
-ifdef PRODUCT_BUILD3
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/jvmfwk/$(UOUTPUTDIR)/bin/javavendors.xml" "program/javavendors.xml"
-else
+ifndef PRODUCT_BUILD3
 # Remove update check files since the Mac App Store has its own update
 # check. Do not remove updatefeed.uno.dylib as it is needed by the pdfimport
 # extension.
