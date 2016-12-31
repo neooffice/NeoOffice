@@ -2148,6 +2148,8 @@ SalLayout* OutputDevice::ImplGlyphFallbackLayout( SalLayout* pSalLayout, ImplLay
         // create and add glyph fallback layout to multilayout
 #if defined USE_JAVA && defined MACOSX
         SalLayout* pFallback = getFallbackFont(*aFontSelData.mpFontEntry, aFontSelData,
+#else	// USE_JAVA && MACOSX
+        SalLayout* pFallback = getFallbackFont(*pFallbackFont, aFontSelData,
 #endif	// USE_JAVA && MACOSX
             nFallbackLevel, rLayoutArgs);
         if (pFallback)
