@@ -4350,8 +4350,8 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	if ( pVCLShadowColor )
 		aStyleSettings.SetShadowColor( Color( *pVCLShadowColor ) );
 
-	// Disable mnemonics
-	aStyleSettings.SetOptions( aStyleSettings.GetOptions() | STYLE_OPTION_NOMNEMONICS );
+	// Mnemonics is needed for our code in OutputDevice::ImplDrawMnemonicLine()
+	aStyleSettings.SetOptions( aStyleSettings.GetOptions() & ~STYLE_OPTION_NOMNEMONICS );
 
 	// Use large icons by default
 	aStyleSettings.SetToolbarIconSize( STYLE_TOOLBAR_ICONSIZE_LARGE );
