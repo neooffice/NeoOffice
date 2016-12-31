@@ -2928,6 +2928,7 @@
     </implementation>
   </component>
   -->
+  <!-- Remove liboglcanvaslo.dylib
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="updchk" uri="vnd.sun.star.expand:$LO_LIB_DIR/libupdchklo.dylib">
     <implementation name="vnd.sun.UpdateCheck">
       <service name="com.sun.star.setup.UpdateCheck"/>
@@ -2936,6 +2937,7 @@
       <service name="com.sun.star.setup.UpdateCheckConfig"/>
     </implementation>
   </component>
+  -->
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="updchkui" uri="vnd.sun.star.expand:$LO_LIB_DIR/libupdatecheckuilo.dylib">
     <implementation name="vnd.sun.UpdateCheckUI">
       <service name="com.sun.star.setup.UpdateCheckUI"/>
