@@ -996,8 +996,6 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
     // tab highlighting is sufficient for indicating active tab, leave text
     // alone
     aFont.SetWeight( WEIGHT_LIGHT );
-#else	// USE_JAVA
-    aFont.SetWeight( ((bIsCurrentItem) && (!ImplGetSVData()->maNWFData.mbNoBoldTabFocus)) ? WEIGHT_BOLD : WEIGHT_LIGHT );
 #endif	// USE_JAVA
     SetFont( aFont );
 
