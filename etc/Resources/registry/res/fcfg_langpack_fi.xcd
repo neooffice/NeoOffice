@@ -209,12 +209,12 @@
       </node>
       <node oor:name="MS Word 2007 XML">
         <prop oor:name="UIName">
-          <value xml:lang="fi">Microsoft Word 2007/2010/2013 XML</value>
+          <value xml:lang="fi">Microsoft Word 2007-2016 XML</value>
         </prop>
       </node>
       <node oor:name="MS Word 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="fi">Microsoft Word 2007/2010/2013 -malli (XML)</value>
+          <value xml:lang="fi">Microsoft Word 2007-2016 -malli (XML)</value>
         </prop>
       </node>
       <node oor:name="Office Open XML Text">
@@ -314,12 +314,12 @@
       </node>
       <node oor:name="MS Word 2007 XML">
         <prop oor:name="UIName">
-          <value xml:lang="fi">Microsoft Word 2007/2010/2013 XML</value>
+          <value xml:lang="fi">Microsoft Word 2007-2016 XML</value>
         </prop>
       </node>
       <node oor:name="MS Word 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="fi">Microsoft Word 2007/2010/2013 -malli (XML)</value>
+          <value xml:lang="fi">Microsoft Word 2007-2016 -malli (XML)</value>
         </prop>
       </node>
       <node oor:name="Office Open XML Text">
@@ -559,12 +559,12 @@
       </node>
       <node oor:name="Calc MS Excel 2007 XML">
         <prop oor:name="UIName">
-          <value xml:lang="fi">Microsoft Excel 2007/2010/2013 XML</value>
+          <value xml:lang="fi">Microsoft Excel 2007-2016 XML</value>
         </prop>
       </node>
       <node oor:name="Calc MS Excel 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="fi">Microsoft Excel 2007/2010/2013 -malli (XML)</value>
+          <value xml:lang="fi">Microsoft Excel 2007-2016 -malli (XML)</value>
         </prop>
       </node>
       <node oor:name="Calc MS Excel 2007 Binary">
@@ -709,12 +709,12 @@
       </node>
       <node oor:name="Impress MS PowerPoint 2007 XML AutoPlay">
         <prop oor:name="UIName">
-          <value xml:lang="fi">Microsoft PowerPoint 2007/2010/2013 XML (automaattiesitys)</value>
+          <value xml:lang="fi">Microsoft PowerPoint 2007-2016 XML (automaattiesitys)</value>
         </prop>
       </node>
       <node oor:name="Impress MS PowerPoint 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="fi">Microsoft PowerPoint 2007/2010/2013 -malli (XML)</value>
+          <value xml:lang="fi">Microsoft PowerPoint 2007-2016 -malli (XML)</value>
         </prop>
       </node>
       <node oor:name="Impress Office Open XML">
@@ -774,12 +774,12 @@
       </node>
       <node oor:name="Impress MS PowerPoint 2007 XML">
         <prop oor:name="UIName">
-          <value xml:lang="fi">Microsoft PowerPoint 2007/2010/2013 XML</value>
+          <value xml:lang="fi">Microsoft PowerPoint 2007-2016 XML</value>
         </prop>
       </node>
       <node oor:name="Impress MS PowerPoint 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="fi">Microsoft PowerPoint 2007/2010/2013 -malli (XML)</value>
+          <value xml:lang="fi">Microsoft PowerPoint 2007-2016 -malli (XML)</value>
         </prop>
       </node>
       <node oor:name="Impress Office Open XML">
