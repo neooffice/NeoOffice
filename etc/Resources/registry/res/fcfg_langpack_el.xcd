@@ -1,0 +1,1187 @@
+<?xml version="1.0" encoding="utf8"?>
+<oor:data xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:oor="http://openoffice.org/2001/registry">
+  <oor:component-data xmlns:install="http://openoffice.org/2004/installation" oor:package="org.openoffice.TypeDetection" oor:name="Filter">
+    <node oor:name="Filters">
+      <node oor:name="writer_web_HTML_help">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Περιεχόμενο βοήθειας</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Base)">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Βάση δεδομένων ODF </value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Base) Report">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Αναφορά βάσης δεδομένων ODF</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Base) Report Chart">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Διάγραμμα αναφοράς του OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="MS WinWord 5">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft WinWord 1/2/5</value>
+        </prop>
+      </node>
+      <node oor:name="MS WinWord 6.0">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Word 6.0</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 95">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Word 95</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 97">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Word 97/2000/XP/2003</value>
+        </prop>
+      </node>
+      <node oor:name="Rich Text Format">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Εμπλουτισμένο κείμενο</value>
+        </prop>
+      </node>
+      <node oor:name="WordPerfect">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο WordPerfect</value>
+        </prop>
+      </node>
+      <node oor:name="MS_Works">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο Microsoft Works</value>
+        </prop>
+      </node>
+      <node oor:name="Beagle_Works">
+        <prop oor:name="UIName">
+          <value xml:lang="el">BeagleWorks/WordPerfect Works v1 Έγγραφο κειμένου</value>
+        </prop>
+      </node>
+      <node oor:name="ClarisWorks">
+        <prop oor:name="UIName">
+          <value xml:lang="el">ClarisWorks/AppleWorks Έγγραφο κειμένου</value>
+        </prop>
+      </node>
+      <node oor:name="DocMaker">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο DOCMaker (v4)</value>
+        </prop>
+      </node>
+      <node oor:name="eDoc_Document">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο eDOC (v2)</value>
+        </prop>
+      </node>
+      <node oor:name="FullWrite_Professional">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Επαγγελματικό έγγραφο FullWrite</value>
+        </prop>
+      </node>
+      <node oor:name="Great_Works">
+        <prop oor:name="UIName">
+          <value xml:lang="el">GreatWorks Έγγραφο κειμένου</value>
+        </prop>
+      </node>
+      <node oor:name="HanMac_Word_J">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο HanMac Word-J</value>
+        </prop>
+      </node>
+      <node oor:name="HanMac_Word_K">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο HanMac Word-K</value>
+        </prop>
+      </node>
+      <node oor:name="LightWayText">
+        <prop oor:name="UIName">
+          <value xml:lang="el">LightWayText for Mac v4.5</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Acta">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο Acta Mac Classic</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_More">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Περισσότερα έγγραφα Mac v2-3</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_RagTime">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο RagTime Mac v2-3</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Word">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Word για Mac (v1 - v5)</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Works">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Works for Mac Έγγραφο κειμένου (v1 - v4)</value>
+        </prop>
+      </node>
+      <node oor:name="MacDoc">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο MacDoc v1</value>
+        </prop>
+      </node>
+      <node oor:name="MacWrite">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο MacWrite</value>
+        </prop>
+      </node>
+      <node oor:name="MacWritePro">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο MacWriteII ή MacWritePro</value>
+        </prop>
+      </node>
+      <node oor:name="Mariner_Write">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Mariner Write Mac Classic v1.6 - v3.5</value>
+        </prop>
+      </node>
+      <node oor:name="MindWrite">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο MindWrite</value>
+        </prop>
+      </node>
+      <node oor:name="Nisus_Writer">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Nisus Writer Mac Classic v3.4 - 6.5</value>
+        </prop>
+      </node>
+      <node oor:name="TeachText">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο TeachText/SimpleText v1</value>
+        </prop>
+      </node>
+      <node oor:name="TexEdit">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο Tex-Edit v2</value>
+        </prop>
+      </node>
+      <node oor:name="WriteNow">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο WriteNow</value>
+        </prop>
+      </node>
+      <node oor:name="WriterPlus">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο WriterPlus</value>
+        </prop>
+      </node>
+      <node oor:name="ZWrite">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο Z-Write 1.3</value>
+        </prop>
+      </node>
+      <node oor:name="AbiWord">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο AbiWord</value>
+        </prop>
+      </node>
+      <node oor:name="T602Document">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο T602</value>
+        </prop>
+      </node>
+      <node oor:name="LotusWordPro">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο Lotus WordPro</value>
+        </prop>
+      </node>
+      <node oor:name="writer_MIZI_Hwp_97">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Hangul WP 97</value>
+        </prop>
+      </node>
+      <node oor:name="writer_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PDF - Φορητή μορφή αρχείου</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Word 2007/2010/2013 XML</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Word 2007/2010/2013 πρότυπο XML</value>
+        </prop>
+      </node>
+      <node oor:name="Office Open XML Text">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Κείμενο Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="Office Open XML Text Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Πρότυπο κειμένου Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="writer_layout_dump">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Διάταξη XML Writer</value>
+        </prop>
+      </node>
+      <node oor:name="BroadBand eBook">
+        <prop oor:name="UIName">
+          <value xml:lang="el">BroadBand eBook</value>
+        </prop>
+      </node>
+      <node oor:name="eReader eBook">
+        <prop oor:name="UIName">
+          <value xml:lang="el">eReader eBook</value>
+        </prop>
+      </node>
+      <node oor:name="FictionBook 2">
+        <prop oor:name="UIName">
+          <value xml:lang="el">FictionBook 2.0</value>
+        </prop>
+      </node>
+      <node oor:name="PalmDoc">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PalmDoc eBook</value>
+        </prop>
+      </node>
+      <node oor:name="Plucker eBook">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Plucker eBook</value>
+        </prop>
+      </node>
+      <node oor:name="TealDoc">
+        <prop oor:name="UIName">
+          <value xml:lang="el">TealDoc eBook</value>
+        </prop>
+      </node>
+      <node oor:name="zTXT">
+        <prop oor:name="UIName">
+          <value xml:lang="el">zTXT eBook</value>
+        </prop>
+      </node>
+      <node oor:name="HTML (StarWriter)">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο HTML (Writer)</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 95 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Word 95 - Πρότυπο</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 97 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Word 97/2000/XP/2003 πρότυπο</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Writer)">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο κειμένου του OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="Text">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Κείμενο</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded)">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Κείμενο - Επιλογή κωδικοποίησης</value>
+        </prop>
+      </node>
+      <node oor:name="writer_StarOffice_XML_Writer_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Πρότυπο εγγράφου του OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="writer8">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο κειμένου ODF</value>
+        </prop>
+      </node>
+      <node oor:name="writer8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Πρότυπο εγγράφου κειμένου ODF</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Word 2007/2010/2013 XML</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Word 2007/2010/2013 πρότυπο XML</value>
+        </prop>
+      </node>
+      <node oor:name="Office Open XML Text">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Κείμενο Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="Office Open XML Text Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Πρότυπο κειμένου Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="writer_web_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PDF - Φορητή μορφή εγγράφου</value>
+        </prop>
+      </node>
+      <node oor:name="HTML">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο HTML</value>
+        </prop>
+      </node>
+      <node oor:name="Text (StarWriter/Web)">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Κείμενο (Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded) (StarWriter/Web)">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Κείμενο - Επιλογή κωδικοποίησης (Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_web_StarOffice_XML_Writer">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο κειμένου (Writer/ιστού) του OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="writer_web_StarOffice_XML_Writer_Web_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Πρότυπο HTML του OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="writerweb8_writer_template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Πρότυπο εγγράφου HTML</value>
+        </prop>
+      </node>
+      <node oor:name="writerweb8_writer">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Κείμενο (Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_globaldocument_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PDF - Φορητή μορφή εγγράφου</value>
+        </prop>
+      </node>
+      <node oor:name="writerglobal8_HTML">
+        <prop oor:name="UIName">
+          <value xml:lang="el">HTML (Writer/Global)</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded) (StarWriter/GlobalDocument)">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Κείμενο - Επιλογή κωδικοποίησης (Κύριο έγγραφο)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_globaldocument_StarOffice_XML_Writer">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο κειμένου του OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="writer_globaldocument_StarOffice_XML_Writer_GlobalDocument">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Κύριο έγγραφο του OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="writerglobal8">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Κύριο έγγραφο ODF </value>
+        </prop>
+      </node>
+      <node oor:name="writerglobal8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Πρότυπο κύριου εγγράφου ODF</value>
+        </prop>
+      </node>
+      <node oor:name="writerglobal8_writer">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο κειμένου ODF </value>
+        </prop>
+      </node>
+      <node oor:name="DIF">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Μορφή ανταλλαγής δεδομένων</value>
+        </prop>
+      </node>
+      <node oor:name="Lotus">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Lotus 1-2-3</value>
+        </prop>
+      </node>
+      <node oor:name="Quattro Pro 6.0">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Quattro Pro 6.0</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 4.0">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Excel 4.0</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 5.0/95">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Excel 5.0</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 95">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Excel 95</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 97">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Excel 97/2000/XP/2003</value>
+        </prop>
+      </node>
+      <node oor:name="Rich Text Format (StarCalc)">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Μορφή εμπλουτισμένου κειμένου (Calc)</value>
+        </prop>
+      </node>
+      <node oor:name="SYLK">
+        <prop oor:name="UIName">
+          <value xml:lang="el">SYLK</value>
+        </prop>
+      </node>
+      <node oor:name="calc_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PDF - Φορητή μορφή εγγράφου</value>
+        </prop>
+      </node>
+      <node oor:name="dBase">
+        <prop oor:name="UIName">
+          <value xml:lang="el">dBASE</value>
+        </prop>
+      </node>
+      <node oor:name="MS_Works_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο Microsoft Works</value>
+        </prop>
+      </node>
+      <node oor:name="Beagle_Works_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="el">BeagleWorks/WordPerfect Works v1 Υπολογιστικό φύλλο</value>
+        </prop>
+      </node>
+      <node oor:name="ClarisWorks_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="el">ClarisWorks/AppleWorks Υπολογιστικό φύλλο</value>
+        </prop>
+      </node>
+      <node oor:name="Claris_Resolve_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο ClarisResolve</value>
+        </prop>
+      </node>
+      <node oor:name="Great_Works_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="el">GreatWorks Υπολογιστικό φύλλο</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Wingz_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο Wingz για Mac</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Works_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Works for Mac Υπολογιστικό φύλλο (v1 - v4)</value>
+        </prop>
+      </node>
+      <node oor:name="HTML (StarCalc)">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο HTML (Calc)</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 4.0 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Excel 4.0 Πρότυπο</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 5.0/95 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Excel 5.0 Πρότυπο</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 95 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Excel 95 Πρότυπο</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 97 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Excel 97/2000/XP/2003 Πρότυπο</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Calc)">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Υπολογιστικό φύλλο του OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="Text - txt - csv (StarCalc)">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Κείμενο χωρισμένο με κόμματα</value>
+        </prop>
+      </node>
+      <node oor:name="calc_HTML_WebQuery">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Αναζήτηση ιστοσελίδας (Calc)</value>
+        </prop>
+      </node>
+      <node oor:name="calc_StarOffice_XML_Calc_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Πρότυπο υπολογιστικού φύλλου του OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="calc8">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Υπολογιστικό φύλλο ODF</value>
+        </prop>
+      </node>
+      <node oor:name="calc8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Πρότυπο υπολογιστικό φύλλο ODF</value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Excel 2007/2010/2013 XML</value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Excel 2007/2010/2013 πρότυπο XML</value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 Binary">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Excel 2007 Δυαδικό</value>
+        </prop>
+      </node>
+      <node oor:name="Calc Office Open XML">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Υπολογιστικό φύλλο Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="Calc Office Open XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Πρότυπο λογιστικού φύλλου Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="draw_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PDF - Φορητή μορφή εγγράφου</value>
+        </prop>
+      </node>
+      <node oor:name="WordPerfect Graphics">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Γραφικά WordPerfect</value>
+        </prop>
+      </node>
+      <node oor:name="Visio Document">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Visio 2000-2013</value>
+        </prop>
+      </node>
+      <node oor:name="Publisher Document">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Publisher 98-2010</value>
+        </prop>
+      </node>
+      <node oor:name="Corel Draw Document">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Corel Draw</value>
+        </prop>
+      </node>
+      <node oor:name="Corel Presentation Exchange">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Corel Presentation Exchange</value>
+        </prop>
+      </node>
+      <node oor:name="Freehand Document">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Adobe/Macromedia Freehand</value>
+        </prop>
+      </node>
+      <node oor:name="Beagle_Works_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="el">BeagleWorks/WordPerfect Works v1 Σχεδίαση</value>
+        </prop>
+      </node>
+      <node oor:name="ClarisWorks_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="el">ClarisWorks/AppleWorks Σχεδίαση</value>
+        </prop>
+      </node>
+      <node oor:name="Great_Works_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="el">GreatWorks Σχεδίαση</value>
+        </prop>
+      </node>
+      <node oor:name="MacDraw_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="el">MacDraw (v0-v1)</value>
+        </prop>
+      </node>
+      <node oor:name="MacDrawPro_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="el">MacDraw II</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Works_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Works for Mac Σχεδίαση (v1 - v4)</value>
+        </prop>
+      </node>
+      <node oor:name="MacPaint_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="el">MacPaint (v1)</value>
+        </prop>
+      </node>
+      <node oor:name="SuperPaint_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="el">SuperPaint (v1)</value>
+        </prop>
+      </node>
+      <node oor:name="PageMaker Document">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Adobe PageMaker</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Draw)">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Σχέδιο του OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="draw_StarOffice_XML_Draw_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Πρότυπο σχεδίου του OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="draw8">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Σχέδιο ODF</value>
+        </prop>
+      </node>
+      <node oor:name="draw8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Πρότυπο σχεδίου ODF</value>
+        </prop>
+      </node>
+      <node oor:name="Apple Keynote">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Apple Keynote 5</value>
+        </prop>
+      </node>
+      <node oor:name="MS PowerPoint 97">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft PowerPoint 97/2000/XP/2003</value>
+        </prop>
+      </node>
+      <node oor:name="MS PowerPoint 97 AutoPlay">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Αυτόματη αναπαραγωγή Microsoft PowerPoint 97/2000/XP/2003</value>
+        </prop>
+      </node>
+      <node oor:name="impress_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PDF - Φορητή μορφή εγράφου</value>
+        </prop>
+      </node>
+      <node oor:name="placeware_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PWP - PlaceWare</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML AutoPlay">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft PowerPoint 2007/2010/2013 XML Αυτόματη εκτέλεση</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Πρότυπο Microsoft PowerPoint 2007/2010/2013 XML</value>
+        </prop>
+      </node>
+      <node oor:name="Impress Office Open XML">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Παρουσίαση Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="Impress Office Open XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Πρότυπο παρουσίασης Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="Impress Office Open XML AutoPlay">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Αυτόματη αναπαραγωγή παρουσίασης Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="ClarisWorks_Impress">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Παρουσίαση ClarisWorks/AppleWorks</value>
+        </prop>
+      </node>
+      <node oor:name="MS PowerPoint 97 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft PowerPoint 97/2000/XP/2003 Πρότυπο</value>
+        </prop>
+      </node>
+      <node oor:name="impress_StarOffice_XML_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Σχέδιο (Impress) του OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Impress)">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Παρουσίαση του OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="impress_StarOffice_XML_Impress_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Πρότυπο παρουσίασης του OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="impress8">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Παρουσίαση ODF</value>
+        </prop>
+      </node>
+      <node oor:name="impress8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Πρότυπο παρουσίασης ODF</value>
+        </prop>
+      </node>
+      <node oor:name="impress8_draw">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Σχέδιο (Impress) ODF</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft PowerPoint 2007/2010/2013 XML</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Πρότυπο Microsoft PowerPoint 2007/2010/2013 XML</value>
+        </prop>
+      </node>
+      <node oor:name="Impress Office Open XML">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Παρουσίαση Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="Impress Office Open XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Πρότυπο παρουσίασης Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Chart)">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Διάγραμμα του OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="chart8">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Διάγραμμα ODF</value>
+        </prop>
+      </node>
+      <node oor:name="MathML XML (Math)">
+        <prop oor:name="UIName">
+          <value xml:lang="el">MathML 1.01</value>
+        </prop>
+      </node>
+      <node oor:name="MathType 3.x">
+        <prop oor:name="UIName">
+          <value xml:lang="el">MathType3.x</value>
+        </prop>
+      </node>
+      <node oor:name="math_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PDF - Φορητή μορφή εγγράφου</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Math)">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Τύπος του OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="math8">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Τύπος ODF</value>
+        </prop>
+      </node>
+      <node oor:name="BMP - MS Windows">
+        <prop oor:name="UIName">
+          <value xml:lang="el">BMP - Ψηφιογραφία Windows</value>
+        </prop>
+      </node>
+      <node oor:name="DXF - AutoCAD Interchange">
+        <prop oor:name="UIName">
+          <value xml:lang="el">DXF - Μορφή ανταλλαγής AutoCAD</value>
+        </prop>
+      </node>
+      <node oor:name="EMF - MS Windows Metafile">
+        <prop oor:name="UIName">
+          <value xml:lang="el">EMF - Βελτιωμένο μετα-αρχείο</value>
+        </prop>
+      </node>
+      <node oor:name="EPS - Encapsulated PostScript">
+        <prop oor:name="UIName">
+          <value xml:lang="el">EPS - Encapsulated PostScript</value>
+        </prop>
+      </node>
+      <node oor:name="GIF - Graphics Interchange">
+        <prop oor:name="UIName">
+          <value xml:lang="el">GIF - Μορφή ανταλλαγής γραφικών</value>
+        </prop>
+      </node>
+      <node oor:name="JPG - JPEG">
+        <prop oor:name="UIName">
+          <value xml:lang="el">JPEG - Joint Photographic Experts Group</value>
+        </prop>
+      </node>
+      <node oor:name="MET - OS/2 Metafile">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Μετα-αρχείο MET - OS/2</value>
+        </prop>
+      </node>
+      <node oor:name="MOV - MOV">
+        <prop oor:name="UIName">
+          <value xml:lang="el">MOV - Μορφή αρχείου QuickTime</value>
+        </prop>
+      </node>
+      <node oor:name="PBM - Portable Bitmap">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PBM - Φορητή ψηφιογραφία</value>
+        </prop>
+      </node>
+      <node oor:name="PCT - Mac Pict">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PCT - Mac Pict</value>
+        </prop>
+      </node>
+      <node oor:name="PCX - Zsoft Paintbrush">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PCX - Πινέλο Zsoft</value>
+        </prop>
+      </node>
+      <node oor:name="PGM - Portable Graymap">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PGM - Portable Graymap</value>
+        </prop>
+      </node>
+      <node oor:name="PNG - Portable Network Graphic">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PNG - Φορητά γραφικά δικτύου</value>
+        </prop>
+      </node>
+      <node oor:name="PPM - Portable Pixelmap">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PPM - Φορητό Pixelmap</value>
+        </prop>
+      </node>
+      <node oor:name="PSD - Adobe Photoshop">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PSD - Adobe Photoshop</value>
+        </prop>
+      </node>
+      <node oor:name="RAS - Sun Rasterfile">
+        <prop oor:name="UIName">
+          <value xml:lang="el">RAS - Sun Raster Image</value>
+        </prop>
+      </node>
+      <node oor:name="SGF - StarOffice Writer SGF">
+        <prop oor:name="UIName">
+          <value xml:lang="el">SGF - Μορφή γραφικών StarWriter</value>
+        </prop>
+      </node>
+      <node oor:name="SGV - StarDraw 2.0">
+        <prop oor:name="UIName">
+          <value xml:lang="el">SGV - StarDraw 2.0</value>
+        </prop>
+      </node>
+      <node oor:name="SVG - Scalable Vector Graphics">
+        <prop oor:name="UIName">
+          <value xml:lang="el">SVG - Κλιμακώσιμα διανυσματικά γραφικά</value>
+        </prop>
+      </node>
+      <node oor:name="SVM - StarView Metafile">
+        <prop oor:name="UIName">
+          <value xml:lang="el">SVM - Μετα-αρχείο StarView</value>
+        </prop>
+      </node>
+      <node oor:name="TGA - Truevision TARGA">
+        <prop oor:name="UIName">
+          <value xml:lang="el">TGA - Truevision Targa</value>
+        </prop>
+      </node>
+      <node oor:name="TIF - Tag Image File">
+        <prop oor:name="UIName">
+          <value xml:lang="el">TIFF - Μορφή αρχείων εικόνων με ετικέτες</value>
+        </prop>
+      </node>
+      <node oor:name="WMF - MS Windows Metafile">
+        <prop oor:name="UIName">
+          <value xml:lang="el">WMF - Μετα-αρχείο Windows</value>
+        </prop>
+      </node>
+      <node oor:name="XBM - X-Consortium">
+        <prop oor:name="UIName">
+          <value xml:lang="el">XBM - Ψηφιογραφία X</value>
+        </prop>
+      </node>
+      <node oor:name="XPM">
+        <prop oor:name="UIName">
+          <value xml:lang="el">XPM - X PixMap</value>
+        </prop>
+      </node>
+      <node oor:name="draw_PCD_Photo_CD_Base">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PCD - Kodak Photo CD (768x512)</value>
+        </prop>
+      </node>
+      <node oor:name="draw_PCD_Photo_CD_Base16">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PCD - Kodak Photo CD (192x128)</value>
+        </prop>
+      </node>
+      <node oor:name="draw_PCD_Photo_CD_Base4">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PCD - Kodak Photo CD (384x256)</value>
+        </prop>
+      </node>
+      <node oor:name="draw_bmp_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">BMP - Ψηφιογραφία Windows</value>
+        </prop>
+      </node>
+      <node oor:name="draw_emf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">EMF - Βελτιωμένο μετα-αρχείο</value>
+        </prop>
+      </node>
+      <node oor:name="draw_eps_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">EPS - Encapsulated PostScript</value>
+        </prop>
+      </node>
+      <node oor:name="draw_flash_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Macromedia Flash (SWF)</value>
+        </prop>
+      </node>
+      <node oor:name="draw_gif_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">GIF - Μορφή ανταλλαγής γραφικών</value>
+        </prop>
+      </node>
+      <node oor:name="draw_jpg_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">JPEG - Joint Photographic Experts Group</value>
+        </prop>
+      </node>
+      <node oor:name="draw_met_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">MET - Μετα-αρχείο OS/2</value>
+        </prop>
+      </node>
+      <node oor:name="draw_pbm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PBM - Φορητή ψηφιογραφία</value>
+        </prop>
+      </node>
+      <node oor:name="draw_pct_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PCT - Mac Pict</value>
+        </prop>
+      </node>
+      <node oor:name="draw_pgm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PGM - Portable Graymap</value>
+        </prop>
+      </node>
+      <node oor:name="draw_png_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PNG - Φορητά γραφικά δικτύου</value>
+        </prop>
+      </node>
+      <node oor:name="draw_ppm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PPM - Φορητό Pixelmap</value>
+        </prop>
+      </node>
+      <node oor:name="draw_ras_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">RAS - Sun Raster Image</value>
+        </prop>
+      </node>
+      <node oor:name="draw_svg_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">SVG - Κλιμακώσιμα διανυσματικά γραφικά</value>
+        </prop>
+      </node>
+      <node oor:name="draw_svm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">SVM - Μετα-αρχείο StarView</value>
+        </prop>
+      </node>
+      <node oor:name="draw_tif_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">TIFF - Μορφή αρχείων εικόνων με ετικέτες</value>
+        </prop>
+      </node>
+      <node oor:name="draw_wmf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">WMF - Μετα-αρχείο Windows</value>
+        </prop>
+      </node>
+      <node oor:name="draw_xpm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">XPM - X PixMap</value>
+        </prop>
+      </node>
+      <node oor:name="draw_html_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο HTML (Draw)</value>
+        </prop>
+      </node>
+      <node oor:name="CGM - Computer Graphics Metafile">
+        <prop oor:name="UIName">
+          <value xml:lang="el">CGM - Μετα-αρχείο γραφικών υπολογιστή</value>
+        </prop>
+      </node>
+      <node oor:name="impress_bmp_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">BMP - Ψηφιογραφία Windows</value>
+        </prop>
+      </node>
+      <node oor:name="impress_emf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">EMF - Βελτιωμένο μετα-αρχείο</value>
+        </prop>
+      </node>
+      <node oor:name="impress_eps_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">EPS - Encapsulated PostScript</value>
+        </prop>
+      </node>
+      <node oor:name="impress_flash_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Macromedia Flash (SWF)</value>
+        </prop>
+      </node>
+      <node oor:name="impress_gif_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">GIF - Μορφή ανταλλαγής γραφικών</value>
+        </prop>
+      </node>
+      <node oor:name="impress_jpg_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">JPEG - Joint Photographic Experts Group</value>
+        </prop>
+      </node>
+      <node oor:name="impress_met_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">MET - Μετα-αρχείο OS/2</value>
+        </prop>
+      </node>
+      <node oor:name="impress_pbm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PBM - Φορητή ψηφιογραφία</value>
+        </prop>
+      </node>
+      <node oor:name="impress_pct_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PCT - Mac Pict</value>
+        </prop>
+      </node>
+      <node oor:name="impress_pgm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PGM - Portable Graymap</value>
+        </prop>
+      </node>
+      <node oor:name="impress_png_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PNG - Φορητά γραφικά δικτύου</value>
+        </prop>
+      </node>
+      <node oor:name="impress_ppm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PPM - Φορητά Pixelmap</value>
+        </prop>
+      </node>
+      <node oor:name="impress_ras_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">RAS - Sun Raster Image</value>
+        </prop>
+      </node>
+      <node oor:name="impress_svg_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">SVG - Κλιμακώσιμα διανυσματικά γραφικά</value>
+        </prop>
+      </node>
+      <node oor:name="impress_svm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">SVM - Μετα-αρχείο StarView</value>
+        </prop>
+      </node>
+      <node oor:name="impress_tif_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">TIFF - Μορφή αρχείου εικόνας με ετικέτες</value>
+        </prop>
+      </node>
+      <node oor:name="impress_wmf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">WMF - Μετα-αρχείο Windows</value>
+        </prop>
+      </node>
+      <node oor:name="impress_xpm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">XPM - X PixMap</value>
+        </prop>
+      </node>
+      <node oor:name="impress_html_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Έγγραφο HTML (Impress)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_jpg_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">JPEG - Joint Photographic Experts Group</value>
+        </prop>
+      </node>
+      <node oor:name="writer_png_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="el">PNG - Φορητά γραφικά δικτύου</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 2003 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Excel 2003 XML</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2003 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="el">Microsoft Word 2003 XML</value>
+        </prop>
+      </node>
+    </node>
+  </oor:component-data>
+</oor:data>
