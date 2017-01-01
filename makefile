@@ -552,6 +552,9 @@ ifndef PRODUCT_BUILD3
 # Remove Python files
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "Frameworks/LibreOfficePython.framework" "Frameworks/libpythonloaderlo.dylib" "Frameworks/pyuno.so" "Frameworks/libpyuno.dylib" "Resources/Scripts/python" "Resources/mailmerge.py" "Resources/msgbox.py" "Resources/officehelper.py" "Resources/pythonloader.py" "Resources/pythonloader.unorc" "Resources/pythonscript.py" "Resources/registry/pyuno.xcd" "Resources/uno.py" "Resources/unohelper.py" "Resources/services/pyuno.rdb" "Resources/services/scriptproviderforpython.rdb" "Resources/wizards/__init__.py" "Resources/wizards/agenda" "Resources/wizards/common" "Resources/wizards/document" "Resources/wizards/fax" "Resources/wizards/letter" "Resources/wizards/text" "Resources/wizards/ui" "Resources/wizards/web"
 endif
+# Copy custom fonts
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find "Resources/fonts/truetype" -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find "Resources/fonts/truetype" -type f -name "*.ttf" -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
 	@echo "End of update installer build steps"
 	@exit 1
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
