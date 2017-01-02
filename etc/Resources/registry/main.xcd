@@ -2120,7 +2120,7 @@
           <value>true</value>
         </prop>
         <prop oor:name="UseDocumentOOoLockFile" oor:type="xs:boolean" oor:nillable="false">
-          <value>true</value>
+          <value>false</value>
         </prop>
         <prop oor:name="UseLocking" oor:type="xs:boolean" oor:nillable="false">
           <value>true</value>
@@ -2355,33 +2355,34 @@
         <group oor:name="InputMethod">
           <prop oor:name="ShowStatusWindow" oor:type="xs:boolean"/>
         </group>
+        <!-- Enable all CJK options by default -->
         <group oor:name="CJK">
           <prop oor:name="CJKFont" oor:type="xs:boolean" oor:nillable="false">
-            <value>false</value>
+            <value>true</value>
           </prop>
           <prop oor:name="VerticalText" oor:type="xs:boolean" oor:nillable="false">
-            <value>false</value>
+            <value>true</value>
           </prop>
           <prop oor:name="AsianTypography" oor:type="xs:boolean" oor:nillable="false">
-            <value>false</value>
+            <value>true</value>
           </prop>
           <prop oor:name="JapaneseFind" oor:type="xs:boolean" oor:nillable="false">
-            <value>false</value>
+            <value>true</value>
           </prop>
           <prop oor:name="Ruby" oor:type="xs:boolean" oor:nillable="false">
-            <value>false</value>
+            <value>true</value>
           </prop>
           <prop oor:name="ChangeCaseMap" oor:type="xs:boolean" oor:nillable="false">
-            <value>false</value>
+            <value>true</value>
           </prop>
           <prop oor:name="DoubleLines" oor:type="xs:boolean" oor:nillable="false">
-            <value>false</value>
+            <value>true</value>
           </prop>
           <prop oor:name="EmphasisMarks" oor:type="xs:boolean" oor:nillable="false">
-            <value>false</value>
+            <value>true</value>
           </prop>
           <prop oor:name="VerticalCallOut" oor:type="xs:boolean" oor:nillable="false">
-            <value>false</value>
+            <value>true</value>
           </prop>
         </group>
         <group oor:name="CTL">
