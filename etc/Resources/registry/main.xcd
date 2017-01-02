@@ -1310,6 +1310,9 @@
           <prop oor:name="ShowFontBoxWYSIWYG" oor:type="xs:boolean" oor:nillable="false">
             <value>true</value>
           </prop>
+          <prop oor:name="ShowFontBoxWYSIWYGInitialized" oor:type="xs:boolean"  oor:nillable="false">
+            <value>false</value>
+          </prop>
         </group>
         <group oor:name="SourceViewFont">
           <prop oor:name="FontName" oor:type="xs:string"/>
@@ -50478,4 +50481,70 @@
       </node>
     </node>
   </oor:component-data>
+  <oor:component-schema oor:name="CalcPasteSpecial" oor:package="org.openoffice.Office" xml:lang="en-US">
+    <component>
+      <group oor:name="PasteSpecial">
+        <prop oor:name="AllCheck" oor:type="xs:boolean">
+          <value>true</value>
+        </prop>
+        <prop oor:name="Checks" oor:type="xs:int">
+          <value>-1</value>
+        </prop>
+        <prop oor:name="FormulaChecks" oor:type="xs:int">
+          <value>-1</value>
+        </prop>
+        <prop oor:name="Checks2" oor:type="xs:int">
+          <value>-1</value>
+        </prop>
+        <prop oor:name="MoveMode" oor:type="xs:int">
+          <value>-1</value>
+        </prop>
+      </group>
+    </component>
+  </oor:component-schema>
+  <oor:component-schema oor:name="WriterPrintOptionsReset" oor:package="org.openoffice.Office" xml:lang="en-US">
+    <component>
+      <group oor:name="Reset">
+        <prop oor:name="PrintOptionsReset" oor:type="xs:boolean">
+          <value>false</value>
+        </prop>
+        <prop oor:name="WebPrintOptionsReset" oor:type="xs:boolean">
+          <value>false</value>
+        </prop>
+      </group>
+    </component>
+  </oor:component-schema>
+  <oor:component-schema oor:name="CalcPasteSpecial" oor:package="org.openoffice.Office" xml:lang="en-US">
+    <component>
+      <group oor:name="PasteSpecial">
+        <prop oor:name="AllCheck" oor:type="xs:boolean" oor:nillable="false">
+          <value>true</value>
+        </prop>
+        <prop oor:name="Checks" oor:type="xs:int" oor:nillable="false">
+          <value>-1</value>
+        </prop>
+        <prop oor:name="FormulaChecks" oor:type="xs:int" oor:nillable="false">
+          <value>-1</value>
+        </prop>
+        <prop oor:name="Checks2" oor:type="xs:int" oor:nillable="false">
+          <value>-1</value>
+        </prop>
+        <prop oor:name="MoveMode" oor:type="xs:int" oor:nillable="false">
+          <value>-1</value>
+        </prop>
+      </group>
+    </component>
+  </oor:component-schema>
+  <oor:component-schema oor:name="WriterPrintOptionsReset" oor:package="org.openoffice.Office" xml:lang="en-US">
+    <component>
+      <group oor:name="Reset">
+        <prop oor:name="PrintOptionsReset" oor:type="xs:boolean" oor:nillable="false">
+          <value>false</value>
+        </prop>
+        <prop oor:name="WebPrintOptionsReset" oor:type="xs:boolean" oor:nillable="false">
+          <value>false</value>
+        </prop>
+      </group>
+    </component>
+  </oor:component-schema>
 </oor:data>
