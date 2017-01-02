@@ -122,27 +122,31 @@ ScInsertContentsDlg::ScInsertContentsDlg( vcl::Window*       pParent,
         }
         if ( pProperties[1].hasValue() )
         {
-            sal_Int32 nValue = 0;
-            if ( pProperties[1] >>= nValue )
-                ScInsertContentsDlg::nPreviousChecks = InsertDeleteFlags::fromInt( nValue );
+            sal_Int32 nValue = -1;
+            pProperties[1] >>= nValue;
+            if ( nValue >= 0 )
+                ScInsertContentsDlg::nPreviousChecks = InsertDeleteFlags::fromInt( (sal_uInt16)nValue );
         }
         if ( pProperties[2].hasValue() )
         {
-            sal_Int32 nValue = 0;
-            if ( pProperties[2] >>= nValue )
-                ScInsertContentsDlg::nPreviousFormulaChecks = nValue;
+            sal_Int32 nValue = -1;
+            pProperties[2] >>= nValue;
+            if ( nValue >= 0 )
+                ScInsertContentsDlg::nPreviousFormulaChecks = (sal_uInt16)nValue;
         }
         if ( pProperties[3].hasValue() )
         {
-            sal_Int32 nValue = 0;
-            if ( pProperties[3] >>= nValue )
-                ScInsertContentsDlg::nPreviousChecks2 = nValue;
+            sal_Int32 nValue = -1;
+            pProperties[3] >>= nValue;
+            if ( nValue >= 0 )
+                ScInsertContentsDlg::nPreviousChecks2 = (sal_uInt16)nValue;
         }
         if ( pProperties[4].hasValue() )
         {
-            sal_Int32 nValue = 0;
-            if ( pProperties[4] >>= nValue )
-                ScInsertContentsDlg::nPreviousMoveMode = nValue;
+            sal_Int32 nValue = -1;
+            pProperties[4] >>= nValue;
+            if ( nValue >= 0 )
+                ScInsertContentsDlg::nPreviousMoveMode = (sal_uInt16)nValue;
         }
     }
 #endif	// USE_JAVA
