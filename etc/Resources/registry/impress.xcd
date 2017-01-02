@@ -5370,7 +5370,9 @@ The current presentation contains no OLE objects.</value>
         <prop oor:name="FilterService">
           <value>com.sun.star.comp.oox.ppt.PowerPointImport</value>
         </prop>
-        <prop oor:name="UserData"/>
+        <prop oor:name="UserData">
+          <value>OXML</value>
+        </prop>
         <prop oor:name="FileFormatVersion"/>
         <prop oor:name="Type">
           <value>MS PowerPoint 2007 XML</value>
@@ -5388,9 +5390,11 @@ The current presentation contains no OLE objects.</value>
         <prop oor:name="FilterService">
           <value>com.sun.star.comp.oox.ppt.PowerPointImport</value>
         </prop>
-        <prop oor:name="UserData"/>
+        <prop oor:name="UserData">
+          <value>OXML</value>
+        </prop>
         <prop oor:name="UIName">
-          <value xml:lang="en-US">Microsoft PowerPoint 2007/2010/2013 XML AutoPlay</value>
+          <value xml:lang="en-US">Microsoft PowerPoint 2007-2016 XML AutoPlay</value>
         </prop>
         <prop oor:name="FileFormatVersion"/>
         <prop oor:name="Type">
@@ -5409,9 +5413,11 @@ The current presentation contains no OLE objects.</value>
         <prop oor:name="FilterService">
           <value>com.sun.star.comp.oox.ppt.PowerPointImport</value>
         </prop>
-        <prop oor:name="UserData"/>
+        <prop oor:name="UserData">
+          <value>OXML</value>
+        </prop>
         <prop oor:name="UIName">
-          <value xml:lang="en-US">Microsoft PowerPoint 2007/2010/2013 XML Template</value>
+          <value xml:lang="en-US">Microsoft PowerPoint 2007-2016 XML Template</value>
         </prop>
         <prop oor:name="FileFormatVersion"/>
         <prop oor:name="Type">
@@ -5480,7 +5486,9 @@ The current presentation contains no OLE objects.</value>
         <prop oor:name="FilterService">
           <value>com.sun.star.comp.oox.ppt.PowerPointImport</value>
         </prop>
-        <prop oor:name="UserData"/>
+        <prop oor:name="UserData">
+          <value>OXML</value>
+        </prop>
         <prop oor:name="UIName">
           <value xml:lang="en-US">Office Open XML Presentation AutoPlay</value>
         </prop>
@@ -5832,7 +5840,7 @@ The current presentation contains no OLE objects.</value>
           <value>Impress MS PowerPoint 2007 XML</value>
         </prop>
         <prop oor:name="UIName">
-          <value xml:lang="en-US">Microsoft PowerPoint 2007/2010/2013 XML</value>
+          <value xml:lang="en-US">Microsoft PowerPoint 2007-2016 XML</value>
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
@@ -5854,7 +5862,7 @@ The current presentation contains no OLE objects.</value>
           <value>Impress MS PowerPoint 2007 XML AutoPlay</value>
         </prop>
         <prop oor:name="UIName">
-          <value xml:lang="en-US">Microsoft PowerPoint 2007/2010/2013 XML</value>
+          <value xml:lang="en-US">Microsoft PowerPoint 2007-2016 XML</value>
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
@@ -5876,7 +5884,7 @@ The current presentation contains no OLE objects.</value>
           <value>Impress MS PowerPoint 2007 XML Template</value>
         </prop>
         <prop oor:name="UIName">
-          <value xml:lang="en-US">Microsoft PowerPoint 2007/2010/2013 XML Template</value>
+          <value xml:lang="en-US">Microsoft PowerPoint 2007-2016 XML Template</value>
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
