@@ -555,16 +555,16 @@ endif
 # Copy custom fonts
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find "Resources/fonts/truetype" -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find "Resources/fonts/truetype" -type f -name "*.ttf" -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find Resources -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find Resources -type f -name "*.xcd" -not -path "*/CVS/*"` ; do tidy -quiet -xml -utf8 -wrap 4096 --hide-comments 1 "$(PWD)/etc/$${i}" | xmllint --noblanks - > "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find Resource -type f -not -name "*.xcd" -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
+ifndef PRODUCT_BUILD3
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find Resource -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find Resources -type f -name "*.xcd" -not -path "*/CVS/*"` ; do tidy -quiet -xml -utf8 -wrap 4096 --hide-comments 1 "$(PWD)/etc/sandbox/$${i}" | xmllint --noblanks - > "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find Resources -type f -not -name "*.xcd" -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/sandbox/$${i}" "$${i}" ; done'
+endif
 	@echo "End of update installer build steps"
 	@exit 1
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -name "*.xcd" -not -path "*/CVS/*"` ; do xmllint --noblanks "$(PWD)/etc/$${i}" > "$${i}" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -not -name "*.xcd" -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
-ifndef PRODUCT_BUILD3
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find share -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find share -type f -name "*.xcd" -not -path "*/CVS/*"` ; do xmllint --noblanks "$(PWD)/etc/sandbox/$${i}" > "$${i}" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find share -type f -not -name "*.xcd" -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/sandbox/$${i}" "$${i}" ; done'
-endif
 	cd "$(INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' | sed 's#BuildMachine=.*$$#BuildMachine=$(BUILD_MACHINE)#g' > "../../out" ; mv -f "../../out" "program/bootstraprc"
 	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(TARGET_MACHINE)#$(TARGET_MACHINE)#g' "$(PWD)/etc/program/fundamentalrc" > "program/fundamentalrc"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/etc/program/sofficerc" "program/sofficerc"
