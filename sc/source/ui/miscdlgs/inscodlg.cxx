@@ -122,25 +122,25 @@ ScInsertContentsDlg::ScInsertContentsDlg( vcl::Window*       pParent,
         }
         if ( pProperties[1].hasValue() )
         {
-            sal_uInt16 nValue = 0;
+            sal_Int32 nValue = 0;
             if ( pProperties[1] >>= nValue )
                 ScInsertContentsDlg::nPreviousChecks = InsertDeleteFlags::fromInt( nValue );
         }
         if ( pProperties[2].hasValue() )
         {
-            sal_uInt16 nValue = 0;
+            sal_Int32 nValue = 0;
             if ( pProperties[2] >>= nValue )
                 ScInsertContentsDlg::nPreviousFormulaChecks = nValue;
         }
         if ( pProperties[3].hasValue() )
         {
-            sal_uInt16 nValue = 0;
+            sal_Int32 nValue = 0;
             if ( pProperties[3] >>= nValue )
                 ScInsertContentsDlg::nPreviousChecks2 = nValue;
         }
         if ( pProperties[4].hasValue() )
         {
-            sal_uInt16 nValue = 0;
+            sal_Int32 nValue = 0;
             if ( pProperties[4] >>= nValue )
                 ScInsertContentsDlg::nPreviousMoveMode = nValue;
         }
