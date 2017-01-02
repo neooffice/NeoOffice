@@ -997,18 +997,19 @@ bool ModelData_Impl::OutputFileDialog( sal_Int8 nStoreMode,
 #ifdef USE_JAVA
     // If we are saving to an Office XML format, forcing the file save as
     // dialog to appear by changing this to a save as operation. Note that
-    // we had to put "OXML" in the "UserData" field in each filter's
-    // modules/org/openoffice/TypeDetection/Filter/fcfg_*_filters.xcu file.
+    // we had to put "OXML" or "OOXML" in the "UserData" field in each filter's
+    // Resources/registry/*.xcd file.
     if ( !bSetStandardName )
     {
         static const OUString aUserDataString( "UserData" );
         static const OUString aOXMLString( "OXML" );
+        static const OUString aOOXMLString( "OOXML" );
         ::comphelper::SequenceAsHashMap::const_iterator it = GetMediaDescr().find( aUserDataString );
         if ( it != GetMediaDescr().end() )
         {
             OUString aUserData;
             it->second >>= aUserData;
-            if ( aUserData == aOXMLString )
+            if ( aUserData == aOXMLString || aUserData == aOOXMLString )
                 bSetStandardName = true;
         }
 
@@ -1021,7 +1022,7 @@ bool ModelData_Impl::OutputFileDialog( sal_Int8 nStoreMode,
             if ( pFilter )
             {
                 OUString aUserData = pFilter->GetUserData();
-                if ( aUserData == aOXMLString )
+                if ( aUserData == aOXMLString || aUserData == aOOXMLString )
                     bSetStandardName = true;
             }
         }
