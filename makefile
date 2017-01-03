@@ -557,11 +557,13 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find "Resources/fonts/truetype" -type f -name "*.ttf" -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find "Resources/config" "Resources/registry" -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find "Resources/config" "Resources/registry" -type f -name "*.xcd" -not -path "*/CVS/*"` ; do tidy -quiet -xml -utf8 -wrap 4096 --hide-comments 1 "$(PWD)/etc/$${i}" | xmllint --noblanks - > "$${i}" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find "Resources/config" "Resources/registry" -type f -not -name "*.xcd" -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find "Resources/config" "Resources/registry" -type f -name "*.xml" -not -path "*/CVS/*"` ; do tidy -quiet -xml -utf8 -wrap 4096 -indent --hide-comments 1 "$(PWD)/etc/$${i}" > "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find "Resources/config" "Resources/registry" -type f -not -name "*.xcd" -not -name "*.xml"  -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
 ifndef PRODUCT_BUILD3
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find "Resources/config" "Resources/registry" -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find "Resources/config" "Resources/registry" -type f -name "*.xcd" -not -path "*/CVS/*"` ; do tidy -quiet -xml -utf8 -wrap 4096 --hide-comments 1 "$(PWD)/etc/sandbox/$${i}" | xmllint --noblanks - > "$${i}" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find "Resources/config" "Resources/registry" -type f -not -name "*.xcd" -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/sandbox/$${i}" "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find "Resources/config" "Resources/registry" -type f -name "*.xml" -not -path "*/CVS/*"` ; do tidy -quiet -xml -utf8 -wrap 4096 -indent --hide-comments 1 "$(PWD)/etc/sandbox/$${i}" > "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find "Resources/config" "Resources/registry" -type f -not -name "*.xcd" -not -name "*.xml" -not -path "*/CVS/*"` ; do cp "$(PWD)/etc/sandbox/$${i}" "$${i}" ; done'
 endif
 	@echo "End of updated installer build steps"
 	@exit 1
