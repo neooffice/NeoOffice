@@ -523,6 +523,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 {
 	MacOSBOOL				mbPrintOperationAborted;
 	MacOSBOOL				mbPrintOperationEnded;
+	NSMutableArray*			mpRetainedPrintObjects;
 	std::list< JavaSalGraphics* >*	mpUnprintedGraphicsList;
 	Condition*				mpUnprintedGraphicsCondition;
 	Mutex*					mpUnprintedGraphicsMutex;
@@ -569,6 +570,9 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 - (void)dealloc
 {
+	if ( mpRetainedPrintObjects )
+		[mpRetainedPrintObjects release];
+
 	if ( mpUnprintedGraphicsCondition )
 		delete mpUnprintedGraphicsCondition;
 
@@ -680,6 +684,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 	mbPrintOperationAborted = NO;
 	mbPrintOperationEnded = NO;
+	mpRetainedPrintObjects = nil;
 	mpUnprintedGraphicsCondition = new Condition();
 	if ( mpUnprintedGraphicsCondition )
 		mpUnprintedGraphicsCondition->set();
@@ -1413,7 +1418,8 @@ JavaSalPrinter::JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter ) :
 	mbPaperRotated( sal_False ),
 	mpPrintOperation( nil ),
 	maPrintThread( NULL ),
-	mpPrintView( nil )
+	mpPrintView( nil ),
+	mpRetainedPrintObjects( nil )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1619,6 +1625,12 @@ BOOL JavaSalPrinter::EndJob()
 
 		osl_destroyThread( maPrintThread );
 		maPrintThread = NULL;
+	}
+
+	if ( mpRetainedPrintObjects )
+	{
+		[mpRetainedPrintObjects release];
+		mpRetainedPrintObjects = nil;
 	}
 
 	[pPool release];
@@ -1932,6 +1944,28 @@ void JavaSalPrinter::SetJobSavingPath( const XubString *pJobSavingPath, sal_Int3
 				}
 			}
 		}
+	}
+
+	[pPool release];
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalPrinter::RetainUntilEndOfPrintJob( id aObject )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( mpPrintOperation )
+	{
+		if ( !mpRetainedPrintObjects )
+		{
+			mpRetainedPrintObjects = [NSMutableArray arrayWithCapacity:10];
+			if ( mpRetainedPrintObjects )
+				[mpRetainedPrintObjects retain];
+		}
+
+		if ( mpRetainedPrintObjects )
+			[mpRetainedPrintObjects addObject:aObject];
 	}
 
 	[pPool release];

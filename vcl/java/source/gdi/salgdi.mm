@@ -323,6 +323,11 @@ void JavaSalGraphicsDrawEPSOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef 
 		pImageRep = [NSPDFImageRep imageRepWithData:(NSData *)maData];
 	if ( pImageRep )
 	{
+		// Fix crash on macOS 10.12 after printing an EPS image by retaining
+		// the EPS image until after the print operation has ended
+		if ( pGraphics->mpPrinter )
+			pGraphics->mpPrinter->RetainUntilEndOfPrintJob( pImageRep );
+
 		NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:aContext flipped:NO];
 		if ( pContext )
 		{

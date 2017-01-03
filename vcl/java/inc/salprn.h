@@ -98,6 +98,7 @@ class JavaSalPrinter : public SalPrinter
 	id						mpPrintOperation;
 	oslThread				maPrintThread;
 	id						mpPrintView;
+	id						mpRetainedPrintObjects;
 	::std::list< id >		maSecurityScopeURLList;
 
 public:
@@ -116,6 +117,7 @@ public:
 	virtual void			SetJobDisposition( const XubString *pJobDisposition );
 	virtual void			SetJobSavingPath( const XubString *pJobSavingPath, sal_Int32 nIteration );
 
+	void					RetainUntilEndOfPrintJob( id aObject );
 	void					RunPrintOperation();
 };
 
