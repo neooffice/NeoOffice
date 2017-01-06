@@ -3860,6 +3860,7 @@
       </group>
     </templates>
     <component>
+      <!-- Disable OOo improvement
       <group oor:name="OOoImprovement">
         <prop oor:name="EnablingAllowed" oor:type="xs:boolean" oor:nillable="false">
           <value>false</value>
@@ -3871,6 +3872,7 @@
           <value>180</value>
         </prop>
       </group>
+      -->
       <set oor:name="Settings" oor:node-type="LoggerSettings"/>
     </component>
   </oor:component-schema>
@@ -4063,6 +4065,7 @@
       <set oor:name="SymbolList" oor:node-type="Symbol"/>
     </component>
   </oor:component-schema>
+  <!-- Disable OOo improvement
   <oor:component-schema oor:name="Settings" oor:package="org.openoffice.Office.OOoImprovement" xml:lang="en-US">
     <templates/>
     <component>
@@ -4107,6 +4110,7 @@
       </group>
     </component>
   </oor:component-schema>
+  -->
   <oor:component-schema oor:name="OptionsDialog" oor:package="org.openoffice.Office" xml:lang="en-US">
     <templates>
       <group oor:name="SingleOption">
