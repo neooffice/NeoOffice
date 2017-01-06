@@ -1,0 +1,9 @@
+[ErrorReport]
+ErrorReportPort=80
+ErrorReportServer=
+[Bootstrap]
+InstallMode=<installmode>
+ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)
+UserInstallation=$SYSUSERCONFIG/$(PRODUCT_DIR_NAME)
+ProductPatch=$(PRODUCT_PATCH_VERSION)
+BuildMachine=$(BUILD_MACHINE)

@@ -1,2 +1,5 @@
 [Bootstrap]
+HideEula=1
+Logo=1
+NativeProgress=true
 URE_BOOTSTRAP=${ORIGIN}/fundamentalrc
