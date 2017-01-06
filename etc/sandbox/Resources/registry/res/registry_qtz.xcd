@@ -20835,6 +20835,7 @@
       </node>
     </node>
   </oor:component-data>
+  <!-- Disable update check
   <oor:component-data xmlns:install="http://openoffice.org/2004/installation" oor:name="Addons" oor:package="org.openoffice.Office">
     <node oor:name="AddonUI">
       <node oor:name="OfficeHelp">
@@ -20846,4 +20847,5 @@
       </node>
     </node>
   </oor:component-data>
+  -->
 </oor:data>
