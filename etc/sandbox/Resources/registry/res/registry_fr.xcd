@@ -202,6 +202,7 @@
         </node>
       </node>
       <node oor:name="Wizard">
+        <!-- Disable Python-based wizards
         <node oor:name="m0">
           <prop oor:name="Title">
             <value xml:lang="fr">~Lettre...</value>
@@ -217,16 +218,19 @@
             <value xml:lang="fr">~Agenda...</value>
           </prop>
         </node>
+        -->
         <node oor:name="m5">
           <prop oor:name="Title">
             <value xml:lang="fr">~Présentation...</value>
           </prop>
         </node>
+        <!-- Disable Python-based wizards
         <node oor:name="m7">
           <prop oor:name="Title">
             <value xml:lang="fr">Page ~Web...</value>
           </prop>
         </node>
+        -->
         <node oor:name="m11">
           <prop oor:name="Title">
             <value xml:lang="fr">~Convertisseur de documents...</value>

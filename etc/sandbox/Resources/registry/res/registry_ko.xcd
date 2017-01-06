@@ -134,6 +134,7 @@
         </node>
       </node>
       <node oor:name="Wizard">
+        <!-- Disable Python-based wizards
         <node oor:name="m0">
           <prop oor:name="Title">
             <value xml:lang="ko">편지(~L)...</value>
@@ -149,16 +150,19 @@
             <value xml:lang="ko">일정(~A)...</value>
           </prop>
         </node>
+        -->
         <node oor:name="m5">
           <prop oor:name="Title">
             <value xml:lang="ko">프레젠테이션(~P)...</value>
           </prop>
         </node>
+        <!-- Disable Python-based wizards
         <node oor:name="m7">
           <prop oor:name="Title">
             <value xml:lang="ko">웹 페이지(~W)...</value>
           </prop>
         </node>
+        -->
         <node oor:name="m11">
           <prop oor:name="Title">
             <value xml:lang="ko">문서 변환기(~C)...</value>
