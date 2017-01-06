@@ -38583,7 +38583,7 @@
         <value/>
       </prop>
       <prop oor:name="ooVendor">
-        <value/>
+        <value>$(PRODUCT_NAME)</value>
       </prop>
       <prop oor:name="ooSetupExtension">
         <value/>
