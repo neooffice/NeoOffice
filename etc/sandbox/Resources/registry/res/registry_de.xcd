@@ -5713,11 +5713,13 @@
             <value xml:lang="de">Abfrage</value>
           </prop>
         </node>
+        <!-- Disable Java-based report object bar
         <node oor:name="private:resource/toolbar/reportobjectbar">
           <prop oor:name="UIName" oor:type="xs:string">
             <value xml:lang="de">Bericht</value>
           </prop>
         </node>
+        -->
         <node oor:name="private:resource/toolbar/formobjectbar">
           <prop oor:name="UIName" oor:type="xs:string">
             <value xml:lang="de">Formular</value>

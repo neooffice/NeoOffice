@@ -5329,11 +5329,13 @@
             <value xml:lang="tr">Sorgu</value>
           </prop>
         </node>
+        <!-- Disable Java-based report object bar
         <node oor:name="private:resource/toolbar/reportobjectbar">
           <prop oor:name="UIName" oor:type="xs:string">
             <value xml:lang="tr">Rapor</value>
           </prop>
         </node>
+        -->
         <node oor:name="private:resource/toolbar/formobjectbar">
           <prop oor:name="UIName" oor:type="xs:string">
             <value xml:lang="tr">Form</value>
