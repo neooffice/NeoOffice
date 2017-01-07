@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-
 <!--***********************************************************************
   This is the main transformation style sheet for transforming.
-  Only use with OOo 2.0
-  Owner: fpe@openoffice.org
+  For use with LibreOffice 4.0+
   =========================================================================
   Changes Log
     May 24 2004 Created
@@ -28,35 +26,23 @@
     Jun 15 2009 #i101799#, fixed wrong handling of http URLs with anchors
 ***********************************************************************//-->
 
-<!--***********************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- * This file incorporates work covered by the following license notice:
- * 
- *   Modified July 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 4
- *   of the Apache License, Version 2.0.
+<!--
+ * This file is part of the LibreOffice project.
  *
- *   You should have received a copy of the GNU General Public License
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- ***********************************************************-->
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+-->
 
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
@@ -85,16 +71,13 @@
 <xsl:variable name="brand2" select="'$[officeversion]'"/>
 <xsl:variable name="brand3" select="'%PRODUCTNAME'"/>
 <xsl:variable name="brand4" select="'%PRODUCTVERSION'"/>
-<xsl:variable name="brand5" select="'$(OO_PRODUCT_NAME)'"/>
-<xsl:variable name="brand6" select="'OpenOffice.org'"/>
-<xsl:variable name="brand7" select="'OpenOffice'"/>
+<xsl:variable name="brand5" select="'$(LIBO_PRODUCT_NAME)'"/>
+<xsl:variable name="brand6" select="'LibreOffice.org'"/>
+<xsl:variable name="brand7" select="'LibreOffice'"/>
 
 <!-- meta data variables from the help file -->
 <xsl:variable name="filename" select="/helpdocument/meta/topic/filename"/>
-<xsl:variable name="topic_id" select="/helpdocument/meta/topic/@id"/>
-<xsl:variable name="topic_status" select="/helpdocument/meta/topic/@status"/>
 <xsl:variable name="title" select="/helpdocument/meta/topic/title"/>
-<xsl:variable name="doclang" select="/helpdocument/meta/topic/title/@xml-lang"/>
 
 <!-- Module and the corresponding switching values-->
 <xsl:param name="Database" select="'swriter'"/>
@@ -121,21 +104,6 @@
 <!-- this is were the images are -->
 <xsl:param name="imgrepos" select="''"/>
 <xsl:param name="Id" />
-<!-- (lame) distinction between OS and Commercial -->
-<xsl:param name="distrib">
-	<!-- Always use "OpenSource" -->
-	<xsl:value-of select="'OpenSource'"/>
-	<!--
-	<xsl:choose>
-		<xsl:when test="starts-with($productname,'OpenOffice')">
-			<xsl:value-of select="'OpenSource'"/>
-		</xsl:when>
-		<xsl:otherwise>
-			<xsl:value-of select="'COMMERCIAL'"/>
-		</xsl:otherwise>
-	</xsl:choose>
-	-->
-</xsl:param>
 <xsl:param name="Language" select="'en-US'"/>
 <xsl:variable name="lang" select="$Language"/>
 
@@ -261,6 +229,22 @@
 	<span class="emph"><xsl:apply-templates /></span>
 </xsl:template>
 
+<!-- SUB -->
+<xsl:template match="sub">
+	<sub><xsl:apply-templates /></sub>
+</xsl:template>
+<xsl:template match="sub" mode="embedded">
+	<sub><xsl:apply-templates /></sub>
+</xsl:template>
+
+<!-- SUP -->
+<xsl:template match="sup">
+	<sup><xsl:apply-templates /></sup>
+</xsl:template>
+<xsl:template match="sup" mode="embedded">
+	<sup><xsl:apply-templates /></sup>
+</xsl:template>
+
 <!-- FILENAME -->
 <xsl:template match="filename" />
 
@@ -366,6 +350,14 @@
 			<xsl:apply-templates />
 		</xsl:when>		
 		
+		<xsl:when test="@role='bascode'">
+			<xsl:call-template name="insertbascode" />
+		</xsl:when>
+
+		<xsl:when test="@role='logocode'">
+			<xsl:call-template name="insertlogocode" />
+		</xsl:when>
+
 		<xsl:otherwise>
 			<xsl:call-template name="insertpara" />
 		</xsl:otherwise>
@@ -566,7 +558,7 @@
 			</xsl:call-template>
 		</xsl:when>
 		
-		<!-- Replace as many OpenOffice references as we can -->
+		<!-- Replace as many LibreOffice references as we can -->
 		<xsl:when test="contains($string,$brand5)">
 			<xsl:variable name="newstr">
 				<xsl:value-of select="substring-before($string,$brand5)"/>
@@ -621,6 +613,16 @@
 	<p class="{$role}"><xsl:apply-templates /></p>
 </xsl:template>
 
+<!-- Insert Basic code snippet  -->
+<xsl:template name="insertbascode">
+	<pre><xsl:apply-templates /></pre>
+</xsl:template>
+
+<!-- Insert Logo code snippet  -->
+<xsl:template name="insertlogocode">
+	<pre><xsl:apply-templates /></pre>
+</xsl:template>
+
 <!-- Insert "How to get Link" -->
 <xsl:template name="insert_howtoget">
 	<xsl:param name="linkhref" />
@@ -661,15 +663,15 @@
 <xsl:variable name="archive"><xsl:value-of select="concat(substring-before(substring-after(@href,'text/'),'/'),'/')"/></xsl:variable>
 <xsl:variable name="dbpostfix"><xsl:call-template name="createDBpostfix"><xsl:with-param name="archive" select="$archive"/></xsl:call-template></xsl:variable>
 	<xsl:choose>
-		<!-- Fix bug 1120 by replacing the OOo support URL -->
+		<!-- Fix bug 1120 by replacing the LibO support URL -->
 		<xsl:when test="@href[ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]] and parent::paragraph[@id='par_id3150667']">
 			<a href="$(PRODUCT_SUPPORT_URL)">$(PRODUCT_SUPPORT_URL_TEXT)</a>
 		</xsl:when>
-		<!-- Replace the OOo documentation URL -->
+		<!-- Replace the LibO documentation URL -->
 		<xsl:when test="@href[ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]] and parent::paragraph[@id='par_id3497211']">
 			<a href="$(PRODUCT_DOCUMENTATION_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
 		</xsl:when>
-		<!-- Replace the OOo spellchecking URLs -->
+		<!-- Replace the LibO spellchecking URLs -->
 		<xsl:when test="@href and (parent::paragraph[@id='par_id6434522'] or parent::paragraph[@id='par_id3552964'] or paragraph[@id='par_id9625843'] or parent::paragraph[@id='par_id1683706'])">
 			<a href="$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
 		</xsl:when>
@@ -1017,7 +1019,7 @@
 	<xsl:value-of select="concat($am,'DbPAR=',$newDB)"/>
 </xsl:template>
 
-<!-- Remove OpenOffice.org support text -->
+<!-- Remove LibreOffice support text -->
 <xsl:template match="paragraph[(@id='par_id9173253' or @id='par_id3154230' or @id='hd_id26327' or @id='par_id1318380' or @id='hd_id2611386' or @id='par_id3166335' or @id='hd_id0915200811081722' or @id='par_id0915200811081778' or @id='hd_id0804200803314150' or @id='par_id0804200803314235') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]]" />
 
 <!-- Remove crash reporting text -->
