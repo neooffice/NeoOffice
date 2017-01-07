@@ -584,14 +584,6 @@ endif
 # library in the program directory
 	cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -e -c 'for i in `find "../program" -type f -name "*.dylib*"` ; do ln -sf "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -e -c 'for i in `find "../program" -type f -name "*.so"` ; do ln -sf "$$i" ; done'
-ifdef PRODUCT_BUILD3
-# Install OOo .oxt files
-	cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -c -e 'JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1 ; export JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY ; unset CLASSPATH ; unset DYLD_LIBRARY_PATH ; for i in `find "$(PWD)/$(OO_BUILD_HOME)/../ext_sources" -type f -name "*.oxt"` "$(PWD)/sdext/$(UOUTPUTDIR)/bin/pdfimport.oxt" ; do rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp" ; echo "yes" | ./unopkg.bin add --shared --verbose "$$i" -env:UserInstallation=file://"$(PWD)/$(INSTALL_HOME)/tmp" ; done ; rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp"'
-else
-# Install OOo .oxt files. Exclude lo-oo-ressources-linguistiques-fr-v5.3.oxt
-# and lightproof-hu_HU-1.3.oxt since they require Python.
-	cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -c -e 'JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1 ; export JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY ; unset CLASSPATH ; unset DYLD_LIBRARY_PATH ; for i in `find "$(PWD)/$(OO_BUILD_HOME)/../ext_sources" -type f -name "*.oxt" | grep -v lo-oo-ressources-linguistiques-fr-v5.3.oxt | grep -v lightproof-hu_HU-1.3.oxt` "$(PWD)/sdext/$(UOUTPUTDIR)/bin/pdfimport.oxt" ; do rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp" ; echo "yes" | ./unopkg.bin add --shared --verbose "$$i" -env:UserInstallation=file://"$(PWD)/$(INSTALL_HOME)/tmp" ; done ; rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp"'
-endif
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Library/Spotlight"
 	cd "$(INSTALL_HOME)/package/Contents/Library/Spotlight" ; tar zxvf "$(PWD)/$(NEOOFFICE_PATCHES_HOME)/neolight.mdimporter.tgz"
 # Make Spotlight plugin ID unique for each build. Fix bug 2711 by updating
