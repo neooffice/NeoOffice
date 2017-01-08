@@ -169,7 +169,8 @@ static NSAlert *pSaveDisabledAlert = nil;
 					}
 				}
 
-				if ( [pSaveDisabledAlert runModal] == NSAlertFirstButtonReturn )
+				NSModalResponse nRet = [pSaveDisabledAlert runModal];
+				if ( nRet == NSAlertDefaultReturn || nRet == NSAlertFirstButtonReturn )
 				{
 					// The OS X sandbox will sometimes fail to open URLs when
 					// the default browser is not Safari and the browser is not
