@@ -4,6 +4,6 @@ ErrorReportServer=
 [Bootstrap]
 InstallMode=<installmode>
 ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)
-UserInstallation=$SYSUSERCONFIG/$(PRODUCT_DIR_NAME)
+UserInstallation=$SYSUSERCONFIG/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)
 ProductPatch=$(PRODUCT_PATCH_VERSION)
 BuildMachine=$(BUILD_MACHINE)
