@@ -958,8 +958,12 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		return bRet;
 
 	NSAlert *pAlert = [NSAlert alertWithMessageText:pMessage defaultButton:nil alternateButton:UpdateGetVCLResString(SV_BUTTONTEXT_CANCEL) otherButton:nil informativeTextWithFormat:@""];
-	if ( pAlert && [pAlert runModal] == NSAlertFirstButtonReturn )
-		bRet = YES;
+	if ( pAlert )
+	{
+		NSModalResponse nRet = [pAlert runModal];
+		if ( nRet == NSAlertDefaultReturn || nRet == NSAlertFirstButtonReturn )
+			bRet = YES;
+	}
 
 	return bRet;
 }
@@ -1612,8 +1616,12 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 					UpdateAddInstallerPackage(aFileName, aDownloadPath, aPackagePath);
 					NSAlert *pAlert = [NSAlert alertWithMessageText:UpdateGetUPDResString(RID_UPDATE_STR_BEGIN_INSTALL) defaultButton:UpdateGetUPDResString(RID_UPDATE_STR_INSTALL_NOW) alternateButton:UpdateGetUPDResString(RID_UPDATE_STR_INSTALL_LATER) otherButton:nil informativeTextWithFormat:@""];
-					if (pAlert && [pAlert runModal] == NSAlertFirstButtonReturn)
-						mbrequestedQuitApp = YES;
+					if ( pAlert )
+					{
+						NSModalResponse nRet = [pAlert runModal];
+						if ( nRet == NSAlertDefaultReturn || nRet == NSAlertFirstButtonReturn )
+							mbrequestedQuitApp = YES;
+					}
 				}
 				else
 				{
@@ -1642,35 +1650,39 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if (pDownload && pPath && pDescription)
 	{
 		NSAlert *pAlert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"%@ %@\n%@", UpdateGetLocalizedString(UPDATEERROR), pDescription, UpdateGetLocalizedString(UPDATEREDOWNLOADFILE)] defaultButton:UpdateGetVCLResString(SV_BUTTONTEXT_YES) alternateButton:UpdateGetVCLResString(SV_BUTTONTEXT_NO) otherButton:nil informativeTextWithFormat:@""];
-		if (pAlert && [pAlert runModal] == NSAlertFirstButtonReturn)
- 		{
-			// Cancel any other downloads for the same file that are already
-			// in progress
-			std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.begin();
-			while (it != aDownloadDataMap.end())
-			{
-				NSString *pOtherDownloadPath = [it->second path];
-				if (pOtherDownloadPath && [pOtherDownloadPath isEqualToString:pPath])
+		if (pAlert)
+		{
+			NSModalResponse nRet = [pAlert runModal];
+			if (nRet == NSAlertDefaultReturn || nRet == NSAlertFirstButtonReturn)
+ 			{
+				// Cancel any other downloads for the same file that are already
+				// in progress
+				std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.begin();
+				while (it != aDownloadDataMap.end())
 				{
+					NSString *pOtherDownloadPath = [it->second path];
 					if (pOtherDownloadPath && [pOtherDownloadPath isEqualToString:pPath])
 					{
-						[it->first cancel];
-						if (it->first != pDownload)
+						if (pOtherDownloadPath && [pOtherDownloadPath isEqualToString:pPath])
 						{
-							[it->second release];
-							it = aDownloadDataMap.begin();
-							continue;
+							[it->first cancel];
+							if (it->first != pDownload)
+							{
+								[it->second release];
+								it = aDownloadDataMap.begin();
+								continue;
+							}
 						}
 					}
+
+					++it;
 				}
 
-				++it;
+				if (pRetryDownloadURLs)
+					[pRetryDownloadURLs removeObjectForKey:pPath];
+
+				bRet = [self reloadDownload:pDownload path:pPath];
 			}
-
-			if (pRetryDownloadURLs)
-				[pRetryDownloadURLs removeObjectForKey:pPath];
-
-			bRet = [self reloadDownload:pDownload path:pPath];
 		}
 	}
 

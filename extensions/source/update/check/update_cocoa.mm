@@ -205,12 +205,15 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 	if (!mbWebViewRequestedQuitApp && UpdateHasPackagePaths())
 	{
 		NSAlert *pAlert = [NSAlert alertWithMessageText:UpdateGetLocalizedString(UPDATEINSTALLUPDATES) defaultButton:UpdateGetVCLResString(SV_BUTTONTEXT_YES) alternateButton:UpdateGetVCLResString(SV_BUTTONTEXT_NO) otherButton:nil informativeTextWithFormat:@""];
-		if ( pAlert && [pAlert runModal] == NSAlertFirstButtonReturn )
+		if ( pAlert )
 		{
-			mbWebViewRequestedQuitApp = YES;
-			CFPreferencesSetAppValue( kUpdateSuppressLaunchAfterInstallationPref
-, kCFBooleanTrue, kCFPreferencesCurrentApplication );
-			CFPreferencesAppSynchronize( kCFPreferencesCurrentApplication );
+			NSModalResponse nRet = [pAlert runModal];
+			if ( nRet == NSAlertDefaultReturn || nRet == NSAlertFirstButtonReturn )
+			{
+				mbWebViewRequestedQuitApp = YES;
+				CFPreferencesSetAppValue( kUpdateSuppressLaunchAfterInstallationPref, kCFBooleanTrue, kCFPreferencesCurrentApplication );
+				CFPreferencesAppSynchronize( kCFPreferencesCurrentApplication );
+			}
 		}
 	}
 }
