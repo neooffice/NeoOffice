@@ -1,4 +1,4 @@
-########################################################################
+#######################################################################
 # 
 #   $RCSfile$
 # 
@@ -69,6 +69,8 @@ ULONGNAME=Intel
 CPUNAME=I
 TARGET_MACHINE=x86_64
 TARGET_FILE_TYPE=Mach-O 64-bit executable $(TARGET_MACHINE)
+SHARED_LIBRARY_FILE_TYPE=Mach-O 64-bit dynamically linked shared library $(TARGET_MACHINE)
+BUNDLE_FILE_TYPE=Mach-O 64-bit bundle $(TARGET_MACHINE)
 else
 OS_TYPE=Win32
 endif
@@ -574,16 +576,11 @@ ifdef PRODUCT_BUILD3
 else
 	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(LIBO_PRODUCT_NAME)#$(LIBO_PRODUCT_NAME)#g' "$(PWD)/etc/sandbox/Resources/help/main_transform.xsl" | sed 's#$$(PRODUCT_SUPPORT_URL)#$(PRODUCT_SUPPORT_URL)#g' | sed 's#$$(PRODUCT_SUPPORT_URL_TEXT)#$(PRODUCT_SUPPORT_URL_TEXT)#g' | sed 's#$$(PRODUCT_DOCUMENTATION_URL)#$(PRODUCT_DOCUMENTATION_URL)#g' | sed 's#$$(PRODUCT_DOCUMENTATION_URL_TEXT)#$(PRODUCT_DOCUMENTATION_URL_TEXT)#g' | sed 's#$$(PRODUCT_DOCUMENTATION_LAUNCHSHORTCUTS_URL)#$(PRODUCT_DOCUMENTATION_LAUNCHSHORTCUTS_URL)#g' | sed 's#$$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)#$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)#g' > "Resources/help/main_transform.xsl"
 endif
-	@echo "End of updated installer build steps"
-	@exit 1
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.bin"` ; do strip -S -x "$$i" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*"` ; do strip -S -x "$$i" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.so"` ; do strip -S -x "$$i" ; done'
-# Shared libraries in extensions may link to OpenOffice shared libraries using
-# @executable_path so create softlinks in the MacOS directory for each shared
-# library in the program directory
-	cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -e -c 'for i in `find "../program" -type f -name "*.dylib*"` ; do ln -sf "$$i" ; done'
-	cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -e -c 'for i in `find "../program" -type f -name "*.so"` ; do ln -sf "$$i" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; find . -type f -exec file {} \; > "$(PWD)/$(INSTALL_HOME)/filetypes.txt"
+# Mac App Store will reject apps with shell scripts
+	cd "$(INSTALL_HOME)/package" ; sh -e -c 'if find . ! -type d -exec file {} \; | grep "script text executable" ; then exit 1 ; fi'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'if grep "script text executable" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" ; then exit 1 ; fi'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `grep -e "$(TARGET_FILE_TYPE)" -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "(BUNDLE_FILE_TYPE)" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" | sed "s#:.*\\$$##"` ; do strip -S -x "$$i" ; done'
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Library/Spotlight"
 	cd "$(INSTALL_HOME)/package/Contents/Library/Spotlight" ; tar zxvf "$(PWD)/$(NEOOFFICE_PATCHES_HOME)/neolight.mdimporter.tgz"
 # Make Spotlight plugin ID unique for each build. Fix bug 2711 by updating
@@ -598,8 +595,8 @@ endif
 	xattr -rcs "$(INSTALL_HOME)/package"
 # Sign all binaries
 	chmod -Rf u+rw "$(INSTALL_HOME)/package"
-# Mac App Store will reject apps with shell scripts
-	cd "$(INSTALL_HOME)/package" ; sh -e -c 'if find . ! -type d -exec file {} \; | grep "script text executable" ; then exit 1 ; fi'
+	@echo "End of updated installer build steps"
+	@exit 1
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type d -name "*.mdimporter"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type d -name "*.qlgenerator"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 # Sign "A" version of each framework
