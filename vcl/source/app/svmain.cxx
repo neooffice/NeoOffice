@@ -294,13 +294,13 @@ int SVMain()
             }
         }
 
-        // Activate the fonts in the "share/fonts/truetype" directory
+        // Activate the fonts in the "Resources/fonts/truetype" directory
         OUString aBasePath;
         if ( utl::Bootstrap::locateBaseInstallation( aBasePath ) == utl::Bootstrap::PATH_EXISTS )
         {
             if ( aBasePath.getLength() )
             {
-                aBasePath += OUString::createFromAscii( "/share/fonts/truetype" );
+                aBasePath += OUString::createFromAscii( "/Resources/fonts/truetype" );
                 ImplLoadNativeFont( aBasePath );
             }
         }
