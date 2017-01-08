@@ -762,7 +762,7 @@ sal_Bool SAL_CALL SfxFrameLoader_Impl::load( const Sequence< PropertyValue >& rA
 
 #ifdef USE_JAVA
     if ( bLoadSuccess )
-        SfxFrameLoader_openDocumentOfType( aDescriptor.getOrDefault( "DocumentService", ::rtl::OUString() ) );
+        SfxFrameLoader_openDocumentOfType( aDescriptor.getOrDefault( "DocumentService", OUString() ) );
     bInLoad = sal_False;
 #endif	// USE_JAVA
 

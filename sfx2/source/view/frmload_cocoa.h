@@ -39,7 +39,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-void SfxFrameLoader_openDocumentOfType( ::rtl::OUString aDocType );
+void SfxFrameLoader_openDocumentOfType( OUString aDocType );
 #ifdef __cplusplus
 }
 #endif
