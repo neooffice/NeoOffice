@@ -138,8 +138,8 @@ class QuickstartMenuItemDescriptor
 	BOOL						mbValueIsDefaultForPref;
 
 public:
-								QuickstartMenuItemDescriptor( SEL aSelector, OUString aText, CFStringRef aPrefName = NULL, CFPropertyListRef aCheckedPrefValue = NULL, BOOL bValueIsDefaultForPref = FALSE ) : maSelector( aSelector ), maText( aText ), maPrefName( aPrefName ), maCheckedPrefValue( aCheckedPrefValue ), mbValueIsDefaultForPref( bValueIsDefaultForPref ) {}
-								QuickstartMenuItemDescriptor( ::std::vector< QuickstartMenuItemDescriptor > &rItems, OUString aText ) : maSelector( NULL ), maText( aText ), maItems( rItems ), maPrefName( NULL ), maCheckedPrefValue( NULL ), mbValueIsDefaultForPref( FALSE ) {}
+								QuickstartMenuItemDescriptor( SEL aSelector, OUString aText, CFStringRef aPrefName = NULL, CFPropertyListRef aCheckedPrefValue = NULL, BOOL bValueIsDefaultForPref = NO ) : maSelector( aSelector ), maText( aText ), maPrefName( aPrefName ), maCheckedPrefValue( aCheckedPrefValue ), mbValueIsDefaultForPref( bValueIsDefaultForPref ) {}
+								QuickstartMenuItemDescriptor( ::std::vector< QuickstartMenuItemDescriptor > &rItems, OUString aText ) : maSelector( NULL ), maText( aText ), maItems( rItems ), maPrefName( NULL ), maCheckedPrefValue( NULL ), mbValueIsDefaultForPref( NO ) {}
 								~QuickstartMenuItemDescriptor() {};
 	NSMenuItem*					CreateMenuItem( const ShutdownIconDelegate *pDelegate ) const;
 };
@@ -659,12 +659,12 @@ extern "C" void java_init_systray()
 		BOOL						bValueIsDefaultForPref;
 	} aMenuItems[] =
 	{
-		{ SvtModuleOptions::E_SWRITER, WRITER_URL, WRITER_FALLBACK_DESC, @selector(handleWriterCommand:), CFSTR( "--writer" ), TRUE },
-		{ SvtModuleOptions::E_SCALC, CALC_URL, CALC_FALLBACK_DESC, @selector(handleCalcCommand:), CFSTR( "--calc" ), FALSE },
-		{ SvtModuleOptions::E_SIMPRESS, IMPRESS_WIZARD_URL, IMPRESS_WIZARD_FALLBACK_DESC, @selector(handleImpressCommand:), CFSTR( "--impress" ), FALSE },
-		{ SvtModuleOptions::E_SDRAW, DRAW_URL, DRAW_FALLBACK_DESC, @selector(handleDrawCommand:), CFSTR( "--draw" ), FALSE },
-		{ SvtModuleOptions::E_SDATABASE, BASE_URL, BASE_FALLBACK_DESC, @selector(handleBaseCommand:), CFSTR( "--base" ), FALSE },
-		{ SvtModuleOptions::E_SMATH, MATH_URL, MATH_FALLBACK_DESC, @selector(handleMathCommand:), CFSTR( "--math" ), FALSE }
+		{ SvtModuleOptions::E_SWRITER, WRITER_URL, WRITER_FALLBACK_DESC, @selector(handleWriterCommand:), CFSTR( "--writer" ), YES },
+		{ SvtModuleOptions::E_SCALC, CALC_URL, CALC_FALLBACK_DESC, @selector(handleCalcCommand:), CFSTR( "--calc" ), NO },
+		{ SvtModuleOptions::E_SIMPRESS, IMPRESS_WIZARD_URL, IMPRESS_WIZARD_FALLBACK_DESC, @selector(handleImpressCommand:), CFSTR( "--impress" ), NO },
+		{ SvtModuleOptions::E_SDRAW, DRAW_URL, DRAW_FALLBACK_DESC, @selector(handleDrawCommand:), CFSTR( "--draw" ), NO },
+		{ SvtModuleOptions::E_SDATABASE, BASE_URL, BASE_FALLBACK_DESC, @selector(handleBaseCommand:), CFSTR( "--base" ), NO },
+		{ SvtModuleOptions::E_SMATH, MATH_URL, MATH_FALLBACK_DESC, @selector(handleMathCommand:), CFSTR( "--math" ), NO }
 	};
 
 	// Disable shutdown
@@ -683,7 +683,7 @@ extern "C" void java_init_systray()
 	// None menu item is only used in default launch submenu
 	aDesc = pShutdownIcon->GetResString( STR_NONE );
 	aDesc = aDesc.replaceAll( "~", "" );
-	aOpenAtLaunchSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DefaultLaunchOptions" ), CFSTR( "--nodefault" ), FALSE ) );
+	aOpenAtLaunchSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DefaultLaunchOptions" ), CFSTR( "--nodefault" ), NO ) );
 
 	SvtModuleOptions aModuleOptions;
 	for ( size_t i = 0; i < sizeof( aMenuItems ) / sizeof( MenuEntryDescriptor ); ++i )
@@ -744,30 +744,30 @@ extern "C" void java_init_systray()
 
 	aDesc = SfxResId( STR_IGNORETRACKPADGESTURES );
 	aDesc = aDesc.replaceAll( "~", "" );
-	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "IgnoreTrackpadGestures" ), kCFBooleanTrue, FALSE ) );
+	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "IgnoreTrackpadGestures" ), kCFBooleanTrue, NO ) );
 
 	aDesc = SfxResId( STR_DISABLEMACOSXSERVICESMENU );
 	aDesc = aDesc.replaceAll( "~", "" );
-	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableServicesMenu" ), kCFBooleanTrue, FALSE ) );
+	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableServicesMenu" ), kCFBooleanTrue, NO ) );
 
 	aDesc = SfxResId( STR_DISABLEMACOSXTEXTHIGHLIGHTING );
 	aDesc = aDesc.replaceAll( "~", "" );
-	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "UseNativeHighlightColor" ), kCFBooleanFalse, FALSE ) );
+	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "UseNativeHighlightColor" ), kCFBooleanFalse, NO ) );
 
 	// Insert the Quick Look submenu entries
 	::std::vector< QuickstartMenuItemDescriptor > aQuickLookSubmenuItems;
 
 	aDesc = SfxResId( STR_QUICKLOOKDISABLED );
 	aDesc = aDesc.replaceAll( "~", "" );
-	aQuickLookSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), kCFBooleanTrue, FALSE ) );
+	aQuickLookSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), kCFBooleanTrue, NO ) );
 
 	aDesc = SfxResId( STR_QUICKLOOKFIRSTPAGEONLY );
 	aDesc = aDesc.replaceAll( "~", "" );
-	aQuickLookSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), kCFBooleanFalse, TRUE ) );
+	aQuickLookSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), kCFBooleanFalse, YES ) );
 
 	aDesc = SfxResId( STR_QUICKLOOKALLPAGES );
 	aDesc = aDesc.replaceAll( "~", "" );
-	aQuickLookSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), CFSTR( "All" ), TRUE ) );
+	aQuickLookSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), CFSTR( "All" ), YES ) );
 
 	aDesc = SfxResId( STR_QUICKLOOKSUPPORT );
 	aDesc = aDesc.replaceAll( "~", "" );
@@ -777,11 +777,11 @@ extern "C" void java_init_systray()
 	{
 		aDesc = SfxResId( STR_DISABLEVERSIONSSUPPORT );
 		aDesc = aDesc.replaceAll( "~", "" );
-		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableVersions" ), kCFBooleanTrue, FALSE ) );
+		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableVersions" ), kCFBooleanTrue, NO ) );
 
 		aDesc = SfxResId( STR_DISABLERESUMESUPPORT );
 		aDesc = aDesc.replaceAll( "~", "" );
-		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableResume" ), kCFBooleanTrue, FALSE ) );
+		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableResume" ), kCFBooleanTrue, NO ) );
 	}
 
 	// Insert the Mac OS X submenu
