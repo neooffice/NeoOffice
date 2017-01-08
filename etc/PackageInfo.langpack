@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<pkg-info format-version="2" overwrite-permissions="true" relocatable="false" identifier="$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)_langpack.pkg" version="$(PRODUCT_SHORT_VERSION)" install-location="/var/tmp/.$(PRODUCT_DIR_NAME).langpack" auth="root" preserve-xattr="true">
-    <scripts>
-        <preinstall file="./preflight"/>
-        <postinstall file="./postflight"/>
-    </scripts>
