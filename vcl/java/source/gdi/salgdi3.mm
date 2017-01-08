@@ -214,6 +214,7 @@ static void ImplFontListChanged()
 					const OUString aSong( "Song" );
 					const OUString aSung( "Sung" );
 					const OUString aNeoSymbol( "Neo Symbol" );
+					const OUString aNeo3Symbol( "Neo3Symbol" );
 					const OUString aNeo4Symbol( "Neo4Symbol" );
 					const OUString aOpenSymbol( "OpenSymbol" );
 					const OUString aRegular( " Regular" );
@@ -288,7 +289,7 @@ static void ImplFontListChanged()
 						if ( !aDisplayName.getLength() || aDisplayName.startsWith( "." ) )
 							continue;
 
-						if ( aDisplayName == aOpenSymbol || aDisplayName == aStarSymbol || aDisplayName == aNeoSymbol )
+						if ( aDisplayName == aOpenSymbol || aDisplayName == aStarSymbol || aDisplayName == aNeoSymbol || aDisplayName == aNeo3Symbol )
 						{
 							// Don't allow Sun's symbol fonts our older
 							// NeoOffice fonts to override our symbol font
