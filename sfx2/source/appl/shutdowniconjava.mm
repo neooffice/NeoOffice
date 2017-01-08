@@ -73,6 +73,8 @@
 #define BASE_FALLBACK_DESC				"Database"
 #define MATH_FALLBACK_DESC				"Formula"
 
+#define DEFAULT_LAUNCH_OPTIONS_KEY		CFSTR( "DefaultLaunchOptions" )
+
 typedef void VCLOpenPrintFileHandler_Type( const char *pPath, sal_Bool bPrint );
 typedef void VCLRequestShutdownHandler_Type();
 
@@ -501,7 +503,16 @@ void ProcessShutdownIconCommand( int nCommand )
 							{
 								NSString *pValue = [pDefaults stringForKey:pPrefName];
 								if ( pValue && [pValue isEqualToString:pPrefStringValue] )
+								{
 									[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
+								}
+								// Handle OpenOffice 3.x style launch options
+								else if ( [pPrefName isEqualToString:(NSString *)DEFAULT_LAUNCH_OPTIONS_KEY] && pValue && [pValue length] > 1 && [pValue characterAtIndex:0] == '-' && [pValue characterAtIndex:1] != '-' )
+								{
+									pValue = [@"-" stringByAppendingString:pValue];
+									if ( pValue && [pValue isEqualToString:pPrefStringValue] )
+										[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
+								}
 							}
 						}
 
@@ -683,7 +694,7 @@ extern "C" void java_init_systray()
 	// None menu item is only used in default launch submenu
 	aDesc = pShutdownIcon->GetResString( STR_NONE );
 	aDesc = aDesc.replaceAll( "~", "" );
-	aOpenAtLaunchSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DefaultLaunchOptions" ), CFSTR( "--nodefault" ), NO ) );
+	aOpenAtLaunchSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, DEFAULT_LAUNCH_OPTIONS_KEY, CFSTR( "--nodefault" ), NO ) );
 
 	SvtModuleOptions aModuleOptions;
 	for ( size_t i = 0; i < sizeof( aMenuItems ) / sizeof( MenuEntryDescriptor ); ++i )
@@ -715,7 +726,7 @@ extern "C" void java_init_systray()
 		aDesc = aModuleOptions.GetModuleName( aMenuItems[i].eModuleIdentifier );
 		aDesc = aDesc.replaceAll( "~", "" );
 		if ( aDesc.getLength() )
-			aOpenAtLaunchSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DefaultLaunchOptions" ), aMenuItems[i].aCheckedPrefValue, aMenuItems[i].bValueIsDefaultForPref ) );
+			aOpenAtLaunchSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, DEFAULT_LAUNCH_OPTIONS_KEY, aMenuItems[i].aCheckedPrefValue, aMenuItems[i].bValueIsDefaultForPref ) );
 	}
 
 	// Open template menu item is only used in new document submenu
