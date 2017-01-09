@@ -46,7 +46,9 @@
 
 #import "objserv_cocoa.h"
 #import "objserv_cocoa.hrc"
-#import "../../../extensions/source/update/check/updatehdl.hrc"
+
+// LibreOffice headers are found relative to LibreOffice include directory
+#import "../extensions/source/update/check/updatehdl.hrc"
 
 #include <dlfcn.h>
 
