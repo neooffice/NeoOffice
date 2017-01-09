@@ -54,7 +54,6 @@
 #include "osx/printview.h"
 
 #include "../app/salinst_cocoa.h"
-#include "../../../../sfx2/source/doc/doc.hrc"
 
 static OUString aPageScalingFactorKey( "PAGE_SCALING_FACTOR" );
 static ResMgr *pSfxResMgr = NULL;
