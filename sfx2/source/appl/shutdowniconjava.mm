@@ -39,6 +39,7 @@
 #include <sfx2/app.hxx>
 #include <sfx2/sfxresid.hxx>
 #include <tools/link.hxx>
+#include <tools/rcid.h>
 #include <unotools/dynamicmenuoptions.hxx>
 #include <unotools/moduleoptions.hxx>
 #include <vcl/svapp.hxx>
@@ -54,6 +55,9 @@
 #include <postmac.h>
 
 #include "../view/topfrm_cocoa.hxx"
+
+// LibreOffice headers are found relative to LibreOffice include directory
+#import "../vcl/inc/svids.hrc"
 
 #define DEFAULT_URL						"_default"
 
@@ -82,9 +86,27 @@ static const NSString *kMenuItemPrefNameKey = @"MenuItemPrefName";
 static const NSString *kMenuItemPrefBooleanValueKey = @"MenuItemPrefBooleanValue";
 static const NSString *kMenuItemPrefStringValueKey = @"MenuItemPrefStringValue";
 static const NSString *kMenuItemValueIsDefaultForPrefKey = @"MenuItemValueIsDefaultForPref";
+static ResMgr *pVclResMgr = NULL;
 
 using namespace com::sun::star::beans;
 using namespace com::sun::star::uno;
+
+static OUString GetVclResString( int nId )
+{
+	if ( !pVclResMgr )
+	{
+		pVclResMgr = ResMgr::CreateResMgr( "vcl" );
+		if ( !pVclResMgr )
+			return "";
+	}
+
+	ResId aResId( nId, *pVclResMgr );
+	aResId.SetRT( RSC_STRING );
+	if ( !pVclResMgr->IsAvailable( aResId ) )
+		return "";
+ 
+	return OUString( ResId( nId, *pVclResMgr ) );
+}
 
 @interface NSObject (ShutdownIconDelegate)
 - (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
@@ -734,9 +756,8 @@ extern "C" void java_init_systray()
 	aDesc = aDesc.replaceAll( "~", "" );
 	aNewSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handleFromTemplateCommand:), aDesc ) );
 
-	// Insert the new document submenu. TODO: get localized "New" string by
-	// loading the label for uno:AddDirect in main.xcd.
-	aDesc = pShutdownIcon->GetResString( STR_QUICKSTART_FILEOPEN );
+	// Insert the new document submenu
+	aDesc = GetVclResString( SV_BUTTONTEXT_NEW );
 	aDesc = aDesc.replaceAll( "~", "" );
 	aAppMenuItems.push_back( QuickstartMenuItemDescriptor( aNewSubmenuItems, aDesc ) );
 
