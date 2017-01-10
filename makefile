@@ -688,20 +688,20 @@ endif
 	rm -Rf "$(INSTALL_HOME)/tmp"
 
 build.patch_package: build.package
-	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" -o "$$PRODUCT_DOMAIN" != "$(PRODUCT_DOMAIN)" -o "$$PRODUCT_DIR_NAME" != "$(PRODUCT_DIR_NAME)" -o "$$PRODUCT_MAC_APP_STORE_URL" != "$(PRODUCT_MAC_APP_STORE_URL)" -o "$$PRODUCT_JAVA_DOWNLOAD_URL" != "$(PRODUCT_JAVA_DOWNLOAD_URL)" -o "$$PRODUCT_MIN_OSVERSION" != "$(PRODUCT_MIN_OSVERSION)" -o "$$PRODUCT_MAX_OSVERSION" != "$(PRODUCT_MAX_OSVERSION)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
+	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
 	"$(MAKE)" $(MFLAGS) "CERTAPPIDENTITY=$(PATCHCERTAPPIDENTITY)" "CERTPKGIDENTITY=$(PATCHCERTPKGIDENTITY)" "build.patch_package_shared"
 	touch "$@"
 
 build.patch_package2: build.package2
-	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" -o "$$PRODUCT_DOMAIN" != "$(PRODUCT_DOMAIN)" -o "$$PRODUCT_DIR_NAME2" != "$(PRODUCT_DIR_NAME2)" -o "$$PRODUCT_MAC_APP_STORE_URL" != "$(PRODUCT_MAC_APP_STORE_URL)" -o "$$PRODUCT_JAVA_DOWNLOAD_URL" != "$(PRODUCT_JAVA_DOWNLOAD_URL)" -o "$$PRODUCT_MIN_OSVERSION" != "$(PRODUCT_MIN_OSVERSION)" -o "$$PRODUCT_MAX_OSVERSION" != "$(PRODUCT_MAX_OSVERSION)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
 ifndef PRODUCT_BUILD2
+	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
 	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD2=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION2)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT2)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME2)" "CERTAPPIDENTITY=$(PATCHCERTAPPIDENTITY2)" "CERTPKGIDENTITY=$(PATCHCERTPKGIDENTITY2)" "PRODUCT_BUNDLED_LANG_PACKS=$(PRODUCT_BUNDLED_LANG_PACKS2)" "build.patch_package_shared"
 	touch "$@"
 endif
 
 build.patch_package3: build.package3
-	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" -o "$$PRODUCT_DOMAIN" != "$(PRODUCT_DOMAIN)" -o "$$PRODUCT_DIR_NAME3" != "$(PRODUCT_DIR_NAME3)" -o "$$PRODUCT_MAC_APP_STORE_URL" != "$(PRODUCT_MAC_APP_STORE_URL)" -o "$$PRODUCT_JAVA_DOWNLOAD_URL" != "$(PRODUCT_JAVA_DOWNLOAD_URL)" -o "$$PRODUCT_MIN_OSVERSION" != "$(PRODUCT_MIN_OSVERSION)" -o "$$PRODUCT_MAX_OSVERSION" != "$(PRODUCT_MAX_OSVERSION)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
 ifndef PRODUCT_BUILD3
+	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
 	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "CERTAPPIDENTITY=$(PATCHCERTAPPIDENTITY3)" "CERTPKGIDENTITY=$(PATCHCERTPKGIDENTITY3)" "PRODUCT_BUNDLED_LANG_PACKS=$(PRODUCT_BUNDLED_LANG_PACKS3)" "build.patch_package_shared"
 	touch "$@"
 endif
@@ -710,13 +710,11 @@ build.patch_package_shared:
 # Check that codesign and productsign executables exist before proceeding
 	@sh -e -c 'for i in codesign productsign ; do if [ -z "`which $$i`" ] ; then echo "$$i command not found" ; exit 1 ; fi ; done'
 	sh -e -c 'if [ -d "$(PATCH_INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(PATCH_INSTALL_HOME)" ; fi'
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Frameworks"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/MacOS"
-	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/program"
-# Copy all resource files in the main installer and overwrite newer resources
-# so that the codesigning will not remove resource files marked as signed in an
-# existing installation
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app/Contents/Resources" ; find . \! -type d -print0 | xargs -0 gnutar cvf - ) | gnutar xvf - );
+	@echo "End of updated patch installer build steps"
+	@exit 1
 ifdef PRODUCT_BUILD3
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/bin/soffice3" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
 else ifdef PRODUCT_BUILD2
