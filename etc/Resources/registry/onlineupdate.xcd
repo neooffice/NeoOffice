@@ -61,11 +61,6 @@
           <node oor:name="UpdateCheck" oor:op="replace"/>
         </node>
       </node>
-      <node oor:name="OnCloseApp" oor:op="fuse">
-        <node oor:name="JobList">
-          <node oor:name="UpdateCheck" oor:op="replace"/>
-        </node>
-      </node>
     </node>
   </oor:component-data>
 </oor:data>
