@@ -438,11 +438,12 @@ build.package_shared:
 	mkdir -p "$(INSTALL_HOME)/package"
 	sh -e -c '( cd "$(LIBO_INSTDIR)/$(LIBO_PRODUCT_NAME).app" && tar cf - . ) | ( cd "$(PWD)/$(INSTALL_HOME)/package" && tar xvf - )'
 	sh -e -c '( cd "$(INSTDIR)/$(LIBO_PRODUCT_NAME).app" && ( find . -type f | tar cf - -T - ) ) | ( cd "$(PWD)/$(INSTALL_HOME)/package" && tar xvf - )'
-# Remove LibO system plugins but fix bug 3381 to save standard dictionaries
+# Remove LibO system plugins. Also remove bundled dictionaries and any other
+# extensions as it forces a restart on first run.
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Library"
+	rm -Rf "$(INSTALL_HOME)/package/Contents/Resources/extensions"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/share/uno_packages"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/user"
-	mkdir -p "$(INSTALL_HOME)/package/Contents/share/uno_packages"
 	chmod -Rf u+w,a+r "$(INSTALL_HOME)/package"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program" ; mv -f "MacOS" "program" ; mkdir -p "MacOS"
 ifdef PRODUCT_BUILD3
