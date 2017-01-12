@@ -396,6 +396,14 @@ Reference<deployment::XPackageManager> PackageManagerImpl::create(
     Reference<XCommandEnvironment> xCmdEnv;
 
     try {
+#ifdef USE_JAVA
+        // Fix extension installation failure during first run of the
+        // application by running initRegistryBackends() so that all applicable
+        // user preference directories are created before checking if this is
+        // read only
+        that->initRegistryBackends();
+#endif	// USE_JAVA
+
         // There is no stamp for the bundled folder:
         if (!stamp.isEmpty())
             that->m_readOnly = isMacroURLReadOnly( stamp );
@@ -438,16 +446,10 @@ Reference<deployment::XPackageManager> PackageManagerImpl::create(
 #endif	// USE_JAVA && MACOSX
         }
 
+#ifndef USE_JAVA
         that->initRegistryBackends();
+#endif	// !USE_JAVA
         that->initActivationLayer( xCmdEnv );
-
-#ifdef USE_JAVA
-        // Fix extension installation failure during first run of the
-        // application by checking if this is read only because the applicable
-        // directory was not created until initRegistryBackends() was called
-        if ( that->m_readOnly && !stamp.isEmpty() && context == "user" )
-            that->m_readOnly = isMacroURLReadOnly( stamp );
-#endif	// USE_JAVA
 
         return xPackageManager;
 
