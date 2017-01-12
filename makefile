@@ -442,8 +442,11 @@ build.package_shared:
 # extensions as it forces a restart on first run.
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Library"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Resources/extensions"
+	rm -Rf "$(INSTALL_HOME)/package/Contents/Resources/uno_packages"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/share/uno_packages"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/user"
+	mkdir -p "$(INSTALL_HOME)/package/Contents/Resources/extensions"
+	mkdir -p "$(INSTALL_HOME)/package/Contents/Resources/uno_packages"
 	chmod -Rf u+w,a+r "$(INSTALL_HOME)/package"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program" ; mv -f "MacOS" "program" ; mkdir -p "MacOS"
 ifdef PRODUCT_BUILD3
