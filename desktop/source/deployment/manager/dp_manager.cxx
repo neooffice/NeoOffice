@@ -441,6 +441,14 @@ Reference<deployment::XPackageManager> PackageManagerImpl::create(
         that->initRegistryBackends();
         that->initActivationLayer( xCmdEnv );
 
+#ifdef USE_JAVA
+        // Fix extension installation failure during first run of the
+        // application by checking if this is read only because the applicable
+        // directory was not created until initRegistryBackends() was called
+        if ( that->m_readOnly && !stamp.isEmpty() && context == "user" )
+            that->m_readOnly = isMacroURLReadOnly( stamp );
+#endif	// USE_JAVA
+
         return xPackageManager;
 
     }
