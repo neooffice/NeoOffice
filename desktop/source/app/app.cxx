@@ -279,34 +279,7 @@ bool cleanExtensionCache() {
     SAL_WARN_IF(
         rc != osl::FileBase::E_None, "desktop.app",
         "cannot close " << fw.getURL() << " after writing: " << +rc);
-
-#ifdef USE_JAVA
-    // Only force the application to restart if there are actually shared or
-    // bundled extensions
-    OUString bundledExtPath("$BUNDLED_EXTENSIONS");
-    rtl::Bootstrap::expandMacros(bundledExtPath);
-    osl::Directory bundledExtDir(bundledExtPath);
-    if (osl::FileBase::E_None == bundledExtDir.open())
-    {
-        osl::DirectoryItem dirItem;
-        if (osl::FileBase::E_None == bundledExtDir.getNextItem(dirItem))
-            return true;
-    }
-
-    OUString sharedExtPath("$UNO_SHARED_PACKAGES_CACHE/uno_packages");
-    rtl::Bootstrap::expandMacros(sharedExtPath);
-    osl::Directory sharedExtDir(sharedExtPath);
-    if (osl::FileBase::E_None == sharedExtDir.open())
-    {
-        osl::DirectoryItem dirItem;
-        if (osl::FileBase::E_None == sharedExtDir.getNextItem(dirItem))
-            return true;
-    }
-    
-    return false;
-#else	// USE_JAVA
     return true;
-#endif	// USE_JAVA
 }
 
 #endif
