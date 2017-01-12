@@ -466,10 +466,14 @@ else
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/updateruninstallers"
 endif
 # Remove unnecessary executables and files
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf CREDITS* LICENSE* Resources/oasis-*.icns program/gengal program/gengal.bin program/python program/regmerge program/regview program/senddoc program/ui-previewer program/unoinfo program/unpack_update
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf CREDITS* LICENSE* Resources/oasis-*.icns program/gengal program/gengal.bin program/python program/regmerge program/regview program/senddoc program/ui-previewer program/unoinfo program/unopkg program/unpack_update
 # Add executable softlinks
 	cd "$(INSTALL_HOME)/package/Contents" ; ln -sf "soffice.bin" "MacOS/soffice"
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/unopkg" ; ln -sf "soffice.bin" "MacOS/unopkg"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/unopkg"
+ifdef PRODUCT_BUILD3
+	cd "$(INSTALL_HOME)/package/Contents" ; ln -sf "soffice.bin" "MacOS/unopkg"
+	cd "$(INSTALL_HOME)/package/Contents" ; ln -sf "soffice.bin" "MacOS/unopkg.bin"
+endif
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd program && ls` ; do ln -sf "../program/$$i" "MacOS/$$i" ; done'
 ifdef PRODUCT_BUILD2
 # Set build version by appending zero instead of date so that it will always be
