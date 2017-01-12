@@ -589,24 +589,6 @@ void ProgressCmdEnv::update_( uno::Any const & rStatus )
             text = ::comphelper::anyToString( rStatus ); // fallback
 
         const SolarMutexGuard aGuard;
-#if defined USE_JAVA && defined MACOSX
-        if ( text.indexOf( "com.sun.star.loader.Java2" ) >= 0 || text.indexOf( "vnd.sun.star.expand:$UNO_USER_PACKAGES_CACHE/uno_packages/" ) >= 0 )
-        {
-            if ( !pApplication_canUseJava )
-                pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
-            if ( !pApplication_canUseJava || !pApplication_canUseJava() )
-            {
-                ResMgr *pResMgr = DeploymentGuiResMgr::get();
-                if ( pResMgr )
-                {
-                    ResId aResId( RID_STR_UNSUPPORTED_EXTENSION_DEPENDENCY, *pResMgr );
-                    aResId.SetRT( RSC_STRING );
-                    if ( pResMgr->IsAvailable( aResId ) )
-                        text = OUString( aResId );
-                }
-            }
-        }
-#endif	// USE_JAVA && MACOSX
         const boost::scoped_ptr<MessageDialog> aBox(new MessageDialog(m_pDialogHelper? m_pDialogHelper->getWindow() : NULL, text));
         aBox->Execute();
     }
@@ -846,7 +828,7 @@ void ExtensionCmdQueue::Thread::execute()
                     msg = reinterpret_cast< uno::Exception const * >( dpExc.Cause.getValue() )->Message;
                 }
 #if defined USE_JAVA && defined MACOSX
-                if (msg.isEmpty())
+                if ( msg.isEmpty() || msg.indexOf( "com.sun.star.loader.Java2" ) >= 0 || msg.indexOf( "com.sun.star.loader.Python" ) >= 0 )
                 {
                     if ( !pApplication_canUseJava )
                         pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
