@@ -845,6 +845,24 @@ void ExtensionCmdQueue::Thread::execute()
                     // notify error cause only:
                     msg = reinterpret_cast< uno::Exception const * >( dpExc.Cause.getValue() )->Message;
                 }
+#if defined USE_JAVA && defined MACOSX
+                if (msg.isEmpty())
+                {
+                    if ( !pApplication_canUseJava )
+                        pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+                    if ( !pApplication_canUseJava || !pApplication_canUseJava() )
+                    {
+                        ResMgr *pResMgr = DeploymentGuiResMgr::get();
+                        if ( pResMgr )
+                        {
+                            ResId aResId( RID_STR_UNSUPPORTED_EXTENSION_DEPENDENCY, *pResMgr );
+                            aResId.SetRT( RSC_STRING );
+                            if ( pResMgr->IsAvailable( aResId ) )
+                                msg = OUString( aResId );
+                        }
+                    }
+                }
+#endif	// USE_JAVA && MACOSX
                 if (msg.isEmpty()) // fallback for debugging purposes
                     msg = ::comphelper::anyToString(exc);
 
