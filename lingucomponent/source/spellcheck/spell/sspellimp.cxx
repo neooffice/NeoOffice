@@ -90,9 +90,12 @@ SpellChecker::SpellChecker() :
     aEvtListeners(GetLinguMutex()),
     pPropHelper(NULL),
     bDisposing(false)
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
+    , mnLastNumDics(0)
+#ifdef MACOSX
     , maLocales(NULL)
-#endif	// USE_JAVA && MACOSX
+#endif	// MACOSX
+#endif	// USE_JAVA
 {
 }
 
@@ -140,12 +143,10 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 
     // this routine should return the locales supported by the installed
     // dictionaries.
-#if defined USE_JAVA && defined MACOSX
-    if (!numdict && !maLocales)
-#else	// USE_JAVA && MACOSX
+#ifndef USE_JAVA
     if (!numdict)
-#endif	// USE_JAVA && MACOSX
     {
+#endif	// !USE_JAVA
         SvtLinguConfig aLinguCfg;
 
         // get list of extension dictionaries-to-use
@@ -174,6 +175,17 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
         // is not yet supported by the list od new style dictionaries
         MergeNewStyleDicsAndOldStyleDics( aDics, aOldStyleDics );
 
+#ifdef USE_JAVA
+        // Update list of locales when the user installs or removes any
+        // dictionaries
+#ifdef MACOSX
+        if (mnLastNumDics != aDics.size() || !maLocales)
+#else	// MACOSX
+        if (mnLastNumDics != aDics.size())
+#endif	// MACOSX
+        {
+            mnLastNumDics = aDics.size();
+#endif	// USE_JAVA
         if (!aDics.empty())
         {
             // get supported locales from the dictionaries-to-use...
@@ -310,6 +322,14 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
                 }
             }
         }
+
+        if ( maLocales )
+        {
+            CFRelease( maLocales );
+            maLocales = NULL;
+        }
+        maPrimaryNativeLocaleMap.clear();
+        maSecondaryNativeLocaleMap.clear();
 
         maLocales = NSSpellChecker_getLocales( aAppLocales );
         if ( maLocales )

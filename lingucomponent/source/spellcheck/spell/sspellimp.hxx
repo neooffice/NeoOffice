@@ -92,11 +92,14 @@ class SpellChecker :
     ::cppu::OInterfaceContainerHelper       aEvtListeners;
     linguistic::PropertyHelper_Spelling*    pPropHelper;
     bool                                    bDisposing;
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
+    size_t                                  mnLastNumDics;
+#ifdef MACOSX
     CFArrayRef                              maLocales;
     ::std::map< OUString, CFStringRef >     maPrimaryNativeLocaleMap;
     ::std::map< OUString, CFStringRef >     maSecondaryNativeLocaleMap;
-#endif	// USE_JAVA && MACOSX
+#endif	// MACOSX
+#endif	// USE_JAVA
 
     // disallow copy-constructor and assignment-operator for now
     SpellChecker(const SpellChecker &);
