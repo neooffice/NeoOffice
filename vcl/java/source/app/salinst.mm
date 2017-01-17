@@ -412,6 +412,30 @@ extern "C" SAL_DLLPUBLIC_EXPORT void Application_releaseSolarMutex()
 		Application::GetSolarMutex().release();
 }
 
+// -----------------------------------------------------------------------
+
+// Note: this must not be static as the symbol will be loaded by the salhelper 
+// module
+extern "C" SAL_DLLPUBLIC_EXPORT void Application_acquireAllSolarMutex( sal_uLong nCount )
+{
+	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+		Application::AcquireSolarMutex( nCount );
+}
+
+// -----------------------------------------------------------------------
+
+// Note: this must not be static as the symbol will be loaded by the salhelper
+// module
+extern "C" SAL_DLLPUBLIC_EXPORT sal_uLong Application_releaseAllSolarMutex()
+{
+	sal_uLong nRet = 0;
+
+	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+		nRet = Application::ReleaseSolarMutex();
+
+	return nRet;
+}
+
 // =======================================================================
 
 void SalAbort( const OUString& rErrorText, bool /* bDumpCore */ )

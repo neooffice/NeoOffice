@@ -187,6 +187,7 @@ PRODUCT_MODULES = \
 	canvas \
 	connectivity \
 	cppcanvas \
+	cppu \
 	cppuhelper \
 	cui \
 	dbaccess \
