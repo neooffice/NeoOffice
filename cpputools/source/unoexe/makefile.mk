@@ -79,6 +79,10 @@ UNOTYPES= \
 
 DEPOBJFILES=$(OBJ)$/unoexe.obj
 
+.IF "$(GUIBASE)" == "java"
+DEPOBJFILES += $(OBJ)$/unoexe_cocoa.obj
+.ENDIF		# "$(GUIBASE)" == "java"
+
 APP1TARGET=$(TARGET)
 APP1OBJS=$(DEPOBJFILES)  
 APP1RPATH=UREBIN
@@ -97,6 +101,10 @@ APP1STDLIBS= \
 .IF "$(OS)" == "WNT"
 APP1STDLIBS += $(UNICOWSLIB)
 .ENDIF
+
+.IF "$(GUIBASE)" == "java"
+APP1STDLIBS += -framework AppKit
+.ENDIF		# "$(GUIBASE)" == "java"
 
 .INCLUDE :  target.mk
 
