@@ -33,8 +33,8 @@
  *
  ************************************************************************/
  
-#ifndef __OBJSERV_COCOA_H__
-#define __OBJSERV_COCOA_H__
+#ifndef __UNOEXE_COCOA_H__
+#define __UNOEXE_COCOA_H__
 
 #ifdef __cplusplus
 extern "C" {
