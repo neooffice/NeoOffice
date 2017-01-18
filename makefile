@@ -860,6 +860,7 @@ build.patch_package_shared:
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/MacOS"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/help"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/program/classes"
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/ure-link/bin"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/ure-link/lib"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/etc/resource"
 # Copy all resource files in the main installer and overwrite newer resources
@@ -867,6 +868,7 @@ build.patch_package_shared:
 # existing installation
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app/Contents/Resources" ; find . \! -type d -print0 | xargs -0 gnutar cvf - ) | gnutar xvf - );
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/cpputools/$(UOUTPUTDIR)/bin/uno" "basis-link/ure-link/bin/uno.bin" ; chmod a+x "basis-link/ure-link/bin/uno.bin"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/vcl/$(UOUTPUTDIR)/bin/checknativefont" "basis-link/program/checknativefont" ; chmod a+x "basis-link/program/checknativefont"
 ifdef PRODUCT_BUILD3
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/bin/soffice3" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
@@ -920,7 +922,7 @@ endif
 ifdef PRODUCT_BUILD3
 	cd "$(PATCH_INSTALL_HOME)/package" ; codesign --force -s "$(CERTAPPIDENTITY)" .
 else
-	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.bin" \! -name "soffice.bin"` "Contents/basis-link/program/checknativefont" ; do codesign --force -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/etc/package/Entitlements_inherit_only.plist" "$$i" ; done'
+	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.bin" \! -name "soffice.bin"` "Contents/basis-link/program/checknativefont" "Contents/basis-link/ure-link/bin/uno.bin" ; do codesign --force -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/etc/package/Entitlements_inherit_only.plist" "$$i" ; done'
 	cat "etc/package/Entitlements.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$(PATCH_INSTALL_HOME)/Entitlements.plist"
 	cd "$(PATCH_INSTALL_HOME)/package" ; codesign --force -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(PATCH_INSTALL_HOME)/Entitlements.plist" .
 endif
