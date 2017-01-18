@@ -189,6 +189,7 @@ PRODUCT_MODULES = \
 	cppcanvas \
 	cppu \
 	cppuhelper \
+	cpputools \
 	cui \
 	dbaccess \
 	desktop \
