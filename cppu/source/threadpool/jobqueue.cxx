@@ -86,11 +86,11 @@ namespace cppu_threadpool {
 
 
 #if defined USE_JAVA && defined MACOSX
-    // Fix deadlocks when using Java or Python-based extensions, such as cadlo,
-    // immediately after installation:
-    // https://extensions.libreoffice.org/extensions/cadlo
-    Application_acquireAllSolarMutexFunc *pAcquireAllFunc = (Application_acquireAllSolarMutexFunc *)dlsym( RTLD_DEFAULT, "Application_acquireAllSolarMutex" );
-    Application_releaseAllSolarMutexFunc *pReleaseAllFunc = (Application_releaseAllSolarMutexFunc *)dlsym( RTLD_DEFAULT, "Application_releaseAllSolarMutex" );
+        // Fix deadlocks when using Java or Python-based extensions, such as
+        // cadlo, immediately after installation:
+        // https://extensions.libreoffice.org/extensions/cadlo
+        Application_acquireAllSolarMutexFunc *pAcquireAllFunc = (Application_acquireAllSolarMutexFunc *)dlsym( RTLD_DEFAULT, "Application_acquireAllSolarMutex" );
+        Application_releaseAllSolarMutexFunc *pReleaseAllFunc = (Application_releaseAllSolarMutexFunc *)dlsym( RTLD_DEFAULT, "Application_releaseAllSolarMutex" );
 #endif  // USE_JAVA && MACOSX
 
         while( true )
