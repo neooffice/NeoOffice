@@ -688,8 +688,9 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 	bInPerformKeyEquivalent = YES;
 
 	// If no application mutex exists yet, ignore event as we are likely to
-	// crash
-	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+	// crash. Check if ImplSVData exists first since Application::IsShutDown()
+	// uses it.
+	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 	{
 		// Prevent flooding of the OOo event queue when holding down a native
 		// menu shortcut by by locking the application mutex

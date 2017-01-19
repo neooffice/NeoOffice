@@ -72,8 +72,9 @@ using namespace vos;
 static void HandleAboutRequest()
 {
 	// If no application mutex exists yet, ignore event as we are likely to
-	// crash
-	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+	// crash. Check if ImplSVData exists first since Application::IsShutDown()
+	// uses it.
+	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 	{
 		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_ABOUT, NULL, NULL);
 		JavaSalEventQueue::postCachedEvent( pEvent );
@@ -83,11 +84,12 @@ static void HandleAboutRequest()
 
 static void HandleOpenPrintFileRequest( const OString &rPath, sal_Bool bPrint )
 {
-	if ( rPath.getLength() && !Application::IsShutDown() )
+	if ( rPath.getLength() )
 	{
 		// If no application mutex exists yet, queue event as we are likely to
-		// crash
-		if ( ImplGetSVData() && ImplGetSVData()->mpDefInst )
+		// crash. Check if ImplSVData exists first since
+		// Application::IsShutDown() uses it.
+		if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 		{
 			JavaSalEvent *pEvent = new JavaSalEvent( bPrint ? SALEVENT_PRINTDOCUMENT : SALEVENT_OPENDOCUMENT, NULL, NULL, rPath );
 			JavaSalEventQueue::postCachedEvent( pEvent );
@@ -105,8 +107,9 @@ static void HandleOpenPrintFileRequest( const OString &rPath, sal_Bool bPrint )
 static void HandlePreferencesRequest()
 {
 	// If no application mutex exists yet, ignore event as we are likely to
-	// crash
-	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+	// crash. Check if ImplSVData exists first since Application::IsShutDown()
+	// uses it.
+	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 	{
 		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PREFS, NULL, NULL);
 		JavaSalEventQueue::postCachedEvent( pEvent );
@@ -119,8 +122,9 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 	NSApplicationTerminateReply nRet = NSTerminateCancel;
 
 	// If no application mutex exists yet, ignore event as we are likely to
-	// crash
-	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+	// crash. Check if ImplSVData exists first since Application::IsShutDown()
+	// uses it.
+	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
@@ -168,8 +172,9 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 static void HandleDidChangeScreenParametersRequest()
 {
 	// If no application mutex exists yet, ignore event as we are likely to
-	// crash
-	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+	// crash. Check if ImplSVData exists first since Application::IsShutDown()
+	// uses it.
+	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 	{
 		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_SCREENPARAMSCHANGED, NULL, NULL);
 		JavaSalEventQueue::postCachedEvent( pEvent );
@@ -604,7 +609,9 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 					NSMenu *pAppMenu = [pItem submenu];
 					if ( pAppMenu )
 					{
-						if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+						// Check if ImplSVData exists first since
+						// Application::IsShutDown() uses it
+						if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 						{
 							IMutex& rSolarMutex = Application::GetSolarMutex();
 							rSolarMutex.acquire();
