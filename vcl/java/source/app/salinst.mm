@@ -279,8 +279,9 @@ sal_Bool VCLInstance_updateNativeMenus()
 	sal_Bool bRet = sal_False;
 
 	// If no application mutex exists yet, queue event as we are likely to
-	// crash
-	if ( Application::IsShutDown() || !ImplGetSVData() || !ImplGetSVData()->mpDefInst )
+	// crash. Check if ImplSVData exists first since Application::IsShutDown()
+	// uses it.
+	if ( !ImplGetSVData() || !ImplGetSVData()->mpDefInst || Application::IsShutDown() )
 		return bRet;
 
 	// Check if there is a native modal window as we will deadlock when a
@@ -393,7 +394,8 @@ extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool Application_acquireSolarMutex()
 {
 	sal_Bool bRet = sal_False;
 
-	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+	// Check if ImplSVData exists first since Application::IsShutDown() uses it
+	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 	{
 		Application::GetSolarMutex().acquire();
 		bRet = sal_True;
@@ -408,7 +410,8 @@ extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool Application_acquireSolarMutex()
 // module
 extern "C" SAL_DLLPUBLIC_EXPORT void Application_releaseSolarMutex()
 {
-	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+	// Check if ImplSVData exists first since Application::IsShutDown() uses it
+	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 		Application::GetSolarMutex().release();
 }
 
@@ -418,7 +421,8 @@ extern "C" SAL_DLLPUBLIC_EXPORT void Application_releaseSolarMutex()
 // module
 extern "C" SAL_DLLPUBLIC_EXPORT void Application_acquireAllSolarMutex( sal_uLong nCount )
 {
-	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+	// Check if ImplSVData exists first since Application::IsShutDown() uses it
+	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 		Application::AcquireSolarMutex( nCount );
 }
 
@@ -430,7 +434,8 @@ extern "C" SAL_DLLPUBLIC_EXPORT sal_uLong Application_releaseAllSolarMutex()
 {
 	sal_uLong nRet = 0;
 
-	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+	// Check if ImplSVData exists first since Application::IsShutDown() uses it
+	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 		nRet = Application::ReleaseSolarMutex();
 
 	return nRet;
