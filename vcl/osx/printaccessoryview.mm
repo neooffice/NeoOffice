@@ -1244,7 +1244,7 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
             }
             else
             {
-                pVal = pController->getValue( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "PrintContent" ) ) );
+                pVal = pController->getValue( "PrintContent" );
                 if ( pVal )
                     pVal->Value >>= aSelectionChecked;
             }
