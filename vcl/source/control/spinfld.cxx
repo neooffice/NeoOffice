@@ -152,7 +152,7 @@ bool ImplDrawNativeSpinfield( vcl::Window *pWin, const SpinbuttonValue& rSpinbut
             nState |= CTRL_STATE_ENABLED;
         if( bInDropDown )
             nState |= CTRL_STATE_PRESSED;
-        bNativeOK = pBorder->DrawNativeControl( CTRL_COMBOBOX, PART_ENTIRE_CONTROL, aRgn, nState, aControlValue, rtl::OUString() );
+        bNativeOK = pBorder->DrawNativeControl( CTRL_COMBOBOX, PART_ENTIRE_CONTROL, aRgn, nState, aControlValue, OUString() );
     }
 #endif	// USE_JAVA
     return bNativeOK;

@@ -43,7 +43,7 @@
 #include "DTransClipboard.hxx"
 
 static ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface > aSystemClipboard;
-static ::boost::unordered_map< ::rtl::OUString, ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >, ::rtl::OUStringHash > aClipboardInstancesMap;
+static ::boost::unordered_map< OUString, ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >, OUStringHash > aClipboardInstancesMap;
 static ::osl::Mutex aClipboardInstancesMutex;
 
 using namespace com::sun::star;
