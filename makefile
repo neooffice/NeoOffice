@@ -200,6 +200,7 @@ PRODUCT_MODULES = \
 	fpicker \
 	framework \
 	i18npool \
+	i18nutil \
 	lingucomponent \
 	linguistic \
 	oox \
