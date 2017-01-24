@@ -449,7 +449,9 @@ build.package_shared:
 	rm -Rf "$(INSTALL_HOME)/package/Contents/share/uno_packages"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/user"
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Resources/extensions"
-	mkdir -p "$(INSTALL_HOME)/package/Contents/Resources/uno_packages"
+# Eliminate sandbox deny file-write-create messages by recreating the cache
+# subdirectory in uno_packages
+	mkdir -p "$(INSTALL_HOME)/package/Contents/Resources/uno_packages/cache"
 	chmod -Rf u+w,a+r "$(INSTALL_HOME)/package"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program" ; mv -f "MacOS" "program" ; mkdir -p "MacOS"
 ifdef PRODUCT_BUILD3
