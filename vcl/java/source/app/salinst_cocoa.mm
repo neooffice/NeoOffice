@@ -622,7 +622,9 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 {
 	if ( mpOpenPanel && !mbCancelled && !mbFinished && mpURL )
 	{
-		if ( pURL )
+		// Fix exception on OS X 10.10 by ensuring the parameter is really an
+		// NSURL instance
+		if ( pURL && [pURL isKindOfClass:[NSURL class]] && [pURL isFileURL] )
 		{
 			pURL = [pURL URLByStandardizingPath];
 			if ( pURL )
