@@ -1208,6 +1208,15 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 			NSString *pDisposition = [pInfo jobDisposition];
 			if ( pDisposition && [pDisposition isEqualToString:NSPrintCancelJob] )
 				mbAborted = YES;
+
+			NSMutableDictionary *pDictionary = [mpInfo dictionary];
+			if ( pDictionary )
+			{
+				NSURL *pURL = [pDictionary objectForKey:NSPrintJobSavingURL];
+CFShow( [pURL absoluteURL] );
+				if ( pURL )
+					Application_cacheSecurityScopedURL( pURL );
+			}
 		}
 
 		VCLPrintView *pPrintView = (VCLPrintView *)[pPrintOperation view];
@@ -1280,32 +1289,9 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		NSMutableDictionary *pDictionary = [mpInfo dictionary];
 		if ( pDictionary )
 		{
-			NSURL *pURL = [pDictionary objectForKey:NSPrintJobSavingURL];
-			if ( pURL )
-			{
-				Application_cacheSecurityScopedURL( pURL );
-
-				// Cache save URL from first print operation
-				if ( mnPrintJobCounter == 1 )
-				{
-					NSString *pJobName = [pURL lastPathComponent];
-					if ( pJobName && [pJobName length] )
-					{
-						pJobName = [pJobName stringByDeletingPathExtension];
-						if ( pJobName && [pJobName length] )
-						{
-							if ( mpJobName )
-								[mpJobName release];
-							mpJobName = pJobName;
-							[mpJobName retain];
-						}
-					}
-				}
-
-				// Remove save URL so that the print job will display a save
-				// dialog if the user chose to save to PDF in the print dialog
-				[pDictionary removeObjectForKey:NSPrintJobSavingURL];
-			}
+			// Remove save URL so that the print job will display a save
+			// dialog if the user chose to save to PDF in the print dialog
+			[pDictionary removeObjectForKey:NSPrintJobSavingURL];
 		}
 	}
 	@catch ( NSException *pExc )
