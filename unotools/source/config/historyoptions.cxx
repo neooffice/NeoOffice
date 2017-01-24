@@ -45,17 +45,8 @@
 #include <comphelper/processfactory.hxx>
 
 #if defined USE_JAVA && defined MACOSX
-
-#include <dlfcn.h>
-
-typedef void* id;
-
-typedef id Application_acquireSecurityScopedURLFromOUString_Type( const OUString *pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const OUString *pDialogTitle );
-typedef void Application_releaseSecurityScopedURL_Type( id pSecurityScopedURLs );
-
-static Application_acquireSecurityScopedURLFromOUString_Type *pApplication_acquireSecurityScopedURLFromOUString = NULL;
-static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
-
+#include <sys/stat.h>
+#include <osl/thread.h>
 #endif	// USE_JAVA && MACOSX
 
 using namespace ::std;
@@ -287,38 +278,25 @@ void SvtHistoryOptions_Impl::Clear( EHistoryType eHistory )
 static bool lcl_fileOpenable(const OUString &rURL)
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !pApplication_acquireSecurityScopedURLFromOUString )
-        pApplication_acquireSecurityScopedURLFromOUString = (Application_acquireSecurityScopedURLFromOUString_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromOUString" );
-    if ( !pApplication_releaseSecurityScopedURL )
-        pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
-
-    // Fix empty File > Recent Documents menu by obtaining write permissions
-    // for the file
-    id pSecurityScopedURL = NULL;
-    if ( pApplication_acquireSecurityScopedURLFromOUString && pApplication_releaseSecurityScopedURL )
-        pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromOUString( &rURL, sal_True, NULL );
+    // Eliminate sandbox deny file-read-data messages by checking if the
+    // file exists using the stat() function. Only do this if the
+    // stat() function indicates that the file exists. Otherwise, use the
+    // original LibO code so that any file aliases in the path can be
+    // resolved.
+    OUString aSystemPath;
+    struct stat aSystemPathStat;
+    if ( osl::FileBase::getSystemPathFromFileURL( rURL, aSystemPath ) == osl::FileBase::E_None && !stat( OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ).getStr(), &aSystemPathStat ) && S_ISREG( aSystemPathStat.st_mode ) )
+        return true;
 #endif	// USE_JAVA && MACOSX
 
     osl::File aRecentFile(rURL);
     if(!aRecentFile.open(osl_File_OpenFlag_Read))
     {
         aRecentFile.close();
-#if defined USE_JAVA && defined MACOSX
-        if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
-            pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
-#endif	// USE_JAVA && MACOSX
         return true;
     }
     else
-#if defined USE_JAVA && defined MACOSX
-    {
-        if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
-            pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
-#endif	// USE_JAVA && MACOSX
         return false;
-#if defined USE_JAVA && defined MACOSX
-    }
-#endif	// USE_JAVA && MACOSX
 }
 
 Sequence< Sequence<PropertyValue> > SvtHistoryOptions_Impl::GetList(EHistoryType eHistory)
