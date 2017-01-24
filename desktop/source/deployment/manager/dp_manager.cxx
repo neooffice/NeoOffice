@@ -69,6 +69,11 @@
 #include "dp_commandenvironments.hxx"
 #include "dp_properties.hxx"
 
+#if defined USE_JAVA && defined MACOSX
+#include <sys/stat.h>
+#include <osl/thread.h>
+#endif	// USE_JAVA && MACOSX
+
 using namespace ::dp_misc;
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -304,6 +309,20 @@ static bool isMacroURLReadOnly( const OUString &rMacro )
         return false; // it will be writeable
     if ( aErr != ::osl::FileBase::E_EXIST )
         return true; // some serious problem creating it
+#if defined USE_JAVA && defined MACOSX
+    // Eliminate sandbox deny file-write-create messages by checking if the
+    // directory is writable before trying to create a file in that
+    // directory. Only do this if the stat() function indicates that the
+    // directory exists. Otherwise, use the original OOo code so that any
+    // folder aliases in the path can be resolved.
+    OUString aSystemPath;
+    struct stat aSystemPathStat;
+    if ( osl::FileBase::getSystemPathFromFileURL( aDirURL, aSystemPath ) == osl::FileBase::E_None && !stat( OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ).getStr(), &aSystemPathStat ) && S_ISDIR( aSystemPathStat.st_mode ) )
+    {
+        if ( access( OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ).getStr(), W_OK ) )
+            return true;
+    }
+#endif	// USE_JAVA && MACOSX
 
     bool bError;
     sal_uInt64 nWritten = 0;
