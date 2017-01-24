@@ -67,11 +67,7 @@
 #include "bc.hxx"
 
 #if defined USE_JAVA && defined MACOSX
-
-#include <osl/file.hxx>
 #include <osl/thread.h>
-#include <sys/stat.h>
-
 #endif	// USE_JAVA && MACOSX
 
 using namespace fileaccess;
