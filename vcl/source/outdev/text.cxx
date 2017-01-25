@@ -1595,7 +1595,13 @@ void OutputDevice::ImplDrawText( OutputDevice& rTargetDevice, const Rectangle& r
         {
             // draw disabled text always without shadow
             // as it fits better with native look
+#ifdef USE_JAVA
+            // Use deactive text color as disable color is the same as
+            // background color
+            rTargetDevice.SetTextColor( rTargetDevice.GetSettings().GetStyleSettings().GetDeactiveTextColor() );
+#else	// USE_JAVA
             rTargetDevice.SetTextColor( rTargetDevice.GetSettings().GetStyleSettings().GetDisableColor() );
+#endif	// USE_JAVA
         }
     }
 
@@ -2273,7 +2279,13 @@ void OutputDevice::DrawCtrlText( const Point& rPos, const OUString& rStr,
         else if( bHighContrastWhite )
             SetTextColor( COL_LIGHTGREEN );
         else
+#ifdef USE_JAVA
+            // Use deactive text color as disable color is the same as
+            // background color
+            SetTextColor( GetSettings().GetStyleSettings().GetDeactiveTextColor() );
+#else	// USE_JAVA
             SetTextColor( GetSettings().GetStyleSettings().GetDisableColor() );
+#endif	// USE_JAVA
 
         DrawText( rPos, aStr, nIndex, nLen, pVector, pDisplayText );
         if ( !(GetSettings().GetStyleSettings().GetOptions() & STYLE_OPTION_NOMNEMONICS) && !pVector )
