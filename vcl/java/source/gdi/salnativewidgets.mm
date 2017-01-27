@@ -64,7 +64,7 @@
 
 #define COMBOBOX_BUTTON_WIDTH			19
 #define COMBOBOX_HEIGHT					28
-#define COMBOBOX_HEIGHT_SLOP			-0.5f
+#define COMBOBOX_HEIGHT_SLOP			1
 #define CONTROL_TAB_PANE_LEFT_OFFSET	6
 #define CONTROL_TAB_PANE_TOP_OFFSET		28
 #define CONTROL_TAB_PANE_RIGHT_OFFSET	6
@@ -4001,9 +4001,11 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					{
 						case PART_ENTIRE_CONTROL:
 							{
-								// Fix clipping of edges by returning the
-								// passed in bounds
-								rNativeBoundingRegion = comboBoxRect;
+								// Fix vertical position of font size combobox
+								// in toolbar by returning the preferred size
+								Point topLeft( (long)preferredRect.origin.x, (long)preferredRect.origin.y );
+								Size boundsSize( (long)preferredRect.size.width, (long)preferredRect.size.height );
+								rNativeBoundingRegion = Rectangle( topLeft, boundsSize );
 								rNativeContentRegion = rNativeBoundingRegion;
 								bReturn = true;
 							}
