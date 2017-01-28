@@ -69,8 +69,10 @@
 #define CONTROL_TAB_PANE_TOP_OFFSET		28
 #define CONTROL_TAB_PANE_RIGHT_OFFSET	6
 #define CONTROL_TAB_PANE_BOTTOM_OFFSET	9
-// Fix bug 3378 by reducing the editbox height for low screen resolutions
-#define EDITBOX_HEIGHT					( 25 * Application::GetSettings().GetStyleSettings().GetToolFont().GetHeight() / 10 )
+// Fix bug 3378 by reducing the editbox height for low screen resolutions.
+// Increase adjustment factor slightly to increase height in text fields in the
+// Preference dialog's User Data panel.
+#define EDITBOX_HEIGHT					( Application::GetSettings().GetStyleSettings().GetToolFont().GetHeight() * 3 )
 #define EDITFRAMEPADDING_WIDTH			1
 #define FOCUSRING_WIDTH					3
 #define FRAME_TRIMWIDTH					1
