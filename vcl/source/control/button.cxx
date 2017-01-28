@@ -1014,6 +1014,11 @@ void PushButton::ImplDrawPushButtonContent( OutputDevice* pDev, sal_uLong nDrawF
             }
             ImplSetSeparatorX( nSeparatorX );
 
+#ifdef USE_JAVA
+            // Fix down arrow over native combobox arrow after tabbing out of
+            // the Apply Style combobox in Writer's Formatting toolbar
+            if ( !bNativeOK || ( aCtrlType != CTRL_COMBOBOX && aCtrlType != CTRL_LISTBOX ) )
+#endif	// USE_JAVA
             aDecoView.DrawSymbol( aSymbolRect, SymbolType::SPIN_DOWN, aColor, nStyle );
         }
 
