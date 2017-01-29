@@ -992,11 +992,6 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
     // we set the font attributes always before drawing to be re-entrant (DrawNativeControl may trigger additional paints)
     vcl::Font aFont( GetFont() );
     aFont.SetTransparent( true );
-#ifdef USE_JAVA
-    // tab highlighting is sufficient for indicating active tab, leave text
-    // alone
-    aFont.SetWeight( WEIGHT_LIGHT );
-#endif	// USE_JAVA
     SetFont( aFont );
 
     Size aTabSize = aRect.GetSize();
