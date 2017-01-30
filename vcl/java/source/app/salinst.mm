@@ -65,6 +65,7 @@
 #include "salimestatus.hxx"
 #include "salptype.hxx"
 #include "saltimer.hxx"
+#include "svids.hrc"
 #include "java/salbmp.h"
 #include "java/saldata.hxx"
 #include "java/salframe.h"
@@ -77,7 +78,6 @@
 #include "java/saltimer.h"
 #include "java/salvd.h"
 
-#include "salinst.hrc"
 #include "salinst_cocoa.h"
 #include "../java/VCLEventQueue_cocoa.h"
 
@@ -996,7 +996,7 @@ OUString JavaSalInstance::GetDefaultPrinter()
 	{
 		ResMgr *pResMgr = ImplGetResMgr();
 		if ( pResMgr )
-			pSalData->maDefaultPrinter = OUString( ResId( SV_PRINT_DEFAULT_PRINTER_TXT, *pResMgr ) );
+			pSalData->maDefaultPrinter = OUString( ResId( SV_PRINT_DEFPRT_TXT, *pResMgr ) );
 	}
 
 	if ( !pSalData->maDefaultPrinter.getLength() )
