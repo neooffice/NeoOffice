@@ -117,7 +117,7 @@ PRODUCT_VERSION2=$(PRODUCT_VERSION) $(PRODUCT_VERSION_EXT2)
 PRODUCT_VERSION3=$(PRODUCT_VERSION) $(PRODUCT_VERSION_EXT3)
 PRODUCT_VERSION_EXT=Beta
 PRODUCT_VERSION_EXT2=Viewer Beta
-PRODUCT_VERSION_EXT3=Classic Edition Beta
+PRODUCT_VERSION_EXT3=Professional Edition Beta
 PRODUCT_DIR_VERSION=$(subst $(SPACE),_,$(PRODUCT_VERSION))
 PRODUCT_SHORT_VERSION=$(subst $(SPACE),,$(subst $(PRODUCT_VERSION_EXT),,$(PRODUCT_VERSION)))
 PREVIOUS_PRODUCT_VERSION_BASE=$(PRODUCT_VERSION_BASE)
@@ -176,7 +176,7 @@ NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
 NEO_TAG:=NeoOffice-2017_Beta
 NEO_TAG2:=NeoOffice-2017_Viewer_Beta
-NEO_TAG3:=NeoOffice-2017_Classic_Edition_Beta
+NEO_TAG3:=NeoOffice-2017_Professional_Edition_Beta
 PRODUCT_MODULES = \
 	unotest \
 	sal \
@@ -524,7 +524,7 @@ endif
 ifeq ("$(PRODUCT_NAME)","NeoOffice")
 #	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/about.bmp" "program/about.png" ; cp "tmp/NeoOffice Aqua Elements 3/Contents/MacOS/about.bmp" "program/about.bmp"
 ifdef PRODUCT_BUILD3
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "Resources/intro.png" ; cp "$(PWD)/etc/package/intro_classic.png" "Resources/intro.png"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "Resources/intro.png" ; cp "$(PWD)/etc/package/intro_professional.png" "Resources/intro.png"
 else ifdef PRODUCT_BUILD2
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "Resources/intro.png" ; cp "$(PWD)/etc/package/intro_free.png" "Resources/intro.png"
 else
