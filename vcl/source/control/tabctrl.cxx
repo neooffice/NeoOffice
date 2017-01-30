@@ -250,7 +250,7 @@ Size TabControl::ImplGetItemSize( ImplTabItem* pItem, long nMaxWidth )
 
 #ifdef USE_JAVA
     // Add a little extra width for the first and last tab items
-    if ( pItem == &mpTabCtrlData->maItemList.front() || pItem == &mpTabCtrlData->maItemList.back() )
+    if ( !mpTabCtrlData->maItemList.empty() && mpTabCtrlData->mpListBox == NULL && ( pItem == &mpTabCtrlData->maItemList.front() || pItem == &mpTabCtrlData->maItemList.back() ) )
     	aSize.Width() += TAB_OFFSET;
 
     // [ed] 10/17/06 Call through to the NWF to get recommended tab item sizes
@@ -1013,6 +1013,9 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
         nTextWidth -= TAB_OFFSET * 2;
     if ( bLastInGroup )
         nTextWidth += TAB_OFFSET;
+
+    // Vertically center the text by moving the text up a little bit
+    nTextHeight++;
 #endif	// USE_JAVA
     if( !! pItem->maTabImage )
     {
