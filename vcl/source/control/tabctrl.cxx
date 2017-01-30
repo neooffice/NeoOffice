@@ -78,7 +78,11 @@ struct ImplTabCtrlData
 };
 
 #define TAB_OFFSET          3
+#ifdef USE_JAVA
+#define TAB_TABOFFSET_X     9
+#else	// USE_JAVA
 #define TAB_TABOFFSET_X     3
+#endif	// USE_JAVA
 #define TAB_TABOFFSET_Y     3
 #define TAB_EXTRASPACE_X    6
 #define TAB_BORDER_LEFT     1
@@ -245,6 +249,10 @@ Size TabControl::ImplGetItemSize( ImplTabItem* pItem, long nMaxWidth )
     aSize.Height() += TAB_TABOFFSET_Y*2;
 
 #ifdef USE_JAVA
+    // Add a little extra width for the first and last tab items
+    if ( pItem == &mpTabCtrlData->maItemList.front() || pItem == &mpTabCtrlData->maItemList.back() )
+    	aSize.Width() += TAB_OFFSET;
+
     // [ed] 10/17/06 Call through to the NWF to get recommended tab item sizes
     TabControl * aNonConstTabControl = (TabControl *)this;
     if ( aNonConstTabControl->IsNativeControlSupported( CTRL_TAB_ITEM, PART_ENTIRE_CONTROL ) )
@@ -1002,9 +1010,9 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
     // Prevent first tab item's text from being shifted too far left and last
     // tab item's text from being shifted too far right
     if ( bFirstInGroup )
-        nTextWidth -= 4;
+        nTextWidth -= TAB_OFFSET * 2;
     if ( bLastInGroup )
-        nTextWidth += 2;
+        nTextWidth += TAB_OFFSET;
 #endif	// USE_JAVA
     if( !! pItem->maTabImage )
     {
