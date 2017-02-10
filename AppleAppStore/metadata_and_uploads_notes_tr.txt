@@ -7,7 +7,7 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-NeoOffice is an office suite for Mac that is based on the OpenOffice office suite. With NeoOffice, you can view, edit, and save OpenOffice and LibreOffice documents.
+NeoOffice is an office suite for Mac that is based on the OpenOffice office suite. With NeoOffice, you can view, edit, and save OpenOffice documents, LibreOffice documents, and simple Microsoft Word, Excel, and PowerPoint documents.
 
 Two engineers created NeoOffice in 2003 when they made OpenOffice run natively on OS X for the first time. Since then, the NeoOffice engineers have continually added improvements to NeoOffice that you will not find in OpenOffice or LibreOffice such as:
 
