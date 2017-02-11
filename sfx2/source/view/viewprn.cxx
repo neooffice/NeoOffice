@@ -863,10 +863,13 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 			GetObjectShell()->Broadcast( SfxPrintingHint( -1, pPrintDlg, pPrinter ) );
 #if defined USE_JAVA && defined MACOSX
 			ErrCode nError;
+			BOOL bOldInDoPrint = pImp->bInDoPrint;
+			pImp->bInDoPrint = TRUE;
 			if ( pPrintDlg->IsRangeChecked( PRINTDIALOG_RANGE ) )
 				nError = DoPrint( pPrinter, pPrintDlg, bSilent, bIsAPI );
 			else
 				nError = DoPrint( pPrinter, NULL, FALSE, bIsAPI );
+			pImp->bInDoPrint = bOldInDoPrint;
 #else	// USE_JAVA && MACOSX
             ErrCode nError = DoPrint( pPrinter, pPrintDlg, bSilent, bIsAPI );
 #endif	// USE_JAVA && MACOSX
