@@ -1496,7 +1496,16 @@ BOOL Printer::StartJob( const XubString& rJobName )
 #endif	// USE_JAVA && MACOSX
 
 		if ( !mpPrinter )
+#if defined USE_JAVA && defined MACOSX
+        {
+            // Attempt to fix crash reported in Mac App Store by setting an
+            // error code if the printer pointer is NULL
+            mnError = PRINTER_GENERALERROR;
+            return FALSE;
+        }
+#else	// USE_JAVA && MACOSX
 			return FALSE;
+#endif	// USE_JAVA && MACOSX
 
 		XubString* pPrintFile;
 		if ( mbPrintFile )
@@ -1518,16 +1527,6 @@ BOOL Printer::StartJob( const XubString& rJobName )
 
         if( ! ImplGetSVData()->maGDIData.mbPrinterPullModel )
         {
-#if defined USE_JAVA && defined MACOSX
-            // Attempt to fix crash reported in Mac App Store by detecting if
-            // the printer has been destroyed unexpectedly
-            if ( !mpPrinter )
-            {
-                mnError = PRINTER_GENERALERROR;
-                return FALSE;
-            }
-#endif	// USE_JAVA && MACOSX
-
             // in the pull model the job can only be started when
             // we have collected all pages to be printed
             if ( !mpPrinter->StartJob( pPrintFile, rJobName, Application::GetDisplayName(),
