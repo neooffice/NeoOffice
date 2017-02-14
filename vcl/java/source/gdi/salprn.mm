@@ -1213,7 +1213,6 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 			if ( pDictionary )
 			{
 				NSURL *pURL = [pDictionary objectForKey:NSPrintJobSavingURL];
-CFShow( [pURL absoluteURL] );
 				if ( pURL )
 					Application_cacheSecurityScopedURL( pURL );
 			}
