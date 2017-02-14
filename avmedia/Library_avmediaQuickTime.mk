@@ -50,6 +50,7 @@ $(eval $(call gb_Library_add_objcxxobjects,avmediaQuickTime,\
 	avmedia/source/quicktime/quicktimeframegrabber \
 	avmedia/source/quicktime/quicktimemanager \
 	avmedia/source/quicktime/quicktimeplayer \
+	avmedia/source/quicktime/quicktimeuno \
 	avmedia/source/quicktime/quicktimewindow \
 ))
 
