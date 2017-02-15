@@ -836,7 +836,7 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
                     aMap.SetOrigin( Point( -aOutPos.X(), -aOutPos.Y() ) );
 #ifdef USE_JAVA
                     if ( (double)aScaleX > 1.0f )
-                    aMap.SetScaleX( aScaleX );
+                        aMap.SetScaleX( aScaleX );
                     if ( (double)aScaleY > 1.0f )
                         aMap.SetScaleY( aScaleY );
 #endif	// USE_JAVA
@@ -925,11 +925,11 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
                             aGDIScaleX *= aGDIMap.GetScaleX(); aGDIMap.SetScaleX( aGDIScaleX );
                             aGDIScaleY *= aGDIMap.GetScaleY(); aGDIMap.SetScaleY( aGDIScaleY );
         
-                        const Size& rOldOffset( GetPixelOffset() );
-                        const Size aEmptySize;
-                        SetPixelOffset( aEmptySize );
+                            const Size& rOldOffset( GetPixelOffset() );
+                            const Size aEmptySize;
+                            SetPixelOffset( aEmptySize );
                             aGDIMap.SetOrigin( PixelToLogic( LogicToPixel( rPos ), aGDIMap ) );
-                        SetPixelOffset( rOldOffset );
+                            SetPixelOffset( rOldOffset );
 
                             Push();
                             SetMapMode( aGDIMap );
