@@ -434,9 +434,6 @@ void OutputDevice::DrawLinearGradient( const Rectangle& rRect,
                 aPoly[2] = aMirrorRect.BottomRight();
                 aPoly[3] = aMirrorRect.BottomLeft();
             }
-            aPoly.Rotate( aCenter, nAngle );
-
-            ImplDrawPolygon( aPoly, pClipPolyPoly );
         }
         else
         {
