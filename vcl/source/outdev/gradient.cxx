@@ -159,6 +159,10 @@ void OutputDevice::ClipAndDrawGradientMetafile ( const Gradient &rGradient, cons
     const bool  bOldOutput = IsOutputEnabled();
 
     EnableOutput( false );
+#if defined USE_JAVA && defined MACOSX
+    // Avoid expensive XORing to draw transparent objects
+    DrawGradient( aBoundRect, rGradient );
+#else	// USE_JAVA && MACOSX
     Push( PushFlags::RASTEROP );
     SetRasterOp( ROP_XOR );
     DrawGradient( aBoundRect, rGradient );
@@ -168,6 +172,7 @@ void OutputDevice::ClipAndDrawGradientMetafile ( const Gradient &rGradient, cons
     SetRasterOp( ROP_XOR );
     DrawGradient( aBoundRect, rGradient );
     Pop();
+#endif	// USE_JAVA && MACOSX
     EnableOutput( bOldOutput );
 }
 
@@ -195,10 +200,18 @@ void OutputDevice::DrawGradientToMetafile ( const tools::PolyPolygon& rPolyPoly,
         else
         {
             mpMetaFile->AddAction( new MetaCommentAction( "XGRAD_SEQ_BEGIN" ) );
+#if defined USE_JAVA && defined MACOSX
+            // Avoid expensive XORing to draw transparent objects
+            mpMetaFile->AddAction( new MetaPushAction( PushFlags::CLIPREGION ) );
+            mpMetaFile->AddAction( new MetaClipRegionAction( vcl::Region( rPolyPoly ), true ) );
+#endif	// USE_JAVA && MACOSX
             mpMetaFile->AddAction( new MetaGradientExAction( rPolyPoly, rGradient ) );
 
             ClipAndDrawGradientMetafile ( rGradient, rPolyPoly );
 
+#if defined USE_JAVA && defined MACOSX
+            mpMetaFile->AddAction( new MetaPopAction() );
+#endif	// USE_JAVA && MACOSX
             mpMetaFile->AddAction( new MetaCommentAction( "XGRAD_SEQ_END" ) );
         }
 
