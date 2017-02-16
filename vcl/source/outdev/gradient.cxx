@@ -201,16 +201,24 @@ void OutputDevice::DrawGradientToMetafile ( const tools::PolyPolygon& rPolyPoly,
         {
             mpMetaFile->AddAction( new MetaCommentAction( "XGRAD_SEQ_BEGIN" ) );
 #if defined USE_JAVA && defined MACOSX
-            // Avoid expensive XORing to draw transparent objects
+            // Fix stray lines drawn at top of transparent gradients that
+            // occurs when running slideshows on a Retina display by passing
+            // the gradient's shape to OutputDevice::DrawTransparent via the
+            // clip region
+            mpMetaFile->AddAction( new MetaCommentAction( "XTRANSGRADPUSHCLIP_SEQ_BEGIN" ) );
             mpMetaFile->AddAction( new MetaPushAction( PushFlags::CLIPREGION ) );
-            mpMetaFile->AddAction( new MetaClipRegionAction( vcl::Region( rPolyPoly ), true ) );
+            mpMetaFile->AddAction( new MetaISectRegionClipRegionAction( vcl::Region( rPolyPoly ) ) );
+            mpMetaFile->AddAction( new MetaCommentAction( "XTRANSGRADPUSHCLIP_SEQ_END" ) );
 #endif	// USE_JAVA && MACOSX
             mpMetaFile->AddAction( new MetaGradientExAction( rPolyPoly, rGradient ) );
 
             ClipAndDrawGradientMetafile ( rGradient, rPolyPoly );
 
 #if defined USE_JAVA && defined MACOSX
+            // Append action to pop clip
+            mpMetaFile->AddAction( new MetaCommentAction( "XTRANSGRADPOPCLIP_SEQ_BEGIN" ) );
             mpMetaFile->AddAction( new MetaPopAction() );
+            mpMetaFile->AddAction( new MetaCommentAction( "XTRANSGRADPOPCLIP_SEQ_END" ) );
 #endif	// USE_JAVA && MACOSX
             mpMetaFile->AddAction( new MetaCommentAction( "XGRAD_SEQ_END" ) );
         }

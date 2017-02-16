@@ -876,6 +876,8 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
                     pVDev.reset();
 
 #ifdef USE_JAVA
+                    size_t nGradBeginPos = GDI_METAFILE_END;
+                    size_t nGradEndPos = GDI_METAFILE_END;
                     size_t nTransGradPushClipBeginPos = GDI_METAFILE_END;
                     size_t nTransGradPushClipEndPos = GDI_METAFILE_END;
                     size_t nTransGradPopClipBeginPos = GDI_METAFILE_END;
@@ -887,7 +889,11 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
                         MetaAction *pAct = ( (GDIMetaFile&) rMtf ).GetAction( nPos );
                         if ( pAct && pAct->GetType() == META_COMMENT_ACTION )
                         {
-                            if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPUSHCLIP_SEQ_BEGIN" ) )
+                            if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XGRAD_SEQ_BEGIN" ) )
+                                nGradBeginPos = nPos;
+                            else if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XGRAD_SEQ_END" ) )
+                                nGradEndPos = nPos;
+                            else if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPUSHCLIP_SEQ_BEGIN" ) )
                                 nTransGradPushClipBeginPos = nPos;
                             else if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPUSHCLIP_SEQ_END" ) )
                                 nTransGradPushClipEndPos = nPos;
@@ -900,11 +906,11 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 
                     // Only use metafile's clip if the clip commands are at the
                     // beginning and end of the metafile
-                    if ( !nTransGradPushClipBeginPos &&
+                    if ( ( !nTransGradPushClipBeginPos || nTransGradPushClipBeginPos - 1 == nGradBeginPos ) &&
                         nTransGradPushClipBeginPos < nTransGradPushClipEndPos &&
                         nTransGradPushClipEndPos < nTransGradPopClipBeginPos &&
                         nTransGradPopClipBeginPos < nTransGradPopClipEndPos &&
-                        nTransGradPopClipEndPos == nCount - 1 )
+                        ( nTransGradPopClipEndPos == nCount - 1 || nTransGradPopClipEndPos == nGradEndPos - 1 ) )
                     {
                         // Copy code from GDIMetaFile::Play for creating map mode
                         // to use when executing metafile commands
