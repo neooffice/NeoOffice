@@ -1,0 +1,14 @@
+--- Module_avmedia.mk	2015-11-25 04:55:38.000000000 -0800
++++ Module_avmedia.mk	2017-02-16 15:44:39.000000000 -0800
+@@ -37,9 +37,11 @@
+ 
+ ifeq ($(OS),MACOSX)
+ ifneq ($(ENABLE_MACOSX_SANDBOX),TRUE)
++ifneq ($(shell if test $(MACOSX_SDK_VERSION) -lt 101200; then echo $(MACOSX_SDK_VERSION); fi),)
+ $(eval $(call gb_Module_add_targets,avmedia,\
+ 	Library_avmediaQuickTime \
+ ))
++endif	# MACOSX_SDK_VERSION < 101200
+ endif
+ endif
+ 
