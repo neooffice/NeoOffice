@@ -752,7 +752,11 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
             Fraction aScaleX( ((OutputDevice*)pVDev.get())->mnDPIX, mnDPIX );
             Fraction aScaleY( ((OutputDevice*)pVDev.get())->mnDPIY, mnDPIY );
 
-            aVirDevRect = Rectangle( Point( 0, 0 ), Size( (long)( ( (double)aScaleX * aDstRect.GetWidth() ) + 0.5 ), (long)( ( (double)aScaleY * aDstRect.GetHeight() ) + 0.5 ) ) );
+            // Fix slight clipping on right and/or bottom edge of oval linear
+            // gradients on Retina displays by adding 2 full pixels to the
+            // width and height of the the temporary buffer in addition to
+            // rounding up
+            aVirDevRect = Rectangle( Point( 0, 0 ), Size( (long)( ( (double)aScaleX * aDstRect.GetWidth() ) + 2.5 ), (long)( ( (double)aScaleY * aDstRect.GetHeight() ) + 2.5 ) ) );
 
             if( pVDev->SetOutputSizePixel( aVirDevRect.GetSize() ) )
 #else	// USE_JAVA
