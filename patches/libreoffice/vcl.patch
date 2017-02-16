@@ -12,3 +12,15 @@
  bool Application::IsInModalMode()
  {
      return (ImplGetSVData()->maAppData.mnModalMode != 0);
+--- osx/PictToBmpFlt.cxx	2015-11-25 04:55:38.000000000 -0800
++++ osx/PictToBmpFlt.cxx	2017-02-16 13:41:28.000000000 -0800
+@@ -19,7 +19,9 @@
+ 
+ #include <premac.h>
+ #include <Carbon/Carbon.h>
++#if MACOSX_SDK_VERSION < 101200
+ #include <QuickTime/QuickTime.h>
++#endif	// MACOSX_SDK_VERSION < 101200
+ #include <postmac.h>
+ 
+ #include <string.h>

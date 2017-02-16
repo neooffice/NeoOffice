@@ -34,11 +34,6 @@
 ##########################################################################
 
 # Macros that are overridable by make command line options
-ifeq ("$(shell uname -s)","Darwin")
-JDK_HOME=/System/Library/Frameworks/JavaVM.framework/Home
-else
-# JDK_HOME must be defined in custom.mk
-endif
 PRODUCT_NAME=My Untested Office Suite
 PRODUCT_DIR_NAME=$(subst $(SPACE),,$(PRODUCT_NAME))
 PRODUCT_DIR_NAME2=$(PRODUCT_DIR_NAME)
@@ -133,8 +128,8 @@ else
 PRODUCT_DIR_PATCH_VERSION:=$(PRODUCT_DIR_PATCH_VERSION)-$(PRODUCT_DIR_PATCH_VERSION_EXTRA)
 endif
 endif
-PRODUCT_MIN_OSVERSION=10.10
-PRODUCT_MIN_OSVERSION_NAME=$(PRODUCT_MIN_OSVERSION) Yosemite
+PRODUCT_MIN_OSVERSION=10.12
+PRODUCT_MIN_OSVERSION_NAME=$(PRODUCT_MIN_OSVERSION) Sierra
 PRODUCT_MAX_OSVERSION=10.12
 PRODUCT_MAX_OSVERSION_NAME=$(PRODUCT_MAX_OSVERSION) Sierra
 PRODUCT_FILETYPE=NO%F
@@ -261,6 +256,7 @@ build.libo_checkout: \
 	touch "$@"
 
 build.libo_patches: \
+	build.libo_configure.ac_patch \
 	build.libo_bin_patch \
 	build.libo_embeddedobj_patch \
 	build.libo_external_patch \
@@ -270,6 +266,16 @@ build.libo_patches: \
 	build.libo_svx_patch \
 	build.libo_sw_patch \
 	build.libo_vcl_patch
+	touch "$@"
+
+build.libo_configure.ac_patch: $(LIBO_PATCHES_HOME)/configure.ac.patch build.libo_checkout
+ifeq ("$(OS_TYPE)","macOS")
+	-( cd "$(LIBO_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(LIBO_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+else
+	-cat "$<" | unix2dos | ( cd "$(LIBO_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" )
+	cat "$<" | unix2dos | ( cd "$(LIBO_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" )
+endif
 	touch "$@"
 
 build.libo_%_patch: $(LIBO_PATCHES_HOME)/%.patch build.libo_checkout
@@ -284,12 +290,8 @@ endif
 
 build.libo_configure: build.libo_patches
 ifeq ("$(OS_TYPE)","macOS")
-	cd "$(LIBO_BUILD_HOME)" ; unset DYLD_LIBRARY_PATH ; autoconf ; ./configure --without-parallelism --with-jdk-home="$(JDK_HOME)" --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --with-macosx-version-min-required="$(PRODUCT_MIN_OSVERSION)" --without-junit --disable-cups --disable-odk --with-lang="$(LIBO_LANGUAGES)" --without-fonts --with-help --with-myspell-dicts --enable-bogus-pkg-config
+	cd "$(LIBO_BUILD_HOME)" ; unset DYLD_LIBRARY_PATH ; autoconf ; ./configure --without-parallelism --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --with-macosx-version-min-required="$(PRODUCT_MIN_OSVERSION)" --without-junit --disable-cups --disable-odk --with-lang="$(LIBO_LANGUAGES)" --without-fonts --with-help --with-myspell-dicts --enable-bogus-pkg-config
 else
-ifndef JDK_HOME
-	@echo "JDK_HOME must be defined in custom.mk" ; exit 1
-endif
-	@sh -c -e 'if [ ! -r "$(JDK_HOME)/lib/tools.jar" ] ; then echo "You must set JDK_HOME to the path of a valid Java Development Kit" ; exit 1 ; fi'
 	@echo "$@ not implemented" ; exit 1
 endif
 	touch "$@"

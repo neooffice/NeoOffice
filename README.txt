@@ -2,25 +2,21 @@ Intructions for Building NeoOffice
 ----------------------------------
 
 
-Steps for building on 10.9 Yosmite for Intel
---------------------------------------------
+Steps for building on macOS 10.12 Sierra for Intel
+--------------------------------------------------
 
-At this time, NeoOffice will only build on Mac OS X 10.10 Yosemite.
+At this time, NeoOffice will only build on macOS 10.12 Sierra.
 
 1. Make sure that you have downloaded and installed the following dependencies from http://developer.apple.com/ website:
 
-   Xcode v7.2.1
-   Command Line Tools for Xcode v7.2
+   Xcode v8.2.1
+   Command Line Tools for Xcode v8.2
 
-2. Download and install Apple's Java 1.6 Development Kit (JDK) from the following URL. Note: the build will ignore Oracle's JDKs:
+2. Download and install Oracle's Java 1.8 Development Kit (JDK) from the following URL. Note: the build will ignore Oracle's JDKs. Oracle JDKs are only used when running NeoOffice:
 
-   http://support.apple.com/kb/DL1572
+   http://www.neooffice.org/neojava/javadownload.php
 
-3. Download and install Oracle's Java 1.8 Development Kit (JDK) from the following URL. Note: the build will ignore Oracle's JDKs. Oracle JDKs are only used when running NeoOffice:
-
-   http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
-
-4. Install the following Mac Ports packages by downloading, compiling, and installing the following packages from the http://www.macports.org/ website. Note that you will need download and install the latest MacPorts Yosemite package to install the MacPorts "port" command. The "port" command is then used to do the downloading, compiling, and installation of the following packages:
+3. Install the following Mac Ports packages by downloading, compiling, and installing the following packages from the http://www.macports.org/ website. Note that you will need download and install the latest MacPorts Yosemite package to install the MacPorts "port" command. The "port" command is then used to do the downloading, compiling, and installation of the following packages:
 
    sudo /opt/local/bin/port install autoconf -x11
    sudo /opt/local/bin/port install automake -x11
@@ -30,11 +26,11 @@ At this time, NeoOffice will only build on Mac OS X 10.10 Yosemite.
 
    After running the above command, add "/opt/local/bin" to the end of your shell's PATH environment variable so that the build can all of the commands installed by /opt/local/bin/port command in the previous step.
 
-5. Installed the Perl Archive::Zip module using the following command:
+4. Installed the Perl Archive::Zip module using the following command. You may need to run this command more than once as the unit tests may fail the first time that you run it:
 
-   cpan Archive::Zip
+   sudo cpan -i Archive::Zip
 
-6. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of your workspace's "neojava" directory:
+5. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of your workspace's "neojava" directory:
 
    cd $NEO_HOME
    make
