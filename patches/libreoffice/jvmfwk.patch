@@ -1,0 +1,21 @@
+--- distributions/OpenOfficeorg/javavendors_macosx.xml	2015-11-25 04:55:38.000000000 -0800
++++ distributions/OpenOfficeorg/javavendors_macosx.xml	2017-02-18 09:05:43.000000000 -0800
+@@ -23,17 +23,8 @@
+  <updated>2013-04-09</updated>
+ 
+  <vendorInfos>
+-  <vendor name="Apple Computer, Inc.">
+-    <minVersion>1.5.0</minVersion>
+-  </vendor>
+- <vendor name="Apple Inc.">
+-  <minVersion>1.5.0</minVersion>
+- </vendor>
+  <vendor name="Oracle Corporation">
+-  <minVersion>1.7.0</minVersion>
+- </vendor>
+- <vendor name="Azul Systems, Inc.">
+-  <minVersion>1.6.0</minVersion>
++  <minVersion>1.8.0</minVersion>
+  </vendor>
+ </vendorInfos>
+ 
