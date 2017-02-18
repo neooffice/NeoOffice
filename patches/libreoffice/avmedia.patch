@@ -1,4 +1,4 @@
---- Library_avmediaQuickTime.mk.bak	2015-11-25 04:55:38.000000000 -0800
+--- Library_avmediaQuickTime.mk	2015-11-25 04:55:38.000000000 -0800
 +++ Library_avmediaQuickTime.mk	2017-02-18 08:03:25.000000000 -0800
 @@ -35,6 +35,7 @@
  	QTKit \
@@ -19,7 +19,7 @@
 +endif	# MACOSX_SDK_VERSION -lt 101200
  
  # vim: set noet sw=4 ts=4:
---- source/quicktime/quicktimecommon.hxx.bak	2015-11-25 04:55:38.000000000 -0800
+--- source/quicktime/quicktimecommon.hxx	2015-11-25 04:55:38.000000000 -0800
 +++ source/quicktime/quicktimecommon.hxx	2017-02-18 08:15:18.000000000 -0800
 @@ -23,7 +23,9 @@
  #ifdef MACOSX
@@ -31,7 +31,7 @@
  #include <postmac.h>
  #endif
  #include <osl/mutex.hxx>
---- source/quicktime/quicktimeuno.mm.bak	2015-11-25 04:55:38.000000000 -0800
+--- source/quicktime/quicktimeuno.mm	2015-11-25 04:55:38.000000000 -0800
 +++ source/quicktime/quicktimeuno.mm	2017-02-18 08:14:28.000000000 -0800
 @@ -17,7 +17,9 @@
   *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
