@@ -64,6 +64,10 @@
 #include "vendorlist.hxx"
 #include "diagnostics.h"
 
+#ifdef MACOSX
+#include "util_cocoa.hxx"
+#endif
+
 #ifdef ANDROID
 #include <osl/detail/android-bootstrap.h>
 #else
@@ -80,10 +84,6 @@
 #if defined LINUX && defined X86
 #include <sys/resource.h>
 #endif
-
-#if defined USE_JAVA && defined MACOSX
-#include "util_cocoa.hxx"
-#endif	// USE_JAVA && MACOSX
 
 using namespace osl;
 using namespace std;
@@ -575,23 +575,29 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     //Check if the Vendor (pInfo->sVendor) is supported by this plugin
     if ( ! isVendorSupported(pInfo->sVendor))
         return JFW_PLUGIN_E_WRONG_VENDOR;
+#ifdef MACOSX
 #ifdef USE_JAVA
-    rtl::Reference<VendorBase> aVendorInfo = getJREInfoByPath( pInfo->sLocation );
     try
     {
-        if ( !aVendorInfo.is() || aVendorInfo->compareVersions( pInfo->sVersion ) < 0 )
-            return JFW_PLUGIN_E_WRONG_VERSION_FORMAT;
+#endif	// USE_JAVA
+    rtl::Reference<VendorBase> aVendorInfo = getJREInfoByPath( OUString( pInfo->sLocation ) );
+    if ( !aVendorInfo.is() || aVendorInfo->compareVersions( OUString( pInfo->sVersion ) ) < 0 )
+#ifdef USE_JAVA
+        return JFW_PLUGIN_E_FAILED_VERSION;
     }
     catch ( MalformedVersionException& )
     {
         return JFW_PLUGIN_E_WRONG_VERSION_FORMAT;
     }
+#else	// USE_JAVA
+        return JFW_PLUGIN_E_VM_CREATION_FAILED;
 #endif	// USE_JAVA
+#endif
     OUString sRuntimeLib = getRuntimeLib(pInfo->arVendorData);
-#if defined USE_JAVA && defined MACOSX
+#ifdef MACOSX
     if ( !JvmfwkUtil_isLoadableJVM( sRuntimeLib ) )
         return JFW_PLUGIN_E_VM_CREATION_FAILED;
-#endif	// USE_JAVA && MACOSX
+#endif
     JFW_TRACE2("Using Java runtime library: " << sRuntimeLib);
 
 #ifndef ANDROID
@@ -616,12 +622,12 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         return JFW_PLUGIN_E_VM_CREATION_FAILED;
     }
 
-#if ( defined UNX && !defined MACOSX ) || defined USE_JAVA
+#if defined UNX && !defined MACOSX
     //Setting the JAVA_HOME is needed for awt
     OUString sPathLocation;
     osl_getSystemPathFromFileURL(pInfo->sLocation, & sPathLocation.pData);
     osl_setEnvironment(OUString("JAVA_HOME").pData, sPathLocation.pData);
-#endif	// ( UNX && !MACOSX ) || USE_JAVA
+#endif
 
     typedef jint JNICALL JNI_CreateVM_Type(JavaVM **, JNIEnv **, void *);
 #if defined USE_JAVA && defined MACOSX
@@ -810,11 +816,11 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         sarOptions[i].extraInfo = options[i].extraInfo;
     }
 
-#if defined MACOSX || defined USE_JAVA
+#ifdef MACOSX
     vm_args.version= JNI_VERSION_1_4; // issue 88987
-#else	// MACOSX || USE_JAVA
+#else
     vm_args.version= JNI_VERSION_1_2;
-#endif	// MACOSX || USE_JAVA
+#endif
     vm_args.options= sarOptions.get();
     vm_args.nOptions= options.size(); //TODO overflow
     vm_args.ignoreUnrecognized= JNI_TRUE;
