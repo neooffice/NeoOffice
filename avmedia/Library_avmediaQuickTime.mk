@@ -45,6 +45,7 @@ $(eval $(call gb_Library_use_system_darwin_frameworks,avmediaQuickTime,\
 	AppKit \
 ))
 
+ifneq ($(shell if test $(MACOSX_SDK_VERSION) -lt 101200; then echo $(MACOSX_SDK_VERSION); fi),)
 $(eval $(call gb_Library_add_objcxxobjects,avmediaQuickTime,\
 	avmedia/source/quicktime/quicktimecommon \
 	avmedia/source/quicktime/quicktimeframegrabber \
@@ -53,6 +54,11 @@ $(eval $(call gb_Library_add_objcxxobjects,avmediaQuickTime,\
 	avmedia/source/quicktime/quicktimeuno \
 	avmedia/source/quicktime/quicktimewindow \
 ))
+else	# MACOSX_SDK_VERSION -lt 101200
+$(eval $(call gb_Library_add_objcxxobjects,avmediaQuickTime,\
+	avmedia/source/quicktime/quicktimeuno \
+))
+endif	# MACOSX_SDK_VERSION -lt 101200
 
 else	# GUIBASE == java
 
@@ -61,6 +67,7 @@ $(eval $(call gb_Library_use_system_darwin_frameworks,avmediaQuickTime,\
 	QTKit \
 ))
 
+ifneq ($(shell if test $(MACOSX_SDK_VERSION) -lt 101200; then echo $(MACOSX_SDK_VERSION); fi),)
 $(eval $(call gb_Library_add_objcxxobjects,avmediaQuickTime,\
 	avmedia/source/quicktime/framegrabber \
 	avmedia/source/quicktime/manager \
@@ -68,6 +75,11 @@ $(eval $(call gb_Library_add_objcxxobjects,avmediaQuickTime,\
 	avmedia/source/quicktime/quicktimeuno \
 	avmedia/source/quicktime/window \
 ))
+else	# MACOSX_SDK_VERSION -lt 101200
+$(eval $(call gb_Library_add_objcxxobjects,avmediaQuickTime,\
+	avmedia/source/quicktime/quicktimeuno \
+))
+endif	# MACOSX_SDK_VERSION -lt 101200
 
 endif	# GUIBASE == java
 

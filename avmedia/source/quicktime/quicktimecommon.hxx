@@ -30,7 +30,9 @@
 #ifdef MACOSX
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
+#if MACOSX_SDK_VERSION < 101200
 #import <QTKit/QTKit.h>
+#endif	// MACOSX_SDK_VERSION < 101200
 #include <postmac.h>
 #endif
 #include <osl/mutex.hxx>
