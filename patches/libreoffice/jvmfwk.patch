@@ -153,7 +153,7 @@
 +                {
 +                    aItemURL += "/Contents/Home";
 +                    if (DirectoryItem::get(aItemURL, aItem) == File::E_None)
-+                        getAndAddJREInfoByPath(aItemURL, allInfos, addedInfos);
++                        getJREInfoByPath(aItemURL, vecInfos);
 +                }
 +            }
 +        }
