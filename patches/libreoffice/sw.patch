@@ -174,3 +174,16 @@
      }
  }
  
+--- qa/extras/rtfimport/rtfimport.cxx	2015-11-25 04:55:38.000000000 -0800
++++ qa/extras/rtfimport/rtfimport.cxx	2017-02-19 09:53:32.000000000 -0800
+@@ -149,8 +149,8 @@
+     uno::Reference<drawing::XShape> xShape(xIndexAccess->getByIndex(0), uno::UNO_QUERY);
+     awt::Size aActualSize(xShape->getSize());
+ 
+-    CPPUNIT_ASSERT_EQUAL(sal_Int32(aExpectedSize.Width()), aActualSize.Width);
+-    CPPUNIT_ASSERT_EQUAL(sal_Int32(aExpectedSize.Height()), aActualSize.Height);
++    CPPUNIT_ASSERT(abs(sal_Int32(aExpectedSize.Width()) - aActualSize.Width) <= 1);
++    CPPUNIT_ASSERT(abs(sal_Int32(aExpectedSize.Height()) - aActualSize.Height) <= 1);
+ }
+ 
+ DECLARE_RTFIMPORT_TEST(testFdo45543, "fdo45543.rtf")
