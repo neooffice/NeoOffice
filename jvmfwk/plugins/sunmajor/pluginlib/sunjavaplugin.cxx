@@ -622,12 +622,12 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         return JFW_PLUGIN_E_VM_CREATION_FAILED;
     }
 
-#if defined UNX && !defined MACOSX
+#if ( defined UNX && !defined MACOSX ) || defined USE_JAVA
     //Setting the JAVA_HOME is needed for awt
     OUString sPathLocation;
     osl_getSystemPathFromFileURL(pInfo->sLocation, & sPathLocation.pData);
     osl_setEnvironment(OUString("JAVA_HOME").pData, sPathLocation.pData);
-#endif
+#endif	// ( UNX && !MACOSX ) || USE_JAVA
 
     typedef jint JNICALL JNI_CreateVM_Type(JavaVM **, JNIEnv **, void *);
 #if defined USE_JAVA && defined MACOSX
