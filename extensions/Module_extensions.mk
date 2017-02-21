@@ -70,11 +70,9 @@ $(eval $(call gb_Module_add_l10n_targets,extensions,\
 	AllLangResTarget_updchk \
 ))
 
-ifneq ($(strip $(PRODUCT_BUILD_TYPE)),java)
 $(eval $(call gb_Module_add_check_targets,extensions,\
     CppunitTest_extensions_test_update \
 ))
-endif	# PRODUCT_BUILD_TYPE != java
 endif
 endif
 
