@@ -38,3 +38,5 @@ At this time, NeoOffice will only build on macOS 10.12 Sierra.
 
    cd $NEO_HOME
    make
+
+   Important note: if the build fails in the build.neo_tests make target, uncheck iCloud Drive in the System Preferences iCloud panel and reinvoke the above commands to continue the build.
