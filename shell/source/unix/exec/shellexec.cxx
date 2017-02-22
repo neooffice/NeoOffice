@@ -165,7 +165,7 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
         // Fix failure to open file URL hyperlinks by obtaining a security
         // scoped bookmark before opening the URL
         id pSecurityScopedURL = NULL;
-        if ( 0 == aURL.compareToAscii("file://", 7) )
+        if ( 0 == aURL.startsWith("file://") )
         {
             if ( !pApplication_acquireSecurityScopedURLFromOUString )
                 pApplication_acquireSecurityScopedURLFromOUString = (Application_acquireSecurityScopedURLFromOUString_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromOUString" );
