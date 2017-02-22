@@ -42,7 +42,6 @@
 #define TMPDIR "/var/tmp"
 #define UNOPKGARG "-unopkg"
 
-typedef OSErr Gestalt_Type( OSType selector, SInt32 *response );
 typedef int SofficeMain_Type( int argc, char **argv );
 typedef int UnoPkgMain_Type( int argc, char **argv );
 
@@ -55,8 +54,8 @@ static BOOL IsSupportedMacOSXVersion()
 	if ( aPref && CFGetTypeID( aPref ) == CFBooleanGetTypeID() && CFBooleanGetValue( (CFBooleanRef)aPref ) )
 		return YES;
 
-	SInt32 nMajorMinOSVersion = 0;
-	SInt32 nMinorMinOSVersion = 0;
+	NSInteger nMajorMinOSVersion = 0;
+	NSInteger nMinorMinOSVersion = 0;
 #ifdef PRODUCT_MIN_OSVERSION
 	char *pMinOSVersion = strdup( PRODUCT_MIN_OSVERSION );
 	if ( pMinOSVersion )
@@ -64,17 +63,17 @@ static BOOL IsSupportedMacOSXVersion()
 		char *pToken = strsep( &pMinOSVersion, "." );
 		if ( pToken )
 		{
-			nMajorMinOSVersion = (SInt32)strtol( pToken, NULL, 10 );
+			nMajorMinOSVersion = (NSInteger)strtol( pToken, NULL, 10 );
 			pToken = strsep( &pMinOSVersion, "." );
 			if ( pToken )
-				nMinorMinOSVersion = (SInt32)strtol( pToken, NULL, 10 );
+				nMinorMinOSVersion = (NSInteger)strtol( pToken, NULL, 10 );
 		}
 		free( pMinOSVersion );
 	}
 #endif	// PRODUCT_MIN_OSVERSION
 
-	SInt32 nMajorMaxOSVersion = 0;
-	SInt32 nMinorMaxOSVersion = 0;
+	NSInteger nMajorMaxOSVersion = 0;
+	NSInteger nMinorMaxOSVersion = 0;
 #ifdef PRODUCT_MAX_OSVERSION
 	char *pMaxOSVersion = strdup( PRODUCT_MAX_OSVERSION );
 	if ( pMaxOSVersion )
@@ -82,10 +81,10 @@ static BOOL IsSupportedMacOSXVersion()
 		char *pToken = strsep( &pMaxOSVersion, "." );
 		if ( pToken )
 		{
-			nMajorMaxOSVersion = (SInt32)strtol( pToken, NULL, 10 );
+			nMajorMaxOSVersion = (NSInteger)strtol( pToken, NULL, 10 );
 			pToken = strsep( &pMaxOSVersion, "." );
 			if ( pToken )
-				nMinorMaxOSVersion = (SInt32)strtol( pToken, NULL, 10 );
+				nMinorMaxOSVersion = (NSInteger)strtol( pToken, NULL, 10 );
 		}
 		free( pMaxOSVersion );
 	}
@@ -96,35 +95,26 @@ static BOOL IsSupportedMacOSXVersion()
 
 	BOOL bRet = NO;
 
-	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-	if ( pLib )
+	NSProcessInfo *pProcessInfo = [NSProcessInfo processInfo];
+	if ( pProcessInfo )
 	{
-		Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
-		if ( pGestalt )
+		NSOperatingSystemVersion aVersion = pProcessInfo.operatingSystemVersion;
+		if ( aVersion.majorVersion >= nMajorMinOSVersion && aVersion.majorVersion <= nMajorMaxOSVersion )
 		{
-			SInt32 majorVersion = 0;
-			pGestalt( gestaltSystemVersionMajor, &majorVersion );
-			if ( majorVersion >= nMajorMinOSVersion && majorVersion <= nMajorMaxOSVersion )
+			if ( aVersion.majorVersion > nMajorMinOSVersion && aVersion.majorVersion < nMajorMaxOSVersion )
 			{
-				if ( majorVersion > nMajorMinOSVersion && majorVersion < nMajorMaxOSVersion )
-				{
-					bRet = YES;
-				}
-				else
-				{
-					SInt32 minorVersion = 0;
- 					pGestalt( gestaltSystemVersionMinor, &minorVersion );
-					if ( nMajorMinOSVersion == nMajorMaxOSVersion )
-						bRet = ( minorVersion >= nMinorMinOSVersion && minorVersion <= nMinorMaxOSVersion );
-					else if ( majorVersion == nMajorMinOSVersion )
-						bRet = ( minorVersion >= nMinorMinOSVersion );
-					else if ( majorVersion == nMajorMaxOSVersion )
-						bRet = ( minorVersion <= nMinorMaxOSVersion );
-				}
+				bRet = YES;
+			}
+			else
+			{
+				if ( nMajorMinOSVersion == nMajorMaxOSVersion )
+					bRet = ( aVersion.minorVersion >= nMinorMinOSVersion && aVersion.minorVersion <= nMinorMaxOSVersion );
+				else if ( aVersion.majorVersion == nMajorMinOSVersion )
+					bRet = ( aVersion.minorVersion >= nMinorMinOSVersion );
+				else if ( aVersion.majorVersion == nMajorMaxOSVersion )
+					bRet = ( aVersion.minorVersion <= nMinorMaxOSVersion );
 			}
 		}
-
-		dlclose( pLib );
 	}
 
 	return bRet;
