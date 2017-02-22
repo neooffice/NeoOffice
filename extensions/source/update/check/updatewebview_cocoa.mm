@@ -369,7 +369,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			{
 				if ( pBaseURLs[ i ] )
 				{
-					NSString *pBaseURL = [pBaseURLs[ i ] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+					NSString *pBaseURL = [pBaseURLs[ i ] stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLHostAllowedCharacterSet]];
 					unsigned int len = [pBaseURL length];
 					if ( len && [pBaseURL characterAtIndex:len - 1] != (unichar)'/' )
 						pBaseURL = [pBaseURL stringByAppendingString:@"/"];
@@ -688,25 +688,25 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 							{
 								while ( [pPath length] && [pPath characterAtIndex:0] == (unichar)'/' )
 									pPath = [pPath substringFromIndex:1];
-								[pURI appendString:[pPath stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+								[pURI appendString:[pPath stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLPathAllowedCharacterSet]]];
 							}
 							NSString *pParams = [pURL parameterString];
 							if ( pParams )
 							{
 								[pURI appendString:@";"];
-								[pURI appendString:[pParams stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+								[pURI appendString:[pParams stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLQueryAllowedCharacterSet]]];
 							}
 							NSString *pQuery = [pURL query];
 							if ( pQuery )
 							{
 								[pURI appendString:@"?"];
-								[pURI appendString:[pQuery stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+								[pURI appendString:[pQuery stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLQueryAllowedCharacterSet]]];
 							}
 							NSString *pFragment = [pURL fragment];
 							if ( pFragment )
 							{
 								[pURI appendString:@"#"];
-								[pURI appendString:[pFragment stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+								[pURI appendString:[pFragment stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLFragmentAllowedCharacterSet]]];
 							}
 
 							NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -983,7 +983,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		[mutableDecodedFilename replaceOccurrencesOfString:@"+" withString:@" " options:0 range:NSMakeRange(0, [filename length])];
 		decodedFilename = mutableDecodedFilename;
 	}
-	decodedFilename = [decodedFilename stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+	decodedFilename = [decodedFilename stringByReplacingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLPathAllowedCharacterSet]];
 	if (!decodedFilename)
 		decodedFilename = filename;
 
@@ -1555,12 +1555,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 					if (pFileName && pPath && pData && [pFileName length] && [pPath length] && [pData length])
 					{
 						NSPropertyListFormat nFormat;
-						NSMutableDictionary *pDict = nil;
-						if (class_getClassMethod([NSPropertyListSerialization class], @selector(propertyListWithData:options:format:error:)))
-							pDict = [NSPropertyListSerialization propertyListWithData:pData options:NSPropertyListMutableContainersAndLeaves format:&nFormat error:nil];
-						if (!pDict && class_getClassMethod([NSPropertyListSerialization class], @selector(propertyListFromData:mutabilityOption:format:errorDescription:)))
-							pDict = [NSPropertyListSerialization propertyListFromData:pData mutabilityOption:NSPropertyListMutableContainersAndLeaves format:&nFormat errorDescription:nil];
-
+						NSMutableDictionary *pDict = [NSPropertyListSerialization propertyListWithData:pData options:NSPropertyListMutableContainersAndLeaves format:&nFormat error:nil];
 						if (pDict && [pDict isKindOfClass:[NSMutableDictionary class]])
 						{
 							NSArray *pArray = [pDict objectForKey:@"system-entities"];
@@ -2018,7 +2013,7 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 
 - (id)initWithUserAgent:(NSString *)pUserAgent
 {
-	[super initWithContentRect:NSMakeRect(0, 0, kUpdateDefaultBrowserWidth, kUpdateDefaultBrowserHeight) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
+	[super initWithContentRect:NSMakeRect(0, 0, kUpdateDefaultBrowserWidth, kUpdateDefaultBrowserHeight) styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskUtilityWindow backing:NSBackingStoreBuffered defer:YES];
 	mpuserAgent = pUserAgent;
 	if ( mpuserAgent )
 		[mpuserAgent retain];
@@ -2107,7 +2102,7 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 	// Have downloading indicator overlaying most of status label
 	mpdownloadingIndicator = [[NSProgressIndicator alloc] initWithFrame:[mpstatusLabel frame]];
 	[mpdownloadingIndicator setStyle:NSProgressIndicatorBarStyle];
-	[mpdownloadingIndicator setControlSize:NSSmallControlSize];
+	[mpdownloadingIndicator setControlSize:NSControlSizeSmall];
 	[mpdownloadingIndicator setIndeterminate:NO];
 	[mpdownloadingIndicator setMinValue:0.0];
 	[mpdownloadingIndicator setMaxValue:100.0];
