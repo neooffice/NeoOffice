@@ -1035,7 +1035,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 		}
 	}
 
-	NSUInteger nStyleMask = NSTitledWindowMask | NSClosableWindowMask;
+	NSUInteger nStyleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable;
 	if ( NSIsEmptyRect( aLastVersionBrowserDocumentFrame ) )
 	{
 		NSApplication *pApp = [NSApplication sharedApplication];
