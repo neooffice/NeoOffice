@@ -177,6 +177,7 @@ PRODUCT_MODULES = \
 	sal \
 	jvmfwk \
 	vcl \
+	apple_remote \
 	avmedia \
 	basic \
 	canvas \
@@ -208,6 +209,7 @@ PRODUCT_MODULES = \
 	sdext \
 	sfx2 \
 	shell \
+	slideshow \
 	svl \
 	svtools \
 	svx \
