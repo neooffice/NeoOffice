@@ -24,11 +24,8 @@ What's New in this Version:
 Before you buy NeoOffice, please click on the «Støtte for NeoOffice» link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would fail to change the fill color of a shape in a Writer document after changing the fill color in the toolbar
-• NeoOffice would sometimes crash when dragging a table within an Impress document
-• NeoOffice would sometimes crash when running a print job on OS X Yosemite
-• NeoOffice would sometimes crash when cancelling both dialogs that appear after selecting the File > Printer Settings menu item in a Writer document
-• When opening a document that contains linked OLE objects, NeoOffice would fail to display the "Update all links?" dialog and would automatically reload all linked OLE objects
+• NeoOffice would crash if you started printing a document and then immediately closed the document before the print job finished
+• When running NeoOffice on macOS Sierra, NeoOffice would crash when printing documents that contain EPS images
 
 
 Keywords:
