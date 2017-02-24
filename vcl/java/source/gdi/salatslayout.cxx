@@ -43,7 +43,6 @@
  *
  ************************************************************************/
 
-#include <dlfcn.h>
 #include <sys/sysctl.h>
 
 #include <basegfx/polygon/b2dpolypolygon.hxx>
@@ -64,12 +63,6 @@
 #define UNITS_PER_PIXEL 1
 #endif	// USE_SUBPIXEL_TEXT_RENDERING
 
-typedef OSErr Gestalt_Type( OSType selector, long *response );
-
-static bool UseIndicFontHack();
-
-static bool bUseIndicFontHackInitialized = false;
-static bool bUseIndicFontHack = false;
 static const OUString aAlBayanPlain( "Al Bayan Plain" );
 static const OUString aAppleSymbols( "Apple Symbols" );
 static const OUString aArialUnicodeMS( "Arial Unicode MS" );
@@ -401,25 +394,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 	{
 		Destroy();
 		return;
-	}
-
-	if ( UseIndicFontHack() )
-	{
-		for ( int i = 0; i < mpHash->mnLen; i++ )
-		{
-			sal_Unicode nChar = mpHash->mpStr[ i ];
-			if ( nChar >= 0x0900 && nChar < 0x0c80 )
-			{
-				SalData *pSalData = GetSalData();
-
-				::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >::const_iterator it = pSalData->maNativeFontMapping.find( (sal_IntPtr)mpHash->mnFontID );
-				if ( it == pSalData->maNativeFontMapping.end() || JavaPhysicalFontFace::IsBadFont( it->second ) )
-				{
-					Destroy();
-					return;
-				}
-			}
-		}
 	}
 
 	mpFont = new JavaImplFont( pFont );
@@ -953,44 +927,6 @@ void ImplATSLayoutData::Release() const
 
 	// const_cast because some compilers violate ANSI C++ spec
 	delete const_cast< ImplATSLayoutData* >( this );
-}
-
-// ============================================================================
-
-static bool UseIndicFontHack()
-{
-	if ( !bUseIndicFontHackInitialized )
-	{
-		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-		if ( pLib )
-		{
-			Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
-			if ( pGestalt )
-			{
-				// Use Indic font hack if we are running OS X 10.11 or higher
-				long res = 0;
-				pGestalt( gestaltSystemVersionMajor, &res );
-				if ( res == 10 )
-				{
-					res = 0;
-					pGestalt( gestaltSystemVersionMinor, &res );
-					if ( res >= 11 )
-					{
-						res = 0;
-						pGestalt( gestaltSystemVersionBugFix, &res );
-						if ( res <= 1 )
-							bUseIndicFontHack = true;
-					}
-				}
-			}
-
-			dlclose( pLib );
-		}
-
-		bUseIndicFontHackInitialized = true;
-	}
-
-	return bUseIndicFontHack;
 }
 
 // ============================================================================
