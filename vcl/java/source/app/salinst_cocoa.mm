@@ -940,7 +940,7 @@ void NSApplication_dispatchPendingEvents( sal_Bool bInNativePrintDrag, sal_Bool 
 			pDate = [NSDate dateWithTimeInterval:0.05f sinceDate:pDate];
 
 		NSEvent *pEvent;
-		while ( ( pEvent = [pApp nextEventMatchingMask:NSAnyEventMask untilDate:pDate inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:YES] ) != nil )
+		while ( ( pEvent = [pApp nextEventMatchingMask:NSEventMaskAny untilDate:pDate inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:YES] ) != nil )
 			[pApp sendEvent:pEvent];
 	}
 

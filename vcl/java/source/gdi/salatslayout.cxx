@@ -656,9 +656,9 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 					if ( j == nGlyphRunCount - 1 )
 					{
 						if ( bVerticalRun )
-							mpGlyphAdvances[ i ] += Float32ToLong( CTFontGetAdvancesForGlyphs( maFont, kCTFontVerticalOrientation, &aGlyphs[ j ], NULL, 1 ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
+							mpGlyphAdvances[ i ] += Float32ToLong( CTFontGetAdvancesForGlyphs( maFont, kCTFontOrientationVertical, &aGlyphs[ j ], NULL, 1 ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
 						else
-							mpGlyphAdvances[ i ] += Float32ToLong( CTFontGetAdvancesForGlyphs( maFont, kCTFontHorizontalOrientation, &aGlyphs[ j ], NULL, 1 ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
+							mpGlyphAdvances[ i ] += Float32ToLong( CTFontGetAdvancesForGlyphs( maFont, kCTFontOrientationHorizontal, &aGlyphs[ j ], NULL, 1 ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
 					}
 					else
 					{
@@ -1249,7 +1249,7 @@ void SalATSLayout::GetGlyphBounds( sal_Int32 nGlyph, JavaImplFont *pFont, Rectan
 		if ( aFont )
 		{
 			CGGlyph nGlyphID = (CGGlyph)( nGlyph & GF_IDXMASK );
-			CGRect aRect = CTFontGetBoundingRectsForGlyphs( aFont, kCTFontDefaultOrientation, &nGlyphID, NULL, 1 );
+			CGRect aRect = CTFontGetBoundingRectsForGlyphs( aFont, kCTFontOrientationDefault, &nGlyphID, NULL, 1 );
 			if ( !CGRectIsEmpty( aRect ) )
 			{
 				double fFontScaleX = pFont->getScaleX();
@@ -2356,7 +2356,7 @@ bool SalATSLayout::GetBoundRect( SalGraphics& /* rGraphics */, Rectangle& rRect 
 				for ( i = nStartGlyph; i < nCurrentGlyph; i++ )
 				{
 					CGGlyph nGlyphID = (CGGlyph)( aGlyphArray[ i ] );
-					CGRect aGlyphRect = CTFontGetBoundingRectsForGlyphs( aFont, kCTFontDefaultOrientation, &nGlyphID, NULL, 1 );
+					CGRect aGlyphRect = CTFontGetBoundingRectsForGlyphs( aFont, kCTFontOrientationDefault, &nGlyphID, NULL, 1 );
 					if ( !CGRectIsEmpty( aGlyphRect ) )
 					{
 						if ( nGlyphOrientation == GF_ROTL )
@@ -2717,7 +2717,7 @@ DeviceCoordinate SalATSLayout::GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharP
 	if ( it == pLayoutData->maNativeGlyphWidths.end() )
 	{
 		CGGlyph aGlyph = (CGGlyph)nGlyphID;
-		nRet = CTFontGetAdvancesForGlyphs( pLayoutData->maFont, kCTFontHorizontalOrientation, &aGlyph, NULL, 1 ) * UNITS_PER_PIXEL;
+		nRet = CTFontGetAdvancesForGlyphs( pLayoutData->maFont, kCTFontOrientationHorizontal, &aGlyph, NULL, 1 ) * UNITS_PER_PIXEL;
 		pLayoutData->maNativeGlyphWidths[ nGlyphID ] = nRet;
 	}
 	else
