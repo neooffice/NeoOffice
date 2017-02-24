@@ -342,7 +342,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		NSMenu *pMainMenu = [pApp mainMenu];
 		if ( pMainMenu )
 		{
-			NSEvent *pEvent = [NSEvent keyEventWithType:NSKeyDown location:NSMakePoint( 0, 0 ) modifierFlags:NSCommandKeyMask timestamp:JavaSalEventQueue::getLastNativeEventTime() windowNumber:0 context:nil characters:@"n" charactersIgnoringModifiers:@"n" isARepeat:NO keyCode:0];
+			NSEvent *pEvent = [NSEvent keyEventWithType:NSEventTypeKeyDown location:NSMakePoint( 0, 0 ) modifierFlags:NSEventModifierFlagCommand timestamp:JavaSalEventQueue::getLastNativeEventTime() windowNumber:0 context:nil characters:@"n" charactersIgnoringModifiers:@"n" isARepeat:NO keyCode:0];
 			if ( pEvent )
 				[pMainMenu performKeyEquivalent:pEvent];
 		}
