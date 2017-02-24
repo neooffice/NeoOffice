@@ -59,22 +59,20 @@ using namespace vcl;
 
 const NSString *kNeoOfficeInternalPboardType = @"NeoOfficeInternalPboardType";
 
-static sal_uInt16 nSupportedTypes = 8;
+static sal_uInt16 nSupportedTypes = 7;
 
 // List of supported native type symbol names in priority order. The first
-// item on each line is the deprecated symbol name, the second item is the most
-// current symbol name, and the third item is a pointer to a local static
-// NSString that the symbol address should be assigned to.
+// item on each line is the most current symbol name and the second item is a
+// pointer to a local static NSString that the symbol address should be
+// assigned to.
 static NSString *aSupportedPasteboardTypeSymbolNames[] = {
-	// NSPasteboard does not provide the URL type in a format that we can handle
-	@"NSURLPboardType", nil, URL_TYPE_TAG,
-	@"NSRTFPboardType", NSPasteboardTypeRTF, nil,
-	@"NSHTMLPboardType", NSPasteboardTypeHTML, HTML_TYPE_TAG,
-	@"NSStringPboardType", NSPasteboardTypeString, STRING_TYPE_TAG,
-	@"NSPDFPboardType", NSPasteboardTypePDF, PDF_TYPE_TAG,
-	nil, NSPasteboardTypePNG, nil,
-	@"NSTIFFPboardType", NSPasteboardTypeTIFF, nil,
-	@"NSPICTPboardType", nil, nil
+	NSURLPboardType, URL_TYPE_TAG,
+	NSPasteboardTypeRTF, nil,
+	NSPasteboardTypeHTML, HTML_TYPE_TAG,
+	NSPasteboardTypeString, STRING_TYPE_TAG,
+	NSPasteboardTypePDF, PDF_TYPE_TAG,
+	NSPasteboardTypePNG, nil,
+	NSPasteboardTypeTIFF, nil
 };
 
 static NSArray *pSupportedPasteboardTypes = nil;
@@ -93,7 +91,6 @@ static NSString *aSupportedPasteboardTypes[] = {
 	nil,
 	nil,
 	nil,
-	nil,
 	nil
 };
 
@@ -103,7 +100,6 @@ static bool aSupportedTextTypes[] = {
 	true,
 	true,
 	true,
-	false,
 	false,
 	false,
 	false
@@ -117,7 +113,6 @@ static OUString aSupportedMimeTypes[] = {
 	"text/plain;charset=utf-16",
 	"image/bmp",
 	"image/bmp",
-	"image/bmp",
 	"image/bmp"
 };
 
@@ -127,7 +122,6 @@ static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( OUString* )0 ),
-	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 )
@@ -782,21 +776,10 @@ static void ImplInitializeSupportedPasteboardTypes()
 			{
 				for ( sal_uInt16 i = 0; i < nSupportedTypes; i++ )
 				{
-					aSupportedPasteboardTypes[ i ] = aSupportedPasteboardTypeSymbolNames[ ( i * 3 ) + 1 ];
-					if ( !aSupportedPasteboardTypes[ i ] || ![aSupportedPasteboardTypes[ i ] length] )
-					{
-						// Try to load deprecated type
-						const NSString *pSymName = aSupportedPasteboardTypeSymbolNames[ i * 3 ];
-						if ( pSymName )
-						{
-							NSString **ppType = (NSString **)CFBundleGetDataPointerForName( aBundle, (CFStringRef)pSymName );
-							if ( ppType && *ppType )
-								aSupportedPasteboardTypes[ i ] = (NSString *)*ppType;
-						}
-					}
+					aSupportedPasteboardTypes[ i ] = aSupportedPasteboardTypeSymbolNames[ i * 2 ];
 
 					// Assign the symbol to the matching local static NSString
-					NSString *pLocalName = aSupportedPasteboardTypeSymbolNames[ ( i * 3 ) + 2 ];
+					NSString *pLocalName = aSupportedPasteboardTypeSymbolNames[ ( i * 2 ) + 1 ];
 					if ( pLocalName )
 					{
 						if ( [HTML_TYPE_TAG isEqualToString:pLocalName] )
