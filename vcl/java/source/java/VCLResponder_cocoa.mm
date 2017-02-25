@@ -55,13 +55,13 @@ static short GetCurrentKeyModifiers()
 		if ( pEvent )
 		{
 			unsigned int nModifiers = [pEvent modifierFlags];
-			if ( nModifiers & NSShiftKeyMask )
+			if ( nModifiers & NSEventModifierFlagShift )
 				nRet |= KEY_SHIFT;
-			if ( nModifiers & NSControlKeyMask )
+			if ( nModifiers & NSEventModifierFlagControl )
 				nRet |= KEY_MOD1;
-			if ( nModifiers & NSAlternateKeyMask )
+			if ( nModifiers & NSEventModifierFlagOption )
 				nRet |= KEY_MOD2;
-			if ( nModifiers & NSCommandKeyMask )
+			if ( nModifiers & NSEventModifierFlagCommand )
 				nRet |= KEY_MOD3;
 		}
 	}

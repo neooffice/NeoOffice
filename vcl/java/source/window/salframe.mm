@@ -211,7 +211,7 @@ static void HandleSystemColorsChangedRequest()
 
 	// Always use NSScrollerStyleLegacy scrollbars as we always draw scrollbars 
 	// with that style in vcl/java/source/gdi/salnativewidgets.mm
-	nVCLScrollbarSize = Float32ToLong( [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy] );
+	nVCLScrollbarSize = Float32ToLong( [NSScroller scrollerWidthForControlSize:NSControlSizeRegular scrollerStyle:NSScrollerStyleLegacy] );
 }
 
 @interface VCLSetSystemUIMode : NSObject
@@ -347,7 +347,7 @@ static BOOL bIOPMAssertionIDSet = NO;
 			if ( pApp )
 			{
 				BOOL bAppInFullScreen = ( [pApp presentationOptions] & NSApplicationPresentationFullScreen ? YES : NO );
-				BOOL bWindowInFullScreen = ( [mpWindow styleMask] & NSFullScreenWindowMask ? YES : NO );
+				BOOL bWindowInFullScreen = ( [mpWindow styleMask] & NSWindowStyleMaskFullScreen ? YES : NO );
 				if ( bAppInFullScreen != bWindowInFullScreen )
 					bToggle = YES;
 			}
@@ -909,7 +909,7 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 		if ( pKeyWindow && [pKeyWindow isVisible] && [pKeyWindow collectionBehavior] & NSWindowCollectionBehaviorFullScreenPrimary )
 		{
 			BOOL bAppInFullScreen = ( [pApp presentationOptions] & NSApplicationPresentationFullScreen ? YES : NO );
-			BOOL bWindowInFullScreen = ( [pKeyWindow styleMask] & NSFullScreenWindowMask ? YES : NO );
+			BOOL bWindowInFullScreen = ( [pKeyWindow styleMask] & NSWindowStyleMaskFullScreen ? YES : NO );
 			if ( bAppInFullScreen || bWindowInFullScreen )
 			{
 				// If there is a non-full screen window that can obtain focus,
@@ -924,7 +924,7 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 					for ( ; i < nCount; i++ )
 					{
 						NSWindow *pWindow = [pWindows objectAtIndex:i];
-						if ( pWindow && [pWindow isVisible] && ! ( [pWindow styleMask] & NSFullScreenWindowMask ) && [pWindow canBecomeKeyWindow] )
+						if ( pWindow && [pWindow isVisible] && ! ( [pWindow styleMask] & NSWindowStyleMaskFullScreen ) && [pWindow canBecomeKeyWindow] )
 							return;
 					}
 				}
@@ -1190,7 +1190,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			for ( ; i < nCount; i++ )
 			{
 				NSWindow *pWindow = [pWindows objectAtIndex:i];
-				if ( pWindow && ![pWindow parentWindow] && ! ( [pWindow styleMask] & NSUtilityWindowMask ) && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
+				if ( pWindow && ![pWindow parentWindow] && ! ( [pWindow styleMask] & NSWindowStyleMaskUtilityWindow ) && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
 				{
 					::std::map< NSWindow*, VCLWindow* >::const_iterator it = aShowOnlyMenusWindowMap.find( pWindow );
 					if ( it == aShowOnlyMenusWindowMap.end() )
@@ -1201,7 +1201,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 							{
 								pVisibleWindow = pWindow;
 							}
-							else if ( ! ( [pVisibleWindow styleMask] & NSFullScreenWindowMask ) && [pWindow styleMask] & NSFullScreenWindowMask )
+							else if ( ! ( [pVisibleWindow styleMask] & NSWindowStyleMaskFullScreen ) && [pWindow styleMask] & NSWindowStyleMaskFullScreen )
 							{
 								pVisibleWindow = pWindow;
 								break;
@@ -1352,21 +1352,21 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	mbUndecorated = NO;
 	mpWaitingView = nil;
 	mpWindow = nil;
-	mnWindowStyleMask = NSBorderlessWindowMask;
+	mnWindowStyleMask = NSWindowStyleMaskBorderless;
 
 	if ( !mbUtility && ( mbShowOnlyMenus || ! ( mnStyle & ( SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE ) ) ) )
 		mbUndecorated = YES;
 
 	if ( !mbUndecorated )
 	{
-		mnWindowStyleMask = NSTitledWindowMask | NSClosableWindowMask;
+		mnWindowStyleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable;
 		if ( mbUtility )
-			mnWindowStyleMask |= NSUtilityWindowMask;
+			mnWindowStyleMask |= NSWindowStyleMaskUtilityWindow;
 		if ( mnStyle & SAL_FRAME_STYLE_SIZEABLE )
 		{
-			mnWindowStyleMask |= NSResizableWindowMask;
+			mnWindowStyleMask |= NSWindowStyleMaskResizable;
 			if ( !mbUtility )
-				mnWindowStyleMask |= NSMiniaturizableWindowMask;
+				mnWindowStyleMask |= NSWindowStyleMaskMiniaturizable;
 		}
 	}
 
@@ -1608,7 +1608,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 #ifdef USE_NATIVE_FULL_SCREEN_MODE
 		// Check if we are in full screen mode
-		if ( [mpWindow styleMask] & NSFullScreenWindowMask && [mpWindow respondsToSelector:@selector(_frameOnExitFromFullScreen)] )
+		if ( [mpWindow styleMask] & NSWindowStyleMaskFullScreen && [mpWindow respondsToSelector:@selector(_frameOnExitFromFullScreen)] )
 		{
 			if ( [pFullScreen boolValue] )
 			{
@@ -1618,7 +1618,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			}
 			else
 			{
-				aFrame = [NSWindow frameRectForContentRect:aFrame styleMask:[mpWindow styleMask] & ~NSFullScreenWindowMask];
+				aFrame = [NSWindow frameRectForContentRect:aFrame styleMask:[mpWindow styleMask] & ~NSWindowStyleMaskFullScreen];
 			}
 		}
 #endif	// USE_NATIVE_FULL_SCREEN_MODE
@@ -1636,7 +1636,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	if ( mpWindow )
 	{
 		unsigned long nState;
-		if ( [mpWindow styleMask] & NSMiniaturizableWindowMask && [mpWindow isMiniaturized] )
+		if ( [mpWindow styleMask] & NSWindowStyleMaskMiniaturizable && [mpWindow isMiniaturized] )
 			nState = WINDOWSTATE_STATE_MINIMIZED;
 		else
 			nState = WINDOWSTATE_STATE_NORMAL;
@@ -1659,7 +1659,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 {
 	(void)pObject;
 
-	if ( mpWindow && [mpWindow styleMask] & NSTitledWindowMask && [mpWindow respondsToSelector:@selector(_setModalWindowLevel)] )
+	if ( mpWindow && [mpWindow styleMask] & NSWindowStyleMaskTitled && [mpWindow respondsToSelector:@selector(_setModalWindowLevel)] )
 	{
 		// Do not make window modal if any of its parent windows are in full
 		// screen mode as this will cause any child windows, such as drop down
@@ -1667,7 +1667,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		NSWindow *pParentWindow = mpWindow;
 		while ( pParentWindow )
 		{
-			if ( [pParentWindow styleMask] & NSFullScreenWindowMask )
+			if ( [pParentWindow styleMask] & NSWindowStyleMaskFullScreen )
 				return;
 			pParentWindow = [pParentWindow parentWindow];
 		}
@@ -1820,7 +1820,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	// the window in a mixed state. Fix the same bug when opening a form in a
 	// full screen mode database document by allowing the size to change when
 	// the window is not in the JavaSalFrame::SetWindowState() method.
-	if ( mpWindow && ( ![pInSetWindowState boolValue] || ! ( [mpWindow styleMask] & NSFullScreenWindowMask ) ) )
+	if ( mpWindow && ( ![pInSetWindowState boolValue] || ! ( [mpWindow styleMask] & NSWindowStyleMaskFullScreen ) ) )
 	{
 		// Fix bug 3012 by only returning a minimum size when the window is
 		// visible
@@ -1913,7 +1913,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	unsigned long nState = [pState unsignedLongValue];
 	if ( !mbUtility && !mbShowOnlyMenus && !mbUndecorated && !mpParent && mpWindow && ( [mpWindow isVisible] || [mpWindow isMiniaturized] ) )
 	{
-		if ( nState == WINDOWSTATE_STATE_MINIMIZED && [mpWindow styleMask] & NSMiniaturizableWindowMask )
+		if ( nState == WINDOWSTATE_STATE_MINIMIZED && [mpWindow styleMask] & NSWindowStyleMaskMiniaturizable )
 			[mpWindow miniaturize:self];
 		else if ( [mpWindow isMiniaturized] )
 			[mpWindow deminiaturize:self];
@@ -2016,7 +2016,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				// by attaching titled windows to the last key window if the
 				// last key window is in full screen mode
 				NSWindow *pParentWindow = mpParent;
-				if ( pKeyWindow && pKeyWindow != mpWindow && [mpWindow styleMask] & NSTitledWindowMask && [pKeyWindow styleMask] & NSFullScreenWindowMask )
+				if ( pKeyWindow && pKeyWindow != mpWindow && [mpWindow styleMask] & NSWindowStyleMaskTitled && [pKeyWindow styleMask] & NSWindowStyleMaskFullScreen )
 					pParentWindow = pKeyWindow;
 				[pParentWindow addChildWindow:mpWindow ordered:NSWindowAbove];
 			}
