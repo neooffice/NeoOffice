@@ -29,7 +29,9 @@
 
 #include <premac.h>
 #ifndef IOS
+#ifndef USE_JAVA
 #include <CoreServices/CoreServices.h>
+#endif	// !USE_JAVA
 #endif
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
