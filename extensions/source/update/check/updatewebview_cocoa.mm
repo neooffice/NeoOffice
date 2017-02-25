@@ -85,6 +85,8 @@ static const NSString *pProductionBaseURLs[] = {
  */
 static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector, ... )
 {
+	(void)aSelector;
+
 	NSWindowController *pController = (NSWindowController *)pThis;
 	if ( pController )
 	{
@@ -255,7 +257,7 @@ static NSData *GetResumeDataForFile(NSURLDownload *pDownload, NSString *pPath)
 	return mpPath;
 }
 
-- (void)setPath:(NSString *)pPath;
+- (void)setPath:(NSString *)pPath
 {
 	if (mpFileName)
 		[mpFileName release];
@@ -781,6 +783,10 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 - (void)webView:(WebView *)pWebView decidePolicyForNewWindowAction:(NSDictionary *)pActionInformation request:(NSURLRequest *)pRequest newFrameName:(NSString *)pFrameName decisionListener:(id < WebPolicyDecisionListener >)pListener
 {
+	(void)pActionInformation;
+	(void)pWebView;
+	(void)pFrameName;
+
 	// Have Mac OS X open the URL
 	if ( pRequest )
 	{
@@ -800,6 +806,8 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 - (void)webView:(WebView *)pWebView didFailLoadWithError:(NSError *)pError forFrame:(WebFrame *)pWebFrame
 {
+	(void)pWebView;
+
 #ifdef DEBUG
 	NSLog( @"didFailLoadWithError: %@", pError);
 #endif
@@ -808,6 +816,8 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 - (void)webView:(WebView *)pWebView didFailProvisionalLoadWithError:(NSError *)pError forFrame:(WebFrame *)pWebFrame
 {
+	(void)pWebView;
+
 #ifdef DEBUG
 	NSLog( @"didFailProvisionalLoadWithError: %@", pError);
 #endif
@@ -873,6 +883,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 - (void)webView:(WebView *)pWebView didStartProvisionalLoadForFrame:(WebFrame *)pFrame
 {
+	(void)pWebView;
+	(void)pFrame;
+
 	[mploadingIndicator setHidden:NO];
 	[mploadingIndicator startAnimation:self];
 	[mpcancelButton setEnabled:YES];
@@ -910,6 +923,10 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 - (NSURLRequest *)webView:(WebView *)pWebView resource:(id)aIdentifier willSendRequest:(NSURLRequest *)pRequest redirectResponse:(NSURLResponse *)pRedirectResponse fromDataSource:(WebDataSource *)pDataSource
 {
+	(void)aIdentifier;
+	(void)pRedirectResponse;
+	(void)pDataSource;
+
 	// Clear the forward history
 	WebBackForwardList *pHistory = [pWebView backForwardList];
 	if ( pHistory )
@@ -932,8 +949,10 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	return pRequest;
 }
 
-- (void)webView:(WebView *)pWebView runJavaScriptAlertPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFame
+- (void)webView:(WebView *)pWebView runJavaScriptAlertPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFrame
 {
+	(void)pWebFrame;
+
 	if ( !pWebView )
 		return;
 
@@ -948,6 +967,8 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 - (BOOL)webView:(WebView *)pWebView runJavaScriptConfirmPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFrame
 {
+	(void)pWebFrame;
+
 	BOOL bRet = NO;
 
 	if ( !pWebView )
@@ -983,7 +1004,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		[mutableDecodedFilename replaceOccurrencesOfString:@"+" withString:@" " options:0 range:NSMakeRange(0, [filename length])];
 		decodedFilename = mutableDecodedFilename;
 	}
-	decodedFilename = [decodedFilename stringByReplacingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLPathAllowedCharacterSet]];
+	decodedFilename = [decodedFilename stringByRemovingPercentEncoding];
 	if (!decodedFilename)
 		decodedFilename = filename;
 
@@ -1481,6 +1502,13 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 - (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id)listener
 {
+	(void)sender;
+	(void)actionInformation;
+#ifndef DEBUG
+	(void)request;
+#endif
+	(void)frame;
+
 #ifdef DEBUG
 	fprintf( stderr, "Update Loading URL: %s\n", [[[request URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
@@ -1489,6 +1517,10 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 - (void)webView:(WebView *)sender decidePolicyForMIMEType:(NSString *)type request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id < WebPolicyDecisionListener >)listener
 {
+	(void)sender;
+	(void)request;
+	(void)frame;
+
 	if([type rangeOfString: @"application/"].location != NSNotFound)
 	{
 		[listener download];
