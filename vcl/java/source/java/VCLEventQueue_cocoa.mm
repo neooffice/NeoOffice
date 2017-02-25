@@ -33,8 +33,6 @@
  *
  ************************************************************************/
 
-#include <dlfcn.h>
-
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 // Need to include for virtual key constants but we don't link to it
@@ -55,42 +53,7 @@
 #define MODIFIER_RELEASE_INTERVAL 100
 #define UNDEFINED_KEY_CODE 0xffff
 
-typedef OSErr Gestalt_Type( OSType selector, SInt32 *response );
-
-static bool bIsRunningElCapitanOrLowerInitizalized  = false;
-static bool bIsRunningElCapitanOrLower = false;
-
 inline long FloatToLong( float f ) { return (long)( f == 0 ? f : f < 0 ? f - 0.5 : f + 0.5 ); }
-
-static bool IsRunningElCapitanOrLower()
-{
-	if ( !bIsRunningElCapitanOrLowerInitizalized )
-	{
-		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-		if ( pLib )
-		{
-			Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
-			if ( pGestalt )
-			{
-				SInt32 res = 0;
-				pGestalt( gestaltSystemVersionMajor, &res );
-				if ( res == 10 )
-				{
-					res = 0;
-					pGestalt( gestaltSystemVersionMinor, &res );
-					if ( res <= 11 )
-						bIsRunningElCapitanOrLower = true;
-				}
-			}
-
-			dlclose( pLib );
-		}
-
-		bIsRunningElCapitanOrLowerInitizalized = true;
-	}
-
-	return bIsRunningElCapitanOrLower;
-}
 
 static NSPoint GetFlippedContentViewLocation( NSWindow *pWindow, NSEvent *pEvent )
 {
@@ -128,22 +91,22 @@ static sal_uInt16 GetEventCode( NSUInteger nModifiers )
 {
 	sal_uInt16 nRet = 0;
 
-	if ( nModifiers & NSLeftMouseDownMask )
+	if ( nModifiers & NSEventMaskLeftMouseDown )
 		nRet |= MOUSE_LEFT;
-	if ( nModifiers & NSRightMouseDownMask )
+	if ( nModifiers & NSEventMaskRightMouseDown )
 		nRet |= MOUSE_RIGHT;
-	if ( nModifiers & NSOtherMouseDownMask )
+	if ( nModifiers & NSEventMaskOtherMouseDown )
 		nRet |= MOUSE_MIDDLE;
 
 	// Treat the Mac OS X command key as a control key and the control key as
 	// the meta key
-	if ( nModifiers & NSCommandKeyMask )
+	if ( nModifiers & NSEventModifierFlagCommand )
 		nRet |= KEY_MOD1;
-	if ( nModifiers & NSAlternateKeyMask )
+	if ( nModifiers & NSEventModifierFlagOption )
 		nRet |= KEY_MOD2;
-	if ( nModifiers & NSControlKeyMask )
+	if ( nModifiers & NSEventModifierFlagControl )
 		nRet |= KEY_MOD3;
-	if ( nModifiers & NSShiftKeyMask )
+	if ( nModifiers & NSEventModifierFlagShift )
 		nRet |= KEY_SHIFT;
 
 	// If command plus left or middle button is pressed, Cocoa will add the
@@ -951,6 +914,8 @@ static NSUInteger nMouseMask = 0;
 
 	if ( [super respondsToSelector:@selector(poseAsInitWithContentRect:styleMask:backing:defer:)] )
 		pRet = [super poseAsInitWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation];
+	else
+		pRet = [super initWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation];
 
 	if ( ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && [self respondsToSelector:@selector(_init)] )
 		[self _init];
@@ -1009,7 +974,7 @@ static NSUInteger nMouseMask = 0;
 		// Fix bug 2992 by not allowing the key window to change when we are
 		// tracking the menubar and never allow a borderless window to grab
 		// focus
-		if ( bTrackingMenuBar && ! ( [self styleMask] & NSTitledWindowMask ) )
+		if ( bTrackingMenuBar && ! ( [self styleMask] & NSWindowStyleMaskTitled ) )
 			return;
 	}
 
@@ -1081,7 +1046,7 @@ static NSUInteger nMouseMask = 0;
 
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent
 {
-	BOOL bCommandKeyPressed = ( pEvent && [pEvent modifierFlags] & NSCommandKeyMask );
+	BOOL bCommandKeyPressed = ( pEvent && [pEvent modifierFlags] & NSEventModifierFlagCommand );
 
 	if ( bCommandKeyPressed && [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
@@ -1092,13 +1057,13 @@ static NSUInteger nMouseMask = 0;
 
 		// Implement the standard window minimization behavior with the
 		// Command-m event
-		if ( [self styleMask] & NSMiniaturizableWindowMask )
+		if ( [self styleMask] & NSWindowStyleMaskMiniaturizable )
 		{
 			NSString *pChars = [pEvent charactersIgnoringModifiers];
 			if ( pChars && [pChars isEqualToString:@"m"] )
 			{
 				// Fix bug 3562 by not allowing utility windows to be minimized
-				if ( ! ( [self styleMask] & NSUtilityWindowMask ) )
+				if ( ! ( [self styleMask] & NSWindowStyleMaskUtilityWindow ) )
 					[self miniaturize:self];
 				return YES;
 			}
@@ -1134,7 +1099,7 @@ static NSUInteger nMouseMask = 0;
 			{
 				bRet = [pApp sendAction:@selector(paste:) to:nil from:self];
 			}
-			else if ( [pChars isEqualToString:@"w"] && [self styleMask] & NSClosableWindowMask )
+			else if ( [pChars isEqualToString:@"w"] && [self styleMask] & NSWindowStyleMaskClosable )
 			{
 				[self performClose:self];
 				bRet = YES;
@@ -1203,7 +1168,7 @@ static NSUInteger nMouseMask = 0;
 	// Fix bug 3357 by updating when we are not in a menu tracking session.
 	// Fix bug 3379 by retaining this window as this window may get released
 	// while updating.
-	if ( bIsVCLWindow && [self isVisible] && nType == NSFlagsChanged && [pEvent modifierFlags] & NSCommandKeyMask )
+	if ( bIsVCLWindow && [self isVisible] && nType == NSEventTypeFlagsChanged && [pEvent modifierFlags] & NSEventModifierFlagCommand )
 	{
 		[self retain];
 
@@ -1242,7 +1207,7 @@ static NSUInteger nMouseMask = 0;
 	if ( bIsVCLWindow && mpFrame )
 	{
 		// Handle all mouse events
-		if ( ( nType >= NSLeftMouseDown && nType <= NSMouseExited ) || ( nType >= NSOtherMouseDown && nType <= NSOtherMouseDragged ) )
+		if ( ( nType >= NSEventTypeLeftMouseDown && nType <= NSEventTypeMouseExited ) || ( nType >= NSEventTypeOtherMouseDown && nType <= NSEventTypeOtherMouseDragged ) )
 		{
 			// If the frame changed after the superclass handled the event,
 			// then we likely clicked on one of the titlebar buttons so
@@ -1252,38 +1217,38 @@ static NSUInteger nMouseMask = 0;
 				return;
 
 			sal_uInt16 nID = 0;
-			NSUInteger nModifiers = [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
+			NSUInteger nModifiers = [pEvent modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask;
 
 			switch ( nType )
 			{
-				case NSMouseMoved:
+				case NSEventTypeMouseMoved:
 					// Ignore mouse move events generated by tracking areas
 					if ( ![self isKeyWindow] )
 						return;
 					nID = SALEVENT_MOUSEMOVE;
 					nMouseMask = 0;
 					break;
-				case NSMouseEntered:
-				case NSLeftMouseDragged:
-				case NSRightMouseDragged:
-				case NSOtherMouseDragged:
+				case NSEventTypeMouseEntered:
+				case NSEventTypeLeftMouseDragged:
+				case NSEventTypeRightMouseDragged:
+				case NSEventTypeOtherMouseDragged:
 					nID = SALEVENT_MOUSEMOVE;
 					nModifiers |= nMouseMask;
 					break;
-				case NSMouseExited:
+				case NSEventTypeMouseExited:
 					nID = SALEVENT_MOUSELEAVE;
 					nModifiers |= nMouseMask;
 					break;
-				case NSLeftMouseDown:
-				case NSRightMouseDown:
-				case NSOtherMouseDown:
+				case NSEventTypeLeftMouseDown:
+				case NSEventTypeRightMouseDown:
+				case NSEventTypeOtherMouseDown :
 					nID = SALEVENT_MOUSEBUTTONDOWN;
 					nMouseMask |= NSEventMaskFromType( nType );
 					nModifiers |= nMouseMask;
 					break;
-				case NSLeftMouseUp:
-				case NSRightMouseUp:
-				case NSOtherMouseUp:
+				case NSEventTypeLeftMouseUp:
+				case NSEventTypeRightMouseUp:
+				case NSEventTypeOtherMouseUp:
 					// Remove matching mouse down mask
 					nID = SALEVENT_MOUSEBUTTONUP;
 					nModifiers |= NSEventMaskFromType( (NSEventType)( nType - 1 ) );
@@ -1301,7 +1266,7 @@ static NSUInteger nMouseMask = 0;
 				// will receive no mouse move events.
 				if ( nID == SALEVENT_MOUSEBUTTONDOWN )
 				{
-					if ( [self canBecomeKeyWindow] && ![self isKeyWindow] && ! ( nModifiers & NSLeftMouseDownMask ) )
+					if ( [self canBecomeKeyWindow] && ![self isKeyWindow] && ! ( nModifiers & NSEventMaskLeftMouseDown ) )
 					{
 						mnIgnoreMouseReleasedModifiers = nModifiers;
 						return;
@@ -1317,7 +1282,7 @@ static NSUInteger nMouseMask = 0;
 					NSPoint aLocation = [pEvent locationInWindow];
 					if ( NSPointInRect( aLocation, aTitlebarFrame ) )
 					{
-						if ( nModifiers & NSLeftMouseDownMask )
+						if ( nModifiers & NSEventMaskLeftMouseDown )
 						{
 							if ( mpLastWindowDraggedEvent )
 								[mpLastWindowDraggedEvent release];
@@ -1339,9 +1304,9 @@ static NSUInteger nMouseMask = 0;
 					// Fix bug 3453 by adding back any recently released
 					// modifiers
 					if ( mnLastMetaModifierReleasedTime >= (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 ) )
-						nModifiers |= NSCommandKeyMask;
+						nModifiers |= NSEventModifierFlagCommand;
 
-					if ( mpLastWindowDraggedEvent && nModifiers & NSLeftMouseDownMask )
+					if ( mpLastWindowDraggedEvent && nModifiers & NSEventMaskLeftMouseDown )
 					{
 						[mpLastWindowDraggedEvent release];
 						mpLastWindowDraggedEvent = nil;
@@ -1380,7 +1345,7 @@ static NSUInteger nMouseMask = 0;
 				{
 					// Strange but true, fix bug 2157 by posting a synthetic
 					// mouse moved event
-					sal_uInt16 nExtraCode = GetEventCode( ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) | nMouseMask );
+					sal_uInt16 nExtraCode = GetEventCode( ( [pEvent modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask ) | nMouseMask );
 					pExtraMouseEvent = new SalMouseEvent();
 					pExtraMouseEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 					pExtraMouseEvent->mnX = (long)aLocation.x;
@@ -1402,10 +1367,10 @@ static NSUInteger nMouseMask = 0;
 			}
 		}
 		// Handle key modifier change events
-		else if ( nType == NSFlagsChanged )
+		else if ( nType == NSEventTypeFlagsChanged )
 		{
-			NSUInteger nModifiers = [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
-			if ( nModifiers & NSCommandKeyMask )
+			NSUInteger nModifiers = [pEvent modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask;
+			if ( nModifiers & NSEventModifierFlagCommand )
 				mnLastMetaModifierReleasedTime = 0;
 			else
 				mnLastMetaModifierReleasedTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 ) + MODIFIER_RELEASE_INTERVAL;
@@ -1422,14 +1387,14 @@ static NSUInteger nMouseMask = 0;
 			pSalKeyModEvent->release();
 		}
 		// Handle scroll wheel, magnify, and swipe
-		else if ( nType == NSScrollWheel || ( ( nType == NSEventTypeMagnify || nType == NSEventTypeSwipe ) && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] ) )
+		else if ( nType == NSEventTypeScrollWheel || ( ( nType == NSEventTypeMagnify || nType == NSEventTypeSwipe ) && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] ) )
 		{
 			static float fUnpostedMagnification = 0;
 			static float fUnpostedHorizontalScrollWheel = 0;
 			static float fUnpostedVerticalScrollWheel = 0;
 
 			NSApplication *pApp = [NSApplication sharedApplication];
-			int nModifiers = [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
+			int nModifiers = [pEvent modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask;
 			float fDeltaX = 0;
 			float fDeltaY = 0;
 			if ( nType == NSEventTypeMagnify )
@@ -1439,7 +1404,7 @@ static NSUInteger nMouseMask = 0;
 
 				// Magnify events need to be converted to vertical scrolls with
 				// the Command key pressed to force the OOo code to zoom.
-				nModifiers |= NSCommandKeyMask;
+				nModifiers |= NSEventModifierFlagCommand;
 				fDeltaY = [pEvent magnification];
 
 				if ( pApp )
@@ -1474,7 +1439,7 @@ static NSUInteger nMouseMask = 0;
 				fDeltaX = [pEvent deltaX];
 				fDeltaY = [pEvent deltaY];
 
-				if ( nModifiers & NSCommandKeyMask )
+				if ( nModifiers & NSEventModifierFlagCommand )
 				{
 					// Only allow horizontal scroll when the Command key is not
 					// pressed
@@ -1557,7 +1522,7 @@ static NSUInteger nMouseMask = 0;
 	        // Fix bug 3030 by setting the modifiers. Note that we ignore the
 			// Shift modifier as using it will disable horizontal scrolling.
 			sal_uInt16 nCode = GetEventCode( nModifiers ) & ( KEY_MOD1 | KEY_MOD2 | KEY_MOD3 );
-			BOOL bScrollPages = ( nType == NSEventTypeSwipe && ! ( nModifiers & NSCommandKeyMask ) );
+			BOOL bScrollPages = ( nType == NSEventTypeSwipe && ! ( nModifiers & NSEventModifierFlagCommand ) );
 
 			long nDeltaX = FloatToLong( fDeltaX );
 			if ( !nDeltaX )
@@ -1619,11 +1584,11 @@ static NSUInteger nMouseMask = 0;
 			{
 				switch ( nType )
 				{
-					case NSLeftMouseDown:
+					case NSEventTypeLeftMouseDown:
 						if ( [pDelegate respondsToSelector:@selector(mouseDown:)] )
 							[pDelegate mouseDown:pEvent];
 						break;
-					case NSLeftMouseDragged:
+					case NSEventTypeLeftMouseDragged:
 						if ( [pDelegate respondsToSelector:@selector(mouseDragged:)] )
 							[pDelegate mouseDragged:pEvent];
 						break;
@@ -1920,7 +1885,7 @@ static CFDataRef aRTFSelection = nil;
 		// Stop exception from being thrown when entering the versions browser
 		// while running on macOS 10.12
 		bRet = [super poseAsAccessibilityIsIgnored];
-		if ( bRet && !IsRunningElCapitanOrLower() && [[self className] isEqualToString:@"NSRemoteView"] )
+		if ( bRet && [[self className] isEqualToString:@"NSRemoteView"] )
 		{
 			NSWindow *pWindow = [self window];
 			if ( pWindow && [[pWindow className] isEqualToString:@"NSDocumentRevisionsAuxiliaryWindow"] )
@@ -1955,7 +1920,7 @@ static CFDataRef aRTFSelection = nil;
 
 	if ( mpLastKeyDownEvent )
 		[mpLastKeyDownEvent release];
-	mpLastKeyDownEvent = ( [pEvent type] == NSKeyDown ? pEvent : nil );
+	mpLastKeyDownEvent = ( [pEvent type] == NSEventTypeKeyDown ? pEvent : nil );
 	if ( mpLastKeyDownEvent )
 		[mpLastKeyDownEvent retain];
 
@@ -2316,14 +2281,14 @@ static CFDataRef aRTFSelection = nil;
 				// Fix bug 710 by stripping out the Alt modifier. Note that we
 				// do it here because we need to let the Alt modifier through
 				// for action keys.
-				NSUInteger nModifiers = ( ( mpLastKeyDownEvent ? [mpLastKeyDownEvent modifierFlags] : 0 ) & NSDeviceIndependentModifierFlagsMask ) | nMouseMask;
+				NSUInteger nModifiers = ( ( mpLastKeyDownEvent ? [mpLastKeyDownEvent modifierFlags] : 0 ) & NSEventModifierFlagDeviceIndependentFlagsMask ) | nMouseMask;
 
 				NSUInteger i = 0;
 				NSUInteger nLength = [pChars length];
 				for ( ; i < nLength; i++ )
 				{
 					sal_uInt16 nChar = (sal_uInt16)[pChars characterAtIndex:i];
-					sal_uInt16 nCode = GetKeyCode( mpLastKeyDownEvent ? [mpLastKeyDownEvent keyCode] : UNDEFINED_KEY_CODE, nChar ) | GetEventCode( nModifiers & ~NSAlternateKeyMask );
+					sal_uInt16 nCode = GetKeyCode( mpLastKeyDownEvent ? [mpLastKeyDownEvent keyCode] : UNDEFINED_KEY_CODE, nChar ) | GetEventCode( nModifiers & ~NSEventModifierFlagOption );
 
 					SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
 					pKeyDownEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
@@ -2502,7 +2467,7 @@ static CFDataRef aRTFSelection = nil;
 		NSString *pChars = [mpLastKeyDownEvent charactersIgnoringModifiers];
 		if ( pChars && [pChars length] )
 		{
-			NSUInteger nModifiers = ( [mpLastKeyDownEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) | nMouseMask;
+			NSUInteger nModifiers = ( [mpLastKeyDownEvent modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask ) | nMouseMask;
 
 			NSUInteger i = 0;
 			NSUInteger nLength = [pChars length];
@@ -2629,7 +2594,7 @@ static CFDataRef aRTFSelection = nil;
 		if ( pEvent )
 		{
 			NSEventType nType = [pEvent type];
-			if ( ( nType >= NSLeftMouseDown && nType <= NSMouseExited ) || ( nType >= NSOtherMouseDown && nType <= NSOtherMouseDragged ) )
+			if ( ( nType >= NSEventTypeLeftMouseDown && nType <= NSEventTypeMouseExited ) || ( nType >= NSEventTypeOtherMouseDown && nType <= NSEventTypeOtherMouseDragged ) )
 				[pWindow sendEvent:pEvent];
 		}
 	}
@@ -2653,7 +2618,7 @@ static CFDataRef aRTFSelection = nil;
 		if ( pEvent )
 		{
 			NSEventType nType = [pEvent type];
-			if ( ( nType >= NSLeftMouseDown && nType <= NSMouseExited ) || ( nType >= NSOtherMouseDown && nType <= NSOtherMouseDragged ) )
+			if ( ( nType >= NSEventTypeLeftMouseDown && nType <= NSEventTypeMouseExited ) || ( nType >= NSEventTypeOtherMouseDown && nType <= NSEventTypeOtherMouseDragged ) )
 				[pWindow sendEvent:pEvent];
 		}
 	}
@@ -2677,7 +2642,7 @@ static CFDataRef aRTFSelection = nil;
 		if ( pEvent )
 		{
 			NSEventType nType = [pEvent type];
-			if ( ( nType >= NSLeftMouseDown && nType <= NSMouseExited ) || ( nType >= NSOtherMouseDown && nType <= NSOtherMouseDragged ) )
+			if ( ( nType >= NSEventTypeLeftMouseDown && nType <= NSEventTypeMouseExited ) || ( nType >= NSEventTypeOtherMouseDown && nType <= NSEventTypeOtherMouseDragged ) )
 				[pWindow sendEvent:pEvent];
 		}
 	}
@@ -2716,7 +2681,7 @@ static CFDataRef aRTFSelection = nil;
 		if ( pEvent )
 		{
 			NSEventType nType = [pEvent type];
-			if ( ( nType >= NSLeftMouseDown && nType <= NSMouseExited ) || ( nType >= NSOtherMouseDown && nType <= NSOtherMouseDragged ) )
+			if ( ( nType >= NSEventTypeLeftMouseDown && nType <= NSEventTypeMouseExited ) || ( nType >= NSEventTypeOtherMouseDown && nType <= NSEventTypeOtherMouseDragged ) )
 				[pWindow sendEvent:pEvent];
 		}
 	}
