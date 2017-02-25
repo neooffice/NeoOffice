@@ -51,15 +51,7 @@
 // #define USE_NATIVE_ADMIN_USER_CHECK
 
 #ifdef MACOSX
-
-#include <dlfcn.h>
-
-#include <premac.h>
-#include <CoreServices/CoreServices.h>
-#include <postmac.h>
-
-typedef OSErr Gestalt_Type( OSType selector, SInt32 *response );
-
+#include "update_cocoa.hxx"
 #endif	// MACOSX
 
 #endif	// USE_JAVA
@@ -83,27 +75,7 @@ static const OUString GetOSVersion()
     if ( !nInitialized )
     {
 #ifdef MACOSX
-        void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-        if ( pLib )
-        {
-            Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
-            if ( pGestalt )
-            {
-                SInt32 nMajor = 0;
-                SInt32 nMinor = 0;
-                SInt32 nBugFix = 0;
-                pGestalt( gestaltSystemVersionMajor, &nMajor);
-                pGestalt( gestaltSystemVersionMinor, &nMinor);
-                pGestalt( gestaltSystemVersionBugFix, &nBugFix);
-                aOSVersion = OUString::number( (sal_Int32)nMajor );
-                aOSVersion += ".";
-                aOSVersion += OUString::number( (sal_Int32)nMinor );
-                aOSVersion += ".";
-                aOSVersion += OUString::number( (sal_Int32)nBugFix );
-            }
-
-            dlclose( pLib );
-        }
+        aOSVersion = UpdateGetOSVersion();
 #endif	// MACOSX
 
         nInitialized = true;

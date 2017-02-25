@@ -59,6 +59,7 @@ typedef void* id;
 
 #endif	// __OBJC__
 
+SAL_DLLPRIVATE OUString UpdateGetOSVersion();
 SAL_DLLPRIVATE sal_Bool UpdateQuitNativeDownloadWebView();
 SAL_DLLPRIVATE sal_Bool UpdateShowNativeDownloadWebView( OUString aURL, OUString aUserAgent, OUString aTitle );
 

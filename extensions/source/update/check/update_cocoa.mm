@@ -241,6 +241,27 @@ OUString UpdateNSStringToOUString( NSString *pString )
 	return OUString( aBuf );
 }
 
+OUString UpdateGetOSVersion()
+{
+	OUString aRet;
+
+	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
+
+	NSProcessInfo *pProcessInfo = [NSProcessInfo processInfo];
+	if ( pProcessInfo )
+	{
+		aRet = OUString::number( (sal_Int32)[pProcessInfo operatingSystemVersion].majorVersion );
+        aRet += ".";
+		aRet += OUString::number( (sal_Int32)[pProcessInfo operatingSystemVersion].minorVersion );
+        aRet += ".";
+		aRet += OUString::number( (sal_Int32)[pProcessInfo operatingSystemVersion].patchVersion );
+	}
+
+	[pool release];
+
+	return aRet;
+}
+
 sal_Bool UpdateQuitNativeDownloadWebView()
 {
 	sal_Bool bRet = sal_False;
