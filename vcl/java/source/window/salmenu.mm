@@ -601,9 +601,9 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 			NSInteger nTag = [pTag unsignedShortValue] & ( KEY_CODE_MASK | KEY_MOD1 | KEY_SHIFT );
 			if ( nTag & KEY_CODE_MASK && nTag & KEY_MOD1 )
 			{
-				NSUInteger nMask = NSCommandKeyMask;
+				NSUInteger nMask = NSEventModifierFlagCommand;
     			if ( nTag & KEY_SHIFT )
-					nMask |= NSShiftKeyMask;
+					nMask |= NSEventModifierFlagShift;
 				[pMenuItem setKeyEquivalent:pKeyText];
 				[pMenuItem setKeyEquivalentModifierMask:nMask];
 				[pMenuItem setTag:nTag];
