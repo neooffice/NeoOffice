@@ -58,7 +58,6 @@
 - (BOOL)acceptsFirstResponder;
 - (void)abandonInput;
 - (id)accessibilityAttributeValue:(NSString *)aAttribute;
-- (BOOL)accessibilityIsIgnored;
 - (void)dealloc;
 - (void)keyDown:(NSEvent *)pEvent;
 - (void)keyUp:(NSEvent *)pEvent;

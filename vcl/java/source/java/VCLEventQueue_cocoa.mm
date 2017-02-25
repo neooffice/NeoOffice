@@ -1872,30 +1872,6 @@ static CFDataRef aRTFSelection = nil;
 	}
 }
 
-- (BOOL)accessibilityIsIgnored
-{
-	BOOL bRet = NO;
-
-	if ( [self isKindOfClass:[VCLView class]] )
-	{
-		return bRet;
-	}
-	else if ( [super respondsToSelector:@selector(poseAsAccessibilityIsIgnored)] )
-	{
-		// Stop exception from being thrown when entering the versions browser
-		// while running on macOS 10.12
-		bRet = [super poseAsAccessibilityIsIgnored];
-		if ( bRet && [[self className] isEqualToString:@"NSRemoteView"] )
-		{
-			NSWindow *pWindow = [self window];
-			if ( pWindow && [[pWindow className] isEqualToString:@"NSDocumentRevisionsAuxiliaryWindow"] )
-				bRet = NO;
-		}
-	}
-
-	return bRet;
-}
-
 - (void)dealloc
 {
 	if ( mpInputManager )
@@ -3147,20 +3123,6 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 		IMP aOldIMP = method_getImplementation( aOldMethod );
 		IMP aNewIMP = method_getImplementation( aNewMethod );
 		if ( aOldIMP && aNewIMP && class_addMethod( [NSWindow class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
-			method_setImplementation( aOldMethod, aNewIMP );
-	}
-
-	// VCLView selectors
-
-	aSelector = @selector(accessibilityIsIgnored);
-	aPoseAsSelector = @selector(poseAsAccessibilityIsIgnored);
-	aOldMethod = class_getInstanceMethod( [NSView class], aSelector );
-	aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-	if ( aOldMethod && aNewMethod )
-	{
-		IMP aOldIMP = method_getImplementation( aOldMethod );
-		IMP aNewIMP = method_getImplementation( aNewMethod );
-		if ( aOldIMP && aNewIMP && class_addMethod( [NSView class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
 			method_setImplementation( aOldMethod, aNewIMP );
 	}
 
