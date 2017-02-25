@@ -56,10 +56,6 @@
 #include <com/sun/star/frame/XFramesSupplier.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 
-#include <premac.h>
-#include <CoreServices/CoreServices.h>
-#include <postmac.h>
-
 #include "jobset.h"
 #include "print.h"
 #include "salimestatus.hxx"
