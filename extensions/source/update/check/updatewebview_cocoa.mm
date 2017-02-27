@@ -146,6 +146,28 @@ static NSData *GetResumeDataForFile(NSURLDownload *pDownload, NSString *pPath)
 	return pRet;
 }
 
+static NSModalResponse ShowModalAlert( NSString *pMessageText, NSString *pDefaultButton, NSString *pAlternateButton )
+{
+	NSModalResponse nRet = 0;
+
+	NSAlert *pAlert = [[NSAlert alloc] init];
+	if ( pAlert )
+	{
+		[pAlert autorelease];
+
+		if ( pMessageText )
+			pAlert.messageText = pMessageText;
+		if ( pDefaultButton )
+			[pAlert addButtonWithTitle:pDefaultButton];
+		if ( pAlternateButton )
+			[pAlert addButtonWithTitle:pAlternateButton];
+
+		nRet = [pAlert runModal];
+	}
+
+	return nRet;
+}
+
 @interface UpdateDownloadData : NSObject
 {
 	unsigned long long		mnBytesReceived;
@@ -747,9 +769,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		}
 	}
 
-	NSAlert *pAlert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"%@ %@", UpdateGetLocalizedString(UPDATEERROR), [pError localizedDescription]] defaultButton:nil alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
-	if ( pAlert )
-		[pAlert runModal];
+	ShowModalAlert( [NSString stringWithFormat:@"%@ %@", UpdateGetLocalizedString(UPDATEERROR), [pError localizedDescription]], nil, nil );
 }
 
 - (void)stopLoading:(id)pSender
@@ -960,9 +980,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if ( !pWindow || ![pWindow isVisible] )
 		return;
 
-	NSAlert *pAlert = [NSAlert alertWithMessageText:pMessage defaultButton:nil alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
-	if ( pAlert )
-		[pAlert runModal];
+	ShowModalAlert( pMessage, nil, nil );
 }
 
 - (BOOL)webView:(WebView *)pWebView runJavaScriptConfirmPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFrame
@@ -978,13 +996,8 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if ( !pWindow || ![pWindow isVisible] )
 		return bRet;
 
-	NSAlert *pAlert = [NSAlert alertWithMessageText:pMessage defaultButton:nil alternateButton:UpdateGetVCLResString(SV_BUTTONTEXT_CANCEL) otherButton:nil informativeTextWithFormat:@""];
-	if ( pAlert )
-	{
-		NSModalResponse nRet = [pAlert runModal];
-		if ( nRet == NSAlertDefaultReturn || nRet == NSAlertFirstButtonReturn )
-			bRet = YES;
-	}
+	if ( ShowModalAlert( pMessage, nil, UpdateGetVCLResString(SV_BUTTONTEXT_CANCEL) ) == NSAlertFirstButtonReturn )
+		bRet = YES;
 
 	return bRet;
 }
@@ -1390,11 +1403,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 #endif
 
 			if (pErrorMessage)
-			{
-				NSAlert *pAlert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"%@ %@", UpdateGetLocalizedString(UPDATEERROR), pErrorMessage] defaultButton:nil alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
-				if (pAlert)
-					[pAlert runModal];
-			}
+				ShowModalAlert( [NSString stringWithFormat:@"%@ %@", UpdateGetLocalizedString(UPDATEERROR), pErrorMessage], nil, nil );
 		}
 
 		[it->second release];
@@ -1642,13 +1651,8 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 					}
 
 					UpdateAddInstallerPackage(aFileName, aDownloadPath, aPackagePath);
-					NSAlert *pAlert = [NSAlert alertWithMessageText:UpdateGetUPDResString(RID_UPDATE_STR_BEGIN_INSTALL) defaultButton:UpdateGetUPDResString(RID_UPDATE_STR_INSTALL_NOW) alternateButton:UpdateGetUPDResString(RID_UPDATE_STR_INSTALL_LATER) otherButton:nil informativeTextWithFormat:@""];
-					if ( pAlert )
-					{
-						NSModalResponse nRet = [pAlert runModal];
-						if ( nRet == NSAlertDefaultReturn || nRet == NSAlertFirstButtonReturn )
-							mbrequestedQuitApp = YES;
-					}
+					if ( ShowModalAlert( UpdateGetUPDResString(RID_UPDATE_STR_BEGIN_INSTALL), UpdateGetUPDResString(RID_UPDATE_STR_INSTALL_NOW), UpdateGetUPDResString(RID_UPDATE_STR_INSTALL_LATER) ) == NSAlertFirstButtonReturn )
+						mbrequestedQuitApp = YES;
 				}
 				else
 				{
@@ -1676,40 +1680,35 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 	if (pDownload && pPath && pDescription)
 	{
-		NSAlert *pAlert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"%@ %@\n%@", UpdateGetLocalizedString(UPDATEERROR), pDescription, UpdateGetLocalizedString(UPDATEREDOWNLOADFILE)] defaultButton:UpdateGetVCLResString(SV_BUTTONTEXT_YES) alternateButton:UpdateGetVCLResString(SV_BUTTONTEXT_NO) otherButton:nil informativeTextWithFormat:@""];
-		if (pAlert)
+		if ( ShowModalAlert( [NSString stringWithFormat:@"%@ %@\n%@", UpdateGetLocalizedString(UPDATEERROR), pDescription, UpdateGetLocalizedString(UPDATEREDOWNLOADFILE)], UpdateGetVCLResString(SV_BUTTONTEXT_YES), UpdateGetVCLResString(SV_BUTTONTEXT_NO) ) == NSAlertFirstButtonReturn )
 		{
-			NSModalResponse nRet = [pAlert runModal];
-			if (nRet == NSAlertDefaultReturn || nRet == NSAlertFirstButtonReturn)
- 			{
-				// Cancel any other downloads for the same file that are already
-				// in progress
-				std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.begin();
-				while (it != aDownloadDataMap.end())
+			// Cancel any other downloads for the same file that are already
+			// in progress
+			std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.begin();
+			while (it != aDownloadDataMap.end())
+			{
+				NSString *pOtherDownloadPath = [it->second path];
+				if (pOtherDownloadPath && [pOtherDownloadPath isEqualToString:pPath])
 				{
-					NSString *pOtherDownloadPath = [it->second path];
 					if (pOtherDownloadPath && [pOtherDownloadPath isEqualToString:pPath])
 					{
-						if (pOtherDownloadPath && [pOtherDownloadPath isEqualToString:pPath])
+						[it->first cancel];
+						if (it->first != pDownload)
 						{
-							[it->first cancel];
-							if (it->first != pDownload)
-							{
-								[it->second release];
-								it = aDownloadDataMap.begin();
-								continue;
-							}
+							[it->second release];
+							it = aDownloadDataMap.begin();
+							continue;
 						}
 					}
-
-					++it;
 				}
 
-				if (pRetryDownloadURLs)
-					[pRetryDownloadURLs removeObjectForKey:pPath];
-
-				bRet = [self reloadDownload:pDownload path:pPath];
+				++it;
 			}
+
+			if (pRetryDownloadURLs)
+				[pRetryDownloadURLs removeObjectForKey:pPath];
+
+			bRet = [self reloadDownload:pDownload path:pPath];
 		}
 	}
 
