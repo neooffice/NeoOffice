@@ -591,6 +591,10 @@ static void RegisterMainBundleWithLaunchServices()
 - (void)undo:(id)pSender;
 @end
 
+@interface NSView (VCLView)
+- (id)accessibilityAttributeValue:(NSString *)aAttribute;
+@end
+
 @interface NSView (VCLViewPoseAs)
 - (BOOL)poseAsAccessibilityIsIgnored;
 @end
@@ -1866,10 +1870,12 @@ static CFDataRef aRTFSelection = nil;
 
 		return @"";
 	}
-	else
+	else if ( [super respondsToSelector:@selector(accessibilityAttributeValue:)] )
 	{
 		return [super accessibilityAttributeValue:aAttribute];
 	}
+
+	return nil;
 }
 
 - (void)dealloc
