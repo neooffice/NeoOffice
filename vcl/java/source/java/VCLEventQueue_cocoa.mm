@@ -591,10 +591,6 @@ static void RegisterMainBundleWithLaunchServices()
 - (void)undo:(id)pSender;
 @end
 
-@interface NSView (VCLView)
-- (id)accessibilityAttributeValue:(NSString *)aAttribute;
-@end
-
 @interface NSView (VCLViewPoseAs)
 - (BOOL)poseAsAccessibilityIsIgnored;
 @end
