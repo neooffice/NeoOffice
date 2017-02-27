@@ -150,29 +150,37 @@ static NSAlert *pSaveDisabledAlert = nil;
 
 	@try
 	{
-		if ( pWorkspace && pURL )
+		pSaveDisabledAlert = [[NSAlert alloc] init];
+		if ( pSaveDisabledAlert )
 		{
-			NSString *pInformativeText = mpInformativeText;
-			if ( !pInformativeText )
-				pInformativeText = @"";
-			pSaveDisabledAlert = [NSAlert alertWithMessageText:mpMessageText defaultButton:mpDefaultButton alternateButton:mpAlternateButton otherButton:nil informativeTextWithFormat:pInformativeText, nil];
-			if ( pSaveDisabledAlert )
+			if ( pWorkspace && pURL )
 			{
-				NSArray *pButtons = [pSaveDisabledAlert buttons];
-				if ( [pButtons count] > 1 )
+				if ( mpMessageText )
+					pSaveDisabledAlert.messageText = mpMessageText;
+				if ( mpInformativeText )
+					pSaveDisabledAlert.informativeText = mpInformativeText;
+				if ( mpDefaultButton )
+					[pSaveDisabledAlert addButtonWithTitle:mpDefaultButton];
+				if ( mpAlternateButton )
 				{
-					NSButton *pAlternateButton = [pButtons objectAtIndex:1];
-					if ( pAlternateButton )
+					[pSaveDisabledAlert addButtonWithTitle:mpAlternateButton];
+
+					NSArray *pButtons = [pSaveDisabledAlert buttons];
+					NSUInteger nCount = [pButtons count];
+					if ( nCount )
 					{
-						unichar cEscapeChar = 0x1b;
-						NSString *pEscapeKey = [NSString stringWithCharacters:&cEscapeChar length:1];
-						if ( pEscapeKey )
-							[pAlternateButton setKeyEquivalent:pEscapeKey];
+						NSButton *pAlternateButton = [pButtons objectAtIndex:nCount - 1];
+						if ( pAlternateButton )
+						{
+							unichar cEscapeChar = 0x1b;
+							NSString *pEscapeKey = [NSString stringWithCharacters:&cEscapeChar length:1];
+							if ( pEscapeKey )
+								[pAlternateButton setKeyEquivalent:pEscapeKey];
+						}
 					}
 				}
 
-				NSModalResponse nRet = [pSaveDisabledAlert runModal];
-				if ( nRet == NSAlertDefaultReturn || nRet == NSAlertFirstButtonReturn )
+				if ( [pSaveDisabledAlert runModal] == NSAlertFirstButtonReturn )
 				{
 					// The OS X sandbox will sometimes fail to open URLs when
 					// the default browser is not Safari and the browser is not
@@ -181,19 +189,23 @@ static NSAlert *pSaveDisabledAlert = nil;
 						[pWorkspace openURLs:[NSArray arrayWithObject:pURL] withAppBundleIdentifier:@"com.apple.Safari" options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
 				}
 			}
-		}
-		else
-		{
-			pSaveDisabledAlert = [NSAlert alertWithMessageText:mpMessageText defaultButton:nil alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
-			if ( pSaveDisabledAlert )
+			else
+			{
+				if ( mpMessageText )
+					pSaveDisabledAlert.messageText = mpMessageText;
 				[pSaveDisabledAlert runModal];
+			}
 		}
 	}
 	@catch ( NSException *pExc )
 	{
 	}
 
-	pSaveDisabledAlert = nil;
+	if ( pSaveDisabledAlert )
+	{
+		[pSaveDisabledAlert autorelease];
+		pSaveDisabledAlert = nil;
+	}
 }
 
 @end
