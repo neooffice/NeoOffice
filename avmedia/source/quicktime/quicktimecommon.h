@@ -37,10 +37,24 @@
 #define _COMMON_H
 
 #import <premac.h>
-// Need to include for QuickTime constants but we don't link to it
-#import <QTKit/QTKit.h>
+#import <AppKit/AppKit.h>
 #import <objc/objc-class.h>
 #import <postmac.h>
+
+#ifndef QTTime
+typedef struct {
+	long long		timeValue;
+	long			timeScale;
+	long			flags;
+} QTTime;
+#endif
+
+#ifndef QTTimeRange
+typedef struct {
+	QTTime		time;
+	QTTime		duration;
+} QTTimeRange;
+#endif
 
 @interface AvmediaArgs : NSObject
 {

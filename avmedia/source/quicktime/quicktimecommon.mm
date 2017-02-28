@@ -144,56 +144,56 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		// Set modifiers. Note that we only care about the Shift and Command
 		// modifiers like the Windows code.
 		unsigned int nKeyModifiers = [pEvent modifierFlags];
-		if ( nKeyModifiers & NSShiftKeyMask )
+		if ( nKeyModifiers & NSEventModifierFlagShift )
 			aEvt.Modifiers |= KeyModifier::SHIFT;
-		if ( nKeyModifiers & NSCommandKeyMask )
+		if ( nKeyModifiers & NSEventModifierFlagCommand )
 			aEvt.Modifiers |= KeyModifier::MOD1;
 
 		// Set buttons
 		switch ( [pEvent type] )
 		{
-			case NSLeftMouseDown:
-				if ( nKeyModifiers & NSControlKeyMask )
+			case NSEventTypeLeftMouseDown:
+				if ( nKeyModifiers & NSEventModifierFlagControl )
 					aEvt.Buttons = MouseButton::RIGHT;
 				else
 					aEvt.Buttons = MouseButton::LEFT;
 				Window::fireMousePressedEvent( pMoviePlayer, aEvt );
 				break;
-			case NSRightMouseDown:
+			case NSEventTypeRightMouseDown:
 				aEvt.Buttons = MouseButton::RIGHT;
 				Window::fireMousePressedEvent( pMoviePlayer, aEvt );
 				break;
-			case NSOtherMouseDown:
+			case NSEventTypeOtherMouseDown:
 				aEvt.Buttons = MouseButton::MIDDLE;
 				Window::fireMousePressedEvent( pMoviePlayer, aEvt );
 				break;
-			case NSLeftMouseDragged:
-				if ( nKeyModifiers & NSControlKeyMask )
+			case NSEventTypeLeftMouseDragged:
+				if ( nKeyModifiers & NSEventModifierFlagControl )
 					aEvt.Buttons = MouseButton::RIGHT;
 				else
 					aEvt.Buttons = MouseButton::LEFT;
 				Window::fireMouseMovedEvent( pMoviePlayer, aEvt );
 				break;
-			case NSRightMouseDragged:
+			case NSEventTypeRightMouseDragged:
 				aEvt.Buttons = MouseButton::RIGHT;
 				Window::fireMouseMovedEvent( pMoviePlayer, aEvt );
 				break;
-			case NSOtherMouseDragged:
+			case NSEventTypeOtherMouseDragged:
 				aEvt.Buttons = MouseButton::MIDDLE;
 				Window::fireMouseMovedEvent( pMoviePlayer, aEvt );
 				break;
-			case NSLeftMouseUp:
-				if ( nKeyModifiers & NSControlKeyMask )
+			case NSEventTypeLeftMouseUp:
+				if ( nKeyModifiers & NSEventModifierFlagControl )
 					aEvt.Buttons = MouseButton::RIGHT;
 				else
 					aEvt.Buttons = MouseButton::LEFT;
 				Window::fireMouseReleasedEvent( pMoviePlayer, aEvt );
 				break;
-			case NSRightMouseUp:
+			case NSEventTypeRightMouseUp:
 				aEvt.Buttons = MouseButton::RIGHT;
 				Window::fireMouseReleasedEvent( pMoviePlayer, aEvt );
 				break;
-			case NSOtherMouseUp:
+			case NSEventTypeOtherMouseUp:
 				aEvt.Buttons = MouseButton::MIDDLE;
 				Window::fireMouseReleasedEvent( pMoviePlayer, aEvt );
 				break;
