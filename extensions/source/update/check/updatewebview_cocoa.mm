@@ -929,7 +929,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if(pDownloadData)
 	{
 		aDownloadDataMap[download]=pDownloadData;
-		[download setDeletesFileUponFailure:NO];
+		download.deletesFileUponFailure = NO;
 
 		// Determine path that is being resumed
 		if (pRetryDownloadURLs)
@@ -1143,7 +1143,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 						if (pNewDownload)
 						{
 							[pNewDownload autorelease];
-							[pNewDownload setDeletesFileUponFailure:NO];
+							pNewDownload.deletesFileUponFailure = NO;
 							[pRetryDownloadURLs setObject:pNewDownload forKey:filePath];
 						}
 					}
@@ -1198,7 +1198,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if(pDownloadData)
 	{
 		aDownloadDataMap[download]=pDownloadData;
-		[download setDeletesFileUponFailure:NO];
+		download.deletesFileUponFailure = NO;
 	}
 }
 
@@ -1467,7 +1467,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 					if (pNewDownload)
 					{
 						[pNewDownload autorelease];
-						[pNewDownload setDeletesFileUponFailure:NO];
+						pNewDownload.deletesFileUponFailure = NO;
 						[pRetryDownloadURLs setObject:pNewDownload forKey:pPath];
 					}
 				}
