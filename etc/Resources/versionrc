@@ -1,7 +1,7 @@
 [Version]
 AllLanguages=ar cs da de el en-GB en-US es fi fr he hu it ja ko nb nl pl pt-BR ru sk sv th tr zh-CN zh-TW qtz
 BuildVersion=
-buildid=
+buildid=0
 ExtensionUpdateURL=http://updateexte.libreoffice.org/ExtensionUpdateService/check.Update
 ProductMajor=447
 ProductMinor=2
