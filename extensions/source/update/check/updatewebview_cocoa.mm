@@ -393,7 +393,10 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			{
 				if ( pBaseURLs[ i ] )
 				{
-					NSString *pBaseURL = [pBaseURLs[ i ] stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLHostAllowedCharacterSet]];
+					// Encoding using the URLHostAllowedCharacterSet or
+					// URLPathAllowedCharacterSet add inappropriate percent
+					// escaped characters so do not encode the base URL string
+					const NSString *pBaseURL = pBaseURLs[ i ];
 					unsigned int len = [pBaseURL length];
 					if ( len && [pBaseURL characterAtIndex:len - 1] != (unichar)'/' )
 						pBaseURL = [pBaseURL stringByAppendingString:@"/"];
