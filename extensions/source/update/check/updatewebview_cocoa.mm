@@ -1140,7 +1140,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 				{
 					NSURLDownload *pNewDownload = nil;
 					NSData *pResumeData = GetResumeDataForFile(download, filePath);
-					if (pResumeData)
+					if (pResumeData && [NSURLDownload instancesRespondToSelector:@selector(initWithResumeData:delegate:path:)] )
 					{
 						pNewDownload = [[NSURLDownload alloc] initWithResumeData:pResumeData delegate:self path:filePath];
 						if (pNewDownload)
@@ -1464,7 +1464,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			{
 				NSURLDownload *pNewDownload = nil;
 				NSData *pResumeData = GetResumeDataForFile(download, pPath);
-				if (pResumeData)
+				if (pResumeData && [NSURLDownload instancesRespondToSelector:@selector(initWithResumeData:delegate:path:)] )
 				{
 					pNewDownload = [[NSURLDownload alloc] initWithResumeData:pResumeData delegate:self path:pPath];
 					if (pNewDownload)
