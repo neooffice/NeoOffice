@@ -1731,7 +1731,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 				[pRetryDownloadURLs retain];
 		}
 
-		if (!pRetryDownloadURLs)
+		if (pRetryDownloadURLs)
 		{
 			NSMutableURLRequest *pRequest = [[pDownload request] mutableCopyWithZone:nil];
 			if (pRequest)
