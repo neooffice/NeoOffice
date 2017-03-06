@@ -38,6 +38,7 @@
 // Need to include for virtual key constants but we don't link to it
 #import <Carbon/Carbon.h>
 #import <objc/objc-class.h>
+#import <apple_remote/RemoteControl.h>
 #include <postmac.h>
 #undef check
 
@@ -1573,6 +1574,55 @@ static NSUInteger nMouseMask = 0;
 				JavaSalEvent *pSalWheelMouseEvent = new JavaSalEvent( SALEVENT_WHEELMOUSE, mpFrame, pWheelMouseEvent );
 				JavaSalEventQueue::postCachedEvent( pSalWheelMouseEvent );
 				pSalWheelMouseEvent->release();
+			}
+		}
+		// Handle apple remote events
+		else if ( nType == NSEventTypeApplicationDefined && [pEvent subtype] == AppleRemoteControlEvent )
+		{
+			sal_Int16 nCommand = 0;
+
+			switch ( [pEvent data1] )
+			{
+				case kRemoteButtonLeft:
+					nCommand = MEDIA_COMMAND_PREVIOUSTRACK;
+					break;
+				case kRemoteButtonLeft_Hold:
+					nCommand = MEDIA_COMMAND_REWIND;
+					break;
+				case kRemoteButtonMenu_Hold:
+					nCommand = MEDIA_COMMAND_STOP;
+					break;
+				case kRemoteButtonMinus:
+					nCommand = MEDIA_COMMAND_VOLUME_DOWN;
+					break;
+				case kRemoteButtonPlay:
+					nCommand = MEDIA_COMMAND_PLAY;
+					break;
+				case kRemoteButtonPlay_Hold:
+					nCommand = MEDIA_COMMAND_PLAY_HOLD;
+					break;
+				case kRemoteButtonPlus:
+					nCommand = MEDIA_COMMAND_VOLUME_UP;
+					break;
+				case kRemoteButtonRight:
+					nCommand = MEDIA_COMMAND_NEXTTRACK;
+					break;
+				case kRemoteButtonRight_Hold:
+					nCommand = MEDIA_COMMAND_NEXTTRACK_HOLD;
+					break;
+				case kRemoteButtonMenu:
+				case kRemoteButtonMinus_Hold:
+				case kRemoteButtonPlus_Hold:
+				default:
+					break;
+			}
+
+			if ( nCommand )
+			{
+				CommandMediaData *pMediaData = new CommandMediaData( nCommand );
+				JavaSalEvent *pCommandEvent = new JavaSalEvent( SALEVENT_COMMANDMEDIADATA, mpFrame, pMediaData );
+				JavaSalEventQueue::postCachedEvent( pCommandEvent );
+				pCommandEvent->release();
 			}
 		}
 

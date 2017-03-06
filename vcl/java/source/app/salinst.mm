@@ -1384,6 +1384,12 @@ JavaSalEvent::~JavaSalEvent()
 				delete pWheelMouseEvent;
 				break;
 			}
+			case SALEVENT_COMMANDMEDIADATA:
+			{
+				CommandMediaData *pCommandMediaData = (CommandMediaData *)mpData;
+				delete pCommandMediaData;
+				break;
+			}
 			default:
 				break;
 		}
@@ -1580,6 +1586,31 @@ void JavaSalEvent::dispatch()
 					}
 				}
 			}
+			return;
+		}
+		case SALEVENT_COMMANDMEDIADATA:
+		{
+			Window *pWindow = NULL;
+			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame->mbVisible )
+				pWindow = pSalData->mpPresentationFrame->GetWindow();
+			if ( !pWindow && pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
+				pWindow = pSalData->mpFocusFrame->GetWindow();
+			if ( !pWindow )
+				pWindow = Application::GetFirstTopLevelWindow();
+
+			CommandMediaData *pCommandMediaData = (CommandMediaData *)mpData;
+			if ( pWindow && pCommandMediaData )
+			{
+				sal_Int16 nCommand = pCommandMediaData->GetMediaId();
+				if ( nCommand == MEDIA_COMMAND_PLAY && pSalData->mpPresentationFrame && pSalData->mpPresentationFrame->mbVisible )
+					nCommand = MEDIA_COMMAND_PLAY_PAUSE;
+				CommandMediaData aModifiedCommandMediaData( nCommand );
+				CommandEvent aCommandEvent( Point(), COMMAND_MEDIA, false, &aModifiedCommandMediaData );
+				NotifyEvent aNotifyEvent( EVENT_COMMAND, pWindow, &aCommandEvent );
+				if ( !ImplCallPreNotify( aNotifyEvent ) )
+					pWindow->Command( aCommandEvent );
+			}
+
 			return;
 		}
 		case SALEVENT_ABOUT:
