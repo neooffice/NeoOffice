@@ -38,6 +38,7 @@
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
+#import <apple_remote/RemoteMainController.h>
 #include <postmac.h>
 
 @interface VCLMainMenuDidEndTracking : NSObject
@@ -53,6 +54,7 @@
 	NSMenu*					mpDockMenu;
 	BOOL					mbInTermination;
 	BOOL					mbInTracking;
+	AppleRemoteMainController*	mpAppleRemoteMainController;
 }
 + (VCLApplicationDelegate *)sharedDelegate;
 - (void)addMenuBarItem:(NSNotification *)pNotification;
@@ -63,7 +65,9 @@
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
 - (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)pSender;
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;
+- (void)applicationWillBecomeActive:(NSNotification *)pNotification;
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification;
+- (void)applicationWillResignActive:(NSNotification *)pNotification;
 - (void)cancelTermination;
 - (void)dealloc;
 - (id)init;

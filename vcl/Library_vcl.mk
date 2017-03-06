@@ -591,13 +591,13 @@ $(eval $(call gb_Library_use_system_darwin_frameworks,vcl,\
 	OpenGL \
 ))
 
+endif	# GUIBASE == java
+
 ifneq ($(ENABLE_MACOSX_SANDBOX),TRUE)
 $(eval $(call gb_Library_use_libraries,vcl,\
     AppleRemote \
 ))
 endif
-
-endif	# GUIBASE == java
 
 endif
 

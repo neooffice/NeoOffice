@@ -116,7 +116,9 @@ static OUString GetVclResString( int nId )
 - (NSMenu *)applicationDockMenu:(NSApplication *)pApplication;
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;
+- (void)applicationWillBecomeActive:(NSNotification *)pNotification;
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification;
+- (void)applicationWillResignActive:(NSNotification *)pNotification;
 @end
 
 /*
@@ -135,7 +137,9 @@ static OUString GetVclResString( int nId )
 - (NSMenu *)applicationDockMenu:(NSApplication *)pApplication;
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;
+- (void)applicationWillBecomeActive:(NSNotification *)pNotification;
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification;
+- (void)applicationWillResignActive:(NSNotification *)pNotification;
 - (void)dealloc;
 - (id)init;
 - (void)handleCalcCommand:(id)pObject;
@@ -362,10 +366,22 @@ void ProcessShutdownIconCommand( int nCommand )
 		return NSTerminateCancel;
 }
 
+- (void)applicationWillBecomeActive:(NSNotification *)pNotification
+{
+	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(applicationWillBecomeActive:)] )
+		[mpDelegate applicationWillBecomeActive:pNotification];
+}
+
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification
 {
 	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(applicationWillFinishLaunching:)] )
 		[mpDelegate applicationWillFinishLaunching:pNotification];
+}
+
+- (void)applicationWillResignActive:(NSNotification *)pNotification
+{
+	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(applicationWillResignActive:)] )
+		[mpDelegate applicationWillResignActive:pNotification];
 }
 
 - (void)dealloc

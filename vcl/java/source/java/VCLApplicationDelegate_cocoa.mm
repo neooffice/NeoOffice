@@ -37,6 +37,7 @@
 
 #include <premac.h>
 #import <objc/objc-runtime.h>
+#import <apple_remote/RemoteControl.h>
 #include <postmac.h>
 
 #include <rtl/ustring.hxx>
@@ -516,6 +517,18 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	return HandleTerminationRequest();
 }
 
+- (void)applicationWillBecomeActive:(NSNotification *)pNotification
+{
+	(void)pNotification;
+
+	if ( mpAppleRemoteMainController )
+	{
+		RemoteControl *pRemoteControl = [mpAppleRemoteMainController remoteControl];
+		if ( pRemoteControl )
+			[pRemoteControl startListening:self];
+	}
+}
+
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification
 {
 	// Make our NSDocumentController subclass the shared controller by creating
@@ -524,6 +537,18 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(applicationWillFinishLaunching:)] )
 		[mpDelegate applicationWillFinishLaunching:pNotification];
+}
+
+- (void)applicationWillResignActive:(NSNotification *)pNotification
+{
+	(void)pNotification;
+
+	if ( mpAppleRemoteMainController )
+	{
+		RemoteControl *pRemoteControl = [mpAppleRemoteMainController remoteControl];
+		if ( pRemoteControl )
+			[pRemoteControl stopListening:self];
+	}
 }
 
 - (void)cancelTermination
@@ -561,6 +586,9 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	if ( mpDockMenu )
 		[mpDockMenu release];
 
+	if ( mpAppleRemoteMainController )
+		[mpAppleRemoteMainController release];
+
 	[super dealloc];
 }
 
@@ -574,6 +602,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	mpDockMenu = [[NSMenu alloc] initWithTitle:@""];
 	mbInTermination = NO;
 	mbInTracking = NO;
+	mpAppleRemoteMainController = [[AppleRemoteMainController alloc] init];
 
 	// Set the application delegate as the delegate for the application menu so
 	// that the Java menu item target and selector can be replaced with our own
@@ -607,7 +636,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	// Set the application delegate as the delegate for the dock menu
 	if ( mpDockMenu )
 		[mpDockMenu setDelegate:self];
-	
+
 	return self;
 }
 
