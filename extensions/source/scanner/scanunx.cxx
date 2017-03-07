@@ -35,16 +35,7 @@
 #endif
 
 #ifdef USE_JAVA
-
-#include <comphelper/processfactory.hxx>
-#include <com/sun/star/beans/PropertyValue.hpp>
-#include <com/sun/star/frame/XDesktop.hpp>
-#include <com/sun/star/frame/XDispatchProvider.hpp>
-#include <com/sun/star/frame/XFrame.hpp>
-#include <com/sun/star/util/XURLTransformer.hpp>
-
-using namespace ::com::sun::star;
-
+#include "scanunx_cocoa.h"
 #endif	// USE_JAVA
 
 BitmapTransporter::BitmapTransporter()
@@ -347,27 +338,8 @@ void ScannerManager::startScan( const ScannerContext& scanner_context,
                                 const Reference< com::sun::star::lang::XEventListener >& listener ) throw( ScannerException, std::exception )
 {
 #ifdef USE_JAVA
-    uno::Reference< lang::XMultiServiceFactory > xFactory( ::comphelper::getProcessServiceFactory() );
-
-    // Invoke the ImageCapture UNO component's BASIC script
-    try
-    {
-        util::URL aURL;
-        aURL.Complete = "macro:///ImageCapture.Main.Main";
-        uno::Reference< util::XURLTransformer > xTransformer( xFactory->createInstance( "com.sun.star.util.URLTransformer" ), uno::UNO_QUERY_THROW );
-        xTransformer->parseStrict( aURL );
-        uno::Reference< frame::XDesktop > xDesktop( xFactory->createInstance( "com.sun.star.frame.Desktop" ), uno::UNO_QUERY_THROW );
-        uno::Reference< frame::XDispatchProvider > xDispatchProvider( xDesktop->getCurrentFrame(), uno::UNO_QUERY );
-        if( xDispatchProvider.is() )
-        {
-            uno::Reference< frame::XDispatch > xDispatch = xDispatchProvider->queryDispatch( aURL, "", 0 );
-            if( xDispatch.is() )
-                xDispatch->dispatch( aURL, uno::Sequence< beans::PropertyValue >() );
-        }
-    }
-    catch ( ... )
-    {
-    }
+    // Launch the ImageCapture application
+    NSWorkspace_launchImageCaptureApplication();
 #else	// USE_JAVA
     osl::MutexGuard aGuard( theSaneProtector::get() );
     sanevec &rSanes = theSanes::get().m_aSanes;
