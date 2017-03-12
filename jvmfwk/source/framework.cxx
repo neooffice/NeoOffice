@@ -268,7 +268,15 @@ javaFrameworkError SAL_CALL jfw_startVM(
                 OString sVendorUpdate = jfw::getElementUpdated();
 
                 if (sVendorUpdate != settings.getJavaInfoAttrVendorUpdate())
+#ifdef USE_JAVA
+                {
+                    // If the info file has been imported from an old version,
+                    // force the LibO code to search for Java again
+                    return JFW_E_NO_SELECT;
+                }
+#else	// USE_JAVA
                     return JFW_E_INVALID_SETTINGS;
+#endif	// USE_JAVA
 
                 //check if JAVA is disabled
                 //If Java is enabled, but it was disabled when this process was started
