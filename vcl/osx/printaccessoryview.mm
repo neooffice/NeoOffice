@@ -144,7 +144,11 @@ class ControllerProperties
                : OUString( "Print selection only" );
     }
     
+#ifdef USE_JAVA 
+    void updatePrintJob( bool bNeedRestart = false )
+#else	// USE_JAVA 
     void updatePrintJob()
+#endif	// USE_JAVA 
     {
         // TODO: refresh page count etc from mpController 
 
@@ -154,7 +158,11 @@ class ControllerProperties
         if( nPages != mnLastPageCount )
             fprintf( stderr, "trouble: number of pages changed from %ld to %ld !\n", mnLastPageCount, nPages );
         #endif
+#ifdef USE_JAVA
+        mpState->bNeedRestart = (bNeedRestart || nPages != mnLastPageCount);
+#else	// USE_JAVA
         mpState->bNeedRestart = (nPages != mnLastPageCount);
+#endif	// USE_JAVA
         NSTabViewItem* pItem = [mpTabView selectedTabViewItem];
         if( pItem )
             mpState->nLastPage = [mpTabView indexOfTabViewItem: pItem];
@@ -274,7 +282,14 @@ class ControllerProperties
                    pVal->Value <<= i_bValue ? sal_Int32(2) : sal_Int32(0);
                else
                    pVal->Value <<= i_bValue;
+#ifdef USE_JAVA
+                // If the "print selection only" option is changed when the
+                // content is only a single page, updatePrintJob() will not
+                // restart the print job so force the print job to restart
+                updatePrintJob( name_it->second == "PrintContent" ? true : false );
+#else	// USE_JAVA
                 updatePrintJob(); 
+#endif	// USE_JAVA
             }
         }
     }
