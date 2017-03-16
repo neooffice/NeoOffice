@@ -881,7 +881,7 @@ void drawIconSets( const ScIconSetInfo* pOldIconSetInfo, OutputDevice* pDev, con
 void drawCells(const Color* pColor, const SvxBrushItem* pBackground, const Color*& pOldColor, const SvxBrushItem*& pOldBackground,
         Rectangle& rRect, long nPosX, long nSignedOneX, OutputDevice* pDev, const ScDataBarInfo* pDataBarInfo, const ScDataBarInfo*& pOldDataBarInfo,
 #ifdef USE_JAVA
-        const ScIconSetInfo* pIconSetInfo, const ScIconSetInfo*& pOldIconSetInfo, Color& rNativeHighlightColor, tools::PolyPolygon& rNativeHighlightPolyPoly)
+        const ScIconSetInfo* pIconSetInfo, const ScIconSetInfo*& pOldIconSetInfo, Color& rNativeHighlightColor, tools::PolyPolygon& rNativeHighlightPolyPoly, sal_uInt16& rNativeHighlightTransparentPercent)
 #else	// USE_JAVA
         const ScIconSetInfo* pIconSetInfo, const ScIconSetInfo*& pOldIconSetInfo)
 #endif	// USE_JAVA
@@ -910,7 +910,7 @@ void drawCells(const Color* pColor, const SvxBrushItem* pBackground, const Color
             pDev->IntersectClipRegion( vcl::Region( rNativeHighlightPolyPoly ) );
             pDev->SetFillColor( rNativeHighlightColor );
             pDev->SetLineColor();
-            pDev->DrawTransparent( tools::PolyPolygon( Polygon( rNativeHighlightPolyPoly.GetBoundRect() ) ), 25 );
+            pDev->DrawTransparent( tools::PolyPolygon( Polygon( rNativeHighlightPolyPoly.GetBoundRect() ) ), rNativeHighlightTransparentPercent );
             pDev->Pop();
         }
 #endif	// USE_JAVA
@@ -945,7 +945,7 @@ void drawCells(const Color* pColor, const SvxBrushItem* pBackground, const Color
                 pDev->IntersectClipRegion( vcl::Region( rNativeHighlightPolyPoly ) );
                 pDev->SetFillColor( rNativeHighlightColor );
                 pDev->SetLineColor();
-                pDev->DrawTransparent( tools::PolyPolygon( Polygon( rNativeHighlightPolyPoly.GetBoundRect() ) ), 25 );
+                pDev->DrawTransparent( tools::PolyPolygon( Polygon( rNativeHighlightPolyPoly.GetBoundRect() ) ), rNativeHighlightTransparentPercent );
                 pDev->Pop();
             }
 #endif	// USE_JAVA
@@ -997,10 +997,15 @@ void ScOutputData::DrawBackground()
 
 #ifdef USE_JAVA
     Color aNativeHighlightColor( COL_TRANSPARENT );
+    sal_uInt16 nNativeHighlightTransparentPercent = 0;
     tools::PolyPolygon aNativeHighlightPolyPoly;
     if ( mpGridWindow )
     {
         aNativeHighlightColor = mpGridWindow->GetSettings().GetStyleSettings().GetHighlightColor();
+
+        const SvtOptionsDrawinglayer aSvtOptionsDrawinglayer;
+        if ( aSvtOptionsDrawinglayer.IsTransparentSelection() )
+            nNativeHighlightTransparentPercent = aSvtOptionsDrawinglayer.GetTransparentSelectionPercent();
 
         std::vector< Rectangle > aPixelRects;
         mpGridWindow->GetNativeHightlightColorRects( aPixelRects );
@@ -1108,7 +1113,7 @@ void ScOutputData::DrawBackground()
                     const ScDataBarInfo* pDataBarInfo = pInfo->pDataBar.get();
                     const ScIconSetInfo* pIconSetInfo = pInfo->pIconSet.get();
 #ifdef USE_JAVA
-                    drawCells( pColor, pBackground, pOldColor, pOldBackground, aRect, nPosX, nSignedOneX, mpDev, pDataBarInfo, pOldDataBarInfo, pIconSetInfo, pOldIconSetInfo, aNativeHighlightColor, aNativeHighlightPolyPoly );
+                    drawCells( pColor, pBackground, pOldColor, pOldBackground, aRect, nPosX, nSignedOneX, mpDev, pDataBarInfo, pOldDataBarInfo, pIconSetInfo, pOldIconSetInfo, aNativeHighlightColor, aNativeHighlightPolyPoly, nNativeHighlightTransparentPercent );
 #else	// USE_JAVA
                     drawCells( pColor, pBackground, pOldColor, pOldBackground, aRect, nPosX, nSignedOneX, mpDev, pDataBarInfo, pOldDataBarInfo, pIconSetInfo, pOldIconSetInfo );
 #endif	// USE_JAVA
@@ -1116,7 +1121,7 @@ void ScOutputData::DrawBackground()
                     nPosX += pRowInfo[0].pCellInfo[nX+1].nWidth * nLayoutSign;
                 }
 #ifdef USE_JAVA
-                drawCells( NULL, NULL, pOldColor, pOldBackground, aRect, nPosX, nSignedOneX, mpDev, NULL, pOldDataBarInfo, NULL, pOldIconSetInfo, aNativeHighlightColor, aNativeHighlightPolyPoly );
+                drawCells( NULL, NULL, pOldColor, pOldBackground, aRect, nPosX, nSignedOneX, mpDev, NULL, pOldDataBarInfo, NULL, pOldIconSetInfo, aNativeHighlightColor, aNativeHighlightPolyPoly, nNativeHighlightTransparentPercent );
 #else	// USE_JAVA
                 drawCells( NULL, NULL, pOldColor, pOldBackground, aRect, nPosX, nSignedOneX, mpDev, NULL, pOldDataBarInfo, NULL, pOldIconSetInfo );
 #endif	// USE_JAVA
