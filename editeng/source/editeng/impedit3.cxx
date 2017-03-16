@@ -81,6 +81,10 @@
 #include <comphelper/string.hxx>
 #include <boost/scoped_array.hpp>
 
+#ifdef USE_JAVA
+#include <svtools/optionsdrawinglayer.hxx>
+#endif	// USE_JAVA
+
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::beans;
@@ -2902,6 +2906,7 @@ void ImpEditEngine::Paint( OutputDevice* pOutDev, Rectangle aClipRect, Point aSt
 #ifdef USE_JAVA
     // Find the matching ImpEditView's selected region
     Color aNativeHighlightColor( COL_TRANSPARENT );
+    sal_uInt16 nNativeHighlightTransparentPercent = 0;
     tools::PolyPolygon aNativeHighlightPolyPoly;
     if ( pActiveView )
     {
@@ -2909,6 +2914,10 @@ void ImpEditEngine::Paint( OutputDevice* pOutDev, Rectangle aClipRect, Point aSt
         if ( pImpView )
         {
             aNativeHighlightColor = pOutDev->GetSettings().GetStyleSettings().GetHighlightColor();
+            const SvtOptionsDrawinglayer aSvtOptionsDrawinglayer;
+            if ( aSvtOptionsDrawinglayer.IsTransparentSelection() )
+                nNativeHighlightTransparentPercent = aSvtOptionsDrawinglayer.GetTransparentSelectionPercent();
+
             aNativeHighlightPolyPoly = pImpView->GetNativeHighlightColorPolyPolygon();
         }
     }
@@ -2926,7 +2935,7 @@ void ImpEditEngine::Paint( OutputDevice* pOutDev, Rectangle aClipRect, Point aSt
         pOutDev->IntersectClipRegion( vcl::Region( aNativeHighlightPolyPoly ) );
         pOutDev->SetFillColor( aNativeHighlightColor );
         pOutDev->SetLineColor();
-        pOutDev->DrawTransparent( tools::PolyPolygon( Polygon( aNativeHighlightPolyPoly.GetBoundRect() ) ), 25 );
+        pOutDev->DrawTransparent( tools::PolyPolygon( Polygon( aNativeHighlightPolyPoly.GetBoundRect() ) ), nNativeHighlightTransparentPercent );
         pOutDev->Pop();
     }
 #endif	// USE_JAVA
