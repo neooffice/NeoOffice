@@ -1026,8 +1026,9 @@
         <prop oor:name="TransparentSelection" oor:type="xs:boolean" oor:nillable="false">
           <value>true</value>
         </prop>
+        <!-- Set transparent selection to 25% -->
         <prop oor:name="TransparentSelectionPercent" oor:type="xs:short" oor:nillable="false">
-          <value>75</value>
+          <value>25</value>
         </prop>
         <prop oor:name="SelectionMaximumLuminancePercent" oor:type="xs:short" oor:nillable="false">
           <value>70</value>
