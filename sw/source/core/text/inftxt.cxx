@@ -81,6 +81,7 @@
 #endif
 
 #ifdef USE_JAVA
+#include <svtools/optionsdrawinglayer.hxx>
 #include <vcl/settings.hxx>
 #include <crsrsh.hxx>
 #endif  // USE_JAVA
@@ -586,6 +587,7 @@ void SwTxtPaintInfo::_DrawText( const OUString &rText, const SwLinePortion &rPor
 
 #ifdef USE_JAVA
     Color aNativeHighlightColor( COL_TRANSPARENT );
+    sal_uInt16 nNativeHighlightTransparentPercent = 0;
     tools::PolyPolygon aNativeHighlightPolyPoly;
     SwRect aRect;
     SwRect aPaintRect;
@@ -595,6 +597,10 @@ void SwTxtPaintInfo::_DrawText( const OUString &rText, const SwLinePortion &rPor
     {
         OutputDevice *pOutDev = GetOut();
         aNativeHighlightColor = pOutDev->GetSettings().GetStyleSettings().GetHighlightColor();
+
+        const SvtOptionsDrawinglayer aSvtOptionsDrawinglayer;
+        if ( aSvtOptionsDrawinglayer.IsTransparentSelection() )
+            nNativeHighlightTransparentPercent = aSvtOptionsDrawinglayer.GetTransparentSelectionPercent();
 
         std::vector< Rectangle > aPixelRects;
 
@@ -639,7 +645,7 @@ void SwTxtPaintInfo::_DrawText( const OUString &rText, const SwLinePortion &rPor
             pOutDev->IntersectClipRegion( vcl::Region( aNativeHighlightPolyPoly ) );
             pOutDev->SetFillColor( aNativeHighlightColor );
             pOutDev->SetLineColor();
-            pOutDev->DrawTransparent( tools::PolyPolygon( Polygon( aNativeHighlightPolyPoly.GetBoundRect() ) ), 25 );
+            pOutDev->DrawTransparent( tools::PolyPolygon( Polygon( aNativeHighlightPolyPoly.GetBoundRect() ) ), nNativeHighlightTransparentPercent );
             pOutDev->Pop();
         }
     }

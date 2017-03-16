@@ -2221,11 +2221,16 @@ void DrawGraphic(
 
 #ifdef USE_JAVA
         Color aNativeHighlightColor( COL_TRANSPARENT );
+        sal_uInt16 nNativeHighlightTransparentPercent = 0;
         tools::PolyPolygon aNativeHighlightPolyPoly;
         SwCrsrShell *pCrsrSh = dynamic_cast< SwCrsrShell* >( pSh );
         if ( pCrsrSh )
         {
             aNativeHighlightColor = pOutDev->GetSettings().GetStyleSettings().GetHighlightColor();
+
+            const SvtOptionsDrawinglayer aSvtOptionsDrawinglayer;
+            if ( aSvtOptionsDrawinglayer.IsTransparentSelection() )
+                nNativeHighlightTransparentPercent = aSvtOptionsDrawinglayer.GetTransparentSelectionPercent();
 
             std::vector< Rectangle > aPixelRects;
 
@@ -2340,7 +2345,7 @@ void DrawGraphic(
                         pOutDev->IntersectClipRegion( vcl::Region( aNativeHighlightPolyPoly ) );
                         pOutDev->SetFillColor( aNativeHighlightColor );
                         pOutDev->SetLineColor();
-                        pOutDev->DrawRect( aNativeHighlightPolyPoly.GetBoundRect() );
+                        pOutDev->DrawTransparent( tools::PolyPolygon( Polygon( aNativeHighlightPolyPoly.GetBoundRect() ) ), nNativeHighlightTransparentPercent );
                         pOutDev->Pop();
                     }
                 }
@@ -2374,7 +2379,7 @@ void DrawGraphic(
                         pOutDev->IntersectClipRegion( vcl::Region( aNativeHighlightPolyPoly ) );
                         pOutDev->SetFillColor( aNativeHighlightColor );
                         pOutDev->SetLineColor();
-                        pOutDev->DrawRect( aNativeHighlightPolyPoly.GetBoundRect() );
+                        pOutDev->DrawTransparent( tools::PolyPolygon( Polygon( aNativeHighlightPolyPoly.GetBoundRect() ) ), nNativeHighlightTransparentPercent );
                         pOutDev->Pop();
                     }
 #endif  // USE_JAVA
