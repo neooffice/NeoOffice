@@ -77,8 +77,8 @@ AboutDialog::AboutDialog(vcl::Window* pParent)
     get(m_pCopyrightText, "copyright");
     m_aCopyrightTextStr = m_pCopyrightText->GetText();
 #ifdef USE_JAVA
-    m_pWebsiteButton = NULL;
-    m_pCreditsButton = NULL;
+    get(m_pWebsiteButton, "website")->Hide();
+    get(m_pCreditsButton, "credits")->Hide();
 #else	// USE_JAVA
     get(m_pWebsiteButton, "website");
     get(m_pCreditsButton, "credits");
