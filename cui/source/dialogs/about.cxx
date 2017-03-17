@@ -236,6 +236,7 @@ OUString AboutDialog::GetBuildId()
 {
     OUString sDefault;
     OUString sBuildId(utl::Bootstrap::getBuildVersion(sDefault));
+#ifndef USE_JAVA
     if (!sBuildId.isEmpty())
         return sBuildId;
 
@@ -248,6 +249,7 @@ OUString AboutDialog::GetBuildId()
     }
 
     OSL_ENSURE( !sBuildId.isEmpty(), "No BUILDID in bootstrap file" );
+#endif	// !USE_JAVA
     return sBuildId;
 }
 
@@ -275,13 +277,17 @@ OUString AboutDialog::GetVersionString()
 {
     OUString sVersion = m_aVersionTextStr;
 
-#ifndef USE_JAVA
     OUString sBuildId = GetBuildId();
 
+#ifndef USE_JAVA
     OUString pLocaleStr = GetLocaleString();
+#endif	// !USE_JAVA
 
     if (!sBuildId.trim().isEmpty())
     {
+#ifdef USE_JAVA
+        sVersion += " " + sBuildId.trim();
+#else	// USE_JAVA
         sVersion += "\n";
         if (m_sBuildStr.indexOf("$BUILDID") == -1)
         {
@@ -289,8 +295,10 @@ OUString AboutDialog::GetVersionString()
             m_sBuildStr += " $BUILDID";
         }
         sVersion += m_sBuildStr.replaceAll("$BUILDID", sBuildId);
+#endif	// USE_JAVA
     }
 
+#ifndef USE_JAVA
     if (strlen(EXTRA_BUILDID) > 0)
     {
         sVersion += "\n";
