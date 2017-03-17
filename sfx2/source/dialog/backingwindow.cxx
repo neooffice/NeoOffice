@@ -107,7 +107,30 @@ BackingWindow::BackingWindow( vcl::Window* i_pParent ) :
     maSelFolders(cmpSelectionItems)
 
 {
-#ifndef USE_JAVA
+#ifdef USE_JAVA
+    mpOpenButton = NULL;
+    mpRecentButton = NULL;
+    mpTemplateButton = NULL;
+    mpCreateLabel = NULL;
+    mpWriterAllButton = NULL;
+    mpCalcAllButton = NULL;
+    mpImpressAllButton = NULL;
+    mpDrawAllButton = NULL;
+    mpDBAllButton = NULL;
+    mpMathAllButton = NULL;
+    mpHelpButton = NULL;
+    mpExtensionsButton = NULL;
+    mpAllButtonsBox = NULL;
+    mpButtonsBox = NULL;
+    mpSmallButtonsBox = NULL;
+    mpThinBox1 = NULL;
+    mpThinBox2 = NULL;
+    mpHelpBox = NULL;
+    mpExtensionsBox = NULL;
+    mpAllRecentThumbnails = NULL;
+    mpLocalView = NULL;
+    mpCurrentView = NULL;
+#else	// USE_JAVA
     m_pUIBuilder = new VclBuilder(this, getUIRootDir(), "sfx/ui/startcenter.ui", "StartCenter" );
 
     get(mpOpenButton, "open_all");
@@ -185,7 +208,7 @@ BackingWindow::BackingWindow( vcl::Window* i_pParent ) :
     {
         SAL_WARN( "fwk", "BackingWindow - caught an exception! " << e.Message );
     }
-#endif	// !USE_JAVA
+#endif	// USE_JAVA
 
     // fdo#34392: we do the layout dynamically, the layout depends on the font,
     // so we should handle data changed events (font changing) of the last child
@@ -540,7 +563,9 @@ IMPL_LINK(BackingWindow, ExtLinkClickHdl, Button*, pButton)
 
 IMPL_LINK( BackingWindow, ClickHdl, Button*, pButton )
 {
-#ifndef USE_JAVA
+#ifdef USE_JAVA
+    (void)pButton;
+#else	// USE_JAVA
     // dispatch the appropriate URL and end the dialog
     if( pButton == mpWriterAllButton )
         dispatchURL( WRITER_URL );
@@ -579,13 +604,15 @@ IMPL_LINK( BackingWindow, ClickHdl, Button*, pButton )
         mpLocalView->reload();
         mpLocalView->GrabFocus();
     }
-#endif	// !USE_JAVA
+#endif	// USE_JAVA
     return 0;
 }
 
 IMPL_LINK( BackingWindow, MenuSelectHdl, MenuButton*, pButton )
 {
-#ifndef USE_JAVA
+#ifdef USE_JAVA
+    (void)pButton;
+#else	// USE_JAVA
     OString sId = pButton->GetCurItemIdent();
 
     if( sId == "filter_writer" )
@@ -621,7 +648,7 @@ IMPL_LINK( BackingWindow, MenuSelectHdl, MenuButton*, pButton )
     mpLocalView->Show();
     mpLocalView->reload();
     mpLocalView->GrabFocus();
-#endif	// !USE_JAVA
+#endif	// USE_JAVA
 
     return 0;
 }
