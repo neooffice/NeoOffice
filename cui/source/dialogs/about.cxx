@@ -73,7 +73,11 @@ AboutDialog::AboutDialog(vcl::Window* pParent)
     get(m_pLogoReplacement, "logoreplacement");
     get(m_pLogoImage, "logo");
     get(m_pVersion, "version");
+#ifdef USE_JAVA
+    get(m_pDescriptionText, "description")->Hide();
+#else	// USE_JAVA
     get(m_pDescriptionText, "description");
+#endif	// USE_JAVA
     get(m_pCopyrightText, "copyright");
     m_aCopyrightTextStr = m_pCopyrightText->GetText();
 #ifdef USE_JAVA
@@ -271,6 +275,7 @@ OUString AboutDialog::GetVersionString()
 {
     OUString sVersion = m_aVersionTextStr;
 
+#ifndef USE_JAVA
     OUString sBuildId = GetBuildId();
 
     OUString pLocaleStr = GetLocaleString();
@@ -302,14 +307,19 @@ OUString AboutDialog::GetVersionString()
         }
         sVersion += m_pLocaleStr.replaceAll("$LOCALE", pLocaleStr);
     }
+#endif	// !USE_JAVA
 
     return sVersion;
 }
 
 OUString AboutDialog::GetCopyrightString()
 {
+#ifdef USE_JAVA
+    OUString aCopyrightString;
+#else	// USE_JAVA
     OUString aCopyrightString = m_aVendorTextStr;
     aCopyrightString += "\n";
+#endif	// USE_JAVA
 
     aCopyrightString += m_aCopyrightTextStr;
     aCopyrightString += "\n";
