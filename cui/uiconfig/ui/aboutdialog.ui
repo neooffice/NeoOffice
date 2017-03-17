@@ -198,7 +198,7 @@
                         <property name="margin_right">12</property>
                         <property name="hexpand">True</property>
                         <!-- Replace copyright string -->
-                        <property name="label" translatable="no">Copyright © Planamesa Inc.</property>
+                        <property name="label" translatable="no">© Planamesa Inc.</property>
                         <property name="justify">center</property>
                         <property name="wrap">True</property>
                       </object>
