@@ -2474,11 +2474,13 @@ void Desktop::OpenClients()
         // soffice was started as tray icon ...
         return;
 
+#ifndef USE_JAVA
     if ( bRecovery )
     {
         ShowBackingComponent(0);
     }
     else
+#endif	// !USE_JAVA
     {
         OpenDefault();
     }
@@ -2873,7 +2875,7 @@ void Desktop::ShowBackingComponent(Desktop * progress)
     {
         return;
     }
-#endif	// USE_JAVA
+#endif	// !USE_JAVA
     Reference< XComponentContext > xContext = comphelper::getProcessComponentContext();
     Reference< XDesktop2 > xDesktop = css::frame::Desktop::create(xContext);
     if (progress != 0)
