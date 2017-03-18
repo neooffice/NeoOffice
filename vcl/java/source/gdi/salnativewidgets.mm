@@ -4467,8 +4467,11 @@ bool JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 				if( nState & ( CTRL_STATE_DEFAULT | CTRL_STATE_FOCUSED | CTRL_STATE_PRESSED ) )
 				{
 					// Fix text color when running on OS X 10.10 and our
-					// application is not the active application
-					if ( !NSApplication_isActive() )
+					// application is not the active application. Fix wrong
+					// color in the File > New > Database dialog's default
+					// button when the help window has focus by not using the
+					// selected color when the button is inactive.
+					if ( nState & CTRL_STATE_INACTIVE || !NSApplication_isActive() )
 						bReturn = JavaSalFrame::GetSelectedControlTextColor( nTextColor );
 					else
 						bReturn = JavaSalFrame::GetAlternateSelectedControlTextColor( nTextColor );
