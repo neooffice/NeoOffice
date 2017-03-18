@@ -2868,10 +2868,12 @@ void Desktop::DoFirstRunInitializations()
 
 void Desktop::ShowBackingComponent(Desktop * progress)
 {
+#ifndef USE_JAVA
     if (GetCommandLineArgs().IsNoDefault())
     {
         return;
     }
+#endif	// USE_JAVA
     Reference< XComponentContext > xContext = comphelper::getProcessComponentContext();
     Reference< XDesktop2 > xDesktop = css::frame::Desktop::create(xContext);
     if (progress != 0)
