@@ -7,6 +7,7 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
+				<string>fodg</string>
 				<string>odg</string>
 				<string>sda</string>
 				<string>sxd</string>
@@ -19,6 +20,7 @@
 				<string>application/vnd.stardivision.draw</string>
 				<string>application/x-stardraw</string>
 				<string>application/vnd.oasis.opendocument.graphics</string>
+				<string>application/vnd.oasis.opendocument.graphics-flat-xml</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Drawing Document</string>
@@ -34,6 +36,7 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
+				<string>fods</string>
 				<string>ods</string>
 				<string>sdc</string>
 				<string>sxc</string>
@@ -46,6 +49,7 @@
 				<string>application/vnd.stardivision.calc</string>
 				<string>application/x-starcalc</string>
 				<string>application/vnd.oasis.opendocument.spreadsheet</string>
+				<string>application/vnd.oasis.opendocument.spreadsheet-flat-xml</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Spreadsheet Document</string>
@@ -61,6 +65,7 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
+				<string>fodp</string>
 				<string>odp</string>
 				<string>sdd</string>
 				<string>sdp</string>
@@ -76,6 +81,7 @@
 				<string>application/vnd.stardivision.impress-packed</string>
 				<string>application/x-starimpress</string>
 				<string>application/vnd.oasis.opendocument.presentation</string>
+				<string>application/vnd.oasis.opendocument.presentation-flat-xml</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Presentation Document</string>
@@ -91,7 +97,7 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
-				<string>sds</string>
+				<string>sxs</string>
 				<string>odc</string>
 				<string>otc</string>
 			</array>
@@ -117,6 +123,7 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
+				<string>fodt</string>
 				<string>odt</string>
 				<string>sdw</string>
 				<string>sxw</string>
@@ -129,6 +136,7 @@
 				<string>application/vnd.stardivision.writer</string>
 				<string>application/x-starwriter</string>
 				<string>application/vnd.oasis.opendocument.text</string>
+				<string>application/vnd.oasis.opendocument.text-flat-xml</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Text Document</string>
@@ -216,6 +224,7 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
+				<string>otm</string>
 				<string>ott</string>
 				<string>stw</string>
 			</array>
@@ -224,6 +233,7 @@
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/vnd.sun.xml.writer.template</string>
+				<string>application/vnd.oasis.opendocument.text-master-template</string>
 				<string>application/vnd.oasis.opendocument.text-template</string>
 			</array>
 			<key>CFBundleTypeName</key>
@@ -403,6 +413,7 @@
 				<string>sgf</string>
 				<string>sgv</string>
 				<string>svg</string>
+				<string>svgz</string>
 				<string>svm</string>
 				<string>tga</string>
 				<string>tif</string>
@@ -450,6 +461,7 @@
 			<array>
 				<string>csv</string>
 				<string>vor</string>
+				<string>tab</string>
 				<string>tsv</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
