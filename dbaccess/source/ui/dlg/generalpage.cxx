@@ -206,6 +206,16 @@ namespace dbaui
                     )
                     insertEmbeddedDBTypeEntryData( loop->eType, loop->sDisplayName );
             }
+
+#ifdef USE_JAVA
+            // When running in the macOS sandbox, the list will be empty so
+            // hide the embedded database label and list
+            if ( !m_pEmbeddedDBType->GetEntryCount() )
+            {
+                m_pFT_EmbeddedDBLabel->Hide();
+                m_pEmbeddedDBType->Hide();
+            }
+#endif	// USE_JAVA
         }
     }
 
