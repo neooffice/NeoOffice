@@ -209,11 +209,15 @@ namespace dbaui
 
 #ifdef USE_JAVA
             // When running in the macOS sandbox, the list will be empty so
-            // hide the embedded database label and list
+            // hide the embedded database label and list. Also, hide the create
+            // database option as creating a new dBase database will fail and
+            // will create an HSQLDB .odb file.
             if ( !m_pEmbeddedDBType->GetEntryCount() )
             {
                 m_pFT_EmbeddedDBLabel->Hide();
                 m_pEmbeddedDBType->Hide();
+                m_pRB_CreateDatabase->Hide();
+                m_pRB_ConnectDatabase->Check();
             }
 #endif	// USE_JAVA
         }
