@@ -3771,6 +3771,11 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_
 				GetWorkArea( aWorkArea );
 			}
 		}
+
+		// Fix misplaced popup window when clicking the Line Spacing toolbar
+		// button in Writer by not centering once both the X and Y are set
+		if ( mbCenter && nFlags & ( SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y ) )
+			mbCenter = sal_False;
 	}
 
 	// Make sure window does not spill off of the screen
