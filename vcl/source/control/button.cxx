@@ -1185,6 +1185,12 @@ void PushButton::ImplDrawPushButton( bool bLayout )
         aInRect.Bottom()-=4;
         aInRect.Left()+=4;
         aInRect.Right()-=4;
+#ifdef USE_JAVA
+        // Allow room for the button's focus ring when drawing text in buttons
+        // in toolbar popup windows such as the color palettes
+        aInRect.Left()+=3;
+        aInRect.Right()-=3;
+#endif	// USE_JAVA
 
         // prepare single line hint (needed on mac to decide between normal push button and
         // rectangular bevel button look)
