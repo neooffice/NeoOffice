@@ -528,6 +528,7 @@ static BOOL bIOPMAssertionIDSet = NO;
 - (void)setJavaFrame:(VCLWindowWrapperArgs *)pArgs;
 - (void)setFullScreenMode:(VCLWindowWrapperArgs *)pArgs;
 - (void)setMinSize:(VCLWindowWrapperArgs *)pArgs;
+- (void)setMovable:(VCLWindowWrapperArgs *)pArgs;
 - (void)setState:(VCLWindowWrapperArgs *)pArgs;
 - (void)setTitle:(VCLWindowWrapperArgs *)pArgs;
 - (void)setVisible:(VCLWindowWrapperArgs *)pArgs;
@@ -1894,6 +1895,20 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
         return;
 
 	[self setContentMinSize:[pMinSize sizeValue]];
+}
+
+- (void)setMovable:(VCLWindowWrapperArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 1 )
+		return;
+
+    NSNumber *pMovable = (NSNumber *)[pArgArray objectAtIndex:0];
+    if ( !pMovable )
+        return;
+
+	if ( mpWindow )
+		[mpWindow setMovable:[pMovable boolValue]];
 }
 
 - (void)setState:(VCLWindowWrapperArgs *)pArgs
@@ -3402,6 +3417,22 @@ void JavaSalFrame::RemoveTrackingRect( Window *pWindow )
 		VCLWindowWrapperArgs *pRemoveTrackingAreaArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSValue valueWithPointer:pWindow]]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[mpWindow performSelectorOnMainThread:@selector(removeTrackingArea:) withObject:pRemoveTrackingAreaArgs waitUntilDone:YES modes:pModes];
+
+		[pPool release];
+	}
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::SetMovable( bool bMoveable )
+{
+	if ( mpWindow )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		VCLWindowWrapperArgs *pSetMovableArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithBool:bMoveable]]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[mpWindow performSelectorOnMainThread:@selector(setMovable:) withObject:pSetMovableArgs waitUntilDone:YES modes:pModes];
 
 		[pPool release];
 	}

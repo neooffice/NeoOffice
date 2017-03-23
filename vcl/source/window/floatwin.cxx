@@ -40,6 +40,10 @@
 #include <tools/rc.h>
 #include <tools/debug.hxx>
 
+#if defined USE_JAVA && defined MACOSX
+#include "java/salframe.h"
+#endif	// USE_JAVA && MACOSX
+
 class FloatingWindow::ImplData
 {
 public:
@@ -631,6 +635,17 @@ void FloatingWindow::StartPopupMode( const Rectangle& rRect, sal_uLong nFlags )
         SetTitleType( FLOATWIN_TITLE_TEAROFF );
     else
         SetTitleType( FLOATWIN_TITLE_NONE );
+
+#if defined USE_JAVA && defined MACOSX
+    // Disable movability if we added WB_MOVEABLE in ImplInit() and this is not
+    // a tear off window
+    if ( GetStyle() & WB_MOVEABLE )
+    {
+        JavaSalFrame *pFrame = (JavaSalFrame *)ImplGetFrame();
+        if ( pFrame )
+            pFrame->SetMovable( nFlags & FLOATWIN_POPUPMODE_ALLOWTEAROFF );
+    }
+#endif	// USE_JAVA && MACOSX
 
     // avoid close on focus change for decorated floating windows only
     if( mpWindowImpl->mbFrame && (GetStyle() & WB_MOVEABLE) )
