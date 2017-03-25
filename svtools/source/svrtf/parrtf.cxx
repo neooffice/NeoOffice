@@ -527,13 +527,16 @@ _inSkipGroup++;
         int nToken = _GetNextToken();
         if (nToken == RTF_BIN)
         {
-            rInput.SeekRel(-1);
 #ifdef USE_JAVA
             // Fix infinite loop that occurs when the \bin value is negative
-            if (nTokenValue < 0)
-                nTokenValue *= -1;
+            if (nTokenValue > 0)
+            {
 #endif	// USE_JAVA
+            rInput.SeekRel(-1);
             rInput.SeekRel(nTokenValue);
+#ifdef USE_JAVA
+            }
+#endif	// USE_JAVA
             nNextCh = GetNextChar();
         }
         while (nNextCh==0xa || nNextCh==0xd)
