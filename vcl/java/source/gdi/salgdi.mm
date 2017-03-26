@@ -384,7 +384,14 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 	// Expand draw bounds by the line width
 	if ( mfLineWidth <= 0 )
 		mfLineWidth = pGraphics->getNativeLineWidth();
+
+	// Eliminate drawing of unexpected circles when drawing a trapezoid with a
+	// round line cap and a wide line width in Writer by not drawing anything
+	// when the path is a single point
 	CGRect aDrawBounds = CGPathGetBoundingBox( maPath );
+	if ( !aDrawBounds.size.width && !aDrawBounds.size.height )
+		return;
+
 	aDrawBounds.origin.x -= mfLineWidth;
 	aDrawBounds.origin.y -= mfLineWidth;
 	aDrawBounds.size.width += mfLineWidth * 2;
