@@ -351,7 +351,7 @@ void JavaSalGraphicsDrawEPSOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef 
 
 // =======================================================================
 
-JavaSalGraphicsDrawPathOp::JavaSalGraphicsDrawPathOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, bool bShiftLines, float fLineWidth, ::basegfx::B2DLineJoin eLineJoin, bool bLineDash ) :
+JavaSalGraphicsDrawPathOp::JavaSalGraphicsDrawPathOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, bool bShiftLines, float fLineWidth, ::basegfx::B2DLineJoin eLineJoin, bool bLineDash, com::sun::star::drawing::LineCap nLineCap ) :
 	JavaSalGraphicsOp( aFrameClipPath, aNativeClipPath, bInvert, bXOR, fLineWidth ),
 	mbAntialias( bAntialias ),
 	mnFillColor( nFillColor ),
@@ -359,7 +359,8 @@ JavaSalGraphicsDrawPathOp::JavaSalGraphicsDrawPathOp( const CGPathRef aFrameClip
 	maPath( NULL ),
 	mbShiftLines( bShiftLines ),
 	meLineJoin( eLineJoin ),
-	mbLineDash( bLineDash )
+	mbLineDash( bLineDash ),
+	mnLineCap( nLineCap )
 {
 	if ( aPath )
 		maPath = CGPathCreateCopy( aPath );
@@ -381,14 +382,13 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 		return;
 
 	// Expand draw bounds by the line width
-	float fNativeLineWidth = mfLineWidth;
-	if ( fNativeLineWidth <= 0 )
-		fNativeLineWidth = pGraphics->getNativeLineWidth();
+	if ( mfLineWidth <= 0 )
+		mfLineWidth = pGraphics->getNativeLineWidth();
 	CGRect aDrawBounds = CGPathGetBoundingBox( maPath );
-	aDrawBounds.origin.x -= fNativeLineWidth;
-	aDrawBounds.origin.y -= fNativeLineWidth;
-	aDrawBounds.size.width += fNativeLineWidth * 2;
-	aDrawBounds.size.height += fNativeLineWidth * 2;
+	aDrawBounds.origin.x -= mfLineWidth;
+	aDrawBounds.origin.y -= mfLineWidth;
+	aDrawBounds.size.width += mfLineWidth * 2;
+	aDrawBounds.size.height += mfLineWidth * 2;
 	if ( !CGRectIsEmpty( aBounds ) )
 		aDrawBounds = CGRectIntersection( aDrawBounds, aBounds );
 	if ( maFrameClipPath )
@@ -407,6 +407,9 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 			aContext = saveClipXORGState( pGraphics, aContext, aDrawBounds );
 			if ( aContext )
 			{
+				// Set line width
+				CGContextSetLineWidth( aContext, mfLineWidth );
+
 				// Set line join
 				switch ( meLineJoin )
 				{
@@ -415,6 +418,19 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 						break;
 					case ::basegfx::B2DLINEJOIN_ROUND:
 						CGContextSetLineJoin( aContext, kCGLineJoinRound );
+						break;
+					default:
+						break;
+				}
+
+				// Set line cap
+				switch ( mnLineCap )
+				{
+					case com::sun::star::drawing::LineCap_BUTT:
+						CGContextSetLineCap( aContext, kCGLineCapButt );
+						break;
+					case com::sun::star::drawing::LineCap_ROUND:
+						CGContextSetLineCap( aContext, kCGLineCapRound );
 						break;
 					default:
 						break;
@@ -455,10 +471,10 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8467
 					// Fix overshifting of curves reported in the following
 					// NeoOffice forum topic by shifting lines only when the
-					// polygon consists of straight lines straight lines:
+					// polygon consists of straight lines:
 					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63692#63692
 					if ( mbShiftLines && !pGraphics->mpPrinter )
-						CGContextTranslateCTM( aContext, mbAntialias ? mfLineWidth / 2 : 0, mfLineWidth / -2 );
+						CGContextTranslateCTM( aContext, mbAntialias ? pGraphics->getNativeLineWidth() / 2 : 0, pGraphics->getNativeLineWidth() / -2 );
 
 					CGContextBeginPath( aContext );
 					CGContextAddPath( aContext, maPath );
@@ -1016,7 +1032,7 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 
 // -----------------------------------------------------------------------
 
-bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, double /* fTransparency */, const ::basegfx::B2DVector& rLineWidths, basegfx::B2DLineJoin eLineJoin, com::sun::star::drawing::LineCap /* nLineCap */ )
+bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, double /* fTransparency */, const ::basegfx::B2DVector& rLineWidths, basegfx::B2DLineJoin eLineJoin, com::sun::star::drawing::LineCap nLineCap )
 {
 	bool bRet = true;
 
@@ -1029,7 +1045,7 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, double /
 			float fNativeLineWidth = rLineWidths.getX();
 			if ( fNativeLineWidth <= 0 )
 				fNativeLineWidth = getNativeLineWidth();
-			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, getAntiAliasB2DDraw(), 0x00000000, mnLineColor, aPath, bShiftLines, fNativeLineWidth, eLineJoin ) );
+			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, getAntiAliasB2DDraw(), 0x00000000, mnLineColor, aPath, bShiftLines, fNativeLineWidth, eLineJoin, false, nLineCap ) );
 			CGPathRelease( aPath );
 		}
 	}
