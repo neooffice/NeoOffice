@@ -1039,12 +1039,15 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 
 // -----------------------------------------------------------------------
 
-bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, double /* fTransparency */, const ::basegfx::B2DVector& rLineWidths, basegfx::B2DLineJoin eLineJoin, com::sun::star::drawing::LineCap nLineCap )
+bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, double fTransparency, const ::basegfx::B2DVector& rLineWidths, basegfx::B2DLineJoin eLineJoin, com::sun::star::drawing::LineCap nLineCap )
 {
 	bool bRet = true;
 
 	if ( mnLineColor )
 	{
+		sal_uInt8 nTransparency = (sal_uInt8)( ( fTransparency * 100 ) + 0.5 );
+		setLineTransparency( nTransparency );
+
 		CGMutablePathRef aPath = CGPathCreateMutable();
 		if ( aPath )
 		{
@@ -1055,6 +1058,8 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, double /
 			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, getAntiAliasB2DDraw(), 0x00000000, mnLineColor, aPath, bShiftLines, fNativeLineWidth, eLineJoin, false, nLineCap ) );
 			CGPathRelease( aPath );
 		}
+
+		setLineTransparency( 0 );
 	}
 
 	return bRet;
