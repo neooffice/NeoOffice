@@ -7545,6 +7545,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      <!-- Remove Lotus Word Pro filter
       <node oor:name="LotusWordPro" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -7570,6 +7571,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="Text" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT EXPORT ALIEN PREFERRED</value>
@@ -8927,6 +8929,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      <!-- Remove Lotus Word Pro filter
       <node oor:name="writer_LotusWordPro_Document" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Writer.LotusWordProImportFilter</value>
@@ -8949,6 +8952,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      -->
       <node oor:name="generic_Text" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.filters.PlainTextFilterDetect</value>

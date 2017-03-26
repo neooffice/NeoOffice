@@ -1261,12 +1261,14 @@
       <service name="com.sun.star.linguistic2.ProofreadingIterator"/>
     </implementation>
   </component>
+  <!-- Remove liblwpftlo.dylib
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="lotuswordpro" uri="vnd.sun.star.expand:$LO_LIB_DIR/liblwpftlo.dylib">
     <implementation name="com.sun.star.comp.Writer.LotusWordProImportFilter">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
   </component>
+  -->
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="oox" uri="vnd.sun.star.expand:$LO_LIB_DIR/libooxlo.dylib">
     <implementation name="com.sun.star.comp.oox.core.FastTokenHandler">
       <service name="com.sun.star.xml.sax.FastTokenHandler"/>
