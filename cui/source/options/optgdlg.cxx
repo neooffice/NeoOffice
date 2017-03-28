@@ -140,13 +140,19 @@ OpenGLCfg::OpenGLCfg():
 
 void OpenGLCfg::reset()
 {
+#if defined USE_JAVA && defined MACOSX
+    mbUseOpenGL = false;
+    mbForceOpenGL = false;
+#else	// USE_JAVA && MACOSX
     mbUseOpenGL = officecfg::Office::Common::VCL::UseOpenGL::get();
     mbForceOpenGL = officecfg::Office::Common::VCL::ForceOpenGL::get();
+#endif	// USE_JAVA && MACOSX
     mbModified = false;
 }
 
 OpenGLCfg::~OpenGLCfg()
 {
+#if !defined USE_JAVA || !defined MACOSX
     if (mbModified)
     {
         boost::shared_ptr< comphelper::ConfigurationChanges > batch( comphelper::ConfigurationChanges::create() );
@@ -154,6 +160,7 @@ OpenGLCfg::~OpenGLCfg()
         officecfg::Office::Common::VCL::ForceOpenGL::set(mbForceOpenGL, batch);
         batch->commit();
     }
+#endif	// !USE_JAVA || !MACOSX
 }
 
 bool OpenGLCfg::useOpenGL() const
@@ -168,20 +175,24 @@ bool OpenGLCfg::forceOpenGL() const
 
 void OpenGLCfg::setUseOpenGL(bool bOpenGL)
 {
+#if !defined USE_JAVA || !defined MACOSX
     if (bOpenGL != mbUseOpenGL)
     {
         mbUseOpenGL = bOpenGL;
         mbModified = true;
     }
+#endif	// !USE_JAVA || !MACOSX
 }
 
 void OpenGLCfg::setForceOpenGL(bool bOpenGL)
 {
+#if !defined USE_JAVA || !defined MACOSX
     if (mbForceOpenGL != bOpenGL)
     {
         mbForceOpenGL = bOpenGL;
         mbModified = true;
     }
+#endif	// !USE_JAVA || !MACOSX
 }
 
 }
@@ -296,7 +307,11 @@ OfaMiscTabPage::OfaMiscTabPage(vcl::Window* pParent, const SfxItemSet& rSet)
     get(m_pYearFrame, "yearframe");
     get(m_pYearValueField, "year");
     get(m_pToYearFT, "toyear");
+#ifdef USE_JAVA
+    get(m_pCollectUsageInfo, "collectusageinfo")->Hide();
+#else	// USE_JAVA
     get(m_pCollectUsageInfo, "collectusageinfo");
+#endif	// USE_JAVA
 
     if (m_pFileDlgCB->IsVisible() && SvtMiscOptions().IsUseSystemFileDialogReadOnly())
     {
@@ -428,7 +443,11 @@ void OfaMiscTabPage::Reset( const SfxItemSet* rSet )
         m_pYearFrame->Enable(false);
     }
 
+#ifdef USE_JAVA
+    m_pCollectUsageInfo->Check(false);
+#else	// USE_JAVA
     m_pCollectUsageInfo->Check(officecfg::Office::Common::Misc::CollectUsageInformation::get());
+#endif	// USE_JAVA
     m_pCollectUsageInfo->SaveValue();
 }
 
@@ -659,9 +678,17 @@ OfaViewTabPage::OfaViewTabPage(vcl::Window* pParent, const SfxItemSet& rSet)
     get(m_pFontHistoryCB, "showfonthistory");
     get(m_pUseHardwareAccell, "useaccel");
     get(m_pUseAntiAliase, "useaa");
+#if defined USE_JAVA && defined MACOSX
+    get(m_pUseOpenGL, "useopengl")->Hide();
+#else	// USE_JAVA && MACOSX
     get(m_pUseOpenGL, "useopengl");
+#endif	// USE_JAVA && MACOSX
 
+#if defined USE_JAVA && defined MACOSX
+    get(m_pForceOpenGL, "forceopengl")->Hide();
+#else	// USE_JAVA && MACOSX
     get(m_pForceOpenGL, "forceopengl");
+#endif	// USE_JAVA && MACOSX
     //fdo#87876 , we need height-for-width support here, but for now we can
     //bodge it
     Size aPrefSize(m_pForceOpenGL->get_preferred_size());
@@ -904,8 +931,13 @@ bool OfaViewTabPage::FillItemSet( SfxItemSet* )
         }
     }
 
+#if defined USE_JAVA && defined MACOSX
+    mpOpenGLConfig->setUseOpenGL(false);
+    mpOpenGLConfig->setForceOpenGL(false);
+#else	// USE_JAVA && MACOSX
     mpOpenGLConfig->setUseOpenGL(m_pUseOpenGL->IsChecked());
     mpOpenGLConfig->setForceOpenGL(m_pForceOpenGL->IsChecked());
+#endif	// USE_JAVA && MACOSX
 
     // #i97672#
     if(m_pSelectionCB->IsEnabled())
