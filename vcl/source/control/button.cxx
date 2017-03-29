@@ -1187,9 +1187,14 @@ void PushButton::ImplDrawPushButton( bool bLayout )
         aInRect.Right()-=4;
 #ifdef USE_JAVA
         // Allow room for the button's focus ring when drawing text in buttons
-        // in toolbar popup windows such as the color palettes
-        aInRect.Left()+=3;
-        aInRect.Right()-=3;
+        // in toolbar popup windows such as the color palettes. Avoid small
+        // symbol size in symbol buttons by limiting this fix to only flat
+        // buttons.
+        if ( GetStyle() & WB_FLATBUTTON )
+        {
+            aInRect.Left()+=5;
+            aInRect.Right()-=5;
+        }
 #endif	// USE_JAVA
 
         // prepare single line hint (needed on mac to decide between normal push button and
