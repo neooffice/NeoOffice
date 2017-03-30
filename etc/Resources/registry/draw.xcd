@@ -959,6 +959,7 @@
           <value>com.sun.star.drawing.DrawingDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="Beagle_Works_Draw" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -979,6 +980,7 @@
           <value>com.sun.star.drawing.DrawingDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="ClarisWorks_Draw" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -1004,6 +1006,7 @@
           <value>com.sun.star.drawing.DrawingDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="Great_Works_Draw" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -1149,6 +1152,7 @@
           <value>com.sun.star.drawing.DrawingDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="PageMaker Document" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -1450,6 +1454,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="draw_Beagle_Works" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Draw.MWAWDrawImportFilter</value>
@@ -1470,6 +1475,7 @@
           <value>BeagleWorks/WordPerfect Works Document</value>
         </prop>
       </node>
+      -->
       <node oor:name="draw_ClarisWorks" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Draw.MWAWDrawImportFilter</value>
@@ -1492,6 +1498,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="draw_Great_Works" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Draw.MWAWDrawImportFilter</value>
@@ -1612,6 +1619,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      -->
       <node oor:name="draw_PageMaker_Document" oor:op="replace">
         <prop oor:name="DetectService">
           <value>org.libreoffice.comp.Draw.PageMakerImportFilter</value>

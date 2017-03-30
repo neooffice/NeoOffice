@@ -47980,6 +47980,7 @@
           <value>IMPORT</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="met_Export" oor:op="replace">
         <prop oor:name="Type">
           <value>met_OS2_Metafile</value>
@@ -47998,6 +47999,7 @@
           <value>EXPORT</value>
         </prop>
       </node>
+      -->
       <node oor:name="met_Import" oor:op="replace">
         <prop oor:name="Type">
           <value>met_OS2_Metafile</value>
@@ -48016,6 +48018,7 @@
           <value>IMPORT</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="pbm_Export" oor:op="replace">
         <prop oor:name="Type">
           <value>pbm_Portable_Bitmap</value>
@@ -48034,6 +48037,7 @@
           <value>EXPORT</value>
         </prop>
       </node>
+      -->
       <node oor:name="pbm_Import" oor:op="replace">
         <prop oor:name="Type">
           <value>pbm_Portable_Bitmap</value>
@@ -48106,6 +48110,7 @@
           <value>IMPORT</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="pct_Export" oor:op="replace">
         <prop oor:name="Type">
           <value>pct_Mac_Pict</value>
@@ -48124,6 +48129,7 @@
           <value>EXPORT</value>
         </prop>
       </node>
+      -->
       <node oor:name="pct_Import" oor:op="replace">
         <prop oor:name="Type">
           <value>pct_Mac_Pict</value>
@@ -48160,6 +48166,7 @@
           <value>IMPORT</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="pgm_Export" oor:op="replace">
         <prop oor:name="Type">
           <value>pgm_Portable_Graymap</value>
@@ -48178,6 +48185,7 @@
           <value>EXPORT</value>
         </prop>
       </node>
+      -->
       <node oor:name="pgm_Import" oor:op="replace">
         <prop oor:name="Type">
           <value>pgm_Portable_Graymap</value>
@@ -48232,6 +48240,7 @@
           <value>IMPORT</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="ppm_Export" oor:op="replace">
         <prop oor:name="Type">
           <value>ppm_Portable_Pixelmap</value>
@@ -48250,6 +48259,7 @@
           <value>EXPORT</value>
         </prop>
       </node>
+      -->
       <node oor:name="ppm_Import" oor:op="replace">
         <prop oor:name="Type">
           <value>ppm_Portable_Pixelmap</value>
@@ -48286,6 +48296,7 @@
           <value>IMPORT</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="ras_Export" oor:op="replace">
         <prop oor:name="Type">
           <value>ras_Sun_Rasterfile</value>
@@ -48304,6 +48315,7 @@
           <value>EXPORT</value>
         </prop>
       </node>
+      -->
       <node oor:name="ras_Import" oor:op="replace">
         <prop oor:name="Type">
           <value>ras_Sun_Rasterfile</value>
@@ -48538,6 +48550,7 @@
           <value>IMPORT</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="xpm_Export" oor:op="replace">
         <prop oor:name="Type">
           <value>xpm_XPM</value>
@@ -48556,6 +48569,7 @@
           <value>EXPORT</value>
         </prop>
       </node>
+      -->
       <node oor:name="xpm_Import" oor:op="replace">
         <prop oor:name="Type">
           <value>xpm_XPM</value>

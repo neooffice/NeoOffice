@@ -6902,6 +6902,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="Beagle_Works" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -6922,6 +6923,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="ClarisWorks" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -6947,6 +6949,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="DocMaker" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -7202,6 +7205,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="Mac_Works" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -7227,6 +7231,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="MacDoc" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -7247,6 +7252,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="MacWrite" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -7272,6 +7278,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="MacWritePro" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -7297,6 +7304,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="Mariner_Write" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -7347,6 +7355,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="Nisus_Writer" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -7422,6 +7431,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="WriteNow" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -7447,6 +7457,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="WriterPlus" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -7495,6 +7506,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="AbiWord" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER</value>
@@ -7877,6 +7889,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="eReader eBook" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -7897,6 +7910,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="FictionBook 2" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -7957,6 +7971,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="TealDoc" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -7997,6 +8012,7 @@
           <value>com.sun.star.text.TextDocument</value>
         </prop>
       </node>
+      -->
     </node>
   </oor:component-data>
   <oor:component-data oor:package="org.openoffice.TypeDetection" oor:name="Types">
@@ -8353,6 +8369,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="writer_Beagle_Works" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Writer.MWAWImportFilter</value>
@@ -8373,6 +8390,7 @@
           <value>BeagleWorks/WordPerfect Works Document</value>
         </prop>
       </node>
+      -->
       <node oor:name="writer_ClarisWorks" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Writer.MWAWImportFilter</value>
@@ -8395,6 +8413,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="writer_DocMaker" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Writer.MWAWImportFilter</value>
@@ -8603,6 +8622,7 @@
           <value>RagTime Mac v2-3 Document</value>
         </prop>
       </node>
+      -->
       <node oor:name="writer_Mac_Word" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Writer.MWAWImportFilter</value>
@@ -8647,6 +8667,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="writer_MacDoc" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Writer.MWAWImportFilter</value>
@@ -8667,6 +8688,7 @@
           <value>MacDoc</value>
         </prop>
       </node>
+      -->
       <node oor:name="writer_MacWrite" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Writer.MWAWImportFilter</value>
@@ -8689,6 +8711,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="writer_MacWritePro" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Writer.MWAWImportFilter</value>
@@ -8711,6 +8734,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      -->
       <node oor:name="writer_Mariner_Write" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Writer.MWAWImportFilter</value>
@@ -8753,6 +8777,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="writer_Nisus_Writer" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Writer.MWAWImportFilter</value>
@@ -8819,6 +8844,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      -->
       <node oor:name="writer_WriteNow" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Writer.MWAWImportFilter</value>
@@ -8841,6 +8867,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="writer_WriterPlus" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Writer.MWAWImportFilter</value>
@@ -8885,6 +8912,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      -->
       <node oor:name="writer_AbiWord_Document" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Writer.AbiWordImportFilter</value>
@@ -9218,6 +9246,7 @@
           <value>BroadBand eBook</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="writer_eReader_eBook" oor:op="replace">
         <prop oor:name="DetectService">
           <value>org.libreoffice.comp.Writer.EBookImportFilter</value>
@@ -9238,6 +9267,7 @@
           <value>eReader eBook</value>
         </prop>
       </node>
+      -->
       <node oor:name="writer_FictionBook_2" oor:op="replace">
         <prop oor:name="DetectService">
           <value>org.libreoffice.comp.Writer.EBookImportFilter</value>
@@ -9298,6 +9328,7 @@
           <value>Plucker eBook</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="writer_TealDoc" oor:op="replace">
         <prop oor:name="DetectService">
           <value>org.libreoffice.comp.Writer.EBookImportFilter</value>
@@ -9338,6 +9369,7 @@
           <value>zTXT eBook</value>
         </prop>
       </node>
+      -->
     </node>
   </oor:component-data>
   <oor:component-data xmlns:install="http://openoffice.org/2004/installation" oor:name="Common" oor:package="org.openoffice.Office">

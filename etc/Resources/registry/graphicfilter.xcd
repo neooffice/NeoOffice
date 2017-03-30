@@ -823,6 +823,7 @@
           <value>com.sun.star.drawing.DrawingDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="draw_met_Export" oor:op="replace">
         <prop oor:name="Flags">
           <value>EXPORT ALIEN SUPPORTSSELECTION</value>
@@ -923,6 +924,7 @@
           <value>com.sun.star.drawing.DrawingDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="draw_png_Export" oor:op="replace">
         <prop oor:name="Flags">
           <value>EXPORT ALIEN SUPPORTSSELECTION</value>
@@ -948,6 +950,7 @@
           <value>com.sun.star.drawing.DrawingDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="draw_ppm_Export" oor:op="replace">
         <prop oor:name="Flags">
           <value>EXPORT ALIEN SUPPORTSSELECTION</value>
@@ -996,6 +999,7 @@
           <value>com.sun.star.drawing.DrawingDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="draw_svg_Export" oor:op="replace">
         <prop oor:name="Flags">
           <value>EXPORT ALIEN 3RDPARTYFILTER</value>
@@ -1021,6 +1025,7 @@
           <value>com.sun.star.drawing.DrawingDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="draw_svm_Export" oor:op="replace">
         <prop oor:name="Flags">
           <value>EXPORT ALIEN SUPPORTSSELECTION</value>
@@ -1046,6 +1051,7 @@
           <value>com.sun.star.drawing.DrawingDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="draw_tif_Export" oor:op="replace">
         <prop oor:name="Flags">
           <value>EXPORT ALIEN SUPPORTSSELECTION</value>
@@ -1094,6 +1100,7 @@
           <value>com.sun.star.drawing.DrawingDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="draw_xpm_Export" oor:op="replace">
         <prop oor:name="Flags">
           <value>EXPORT ALIEN SUPPORTSSELECTION</value>
@@ -1117,6 +1124,7 @@
           <value>com.sun.star.drawing.DrawingDocument</value>
         </prop>
       </node>
+      -->
     </node>
   </oor:component-data>
   <oor:component-data oor:package="org.openoffice.TypeDetection" oor:name="Types">
@@ -1970,6 +1978,7 @@
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="impress_met_Export" oor:op="replace">
         <prop oor:name="Flags">
           <value>EXPORT ALIEN SUPPORTSSELECTION</value>
@@ -2070,6 +2079,7 @@
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="impress_png_Export" oor:op="replace">
         <prop oor:name="Flags">
           <value>EXPORT ALIEN SUPPORTSSELECTION</value>
@@ -2095,6 +2105,7 @@
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="impress_ppm_Export" oor:op="replace">
         <prop oor:name="Flags">
           <value>EXPORT ALIEN SUPPORTSSELECTION</value>
@@ -2143,6 +2154,7 @@
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="impress_svg_Export" oor:op="replace">
         <prop oor:name="Flags">
           <value>EXPORT ALIEN 3RDPARTYFILTER</value>
@@ -2168,6 +2180,7 @@
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="impress_svm_Export" oor:op="replace">
         <prop oor:name="Flags">
           <value>EXPORT ALIEN SUPPORTSSELECTION</value>
@@ -2193,6 +2206,7 @@
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="impress_tif_Export" oor:op="replace">
         <prop oor:name="Flags">
           <value>EXPORT ALIEN SUPPORTSSELECTION</value>
@@ -2241,6 +2255,7 @@
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="impress_xpm_Export" oor:op="replace">
         <prop oor:name="Flags">
           <value>EXPORT ALIEN SUPPORTSSELECTION</value>
@@ -2264,6 +2279,7 @@
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
       </node>
+      -->
     </node>
   </oor:component-data>
   <oor:component-data oor:package="org.openoffice.TypeDetection" oor:name="Types">

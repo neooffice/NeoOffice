@@ -3136,6 +3136,7 @@
           <value>com.sun.star.sheet.SpreadsheetDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="Beagle_Works_Calc" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -3156,6 +3157,7 @@
           <value>com.sun.star.sheet.SpreadsheetDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="ClarisWorks_Calc" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -3206,6 +3208,7 @@
           <value>com.sun.star.sheet.SpreadsheetDocument</value>
         </prop>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="Great_Works_Calc" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -3251,6 +3254,7 @@
           <value>com.sun.star.sheet.SpreadsheetDocument</value>
         </prop>
       </node>
+      -->
       <node oor:name="Mac_Works_Calc" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
@@ -3925,6 +3929,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="calc_Beagle_Works" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Calc.MWAWCalcImportFilter</value>
@@ -3945,6 +3950,7 @@
           <value>BeagleWorks/WordPerfect Works Document</value>
         </prop>
       </node>
+      -->
       <node oor:name="calc_ClarisWorks" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Calc.MWAWCalcImportFilter</value>
@@ -3989,6 +3995,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="calc_Great_Works" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Calc.MWAWCalcImportFilter</value>
@@ -4009,6 +4016,7 @@
           <value>GreatWorks Document</value>
         </prop>
       </node>
+      -->
       <node oor:name="calc_Mac_Works" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Calc.MWAWCalcImportFilter</value>
@@ -4031,6 +4039,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      <!-- Disable experimental filters
       <node oor:name="calc_Mac_Wingz" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.Calc.MWAWCalcImportFilter</value>
@@ -4051,6 +4060,7 @@
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      -->
     </node>
   </oor:component-data>
   <oor:component-data xmlns:install="http://openoffice.org/2004/installation" oor:name="Common" oor:package="org.openoffice.Office">
