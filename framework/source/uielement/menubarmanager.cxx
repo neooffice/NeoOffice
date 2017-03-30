@@ -87,8 +87,8 @@
 #if defined USE_JAVA && defined MACOSX
 
 typedef sal_Bool IsShowOnlyMenusWindow_Type( void* );
-typedef OUString NSDocument_revertToSavedLocalizedString_Type( vcl::Window *pWindow );
-typedef OUString NSDocument_saveAVersionLocalizedString_Type( vcl::Window *pWindow );
+typedef OUString *NSDocument_revertToSavedLocalizedString_Type( vcl::Window *pWindow );
+typedef OUString *NSDocument_saveAVersionLocalizedString_Type( vcl::Window *pWindow );
 
 static ::osl::Module aVCLModule;
 static ::osl::Module aSFXModule;
@@ -998,16 +998,19 @@ IMPL_LINK( MenuBarManager, Activate, Menu *, pMenu )
 
                     // Reset save and versions menu item text based on whether
                     // native version support is enabled
-                    OUString aItemText;
+                    OUString *pItemText = NULL;
                     vcl::Window* pWindow = NULL;
                     if ( m_xFrame.is() )
                         pWindow = VCLUnoHelper::GetWindow( m_xFrame->getContainerWindow() );
                     if ( bSaveCommand && pNSDocument_saveAVersionLocalizedString )
-                         aItemText = pNSDocument_saveAVersionLocalizedString( pWindow );
+                         pItemText = pNSDocument_saveAVersionLocalizedString( pWindow );
                     else if ( bVersionsCommand && pNSDocument_revertToSavedLocalizedString )
-                         aItemText = pNSDocument_revertToSavedLocalizedString( pWindow );
+                         pItemText = pNSDocument_revertToSavedLocalizedString( pWindow );
 
-                    if ( !aItemText.getLength() )
+                    OUString aItemText;
+                    if ( pItemText && pItemText->getLength() )
+                        aItemText = *pItemText;
+					else
                         aItemText = RetrieveLabelFromCommand( aCommand );
 
                     if ( aItemText.getLength() )

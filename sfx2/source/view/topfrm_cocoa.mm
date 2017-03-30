@@ -1382,12 +1382,13 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 @end
 
-OUString NSDocument_revertToSavedLocalizedString( vcl::Window *pWindow )
+OUString *NSDocument_revertToSavedLocalizedString( vcl::Window *pWindow )
 {
 	if ( !pWindow || !NSDocument_versionsEnabled() || !HasNativeVersion( pWindow ) )
-		return "";
-
-	if ( !aRevertToSavedLocalizedString.getLength() )
+	{
+		aRevertToSavedLocalizedString = "";
+	}
+	else if ( !aRevertToSavedLocalizedString.getLength() )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1405,15 +1406,16 @@ OUString NSDocument_revertToSavedLocalizedString( vcl::Window *pWindow )
 		[pPool release];
 	}
 
-	return aRevertToSavedLocalizedString;
+	return &aRevertToSavedLocalizedString;
 }
 
-OUString NSDocument_saveAVersionLocalizedString( vcl::Window *pWindow )
+OUString *NSDocument_saveAVersionLocalizedString( vcl::Window *pWindow )
 {
 	if ( !pWindow || !NSDocument_versionsEnabled() || !HasNativeVersion( pWindow ) )
-		return "";
-
-	if ( !aSaveAVersionLocalizedString.getLength() )
+	{
+		aSaveAVersionLocalizedString = "";
+	}
+	else if ( !aSaveAVersionLocalizedString.getLength() )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1440,7 +1442,7 @@ OUString NSDocument_saveAVersionLocalizedString( vcl::Window *pWindow )
 		[pPool release];
 	}
 
-	return aSaveAVersionLocalizedString;
+	return &aSaveAVersionLocalizedString;
 }
 
 sal_Bool NSDocument_isValidMoveToPath( OUString aPath )

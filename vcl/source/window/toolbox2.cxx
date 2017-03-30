@@ -57,8 +57,8 @@
 
 #include <osl/module.hxx>
 
-typedef OUString NSDocument_revertToSavedLocalizedString_Type( vcl::Window *pWindow );
-typedef OUString NSDocument_saveAVersionLocalizedString_Type( vcl::Window *pWindow );
+typedef OUString *NSDocument_revertToSavedLocalizedString_Type( vcl::Window *pWindow );
+typedef OUString *NSDocument_saveAVersionLocalizedString_Type( vcl::Window *pWindow );
 
 static ::osl::Module aSFXModule;
 static const OUString aSaveCommand( ".uno:Save" );
@@ -1622,7 +1622,7 @@ const OUString& ToolBox::GetQuickHelpText( sal_uInt16 nItemId ) const
         {
             if ( !pNSDocument_revertToSavedLocalizedString && !pNSDocument_saveAVersionLocalizedString )
             {
-                if ( aSFXModule.load( "libsfx.dylib" ) )
+                if ( aSFXModule.load( "libsfxlo.dylib" ) )
                 {
                     pNSDocument_revertToSavedLocalizedString = (NSDocument_revertToSavedLocalizedString_Type *)aSFXModule.getSymbol( "NSDocument_revertToSavedLocalizedString" );
                     pNSDocument_saveAVersionLocalizedString = (NSDocument_saveAVersionLocalizedString_Type *)aSFXModule.getSymbol( "NSDocument_saveAVersionLocalizedString" );
@@ -1630,9 +1630,7 @@ const OUString& ToolBox::GetQuickHelpText( sal_uInt16 nItemId ) const
             }
 
             // Reset save and versions quick help text based on whether
-            // native version support is enabled. Note that the returned text
-            // must be static otherwise the OOo code will hang.
-            static OUString aItemText;
+            // native version support is enabled
             Window* pWindow = GetParent();
             if ( pWindow )
             {
@@ -1640,15 +1638,14 @@ const OUString& ToolBox::GetQuickHelpText( sal_uInt16 nItemId ) const
                     pWindow = pWindow->GetParent();
                 if ( pWindow->IsTopWindow() )
                 {
+                    OUString *pItemText = NULL;
                     if ( pItem->maCommandStr == aSaveCommand && pNSDocument_saveAVersionLocalizedString )
-                        aItemText = pNSDocument_saveAVersionLocalizedString( pWindow );
+                        pItemText = pNSDocument_saveAVersionLocalizedString( pWindow );
                     else if ( pItem->maCommandStr == aVersionsCommand && pNSDocument_revertToSavedLocalizedString )
-                        aItemText = pNSDocument_revertToSavedLocalizedString( pWindow );
-					else
-                        aItemText = "";
+                        pItemText = pNSDocument_revertToSavedLocalizedString( pWindow );
 
-                    if ( aItemText.getLength() )
-                        return aItemText;
+                    if ( pItemText && pItemText->getLength() )
+                        return *pItemText;
                 }
             }
         }

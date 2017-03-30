@@ -48,8 +48,8 @@ class SfxViewFrame;
 // Comment out the following line to disable native versions support
 #define USE_NATIVE_VERSIONS
 
-extern "C" SAL_DLLPUBLIC_EXPORT OUString NSDocument_revertToSavedLocalizedString( vcl::Window *pWindow );
-extern "C" SAL_DLLPUBLIC_EXPORT OUString NSDocument_saveAVersionLocalizedString( vcl::Window *pWindow );
+extern "C" SAL_DLLPUBLIC_EXPORT OUString *NSDocument_revertToSavedLocalizedString( vcl::Window *pWindow );
+extern "C" SAL_DLLPUBLIC_EXPORT OUString *NSDocument_saveAVersionLocalizedString( vcl::Window *pWindow );
 sal_Bool NSDocument_isValidMoveToPath( OUString aPath );
 sal_Bool NSDocument_versionsEnabled();
 sal_Bool NSDocument_versionsSupported();
