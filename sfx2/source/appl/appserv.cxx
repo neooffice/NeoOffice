@@ -238,6 +238,8 @@ static bool checkURL( const char *pName, const char *pExt, OUString &rURL )
         return false;
 }
 
+#ifndef USE_JAVA
+
 /// Displays CREDITS or LICENSE in any of the available version
 static void showDocument( const char* pBaseName )
 {
@@ -259,6 +261,8 @@ static void showDocument( const char* pBaseName )
     }
 }
 
+#endif	// !USE_JAVA
+
 namespace
 {
     class LicenseDialog : public ModalDialog
@@ -272,13 +276,19 @@ namespace
     LicenseDialog::LicenseDialog(vcl::Window *pParent)
         : ModalDialog(pParent, "LicenseDialog", "sfx/ui/licensedialog.ui")
     {
+#ifdef USE_JAVA
+        get<PushButton>("show")->Hide();
+#else	// USE_JAVA
         get<PushButton>("show")->SetClickHdl(LINK(this, LicenseDialog, ShowHdl));
+#endif	// USE_JAVA
     }
 
     IMPL_LINK_NOARG(LicenseDialog, ShowHdl)
     {
         EndDialog(RET_OK);
+#ifndef USE_JAVA
         showDocument("LICENSE");
+#endif	// !USE_JAVA
         return 0;
     }
 }
