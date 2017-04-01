@@ -15,13 +15,6 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- * 
- *   Modified January 2017 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 3.3
- *   of the Mozilla Public License, v. 2.0.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  -->
 <menu:menubar xmlns:menu="http://openoffice.org/2001/menu" menu:id="menubar">
     <menu:menu menu:id=".uno:PickList">
@@ -137,10 +130,8 @@
             </menu:menu>
 
 
-            <!-- Disable Java-based reports
             <menu:menuseparator/>
             <menu:menuitem menu:id=".uno:ExecuteReport"/>
-            -->
         </menu:menupopup>
     </menu:menu>
 
@@ -152,9 +143,7 @@
             <menu:menuitem menu:id=".uno:ControlProperties"/>
             <menu:menuitem menu:id=".uno:AddField"/>
             <menu:menuitem menu:id=".uno:DbSortingAndGrouping"/>
-            <!-- Disable Java-based reports
             <menu:menuitem menu:id=".uno:ReportNavigator"/>
-            -->
             <menu:menuseparator/>
             <menu:menuitem menu:id=".uno:AvailableToolbars"/>
             <menu:menuitem menu:id=".uno:StatusBarVisible"/>

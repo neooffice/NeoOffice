@@ -500,10 +500,12 @@
     <menu:menupopup>
       <menu:menuitem menu:id=".uno:HelpIndex"/>
       <menu:menuitem menu:id=".uno:ExtendedHelp"/>
+      <!-- Remove feedback and license menu items
       <menu:menuseparator/>
       <menu:menuitem menu:id=".uno:SendFeedback"/>
       <menu:menuseparator/>
       <menu:menuitem menu:id=".uno:ShowLicense"/>
+      -->
       
     </menu:menupopup>
   </menu:menu>
