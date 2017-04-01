@@ -221,6 +221,9 @@ namespace
         }
     }
 }
+
+#ifndef USE_JAVA
+
 /// Find the correct location of the document (LICENSE.fodt, etc.), and return
 /// it in rURL if found.
 static bool checkURL( const char *pName, const char *pExt, OUString &rURL )
@@ -237,8 +240,6 @@ static bool checkURL( const char *pName, const char *pExt, OUString &rURL )
     else
         return false;
 }
-
-#ifndef USE_JAVA
 
 /// Displays CREDITS or LICENSE in any of the available version
 static void showDocument( const char* pBaseName )
