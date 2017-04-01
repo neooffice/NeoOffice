@@ -487,7 +487,7 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
 
         case SID_SHOW_CREDITS:
         {
-#ifdef !USE_JAVA
+#ifndef USE_JAVA
             showDocument( "CREDITS" );
 #endif	// !USE_JAVA
             break;
