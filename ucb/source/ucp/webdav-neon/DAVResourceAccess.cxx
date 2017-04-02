@@ -1160,7 +1160,11 @@ void DAVResourceAccess::getUserRequestHeaders(
         }
     }
     rRequestHeaders.push_back(
+#ifdef PRODUCT_NAME
+        DAVRequestHeader( "User-Agent", PRODUCT_NAME ) );
+#else	// PRODUCT_NAME
         DAVRequestHeader( "User-Agent", "LibreOffice" ) );
+#endif	// PRODUCT_NAME
 }
 
 
