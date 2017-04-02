@@ -564,7 +564,7 @@ endif
 # Remove LibO native spellchecker and all OpenGL libraries. Fix bug 3273 by not
 # installing any LibO fonts. Remove Lotus Word Pro import library as it has
 # several known security vulnerabilities. Remove OpenGL transitions.
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "Frameworks/libMacOSXSpelllo.dylib" "Frameworks/libOGLTranslo.dylib" "Frameworks/libavmediaMacAVFlo.dylib" "Frameworks/libavmediaogl.dylib" "Frameworks/liblwpftlo.dylib" "Frameworks/liboglcanvaslo.dylib" "Resources/config/soffice.cfg/simpress/transitions-ogl.xml" "Resources/fonts/truetype"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "Frameworks/libMacOSXSpelllo.dylib" "Frameworks/libOGLTranslo.dylib" "Frameworks/libavmediaMacAVFlo.dylib" "Frameworks/libavmediaogl.dylib" "Frameworks/liblwpftlo.dylib" "Frameworks/liboglcanvaslo.dylib" "Resources/config/soffice.cfg/simpress/transitions-ogl.xml" "Resources/fonts/truetype" "Resources/java/smoketest.jar"
 ifndef PRODUCT_BUILD3
 # Remove update check files since the Mac App Store has its own update
 # check. Do not remove updatefeed.uno.dylib as it is needed by the pdfimport
