@@ -1552,11 +1552,6 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
                 if ( !pApplication_canUseJava || !pApplication_canUseJava() )
                     continue;
             }
-            // Disable OpenCL page
-            else if( RID_SVXPAGE_OPENCL == nPageId )
-            {
-                continue;
-            }
 #endif	// USE_JAVA && MACOSX
 
             // Disable Online Update page if service not installed
