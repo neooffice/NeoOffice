@@ -4083,8 +4083,9 @@
         <prop oor:name="DeliveredPrebundled" oor:type="xs:boolean" oor:nillable="false">
           <value>false</value>
         </prop>
+        <!-- Remove libreoffice.org URL -->
         <prop oor:name="HelpUrl" oor:type="xs:string" oor:nillable="false">
-          <value>http://wiki.documentfoundation.org/UX/LibreOffice_User_Feedback_Program</value>
+          <value/>
         </prop>
       </group>
       <group oor:name="Counters">
@@ -4099,8 +4100,9 @@
         </prop>
       </group>
       <group oor:name="Upload">
+        <!-- Remove libreoffice.org URL -->
         <prop oor:name="SoapUrl" oor:type="xs:string" oor:nillable="false">
-          <value>http://report.libreoffice.org:80/soap/servlet/rpcrouter</value>
+          <value/>
         </prop>
         <prop oor:name="SoapIdAdditions" oor:type="xs:string" oor:nillable="false">
           <value/>
@@ -13318,8 +13320,9 @@
         <prop oor:name="AddFeatureURL" oor:type="xs:string">
           <value>http://extensions.libreoffice.org/</value>
         </prop>
+        <!-- Remove libreoffice.org URL -->
         <prop oor:name="InfoURL" oor:type="xs:string">
-          <value>http://www.libreoffice.org/</value>
+          <value/>
         </prop>
         <prop oor:name="TemplateRepositoryURL" oor:type="xs:string">
           <value>http://templates.libreoffice.org/</value>
