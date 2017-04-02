@@ -5,6 +5,7 @@ buildid=0
 ExtensionUpdateURL=http://updateexte.libreoffice.org/ExtensionUpdateService/check.Update
 ProductMajor=447
 ProductMinor=2
+ReferenceLibOMajorMinor=$(LIBO_PRODUCT_VERSION)
 ReferenceOOoMajorMinor=4.1
 UpdateID=LibreOfficeDev_4_en-US
 UpdateURL=$(PRODUCT_UPDATE_CHECK_URL)?product=$(PRODUCT_NAME) $(PRODUCT_VERSION)&patch=$(PRODUCT_PATCH_VERSION)&os=${_OS}&arch=${_ARCH}&osversion=<OSVERSION>
