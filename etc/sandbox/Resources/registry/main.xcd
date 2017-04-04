@@ -4083,7 +4083,6 @@
         <prop oor:name="DeliveredPrebundled" oor:type="xs:boolean" oor:nillable="false">
           <value>false</value>
         </prop>
-        <!-- Remove libreoffice.org URL -->
         <prop oor:name="HelpUrl" oor:type="xs:string" oor:nillable="false">
           <value/>
         </prop>
@@ -4100,7 +4099,6 @@
         </prop>
       </group>
       <group oor:name="Upload">
-        <!-- Remove libreoffice.org URL -->
         <prop oor:name="SoapUrl" oor:type="xs:string" oor:nillable="false">
           <value/>
         </prop>
