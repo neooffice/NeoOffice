@@ -1298,6 +1298,11 @@ Size ListBox::CalcMinimumSize() const
     {
         aSz.Height() += 4; // add a space between entry and border
         aSz.Width() += 4;  // add a little breathing space
+#ifdef USE_JAVA
+        // Add extra width so that the focus ring width does not push the text
+        // into the dropdown button
+        aSz.Width() += 5;
+#endif	// USE_JAVA
         bAddScrollWidth = true;
     }
     else
