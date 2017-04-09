@@ -1611,6 +1611,10 @@ void JavaSalEvent::dispatch()
 			JavaSalFrame *pFrame = pSalData->mpFocusFrame;
 			if ( pFrame && pFrame->mbVisible )
 			{
+				// Pass all events received by a utility window to its parent
+				// window
+				while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() )
+					pFrame = pFrame->mpParent;
 				pFrame->CallCallback( SALEVENT_SHOWDIALOG, reinterpret_cast< void* >( SHOWDIALOG_ID_ABOUT ) );
 			}
 			else
@@ -1630,6 +1634,10 @@ void JavaSalEvent::dispatch()
 			JavaSalFrame *pFrame = pSalData->mpFocusFrame;
 			if ( pFrame && pFrame->mbVisible )
 			{
+				// Pass all events received by a utility window to its parent
+				// window
+				while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() )
+					pFrame = pFrame->mpParent;
 				pFrame->CallCallback( SALEVENT_SHOWDIALOG, reinterpret_cast< void* >( SHOWDIALOG_ID_PREFERENCES ) );
 			}
 			else
