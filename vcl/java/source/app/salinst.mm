@@ -87,14 +87,7 @@ public:
 	virtual void			toggle() {}
 };
 
-typedef void NativeAboutMenuHandler_Type();
-typedef void NativePreferencesMenuHandler_Type();
-
 static bool bInUnitTest = false;
-static ::osl::Module aAboutHandlerModule;
-static ::osl::Module aPreferencesHandlerModule;
-static NativeAboutMenuHandler_Type *pAboutHandler = NULL;
-static NativePreferencesMenuHandler_Type *pPreferencesHandler = NULL;
 static bool bAllowReleaseYieldMutex = false;
 static sal_Bool bInNativeDragPrint = sal_False;
 static SalYieldMutex aEventQueueMutex;
@@ -1615,29 +1608,31 @@ void JavaSalEvent::dispatch()
 		}
 		case SALEVENT_ABOUT:
 		{
-			// Load libsfx and invoke the native preferences handler
-			if ( !pAboutHandler )
+			JavaSalFrame *pFrame = pSalData->maFrameList.front();
+			if ( !pFrame || pFrame->CallCallback( SALEVENT_SHOWDIALOG, reinterpret_cast< void* >( SHOWDIALOG_ID_ABOUT ) ) )
 			{
-				if ( aAboutHandlerModule.load( "libsfxlo.dylib" ) )
-					pAboutHandler = (NativeAboutMenuHandler_Type *)aAboutHandlerModule.getSymbol( "NativeAboutMenuHandler" );
+				ImplSVData *pSVData = ImplGetSVData();
+				if ( pSVData )
+				{
+					ApplicationEvent aAppEvent( ApplicationEvent::TYPE_SHOWDIALOG, "ABOUT" );
+					pSVData->mpApp->AppEvent( aAppEvent );
+				}
 			}
-
-			if ( pAboutHandler && !pSalData->mbInNativeModalSheet )
-				pAboutHandler();
 
 			return;
 		}
 		case SALEVENT_PREFS:
 		{
-			// Load libofa and invoke the native preferences handler
-			if ( !pPreferencesHandler )
+			JavaSalFrame *pFrame = pSalData->maFrameList.front();
+			if ( !pFrame || pFrame->CallCallback( SALEVENT_SHOWDIALOG, reinterpret_cast< void* >( SHOWDIALOG_ID_PREFERENCES ) ) )
 			{
-				if ( aPreferencesHandlerModule.load( "libsfxlo.dylib" ) )
-					pPreferencesHandler = (NativePreferencesMenuHandler_Type *)aPreferencesHandlerModule.getSymbol( "NativePreferencesMenuHandler" );
+				ImplSVData *pSVData = ImplGetSVData();
+				if ( pSVData )
+				{
+					ApplicationEvent aAppEvent( ApplicationEvent::TYPE_SHOWDIALOG, "PREFERENCES" );
+					pSVData->mpApp->AppEvent( aAppEvent );
+				}
 			}
-
-			if ( pPreferencesHandler && !pSalData->mbInNativeModalSheet )
-				pPreferencesHandler();
 
 			return;
 		}
