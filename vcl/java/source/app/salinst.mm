@@ -1608,8 +1608,12 @@ void JavaSalEvent::dispatch()
 		}
 		case SALEVENT_ABOUT:
 		{
-			JavaSalFrame *pFrame = pSalData->maFrameList.front();
-			if ( !pFrame || pFrame->CallCallback( SALEVENT_SHOWDIALOG, reinterpret_cast< void* >( SHOWDIALOG_ID_ABOUT ) ) )
+			JavaSalFrame *pFrame = pSalData->mpFocusFrame;
+			if ( pFrame && pFrame->mbVisible )
+			{
+				pFrame->CallCallback( SALEVENT_SHOWDIALOG, reinterpret_cast< void* >( SHOWDIALOG_ID_ABOUT ) );
+			}
+			else
 			{
 				ImplSVData *pSVData = ImplGetSVData();
 				if ( pSVData )
@@ -1623,8 +1627,12 @@ void JavaSalEvent::dispatch()
 		}
 		case SALEVENT_PREFS:
 		{
-			JavaSalFrame *pFrame = pSalData->maFrameList.front();
-			if ( !pFrame || pFrame->CallCallback( SALEVENT_SHOWDIALOG, reinterpret_cast< void* >( SHOWDIALOG_ID_PREFERENCES ) ) )
+			JavaSalFrame *pFrame = pSalData->mpFocusFrame;
+			if ( pFrame && pFrame->mbVisible )
+			{
+				pFrame->CallCallback( SALEVENT_SHOWDIALOG, reinterpret_cast< void* >( SHOWDIALOG_ID_PREFERENCES ) );
+			}
+			else
 			{
 				ImplSVData *pSVData = ImplGetSVData();
 				if ( pSVData )
