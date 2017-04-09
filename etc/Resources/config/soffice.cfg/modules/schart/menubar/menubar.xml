@@ -160,7 +160,8 @@
             </menu:menu>
             <menu:menuitem menu:id="service:com.sun.star.deployment.ui.PackageManagerDialog" menu:helpid="42772"/>
             <menu:menuitem menu:id=".uno:ConfigureDialog" menu:label=""/>
-            
+            <!-- Add back Options menu item -->
+            <menu:menuitem menu:id=".uno:OptionsTreeDialog" menu:label=""/>
         </menu:menupopup>
     </menu:menu>
     <menu:menu menu:id=".uno:WindowList" menu:label="">
@@ -180,7 +181,8 @@
             <menu:menuseparator/>
             <menu:menuitem menu:id=".uno:ShowLicense"/>
             -->
-            
+            <!-- Add back About menu item -->
+            <menu:menuitem menu:id=".uno:About"/>
         </menu:menupopup>
     </menu:menu>
 </menu:menubar>
