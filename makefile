@@ -195,6 +195,7 @@ PRODUCT_MODULES = \
 	filter \
 	fpicker \
 	framework \
+	helpcontent2 \
 	i18npool \
 	i18nutil \
 	lingucomponent \
@@ -220,6 +221,7 @@ PRODUCT_MODULES = \
 	unotools \
 	uui \
 	writerfilter \
+	xmlhelp \
 	xmloff
 
 .DELETE_ON_ERROR : build.neo_configure
@@ -371,6 +373,7 @@ build.neo_patches: \
 	touch "$@"
 
 # Custom modules that need to link directly to other custom modules
+build.neo_helpcontent2_patch: build.neo_xmlhelp_patch
 build.neo_sfx2_patch: build.neo_sal_patch build.neo_unotools_patch
 build.neo_svtools_patch: build.neo_extensions_patch build.neo_vcl_patch
 
