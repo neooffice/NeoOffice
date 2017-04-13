@@ -1228,15 +1228,7 @@
 <xsl:template match="paragraph[@id='par_id1013200911280529' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedoptionen01000000xml']]]" />
 
 <!-- Remove Improvement Program text -->
-<xsl:template match="embed[@href='text/shared/optionen/improvement.xhp#improvement']" />
-<xsl:template match="section[embed[@href='text/shared/00/00000406.xhp#improvement']]" />
 <xsl:template match="paragraph[(@id='hd_id0120200910361765' or @id='par_id0120200910361848' or @id='par_id0120200910361874') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]]" />
-<xsl:template match="paragraph[@id='par_id0526200904120665' and ancestor::body/preceding-sibling::meta[topic[@id='textshared0000000406xml']]]" />
-<xsl:template match="paragraph[@id='par_id0526200312315378' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedoptionenimprovementxhp']]]">
-	<xsl:apply-templates mode="notavailable" select="." />
-</xsl:template>
-<xsl:template match="paragraph[not(@id='hd_id0526200912315340') and not(@id='par_id0526200312315378') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedoptionenimprovementxhp']]]" />
-<xsl:template match="list[ancestor::body/preceding-sibling::meta[topic[@id='textsharedoptionenimprovementxhp']]]" />
 
 <!-- Remove Start Center text -->
 <xsl:template match="paragraph[@id='par_id3159201' and ancestor::body/preceding-sibling::meta[topic[@id='textshared0101050000xml']]]" />
