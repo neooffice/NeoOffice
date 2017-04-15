@@ -1084,11 +1084,6 @@
 <xsl:template match="paragraph[not(@id='hd_id8773155') and not(@id='par_id5248573') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedexplorerdatabaserep_mainxml']]]" />
 <xsl:template match="list[ancestor::body/preceding-sibling::meta[topic[@id='textsharedexplorerdatabaserep_mainxml']]]" />
 <xsl:template match="paragraph[(@id='hd_id3154750' or @id='par_id3155628') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedoptionen01013000xml']]]" />
-<xsl:template match="paragraph[@id='par_id3143267' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidemobiledevicefiltersxml']]]">
-	<xsl:apply-templates mode="securitywarning" select="." />
-</xsl:template>
-<xsl:template match="paragraph[not(@id='hd_id3147143') and not(@id='par_id3143267') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidemobiledevicefiltersxml']]]" />
-<xsl:template match="list[ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidemobiledevicefiltersxml']]]" />
 <xsl:template match="paragraph[(@id='hd_id3151172' or @id='par_id3148386') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0000000005xml']]]" />
 <xsl:template match="paragraph[@id='par_idN105C1' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidedata_reportsxhp']]]">
 	<xsl:apply-templates mode="securitywarning" select="." />
