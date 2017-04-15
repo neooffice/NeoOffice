@@ -1043,8 +1043,8 @@
 </xsl:template>
 
 <!-- Remove Java text -->
-<xsl:template match="section[embed[@href='text/shared/00/00000406.xhp#java']]" />
-<xsl:template match="embed[@href='text/shared/optionen/java.xhp#java']" />
+<xsl:template match="section[embed[@href='text/shared/00/00000406.xhp#advanced']]" />
+<xsl:template match="embed[@href='text/shared/optionen/java.xhp#advanced']" />
 <xsl:template match="paragraph[@id='par_idN10561' and ancestor::body/preceding-sibling::meta[topic[@id='textswriter01mailmerge02xml']]]">
 	<xsl:apply-templates mode="securitywarning" select="." />
 </xsl:template>
@@ -1167,12 +1167,6 @@
 <xsl:template match="embed[@href='text/shared/autopi/01010600.xhp#seite6']" />
 <xsl:template match="paragraph[@id='par_idN10C3D' and ancestor::body/preceding-sibling::meta[topic[@id='textshared0000000406xml']]]" />
 <xsl:template match="paragraph[(@id='par_idN1055D' or @id='par_idN10585' or @id='par_idN10589' or @id='par_id8584246') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedexplorerdatabasedabawiz01xml']]]" />
-
-<!-- Remove Online Registration text -->
-<xsl:template match="paragraph[@id='par_idN1055C' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopistartupxhp']]]">
-	<xsl:apply-templates mode="notavailable" select="." />
-</xsl:template>
-<xsl:template match="paragraph[not(@id='par_idN1054C') and not(@id='par_idN1055C') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopistartupxhp']]]" />
 
 <!-- Remove Online Update text -->
 <xsl:template match="section[embed[@href='text/shared/00/00000406.xhp#online_update']]" />

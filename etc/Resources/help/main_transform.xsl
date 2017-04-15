@@ -1033,12 +1033,6 @@
 <xsl:template match="paragraph[@id='hd_id9999694' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidelanguage_selectxml']]]" />
 <xsl:template match="listitem[paragraph[(@id='par_id130619' or @id='par_id2216559' or @id='par_id7869502' or @id='par_id9852900' or @id='par_id3791924') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidelanguage_selectxml']]]]" />
 
-<!-- Remove Online Registration text -->
-<xsl:template match="paragraph[@id='par_idN1055C' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopistartupxhp']]]">
-	<xsl:apply-templates mode="notavailable" select="." />
-</xsl:template>
-<xsl:template match="paragraph[not(@id='par_idN1054C') and not(@id='par_idN1055C') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopistartupxhp']]]" />
-
 <!-- Remove LDAP text -->
 <xsl:template match="paragraph[@id='par_idN10558' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedexplorerdatabasedabawiz02ldapxml']]]">
 	<xsl:apply-templates mode="notavailable" select="." />
