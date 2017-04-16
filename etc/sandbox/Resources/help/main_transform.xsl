@@ -1160,7 +1160,7 @@
 <xsl:template match="embed[@href='text/shared/autopi/01010400.xhp#seite4']" />
 <xsl:template match="embed[@href='text/shared/autopi/01010500.xhp#seite5']" />
 <xsl:template match="embed[@href='text/shared/autopi/01010600.xhp#seite6']" />
-<xsl:template match="paragraph[@id='par_idN10C3D' and ancestor::body/preceding-sibling::meta[topic[@id='textshared0000000406xml']]]" />
+<xsl:template match="paragraph[@id='par_idN11C3D' and ancestor::body/preceding-sibling::meta[topic[@id='textshared0000000406xml']]]" />
 <xsl:template match="paragraph[(@id='par_idN1055D' or @id='par_idN10585' or @id='par_idN10589' or @id='par_id8584246') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedexplorerdatabasedabawiz01xml']]]" />
 
 <!-- Remove Online Update text -->
