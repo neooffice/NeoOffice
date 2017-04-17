@@ -1078,6 +1078,13 @@
 <xsl:template match="list[ancestor::body/preceding-sibling::meta[topic[@id='LibreLogo']]]" />
 <xsl:template match="table[ancestor::body/preceding-sibling::meta[topic[@id='LibreLogo']]]" />
 
+<!-- Remove OpenGL text -->
+<xsl:template match="paragraph[(@id='hd_id3154507' or @id='par_id3146879') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0000000005xml']]]" />
+
+<!-- Remove feedback, license, and credits text -->
+<xsl:template match="paragraph[(@id='hd_id2752763' or @id='par_id443534340' or @id='hd_id4153881' or @id='par_id4144510' or @id='hd_id5153881' or @id='par_id5144510') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedmain0108xml']]]" />
+<xsl:template match="listitem[paragraph[@id='par_id3147008' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguideversion_numberxml']]]]" />
+
 <!-- Replace paragraph with "not available" warning -->
 <xsl:template match="paragraph" mode="notavailable">
 	<xsl:choose>
