@@ -671,10 +671,6 @@
 		<xsl:when test="@href[ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]] and parent::paragraph[@id='par_id3497211']">
 			<a href="$(PRODUCT_DOCUMENTATION_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
 		</xsl:when>
-		<!-- Replace the LibO spellchecking URLs -->
-		<xsl:when test="@href and (parent::paragraph[@id='par_id6434522'] or parent::paragraph[@id='par_id3552964'] or paragraph[@id='par_id9625843'] or parent::paragraph[@id='par_id1683706'])">
-			<a href="$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
-		</xsl:when>
 		<xsl:when test="starts-with(@href,'http://') or starts-with(@href,'https://')">  <!-- web links -->
 			<a href="{@href}"><xsl:apply-templates /></a>
 		</xsl:when>
