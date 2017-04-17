@@ -1026,7 +1026,7 @@
 <xsl:template match="paragraph[@id='par_id3153345' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguideerror_reportxml']]]">
 	<xsl:apply-templates mode="notavailable" select="." />
 </xsl:template>
-<xsl:template match="paragraph[(@id='par_id3147088' or @id='hd_id3148538' or @id='par_id3149811' or @id='hd_id3154046' or @id='par_id3147335' or @id='hd_id3159399' or @id='par_id3150504' or @id='par_id3149670' or @id='par_id3153526' or @id='hd_id3150792' or @id='par_id3154366' or @id='par_id3151177') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguideerror_reportxml']]]" />
+<xsl:template match="paragraph[not(@id='hd_id3150616') and not(@id='par_id3153345') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguideerror_reportxml']]]" />
 
 <!-- Remove Download and Language Pack text -->
 <xsl:template match="paragraph[(@id='hd_id3168534' or @id='par_id3028143') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]]" />
