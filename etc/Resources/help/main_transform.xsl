@@ -1027,7 +1027,7 @@
 <!-- Remove Download and Language Pack text -->
 <xsl:template match="paragraph[(@id='hd_id3168534' or @id='par_id3028143') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]]" />
 <xsl:template match="paragraph[@id='hd_id9999694' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidelanguage_selectxml']]]" />
-<xsl:template match="listitem[paragraph[(@id='par_id130619' or @id='par_id2216559' or @id='par_id7869502' or @id='par_id9852900' or @id='par_id3791924') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidelanguage_selectxml']]]]" />
+<xsl:template match="listitem[paragraph[(@id='par_id130619' or @id='par_id221655a' or @id='par_id7869502' or @id='par_id9852900' or @id='par_id3791924') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidelanguage_selectxml']]]]" />
 
 <!-- Remove LDAP text -->
 <xsl:template match="paragraph[@id='par_idN10558' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedexplorerdatabasedabawiz02ldapxml']]]">
