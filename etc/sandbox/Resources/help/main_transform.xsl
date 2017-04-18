@@ -579,7 +579,7 @@
 				<xsl:with-param name="string" select="$newstr"/>
 			</xsl:call-template>
 		</xsl:when>
-		<xsl:when test="contains($string,$brand7)">
+		<xsl:when test="contains($string,$brand7) and parent::paragraph[not(@id='par_id2008200911583098') and not(@id='par_id5004119') and not(@id='par_id0120200910234570') and not(@id='par_id0902200809540918')]">
 			<xsl:variable name="newstr">
 				<xsl:value-of select="substring-before($string,$brand7)"/>
 				<xsl:value-of select="$productname"/>
