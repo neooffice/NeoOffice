@@ -57,14 +57,6 @@ static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecuritySc
 #ifdef USE_QUICKTIME
 static const short nAVMediaMinDB = -40;
 static const short nAVMediaMaxDB = 0;
-#endif	// USE_QUICKTIME
-#if __x86_64__
-static BOOL bAVKitInitialized = NO;
-static Class aAVAssetClass = nil;
-static Class aAVPlayerClass = nil;
-static Class aAVPlayerViewClass = nil;
-#endif	// __x86_64__
-#ifdef USE_QUICKTIME
 static BOOL bQTKitInitialized = NO;
 static Class aQTMovieClass = nil;
 static Class aQTMovieViewClass = nil;
@@ -77,28 +69,6 @@ static QTMovieLoopsAttribute_Type *pQTMovieLoopsAttribute = NULL;
 using namespace ::avmedia::quicktime;
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::media;
-
-static void InitializeAVKit()
-{
-#if __x86_64__
-	if ( !bAVKitInitialized )
-	{
-		NSBundle *pAVKitBundle = [NSBundle bundleWithPath:@"/System/Library/Frameworks/AVKit.framework"];
-		if ( pAVKitBundle )
-		{
-			Class aClass = [pAVKitBundle classNamed:@"AVPlayerView"];
-			if ( [aClass isSubclassOfClass:[NSView class]] )
-			{
-				aAVPlayerViewClass = aClass;
-				aAVAssetClass = [pAVKitBundle classNamed:@"AVAsset"];
-				aAVPlayerClass = [pAVKitBundle classNamed:@"AVPlayer"];
-			}
-		}
-
-		bAVKitInitialized = YES;
-	}
-#endif // __x86_64__
-}
 
 #ifdef USE_QUICKTIME
 
@@ -345,11 +315,19 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		mpMovieView = nil;
 	}
 
+#ifdef USE_QUICKTIME
 	if ( mpMovie )
 	{
 		[mpMovie release];
 		mpMovie = nil;
 	}
+#else	// USE_QUICKTIME
+	if ( mpAVPlayer )
+	{
+		[mpAVPlayer release];
+		mpAVPlayer = nil;
+	}
+#endif	// USE_QUICKTIME
 
 	if ( mpSuperview )
 	{
@@ -447,7 +425,11 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 {
 	[super init];
 
+#ifdef USE_QUICKTIME
 	mpMovie = nil;
+#else	// USE_QUICKTIME
+	mpAVPlayer = nil;
+#endif	// USE_QUICKTIME
 	mpMovieView = nil;
 	maPreferredSize = NSMakeSize( 0, 0 );
 	maRealFrame = NSMakeRect( 0, 0, 0, 0 );
@@ -479,7 +461,6 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 {
 	(void)pObject;
 
-	InitializeAVKit();
 #ifdef USE_QUICKTIME
 	InitializeQTKit();
 #endif	// USE_QUICKTIME
@@ -489,8 +470,6 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !mpURL )
 		return;
 
-	mpMovie = nil;
-	mpMovieView  = nil;
 #ifdef USE_QUICKTIME
 	if ( aQTMovieClass && class_getClassMethod( aQTMovieClass, @selector(movieWithURL:error:) ) && pQTGetTimeInterval && pQTMakeTimeRange && pQTMakeTimeWithTimeInterval && pQTMovieLoopsAttribute )
 	{
@@ -522,10 +501,14 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 #endif	// USE_QUICKTIME
 }
 
+#ifdef USE_QUICKTIME
+
 - (NSObject *)movie
 {
 	return mpMovie;
 }
+
+#endif	// USE_QUICKTIME
 
 - (AvmediaMovieView *)movieView
 {
@@ -583,6 +566,15 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		[mpMovie play];
 #endif	// USE_QUICKTIME
 }
+
+#ifndef USE_QUICKTIME
+
+- (AVPlayer *)player
+{
+	return mpAVPlayer;
+}
+
+#endif	// !USE_QUICKTIME
 
 - (void)preferredSize:(AvmediaArgs *)pArgs
 {
@@ -977,11 +969,19 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	[self setCursor:nil];
 	[self setMoviePlayer:nil];
 
+#ifdef USE_QUICKTIME
 	if ( mpQTMovieView )
 	{
 		[mpQTMovieView removeFromSuperview];
 		[mpQTMovieView release];
 	}
+#else	// USE_QUICKTIME
+	if ( mpAVPlayerView )
+	{
+		[mpAVPlayerView removeFromSuperview];
+		[mpAVPlayerView release];
+	}
+#endif	// USE_QUICKTIME
 
 	[super dealloc];
 }
@@ -999,15 +999,14 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 {
 	[super initWithFrame:aFrame];
 
-	InitializeAVKit();
 #ifdef USE_QUICKTIME
 	InitializeQTKit();
 #endif	// USE_QUICKTIME
 
 	mpCursor = nil;
 	mpMoviePlayer = nil;
-	mpQTMovieView = nil;
 #ifdef USE_QUICKTIME
+	mpQTMovieView = nil;
 	if ( aQTMovieViewClass )
 	{
 		mpQTMovieView = [aQTMovieViewClass alloc];
@@ -1031,6 +1030,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 			}
 		}
 	}
+#else	// USE_QUICKTIME
+	mpAVPlayerView = nil;
 #endif	// USE_QUICKTIME
 
 	return self;

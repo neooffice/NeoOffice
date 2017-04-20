@@ -36,13 +36,17 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
-#import <premac.h>
-#import <AppKit/AppKit.h>
-#import <objc/objc-class.h>
-#import <postmac.h>
-
 // Comment out the following line to disable QuickTime
 #define USE_QUICKTIME
+
+#import <premac.h>
+#import <AppKit/AppKit.h>
+#ifdef USE_QUICKTIME
+#import <objc/objc-class.h>
+#else	// USE_QUICKTIME
+#import <AVKit/AVKit.h>
+#endif	// USE_QUICKTIME
+#import <postmac.h>
 
 #ifndef QTTime
 typedef struct {
@@ -76,7 +80,11 @@ typedef struct {
 
 @interface AvmediaMoviePlayer : NSObject
 {
+#ifdef USE_QUICKTIME
 	NSObject*				mpMovie;
+#else	// USE_QUICKTIME
+	AVPlayer*				mpAVPlayer;
+#endif	// USE_QUICKTIME
 	AvmediaMovieView*		mpMovieView;
 	NSView*					mpSuperview;
 	NSSize					maPreferredSize;
@@ -93,10 +101,15 @@ typedef struct {
 - (id)initWithURL:(NSURL *)pURL;
 - (void)initialize:(id)pObject;
 - (BOOL)isPlaying:(AvmediaArgs *)pArgs;
+#ifdef USE_QUICKTIME
 - (NSObject *)movie;
+#endif	// USE_QUICKTIME
 - (AvmediaMovieView *)movieView;
 - (BOOL)mute:(AvmediaArgs *)pArgs;
 - (void)play:(id)pObject;
+#ifndef USE_QUICKTIME
+- (AVPlayer *)player;
+#endif	// !USE_QUICKTIME
 - (void)preferredSize:(AvmediaArgs *)pArgs;
 - (double)rate:(AvmediaArgs *)pArgs;
 - (double)selectionEnd:(AvmediaArgs *)pArgs;
@@ -120,7 +133,11 @@ typedef struct {
 {
 	NSCursor*				mpCursor;
 	AvmediaMoviePlayer*		mpMoviePlayer;
+#ifdef USE_QUICKTIME
 	NSView*					mpQTMovieView;
+#else	// USE_QUICKTIME
+	AVPlayerView*			mpAVPlayerView;
+#endif	// USE_QUICKTIME
 }
 + (NSMenu *)defaultMenu;
 - (BOOL)becomeFirstResponder;
