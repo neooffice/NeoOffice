@@ -41,6 +41,9 @@
 #import <objc/objc-class.h>
 #import <postmac.h>
 
+// Comment out the following line to disable QuickTime
+#define USE_QUICKTIME
+
 #ifndef QTTime
 typedef struct {
 	long long		timeValue;

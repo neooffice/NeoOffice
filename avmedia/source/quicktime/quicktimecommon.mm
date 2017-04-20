@@ -45,21 +45,26 @@
 
 typedef id Application_acquireSecurityScopedURLFromNSURL_Type( const id pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const id pDialogTitle );
 typedef void Application_releaseSecurityScopedURL_Type( id pSecurityScopedURLs );
+#ifdef USE_QUICKTIME
 typedef BOOL QTGetTimeInterval_Type( QTTime time, NSTimeInterval *timeInterval );
 typedef QTTimeRange QTMakeTimeRange_Type( QTTime time, QTTime duration );
 typedef QTTime QTMakeTimeWithTimeInterval_Type( NSTimeInterval timeInterval );
 typedef NSString * const QTMovieLoopsAttribute_Type;
+#endif	// USE_QUICKTIME
 
 static Application_acquireSecurityScopedURLFromNSURL_Type *pApplication_acquireSecurityScopedURLFromNSURL = NULL;
 static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
+#ifdef USE_QUICKTIME
 static const short nAVMediaMinDB = -40;
 static const short nAVMediaMaxDB = 0;
+#endif	// USE_QUICKTIME
 #if __x86_64__
 static BOOL bAVKitInitialized = NO;
 static Class aAVAssetClass = nil;
 static Class aAVPlayerClass = nil;
 static Class aAVPlayerViewClass = nil;
 #endif	// __x86_64__
+#ifdef USE_QUICKTIME
 static BOOL bQTKitInitialized = NO;
 static Class aQTMovieClass = nil;
 static Class aQTMovieViewClass = nil;
@@ -67,6 +72,7 @@ static QTGetTimeInterval_Type *pQTGetTimeInterval = NULL;
 static QTMakeTimeRange_Type *pQTMakeTimeRange = NULL;
 static QTMakeTimeWithTimeInterval_Type *pQTMakeTimeWithTimeInterval = NULL;
 static QTMovieLoopsAttribute_Type *pQTMovieLoopsAttribute = NULL;
+#endif	// USE_QUICKTIME
 
 using namespace ::avmedia::quicktime;
 using namespace ::com::sun::star::awt;
@@ -93,6 +99,8 @@ static void InitializeAVKit()
 	}
 #endif // __x86_64__
 }
+
+#ifdef USE_QUICKTIME
 
 static void InitializeQTKit()
 {
@@ -125,6 +133,8 @@ static void InitializeQTKit()
 		bQTKitInitialized = YES;
 	}
 }
+
+#endif	// USE_QUICKTIME
 
 static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, AvmediaMoviePlayer *pMoviePlayer )
 {
@@ -262,6 +272,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 @end
 
+#ifdef USE_QUICKTIME
+
 @interface NSObject (QTMovie)
 + (id)movieWithURL:(NSURL *)pURL error:(NSError **)ppError;
 - (QTTime)currentTime;
@@ -289,6 +301,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 - (void)setShowsResizeIndicator:(BOOL)bShow;
 @end
 
+#endif	// USE_QUICKTIME
+
 @implementation AvmediaMoviePlayer
 
 - (void)bounds:(AvmediaArgs *)pArgs
@@ -301,12 +315,14 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 {
 	double fRet = 0;
 
+#ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(currentTime)] )
 	{
 		NSTimeInterval aInterval;
 		if ( pQTGetTimeInterval && pQTGetTimeInterval( [mpMovie currentTime], &aInterval ) )
 			fRet = aInterval;
 	}
+#endif	// USE_QUICKTIME
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithDouble:fRet]];
@@ -346,12 +362,14 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 {
 	double fRet = 0;
 
+#ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(duration)] )
 	{
 		NSTimeInterval aInterval;
 		if ( pQTGetTimeInterval && pQTGetTimeInterval( [mpMovie duration], &aInterval ) )
 			fRet = aInterval;
 	}
+#endif	// USE_QUICKTIME
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithDouble:fRet]];
@@ -388,7 +406,11 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pTime )
 		return pRet;
 
+#ifdef USE_QUICKTIME
 	NSImage *pImage = ( mpMovie && [mpMovie respondsToSelector:@selector(frameImageAtTime:)] && pQTMakeTimeWithTimeInterval ? [mpMovie frameImageAtTime:pQTMakeTimeWithTimeInterval( [pTime doubleValue] )] : nil );
+#else	// USE_QUICKTIME
+	NSImage *pImage = nil;
+#endif	// USE_QUICKTIME
 	if ( pImage )
 	{
 		NSSize aSize = [pImage size];
@@ -458,7 +480,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	(void)pObject;
 
 	InitializeAVKit();
+#ifdef USE_QUICKTIME
 	InitializeQTKit();
+#endif	// USE_QUICKTIME
 
 	[self destroy:self];
 
@@ -467,6 +491,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 	mpMovie = nil;
 	mpMovieView  = nil;
+#ifdef USE_QUICKTIME
 	if ( aQTMovieClass && class_getClassMethod( aQTMovieClass, @selector(movieWithURL:error:) ) && pQTGetTimeInterval && pQTMakeTimeRange && pQTMakeTimeWithTimeInterval && pQTMovieLoopsAttribute )
 	{
 		NSError *pError = nil;
@@ -494,6 +519,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 			[mpMovieView setMovie:mpMovie];
 		}
 	}
+#endif	// USE_QUICKTIME
 }
 
 - (NSObject *)movie
@@ -508,7 +534,11 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (BOOL)isPlaying:(AvmediaArgs *)pArgs
 {
-	BOOL bRet = ( mpMovie && [mpMovie respondsToSelector:@selector(rate)] && [mpMovie rate] != 0 );
+	BOOL bRet = NO;
+
+#ifdef USE_QUICKTIME
+	bRet = ( mpMovie && [mpMovie respondsToSelector:@selector(rate)] && [mpMovie rate] != 0 );
+#endif	// USE_QUICKTIME
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithBool:bRet]];
@@ -518,7 +548,11 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (double)rate:(AvmediaArgs *)pArgs
 {
-	double fRet = (double)( mpMovie && [mpMovie respondsToSelector:@selector(rate)] ? [mpMovie rate] : 0 );
+	double fRet = 0;
+
+#ifdef USE_QUICKTIME
+	fRet = (double)( mpMovie && [mpMovie respondsToSelector:@selector(rate)] ? [mpMovie rate] : 0 );
+#endif	// USE_QUICKTIME
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithDouble:fRet]];
@@ -528,7 +562,11 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (BOOL)mute:(AvmediaArgs *)pArgs
 {
-	BOOL bRet = ( mpMovie && [mpMovie respondsToSelector:@selector(muted)] ? [mpMovie muted] : NO );
+	BOOL bRet = NO;
+
+#ifdef USE_QUICKTIME
+	bRet = ( mpMovie && [mpMovie respondsToSelector:@selector(muted)] ? [mpMovie muted] : NO );
+#endif	// USE_QUICKTIME
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithBool:bRet]];
@@ -540,8 +578,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 {
 	(void)pObject;
 
+#ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(play)] && [mpMovie respondsToSelector:@selector(rate)] && [mpMovie rate] == 0 )
 		[mpMovie play];
+#endif	// USE_QUICKTIME
 }
 
 - (void)preferredSize:(AvmediaArgs *)pArgs
@@ -554,6 +594,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 {
 	double fRet = 0;
 
+#ifdef USE_QUICKTIME
 	if ( mpMovie && pQTGetTimeInterval )
 	{
 		NSTimeInterval aInterval;
@@ -566,6 +607,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 			fRet = aInterval;
 		}
 	}
+#endif	// USE_QUICKTIME
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithDouble:fRet]];
@@ -611,8 +653,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pTime )
 		return;
 
+#ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(setCurrentTime:)] && pQTMakeTimeWithTimeInterval )
 		[mpMovie setCurrentTime:pQTMakeTimeWithTimeInterval( [pTime doubleValue] )];
+#endif	// USE_QUICKTIME
 }
 
 - (void)setFocus:(id)pObject
@@ -681,8 +725,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pLooping )
 		return;
 
+#ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(setAttribute:forKey:)] && pQTMovieLoopsAttribute )
 		[mpMovie setAttribute:pLooping forKey:*pQTMovieLoopsAttribute];
+#endif	// USE_QUICKTIME
 }
 
 - (void)setMute:(AvmediaArgs *)pArgs
@@ -695,8 +741,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pMute )
 		return;
 
+#ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(setMuted:)] )
 		[mpMovie setMuted:[pMute boolValue]];
+#endif	// USE_QUICKTIME
 }
 
 - (void)setPointer:(AvmediaArgs *)pArgs
@@ -745,8 +793,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pTime )
 		return;
 
+#ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(setRate:)] )
 		[mpMovie setRate:[pTime floatValue]];
+#endif	// USE_QUICKTIME
 }
 
 - (void)setSelection:(AvmediaArgs *)pArgs
@@ -759,8 +809,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pTime )
 		return;
 
+#ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(setSelection:)] && pQTMakeTimeRange && pQTMakeTimeWithTimeInterval )
 		[mpMovie setSelection:pQTMakeTimeRange( pQTMakeTimeWithTimeInterval( 0 ), pQTMakeTimeWithTimeInterval( [pTime doubleValue] ) )];
+#endif	// USE_QUICKTIME
 }
 
 - (void)setSuperview:(AvmediaArgs *)pArgs
@@ -831,8 +883,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pDB )
 		return;
 
+#ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(setVolume:)] )
 		[mpMovie setVolume:( (float)( [pDB shortValue] - nAVMediaMinDB ) / (float)( nAVMediaMaxDB - nAVMediaMinDB ) )];
+#endif	// USE_QUICKTIME
 }
 
 - (void)setZoomLevel:(AvmediaArgs *)pArgs
@@ -875,13 +929,19 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 {
 	(void)pObject;
 
+#ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(rate)] && [mpMovie respondsToSelector:@selector(stop)] && [mpMovie rate] != 0 )
 		[mpMovie stop];
+#endif	// USE_QUICKTIME
 }
 
 - (short)volumeDB:(AvmediaArgs *)pArgs
 {
-	short nRet = (short)( ( mpMovie && [mpMovie respondsToSelector:@selector(volume)] ? [mpMovie volume] : 0 ) * ( nAVMediaMaxDB - nAVMediaMinDB ) ) + nAVMediaMinDB;
+	short nRet = 0;
+
+#ifdef USE_QUICKTIME
+	nRet = (short)( ( mpMovie && [mpMovie respondsToSelector:@selector(volume)] ? [mpMovie volume] : 0 ) * ( nAVMediaMaxDB - nAVMediaMinDB ) ) + nAVMediaMinDB;
+#endif	// USE_QUICKTIME
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithShort:nRet]];
@@ -940,11 +1000,14 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	[super initWithFrame:aFrame];
 
 	InitializeAVKit();
+#ifdef USE_QUICKTIME
 	InitializeQTKit();
+#endif	// USE_QUICKTIME
 
 	mpCursor = nil;
 	mpMoviePlayer = nil;
 	mpQTMovieView = nil;
+#ifdef USE_QUICKTIME
 	if ( aQTMovieViewClass )
 	{
 		mpQTMovieView = [aQTMovieViewClass alloc];
@@ -968,6 +1031,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 			}
 		}
 	}
+#endif	// USE_QUICKTIME
 
 	return self;
 }
@@ -1077,17 +1141,23 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 {
 	[super setFrame:aRect];
 
+#ifdef USE_QUICKTIME
 	if ( mpQTMovieView )
 		[mpQTMovieView setFrame:NSMakeRect( 0, 0, aRect.size.width, aRect.size.height )];
+#endif	// USE_QUICKTIME
 }
 
 - (void)setMovie:(NSObject *)pMovie
 {
+#ifdef USE_QUICKTIME
 	if ( !pMovie || [pMovie isKindOfClass:aQTMovieClass] )
 	{
 		if ( mpQTMovieView && [mpQTMovieView respondsToSelector:@selector(setMovie:)] )
 			[mpQTMovieView setMovie:(QTMovie *)pMovie];
 	}
+#else	// USE_QUICKTIME
+	(void)pMovie;
+#endif	// USE_QUICKTIME
 }
 
 - (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer
@@ -1103,8 +1173,12 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)setPreservesAspectRatio:(BOOL)bPreservesAspectRatio
 {
+#ifdef USE_QUICKTIME
 	if ( mpQTMovieView && [mpQTMovieView respondsToSelector:@selector(setPreservesAspectRatio:)] )
 		[mpQTMovieView setPreservesAspectRatio:bPreservesAspectRatio];
+#else	// USE_QUICKTIME
+	(void)bPreservesAspectRatio;
+#endif	// USE_QUICKTIME
 }
 
 @end
