@@ -566,7 +566,10 @@ endif
 # installing any LibO fonts. Remove Lotus Word Pro import library as it has
 # several known security vulnerabilities. Remove OpenGL transitions.
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "Frameworks/libMacOSXSpelllo.dylib" "Frameworks/libOGLTranslo.dylib" "Frameworks/libavmediaMacAVFlo.dylib" "Frameworks/libavmediaogl.dylib" "Frameworks/liblwpftlo.dylib" "Frameworks/liboglcanvaslo.dylib" "Resources/config/soffice.cfg/simpress/transitions-ogl.xml" "Resources/fonts/truetype" "Resources/java/smoketest.jar"
-ifndef PRODUCT_BUILD3
+ifdef PRODUCT_BUILD3
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find "Resources/wizards" -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find "Resources/wizards" -type f -name "*.py" -not -path "*/CVS/*"` ; do sed "s#\$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$(PWD)/etc/$${i}" > "$${i}" ; done'
+else
 # Remove update check files since the Mac App Store has its own update
 # check. Do not remove updatefeed.uno.dylib as it is needed by the pdfimport
 # extension.
