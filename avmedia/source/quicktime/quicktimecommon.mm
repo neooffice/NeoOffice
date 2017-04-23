@@ -43,6 +43,10 @@
 #include <com/sun/star/awt/SystemPointer.hpp>
 #include <com/sun/star/media/ZoomLevel.hpp>
 
+#ifndef USE_QUICKTIME
+#define PREFERRED_TIMESCALE 1000
+#endif	// !USE_QUICKTIME
+
 typedef id Application_acquireSecurityScopedURLFromNSURL_Type( const id pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const id pDialogTitle );
 typedef void Application_releaseSecurityScopedURL_Type( id pSecurityScopedURLs );
 #ifdef USE_QUICKTIME
@@ -517,7 +521,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 				AVAssetImageGenerator *pAVAssetImageGenerator = [AVAssetImageGenerator assetImageGeneratorWithAsset:pAVAsset];
 				if ( pAVAssetImageGenerator )
 				{
-					CGImageRef aImage = [pAVAssetImageGenerator copyCGImageAtTime:CMTimeMakeWithSeconds( 0, 1 ) actualTime:NULL error:NULL];
+					CGImageRef aImage = [pAVAssetImageGenerator copyCGImageAtTime:CMTimeMakeWithSeconds( 0, PREFERRED_TIMESCALE ) actualTime:NULL error:NULL];
 					if ( aImage )
 					{
 						maPreferredSize = NSMakeSize( CGImageGetWidth( aImage ), CGImageGetHeight( aImage ) );
