@@ -36,14 +36,15 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
-// Comment out the following line to disable QuickTime
-#define USE_QUICKTIME
+// Uncomment the following line to enable QuickTime
+// #define USE_QUICKTIME
 
 #import <premac.h>
 #import <AppKit/AppKit.h>
 #ifdef USE_QUICKTIME
 #import <objc/objc-class.h>
 #else	// USE_QUICKTIME
+#import <AVFoundation/AVFoundation.h>
 #import <AVKit/AVKit.h>
 #endif	// USE_QUICKTIME
 #import <postmac.h>
@@ -103,13 +104,12 @@ typedef struct {
 - (BOOL)isPlaying:(AvmediaArgs *)pArgs;
 #ifdef USE_QUICKTIME
 - (NSObject *)movie;
+#else	// USE_QUICKTIME
+- (AVPlayer *)movie;
 #endif	// USE_QUICKTIME
 - (AvmediaMovieView *)movieView;
 - (BOOL)mute:(AvmediaArgs *)pArgs;
 - (void)play:(id)pObject;
-#ifndef USE_QUICKTIME
-- (AVPlayer *)player;
-#endif	// !USE_QUICKTIME
 - (void)preferredSize:(AvmediaArgs *)pArgs;
 - (double)rate:(AvmediaArgs *)pArgs;
 - (double)selectionEnd:(AvmediaArgs *)pArgs;
@@ -161,7 +161,11 @@ typedef struct {
 - (void)resetCursorRects;
 - (void)setCursor:(NSCursor *)pCursor;
 - (void)setFrame:(NSRect)aRect;
+#ifdef USE_QUICKTIME
 - (void)setMovie:(NSObject *)pMovie;
+#else	// USE_QUICKTIME
+- (void)setMovie:(AVPlayer *)pMovie;
+#endif	// USE_QUICKTIME
 - (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer;
 - (void)setPreservesAspectRatio:(BOOL)bPreservesAspectRatio;
 @end

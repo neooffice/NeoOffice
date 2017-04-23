@@ -334,6 +334,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		[mpSuperview release];
 		mpSuperview = nil;
 	}
+
+	maPreferredSize = NSMakeSize( 0, 0 );
+	maRealFrame = NSMakeRect( 0, 0, 0, 0 );
+	mnZoomLevel = ZoomLevel_FIT_TO_WINDOW_FIXED_ASPECT;
 }
 
 - (double)duration:(AvmediaArgs *)pArgs
@@ -498,6 +502,38 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 			[mpMovieView setMovie:mpMovie];
 		}
 	}
+#else	// USE_QUICKTIME
+	mpAVPlayer = [AVPlayer playerWithURL:mpURL];
+	if ( mpAVPlayer )
+	{
+		[mpAVPlayer retain];
+
+		AVPlayerItem *pAVPlayerItem = mpAVPlayer.currentItem;
+		if ( pAVPlayerItem )
+		{
+			AVAsset *pAVAsset = pAVPlayerItem.asset;
+			if ( pAVAsset )
+			{
+				AVAssetImageGenerator *pAVAssetImageGenerator = [AVAssetImageGenerator assetImageGeneratorWithAsset:pAVAsset];
+				if ( pAVAssetImageGenerator )
+				{
+					CGImageRef aImage = [pAVAssetImageGenerator copyCGImageAtTime:CMTimeMakeWithSeconds( 0, 1 ) actualTime:NULL error:NULL];
+					if ( aImage )
+					{
+						maPreferredSize = NSMakeSize( CGImageGetWidth( aImage ), CGImageGetHeight( aImage ) );
+						maRealFrame = NSMakeRect( 0, 0, maPreferredSize.width, maPreferredSize.height );
+
+						CGImageRelease( aImage );
+					}
+				}
+			}
+		}
+
+		mpMovieView = [[AvmediaMovieView alloc] initWithFrame:maRealFrame];
+		[mpMovieView setMoviePlayer:self];
+		[mpMovieView setPreservesAspectRatio:( mnZoomLevel == ZoomLevel_FIT_TO_WINDOW ? NO : YES )];
+		[mpMovieView setMovie:mpAVPlayer];
+	}
 #endif	// USE_QUICKTIME
 }
 
@@ -506,6 +542,13 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 - (NSObject *)movie
 {
 	return mpMovie;
+}
+
+#else	// USE_QUICKTIME
+
+- (AVPlayer *)movie
+{
+	return mpAVPlayer;
 }
 
 #endif	// USE_QUICKTIME
@@ -566,15 +609,6 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		[mpMovie play];
 #endif	// USE_QUICKTIME
 }
-
-#ifndef USE_QUICKTIME
-
-- (AVPlayer *)player
-{
-	return mpAVPlayer;
-}
-
-#endif	// !USE_QUICKTIME
 
 - (void)preferredSize:(AvmediaArgs *)pArgs
 {
@@ -1031,7 +1065,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		}
 	}
 #else	// USE_QUICKTIME
-	mpAVPlayerView = nil;
+	mpAVPlayerView = [[AVPlayerView alloc] initWithFrame:NSMakeRect( 0, 0, aFrame.size.width, aFrame.size.height )];
+	if ( mpAVPlayerView )
+		[self addSubview:mpAVPlayerView];
 #endif	// USE_QUICKTIME
 
 	return self;
@@ -1148,18 +1184,26 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 #endif	// USE_QUICKTIME
 }
 
+#ifdef USE_QUICKTIME
+
 - (void)setMovie:(NSObject *)pMovie
 {
-#ifdef USE_QUICKTIME
 	if ( !pMovie || [pMovie isKindOfClass:aQTMovieClass] )
 	{
 		if ( mpQTMovieView && [mpQTMovieView respondsToSelector:@selector(setMovie:)] )
 			[mpQTMovieView setMovie:(QTMovie *)pMovie];
 	}
-#else	// USE_QUICKTIME
-	(void)pMovie;
-#endif	// USE_QUICKTIME
 }
+
+#else	// USE_QUICKTIME
+
+- (void)setMovie:(AVPlayer *)pPlayer
+{
+	if ( mpAVPlayerView )
+		mpAVPlayerView.player = pPlayer;
+}
+
+#endif	// USE_QUICKTIME
 
 - (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer
 {

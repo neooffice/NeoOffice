@@ -43,6 +43,9 @@ ifeq ($(strip $(GUIBASE)),java)
 
 $(eval $(call gb_Library_use_system_darwin_frameworks,avmediaQuickTime,\
 	AppKit \
+	AVFoundation \
+	AVKit \
+	CoreMedia \
 ))
 
 $(eval $(call gb_Library_add_objcxxobjects,avmediaQuickTime,\
