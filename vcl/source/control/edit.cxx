@@ -439,10 +439,17 @@ long Edit::ImplGetExtraOffset() const
     if( ( GetStyle() & WB_BORDER ) || ( mbIsSubEdit && ( GetParent()->GetStyle() & WB_BORDER ) ) )
 #ifdef USE_JAVA
     {
-        if ( !mbIsSubEdit )
-            nExtraOffset = 5;
+        if ( GetStyle() & WB_LEFT )
+        {
+            if ( !mbIsSubEdit )
+                nExtraOffset = 5;
+            else
+                nExtraOffset = 3;
+        }
         else
-            nExtraOffset = 3;
+        {
+            nExtraOffset = 2;
+        }
     }
 #else	// USE_JAVA
         nExtraOffset = 2;
