@@ -302,9 +302,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		AVPlayerItem *pAVPlayerItem = mpAVPlayer.currentItem;
 		if ( pAVPlayerItem )
 		{
-			CMTime aDuration = pAVPlayerItem.currentTime;
-			if ( CMTIME_IS_NUMERIC( aDuration ) )
-				fRet = CMTimeGetSeconds( aDuration );
+			CMTime aTime = pAVPlayerItem.currentTime;
+			if ( CMTIME_IS_NUMERIC( aTime ) )
+				fRet = CMTimeGetSeconds( aTime );
 		}
 	}
 #endif	// USE_QUICKTIME
@@ -555,7 +555,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 				AVAssetImageGenerator *pAVAssetImageGenerator = [AVAssetImageGenerator assetImageGeneratorWithAsset:pAVAsset];
 				if ( pAVAssetImageGenerator )
 				{
-					CGImageRef aImage = [pAVAssetImageGenerator copyCGImageAtTime:CMTimeMakeWithSeconds( 0, PREFERRED_TIMESCALE ) actualTime:NULL error:NULL];
+					CGImageRef aImage = [pAVAssetImageGenerator copyCGImageAtTime:kCMTimeZero actualTime:NULL error:NULL];
 					if ( aImage )
 					{
 						maPreferredSize = NSMakeSize( CGImageGetWidth( aImage ), CGImageGetHeight( aImage ) );
@@ -737,7 +737,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	{
 		AVPlayerItem *pAVPlayerItem = mpAVPlayer.currentItem;
 		if ( pAVPlayerItem )
-			[pAVPlayerItem seekToTime:CMTimeMakeWithSeconds( fTime, PREFERRED_TIMESCALE )];
+			[pAVPlayerItem seekToTime:CMTimeMakeWithSeconds( fTime, PREFERRED_TIMESCALE ) toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
 	}
 #endif	// USE_QUICKTIME
 }
