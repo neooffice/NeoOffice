@@ -296,6 +296,17 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		if ( pQTGetTimeInterval && pQTGetTimeInterval( [mpMovie currentTime], &aInterval ) )
 			fRet = aInterval;
 	}
+#else	// USE_QUICKTIME
+	if ( mpAVPlayer )
+	{
+		AVPlayerItem *pAVPlayerItem = mpAVPlayer.currentItem;
+		if ( pAVPlayerItem )
+		{
+			CMTime aDuration = pAVPlayerItem.currentTime;
+			if ( CMTIME_IS_NUMERIC( aDuration ) )
+				fRet = CMTimeGetSeconds( aDuration );
+		}
+	}
 #endif	// USE_QUICKTIME
 
 	if ( pArgs )
@@ -354,6 +365,29 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		NSTimeInterval aInterval;
 		if ( pQTGetTimeInterval && pQTGetTimeInterval( [mpMovie duration], &aInterval ) )
 			fRet = aInterval;
+	}
+#else	// USE_QUICKTIME
+	if ( mpAVPlayer )
+	{
+		AVPlayerItem *pAVPlayerItem = mpAVPlayer.currentItem;
+		if ( pAVPlayerItem )
+		{
+			CMTime aDuration = pAVPlayerItem.duration;
+			if ( CMTIME_IS_NUMERIC( aDuration ) )
+			{
+				fRet = CMTimeGetSeconds( aDuration );
+			}
+			else
+			{
+				AVAsset *pAVAsset = pAVPlayerItem.asset;
+				if ( pAVAsset )
+				{
+					aDuration = pAVAsset.duration;
+					if ( CMTIME_IS_NUMERIC( aDuration ) )
+						fRet = CMTimeGetSeconds( aDuration );
+				}
+			}
+		}
 	}
 #endif	// USE_QUICKTIME
 
@@ -683,9 +717,28 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pTime )
 		return;
 
+	double fTime = [pTime doubleValue];
+	if ( fTime < 0 )
+	{
+		fTime = 0;
+	}
+	else
+	{
+		double fDuration = [self duration:nil];
+		if ( fTime > fDuration )
+			fTime = fDuration;
+	}
+
 #ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(setCurrentTime:)] && pQTMakeTimeWithTimeInterval )
-		[mpMovie setCurrentTime:pQTMakeTimeWithTimeInterval( [pTime doubleValue] )];
+		[mpMovie setCurrentTime:pQTMakeTimeWithTimeInterval( fTime )];
+#else	// USE_QUICKTIME
+	if ( mpAVPlayer )
+	{
+		AVPlayerItem *pAVPlayerItem = mpAVPlayer.currentItem;
+		if ( pAVPlayerItem )
+			[pAVPlayerItem seekToTime:CMTimeMakeWithSeconds( fTime, PREFERRED_TIMESCALE )];
+	}
 #endif	// USE_QUICKTIME
 }
 
