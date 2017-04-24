@@ -626,10 +626,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (BOOL)mute:(AvmediaArgs *)pArgs
 {
-	BOOL bRet = NO;
-
 #ifdef USE_QUICKTIME
-	bRet = ( mpMovie && [mpMovie respondsToSelector:@selector(muted)] ? [mpMovie muted] : NO );
+	BOOL bRet = ( mpMovie && [mpMovie respondsToSelector:@selector(muted)] ? [mpMovie muted] : NO );
+#else	// USE_QUICKTIME
+	BOOL bRet = ( mpAVPlayer ? [mpAVPlayer isMuted] : NO );
 #endif	// USE_QUICKTIME
 
 	if ( pArgs )
@@ -830,6 +830,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 #ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(setMuted:)] )
 		[mpMovie setMuted:[pMute boolValue]];
+#else	// USE_QUICKTIME
+	if ( mpAVPlayer )
+		mpAVPlayer.muted = [pMute boolValue];
 #endif	// USE_QUICKTIME
 }
 
@@ -992,6 +995,15 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 #ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(setVolume:)] )
 		[mpMovie setVolume:( (float)( [pDB shortValue] - nAVMediaMinDB ) / (float)( nAVMediaMaxDB - nAVMediaMinDB ) )];
+#else	// USE_QUICKTIME
+	float fVolume = pow( 10.0f, [pDB shortValue] / 20.0f );
+	if ( fVolume < 0 )
+		fVolume = 0;
+	if ( fVolume > 1 )
+		fVolume = 1;
+
+	if ( mpAVPlayer )
+		mpAVPlayer.volume = fVolume;
 #endif	// USE_QUICKTIME
 }
 
@@ -1046,10 +1058,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (short)volumeDB:(AvmediaArgs *)pArgs
 {
-	short nRet = 0;
-
 #ifdef USE_QUICKTIME
-	nRet = (short)( ( mpMovie && [mpMovie respondsToSelector:@selector(volume)] ? [mpMovie volume] : 0 ) * ( nAVMediaMaxDB - nAVMediaMinDB ) ) + nAVMediaMinDB;
+	short nRet = (short)( ( mpMovie && [mpMovie respondsToSelector:@selector(volume)] ? [mpMovie volume] : 0 ) * ( nAVMediaMaxDB - nAVMediaMinDB ) ) + nAVMediaMinDB;
+#else	// USE_QUICKTIME
+	short nRet = ( mpAVPlayer ? (short)( ( 20.0f * log10f( mpAVPlayer.volume ) ) +0.5f ) : 0 );
 #endif	// USE_QUICKTIME
 
 	if ( pArgs )
