@@ -764,6 +764,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 	switch ( mnZoomLevel )
 	{
+		case ZoomLevel_ORIGINAL:
+			break;
 		case ZoomLevel_ZOOM_1_TO_4:
 			aZoomFrame.size.width /= 4;
 			aZoomFrame.size.height /= 4;
@@ -782,7 +784,6 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 			break;
 		case ZoomLevel_FIT_TO_WINDOW:
 		case ZoomLevel_FIT_TO_WINDOW_FIXED_ASPECT:
-		case ZoomLevel_ORIGINAL:
 		default:
 			// Use the unadjusted preferred size to fit in window
 			aZoomFrame = aRect;
@@ -1279,6 +1280,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 #ifdef USE_QUICKTIME
 	if ( mpQTMovieView )
 		[mpQTMovieView setFrame:NSMakeRect( 0, 0, aRect.size.width, aRect.size.height )];
+#else	// USE_QUICKTIME
+	if ( mpAVPlayerView )
+		[mpAVPlayerView setFrame:NSMakeRect( 0, 0, aRect.size.width, aRect.size.height )];
 #endif	// USE_QUICKTIME
 }
 
@@ -1320,7 +1324,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( mpQTMovieView && [mpQTMovieView respondsToSelector:@selector(setPreservesAspectRatio:)] )
 		[mpQTMovieView setPreservesAspectRatio:bPreservesAspectRatio];
 #else	// USE_QUICKTIME
-	(void)bPreservesAspectRatio;
+	if ( mpAVPlayerView )
+		mpAVPlayerView.videoGravity = ( bPreservesAspectRatio ? AVLayerVideoGravityResizeAspect : AVLayerVideoGravityResize );
 #endif	// USE_QUICKTIME
 }
 
