@@ -598,10 +598,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (BOOL)isPlaying:(AvmediaArgs *)pArgs
 {
-	BOOL bRet = NO;
-
 #ifdef USE_QUICKTIME
-	bRet = ( mpMovie && [mpMovie respondsToSelector:@selector(rate)] && [mpMovie rate] != 0 );
+	BOOL bRet = ( mpMovie && [mpMovie respondsToSelector:@selector(rate)] && [mpMovie rate] != 0 );
+#else	// USE_QUICKTIME
+	BOOL bRet = ( mpAVPlayer && mpAVPlayer.timeControlStatus != AVPlayerTimeControlStatusPaused  && mpAVPlayer.rate != 0 );
 #endif	// USE_QUICKTIME
 
 	if ( pArgs )
@@ -612,10 +612,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (double)rate:(AvmediaArgs *)pArgs
 {
-	double fRet = 0;
-
 #ifdef USE_QUICKTIME
-	fRet = (double)( mpMovie && [mpMovie respondsToSelector:@selector(rate)] ? [mpMovie rate] : 0 );
+	double fRet = (double)( mpMovie && [mpMovie respondsToSelector:@selector(rate)] ? [mpMovie rate] : 0 );
+#else	// USE_QUICKTIME
+	double fRet = (double)( mpAVPlayer ? [mpAVPlayer rate] : 0 );
 #endif	// USE_QUICKTIME
 
 	if ( pArgs )
@@ -645,6 +645,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 #ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(play)] && [mpMovie respondsToSelector:@selector(rate)] && [mpMovie rate] == 0 )
 		[mpMovie play];
+#else	// USE_QUICKTIME
+	if ( mpAVPlayer )
+		[mpAVPlayer play];
 #endif	// USE_QUICKTIME
 }
 
@@ -876,9 +879,29 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pTime )
 		return;
 
+	float fRate = [pTime floatValue];
 #ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(setRate:)] )
-		[mpMovie setRate:[pTime floatValue]];
+		[mpMovie setRate:fRate];
+#else	// USE_QUICKTIME
+	if ( mpAVPlayer )
+	{
+		if ( fRate == 0 || fRate == 1 )
+		{
+			mpAVPlayer.rate = fRate;
+		}
+		else
+		{
+			AVPlayerItem *pAVPlayerItem = mpAVPlayer.currentItem;
+			if ( pAVPlayerItem )
+			{
+				if ( fRate < 0 && ( ( fRate == -1 && pAVPlayerItem.canPlayReverse ) || ( fRate > -1 && pAVPlayerItem.canPlaySlowReverse ) || ( fRate < -1 && pAVPlayerItem.canPlayFastReverse ) ) )
+					mpAVPlayer.rate = fRate;
+				else if ( fRate > 0 && ( ( fRate < 1 && pAVPlayerItem.canPlaySlowForward ) || ( fRate > 1 && pAVPlayerItem.canPlayFastForward ) ) )
+					mpAVPlayer.rate = fRate;
+			}
+		}
+	}
 #endif	// USE_QUICKTIME
 }
 
@@ -1015,6 +1038,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 #ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(rate)] && [mpMovie respondsToSelector:@selector(stop)] && [mpMovie rate] != 0 )
 		[mpMovie stop];
+#else	// USE_QUICKTIME
+	if ( mpAVPlayer )
+		[mpAVPlayer pause];
 #endif	// USE_QUICKTIME
 }
 
@@ -1124,7 +1150,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 #else	// USE_QUICKTIME
 	mpAVPlayerView = [[AVPlayerView alloc] initWithFrame:NSMakeRect( 0, 0, aFrame.size.width, aFrame.size.height )];
 	if ( mpAVPlayerView )
+	{
+		mpAVPlayerView.controlsStyle = AVPlayerViewControlsStyleNone;
 		[self addSubview:mpAVPlayerView];
+	}
 #endif	// USE_QUICKTIME
 
 	return self;
