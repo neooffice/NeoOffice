@@ -428,9 +428,6 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 #ifdef USE_QUICKTIME
 	NSImage *pImage = ( mpMovie && [mpMovie respondsToSelector:@selector(frameImageAtTime:)] && pQTMakeTimeWithTimeInterval ? [mpMovie frameImageAtTime:pQTMakeTimeWithTimeInterval( [pTime doubleValue] )] : nil );
-#else	// USE_QUICKTIME
-	NSImage *pImage = nil;
-#endif	// USE_QUICKTIME
 	if ( pImage )
 	{
 		NSSize aSize = [pImage size];
@@ -456,6 +453,31 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 				[pFocusView lockFocus];
 		}
 	}
+#else	// USE_QUICKTIME
+	if ( mpAVPlayer )
+	{
+		AVPlayerItem *pAVPlayerItem = mpAVPlayer.currentItem;
+		if ( pAVPlayerItem )
+		{
+			AVAsset *pAVAsset = pAVPlayerItem.asset;
+			if ( pAVAsset )
+			{
+				AVAssetImageGenerator *pAVAssetImageGenerator = [AVAssetImageGenerator assetImageGeneratorWithAsset:pAVAsset];
+				if ( pAVAssetImageGenerator )
+				{
+					pAVAssetImageGenerator.requestedTimeToleranceBefore = kCMTimeZero;
+					pAVAssetImageGenerator.requestedTimeToleranceAfter = kCMTimeZero;
+					CGImageRef aImage = [pAVAssetImageGenerator copyCGImageAtTime:CMTimeMakeWithSeconds( [pTime doubleValue], PREFERRED_TIMESCALE ) actualTime:NULL error:NULL];
+					if ( aImage )
+					{
+						pRet = [[NSBitmapImageRep alloc] initWithCGImage:aImage];
+						CGImageRelease( aImage );
+					}
+				}
+			}
+		}
+	}
+#endif	// USE_QUICKTIME
 
 	if ( pRet )
 		[pArgs setResult:pRet];
@@ -560,7 +582,6 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 					{
 						maPreferredSize = NSMakeSize( CGImageGetWidth( aImage ), CGImageGetHeight( aImage ) );
 						maRealFrame = NSMakeRect( 0, 0, maPreferredSize.width, maPreferredSize.height );
-
 						CGImageRelease( aImage );
 					}
 				}
