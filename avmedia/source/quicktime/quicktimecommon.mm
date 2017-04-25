@@ -773,27 +773,15 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pTime )
 		return;
 
-	double fTime = [pTime doubleValue];
-	if ( fTime < 0 )
-	{
-		fTime = 0;
-	}
-	else
-	{
-		double fDuration = [self duration:nil];
-		if ( fTime > fDuration )
-			fTime = fDuration;
-	}
-
 #ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(setCurrentTime:)] && pQTMakeTimeWithTimeInterval )
-		[mpMovie setCurrentTime:pQTMakeTimeWithTimeInterval( fTime )];
+		[mpMovie setCurrentTime:pQTMakeTimeWithTimeInterval( [pTime doubleValue] )];
 #else	// USE_QUICKTIME
 	if ( mpAVPlayer )
 	{
 		AVPlayerItem *pAVPlayerItem = mpAVPlayer.currentItem;
 		if ( pAVPlayerItem )
-			[pAVPlayerItem seekToTime:CMTimeMakeWithSeconds( fTime, PREFERRED_TIMESCALE ) toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+			[pAVPlayerItem seekToTime:CMTimeMakeWithSeconds( [pTime doubleValue], PREFERRED_TIMESCALE ) toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
 	}
 #endif	// USE_QUICKTIME
 }
