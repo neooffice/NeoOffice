@@ -339,6 +339,14 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 #else	// USE_QUICKTIME
 	if ( mpAVPlayer )
 	{
+		AVPlayerItem *pAVPlayerItem = mpAVPlayer.currentItem;
+		if ( pAVPlayerItem )
+		{
+			NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+			if ( pNotificationCenter )
+				[pNotificationCenter removeObserver:self name:AVPlayerItemDidPlayToEndTimeNotification object:pAVPlayerItem];
+		}
+
 		[mpAVPlayer release];
 		mpAVPlayer = nil;
 	}
@@ -493,6 +501,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	mpMovie = nil;
 #else	// USE_QUICKTIME
 	mpAVPlayer = nil;
+	mbLooping = NO;
 #endif	// USE_QUICKTIME
 	mpMovieView = nil;
 	maPreferredSize = NSMakeSize( 0, 0 );
@@ -586,6 +595,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 					}
 				}
 			}
+
+			NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+			if ( pNotificationCenter )
+				[pNotificationCenter addObserver:self selector:@selector(playerItemDidPlayToEndTime:) name:AVPlayerItemDidPlayToEndTimeNotification object:pAVPlayerItem];
 		}
 
 		mpMovieView = [[AvmediaMovieView alloc] initWithFrame:maRealFrame];
@@ -622,7 +635,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 #ifdef USE_QUICKTIME
 	BOOL bRet = ( mpMovie && [mpMovie respondsToSelector:@selector(rate)] && [mpMovie rate] != 0 );
 #else	// USE_QUICKTIME
-	BOOL bRet = ( mpAVPlayer && mpAVPlayer.timeControlStatus != AVPlayerTimeControlStatusPaused  && mpAVPlayer.rate != 0 );
+	BOOL bRet = ( mpAVPlayer && mpAVPlayer.timeControlStatus != AVPlayerTimeControlStatusPaused && mpAVPlayer.rate != 0 );
 #endif	// USE_QUICKTIME
 
 	if ( pArgs )
@@ -671,6 +684,25 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		[mpAVPlayer play];
 #endif	// USE_QUICKTIME
 }
+
+#ifndef USE_QUICKTIME
+
+- (void)playerItemDidPlayToEndTime:(NSNotification *)pNotification
+{
+	(void)pNotification;
+
+	if ( mbLooping && mpAVPlayer )
+	{
+		AVPlayerItem *pAVPlayerItem = mpAVPlayer.currentItem;
+		if ( pAVPlayerItem )
+		{
+			[pAVPlayerItem seekToTime:kCMTimeZero toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+			[mpAVPlayer play];
+		}
+	}
+}
+
+#endif  // !USE_QUICKTIME
 
 - (void)preferredSize:(AvmediaArgs *)pArgs
 {
@@ -836,6 +868,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 #ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(setAttribute:forKey:)] && pQTMovieLoopsAttribute )
 		[mpMovie setAttribute:pLooping forKey:*pQTMovieLoopsAttribute];
+#else	// USE_QUICKTIME
+	mbLooping = [pLooping boolValue];
 #endif	// USE_QUICKTIME
 }
 
