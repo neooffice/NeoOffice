@@ -86,6 +86,7 @@ typedef struct {
 #else	// USE_QUICKTIME
 	AVPlayer*				mpAVPlayer;
 	BOOL					mbLooping;
+	double					mfStopTime;
 #endif	// USE_QUICKTIME
 	AvmediaMovieView*		mpMovieView;
 	NSView*					mpSuperview;
@@ -116,7 +117,9 @@ typedef struct {
 #endif	// !USE_QUICKTIME
 - (void)preferredSize:(AvmediaArgs *)pArgs;
 - (double)rate:(AvmediaArgs *)pArgs;
+#ifdef USE_QUICKTIME
 - (double)selectionEnd:(AvmediaArgs *)pArgs;
+#endif	// USE_QUICKTIME
 - (void)setBounds:(AvmediaArgs *)pArgs;
 - (void)setCurrentTime:(AvmediaArgs *)pArgs;
 - (void)setFocus:(id)pObject;

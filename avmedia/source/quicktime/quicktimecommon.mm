@@ -304,7 +304,12 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		{
 			CMTime aTime = pAVPlayerItem.currentTime;
 			if ( CMTIME_IS_NUMERIC( aTime ) )
+			{
 				fRet = CMTimeGetSeconds( aTime );
+
+				if ( fRet > mfStopTime )
+					[mpAVPlayer pause];
+			}
 		}
 	}
 #endif	// USE_QUICKTIME
@@ -350,6 +355,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		[mpAVPlayer release];
 		mpAVPlayer = nil;
 	}
+
+	mbLooping = NO;
+	mfStopTime = DBL_MAX;
 #endif	// USE_QUICKTIME
 
 	if ( mpSuperview )
@@ -502,6 +510,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 #else	// USE_QUICKTIME
 	mpAVPlayer = nil;
 	mbLooping = NO;
+	mfStopTime = DBL_MAX;
 #endif	// USE_QUICKTIME
 	mpMovieView = nil;
 	maPreferredSize = NSMakeSize( 0, 0 );
@@ -710,11 +719,12 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		[pArgs setResult:[NSValue valueWithSize:maPreferredSize]];
 }
 
+#ifdef USE_QUICKTIME
+
 - (double)selectionEnd:(AvmediaArgs *)pArgs
 {
 	double fRet = 0;
 
-#ifdef USE_QUICKTIME
 	if ( mpMovie && pQTGetTimeInterval )
 	{
 		NSTimeInterval aInterval;
@@ -727,13 +737,14 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 			fRet = aInterval;
 		}
 	}
-#endif	// USE_QUICKTIME
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithDouble:fRet]];
 
 	return fRet;
 }
+
+#endif  // USE_QUICKTIME
 
 - (void)setBounds:(AvmediaArgs *)pArgs
 {
@@ -965,6 +976,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 #ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(setSelection:)] && pQTMakeTimeRange && pQTMakeTimeWithTimeInterval )
 		[mpMovie setSelection:pQTMakeTimeRange( pQTMakeTimeWithTimeInterval( 0 ), pQTMakeTimeWithTimeInterval( [pTime doubleValue] ) )];
+#else	// USE_QUICKTIME
+	mfStopTime = [pTime doubleValue];
 #endif	// USE_QUICKTIME
 }
 
