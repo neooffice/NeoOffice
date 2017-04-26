@@ -170,8 +170,8 @@ YOURSWAYCREATEDMG_SOURCE_FILENAME=yoursway-create-dmg.zip
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
 NEO_TAG:=NeoOffice-2017_Beta
-NEO_TAG2:=NeoOffice-2017_Viewer_Beta
-NEO_TAG3:=NeoOffice-2017_Professional_Edition_Beta
+NEO_TAG2:=$(NEO_TAG)
+NEO_TAG3:=$(NEO_TAG)
 PRODUCT_MODULES = \
 	unotest \
 	sal \
