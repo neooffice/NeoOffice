@@ -888,9 +888,9 @@ void UpdateHandler::setFullVersion( OUString& rString )
 #ifdef USE_JAVA
     // Append the patch number onto the product version
     OUString sDefault;
-    OUString sBuildId( utl::Bootstrap::getBuildIdData( sDefault ) );
-    if ( sBuildId.getLength() )
-        aProductFullVersion += " " + sBuildId;
+    OUString sBuildVersion( utl::Bootstrap::getBuildVersion( sDefault ) );
+    if ( sBuildVersion.getLength() )
+        aProductFullVersion += " " + sBuildVersion;
 #endif	// USE_JAVA
     rString = rString.replaceFirst( aProductVersion, aProductFullVersion );
 }
