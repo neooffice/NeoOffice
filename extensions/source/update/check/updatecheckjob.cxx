@@ -145,11 +145,6 @@ void SAL_CALL InitUpdateCheckJobThread::run()
         rtl::Reference< UpdateCheck > aController( UpdateCheck::get() );
         aController->initialize( m_xParameters, m_xContext );
 
-#ifdef USE_JAVA
-        if ( m_bTerminating )
-            aController->onCloseApp();
-        else
-#endif	// USE_JAVA
         if ( m_bShowDialog )
             aController->showDialog( true );
     } catch (const uno::Exception &e) {
@@ -322,6 +317,11 @@ void SAL_CALL UpdateCheckJob::notifyTermination( lang::EventObject const & )
         m_pInitThread->setTerminating();
         m_pInitThread->join();
     }
+
+#ifdef USE_JAVA
+    rtl::Reference< UpdateCheck > aController( UpdateCheck::get() );
+    aController->onCloseApp();
+#endif	// USE_JAVA
 }
 
 } // anonymous namespace
