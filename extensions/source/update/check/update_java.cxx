@@ -77,7 +77,12 @@ void UpdateInstallNextBatchOfInstallerPackagePaths()
 	if (nLastIndex > 0)
 	{
 		aExeURL = aExeURL.copy(0, nLastIndex+1);
-		aExeURL += "updateruninstallers";
+		aExeURL += "updchkruninstallers";
+#ifdef WNT
+		aExeURL += ".exe";
+#else	// WNT
+		aExeURL += ".bin";
+#endif	// WNT
 
 		osl::ClearableMutexGuard aGuard(aPackagesMutex);
 
