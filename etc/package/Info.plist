@@ -927,5 +927,11 @@
 	<string>$(PRODUCT_MIN_OSVERSION)</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
+	<!-- Allow WebKit to load non-HTTPS URLs -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 </dict>
 </plist>
