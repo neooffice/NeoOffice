@@ -3352,8 +3352,7 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 	}
 
 	// Disable automatic window tabbing in on macOS 10.12
-	if ( class_getClassMethod( [NSWindow class], @selector(setAllowsAutomaticWindowTabbing:) ) )
-		[NSWindow setAllowsAutomaticWindowTabbing:NO];
+	[NSWindow setAllowsAutomaticWindowTabbing:NO];
 }
 
 @end
