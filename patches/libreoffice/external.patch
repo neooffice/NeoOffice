@@ -18,3 +18,38 @@
  			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM)) \
  			$(if $(filter MACOSX,$(OS)),--prefix=/@.__________________________________________________OOO) \
  			$(if $(filter IOS ANDROID,$(OS)),--disable-shared,--disable-static) \
+--- expat/UnpackedTarball_expat.mk	2015-11-25 04:55:38.000000000 -0800
++++ expat/UnpackedTarball_expat.mk	2017-06-25 18:29:37.000000000 -0700
+@@ -12,7 +12,8 @@
+ $(eval $(call gb_UnpackedTarball_set_tarball,expat,$(EXPAT_TARBALL)))
+ 
+ $(eval $(call gb_UnpackedTarball_add_patches,expat,\
+-	external/expat/expat-2.1.0.patch \
++	external/expat/expat-winapi.patch \
++	external/expat/expat-iOS.patch \
+ ))
+ 
+ # This is a bit hackish.
+--- expat/expat-iOS.patch	2017-06-25 18:29:24.000000000 -0700
++++ expat/expat-iOS.patch	2017-06-25 18:31:42.000000000 -0700
+@@ -0,0 +1,20 @@
++--- misc/expat-2.1.0/conftools/config.sub	2016-04-30 21:24:14.000000000 +0200
+++++ misc/build/expat-2.1.0/conftools/config.sub	2017-06-11 10:56:49.000000000 +0200
++@@ -252,7 +252,7 @@
++ 	| alpha64 | alpha64ev[4-8] | alpha64ev56 | alpha64ev6[78] | alpha64pca5[67] \
++ 	| am33_2.0 \
++ 	| arc | arceb \
++-	| arm | arm[bl]e | arme[lb] | armv[2-8] | armv[3-8][lb] | armv7[arm] \
+++	| arm | arm[bl]e | arme[lb] | armv[2-8] | armv[3-8][lb] | armv7[arm] | arm64 \
++ 	| avr | avr32 \
++ 	| ba \
++ 	| be32 | be64 \
++@@ -374,7 +374,7 @@
++ 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
++ 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
++ 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* | arceb-* \
++-	| arm-*  | armbe-* | armle-* | armeb-* | armv*-* \
+++	| arm-*  | armbe-* | armle-* | armeb-* | armv*-* | arm64-* \
++ 	| avr-* | avr32-* \
++ 	| ba-* \
++ 	| be32-* | be64-* \

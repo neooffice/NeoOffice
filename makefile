@@ -240,7 +240,7 @@ build.ant_checkout: $(APACHE_PATCHES_HOME)/$(ANT_SOURCE_FILENAME)
 	cd "$(BUILD_HOME)" ; tar zxvf "$(PWD)/$(APACHE_PATCHES_HOME)/$(ANT_SOURCE_FILENAME)"
 	touch "$@"
 
-build.libo_external_tarballs_checkout: build.libo_src_checkout
+build.libo_external_tarballs_checkout: build.libo_src_checkout build.libo_download.lst_patch
 	rm -Rf "$(LIBO_BUILD_HOME)/external/tarballs"
 	mkdir -p "$(LIBO_BUILD_HOME)/external/tarballs"
 	cd "$(LIBO_PATCHES_HOME)/external/tarballs" ; sh -c -e 'for i in `find . -type f -maxdepth 1 | grep -v /CVS/` ; do cp "$$i" "$(PWD)/$(LIBO_BUILD_HOME)/external/tarballs/$$i" ; done'
@@ -259,6 +259,7 @@ build.libo_checkout: \
 
 build.libo_patches: \
 	build.libo_configure.ac_patch \
+	build.libo_download.lst_patch \
 	build.libo_avmedia_patch \
 	build.libo_bin_patch \
 	build.libo_embeddedobj_patch \
@@ -274,6 +275,16 @@ build.libo_patches: \
 	touch "$@"
 
 build.libo_configure.ac_patch: $(LIBO_PATCHES_HOME)/configure.ac.patch build.libo_checkout
+ifeq ("$(OS_TYPE)","macOS")
+	-( cd "$(LIBO_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(LIBO_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+else
+	-cat "$<" | unix2dos | ( cd "$(LIBO_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" )
+	cat "$<" | unix2dos | ( cd "$(LIBO_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" )
+endif
+	touch "$@"
+
+build.libo_download.lst_patch: $(LIBO_PATCHES_HOME)/download.lst.patch build.libo_checkout
 ifeq ("$(OS_TYPE)","macOS")
 	-( cd "$(LIBO_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(LIBO_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
