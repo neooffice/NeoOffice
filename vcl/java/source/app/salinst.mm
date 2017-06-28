@@ -2177,13 +2177,17 @@ void JavaSalEvent::dispatch()
 					}
 
 					// Fix bug 3252 by always comparing the bounds against the
-					// work area
+					// work area. Fix hidden buttons in tall resizable dialogs
+					// (such as the Tools > Mail Merge Wizard dialog) when using
+					// a small monitor by forcing a resize event when only the
+					// height of the window has been reduced to fit the work
+					// area.
 					bool bForceResize = false;
 					if ( pFrame->mbInShow )
 					{
 						Rectangle aRect( *pPosSize );
 						pFrame->GetWorkArea( aRect );
-						if ( aRect == *pPosSize )
+						if ( ( aRect.Left() == pPosSize->Left() && aRect.GetWidth() == pPosSize->GetWidth() ) || ( aRect.Top() == pPosSize->Top() && aRect.GetHeight() == pPosSize->GetHeight() ) )
 							bForceResize = true;
 					}
 
