@@ -951,7 +951,14 @@ openFilePath( const char *cpFilePath, oslFileHandle* pHandle, sal_uInt32 uFlags,
     /* Check for flags passed in from SvFileStream::Open() */
     if (uFlags & osl_File_OpenFlag_Trunc)
         flags |= O_TRUNC;
+#if defined USE_JAVA && defined MACOSX
+    // Fix failure when running on macOS 10.13 to open a mounted file on an
+    // SMB volume by only adding the O_EXCL flag when the O_CREAT flag is
+    // already set
+    if (!(uFlags & osl_File_OpenFlag_NoExcl) && flags & O_CREAT)
+#else	// USE_JAVA && MACOSX
     if (!(uFlags & osl_File_OpenFlag_NoExcl))
+#endif	// USE_JAVA && MACOSX
         flags |= O_EXCL;
 
     if (uFlags & osl_File_OpenFlag_NoLock)
