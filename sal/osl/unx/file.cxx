@@ -801,8 +801,18 @@ static int osl_file_adjustLockFlags (const char * path, int flags)
     {
         if( 0 == strncmp("afpfs", s.f_fstypename, 5) )
         {
+#ifdef USE_JAVA
+            // Fix failure when running on macOS 10.13 to open a mounted file
+            // in read only mode that is locked by another machine by only
+            // adding the O_SHLOCK flag if the O_EXLOCK flag is already set
+            if ( flags & O_EXLOCK )
+            {
+#endif	// USE_JAVA
             flags &= ~O_EXLOCK;
             flags |=  O_SHLOCK;
+#ifdef USE_JAVA
+            }
+#endif	// USE_JAVA
         }
         else
         {
