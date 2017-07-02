@@ -13511,6 +13511,19 @@ void PDFWriterImpl::encodeGlyphs()
                                     }
                                     else if ( ( nNextFontIDPos = aTextContent.indexOf( aFontIDTagG, nCurrentPos ) ) >= 0 )
                                     {
+                                        // Fix broken emojis when running on
+                                        // macOS 10.13 by ignoring extraneous
+                                        // /Gs graphic state tags
+                                        static const OString aGraphicStateEndTag( "gs" );
+                                        sal_Int32 nIndex = nNextFontIDPos + nFontIDTagLenG;
+                                        OString aToken = aTextContent.getToken( 1, ' ', nIndex );
+                                        if ( nIndex >= nNextFontIDPos + nFontIDTagLenG && aToken == aGraphicStateEndTag )
+                                        {
+                                            nCurrentPos = nIndex;
+                                            nCurrentFontIDTagLen = 0;
+                                            continue;
+                                        }
+
                                         nCurrentFontIDTagLen = nFontIDTagLenG;
                                     }
                                     else if ( ( nNextFontIDPos = aTextContent.indexOf( aFontIDTagTc, nCurrentPos ) ) >= 0 )
