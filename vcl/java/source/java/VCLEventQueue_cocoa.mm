@@ -642,6 +642,7 @@ static void RegisterMainBundleWithLaunchServices()
 	mpLastWindowDraggedEvent = nil;
 	mbInVersionBrowser = NO;
 	mbCloseOnExitVersionBrowser = NO;
+	maNonFullScreenFrame = NSMakeRect( 0, 0, 0, 0 );
 
 	[self setReleasedWhenClosed:NO];
 	[self setDelegate:self];
@@ -661,6 +662,14 @@ static void RegisterMainBundleWithLaunchServices()
 	[super dealloc];
 }
 
+- (NSRect)nonFullScreenFrame
+{
+	if ( [self styleMask] & NSWindowStyleMaskFullScreen )
+		return maNonFullScreenFrame;
+	else
+		return [self frame];
+}
+
 - (void)setCanBecomeKeyWindow:(BOOL)bCanBecomeKeyWindow
 {
 	mbCanBecomeKeyWindow = bCanBecomeKeyWindow;
@@ -673,6 +682,11 @@ static void RegisterMainBundleWithLaunchServices()
 	NSView *pContentView = [self contentView];
 	if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
 		[(VCLView *)pContentView setJavaFrame:pFrame];
+}
+
+- (void)setNonFullScreenFrame:(NSRect)aFrame
+{
+	maNonFullScreenFrame = aFrame;
 }
 
 @end
@@ -829,6 +843,7 @@ static NSUInteger nMouseMask = 0;
 	mpLastWindowDraggedEvent = nil;
 	mbInVersionBrowser = NO;
 	mbCloseOnExitVersionBrowser = NO;
+	maNonFullScreenFrame = NSMakeRect( 0, 0, 0, 0 );
 
 	[self setReleasedWhenClosed:NO];
 	[self setDelegate:self];
@@ -983,9 +998,16 @@ static NSUInteger nMouseMask = 0;
 		[super poseAsMakeKeyWindow];
 }
 
+- (NSRect)nonFullScreenFrame
+{
+	if ( [self styleMask] & NSWindowStyleMaskFullScreen )
+		return maNonFullScreenFrame;
+	else
+		return [self frame];
+}
+
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(NSInteger)nOtherWindowNumber
 {
-#ifdef USE_NATIVE_FULL_SCREEN_MODE
 	if ( nOrderingMode != NSWindowOut && ![self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
 		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
@@ -1039,7 +1061,6 @@ static NSUInteger nMouseMask = 0;
 			[self setContentView:nil];
 		}
 	}
-#endif	// USE_NATIVE_FULL_SCREEN_MODE
 
 	if ( [super respondsToSelector:@selector(poseAsOrderWindow:relativeTo:)] )
 		[super poseAsOrderWindow:nOrderingMode relativeTo:nOtherWindowNumber];
@@ -1664,6 +1685,11 @@ static NSUInteger nMouseMask = 0;
 		[(VCLView *)pContentView setJavaFrame:pFrame];
 }
 
+- (void)setNonFullScreenFrame:(NSRect)aFrame
+{
+	maNonFullScreenFrame = aFrame;
+}
+
 - (void)setDraggingSourceDelegate:(id)pDelegate
 {
 	if ( !pDraggingSourceDelegates )
@@ -1690,28 +1716,29 @@ static NSUInteger nMouseMask = 0;
 {
 	(void)pNotification;
 
-#ifdef USE_NATIVE_FULL_SCREEN_MODE
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
 		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_FULLSCREENEXITED, mpFrame, NULL);
 		JavaSalEventQueue::postCachedEvent( pEvent );
 		pEvent->release();
 	}
-#endif	// USE_NATIVE_FULL_SCREEN_MODE
 }
 
 - (void)windowWillEnterFullScreen:(NSNotification *)pNotification
 {
 	(void)pNotification;
 
-#ifdef USE_NATIVE_FULL_SCREEN_MODE
-	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
+	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
 	{
-		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_FULLSCREENENTERED, mpFrame, NULL);
-		JavaSalEventQueue::postCachedEvent( pEvent );
-		pEvent->release();
-}
-#endif	// USE_NATIVE_FULL_SCREEN_MODE
+		maNonFullScreenFrame = [self frame];
+
+		if ( [self isVisible] )
+		{
+			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_FULLSCREENENTERED, mpFrame, NULL);
+			JavaSalEventQueue::postCachedEvent( pEvent );
+			pEvent->release();
+		}
+	}
 }
 
 - (void)windowDidMove:(NSNotification *)pNotification

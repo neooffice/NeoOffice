@@ -1562,14 +1562,12 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
     if ( !pTopLevelWindow )
         return;
 
-#ifdef USE_NATIVE_FULL_SCREEN_MODE
 	// Enable full screen feature for normal windows. Only enable this feature
 	// if the window is not a panel and has a titlebar.
 	if ( [pTopLevelWindow boolValue] && !mbUndecorated && mpWindow && [mpWindow isKindOfClass:[VCLWindow class]] )
 		[mpWindow setCollectionBehavior:[mpWindow collectionBehavior] | NSWindowCollectionBehaviorFullScreenPrimary];
 	else
 		[mpWindow setCollectionBehavior:[mpWindow collectionBehavior] & ~NSWindowCollectionBehaviorFullScreenPrimary];
-#endif	// USE_NATIVE_FULL_SCREEN_MODE
 
 	// Only return content view if window is visible
 	if ( mpWindow && [mpWindow isVisible] )
@@ -1607,13 +1605,16 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 		NSRect aFrame = [mpWindow frame];
 
-#ifdef USE_NATIVE_FULL_SCREEN_MODE
 		// Check if we are in full screen mode
-		if ( [mpWindow styleMask] & NSWindowStyleMaskFullScreen && [mpWindow respondsToSelector:@selector(_frameOnExitFromFullScreen)] )
+		if ( [mpWindow styleMask] & NSWindowStyleMaskFullScreen )
 		{
 			if ( [pFullScreen boolValue] )
 			{
-				NSRect aNonFullScreenFrame = [mpWindow _frameOnExitFromFullScreen];
+				NSRect aNonFullScreenFrame;
+				if ( [mpWindow isKindOfClass:[VCLPanel class]] )
+					aNonFullScreenFrame = [(VCLPanel *)mpWindow nonFullScreenFrame];
+				else
+					aNonFullScreenFrame = [(VCLWindow *)mpWindow nonFullScreenFrame];
 				if ( !NSIsEmptyRect( aNonFullScreenFrame ) )
 					aFrame = aNonFullScreenFrame;
 			}
@@ -1622,7 +1623,6 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				aFrame = [NSWindow frameRectForContentRect:aFrame styleMask:[mpWindow styleMask] & ~NSWindowStyleMaskFullScreen];
 			}
 		}
-#endif	// USE_NATIVE_FULL_SCREEN_MODE
 
 		// Flip to OOo coordinates
 		NSRect aTotalBounds = GetTotalScreenBounds();

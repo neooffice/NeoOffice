@@ -38,9 +38,6 @@
 
 #include "java/salframe.h"
 
-// Comment out the following line to disable full screen mode
-#define USE_NATIVE_FULL_SCREEN_MODE
-
 #ifdef __OBJC__
 
 @interface VCLView : NSView <NSDraggingDestination, NSDraggingSource, NSTextInputClient>
@@ -103,7 +100,6 @@
 
 @interface NSWindow (VCLWindow)
 - (void)_clearModalWindowLevel;
-- (NSRect)_frameOnExitFromFullScreen;
 - (void)_restoreModalWindowLevel;
 - (void)_setModalWindowLevel;
 @end
@@ -117,12 +113,15 @@
 	NSEvent*				mpLastWindowDraggedEvent;
 	BOOL					mbInVersionBrowser;
 	BOOL					mbCloseOnExitVersionBrowser;
+	NSRect					maNonFullScreenFrame;
 }
 - (void)_init;
 - (BOOL)canBecomeKeyWindow;
 - (void)dealloc;
+- (NSRect)nonFullScreenFrame;
 - (void)setCanBecomeKeyWindow:(BOOL)bCanBecomeKeyWindow;
 - (void)setJavaFrame:(JavaSalFrame *)pFrame;
+- (void)setNonFullScreenFrame:(NSRect)aFrame;
 @end
 
 @interface VCLWindow : NSWindow <NSWindowDelegate>
@@ -134,6 +133,7 @@
 	NSEvent*				mpLastWindowDraggedEvent;
 	BOOL					mbInVersionBrowser;
 	BOOL					mbCloseOnExitVersionBrowser;
+	NSRect					maNonFullScreenFrame;
 }
 + (void)clearModalWindowLevel;
 + (void)restoreModalWindowLevel;
@@ -148,12 +148,14 @@
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation screen:(NSScreen *)pScreen;
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder;
 - (void)makeKeyWindow;
+- (NSRect)nonFullScreenFrame;
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(NSInteger)nOtherWindowNumber;
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
 - (void)resignKeyWindow;
 - (void)sendEvent:(NSEvent *)pEvent;
 - (void)setCanBecomeKeyWindow:(BOOL)bCanBecomeKeyWindow;
 - (void)setJavaFrame:(JavaSalFrame *)pFrame;
+- (void)setNonFullScreenFrame:(NSRect)aFrame;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
 - (void)windowDidExitFullScreen:(NSNotification *)pNotification;
 - (void)windowWillEnterFullScreen:(NSNotification *)pNotification;
