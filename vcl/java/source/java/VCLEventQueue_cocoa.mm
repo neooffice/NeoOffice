@@ -1720,9 +1720,10 @@ static NSUInteger nMouseMask = 0;
 	{
 		// Fix incorrect window frame when selecting the View > Full Screen
 		// menu item in a full screen window while running on macOS 10.13 by
-		// explicitly setting the window to the cached non-full screen frame
+		// explicitly setting the window to the cached non-full screen frame.
+		// Eliminate flickering in window by disabling redisplay.
 		if ( !NSIsEmptyRect( maNonFullScreenFrame ) )
-			[self setFrame:maNonFullScreenFrame display:YES];
+			[self setFrame:maNonFullScreenFrame display:NO];
 		maNonFullScreenFrame = NSMakeRect( 0, 0, 0, 0 );
 
 		if ( [self isVisible] )
