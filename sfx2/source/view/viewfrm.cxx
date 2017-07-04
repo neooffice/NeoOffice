@@ -3143,7 +3143,12 @@ void SfxViewFrame::MiscExec_Impl( SfxRequest& rReq )
             else
                 rReq.Ignore();
 
+#if defined USE_JAVA && defined MACOSX
+            // Fix misplacement of sidebar after exiting the versions browser
+            // while in full screen mode by skipping update of the window
+#else	// USE_JAVA && MACOSX
             GetDispatcher()->Update_Impl( true );
+#endif	// USE_JAVA && MACOSX
             break;
         }
     }
