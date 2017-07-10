@@ -51,6 +51,9 @@
 #include "VCLResponder_cocoa.h"
 #include "../app/salinst_cocoa.h"
 
+// Comment out the following line to disable automatic window tabbing
+#define USE_AUTOMATIC_WINDOW_TABBING
+
 #define MODIFIER_RELEASE_INTERVAL 100
 #define UNDEFINED_KEY_CODE 0xffff
 
@@ -865,6 +868,11 @@ static NSUInteger nMouseMask = 0;
 			NSResponder *pResponder = [self firstResponder];
 			if ( pResponder && [pResponder isKindOfClass:[VCLView class]] )
 				[(VCLView *)pResponder abandonInput];
+
+			// Insets may have changed if a tabbed window was added or removed
+			JavaSalEvent *pMoveResizeEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
+			JavaSalEventQueue::postCachedEvent( pMoveResizeEvent );
+			pMoveResizeEvent->release();
 
 			JavaSalEvent *pFocusEvent = new JavaSalEvent( SALEVENT_GETFOCUS, mpFrame, NULL );
 			JavaSalEventQueue::postCachedEvent( pFocusEvent );
@@ -3389,8 +3397,10 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 		}
 	}
 
+#ifndef USE_AUTOMATIC_WINDOW_TABBING
 	// Disable automatic window tabbing in on macOS 10.12
 	[NSWindow setAllowsAutomaticWindowTabbing:NO];
+#endif	// !USE_AUTOMATIC_WINDOW_TABBING
 }
 
 @end

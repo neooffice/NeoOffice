@@ -1608,6 +1608,10 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		// Check if we are in full screen mode
 		if ( [mpWindow styleMask] & NSWindowStyleMaskFullScreen )
 		{
+			// Reset insets to non-tabbed window insets
+			NSRect aNonTabbedFrame = [NSWindow frameRectForContentRect:aFrame styleMask:[mpWindow styleMask] & ~NSWindowStyleMaskFullScreen];
+			maInsets = NSMakeRect( aFrame.origin.x - aNonTabbedFrame.origin.x, aFrame.origin.y - aNonTabbedFrame.origin.y, aNonTabbedFrame.origin.x + aNonTabbedFrame.size.width - aFrame.origin.x - aFrame.size.width, aNonTabbedFrame.origin.y + aNonTabbedFrame.size.height - aFrame.origin.y - aFrame.size.height );
+
 			if ( [pFullScreen boolValue] )
 			{
 				NSRect aNonFullScreenFrame;
@@ -1620,8 +1624,15 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			}
 			else
 			{
-				aFrame = [NSWindow frameRectForContentRect:aFrame styleMask:[mpWindow styleMask] & ~NSWindowStyleMaskFullScreen];
+				aFrame = aNonTabbedFrame;
 			}
+		}
+		else
+		{
+			// Update insets for non-full screen windows as tabbed windows have
+			// a different inset than untabbed windows
+			NSRect aContentRect = [mpWindow contentRectForFrameRect:aFrame];
+			maInsets = NSMakeRect( aContentRect.origin.x - aFrame.origin.x, aContentRect.origin.y - aFrame.origin.y, aFrame.origin.x + aFrame.size.width - aContentRect.origin.x - aContentRect.size.width, aFrame.origin.y + aFrame.size.height - aContentRect.origin.y - aContentRect.size.height );
 		}
 
 		// Flip to OOo coordinates
@@ -3135,6 +3146,15 @@ const Rectangle JavaSalFrame::GetBounds( sal_Bool *pInLiveResize, sal_Bool bUseF
 		{
 			NSRect aFrame = [pFrame rectValue];
 			aRet = Rectangle( Point( (long)aFrame.origin.x, (long)aFrame.origin.y ), Size( (long)aFrame.size.width, (long)aFrame.size.height ) );
+
+			// Update insets for non-full screen windows as tabbed windows have
+			// a different inset than untabbed windows
+			const NSRect aInsets = [mpWindow insets];
+			Rectangle aRect( (long)aInsets.origin.x, (long)aInsets.size.height, (long)aInsets.size.width, (long)aInsets.origin.y );
+			maGeometry.nLeftDecoration = aRect.Left();
+			maGeometry.nTopDecoration = aRect.Top();
+			maGeometry.nRightDecoration = aRect.Right();
+			maGeometry.nBottomDecoration = aRect.Bottom();
 		}
 
 		[pPool release];
