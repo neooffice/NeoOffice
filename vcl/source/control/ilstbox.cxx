@@ -3133,29 +3133,30 @@ void ImplListBoxFloatingWindow::StartFloat( bool bStartTracking )
 
         Size aSz = GetParent()->GetSizePixel();
         Point aPos = GetParent()->GetPosPixel();
+        aPos = GetParent()->GetParent()->OutputToScreenPixel( aPos );
 #ifdef USE_JAVA
         // respect NWF preferred drawing bounds.  Bug #1769
         if ( GetParent()->IsNativeWidgetEnabled() )
         {
-            if( dynamic_cast<ComboBox *>(GetParent()) && IsNativeControlSupported( CTRL_COMBOBOX, PART_ENTIRE_CONTROL ) )
+            ControlType nCtrlType = 0;
+            if ( dynamic_cast< ComboBox* >( GetParent() ) && IsNativeControlSupported( CTRL_COMBOBOX, PART_ENTIRE_CONTROL ) )
+                nCtrlType = CTRL_COMBOBOX;
+            else if ( dynamic_cast< ListBox* >( GetParent() ) && IsNativeControlSupported( CTRL_LISTBOX, PART_ENTIRE_CONTROL ) )
+                nCtrlType = CTRL_LISTBOX;
+
+            if ( nCtrlType )
             {
                 ImplControlValue aControlValue;
-                Rectangle aCtrlRegion( GetParent()->GetPosPixel(), GetParent()->GetSizePixel() );
+                Rectangle aCtrlRegion( aPos, aSz );
                 Rectangle aBoundingRgn, aContentRgn;
-                if ( GetNativeControlRegion( CTRL_COMBOBOX, PART_ENTIRE_CONTROL, aCtrlRegion, 0, aControlValue, OUString(), aBoundingRgn, aContentRgn ) )
-                    aSz = aContentRgn.GetSize();
-            }
-            if( dynamic_cast<ListBox *>(GetParent()) && IsNativeControlSupported( CTRL_LISTBOX, PART_ENTIRE_CONTROL ) )
-            {
-                ImplControlValue aControlValue;
-                Rectangle aCtrlRegion( GetParent()->GetPosPixel(), GetParent()->GetSizePixel() );
-                Rectangle aBoundingRgn, aContentRgn;
-                if ( GetNativeControlRegion( CTRL_LISTBOX, PART_ENTIRE_CONTROL, aCtrlRegion, 0, aControlValue, OUString(), aBoundingRgn, aContentRgn ) )
-                    aSz = aContentRgn.GetSize();
+                if ( GetNativeControlRegion( nCtrlType, PART_ENTIRE_CONTROL, aCtrlRegion, 0, aControlValue, OUString(), aBoundingRgn, aContentRgn ) )
+                {
+                    aSz.Width() += aContentRgn.Left() + aContentRgn.GetWidth() - aPos.X() - aSz.Width();
+                    aSz.Height() += aContentRgn.Top() + aContentRgn.GetHeight() - aPos.Y() - aSz.Height();
+                }
             }
         }
 #endif	// USE_JAVA
-        aPos = GetParent()->GetParent()->OutputToScreenPixel( aPos );
         // FIXME: this ugly hack is for Mac/Aqua
         // should be replaced by a real mechanism to place the float rectangle
         if( ImplGetSVData()->maNWFData.mbNoFocusRects &&
