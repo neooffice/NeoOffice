@@ -61,7 +61,6 @@ static ::std::map< NSWindow*, JavaSalGraphics* > aNativeWindowMap;
 static ::std::map< NSWindow*, NSCursor* > aNativeCursorMap;
 static ::std::map< NSWindow*, NSTimer* > aNativeFlushTimerMap;
 static bool bScreensInitialized = false;
-static unsigned int nMainScreen = 0;
 static NSRect aTotalScreenBounds = NSZeroRect;
 static ::std::vector< Rectangle > aVCLScreensFullBoundsList;
 static ::std::vector< Rectangle > aVCLScreensVisibleBoundsList;
@@ -120,13 +119,11 @@ static void HandleScreensChangedRequest()
 	MutexGuard aGuard( aScreensMutex );
 
 	bScreensInitialized = true;
-	nMainScreen = 0;
 	aTotalScreenBounds = NSZeroRect;
 	aVCLScreensFullBoundsList.clear();
 	aVCLScreensVisibleBoundsList.clear();
 
 	NSArray *pScreens = [NSScreen screens];
-	NSScreen *pMainScreen = [NSScreen mainScreen];
 	if ( pScreens )
 	{
 		// Calculate the total combined screen so that we can flip coordinates
@@ -155,10 +152,6 @@ static void HandleScreensChangedRequest()
 				aVisibleRect.Justify();
 				aVCLScreensFullBoundsList.push_back( aFullRect );
 				aVCLScreensVisibleBoundsList.push_back( aVisibleRect );
-
-				// Check if this is the main screen
-				if ( pMainScreen && aVCLScreensFullBoundsList.size() && NSEqualRects( [pMainScreen frame], aFullFrame ) )
-					nMainScreen = aVCLScreensFullBoundsList.size() - 1;
 			}
 		}
 	}
@@ -2872,11 +2865,11 @@ void JavaSalFrame::FlushAllFrames()
 
 unsigned int JavaSalFrame::GetDefaultScreenNumber()
 {
-	// Update if screens have not yet been set
-	InitializeScreens();
-
-	MutexGuard aGuard( aScreensMutex );
-	return nMainScreen;
+	// Fix slideshow appearing underneath the presentation controller window
+	// when running a slideshow immediately after moving the presentation
+	// window to a different screen by always returning the first screen
+	// instead of the the native main screen number
+	return 0;
 }
 
 // -----------------------------------------------------------------------
