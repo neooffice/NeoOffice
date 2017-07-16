@@ -1822,10 +1822,11 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 	// Don't change size of windows in full screen mode or else the "update
 	// links" dialog that appears when opening certain documents will leave
-	// the window in a mixed state. Fix the same bug when opening a form in a
-	// full screen mode database document by allowing the size to change when
-	// the window is not in the JavaSalFrame::SetWindowState() method.
-	if ( mpWindow && ( ![pInSetWindowState boolValue] || ! ( [mpWindow styleMask] & NSWindowStyleMaskFullScreen ) ) )
+	// the window in a mixed state. Also, fix underlapping of the native tabbed
+	// windows toolbar when switching to another application and back again
+	// while in full screen mode. TODO: reimplement fix for the first bug when
+	// opening a form in a full screen mode database document.
+	if ( mpWindow && ! ( [mpWindow styleMask] & NSWindowStyleMaskFullScreen ) )
 	{
 		// Fix bug 3012 by only returning a minimum size when the window is
 		// visible
