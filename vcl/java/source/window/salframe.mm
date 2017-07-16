@@ -1570,14 +1570,18 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 - (void)getFrame:(VCLWindowWrapperArgs *)pArgs
 {
 	NSArray *pArgArray = [pArgs args];
-	if ( !pArgArray || [pArgArray count] < 2 )
+	if ( !pArgArray || [pArgArray count] < 3 )
 		return;
 
     NSValue *pInLiveResize = (NSValue *)[pArgArray objectAtIndex:0];
     if ( !pInLiveResize )
         return;
 
-    NSNumber *pFullScreen = (NSNumber *)[pArgArray objectAtIndex:1];
+    NSValue *pInFullScreenMode = (NSValue *)[pArgArray objectAtIndex:1];
+    if ( !pInFullScreenMode )
+        return;
+
+    NSNumber *pFullScreen = (NSNumber *)[pArgArray objectAtIndex:2];
     if ( !pFullScreen )
         return;
 
@@ -1596,11 +1600,15 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				*pInLiveResizePointer = NO;
 		}
 
+		sal_Bool *pInFullScreenModePointer = (sal_Bool *)[pInFullScreenMode pointerValue];
 		NSRect aFrame = [mpWindow frame];
 
 		// Check if we are in full screen mode
 		if ( [mpWindow styleMask] & NSWindowStyleMaskFullScreen )
 		{
+			if ( pInFullScreenModePointer )
+				*pInFullScreenModePointer = YES;
+
 			// Reset insets to non-tabbed window insets
 			NSRect aNonTabbedFrame = [NSWindow frameRectForContentRect:aFrame styleMask:[mpWindow styleMask] & ~NSWindowStyleMaskFullScreen];
 			maInsets = NSMakeRect( aFrame.origin.x - aNonTabbedFrame.origin.x, aFrame.origin.y - aNonTabbedFrame.origin.y, aNonTabbedFrame.origin.x + aNonTabbedFrame.size.width - aFrame.origin.x - aFrame.size.width, aNonTabbedFrame.origin.y + aNonTabbedFrame.size.height - aFrame.origin.y - aFrame.size.height );
@@ -1622,6 +1630,9 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		}
 		else
 		{
+			if ( pInFullScreenModePointer )
+				*pInFullScreenModePointer = NO;
+
 			// Update insets for non-full screen windows as tabbed windows have
 			// a different inset than untabbed windows
 			NSRect aContentRect = [mpWindow contentRectForFrameRect:aFrame];
@@ -1824,8 +1835,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	// links" dialog that appears when opening certain documents will leave
 	// the window in a mixed state. Also, fix underlapping of the native tabbed
 	// windows toolbar when switching to another application and back again
-	// while in full screen mode. TODO: reimplement fix for the first bug when
-	// opening a form in a full screen mode database document.
+	// while in full screen mode.
 	if ( mpWindow && ! ( [mpWindow styleMask] & NSWindowStyleMaskFullScreen ) )
 	{
 		// Fix bug 3012 by only returning a minimum size when the window is
@@ -3124,7 +3134,7 @@ void JavaSalFrame::FlushAllObjects()
 
 // -----------------------------------------------------------------------
 
-const Rectangle JavaSalFrame::GetBounds( sal_Bool *pInLiveResize, sal_Bool bUseFullScreenOriginalBounds )
+const Rectangle JavaSalFrame::GetBounds( sal_Bool *pInLiveResize, sal_Bool *pInFullScreenMode, sal_Bool bUseFullScreenOriginalBounds )
 {
 	Rectangle aRet( Point( 0, 0 ), Size( 0, 0 ) );
 
@@ -3132,7 +3142,7 @@ const Rectangle JavaSalFrame::GetBounds( sal_Bool *pInLiveResize, sal_Bool bUseF
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		VCLWindowWrapperArgs *pGetFrameArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSValue valueWithPointer:pInLiveResize], [NSNumber numberWithBool:bUseFullScreenOriginalBounds], nil]];
+		VCLWindowWrapperArgs *pGetFrameArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSValue valueWithPointer:pInLiveResize], [NSValue valueWithPointer:pInFullScreenMode], [NSNumber numberWithBool:bUseFullScreenOriginalBounds], nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[mpWindow performSelectorOnMainThread:@selector(getFrame:) withObject:pGetFrameArgs waitUntilDone:YES modes:pModes];
 		NSValue *pFrame = (NSValue *)[pGetFrameArgs result];
@@ -4002,7 +4012,7 @@ void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 
 bool JavaSalFrame::GetWindowState( SalFrameState* pState )
 {
-	Rectangle aBounds( GetBounds( NULL, sal_True ) );
+	Rectangle aBounds( GetBounds( NULL, NULL, sal_True ) );
 	pState->mnMask = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT | WINDOWSTATE_MASK_STATE;
 	pState->mnX = aBounds.Left();
 	pState->mnY = aBounds.Top();

@@ -2142,9 +2142,10 @@ void JavaSalEvent::dispatch()
 
 				// Update size
 				sal_Bool bInLiveResize = sal_False;
+				sal_Bool bInFullScreenMode = sal_False;
 				if ( !pPosSize )
 				{
-					pPosSize = new Rectangle( pFrame->GetBounds( &bInLiveResize ) );
+					pPosSize = new Rectangle( pFrame->GetBounds( &bInLiveResize, &bInFullScreenMode ) );
 					mpData = pPosSize;
 				}
 
@@ -2189,6 +2190,13 @@ void JavaSalEvent::dispatch()
 						pFrame->GetWorkArea( aRect );
 						if ( ( aRect.Left() == pPosSize->Left() && aRect.GetWidth() == pPosSize->GetWidth() ) || ( aRect.Top() == pPosSize->Top() && aRect.GetHeight() == pPosSize->GetHeight() ) )
 							bForceResize = true;
+					}
+					// Reimplement fix for missized content area when opening
+					// a form in a full screen mode database document by
+					// forcing a resize
+					else if ( bInFullScreenMode && !pFrame->mbInSetPosSize && !pFrame->mbInSetWindowState )
+					{
+						bForceResize = true;
 					}
 
 					bool bPosChanged = false;

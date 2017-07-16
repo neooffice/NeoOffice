@@ -118,7 +118,7 @@ public:
 	bool					IsUtilityWindow();
 	void					RemoveObject( JavaSalObject *pObject, bool bDeleted );
 	void					FlushAllObjects();
-	const Rectangle			GetBounds( sal_Bool *pInLiveResize = NULL, sal_Bool bUseFullScreenOriginalBounds = sal_False );
+	const Rectangle			GetBounds( sal_Bool *pInLiveResize = NULL, sal_Bool *pInFullScreenMode = NULL, sal_Bool bUseFullScreenOriginalBounds = sal_False );
 	const Rectangle			GetInsets();
 	id						GetNativeWindow();
 	id						GetNativeWindowContentView( sal_Bool bTopLevelWindow );
