@@ -1109,7 +1109,40 @@ static void CloseOrOrderOutWindow( NSWindow *pWindow )
 	// screen mode, ordering out will leave the application in an empty full
 	// screen mode state
 	if ( pWindow )
+	{
+		NSWindow *pLastTabbedWindow = nil;
+		NSArray<NSWindow*> *pTabbedWindows = pWindow.tabbedWindows;
+		if ( pTabbedWindows )
+		{
+			NSUInteger nCount = [pTabbedWindows count];
+			if ( nCount <= 2 )
+			{
+				NSUInteger i = 0;
+				for ( ; i < nCount; i++ )
+				{
+					NSWindow *pTabbedWindow = [pTabbedWindows objectAtIndex:i];
+					if ( pTabbedWindow && pTabbedWindow != pWindow )
+					{
+						pLastTabbedWindow = pTabbedWindow;
+						[pLastTabbedWindow retain];
+					}
+
+				}
+			}
+		}
+		
 		[pWindow close];
+
+		// Fix missized window contents when tabbed windows are closed using
+		// the Close Other Tabs menu item in a tabs popover menu by calling
+		// the windowDidResize: selector on the last remaining tabbed window
+		if ( pLastTabbedWindow )
+		{
+			id<NSWindowDelegate> pDelegate = [pLastTabbedWindow delegate];
+			if ( pDelegate && [pDelegate respondsToSelector:@selector(windowDidResize:)] )
+				[pDelegate windowDidResize:[NSNotification notificationWithName:NSWindowDidResizeNotification object:pLastTabbedWindow]];
+		}
+	}
 }
 
 static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
