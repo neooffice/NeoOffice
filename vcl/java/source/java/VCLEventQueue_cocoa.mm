@@ -1193,7 +1193,14 @@ static NSUInteger nMouseMask = 0;
 
 	BOOL bIsVCLWindow = ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] );
 	NSEventType nType = [pEvent type];
-	NSRect aOldFrame = [self frame];
+	NSRect aOldFrame = NSZeroRect;
+	NSRect aOldContentFrame = NSZeroRect;
+	BOOL bIsMouseEvent = ( ( nType >= NSEventTypeLeftMouseDown && nType <= NSEventTypeMouseExited ) || ( nType >= NSEventTypeOtherMouseDown && nType <= NSEventTypeOtherMouseDragged ) );
+	if ( bIsMouseEvent )
+	{
+		aOldFrame = [self frame];
+		aOldContentFrame = [self contentRectForFrameRect:aOldFrame];
+	}
 
 	// Fix bug 3357 by updating when we are not in a menu tracking session.
 	// Fix bug 3379 by retaining this window as this window may get released
@@ -1237,14 +1244,25 @@ static NSUInteger nMouseMask = 0;
 	if ( bIsVCLWindow && mpFrame )
 	{
 		// Handle all mouse events
-		if ( ( nType >= NSEventTypeLeftMouseDown && nType <= NSEventTypeMouseExited ) || ( nType >= NSEventTypeOtherMouseDown && nType <= NSEventTypeOtherMouseDragged ) )
+		if ( bIsMouseEvent )
 		{
 			// If the frame changed after the superclass handled the event,
 			// then we likely clicked on one of the titlebar buttons so
 			// ignore the event to prevent unexpected dragging events
 			NSRect aFrame = [self frame];
 			if ( aFrame.size.width != aOldFrame.size.width || aFrame.size.height != aOldFrame.size.height )
+			{
 				return;
+			}
+			else
+			{
+				// Fix toolbar popup from appearing after selecting the
+				// Move Tab to New Window menu item in a tab's popover window
+                // by detecting if the event changed the window's content size
+				NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
+				if ( aContentFrame.size.width != aOldContentFrame.size.width || aContentFrame.size.height != aOldContentFrame.size.height )
+					return;
+			}
 
 			sal_uInt16 nID = 0;
 			NSUInteger nModifiers = [pEvent modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask;
