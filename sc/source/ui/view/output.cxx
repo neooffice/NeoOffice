@@ -905,12 +905,15 @@ void drawCells(const Color* pColor, const SvxBrushItem* pBackground, const Color
             // forum topic while avoiding even-odd drawing of any overlapping
             // polygons by setting the clip to the polypolygon:
             // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8537
+            // Revert fix for the previous bug as the fix is no longer
+            // needed with the LibreOffice 4.4.7.2 code and the fix causes
+            // highlighting to fail when selecting multiple lines of text
+            // within a spreadsheet cell.
             pDev->Push( PushFlags::CLIPREGION | PushFlags::FILLCOLOR | PushFlags::LINECOLOR );
             pDev->IntersectClipRegion( rRect );
-            pDev->IntersectClipRegion( vcl::Region( rNativeHighlightPolyPoly ) );
             pDev->SetFillColor( rNativeHighlightColor );
             pDev->SetLineColor();
-            pDev->DrawTransparent( tools::PolyPolygon( Polygon( rNativeHighlightPolyPoly.GetBoundRect() ) ), rNativeHighlightTransparentPercent );
+            pDev->DrawTransparent( rNativeHighlightPolyPoly, rNativeHighlightTransparentPercent );
             pDev->Pop();
         }
 #endif	// USE_JAVA
@@ -940,12 +943,15 @@ void drawCells(const Color* pColor, const SvxBrushItem* pBackground, const Color
                 // forum topic while avoiding even-odd drawing of any overlapping
                 // polygons by setting the clip to the polypolygon:
                 // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8537
+                // Revert fix for the previous bug as the fix is no longer
+                // needed with the LibreOffice 4.4.7.2 code and the fix causes
+                // highlighting to fail when selecting multiple lines of text
+                // within a spreadsheet cell.
                 pDev->Push( PushFlags::CLIPREGION | PushFlags::FILLCOLOR | PushFlags::LINECOLOR );
                 pDev->IntersectClipRegion( rRect );
-                pDev->IntersectClipRegion( vcl::Region( rNativeHighlightPolyPoly ) );
                 pDev->SetFillColor( rNativeHighlightColor );
                 pDev->SetLineColor();
-                pDev->DrawTransparent( tools::PolyPolygon( Polygon( rNativeHighlightPolyPoly.GetBoundRect() ) ), rNativeHighlightTransparentPercent );
+                pDev->DrawTransparent( rNativeHighlightPolyPoly, rNativeHighlightTransparentPercent );
                 pDev->Pop();
             }
 #endif	// USE_JAVA
