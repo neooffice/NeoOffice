@@ -2930,12 +2930,15 @@ void ImpEditEngine::Paint( OutputDevice* pOutDev, Rectangle aClipRect, Point aSt
         // avoiding even-odd drawing of any overlapping polygons by setting the
         // clip to the polypolygon:
         // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8537
+        // Revert fix for the previous two bugs as the fix is no longer needed
+        // with the LibreOffice 4.4.7.2 code and the fix causes highlighting
+        // to fail when selecting multiple lines of text within a spreadsheet
+        // cell.
         pOutDev->Push( PushFlags::CLIPREGION | PushFlags::FILLCOLOR | PushFlags::LINECOLOR );
         pOutDev->IntersectClipRegion( aClipRect );
-        pOutDev->IntersectClipRegion( vcl::Region( aNativeHighlightPolyPoly ) );
         pOutDev->SetFillColor( aNativeHighlightColor );
         pOutDev->SetLineColor();
-        pOutDev->DrawTransparent( tools::PolyPolygon( Polygon( aNativeHighlightPolyPoly.GetBoundRect() ) ), nNativeHighlightTransparentPercent );
+        pOutDev->DrawTransparent( aNativeHighlightPolyPoly, nNativeHighlightTransparentPercent );
         pOutDev->Pop();
     }
 #endif	// USE_JAVA
