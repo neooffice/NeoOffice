@@ -34,20 +34,21 @@ App Review Information
 Review Notes:
 Paste the following paragraphs into the Review Notes text area. Stop before the "App Sandbox Entitlement Usage Information" section:
 
-NeoOffice is a registered trademark that we - Planamesa Inc. - own. This product is a combination of our own Planamesa Inc. copyrighted source code plus the following third-party source code licensed under various open source software licenses. None of the third-party source code is subject to any of the GNU General Public License (GPL) open source licenses:
+NeoOffice is a registered trademark that we - Planamesa Inc. - own. This product is a combination of our own Planamesa Inc. copyrighted source code plus the following third-party source code licensed under various open source software licenses:
+
+Mozilla Public License, version 2.0:
+- LibreOffice source code copyright by LibreOffice contributors
+
+Apache License, version 2.0:
+- OpenOffice.org source code copyright by The Apache Software Foundation
 
 GNU Lesser General Public License (LGPL) version 3:
 - OpenOffice.org source code copyright by The Apache Software Foundation
-- LibreOffice source code copyright by LibreOffice contributors
 - NeoOffice icons and images copyright by Armando Nava, Daniel Pimley, and Oscar Van Vliet
 
 GNU Lesser General Public License (LGPL) version 2:
 - NeoOffice icons and images copyright by Smokey Ardisson
 - NeoOffice icons and images copyright by Daniel Pimley
-
-MIT-style license:
-- Minizip source code copyright by Gilles Vollant
-- Mac remote control infrared receiver source code copyright by Martin Kahr
 
 
 App Sandbox Entitlement Usage Information:
