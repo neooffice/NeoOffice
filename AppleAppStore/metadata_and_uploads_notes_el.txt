@@ -23,9 +23,9 @@ Two engineers created NeoOffice in 2003 when they made OpenOffice run natively o
 What's New in this Version:
 Before you buy NeoOffice, please click on the «Υποστήριξη NeoOffice» link and read the installation notes.
 
-This version of NeoOffice fixes the following bugs:
-• NeoOffice would crash if you started printing a document and then immediately closed the document before the print job finished
-• When running NeoOffice on macOS Sierra, NeoOffice would crash when printing documents that contain EPS images
+This version is a new version of NeoOffice that is based on LibreOffice. While previous versions of NeoOffice were based on the OpenOffice code, NeoOffice 2017 is based on the LibreOffice 4.4 code.
+
+We switched to the LibreOffice 4.4 code because the LibreOffice code is able to open and save Microsoft Office .docx, .xlsx, and .pptx documents with fewer errors than the OpenOffice code.
 
 
 Keywords:
