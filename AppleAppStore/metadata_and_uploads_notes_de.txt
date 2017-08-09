@@ -7,7 +7,7 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-NeoOffice ist ein Office-Paket für Mac, die auf dem OpenOffice Office-Paket basiert. Mit NeoOffice können Sie OpenOffice-Dokumente, LibreOffice-Dokumente und einfache Microsoft Word-, Excel- und Powerpoint-Dokumente anzeigen, bearbeiten und speichern.
+NeoOffice ist ein Office-Paket für Mac, die auf OpenOffice und LibreOffice basiert. Mit NeoOffice können Sie OpenOffice-Dokumente, LibreOffice-Dokumente und einfache Microsoft Word-, Excel- und Powerpoint-Dokumente anzeigen, bearbeiten und speichern.
 
 Zwei Ingenieure erstellten NeoOffice im Jahr 2003, als sie OpenOffice auf OS X zum ersten Mal native ausführbar machten. Seitdem haben die NeoOffice-Ingenieure immer wieder Verbesserungen zu NeoOffice hinzugefügt, dass Sie nicht in OpenOffice oder LibreOffice finden werden, wie zum Beispiel:
 

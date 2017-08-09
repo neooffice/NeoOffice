@@ -7,7 +7,7 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-NeoOffice is een kantoorsoftware voor Mac, dat is gebaseerd op de OpenOffice kantoorsoftware. Met NeoOffice kunt u OpenOffice-documenten, LibreOffice-documenten en eenvoudige Microsoft Word-, Excel- en PowerPoint-documenten bekijken, bewerken en opslaan.
+NeoOffice is een kantoorsoftware voor Mac, dat is gebaseerd op OpenOffice en LibreOffice. Met NeoOffice kunt u OpenOffice-documenten, LibreOffice-documenten en eenvoudige Microsoft Word-, Excel- en PowerPoint-documenten bekijken, bewerken en opslaan.
 
 Twee ontwikkelaars gecreëerd NeoOffice in 2003 toen ze OpenOffice draaien native op OS X voor de errste keer. Sindsdien hebben de NeoOffice ingenieurs voortdurend verbeteringen toegevoegd aan NeoOffice dat u niet vindt in OpenOffice of LibreOffice, zoals:
 
