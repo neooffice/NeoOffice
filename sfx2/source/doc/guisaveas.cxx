@@ -515,7 +515,23 @@ uno::Sequence< beans::PropertyValue > ModelData_Impl::GetDocServiceDefaultFilter
                                                                 OUString("ooSetupFactoryDefaultFilter"),
                                                                 OUString() );
 
+#ifdef USE_JAVA
+    try
+    {
+#endif	// USE_JAVA
     m_pOwner->GetFilterConfiguration()->getByName( aFilterName ) >>= aProps;
+#ifdef USE_JAVA
+    }
+    catch( const container::NoSuchElementException& e )
+    {
+        // Fix failure to save caused by preferences imported from
+        // NeoOffice 2015 or older are imported by converting the old OOXML
+        // filter names
+        aFilterName = aFilterName.replaceFirst( "2008 XML", "2007 XML" );
+        aFilterName = aFilterName.replaceFirst( "2008 Binary", "2007 Binary" );
+        m_pOwner->GetFilterConfiguration()->getByName( aFilterName ) >>= aProps;
+    }
+#endif	// USE_JAVA
 
     return aProps;
 }
