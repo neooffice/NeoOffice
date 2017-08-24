@@ -1326,24 +1326,23 @@ ImplFontEntry* ImplFontCache::GetFontEntry( PhysicalFontCollection* pFontList,
 
         // if we're subtituting from or to a symbol font we may need a symbol
         // conversion table
-#ifdef USE_JAVA
-        if( aFontSelData.IsSymbolFont() )
-        {
-            pEntry->mpConversion = ConvertChar::GetRecodeData( aFontSelData.maTargetName, aFontSelData.maSearchName );
-
-            // Fix bug 2661 by handling cases where some fonts require the
-            // symbol recoding. Fix bug 2740 and maybe bug 2746 by only doing
-            // this handling for symbol fonts. Fix nonprinting characters issue
-            // in bug 2740 by not using the default recode table if the
-            // requested font is StarSymbol or OpenSymbol.
-            if( !pEntry->mpConversion && pFontData->IsSymbolFont() && !aFontSelData.maTargetName.equalsIgnoreAsciiCaseAsciiL( "starsymbol", 10 ) && !aFontSelData.maTargetName.equalsIgnoreAsciiCaseAsciiL( "opensymbol", 10 ) )
-                pEntry->mpConversion = ConvertChar::GetRecodeData( "symbol", "opensymbol" );
-        }
-#else	// USE_JAVA
         if( pFontData->IsSymbolFont() || aFontSelData.IsSymbolFont() )
         {
             if( aFontSelData.maTargetName != aFontSelData.maSearchName )
                 pEntry->mpConversion = ConvertChar::GetRecodeData( aFontSelData.maTargetName, aFontSelData.maSearchName );
+
+#ifdef USE_JAVA
+            // Fix bug 2661 by handling cases where some fonts require the
+            // symbol recoding. Fix bug 2740 and maybe bug 2746 by only doing
+            // this handling for symbol fonts. Fix nonprinting characters issue
+            // in bug 2740 by not using the default recode table if the
+            // requested font is StarSymbol or OpenSymbol. Fix incorrect bullet
+            // symbols when exporting as PDF reported in the
+            // testing/sierrahighsierrabugs_emails/20170824 e-mail by merging
+            // the following code into the existing LibreOffice code block.
+            if( !pEntry->mpConversion && pFontData->IsSymbolFont() && !aFontSelData.maTargetName.equalsIgnoreAsciiCaseAsciiL( "starsymbol", 10 ) && !aFontSelData.maTargetName.equalsIgnoreAsciiCaseAsciiL( "opensymbol", 10 ) )
+                pEntry->mpConversion = ConvertChar::GetRecodeData( "symbol", "opensymbol" );
+#endif	// USE_JAVA
         }
 
 #ifdef MACOSX
@@ -1357,7 +1356,6 @@ ImplFontEntry* ImplFontCache::GetFontEntry( PhysicalFontCollection* pFontList,
             pEntry->mpConversion = ConvertChar::GetRecodeData( OUString("Symbol"), OUString("AppleSymbol") );
         }
 #endif
-#endif	// USE_JAVA
 
         // add the new entry to the cache
         maFontInstanceList[ aFontSelData ] = pEntry;
