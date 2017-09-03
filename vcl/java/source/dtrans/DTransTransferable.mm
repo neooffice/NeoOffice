@@ -45,6 +45,7 @@
 
 #include <premac.h>
 #import <AppKit/AppKit.h>
+#import <CoreServices/CoreServices.h>
 #include <postmac.h>
 
 #define HTML_TYPE_TAG @"HTML"
@@ -57,7 +58,7 @@ using namespace com::sun::star::io;
 using namespace com::sun::star::uno;
 using namespace vcl;
 
-const NSString *kNeoOfficeInternalPboardType = @"NeoOfficeInternalPboardType";
+CFStringRef kNeoOfficeInternalPboardType = CFSTR( "NeoOfficeInternalPboardType" );
 
 static sal_uInt16 nSupportedTypes = 7;
 
@@ -625,9 +626,11 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 		[mpPasteboardName retain];
 	mpTypes = pTypes;
 	// Fix bug 3673 by adding a custom type when the list of native drag types
-	// is empty
-	if ( ( !mpTypes || ![mpTypes count] ) && mpPasteboardName && [mpPasteboardName isEqualToString:NSDragPboard] )
-		mpTypes = [NSArray arrayWithObject:kNeoOfficeInternalPboardType];
+	// is empty. Fix failure to drag slides in presentation sidebar by using
+	// the UTTypeCreatePreferredIdentifierForTag() function to avoid "invalid
+	// UTI" errors in [DTransPasteboardOwner writeableTypesForPasteboard:].
+	if ( ( !mpTypes || ![mpTypes count] ) && mpPasteboardName && [mpPasteboardName isEqualToString:@"JavaDNDPasteboardHelper"] )
+		mpTypes = [NSArray arrayWithObject:(NSString *)UTTypeCreatePreferredIdentifierForTag( kUTTagClassNSPboardType, kNeoOfficeInternalPboardType, kUTTypeData )];
 	if ( mpTypes )
 		[mpTypes retain];
 
@@ -799,8 +802,11 @@ static void ImplInitializeSupportedPasteboardTypes()
 			}
 		}
 
-		// Fix bug 3673 by adding a custom type to the list of native types
-		[pTypes addObject:kNeoOfficeInternalPboardType];
+		// Fix bug 3673 by adding a custom type to the list of native types.
+		// Fix failure to drag slides in presentation sidebar by using the
+		// UTTypeCreatePreferredIdentifierForTag() function to avoid "invalid
+		// UTI" errors in [DTransPasteboardOwner writeableTypesForPasteboard:].
+		[pTypes addObject:(NSString *)UTTypeCreatePreferredIdentifierForTag( kUTTagClassNSPboardType, kNeoOfficeInternalPboardType, kUTTypeData )];
 
 		[pTypes retain];
 		pSupportedPasteboardTypes = pTypes;
