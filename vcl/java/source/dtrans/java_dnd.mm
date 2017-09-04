@@ -1545,11 +1545,13 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	aDropEvent.LocationX = nX;
 	aDropEvent.LocationY = nY;
 
+	bool bSame = false;
 	NSDragOperation nMask = [aInfo draggingSourceOperationMask];
 	if ( pTrackDragOwner )
 	{
+		bSame = pTrackDragOwner->getNSView() == getNSView();
 		aDropEvent.SourceActions = pTrackDragOwner->mnActions;
-		aDropEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, pTrackDragOwner->getNSView() == getNSView() );
+		aDropEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, bSame );
 		aDropEvent.Transferable = pTrackDragOwner->maContents;
 	}
 	else
@@ -1582,6 +1584,30 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8457
 	mbRejected = pContext->isRejected();
 	bRet = ( !mbRejected && pContext->getDropComplete() );
+
+	// Fix failure to drag slides in presentation sidebar by retrying the event
+	// with a different default drop action
+	if ( !bRet && bSame )
+	{
+		aDropEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, false );
+
+		JavaDropTargetDropContext *pContext = new JavaDropTargetDropContext( aDropEvent.DropAction );
+		aDropEvent.Context = uno::Reference< datatransfer::dnd::XDropTargetDropContext >( pContext );
+
+		listeners =  maListeners;
+
+		for ( ::std::list< uno::Reference< datatransfer::dnd::XDropTargetListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
+		{
+			if ( (*it).is() )
+				(*it)->drop( aDropEvent );
+		}
+
+		// Fix bug 3647 by allowing the VCL event dispatch thread to run
+		Application::Reschedule();
+
+		mbRejected = pContext->isRejected();
+		bRet = ( !mbRejected && pContext->getDropComplete() );
+	}
 
 	return bRet;
 }
