@@ -24,8 +24,8 @@ What's New in this Version:
 Before you buy NeoOffice, please click on the «Υποστήριξη NeoOffice» link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
-• If the "Always save as" preference had been changed to .docx, .xlsx, or .pptx before upgrading to NeoOffice 2017, NeoOffice could not save files after upgrading to NeoOffice 2017
-• When exporting as PDF, NeoOffice 2017 would use the incorrect symbol font for bullets and other symbols in the PDF file
+• Dragging a slide within a presentation's "Slides" panel would fail
+• None of the buttons in the Line Spacing toolbar button's popup window could be selected
 
 
 Keywords:
