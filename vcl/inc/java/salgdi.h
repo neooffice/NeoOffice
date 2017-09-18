@@ -73,8 +73,9 @@ public:
 	static ::std::map< OUString, OUString >	maBadNativeFontNameMap;
 	OUString				maFontName;
 	mutable sal_IntPtr		mnNativeFontID;
-	::std::list< JavaPhysicalFontFace* >	maChildren;
+	mutable ::std::list< JavaPhysicalFontFace* >	maChildren;
 	OUString				maFamilyName;
+	mutable const JavaPhysicalFontFace*	mpParent;
 
 	static void				ClearNativeFonts();
 	static void				HandleBadFont( const JavaPhysicalFontFace *pFontData );

@@ -752,7 +752,7 @@ IMPL_STATIC_LINK_NOINSTANCE( JavaPhysicalFontFace, RunNativeFontsTimer, void*, /
 
 // -----------------------------------------------------------------------
 
-JavaPhysicalFontFace::JavaPhysicalFontFace( const ImplDevFontAttributes& rAttributes, const OUString& rFontName, sal_IntPtr nNativeFontID, const OUString& rFamilyName ) : PhysicalFontFace( rAttributes, 0 ), maFontName( rFontName ), mnNativeFontID( nNativeFontID ), maFamilyName( rFamilyName )
+JavaPhysicalFontFace::JavaPhysicalFontFace( const ImplDevFontAttributes& rAttributes, const OUString& rFontName, sal_IntPtr nNativeFontID, const OUString& rFamilyName ) : PhysicalFontFace( rAttributes, 0 ), maFontName( rFontName ), mnNativeFontID( nNativeFontID ), maFamilyName( rFamilyName ), mpParent( NULL )
 {
 	if ( mnNativeFontID )
 		CFRetain( (CTFontRef)mnNativeFontID );
@@ -1005,7 +1005,24 @@ sal_uInt16 JavaSalGraphics::SetFont( FontSelectPattern* pFont, int nFallbackLeve
 			JavaPhysicalFontFace *pChildFontData = (JavaPhysicalFontFace *)pFontData->Clone();
 			if ( pChildFontData )
 			{
-				((JavaPhysicalFontFace *)pFont->mpFontData)->maChildren.push_back( pChildFontData );
+				const JavaPhysicalFontFace *pJavaFontData = dynamic_cast<const JavaPhysicalFontFace *>( pFont->mpFontData );
+				if ( pJavaFontData )
+				{
+					// Fix stack overflow crash due to excessively long chains
+					// of child fonts by replacing the last chained font
+					// instead of adding to the chain
+					if ( pJavaFontData->mpParent )
+					{
+						pJavaFontData->mpParent->maChildren.remove( (JavaPhysicalFontFace*)pJavaFontData );
+						delete pJavaFontData;
+					}
+					else
+					{
+						pChildFontData->mpParent = pJavaFontData;
+						pJavaFontData->maChildren.push_back( pChildFontData );
+					}
+				}
+
 				pFont->mpFontData = pChildFontData;
 			}
 		}
