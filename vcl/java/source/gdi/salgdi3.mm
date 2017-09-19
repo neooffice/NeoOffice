@@ -768,13 +768,23 @@ JavaPhysicalFontFace::JavaPhysicalFontFace( const ImplDevFontAttributes& rAttrib
 
 JavaPhysicalFontFace::~JavaPhysicalFontFace()
 {
+	if ( mpParent )
+		mpParent->maChildren.remove( this );
+
 	if ( mnNativeFontID )
 		CFRelease( (CTFontRef)mnNativeFontID );
 
-	while ( maChildren.size() )
+	if ( maChildren.size() )
 	{
-		delete maChildren.front();
-		maChildren.pop_front();
+		// Copy list as deleting a child will try to remove the child from
+		// the list
+		::std::list< JavaPhysicalFontFace* > aChildren( maChildren );
+		maChildren.clear();
+		while ( aChildren.size() )
+		{
+			delete aChildren.front();
+			aChildren.pop_front();
+		}
 	}
 }
 
@@ -1013,7 +1023,6 @@ sal_uInt16 JavaSalGraphics::SetFont( FontSelectPattern* pFont, int nFallbackLeve
 					// instead of adding to the chain
 					if ( pJavaFontData->mpParent )
 					{
-						pJavaFontData->mpParent->maChildren.remove( (JavaPhysicalFontFace*)pJavaFontData );
 						delete pJavaFontData;
 					}
 					else
