@@ -2437,6 +2437,10 @@ static CFDataRef aRTFSelection = nil;
 	NSWindow *pWindow = [self window];
 	if ( pWindow && [pWindow isVisible] && mpFrame )
 	{
+		// Attempt to fix crash in [pWindow contentRectForFrameRect:] by
+		// retaining the window
+		[pWindow retain];
+
 		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
@@ -2517,6 +2521,8 @@ static CFDataRef aRTFSelection = nil;
 		}
 
 		rSolarMutex.release();
+
+		[pWindow release];
 	}
 
 	return aRet;
