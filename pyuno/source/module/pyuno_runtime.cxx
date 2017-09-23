@@ -167,6 +167,12 @@ static void getRuntimeImpl( PyRef & globalDict, PyRef &runtimeImpl )
 
 static PyRef importUnoModule( ) throw ( RuntimeException )
 {
+#ifdef USE_JAVA
+    // Fix crash on some machines when loading the uno.py file by catching
+    // any Python exceptions
+    try
+    {
+#endif	// USE_JAVA
     // import the uno module
     PyRef module( PyImport_ImportModule( "uno" ), SAL_NO_ACQUIRE, NOT_NULL );
     if( PyErr_Occurred() )
@@ -188,6 +194,17 @@ static PyRef importUnoModule( ) throw ( RuntimeException )
     }
     PyRef dict( PyModule_GetDict( module.get() ) );
     return dict;
+#ifdef USE_JAVA
+    }
+    catch( const com::sun::star::uno::Exception &e )
+    {
+        throw;
+    }
+    catch ( ... )
+    {
+        throw RuntimeException( "python module \"uno\" raised an unknown exception" );
+    }
+#endif	// USE_JAVA
 }
 
 static void readLoggingConfig( sal_Int32 *pLevel, FILE **ppFile )
