@@ -24,8 +24,13 @@ What's New in this Version:
 Before you buy NeoOffice, please click on the 「NeoOffice のサポート」 link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
-• Dragging a slide within a presentation's "Slides" panel would fail
-• None of the buttons in the Line Spacing toolbar button's popup window could be selected
+• NeoOffice would would sometimes crash when quitting
+• NeoOffice would horizontally stretch grayscale images when exporting to PDF
+• NeoOffice would sometimes crash when saving JPEG images
+• NeoOffice would sometimes crash when entering text using some of the macOS Asian keyboard layouts
+• NeoOffice would crash when expanding a list of macros in some of the macro dialogs
+• NeoOffice would sometimes crash when closing a window after dragging text or other objects within the window
+• NeoOffice would sometimes crash during execution of a timer in the application's native event dispatching thread
 
 
 Keywords:
