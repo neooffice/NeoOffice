@@ -408,7 +408,7 @@ SwPrintOptions*     SwModule::GetPrtOptions(bool bWeb)
             pWebPrtOpt->SetPrintTable(true);
             pWebPrtOpt->SetPrintControl(true);
             pWebPrtOpt->SetPrintPageBackground(true);
-            pWebPrtOpt->SetPrintEmptyPages(true);
+            pWebPrtOpt->SetPrintEmptyPages(false);
             pWebPrtOpt->Commit();
 
             pReset->SetPrintOptionsReset(sal_True);
@@ -430,7 +430,7 @@ SwPrintOptions*     SwModule::GetPrtOptions(bool bWeb)
             pPrtOpt->SetPrintDraw(true);
             pPrtOpt->SetPrintLeftPage(true);
             pPrtOpt->SetPrintRightPage(true);
-            pPrtOpt->SetPrintEmptyPages(true);
+            pPrtOpt->SetPrintEmptyPages(false);
             pPrtOpt->Commit();
 
             pReset->SetPrintOptionsReset(sal_True);
