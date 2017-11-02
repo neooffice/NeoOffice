@@ -24,13 +24,12 @@ What's New in this Version:
 Avant d'acheter NeoOffice, s'il vous plaît cliquer sur le lien « Assistance : NeoOffice » et lire les notes d'installation.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would would sometimes crash when quitting
-• NeoOffice would horizontally stretch grayscale images when exporting to PDF
-• NeoOffice would sometimes crash when saving JPEG images
-• NeoOffice would sometimes crash when entering text using some of the macOS Asian keyboard layouts
-• NeoOffice would crash when expanding a list of macros in some of the macro dialogs
-• NeoOffice would sometimes crash when closing a window after dragging text or other objects within the window
-• NeoOffice would sometimes crash during execution of a timer in the application's native event dispatching thread
+• NeoOffice would crash while editing Writer and Calc documents in 3 different places in NeoOffice's underlying LibreOffice 4.4 code
+• NeoOffice would crash due to RedHat bug #1409634
+• NeoOffice would sometimes crash when when importing PDF documents
+• NeoOffice would sometimes crash when crash when scrolling within a popup menu
+• NeoOffice would sometimes crash when editing a table in a Writer document
+• NeoOffice would crash due to LibreOffice bug #107975
 
 
 Keywords:
