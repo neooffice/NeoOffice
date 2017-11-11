@@ -397,7 +397,13 @@ void Menu::ImplCallEventListeners( sal_uLong nEvent, sal_uInt16 nPos )
             if( aDelData.isDeleted() )
                 break;
 
+#ifdef USE_JAVA
+            // Attempt to fix Mac App Store crash by testing if menu has
+            // already been deleted
+            pMenu = ( pMenu->pStartedFrom != pMenu && IsValidMenu( pMenu->pStartedFrom ) ) ? pMenu->pStartedFrom : NULL;
+#else	// USE_JAVA
             pMenu = ( pMenu->pStartedFrom != pMenu ) ? pMenu->pStartedFrom : NULL;
+#endif	// USE_JAVA
         }
     }
 }
