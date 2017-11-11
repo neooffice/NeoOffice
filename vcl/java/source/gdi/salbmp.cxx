@@ -77,14 +77,12 @@ JavaSalBitmap::JavaSalBitmap() :
 	mpGraphics( NULL ),
 	mpVirDev( NULL )
 {
-	GetSalData()->maBitmapList.push_back( this );
 }
 
 // ------------------------------------------------------------------
 
 JavaSalBitmap::~JavaSalBitmap()
 {
-	GetSalData()->maBitmapList.remove( this );
 	Destroy();
 }
 
