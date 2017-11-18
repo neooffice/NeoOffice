@@ -133,6 +133,15 @@ long ScColumn::GetNeededSize(
     //      conditional formatting
     const SfxItemSet* pCondSet = pDocument->GetCondResult( nCol, nRow, nTab );
 
+#ifndef NO_LIBO_BUG_92963_FIX
+    //The pPattern may change in GetCondResult
+    if (aCell.meType == CELLTYPE_FORMULA)
+    {
+        pPattern = pAttrArray->GetPattern( nRow );
+        if (ppPatternChange)
+            *ppPatternChange = pPattern;
+    }
+#endif	// !NO_LIBO_BUG_92963_FIX
     //  line break?
 
     const SfxPoolItem* pCondItem;
