@@ -24,12 +24,14 @@ What's New in this Version:
 Before you buy NeoOffice, please click on the "NeoOffice 支持" link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would crash while editing Writer and Calc documents in 3 different places in NeoOffice's underlying LibreOffice 4.4 code
-• NeoOffice would crash due to RedHat bug #1409634
-• NeoOffice would sometimes crash when when importing PDF documents
-• NeoOffice would sometimes crash when crash when scrolling within a popup menu
-• NeoOffice would sometimes crash when editing a table in a Writer document
-• NeoOffice would crash due to LibreOffice bug #107975
+• NeoOffice would sometimes crash when copying bookmarks in a Writer document
+• NeoOffice would sometimes crash when a popup menu closed
+• NeoOffice would sometimes crash when opening a document that contains remote images
+• NeoOffice would crash due to LibreOffice bug #113591
+• NeoOffice would crash due to LibreOffice bug #92963
+• NeoOffice would sometimes crash when copying cells that contain comments in a Calc document
+• NeoOffice would sometimes crash when scrolling using a mouse wheel
+• NeoOffice would sometimes crash when selecting the File > Open menu item in a Writer document 
 
 
 Keywords:
