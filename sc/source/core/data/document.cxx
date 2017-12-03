@@ -6233,7 +6233,11 @@ ScPostIt* ScDocument::GetOrCreateNote(const ScAddress& rPos)
 }
 ScPostIt* ScDocument::CreateNote(const ScAddress& rPos)
 {
+#ifdef NO_LIBO_5_4_4_POSTIT_FIXES
     ScPostIt* pPostIt = new ScPostIt(*this, rPos, false);
+#else	// NO_LIBO_5_4_4_POSTIT_FIXES
+    ScPostIt* pPostIt = new ScPostIt(*this, rPos);
+#endif	// NO_LIBO_5_4_4_POSTIT_FIXES
     SetNote(rPos, pPostIt);
     return pPostIt;
 }
