@@ -282,6 +282,7 @@ static oslThread osl_thread_create_Impl (
     if (pthread_attr_init(&attr) != 0)
         return (0);
 
+#ifdef NO_LIBO_BUG_71097_FIX
 #if defined OPENBSD
     stacksize = 262144;
 #elif defined LINUX
@@ -289,13 +290,13 @@ static oslThread osl_thread_create_Impl (
 #else
     stacksize = 100 * PTHREAD_STACK_MIN;
 #endif
-#ifdef USE_JAVA
-	// Fix bug 3573 by setting the minimum stack size to the minimum size
-	// required by libvcl
-	static const size_t nMinStacksize = 2 * 1024 * 1024;
-    if (stacksize < nMinStacksize)
-        stacksize = nMinStacksize;
-#endif	// USE_JAVA
+#else	// NO_LIBO_BUG_71097_FIX
+#if defined OPENBSD
+    stacksize = 262144;
+#else
+    stacksize = 12 * 1024 * 1024; // 8MB is not enough for ASAN on x86-64
+#endif
+#endif	// NO_LIBO_BUG_71097_FIX
     if (pthread_attr_setstacksize(&attr, stacksize) != 0) {
         pthread_attr_destroy(&attr);
         return (0);
