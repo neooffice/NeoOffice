@@ -196,7 +196,7 @@ static PyRef importUnoModule( ) throw ( RuntimeException )
     return dict;
 #ifdef USE_JAVA
     }
-    catch( const com::sun::star::uno::Exception &e )
+    catch( const RuntimeException &e )
     {
         throw;
     }
