@@ -1005,6 +1005,8 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 								pPDFData = [NSMutableData dataWithCapacity:PDF_BUF_SIZE];
 								if ( pPDFData )
 								{
+									[pPDFData autorelease];
+
 									static const sal_uInt32 nBytes = 4096;
 									sal_Int32 nBytesRead;
 									uno::Sequence< ::sal_Int8 > aBytes( nBytes );
