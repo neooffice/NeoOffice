@@ -970,10 +970,6 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (void)makeWindowControllers
 {
-	// Use an autorelease pool to prevent PDFDocument instances from staying
-	// around long after its PDFView has release it
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
 	[self destroy];
 
 	[super makeWindowControllers];
@@ -1009,8 +1005,6 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 								pPDFData = [NSMutableData dataWithCapacity:PDF_BUF_SIZE];
 								if ( pPDFData )
 								{
-									[pPDFData autorelease];
-
 									static const sal_uInt32 nBytes = 4096;
 									sal_Int32 nBytesRead;
 									uno::Sequence< ::sal_Int8 > aBytes( nBytes );
@@ -1125,8 +1119,6 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 			}
 		}
 	}
-
-	[pPool release];
 }
 
 @end
