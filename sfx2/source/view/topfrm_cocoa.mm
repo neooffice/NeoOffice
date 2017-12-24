@@ -970,6 +970,10 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (void)makeWindowControllers
 {
+	// Use an autorelease pool to prevent PDFDocument instances from staying
+	// around long after its PDFView has release it
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	[self destroy];
 
 	[super makeWindowControllers];
@@ -1121,6 +1125,8 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 			}
 		}
 	}
+
+	[pPool release];
 }
 
 @end
