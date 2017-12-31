@@ -2438,8 +2438,17 @@ void ScDocument::SetClipParam(const ScClipParam& rParam)
 
 bool ScDocument::IsClipboardSource() const
 {
+#ifndef NO_LIBO_BUG_108612_FIX
+    if (bIsClip)
+        return false;
+#endif	// !NO_LIBO_BUG_108612_FIX
+
     ScDocument* pClipDoc = SC_MOD()->GetClipDoc();
+#ifdef NO_LIBO_BUG_108612_FIX
     return pClipDoc && pClipDoc->xPoolHelper.is() &&
+#else	// NO_LIBO_BUG_108612_FIX
+    return pClipDoc && pClipDoc->bIsClip && pClipDoc->xPoolHelper.is() && xPoolHelper.is() &&
+#endif	// NO_LIBO_BUG_108612_FIX
             xPoolHelper->GetDocPool() == pClipDoc->xPoolHelper->GetDocPool();
 }
 
