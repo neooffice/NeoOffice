@@ -15,6 +15,13 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified January 2018 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <basegfx/matrix/b2dhommatrix.hxx>
@@ -311,6 +318,14 @@ void XMLShapeExport::collectShapeAutoStyles(const uno::Reference< drawing::XShap
                 // so do not skip it!
             }
         }
+#ifdef USE_JAVA
+        // Prevent crash in sd_export_tests unit test by skipping if xText is
+        // not set
+        else
+        {
+            bSkip = true;
+        }
+#endif	// USE_JAVA
         if (!bSkip)
 #endif	// NO_LIBO_BUG_102479_FIX
         {
