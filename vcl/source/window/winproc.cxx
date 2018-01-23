@@ -1465,14 +1465,7 @@ static bool ImplHandleWheelEvent( vcl::Window* pWindow, const SalWheelMouseEvent
     bool bAcceptableWheelScrollTarget = false;
     if (shouldReusePreviousMouseWindow(aPreviousEvent, rEvt))
     {
-        vcl::Window *pPreviousParentWindow = pPreviousWindow;
-        while (pPreviousParentWindow && pPreviousParentWindow->GetParent())
-            pPreviousParentWindow = pPreviousParentWindow->GetParent();
-
-        vcl::Window *pTopLevelWindow = Application::GetFirstTopLevelWindow();
-        while (pTopLevelWindow && pTopLevelWindow != pPreviousParentWindow)
-            pTopLevelWindow = Application::GetNextTopLevelWindow(pTopLevelWindow);
-        if (pTopLevelWindow != pPreviousParentWindow)
+        if (!ImplIsValidWindow(pPreviousWindow))
             pPreviousWindow = NULL;
 
         bAcceptableWheelScrollTarget = acceptableWheelScrollTarget(pPreviousWindow);
