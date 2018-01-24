@@ -62,6 +62,8 @@
 
 #include <com/sun/star/view/XViewSettingsSupplier.hpp>
 
+#include "printer.h"
+
 static const OUString sShowOnlineLayout( "ShowOnlineLayout" );
 
 #endif	// USE_JAVA
@@ -697,6 +699,12 @@ void SfxViewShell::ExecPrint( const uno::Sequence < beans::PropertyValue >& rPro
 
     // FIXME: job setup
     SfxPrinter* pDocPrt = GetPrinter(false);
+#ifdef USE_JAVA
+    // Attempt to fix Mac App Store crash by detecting if the printer has been
+    // deleted
+    if ( pDocPrt && !ImplIsValidSfxPrinter( pDocPrt ) )
+        pDocPrt = NULL;
+#endif	// USE_JAVA
     JobSetup aJobSetup = pDocPrt ? pDocPrt->GetJobSetup() : GetJobSetup();
     Printer::PrintJob( pController, aJobSetup );
 }
