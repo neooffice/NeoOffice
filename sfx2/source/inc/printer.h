@@ -36,8 +36,12 @@
 #ifndef INCLUDED_SFX2_SOURCE_INC_PRINTER_H
 #define INCLUDED_SFX2_SOURCE_INC_PRINTER_H
 
+#ifdef USE_JAVA
+
 #include <sfx2/printer.hxx>
 
 bool ImplIsValidSfxPrinter( const SfxPrinter *pPrinter );
+
+#endif	// USE_JAVA
 
 #endif	// INCLUDED_SFX2_SOURCE_INC_PRINTER_H
