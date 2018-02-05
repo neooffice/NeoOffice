@@ -881,7 +881,13 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
                 // use default printer from document
                 pPrinter = pDocPrinter;
 
+#ifdef USE_JAVA
+            // Attempt to fix Mac App Store crash by detecting if the printer
+            // has been deleted
+            if( !pPrinter || !ImplIsValidSfxPrinter( pPrinter ) || !pPrinter->IsValid() )
+#else	// USE_JAVA
             if( !pPrinter || !pPrinter->IsValid() )
+#endif	// USE_JAVA
             {
                 // no valid printer either in ItemSet or at the document
                 if ( !bSilent )
