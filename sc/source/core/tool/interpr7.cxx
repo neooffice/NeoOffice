@@ -11,9 +11,9 @@
 #include <rtl/strbuf.hxx>
 #include <formula/errorcodes.hxx>
 #include <svtools/miscopt.hxx>
-#ifndef NO_LIBO_CVE_2018_1055_FIX
+#ifndef NO_LIBO_CVE_2018_6871_FIX
 #include <tools/urlobj.hxx>
-#endif	// !NO_LIBO_CVE_2018_1055_FIX
+#endif	// !NO_LIBO_CVE_2018_6871_FIX
 
 #include <com/sun/star/ucb/XSimpleFileAccess3.hpp>
 #include <com/sun/star/ucb/SimpleFileAccess.hpp>
@@ -161,7 +161,7 @@ void ScInterpreter::ScWebservice()
             return;
         }
 
-#ifndef NO_LIBO_CVE_2018_1055_FIX
+#ifndef NO_LIBO_CVE_2018_6871_FIX
         INetURLObject aObj(aURI, INET_PROT_FILE);
         INetProtocol eProtocol = aObj.GetProtocol();
         if (eProtocol != INET_PROT_HTTP && eProtocol != INET_PROT_HTTPS)
@@ -169,7 +169,7 @@ void ScInterpreter::ScWebservice()
             PushError( errNoValue );
             return;
         }
-#endif	// !NO_LIBO_CVE_2018_1055_FIX
+#endif	// !NO_LIBO_CVE_2018_6871_FIX
 
         uno::Reference< ucb::XSimpleFileAccess3 > xFileAccess( ucb::SimpleFileAccess::create( comphelper::getProcessComponentContext() ), uno::UNO_QUERY );
         if(!xFileAccess.is())
