@@ -382,6 +382,11 @@ class SwHTMLParser : public SfxHTMLParser, public SwClient
     _HTMLAttrContexts aContexts;// der aktuelle Attribut/Token-Kontext
     SwHTMLFrmFmts   aMoveFlyFrms;// Fly-Frames, the anchor is moved
     std::deque<sal_Int32> aMoveFlyCnts;// and the Content-Positions
+#ifndef NO_LIBO_HTML_TABLE_LEAK_FIX
+    //stray SwTableBoxes which need to be deleted to avoid leaking, but hold
+    //onto them until parsing is done
+    std::vector<std::unique_ptr<SwTableBox>> m_aOrphanedTableBoxes;
+#endif	// !NO_LIBO_HTML_TABLE_LEAK_FIX
 
     SwApplet_Impl *pAppletImpl; // das aktuelle Applet
 
@@ -396,6 +401,9 @@ class SwHTMLParser : public SfxHTMLParser, public SwClient
     SwNodeIndex     *pSttNdIdx;
 
     HTMLTable       *pTable;    // die aktuelle "auesserste" Tabelle
+#ifndef NO_LIBO_HTML_TABLE_LEAK_FIX
+    std::vector<HTMLTable*> m_aTables;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     SwHTMLForm_Impl *pFormImpl;// die aktuelle Form
     SdrObject       *pMarquee;  // aktuelles Marquee
 #ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
@@ -909,6 +917,16 @@ public:
     virtual bool ParseMetaOptions( const ::com::sun::star::uno::Reference<
                 ::com::sun::star::document::XDocumentProperties>&,
             SvKeyValueIterator* ) SAL_OVERRIDE;
+
+
+#ifndef NO_LIBO_HTML_TABLE_LEAK_FIX
+    void RegisterHTMLTable(HTMLTable* pNew)
+    {
+        m_aTables.push_back(pNew);
+    }
+
+    void DeregisterHTMLTable(HTMLTable* pOld);
+#endif	// !NO_LIBO_HTML_TABLE_LEAK_FIX
 };
 
 struct SwPendingStackData
