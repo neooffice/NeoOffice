@@ -667,6 +667,7 @@ void SwHTMLParser::Continue( int nToken )
             while( GetNumInfo().GetNumRule() )
                 EndNumBulList();
 
+#ifdef NO_LIBO_HTML_CONTEXT_LEAK_FIX
             OSL_ENSURE( !nContextStMin, "Es gibt geschuetzte Kontexte" );
             nContextStMin = 0;
             while( aContexts.size() )
@@ -678,6 +679,24 @@ void SwHTMLParser::Continue( int nToken )
                     delete pCntxt;
                 }
             }
+#else	// NO_LIBO_HTML_CONTEXT_LEAK_FIX
+            // try this twice, first normally to let nContextStMin decrease
+            // naturally and get contexts popped in desired order, and if that
+            // fails force it
+            for (int i = 0; i < 2; ++i)
+            {
+                while (aContexts.size() > nContextStMin)
+                {
+                    std::unique_ptr<_HTMLAttrContext> xCntxt(PopContext());
+                    if (xCntxt)
+                        EndContext(xCntxt.get());
+                }
+                if (!nContextStMin)
+                    break;
+                OSL_ENSURE(!nContextStMin, "There are still protected contexts");
+                nContextStMin = 0;
+            }
+#endif	// NO_LIBO_HTML_CONTEXT_LEAK_FIX
 
             if( !aParaAttrs.empty() )
                 aParaAttrs.clear();
