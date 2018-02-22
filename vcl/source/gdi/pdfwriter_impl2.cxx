@@ -1723,10 +1723,16 @@ inline bool isSet( const Scanline i_pLine, long i_nIndex )
     return (i_pLine[ i_nIndex/8 ] & (0x80 >> (i_nIndex&7))) != 0;
 }
 
+#ifdef NO_LIBO_FINDBITRUN_FIX
 long findBitRun( const Scanline i_pLine, long i_nStartIndex, long i_nW, bool i_bSet )
+#else	// NO_LIBO_FINDBITRUN_FIX
+long findBitRunImpl( const Scanline i_pLine, long i_nStartIndex, long i_nW, bool i_bSet )
+#endif	// NO_LIBO_FINDBITRUN_FIX
 {
+#ifdef NO_LIBO_FINDBITRUN_FIX
     if( i_nStartIndex < 0 )
         return i_nW;
+#endif	// NO_LIBO_FINDBITRUN_FIX
 
     long nIndex = i_nStartIndex;
     if( nIndex < i_nW )
@@ -1788,6 +1794,28 @@ long findBitRun( const Scanline i_pLine, long i_nStartIndex, long i_nW, bool i_b
     }
     return nIndex < i_nW ? nIndex : i_nW;
 }
+
+#ifndef NO_LIBO_FINDBITRUN_FIX
+
+long findBitRun(const Scanline i_pLine, long i_nStartIndex, long i_nW, bool i_bSet)
+{
+    if (i_nStartIndex < 0)
+        return i_nW;
+
+    return findBitRunImpl(i_pLine, i_nStartIndex, i_nW, i_bSet);
+}
+
+long findBitRun(const Scanline i_pLine, long i_nStartIndex, long i_nW)
+{
+    if (i_nStartIndex < 0)
+        return i_nW;
+
+    const bool bSet = i_nStartIndex < i_nW && isSet(i_pLine, i_nStartIndex);
+
+    return findBitRunImpl(i_pLine, i_nStartIndex, i_nW, bSet);
+}
+
+#endif	// !NO_LIBO_FINDBITRUN_FIX
 
 struct BitStreamState
 {
@@ -2092,7 +2120,11 @@ void PDFWriterImpl::writeG4Stream( BitmapReadAccess* i_pBitmap )
         long nRefIndex1 = bRefSet ? 0 : findBitRun( pRefLine, 0, nW, bRefSet );
         for( ; nLineIndex < nW; )
         {
+#ifdef NO_LIBO_FINDBITRUN_FIX
             long nRefIndex2 = findBitRun( pRefLine, nRefIndex1, nW, isSet( pRefLine, nRefIndex1 ) );
+#else	// NO_LIBO_FINDBITRUN_FIX
+            long nRefIndex2 = findBitRun( pRefLine, nRefIndex1, nW );
+#endif	// NO_LIBO_FINDBITRUN_FIX
             if( nRefIndex2 >= nRunIndex1 )
             {
                 long nDiff = nRefIndex1 - nRunIndex1;
@@ -2122,7 +2154,11 @@ void PDFWriterImpl::writeG4Stream( BitmapReadAccess* i_pBitmap )
                 {   // difference too large, horizontal coding
                     // emit horz code 001
                     putG4Bits( 3, 0x1, aBitState );
+#ifdef NO_LIBO_FINDBITRUN_FIX
                     long nRunIndex2 = findBitRun( pCurLine, nRunIndex1, nW, isSet( pCurLine, nRunIndex1 ) );
+#else	// NO_LIBO_FINDBITRUN_FIX
+                    long nRunIndex2 = findBitRun( pCurLine, nRunIndex1, nW );
+#endif	// NO_LIBO_FINDBITRUN_FIX
                     bool bWhiteFirst = ( nLineIndex + nRunIndex1 == 0 || ! isSet( pCurLine, nLineIndex ) );
                     putG4Span( nRunIndex1 - nLineIndex, bWhiteFirst, aBitState );
                     putG4Span( nRunIndex2 - nRunIndex1, ! bWhiteFirst, aBitState );
