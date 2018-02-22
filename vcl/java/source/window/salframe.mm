@@ -1415,7 +1415,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			if ( mbUndecorated && !mbShowOnlyMenus && !mbFullScreen )
 			{
 				[(VCLPanel *)mpWindow setBecomesKeyOnlyIfNeeded:NO];
-				[(VCLPanel *)mpWindow setCanBecomeKeyWindow:NO];
+				[(VCLPanel *)mpWindow setCanBecomeKeyWindow:mnStyle & SAL_FRAME_STYLE_FLOAT_FOCUSABLE ? YES : NO];
 			}
 			else if ( mbUtility )
 			{
@@ -1926,9 +1926,9 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		[self adjustColorLevelAndShadow];
 
 		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
-			[(VCLPanel *)mpWindow setCanBecomeKeyWindow:mbFullScreen];
+			[(VCLPanel *)mpWindow setCanBecomeKeyWindow:( mbFullScreen || mnStyle & SAL_FRAME_STYLE_FLOAT_FOCUSABLE ) ? YES : NO];
 		else
-			[(VCLWindow *)mpWindow setCanBecomeKeyWindow:mbFullScreen];
+			[(VCLWindow *)mpWindow setCanBecomeKeyWindow:( mbFullScreen || mnStyle & SAL_FRAME_STYLE_FLOAT_FOCUSABLE ) ? YES : NO];
 	}
 }
 
@@ -3131,7 +3131,7 @@ bool JavaSalFrame::Deminimize()
 
 bool JavaSalFrame::IsFloatingFrame()
 {
-	return ( ! ( mnStyle & ( SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE ) ) && this != GetSalData()->mpPresentationFrame && !mbShowOnlyMenus );
+	return ( ! ( mnStyle & ( SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE | SAL_FRAME_STYLE_FLOAT_FOCUSABLE ) ) && this != GetSalData()->mpPresentationFrame && !mbShowOnlyMenus );
 }
 
 // -----------------------------------------------------------------------
