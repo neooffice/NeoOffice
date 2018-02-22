@@ -53,7 +53,9 @@
 #include <tools/urlobj.hxx>
 #include <vcl/window.hxx>
 
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
+
+#ifdef MACOSX
 
 #include <osl/file.hxx>
 #include <vcl/sysdata.hxx>
@@ -61,7 +63,11 @@
 
 #include "topfrm_cocoa.hxx"
 
-#endif	// USE_JAVA && MACOSX
+#endif	// MACOSX
+
+#include "shell.h"
+
+#endif	// USE_JAVA
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -378,7 +384,13 @@ void SfxViewFrame::GetState_Impl( SfxItemSet &rSet )
                 break;
 
             case SID_OBJECT:
+#ifdef USE_JAVA
+                // Attempt to fix Mac App Store crash by detecting if the
+                // view shell has been deleted
+                if ( ImplIsValidSfxShell( GetViewShell() ) && GetViewShell()->GetVerbs().getLength() && !GetObjectShell()->IsInPlaceActive() )
+#else	// USE_JAVA
                 if ( GetViewShell() && GetViewShell()->GetVerbs().getLength() && !GetObjectShell()->IsInPlaceActive() )
+#endif	// USE_JAVA
                 {
                     uno::Any aAny;
                     aAny <<= GetViewShell()->GetVerbs();
