@@ -443,9 +443,19 @@ void SfxPrinterController::jobFinished( com::sun::star::view::PrintableState nSt
                     pDocPrt->SetJobSetup( getPrinter()->GetJobSetup() );
                 else
                 {
+#ifdef USE_JAVA
+                    // Attempt to fix Mac App Store crash by checking if the
+                    // printer's options pointer is NULL
+                    const SfxItemSet *pOptions = &pDocPrt->GetOptions();
+                    if ( pOptions )
+                    {
+#endif	// USE_JAVA
                     SfxPrinter* pNewPrt = new SfxPrinter( pDocPrt->GetOptions().Clone(), getPrinter()->GetName() );
                     pNewPrt->SetJobSetup( getPrinter()->GetJobSetup() );
                     mpViewShell->SetPrinter( pNewPrt, SFX_PRINTER_PRINTER | SFX_PRINTER_JOBSETUP );
+#ifdef USE_JAVA
+                    }
+#endif	// USE_JAVA
                 }
             }
         }
