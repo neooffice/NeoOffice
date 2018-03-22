@@ -971,7 +971,13 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 
                 if ( nDialogRet == RET_OK )
                 {
+#ifdef USE_JAVA
+                    // Attempt to fix Mac App Store crash by checking if the
+                    // printer names are valid strings
+                    if ( pPrinter->GetName().pData && pDlgPrinter->GetName().pData && pPrinter->GetName() != pDlgPrinter->GetName() )
+#else	// USE_JAVA
                     if ( pPrinter->GetName() != pDlgPrinter->GetName() )
+#endif	// USE_JAVA
                     {
                         // user has changed the printer -> macro recording
                         SfxRequest aReq( GetViewFrame(), SID_PRINTER_NAME );
