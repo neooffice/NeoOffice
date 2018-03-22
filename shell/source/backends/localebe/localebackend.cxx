@@ -25,10 +25,19 @@
  */
 
 
+#ifndef NO_LIBO_OPTIONAL_LOCALE_FIX
+#include <sal/config.h>
+
+#include <limits>
+#endif	// !NO_LIBO_OPTIONAL_LOCALE_FIX
+
 #include "localebackend.hxx"
 #include <com/sun/star/beans/Optional.hpp>
 #include <cppuhelper/supportsservice.hxx>
 #include <osl/time.h>
+#ifndef NO_LIBO_OPTIONAL_LOCALE_FIX
+#include <rtl/character.hxx>
+#endif	// !NO_LIBO_OPTIONAL_LOCALE_FIX
 
 #include <stdio.h>
 
@@ -41,7 +50,11 @@
 #pragma warning(pop)
 #endif
 
+#ifdef NO_LIBO_OPTIONAL_LOCALE_FIX
 OUString ImplGetLocale(LCID lcid)
+#else	// NO_LIBO_OPTIONAL_LOCALE_FIX
+css::beans::Optional<css::uno::Any> ImplGetLocale(LCID lcid)
+#endif	// NO_LIBO_OPTIONAL_LOCALE_FIX
 {
     TCHAR buffer[8];
     LPTSTR cp = buffer;
@@ -53,10 +66,18 @@ OUString ImplGetLocale(LCID lcid)
             // #i50822# minus character must be written before cp
             *(cp - 1) = '-';
 
+#ifdef NO_LIBO_OPTIONAL_LOCALE_FIX
         return OUString::createFromAscii(buffer);
+#else	// NO_LIBO_OPTIONAL_LOCALE_FIX
+        return {true, css::uno::Any(OUString::createFromAscii(buffer))};
+#endif	// NO_LIBO_OPTIONAL_LOCALE_FIX
     }
 
+#ifdef NO_LIBO_OPTIONAL_LOCALE_FIX
     return OUString();
+#else	// NO_LIBO_OPTIONAL_LOCALE_FIX
+    return {false, {}};
+#endif	// NO_LIBO_OPTIONAL_LOCALE_FIX
 }
 
 #elif defined(MACOSX)
@@ -121,7 +142,11 @@ namespace /* private */
         return CFLocaleCreateCanonicalLocaleIdentifierFromString(kCFAllocatorDefault, sref);
     }
 
+#ifdef NO_LIBO_OPTIONAL_LOCALE_FIX
     OUString ImplGetLocale(const char* pref)
+#else	// NO_LIBO_OPTIONAL_LOCALE_FIX
+    css::beans::Optional<css::uno::Any> ImplGetLocale(const char* pref)
+#endif	// NO_LIBO_OPTIONAL_LOCALE_FIX
     {
         CFStringRef sref = ImplGetAppPreference(pref);
         CFStringGuard srefGuard(sref);
@@ -194,7 +219,11 @@ namespace /* private */
                 }
             }
         }
+#ifdef NO_LIBO_OPTIONAL_LOCALE_FIX
         return aLocaleBuffer.makeStringAndClear();
+#else	// NO_LIBO_OPTIONAL_LOCALE_FIX
+        return {true, css::uno::Any(aLocaleBuffer.makeStringAndClear())};
+#endif	// NO_LIBO_OPTIONAL_LOCALE_FIX
     }
 
 } // namespace /* private */
@@ -211,13 +240,21 @@ namespace /* private */
  * is called from the main thread only.
  */
 
+#ifdef NO_LIBO_OPTIONAL_LOCALE_FIX
 static OUString ImplGetLocale(int category)
+#else	// NO_LIBO_OPTIONAL_LOCALE_FIX
+static css::beans::Optional<css::uno::Any> ImplGetLocale(char const * category)
+#endif	// NO_LIBO_OPTIONAL_LOCALE_FIX
 {
     const char *locale = setlocale(category, "");
 
     // Return "en-US" for C locales
     if( (locale == NULL) || ( locale[0] == 'C' && locale[1] == '\0' ) )
+#ifdef NO_LIBO_OPTIONAL_LOCALE_FIX
         return OUString( "en-US"  );
+#else	// NO_LIBO_OPTIONAL_LOCALE_FIX
+        return {true, css::uno::Any(OUString("en-US"))};
+#endif	// NO_LIBO_OPTIONAL_LOCALE_FIX
 
 
     const char *cp;
@@ -232,6 +269,16 @@ static OUString ImplGetLocale(int category)
             uscore = cp;
         if (*cp == '.' || *cp == '@')
             break;
+#ifndef NO_LIBO_OPTIONAL_LOCALE_FIX
+        if (!rtl::isAscii(static_cast<unsigned char>(*cp))) {
+            SAL_INFO("shell", "locale env var with non-ASCII content");
+            return {false, {}};
+        }
+    }
+    if (cp - locale > std::numeric_limits<sal_Int32>::max()) {
+        SAL_INFO("shell", "locale env var content too long");
+        return {false, {}};
+#endif	// !NO_LIBO_OPTIONAL_LOCALE_FIX
     }
 
     OUStringBuffer aLocaleBuffer;
@@ -246,7 +293,11 @@ static OUString ImplGetLocale(int category)
         aLocaleBuffer.appendAscii(locale, cp - locale);
     }
 
+#ifdef NO_LIBO_OPTIONAL_LOCALE_FIX
     return aLocaleBuffer.makeStringAndClear();
+#else	// NO_LIBO_OPTIONAL_LOCALE_FIX
+    return {true, css::uno::Any(aLocaleBuffer.makeStringAndClear())};
+#endif	// NO_LIBO_OPTIONAL_LOCALE_FIX
 }
 
 #endif
@@ -272,7 +323,11 @@ LocaleBackend* LocaleBackend::createInstance()
 
 
 
+#ifdef NO_LIBO_OPTIONAL_LOCALE_FIX
 OUString LocaleBackend::getLocale(void)
+#else	// NO_LIBO_OPTIONAL_LOCALE_FIX
+css::beans::Optional<css::uno::Any> LocaleBackend::getLocale()
+#endif	// NO_LIBO_OPTIONAL_LOCALE_FIX
 {
 #if defined WNT
     return ImplGetLocale( GetUserDefaultLCID() );
@@ -285,7 +340,11 @@ OUString LocaleBackend::getLocale(void)
 
 
 
+#ifdef NO_LIBO_OPTIONAL_LOCALE_FIX
 OUString LocaleBackend::getUILocale(void)
+#else	// NO_LIBO_OPTIONAL_LOCALE_FIX
+css::beans::Optional<css::uno::Any> LocaleBackend::getUILocale()
+#endif	// NO_LIBO_OPTIONAL_LOCALE_FIX
 {
 #if defined WNT
     return ImplGetLocale( MAKELCID(GetUserDefaultUILanguage(), SORT_DEFAULT) );
@@ -298,7 +357,11 @@ OUString LocaleBackend::getUILocale(void)
 
 
 
+#ifdef NO_LIBO_OPTIONAL_LOCALE_FIX
 OUString LocaleBackend::getSystemLocale(void)
+#else	// NO_LIBO_OPTIONAL_LOCALE_FIX
+css::beans::Optional<css::uno::Any> LocaleBackend::getSystemLocale()
+#endif	// NO_LIBO_OPTIONAL_LOCALE_FIX
 {
 // note: the implementation differs from getLocale() only on Windows
 #if defined WNT
@@ -329,19 +392,31 @@ css::uno::Any LocaleBackend::getPropertyValue(
         css::uno::RuntimeException, std::exception)
 {
     if ( PropertyName == "Locale" ) {
+#ifdef NO_LIBO_OPTIONAL_LOCALE_FIX
         return css::uno::makeAny(
             css::beans::Optional< css::uno::Any >(
                 true, css::uno::makeAny(getLocale())));
+#else	// NO_LIBO_OPTIONAL_LOCALE_FIX
+        return css::uno::Any(getLocale());
+#endif	// NO_LIBO_OPTIONAL_LOCALE_FIX
     } else if (PropertyName.equals("SystemLocale"))
     {
+#ifdef NO_LIBO_OPTIONAL_LOCALE_FIX
         return css::uno::makeAny(
             css::beans::Optional< css::uno::Any >(
                 true, css::uno::makeAny(getSystemLocale())));
+#else	// NO_LIBO_OPTIONAL_LOCALE_FIX
+        return css::uno::Any(getSystemLocale());
+#endif	// NO_LIBO_OPTIONAL_LOCALE_FIX
     } else if (PropertyName.equals("UILocale"))
     {
+#ifdef NO_LIBO_OPTIONAL_LOCALE_FIX
         return css::uno::makeAny(
             css::beans::Optional< css::uno::Any >(
                 true, css::uno::makeAny(getUILocale())));
+#else	// NO_LIBO_OPTIONAL_LOCALE_FIX
+        return css::uno::Any(getUILocale());
+#endif	// NO_LIBO_OPTIONAL_LOCALE_FIX
     } else {
         throw css::beans::UnknownPropertyException(
             PropertyName, static_cast< cppu::OWeakObject * >(this));
