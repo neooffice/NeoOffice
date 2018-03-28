@@ -4094,6 +4094,10 @@ SdrObject* SvxMSDffManager::ImportGroup( const DffRecordHeader& rHd, SvStream& r
                         if( nShapeId )
                             insertShapeId( nShapeId, pTmp );
                     }
+#ifndef NO_LIBO_SHAPE_LEAK_FIX
+                    else if (pTmp)
+                        SdrObject::Free(pTmp);
+#endif	// !NO_LIBO_SHAPE_LEAK_FIX
                 }
                 else if ( aRecHd2.nRecType == DFF_msofbtSpContainer )
                 {
@@ -4107,6 +4111,10 @@ SdrObject* SvxMSDffManager::ImportGroup( const DffRecordHeader& rHd, SvStream& r
                         if( nShapeId )
                             insertShapeId( nShapeId, pTmp );
                     }
+#ifndef NO_LIBO_SHAPE_LEAK_FIX
+                    else if (pTmp)
+                        SdrObject::Free(pTmp);
+#endif	// !NO_LIBO_SHAPE_LEAK_FIX
                 }
                 if (!aRecHd2.SeekToEndOfRecord(rSt))
                     return pRet;
