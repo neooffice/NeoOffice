@@ -400,8 +400,10 @@ class SwHTMLParser : public SfxHTMLParser, public SwClient
                                         // gerufen wurde.
     SwNodeIndex     *pSttNdIdx;
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     HTMLTable       *pTable;    // die aktuelle "auesserste" Tabelle
-#ifndef NO_LIBO_HTML_TABLE_LEAK_FIX
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    std::shared_ptr<HTMLTable> m_xTable; // current "outermost" table
     std::vector<HTMLTable*> m_aTables;
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     SwHTMLForm_Impl *pFormImpl;// die aktuelle Form
@@ -846,7 +848,11 @@ private:
     void BuildTableSection( HTMLTable *pTable, bool bReadOptions, bool bHead );
     void BuildTableColGroup( HTMLTable *pTable, bool bReadOptions );
     void BuildTableCaption( HTMLTable *pTable );
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     HTMLTable *BuildTable( SvxAdjust eCellAdjust,
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    std::shared_ptr<HTMLTable> BuildTable(SvxAdjust eCellAdjust,
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                            bool bIsParentHead = false,
                            bool bHasParentSection=true,
                            bool bHasToFlow = false );

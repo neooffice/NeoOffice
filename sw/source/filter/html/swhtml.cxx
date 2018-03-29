@@ -250,7 +250,9 @@ SwHTMLParser::SwHTMLParser( SwDoc* pD, SwPaM& rCrsr, SvStream& rIn,
     pDoc( pD ),
     pActionViewShell( 0 ),
     pSttNdIdx( 0 ),
+#ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
     pTable(0),
+#endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
     pFormImpl( 0 ),
     pMarquee( 0 ),
 #ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
@@ -461,7 +463,11 @@ SwHTMLParser::~SwHTMLParser()
     DeleteFormImpl();
     DeleteFootEndNoteImpl();
 
+#ifdef NO_LIBO_HTML_CONTEXT_LEAK_FIX
     OSL_ENSURE( !pTable, "Es existiert noch eine offene Tabelle" );
+#else	// NO_LIBO_HTML_CONTEXT_LEAK_FIX
+    OSL_ENSURE(!m_xTable.get(), "It exists still a open table");
+#endif	// NO_LIBO_HTML_CONTEXT_LEAK_FIX
     delete pImageMaps;
 
     OSL_ENSURE( !pPendStack,
@@ -1408,20 +1414,32 @@ void SwHTMLParser::NextToken( int nToken )
     case HTML_OBJECT_ON:
 #if HAVE_FEATURE_JAVA
         NewObject();
+#ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
         bCallNextToken = pAppletImpl!=0 && pTable!=0;
+#else	// NO_LIBO_HTML_FIELD_LEAK_FIX
+        bCallNextToken = pAppletImpl!=nullptr && m_xTable;
+#endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
 #endif
         break;
 
     case HTML_APPLET_ON:
 #if HAVE_FEATURE_JAVA
         InsertApplet();
+#ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
         bCallNextToken = pAppletImpl!=0 && pTable!=0;
+#else	// NO_LIBO_HTML_FIELD_LEAK_FIX
+        bCallNextToken = pAppletImpl!=nullptr && m_xTable;
+#endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
 #endif
         break;
 
     case HTML_IFRAME_ON:
         InsertFloatingFrame();
+#ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
         bCallNextToken = bInFloatingFrame && pTable!=0;
+#else	// NO_LIBO_HTML_FIELD_LEAK_FIX
+        bCallNextToken = bInFloatingFrame && m_xTable;
+#endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
         break;
 
     case HTML_LINEBREAK:
@@ -1461,7 +1479,11 @@ void SwHTMLParser::NextToken( int nToken )
     case HTML_LINEFEEDCHAR:
         if( pPam->GetPoint()->nContent.GetIndex() )
             AppendTxtNode();
+#ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
         if( !pTable && !pDoc->IsInHeaderFooter( pPam->GetPoint()->nNode ) )
+#else	// NO_LIBO_HTML_FIELD_LEAK_FIX
+        if (!m_xTable && !pDoc->IsInHeaderFooter(pPam->GetPoint()->nNode))
+#endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
         {
             NewAttr( &aAttrTab.pBreak, SvxFmtBreakItem(SVX_BREAK_PAGE_BEFORE, RES_BREAK) );
             EndAttr( aAttrTab.pBreak, 0, false );
@@ -1531,7 +1553,11 @@ void SwHTMLParser::NextToken( int nToken )
 
     case HTML_NOEMBED_ON:
         bInNoEmbed = true;
+#ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
         bCallNextToken = pTable!=0;
+#else	// NO_LIBO_HTML_FIELD_LEAK_FIX
+        bCallNextToken = bool(m_xTable);
+#endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
         ReadRawData( OOO_STRING_SVTOOLS_HTML_noembed );
         break;
 
@@ -1602,7 +1628,11 @@ void SwHTMLParser::NextToken( int nToken )
 
     case HTML_MARQUEE_ON:
         NewMarquee();
+#ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
         bCallNextToken = pMarquee!=0 && pTable!=0;
+#else	// NO_LIBO_HTML_FIELD_LEAK_FIX
+        bCallNextToken = pMarquee!=nullptr && m_xTable;
+#endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
         break;
 
     case HTML_FORM_ON:
@@ -1699,8 +1729,13 @@ void SwHTMLParser::NextToken( int nToken )
         {
             if( nOpenParaToken )
                 EndPara();
+#ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
             OSL_ENSURE( !pTable, "table in table not allowed here" );
             if( !pTable && (IsNewDoc() || !pPam->GetNode().FindTableNode()) &&
+#else	// NO_LIBO_HTML_FIELD_LEAK_FIX
+            OSL_ENSURE(!m_xTable.get(), "table in table not allowed here");
+            if( !m_xTable && (IsNewDoc() || !pPam->GetNode().FindTableNode()) &&
+#endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
                 (pPam->GetPoint()->nNode.GetIndex() >
                             pDoc->GetNodes().GetEndOfExtras().GetIndex() ||
                 !pPam->GetNode().FindFootnoteStartNode() ) )
@@ -1878,7 +1913,11 @@ void SwHTMLParser::NextToken( int nToken )
 
     case HTML_SDFIELD_ON:
         NewField();
+#ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
         bCallNextToken = bInField && pTable!=0;
+#else	// NO_LIBO_HTML_FIELD_LEAK_FIX
+        bCallNextToken = bInField && m_xTable;
+#endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
         break;
 
     case HTML_EMPHASIS_OFF:
@@ -1945,12 +1984,20 @@ void SwHTMLParser::NextToken( int nToken )
 
     case HTML_TEXTAREA_ON:
         NewTextArea();
+#ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
         bCallNextToken = bTextArea && pTable!=0;
+#else	// NO_LIBO_HTML_FIELD_LEAK_FIX
+        bCallNextToken = bTextArea && m_xTable;
+#endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
         break;
 
     case HTML_SELECT_ON:
         NewSelect();
+#ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
         bCallNextToken = bSelect && pTable!=0;
+#else	// NO_LIBO_HTML_FIELD_LEAK_FIX
+        bCallNextToken = bSelect && m_xTable;
+#endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
         break;
 
     case HTML_ANCHOR_ON:
@@ -2403,7 +2450,11 @@ bool SwHTMLParser::AppendTxtNode( SwHTMLAppendMode eMode, bool bUpdateNum )
         }
     }
 
+#ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
     if( !pTable && !--nParaCnt )
+#else	// NO_LIBO_HTML_FIELD_LEAK_FIX
+    if (!m_xTable && !--nParaCnt)
+#endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
         Show();
 
     return bRet;
@@ -3979,7 +4030,11 @@ void SwHTMLParser::NewPara()
 
 void SwHTMLParser::EndPara( bool bReal )
 {
+#ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
     if( HTML_LI_ON==nOpenParaToken && pTable )
+#else	// NO_LIBO_HTML_FIELD_LEAK_FIX
+    if (HTML_LI_ON==nOpenParaToken && m_xTable)
+#endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
     {
 #if OSL_DEBUG_LEVEL > 0
         const SwNumRule *pNumRule = pPam->GetNode().GetTxtNode()->GetNumRule();
@@ -5349,7 +5404,11 @@ void SwHTMLParser::InsertHorzRule()
         // Sinn. Um zu Vermeiden, dass die Linie bei der Breitenberechnung
         // beruecksichtigt wird, bekommt sie aber trotzdem entsprechendes
         // LRSpace-Item verpasst.
+#ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
         if( !pTable )
+#else	// NO_LIBO_HTML_FIELD_LEAK_FIX
+        if (!m_xTable)
+#endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
         {
             // Laenge und Ausrichtung der Linie ueber Absatz-Einzuege "tuerken"
             long nBrowseWidth = GetCurrentBrowseWidth();
