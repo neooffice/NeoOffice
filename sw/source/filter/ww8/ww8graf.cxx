@@ -2617,7 +2617,17 @@ SwFrmFmt* SwWW8ImplReader::Read_GrafLayer( long nGrafAnchorCp )
     // #i21847#
     // Some shapes are set to *hidden*, don't import those ones.
     if (pRecord->bHidden)
+#ifndef NO_LIBO_SDROBJECT_LEAK_FIX
+    {
+        // remove old object from the Z-Order list
+        pMSDffManager->RemoveFromShapeOrder(pObject);
+        // and delete the object
+        SdrObject::Free(pObject);
+#endif	// !NO_LIBO_SDROBJECT_LEAK_FIX
         return 0;
+#ifndef NO_LIBO_SDROBJECT_LEAK_FIX
+    }
+#endif	// !NO_LIBO_SDROBJECT_LEAK_FIX
 
     sal_uInt16 nCount = pObject->GetUserDataCount();
     if(nCount)
