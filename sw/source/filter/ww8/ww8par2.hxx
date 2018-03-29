@@ -176,7 +176,11 @@ class WW8TabDesc: private boost::noncopyable
     WW8TabBandDesc* pFirstBand;
     WW8TabBandDesc* pActBand;
 
+#ifdef NO_LIBO_WW8_TABLE_LEAK_FIX
     SwPosition* pTmpPos;
+#else	// NO_LIBO_WW8_TABLE_LEAK_FIX
+    std::unique_ptr<SwPosition> m_xTmpPos;
+#endif	// NO_LIBO_WW8_TABLE_LEAK_FIX
 
     SwTableNode* pTblNd;            // table node
     const SwTableLines* pTabLines;  // row array of node

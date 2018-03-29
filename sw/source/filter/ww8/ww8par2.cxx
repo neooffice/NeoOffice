@@ -1755,7 +1755,9 @@ WW8TabDesc::WW8TabDesc(SwWW8ImplReader* pIoClass, WW8_CP nStartCp) :
     pIo(pIoClass),
     pFirstBand(0),
     pActBand(0),
+#ifdef NO_LIBO_WW8_TABLE_LEAK_FIX
     pTmpPos(0),
+#endif	// NO_LIBO_WW8_TABLE_LEAK_FIX
     pTblNd(0),
     pTabLines(0),
     pTabLine(0),
@@ -2400,7 +2402,11 @@ void WW8TabDesc::CreateSwTable(SvxULSpaceItem* pULSpaceItem)
     if (bInsNode)
         pIo->AppendTxtNode(*pPoint);
 
+#ifdef NO_LIBO_WW8_TABLE_LEAK_FIX
     pTmpPos = new SwPosition( *pIo->pPaM->GetPoint() );
+#else	// NO_LIBO_WW8_TABLE_LEAK_FIX
+    m_xTmpPos.reset(new SwPosition(*pIo->pPaM->GetPoint()));
+#endif	// NO_LIBO_WW8_TABLE_LEAK_FIX
 
     // The table is small: The number of columns is the lowest count of
     // columns of the origin, because inserting is faster than deleting.
@@ -2408,7 +2414,11 @@ void WW8TabDesc::CreateSwTable(SvxULSpaceItem* pULSpaceItem)
     // rows of a band can be duplicated easy.
     pTable = pIo->rDoc.InsertTable(
             SwInsertTableOptions( tabopts::HEADLINE_NO_BORDER, 0 ),
+#ifdef NO_LIBO_WW8_TABLE_LEAK_FIX
             *pTmpPos, nBands, nDefaultSwCols, eOri, 0, 0, false, true );
+#else	// NO_LIBO_WW8_TABLE_LEAK_FIX
+            *m_xTmpPos, nBands, nDefaultSwCols, eOri );
+#endif	// NO_LIBO_WW8_TABLE_LEAK_FIX
 
     OSL_ENSURE(pTable && pTable->GetFrmFmt(), "insert table failed");
     if (!pTable || !pTable->GetFrmFmt())
@@ -2429,7 +2439,11 @@ void WW8TabDesc::CreateSwTable(SvxULSpaceItem* pULSpaceItem)
     // contains a Pagedesc. If so that Pagedesc would be moved to the
     // row after the table, whats wrong. So delete and
     // set later to the table format.
+#ifdef NO_LIBO_WW8_TABLE_LEAK_FIX
     if (SwTxtNode *const pNd = pTmpPos->nNode.GetNode().GetTxtNode())
+#else	// NO_LIBO_WW8_TABLE_LEAK_FIX
+    if (SwTxtNode *const pNd = m_xTmpPos->nNode.GetNode().GetTxtNode())
+#endif	// NO_LIBO_WW8_TABLE_LEAK_FIX
     {
         if (const SfxItemSet* pSet = pNd->GetpSwAttrSet())
         {
@@ -2693,9 +2707,15 @@ void WW8TabDesc::ParkPaM()
 
 void WW8TabDesc::MoveOutsideTable()
 {
+#ifdef NO_LIBO_WW8_TABLE_LEAK_FIX
     OSL_ENSURE(pTmpPos && pIo, "I've forgotten where the table is anchored");
     if (pTmpPos && pIo)
         *pIo->pPaM->GetPoint() = *pTmpPos;
+#else	// NO_LIBO_WW8_TABLE_LEAK_FIX
+    OSL_ENSURE(m_xTmpPos.get() && pIo, "I've forgotten where the table is anchored");
+    if (m_xTmpPos && pIo)
+        *pIo->pPaM->GetPoint() = *m_xTmpPos;
+#endif	// NO_LIBO_WW8_TABLE_LEAK_FIX
 }
 
 void WW8TabDesc::FinishSwTable()
@@ -2709,7 +2729,11 @@ void WW8TabDesc::FinishSwTable()
     pIo->pCtrlStck->SetAttr( *pIo->pPaM->GetPoint(), 0, false);
 
     MoveOutsideTable();
+#ifdef NO_LIBO_WW8_TABLE_LEAK_FIX
     delete pTmpPos, pTmpPos = 0;
+#else	// NO_LIBO_WW8_TABLE_LEAK_FIX
+    m_xTmpPos.reset();
+#endif	// NO_LIBO_WW8_TABLE_LEAK_FIX
 
     aDup.Insert(*pIo->pPaM->GetPoint());
 
