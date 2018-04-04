@@ -1294,6 +1294,11 @@ const SwCntntFrm *SwLayoutFrm::GetCntntPos( Point& rPoint,
                 }
                 if ( !pCntnt )  // Somewhere down the road we have to start with one!
                 {
+#ifdef USE_JAVA
+                    // Attempt to fix Mac App Store crash by checking for a
+                    // NULL upper form
+                    if ( pStart->FindPageFrm()->GetUpper() )
+#endif	// USE_JAVA
                     pCntnt = pStart->FindPageFrm()->GetUpper()->ContainsCntnt();
                     while ( pCntnt && !pCntnt->IsInDocBody() )
                         pCntnt = pCntnt->GetNextCntntFrm();
@@ -1312,6 +1317,11 @@ const SwCntntFrm *SwLayoutFrm::GetCntntPos( Point& rPoint,
                     pCntnt = pStart->ContainsCntnt();
                 }
                 else // Somewhere down the road we have to start with one!
+#ifdef USE_JAVA
+                    // Attempt to fix Mac App Store crash by checking for a
+                    // NULL upper form
+                    if ( pStart->FindPageFrm()->GetUpper() )
+#endif	// USE_JAVA
                     pCntnt = pStart->FindPageFrm()->GetUpper()->ContainsCntnt();
             }
             pActual = pCntnt;
