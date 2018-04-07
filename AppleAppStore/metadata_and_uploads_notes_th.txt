@@ -24,19 +24,17 @@ What's New in this Version:
 Before you buy NeoOffice, please click on the "การสนับสนุน NeoOffice" link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would sometimes crash when loading extensions that have been imported from older versions of NeoOffice
-• NeoOffice would sometimes crash when opening WPG drawing files
-• NeoOffice would sometimes crash when scrolling using a mouse wheel
-• NeoOffice would sometimes crash when dragging a table in a presentation document
+• NeoOffice would sometimes crash when opening a word processing document
+• NeoOffice would sometimes crash when opening a .docx document
 • NeoOffice would sometimes crash when printing
-• NeoOffice would sometimes crash when undoing or redoing changes in a Writer document
-• NeoOffice would sometimes crash when deleting a form field
-• NeoOffice needed a LibreOffice security patch for a security vulnerability that affects Calc documents
+• NeoOffice would sometimes crash when opening HWP word processing files
+• NeoOffice would sometimes crash when selecting an image in a Writer document
+• NeoOffice would sometimes crash when loading your locale preferences
+• NeoOffice would sometimes crash when closing the Printer Options dialog
+• NeoOffice would sometimes crash when editing sections in a Writer document
 • NeoOffice would leak memory due to several LibreOffice bugs
-• NeoOffice would crash due to LibreOffice bug #108887
-• NeoOffice would sometimes crash when dragging comments in a presentation document
-• NeoOffice would sometimes crash when opening a spreadsheet document
-• NeoOffice would not allow editing of comments in presentation documents
+• NeoOffice would sometimes crash when repaginating a Writer document
+• NeoOffice would sometimes crash when saving a Writer document
 
 
 Keywords:
