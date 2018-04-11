@@ -15,6 +15,13 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified April 2018 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "hintids.hxx"
@@ -4453,6 +4460,12 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                                         ? RES_POOLCOLL_TABLE_HDLN
                                         : RES_POOLCOLL_TABLE ));
+#ifdef USE_JAVA
+        // Attempt to fix Mac App Store crash by checking if starting node is
+        // NULL
+        if ( pStNd )
+        {
+#endif	// USE_JAVA
         const SwEndNode *pEndNd = pStNd->EndOfSectionNode();
         SwCntntNode *pCNd = pDoc->GetNodes()[pEndNd->GetIndex()-1] ->GetCntntNode();
         //Added defaults to CJK and CTL
@@ -4470,6 +4483,9 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
         xSaveStruct->AddContents( new HTMLTableCnts(pStNd) );
         xSaveStruct->ClearIsInSection();
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
+#ifdef USE_JAVA
+        }
+#endif	// USE_JAVA
     }
 
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
