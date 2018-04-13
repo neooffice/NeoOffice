@@ -74,6 +74,14 @@
 #include <touch/touch.h>
 #endif
 
+#ifdef USE_JAVA
+
+#include "crsrsh.h"
+
+static ::boost::unordered_map< const SwCrsrShell*, const SwCrsrShell* > aCrsrShellMap;
+
+#endif	// USE_JAVA
+
 using namespace com::sun::star;
 using namespace util;
 
@@ -2675,6 +2683,10 @@ SwCrsrShell::SwCrsrShell( SwCrsrShell& rShell, vcl::Window *pInitWin )
 #if defined(ANDROID) || defined(IOS)
     HideCrsr();
 #endif
+
+#ifdef USE_JAVA
+    aCrsrShellMap[ this ] = this;
+#endif	// USE_JAVA
 }
 
 /// default constructor
@@ -2726,10 +2738,20 @@ SwCrsrShell::SwCrsrShell( SwDoc& rDoc, vcl::Window *pInitWin,
 #if defined(ANDROID) || defined(IOS)
     HideCrsr();
 #endif
+
+#ifdef USE_JAVA
+    aCrsrShellMap[ this ] = this;
+#endif	// USE_JAVA
 }
 
 SwCrsrShell::~SwCrsrShell()
 {
+#ifdef USE_JAVA
+    ::boost::unordered_map< const SwCrsrShell*, const SwCrsrShell* >::iterator it = aCrsrShellMap.find( this );
+    if ( it != aCrsrShellMap.end() )
+        aCrsrShellMap.erase( it );
+#endif	// USE_JAVA
+
     // if it is not the last view then at least the field should be updated
     if( GetNext() != this )
         CheckTblBoxCntnt( m_pCurCrsr->GetPoint() );
@@ -3546,5 +3568,15 @@ void SwCrsrShell::GetSmartTagTerm( const Point& rPt, SwRect& rSelectRect,
         }
     }
 }
+
+#ifdef USE_JAVA
+
+bool ImplIsValidSwCrsrShell( const SwCrsrShell *pCrsrShell )
+{
+    ::boost::unordered_map< const SwCrsrShell*, const SwCrsrShell* >::const_iterator it = aCrsrShellMap.find( pCrsrShell );
+    return ( it != aCrsrShellMap.end() ? true : false );
+}
+
+#endif	// USE_JAVA
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
