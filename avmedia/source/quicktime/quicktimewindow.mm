@@ -326,7 +326,6 @@ void Window::setFocus() throw( RuntimeException )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setFocus:) withObject:(id)mpMoviePlayer waitUntilDone:YES modes:pModes];
-		mpMoviePlayer = NULL;
 	}
 }
 
