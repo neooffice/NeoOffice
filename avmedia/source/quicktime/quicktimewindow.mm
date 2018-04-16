@@ -56,27 +56,16 @@ namespace quicktime
 
 // ----------------------------------------------------------------------------
 
-Window* Window::findWindowAndLockSolarMutex( void* pMoviePlayer )
+Window* Window::findWindow( const void* pMoviePlayer )
 {
 	Window *pRet = NULL;
 
-	if ( !Application::IsShutDown() )
+	for ( ::std::list< Window* >::const_iterator it = Window::maWindows.begin(); it != Window::maWindows.end(); ++it )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
+		if ( (*it)->mpMoviePlayer == pMoviePlayer )
 		{
-			for ( ::std::list< Window* >::const_iterator it = Window::maWindows.begin(); it != Window::maWindows.end(); ++it )
-			{
-				if ( (*it)->mpMoviePlayer == pMoviePlayer )
-				{
-					pRet = *it;
-					break;
-				}
-			}
-
-			if ( !pRet )
-				rSolarMutex.release();
+			pRet = *it;
+			break;
 		}
 	}
 
@@ -85,17 +74,10 @@ Window* Window::findWindowAndLockSolarMutex( void* pMoviePlayer )
 
 // ----------------------------------------------------------------------------
 
-void Window::releaseSolarMutex()
+IMPL_STATIC_LINK_NOINSTANCE( Window, fireFocusGainedEvent, void*, pEvtData )
 {
-	comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-	rSolarMutex.release();
-}
-
-// ----------------------------------------------------------------------------
-
-void Window::fireFocusGainedEvent( void* pMoviePlayer, const ::com::sun::star::awt::FocusEvent& rEvt )
-{
-	Window *pWindow = Window::findWindowAndLockSolarMutex( pMoviePlayer );
+	FocusEventData *pFocusEvtData = static_cast< FocusEventData* >( pEvtData );
+	Window *pWindow = Window::findWindow( pFocusEvtData->mpMoviePlayer );
 	if ( pWindow )
 	{
 		OInterfaceContainerHelper* pContainer = pWindow->maListeners.getContainer( getCppuType( (Reference< XFocusListener >*)0 ) );
@@ -103,18 +85,20 @@ void Window::fireFocusGainedEvent( void* pMoviePlayer, const ::com::sun::star::a
 		{
 			OInterfaceIteratorHelper aIterator( *pContainer );
 			while ( aIterator.hasMoreElements() )
-				Reference< XFocusListener >( aIterator.next(), UNO_QUERY )->focusGained( rEvt );
+				Reference< XFocusListener >( aIterator.next(), UNO_QUERY )->focusGained( pFocusEvtData->maFocusEvent );
 		}
-
-		Window::releaseSolarMutex();
 	}
+
+	delete pFocusEvtData;
+	return 0;
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::fireMouseMovedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt )
+IMPL_STATIC_LINK_NOINSTANCE( Window, fireMouseMovedEvent, void*, pEvtData )
 {
-	Window *pWindow = Window::findWindowAndLockSolarMutex( pMoviePlayer );
+	MouseEventData *pMouseEvtData = static_cast< MouseEventData* >( pEvtData );
+	Window *pWindow = Window::findWindow( pMouseEvtData->mpMoviePlayer );
 	if ( pWindow )
 	{
 		OInterfaceContainerHelper* pContainer = pWindow->maListeners.getContainer( getCppuType( (Reference< XMouseMotionListener >*)0 ) );
@@ -122,18 +106,20 @@ void Window::fireMouseMovedEvent( void *pMoviePlayer, const ::com::sun::star::aw
 		{
 			OInterfaceIteratorHelper aIterator( *pContainer );
 			while ( aIterator.hasMoreElements() )
-				Reference< XMouseMotionListener >( aIterator.next(), UNO_QUERY )->mouseMoved( rEvt );
+				Reference< XMouseMotionListener >( aIterator.next(), UNO_QUERY )->mouseMoved( pMouseEvtData->maMouseEvent );
 		}
-
-		Window::releaseSolarMutex();
 	}
+
+	delete pMouseEvtData;
+	return 0;
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::fireMousePressedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt )
+IMPL_STATIC_LINK_NOINSTANCE( Window, fireMousePressedEvent, void*, pEvtData )
 {
-	Window *pWindow = Window::findWindowAndLockSolarMutex( pMoviePlayer );
+	MouseEventData *pMouseEvtData = static_cast< MouseEventData* >( pEvtData );
+	Window *pWindow = Window::findWindow( pMouseEvtData->mpMoviePlayer );
 	if ( pWindow )
 	{
 		OInterfaceContainerHelper* pContainer = pWindow->maListeners.getContainer( getCppuType( (Reference< XMouseListener >*)0 ) );
@@ -141,18 +127,20 @@ void Window::fireMousePressedEvent( void *pMoviePlayer, const ::com::sun::star::
 		{
 			OInterfaceIteratorHelper aIterator( *pContainer );
 			while ( aIterator.hasMoreElements() )
-				Reference< XMouseListener >( aIterator.next(), UNO_QUERY )->mousePressed( rEvt );
+				Reference< XMouseListener >( aIterator.next(), UNO_QUERY )->mousePressed( pMouseEvtData->maMouseEvent );
 		}
-
-		Window::releaseSolarMutex();
 	}
+
+	delete pMouseEvtData;
+	return 0;
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::fireMouseReleasedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt )
+IMPL_STATIC_LINK_NOINSTANCE( Window, fireMouseReleasedEvent, void*, pEvtData )
 {
-	Window *pWindow = Window::findWindowAndLockSolarMutex( pMoviePlayer );
+	MouseEventData *pMouseEvtData = static_cast< MouseEventData* >( pEvtData );
+	Window *pWindow = Window::findWindow( pMouseEvtData->mpMoviePlayer );
 	if ( pWindow )
 	{
 		OInterfaceContainerHelper* pContainer = pWindow->maListeners.getContainer( getCppuType( (Reference< XMouseListener >*)0 ) );
@@ -160,11 +148,12 @@ void Window::fireMouseReleasedEvent( void *pMoviePlayer, const ::com::sun::star:
 		{
 			OInterfaceIteratorHelper aIterator( *pContainer );
 			while ( aIterator.hasMoreElements() )
-				Reference< XMouseListener >( aIterator.next(), UNO_QUERY )->mouseReleased( rEvt );
+				Reference< XMouseListener >( aIterator.next(), UNO_QUERY )->mouseReleased( pMouseEvtData->maMouseEvent );
 		}
-
-		Window::releaseSolarMutex();
 	}
+
+	delete pMouseEvtData;
+	return 0;
 }
 
 // ----------------------------------------------------------------------------
