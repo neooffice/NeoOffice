@@ -2250,4 +2250,31 @@ bool MultiSalLayout::GetOutline( SalGraphics& rGraphics,
     return bRet;
 }
 
+#ifdef USE_JAVA
+
+GlyphItem::GlyphItem( const GlyphItem &rItem )
+{
+    mnFlags = rItem.mnFlags;
+    mnCharPos = rItem.mnCharPos;
+    mnOrigWidth = rItem.mnOrigWidth;
+    mnNewWidth = rItem.mnOrigWidth;
+    mnXOffset = rItem.mnXOffset;
+    maGlyphId = rItem.maGlyphId;
+    maLinearPos = rItem.maLinearPos;
+}
+
+GlyphItem& GlyphItem::operator=( const GlyphItem &rItem )
+{
+    mnFlags = rItem.mnFlags;
+    mnCharPos = rItem.mnCharPos;
+    mnOrigWidth = rItem.mnOrigWidth;
+    mnNewWidth = rItem.mnOrigWidth;
+    mnXOffset = rItem.mnXOffset;
+    maGlyphId = rItem.maGlyphId;
+    maLinearPos = rItem.maLinearPos;
+    return *this;
+}
+
+#endif	// USE_JAVA
+
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
