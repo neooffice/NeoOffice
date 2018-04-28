@@ -1129,7 +1129,10 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric, int /* nFallba
 	pMetric->mnExtLeading = 0;
 	pMetric->mbKernableFont = false;
 	pMetric->mnSlant = 0;
-	pMetric->mnMinKashida = 0;
+
+	// Fix missing kashidas by setting the font's minimum kashida width to a
+	// non-zero width
+	pMetric->mnMinKashida = 1;
 }
 
 // -----------------------------------------------------------------------
