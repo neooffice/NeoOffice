@@ -321,11 +321,6 @@ public:
             {}
 
 #ifdef USE_JAVA
-    // Stop crashing when the glyph item vector is resized by implementing
-    // copy constructors
-    SAL_DLLPRIVATE  GlyphItem( const GlyphItem& );
-    SAL_DLLPRIVATE  GlyphItem& operator=( const GlyphItem& );
-
     enum{ FALLBACK_MASK=0xFF, IS_IN_CLUSTER=0x100, IS_RTL_GLYPH=0x200, IS_DIACRITIC=0x400, IS_KASHIDA_ALLOWED_AFTER_GLYPH=0x800, IS_NONPRINTING_CHAR=0x1000 };
 #else	// USE_JAVA
     enum{ FALLBACK_MASK=0xFF, IS_IN_CLUSTER=0x100, IS_RTL_GLYPH=0x200, IS_DIACRITIC=0x400 };
