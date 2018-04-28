@@ -1355,11 +1355,21 @@ void GenericSalLayout::KashidaJustify( long nKashidaIndex, int nKashidaWidth )
     if( nKashidaWidth <= 0 )
         return;
 
+#ifdef USE_JAVA
+    // Fix crash when inserting into the middle of the glyph items vector by
+    // only appending glyph items in a new vector
+    GlyphVector aNewGlyphItems;
+#endif	// USE_JAVA
+
     // calculate max number of needed kashidas
     int nKashidaCount = 0;
     for (GlyphVector::iterator pG = m_GlyphItems.begin();
             pG != m_GlyphItems.end(); ++pG)
     {
+#ifdef USE_JAVA
+        aNewGlyphItems.push_back(*pG);
+#endif	// USE_JAVA
+
         // only inject kashidas in RTL contexts
         if( !pG->IsRTLGlyph() )
             continue;
@@ -1386,34 +1396,47 @@ void GenericSalLayout::KashidaJustify( long nKashidaIndex, int nKashidaWidth )
 #ifdef USE_JAVA
         aPos.X() += pG->mnOrigWidth;
         pG->mnNewWidth = pG->mnOrigWidth;
-        ++pG;
 #else	// USE_JAVA
         aPos.X() -= nGapWidth; // cluster is already right aligned
 #endif	// USE_JAVA
         int const nCharPos = pG->mnCharPos;
+#ifndef USE_JAVA
         GlyphVector::iterator pG2 = pG;
+#endif	// !USE_JAVA
         for(; nGapWidth > nKashidaWidth; nGapWidth -= nKashidaWidth, ++nKashidaCount )
         {
+#ifdef USE_JAVA
+            aNewGlyphItems.push_back(GlyphItem(nCharPos, nKashidaIndex, aPos,
+                                                      GlyphItem::IS_IN_CLUSTER|GlyphItem::IS_RTL_GLYPH, nKashidaWidth ));
+#else	// USE_JAVA
             pG2 = m_GlyphItems.insert(pG2, GlyphItem(nCharPos, nKashidaIndex, aPos,
                                                       GlyphItem::IS_IN_CLUSTER|GlyphItem::IS_RTL_GLYPH, nKashidaWidth ));
             ++pG2;
+#endif	// USE_JAVA
             aPos.X() += nKashidaWidth;
         }
 
         // fixup rightmost kashida for gap remainder
         if( nGapWidth > 0 )
         {
-            pG2 = m_GlyphItems.insert(pG2, GlyphItem(nCharPos, nKashidaIndex, aPos,
 #ifdef USE_JAVA
+            aNewGlyphItems.push_back(GlyphItem(nCharPos, nKashidaIndex, aPos,
                                                       GlyphItem::IS_IN_CLUSTER|GlyphItem::IS_RTL_GLYPH, nGapWidth ));
 #else	// USE_JAVA
+            pG2 = m_GlyphItems.insert(pG2, GlyphItem(nCharPos, nKashidaIndex, aPos,
                                                       GlyphItem::IS_IN_CLUSTER|GlyphItem::IS_RTL_GLYPH, nKashidaCount ? nGapWidth : nGapWidth/2 ));
-#endif	// USE_JAVA
             ++pG2;
+#endif	// USE_JAVA
             aPos.X() += nGapWidth;
         }
+#ifndef USE_JAVA
         pG = pG2;
+#endif	// !USE_JAVA
     }
+
+#ifdef USE_JAVA
+    m_GlyphItems = aNewGlyphItems;
+#endif	// USE_JAVA
 }
 
 void GenericSalLayout::GetCaretPositions( int nMaxIndex, long* pCaretXArray ) const
