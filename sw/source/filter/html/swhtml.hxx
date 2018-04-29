@@ -885,6 +885,10 @@ private:
     bool HasCurrentParaFlys( bool bNoSurroundOnly = false,
                              bool bSurroundOnly = false ) const;
 
+#ifndef NO_LIBO_DELETE_IN_CURRENT_TABLE_FIX
+    bool PendingTableInPaM(SwPaM& rPam) const;
+#endif	// !NO_LIBO_DELETE_IN_CURRENT_TABLE_FIX
+
 public:         // used in tables
 
     // Create brush item (with new) or 0

@@ -6206,4 +6206,22 @@ std::shared_ptr<HTMLTable> SwHTMLParser::BuildTable(SvxAdjust eParentAdjust,
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 }
 
+#ifndef NO_LIBO_DELETE_IN_CURRENT_TABLE_FIX
+
+bool SwHTMLParser::PendingTableInPaM(SwPaM& rPam) const
+{
+    if (!m_xTable)
+        return false;
+    const SwTable *pTable = m_xTable->GetSwTable();
+    if (!pTable)
+        return false;
+    const SwTableNode* pTableNode = pTable->GetTableNode();
+    if (!pTableNode)
+        return false;
+    SwNodeIndex aTableNodeIndex(*pTableNode);
+    return (aTableNodeIndex >= rPam.Start()->nNode && aTableNodeIndex <= rPam.End()->nNode);
+}
+
+#endif	// !NO_LIBO_DELETE_IN_CURRENT_TABLE_FIX
+
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
