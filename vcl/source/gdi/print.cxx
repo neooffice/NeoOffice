@@ -60,6 +60,12 @@
 #include "com/sun/star/container/XNameAccess.hpp"
 #include "com/sun/star/lang/XMultiServiceFactory.hpp"
 
+#ifdef USE_JAVA
+
+static ::boost::unordered_map< const Printer*, const Printer* > aPrinterMap;
+
+#endif  // USE_JAVA
+
 using namespace com::sun::star::uno;
 using namespace com::sun::star::lang;
 using namespace com::sun::star::beans;
@@ -987,6 +993,10 @@ Printer::Printer()
     }
     else
         ImplInitDisplay( NULL );
+
+#ifdef USE_JAVA
+    aPrinterMap[ this ] = this;
+#endif  // USE_JAVA
 }
 
 Printer::Printer( const JobSetup& rJobSetup ) :
@@ -1005,6 +1015,10 @@ Printer::Printer( const JobSetup& rJobSetup ) :
         ImplInitDisplay( NULL );
         maJobSetup = JobSetup();
     }
+
+#ifdef USE_JAVA
+    aPrinterMap[ this ] = this;
+#endif  // USE_JAVA
 }
 
 Printer::Printer( const QueueInfo& rQueueInfo )
@@ -1016,6 +1030,10 @@ Printer::Printer( const QueueInfo& rQueueInfo )
         ImplInit( pInfo );
     else
         ImplInitDisplay( NULL );
+
+#ifdef USE_JAVA
+    aPrinterMap[ this ] = this;
+#endif  // USE_JAVA
 }
 
 Printer::Printer( const OUString& rPrinterName )
@@ -1026,12 +1044,22 @@ Printer::Printer( const OUString& rPrinterName )
         ImplInit( pInfo );
     else
         ImplInitDisplay( NULL );
+
+#ifdef USE_JAVA
+    aPrinterMap[ this ] = this;
+#endif  // USE_JAVA
 }
 
 Printer::~Printer()
 {
     DBG_ASSERT( !IsPrinting(), "Printer::~Printer() - Job is printing" );
     DBG_ASSERT( !IsJobActive(), "Printer::~Printer() - Job is active" );
+
+#ifdef USE_JAVA
+    ::boost::unordered_map< const Printer*, const Printer* >::iterator it = aPrinterMap.find( this );
+    if ( it != aPrinterMap.end() )
+        aPrinterMap.erase( it );
+#endif  // USE_JAVA
 
     delete mpPrinterOptions;
 
@@ -1877,5 +1905,15 @@ Bitmap Printer::GetBitmap( const Point& rSrcPt, const Size& rSize ) const
 
     return OutputDevice::GetBitmap( rSrcPt, rSize );
 }
+
+#ifdef USE_JAVA
+
+bool ImplIsValidPrinter( const Printer *pPrinter )
+{
+    ::boost::unordered_map< const Printer*, const Printer* >::const_iterator it = aPrinterMap.find( pPrinter );
+    return ( it != aPrinterMap.end() ? true : false );
+}
+
+#endif  // USE_JAVA
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
