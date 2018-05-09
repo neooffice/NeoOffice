@@ -702,6 +702,11 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         if (opt.startsWith("-Xss")) {
             hasStackSize = true;
         }
+#ifdef USE_JAVA
+        // Fix failure to load Java 10.x in dbaccess unit tests by not adding
+        // empty options
+        if (opt.getLength())
+#endif	// USE_JAVA
         options.push_back(Option(opt, arOptions[i].extraInfo));
     }
     if (addForceInterpreted) {
