@@ -2525,10 +2525,18 @@ void Desktop::OpenDefault()
     if ( aName.isEmpty() )
     {
         // Old way to create a default document
+#ifdef USE_JAVA
+        // Make Calc the preferred default document
+        if ( aOpt.IsModuleInstalled( SvtModuleOptions::E_SCALC ) )
+            aName = aOpt.GetFactoryEmptyDocumentURL( SvtModuleOptions::E_CALC );
+        else if ( aOpt.IsModuleInstalled( SvtModuleOptions::E_SWRITER ) )
+            aName = aOpt.GetFactoryEmptyDocumentURL( SvtModuleOptions::E_WRITER );
+#else	// USE_JAVA
         if ( aOpt.IsModuleInstalled( SvtModuleOptions::E_SWRITER ) )
             aName = aOpt.GetFactoryEmptyDocumentURL( SvtModuleOptions::E_WRITER );
         else if ( aOpt.IsModuleInstalled( SvtModuleOptions::E_SCALC ) )
             aName = aOpt.GetFactoryEmptyDocumentURL( SvtModuleOptions::E_CALC );
+#endif	// USE_JAVA
         else if ( aOpt.IsModuleInstalled( SvtModuleOptions::E_SIMPRESS ) )
             aName = aOpt.GetFactoryEmptyDocumentURL( SvtModuleOptions::E_IMPRESS );
         else if ( aOpt.IsModuleInstalled( SvtModuleOptions::E_SDATABASE ) )
