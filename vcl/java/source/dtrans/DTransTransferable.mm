@@ -660,10 +660,11 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 {
 	// Fix crash due to multiple calls to this selector that occur when this
 	// object is used as an NSDraggingItem by only releasing when the sender
-	// is the same pasteboard used to create this object 
+	// is the same pasteboard used to create this object. Attempt to fix Mac
+	// App Store crash by delaying the release of the clipboard owner.
 	NSPasteboard *pPasteboard = ( mpPasteboardName ? [NSPasteboard pasteboardWithName:mpPasteboardName] : [NSPasteboard generalPasteboard] );
 	if ( pPasteboard == pSender )
-		[self release];
+		[self performSelector:@selector(release) withObject:nil afterDelay:0];
 }
 
 - (id)pasteboardPropertyListForType:(NSString *)pType
@@ -700,7 +701,9 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 		}
 		else
 		{
-			[self release];
+			// Attempt to fix Mac App Store crash by delaying the release of
+			// the clipboard owner
+			[self performSelector:@selector(release) withObject:nil afterDelay:0];
 		}
 	}
 }
