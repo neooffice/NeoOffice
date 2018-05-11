@@ -437,7 +437,13 @@ void SfxPrinterController::jobFinished( com::sun::star::view::PrintableState nSt
             // the printer's SfxItemSet here to copy. Awkward, but at the moment there is no
             // other way here to get the item set.
             SfxPrinter* pDocPrt = mpViewShell->GetPrinter(true);
+#ifdef USE_JAVA
+            // Attempt to fix Mac App Store crash by detecting if the printer
+            // has been deleted
+            if( pDocPrt && ImplIsValidPrinter( (Printer *)pDocPrt ) && ImplIsValidPrinter( getPrinter().get() ) )
+#else	// USE_JAVA
             if( pDocPrt )
+#endif	// USE_JAVA
             {
                 if( pDocPrt->GetName() == getPrinter()->GetName() )
                     pDocPrt->SetJobSetup( getPrinter()->GetJobSetup() );
@@ -973,8 +979,9 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
                 {
 #ifdef USE_JAVA
                     // Attempt to fix Mac App Store crash by checking if the
-                    // printer names are valid strings
-                    if ( pPrinter->GetName().pData && pDlgPrinter->GetName().pData && pPrinter->GetName() != pDlgPrinter->GetName() )
+                    // printer names are valid strings. Attempt to fix Mac App
+                    // Store crash by detecting if the printer has been deleted.
+                    if ( ImplIsValidPrinter( pPrinter ) && ImplIsValidPrinter( pDlgPrinter ) && pPrinter->GetName().pData && pDlgPrinter->GetName().pData && pPrinter->GetName() != pDlgPrinter->GetName() )
 #else	// USE_JAVA
                     if ( pPrinter->GetName() != pDlgPrinter->GetName() )
 #endif	// USE_JAVA
