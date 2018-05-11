@@ -99,7 +99,7 @@ using namespace ::cppu;
 #include "sfxslots.hxx"
 
 #ifdef USE_JAVA
-#include "printer.h"
+#include <vcl/print.hxx>
 #endif	// USE_JAVA
 
 
@@ -822,7 +822,7 @@ void SfxViewShell::GetState_Impl( SfxItemSet &rSet )
 #ifdef USE_JAVA
                     // Attempt to fix Mac App Store crash by detecting if the
                     // printer has been deleted
-                    if ( pPrinter && !ImplIsValidSfxPrinter( pPrinter ) )
+                    if ( pPrinter && !ImplIsValidPrinter( pPrinter ) )
                         pPrinter = NULL;
 #endif	// USE_JAVA
 

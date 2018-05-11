@@ -40,17 +40,9 @@
 #include <sfx2/sfxresid.hxx>
 #include "view.hrc"
 
-#ifdef USE_JAVA
-
-#ifdef MACOSX
+#if defined USE_JAVA && defined MACOSX
 #include <svtools/prnsetup.hxx>
-#endif	// MACOSX
-
-#include "printer.h"
-
-static ::boost::unordered_map< const SfxPrinter*, const SfxPrinter* > aPrinterMap;
-
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 // struct SfxPrinter_Impl ------------------------------------------------
 
@@ -137,9 +129,6 @@ SfxPrinter::SfxPrinter( SfxItemSet* pTheOptions ) :
 {
     assert(pOptions);
     pImpl = new SfxPrinter_Impl;
-#ifdef USE_JAVA
-    aPrinterMap[ this ] = this;
-#endif	// USE_JAVA
 }
 
 
@@ -157,10 +146,6 @@ SfxPrinter::SfxPrinter( SfxItemSet* pTheOptions,
 
     if ( bKnown )
         SetJobSetup( rTheOrigJobSetup );
-
-#ifdef USE_JAVA
-    aPrinterMap[ this ] = this;
-#endif	// USE_JAVA
 }
 
 
@@ -175,9 +160,6 @@ SfxPrinter::SfxPrinter( SfxItemSet* pTheOptions,
 {
     assert(pOptions);
     pImpl = new SfxPrinter_Impl;
-#ifdef USE_JAVA
-    aPrinterMap[ this ] = this;
-#endif	// USE_JAVA
 }
 
 
@@ -198,10 +180,6 @@ SfxPrinter::SfxPrinter( const SfxPrinter& rPrinter ) :
     pImpl->mbSelection = rPrinter.pImpl->mbSelection;
     pImpl->mbFromTo = rPrinter.pImpl->mbFromTo;
     pImpl->mbRange = rPrinter.pImpl->mbRange;
-
-#ifdef USE_JAVA
-    aPrinterMap[ this ] = this;
-#endif	// USE_JAVA
 }
 
 
@@ -229,12 +207,6 @@ SfxPrinter* SfxPrinter::Clone() const
 
 SfxPrinter::~SfxPrinter()
 {
-#ifdef USE_JAVA
-    ::boost::unordered_map< const SfxPrinter*, const SfxPrinter* >::iterator it = aPrinterMap.find( this );
-    if ( it != aPrinterMap.end() )
-        aPrinterMap.erase( it );
-#endif	// USE_JAVA
-
     delete pOptions;
     delete pImpl;
 }
@@ -377,15 +349,5 @@ void SfxPrintOptionsDialog::DisableHelp()
 
     get<HelpButton>("help")->Disable();
 }
-
-#ifdef USE_JAVA
-
-bool ImplIsValidSfxPrinter( const SfxPrinter *pPrinter )
-{
-    ::boost::unordered_map< const SfxPrinter*, const SfxPrinter* >::const_iterator it = aPrinterMap.find( pPrinter );
-    return ( it != aPrinterMap.end() ? true : false );
-}
-
-#endif	// USE_JAVA
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
