@@ -45,6 +45,14 @@
 
 #include "itemholder1.hxx"
 
+#if defined USE_JAVA && defined MACOSX
+
+#include <premac.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <postmac.h>
+
+#endif	// USE_JAVA && MACOSX
+
 /*-************************************************************************************************************
     @descr          These values are used to define necessary keys from our configuration management to support
                     all functionality of these implementation.
@@ -1266,18 +1274,46 @@ SvtModuleOptions::EFactory SvtModuleOptions::ClassifyFactoryByModel(const css::u
 OUString SvtModuleOptions::GetDefaultModuleName()
 {
     OUString aModule;
-#ifdef USE_JAVA
-    // Make Calc the preferred default document
-    if (m_pDataContainer->IsModuleInstalled(SvtModuleOptions::E_SCALC))
-        aModule = GetFactoryShortName(SvtModuleOptions::E_CALC);
-    else if (m_pDataContainer->IsModuleInstalled(SvtModuleOptions::E_SWRITER))
-        aModule = GetFactoryShortName(SvtModuleOptions::E_WRITER);
-#else	// USE_JAVA
+
+#if defined USE_JAVA && defined MACOSX
+    // Set the preferred default document from the DefaultLaunchOptions
+    // preference
+    CFPropertyListRef aPref = CFPreferencesCopyAppValue(CFSTR("DefaultLaunchOptions"), kCFPreferencesCurrentApplication);
+    if (aPref)
+    {
+        if (CFGetTypeID(aPref) == CFStringGetTypeID())
+        {
+			CFStringRef aPrefStr = (CFStringRef)aPref;
+			if (CFStringCompare(aPrefStr, CFSTR("--writer"), 0) == kCFCompareEqualTo)
+                aModule = GetFactoryShortName(SvtModuleOptions::E_WRITER);
+			else if (CFStringCompare(aPrefStr, CFSTR("--calc"), 0) == kCFCompareEqualTo)
+                aModule = GetFactoryShortName(SvtModuleOptions::E_CALC);
+			else if (CFStringCompare(aPrefStr, CFSTR("--impress"), 0) == kCFCompareEqualTo)
+                aModule = GetFactoryShortName(SvtModuleOptions::E_IMPRESS);
+			else if (CFStringCompare(aPrefStr, CFSTR("--draw"), 0) == kCFCompareEqualTo)
+                aModule = GetFactoryShortName(SvtModuleOptions::E_DRAW);
+			else if (CFStringCompare(aPrefStr, CFSTR("--base"), 0) == kCFCompareEqualTo)
+                aModule = GetFactoryShortName(SvtModuleOptions::E_DATABASE);
+			else if (CFStringCompare(aPrefStr, CFSTR("--math"), 0) == kCFCompareEqualTo)
+                aModule = GetFactoryShortName(SvtModuleOptions::E_MATH);
+        }
+
+        CFRelease(aPref);
+    }
+
+    if (aModule.isEmpty())
+    {
+        // Make Calc the preferred default document
+        if (m_pDataContainer->IsModuleInstalled(SvtModuleOptions::E_SCALC))
+            aModule = GetFactoryShortName(SvtModuleOptions::E_CALC);
+        else if (m_pDataContainer->IsModuleInstalled(SvtModuleOptions::E_SWRITER))
+            aModule = GetFactoryShortName(SvtModuleOptions::E_WRITER);
+#else	// USE_JAVA && MACOSX
     if (m_pDataContainer->IsModuleInstalled(SvtModuleOptions::E_SWRITER))
         aModule = GetFactoryShortName(SvtModuleOptions::E_WRITER);
     else if (m_pDataContainer->IsModuleInstalled(SvtModuleOptions::E_SCALC))
         aModule = GetFactoryShortName(SvtModuleOptions::E_CALC);
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     else if (m_pDataContainer->IsModuleInstalled(SvtModuleOptions::E_SIMPRESS))
         aModule = GetFactoryShortName(SvtModuleOptions::E_IMPRESS);
     else if (m_pDataContainer->IsModuleInstalled(SvtModuleOptions::E_SDATABASE))
@@ -1290,6 +1326,9 @@ OUString SvtModuleOptions::GetDefaultModuleName()
         aModule = GetFactoryShortName(SvtModuleOptions::E_WRITERGLOBAL);
     else if (m_pDataContainer->IsModuleInstalled(SvtModuleOptions::E_SMATH))
         aModule = GetFactoryShortName(SvtModuleOptions::E_MATH);
+#if defined USE_JAVA && defined MACOSX
+    }
+#endif	// USE_JAVA && MACOSX
     return aModule;
 }
 
