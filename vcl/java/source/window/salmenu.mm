@@ -582,7 +582,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
         return;
 
 	NSString *pKeyText = (NSString *)[pArgArray objectAtIndex:1];
-	if ( !pKeyText || [pKeyText length] != 1 )
+	if ( !pKeyText || [pKeyText length] > 1 )
 		return;
 
     NSNumber *pTag = (NSNumber *)[pArgArray objectAtIndex:2];
@@ -607,6 +607,12 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 				[pMenuItem setKeyEquivalent:pKeyText];
 				[pMenuItem setKeyEquivalentModifierMask:nMask];
 				[pMenuItem setTag:nTag];
+			}
+			else
+			{
+				[pMenuItem setKeyEquivalent:@""];
+				[pMenuItem setKeyEquivalentModifierMask:0];
+				[pMenuItem setTag:0];
 			}
 		}
 	}
@@ -1172,29 +1178,27 @@ void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, cons
 	// in the application menu. Also, fix bug 2886 by not allowing any
 	// shortcuts with a space as Java will disable a tab and the shortcut
 	// be unusable.
+	OUString aKeyEquivalent;
 	if ( mpMenu && rKeyCode.IsMod1() && !rKeyCode.IsMod2() && !rKeyCode.IsMod3() && ! ( rKeyCode.GetCode() == KEY_H && !rKeyCode.IsShift() ) && rKeyCode.GetCode() != KEY_Q && rKeyCode.GetCode() != KEY_COMMA && rKeyCode.GetCode() != KEY_SPACE )
 	{
-		// assume pSalMenuItem is a pointer to the item to be associated with
-		// the new shortcut
-		JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pSalMenuItem;
-		if ( pJavaSalMenuItem && pJavaSalMenuItem->mpMenuItem )
-		{
-			OUString aKeyEquivalent = JavaSalFrame::ConvertVCLKeyCode( rKeyCode.GetCode(), true );
-			if ( !rKeyCode.IsShift() )
-				aKeyEquivalent = aKeyEquivalent.toAsciiLowerCase();
+		aKeyEquivalent = JavaSalFrame::ConvertVCLKeyCode( rKeyCode.GetCode(), true );
+		if ( !rKeyCode.IsShift() )
+			aKeyEquivalent = aKeyEquivalent.toAsciiLowerCase();
+	}
 
-			if ( aKeyEquivalent.getLength() )
-			{
-				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+	// assume pSalMenuItem is a pointer to the item to be associated with
+	// the new shortcut
+	JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pSalMenuItem;
+	if ( pJavaSalMenuItem && pJavaSalMenuItem->mpMenuItem )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-				NSString *pKeyEquivalent = [NSString stringWithCharacters:aKeyEquivalent.getStr() length:aKeyEquivalent.getLength()];
-				VCLMenuWrapperArgs *pSetMenuItemKeyEquivalentArgs = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithUnsignedInt:nPos], ( pKeyEquivalent ? pKeyEquivalent : @"" ), [NSNumber numberWithUnsignedShort:rKeyCode.GetFullCode()], nil]];
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[mpMenu performSelectorOnMainThread:@selector(setMenuItemKeyEquivalent:) withObject:pSetMenuItemKeyEquivalentArgs waitUntilDone:NO modes:pModes];
+		NSString *pKeyEquivalent = [NSString stringWithCharacters:aKeyEquivalent.getStr() length:aKeyEquivalent.getLength()];
+		VCLMenuWrapperArgs *pSetMenuItemKeyEquivalentArgs = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithUnsignedInt:nPos], ( pKeyEquivalent ? pKeyEquivalent : @"" ), [NSNumber numberWithUnsignedShort:rKeyCode.GetFullCode()], nil]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[mpMenu performSelectorOnMainThread:@selector(setMenuItemKeyEquivalent:) withObject:pSetMenuItemKeyEquivalentArgs waitUntilDone:NO modes:pModes];
 
-				[pPool release];
-			}
-		}
+		[pPool release];
 	}
 }
 
