@@ -24,17 +24,20 @@ What's New in this Version:
 Before you buy NeoOffice, please click on the „«NeoOffice» - поддержка“ link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would sometimes crash when opening a word processing document
-• NeoOffice would sometimes crash when opening a .docx document
+• NeoOffice would sometimes crash when pasting HTML tables into a Writer document
+• NeoOffice would sometimes crash when moving the cursor in a Writer document
+• NeoOffice would sometimes crash when clicking on a video while in a slideshow
+• NeoOffice needed three LibreOffice security patches for security vulnerabilities that affect several types of documents
+• NeoOffice would sometimes crash when closing a Calc document
+• NeoOffice would sometimes crash when Arabic text is set to full width alignment.
+• NeoOffice would not display any kashida glyphs when Arabic text is set to full width alignment
+• NeoOffice would sometimes crash when opening SVG image files
+• NeoOffice would sometimes crash when selecting the Format > Page menu item
+• NeoOffice would sometimes crash when pasting content copied from NeoOffice
+• NeoOffice would sometimes leave thin horizontal lines in a Calc document when running on a Retina display after moving the selected cell back and forth off the right or left edges of the window
 • NeoOffice would sometimes crash when printing
-• NeoOffice would sometimes crash when opening HWP word processing files
-• NeoOffice would sometimes crash when selecting an image in a Writer document
-• NeoOffice would sometimes crash when loading your locale preferences
-• NeoOffice would sometimes crash when closing the Printer Options dialog
-• NeoOffice would sometimes crash when editing sections in a Writer document
+• NeoOffice would open a new Writer document when pressing the Command-N keys instead of opening the document type checked in the NeoOffice > Open at Launch menu
 • NeoOffice would leak memory due to several LibreOffice bugs
-• NeoOffice would sometimes crash when repaginating a Writer document
-• NeoOffice would sometimes crash when saving a Writer document
 
 
 Keywords:
