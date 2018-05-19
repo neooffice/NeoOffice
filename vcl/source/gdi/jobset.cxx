@@ -347,7 +347,13 @@ SvStream& WriteJobSetup( SvStream& rOStream, const JobSetup& rJobSetup )
     // if ( rOStream.GetVersion() < JOBSET_FILEFORMAT2 )
     {
         sal_uInt16 nLen = 0;
+#ifdef USE_JAVA
+        // Attempt to fix Mac App Store crash by detecting if the job setup
+        // has been deleted
+        if ( !rJobSetup.mpData || !ImplIsValidImplJobSetup( rJobSetup.ImplGetConstData() ) )
+#else	// USE_JAVA
         if ( !rJobSetup.mpData )
+#endif	// USE_JAVA
             rOStream.WriteUInt16( nLen );
         else
         {
