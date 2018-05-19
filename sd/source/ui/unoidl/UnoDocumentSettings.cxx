@@ -422,7 +422,13 @@ throw (UnknownPropertyException, PropertyVetoException,
     SdOptionsPrintItem aOptionsPrintItem( ATTR_OPTIONS_PRINT );
 
     SfxPrinter* pPrinter = pDocSh->GetPrinter( false );
+#ifdef USE_JAVA
+    // Attempt to fix Mac App Store crash by detecting if the printer has been
+    // deleted
+    if( pPrinter && ImplIsValidPrinter( pPrinter ) )
+#else	// USE_JAVA
     if( pPrinter )
+#endif	// USE_JAVA
     {
         SdOptionsPrintItem* pPrinterOptions = NULL;
         if(pPrinter->GetOptions().GetItemState( ATTR_OPTIONS_PRINT, false, (const SfxPoolItem**) &pPrinterOptions) == SfxItemState::SET)
