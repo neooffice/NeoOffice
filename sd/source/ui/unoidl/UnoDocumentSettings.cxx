@@ -741,7 +741,13 @@ throw (UnknownPropertyException, PropertyVetoException,
                         if( !aPrinterName.isEmpty() && pDocSh->GetCreateMode() != SFX_CREATE_MODE_EMBEDDED )
                         {
                             SfxPrinter *pTempPrinter = pDocSh->GetPrinter( true );
+#ifdef USE_JAVA
+                            // Attempt to fix Mac App Store crash by detecting
+                            // if the printer has been deleted
+                            if (pTempPrinter && ImplIsValidPrinter(pTempPrinter))
+#else	// USE_JAVA
                             if (pTempPrinter)
+#endif	// USE_JAVA
                             {
                                 SfxPrinter *pNewPrinter = new SfxPrinter( pTempPrinter->GetOptions().Clone(), aPrinterName );
                                 pDocSh->SetPrinter( pNewPrinter );
@@ -1124,13 +1130,25 @@ throw (UnknownPropertyException, WrappedTargetException, RuntimeException, std::
             case HANDLE_PRINTERNAME:
                 {
                     SfxPrinter *pTempPrinter = pDocSh->GetPrinter( false );
+#ifdef USE_JAVA
+                    // Attempt to fix Mac App Store crash by detecting if the
+                    // printer has been deleted
+                    *pValue <<= pTempPrinter && ImplIsValidPrinter( pTempPrinter ) ? OUString ( pTempPrinter->GetName()) : OUString();
+#else	// USE_JAVA
                     *pValue <<= pTempPrinter ? OUString ( pTempPrinter->GetName()) : OUString();
+#endif	// USE_JAVA
                 }
                 break;
             case HANDLE_PRINTERJOB:
                 {
                     SfxPrinter *pTempPrinter = pDocSh->GetPrinter( false );
+#ifdef USE_JAVA
+                    // Attempt to fix Mac App Store crash by detecting if the
+                    // printer has been deleted
+                    if (pTempPrinter && ImplIsValidPrinter(pTempPrinter))
+#else	// USE_JAVA
                     if (pTempPrinter)
+#endif	// USE_JAVA
                     {
                         SvMemoryStream aStream;
                         pTempPrinter->Store( aStream );
