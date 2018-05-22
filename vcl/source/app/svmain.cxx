@@ -702,12 +702,16 @@ void DeInitVCL()
     // running unit tests as it will cause some tests to crash.
     if ( bInImplSVMain )
     {
+        // Attempt to fix Mac App Store when quitting when clearing the embedded
+        // fonts before deleting the SalInstance
+        EmbeddedFontsHelper::clearTemporaryFontFiles();
+
         SalInstance *pDefInst = pSVData->mpDefInst;
         pSVData->mpDefInst = NULL;
         DestroySalInstance( pDefInst );
     }
     else
-#else   // USE_JAVA && MACOSX
+#else	// USE_JAVA && MACOSX
     DestroySalInstance( pSVData->mpDefInst );
 #endif  // USE_JAVA && MACOSX
 
@@ -717,6 +721,11 @@ void DeInitVCL()
         pOwnSvApp = NULL;
     }
 
+#if defined USE_JAVA && defined MACOSX
+    // Attempt to fix Mac App Store when quitting when clearing the embedded
+    // fonts before deleting the SalInstance
+    if ( !bInImplSVMain )
+#endif  // USE_JAVA && MACOSX
     EmbeddedFontsHelper::clearTemporaryFontFiles();
 }
 
