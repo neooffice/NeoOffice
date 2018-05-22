@@ -698,16 +698,8 @@ void DeInitVCL()
     // Deinit Sal
 #if defined USE_JAVA && defined MACOSX
     // Fix random crashing in native callbacks that get called after destroying
-    // the SalInstance by setting it to NULL. Do not execute this code when
-    // running unit tests as it will cause some tests to crash.
-    if ( bInImplSVMain )
-    {
-        SalInstance *pDefInst = pSVData->mpDefInst;
-        pSVData->mpDefInst = NULL;
-        DestroySalInstance( pDefInst );
-    }
-    else
-#else   // USE_JAVA && MACOSX
+    // the SalInstance by destroying it in ImplDeInitSVData()
+#else	// USE_JAVA && MACOSX
     DestroySalInstance( pSVData->mpDefInst );
 #endif  // USE_JAVA && MACOSX
 
