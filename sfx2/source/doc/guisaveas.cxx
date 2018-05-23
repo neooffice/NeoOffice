@@ -818,7 +818,26 @@ sal_Int8 ModelData_Impl::CheckFilter( const OUString& aFilterName )
         OUString aPreusedFilterName = GetDocProps().getUnpackedValueOrDefault(
                                                     OUString("PreusedFilterName"),
                                                     OUString() );
+#ifdef USE_JAVA
+        // If we are saving to an Office XML format, force the alien format
+        // warning dialog to appear. Note that we had to put "OXML" or
+        // "OOXML" in the "UserData" field in each filter's
+        // Resources/registry/*.xcd file.
+        static const OUString aOXMLString( "OXML" );
+        static const OUString aOOXMLString( "OOXML" );
+
+        bool bForceDisplay = false;
+        const SfxFilter* pFilter = SfxGetpApp()->GetFilterMatcher().GetFilter4FilterName( aFilterName );
+        if ( pFilter )
+        {
+            OUString aUserData = pFilter->GetUserData();
+            if ( aUserData == aOXMLString || aUserData == aOOXMLString )
+                    bForceDisplay = true;
+        }
+        if ( bForceDisplay || ( !aPreusedFilterName.equals( aFilterName ) && !aUIName.equals( aDefUIName ) ) )
+#else	// USE_JAVA
         if ( !aPreusedFilterName.equals( aFilterName ) && !aUIName.equals( aDefUIName ) )
+#endif	// USE_JAVA
         {
             // is it possible to get these names from somewhere and not just
             // hardcode them?
@@ -856,22 +875,6 @@ sal_Int8 ModelData_Impl::CheckFilter( const OUString& aFilterName )
                 }
             }
 #ifdef USE_JAVA
-            // If we are saving to an Office XML format, force the alien format
-            // warning dialog to appear. Note that we had to put "OXML" or
-            // "OOXML" in the "UserData" field in each filter's
-            // Resources/registry/*.xcd file.
-            static const OUString aOXMLString( "OXML" );
-            static const OUString aOOXMLString( "OOXML" );
-
-            bool bForceDisplay = false;
-            const SfxFilter* pFilter = SfxGetpApp()->GetFilterMatcher().GetFilter4FilterName( aFilterName );
-            if ( pFilter )
-            {
-                OUString aUserData = pFilter->GetUserData();
-                if ( aUserData == aOXMLString || aUserData == aOOXMLString )
-                        bForceDisplay = true;
-            }
-
             if ( !SfxStoringHelper::WarnUnacceptableFormat( GetModel(), aUIName, aDefUIName, true, bForceDisplay ) )
 #else	// USE_JAVA
             if ( !SfxStoringHelper::WarnUnacceptableFormat( GetModel(), aUIName, aDefUIName, true ) )
