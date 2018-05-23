@@ -855,7 +855,27 @@ sal_Int8 ModelData_Impl::CheckFilter( const OUString& aFilterName )
                         return STATUS_SAVEAS;
                 }
             }
+#ifdef USE_JAVA
+            // If we are saving to an Office XML format, force the alien format
+            // warning dialog to appear. Note that we had to put "OXML" or
+            // "OOXML" in the "UserData" field in each filter's
+            // Resources/registry/*.xcd file.
+            static const OUString aOXMLString( "OXML" );
+            static const OUString aOOXMLString( "OOXML" );
+
+            bool bForceDisplay = false;
+            const SfxFilter* pFilter = SfxGetpApp()->GetFilterMatcher().GetFilter4FilterName( aFilterName );
+            if ( pFilter )
+            {
+                OUString aUserData = pFilter->GetUserData();
+                if ( aUserData == aOXMLString || aUserData == aOOXMLString )
+                        bForceDisplay = true;
+            }
+
+            if ( !SfxStoringHelper::WarnUnacceptableFormat( GetModel(), aUIName, aDefUIName, true, bForceDisplay ) )
+#else	// USE_JAVA
             if ( !SfxStoringHelper::WarnUnacceptableFormat( GetModel(), aUIName, aDefUIName, true ) )
+#endif	// USE_JAVA
                 return STATUS_SAVEAS_STANDARDNAME;
         }
     }
@@ -1009,41 +1029,6 @@ bool ModelData_Impl::OutputFileDialog( sal_Int8 nStoreMode,
     }
 
     OUString aAdjustToType;
-
-#ifdef USE_JAVA
-    // If we are saving to an Office XML format, forcing the file save as
-    // dialog to appear by changing this to a save as operation. Note that
-    // we had to put "OXML" or "OOXML" in the "UserData" field in each filter's
-    // Resources/registry/*.xcd file.
-    if ( !bSetStandardName )
-    {
-        static const OUString aUserDataString( "UserData" );
-        static const OUString aOXMLString( "OXML" );
-        static const OUString aOOXMLString( "OOXML" );
-        ::comphelper::SequenceAsHashMap::const_iterator it = GetMediaDescr().find( aUserDataString );
-        if ( it != GetMediaDescr().end() )
-        {
-            OUString aUserData;
-            it->second >>= aUserData;
-            if ( aUserData == aOXMLString || aUserData == aOOXMLString )
-                bSetStandardName = true;
-        }
-
-        // When doing a "save as", the "UserData" field will be empty so check
-        // the original file filter's "UserData" field
-        if ( !bSetStandardName )
-        {
-            OUString aFilterName = GetDocProps().getUnpackedValueOrDefault( aFilterNameString, OUString() );
-            const SfxFilter* pFilter = SfxGetpApp()->GetFilterMatcher().GetFilter4FilterName( aFilterName );
-            if ( pFilter )
-            {
-                OUString aUserData = pFilter->GetUserData();
-                if ( aUserData == aOXMLString || aUserData == aOOXMLString )
-                    bSetStandardName = true;
-            }
-        }
-    }
-#endif	// USE_JAVA
 
     const OUString sFilterNameString(aFilterNameString);
 
@@ -1912,9 +1897,17 @@ void SfxStoringHelper::SetDocInfoState(
 bool SfxStoringHelper::WarnUnacceptableFormat( const uno::Reference< frame::XModel >& xModel,
                                                     const OUString& aOldUIName,
                                                     const OUString& /*aDefUIName*/,
+#ifdef USE_JAVA
+                                                    bool /*bCanProceedFurther*/, bool bForceDisplay )
+#else	// USE_JAVA
                                                     bool /*bCanProceedFurther*/ )
+#endif	// USE_JAVA
 {
+#ifdef USE_JAVA
+    if ( !bForceDisplay && !SvtSaveOptions().IsWarnAlienFormat() )
+#else	// USE_JAVA
     if ( !SvtSaveOptions().IsWarnAlienFormat() )
+#endif	// USE_JAVA
         return true;
 
     vcl::Window* pWin = SfxStoringHelper::GetModelWindow( xModel );
