@@ -1911,7 +1911,11 @@ bool SfxStoringHelper::WarnUnacceptableFormat( const uno::Reference< frame::XMod
         return true;
 
     vcl::Window* pWin = SfxStoringHelper::GetModelWindow( xModel );
+#ifdef USE_JAVA
+    SfxAlienWarningDialog aDlg( pWin, aOldUIName, bForceDisplay );
+#else	// USE_JAVA
     SfxAlienWarningDialog aDlg( pWin, aOldUIName );
+#endif	// USE_JAVA
 
     return aDlg.Execute() == RET_OK;
 }
