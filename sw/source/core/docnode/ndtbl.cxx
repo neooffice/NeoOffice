@@ -544,6 +544,12 @@ const SwTable* SwDoc::InsertTable( const SwInsertTableOptions& rInsTblOpts,
             SwTableBox *pBox = new SwTableBox( pBoxF, aNdIdx, pLine);
             rBoxes.insert( rBoxes.begin() + i, pBox );
             aNdIdx += 3; // StartNode, TextNode, EndNode  == 3 Nodes
+#ifdef USE_JAVA
+            // Attempt to fix Mac App Store crashing bug by checking if the
+            // start node of the new node index is NULL
+            if ( !aNdIdx.GetNode().GetStartNode() )
+                aNdIdx -= 3;
+#endif	// USE_JAVA
         }
     }
     // Insert Frms
