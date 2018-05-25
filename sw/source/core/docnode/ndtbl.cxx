@@ -541,6 +541,9 @@ const SwTable* SwDoc::InsertTable( const SwInsertTableOptions& rInsTblOpts,
                 }
             }
 
+#ifdef USE_JAVA
+            SwNodeIndex aOldNdIdx( aNdIdx );
+#endif	// USE_JAVA
             SwTableBox *pBox = new SwTableBox( pBoxF, aNdIdx, pLine);
             rBoxes.insert( rBoxes.begin() + i, pBox );
             aNdIdx += 3; // StartNode, TextNode, EndNode  == 3 Nodes
@@ -548,7 +551,7 @@ const SwTable* SwDoc::InsertTable( const SwInsertTableOptions& rInsTblOpts,
             // Attempt to fix Mac App Store crashing bug by checking if the
             // start node of the new node index is NULL
             if ( !aNdIdx.GetNode().GetStartNode() )
-                aNdIdx -= 3;
+                aNdIdx = aOldNdIdx;
 #endif	// USE_JAVA
         }
     }
