@@ -1065,8 +1065,12 @@ static NSUInteger nMouseMask = 0;
 		{
 			// Fix crashing on OS X 10.10 when displaying the Save dialog while
 			// the titlebar popover window is displayed by removing the
-			// titlebar popover window's content view before ordering it out
-			[self setContentView:nil];
+			// titlebar popover window's content view before ordering it out.
+			// Attempt to fix Mac App Store crash by replacing content view
+			// with a new, empty view.
+			NSView *pContentView = [[NSView alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1)];
+			[self setContentView:pContentView];
+			[pContentView autorelease];
 		}
 	}
 
