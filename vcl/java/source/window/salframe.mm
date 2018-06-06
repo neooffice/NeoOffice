@@ -174,8 +174,13 @@ static sal_Bool SetSalColorFromNSColor( NSColor *pNSColor, SalColor **ppSalColor
 			pNSColor = [pNSColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
 			if ( pNSColor )
 			{
+				// Remove transparency by blending color with opaque gray
+				float fAlpha = [pNSColor alphaComponent];
+				float fRed = [pNSColor redComponent];
+				float fGreen = [pNSColor greenComponent];
+				float fBlue = [pNSColor blueComponent];
 				*ppSalColor = new SalColor;
-				**ppSalColor = MAKE_SALCOLOR( (unsigned char)( [pNSColor redComponent] * 0xff ), (unsigned char)( [pNSColor greenComponent] * 0xff ), (unsigned char)( [pNSColor blueComponent] * 0xff ) );
+				**ppSalColor = MAKE_SALCOLOR( (unsigned char)( ( 0.5f + ( ( fRed - 0.5f ) * fAlpha ) ) * 0xff ), (unsigned char)( ( 0.5f + ( ( fGreen - 0.5f ) * fAlpha ) ) * 0xff ), (unsigned char)( ( 0.5f + ( ( fBlue - 0.5f ) * fAlpha ) ) * 0xff ) );
 				bRet = sal_True;
 			}
 		}
