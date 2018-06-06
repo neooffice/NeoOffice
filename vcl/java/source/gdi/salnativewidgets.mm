@@ -772,7 +772,7 @@ static bool IsRunningHighSierraOrLower()
 						}
 
 						// Vertically center control
-						aDrawRect.origin.y += ( ( fOffscreenHeight - fCellHeight ) / 2 ) + ( mbEditable ? COMBOBOX_HEIGHT_SLOP : 0 );
+						aDrawRect.origin.y += ( ( fOffscreenHeight - fCellHeight ) / 2 ) + COMBOBOX_HEIGHT_SLOP;
 						aDrawRect.size.height = fCellHeight;
 
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
