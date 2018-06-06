@@ -71,6 +71,7 @@
 // Increase adjustment factor slightly to increase height in text fields in the
 // Preference dialog's User Data panel.
 #define EDITBOX_HEIGHT					( Application::GetSettings().GetStyleSettings().GetToolFont().GetHeight() * 3 )
+#define EDITBOX_HEIGHT_SLOP				( IsRunningHighSierraOrLower() ? 0 : 1 )
 #define EDITFRAMEPADDING_WIDTH			1
 #define FOCUSRING_WIDTH					3
 #define FRAME_TRIMWIDTH					1
@@ -2044,7 +2045,13 @@ static bool IsRunningHighSierraOrLower()
 
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
-						[pCell drawWithFrame:aDrawRect inView:pTextField];
+
+						// Fix height of text fields on macOS 10.14 by adding
+						// height to the top of the text field
+						NSRect aCellDrawRect = aDrawRect;
+						aCellDrawRect.origin.y -= EDITBOX_HEIGHT_SLOP;
+						aCellDrawRect.size.height += EDITBOX_HEIGHT_SLOP;
+						[pCell drawWithFrame:aCellDrawRect inView:pTextField];
 
 						// Draw focus ring
 						if ( mnControlState & CTRL_STATE_FOCUSED && [pTextField isEnabled] )
