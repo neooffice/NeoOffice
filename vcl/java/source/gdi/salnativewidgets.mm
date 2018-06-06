@@ -120,6 +120,9 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 	void					ReleaseContext();
 };
 
+static bool bIsRunningHighSierraOrLowerInitizalized  = false;
+static bool bIsRunningHighSierraOrLower = false;
+
 static VCLBitmapBuffer aSharedComboBoxBuffer;
 static VCLBitmapBuffer aSharedListBoxBuffer;
 static VCLBitmapBuffer aSharedHorizontalScrollBarBuffer;
@@ -140,6 +143,30 @@ static VCLBitmapBuffer aSharedBevelButtonBuffer;
 static VCLBitmapBuffer aSharedCheckboxBuffer;
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
+
+// =======================================================================
+
+static bool IsRunningHighSierraOrLower()
+{
+	if ( !bIsRunningHighSierraOrLowerInitizalized )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSProcessInfo *pProcessInfo = [NSProcessInfo processInfo];
+		if ( pProcessInfo )
+		{
+			NSOperatingSystemVersion aVersion = pProcessInfo.operatingSystemVersion;
+			if ( aVersion.majorVersion <= 10 && aVersion.minorVersion <= 13 )
+				bIsRunningHighSierraOrLower = true;
+		}
+
+		bIsRunningHighSierraOrLowerInitizalized = true;
+
+		[pPool release];
+	}
+
+	return bIsRunningHighSierraOrLower;
+}
 
 // =======================================================================
 
@@ -231,6 +258,49 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 - (void)setInactive:(BOOL)bInactive
 {
 	mbInactive = bInactive;
+}
+
+@end
+
+// =======================================================================
+
+@interface VCLNativeControlView : NSView
+{
+	BOOL					mbFlipped;
+}
++ (id)createWithControl:(NSControl *)pControl;
+- (id)initWithControl:(NSControl *)pControl;
+- (BOOL)isFlipped;
+@end
+
+@implementation VCLNativeControlView
+
++ (id)createWithControl:(NSControl *)pControl
+{
+	VCLNativeControlView *pRet = nil;
+
+	if ( pControl )
+	{
+		pRet = [[VCLNativeControlView alloc] initWithControl:pControl];
+		if ( pRet )
+			[pRet autorelease];
+	}
+
+	return pRet;
+}
+
+- (id)initWithControl:(NSControl *)pControl
+{
+	[super initWithFrame:[pControl frame]];
+
+	mbFlipped = [pControl isFlipped];
+
+	return self;
+}
+
+- (BOOL)isFlipped
+{
+	return mbFlipped;
 }
 
 @end
@@ -433,7 +503,10 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 							}
 						}
 
-						[pCell drawWithFrame:aDrawRect inView:pButton];
+						// Fix failure to draw on macOS 10.14 by passing a
+						// regular view instead of the control itself
+						NSView *pControlView = ( IsRunningHighSierraOrLower() ? pButton : [VCLNativeControlView createWithControl:pButton] );
+						[pCell drawWithFrame:aDrawRect inView:( pControlView ? pControlView : pButton )];
 
 						if ( mbRedraw )
 						{
@@ -704,7 +777,12 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
-						[pCell drawWithFrame:aDrawRect inView:pControl];
+
+						// Fix failure to draw on macOS 10.14 by passing a
+						// regular view instead of the control itself
+						NSView *pControlView = ( IsRunningHighSierraOrLower() ? pControl : [VCLNativeControlView createWithControl:pControl] );
+						[pCell drawWithFrame:aDrawRect inView:( pControlView ? pControlView : pControl )];
+
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
 						mbDrawn = true;
