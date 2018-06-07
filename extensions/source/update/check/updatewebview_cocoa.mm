@@ -677,6 +677,11 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 - (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame reason:(NSError *)pError
 {
+	// Fix crashing on High Sierra when the internet is disconnected during
+	// a download by not trying to reload from the next server
+	if (!IsRunningSierraOrLower())
+		return;
+
 	int errCode = pError ? [pError code] : 0;
 
 	if ( !errCode || errCode == WebKitErrorFrameLoadInterruptedByPolicyChange )
@@ -797,7 +802,8 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		}
 	}
 
-	ShowModalAlert( [NSString stringWithFormat:@"%@ %@", UpdateGetLocalizedString(UPDATEERROR), [pError localizedDescription]], nil, nil );
+	if ( pError )
+		ShowModalAlert( [NSString stringWithFormat:@"%@ %@", UpdateGetLocalizedString(UPDATEERROR), [pError localizedDescription]], nil, nil );
 }
 
 - (void)stopLoading:(id)pSender
