@@ -78,6 +78,31 @@ static const NSString *pProductionBaseURLs[] = {
 };
 #endif	// !TEST
 
+static bool bIsRunningSierraOrLowerInitizalized  = false;
+static bool bIsRunningSierraOrLower = false;
+
+static bool IsRunningSierraOrLower()
+{
+	if ( !bIsRunningSierraOrLowerInitizalized )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSProcessInfo *pProcessInfo = [NSProcessInfo processInfo];
+		if ( pProcessInfo )
+		{
+			NSOperatingSystemVersion aVersion = pProcessInfo.operatingSystemVersion;
+			if ( aVersion.majorVersion <= 10 && aVersion.minorVersion <= 12 )
+				bIsRunningSierraOrLower = true;
+		}
+
+		bIsRunningSierraOrLowerInitizalized = true;
+
+		[pPool release];
+	}
+
+	return bIsRunningSierraOrLower;
+}
+
 /**
  * Overrides WebKit's [WebJavaScriptTextInputPanel windowDidLoad] selector to
  * set the JavaScript prompt dialog to have no title like the other JavaScript
@@ -1078,9 +1103,11 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			unsigned long long nExpectedContentLength = [it->second expectedContentLength];
 			if (nExpectedContentLength > 0)
 			{
+				// Disable resuming partial downloads on High Sierra and higher
+				// as it is no longer supported using NSURLDownload
 				if (GetFileSize(filePath) == nExpectedContentLength)
 					bCompleteDownload = YES;
-				else
+				else if (IsRunningSierraOrLower())
 					bPartialDownload = YES;
 			}
 		}
@@ -1455,9 +1482,11 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 				[pRetryDownloadURLs retain];
 		}
 
+		// Disable resuming downloads on High Sierra and higher as it is no
+		// longer supported using NSURLDownload
 		BOOL bRetry = NO;
 		NSString *pPath = [it->second path];
-		if (pPath && pRetryDownloadURLs)
+		if (pPath && pRetryDownloadURLs && IsRunningSierraOrLower())
 		{
 			NSObject *pValue = [pRetryDownloadURLs objectForKey:pPath];
 			if (!pValue || ![pValue isKindOfClass:[NSNull class]])
@@ -1722,7 +1751,10 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 {
 	BOOL bRet = NO;
 
-	if (pDownload && pPath)
+	// Eliminate thread error messages on High Sierra and Mojave by disabling
+	// redownloading on macOS versions that no longer support resuming
+	// downloads using NSURLDownload
+	if (pDownload && pPath && IsRunningSierraOrLower())
 	{
 		if (!pRetryDownloadURLs)
 		{
