@@ -1317,10 +1317,18 @@ UpdateCheck::showDialog(bool forceCheck)
 void UpdateCheck::onCloseApp()
 {
 #ifdef USE_NATIVE_DOWNLOAD_WEBVIEW
-#ifdef MACOSX
-    sal_Bool bInstall = UpdateQuitNativeDownloadWebView();
-#else	// MACOSX
     sal_Bool bInstall = sal_False;
+#ifdef MACOSX
+    // Eliminate duplicate display of dialog when LibreOffice calls this method
+    // more than once
+    static sal_Bool bInstallInitialized = false;
+    if (!bInstallInitialized)
+    {
+        bInstallInitialized = true;
+        bInstall = UpdateQuitNativeDownloadWebView();
+    }
+#else	// MACOSX
+    bInstall = sal_False;
 #endif	// MACOSX
 
     if (bInstall)
