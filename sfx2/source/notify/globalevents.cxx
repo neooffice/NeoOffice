@@ -186,6 +186,13 @@ private:
     TModelList::iterator impl_searchDoc(const css::uno::Reference< css::frame::XModel >& xModel);
 };
 
+#ifdef USE_JAVA
+
+static ::boost::unordered_map< const SfxGlobalEvents_Impl*, const SfxGlobalEvents_Impl* > aGlobalEventsMap;
+static osl::Mutex aGlobalEventsMapMutex;
+
+#endif	// USE_JAVA
+
 ModelCollectionEnumeration::ModelCollectionEnumeration()
     : ModelCollectionMutexBase(                 )
     , m_pEnumerationIt        (m_lModels.begin())
@@ -247,11 +254,22 @@ SfxGlobalEvents_Impl::SfxGlobalEvents_Impl( const uno::Reference < uno::XCompone
     pImp                   = new GlobalEventConfig();
     m_xEvents              = pImp;
     m_refCount--;
+#ifdef USE_JAVA
+    ::osl::MutexGuard aMutex(aGlobalEventsMapMutex);
+    aGlobalEventsMap[this] = this;
+#endif	// USE_JAVA
 }
 
 
 SfxGlobalEvents_Impl::~SfxGlobalEvents_Impl()
 {
+#ifdef USE_JAVA
+    ::osl::ClearableMutexGuard aMutex(aGlobalEventsMapMutex);
+    ::boost::unordered_map< const SfxGlobalEvents_Impl*, const SfxGlobalEvents_Impl* >::iterator it = aGlobalEventsMap.find(this);
+    if (it != aGlobalEventsMap.end())
+        aGlobalEventsMap.erase(it);
+    aMutex.clear();
+#endif	// USE_JAVA
 }
 
 
@@ -507,25 +525,33 @@ void SfxGlobalEvents_Impl::implts_checkAndExecuteEventBindings(const document::D
 
 void SfxGlobalEvents_Impl::implts_notifyListener(const document::DocumentEvent& aEvent)
 {
+#ifdef USE_JAVA
+    // Attempt to fix Mac App Store crash by detecting if this instance has
+    // already been deleted
+    ::osl::ResettableMutexGuard aMutex(aGlobalEventsMapMutex);
+    ::boost::unordered_map< const SfxGlobalEvents_Impl*, const SfxGlobalEvents_Impl* >::const_iterator it = aGlobalEventsMap.find(this);
+    if (it != aGlobalEventsMap.end())
+        aMutex.clear();
+    else
+        return;
+#endif	// USE_JAVA
+
     // containers are threadsafe
     document::EventObject aLegacyEvent(aEvent.Source, aEvent.EventName);
     m_aLegacyListeners.notifyEach( &document::XEventListener::notifyEvent, aLegacyEvent );
 
 #ifdef USE_JAVA
-    // Attempt to fix Mac App Store crash by sending notifications to a copy of
-    // the container helper
-    if ( m_aDocumentListeners.getLength() )
-    {
-        ::cppu::OInterfaceContainerHelper aDocumentListeners( m_aLock );
-        uno::Sequence< uno::Reference< XInterface > > aSeq = m_aDocumentListeners.getElements();
-        sal_Int32 nLen = m_aDocumentListeners.getLength();
-        for ( sal_Int32 i = 0; i < nLen; i++ )
-            aDocumentListeners.addInterface( aSeq[ i ] );
-        aDocumentListeners.notifyEach( &document::XDocumentEventListener::documentEventOccured, aEvent );
-    }
-#else	// USE_JAVA
-    m_aDocumentListeners.notifyEach( &document::XDocumentEventListener::documentEventOccured, aEvent );
+    // Just to be safe, recheck that this instance has been deleted in the
+    // notifications above
+    aMutex.reset();
+    it = aGlobalEventsMap.find(this);
+    if (it != aGlobalEventsMap.end())
+        aMutex.clear();
+    else
+        return;
 #endif	// USE_JAVA
+
+    m_aDocumentListeners.notifyEach( &document::XDocumentEventListener::documentEventOccured, aEvent );
 }
 
 
