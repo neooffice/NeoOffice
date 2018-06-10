@@ -990,6 +990,8 @@ void HTMLTable::InitCtor(const HTMLTableOptions& rOptions)
 
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     pBox1 = 0;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    m_xBox1.reset();
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     pBoxFmt = 0; pLineFmt = 0;
     pLineFrmFmtNoHeight = 0;
