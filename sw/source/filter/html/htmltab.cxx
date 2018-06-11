@@ -220,12 +220,18 @@ public:
 // Cell of a HTML table
 class HTMLTableCell
 {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     // !!!ATTENTION!!!!! For each new pointer the SetProtected
     // method (and the dtor) has to be executed.
     HTMLTableCnts *pContents;       // cell content
     SvxBrushItem *pBGBrush;         // cell background
     // !!!ATTENTION!!!!!
     ::boost::shared_ptr<SvxBoxItem> m_pBoxItem;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    std::shared_ptr<HTMLTableCnts> m_xContents;       // cell content
+    std::shared_ptr<SvxBrushItem> m_xBGBrush;         // cell background
+    std::shared_ptr<SvxBoxItem> m_xBoxItem;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     sal_uInt32 nNumFmt;
     sal_uInt16 nRowSpan;                // cell ROWSPAN
@@ -244,12 +250,20 @@ public:
 
     HTMLTableCell();                // new cells always empty
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     ~HTMLTableCell();               // only allowed in ~HTMLTableRow
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     // Fill a not empty cell
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     void Set( HTMLTableCnts *pCnts, sal_uInt16 nRSpan, sal_uInt16 nCSpan,
               sal_Int16 eVertOri, SvxBrushItem *pBGBrush,
               ::boost::shared_ptr<SvxBoxItem> const pBoxItem,
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    void Set( std::shared_ptr<HTMLTableCnts> const& rCnts, sal_uInt16 nRSpan, sal_uInt16 nCSpan,
+              sal_Int16 eVertOri, std::shared_ptr<SvxBrushItem> const& rBGBrush,
+              std::shared_ptr<SvxBoxItem> const& rBoxItem,
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
               bool bHasNumFmt, sal_uInt32 nNumFmt,
               bool bHasValue, double nValue, bool bNoWrap, bool bCovered );
 
@@ -257,8 +271,13 @@ public:
     void SetProtected();
 
     // Set/Get cell content
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     void SetContents( HTMLTableCnts *pCnts ) { pContents = pCnts; }
     HTMLTableCnts *GetContents() { return pContents; }
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    void SetContents(std::shared_ptr<HTMLTableCnts> const& rCnts) { m_xContents = rCnts; }
+    const std::shared_ptr<HTMLTableCnts>& GetContents() const { return m_xContents; }
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     // Set/Get cell ROWSPAN/COLSPAN
     void SetRowSpan( sal_uInt16 nRSpan ) { nRowSpan = nRSpan; }
@@ -269,8 +288,13 @@ public:
 
     inline void SetWidth( sal_uInt16 nWidth, bool bRelWidth );
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     const SvxBrushItem *GetBGBrush() const { return pBGBrush; }
     ::boost::shared_ptr<SvxBoxItem> GetBoxItem() const { return m_pBoxItem; }
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    const std::shared_ptr<SvxBrushItem>& GetBGBrush() const { return m_xBGBrush; }
+    const std::shared_ptr<SvxBoxItem>& GetBoxItem() const { return m_xBoxItem; }
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     inline bool GetNumFmt( sal_uInt32& rNumFmt ) const;
     inline bool GetValue( double& rValue ) const;
@@ -278,7 +302,11 @@ public:
     sal_Int16 GetVertOri() const { return eVertOri; }
 
     // Is the cell filled or protected ?
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     bool IsUsed() const { return pContents!=0 || bProtected; }
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    bool IsUsed() const { return m_xContents || bProtected; }
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     SwHTMLTableLayoutCell *CreateLayoutInfo();
 
@@ -584,10 +612,19 @@ public:
     sal_Int16 GetInheritedVertOri() const;
 
     // Insert a cell on the current position
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     void InsertCell( HTMLTableCnts *pCnts, sal_uInt16 nRowSpan, sal_uInt16 nColSpan,
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    void InsertCell( std::shared_ptr<HTMLTableCnts> const& rCnts, sal_uInt16 nRowSpan, sal_uInt16 nColSpan,
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                      sal_uInt16 nWidth, bool bRelWidth, sal_uInt16 nHeight,
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                      sal_Int16 eVertOri, SvxBrushItem *pBGBrush,
                      boost::shared_ptr<SvxBoxItem> const pBoxItem,
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                     sal_Int16 eVertOri, std::shared_ptr<SvxBrushItem> const& rBGBrushItem,
+                     std::shared_ptr<SvxBoxItem> const& rBoxItem,
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                      bool bHasNumFmt, sal_uInt32 nNumFmt,
                      bool bHasValue, double nValue, bool bNoWrap );
 
@@ -738,8 +775,10 @@ SwHTMLTableLayoutCnts *HTMLTableCnts::CreateLayoutInfo()
 }
 
 HTMLTableCell::HTMLTableCell():
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     pContents(0),
     pBGBrush(0),
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     nNumFmt(0),
     nRowSpan(1),
     nColSpan(1),
@@ -753,6 +792,8 @@ HTMLTableCell::HTMLTableCell():
     bNoWrap(false),
     mbCovered(false)
 {}
+
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
 
 HTMLTableCell::~HTMLTableCell()
 {
@@ -768,16 +809,30 @@ HTMLTableCell::~HTMLTableCell()
 void HTMLTableCell::Set( HTMLTableCnts *pCnts, sal_uInt16 nRSpan, sal_uInt16 nCSpan,
                          sal_Int16 eVert, SvxBrushItem *pBrush,
                          ::boost::shared_ptr<SvxBoxItem> const pBoxItem,
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+void HTMLTableCell::Set( std::shared_ptr<HTMLTableCnts> const& rCnts, sal_uInt16 nRSpan, sal_uInt16 nCSpan,
+                         sal_Int16 eVert, std::shared_ptr<SvxBrushItem> const& rBrush,
+                         std::shared_ptr<SvxBoxItem> const& rBoxItem,
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                          bool bHasNF, sal_uInt32 nNF, bool bHasV, double nVal,
                          bool bNWrap, bool bCovered )
 {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     pContents = pCnts;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    m_xContents = rCnts;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     nRowSpan = nRSpan;
     nColSpan = nCSpan;
     bProtected = false;
     eVertOri = eVert;
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     pBGBrush = pBrush;
     m_pBoxItem = pBoxItem;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    m_xBGBrush = rBrush;
+    m_xBoxItem = rBoxItem;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     bHasNumFmt = bHasNF;
     bHasValue = bHasV;
@@ -800,11 +855,20 @@ void HTMLTableCell::SetProtected()
     // sein, weil sie nicht geloescht werden!!!
 
     // Inhalt loeschen
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     pContents = 0;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    m_xContents.reset();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     // Hintergrundfarbe kopieren.
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     if( pBGBrush )
         pBGBrush = new SvxBrushItem( *pBGBrush );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    if (m_xBGBrush)
+        m_xBGBrush.reset(new SvxBrushItem(*m_xBGBrush));
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     nRowSpan = 1;
     nColSpan = 1;
@@ -825,7 +889,11 @@ inline bool HTMLTableCell::GetValue( double& rValue ) const
 
 SwHTMLTableLayoutCell *HTMLTableCell::CreateLayoutInfo()
 {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     SwHTMLTableLayoutCnts *pCntInfo = pContents ? pContents->CreateLayoutInfo() : 0;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    SwHTMLTableLayoutCnts *pCntInfo = m_xContents ? m_xContents->CreateLayoutInfo() : nullptr;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     return new SwHTMLTableLayoutCell( pCntInfo, nRowSpan, nColSpan, nWidth,
                                       bRelWidth, bNoWrap );
@@ -1324,7 +1392,11 @@ void HTMLTable::FixRowSpan( sal_uInt16 nRow, sal_uInt16 nCol,
 {
     sal_uInt16 nRowSpan=1;
     HTMLTableCell *pCell;
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     while( ( pCell=GetCell(nRow,nCol), pCell->GetContents()==pCnts ) )
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    while (pCell=GetCell(nRow,nCol), pCell->GetContents().get() == pCnts)
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     {
         pCell->SetRowSpan( nRowSpan );
         if( pLayoutInfo )
@@ -1354,13 +1426,21 @@ const SwStartNode* HTMLTable::GetPrevBoxStartNode( sal_uInt16 nRow, sal_uInt16 n
     {
         // immer die Vorgaenger-Zelle
         if( nCol>0 )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             pPrevCnts = GetCell( 0, nCol-1 )->GetContents();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            pPrevCnts = GetCell( 0, nCol-1 )->GetContents().get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         else
             return pPrevStNd;
     }
     else if( USHRT_MAX==nRow && USHRT_MAX==nCol )
         // der Contents der letzten Zelle
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         pPrevCnts = GetCell( nRows-1, nCols-1 )->GetContents();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        pPrevCnts = GetCell( nRows-1, nCols-1 )->GetContents().get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     else
     {
         sal_uInt16 i;
@@ -1373,7 +1453,11 @@ const SwStartNode* HTMLTable::GetPrevBoxStartNode( sal_uInt16 nRow, sal_uInt16 n
             i--;
             if( 1 == pPrevRow->GetCell(i)->GetRowSpan() )
             {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 pPrevCnts = GetCell(nRow,i)->GetContents();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                pPrevCnts = GetCell(nRow,i)->GetContents().get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                 break;
             }
         }
@@ -1385,14 +1469,22 @@ const SwStartNode* HTMLTable::GetPrevBoxStartNode( sal_uInt16 nRow, sal_uInt16 n
             while( !pPrevCnts && i )
             {
                 i--;
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 pPrevCnts = pPrevRow->GetCell(i)->GetContents();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                pPrevCnts = pPrevRow->GetCell(i)->GetContents().get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             }
         }
     }
     OSL_ENSURE( pPrevCnts, "keine gefuellte Vorgaenger-Zelle gefunden" );
     if( !pPrevCnts )
     {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         pPrevCnts = GetCell(0,0)->GetContents();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        pPrevCnts = GetCell(0,0)->GetContents().get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         if( !pPrevCnts )
             return pPrevStNd;
     }
@@ -1498,7 +1590,11 @@ void HTMLTable::FixFrameFmt( SwTableBox *pBox,
     SwFrmFmt *pFrmFmt = 0;      // frame::Frame-Format
     sal_Int16 eVOri = text::VertOrientation::NONE;
     const SvxBrushItem *pBGBrushItem = 0;   // Hintergrund
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     boost::shared_ptr<SvxBoxItem> pBoxItem;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    std::shared_ptr<SvxBoxItem> pBoxItem;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     bool bTopLine = false, bBottomLine = false, bLastBottomLine = false;
     bool bReUsable = false;     // Format nochmals verwendbar?
     sal_uInt16 nEmptyRows = 0;
@@ -1514,7 +1610,11 @@ void HTMLTable::FixFrameFmt( SwTableBox *pBox,
         // die Hintergrundfarbe/-grafik bestimmen
         const HTMLTableCell *pCell = GetCell( nRow, nCol );
         pBoxItem = pCell->GetBoxItem();
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         pBGBrushItem = pCell->GetBGBrush();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        pBGBrushItem = pCell->GetBGBrush().get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         if( !pBGBrushItem )
         {
             // Wenn die Zelle ueber mehrere Zeilen geht muss ein evtl.
@@ -1897,12 +1997,25 @@ SwTableLine *HTMLTable::MakeTableLine( SwTableBox *pUpper,
 
                         const SwStartNode* pPrevStartNd =
                             GetPrevBoxStartNode( nTopRow, nStartCol );
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                         HTMLTableCnts *pCnts = new HTMLTableCnts(
                             pParser->InsertTableSection(pPrevStartNd) );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                        std::shared_ptr<HTMLTableCnts> xCnts(new HTMLTableCnts(
+                            pParser->InsertTableSection(pPrevStartNd)));
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                         SwHTMLTableLayoutCnts *pCntsLayoutInfo =
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                             pCnts->CreateLayoutInfo();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                            xCnts->CreateLayoutInfo();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                         pCell2->SetContents( pCnts );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                        pCell2->SetContents(xCnts);
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                         SwHTMLTableLayoutCell *pCurrCell = pLayoutInfo->GetCell( nTopRow, nStartCol );
                         pCurrCell->SetContents( pCntsLayoutInfo );
                         if( nBoxRowSpan < 0 )
@@ -1911,13 +2024,21 @@ SwTableLine *HTMLTable::MakeTableLine( SwTableBox *pUpper,
                         // ggf. COLSPAN beachten
                         for( sal_uInt16 j=nStartCol+1; j<nSplitCol; j++ )
                         {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                             GetCell(nTopRow,j)->SetContents( pCnts );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                            GetCell(nTopRow,j)->SetContents(xCnts);
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                             pLayoutInfo->GetCell( nTopRow, j )
                                        ->SetContents( pCntsLayoutInfo );
                         }
                     }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                     pBox = MakeTableBox( pLine, pCell2->GetContents(),
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                    pBox = MakeTableBox( pLine, pCell2->GetContents().get(),
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                                          nTopRow, nStartCol,
                                          nBottomRow, nSplitCol );
 
@@ -2075,7 +2196,11 @@ void HTMLTable::InheritBorders( const HTMLTable *pParent,
 
     // die Child-Tabelle muss die Farbe der Zelle erben, in der sie
     // vorkommt, wenn sie keine eigene besitzt
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     const SvxBrushItem *pInhBG = pParent->GetCell(nRow,nCol)->GetBGBrush();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    const SvxBrushItem *pInhBG = pParent->GetCell(nRow,nCol)->GetBGBrush().get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     if( !pInhBG && pParent != pTopTable &&
         pParent->GetCell(nRow,nCol)->GetRowSpan() == pParent->nRows )
     {
@@ -2163,7 +2288,11 @@ void HTMLTable::SetBorders()
             HTMLTableCell *pCell = pRow->GetCell(j);
             if( pCell->GetContents()  )
             {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 HTMLTableCnts *pCnts = pCell->GetContents();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                HTMLTableCnts *pCnts = pCell->GetContents().get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                 bool bFirstPara = true;
                 while( pCnts )
                 {
@@ -2236,11 +2365,20 @@ sal_Int16 HTMLTable::GetInheritedVertOri() const
     return eVOri;
 }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
 void HTMLTable::InsertCell( HTMLTableCnts *pCnts,
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+void HTMLTable::InsertCell( std::shared_ptr<HTMLTableCnts> const& rCnts,
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                             sal_uInt16 nRowSpan, sal_uInt16 nColSpan,
                             sal_uInt16 nCellWidth, bool bRelWidth, sal_uInt16 nCellHeight,
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                             sal_Int16 eVertOrient, SvxBrushItem *pBGBrushItem,
                             boost::shared_ptr<SvxBoxItem> const pBoxItem,
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                            sal_Int16 eVertOrient, std::shared_ptr<SvxBrushItem> const& rBGBrushItem,
+                            std::shared_ptr<SvxBoxItem> const& rBoxItem,
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                             bool bHasNumFmt, sal_uInt32 nNumFmt,
                             bool bHasValue, double nValue, bool bNoWrap )
 {
@@ -2296,7 +2434,11 @@ void HTMLTable::InsertCell( HTMLTableCnts *pCnts,
                 // ueberschrieben werden bzw. von ProtectRowSpan geloescht
                 // (Inhalt) oder kopiert (Farbe) werden.
                 nSpanedCols = i + pCell->GetColSpan();
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 FixRowSpan( nCurRow-1, i, pCell->GetContents() );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                FixRowSpan( nCurRow-1, i, pCell->GetContents().get() );
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                 if( pCell->GetRowSpan() > nRowSpan )
                     ProtectRowSpan( nRowsReq, i,
                                     pCell->GetRowSpan()-nRowSpan );
@@ -2307,7 +2449,11 @@ void HTMLTable::InsertCell( HTMLTableCnts *pCnts,
             // Auch diese Inhalte sind in jedem Fall nich in der Zeile
             // darueber verankert.
             HTMLTableCell *pCell = pCurRow->GetCell(i);
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             FixRowSpan( nCurRow-1, i, pCell->GetContents() );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            FixRowSpan( nCurRow-1, i, pCell->GetContents().get() );
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             ProtectRowSpan( nCurRow, i, pCell->GetRowSpan() );
         }
     }
@@ -2319,7 +2465,11 @@ void HTMLTable::InsertCell( HTMLTableCnts *pCnts,
         {
             const bool bCovered = i != nColSpan || j != nRowSpan;
             GetCell( nRowsReq-j, nColsReq-i )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 ->Set( pCnts, j, i, eVertOrient, pBGBrushItem, pBoxItem,
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                ->Set( rCnts, j, i, eVertOrient, rBGBrushItem, rBoxItem,
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                        bHasNumFmt, nNumFmt, bHasValue, nValue, bNoWrap, bCovered );
         }
     }
@@ -2500,7 +2650,11 @@ void HTMLTable::CloseTable()
         for( i=0; i<nCols; i++ )
             if( ( (pCell=(pPrevRow->GetCell(i))), (pCell->GetRowSpan()) > 1 ) )
             {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 FixRowSpan( nCurRow-1, i, pCell->GetContents() );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                FixRowSpan( nCurRow-1, i, pCell->GetContents().get() );
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                 ProtectRowSpan( nCurRow, i, (*pRows)[nCurRow].GetCell(i)->GetRowSpan() );
             }
         for( i=nRows-1; i>=nCurRow; i-- )
@@ -3208,7 +3362,9 @@ public:
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     _SectionSaveStruct( SwHTMLParser& rParser );
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     virtual ~_SectionSaveStruct();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
 #if OSL_DEBUG_LEVEL > 0
     sal_uInt16 GetContextStAttrMin() const { return nContextStAttrMinSave; }
@@ -3244,8 +3400,12 @@ _SectionSaveStruct::_SectionSaveStruct( SwHTMLParser& rParser ) :
     rParser.nDefListDeep = 0;
 }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
+
 _SectionSaveStruct::~_SectionSaveStruct()
 {}
+
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
 void _SectionSaveStruct::Restore( SwHTMLParser& rParser )
 {
@@ -3285,11 +3445,21 @@ class _CellSaveStruct : public _SectionSaveStruct
     OUString aStyle, aId, aClass, aLang, aDir;
     OUString aBGImage;
     Color aBGColor;
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     boost::shared_ptr<SvxBoxItem> m_pBoxItem;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    std::shared_ptr<SvxBoxItem> m_xBoxItem;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     HTMLTableCnts* pCnts;           // Liste aller Inhalte
     HTMLTableCnts* pCurrCnts;   // der aktuelle Inhalt oder 0
     SwNodeIndex *pNoBreakEndParaIdx;// Absatz-Index eines </NOBR>
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    std::shared_ptr<HTMLTableCnts> m_xCnts;              // List of all contents
+    HTMLTableCnts* m_pCurrCnts;                          // current content or 0
+    std::unique_ptr<SwNodeIndex> m_pNoBreakEndNodeIndex; // Paragraph index of a <NOBR>
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     double nValue;
 
@@ -3314,13 +3484,22 @@ public:
     _CellSaveStruct( SwHTMLParser& rParser, HTMLTable *pCurTable, bool bHd,
                      bool bReadOpt );
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     virtual ~_CellSaveStruct();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     void AddContents( HTMLTableCnts *pNewCnts );
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     HTMLTableCnts *GetFirstContents() { return pCnts; }
 
     void ClearIsInSection() { pCurrCnts = 0; }
     bool IsInSection() const { return pCurrCnts!=0; }
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    bool HasFirstContents() const { return m_xCnts.get(); }
+
+    void ClearIsInSection() { m_pCurrCnts = nullptr; }
+    bool IsInSection() const { return m_pCurrCnts!=nullptr; }
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     void InsertCell( SwHTMLParser& rParser, HTMLTable *pCurTable );
 
@@ -3334,9 +3513,14 @@ public:
 _CellSaveStruct::_CellSaveStruct( SwHTMLParser& rParser, HTMLTable *pCurTable,
                                   bool bHd, bool bReadOpt ) :
     _SectionSaveStruct( rParser ),
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     pCnts( 0 ),
     pCurrCnts( 0 ),
     pNoBreakEndParaIdx( 0 ),
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    m_pCurrCnts( nullptr ),
+    m_pNoBreakEndNodeIndex( nullptr ),
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     nValue( 0.0 ),
     nNumFmt( 0 ),
     nRowSpan( 1 ),
@@ -3473,7 +3657,11 @@ _CellSaveStruct::_CellSaveStruct( SwHTMLParser& rParser, HTMLTable *pCurTable,
             SfxPoolItem const* pItem;
             if (SfxItemState::SET == aItemSet.GetItemState(RES_BOX, false, &pItem))
             {   // fdo#41796: steal box item to set it in FixFrameFmt later!
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 m_pBoxItem.reset(dynamic_cast<SvxBoxItem *>(pItem->Clone()));
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                m_xBoxItem.reset(dynamic_cast<SvxBoxItem *>(pItem->Clone()));
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                 aItemSet.ClearItem(RES_BOX);
             }
             rParser.InsertAttrs( aItemSet, aPropInfo, pCntxt );
@@ -3485,19 +3673,36 @@ _CellSaveStruct::_CellSaveStruct( SwHTMLParser& rParser, HTMLTable *pCurTable,
     rParser.PushContext( pCntxt );
 }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
+
 _CellSaveStruct::~_CellSaveStruct()
 {
     delete pNoBreakEndParaIdx;
 }
 
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
+
 void _CellSaveStruct::AddContents( HTMLTableCnts *pNewCnts )
 {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     if( pCnts )
         pCnts->Add( pNewCnts );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    if (m_xCnts)
+        m_xCnts->Add( pNewCnts );
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     else
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         pCnts = pNewCnts;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        m_xCnts.reset(pNewCnts);
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     pCurrCnts = pNewCnts;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    m_pCurrCnts = pNewCnts;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 }
 
 void _CellSaveStruct::InsertCell( SwHTMLParser& rParser,
@@ -3532,11 +3737,19 @@ void _CellSaveStruct::InsertCell( SwHTMLParser& rParser,
 #endif
 
     // jetzt muessen wir noch die Zelle an der aktuellen Position einfuegen
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     SvxBrushItem *pBrushItem =
         rParser.CreateBrushItem( bBGColor ? &aBGColor : 0, aBGImage,
                                  aStyle, aId, aClass );
     pCurTable->InsertCell( pCnts, nRowSpan, nColSpan, nWidth,
                            bPrcWidth, nHeight, eVertOri, pBrushItem, m_pBoxItem,
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    std::shared_ptr<SvxBrushItem> xBrushItem(
+        rParser.CreateBrushItem(bBGColor ? &aBGColor : nullptr, aBGImage,
+                                aStyle, aId, aClass));
+    pCurTable->InsertCell( m_xCnts, nRowSpan, nColSpan, nWidth,
+                           bPrcWidth, nHeight, eVertOri, xBrushItem, m_xBoxItem,
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                            bHasNumFmt, nNumFmt, bHasValue, nValue,
                            bNoWrap );
     Restore( rParser );
@@ -3544,10 +3757,17 @@ void _CellSaveStruct::InsertCell( SwHTMLParser& rParser,
 
 void _CellSaveStruct::StartNoBreak( const SwPosition& rPos )
 {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     if( !pCnts ||
         (!rPos.nContent.GetIndex() && pCurrCnts==pCnts &&
          pCnts->GetStartNode() &&
          pCnts->GetStartNode()->GetIndex() + 1 ==
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    if( !m_xCnts ||
+        (!rPos.nContent.GetIndex() && m_pCurrCnts == m_xCnts.get() &&
+         m_xCnts->GetStartNode() &&
+         m_xCnts->GetStartNode()->GetIndex() + 1 ==
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             rPos.nNode.GetIndex()) )
     {
         bNoBreak = true;
@@ -3558,8 +3778,12 @@ void _CellSaveStruct::EndNoBreak( const SwPosition& rPos )
 {
     if( bNoBreak )
     {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         delete pNoBreakEndParaIdx;
         pNoBreakEndParaIdx = new SwNodeIndex( rPos.nNode );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        m_pNoBreakEndNodeIndex.reset( new SwNodeIndex( rPos.nNode ) );
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         nNoBreakEndCntntPos = rPos.nContent.GetIndex();
         bNoBreak = false;
     }
@@ -3567,20 +3791,37 @@ void _CellSaveStruct::EndNoBreak( const SwPosition& rPos )
 
 void _CellSaveStruct::CheckNoBreak( const SwPosition& rPos, SwDoc * /*pDoc*/ )
 {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     if( pCnts && pCurrCnts==pCnts )
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    if (m_xCnts && m_pCurrCnts == m_xCnts.get())
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     {
         if( bNoBreak )
         {
             // <NOBR> wurde nicht beendet
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             pCnts->SetNoBreak();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            m_xCnts->SetNoBreak();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         }
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         else if( pNoBreakEndParaIdx &&
                  pNoBreakEndParaIdx->GetIndex() == rPos.nNode.GetIndex() )
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        else if( m_pNoBreakEndNodeIndex &&
+                 m_pNoBreakEndNodeIndex->GetIndex() == rPos.nNode.GetIndex() )
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         {
             if( nNoBreakEndCntntPos == rPos.nContent.GetIndex() )
             {
                 // <NOBR> wurde unmittelbar vor dem Zellen-Ende beendet
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 pCnts->SetNoBreak();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                m_xCnts->SetNoBreak();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             }
             else if( nNoBreakEndCntntPos + 1 == rPos.nContent.GetIndex() )
             {
@@ -3593,7 +3834,11 @@ void _CellSaveStruct::CheckNoBreak( const SwPosition& rPos, SwDoc * /*pDoc*/ )
                     {
                         // Zwischem dem </NOBR> und dem Zellen-Ende gibt es nur
                         // ein Blank oder einen Zeilenumbruch.
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                         pCnts->SetNoBreak();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                        m_xCnts->SetNoBreak();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                     }
                 }
             }
@@ -4454,7 +4699,7 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
     if( !pSaveStruct->GetFirstContents() ||
         (!pSaveStruct->IsInSection() && !pCurTable->HasColTags()) )
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
-    if( !xSaveStruct->GetFirstContents() ||
+    if( !xSaveStruct->HasFirstContents() ||
         (!xSaveStruct->IsInSection() && !pCurTable->HasColTags()) )
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     {
