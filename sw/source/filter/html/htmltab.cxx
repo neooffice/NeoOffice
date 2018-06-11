@@ -38,6 +38,9 @@
 #include <svtools/htmltokn.h>
 #include <svtools/htmlkywd.hxx>
 #include <svl/urihelper.hxx>
+#ifndef NO_LIBO_HTML_TABLE_LEAK_FIX
+#include <o3tl/make_unique.hxx>
+#endif	// !NO_LIBO_HTML_TABLE_LEAK_FIX
 
 #include <fmtornt.hxx>
 #include <frmfmt.hxx>
@@ -314,11 +317,19 @@ public:
 };
 
 // Row of a HTML table
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
 typedef boost::ptr_vector<HTMLTableCell> HTMLTableCells;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+typedef std::vector<std::unique_ptr<HTMLTableCell>> HTMLTableCells;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
 class HTMLTableRow
 {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     HTMLTableCells *pCells;             // cells of the row
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    std::unique_ptr<HTMLTableCells> m_xCells;   ///< cells of the row
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     bool bIsEndOfGroup : 1;
 
@@ -327,15 +338,23 @@ class HTMLTableRow
 
     SvxAdjust eAdjust;
     sal_Int16 eVertOri;
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     SvxBrushItem *pBGBrush;             // background of cell from STYLE
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    std::unique_ptr<SvxBrushItem> xBGBrush;             // background of cell from STYLE
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
 public:
 
     bool bBottomBorder;                 // Is there a line after the row?
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     HTMLTableRow( sal_uInt16 nCells=0 );    // cells of the row are empty
 
     ~HTMLTableRow();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    explicit HTMLTableRow( sal_uInt16 nCells ); // cells of the row are empty
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     inline void SetHeight( sal_uInt16 nHeight );
     sal_uInt16 GetHeight() const { return nHeight; }
@@ -348,8 +367,13 @@ public:
     inline void SetVertOri( sal_Int16 eV) { eVertOri = eV; }
     inline sal_Int16 GetVertOri() const { return eVertOri; }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     void SetBGBrush( SvxBrushItem *pBrush ) { pBGBrush = pBrush; }
     const SvxBrushItem *GetBGBrush() const { return pBGBrush; }
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    void SetBGBrush(std::unique_ptr<SvxBrushItem>& rBrush ) { xBGBrush = std::move(rBrush); }
+    const std::unique_ptr<SvxBrushItem>& GetBGBrush() const { return xBGBrush; }
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     inline void SetEndOfGroup() { bIsEndOfGroup = true; }
     inline bool IsEndOfGroup() const { return bIsEndOfGroup; }
@@ -406,9 +430,15 @@ public:
 };
 
 // HTML table
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
 typedef boost::ptr_vector<HTMLTableRow> HTMLTableRows;
 
 typedef boost::ptr_vector<HTMLTableColumn> HTMLTableColumns;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+typedef std::vector<std::unique_ptr<HTMLTableRow>> HTMLTableRows;
+
+typedef std::vector<std::unique_ptr<HTMLTableColumn>> HTMLTableColumns;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
 typedef std::vector<SdrObject *> SdrObjects;
 
@@ -422,8 +452,13 @@ class HTMLTable
     SdrObjects *pResizeDrawObjs;// SDR objects
     std::vector<sal_uInt16> *pDrawObjPrcWidths;   // column of draw object and its rel. width
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     HTMLTableRows *pRows;           // table rows
     HTMLTableColumns *pColumns;     // table columns
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    HTMLTableRows *m_pRows;         ///< table rows
+    HTMLTableColumns *m_pColumns;   ///< table columns
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     sal_uInt16 nRows;                   // number of rows
     sal_uInt16 nCols;                   // number of columns
@@ -454,8 +489,13 @@ private:
     SwTableBoxFmt *pBoxFmt;         // frame::Frame-Format from SwTableBox
     SwTableLineFmt *pLineFmt;       // frame::Frame-Format from SwTableLine
     SwTableLineFmt *pLineFrmFmtNoHeight;
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     SvxBrushItem *pBGBrush;         // background of the table
     SvxBrushItem *pInhBGBrush;      // "inherited" background of the table
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    std::unique_ptr<SvxBrushItem> m_xBackgroundBrush;          // background of the table
+    std::unique_ptr<SvxBrushItem> m_xInheritedBackgroundBrush; // "inherited" background of the table
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     const SwStartNode *pCaptionStartNode;   // Start-Node of the table-caption
     //lines for the border
     SvxBorderLine aTopBorderLine;
@@ -570,8 +610,13 @@ private:
     // is the border already setted?
     bool BordersSet() const { return bBordersSet; }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     const SvxBrushItem *GetBGBrush() const { return pBGBrush; }
     const SvxBrushItem *GetInhBGBrush() const { return pInhBGBrush; }
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    const std::unique_ptr<SvxBrushItem>& GetBGBrush() const { return m_xBackgroundBrush; }
+    const std::unique_ptr<SvxBrushItem>& GetInhBGBrush() const { return m_xInheritedBackgroundBrush; }
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     sal_uInt16 GetBorderWidth( const SvxBorderLine& rBLine,
                            bool bWithDistance=false ) const;
@@ -629,8 +674,12 @@ public:
                      bool bHasValue, double nValue, bool bNoWrap );
 
     // announce the start/end of a new row
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     void OpenRow( SvxAdjust eAdjust, sal_Int16 eVertOri,
                   SvxBrushItem *pBGBrush );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    void OpenRow(SvxAdjust eAdjust, sal_Int16 eVertOri, std::unique_ptr<SvxBrushItem>& rBGBrush);
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     void CloseRow( bool bEmpty );
 
     // announce the end of a new section
@@ -687,7 +736,11 @@ public:
 
     const SwTable *GetSwTable() const { return pSwTable; }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     void SetBGBrush( const SvxBrushItem& rBrush ) { delete pBGBrush; pBGBrush = new SvxBrushItem( rBrush ); }
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    void SetBGBrush(const SvxBrushItem& rBrush) { m_xBackgroundBrush.reset(new SvxBrushItem(rBrush)); }
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     const OUString& GetId() const { return aId; }
     const OUString& GetClass() const { return aClass; }
@@ -899,30 +952,49 @@ SwHTMLTableLayoutCell *HTMLTableCell::CreateLayoutInfo()
                                       bRelWidth, bNoWrap );
 }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
 HTMLTableRow::HTMLTableRow( sal_uInt16 nCells ):
     pCells(new HTMLTableCells),
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+HTMLTableRow::HTMLTableRow(sal_uInt16 const nCells)
+    : m_xCells(new HTMLTableCells),
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     bIsEndOfGroup(false),
     nHeight(0),
     nEmptyRows(0),
     eAdjust(SVX_ADJUST_END),
     eVertOri(text::VertOrientation::TOP),
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     pBGBrush(0),
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     bBottomBorder(false)
 {
     for( sal_uInt16 i=0; i<nCells; i++ )
     {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         pCells->push_back( new HTMLTableCell );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        m_xCells->push_back(o3tl::make_unique<HTMLTableCell>());
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     OSL_ENSURE(nCells == pCells->size(),
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    OSL_ENSURE(nCells == m_xCells->size(),
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             "wrong Cell count in new HTML table row");
 }
+
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
 
 HTMLTableRow::~HTMLTableRow()
 {
     delete pCells;
     delete pBGBrush;
 }
+
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
 inline void HTMLTableRow::SetHeight( sal_uInt16 nHght )
 {
@@ -932,9 +1004,15 @@ inline void HTMLTableRow::SetHeight( sal_uInt16 nHght )
 
 inline HTMLTableCell *HTMLTableRow::GetCell( sal_uInt16 nCell ) const
 {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     OSL_ENSURE( nCell<pCells->size(),
         "ungueltiger Zellen-Index in HTML-Tabellenzeile" );
     return &(*pCells)[nCell];
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    OSL_ENSURE( nCell < m_xCells->size(),
+        "invalid cell index in HTML table row" );
+    return (*m_xCells)[nCell].get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 }
 
 void HTMLTableRow::Expand( sal_uInt16 nCells, bool bOneCell )
@@ -943,34 +1021,63 @@ void HTMLTableRow::Expand( sal_uInt16 nCells, bool bOneCell )
     // bOneCell gesetzt ist. Das geht, nur fuer Zeilen, in die keine
     // Zellen mehr eingefuegt werden!
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     sal_uInt16 nColSpan = nCells-pCells->size();
     for( sal_uInt16 i=pCells->size(); i<nCells; i++ )
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    sal_uInt16 nColSpan = nCells - m_xCells->size();
+    for (sal_uInt16 i = m_xCells->size(); i < nCells; ++i)
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         HTMLTableCell *pCell = new HTMLTableCell;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        std::unique_ptr<HTMLTableCell> pCell(new HTMLTableCell);
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         if( bOneCell )
             pCell->SetColSpan( nColSpan );
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         pCells->push_back( pCell );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        m_xCells->push_back(std::move(pCell));
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         nColSpan--;
     }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     OSL_ENSURE(nCells == pCells->size(),
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    OSL_ENSURE(nCells == m_xCells->size(),
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             "wrong Cell count in expanded HTML table row");
 }
 
 void HTMLTableRow::Shrink( sal_uInt16 nCells )
 {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     OSL_ENSURE(nCells < pCells->size(), "number of cells too large");
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    OSL_ENSURE(nCells < m_xCells->size(), "number of cells too large");
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
 #if OSL_DEBUG_LEVEL > 0
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
      sal_uInt16 nEnd = pCells->size();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+     sal_uInt16 const nEnd = m_xCells->size();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 #endif
     // The colspan of empty cells at the end has to be fixed to the new
     // number of cells.
     sal_uInt16 i=nCells;
     while( i )
     {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         HTMLTableCell *pCell = &(*pCells)[--i];
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        HTMLTableCell *pCell = (*m_xCells)[--i].get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         if( !pCell->GetContents() )
         {
 #if OSL_DEBUG_LEVEL > 0
@@ -985,7 +1092,11 @@ void HTMLTableRow::Shrink( sal_uInt16 nCells )
 #if OSL_DEBUG_LEVEL > 0
     for( i=nCells; i<nEnd; i++ )
     {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         HTMLTableCell *pCell = &(*pCells)[i];
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        HTMLTableCell *pCell = (*m_xCells)[i].get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         OSL_ENSURE( pCell->GetRowSpan() == 1,
                 "RowSpan von zu loesender Zelle ist falsch" );
         OSL_ENSURE( pCell->GetColSpan() == nEnd - i,
@@ -994,7 +1105,11 @@ void HTMLTableRow::Shrink( sal_uInt16 nCells )
     }
 #endif
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     pCells->erase( pCells->begin() + nCells, pCells->end() );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    m_xCells->erase(m_xCells->begin() + nCells, m_xCells->end());
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 }
 
 HTMLTableColumn::HTMLTableColumn():
@@ -1060,8 +1175,13 @@ void HTMLTable::InitCtor(const HTMLTableOptions& rOptions)
     pResizeDrawObjs = 0;
     pDrawObjPrcWidths = 0;
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     pRows = new HTMLTableRows;
     pColumns = new HTMLTableColumns;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    m_pRows = new HTMLTableRows;
+    m_pColumns = new HTMLTableColumns;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     nRows = 0;
     nCurRow = 0; nCurCol = 0;
 
@@ -1072,7 +1192,11 @@ void HTMLTable::InitCtor(const HTMLTableOptions& rOptions)
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     pBoxFmt = 0; pLineFmt = 0;
     pLineFrmFmtNoHeight = 0;
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     pInhBGBrush = 0;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    m_xInheritedBackgroundBrush.reset();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     pPrevStNd = 0;
     pSwTable = 0;
@@ -1201,13 +1325,14 @@ void HTMLTable::InitCtor(const HTMLTableOptions& rOptions)
 
     bColSpec = false;
 
-    pBGBrush = pParser->CreateBrushItem(
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
+    pBGBrush = pParser->CreateBrushItem(
                     pOptions->bBGColor ? &(pOptions->aBGColor) : 0,
                     pOptions->aBGImage, aEmptyOUStr, aEmptyOUStr, aEmptyOUStr );
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    m_xBackgroundBrush.reset(pParser->CreateBrushItem(
                     rOptions.bBGColor ? &(rOptions.aBGColor) : nullptr,
-                    rOptions.aBGImage, aEmptyOUStr, aEmptyOUStr, aEmptyOUStr);
+                    rOptions.aBGImage, aEmptyOUStr, aEmptyOUStr, aEmptyOUStr));
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     pContext = 0;
@@ -1291,7 +1416,11 @@ HTMLTable::HTMLTable( SwHTMLParser* pPars, HTMLTable *pTopTab,
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     for( sal_uInt16 i=0; i<nCols; i++ )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         pColumns->push_back( new HTMLTableColumn );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        m_pColumns->push_back(o3tl::make_unique<HTMLTableColumn>());
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
 #ifndef NO_LIBO_HTML_TABLE_LEAK_FIX
     pParser->RegisterHTMLTable(this);
@@ -1318,10 +1447,15 @@ HTMLTable::~HTMLTable()
     delete pResizeDrawObjs;
     delete pDrawObjPrcWidths;
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     delete pRows;
     delete pColumns;
     delete pBGBrush;
     delete pInhBGBrush;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    delete m_pRows;
+    delete m_pColumns;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     delete pContext;
 
@@ -1335,7 +1469,11 @@ SwHTMLTableLayout *HTMLTable::CreateLayoutInfo()
 
     sal_uInt16 nBorderWidth = GetBorderWidth( aBorderLine, true );
     sal_uInt16 nLeftBorderWidth =
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         ((*pColumns)[0]).bLeftBorder ? GetBorderWidth( aLeftBorderLine, true ) : 0;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        (*m_pColumns)[0]->bLeftBorder ? GetBorderWidth(aLeftBorderLine, true) : 0;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     sal_uInt16 nRightBorderWidth =
         bRightBorder ? GetBorderWidth( aRightBorderLine, true ) : 0;
     sal_uInt16 nInhLeftBorderWidth = 0;
@@ -1354,7 +1492,11 @@ SwHTMLTableLayout *HTMLTable::CreateLayoutInfo()
     sal_uInt16 i;
     for( i=0; i<nRows; i++ )
     {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         HTMLTableRow *pRow = &(*pRows)[i];
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        HTMLTableRow *const pRow = (*m_pRows)[i].get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         for( sal_uInt16 j=0; j<nCols; j++ )
         {
             SwHTMLTableLayoutCell *pLayoutCell =
@@ -1376,7 +1518,11 @@ SwHTMLTableLayout *HTMLTable::CreateLayoutInfo()
     pLayoutInfo->SetExportable( bExportable );
 
     for( i=0; i<nCols; i++ )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         pLayoutInfo->SetColumn( ((*pColumns)[i]).CreateLayoutInfo(), i );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        pLayoutInfo->SetColumn( (*m_pColumns)[i]->CreateLayoutInfo(), i );
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     return pLayoutInfo;
 }
@@ -1444,7 +1590,11 @@ const SwStartNode* HTMLTable::GetPrevBoxStartNode( sal_uInt16 nRow, sal_uInt16 n
     else
     {
         sal_uInt16 i;
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         HTMLTableRow *pPrevRow = &(*pRows)[nRow-1];
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        HTMLTableRow *const pPrevRow = (*m_pRows)[nRow-1].get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
         // evtl. eine Zelle in der aktuellen Zeile
         i = nCol;
@@ -1527,7 +1677,11 @@ sal_uInt16 HTMLTable::GetTopCellSpace( sal_uInt16 nRow, sal_uInt16 nRowSpan,
                 nSpace = nTopBorderWidth;
         }
     }
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     else if( bSwBorders && (*pRows)[nRow+nRowSpan-1].bBottomBorder &&
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    else if( bSwBorders && (*m_pRows)[nRow+nRowSpan-1]->bBottomBorder &&
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
              nSpace < MIN_BORDER_DIST )
     {
         OSL_ENSURE( !nCellPadding, "GetTopCellSpace: CELLPADDING!=0" );
@@ -1560,7 +1714,11 @@ sal_uInt16 HTMLTable::GetBottomCellSpace( sal_uInt16 nRow, sal_uInt16 nRowSpan,
     }
     else if( bSwBorders )
     {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         if( (*pRows)[nRow+nRowSpan+1].bBottomBorder )
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        if( (*m_pRows)[nRow+nRowSpan+1]->bBottomBorder )
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         {
             sal_uInt16 nBorderWidth = GetBorderWidth( aBorderLine, true );
             if( nSpace < nBorderWidth )
@@ -1603,7 +1761,11 @@ void HTMLTable::FixFrameFmt( SwTableBox *pBox,
     sal_uInt32 nNumFmt = 0;
     double nValue = 0.0;
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     HTMLTableColumn *pColumn = &(*pColumns)[nCol];
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    HTMLTableColumn *const pColumn = (*m_pColumns)[nCol].get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     if( pBox->GetSttNd() )
     {
@@ -1626,20 +1788,40 @@ void HTMLTable::FixFrameFmt( SwTableBox *pBox,
             // die Line von der GC (zu Recht) wegoptimiert wird.
             if( nRowSpan > 1 || (this != pTopTable && nRowSpan==nRows) )
             {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 pBGBrushItem = (*pRows)[nRow].GetBGBrush();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                pBGBrushItem = (*m_pRows)[nRow]->GetBGBrush().get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                 if( !pBGBrushItem && this != pTopTable )
                 {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                     pBGBrushItem = GetBGBrush();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                    pBGBrushItem = GetBGBrush().get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                     if( !pBGBrushItem )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                         pBGBrushItem = GetInhBGBrush();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                        pBGBrushItem = GetInhBGBrush().get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                 }
             }
         }
 
         bTopLine = 0==nRow && bTopBorder && bFirstPara;
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         if( (*pRows)[nRow+nRowSpan-1].bBottomBorder && bLastPara )
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        if( (*m_pRows)[nRow+nRowSpan-1]->bBottomBorder && bLastPara )
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             nEmptyRows = (*pRows)[nRow+nRowSpan-1].GetEmptyRows();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            nEmptyRows = (*m_pRows)[nRow+nRowSpan-1]->GetEmptyRows();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             if( nRow+nRowSpan == nRows )
                 bLastBottomLine = true;
             else
@@ -1712,7 +1894,11 @@ void HTMLTable::FixFrameFmt( SwTableBox *pBox,
                 }
                 bSet = true;
             }
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             if( ((*pColumns)[nCol]).bLeftBorder )
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            if( ((*m_pColumns)[nCol])->bLeftBorder )
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             {
                 const SvxBorderLine& rBorderLine =
                     0==nCol ? aLeftBorderLine : aBorderLine;
@@ -1911,7 +2097,11 @@ SwTableLine *HTMLTable::MakeTableLine( SwTableBox *pUpper,
                                                      : pLineFmt,
                                  0, pUpper );
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     HTMLTableRow *pTopRow = &(*pRows)[nTopRow];
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    HTMLTableRow *pTopRow = (*m_pRows)[nTopRow].get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     sal_uInt16 nRowHeight = pTopRow->GetHeight();
     const SvxBrushItem *pBGBrushItem = 0;
     if( this == pTopTable || nTopRow>0 || nBottomRow<nRows )
@@ -1919,16 +2109,28 @@ SwTableLine *HTMLTable::MakeTableLine( SwTableBox *pUpper,
         // An der Line eine Frabe zu setzen macht keinen Sinn, wenn sie
         // die auesserste und gleichzeitig einzige Zeile einer Tabelle in
         // der Tabelle ist.
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         pBGBrushItem = pTopRow->GetBGBrush();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        pBGBrushItem = pTopRow->GetBGBrush().get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
         if( !pBGBrushItem && this != pTopTable )
         {
             // Ein an einer Tabellen in der Tabelle gesetzter Hintergrund
             // wird an den Rows gesetzt. Das gilt auch fuer den Hintergrund
             // der Zelle, in dem die Tabelle vorkommt.
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             pBGBrushItem = GetBGBrush();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            pBGBrushItem = GetBGBrush().get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             if( !pBGBrushItem )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 pBGBrushItem = GetInhBGBrush();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                pBGBrushItem = GetInhBGBrush().get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         }
     }
     if( nTopRow==nBottomRow-1 && (nRowHeight || pBGBrushItem) )
@@ -2178,9 +2380,17 @@ void HTMLTable::InheritBorders( const HTMLTable *pParent,
         bFillerTopBorder = true; // auch Filler bekommt eine Umrandung
         aTopBorderLine = pParent->aTopBorderLine;
     }
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     if( (*pParent->pRows)[nRow+nRowSpan-1].bBottomBorder && bLastPara )
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    if( (*pParent->m_pRows)[nRow+nRowSpan-1]->bBottomBorder && bLastPara )
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         (*pRows)[nRows-1].bBottomBorder = true;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        (*m_pRows)[nRows-1]->bBottomBorder = true;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         bFillerBottomBorder = true; // auch Filler bekommt eine Umrandung
         aBottomBorderLine =
             nRow+nRowSpan==pParent->nRows ? pParent->aBottomBorderLine
@@ -2192,7 +2402,11 @@ void HTMLTable::InheritBorders( const HTMLTable *pParent,
     // Sie darf jedoch immer einen oberen Rand bekommen, wenn die Tabelle
     // nicht der erste Absatz in der Zelle ist.
     bTopAlwd = ( !bFirstPara || (pParent->bTopAlwd &&
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                  (0==nRow || !((*pParent->pRows)[nRow-1]).bBottomBorder)) );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                 (0==nRow || !((*pParent->m_pRows)[nRow-1])->bBottomBorder)) );
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     // die Child-Tabelle muss die Farbe der Zelle erben, in der sie
     // vorkommt, wenn sie keine eigene besitzt
@@ -2208,14 +2422,30 @@ void HTMLTable::InheritBorders( const HTMLTable *pParent,
         // und besteht nur aus einer Line, die bei der GC (zu Recht)
         // wegoptimiert wird. Deshalb muss der Hintergrund der Line in
         // diese Tabelle uebernommen werden.
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         pInhBG = (*pParent->pRows)[nRow].GetBGBrush();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        pInhBG = (*pParent->m_pRows)[nRow]->GetBGBrush().get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         if( !pInhBG )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             pInhBG = pParent->GetBGBrush();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            pInhBG = pParent->GetBGBrush().get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         if( !pInhBG )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             pInhBG = pParent->GetInhBGBrush();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            pInhBG = pParent->GetInhBGBrush().get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     }
     if( pInhBG )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         pInhBGBrush = new SvxBrushItem( *pInhBG );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        m_xInheritedBackgroundBrush.reset(new SvxBrushItem(*pInhBG));
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 }
 
 void HTMLTable::InheritVertBorders( const HTMLTable *pParent,
@@ -2232,7 +2462,11 @@ void HTMLTable::InheritVertBorders( const HTMLTable *pParent,
             GetBorderWidth( aInhRightBorderLine, true ) + MIN_BORDER_DIST;
     }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     if( ((*pParent->pColumns)[nCol]).bLeftBorder )
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    if( ((*pParent->m_pColumns)[nCol])->bLeftBorder )
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     {
         bInhLeftBorder = true;  // erstmal nur merken
         aInhLeftBorderLine = 0==nCol ? pParent->aLeftBorderLine
@@ -2250,7 +2484,11 @@ void HTMLTable::InheritVertBorders( const HTMLTable *pParent,
 
     bRightAlwd = ( pParent->bRightAlwd &&
                   (nCol+nColSpan==pParent->nCols ||
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                    !((*pParent->pColumns)[nCol+nColSpan]).bLeftBorder) );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                   !((*pParent->m_pColumns)[nCol+nColSpan])->bLeftBorder) );
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 }
 
 void HTMLTable::SetBorders()
@@ -2259,30 +2497,52 @@ void HTMLTable::SetBorders()
     for( i=1; i<nCols; i++ )
         if( HTML_TR_ALL==eRules || HTML_TR_COLS==eRules ||
             ((HTML_TR_ROWS==eRules || HTML_TR_GROUPS==eRules) &&
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
              ((*pColumns)[i-1]).IsEndOfGroup()) )
             ((*pColumns)[i]).bLeftBorder = true;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+             ((*m_pColumns)[i-1])->IsEndOfGroup()) )
+            ((*m_pColumns)[i])->bLeftBorder = true;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     for( i=0; i<nRows-1; i++ )
         if( HTML_TR_ALL==eRules || HTML_TR_ROWS==eRules ||
             ((HTML_TR_COLS==eRules || HTML_TR_GROUPS==eRules) &&
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
              (*pRows)[i].IsEndOfGroup()) )
             (*pRows)[i].bBottomBorder = true;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+             (*m_pRows)[i]->IsEndOfGroup()) )
+            (*m_pRows)[i]->bBottomBorder = true;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     if( bTopAlwd && (HTML_TF_ABOVE==eFrame || HTML_TF_HSIDES==eFrame ||
                      HTML_TF_BOX==eFrame) )
         bTopBorder = true;
     if( HTML_TF_BELOW==eFrame || HTML_TF_HSIDES==eFrame ||
         HTML_TF_BOX==eFrame )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         (*pRows)[nRows-1].bBottomBorder = true;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        (*m_pRows)[nRows-1]->bBottomBorder = true;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     if( (HTML_TF_RHS==eFrame || HTML_TF_VSIDES==eFrame ||
                       HTML_TF_BOX==eFrame) )
         bRightBorder = true;
     if( HTML_TF_LHS==eFrame || HTML_TF_VSIDES==eFrame || HTML_TF_BOX==eFrame )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         ((*pColumns)[0]).bLeftBorder = true;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        ((*m_pColumns)[0])->bLeftBorder = true;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     for( i=0; i<nRows; i++ )
     {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         HTMLTableRow *pRow = &(*pRows)[i];
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        HTMLTableRow *const pRow = (*m_pRows)[i].get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         for( sal_uInt16 j=0; j<nCols; j++ )
         {
             HTMLTableCell *pCell = pRow->GetCell(j);
@@ -2339,15 +2599,27 @@ inline HTMLTableCell *HTMLTable::GetCell( sal_uInt16 nRow,
                                           sal_uInt16 nCell ) const
 {
     OSL_ENSURE(nRow < pRows->size(), "invalid row index in HTML table");
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     return (*pRows)[nRow].GetCell( nCell );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    return (*m_pRows)[nRow]->GetCell( nCell );
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 }
 
 SvxAdjust HTMLTable::GetInheritedAdjust() const
 {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     SvxAdjust eAdjust = (nCurCol<nCols ? ((*pColumns)[nCurCol]).GetAdjust()
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    SvxAdjust eAdjust = (nCurCol<nCols ? ((*m_pColumns)[nCurCol])->GetAdjust()
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                                        : SVX_ADJUST_END );
     if( SVX_ADJUST_END==eAdjust )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         eAdjust = (*pRows)[nCurRow].GetAdjust();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        eAdjust = (*m_pRows)[nCurRow]->GetAdjust();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     return eAdjust;
 }
@@ -2355,9 +2627,17 @@ SvxAdjust HTMLTable::GetInheritedAdjust() const
 sal_Int16 HTMLTable::GetInheritedVertOri() const
 {
     // text::VertOrientation::TOP ist der default!
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     sal_Int16 eVOri = (*pRows)[nCurRow].GetVertOri();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    sal_Int16 eVOri = (*m_pRows)[nCurRow]->GetVertOri();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     if( text::VertOrientation::TOP==eVOri && nCurCol<nCols )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         eVOri = ((*pColumns)[nCurCol]).GetVertOri();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        eVOri = ((*m_pColumns)[nCurCol])->GetVertOri();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     if( text::VertOrientation::TOP==eVOri )
         eVOri = eVertOri;
 
@@ -2397,9 +2677,17 @@ void HTMLTable::InsertCell( std::shared_ptr<HTMLTableCnts> const& rCnts,
     if( nCols < nColsReq )
     {
         for( i=nCols; i<nColsReq; i++ )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             pColumns->push_back( new HTMLTableColumn );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            m_pColumns->push_back(o3tl::make_unique<HTMLTableColumn>());
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         for( i=0; i<nRows; i++ )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             (*pRows)[i].Expand( nColsReq, i<nCurRow );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            (*m_pRows)[i]->Expand( nColsReq, i<nCurRow );
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         nCols = nColsReq;
         OSL_ENSURE(pColumns->size() == nCols,
                 "wrong number of columns after expanding");
@@ -2412,7 +2700,11 @@ void HTMLTable::InsertCell( std::shared_ptr<HTMLTableCnts> const& rCnts,
     if( nRows < nRowsReq )
     {
         for( i=nRows; i<nRowsReq; i++ )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             pRows->push_back( new HTMLTableRow(nCols) );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            m_pRows->push_back(o3tl::make_unique<HTMLTableRow>(nCols));
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         nRows = nRowsReq;
         OSL_ENSURE(nRows == pRows->size(), "wrong number of rows in Insert");
     }
@@ -2422,7 +2714,11 @@ void HTMLTable::InsertCell( std::shared_ptr<HTMLTableCnts> const& rCnts,
     sal_uInt16 nSpanedCols = 0;
     if( nCurRow>0 )
     {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         HTMLTableRow *pCurRow = &(*pRows)[nCurRow];
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        HTMLTableRow *const pCurRow = (*m_pRows)[nCurRow].get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         for( i=nCurCol; i<nColsReq; i++ )
         {
             HTMLTableCell *pCell = pCurRow->GetCell(i);
@@ -2493,7 +2789,11 @@ void HTMLTable::InsertCell( std::shared_ptr<HTMLTableCnts> const& rCnts,
     {
         if( nCellHeight < MINLAY )
             nCellHeight = MINLAY;
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         (*pRows)[nCurRow].SetHeight( (sal_uInt16)aTwipSz.Height() );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        (*m_pRows)[nCurRow]->SetHeight( (sal_uInt16)aTwipSz.Height() );
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     }
 
     // den Spaltenzaehler hinter die neuen Zellen setzen
@@ -2511,13 +2811,22 @@ inline void HTMLTable::CloseSection( bool bHead )
     // die vorhergende Section beenden, falls es schon eine Zeile gibt
     OSL_ENSURE( nCurRow<=nRows, "ungeultige aktuelle Zeile" );
     if( nCurRow>0 && nCurRow<=nRows )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         (*pRows)[nCurRow-1].SetEndOfGroup();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        (*m_pRows)[nCurRow-1]->SetEndOfGroup();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     if( bHead )
         nHeadlineRepeat = nCurRow;
 }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
 void HTMLTable::OpenRow( SvxAdjust eAdjust, sal_Int16 eVertOrient,
                          SvxBrushItem *pBGBrushItem )
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+void HTMLTable::OpenRow(SvxAdjust eAdjust, sal_Int16 eVertOrient,
+                        std::unique_ptr<SvxBrushItem>& rBGBrushItem)
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 {
     sal_uInt16 nRowsReq = nCurRow+1;    // Anzahl benoetigter Zeilen;
 
@@ -2525,17 +2834,30 @@ void HTMLTable::OpenRow( SvxAdjust eAdjust, sal_Int16 eVertOrient,
     if( nRows<nRowsReq )
     {
         for( sal_uInt16 i=nRows; i<nRowsReq; i++ )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             pRows->push_back( new HTMLTableRow(nCols) );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            m_pRows->push_back(o3tl::make_unique<HTMLTableRow>(nCols));
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         nRows = nRowsReq;
         OSL_ENSURE( nRows==pRows->size(),
                 "Zeilenzahl in OpenRow stimmt nicht" );
     }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     HTMLTableRow *pCurRow = &((*pRows)[nCurRow]);
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    HTMLTableRow *const pCurRow = (*m_pRows)[nCurRow].get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     pCurRow->SetAdjust( eAdjust );
     pCurRow->SetVertOri( eVertOrient );
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     if( pBGBrushItem )
         (*pRows)[nCurRow].SetBGBrush( pBGBrushItem );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    if (rBGBrushItem)
+        (*m_pRows)[nCurRow]->SetBGBrush(rBGBrushItem);
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     // den Spaltenzaehler wieder an den Anfang setzen
     nCurCol=0;
@@ -2553,11 +2875,19 @@ void HTMLTable::CloseRow( bool bEmpty )
     if( bEmpty )
     {
         if( nCurRow > 0 )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             (*pRows)[nCurRow-1].IncEmptyRows();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            (*m_pRows)[nCurRow-1]->IncEmptyRows();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         return;
     }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     HTMLTableRow *pRow = &(*pRows)[nCurRow];
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    HTMLTableRow *const pRow = (*m_pRows)[nCurRow].get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     // den COLSPAN aller leeren Zellen am Zeilenende so anpassen, dass
     // eine Zelle daraus wird. Das kann man hier machen (und auf keinen
@@ -2589,7 +2919,11 @@ inline void HTMLTable::CloseColGroup( sal_uInt16 nSpan, sal_uInt16 _nWidth,
 
     OSL_ENSURE( nCurCol<=nCols, "ungueltige Spalte" );
     if( nCurCol>0 && nCurCol<=nCols )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         ((*pColumns)[nCurCol-1]).SetEndOfGroup();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        ((*m_pColumns)[nCurCol-1])->SetEndOfGroup();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 }
 
 void HTMLTable::InsertCol( sal_uInt16 nSpan, sal_uInt16 nColWidth, bool bRelWidth,
@@ -2609,7 +2943,11 @@ void HTMLTable::InsertCol( sal_uInt16 nSpan, sal_uInt16 nColWidth, bool bRelWidt
     if( nCols < nColsReq )
     {
         for( i=nCols; i<nColsReq; i++ )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             pColumns->push_back( new HTMLTableColumn );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            m_pColumns->push_back(o3tl::make_unique<HTMLTableColumn>());
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         nCols = nColsReq;
     }
 
@@ -2622,7 +2960,11 @@ void HTMLTable::InsertCol( sal_uInt16 nSpan, sal_uInt16 nColWidth, bool bRelWidt
 
     for( i=nCurCol; i<nColsReq; i++ )
     {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         HTMLTableColumn *pCol = &(*pColumns)[i];
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        HTMLTableColumn *const pCol = (*m_pColumns)[i].get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         sal_uInt16 nTmp = bRelWidth ? nColWidth : (sal_uInt16)aTwipSz.Width();
         pCol->SetWidth( nTmp, bRelWidth );
         pCol->SetAdjust( eAdjust );
@@ -2645,29 +2987,46 @@ void HTMLTable::CloseTable()
     // anpassen.
     if( nRows>nCurRow )
     {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         HTMLTableRow *pPrevRow = &(*pRows)[nCurRow-1];
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        HTMLTableRow *const pPrevRow = (*m_pRows)[nCurRow-1].get();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         HTMLTableCell *pCell;
         for( i=0; i<nCols; i++ )
             if( ( (pCell=(pPrevRow->GetCell(i))), (pCell->GetRowSpan()) > 1 ) )
             {
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 FixRowSpan( nCurRow-1, i, pCell->GetContents() );
+                ProtectRowSpan( nCurRow, i, (*pRows)[nCurRow].GetCell(i)->GetRowSpan() );
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
                 FixRowSpan( nCurRow-1, i, pCell->GetContents().get() );
+                ProtectRowSpan(nCurRow, i, (*m_pRows)[nCurRow]->GetCell(i)->GetRowSpan());
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
-                ProtectRowSpan( nCurRow, i, (*pRows)[nCurRow].GetCell(i)->GetRowSpan() );
             }
         for( i=nRows-1; i>=nCurRow; i-- )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             pRows->erase(pRows->begin() + i);
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            m_pRows->erase(m_pRows->begin() + i);
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         nRows = nCurRow;
     }
 
     // falls die Tabelle keine Spalte hat, muessen wir eine hinzufuegen
     if( 0==nCols )
     {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         pColumns->push_back( new HTMLTableColumn );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        m_pColumns->push_back(o3tl::make_unique<HTMLTableColumn>());
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         for( i=0; i<nRows; i++ )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             (*pRows)[i].Expand(1);
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            (*m_pRows)[i]->Expand(1);
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         nCols = 1;
         nFilledCols = 1;
     }
@@ -2675,16 +3034,28 @@ void HTMLTable::CloseTable()
     // falls die Tabelle keine Zeile hat, muessen wir eine hinzufuegen
     if( 0==nRows )
     {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         pRows->push_back( new HTMLTableRow(nCols) );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        m_pRows->push_back(o3tl::make_unique<HTMLTableRow>(nCols));
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         nRows = 1;
         nCurRow = 1;
     }
 
     if( nFilledCols < nCols )
     {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         pColumns->erase( pColumns->begin() + nFilledCols, pColumns->begin() + nCols );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        m_pColumns->erase( m_pColumns->begin() + nFilledCols, m_pColumns->begin() + nCols );
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         for( i=0; i<nRows; i++ )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             (*pRows)[i].Shrink( nFilledCols );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            (*m_pRows)[i]->Shrink( nFilledCols );
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         nCols = nFilledCols;
     }
 }
@@ -2789,11 +3160,19 @@ void HTMLTable::MakeTable( SwTableBox *pBox, sal_uInt16 nAbsAvail,
         }
 
         if( pLayoutInfo->GetRelLeftFill() == 0 &&
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             !((*pColumns)[0]).bLeftBorder &&
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            !((*m_pColumns)[0])->bLeftBorder &&
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             bInhLeftBorder )
         {
             // ggf. rechte Umrandung von auesserer Tabelle uebernehmen
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             ((*pColumns)[0]).bLeftBorder = true;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            ((*m_pColumns)[0])->bLeftBorder = true;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             aLeftBorderLine = aInhLeftBorderLine;
         }
     }
@@ -4911,10 +5290,19 @@ void SwHTMLParser::BuildTableRow( HTMLTable *pCurTable, bool bReadOptions,
         if( !aId.isEmpty() )
             InsertBookmark( aId );
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         SvxBrushItem *pBrushItem =
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        std::unique_ptr<SvxBrushItem> xBrushItem(
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             CreateBrushItem( bBGColor ? &aBGColor : 0, aBGImage, aStyle,
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                              aId, aClass );
         pCurTable->OpenRow( eAdjust, eVertOri, pBrushItem );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                             aId, aClass ));
+        pCurTable->OpenRow(eAdjust, eVertOri, xBrushItem);
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         // ist beim ersten GetNextToken schon pending, muss bei
         // wiederaufsetzen auf jedenfall neu gelesen werden!
         SaveState( 0 );
