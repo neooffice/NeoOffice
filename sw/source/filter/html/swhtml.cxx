@@ -422,6 +422,16 @@ SwHTMLParser::~SwHTMLParser()
 #ifdef DBG_UTIL
     OSL_ENSURE( !m_nContinue, "DTOR im Continue!" );
 #endif
+
+#ifndef NO_LIBO_HTML_CONTEXT_LEAK_FIX
+    OSL_ENSURE(aContexts.empty(), "There are still contexts on the stack");
+    while (!aContexts.empty())
+    {
+        std::unique_ptr<_HTMLAttrContext> xCntxt(PopContext());
+        ClearContext(xCntxt.get());
+    }
+#endif	// !NO_LIBO_HTML_CONTEXT_LEAK_FIX
+
     bool bAsync = pDoc->IsInLoadAsynchron();
     pDoc->SetInLoadAsynchron( false );
     pDoc->getIDocumentSettingAccess().set(IDocumentSettingAccess::HTML_MODE, bOldIsHTMLMode);
