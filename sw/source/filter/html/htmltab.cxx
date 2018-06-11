@@ -458,7 +458,11 @@ private:
 
     SwHTMLParser *pParser;          // the current parser
     HTMLTable *pTopTable;           // the table on the Top-Level
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     HTMLTableCnts *pParentContents;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    std::unique_ptr<HTMLTableCnts> m_xParentContents;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     _HTMLTableContext *pContext;    // the context of the table
 
@@ -616,8 +620,13 @@ public:
     void SetHasParentSection( bool bSet ) { bHasParentSection = bSet; }
     bool HasParentSection() const { return bHasParentSection; }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     void SetParentContents( HTMLTableCnts *pCnts ) { pParentContents = pCnts; }
     HTMLTableCnts *GetParentContents() const { return pParentContents; }
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    void SetParentContents(HTMLTableCnts *pCnts) { m_xParentContents.reset(pCnts); }
+    std::unique_ptr<HTMLTableCnts>& GetParentContents() { return m_xParentContents; }
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     void MakeParentContents();
 
@@ -1134,14 +1143,16 @@ void HTMLTable::InitCtor(const HTMLTableOptions& rOptions)
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     pContext = 0;
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     pParentContents = 0;
 
-#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     aId = pOptions->aId;
     aClass = pOptions->aClass;
     aStyle = pOptions->aStyle;
     aDir = pOptions->aDir;
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    m_xParentContents.reset();
+
     aId = rOptions.aId;
     aClass = rOptions.aClass;
     aStyle = rOptions.aStyle;
@@ -4220,13 +4231,14 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                                 "links oder rechts ausgerichtete Tabellen gehoehren in Rahmen" );
 
-                        HTMLTableCnts *pParentContents =
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
+                        HTMLTableCnts *pParentContents =
                             pSubTable->GetParentContents();
-#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
-                            xSubTable->GetParentContents();
-#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                         if( pParentContents )
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                        auto& rParentContents = xSubTable->GetParentContents();
+                        if (rParentContents)
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                         {
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                             OSL_ENSURE( !pSaveStruct->IsInSection(),
@@ -4240,7 +4252,7 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                             pSaveStruct->AddContents( pParentContents );
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
-                            xSaveStruct->AddContents(pParentContents);
+                            xSaveStruct->AddContents(rParentContents.release());
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                         }
 
