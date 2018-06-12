@@ -174,11 +174,13 @@ class HTMLTableCnts
     const SwStartNode *pStartNode;      // a paragraph
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     HTMLTable *pTable;                  // a table
-#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
-    std::shared_ptr<HTMLTable> m_xTable;                  // a table
-#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     SwHTMLTableLayoutCnts* pLayoutInfo;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    std::shared_ptr<HTMLTable> m_xTable;                  // a table
+
+    std::shared_ptr<SwHTMLTableLayoutCnts> m_xLayoutInfo;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     bool bNoBreak;
 
@@ -217,7 +219,11 @@ public:
 
     void SetNoBreak() { bNoBreak = true; }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     SwHTMLTableLayoutCnts *CreateLayoutInfo();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    const std::shared_ptr<SwHTMLTableLayoutCnts>& CreateLayoutInfo();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 };
 
 // Cell of a HTML table
@@ -307,11 +313,13 @@ public:
     // Is the cell filled or protected ?
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     bool IsUsed() const { return pContents!=0 || bProtected; }
-#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
-    bool IsUsed() const { return m_xContents || bProtected; }
-#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     SwHTMLTableLayoutCell *CreateLayoutInfo();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    bool IsUsed() const { return m_xContents || bProtected; }
+
+    std::unique_ptr<SwHTMLTableLayoutCell> CreateLayoutInfo();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     bool IsCovered() const { return mbCovered; }
 };
@@ -754,7 +762,11 @@ public:
 void HTMLTableCnts::InitCtor()
 {
     pNext = 0;
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     pLayoutInfo = 0;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    m_xLayoutInfo.reset();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     bNoBreak = false;
 }
@@ -804,27 +816,52 @@ void HTMLTableCnts::Add( HTMLTableCnts* pNewCnts )
 
 inline void HTMLTableCnts::SetTableBox( SwTableBox *pBox )
 {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     OSL_ENSURE( pLayoutInfo, "Da sit noch keine Layout-Info" );
     if( pLayoutInfo )
         pLayoutInfo->SetTableBox( pBox );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    OSL_ENSURE(m_xLayoutInfo.get(), "There is no layout info");
+    if (m_xLayoutInfo)
+        m_xLayoutInfo->SetTableBox(pBox);
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 }
 
-SwHTMLTableLayoutCnts *HTMLTableCnts::CreateLayoutInfo()
-{
-    if( !pLayoutInfo )
-    {
-        SwHTMLTableLayoutCnts *pNextInfo = pNext ? pNext->CreateLayoutInfo() : 0;
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
+SwHTMLTableLayoutCnts *HTMLTableCnts::CreateLayoutInfo()
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+const std::shared_ptr<SwHTMLTableLayoutCnts>& HTMLTableCnts::CreateLayoutInfo()
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
+{
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
+    if( !pLayoutInfo )
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    if (!m_xLayoutInfo)
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
+        SwHTMLTableLayoutCnts *pNextInfo = pNext ? pNext->CreateLayoutInfo() : 0;
         SwHTMLTableLayout *pTableInfo = pTable ? pTable->CreateLayoutInfo() : 0;
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        std::shared_ptr<SwHTMLTableLayoutCnts> xNextInfo;
+        if (pNext)
+            xNextInfo = pNext->CreateLayoutInfo();
         SwHTMLTableLayout *pTableInfo = m_xTable ? m_xTable->CreateLayoutInfo() : nullptr;
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         pLayoutInfo = new SwHTMLTableLayoutCnts( pStartNode, pTableInfo,
                                                  bNoBreak, pNextInfo );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        m_xLayoutInfo.reset(new SwHTMLTableLayoutCnts(pStartNode, pTableInfo, bNoBreak, xNextInfo));
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     return pLayoutInfo;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    return m_xLayoutInfo;
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 }
 
 HTMLTableCell::HTMLTableCell():
@@ -940,16 +977,24 @@ inline bool HTMLTableCell::GetValue( double& rValue ) const
     return bHasValue;
 }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
 SwHTMLTableLayoutCell *HTMLTableCell::CreateLayoutInfo()
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+std::unique_ptr<SwHTMLTableLayoutCell> HTMLTableCell::CreateLayoutInfo()
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 {
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     SwHTMLTableLayoutCnts *pCntInfo = pContents ? pContents->CreateLayoutInfo() : 0;
-#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
-    SwHTMLTableLayoutCnts *pCntInfo = m_xContents ? m_xContents->CreateLayoutInfo() : nullptr;
-#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     return new SwHTMLTableLayoutCell( pCntInfo, nRowSpan, nColSpan, nWidth,
                                       bRelWidth, bNoWrap );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    std::shared_ptr<SwHTMLTableLayoutCnts> xCntInfo;
+    if (m_xContents)
+        xCntInfo = m_xContents->CreateLayoutInfo();
+    return std::unique_ptr<SwHTMLTableLayoutCell>(new SwHTMLTableLayoutCell(xCntInfo, nRowSpan, nColSpan, nWidth,
+                                      bRelWidth, bNoWrap));
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 }
 
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
@@ -1499,18 +1544,32 @@ SwHTMLTableLayout *HTMLTable::CreateLayoutInfo()
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         for( sal_uInt16 j=0; j<nCols; j++ )
         {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             SwHTMLTableLayoutCell *pLayoutCell =
                 pRow->GetCell(j)->CreateLayoutInfo();
 
             pLayoutInfo->SetCell( pLayoutCell, i, j );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            pLayoutInfo->SetCell( pRow->GetCell(j)->CreateLayoutInfo().release(), i, j );
+            SwHTMLTableLayoutCell* pLayoutCell = pLayoutInfo->GetCell(i, j );
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
             if( bExportable )
             {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 SwHTMLTableLayoutCnts *pLayoutCnts =
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                const std::shared_ptr<SwHTMLTableLayoutCnts>& rLayoutCnts =
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                     pLayoutCell->GetContents();
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 bExportable = !pLayoutCnts ||
                               ( pLayoutCnts->GetStartNode() &&
                                 !pLayoutCnts->GetNext() );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                bExportable = !rLayoutCnts ||
+                              (rLayoutCnts->GetStartNode() && !rLayoutCnts->GetNext());
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             }
         }
     }
@@ -2202,14 +2261,12 @@ SwTableLine *HTMLTable::MakeTableLine( SwTableBox *pUpper,
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                         HTMLTableCnts *pCnts = new HTMLTableCnts(
                             pParser->InsertTableSection(pPrevStartNd) );
+                        SwHTMLTableLayoutCnts *pCntsLayoutInfo =
+                            pCnts->CreateLayoutInfo();
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
                         std::shared_ptr<HTMLTableCnts> xCnts(new HTMLTableCnts(
                             pParser->InsertTableSection(pPrevStartNd)));
-#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
-                        SwHTMLTableLayoutCnts *pCntsLayoutInfo =
-#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
-                            pCnts->CreateLayoutInfo();
-#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                        const std::shared_ptr<SwHTMLTableLayoutCnts> xCntsLayoutInfo =
                             xCnts->CreateLayoutInfo();
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
@@ -2219,7 +2276,11 @@ SwTableLine *HTMLTable::MakeTableLine( SwTableBox *pUpper,
                         pCell2->SetContents(xCnts);
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                         SwHTMLTableLayoutCell *pCurrCell = pLayoutInfo->GetCell( nTopRow, nStartCol );
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                         pCurrCell->SetContents( pCntsLayoutInfo );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                        pCurrCell->SetContents(xCntsLayoutInfo);
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                         if( nBoxRowSpan < 0 )
                             pCurrCell->SetRowSpan( 0 );
 
@@ -2232,7 +2293,11 @@ SwTableLine *HTMLTable::MakeTableLine( SwTableBox *pUpper,
                             GetCell(nTopRow,j)->SetContents(xCnts);
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                             pLayoutInfo->GetCell( nTopRow, j )
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                                        ->SetContents( pCntsLayoutInfo );
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+                                       ->SetContents(xCntsLayoutInfo);
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                         }
                     }
 
