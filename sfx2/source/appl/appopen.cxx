@@ -1123,12 +1123,12 @@ void SfxApplication::OpenDocExec_Impl( SfxRequest& rReq )
         const SfxPoolItem* pRetValue = rReq.GetReturnValue();
         if (pRetValue)
         {
-#ifdef NO_LIBO_MODIFIED_LINK_ITEM_ARG_LEAK
+#ifdef NO_LIBO_MODIFIED_LINK_ITEM_ARG_LEAK_FIX
             SfxPoolItem* pClone = pRetValue->Clone();
             pLinkItem->GetValue().Call(pClone);
-#else	// NO_LIBO_MODIFIED_LINK_ITEM_ARG_LEAK
+#else	// NO_LIBO_MODIFIED_LINK_ITEM_ARG_LEAK_FIX
             pLinkItem->GetValue().Call((SfxPoolItem *)pRetValue);
-#endif	// NO_LIBO_MODIFIED_LINK_ITEM_ARG_LEAK
+#endif	// NO_LIBO_MODIFIED_LINK_ITEM_ARG_LEAK_FIX
         }
         delete pLinkItem;
     }
