@@ -543,9 +543,9 @@ private:
     _HTMLTableContext *pContext;    // the context of the table
 
     SwHTMLTableLayout *pLayoutInfo;
-#ifdef USE_JAVA
+#ifndef NO_LIBO_MODIFIED_HTML_TABLE_LEAK_FIX
     bool bLayoutInfoOwner;
-#endif	// USE_JAVA
+#endif	// !NO_LIBO_MODIFIED_HTML_TABLE_LEAK_FIX
 
     // the following parameters are from the <TABLE>-Tag
     sal_uInt16 nWidth;                  // width of the table
@@ -1439,9 +1439,9 @@ HTMLTable::HTMLTable( SwHTMLParser* pPars, HTMLTable *pTopTab,
     pParser( pPars ),
     pTopTable( pTopTab ? pTopTab : this ),
     pLayoutInfo( 0 ),
-#ifdef USE_JAVA
+#ifndef NO_LIBO_MODIFIED_HTML_TABLE_LEAK_FIX
     bLayoutInfoOwner( true ),
-#endif	// USE_JAVA
+#endif	// !NO_LIBO_MODIFIED_HTML_TABLE_LEAK_FIX
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     nWidth( pOptions->nWidth ),
     nHeight( pTopTab ? 0 : pOptions->nHeight ),
@@ -1512,10 +1512,10 @@ HTMLTable::~HTMLTable()
 
     // pLayoutInfo wurde entweder bereits geloescht oder muss aber es
     // in den Besitz der SwTable uebergegangen.
-#ifdef USE_JAVA
+#ifndef NO_LIBO_MODIFIED_HTML_TABLE_LEAK_FIX
     if ( bLayoutInfoOwner )
         delete pLayoutInfo;
-#endif	// USE_JAVA
+#endif	// !NO_LIBO_MODIFIED_HTML_TABLE_LEAK_FIX
 }
 
 SwHTMLTableLayout *HTMLTable::CreateLayoutInfo()
@@ -1534,11 +1534,11 @@ SwHTMLTableLayout *HTMLTable::CreateLayoutInfo()
     sal_uInt16 nInhLeftBorderWidth = 0;
     sal_uInt16 nInhRightBorderWidth = 0;
 
-#ifdef USE_JAVA
+#ifndef NO_LIBO_MODIFIED_HTML_TABLE_LEAK_FIX
     if ( bLayoutInfoOwner )
         delete pLayoutInfo;
     bLayoutInfoOwner = true;
-#endif	// USE_JAVA
+#endif	// !NO_LIBO_MODIFIED_HTML_TABLE_LEAK_FIX
     pLayoutInfo = new SwHTMLTableLayout(
                         pSwTable,
                         nRows, nCols, bFixedCols, bColSpec,
@@ -3489,9 +3489,9 @@ void HTMLTable::MakeTable( SwTableBox *pBox, sal_uInt16 nAbsAvail,
 
         pLayoutInfo->SetWidths();
 
-#ifdef USE_JAVA
+#ifndef NO_LIBO_MODIFIED_HTML_TABLE_LEAK_FIX
         bLayoutInfoOwner = false;
-#endif	// USE_JAVA
+#endif	// !NO_LIBO_MODIFIED_HTML_TABLE_LEAK_FIX
         ((SwTable *)pSwTable)->SetHTMLTableLayout( pLayoutInfo );
 
         if( pResizeDrawObjs )
