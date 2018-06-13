@@ -543,6 +543,9 @@ private:
     _HTMLTableContext *pContext;    // the context of the table
 
     SwHTMLTableLayout *pLayoutInfo;
+#ifdef USE_JAVA
+    bool bLayoutInfoOwner;
+#endif	// USE_JAVA
 
     // the following parameters are from the <TABLE>-Tag
     sal_uInt16 nWidth;                  // width of the table
@@ -1436,6 +1439,9 @@ HTMLTable::HTMLTable( SwHTMLParser* pPars, HTMLTable *pTopTab,
     pParser( pPars ),
     pTopTable( pTopTab ? pTopTab : this ),
     pLayoutInfo( 0 ),
+#ifdef USE_JAVA
+    bLayoutInfoOwner( true ),
+#endif	// USE_JAVA
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     nWidth( pOptions->nWidth ),
     nHeight( pTopTab ? 0 : pOptions->nHeight ),
@@ -1506,6 +1512,10 @@ HTMLTable::~HTMLTable()
 
     // pLayoutInfo wurde entweder bereits geloescht oder muss aber es
     // in den Besitz der SwTable uebergegangen.
+#ifdef USE_JAVA
+    if ( bLayoutInfoOwner )
+        delete pLayoutInfo;
+#endif	// USE_JAVA
 }
 
 SwHTMLTableLayout *HTMLTable::CreateLayoutInfo()
@@ -1524,6 +1534,11 @@ SwHTMLTableLayout *HTMLTable::CreateLayoutInfo()
     sal_uInt16 nInhLeftBorderWidth = 0;
     sal_uInt16 nInhRightBorderWidth = 0;
 
+#ifdef USE_JAVA
+    if ( bLayoutInfoOwner )
+        delete pLayoutInfo;
+    bLayoutInfoOwner = true;
+#endif	// USE_JAVA
     pLayoutInfo = new SwHTMLTableLayout(
                         pSwTable,
                         nRows, nCols, bFixedCols, bColSpec,
@@ -3474,6 +3489,9 @@ void HTMLTable::MakeTable( SwTableBox *pBox, sal_uInt16 nAbsAvail,
 
         pLayoutInfo->SetWidths();
 
+#ifdef USE_JAVA
+        bLayoutInfoOwner = false;
+#endif	// USE_JAVA
         ((SwTable *)pSwTable)->SetHTMLTableLayout( pLayoutInfo );
 
         if( pResizeDrawObjs )
