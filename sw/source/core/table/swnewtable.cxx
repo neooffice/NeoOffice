@@ -67,11 +67,20 @@
 class SwBoxSelection
 {
 public:
+#ifdef NO_LIBO_SEL_BOXES_LEAK_FIX
     std::vector<const SwSelBoxes*> aBoxes;
+#else	// NO_LIBO_SEL_BOXES_LEAK_FIX
+    std::vector<SwSelBoxes> maBoxes;
+#endif	// NO_LIBO_SEL_BOXES_LEAK_FIX
     long mnMergeWidth;
     SwBoxSelection() : mnMergeWidth(0) {}
+#ifdef NO_LIBO_SEL_BOXES_LEAK_FIX
     bool isEmpty() const { return aBoxes.empty(); }
     void insertBoxes( const SwSelBoxes* pNew ){ aBoxes.insert( aBoxes.end(), pNew ); }
+#else	// NO_LIBO_SEL_BOXES_LEAK_FIX
+    bool isEmpty() const { return maBoxes.empty(); }
+    void push_back(const SwSelBoxes& rNew) { maBoxes.push_back(rNew); }
+#endif	// NO_LIBO_SEL_BOXES_LEAK_FIX
 };
 
 /** NewMerge(..) removes the superfluous cells after cell merge
@@ -388,7 +397,11 @@ SwBoxSelection* SwTable::CollectBoxSelection( const SwPaM& rPam ) const
     {
         SwTableLine* pLine = aLines[nRow];
         OSL_ENSURE( pLine, "Missing table line" );
+#ifdef NO_LIBO_SEL_BOXES_LEAK_FIX
         SwSelBoxes *pBoxes = new SwSelBoxes();
+#else	// NO_LIBO_SEL_BOXES_LEAK_FIX
+        SwSelBoxes aBoxes;
+#endif	// NO_LIBO_SEL_BOXES_LEAK_FIX
         long nLeft = 0;
         long nRight = 0;
         long nRowSpan = 1;
@@ -417,7 +430,11 @@ SwBoxSelection* SwTable::CollectBoxSelection( const SwPaM& rPam ) const
                 {
                     if( nCurrBox )
                     {
+#ifdef NO_LIBO_SEL_BOXES_LEAK_FIX
                         pBoxes->insert( pBox );
+#else	// NO_LIBO_SEL_BOXES_LEAK_FIX
+                        aBoxes.insert(pBox);
+#endif	// NO_LIBO_SEL_BOXES_LEAK_FIX
                         pInnerBox = pBox;
                         pLeftBox = pLine->GetTabBoxes()[nCurrBox-1];
                         nDiff = nMin - nLeft;
@@ -448,7 +465,11 @@ SwBoxSelection* SwTable::CollectBoxSelection( const SwPaM& rPam ) const
             }
             else if( nRight <= nMax )
             {
+#ifdef NO_LIBO_SEL_BOXES_LEAK_FIX
                 pBoxes->insert( pBox );
+#else	// NO_LIBO_SEL_BOXES_LEAK_FIX
+                aBoxes.insert(pBox);
+#endif	// NO_LIBO_SEL_BOXES_LEAK_FIX
                 if( nRow == nTop && nRowSpan < 0 )
                 {
                     bOkay = false;
@@ -467,7 +488,11 @@ SwBoxSelection* SwTable::CollectBoxSelection( const SwPaM& rPam ) const
                 {
                     if( nCurrBox+1 < nCount )
                     {
+#ifdef NO_LIBO_SEL_BOXES_LEAK_FIX
                         pBoxes->insert( pBox );
+#else	// NO_LIBO_SEL_BOXES_LEAK_FIX
+                        aBoxes.insert(pBox);
+#endif	// NO_LIBO_SEL_BOXES_LEAK_FIX
                         pInnerBox = pBox;
                         pRightBox = pLine->GetTabBoxes()[nCurrBox+1];
                         nDiff = nRight - nMax;
@@ -567,7 +592,11 @@ SwBoxSelection* SwTable::CollectBoxSelection( const SwPaM& rPam ) const
             --nLeftSpanCnt;
         if( nRightSpanCnt )
             --nRightSpanCnt;
+#ifdef NO_LIBO_SEL_BOXES_LEAK_FIX
         pRet->insertBoxes( pBoxes );
+#else	// NO_LIBO_SEL_BOXES_LEAK_FIX
+        pRet->push_back(aBoxes);
+#endif	// NO_LIBO_SEL_BOXES_LEAK_FIX
     }
     pRet->mnMergeWidth = nMax - nMin;
     if( nCheckBottom > nBottom )
@@ -834,7 +863,11 @@ bool SwTable::PrepareMerge( const SwPaM& rPam, SwSelBoxes& rBoxes,
     // i.e. contiguous cells in contiguous rows
     bool bMerge = false; // will be set if any content is transferred from
     // a "not already overlapped" cell into the new master cell.
+#ifdef NO_LIBO_SEL_BOXES_LEAK_FIX
     SwTableBox *pMergeBox = (*pSel->aBoxes[0])[0]; // the master cell box
+#else	// NO_LIBO_SEL_BOXES_LEAK_FIX
+    SwTableBox *pMergeBox = pSel->maBoxes[0][0]; // the master cell box
+#endif	// NO_LIBO_SEL_BOXES_LEAK_FIX
     if( !pMergeBox )
         return false;
     (*ppMergeBox) = pMergeBox;
@@ -849,7 +882,11 @@ bool SwTable::PrepareMerge( const SwPaM& rPam, SwSelBoxes& rBoxes,
     SwPosition aInsPos( *pMergeBox->GetSttNd()->EndOfSectionNode() );
     SwPaM aChkPam( aInsPos );
     // The number of lines in the selection rectangle: nLineCount
+#ifdef NO_LIBO_SEL_BOXES_LEAK_FIX
     const size_t nLineCount = pSel->aBoxes.size();
+#else	// NO_LIBO_SEL_BOXES_LEAK_FIX
+    const size_t nLineCount = pSel->maBoxes.size();
+#endif	// NO_LIBO_SEL_BOXES_LEAK_FIX
     // BTW: nLineCount is the rowspan of the new master cell
     long nRowSpan = static_cast<long>(nLineCount);
     // We will need the first and last line of the selection
@@ -860,12 +897,21 @@ bool SwTable::PrepareMerge( const SwPaM& rPam, SwSelBoxes& rBoxes,
     for( size_t nCurrLine = 0; nCurrLine < nLineCount; ++nCurrLine )
     {
         // The selected boxes in the current line
+#ifdef NO_LIBO_SEL_BOXES_LEAK_FIX
         const SwSelBoxes* pBoxes = pSel->aBoxes[ nCurrLine ];
         size_t nColCount = pBoxes->size();
+#else	// NO_LIBO_SEL_BOXES_LEAK_FIX
+        const SwSelBoxes& rLineBoxes = pSel->maBoxes[nCurrLine];
+        size_t nColCount = rLineBoxes.size();
+#endif	// NO_LIBO_SEL_BOXES_LEAK_FIX
         // Iteration over the selected cell in the current row
         for (size_t nCurrCol = 0; nCurrCol < nColCount; ++nCurrCol)
         {
+#ifdef NO_LIBO_SEL_BOXES_LEAK_FIX
             SwTableBox* pBox = (*pBoxes)[nCurrCol];
+#else	// NO_LIBO_SEL_BOXES_LEAK_FIX
+            SwTableBox* pBox = rLineBoxes[nCurrCol];
+#endif	// NO_LIBO_SEL_BOXES_LEAK_FIX
             rMerged.insert( pBox );
             // Only the first selected cell in every row will be alive,
             // the other will be deleted => put into rBoxes
@@ -937,11 +983,20 @@ bool SwTable::PrepareMerge( const SwPaM& rPam, SwSelBoxes& rBoxes,
         pNewFmt->SetFmtAttr( SwFmtFrmSize( ATT_VAR_SIZE, pSel->mnMergeWidth, 0 ) );
         for( size_t nCurrLine = 0; nCurrLine < nLineCount; ++nCurrLine )
         {
+#ifdef NO_LIBO_SEL_BOXES_LEAK_FIX
             const SwSelBoxes* pBoxes = pSel->aBoxes[ nCurrLine ];
             size_t nColCount = pBoxes->size();
+#else	// NO_LIBO_SEL_BOXES_LEAK_FIX
+            const SwSelBoxes& rLineBoxes = pSel->maBoxes[nCurrLine];
+            size_t nColCount = rLineBoxes.size();
+#endif	// NO_LIBO_SEL_BOXES_LEAK_FIX
             for (size_t nCurrCol = 0; nCurrCol < nColCount; ++nCurrCol)
             {
+#ifdef NO_LIBO_SEL_BOXES_LEAK_FIX
                 SwTableBox* pBox = (*pBoxes)[nCurrCol];
+#else	// NO_LIBO_SEL_BOXES_LEAK_FIX
+                SwTableBox* pBox = rLineBoxes[nCurrCol];
+#endif	// NO_LIBO_SEL_BOXES_LEAK_FIX
                 if( nCurrCol )
                 {
                     // Even this box will be deleted soon,
