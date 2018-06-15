@@ -24,19 +24,20 @@ What's New in this Version:
 Before you buy NeoOffice, please click on the 「NeoOffice 支援」 link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would sometimes crash when pasting HTML tables into a Writer document
-• NeoOffice would sometimes crash when moving the cursor in a Writer document
-• NeoOffice would sometimes crash when clicking on a video while in a slideshow
-• NeoOffice needed three LibreOffice security patches for security vulnerabilities that affect several types of documents
-• NeoOffice would sometimes crash when closing a Calc document
-• NeoOffice would sometimes crash when Arabic text is set to full width alignment.
-• NeoOffice would not display any kashida glyphs when Arabic text is set to full width alignment
-• NeoOffice would sometimes crash when opening SVG image files
-• NeoOffice would sometimes crash when selecting the Format > Page menu item
-• NeoOffice would sometimes crash when pasting content copied from NeoOffice
-• NeoOffice would sometimes leave thin horizontal lines in a Calc document when running on a Retina display after moving the selected cell back and forth off the right or left edges of the window
-• NeoOffice would sometimes crash when printing
-• NeoOffice would open a new Writer document when pressing the Command-N keys instead of opening the document type checked in the NeoOffice > Open at Launch menu
+• NeoOffice would sometimes crash when opening and saving Impress documents
+• NeoOffice would sometimes crash when scrolling in a Calc document
+• NeoOffice would sometimes crash when quitting
+• NeoOffice would display a native save dialog that would default to saving to a .odt, .ods, or .odp file when saving .docx, .xlsx, and .pptx files
+• NeoOffice would sometimes crash when copying a table in a Writer document
+• NeoOffice would sometimes crash when building the list of available fonts for display in a popup window
+• NeoOffice would sometimes crash when loading a chart with the GL3D style in a Calc document
+• NeoOffice would sometimes crash when closing an Impress document
+• NeoOffice would sometimes crash when selecting the Format > Paragraph menu item in an Impress document
+• NeoOffice would fail to draw native buttons and listboxes when running on macOS Mojava
+• NeoOffice would would draw partially transparent system colors incorrectly when running on macOS Mojava
+• NeoOffice would sometimes crash when saving Writer documents
+• NeoOffice would sometimes crash when editing the page header or footer in Calc documents
+• NeoOffice would crash due to LibreOffice bug #90357
 • NeoOffice would leak memory due to several LibreOffice bugs
 
 
