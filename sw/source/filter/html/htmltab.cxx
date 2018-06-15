@@ -4102,10 +4102,19 @@ _CellSaveStruct::_CellSaveStruct( SwHTMLParser& rParser, HTMLTable *pCurTable,
         nToken = HTML_TABLEDATA_ON;
         nColl = RES_POOLCOLL_TABLE;
     }
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = new _HTMLAttrContext( nToken, nColl, aEmptyOUStr, true );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(new _HTMLAttrContext(nToken, nColl, aEmptyOUStr, true));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     if( SVX_ADJUST_END != eAdjust )
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         rParser.InsertAttr( &rParser.aAttrTab.pAdjust, SvxAdjustItem(eAdjust, RES_PARATR_ADJUST),
                             pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        rParser.InsertAttr(&rParser.aAttrTab.pAdjust, SvxAdjustItem(eAdjust, RES_PARATR_ADJUST),
+                           xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     if( rParser.HasStyleOptions( aStyle, aId, aClass, &aLang, &aDir ) )
     {
@@ -4126,13 +4135,25 @@ _CellSaveStruct::_CellSaveStruct( SwHTMLParser& rParser, HTMLTable *pCurTable,
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                 aItemSet.ClearItem(RES_BOX);
             }
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             rParser.InsertAttrs( aItemSet, aPropInfo, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            rParser.InsertAttrs(aItemSet, aPropInfo, xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         }
     }
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     rParser.SplitPREListingXMP( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    rParser.SplitPREListingXMP(xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     rParser.PushContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    rParser.PushContext(xCntxt);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 }
 
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
@@ -5226,9 +5247,14 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
         // Da es durch EndContext wieder restauriert wird, geht das.
         while( (sal_uInt16)aContexts.size() > nContextStAttrMin+1 )
         {
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             _HTMLAttrContext *pCntxt = PopContext();
             EndContext( pCntxt );
             delete pCntxt;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            std::unique_ptr<_HTMLAttrContext> xCntxt(PopContext());
+            EndContext(xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         }
 
         // LFs am Absatz-Ende entfernen
@@ -5237,18 +5263,28 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
 
         // falls fuer die Zelle eine Ausrichtung gesetzt wurde, muessen
         // wir die beenden
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         _HTMLAttrContext *pCntxt = PopContext();
         EndContext( pCntxt );
         delete pCntxt;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        std::unique_ptr<_HTMLAttrContext> xCntxt(PopContext());
+        EndContext(xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
     else
     {
         // Alle noch offenen Kontexte beenden
         while( aContexts.size() > nContextStAttrMin )
         {
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             _HTMLAttrContext *pCntxt = PopContext();
             ClearContext( pCntxt );
             delete pCntxt;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            std::unique_ptr<_HTMLAttrContext> xCntxt(PopContext());
+            ClearContext(xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         }
     }
 
@@ -6123,15 +6159,27 @@ void SwHTMLParser::BuildTableCaption( HTMLTable *pCurTable )
         else
             pStNd = InsertTableSection( RES_POOLCOLL_TEXT );
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         _HTMLAttrContext *pCntxt = new _HTMLAttrContext( HTML_CAPTION_ON );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        std::unique_ptr<_HTMLAttrContext> xCntxt(new _HTMLAttrContext(HTML_CAPTION_ON));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
         // Tabellen-Ueberschriften sind immer zentriert.
         NewAttr( &aAttrTab.pAdjust, SvxAdjustItem(SVX_ADJUST_CENTER, RES_PARATR_ADJUST) );
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         _HTMLAttrs &rAttrs = pCntxt->GetAttrs();
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        _HTMLAttrs &rAttrs = xCntxt->GetAttrs();
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         rAttrs.push_back( aAttrTab.pAdjust );
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         PushContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        PushContext(xCntxt);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
         // StartNode der Section an der Tabelle merken.
         pCurTable->SetCaption( pStNd, bTop );
@@ -6229,9 +6277,14 @@ void SwHTMLParser::BuildTableCaption( HTMLTable *pCurTable )
     // Alle noch offenen Kontexte beenden
     while( (sal_uInt16)aContexts.size() > nContextStAttrMin+1 )
     {
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         _HTMLAttrContext *pCntxt = PopContext();
         EndContext( pCntxt );
         delete pCntxt;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        std::unique_ptr<_HTMLAttrContext> xCntxt(PopContext());
+        EndContext(xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
 
     // LF am Absatz-Ende entfernen
@@ -6259,9 +6312,15 @@ void SwHTMLParser::BuildTableCaption( HTMLTable *pCurTable )
 
     // falls fuer die Zelle eine Ausrichtung gesetzt wurde, muessen
     // wir die beenden
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = PopContext();
     EndContext( pCntxt );
     delete pCntxt;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(PopContext());
+    EndContext(xCntxt.get());
+    xCntxt.reset();
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     SetAttr( false );
 
@@ -6754,9 +6813,14 @@ std::shared_ptr<HTMLTable> SwHTMLParser::BuildTable(SvxAdjust eParentAdjust,
         // weil die aktuelle danach nicht mehr existiert
         while( aContexts.size() > nContextStAttrMin )
         {
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             _HTMLAttrContext *pCntxt = PopContext();
             ClearContext( pCntxt );
             delete pCntxt;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            std::unique_ptr<_HTMLAttrContext> xCntxt(PopContext());
+            ClearContext(xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         }
 
         nContextStMin = pTCntxt->GetContextStMin();

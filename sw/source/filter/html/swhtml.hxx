@@ -324,7 +324,11 @@ public:
     SwHTMLAppendMode GetAppendMode() const { return eAppend; }
 };
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
 typedef std::vector<_HTMLAttrContext *> _HTMLAttrContexts;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+typedef std::vector<std::unique_ptr<_HTMLAttrContext>> _HTMLAttrContexts;
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
 class HTMLTable;
 class SwCSS1Parser;
@@ -571,14 +575,27 @@ class SwHTMLParser : public SfxHTMLParser, public SwClient
     // Verwalten des Attribut-Kontexts
 
     // aktuellen Kontext merken
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     inline void PushContext( _HTMLAttrContext *pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    void PushContext(std::unique_ptr<_HTMLAttrContext>& rCntxt)
+    {
+        aContexts.push_back(std::move(rCntxt));
+    }
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // den obersten/spezifizierten Kontext holen, aber nicht ausserhalb
     // des Kontexts mit Token nLimit suchen. Wenn bRemove gesetzt ist,
     // wird er entfernt
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *PopContext( sal_uInt16 nToken=0, sal_uInt16 nLimit=0,
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> PopContext( sal_uInt16 nToken=0, sal_uInt16 nLimit=0,
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
                                   bool bRemove=true );
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     inline const _HTMLAttrContext *GetTopContext() const;
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     bool GetMarginsFromContext( sal_uInt16 &nLeft, sal_uInt16 &nRight, short& nIndent,
                                 bool bIgnoreCurrent=false ) const;
@@ -1011,6 +1028,8 @@ inline bool SwHTMLParser::HasStyleOptions( const OUString &rStyle,
            (pLang && !pLang->isEmpty()) || (pDir && !pDir->isEmpty());
 }
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
+
 inline const _HTMLAttrContext *SwHTMLParser::GetTopContext() const
 {
     return aContexts.size() > nContextStMin
@@ -1021,6 +1040,8 @@ inline void SwHTMLParser::PushContext( _HTMLAttrContext *pCntxt )
 {
     aContexts.push_back( pCntxt );
 }
+
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
 #endif
 

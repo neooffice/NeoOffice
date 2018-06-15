@@ -1068,12 +1068,21 @@ void SwHTMLParser::InsertBodyOptions()
 void SwHTMLParser::NewAnchor()
 {
     // den voherigen Link beenden, falls es einen gab
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pOldCntxt = PopContext( HTML_ANCHOR_ON );
     if( pOldCntxt )
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xOldCntxt(PopContext(HTML_ANCHOR_ON));
+    if (xOldCntxt)
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     {
         // und ggf. die Attribute beenden
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         EndContext( pOldCntxt );
         delete pOldCntxt;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        EndContext(xOldCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
 
     SvxMacroTableDtor aMacroTbl;
@@ -1190,7 +1199,11 @@ ANCHOR_SETEVENT:
     }
 
     // einen neuen Kontext anlegen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = new _HTMLAttrContext( HTML_ANCHOR_ON );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(new _HTMLAttrContext(HTML_ANCHOR_ON));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     bool bEnAnchor = false, bFtnAnchor = false, bFtnEnSymbol = false;
     OUString aFtnName;
@@ -1223,8 +1236,13 @@ ANCHOR_SETEVENT:
 
         if( ParseStyleOptions( aStyle, aId, aClass, aItemSet, aPropInfo, &aLang, &aDir ) )
         {
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             DoPositioning( aItemSet, aPropInfo, pCntxt );
             InsertAttrs( aItemSet, aPropInfo, pCntxt, true );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            DoPositioning(aItemSet, aPropInfo, xCntxt.get());
+            InsertAttrs(aItemSet, aPropInfo, xCntxt.get(), true);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         }
     }
 
@@ -1249,7 +1267,11 @@ ANCHOR_SETEVENT:
             aINetFmt.SetMacroTbl( &aMacroTbl );
 
         // das Default-Attribut setzen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         InsertAttr( &aAttrTab.pINetFmt, aINetFmt, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        InsertAttr(&aAttrTab.pINetFmt, aINetFmt, xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
     else if( !aName.isEmpty() )
     {
@@ -1267,7 +1289,11 @@ ANCHOR_SETEVENT:
     }
 
     // den Kontext merken
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     PushContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    PushContext(xCntxt);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 }
 
 void SwHTMLParser::EndAnchor()

@@ -2103,11 +2103,20 @@ void SwHTMLParser::NewTextArea()
         SetControlSize( xShape, aTextSz, false, false );
 
     // einen neuen Kontext anlegen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = new _HTMLAttrContext( HTML_TEXTAREA_ON );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(new _HTMLAttrContext(HTML_TEXTAREA_ON));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // und PRE/Listing/XMP voruebergehend aussetzen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     SplitPREListingXMP( pCntxt );
     PushContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    SplitPREListingXMP(xCntxt.get());
+    PushContext(xCntxt);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     bTextArea = true;
     bTAIgnoreNewPara = true;
@@ -2130,12 +2139,21 @@ void SwHTMLParser::EndTextArea()
     pFormImpl->ReleaseFCompPropSet();
 
     // den Kontext holen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = PopContext( HTML_TEXTAREA_ON );
     if( pCntxt )
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(PopContext(HTML_TEXTAREA_ON));
+    if (xCntxt)
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     {
         // und ggf. die Attribute beenden
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         EndContext( pCntxt );
         delete pCntxt;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        EndContext(xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
 
     bTextArea = false;
@@ -2382,11 +2400,20 @@ void SwHTMLParser::NewSelect()
         SetControlSize( xShape, aTextSz, bMinWidth, bMinHeight );
 
     // einen neuen Kontext anlegen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = new _HTMLAttrContext( HTML_SELECT_ON );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(new _HTMLAttrContext(HTML_SELECT_ON));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // und PRE/Listing/XMP voruebergehend aussetzen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     SplitPREListingXMP( pCntxt );
     PushContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    SplitPREListingXMP(xCntxt.get());
+    PushContext(xCntxt);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     bSelect = true;
 }
@@ -2466,12 +2493,21 @@ void SwHTMLParser::EndSelect()
     pFormImpl->ReleaseFCompPropSet();
 
     // den Kontext holen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = PopContext( HTML_SELECT_ON );
     if( pCntxt )
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(PopContext(HTML_SELECT_ON));
+    if (xCntxt)
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     {
         // und ggf. die Attribute beenden
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         EndContext( pCntxt );
         delete pCntxt;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        EndContext(xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
 
     bSelect = false;

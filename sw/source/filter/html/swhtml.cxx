@@ -3545,7 +3545,11 @@ void SwHTMLParser::NewStdAttr( int nToken )
     }
 
     // einen neuen Kontext anlegen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = new _HTMLAttrContext( static_cast< sal_uInt16 >(nToken) );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(new _HTMLAttrContext(static_cast< sal_uInt16 >(nToken)));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // Styles parsen
     if( HasStyleOptions( aStyle, aId, aClass, &aLang, &aDir ) )
@@ -3556,14 +3560,24 @@ void SwHTMLParser::NewStdAttr( int nToken )
         if( ParseStyleOptions( aStyle, aId, aClass, aItemSet, aPropInfo, &aLang, &aDir ) )
         {
             if( HTML_SPAN_ON != nToken || aClass.isEmpty() ||
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
                 !CreateContainer( aClass, aItemSet, aPropInfo, pCntxt ) )
                 DoPositioning( aItemSet, aPropInfo, pCntxt );
             InsertAttrs( aItemSet, aPropInfo, pCntxt, true );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+                !CreateContainer( aClass, aItemSet, aPropInfo, xCntxt.get() ) )
+                DoPositioning( aItemSet, aPropInfo, xCntxt.get() );
+            InsertAttrs( aItemSet, aPropInfo, xCntxt.get(), true );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         }
     }
 
     // den Kontext merken
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     PushContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    PushContext(xCntxt);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 }
 
 void SwHTMLParser::NewStdAttr( int nToken,
@@ -3598,7 +3612,11 @@ void SwHTMLParser::NewStdAttr( int nToken,
     }
 
     // einen neuen Kontext anlegen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = new _HTMLAttrContext( static_cast< sal_uInt16 >(nToken) );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(new _HTMLAttrContext(static_cast< sal_uInt16 >(nToken)));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // Styles parsen
     if( HasStyleOptions( aStyle, aId, aClass, &aLang, &aDir ) )
@@ -3613,38 +3631,71 @@ void SwHTMLParser::NewStdAttr( int nToken,
             aItemSet.Put( *pItem3 );
 
         if( ParseStyleOptions( aStyle, aId, aClass, aItemSet, aPropInfo, &aLang, &aDir ) )
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             DoPositioning( aItemSet, aPropInfo, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            DoPositioning( aItemSet, aPropInfo, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         InsertAttrs( aItemSet, aPropInfo, pCntxt, true );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        InsertAttrs( aItemSet, aPropInfo, xCntxt.get(), true );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
     else
     {
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         InsertAttr( ppAttr ,rItem, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        InsertAttr( ppAttr ,rItem, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         if( pItem2 )
         {
             OSL_ENSURE( ppAttr2, "missing table entry for item2" );
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             InsertAttr( ppAttr2, *pItem2, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            InsertAttr( ppAttr2, *pItem2, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         }
         if( pItem3 )
         {
             OSL_ENSURE( ppAttr3, "missing table entry for item3" );
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             InsertAttr( ppAttr3, *pItem3, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            InsertAttr( ppAttr3, *pItem3, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         }
     }
 
     // den Kontext merken
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     PushContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    PushContext(xCntxt);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 }
 
 void SwHTMLParser::EndTag( int nToken )
 {
     // den Kontext holen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = PopContext( static_cast< sal_uInt16 >(nToken & ~1) );
     if( pCntxt )
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(PopContext(static_cast< sal_uInt16 >(nToken & ~1)));
+    if (xCntxt)
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     {
         // und ggf. die Attribute beenden
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         EndContext( pCntxt );
         delete pCntxt;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        EndContext(xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
 }
 
@@ -3687,7 +3738,11 @@ void SwHTMLParser::NewBasefontAttr()
         nSize = 7;
 
     // einen neuen Kontext anlegen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = new _HTMLAttrContext( HTML_BASEFONT_ON );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(new _HTMLAttrContext(HTML_BASEFONT_ON));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // Styles parsen
     if( HasStyleOptions( aStyle, aId, aClass, &aLang, &aDir ) )
@@ -3707,22 +3762,46 @@ void SwHTMLParser::NewBasefontAttr()
         aItemSet.Put( aFontHeightCTL );
 
         if( ParseStyleOptions( aStyle, aId, aClass, aItemSet, aPropInfo, &aLang, &aDir ) )
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             DoPositioning( aItemSet, aPropInfo, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            DoPositioning( aItemSet, aPropInfo, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         InsertAttrs( aItemSet, aPropInfo, pCntxt, true );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        InsertAttrs( aItemSet, aPropInfo, xCntxt.get(), true );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
     else
     {
         SvxFontHeightItem aFontHeight( aFontHeights[nSize-1], 100, RES_CHRATR_FONTSIZE );
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         InsertAttr( &aAttrTab.pFontHeight, aFontHeight, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        InsertAttr( &aAttrTab.pFontHeight, aFontHeight, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         SvxFontHeightItem aFontHeightCJK( aFontHeights[nSize-1], 100, RES_CHRATR_CJK_FONTSIZE );
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         InsertAttr( &aAttrTab.pFontHeightCJK, aFontHeightCJK, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        InsertAttr( &aAttrTab.pFontHeightCJK, aFontHeightCJK, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         SvxFontHeightItem aFontHeightCTL( aFontHeights[nSize-1], 100, RES_CHRATR_CTL_FONTSIZE );
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         InsertAttr( &aAttrTab.pFontHeightCTL, aFontHeightCTL, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        InsertAttr( &aAttrTab.pFontHeightCTL, aFontHeightCTL, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
 
     // den Kontext merken
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     PushContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    PushContext(xCntxt);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // die Font-Size merken
     aBaseFontStack.push_back( nSize );
@@ -3890,7 +3969,11 @@ void SwHTMLParser::NewFontAttr( int nToken )
     }
 
     // einen neuen Kontext anlegen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = new _HTMLAttrContext( static_cast< sal_uInt16 >(nToken) );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(new _HTMLAttrContext(static_cast< sal_uInt16 >(nToken)));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // Styles parsen
     if( HasStyleOptions( aStyle, aId, aClass, &aLang, &aDir ) )
@@ -3920,36 +4003,76 @@ void SwHTMLParser::NewFontAttr( int nToken )
         }
 
         if( ParseStyleOptions( aStyle, aId, aClass, aItemSet, aPropInfo, &aLang, &aDir ) )
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             DoPositioning( aItemSet, aPropInfo, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            DoPositioning( aItemSet, aPropInfo, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         InsertAttrs( aItemSet, aPropInfo, pCntxt, true );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        InsertAttrs( aItemSet, aPropInfo, xCntxt.get(), true );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
     else
     {
         if( nFontHeight )
         {
             SvxFontHeightItem aFontHeight( nFontHeight, 100, RES_CHRATR_FONTSIZE );
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             InsertAttr( &aAttrTab.pFontHeight, aFontHeight, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            InsertAttr( &aAttrTab.pFontHeight, aFontHeight, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
             SvxFontHeightItem aFontHeightCJK( nFontHeight, 100, RES_CHRATR_CJK_FONTSIZE );
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             InsertAttr( &aAttrTab.pFontHeight, aFontHeightCJK, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            InsertAttr( &aAttrTab.pFontHeight, aFontHeightCJK, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
             SvxFontHeightItem aFontHeightCTL( nFontHeight, 100, RES_CHRATR_CTL_FONTSIZE );
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             InsertAttr( &aAttrTab.pFontHeight, aFontHeightCTL, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            InsertAttr( &aAttrTab.pFontHeight, aFontHeightCTL, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         }
         if( bColor )
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             InsertAttr( &aAttrTab.pFontColor, SvxColorItem(aColor, RES_CHRATR_COLOR), pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            InsertAttr( &aAttrTab.pFontColor, SvxColorItem(aColor, RES_CHRATR_COLOR), xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         if( !aFontName.isEmpty() )
         {
             SvxFontItem aFont( eFamily, aFontName, aStyleName, ePitch, eEnc, RES_CHRATR_FONT );
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             InsertAttr( &aAttrTab.pFont, aFont, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            InsertAttr( &aAttrTab.pFont, aFont, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
             SvxFontItem aFontCJK( eFamily, aFontName, aStyleName, ePitch, eEnc, RES_CHRATR_CJK_FONT );
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             InsertAttr( &aAttrTab.pFont, aFontCJK, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            InsertAttr( &aAttrTab.pFont, aFontCJK, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
             SvxFontItem aFontCTL( eFamily, aFontName, aStyleName, ePitch, eEnc, RES_CHRATR_CTL_FONT );
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             InsertAttr( &aAttrTab.pFont, aFontCTL, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            InsertAttr( &aAttrTab.pFont, aFontCTL, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         }
     }
 
     // den Kontext merken
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     PushContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    PushContext(xCntxt);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     aFontStack.push_back( nSize );
 }
@@ -4001,10 +4124,18 @@ void SwHTMLParser::NewPara()
     }
 
     // einen neuen Kontext anlegen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt =
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         !aClass.isEmpty() ? new _HTMLAttrContext( HTML_PARABREAK_ON,
                                              RES_POOLCOLL_TEXT, aClass )
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
                      : new _HTMLAttrContext( HTML_PARABREAK_ON );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+                     : new _HTMLAttrContext( HTML_PARABREAK_ON ));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // Styles parsen (Class nicht beruecksichtigen. Das geht nur, solange
     // keine der CSS1-Properties der Klasse hart formatiert werden muss!!!)
@@ -4017,19 +4148,36 @@ void SwHTMLParser::NewPara()
         {
             OSL_ENSURE( aClass.isEmpty() || !pCSS1Parser->GetClass( aClass ),
                     "Class wird nicht beruecksichtigt" );
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             DoPositioning( aItemSet, aPropInfo, pCntxt );
             InsertAttrs( aItemSet, aPropInfo, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            DoPositioning( aItemSet, aPropInfo, xCntxt.get() );
+            InsertAttrs( aItemSet, aPropInfo, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         }
     }
 
     if( SVX_ADJUST_END != eParaAdjust )
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         InsertAttr( &aAttrTab.pAdjust, SvxAdjustItem(eParaAdjust, RES_PARATR_ADJUST), pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        InsertAttr( &aAttrTab.pAdjust, SvxAdjustItem(eParaAdjust, RES_PARATR_ADJUST), xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // und auf den Stack packen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     PushContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    PushContext( xCntxt );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // die aktuelle Vorlage oder deren Attribute setzen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     SetTxtCollAttrs( !aClass.isEmpty() ? pCntxt : 0 );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    SetTxtCollAttrs( !aClass.isEmpty() ? aContexts.back().get() : nullptr );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // Laufbalkenanzeige
     ShowStatline();
@@ -4071,16 +4219,33 @@ void SwHTMLParser::EndPara( bool bReal )
 
     // den Kontext vom Stack holen. Er kann auch von einer implizit
     // geoeffneten Definitionsliste kommen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt =
         PopContext( static_cast< sal_uInt16 >(nOpenParaToken ? (nOpenParaToken & ~1)
                                    : HTML_PARABREAK_ON) );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(
+        PopContext( nOpenParaToken != 0 ? (nOpenParaToken & ~1) : HTML_PARABREAK_ON ));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // Attribute beenden
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     if( pCntxt )
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    if (xCntxt)
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     {
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         EndContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        EndContext(xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         SetAttr();  // Absatz-Atts wegen JavaScript moeglichst schnell setzen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         delete pCntxt;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        xCntxt.reset();
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
 
     // und die bisherige Vorlage neu setzen
@@ -4143,7 +4308,11 @@ void SwHTMLParser::NewHeading( int nToken )
     }
 
     // den Kontext anlegen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = new _HTMLAttrContext( static_cast< sal_uInt16 >(nToken), nTxtColl, aClass );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(new _HTMLAttrContext(static_cast< sal_uInt16 >(nToken), nTxtColl, aClass));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // Styles parsen (zu Class siehe auch NewPara)
     if( HasStyleOptions( aStyle, aId, aEmptyOUStr, &aLang, &aDir ) )
@@ -4155,19 +4324,37 @@ void SwHTMLParser::NewHeading( int nToken )
         {
             OSL_ENSURE( aClass.isEmpty() || !pCSS1Parser->GetClass( aClass ),
                     "Class wird nicht beruecksichtigt" );
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             DoPositioning( aItemSet, aPropInfo, pCntxt );
             InsertAttrs( aItemSet, aPropInfo, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            DoPositioning( aItemSet, aPropInfo, xCntxt.get() );
+            InsertAttrs( aItemSet, aPropInfo, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         }
     }
 
     if( SVX_ADJUST_END != eParaAdjust )
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         InsertAttr( &aAttrTab.pAdjust, SvxAdjustItem(eParaAdjust, RES_PARATR_ADJUST), pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        InsertAttr( &aAttrTab.pAdjust, SvxAdjustItem(eParaAdjust, RES_PARATR_ADJUST), xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
+ 
 
     // udn auf den Stack packen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     PushContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    PushContext(xCntxt);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // und die Vorlage oder deren Attribute setzen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     SetTxtCollAttrs( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    SetTxtCollAttrs(aContexts.back().get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     nFontStHeadStart = aFontStack.size();
 
@@ -4184,9 +4371,17 @@ void SwHTMLParser::EndHeading()
         AddParSpace();
 
     // Kontext zu dem Token suchen und vom Stack holen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = 0;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt;
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     sal_uInt16 nPos = aContexts.size();
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     while( !pCntxt && nPos>nContextStMin )
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    while( !xCntxt && nPos>nContextStMin )
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     {
         switch( aContexts[--nPos]->GetToken() )
         {
@@ -4196,18 +4391,34 @@ void SwHTMLParser::EndHeading()
         case HTML_HEAD4_ON:
         case HTML_HEAD5_ON:
         case HTML_HEAD6_ON:
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             pCntxt = aContexts[nPos];
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            xCntxt = std::move(aContexts[nPos]);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
             aContexts.erase( aContexts.begin() + nPos );
             break;
         }
     }
 
     // und noch Attribute beenden
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     if( pCntxt )
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    if (xCntxt)
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     {
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         EndContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        EndContext(xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         SetAttr();  // Absatz-Atts wegen JavaScript moeglichst schnell setzen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         delete pCntxt;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        xCntxt.reset();
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
 
     // die bisherige Vorlage neu setzen
@@ -4277,7 +4488,11 @@ void SwHTMLParser::NewTxtFmtColl( int nToken, sal_uInt16 nColl )
         AddParSpace();
 
     // ... und in einem Kontext merken
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = new _HTMLAttrContext( static_cast< sal_uInt16 >(nToken), nColl, aClass );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(new _HTMLAttrContext(static_cast< sal_uInt16 >(nToken), nColl, aClass));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // Styles parsen (zu Class siehe auch NewPara)
     if( HasStyleOptions( aStyle, aId, aEmptyOUStr, &aLang, &aDir ) )
@@ -4289,15 +4504,28 @@ void SwHTMLParser::NewTxtFmtColl( int nToken, sal_uInt16 nColl )
         {
             OSL_ENSURE( aClass.isEmpty() || !pCSS1Parser->GetClass( aClass ),
                     "Class wird nicht beruecksichtigt" );
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             DoPositioning( aItemSet, aPropInfo, pCntxt );
             InsertAttrs( aItemSet, aPropInfo, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            DoPositioning( aItemSet, aPropInfo, xCntxt.get() );
+            InsertAttrs( aItemSet, aPropInfo, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         }
     }
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     PushContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    PushContext(xCntxt);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // die neue Vorlage setzen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     SetTxtCollAttrs( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    SetTxtCollAttrs(aContexts.back().get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // Laufbalkenanzeige aktualisieren
     ShowStatline();
@@ -4330,14 +4558,30 @@ void SwHTMLParser::EndTxtFmtColl( int nToken )
         AddParSpace();
 
     // den aktuellen Kontext vom Stack holen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = PopContext( static_cast< sal_uInt16 >(nToken & ~1) );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(PopContext(static_cast< sal_uInt16 >(nToken & ~1)));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // und noch Attribute beenden
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     if( pCntxt )
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    if (xCntxt)
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     {
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         EndContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        EndContext(xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         SetAttr();  // Absatz-Atts wegen JavaScript moeglichst schnell setzen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         delete pCntxt;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        xCntxt.reset();
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
 
     // und die bisherige Vorlage setzen
@@ -4403,7 +4647,11 @@ void SwHTMLParser::NewDefList()
     }
 
     // ... und in einem Kontext merken
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = new _HTMLAttrContext( HTML_DEFLIST_ON );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(new _HTMLAttrContext(HTML_DEFLIST_ON));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // darin auch die Raender merken
     sal_uInt16 nLeft=0, nRight=0;
@@ -4424,7 +4672,11 @@ void SwHTMLParser::NewDefList()
         nLeft = nLeft + static_cast< sal_uInt16 >(rLRSpace.GetTxtLeft());
     }
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     pCntxt->SetMargins( nLeft, nRight, nIndent );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    xCntxt->SetMargins( nLeft, nRight, nIndent );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // Styles parsen
     if( HasStyleOptions( aStyle, aId, aClass, &aLang, &aDir ) )
@@ -4434,16 +4686,29 @@ void SwHTMLParser::NewDefList()
 
         if( ParseStyleOptions( aStyle, aId, aClass, aItemSet, aPropInfo, &aLang, &aDir ) )
         {
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             DoPositioning( aItemSet, aPropInfo, pCntxt );
             InsertAttrs( aItemSet, aPropInfo, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            DoPositioning( aItemSet, aPropInfo, xCntxt.get() );
+            InsertAttrs( aItemSet, aPropInfo, xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         }
     }
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     PushContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    PushContext(xCntxt);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // die Attribute der neuen Vorlage setzen
     if( nDefListDeep > 1 )
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         SetTxtCollAttrs( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        SetTxtCollAttrs(aContexts.back().get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 }
 
 void SwHTMLParser::EndDefList()
@@ -4459,14 +4724,30 @@ void SwHTMLParser::EndDefList()
         nDefListDeep--;
 
     // den aktuellen Kontext vom Stack holen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = PopContext( HTML_DEFLIST_ON );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(PopContext(HTML_DEFLIST_ON));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // und noch Attribute beenden
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     if( pCntxt )
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    if (xCntxt)
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     {
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         EndContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        EndContext(xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         SetAttr();  // Absatz-Atts wegen JavaScript moeglichst schnell setzen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         delete pCntxt;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        xCntxt.reset();
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
 
     // und Vorlage setzen
@@ -4517,9 +4798,17 @@ void SwHTMLParser::EndDefListItem( int nToken, bool bSetColl,
 
     // Kontext zu dem Token suchen und vom Stack holen
     nToken &= ~1;
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = 0;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt;
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     sal_uInt16 nPos = aContexts.size();
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     while( !pCntxt && nPos>nContextStMin )
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    while( !xCntxt && nPos>nContextStMin )
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     {
         sal_uInt16 nCntxtToken = aContexts[--nPos]->GetToken();
         switch( nCntxtToken )
@@ -4528,7 +4817,11 @@ void SwHTMLParser::EndDefListItem( int nToken, bool bSetColl,
         case HTML_DT_ON:
             if( !nToken || nToken == nCntxtToken  )
             {
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
                 pCntxt = aContexts[nPos];
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+                xCntxt = std::move(aContexts[nPos]);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
                 aContexts.erase( aContexts.begin() + nPos );
             }
             break;
@@ -4545,11 +4838,21 @@ void SwHTMLParser::EndDefListItem( int nToken, bool bSetColl,
     }
 
     // und noch Attribute beenden
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     if( pCntxt )
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    if (xCntxt)
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     {
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         EndContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        EndContext(xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         SetAttr();  // Absatz-Atts wegen JavaScript moeglichst schnell setzen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         delete pCntxt;
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
 
     // und die bisherige Vorlage setzen
@@ -4651,7 +4954,11 @@ void SwHTMLParser::SetTxtCollAttrs( _HTMLAttrContext *pContext )
 
     for( i = nContextStAttrMin; i < aContexts.size(); i++ )
     {
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         const _HTMLAttrContext *pCntxt = aContexts[i];
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        const _HTMLAttrContext *pCntxt = aContexts[i].get();
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
         sal_uInt16 nColl = pCntxt->GetTxtFmtColl();
         if( nColl )
@@ -4888,7 +5195,11 @@ void SwHTMLParser::NewCharFmt( int nToken )
     }
 
     // einen neuen Kontext anlegen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = new _HTMLAttrContext( static_cast< sal_uInt16 >(nToken) );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(new _HTMLAttrContext(static_cast< sal_uInt16 >(nToken)));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // die Vorlage setzen und im Kontext merken
     SwCharFmt* pCFmt = pCSS1Parser->GetChrFmt( static_cast< sal_uInt16 >(nToken), aClass );
@@ -4904,8 +5215,13 @@ void SwHTMLParser::NewCharFmt( int nToken )
         {
             OSL_ENSURE( aClass.isEmpty() || !pCSS1Parser->GetClass( aClass ),
                     "Class wird nicht beruecksichtigt" );
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             DoPositioning( aItemSet, aPropInfo, pCntxt );
             InsertAttrs( aItemSet, aPropInfo, pCntxt, true );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            DoPositioning( aItemSet, aPropInfo, xCntxt.get() );
+            InsertAttrs( aItemSet, aPropInfo, xCntxt.get(), true );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         }
     }
 
@@ -4913,10 +5229,18 @@ void SwHTMLParser::NewCharFmt( int nToken )
     // koennen nie durch Styles eingefuegt werden. Das Attribut ist deshalb
     // auch gar nicht im CSS1-Which-Range enthalten
     if( pCFmt )
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         InsertAttr( &aAttrTab.pCharFmts, SwFmtCharFmt( pCFmt ), pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        InsertAttr( &aAttrTab.pCharFmts, SwFmtCharFmt( pCFmt ), xCntxt.get() );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // den Kontext merken
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     PushContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    PushContext(xCntxt);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 }
 
 void SwHTMLParser::InsertSpacer()
@@ -5362,13 +5686,26 @@ void SwHTMLParser::InsertHorzRule()
     pPam->Move( fnMoveBackward );
 
     // ... und in einem Kontext merken
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt =
         new _HTMLAttrContext( HTML_HORZRULE, RES_POOLCOLL_HTML_HR, aEmptyOUStr );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(
+        new _HTMLAttrContext(HTML_HORZRULE, RES_POOLCOLL_HTML_HR, aEmptyOUStr));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     PushContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    PushContext(xCntxt);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // die neue Vorlage setzen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     SetTxtCollAttrs( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    SetTxtCollAttrs(aContexts.back().get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     // die harten Attribute an diesem Absatz werden nie mehr ungueltig
     if( !aParaAttrs.empty() )
@@ -5460,9 +5797,14 @@ void SwHTMLParser::InsertHorzRule()
         InsertBookmark( aId );
 
     // den aktuellen Kontext vom Stack holen
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pPoppedContext = PopContext( HTML_HORZRULE );
     OSL_ENSURE( pPoppedContext==pCntxt, "wo kommt denn da ein HR-Kontext her?" );
     delete pPoppedContext;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xPoppedContext(PopContext(HTML_HORZRULE));
+    xPoppedContext.reset();
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     pPam->Move( fnMoveForward );
 

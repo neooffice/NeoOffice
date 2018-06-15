@@ -117,7 +117,11 @@ void SwHTMLParser::NewDivision( int nToken )
         bAppended = true;
     }
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = new _HTMLAttrContext( static_cast< sal_uInt16 >(nToken) );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(new _HTMLAttrContext(static_cast< sal_uInt16 >(nToken)));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     bool bStyleParsed = false, bPositioned = false;
     SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
@@ -130,15 +134,28 @@ void SwHTMLParser::NewDivision( int nToken )
         {
             if ( aPropInfo.nColumnCount >= 2 )
             {
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
                 delete pCntxt;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+                xCntxt.reset();
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
                 NewMultiCol( aPropInfo.nColumnCount );
                 return;
             }
             bPositioned = HTML_DIVISION_ON == nToken && !aClass.isEmpty() &&
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
                           CreateContainer( aClass, aItemSet, aPropInfo,
                                            pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+                          CreateContainer(aClass, aItemSet, aPropInfo,
+                                          xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
             if( !bPositioned )
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
                 bPositioned = DoPositioning( aItemSet, aPropInfo, pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+                bPositioned = DoPositioning(aItemSet, aPropInfo, xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         }
     }
 
@@ -216,7 +233,11 @@ void SwHTMLParser::NewDivision( int nToken )
         }
 
         SwPosition aNewPos( SwNodeIndex( rCntntStIdx, 1 ), SwIndex( pCNd, 0 ) );
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         SaveDocContext( pCntxt, nFlags, &aNewPos );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        SaveDocContext(xCntxt.get(), nFlags, &aNewPos);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
     else if( !bPositioned && aId.getLength() > 9 &&
              (aId[0] == 's' || aId[0] == 'S' ) &&
@@ -236,7 +257,11 @@ void SwHTMLParser::NewDivision( int nToken )
                     pDoc->GetNodes()[pStartNdIdx->GetIndex()+1]->GetCntntNode();
                 SwNodeIndex aTmpSwNodeIndex = SwNodeIndex(*pCNd);
                 SwPosition aNewPos( aTmpSwNodeIndex, SwIndex( pCNd, 0 ) );
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
                 SaveDocContext( pCntxt, CONTEXT_FLAGS_FTN, &aNewPos );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+                SaveDocContext(xCntxt.get(), CONTEXT_FLAGS_FTN, &aNewPos);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
                 aId.clear();
                 aPropInfo.aId.clear();
             }
@@ -364,7 +389,11 @@ void SwHTMLParser::NewDivision( int nToken )
             pPostIts = 0;
         }
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         pCntxt->SetSpansSection( true );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        xCntxt->SetSpansSection( true );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
         // keine text::Bookmarks mit dem gleichen Namen wie Bereiche einfuegen
         if( !aPropInfo.aId.isEmpty() && aPropInfo.aId==aName )
@@ -372,46 +401,84 @@ void SwHTMLParser::NewDivision( int nToken )
     }
     else
     {
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         pCntxt->SetAppendMode( AM_NOSPACE );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        xCntxt->SetAppendMode( AM_NOSPACE );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
 
     if( SVX_ADJUST_END != eAdjust )
     {
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         InsertAttr( &aAttrTab.pAdjust, SvxAdjustItem(eAdjust, RES_PARATR_ADJUST), pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        InsertAttr(&aAttrTab.pAdjust, SvxAdjustItem(eAdjust, RES_PARATR_ADJUST), xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
 
     // Style parsen
     if( bStyleParsed )
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         InsertAttrs( aItemSet, aPropInfo, pCntxt, true );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        InsertAttrs( aItemSet, aPropInfo, xCntxt.get(), true );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     PushContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    PushContext(xCntxt);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 }
 
 void SwHTMLParser::EndDivision( int /*nToken*/ )
 {
     // Stack-Eintrag zu dem Token suchen (weil wir noch den Div-Stack
     // haben unterscheiden wir erst einmal nicht zwischen DIV und CENTER
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = 0;
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt;
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     sal_uInt16 nPos = aContexts.size();
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     while( !pCntxt && nPos>nContextStMin )
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    while (!xCntxt && nPos>nContextStMin)
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     {
         switch( aContexts[--nPos]->GetToken() )
         {
         case HTML_CENTER_ON:
         case HTML_DIVISION_ON:
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
             pCntxt = aContexts[nPos];
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+            xCntxt = std::move(aContexts[nPos]);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
             aContexts.erase( aContexts.begin() + nPos );
             break;
         }
     }
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     if( pCntxt )
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    if (xCntxt)
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     {
         // Attribute beenden
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         EndContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        EndContext(xCntxt.get());
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         SetAttr();  // Absatz-Atts wegen JavaScript moeglichst schnell setzen
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         delete pCntxt;
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
 }
 
@@ -530,7 +597,11 @@ bool SwHTMLParser::EndSections( bool bLFStripped )
     sal_uInt16 nPos = aContexts.size();
     while( nPos>nContextStMin )
     {
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         _HTMLAttrContext *pCntxt = aContexts[--nPos];
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        _HTMLAttrContext *pCntxt = aContexts[--nPos].get();
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         if( pCntxt->GetSpansSection() && EndSection( bLFStripped ) )
         {
             bSectionClosed = true;
@@ -587,7 +658,11 @@ void SwHTMLParser::NewMultiCol( sal_uInt16 columnsFromCss )
         }
     }
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     _HTMLAttrContext *pCntxt = new _HTMLAttrContext( HTML_MULTICOL_ON );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    std::unique_ptr<_HTMLAttrContext> xCntxt(new _HTMLAttrContext(HTML_MULTICOL_ON));
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     //.is the multicol elememt contained in a container? That may be the
     // case for 5.0 documents.
@@ -651,9 +726,17 @@ void SwHTMLParser::NewMultiCol( sal_uInt16 columnsFromCss )
             aPropInfo.aId = "";
         }
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         InsertFlyFrame( aFrmItemSet, pCntxt, aFlyName, CONTEXT_FLAGS_ABSPOS );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        InsertFlyFrame(aFrmItemSet, xCntxt.get(), aFlyName, CONTEXT_FLAGS_ABSPOS);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         pCntxt->SetPopStack( true );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        xCntxt->SetPopStack( true );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
         bPositioned = true;
     }
 
@@ -752,7 +835,11 @@ void SwHTMLParser::NewMultiCol( sal_uInt16 columnsFromCss )
             pPostIts = 0;
         }
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         pCntxt->SetSpansSection( true );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        xCntxt->SetSpansSection( true );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
         // Insert a bookmark if its name differs from the section's name only.
         if( !aPropInfo.aId.isEmpty() && aPropInfo.aId==aName )
@@ -761,9 +848,17 @@ void SwHTMLParser::NewMultiCol( sal_uInt16 columnsFromCss )
 
     // Additional attributes must be set as hard ones.
     if( bStyleParsed )
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         InsertAttrs( aItemSet, aPropInfo, pCntxt, true );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+        InsertAttrs( aItemSet, aPropInfo, xCntxt.get(), true );
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     PushContext( pCntxt );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    PushContext(xCntxt);
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 }
 
 void SwHTMLParser::InsertFlyFrame( const SfxItemSet& rItemSet,
