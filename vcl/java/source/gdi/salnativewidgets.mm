@@ -505,8 +505,22 @@ static bool IsRunningHighSierraOrLower()
 						}
 
 						// Fix failure to draw on macOS 10.14 by passing a
-						// regular view instead of the control itself
-						NSView *pControlView = ( IsRunningHighSierraOrLower() ? pButton : [VCLNativeControlView createWithControl:pButton] );
+						// regular view instead of the control itself. Fix
+						// failure to draw control in inactive state on
+						// macOS 10.14 by attaching view to the control's
+						// window.
+						NSView *pControlView = ( IsRunningHighSierraOrLower() ? nil : [VCLNativeControlView createWithControl:pButton] );
+						if ( pControlView )
+						{
+							NSWindow *pWindow = [pButton window];
+							if ( pWindow )
+							{
+								NSView *pContentView = [pWindow contentView];
+								if ( pContentView )
+									[pContentView addSubview:pControlView positioned:NSWindowBelow relativeTo:nil];
+							}
+						}
+
 						[pCell drawWithFrame:aDrawRect inView:( pControlView ? pControlView : pButton )];
 
 						if ( mbRedraw )
@@ -528,6 +542,9 @@ static bool IsRunningHighSierraOrLower()
 								CGContextEndTransparencyLayer( mpBuffer->maContext );
 							}
 						}
+
+						if ( pControlView )
+							[pControlView removeFromSuperview];
 
 						if ( bAttachToKeyWindow )
 							[pButton removeFromSuperview];
@@ -780,9 +797,26 @@ static bool IsRunningHighSierraOrLower()
 						[NSGraphicsContext setCurrentContext:pContext];
 
 						// Fix failure to draw on macOS 10.14 by passing a
-						// regular view instead of the control itself
-						NSView *pControlView = ( IsRunningHighSierraOrLower() ? pControl : [VCLNativeControlView createWithControl:pControl] );
+						// regular view instead of the control itself. Fix
+						// failure to draw control in inactive state on
+						// macOS 10.14 by attaching view to the control's
+						// window.
+						NSView *pControlView = ( IsRunningHighSierraOrLower() ? nil : [VCLNativeControlView createWithControl:pControl] );
+						if ( pControlView )
+						{
+							NSWindow *pWindow = [pControl window];
+							if ( pWindow )
+							{
+								NSView *pContentView = [pWindow contentView];
+								if ( pContentView )
+									[pContentView addSubview:pControlView positioned:NSWindowBelow relativeTo:nil];
+							}
+						}
+
 						[pCell drawWithFrame:aDrawRect inView:( pControlView ? pControlView : pControl )];
+
+						if ( pControlView )
+							[pControlView removeFromSuperview];
 
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
