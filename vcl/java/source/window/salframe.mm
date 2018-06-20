@@ -87,6 +87,10 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 using namespace osl;
 using namespace vcl;
 
+@interface NSColor (VCLColor)
++ (NSColor *)unemphasizedSelectedTextBackgroundColor;
+@end
+
 static NSRect GetTotalScreenBounds()
 {
 	if ( NSIsEmptyRect( aTotalScreenBounds ) )
@@ -200,7 +204,10 @@ static void HandleSystemColorsChangedRequest()
 	SetSalColorFromNSColor( [NSColor selectedTextBackgroundColor], &pVCLHighlightColor );
 	SetSalColorFromNSColor( [NSColor selectedTextColor], &pVCLHighlightTextColor );
 	SetSalColorFromNSColor( [NSColor disabledControlTextColor], &pVCLDisabledControlTextColor );
-	SetSalColorFromNSColor( [NSColor controlHighlightColor], &pVCLBackColor );
+	if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedTextBackgroundColor) ) )
+		SetSalColorFromNSColor( [NSColor unemphasizedSelectedTextBackgroundColor], &pVCLBackColor );
+	else if ( class_getClassMethod( [NSColor class], @selector(controlHighlightColor) ) )
+		SetSalColorFromNSColor( [NSColor controlHighlightColor], &pVCLBackColor );
 	SetSalColorFromNSColor( [NSColor alternateSelectedControlTextColor], &pVCLAlternateSelectedControlTextColor );
 	SetSalColorFromNSColor( [NSColor selectedControlTextColor], &pVCLSelectedControlTextColor );
 	SetSalColorFromNSColor( [NSColor selectedMenuItemColor], &pVCLSelectedMenuItemColor );
