@@ -88,7 +88,7 @@ using namespace osl;
 using namespace vcl;
 
 @interface NSColor (VCLColor)
-+ (NSColor *)unemphasizedSelectedTextBackgroundColor;
++ (NSColor *)unemphasizedSelectedContentBackgroundColor;
 @end
 
 static NSRect GetTotalScreenBounds()
@@ -204,15 +204,19 @@ static void HandleSystemColorsChangedRequest()
 	SetSalColorFromNSColor( [NSColor selectedTextBackgroundColor], &pVCLHighlightColor );
 	SetSalColorFromNSColor( [NSColor selectedTextColor], &pVCLHighlightTextColor );
 	SetSalColorFromNSColor( [NSColor disabledControlTextColor], &pVCLDisabledControlTextColor );
-	if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedTextBackgroundColor) ) )
-		SetSalColorFromNSColor( [NSColor unemphasizedSelectedTextBackgroundColor], &pVCLBackColor );
+	if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedContentBackgroundColor) ) )
+		SetSalColorFromNSColor( [NSColor unemphasizedSelectedContentBackgroundColor], &pVCLBackColor );
 	else if ( class_getClassMethod( [NSColor class], @selector(controlHighlightColor) ) )
 		SetSalColorFromNSColor( [NSColor controlHighlightColor], &pVCLBackColor );
 	SetSalColorFromNSColor( [NSColor alternateSelectedControlTextColor], &pVCLAlternateSelectedControlTextColor );
 	SetSalColorFromNSColor( [NSColor selectedControlTextColor], &pVCLSelectedControlTextColor );
-	SetSalColorFromNSColor( [NSColor selectedMenuItemColor], &pVCLSelectedMenuItemColor );
+	if ( class_getClassMethod( [NSColor class], @selector(selectedMenuItemColor) ) )
+		SetSalColorFromNSColor( [NSColor selectedMenuItemColor], &pVCLSelectedMenuItemColor );
+	else
+		SetSalColorFromNSColor( [NSColor keyboardFocusIndicatorColor], &pVCLSelectedMenuItemColor );
 	SetSalColorFromNSColor( [NSColor selectedMenuItemTextColor], &pVCLSelectedMenuItemTextColor );
-	SetSalColorFromNSColor( [NSColor controlShadowColor], &pVCLShadowColor );
+	if ( class_getClassMethod( [NSColor class], @selector(controlShadowColor) ) )
+		SetSalColorFromNSColor( [NSColor controlShadowColor], &pVCLShadowColor );
 
 	// Always use NSScrollerStyleLegacy scrollbars as we always draw scrollbars 
 	// with that style in vcl/java/source/gdi/salnativewidgets.mm
