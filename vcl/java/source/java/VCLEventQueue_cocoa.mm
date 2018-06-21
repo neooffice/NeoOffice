@@ -51,6 +51,13 @@
 #include "VCLResponder_cocoa.h"
 #include "../app/salinst_cocoa.h"
 
+#ifndef NSAppearanceNameDarkAqua
+#define NSAppearanceNameDarkAqua @"NSAppearanceNameDarkAqua"
+#endif	// NSAppearanceNameDarkAqua
+
+// Uncomment the following line to enable dark mode
+// #define USE_DARK_MODE_APPEARANCE
+
 // Comment out the following line to disable automatic window tabbing
 #define USE_AUTOMATIC_WINDOW_TABBING
 
@@ -3045,6 +3052,7 @@ static CFDataRef aRTFSelection = nil;
 
 @interface NSApplication (VCLApplicationPoseAs)
 - (void)poseAsSetDelegate:(id< NSApplicationDelegate >)pObject;
+- (void)setAppearance:(NSAppearance *)pAppearance;
 @end
 
 @interface VCLApplication : NSApplication
@@ -3411,6 +3419,20 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 	if ( pApp && pSharedDelegate )
 	{
 		[pApp setDelegate:pSharedDelegate];
+
+#ifdef USE_DARK_MODE_APPEARANCE
+		NSString *pAppearanceName = nil;
+		NSString *pStyle = [[NSUserDefaults standardUserDefaults] stringForKey:@"AppleInterfaceStyle"];
+		if ( pStyle && [pStyle isEqualToString:@"Dark"] )
+			pAppearanceName = NSAppearanceNameDarkAqua;
+
+		if ( pAppearanceName )
+		{
+			NSAppearance *pAppearance = [NSAppearance appearanceNamed:pAppearanceName];
+			if ( pAppearance && [pApp respondsToSelector:@selector(setAppearance:)] )
+				[pApp setAppearance:pAppearance];
+		}
+#endif	// USE_DARK_MODE_APPEARANCE
 
 		NSMenu *pMainMenu = [pApp mainMenu];
 		if ( pMainMenu && [pMainMenu numberOfItems] > 0 )
