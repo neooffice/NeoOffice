@@ -40,6 +40,10 @@
 
 #ifdef __OBJC__
 
+@interface NSColor (VCLColor)
++ (NSColor *)unemphasizedSelectedContentBackgroundColor;
+@end
+
 @interface VCLView : NSView <NSDraggingDestination, NSDraggingSource, NSTextInputClient>
 {
 	JavaSalFrame*			mpFrame;

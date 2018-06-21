@@ -87,10 +87,6 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 using namespace osl;
 using namespace vcl;
 
-@interface NSColor (VCLColor)
-+ (NSColor *)unemphasizedSelectedContentBackgroundColor;
-@end
-
 static NSRect GetTotalScreenBounds()
 {
 	if ( NSIsEmptyRect( aTotalScreenBounds ) )

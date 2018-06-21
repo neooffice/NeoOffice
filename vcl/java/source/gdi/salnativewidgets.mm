@@ -42,6 +42,7 @@
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
+#import <objc/objc-class.h>
 #include <postmac.h>
 #undef check
 
@@ -2222,7 +2223,10 @@ static bool IsRunningHighSierraOrLower()
 						}
 						else
 						{
-							[[NSColor controlColor] set];
+							if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedContentBackgroundColor) ) )
+								[[NSColor unemphasizedSelectedContentBackgroundColor] set];
+							else
+								[[NSColor controlColor] set];
 							[NSBezierPath fillRect:aDrawRect];
 						}
 						[NSGraphicsContext setCurrentContext:pOldContext];
