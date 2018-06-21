@@ -51,10 +51,6 @@
 #include "VCLResponder_cocoa.h"
 #include "../app/salinst_cocoa.h"
 
-#ifndef NSAppearanceNameDarkAqua
-#define NSAppearanceNameDarkAqua @"NSAppearanceNameDarkAqua"
-#endif	// NSAppearanceNameDarkAqua
-
 // Uncomment the following line to enable dark mode
 // #define USE_DARK_MODE_APPEARANCE
 
@@ -63,6 +59,12 @@
 
 #define MODIFIER_RELEASE_INTERVAL 100
 #define UNDEFINED_KEY_CODE 0xffff
+
+#ifdef USE_DARK_MODE_APPEARANCE
+#ifndef NSAppearanceNameDarkAqua
+#define NSAppearanceNameDarkAqua @"NSAppearanceNameDarkAqua"
+#endif	// NSAppearanceNameDarkAqua
+#endif	// USE_DARK_MODE_APPEARANCE
 
 inline long FloatToLong( float f ) { return (long)( f == 0 ? f : f < 0 ? f - 0.5 : f + 0.5 ); }
 
@@ -3052,7 +3054,9 @@ static CFDataRef aRTFSelection = nil;
 
 @interface NSApplication (VCLApplicationPoseAs)
 - (void)poseAsSetDelegate:(id< NSApplicationDelegate >)pObject;
+#ifdef USE_DARK_MODE_APPEARANCE
 - (void)setAppearance:(NSAppearance *)pAppearance;
+#endif	// USE_DARK_MODE_APPEARANCE
 @end
 
 @interface VCLApplication : NSApplication
