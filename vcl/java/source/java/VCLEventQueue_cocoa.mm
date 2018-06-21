@@ -61,6 +61,9 @@
 #define UNDEFINED_KEY_CODE 0xffff
 
 #ifdef USE_DARK_MODE_APPEARANCE
+#ifndef NSAppearanceNameAqua
+#define NSAppearanceNameAqua @"NSAppearanceNameAqua"
+#endif	// NSAppearanceNameAqua
 #ifndef NSAppearanceNameDarkAqua
 #define NSAppearanceNameDarkAqua @"NSAppearanceNameDarkAqua"
 #endif	// NSAppearanceNameDarkAqua
@@ -548,6 +551,104 @@ static void RegisterMainBundleWithLaunchServices()
 			LSRegisterURL( (CFURLRef)pBundleURL, false );
 	}
 }
+
+#ifdef USE_DARK_MODE_APPEARANCE
+
+@interface NSApplication (VCLApplication)
+#ifdef USE_DARK_MODE_APPEARANCE
+- (void)setAppearance:(NSAppearance *)pAppearance;
+#endif	// USE_DARK_MODE_APPEARANCE
+@end
+
+static NSString *pAppleInterfaceStyle = @"AppleInterfaceStyle";
+
+static void HandleSystemAppearanceChangedRequest()
+{
+	NSApplication *pApp = [NSApplication sharedApplication];
+	NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
+	if ( pApp && pDefaults )
+	{
+		NSString *pAppearanceName = nil;
+		NSString *pStyle = [pDefaults stringForKey:pAppleInterfaceStyle];
+		if ( pStyle && [pStyle isEqualToString:@"Dark"] )
+			pAppearanceName = NSAppearanceNameDarkAqua;
+		else
+			pAppearanceName = NSAppearanceNameAqua;
+
+		if ( pAppearanceName )
+		{
+			NSAppearance *pAppearance = [NSAppearance appearanceNamed:pAppearanceName];
+			if ( pAppearance && [pApp respondsToSelector:@selector(setAppearance:)] )
+			{
+				[pApp setAppearance:pAppearance];
+
+				// Post a NSSystemColorsDidChangeNotification notification so
+				// that colors will be updated in our system color change
+				// handler
+				NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+				if ( pNotificationCenter )
+				{
+					NSNotification *pNotification = [NSNotification notificationWithName:NSSystemColorsDidChangeNotification object:nil];
+					if ( pNotification )
+						[pNotificationCenter postNotification:pNotification];
+				}
+			}
+		}
+	}
+}
+
+@interface VCLUpdateSystemAppearance : NSObject
+{
+}
++ (id)create;
+- (id)init;
+- (void)observeValueForKeyPath:(NSString *)pKeyPath ofObject:(id)pObject change:(NSDictionary<NSKeyValueChangeKey, id> *)pChange context:(void *)pContext;
+@end
+
+static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
+
+@implementation VCLUpdateSystemAppearance
+
++ (id)create
+{
+	VCLUpdateSystemAppearance *pRet = [[VCLUpdateSystemAppearance alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)init
+{
+	[super init];
+ 
+	if ( !pVCLUpdateSystemAppearance )
+	{
+		NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
+		if ( pDefaults )
+		{
+			pVCLUpdateSystemAppearance = self;
+			[pVCLUpdateSystemAppearance retain];
+			[pDefaults addObserver:self forKeyPath:pAppleInterfaceStyle options:NSKeyValueObservingOptionNew context:NULL];
+		}
+	}
+
+	HandleSystemAppearanceChangedRequest();
+
+	return self;
+}
+
+- (void)observeValueForKeyPath:(NSString *)pKeyPath ofObject:(id)pObject change:(NSDictionary<NSKeyValueChangeKey, id> *)pChange context:(void *)pContext
+{
+	(void)pKeyPath;
+	(void)pObject;
+	(void)pChange;
+	(void)pContext;
+
+	HandleSystemAppearanceChangedRequest();
+}
+
+@end
+
+#endif	// USE_DARK_MODE_APPEARANCE
 
 @interface IsApplicationActive : NSObject
 {
@@ -3054,9 +3155,6 @@ static CFDataRef aRTFSelection = nil;
 
 @interface NSApplication (VCLApplicationPoseAs)
 - (void)poseAsSetDelegate:(id< NSApplicationDelegate >)pObject;
-#ifdef USE_DARK_MODE_APPEARANCE
-- (void)setAppearance:(NSAppearance *)pAppearance;
-#endif	// USE_DARK_MODE_APPEARANCE
 @end
 
 @interface VCLApplication : NSApplication
@@ -3424,20 +3522,6 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 	{
 		[pApp setDelegate:pSharedDelegate];
 
-#ifdef USE_DARK_MODE_APPEARANCE
-		NSString *pAppearanceName = nil;
-		NSString *pStyle = [[NSUserDefaults standardUserDefaults] stringForKey:@"AppleInterfaceStyle"];
-		if ( pStyle && [pStyle isEqualToString:@"Dark"] )
-			pAppearanceName = NSAppearanceNameDarkAqua;
-
-		if ( pAppearanceName )
-		{
-			NSAppearance *pAppearance = [NSAppearance appearanceNamed:pAppearanceName];
-			if ( pAppearance && [pApp respondsToSelector:@selector(setAppearance:)] )
-				[pApp setAppearance:pAppearance];
-		}
-#endif	// USE_DARK_MODE_APPEARANCE
-
 		NSMenu *pMainMenu = [pApp mainMenu];
 		if ( pMainMenu && [pMainMenu numberOfItems] > 0 )
 		{
@@ -3450,6 +3534,10 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 			}
 		}
 	}
+
+#ifdef USE_DARK_MODE_APPEARANCE
+	[VCLUpdateSystemAppearance create];
+#endif	// USE_DARK_MODE_APPEARANCE
 
 #ifndef USE_AUTOMATIC_WINDOW_TABBING
 	// Disable automatic window tabbing in on macOS 10.12
