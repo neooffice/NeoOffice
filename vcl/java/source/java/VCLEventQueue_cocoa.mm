@@ -52,7 +52,7 @@
 #include "../app/salinst_cocoa.h"
 
 // Uncomment the following line to enable dark mode
-#define USE_DARK_MODE_APPEARANCE
+// #define USE_DARK_MODE_APPEARANCE
 
 // Comment out the following line to disable automatic window tabbing
 #define USE_AUTOMATIC_WINDOW_TABBING
