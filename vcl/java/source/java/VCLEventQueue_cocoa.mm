@@ -562,8 +562,50 @@ static void RegisterMainBundleWithLaunchServices()
 
 static NSString *pAppleInterfaceStyle = @"AppleInterfaceStyle";
 
-static void HandleSystemAppearanceChangedRequest()
+@interface VCLUpdateSystemAppearance : NSObject
 {
+}
++ (id)create;
+- (id)init;
+- (void)observeValueForKeyPath:(NSString *)pKeyPath ofObject:(id)pObject change:(NSDictionary<NSKeyValueChangeKey, id> *)pChange context:(void *)pContext;
+@end
+
+static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
+
+@implementation VCLUpdateSystemAppearance
+
++ (id)create
+{
+	VCLUpdateSystemAppearance *pRet = [[VCLUpdateSystemAppearance alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)init
+{
+	[super init];
+ 
+	if ( !pVCLUpdateSystemAppearance )
+	{
+		NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
+		if ( pDefaults )
+		{
+			pVCLUpdateSystemAppearance = self;
+			[pVCLUpdateSystemAppearance retain];
+			[pDefaults addObserver:self forKeyPath:pAppleInterfaceStyle options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:NULL];
+		}
+	}
+
+	return self;
+}
+
+- (void)observeValueForKeyPath:(NSString *)pKeyPath ofObject:(id)pObject change:(NSDictionary<NSKeyValueChangeKey, id> *)pChange context:(void *)pContext
+{
+	(void)pKeyPath;
+	(void)pObject;
+	(void)pChange;
+	(void)pContext;
+
 	NSApplication *pApp = [NSApplication sharedApplication];
 	NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
 	if ( pApp && pDefaults )
@@ -596,55 +638,6 @@ static void HandleSystemAppearanceChangedRequest()
 			}
 		}
 	}
-}
-
-@interface VCLUpdateSystemAppearance : NSObject
-{
-}
-+ (id)create;
-- (id)init;
-- (void)observeValueForKeyPath:(NSString *)pKeyPath ofObject:(id)pObject change:(NSDictionary<NSKeyValueChangeKey, id> *)pChange context:(void *)pContext;
-@end
-
-static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
-
-@implementation VCLUpdateSystemAppearance
-
-+ (id)create
-{
-	VCLUpdateSystemAppearance *pRet = [[VCLUpdateSystemAppearance alloc] init];
-	[pRet autorelease];
-	return pRet;
-}
-
-- (id)init
-{
-	[super init];
- 
-	if ( !pVCLUpdateSystemAppearance )
-	{
-		NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
-		if ( pDefaults )
-		{
-			pVCLUpdateSystemAppearance = self;
-			[pVCLUpdateSystemAppearance retain];
-			[pDefaults addObserver:self forKeyPath:pAppleInterfaceStyle options:NSKeyValueObservingOptionNew context:NULL];
-		}
-	}
-
-	HandleSystemAppearanceChangedRequest();
-
-	return self;
-}
-
-- (void)observeValueForKeyPath:(NSString *)pKeyPath ofObject:(id)pObject change:(NSDictionary<NSKeyValueChangeKey, id> *)pChange context:(void *)pContext
-{
-	(void)pKeyPath;
-	(void)pObject;
-	(void)pChange;
-	(void)pContext;
-
-	HandleSystemAppearanceChangedRequest();
 }
 
 @end
