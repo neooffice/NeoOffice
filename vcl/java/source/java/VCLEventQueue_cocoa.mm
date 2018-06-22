@@ -52,7 +52,7 @@
 #include "../app/salinst_cocoa.h"
 
 // Uncomment the following line to enable dark mode
-// #define USE_DARK_MODE_APPEARANCE
+#define USE_DARK_MODE_APPEARANCE
 
 // Comment out the following line to disable automatic window tabbing
 #define USE_AUTOMATIC_WINDOW_TABBING
@@ -570,7 +570,10 @@ static void HandleSystemAppearanceChangedRequest()
 	{
 		NSString *pAppearanceName = nil;
 		NSString *pStyle = [pDefaults stringForKey:pAppleInterfaceStyle];
-		if ( pStyle && [pStyle isEqualToString:@"Dark"] )
+		NSRange aRange = NSMakeRange( NSNotFound, 0 );
+		if ( pStyle )
+			aRange = [pStyle rangeOfString:@"dark" options:NSCaseInsensitiveSearch];
+		if ( aRange.location != NSNotFound && aRange.length )
 			pAppearanceName = NSAppearanceNameDarkAqua;
 		else
 			pAppearanceName = NSAppearanceNameAqua;
