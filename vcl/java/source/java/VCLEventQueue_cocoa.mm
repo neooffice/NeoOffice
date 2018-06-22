@@ -568,33 +568,31 @@ static void HandleSystemAppearanceChangedRequest()
 	NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
 	if ( pApp && pDefaults )
 	{
-		NSString *pAppearanceName = nil;
 		NSString *pStyle = [pDefaults stringForKey:pAppleInterfaceStyle];
 		NSRange aRange = NSMakeRange( NSNotFound, 0 );
 		if ( pStyle )
 			aRange = [pStyle rangeOfString:@"dark" options:NSCaseInsensitiveSearch];
+
+		NSString *pAppearanceName = nil;
 		if ( aRange.location != NSNotFound && aRange.length )
 			pAppearanceName = NSAppearanceNameDarkAqua;
 		else
 			pAppearanceName = NSAppearanceNameAqua;
 
-		if ( pAppearanceName )
+		NSAppearance *pAppearance = [NSAppearance appearanceNamed:pAppearanceName];
+		if ( pAppearance && [pApp respondsToSelector:@selector(setAppearance:)] )
 		{
-			NSAppearance *pAppearance = [NSAppearance appearanceNamed:pAppearanceName];
-			if ( pAppearance && [pApp respondsToSelector:@selector(setAppearance:)] )
-			{
-				[pApp setAppearance:pAppearance];
+			[pApp setAppearance:pAppearance];
 
-				// Post a NSSystemColorsDidChangeNotification notification so
-				// that colors will be updated in our system color change
-				// handler
-				NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
-				if ( pNotificationCenter )
-				{
-					NSNotification *pNotification = [NSNotification notificationWithName:NSSystemColorsDidChangeNotification object:nil];
-					if ( pNotification )
-						[pNotificationCenter postNotification:pNotification];
-				}
+			// Post a NSSystemColorsDidChangeNotification notification so
+			// that colors will be updated in our system color change
+			// handler
+			NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+			if ( pNotificationCenter )
+			{
+				NSNotification *pNotification = [NSNotification notificationWithName:NSSystemColorsDidChangeNotification object:nil];
+				if ( pNotification )
+					[pNotificationCenter postNotification:pNotification];
 			}
 		}
 	}
