@@ -3030,6 +3030,21 @@ unsigned int JavaSalFrame::GetScreenCount()
 
 // -----------------------------------------------------------------------
 
+bool JavaSalFrame::UseDarkModeColors()
+{
+	bool bRet = false;
+
+	// Update colors if any system colors have not yet been set
+	InitializeSystemColors();
+
+	MutexGuard aGuard( aSystemColorsMutex );
+	bRet = bVCLUseDarkModeColors;
+
+	return bRet;
+}
+
+// -----------------------------------------------------------------------
+
 bool JavaSalFrame::GetAlternateSelectedControlTextColor( SalColor& rSalColor )
 {
 	bool bRet = false;
@@ -3037,6 +3052,7 @@ bool JavaSalFrame::GetAlternateSelectedControlTextColor( SalColor& rSalColor )
 	// Update colors if any system colors have not yet been set
 	InitializeSystemColors();
 
+	MutexGuard aGuard( aSystemColorsMutex );
 	if ( pVCLAlternateSelectedControlTextColor )
 	{
 		rSalColor = *pVCLAlternateSelectedControlTextColor;
@@ -3055,6 +3071,7 @@ bool JavaSalFrame::GetControlTextColor( SalColor& rSalColor )
 	// Update colors if any system colors have not yet been set
 	InitializeSystemColors();
 
+	MutexGuard aGuard( aSystemColorsMutex );
 	if ( pVCLControlTextColor )
 	{
 		rSalColor = *pVCLControlTextColor;
@@ -3073,6 +3090,7 @@ bool JavaSalFrame::GetDisabledControlTextColor( SalColor& rSalColor )
 	// Update colors if any system colors have not yet been set
 	InitializeSystemColors();
 
+	MutexGuard aGuard( aSystemColorsMutex );
 	if ( pVCLDisabledControlTextColor )
 	{
 		rSalColor = *pVCLDisabledControlTextColor;
@@ -3091,6 +3109,7 @@ bool JavaSalFrame::GetSelectedControlTextColor( SalColor& rSalColor )
 	// Update colors if any system colors have not yet been set
 	InitializeSystemColors();
 
+	MutexGuard aGuard( aSystemColorsMutex );
 	if ( pVCLSelectedControlTextColor )
 	{
 		rSalColor = *pVCLSelectedControlTextColor;
@@ -3109,6 +3128,7 @@ bool JavaSalFrame::GetSelectedMenuItemTextColor( SalColor& rSalColor )
 	// Update colors if any system colors have not yet been set
 	InitializeSystemColors();
 
+	MutexGuard aGuard( aSystemColorsMutex );
 	if ( pVCLSelectedMenuItemTextColor )
 	{
 		rSalColor = *pVCLSelectedMenuItemTextColor;

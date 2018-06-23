@@ -103,6 +103,7 @@ public:
 	static const Rectangle	GetScreenBounds( long nX, long nY, long nWidth, long nHeight, sal_Bool bFullScreenMode );
 	static const Rectangle	GetScreenBounds( unsigned int nScreen, sal_Bool bFullScreenMode );
 	static unsigned int		GetScreenCount();
+	static bool				UseDarkModeColors();
 	static bool				GetAlternateSelectedControlTextColor( SalColor& rSalColor );
 	static bool				GetControlTextColor( SalColor& rSalColor );
 	static bool				GetDisabledControlTextColor( SalColor& rSalColor );
