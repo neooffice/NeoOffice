@@ -60,15 +60,6 @@
 #define MODIFIER_RELEASE_INTERVAL 100
 #define UNDEFINED_KEY_CODE 0xffff
 
-#ifdef USE_DARK_MODE_APPEARANCE
-#ifndef NSAppearanceNameAqua
-#define NSAppearanceNameAqua @"NSAppearanceNameAqua"
-#endif	// NSAppearanceNameAqua
-#ifndef NSAppearanceNameDarkAqua
-#define NSAppearanceNameDarkAqua @"NSAppearanceNameDarkAqua"
-#endif	// NSAppearanceNameDarkAqua
-#endif	// USE_DARK_MODE_APPEARANCE
-
 inline long FloatToLong( float f ) { return (long)( f == 0 ? f : f < 0 ? f - 0.5 : f + 0.5 ); }
 
 static NSPoint GetFlippedContentViewLocation( NSWindow *pWindow, NSEvent *pEvent )
@@ -553,12 +544,6 @@ static void RegisterMainBundleWithLaunchServices()
 }
 
 #ifdef USE_DARK_MODE_APPEARANCE
-
-@interface NSApplication (VCLApplication)
-#ifdef USE_DARK_MODE_APPEARANCE
-- (void)setAppearance:(NSAppearance *)pAppearance;
-#endif	// USE_DARK_MODE_APPEARANCE
-@end
 
 static NSString *pAppleInterfaceStyle = @"AppleInterfaceStyle";
 

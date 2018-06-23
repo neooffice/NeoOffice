@@ -40,6 +40,15 @@
 
 #ifdef __OBJC__
 
+#ifndef NSAppearanceNameDarkAqua
+#define NSAppearanceNameDarkAqua @"NSAppearanceNameDarkAqua"
+#endif	// NSAppearanceNameDarkAqua
+
+@interface NSApplication (VCLApplication)
+- (NSAppearance *)appearance;
+- (void)setAppearance:(NSAppearance *)pAppearance;
+@end
+
 @interface NSColor (VCLColor)
 + (NSColor *)selectedContentBackgroundColor;
 + (NSColor *)separatorColor;
