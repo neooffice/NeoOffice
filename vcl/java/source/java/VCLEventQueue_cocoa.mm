@@ -546,6 +546,7 @@ static void RegisterMainBundleWithLaunchServices()
 #ifdef USE_DARK_MODE_APPEARANCE
 
 static NSString *pAppleInterfaceStyle = @"AppleInterfaceStyle";
+static NSString *pDisableDarkMode = @"DisableDarkMode";
 
 @interface VCLUpdateSystemAppearance : NSObject
 {
@@ -577,6 +578,8 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 		{
 			pVCLUpdateSystemAppearance = self;
 			[pVCLUpdateSystemAppearance retain];
+			[pDefaults addObserver:self forKeyPath:pDisableDarkMode options:NSKeyValueObservingOptionNew context:NULL];
+			// Force observer to fire immediately to set initial appearance
 			[pDefaults addObserver:self forKeyPath:pAppleInterfaceStyle options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:NULL];
 		}
 	}
@@ -595,19 +598,24 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 	NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
 	if ( pApp && pDefaults )
 	{
-		NSString *pStyle = [pDefaults stringForKey:pAppleInterfaceStyle];
-		NSRange aRange = NSMakeRange( NSNotFound, 0 );
-		if ( pStyle )
-			aRange = [pStyle rangeOfString:@"dark" options:NSCaseInsensitiveSearch];
+		NSAppearance *pAppearance = nil;
+		if ( ![pDefaults boolForKey:pDisableDarkMode] )
+		{
+			NSString *pStyle = [pDefaults stringForKey:pAppleInterfaceStyle];
+			NSRange aRange = NSMakeRange( NSNotFound, 0 );
+			if ( pStyle )
+				aRange = [pStyle rangeOfString:@"dark" options:NSCaseInsensitiveSearch];
 
-		NSString *pAppearanceName = nil;
-		if ( aRange.location != NSNotFound && aRange.length )
-			pAppearanceName = NSAppearanceNameDarkAqua;
-		else
-			pAppearanceName = NSAppearanceNameAqua;
+			NSString *pAppearanceName = nil;
+			if ( aRange.location != NSNotFound && aRange.length )
+				pAppearanceName = NSAppearanceNameDarkAqua;
+			else
+				pAppearanceName = NSAppearanceNameAqua;
 
-		NSAppearance *pAppearance = [NSAppearance appearanceNamed:pAppearanceName];
-		if ( pAppearance && [pApp respondsToSelector:@selector(setAppearance:)] )
+			pAppearance = [NSAppearance appearanceNamed:pAppearanceName];
+		}
+
+		if ( [pApp respondsToSelector:@selector(appearance)] && [pApp respondsToSelector:@selector(setAppearance:)] && pAppearance != [pApp appearance] )
 		{
 			[pApp setAppearance:pAppearance];
 
