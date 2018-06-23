@@ -1044,8 +1044,15 @@ static bool IsRunningHighSierraOrLower()
 					[NSGraphicsContext setCurrentContext:pContext];
 
 
-					// Fix bug 2031 by always filling the background with white
-					[[NSColor whiteColor] set];
+					// Fix bug 2031 by always filling the background with white.
+					// Fix incorrect dark mode drawing by filling with a system
+					// color instead of white.
+					if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedContentBackgroundColor) ) )
+						[[NSColor unemphasizedSelectedContentBackgroundColor] set];
+					else if ( class_getClassMethod( [NSColor class], @selector(scrollBarColor) ) )
+						[[NSColor scrollBarColor] set];
+					else
+						[[NSColor controlBackgroundColor] set];
 					[NSBezierPath fillRect:NSRectFromCGRect( aAdjustedDestRect )];
 
 					// Draw arrows on Mac OS X 10.6
