@@ -1568,15 +1568,13 @@ void JavaSalEvent::dispatch()
 
 				// Force update of window settings
 				pSVData->maAppData.mbSettingsInit = sal_False;
-				if ( pSVData->maAppData.mpSettings )
+				AllSettings aSettings;
+				Application::MergeSystemSettings( aSettings );
+				Window *pWindow = Application::GetFirstTopLevelWindow();
+				while ( pWindow )
 				{
-					Application::MergeSystemSettings( *pSVData->maAppData.mpSettings );
-					Window *pWindow = Application::GetFirstTopLevelWindow();
-					while ( pWindow )
-					{
-						pWindow->UpdateSettings( *pSVData->maAppData.mpSettings, sal_True );
-						pWindow = Application::GetNextTopLevelWindow( pWindow );
-					}
+					pWindow->UpdateSettings( aSettings, sal_True );
+					pWindow = Application::GetNextTopLevelWindow( pWindow );
 				}
 			}
 			return;
