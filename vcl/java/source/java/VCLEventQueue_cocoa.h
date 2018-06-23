@@ -41,7 +41,11 @@
 #ifdef __OBJC__
 
 @interface NSColor (VCLColor)
++ (NSColor *)selectedContentBackgroundColor;
++ (NSColor *)separatorColor;
 + (NSColor *)unemphasizedSelectedContentBackgroundColor;
++ (NSColor *)unemphasizedSelectedTextBackgroundColor;
++ (NSColor *)unemphasizedSelectedTextColor;
 @end
 
 @interface VCLView : NSView <NSDraggingDestination, NSDraggingSource, NSTextInputClient>
