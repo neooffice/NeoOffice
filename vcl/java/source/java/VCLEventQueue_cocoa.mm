@@ -632,9 +632,11 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 			NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
 			if ( pNotificationCenter )
 			{
+				// Delay posting of notification to allow NSColor class to
+				// update system colors to match the new appearance
 				NSNotification *pNotification = [NSNotification notificationWithName:NSSystemColorsDidChangeNotification object:nil];
 				if ( pNotification )
-					[pNotificationCenter postNotification:pNotification];
+					[pNotificationCenter performSelector:@selector(postNotification:) withObject:pNotification afterDelay:0];
 			}
 		}
 	}
