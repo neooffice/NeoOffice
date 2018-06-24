@@ -321,7 +321,6 @@ IMPL_LINK_NOARG(ComboBox, ImplPopupModeEndHdl)
 
 #ifdef USE_JAVA
     ImplControlValue aControlValue;
-    Point aPoint;
     Rectangle aCtrlRegion( GetPosPixel(), GetSizePixel() );
     Rectangle aBoundingRgn, aContentRgn;
     if ( GetNativeControlRegion( CTRL_COMBOBOX, PART_BUTTON_DOWN, aCtrlRegion, 0, aControlValue, OUString(), aBoundingRgn, aContentRgn ) )
@@ -900,6 +899,15 @@ void ComboBox::ImplUpdateFloatSelection()
             mpImplLB->SelectEntry( n, aSelInText.count( n ) );
     }
     mpImplLB->SetCallSelectionChangedHdl( true );
+
+#ifdef USE_JAVA
+    // Fix failure to clear edit area after the selected item changes when
+    // in dark mode on macOS 10.14 by invalidating the entire combobox
+    Rectangle aBounds( GetPosPixel(), GetSizePixel() );
+    GetParent()->Invalidate( aBounds );
+    if ( GetParent()->IsInPaint() )
+        GetParent()->Update();
+#endif	// USE_JAVA
 }
 
 sal_Int32 ComboBox::InsertEntry(const OUString& rStr, sal_Int32 const nPos)
