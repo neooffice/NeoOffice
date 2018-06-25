@@ -1357,7 +1357,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		if ( mbFullScreen )
 			[mpWindow setBackgroundColor:[NSColor blackColor]];
 		else
-			[mpWindow setBackgroundColor:[NSColor whiteColor]];
+			[mpWindow setBackgroundColor:[NSColor windowBackgroundColor]];
 
 		if ( mbUtility )
 		{
