@@ -51,9 +51,6 @@
 #include "VCLResponder_cocoa.h"
 #include "../app/salinst_cocoa.h"
 
-// Uncomment the following line to enable dark mode
-#define USE_DARK_MODE_APPEARANCE
-
 // Comment out the following line to disable automatic window tabbing
 #define USE_AUTOMATIC_WINDOW_TABBING
 
@@ -543,10 +540,8 @@ static void RegisterMainBundleWithLaunchServices()
 	}
 }
 
-#ifdef USE_DARK_MODE_APPEARANCE
-
-static NSString *pAppleInterfaceStyle = @"AppleInterfaceStyle";
-static NSString *pDisableDarkMode = @"DisableDarkMode";
+static NSString *pAppleInterfaceStylePref = @"AppleInterfaceStyle";
+static NSString *pDisableDarkModePref = @"DisableDarkMode";
 
 @interface VCLUpdateSystemAppearance : NSObject
 {
@@ -578,9 +573,9 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 		{
 			pVCLUpdateSystemAppearance = self;
 			[pVCLUpdateSystemAppearance retain];
-			[pDefaults addObserver:self forKeyPath:pDisableDarkMode options:NSKeyValueObservingOptionNew context:NULL];
+			[pDefaults addObserver:self forKeyPath:pDisableDarkModePref options:NSKeyValueObservingOptionNew context:NULL];
 			// Force observer to fire immediately to set initial appearance
-			[pDefaults addObserver:self forKeyPath:pAppleInterfaceStyle options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:NULL];
+			[pDefaults addObserver:self forKeyPath:pAppleInterfaceStylePref options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:NULL];
 		}
 	}
 
@@ -598,10 +593,20 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 	NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
 	if ( pApp && pDefaults )
 	{
-		NSAppearance *pAppearance = nil;
-		if ( ![pDefaults boolForKey:pDisableDarkMode] )
+		// Dark mode is disabled by default
+		BOOL bDisableDarkMode = YES;
+		CFPropertyListRef aPref = CFPreferencesCopyAppValue( (CFStringRef)pDisableDarkModePref, kCFPreferencesCurrentApplication );
+		if ( aPref )
 		{
-			NSString *pStyle = [pDefaults stringForKey:pAppleInterfaceStyle];
+			if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanFalse )
+				bDisableDarkMode = NO;
+			CFRelease( aPref );
+		}
+
+		NSAppearance *pAppearance = nil;
+		if ( !bDisableDarkMode )
+		{
+			NSString *pStyle = [pDefaults stringForKey:pAppleInterfaceStylePref];
 			NSRange aRange = NSMakeRange( NSNotFound, 0 );
 			if ( pStyle )
 				aRange = [pStyle rangeOfString:@"dark" options:NSCaseInsensitiveSearch];
@@ -636,8 +641,6 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 }
 
 @end
-
-#endif	// USE_DARK_MODE_APPEARANCE
 
 @interface IsApplicationActive : NSObject
 {
@@ -3524,9 +3527,7 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 		}
 	}
 
-#ifdef USE_DARK_MODE_APPEARANCE
 	[VCLUpdateSystemAppearance create];
-#endif	// USE_DARK_MODE_APPEARANCE
 
 #ifndef USE_AUTOMATIC_WINDOW_TABBING
 	// Disable automatic window tabbing in on macOS 10.12
