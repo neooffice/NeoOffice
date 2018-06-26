@@ -89,6 +89,7 @@ static const NSString *kMenuItemPrefNameKey = @"MenuItemPrefName";
 static const NSString *kMenuItemPrefBooleanValueKey = @"MenuItemPrefBooleanValue";
 static const NSString *kMenuItemPrefStringValueKey = @"MenuItemPrefStringValue";
 static const NSString *kMenuItemValueIsDefaultForPrefKey = @"MenuItemValueIsDefaultForPref";
+static const NSString *kMenuItemForceDefaultIfUnsetPrefKey = @"MenuItemForceDefaultIfUnsetPref";
 static ResMgr *pVclResMgr = NULL;
 
 using namespace com::sun::star::beans;
@@ -189,10 +190,11 @@ class QuickstartMenuItemDescriptor
 	CFStringRef					maPrefName;
 	CFPropertyListRef			maCheckedPrefValue;
 	BOOL						mbValueIsDefaultForPref;
+	BOOL						mbForceDefaultIfUnsetPref;
 
 public:
-								QuickstartMenuItemDescriptor( SEL aSelector, OUString aText, CFStringRef aPrefName = NULL, CFPropertyListRef aCheckedPrefValue = NULL, BOOL bValueIsDefaultForPref = NO ) : maSelector( aSelector ), maText( aText ), maPrefName( aPrefName ), maCheckedPrefValue( aCheckedPrefValue ), mbValueIsDefaultForPref( bValueIsDefaultForPref ) {}
-								QuickstartMenuItemDescriptor( ::std::vector< QuickstartMenuItemDescriptor > &rItems, OUString aText ) : maSelector( NULL ), maText( aText ), maItems( rItems ), maPrefName( NULL ), maCheckedPrefValue( NULL ), mbValueIsDefaultForPref( NO ) {}
+								QuickstartMenuItemDescriptor( SEL aSelector, OUString aText, CFStringRef aPrefName = NULL, CFPropertyListRef aCheckedPrefValue = NULL, BOOL bValueIsDefaultForPref = NO, BOOL bForceDefaultIfUnsetPref = NO ) : maSelector( aSelector ), maText( aText ), maPrefName( aPrefName ), maCheckedPrefValue( aCheckedPrefValue ), mbValueIsDefaultForPref( bValueIsDefaultForPref ), mbForceDefaultIfUnsetPref( bForceDefaultIfUnsetPref ) {}
+								QuickstartMenuItemDescriptor( ::std::vector< QuickstartMenuItemDescriptor > &rItems, OUString aText ) : maSelector( NULL ), maText( aText ), maItems( rItems ), maPrefName( NULL ), maCheckedPrefValue( NULL ), mbValueIsDefaultForPref( NO ), mbForceDefaultIfUnsetPref( NO ) {}
 								~QuickstartMenuItemDescriptor() {};
 	NSMenuItem*					CreateMenuItem( const ShutdownIconDelegate *pDelegate ) const;
 };
@@ -245,18 +247,12 @@ NSMenuItem *QuickstartMenuItemDescriptor::QuickstartMenuItemDescriptor::CreateMe
 						pPrefKey = kMenuItemPrefStringValueKey;
 						pPrefValue = (NSString *)maCheckedPrefValue;
 					}
-					// If the default is YES and there is no preference set,
-					// create a boolean preference
-					else if ( mbValueIsDefaultForPref )
-					{
-						pPrefKey = kMenuItemPrefBooleanValueKey;
-						pPrefValue = [NSNumber numberWithBool:YES];
-					}
 
 					NSObject *pValueIsDefaultForPref = [NSNumber numberWithBool:mbValueIsDefaultForPref];
-					if ( pPrefKey && pPrefValue && pValueIsDefaultForPref )
+					NSObject *pForceDefaultIfUnsetPref = [NSNumber numberWithBool:mbForceDefaultIfUnsetPref];
+					if ( pPrefKey && pPrefValue && pValueIsDefaultForPref && pForceDefaultIfUnsetPref )
 					{
-						NSDictionary *pDict = [NSDictionary dictionaryWithObjectsAndKeys:(NSString *)maPrefName, kMenuItemPrefNameKey, pPrefValue, pPrefKey, pValueIsDefaultForPref, kMenuItemValueIsDefaultForPrefKey, nil];
+						NSDictionary *pDict = [NSDictionary dictionaryWithObjectsAndKeys:(NSString *)maPrefName, kMenuItemPrefNameKey, pPrefValue, pPrefKey, pValueIsDefaultForPref, kMenuItemValueIsDefaultForPrefKey, pForceDefaultIfUnsetPref, kMenuItemForceDefaultIfUnsetPrefKey, nil];
 						if ( pDict )
 							[pRet setRepresentedObject:pDict];
 					}
@@ -558,12 +554,27 @@ void ProcessShutdownIconCommand( int nCommand )
 						NSNumber *pPrefBooleanValue = (NSNumber *)[pDict objectForKey:kMenuItemPrefBooleanValueKey];
 						NSString *pPrefStringValue = (NSString *)[pDict objectForKey:kMenuItemPrefStringValueKey];
 						NSNumber *pValueIsDefaultForPref = (NSNumber *)[pDict objectForKey:kMenuItemValueIsDefaultForPrefKey];
+						NSNumber *pForceDefaultIfUnsetPref = (NSNumber *)[pDict objectForKey:kMenuItemForceDefaultIfUnsetPrefKey];
+
+						// Check if the preference is unset
+						BOOL bForceSet = NO;
+						if ( pForceDefaultIfUnsetPref && [pForceDefaultIfUnsetPref boolValue] )
+						{
+							CFPropertyListRef aPref = CFPreferencesCopyAppValue( (CFStringRef)pPrefName, kCFPreferencesCurrentApplication );
+							if ( aPref )
+								CFRelease( aPref );
+							else
+								bForceSet = YES;
+						}
+
 						if ( pPrefBooleanValue )
 						{
 							if ( pDefaults )
 							{
 								NSNumber *pValue = (NSNumber *)[pDefaults objectForKey:pPrefName];
 								if ( pValue && [pValue boolValue] == [pPrefBooleanValue boolValue] )
+									[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
+								else if ( bForceSet && [pPrefBooleanValue boolValue] )
 									[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
 							}
 						}
@@ -583,6 +594,8 @@ void ProcessShutdownIconCommand( int nCommand )
 									if ( pValue && [pValue isEqualToString:pPrefStringValue] )
 										[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
 								}
+								else if ( bForceSet && pPrefStringValue )
+									[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
 							}
 						}
 
@@ -590,7 +603,7 @@ void ProcessShutdownIconCommand( int nCommand )
 						// item is marked as the default checked item, make it
 						// the checked item until another menu item becomes the
 						// checked item
-						if ( pValueIsDefaultForPref && [pValueIsDefaultForPref boolValue] && pCheckedMenuItems && ![pCheckedMenuItems objectForKey:pPrefName] )
+						if ( pValueIsDefaultForPref && [pValueIsDefaultForPref boolValue] && ( !pForceDefaultIfUnsetPref || ![pForceDefaultIfUnsetPref boolValue] ) && pCheckedMenuItems && ![pCheckedMenuItems objectForKey:pPrefName] )
 							[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
 					}
 				}
@@ -868,7 +881,7 @@ extern "C" void java_init_systray()
 		{
 			aDesc = SfxResId( STR_DISABLEDARKMODE );
 			aDesc = aDesc.replaceAll( "~", "" );
-			aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableDarkMode" ), kCFBooleanTrue, YES ) );
+			aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableDarkMode" ), kCFBooleanTrue, YES, YES ) );
 		}
 	}
 
