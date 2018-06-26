@@ -865,7 +865,7 @@ extern "C" void java_init_systray()
 		aDesc = aDesc.replaceAll( "~", "" );
 		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableResume" ), kCFBooleanTrue, NO ) );
 
-		// if ( !IsRunningHighSierraOrLower() )
+		if ( !IsRunningHighSierraOrLower() )
 		{
 			aDesc = SfxResId( STR_DISABLEDARKMODE );
 			aDesc = aDesc.replaceAll( "~", "" );
