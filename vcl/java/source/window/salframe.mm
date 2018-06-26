@@ -4431,8 +4431,8 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 		aStyleSettings.SetRadioCheckTextColor( aThemeDialogColor );
 		aStyleSettings.SetGroupTextColor( aThemeDialogColor );
 		aStyleSettings.SetLabelTextColor( aThemeDialogColor );
+		aStyleSettings.SetHelpTextColor( aTextColor );
 		aStyleSettings.SetInfoTextColor( aTextColor );
-		aStyleSettings.SetWindowTextColor( aTextColor );
 		aStyleSettings.SetFieldTextColor( aTextColor );
 	}
 
@@ -4491,6 +4491,7 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	if ( pVCLWindowColor )
 	{
 		Color aWindowColor( *pVCLWindowColor );
+
 		aStyleSettings.SetFieldColor( aWindowColor );
 		aStyleSettings.SetWindowColor( aWindowColor );
 	}
