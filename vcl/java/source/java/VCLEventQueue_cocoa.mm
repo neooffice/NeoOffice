@@ -593,18 +593,11 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 	NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
 	if ( pApp && pDefaults )
 	{
-		// Dark mode is disabled by default
-		BOOL bDisableDarkMode = YES;
-		CFPropertyListRef aPref = CFPreferencesCopyAppValue( (CFStringRef)pDisableDarkModePref, kCFPreferencesCurrentApplication );
-		if ( aPref )
-		{
-			if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanFalse )
-				bDisableDarkMode = NO;
-			CFRelease( aPref );
-		}
-
 		NSAppearance *pAppearance = nil;
-		if ( !bDisableDarkMode )
+		NSNumber *pDisableDarkMode = [pDefaults objectForKey:pDisableDarkModePref];
+
+		// Dark mode is disabled by default
+		if ( pDisableDarkMode && [pDisableDarkMode isKindOfClass:[NSNumber class]] && ![pDisableDarkMode boolValue] )
 		{
 			NSString *pStyle = [pDefaults stringForKey:pAppleInterfaceStylePref];
 			NSRange aRange = NSMakeRange( NSNotFound, 0 );
