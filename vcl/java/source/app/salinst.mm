@@ -1574,6 +1574,7 @@ void JavaSalEvent::dispatch()
 				while ( pWindow )
 				{
 					pWindow->UpdateSettings( aSettings, sal_True );
+					pWindow->Invalidate();
 					pWindow = Application::GetNextTopLevelWindow( pWindow );
 				}
 			}
