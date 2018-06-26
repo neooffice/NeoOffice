@@ -555,18 +555,6 @@ void ProcessShutdownIconCommand( int nCommand )
 						NSString *pPrefStringValue = (NSString *)[pDict objectForKey:kMenuItemPrefStringValueKey];
 						NSNumber *pValueIsDefaultForPref = (NSNumber *)[pDict objectForKey:kMenuItemValueIsDefaultForPrefKey];
 						NSNumber *pForceDefaultIfUnsetPref = (NSNumber *)[pDict objectForKey:kMenuItemForceDefaultIfUnsetPrefKey];
-
-						// Check if the preference is unset
-						BOOL bForceSet = NO;
-						if ( pForceDefaultIfUnsetPref && [pForceDefaultIfUnsetPref boolValue] )
-						{
-							CFPropertyListRef aPref = CFPreferencesCopyAppValue( (CFStringRef)pPrefName, kCFPreferencesCurrentApplication );
-							if ( aPref )
-								CFRelease( aPref );
-							else
-								bForceSet = YES;
-						}
-
 						if ( pPrefBooleanValue )
 						{
 							if ( pDefaults )
@@ -574,7 +562,7 @@ void ProcessShutdownIconCommand( int nCommand )
 								NSNumber *pValue = (NSNumber *)[pDefaults objectForKey:pPrefName];
 								if ( pValue && [pValue boolValue] == [pPrefBooleanValue boolValue] )
 									[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
-								else if ( bForceSet && [pPrefBooleanValue boolValue] )
+								else if ( !pValue && pForceDefaultIfUnsetPref && [pForceDefaultIfUnsetPref boolValue] )
 									[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
 							}
 						}
@@ -594,7 +582,7 @@ void ProcessShutdownIconCommand( int nCommand )
 									if ( pValue && [pValue isEqualToString:pPrefStringValue] )
 										[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
 								}
-								else if ( bForceSet && pPrefStringValue )
+								else if ( !pValue && pForceDefaultIfUnsetPref && [pForceDefaultIfUnsetPref boolValue] )
 									[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
 							}
 						}
@@ -877,7 +865,7 @@ extern "C" void java_init_systray()
 		aDesc = aDesc.replaceAll( "~", "" );
 		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableResume" ), kCFBooleanTrue, NO ) );
 
-		if ( !IsRunningHighSierraOrLower() )
+		// if ( !IsRunningHighSierraOrLower() )
 		{
 			aDesc = SfxResId( STR_DISABLEDARKMODE );
 			aDesc = aDesc.replaceAll( "~", "" );
