@@ -82,6 +82,9 @@
 typedef void VCLOpenPrintFileHandler_Type( const char *pPath, sal_Bool bPrint );
 typedef void VCLRequestShutdownHandler_Type();
 
+static bool bIsRunningHighSierraOrLowerInitizalized  = false;
+static bool bIsRunningHighSierraOrLower = false;
+
 static const NSString *kMenuItemPrefNameKey = @"MenuItemPrefName";
 static const NSString *kMenuItemPrefBooleanValueKey = @"MenuItemPrefBooleanValue";
 static const NSString *kMenuItemPrefStringValueKey = @"MenuItemPrefStringValue";
@@ -90,6 +93,28 @@ static ResMgr *pVclResMgr = NULL;
 
 using namespace com::sun::star::beans;
 using namespace com::sun::star::uno;
+
+static bool IsRunningHighSierraOrLower()
+{
+	if ( !bIsRunningHighSierraOrLowerInitizalized )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSProcessInfo *pProcessInfo = [NSProcessInfo processInfo];
+		if ( pProcessInfo )
+		{
+			NSOperatingSystemVersion aVersion = pProcessInfo.operatingSystemVersion;
+			if ( aVersion.majorVersion <= 10 && aVersion.minorVersion <= 13 )
+				bIsRunningHighSierraOrLower = true;
+		}
+
+		bIsRunningHighSierraOrLowerInitizalized = true;
+
+		[pPool release];
+	}
+
+	return bIsRunningHighSierraOrLower;
+}
 
 static OUString GetVclResString( int nId )
 {
@@ -220,8 +245,15 @@ NSMenuItem *QuickstartMenuItemDescriptor::QuickstartMenuItemDescriptor::CreateMe
 						pPrefKey = kMenuItemPrefStringValueKey;
 						pPrefValue = (NSString *)maCheckedPrefValue;
 					}
-					NSObject *pValueIsDefaultForPref = [NSNumber numberWithBool:mbValueIsDefaultForPref];
+					// If the default is YES and there is no preference set,
+					// create a boolean preference
+					else if ( mbValueIsDefaultForPref )
+					{
+						pPrefKey = kMenuItemPrefBooleanValueKey;
+						pPrefValue = [NSNumber numberWithBool:YES];
+					}
 
+					NSObject *pValueIsDefaultForPref = [NSNumber numberWithBool:mbValueIsDefaultForPref];
 					if ( pPrefKey && pPrefValue && pValueIsDefaultForPref )
 					{
 						NSDictionary *pDict = [NSDictionary dictionaryWithObjectsAndKeys:(NSString *)maPrefName, kMenuItemPrefNameKey, pPrefValue, pPrefKey, pValueIsDefaultForPref, kMenuItemValueIsDefaultForPrefKey, nil];
@@ -831,6 +863,13 @@ extern "C" void java_init_systray()
 		aDesc = SfxResId( STR_DISABLERESUMESUPPORT );
 		aDesc = aDesc.replaceAll( "~", "" );
 		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableResume" ), kCFBooleanTrue, NO ) );
+
+		if ( !IsRunningHighSierraOrLower() )
+		{
+			aDesc = SfxResId( STR_DISABLEDARKMODE );
+			aDesc = aDesc.replaceAll( "~", "" );
+			aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableDarkMode" ), kCFBooleanTrue, YES ) );
+		}
 	}
 
 	// Insert the Mac OS X submenu
