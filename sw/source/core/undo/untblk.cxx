@@ -49,11 +49,31 @@ SwUndoInserts::SwUndoInserts( SwUndoId nUndoId, const SwPaM& rPam )
         if( pTxtNd->HasSwAttrSet() )
             pHistory->CopyFmtAttr( *pTxtNd->GetpSwAttrSet(), nSttNode );
 
+#ifdef NO_LIBO_BUG_108124_FIX
         if( !nSttCntnt )    // than take the Flys along
+#else	// NO_LIBO_BUG_108124_FIX
+        // We may have some flys anchored to paragraph where we inserting.
+        // These flys will be saved in pFrameFormats array (only flys which exist BEFORE insertion!)
+        // Then in SwUndoInserts::SetInsertRange the flys saved in pFrameFormats will NOT create Undos.
+        // m_FlyUndos will only be filled with newly inserted flys.
+
+        const size_t nArrLen = pDoc->GetSpzFrmFmts()->size();
+        for( size_t n = 0; n < nArrLen; ++n )
+#endif	// NO_LIBO_BUG_108124_FIX
         {
+#ifdef NO_LIBO_BUG_108124_FIX
             const size_t nArrLen = pDoc->GetSpzFrmFmts()->size();
             for( size_t n = 0; n < nArrLen; ++n )
+#else	// NO_LIBO_BUG_108124_FIX
+            SwFrmFmt* pFmt = (*pDoc->GetSpzFrmFmts())[n];
+            SwFmtAnchor const*const  pAnchor = &pFmt->GetAnchor();
+            const SwPosition* pAPos = pAnchor->GetCntntAnchor();
+            if (pAPos &&
+                (pAnchor->GetAnchorId() == RndStdIds::FLY_AT_PARA) &&
+                 nSttNode == pAPos->nNode.GetIndex() )
+#endif	// NO_LIBO_BUG_108124_FIX
             {
+#ifdef NO_LIBO_BUG_108124_FIX
                 SwFrmFmt* pFmt = (*pDoc->GetSpzFrmFmts())[n];
                 SwFmtAnchor const*const  pAnchor = &pFmt->GetAnchor();
                 const SwPosition* pAPos = pAnchor->GetCntntAnchor();
@@ -65,6 +85,11 @@ SwUndoInserts::SwUndoInserts( SwUndoId nUndoId, const SwPaM& rPam )
                         pFrmFmts = new std::vector<SwFrmFmt*>;
                     pFrmFmts->push_back( pFmt );
                 }
+#else	// NO_LIBO_BUG_108124_FIX
+                if( !pFrmFmts )
+                    pFrmFmts = new std::vector<SwFrmFmt*>;
+                pFrmFmts->push_back( pFmt );
+#endif	// NO_LIBO_BUG_108124_FIX
             }
         }
     }
@@ -76,7 +101,22 @@ SwUndoInserts::SwUndoInserts( SwUndoId nUndoId, const SwPaM& rPam )
     }
 }
 
+#ifdef NO_LIBO_BUG_108124_FIX
 // set destination after reading input
+#else	// NO_LIBO_BUG_108124_FIX
+// This method does two things:
+// 1. Adjusts SwUndoRng members, required for Undo.
+//  Members are:
+//  SwUndoRng::nSttNode - all nodes starting from this node will be deleted during Undo (in SwUndoInserts::UndoImpl)
+//  SwUndoRng::nSttContent - corresponding content index in SwUndoRng::nSttNode
+//  SwUndoRng::nEndNode - end node for deletion
+//  SwUndoRng::nEndContent - end content index
+// All these members are filled in during construction of SwUndoInserts instance, and can be adjusted using this method
+//
+// 2. Fills in m_FlyUndos array with flys anchored ONLY to first and last paragraphs (first == rPam.Start(), last == rPam.End())
+//  Flys, anchored to any paragraph, but not first and last, are handled by DelContentIndex (see SwUndoInserts::UndoImpl) and are not stored in m_FlyUndos.
+#endif	// NO_LIBO_BUG_108124_FIX
+
 void SwUndoInserts::SetInsertRange( const SwPaM& rPam, bool bScanFlys,
                                     bool bSttIsTxtNd )
 {
@@ -100,7 +140,13 @@ void SwUndoInserts::SetInsertRange( const SwPaM& rPam, bool bScanFlys,
         }
     }
 
+#ifdef NO_LIBO_BUG_108124_FIX
     if( bScanFlys && !nSttCntnt )
+#else	// NO_LIBO_BUG_108124_FIX
+    // Fill m_FlyUndos with flys anchored to first and last paragraphs
+
+    if( bScanFlys)
+#endif	// NO_LIBO_BUG_108124_FIX
     {
         // than collect all new Flys
         SwDoc* pDoc = (SwDoc*)rPam.GetDoc();
@@ -112,7 +158,11 @@ void SwUndoInserts::SetInsertRange( const SwPaM& rPam, bool bScanFlys,
             SwPosition const*const pAPos = pAnchor->GetCntntAnchor();
             if (pAPos &&
                 (pAnchor->GetAnchorId() == FLY_AT_PARA) &&
+#ifdef NO_LIBO_BUG_108124_FIX
                 nSttNode == pAPos->nNode.GetIndex() )
+#else	// NO_LIBO_BUG_108124_FIX
+                (nSttNode == pAPos->nNode.GetIndex() || nEndNode == pAPos->nNode.GetIndex()))
+#endif	// NO_LIBO_BUG_108124_FIX
             {
                 std::vector<SwFrmFmt*>::iterator it;
                 if( !pFrmFmts ||
@@ -143,6 +193,29 @@ SwUndoInserts::~SwUndoInserts()
     delete pFrmFmts;
     delete pRedlData;
 }
+
+#ifndef NO_LIBO_BUG_108124_FIX
+// Undo Insert operation
+//  It's important to note that Undo stores absolute node indexes. I.e. if during insertion, you insert nodes 31 to 33,
+//  during Undo nodes with indices from 31 to 33 will be deleted. Undo doesn't check that nodes 31 to 33 are the same nodes which were inserted.
+//  It just deletes them.
+//  This may seem as bad programming practice, but Undo actions are strongly ordered. If you change your document in some way, a new Undo action is added.
+//  During Undo most recent actions will be executed first. So during execution of particular Undo action indices will be correct.
+//  But storing absolute indices leads to crashes if some action in Undo fails to roll back some modifications.
+
+//  Has following main steps:
+//  1. DelContentIndex to delete footnotes, flys, bookmarks (see comment for this function)
+//     Deleted flys are stored in pHistory array.
+//     First and last paragraphs flys are handled later in this function! They are not deleted by DelContentIndex!
+//     For flys anchored to last paragraph, DelContentIndex re-anchors them to the last paragraph that will remain after Undo.
+//     This is not fully correct, as everything between nSttNode and nEndNode should be deleted (these nodes marks range of inserted nodes).
+//     But due to bug in paste (probably there), during paste all flys are anchored to last paragraph (see https://bugs.documentfoundation.org/show_bug.cgi?id=94225#c38).
+//     So they should be re-anchored.
+//  2. MoveToUndoNds moves nodes to Undo nodes array and removes them from document.
+//  3. m_FlyUndos removes flys anchored to first and last paragraph in Undo range. This array may be empty.
+//  4. Lastly (starting from if(pTextNode)), text from last paragraph is joined to last remaining paragraph and FormatColl for last paragraph is restored.
+//     Format coll for last paragraph is removed during execution of UndoImpl
+#endif	// !NO_LIBO_BUG_108124_FIX
 
 void SwUndoInserts::UndoImpl(::sw::UndoRedoContext & rContext)
 {
@@ -237,6 +310,11 @@ void SwUndoInserts::UndoImpl(::sw::UndoRedoContext & rContext)
         }
     }
 }
+
+#ifndef NO_LIBO_BUG_108124_FIX
+// See SwUndoInserts::UndoImpl comments
+// All actions here should be done in reverse order to what is done in SwUndoInserts::UndoImpl!
+#endif	// !NO_LIBO_BUG_108124_FIX
 
 void SwUndoInserts::RedoImpl(::sw::UndoRedoContext & rContext)
 {
