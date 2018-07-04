@@ -841,7 +841,9 @@ SwContentTree::SwContentTree(vcl::Window* pParent, const ResId& rResId) :
         bIsOutlineMoveable(true),
         bViewHasChanged(false),
         bIsImageListInitialized(false),
+#ifdef NO_LIBO_BUG_103788_FIX
         m_bActiveDocModified(false),
+#endif	// NO_LIBO_BUG_103788_FIX
         bIsKeySpace(false)
 {
     SetHelpId(HID_NAVIGATOR_TREELIST);
@@ -1776,7 +1778,9 @@ void SwContentTree::Display( bool bActive )
         ScrollOutputArea( (short)nDelta );
     }
 
+#ifdef NO_LIBO_BUG_103788_FIX
     m_bActiveDocModified = false;
+#endif	// NO_LIBO_BUG_103788_FIX
 }
 
 // In the Clear the content types have to be deleted, also.
@@ -2281,12 +2285,14 @@ void SwContentTree::SetConstantShell(SwWrtShell* pSh)
 
 void SwContentTree::Notify(SfxBroadcaster & rBC, SfxHint const& rHint)
 {
+#ifdef NO_LIBO_BUG_103788_FIX
     SfxSimpleHint const*const pHint(dynamic_cast<SfxSimpleHint const*>(&rHint));
     if (pHint && SFX_HINT_DOCCHANGED == pHint->GetId())
     {
         m_bActiveDocModified = true;
         return;
     }
+#endif	// NO_LIBO_BUG_103788_FIX
 
     SfxViewEventHint const*const pVEHint(
             dynamic_cast<SfxViewEventHint const*>(&rHint));
@@ -2495,11 +2501,16 @@ IMPL_LINK_NOARG(SwContentTree, TimerUpdate)
         else if( (bIsActive || (bIsConstant && pActShell == GetWrtShell())) &&
                     HasContentChanged())
         {
+#ifdef NO_LIBO_BUG_103788_FIX
             if (!bIsActive || m_bActiveDocModified)
             {   // don't burn cpu and redraw and flicker if not modified
                 FindActiveTypeAndRemoveUserData();
                 Display(true);
             }
+#else	// NO_LIBO_BUG_103788_FIX
+            FindActiveTypeAndRemoveUserData();
+            Display(true);
+#endif	// NO_LIBO_BUG_103788_FIX
         }
     }
     else if(!pView && bIsActive && !bIsIdleClear)
