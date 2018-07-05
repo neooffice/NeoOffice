@@ -4434,6 +4434,7 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 		aStyleSettings.SetHelpTextColor( aTextColor );
 		aStyleSettings.SetInfoTextColor( aTextColor );
 		aStyleSettings.SetFieldTextColor( aTextColor );
+		aStyleSettings.SetWindowTextColor( aTextColor );
 	}
 
 	if ( pVCLHighlightColor )
@@ -4492,6 +4493,7 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	{
 		Color aWindowColor( *pVCLWindowColor );
 
+		aStyleSettings.SetActiveTabColor( aWindowColor );
 		aStyleSettings.SetFieldColor( aWindowColor );
 		aStyleSettings.SetWindowColor( aWindowColor );
 	}
