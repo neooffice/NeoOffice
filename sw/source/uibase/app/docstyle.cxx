@@ -1222,7 +1222,11 @@ SfxItemSet&   SwDocStyleSheet::GetItemSet()
                     aCoreSet.Put(SfxBoolItem(SID_ATTR_AUTO_STYLE_UPDATE, pColl->IsAutoUpdateFmt()));
 #endif	// USE_JAVA
 
+#ifdef USE_JAVA
+                    if(pColl && pColl->DerivedFrom())
+#else	// USE_JAVA
                     if(pColl->DerivedFrom())
+#endif	// USE_JAVA
                         aCoreSet.SetParent(&pColl->DerivedFrom()->GetAttrSet());
                 }
                 else
