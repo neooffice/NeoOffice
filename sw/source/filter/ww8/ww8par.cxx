@@ -3947,7 +3947,11 @@ bool SwWW8ImplReader::ReadText(WW8_CP nStartCp, WW8_CP nTextLen, ManTypes nType)
 
     bWasParaEnd = false;
     nAktColl    =  0;
+#ifdef NO_LIBO_AKT_ITEM_SET_LEAK_FIX
     pAktItemSet =  0;
+#else	// NO_LIBO_AKT_ITEM_SET_LEAK_FIX
+    m_xAktItemSet.reset();
+#endif	// NO_LIBO_AKT_ITEM_SET_LEAK_FIX
     nCharFmt    = -1;
     bSpec = false;
     bPgSecBreak = false;
@@ -4065,22 +4069,40 @@ bool SwWW8ImplReader::ReadText(WW8_CP nStartCp, WW8_CP nTextLen, ManTypes nType)
 
             const SwFmtCharFmt *pSwFmtCharFmt = 0;
 
+#ifdef NO_LIBO_AKT_ITEM_SET_LEAK_FIX
             if(pAktItemSet)
                 pSwFmtCharFmt = &(ItemGet<SwFmtCharFmt>(*pAktItemSet, RES_TXTATR_CHARFMT));
+#else	// NO_LIBO_AKT_ITEM_SET_LEAK_FIX
+            if (m_xAktItemSet)
+                pSwFmtCharFmt = &(ItemGet<SwFmtCharFmt>(*m_xAktItemSet, RES_TXTATR_CHARFMT));
+#endif	// NO_LIBO_AKT_ITEM_SET_LEAK_FIX
 
             if(pSwFmtCharFmt)
                 pFmt = pSwFmtCharFmt->GetCharFmt();
 
+#ifdef NO_LIBO_AKT_ITEM_SET_LEAK_FIX
             if(pAktItemSet && !pFmt)
+#else	// NO_LIBO_AKT_ITEM_SET_LEAK_FIX
+            if (m_xAktItemSet && !pFmt)
+#endif	// NO_LIBO_AKT_ITEM_SET_LEAK_FIX
             {
                 OUString sPrefix(OUStringBuffer("WW8Dropcap").append(nDropCap++).makeStringAndClear());
                 pNewSwCharFmt = rDoc.MakeCharFmt(sPrefix, (SwCharFmt*)rDoc.GetDfltCharFmt());
+#ifdef NO_LIBO_AKT_ITEM_SET_LEAK_FIX
                  pAktItemSet->ClearItem(RES_CHRATR_ESCAPEMENT);
                 pNewSwCharFmt->SetFmtAttr( *pAktItemSet );
+#else	// NO_LIBO_AKT_ITEM_SET_LEAK_FIX
+                m_xAktItemSet->ClearItem(RES_CHRATR_ESCAPEMENT);
+                pNewSwCharFmt->SetFmtAttr(*m_xAktItemSet);
+#endif	// NO_LIBO_AKT_ITEM_SET_LEAK_FIX
             }
 
+#ifdef NO_LIBO_AKT_ITEM_SET_LEAK_FIX
             delete pAktItemSet;
             pAktItemSet = 0;
+#else	// NO_LIBO_AKT_ITEM_SET_LEAK_FIX
+            m_xAktItemSet.reset();
+#endif	// NO_LIBO_AKT_ITEM_SET_LEAK_FIX
             bDropCap=false;
         }
 
@@ -4175,7 +4197,9 @@ SwWW8ImplReader::SwWW8ImplReader(sal_uInt8 nVersionPara, SvStorage* pStorage,
     , maTxtNodesHavingLeftIndentSet()
     , pStyles(0)
     , pAktColl(0)
+#ifdef NO_LIBO_AKT_ITEM_SET_LEAK_FIX
     , pAktItemSet(0)
+#endif	// NO_LIBO_AKT_ITEM_SET_LEAK_FIX
     , pDfltTxtFmtColl(0)
     , pStandardFmtColl(0)
     , pHdFt(0)
@@ -6336,5 +6360,16 @@ SdrObjUserData* SwMacroInfo::Clone( SdrObject* /*pObj*/ ) const
 {
    return new SwMacroInfo( *this );
 }
+
+#ifndef NO_LIBO_AKT_ITEM_SET_LEAK_FIX
+
+std::unique_ptr<SfxItemSet> SwWW8ImplReader::SetAktItemSet(SfxItemSet* pItemSet)
+{
+    std::unique_ptr<SfxItemSet> xRet(std::move(m_xAktItemSet));
+    m_xAktItemSet.reset(pItemSet);
+    return xRet;
+}
+
+#endif	// !NO_LIBO_AKT_ITEM_SET_LEAK_FIX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

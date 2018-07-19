@@ -173,12 +173,20 @@ private:
     WW8LSTInfo* GetLSTByListId(    sal_uInt32  nIdLst     ) const;
     //the rParaSprms returns back the original word paragraph indent
     //sprms which are attached to this numbering level
+#ifdef NO_LIBO_WW8_TABLE_LEAK_FIX
     bool ReadLVL(SwNumFmt& rNumFmt, SfxItemSet*& rpItemSet, sal_uInt16 nLevelStyle,
+#else	// NO_LIBO_WW8_TABLE_LEAK_FIX
+    bool ReadLVL(SwNumFmt& rNumFmt, std::unique_ptr<SfxItemSet>& rpItemSet, sal_uInt16 nLevelStyle,
+#endif	// NO_LIBO_WW8_TABLE_LEAK_FIX
         bool bSetStartNo, std::deque<bool> &rNotReallyThere, sal_uInt16 nLevel,
         ww::bytes &rParaSprms);
 
     // Zeichenattribute aus GrpprlChpx
+#ifdef NO_LIBO_WW8_TABLE_LEAK_FIX
     typedef SfxItemSet* WW8aISet[nMaxLevel];
+#else	// NO_LIBO_WW8_TABLE_LEAK_FIX
+    typedef std::unique_ptr<SfxItemSet> WW8aISet[nMaxLevel];
+#endif	// NO_LIBO_WW8_TABLE_LEAK_FIX
     // Zeichen Style Pointer
     typedef SwCharFmt* WW8aCFmt[nMaxLevel];
 
@@ -1245,7 +1253,11 @@ private:
     WW8RStyle* pStyles;     // Pointer auf die Style-Einleseklasse
     SwFmt* pAktColl;        // gerade zu erzeugende Collection
                             // ( ist ausserhalb einer Style-Def immer 0 )
+#ifdef NO_LIBO_AKT_ITEM_SET_LEAK_FIX
     SfxItemSet* pAktItemSet;// gerade einzulesende Zeichenattribute
+#else	// NO_LIBO_AKT_ITEM_SET_LEAK_FIX
+    std::unique_ptr<SfxItemSet> m_xAktItemSet;// character attributes to be read in now
+#endif	// NO_LIBO_AKT_ITEM_SET_LEAK_FIX
                             // (ausserhalb des WW8ListManager Ctor's immer 0)
     std::vector<SwWW8StyInf> vColl;
     const SwTxtFmtColl* pDfltTxtFmtColl;    // Default
@@ -1517,7 +1529,11 @@ private:
             SwFrmFmt *pFlyFmt, WW8_FSPA *pF);
 
     bool IsDropCap();
+#ifdef NO_LIBO_AKT_ITEM_SET_LEAK_FIX
     bool IsListOrDropcap() { return (!pAktItemSet  || bDropCap); };
+#else	// NO_LIBO_AKT_ITEM_SET_LEAK_FIX
+    bool IsListOrDropcap() { return (!m_xAktItemSet  || bDropCap); };
+#endif	// NO_LIBO_AKT_ITEM_SET_LEAK_FIX
 
     WW8FlyPara *ConstructApo(const ApoTestResults &rApo,
         const WW8_TablePos *pTabPos);
@@ -1913,7 +1929,11 @@ public:     // eigentlich private, geht aber leider nur public
     SwDoc& GetDoc() const           { return rDoc; }
     sal_uInt16 GetNAktColl()  const     { return nAktColl; }
     void SetNAktColl( sal_uInt16 nColl ) { nAktColl = nColl;    }
+#ifdef NO_LIBO_AKT_ITEM_SET_LEAK_FIX
     void SetAktItemSet( SfxItemSet* pItemSet ) { pAktItemSet = pItemSet; }
+#else	// NO_LIBO_AKT_ITEM_SET_LEAK_FIX
+    std::unique_ptr<SfxItemSet> SetAktItemSet(SfxItemSet* pItemSet);
+#endif	// NO_LIBO_AKT_ITEM_SET_LEAK_FIX
     sal_uInt16 StyleUsingLFO( sal_uInt16 nLFOIndex ) const ;
     const SwFmt* GetStyleWithOrgWWName( OUString& rName ) const ;
 
