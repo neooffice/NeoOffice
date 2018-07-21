@@ -437,7 +437,11 @@ bool SwHTMLParser::DoPositioning( SfxItemSet &rItemSet,
     // - es wurde eine Breite angegeben (in beiden Faellen noetig)
     if( SwCSS1Parser::MayBePositioned( rPropInfo ) )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aFrmItemSet( pDoc->GetAttrPool(),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aFrmItemSet( m_xDoc->GetAttrPool(),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                 RES_FRMATR_BEGIN, RES_FRMATR_END-1 );
         if( !IsNewDoc() )
             Reader::ResetFrmFmtAttrs(aFrmItemSet );
@@ -477,7 +481,11 @@ bool SwHTMLParser::CreateContainer( const OUString& rClass,
         SwCSS1Parser::MayBePositioned( rPropInfo ) )
     {
         // Container-Klasse
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet *pFrmItemSet = pContext->GetFrmItemSet( pDoc );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet *pFrmItemSet = pContext->GetFrmItemSet( m_xDoc.get() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( !IsNewDoc() )
             Reader::ResetFrmFmtAttrs( *pFrmItemSet );
 

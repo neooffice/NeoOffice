@@ -411,11 +411,19 @@ void SwCrsrShell::MarkListLevel( const OUString& sListId,
          nListLevel != m_nMarkedListLevel)
     {
         if ( !m_sMarkedListId.isEmpty() )
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             mpDoc->MarkListLevel( m_sMarkedListId, m_nMarkedListLevel, false );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            mxDoc->MarkListLevel( m_sMarkedListId, m_nMarkedListLevel, false );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         if ( !sListId.isEmpty() )
         {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             mpDoc->MarkListLevel( sListId, nListLevel, true );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            mxDoc->MarkListLevel( sListId, nListLevel, true );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         }
 
         m_sMarkedListId = sListId;
@@ -1437,7 +1445,11 @@ void SwCrsrShell::UpdateCrsr( sal_uInt16 eFlags, bool bIdleEnd )
     // then the table mode is active (also if it is already active: m_pTblCrsr)
     SwPaM* pTstCrsr = getShellCrsr( true );
     if( pTstCrsr->HasMark() && !m_pBlockCrsr &&
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         mpDoc->IsIdxInTbl( pTstCrsr->GetPoint()->nNode ) &&
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        mxDoc->IsIdxInTbl( pTstCrsr->GetPoint()->nNode ) &&
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
           ( m_pTblCrsr ||
             pTstCrsr->GetNode( true ).StartOfSectionNode() !=
             pTstCrsr->GetNode( false ).StartOfSectionNode() ) && !mbSelectAll)
@@ -1616,8 +1628,13 @@ void SwCrsrShell::UpdateCrsr( sal_uInt16 eFlags, bool bIdleEnd )
         if( pSectNd && ( pSectNd->GetSection().IsHiddenFlag() ||
             ( !IsReadOnlyAvailable() &&
               pSectNd->GetSection().IsProtectFlag() &&
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
              ( !mpDoc->GetDocShell() ||
                !mpDoc->GetDocShell()->IsReadOnly() || m_bAllProtect )) ) )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+             ( !mxDoc->GetDocShell() ||
+               !mxDoc->GetDocShell()->IsReadOnly() || m_bAllProtect )) ) )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         {
             if( !FindValidCntntNode( !HasDrawView() ||
                     0 == Imp()->GetDrawView()->GetMarkedObjectList().GetMarkCount()))
@@ -1721,8 +1738,13 @@ void SwCrsrShell::UpdateCrsr( sal_uInt16 eFlags, bool bIdleEnd )
             if( !IsReadOnlyAvailable() && pFrm->IsProtected() &&
                 ( !Imp()->GetDrawView() ||
                   !Imp()->GetDrawView()->GetMarkedObjectList().GetMarkCount() ) &&
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 (!mpDoc->GetDocShell() ||
                  !mpDoc->GetDocShell()->IsReadOnly() || m_bAllProtect ) )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                (!mxDoc->GetDocShell() ||
+                 !mxDoc->GetDocShell()->IsReadOnly() || m_bAllProtect ) )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             {
                 // look for a valid position
                 bool bChgState = true;
@@ -2871,7 +2893,11 @@ bool SwCrsrShell::FindValidCntntNode( bool bOnlyText )
     // first check for frames
     SwNodeIndex& rNdIdx = m_pCurCrsr->GetPoint()->nNode;
     sal_uLong nNdIdx = rNdIdx.GetIndex(); // keep backup
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwNodes& rNds = mpDoc->GetNodes();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwNodes& rNds = mxDoc->GetNodes();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwCntntNode* pCNd = rNdIdx.GetNode().GetCntntNode();
     const SwCntntFrm * pFrm;
 
@@ -2902,8 +2928,13 @@ bool SwCrsrShell::FindValidCntntNode( bool bOnlyText )
     else if( bOnlyText && pCNd && pCNd->IsNoTxtNode() )
     {
         // set to beginning of document
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         rNdIdx = mpDoc->GetNodes().GetEndOfExtras();
         m_pCurCrsr->GetPoint()->nContent.Assign( mpDoc->GetNodes().GoNext(
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        rNdIdx = mxDoc->GetNodes().GetEndOfExtras();
+        m_pCurCrsr->GetPoint()->nContent.Assign( mxDoc->GetNodes().GoNext(
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                                             &rNdIdx ), 0 );
         nNdIdx = rNdIdx.GetIndex();
     }
@@ -3144,7 +3175,11 @@ short SwCrsrShell::GetTextDirection( const Point* pPt ) const
         GetLayout()->GetCrsrOfst( &aPos, aPt, &aTmpState );
     }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     return mpDoc->GetTextDirection( aPos, &aPt );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    return mxDoc->GetTextDirection( aPos, &aPt );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 
 bool SwCrsrShell::IsInVerticalText( const Point* pPt ) const

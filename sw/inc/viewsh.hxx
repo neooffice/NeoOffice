@@ -38,6 +38,10 @@
 #include <vcl/mapmod.hxx>
 #include <vcl/print.hxx>
 
+#ifndef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+#include <rtl/ref.hxx>
+#endif	// !NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+
 namespace com { namespace sun { namespace star { namespace accessibility {
            class XAccessible; } } } }
 
@@ -198,7 +202,11 @@ protected:
     static vcl::Window*          mpCareWindow;    ///< Avoid this window.
 
     SwRect                  maVisArea;       ///< The modern version of VisArea.
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwDoc                   *mpDoc;          ///< The document; never 0.
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    rtl::Reference<SwDoc>   mxDoc;          ///< The document; never 0.
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     sal_uInt16 mnStartAction; ///< != 0 if at least one Action is active.
     sal_uInt16 mnLockPaint;   ///< != 0 if Paint is locked.
@@ -299,7 +307,11 @@ public:
 
     const Size GetPageSize( sal_uInt16 nPageNum, bool bSkipEmptyPages ) const;
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     inline SwDoc *GetDoc()  const { return mpDoc; }  //Never 0.
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwDoc *GetDoc()  const { return mxDoc.get(); }  //Never 0.
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     /** Provides access to the document setting interface
      */

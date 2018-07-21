@@ -876,7 +876,11 @@ void SwFEShell::InsertDrawObj( SdrObject& rDrawObj,
     rDrawObj.SetLayer( getIDocumentDrawModelAccess()->GetHeavenId() );
 
     // find anchor position
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwPaM aPam( mpDoc->GetNodes() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwPaM aPam( mxDoc->GetNodes() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
         SwCrsrMoveState aState( MV_SETONLYTEXT );
         Point aTmpPt( rInsertPosition );
@@ -913,9 +917,15 @@ void SwFEShell::GetPageObjs( std::vector<SwFrmFmt*>& rFillArr )
 {
     rFillArr.clear();
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     for( sal_uInt16 n = 0; n < mpDoc->GetSpzFrmFmts()->size(); ++n )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    for( auto pFmt : *mxDoc->GetSpzFrmFmts() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SwFrmFmt* pFmt = (*mpDoc->GetSpzFrmFmts())[n];
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if (FLY_AT_PAGE == pFmt->GetAnchor().GetAnchorId())
         {
             rFillArr.push_back( pFmt );
@@ -938,7 +948,11 @@ void SwFEShell::SetPageObjsNewPage( std::vector<SwFrmFmt*>& rFillArr, int nOffse
     for( sal_uInt16 n = 0; n < rFillArr.size(); ++n )
     {
         SwFrmFmt* pFmt = rFillArr[n];
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( mpDoc->GetSpzFrmFmts()->Contains( pFmt ))
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        if (mxDoc->GetSpzFrmFmts()->Contains( pFmt ))
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         {
             // FlyFmt is still valid, therefore process
 
@@ -962,7 +976,11 @@ void SwFEShell::SetPageObjsNewPage( std::vector<SwFrmFmt*>& rFillArr, int nOffse
                 bTmpAssert = true;
             }
             aNewAnchor.SetPageNum( sal_uInt16(nNewPage) );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             mpDoc->SetAttr( aNewAnchor, *pFmt );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            mxDoc->SetAttr( aNewAnchor, *pFmt );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         }
     }
 
@@ -1399,12 +1417,20 @@ SwFrmFmt* SwFEShell::WizzardGetFly()
 {
     // do not search the Fly via the layout. Now we can delete a frame
     // without a valid layout. ( e.g. for the wizards )
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwFrmFmts& rSpzArr = *mpDoc->GetSpzFrmFmts();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwFrmFmts& rSpzArr = *mxDoc->GetSpzFrmFmts();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     sal_uInt16 nCnt = rSpzArr.size();
     if( nCnt )
     {
         SwNodeIndex& rCrsrNd = GetCrsr()->GetPoint()->nNode;
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( rCrsrNd.GetIndex() > mpDoc->GetNodes().GetEndOfExtras().GetIndex() )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        if( rCrsrNd.GetIndex() > mxDoc->GetNodes().GetEndOfExtras().GetIndex() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             // Cursor is in the body area!
             return 0;
 
@@ -1770,7 +1796,11 @@ bool SwFEShell::ReplaceSdrObj( const OUString& rGrfName, const OUString& rFltNam
         SwFrmFmt *pFmt = FindFrmFmt( pObj );
 
         // store attributes, then set the graphic
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aFrmSet( mpDoc->GetAttrPool(),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aFrmSet( mxDoc->GetAttrPool(),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                             pFmt->GetAttrSet().GetRanges() );
         aFrmSet.Set( pFmt->GetAttrSet() );
 
@@ -1845,21 +1875,41 @@ void SwFEShell::GetConnectableFrmFmts(SwFrmFmt & rFmt,
     SwFrmFmt * pOldChainPrev = (SwFrmFmt *) rChain.GetPrev();
 
     if (pOldChainNext)
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         mpDoc->Unchain(rFmt);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        mxDoc->Unchain(rFmt);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     if (pOldChainPrev)
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         mpDoc->Unchain(*pOldChainPrev);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        mxDoc->Unchain(*pOldChainPrev);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     sal_uInt16 nCnt = mpDoc->GetFlyCount(FLYCNTTYPE_FRM);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    const sal_uInt16 nCnt = mxDoc->GetFlyCount(FLYCNTTYPE_FRM);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     /* potential successors resp. predecessors */
     ::std::vector< const SwFrmFmt * > aTmpSpzArray;
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     mpDoc->FindFlyByName(rReference);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    mxDoc->FindFlyByName(rReference);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     for (sal_uInt16 n = 0; n < nCnt; n++)
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         const SwFrmFmt & rFmt1 = *(mpDoc->GetFlyNum(n, FLYCNTTYPE_FRM));
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        const SwFrmFmt & rFmt1 = *(mxDoc->GetFlyNum(n, FLYCNTTYPE_FRM));
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         /*
            pFmt is a potential successor of rFmt if it is chainable after
@@ -1872,9 +1922,17 @@ void SwFEShell::GetConnectableFrmFmts(SwFrmFmt & rFmt,
         int nChainState;
 
         if (bSuccessors)
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             nChainState = mpDoc->Chainable(rFmt, rFmt1);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            nChainState = mxDoc->Chainable(rFmt, rFmt1);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         else
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             nChainState = mpDoc->Chainable(rFmt1, rFmt);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            nChainState = mxDoc->Chainable(rFmt1, rFmt);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         if (nChainState == SW_CHAIN_OK)
         {
@@ -1921,10 +1979,18 @@ void SwFEShell::GetConnectableFrmFmts(SwFrmFmt & rFmt,
     }
 
     if (pOldChainNext)
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         mpDoc->Chain(rFmt, *pOldChainNext);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        mxDoc->Chain(rFmt, *pOldChainNext);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     if (pOldChainPrev)
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         mpDoc->Chain(*pOldChainPrev, rFmt);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        mxDoc->Chain(*pOldChainPrev, rFmt);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     EndAction();
 }

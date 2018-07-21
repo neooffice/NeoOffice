@@ -264,7 +264,11 @@ void SwHTMLParser::NewField()
     {
         SvtUserOptions aOpt;
         const OUString& rUser = aOpt.GetFullName();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SwDocShell *pDocShell(pDoc->GetDocShell());
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SwDocShell *pDocShell(m_xDoc->GetDocShell());
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         OSL_ENSURE(pDocShell, "no SwDocShell");
         if (pDocShell) {
             uno::Reference<document::XDocumentPropertiesSupplier> xDPS(
@@ -284,7 +288,11 @@ void SwHTMLParser::NewField()
     if( RES_DATEFLD==nType || RES_TIMEFLD==nType )
         nWhich = RES_DATETIMEFLD;
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwFieldType* pType = pDoc->getIDocumentFieldsAccess().GetSysFldType( nWhich );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwFieldType* pType = m_xDoc->getIDocumentFieldsAccess().GetSysFldType( nWhich );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 #ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
     SwField *pFld = 0;
 #else	// NO_LIBO_HTML_FIELD_LEAK_FIX
@@ -360,7 +368,11 @@ void SwHTMLParser::NewField()
             if( !aValue.isEmpty() )
                 nSub |= FIXEDFLD;
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             SvNumberFormatter *pFormatter = pDoc->GetNumberFormatter();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            SvNumberFormatter *pFormatter = m_xDoc->GetNumberFormatter();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             if( pFmtOption )
             {
                 const OUString& rFmt = pFmtOption->GetString();
@@ -400,12 +412,20 @@ void SwHTMLParser::NewField()
         {
             sal_uInt16 nSub = 0;
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             SvNumberFormatter *pFormatter = pDoc->GetNumberFormatter();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            SvNumberFormatter *pFormatter = m_xDoc->GetNumberFormatter();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             sal_uInt32 nNumFmt;
             LanguageType eLang;
             double dValue = GetTableDataOptionsValNum(
                                 nNumFmt, eLang, aNumValue, aNumFmt,
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                 *pDoc->GetNumberFormatter() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                                *m_xDoc->GetNumberFormatter() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             short nFmtType = pFormatter->GetType( nNumFmt );
             switch( nFmtType )
             {
@@ -495,7 +515,11 @@ void SwHTMLParser::NewField()
                     LanguageType eLang;
                     dValue = GetTableDataOptionsValNum(
                                     nNumFmt, eLang, aNumValue, aNumFmt,
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                     *pDoc->GetNumberFormatter() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                                    *m_xDoc->GetNumberFormatter() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     bFixed &= bHasNumValue;
                 }
                 else
@@ -590,10 +614,18 @@ void SwHTMLParser::NewField()
         else
         {
 #ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pDoc->getIDocumentContentOperations().InsertPoolItem( *pPam, SwFmtFld(*pFld), 0 );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            m_xDoc->getIDocumentContentOperations().InsertPoolItem( *pPam, SwFmtFld(*pFld), 0 );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             delete pFld;
 #else	// NO_LIBO_HTML_FIELD_LEAK_FIX
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pDoc->getIDocumentContentOperations().InsertPoolItem(*pPam, SwFmtFld(*xNewField), 0);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            m_xDoc->getIDocumentContentOperations().InsertPoolItem(*pPam, SwFmtFld(*xNewField), 0);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             xNewField.reset();
 #endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
         }
@@ -673,11 +705,19 @@ void SwHTMLParser::EndField()
         }
 
 #ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->getIDocumentContentOperations().InsertPoolItem( *pPam, SwFmtFld(*pField), 0 );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->getIDocumentContentOperations().InsertPoolItem( *pPam, SwFmtFld(*pField), 0 );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         delete pField;
         pField = 0;
 #else	// NO_LIBO_HTML_FIELD_LEAK_FIX
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->getIDocumentContentOperations().InsertPoolItem( *pPam, SwFmtFld(*m_xField), 0 );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->getIDocumentContentOperations().InsertPoolItem( *pPam, SwFmtFld(*m_xField), 0 );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         m_xField.reset();
 #endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
     }
@@ -755,7 +795,11 @@ void SwHTMLParser::InsertComment( const OUString& rComment, const sal_Char *pTag
     }
 
     SwPostItField aPostItFld(
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     (SwPostItFieldType*)pDoc->getIDocumentFieldsAccess().GetSysFldType( RES_POSTITFLD ),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    (SwPostItFieldType*)m_xDoc->getIDocumentFieldsAccess().GetSysFldType( RES_POSTITFLD ),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     aEmptyOUStr, aComment, aEmptyOUStr, aEmptyOUStr, DateTime( DateTime::SYSTEM ) );
     InsertAttr( SwFmtFld( aPostItFld ) );
 

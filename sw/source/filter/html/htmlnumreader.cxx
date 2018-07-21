@@ -71,8 +71,13 @@ void SwHTMLParser::NewNumBulList( int nToken )
     // ggf. ein Regelwerk anlegen
     if( !rInfo.GetNumRule() )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         sal_uInt16 nPos = pDoc->MakeNumRule( pDoc->GetUniqueNumRuleName() );
         rInfo.SetNumRule( pDoc->GetNumRuleTbl()[nPos] );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        sal_uInt16 nPos = m_xDoc->MakeNumRule( m_xDoc->GetUniqueNumRuleName() );
+        rInfo.SetNumRule( m_xDoc->GetNumRuleTbl()[nPos] );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     }
 
     // das Format anpassen, falls es fuer den Level noch nicht
@@ -265,7 +270,11 @@ void SwHTMLParser::NewNumBulList( int nToken )
     // Styles parsen
     if( HasStyleOptions( aStyle, aId, aClass, &aLang, &aDir ) )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxCSS1PropertyInfo aPropInfo;
 
         if( ParseStyleOptions( aStyle, aId, aClass, aItemSet, aPropInfo, &aLang, &aDir ) )
@@ -309,7 +318,11 @@ void SwHTMLParser::NewNumBulList( int nToken )
             if( bChangeNumFmt )
             {
                 rInfo.GetNumRule()->Set( nLevel, aNumFmt );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 pDoc->ChgNumRuleFmts( *rInfo.GetNumRule() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                m_xDoc->ChgNumRuleFmts( *rInfo.GetNumRule() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 bChangeNumFmt = false;
             }
 
@@ -330,7 +343,11 @@ void SwHTMLParser::NewNumBulList( int nToken )
     if( bChangeNumFmt )
     {
         rInfo.GetNumRule()->Set( nLevel, aNumFmt );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->ChgNumRuleFmts( *rInfo.GetNumRule() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->ChgNumRuleFmts( *rInfo.GetNumRule() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     }
 
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
@@ -422,7 +439,11 @@ void SwHTMLParser::EndNumBulList( int nToken )
                 }
             }
             if( bChanged )
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 pDoc->ChgNumRuleFmts( *rInfo.GetNumRule() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                m_xDoc->ChgNumRuleFmts( *rInfo.GetNumRule() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
             // Beim letzen Append wurde das NumRule-Item und das
             // NodeNum-Objekt mit kopiert. Beides muessen wir noch
@@ -521,7 +542,11 @@ void SwHTMLParser::NewNumBulListItem( int nToken )
     }
     else
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         aNumRuleName = pDoc->GetUniqueNumRuleName();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        aNumRuleName = m_xDoc->GetUniqueNumRuleName();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SwNumRule aNumRule( aNumRuleName,
                             SvxNumberFormat::LABEL_WIDTH_AND_POSITION );
         SwNumFmt aNumFmt( aNumRule.Get( 0 ) );
@@ -536,7 +561,11 @@ void SwHTMLParser::NewNumBulListItem( int nToken )
         aNumFmt.SetFirstLineOffset( HTML_NUMBUL_INDENT );
         aNumRule.Set( 0, aNumFmt );
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->MakeNumRule( aNumRuleName, &aNumRule );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->MakeNumRule( aNumRuleName, &aNumRule );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         OSL_ENSURE( !nOpenParaToken,
                 "Jetzt geht ein offenes Absatz-Element verloren" );
@@ -572,7 +601,11 @@ void SwHTMLParser::NewNumBulListItem( int nToken )
     // Styles parsen
     if( HasStyleOptions( aStyle, aId, aClass, &aLang, &aDir ) )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxCSS1PropertyInfo aPropInfo;
 
         if( ParseStyleOptions( aStyle, aId, aClass, aItemSet, aPropInfo, &aLang, &aDir ) )

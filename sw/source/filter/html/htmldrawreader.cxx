@@ -81,9 +81,15 @@ void SwHTMLParser::InsertDrawObject( SdrObject* pNewDrawObj,
     // always on top of text.
     // but in invisible layer. <ConnectToLayout> will move the object
     // to the visible layer.
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     pNewDrawObj->SetLayer( pDoc->getIDocumentDrawModelAccess().GetInvisibleHeavenId() );
 
     SfxItemSet aFrmSet( pDoc->GetAttrPool(),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    pNewDrawObj->SetLayer( m_xDoc->getIDocumentDrawModelAccess().GetInvisibleHeavenId() );
+
+    SfxItemSet aFrmSet( m_xDoc->GetAttrPool(),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         RES_FRMATR_BEGIN, RES_FRMATR_END-1 );
     if( !IsNewDoc() )
         Reader::ResetFrmFmtAttrs( aFrmSet );
@@ -200,7 +206,11 @@ void SwHTMLParser::InsertDrawObject( SdrObject* pNewDrawObj,
     }
     aFrmSet.Put( aAnchor );
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     pDoc->getIDocumentContentOperations().InsertDrawObj( *pPam, *pNewDrawObj, aFrmSet );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    m_xDoc->getIDocumentContentOperations().InsertDrawObj( *pPam, *pNewDrawObj, aFrmSet );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 
 static void PutEEPoolItem( SfxItemSet &rEEItemSet,
@@ -360,7 +370,11 @@ void SwHTMLParser::NewMarquee( HTMLTable *pCurTable )
 
     // Ein DrawTxtobj anlegen
     // #i52858# - method name changed
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwDrawModel* pModel = pDoc->getIDocumentDrawModelAccess().GetOrCreateDrawModel();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwDrawModel* pModel = m_xDoc->getIDocumentDrawModelAccess().GetOrCreateDrawModel();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SdrPage* pPg = pModel->GetPage( 0 );
     pMarquee = SdrObjFactory::MakeNewObject( SdrInventor,
                                              OBJ_TEXT, pPg, pModel );
@@ -449,7 +463,11 @@ void SwHTMLParser::NewMarquee( HTMLTable *pCurTable )
 
     // Styles parsen (funktioniert hier nur fuer Attribute, die auch
     // am Zeichen-Objekt gesetzt werden koennen)
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SfxItemSet aStyleItemSet( pDoc->GetAttrPool(),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SfxItemSet aStyleItemSet( m_xDoc->GetAttrPool(),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                               pCSS1Parser->GetWhichMap() );
     SvxCSS1PropertyInfo aPropInfo;
     if( HasStyleOptions( aStyle, aId, aClass )  &&

@@ -124,7 +124,11 @@ void SwHTMLParser::NewDivision( int nToken )
 #endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     bool bStyleParsed = false, bPositioned = false;
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SvxCSS1PropertyInfo aPropInfo;
     if( HasStyleOptions( aStyle, aId, aClass, &aLang, &aDir ) )
     {
@@ -198,14 +202,22 @@ void SwHTMLParser::NewDivision( int nToken )
 
         if( bNew )
         {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pCNd = pDoc->GetNodes()[rCntntStIdx.GetIndex()+1]
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            pCNd = m_xDoc->GetNodes()[rCntntStIdx.GetIndex()+1]
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                        ->GetCntntNode();
         }
         else
         {
             // Einen neuen Node zu Beginn der Section anlegen
             SwNodeIndex aSttIdx( rCntntStIdx, 1 );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pCNd = pDoc->GetNodes().MakeTxtNode( aSttIdx,
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            pCNd = m_xDoc->GetNodes().MakeTxtNode( aSttIdx,
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                             pCSS1Parser->GetTxtCollFromPool(RES_POOLCOLL_TEXT));
 
             // Den bisherigen Inhalt der Section loeschen
@@ -219,14 +231,30 @@ void SwHTMLParser::NewDivision( int nToken )
 #ifndef NO_LIBO_DELETE_IN_CURRENT_TABLE_FIX
             if (!PendingTableInPaM(aDelPam))
 #endif	// !NO_LIBO_DELETE_IN_CURRENT_TABLE_FIX
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pDoc->getIDocumentContentOperations().DelFullPara( aDelPam );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            m_xDoc->getIDocumentContentOperations().DelFullPara( aDelPam );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
             // Die Seitenvorlage aktualisieren
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             for( sal_uInt16 i=0; i < pDoc->GetPageDescCnt(); i++ )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            for( sal_uInt16 i=0; i < m_xDoc->GetPageDescCnt(); i++ )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 if( RES_POOLPAGE_HTML == pDoc->GetPageDesc(i).GetPoolFmtId() )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                if( RES_POOLPAGE_HTML == m_xDoc->GetPageDesc(i).GetPoolFmtId() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     pDoc->ChgPageDesc( i, *pPageDesc );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    m_xDoc->ChgPageDesc( i, *pPageDesc );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     break;
                 }
             }
@@ -254,7 +282,11 @@ void SwHTMLParser::NewDivision( int nToken )
             if( pStartNdIdx )
             {
                 SwCntntNode *pCNd =
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     pDoc->GetNodes()[pStartNdIdx->GetIndex()+1]->GetCntntNode();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    m_xDoc->GetNodes()[pStartNdIdx->GetIndex()+1]->GetCntntNode();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 SwNodeIndex aTmpSwNodeIndex = SwNodeIndex(*pCNd);
                 SwPosition aNewPos( aTmpSwNodeIndex, SwIndex( pCNd, 0 ) );
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
@@ -291,7 +323,11 @@ void SwHTMLParser::NewDivision( int nToken )
         SetAttr( true, true, pPostIts );
 
         // Namen der Section eindeutig machen
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         const OUString aName( pDoc->GetUniqueSectionName( !aId.isEmpty() ? &aId : 0 ) );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        const OUString aName( m_xDoc->GetUniqueSectionName( !aId.isEmpty() ? &aId : 0 ) );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         if( !aHRef.isEmpty() )
         {
@@ -341,7 +377,11 @@ void SwHTMLParser::NewDivision( int nToken )
             aSection.SetProtectFlag(true);
         }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aFrmItemSet( pDoc->GetAttrPool(),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aFrmItemSet( m_xDoc->GetAttrPool(),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                 RES_FRMATR_BEGIN, RES_FRMATR_END-1 );
         if( !IsNewDoc() )
             Reader::ResetFrmFmtAttrs(aFrmItemSet );
@@ -360,7 +400,11 @@ void SwHTMLParser::NewDivision( int nToken )
             aItemSet.ClearItem( RES_FRAMEDIR );
         }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->InsertSwSection( *pPam, aSection, 0, &aFrmItemSet, false );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->InsertSwSection( *pPam, aSection, 0, &aFrmItemSet, false );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         // ggfs. einen Bereich anspringen
         if( JUMPTO_REGION == eJumpTo && aName == sJmpMark )
@@ -507,7 +551,11 @@ void SwHTMLParser::FixHeaderFooterDistance( bool bHeader,
     }
 
     sal_uInt16 nSpace = 0;
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwTxtNode *pTxtNode = pDoc->GetNodes()[nPrvNxtIdx]->GetTxtNode();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwTxtNode *pTxtNode = m_xDoc->GetNodes()[nPrvNxtIdx]->GetTxtNode();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( pTxtNode )
     {
         const SvxULSpaceItem& rULSpace =
@@ -539,7 +587,11 @@ void SwHTMLParser::FixHeaderFooterDistance( bool bHeader,
         nPrvNxtIdx = rCntntStIdx.GetIndex() + 1;
     }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     pTxtNode = pDoc->GetNodes()[nPrvNxtIdx]
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    pTxtNode = m_xDoc->GetNodes()[nPrvNxtIdx]
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     ->GetTxtNode();
     if( pTxtNode )
     {
@@ -575,7 +627,11 @@ void SwHTMLParser::FixHeaderFooterDistance( bool bHeader,
 
 bool SwHTMLParser::EndSection( bool bLFStripped )
 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwEndNode *pEndNd = pDoc->GetNodes()[pPam->GetPoint()->nNode.GetIndex()+1]
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwEndNode *pEndNd = m_xDoc->GetNodes()[pPam->GetPoint()->nNode.GetIndex()+1]
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                             ->GetEndNode();
     if( pEndNd && pEndNd->StartOfSectionNode()->IsSectionNode() )
     {
@@ -673,7 +729,11 @@ void SwHTMLParser::NewMultiCol( sal_uInt16 columnsFromCss )
 
     // Parse style sheets, but don't position anything by now.
     bool bStyleParsed = false;
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SvxCSS1PropertyInfo aPropInfo;
     if( HasStyleOptions( aStyle, aId, aClass, &aLang, &aDir ) )
         bStyleParsed = ParseStyleOptions( aStyle, aId, aClass,
@@ -696,7 +756,11 @@ void SwHTMLParser::NewMultiCol( sal_uInt16 columnsFromCss )
     bool bPositioned = false;
     if( bInCntnr || SwCSS1Parser::MayBePositioned( aPropInfo, true ) )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aFrmItemSet( pDoc->GetAttrPool(),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aFrmItemSet( m_xDoc->GetAttrPool(),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                 RES_FRMATR_BEGIN, RES_FRMATR_END-1 );
         if( !IsNewDoc() )
             Reader::ResetFrmFmtAttrs(aFrmItemSet );
@@ -773,10 +837,18 @@ void SwHTMLParser::NewMultiCol( sal_uInt16 columnsFromCss )
         SetAttr( true, true, pPostIts );
 
         // Make section name unique.
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         OUString aName( pDoc->GetUniqueSectionName( !aId.isEmpty() ? &aId : 0 ) );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        OUString aName( m_xDoc->GetUniqueSectionName( !aId.isEmpty() ? &aId : 0 ) );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SwSectionData aSection( CONTENT_SECTION, aName );
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aFrmItemSet( pDoc->GetAttrPool(),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aFrmItemSet( m_xDoc->GetAttrPool(),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                 RES_FRMATR_BEGIN, RES_FRMATR_END-1 );
         if( !IsNewDoc() )
             Reader::ResetFrmFmtAttrs(aFrmItemSet );
@@ -807,7 +879,11 @@ void SwHTMLParser::NewMultiCol( sal_uInt16 columnsFromCss )
             aFrmItemSet.Put( *pItem );
             aItemSet.ClearItem( RES_FRAMEDIR );
         }
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->InsertSwSection( *pPam, aSection, 0, &aFrmItemSet, false );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->InsertSwSection( *pPam, aSection, 0, &aFrmItemSet, false );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         // Jump to section, if this is requested.
         if( JUMPTO_REGION == eJumpTo && aName == sJmpMark )
@@ -870,7 +946,11 @@ void SwHTMLParser::InsertFlyFrame( const SfxItemSet& rItemSet,
         ((const SwFmtAnchor&)rItemSet.Get( RES_ANCHOR )).GetAnchorId();
 
     // Den Rahmen anlegen
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwFlyFrmFmt* pFlyFmt = pDoc->MakeFlySection( eAnchorId, pPam->GetPoint(),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwFlyFrmFmt* pFlyFmt = m_xDoc->MakeFlySection( eAnchorId, pPam->GetPoint(),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                                     &rItemSet );
     // Ggf. den Namen setzen
     if( !rName.isEmpty() )
@@ -880,7 +960,11 @@ void SwHTMLParser::InsertFlyFrame( const SfxItemSet& rItemSet,
 
     const SwFmtCntnt& rFlyCntnt = pFlyFmt->GetCntnt();
     const SwNodeIndex& rFlyCntIdx = *rFlyCntnt.GetCntntIdx();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwCntntNode *pCNd = pDoc->GetNodes()[rFlyCntIdx.GetIndex()+1]
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwCntntNode *pCNd = m_xDoc->GetNodes()[rFlyCntIdx.GetIndex()+1]
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                             ->GetCntntNode();
 
     SwPosition aNewPos( SwNodeIndex( rFlyCntIdx, 1 ), SwIndex( pCNd, 0 ) );
@@ -892,7 +976,11 @@ void SwHTMLParser::MovePageDescAttrs( SwNode *pSrcNd,
                                       bool bFmtBreak )
 {
     SwCntntNode* pDestCntntNd =
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->GetNodes()[nDestIdx]->GetCntntNode();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->GetNodes()[nDestIdx]->GetCntntNode();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     OSL_ENSURE( pDestCntntNd, "Wieso ist das Ziel kein Content-Node?" );
 

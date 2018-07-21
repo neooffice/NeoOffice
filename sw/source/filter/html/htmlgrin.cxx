@@ -115,7 +115,11 @@ ImageMap *SwHTMLParser::FindImageMap( const OUString& rName ) const
 
 void SwHTMLParser::ConnectImageMaps()
 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwNodes& rNds = pDoc->GetNodes();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwNodes& rNds = m_xDoc->GetNodes();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     // auf den Start-Node der 1. Section
     sal_uLong nIdx = rNds.GetEndOfAutotext().StartOfSectionIndex() + 1;
     sal_uLong nEndIdx = rNds.GetEndOfAutotext().GetIndex();
@@ -296,7 +300,11 @@ void SwHTMLParser::RegisterFlyFrm( SwFrmFmt *pFlyFmt )
 void SwHTMLParser::GetDefaultScriptType( ScriptType& rType,
                                          OUString& rTypeStr ) const
 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwDocShell *pDocSh = pDoc->GetDocShell();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwDocShell *pDocSh = m_xDoc->GetDocShell();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SvKeyValueIterator* pHeaderAttrs = pDocSh ? pDocSh->GetHeaderAttributes()
                                               : 0;
     rType = GetScriptType( pHeaderAttrs );
@@ -496,12 +504,20 @@ IMAGE_SETEVENT:
             nHeight = aPixelSize.Height();
     }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SvxCSS1PropertyInfo aPropInfo;
     if( HasStyleOptions( aStyle, aId, aClass ) )
         ParseStyleOptions( aStyle, aId, aClass, aItemSet, aPropInfo );
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SfxItemSet aFrmSet( pDoc->GetAttrPool(),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SfxItemSet aFrmSet( m_xDoc->GetAttrPool(),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         RES_FRMATR_BEGIN, RES_FRMATR_END-1 );
     if( !IsNewDoc() )
         Reader::ResetFrmFmtAttrs( aFrmSet );
@@ -523,7 +539,11 @@ IMAGE_SETEVENT:
                 ((const SwFmtINetFmt&)aAttrTab.pINetFmt->GetItem()).GetValue();
 
             pCSS1Parser->SetATagStyles();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             sal_uInt16 nPoolId =  static_cast< sal_uInt16 >(pDoc->IsVisitedURL( rURL )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            sal_uInt16 nPoolId =  static_cast< sal_uInt16 >(m_xDoc->IsVisitedURL( rURL )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                     ? RES_POOLCHR_INET_VISIT
                                     : RES_POOLCHR_INET_NORMAL);
             const SwCharFmt *pCharFmt = pCSS1Parser->GetCharFmtFromPool( nPoolId );
@@ -534,7 +554,11 @@ IMAGE_SETEVENT:
         {
             const SvxColorItem& rColorItem = aAttrTab.pFontColor ?
               (const SvxColorItem &)aAttrTab.pFontColor->GetItem() :
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
               (const SvxColorItem &)pDoc->GetDefault(RES_CHRATR_COLOR);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+              (const SvxColorItem &)m_xDoc->GetDefault(RES_CHRATR_COLOR);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             aHBorderLine.SetColor( rColorItem.GetValue() );
             aVBorderLine.SetColor( aHBorderLine.GetColor() );
         }
@@ -734,9 +758,17 @@ IMAGE_SETEVENT:
     aFrmSet.Put( aFrmSize );
 
     // passing empty sGrfNm here, means we don't want the graphic to be linked
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwFrmFmt *pFlyFmt = pDoc->getIDocumentContentOperations().Insert( *pPam, sGrfNm, aEmptyOUStr, &aGraphic,
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwFrmFmt *pFlyFmt = m_xDoc->getIDocumentContentOperations().Insert( *pPam, sGrfNm, aEmptyOUStr, &aGraphic,
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                       &aFrmSet, NULL, NULL );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwGrfNode *pGrfNd = pDoc->GetNodes()[ pFlyFmt->GetCntnt().GetCntntIdx()
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwGrfNode *pGrfNd = m_xDoc->GetNodes()[ pFlyFmt->GetCntnt().GetCntntIdx()
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                   ->GetIndex()+1 ]->GetGrfNode();
 
     if( !sHTMLGrfName.isEmpty() )
@@ -836,7 +868,11 @@ IMAGE_SETEVENT:
 
 void SwHTMLParser::InsertBodyOptions()
 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     pDoc->SetTxtFmtColl( *pPam,
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    m_xDoc->SetTxtFmtColl( *pPam,
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                          pCSS1Parser->GetTxtCollFromPool( RES_POOLCOLL_TEXT ) );
 
     OUString aBackGround, aId, aStyle, aLang, aDir;
@@ -980,7 +1016,11 @@ void SwHTMLParser::InsertBodyOptions()
 
     if( !aStyle.isEmpty() || !aDir.isEmpty() )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxCSS1PropertyInfo aPropInfo;
         OUString aDummy;
         ParseStyleOptions( aStyle, aDummy, aDummy, aItemSet, aPropInfo, 0, &aDir );
@@ -1054,7 +1094,11 @@ void SwHTMLParser::InsertBodyOptions()
             {
                 SvxLanguageItem aLanguage( eLang, nWhich );
                 aLanguage.SetWhich( nWhich );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 pDoc->SetDefault( aLanguage );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                m_xDoc->SetDefault( aLanguage );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             }
         }
     }
@@ -1231,7 +1275,11 @@ ANCHOR_SETEVENT:
     // Styles parsen
     if( HasStyleOptions( aStyle, aId, aStrippedClass, &aLang, &aDir ) )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxCSS1PropertyInfo aPropInfo;
 
         if( ParseStyleOptions( aStyle, aId, aClass, aItemSet, aPropInfo, &aLang, &aDir ) )
@@ -1346,7 +1394,11 @@ bool SwHTMLParser::HasCurrentParaBookmarks( bool bIgnoreStack ) const
     if( !bHasMarks )
     {
         // second step: when we didn't find a bookmark, check if there is one set already
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         IDocumentMarkAccess* const pMarkAccess = pDoc->getIDocumentMarkAccess();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        IDocumentMarkAccess* const pMarkAccess = m_xDoc->getIDocumentMarkAccess();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         for(IDocumentMarkAccess::const_iterator_t ppMark = pMarkAccess->getAllMarksBegin();
             ppMark != pMarkAccess->getAllMarksEnd();
             ++ppMark)
@@ -1381,7 +1433,11 @@ void SwHTMLParser::StripTrailingPara()
         {
             sal_uLong nNodeIdx = pPam->GetPoint()->nNode.GetIndex();
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             const SwFrmFmts& rFrmFmtTbl = *pDoc->GetSpzFrmFmts();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            const SwFrmFmts& rFrmFmtTbl = *m_xDoc->GetSpzFrmFmts();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
             for( sal_uInt16 i=0; i<rFrmFmtTbl.size(); i++ )
             {
@@ -1405,7 +1461,11 @@ void SwHTMLParser::StripTrailingPara()
             {
                 // es wurden Felder in den Node eingefuegt, die muessen
                 // wir jetzt verschieben
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 SwTxtNode *pPrvNd = pDoc->GetNodes()[nNodeIdx-1]->GetTxtNode();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                SwTxtNode *pPrvNd = m_xDoc->GetNodes()[nNodeIdx-1]->GetTxtNode();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 if( pPrvNd )
                 {
                     SwIndex aSrc( pCNd, 0 );
@@ -1414,7 +1474,11 @@ void SwHTMLParser::StripTrailingPara()
             }
 
             // jetz muessen wir noch eventuell vorhandene Bookmarks verschieben
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             IDocumentMarkAccess* const pMarkAccess = pDoc->getIDocumentMarkAccess();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            IDocumentMarkAccess* const pMarkAccess = m_xDoc->getIDocumentMarkAccess();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             for(IDocumentMarkAccess::const_iterator_t ppMark = pMarkAccess->getAllMarksBegin();
                 ppMark != pMarkAccess->getAllMarksEnd();
                 ++ppMark)
@@ -1425,7 +1489,11 @@ void SwHTMLParser::StripTrailingPara()
                 if(nBookNdIdx==nNodeIdx)
                 {
                     SwNodeIndex nNewNdIdx(pPam->GetPoint()->nNode);
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     SwCntntNode* pNd = pDoc->GetNodes().GoPrevious(&nNewNdIdx);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    SwCntntNode* pNd = m_xDoc->GetNodes().GoPrevious(&nNewNdIdx);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     if(!pNd)
                     {
                         OSL_ENSURE(false, "Hoppla, wo ist mein Vorgaenger-Node");
@@ -1447,7 +1515,11 @@ void SwHTMLParser::StripTrailingPara()
             pPam->GetPoint()->nContent.Assign( 0, 0 );
             pPam->SetMark();
             pPam->DeleteMark();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pDoc->GetNodes().Delete( pPam->GetPoint()->nNode );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            m_xDoc->GetNodes().Delete( pPam->GetPoint()->nNode );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pPam->Move( fnMoveBackward, fnGoNode );
         }
 #ifdef NO_LIBO_HTML_FIELD_LEAK_FIX

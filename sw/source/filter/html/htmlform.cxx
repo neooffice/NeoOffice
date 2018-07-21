@@ -646,13 +646,21 @@ void SwHTMLParser::SetControlSize( const uno::Reference< drawing::XShape >& rSha
     // das auch vom SwXShape implementiert wird.
     uno::Reference< beans::XPropertySet > xPropSet( rShape, UNO_QUERY );
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwViewShell *pVSh = pDoc->getIDocumentLayoutAccess().GetCurrentViewShell();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwViewShell *pVSh = m_xDoc->getIDocumentLayoutAccess().GetCurrentViewShell();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( !pVSh && !nEventId )
     {
         // If there is no view shell by now and the doc shell is an internal
         // one, no view shell will be created. That for, we have to do that of
         // our own. This happens if a linked section is inserted or refreshed.
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SwDocShell *pDocSh = pDoc->GetDocShell();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SwDocShell *pDocSh = m_xDoc->GetDocShell();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( pDocSh )
         {
             if ( pDocSh->GetMedium() )
@@ -664,7 +672,11 @@ void SwHTMLParser::SetControlSize( const uno::Reference< drawing::XShape >& rSha
 
             pTempViewFrame = SfxViewFrame::LoadHiddenDocument( *pDocSh, 0 );
             CallStartAction();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pVSh = pDoc->getIDocumentLayoutAccess().GetCurrentViewShell();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            pVSh = m_xDoc->getIDocumentLayoutAccess().GetCurrentViewShell();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         }
     }
 
@@ -1244,7 +1256,11 @@ void SwHTMLParser::NewForm( bool bAppend )
     }
 
     if( !pFormImpl )
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pFormImpl = new SwHTMLForm_Impl( pDoc->GetDocShell() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        pFormImpl = new SwHTMLForm_Impl( m_xDoc->GetDocShell() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     OUString aAction( sBaseURL );
     OUString sName, sTarget;
@@ -1799,7 +1815,11 @@ void SwHTMLParser::InsertInput()
         }
     }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SfxItemSet aCSS1ItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SfxItemSet aCSS1ItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SvxCSS1PropertyInfo aCSS1PropInfo;
     if( HasStyleOptions( aStyle, aId, aClass ) )
     {
@@ -2069,7 +2089,11 @@ void SwHTMLParser::NewTextArea()
 
     Size aTextSz( nCols, nRows );
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SfxItemSet aCSS1ItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SfxItemSet aCSS1ItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SvxCSS1PropertyInfo aCSS1PropInfo;
     if( HasStyleOptions( aStyle, aId, aClass ) )
     {
@@ -2361,7 +2385,11 @@ void SwHTMLParser::NewSelect()
         bMinHeight = false;
     }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SfxItemSet aCSS1ItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SfxItemSet aCSS1ItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SvxCSS1PropertyInfo aCSS1PropInfo;
     if( HasStyleOptions( aStyle, aId, aClass ) )
     {

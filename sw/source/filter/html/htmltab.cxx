@@ -3617,7 +3617,11 @@ const SwStartNode *SwHTMLParser::InsertTableSection
         else
             pNd = pPrevStNd->EndOfSectionNode();
         SwNodeIndex nIdx( *pNd, 1 );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pStNd = pDoc->GetNodes().MakeTextSection( nIdx, SwTableBoxStartNode,
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        pStNd = m_xDoc->GetNodes().MakeTextSection( nIdx, SwTableBoxStartNode,
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                                   pColl );
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         pTable->IncBoxCount();
@@ -3627,7 +3631,11 @@ const SwStartNode *SwHTMLParser::InsertTableSection
     }
 
     //Added defaults to CJK and CTL
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwCntntNode *pCNd = pDoc->GetNodes()[pStNd->GetIndex()+1] ->GetCntntNode();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwCntntNode *pCNd = m_xDoc->GetNodes()[pStNd->GetIndex()+1] ->GetCntntNode();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SvxFontHeightItem aFontHeight( 40, 100, RES_CHRATR_FONTSIZE );
     pCNd->SetAttr( aFontHeight );
     SvxFontHeightItem aFontHeightCJK( 40, 100, RES_CHRATR_CJK_FONTSIZE );
@@ -3681,7 +3689,11 @@ const SwStartNode *SwHTMLParser::InsertTableSection( sal_uInt16 nPoolId )
             } while( pOutTbl && pTblNd->GetTable().GetHTMLTableLayout() );
         }
         SwNodeIndex aIdx( *pTblNd->EndOfSectionNode() );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pStNd = pDoc->GetNodes().MakeTextSection( aIdx, SwTableBoxStartNode,
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        pStNd = m_xDoc->GetNodes().MakeTextSection( aIdx, SwTableBoxStartNode,
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                                   pColl );
 
         pPam->GetPoint()->nNode = pStNd->GetIndex() + 1;
@@ -3701,8 +3713,13 @@ SwStartNode *SwHTMLParser::InsertTempTableCaptionSection()
 {
     SwTxtFmtColl *pColl = pCSS1Parser->GetTxtCollFromPool( RES_POOLCOLL_TEXT );
     SwNodeIndex& rIdx = pPam->GetPoint()->nNode;
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     rIdx = pDoc->GetNodes().GetEndOfExtras();
     SwStartNode *pStNd = pDoc->GetNodes().MakeTextSection( rIdx,
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    rIdx = m_xDoc->GetNodes().GetEndOfExtras();
+    SwStartNode *pStNd = m_xDoc->GetNodes().MakeTextSection( rIdx,
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                           SwNormalStartNode, pColl );
 
     rIdx = pStNd->GetIndex() + 1;
@@ -3764,7 +3781,11 @@ SvxBrushItem* SwHTMLParser::CreateBrushItem( const Color *pColor,
 
     if( !rStyle.isEmpty() || !rId.isEmpty() || !rClass.isEmpty() )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aItemSet( pDoc->GetAttrPool(), RES_BACKGROUND,
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), RES_BACKGROUND,
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                                   RES_BACKGROUND );
         SvxCSS1PropertyInfo aPropInfo;
 
@@ -4085,7 +4106,11 @@ _CellSaveStruct::_CellSaveStruct( SwHTMLParser& rParser, HTMLTable *pCurTable,
         LanguageType eLang;
         nValue = SfxHTMLParser::GetTableDataOptionsValNum(
                             nNumFmt, eLang, aValue, aNumFmt,
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                             *rParser.pDoc->GetNumberFormatter() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                            *rParser.m_xDoc->GetNumberFormatter() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     }
 
     // einen neuen Kontext anlegen, aber das drawing::Alignment-Attribut
@@ -4118,7 +4143,11 @@ _CellSaveStruct::_CellSaveStruct( SwHTMLParser& rParser, HTMLTable *pCurTable,
 
     if( rParser.HasStyleOptions( aStyle, aId, aClass, &aLang, &aDir ) )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aItemSet( rParser.pDoc->GetAttrPool(),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( rParser.m_xDoc->GetAttrPool(),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                              rParser.pCSS1Parser->GetWhichMap() );
         SvxCSS1PropertyInfo aPropInfo;
 
@@ -4451,7 +4480,11 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
                 0
             };
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             SfxItemSet aItemSet( pDoc->GetAttrPool(), aWhichIds );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            SfxItemSet aItemSet( m_xDoc->GetAttrPool(), aWhichIds );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             SvxCSS1PropertyInfo aPropInfo;
 
             bool bStyleParsed = ParseStyleOptions( pCurTable->GetStyle(),
@@ -4533,7 +4566,11 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
                     if( !pPam->GetPoint()->nContent.GetIndex() )
                     {
                         //Set default to CJK and CTL
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         pDoc->SetTxtFmtColl( *pPam,
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                        m_xDoc->SetTxtFmtColl( *pPam,
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                             pCSS1Parser->GetTxtCollFromPool(RES_POOLCOLL_STANDARD) );
                         SvxFontHeightItem aFontHeight( 40, 100, RES_CHRATR_FONTSIZE );
 
@@ -4636,7 +4673,11 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
                 {
                     // Die Tabelle soll in einen Rahmen geschaufelt werden.
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     SfxItemSet aFrmSet( pDoc->GetAttrPool(),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    SfxItemSet aFrmSet( m_xDoc->GetAttrPool(),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                         RES_FRMATR_BEGIN, RES_FRMATR_END-1 );
                     if( !pCurTable->IsNewDoc() )
                         Reader::ResetFrmFmtAttrs( aFrmSet );
@@ -4678,14 +4719,22 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
                     RndStdIds eAnchorId = ((const SwFmtAnchor&)aFrmSet.
                                                 Get( RES_ANCHOR )).
                                                 GetAnchorId();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     SwFrmFmt *pFrmFmt =  pDoc->MakeFlySection(
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    SwFrmFmt *pFrmFmt =  m_xDoc->MakeFlySection(
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                 eAnchorId, pPam->GetPoint(), &aFrmSet );
 
                     pTCntxt->SetFrmFmt( pFrmFmt );
                     const SwFmtCntnt& rFlyCntnt = pFrmFmt->GetCntnt();
                     pPam->GetPoint()->nNode = *rFlyCntnt.GetCntntIdx();
                     SwCntntNode *pCNd =
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         pDoc->GetNodes().GoNext( &(pPam->GetPoint()->nNode) );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                        m_xDoc->GetNodes().GoNext( &(pPam->GetPoint()->nNode) );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     pPam->GetPoint()->nContent.Assign( pCNd, 0 );
 
                 }
@@ -4696,7 +4745,11 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
                 // gesetzt)
                 OSL_ENSURE( !pPam->GetPoint()->nContent.GetIndex(),
                         "Der Absatz hinter der Tabelle ist nicht leer!" );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 const SwTable* pSwTable = pDoc->InsertTable(
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                const SwTable* pSwTable = m_xDoc->InsertTable(
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         SwInsertTableOptions( tabopts::HEADLINE_NO_BORDER, 1 ),
                         *pPam->GetPoint(), 1, 1, text::HoriOrientation::LEFT );
 
@@ -4704,7 +4757,11 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
                 {
                     SwNodeIndex aDstIdx( pPam->GetPoint()->nNode );
                     pPam->Move( fnMoveBackward );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     pDoc->GetNodes().Delete( aDstIdx );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    m_xDoc->GetNodes().Delete( aDstIdx );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 }
                 else
                 {
@@ -5209,7 +5266,11 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
         {
 #endif	// USE_JAVA
         const SwEndNode *pEndNd = pStNd->EndOfSectionNode();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SwCntntNode *pCNd = pDoc->GetNodes()[pEndNd->GetIndex()-1] ->GetCntntNode();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SwCntntNode *pCNd = m_xDoc->GetNodes()[pEndNd->GetIndex()-1] ->GetCntntNode();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         //Added defaults to CJK and CTL
         SvxFontHeightItem aFontHeight( 40, 100, RES_CHRATR_FONTSIZE );
         pCNd->SetAttr( aFontHeight );
@@ -5237,9 +5298,17 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     {
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pSaveStruct->CheckNoBreak( *pPam->GetPoint(), pDoc );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        pSaveStruct->CheckNoBreak( *pPam->GetPoint(), m_xDoc.get() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         xSaveStruct->CheckNoBreak( *pPam->GetPoint(), pDoc );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        xSaveStruct->CheckNoBreak( *pPam->GetPoint(), m_xDoc.get() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
         // Alle noch offenen Kontexte beenden. Wir nehmen hier
@@ -6867,7 +6936,11 @@ std::shared_ptr<HTMLTable> SwHTMLParser::BuildTable(SvxAdjust eParentAdjust,
                         pNd = pTblStNd->EndOfSectionNode();
                     SwNodeIndex aDstIdx( *pNd, bTop ? 0 : 1 );
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     pDoc->getIDocumentContentOperations().MoveNodeRange( aSrcRg, aDstIdx,
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    m_xDoc->getIDocumentContentOperations().MoveNodeRange( aSrcRg, aDstIdx,
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         IDocumentContentOperations::DOC_MOVEDEFAULT );
 
                     // Wenn die Caption vor der Tabelle eingefuegt wurde muss
@@ -6885,7 +6958,11 @@ std::shared_ptr<HTMLTable> SwHTMLParser::BuildTable(SvxAdjust eParentAdjust,
                 // Die Section wird jetzt nicht mehr gebraucht.
                 pPam->SetMark();
                 pPam->DeleteMark();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 pDoc->getIDocumentContentOperations().DeleteSection( (SwStartNode *)pCapStNd );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                m_xDoc->getIDocumentContentOperations().DeleteSection( (SwStartNode *)pCapStNd );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 pTable->SetCaption( 0, false );
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
@@ -6896,9 +6973,17 @@ std::shared_ptr<HTMLTable> SwHTMLParser::BuildTable(SvxAdjust eParentAdjust,
             // SwTable aufbereiten
             sal_uInt16 nBrowseWidth = (sal_uInt16)GetCurrentBrowseWidth();
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pSaveStruct->MakeTable( nBrowseWidth, *pPam->GetPoint(), pDoc );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            pSaveStruct->MakeTable( nBrowseWidth, *pPam->GetPoint(), m_xDoc.get() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             xSaveStruct->MakeTable(nBrowseWidth, *pPam->GetPoint(), pDoc);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            xSaveStruct->MakeTable(nBrowseWidth, *pPam->GetPoint(), m_xDoc.get());
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         }
 
@@ -6960,7 +7045,11 @@ std::shared_ptr<HTMLTable> SwHTMLParser::BuildTable(SvxAdjust eParentAdjust,
         {
             pPam->SetMark();
             pPam->DeleteMark();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pDoc->getIDocumentContentOperations().DeleteSection( (SwStartNode *)pCapStNd );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            m_xDoc->getIDocumentContentOperations().DeleteSection( (SwStartNode *)pCapStNd );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             pCurTable->SetCaption( 0, false );
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX

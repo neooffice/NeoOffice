@@ -209,7 +209,11 @@ sal_uLong HTMLReader::Read( SwDoc &rDoc, const OUString& rBaseURL, SwPaM &rPam, 
     }
 
     // damit keiner das Doc klaut!
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     rDoc.acquire();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    rtl::Reference<SwDoc> aHoldRef(&rDoc);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     sal_uLong nRet = 0;
     SvParserRef xParser = new SwHTMLParser( &rDoc, rPam, *pStrm,
                                             rName, rBaseURL, !bInsertMode, pMedium,
@@ -247,7 +251,11 @@ SwHTMLParser::SwHTMLParser( SwDoc* pD, SwPaM& rCrsr, SvStream& rIn,
     pCSS1Parser( 0 ),
     pNumRuleInfo( new SwHTMLNumRuleInfo ),
     pPendStack( 0 ),
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     pDoc( pD ),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    m_xDoc( pD ),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     pActionViewShell( 0 ),
     pSttNdIdx( 0 ),
 #ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
@@ -331,23 +339,46 @@ SwHTMLParser::SwHTMLParser( SwDoc* pD, SwPaM& rCrsr, SvStream& rIn,
         //CJK has different defaults, so a different object should be used for this
         //RES_CHARTR_CJK_FONTSIZE is a valid value
         SvxFontHeightItem aFontHeight(aFontHeights[2], 100, RES_CHRATR_FONTSIZE);
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->SetDefault( aFontHeight );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->SetDefault( aFontHeight );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxFontHeightItem aFontHeightCJK(aFontHeights[2], 100, RES_CHRATR_CJK_FONTSIZE);
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->SetDefault( aFontHeightCJK );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->SetDefault( aFontHeightCJK );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxFontHeightItem aFontHeightCTL(aFontHeights[2], 100, RES_CHRATR_CTL_FONTSIZE);
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->SetDefault( aFontHeightCTL );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->SetDefault( aFontHeightCTL );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         // #i18732# - adjust default of option 'FollowTextFlow'
         // TODO: not sure what the appropriate default for HTML should be?
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->SetDefault( SwFmtFollowTextFlow(true) );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->SetDefault( SwFmtFollowTextFlow(true) );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     }
 
     // Waehrend des Imports in den HTML-Modus schalten, damit die
     // richrigen Vorlagen angelegt werden
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     bOldIsHTMLMode = pDoc->getIDocumentSettingAccess().get(IDocumentSettingAccess::HTML_MODE);
     pDoc->getIDocumentSettingAccess().set(IDocumentSettingAccess::HTML_MODE, true);
 
     pCSS1Parser = new SwCSS1Parser( pDoc, aFontHeights, sBaseURL, IsNewDoc() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    bOldIsHTMLMode = m_xDoc->getIDocumentSettingAccess().get(IDocumentSettingAccess::HTML_MODE);
+    m_xDoc->getIDocumentSettingAccess().set(IDocumentSettingAccess::HTML_MODE, true);
+
+    pCSS1Parser = new SwCSS1Parser( m_xDoc.get(), aFontHeights, sBaseURL, IsNewDoc() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     pCSS1Parser->SetIgnoreFontFamily( rHtmlOptions.IsIgnoreFontFamily() );
 
     if( bReadUTF8 )
@@ -356,7 +387,11 @@ SwHTMLParser::SwHTMLParser( SwDoc* pD, SwPaM& rCrsr, SvStream& rIn,
     }
     else
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SwDocShell *pDocSh = pDoc->GetDocShell();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SwDocShell *pDocSh = m_xDoc->GetDocShell();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvKeyValueIterator *pHeaderAttrs =
             pDocSh->GetHeaderAttributes();
         if( pHeaderAttrs )
@@ -365,7 +400,11 @@ SwHTMLParser::SwHTMLParser( SwDoc* pD, SwPaM& rCrsr, SvStream& rIn,
     pCSS1Parser->SetDfltEncoding( osl_getThreadTextEncoding() );
 
     // Timer nur bei ganz normalen Dokumenten aufsetzen!
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwDocShell* pDocSh = pDoc->GetDocShell();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwDocShell* pDocSh = m_xDoc->GetDocShell();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( pDocSh )
     {
         bViewCreated = true;            // nicht, synchron laden
@@ -432,28 +471,57 @@ SwHTMLParser::~SwHTMLParser()
     }
 #endif	// !NO_LIBO_HTML_CONTEXT_LEAK_FIX
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     bool bAsync = pDoc->IsInLoadAsynchron();
     pDoc->SetInLoadAsynchron( false );
     pDoc->getIDocumentSettingAccess().set(IDocumentSettingAccess::HTML_MODE, bOldIsHTMLMode);
 
     if( pDoc->GetDocShell() && nEventId )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    bool bAsync = m_xDoc->IsInLoadAsynchron();
+    m_xDoc->SetInLoadAsynchron( false );
+    m_xDoc->getIDocumentSettingAccess().set(IDocumentSettingAccess::HTML_MODE, bOldIsHTMLMode);
+
+    if( m_xDoc->GetDocShell() && nEventId )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         Application::RemoveUserEvent( nEventId );
 
     // das DocumentDetected kann ggfs. die DocShells loeschen, darum nochmals
     // abfragen
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( pDoc->GetDocShell() )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    if( m_xDoc->GetDocShell() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
         // Gelinkte Bereiche updaten
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         sal_uInt16 nLinkMode = pDoc->getIDocumentSettingAccess().getLinkUpdateMode( true );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        sal_uInt16 nLinkMode = m_xDoc->getIDocumentSettingAccess().getLinkUpdateMode( true );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( nLinkMode != NEVER && bAsync &&
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             SFX_CREATE_MODE_INTERNAL!=pDoc->GetDocShell()->GetCreateMode() )
             pDoc->getIDocumentLinksAdministration().GetLinkManager().UpdateAllLinks( nLinkMode == MANUAL,
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            SFX_CREATE_MODE_INTERNAL!=m_xDoc->GetDocShell()->GetCreateMode() )
+            m_xDoc->getIDocumentLinksAdministration().GetLinkManager().UpdateAllLinks( nLinkMode == MANUAL,
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                                    true, false );
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if ( pDoc->GetDocShell()->IsLoading() )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        if ( m_xDoc->GetDocShell()->IsLoading() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         {
             // #i59688#
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pDoc->GetDocShell()->LoadingFinished();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            m_xDoc->GetDocShell()->LoadingFinished();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         }
     }
 
@@ -490,20 +558,29 @@ SwHTMLParser::~SwHTMLParser()
         delete pTmp;
     }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( !pDoc->release() )
     {
         // keiner will mehr das Doc haben, also weg damit
         delete pDoc;
         pDoc = NULL;
     }
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    m_xDoc.clear();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     if ( pTempViewFrame )
     {
         pTempViewFrame->DoClose();
 
         // the temporary view frame is hidden, so the hidden flag might need to be removed
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if ( bRemoveHidden && pDoc && pDoc->GetDocShell() && pDoc->GetDocShell()->GetMedium() )
             pDoc->GetDocShell()->GetMedium()->GetItemSet()->ClearItem( SID_HIDDEN );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        if ( bRemoveHidden && m_xDoc.is() && m_xDoc->GetDocShell() && m_xDoc->GetDocShell()->GetMedium() )
+            m_xDoc->GetDocShell()->GetMedium()->GetItemSet()->ClearItem( SID_HIDDEN );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     }
 }
 
@@ -513,8 +590,13 @@ IMPL_LINK( SwHTMLParser, AsyncCallback, void*, /*pVoid*/ )
 
     // #i47907# - If the document has already been destructed,
     // the parser should be aware of this:
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( ( pDoc->GetDocShell() && pDoc->GetDocShell()->IsAbortingImport() )
         || 1 == pDoc->getReferenceCount() )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    if( ( m_xDoc->GetDocShell() && m_xDoc->GetDocShell()->IsAbortingImport() )
+        || 1 == m_xDoc->getReferenceCount() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
         // wurde der Import vom SFX abgebrochen?
         eState = SVPAR_ERROR;
@@ -527,15 +609,27 @@ IMPL_LINK( SwHTMLParser, AsyncCallback, void*, /*pVoid*/ )
 SvParserState SwHTMLParser::CallParser()
 {
     // einen temporaeren Index anlegen, auf Pos 0 so wird er nicht bewegt!
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     pSttNdIdx = new SwNodeIndex( pDoc->GetNodes() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    pSttNdIdx = new SwNodeIndex( m_xDoc->GetNodes() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( !IsNewDoc() )       // in ein Dokument einfuegen ?
     {
         const SwPosition* pPos = pPam->GetPoint();
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->getIDocumentContentOperations().SplitNode( *pPos, false );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->getIDocumentContentOperations().SplitNode( *pPos, false );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         *pSttNdIdx = pPos->nNode.GetIndex()-1;
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->getIDocumentContentOperations().SplitNode( *pPos, false );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->getIDocumentContentOperations().SplitNode( *pPos, false );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         SwPaM aInsertionRangePam( *pPos );
 
@@ -545,9 +639,15 @@ SvParserState SwHTMLParser::CallParser()
         aInsertionRangePam.SetMark();
         *aInsertionRangePam.GetPoint() = *pPam->GetPoint();
         aInsertionRangePam.Move( fnMoveBackward );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->getIDocumentRedlineAccess().SplitRedline( aInsertionRangePam );
 
         pDoc->SetTxtFmtColl( *pPam,
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->getIDocumentRedlineAccess().SplitRedline( aInsertionRangePam );
+
+        m_xDoc->SetTxtFmtColl( *pPam,
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 pCSS1Parser->GetTxtCollFromPool( RES_POOLCOLL_STANDARD ));
     }
 
@@ -570,12 +670,20 @@ SvParserState SwHTMLParser::CallParser()
         rInput.Seek(STREAM_SEEK_TO_END);
         rInput.ResetError();
         ::StartProgress( STR_STATSTR_W4WREAD, 0, rInput.Tell(),
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                          pDoc->GetDocShell() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                         m_xDoc->GetDocShell() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         rInput.Seek(STREAM_SEEK_TO_BEGIN);
         rInput.ResetError();
     }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     pDoc->GetPageDesc( 0 ).Add( this );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    m_xDoc->GetPageDesc( 0 ).Add( this );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     SvParserState eRet = HTMLParser::CallParser();
     return eRet;
@@ -593,7 +701,11 @@ void SwHTMLParser::Continue( int nToken )
     // aufgeraeumt wird.
     OSL_ENSURE( SVPAR_ERROR!=eState,
             "SwHTMLParser::Continue: bereits ein Fehler gesetzt" );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( pDoc->GetDocShell() && pDoc->GetDocShell()->IsAbortingImport() )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    if( m_xDoc->GetDocShell() && m_xDoc->GetDocShell()->IsAbortingImport() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         eState = SVPAR_ERROR;
 
     // Die SwViewShell vom Dokument holen, merken und als aktuelle setzen.
@@ -607,7 +719,11 @@ void SwHTMLParser::Continue( int nToken )
         // gelesen und ein SaveState(0) gerufen.
         eState = SVPAR_PENDING;
         bViewCreated = true;
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->SetInLoadAsynchron( true );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->SetInLoadAsynchron( true );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
 #ifdef DBG_UTIL
         m_nContinue--;
@@ -617,19 +733,37 @@ void SwHTMLParser::Continue( int nToken )
     }
 
     bSetModEnabled = false;
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( pDoc->GetDocShell() &&
         (bSetModEnabled = pDoc->GetDocShell()->IsEnableSetModified()) )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    if( m_xDoc->GetDocShell() &&
+        (bSetModEnabled = m_xDoc->GetDocShell()->IsEnableSetModified()) )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->GetDocShell()->EnableSetModified( false );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->GetDocShell()->EnableSetModified( false );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     }
 
     // waehrend des einlesens kein OLE-Modified rufen
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     Link aOLELink( pDoc->GetOle2Link() );
     pDoc->SetOle2Link( Link() );
 
     bool bModified = pDoc->getIDocumentState().IsModified();
     bool const bWasUndo = pDoc->GetIDocumentUndoRedo().DoesUndo();
     pDoc->GetIDocumentUndoRedo().DoUndo(false);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    Link aOLELink( m_xDoc->GetOle2Link() );
+    m_xDoc->SetOle2Link( Link() );
+
+    bool bModified = m_xDoc->getIDocumentState().IsModified();
+    bool const bWasUndo = m_xDoc->GetIDocumentUndoRedo().DoesUndo();
+    m_xDoc->GetIDocumentUndoRedo().DoUndo(false);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     // Wenn der Import abgebrochen wird, kein Continue mehr rufen.
     // Falls ein Pending-Stack existiert aber durch einen Aufruf
@@ -650,7 +784,11 @@ void SwHTMLParser::Continue( int nToken )
     }
 
     // Laufbalken wieder abschalten
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     EndProgress( pDoc->GetDocShell() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    EndProgress( m_xDoc->GetDocShell() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     bool bLFStripped = false;
     if( SVPAR_PENDING != GetStatus() )
@@ -660,7 +798,11 @@ void SwHTMLParser::Continue( int nToken )
             if( !aScriptSource.isEmpty() )
             {
                 SwScriptFieldType *pType =
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     (SwScriptFieldType*)pDoc->getIDocumentFieldsAccess().GetSysFldType( RES_SCRIPTFLD );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    (SwScriptFieldType*)m_xDoc->getIDocumentFieldsAccess().GetSysFldType( RES_SCRIPTFLD );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
                 SwScriptField aFld( pType, aScriptType, aScriptSource,
                                     false );
@@ -790,7 +932,11 @@ if( pSttNdIdx->GetIndex()+1 == pPam->GetBound( false ).nNode.GetIndex() )
 
             if( IsNewDoc() )
             {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 const SwNode *pPrev = pDoc->GetNodes()[nNodeIdx -1];
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                const SwNode *pPrev = m_xDoc->GetNodes()[nNodeIdx -1];
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 if( !pPam->GetPoint()->nContent.GetIndex() &&
                     ( pPrev->IsCntntNode() ||
                       (pPrev->IsEndNode() &&
@@ -814,11 +960,19 @@ if( pSttNdIdx->GetIndex()+1 == pPam->GetBound( false ).nNode.GetIndex() )
                         }
                         pPam->GetBound(true).nContent.Assign( 0, 0 );
                         pPam->GetBound(false).nContent.Assign( 0, 0 );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         pDoc->GetNodes().Delete( pPam->GetPoint()->nNode );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                        m_xDoc->GetNodes().Delete( pPam->GetPoint()->nNode );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     }
                 }
             }
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             else if( 0 != ( pAktNd = pDoc->GetNodes()[ nNodeIdx ]->GetTxtNode()) && !bHasFlysOrMarks )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            else if( 0 != ( pAktNd = m_xDoc->GetNodes()[ nNodeIdx ]->GetTxtNode()) && !bHasFlysOrMarks )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             {
                 if( pAktNd->CanJoinNext( &pPos->nNode ))
                 {
@@ -831,7 +985,11 @@ if( pSttNdIdx->GetIndex()+1 == pPam->GetBound( false ).nNode.GetIndex() )
                 {
                     pPos->nContent.Assign( 0, 0 );
                     pPam->SetMark(); pPam->DeleteMark();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     pDoc->GetNodes().Delete( pPos->nNode, 1 );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    m_xDoc->GetNodes().Delete( pPos->nNode, 1 );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     pPam->Move( fnMoveBackward );
                 }
             }
@@ -873,7 +1031,11 @@ if( pSttNdIdx->GetIndex()+1 == pPam->GetBound( false ).nNode.GetIndex() )
         // adjust AutoLoad in DocumentProperties
         if( IsNewDoc() )
         {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             SwDocShell *pDocShell(pDoc->GetDocShell());
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            SwDocShell *pDocShell(m_xDoc->GetDocShell());
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             OSL_ENSURE(pDocShell, "no SwDocShell");
             if (pDocShell) {
                 uno::Reference<document::XDocumentPropertiesSupplier> xDPS(
@@ -891,7 +1053,11 @@ if( pSttNdIdx->GetIndex()+1 == pPam->GetBound( false ).nNode.GetIndex() )
 
         if( bUpdateDocStat )
         {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pDoc->getIDocumentStatistics().UpdateDocStat( false, true );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            m_xDoc->getIDocumentStatistics().UpdateDocStat( false, true );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         }
     }
 
@@ -900,12 +1066,21 @@ if( pSttNdIdx->GetIndex()+1 == pPam->GetBound( false ).nNode.GetIndex() )
 
     // sollte der Parser der Letzte sein, der das Doc haelt, dann braucht
     // man hier auch nichts mehr tun, Doc wird gleich zerstoert!
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( 1 < pDoc->getReferenceCount() )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    if( 1 < m_xDoc->getReferenceCount() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
         if( bWasUndo )
         {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pDoc->GetIDocumentUndoRedo().DelAllUndoObj();
             pDoc->GetIDocumentUndoRedo().DoUndo(true);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            m_xDoc->GetIDocumentUndoRedo().DelAllUndoObj();
+            m_xDoc->GetIDocumentUndoRedo().DoUndo(true);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         }
         else if( !pInitVSh )
         {
@@ -916,16 +1091,33 @@ if( pSttNdIdx->GetIndex()+1 == pPam->GetBound( false ).nNode.GetIndex() )
             SwViewShell *pTmpVSh = CheckActionViewShell();
             if( pTmpVSh )
             {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 pDoc->GetIDocumentUndoRedo().DoUndo(true);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                m_xDoc->GetIDocumentUndoRedo().DoUndo(true);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             }
         }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->SetOle2Link( aOLELink );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->SetOle2Link( aOLELink );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( !bModified )
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pDoc->getIDocumentState().ResetModified();
         if( bSetModEnabled && pDoc->GetDocShell() )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            m_xDoc->getIDocumentState().ResetModified();
+        if( bSetModEnabled && m_xDoc->GetDocShell() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pDoc->GetDocShell()->EnableSetModified( true );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            m_xDoc->GetDocShell()->EnableSetModified( true );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             bSetModEnabled = false; // this is unnecessary here
         }
     }
@@ -967,7 +1159,11 @@ void SwHTMLParser::DocumentDetected()
 
         CallEndAction( true, true );
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->GetIDocumentUndoRedo().DoUndo(false);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->GetIDocumentUndoRedo().DoUndo(false);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         // Durch das DocumentDetected wurde im allgemeinen eine
         // SwViewShell angelegt. Es kann aber auch sein, dass sie
         // erst spaeter angelegt wird, naemlich dann, wenn die UI
@@ -979,15 +1175,24 @@ void SwHTMLParser::DocumentDetected()
 // is called for every token that is recognised in CallParser
 void SwHTMLParser::NextToken( int nToken )
 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( ( pDoc->GetDocShell() && pDoc->GetDocShell()->IsAbortingImport() )
         || 1 == pDoc->getReferenceCount() )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    if( ( m_xDoc->GetDocShell() && m_xDoc->GetDocShell()->IsAbortingImport() )
+        || 1 == m_xDoc->getReferenceCount() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
         // Was the import cancelled by SFX? If a pending stack
         // exists, clean it.
         eState = SVPAR_ERROR;
         OSL_ENSURE( !pPendStack || pPendStack->nToken,
                 "SwHTMLParser::NextToken: Pending-Stack without token" );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( 1 == pDoc->getReferenceCount() || !pPendStack )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        if( 1 == m_xDoc->getReferenceCount() || !pPendStack )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             return ;
     }
 
@@ -1026,9 +1231,17 @@ void SwHTMLParser::NextToken( int nToken )
             case HTML_TITLE_OFF:
                 if( IsNewDoc() && !sTitle.isEmpty() )
                 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     if( pDoc->GetDocShell() ) {
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    if( m_xDoc->GetDocShell() ) {
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         uno::Reference<document::XDocumentPropertiesSupplier>
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                             xDPS(pDoc->GetDocShell()->GetModel(),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                            xDPS(m_xDoc->GetDocShell()->GetModel(),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                             uno::UNO_QUERY_THROW);
                         uno::Reference<document::XDocumentProperties> xDocProps(
                             xDPS->getDocumentProperties());
@@ -1037,7 +1250,11 @@ void SwHTMLParser::NextToken( int nToken )
                             xDocProps->setTitle(sTitle);
                         }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         pDoc->GetDocShell()->SetTitle( sTitle );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                        m_xDoc->GetDocShell()->SetTitle( sTitle );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     }
                 }
                 bInTitle = false;
@@ -1256,7 +1473,11 @@ void SwHTMLParser::NextToken( int nToken )
             {
                 if( !bDocInitalized )
                     DocumentDetected();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 pDoc->getIDocumentContentOperations().InsertString( *pPam, aToken );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                m_xDoc->getIDocumentContentOperations().InsertString( *pPam, aToken );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
                 // if there are temporary paragraph attributes and the
                 // paragraph isn't empty then the paragraph attributes
@@ -1311,7 +1532,11 @@ void SwHTMLParser::NextToken( int nToken )
 
             if( pPageDesc )
             {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 pDoc->getIDocumentContentOperations().InsertPoolItem( *pPam, SwFmtPageDesc( pPageDesc ), 0 );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                m_xDoc->getIDocumentContentOperations().InsertPoolItem( *pPam, SwFmtPageDesc( pPageDesc ), 0 );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             }
         }
         break;
@@ -1334,7 +1559,11 @@ void SwHTMLParser::NextToken( int nToken )
                 case HTML_O_TARGET:
                     if( IsNewDoc() )
                     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         SwDocShell *pDocShell(pDoc->GetDocShell());
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                        SwDocShell *pDocShell(m_xDoc->GetDocShell());
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         OSL_ENSURE(pDocShell, "no SwDocShell");
                         if (pDocShell) {
                             uno::Reference<document::XDocumentPropertiesSupplier> xDPS(
@@ -1359,11 +1588,19 @@ void SwHTMLParser::NextToken( int nToken )
             SvKeyValueIterator *pHTTPHeader = 0;
             if( IsNewDoc() )
             {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 SwDocShell *pDocSh = pDoc->GetDocShell();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                SwDocShell *pDocSh = m_xDoc->GetDocShell();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 if( pDocSh )
                     pHTTPHeader = pDocSh->GetHeaderAttributes();
             }
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             SwDocShell *pDocShell(pDoc->GetDocShell());
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            SwDocShell *pDocShell(m_xDoc->GetDocShell());
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             OSL_ENSURE(pDocShell, "no SwDocShell");
             if (pDocShell)
             {
@@ -1474,25 +1711,45 @@ void SwHTMLParser::NextToken( int nToken )
             }
             // progress bar
             if( !GetMedium() || !GetMedium()->IsRemote() )
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 ::SetProgressState( rInput.Tell(), pDoc->GetDocShell() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                ::SetProgressState( rInput.Tell(), m_xDoc->GetDocShell() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         }
         break;
 
     case HTML_NONBREAKSPACE:
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->getIDocumentContentOperations().InsertString( *pPam, OUString(CHAR_HARDBLANK) );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->getIDocumentContentOperations().InsertString( *pPam, OUString(CHAR_HARDBLANK) );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         break;
 
     case HTML_SOFTHYPH:
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->getIDocumentContentOperations().InsertString( *pPam, OUString(CHAR_SOFTHYPHEN) );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->getIDocumentContentOperations().InsertString( *pPam, OUString(CHAR_SOFTHYPHEN) );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         break;
 
     case HTML_LINEFEEDCHAR:
         if( pPam->GetPoint()->nContent.GetIndex() )
             AppendTxtNode();
 #ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( !pTable && !pDoc->IsInHeaderFooter( pPam->GetPoint()->nNode ) )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        if( !pTable && !m_xDoc->IsInHeaderFooter( pPam->GetPoint()->nNode ) )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 #else	// NO_LIBO_HTML_FIELD_LEAK_FIX
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if (!m_xTable && !pDoc->IsInHeaderFooter(pPam->GetPoint()->nNode))
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        if (!m_xTable && !m_xDoc->IsInHeaderFooter(pPam->GetPoint()->nNode))
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 #endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
         {
             NewAttr( &aAttrTab.pBreak, SvxFmtBreakItem(SVX_BREAK_PAGE_BEFORE, RES_BREAK) );
@@ -1527,7 +1784,11 @@ void SwHTMLParser::NextToken( int nToken )
         {
             if( !bDocInitalized )
                 DocumentDetected();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pDoc->getIDocumentContentOperations().InsertString( *pPam, aToken );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            m_xDoc->getIDocumentContentOperations().InsertString( *pPam, aToken );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
             // if there are temporary paragraph attributes and the
             // paragraph isn't empty then the paragraph attributes
@@ -1547,7 +1808,11 @@ void SwHTMLParser::NextToken( int nToken )
         InsertImage();
         // if only the parser references the doc, we can break and set
         // an error code
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( 1 == pDoc->getReferenceCount() )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        if( 1 == m_xDoc->getReferenceCount() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         {
             eState = SVPAR_ERROR;
         }
@@ -1747,7 +2012,11 @@ void SwHTMLParser::NextToken( int nToken )
             if( !m_xTable && (IsNewDoc() || !pPam->GetNode().FindTableNode()) &&
 #endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
                 (pPam->GetPoint()->nNode.GetIndex() >
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                             pDoc->GetNodes().GetEndOfExtras().GetIndex() ||
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                            m_xDoc->GetNodes().GetEndOfExtras().GetIndex() ||
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 !pPam->GetNode().FindFootnoteStartNode() ) )
             {
                 if ( nParaCnt < 5 )
@@ -1974,7 +2243,11 @@ void SwHTMLParser::NextToken( int nToken )
                 if( HTML_O_DIR == rOption.GetToken() )
                 {
                     const OUString& rDir = rOption.GetString();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     SfxItemSet aItemSet( pDoc->GetAttrPool(),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    SfxItemSet aItemSet( m_xDoc->GetAttrPool(),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                          pCSS1Parser->GetWhichMap() );
                     SvxCSS1PropertyInfo aPropInfo;
                     OUString aDummy;
@@ -2212,7 +2485,11 @@ bool SwHTMLParser::AppendTxtNode( SwHTMLAppendMode eMode, bool bUpdateNum )
 
     SwPosition aOldPos( *pPam->GetPoint() );
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     bool bRet = pDoc->getIDocumentContentOperations().AppendTxtNode( *pPam->GetPoint() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    bool bRet = m_xDoc->getIDocumentContentOperations().AppendTxtNode( *pPam->GetPoint() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     // Zeichen-Attribute aufspalten und ggf keine setzen, die ueber den
     // ganzen Absatz gesetzt sind
@@ -2480,7 +2757,11 @@ void SwHTMLParser::AddParSpace()
 
     sal_uLong nNdIdx = pPam->GetPoint()->nNode.GetIndex() - 1;
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwTxtNode *pTxtNode = pDoc->GetNodes()[nNdIdx]->GetTxtNode();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwTxtNode *pTxtNode = m_xDoc->GetNodes()[nNdIdx]->GetTxtNode();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( !pTxtNode )
         return;
 
@@ -2570,8 +2851,13 @@ void SwHTMLParser::Show()
 
     Application::Reschedule();
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( ( pDoc->GetDocShell() && pDoc->GetDocShell()->IsAbortingImport() )
         || 1 == pDoc->getReferenceCount() )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    if( ( m_xDoc->GetDocShell() && m_xDoc->GetDocShell()->IsAbortingImport() )
+        || 1 == m_xDoc->getReferenceCount() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
         // wurde der Import vom SFX abgebrochen?
         eState = SVPAR_ERROR;
@@ -2602,15 +2888,24 @@ void SwHTMLParser::ShowStatline()
     // Laufbalkenanzeige
     if( !GetMedium() || !GetMedium()->IsRemote() )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         ::SetProgressState( rInput.Tell(), pDoc->GetDocShell() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        ::SetProgressState( rInput.Tell(), m_xDoc->GetDocShell() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         CheckActionViewShell();
     }
     else
     {
         Application::Reschedule();
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( ( pDoc->GetDocShell() && pDoc->GetDocShell()->IsAbortingImport() )
             || 1 == pDoc->getReferenceCount() )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        if( ( m_xDoc->GetDocShell() && m_xDoc->GetDocShell()->IsAbortingImport() )
+            || 1 == m_xDoc->getReferenceCount() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             // wurde der Import vom SFX abgebrochen?
             eState = SVPAR_ERROR;
 
@@ -2632,7 +2927,11 @@ SwViewShell *SwHTMLParser::CallStartAction( SwViewShell *pVSh, bool bChkPtr )
 #if OSL_DEBUG_LEVEL > 0
         SwViewShell *pOldVSh = pVSh;
 #endif
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pVSh = pDoc->getIDocumentLayoutAccess().GetCurrentViewShell();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        pVSh = m_xDoc->getIDocumentLayoutAccess().GetCurrentViewShell();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 #if OSL_DEBUG_LEVEL > 0
         OSL_ENSURE( !pVSh || !pOldVSh || pOldVSh == pVSh, "CallStartAction: Wer hat die SwViewShell ausgetauscht?" );
         if( pOldVSh && !pVSh )
@@ -2656,7 +2955,11 @@ SwViewShell *SwHTMLParser::CallEndAction( bool bChkAction, bool bChkPtr )
 {
     if( bChkPtr )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SwViewShell *pVSh = pDoc->getIDocumentLayoutAccess().GetCurrentViewShell();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SwViewShell *pVSh = m_xDoc->getIDocumentLayoutAccess().GetCurrentViewShell();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         OSL_ENSURE( !pVSh || pActionViewShell == pVSh,
                 "CallEndAction: Wer hat die SwViewShell ausgetauscht?" );
 #if OSL_DEBUG_LEVEL > 0
@@ -2708,7 +3011,11 @@ SwViewShell *SwHTMLParser::CallEndAction( bool bChkAction, bool bChkPtr )
 
     // sollte der Parser der Letzte sein, der das Doc haelt, dann kann
     // man hier abbrechen und einen Fehler setzen.
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( 1 == pDoc->getReferenceCount() )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    if( 1 == m_xDoc->getReferenceCount() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
         eState = SVPAR_ERROR;
     }
@@ -2721,7 +3028,11 @@ SwViewShell *SwHTMLParser::CallEndAction( bool bChkAction, bool bChkPtr )
 
 SwViewShell *SwHTMLParser::CheckActionViewShell()
 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwViewShell *pVSh = pDoc->getIDocumentLayoutAccess().GetCurrentViewShell();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwViewShell *pVSh = m_xDoc->getIDocumentLayoutAccess().GetCurrentViewShell();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     OSL_ENSURE( !pVSh || pActionViewShell == pVSh,
             "CheckActionViewShell: Wer hat die SwViewShell ausgetauscht?" );
 #if OSL_DEBUG_LEVEL > 0
@@ -2778,7 +3089,11 @@ void SwHTMLParser::_SetAttr( bool bChkEnd, bool bBeforeTable,
             // Attribiute im Content-Bereich duerfen nicht gesetzt
             // werden, wenn wir in einem Sonderbereich stehen, aber
             // umgekekehrt schon.
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             sal_uLong nEndOfIcons = pDoc->GetNodes().GetEndOfExtras().GetIndex();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            sal_uLong nEndOfIcons = m_xDoc->GetNodes().GetEndOfExtras().GetIndex();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             bSetAttr = nEndParaIdx < rEndIdx.GetIndex() ||
                        rEndIdx.GetIndex() > nEndOfIcons ||
                        nEndParaIdx <= nEndOfIcons;
@@ -2824,7 +3139,11 @@ void SwHTMLParser::_SetAttr( bool bChkEnd, bool bBeforeTable,
                         pAttr = pPrev;
                         continue; //break;
                     }
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     pCNd = pDoc->GetNodes().GoNext( &(pAttr->nSttPara) );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    pCNd = m_xDoc->GetNodes().GoNext( &(pAttr->nSttPara) );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     if( pCNd )
                         pAttr->nSttCntnt = 0;
                     else
@@ -2850,7 +3169,11 @@ void SwHTMLParser::_SetAttr( bool bChkEnd, bool bBeforeTable,
                     pCNd = pAttr->nEndPara.GetNode().GetCntntNode();
                     if( !pCNd )
                     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         pCNd = pDoc->GetNodes().GoPrevious( &(pAttr->nEndPara) );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                        pCNd = m_xDoc->GetNodes().GoPrevious( &(pAttr->nEndPara) );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         if( pCNd )
                             pAttr->nEndCntnt = pCNd->Len();
                         else
@@ -2909,7 +3232,11 @@ void SwHTMLParser::_SetAttr( bool bChkEnd, bool bBeforeTable,
                 case RES_FLTR_BOOKMARK: // insert bookmark
                     {
                         const OUString sName( ((SfxStringItem*)pAttr->pItem)->GetValue() );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         IDocumentMarkAccess* const pMarkAccess = pDoc->getIDocumentMarkAccess();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                        IDocumentMarkAccess* const pMarkAccess = m_xDoc->getIDocumentMarkAccess();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         IDocumentMarkAccess::const_iterator_t ppBkmk = pMarkAccess->findMark( sName );
                         if( ppBkmk != pMarkAccess->getAllMarksEnd() &&
                             ppBkmk->get()->GetMarkStart() == *pAttrPam->GetPoint() )
@@ -2974,7 +3301,11 @@ void SwHTMLParser::_SetAttr( bool bChkEnd, bool bBeforeTable,
                         eJumpTo = JUMPTO_NONE;
                     }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     pDoc->getIDocumentContentOperations().InsertPoolItem( *pAttrPam, *pAttr->pItem, nsSetAttrMode::SETATTR_DONTREPLACE );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    m_xDoc->getIDocumentContentOperations().InsertPoolItem( *pAttrPam, *pAttr->pItem, nsSetAttrMode::SETATTR_DONTREPLACE );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 }
                 pAttrPam->DeleteMark();
 
@@ -3002,7 +3333,11 @@ void SwHTMLParser::_SetAttr( bool bChkEnd, bool bBeforeTable,
         }
         else
         {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             sal_uLong nEndOfIcons = pDoc->GetNodes().GetEndOfExtras().GetIndex();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            sal_uLong nEndOfIcons = m_xDoc->GetNodes().GetEndOfExtras().GetIndex();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             bMoveFly = nFlyParaIdx < rEndIdx.GetIndex() ||
                        rEndIdx.GetIndex() > nEndOfIcons ||
                        nFlyParaIdx <= nEndOfIcons;
@@ -3056,7 +3391,11 @@ void SwHTMLParser::_SetAttr( bool bChkEnd, bool bBeforeTable,
             pAttrPam->Move( fnMoveBackward );
         }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->getIDocumentContentOperations().InsertPoolItem( *pAttrPam, *pAttr->pItem, 0 );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->getIDocumentContentOperations().InsertPoolItem( *pAttrPam, *pAttr->pItem, 0 );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         aFields.pop_front();
         delete pAttr;
@@ -3365,12 +3704,25 @@ void SwHTMLParser::SplitAttrTab( _HTMLAttrTable& rNewAttrTab,
     {
         sal_uLong nOldEnd = nEndIdx.GetIndex();
         sal_uLong nTmpIdx;
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( ( nTmpIdx = pDoc->GetNodes().GetEndOfExtras().GetIndex()) >= nOldEnd ||
             ( nTmpIdx = pDoc->GetNodes().GetEndOfAutotext().GetIndex()) >= nOldEnd )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        if( ( nTmpIdx = m_xDoc->GetNodes().GetEndOfExtras().GetIndex()) >= nOldEnd ||
+            ( nTmpIdx = m_xDoc->GetNodes().GetEndOfAutotext().GetIndex()) >= nOldEnd )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             nTmpIdx = pDoc->GetNodes().GetEndOfInserts().GetIndex();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            nTmpIdx = m_xDoc->GetNodes().GetEndOfInserts().GetIndex();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         }
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SwCntntNode* pCNd = pDoc->GetNodes().GoPrevious(&nEndIdx);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SwCntntNode* pCNd = m_xDoc->GetNodes().GoPrevious(&nEndIdx);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         // keine Attribute setzen, wenn der PaM aus dem Content-Bereich
         // herausgeschoben wurde.
@@ -3554,7 +3906,11 @@ void SwHTMLParser::NewStdAttr( int nToken )
     // Styles parsen
     if( HasStyleOptions( aStyle, aId, aClass, &aLang, &aDir ) )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxCSS1PropertyInfo aPropInfo;
 
         if( ParseStyleOptions( aStyle, aId, aClass, aItemSet, aPropInfo, &aLang, &aDir ) )
@@ -3621,7 +3977,11 @@ void SwHTMLParser::NewStdAttr( int nToken,
     // Styles parsen
     if( HasStyleOptions( aStyle, aId, aClass, &aLang, &aDir ) )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxCSS1PropertyInfo aPropInfo;
 
         aItemSet.Put( rItem );
@@ -3747,7 +4107,11 @@ void SwHTMLParser::NewBasefontAttr()
     // Styles parsen
     if( HasStyleOptions( aStyle, aId, aClass, &aLang, &aDir ) )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxCSS1PropertyInfo aPropInfo;
 
         //CJK has different defaults
@@ -3930,7 +4294,11 @@ void SwHTMLParser::NewFontAttr( int nToken )
     if( !aFace.isEmpty() && !pCSS1Parser->IsIgnoreFontFamily() )
     {
         const FontList *pFList = 0;
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SwDocShell *pDocSh = pDoc->GetDocShell();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SwDocShell *pDocSh = m_xDoc->GetDocShell();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( pDocSh )
         {
             const SvxFontListItem *pFListItem =
@@ -3978,7 +4346,11 @@ void SwHTMLParser::NewFontAttr( int nToken )
     // Styles parsen
     if( HasStyleOptions( aStyle, aId, aClass, &aLang, &aDir ) )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxCSS1PropertyInfo aPropInfo;
 
         if( nFontHeight )
@@ -4141,7 +4513,11 @@ void SwHTMLParser::NewPara()
     // keine der CSS1-Properties der Klasse hart formatiert werden muss!!!)
     if( HasStyleOptions( aStyle, aId, aEmptyOUStr, &aLang, &aDir ) )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxCSS1PropertyInfo aPropInfo;
 
         if( ParseStyleOptions( aStyle, aId, aEmptyOUStr, aItemSet, aPropInfo, &aLang, &aDir ) )
@@ -4317,7 +4693,11 @@ void SwHTMLParser::NewHeading( int nToken )
     // Styles parsen (zu Class siehe auch NewPara)
     if( HasStyleOptions( aStyle, aId, aEmptyOUStr, &aLang, &aDir ) )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxCSS1PropertyInfo aPropInfo;
 
         if( ParseStyleOptions( aStyle, aId, aEmptyOUStr, aItemSet, aPropInfo, &aLang, &aDir ) )
@@ -4497,7 +4877,11 @@ void SwHTMLParser::NewTxtFmtColl( int nToken, sal_uInt16 nColl )
     // Styles parsen (zu Class siehe auch NewPara)
     if( HasStyleOptions( aStyle, aId, aEmptyOUStr, &aLang, &aDir ) )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxCSS1PropertyInfo aPropInfo;
 
         if( ParseStyleOptions( aStyle, aId, aEmptyOUStr, aItemSet, aPropInfo, &aLang, &aDir ) )
@@ -4681,7 +5065,11 @@ void SwHTMLParser::NewDefList()
     // Styles parsen
     if( HasStyleOptions( aStyle, aId, aClass, &aLang, &aDir ) )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxCSS1PropertyInfo aPropInfo;
 
         if( ParseStyleOptions( aStyle, aId, aClass, aItemSet, aPropInfo, &aLang, &aDir ) )
@@ -4870,7 +5258,11 @@ bool SwHTMLParser::HasCurrentParaFlys( bool bNoSurroundOnly,
     // sonst:               Der Absatz enthaelt irgendeinen Rahmen
     SwNodeIndex& rNodeIdx = pPam->GetPoint()->nNode;
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     const SwFrmFmts& rFrmFmtTbl = *pDoc->GetSpzFrmFmts();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    const SwFrmFmts& rFrmFmtTbl = *m_xDoc->GetSpzFrmFmts();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     bool bFound = false;
     for ( sal_uInt16 i=0; i<rFrmFmtTbl.size(); i++ )
@@ -5130,7 +5522,11 @@ void SwHTMLParser::SetTxtCollAttrs( _HTMLAttrContext *pContext )
     }
 
     // Die Vorlage setzen
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     pDoc->SetTxtFmtColl( *pPam, pCollToSet );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    m_xDoc->SetTxtFmtColl( *pPam, pCollToSet );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     // ggf. noch den Absatz-Einzug korrigieren
     const SvxLRSpaceItem& rLRItem = pCollToSet->GetLRSpace();
@@ -5208,7 +5604,11 @@ void SwHTMLParser::NewCharFmt( int nToken )
     // Styles parsen (zu Class siehe auch NewPara)
     if( HasStyleOptions( aStyle, aId, aEmptyOUStr, &aLang, &aDir ) )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxCSS1PropertyInfo aPropInfo;
 
         if( ParseStyleOptions( aStyle, aId, aEmptyOUStr, aItemSet, aPropInfo, &aLang, &aDir ) )
@@ -5299,7 +5699,11 @@ void SwHTMLParser::InsertSpacer()
             // einen leeren Textrahmen anlegen
 
             // den Itemset holen
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             SfxItemSet aFrmSet( pDoc->GetAttrPool(),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            SfxItemSet aFrmSet( m_xDoc->GetAttrPool(),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                 RES_FRMATR_BEGIN, RES_FRMATR_END-1 );
             if( !IsNewDoc() )
                 Reader::ResetFrmFmtAttrs( aFrmSet );
@@ -5310,7 +5714,11 @@ void SwHTMLParser::InsertSpacer()
             // und noch die Groesse des Rahmens
             Size aDfltSz( MINFLY, MINFLY );
             Size aSpace( 0, 0 );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             SfxItemSet aDummyItemSet( pDoc->GetAttrPool(),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            SfxItemSet aDummyItemSet( m_xDoc->GetAttrPool(),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                  pCSS1Parser->GetWhichMap() );
             SvxCSS1PropertyInfo aDummyPropInfo;
 
@@ -5326,7 +5734,11 @@ void SwHTMLParser::InsertSpacer()
             // der Rahmen anlegen
             RndStdIds eAnchorId =
                 ((const SwFmtAnchor &)aFrmSet.Get(RES_ANCHOR)).GetAnchorId();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             SwFrmFmt *pFlyFmt = pDoc->MakeFlySection( eAnchorId,
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            SwFrmFmt *pFlyFmt = m_xDoc->MakeFlySection( eAnchorId,
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                             pPam->GetPoint(), &aFrmSet );
             // Ggf Frames anlegen und auto-geb. Rahmen registrieren
             RegisterFlyFrm( pFlyFmt );
@@ -5351,7 +5763,11 @@ void SwHTMLParser::InsertSpacer()
 
                 SetAttr();  // noch offene Absatz-Attribute setzen
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 pTxtNode = pDoc->GetNodes()[pPam->GetPoint()->nNode.GetIndex()-1]
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                pTxtNode = m_xDoc->GetNodes()[pPam->GetPoint()->nNode.GetIndex()-1]
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                ->GetTxtNode();
 
                 // Wenn der Abstz davor kein Txtenode ist, dann wird jetzt
@@ -5410,7 +5826,11 @@ void SwHTMLParser::InsertSpacer()
             {
                 NewAttr( &aAttrTab.pKerning, SvxKerningItem( (short)nSize, RES_CHRATR_KERNING ) );
                 OUString aTmp( ' ' );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 pDoc->getIDocumentContentOperations().InsertString( *pPam, aTmp );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                m_xDoc->getIDocumentContentOperations().InsertString( *pPam, aTmp );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 EndAttr( aAttrTab.pKerning );
             }
         }
@@ -5431,7 +5851,11 @@ sal_uInt16 SwHTMLParser::ToTwips( sal_uInt16 nPixel ) const
 
 SwTwips SwHTMLParser::GetCurrentBrowseWidth()
 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     const SwTwips nWidth = SwHTMLTableLayout::GetBrowseWidth( *pDoc );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    const SwTwips nWidth = SwHTMLTableLayout::GetBrowseWidth( *m_xDoc );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( nWidth )
         return nWidth;
 
@@ -5534,7 +5958,11 @@ void SwHTMLParser::InsertLineBreak()
         SwTxtNode* pTxtNd = rNodeIdx.GetNode().GetTxtNode();
         if( pTxtNd )
         {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             const SwFrmFmts& rFrmFmtTbl = *pDoc->GetSpzFrmFmts();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            const SwFrmFmts& rFrmFmtTbl = *m_xDoc->GetSpzFrmFmts();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
             for( sal_uInt16 i=0; i<rFrmFmtTbl.size(); i++ )
             {
@@ -5583,7 +6011,11 @@ void SwHTMLParser::InsertLineBreak()
     bool bBreakItem = false;
     if( HasStyleOptions( aStyle, aId, aClass ) )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxCSS1PropertyInfo aPropInfo;
 
         if( ParseStyleOptions( aStyle, aId, aClass, aItemSet, aPropInfo ) )
@@ -5609,7 +6041,11 @@ void SwHTMLParser::InsertLineBreak()
         // wenn kein CLEAR ausgefuehrt werden sollte oder konnte, wird
         // ein Zeilenumbruch eingef?gt
         OUString sTmp( (sal_Unicode)0x0a );   // make the Mac happy :-)
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->getIDocumentContentOperations().InsertString( *pPam, sTmp );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->getIDocumentContentOperations().InsertString( *pPam, sTmp );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     }
     else if( pPam->GetPoint()->nContent.GetIndex() )
     {
@@ -5879,7 +6315,11 @@ void SwHTMLParser::ParseMoreMetaOptions()
     sText.append("\">");
 
     SwPostItField aPostItFld(
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         (SwPostItFieldType*)pDoc->getIDocumentFieldsAccess().GetSysFldType( RES_POSTITFLD ),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        (SwPostItFieldType*)m_xDoc->getIDocumentFieldsAccess().GetSysFldType( RES_POSTITFLD ),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         aEmptyOUStr, sText.makeStringAndClear(), aEmptyOUStr, aEmptyOUStr, DateTime( DateTime::SYSTEM ) );
     SwFmtFld aFmtFld( aPostItFld );
     InsertAttr( aFmtFld );

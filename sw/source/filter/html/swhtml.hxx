@@ -398,7 +398,11 @@ class SwHTMLParser : public SfxHTMLParser, public SwClient
     SwHTMLNumRuleInfo *pNumRuleInfo;
     SwPendingStack  *pPendStack;
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwDoc           *pDoc;
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    rtl::Reference<SwDoc> m_xDoc;
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwPaM           *pPam;      // SwPosition duerfte doch reichen, oder ??
     SwViewShell       *pActionViewShell;  // SwViewShell, an der das StartAction
                                         // gerufen wurde.

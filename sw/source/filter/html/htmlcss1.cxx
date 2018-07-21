@@ -1725,8 +1725,13 @@ bool SwHTMLParser::FileDownload( const OUString& rURL,
     }
 
     // wurde abgebrochen?
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( ( pDoc->GetDocShell() && pDoc->GetDocShell()->IsAbortingImport() )
         || 1 == pDoc->getReferenceCount() )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    if( ( m_xDoc->GetDocShell() && m_xDoc->GetDocShell()->IsAbortingImport() )
+        || 1 == m_xDoc->getReferenceCount() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
         // wurde der Import vom SFX abgebrochen?
         eState = SVPAR_ERROR;
