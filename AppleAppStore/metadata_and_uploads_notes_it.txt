@@ -23,21 +23,15 @@ Due ingegneri di NeoOffice hanno creato NeoOffice nel 2003, quando hanno fatto O
 What's New in this Version:
 Prima di acquistare NeoOffice, per favore clicca sul link «Supporto per NeoOffice» e leggi le note d'installazione.
 
-This version of NeoOffice fixes the following bugs:
-• NeoOffice would sometimes crash when opening and saving Impress documents
-• NeoOffice would sometimes crash when scrolling in a Calc document
-• NeoOffice would sometimes crash when quitting
-• NeoOffice would display a native save dialog that would default to saving to a .odt, .ods, or .odp file when saving .docx, .xlsx, and .pptx files
-• NeoOffice would sometimes crash when copying a table in a Writer document
-• NeoOffice would sometimes crash when building the list of available fonts for display in a popup window
-• NeoOffice would sometimes crash when loading a chart with the GL3D style in a Calc document
-• NeoOffice would sometimes crash when closing an Impress document
-• NeoOffice would sometimes crash when selecting the Format > Paragraph menu item in an Impress document
-• NeoOffice would fail to draw native buttons and listboxes when running on macOS Mojava
-• NeoOffice would would draw partially transparent system colors incorrectly when running on macOS Mojava
-• NeoOffice would sometimes crash when saving Writer documents
-• NeoOffice would sometimes crash when editing the page header or footer in Calc documents
-• NeoOffice would crash due to LibreOffice bug #90357
+This version adds a new, experimental feature for NeoOffice users running macOS 10.14 Mojave: Dark Mode display. To enable this feature, uncheck the NeoOffice > Mac Options > Disable Dark Mode menu item.
+
+This version of NeoOffice also fixes the following bugs:
+• NeoOffice would draw some native controls (such as checkboxes, radio buttons, comboboxes, and listboxes) as active when NeoOffice was not the active application when running on macOS Mojave
+• NeoOffice would use white as the background color for toolbars and popup menus instead of light gray when running on macOS Mojave
+• NeoOffice would crash due to LibreOffice bugs #94225, #103359, #103788, and #108124
+• NeoOffice would sometimes crash when displaying the Navigator window in Writer
+• NeoOffice would sometimes crash when starting a slideshow in Impress
+• NeoOffice would sometimes crash when opening or editing Writer documents
 • NeoOffice would leak memory due to several LibreOffice bugs
 
 
