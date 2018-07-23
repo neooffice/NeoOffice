@@ -23,9 +23,7 @@ Two engineers created NeoOffice in 2003 when they made OpenOffice run natively o
 What's New in this Version:
 Before you buy NeoOffice, please click on the »Support til NeoOffice« link and read the installation notes.
 
-This version adds a new, experimental feature for NeoOffice users running macOS 10.14 Mojave: Dark Mode display. To enable this feature, uncheck the NeoOffice > Mac Options > Disable Dark Mode menu item.
-
-This version of NeoOffice also fixes the following bugs:
+This version of NeoOffice fixes the following bugs:
 • NeoOffice would draw some native controls (such as checkboxes, radio buttons, comboboxes, and listboxes) as active when NeoOffice was not the active application when running on macOS Mojave
 • NeoOffice would use white as the background color for toolbars and popup menus instead of light gray when running on macOS Mojave
 • NeoOffice would crash due to LibreOffice bugs #94225, #103359, #103788, and #108124
