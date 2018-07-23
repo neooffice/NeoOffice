@@ -24,8 +24,6 @@ What's New in this Version:
 Voordat u koopt NeoOffice, alsjeblieft klik op de "NeoOffice Ondersteuning" link en lees de installatienotities.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would draw some native controls (such as checkboxes, radio buttons, comboboxes, and listboxes) as active when NeoOffice was not the active application when running on macOS Mojave
-• NeoOffice would use white as the background color for toolbars and popup menus instead of light gray when running on macOS Mojave
 • NeoOffice would crash due to LibreOffice bugs #94225, #103359, #103788, and #108124
 • NeoOffice would sometimes crash when displaying the Navigator window in Writer
 • NeoOffice would sometimes crash when starting a slideshow in Impress
