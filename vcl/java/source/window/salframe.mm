@@ -4475,15 +4475,10 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 		aStyleSettings.SetMenuColor( aBackColor );
 		aStyleSettings.SetMenuBarColor( aBackColor );
 
-		if( aBackColor == COL_LIGHTGRAY )
-		{
-			aStyleSettings.SetCheckedColor( Color( 0xCC, 0xCC, 0xCC ) );
-		}
-		else
-		{
-			Color aColor2 = aStyleSettings.GetLightColor();
-			aStyleSettings.SetCheckedColor( Color( (sal_uInt8)( ( (sal_uInt16)aBackColor.GetRed() + (sal_uInt16)aColor2.GetRed() ) / 2 ), (sal_uInt8)( ( (sal_uInt16)aBackColor.GetGreen() + (sal_uInt16)aColor2.GetGreen() ) / 2 ), (sal_uInt8)( ( (sal_uInt16)aBackColor.GetBlue() + (sal_uInt16)aColor2.GetBlue() ) / 2 ) ) );
-		}
+		Color aLightColor = aStyleSettings.GetLightColor();
+		if( aLightColor.GetColorError( aBackColor ) < 0x4 )
+			aLightColor.Invert();
+		aStyleSettings.SetCheckedColor( Color( (sal_uInt8)( ( (sal_uInt16)aBackColor.GetRed() + (sal_uInt16)aLightColor.GetRed() ) / 2 ), (sal_uInt8)( ( (sal_uInt16)aBackColor.GetGreen() + (sal_uInt16)aLightColor.GetGreen() ) / 2 ), (sal_uInt8)( ( (sal_uInt16)aBackColor.GetBlue() + (sal_uInt16)aLightColor.GetBlue() ) / 2 ) ) );
 	}
 
 	if ( pVCLShadowColor )
