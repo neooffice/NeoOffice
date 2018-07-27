@@ -79,6 +79,7 @@ static SalColor *pVCLSelectedMenuItemColor = NULL;
 static SalColor *pVCLSelectedMenuItemTextColor = NULL;
 static SalColor *pVCLShadowColor = NULL;
 static SalColor *pVCLWindowColor = NULL;
+static SalColor *pVCLLinkColor = NULL;
 static long nVCLScrollbarSize = 0;
 
 static ::osl::Mutex aSystemColorsMutex;
@@ -229,6 +230,8 @@ static void HandleSystemColorsChangedRequest()
 	if ( class_getClassMethod( [NSColor class], @selector(controlShadowColor) ) )
 		SetSalColorFromNSColor( [NSColor controlShadowColor], &pVCLShadowColor );
 	SetSalColorFromNSColor( [NSColor windowBackgroundColor], &pVCLWindowColor );
+	if ( class_getClassMethod( [NSColor class], @selector(linkColor) ) )
+		SetSalColorFromNSColor( [NSColor linkColor], &pVCLLinkColor );
 
 	// Always use NSScrollerStyleLegacy scrollbars as we always draw scrollbars 
 	// with that style in vcl/java/source/gdi/salnativewidgets.mm
@@ -4493,7 +4496,11 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 		aStyleSettings.SetActiveTabColor( aWindowColor );
 		aStyleSettings.SetFieldColor( aWindowColor );
 		aStyleSettings.SetWindowColor( aWindowColor );
+		aStyleSettings.SetWorkspaceColor( aWindowColor );
 	}
+
+	if ( pVCLLinkColor )
+		aStyleSettings.SetLinkColor( Color( *pVCLLinkColor ) );
 
 	// Mnemonics is needed for our code in OutputDevice::ImplDrawMnemonicLine()
 	aStyleSettings.SetOptions( aStyleSettings.GetOptions() & ~STYLE_OPTION_NOMNEMONICS );

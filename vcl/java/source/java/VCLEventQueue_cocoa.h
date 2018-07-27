@@ -50,6 +50,7 @@
 @end
 
 @interface NSColor (VCLColor)
++ (NSColor *)linkColor;
 + (NSColor *)selectedContentBackgroundColor;
 + (NSColor *)separatorColor;
 + (NSColor *)unemphasizedSelectedContentBackgroundColor;
