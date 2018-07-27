@@ -3461,6 +3461,8 @@ void JavaSalFrame::UpdateLayer()
 		mpGraphics->setLayer( maFrameLayer );
 		if ( mbFullScreen )
 			mpGraphics->setBackgroundColor( 0xff000000 );
+		else if ( pVCLWindowColor )
+			mpGraphics->setBackgroundColor( *pVCLWindowColor );
 		else
 			mpGraphics->setBackgroundColor( 0xffffffff );
 
