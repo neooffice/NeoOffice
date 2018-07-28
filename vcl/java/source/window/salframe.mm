@@ -2347,6 +2347,15 @@ void ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bShowOnlyMenus )
 
 // -----------------------------------------------------------------------
 
+// Note: this must not be static as the symbol will be loaded by the svtools
+// module
+sal_Bool UseDarkModeColors()
+{
+	return JavaSalFrame::UseDarkModeColors();
+}
+
+// -----------------------------------------------------------------------
+
 void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 {
 	if ( !pView )

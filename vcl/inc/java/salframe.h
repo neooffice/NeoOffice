@@ -186,5 +186,8 @@ public:
 // module
 extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool IsShowOnlyMenusWindow( vcl::Window *pWindow );
 extern "C" SAL_DLLPUBLIC_EXPORT void ShowOnlyMenusForWindow( vcl::Window *pWindow, sal_Bool bShowOnlyMenus );
+// Note: this must not be static as the symbol will be loaded by the svtools
+// module
+extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool UseDarkModeColors();
 
 #endif // _SV_SALFRAME_H
