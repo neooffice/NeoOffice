@@ -482,6 +482,17 @@ Color ColorConfig::GetDefaultColor(ColorConfigEntry eEntry)
         0x259D9D, // SQLPARAMTER
         0x969696,// SQLCOMMENT
     };
+#if defined USE_JAVA && defined MACOSX
+    // Load libvcl and invoke the UseDarkModeColors function
+    sal_Bool bUseDarkModeColors = sal_False;
+    if (!pUseDarkModeColors)
+    {
+        if (aModule.load("libvcllo.dylib"))
+            pUseDarkModeColors = (UseDarkModeColors_Type *)aModule.getSymbol( "UseDarkModeColors");
+    }
+    if (pUseDarkModeColors)
+        bUseDarkModeColors = pUseDarkModeColors();
+#endif	// USE_JAVA && MACOSX
     Color aRet;
     switch(eEntry)
     {
@@ -500,18 +511,18 @@ Color ColorConfig::GetDefaultColor(ColorConfigEntry eEntry)
         default:
             aRet = aAutoColors[eEntry];
 #if defined USE_JAVA && defined MACOSX
-            // Load libvcl and invoke the UseDarkModeColors function
-            if ( !pUseDarkModeColors )
-            {
-                if ( aModule.load( "libvcllo.dylib" ) )
-                    pUseDarkModeColors = (UseDarkModeColors_Type *)aModule.getSymbol( "UseDarkModeColors" );
-            }
-            if ( pUseDarkModeColors && pUseDarkModeColors() )
+            if (bUseDarkModeColors )
                 aRet.Invert();
 #endif	// USE_JAVA && MACOSX
     }
     // fdo#71511: if in autodetected a11y HC mode, do pull background color from theme
+#if defined USE_JAVA && defined MACOSX
+    // Make Writer default table border color and Impress default outline text
+    // color visible in macOS Dark Mode by using high contrast colors
+    if(bUseDarkModeColors || (m_pImpl &&  m_pImpl->GetAutoDetectSystemHC()))
+#else	// USE_JAVA && MACOSX
     if(m_pImpl &&  m_pImpl->GetAutoDetectSystemHC())
+#endif	// USE_JAVA && MACOSX
     {
         switch(eEntry)
         {
