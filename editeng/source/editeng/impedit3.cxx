@@ -83,6 +83,16 @@
 
 #ifdef USE_JAVA
 #include <svtools/optionsdrawinglayer.hxx>
+
+#ifdef MACOSX
+
+typedef sal_Bool UseDarkModeColors_Type();
+static ::osl::Module aModule;
+
+static UseDarkModeColors_Type *pUseDarkModeColors = NULL;
+
+#endif	// MACOSX
+
 #endif	// USE_JAVA
 
 using namespace ::com::sun::star;
@@ -2672,6 +2682,18 @@ void ImpEditEngine::SeekCursor( ContentNode* pNode, sal_Int32 nPos, SvxFont& rFo
 
     if ( aStatus.DoNotUseColors() )
     {
+#if defined USE_JAVA && defined MACOSX
+        // Load libvcl and invoke the UseDarkModeColors function
+        if (!pUseDarkModeColors)
+        {
+            if (aModule.load("libvcllo.dylib"))
+                pUseDarkModeColors = (UseDarkModeColors_Type *)aModule.getSymbol( "UseDarkModeColors");
+        }
+
+        if (pUseDarkModeColors && pUseDarkModeColors())
+            rFont.SetColor( /* rColorItem.GetValue() */ COL_WHITE );
+        else
+#endif	// USE_JAVA && MACOSX
         rFont.SetColor( /* rColorItem.GetValue() */ COL_BLACK );
     }
 
