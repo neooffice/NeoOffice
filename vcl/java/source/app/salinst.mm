@@ -1566,14 +1566,17 @@ void JavaSalEvent::dispatch()
 					pSVData->maCtrlData.mpCheckImgList = NULL;
 				}
 
-				// Force update of window settings
-				pSVData->maAppData.mbSettingsInit = sal_False;
-				AllSettings aSettings;
-				Application::MergeSystemSettings( aSettings );
+				// Dispatch a settings changed event as it appears to more
+				// thoroughly propagate system color changes when changing
+				// to or from macOS Dark Mode
+				JavaSalFrame *pFrame = pSalData->maFrameList.front();
+				if ( pFrame )
+					pFrame->CallCallback( SALEVENT_SETTINGSCHANGED, NULL );
+
+				// Invalidate all top level windows just to be safe
 				Window *pWindow = Application::GetFirstTopLevelWindow();
 				while ( pWindow )
 				{
-					pWindow->UpdateSettings( aSettings, sal_True );
 					pWindow->Invalidate();
 					pWindow = Application::GetNextTopLevelWindow( pWindow );
 				}
