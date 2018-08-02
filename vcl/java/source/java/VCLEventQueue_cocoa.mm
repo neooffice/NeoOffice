@@ -596,8 +596,8 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 		NSAppearance *pAppearance = nil;
 		NSNumber *pDisableDarkMode = [pDefaults objectForKey:pDisableDarkModePref];
 
-		// Dark mode is disabled by default
-		if ( pDisableDarkMode && [pDisableDarkMode isKindOfClass:[NSNumber class]] && ![pDisableDarkMode boolValue] )
+		// Dark mode is enabled by default
+		if ( !pDisableDarkMode || ![pDisableDarkMode isKindOfClass:[NSNumber class]] || ![pDisableDarkMode boolValue] )
 		{
 			NSString *pStyle = [pDefaults stringForKey:pAppleInterfaceStylePref];
 			NSRange aRange = NSMakeRange( NSNotFound, 0 );

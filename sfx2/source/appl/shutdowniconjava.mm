@@ -869,7 +869,7 @@ extern "C" void java_init_systray()
 		{
 			aDesc = SfxResId( STR_DISABLEDARKMODE );
 			aDesc = aDesc.replaceAll( "~", "" );
-			aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableDarkMode" ), kCFBooleanTrue, YES, YES ) );
+			aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableDarkMode" ), kCFBooleanTrue, NO ) );
 		}
 	}
 
