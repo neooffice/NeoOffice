@@ -51,8 +51,7 @@ static sal_Bool UseDarkModeColors()
     if (pUseDarkModeColors)
         bRet = pUseDarkModeColors();
 
-    //return bRet;
-    return sal_True;
+    return bRet;
 }
 
 #endif	// USE_JAVA && MACOSX
