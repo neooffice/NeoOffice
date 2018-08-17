@@ -4493,8 +4493,10 @@ Color ImpEditEngine::GetAutoColor() const
     Color aColor = const_cast<ImpEditEngine*>(this)->GetColorConfig().GetColorValue( svtools::FONTCOLOR ).nColor;
 
 #if defined USE_JAVA && defined MACOSX
-    // Fix wrong text color when printing in macOS Dark Mode
-    if ( GetBackgroundColor() != COL_AUTO || UseDarkModeColors() )
+    // Fix wrong text color when printing in macOS Dark Mode. Fix wrong text
+    // color in Writer and Calc comments by not adjusting color if there is an
+    // active view.
+    if ( GetBackgroundColor() != COL_AUTO || ( !pActiveView && UseDarkModeColors() ) )
 #else	// USE_JAVA && MACOSX
     if ( GetBackgroundColor() != COL_AUTO )
 #endif	// USE_JAVA && MACOSX
