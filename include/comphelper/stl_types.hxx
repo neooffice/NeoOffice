@@ -21,9 +21,9 @@
 
 #include <sal/config.h>
 
-#ifndef NO_OOO_4_4_INCLUDES
+#ifndef NO_LIBO_4_4_COMPHELPER_STL_TYPES
 #include <stack>
-#endif	// NO_OOO_4_4_INCLUDES
+#endif	// !NO_LIBO_4_4_COMPHELPER_STL_TYPES
 
 #include <math.h>
 #include <functional>
@@ -33,6 +33,9 @@
 #include <rtl/ustrbuf.hxx>
 #include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/beans/PropertyValue.hpp>
+#ifndef NO_LIBO_4_4_COMPHELPER_STL_TYPES
+#include <com/sun/star/beans/NamedValue.hpp>
+#endif	// !NO_LIBO_4_4_COMPHELPER_STL_TYPES
 
 namespace comphelper
 {
@@ -78,6 +81,21 @@ public:
         return !!(lhs.Name == rhs);
     }
 };
+
+#ifndef NO_LIBO_4_4_COMPHELPER_STL_TYPES
+
+class TNamedValueEqualFunctor : public ::std::binary_function< ::com::sun::star::beans::NamedValue,OUString,bool>
+{
+public:
+    TNamedValueEqualFunctor()
+    {}
+    bool operator() (const ::com::sun::star::beans::NamedValue& lhs, const OUString& rhs) const
+    {
+        return !!(lhs.Name == rhs);
+    }
+};
+
+#endif	// !NO_LIBO_4_4_COMPHELPER_STL_TYPES
 
 /// by-value less functor for std::set<std::unique_ptr<T>>
 template<class T> struct UniquePtrValueLess
