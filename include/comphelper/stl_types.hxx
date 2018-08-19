@@ -21,6 +21,10 @@
 
 #include <sal/config.h>
 
+#ifndef NO_OOO_4_4_INCLUDES
+#include <stack>
+#endif	// NO_OOO_4_4_INCLUDES
+
 #include <math.h>
 #include <functional>
 #include <memory>
