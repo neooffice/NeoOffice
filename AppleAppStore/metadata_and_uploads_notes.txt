@@ -23,12 +23,8 @@ Two engineers created NeoOffice in 2003 when they made OpenOffice run natively o
 What's New in this Version:
 Before you buy NeoOffice, please click on the "NeoOffice Support" link and read the installation notes.
 
-This version of NeoOffice fixes the following bugs:
-• NeoOffice would crash due to LibreOffice bugs #94225, #103359, #103788, and #108124
-• NeoOffice would sometimes crash when displaying the Navigator window in Writer
-• NeoOffice would sometimes crash when starting a slideshow in Impress
-• NeoOffice would sometimes crash when opening or editing Writer documents
-• NeoOffice would leak memory due to several LibreOffice bugs
+This version of NeoOffice fixes the following bug:
+• NeoOffice would sometimes crash when printing a lengthy document in Writer
 
 
 Keywords:
