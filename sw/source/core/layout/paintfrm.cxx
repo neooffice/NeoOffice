@@ -113,6 +113,32 @@
 #define COL_NOTES_SIDEPANE_BORDER           RGB_COLORDATA(200,200,200)
 #define COL_NOTES_SIDEPANE_SCROLLAREA       RGB_COLORDATA(230,230,220)
 
+#if defined USE_JAVA && defined MACOSX
+
+typedef sal_Bool UseDarkModeColors_Type();
+
+static ::osl::Module aModule;
+static UseDarkModeColors_Type *pUseDarkModeColors = NULL;
+
+static sal_Bool UseDarkModeColors()
+{
+    sal_Bool bRet = sal_False;
+
+    // Load libvcl and invoke the UseDarkModeColors function
+    if (!pUseDarkModeColors)
+    {
+        if (aModule.load("libvcllo.dylib"))
+            pUseDarkModeColors = (UseDarkModeColors_Type *)aModule.getSymbol( "UseDarkModeColors");
+    }
+
+    if (pUseDarkModeColors)
+        bRet = pUseDarkModeColors();
+
+    return bRet;
+}
+
+#endif	// USE_JAVA && MACOSX
+
 using namespace ::editeng;
 using namespace ::com::sun::star;
 using ::drawinglayer::primitive2d::BorderLinePrimitive2D;
@@ -6375,6 +6401,14 @@ static void lcl_paintBitmapExToRect(OutputDevice *pOut, const Point& aPoint, con
             _pViewShell->GetOut()->DrawRect(Rectangle(Point(aPageRect.Left()-pMgr->GetSidebarBorderWidth(),aPageRect.Top()),Size(pMgr->GetSidebarBorderWidth(),aPageRect.Height())))    ;
             if (Application::GetSettings().GetStyleSettings().GetHighContrastMode() )
                 _pViewShell->GetOut()->SetFillColor(COL_BLACK);
+#if defined USE_JAVA && defined MACOSX
+            else if (UseDarkModeColors())
+            {
+                Color aFillColor(COL_NOTES_SIDEPANE);
+                aFillColor.Invert();
+                _pViewShell->GetOut()->SetFillColor(aFillColor);
+            }
+#endif	// USE_JAVA && MACOSX
             else
                 _pViewShell->GetOut()->SetFillColor(COL_NOTES_SIDEPANE);
             _pViewShell->GetOut()->DrawRect(Rectangle(Point(aPageRect.Left()-pMgr->GetSidebarWidth()-pMgr->GetSidebarBorderWidth(),aPageRect.Top()),Size(pMgr->GetSidebarWidth(),aPageRect.Height())))  ;
@@ -6386,6 +6420,14 @@ static void lcl_paintBitmapExToRect(OutputDevice *pOut, const Point& aPoint, con
             _pViewShell->GetOut()->DrawRect(aSidebarBorder.SVRect());
             if (Application::GetSettings().GetStyleSettings().GetHighContrastMode() )
                 _pViewShell->GetOut()->SetFillColor(COL_BLACK);
+#if defined USE_JAVA && defined MACOSX
+            else if (UseDarkModeColors())
+            {
+                Color aFillColor(COL_NOTES_SIDEPANE);
+                aFillColor.Invert();
+                _pViewShell->GetOut()->SetFillColor(aFillColor);
+            }
+#endif	// USE_JAVA && MACOSX
             else
                 _pViewShell->GetOut()->SetFillColor(COL_NOTES_SIDEPANE);
             SwRect aSidebar(Point(aPageRect.Right()+pMgr->GetSidebarBorderWidth(),aPageRect.Top()),Size(pMgr->GetSidebarWidth(),aPageRect.Height()));
