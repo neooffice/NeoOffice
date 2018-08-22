@@ -117,7 +117,7 @@ String STR_DISABLERESUMESUPPORT
 
 String STR_DISABLEDARKMODE
 {
-	Text [ de ] = "Deaktiviere Dunkemodus";
+	Text [ de ] = "Deaktiviere Dunkelmodus";
 	Text [ en-US ] = "Disable Dark Mode";
 	Text [ es ] = "Deshabilitar modo oscuro";
 	Text [ fr ] = "Désactiver Mode foncé";
