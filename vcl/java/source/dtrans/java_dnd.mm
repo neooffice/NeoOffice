@@ -319,6 +319,16 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 							{
 								[pDraggingItem autorelease];
 
+								// Fix hanging on macOS Mojave by ensuring that
+								// the drag frame is not empty
+								NSRect aDraggingFrame = pDraggingItem.draggingFrame;
+								if ( NSIsEmptyRect( aDraggingFrame ) )
+								{
+								    aDraggingFrame.size.width = 1;
+								    aDraggingFrame.size.height = 1;
+								    pDraggingItem.draggingFrame = aDraggingFrame;
+								}
+
 								pDraggingSession = [mpSource beginDraggingSessionWithItems:[NSArray arrayWithObject:pDraggingItem] event:mpLastMouseEvent source:mpDraggingSource];
 							}
 						}
