@@ -596,14 +596,18 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 		if ( pMenuItem )
 		{
 			// This selector should not have been called if there is no key
-			// code or command key modifier. Also, the only modifiers allowed
-			// are command and shift keys.
-			NSInteger nTag = [pTag unsignedShortValue] & ( KEY_CODE_MASK | KEY_MOD1 | KEY_SHIFT );
+			// code or command key modifier
+			NSInteger nTag = [pTag unsignedShortValue] & ( KEY_CODE_MASK | KEY_MOD1 | KEY_MOD2 | KEY_MOD3 | KEY_SHIFT );
 			if ( nTag & KEY_CODE_MASK && nTag & KEY_MOD1 )
 			{
 				NSUInteger nMask = NSEventModifierFlagCommand;
+    			if ( nTag & KEY_MOD2 )
+					nMask |= NSEventModifierFlagOption;
+    			if ( nTag & KEY_MOD3 )
+					nMask |= NSEventModifierFlagControl;
     			if ( nTag & KEY_SHIFT )
 					nMask |= NSEventModifierFlagShift;
+
 				[pMenuItem setKeyEquivalent:pKeyText];
 				[pMenuItem setKeyEquivalentModifierMask:nMask];
 				[pMenuItem setTag:nTag];
@@ -1175,7 +1179,7 @@ void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, cons
 	// input manager and document editing actions. Also, exclude standard
 	// shortcuts in the application menu.
 	OUString aKeyEquivalent;
-	if ( mpMenu && rKeyCode.IsMod1() && ! ( rKeyCode.GetCode() == KEY_H && !rKeyCode.IsMod3() && !rKeyCode.IsShift() ) && ! ( rKeyCode.GetCode() == KEY_Q && !rKeyCode.IsMod2() && !rKeyCode.IsMod3() ) && ! ( rKeyCode.GetCode() == KEY_COMMA && !rKeyCode.IsMod2() && !rKeyCode.IsMod3() && !rKeyCode.IsShift() ) )
+	if ( mpMenu && rKeyCode.IsMod1() && ! ( rKeyCode.GetCode() == KEY_H && !rKeyCode.IsMod3() && !rKeyCode.IsShift() ) && ! ( rKeyCode.GetCode() == KEY_Q && !rKeyCode.IsMod2() && !rKeyCode.IsMod3() && !rKeyCode.IsShift() ) && ! ( rKeyCode.GetCode() == KEY_COMMA && !rKeyCode.IsMod2() && !rKeyCode.IsMod3() && !rKeyCode.IsShift() ) )
 	{
 		aKeyEquivalent = JavaSalFrame::ConvertVCLKeyCode( rKeyCode.GetCode(), true );
 		if ( !rKeyCode.IsShift() )
