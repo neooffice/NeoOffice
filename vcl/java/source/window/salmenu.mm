@@ -1170,16 +1170,12 @@ void JavaSalMenu::SetItemText( unsigned /* nPos */, SalMenuItem* pSalMenuItem, c
 
 void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const vcl::KeyCode& rKeyCode, const OUString& /* rKeyName */ )
 {
-	// Only pass through keycodes that are using the command key as Java will
-	// always add a command key to any shortcut. Also, ignore any shortcuts
-	// that use modifiers other than the shift key as Java only allows adding
-	// of the shift key and Alt and Control modifiers are likely to conflict
-	// with standard Mac key actions. Also, exclude standard shortcuts
-	// in the application menu. Also, fix bug 2886 by not allowing any
-	// shortcuts with a space as Java will disable a tab and the shortcut
-	// be unusable.
+	// Only pass through keycodes that are using the command key as of the
+	// Alt and Control modifiers are likely to conflict with standard Mac key
+	// input manager and document editing actions. Also, exclude standard
+	// shortcuts in the application menu.
 	OUString aKeyEquivalent;
-	if ( mpMenu && rKeyCode.IsMod1() && !rKeyCode.IsMod2() && !rKeyCode.IsMod3() && ! ( rKeyCode.GetCode() == KEY_H && !rKeyCode.IsShift() ) && rKeyCode.GetCode() != KEY_Q && rKeyCode.GetCode() != KEY_COMMA && rKeyCode.GetCode() != KEY_SPACE )
+	if ( mpMenu && rKeyCode.IsMod1() && ! ( rKeyCode.GetCode() == KEY_H && !rKeyCode.IsMod3() && !rKeyCode.IsShift() ) && ! ( rKeyCode.GetCode() == KEY_Q && !rKeyCode.IsMod2() && !rKeyCode.IsMod3() ) && ! ( rKeyCode.GetCode() == KEY_COMMA && !rKeyCode.IsMod2() && !rKeyCode.IsMod3() && !rKeyCode.IsShift() ) )
 	{
 		aKeyEquivalent = JavaSalFrame::ConvertVCLKeyCode( rKeyCode.GetCode(), true );
 		if ( !rKeyCode.IsShift() )
