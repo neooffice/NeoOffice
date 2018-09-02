@@ -1206,7 +1206,7 @@ static NSUInteger nMouseMask = 0;
 	// Fix bug 1751 by responding to Command-c, Command-v, and Command-x keys
 	// for non-Java windows. Fix bug 3561 by responding to Command-w keys for
 	// closable non-Java windows.
-	if ( !bRet && bCommandKeyPressed && [self isVisible] && ![self isKindOfClass:[VCLPanel class]] && ![self isKindOfClass:[VCLWindow class]] )
+	if ( !bRet && bCommandKeyPressed && [self isVisible] && ![self isKindOfClass:[VCLPanel class]] && ![self isKindOfClass:[VCLWindow class]] && ! ( [pEvent modifierFlags] & ( NSEventModifierFlagOption | NSEventModifierFlagControl ) ) )
 	{
 		NSApplication *pApp = [NSApplication sharedApplication];
 		NSString *pChars = [pEvent charactersIgnoringModifiers];
