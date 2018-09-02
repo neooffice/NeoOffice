@@ -128,7 +128,8 @@ static bool ImplAdjustTextColor( SfxItemSet &rItemSet, bool bInvertFillColorIfDa
             Color aFillColor = pFillColorItem->GetColorValue();
             if ( aFillColor != COL_AUTO  )
             {
-                if ( bInvertFillColorIfDarkMode && UseDarkModeColors() )
+                bool bUseDarkModeColors = UseDarkModeColors();
+                if ( bUseDarkModeColors && bInvertFillColorIfDarkMode )
                      aFillColor.Invert();
 
                 Color aColor = SC_MOD()->GetColorConfig().GetColorValue( svtools::FONTCOLOR ).nColor;
@@ -136,7 +137,7 @@ static bool ImplAdjustTextColor( SfxItemSet &rItemSet, bool bInvertFillColorIfDa
                     rItemSet.Put( SvxColorItem( Color( COL_WHITE ), EE_CHAR_COLOR ) );
                 else if ( aFillColor.IsBright() && aColor.IsBright() )
                     rItemSet.Put( SvxColorItem( Color( COL_BLACK ), EE_CHAR_COLOR ) );
-                else if ( UseDarkModeColors() && !aFillColor.IsDark() && !aColor.IsDark() && !aFillColor.IsBright() && !aColor.IsBright() )
+                else if ( bUseDarkModeColors && !aFillColor.IsDark() && !aColor.IsDark() && !aFillColor.IsBright() && !aColor.IsBright() )
                     rItemSet.Put( SvxColorItem( Color( COL_GRAY ), EE_CHAR_COLOR ) );
 
                 bRet = true;

@@ -4496,7 +4496,8 @@ Color ImpEditEngine::GetAutoColor() const
     // Fix wrong text color when printing in macOS Dark Mode. Fix wrong text
     // color in Writer and Calc comments by not adjusting color if there is an
     // active view.
-    if ( GetBackgroundColor() != COL_AUTO || ( !pActiveView && UseDarkModeColors() ) )
+    bool bUseDarkModeColors = UseDarkModeColors();
+    if ( GetBackgroundColor() != COL_AUTO || ( !pActiveView && bUseDarkModeColors ) )
 #else	// USE_JAVA && MACOSX
     if ( GetBackgroundColor() != COL_AUTO )
 #endif	// USE_JAVA && MACOSX
@@ -4506,7 +4507,7 @@ Color ImpEditEngine::GetAutoColor() const
         else if ( GetBackgroundColor().IsBright() && aColor.IsBright() )
             aColor = COL_BLACK;
 #if defined USE_JAVA && defined MACOSX
-        else if ( UseDarkModeColors() && !GetBackgroundColor().IsDark() && !aColor.IsDark() && !GetBackgroundColor().IsBright() && !aColor.IsBright() )
+        else if ( bUseDarkModeColors && !GetBackgroundColor().IsDark() && !aColor.IsDark() && !GetBackgroundColor().IsBright() && !aColor.IsBright() )
             aColor = COL_GRAY;
 #endif	// USE_JAVA && MACOSX
     }
