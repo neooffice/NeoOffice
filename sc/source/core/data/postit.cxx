@@ -15,6 +15,13 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified September 2018 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <memory>
@@ -50,6 +57,15 @@
 
 #include <utility>
 
+#ifdef USE_JAVA
+
+#include <editeng/colritem.hxx>
+#include <svtools/colorcfg.hxx>
+
+#include "scmod.hxx"
+
+#endif	// USE_JAVA
+
 using namespace com::sun::star;
 
 namespace {
@@ -61,6 +77,44 @@ const long SC_NOTECAPTION_CELLDIST          =   600;    /// Default distance of 
 const long SC_NOTECAPTION_OFFSET_Y          = -1500;    /// Default Y offset of note captions to top border of anchor cell.
 const long SC_NOTECAPTION_OFFSET_X          =  1500;    /// Default X offset of note captions to left border of anchor cell.
 const long SC_NOTECAPTION_BORDERDIST_TEMP   =   100;    /// Distance of temporary note captions to visible sheet area.
+
+#ifdef USE_JAVA
+
+// The LibreOffice code saves the note's background color even when it is set
+// to COL_AUTO but does not save the text color if it is COL_AUTO. This causes
+// black text when editing a note created in macOS Dark Mode. To fix this
+// problem, set the text color to a reasonable color if the background color
+// is already set.
+static void ImplAdjustTextColor( SfxItemSet &rItemSet )
+{
+    // The LibreOffice code saves the note's background color even when it is
+    // set to COL_AUTO but does not save the text color if it is COL_AUTO. This
+    // causes black text when editing a note created in macOS Dark Mode. To fix
+    // this problem, set the text color to a reasonable color if the background
+    // color is already set.
+    SFX_ITEMSET_GET( rItemSet, pColorItem, SvxColorItem, EE_CHAR_COLOR, false );
+    if ( !pColorItem )
+    {
+        SFX_ITEMSET_GET( rItemSet, pFillColorItem, XFillColorItem, XATTR_FILLCOLOR, false );
+        if ( pFillColorItem )
+        {
+            // The following code should match the logic in the
+            // ImpEditEngine::GetAutoColor() method in
+            // editeng/source/editeng/impedit3.cxx
+            const Color &rFillColor = pFillColorItem->GetColorValue();
+            if ( rFillColor != COL_AUTO  )
+            {
+                Color aColor = SC_MOD()->GetColorConfig().GetColorValue( svtools::FONTCOLOR ).nColor;
+                if ( rFillColor.IsDark() && aColor.IsDark() )
+                    rItemSet.Put( SvxColorItem( Color( COL_WHITE ), EE_CHAR_COLOR ) );
+                else if ( rFillColor.IsBright() && aColor.IsBright() )
+                    rItemSet.Put( SvxColorItem( Color( COL_BLACK ), EE_CHAR_COLOR ) );
+            }
+        }
+    }
+}
+
+#endif	// USE_JAVA
 
 /** Static helper functions for caption objects. */
 class ScCaptionUtil
@@ -87,6 +141,12 @@ void ScCaptionUtil::SetCaptionLayer( SdrCaptionObj& rCaption, bool bShown )
 
 void ScCaptionUtil::SetBasicCaptionSettings( SdrCaptionObj& rCaption, bool bShown )
 {
+#ifdef USE_JAVA
+    SfxItemSet aItemSet = rCaption.GetMergedItemSet();
+    ImplAdjustTextColor( aItemSet );
+    rCaption.SetMergedItemSet( aItemSet );
+#endif	// USE_JAVA
+
     SetCaptionLayer( rCaption, bShown );
     rCaption.SetFixedTail();
     rCaption.SetSpecialTextBoxShadow();
@@ -1326,6 +1386,9 @@ ScPostIt* ScNoteUtil::CreateNoteFromObjectData(
     ScNoteData aNoteData( bShown );
     aNoteData.mxInitData.reset( new ScCaptionInitData );
     ScCaptionInitData& rInitData = *aNoteData.mxInitData;
+#ifdef USE_JAVA
+    ImplAdjustTextColor( *pItemSet );
+#endif	// USE_JAVA
     rInitData.mxItemSet.reset( pItemSet );
     rInitData.mxOutlinerObj.reset( pOutlinerObj );
 
