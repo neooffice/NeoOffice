@@ -1217,6 +1217,34 @@ static NSUInteger nMouseMask = 0;
 				}
 				return YES;
 			}
+			else if ( pChars && [pChars isEqualToString:@"w"] )
+			{
+				// Fix bug 3562 by not allowing utility windows to be minimized
+				if ( [pEvent modifierFlags] & NSEventModifierFlagOption )
+				{
+					NSApplication *pApp = [NSApplication sharedApplication];
+					if ( pApp )
+					{
+						NSArray *pWindows = [pApp windows];
+						if ( pWindows )
+						{
+							NSUInteger nCount = [pWindows count];
+							NSUInteger i = 0;
+							for ( ; i < nCount; i++ )
+							{
+								NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
+								if ( pWindow && [pWindow isVisible] )
+									[pWindow performSelector:@selector(performClose:) withObject:self afterDelay:0];
+							}
+						}
+					}
+				}
+				else if ( [self isVisible] )
+				{
+					[self performSelector:@selector(performClose:) withObject:self afterDelay:0];
+				}
+				return YES;
+			}
 		}
 	}
 
