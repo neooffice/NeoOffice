@@ -57,14 +57,36 @@
 
 #include <utility>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #include <editeng/colritem.hxx>
 #include <svtools/colorcfg.hxx>
 
 #include "scmod.hxx"
 
-#endif	// USE_JAVA
+typedef sal_Bool UseDarkModeColors_Type();
+
+static ::osl::Module aModule;
+static UseDarkModeColors_Type *pUseDarkModeColors = NULL;
+
+static sal_Bool UseDarkModeColors()
+{
+    sal_Bool bRet = sal_False;
+
+    // Load libvcl and invoke the UseDarkModeColors function
+    if (!pUseDarkModeColors)
+    {
+        if (aModule.load("libvcllo.dylib"))
+            pUseDarkModeColors = (UseDarkModeColors_Type *)aModule.getSymbol( "UseDarkModeColors");
+    }
+
+    if (pUseDarkModeColors)
+        bRet = pUseDarkModeColors();
+
+    return bRet;
+}
+
+#endif	// USE_JAVA && MACOSX
 
 using namespace com::sun::star;
 
@@ -85,8 +107,10 @@ const long SC_NOTECAPTION_BORDERDIST_TEMP   =   100;    /// Distance of temporar
 // black text when editing a note created in macOS Dark Mode. To fix this
 // problem, set the text color to a reasonable color if the background color
 // is already set.
-static void ImplAdjustTextColor( SfxItemSet &rItemSet )
+static bool ImplAdjustTextColor( SfxItemSet &rItemSet, bool bInvertFillColorIfDarkMode )
 {
+	bool bRet = false;
+
     // The LibreOffice code saves the note's background color even when it is
     // set to COL_AUTO but does not save the text color if it is COL_AUTO. This
     // causes black text when editing a note created in macOS Dark Mode. To fix
@@ -101,17 +125,26 @@ static void ImplAdjustTextColor( SfxItemSet &rItemSet )
             // The following code should match the logic in the
             // ImpEditEngine::GetAutoColor() method in
             // editeng/source/editeng/impedit3.cxx
-            const Color &rFillColor = pFillColorItem->GetColorValue();
-            if ( rFillColor != COL_AUTO  )
+            Color aFillColor = pFillColorItem->GetColorValue();
+            if ( aFillColor != COL_AUTO  )
             {
+                if ( bInvertFillColorIfDarkMode && UseDarkModeColors() )
+                     aFillColor.Invert();
+
                 Color aColor = SC_MOD()->GetColorConfig().GetColorValue( svtools::FONTCOLOR ).nColor;
-                if ( rFillColor.IsDark() && aColor.IsDark() )
+                if ( aFillColor.IsDark() && aColor.IsDark() )
                     rItemSet.Put( SvxColorItem( Color( COL_WHITE ), EE_CHAR_COLOR ) );
-                else if ( rFillColor.IsBright() && aColor.IsBright() )
+                else if ( aFillColor.IsBright() && aColor.IsBright() )
                     rItemSet.Put( SvxColorItem( Color( COL_BLACK ), EE_CHAR_COLOR ) );
+                else if ( UseDarkModeColors() && !aFillColor.IsDark() && !aColor.IsDark() && !aFillColor.IsBright() && !aColor.IsBright() )
+                    rItemSet.Put( SvxColorItem( Color( COL_GRAY ), EE_CHAR_COLOR ) );
+
+                bRet = true;
             }
         }
     }
+
+    return bRet;
 }
 
 #endif	// USE_JAVA
@@ -143,8 +176,8 @@ void ScCaptionUtil::SetBasicCaptionSettings( SdrCaptionObj& rCaption, bool bShow
 {
 #ifdef USE_JAVA
     SfxItemSet aItemSet = rCaption.GetMergedItemSet();
-    ImplAdjustTextColor( aItemSet );
-    rCaption.SetMergedItemSet( aItemSet );
+    if ( ImplAdjustTextColor( aItemSet, true ) )
+        rCaption.SetMergedItemSet( aItemSet );
 #endif	// USE_JAVA
 
     SetCaptionLayer( rCaption, bShown );
@@ -1387,7 +1420,7 @@ ScPostIt* ScNoteUtil::CreateNoteFromObjectData(
     aNoteData.mxInitData.reset( new ScCaptionInitData );
     ScCaptionInitData& rInitData = *aNoteData.mxInitData;
 #ifdef USE_JAVA
-    ImplAdjustTextColor( *pItemSet );
+    ImplAdjustTextColor( *pItemSet, false );
 #endif	// USE_JAVA
     rInitData.mxItemSet.reset( pItemSet );
     rInitData.mxOutlinerObj.reset( pOutlinerObj );

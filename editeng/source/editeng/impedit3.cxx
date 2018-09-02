@@ -4505,6 +4505,10 @@ Color ImpEditEngine::GetAutoColor() const
             aColor = COL_WHITE;
         else if ( GetBackgroundColor().IsBright() && aColor.IsBright() )
             aColor = COL_BLACK;
+#if defined USE_JAVA && defined MACOSX
+        else if ( UseDarkModeColors() && !GetBackgroundColor().IsDark() && !aColor.IsDark() && !GetBackgroundColor().IsBright() && !aColor.IsBright() )
+            aColor = COL_GRAY;
+#endif	// USE_JAVA && MACOSX
     }
 
     return aColor;
