@@ -1186,14 +1186,35 @@ static NSUInteger nMouseMask = 0;
 
 		// Implement the standard window minimization behavior with the
 		// Command-m event
-		if ( [self styleMask] & NSWindowStyleMaskMiniaturizable )
+		if ( ! ( [pEvent modifierFlags] & NSEventModifierFlagControl ) )
 		{
 			NSString *pChars = [pEvent charactersIgnoringModifiers];
 			if ( pChars && [pChars isEqualToString:@"m"] )
 			{
 				// Fix bug 3562 by not allowing utility windows to be minimized
-				if ( ! ( [self styleMask] & NSWindowStyleMaskUtilityWindow ) )
+				if ( [pEvent modifierFlags] & NSEventModifierFlagOption )
+				{
+					NSApplication *pApp = [NSApplication sharedApplication];
+					if ( pApp )
+					{
+						NSArray *pWindows = [pApp windows];
+						if ( pWindows )
+						{
+							NSUInteger nCount = [pWindows count];
+							NSUInteger i = 0;
+							for ( ; i < nCount; i++ )
+							{
+								NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
+								if ( pWindow && [pWindow styleMask] & NSWindowStyleMaskMiniaturizable && ! ( [pWindow styleMask] & NSWindowStyleMaskUtilityWindow ) )
+									[pWindow miniaturize:self];
+							}
+						}
+					}
+				}
+				else if ( [self styleMask] & NSWindowStyleMaskMiniaturizable && ! ( [self styleMask] & NSWindowStyleMaskUtilityWindow ) )
+				{
 					[self miniaturize:self];
+				}
 				return YES;
 			}
 		}
