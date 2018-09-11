@@ -9,6 +9,10 @@ Subtitle:
 LibreOffice + Mode foncé
 
 
+Privacy Policy URL:
+https://www.neooffice.org/neojava/faq.php#privacy
+
+
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
