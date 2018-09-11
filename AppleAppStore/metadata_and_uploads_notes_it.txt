@@ -36,7 +36,7 @@ This version of NeoOffice fixes the following bugs:
 
 
 Promotional Text:
-NeoOffice ora supporta la Modalità scura di macOS!
+NeoOffice ora supporta la Modalità scura nativa!
 
 
 Keywords:

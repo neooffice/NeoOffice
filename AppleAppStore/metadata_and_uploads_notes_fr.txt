@@ -36,7 +36,7 @@ This version of NeoOffice fixes the following bugs:
 
 
 Promotional Text:
-NeoOffice prend désormais en charge le Mode foncé de macOS !
+NeoOffice prend désormais en charge le Mode foncé natif !
 
 
 Keywords:

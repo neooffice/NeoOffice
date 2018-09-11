@@ -36,7 +36,7 @@ This version of NeoOffice fixes the following bugs:
 
 
 Promotional Text:
-NeoOffice unterstützt jetzt den macOS Dunkelmodus!
+NeoOffice unterstützt jetzt den nativen Dunkelmodus!
 
 
 Keywords:
