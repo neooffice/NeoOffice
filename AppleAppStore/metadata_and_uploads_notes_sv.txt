@@ -4,6 +4,11 @@ Metadata and Uploads - Swedish
 App Name: Note that the App Name is only one word so that it will be first in the search list before any other "NeoOffice *" apps when searching in the Apple Mac App Store:
 NeoOffice
 
+
+Subtitle:
+LibreOffice + Dark Mode
+
+
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
@@ -11,6 +16,7 @@ NeoOffice is an office suite for Mac that is based on OpenOffice and LibreOffice
 
 Two engineers created NeoOffice in 2003 when they made OpenOffice run natively on OS X for the first time. Since then, the NeoOffice engineers have continually added improvements to NeoOffice that you will not find in OpenOffice or LibreOffice such as:
 
+• Native Dark Mode
 • NeoOffice > Open at Launch menu to open Calc or Impress instead of Writer at launch
 • File > Browse All Versions menu to restore previous versions of your documents
 • Native file locking to safely edit files in iCloud Drive, Dropbox, or network drives

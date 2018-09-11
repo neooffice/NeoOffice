@@ -4,6 +4,11 @@ Metadata and Uploads - Italian
 App Name: Note that the App Name is only one word so that it will be first in the search list before any other "NeoOffice *" apps when searching in the Apple Mac App Store:
 NeoOffice
 
+
+Subtitle:
+LibreOffice + Modalità scura
+
+
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
@@ -11,6 +16,7 @@ NeoOffice è una suite per ufficio per Mac che si basa su OpenOffice e LibreOffi
 
 Due ingegneri di NeoOffice hanno creato NeoOffice nel 2003, quando hanno fatto OpenOffice funzionare in modo nativo su OS X per la prima volta. Da allora, gli ingegneri di NeoOffice hanno continuamente aggiunti miglioramenti a NeoOffice che non troverete in OpenOffice o LibreOffice come ad esempio:
 
+• Modalità scura nativa
 • Menu di NeoOffice > Apri al inizio per aprire Calc o Impress, invece di Writer al inizio
 • Menu di File > Sfoglia tutte le versioni per ripristinare le versioni precedenti dei voi documenti
 • Blocco nativo dei file per modificare in modo sicuro i file in iCloud Drive, Dropbox o dischi di rete

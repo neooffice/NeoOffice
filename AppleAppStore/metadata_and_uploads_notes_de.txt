@@ -4,6 +4,11 @@ Metadata and Uploads - German
 App Name: Note that the App Name is only one word so that it will be first in the search list before any other "NeoOffice *" apps when searching in the Apple Mac App Store:
 NeoOffice
 
+
+Subtitle:
+LibreOffice + Dunkelmodus
+
+
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
@@ -11,6 +16,7 @@ NeoOffice ist ein Office-Paket für Mac, die auf OpenOffice und LibreOffice basi
 
 Zwei Ingenieure erstellten NeoOffice im Jahr 2003, als sie OpenOffice auf OS X zum ersten Mal native ausführbar machten. Seitdem haben die NeoOffice-Ingenieure immer wieder Verbesserungen zu NeoOffice hinzugefügt, dass Sie nicht in OpenOffice oder LibreOffice finden werden, wie zum Beispiel:
 
+• Nativer Dunkelmodus
 • NeoOffice > Beim Starten Öffnen Menü für die Öffnung von Calc oder Impress anstelle Writer beim Start
 • Datei > Alle Versionen durchsuchen Menü für die Wiederherstellung von vorherigen Versionen von Ihrer Dokumente
 • Native Datei-Sperrung für die sichere Bearbeitung von Dateien in iCloud Drive, Dropbox oder Netzlaufwerke

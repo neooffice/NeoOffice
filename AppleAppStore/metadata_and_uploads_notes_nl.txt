@@ -4,6 +4,11 @@ Metadata and Uploads - Dutch
 App Name: Note that the App Name is only one word so that it will be first in the search list before any other "NeoOffice *" apps when searching in the Apple Mac App Store:
 NeoOffice
 
+
+Subtitle:
+LibreOffice + Donkere modus
+
+
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
@@ -11,6 +16,7 @@ NeoOffice is een kantoorsoftware voor Mac, dat is gebaseerd op OpenOffice en Lib
 
 Twee ontwikkelaars gecreëerd NeoOffice in 2003 toen ze OpenOffice draaien native op OS X voor de errste keer. Sindsdien hebben de NeoOffice ingenieurs voortdurend verbeteringen toegevoegd aan NeoOffice dat u niet vindt in OpenOffice of LibreOffice, zoals:
 
+• Native Donkere modus
 • NeoOffice > Toon bij starten menu voor de opening van Calc of Impress in plaats van Writer bij opstarten
 • Bestand > Blader door alle versies menu voor de restauratie van vorige versies van uw documenten
 • Mac-eigen bestandsblokkering voor het veilig bewerken van bestanden in iCloud Drive, Dropbox of netwerkschijven

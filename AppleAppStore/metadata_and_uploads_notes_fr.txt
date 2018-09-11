@@ -4,6 +4,11 @@ Metadata and Uploads - French
 App Name: Note that the App Name is only one word so that it will be first in the search list before any other "NeoOffice *" apps when searching in the Apple Mac App Store:
 NeoOffice
 
+
+Subtitle:
+LibreOffice + Mode foncé
+
+
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
@@ -11,6 +16,7 @@ NeoOffice est une suite bureautique pour Mac qui est basé sur OpenOffice et Lib
 
 Deux ingénieurs ont créé NeoOffice en 2003 quand ils ont fait OpenOffice fonctionner en mode natif sur OS X pour la première fois. Depuis lors, les ingénieurs de NeoOffice ont continuellement ajouté des améliorations à NeoOffice que vous ne trouverez pas dans OpenOffice ou LibreOffice, comme :
 
+• Mode foncé natif
 • Menu de NeoOffice > Document par défault pour ouvrir de Calc ou Impress au lieu de Writer au démarrage
 • Menu de Fichier > Parcourir toutes les versions pour restaurer les versions précédentes de vos documents
 • Verrouillage natif des fichiers pour modifier sans encombre des fichiers dans iCloud Drive, Dropbox ou lecteurs réseau
