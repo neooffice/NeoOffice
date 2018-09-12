@@ -40,5 +40,5 @@ sal_Bool Application_canSave()
 
 sal_Bool Application_canUseJava()
 {
-	return sal_False;
+	return sal_True;
 }

@@ -2,7 +2,7 @@
 # the UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
 PRODUCT_NAME=NeoOffice
 PRODUCT_DIR_NAME=NeoOfficeSecureEdition
-PRODUCT_DIR_NAME2=$(PRODUCT_DIR_NAME)
+PRODUCT_DIR_NAME2=$(PRODUCT_NAME)
 PRODUCT_DIR_NAME3=$(PRODUCT_NAME)
 PRODUCT_DOMAIN=org.neooffice
 PRODUCT_TRADEMARKED_NAME=NeoOffice®

@@ -46,9 +46,16 @@ String STR_SAVEDISABLEDCANNOTSAVE
 
 String STR_SAVEDISABLEDDOWNLOADPRODUCTTOSAVE
 {
+/*
 	Text [ de ] = "Laden %PRODUCTNAME im Mac App Store?";
 	Text [ en-US ] = "Download %PRODUCTNAME on the Mac App Store?";
 	Text [ fr ] = "Télécharger %PRODUCTNAME dans le Mac App Store ?";
 	Text [ it ] = "Scarica %PRODUCTNAME su Mac App Store?";
 	Text [ nl ] = "Download %PRODUCTNAME in de Mac App Store?";
+*/
+	Text [ de ] = "Laden %PRODUCTNAME Professional Edition?";
+	Text [ en-US ] = "Download %PRODUCTNAME Professional Edition?";
+	Text [ fr ] = "Télécharger %PRODUCTNAME Professional Edition ?";
+	Text [ it ] = "Scarica %PRODUCTNAME Professional Edition?";
+	Text [ nl ] = "Download %PRODUCTNAME Professional Edition?";
 };
