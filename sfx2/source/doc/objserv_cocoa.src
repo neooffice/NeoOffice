@@ -37,11 +37,11 @@
 
 String STR_SAVEDISABLEDCANNOTSAVE
 {
-	Text [ de ] = "%PRODUCTNAME %PRODUCTVERSION kann Dokumente nicht speichern.";
-	Text [ en-US ] = "%PRODUCTNAME %PRODUCTVERSION cannot save documents.";
-	Text [ fr ] = "%PRODUCTNAME %PRODUCTVERSION ne peut pas enregistrer des documents.";
-	Text [ it ] = "%PRODUCTNAME %PRODUCTVERSION non può salvare i documenti.";
-	Text [ nl ] = "%PRODUCTNAME %PRODUCTVERSION kan niet documenten op te slaan.";
+	Text [ de ] = "%PRODUCTNAME Viewer kann Dokumente nicht speichern.";
+	Text [ en-US ] = "%PRODUCTNAME Viewer cannot save documents.";
+	Text [ fr ] = "%PRODUCTNAME Viewer ne peut pas enregistrer des documents.";
+	Text [ it ] = "%PRODUCTNAME Viewer non può salvare i documenti.";
+	Text [ nl ] = "%PRODUCTNAME Viewer kan niet documenten op te slaan.";
 };
 
 String STR_SAVEDISABLEDDOWNLOADPRODUCTTOSAVE
