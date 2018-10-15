@@ -12,7 +12,7 @@ At this time, NeoOffice will only build on macOS 10.12 Sierra.
    Xcode v8.3.3
    Command Line Tools for Xcode v8.3.2
 
-2. Download and install Oracle's Java 1.8 Development Kit (JDK) from the following URL. Note: the build will ignore Oracle's JDKs. Oracle JDKs are only used when running NeoOffice:
+2. Download and install Oracle's Java 1.8 Development Kit (JDK) from the following URL:
 
    http://www.neooffice.org/neojava/javadownload.php
 
