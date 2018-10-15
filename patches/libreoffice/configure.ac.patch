@@ -57,11 +57,11 @@
      AC_MSG_CHECKING([what Mac OS X SDK to use])
  
 -    for _macosx_sdk in $with_macosx_sdk 10.8 10.9 10.10 10.11; do
-+    for _macosx_sdk in $with_macosx_sdk 10.12; do
++    for _macosx_sdk in $with_macosx_sdk 10.12 10.13 10.14; do
          MACOSX_SDK_PATH=`xcrun --sdk macosx${_macosx_sdk} --show-sdk-path 2> /dev/null`
          if test -d "$MACOSX_SDK_PATH"; then
              with_macosx_sdk="${_macosx_sdk}"
-@@ -2743,25 +2743,16 @@
+@@ -2743,25 +2743,22 @@
      AC_MSG_RESULT([SDK $with_macosx_sdk at $MACOSX_SDK_PATH])
  
      case $with_macosx_sdk in
@@ -78,10 +78,16 @@
 -        MACOSX_SDK_VERSION=101100
 +    10.12)
 +        MACOSX_SDK_VERSION=101200
++        ;;
++    10.13)
++        MACOSX_SDK_VERSION=101300
++        ;;
++    10.14)
++        MACOSX_SDK_VERSION=101400
          ;;
      *)
 -        AC_MSG_ERROR([with-macosx-sdk $with_macosx_sdk is not a supported value, supported values are 10.8--11])
-+        AC_MSG_ERROR([with-macosx-sdk $with_macosx_sdk is not a supported value, supported values are 10.12])
++        AC_MSG_ERROR([with-macosx-sdk $with_macosx_sdk is not a supported value, supported values are 10.12--14])
          ;;
      esac
  
@@ -91,7 +97,7 @@
      fi
  
      if test "$with_macosx_version_max_allowed" = "" ; then
-@@ -2776,20 +2767,11 @@
+@@ -2776,20 +2773,17 @@
      MACOSX_DEPLOYMENT_TARGET="$with_macosx_version_min_required"
  
      case "$with_macosx_version_min_required" in
@@ -108,14 +114,20 @@
 -        MAC_OS_X_VERSION_MIN_REQUIRED="101100"
 +    10.12)
 +        MAC_OS_X_VERSION_MIN_REQUIRED="101200"
++        ;;
++    10.13)
++        MAC_OS_X_VERSION_MIN_REQUIRED="101300"
++        ;;
++    10.14)
++        MAC_OS_X_VERSION_MIN_REQUIRED="101400"
          ;;
      *)
 -        AC_MSG_ERROR([with-macosx-version-min-required $with_macosx_version_min_required is not a supported value, supported values are 10.8--11])
-+        AC_MSG_ERROR([with-macosx-version-min-required $with_macosx_version_min_required is not a supported value, supported values are 10.12])
++        AC_MSG_ERROR([with-macosx-version-min-required $with_macosx_version_min_required is not a supported value, supported values are 10.12--14])
          ;;
      esac
  
-@@ -2813,20 +2795,11 @@
+@@ -2813,20 +2807,17 @@
      fi
  
      case "$with_macosx_version_max_allowed" in
@@ -132,10 +144,16 @@
 -        MAC_OS_X_VERSION_MAX_ALLOWED="101100"
 +    10.12)
 +        MAC_OS_X_VERSION_MAX_ALLOWED="101200"
++        ;;
++    10.13)
++        MAC_OS_X_VERSION_MAX_ALLOWED="101300"
++        ;;
++    10.14)
++        MAC_OS_X_VERSION_MAX_ALLOWED="101400"
          ;;
      *)
 -        AC_MSG_ERROR([with-macosx-version-max-allowed $with_macosx_version_max_allowed is not a supported value, supported values are 10.8--11])
-+        AC_MSG_ERROR([with-macosx-version-max-allowed $with_macosx_version_max_allowed is not a supported value, supported values are 10.12])
++        AC_MSG_ERROR([with-macosx-version-max-allowed $with_macosx_version_max_allowed is not a supported value, supported values are 10.12--14])
          ;;
      esac
  
