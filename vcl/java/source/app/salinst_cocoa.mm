@@ -54,6 +54,8 @@
 
 static ::osl::Mutex aCurrentInstanceSecurityURLCacheMutex;
 static NSMutableDictionary *pCurrentInstanceSecurityURLCacheDictionary = nil;
+static BOOL bIsCppUnitTesterInitialized = false;
+static BOOL bIsCppUnitTester = false;
 
 using namespace osl;
 
@@ -85,6 +87,24 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 - (NSURL *)securityScopedURL;
 - (void)setResult:(NSInteger)nResult;
 @end
+
+static BOOL ImplIsCppUnitTester()
+{
+	if ( !bIsCppUnitTesterInitialized )
+	{
+		bIsCppUnitTesterInitialized = true;
+
+		OUString sFile;
+		if ( osl_getExecutableFile( &sFile.pData ) == osl_Process_E_None )
+		{
+			sFile = sFile.copy( sFile.lastIndexOf( '/' ) + 1 );
+			if ( sFile == "cppunittester" )
+				bIsCppUnitTester = true;
+		}
+	}
+
+	return bIsCppUnitTester;
+}
 
 static BOOL IsURLReadableOrWritable( NSURL *pURL )
 {
@@ -399,7 +419,7 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 				{
 					// Check if there are any cached security scoped bookmarks
 					// for this URL or any of its parent folders
-					BOOL bShowOpenPanel = YES;
+					BOOL bShowOpenPanel = !ImplIsCppUnitTester();
 					NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
 					NSURL *pTmpURL = pURL;
 					BOOL bSecurityScopedURLFound = NO;
