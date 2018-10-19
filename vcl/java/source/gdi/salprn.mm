@@ -732,7 +732,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		if ( pContext )
 		{
 			// Draw undrawn graphics ops to the print context
-			CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+			CGContextRef aContext = [pContext CGContext];
 			if ( aContext )
 			{
 				float fScaleFactor = 1.0f;

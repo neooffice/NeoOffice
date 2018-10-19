@@ -112,10 +112,10 @@ using namespace vcl;
 				NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
 				if ( pWindow && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
 				{
-					NSGraphicsContext *pContext = [pWindow graphicsContext];
+					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithWindow:pWindow];
 					if ( pContext )
 					{
-						CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+						CGContextRef aContext = [pContext CGContext];
 						if ( aContext )
 						{
 							if ( !aLastContext )

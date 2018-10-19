@@ -475,10 +475,10 @@ static BOOL bIOPMAssertionIDSet = NO;
 		if ( aContentRect.size.height <= 1.0f )
 			aContentRect.size.height = 1.0f;
 
-		NSGraphicsContext *pContext = [pWindow graphicsContext];
+		NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithWindow:pWindow];
 		if ( pContext )
 		{
-			CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+			CGContextRef aContext = [pContext CGContext];
 			if ( aContext )
 			{
 				maLayer = CGLayerCreateWithContext( aContext, CGSizeMake( aContentRect.size.width, aContentRect.size.height ), NULL );
@@ -2358,7 +2358,9 @@ sal_Bool UseDarkModeColors()
 
 void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 {
-	if ( !pView )
+	// If compiled on macOS 10.14, the window's context will always be nil so
+	// exit if the view is not the focus view
+	if ( !pView || pView != [NSView focusView] )
 		return;
 
 	NSWindow *pWindow = [pView window];
@@ -2384,13 +2386,10 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 		CGRect aDestRect = CGRectStandardize( NSRectToCGRect( aDirtyRect ) );
 		if ( CGRectIntersectsRect( aBounds, aDestRect ) )
 		{
-			NSGraphicsContext *pContext = [pWindow graphicsContext];
+			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
 			if ( pContext )
 			{
-				NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
-				[NSGraphicsContext setCurrentContext:pContext];
-
-				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+				CGContextRef aContext = [pContext CGContext];
 				if ( aContext )
 				{
 					CGContextSaveGState( aContext );
@@ -2411,8 +2410,6 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 
 					CGContextRestoreGState( aContext );
 				}
-
-				[NSGraphicsContext setCurrentContext:pOldContext];
 			}
 		}
 	}
