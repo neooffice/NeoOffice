@@ -54,6 +54,7 @@
 #include "osx/printview.h"
 
 #include "../app/salinst_cocoa.h"
+#include "../java/VCLEventQueue_cocoa.h"
 
 static OUString aPageScalingFactorKey( "PAGE_SCALING_FACTOR" );
 static ResMgr *pSfxResMgr = NULL;
@@ -1180,6 +1181,22 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 - (void)printOperationDidRun:(NSPrintOperation *)pPrintOperation success:(BOOL)bSuccess contextInfo:(void *)pContextInfo
 {
 	(void)pContextInfo;
+
+	if ( @available(macOS 10.14, * ) )
+	{
+		// When compiled on macOS 10.14, the print operation changes the
+		// current appearance and does not automatically change it back to the
+		// application's appearance
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp )
+		{
+			NSAppearance *pAppearance = [pApp appearance];
+			if ( !pAppearance )
+				pAppearance = [NSAppearance appearanceNamed:NSAppearanceNameAqua];
+			if ( pAppearance )
+				[NSAppearance setCurrentAppearance:pAppearance];
+		}
+	}
 
 	if ( !mpPrintOperation || pPrintOperation != mpPrintOperation )
 		return;
