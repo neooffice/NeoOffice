@@ -57,6 +57,8 @@
 #define MODIFIER_RELEASE_INTERVAL 100
 #define UNDEFINED_KEY_CODE 0xffff
 
+static ::std::map< NSWindow*, NSGraphicsContext* > aNativeGraphicsContextMap;
+
 inline long FloatToLong( float f ) { return (long)( f == 0 ? f : f < 0 ? f - 0.5 : f + 0.5 ); }
 
 static NSPoint GetFlippedContentViewLocation( NSWindow *pWindow, NSEvent *pEvent )
@@ -754,6 +756,8 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 
 - (void)dealloc
 {
+	NSWindow_setCachedGraphicsContext( self, nil );
+
 	if ( mpLastWindowDraggedEvent )
 		[mpLastWindowDraggedEvent release];
 
@@ -994,6 +998,8 @@ static NSUInteger nMouseMask = 0;
 
 - (void)dealloc
 {
+	NSWindow_setCachedGraphicsContext( self, nil );
+
 	if ( mpLastWindowDraggedEvent )
 		[mpLastWindowDraggedEvent release];
 
@@ -1171,6 +1177,17 @@ static NSUInteger nMouseMask = 0;
 
 	if ( [super respondsToSelector:@selector(poseAsOrderWindow:relativeTo:)] )
 		[super poseAsOrderWindow:nOrderingMode relativeTo:nOtherWindowNumber];
+
+	if ( nOrderingMode != NSWindowOut && [self isVisible] )
+	{
+		NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithWindow:self];
+		if ( pContext )
+			NSWindow_setCachedGraphicsContext( self, pContext );
+	}
+	else
+	{
+		NSWindow_setCachedGraphicsContext( self, nil );
+	}
 }
 
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent
@@ -3664,4 +3681,38 @@ void VCLEventQueue_installVCLEventQueueClasses()
 	[pInstallVCLEventQueueClasses performSelectorOnMainThread:@selector(installVCLEventQueueClasses:) withObject:pInstallVCLEventQueueClasses waitUntilDone:YES modes:pModes];
 
 	[pPool release];
+}
+
+SAL_DLLPRIVATE NSGraphicsContext *NSWindow_cachedGraphicsContext( NSWindow *pWindow )
+{
+	NSGraphicsContext *pRet = nil;
+
+	if ( !pWindow )
+		return pRet;
+
+	std::map< NSWindow*, NSGraphicsContext* >::iterator it = aNativeGraphicsContextMap.find( pWindow );
+	if ( it != aNativeGraphicsContextMap.end() )
+		pRet = it->second;
+
+	return pRet;
+}
+
+SAL_DLLPRIVATE void NSWindow_setCachedGraphicsContext( NSWindow *pWindow, NSGraphicsContext *pContext )
+{
+	if ( !pWindow )
+		return;
+
+	if ( pContext )
+		[pContext retain];
+
+	std::map< NSWindow*, NSGraphicsContext* >::iterator it = aNativeGraphicsContextMap.find( pWindow );
+	if ( it != aNativeGraphicsContextMap.end() )
+	{
+		if ( it->second )
+			[it->second release];
+		aNativeGraphicsContextMap.erase( it );
+	}
+
+	if ( pContext )
+		aNativeGraphicsContextMap[ pWindow ] = pContext;
 }

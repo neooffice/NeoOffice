@@ -475,7 +475,12 @@ static BOOL bIOPMAssertionIDSet = NO;
 		if ( aContentRect.size.height <= 1.0f )
 			aContentRect.size.height = 1.0f;
 
-		NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithWindow:pWindow];
+		// Fix macOS 10.14 failure to create a graphics context by using a
+		// cached graphics context if it is available
+		NSGraphicsContext *pContext = NSWindow_cachedGraphicsContext( pWindow );
+		if ( !pContext )
+			pContext = [NSGraphicsContext graphicsContextWithWindow:pWindow];
+
 		if ( pContext )
 		{
 			CGContextRef aContext = [pContext CGContext];
@@ -2389,6 +2394,8 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
 			if ( pContext )
 			{
+				NSWindow_setCachedGraphicsContext( pWindow, pContext );
+
 				CGContextRef aContext = [pContext CGContext];
 				if ( aContext )
 				{

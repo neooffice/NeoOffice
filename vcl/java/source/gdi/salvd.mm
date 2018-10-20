@@ -40,6 +40,8 @@
 #include "java/salgdi.h"
 #include "java/salvd.h"
 
+#include "../java/VCLEventQueue_cocoa.h"
+
 using namespace vcl;
 
 @interface VCLVirtualDeviceGetGraphicsLayer : NSObject
@@ -112,7 +114,12 @@ using namespace vcl;
 				NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
 				if ( pWindow && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
 				{
-					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithWindow:pWindow];
+					// Fix macOS 10.14 failure to create a graphics context by
+					// using a cached graphics context if it is available
+					NSGraphicsContext *pContext = NSWindow_cachedGraphicsContext( pWindow );
+					if ( !pContext )
+						pContext = [NSGraphicsContext graphicsContextWithWindow:pWindow];
+
 					if ( pContext )
 					{
 						CGContextRef aContext = [pContext CGContext];

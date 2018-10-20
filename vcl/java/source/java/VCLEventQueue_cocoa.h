@@ -192,6 +192,8 @@
 SAL_DLLPRIVATE void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect );
 SAL_DLLPRIVATE NSCursor *JavaSalFrame_getCursor( NSView *pView );
 SAL_DLLPRIVATE sal_Bool NSWindow_hasMarkedText( NSWindow *pWindow );
+SAL_DLLPRIVATE NSGraphicsContext *NSWindow_cachedGraphicsContext( NSWindow *pWindow );
+SAL_DLLPRIVATE void NSWindow_setCachedGraphicsContext( NSWindow *pWindow, NSGraphicsContext *pContext );
 
 #endif	// __OBJC__
 
