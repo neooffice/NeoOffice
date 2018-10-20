@@ -591,45 +591,48 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 	(void)pChange;
 	(void)pContext;
 
-	NSApplication *pApp = [NSApplication sharedApplication];
-	NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
-	if ( pApp && pDefaults )
+	if ( @available(macOS 10.14, * ) )
 	{
-		NSAppearance *pAppearance = nil;
-		NSNumber *pDisableDarkMode = [pDefaults objectForKey:pDisableDarkModePref];
-
-		// Dark mode is enabled by default
-		if ( !pDisableDarkMode || ![pDisableDarkMode isKindOfClass:[NSNumber class]] || ![pDisableDarkMode boolValue] )
+		NSApplication *pApp = [NSApplication sharedApplication];
+		NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
+		if ( pApp && pDefaults )
 		{
-			NSString *pStyle = [pDefaults stringForKey:pAppleInterfaceStylePref];
-			NSRange aRange = NSMakeRange( NSNotFound, 0 );
-			if ( pStyle )
-				aRange = [pStyle rangeOfString:@"dark" options:NSCaseInsensitiveSearch];
+			NSAppearance *pAppearance = nil;
+			NSNumber *pDisableDarkMode = [pDefaults objectForKey:pDisableDarkModePref];
 
-			NSString *pAppearanceName = nil;
-			if ( aRange.location != NSNotFound && aRange.length )
-				pAppearanceName = NSAppearanceNameDarkAqua;
-			else
-				pAppearanceName = NSAppearanceNameAqua;
-
-			pAppearance = [NSAppearance appearanceNamed:pAppearanceName];
-		}
-
-		if ( [pApp respondsToSelector:@selector(appearance)] && [pApp respondsToSelector:@selector(setAppearance:)] && pAppearance != [pApp appearance] )
-		{
-			[pApp setAppearance:pAppearance];
-
-			// Post a NSSystemColorsDidChangeNotification notification so
-			// that colors will be updated in our system color change
-			// handler
-			NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
-			if ( pNotificationCenter )
+			// Dark mode is enabled by default
+			if ( !pDisableDarkMode || ![pDisableDarkMode isKindOfClass:[NSNumber class]] || ![pDisableDarkMode boolValue] )
 			{
-				// Delay posting of notification to allow NSColor class to
-				// update system colors to match the new appearance
-				NSNotification *pNotification = [NSNotification notificationWithName:NSSystemColorsDidChangeNotification object:nil];
-				if ( pNotification )
-					[pNotificationCenter performSelector:@selector(postNotification:) withObject:pNotification afterDelay:0];
+				NSString *pStyle = [pDefaults stringForKey:pAppleInterfaceStylePref];
+				NSRange aRange = NSMakeRange( NSNotFound, 0 );
+				if ( pStyle )
+					aRange = [pStyle rangeOfString:@"dark" options:NSCaseInsensitiveSearch];
+
+				NSString *pAppearanceName = nil;
+				if ( aRange.location != NSNotFound && aRange.length )
+					pAppearanceName = NSAppearanceNameDarkAqua;
+				else
+					pAppearanceName = NSAppearanceNameAqua;
+
+				pAppearance = [NSAppearance appearanceNamed:pAppearanceName];
+			}
+
+			if ( pAppearance != [pApp appearance] )
+			{
+				[pApp setAppearance:pAppearance];
+
+				// Post a NSSystemColorsDidChangeNotification notification so
+				// that colors will be updated in our system color change
+				// handler
+				NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+				if ( pNotificationCenter )
+				{
+					// Delay posting of notification to allow NSColor class to
+					// update system colors to match the new appearance
+					NSNotification *pNotification = [NSNotification notificationWithName:NSSystemColorsDidChangeNotification object:nil];
+					if ( pNotification )
+						[pNotificationCenter performSelector:@selector(postNotification:) withObject:pNotification afterDelay:0];
+				}
 			}
 		}
 	}
