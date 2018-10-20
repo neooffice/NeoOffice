@@ -44,16 +44,13 @@
 #define NSAppearanceNameDarkAqua @"NSAppearanceNameDarkAqua"
 #endif	// NSAppearanceNameDarkAqua
 
-@interface NSAppearance (VCLAppearance)
-+ (void)setCurrentAppearance:(NSAppearance *)pAppearance;
-@end
-
 @interface NSApplication (VCLApplication)
 - (NSAppearance *)appearance;
 - (void)setAppearance:(NSAppearance *)pAppearance;
 @end
 
 @interface NSColor (VCLColor)
++ (NSColor *)linkColor;
 + (NSColor *)selectedContentBackgroundColor;
 + (NSColor *)separatorColor;
 + (NSColor *)unemphasizedSelectedContentBackgroundColor;

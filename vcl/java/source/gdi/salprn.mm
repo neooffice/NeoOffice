@@ -1182,19 +1182,25 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 {
 	(void)pContextInfo;
 
+#if MACOSX_SDK_VERSION >= 101400
 	if ( @available(macOS 10.14, * ) )
+#endif	// MACOSX_SDK_VERSION >= 101400
 	{
 		// When compiled on macOS 10.14, the print operation changes the
 		// current appearance and does not automatically change it back to the
 		// application's appearance
 		NSApplication *pApp = [NSApplication sharedApplication];
+#if MACOSX_SDK_VERSION < 101400
 		if ( pApp )
+#else	// MACOSX_SDK_VERSION < 101400
+		if ( pApp && [pApp respondsToSelector:@selector(appearance)] )
+#endif	// MACOSX_SDK_VERSION < 101400
 		{
 			NSAppearance *pAppearance = [pApp appearance];
 			if ( !pAppearance )
 				pAppearance = [NSAppearance appearanceNamed:NSAppearanceNameAqua];
 			if ( pAppearance )
-				[NSAppearance setCurrentAppearance:pAppearance];
+				NSAppearance.currentAppearance = pAppearance;
 		}
 	}
 
