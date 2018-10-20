@@ -200,12 +200,23 @@ static void HandleSystemColorsChangedRequest()
 
 	bVCLUseDarkModeColors = false;
 
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp && [pApp respondsToSelector:@selector(appearance)] )
+	if ( @available(macOS 10.14, * ) )
 	{
-		NSAppearance *pAppearance = [pApp appearance];
-		if ( pAppearance && [NSAppearanceNameDarkAqua isEqualToString:[pAppearance name]] )
-			bVCLUseDarkModeColors = true;
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp )
+		{
+			NSAppearance *pAppearance = [pApp appearance];
+			if ( pAppearance )
+			{
+				// When compiled on macOS 10.14, the current appearance does
+				// not automatically change when the application's appearance
+				// has changed
+				NSAppearance.currentAppearance = pAppearance;
+
+				if ( [NSAppearanceNameDarkAqua isEqualToString:[pAppearance name]] )
+					bVCLUseDarkModeColors = true;
+			}
+		}
 	}
 
 	SetSalColorFromNSColor( [NSColor controlTextColor], &pVCLControlTextColor );
