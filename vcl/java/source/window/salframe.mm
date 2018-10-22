@@ -2421,7 +2421,11 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
 			if ( pContext )
 			{
-				NSWindow_setCachedGraphicsContext( pWindow, pContext );
+				// When compiled on macOS 10.14, the current context may not
+				// support retina display resolution so cache it only when
+				// a context does not already exist in the cache
+				if ( !NSWindow_cachedGraphicsContext( pWindow ) )
+					NSWindow_setCachedGraphicsContext( pWindow, pContext );
 
 				CGContextRef aContext = [pContext CGContext];
 				if ( aContext )
