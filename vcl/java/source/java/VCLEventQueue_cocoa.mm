@@ -1187,15 +1187,14 @@ static NSUInteger nMouseMask = 0;
 	if ( [super respondsToSelector:@selector(poseAsOrderWindow:relativeTo:)] )
 		[super poseAsOrderWindow:nOrderingMode relativeTo:nOtherWindowNumber];
 
+	// Don't remove the context from the cache when ordering out as we will
+	// need the cached context if compiled on macOS 10.14 and a floating window
+	// is reshown
 	if ( nOrderingMode != NSWindowOut && [self isVisible] )
 	{
 		NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithWindow:self];
 		if ( pContext )
 			NSWindow_setCachedGraphicsContext( self, pContext );
-	}
-	else
-	{
-		NSWindow_setCachedGraphicsContext( self, nil );
 	}
 }
 
