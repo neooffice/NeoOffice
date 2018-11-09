@@ -80,6 +80,7 @@ static SalColor *pVCLSelectedMenuItemTextColor = NULL;
 static SalColor *pVCLShadowColor = NULL;
 static SalColor *pVCLWindowColor = NULL;
 static SalColor *pVCLLinkColor = NULL;
+static SalColor *pVCLUnderPageColor = NULL;
 static long nVCLScrollbarSize = 0;
 
 static ::osl::Mutex aSystemColorsMutex;
@@ -259,6 +260,7 @@ static void HandleSystemColorsChangedRequest()
 	SetSalColorFromNSColor( [NSColor windowBackgroundColor], &pVCLWindowColor );
 	if ( class_getClassMethod( [NSColor class], @selector(linkColor) ) )
 		SetSalColorFromNSColor( [NSColor linkColor], &pVCLLinkColor );
+	SetSalColorFromNSColor( [NSColor underPageBackgroundColor], &pVCLUnderPageColor );
 
 	// Always use NSScrollerStyleLegacy scrollbars as we always draw scrollbars 
 	// with that style in vcl/java/source/gdi/salnativewidgets.mm
@@ -3178,6 +3180,30 @@ bool JavaSalFrame::GetSelectedMenuItemTextColor( SalColor& rSalColor )
 	if ( pVCLSelectedMenuItemTextColor )
 	{
 		rSalColor = *pVCLSelectedMenuItemTextColor;
+		bRet = true;
+	}
+
+	return bRet;
+}
+
+// -----------------------------------------------------------------------
+
+bool JavaSalFrame::GetSelectedTabTextColor( SalColor& rSalColor )
+{
+	bool bRet = false;
+
+	// Update colors if any system colors have not yet been set
+	InitializeSystemColors();
+
+	MutexGuard aGuard( aSystemColorsMutex );
+	if ( bVCLUseDarkModeColors && pVCLUnderPageColor )
+	{
+		rSalColor = *pVCLUnderPageColor;
+		bRet = true;
+	}
+	else if ( pVCLSelectedControlTextColor )
+	{
+		rSalColor = *pVCLSelectedControlTextColor;
 		bRet = true;
 	}
 

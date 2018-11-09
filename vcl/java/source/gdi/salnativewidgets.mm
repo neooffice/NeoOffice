@@ -4651,7 +4651,7 @@ bool JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 					if ( ! ( nState & CTRL_STATE_INACTIVE ) )
 						bReturn = JavaSalFrame::GetAlternateSelectedControlTextColor( nTextColor );
 					else
-						bReturn = JavaSalFrame::GetSelectedControlTextColor( nTextColor );
+						bReturn = JavaSalFrame::GetSelectedTabTextColor( nTextColor );
 				}
 				else if ( nState & CTRL_STATE_PRESSED )
 				{
