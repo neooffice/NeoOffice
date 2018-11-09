@@ -455,8 +455,6 @@ static bool IsRunningHighSierraOrLower()
 						CGContextScaleCTM( mpBuffer->maContext, -1.0f, 1.0f );
 					}
 
-					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
-
 					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 					if ( pContext )
 					{
@@ -522,7 +520,9 @@ static bool IsRunningHighSierraOrLower()
 							}
 						}
 
+						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 						[pCell drawWithFrame:aDrawRect inView:( pControlView ? pControlView : pButton )];
+						CGContextEndTransparencyLayer( mpBuffer->maContext );
 
 						if ( mbRedraw )
 						{
@@ -555,7 +555,6 @@ static bool IsRunningHighSierraOrLower()
 						mbDrawn = true;
 					}
 
-					CGContextEndTransparencyLayer( mpBuffer->maContext );
 					CGContextRestoreGState( mpBuffer->maContext );
 
 					mpBuffer->ReleaseContext();
@@ -777,7 +776,6 @@ static bool IsRunningHighSierraOrLower()
 						CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
 						CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 					}
-					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 					if ( pContext )
@@ -814,7 +812,9 @@ static bool IsRunningHighSierraOrLower()
 							}
 						}
 
+						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 						[pCell drawWithFrame:aDrawRect inView:( pControlView ? pControlView : pControl )];
+						CGContextEndTransparencyLayer( mpBuffer->maContext );
 
 						if ( pControlView )
 							[pControlView removeFromSuperview];
@@ -824,7 +824,6 @@ static bool IsRunningHighSierraOrLower()
 						mbDrawn = true;
 					}
 
-					CGContextEndTransparencyLayer( mpBuffer->maContext );
 					CGContextRestoreGState( mpBuffer->maContext );
 
 					mpBuffer->ReleaseContext();
@@ -1035,14 +1034,13 @@ static bool IsRunningHighSierraOrLower()
 					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
 					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 				}
-				CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 				if ( pContext )
 				{
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
-
+					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 					// Fix bug 2031 by always filling the background with white.
 					// Fix incorrect dark mode drawing by filling with a system
@@ -1130,12 +1128,13 @@ static bool IsRunningHighSierraOrLower()
 					[pScroller drawKnobSlotInRect:[pScroller rectForPart:NSScrollerKnobSlot] highlight:NO];
 					if ( !mbDrawOnlyTrack )
 						[pScroller drawKnob];
+
+					CGContextEndTransparencyLayer( mpBuffer->maContext );
 					[NSGraphicsContext setCurrentContext:pOldContext];
 
 					mbDrawn = true;
 				}
 
-				CGContextEndTransparencyLayer( mpBuffer->maContext );
 				CGContextRestoreGState( mpBuffer->maContext );
 
 				mpBuffer->ReleaseContext();
@@ -1354,20 +1353,19 @@ static bool IsRunningHighSierraOrLower()
 				// to draw the control.
 				CGContextTranslateCTM( mpBuffer->maContext, 0, ( ( fOffscreenHeight - [pProgressIndicator frame].size.height ) / 2 ) + PROGRESSBAR_HEIGHT_SLOP );
 
-				CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
-
 				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 				if ( pContext )
 				{
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
+					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 					[pProgressIndicator drawRect:[pProgressIndicator frame]];
+					CGContextEndTransparencyLayer( mpBuffer->maContext );
 					[NSGraphicsContext setCurrentContext:pOldContext];
 
 					mbDrawn = true;
 				}
 
-				CGContextEndTransparencyLayer( mpBuffer->maContext );
 				CGContextRestoreGState( mpBuffer->maContext );
 
 				mpBuffer->ReleaseContext();
@@ -1478,20 +1476,20 @@ static bool IsRunningHighSierraOrLower()
 					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
 					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 				}
-				CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 				if ( pContext )
 				{
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
+					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 					[pBox drawRect:[pBox frame]];
+					CGContextEndTransparencyLayer( mpBuffer->maContext );
 					[NSGraphicsContext setCurrentContext:pOldContext];
 
 					mbDrawn = true;
 				}
 
-				CGContextEndTransparencyLayer( mpBuffer->maContext );
 				CGContextRestoreGState( mpBuffer->maContext );
 
 				mpBuffer->ReleaseContext();
@@ -1583,20 +1581,20 @@ static bool IsRunningHighSierraOrLower()
 					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
 					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 				}
-				CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 				if ( pContext )
 				{
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
+					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 					[pView drawRect:[pView frame]];
+					CGContextEndTransparencyLayer( mpBuffer->maContext );
 					[NSGraphicsContext setCurrentContext:pOldContext];
 
 					mbDrawn = true;
 				}
 
-				CGContextEndTransparencyLayer( mpBuffer->maContext );
 				CGContextRestoreGState( mpBuffer->maContext );
 
 				mpBuffer->ReleaseContext();
@@ -1737,7 +1735,6 @@ static bool IsRunningHighSierraOrLower()
 							CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
 							CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 						}
-						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 						NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 						if ( pContext )
@@ -1750,6 +1747,8 @@ static bool IsRunningHighSierraOrLower()
 
 							NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 							[NSGraphicsContext setCurrentContext:pContext];
+							CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+
 							if ( bHighlighted )
 								[pTableHeaderCell highlight:YES withFrame:aDrawRect inView:pTableHeaderView];
 							else
@@ -1775,12 +1774,12 @@ static bool IsRunningHighSierraOrLower()
 									[pTableHeaderCell drawSortIndicatorWithFrame:aDrawRect inView:pTableHeaderView ascending:bSortAscending priority:0];
 							}
 
+							CGContextEndTransparencyLayer( mpBuffer->maContext );
 							[NSGraphicsContext setCurrentContext:pOldContext];
 
 							mbDrawn = true;
 						}
 
-						CGContextEndTransparencyLayer( mpBuffer->maContext );
 						CGContextRestoreGState( mpBuffer->maContext );
 
 						mpBuffer->ReleaseContext();
@@ -1929,13 +1928,13 @@ static bool IsRunningHighSierraOrLower()
 					float fYAdjust = ( fOffscreenHeight - fCellHeight ) / 2;
 					CGContextTranslateCTM( mpBuffer->maContext, fXAdjust, fYAdjust );
 
-					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
-
 					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 					if ( pContext )
 					{
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
+						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+
 						[pStepper drawRect:[pStepper frame]];
 
 						// Draw focus ring
@@ -1949,12 +1948,12 @@ static bool IsRunningHighSierraOrLower()
 								[pPath fill];
 						}
 
+						CGContextEndTransparencyLayer( mpBuffer->maContext );
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
 						mbDrawn = true;
 					}
 
-					CGContextEndTransparencyLayer( mpBuffer->maContext );
 					CGContextRestoreGState( mpBuffer->maContext );
 
 					mpBuffer->ReleaseContext();
@@ -2078,7 +2077,6 @@ static bool IsRunningHighSierraOrLower()
 						CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
 						CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 					}
-					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 					if ( pContext )
@@ -2091,6 +2089,7 @@ static bool IsRunningHighSierraOrLower()
 
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
+						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 						// Fix height of text fields on macOS 10.14 by adding
 						// height to the top of the text field
@@ -2107,12 +2106,12 @@ static bool IsRunningHighSierraOrLower()
 							[NSBezierPath fillRect:aDrawRect];
 						}
 
+						CGContextEndTransparencyLayer( mpBuffer->maContext );
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
 						mbDrawn = true;
 					}
 
-					CGContextEndTransparencyLayer( mpBuffer->maContext );
 					CGContextRestoreGState( mpBuffer->maContext );
 
 					mpBuffer->ReleaseContext();
@@ -2219,7 +2218,6 @@ static bool IsRunningHighSierraOrLower()
 						CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
 						CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 					}
-					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 					if ( pContext )
@@ -2228,6 +2226,8 @@ static bool IsRunningHighSierraOrLower()
 
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
+						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+
 						if ( mbDrawSeparator )
 						{
 							[pMenuItemCell drawSeparatorItemWithFrame:aDrawRect inView:pControl];
@@ -2244,12 +2244,13 @@ static bool IsRunningHighSierraOrLower()
 								[[NSColor controlColor] set];
 							[NSBezierPath fillRect:aDrawRect];
 						}
+
+						CGContextEndTransparencyLayer( mpBuffer->maContext );
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
 						mbDrawn = true;
 					}
 
-					CGContextEndTransparencyLayer( mpBuffer->maContext );
 					CGContextRestoreGState( mpBuffer->maContext );
 
 					mpBuffer->ReleaseContext();
@@ -2349,20 +2350,20 @@ static bool IsRunningHighSierraOrLower()
 					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
 					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 				}
-				CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 				if ( pContext )
 				{
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
+					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 					[pTabView drawRect:[pTabView frame]];
+					CGContextEndTransparencyLayer( mpBuffer->maContext );
 					[NSGraphicsContext setCurrentContext:pOldContext];
 
 					mbDrawn = true;
 				}
 
-				CGContextEndTransparencyLayer( mpBuffer->maContext );
 				CGContextRestoreGState( mpBuffer->maContext );
 
 				mpBuffer->ReleaseContext();
@@ -2575,7 +2576,6 @@ static bool IsRunningHighSierraOrLower()
 						CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
 						CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 					}
-					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 					if ( pContext )
@@ -2589,6 +2589,8 @@ static bool IsRunningHighSierraOrLower()
 
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
+						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+
 						[pTabView _drawTabViewItem:pItem inRect:[pTabView frame]];
 
 						// Draw focus ring
@@ -2625,12 +2627,12 @@ static bool IsRunningHighSierraOrLower()
 							}
 						}
 
+						CGContextEndTransparencyLayer( mpBuffer->maContext );
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
 						mbDrawn = true;
 					}
 
-					CGContextEndTransparencyLayer( mpBuffer->maContext );
 					CGContextRestoreGState( mpBuffer->maContext );
 
 					mpBuffer->ReleaseContext();
