@@ -188,7 +188,6 @@ static OUString aSaveAVersionLocalizedString;
 @end
 
 @interface NSDocument (SFXDocument)
-- (void)_checkAutosavingThenUpdateChangeCount:(NSDocumentChangeType)nChangeType;
 - (BOOL)_preserveContentsIfNecessaryAfterWriting:(BOOL)bAfter toURL:(NSURL *)pURL forSaveOperation:(NSUInteger)nSaveOperation version:(NSDocumentVersion **)ppVersion error:(NSError **)ppError;
 - (void)poseAsMakeWindowControllers;
 @end
@@ -836,9 +835,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 	if ( bModified )
 	{
-		if ( [self respondsToSelector:@selector(_checkAutosavingThenUpdateChangeCount:)] )
-			[self _checkAutosavingThenUpdateChangeCount:NSChangeDone];
-		else
+		if ( [self checkAutosavingSafetyAndReturnError:nil] )
 			[self updateChangeCount:NSChangeDone];
 	}
 	else
@@ -1488,7 +1485,7 @@ sal_Bool NSDocument_versionsEnabled()
 sal_Bool NSDocument_versionsSupported()
 {
 #ifdef USE_NATIVE_VERSIONS
-	return ( class_getInstanceMethod( [NSDocument class], @selector(_checkAutosavingThenUpdateChangeCount:) ) && class_getInstanceMethod( [NSDocument class], @selector(_preserveContentsIfNecessaryAfterWriting:toURL:forSaveOperation:version:error:) ) ? sal_True : sal_False );
+	return ( class_getInstanceMethod( [NSDocument class], @selector(_preserveContentsIfNecessaryAfterWriting:toURL:forSaveOperation:version:error:) ) ? sal_True : sal_False );
 #else	// USE_NATIVE_VERSIONS
 	return sal_False;
 #endif	// USE_NATIVE_VERSIONS
