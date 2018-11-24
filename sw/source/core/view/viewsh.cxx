@@ -2568,7 +2568,7 @@ void SwViewShell::DeleteReplacementBitmaps()
 
 SwPostItMgr* SwViewShell::GetPostItMgr()
 {
-#ifdef NO_USE_JAVA
+#ifdef USE_JAVA
     // Fix Mac App Store crash when printing by checking for a NULL document
     if ( !GetDoc() )
         return 0;
