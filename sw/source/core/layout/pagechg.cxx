@@ -15,6 +15,13 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified November 2018 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <ndole.hxx>
@@ -248,7 +255,13 @@ SwPageFrm::~SwPageFrm()
         SwDoc *pDoc = GetFmt() ? GetFmt()->GetDoc() : NULL;
         if( pDoc && !pDoc->IsInDtor() )
         {
+#ifdef USE_JAVA
+            // Fix crash when printing comments by checking the current shell's
+            // document is NULL
+            if ( pSh && pSh->Imp() )
+#else	// USE_JAVA
             if ( pSh )
+#endif	// USE_JAVA
             {
                 SwViewImp *pImp = pSh->Imp();
                 pImp->SetFirstVisPageInvalid();
@@ -2176,7 +2189,13 @@ void SwRootFrm::CheckViewLayout( const SwViewOption* pViewOpt, const SwRect* pVi
 
         SwViewShell* pSh = GetCurrShell();
 
+#ifdef USE_JAVA
+        // Fix crash when printing comments by checking the current shell's
+        // document is NULL
+        if ( pSh && pSh->GetDoc() && pSh->GetDoc()->GetDocShell() )
+#else	// USE_JAVA
         if ( pSh && pSh->GetDoc()->GetDocShell() )
+#endif	// USE_JAVA
         {
             pSh->SetFirstVisPageInvalid();
             if (bOldCallbackActionEnabled)

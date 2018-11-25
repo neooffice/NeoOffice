@@ -447,7 +447,13 @@ SwViewShell::~SwViewShell()
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if ( mpDoc )
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+#ifdef USE_JAVA
+    // Fix crash when printing comments by checking the current shell's
+    // document is NULL
+    if ( pLayoutAccess && mxDoc.get() )
+#else	// USE_JAVA
     if ( pLayoutAccess )
+#endif	// USE_JAVA
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
         GetLayout()->DeRegisterShell( this );
