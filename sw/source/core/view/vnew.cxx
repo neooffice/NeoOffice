@@ -365,7 +365,11 @@ SwViewShell::SwViewShell( SwViewShell& rShell, vcl::Window *pWindow,
 SwViewShell::~SwViewShell()
 {
 #ifndef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+#ifdef USE_JAVA
+    IDocumentLayoutAccess * pLayoutAccess = mxDoc.get() ? &mxDoc->getIDocumentLayoutAccess() : nullptr;
+#else	// USE_JAVA
     IDocumentLayoutAccess * const pLayoutAccess = mxDoc.get() ? &mxDoc->getIDocumentLayoutAccess() : nullptr;
+#endif	// USE_JAVA
 #endif	// !NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     {
@@ -427,7 +431,15 @@ SwViewShell::~SwViewShell()
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             auto x = mxDoc->getReferenceCount();
             mxDoc.clear();
+#ifdef USE_JAVA
+            // Fix crash when printing comments by checking the current shell's
+            // document is NULL
+            if( x <= 1 )
+                pLayoutAccess = nullptr;
+            else
+#else	// USE_JAVA
             if( x > 1 )
+#endif	// USE_JAVA
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 GetLayout()->ResetNewLayout();
         }
@@ -447,13 +459,7 @@ SwViewShell::~SwViewShell()
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if ( mpDoc )
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-#ifdef USE_JAVA
-    // Fix crash when printing comments by checking the current shell's
-    // document is NULL
-    if ( pLayoutAccess && mxDoc.get() )
-#else	// USE_JAVA
     if ( pLayoutAccess )
-#endif	// USE_JAVA
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
         GetLayout()->DeRegisterShell( this );
