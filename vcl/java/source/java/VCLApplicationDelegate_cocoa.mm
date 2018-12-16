@@ -125,45 +125,38 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 	// uses it.
 	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
+		// Try to fix deadlocks in the framework module by not acquiring the
+		// application mutex on the main thread
+		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_SHUTDOWN, NULL, NULL );
+		JavaSalEventQueue::postCachedEvent( pEvent );
+		while ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() && !pEvent->isShutdownCancelled() && !JavaSalEventQueue::isShutdownDisabled() )
+			NSApplication_dispatchPendingEvents( NO, YES );
+		pEvent->release();
 
-		if ( !Application::IsShutDown() && !JavaSalEventQueue::isShutdownDisabled() )
+		if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && Application::IsShutDown() )
 		{
-			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_SHUTDOWN, NULL, NULL );
-			JavaSalEventQueue::postCachedEvent( pEvent );
-			while ( !Application::IsShutDown() && !pEvent->isShutdownCancelled() && !JavaSalEventQueue::isShutdownDisabled() )
-				Application::Reschedule();
-			pEvent->release();
+			nRet = NSTerminateLater;
 
-			if ( Application::IsShutDown() )
+			// Close any windows still showing so that all windows
+			// get the appropriate window closing delegate calls
+			NSApplication *pApp = [NSApplication sharedApplication];
+			if ( pApp )
 			{
-				// Close any windows still showing so that all windows
-				// get the appropriate window closing delegate calls
-				NSApplication *pApp = [NSApplication sharedApplication];
-				if ( pApp )
+				NSArray *pWindows = [pApp windows];
+				if ( pWindows )
 				{
-					NSArray *pWindows = [pApp windows];
-					if ( pWindows )
+					unsigned int i = 0;
+					unsigned int nCount = [pWindows count];
+					for ( ; i < nCount ; i++ )
 					{
-						unsigned int i = 0;
-						unsigned int nCount = [pWindows count];
-						for ( ; i < nCount ; i++ )
-						{
-							NSWindow *pWindow = [pWindows objectAtIndex:i];
-							if ( pWindow )
-								[pWindow orderOut:pWindow];
-						}
+						NSWindow *pWindow = [pWindows objectAtIndex:i];
+						if ( pWindow )
+							[pWindow orderOut:pWindow];
 					}
 				}
 			}
 		}
-
-		rSolarMutex.release();
 	}
-
-	if ( Application::IsShutDown() )
-		nRet = NSTerminateLater;
 
 	return nRet;
 }
