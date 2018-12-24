@@ -34,8 +34,10 @@ What's New in this Version:
 Before you buy NeoOffice, please click on the "NeoOffice Support" link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
-• When running in macOS Dark Mode, NeoOffice would display text in a selected tab in an inactive window as white instead of dark gray
-• NeoOffice would crash when printing certain documents in Writer
+• NeoOffice would crash due to LibreOffice bugs #57550 and #66496
+• NeoOffice would crash when selecting the Load Styles option in the Styles and Formatting panel in a Writer document
+• NeoOffice would crash printing a Writer document if printing comments had been enabled in the Comments section of the Printer Options dialog
+• NeoOffice would crash quitting if a database that uses Calc files for its tables was open
 
 
 Promotional Text:
