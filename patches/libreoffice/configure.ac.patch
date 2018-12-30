@@ -1,4 +1,4 @@
---- configure.ac.bak	2018-05-09 05:27:29.000000000 -0500
+--- configure.ac	2018-05-09 05:27:29.000000000 -0500
 +++ configure.ac	2018-12-30 12:31:28.000000000 -0600
 @@ -2329,7 +2329,7 @@
                            not terribly useful. It works fine to build with a new SDK and run the result

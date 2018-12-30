@@ -1,6 +1,6 @@
 --- source/commonembedding/visobj.cxx	2015-11-25 04:55:38.000000000 -0800
 +++ source/commonembedding/visobj.cxx	2016-12-08 13:18:32.000000000 -0800
-@@ -174,7 +174,11 @@
+@@ -124,7 +124,11 @@
      bool bBackToLoaded = false;
      if ( m_nObjectState == embed::EmbedStates::LOADED )
      {

@@ -1,6 +1,6 @@
 --- source/app/svapp.cxx	2015-11-25 04:55:38.000000000 -0800
 +++ source/app/svapp.cxx	2016-10-27 15:19:44.000000000 -0700
-@@ -437,6 +437,11 @@
+@@ -622,6 +622,11 @@
      return ImplGetSVData()->maAppData.mbInAppExecute;
  }
  
@@ -12,27 +12,13 @@
  bool Application::IsInModalMode()
  {
      return (ImplGetSVData()->maAppData.mnModalMode != 0);
---- osx/PictToBmpFlt.cxx	2015-11-25 04:55:38.000000000 -0800
-+++ osx/PictToBmpFlt.cxx	2017-02-16 13:41:28.000000000 -0800
-@@ -19,7 +19,9 @@
- 
- #include <premac.h>
- #include <Carbon/Carbon.h>
-+#if MACOSX_SDK_VERSION < 101200
- #include <QuickTime/QuickTime.h>
-+#endif	// MACOSX_SDK_VERSION < 101200
- #include <postmac.h>
- 
- #include <string.h>
---- osx/OSXTransferable.cxx	2015-11-25 05:55:38.000000000 -0700
-+++ osx/OSXTransferable.cxx	2018-10-15 18:11:30.000000000 -0600
-@@ -73,8 +73,8 @@
-   bool bInternal(false);
-   NSString* sysFormat =
+--- osx/OSXTransferable.cxx	2018-05-09 05:27:29.000000000 -0500
++++ osx/OSXTransferable.cxx	2018-12-30 17:25:10.000000000 -0600
+@@ -109,7 +109,7 @@
+   NSString const * sysFormat =
        (aFlavor.MimeType.startsWith("image/png"))
--      ? mDataFlavorMapper->openOfficeImageToSystemFlavor( mPasteboard )
+       ? DataFlavorMapper::openOfficeImageToSystemFlavor( mPasteboard )
 -      : mDataFlavorMapper->openOfficeToSystemFlavor(aFlavor, bInternal);
-+      ? (NSString *)mDataFlavorMapper->openOfficeImageToSystemFlavor( mPasteboard )
 +      : (NSString *)mDataFlavorMapper->openOfficeToSystemFlavor(aFlavor, bInternal);
    DataProviderPtr_t dp;
  

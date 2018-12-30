@@ -1,5 +1,5 @@
---- hsqldb/UnpackedTarball_hsqldb.mk	2015-11-25 04:55:38.000000000 -0800
-+++ hsqldb/UnpackedTarball_hsqldb.mk	2016-11-13 13:52:01.000000000 -0800
+--- hsqldb/UnpackedTarball_hsqldb.mk	2018-05-09 05:27:29.000000000 -0500
++++ hsqldb/UnpackedTarball_hsqldb.mk	2018-12-30 15:38:46.000000000 -0600
 @@ -27,6 +27,7 @@
  	$(if $(HSQLDB_USE_JDBC_4_1),\
  		external/hsqldb/patches/jdbc-4.1.patch \
@@ -8,72 +8,16 @@
  ))
  
  # vim: set noet sw=4 ts=4:
---- redland/ExternalProject_raptor.mk	2015-11-25 04:55:38.000000000 -0800
-+++ redland/ExternalProject_raptor.mk	2017-02-25 15:18:56.000000000 -0800
-@@ -45,6 +45,7 @@
+--- redland/ExternalProject_raptor.mk	2018-05-09 05:27:29.000000000 -0500
++++ redland/ExternalProject_raptor.mk	2018-12-30 15:35:04.000000000 -0600
+@@ -28,6 +28,7 @@
  			 --enable-parsers="rdfxml ntriples turtle trig guess rss-tag-soup" \
  			--with-www=xml \
  			--without-xslt-config \
 +			$(if $(filter MACOSX,$(OS)),--with-xml2-config=/usr/bin/xml2-config) \
- 			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM)) \
+ 			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM) \
+ 			$(if $(filter INTEL ARM,$(CPUNAME)),ac_cv_c_bigendian=no)) \
  			$(if $(filter MACOSX,$(OS)),--prefix=/@.__________________________________________________OOO) \
- 			$(if $(filter IOS ANDROID,$(OS)),--disable-shared,--disable-static) \
---- expat/UnpackedTarball_expat.mk	2015-11-25 04:55:38.000000000 -0800
-+++ expat/UnpackedTarball_expat.mk	2017-06-25 18:29:37.000000000 -0700
-@@ -12,7 +12,9 @@
- $(eval $(call gb_UnpackedTarball_set_tarball,expat,$(EXPAT_TARBALL)))
- 
- $(eval $(call gb_UnpackedTarball_add_patches,expat,\
--	external/expat/expat-2.1.0.patch \
-+	external/expat/expat-winapi.patch \
-+	external/expat/expat-iOS.patch \
-+	external/expat/expat-macOS.patch \
- ))
- 
- # This is a bit hackish.
---- expat/expat-iOS.patch	2017-06-25 18:29:24.000000000 -0700
-+++ expat/expat-iOS.patch	2017-06-25 18:31:42.000000000 -0700
-@@ -0,0 +1,20 @@
-+--- misc/expat-2.1.0/conftools/config.sub	2016-04-30 21:24:14.000000000 +0200
-++++ misc/build/expat-2.1.0/conftools/config.sub	2017-06-11 10:56:49.000000000 +0200
-+@@ -252,7 +252,7 @@
-+ 	| alpha64 | alpha64ev[4-8] | alpha64ev56 | alpha64ev6[78] | alpha64pca5[67] \
-+ 	| am33_2.0 \
-+ 	| arc | arceb \
-+-	| arm | arm[bl]e | arme[lb] | armv[2-8] | armv[3-8][lb] | armv7[arm] \
-++	| arm | arm[bl]e | arme[lb] | armv[2-8] | armv[3-8][lb] | armv7[arm] | arm64 \
-+ 	| avr | avr32 \
-+ 	| ba \
-+ 	| be32 | be64 \
-+@@ -374,7 +374,7 @@
-+ 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
-+ 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
-+ 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* | arceb-* \
-+-	| arm-*  | armbe-* | armle-* | armeb-* | armv*-* \
-++	| arm-*  | armbe-* | armle-* | armeb-* | armv*-* | arm64-* \
-+ 	| avr-* | avr32-* \
-+ 	| ba-* \
-+ 	| be32-* | be64-* \
---- expat/expat-macOS.patch 2017-06-25 21:48:41.000000000 -0700
-+++ expat/expat-macOS.patch	2017-06-25 21:55:54.000000000 -0700
-@@ -0,0 +1,17 @@
-+--- misc/expat-2.1.1/lib/xmlparse.c	2017-06-17 09:07:38.000000000 -0700
-++++ misc/build/expat-2.1.1/lib/xmlparse.c	2017-06-25 21:51:02.000000000 -0700
-+@@ -699,7 +699,14 @@
-+ # include <errno.h>
-+ 
-+ # if defined(HAVE_GETRANDOM)
-++#  ifdef __clang__
-++#    pragma push_macro("buffer")
-++#    undef buffer
-++#  endif
-+ #  include <sys/random.h>    /* getrandom */
-++#  ifdef __clang__
-++#    pragma pop_macro("buffer")
-++#  endif
-+ # else
-+ #  include <unistd.h>        /* syscall */
-+ #  include <sys/syscall.h>   /* SYS_getrandom */
 --- opencollada/patches/opencollada.libxml.patch.0	2015-11-25 05:55:38.000000000 -0700
 +++ opencollada/patches/opencollada.libxml.patch.0	2018-10-15 19:04:44.000000000 -0600
 @@ -10,3 +10,14 @@
@@ -91,25 +35,3 @@
 + #include <memory>
 + #include <string.h>
 + #include <limits>
---- firebird/firebird-macosx.patch.1	2015-11-25 05:55:38.000000000 -0700
-+++ firebird/firebird-macosx.patch.1	2018-10-15 21:40:42.000000000 -0600
-@@ -109,3 +109,19 @@
-  EMBED_UTIL_TARGETS=gstat gds_relay gsec fbguard nbackup fb_lock_print fbsvcmgr fbtracemgr
-  CLIENT_UTIL_TARGETS=gds_relay gstat gsec fbguard fbmgr_bin nbackup fb_lock_print fbsvcmgr \
-  	fbtracemgr
-+--- firebird/src/common/classes/FpeControl.h	2013-03-19 02:38:21.000000000 -0600
-++++ firebird/src/common/classes/FpeControl.h	2018-10-15 21:31:47.000000000 -0600
-+@@ -208,11 +208,13 @@
-+ }
-+ #else
-+ #ifndef isinf
-++#ifndef __APPLE__
-+ template <typename F>
-+ inline bool isinf(F x)
-+ {
-+ 	return !isnan(x) && isnan(x - x);
-+ }
-++#endif // __APPLE__
-+ #endif // isinf
-+ #endif // WIN_NT
-+ 

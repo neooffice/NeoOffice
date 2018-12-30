@@ -1,6 +1,6 @@
 --- Library_avmediaQuickTime.mk	2015-11-25 04:55:38.000000000 -0800
 +++ Library_avmediaQuickTime.mk	2017-02-18 08:03:25.000000000 -0800
-@@ -35,6 +35,7 @@
+@@ -34,6 +34,7 @@
  	QTKit \
  ))
  
@@ -8,7 +8,7 @@
  $(eval $(call gb_Library_add_objcxxobjects,avmediaQuickTime,\
  	avmedia/source/quicktime/framegrabber \
  	avmedia/source/quicktime/manager \
-@@ -42,5 +43,10 @@
+@@ -41,5 +42,10 @@
  	avmedia/source/quicktime/quicktimeuno \
  	avmedia/source/quicktime/window \
  ))

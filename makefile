@@ -274,12 +274,7 @@ build.libo_patches: \
 	build.libo_external_patch \
 	build.libo_include_patch \
 	build.libo_jvmfwk_patch \
-	build.libo_sc_patch \
-	build.libo_sd_patch \
-	build.libo_svx_patch \
-	build.libo_sw_patch \
 	build.libo_vcl_patch \
-	build.libo_writerperfect_patch \
 	build.libo_xmlhelp_patch
 	touch "$@"
 
