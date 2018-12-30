@@ -128,7 +128,7 @@ else
 PRODUCT_DIR_PATCH_VERSION:=$(PRODUCT_DIR_PATCH_VERSION)-$(PRODUCT_DIR_PATCH_VERSION_EXTRA)
 endif
 endif
-PRODUCT_MIN_OSVERSION=10.12
+PRODUCT_MIN_OSVERSION=10.14
 PRODUCT_MIN_OSVERSION_NAME=$(PRODUCT_MIN_OSVERSION) Sierra
 PRODUCT_MAX_OSVERSION=10.14
 PRODUCT_MAX_OSVERSION_NAME=$(PRODUCT_MAX_OSVERSION) Mojave
@@ -305,7 +305,7 @@ endif
 
 build.libo_configure: build.libo_patches
 ifeq ("$(OS_TYPE)","macOS")
-	cd "$(LIBO_BUILD_HOME)" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; autoconf ; ./configure --without-parallelism --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --with-macosx-version-min-required="$(PRODUCT_MIN_OSVERSION)" --without-junit --disable-cups --disable-odk --with-lang="$(LIBO_LANGUAGES)" --without-fonts --with-help --with-myspell-dicts --enable-bogus-pkg-config
+	cd "$(LIBO_BUILD_HOME)" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; NASM=/opt/local/bin/nasm ; export NASM ; autoconf ; ./configure --without-parallelism --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --with-macosx-version-min-required="$(PRODUCT_MIN_OSVERSION)" --without-junit --disable-cups --disable-odk --with-lang="$(LIBO_LANGUAGES)" --without-fonts --with-help --with-myspell-dicts --enable-bogus-pkg-config
 else
 	@echo "$@ not implemented" ; exit 1
 endif

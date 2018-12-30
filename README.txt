@@ -25,6 +25,7 @@ At this time, NeoOffice will only build on macOS 10.14 Mojave.
    sudo /opt/local/bin/port install cvs -x11
    sudo /opt/local/bin/port install gnutar -x11
    sudo /opt/local/bin/port install xz -x11
+   sudo /opt/local/bin/port install nasm -x11
 
    After running the above command, add "/opt/local/bin" to the end of your shell's PATH environment variable so that the build can all of the commands installed by /opt/local/bin/port command in the previous step.
 
