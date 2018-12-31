@@ -82,3 +82,13 @@
 - #include <memory>
 - #include <string.h>
 - #include <limits>
+--- hunspell/ExternalProject_hunspell.mk	2018-05-09 05:27:29.000000000 -0500
++++ hunspell/ExternalProject_hunspell.mk	2018-12-31 07:34:38.000000000 -0600
+@@ -27,6 +27,7 @@
+ 		LIBS="$(gb_STDLIBS) $(LIBS)" \
+ 		autoreconf && \
+ 		$(SHELL) ./configure --disable-shared --disable-nls --with-pic \
++			--disable-dependency-tracking \
+ 			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM))\
+ 			$(if $(filter AIX,$(OS)),CFLAGS="-D_LINUX_SOURCE_COMPAT") \
+ 			$(if $(hunspell_CPPFLAGS),CPPFLAGS='$(hunspell_CPPFLAGS)') \
