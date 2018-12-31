@@ -35,3 +35,34 @@
 + #include <memory>
 + #include <string.h>
 + #include <limits>
+--- curl/curl-osx.patch.1	2018-05-09 05:27:29.000000000 -0500
++++ curl/curl-osx.patch.1	2018-12-30 18:53:54.000000000 -0600
+@@ -283,3 +283,14 @@
+  /* Define to 1 if compiler supports C99 variadic macro style. */
+  #cmakedefine HAVE_VARIADIC_MACROS_C99 1
+  
++--- a/acinclude.m4	2016-12-19 01:27:56.000000000 -0600
+++++ b/acinclude.m4	2018-12-30 18:52:22.000000000 -0600
++@@ -3224,7 +3224,7 @@
++     AC_MSG_CHECKING([for *version-min in CFLAGS])
++     min=""
++     if test -z "$(echo $CFLAGS | grep m.*os.*-version-min)"; then
++-      min="-mmacosx-version-min=10.8"
+++      min="-mmacosx-version-min=10.14"
++       CFLAGS="$CFLAGS $min"
++     fi
++     if test -z "$min"; then
+--- curl/UnpackedTarball_curl.mk	2018-05-09 05:27:29.000000000 -0500
++++ curl/UnpackedTarball_curl.mk	2018-12-30 19:12:02.000000000 -0600
+@@ -35,11 +35,9 @@
+ endif
+ 
+ ifeq ($(OS),MACOSX)
+-ifneq ($(filter 1090 101000,$(MAC_OS_X_VERSION_MIN_REQUIRED)),)
+ $(eval $(call gb_UnpackedTarball_add_patches,curl,\
+ 	external/curl/curl-osx.patch.1 \
+ ))
+ endif
+-endif
+ 
+ # vim: set noet sw=4 ts=4:
