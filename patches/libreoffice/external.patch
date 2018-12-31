@@ -66,3 +66,19 @@
 -endif
  
  # vim: set noet sw=4 ts=4:
+--- opencollada/patches/libc++.patch.0	2018-05-09 05:27:29.000000000 -0500
++++ opencollada/patches/libc++.patch.0	2018-12-30 19:58:11.000000000 -0600
+@@ -9,13 +9,3 @@
+      #include <unordered_map>
+      #include <unordered_set>
+      #define COLLADABU_HASH_MAP std::unordered_map
+---- GeneratedSaxParser/src/GeneratedSaxParserUtils.cpp
+-+++ GeneratedSaxParser/src/GeneratedSaxParserUtils.cpp
+-@@ -10,6 +10,7 @@
+- 
+- #include "GeneratedSaxParserUtils.h"
+- #include <math.h>
+-+#include <cmath>
+- #include <memory>
+- #include <string.h>
+- #include <limits>
