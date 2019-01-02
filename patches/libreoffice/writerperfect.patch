@@ -1,4 +1,4 @@
---- qa/unit/WpftWriterFilterTest.cxx.bak	2018-05-09 05:27:29.000000000 -0500
+--- qa/unit/WpftWriterFilterTest.cxx	2018-05-09 05:27:29.000000000 -0500
 +++ qa/unit/WpftWriterFilterTest.cxx	2019-01-02 14:20:08.000000000 -0600
 @@ -60,7 +60,9 @@
      doTest("com.sun.star.comp.Writer.AbiWordImportFilter", "/writerperfect/qa/unit/data/writer/libabw/");
