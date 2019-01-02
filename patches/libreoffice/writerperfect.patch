@@ -1,0 +1,12 @@
+--- qa/unit/WpftWriterFilterTest.cxx.bak	2018-05-09 05:27:29.000000000 -0500
++++ qa/unit/WpftWriterFilterTest.cxx	2019-01-02 14:20:08.000000000 -0600
+@@ -60,7 +60,9 @@
+     doTest("com.sun.star.comp.Writer.AbiWordImportFilter", "/writerperfect/qa/unit/data/writer/libabw/");
+     doTest("org.libreoffice.comp.Writer.EBookImportFilter", "/writerperfect/qa/unit/data/writer/libe-book/", aEBookOptional);
+     doTest("com.sun.star.comp.Writer.MSWorksImportFilter", "/writerperfect/qa/unit/data/writer/libwps/", aWpsOptional);
++#if defined USE_JAVA || !defined MACOSX
+     doTest("com.sun.star.comp.Writer.MWAWImportFilter", "/writerperfect/qa/unit/data/writer/libmwaw/", aMWAWOptional);
++#endif	// USE_JAVA || !MACOSX
+     doTest("org.libreoffice.comp.Writer.PagesImportFilter", "/writerperfect/qa/unit/data/writer/libetonyek/", aEtonyekOptional);
+     doTest("org.libreoffice.comp.Writer.StarOfficeWriterImportFilter", "/writerperfect/qa/unit/data/writer/libstaroffice/", aStarOfficeOptional);
+     doTest("com.sun.star.comp.Writer.WordPerfectImportFilter", "/writerperfect/qa/unit/data/writer/libwpd/");
