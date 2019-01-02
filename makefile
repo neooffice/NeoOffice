@@ -275,6 +275,7 @@ build.libo_patches: \
 	build.libo_include_patch \
 	build.libo_jvmfwk_patch \
 	build.libo_vcl_patch \
+	build.libo_writerperfect_patch \
 	build.libo_xmlhelp_patch
 	touch "$@"
 
