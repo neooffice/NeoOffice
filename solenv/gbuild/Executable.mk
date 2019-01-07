@@ -109,6 +109,8 @@ $(eval $(foreach method,\
 	add_objcobjects \
 	add_objcxxobject \
 	add_objcxxobjects \
+	add_cxxclrobject \
+	add_cxxclrobjects \
 	add_grammar \
 	add_grammars \
 	add_scanner \
@@ -121,6 +123,7 @@ $(eval $(foreach method,\
 	add_cxxflags \
 	add_objcflags \
 	add_objcxxflags \
+	add_cxxclrflags \
 	add_defs \
 	set_include \
 	add_ldflags \
@@ -136,6 +139,7 @@ $(eval $(foreach method,\
 	use_internal_api \
 	use_internal_bootstrap_api \
 	use_internal_comprehensive_api \
+	use_library_objects \
 	use_libraries \
 	use_static_libraries \
 	use_external \
@@ -148,8 +152,8 @@ $(eval $(foreach method,\
 	set_precompiled_header \
 	add_nativeres \
 	set_warnings_not_errors \
+	set_external_code \
 	set_generated_cxx_suffix \
-	disable_compiler_plugins \
 ,\
 	$(call gb_Executable_forward_to_Linktarget,$(method))\
 ))
