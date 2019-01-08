@@ -20,40 +20,57 @@
 #ifndef INCLUDED_FILTER_MSFILTER_SVDFPPT_HXX
 #define INCLUDED_FILTER_MSFILTER_SVDFPPT_HXX
 
-#include <rtl/ustring.hxx>
-#include <tools/solar.h>
-#include <tools/gen.hxx>
-#include <tools/color.hxx>
-#include <svx/svdobj.hxx>
-#include <editeng/numitem.hxx>
-#include <editeng/editdata.hxx>
-#include <filter/msfilter/msdffimp.hxx>
-#include <filter/msfilter/msocximex.hxx>
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <type_traits>
+#include <vector>
+
+#include <com/sun/star/uno/Reference.hxx>
 #include <editeng/eeitem.hxx>
 #define ITEMID_FIELD EE_FEATURE_FIELD
 #include <editeng/flditem.hxx>
 #undef ITEMID_FIELD
+#include <filter/msfilter/dffrecordheader.hxx>
+#include <filter/msfilter/msdffimp.hxx>
 #include <filter/msfilter/msfilterdllapi.h>
-#include <vcl/font.hxx>
-#include <vector>
-#include <boost/noncopyable.hpp>
-#include <boost/optional.hpp>
-#include <boost/ptr_container/ptr_vector.hpp>
+#include <filter/msfilter/msocximex.hxx>
+#include <o3tl/enumarray.hxx>
+#include <rtl/textenc.h>
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
+#include <svx/msdffdef.hxx>
+#include <tools/color.hxx>
+#include <tools/fontenum.hxx>
+#include <tools/gen.hxx>
+#include <tools/ref.hxx>
+#include <tools/solar.h>
+#include <vcl/graph.hxx>
+#include <salhelper/simplereferenceobject.hxx>
 
-class SdrModel;
-class SdPage;
+namespace boost {
+    template <class T> class optional;
+}
+
+namespace com { namespace sun { namespace star {
+    namespace awt { struct Size; }
+    namespace drawing { class XShape; }
+    namespace form { class XFormComponent; }
+    namespace frame { class XModel; }
+} } }
+
 class SdrPage;
 class SdrObject;
 class SvStream;
-class Polygon;
-namespace tools { class PolyPolygon; }
 class SfxItemSet;
-class Outliner;
-class Graphic;
-class SvxMSDffManager;
+class SdrOutliner;
+class SfxStyleSheet;
+class SotStorage;
+class SvMemoryStream;
+class SvxNumberFormat;
 class PPTTextObj;
-class DffRecordHeader;
-class SvxBulletItem;
+enum class PptSlideLayout;
+enum class PptPlaceholder : sal_uInt8;
 
 #define PPT_IMPORTFLAGS_NO_TEXT_ASSERT  1
 
@@ -83,7 +100,7 @@ struct MSFILTER_DLLPUBLIC PowerPointImportParam
     sal_uInt32          nImportFlags;
     PptCurrentUserAtom  aCurrentUserAtom;
 
-    PowerPointImportParam( SvStream& rDocStream, sal_uInt32 nImportFlags );
+    PowerPointImportParam( SvStream& rDocStream );
 };
 
 struct SdHyperlinkEntry
@@ -96,12 +113,7 @@ struct SdHyperlinkEntry
     OUString    aTarget;
     OUString    aSubAdress;
 
-    sal_Int32   nStartPos;
-    sal_Int32   nEndPos;
-
     OUString    aConvSubString;
-    ESelection  aESelection;
-    bool        bSelection;
 };
 
 // Helper class for reading the PPT InteractiveInfoAtom
@@ -150,21 +162,19 @@ enum PPT_TextHeader
     PPTTH_QUARTERBODY  // Body in four-body slide
 };
 
-#define TSS_TYPE_PAGETITLE      (0)
-#define TSS_TYPE_BODY           (1)
-#define TSS_TYPE_NOTES          (2)
-#define TSS_TYPE_UNUSED         (3)
-#define TSS_TYPE_TEXT_IN_SHAPE  (4)
-#define TSS_TYPE_SUBTITLE       (5)
-#define TSS_TYPE_TITLE          (6)
-#define TSS_TYPE_HALFBODY       (7)
-#define TSS_TYPE_QUARTERBODY    (8)
-
-// Inventor-Id for PPT UserData
-const sal_uInt32 PPTInventor = sal_uInt32('P') * 0x00000001
-                             + sal_uInt32('P') * 0x00000100
-                             + sal_uInt32('T') * 0x00010000
-                             + sal_uInt32('0') * 0x01000000;
+enum class TSS_Type : unsigned {
+    PageTitle      = 0,
+    Body           = 1,
+    Notes          = 2,
+    Unused         = 3,
+    TextInShape    = 4,
+    Subtitle       = 5,
+    Title          = 6,
+    HalfBody       = 7,
+    QuarterBody    = 8,
+    LAST = QuarterBody,
+    Unknown        = 0xffffffff // or invalid
+};
 
 const int nMaxPPTLevels = 5;
 
@@ -187,17 +197,17 @@ struct MSFILTER_DLLPUBLIC PptDocumentAtom
 
 public:
 
-    Size    GetPageSize( const Size& rSiz ) const;
-    Size    GetSlidesPageSize() const { return GetPageSize( aSlidesPageSize ); }
-    Size    GetNotesPageSize() const { return GetPageSize( aNotesPageSize ); }
+    static const Size& GetPageSize( const Size& rSiz );
+    Size        GetSlidesPageSize() const { return GetPageSize( aSlidesPageSize ); }
+    Size        GetNotesPageSize() const { return GetPageSize( aNotesPageSize ); }
 
     friend SvStream& ReadPptDocumentAtom( SvStream& rIn, PptDocumentAtom& rAtom );
 };
 
 struct PptSlideLayoutAtom
 {
-    sal_Int32           eLayout;                // 0..18
-    sal_uInt8           aPlaceholderId[ 8 ];
+    PptSlideLayout      eLayout;                // 0..18
+    PptPlaceholder      aPlaceholderId[ 8 ];
 
 public:
                         PptSlideLayoutAtom() { Clear(); }
@@ -227,7 +237,7 @@ struct PptSlidePersistAtom
     sal_uInt32          nFlags;
     sal_uInt32          nNumberTexts;
     sal_uInt32          nSlideId;
-    sal_uInt32          nReserved;                  // we will use nReserved temporarly to set the offset to SSSlideInfoAtom ( if possible )
+    sal_uInt32          nReserved;                  // we will use nReserved temporarily to set the offset to SSSlideInfoAtom ( if possible )
 
 public:
                         PptSlidePersistAtom() { Clear(); }
@@ -253,8 +263,7 @@ struct PptColorSchemeAtom
     sal_uInt8           aData[32];
 
 public:
-                        PptColorSchemeAtom () { Clear(); }
-    void                Clear();
+                        PptColorSchemeAtom();
     Color               GetColor( sal_uInt16 nNum ) const;
 
     friend SvStream& ReadPptColorSchemeAtom(SvStream& rIn, PptColorSchemeAtom& rAtom);
@@ -263,11 +272,9 @@ public:
 struct PptFontEntityAtom
 {
     OUString            aName;
-    double              fScaling;
     sal_uInt8           lfClipPrecision;
     sal_uInt8           lfQuality;
 
-    sal_uInt32          nUniqueFontId;          // not used anymore
     rtl_TextEncoding    eCharSet;
     FontFamily          eFamily;
     FontPitch           ePitch;
@@ -305,7 +312,7 @@ public:
 struct PptOEPlaceholderAtom
 {
     sal_uInt32          nPlacementId;
-    sal_uInt8           nPlaceholderId;
+    PptPlaceholder      nPlaceholderId;
     sal_uInt8           nPlaceholderSize; // 0=Full size, 1=Half size, 2=Quarter of Slide
 
 public:
@@ -315,11 +322,13 @@ public:
     friend SvStream& ReadPptOEPlaceholderAtom( SvStream& rIn, PptOEPlaceholderAtom& rAtom );
 };
 
-struct ProcessData;
 struct PPTStyleSheet;
 struct HeaderFooterEntry;
-struct PptSlidePersistEntry : private boost::noncopyable
+struct PptSlidePersistEntry
 {
+    PptSlidePersistEntry(const PptSlidePersistEntry&) = delete;
+    PptSlidePersistEntry& operator=( const PptSlidePersistEntry& ) = delete;
+
     PptSlidePersistAtom aPersistAtom;
     PptSlideAtom        aSlideAtom;
     PptNotesAtom        aNotesAtom;
@@ -355,26 +364,33 @@ public:
 
 #define PPTSLIDEPERSIST_ENTRY_NOTFOUND 0xFFFF
 
-class MSFILTER_DLLPUBLIC PptSlidePersistList: private boost::noncopyable
+class MSFILTER_DLLPUBLIC PptSlidePersistList
 {
 private:
-    boost::ptr_vector<PptSlidePersistEntry> mvEntries;
+    PptSlidePersistList(const PptSlidePersistList&) = delete;
+    PptSlidePersistList& operator=( const PptSlidePersistList& ) = delete;
+
+    typedef std::vector<std::unique_ptr<PptSlidePersistEntry>> Entries_t;
+    Entries_t mvEntries;
 
 public:
     PptSlidePersistList();
     ~PptSlidePersistList();
 
     size_t size() const { return mvEntries.size(); }
-    bool is_null( size_t nIdx ) const { return mvEntries.is_null( nIdx ); }
-    const PptSlidePersistEntry& operator[]( size_t nIdx ) const { return mvEntries[ nIdx ]; }
-    PptSlidePersistEntry& operator[]( size_t nIdx ) { return mvEntries[ nIdx ]; }
-    boost::ptr_vector<PptSlidePersistEntry>::iterator begin() { return mvEntries.begin(); }
-    void insert( boost::ptr_vector<PptSlidePersistEntry>::iterator it,
-                 PptSlidePersistEntry* pEntry )
+    bool is_null( size_t nIdx ) const { return mvEntries[ nIdx ] == nullptr; }
+    const PptSlidePersistEntry& operator[](size_t nIdx) const { return *mvEntries[ nIdx ]; }
+    PptSlidePersistEntry& operator[](size_t nIdx) { return *mvEntries[ nIdx ]; }
+    Entries_t::iterator begin() { return mvEntries.begin(); }
+    void insert( Entries_t::iterator it,
+                 std::unique_ptr<PptSlidePersistEntry> pEntry )
     {
-        mvEntries.insert(it, pEntry);
+        mvEntries.insert(it, std::move(pEntry));
     }
-    void push_back( PptSlidePersistEntry* pEntry ) { mvEntries.push_back(pEntry); }
+    void push_back(std::unique_ptr<PptSlidePersistEntry> pEntry)
+    {
+        mvEntries.push_back(std::move(pEntry));
+    }
 
     sal_uInt16          FindPage( sal_uInt32 nId ) const;
 };
@@ -383,7 +399,6 @@ class  SfxObjectShell;
 struct PPTOleEntry
 {
     sal_uInt32          nId;                        // OleId
-    sal_uInt32          nPersistPtr;                // PersistPtr
     sal_uInt32          nRecHdOfs;                  // points to the record header: ExObjListHd
     SfxObjectShell*     pShell;
     sal_uInt16          nType;                      // maybe PPT_PST_ExEmbed or PPT_PST_ExControl
@@ -391,7 +406,6 @@ struct PPTOleEntry
 
     PPTOleEntry( sal_uInt32 nid, sal_uInt32 nOfs, SfxObjectShell* pSh, sal_uInt16 nT, sal_uInt32 nAsp )
         : nId(nid)
-        , nPersistPtr(0)
         , nRecHdOfs(nOfs)
         , pShell(pSh)
         , nType(nT)
@@ -410,8 +424,14 @@ public:
     friend SvStream& ReadPptExOleObjAtom( SvStream& rIn, PptExOleObjAtom& rAtom );
 };
 
-typedef ::std::vector< PPTOleEntry* > PPTOleEntryList;
-class PPTExtParaProv;
+// SdPage derives from SdrPage, is only known inside sd, and needs to be carried
+// around as an opaque pointer here:
+struct SdPageCapsule {
+    explicit SdPageCapsule(SdrPage * thePage): page(thePage) {}
+
+    SdrPage * page;
+};
+
 class MSFILTER_DLLPUBLIC SdrEscherImport : public SvxMSDffManager
 {
 protected:
@@ -424,21 +444,11 @@ protected:
     PptDocumentAtom     aDocAtom;
     DffRecordManager    aDocRecManager;             // contains all first level container and atoms of the document container
 
-    PPTOleEntryList     aOleObjectList;             // contains PPTOleEntrys
+    ::std::vector< PPTOleEntry* > aOleObjectList;
 
-    PptFontCollection*  pFonts;
+    PptFontCollection*  m_pFonts;
 
     sal_uInt32          nStreamLen;
-    sal_uInt16          nTextStylesIndex;
-
-    rtl_TextEncoding    eCharSetSystem;
-
-    bool                bWingdingsChecked       : 1;
-    bool                bWingdingsAvailable     : 1;
-    bool                bMonotypeSortsChecked   : 1;
-    bool                bMonotypeSortsAvailable : 1;
-    bool                bTimesNewRomanChecked   : 1;
-    bool                bTimesNewRomanAvailable : 1;
 
     bool                 ReadString( OUString& rStr ) const;
     // only for PowerPoint filter:
@@ -450,36 +460,32 @@ public:
     PowerPointImportParam& rImportParam;
 
                         SdrEscherImport( PowerPointImportParam&, const OUString& rBaseURL );
-    virtual             ~SdrEscherImport();
-    virtual bool        GetColorFromPalette( sal_uInt16 nNum, Color& rColor ) const SAL_OVERRIDE;
-    virtual bool        SeekToShape( SvStream& rSt, void* pClientData, sal_uInt32 nId ) const SAL_OVERRIDE;
+    virtual             ~SdrEscherImport() override;
+    virtual bool        GetColorFromPalette( sal_uInt16 nNum, Color& rColor ) const override;
+    virtual bool        SeekToShape( SvStream& rSt, void* pClientData, sal_uInt32 nId ) const override;
     PptFontEntityAtom*  GetFontEnityAtom( sal_uInt32 nNum ) const;
     void                RecolorGraphic( SvStream& rSt, sal_uInt32 nRecLen, Graphic& rGraph );
-    virtual SdrObject*  ReadObjText( PPTTextObj* pTextObj, SdrObject* pObj, SdPage* pPage ) const;
-    virtual SdrObject*  ProcessObj( SvStream& rSt, DffObjData& rData, void* pData, Rectangle& rTextRect, SdrObject* pObj ) SAL_OVERRIDE;
-    virtual void        ProcessClientAnchor2( SvStream& rSt, DffRecordHeader& rHd, void* pData, DffObjData& rObj ) SAL_OVERRIDE;
+    virtual SdrObject*  ReadObjText( PPTTextObj* pTextObj, SdrObject* pObj, SdPageCapsule pPage ) const;
+    virtual SdrObject*  ProcessObj( SvStream& rSt, DffObjData& rData, void* pData, tools::Rectangle& rTextRect, SdrObject* pObj ) override;
+    virtual void        ProcessClientAnchor2( SvStream& rSt, DffRecordHeader& rHd, void* pData, DffObjData& rObj ) override;
     void                ImportHeaderFooterContainer( DffRecordHeader& rHeader, HeaderFooterEntry& rEntry );
 };
 
 
-
-#define SD_HEADERFOOTER_DATE        1
-#define SD_HEADERFOOTER_TODAYDATE   2
-#define SD_HEADERFOOTER_USERDATE    4
-#define SD_HEADERFOOTER_SLIDENUMBER 8
-#define SD_HEADERFOOTER_HEADER      16
-#define SD_HEADERFOOTER_FOOTER      32
-
-class SvxFieldItem;
 struct MSFILTER_DLLPUBLIC PPTFieldEntry
 {
     sal_uInt16          nPos;
     sal_uInt16          nTextRangeEnd;
-    SvxFieldItem*       pField1;
-    SvxFieldItem*       pField2;
-    OUString*           pString;
+    std::unique_ptr<SvxFieldItem> xField1;
+    std::unique_ptr<SvxFieldItem> xField2;
+    std::unique_ptr<OUString> xString;
 
-    PPTFieldEntry() : nPos( 0 ), nTextRangeEnd( 0 ), pField1( NULL ), pField2( NULL ), pString( NULL ) {};
+    PPTFieldEntry()
+        : nPos(0)
+        , nTextRangeEnd(0)
+    {
+    }
+
     ~PPTFieldEntry();
 
     void                SetDateTime( sal_uInt32 nType );
@@ -498,36 +504,30 @@ struct MSFILTER_DLLPUBLIC HeaderFooterEntry
     OUString            pPlaceholder[ 4 ];
     sal_uInt32          nAtom;
 
-    sal_uInt32          GetMaskForInstance( sal_uInt32 nInstance );
     sal_uInt32          IsToDisplay( sal_uInt32 nInstance );
     sal_uInt32          NeedToImportInstance(
                             const sal_uInt32 nInstance,
                             const PptSlidePersistEntry& rSlidePersist
                         );
 
-                        explicit HeaderFooterEntry( const PptSlidePersistEntry* pMaster = NULL );
+                        explicit HeaderFooterEntry( const PptSlidePersistEntry* pMaster = nullptr );
                         ~HeaderFooterEntry();
 };
 
 struct ProcessData
 {
     PptSlidePersistEntry&       rPersistEntry;
-    SdPage*                     pPage;
+    SdPageCapsule               pPage;
     ::std::vector< SdrObject* > aBackgroundColoredObjects;
-    sal_uInt32*                 pTableRowProperties;
+    std::unique_ptr<sal_uInt32[]> pTableRowProperties;
 
-    ProcessData( PptSlidePersistEntry& rP, SdPage* pP ) :
+    ProcessData( PptSlidePersistEntry& rP, SdPageCapsule pP ) :
         rPersistEntry               ( rP ),
-        pPage                       ( pP ),
-        pTableRowProperties         ( NULL ) {};
-    ~ProcessData() { delete[] pTableRowProperties; };
+        pPage                       ( pP ) {};
 };
 
 
-
-typedef ::std::vector< SdHyperlinkEntry* > SdHyperlinkEntryList;
 class SdrTextObj;
-class SfxObjectShell;
 
 class MSFILTER_DLLPUBLIC SdrPowerPointImport : public SdrEscherImport
 {
@@ -541,16 +541,16 @@ protected:
     bool                    bOk;
     PptUserEditAtom         aUserEditAtom;
     PptColorSchemeAtom      aPageColors;
-    SdHyperlinkEntryList    aHyperList;
+    ::std::vector< SdHyperlinkEntry* > aHyperList;
     sal_uInt32*             pPersistPtr;
-    sal_uLong               nPersistPtrAnz;
+    sal_uInt32              nPersistPtrAnz;
 
     const PPTStyleSheet*    pPPTStyleSheet; // this is the current stylesheet;
     const PPTStyleSheet*    pDefaultSheet;  // this is a sheet we are using if no masterpage can be found, but that should
                                             // never happen just preventing a crash
-    PptSlidePersistList*    pMasterPages;
-    PptSlidePersistList*    pSlidePages;
-    PptSlidePersistList*    pNotePages;
+    PptSlidePersistList*    m_pMasterPages;
+    PptSlidePersistList*    m_pSlidePages;
+    PptSlidePersistList*    m_pNotePages;
     sal_uInt16              nAktPageNum;
     sal_uLong               nDocStreamPos;
     sal_uInt16              nPageColorsNum;
@@ -560,9 +560,9 @@ protected:
 protected:
     using SdrEscherImport::ReadObjText;
 
-    bool                    SeekToAktPage(DffRecordHeader* pRecHd=NULL) const;
-    bool                    SeekToDocument(DffRecordHeader* pRecHd=NULL) const;
-    bool                    SeekToContentOfProgTag(
+    bool                    SeekToAktPage(DffRecordHeader* pRecHd) const;
+    bool                    SeekToDocument(DffRecordHeader* pRecHd) const;
+    static bool             SeekToContentOfProgTag(
                                 sal_Int32 nVersion,
                                 SvStream& rSt,
                                 const DffRecordHeader& rProgTagBinaryDataHd,
@@ -571,31 +571,29 @@ protected:
     virtual SdrObject*      ApplyTextObj(
                                 PPTTextObj* pTextObj,
                                 SdrTextObj* pText,
-                                SdPage* pPage,
+                                SdPageCapsule pPage,
                                 SfxStyleSheet*,
                                 SfxStyleSheet** )
                              const;
-    virtual SdrObject*      ReadObjText( PPTTextObj* pTextObj, SdrObject* pObj, SdPage* pPage ) const SAL_OVERRIDE;
+    virtual SdrObject*      ReadObjText( PPTTextObj* pTextObj, SdrObject* pObj, SdPageCapsule pPage ) const override;
     // #i32596# - new parameter <_nCalledByGroup>, which
     // indicates, if the OLE object is imported inside a group object.
     virtual SdrObject*      ImportOLE(
-                                long nOLEId,
+                                sal_uInt32 nOLEId,
                                 const Graphic& rGraf,
-                                const Rectangle& rBoundRect,
-                                const Rectangle& rVisArea,
+                                const tools::Rectangle& rBoundRect,
+                                const tools::Rectangle& rVisArea,
                                 const int _nCalledByGroup,
                                 sal_Int64 nAspect
-                            ) const SAL_OVERRIDE;
+                            ) const override;
     SvMemoryStream*         ImportExOleObjStg( sal_uInt32 nPersistPtr, sal_uInt32& nOleId ) const;
     SdrPage*                MakeBlancPage(bool bMaster) const;
     bool                    ReadFontCollection();
-    bool                    ForceFontCollection() const
-                            { return pFonts!=NULL?sal_True:((SdrPowerPointImport*)this)->ReadFontCollection(); }
     PptSlidePersistList*    GetPageList(PptPageKind ePageKind) const;
     sal_uInt32              GetAktPageId();
     sal_uInt32              GetMasterPageId(sal_uInt16 nPageNum, PptPageKind ePageKind) const;
     sal_uInt32              GetNotesPageId(sal_uInt16 nPageNum ) const;
-    SdrOutliner*            GetDrawOutliner( SdrTextObj* pSdrText ) const;
+    static SdrOutliner*     GetDrawOutliner( SdrTextObj* pSdrText );
     void                    SeekOle( SfxObjectShell* pShell, sal_uInt32 nFilterOptions );
 
     void                    ApplyTextAnchorAttributes( PPTTextObj& rTextObj, SfxItemSet& rSet ) const;
@@ -603,18 +601,15 @@ protected:
 
 public:
                             SdrPowerPointImport( PowerPointImportParam&, const OUString& rBaseURL );
-    virtual                 ~SdrPowerPointImport();
+    virtual                 ~SdrPowerPointImport() override;
     sal_uInt16              GetPageCount( PptPageKind eKind = PPT_SLIDEPAGE ) const;
     void                    SetPageNum( sal_uInt16 nPageNum, PptPageKind = PPT_SLIDEPAGE );
-    sal_uInt16              GetPageNum() const { return nAktPageNum; }
-    PptPageKind             GetPageKind() const { return eAktPageKind; }
     Size                    GetPageSize() const;
     SdrObject*              ImportPageBackgroundObject(
                                 const SdrPage& rPage,
-                                sal_uInt32& nBgFileOffset,
-                                bool bForce
+                                sal_uInt32& nBgFileOffset
                             );
-    bool                    IsNoteOrHandout( sal_uInt16 nPageNum, PptPageKind ePageKind ) const;
+    bool                    IsNoteOrHandout( sal_uInt16 nPageNum ) const;
     bool                    HasMasterPage(
                                 sal_uInt16 nPageNum,
                                 PptPageKind ePageKind = PPT_SLIDEPAGE
@@ -624,41 +619,16 @@ public:
                                 PptPageKind ePageKind = PPT_SLIDEPAGE
                             ) const;
 
-    void                    ImportPage( SdrPage* pPage, const PptSlidePersistEntry* pMasterPersist = NULL );
-    virtual bool            GetColorFromPalette(sal_uInt16 nNum, Color& rColor) const SAL_OVERRIDE;
-    virtual bool            SeekToShape( SvStream& rSt, void* pClientData, sal_uInt32 nId ) const SAL_OVERRIDE;
-    sal_Unicode             PPTSubstitute(
-                                sal_uInt16 nFont,
-                                sal_Unicode nChar,
-                                sal_uInt32& nMappedFontId,
-                                vcl::Font& rFont,
-                                char nDefault
-                            ) const;
-    const PptDocumentAtom&  GetDocumentAtom() const { return aDocAtom; }
-    virtual const PptSlideLayoutAtom*   GetSlideLayoutAtom() const SAL_OVERRIDE;
+    void                    ImportPage( SdrPage* pPage, const PptSlidePersistEntry* pMasterPersist );
+    virtual bool            GetColorFromPalette(sal_uInt16 nNum, Color& rColor) const override;
+    virtual bool            SeekToShape( SvStream& rSt, void* pClientData, sal_uInt32 nId ) const override;
+    virtual const PptSlideLayoutAtom*   GetSlideLayoutAtom() const override;
     SdrObject*              CreateTable(
                                 SdrObject* pGroupObject,
                                 sal_uInt32* pTableArry,
                                 SvxMSDffSolverContainer*
                             );
-    virtual bool ReadFormControl( SotStorageRef& rSrc1, com::sun::star::uno::Reference< com::sun::star::form::XFormComponent > & rFormComp ) const = 0;
-};
-
-struct PPTTextCharacterStyleAtomInterpreter
-{
-    sal_uInt16      nFlags1;
-    sal_uInt16      nFlags2;
-    sal_uInt16      nFlags3;
-    sal_Int32       n1;
-    sal_uInt16      nFontHeight;
-    sal_Int32       nFontColor;
-
-                    PPTTextCharacterStyleAtomInterpreter();
-                    ~PPTTextCharacterStyleAtomInterpreter();
-
-    bool            Read( SvStream& rIn, const DffRecordHeader& rRecHd );
-
-    sal_uInt32      GetColor( sal_uInt32 nDefault );
+    virtual bool ReadFormControl( tools::SvRef<SotStorage>& rSrc1, css::uno::Reference< css::form::XFormComponent > & rFormComp ) const = 0;
 };
 
 struct PPTTextParagraphStyleAtomInterpreter
@@ -677,18 +647,17 @@ struct PPTTextParagraphStyleAtomInterpreter
 struct PPTTextSpecInfo
 {
     sal_uInt32      nCharIdx;
-    sal_uInt16      nLanguage[ 3 ];
+    LanguageType    nLanguage[ 3 ];
     sal_uInt16      nDontKnow;
 
     explicit PPTTextSpecInfo( sal_uInt32 nCharIdx );
     ~PPTTextSpecInfo();
 };
 
-typedef ::std::vector< PPTTextSpecInfo* > PPTTextSpecInfoList;
 struct  PPTTextSpecInfoAtomInterpreter
 {
     bool                bValid;
-    PPTTextSpecInfoList aList;
+    ::std::vector< PPTTextSpecInfo* > aList;
 
                     PPTTextSpecInfoAtomInterpreter();
                     ~PPTTextSpecInfoAtomInterpreter();
@@ -697,7 +666,7 @@ struct  PPTTextSpecInfoAtomInterpreter
                         SvStream& rIn,
                         const DffRecordHeader& rRecHd,
                         sal_uInt16 nRecordType,
-                        const PPTTextSpecInfo* pTextSpecDefault = NULL
+                        const PPTTextSpecInfo* pTextSpecDefault = nullptr
                     );
 
 };
@@ -732,18 +701,16 @@ struct PPTBuGraEntry
                 PPTBuGraEntry( Graphic& rGraphic, sal_uInt32 nInstance );
 };
 
-typedef ::std::vector< PPTBuGraEntry* > PPTBuGraEntryList;
-
 class PPTExtParaProv
 {
-    PPTBuGraEntryList   aBuGraList;
+    ::std::vector< PPTBuGraEntry* > aBuGraList;
 
-public :
+public:
     bool                bStyles;
     bool                bGraphics;
     DffRecordManager    aExtendedPresRules;
 
-    PPTExtParaSheet     aExtParaSheet[ PPT_STYLESHEETENTRYS ];
+    o3tl::enumarray<TSS_Type, PPTExtParaSheet> aExtParaSheet;
 
     bool                GetGraphic( sal_uInt32 nInstance, Graphic& rGraphic ) const;
 
@@ -770,10 +737,10 @@ struct PPTCharSheet
 {
     PPTCharLevel    maCharLevel[nMaxPPTLevels];
 
-                    explicit PPTCharSheet( sal_uInt32 nInstance );
+                    explicit PPTCharSheet( TSS_Type nInstance );
                     PPTCharSheet( const PPTCharSheet& rCharSheet );
 
-    void            Read( SvStream& rIn, bool bMasterStyle, sal_uInt32 nLevel, bool bFirst );
+    void            Read( SvStream& rIn, sal_uInt32 nLevel );
 };
 
 struct PPTParaLevel
@@ -803,13 +770,12 @@ public:
 
     PPTParaLevel    maParaLevel[nMaxPPTLevels];
 
-                    explicit PPTParaSheet( sal_uInt32 nInstance );
+                    explicit PPTParaSheet( TSS_Type nInstance );
                     PPTParaSheet( const PPTParaSheet& rParaSheet );
 
-    bool            Read(
+    void            Read(
                         SdrPowerPointImport& rMan,
                         SvStream& rIn,
-                        bool bMasterStyle,
                         sal_uInt32 nLevel,
                         bool bFirst
                     );
@@ -829,15 +795,14 @@ class PPTNumberFormatCreator
 
     void        ImplGetNumberFormat(
                     SdrPowerPointImport& rMan,
-                    SvxNumberFormat& rNumberFormat,
-                    sal_uInt32 nLevel
+                    SvxNumberFormat& rNumberFormat
                 );
     bool       ImplGetExtNumberFormat(
                     SdrPowerPointImport& rMan,
                     SvxNumberFormat& rNumberFormat,
                     sal_uInt32 nLevel,
-                    sal_uInt32 nInstance,
-                    sal_uInt32 nInstanceInSheet,
+                    TSS_Type nInstance,
+                    TSS_Type nInstanceInSheet,
                     boost::optional< sal_Int16 >& rStartNumbering,
                     sal_uInt32 nFontHeight,
                     PPTParagraphObj* pPara
@@ -850,7 +815,7 @@ protected:
 
 public:
 
-    PPTExtParaProv*  pExtParaProv;
+    std::unique_ptr<PPTExtParaProv>  pExtParaProv;
 
     void        GetNumberFormat(
                     SdrPowerPointImport& rMan,
@@ -858,14 +823,14 @@ public:
                     sal_uInt32 nLevel,
                     const PPTParaLevel& rParaLevel,
                     const PPTCharLevel& rCharLevel,
-                    sal_uInt32 nInstance
+                    TSS_Type nInstance
                 );
 
     bool        GetNumberFormat(
                     SdrPowerPointImport& rMan,
                     SvxNumberFormat& rNumberFormat,
                     PPTParagraphObj* pPara,
-                    sal_uInt32 nInstanceInSheet,
+                    TSS_Type nInstanceInSheet,
                     boost::optional< sal_Int16 >& rStartNumbering
                 );
 };
@@ -874,24 +839,21 @@ class SvxNumBulletItem;
 struct PPTStyleSheet : public PPTNumberFormatCreator
 {
     PPTTextSpecInfo     maTxSI;
-    PPTCharSheet*       mpCharSheet[ PPT_STYLESHEETENTRYS ];
-    PPTParaSheet*       mpParaSheet[ PPT_STYLESHEETENTRYS ];
-    SvxNumBulletItem*   mpNumBulletItem[ PPT_STYLESHEETENTRYS ];
+    o3tl::enumarray<TSS_Type, PPTCharSheet*>     mpCharSheet;
+    o3tl::enumarray<TSS_Type, PPTParaSheet*>     mpParaSheet;
+    o3tl::enumarray<TSS_Type, SvxNumBulletItem*> mpNumBulletItem;
 
                         PPTStyleSheet(
                             const DffRecordHeader& rSlideHd,
                             SvStream& rSt, SdrPowerPointImport&,
-                            const PPTTextCharacterStyleAtomInterpreter&,
                             const PPTTextParagraphStyleAtomInterpreter&,
                             const PPTTextSpecInfo&
                         );
                         ~PPTStyleSheet();
 };
 
-struct ImplPPTParaPropSet
+struct ImplPPTParaPropSet : public salhelper::SimpleReferenceObject
 {
-    sal_uInt32  mnRefCount;
-
     sal_uInt16  mnDepth;
     sal_uInt32  mnAttrSet;
     sal_uInt32  mnBulletColor;
@@ -907,8 +869,7 @@ struct ImplPPTParaPropSet
     sal_uInt16  nDontKnow2bit06;
 
     ImplPPTParaPropSet()
-        : mnRefCount( 1 )
-        , mnDepth( 0 )
+        : mnDepth( 0 )
         , mnAttrSet( 0 )
         , mnBulletColor( 0 )
         , mnExtParagraphMask( 0 )
@@ -924,19 +885,17 @@ struct ImplPPTParaPropSet
 struct PPTParaPropSet
 {
     sal_uInt32          mnOriginalTextPos;
-    ImplPPTParaPropSet* pParaSet;
+    rtl::Reference<ImplPPTParaPropSet> mxParaSet;
 
                         PPTParaPropSet();
                         PPTParaPropSet( PPTParaPropSet& rParaPropSet );
                         ~PPTParaPropSet();
 
-    PPTParaPropSet&     operator=( PPTParaPropSet& rParaPropSet );
+    PPTParaPropSet&     operator=( const PPTParaPropSet& rParaPropSet );
 };
 
 struct ImplPPTCharPropSet
 {
-    sal_uInt32  mnRefCount;
-
     sal_uInt32  mnAttrSet;
     sal_uInt16  mnFlags;
     sal_uInt32  mnColor;
@@ -948,8 +907,7 @@ struct ImplPPTCharPropSet
     sal_uInt16  mnSymbolFont;
 
     ImplPPTCharPropSet()
-        : mnRefCount ( 1 )
-        , mnAttrSet( 0 )
+        : mnAttrSet( 0 )
         , mnFlags( 0 )
         , mnColor( 0 )
         , mnFont( 0 )
@@ -975,10 +933,9 @@ struct PPTCharPropSet
     sal_uInt32          mnOriginalTextPos;
     sal_uInt32          mnParagraph;
     OUString            maString;
-    SvxFieldItem*       mpFieldItem;
-    sal_uInt16          mnLanguage[ 3 ];
-
-    ImplPPTCharPropSet* pCharSet;
+    std::unique_ptr<SvxFieldItem>
+                        mpFieldItem;
+    LanguageType        mnLanguage[ 3 ];
 
     void                SetFont( sal_uInt16 nFont );
     void                SetColor( sal_uInt32 nColor );
@@ -990,8 +947,13 @@ struct PPTCharPropSet
 
     PPTCharPropSet&     operator=( const PPTCharPropSet& rCharPropSet );
 
+    friend class PPTTextObj;
+    friend class PPTParagraphObj;
+    friend class PPTPortionObj;
+    friend struct PPTStyleTextPropReader;
+
 private:
-    void                ImplMakeUnique();
+    o3tl::cow_wrapper< ImplPPTCharPropSet > mpImplPPTCharPropSet;
 };
 
 struct PPTTabEntry
@@ -1000,43 +962,41 @@ struct PPTTabEntry
     sal_uInt16  nStyle;
 };
 
-struct PPTRuler
+struct PPTRuler : public salhelper::SimpleReferenceObject
 {
-        sal_uInt32          nRefCount;
-
         sal_Int32           nFlags;
         sal_uInt16          nDefaultTab;
         sal_uInt16          nTextOfs[nMaxPPTLevels];
         sal_uInt16          nBulletOfs[nMaxPPTLevels];
-        PPTTabEntry*        pTab;
+        std::unique_ptr<PPTTabEntry[]>
+                            pTab;
         sal_uInt16          nTabCount;
 
         PPTRuler();
-        ~PPTRuler();
+        virtual ~PPTRuler() override;
 };
 
 struct PPTTextRulerInterpreter
 {
-        PPTRuler    *mpImplRuler;
+        rtl::Reference<PPTRuler>    mxImplRuler;
 
                     PPTTextRulerInterpreter();
                     PPTTextRulerInterpreter( PPTTextRulerInterpreter& rRuler );
                     PPTTextRulerInterpreter(
                         sal_uInt32 nFileOfs,
-                        SdrPowerPointImport&,
                         DffRecordHeader& rHd,
                         SvStream& rIn
                     );
                     ~PPTTextRulerInterpreter();
 
         sal_uInt16  GetTabOffsetByIndex( sal_uInt16 nIndex ) const
-                    { return mpImplRuler->pTab[ nIndex ].nOffset; };
+                    { return mxImplRuler->pTab[ nIndex ].nOffset; };
 
         sal_uInt16  GetTabStyleByIndex( sal_uInt16 nIndex ) const
-                    { return mpImplRuler->pTab[ nIndex ].nStyle; };
+                    { return mxImplRuler->pTab[ nIndex ].nStyle; };
 
-        sal_uInt16  GetTabCount() const { return mpImplRuler->nTabCount; };
-        bool        GetDefaultTab( sal_uInt32 nLevel, sal_uInt16& nValue ) const;
+        sal_uInt16  GetTabCount() const { return mxImplRuler->nTabCount; };
+        bool        GetDefaultTab( sal_uInt16& nValue ) const;
         bool        GetTextOfs( sal_uInt32 nLevel, sal_uInt16& nValue ) const;
         bool        GetBulletOfs( sal_uInt32 nLevel, sal_uInt16& nValue ) const;
 
@@ -1045,7 +1005,6 @@ struct PPTTextRulerInterpreter
 
 #define PPT_SPEC_NEWLINE            0x10000
 #define PPT_SPEC_SYMBOL             0x20000
-#define PPT_SPEC_USE_STARBATS       0x40000
 
 struct StyleTextProp9
 {
@@ -1087,32 +1046,29 @@ struct PPTStyleTextPropReader
 
             PPTStyleTextPropReader(
                 SvStream& rIn,
-                SdrPowerPointImport&,
                 const DffRecordHeader& rClientTextBoxHd,
                 PPTTextRulerInterpreter& rInterpreter,
                 const DffRecordHeader& rExtParaHd,
-                sal_uInt32 nTextInstance
+                TSS_Type nTextInstance
             );
             ~PPTStyleTextPropReader();
 
     void    Init(
                 SvStream& rIn,
-                SdrPowerPointImport&,
                 const DffRecordHeader& rClientTextBoxHd,
                 PPTTextRulerInterpreter& rInterpreter,
                 const DffRecordHeader& rExtParaHd,
-                sal_uInt32 nTextInstance
+                TSS_Type nTextInstance
             );
     void    ReadParaProps(
                 SvStream& rIn,
-                SdrPowerPointImport& rMan,
                 const DffRecordHeader& rTextHeader,
                 const OUString& aString,
                 PPTTextRulerInterpreter& rRuler,
                 sal_uInt32& nCharCount,
                 bool& bTextPropAtom
             );
-    void    ReadCharProps(
+    static void ReadCharProps(
                 SvStream& rIn,
                 PPTCharPropSet& aCharPropSet,
                 const OUString& aString,
@@ -1128,26 +1084,25 @@ struct PPTStyleTextPropReader
             );
 };
 
-class SvxFieldItem;
 class MSFILTER_DLLPUBLIC PPTPortionObj : public PPTCharPropSet
 {
 
     friend class PPTParagraphObj;
 
     const PPTStyleSheet&    mrStyleSheet;
-    sal_uInt32              mnInstance;
+    TSS_Type                mnInstance;
     sal_uInt32              mnDepth;
 
 public:
 
-    bool            GetAttrib( sal_uInt32 nAttr, sal_uInt32& nVal, sal_uInt32 nInstanceInSheet ) const;
+    bool            GetAttrib( sal_uInt32 nAttr, sal_uInt32& nVal, TSS_Type nInstanceInSheet ) const;
     SvxFieldItem*   GetTextField();
 
-                    PPTPortionObj( const PPTStyleSheet&, sal_uInt32 nInstance, sal_uInt32 nDepth );
+                    PPTPortionObj( const PPTStyleSheet&, TSS_Type nInstance, sal_uInt32 nDepth );
                     PPTPortionObj(
                         const PPTCharPropSet&,
                         const PPTStyleSheet&,
-                        sal_uInt32 nInstance,
+                        TSS_Type nInstance,
                         sal_uInt32 nDepth
                     );
                     PPTPortionObj( const PPTPortionObj& );
@@ -1157,12 +1112,12 @@ public:
     void            ApplyTo(
                         SfxItemSet& rSet,
                         SdrPowerPointImport& rManager,
-                        sal_uInt32 nInstanceInSheet
+                        TSS_Type nInstanceInSheet
                     );
     void            ApplyTo(
                         SfxItemSet& rSet,
                         SdrPowerPointImport& rManager,
-                        sal_uInt32 nInstanceInSheet,
+                        TSS_Type nInstanceInSheet,
                         const PPTTextObj* pTextObj
                     );
     sal_uInt32      Count() const { return ( mpFieldItem ) ? 1 : maString.getLength(); };
@@ -1178,25 +1133,24 @@ class MSFILTER_DLLPUBLIC PPTParagraphObj
     friend class PPTNumberFormatCreator;
 
     const PPTStyleSheet&    mrStyleSheet;
-    sal_uInt32              mnInstance;
+    TSS_Type                mnInstance;
 
-protected:
-
-    void                    ImplClear();
+    PPTParagraphObj(PPTParagraphObj const&) = delete;
+    void operator=(PPTParagraphObj const&) = delete;
 
 public:
 
     bool                    mbTab;          // if true, this paragraph has tabulators in text
 
     sal_uInt32              mnCurrentObject;
-    ::boost::ptr_vector<PPTPortionObj> m_PortionList;
+    ::std::vector<std::unique_ptr<PPTPortionObj>> m_PortionList;
 
     void                    UpdateBulletRelSize( sal_uInt32& nBulletRelSize ) const;
-    bool                    GetAttrib( sal_uInt32 nAttr, sal_uInt32& nVal, sal_uInt32 nInstanceInSheet );
+    bool                    GetAttrib( sal_uInt32 nAttr, sal_uInt32& nVal, TSS_Type nInstanceInSheet );
 
                             PPTParagraphObj(
                                 const PPTStyleSheet&,
-                                sal_uInt32 nInstance,
+                                TSS_Type nInstance,
                                 sal_uInt16 nDepth
                             );
                             PPTParagraphObj(
@@ -1204,7 +1158,7 @@ public:
                                 size_t nCurParaPos,
                                 size_t& rnCurCharPos,
                                 const PPTStyleSheet&,
-                                sal_uInt32 nInstance,
+                                TSS_Type nInstance,
                                 PPTTextRulerInterpreter& rRuler
                             );
                             ~PPTParagraphObj();
@@ -1218,8 +1172,7 @@ public:
                                 SfxItemSet& rSet,
                                 boost::optional< sal_Int16 >& rStartNumbering,
                                 SdrPowerPointImport& rManager,
-                                sal_uInt32 nInstanceInSheet,
-                                const PPTParagraphObj* pPrev
+                                TSS_Type nInstanceInSheet
                             );
 };
 
@@ -1229,44 +1182,40 @@ public:
 #define PPT_TEXTOBJ_FLAGS_PARA_ALIGNMENT_USED_BLOCK     8
 #define PPT_TEXTOBJ_FLAGS_VERTICAL                      16
 
-struct ImplPPTTextObj
+struct ImplPPTTextObj : public salhelper::SimpleReferenceObject
 {
-    sal_uInt32                  mnRefCount;
     sal_uInt32                  mnShapeId;
     sal_uInt32                  mnShapeMaster;
-    PptOEPlaceholderAtom*       mpPlaceHolderAtom;
-    sal_uInt16                  mnInstance;
-    sal_uInt16                  mnDestinationInstance;
+    std::unique_ptr<PptOEPlaceholderAtom> mpPlaceHolderAtom;
+    TSS_Type                    mnInstance;
+    TSS_Type                    mnDestinationInstance;
     MSO_SPT                     meShapeType;
 
     sal_uInt32                  mnCurrentObject;
     sal_uInt32                  mnParagraphCount;
-    PPTParagraphObj**           mpParagraphList;
+    std::vector<std::unique_ptr<PPTParagraphObj>>
+                                maParagraphList;
     PptSlidePersistEntry&       mrPersistEntry;
 
     sal_uInt32                  mnTextFlags;
 
     explicit ImplPPTTextObj( PptSlidePersistEntry& rPersistEntry )
-        : mnRefCount(0)
-        , mnShapeId(0)
+        : mnShapeId(0)
         , mnShapeMaster(0)
-        , mpPlaceHolderAtom(NULL)
-        , mnInstance(0)
-        , mnDestinationInstance(0)
+        , mpPlaceHolderAtom(nullptr)
+        , mnInstance(TSS_Type::PageTitle)
+        , mnDestinationInstance(TSS_Type::PageTitle)
         , meShapeType(mso_sptMin)
         , mnCurrentObject(0)
         , mnParagraphCount(0)
-        , mpParagraphList(NULL)
         , mrPersistEntry ( rPersistEntry )
         , mnTextFlags(0) {};
 };
 
 class MSFILTER_DLLPUBLIC PPTTextObj
 {
-    ImplPPTTextObj*         mpImplTextObj;
-    void                    ImplClear();
+    rtl::Reference<ImplPPTTextObj> mxImplTextObj;
 
-                            PPTTextObj(){};
 public:
                             PPTTextObj(
                                 SvStream& rSt,
@@ -1277,32 +1226,32 @@ public:
                             PPTTextObj( PPTTextObj& rTextObj );
                             ~PPTTextObj();
 
-    sal_uInt32              GetCurrentIndex() const { return mpImplTextObj->mnCurrentObject; };
-    sal_uInt32              Count() const { return mpImplTextObj->mnParagraphCount; };
+    sal_uInt32              GetCurrentIndex() const { return mxImplTextObj->mnCurrentObject; };
+    sal_uInt32              Count() const { return mxImplTextObj->mnParagraphCount; };
     PPTParagraphObj*        First();
     PPTParagraphObj*        Next();
-    MSO_SPT                 GetShapeType() const { return mpImplTextObj->meShapeType; };
-    sal_uInt32              GetInstance() const { return mpImplTextObj->mnInstance; };
-    void                    SetInstance( sal_uInt16 nInstance )
-                            { mpImplTextObj->mnInstance = nInstance; }
+    MSO_SPT                 GetShapeType() const { return mxImplTextObj->meShapeType; };
+    TSS_Type                GetInstance() const { return mxImplTextObj->mnInstance; };
+    void                    SetInstance( TSS_Type nInstance )
+                            { mxImplTextObj->mnInstance = nInstance; }
 
-    sal_uInt32              GetDestinationInstance() const
-                            { return mpImplTextObj->mnDestinationInstance; }
+    TSS_Type                GetDestinationInstance() const
+                            { return mxImplTextObj->mnDestinationInstance; }
 
-    void                    SetDestinationInstance( sal_uInt16 nInstance )
-                            { mpImplTextObj->mnDestinationInstance = nInstance; }
+    void                    SetDestinationInstance( TSS_Type nInstance )
+                            { mxImplTextObj->mnDestinationInstance = nInstance; }
 
-    PptOEPlaceholderAtom*   GetOEPlaceHolderAtom() const { return mpImplTextObj->mpPlaceHolderAtom; }
-    sal_uInt32              GetTextFlags() const { return mpImplTextObj->mnTextFlags; }
+    PptOEPlaceholderAtom*   GetOEPlaceHolderAtom() const { return mxImplTextObj->mpPlaceHolderAtom.get(); }
+    sal_uInt32              GetTextFlags() const { return mxImplTextObj->mnTextFlags; }
     void                    SetVertical( bool bVertical )
                             {
                                 if ( bVertical )
-                                    mpImplTextObj->mnTextFlags |= PPT_TEXTOBJ_FLAGS_VERTICAL;
+                                    mxImplTextObj->mnTextFlags |= PPT_TEXTOBJ_FLAGS_VERTICAL;
                                 else
-                                    mpImplTextObj->mnTextFlags &= ~PPT_TEXTOBJ_FLAGS_VERTICAL;
+                                    mxImplTextObj->mnTextFlags &= ~PPT_TEXTOBJ_FLAGS_VERTICAL;
                             }
     bool                    GetVertical() const
-                            { return ( mpImplTextObj->mnTextFlags & PPT_TEXTOBJ_FLAGS_VERTICAL ) != 0; }
+                            { return ( mxImplTextObj->mnTextFlags & PPT_TEXTOBJ_FLAGS_VERTICAL ) != 0; }
 
     const SfxItemSet*       GetBackground() const;
 
@@ -1311,74 +1260,38 @@ public:
 
 class PPTConvertOCXControls : public SvxMSConvertOCXControls
 {
-    virtual const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XDrawPage > & GetDrawPage() SAL_OVERRIDE;
+    virtual void GetDrawPage() override;
     PptPageKind     ePageKind;
     const SdrPowerPointImport* mpPPTImporter;
-    com::sun::star::uno::Reference< com::sun::star::io::XInputStream > mxInStrm;
-public :
+public:
 
-    PPTConvertOCXControls( const SdrPowerPointImport* pPPTImporter, com::sun::star::uno::Reference< com::sun::star::io::XInputStream >& rxInStrm, const com::sun::star::uno::Reference< com::sun::star::frame::XModel >& rxModel, PptPageKind ePKind ) :
+    PPTConvertOCXControls( const SdrPowerPointImport* pPPTImporter, const css::uno::Reference< css::frame::XModel >& rxModel, PptPageKind ePKind ) :
         SvxMSConvertOCXControls ( rxModel ),
         ePageKind               ( ePKind ),
-        mpPPTImporter           ( pPPTImporter ),
-        mxInStrm                ( rxInStrm )
+        mpPPTImporter           ( pPPTImporter )
     {};
-    virtual bool ReadOCXStream( SotStorageRef& rSrc1,
-        com::sun::star::uno::Reference<
-        com::sun::star::drawing::XShape > *pShapeRef=0,
-        bool bFloatingCtrl=false );
+    bool ReadOCXStream( tools::SvRef<SotStorage>& rSrc1,
+        css::uno::Reference<css::drawing::XShape > *pShapeRef );
     virtual bool InsertControl(
-        const com::sun::star::uno::Reference< com::sun::star::form::XFormComponent > &rFComp,
-        const com::sun::star::awt::Size& rSize,
-        com::sun::star::uno::Reference< com::sun::star::drawing::XShape > *pShape,
+        const css::uno::Reference< css::form::XFormComponent > &rFComp,
+        const css::awt::Size& rSize,
+        css::uno::Reference< css::drawing::XShape > *pShape,
         bool bFloatingCtrl
-    ) SAL_OVERRIDE;
+    ) override;
 };
 
 // PowerPoint record types
-#define PPT_PST_Unknown                         0
-#define PPT_PST_SubContainerCompleted           1
-#define PPT_PST_IRRAtom                         2
-#define PPT_PST_PSS                             3
-#define PPT_PST_SubContainerException           4
-#define PPT_PST_ClientSignal1                   6
-#define PPT_PST_ClientSignal2                   7
-#define PPT_PST_PowerPointStateInfoAtom         10
 #define PPT_PST_Document                        1000
 #define PPT_PST_DocumentAtom                    1001
-#define PPT_PST_EndDocument                     1002
-#define PPT_PST_SlidePersist                    1003
-#define PPT_PST_SlideBase                       1004
-#define PPT_PST_SlideBaseAtom                   1005
-#define PPT_PST_Slide                           1006
 #define PPT_PST_SlideAtom                       1007
-#define PPT_PST_Notes                           1008
 #define PPT_PST_NotesAtom                       1009
 #define PPT_PST_Environment                     1010
 #define PPT_PST_SlidePersistAtom                1011
-#define PPT_PST_Scheme                          1012
-#define PPT_PST_SchemeAtom                      1013
-#define PPT_PST_DocViewInfo                     1014
-#define PPT_PST_SslideLayoutAtom                1015
-#define PPT_PST_MainMaster                      1016
 #define PPT_PST_SSSlideInfoAtom                 1017
-#define PPT_PST_SlideViewInfo                   1018
-#define PPT_PST_GuideAtom                       1019
-#define PPT_PST_ViewInfo                        1020
-#define PPT_PST_ViewInfoAtom                    1021
-#define PPT_PST_SlideViewInfoAtom               1022
 #define PPT_PST_VBAInfo                         1023
 #define PPT_PST_VBAInfoAtom                     1024
 #define PPT_PST_SSDocInfoAtom                   1025
-#define PPT_PST_Summary                         1026
-#define PPT_PST_Texture                         1027
-#define PPT_PST_VBASlideInfo                    1028
-#define PPT_PST_VBASlideInfoAtom                1029
-#define PPT_PST_DocRoutingSlip                  1030
-#define PPT_PST_OutlineViewInfo                 1031
-#define PPT_PST_SorterViewInfo                  1032
 #define PPT_PST_ExObjList                       1033
-#define PPT_PST_ExObjListAtom                   1034
 #define PPT_PST_PPDrawingGroup                  1035
 #define PPT_PST_PPDrawing                       1036
 #define PPT_PST_GridSpacing10Atom               1037
@@ -1387,47 +1300,27 @@ public :
 #define PPT_PST_NamedShowSlides                 1042
 #define PPT_PST_List                            2000
 #define PPT_PST_FontCollection                  2005
-#define PPT_PST_ListPlaceholder                 2017
-#define PPT_PST_BookmarkCollection              2019
 #define PPT_PST_SoundCollection                 2020
-#define PPT_PST_SoundCollAtom                   2021
 #define PPT_PST_Sound                           2022
 #define PPT_PST_SoundData                       2023
-#define PPT_PST_BookmarkSeedAtom                2025
-#define PPT_PST_GuideList                       2026
-#define PPT_PST_RunArray                        2028
-#define PPT_PST_RunArrayAtom                    2029
-#define PPT_PST_ArrayElementAtom                2030
-#define PPT_PST_Int4ArrayAtom                   2031
 #define PPT_PST_ColorSchemeAtom                 2032
 
 // these atoms first was seen in ppt2000 in a private Tag atom
 #define PPT_PST_ExtendedBuGraContainer          2040    // consist of 4041
 #define PPT_PST_ExtendedBuGraAtom               2041    // the instance of this atom indices the current graphic
 
-#define PPT_PST_OEShape                         3008
 #define PPT_PST_ExObjRefAtom                    3009
 #define PPT_PST_OEPlaceholderAtom               3011
-#define PPT_PST_GrColor                         3020
-#define PPT_PST_GrectAtom                       3025
-#define PPT_PST_GratioAtom                      3031
-#define PPT_PST_Gscaling                        3032
-#define PPT_PST_GpointAtom                      3034
-#define PPT_PST_OEShapeAtom                     3035
 #define PPT_PST_OutlineTextRefAtom              3998
 #define PPT_PST_TextHeaderAtom                  3999
 #define PPT_PST_TextCharsAtom                   4000
 #define PPT_PST_StyleTextPropAtom               4001
-#define PPT_PST_BaseTextPropAtom                4002
 #define PPT_PST_TxMasterStyleAtom               4003
-#define PPT_PST_TxCFStyleAtom                   4004
 #define PPT_PST_TxPFStyleAtom                   4005
 #define PPT_PST_TextRulerAtom                   4006
-#define PPT_PST_TextBookmarkAtom                4007
 #define PPT_PST_TextBytesAtom                   4008
 #define PPT_PST_TxSIStyleAtom                   4009
 #define PPT_PST_TextSpecInfoAtom                4010
-#define PPT_PST_DefaultRulerAtom                4011
 
 // these atoms first was seen in ppt2000 in a private Tag atom
 #define PPT_PST_ExtendedParagraphAtom           4012
@@ -1438,52 +1331,23 @@ public :
 #define PPT_PST_TextDefaults9Atom               4016
 
 #define PPT_PST_FontEntityAtom                  4023
-#define PPT_PST_FontEmbedData                   4024
-#define PPT_PST_TypeFace                        4025
 #define PPT_PST_CString                         4026
-#define PPT_PST_ExternalObject                  4027
-#define PPT_PST_MetaFile                        4033
-#define PPT_PST_ExOleObj                        4034
 #define PPT_PST_ExOleObjAtom                    4035
-#define PPT_PST_ExPlainLinkAtom                 4036
-#define PPT_PST_CorePict                        4037
-#define PPT_PST_CorePictAtom                    4038
-#define PPT_PST_ExPlainAtom                     4039
 #define PPT_PST_SrKinsoku                       4040
-#define PPT_PST_Handout                         4041
 #define PPT_PST_ExEmbed                         4044
-#define PPT_PST_ExEmbedAtom                     4045
-#define PPT_PST_ExLink                          4046
-#define PPT_PST_ExLinkAtom_old                  4047
-#define PPT_PST_BookmarkEntityAtom              4048
-#define PPT_PST_ExLinkAtom                      4049
-#define PPT_PST_SrKinsokuAtom                   4050
 #define PPT_PST_ExHyperlinkAtom                 4051
-#define PPT_PST_ExPlain                         4053
-#define PPT_PST_ExPlainLink                     4054
 #define PPT_PST_ExHyperlink                     4055
 #define PPT_PST_SlideNumberMCAtom               4056
 #define PPT_PST_HeadersFooters                  4057
 #define PPT_PST_HeadersFootersAtom              4058
-#define PPT_PST_RecolorEntryAtom                4062
 #define PPT_PST_TxInteractiveInfoAtom           4063
-#define PPT_PST_EmFormatAtom                    4065
-#define PPT_PST_CharFormatAtom                  4066
-#define PPT_PST_ParaFormatAtom                  4067
 #define PPT_PST_MasterText                      4068
 #define PPT_PST_RecolorInfoAtom                 4071
-#define PPT_PST_ExQuickTime                     4073
-#define PPT_PST_ExQuickTimeMovie                4074
-#define PPT_PST_ExQuickTimeMovieData            4075
-#define PPT_PST_ExSubscription                  4076
-#define PPT_PST_ExSubscriptionSection           4077
 #define PPT_PST_ExControl                       4078
-#define PPT_PST_ExControlAtom                   4091
 #define PPT_PST_SlideListWithText               4080
 #define PPT_PST_AnimationInfoAtom               4081
 #define PPT_PST_InteractiveInfo                 4082
 #define PPT_PST_InteractiveInfoAtom             4083
-#define PPT_PST_SlideList                       4084
 #define PPT_PST_UserEditAtom                    4085
 #define PPT_PST_CurrentUserAtom                 4086
 #define PPT_PST_DateTimeMCAtom                  4087
@@ -1494,32 +1358,17 @@ public :
 #define PPT_PST_ExVideo                         4101
 #define PPT_PST_ExAviMovie                      4102
 #define PPT_PST_ExMCIMovie                      4103
-#define PPT_PST_ExMIDIAudio                     4109
-#define PPT_PST_ExCDAudio                       4110
-#define PPT_PST_ExWAVAudioEmbedded              4111
-#define PPT_PST_ExWAVAudioLink                  4112
-#define PPT_PST_ExOleObjStg                     4113
-#define PPT_PST_ExCDAudioAtom                   4114
-#define PPT_PST_ExWAVAudioEmbeddedAtom          4115
 #define PPT_PST_AnimationInfo                   4116
 #define PPT_PST_RTFDateTimeMCAtom               4117
 #define PPT_PST_ProgTags                        5000
-#define PPT_PST_ProgStringTag                   5001
 #define PPT_PST_ProgBinaryTag                   5002
 #define PPT_PST_BinaryTagData                   5003
-#define PPT_PST_PrintOptions                    6000
-#define PPT_PST_PersistPtrFullBlock             6001
 #define PPT_PST_PersistPtrIncrementalBlock      6002
 
 // these atoms first was seen in ppt2000 in a private Tag atom
 #define PPT_PST_PresentationAdvisorFlags9Atom   6010
 #define PPT_PST_HtmlDocInfo9Atom                6011
 
-#define PPT_PST_RulerIndentAtom                 10000
-#define PPT_PST_GscalingAtom                    10001
-#define PPT_PST_GrColorAtom                     10002
-#define PPT_PST_GLPointAtom                     10003
-#define PPT_PST_GlineAtom                       10004
 
 #define PPT_PST_HashCodeAtom                    11008
 #define PPT_PST_BuildList                       11010
@@ -1539,9 +1388,6 @@ public :
 #define PPT_ParaAttr_BulletColor    5   //00000020
 #define PPT_ParaAttr_BulletHeight   6   //00000040
 #define PPT_ParaAttr_BulletChar     7   //00000080
-#define PPT_ParaAttr_DontKnow1      8   //00000100
-#define PPT_ParaAttr_DontKnow2      9   //00000200
-#define PPT_ParaAttr_DontKnow3      10  //00000400
 #define PPT_ParaAttr_Adjust         11  //00000800 0000=Left, 0001=Center, 0002=Right, 0003=Block
 #define PPT_ParaAttr_LineFeed       12  //00001000
 #define PPT_ParaAttr_UpperDist      13  //00002000 is set to 0032 for TextFrames by default
@@ -1560,9 +1406,6 @@ public :
 #define PPT_CharAttr_Shadow             4   //00000010
 #define PPT_CharAttr_Strikeout          8   //00000100
 #define PPT_CharAttr_Embossed           9   //00000200
-#define PPT_CharAttr_ResetNumbering     10  //00000400
-#define PPT_CharAttr_EnableNumbering1   11  //00000800
-#define PPT_CharAttr_EnableNumbering2   12  //00001000
 #define PPT_CharAttr_Font               16  //00010000
 #define PPT_CharAttr_AsianOrComplexFont 21  //00200000
 #define PPT_CharAttr_ANSITypeface       22  //00400000
@@ -1572,53 +1415,59 @@ public :
 #define PPT_CharAttr_Escapement         19  //00080000
 
 // values for PptSlideLayoutAtom.eLayout
-#define PPT_LAYOUT_TITLESLIDE               0   // The slide is a title slide
-#define PPT_LAYOUT_TITLEANDBODYSLIDE        1   // Title and body slide
-#define PPT_LAYOUT_TITLEMASTERSLIDE         2   // Title master slide
-#define PPT_LAYOUT_MASTERSLIDE              3   // Master slide layout
-#define PPT_LAYOUT_MASTERNOTES              4   // Master notes layout
-#define PPT_LAYOUT_NOTESTITLEBODY           5   // Notes title/body layout
-#define PPT_LAYOUT_HANDOUTLAYOUT            6   // Handout layout, therefore it doesn't have placeholders except header, footer, and date
-#define PPT_LAYOUT_ONLYTITLE                7   // Only title placeholder
-#define PPT_LAYOUT_2COLUMNSANDTITLE         8   // Body of the slide has 2 columns and a title
-#define PPT_LAYOUT_2ROWSANDTITLE            9   // Slide's body has 2 rows and a title
-#define PPT_LAYOUT_RIGHTCOLUMN2ROWS         10  // Body contains 2 columns, right column has 2 rows
-#define PPT_LAYOUT_LEFTCOLUMN2ROWS          11  // Body contains 2 columns, left column has 2 rows
-#define PPT_LAYOUT_BOTTOMROW2COLUMNS        12  // Body contains 2 rows, bottom row has 2 columns
-#define PPT_LAYOUT_TOPROW2COLUMN            13  // Body contains 2 rows, top row has 2 columns
-#define PPT_LAYOUT_4OBJECTS                 14  // 4 objects
-#define PPT_LAYOUT_BIGOBJECT                15  // Big object
-#define PPT_LAYOUT_BLANCSLIDE               16  // Blank slide
-#define PPT_LAYOUT_TITLERIGHTBODYLEFT       17  // Vertical title on the right, body on the left
-#define PPT_LAYOUT_TITLERIGHT2BODIESLEFT    18  // Vertical title on the right, body on the left split into 2 rows
+enum class PptSlideLayout
+{
+    TITLESLIDE             =  0,   // The slide is a title slide
+    TITLEANDBODYSLIDE      =  1,   // Title and body slide
+    TITLEMASTERSLIDE       =  2,   // Title master slide
+    MASTERSLIDE            =  3,   // Master slide layout
+    MASTERNOTES            =  4,   // Master notes layout
+    NOTESTITLEBODY         =  5,   // Notes title/body layout
+    HANDOUTLAYOUT          =  6,   // Handout layout, therefore it doesn't have placeholders except header, footer, and date
+    ONLYTITLE              =  7,   // Only title placeholder
+    TWOCOLUMNSANDTITLE     =  8,   // Body of the slide has 2 columns and a title
+    TWOROWSANDTITLE        =  9,   // Slide's body has 2 rows and a title
+    RIGHTCOLUMN2ROWS       =  10,  // Body contains 2 columns, right column has 2 rows
+    LEFTCOLUMN2ROWS        =  11,  // Body contains 2 columns, left column has 2 rows
+    BOTTOMROW2COLUMNS      =  12,  // Body contains 2 rows, bottom row has 2 columns
+    TOPROW2COLUMN          =  13,  // Body contains 2 rows, top row has 2 columns
+    FOUROBJECTS            =  14,  // 4 objects
+    BIGOBJECT              =  15,  // Big object
+    BLANCSLIDE             =  16,  // Blank slide
+    TITLERIGHTBODYLEFT     =  17,  // Vertical title on the right, body on the left
+    TITLERIGHT2BODIESLEFT  =  18   // Vertical title on the right, body on the left split into 2 rows
+};
 
 // the following table describes the placeholder id's (values from reality followed by values taken from the documentation)
-#define PPT_PLACEHOLDER_NONE                    0   //  0 None
-#define PPT_PLACEHOLDER_MASTERTITLE             1   //  1 Master title
-#define PPT_PLACEHOLDER_MASTERBODY              2   //  2 Master body
-#define PPT_PLACEHOLDER_MASTERCENTEREDTITLE     3   //  3 Master centered title
-#define PPT_PLACEHOLDER_MASTERSUBTITLE          4   // 10 Master subtitle
-#define PPT_PLACEHOLDER_MASTERNOTESSLIDEIMAGE   5   //  4 Master notes slide image
-#define PPT_PLACEHOLDER_MASTERNOTESBODYIMAGE    6   //  5 Master notes body image
-#define PPT_PLACEHOLDER_MASTERDATE              7   //  6 Master date
-#define PPT_PLACEHOLDER_MASTERSLIDENUMBER       8   //  7 Master slide number
-#define PPT_PLACEHOLDER_MASTERFOOTER            9   //  8 Master footer
-#define PPT_PLACEHOLDER_MASTERHEADER            10  //  9 Master header
-#define PPT_PLACEHOLDER_GENERICTEXTOBJECT           // 11 Generic text object
-#define PPT_PLACEHOLDER_TITLE                   13  // 12 Title
-#define PPT_PLACEHOLDER_BODY                    14  // 13 Body
-#define PPT_PLACEHOLDER_NOTESBODY               12  // 14 Notes body
-#define PPT_PLACEHOLDER_CENTEREDTITLE           15  // 15 Centered title
-#define PPT_PLACEHOLDER_SUBTITLE                16  // 16 Subtitle
-#define PPT_PLACEHOLDER_VERTICALTEXTTITLE       17  // 17 Vertical text title
-#define PPT_PLACEHOLDER_VERTICALTEXTBODY        18  // 18 Vertical text body
-#define PPT_PLACEHOLDER_NOTESSLIDEIMAGE         11  // 19 Notes slide image
-#define PPT_PLACEHOLDER_OBJECT                  19  // 20 Object (no matter the size)
-#define PPT_PLACEHOLDER_GRAPH                   20  // 21 Graph
-#define PPT_PLACEHOLDER_TABLE                   21  // 22 Table
-#define PPT_PLACEHOLDER_CLIPART                 22  // 23 Clip Art
-#define PPT_PLACEHOLDER_ORGANISZATIONCHART      23  // 24 Organization Chart
-#define PPT_PLACEHOLDER_MEDIACLIP               24  // 25 Media Clip
+enum class PptPlaceholder : sal_uInt8
+{
+    NONE                   = 0,   //  0 None
+    MASTERTITLE            = 1,   //  1 Master title
+    MASTERBODY             = 2,   //  2 Master body
+    MASTERCENTEREDTITLE    = 3,   //  3 Master centered title
+    MASTERSUBTITLE         = 4,   // 10 Master subtitle
+    MASTERNOTESSLIDEIMAGE  = 5,   //  4 Master notes slide image
+    MASTERNOTESBODYIMAGE   = 6,   //  5 Master notes body image
+    MASTERDATE             = 7,   //  6 Master date
+    MASTERSLIDENUMBER      = 8,   //  7 Master slide number
+    MASTERFOOTER           = 9,   //  8 Master footer
+    MASTERHEADER           = 10,  //  9 Master header
+                                  // 11 Generic text object
+    TITLE                  = 13,  // 12 Title
+    BODY                   = 14,  // 13 Body
+    NOTESBODY              = 12,  // 14 Notes body
+    CENTEREDTITLE          = 15,  // 15 Centered title
+    SUBTITLE               = 16,  // 16 Subtitle
+    VERTICALTEXTTITLE      = 17,  // 17 Vertical text title
+    VERTICALTEXTBODY       = 18,  // 18 Vertical text body
+    NOTESSLIDEIMAGE        = 11,  // 19 Notes slide image
+    OBJECT                 = 19,  // 20 Object (no matter the size)
+    GRAPH                  = 20,  // 21 Graph
+    TABLE                  = 21,  // 22 Table
+    CLIPART                = 22,  // 23 Clip Art
+    ORGANISZATIONCHART     = 23,  // 24 Organization Chart
+    MEDIACLIP              = 24  // 25 Media Clip
+};
 
 #endif // INCLUDED_FILTER_MSFILTER_SVDFPPT_HXX
 
