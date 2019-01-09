@@ -346,7 +346,7 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
         {
             OSL_TRACE("osl_createPipe : failed to get port number for socket. Errno: %d; %s\n",errno,strerror(errno));
             close (pPipe->m_Socket);
-            __osl_destroyPipeImpl(pPipe);
+            destroyPipeImpl(pPipe);
             return nullptr;
         }
 #endif	// USE_JAVA
