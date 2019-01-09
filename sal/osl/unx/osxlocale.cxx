@@ -63,10 +63,10 @@ namespace
         CFPropertyListRef pref = CFPreferencesCopyAppValue(CFSTR("AppleLanguages"), kCFPreferencesCurrentApplication);
         CFPropertyListGuard proplGuard(pref);
 
-        if (pref == NULL) // return fallback value 'en_US'
+        if (pref == nullptr) // return fallback value 'en_US'
              return CFStringCreateWithCString(kCFAllocatorDefault, "en_US", kCFStringEncodingASCII);
 
-        CFStringRef sref = (CFGetTypeID(pref) == CFArrayGetTypeID()) ? (CFStringRef)CFArrayGetValueAtIndex((CFArrayRef)pref, 0) : (CFStringRef)pref;
+        CFStringRef sref = (CFGetTypeID(pref) == CFArrayGetTypeID()) ? static_cast<CFStringRef>(CFArrayGetValueAtIndex(static_cast<CFArrayRef>(pref), 0)) : static_cast<CFStringRef>(pref);
 
         return CFLocaleCreateCanonicalLocaleIdentifierFromString(kCFAllocatorDefault, sref);
     }
@@ -74,7 +74,8 @@ namespace
     void append(rtl::OUStringBuffer & buffer, CFStringRef string) {
         CFIndex n = CFStringGetLength(string);
         CFStringGetCharacters(
-            string, CFRangeMake(0, n), buffer.appendUninitialized(n));
+            string, CFRangeMake(0, n),
+            reinterpret_cast<UniChar *>(buffer.appendUninitialized(n)));
     }
 }
 
@@ -85,11 +86,11 @@ rtl::OUString macosx_getLocale()
     CFStringRef sref = getProcessLocale();
     CFStringGuard sGuard(sref);
 
-    assert(sref != NULL && "osxlocale.cxx: getProcessLocale must return a non-NULL value");
+    assert(sref != nullptr && "osxlocale.cxx: getProcessLocale must return a non-NULL value");
 
     // split the string into substrings; the first two (if there are two) substrings
     // are language and country
-    CFArrayRef subs = CFStringCreateArrayBySeparatingStrings(NULL, sref, CFSTR("-"));
+    CFArrayRef subs = CFStringCreateArrayBySeparatingStrings(nullptr, sref, CFSTR("-"));
 #ifdef USE_JAVA
     if (CFArrayGetCount(subs) < 2)
     {
@@ -102,14 +103,14 @@ rtl::OUString macosx_getLocale()
     CFArrayGuard arrGuard(subs);
 
     rtl::OUStringBuffer buf;
-    append(buf, (CFStringRef)CFArrayGetValueAtIndex(subs, 0));
+    append(buf, static_cast<CFStringRef>(CFArrayGetValueAtIndex(subs, 0)));
 
     // country also available? Assumption: if the array contains more than one
     // value the second value is always the country!
     if (CFArrayGetCount(subs) > 1)
     {
 #ifdef USE_JAVA
-        CFStringRef country = (CFStringRef)CFArrayGetValueAtIndex(subs, 1);
+        CFStringRef country = static_cast<CFStringRef>(CFArrayGetValueAtIndex(subs, 1));
         if (CFStringGetLength(country) > 2)
         {
             if (CFStringCompare(country, CFSTR("Hans"), 0) == kCFCompareEqualTo)
@@ -127,7 +128,7 @@ rtl::OUString macosx_getLocale()
         }
 #else	// USE_JAVA
         buf.append("_");
-        append(buf, (CFStringRef)CFArrayGetValueAtIndex(subs, 1));
+        append(buf, static_cast<CFStringRef>(CFArrayGetValueAtIndex(subs, 1)));
 #endif	// USE_JAVA
     }
     // Append 'UTF-8' to the locale because the Mac OS X file

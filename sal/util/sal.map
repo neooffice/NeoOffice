@@ -689,6 +689,35 @@ LIBO_UDK_4.3 { # symbols available in >= LibO 4.3
         osl_areCommandArgsSet;
 } LIBO_UDK_4.2;
 
+LIBO_UDK_5.0 { # symbols available in >= LibO 5.0
+    global:
+        rtl_secureZeroMemory;
+} LIBO_UDK_4.3;
+
+LIBO_UDK_5.1 { # symbols available in >= LibO 5.1
+    global:
+        rtl_uString_newConcatAsciiL;
+        rtl_uString_newReplaceAllToAsciiL;
+        rtl_uString_newReplaceFirstToAsciiL;
+} LIBO_UDK_5.0;
+
+LIBO_UDK_5.2 { # symbols available in >= LibO 5.2
+    global:
+        osl_getShortUserName;
+} LIBO_UDK_5.1;
+
+LIBO_UDK_5.3 { # symbols available in >= LibO 5.3
+    global:
+        rtl_math_approxEqual;
+        rtl_uString_newConcatUtf16L;
+        rtl_uString_newReplaceAllAsciiLUtf16L;
+        rtl_uString_newReplaceAllUtf16LAsciiL;
+        rtl_uString_newReplaceAllUtf16LUtf16L;
+        rtl_uString_newReplaceFirstAsciiLUtf16L;
+        rtl_uString_newReplaceFirstUtf16LAsciiL;
+        rtl_uString_newReplaceFirstUtf16LUtf16L;
+} LIBO_UDK_5.2;
+
 PRIVATE_1.0 {
     global:
         osl_detail_ObjectRegistry_storeAddresses;
@@ -709,6 +738,11 @@ PRIVATE_1.2 { # LibreOffice 3.5
         sal_detail_log;
         sal_detail_logFormat;
 } PRIVATE_1.1;
+
+PRIVATE_1.3 { # LibreOffice 5.4
+    global:
+        sal_detail_log_report;
+} PRIVATE_1.2;
 
 PRIVATE_textenc.1 { # LibreOffice 3.6
     global:

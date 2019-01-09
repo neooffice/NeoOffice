@@ -86,12 +86,12 @@ DirectoryItem_Impl::DirectoryItem_Impl(
       m_ustrFilePath (ustrFilePath),
       m_DType        (DType)
 {
-    if (m_ustrFilePath != 0)
+    if (m_ustrFilePath != nullptr)
         rtl_uString_acquire(m_ustrFilePath);
 }
 DirectoryItem_Impl::~DirectoryItem_Impl()
 {
-    if (m_ustrFilePath != 0)
+    if (m_ustrFilePath != nullptr)
         rtl_uString_release(m_ustrFilePath);
 }
 
@@ -110,7 +110,7 @@ void DirectoryItem_Impl::acquire()
 }
 void DirectoryItem_Impl::release()
 {
-    if (0 == --m_RefCount)
+    if (--m_RefCount == 0)
         delete this;
 }
 
@@ -148,18 +148,18 @@ static oslFileError osl_psz_removeFile(const sal_Char* pszPath);
 
 oslFileError SAL_CALL osl_openDirectory(rtl_uString* ustrDirectoryURL, oslDirectory* pDirectory)
 {
-    rtl_uString* ustrSystemPath = NULL;
+    rtl_uString* ustrSystemPath = nullptr;
     oslFileError eRet;
 
     char path[PATH_MAX];
 
-    if ((0 == ustrDirectoryURL) || (0 == ustrDirectoryURL->length) || (0 == pDirectory))
+    if ((ustrDirectoryURL == nullptr) || (ustrDirectoryURL->length == 0) || (pDirectory == nullptr))
         return osl_File_E_INVAL;
 
     /* convert file URL to system path */
     eRet = osl_getSystemPathFromFileURL_Ex(ustrDirectoryURL, &ustrSystemPath);
 
-    if( osl_File_E_None != eRet )
+    if( eRet != osl_File_E_None )
         return eRet;
 
     osl_systemPathRemoveSeparator(ustrSystemPath);
@@ -209,7 +209,7 @@ oslFileError SAL_CALL osl_openDirectory(rtl_uString* ustrDirectoryURL, oslDirect
             if( pdir )
             {
                 /* create and initialize impl structure */
-                oslDirectoryImpl* pDirImpl = (oslDirectoryImpl*) rtl_allocateMemory( sizeof(oslDirectoryImpl) );
+                oslDirectoryImpl* pDirImpl = static_cast<oslDirectoryImpl*>(rtl_allocateMemory( sizeof(oslDirectoryImpl) ));
 
                 if( pDirImpl )
                 {
@@ -218,14 +218,11 @@ oslFileError SAL_CALL osl_openDirectory(rtl_uString* ustrDirectoryURL, oslDirect
 #ifdef ANDROID
                     pDirImpl->eKind = oslDirectoryImpl::KIND_DIRENT;
 #endif
-                    *pDirectory = (oslDirectory) pDirImpl;
+                    *pDirectory = static_cast<oslDirectory>(pDirImpl);
                     return osl_File_E_None;
                 }
-                else
-                {
-                    errno = ENOMEM;
-                    closedir( pdir );
-                }
+                errno = ENOMEM;
+                closedir( pdir );
             }
             else
             {
@@ -243,12 +240,12 @@ oslFileError SAL_CALL osl_openDirectory(rtl_uString* ustrDirectoryURL, oslDirect
 
 oslFileError SAL_CALL osl_closeDirectory( oslDirectory Directory )
 {
-    oslDirectoryImpl* pDirImpl = (oslDirectoryImpl*) Directory;
+    oslDirectoryImpl* pDirImpl = static_cast<oslDirectoryImpl*>(Directory);
     oslFileError err = osl_File_E_None;
 
     OSL_ASSERT( Directory );
 
-    if( NULL == pDirImpl )
+    if( pDirImpl == nullptr )
         return osl_File_E_INVAL;
 
 #ifdef ANDROID
@@ -283,13 +280,12 @@ static struct dirent* osl_readdir_impl_(DIR* pdir, bool bFilterLocalAndParentDir
 {
     struct dirent* pdirent;
 
-    while ((pdirent = readdir(pdir)) != NULL)
+    while ((pdirent = readdir(pdir)) != nullptr)
     {
         if (bFilterLocalAndParentDir &&
-            ((0 == strcmp(pdirent->d_name, ".")) || (0 == strcmp(pdirent->d_name, ".."))))
+            ((strcmp(pdirent->d_name, ".") == 0) || (strcmp(pdirent->d_name, "..") == 0)))
             continue;
-        else
-            break;
+        break;
     }
 
     return pdirent;
@@ -297,15 +293,15 @@ static struct dirent* osl_readdir_impl_(DIR* pdir, bool bFilterLocalAndParentDir
 
 oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirectoryItem* pItem, SAL_UNUSED_PARAMETER sal_uInt32 /*uHint*/)
 {
-    oslDirectoryImpl* pDirImpl     = (oslDirectoryImpl*)Directory;
-    rtl_uString*      ustrFileName = NULL;
-    rtl_uString*      ustrFilePath = NULL;
+    oslDirectoryImpl* pDirImpl     = static_cast<oslDirectoryImpl*>(Directory);
+    rtl_uString*      ustrFileName = nullptr;
+    rtl_uString*      ustrFilePath = nullptr;
     struct dirent*    pEntry;
 
     OSL_ASSERT(Directory);
     OSL_ASSERT(pItem);
 
-    if ((NULL == Directory) || (NULL == pItem))
+    if ((Directory == nullptr) || (pItem == nullptr))
         return osl_File_E_INVAL;
 
 #ifdef ANDROID
@@ -319,14 +315,14 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
         pEntry = osl_readdir_impl_(pDirImpl->pDirStruct, true);
     }
 
-    if (NULL == pEntry)
+    if (pEntry == nullptr)
         return osl_File_E_NOENT;
 
 #if defined(MACOSX) && !defined USE_JAVA
 
     // convert decomposed filename to precomposed unicode
     char composed_name[BUFSIZ];
-    CFMutableStringRef strRef = CFStringCreateMutable (NULL, 0 );
+    CFMutableStringRef strRef = CFStringCreateMutable (nullptr, 0 );
     CFStringAppendCString( strRef, pEntry->d_name, kCFStringEncodingUTF8 );  //UTF8 is default on Mac OSX
     CFStringNormalize( strRef, kCFStringNormalizationFormC );
     CFStringGetCString( strRef, composed_name, BUFSIZ, kCFStringEncodingUTF8 );
@@ -338,7 +334,7 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
     /* convert file name to unicode */
     rtl_string2UString( &ustrFileName, pEntry->d_name, strlen( pEntry->d_name ),
         osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
-    OSL_ASSERT(ustrFileName != 0);
+    OSL_ASSERT(ustrFileName != nullptr);
 
 #endif	// MACOSX && !USE_JAVA
 
@@ -364,9 +360,10 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
     rtl_uString_release( ustrFileName );
 
     DirectoryItem_Impl * pImpl = static_cast< DirectoryItem_Impl* >(*pItem);
-    if (0 != pImpl)
+    if (pImpl != nullptr)
     {
-        pImpl->release(), pImpl = 0;
+        pImpl->release();
+        pImpl = nullptr;
     }
 #ifdef _DIRENT_HAVE_D_TYPE
     pImpl = new DirectoryItem_Impl(ustrFilePath, pEntry->d_type);
@@ -381,20 +378,20 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
 
 oslFileError SAL_CALL osl_getDirectoryItem( rtl_uString* ustrFileURL, oslDirectoryItem* pItem )
 {
-    rtl_uString* ustrSystemPath = NULL;
+    rtl_uString* ustrSystemPath = nullptr;
     oslFileError osl_error      = osl_File_E_INVAL;
 
-    OSL_ASSERT((0 != ustrFileURL) && (0 != pItem));
-    if ((0 == ustrFileURL) || (0 == ustrFileURL->length) || (0 == pItem))
+    OSL_ASSERT((nullptr != ustrFileURL) && (nullptr != pItem));
+    if ((ustrFileURL == nullptr) || (ustrFileURL->length == 0) || (pItem == nullptr))
         return osl_File_E_INVAL;
 
     osl_error = osl_getSystemPathFromFileURL_Ex(ustrFileURL, &ustrSystemPath);
-    if (osl_File_E_None != osl_error)
+    if (osl_error != osl_File_E_None)
         return osl_error;
 
     osl_systemPathRemoveSeparator(ustrSystemPath);
 
-    if (-1 == access_u(ustrSystemPath, F_OK))
+    if (access_u(ustrSystemPath, F_OK) == -1)
     {
         osl_error = oslTranslateFileError(OSL_FET_ERROR, errno);
     }
@@ -410,7 +407,7 @@ oslFileError SAL_CALL osl_getDirectoryItem( rtl_uString* ustrFileURL, oslDirecto
 oslFileError SAL_CALL osl_acquireDirectoryItem( oslDirectoryItem Item )
 {
     DirectoryItem_Impl * pImpl = static_cast< DirectoryItem_Impl* >(Item);
-    if (0 == pImpl)
+    if (pImpl == nullptr)
         return osl_File_E_INVAL;
 
     pImpl->acquire();
@@ -420,7 +417,7 @@ oslFileError SAL_CALL osl_acquireDirectoryItem( oslDirectoryItem Item )
 oslFileError SAL_CALL osl_releaseDirectoryItem( oslDirectoryItem Item )
 {
     DirectoryItem_Impl * pImpl = static_cast< DirectoryItem_Impl* >(Item);
-    if (0 == pImpl)
+    if (pImpl == nullptr)
         return osl_File_E_INVAL;
 
     pImpl->release();
@@ -556,8 +553,7 @@ static int path_make_parent(sal_Unicode* path)
         *(path + i) = 0;
         return i;
     }
-    else
-        return 0;
+    return 0;
 }
 
 static int create_dir_with_callback(
@@ -585,7 +581,7 @@ static oslFileError create_dir_recursively_(
     oslDirectoryCreationCallbackFunc aDirectoryCreationCallbackFunc,
     void* pData)
 {
-    OSL_PRECOND((rtl_ustr_getLength(dir_path) > 0) && ((dir_path + (rtl_ustr_getLength(dir_path) - 1)) != (dir_path + rtl_ustr_lastIndexOfChar(dir_path, '/'))), \
+    OSL_PRECOND((rtl_ustr_getLength(dir_path) > 0) && ((dir_path + (rtl_ustr_getLength(dir_path) - 1)) != (dir_path + rtl_ustr_lastIndexOfChar(dir_path, '/'))),
     "Path must not end with a slash");
 
     int native_err = create_dir_with_callback(
@@ -606,7 +602,7 @@ static oslFileError create_dir_recursively_(
     oslFileError osl_error = create_dir_recursively_(
         dir_path, aDirectoryCreationCallbackFunc, pData);
 
-    if (osl_File_E_None != osl_error)
+    if (osl_error != osl_File_E_None)
         return osl_error;
 
        dir_path[pos] = '/';
@@ -619,7 +615,7 @@ oslFileError SAL_CALL osl_createDirectoryPath(
     oslDirectoryCreationCallbackFunc aDirectoryCreationCallbackFunc,
     void* pData)
 {
-    if (aDirectoryUrl == NULL)
+    if (aDirectoryUrl == nullptr)
         return osl_File_E_INVAL;
 
     rtl::OUString sys_path;
@@ -643,7 +639,7 @@ oslFileError SAL_CALL osl_createDirectoryPath(
 #endif	// USE_JAVA
 
     // const_cast because sys_path is a local copy which we want to modify inplace instead of
-    // coyp it into another buffer on the heap again
+    // copy it into another buffer on the heap again
     return create_dir_recursively_(sys_path.pData->buffer, aDirectoryCreationCallbackFunc, pData);
 }
 
@@ -864,10 +860,8 @@ static oslFileError osl_psz_copyFile( const sal_Char* pszPath, const sal_Char* p
     {
         return osl_File_E_ISDIR;
     }
-    else
-    {
-        /* mfe: file does not exists or is no dir */
-    }
+
+    /* mfe: file does not exists or is no dir */
 
     tErr = oslDoCopy(pszPath,pszDestPath,nMode,nSourceSize,DestFileExists);
 
@@ -892,7 +886,8 @@ static oslFileError oslDoCopy(const sal_Char* pszSourceFileName, const sal_Char*
     if ( DestFileExists )
     {
         //TODO: better pick a temp file name instead of adding .osl-tmp:
-        tmpDestFile = rtl::OString(pszSourceFileName) + ".osl-tmp";
+        // use the destination file to avoid EXDEV /* Cross-device link */
+        tmpDestFile = rtl::OString(pszDestFileName) + ".osl-tmp";
         if (rename(pszDestFileName, tmpDestFile.getStr()) != 0)
         {
             if (errno == ENOENT)
@@ -1012,8 +1007,8 @@ static int oslDoCopyLink(const sal_Char* pszSourceFileName, const sal_Char* pszD
         nRet=errno;
         return nRet;
     }
-    else
-        pszLinkContent[ nRet ] = 0;
+
+    pszLinkContent[ nRet ] = 0;
 
     nRet = symlink(pszLinkContent,pszDestFileName);
 
@@ -1028,7 +1023,7 @@ static int oslDoCopyLink(const sal_Char* pszSourceFileName, const sal_Char* pszD
 
 static int oslDoCopyFile(const sal_Char* pszSourceFileName, const sal_Char* pszDestFileName, size_t nSourceSize, mode_t mode)
 {
-    oslFileHandle SourceFileFH=0;
+    oslFileHandle SourceFileFH=nullptr;
     int DestFileFD=0;
     int nRet=0;
 
