@@ -250,7 +250,7 @@ sal_Bool macxp_isUbiquitousPath(sal_Unicode *path, sal_Int32 len)
 		NSFileManager *pFileManager = [NSFileManager defaultManager];
 		if ( pFileManager )
 		{
-			NSString *pPath = [NSString stringWithCharacters:reinterpret_cast< unichar * >( path ) length:len];
+			NSString *pPath = [NSString stringWithCharacters:reinterpret_cast<unichar const *>( path ) length:len];
 			if ( pPath && [pPath length] )
 			{
 				NSURL *pURL = [NSURL fileURLWithPath:pPath];
