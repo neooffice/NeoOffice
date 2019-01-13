@@ -278,8 +278,8 @@ public:
     virtual FactoryFunction GetUITestFactory() const override;
 
 #ifdef USE_JAVA
-    const ImplBtn* GetImplBtn() const { return mpBtn; }
-#endif  // USE_JAVA
+    bool IsImplBtnPressed() const;
+#endif	// USE_JAVA
 };
 
 class VCL_DLLPUBLIC MultiListBox : public ListBox
