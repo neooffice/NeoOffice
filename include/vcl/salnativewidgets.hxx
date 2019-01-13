@@ -235,7 +235,7 @@ enum class ControlState {
     DEFAULT         = 0x0020,
     SELECTED        = 0x0040,
 #if defined USE_JAVA && defined MACOSX
-    INACTIVE		= 0x0100
+    INACTIVE		= 0x0100,
 #endif	// USE_JAVA && MACOSX
     DOUBLEBUFFERING = 0x4000,  ///< Set when the control is painted using double-buffering via VirtualDevice.
     CACHING_ALLOWED = 0x8000,  ///< Set when the control is completely visible (i.e. not clipped).
@@ -507,8 +507,7 @@ enum ListViewHeaderSortValue {
 class VCL_DLLPUBLIC ListViewHeaderValue : public ImplControlValue
 {
 public:
-    ListViewHeaderValue()
-    : ImplControlValue( CTRL_LISTVIEWHEADER, BUTTONVALUE_DONTKNOW, 0 )
+    ListViewHeaderValue() : ImplControlValue( ControlType::ListViewHeader, 0 )
     , mbPrimarySortColumn( false ), mnSortDirection( LISTVIEWHEADER_SORT_DONTKNOW ) {}
     virtual ~ListViewHeaderValue() {}
     virtual ListViewHeaderValue* clone() const SAL_OVERRIDE;
