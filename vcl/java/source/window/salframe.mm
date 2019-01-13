@@ -687,91 +687,87 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 				pPath = [[[pPath stringByAppendingPathComponent:@"Contents"] stringByAppendingPathComponent:@"Resources"] stringByAppendingPathComponent:@"cursors"];
 				if ( pPath )
 				{
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AIRBRUSH hotSpot:NSMakePoint( 2, 31 ) path:[pPath stringByAppendingPathComponent:@"airbrush.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_E hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"ase.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_N hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asn.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_NE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asne.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_NS hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asns.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_NSWE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asnswe"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_NW hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asnw.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_S hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"ass.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_SE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asse.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_SW hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"assw.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_W hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asw.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_WE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"aswe.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_CHAIN hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"chain.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_CHAIN_NOTALLOWED hotSpot:NSMakePoint( 10, 10 ) path:[pPath stringByAppendingPathComponent:@"chainnot.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_CHART hotSpot:NSMakePoint( 11, 11 ) path:[pPath stringByAppendingPathComponent:@"chart.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_COPYDATA hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"copydata.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_COPYDATALINK hotSpot:NSMakePoint( 10, 2 ) path:[pPath stringByAppendingPathComponent:@"copydlnk.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_COPYFILE hotSpot:NSMakePoint( 5, 10 ) path:[pPath stringByAppendingPathComponent:@"copyf.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_COPYFILES hotSpot:NSMakePoint( 9, 10 ) path:[pPath stringByAppendingPathComponent:@"copyf2.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_COPYFILELINK hotSpot:NSMakePoint( 9, 7 ) path:[pPath stringByAppendingPathComponent:@"copyflnk.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_CROOK hotSpot:NSMakePoint( 16, 17 ) path:[pPath stringByAppendingPathComponent:@"crook.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_CROP hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"crop.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_CROSS hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"cross.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_ARC hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"darc.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_BEZIER hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dbezier.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_CAPTION hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dcapt.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_CIRCLECUT hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dcirccut.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_CONNECT hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dconnect.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_ELLIPSE hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dellipse.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DETECTIVE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"detectiv.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_FREEHAND hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dfree.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_LINE hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dline.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_PIE hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dpie.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_POLYGON hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dpolygon.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_RECT hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"drect.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_TEXT hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dtext.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_FILL hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"fill.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_HAND hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"hand.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_HELP hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"help.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_HSHEAR hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"hshear.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_HSIZEBAR hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"hsizebar.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_HSPLIT hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"hsplit.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_LINKDATA hotSpot:NSMakePoint( 10, 2 ) path:[pPath stringByAppendingPathComponent:@"linkdata.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_LINKFILE hotSpot:NSMakePoint( 9, 7 ) path:[pPath stringByAppendingPathComponent:@"linkf.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MAGNIFY hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"magnify.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MIRROR hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"mirror.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MOVE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"move.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MOVEBEZIERWEIGHT hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"movebw.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MOVEDATA hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"movedata.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MOVEDATALINK hotSpot:NSMakePoint( 3, 3 ) path:[pPath stringByAppendingPathComponent:@"movedlnk.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MOVEFILE hotSpot:NSMakePoint( 5, 10 ) path:[pPath stringByAppendingPathComponent:@"movef.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MOVEFILES hotSpot:NSMakePoint( 9, 10 ) path:[pPath stringByAppendingPathComponent:@"movef2.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MOVEFILELINK hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"moveflnk.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MOVEPOINT hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"movept.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_NESIZE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"neswsize.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_SWSIZE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"neswsize.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_WINDOW_NESIZE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"neswsize.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_WINDOW_SWSIZE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"neswsize.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_NOTALLOWED hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"notallow.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_NULL hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"nullptr.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_NWSIZE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"nwsesize.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_SESIZE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"nwsesize.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_WINDOW_NWSIZE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"nwsesize.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_WINDOW_SESIZE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"nwsesize.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_PEN hotSpot:NSMakePoint( 2, 31 ) path:[pPath stringByAppendingPathComponent:@"pen.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_PIVOT_COL hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"pivotcol.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_PIVOT_DELETE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"pivotdel.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_PIVOT_FIELD hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"pivotfld.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_PIVOT_ROW hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"pivotrow.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_PAINTBRUSH hotSpot:NSMakePoint( 4, 30 ) path:[pPath stringByAppendingPathComponent:@"pntbrsh.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_REFHAND hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"refhand.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_ROTATE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"rotate.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_TAB_SELECT_E hotSpot:NSMakePoint( 31, 16 ) path:[pPath stringByAppendingPathComponent:@"tblsele.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_TAB_SELECT_S hotSpot:NSMakePoint( 16, 31 ) path:[pPath stringByAppendingPathComponent:@"tblsels.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_TAB_SELECT_SE hotSpot:NSMakePoint( 31, 31 ) path:[pPath stringByAppendingPathComponent:@"tblselse.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_TAB_SELECT_SW hotSpot:NSMakePoint( 2, 31 ) path:[pPath stringByAppendingPathComponent:@"tblselsw.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_TAB_SELECT_W hotSpot:NSMakePoint( 2, 16 ) path:[pPath stringByAppendingPathComponent:@"tblselw.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_TIMEEVENT_MOVE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"timemove.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_TIMEEVENT_SIZE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"timesize.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_VSHEAR hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"vshear.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_VSIZEBAR hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"vsizebar.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_VSPLIT hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"vsplit.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_TEXT_VERTICAL hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"vtext.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_HIDEWHITESPACE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"wshide.png"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_SHOWWHITESPACE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"wsshow.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::AutoScrollE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"ase.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::AutoScrollN hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asn.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::AutoScrollNE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asne.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::AutoScrollNS hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asns.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::AutoScrollNSWE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asnswe"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::AutoScrollNW hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asnw.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::AutoScrollS hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"ass.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::AutoScrollSE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asse.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::AutoScrollSW hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"assw.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::AutoScrollW hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asw.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::AutoScrollWE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"aswe.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::Chain hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"chain.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::ChainNotAllowed hotSpot:NSMakePoint( 10, 10 ) path:[pPath stringByAppendingPathComponent:@"chainnot.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::Chart hotSpot:NSMakePoint( 11, 11 ) path:[pPath stringByAppendingPathComponent:@"chart.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::CopyData hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"copydata.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::CopyDataLink hotSpot:NSMakePoint( 10, 2 ) path:[pPath stringByAppendingPathComponent:@"copydlnk.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::CopyFile hotSpot:NSMakePoint( 5, 10 ) path:[pPath stringByAppendingPathComponent:@"copyf.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::CopyFiles hotSpot:NSMakePoint( 9, 10 ) path:[pPath stringByAppendingPathComponent:@"copyf2.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::CopyFileLink hotSpot:NSMakePoint( 9, 7 ) path:[pPath stringByAppendingPathComponent:@"copyflnk.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::Crook hotSpot:NSMakePoint( 16, 17 ) path:[pPath stringByAppendingPathComponent:@"crook.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::Crop hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"crop.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::Cross hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"cross.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::DrawArc hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"darc.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::DrawBezier hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dbezier.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::DrawCaption hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dcapt.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::DrawCircleCut hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dcirccut.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::DrawConnect hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dconnect.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::DrawEllipse hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dellipse.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::Detective hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"detectiv.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::DrawFreehand hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dfree.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::DrawLine hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dline.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::DrawPie hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dpie.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::DrawPolygon hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dpolygon.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::DrawRect hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"drect.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::DrawText hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dtext.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::Fill hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"fill.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::Hand hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"hand.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::Help hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"help.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::HShear hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"hshear.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::HSizeBar hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"hsizebar.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::HSplit hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"hsplit.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::LinkData hotSpot:NSMakePoint( 10, 2 ) path:[pPath stringByAppendingPathComponent:@"linkdata.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::LinkFile hotSpot:NSMakePoint( 9, 7 ) path:[pPath stringByAppendingPathComponent:@"linkf.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::Magnify hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"magnify.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::Mirror hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"mirror.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::Move hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"move.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::MoveBezierWeight hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"movebw.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::MoveData hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"movedata.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::MoveDataLink hotSpot:NSMakePoint( 3, 3 ) path:[pPath stringByAppendingPathComponent:@"movedlnk.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::MoveFile hotSpot:NSMakePoint( 5, 10 ) path:[pPath stringByAppendingPathComponent:@"movef.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::MoveFiles hotSpot:NSMakePoint( 9, 10 ) path:[pPath stringByAppendingPathComponent:@"movef2.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::MoveFileLink hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"moveflnk.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::MovePoint hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"movept.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::NESize hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"neswsize.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::SWSize hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"neswsize.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::WindowNESize hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"neswsize.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::WindowSWSize hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"neswsize.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::NotAllowed hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"notallow.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::Null hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"nullptr.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::NWSize hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"nwsesize.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::SESize hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"nwsesize.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::WindowNWSize hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"nwsesize.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::WindowSESize hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"nwsesize.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::Pen hotSpot:NSMakePoint( 2, 31 ) path:[pPath stringByAppendingPathComponent:@"pen.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::PivotCol hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"pivotcol.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::PivotDelete hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"pivotdel.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::PivotField hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"pivotfld.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::PivotRow hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"pivotrow.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::RefHand hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"refhand.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::Rotate hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"rotate.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::TabSelectE hotSpot:NSMakePoint( 31, 16 ) path:[pPath stringByAppendingPathComponent:@"tblsele.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::TabSelectS hotSpot:NSMakePoint( 16, 31 ) path:[pPath stringByAppendingPathComponent:@"tblsels.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::TabSelectSE hotSpot:NSMakePoint( 31, 31 ) path:[pPath stringByAppendingPathComponent:@"tblselse.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::TabSelectSW hotSpot:NSMakePoint( 2, 31 ) path:[pPath stringByAppendingPathComponent:@"tblselsw.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::TabSelectW hotSpot:NSMakePoint( 2, 16 ) path:[pPath stringByAppendingPathComponent:@"tblselw.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::VShear hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"vshear.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::VSizeBar hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"vsizebar.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::VSplit hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"vsplit.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::TextVertical hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"vtext.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::HideWhitespace hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"wshide.png"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:PointerStyle::ShowWhitespace hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"wsshow.png"]];
 				}
 			}
 		}
@@ -787,119 +783,118 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 	{
 		switch ( mePointerStyle )
 		{
-			case POINTER_NULL:
-			case POINTER_TEXT:
+			case PointerStyle::Null:
+			case PointerStyle::Text:
 				pCursor = [NSCursor IBeamCursor];
 				break;
-			case POINTER_CROSS:
-			case POINTER_DRAW_LINE:
-			case POINTER_DRAW_RECT:
-			case POINTER_DRAW_POLYGON:
-			case POINTER_DRAW_BEZIER:
-			case POINTER_DRAW_ARC:
-			case POINTER_DRAW_PIE:
-			case POINTER_DRAW_CIRCLECUT:
-			case POINTER_DRAW_ELLIPSE:
-			case POINTER_DRAW_FREEHAND:
-			case POINTER_DRAW_CONNECT:
-			case POINTER_DRAW_TEXT:
-			case POINTER_DRAW_CAPTION:
+			case PointerStyle::Cross:
+			case PointerStyle::DrawLine:
+			case PointerStyle::DrawRect:
+			case PointerStyle::DrawPolygon:
+			case PointerStyle::DrawBezier:
+			case PointerStyle::DrawArc:
+			case PointerStyle::DrawPie:
+			case PointerStyle::DrawCircleCut:
+			case PointerStyle::DrawEllipse:
+			case PointerStyle::DrawFreehand:
+			case PointerStyle::DrawConnect:
+			case PointerStyle::DrawText:
+			case PointerStyle::DrawCaption:
 				pCursor = [NSCursor crosshairCursor];
 				break;
-			case POINTER_MOVE:
+			case PointerStyle::Move:
 				pCursor = [NSCursor openHandCursor];
 				break;
-			case POINTER_NOTALLOWED:
+			case PointerStyle::NotAllowed:
 				pCursor = [NSCursor operationNotAllowedCursor];
 				break;
-			case POINTER_NSIZE:
-			case POINTER_WINDOW_NSIZE:
-			case POINTER_SSIZE:
-			case POINTER_WINDOW_SSIZE:
-			case POINTER_VSPLIT:
-			case POINTER_VSIZEBAR:
+			case PointerStyle::NSize:
+			case PointerStyle::WindowNSize:
+			case PointerStyle::SSize:
+			case PointerStyle::WindowSSize:
+			case PointerStyle::VSplit:
+			case PointerStyle::VSizeBar:
 				pCursor = [NSCursor resizeUpDownCursor];
 				break;
-			case POINTER_WSIZE:
-			case POINTER_WINDOW_WSIZE:
-			case POINTER_ESIZE:
-			case POINTER_WINDOW_ESIZE:
-			case POINTER_HSPLIT:
-			case POINTER_HSIZEBAR:
+			case PointerStyle::WSize:
+			case PointerStyle::WindowWSize:
+			case PointerStyle::ESize:
+			case PointerStyle::WindowESize:
+			case PointerStyle::HSplit:
+			case PointerStyle::HSizeBar:
 				pCursor = [NSCursor resizeLeftRightCursor];
 				break;
-			case POINTER_HAND:
-			case POINTER_REFHAND:
+			case PointerStyle::Hand:
+			case PointerStyle::RefHand:
 				pCursor = [NSCursor pointingHandCursor];
 				break;
-			case POINTER_TEXT_VERTICAL:
+			case PointerStyle::TextVertical:
 				pCursor = [NSCursor IBeamCursorForVerticalLayout];
 				break;
-			case POINTER_WAIT:
+			case PointerStyle::Wait:
 				// Animate waiting view if available
 				bAnimateWaitingView = YES;
 				pCursor = [NSCursor arrowCursor];
 				break;
-			case POINTER_ARROW:
-			case POINTER_HELP:
-			case POINTER_PEN:
-			case POINTER_MAGNIFY:
-			case POINTER_FILL:
-			case POINTER_ROTATE:
-			case POINTER_HSHEAR:
-			case POINTER_VSHEAR:
-			case POINTER_MIRROR:
-			case POINTER_CROOK:
-			case POINTER_CROP:
-			case POINTER_MOVEPOINT:
-			case POINTER_MOVEBEZIERWEIGHT:
-			case POINTER_MOVEDATA:
-			case POINTER_COPYDATA:
-			case POINTER_LINKDATA:
-			case POINTER_MOVEDATALINK:
-			case POINTER_COPYDATALINK:
-			case POINTER_MOVEFILE:
-			case POINTER_COPYFILE:
-			case POINTER_LINKFILE:
-			case POINTER_MOVEFILELINK:
-			case POINTER_COPYFILELINK:
-			case POINTER_MOVEFILES:
-			case POINTER_COPYFILES:
-			case POINTER_CHART:
-			case POINTER_DETECTIVE:
-			case POINTER_PIVOT_COL:
-			case POINTER_PIVOT_ROW:
-			case POINTER_PIVOT_FIELD:
-			case POINTER_CHAIN:
-			case POINTER_CHAIN_NOTALLOWED:
-			case POINTER_TIMEEVENT_MOVE:
-			case POINTER_TIMEEVENT_SIZE:
-			case POINTER_AUTOSCROLL_N:
-			case POINTER_AUTOSCROLL_S:
-			case POINTER_AUTOSCROLL_W:
-			case POINTER_AUTOSCROLL_E:
-			case POINTER_AUTOSCROLL_NW:
-			case POINTER_AUTOSCROLL_NE:
-			case POINTER_AUTOSCROLL_SW:
-			case POINTER_AUTOSCROLL_SE:
-			case POINTER_AUTOSCROLL_NS:
-			case POINTER_AUTOSCROLL_WE:
-			case POINTER_AUTOSCROLL_NSWE:
-			case POINTER_AIRBRUSH:
-			case POINTER_PIVOT_DELETE:
-			case POINTER_TAB_SELECT_S:
-			case POINTER_TAB_SELECT_E:
-			case POINTER_TAB_SELECT_SE:
-			case POINTER_TAB_SELECT_W:
-			case POINTER_TAB_SELECT_SW:
-			case POINTER_NWSIZE:
-			case POINTER_WINDOW_NWSIZE:
-			case POINTER_NESIZE:
-			case POINTER_WINDOW_NESIZE:
-			case POINTER_SWSIZE:
-			case POINTER_WINDOW_SWSIZE:
-			case POINTER_SESIZE:
-			case POINTER_WINDOW_SESIZE:
+			case PointerStyle::Arrow:
+			case PointerStyle::Help:
+			case PointerStyle::NWSize:
+			case PointerStyle::NESize:
+			case PointerStyle::SWSize:
+			case PointerStyle::SESize:
+			case PointerStyle::WindowNWSize:
+			case PointerStyle::WindowNESize:
+			case PointerStyle::WindowSWSize:
+			case PointerStyle::WindowSESize:
+			case PointerStyle::Pen:
+			case PointerStyle::Magnify:
+			case PointerStyle::Fill:
+			case PointerStyle::Rotate:
+			case PointerStyle::HShear:
+			case PointerStyle::VShear:
+			case PointerStyle::Mirror:
+			case PointerStyle::Crook:
+			case PointerStyle::Crop:
+			case PointerStyle::MovePoint:
+			case PointerStyle::MoveBezierWeight:
+			case PointerStyle::MoveData:
+			case PointerStyle::CopyData:
+			case PointerStyle::LinkData:
+			case PointerStyle::MoveDataLink:
+			case PointerStyle::CopyDataLink:
+			case PointerStyle::MoveFile:
+			case PointerStyle::CopyFile:
+			case PointerStyle::LinkFile:
+			case PointerStyle::MoveFileLink:
+			case PointerStyle::CopyFileLink:
+			case PointerStyle::MoveFiles:
+			case PointerStyle::CopyFiles:
+			case PointerStyle::Chart:
+			case PointerStyle::Detective:
+			case PointerStyle::PivotCol:
+			case PointerStyle::PivotRow:
+			case PointerStyle::PivotField:
+			case PointerStyle::Chain:
+			case PointerStyle::ChainNotAllowed:
+			case PointerStyle::AutoScrollN:
+			case PointerStyle::AutoScrollS:
+			case PointerStyle::AutoScrollW:
+			case PointerStyle::AutoScrollE:
+			case PointerStyle::AutoScrollNW:
+			case PointerStyle::AutoScrollNE:
+			case PointerStyle::AutoScrollSW:
+			case PointerStyle::AutoScrollSE:
+			case PointerStyle::AutoScrollNS:
+			case PointerStyle::AutoScrollWE:
+			case PointerStyle::AutoScrollNSWE:
+			case PointerStyle::PivotDelete:
+			case PointerStyle::TabSelectS:
+			case PointerStyle::TabSelectE:
+			case PointerStyle::TabSelectSE:
+			case PointerStyle::TabSelectW:
+			case PointerStyle::TabSelectSW:
+			case PointerStyle::HideWhitespace:
+			case PointerStyle::ShowWhitespace:
 			default:
 				pCursor = [NSCursor arrowCursor];
 				break;
