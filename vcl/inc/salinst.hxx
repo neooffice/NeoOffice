@@ -27,24 +27,23 @@
 #ifndef INCLUDED_VCL_INC_SALINST_HXX
 #define INCLUDED_VCL_INC_SALINST_HXX
 
-#include "com/sun/star/uno/Reference.hxx"
-#include "com/sun/star/uno/XComponentContext.hpp"
-#include "com/sun/star/ui/dialogs/XFilePicker2.hpp"
-#include "com/sun/star/ui/dialogs/XFolderPicker2.hpp"
-
-#include "tools/solar.h"
-#include "displayconnectiondispatch.hxx"
-#include "vcl/dllapi.h"
 #include <sal/types.h>
+#include <rtl/ref.hxx>
+#include <tools/solar.h>
+#include <vcl/dllapi.h>
+#include <vcl/salgtype.hxx>
 
-#include "rtl/ref.hxx"
+#include "displayconnectiondispatch.hxx"
 
-#include <list>
+#include <com/sun/star/uno/XComponentContext.hpp>
+#include <com/sun/star/ui/dialogs/XFilePicker2.hpp>
+#include <com/sun/star/ui/dialogs/XFolderPicker2.hpp>
 
 namespace comphelper { class SolarMutex; }
 struct SystemParentData;
 struct SalPrinterQueueInfo;
-struct ImplJobSetup;
+class ImplJobSetup;
+class OpenGLContext;
 class SalGraphics;
 class SalFrame;
 class SalObject;
@@ -63,6 +62,12 @@ class SalSession;
 struct SystemGraphicsData;
 struct SystemWindowData;
 class Menu;
+enum class VclInputFlags;
+enum class SalFrameStyleFlags;
+
+enum SalYieldResult { EVENT, TIMEOUT };
+
+typedef struct _cairo_font_options cairo_font_options_t;
 
 class VCL_PLUGIN_PUBLIC SalInstance
 {
@@ -78,12 +83,12 @@ public:
 
     // Frame
     // DisplayName for Unix ???
-    virtual SalFrame*       CreateChildFrame( SystemParentData* pParent, sal_uLong nStyle ) = 0;
-    virtual SalFrame*       CreateFrame( SalFrame* pParent, sal_uLong nStyle ) = 0;
+    virtual SalFrame*       CreateChildFrame( SystemParentData* pParent, SalFrameStyleFlags nStyle ) = 0;
+    virtual SalFrame*       CreateFrame( SalFrame* pParent, SalFrameStyleFlags nStyle ) = 0;
     virtual void            DestroyFrame( SalFrame* pFrame ) = 0;
 
     // Object (System Child Window)
-    virtual SalObject*      CreateObject( SalFrame* pParent, SystemWindowData* pWindowData, bool bShow = true ) = 0;
+    virtual SalObject*      CreateObject( SalFrame* pParent, SystemWindowData* pWindowData, bool bShow ) = 0;
     virtual void            DestroyObject( SalObject* pObject ) = 0;
 
     // VirtualDevice
@@ -95,11 +100,11 @@ public:
     virtual SalVirtualDevice*
                             CreateVirtualDevice( SalGraphics* pGraphics,
                                                  long &rDX, long &rDY,
-                                                 sal_uInt16 nBitCount, const SystemGraphicsData *pData = NULL ) = 0;
+                                                 DeviceFormat eFormat, const SystemGraphicsData *pData = nullptr ) = 0;
 
     // Printer
     // pSetupData->mpDriverData can be 0
-    // pSetupData must be updatet with the current
+    // pSetupData must be updated with the current
     // JobSetup
     virtual SalInfoPrinter* CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
                                                ImplJobSetup* pSetupData ) = 0;
@@ -116,7 +121,7 @@ public:
     virtual SalTimer*       CreateSalTimer() = 0;
     // SalI18NImeStatus
     virtual SalI18NImeStatus*
-                            CreateI18NImeStatus() = 0;
+                            CreateI18NImeStatus();
     // SalSystem
     virtual SalSystem*      CreateSalSystem() = 0;
     // SalBitmap
@@ -130,11 +135,14 @@ public:
     // return true, if yield mutex is owned by this thread, else false
     virtual bool            CheckYieldMutex() = 0;
 
-    // wait next event and dispatch
-    // must returned by UserEvent (SalFrame::PostEvent)
-    // and timer
-    virtual void            Yield( bool bWait, bool bHandleAllCurrentEvents ) = 0;
-    virtual bool            AnyInput( sal_uInt16 nType ) = 0;
+    /**
+     * Wait for the next event (if bWait) and dispatch it,
+     * includes posted events, and timers.
+     * If bHandleAllCurrentEvents - dispatch multiple posted
+     * user events. Returns true if events needed processing.
+     */
+    virtual SalYieldResult  DoYield(bool bWait, bool bHandleAllCurrentEvents, sal_uLong nReleased) = 0;
+    virtual bool            AnyInput( VclInputFlags nType ) = 0;
 
     // menus
     virtual SalMenu*        CreateMenu( bool bMenuBar, Menu* pMenu );
@@ -145,24 +153,16 @@ public:
     // may return NULL to disable session management
     virtual SalSession*     CreateSalSession() = 0;
 
+    virtual OpenGLContext*  CreateOpenGLContext() = 0;
+
     // methods for XDisplayConnection
 
     void                    SetEventCallback( rtl::Reference< vcl::DisplayConnectionDispatch > const & pInstance )
         { m_pEventInst = pInstance; }
 
-    bool                    CallEventCallback( void* pEvent, int nBytes )
-        { return m_pEventInst.is() && m_pEventInst->dispatchEvent( pEvent, nBytes ); }
+    bool                    CallEventCallback( void* pEvent, int nBytes );
 
-    bool                    CallErrorCallback( void* pEvent, int nBytes )
-        { return m_pEventInst.is() && m_pEventInst->dispatchErrorEvent( pEvent, nBytes ); }
-
-    enum ConnectionIdentifierType { AsciiCString, Blob };
-    virtual void*           GetConnectionIdentifier( ConnectionIdentifierType& rReturnedType, int& rReturnedBytes ) = 0;
-
-    // this is a vehicle for PrintFontManager to bridge the gap between vcl and libvclplug_*
-    // this is only necessary because PrintFontManager is an exported vcl API and therefore
-    // needs to be in libvcl while libvclplug_* do not contain exported C++ API
-    virtual void            FillFontPathList( std::list< OString >& o_rFontPaths );
+    virtual OUString        GetConnectionIdentifier() = 0;
 
     // dtrans implementation
     virtual css::uno::Reference< css::uno::XInterface > CreateClipboard( const css::uno::Sequence< css::uno::Any >& i_rArguments );
@@ -182,6 +182,11 @@ public:
     virtual void            updatePrinterUpdate() {}
     virtual void            jobStartedPrinterUpdate() {}
     virtual void            jobEndedPrinterUpdate() {}
+
+    /// get information about underlying versions
+    virtual OUString        getOSVersion() { return OUString("-"); }
+
+    virtual const cairo_font_options_t* GetCairoFontOptions() { return nullptr; }
 };
 
 // called from SVMain
@@ -200,6 +205,10 @@ void InitSalData();                         // called from Application-Ctor
 void DeInitSalData();                       // called from Application-Dtor
 
 void InitSalMain();
+
+#ifdef MACOSX
+void postInitVCLinitNSApp();
+#endif
 
 #endif // INCLUDED_VCL_INC_SALINST_HXX
 

@@ -101,7 +101,6 @@ $(eval $(call gb_Package_add_files_with_dir,vcl_osxres,Resources,\
     MainMenu.nib/classes.nib \
     MainMenu.nib/info.nib \
     MainMenu.nib/keyedobjects.nib \
-    cursors/airbrush.png \
     cursors/ase.png \
     cursors/asn.png \
     cursors/asne.png \
@@ -160,15 +159,12 @@ $(eval $(call gb_Package_add_files_with_dir,vcl_osxres,Resources,\
     cursors/pivotdel.png \
     cursors/pivotfld.png \
     cursors/pivotrow.png \
-    cursors/pntbrsh.png \
     cursors/rotate.png \
     cursors/tblsele.png \
     cursors/tblsels.png \
     cursors/tblselse.png \
     cursors/tblselsw.png \
     cursors/tblselw.png \
-    cursors/timemove.png \
-    cursors/timesize.png \
     cursors/vshear.png \
     cursors/vtext.png \
 ))

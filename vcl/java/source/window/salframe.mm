@@ -62,8 +62,8 @@ static ::std::map< NSWindow*, NSCursor* > aNativeCursorMap;
 static ::std::map< NSWindow*, NSTimer* > aNativeFlushTimerMap;
 static bool bScreensInitialized = false;
 static NSRect aTotalScreenBounds = NSZeroRect;
-static ::std::vector< Rectangle > aVCLScreensFullBoundsList;
-static ::std::vector< Rectangle > aVCLScreensVisibleBoundsList;
+static ::std::vector< tools::Rectangle > aVCLScreensFullBoundsList;
+static ::std::vector< tools::Rectangle > aVCLScreensVisibleBoundsList;
 static ::osl::Mutex aScreensMutex;
 static bool bSystemColorsInitialized = false;
 static bool	bVCLUseDarkModeColors = false;
@@ -150,8 +150,8 @@ static void HandleScreensChangedRequest()
 				aLastFullFrame = aFullFrame;
 
 				// Flip coordinates and cache bounds
-				Rectangle aFullRect( Point( (long)aFullFrame.origin.x, (long)aTotalBounds.size.height - aFullFrame.origin.y - aFullFrame.size.height ), Size( (long)aFullFrame.size.width, (long)aFullFrame.size.height ) );
-				Rectangle aVisibleRect( Point( (long)aVisibleFrame.origin.x, (long)aTotalBounds.size.height - aVisibleFrame.origin.y- aVisibleFrame.size.height ), Size( (long)aVisibleFrame.size.width, (long)aVisibleFrame.size.height ) );
+				tools::Rectangle aFullRect( Point( (long)aFullFrame.origin.x, (long)aTotalBounds.size.height - aFullFrame.origin.y - aFullFrame.size.height ), Size( (long)aFullFrame.size.width, (long)aFullFrame.size.height ) );
+				tools::Rectangle aVisibleRect( Point( (long)aVisibleFrame.origin.x, (long)aTotalBounds.size.height - aVisibleFrame.origin.y- aVisibleFrame.size.height ), Size( (long)aVisibleFrame.size.width, (long)aVisibleFrame.size.height ) );
 				aFullRect.Justify();
 				aVisibleRect.Justify();
 				aVCLScreensFullBoundsList.push_back( aFullRect );
@@ -2527,7 +2527,7 @@ JavaSalFrame::JavaSalFrame( sal_uLong nSalFrameStyle, JavaSalFrame *pParent ) :
 		SetParent( pParent );
 
 	// Cache the insets
-	Rectangle aRect = GetInsets();
+	tools::Rectangle aRect = GetInsets();
 	maGeometry.nLeftDecoration = aRect.Left();
 	maGeometry.nTopDecoration = aRect.Top();
 	maGeometry.nRightDecoration = aRect.Right();
@@ -2992,7 +2992,7 @@ unsigned int JavaSalFrame::GetDefaultScreenNumber()
 
 // -----------------------------------------------------------------------
 
-const Rectangle JavaSalFrame::GetScreenBounds( long nX, long nY, long nWidth, long nHeight, sal_Bool bFullScreenMode )
+const tools::Rectangle JavaSalFrame::GetScreenBounds( long nX, long nY, long nWidth, long nHeight, sal_Bool bFullScreenMode )
 {
 	// Update if screens have not yet been set
 	InitializeScreens();
@@ -3023,10 +3023,10 @@ const Rectangle JavaSalFrame::GetScreenBounds( long nX, long nY, long nWidth, lo
 
 	// Iterate through the screens and find the closest screen
 	unsigned long nClosestArea = ULONG_MAX;
-	Rectangle aClosestBounds;
+	tools::Rectangle aClosestBounds;
 	for ( i = 0; i < aVCLScreensFullBoundsList.size() && i < aVCLScreensVisibleBoundsList.size(); i++ )
 	{
-		Rectangle aBounds;
+		tools::Rectangle aBounds;
 		if ( bFullScreenMode )
 			aBounds = aVCLScreensFullBoundsList[ i ];
 		else
@@ -3044,12 +3044,12 @@ const Rectangle JavaSalFrame::GetScreenBounds( long nX, long nY, long nWidth, lo
 	if ( aClosestBounds.GetWidth() > 0 && aClosestBounds.GetHeight() > 0 )
 		return aClosestBounds;
 	else
-		return Rectangle( Point( 0, 0 ), Size( 800, 600 ) );
+		return tools::Rectangle( Point( 0, 0 ), Size( 800, 600 ) );
 }
 
 // -----------------------------------------------------------------------
 
-const Rectangle JavaSalFrame::GetScreenBounds( unsigned int nScreen, sal_Bool bFullScreenMode )
+const tools::Rectangle JavaSalFrame::GetScreenBounds( unsigned int nScreen, sal_Bool bFullScreenMode )
 {
 	// Update if screens have not yet been set
 	InitializeScreens();
@@ -3062,7 +3062,7 @@ const Rectangle JavaSalFrame::GetScreenBounds( unsigned int nScreen, sal_Bool bF
 	if ( !bFullScreenMode && nScreen < aVCLScreensVisibleBoundsList.size() )
 		return aVCLScreensVisibleBoundsList[ nScreen ];
 		
-	return Rectangle( Point( 0, 0 ), Size( 0, 0 ) );
+	return tools::Rectangle( Point( 0, 0 ), Size( 0, 0 ) );
 }
 
 // -----------------------------------------------------------------------
@@ -3282,9 +3282,9 @@ void JavaSalFrame::FlushAllObjects()
 
 // -----------------------------------------------------------------------
 
-const Rectangle JavaSalFrame::GetBounds( sal_Bool *pInLiveResize, sal_Bool *pInFullScreenMode, sal_Bool bUseFullScreenOriginalBounds )
+const tools::Rectangle JavaSalFrame::GetBounds( sal_Bool *pInLiveResize, sal_Bool *pInFullScreenMode, sal_Bool bUseFullScreenOriginalBounds )
 {
-	Rectangle aRet( Point( 0, 0 ), Size( 0, 0 ) );
+	tools::Rectangle aRet( Point( 0, 0 ), Size( 0, 0 ) );
 
 	if ( mpWindow )
 	{
@@ -3297,12 +3297,12 @@ const Rectangle JavaSalFrame::GetBounds( sal_Bool *pInLiveResize, sal_Bool *pInF
 		if ( pFrame )
 		{
 			NSRect aFrame = [pFrame rectValue];
-			aRet = Rectangle( Point( (long)aFrame.origin.x, (long)aFrame.origin.y ), Size( (long)aFrame.size.width, (long)aFrame.size.height ) );
+			aRet = tools::Rectangle( Point( (long)aFrame.origin.x, (long)aFrame.origin.y ), Size( (long)aFrame.size.width, (long)aFrame.size.height ) );
 
 			// Update insets for non-full screen windows as tabbed windows have
 			// a different inset than untabbed windows
 			const NSRect aInsets = [mpWindow insets];
-			Rectangle aRect( (long)aInsets.origin.x, (long)aInsets.size.height, (long)aInsets.size.width, (long)aInsets.origin.y );
+			tools::Rectangle aRect( (long)aInsets.origin.x, (long)aInsets.size.height, (long)aInsets.size.width, (long)aInsets.origin.y );
 			maGeometry.nLeftDecoration = aRect.Left();
 			maGeometry.nTopDecoration = aRect.Top();
 			maGeometry.nRightDecoration = aRect.Right();
@@ -3317,10 +3317,10 @@ const Rectangle JavaSalFrame::GetBounds( sal_Bool *pInLiveResize, sal_Bool *pInF
 
 // -----------------------------------------------------------------------
 
-const Rectangle JavaSalFrame::GetInsets()
+const tools::Rectangle JavaSalFrame::GetInsets()
 {
 	// Insets use the rectangle's data members directly so set members directly
-	Rectangle aRet( 0, 0, 0, 0 );
+	tools::Rectangle aRet( 0, 0, 0, 0 );
 
 	if ( mpWindow )
 	{
@@ -3328,7 +3328,7 @@ const Rectangle JavaSalFrame::GetInsets()
 
 		// Flip native insets
 		const NSRect aInsets = [mpWindow insets];
-		aRet = Rectangle( (long)aInsets.origin.x, (long)aInsets.size.height, (long)aInsets.size.width, (long)aInsets.origin.y );
+		aRet = tools::Rectangle( (long)aInsets.origin.x, (long)aInsets.size.height, (long)aInsets.size.width, (long)aInsets.origin.y );
 
 		[pPool release];
 	}
@@ -3636,7 +3636,7 @@ void JavaSalFrame::ReleaseGraphics( SalGraphics* pGraphics )
 
 // -----------------------------------------------------------------------
 
-bool JavaSalFrame::PostEvent( void *pData )
+bool JavaSalFrame::PostEvent( ImplSVEvent *pData )
 {
 	JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_USEREVENT, this, pData );
 	JavaSalEventQueue::postCachedEvent( pEvent );
@@ -3795,7 +3795,7 @@ void JavaSalFrame::Show( bool bVisible, bool bNoActivate )
 		// Explicitly set focus to this frame since Java may set the focus
 		// to the child frame
 		if ( !bNoActivate )
-			ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+			ToTop( SalFrameToTop::RestoreWhenMin | SalFrameToTop::GrabFocus );
 
 		mbInShow = sal_False;
 	}
@@ -3855,7 +3855,7 @@ void JavaSalFrame::Show( bool bVisible, bool bNoActivate )
 			// closed and the show only menus frame's menubar fails to be
 			// set by ensuring that the show only menus frame gets focus
 			if ( pShowOnlyMenusFrame->mbVisible )
-				pShowOnlyMenusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+				pShowOnlyMenusFrame->ToTop( SalFrameToTop::RestoreWhenMin | SalFrameToTop::GrabFocus );
 			else
 				pShowOnlyMenusFrame->Show( true, false );
 		}
@@ -3909,7 +3909,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_
 
 	mbInSetPosSize = sal_True;
 
-	Rectangle aPosSize( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
+	tools::Rectangle aPosSize( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
 
 	if ( ! ( nFlags & SAL_FRAME_POSSIZE_X ) )
 		nX = aPosSize.Left();
@@ -3925,7 +3925,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_
 	long nParentY = 0;
 	if ( mpParent )
 	{
-		Rectangle aParentBounds( mpParent->GetBounds() );
+		tools::Rectangle aParentBounds( mpParent->GetBounds() );
 		nParentX = aParentBounds.Left() + mpParent->maGeometry.nLeftDecoration;
 		nParentY = aParentBounds.Top() + mpParent->maGeometry.nTopDecoration;
 
@@ -3938,7 +3938,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_
 			nY += nParentY;
 	}
 
-	Rectangle aWorkArea;
+	tools::Rectangle aWorkArea;
 	if ( mbCenter && ! ( nFlags & ( SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y ) ) )
 	{
 		if ( mpParent && (long)mpParent->maGeometry.nWidth >= nWidth && (long)mpParent->maGeometry.nHeight > nHeight)
@@ -3946,12 +3946,12 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_
 			nX = nParentX + ( mpParent->maGeometry.nWidth - nWidth ) / 2;
 			nY = nParentY + ( mpParent->maGeometry.nHeight - nHeight ) / 2;
 
-			aWorkArea = Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) );
+			aWorkArea = tools::Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) );
 			GetWorkArea( aWorkArea );
 		}
 		else
 		{
-			aWorkArea = Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) );
+			aWorkArea = tools::Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) );
 			GetWorkArea( aWorkArea );
 
 			nX = aWorkArea.Left() + ( ( aWorkArea.GetWidth() - nWidth ) / 2 );
@@ -3962,14 +3962,14 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_
 	}
 	else
 	{
-		aWorkArea = Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) );
+		aWorkArea = tools::Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) );
 		GetWorkArea( aWorkArea );
 
 		// Make sure that the work area intersects with the parent frame
 		// so that dialogs don't show on a different monitor than the parent
 		if ( mpParent )
 		{
-			Rectangle aParentBounds( mpParent->GetBounds() );
+			tools::Rectangle aParentBounds( mpParent->GetBounds() );
 			if ( aWorkArea.GetIntersection( aParentBounds ).IsEmpty() )
 			{
 				aWorkArea = aParentBounds;
@@ -4084,7 +4084,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_
 
 // -----------------------------------------------------------------------
 
-void JavaSalFrame::GetWorkArea( Rectangle &rRect )
+void JavaSalFrame::GetWorkArea( tools::Rectangle &rRect )
 {
 	SalData *pSalData = GetSalData();
 	// Fix unexpected resizing of window to the screen's visible bounds
@@ -4114,7 +4114,7 @@ void JavaSalFrame::GetWorkArea( Rectangle &rRect )
 		nHeight -= maGeometry.nTopDecoration + maGeometry.nBottomDecoration;
 	}
 
-	Rectangle aRect( JavaSalFrame::GetScreenBounds( nX, nY, nWidth, nHeight, bFullScreenMode ) );
+	tools::Rectangle aRect( JavaSalFrame::GetScreenBounds( nX, nY, nWidth, nHeight, bFullScreenMode ) );
 	if ( aRect.GetWidth() > 0 && aRect.GetHeight() > 0 )
 		rRect = aRect;
 }
@@ -4162,7 +4162,7 @@ void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 
 bool JavaSalFrame::GetWindowState( SalFrameState* pState )
 {
-	Rectangle aBounds( GetBounds( NULL, NULL, sal_True ) );
+	tools::Rectangle aBounds( GetBounds( NULL, NULL, sal_True ) );
 	pState->mnMask = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT | WINDOWSTATE_MASK_STATE;
 	pState->mnX = aBounds.Left();
 	pState->mnY = aBounds.Top();
@@ -4208,9 +4208,9 @@ void JavaSalFrame::ShowFullScreen( bool bFullScreen, sal_Int32 nDisplay )
 		{
 			memcpy( &maOriginalGeometry, &maGeometry, sizeof( SalFrameGeometry ) );
 
-			Rectangle aWorkArea( JavaSalFrame::GetScreenBounds( nDisplay, sal_True ) );
+			tools::Rectangle aWorkArea( JavaSalFrame::GetScreenBounds( nDisplay, sal_True ) );
 			if ( aWorkArea.IsEmpty() )
-				aWorkArea = Rectangle( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
+				aWorkArea = tools::Rectangle( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
 			GetWorkArea( aWorkArea );
 			SetPosSize( aWorkArea.Left(), aWorkArea.Top(), aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
 		}
@@ -4271,7 +4271,7 @@ void JavaSalFrame::StartPresentation( bool bStart )
 	{
 		sal_uInt16 nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
 
-		Rectangle aWorkArea( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
+		tools::Rectangle aWorkArea( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
 		GetWorkArea( aWorkArea );
 
 		SetPosSize( aWorkArea.Left(), aWorkArea.Top(), aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
@@ -4299,7 +4299,7 @@ void JavaSalFrame::SetAlwaysOnTop( bool /* bOnTop */ )
 
 // -----------------------------------------------------------------------
 
-void JavaSalFrame::ToTop( sal_uInt16 nFlags )
+void JavaSalFrame::ToTop( SalFrameToTop nFlags )
 {
 	// Make sure frame is a top-level window
 	JavaSalFrame *pFrame = this;
@@ -4310,11 +4310,11 @@ void JavaSalFrame::ToTop( sal_uInt16 nFlags )
 		return;
 
 	bool bSuccess = false;
-	if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS )
+	if ( nFlags & SalFrameToTop::GrabFocus )
 	{
 		bSuccess = pFrame->ToFront();
 	}
-	else if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY )
+	else if ( nFlags & SalFrameToTop::GrabFocusOnly )
 	{
 		// Fix bug 3193 by invoking toFront() if the frame is a modal dialog
 		bool bModal = false;
@@ -4326,12 +4326,12 @@ void JavaSalFrame::ToTop( sal_uInt16 nFlags )
 				bModal = true;
 		}
 
-		if ( bModal || nFlags & SAL_FRAME_TOTOP_RESTOREWHENMIN )
+		if ( bModal || nFlags & SalFrameToTop::RestoreWhenMin )
 			bSuccess = pFrame->ToFront();
 		else
 			bSuccess = pFrame->RequestFocus();
 	}
-	else if ( nFlags & SAL_FRAME_TOTOP_RESTOREWHENMIN )
+	else if ( nFlags & SalFrameToTop::RestoreWhenMin )
 	{
 		bSuccess = pFrame->Deminimize();
 	}
@@ -4401,20 +4401,6 @@ void JavaSalFrame::Flush()
 
 // -----------------------------------------------------------------------
 
-void JavaSalFrame::Flush( const Rectangle& /* rRect */ )
-{
-	Flush();
-}
-
-// -----------------------------------------------------------------------
-
-void JavaSalFrame::Sync()
-{
-	Flush();
-}
-
-// -----------------------------------------------------------------------
-
 void JavaSalFrame::SetInputContext( SalInputContext* pContext )
 {
 	// Only allow Mac OS X key bindings when the OOo application code says so
@@ -4426,7 +4412,7 @@ void JavaSalFrame::SetInputContext( SalInputContext* pContext )
 
 // -----------------------------------------------------------------------
 
-void JavaSalFrame::EndExtTextInput( sal_uInt16 /* nFlags */ )
+void JavaSalFrame::EndExtTextInput( EndExtTextInputFlags /* nFlags */ )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalFrame::EndExtTextInput not implemented\n" );
@@ -4862,11 +4848,9 @@ void JavaSalFrame::SetScreenNumber( unsigned int /* nScreen */ )
 
 // -----------------------------------------------------------------------
 
-SalFrame::SalIndicatorState JavaSalFrame::GetIndicatorState()
+KeyIndicatorState JavaSalFrame::GetIndicatorState()
 {
-	SalFrame::SalIndicatorState aState;
-	aState.mnState = 0;
-	return aState;
+	return KeyIndicatorState::NONE;
 }
 
 // -----------------------------------------------------------------------

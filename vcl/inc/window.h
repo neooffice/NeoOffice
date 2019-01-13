@@ -29,27 +29,19 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
-#include <com/sun/star/uno/Reference.hxx>
-#include <cppuhelper/weakref.hxx>
-#include <list>
-#include <tools/wintypes.hxx>
 #include <tools/fract.hxx>
-#include <vcl/cursor.hxx>
-#include <vcl/inputctx.hxx>
-#include <vcl/outdev.hxx>
-#include <vcl/pointr.hxx>
-#include <vcl/salnativewidgets.hxx>
-#include <vcl/timer.hxx>
-#include <vcl/vclevent.hxx>
-#include <vector>
+#include <vcl/idle.hxx>
+#include <o3tl/typed_flags_set.hxx>
 
-struct SalPaintEvent;
-struct ImplDelData;
-struct ImplAccessibleInfos;
+#include <list>
+#include <vector>
+#include <set>
+
+namespace vcl {
+    class Window;
+}
 
 class FixedText;
-namespace vcl { class Window; }
 class VclSizeGroup;
 class VirtualDevice;
 class PhysicalFontCollection;
@@ -58,24 +50,23 @@ class VCLXWindow;
 class SalFrame;
 class SalObject;
 enum class MouseEventModifiers;
+enum class MouseNotifyEvent;
+enum class ActivateModeFlags;
+enum class DialogControlFlags;
+enum class GetFocusFlags;
+enum class ParentClipMode;
+enum class SalEvent;
 
-namespace com {
-namespace sun {
-namespace star {
+namespace com { namespace sun { namespace star {
+
 namespace accessibility {
     class XAccessible;
-}}}}
+}
 
-namespace com {
-namespace sun {
-namespace star {
 namespace rendering {
     class XCanvas;
-}}}}
+}
 
-namespace com {
-namespace sun {
-namespace star {
 namespace awt {
     class XWindowPeer;
     class XWindow;
@@ -84,8 +75,7 @@ namespace uno {
     class Any;
     class XInterface;
 }
-namespace datatransfer {
-namespace clipboard {
+namespace datatransfer { namespace clipboard {
     class XClipboard;
 }
 
@@ -94,44 +84,30 @@ namespace dnd {
     class XDragGestureRecognizer;
     class XDragSource;
     class XDropTarget;
-} } } } }
+}}}}}
 
-namespace vcl {
-    struct ControlLayoutData;
-}
-
-bool ImplWindowFrameProc( vcl::Window* pInst, SalFrame* pFrame, sal_uInt16 nEvent, const void* pEvent );
-
-#define WINDOW_HITTEST_INSIDE           ((sal_uInt16)0x0001)
-#define WINDOW_HITTEST_TRANSPARENT      ((sal_uInt16)0x0002)
+bool ImplWindowFrameProc( vcl::Window* pInst, SalEvent nEvent, const void* pEvent );
 
 struct ImplWinData
 {
     OUString*           mpExtOldText;
-    sal_uInt16*         mpExtOldAttrAry;
-    Rectangle*          mpCursorRect;
+    ExtTextInputAttr*   mpExtOldAttrAry;
+    tools::Rectangle*          mpCursorRect;
     long                mnCursorExtWidth;
     bool                mbVertical;
-    Rectangle*          mpCompositionCharRects;
+    tools::Rectangle*          mpCompositionCharRects;
     long                mnCompositionCharRects;
-    Rectangle*          mpFocusRect;
-    Rectangle*          mpTrackRect;
-    sal_uInt16          mnTrackFlags;
+    tools::Rectangle*          mpFocusRect;
+    tools::Rectangle*          mpTrackRect;
+    ShowTrackFlags      mnTrackFlags;
     sal_uInt16          mnIsTopWindow;
     bool                mbMouseOver;            //< tracks mouse over for native widget paint effect
     bool                mbEnableNativeWidget;   //< toggle native widget rendering
-    ::std::list< vcl::Window* >
+    ::std::list< VclPtr<vcl::Window> >
                         maTopWindowChildren;
-};
 
-struct ImplOverlapData
-{
-    VirtualDevice*      mpSaveBackDev;          //< saved background bitmap
-    vcl::Region*             mpSaveBackRgn;          //< saved region, which must be invalidated
-    vcl::Window*        mpNextBackWin;          //< next window with saved background
-    sal_uIntPtr         mnSaveBackSize;         //< bitmap size of saved background
-    bool                mbSaveBack;             //< true: save background
-    sal_uInt8           mnTopLevel;             //< Level for Overlap-Window
+     ImplWinData();
+    ~ImplWinData();
 };
 
 struct ImplFrameData
@@ -139,19 +115,16 @@ struct ImplFrameData
     Idle                maPaintIdle;            //< paint idle handler
     Idle                maResizeIdle;          //< resize timer
     InputContext        maOldInputContext;      //< last set Input Context
-    vcl::Window*        mpNextFrame;            //< next frame window
-    vcl::Window*        mpFirstOverlap;         //< first overlap vcl::Window
-    vcl::Window*        mpFocusWin;             //< focus window (is also set, when frame doesn't have the focous)
-    vcl::Window*        mpMouseMoveWin;         //< last window, where MouseMove() called
-    vcl::Window*        mpMouseDownWin;         //< last window, where MouseButtonDown() called
-    vcl::Window*        mpFirstBackWin;         //< first overlap-window with saved background
-    ::std::vector<vcl::Window *> maOwnerDrawList;    //< List of system windows with owner draw decoration
+    VclPtr<vcl::Window> mpNextFrame;            //< next frame window
+    VclPtr<vcl::Window> mpFirstOverlap;         //< first overlap vcl::Window
+    VclPtr<vcl::Window> mpFocusWin;             //< focus window (is also set, when frame doesn't have the focus)
+    VclPtr<vcl::Window> mpMouseMoveWin;         //< last window, where MouseMove() called
+    VclPtr<vcl::Window> mpMouseDownWin;         //< last window, where MouseButtonDown() called
+    ::std::vector<VclPtr<vcl::Window> > maOwnerDrawList;    //< List of system windows with owner draw decoration
     PhysicalFontCollection* mpFontCollection;   //< Font-List for this frame
     ImplFontCache*      mpFontCache;            //< Font-Cache for this frame
     sal_Int32           mnDPIX;                 //< Original Screen Resolution
     sal_Int32           mnDPIY;                 //< Original Screen Resolution
-    ImplMapRes          maMapUnitRes;           //< for LogicUnitToPixel
-    sal_uIntPtr         mnAllSaveBackSize;      //< size of all bitmaps of saved backgrounds
     ImplSVEvent *       mnFocusId;              //< FocusId for PostUserLink
     ImplSVEvent *       mnMouseMoveId;          //< MoveId for PostUserLink
     long                mnLastMouseX;           //< last x mouse position
@@ -163,12 +136,11 @@ struct ImplFrameData
     long                mnLastMouseWinX;        //< last x mouse position, rel. to pMouseMoveWin
     long                mnLastMouseWinY;        //< last y mouse position, rel. to pMouseMoveWin
     sal_uInt16          mnModalMode;            //< frame based modal count (app based makes no sense anymore)
-    sal_uIntPtr         mnMouseDownTime;        //< mouse button down time for double click
+    sal_uInt64          mnMouseDownTime;        //< mouse button down time for double click
     sal_uInt16          mnClickCount;           //< mouse click count
     sal_uInt16          mnFirstMouseCode;       //< mouse code by mousebuttondown
     sal_uInt16          mnMouseCode;            //< mouse code
     MouseEventModifiers mnMouseMode;            //< mouse mode
-    MapUnit             meMapUnit;              //< last MapUnit for LogicUnitToPixel
     bool                mbHasFocus;             //< focus
     bool                mbInMouseMove;          //< is MouseMove on stack
     bool                mbMouseIn;              //> is Mouse inside the frame
@@ -180,13 +152,18 @@ struct ImplFrameData
     bool                mbInSysObjToTopHdl;     //< within a SysChildren's ToTop handler
     bool                mbSysObjFocus;          //< does a SysChild have focus
 
-    ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDragSource > mxDragSource;
-    ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDropTarget > mxDropTarget;
-    ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener > mxDropTargetListener;
-    ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::clipboard::XClipboard > mxClipboard;
-    ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::clipboard::XClipboard > mxSelection;
+    css::uno::Reference< css::datatransfer::dnd::XDragSource > mxDragSource;
+    css::uno::Reference< css::datatransfer::dnd::XDropTarget > mxDropTarget;
+    css::uno::Reference< css::datatransfer::dnd::XDropTargetListener > mxDropTargetListener;
+    css::uno::Reference< css::datatransfer::clipboard::XClipboard > mxClipboard;
+    css::uno::Reference< css::datatransfer::clipboard::XClipboard > mxSelection;
 
     bool                mbInternalDragGestureRecognizer;
+    VclPtr<VirtualDevice> mpBuffer; ///< Buffer for the double-buffering
+    bool mbInBufferedPaint; ///< PaintHelper is in the process of painting into this buffer.
+    tools::Rectangle maBufferedRect; ///< Rectangle in the buffer that has to be painted to the screen.
+
+    ImplFrameData( vcl::Window *pWindow );
 };
 
 struct ImplAccessibleInfos
@@ -194,9 +171,9 @@ struct ImplAccessibleInfos
     sal_uInt16          nAccessibleRole;
     OUString*           pAccessibleName;
     OUString*           pAccessibleDescription;
-    vcl::Window*        pLabeledByWindow;
-    vcl::Window*        pLabelForWindow;
-    vcl::Window*        pMemberOfWindow;
+    VclPtr<vcl::Window> pLabeledByWindow;
+    VclPtr<vcl::Window> pLabelForWindow;
+    VclPtr<vcl::Window> pMemberOfWindow;
 
     ImplAccessibleInfos();
     ~ImplAccessibleInfos();
@@ -204,40 +181,58 @@ struct ImplAccessibleInfos
 
 enum AlwaysInputMode { AlwaysInputNone = 0, AlwaysInputEnabled = 1, AlwaysInputDisabled =2 };
 
-class WindowImpl: private boost::noncopyable
+enum class ImplPaintFlags {
+    NONE             = 0x0000,
+    Paint            = 0x0001,
+    PaintAll         = 0x0002,
+    PaintAllChildren = 0x0004,
+    PaintChildren    = 0x0008,
+    Erase            = 0x0010,
+    CheckRtl         = 0x0020,
+};
+namespace o3tl {
+    template<> struct typed_flags<ImplPaintFlags> : is_typed_flags<ImplPaintFlags, 0x003f> {};
+}
+
+
+class WindowImpl
 {
+private:
+    WindowImpl(const WindowImpl&) = delete;
+    WindowImpl& operator=(const WindowImpl&) = delete;
 public:
     WindowImpl( WindowType );
     ~WindowImpl();
 
     ImplWinData*        mpWinData;
-    ImplOverlapData*    mpOverlapData;
     ImplFrameData*      mpFrameData;
     SalFrame*           mpFrame;
     SalObject*          mpSysObj;
-    vcl::Window*        mpFrameWindow;
-    vcl::Window*        mpOverlapWindow;
-    vcl::Window*        mpBorderWindow;
-    vcl::Window*        mpClientWindow;
-    vcl::Window*        mpParent;
-    vcl::Window*        mpRealParent;
-    vcl::Window*        mpFirstChild;
-    vcl::Window*        mpLastChild;
-    vcl::Window*        mpFirstOverlap;
-    vcl::Window*        mpLastOverlap;
-    vcl::Window*        mpPrev;
-    vcl::Window*        mpNext;
-    vcl::Window*        mpNextOverlap;
-    vcl::Window*        mpLastFocusWindow;
-    vcl::Window*        mpDlgCtrlDownWindow;
-    VclEventListeners   maEventListeners;
-    VclEventListeners   maChildEventListeners;
+    VclPtr<vcl::Window> mpFrameWindow;
+    VclPtr<vcl::Window> mpOverlapWindow;
+    VclPtr<vcl::Window> mpBorderWindow;
+    VclPtr<vcl::Window> mpClientWindow;
+    VclPtr<vcl::Window> mpParent;
+    VclPtr<vcl::Window> mpRealParent;
+    VclPtr<vcl::Window> mpFirstChild;
+    VclPtr<vcl::Window> mpLastChild;
+    VclPtr<vcl::Window> mpFirstOverlap;
+    VclPtr<vcl::Window> mpLastOverlap;
+    VclPtr<vcl::Window> mpPrev;
+    VclPtr<vcl::Window> mpNext;
+    VclPtr<vcl::Window> mpNextOverlap;
+    VclPtr<vcl::Window> mpLastFocusWindow;
+    VclPtr<vcl::Window> mpDlgCtrlDownWindow;
+    std::vector<Link<VclWindowEvent&,void>> maEventListeners;
+    int mnEventListenersIteratingCount;
+    std::set<Link<VclWindowEvent&,void>> maEventListenersDeleted;
+    std::vector<Link<VclWindowEvent&,void>> maChildEventListeners;
+    int mnChildEventListenersIteratingCount;
+    std::set<Link<VclWindowEvent&,void>> maChildEventListenersDeleted;
 
     // The canvas interface for this VCL window. Is persistent after the first GetCanvas() call
-    ::com::sun::star::uno::WeakReference< ::com::sun::star::rendering::XCanvas >    mxCanvas;
+    css::uno::WeakReference< css::rendering::XCanvas >    mxCanvas;
 
-    ImplDelData*        mpFirstDel;
-    void*               mpUserData;
     vcl::Cursor*        mpCursor;
     Pointer             maPointer;
     Fraction            maZoom;
@@ -258,14 +253,14 @@ public:
     long                mnAbsScreenX;
     Point               maPos;
     OString             maHelpId;
-    OString             maUniqId;
     OUString            maHelpText;
     OUString            maQuickHelpText;
+    OUString            maID;
     InputContext        maInputContext;
-    ::com::sun::star::uno::Reference< ::com::sun::star::awt::XWindowPeer > mxWindowPeer;
-    ::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible > mxAccessible;
-    ::boost::shared_ptr< VclSizeGroup > m_xSizeGroup;
-    ::std::vector< FixedText* > m_aMnemonicLabels;
+    css::uno::Reference< css::awt::XWindowPeer > mxWindowPeer;
+    css::uno::Reference< css::accessibility::XAccessible > mxAccessible;
+    std::shared_ptr< VclSizeGroup > m_xSizeGroup;
+    std::vector< VclPtr<FixedText> > m_aMnemonicLabels;
     ImplAccessibleInfos* mpAccessibleInfos;
     VCLXWindow*         mpVCLXWindow;
     vcl::Region              maWinRegion;            //< region to 'shape' the VCL window (frame coordinates)
@@ -280,11 +275,11 @@ public:
     WindowType          mnType;
     ControlPart         mnNativeBackground;
     sal_uInt16          mnWaitCount;
-    sal_uInt16          mnPaintFlags;
-    sal_uInt16          mnGetFocusFlags;
-    sal_uInt16          mnParentClipMode;
-    sal_uInt16          mnActivateMode;
-    sal_uInt16          mnDlgCtrlFlags;
+    ImplPaintFlags      mnPaintFlags;
+    GetFocusFlags       mnGetFocusFlags;
+    ParentClipMode      mnParentClipMode;
+    ActivateModeFlags   mnActivateMode;
+    DialogControlFlags  mnDlgCtrlFlags;
     sal_uInt16          mnLockCount;
     AlwaysInputMode     meAlwaysInputMode;
     VclAlign            meHalign;
@@ -311,15 +306,12 @@ public:
                         mbVisible:1,
                         mbDisabled:1,
                         mbInputDisabled:1,
-                        mbDropDisabled:1,
                         mbNoUpdate:1,
                         mbNoParentUpdate:1,
                         mbActive:1,
-                        mbParentActive:1,
                         mbReallyVisible:1,
                         mbReallyShown:1,
                         mbInInitShow:1,
-                        mbChildNotify:1,
                         mbChildPtrOverwrite:1,
                         mbNoPtrVisible:1,
                         mbPaintFrame:1,
@@ -357,7 +349,7 @@ public:
                         mbCompoundControlHasFocus:1,
                         mbPaintDisabled:1,
                         mbAllResize:1,
-                        mbInDtor:1,
+                        mbInDispose:1,
                         mbExtTextInput:1,
                         mbInFocusHdl:1,
                         mbOverlapVisible:1,
@@ -377,15 +369,36 @@ public:
                         mbExpand:1,
                         mbFill:1,
                         mbSecondary:1,
-                        mbNonHomogeneous:1;
+                        mbNonHomogeneous:1,
+                        mbDoubleBufferingRequested:1;
 
-    ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface > mxDNDListenerContainer;
+    css::uno::Reference< css::uno::XInterface > mxDNDListenerContainer;
+};
+
+/// Sets up the buffer to have settings matching the window, and restores the original state in the dtor.
+class PaintBufferGuard
+{
+    ImplFrameData* mpFrameData;
+    VclPtr<vcl::Window> m_pWindow;
+    bool mbBackground;
+    Wallpaper maBackground;
+    AllSettings maSettings;
+    long mnOutOffX;
+    long mnOutOffY;
+    tools::Rectangle m_aPaintRect;
+public:
+    PaintBufferGuard(ImplFrameData* pFrameData, vcl::Window* pWindow);
+    ~PaintBufferGuard();
+    /// If this is called, then the dtor will also copy rRectangle to the window from the buffer, before restoring the state.
+    void SetPaintRect(const tools::Rectangle& rRectangle);
+    /// Returns either the frame's buffer or the window, in case of no buffering.
+    vcl::RenderContext* GetRenderContext();
 };
 
 // helper methods
 
-bool ImplHandleMouseEvent( vcl::Window* pWindow, sal_uInt16 nSVEvent, bool bMouseLeave,
-                           long nX, long nY, sal_uIntPtr nMsgTime,
+bool ImplHandleMouseEvent( const VclPtr<vcl::Window>& xWindow, MouseNotifyEvent nSVEvent, bool bMouseLeave,
+                           long nX, long nY, sal_uInt64 nMsgTime,
                            sal_uInt16 nCode, MouseEventModifiers nMode );
 void ImplHandleResize( vcl::Window* pWindow, long nNewWidth, long nNewHeight );
 
