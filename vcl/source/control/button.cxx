@@ -24,14 +24,13 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <tools/debug.hxx>
 #include <tools/lineend.hxx>
 #include <tools/poly.hxx>
-#include <tools/rc.h>
 
 #include <vcl/image.hxx>
 #include <vcl/bitmap.hxx>
 #include <vcl/bitmapex.hxx>
+#include <vcl/builderfactory.hxx>
 #include <vcl/decoview.hxx>
 #include <vcl/event.hxx>
 #include <vcl/svapp.hxx>
@@ -42,19 +41,17 @@
 #include <vcl/salnativewidgets.hxx>
 #include <vcl/edit.hxx>
 #include <vcl/layout.hxx>
+#include <vcl/vclstatuslistener.hxx>
+#include <vcl/uitest/uiobject.hxx>
 
 #include <svids.hrc>
+#include <bitmaps.hlst>
 #include <svdata.hxx>
 #include <window.h>
 #include <controldata.hxx>
 
-#include <comphelper/processfactory.hxx>
+#include <comphelper/dispatchcommand.hxx>
 
-#include <com/sun/star/frame/Desktop.hpp>
-#include <com/sun/star/frame/XDispatch.hpp>
-#include <com/sun/star/frame/XDispatchProvider.hpp>
-#include <com/sun/star/util/URL.hpp>
-#include <com/sun/star/util/URLTransformer.hpp>
 
 using namespace css;
 
@@ -74,52 +71,62 @@ using namespace css;
                                      WB_TOP | WB_VCENTER | WB_BOTTOM |  \
                                      WB_WORDBREAK | WB_NOLABEL)
 
+#define STYLE_RADIOBUTTON_MONO      ((sal_uInt16)0x0001) // legacy
+#define STYLE_CHECKBOX_MONO         ((sal_uInt16)0x0001) // legacy
+
 class ImplCommonButtonData
 {
 public:
-    Rectangle       maFocusRect;
+    ImplCommonButtonData();
+
+    tools::Rectangle       maFocusRect;
     long            mnSeparatorX;
-    sal_uInt16      mnButtonState;
+    DrawButtonFlags mnButtonState;
     bool            mbSmallSymbol;
 
     Image           maImage;
     ImageAlign      meImageAlign;
     SymbolAlign     meSymbolAlign;
 
-public:
-                    ImplCommonButtonData();
-                   ~ImplCommonButtonData();
+    /** StatusListener. Updates the button as the slot state changes */
+    rtl::Reference<VclStatusListener<Button>> mpStatusListener;
 };
 
-ImplCommonButtonData::ImplCommonButtonData() : maFocusRect(), mnSeparatorX(0), mnButtonState(0),
-mbSmallSymbol(false), maImage(), meImageAlign(IMAGEALIGN_TOP), meSymbolAlign(SYMBOLALIGN_LEFT)
-{
-}
-
-ImplCommonButtonData::~ImplCommonButtonData()
+ImplCommonButtonData::ImplCommonButtonData() : maFocusRect(), mnSeparatorX(0), mnButtonState(DrawButtonFlags::NONE),
+mbSmallSymbol(false), maImage(), meImageAlign(ImageAlign::Top), meSymbolAlign(SymbolAlign::LEFT)
 {
 }
 
 Button::Button( WindowType nType ) :
-    Control( nType )
+    Control( nType ),
+    mpButtonData( new ImplCommonButtonData )
 {
-    mpButtonData = new ImplCommonButtonData;
 }
 
 Button::~Button()
 {
-    delete mpButtonData;
+    disposeOnce();
+}
+
+void Button::dispose()
+{
+    if (mpButtonData->mpStatusListener.is())
+        mpButtonData->mpStatusListener->dispose();
+    Control::dispose();
 }
 
 void Button::SetCommandHandler(const OUString& aCommand)
 {
     maCommand = aCommand;
-    SetClickHdl(Link(NULL, dispatchCommandHandler));
+    SetClickHdl( LINK( this, Button, dispatchCommandHandler) );
+
+    mpButtonData->mpStatusListener = new VclStatusListener<Button>(this, aCommand);
+    mpButtonData->mpStatusListener->startListening();
 }
 
 void Button::Click()
 {
-    ImplCallEventListenersAndHandler( VCLEVENT_BUTTON_CLICK, maClickHdl, this );
+    ImplCallEventListenersAndHandler( VclEventId::ButtonClick, [this] () { maClickHdl.Call(this); } );
 }
 
 OUString Button::GetStandardText( StandardButtonType eButton )
@@ -128,7 +135,7 @@ OUString Button::GetStandardText( StandardButtonType eButton )
     {
         sal_uInt32 nResId;
         const char* pDefText;
-    } aResIdAry[BUTTON_COUNT] =
+    } aResIdAry[static_cast<int>(StandardButtonType::Count)] =
     {
         { SV_BUTTONTEXT_OK, "~OK" },
         { SV_BUTTONTEXT_CANCEL, "~Cancel" },
@@ -140,8 +147,7 @@ OUString Button::GetStandardText( StandardButtonType eButton )
         { SV_BUTTONTEXT_MORE, "~More" },
         { SV_BUTTONTEXT_IGNORE, "~Ignore" },
         { SV_BUTTONTEXT_ABORT, "~Abort" },
-        { SV_BUTTONTEXT_LESS, "~Less" },
-        { SV_BUTTONTEXT_RESET, "R~eset" }
+        { SV_BUTTONTEXT_LESS, "~Less" }
     };
 
     ResMgr* pResMgr = ImplGetResMgr();
@@ -153,7 +159,7 @@ OUString Button::GetStandardText( StandardButtonType eButton )
     }
 
     sal_uInt32 nResId = aResIdAry[(sal_uInt16)eButton].nResId;
-#ifdef WNT
+#ifdef _WIN32
     // http://lists.freedesktop.org/archives/libreoffice/2013-January/044513.html
     // Under windows we don't want accelerators on ok/cancel but do on other
     // buttons
@@ -162,7 +168,7 @@ OUString Button::GetStandardText( StandardButtonType eButton )
     else if (nResId == SV_BUTTONTEXT_CANCEL)
         nResId = SV_BUTTONTEXT_CANCEL_NOMNEMONIC;
 #endif
-    return ResId(nResId, *pResMgr).toString();
+    return ResId(nResId, *pResMgr);
 }
 
 bool Button::SetModeImage( const Image& rImage )
@@ -170,7 +176,7 @@ bool Button::SetModeImage( const Image& rImage )
     if ( rImage != mpButtonData->maImage )
     {
         mpButtonData->maImage = rImage;
-        StateChanged( StateChangedType::DATA );
+        StateChanged( StateChangedType::Data );
         queue_resize();
     }
     return true;
@@ -191,7 +197,7 @@ void Button::SetImageAlign( ImageAlign eAlign )
     if ( mpButtonData->meImageAlign != eAlign )
     {
         mpButtonData->meImageAlign = eAlign;
-        StateChanged( StateChangedType::DATA );
+        StateChanged( StateChangedType::Data );
     }
 }
 
@@ -200,7 +206,7 @@ ImageAlign Button::GetImageAlign() const
     return mpButtonData->meImageAlign;
 }
 
-void Button::SetFocusRect( const Rectangle& rFocusRect )
+void Button::SetFocusRect( const tools::Rectangle& rFocusRect )
 {
     ImplSetFocusRect( rFocusRect );
 }
@@ -215,24 +221,23 @@ void Button::ImplSetSeparatorX( long nX )
     mpButtonData->mnSeparatorX = nX;
 }
 
-sal_uInt16 Button::ImplGetTextStyle( OUString& rText, WinBits nWinStyle,
-                                 sal_uLong nDrawFlags )
+DrawTextFlags Button::ImplGetTextStyle(OUString& rText, WinBits nWinStyle, DrawFlags nDrawFlags )
 {
-    const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
-    sal_uInt16 nTextStyle = FixedText::ImplGetTextStyle( nWinStyle & ~WB_DEFBUTTON );
+    const StyleSettings& rStyleSettings = Application::GetSettings().GetStyleSettings();
+    DrawTextFlags nTextStyle = FixedText::ImplGetTextStyle(nWinStyle & ~WB_DEFBUTTON);
 
-    if ( nDrawFlags & WINDOW_DRAW_NOMNEMONIC )
+    if (nDrawFlags & DrawFlags::NoMnemonic)
     {
-        if ( nTextStyle & TEXT_DRAW_MNEMONIC )
+        if (nTextStyle & DrawTextFlags::Mnemonic)
         {
             rText = GetNonMnemonicString( rText );
-            nTextStyle &= ~TEXT_DRAW_MNEMONIC;
+            nTextStyle &= ~DrawTextFlags::Mnemonic;
         }
     }
 
-    if ( !(nDrawFlags & WINDOW_DRAW_NODISABLE) )
+    if (!(nDrawFlags & DrawFlags::NoDisable))
     {
-        if ( !IsEnabled() )
+        if (!IsEnabled())
 #ifdef USE_JAVA
         {
             Color aColor;
@@ -241,64 +246,64 @@ sal_uInt16 Button::ImplGetTextStyle( OUString& rText, WinBits nWinStyle,
             // assume if we have native control support for pushbuttons we've
             // properly mapped disabled radio button text and other text
             // to proper color as well.
-            if ( ! ( IsNativeControlSupported( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL ) && GetNativeControlTextColor( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL, 0, aValue, aColor ) ) )
+            if ( ! ( IsNativeControlSupported( ControlType::Pushbutton, ControlPart::Entire ) && GetNativeControlTextColor( ControlType::Pushbutton, ControlPart::Entire, ControlState::NONE, aValue, aColor ) ) )
 #endif	// USE_JAVA
-            nTextStyle |= TEXT_DRAW_DISABLE;
+            nTextStyle |= DrawTextFlags::Disable;
 #ifdef USE_JAVA
-       }
+        }
 #endif	// USE_JAVA
     }
 
-    if ( (nDrawFlags & WINDOW_DRAW_MONO) ||
-         (rStyleSettings.GetOptions() & STYLE_OPTION_MONO) )
-        nTextStyle |= TEXT_DRAW_MONO;
+    if ((nDrawFlags & DrawFlags::Mono) ||
+        (rStyleSettings.GetOptions() & StyleSettingsOptions::Mono))
+    {
+        nTextStyle |= DrawTextFlags::Mono;
+    }
 
     return nTextStyle;
 }
 
-void Button::ImplDrawAlignedImage( OutputDevice* pDev, Point& rPos,
-                                   Size& rSize, bool bLayout,
-                                   sal_uLong nImageSep, sal_uLong nDrawFlags,
-                                   sal_uInt16 nTextStyle, Rectangle *pSymbolRect,
-                                   bool bAddImageSep )
+void Button::ImplDrawAlignedImage(OutputDevice* pDev, Point& rPos,
+                                  Size& rSize,
+                                  sal_uLong nImageSep, DrawFlags nDrawFlags,
+                                  DrawTextFlags nTextStyle, tools::Rectangle *pSymbolRect,
+                                  bool bAddImageSep)
 {
-    OUString        aText( GetText() );
-    bool            bDrawImage = HasImage() && ! ( ImplGetButtonState() & BUTTON_DRAW_NOIMAGE );
-    bool            bDrawText  = !aText.isEmpty() && ! ( ImplGetButtonState() & BUTTON_DRAW_NOTEXT );
-    bool            bHasSymbol = pSymbolRect ? true : false;
+    OUString aText(GetText());
+    bool bDrawImage = HasImage() && ! (ImplGetButtonState() & DrawButtonFlags::NoImage);
+    bool bDrawText  = !aText.isEmpty() && ! (ImplGetButtonState() & DrawButtonFlags::NoText);
+    bool bHasSymbol = pSymbolRect != nullptr;
 
     // No text and no image => nothing to do => return
-    if ( !bDrawImage && !bDrawText && !bHasSymbol )
+    if (!bDrawImage && !bDrawText && !bHasSymbol)
         return;
 
-    WinBits         nWinStyle = GetStyle();
-    Rectangle       aOutRect( rPos, rSize );
-    MetricVector   *pVector = bLayout ? &mpControlData->mpLayoutData->m_aUnicodeBoundRects : NULL;
-    OUString       *pDisplayText = bLayout ? &mpControlData->mpLayoutData->m_aDisplayText : NULL;
-    ImageAlign      eImageAlign = mpButtonData->meImageAlign;
-    Size            aImageSize = mpButtonData->maImage.GetSizePixel();
+    WinBits nWinStyle = GetStyle();
+    tools::Rectangle aOutRect( rPos, rSize );
+    ImageAlign eImageAlign = mpButtonData->meImageAlign;
+    Size aImageSize = mpButtonData->maImage.GetSizePixel();
 
-    if ( ( nDrawFlags & WINDOW_DRAW_NOMNEMONIC ) &&
-         ( nTextStyle & TEXT_DRAW_MNEMONIC ) )
+    if ((nDrawFlags & DrawFlags::NoMnemonic) &&
+        (nTextStyle & DrawTextFlags::Mnemonic))
     {
-        aText = GetNonMnemonicString( aText );
-        nTextStyle &= ~TEXT_DRAW_MNEMONIC;
+        aText = GetNonMnemonicString(aText);
+        nTextStyle &= ~DrawTextFlags::Mnemonic;
     }
 
     aImageSize.Width()  = CalcZoom( aImageSize.Width() );
     aImageSize.Height() = CalcZoom( aImageSize.Height() );
 
     // Drawing text or symbol only is simple, use style and output rectangle
-    if ( bHasSymbol && !bDrawImage && !bDrawText )
+    if (bHasSymbol && !bDrawImage && !bDrawText)
     {
         *pSymbolRect = aOutRect;
         return;
     }
-    else if ( bDrawText && !bDrawImage && !bHasSymbol )
+    else if (bDrawText && !bDrawImage && !bHasSymbol)
     {
-        DrawControlText( *pDev, aOutRect, aText, nTextStyle, pVector, pDisplayText );
+        aOutRect = DrawControlText(*pDev, aOutRect, aText, nTextStyle, nullptr, nullptr);
 
-        ImplSetFocusRect( aOutRect );
+        ImplSetFocusRect(aOutRect);
         rSize = aOutRect.GetSize();
         rPos = aOutRect.TopLeft();
 
@@ -306,81 +311,82 @@ void Button::ImplDrawAlignedImage( OutputDevice* pDev, Point& rPos,
     }
 
     // check for HC mode ( image only! )
-    Image    *pImage    = &(mpButtonData->maImage);
+    Image* pImage = &(mpButtonData->maImage);
 
     Size aTextSize;
     Size aSymbolSize;
+    Size aDeviceTextSize;
     Size aMax;
     Point aImagePos = rPos;
     Point aTextPos = rPos;
-    Rectangle aUnion = Rectangle( aImagePos, aImageSize );
-    Rectangle aSymbol;
+    tools::Rectangle aUnion = tools::Rectangle(aImagePos, aImageSize);
+    tools::Rectangle aSymbol;
     long nSymbolHeight = 0;
 
-    if ( bDrawText || bHasSymbol )
+    if (bDrawText || bHasSymbol)
     {
         // Get the size of the text output area ( the symbol will be drawn in
         // this area as well, so the symbol rectangle will be calculated here, too )
 
-        Rectangle   aRect = Rectangle( Point(), rSize );
-        Size        aTSSize;
+        tools::Rectangle aRect = tools::Rectangle(Point(), rSize);
+        Size aTSSize;
 
-        if ( bHasSymbol )
+        if (bHasSymbol)
         {
-            if ( bDrawText )
+            if (bDrawText)
             {
                 nSymbolHeight = pDev->GetTextHeight();
-                if ( mpButtonData->mbSmallSymbol )
+                if (mpButtonData->mbSmallSymbol)
                     nSymbolHeight = nSymbolHeight * 3 / 4;
 
-                aSymbol = Rectangle( Point(), Size( nSymbolHeight, nSymbolHeight ) );
-                ImplCalcSymbolRect( aSymbol );
+                aSymbol = tools::Rectangle(Point(), Size(nSymbolHeight, nSymbolHeight));
+                ImplCalcSymbolRect(aSymbol);
                 aRect.Left() += 3 * nSymbolHeight / 2;
                 aTSSize.Width() = 3 * nSymbolHeight / 2;
             }
             else
             {
-                aSymbol = Rectangle( Point(), rSize );
-                ImplCalcSymbolRect( aSymbol );
+                aSymbol = tools::Rectangle(Point(), rSize);
+                ImplCalcSymbolRect(aSymbol);
                 aTSSize.Width() = aSymbol.GetWidth();
             }
             aTSSize.Height() = aSymbol.GetHeight();
             aSymbolSize = aSymbol.GetSize();
         }
 
-        if ( bDrawText )
+        if (bDrawText)
         {
-            if ( ( eImageAlign == IMAGEALIGN_LEFT_TOP     ) ||
-                 ( eImageAlign == IMAGEALIGN_LEFT         ) ||
-                 ( eImageAlign == IMAGEALIGN_LEFT_BOTTOM  ) ||
-                 ( eImageAlign == IMAGEALIGN_RIGHT_TOP    ) ||
-                 ( eImageAlign == IMAGEALIGN_RIGHT        ) ||
-                 ( eImageAlign == IMAGEALIGN_RIGHT_BOTTOM ) )
+            if ((eImageAlign == ImageAlign::LeftTop)     ||
+                (eImageAlign == ImageAlign::Left )        ||
+                (eImageAlign == ImageAlign::LeftBottom)  ||
+                (eImageAlign == ImageAlign::RightTop)    ||
+                (eImageAlign == ImageAlign::Right)        ||
+                (eImageAlign == ImageAlign::RightBottom))
             {
-                aRect.Right() -= ( aImageSize.Width() + nImageSep );
+                aRect.Right() -= (aImageSize.Width() + nImageSep);
             }
-            else if ( ( eImageAlign == IMAGEALIGN_TOP_LEFT     ) ||
-                      ( eImageAlign == IMAGEALIGN_TOP          ) ||
-                      ( eImageAlign == IMAGEALIGN_TOP_RIGHT    ) ||
-                      ( eImageAlign == IMAGEALIGN_BOTTOM_LEFT  ) ||
-                      ( eImageAlign == IMAGEALIGN_BOTTOM       ) ||
-                      ( eImageAlign == IMAGEALIGN_BOTTOM_RIGHT ) )
+            else if ((eImageAlign == ImageAlign::TopLeft)    ||
+                     (eImageAlign == ImageAlign::Top)         ||
+                     (eImageAlign == ImageAlign::TopRight)   ||
+                     (eImageAlign == ImageAlign::BottomLeft) ||
+                     (eImageAlign == ImageAlign::Bottom)      ||
+                     (eImageAlign == ImageAlign::BottomRight))
             {
-                aRect.Bottom() -= ( aImageSize.Height() + nImageSep );
+                aRect.Bottom() -= (aImageSize.Height() + nImageSep);
             }
 
-            aRect = pDev->GetTextRect( aRect, aText, nTextStyle );
+            aRect = GetControlTextRect(*pDev, aRect, aText, nTextStyle, &aDeviceTextSize);
             aTextSize = aRect.GetSize();
 
             aTSSize.Width()  += aTextSize.Width();
 
-            if ( aTSSize.Height() < aTextSize.Height() )
+            if (aTSSize.Height() < aTextSize.Height())
                 aTSSize.Height() = aTextSize.Height();
 
-            if( bAddImageSep && bDrawImage )
+            if (bAddImageSep && bDrawImage)
             {
                 long nDiff = (aImageSize.Height() - aTextSize.Height()) / 3;
-                if( nDiff > 0 )
+                if (nDiff > 0)
                     nImageSep += nDiff;
             }
         }
@@ -390,64 +396,64 @@ void Button::ImplDrawAlignedImage( OutputDevice* pDev, Point& rPos,
 
         // Now calculate the output area for the image and the text according to the image align flags
 
-        if ( ( eImageAlign == IMAGEALIGN_LEFT ) ||
-             ( eImageAlign == IMAGEALIGN_RIGHT ) )
+        if ((eImageAlign == ImageAlign::Left) ||
+            (eImageAlign == ImageAlign::Right))
         {
-            aImagePos.Y() = rPos.Y() + ( aMax.Height() - aImageSize.Height() ) / 2;
-            aTextPos.Y()  = rPos.Y() + ( aMax.Height() - aTSSize.Height() ) / 2;
+            aImagePos.Y() = rPos.Y() + (aMax.Height() - aImageSize.Height()) / 2;
+            aTextPos.Y()  = rPos.Y() + (aMax.Height() - aTSSize.Height()) / 2;
         }
-        else if ( ( eImageAlign == IMAGEALIGN_LEFT_BOTTOM ) ||
-                  ( eImageAlign == IMAGEALIGN_RIGHT_BOTTOM ) )
+        else if ((eImageAlign == ImageAlign::LeftBottom) ||
+                 (eImageAlign == ImageAlign::RightBottom))
         {
             aImagePos.Y() = rPos.Y() + aMax.Height() - aImageSize.Height();
             aTextPos.Y()  = rPos.Y() + aMax.Height() - aTSSize.Height();
         }
-        else if ( ( eImageAlign == IMAGEALIGN_TOP ) ||
-                  ( eImageAlign == IMAGEALIGN_BOTTOM ) )
+        else if ((eImageAlign == ImageAlign::Top) ||
+                 (eImageAlign == ImageAlign::Bottom))
         {
-            aImagePos.X() = rPos.X() + ( aMax.Width() - aImageSize.Width() ) / 2;
-            aTextPos.X()  = rPos.X() + ( aMax.Width() - aTSSize.Width() ) / 2;
+            aImagePos.X() = rPos.X() + (aMax.Width() - aImageSize.Width()) / 2;
+            aTextPos.X()  = rPos.X() + (aMax.Width() - aTSSize.Width()) / 2;
         }
-        else if ( ( eImageAlign == IMAGEALIGN_TOP_RIGHT ) ||
-                  ( eImageAlign == IMAGEALIGN_BOTTOM_RIGHT ) )
+        else if ((eImageAlign == ImageAlign::TopRight) ||
+                 (eImageAlign == ImageAlign::BottomRight))
         {
             aImagePos.X() = rPos.X() + aMax.Width() - aImageSize.Width();
             aTextPos.X()  = rPos.X() + aMax.Width() - aTSSize.Width();
         }
 
-        if ( ( eImageAlign == IMAGEALIGN_LEFT_TOP ) ||
-             ( eImageAlign == IMAGEALIGN_LEFT ) ||
-             ( eImageAlign == IMAGEALIGN_LEFT_BOTTOM ) )
+        if ((eImageAlign == ImageAlign::LeftTop) ||
+            (eImageAlign == ImageAlign::Left)     ||
+            (eImageAlign == ImageAlign::LeftBottom))
         {
             aTextPos.X() = rPos.X() + aImageSize.Width() + nImageSep;
         }
-        else if ( ( eImageAlign == IMAGEALIGN_RIGHT_TOP ) ||
-                  ( eImageAlign == IMAGEALIGN_RIGHT ) ||
-                  ( eImageAlign == IMAGEALIGN_RIGHT_BOTTOM ) )
+        else if ((eImageAlign == ImageAlign::RightTop) ||
+                 (eImageAlign == ImageAlign::Right)     ||
+                 (eImageAlign == ImageAlign::RightBottom))
         {
             aImagePos.X() = rPos.X() + aTSSize.Width() + nImageSep;
         }
-        else if ( ( eImageAlign == IMAGEALIGN_TOP_LEFT ) ||
-                  ( eImageAlign == IMAGEALIGN_TOP ) ||
-                  ( eImageAlign == IMAGEALIGN_TOP_RIGHT ) )
+        else if ((eImageAlign == ImageAlign::TopLeft) ||
+                 (eImageAlign == ImageAlign::Top)      ||
+                 (eImageAlign == ImageAlign::TopRight))
         {
             aTextPos.Y() = rPos.Y() + aImageSize.Height() + nImageSep;
         }
-        else if ( ( eImageAlign == IMAGEALIGN_BOTTOM_LEFT ) ||
-                  ( eImageAlign == IMAGEALIGN_BOTTOM ) ||
-                  ( eImageAlign == IMAGEALIGN_BOTTOM_RIGHT ) )
+        else if ((eImageAlign == ImageAlign::BottomLeft) ||
+                 (eImageAlign == ImageAlign::Bottom)      ||
+                 (eImageAlign == ImageAlign::BottomRight))
         {
             aImagePos.Y() = rPos.Y() + aTSSize.Height() + nImageSep;
         }
-        else if ( eImageAlign == IMAGEALIGN_CENTER )
+        else if (eImageAlign == ImageAlign::Center)
         {
-            aImagePos.X() = rPos.X() + ( aMax.Width()  - aImageSize.Width() ) / 2;
-            aImagePos.Y() = rPos.Y() + ( aMax.Height() - aImageSize.Height() ) / 2;
-            aTextPos.X()  = rPos.X() + ( aMax.Width()  - aTSSize.Width() ) / 2;
-            aTextPos.Y()  = rPos.Y() + ( aMax.Height() - aTSSize.Height() ) / 2;
+            aImagePos.X() = rPos.X() + (aMax.Width()  - aImageSize.Width()) / 2;
+            aImagePos.Y() = rPos.Y() + (aMax.Height() - aImageSize.Height()) / 2;
+            aTextPos.X()  = rPos.X() + (aMax.Width()  - aTSSize.Width()) / 2;
+            aTextPos.Y()  = rPos.Y() + (aMax.Height() - aTSSize.Height()) / 2;
         }
-        aUnion = Rectangle( aImagePos, aImageSize );
-        aUnion.Union( Rectangle( aTextPos, aTSSize ) );
+        aUnion = tools::Rectangle(aImagePos, aImageSize);
+        aUnion.Union(tools::Rectangle(aTextPos, aTSSize));
     }
 
     // Now place the combination of text and image in the output area of the button
@@ -455,27 +461,27 @@ void Button::ImplDrawAlignedImage( OutputDevice* pDev, Point& rPos,
     long nXOffset = 0;
     long nYOffset = 0;
 
-    if ( nWinStyle & WB_CENTER )
+    if (nWinStyle & WB_CENTER)
     {
-        nXOffset = ( rSize.Width() - aUnion.GetWidth() ) / 2;
+        nXOffset = (rSize.Width() - aUnion.GetWidth()) / 2;
     }
-    else if ( nWinStyle & WB_RIGHT )
+    else if (nWinStyle & WB_RIGHT)
     {
         nXOffset = rSize.Width() - aUnion.GetWidth();
     }
 
-    if ( nWinStyle & WB_VCENTER )
+    if (nWinStyle & WB_VCENTER)
     {
-        nYOffset = ( rSize.Height() - aUnion.GetHeight() ) / 2;
+        nYOffset = (rSize.Height() - aUnion.GetHeight()) / 2;
     }
-    else if ( nWinStyle & WB_BOTTOM )
+    else if (nWinStyle & WB_BOTTOM)
     {
         nYOffset = rSize.Height() - aUnion.GetHeight();
     }
 
     // the top left corner should always be visible, so we don't allow negative offsets
-    if ( nXOffset < 0 ) nXOffset = 0;
-    if ( nYOffset < 0 ) nYOffset = 0;
+    if (nXOffset < 0) nXOffset = 0;
+    if (nYOffset < 0) nYOffset = 0;
 
     aImagePos.X() += nXOffset;
     aImagePos.Y() += nYOffset;
@@ -487,57 +493,60 @@ void Button::ImplDrawAlignedImage( OutputDevice* pDev, Point& rPos,
     rPos.X() += nXOffset;
     rPos.Y() += nYOffset;
 
-    if ( bHasSymbol )
+    if (bHasSymbol)
     {
-        if ( mpButtonData->meSymbolAlign == SYMBOLALIGN_RIGHT )
+        if (mpButtonData->meSymbolAlign == SymbolAlign::RIGHT)
         {
-            Point aRightPos = Point( aTextPos.X() + aTextSize.Width() + aSymbolSize.Width()/2, aTextPos.Y() );
-            *pSymbolRect = Rectangle( aRightPos, aSymbolSize );
+            Point aRightPos = Point(aTextPos.X() + aTextSize.Width() + aSymbolSize.Width() / 2, aTextPos.Y());
+            *pSymbolRect = tools::Rectangle(aRightPos, aSymbolSize);
         }
         else
         {
-            *pSymbolRect = Rectangle( aTextPos, aSymbolSize );
-            aTextPos.X() += ( 3 * nSymbolHeight / 2 );
+            *pSymbolRect = tools::Rectangle(aTextPos, aSymbolSize);
+            aTextPos.X() += 3 * nSymbolHeight / 2;
         }
-        if ( mpButtonData->mbSmallSymbol )
+        if (mpButtonData->mbSmallSymbol)
         {
-            nYOffset = (aUnion.GetHeight() - aSymbolSize.Height())/2;
-            pSymbolRect->setY( aTextPos.Y() + nYOffset );
+            nYOffset = (aUnion.GetHeight() - aSymbolSize.Height()) / 2;
+            pSymbolRect->setY(aTextPos.Y() + nYOffset);
         }
     }
 
-    sal_uInt16 nStyle = 0;
+    DrawImageFlags nStyle = DrawImageFlags::NONE;
 
-    if ( ! ( nDrawFlags & WINDOW_DRAW_NODISABLE ) &&
-         ! IsEnabled() )
-#ifdef USE_JAVA
-        nStyle |= IMAGE_DRAW_SEMITRANSPARENT;
-#else	// USE_JAVA
-        nStyle |= IMAGE_DRAW_DISABLE;
-#endif	// USE_JAVA
-
-    if ( IsZoom() )
-        pDev->DrawImage( aImagePos, aImageSize, *pImage, nStyle );
-    else
-        pDev->DrawImage( aImagePos, *pImage, nStyle );
-
-    if ( bDrawText )
+    if (!(nDrawFlags & DrawFlags::NoDisable) &&
+        !IsEnabled())
     {
-        ImplSetFocusRect( Rectangle( aTextPos, aTextSize ) );
-        pDev->DrawText( Rectangle( aTextPos, aTextSize ), aText, nTextStyle, pVector, pDisplayText );
+#ifdef USE_JAVA
+        nStyle |= DrawImageFlags::SemiTransparent;
+#else	// USE_JAVA
+        nStyle |= DrawImageFlags::Disable;
+#endif	// USE_JAVA
+    }
+
+    if (IsZoom())
+        pDev->DrawImage(aImagePos, aImageSize, *pImage, nStyle);
+    else
+        pDev->DrawImage(aImagePos, *pImage, nStyle);
+
+    if (bDrawText)
+    {
+        const tools::Rectangle aTOutRect(aTextPos, aTextSize);
+        ImplSetFocusRect(aTOutRect);
+        DrawControlText(*pDev, aTOutRect, aText, nTextStyle, nullptr, nullptr, &aDeviceTextSize);
     }
     else
     {
-        ImplSetFocusRect( Rectangle( aImagePos, aImageSize ) );
+        ImplSetFocusRect(tools::Rectangle(aImagePos, aImageSize));
     }
 }
 
-void Button::ImplSetFocusRect( const Rectangle &rFocusRect )
+void Button::ImplSetFocusRect(const tools::Rectangle &rFocusRect)
 {
-    Rectangle aFocusRect = rFocusRect;
-    Rectangle aOutputRect = Rectangle( Point(), GetOutputSizePixel() );
+    tools::Rectangle aFocusRect = rFocusRect;
+    tools::Rectangle aOutputRect = tools::Rectangle(Point(), GetOutputSizePixel());
 
-    if ( ! aFocusRect.IsEmpty() )
+    if (!aFocusRect.IsEmpty())
     {
         aFocusRect.Left()--;
         aFocusRect.Top()--;
@@ -545,25 +554,29 @@ void Button::ImplSetFocusRect( const Rectangle &rFocusRect )
         aFocusRect.Bottom()++;
     }
 
-    if ( aFocusRect.Left()   < aOutputRect.Left()   ) aFocusRect.Left()   = aOutputRect.Left();
-    if ( aFocusRect.Top()    < aOutputRect.Top()    ) aFocusRect.Top()    = aOutputRect.Top();
-    if ( aFocusRect.Right()  > aOutputRect.Right()  ) aFocusRect.Right()  = aOutputRect.Right();
-    if ( aFocusRect.Bottom() > aOutputRect.Bottom() ) aFocusRect.Bottom() = aOutputRect.Bottom();
+    if (aFocusRect.Left()   < aOutputRect.Left())
+        aFocusRect.Left()   = aOutputRect.Left();
+    if (aFocusRect.Top()    < aOutputRect.Top())
+        aFocusRect.Top()    = aOutputRect.Top();
+    if (aFocusRect.Right()  > aOutputRect.Right())
+        aFocusRect.Right()  = aOutputRect.Right();
+    if (aFocusRect.Bottom() > aOutputRect.Bottom())
+        aFocusRect.Bottom() = aOutputRect.Bottom();
 
     mpButtonData->maFocusRect = aFocusRect;
 }
 
-const Rectangle& Button::ImplGetFocusRect() const
+const tools::Rectangle& Button::ImplGetFocusRect() const
 {
     return mpButtonData->maFocusRect;
 }
 
-sal_uInt16& Button::ImplGetButtonState()
+DrawButtonFlags& Button::ImplGetButtonState()
 {
     return mpButtonData->mnButtonState;
 }
 
-sal_uInt16 Button::ImplGetButtonState() const
+DrawButtonFlags Button::ImplGetButtonState() const
 {
     return mpButtonData->mnButtonState;
 }
@@ -573,29 +586,29 @@ void Button::ImplSetSymbolAlign( SymbolAlign eAlign )
     if ( mpButtonData->meSymbolAlign != eAlign )
     {
         mpButtonData->meSymbolAlign = eAlign;
-        StateChanged( StateChangedType::DATA );
+        StateChanged( StateChangedType::Data );
     }
 }
 
-void Button::SetSmallSymbol(bool bSmall)
+void Button::SetSmallSymbol()
 {
-    mpButtonData->mbSmallSymbol = bSmall;
+    mpButtonData->mbSmallSymbol = true;
 }
 
 void Button::EnableImageDisplay( bool bEnable )
 {
     if( bEnable )
-        mpButtonData->mnButtonState &= ~BUTTON_DRAW_NOIMAGE;
+        mpButtonData->mnButtonState &= ~DrawButtonFlags::NoImage;
     else
-        mpButtonData->mnButtonState |= BUTTON_DRAW_NOIMAGE;
+        mpButtonData->mnButtonState |= DrawButtonFlags::NoImage;
 }
 
 void Button::EnableTextDisplay( bool bEnable )
 {
     if( bEnable )
-        mpButtonData->mnButtonState &= ~BUTTON_DRAW_NOTEXT;
+        mpButtonData->mnButtonState &= ~DrawButtonFlags::NoText;
     else
-        mpButtonData->mnButtonState |= BUTTON_DRAW_NOTEXT;
+        mpButtonData->mnButtonState |= DrawButtonFlags::NoText;
 }
 
 bool Button::IsSmallSymbol () const
@@ -603,19 +616,19 @@ bool Button::IsSmallSymbol () const
     return mpButtonData->mbSmallSymbol;
 }
 
-bool Button::set_property(const OString &rKey, const OString &rValue)
+bool Button::set_property(const OString &rKey, const OUString &rValue)
 {
     if (rKey == "image-position")
     {
-        ImageAlign eAlign = IMAGEALIGN_LEFT;
+        ImageAlign eAlign = ImageAlign::Left;
         if (rValue == "left")
-            eAlign = IMAGEALIGN_LEFT;
+            eAlign = ImageAlign::Left;
         else if (rValue == "right")
-            eAlign = IMAGEALIGN_RIGHT;
+            eAlign = ImageAlign::Right;
         else if (rValue == "top")
-            eAlign = IMAGEALIGN_TOP;
+            eAlign = ImageAlign::Top;
         else if (rValue == "bottom")
-            eAlign = IMAGEALIGN_BOTTOM;
+            eAlign = ImageAlign::Bottom;
         SetImageAlign(eAlign);
     }
     else
@@ -623,40 +636,23 @@ bool Button::set_property(const OString &rKey, const OString &rValue)
     return true;
 }
 
-long Button::dispatchCommandHandler(void *, void *pCaller)
+void Button::statusChanged(const css::frame::FeatureStateEvent& rEvent)
 {
-    const Button *pButton = reinterpret_cast<Button*>(pCaller);
-    if (pButton == NULL)
-        return 0;
-
-    // Target where we will execute the .uno: command
-    uno::Reference<uno::XComponentContext> xContext = ::comphelper::getProcessComponentContext();
-    uno::Reference<frame::XDesktop2> xDesktop = frame::Desktop::create(xContext);
-
-    uno::Reference<frame::XFrame> xFrame(xDesktop->getActiveFrame());
-    if (!xFrame.is())
-        xFrame = uno::Reference<frame::XFrame>(xDesktop, uno::UNO_QUERY);
-
-    uno::Reference<frame::XDispatchProvider> xDispatchProvider(xFrame, uno::UNO_QUERY);
-    if (!xDispatchProvider.is())
-        return 0;
-
-    util::URL aCommandURL;
-    aCommandURL.Complete = pButton->maCommand;
-    uno::Reference<util::XURLTransformer> xParser = util::URLTransformer::create(xContext);
-    xParser->parseStrict(aCommandURL);
-
-    uno::Reference<frame::XDispatch> xDisp = xDispatchProvider->queryDispatch(aCommandURL, OUString(), 0);
-    if (!xDisp.is())
-        return 0;
-
-    // And do the work...
-    xDisp->dispatch(aCommandURL, uno::Sequence<beans::PropertyValue>());
-
-    return 1;
+    Enable(rEvent.IsEnabled);
 }
 
+FactoryFunction Button::GetUITestFactory() const
+{
+    return ButtonUIObject::create;
+}
 
+IMPL_STATIC_LINK( Button, dispatchCommandHandler, Button*, pButton, void )
+{
+    if (pButton == nullptr)
+        return;
+
+    comphelper::dispatchCommand(pButton->maCommand, uno::Sequence<beans::PropertyValue>());
+}
 
 void PushButton::ImplInitPushButtonData()
 {
@@ -664,29 +660,28 @@ void PushButton::ImplInitPushButtonData()
 
     meSymbol        = SymbolType::DONTKNOW;
     meState         = TRISTATE_FALSE;
-    meSaveValue     = TRISTATE_FALSE;
-    mnDDStyle       = 0;
+    mnDDStyle       = PushButtonDropdownStyle::NONE;
+    mbIsActive    = false;
     mbPressed       = false;
-    mbInUserDraw    = false;
 }
 
 namespace
 {
     vcl::Window* getPreviousSibling(vcl::Window *pParent)
     {
-        return pParent ? pParent->GetWindow(WINDOW_LASTCHILD) : NULL;
+        return pParent ? pParent->GetWindow(GetWindowType::LastChild) : nullptr;
     }
 }
 
 void PushButton::ImplInit( vcl::Window* pParent, WinBits nStyle )
 {
     nStyle = ImplInitStyle(getPreviousSibling(pParent), nStyle);
-    Button::ImplInit( pParent, nStyle, NULL );
+    Button::ImplInit( pParent, nStyle, nullptr );
 
     if ( nStyle & WB_NOLIGHTBORDER )
-        ImplGetButtonState() |= BUTTON_DRAW_NOLIGHTBORDER;
+        ImplGetButtonState() |= DrawButtonFlags::NoLightBorder;
 
-    ImplInitSettings( true, true, true );
+    ImplInitSettings( true );
 }
 
 WinBits PushButton::ImplInitStyle( const vcl::Window* pPrevWindow, WinBits nStyle )
@@ -702,10 +697,10 @@ WinBits PushButton::ImplInitStyle( const vcl::Window* pPrevWindow, WinBits nStyl
 
     if ( !(nStyle & WB_NOGROUP) &&
          (!pPrevWindow ||
-          ((pPrevWindow->GetType() != WINDOW_PUSHBUTTON  ) &&
-           (pPrevWindow->GetType() != WINDOW_OKBUTTON    ) &&
-           (pPrevWindow->GetType() != WINDOW_CANCELBUTTON) &&
-           (pPrevWindow->GetType() != WINDOW_HELPBUTTON  )) ) )
+          ((pPrevWindow->GetType() != WindowType::PUSHBUTTON  ) &&
+           (pPrevWindow->GetType() != WindowType::OKBUTTON    ) &&
+           (pPrevWindow->GetType() != WindowType::CANCELBUTTON) &&
+           (pPrevWindow->GetType() != WindowType::HELPBUTTON  )) ) )
         nStyle |= WB_GROUP;
     return nStyle;
 }
@@ -720,110 +715,115 @@ const Color& PushButton::GetCanonicalTextColor( const StyleSettings& _rStyle ) c
     return _rStyle.GetButtonTextColor();
 }
 
-void PushButton::ImplInitSettings( bool bFont,
-                                   bool bForeground, bool bBackground )
+void PushButton::ImplInitSettings( bool bBackground )
 {
-    Button::ImplInitSettings( bFont, bForeground );
+    Button::ImplInitSettings();
 
     if ( bBackground )
     {
         SetBackground();
         // #i38498#: do not check for GetParent()->IsChildTransparentModeEnabled()
-        // otherwise the formcontrol button will be overdrawn due to PARENTCLIPMODE_NOCLIP
+        // otherwise the formcontrol button will be overdrawn due to ParentClipMode::NoClip
         // for radio and checkbox this is ok as they should appear transparent in documents
-        if ( IsNativeControlSupported( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL ) ||
+        if ( IsNativeControlSupported( ControlType::Pushbutton, ControlPart::Entire ) ||
              (GetStyle() & WB_FLATBUTTON) != 0 )
         {
-            EnableChildTransparentMode( true );
-            SetParentClipMode( PARENTCLIPMODE_NOCLIP );
+            EnableChildTransparentMode();
+            SetParentClipMode( ParentClipMode::NoClip );
             SetPaintTransparent( true );
-            mpWindowImpl->mbUseNativeFocus = (GetStyle() & WB_FLATBUTTON)
-                ? false
-                : ImplGetSVData()->maNWFData.mbNoFocusRects;
+
+            if ((GetStyle() & WB_FLATBUTTON) == 0)
+                mpWindowImpl->mbUseNativeFocus = ImplGetSVData()->maNWFData.mbNoFocusRects;
+            else
+                mpWindowImpl->mbUseNativeFocus = ImplGetSVData()->maNWFData.mbNoFocusRectsForFlatButtons;
         }
         else
         {
             EnableChildTransparentMode( false );
-            SetParentClipMode( 0 );
+            SetParentClipMode();
             SetPaintTransparent( false );
         }
     }
 }
 
-void PushButton::ImplDrawPushButtonFrame( vcl::Window* pDev,
-                                          Rectangle& rRect, sal_uInt16 nStyle )
+void PushButton::ImplDrawPushButtonFrame(vcl::RenderContext& rRenderContext,
+                                         tools::Rectangle& rRect, DrawButtonFlags nStyle)
 {
-    if ( !(pDev->GetStyle() & (WB_RECTSTYLE | WB_SMALLSTYLE)) )
+    if (!(GetStyle() & (WB_RECTSTYLE | WB_SMALLSTYLE)))
     {
-        StyleSettings aStyleSettings = pDev->GetSettings().GetStyleSettings();
-        if ( pDev->IsControlBackground() )
-            aStyleSettings.Set3DColors( pDev->GetControlBackground() );
+        StyleSettings aStyleSettings = rRenderContext.GetSettings().GetStyleSettings();
+        if (IsControlBackground())
+            aStyleSettings.Set3DColors(GetControlBackground());
     }
 
-    DecorationView aDecoView( pDev );
-    if ( pDev->IsControlBackground() )
+    DecorationView aDecoView(&rRenderContext);
+    if (IsControlBackground())
     {
-        AllSettings     aSettings = pDev->GetSettings();
-        AllSettings     aOldSettings = aSettings;
-        StyleSettings   aStyleSettings = aSettings.GetStyleSettings();
-        aStyleSettings.Set3DColors( pDev->GetControlBackground() );
-        aSettings.SetStyleSettings( aStyleSettings );
-        pDev->OutputDevice::SetSettings( aSettings );
-        rRect = aDecoView.DrawButton( rRect, nStyle );
-        pDev->OutputDevice::SetSettings( aOldSettings );
+        AllSettings aSettings = rRenderContext.GetSettings();
+        AllSettings aOldSettings = aSettings;
+        StyleSettings aStyleSettings = aSettings.GetStyleSettings();
+        aStyleSettings.Set3DColors(GetControlBackground());
+        aSettings.SetStyleSettings(aStyleSettings);
+
+        // Call OutputDevice::SetSettings() explicitly, as rRenderContext may
+        // be a vcl::Window in fact, and vcl::Window::SetSettings() will call
+        // Invalidate(), which is a problem, since we're in Paint().
+        rRenderContext.OutputDevice::SetSettings(aSettings);
+        rRect = aDecoView.DrawButton(rRect, nStyle);
+        rRenderContext.OutputDevice::SetSettings(aOldSettings);
     }
     else
-        rRect = aDecoView.DrawButton( rRect, nStyle );
+        rRect = aDecoView.DrawButton(rRect, nStyle);
 }
 
 bool PushButton::ImplHitTestPushButton( vcl::Window* pDev,
                                         const Point& rPos )
 {
     Point       aTempPoint;
-    Rectangle   aTestRect( aTempPoint, pDev->GetOutputSizePixel() );
+    tools::Rectangle   aTestRect( aTempPoint, pDev->GetOutputSizePixel() );
 
     return aTestRect.IsInside( rPos );
 }
 
-sal_uInt16 PushButton::ImplGetTextStyle( sal_uLong nDrawFlags ) const
+DrawTextFlags PushButton::ImplGetTextStyle( DrawFlags nDrawFlags ) const
 {
     const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
 
-    sal_uInt16 nTextStyle = TEXT_DRAW_MNEMONIC | TEXT_DRAW_MULTILINE | TEXT_DRAW_ENDELLIPSIS;
+    DrawTextFlags nTextStyle = DrawTextFlags::Mnemonic | DrawTextFlags::MultiLine | DrawTextFlags::EndEllipsis;
 
-    if ( ( rStyleSettings.GetOptions() & STYLE_OPTION_MONO ) ||
-         ( nDrawFlags & WINDOW_DRAW_MONO ) )
-        nTextStyle |= TEXT_DRAW_MONO;
+    if ( ( rStyleSettings.GetOptions() & StyleSettingsOptions::Mono ) ||
+         ( nDrawFlags & DrawFlags::Mono ) )
+        nTextStyle |= DrawTextFlags::Mono;
 
     if ( GetStyle() & WB_WORDBREAK )
-        nTextStyle |= TEXT_DRAW_WORDBREAK;
+        nTextStyle |= DrawTextFlags::WordBreak;
     if ( GetStyle() & WB_NOLABEL )
-        nTextStyle &= ~TEXT_DRAW_MNEMONIC;
+        nTextStyle &= ~DrawTextFlags::Mnemonic;
 
     if ( GetStyle() & WB_LEFT )
-        nTextStyle |= TEXT_DRAW_LEFT;
+        nTextStyle |= DrawTextFlags::Left;
     else if ( GetStyle() & WB_RIGHT )
-        nTextStyle |= TEXT_DRAW_RIGHT;
+        nTextStyle |= DrawTextFlags::Right;
     else
-        nTextStyle |= TEXT_DRAW_CENTER;
+        nTextStyle |= DrawTextFlags::Center;
 
     if ( GetStyle() & WB_TOP )
-        nTextStyle |= TEXT_DRAW_TOP;
+        nTextStyle |= DrawTextFlags::Top;
     else if ( GetStyle() & WB_BOTTOM )
-        nTextStyle |= TEXT_DRAW_BOTTOM;
+        nTextStyle |= DrawTextFlags::Bottom;
     else
-        nTextStyle |= TEXT_DRAW_VCENTER;
+        nTextStyle |= DrawTextFlags::VCenter;
 
-    if ( ! ( (nDrawFlags & WINDOW_DRAW_NODISABLE) || IsEnabled() ) )
+    if ( ! ( (nDrawFlags & DrawFlags::NoDisable) || IsEnabled() ) )
 #ifdef USE_JAVA
     {
         Color aColor;
         ImplControlValue aValue;
         PushButton *nonConstButton = (PushButton *)this;
 
-        if ( ! ( nonConstButton->IsNativeControlSupported( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL ) && nonConstButton->GetNativeControlTextColor( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL, 0, aValue, aColor ) ) )
+        if ( ! ( nonConstButton->IsNativeControlSupported( ControlType::Pushbutton, ControlPart::Entire ) && nonConstButton->GetNativeControlTextColor( ControlType::Pushbutton, ControlPart::Entire, ControlState::NONE, aValue, aColor ) ) )
 #endif	// USE_JAVA
-        nTextStyle |= TEXT_DRAW_DISABLE;
+        nTextStyle |= DrawTextFlags::Disable;
 #ifdef USE_JAVA
     }
 #endif	// USE_JAVA
@@ -843,32 +843,29 @@ static void ImplDrawBtnDropDownArrow( OutputDevice* pDev,
         pDev->SetFillColor( Color( COL_BLACK ) );
     else
         pDev->SetFillColor( rColor );
-    pDev->DrawRect( Rectangle( nX+0, nY+0, nX+6, nY+0 ) );
-    pDev->DrawRect( Rectangle( nX+1, nY+1, nX+5, nY+1 ) );
-    pDev->DrawRect( Rectangle( nX+2, nY+2, nX+4, nY+2 ) );
-    pDev->DrawRect( Rectangle( nX+3, nY+3, nX+3, nY+3 ) );
+    pDev->DrawRect( tools::Rectangle( nX+0, nY+0, nX+6, nY+0 ) );
+    pDev->DrawRect( tools::Rectangle( nX+1, nY+1, nX+5, nY+1 ) );
+    pDev->DrawRect( tools::Rectangle( nX+2, nY+2, nX+4, nY+2 ) );
+    pDev->DrawRect( tools::Rectangle( nX+3, nY+3, nX+3, nY+3 ) );
     if ( bBlack )
     {
         pDev->SetFillColor( rColor );
-        pDev->DrawRect( Rectangle( nX+2, nY+1, nX+4, nY+1 ) );
-        pDev->DrawRect( Rectangle( nX+3, nY+2, nX+3, nY+2 ) );
+        pDev->DrawRect( tools::Rectangle( nX+2, nY+1, nX+4, nY+1 ) );
+        pDev->DrawRect( tools::Rectangle( nX+3, nY+2, nX+3, nY+2 ) );
     }
     pDev->SetLineColor( aOldLineColor );
     pDev->SetFillColor( aOldFillColor );
 }
 
-void PushButton::ImplDrawPushButtonContent( OutputDevice* pDev, sal_uLong nDrawFlags,
-                                            const Rectangle& rRect,
-                                            bool bLayout,
-                                            bool bMenuBtnSep
-                                            )
+void PushButton::ImplDrawPushButtonContent(OutputDevice* pDev, DrawFlags nDrawFlags,
+                                           const tools::Rectangle& rRect, bool bMenuBtnSep)
 {
     const StyleSettings&    rStyleSettings = GetSettings().GetStyleSettings();
-    Rectangle               aInRect = rRect;
+    tools::Rectangle               aInRect = rRect;
     Color                   aColor;
     OUString                aText = PushButton::GetText(); // PushButton:: because of MoreButton
-    sal_uInt16              nTextStyle = ImplGetTextStyle( nDrawFlags );
-    sal_uInt16              nStyle;
+    DrawTextFlags           nTextStyle = ImplGetTextStyle( nDrawFlags );
+    DrawSymbolFlags         nStyle;
 
     if( aInRect.Right() < aInRect.Left() || aInRect.Bottom() < aInRect.Top() )
         aInRect.SetEmpty();
@@ -879,87 +876,85 @@ void PushButton::ImplDrawPushButtonContent( OutputDevice* pDev, sal_uLong nDrawF
 #ifdef USE_JAVA
     bool bNativeOK = false;
     bool bDropDown = ( IsSymbol() && GetSymbol() == SymbolType::SPIN_DOWN && !GetText().getLength() );
-    ControlType aCtrlType = 0;
+    ControlType aCtrlType = ControlType::Generic;
     switch( GetParent()->GetType() )
     {
-        case WINDOW_LISTBOX:
-        case WINDOW_MULTILISTBOX:
-        case WINDOW_TREELISTBOX:
-            aCtrlType = CTRL_LISTBOX;
+        case WindowType::LISTBOX:
+        case WindowType::MULTILISTBOX:
+        case WindowType::TREELISTBOX:
+            aCtrlType = ControlType::Listbox;
             break;
-        case WINDOW_COMBOBOX:
-        case WINDOW_PATTERNBOX:
-        case WINDOW_NUMERICBOX:
-        case WINDOW_METRICBOX:
-        case WINDOW_CURRENCYBOX:
-        case WINDOW_DATEBOX:
-        case WINDOW_TIMEBOX:
-        case WINDOW_LONGCURRENCYBOX:
-            aCtrlType = CTRL_COMBOBOX;
+        case WindowType::COMBOBOX:
+        case WindowType::PATTERNBOX:
+        case WindowType::NUMERICBOX:
+        case WindowType::METRICBOX:
+        case WindowType::CURRENCYBOX:
+        case WindowType::DATEBOX:
+        case WindowType::TIMEBOX:
+        case WindowType::LONGCURRENCYBOX:
+            aCtrlType = ControlType::Combobox;
             break;
         default:
             break;
     }
  
-    if( bDropDown && (aCtrlType == CTRL_COMBOBOX || aCtrlType == CTRL_LISTBOX ) )
+    if( bDropDown && (aCtrlType == ControlType::Combobox || aCtrlType == ControlType::Listbox ) )
     {
         // let the theme draw it, note we then need support
-        // for CTRL_LISTBOX/PART_BUTTON_DOWN and CTRL_COMBOBOX/PART_BUTTON_DOWN
+        // for ControlType::Listbox/ControlPart::ButtonDown and ControlType::Combobox/ControlPart::ButtonDown
         ImplControlValue aControlValue;
         vcl::Region aCtrlRegion( aInRect );
-        ControlState nState = 0;
+        ControlState nState = ControlState::NONE;
 
         if ( mbPressed )
-            nState |= CTRL_STATE_PRESSED;
-        if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
-            nState |= CTRL_STATE_PRESSED;
+            nState |= ControlState::PRESSED;
+        if ( ImplGetButtonState() & DrawButtonFlags::Pressed )
+            nState |= ControlState::PRESSED;
         if ( HasFocus() )
-            nState |= CTRL_STATE_FOCUSED;
-        if ( ImplGetButtonState() & BUTTON_DRAW_DEFAULT )
-            nState |= CTRL_STATE_DEFAULT;
+            nState |= ControlState::FOCUSED;
+        if ( ImplGetButtonState() & DrawButtonFlags::Default )
+            nState |= ControlState::DEFAULT;
         if ( Window::IsEnabled() )
-            nState |= CTRL_STATE_ENABLED;
+            nState |= ControlState::ENABLED;
         if ( IsMouseOver() && aInRect.IsInside( GetPointerPosPixel() ) )
-            nState |= CTRL_STATE_ROLLOVER;
+            nState |= ControlState::ROLLOVER;
 
-        bNativeOK = GetNativeControlTextColor( aCtrlType, PART_BUTTON_DOWN, nState, aControlValue, aColor );
+        bNativeOK = GetNativeControlTextColor( aCtrlType, ControlPart::ButtonDown, nState, aControlValue, aColor );
     }
     else
     {
         ImplControlValue aControlValue;
         vcl::Region aCtrlRegion( aInRect );
-        ControlState nState = 0;
+        ControlState nState = ControlState::NONE;
 
         if ( mbPressed || IsChecked() )
-            nState |= CTRL_STATE_PRESSED;
-        if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
-            nState |= CTRL_STATE_PRESSED;
+            nState |= ControlState::PRESSED;
+        if ( ImplGetButtonState() & DrawButtonFlags::Pressed )
+            nState |= ControlState::PRESSED;
         if ( HasFocus() )
-            nState |= CTRL_STATE_FOCUSED;
-        if ( ImplGetButtonState() & BUTTON_DRAW_DEFAULT )
-            nState |= CTRL_STATE_DEFAULT;
+            nState |= ControlState::FOCUSED;
+        if ( ImplGetButtonState() & DrawButtonFlags::Default )
+            nState |= ControlState::DEFAULT;
         if ( Window::IsEnabled() )
-            nState |= CTRL_STATE_ENABLED;
+            nState |= ControlState::ENABLED;
         if ( IsMouseOver() && aInRect.IsInside( GetPointerPosPixel() ) )
-            nState |= CTRL_STATE_ROLLOVER;
+            nState |= ControlState::ROLLOVER;
 
-        bNativeOK = GetNativeControlTextColor( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL, nState, aControlValue, aColor );
+        bNativeOK = GetNativeControlTextColor( ControlType::Pushbutton, ControlPart::Entire, nState, aControlValue, aColor );
     }
-#endif	// USE_JAVA
 
-#ifdef USE_JAVA
     // Fix bug 2534 without causing bug 2208 by not overriding the native text
     // color if there is text
     if ( !bNativeOK || !GetText().getLength() )
     {
 #endif	// USE_JAVA
-    if ( nDrawFlags & WINDOW_DRAW_MONO )
+    if ( nDrawFlags & DrawFlags::Mono )
         aColor = Color( COL_BLACK );
-    else if( (nDrawFlags & WINDOW_DRAW_ROLLOVER) && IsNativeControlSupported(CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL) )
+    else if( (nDrawFlags & DrawFlags::NoRollover) && IsNativeControlSupported(ControlType::Pushbutton, ControlPart::Entire) )
         aColor = rStyleSettings.GetButtonRolloverTextColor();
     else if ( IsControlForeground() )
         aColor = GetControlForeground();
-    else if( nDrawFlags & WINDOW_DRAW_ROLLOVER )
+    else if( nDrawFlags & DrawFlags::NoRollover )
         aColor = rStyleSettings.GetButtonRolloverTextColor();
     else
         aColor = rStyleSettings.GetButtonTextColor();
@@ -969,10 +964,10 @@ void PushButton::ImplDrawPushButtonContent( OutputDevice* pDev, sal_uLong nDrawF
 
     pDev->SetTextColor( aColor );
 
-    if ( IsEnabled() || (nDrawFlags & WINDOW_DRAW_NODISABLE) )
-        nStyle = 0;
+    if ( IsEnabled() || (nDrawFlags & DrawFlags::NoDisable) )
+        nStyle = DrawSymbolFlags::NONE;
     else
-        nStyle = SYMBOL_DRAW_DISABLE;
+        nStyle = DrawSymbolFlags::Disable;
 
     Size aSize = rRect.GetSize();
     Point aPos = rRect.TopLeft();
@@ -980,11 +975,12 @@ void PushButton::ImplDrawPushButtonContent( OutputDevice* pDev, sal_uLong nDrawF
     sal_uLong nImageSep = 1 + (pDev->GetTextHeight()-10)/2;
     if( nImageSep < 1 )
         nImageSep = 1;
-    if ( mnDDStyle == PUSHBUTTON_DROPDOWN_MENUBUTTON )
+    if ( mnDDStyle == PushButtonDropdownStyle::MenuButton ||
+         mnDDStyle == PushButtonDropdownStyle::SplitMenuButton )
     {
         long nSeparatorX = 0;
-        Rectangle aSymbolRect = aInRect;
-        if ( !aText.isEmpty() && ! (ImplGetButtonState() & BUTTON_DRAW_NOTEXT) )
+        tools::Rectangle aSymbolRect = aInRect;
+        if ( !aText.isEmpty() && ! (ImplGetButtonState() & DrawButtonFlags::NoText) )
         {
             // calculate symbol size
             long nSymbolSize    = pDev->GetTextHeight() / 2 + 1;
@@ -996,51 +992,48 @@ void PushButton::ImplDrawPushButtonContent( OutputDevice* pDev, sal_uLong nDrawF
             aSymbolRect.Right() -= nSymbolSize/2;
             aSymbolRect.Left()  = aSymbolRect.Right() - nSymbolSize;
 
-            ImplDrawAlignedImage( pDev, aPos, aSize, bLayout, nImageSep,
-                                  nDrawFlags, nTextStyle, NULL, true );
+            ImplDrawAlignedImage( pDev, aPos, aSize, nImageSep,
+                                  nDrawFlags, nTextStyle, nullptr, true );
         }
         else
             ImplCalcSymbolRect( aSymbolRect );
 
-        if( ! bLayout )
+        long nDistance = (aSymbolRect.GetHeight() > 10) ? 2 : 1;
+        DecorationView aDecoView( pDev );
+        if( bMenuBtnSep && nSeparatorX > 0 )
         {
-            long nDistance = (aSymbolRect.GetHeight() > 10) ? 2 : 1;
-            DecorationView aDecoView( pDev );
-            if( bMenuBtnSep && nSeparatorX > 0 )
-            {
-                Point aStartPt( nSeparatorX, aSymbolRect.Top()+nDistance );
-                Point aEndPt( nSeparatorX, aSymbolRect.Bottom()-nDistance );
-                aDecoView.DrawSeparator( aStartPt, aEndPt );
-            }
-            ImplSetSeparatorX( nSeparatorX );
+            Point aStartPt( nSeparatorX, aSymbolRect.Top()+nDistance );
+            Point aEndPt( nSeparatorX, aSymbolRect.Bottom()-nDistance );
+            aDecoView.DrawSeparator( aStartPt, aEndPt );
+        }
+        ImplSetSeparatorX( nSeparatorX );
 
 #ifdef USE_JAVA
-            // Fix down arrow over native combobox arrow after tabbing out of
-            // the Apply Style combobox in Writer's Formatting toolbar
-            if ( !bNativeOK || ( aCtrlType != CTRL_COMBOBOX && aCtrlType != CTRL_LISTBOX ) )
+        // Fix down arrow over native combobox arrow after tabbing out of
+        // the Apply Style combobox in Writer's Formatting toolbar
+        if ( !bNativeOK || ( aCtrlType != ControlType::Combobox && aCtrlType != ControlType::Listbox ) )
 #endif	// USE_JAVA
-            aDecoView.DrawSymbol( aSymbolRect, SymbolType::SPIN_DOWN, aColor, nStyle );
-        }
+        aDecoView.DrawSymbol( aSymbolRect, SymbolType::SPIN_DOWN, aColor, nStyle );
 
     }
     else
     {
-        Rectangle aSymbolRect;
-        ImplDrawAlignedImage( pDev, aPos, aSize, bLayout, nImageSep, nDrawFlags,
-                              nTextStyle, IsSymbol() ? &aSymbolRect : NULL, true );
+        tools::Rectangle aSymbolRect;
+        ImplDrawAlignedImage( pDev, aPos, aSize, nImageSep, nDrawFlags,
+                              nTextStyle, IsSymbol() ? &aSymbolRect : nullptr, true );
 
-        if ( IsSymbol() && ! bLayout )
+        if ( IsSymbol() )
         {
             DecorationView aDecoView( pDev );
             aDecoView.DrawSymbol( aSymbolRect, meSymbol, aColor, nStyle );
         }
 
-        if ( mnDDStyle == PUSHBUTTON_DROPDOWN_TOOLBOX && !bLayout )
+        if ( mnDDStyle == PushButtonDropdownStyle::Toolbox )
         {
             bool bBlack = false;
             Color   aArrowColor( COL_BLACK );
 
-            if ( !(nDrawFlags & WINDOW_DRAW_MONO) )
+            if ( !(nDrawFlags & DrawFlags::Mono) )
             {
                 if ( !IsEnabled() )
                     aArrowColor = rStyleSettings.GetShadowColor();
@@ -1056,129 +1049,142 @@ void PushButton::ImplDrawPushButtonContent( OutputDevice* pDev, sal_uLong nDrawF
         }
     }
 
-    UserDrawEvent aUDEvt( this, aInRect, 0 );
-    UserDraw( aUDEvt );
-
     pDev->Pop();  // restore clipregion
 }
 
-void PushButton::UserDraw( const UserDrawEvent& )
+void PushButton::ImplDrawPushButton(vcl::RenderContext& rRenderContext)
 {
-}
+    HideFocus();
 
-void PushButton::ImplDrawPushButton( bool bLayout )
-{
-    if( !bLayout )
-        HideFocus();
-
-    sal_uInt16                  nButtonStyle = ImplGetButtonState();
-    Point                   aPoint;
-    Size                    aOutSz( GetOutputSizePixel() );
-    Rectangle               aRect( aPoint, aOutSz );
-    Rectangle               aInRect = aRect;
-    bool                    bNativeOK = false;
+    DrawButtonFlags nButtonStyle = ImplGetButtonState();
+    Point aPoint;
+    Size aOutSz(GetOutputSizePixel());
+    tools::Rectangle aRect(aPoint, aOutSz);
+    tools::Rectangle aInRect = aRect;
+    bool bNativeOK = false;
 
     // adjust style if button should be rendered 'pressed'
-    if ( mbPressed )
-        nButtonStyle |= BUTTON_DRAW_PRESSED;
+    if (mbPressed || mbIsActive)
+        nButtonStyle |= DrawButtonFlags::Pressed;
 
     // TODO: move this to Window class or make it a member !!!
-    ControlType aCtrlType = 0;
-    switch( GetParent()->GetType() )
+    ControlType aCtrlType = ControlType::Generic;
+    switch(GetParent()->GetType())
     {
-        case WINDOW_LISTBOX:
-        case WINDOW_MULTILISTBOX:
-        case WINDOW_TREELISTBOX:
-            aCtrlType = CTRL_LISTBOX;
+        case WindowType::LISTBOX:
+        case WindowType::MULTILISTBOX:
+        case WindowType::TREELISTBOX:
+            aCtrlType = ControlType::Listbox;
             break;
 
-        case WINDOW_COMBOBOX:
-        case WINDOW_PATTERNBOX:
-        case WINDOW_NUMERICBOX:
-        case WINDOW_METRICBOX:
-        case WINDOW_CURRENCYBOX:
-        case WINDOW_DATEBOX:
-        case WINDOW_TIMEBOX:
-        case WINDOW_LONGCURRENCYBOX:
-            aCtrlType = CTRL_COMBOBOX;
+        case WindowType::COMBOBOX:
+        case WindowType::PATTERNBOX:
+        case WindowType::NUMERICBOX:
+        case WindowType::METRICBOX:
+        case WindowType::CURRENCYBOX:
+        case WindowType::DATEBOX:
+        case WindowType::TIMEBOX:
+        case WindowType::LONGCURRENCYBOX:
+            aCtrlType = ControlType::Combobox;
             break;
         default:
             break;
     }
 
-    bool bDropDown = ( IsSymbol() && (GetSymbol()==SymbolType::SPIN_DOWN) && GetText().isEmpty() );
+    bool bDropDown = (IsSymbol() && (GetSymbol() == SymbolType::SPIN_DOWN) && GetText().isEmpty());
 
-    if( bDropDown && (aCtrlType == CTRL_COMBOBOX || aCtrlType == CTRL_LISTBOX ) )
+    if( bDropDown && (aCtrlType == ControlType::Combobox || aCtrlType == ControlType::Listbox))
     {
-        if( GetParent()->IsNativeControlSupported( aCtrlType, PART_ENTIRE_CONTROL) )
+        if (GetParent()->IsNativeControlSupported(aCtrlType, ControlPart::Entire))
         {
             // skip painting if the button was already drawn by the theme
-            if( aCtrlType == CTRL_COMBOBOX )
+            if (aCtrlType == ControlType::Combobox)
             {
                 Edit* pEdit = static_cast<Edit*>(GetParent());
-                if( pEdit->ImplUseNativeBorder( pEdit->GetStyle() ) )
+                if (pEdit->ImplUseNativeBorder(rRenderContext, pEdit->GetStyle()))
                     bNativeOK = true;
             }
-            else if( GetParent()->IsNativeControlSupported( aCtrlType, HAS_BACKGROUND_TEXTURE) )
+            else if (GetParent()->IsNativeControlSupported(aCtrlType, ControlPart::HasBackgroundTexture))
             {
                 bNativeOK = true;
             }
-            if( !bNativeOK && GetParent()->IsNativeControlSupported( aCtrlType, PART_BUTTON_DOWN ) )
+
+            if (!bNativeOK && GetParent()->IsNativeControlSupported(aCtrlType, ControlPart::ButtonDown))
             {
                 // let the theme draw it, note we then need support
-                // for CTRL_LISTBOX/PART_BUTTON_DOWN and CTRL_COMBOBOX/PART_BUTTON_DOWN
+                // for ControlType::Listbox/ControlPart::ButtonDown and ControlType::Combobox/ControlPart::ButtonDown
 
-                ImplControlValue    aControlValue;
-                ControlState        nState = 0;
+                ImplControlValue aControlValue;
+                ControlState nState = ControlState::NONE;
 
-                if ( mbPressed )                        nState |= CTRL_STATE_PRESSED;
-                if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )   nState |= CTRL_STATE_PRESSED;
-                if ( HasFocus() )                       nState |= CTRL_STATE_FOCUSED;
-                if ( ImplGetButtonState() & BUTTON_DRAW_DEFAULT )   nState |= CTRL_STATE_DEFAULT;
-                if ( Window::IsEnabled() )              nState |= CTRL_STATE_ENABLED;
+                if (mbPressed || mbIsActive)
+                    nState |= ControlState::PRESSED;
+                if (ImplGetButtonState() & DrawButtonFlags::Pressed)
+                    nState |= ControlState::PRESSED;
+                if (HasFocus())
+                    nState |= ControlState::FOCUSED;
+                if (ImplGetButtonState() & DrawButtonFlags::Default)
+                    nState |= ControlState::DEFAULT;
+                if (Window::IsEnabled())
+                    nState |= ControlState::ENABLED;
 
-                if ( IsMouseOver() && aInRect.IsInside( GetPointerPosPixel() ) )
-                    nState |= CTRL_STATE_ROLLOVER;
+                if (IsMouseOver() && aInRect.IsInside(GetPointerPosPixel()))
+                    nState |= ControlState::ROLLOVER;
 
-                bNativeOK = DrawNativeControl( aCtrlType, PART_BUTTON_DOWN, aInRect, nState,
-                                                aControlValue, OUString() );
+                if ( IsMouseOver() && aInRect.IsInside(GetPointerPosPixel()) && mbIsActive)
+                {
+                    nState |= ControlState::ROLLOVER;
+                    nButtonStyle &= ~DrawButtonFlags::Pressed;
+                }
+
+                bNativeOK = rRenderContext.DrawNativeControl(aCtrlType, ControlPart::ButtonDown, aInRect, nState,
+                                                             aControlValue, OUString());
             }
         }
     }
 
-    if( bNativeOK )
+    if (bNativeOK)
         return;
 
-    bool bRollOver = (IsMouseOver() && aInRect.IsInside( GetPointerPosPixel() ));
-    bool bDrawMenuSep = true;
-    if( (GetStyle() & WB_FLATBUTTON) )
+    bool bRollOver = (IsMouseOver() && aInRect.IsInside(GetPointerPosPixel()));
+    bool bDrawMenuSep = mnDDStyle == PushButtonDropdownStyle::SplitMenuButton;
+    if (GetStyle() & WB_FLATBUTTON)
     {
-        if( ! bRollOver && ! HasFocus() )
+        if (!bRollOver && !HasFocus())
             bDrawMenuSep = false;
     }
-    if ( (bNativeOK=IsNativeControlSupported(CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL)) )
+    bNativeOK = rRenderContext.IsNativeControlSupported(ControlType::Pushbutton, ControlPart::Entire);
+    if (bNativeOK)
     {
         PushButtonValue aControlValue;
-        Rectangle        aCtrlRegion( aInRect );
-        ControlState     nState = 0;
+        tools::Rectangle aCtrlRegion(aInRect);
+        ControlState nState = ControlState::NONE;
 
-        if ( mbPressed || IsChecked() )                   nState |= CTRL_STATE_PRESSED;
-        if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED ) nState |= CTRL_STATE_PRESSED;
-        if ( HasFocus() )                       nState |= CTRL_STATE_FOCUSED;
-        if ( ImplGetButtonState() & BUTTON_DRAW_DEFAULT )   nState |= CTRL_STATE_DEFAULT;
-        if ( Window::IsEnabled() )              nState |= CTRL_STATE_ENABLED;
+        if (mbPressed || IsChecked() || mbIsActive)
+            nState |= ControlState::PRESSED;
+        if (ImplGetButtonState() & DrawButtonFlags::Pressed)
+            nState |= ControlState::PRESSED;
+        if (HasFocus())
+            nState |= ControlState::FOCUSED;
+        if (ImplGetButtonState() & DrawButtonFlags::Default)
+            nState |= ControlState::DEFAULT;
+        if (Window::IsEnabled())
+            nState |= ControlState::ENABLED;
 
-        if ( bRollOver )
-            nState |= CTRL_STATE_ROLLOVER;
+        if (bRollOver || mbIsActive)
+            nState |= ControlState::ROLLOVER;
 
-        if( GetStyle() & WB_BEVELBUTTON )
+        if (mbIsActive && bRollOver)
+            nState &= ~ControlState::PRESSED;
+
+        if (GetStyle() & WB_BEVELBUTTON)
             aControlValue.mbBevelButton = true;
 
         // draw frame into invisible window to have aInRect modified correctly
-        // but do not shift the inner rect for pressed buttons (ie remove BUTTON_DRAW_PRESSED)
+        // but do not shift the inner rect for pressed buttons (ie remove DrawButtonFlags::Pressed)
         // this assumes the theme has enough visual cues to signalize the button was pressed
         //Window aWin( this );
-        //ImplDrawPushButtonFrame( &aWin, aInRect, nButtonStyle & ~BUTTON_DRAW_PRESSED );
+        //ImplDrawPushButtonFrame( &aWin, aInRect, nButtonStyle & ~DrawButtonFlags::Pressed );
 
         // looks better this way as symbols were displaced slightly using the above approach
         aInRect.Top()+=4;
@@ -1199,15 +1205,15 @@ void PushButton::ImplDrawPushButton( bool bLayout )
 
         // prepare single line hint (needed on mac to decide between normal push button and
         // rectangular bevel button look)
-        Size aFontSize( Application::GetSettings().GetStyleSettings().GetPushButtonFont().GetSize() );
-        aFontSize = LogicToPixel( aFontSize, MapMode( MAP_POINT ) );
-        Size aInRectSize( LogicToPixel( Size( aInRect.GetWidth(), aInRect.GetHeight() ) ) );
-        aControlValue.mbSingleLine = (aInRectSize.Height() < 2 * aFontSize.Height() );
+        Size aFontSize(Application::GetSettings().GetStyleSettings().GetPushButtonFont().GetFontSize());
+        aFontSize = rRenderContext.LogicToPixel(aFontSize, MapMode(MapUnit::MapPoint));
+        Size aInRectSize(rRenderContext.LogicToPixel(Size(aInRect.GetWidth(), aInRect.GetHeight())));
+        aControlValue.mbSingleLine = (aInRectSize.Height() < 2 * aFontSize.Height());
 
-        if( ((nState & CTRL_STATE_ROLLOVER)) || ! (GetStyle() & WB_FLATBUTTON) )
+        if (((nState & ControlState::ROLLOVER)) || !(GetStyle() & WB_FLATBUTTON))
         {
-            bNativeOK = DrawNativeControl( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL, aCtrlRegion, nState,
-                            aControlValue, OUString()/*PushButton::GetText()*/ );
+            bNativeOK = rRenderContext.DrawNativeControl(ControlType::Pushbutton, ControlPart::Entire, aCtrlRegion, nState,
+                                                         aControlValue, OUString() /*PushButton::GetText()*/);
         }
         else
         {
@@ -1215,22 +1221,21 @@ void PushButton::ImplDrawPushButton( bool bLayout )
         }
 
         // draw content using the same aInRect as non-native VCL would do
-        ImplDrawPushButtonContent( this,
-                                   (nState&CTRL_STATE_ROLLOVER) ? WINDOW_DRAW_ROLLOVER : 0,
-                                   aInRect, bLayout, bDrawMenuSep );
+        ImplDrawPushButtonContent(&rRenderContext, (nState&ControlState::ROLLOVER) ? DrawFlags::NoRollover : DrawFlags::NONE,
+                                  aInRect, bDrawMenuSep);
 
-        if ( HasFocus() )
-            ShowFocus( ImplGetFocusRect() );
+        if (HasFocus())
+            ShowFocus(ImplGetFocusRect());
     }
 
-    if ( !bNativeOK )
+    if (!bNativeOK)
     {
         // draw PushButtonFrame, aInRect has content size afterwards
-        if( (GetStyle() & WB_FLATBUTTON) )
+        if (GetStyle() & WB_FLATBUTTON)
         {
-            Rectangle aTempRect( aInRect );
-            if( ! bLayout && bRollOver )
-                ImplDrawPushButtonFrame( this, aTempRect, nButtonStyle );
+            tools::Rectangle aTempRect(aInRect);
+            if (bRollOver)
+                ImplDrawPushButtonFrame(rRenderContext, aTempRect, nButtonStyle);
             aInRect.Left()   += 2;
             aInRect.Top()    += 2;
             aInRect.Right()  -= 2;
@@ -1238,16 +1243,15 @@ void PushButton::ImplDrawPushButton( bool bLayout )
         }
         else
         {
-            if( ! bLayout )
-                ImplDrawPushButtonFrame( this, aInRect, nButtonStyle );
+            ImplDrawPushButtonFrame(rRenderContext, aInRect, nButtonStyle);
         }
 
         // draw content
-        ImplDrawPushButtonContent( this, 0, aInRect, bLayout, bDrawMenuSep );
+        ImplDrawPushButtonContent(&rRenderContext, DrawFlags::NONE, aInRect, bDrawMenuSep);
 
-        if( ! bLayout && HasFocus() )
+        if (HasFocus())
         {
-            ShowFocus( ImplGetFocusRect() );
+            ShowFocus(ImplGetFocusRect());
         }
     }
 }
@@ -1259,19 +1263,19 @@ void PushButton::ImplSetDefButton( bool bSet )
     int dLeft(0), dRight(0), dTop(0), dBottom(0);
     bool bSetPos = false;
 
-    if ( IsNativeControlSupported(CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL) )
+    if ( IsNativeControlSupported(ControlType::Pushbutton, ControlPart::Entire) )
     {
-        Rectangle aBound, aCont;
-        Rectangle aCtrlRect( 0, 0, 80, 20 ); // use a constant size to avoid accumulating
+        tools::Rectangle aBound, aCont;
+        tools::Rectangle aCtrlRect( 0, 0, 80, 20 ); // use a constant size to avoid accumulating
                                              // will not work if the theme has dynamic adornment sizes
         ImplControlValue aControlValue;
-        Rectangle        aCtrlRegion( aCtrlRect );
-        ControlState     nState = CTRL_STATE_DEFAULT|CTRL_STATE_ENABLED;
+        tools::Rectangle        aCtrlRegion( aCtrlRect );
+        ControlState     nState = ControlState::DEFAULT|ControlState::ENABLED;
 
         // get native size of a 'default' button
         // and adjust the VCL button if more space for adornment is required
-        if( GetNativeControlRegion( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL, aCtrlRegion,
-                                nState, aControlValue, OUString(),
+        if( GetNativeControlRegion( ControlType::Pushbutton, ControlPart::Entire, aCtrlRegion,
+                                nState, aControlValue,
                                 aBound, aCont ) )
         {
             dLeft = aCont.Left() - aBound.Left();
@@ -1284,35 +1288,35 @@ void PushButton::ImplSetDefButton( bool bSet )
 
     if ( bSet )
     {
-        if( !(ImplGetButtonState() & BUTTON_DRAW_DEFAULT) && bSetPos )
+        if( !(ImplGetButtonState() & DrawButtonFlags::Default) && bSetPos )
         {
             // adjust pos/size when toggling from non-default to default
             aPos.Move(-dLeft, -dTop);
             aSize.Width() += dLeft + dRight;
             aSize.Height() += dTop + dBottom;
         }
-        ImplGetButtonState() |= BUTTON_DRAW_DEFAULT;
+        ImplGetButtonState() |= DrawButtonFlags::Default;
     }
     else
     {
-        if( (ImplGetButtonState() & BUTTON_DRAW_DEFAULT) && bSetPos )
+        if( (ImplGetButtonState() & DrawButtonFlags::Default) && bSetPos )
         {
             // adjust pos/size when toggling from default to non-default
             aPos.Move(dLeft, dTop);
             aSize.Width() -= dLeft + dRight;
             aSize.Height() -= dTop + dBottom;
         }
-        ImplGetButtonState() &= ~BUTTON_DRAW_DEFAULT;
+        ImplGetButtonState() &= ~DrawButtonFlags::Default;
     }
     if( bSetPos )
-        setPosSizePixel( aPos.X(), aPos.Y(), aSize.Width(), aSize.Height(), WINDOW_POSSIZE_ALL );
+        setPosSizePixel( aPos.X(), aPos.Y(), aSize.Width(), aSize.Height() );
 
     Invalidate();
 }
 
 bool PushButton::ImplIsDefButton() const
 {
-    return (ImplGetButtonState() & BUTTON_DRAW_DEFAULT) != 0;
+    return bool(ImplGetButtonState() & DrawButtonFlags::Default);
 }
 
 PushButton::PushButton( WindowType nType ) :
@@ -1322,27 +1326,10 @@ PushButton::PushButton( WindowType nType ) :
 }
 
 PushButton::PushButton( vcl::Window* pParent, WinBits nStyle ) :
-    Button( WINDOW_PUSHBUTTON )
+    Button( WindowType::PUSHBUTTON )
 {
     ImplInitPushButtonData();
     ImplInit( pParent, nStyle );
-}
-
-PushButton::PushButton( vcl::Window* pParent, const ResId& rResId ) :
-    Button( WINDOW_PUSHBUTTON )
-{
-    rResId.SetRT( RSC_PUSHBUTTON );
-    WinBits nStyle = ImplInitRes( rResId );
-    ImplInitPushButtonData();
-    ImplInit( pParent, nStyle );
-    ImplLoadRes( rResId );
-
-    if ( !(nStyle & WB_HIDE) )
-        Show();
-}
-
-PushButton::~PushButton()
-{
 }
 
 void PushButton::MouseButtonDown( const MouseEvent& rMEvt )
@@ -1350,17 +1337,17 @@ void PushButton::MouseButtonDown( const MouseEvent& rMEvt )
     if ( rMEvt.IsLeft() &&
          ImplHitTestPushButton( this, rMEvt.GetPosPixel() ) )
     {
-        sal_uInt16 nTrackFlags = 0;
+        StartTrackingFlags nTrackFlags = StartTrackingFlags::NONE;
 
         if ( ( GetStyle() & WB_REPEAT ) &&
              ! ( GetStyle() & WB_TOGGLE ) )
-            nTrackFlags |= STARTTRACK_BUTTONREPEAT;
+            nTrackFlags |= StartTrackingFlags::ButtonRepeat;
 
-        ImplGetButtonState() |= BUTTON_DRAW_PRESSED;
-        ImplDrawPushButton();
+        ImplGetButtonState() |= DrawButtonFlags::Pressed;
+        Invalidate();
         StartTracking( nTrackFlags );
 
-        if ( nTrackFlags & STARTTRACK_BUTTONREPEAT )
+        if ( nTrackFlags & StartTrackingFlags::ButtonRepeat )
             Click();
     }
 }
@@ -1369,7 +1356,7 @@ void PushButton::Tracking( const TrackingEvent& rTEvt )
 {
     if ( rTEvt.IsTrackingEnded() )
     {
-        if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
+        if ( ImplGetButtonState() & DrawButtonFlags::Pressed )
         {
             if ( !(GetStyle() & WB_NOPOINTERFOCUS) && !rTEvt.IsTrackingCanceled() )
                 GrabFocus();
@@ -1382,21 +1369,19 @@ void PushButton::Tracking( const TrackingEvent& rTEvt )
                     if ( IsChecked() )
                     {
                         Check( false );
-                        ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
+                        ImplGetButtonState() &= ~DrawButtonFlags::Pressed;
                     }
                     else
-                        Check( true );
+                        Check();
                 }
             }
             else
-                ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
+                ImplGetButtonState() &= ~DrawButtonFlags::Pressed;
 
 #ifdef USE_JAVA
-            GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-            if ( GetParent()->IsInPaint() )
-                GetParent()->Update();
+            GetParent()->Invalidate( tools::Rectangle( GetPosPixel(), GetSizePixel() ) );
 #else	// USE_JAVA
-            ImplDrawPushButton();
+            Invalidate();
 #endif	// USE_JAVA
 
             // do not call Click handler if aborted
@@ -1412,7 +1397,7 @@ void PushButton::Tracking( const TrackingEvent& rTEvt )
     {
         if ( ImplHitTestPushButton( this, rTEvt.GetMouseEvent().GetPosPixel() ) )
         {
-            if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
+            if ( ImplGetButtonState() & DrawButtonFlags::Pressed )
             {
                 if ( rTEvt.IsTrackingRepeat() && (GetStyle() & WB_REPEAT) &&
                      ! ( GetStyle() & WB_TOGGLE ) )
@@ -1420,27 +1405,23 @@ void PushButton::Tracking( const TrackingEvent& rTEvt )
             }
             else
             {
-                ImplGetButtonState() |= BUTTON_DRAW_PRESSED;
+                ImplGetButtonState() |= DrawButtonFlags::Pressed;
 #ifdef USE_JAVA
-                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                if ( GetParent()->IsInPaint() )
-                    GetParent()->Update();
+                GetParent()->Invalidate( tools::Rectangle( GetPosPixel(), GetSizePixel() ) );
 #else	// USE_JAVA
-                ImplDrawPushButton();
+                Invalidate();
 #endif	// USE_JAVA
             }
         }
         else
         {
-            if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
+            if ( ImplGetButtonState() & DrawButtonFlags::Pressed )
             {
-                ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
+                ImplGetButtonState() &= ~DrawButtonFlags::Pressed;
 #ifdef USE_JAVA
-                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                if ( GetParent()->IsInPaint() )
-                    GetParent()->Update();
+                GetParent()->Invalidate( tools::Rectangle( GetPosPixel(), GetSizePixel() ) );
 #else	// USE_JAVA
-                ImplDrawPushButton();
+                Invalidate();
 #endif	// USE_JAVA
             }
         }
@@ -1454,20 +1435,20 @@ void PushButton::KeyInput( const KeyEvent& rKEvt )
     if ( !aKeyCode.GetModifier() &&
          ((aKeyCode.GetCode() == KEY_RETURN) || (aKeyCode.GetCode() == KEY_SPACE)) )
     {
-        if ( !(ImplGetButtonState() & BUTTON_DRAW_PRESSED) )
+        if ( !(ImplGetButtonState() & DrawButtonFlags::Pressed) )
         {
-            ImplGetButtonState() |= BUTTON_DRAW_PRESSED;
-            ImplDrawPushButton();
+            ImplGetButtonState() |= DrawButtonFlags::Pressed;
+            Invalidate();
         }
 
         if ( ( GetStyle() & WB_REPEAT ) &&
              ! ( GetStyle() & WB_TOGGLE ) )
             Click();
     }
-    else if ( (ImplGetButtonState() & BUTTON_DRAW_PRESSED) && (aKeyCode.GetCode() == KEY_ESCAPE) )
+    else if ( (ImplGetButtonState() & DrawButtonFlags::Pressed) && (aKeyCode.GetCode() == KEY_ESCAPE) )
     {
-        ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
-        ImplDrawPushButton();
+        ImplGetButtonState() &= ~DrawButtonFlags::Pressed;
+        Invalidate();
     }
     else
         Button::KeyInput( rKEvt );
@@ -1477,7 +1458,7 @@ void PushButton::KeyUp( const KeyEvent& rKEvt )
 {
     vcl::KeyCode aKeyCode = rKEvt.GetKeyCode();
 
-    if ( (ImplGetButtonState() & BUTTON_DRAW_PRESSED) &&
+    if ( (ImplGetButtonState() & DrawButtonFlags::Pressed) &&
          ((aKeyCode.GetCode() == KEY_RETURN) || (aKeyCode.GetCode() == KEY_SPACE)) )
     {
         if ( GetStyle() & WB_TOGGLE )
@@ -1485,17 +1466,17 @@ void PushButton::KeyUp( const KeyEvent& rKEvt )
             if ( IsChecked() )
             {
                 Check( false );
-                ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
+                ImplGetButtonState() &= ~DrawButtonFlags::Pressed;
             }
             else
-                Check( true );
+                Check();
 
             Toggle();
         }
         else
-            ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
+            ImplGetButtonState() &= ~DrawButtonFlags::Pressed;
 
-        ImplDrawPushButton();
+        Invalidate();
 
         if ( !( ( GetStyle() & WB_REPEAT )  &&
                 ! ( GetStyle() & WB_TOGGLE ) ) )
@@ -1507,27 +1488,27 @@ void PushButton::KeyUp( const KeyEvent& rKEvt )
 
 void PushButton::FillLayoutData() const
 {
-    mpControlData->mpLayoutData = new vcl::ControlLayoutData();
-    const_cast<PushButton*>(this)->ImplDrawPushButton( true );
+    mpControlData->mpLayoutData.reset( new vcl::ControlLayoutData );
+    const_cast<PushButton*>(this)->Invalidate();
 }
 
-void PushButton::Paint( const Rectangle& )
+void PushButton::Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle&)
 {
-    ImplDrawPushButton();
+    ImplDrawPushButton(rRenderContext);
 }
 
 void PushButton::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
-                       sal_uLong nFlags )
+                       DrawFlags nFlags )
 {
     Point       aPos  = pDev->LogicToPixel( rPos );
     Size        aSize = pDev->LogicToPixel( rSize );
-    Rectangle   aRect( aPos, aSize );
+    tools::Rectangle   aRect( aPos, aSize );
     vcl::Font   aFont = GetDrawPixelFont( pDev );
 
     pDev->Push();
     pDev->SetMapMode();
     pDev->SetFont( aFont );
-    if ( nFlags & WINDOW_DRAW_MONO )
+    if ( nFlags & DrawFlags::Mono )
     {
         pDev->SetTextColor( Color( COL_BLACK ) );
     }
@@ -1548,14 +1529,14 @@ void PushButton::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
     pDev->SetTextFillColor();
 
     DecorationView aDecoView( pDev );
-    sal_uInt16 nButtonStyle = 0;
-    if ( nFlags & WINDOW_DRAW_MONO )
-        nButtonStyle |= BUTTON_DRAW_MONO;
+    DrawButtonFlags nButtonStyle = DrawButtonFlags::NONE;
+    if ( nFlags & DrawFlags::Mono )
+        nButtonStyle |= DrawButtonFlags::Mono;
     if ( IsChecked() )
-        nButtonStyle |= BUTTON_DRAW_CHECKED;
+        nButtonStyle |= DrawButtonFlags::Checked;
     aRect = aDecoView.DrawButton( aRect, nButtonStyle );
 
-    ImplDrawPushButtonContent( pDev, nFlags, aRect, false, true );
+    ImplDrawPushButtonContent( pDev, nFlags, aRect, true );
     pDev->Pop();
 }
 
@@ -1583,19 +1564,18 @@ void PushButton::StateChanged( StateChangedType nType )
 {
     Button::StateChanged( nType );
 
-    if ( (nType == StateChangedType::ENABLE) ||
-         (nType == StateChangedType::TEXT) ||
-         (nType == StateChangedType::IMAGE) ||
-         (nType == StateChangedType::DATA) ||
-         (nType == StateChangedType::STATE) ||
-         (nType == StateChangedType::UPDATEMODE) )
+    if ( (nType == StateChangedType::Enable) ||
+         (nType == StateChangedType::Text) ||
+         (nType == StateChangedType::Data) ||
+         (nType == StateChangedType::State) ||
+         (nType == StateChangedType::UpdateMode) )
     {
         if ( IsReallyVisible() && IsUpdateMode() )
             Invalidate();
     }
-    else if ( nType == StateChangedType::STYLE )
+    else if ( nType == StateChangedType::Style )
     {
-        SetStyle( ImplInitStyle( GetWindow( WINDOW_PREV ), GetStyle() ) );
+        SetStyle( ImplInitStyle( GetWindow( GetWindowType::Prev ), GetStyle() ) );
 
         bool bIsDefButton = ( GetStyle() & WB_DEFBUTTON ) != 0;
         bool bWasDefButton = ( GetPrevStyle() & WB_DEFBUTTON ) != 0;
@@ -1609,20 +1589,20 @@ void PushButton::StateChanged( StateChangedType nType )
                 Invalidate();
         }
     }
-    else if ( (nType == StateChangedType::ZOOM) ||
-              (nType == StateChangedType::CONTROLFONT) )
+    else if ( (nType == StateChangedType::Zoom) ||
+              (nType == StateChangedType::ControlFont) )
     {
-        ImplInitSettings( true, false, false );
+        ImplInitSettings( false );
         Invalidate();
     }
-    else if ( nType == StateChangedType::CONTROLFOREGROUND )
+    else if ( nType == StateChangedType::ControlForeground )
     {
-        ImplInitSettings( false, true, false );
+        ImplInitSettings( false );
         Invalidate();
     }
-    else if ( nType == StateChangedType::CONTROLBACKGROUND )
+    else if ( nType == StateChangedType::ControlBackground )
     {
-        ImplInitSettings( false, false, true );
+        ImplInitSettings( true );
         Invalidate();
     }
 }
@@ -1631,45 +1611,45 @@ void PushButton::DataChanged( const DataChangedEvent& rDCEvt )
 {
     Button::DataChanged( rDCEvt );
 
-    if ( (rDCEvt.GetType() == DATACHANGED_FONTS) ||
-         (rDCEvt.GetType() == DATACHANGED_FONTSUBSTITUTION) ||
-         ((rDCEvt.GetType() == DATACHANGED_SETTINGS) &&
-          (rDCEvt.GetFlags() & SETTINGS_STYLE)) )
+    if ( (rDCEvt.GetType() == DataChangedEventType::FONTS) ||
+         (rDCEvt.GetType() == DataChangedEventType::FONTSUBSTITUTION) ||
+         ((rDCEvt.GetType() == DataChangedEventType::SETTINGS) &&
+          (rDCEvt.GetFlags() & AllSettingsFlags::STYLE)) )
     {
-        ImplInitSettings( true, true, true );
+        ImplInitSettings( true );
         Invalidate();
     }
 }
 
 bool PushButton::PreNotify( NotifyEvent& rNEvt )
 {
-    const MouseEvent* pMouseEvt = NULL;
+    const MouseEvent* pMouseEvt = nullptr;
 
-    if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != NULL )
+    if( (rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != nullptr )
     {
         if( pMouseEvt->IsEnterWindow() || pMouseEvt->IsLeaveWindow() )
         {
             // trigger redraw as mouse over state has changed
 
             // TODO: move this to Window class or make it a member !!!
-            ControlType aCtrlType = 0;
+            ControlType aCtrlType = ControlType::Generic;
             switch( GetParent()->GetType() )
             {
-                case WINDOW_LISTBOX:
-                case WINDOW_MULTILISTBOX:
-                case WINDOW_TREELISTBOX:
-                    aCtrlType = CTRL_LISTBOX;
+                case WindowType::LISTBOX:
+                case WindowType::MULTILISTBOX:
+                case WindowType::TREELISTBOX:
+                    aCtrlType = ControlType::Listbox;
                     break;
 
-                case WINDOW_COMBOBOX:
-                case WINDOW_PATTERNBOX:
-                case WINDOW_NUMERICBOX:
-                case WINDOW_METRICBOX:
-                case WINDOW_CURRENCYBOX:
-                case WINDOW_DATEBOX:
-                case WINDOW_TIMEBOX:
-                case WINDOW_LONGCURRENCYBOX:
-                    aCtrlType = CTRL_COMBOBOX;
+                case WindowType::COMBOBOX:
+                case WindowType::PATTERNBOX:
+                case WindowType::NUMERICBOX:
+                case WindowType::METRICBOX:
+                case WindowType::CURRENCYBOX:
+                case WindowType::DATEBOX:
+                case WindowType::TIMEBOX:
+                case WindowType::LONGCURRENCYBOX:
+                    aCtrlType = ControlType::Combobox;
                     break;
                 default:
                     break;
@@ -1677,26 +1657,26 @@ bool PushButton::PreNotify( NotifyEvent& rNEvt )
 
             bool bDropDown = ( IsSymbol() && (GetSymbol()==SymbolType::SPIN_DOWN) && GetText().isEmpty() );
 
-            if( bDropDown && GetParent()->IsNativeControlSupported( aCtrlType, PART_ENTIRE_CONTROL) &&
-                   !GetParent()->IsNativeControlSupported( aCtrlType, PART_BUTTON_DOWN) )
+            if( bDropDown && GetParent()->IsNativeControlSupported( aCtrlType, ControlPart::Entire) &&
+                   !GetParent()->IsNativeControlSupported( aCtrlType, ControlPart::ButtonDown) )
             {
-                vcl::Window *pBorder = GetParent()->GetWindow( WINDOW_BORDER );
-                if(aCtrlType == CTRL_COMBOBOX)
+                vcl::Window *pBorder = GetParent()->GetWindow( GetWindowType::Border );
+                if(aCtrlType == ControlType::Combobox)
                 {
                     // only paint the button part to avoid flickering of the combobox text
                     Point aPt;
-                    Rectangle aClipRect( aPt, GetOutputSizePixel() );
+                    tools::Rectangle aClipRect( aPt, GetOutputSizePixel() );
                     aClipRect.SetPos(pBorder->ScreenToOutputPixel(OutputToScreenPixel(aClipRect.TopLeft())));
                     pBorder->Invalidate( aClipRect );
                 }
                 else
                 {
-                    pBorder->Invalidate( INVALIDATE_NOERASE );
+                    pBorder->Invalidate( InvalidateFlags::NoErase );
                     pBorder->Update();
                 }
             }
             else if( (GetStyle() & WB_FLATBUTTON) ||
-                     IsNativeControlSupported(CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL) )
+                     IsNativeControlSupported(ControlType::Pushbutton, ControlPart::Entire) )
             {
                 Invalidate();
             }
@@ -1708,7 +1688,7 @@ bool PushButton::PreNotify( NotifyEvent& rNEvt )
 
 void PushButton::Toggle()
 {
-    ImplCallEventListenersAndHandler( VCLEVENT_PUSHBUTTON_TOGGLE, maToggleHdl, this );
+    ImplCallEventListenersAndHandler( VclEventId::PushbuttonToggle, nullptr );
 }
 
 void PushButton::SetSymbol( SymbolType eSymbol )
@@ -1716,7 +1696,7 @@ void PushButton::SetSymbol( SymbolType eSymbol )
     if ( meSymbol != eSymbol )
     {
         meSymbol = eSymbol;
-        StateChanged( StateChangedType::DATA );
+        CompatStateChanged( StateChangedType::Data );
     }
 }
 
@@ -1725,12 +1705,12 @@ void PushButton::SetSymbolAlign( SymbolAlign eAlign )
     ImplSetSymbolAlign( eAlign );
 }
 
-void PushButton::SetDropDown( sal_uInt16 nStyle )
+void PushButton::SetDropDown( PushButtonDropdownStyle nStyle )
 {
     if ( mnDDStyle != nStyle )
     {
         mnDDStyle = nStyle;
-        StateChanged( StateChangedType::DATA );
+        CompatStateChanged( StateChangedType::Data );
     }
 }
 
@@ -1740,21 +1720,28 @@ void PushButton::SetState( TriState eState )
     {
         meState = eState;
         if ( meState == TRISTATE_FALSE )
-            ImplGetButtonState() &= ~(BUTTON_DRAW_CHECKED | BUTTON_DRAW_DONTKNOW);
+            ImplGetButtonState() &= ~DrawButtonFlags(DrawButtonFlags::Checked | DrawButtonFlags::DontKnow);
         else if ( meState == TRISTATE_TRUE )
         {
-            ImplGetButtonState() &= ~BUTTON_DRAW_DONTKNOW;
-            ImplGetButtonState() |= BUTTON_DRAW_CHECKED;
+            ImplGetButtonState() &= ~DrawButtonFlags::DontKnow;
+            ImplGetButtonState() |= DrawButtonFlags::Checked;
         }
         else // TRISTATE_INDET
         {
-            ImplGetButtonState() &= ~BUTTON_DRAW_CHECKED;
-            ImplGetButtonState() |= BUTTON_DRAW_DONTKNOW;
+            ImplGetButtonState() &= ~DrawButtonFlags::Checked;
+            ImplGetButtonState() |= DrawButtonFlags::DontKnow;
         }
 
-        StateChanged( StateChangedType::STATE );
+        CompatStateChanged( StateChangedType::State );
         Toggle();
     }
+}
+
+void PushButton::statusChanged(const css::frame::FeatureStateEvent& rEvent)
+{
+    Button::statusChanged(rEvent);
+    if (rEvent.State.has<bool>())
+        SetPressed(rEvent.State.get<bool>());
 }
 
 void PushButton::SetPressed( bool bPressed )
@@ -1762,22 +1749,23 @@ void PushButton::SetPressed( bool bPressed )
     if ( mbPressed != bPressed )
     {
         mbPressed = bPressed;
-        StateChanged( StateChangedType::DATA );
+        CompatStateChanged( StateChangedType::Data );
     }
 }
 
 void PushButton::EndSelection()
 {
-    EndTracking( ENDTRACK_CANCEL );
-    if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
+    EndTracking( TrackingEventFlags::Cancel );
+    if ( !IsDisposed() &&
+         ImplGetButtonState() & DrawButtonFlags::Pressed )
     {
-        ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
+        ImplGetButtonState() &= ~DrawButtonFlags::Pressed;
         if ( !mbPressed )
-            ImplDrawPushButton();
+            Invalidate();
     }
 }
 
-Size PushButton::CalcMinimumSize( long nMaxWidth ) const
+Size PushButton::CalcMinimumSize() const
 {
     Size aSize;
 
@@ -1788,18 +1776,18 @@ Size PushButton::CalcMinimumSize( long nMaxWidth ) const
         else
             aSize = Size( 26, 24 );
     }
-    else if ( IsImage() && ! (ImplGetButtonState() & BUTTON_DRAW_NOIMAGE) )
+    else if ( Button::HasImage() && ! (ImplGetButtonState() & DrawButtonFlags::NoImage) )
         aSize = GetModeImage().GetSizePixel();
-    if( mnDDStyle == PUSHBUTTON_DROPDOWN_MENUBUTTON )
+    if( mnDDStyle == PushButtonDropdownStyle::MenuButton ||
+        mnDDStyle == PushButtonDropdownStyle::SplitMenuButton )
     {
         long nSymbolSize = GetTextHeight() / 2 + 1;
         aSize.Width() += 2*nSymbolSize;
     }
-    if ( !PushButton::GetText().isEmpty() && ! (ImplGetButtonState() & BUTTON_DRAW_NOTEXT) )
+    if ( !PushButton::GetText().isEmpty() && ! (ImplGetButtonState() & DrawButtonFlags::NoText) )
     {
-        sal_uLong nDrawFlags = 0;
-        Size textSize = GetTextRect( Rectangle( Point(), Size( nMaxWidth ? nMaxWidth : 0x7fffffff, 0x7fffffff ) ),
-                                     PushButton::GetText(), ImplGetTextStyle( nDrawFlags ) ).GetSize();
+        Size textSize = GetTextRect( tools::Rectangle( Point(), Size( 0x7fffffff, 0x7fffffff ) ),
+                                     PushButton::GetText(), ImplGetTextStyle( DrawFlags::NONE ) ).GetSize();
         aSize.Width() += textSize.Width();
         aSize.Height() = std::max( aSize.Height(), long( textSize.Height() * 1.15 ) );
     }
@@ -1819,7 +1807,7 @@ Size PushButton::GetOptimalSize() const
     return CalcMinimumSize();
 }
 
-bool PushButton::set_property(const OString &rKey, const OString &rValue)
+bool PushButton::set_property(const OString &rKey, const OUString &rValue)
 {
     if (rKey == "has-default")
     {
@@ -1834,15 +1822,28 @@ bool PushButton::set_property(const OString &rKey, const OString &rValue)
     return true;
 }
 
+void PushButton::ShowFocus(const tools::Rectangle& rRect)
+{
+    if (IsNativeControlSupported(ControlType::Pushbutton, ControlPart::Focus))
+    {
+        ImplControlValue aControlValue;
+        tools::Rectangle aInRect(Point(), GetOutputSizePixel());
+        GetOutDev()->DrawNativeControl(ControlType::Pushbutton, ControlPart::Focus, aInRect,
+                                       ControlState::FOCUSED, aControlValue, OUString());
+    }
+    Button::ShowFocus(rRect);
+}
+
 void OKButton::ImplInit( vcl::Window* pParent, WinBits nStyle )
 {
+    set_id("ok");
     PushButton::ImplInit( pParent, nStyle );
 
-    SetText( Button::GetStandardText( BUTTON_OK ) );
+    SetText( Button::GetStandardText( StandardButtonType::OK ) );
 }
 
 OKButton::OKButton( vcl::Window* pParent, WinBits nStyle ) :
-    PushButton( WINDOW_OKBUTTON )
+    PushButton( WindowType::OKBUTTON )
 {
     ImplInit( pParent, nStyle );
 }
@@ -1881,13 +1882,14 @@ void OKButton::Click()
 
 void CancelButton::ImplInit( vcl::Window* pParent, WinBits nStyle )
 {
+    set_id("cancel");
     PushButton::ImplInit( pParent, nStyle );
 
-    SetText( Button::GetStandardText( BUTTON_CANCEL ) );
+    SetText( Button::GetStandardText( StandardButtonType::Cancel ) );
 }
 
 CancelButton::CancelButton( vcl::Window* pParent, WinBits nStyle ) :
-    PushButton( WINDOW_CANCELBUTTON )
+    PushButton( WindowType::CANCELBUTTON )
 {
     ImplInit( pParent, nStyle );
 }
@@ -1903,7 +1905,7 @@ void CancelButton::Click()
             if ( pParent->IsDialog() )
             {
                 if ( static_cast<Dialog*>(pParent)->IsInExecute() )
-                    static_cast<Dialog*>(pParent)->EndDialog( RET_CANCEL );
+                    static_cast<Dialog*>(pParent)->EndDialog();
                 // prevent recursive calls
                 else if ( !static_cast<Dialog*>(pParent)->IsInClose() )
                 {
@@ -1927,32 +1929,21 @@ void CancelButton::Click()
 CloseButton::CloseButton( vcl::Window* pParent, WinBits nStyle )
     : CancelButton(pParent, nStyle)
 {
-    SetText( Button::GetStandardText( BUTTON_CLOSE ) );
+    SetText( Button::GetStandardText( StandardButtonType::Close ) );
 }
 
 void HelpButton::ImplInit( vcl::Window* pParent, WinBits nStyle )
 {
+    set_id("help");
     PushButton::ImplInit( pParent, nStyle | WB_NOPOINTERFOCUS );
 
-    SetText( Button::GetStandardText( BUTTON_HELP ) );
+    SetText( Button::GetStandardText( StandardButtonType::Help ) );
 }
 
 HelpButton::HelpButton( vcl::Window* pParent, WinBits nStyle ) :
-    PushButton( WINDOW_HELPBUTTON )
+    PushButton( WindowType::HELPBUTTON )
 {
     ImplInit( pParent, nStyle );
-}
-
-HelpButton::HelpButton( vcl::Window* pParent, const ResId& rResId ) :
-    PushButton( WINDOW_HELPBUTTON )
-{
-    rResId.SetRT( RSC_HELPBUTTON );
-    WinBits nStyle = ImplInitRes( rResId );
-    ImplInit( pParent, nStyle );
-    ImplLoadRes( rResId );
-
-    if ( !(nStyle & WB_HIDE) )
-        Show();
 }
 
 void HelpButton::Click()
@@ -1981,15 +1972,15 @@ void RadioButton::ImplInitRadioButtonData()
 void RadioButton::ImplInit( vcl::Window* pParent, WinBits nStyle )
 {
     nStyle = ImplInitStyle(getPreviousSibling(pParent), nStyle);
-    Button::ImplInit( pParent, nStyle, NULL );
+    Button::ImplInit( pParent, nStyle, nullptr );
 
-    ImplInitSettings( true, true, true );
+    ImplInitSettings( true );
 }
 
 WinBits RadioButton::ImplInitStyle( const vcl::Window* pPrevWindow, WinBits nStyle )
 {
     if ( !(nStyle & WB_NOGROUP) &&
-         (!pPrevWindow || (pPrevWindow->GetType() != WINDOW_RADIOBUTTON)) )
+         (!pPrevWindow || (pPrevWindow->GetType() != WindowType::RADIOBUTTON)) )
         nStyle |= WB_GROUP;
     if ( !(nStyle & WB_NOTABSTOP) )
     {
@@ -2011,28 +2002,27 @@ const Color& RadioButton::GetCanonicalTextColor( const StyleSettings& _rStyle ) 
     return _rStyle.GetRadioCheckTextColor();
 }
 
-void RadioButton::ImplInitSettings( bool bFont,
-                                    bool bForeground, bool bBackground )
+void RadioButton::ImplInitSettings( bool bBackground )
 {
-    Button::ImplInitSettings( bFont, bForeground );
+    Button::ImplInitSettings();
 
     if ( bBackground )
     {
         vcl::Window* pParent = GetParent();
         if ( !IsControlBackground() &&
-            (pParent->IsChildTransparentModeEnabled() || IsNativeControlSupported( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL ) ) )
+            (pParent->IsChildTransparentModeEnabled() || IsNativeControlSupported( ControlType::Radiobutton, ControlPart::Entire ) ) )
         {
-            EnableChildTransparentMode( true );
-            SetParentClipMode( PARENTCLIPMODE_NOCLIP );
+            EnableChildTransparentMode();
+            SetParentClipMode( ParentClipMode::NoClip );
             SetPaintTransparent( true );
             SetBackground();
-            if( IsNativeControlSupported( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL ) )
+            if( IsNativeControlSupported( ControlType::Radiobutton, ControlPart::Entire ) )
                 mpWindowImpl->mbUseNativeFocus = ImplGetSVData()->maNWFData.mbNoFocusRects;
         }
         else
         {
             EnableChildTransparentMode( false );
-            SetParentClipMode( 0 );
+            SetParentClipMode();
             SetPaintTransparent( false );
 
             if ( IsControlBackground() )
@@ -2043,185 +2033,165 @@ void RadioButton::ImplInitSettings( bool bFont,
     }
 }
 
-void RadioButton::DrawRadioButtonState( )
+void RadioButton::DrawRadioButtonState(vcl::RenderContext& rRenderContext)
 {
-    ImplDrawRadioButtonState( );
+    ImplDrawRadioButtonState(rRenderContext);
 }
 
-void RadioButton::ImplInvalidateOrDrawRadioButtonState()
+void RadioButton::ImplDrawRadioButtonState(vcl::RenderContext& rRenderContext)
 {
-    if( ImplGetSVData()->maNWFData.mbCheckBoxNeedsErase )
-    {
-        if ( IsNativeControlSupported(CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL) )
-        {
-#ifdef USE_JAVA
-            Invalidate( maStateRect );
-            if ( IsInPaint() )
-                Update();
-#else	// USE_JAVA
-            Invalidate();
-            Update();
-#endif	// USE_JAVA
-            return;
-        }
-    }
-    ImplDrawRadioButtonState();
-}
-
-void RadioButton::ImplDrawRadioButtonState()
-{
-    bool   bNativeOK = false;
+    bool bNativeOK = false;
 
     // no native drawing for image radio buttons
-    if ( !maImage && (bNativeOK=IsNativeControlSupported(CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL)) )
+    if (!maImage && rRenderContext.IsNativeControlSupported(ControlType::Radiobutton, ControlPart::Entire))
     {
-        ImplControlValue            aControlValue( mbChecked ? BUTTONVALUE_ON : BUTTONVALUE_OFF );
-        Rectangle                   aCtrlRect( maStateRect.TopLeft(), maStateRect.GetSize() );
-        ControlState                nState = 0;
+        ImplControlValue aControlValue( mbChecked ? ButtonValue::On : ButtonValue::Off );
+        tools::Rectangle aCtrlRect(maStateRect.TopLeft(), maStateRect.GetSize());
+        ControlState nState = ControlState::NONE;
 
-        if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )   nState |= CTRL_STATE_PRESSED;
-        if ( HasFocus() )                       nState |= CTRL_STATE_FOCUSED;
-        if ( ImplGetButtonState() & BUTTON_DRAW_DEFAULT )   nState |= CTRL_STATE_DEFAULT;
-        if ( IsEnabled() )                      nState |= CTRL_STATE_ENABLED;
+        if (ImplGetButtonState() & DrawButtonFlags::Pressed)
+            nState |= ControlState::PRESSED;
+        if (HasFocus())
+            nState |= ControlState::FOCUSED;
+        if (ImplGetButtonState() & DrawButtonFlags::Default)
+            nState |= ControlState::DEFAULT;
+        if (IsEnabled())
+            nState |= ControlState::ENABLED;
 
-        if ( IsMouseOver() && maMouseRect.IsInside( GetPointerPosPixel() ) )
-            nState |= CTRL_STATE_ROLLOVER;
+        if (IsMouseOver() && maMouseRect.IsInside(GetPointerPosPixel()))
+            nState |= ControlState::ROLLOVER;
 
-        bNativeOK = DrawNativeControl( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL, aCtrlRect, nState,
-                    aControlValue,OUString() );
-
+        bNativeOK = rRenderContext.DrawNativeControl(ControlType::Radiobutton, ControlPart::Entire, aCtrlRect,
+                                                     nState, aControlValue, OUString());
     }
 
-    if ( !bNativeOK )
+    if (!bNativeOK)
     {
-        // kein Image-RadioButton
-        if ( !maImage )
+        if (!maImage)
         {
-            sal_uInt16 nStyle = ImplGetButtonState();
-            if ( !IsEnabled() )
-                nStyle |= BUTTON_DRAW_DISABLED;
-            if ( mbChecked )
-                nStyle |= BUTTON_DRAW_CHECKED;
-            Image aImage = GetRadioImage( GetSettings(), nStyle );
-            if ( IsZoom() )
-                DrawImage( maStateRect.TopLeft(), maStateRect.GetSize(), aImage );
+            DrawButtonFlags nStyle = ImplGetButtonState();
+            if (!IsEnabled())
+                nStyle |= DrawButtonFlags::Disabled;
+            if (mbChecked)
+                nStyle |= DrawButtonFlags::Checked;
+            Image aImage = GetRadioImage(rRenderContext.GetSettings(), nStyle);
+            if (IsZoom())
+                rRenderContext.DrawImage(maStateRect.TopLeft(), maStateRect.GetSize(), aImage);
             else
-                DrawImage( maStateRect.TopLeft(), aImage );
+                rRenderContext.DrawImage(maStateRect.TopLeft(), aImage);
         }
         else
         {
             HideFocus();
 
-            DecorationView          aDecoView( this );
-            const StyleSettings&    rStyleSettings = GetSettings().GetStyleSettings();
-            Rectangle               aImageRect  = maStateRect;
-            Size                    aImageSize  = maImage.GetSizePixel();
-            bool                    bEnabled    = IsEnabled();
-            sal_uInt16 nButtonStyle = FRAME_DRAW_DOUBLEIN;
+            DecorationView aDecoView(&rRenderContext);
+            const StyleSettings& rStyleSettings = rRenderContext.GetSettings().GetStyleSettings();
+            tools::Rectangle aImageRect  = maStateRect;
+            Size aImageSize = maImage.GetSizePixel();
+            bool bEnabled = IsEnabled();
+            DrawFrameStyle nButtonStyle = DrawFrameStyle::DoubleIn;
 
-            aImageSize.Width()  = CalcZoom( aImageSize.Width() );
-            aImageSize.Height() = CalcZoom( aImageSize.Height() );
+            aImageSize.Width()  = CalcZoom(aImageSize.Width());
+            aImageSize.Height() = CalcZoom(aImageSize.Height());
 
             // display border and selection status
-            aImageRect = aDecoView.DrawFrame( aImageRect, nButtonStyle );
-            if ( (ImplGetButtonState() & BUTTON_DRAW_PRESSED) || !bEnabled )
-                SetFillColor( rStyleSettings.GetFaceColor() );
+            aImageRect = aDecoView.DrawFrame(aImageRect, nButtonStyle);
+            if ((ImplGetButtonState() & DrawButtonFlags::Pressed) || !bEnabled)
+                rRenderContext.SetFillColor( rStyleSettings.GetFaceColor());
             else
-                SetFillColor( rStyleSettings.GetFieldColor() );
-            SetLineColor();
-            DrawRect( aImageRect );
+                rRenderContext.SetFillColor(rStyleSettings.GetFieldColor());
+            rRenderContext.SetLineColor();
+            rRenderContext.DrawRect(aImageRect);
 
             // display image
-            nButtonStyle = 0;
-            if ( !bEnabled )
+            DrawImageFlags nImageStyle = DrawImageFlags::NONE;
+            if (!bEnabled)
 #ifdef USE_JAVA
-                nButtonStyle |= IMAGE_DRAW_SEMITRANSPARENT;
+                nImageStyle |= DrawImageFlags::SemiTransparent;
 #else	// USE_JAVA
-                nButtonStyle |= IMAGE_DRAW_DISABLE;
+                nImageStyle |= DrawImageFlags::Disable;
 #endif	// USE_JAVA
 
-            Image *pImage = &maImage;
+            Image* pImage = &maImage;
 
-            Point aImagePos( aImageRect.TopLeft() );
-            aImagePos.X() += (aImageRect.GetWidth()-aImageSize.Width())/2;
-            aImagePos.Y() += (aImageRect.GetHeight()-aImageSize.Height())/2;
-            if ( IsZoom() )
-                DrawImage( aImagePos, aImageSize, *pImage, nButtonStyle );
+            Point aImagePos(aImageRect.TopLeft());
+            aImagePos.X() += (aImageRect.GetWidth() - aImageSize.Width()) / 2;
+            aImagePos.Y() += (aImageRect.GetHeight() - aImageSize.Height()) / 2;
+            if (IsZoom())
+                rRenderContext.DrawImage(aImagePos, aImageSize, *pImage, nImageStyle);
             else
-                DrawImage( aImagePos, *pImage, nButtonStyle );
+                rRenderContext.DrawImage(aImagePos, *pImage, nImageStyle);
 
             aImageRect.Left()++;
             aImageRect.Top()++;
             aImageRect.Right()--;
             aImageRect.Bottom()--;
 
-            ImplSetFocusRect( aImageRect );
+            ImplSetFocusRect(aImageRect);
 
-            if ( mbChecked )
+            if (mbChecked)
             {
-                SetLineColor( rStyleSettings.GetHighlightColor() );
-                SetFillColor();
-                if ( (aImageSize.Width() >= 20) || (aImageSize.Height() >= 20) )
+                rRenderContext.SetLineColor(rStyleSettings.GetHighlightColor());
+                rRenderContext.SetFillColor();
+                if ((aImageSize.Width() >= 20) || (aImageSize.Height() >= 20))
                 {
                     aImageRect.Left()++;
                     aImageRect.Top()++;
                     aImageRect.Right()--;
                     aImageRect.Bottom()--;
                 }
-                DrawRect( aImageRect );
+                rRenderContext.DrawRect(aImageRect);
                 aImageRect.Left()++;
                 aImageRect.Top()++;
                 aImageRect.Right()--;
                 aImageRect.Bottom()--;
-                DrawRect( aImageRect );
+                rRenderContext.DrawRect(aImageRect);
             }
 
-            if ( HasFocus() )
-                ShowFocus( ImplGetFocusRect() );
+            if (HasFocus())
+                ShowFocus(ImplGetFocusRect());
         }
     }
 }
 
-void RadioButton::ImplDraw( OutputDevice* pDev, sal_uLong nDrawFlags,
+void RadioButton::ImplDraw( OutputDevice* pDev, DrawFlags nDrawFlags,
                             const Point& rPos, const Size& rSize,
-                            const Size& rImageSize, Rectangle& rStateRect,
-                            Rectangle& rMouseRect, bool bLayout )
+                            const Size& rImageSize, tools::Rectangle& rStateRect,
+                            tools::Rectangle& rMouseRect )
 {
     WinBits                 nWinStyle = GetStyle();
     OUString                aText( GetText() );
-    MetricVector*           pVector = bLayout ? &mpControlData->mpLayoutData->m_aUnicodeBoundRects : NULL;
-    OUString*               pDisplayText = bLayout ? &mpControlData->mpLayoutData->m_aDisplayText : NULL;
 
     pDev->Push( PushFlags::CLIPREGION );
-    pDev->IntersectClipRegion( Rectangle( rPos, rSize ) );
+    pDev->IntersectClipRegion( tools::Rectangle( rPos, rSize ) );
 
     // no image radio button
     if ( !maImage )
     {
-        if ( ( !aText.isEmpty() && ! (ImplGetButtonState() & BUTTON_DRAW_NOTEXT) ) ||
-             ( HasImage() &&  ! (ImplGetButtonState() & BUTTON_DRAW_NOIMAGE) ) )
+        if ( ( !aText.isEmpty() && ! (ImplGetButtonState() & DrawButtonFlags::NoText) ) ||
+             ( HasImage() &&  ! (ImplGetButtonState() & DrawButtonFlags::NoImage) ) )
         {
-            sal_uInt16 nTextStyle = Button::ImplGetTextStyle( aText, nWinStyle, nDrawFlags );
+            DrawTextFlags nTextStyle = Button::ImplGetTextStyle( aText, nWinStyle, nDrawFlags );
 
 #ifdef USE_JAVA
-            if ( IsNativeControlSupported( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL ) )
+            if ( IsNativeControlSupported( ControlType::Radiobutton, ControlPart::Entire ) )
             {
                 ImplControlValue aControlValue;
-                ControlState nState = 0;
+                ControlState nState = ControlState::NONE;
                 Color aColor;
                 
-                if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
-                    nState |= CTRL_STATE_PRESSED;
+                if ( ImplGetButtonState() & DrawButtonFlags::Pressed )
+                    nState |= ControlState::PRESSED;
                 if ( HasFocus() )
-                    nState |= CTRL_STATE_FOCUSED;
-                if ( ImplGetButtonState() & BUTTON_DRAW_DEFAULT )
-                    nState |= CTRL_STATE_DEFAULT;
+                    nState |= ControlState::FOCUSED;
+                if ( ImplGetButtonState() & DrawButtonFlags::Default )
+                    nState |= ControlState::DEFAULT;
                 if ( Window::IsEnabled() )
-                    nState |= CTRL_STATE_ENABLED;
+                    nState |= ControlState::ENABLED;
                 if ( IsMouseOver() )
-                    nState |= CTRL_STATE_ROLLOVER;
+                    nState |= ControlState::ROLLOVER;
         
-                if ( GetNativeControlTextColor( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL, nState, aControlValue, aColor ) )
+                if ( GetNativeControlTextColor( ControlType::Radiobutton, ControlPart::Entire, nState, aControlValue, aColor ) )
                     SetTextColor( aColor );
             }
 #endif	// USE_JAVA
@@ -2237,15 +2207,14 @@ void RadioButton::ImplDraw( OutputDevice* pDev, sal_uLong nDrawFlags,
             if( (nWinStyle & (WB_TOP|WB_VCENTER|WB_BOTTOM)) == 0 &&
                 (rImageSize.Height() > rSize.Height() || ! (nWinStyle & WB_WORDBREAK)  ) )
             {
-                nTextStyle &= ~(TEXT_DRAW_TOP|TEXT_DRAW_BOTTOM);
-                nTextStyle |= TEXT_DRAW_VCENTER;
+                nTextStyle &= ~DrawTextFlags(DrawTextFlags::Top|DrawTextFlags::Bottom);
+                nTextStyle |= DrawTextFlags::VCenter;
                 aSize.Height() = rImageSize.Height();
             }
 
-            ImplDrawAlignedImage( pDev, aPos, aSize, bLayout, 1,
-                                  nDrawFlags, nTextStyle, NULL );
+            ImplDrawAlignedImage( pDev, aPos, aSize, 1, nDrawFlags, nTextStyle );
 
-            rMouseRect          = Rectangle( aPos, aSize );
+            rMouseRect          = tools::Rectangle( aPos, aSize );
             rMouseRect.Left()   = rPos.X();
 
             rStateRect.Left()   = rPos.X();
@@ -2300,12 +2269,12 @@ void RadioButton::ImplDraw( OutputDevice* pDev, sal_uLong nDrawFlags,
     {
         bool        bTopImage   = (nWinStyle & WB_TOP) != 0;
         Size        aImageSize  = maImage.GetSizePixel();
-        Rectangle   aImageRect( rPos, rSize );
+        tools::Rectangle   aImageRect( rPos, rSize );
         long        nTextHeight = pDev->GetTextHeight();
         long        nTextWidth  = pDev->GetCtrlTextWidth( aText );
 
         // calculate position and sizes
-        if ( !aText.isEmpty() && ! (ImplGetButtonState() & BUTTON_DRAW_NOTEXT) )
+        if ( !aText.isEmpty() && ! (ImplGetButtonState() & DrawButtonFlags::NoText) )
         {
             Size aTmpSize( (aImageSize.Width()+8), (aImageSize.Height()+8) );
             if ( bTopImage )
@@ -2331,7 +2300,7 @@ void RadioButton::ImplDraw( OutputDevice* pDev, sal_uLong nDrawFlags,
                 aTxtPos.X() += aImageRect.Right()+8;
                 aTxtPos.Y() += (rSize.Height()-nTextHeight)/2;
             }
-            pDev->DrawCtrlText( aTxtPos, aText, 0, aText.getLength(), TEXT_DRAW_MNEMONIC, pVector, pDisplayText );
+            pDev->DrawCtrlText( aTxtPos, aText, 0, aText.getLength() );
         }
 
         rMouseRect = aImageRect;
@@ -2341,30 +2310,27 @@ void RadioButton::ImplDraw( OutputDevice* pDev, sal_uLong nDrawFlags,
     pDev->Pop();
 }
 
-void RadioButton::ImplDrawRadioButton( bool bLayout )
+void RadioButton::ImplDrawRadioButton(vcl::RenderContext& rRenderContext)
 {
-    if( !bLayout )
-        HideFocus();
+    HideFocus();
 
     Size aImageSize;
-    if ( !maImage )
+    if (!maImage)
         aImageSize = ImplGetRadioImageSize();
     else
         aImageSize  = maImage.GetSizePixel();
-    aImageSize.Width()  = CalcZoom( aImageSize.Width() );
-    aImageSize.Height() = CalcZoom( aImageSize.Height() );
+
+    aImageSize.Width()  = CalcZoom(aImageSize.Width());
+    aImageSize.Height() = CalcZoom(aImageSize.Height());
 
     // Draw control text
-    ImplDraw( this, 0, Point(), GetOutputSizePixel(),
-              aImageSize, maStateRect, maMouseRect, bLayout );
+    ImplDraw(&rRenderContext, DrawFlags::NONE, Point(), GetOutputSizePixel(),
+             aImageSize, maStateRect, maMouseRect);
 
-    if( !bLayout || IsNativeControlSupported(CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL) )
-    {
-        if ( !maImage && HasFocus() )
-            ShowFocus( ImplGetFocusRect() );
+    if (!maImage && HasFocus())
+        ShowFocus(ImplGetFocusRect());
 
-        ImplDrawRadioButtonState();
-    }
+    ImplDrawRadioButtonState(rRenderContext);
 }
 
 void RadioButton::group(RadioButton &rOther)
@@ -2374,20 +2340,20 @@ void RadioButton::group(RadioButton &rOther)
 
     if (!m_xGroup)
     {
-        m_xGroup.reset(new std::vector<RadioButton*>);
+        m_xGroup.reset(new std::vector<VclPtr<RadioButton> >);
         m_xGroup->push_back(this);
     }
 
-    std::vector<RadioButton*>::iterator aFind = std::find(m_xGroup->begin(), m_xGroup->end(), &rOther);
+    auto aFind = std::find(m_xGroup->begin(), m_xGroup->end(), VclPtr<RadioButton>(&rOther));
     if (aFind == m_xGroup->end())
     {
         m_xGroup->push_back(&rOther);
 
         if (rOther.m_xGroup)
         {
-            std::vector< RadioButton* > aOthers(rOther.GetRadioButtonGroup(false));
+            std::vector< VclPtr<RadioButton> > aOthers(rOther.GetRadioButtonGroup(false));
             //make all members of the group share the same button group
-            for (std::vector<RadioButton*>::iterator aI = aOthers.begin(), aEnd = aOthers.end(); aI != aEnd; ++aI)
+            for (auto aI = aOthers.begin(), aEnd = aOthers.end(); aI != aEnd; ++aI)
             {
                 aFind = std::find(m_xGroup->begin(), m_xGroup->end(), *aI);
                 if (aFind == m_xGroup->end())
@@ -2396,10 +2362,8 @@ void RadioButton::group(RadioButton &rOther)
         }
 
         //make all members of the group share the same button group
-        for (std::vector<RadioButton*>::iterator aI = m_xGroup->begin(), aEnd = m_xGroup->end();
-            aI != aEnd; ++aI)
+        for (VclPtr<RadioButton> const & pButton : *m_xGroup)
         {
-            RadioButton* pButton = *aI;
             pButton->m_xGroup = m_xGroup;
         }
     }
@@ -2409,16 +2373,15 @@ void RadioButton::group(RadioButton &rOther)
         ImplUncheckAllOther();
 }
 
-std::vector< RadioButton* > RadioButton::GetRadioButtonGroup(bool bIncludeThis) const
+std::vector< VclPtr<RadioButton> > RadioButton::GetRadioButtonGroup(bool bIncludeThis) const
 {
     if (m_xGroup)
     {
         if (bIncludeThis)
             return *m_xGroup;
-        std::vector< RadioButton* > aGroup;
-        for (std::vector<RadioButton*>::iterator aI = m_xGroup->begin(), aEnd = m_xGroup->end(); aI != aEnd; ++aI)
+        std::vector< VclPtr<RadioButton> > aGroup;
+        for (VclPtr<RadioButton> const & pRadioButton : *m_xGroup)
         {
-            RadioButton *pRadioButton = *aI;
             if (pRadioButton == this)
                 continue;
             aGroup.push_back(pRadioButton);
@@ -2427,28 +2390,27 @@ std::vector< RadioButton* > RadioButton::GetRadioButtonGroup(bool bIncludeThis) 
     }
 
     //old-school
-    SAL_WARN("vcl.control", "No new-style group set on radiobutton <" << GetHelpId() << "> using old-style digging around");
 
     // go back to first in group;
     vcl::Window* pFirst = const_cast<RadioButton*>(this);
     while( ( pFirst->GetStyle() & WB_GROUP ) == 0 )
     {
-        vcl::Window* pWindow = pFirst->GetWindow( WINDOW_PREV );
+        vcl::Window* pWindow = pFirst->GetWindow( GetWindowType::Prev );
         if( pWindow )
             pFirst = pWindow;
         else
             break;
     }
-    std::vector< RadioButton* > aGroup;
+    std::vector< VclPtr<RadioButton> > aGroup;
     // insert radiobuttons up to next group
     do
     {
-        if( pFirst->GetType() == WINDOW_RADIOBUTTON )
+        if( pFirst->GetType() == WindowType::RADIOBUTTON )
         {
             if( pFirst != this || bIncludeThis )
                 aGroup.push_back( static_cast<RadioButton*>(pFirst) );
         }
-        pFirst = pFirst->GetWindow( WINDOW_NEXT );
+        pFirst = pFirst->GetWindow( GetWindowType::Next );
     } while( pFirst && ( ( pFirst->GetStyle() & WB_GROUP ) == 0 ) );
 
     return aGroup;
@@ -2458,19 +2420,16 @@ void RadioButton::ImplUncheckAllOther()
 {
     mpWindowImpl->mnStyle |= WB_TABSTOP;
 
-    std::vector<RadioButton*> aGroup(GetRadioButtonGroup(false));
+    std::vector<VclPtr<RadioButton> > aGroup(GetRadioButtonGroup(false));
     // iterate over radio button group and checked buttons
-    for (std::vector<RadioButton*>::iterator aI = aGroup.begin(), aEnd = aGroup.end(); aI != aEnd; ++aI)
+    for (auto aI = aGroup.begin(), aEnd = aGroup.end(); aI != aEnd; ++aI)
     {
-        RadioButton *pWindow = *aI;
+        VclPtr<RadioButton> pWindow = *aI;
         if ( pWindow->IsChecked() )
         {
-            ImplDelData aDelData;
-            pWindow->ImplAddDel( &aDelData );
             pWindow->SetState( false );
-            if ( aDelData.IsDead() )
+            if ( pWindow->IsDisposed() )
                 return;
-            pWindow->ImplRemoveDel( &aDelData );
         }
 
         // not inside if clause to always remove wrongly set WB_TABSTOPS
@@ -2478,78 +2437,62 @@ void RadioButton::ImplUncheckAllOther()
     }
 }
 
-void RadioButton::ImplCallClick( bool bGrabFocus, sal_uInt16 nFocusFlags )
+void RadioButton::ImplCallClick( bool bGrabFocus, GetFocusFlags nFocusFlags )
 {
     mbStateChanged = !mbChecked;
     mbChecked = true;
     mpWindowImpl->mnStyle |= WB_TABSTOP;
-    ImplInvalidateOrDrawRadioButtonState();
-    ImplDelData aDelData;
-    ImplAddDel( &aDelData );
+    Invalidate();
+    Update();
+    VclPtr<vcl::Window> xWindow = this;
     if ( mbRadioCheck )
         ImplUncheckAllOther();
-    if ( aDelData.IsDead() )
+    if ( xWindow->IsDisposed() )
         return;
     if ( bGrabFocus )
         ImplGrabFocus( nFocusFlags );
-    if ( aDelData.IsDead() )
+    if ( xWindow->IsDisposed() )
         return;
     if ( mbStateChanged )
         Toggle();
-    if ( aDelData.IsDead() )
+    if ( xWindow->IsDisposed() )
         return;
     Click();
-    if ( aDelData.IsDead() )
+    if ( xWindow->IsDisposed() )
         return;
-    ImplRemoveDel( &aDelData );
     mbStateChanged = false;
 }
 
 RadioButton::RadioButton( vcl::Window* pParent, WinBits nStyle ) :
-    Button( WINDOW_RADIOBUTTON ), mbLegacyNoTextAlign( false )
+    Button( WindowType::RADIOBUTTON ), mbLegacyNoTextAlign( false )
 {
     ImplInitRadioButtonData();
     ImplInit( pParent, nStyle );
-}
-
-RadioButton::RadioButton( vcl::Window* pParent, const ResId& rResId ) :
-    Button( WINDOW_RADIOBUTTON ), mbLegacyNoTextAlign( false )
-{
-    rResId.SetRT( RSC_RADIOBUTTON );
-    WinBits nStyle = ImplInitRes( rResId );
-    ImplInitRadioButtonData();
-    ImplInit( pParent, nStyle );
-    ImplLoadRes( rResId );
-
-    if ( !(nStyle & WB_HIDE) )
-        Show();
-}
-
-void RadioButton::ImplLoadRes( const ResId& rResId )
-{
-    Button::ImplLoadRes( rResId );
-
-    //anderer Wert als Default ?
-    sal_uInt16 nChecked = ReadShortRes();
-    if ( nChecked )
-        SetState( true );
 }
 
 RadioButton::~RadioButton()
 {
+    disposeOnce();
+}
+
+void RadioButton::dispose()
+{
     if (m_xGroup)
     {
-        m_xGroup->erase(std::remove(m_xGroup->begin(), m_xGroup->end(), this),
-            m_xGroup->end());
+        m_xGroup->erase(std::remove(m_xGroup->begin(), m_xGroup->end(), VclPtr<RadioButton>(this)),
+                        m_xGroup->end());
+        m_xGroup.reset();
     }
+    Button::dispose();
 }
 
 void RadioButton::MouseButtonDown( const MouseEvent& rMEvt )
 {
     if ( rMEvt.IsLeft() && maMouseRect.IsInside( rMEvt.GetPosPixel() ) )
     {
-        ImplGetButtonState() |= BUTTON_DRAW_PRESSED;
-        ImplInvalidateOrDrawRadioButtonState();
+        ImplGetButtonState() |= DrawButtonFlags::Pressed;
+        Invalidate();
+        Update();
         StartTracking();
         return;
     }
@@ -2561,36 +2504,41 @@ void RadioButton::Tracking( const TrackingEvent& rTEvt )
 {
     if ( rTEvt.IsTrackingEnded() )
     {
-        if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
+        if ( ImplGetButtonState() & DrawButtonFlags::Pressed )
         {
             if ( !(GetStyle() & WB_NOPOINTERFOCUS) && !rTEvt.IsTrackingCanceled() )
                 GrabFocus();
 
-            ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
+            ImplGetButtonState() &= ~DrawButtonFlags::Pressed;
 
             // do not call click handler if aborted
             if ( !rTEvt.IsTrackingCanceled() )
                 ImplCallClick();
             else
-                ImplInvalidateOrDrawRadioButtonState();
+            {
+                Invalidate();
+                Update();
+            }
         }
     }
     else
     {
         if ( maMouseRect.IsInside( rTEvt.GetMouseEvent().GetPosPixel() ) )
         {
-            if ( !(ImplGetButtonState() & BUTTON_DRAW_PRESSED) )
+            if ( !(ImplGetButtonState() & DrawButtonFlags::Pressed) )
             {
-                ImplGetButtonState() |= BUTTON_DRAW_PRESSED;
-                ImplInvalidateOrDrawRadioButtonState();
+                ImplGetButtonState() |= DrawButtonFlags::Pressed;
+                Invalidate();
+                Update();
             }
         }
         else
         {
-            if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
+            if ( ImplGetButtonState() & DrawButtonFlags::Pressed )
             {
-                ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
-                ImplInvalidateOrDrawRadioButtonState();
+                ImplGetButtonState() &= ~DrawButtonFlags::Pressed;
+                Invalidate();
+                Update();
             }
         }
     }
@@ -2602,16 +2550,18 @@ void RadioButton::KeyInput( const KeyEvent& rKEvt )
 
     if ( !aKeyCode.GetModifier() && (aKeyCode.GetCode() == KEY_SPACE) )
     {
-        if ( !(ImplGetButtonState() & BUTTON_DRAW_PRESSED) )
+        if ( !(ImplGetButtonState() & DrawButtonFlags::Pressed) )
         {
-            ImplGetButtonState() |= BUTTON_DRAW_PRESSED;
-            ImplInvalidateOrDrawRadioButtonState();
+            ImplGetButtonState() |= DrawButtonFlags::Pressed;
+            Invalidate();
+            Update();
         }
     }
-    else if ( (ImplGetButtonState() & BUTTON_DRAW_PRESSED) && (aKeyCode.GetCode() == KEY_ESCAPE) )
+    else if ( (ImplGetButtonState() & DrawButtonFlags::Pressed) && (aKeyCode.GetCode() == KEY_ESCAPE) )
     {
-        ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
-        ImplInvalidateOrDrawRadioButtonState();
+        ImplGetButtonState() &= ~DrawButtonFlags::Pressed;
+        Invalidate();
+        Update();
     }
     else
         Button::KeyInput( rKEvt );
@@ -2621,9 +2571,9 @@ void RadioButton::KeyUp( const KeyEvent& rKEvt )
 {
     vcl::KeyCode aKeyCode = rKEvt.GetKeyCode();
 
-    if ( (ImplGetButtonState() & BUTTON_DRAW_PRESSED) && (aKeyCode.GetCode() == KEY_SPACE) )
+    if ( (ImplGetButtonState() & DrawButtonFlags::Pressed) && (aKeyCode.GetCode() == KEY_SPACE) )
     {
-        ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
+        ImplGetButtonState() &= ~DrawButtonFlags::Pressed;
         ImplCallClick();
     }
     else
@@ -2632,29 +2582,29 @@ void RadioButton::KeyUp( const KeyEvent& rKEvt )
 
 void RadioButton::FillLayoutData() const
 {
-    mpControlData->mpLayoutData = new vcl::ControlLayoutData();
-    const_cast<RadioButton*>(this)->ImplDrawRadioButton( true );
+    mpControlData->mpLayoutData.reset( new vcl::ControlLayoutData );
+    const_cast<RadioButton*>(this)->Invalidate();
 }
 
-void RadioButton::Paint( const Rectangle& )
+void RadioButton::Paint( vcl::RenderContext& rRenderContext, const tools::Rectangle& )
 {
-    ImplDrawRadioButton();
+    ImplDrawRadioButton(rRenderContext);
 }
 
 void RadioButton::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
-                        sal_uLong nFlags )
+                        DrawFlags nFlags )
 {
     if ( !maImage )
     {
-        MapMode     aResMapMode( MAP_100TH_MM );
+        MapMode     aResMapMode( MapUnit::Map100thMM );
         Point       aPos  = pDev->LogicToPixel( rPos );
         Size        aSize = pDev->LogicToPixel( rSize );
         Size        aImageSize = pDev->LogicToPixel( Size( 300, 300 ), aResMapMode );
         Size        aBrd1Size = pDev->LogicToPixel( Size( 20, 20 ), aResMapMode );
         Size        aBrd2Size = pDev->LogicToPixel( Size( 60, 60 ), aResMapMode );
         vcl::Font   aFont = GetDrawPixelFont( pDev );
-        Rectangle   aStateRect;
-        Rectangle   aMouseRect;
+        tools::Rectangle   aStateRect;
+        tools::Rectangle   aMouseRect;
 
         aImageSize.Width()  = CalcZoom( aImageSize.Width() );
         aImageSize.Height() = CalcZoom( aImageSize.Height() );
@@ -2675,7 +2625,7 @@ void RadioButton::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize
         pDev->Push();
         pDev->SetMapMode();
         pDev->SetFont( aFont );
-        if ( nFlags & WINDOW_DRAW_MONO )
+        if ( nFlags & DrawFlags::Mono )
             pDev->SetTextColor( Color( COL_BLACK ) );
         else
             pDev->SetTextColor( GetTextColor() );
@@ -2690,11 +2640,11 @@ void RadioButton::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize
 
         pDev->SetLineColor();
         pDev->SetFillColor( Color( COL_BLACK ) );
-        pDev->DrawPolygon( Polygon( aCenterPos, nRadX, nRadY ) );
+        pDev->DrawPolygon( tools::Polygon( aCenterPos, nRadX, nRadY ) );
         nRadX -= aBrd1Size.Width();
         nRadY -= aBrd1Size.Height();
         pDev->SetFillColor( Color( COL_WHITE ) );
-        pDev->DrawPolygon( Polygon( aCenterPos, nRadX, nRadY ) );
+        pDev->DrawPolygon( tools::Polygon( aCenterPos, nRadX, nRadY ) );
         if ( mbChecked )
         {
             nRadX -= aBrd1Size.Width();
@@ -2704,7 +2654,7 @@ void RadioButton::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize
             if ( !nRadY )
                 nRadY = 1;
             pDev->SetFillColor( Color( COL_BLACK ) );
-            pDev->DrawPolygon( Polygon( aCenterPos, nRadX, nRadY ) );
+            pDev->DrawPolygon( tools::Polygon( aCenterPos, nRadX, nRadY ) );
         }
 
         pDev->Pop();
@@ -2730,10 +2680,11 @@ void RadioButton::GetFocus()
 
 void RadioButton::LoseFocus()
 {
-    if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
+    if ( ImplGetButtonState() & DrawButtonFlags::Pressed )
     {
-        ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
-        ImplInvalidateOrDrawRadioButtonState();
+        ImplGetButtonState() &= ~DrawButtonFlags::Pressed;
+        Invalidate();
+        Update();
     }
 
     HideFocus();
@@ -2744,23 +2695,22 @@ void RadioButton::StateChanged( StateChangedType nType )
 {
     Button::StateChanged( nType );
 
-    if ( nType == StateChangedType::STATE )
+    if ( nType == StateChangedType::State )
     {
         if ( IsReallyVisible() && IsUpdateMode() )
             Invalidate( maStateRect );
     }
-    else if ( (nType == StateChangedType::ENABLE) ||
-              (nType == StateChangedType::TEXT) ||
-              (nType == StateChangedType::IMAGE) ||
-              (nType == StateChangedType::DATA) ||
-              (nType == StateChangedType::UPDATEMODE) )
+    else if ( (nType == StateChangedType::Enable) ||
+              (nType == StateChangedType::Text) ||
+              (nType == StateChangedType::Data) ||
+              (nType == StateChangedType::UpdateMode) )
     {
         if ( IsUpdateMode() )
             Invalidate();
     }
-    else if ( nType == StateChangedType::STYLE )
+    else if ( nType == StateChangedType::Style )
     {
-        SetStyle( ImplInitStyle( GetWindow( WINDOW_PREV ), GetStyle() ) );
+        SetStyle( ImplInitStyle( GetWindow( GetWindowType::Prev ), GetStyle() ) );
 
         if ( (GetPrevStyle() & RADIOBUTTON_VIEW_STYLE) !=
              (GetStyle() & RADIOBUTTON_VIEW_STYLE) )
@@ -2769,20 +2719,20 @@ void RadioButton::StateChanged( StateChangedType nType )
                 Invalidate();
         }
     }
-    else if ( (nType == StateChangedType::ZOOM) ||
-              (nType == StateChangedType::CONTROLFONT) )
+    else if ( (nType == StateChangedType::Zoom) ||
+              (nType == StateChangedType::ControlFont) )
     {
-        ImplInitSettings( true, false, false );
+        ImplInitSettings( false );
         Invalidate();
     }
-    else if ( nType == StateChangedType::CONTROLFOREGROUND )
+    else if ( nType == StateChangedType::ControlForeground )
     {
-        ImplInitSettings( false, true, false );
+        ImplInitSettings( false );
         Invalidate();
     }
-    else if ( nType == StateChangedType::CONTROLBACKGROUND )
+    else if ( nType == StateChangedType::ControlBackground )
     {
-        ImplInitSettings( false, false, true );
+        ImplInitSettings( true );
         Invalidate();
     }
 }
@@ -2791,27 +2741,27 @@ void RadioButton::DataChanged( const DataChangedEvent& rDCEvt )
 {
     Button::DataChanged( rDCEvt );
 
-    if ( (rDCEvt.GetType() == DATACHANGED_FONTS) ||
-         (rDCEvt.GetType() == DATACHANGED_FONTSUBSTITUTION) ||
-         ((rDCEvt.GetType() == DATACHANGED_SETTINGS) &&
-          (rDCEvt.GetFlags() & SETTINGS_STYLE)) )
+    if ( (rDCEvt.GetType() == DataChangedEventType::FONTS) ||
+         (rDCEvt.GetType() == DataChangedEventType::FONTSUBSTITUTION) ||
+         ((rDCEvt.GetType() == DataChangedEventType::SETTINGS) &&
+          (rDCEvt.GetFlags() & AllSettingsFlags::STYLE)) )
     {
-        ImplInitSettings( true, true, true );
+        ImplInitSettings( true );
         Invalidate();
     }
 }
 
 bool RadioButton::PreNotify( NotifyEvent& rNEvt )
 {
-    const MouseEvent* pMouseEvt = NULL;
+    const MouseEvent* pMouseEvt = nullptr;
 
-    if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != NULL )
+    if( (rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != nullptr )
     {
 #ifndef USE_JAVA
         if( !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
         {
             // trigger redraw if mouse over state has changed
-            if( IsNativeControlSupported(CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL) )
+            if( IsNativeControlSupported(ControlType::Radiobutton, ControlPart::Entire) )
             {
                 if( ( maMouseRect.IsInside( GetPointerPosPixel()) &&
                      !maMouseRect.IsInside( GetLastPointerPosPixel()) ) ||
@@ -2831,7 +2781,7 @@ bool RadioButton::PreNotify( NotifyEvent& rNEvt )
 
 void RadioButton::Toggle()
 {
-    ImplCallEventListenersAndHandler( VCLEVENT_RADIOBUTTON_TOGGLE, maToggleHdl, this );
+    ImplCallEventListenersAndHandler( VclEventId::RadiobuttonToggle, [this] () { maToggleHdl.Call(*this); } );
 }
 
 bool RadioButton::SetModeRadioImage( const Image& rImage )
@@ -2839,7 +2789,7 @@ bool RadioButton::SetModeRadioImage( const Image& rImage )
     if ( rImage != maImage )
     {
         maImage = rImage;
-        StateChanged( StateChangedType::DATA );
+        CompatStateChanged( StateChangedType::Data );
         queue_resize();
     }
     return true;
@@ -2857,12 +2807,12 @@ void RadioButton::SetState( bool bCheck )
     if ( mbChecked != bCheck )
     {
         mbChecked = bCheck;
-        StateChanged( StateChangedType::STATE );
+        CompatStateChanged( StateChangedType::State );
         Toggle();
     }
 }
 
-bool RadioButton::set_property(const OString &rKey, const OString &rValue)
+bool RadioButton::set_property(const OString &rKey, const OUString &rValue)
 {
     if (rKey == "active")
         SetState(toBool(rValue));
@@ -2912,17 +2862,15 @@ void RadioButton::Check( bool bCheck )
     if ( mbChecked != bCheck )
     {
         mbChecked = bCheck;
-        ImplDelData aDelData;
-        ImplAddDel( &aDelData );
-        StateChanged( StateChangedType::STATE );
-        if ( aDelData.IsDead() )
+        VclPtr<vcl::Window> xWindow = this;
+        CompatStateChanged( StateChangedType::State );
+        if ( xWindow->IsDisposed() )
             return;
         if ( bCheck && mbRadioCheck )
             ImplUncheckAllOther();
-        if ( aDelData.IsDead() )
+        if ( xWindow->IsDisposed() )
             return;
         Toggle();
-        ImplRemoveDel( &aDelData );
     }
 }
 
@@ -2937,17 +2885,16 @@ Size RadioButton::ImplGetRadioImageSize() const
 {
     Size aSize;
     bool bDefaultSize = true;
-    if( IsNativeControlSupported( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL ) )
+    if( IsNativeControlSupported( ControlType::Radiobutton, ControlPart::Entire ) )
     {
         ImplControlValue aControlValue;
-        // #i45896# workaround gcc3.3 temporary problem
-        Rectangle        aCtrlRegion( Point( 0, 0 ), GetSizePixel() );
-        ControlState     nState = CTRL_STATE_DEFAULT|CTRL_STATE_ENABLED;
-        Rectangle aBoundingRgn, aContentRgn;
+        tools::Rectangle        aCtrlRegion( Point( 0, 0 ), GetSizePixel() );
+        ControlState     nState = ControlState::DEFAULT|ControlState::ENABLED;
+        tools::Rectangle aBoundingRgn, aContentRgn;
 
         // get native size of a radio button
-        if( GetNativeControlRegion( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL, aCtrlRegion,
-                                           nState, aControlValue, OUString(),
+        if( GetNativeControlRegion( ControlType::Radiobutton, ControlPart::Entire, aCtrlRegion,
+                                           nState, aControlValue,
                                            aBoundingRgn, aContentRgn ) )
         {
             aSize = aContentRgn.GetSize();
@@ -2955,13 +2902,12 @@ Size RadioButton::ImplGetRadioImageSize() const
         }
     }
     if( bDefaultSize )
-        aSize = GetRadioImage( GetSettings(), 0 ).GetSizePixel();
+        aSize = GetRadioImage( GetSettings(), DrawButtonFlags::NONE ).GetSizePixel();
     return aSize;
 }
 
-static void LoadThemedImageList (const StyleSettings &rStyleSettings,
-                                 ImageList *pList, const ResId &rResId,
-                                 sal_uInt16 nImages)
+static void LoadThemedImageList(const StyleSettings &rStyleSettings,
+                                std::vector<Image>& rList, const std::vector<OUString> &rResources)
 {
     Color aColorAry1[6];
     Color aColorAry2[6];
@@ -2978,83 +2924,98 @@ static void LoadThemedImageList (const StyleSettings &rStyleSettings,
     aColorAry2[4] = rStyleSettings.GetDarkShadowColor();
     aColorAry2[5] = rStyleSettings.GetWindowTextColor();
 
-    Color aMaskColor(0x00, 0x00, 0xFF );
-        DBG_ASSERT( sizeof(aColorAry1) == sizeof(aColorAry2), "aColorAry1 must match aColorAry2" );
-    // FIXME: do we want the mask for the checkbox ?
-    pList->InsertFromHorizontalBitmap (rResId, nImages, &aMaskColor,
-        aColorAry1, aColorAry2, sizeof(aColorAry1) / sizeof(Color));
+    static_assert( sizeof(aColorAry1) == sizeof(aColorAry2), "aColorAry1 must match aColorAry2" );
+
+    for (const auto &a : rResources)
+    {
+        BitmapEx aBmpEx(a);
+        aBmpEx.Replace(aColorAry1, aColorAry2, SAL_N_ELEMENTS(aColorAry1));
+        rList.push_back(Image(aBmpEx));
+    }
 }
 
-Image RadioButton::GetRadioImage( const AllSettings& rSettings, sal_uInt16 nFlags )
+Image RadioButton::GetRadioImage( const AllSettings& rSettings, DrawButtonFlags nFlags )
 {
     ImplSVData*             pSVData = ImplGetSVData();
     const StyleSettings&    rStyleSettings = rSettings.GetStyleSettings();
     sal_uInt16              nStyle = 0;
 
-    if ( rStyleSettings.GetOptions() & STYLE_OPTION_MONO )
+    if ( rStyleSettings.GetOptions() & StyleSettingsOptions::Mono )
         nStyle = STYLE_RADIOBUTTON_MONO;
 
-    if ( !pSVData->maCtrlData.mpRadioImgList ||
+    if ( pSVData->maCtrlData.maRadioImgList.empty() ||
          (pSVData->maCtrlData.mnRadioStyle != nStyle) ||
          (pSVData->maCtrlData.mnLastRadioFColor != rStyleSettings.GetFaceColor().GetColor()) ||
          (pSVData->maCtrlData.mnLastRadioWColor != rStyleSettings.GetWindowColor().GetColor()) ||
          (pSVData->maCtrlData.mnLastRadioLColor != rStyleSettings.GetLightColor().GetColor()) )
     {
-        if ( pSVData->maCtrlData.mpRadioImgList )
-            delete pSVData->maCtrlData.mpRadioImgList;
+        pSVData->maCtrlData.maRadioImgList.clear();
 
         pSVData->maCtrlData.mnLastRadioFColor = rStyleSettings.GetFaceColor().GetColor();
         pSVData->maCtrlData.mnLastRadioWColor = rStyleSettings.GetWindowColor().GetColor();
         pSVData->maCtrlData.mnLastRadioLColor = rStyleSettings.GetLightColor().GetColor();
 
-        ResMgr* pResMgr = ImplGetResMgr();
-        pSVData->maCtrlData.mpRadioImgList = new ImageList();
-        if( pResMgr )
-            LoadThemedImageList( rStyleSettings,
-                 pSVData->maCtrlData.mpRadioImgList,
-                 ResId( SV_RESID_BITMAP_RADIO+nStyle, *pResMgr ), 6
-            );
+        std::vector<OUString> aResources;
+        if (nStyle)
+        {
+            aResources.push_back(SV_RESID_BITMAP_RADIOMONO1);
+            aResources.push_back(SV_RESID_BITMAP_RADIOMONO2);
+            aResources.push_back(SV_RESID_BITMAP_RADIOMONO3);
+            aResources.push_back(SV_RESID_BITMAP_RADIOMONO4);
+            aResources.push_back(SV_RESID_BITMAP_RADIOMONO5);
+            aResources.push_back(SV_RESID_BITMAP_RADIOMONO6);
+        }
+        else
+        {
+            aResources.push_back(SV_RESID_BITMAP_RADIO1);
+            aResources.push_back(SV_RESID_BITMAP_RADIO2);
+            aResources.push_back(SV_RESID_BITMAP_RADIO3);
+            aResources.push_back(SV_RESID_BITMAP_RADIO4);
+            aResources.push_back(SV_RESID_BITMAP_RADIO5);
+            aResources.push_back(SV_RESID_BITMAP_RADIO6);
+        }
+        LoadThemedImageList( rStyleSettings, pSVData->maCtrlData.maRadioImgList, aResources);
         pSVData->maCtrlData.mnRadioStyle = nStyle;
     }
 
-    sal_uInt16 nId;
-    if ( nFlags & BUTTON_DRAW_DISABLED )
+    sal_uInt16 nIndex;
+    if ( nFlags & DrawButtonFlags::Disabled )
     {
-        if ( nFlags & BUTTON_DRAW_CHECKED )
-            nId = 6;
+        if ( nFlags & DrawButtonFlags::Checked )
+            nIndex = 5;
         else
-            nId = 5;
+            nIndex = 4;
     }
-    else if ( nFlags & BUTTON_DRAW_PRESSED )
+    else if ( nFlags & DrawButtonFlags::Pressed )
     {
-        if ( nFlags & BUTTON_DRAW_CHECKED )
-            nId = 4;
+        if ( nFlags & DrawButtonFlags::Checked )
+            nIndex = 3;
         else
-            nId = 3;
+            nIndex = 2;
     }
     else
     {
-        if ( nFlags & BUTTON_DRAW_CHECKED )
-            nId = 2;
+        if ( nFlags & DrawButtonFlags::Checked )
+            nIndex = 1;
         else
-            nId = 1;
+            nIndex = 0;
     }
-    return pSVData->maCtrlData.mpRadioImgList->GetImage( nId );
+    return pSVData->maCtrlData.maRadioImgList[nIndex];
 }
 
 void RadioButton::ImplSetMinimumNWFSize()
 {
     Push( PushFlags::MAPMODE );
-    SetMapMode( MAP_PIXEL );
+    SetMapMode( MapUnit::MapPixel );
 
     ImplControlValue aControlValue;
     Size aCurSize( GetSizePixel() );
-    Rectangle aCtrlRegion( Point( 0, 0 ), aCurSize );
-    Rectangle aBoundingRgn, aContentRgn;
+    tools::Rectangle aCtrlRegion( Point( 0, 0 ), aCurSize );
+    tools::Rectangle aBoundingRgn, aContentRgn;
 
     // get native size of a radiobutton
-    if( GetNativeControlRegion( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL, aCtrlRegion,
-                                CTRL_STATE_DEFAULT|CTRL_STATE_ENABLED, aControlValue, OUString(),
+    if( GetNativeControlRegion( ControlType::Radiobutton, ControlPart::Entire, aCtrlRegion,
+                                ControlState::DEFAULT|ControlState::ENABLED, aControlValue,
                                 aBoundingRgn, aContentRgn ) )
     {
         Size aSize = aContentRgn.GetSize();
@@ -3069,7 +3030,7 @@ void RadioButton::ImplSetMinimumNWFSize()
     Pop();
 }
 
-Size RadioButton::CalcMinimumSize( long nMaxWidth ) const
+Size RadioButton::CalcMinimumSize() const
 {
     Size aSize;
     if ( !maImage )
@@ -3082,20 +3043,11 @@ Size RadioButton::CalcMinimumSize( long nMaxWidth ) const
     }
 
     OUString aText = GetText();
-    if ( !aText.isEmpty() && ! (ImplGetButtonState() & BUTTON_DRAW_NOTEXT) )
+    if ( !aText.isEmpty() && ! (ImplGetButtonState() & DrawButtonFlags::NoText) )
     {
         bool bTopImage = (GetStyle() & WB_TOP) != 0;
 
-        if (!bTopImage)
-        {
-            nMaxWidth -= aSize.Width();
-            nMaxWidth -= ImplGetImageToTextDistance();
-        }
-
-        // subtract what will be added later
-        nMaxWidth-=2;
-
-        Size aTextSize = GetTextRect( Rectangle( Point(), Size( nMaxWidth > 0 ? nMaxWidth : 0x7fffffff, 0x7fffffff ) ),
+        Size aTextSize = GetTextRect( tools::Rectangle( Point(), Size( 0x7fffffff, 0x7fffffff ) ),
                                       aText, FixedText::ImplGetTextStyle( GetStyle() ) ).GetSize();
 
         aSize.Width()+=2;   // for focus rect
@@ -3124,6 +3076,32 @@ Size RadioButton::GetOptimalSize() const
     return CalcMinimumSize();
 }
 
+void RadioButton::ShowFocus(const tools::Rectangle& rRect)
+{
+    if (IsNativeControlSupported(ControlType::Radiobutton, ControlPart::Focus))
+    {
+        ImplControlValue aControlValue;
+        tools::Rectangle aInRect(Point(0, 0), GetSizePixel());
+
+        aInRect.Left() = rRect.Left();  // exclude the radio element itself from the focusrect
+
+        //to-do, figure out a better solution here
+        aInRect.Left()-=2;
+        aInRect.Right()+=2;
+        aInRect.Top()-=2;
+        aInRect.Bottom()+=2;
+
+        DrawNativeControl(ControlType::Radiobutton, ControlPart::Focus, aInRect,
+                          ControlState::FOCUSED, aControlValue, OUString());
+    }
+    Button::ShowFocus(rRect);
+}
+
+FactoryFunction RadioButton::GetUITestFactory() const
+{
+    return RadioButtonUIObject::create;
+}
+
 void CheckBox::ImplInitCheckBoxData()
 {
     meState         = TRISTATE_FALSE;
@@ -3134,9 +3112,9 @@ void CheckBox::ImplInitCheckBoxData()
 void CheckBox::ImplInit( vcl::Window* pParent, WinBits nStyle )
 {
     nStyle = ImplInitStyle(getPreviousSibling(pParent), nStyle);
-    Button::ImplInit( pParent, nStyle, NULL );
+    Button::ImplInit( pParent, nStyle, nullptr );
 
-    ImplInitSettings( true, true, true );
+    ImplInitSettings( true );
 }
 
 WinBits CheckBox::ImplInitStyle( const vcl::Window* pPrevWindow, WinBits nStyle )
@@ -3144,7 +3122,7 @@ WinBits CheckBox::ImplInitStyle( const vcl::Window* pPrevWindow, WinBits nStyle 
     if ( !(nStyle & WB_NOTABSTOP) )
         nStyle |= WB_TABSTOP;
     if ( !(nStyle & WB_NOGROUP) &&
-         (!pPrevWindow || (pPrevWindow->GetType() != WINDOW_CHECKBOX)) )
+         (!pPrevWindow || (pPrevWindow->GetType() != WindowType::CHECKBOX)) )
         nStyle |= WB_GROUP;
     return nStyle;
 }
@@ -3159,28 +3137,27 @@ const Color& CheckBox::GetCanonicalTextColor( const StyleSettings& _rStyle ) con
     return _rStyle.GetRadioCheckTextColor();
 }
 
-void CheckBox::ImplInitSettings( bool bFont,
-                                 bool bForeground, bool bBackground )
+void CheckBox::ImplInitSettings( bool bBackground )
 {
-    Button::ImplInitSettings( bFont, bForeground );
+    Button::ImplInitSettings();
 
     if ( bBackground )
     {
         vcl::Window* pParent = GetParent();
         if ( !IsControlBackground() &&
-            (pParent->IsChildTransparentModeEnabled() || IsNativeControlSupported( CTRL_CHECKBOX, PART_ENTIRE_CONTROL ) ) )
+            (pParent->IsChildTransparentModeEnabled() || IsNativeControlSupported( ControlType::Checkbox, ControlPart::Entire ) ) )
         {
-            EnableChildTransparentMode( true );
-            SetParentClipMode( PARENTCLIPMODE_NOCLIP );
+            EnableChildTransparentMode();
+            SetParentClipMode( ParentClipMode::NoClip );
             SetPaintTransparent( true );
             SetBackground();
-            if( IsNativeControlSupported( CTRL_CHECKBOX, PART_ENTIRE_CONTROL ) )
+            if( IsNativeControlSupported( ControlType::Checkbox, ControlPart::Entire ) )
                 ImplGetWindowImpl()->mbUseNativeFocus = ImplGetSVData()->maNWFData.mbNoFocusRects;
         }
         else
         {
             EnableChildTransparentMode( false );
-            SetParentClipMode( 0 );
+            SetParentClipMode();
             SetPaintTransparent( false );
 
             if ( IsControlBackground() )
@@ -3191,116 +3168,89 @@ void CheckBox::ImplInitSettings( bool bFont,
     }
 }
 
-void CheckBox::ImplLoadRes( const ResId& rResId )
+void CheckBox::ImplDrawCheckBoxState(vcl::RenderContext& rRenderContext)
 {
-    Button::ImplLoadRes( rResId );
-
-    sal_uInt16 nChecked = ReadShortRes();
-    //anderer Wert als Default ?
-    if( nChecked )
-        Check( true );
-}
-
-void CheckBox::ImplInvalidateOrDrawCheckBoxState()
-{
-    if( ImplGetSVData()->maNWFData.mbCheckBoxNeedsErase )
+    bool bNativeOK = rRenderContext.IsNativeControlSupported(ControlType::Checkbox, ControlPart::Entire);
+    if (bNativeOK)
     {
-        if ( IsNativeControlSupported(CTRL_CHECKBOX, PART_ENTIRE_CONTROL) )
-        {
-#ifdef USE_JAVA
-            Invalidate( maStateRect );
-            if ( IsInPaint() )
-                Update();
-#else	// USE_JAVA
-            Invalidate();
-            Update();
-#endif	// USE_JAVA
-            return;
-        }
-    }
-    ImplDrawCheckBoxState();
-}
+        ImplControlValue aControlValue(meState == TRISTATE_TRUE ? ButtonValue::On : ButtonValue::Off);
+        tools::Rectangle aCtrlRegion(maStateRect);
+        ControlState nState = ControlState::NONE;
 
-void CheckBox::ImplDrawCheckBoxState()
-{
-    bool    bNativeOK = true;
+        if (HasFocus())
+            nState |= ControlState::FOCUSED;
+        if (ImplGetButtonState() & DrawButtonFlags::Default)
+            nState |= ControlState::DEFAULT;
+        if (ImplGetButtonState() & DrawButtonFlags::Pressed)
+            nState |= ControlState::PRESSED;
+        if (IsEnabled())
+            nState |= ControlState::ENABLED;
 
-    if ( (bNativeOK=IsNativeControlSupported(CTRL_CHECKBOX, PART_ENTIRE_CONTROL)) )
-    {
-        ImplControlValue    aControlValue( meState == TRISTATE_TRUE ? BUTTONVALUE_ON : BUTTONVALUE_OFF );
-        Rectangle           aCtrlRegion( maStateRect );
-        ControlState        nState = 0;
+        if (meState == TRISTATE_TRUE)
+            aControlValue.setTristateVal(ButtonValue::On);
+        else if (meState == TRISTATE_INDET)
+            aControlValue.setTristateVal(ButtonValue::Mixed);
 
-        if ( HasFocus() )                       nState |= CTRL_STATE_FOCUSED;
-        if ( ImplGetButtonState() & BUTTON_DRAW_DEFAULT )   nState |= CTRL_STATE_DEFAULT;
-        if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )   nState |= CTRL_STATE_PRESSED;
-        if ( IsEnabled() )                      nState |= CTRL_STATE_ENABLED;
+        if (IsMouseOver() && maMouseRect.IsInside(GetPointerPosPixel()))
+            nState |= ControlState::ROLLOVER;
 
-        if ( meState == TRISTATE_TRUE )
-            aControlValue.setTristateVal( BUTTONVALUE_ON );
-        else if ( meState == TRISTATE_INDET )
-            aControlValue.setTristateVal( BUTTONVALUE_MIXED );
-
-        if ( IsMouseOver() && maMouseRect.IsInside( GetPointerPosPixel() ) )
-            nState |= CTRL_STATE_ROLLOVER;
-
-        bNativeOK = DrawNativeControl( CTRL_CHECKBOX, PART_ENTIRE_CONTROL, aCtrlRegion, nState,
-                                 aControlValue, OUString() );
+        bNativeOK = rRenderContext.DrawNativeControl(ControlType::Checkbox, ControlPart::Entire, aCtrlRegion,
+                                                     nState, aControlValue, OUString());
     }
 
-    if ( !bNativeOK )
+    if (!bNativeOK)
     {
-        sal_uInt16 nStyle = ImplGetButtonState();
-        if ( !IsEnabled() )
-            nStyle |= BUTTON_DRAW_DISABLED;
-        if ( meState == TRISTATE_INDET )
-            nStyle |= BUTTON_DRAW_DONTKNOW;
-        else if ( meState == TRISTATE_TRUE )
-            nStyle |= BUTTON_DRAW_CHECKED;
-        Image aImage = GetCheckImage( GetSettings(), nStyle );
-        if ( IsZoom() )
-            DrawImage( maStateRect.TopLeft(), maStateRect.GetSize(), aImage );
+        DrawButtonFlags nStyle = ImplGetButtonState();
+        if (!IsEnabled())
+            nStyle |= DrawButtonFlags::Disabled;
+        if (meState == TRISTATE_INDET)
+            nStyle |= DrawButtonFlags::DontKnow;
+        else if (meState == TRISTATE_TRUE)
+            nStyle |= DrawButtonFlags::Checked;
+        Image aImage = GetCheckImage(GetSettings(), nStyle);
+        if (IsZoom())
+            rRenderContext.DrawImage(maStateRect.TopLeft(), maStateRect.GetSize(), aImage);
         else
-            DrawImage( maStateRect.TopLeft(), aImage );
+            rRenderContext.DrawImage(maStateRect.TopLeft(), aImage);
     }
 }
 
-void CheckBox::ImplDraw( OutputDevice* pDev, sal_uLong nDrawFlags,
+void CheckBox::ImplDraw( OutputDevice* pDev, DrawFlags nDrawFlags,
                          const Point& rPos, const Size& rSize,
-                         const Size& rImageSize, Rectangle& rStateRect,
-                         Rectangle& rMouseRect, bool bLayout )
+                         const Size& rImageSize, tools::Rectangle& rStateRect,
+                         tools::Rectangle& rMouseRect )
 {
     WinBits                 nWinStyle = GetStyle();
     OUString                aText( GetText() );
 
     pDev->Push( PushFlags::CLIPREGION | PushFlags::LINECOLOR );
-    pDev->IntersectClipRegion( Rectangle( rPos, rSize ) );
+    pDev->IntersectClipRegion( tools::Rectangle( rPos, rSize ) );
 
     long nLineY = rPos.Y() + (rSize.Height()-1)/2;
-    if ( ( !aText.isEmpty() && ! (ImplGetButtonState() & BUTTON_DRAW_NOTEXT) ) ||
-         ( HasImage() && !  (ImplGetButtonState() & BUTTON_DRAW_NOIMAGE) ) )
+    if ( ( !aText.isEmpty() && ! (ImplGetButtonState() & DrawButtonFlags::NoText) ) ||
+         ( HasImage() && !  (ImplGetButtonState() & DrawButtonFlags::NoImage) ) )
     {
-        sal_uInt16 nTextStyle = Button::ImplGetTextStyle( aText, nWinStyle, nDrawFlags );
+        DrawTextFlags nTextStyle = Button::ImplGetTextStyle( aText, nWinStyle, nDrawFlags );
 
 #ifdef USE_JAVA
-        if ( IsNativeControlSupported( CTRL_CHECKBOX, PART_ENTIRE_CONTROL ) )
+        if ( IsNativeControlSupported( ControlType::Checkbox, ControlPart::Entire ) )
         {
             ImplControlValue aControlValue;
-            ControlState nState = 0;
+            ControlState nState = ControlState::NONE;
             Color aColor;
 
-            if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
-                nState |= CTRL_STATE_PRESSED;
+            if ( ImplGetButtonState() & DrawButtonFlags::Pressed )
+                nState |= ControlState::PRESSED;
             if ( HasFocus() )
-                nState |= CTRL_STATE_FOCUSED;
-            if ( ImplGetButtonState() & BUTTON_DRAW_DEFAULT )
-                nState |= CTRL_STATE_DEFAULT;
+                nState |= ControlState::FOCUSED;
+            if ( ImplGetButtonState() & DrawButtonFlags::Default )
+                nState |= ControlState::DEFAULT;
             if ( Window::IsEnabled() )
-                nState |= CTRL_STATE_ENABLED;
+                nState |= ControlState::ENABLED;
             if ( IsMouseOver() )
-                nState |= CTRL_STATE_ROLLOVER;
+                nState |= ControlState::ROLLOVER;
 
-            if ( GetNativeControlTextColor( CTRL_CHECKBOX, PART_ENTIRE_CONTROL, nState, aControlValue, aColor ) )
+            if ( GetNativeControlTextColor( ControlType::Checkbox, ControlPart::Entire, nState, aControlValue, aColor ) )
                 SetTextColor( aColor );
         }
 #endif	// USE_JAVA
@@ -3316,16 +3266,15 @@ void CheckBox::ImplDraw( OutputDevice* pDev, sal_uLong nDrawFlags,
         if( (nWinStyle & (WB_TOP|WB_VCENTER|WB_BOTTOM)) == 0 &&
             (rImageSize.Height() > rSize.Height() || ! (nWinStyle & WB_WORDBREAK) ) )
         {
-            nTextStyle &= ~(TEXT_DRAW_TOP|TEXT_DRAW_BOTTOM);
-            nTextStyle |= TEXT_DRAW_VCENTER;
+            nTextStyle &= ~DrawTextFlags(DrawTextFlags::Top|DrawTextFlags::Bottom);
+            nTextStyle |= DrawTextFlags::VCenter;
             aSize.Height() = rImageSize.Height();
         }
 
-        ImplDrawAlignedImage( pDev, aPos, aSize, bLayout, 1,
-                              nDrawFlags, nTextStyle, NULL );
+        ImplDrawAlignedImage( pDev, aPos, aSize, 1, nDrawFlags, nTextStyle );
         nLineY = aPos.Y() + aSize.Height()/2;
 
-        rMouseRect          = Rectangle( aPos, aSize );
+        rMouseRect          = tools::Rectangle( aPos, aSize );
         rMouseRect.Left()   = rPos.X();
         rStateRect.Left()   = rPos.X();
         rStateRect.Top()    = rMouseRect.Top();
@@ -3375,13 +3324,13 @@ void CheckBox::ImplDraw( OutputDevice* pDev, sal_uLong nDrawFlags,
         rMouseRect.Right()-1-nLineSpace < rPos.X()+rSize.Width() )
     {
         const StyleSettings&    rStyleSettings = GetSettings().GetStyleSettings();
-        if ( rStyleSettings.GetOptions() & STYLE_OPTION_MONO )
+        if ( rStyleSettings.GetOptions() & StyleSettingsOptions::Mono )
             SetLineColor( Color( COL_BLACK ) );
         else
             SetLineColor( rStyleSettings.GetShadowColor() );
         long nLineX = rMouseRect.Right()+nLineSpace;
         DrawLine( Point( nLineX, nLineY ), Point( rPos.X() + rSize.Width()-1, nLineY ) );
-        if ( !(rStyleSettings.GetOptions() & STYLE_OPTION_MONO) )
+        if ( !(rStyleSettings.GetOptions() & StyleSettingsOptions::Mono) )
         {
             SetLineColor( rStyleSettings.GetLightColor() );
             DrawLine( Point( nLineX, nLineY+1 ), Point( rPos.X() + rSize.Width()-1, nLineY+1 ) );
@@ -3391,24 +3340,20 @@ void CheckBox::ImplDraw( OutputDevice* pDev, sal_uLong nDrawFlags,
     pDev->Pop();
 }
 
-void CheckBox::ImplDrawCheckBox( bool bLayout )
+void CheckBox::ImplDrawCheckBox(vcl::RenderContext& rRenderContext)
 {
     Size aImageSize = ImplGetCheckImageSize();
     aImageSize.Width()  = CalcZoom( aImageSize.Width() );
     aImageSize.Height() = CalcZoom( aImageSize.Height() );
 
-    if( !bLayout )
-        HideFocus();
+    HideFocus();
 
-    ImplDraw( this, 0, Point(), GetOutputSizePixel(), aImageSize,
-              maStateRect, maMouseRect, bLayout );
+    ImplDraw(&rRenderContext, DrawFlags::NONE, Point(), GetOutputSizePixel(),
+             aImageSize, maStateRect, maMouseRect);
 
-    if( !bLayout )
-    {
-        ImplDrawCheckBoxState();
-        if ( HasFocus() )
-            ShowFocus( ImplGetFocusRect() );
-    }
+    ImplDrawCheckBoxState(rRenderContext);
+    if (HasFocus())
+        ShowFocus(ImplGetFocusRect());
 }
 
 void CheckBox::ImplCheck()
@@ -3424,45 +3369,32 @@ void CheckBox::ImplCheck()
         eNewState = TRISTATE_FALSE;
     meState = eNewState;
 
-    ImplDelData aDelData;
-    ImplAddDel( &aDelData );
+    VclPtr<vcl::Window> xWindow = this;
     if( (GetStyle() & WB_EARLYTOGGLE) )
         Toggle();
-    ImplInvalidateOrDrawCheckBoxState();
+    Invalidate();
+    Update();
     if( ! (GetStyle() & WB_EARLYTOGGLE) )
         Toggle();
-    if ( aDelData.IsDead() )
+    if ( xWindow->IsDisposed() )
         return;
-    ImplRemoveDel( &aDelData );
     Click();
 }
 
 CheckBox::CheckBox( vcl::Window* pParent, WinBits nStyle ) :
-    Button( WINDOW_CHECKBOX ), mbLegacyNoTextAlign( false )
+    Button( WindowType::CHECKBOX ), mbLegacyNoTextAlign( false )
 {
     ImplInitCheckBoxData();
     ImplInit( pParent, nStyle );
-}
-
-CheckBox::CheckBox( vcl::Window* pParent, const ResId& rResId ) :
-    Button( WINDOW_CHECKBOX ), mbLegacyNoTextAlign( false )
-{
-    rResId.SetRT( RSC_CHECKBOX );
-    WinBits nStyle = ImplInitRes( rResId );
-    ImplInitCheckBoxData();
-    ImplInit( pParent, nStyle );
-    ImplLoadRes( rResId );
-
-    if ( !(nStyle & WB_HIDE) )
-        Show();
 }
 
 void CheckBox::MouseButtonDown( const MouseEvent& rMEvt )
 {
     if ( rMEvt.IsLeft() && maMouseRect.IsInside( rMEvt.GetPosPixel() ) )
     {
-        ImplGetButtonState() |= BUTTON_DRAW_PRESSED;
-        ImplInvalidateOrDrawCheckBoxState();
+        ImplGetButtonState() |= DrawButtonFlags::Pressed;
+        Invalidate();
+        Update();
         StartTracking();
         return;
     }
@@ -3474,36 +3406,41 @@ void CheckBox::Tracking( const TrackingEvent& rTEvt )
 {
     if ( rTEvt.IsTrackingEnded() )
     {
-        if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
+        if ( ImplGetButtonState() & DrawButtonFlags::Pressed )
         {
             if ( !(GetStyle() & WB_NOPOINTERFOCUS) && !rTEvt.IsTrackingCanceled() )
                 GrabFocus();
 
-            ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
+            ImplGetButtonState() &= ~DrawButtonFlags::Pressed;
 
             // do not call click handler if aborted
             if ( !rTEvt.IsTrackingCanceled() )
                 ImplCheck();
             else
-                ImplInvalidateOrDrawCheckBoxState();
+            {
+                Invalidate();
+                Update();
+            }
         }
     }
     else
     {
         if ( maMouseRect.IsInside( rTEvt.GetMouseEvent().GetPosPixel() ) )
         {
-            if ( !(ImplGetButtonState() & BUTTON_DRAW_PRESSED) )
+            if ( !(ImplGetButtonState() & DrawButtonFlags::Pressed) )
             {
-                ImplGetButtonState() |= BUTTON_DRAW_PRESSED;
-                ImplInvalidateOrDrawCheckBoxState();
+                ImplGetButtonState() |= DrawButtonFlags::Pressed;
+                Invalidate();
+                Update();
             }
         }
         else
         {
-            if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
+            if ( ImplGetButtonState() & DrawButtonFlags::Pressed )
             {
-                ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
-                ImplInvalidateOrDrawCheckBoxState();
+                ImplGetButtonState() &= ~DrawButtonFlags::Pressed;
+                Invalidate();
+                Update();
             }
         }
     }
@@ -3515,16 +3452,18 @@ void CheckBox::KeyInput( const KeyEvent& rKEvt )
 
     if ( !aKeyCode.GetModifier() && (aKeyCode.GetCode() == KEY_SPACE) )
     {
-        if ( !(ImplGetButtonState() & BUTTON_DRAW_PRESSED) )
+        if ( !(ImplGetButtonState() & DrawButtonFlags::Pressed) )
         {
-            ImplGetButtonState() |= BUTTON_DRAW_PRESSED;
-            ImplInvalidateOrDrawCheckBoxState();
+            ImplGetButtonState() |= DrawButtonFlags::Pressed;
+            Invalidate();
+            Update();
         }
     }
-    else if ( (ImplGetButtonState() & BUTTON_DRAW_PRESSED) && (aKeyCode.GetCode() == KEY_ESCAPE) )
+    else if ( (ImplGetButtonState() & DrawButtonFlags::Pressed) && (aKeyCode.GetCode() == KEY_ESCAPE) )
     {
-        ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
-        ImplInvalidateOrDrawCheckBoxState();
+        ImplGetButtonState() &= ~DrawButtonFlags::Pressed;
+        Invalidate();
+        Update();
     }
     else
         Button::KeyInput( rKEvt );
@@ -3534,9 +3473,9 @@ void CheckBox::KeyUp( const KeyEvent& rKEvt )
 {
     vcl::KeyCode aKeyCode = rKEvt.GetKeyCode();
 
-    if ( (ImplGetButtonState() & BUTTON_DRAW_PRESSED) && (aKeyCode.GetCode() == KEY_SPACE) )
+    if ( (ImplGetButtonState() & DrawButtonFlags::Pressed) && (aKeyCode.GetCode() == KEY_SPACE) )
     {
-        ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
+        ImplGetButtonState() &= ~DrawButtonFlags::Pressed;
         ImplCheck();
     }
     else
@@ -3545,19 +3484,19 @@ void CheckBox::KeyUp( const KeyEvent& rKEvt )
 
 void CheckBox::FillLayoutData() const
 {
-    mpControlData->mpLayoutData = new vcl::ControlLayoutData();
-    const_cast<CheckBox*>(this)->ImplDrawCheckBox( true );
+    mpControlData->mpLayoutData.reset( new vcl::ControlLayoutData );
+    const_cast<CheckBox*>(this)->Invalidate();
 }
 
-void CheckBox::Paint( const Rectangle& )
+void CheckBox::Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle&)
 {
-    ImplDrawCheckBox();
+    ImplDrawCheckBox(rRenderContext);
 }
 
 void CheckBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
-                     sal_uLong nFlags )
+                     DrawFlags nFlags )
 {
-    MapMode     aResMapMode( MAP_100TH_MM );
+    MapMode     aResMapMode( MapUnit::Map100thMM );
     Point       aPos  = pDev->LogicToPixel( rPos );
     Size        aSize = pDev->LogicToPixel( rSize );
     Size        aImageSize = pDev->LogicToPixel( Size( 300, 300 ), aResMapMode );
@@ -3565,8 +3504,8 @@ void CheckBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
     Size        aBrd2Size = pDev->LogicToPixel( Size( 30, 30 ), aResMapMode );
     long        nCheckWidth = pDev->LogicToPixel( Size( 20, 20 ), aResMapMode ).Width();
     vcl::Font   aFont = GetDrawPixelFont( pDev );
-    Rectangle   aStateRect;
-    Rectangle   aMouseRect;
+    tools::Rectangle   aStateRect;
+    tools::Rectangle   aMouseRect;
 
     aImageSize.Width()  = CalcZoom( aImageSize.Width() );
     aImageSize.Height() = CalcZoom( aImageSize.Height() );
@@ -3589,14 +3528,14 @@ void CheckBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
     pDev->Push();
     pDev->SetMapMode();
     pDev->SetFont( aFont );
-    if ( nFlags & WINDOW_DRAW_MONO )
+    if ( nFlags & DrawFlags::Mono )
         pDev->SetTextColor( Color( COL_BLACK ) );
     else
         pDev->SetTextColor( GetTextColor() );
     pDev->SetTextFillColor();
 
     ImplDraw( pDev, nFlags, aPos, aSize,
-              aImageSize, aStateRect, aMouseRect, false );
+              aImageSize, aStateRect, aMouseRect );
 
     pDev->SetLineColor();
     pDev->SetFillColor( Color( COL_BLACK ) );
@@ -3660,7 +3599,7 @@ void CheckBox::Resize()
 
 void CheckBox::GetFocus()
 {
-    if ( GetText().isEmpty() || (ImplGetButtonState() & BUTTON_DRAW_NOTEXT) )
+    if ( GetText().isEmpty() || (ImplGetButtonState() & DrawButtonFlags::NoText) )
     {
         // increase button size to have space for focus rect
         // checkboxes without text will draw focusrect around the check
@@ -3670,8 +3609,8 @@ void CheckBox::GetFocus()
         aPos.Move(-1,-1);
         aSize.Height() += 2;
         aSize.Width() += 2;
-        setPosSizePixel( aPos.X(), aPos.Y(), aSize.Width(), aSize.Height(), WINDOW_POSSIZE_ALL );
-        ImplDrawCheckBox();
+        setPosSizePixel( aPos.X(), aPos.Y(), aSize.Width(), aSize.Height() );
+        Invalidate();
     }
     else
         ShowFocus( ImplGetFocusRect() );
@@ -3682,16 +3621,17 @@ void CheckBox::GetFocus()
 
 void CheckBox::LoseFocus()
 {
-    if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
+    if ( ImplGetButtonState() & DrawButtonFlags::Pressed )
     {
-        ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
-        ImplInvalidateOrDrawCheckBoxState();
+        ImplGetButtonState() &= ~DrawButtonFlags::Pressed;
+        Invalidate();
+        Update();
     }
 
     HideFocus();
     Button::LoseFocus();
 
-    if ( GetText().isEmpty() || (ImplGetButtonState() & BUTTON_DRAW_NOTEXT) )
+    if ( GetText().isEmpty() || (ImplGetButtonState() & DrawButtonFlags::NoText) )
     {
         // decrease button size again (see GetFocus())
         // checkboxes without text will draw focusrect around the check
@@ -3700,8 +3640,8 @@ void CheckBox::LoseFocus()
         aPos.Move(1,1);
         aSize.Height() -= 2;
         aSize.Width() -= 2;
-        setPosSizePixel( aPos.X(), aPos.Y(), aSize.Width(), aSize.Height(), WINDOW_POSSIZE_ALL );
-        ImplDrawCheckBox();
+        setPosSizePixel( aPos.X(), aPos.Y(), aSize.Width(), aSize.Height() );
+        Invalidate();
     }
 }
 
@@ -3709,23 +3649,22 @@ void CheckBox::StateChanged( StateChangedType nType )
 {
     Button::StateChanged( nType );
 
-    if ( nType == StateChangedType::STATE )
+    if ( nType == StateChangedType::State )
     {
         if ( IsReallyVisible() && IsUpdateMode() )
             Invalidate( maStateRect );
     }
-    else if ( (nType == StateChangedType::ENABLE) ||
-              (nType == StateChangedType::TEXT) ||
-              (nType == StateChangedType::IMAGE) ||
-              (nType == StateChangedType::DATA) ||
-              (nType == StateChangedType::UPDATEMODE) )
+    else if ( (nType == StateChangedType::Enable) ||
+              (nType == StateChangedType::Text) ||
+              (nType == StateChangedType::Data) ||
+              (nType == StateChangedType::UpdateMode) )
     {
         if ( IsUpdateMode() )
             Invalidate();
     }
-    else if ( nType == StateChangedType::STYLE )
+    else if ( nType == StateChangedType::Style )
     {
-        SetStyle( ImplInitStyle( GetWindow( WINDOW_PREV ), GetStyle() ) );
+        SetStyle( ImplInitStyle( GetWindow( GetWindowType::Prev ), GetStyle() ) );
 
         if ( (GetPrevStyle() & CHECKBOX_VIEW_STYLE) !=
              (GetStyle() & CHECKBOX_VIEW_STYLE) )
@@ -3734,20 +3673,20 @@ void CheckBox::StateChanged( StateChangedType nType )
                 Invalidate();
         }
     }
-    else if ( (nType == StateChangedType::ZOOM) ||
-              (nType == StateChangedType::CONTROLFONT) )
+    else if ( (nType == StateChangedType::Zoom) ||
+              (nType == StateChangedType::ControlFont) )
     {
-        ImplInitSettings( true, false, false );
+        ImplInitSettings( false );
         Invalidate();
     }
-    else if ( nType == StateChangedType::CONTROLFOREGROUND )
+    else if ( nType == StateChangedType::ControlForeground )
     {
-        ImplInitSettings( false, true, false );
+        ImplInitSettings( false );
         Invalidate();
     }
-    else if ( nType == StateChangedType::CONTROLBACKGROUND )
+    else if ( nType == StateChangedType::ControlBackground )
     {
-        ImplInitSettings( false, false, true );
+        ImplInitSettings( true );
         Invalidate();
     }
 }
@@ -3756,27 +3695,27 @@ void CheckBox::DataChanged( const DataChangedEvent& rDCEvt )
 {
     Button::DataChanged( rDCEvt );
 
-    if ( (rDCEvt.GetType() == DATACHANGED_FONTS) ||
-         (rDCEvt.GetType() == DATACHANGED_FONTSUBSTITUTION) ||
-         ((rDCEvt.GetType() == DATACHANGED_SETTINGS) &&
-          (rDCEvt.GetFlags() & SETTINGS_STYLE)) )
+    if ( (rDCEvt.GetType() == DataChangedEventType::FONTS) ||
+         (rDCEvt.GetType() == DataChangedEventType::FONTSUBSTITUTION) ||
+         ((rDCEvt.GetType() == DataChangedEventType::SETTINGS) &&
+          (rDCEvt.GetFlags() & AllSettingsFlags::STYLE)) )
     {
-        ImplInitSettings( true, true, true );
+        ImplInitSettings( true );
         Invalidate();
     }
 }
 
 bool CheckBox::PreNotify( NotifyEvent& rNEvt )
 {
-    const MouseEvent* pMouseEvt = NULL;
+    const MouseEvent* pMouseEvt = nullptr;
 
-    if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != NULL )
+    if( (rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != nullptr )
     {
 #ifndef USE_JAVA
         if( !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
         {
             // trigger redraw if mouse over state has changed
-            if( IsNativeControlSupported(CTRL_CHECKBOX, PART_ENTIRE_CONTROL) )
+            if( IsNativeControlSupported(ControlType::Checkbox, ControlPart::Entire) )
             {
                 if( ( maMouseRect.IsInside( GetPointerPosPixel()) &&
                      !maMouseRect.IsInside( GetLastPointerPosPixel()) ) ||
@@ -3788,7 +3727,7 @@ bool CheckBox::PreNotify( NotifyEvent& rNEvt )
                 }
             }
         }
-#endif     // !USE_JAVA
+#endif	// !USE_JAVA
     }
 
     return Button::PreNotify(rNEvt);
@@ -3796,7 +3735,7 @@ bool CheckBox::PreNotify( NotifyEvent& rNEvt )
 
 void CheckBox::Toggle()
 {
-    ImplCallEventListenersAndHandler( VCLEVENT_CHECKBOX_TOGGLE, maToggleHdl, this );
+    ImplCallEventListenersAndHandler( VclEventId::CheckboxToggle, [this] () { maToggleHdl.Call(*this); } );
 }
 
 void CheckBox::SetState( TriState eState )
@@ -3807,12 +3746,12 @@ void CheckBox::SetState( TriState eState )
     if ( meState != eState )
     {
         meState = eState;
-        StateChanged( StateChangedType::STATE );
+        StateChanged( StateChangedType::State );
         Toggle();
     }
 }
 
-bool CheckBox::set_property(const OString &rKey, const OString &rValue)
+bool CheckBox::set_property(const OString &rKey, const OUString &rValue)
 {
     if (rKey == "active")
         SetState(toBool(rValue) ? TRISTATE_TRUE : TRISTATE_FALSE);
@@ -3843,17 +3782,16 @@ Size CheckBox::ImplGetCheckImageSize() const
 {
     Size aSize;
     bool bDefaultSize = true;
-    if( IsNativeControlSupported( CTRL_CHECKBOX, PART_ENTIRE_CONTROL ) )
+    if( IsNativeControlSupported( ControlType::Checkbox, ControlPart::Entire ) )
     {
         ImplControlValue aControlValue;
-        // #i45896# workaround gcc3.3 temporary problem
-        Rectangle        aCtrlRegion( Point( 0, 0 ), GetSizePixel() );
-        ControlState     nState = CTRL_STATE_DEFAULT|CTRL_STATE_ENABLED;
-        Rectangle aBoundingRgn, aContentRgn;
+        tools::Rectangle        aCtrlRegion( Point( 0, 0 ), GetSizePixel() );
+        ControlState     nState = ControlState::DEFAULT|ControlState::ENABLED;
+        tools::Rectangle aBoundingRgn, aContentRgn;
 
         // get native size of a check box
-        if( GetNativeControlRegion( CTRL_CHECKBOX, PART_ENTIRE_CONTROL, aCtrlRegion,
-                                           nState, aControlValue, OUString(),
+        if( GetNativeControlRegion( ControlType::Checkbox, ControlPart::Entire, aCtrlRegion,
+                                           nState, aControlValue,
                                            aBoundingRgn, aContentRgn ) )
         {
             aSize = aContentRgn.GetSize();
@@ -3861,85 +3799,104 @@ Size CheckBox::ImplGetCheckImageSize() const
         }
     }
     if( bDefaultSize )
-        aSize = GetCheckImage( GetSettings(), 0 ).GetSizePixel();
+        aSize = GetCheckImage( GetSettings(), DrawButtonFlags::NONE ).GetSizePixel();
     return aSize;
 }
 
-Image CheckBox::GetCheckImage( const AllSettings& rSettings, sal_uInt16 nFlags )
+Image CheckBox::GetCheckImage( const AllSettings& rSettings, DrawButtonFlags nFlags )
 {
     ImplSVData*             pSVData = ImplGetSVData();
     const StyleSettings&    rStyleSettings = rSettings.GetStyleSettings();
     sal_uInt16              nStyle = 0;
 
-    if ( rStyleSettings.GetOptions() & STYLE_OPTION_MONO )
+    if ( rStyleSettings.GetOptions() & StyleSettingsOptions::Mono )
         nStyle = STYLE_CHECKBOX_MONO;
 
-    if ( !pSVData->maCtrlData.mpCheckImgList ||
+    if ( pSVData->maCtrlData.maCheckImgList.empty() ||
          (pSVData->maCtrlData.mnCheckStyle != nStyle) ||
          (pSVData->maCtrlData.mnLastCheckFColor != rStyleSettings.GetFaceColor().GetColor()) ||
          (pSVData->maCtrlData.mnLastCheckWColor != rStyleSettings.GetWindowColor().GetColor()) ||
          (pSVData->maCtrlData.mnLastCheckLColor != rStyleSettings.GetLightColor().GetColor()) )
     {
-        if ( pSVData->maCtrlData.mpCheckImgList )
-            delete pSVData->maCtrlData.mpCheckImgList;
+        pSVData->maCtrlData.maCheckImgList.clear();
 
         pSVData->maCtrlData.mnLastCheckFColor = rStyleSettings.GetFaceColor().GetColor();
         pSVData->maCtrlData.mnLastCheckWColor = rStyleSettings.GetWindowColor().GetColor();
         pSVData->maCtrlData.mnLastCheckLColor = rStyleSettings.GetLightColor().GetColor();
 
-        ResMgr* pResMgr = ImplGetResMgr();
-        pSVData->maCtrlData.mpCheckImgList = new ImageList();
-        if( pResMgr )
-            LoadThemedImageList( rStyleSettings,
-                pSVData->maCtrlData.mpCheckImgList,
-                ResId( SV_RESID_BITMAP_CHECK+nStyle, *pResMgr ), 9 );
+        std::vector<OUString> aResources;
+        if (nStyle)
+        {
+            aResources.push_back(SV_RESID_BITMAP_CHECKMONO1);
+            aResources.push_back(SV_RESID_BITMAP_CHECKMONO2);
+            aResources.push_back(SV_RESID_BITMAP_CHECKMONO3);
+            aResources.push_back(SV_RESID_BITMAP_CHECKMONO4);
+            aResources.push_back(SV_RESID_BITMAP_CHECKMONO5);
+            aResources.push_back(SV_RESID_BITMAP_CHECKMONO6);
+            aResources.push_back(SV_RESID_BITMAP_CHECKMONO7);
+            aResources.push_back(SV_RESID_BITMAP_CHECKMONO8);
+            aResources.push_back(SV_RESID_BITMAP_CHECKMONO9);
+        }
+        else
+        {
+            aResources.push_back(SV_RESID_BITMAP_CHECK1);
+            aResources.push_back(SV_RESID_BITMAP_CHECK2);
+            aResources.push_back(SV_RESID_BITMAP_CHECK3);
+            aResources.push_back(SV_RESID_BITMAP_CHECK4);
+            aResources.push_back(SV_RESID_BITMAP_CHECK5);
+            aResources.push_back(SV_RESID_BITMAP_CHECK6);
+            aResources.push_back(SV_RESID_BITMAP_CHECK7);
+            aResources.push_back(SV_RESID_BITMAP_CHECK8);
+            aResources.push_back(SV_RESID_BITMAP_CHECK9);
+        }
+        LoadThemedImageList(rStyleSettings, pSVData->maCtrlData.maCheckImgList, aResources);
         pSVData->maCtrlData.mnCheckStyle = nStyle;
     }
 
-    sal_uInt16 nId;
-    if ( nFlags & BUTTON_DRAW_DISABLED )
+    sal_uInt16 nIndex;
+    if ( nFlags & DrawButtonFlags::Disabled )
     {
-        if ( nFlags & BUTTON_DRAW_DONTKNOW )
-            nId = 9;
-        else if ( nFlags & BUTTON_DRAW_CHECKED )
-            nId = 6;
+        if ( nFlags & DrawButtonFlags::DontKnow )
+            nIndex = 8;
+        else if ( nFlags & DrawButtonFlags::Checked )
+            nIndex = 5;
         else
-            nId = 5;
+            nIndex = 4;
     }
-    else if ( nFlags & BUTTON_DRAW_PRESSED )
+    else if ( nFlags & DrawButtonFlags::Pressed )
     {
-        if ( nFlags & BUTTON_DRAW_DONTKNOW )
-            nId = 8;
-        else if ( nFlags & BUTTON_DRAW_CHECKED )
-            nId = 4;
+        if ( nFlags & DrawButtonFlags::DontKnow )
+            nIndex = 7;
+        else if ( nFlags & DrawButtonFlags::Checked )
+            nIndex = 3;
         else
-            nId = 3;
+            nIndex = 2;
     }
     else
     {
-        if ( nFlags & BUTTON_DRAW_DONTKNOW )
-            nId = 7;
-        else if ( nFlags & BUTTON_DRAW_CHECKED )
-            nId = 2;
+        if ( nFlags & DrawButtonFlags::DontKnow )
+            nIndex = 6;
+        else if ( nFlags & DrawButtonFlags::Checked )
+            nIndex = 1;
         else
-            nId = 1;
+            nIndex = 0;
     }
-    return pSVData->maCtrlData.mpCheckImgList->GetImage( nId );
+    return pSVData->maCtrlData.maCheckImgList[nIndex];
 }
 
 void CheckBox::ImplSetMinimumNWFSize()
 {
     Push( PushFlags::MAPMODE );
-    SetMapMode( MAP_PIXEL );
+    SetMapMode( MapUnit::MapPixel );
 
     ImplControlValue aControlValue;
     Size aCurSize( GetSizePixel() );
-    Rectangle aCtrlRegion( Point( 0, 0 ), aCurSize );
-    Rectangle aBoundingRgn, aContentRgn;
+    tools::Rectangle aCtrlRegion( Point( 0, 0 ), aCurSize );
+    tools::Rectangle aBoundingRgn, aContentRgn;
 
     // get native size of a radiobutton
-    if( GetNativeControlRegion( CTRL_CHECKBOX, PART_ENTIRE_CONTROL, aCtrlRegion,
-                                CTRL_STATE_DEFAULT|CTRL_STATE_ENABLED, aControlValue, OUString(),
+    if( GetNativeControlRegion( ControlType::Checkbox, ControlPart::Entire, aCtrlRegion,
+                                ControlState::DEFAULT|ControlState::ENABLED, aControlValue,
                                 aBoundingRgn, aContentRgn ) )
     {
         Size aSize = aContentRgn.GetSize();
@@ -3960,13 +3917,13 @@ Size CheckBox::CalcMinimumSize( long nMaxWidth ) const
     nMaxWidth -= aSize.Width();
 
     OUString aText = GetText();
-    if ( !aText.isEmpty() && ! (ImplGetButtonState() & BUTTON_DRAW_NOTEXT) )
+    if ( !aText.isEmpty() && ! (ImplGetButtonState() & DrawButtonFlags::NoText) )
     {
         // subtract what will be added later
         nMaxWidth-=2;
         nMaxWidth -= ImplGetImageToTextDistance();
 
-        Size aTextSize = GetTextRect( Rectangle( Point(), Size( nMaxWidth > 0 ? nMaxWidth : 0x7fffffff, 0x7fffffff ) ),
+        Size aTextSize = GetTextRect( tools::Rectangle( Point(), Size( nMaxWidth > 0 ? nMaxWidth : 0x7fffffff, 0x7fffffff ) ),
                                       aText, FixedText::ImplGetTextStyle( GetStyle() ) ).GetSize();
         aSize.Width()+=2;    // for focus rect
         aSize.Width() += ImplGetImageToTextDistance();
@@ -3992,34 +3949,36 @@ Size CheckBox::GetOptimalSize() const
     return CalcMinimumSize();
 }
 
+void CheckBox::ShowFocus(const tools::Rectangle& rRect)
+{
+    if (IsNativeControlSupported(ControlType::Checkbox, ControlPart::Focus))
+    {
+        ImplControlValue aControlValue;
+        tools::Rectangle aInRect(Point(0, 0), GetSizePixel());
+
+        aInRect.Left() = rRect.Left();  // exclude the checkbox itself from the focusrect
+
+        //to-do, figure out a better solution here
+        aInRect.Left()-=2;
+        aInRect.Right()+=2;
+        aInRect.Top()-=2;
+        aInRect.Bottom()+=2;
+
+        DrawNativeControl(ControlType::Checkbox, ControlPart::Focus, aInRect,
+                          ControlState::FOCUSED, aControlValue, OUString());
+    }
+    Button::ShowFocus(rRect);
+}
+
+FactoryFunction CheckBox::GetUITestFactory() const
+{
+    return CheckBoxUIObject::create;
+}
+
 ImageButton::ImageButton( vcl::Window* pParent, WinBits nStyle ) :
     PushButton( pParent, nStyle )
 {
     ImplInitStyle();
-}
-
-ImageButton::ImageButton( vcl::Window* pParent, const ResId& rResId ) :
-    PushButton( pParent, rResId.SetRT( RSC_IMAGEBUTTON ) )
-{
-    sal_uLong nObjMask = ReadLongRes();
-
-    if ( RSC_IMAGEBUTTON_IMAGE & nObjMask )
-    {
-        SetModeImage( Image( ResId( (RSHEADER_TYPE*)GetClassRes(), *rResId.GetResMgr() ) ) );
-        IncrementRes( GetObjSizeRes( (RSHEADER_TYPE*)GetClassRes() ) );
-    }
-
-    if ( RSC_IMAGEBUTTON_SYMBOL & nObjMask )
-        SetSymbol( (SymbolType)ReadLongRes() );
-
-    if ( RSC_IMAGEBUTTON_STATE & nObjMask )
-        SetState( (TriState)ReadLongRes() );
-
-    ImplInitStyle();
-}
-
-ImageButton::~ImageButton()
-{
 }
 
 void ImageButton::ImplInitStyle()
@@ -4035,77 +3994,72 @@ void ImageButton::ImplInitStyle()
     SetStyle( nStyle );
 }
 
-ImageRadioButton::ImageRadioButton( vcl::Window* pParent, WinBits nStyle ) :
-    RadioButton( pParent, nStyle )
-{
-}
-
-ImageRadioButton::~ImageRadioButton()
+ImageRadioButton::ImageRadioButton( vcl::Window* pParent ) :
+    RadioButton( pParent, 0 )
 {
 }
 
 TriStateBox::TriStateBox( vcl::Window* pParent, WinBits nStyle ) :
     CheckBox( pParent, nStyle )
 {
-    EnableTriState( true );
+    EnableTriState();
 }
 
-TriStateBox::~TriStateBox()
+DisclosureButton::DisclosureButton( vcl::Window* pParent ) :
+    CheckBox( pParent, 0 )
 {
 }
 
-DisclosureButton::DisclosureButton( vcl::Window* pParent, WinBits nStyle ) :
-    CheckBox( pParent, nStyle )
-{
-}
-
-void DisclosureButton::ImplDrawCheckBoxState()
+void DisclosureButton::ImplDrawCheckBoxState(vcl::RenderContext& rRenderContext)
 {
     /* HACK: DisclosureButton is currently assuming, that the disclosure sign
        will fit into the rectangle occupied by a normal checkbox on all themes.
        If this does not hold true for some theme, ImplGetCheckImageSize
-       would have to be overloaded for DisclosureButton; also GetNativeControlRegion
-       for CTRL_LISTNODE would have to be implemented and taken into account
+       would have to be overridden for DisclosureButton; also GetNativeControlRegion
+       for ControlType::ListNode would have to be implemented and taken into account
     */
 
-    Rectangle aStateRect( GetStateRect() );
+    tools::Rectangle aStateRect(GetStateRect());
 
-    ImplControlValue    aControlValue( GetState() == TRISTATE_TRUE ? BUTTONVALUE_ON : BUTTONVALUE_OFF );
-    Rectangle           aCtrlRegion( aStateRect );
-    ControlState        nState = 0;
+    ImplControlValue aControlValue(GetState() == TRISTATE_TRUE ? ButtonValue::On : ButtonValue::Off);
+    tools::Rectangle aCtrlRegion(aStateRect);
+    ControlState nState = ControlState::NONE;
 
-    if ( HasFocus() )                       nState |= CTRL_STATE_FOCUSED;
-    if ( ImplGetButtonState() & BUTTON_DRAW_DEFAULT )   nState |= CTRL_STATE_DEFAULT;
-    if ( Window::IsEnabled() )              nState |= CTRL_STATE_ENABLED;
-    if ( IsMouseOver() && GetMouseRect().IsInside( GetPointerPosPixel() ) )
-        nState |= CTRL_STATE_ROLLOVER;
+    if (HasFocus())
+        nState |= ControlState::FOCUSED;
+    if (ImplGetButtonState() & DrawButtonFlags::Default)
+        nState |= ControlState::DEFAULT;
+    if (Window::IsEnabled())
+        nState |= ControlState::ENABLED;
+    if (IsMouseOver() && GetMouseRect().IsInside(GetPointerPosPixel()))
+        nState |= ControlState::ROLLOVER;
 
-    if( ! DrawNativeControl( CTRL_LISTNODE, PART_ENTIRE_CONTROL, aCtrlRegion, nState,
-                           aControlValue, OUString() ) )
+    if (!rRenderContext.DrawNativeControl(ControlType::ListNode, ControlPart::Entire, aCtrlRegion,
+                                          nState, aControlValue, OUString()))
     {
-        ImplSVCtrlData& rCtrlData( ImplGetSVData()->maCtrlData );
-        if( ! rCtrlData.mpDisclosurePlus )
-            rCtrlData.mpDisclosurePlus = new Image( BitmapEx( VclResId( SV_DISCLOSURE_PLUS ) ) );
-        if( ! rCtrlData.mpDisclosureMinus )
-            rCtrlData.mpDisclosureMinus = new Image( BitmapEx( VclResId( SV_DISCLOSURE_MINUS ) ) );
+        ImplSVCtrlData& rCtrlData(ImplGetSVData()->maCtrlData);
+        if (!rCtrlData.mpDisclosurePlus)
+            rCtrlData.mpDisclosurePlus = new Image(BitmapEx(SV_DISCLOSURE_PLUS));
+        if (!rCtrlData.mpDisclosureMinus)
+            rCtrlData.mpDisclosureMinus = new Image(BitmapEx(SV_DISCLOSURE_MINUS));
 
-        Image* pImg = NULL;
+        Image* pImg = nullptr;
         pImg = IsChecked() ? rCtrlData.mpDisclosureMinus : rCtrlData.mpDisclosurePlus;
 
-        DBG_ASSERT( pImg, "no disclosure image" );
-        if( ! pImg )
+        SAL_WARN_IF(!pImg, "vcl", "no disclosure image");
+        if (!pImg)
             return;
 
-        sal_uInt16 nStyle = 0;
-        if( ! IsEnabled() )
-            nStyle |= IMAGE_DRAW_DISABLE;
+        DrawImageFlags nStyle = DrawImageFlags::NONE;
+        if (!IsEnabled())
+            nStyle |= DrawImageFlags::Disable;
 
-        Size aSize( aStateRect.GetSize() );
-        Size aImgSize( pImg->GetSizePixel() );
-        Point aOff( (aSize.Width() - aImgSize.Width())/2,
-                    (aSize.Height() - aImgSize.Height())/2 );
+        Size aSize(aStateRect.GetSize());
+        Size aImgSize(pImg->GetSizePixel());
+        Point aOff((aSize.Width() - aImgSize.Width()) / 2,
+                   (aSize.Height() - aImgSize.Height()) / 2);
         aOff += aStateRect.TopLeft();
-        DrawImage( aOff, *pImg, nStyle );
+        rRenderContext.DrawImage(aOff, *pImg, nStyle);
     }
 }
 
@@ -4122,6 +4076,12 @@ void DisclosureButton::KeyInput( const KeyEvent& rKEvt )
     }
     else
         CheckBox::KeyInput( rKEvt );
+}
+
+VCL_BUILDER_DECL_FACTORY(SmallButton)
+{
+    (void)rMap;
+    rRet = VclPtr<PushButton>::Create(pParent, WB_CLIPCHILDREN|WB_CENTER|WB_VCENTER|WB_FLATBUTTON|WB_SMALLSTYLE);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
