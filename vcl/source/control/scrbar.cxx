@@ -24,16 +24,15 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "vcl/event.hxx"
-#include "vcl/decoview.hxx"
-#include "vcl/scrbar.hxx"
-#include "vcl/timer.hxx"
-#include "vcl/settings.hxx"
+#include <vcl/event.hxx>
+#include <vcl/decoview.hxx>
+#include <vcl/scrbar.hxx>
+#include <vcl/timer.hxx>
+#include <vcl/settings.hxx>
 
 #include "svdata.hxx"
 
 #include "rtl/string.hxx"
-#include "tools/rc.h"
 
 #if defined USE_JAVA && defined MACOSX
 
@@ -50,23 +49,23 @@
 static const CFStringRef kAppleScrollBarVariantPref = CFSTR( "AppleScrollBarVariant" );
 static CFStringRef aLastAppleScrollBarVariantValue = NULL;
 static ::std::list< ScrollBar* > gScrollBars;
-static ::std::map< ScrollBar*, Rectangle > gScrollBarTrackingRects;
+static ::std::map< ScrollBar*, tools::Rectangle > gScrollBarTrackingRects;
 
 #endif	// USE_JAVA && MACOSX
 
 /*  #i77549#
     HACK: for scrollbars in case of thumb rect, page up and page down rect we
-    abuse the HitTestNativeControl interface. All theming engines but OS X
+    abuse the HitTestNativeScrollbar interface. All theming engines but OS X
     are actually able to draw the thumb according to our internal representation.
     However OS X draws a little outside. The canonical way would be to enhance the
-    HitTestNativeControl passing a ScrollbarValue additionally so all necessary
+    HitTestNativeScrollbar passing a ScrollbarValue additionally so all necessary
     information is available in the call.
     .
     However since there is only this one small exception we will deviate a little and
     instead pass the respective rect as control region to allow for a small correction.
 
-    So all places using HitTestNativeControl on PART_THUMB_HORZ, PART_THUMB_VERT,
-    PART_TRACK_HORZ_LEFT, PART_TRACK_HORZ_RIGHT, PART_TRACK_VERT_UPPER, PART_TRACK_VERT_LOWER
+    So all places using HitTestNativeScrollbar on ControlPart::ThumbHorz, ControlPart::ThumbVert,
+    ControlPart::TrackHorzLeft, ControlPart::TrackHorzRight, ControlPart::TrackVertUpper, ControlPart::TrackVertLower
     do not use the control rectangle as region but the actuall part rectangle, making
     only small deviations feasible.
 */
@@ -79,9 +78,6 @@ static ::std::map< ScrollBar*, Rectangle > gScrollBarTrackingRects;
 #define SCRBAR_DRAW_PAGE2           ((sal_uInt16)0x0008)
 #define SCRBAR_DRAW_THUMB           ((sal_uInt16)0x0010)
 #define SCRBAR_DRAW_BACKGROUND      ((sal_uInt16)0x0020)
-#define SCRBAR_DRAW_ALL             (SCRBAR_DRAW_BTN1 | SCRBAR_DRAW_BTN2 |  \
-                                     SCRBAR_DRAW_PAGE1 | SCRBAR_DRAW_PAGE2 |\
-                                     SCRBAR_DRAW_THUMB | SCRBAR_DRAW_BACKGROUND )
 
 #define SCRBAR_STATE_BTN1_DOWN      ((sal_uInt16)0x0001)
 #define SCRBAR_STATE_BTN1_DISABLE   ((sal_uInt16)0x0002)
@@ -90,7 +86,6 @@ static ::std::map< ScrollBar*, Rectangle > gScrollBarTrackingRects;
 #define SCRBAR_STATE_PAGE1_DOWN     ((sal_uInt16)0x0010)
 #define SCRBAR_STATE_PAGE2_DOWN     ((sal_uInt16)0x0020)
 #define SCRBAR_STATE_THUMB_DOWN     ((sal_uInt16)0x0040)
-
 #if defined USE_JAVA && defined MACOSX
 #define SCRBAR_STATE_BTN1_INSIDE    ((sal_uInt16)0x0100)
 #define SCRBAR_STATE_BTN2_INSIDE    ((sal_uInt16)0x0200)
@@ -102,10 +97,9 @@ struct ImplScrollBarData
 {
     AutoTimer       maTimer; // Timer
     bool            mbHide;
-    Rectangle       maTrackRect; // TODO: move to ScrollBar class when binary incompatibility of ScrollBar class is no longer problematic
 #if defined USE_JAVA && defined MACOSX
     bool            mbHasEntireControlRect;
-    Rectangle       maEntireControlRect;
+    tools::Rectangle       maEntireControlRect;
 #endif	// USE_JAVA && MACOSX
 };
 
@@ -153,7 +147,7 @@ static void RelayoutScrollBars()
 
 void ScrollBar::ImplInit( vcl::Window* pParent, WinBits nStyle )
 {
-    mpData              = NULL;
+    mpData              = nullptr;
     mnThumbPixRange     = 0;
     mnThumbPixPos       = 0;
     mnThumbPixSize      = 0;
@@ -166,27 +160,18 @@ void ScrollBar::ImplInit( vcl::Window* pParent, WinBits nStyle )
     mnDelta             = 0;
     mnDragDraw          = 0;
     mnStateFlags        = 0;
-    meScrollType        = SCROLL_DONTKNOW;
-    meDDScrollType      = SCROLL_DONTKNOW;
+    meScrollType        = ScrollType::DontKnow;
     mbCalcSize          = true;
     mbFullDrag          = false;
 
-    if( !mpData )  // TODO: remove when maTrackRect is no longer in mpData
-    {
-        mpData = new ImplScrollBarData;
-        mpData->maTimer.SetTimeoutHdl( LINK( this, ScrollBar, ImplAutoTimerHdl ) );
-        mpData->mbHide = false;
-    }
-
     ImplInitStyle( nStyle );
-    Control::ImplInit( pParent, nStyle, NULL );
+    Control::ImplInit( pParent, nStyle, nullptr );
 
     long nScrollSize = GetSettings().GetStyleSettings().GetScrollBarSize();
     SetSizePixel( Size( nScrollSize, nScrollSize ) );
-    SetBackground();
 
 #if defined USE_JAVA && defined MACOSX
-    if ( IsNativeControlSupported( CTRL_SCROLLBAR, PART_ENTIRE_CONTROL ) )
+    if ( IsNativeControlSupported( ControlType::Scrollbar, ControlPart::Entire ) )
     {
         RelayoutScrollBars();
         gScrollBars.push_back( this );
@@ -199,21 +184,26 @@ void ScrollBar::ImplInitStyle( WinBits nStyle )
     if ( nStyle & WB_DRAG )
         mbFullDrag = true;
     else
-        mbFullDrag = (GetSettings().GetStyleSettings().GetDragFullOptions() & DRAGFULL_OPTION_SCROLL) != 0;
+        mbFullDrag = bool(GetSettings().GetStyleSettings().GetDragFullOptions() & DragFullOptions::Scroll);
 }
 
 ScrollBar::ScrollBar( vcl::Window* pParent, WinBits nStyle ) :
-    Control( WINDOW_SCROLLBAR )
+    Control( WindowType::SCROLLBAR )
 {
     ImplInit( pParent, nStyle );
 }
 
 ScrollBar::~ScrollBar()
 {
-    delete mpData;
+    disposeOnce();
+}
+
+void ScrollBar::dispose()
+{
+    delete mpData; mpData = nullptr;
 
 #if defined USE_JAVA && defined MACOSX
-    ::std::map< ScrollBar*, Rectangle >::iterator it = gScrollBarTrackingRects.find( this );
+    ::std::map< ScrollBar*, tools::Rectangle >::iterator it = gScrollBarTrackingRects.find( this );
     if ( it != gScrollBarTrackingRects.end() )
     {
         JavaSalFrame *pFrame = (JavaSalFrame *)ImplGetFrame();
@@ -225,27 +215,23 @@ ScrollBar::~ScrollBar()
 
     gScrollBars.remove( this );
 #endif	// USE_JAVA && MACOSX
+
+    Control::dispose();
 }
 
 void ScrollBar::ImplUpdateRects( bool bUpdate )
 {
 #if defined USE_JAVA && defined MACOSX
-    if( IsNativeControlSupported( CTRL_SCROLLBAR, PART_ENTIRE_CONTROL ) )
+    if( IsNativeControlSupported( ControlType::Scrollbar, ControlPart::Entire ) )
     {
         ImplUpdateRectsNative( bUpdate );
         return;
     }
 #endif	// USE_JAVA && MACOSX
 
-    sal_uInt16      nOldStateFlags  = mnStateFlags;
-    Rectangle   aOldPage1Rect = maPage1Rect;
-    Rectangle   aOldPage2Rect = maPage2Rect;
-    Rectangle   aOldThumbRect = maThumbRect;
-
     mnStateFlags  &= ~SCRBAR_STATE_BTN1_DISABLE;
     mnStateFlags  &= ~SCRBAR_STATE_BTN2_DISABLE;
 
-    Rectangle& maTrackRect = mpData->maTrackRect; // TODO: remove when maTrackRect is no longer in mpData
     if ( mnThumbPixRange )
     {
         if ( GetStyle() & WB_HORZ )
@@ -307,7 +293,7 @@ void ScrollBar::ImplUpdateRects( bool bUpdate )
         }
     }
 
-    if( !IsNativeControlSupported(CTRL_SCROLLBAR, PART_ENTIRE_CONTROL) )
+    if( !IsNativeControlSupported(ControlType::Scrollbar, ControlPart::Entire) )
     {
         // disable scrollbar buttons only in VCL's own 'theme'
         // as it is uncommon on other platforms
@@ -319,20 +305,7 @@ void ScrollBar::ImplUpdateRects( bool bUpdate )
 
     if ( bUpdate )
     {
-        sal_uInt16 nDraw = 0;
-        if ( (nOldStateFlags & SCRBAR_STATE_BTN1_DISABLE) !=
-             (mnStateFlags & SCRBAR_STATE_BTN1_DISABLE) )
-            nDraw |= SCRBAR_DRAW_BTN1;
-        if ( (nOldStateFlags & SCRBAR_STATE_BTN2_DISABLE) !=
-             (mnStateFlags & SCRBAR_STATE_BTN2_DISABLE) )
-            nDraw |= SCRBAR_DRAW_BTN2;
-        if ( aOldPage1Rect != maPage1Rect )
-            nDraw |= SCRBAR_DRAW_PAGE1;
-        if ( aOldPage2Rect != maPage2Rect )
-            nDraw |= SCRBAR_DRAW_PAGE2;
-        if ( aOldThumbRect != maThumbRect )
-            nDraw |= SCRBAR_DRAW_THUMB;
-        ImplDraw( nDraw, this );
+        Invalidate();
     }
 }
 
@@ -341,16 +314,16 @@ void ScrollBar::ImplUpdateRects( bool bUpdate )
 void ScrollBar::ImplUpdateRectsNative( bool bUpdate )
 {
     sal_uInt16  nOldStateFlags  = mnStateFlags;
-    Rectangle   aOldPage1Rect = maPage1Rect;
-    Rectangle   aOldPage2Rect = maPage2Rect;
-    Rectangle   aOldThumbRect = maThumbRect;
+    tools::Rectangle   aOldPage1Rect = maPage1Rect;
+    tools::Rectangle   aOldPage2Rect = maPage2Rect;
+    tools::Rectangle   aOldThumbRect = maThumbRect;
 
     mnStateFlags  &= ~SCRBAR_STATE_BTN1_DISABLE;
     mnStateFlags  &= ~SCRBAR_STATE_BTN2_DISABLE;
 
     bool bHorz = (GetStyle() & WB_HORZ ? true : false);
 
-    ControlState nState = ( IsEnabled() ? CTRL_STATE_ENABLED : 0 ) | ( HasFocus() ? CTRL_STATE_FOCUSED : 0 );
+    ControlState nState = ( IsEnabled() ? ControlState::ENABLED : ControlState::NONE ) | ( HasFocus() ? ControlState::FOCUSED : ControlState::NONE );
     ScrollbarValue scrValue;
 
     scrValue.mnMin = mnMinRange;
@@ -360,56 +333,54 @@ void ScrollBar::ImplUpdateRectsNative( bool bUpdate )
     scrValue.maThumbRect = maThumbRect;
     scrValue.maButton1Rect = maBtn1Rect;
     scrValue.maButton2Rect = maBtn2Rect;
-    scrValue.mnButton1State = ((mnStateFlags & SCRBAR_STATE_BTN1_DOWN) ? CTRL_STATE_PRESSED : 0) |
-                            ((!(mnStateFlags & SCRBAR_STATE_BTN1_DISABLE)) ? CTRL_STATE_ENABLED : 0);
-    scrValue.mnButton2State = ((mnStateFlags & SCRBAR_STATE_BTN2_DOWN) ? CTRL_STATE_PRESSED : 0) |
-                            ((!(mnStateFlags & SCRBAR_STATE_BTN2_DISABLE)) ? CTRL_STATE_ENABLED : 0);
-    scrValue.mnThumbState = nState | ((mnStateFlags & SCRBAR_STATE_THUMB_DOWN) ? CTRL_STATE_PRESSED : 0);
-    scrValue.mnPage1State = nState | ((mnStateFlags & SCRBAR_STATE_PAGE1_DOWN) ? CTRL_STATE_PRESSED : 0);
-    scrValue.mnPage2State = nState | ((mnStateFlags & SCRBAR_STATE_PAGE2_DOWN) ? CTRL_STATE_PRESSED : 0);
+    scrValue.mnButton1State = ((mnStateFlags & SCRBAR_STATE_BTN1_DOWN) ? ControlState::PRESSED : ControlState::NONE) |
+                            ((!(mnStateFlags & SCRBAR_STATE_BTN1_DISABLE)) ? ControlState::ENABLED : ControlState::NONE);
+    scrValue.mnButton2State = ((mnStateFlags & SCRBAR_STATE_BTN2_DOWN) ? ControlState::PRESSED : ControlState::NONE) |
+                            ((!(mnStateFlags & SCRBAR_STATE_BTN2_DISABLE)) ? ControlState::ENABLED : ControlState::NONE);
+    scrValue.mnThumbState = nState | ((mnStateFlags & SCRBAR_STATE_THUMB_DOWN) ? ControlState::PRESSED : ControlState::NONE);
+    scrValue.mnPage1State = nState | ((mnStateFlags & SCRBAR_STATE_PAGE1_DOWN) ? ControlState::PRESSED : ControlState::NONE);
+    scrValue.mnPage2State = nState | ((mnStateFlags & SCRBAR_STATE_PAGE2_DOWN) ? ControlState::PRESSED : ControlState::NONE);
 
     if( IsMouseOver() )
     {
-        Rectangle* pRect = ImplFindPartRect( GetPointerPosPixel() );
+        tools::Rectangle* pRect = ImplFindPartRect( GetPointerPosPixel() );
         if( pRect )
         {
             if( pRect == &maThumbRect )
-                scrValue.mnThumbState |= CTRL_STATE_ROLLOVER;
+                scrValue.mnThumbState |= ControlState::ROLLOVER;
             else if( pRect == &maBtn1Rect )
-                scrValue.mnButton1State |= CTRL_STATE_ROLLOVER;
+                scrValue.mnButton1State |= ControlState::ROLLOVER;
             else if( pRect == &maBtn2Rect )
-                scrValue.mnButton2State |= CTRL_STATE_ROLLOVER;
+                scrValue.mnButton2State |= ControlState::ROLLOVER;
             else if( pRect == &maPage1Rect )
-                scrValue.mnPage1State |= CTRL_STATE_ROLLOVER;
+                scrValue.mnPage1State |= ControlState::ROLLOVER;
             else if( pRect == &maPage2Rect )
-                scrValue.mnPage2State |= CTRL_STATE_ROLLOVER;
+                scrValue.mnPage2State |= ControlState::ROLLOVER;
         }
     }
 
-    Rectangle aControlRegion( Point( 0, 0 ), GetOutputSizePixel() );
-    Rectangle aEntireCtrlRegion, aPage1Region, aPage2Region, aThumbRegion, aBoundingRegion, aTrackRegion;
+    tools::Rectangle aControlRegion( Point( 0, 0 ), GetOutputSizePixel() );
+    tools::Rectangle aEntireCtrlRegion, aPage1Region, aPage2Region, aThumbRegion, aBoundingRegion, aTrackRegion;
 
     if( ! mpData )
         ImplNewImplScrollBarData();
 
-    if( GetNativeControlRegion( CTRL_SCROLLBAR, PART_ENTIRE_CONTROL, aControlRegion, 0, scrValue, OUString(), aBoundingRegion, aEntireCtrlRegion ) )
+    if( GetNativeControlRegion( ControlType::Scrollbar, ControlPart::Entire, aControlRegion, ControlState::NONE, scrValue, aBoundingRegion, aEntireCtrlRegion ) )
     {
         mpData->mbHasEntireControlRect = true;
         mpData->maEntireControlRect = aEntireCtrlRegion;
     }
 
-    if( GetNativeControlRegion( CTRL_SCROLLBAR, ( ( bHorz ) ? PART_TRACK_HORZ_AREA : PART_TRACK_VERT_AREA ), aControlRegion, 0, scrValue, OUString(), aBoundingRegion, aTrackRegion ) )
-    {
-        mpData->maTrackRect = aTrackRegion;
-    }
+    if( GetNativeControlRegion( ControlType::Scrollbar, ( bHorz ? ControlPart::TrackHorzArea : ControlPart::TrackVertArea ), aControlRegion, ControlState::NONE, scrValue, aBoundingRegion, aTrackRegion ) )
+        maTrackRect = aTrackRegion;
 
-    GetNativeControlRegion( CTRL_SCROLLBAR, ( ( bHorz ) ? PART_TRACK_HORZ_LEFT : PART_TRACK_VERT_UPPER ), aControlRegion, 0, scrValue, OUString(), aBoundingRegion, aPage1Region );
+    GetNativeControlRegion( ControlType::Scrollbar, ( bHorz ? ControlPart::TrackHorzLeft : ControlPart::TrackVertUpper ), aControlRegion, ControlState::NONE, scrValue, aBoundingRegion, aPage1Region );
     maPage1Rect = aPage1Region;
 
-    GetNativeControlRegion( CTRL_SCROLLBAR, ( ( bHorz ) ? PART_TRACK_HORZ_RIGHT : PART_TRACK_VERT_LOWER ), aControlRegion, 0, scrValue, OUString(), aBoundingRegion, aPage2Region );
+    GetNativeControlRegion( ControlType::Scrollbar, ( bHorz ? ControlPart::TrackHorzRight : ControlPart::TrackVertLower ), aControlRegion, ControlState::NONE, scrValue, aBoundingRegion, aPage2Region );
     maPage2Rect = aPage2Region;
 
-    GetNativeControlRegion( CTRL_SCROLLBAR, ( ( bHorz ) ? PART_THUMB_HORZ : PART_THUMB_VERT ), aControlRegion, 0, scrValue, OUString(), aBoundingRegion, aThumbRegion );
+    GetNativeControlRegion( ControlType::Scrollbar, ( bHorz ? ControlPart::ThumbHorz : ControlPart::ThumbVert ), aControlRegion, ControlState::NONE, scrValue, aBoundingRegion, aThumbRegion );
     maThumbRect = aThumbRegion;
 
     if ( bUpdate )
@@ -427,7 +398,7 @@ void ScrollBar::ImplUpdateRectsNative( bool bUpdate )
             nDraw |= SCRBAR_DRAW_PAGE2;
         if ( aOldThumbRect != maThumbRect )
             nDraw |= SCRBAR_DRAW_THUMB;
-        ImplDraw( nDraw, this );
+        Invalidate();
     }
 }
 
@@ -467,20 +438,19 @@ void ScrollBar::ImplCalc( bool bUpdate )
     const Size aSize = GetOutputSizePixel();
     const long nMinThumbSize = GetSettings().GetStyleSettings().GetMinThumbSize();
 
-    Rectangle& maTrackRect = mpData->maTrackRect;  // TODO: remove when maTrackRect is no longer in mpData
     if ( mbCalcSize )
     {
         Size aOldSize = getCurrentCalcSize();
 
-        const Rectangle aControlRegion( Point(0,0), aSize );
-        Rectangle aBtn1Region, aBtn2Region, aTrackRegion, aBoundingRegion;
+        const tools::Rectangle aControlRegion( Point(0,0), aSize );
+        tools::Rectangle aBtn1Region, aBtn2Region, aTrackRegion, aBoundingRegion;
 
         if ( GetStyle() & WB_HORZ )
         {
-            if ( GetNativeControlRegion( CTRL_SCROLLBAR, IsRTLEnabled()? PART_BUTTON_RIGHT: PART_BUTTON_LEFT,
-                        aControlRegion, 0, ImplControlValue(), OUString(), aBoundingRegion, aBtn1Region ) &&
-                 GetNativeControlRegion( CTRL_SCROLLBAR, IsRTLEnabled()? PART_BUTTON_LEFT: PART_BUTTON_RIGHT,
-                        aControlRegion, 0, ImplControlValue(), OUString(), aBoundingRegion, aBtn2Region ) )
+            if ( GetNativeControlRegion( ControlType::Scrollbar, IsRTLEnabled()? ControlPart::ButtonRight: ControlPart::ButtonLeft,
+                        aControlRegion, ControlState::NONE, ImplControlValue(), aBoundingRegion, aBtn1Region ) &&
+                 GetNativeControlRegion( ControlType::Scrollbar, IsRTLEnabled()? ControlPart::ButtonLeft: ControlPart::ButtonRight,
+                        aControlRegion, ControlState::NONE, ImplControlValue(), aBoundingRegion, aBtn2Region ) )
             {
                 maBtn1Rect = aBtn1Region;
                 maBtn2Rect = aBtn2Region;
@@ -494,11 +464,11 @@ void ScrollBar::ImplCalc( bool bUpdate )
                 maBtn2Rect.SetSize( aBtnSize );
             }
 
-            if ( GetNativeControlRegion( CTRL_SCROLLBAR, PART_TRACK_HORZ_AREA,
-                     aControlRegion, 0, ImplControlValue(), OUString(), aBoundingRegion, aTrackRegion ) )
+            if ( GetNativeControlRegion( ControlType::Scrollbar, ControlPart::TrackHorzArea,
+                     aControlRegion, ControlState::NONE, ImplControlValue(), aBoundingRegion, aTrackRegion ) )
                 maTrackRect = aTrackRegion;
             else
-                maTrackRect = Rectangle( maBtn1Rect.TopRight(), maBtn2Rect.BottomLeft() );
+                maTrackRect = tools::Rectangle( maBtn1Rect.TopRight(), maBtn2Rect.BottomLeft() );
 
             // Check if available space is big enough for thumb ( min thumb size = ScrBar width/height )
             mnThumbPixRange = maTrackRect.Right() - maTrackRect.Left();
@@ -518,10 +488,10 @@ void ScrollBar::ImplCalc( bool bUpdate )
         }
         else
         {
-            if ( GetNativeControlRegion( CTRL_SCROLLBAR, PART_BUTTON_UP,
-                        aControlRegion, 0, ImplControlValue(), OUString(), aBoundingRegion, aBtn1Region ) &&
-                 GetNativeControlRegion( CTRL_SCROLLBAR, PART_BUTTON_DOWN,
-                        aControlRegion, 0, ImplControlValue(), OUString(), aBoundingRegion, aBtn2Region ) )
+            if ( GetNativeControlRegion( ControlType::Scrollbar, ControlPart::ButtonUp,
+                        aControlRegion, ControlState::NONE, ImplControlValue(), aBoundingRegion, aBtn1Region ) &&
+                 GetNativeControlRegion( ControlType::Scrollbar, ControlPart::ButtonDown,
+                        aControlRegion, ControlState::NONE, ImplControlValue(), aBoundingRegion, aBtn2Region ) )
             {
                 maBtn1Rect = aBtn1Region;
                 maBtn2Rect = aBtn2Region;
@@ -535,11 +505,11 @@ void ScrollBar::ImplCalc( bool bUpdate )
                 maBtn2Rect.SetSize( aBtnSize );
             }
 
-            if ( GetNativeControlRegion( CTRL_SCROLLBAR, PART_TRACK_VERT_AREA,
-                     aControlRegion, 0, ImplControlValue(), OUString(), aBoundingRegion, aTrackRegion ) )
+            if ( GetNativeControlRegion( ControlType::Scrollbar, ControlPart::TrackVertArea,
+                     aControlRegion, ControlState::NONE, ImplControlValue(), aBoundingRegion, aTrackRegion ) )
                 maTrackRect = aTrackRegion;
             else
-                maTrackRect = Rectangle( maBtn1Rect.BottomLeft()+Point(0,1), maBtn2Rect.TopRight() );
+                maTrackRect = tools::Rectangle( maBtn1Rect.BottomLeft()+Point(0,1), maBtn2Rect.TopRight() );
 
             // Check if available space is big enough for thumb
             mnThumbPixRange = maTrackRect.Bottom() - maTrackRect.Top();
@@ -599,7 +569,7 @@ void ScrollBar::ImplCalc( bool bUpdate )
         }
     }
 
-    // If we're ought to ouput again and we have been triggered
+    // If we're ought to output again and we have been triggered
     // a Paint event via an Action, we don't output directly,
     // but invalidate everything
     if ( bUpdate && HasPaintEvent() )
@@ -610,13 +580,13 @@ void ScrollBar::ImplCalc( bool bUpdate )
     ImplUpdateRects( bUpdate );
 }
 
-void ScrollBar::Draw( OutputDevice* pDev, const Point& rPos, const Size& /* rSize */, sal_uLong nFlags )
+void ScrollBar::Draw( OutputDevice* pDev, const Point& rPos, const Size& /* rSize */, DrawFlags nFlags )
 {
     Point aPos  = pDev->LogicToPixel( rPos );
 
     pDev->Push();
     pDev->SetMapMode();
-    if ( !(nFlags & WINDOW_DRAW_MONO) )
+    if ( !(nFlags & DrawFlags::Mono) )
     {
         // DecoView uses the FaceColor...
         AllSettings aSettings = pDev->GetSettings();
@@ -642,35 +612,36 @@ void ScrollBar::Draw( OutputDevice* pDev, const Point& rPos, const Size& /* rSiz
     maBtn1Rect+=aPos;
     maBtn2Rect+=aPos;
     maThumbRect+=aPos;
-    mpData->maTrackRect+=aPos; // TODO: update when maTrackRect is no longer in mpData
+    maTrackRect+=aPos;
     maPage1Rect+=aPos;
     maPage2Rect+=aPos;
 
-    ImplDraw( SCRBAR_DRAW_ALL, pDev );
+    ImplDraw(*pDev);
     pDev->Pop();
 
     mbCalcSize = true;
 }
 
-bool ScrollBar::ImplDrawNative( sal_uInt16 nDrawFlags )
+bool ScrollBar::ImplDrawNative(vcl::RenderContext& rRenderContext, sal_uInt16 nDrawFlags)
 {
     ScrollbarValue scrValue;
 
-    bool bNativeOK = IsNativeControlSupported(CTRL_SCROLLBAR, PART_ENTIRE_CONTROL);
-    if( !bNativeOK )
+    bool bNativeOK = rRenderContext.IsNativeControlSupported(ControlType::Scrollbar, ControlPart::Entire);
+    if (!bNativeOK)
         return false;
 
 #ifdef USE_JAVA
     // We need to set the background color in the native drawing method
-    SetFillColor( GetBackground().GetColor() );
+    rRenderContext.SetFillColor( GetBackground().GetColor() );
 #endif	// USE_JAVA
 
-    bool bHorz = (GetStyle() & WB_HORZ) ? true : false;
+    bool bHorz = (GetStyle() & WB_HORZ) != 0;
 
     // Draw the entire background if the control supports it
-    if( IsNativeControlSupported(CTRL_SCROLLBAR, bHorz ? PART_DRAW_BACKGROUND_HORZ : PART_DRAW_BACKGROUND_VERT) )
+    if (rRenderContext.IsNativeControlSupported(ControlType::Scrollbar, bHorz ? ControlPart::DrawBackgroundHorz : ControlPart::DrawBackgroundVert))
     {
-        ControlState        nState = ( IsEnabled() ? CTRL_STATE_ENABLED : 0 ) | ( HasFocus() ? CTRL_STATE_FOCUSED : 0 );
+        ControlState nState = (IsEnabled() ? ControlState::ENABLED : ControlState::NONE)
+                            | (HasFocus() ? ControlState::FOCUSED : ControlState::NONE);
 
         scrValue.mnMin = mnMinRange;
         scrValue.mnMax = mnMaxRange;
@@ -679,39 +650,39 @@ bool ScrollBar::ImplDrawNative( sal_uInt16 nDrawFlags )
         scrValue.maThumbRect = maThumbRect;
         scrValue.maButton1Rect = maBtn1Rect;
         scrValue.maButton2Rect = maBtn2Rect;
-        scrValue.mnButton1State = ((mnStateFlags & SCRBAR_STATE_BTN1_DOWN) ? CTRL_STATE_PRESSED : 0) |
+        scrValue.mnButton1State = ((mnStateFlags & SCRBAR_STATE_BTN1_DOWN) ? ControlState::PRESSED : ControlState::NONE) |
 #if defined USE_JAVA && defined MACOSX
-                            ((mnStateFlags & SCRBAR_STATE_BTN1_INSIDE) ? CTRL_STATE_SELECTED : 0) |
+                            ((mnStateFlags & SCRBAR_STATE_BTN1_INSIDE) ? ControlState::SELECTED : ControlState::NONE) |
 #endif	// USE_JAVA && MACOSX
-                            ((!(mnStateFlags & SCRBAR_STATE_BTN1_DISABLE)) ? CTRL_STATE_ENABLED : 0);
-        scrValue.mnButton2State = ((mnStateFlags & SCRBAR_STATE_BTN2_DOWN) ? CTRL_STATE_PRESSED : 0) |
+                            ((!(mnStateFlags & SCRBAR_STATE_BTN1_DISABLE)) ? ControlState::ENABLED : ControlState::NONE);
+        scrValue.mnButton2State = ((mnStateFlags & SCRBAR_STATE_BTN2_DOWN) ? ControlState::PRESSED : ControlState::NONE) |
 #if defined USE_JAVA && defined MACOSX
-                            ((mnStateFlags & SCRBAR_STATE_BTN2_INSIDE) ? CTRL_STATE_SELECTED : 0) |
+                            ((mnStateFlags & SCRBAR_STATE_BTN2_INSIDE) ? ControlState::SELECTED : ControlState::NONE) |
 #endif	// USE_JAVA && MACOSX
-                            ((!(mnStateFlags & SCRBAR_STATE_BTN2_DISABLE)) ? CTRL_STATE_ENABLED : 0);
-        scrValue.mnThumbState = nState | ((mnStateFlags & SCRBAR_STATE_THUMB_DOWN) ? CTRL_STATE_PRESSED : 0);
-        scrValue.mnPage1State = nState | ((mnStateFlags & SCRBAR_STATE_PAGE1_DOWN) ? CTRL_STATE_PRESSED : 0);
-        scrValue.mnPage2State = nState | ((mnStateFlags & SCRBAR_STATE_PAGE2_DOWN) ? CTRL_STATE_PRESSED : 0);
+                            ((!(mnStateFlags & SCRBAR_STATE_BTN2_DISABLE)) ? ControlState::ENABLED : ControlState::NONE);
+        scrValue.mnThumbState = nState | ((mnStateFlags & SCRBAR_STATE_THUMB_DOWN) ? ControlState::PRESSED : ControlState::NONE);
+        scrValue.mnPage1State = nState | ((mnStateFlags & SCRBAR_STATE_PAGE1_DOWN) ? ControlState::PRESSED : ControlState::NONE);
+        scrValue.mnPage2State = nState | ((mnStateFlags & SCRBAR_STATE_PAGE2_DOWN) ? ControlState::PRESSED : ControlState::NONE);
 
-        if( IsMouseOver() )
+        if (IsMouseOver())
         {
-            Rectangle* pRect = ImplFindPartRect( GetPointerPosPixel() );
-            if( pRect )
+            tools::Rectangle* pRect = ImplFindPartRect(GetPointerPosPixel());
+            if (pRect)
             {
-                if( pRect == &maThumbRect )
-                    scrValue.mnThumbState |= CTRL_STATE_ROLLOVER;
-                else if( pRect == &maBtn1Rect )
-                    scrValue.mnButton1State |= CTRL_STATE_ROLLOVER;
-                else if( pRect == &maBtn2Rect )
-                    scrValue.mnButton2State |= CTRL_STATE_ROLLOVER;
-                else if( pRect == &maPage1Rect )
-                    scrValue.mnPage1State |= CTRL_STATE_ROLLOVER;
-                else if( pRect == &maPage2Rect )
-                    scrValue.mnPage2State |= CTRL_STATE_ROLLOVER;
+                if (pRect == &maThumbRect)
+                    scrValue.mnThumbState |= ControlState::ROLLOVER;
+                else if (pRect == &maBtn1Rect)
+                    scrValue.mnButton1State |= ControlState::ROLLOVER;
+                else if (pRect == &maBtn2Rect)
+                    scrValue.mnButton2State |= ControlState::ROLLOVER;
+                else if (pRect == &maPage1Rect)
+                    scrValue.mnPage1State |= ControlState::ROLLOVER;
+                else if (pRect == &maPage2Rect)
+                    scrValue.mnPage2State |= ControlState::ROLLOVER;
             }
         }
 
-        Rectangle aCtrlRegion;
+        tools::Rectangle aCtrlRegion;
 #if defined USE_JAVA && defined MACOSX
         // Explicitly check if the native scrollbar style changed since
         // changes in the System Preferences application does not generate
@@ -736,24 +707,38 @@ bool ScrollBar::ImplDrawNative( sal_uInt16 nDrawFlags )
             // approximate valid full control by what we need to cover all
             // hit test areas
 #endif	// USE_JAVA && MACOSX
-        aCtrlRegion.Union( maBtn1Rect );
-        aCtrlRegion.Union( maBtn2Rect );
-        aCtrlRegion.Union( maPage1Rect );
-        aCtrlRegion.Union( maPage2Rect );
-        aCtrlRegion.Union( maThumbRect );
+        aCtrlRegion.Union(maBtn1Rect);
+        aCtrlRegion.Union(maBtn2Rect);
+        aCtrlRegion.Union(maPage1Rect);
+        aCtrlRegion.Union(maPage2Rect);
+        aCtrlRegion.Union(maThumbRect);
 #if defined USE_JAVA && defined MACOSX
         }
 #endif	// USE_JAVA && MACOSX
-        bNativeOK = DrawNativeControl( CTRL_SCROLLBAR, (bHorz ? PART_DRAW_BACKGROUND_HORZ : PART_DRAW_BACKGROUND_VERT),
-                        aCtrlRegion, nState, scrValue, OUString() );
+
+        tools::Rectangle aRequestedRegion(Point(0,0), GetOutputSizePixel());
+        // if the actual native control region is smaller then the region that
+        // we requested the control to draw in, then draw a background rectangle
+        // to avoid drawing artifacts in the uncovered region
+        if (aCtrlRegion.GetWidth() < aRequestedRegion.GetWidth() ||
+            aCtrlRegion.GetHeight() < aRequestedRegion.GetHeight())
+        {
+            Color aFaceColor = rRenderContext.GetSettings().GetStyleSettings().GetFaceColor();
+            rRenderContext.SetFillColor(aFaceColor);
+            rRenderContext.SetLineColor(aFaceColor);
+            rRenderContext.DrawRect(aRequestedRegion);
+        }
+
+        bNativeOK = rRenderContext.DrawNativeControl(ControlType::Scrollbar, (bHorz ? ControlPart::DrawBackgroundHorz : ControlPart::DrawBackgroundVert),
+                                                    aCtrlRegion, nState, scrValue, OUString());
 
 #if defined USE_JAVA && defined MACOSX
         // Add or update scrollbar tracking area
         if ( bNativeOK && IsReallyVisible() )
         {
-            Rectangle aTrackingRect( Point( GetOutOffXPixel(), GetOutOffYPixel() ), Size( GetOutputWidthPixel(), GetOutputHeightPixel() ) );
+            tools::Rectangle aTrackingRect( Point( GetOutOffXPixel(), GetOutOffYPixel() ), Size( GetOutputWidthPixel(), GetOutputHeightPixel() ) );
 
-            ::std::map< ScrollBar*, Rectangle >::iterator it = gScrollBarTrackingRects.find( this );
+            ::std::map< ScrollBar*, tools::Rectangle >::iterator it = gScrollBarTrackingRects.find( this );
             if ( it == gScrollBarTrackingRects.end() || it->second != aTrackingRect )
             {
                 JavaSalFrame *pFrame = (JavaSalFrame *)ImplGetFrame();
@@ -767,220 +752,197 @@ bool ScrollBar::ImplDrawNative( sal_uInt16 nDrawFlags )
     }
     else
     {
-        if ( (nDrawFlags & SCRBAR_DRAW_PAGE1) || (nDrawFlags & SCRBAR_DRAW_PAGE2) )
+        if ((nDrawFlags & SCRBAR_DRAW_PAGE1) || (nDrawFlags & SCRBAR_DRAW_PAGE2))
         {
-            sal_uInt32  part1 = bHorz ? PART_TRACK_HORZ_LEFT : PART_TRACK_VERT_UPPER;
-            sal_uInt32  part2 = bHorz ? PART_TRACK_HORZ_RIGHT : PART_TRACK_VERT_LOWER;
-            Rectangle   aCtrlRegion1( maPage1Rect );
-            Rectangle   aCtrlRegion2( maPage2Rect );
-            ControlState nState1 = (IsEnabled() ? CTRL_STATE_ENABLED : 0) | (HasFocus() ? CTRL_STATE_FOCUSED : 0);
+            ControlPart part1 = bHorz ? ControlPart::TrackHorzLeft : ControlPart::TrackVertUpper;
+            ControlPart part2 = bHorz ? ControlPart::TrackHorzRight : ControlPart::TrackVertLower;
+            tools::Rectangle aCtrlRegion1(maPage1Rect);
+            tools::Rectangle aCtrlRegion2(maPage2Rect);
+            ControlState nState1 = (IsEnabled() ? ControlState::ENABLED : ControlState::NONE)
+                                 | (HasFocus() ? ControlState::FOCUSED : ControlState::NONE);
             ControlState nState2 = nState1;
 
-            nState1 |= ((mnStateFlags & SCRBAR_STATE_PAGE1_DOWN) ? CTRL_STATE_PRESSED : 0);
-            nState2 |= ((mnStateFlags & SCRBAR_STATE_PAGE2_DOWN) ? CTRL_STATE_PRESSED : 0);
+            nState1 |= ((mnStateFlags & SCRBAR_STATE_PAGE1_DOWN) ? ControlState::PRESSED : ControlState::NONE);
+            nState2 |= ((mnStateFlags & SCRBAR_STATE_PAGE2_DOWN) ? ControlState::PRESSED : ControlState::NONE);
 
-            if( IsMouseOver() )
+            if (IsMouseOver())
             {
-                Rectangle* pRect = ImplFindPartRect( GetPointerPosPixel() );
-                if( pRect )
+                tools::Rectangle* pRect = ImplFindPartRect(GetPointerPosPixel());
+                if (pRect)
                 {
-                    if( pRect == &maPage1Rect )
-                        nState1 |= CTRL_STATE_ROLLOVER;
-                    else if( pRect == &maPage2Rect )
-                        nState2 |= CTRL_STATE_ROLLOVER;
+                    if (pRect == &maPage1Rect)
+                        nState1 |= ControlState::ROLLOVER;
+                    else if (pRect == &maPage2Rect)
+                        nState2 |= ControlState::ROLLOVER;
                 }
             }
 
-            if ( nDrawFlags & SCRBAR_DRAW_PAGE1 )
-                bNativeOK = DrawNativeControl( CTRL_SCROLLBAR, part1, aCtrlRegion1, nState1,
-                                scrValue, OUString() );
+            if (nDrawFlags & SCRBAR_DRAW_PAGE1)
+                bNativeOK = rRenderContext.DrawNativeControl(ControlType::Scrollbar, part1, aCtrlRegion1, nState1, scrValue, OUString());
 
-            if ( nDrawFlags & SCRBAR_DRAW_PAGE2 )
-                bNativeOK = DrawNativeControl( CTRL_SCROLLBAR, part2, aCtrlRegion2, nState2,
-                                scrValue, OUString() );
+            if (nDrawFlags & SCRBAR_DRAW_PAGE2)
+                bNativeOK = rRenderContext.DrawNativeControl(ControlType::Scrollbar, part2, aCtrlRegion2, nState2, scrValue, OUString());
         }
-        if ( (nDrawFlags & SCRBAR_DRAW_BTN1) || (nDrawFlags & SCRBAR_DRAW_BTN2) )
+        if ((nDrawFlags & SCRBAR_DRAW_BTN1) || (nDrawFlags & SCRBAR_DRAW_BTN2))
         {
-            sal_uInt32  part1 = bHorz ? PART_BUTTON_LEFT : PART_BUTTON_UP;
-            sal_uInt32  part2 = bHorz ? PART_BUTTON_RIGHT : PART_BUTTON_DOWN;
-            Rectangle   aCtrlRegion1( maBtn1Rect );
-            Rectangle   aCtrlRegion2( maBtn2Rect );
-            ControlState nState1 = HasFocus() ? CTRL_STATE_FOCUSED : 0;
+            ControlPart part1 = bHorz ? ControlPart::ButtonLeft : ControlPart::ButtonUp;
+            ControlPart part2 = bHorz ? ControlPart::ButtonRight : ControlPart::ButtonDown;
+            tools::Rectangle aCtrlRegion1(maBtn1Rect);
+            tools::Rectangle aCtrlRegion2(maBtn2Rect);
+            ControlState nState1 = HasFocus() ? ControlState::FOCUSED : ControlState::NONE;
             ControlState nState2 = nState1;
 
-            if ( !Window::IsEnabled() || !IsEnabled() )
-                nState1 = (nState2 &= ~CTRL_STATE_ENABLED);
+            if (!Window::IsEnabled() || !IsEnabled())
+                nState1 = (nState2 &= ~ControlState::ENABLED);
             else
-                nState1 = (nState2 |= CTRL_STATE_ENABLED);
+                nState1 = (nState2 |= ControlState::ENABLED);
 
-            nState1 |= ((mnStateFlags & SCRBAR_STATE_BTN1_DOWN) ? CTRL_STATE_PRESSED : 0);
-            nState2 |= ((mnStateFlags & SCRBAR_STATE_BTN2_DOWN) ? CTRL_STATE_PRESSED : 0);
+            nState1 |= ((mnStateFlags & SCRBAR_STATE_BTN1_DOWN) ? ControlState::PRESSED : ControlState::NONE);
+            nState2 |= ((mnStateFlags & SCRBAR_STATE_BTN2_DOWN) ? ControlState::PRESSED : ControlState::NONE);
 
-            if(mnStateFlags & SCRBAR_STATE_BTN1_DISABLE)
-                nState1 &= ~CTRL_STATE_ENABLED;
-            if(mnStateFlags & SCRBAR_STATE_BTN2_DISABLE)
-                nState2 &= ~CTRL_STATE_ENABLED;
+            if (mnStateFlags & SCRBAR_STATE_BTN1_DISABLE)
+                nState1 &= ~ControlState::ENABLED;
+            if (mnStateFlags & SCRBAR_STATE_BTN2_DISABLE)
+                nState2 &= ~ControlState::ENABLED;
 
-            if( IsMouseOver() )
+            if (IsMouseOver())
             {
-                Rectangle* pRect = ImplFindPartRect( GetPointerPosPixel() );
-                if( pRect )
+                tools::Rectangle* pRect = ImplFindPartRect(GetPointerPosPixel());
+                if (pRect)
                 {
-                    if( pRect == &maBtn1Rect )
-                        nState1 |= CTRL_STATE_ROLLOVER;
-                    else if( pRect == &maBtn2Rect )
-                        nState2 |= CTRL_STATE_ROLLOVER;
+                    if (pRect == &maBtn1Rect)
+                        nState1 |= ControlState::ROLLOVER;
+                    else if (pRect == &maBtn2Rect)
+                        nState2 |= ControlState::ROLLOVER;
                 }
             }
 
-            if ( nDrawFlags & SCRBAR_DRAW_BTN1 )
-                bNativeOK = DrawNativeControl( CTRL_SCROLLBAR, part1, aCtrlRegion1, nState1,
-                                scrValue, OUString() );
+            if (nDrawFlags & SCRBAR_DRAW_BTN1)
+                bNativeOK = rRenderContext.DrawNativeControl(ControlType::Scrollbar, part1, aCtrlRegion1, nState1, scrValue, OUString());
 
-            if ( nDrawFlags & SCRBAR_DRAW_BTN2 )
-                bNativeOK = DrawNativeControl( CTRL_SCROLLBAR, part2, aCtrlRegion2, nState2,
-                                scrValue, OUString() );
+            if (nDrawFlags & SCRBAR_DRAW_BTN2)
+                bNativeOK = rRenderContext.DrawNativeControl(ControlType::Scrollbar, part2, aCtrlRegion2, nState2, scrValue, OUString());
         }
-        if ( (nDrawFlags & SCRBAR_DRAW_THUMB) && !maThumbRect.IsEmpty() )
+        if ((nDrawFlags & SCRBAR_DRAW_THUMB) && !maThumbRect.IsEmpty())
         {
-            ControlState    nState = IsEnabled() ? CTRL_STATE_ENABLED : 0;
-            Rectangle       aCtrlRegion( maThumbRect );
+            ControlState nState = IsEnabled() ? ControlState::ENABLED : ControlState::NONE;
+            tools::Rectangle aCtrlRegion(maThumbRect);
 
-            if ( mnStateFlags & SCRBAR_STATE_THUMB_DOWN )
-                nState |= CTRL_STATE_PRESSED;
+            if (mnStateFlags & SCRBAR_STATE_THUMB_DOWN)
+                nState |= ControlState::PRESSED;
 
-            if ( HasFocus() )
-                nState |= CTRL_STATE_FOCUSED;
+            if (HasFocus())
+                nState |= ControlState::FOCUSED;
 
-            if( IsMouseOver() )
+            if (IsMouseOver())
             {
-                Rectangle* pRect = ImplFindPartRect( GetPointerPosPixel() );
-                if( pRect )
+                tools::Rectangle* pRect = ImplFindPartRect(GetPointerPosPixel());
+                if (pRect)
                 {
-                    if( pRect == &maThumbRect )
-                        nState |= CTRL_STATE_ROLLOVER;
+                    if (pRect == &maThumbRect)
+                        nState |= ControlState::ROLLOVER;
                 }
             }
 
-            bNativeOK = DrawNativeControl( CTRL_SCROLLBAR, (bHorz ? PART_THUMB_HORZ : PART_THUMB_VERT),
-                    aCtrlRegion, nState, scrValue, OUString() );
+            bNativeOK = rRenderContext.DrawNativeControl(ControlType::Scrollbar, (bHorz ? ControlPart::ThumbHorz : ControlPart::ThumbVert),
+                                                         aCtrlRegion, nState, scrValue, OUString());
         }
     }
     return bNativeOK;
 }
 
-void ScrollBar::ImplDraw( sal_uInt16 nDrawFlags, OutputDevice* pOutDev )
+void ScrollBar::ImplDraw(vcl::RenderContext& rRenderContext)
 {
-    DecorationView          aDecoView( pOutDev );
-    Rectangle               aTempRect;
-    sal_uInt16                  nStyle;
-    const StyleSettings&    rStyleSettings = pOutDev->GetSettings().GetStyleSettings();
-    SymbolType              eSymbolType;
-    bool                    bEnabled = IsEnabled();
+    DecorationView aDecoView(&rRenderContext);
+    tools::Rectangle aTempRect;
+    DrawButtonFlags nStyle;
+    const StyleSettings& rStyleSettings = rRenderContext.GetSettings().GetStyleSettings();
+    SymbolType eSymbolType;
+    bool bEnabled = IsEnabled();
 
     // Finish some open calculations (if any)
-    if ( mbCalcSize )
-        ImplCalc( false );
+    if (mbCalcSize)
+        ImplCalc(false);
 
-    vcl::Window *pWin = NULL;
-    if( pOutDev->GetOutDevType() == OUTDEV_WINDOW )
-        pWin = static_cast<vcl::Window*>(pOutDev);
+    //vcl::Window *pWin = NULL;
+    //if (rRenderContext.GetOutDevType() == OUTDEV_WINDOW)
+    //    pWin = static_cast<vcl::Window*>(&rRenderContext);
 
     // Draw the entire control if the native theme engine needs it
-    if ( nDrawFlags && pWin && pWin->IsNativeControlSupported(CTRL_SCROLLBAR, PART_DRAW_BACKGROUND_HORZ) )
+    if (rRenderContext.IsNativeControlSupported(ControlType::Scrollbar, ControlPart::DrawBackgroundHorz))
     {
-        ImplDrawNative( SCRBAR_DRAW_BACKGROUND );
+        ImplDrawNative(rRenderContext, SCRBAR_DRAW_BACKGROUND);
         return;
     }
 
-    if( (nDrawFlags & SCRBAR_DRAW_BTN1) && (!pWin || !ImplDrawNative( SCRBAR_DRAW_BTN1 ) ) )
+    if (!ImplDrawNative(rRenderContext, SCRBAR_DRAW_BTN1))
     {
-        nStyle = BUTTON_DRAW_NOLIGHTBORDER;
-        if ( mnStateFlags & SCRBAR_STATE_BTN1_DOWN )
-            nStyle |= BUTTON_DRAW_PRESSED;
-        aTempRect = aDecoView.DrawButton( maBtn1Rect, nStyle );
+        nStyle = DrawButtonFlags::NoLightBorder;
+        if (mnStateFlags & SCRBAR_STATE_BTN1_DOWN)
+            nStyle |= DrawButtonFlags::Pressed;
+        aTempRect = aDecoView.DrawButton( PixelToLogic(maBtn1Rect), nStyle );
         ImplCalcSymbolRect( aTempRect );
-        nStyle = 0;
-        if ( (mnStateFlags & SCRBAR_STATE_BTN1_DISABLE) || !bEnabled )
-            nStyle |= SYMBOL_DRAW_DISABLE;
-        if ( rStyleSettings.GetOptions() & STYLE_OPTION_SCROLLARROW )
-        {
-            if ( GetStyle() & WB_HORZ )
-                eSymbolType = SymbolType::ARROW_LEFT;
-            else
-                eSymbolType = SymbolType::ARROW_UP;
-        }
+        DrawSymbolFlags nSymbolStyle = DrawSymbolFlags::NONE;
+        if ((mnStateFlags & SCRBAR_STATE_BTN1_DISABLE) || !bEnabled)
+            nSymbolStyle |= DrawSymbolFlags::Disable;
+        if (GetStyle() & WB_HORZ)
+            eSymbolType = SymbolType::SPIN_LEFT;
         else
-        {
-            if ( GetStyle() & WB_HORZ )
-                eSymbolType = SymbolType::SPIN_LEFT;
-            else
-                eSymbolType = SymbolType::SPIN_UP;
-        }
-        aDecoView.DrawSymbol( aTempRect, eSymbolType, rStyleSettings.GetButtonTextColor(), nStyle );
+            eSymbolType = SymbolType::SPIN_UP;
+        aDecoView.DrawSymbol(aTempRect, eSymbolType, rStyleSettings.GetButtonTextColor(), nSymbolStyle);
     }
 
-    if ( (nDrawFlags & SCRBAR_DRAW_BTN2) && (!pWin || !ImplDrawNative( SCRBAR_DRAW_BTN2 ) ) )
+    if (!ImplDrawNative(rRenderContext, SCRBAR_DRAW_BTN2))
     {
-        nStyle = BUTTON_DRAW_NOLIGHTBORDER;
-        if ( mnStateFlags & SCRBAR_STATE_BTN2_DOWN )
-            nStyle |= BUTTON_DRAW_PRESSED;
-        aTempRect = aDecoView.DrawButton(  maBtn2Rect, nStyle );
-        ImplCalcSymbolRect( aTempRect );
-        nStyle = 0;
-        if ( (mnStateFlags & SCRBAR_STATE_BTN2_DISABLE) || !bEnabled )
-            nStyle |= SYMBOL_DRAW_DISABLE;
-        if ( rStyleSettings.GetOptions() & STYLE_OPTION_SCROLLARROW )
-        {
-            if ( GetStyle() & WB_HORZ )
-                eSymbolType = SymbolType::ARROW_RIGHT;
-            else
-                eSymbolType = SymbolType::ARROW_DOWN;
-        }
+        nStyle = DrawButtonFlags::NoLightBorder;
+        if (mnStateFlags & SCRBAR_STATE_BTN2_DOWN)
+            nStyle |= DrawButtonFlags::Pressed;
+        aTempRect = aDecoView.DrawButton(PixelToLogic(maBtn2Rect), nStyle);
+        ImplCalcSymbolRect(aTempRect);
+        DrawSymbolFlags nSymbolStyle = DrawSymbolFlags::NONE;
+        if ((mnStateFlags & SCRBAR_STATE_BTN2_DISABLE) || !bEnabled)
+            nSymbolStyle |= DrawSymbolFlags::Disable;
+        if (GetStyle() & WB_HORZ)
+            eSymbolType = SymbolType::SPIN_RIGHT;
         else
-        {
-            if ( GetStyle() & WB_HORZ )
-                eSymbolType = SymbolType::SPIN_RIGHT;
-            else
-                eSymbolType = SymbolType::SPIN_DOWN;
-        }
-        aDecoView.DrawSymbol( aTempRect, eSymbolType, rStyleSettings.GetButtonTextColor(), nStyle );
+            eSymbolType = SymbolType::SPIN_DOWN;
+        aDecoView.DrawSymbol(aTempRect, eSymbolType, rStyleSettings.GetButtonTextColor(), nSymbolStyle);
     }
 
-    pOutDev->SetLineColor();
+    rRenderContext.SetLineColor();
 
-    if ( (nDrawFlags & SCRBAR_DRAW_THUMB) && (!pWin || !ImplDrawNative( SCRBAR_DRAW_THUMB ) ) )
+    if (!ImplDrawNative(rRenderContext, SCRBAR_DRAW_THUMB))
     {
-        if ( !maThumbRect.IsEmpty() )
+        if (!maThumbRect.IsEmpty())
         {
-            if ( bEnabled )
+            if (bEnabled)
             {
-                nStyle = BUTTON_DRAW_NOLIGHTBORDER;
-                aTempRect = aDecoView.DrawButton( maThumbRect, nStyle );
+                nStyle = DrawButtonFlags::NoLightBorder;
+                aTempRect = aDecoView.DrawButton(PixelToLogic(maThumbRect), nStyle);
             }
             else
             {
-                pOutDev->SetFillColor( rStyleSettings.GetCheckedColor() );
-                pOutDev->DrawRect( maThumbRect );
+                rRenderContext.SetFillColor(rStyleSettings.GetCheckedColor());
+                rRenderContext.DrawRect(PixelToLogic(maThumbRect));
             }
         }
     }
 
-    if ( (nDrawFlags & SCRBAR_DRAW_PAGE1) && (!pWin || !ImplDrawNative( SCRBAR_DRAW_PAGE1 ) ) )
+    if (!ImplDrawNative(rRenderContext, SCRBAR_DRAW_PAGE1))
     {
-        if ( mnStateFlags & SCRBAR_STATE_PAGE1_DOWN )
-            pOutDev->SetFillColor( rStyleSettings.GetShadowColor() );
+        if (mnStateFlags & SCRBAR_STATE_PAGE1_DOWN)
+            rRenderContext.SetFillColor(rStyleSettings.GetShadowColor());
         else
-            pOutDev->SetFillColor( rStyleSettings.GetCheckedColor() );
-        pOutDev->DrawRect( maPage1Rect );
+            rRenderContext.SetFillColor(rStyleSettings.GetCheckedColor());
+        rRenderContext.DrawRect(PixelToLogic(maPage1Rect));
     }
-    if ( (nDrawFlags & SCRBAR_DRAW_PAGE2) && (!pWin || !ImplDrawNative( SCRBAR_DRAW_PAGE2 ) ) )
+    if (!ImplDrawNative(rRenderContext, SCRBAR_DRAW_PAGE2))
     {
-        if ( mnStateFlags & SCRBAR_STATE_PAGE2_DOWN )
-            pOutDev->SetFillColor( rStyleSettings.GetShadowColor() );
+        if (mnStateFlags & SCRBAR_STATE_PAGE2_DOWN)
+            rRenderContext.SetFillColor(rStyleSettings.GetShadowColor());
         else
-            pOutDev->SetFillColor( rStyleSettings.GetCheckedColor() );
-        pOutDev->DrawRect( maPage2Rect );
+            rRenderContext.SetFillColor(rStyleSettings.GetCheckedColor());
+        rRenderContext.DrawRect(PixelToLogic(maPage2Rect));
     }
 }
 
@@ -1006,19 +968,19 @@ long ScrollBar::ImplDoAction( bool bCallEndScroll )
 
     switch ( meScrollType )
     {
-        case SCROLL_LINEUP:
+        case ScrollType::LineUp:
             nDelta = ImplScroll( mnThumbPos-mnLineSize, bCallEndScroll );
             break;
 
-        case SCROLL_LINEDOWN:
+        case ScrollType::LineDown:
             nDelta = ImplScroll( mnThumbPos+mnLineSize, bCallEndScroll );
             break;
 
-        case SCROLL_PAGEUP:
+        case ScrollType::PageUp:
             nDelta = ImplScroll( mnThumbPos-mnPageSize, bCallEndScroll );
             break;
 
-        case SCROLL_PAGEDOWN:
+        case ScrollType::PageDown:
             nDelta = ImplScroll( mnThumbPos+mnPageSize, bCallEndScroll );
             break;
         default:
@@ -1032,19 +994,19 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, bool bCallAction )
 {
     sal_uInt16  nOldStateFlags = mnStateFlags;
     bool    bAction = false;
-    bool        bHorizontal = ( GetStyle() & WB_HORZ ) ? true: false;
+    bool        bHorizontal = ( GetStyle() & WB_HORZ ) != 0;
     bool        bIsInside = false;
 
     Point aPoint( 0, 0 );
-    Rectangle aControlRegion( aPoint, GetOutputSizePixel() );
+    tools::Rectangle aControlRegion( aPoint, GetOutputSizePixel() );
 
     switch ( meScrollType )
     {
-        case SCROLL_LINEUP:
+        case ScrollType::LineUp:
 #if defined USE_JAVA && defined MACOSX
             mnStateFlags &= ~SCRBAR_STATE_BTN1_INSIDE;
 #endif	// USE_JAVA && MACOSX
-            if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? (IsRTLEnabled()? PART_BUTTON_RIGHT: PART_BUTTON_LEFT): PART_BUTTON_UP,
+            if ( HitTestNativeScrollbar( bHorizontal? (IsRTLEnabled()? ControlPart::ButtonRight: ControlPart::ButtonLeft): ControlPart::ButtonUp,
                         aControlRegion, rMousePos, bIsInside )?
                     bIsInside:
                     maBtn1Rect.IsInside( rMousePos ) )
@@ -1053,7 +1015,7 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, bool bCallAction )
                 mnStateFlags |= SCRBAR_STATE_BTN1_DOWN;
             }
 #if defined USE_JAVA && defined MACOSX
-            else if ( GetSalData()->mbDoubleScrollbarArrows && ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_BUTTON_LEFT: PART_BUTTON_UP,
+            else if ( GetSalData()->mbDoubleScrollbarArrows && ( HitTestNativeScrollbar( bHorizontal? ControlPart::ButtonLeft: ControlPart::ButtonUp,
                         aControlRegion, rMousePos, bIsInside )?
                     bIsInside:
                     maBtn2Rect.IsInside( rMousePos ) ) )
@@ -1067,11 +1029,11 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, bool bCallAction )
                 mnStateFlags &= ~SCRBAR_STATE_BTN1_DOWN;
             break;
 
-        case SCROLL_LINEDOWN:
+        case ScrollType::LineDown:
 #if defined USE_JAVA && defined MACOSX
             mnStateFlags &= ~SCRBAR_STATE_BTN2_INSIDE;
 #endif	// USE_JAVA && MACOSX
-            if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? (IsRTLEnabled()? PART_BUTTON_LEFT: PART_BUTTON_RIGHT): PART_BUTTON_DOWN,
+            if ( HitTestNativeScrollbar( bHorizontal? (IsRTLEnabled()? ControlPart::ButtonLeft: ControlPart::ButtonRight): ControlPart::ButtonDown,
                         aControlRegion, rMousePos, bIsInside )?
                     bIsInside:
                     maBtn2Rect.IsInside( rMousePos ) )
@@ -1080,7 +1042,7 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, bool bCallAction )
                 mnStateFlags |= SCRBAR_STATE_BTN2_DOWN;
             }
 #if defined USE_JAVA && defined MACOSX
-            else if ( GetSalData()->mbDoubleScrollbarArrows && ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_BUTTON_RIGHT: PART_BUTTON_DOWN,
+            else if ( GetSalData()->mbDoubleScrollbarArrows && ( HitTestNativeScrollbar( bHorizontal? ControlPart::ButtonRight: ControlPart::ButtonDown,
                         aControlRegion, rMousePos, bIsInside )?
                     bIsInside:
                     maBtn1Rect.IsInside( rMousePos ) ) )
@@ -1094,12 +1056,12 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, bool bCallAction )
                 mnStateFlags &= ~SCRBAR_STATE_BTN2_DOWN;
             break;
 
-        case SCROLL_PAGEUP:
+        case ScrollType::PageUp:
 #if defined USE_JAVA && defined MACOSX
             if ( maPage1Rect.IsInside( rMousePos ) )
 #else	// USE_JAVA && MACOSX
-            // HitTestNativeControl, see remark at top of file
-            if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_TRACK_HORZ_LEFT: PART_TRACK_VERT_UPPER,
+            // HitTestNativeScrollbar, see remark at top of file
+            if ( HitTestNativeScrollbar( bHorizontal? ControlPart::TrackHorzLeft: ControlPart::TrackVertUpper,
                                        maPage1Rect, rMousePos, bIsInside )?
                     bIsInside:
                     maPage1Rect.IsInside( rMousePos ) )
@@ -1112,12 +1074,12 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, bool bCallAction )
                 mnStateFlags &= ~SCRBAR_STATE_PAGE1_DOWN;
             break;
 
-        case SCROLL_PAGEDOWN:
+        case ScrollType::PageDown:
 #if defined USE_JAVA && defined MACOSX
             if ( maPage2Rect.IsInside( rMousePos ) )
 #else	// USE_JAVA && MACOSX
-            // HitTestNativeControl, see remark at top of file
-            if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_TRACK_HORZ_RIGHT: PART_TRACK_VERT_LOWER,
+            // HitTestNativeScrollbar, see remark at top of file
+            if ( HitTestNativeScrollbar( bHorizontal? ControlPart::TrackHorzRight: ControlPart::TrackVertLower,
                                        maPage2Rect, rMousePos, bIsInside )?
                     bIsInside:
                     maPage2Rect.IsInside( rMousePos ) )
@@ -1134,7 +1096,7 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, bool bCallAction )
     }
 
     if ( nOldStateFlags != mnStateFlags )
-        ImplDraw( mnDragDraw, this );
+        Invalidate();
     if ( bAction )
         ImplDoAction( false );
 }
@@ -1165,6 +1127,11 @@ void ScrollBar::ImplDragThumb( const Point& rMousePos )
 #endif	// USE_JAVA && MACOSX
         if ( mbFullDrag && (nOldPos != mnThumbPos) )
         {
+            // When dragging in windows the repaint request gets starved so dragging
+            // the scrollbar feels slower than it actually is. Let's force an immediate
+            // repaint of the scrollbar.
+            ImplDraw(*this);
+
             mnDelta = mnThumbPos-nOldPos;
             Scroll();
             mnDelta = 0;
@@ -1181,50 +1148,62 @@ void ScrollBar::MouseButtonDown( const MouseEvent& rMEvt )
 
     if (rMEvt.IsLeft() || rMEvt.IsMiddle() || rMEvt.IsRight())
     {
-        const Point&        rMousePos = rMEvt.GetPosPixel();
-        sal_uInt16          nTrackFlags = 0;
-        bool                bHorizontal = ( GetStyle() & WB_HORZ ) ? true: false;
+        Point aPosPixel;
+        if (!IsMapModeEnabled() && GetMapMode().GetMapUnit() == MapUnit::MapTwip)
+        {
+            // rMEvt coordinates are in twips.
+            Push(PushFlags::MAPMODE);
+            EnableMapMode();
+            MapMode aMapMode = GetMapMode();
+            aMapMode.SetOrigin(Point(0, 0));
+            SetMapMode(aMapMode);
+            aPosPixel = LogicToPixel(rMEvt.GetPosPixel());
+            Pop();
+        }
+        const Point&        rMousePos = (GetMapMode().GetMapUnit() != MapUnit::MapTwip ? rMEvt.GetPosPixel() : aPosPixel);
+        StartTrackingFlags  nTrackFlags = StartTrackingFlags::NONE;
+        bool                bHorizontal = ( GetStyle() & WB_HORZ ) != 0;
         bool                bIsInside = false;
         bool                bDragToMouse = false;
 
         Point aPoint( 0, 0 );
-        Rectangle aControlRegion( aPoint, GetOutputSizePixel() );
+        tools::Rectangle aControlRegion( aPoint, GetOutputSizePixel() );
 
-        if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? (IsRTLEnabled()? PART_BUTTON_RIGHT: PART_BUTTON_LEFT): PART_BUTTON_UP,
+        if ( HitTestNativeScrollbar( bHorizontal? (IsRTLEnabled()? ControlPart::ButtonRight: ControlPart::ButtonLeft): ControlPart::ButtonUp,
                     aControlRegion, rMousePos, bIsInside )?
                 bIsInside:
                 maBtn1Rect.IsInside( rMousePos ) )
         {
             if (rMEvt.IsLeft() && !(mnStateFlags & SCRBAR_STATE_BTN1_DISABLE) )
             {
-                nTrackFlags     = STARTTRACK_BUTTONREPEAT;
+                nTrackFlags     = StartTrackingFlags::ButtonRepeat;
 #if defined USE_JAVA && defined MACOSX
                 if ( GetSalData()->mbDoubleScrollbarArrows &&
                     ( ( bHorizontal && rMousePos.X() > maBtn1Rect.Left() + ( maBtn1Rect.GetWidth() / 2 ) ) ||
                     ( !bHorizontal && rMousePos.Y() > maBtn1Rect.Top() + ( maBtn1Rect.GetHeight() / 2 ) ) ) )
-                    meScrollType    = SCROLL_LINEDOWN;
+                    meScrollType    = ScrollType::LineDown;
                 else
 #endif	// USE_JAVA && MACOSX
-                meScrollType    = SCROLL_LINEUP;
+                meScrollType    = ScrollType::LineUp;
                 mnDragDraw      = SCRBAR_DRAW_BTN1;
             }
         }
-        else if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? (IsRTLEnabled()? PART_BUTTON_LEFT: PART_BUTTON_RIGHT): PART_BUTTON_DOWN,
+        else if ( HitTestNativeScrollbar( bHorizontal? (IsRTLEnabled()? ControlPart::ButtonLeft: ControlPart::ButtonRight): ControlPart::ButtonDown,
                     aControlRegion, rMousePos, bIsInside )?
                 bIsInside:
                 maBtn2Rect.IsInside( rMousePos ) )
         {
             if (rMEvt.IsLeft() && !(mnStateFlags & SCRBAR_STATE_BTN2_DISABLE) )
             {
-                nTrackFlags     = STARTTRACK_BUTTONREPEAT;
+                nTrackFlags     = StartTrackingFlags::ButtonRepeat;
 #if defined USE_JAVA && defined MACOSX
                 if ( GetSalData()->mbDoubleScrollbarArrows &&
                     ( ( bHorizontal && rMousePos.X() <= maBtn2Rect.Left() + ( maBtn2Rect.GetWidth() / 2 ) ) ||
                     ( !bHorizontal && rMousePos.Y() <= maBtn2Rect.Top() + ( maBtn2Rect.GetHeight() / 2 ) ) ) )
-                    meScrollType    = SCROLL_LINEUP;
+                    meScrollType    = ScrollType::LineUp;
                 else
 #endif	// USE_JAVA && MACOSX
-                meScrollType    = SCROLL_LINEDOWN;
+                meScrollType    = ScrollType::LineDown;
                 mnDragDraw      = SCRBAR_DRAW_BTN2;
             }
         }
@@ -1243,7 +1222,7 @@ void ScrollBar::MouseButtonDown( const MouseEvent& rMEvt )
             ImplGetSVData()->maNWFData.mbScrollbarJumpPage = bScrollbarJumpPage;
 #endif	// USE_JAVA && MACOSX
 
-            bool bThumbHit = HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_THUMB_HORZ : PART_THUMB_VERT,
+            bool bThumbHit = HitTestNativeScrollbar( bHorizontal? ControlPart::ThumbHorz : ControlPart::ThumbVert,
                                                    maThumbRect, rMousePos, bIsInside )
                              ? bIsInside : maThumbRect.IsInside( rMousePos );
 
@@ -1255,14 +1234,17 @@ void ScrollBar::MouseButtonDown( const MouseEvent& rMEvt )
                 if( mpData )
                 {
                     mpData->mbHide = true; // disable focus blinking
-                    if( HasFocus() )
-                        ImplDraw( SCRBAR_DRAW_THUMB, this ); // paint without focus
+                    if (HasFocus())
+                    {
+                        mnStateFlags |= SCRBAR_DRAW_THUMB; // paint without focus
+                        Invalidate();
+                    }
                 }
 
                 if ( mnVisibleSize < mnMaxRange-mnMinRange )
                 {
-                    nTrackFlags     = 0;
-                    meScrollType    = SCROLL_DRAG;
+                    nTrackFlags     = StartTrackingFlags::NONE;
+                    meScrollType    = ScrollType::Drag;
                     mnDragDraw      = SCRBAR_DRAW_THUMB;
 
                     // calculate mouse offset
@@ -1283,42 +1265,42 @@ void ScrollBar::MouseButtonDown( const MouseEvent& rMEvt )
                     }
 
                     mnStateFlags |= SCRBAR_STATE_THUMB_DOWN;
-                    ImplDraw( mnDragDraw, this );
+                    Invalidate();
                 }
             }
 #if defined USE_JAVA && defined MACOSX
             else
 #else	// USE_JAVA && MACOSX
-            else if(bPage && (HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_TRACK_HORZ_AREA : PART_TRACK_VERT_AREA,
-                                           aControlRegion, rMousePos, bIsInside ) ?
-                bIsInside : true) )
+            else if(bPage && (!HitTestNativeScrollbar( bHorizontal? ControlPart::TrackHorzArea : ControlPart::TrackVertArea,
+                                           aControlRegion, rMousePos, bIsInside ) ||
+                bIsInside) )
 #endif	// USE_JAVA && MACOSX
             {
-                nTrackFlags = STARTTRACK_BUTTONREPEAT;
+                nTrackFlags = StartTrackingFlags::ButtonRepeat;
 
 #if defined USE_JAVA && defined MACOSX
                 if ( maPage1Rect.IsInside( rMousePos ) )
 #else	// USE_JAVA && MACOSX
-                // HitTestNativeControl, see remark at top of file
-                if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_TRACK_HORZ_LEFT : PART_TRACK_VERT_UPPER,
+                // HitTestNativeScrollbar, see remark at top of file
+                if ( HitTestNativeScrollbar( bHorizontal? ControlPart::TrackHorzLeft : ControlPart::TrackVertUpper,
                                            maPage1Rect, rMousePos, bIsInside )?
                     bIsInside:
                     maPage1Rect.IsInside( rMousePos ) )
 #endif	// USE_JAVA && MACOSX
                 {
-                    meScrollType    = SCROLL_PAGEUP;
+                    meScrollType    = ScrollType::PageUp;
                     mnDragDraw      = SCRBAR_DRAW_PAGE1;
                 }
                 else
                 {
-                    meScrollType    = SCROLL_PAGEDOWN;
+                    meScrollType    = ScrollType::PageDown;
                     mnDragDraw      = SCRBAR_DRAW_PAGE2;
                 }
             }
         }
 
         // Should we start Tracking?
-        if ( meScrollType != SCROLL_DONTKNOW )
+        if ( meScrollType != ScrollType::DontKnow )
         {
             // store original position for cancel and EndScroll delta
             mnStartPos = mnThumbPos;
@@ -1347,7 +1329,7 @@ void ScrollBar::Tracking( const TrackingEvent& rTEvt )
         mnStateFlags &= ~(SCRBAR_STATE_BTN1_INSIDE | SCRBAR_STATE_BTN2_INSIDE);
 #endif	// USE_JAVA && MACOSX
         if ( nOldStateFlags != mnStateFlags )
-            ImplDraw( mnDragDraw, this );
+            Invalidate();
         mnDragDraw = 0;
 
         // Restore the old ThumbPosition when canceled
@@ -1359,7 +1341,7 @@ void ScrollBar::Tracking( const TrackingEvent& rTEvt )
             Scroll();
         }
 
-        if ( meScrollType == SCROLL_DRAG )
+        if ( meScrollType == ScrollType::Drag )
         {
             // On a SCROLLDRAG we recalculate the Thumb, so that it's back to a
             // rounded ThumbPosition
@@ -1376,17 +1358,29 @@ void ScrollBar::Tracking( const TrackingEvent& rTEvt )
         mnDelta = mnThumbPos-mnStartPos;
         EndScroll();
         mnDelta = 0;
-        meScrollType = SCROLL_DONTKNOW;
+        meScrollType = ScrollType::DontKnow;
 
         if( mpData )
             mpData->mbHide = false; // re-enable focus blinking
     }
     else
     {
-        const Point rMousePos = rTEvt.GetMouseEvent().GetPosPixel();
+        Point aPosPixel;
+        if (!IsMapModeEnabled() && GetMapMode().GetMapUnit() == MapUnit::MapTwip)
+        {
+            // rTEvt coordinates are in twips.
+            Push(PushFlags::MAPMODE);
+            EnableMapMode();
+            MapMode aMapMode = GetMapMode();
+            aMapMode.SetOrigin(Point(0, 0));
+            SetMapMode(aMapMode);
+            aPosPixel = LogicToPixel(rTEvt.GetMouseEvent().GetPosPixel());
+            Pop();
+        }
+        const Point rMousePos = (GetMapMode().GetMapUnit() != MapUnit::MapTwip ? rTEvt.GetMouseEvent().GetPosPixel() : aPosPixel);
 
         // Dragging is treated in a special way
-        if ( meScrollType == SCROLL_DRAG )
+        if ( meScrollType == ScrollType::Drag )
             ImplDragThumb( rMousePos );
         else
             ImplDoMouseAction( rMousePos, rTEvt.IsTrackingRepeat() );
@@ -1414,20 +1408,20 @@ void ScrollBar::KeyInput( const KeyEvent& rKEvt )
 
             case KEY_LEFT:
             case KEY_UP:
-                DoScrollAction( SCROLL_LINEUP );
+                DoScrollAction( ScrollType::LineUp );
                 break;
 
             case KEY_RIGHT:
             case KEY_DOWN:
-                DoScrollAction( SCROLL_LINEDOWN );
+                DoScrollAction( ScrollType::LineDown );
                 break;
 
             case KEY_PAGEUP:
-                DoScrollAction( SCROLL_PAGEUP );
+                DoScrollAction( ScrollType::PageUp );
                 break;
 
             case KEY_PAGEDOWN:
-                DoScrollAction( SCROLL_PAGEDOWN );
+                DoScrollAction( ScrollType::PageDown );
                 break;
 
             default:
@@ -1439,9 +1433,14 @@ void ScrollBar::KeyInput( const KeyEvent& rKEvt )
         Control::KeyInput( rKEvt );
 }
 
-void ScrollBar::Paint( const Rectangle& )
+void ScrollBar::ApplySettings(vcl::RenderContext& rRenderContext)
 {
-    ImplDraw( SCRBAR_DRAW_ALL, this );
+    rRenderContext.SetBackground();
+}
+
+void ScrollBar::Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle&)
+{
+    ImplDraw(rRenderContext);
 }
 
 void ScrollBar::Resize()
@@ -1453,17 +1452,16 @@ void ScrollBar::Resize()
     Invalidate();
 }
 
-IMPL_LINK_NOARG(ScrollBar, ImplAutoTimerHdl)
+IMPL_LINK_NOARG(ScrollBar, ImplAutoTimerHdl, Timer *, void)
 {
     if( mpData && mpData->mbHide )
-        return 0;
+        return;
     ImplInvert();
-    return 0;
 }
 
 void ScrollBar::ImplInvert()
 {
-    Rectangle aRect( maThumbRect );
+    tools::Rectangle aRect( maThumbRect );
     if( aRect.getWidth() > 4 )
     {
         aRect.Left() += 2;
@@ -1475,21 +1473,22 @@ void ScrollBar::ImplInvert()
         aRect.Bottom() -= 2;
     }
 
-    Invert( aRect, 0 );
+    Invert( aRect );
 }
 
 void ScrollBar::GetFocus()
 {
     if( !mpData )
+    {
 #if defined USE_JAVA && defined MACOSX
         ImplNewImplScrollBarData();
 #else	// USE_JAVA && MACOSX
-    {
         mpData = new ImplScrollBarData;
-        mpData->maTimer.SetTimeoutHdl( LINK( this, ScrollBar, ImplAutoTimerHdl ) );
+        mpData->maTimer.SetInvokeHandler( LINK( this, ScrollBar, ImplAutoTimerHdl ) );
+        mpData->maTimer.SetDebugName( "vcl::ScrollBar mpData->maTimer" );
         mpData->mbHide = false;
-    }
 #endif	// USE_JAVA && MACOSX
+    }
     ImplInvert(); // react immediately
     mpData->maTimer.SetTimeout( GetSettings().GetStyleSettings().GetCursorBlinkTime() );
     mpData->maTimer.Start();
@@ -1504,7 +1503,7 @@ void ScrollBar::ImplNewImplScrollBarData()
         return;
 
     mpData = new ImplScrollBarData;
-    mpData->maTimer.SetTimeoutHdl( LINK( this, ScrollBar, ImplAutoTimerHdl ) );
+    mpData->maTimer.SetInvokeHandler( LINK( this, ScrollBar, ImplAutoTimerHdl ) );
     mpData->mbHide = false;
     mpData->mbHasEntireControlRect = false;
 }
@@ -1515,7 +1514,7 @@ void ScrollBar::LoseFocus()
 {
     if( mpData )
         mpData->maTimer.Stop();
-    ImplDraw( SCRBAR_DRAW_THUMB, this );
+    Invalidate();
 
     Control::LoseFocus();
 }
@@ -1524,14 +1523,14 @@ void ScrollBar::StateChanged( StateChangedType nType )
 {
     Control::StateChanged( nType );
 
-    if ( nType == StateChangedType::INITSHOW )
+    if ( nType == StateChangedType::InitShow )
         ImplCalc( false );
-    else if ( nType == StateChangedType::DATA )
+    else if ( nType == StateChangedType::Data )
     {
         if ( IsReallyVisible() && IsUpdateMode() )
-            ImplCalc( true );
+            ImplCalc();
     }
-    else if ( nType == StateChangedType::UPDATEMODE )
+    else if ( nType == StateChangedType::UpdateMode )
     {
         if ( IsReallyVisible() && IsUpdateMode() )
         {
@@ -1539,12 +1538,12 @@ void ScrollBar::StateChanged( StateChangedType nType )
             Invalidate();
         }
     }
-    else if ( nType == StateChangedType::ENABLE )
+    else if ( nType == StateChangedType::Enable )
     {
         if ( IsReallyVisible() && IsUpdateMode() )
             Invalidate();
     }
-    else if ( nType == StateChangedType::STYLE )
+    else if ( nType == StateChangedType::Style )
     {
         ImplInitStyle( GetStyle() );
         if ( IsReallyVisible() && IsUpdateMode() )
@@ -1560,9 +1559,9 @@ void ScrollBar::StateChanged( StateChangedType nType )
     }
 #if defined USE_JAVA && defined MACOSX
     // Remove tracking area when hiding the scrollbar
-    else if ( nType == StateChangedType::VISIBLE && !IsVisible() )
+    else if ( nType == StateChangedType::Visible && !IsVisible() )
     {
-        ::std::map< ScrollBar*, Rectangle >::iterator it = gScrollBarTrackingRects.find( this );
+        ::std::map< ScrollBar*, tools::Rectangle >::iterator it = gScrollBarTrackingRects.find( this );
         if ( it != gScrollBarTrackingRects.end() )
         {
             JavaSalFrame *pFrame = (JavaSalFrame *)ImplGetFrame();
@@ -1579,8 +1578,8 @@ void ScrollBar::DataChanged( const DataChangedEvent& rDCEvt )
 {
     Control::DataChanged( rDCEvt );
 
-    if ( (rDCEvt.GetType() == DATACHANGED_SETTINGS) &&
-         (rDCEvt.GetFlags() & SETTINGS_STYLE) )
+    if ( (rDCEvt.GetType() == DataChangedEventType::SETTINGS) &&
+         (rDCEvt.GetFlags() & AllSettingsFlags::STYLE) )
     {
         mbCalcSize = true;
         ImplCalc( false );
@@ -1588,20 +1587,20 @@ void ScrollBar::DataChanged( const DataChangedEvent& rDCEvt )
     }
 }
 
-Rectangle* ScrollBar::ImplFindPartRect( const Point& rPt )
+tools::Rectangle* ScrollBar::ImplFindPartRect( const Point& rPt )
 {
-    bool    bHorizontal = ( GetStyle() & WB_HORZ ) ? true: false;
+    bool    bHorizontal = ( GetStyle() & WB_HORZ ) != 0;
     bool    bIsInside = false;
 
     Point aPoint( 0, 0 );
-    Rectangle aControlRegion( aPoint, GetOutputSizePixel() );
+    tools::Rectangle aControlRegion( aPoint, GetOutputSizePixel() );
 
-    if( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? (IsRTLEnabled()? PART_BUTTON_RIGHT: PART_BUTTON_LEFT): PART_BUTTON_UP,
+    if( HitTestNativeScrollbar( bHorizontal? (IsRTLEnabled()? ControlPart::ButtonRight: ControlPart::ButtonLeft): ControlPart::ButtonUp,
                 aControlRegion, rPt, bIsInside )?
             bIsInside:
             maBtn1Rect.IsInside( rPt ) )
         return &maBtn1Rect;
-    else if( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? (IsRTLEnabled()? PART_BUTTON_LEFT: PART_BUTTON_RIGHT): PART_BUTTON_DOWN,
+    else if( HitTestNativeScrollbar( bHorizontal? (IsRTLEnabled()? ControlPart::ButtonLeft: ControlPart::ButtonRight): ControlPart::ButtonDown,
                 aControlRegion, rPt, bIsInside )?
             bIsInside:
             maBtn2Rect.IsInside( rPt ) )
@@ -1609,8 +1608,8 @@ Rectangle* ScrollBar::ImplFindPartRect( const Point& rPt )
 #if defined USE_JAVA && defined MACOSX
     else if( maPage1Rect.IsInside( rPt ) )
 #else	// USE_JAVA && MACOSX
-    // HitTestNativeControl, see remark at top of file
-    else if( HitTestNativeControl( CTRL_SCROLLBAR,  bHorizontal ? PART_TRACK_HORZ_LEFT : PART_TRACK_VERT_UPPER,
+    // HitTestNativeScrollbar, see remark at top of file
+    else if( HitTestNativeScrollbar( bHorizontal ? ControlPart::TrackHorzLeft : ControlPart::TrackVertUpper,
                 maPage1Rect, rPt, bIsInside)?
             bIsInside:
             maPage1Rect.IsInside( rPt ) )
@@ -1619,8 +1618,8 @@ Rectangle* ScrollBar::ImplFindPartRect( const Point& rPt )
 #if defined USE_JAVA && defined MACOSX
     else if( maPage2Rect.IsInside( rPt ) )
 #else	// USE_JAVA && MACOSX
-    // HitTestNativeControl, see remark at top of file
-    else if( HitTestNativeControl( CTRL_SCROLLBAR,  bHorizontal ? PART_TRACK_HORZ_RIGHT : PART_TRACK_VERT_LOWER,
+    // HitTestNativeScrollbar, see remark at top of file
+    else if( HitTestNativeScrollbar( bHorizontal ? ControlPart::TrackHorzRight : ControlPart::TrackVertLower,
                 maPage2Rect, rPt, bIsInside)?
             bIsInside:
             maPage2Rect.IsInside( rPt ) )
@@ -1629,36 +1628,36 @@ Rectangle* ScrollBar::ImplFindPartRect( const Point& rPt )
 #if defined USE_JAVA && defined MACOSX
     else if( maThumbRect.IsInside( rPt ) )
 #else	// USE_JAVA && MACOSX
-    // HitTestNativeControl, see remark at top of file
-    else if( HitTestNativeControl( CTRL_SCROLLBAR,  bHorizontal ? PART_THUMB_HORZ : PART_THUMB_VERT,
+    // HitTestNativeScrollbar, see remark at top of file
+    else if( HitTestNativeScrollbar( bHorizontal ? ControlPart::ThumbHorz : ControlPart::ThumbVert,
                 maThumbRect, rPt, bIsInside)?
              bIsInside:
              maThumbRect.IsInside( rPt ) )
 #endif	// USE_JAVA && MACOSX
         return &maThumbRect;
     else
-        return NULL;
+        return nullptr;
 }
 
 bool ScrollBar::PreNotify( NotifyEvent& rNEvt )
 {
-    const MouseEvent* pMouseEvt = NULL;
+    const MouseEvent* pMouseEvt = nullptr;
 
-    if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != NULL )
+    if( (rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != nullptr )
     {
         if( !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
         {
             // Trigger a redraw if mouse over state has changed
-            if( IsNativeControlSupported(CTRL_SCROLLBAR, PART_ENTIRE_CONTROL) )
+            if( IsNativeControlSupported(ControlType::Scrollbar, ControlPart::Entire) )
             {
-                Rectangle* pRect = ImplFindPartRect( GetPointerPosPixel() );
-                Rectangle* pLastRect = ImplFindPartRect( GetLastPointerPosPixel() );
+                tools::Rectangle* pRect = ImplFindPartRect( GetPointerPosPixel() );
+                tools::Rectangle* pLastRect = ImplFindPartRect( GetLastPointerPosPixel() );
                 if( pRect != pLastRect || pMouseEvt->IsLeaveWindow() || pMouseEvt->IsEnterWindow() )
                 {
 #if defined USE_JAVA && defined MACOSX
                     // Redraw the entire scrollbar as mouse over events change
                     // the thumb color on Mac OS X 10.7 and higher
-                    ImplDraw( SCRBAR_DRAW_ALL, this );
+                    Invalidate();
 #else	// USE_JAVA && MACOSX
                     vcl::Region aRgn( GetActiveClipRegion() );
                     vcl::Region aClipRegion;
@@ -1669,14 +1668,14 @@ bool ScrollBar::PreNotify( NotifyEvent& rNEvt )
                         aClipRegion.Union( *pLastRect );
 
                     // Support for 3-button scroll bars
-                    bool bHas3Buttons = IsNativeControlSupported( CTRL_SCROLLBAR, HAS_THREE_BUTTONS );
+                    bool bHas3Buttons = IsNativeControlSupported( ControlType::Scrollbar, ControlPart::HasThreeButtons );
                     if ( bHas3Buttons && ( pRect == &maBtn1Rect || pLastRect == &maBtn1Rect ) )
                     {
                         aClipRegion.Union( maBtn2Rect );
                     }
 
                     SetClipRegion( aClipRegion );
-                    Paint( aClipRegion.GetBoundRect() );
+                    Invalidate(aClipRegion.GetBoundRect());
 
                     SetClipRegion( aRgn );
 #endif	// USE_JAVA && MACOSX
@@ -1690,36 +1689,36 @@ bool ScrollBar::PreNotify( NotifyEvent& rNEvt )
 
 void ScrollBar::Scroll()
 {
-    ImplCallEventListenersAndHandler( VCLEVENT_SCROLLBAR_SCROLL, maScrollHdl, this );
+    ImplCallEventListenersAndHandler( VclEventId::ScrollbarScroll, [this] () { maScrollHdl.Call(this); } );
 }
 
 void ScrollBar::EndScroll()
 {
-    ImplCallEventListenersAndHandler( VCLEVENT_SCROLLBAR_ENDSCROLL, maEndScrollHdl, this );
+    ImplCallEventListenersAndHandler( VclEventId::ScrollbarEndScroll, [this] () { maEndScrollHdl.Call(this); } );
 }
 
 long ScrollBar::DoScroll( long nNewPos )
 {
-    if ( meScrollType != SCROLL_DONTKNOW )
+    if ( meScrollType != ScrollType::DontKnow )
         return 0;
 
     SAL_INFO("vcl.scrollbar", "DoScroll(" << nNewPos << ")");
-    meScrollType = SCROLL_DRAG;
+    meScrollType = ScrollType::Drag;
     long nDelta = ImplScroll( nNewPos, true );
-    meScrollType = SCROLL_DONTKNOW;
+    meScrollType = ScrollType::DontKnow;
     return nDelta;
 }
 
 long ScrollBar::DoScrollAction( ScrollType eScrollType )
 {
-    if ( (meScrollType != SCROLL_DONTKNOW) ||
-         (eScrollType == SCROLL_DONTKNOW) ||
-         (eScrollType == SCROLL_DRAG) )
+    if ( (meScrollType != ScrollType::DontKnow) ||
+         (eScrollType == ScrollType::DontKnow) ||
+         (eScrollType == ScrollType::Drag) )
         return 0;
 
     meScrollType = eScrollType;
     long nDelta = ImplDoAction( true );
-    meScrollType = SCROLL_DONTKNOW;
+    meScrollType = ScrollType::DontKnow;
     return nDelta;
 }
 
@@ -1754,7 +1753,7 @@ void ScrollBar::SetRange( const Range& rRange )
         if ( mnThumbPos < mnMinRange )
             mnThumbPos = mnMinRange;
 
-        StateChanged( StateChangedType::DATA );
+        CompatStateChanged( StateChangedType::Data );
     }
 }
 
@@ -1768,7 +1767,7 @@ void ScrollBar::SetThumbPos( long nNewThumbPos )
     if ( mnThumbPos != nNewThumbPos )
     {
         mnThumbPos = nNewThumbPos;
-        StateChanged( StateChangedType::DATA );
+        CompatStateChanged( StateChangedType::Data );
     }
 }
 
@@ -1783,7 +1782,7 @@ void ScrollBar::SetVisibleSize( long nNewSize )
             mnThumbPos = mnMaxRange-mnVisibleSize;
         if ( mnThumbPos < mnMinRange )
             mnThumbPos = mnMinRange;
-        StateChanged( StateChangedType::DATA );
+        CompatStateChanged( StateChangedType::Data );
     }
 }
 
@@ -1810,7 +1809,7 @@ Size ScrollBar::GetOptimalSize() const
 
 Size ScrollBar::getCurrentCalcSize() const
 {
-    Rectangle aCtrlRegion;
+    tools::Rectangle aCtrlRegion;
     aCtrlRegion.Union(maBtn1Rect);
     aCtrlRegion.Union(maBtn2Rect);
     aCtrlRegion.Union(maPage1Rect);
@@ -1819,34 +1818,27 @@ Size ScrollBar::getCurrentCalcSize() const
     return aCtrlRegion.GetSize();
 }
 
-void ScrollBarBox::ImplInit( vcl::Window* pParent, WinBits nStyle )
+void ScrollBarBox::ImplInit(vcl::Window* pParent, WinBits nStyle)
 {
-    Window::ImplInit( pParent, nStyle, NULL );
+    Window::ImplInit( pParent, nStyle, nullptr );
 
     const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
     long nScrollSize = rStyleSettings.GetScrollBarSize();
-    SetSizePixel( Size( nScrollSize, nScrollSize ) );
-    ImplInitSettings();
+    SetSizePixel(Size(nScrollSize, nScrollSize));
 }
 
 ScrollBarBox::ScrollBarBox( vcl::Window* pParent, WinBits nStyle ) :
-    Window( WINDOW_SCROLLBARBOX )
+    Window( WindowType::SCROLLBARBOX )
 {
     ImplInit( pParent, nStyle );
 }
 
-void ScrollBarBox::ImplInitSettings()
+void ScrollBarBox::ApplySettings(vcl::RenderContext& rRenderContext)
 {
-    // FIXME: Hack so that we can build DockingWindows even without background
-    // and not everything has been switched over yet
-    if ( IsBackground() )
+    if (rRenderContext.IsBackground())
     {
-        Color aColor;
-        if ( IsControlBackground() )
-            aColor = GetControlBackground();
-        else
-            aColor = GetSettings().GetStyleSettings().GetFaceColor();
-        SetBackground( aColor );
+        Color aColor = rRenderContext.GetSettings().GetStyleSettings().GetFaceColor();
+        ApplyControlBackground(rRenderContext, aColor);
     }
 }
 
@@ -1854,9 +1846,8 @@ void ScrollBarBox::StateChanged( StateChangedType nType )
 {
     Window::StateChanged( nType );
 
-    if ( nType == StateChangedType::CONTROLBACKGROUND )
+    if (nType == StateChangedType::ControlBackground)
     {
-        ImplInitSettings();
         Invalidate();
     }
 }
@@ -1865,10 +1856,9 @@ void ScrollBarBox::DataChanged( const DataChangedEvent& rDCEvt )
 {
     Window::DataChanged( rDCEvt );
 
-    if ( (rDCEvt.GetType() == DATACHANGED_SETTINGS) &&
-         (rDCEvt.GetFlags() & SETTINGS_STYLE) )
+    if ((rDCEvt.GetType() == DataChangedEventType::SETTINGS) &&
+        (rDCEvt.GetFlags() & AllSettingsFlags::STYLE))
     {
-        ImplInitSettings();
         Invalidate();
     }
 }
