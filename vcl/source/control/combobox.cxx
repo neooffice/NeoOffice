@@ -24,20 +24,75 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <vcl/combobox.hxx>
+
 #include <set>
+
 #include <comphelper/string.hxx>
-#include <tools/debug.hxx>
-#include <tools/rc.h>
 #include <vcl/decoview.hxx>
-#include <vcl/lstbox.h>
+#include <vcl/lstbox.hxx>
 #include <vcl/button.hxx>
 #include <vcl/event.hxx>
-#include <vcl/combobox.hxx>
 #include <vcl/settings.hxx>
+#include <vcl/uitest/uiobject.hxx>
 
 #include <svdata.hxx>
-#include <ilstbox.hxx>
+#include "listbox.hxx"
 #include <controldata.hxx>
+
+
+struct ComboBoxBounds
+{
+    Point aSubEditPos;
+    Size aSubEditSize;
+
+    Point aButtonPos;
+    Size aButtonSize;
+};
+
+struct ComboBox::Impl
+{
+    ComboBox &          m_rThis;
+    VclPtr<Edit>        m_pSubEdit;
+    VclPtr<ImplListBox> m_pImplLB;
+    VclPtr<ImplBtn>     m_pBtn;
+    VclPtr<ImplListBoxFloatingWindow>  m_pFloatWin;
+    sal_uInt16          m_nDDHeight;
+    sal_Unicode         m_cMultiSep;
+    bool                m_isDDAutoSize        : 1;
+    bool                m_isSyntheticModify   : 1;
+    bool                m_isMatchCase         : 1;
+    sal_Int32           m_nMaxWidthChars;
+    Link<ComboBox&,void>               m_SelectHdl;
+    Link<ComboBox&,void>               m_DoubleClickHdl;
+
+    explicit Impl(ComboBox & rThis)
+        : m_rThis(rThis)
+        , m_nDDHeight(0)
+        , m_cMultiSep(0)
+        , m_isDDAutoSize(false)
+        , m_isSyntheticModify(false)
+        , m_isMatchCase(false)
+        , m_nMaxWidthChars(0)
+    {
+    }
+
+    void ImplInitComboBoxData();
+    void ImplUpdateFloatSelection();
+    ComboBoxBounds calcComboBoxDropDownComponentBounds(
+        const Size &rOutSize, const Size &rBorderOutSize) const;
+
+    DECL_DLLPRIVATE_LINK( ImplSelectHdl, LinkParamNone*, void );
+    DECL_DLLPRIVATE_LINK( ImplCancelHdl, LinkParamNone*, void );
+    DECL_DLLPRIVATE_LINK( ImplDoubleClickHdl, ImplListBoxWindow*, void );
+    DECL_DLLPRIVATE_LINK( ImplClickBtnHdl, void*, void );
+    DECL_DLLPRIVATE_LINK( ImplPopupModeEndHdl, FloatingWindow*, void );
+    DECL_DLLPRIVATE_LINK( ImplSelectionChangedHdl, sal_Int32, void );
+    DECL_DLLPRIVATE_LINK( ImplUserDrawHdl, UserDrawEvent*, void );
+    DECL_DLLPRIVATE_LINK( ImplAutocompleteHdl, Edit&, void );
+    DECL_DLLPRIVATE_LINK( ImplListItemSelectHdl , LinkParamNone*, void );
+};
+
 
 static void lcl_GetSelectedEntries( ::std::set< sal_Int32 >& rSelectedPos, const OUString& rText, sal_Unicode cTokenSep, const ImplEntryList* pEntryList )
 {
@@ -51,76 +106,56 @@ static void lcl_GetSelectedEntries( ::std::set< sal_Int32 >& rSelectedPos, const
     }
 }
 
-ComboBox::ComboBox( vcl::Window* pParent, WinBits nStyle ) :
-    Edit( WINDOW_COMBOBOX )
+ComboBox::ComboBox(vcl::Window *const pParent, WinBits const nStyle)
+    : Edit( WindowType::COMBOBOX )
+    , m_pImpl(new Impl(*this))
 {
-    ImplInitComboBoxData();
+    m_pImpl->ImplInitComboBoxData();
     ImplInit( pParent, nStyle );
     SetWidthInChars(-1);
 
 #ifdef USE_JAVA
-    if ( pParent && IsNativeControlSupported( CTRL_COMBOBOX, PART_ENTIRE_CONTROL ) )
-    { 
-        SetMouseTransparent( sal_True );
-        EnableChildTransparentMode( sal_True );
-        SetParentClipMode( PARENTCLIPMODE_NOCLIP );
-        SetPaintTransparent( sal_True ); 
-        SetBackground();
-    }
-#endif	// USE_JAVA
-}
-
-ComboBox::ComboBox( vcl::Window* pParent, const ResId& rResId ) :
-    Edit( WINDOW_COMBOBOX )
-{
-    ImplInitComboBoxData();
-    rResId.SetRT( RSC_COMBOBOX );
-    WinBits nStyle = ImplInitRes( rResId );
-    ImplInit( pParent, nStyle );
-    ImplLoadRes( rResId );
-
-    SetWidthInChars(-1);
-
-#ifdef USE_JAVA
-    if ( pParent && IsNativeControlSupported( CTRL_COMBOBOX, PART_ENTIRE_CONTROL ) )
+    if ( pParent && IsNativeControlSupported( ControlType::Combobox, ControlPart::Entire ) )
     { 
         SetMouseTransparent( true );
         EnableChildTransparentMode( true );
-        SetParentClipMode( PARENTCLIPMODE_NOCLIP );
+        SetParentClipMode( ParentClipMode::NoClip );
         SetPaintTransparent( true ); 
         SetBackground();
     }
 #endif	// USE_JAVA
-
-    if ( !(nStyle & WB_HIDE ) )
-        Show();
 }
 
 ComboBox::~ComboBox()
 {
-    SetSubEdit( NULL );
-    delete mpSubEdit;
-
-    ImplListBox *pImplLB = mpImplLB;
-    mpImplLB = NULL;
-    delete pImplLB;
-
-    delete mpFloatWin;
-    delete mpBtn;
+    disposeOnce();
 }
 
-void ComboBox::ImplInitComboBoxData()
+void ComboBox::dispose()
 {
-    mpSubEdit           = NULL;
-    mpBtn               = NULL;
-    mpImplLB            = NULL;
-    mpFloatWin          = NULL;
+    m_pImpl->m_pSubEdit.disposeAndClear();
 
-    mnDDHeight          = 0;
-    mbDDAutoSize        = true;
-    mbSyntheticModify   = false;
-    mbMatchCase         = false;
-    mcMultiSep          = ';';
+    VclPtr< ImplListBox > pImplLB = m_pImpl->m_pImplLB;
+    m_pImpl->m_pImplLB.clear();
+    pImplLB.disposeAndClear();
+
+    m_pImpl->m_pFloatWin.disposeAndClear();
+    m_pImpl->m_pBtn.disposeAndClear();
+    Edit::dispose();
+}
+
+void ComboBox::Impl::ImplInitComboBoxData()
+{
+    m_pSubEdit.disposeAndClear();
+    m_pBtn              = nullptr;
+    m_pImplLB           = nullptr;
+    m_pFloatWin         = nullptr;
+
+    m_nDDHeight         = 0;
+    m_isDDAutoSize      = true;
+    m_isSyntheticModify = false;
+    m_isMatchCase       = false;
+    m_cMultiSep         = ';';
     m_nMaxWidthChars    = -1;
 }
 
@@ -128,31 +163,29 @@ void ComboBox::ImplCalcEditHeight()
 {
     sal_Int32 nLeft, nTop, nRight, nBottom;
     GetBorder( nLeft, nTop, nRight, nBottom );
-    mnDDHeight = (sal_uInt16)(mpSubEdit->GetTextHeight() + nTop + nBottom + 4);
+    m_pImpl->m_nDDHeight = (sal_uInt16)(m_pImpl->m_pSubEdit->GetTextHeight() + nTop + nBottom + 4);
     if ( !IsDropDownBox() )
-        mnDDHeight += 4;
+        m_pImpl->m_nDDHeight += 4;
 
-    Rectangle aCtrlRegion( Point( 0, 0 ), Size( 10, 10 ) );
-    Rectangle aBoundRegion, aContentRegion;
+    tools::Rectangle aCtrlRegion( Point( 0, 0 ), Size( 10, 10 ) );
+    tools::Rectangle aBoundRegion, aContentRegion;
     ImplControlValue aControlValue;
-    ControlType aType = IsDropDownBox() ? CTRL_COMBOBOX : CTRL_EDITBOX;
-    if( GetNativeControlRegion( aType, PART_ENTIRE_CONTROL,
+    ControlType aType = IsDropDownBox() ? ControlType::Combobox : ControlType::Editbox;
+    if( GetNativeControlRegion( aType, ControlPart::Entire,
                                 aCtrlRegion,
-                                CTRL_STATE_ENABLED,
-                                aControlValue, OUString(),
+                                ControlState::ENABLED,
+                                aControlValue,
                                 aBoundRegion, aContentRegion ) )
     {
         const long nNCHeight = aBoundRegion.GetHeight();
-        if( mnDDHeight < nNCHeight )
-            mnDDHeight = sal::static_int_cast<sal_uInt16>( nNCHeight );
+        if (m_pImpl->m_nDDHeight < nNCHeight)
+            m_pImpl->m_nDDHeight = sal::static_int_cast<sal_uInt16>(nNCHeight);
     }
 }
 
 void ComboBox::ImplInit( vcl::Window* pParent, WinBits nStyle )
 {
-    ImplInitStyle( nStyle );
-
-    bool bNoBorder = ( nStyle & WB_NOBORDER ) ? true : false;
+    bool bNoBorder = ( nStyle & WB_NOBORDER ) != 0;
     if ( !(nStyle & WB_DROPDOWN) )
     {
         nStyle &= ~WB_BORDER;
@@ -172,14 +205,14 @@ void ComboBox::ImplInit( vcl::Window* pParent, WinBits nStyle )
     WinBits nListStyle = nStyle;
     if( nStyle & WB_DROPDOWN )
     {
-        mpFloatWin = new ImplListBoxFloatingWindow( this );
-        mpFloatWin->SetAutoWidth( true );
-        mpFloatWin->SetPopupModeEndHdl( LINK( this, ComboBox, ImplPopupModeEndHdl ) );
+        m_pImpl->m_pFloatWin = VclPtr<ImplListBoxFloatingWindow>::Create( this );
+        m_pImpl->m_pFloatWin->SetAutoWidth( true );
+        m_pImpl->m_pFloatWin->SetPopupModeEndHdl( LINK(m_pImpl.get(), ComboBox::Impl, ImplPopupModeEndHdl) );
 
-        mpBtn = new ImplBtn( this, WB_NOLIGHTBORDER | WB_RECTSTYLE );
-        ImplInitDropDownButton( mpBtn );
-        mpBtn->buttonDownSignal.connect( boost::bind( &ComboBox::ImplClickButtonHandler, this, _1 ));
-        mpBtn->Show();
+        m_pImpl->m_pBtn = VclPtr<ImplBtn>::Create( this, WB_NOLIGHTBORDER | WB_RECTSTYLE );
+        ImplInitDropDownButton( m_pImpl->m_pBtn );
+        m_pImpl->m_pBtn->SetMBDownHdl( LINK( m_pImpl.get(), ComboBox::Impl, ImplClickBtnHdl ) );
+        m_pImpl->m_pBtn->Show();
 
         nEditStyle |= WB_NOBORDER;
         nListStyle &= ~WB_BORDER;
@@ -195,30 +228,30 @@ void ComboBox::ImplInit( vcl::Window* pParent, WinBits nStyle )
         }
     }
 
-    mpSubEdit = new Edit( this, nEditStyle );
-    mpSubEdit->EnableRTL( false );
-    SetSubEdit( mpSubEdit );
-    mpSubEdit->SetPosPixel( Point() );
+    m_pImpl->m_pSubEdit.set( VclPtr<Edit>::Create( this, nEditStyle ) );
+    m_pImpl->m_pSubEdit->EnableRTL( false );
+    SetSubEdit( m_pImpl->m_pSubEdit );
+    m_pImpl->m_pSubEdit->SetPosPixel( Point() );
     EnableAutocomplete( true );
-    mpSubEdit->Show();
+    m_pImpl->m_pSubEdit->Show();
 
     vcl::Window* pLBParent = this;
-    if ( mpFloatWin )
-        pLBParent = mpFloatWin;
-    mpImplLB = new ImplListBox( pLBParent, nListStyle|WB_SIMPLEMODE|WB_AUTOHSCROLL );
-    mpImplLB->SetPosPixel( Point() );
-    mpImplLB->SetSelectHdl( LINK( this, ComboBox, ImplSelectHdl ) );
-    mpImplLB->SetCancelHdl( LINK( this, ComboBox, ImplCancelHdl ) );
-    mpImplLB->SetDoubleClickHdl( LINK( this, ComboBox, ImplDoubleClickHdl ) );
-    mpImplLB->userDrawSignal.connect( boost::bind( &ComboBox::ImplUserDrawHandler, this, _1 ) );
-    mpImplLB->SetSelectionChangedHdl( LINK( this, ComboBox, ImplSelectionChangedHdl ) );
-    mpImplLB->SetListItemSelectHdl( LINK( this, ComboBox, ImplListItemSelectHdl ) );
-    mpImplLB->Show();
+    if (m_pImpl->m_pFloatWin)
+        pLBParent = m_pImpl->m_pFloatWin;
+    m_pImpl->m_pImplLB = VclPtr<ImplListBox>::Create( pLBParent, nListStyle|WB_SIMPLEMODE|WB_AUTOHSCROLL );
+    m_pImpl->m_pImplLB->SetPosPixel( Point() );
+    m_pImpl->m_pImplLB->SetSelectHdl( LINK(m_pImpl.get(), ComboBox::Impl, ImplSelectHdl) );
+    m_pImpl->m_pImplLB->SetCancelHdl( LINK(m_pImpl.get(), ComboBox::Impl, ImplCancelHdl) );
+    m_pImpl->m_pImplLB->SetDoubleClickHdl( LINK(m_pImpl.get(), ComboBox::Impl, ImplDoubleClickHdl) );
+    m_pImpl->m_pImplLB->SetUserDrawHdl( LINK(m_pImpl.get(), ComboBox::Impl, ImplUserDrawHdl) );
+    m_pImpl->m_pImplLB->SetSelectionChangedHdl( LINK(m_pImpl.get(), ComboBox::Impl, ImplSelectionChangedHdl) );
+    m_pImpl->m_pImplLB->SetListItemSelectHdl( LINK(m_pImpl.get(), ComboBox::Impl, ImplListItemSelectHdl) );
+    m_pImpl->m_pImplLB->Show();
 
-    if ( mpFloatWin )
-        mpFloatWin->SetImplListBox( mpImplLB );
+    if (m_pImpl->m_pFloatWin)
+        m_pImpl->m_pFloatWin->SetImplListBox( m_pImpl->m_pImplLB );
     else
-        mpImplLB->GetMainWindow().AllowGrabFocus( true );
+        m_pImpl->m_pImplLB->GetMainWindow()->AllowGrabFocus( true );
 
     ImplCalcEditHeight();
 
@@ -234,188 +267,150 @@ WinBits ComboBox::ImplInitStyle( WinBits nStyle )
     return nStyle;
 }
 
-void ComboBox::ImplLoadRes( const ResId& rResId )
-{
-    Edit::ImplLoadRes( rResId );
-
-    sal_Int32 nNumber = ReadLongRes();
-
-    if( nNumber )
-    {
-        for( sal_Int32 i = 0; i < nNumber; i++ )
-        {
-            InsertEntry( ReadStringRes(), LISTBOX_APPEND );
-        }
-    }
-}
-
 void ComboBox::EnableAutocomplete( bool bEnable, bool bMatchCase )
 {
-    mbMatchCase = bMatchCase;
+    m_pImpl->m_isMatchCase = bMatchCase;
 
     if ( bEnable )
-    {
-        if( !mAutocompleteConnection.connected())
-            mAutocompleteConnection = mpSubEdit->autocompleteSignal.connect(
-                boost::bind( &ComboBox::ImplAutocompleteHandler, this, _1 ) );
-    }
+        m_pImpl->m_pSubEdit->SetAutocompleteHdl( LINK(m_pImpl.get(), ComboBox::Impl, ImplAutocompleteHdl) );
     else
-        mAutocompleteConnection.disconnect();
+        m_pImpl->m_pSubEdit->SetAutocompleteHdl( Link<Edit&,void>() );
 }
 
 bool ComboBox::IsAutocompleteEnabled() const
 {
-    return mAutocompleteConnection.connected();
+    return m_pImpl->m_pSubEdit->GetAutocompleteHdl().IsSet();
 }
 
-void ComboBox::ImplClickButtonHandler( ImplBtn* )
+IMPL_LINK_NOARG(ComboBox::Impl, ImplClickBtnHdl, void*, void)
 {
-    ImplCallEventListeners( VCLEVENT_DROPDOWN_PRE_OPEN );
-    mpSubEdit->GrabFocus();
-    if ( !mpImplLB->GetEntryList()->GetMRUCount() )
+    m_rThis.CallEventListeners( VclEventId::DropdownPreOpen );
+    m_pSubEdit->GrabFocus();
+    if (!m_pImplLB->GetEntryList()->GetMRUCount())
         ImplUpdateFloatSelection();
     else
-        mpImplLB->SelectEntry( 0 , true );
-    mpBtn->SetPressed( true );
-    SetSelection( Selection( 0, SELECTION_MAX ) );
-    mpFloatWin->StartFloat( true );
-    ImplCallEventListeners( VCLEVENT_DROPDOWN_OPEN );
+        m_pImplLB->SelectEntry( 0 , true );
+    m_pBtn->SetPressed( true );
+    m_rThis.SetSelection( Selection( 0, SELECTION_MAX ) );
+    m_pFloatWin->StartFloat( true );
+    m_rThis.CallEventListeners( VclEventId::DropdownOpen );
 
-    ImplClearLayoutData();
-    if( mpImplLB )
-        mpImplLB->GetMainWindow().ImplClearLayoutData();
+    m_rThis.ImplClearLayoutData();
+    if (m_pImplLB)
+        m_pImplLB->GetMainWindow()->ImplClearLayoutData();
 
 #ifdef USE_JAVA
     ImplControlValue aControlValue;
-    Rectangle aCtrlRegion( GetPosPixel(), GetSizePixel() );
-    Rectangle aBoundingRgn, aContentRgn;
-    if ( GetNativeControlRegion( CTRL_COMBOBOX, PART_BUTTON_DOWN, aCtrlRegion, 0, aControlValue, OUString(), aBoundingRgn, aContentRgn ) )
+    tools::Rectangle aCtrlRegion( m_rThis.GetPosPixel(), m_rThis.GetSizePixel() );
+    tools::Rectangle aBoundingRgn, aContentRgn;
+    if ( m_rThis.GetNativeControlRegion( ControlType::Combobox, ControlPart::Entire, aCtrlRegion, ControlState::NONE, aControlValue, aBoundingRgn, aContentRgn ) )
     {
-        GetParent()->Invalidate( aContentRgn );
-        if ( GetParent()->IsInPaint() )
-            GetParent()->Update();
+        m_rThis.GetParent()->Invalidate( aContentRgn );
+        if ( m_rThis.GetParent()->IsInPaint() )
+            m_rThis.GetParent()->Update();
     }
 #endif	// USE_JAVA
 }
 
-IMPL_LINK_NOARG(ComboBox, ImplPopupModeEndHdl)
+IMPL_LINK_NOARG(ComboBox::Impl, ImplPopupModeEndHdl, FloatingWindow*, void)
 {
-    if( mpFloatWin->IsPopupModeCanceled() )
+    if (m_pFloatWin->IsPopupModeCanceled())
     {
-        if ( !mpImplLB->GetEntryList()->IsEntryPosSelected( mpFloatWin->GetPopupModeStartSaveSelection() ) )
+        if (!m_pImplLB->GetEntryList()->IsEntryPosSelected(
+                    m_pFloatWin->GetPopupModeStartSaveSelection()))
         {
-            mpImplLB->SelectEntry( mpFloatWin->GetPopupModeStartSaveSelection(), true );
-            bool bTravelSelect = mpImplLB->IsTravelSelect();
-            mpImplLB->SetTravelSelect( true );
-            Select();
-            mpImplLB->SetTravelSelect( bTravelSelect );
+            m_pImplLB->SelectEntry(m_pFloatWin->GetPopupModeStartSaveSelection(), true);
+            bool bTravelSelect = m_pImplLB->IsTravelSelect();
+            m_pImplLB->SetTravelSelect( true );
+            m_rThis.Select();
+            m_pImplLB->SetTravelSelect( bTravelSelect );
         }
     }
 
-    ImplClearLayoutData();
-    if( mpImplLB )
-        mpImplLB->GetMainWindow().ImplClearLayoutData();
+    m_rThis.ImplClearLayoutData();
+    if (m_pImplLB)
+        m_pImplLB->GetMainWindow()->ImplClearLayoutData();
 
-    mpBtn->SetPressed( false );
-    ImplCallEventListeners( VCLEVENT_DROPDOWN_CLOSE );
+    m_pBtn->SetPressed( false );
+    m_rThis.CallEventListeners( VclEventId::DropdownClose );
 
 #ifdef USE_JAVA
     ImplControlValue aControlValue;
-    Rectangle aCtrlRegion( GetPosPixel(), GetSizePixel() );
-    Rectangle aBoundingRgn, aContentRgn;
-    if ( GetNativeControlRegion( CTRL_COMBOBOX, PART_BUTTON_DOWN, aCtrlRegion, 0, aControlValue, OUString(), aBoundingRgn, aContentRgn ) )
+    tools::Rectangle aCtrlRegion( m_rThis.GetPosPixel(), m_rThis.GetSizePixel() );
+    tools::Rectangle aBoundingRgn, aContentRgn;
+    if ( m_rThis.GetNativeControlRegion( ControlType::Combobox, ControlPart::Entire, aCtrlRegion, ControlState::NONE, aControlValue, aBoundingRgn, aContentRgn ) )
     {
-        GetParent()->Invalidate( aContentRgn );
-        if ( GetParent()->IsInPaint() )
-            GetParent()->Update();
+        m_rThis.GetParent()->Invalidate( aContentRgn );
+        if ( m_rThis.GetParent()->IsInPaint() )
+            m_rThis.GetParent()->Update();
     }
 #endif	// USE_JAVA
-
-    return 0;
 }
 
-void ComboBox::ImplAutocompleteHandler( Edit* pEdit )
+IMPL_LINK(ComboBox::Impl, ImplAutocompleteHdl, Edit&, rEdit, void)
 {
-    Selection           aSel = pEdit->GetSelection();
-    AutocompleteAction  eAction = pEdit->GetAutocompleteAction();
+    Selection           aSel = rEdit.GetSelection();
 
-    /* If there is no current selection do not auto complete on
-       Tab/Shift-Tab since then we would not cycle to the next field.
-    */
-    if ( aSel.Len() ||
-         ((eAction != AUTOCOMPLETE_TABFORWARD) && (eAction != AUTOCOMPLETE_TABBACKWARD)) )
     {
-        OUString    aFullText = pEdit->GetText();
+        OUString    aFullText = rEdit.GetText();
         OUString    aStartText = aFullText.copy( 0, (sal_Int32)aSel.Max() );
-        sal_Int32   nStart = mpImplLB->GetCurrentPos();
+        sal_Int32   nStart = m_pImplLB->GetCurrentPos();
 
         if ( nStart == LISTBOX_ENTRY_NOTFOUND )
             nStart = 0;
 
-        bool bForward = true;
-        if ( eAction == AUTOCOMPLETE_TABFORWARD )
-            nStart++;
-        else if ( eAction == AUTOCOMPLETE_TABBACKWARD )
-        {
-            bForward = false;
-            if (nStart)
-                nStart = nStart - 1;
-            else if (mpImplLB->GetEntryList()->GetEntryCount())
-                nStart = mpImplLB->GetEntryList()->GetEntryCount()-1;
-        }
-
         sal_Int32 nPos = LISTBOX_ENTRY_NOTFOUND;
-        if( ! mbMatchCase )
+        if (!m_isMatchCase)
         {
             // Try match case insensitive from current position
-            nPos = mpImplLB->GetEntryList()->FindMatchingEntry( aStartText, nStart, bForward, true );
+            nPos = m_pImplLB->GetEntryList()->FindMatchingEntry(aStartText, nStart, true);
             if ( nPos == LISTBOX_ENTRY_NOTFOUND )
                 // Try match case insensitive, but from start
-                nPos = mpImplLB->GetEntryList()->FindMatchingEntry( aStartText, bForward ? 0 : (mpImplLB->GetEntryList()->GetEntryCount()-1), bForward, true );
+                nPos = m_pImplLB->GetEntryList()->FindMatchingEntry(aStartText, 0, true);
         }
 
         if ( nPos == LISTBOX_ENTRY_NOTFOUND )
             // Try match full from current position
-            nPos = mpImplLB->GetEntryList()->FindMatchingEntry( aStartText, nStart, bForward, false );
+            nPos = m_pImplLB->GetEntryList()->FindMatchingEntry(aStartText, nStart, false);
         if ( nPos == LISTBOX_ENTRY_NOTFOUND )
             //  Match full, but from start
-            nPos = mpImplLB->GetEntryList()->FindMatchingEntry( aStartText, bForward ? 0 : (mpImplLB->GetEntryList()->GetEntryCount()-1), bForward, false );
+            nPos = m_pImplLB->GetEntryList()->FindMatchingEntry(aStartText, 0, false);
 
         if ( nPos != LISTBOX_ENTRY_NOTFOUND )
         {
-            OUString aText = mpImplLB->GetEntryList()->GetEntryText( nPos );
+            OUString aText = m_pImplLB->GetEntryList()->GetEntryText( nPos );
             Selection aSelection( aText.getLength(), aStartText.getLength() );
-            pEdit->SetText( aText, aSelection );
+            rEdit.SetText( aText, aSelection );
         }
     }
 }
 
-IMPL_LINK_NOARG(ComboBox, ImplSelectHdl)
+IMPL_LINK_NOARG(ComboBox::Impl, ImplSelectHdl, LinkParamNone*, void)
 {
-    bool bPopup = IsInDropDown();
+    bool bPopup = m_rThis.IsInDropDown();
     bool bCallSelect = false;
-    if ( mpImplLB->IsSelectionChanged() || bPopup )
+    if (m_pImplLB->IsSelectionChanged() || bPopup)
     {
         OUString aText;
-        if ( IsMultiSelectionEnabled() )
+        if (m_rThis.IsMultiSelectionEnabled())
         {
-            aText = mpSubEdit->GetText();
+            aText = m_pSubEdit->GetText();
 
             // remove all entries to which there is an entry, but which is not selected
             sal_Int32 nIndex = 0;
             while ( nIndex >= 0 )
             {
                 sal_Int32  nPrevIndex = nIndex;
-                OUString   aToken = aText.getToken( 0, mcMultiSep, nIndex );
+                OUString   aToken = aText.getToken( 0, m_cMultiSep, nIndex );
                 sal_Int32  nTokenLen = aToken.getLength();
                 aToken = comphelper::string::strip(aToken, ' ');
-                sal_Int32      nP = mpImplLB->GetEntryList()->FindEntry( aToken );
-                if ( (nP != LISTBOX_ENTRY_NOTFOUND) && (!mpImplLB->GetEntryList()->IsEntryPosSelected( nP )) )
+                sal_Int32 nP = m_pImplLB->GetEntryList()->FindEntry( aToken );
+                if ((nP != LISTBOX_ENTRY_NOTFOUND) && (!m_pImplLB->GetEntryList()->IsEntryPosSelected(nP)))
                 {
                     aText = aText.replaceAt( nPrevIndex, nTokenLen, "" );
                     nIndex = nIndex - nTokenLen;
                     sal_Int32 nSepCount=0;
-                    if ( (nPrevIndex+nSepCount < aText.getLength()) && (aText[nPrevIndex+nSepCount] == mcMultiSep) )
+                    if ((nPrevIndex+nSepCount < aText.getLength()) && (aText[nPrevIndex+nSepCount] == m_cMultiSep))
                     {
                         nIndex--;
                         ++nSepCount;
@@ -427,149 +422,143 @@ IMPL_LINK_NOARG(ComboBox, ImplSelectHdl)
 
             // attach missing entries
             ::std::set< sal_Int32 > aSelInText;
-            lcl_GetSelectedEntries( aSelInText, aText, mcMultiSep, mpImplLB->GetEntryList() );
-            sal_Int32 nSelectedEntries = mpImplLB->GetEntryList()->GetSelectEntryCount();
+            lcl_GetSelectedEntries( aSelInText, aText, m_cMultiSep, m_pImplLB->GetEntryList() );
+            sal_Int32 nSelectedEntries = m_pImplLB->GetEntryList()->GetSelectEntryCount();
             for ( sal_Int32 n = 0; n < nSelectedEntries; n++ )
             {
-                sal_Int32 nP = mpImplLB->GetEntryList()->GetSelectEntryPos( n );
+                sal_Int32 nP = m_pImplLB->GetEntryList()->GetSelectEntryPos( n );
                 if ( !aSelInText.count( nP ) )
                 {
-                    if ( !aText.isEmpty() && (aText[ aText.getLength()-1 ] != mcMultiSep) )
-                        aText += OUString(mcMultiSep);
+                    if (!aText.isEmpty() && (aText[aText.getLength()-1] != m_cMultiSep))
+                        aText += OUStringLiteral1(m_cMultiSep);
                     if ( !aText.isEmpty() )
                         aText += " ";   // slightly loosen
-                    aText += mpImplLB->GetEntryList()->GetEntryText( nP );
-                    aText += OUString(mcMultiSep);
+                    aText += m_pImplLB->GetEntryList()->GetEntryText( nP );
+                    aText += OUStringLiteral1(m_cMultiSep);
                 }
             }
-            aText = comphelper::string::stripEnd( aText, mcMultiSep );
+            aText = comphelper::string::stripEnd( aText, m_cMultiSep );
         }
         else
         {
-            aText = mpImplLB->GetEntryList()->GetSelectEntry( 0 );
+            aText = m_pImplLB->GetEntryList()->GetSelectEntry( 0 );
         }
 
-        mpSubEdit->SetText( aText );
+        m_pSubEdit->SetText( aText );
 
         Selection aNewSelection( 0, aText.getLength() );
-        if ( IsMultiSelectionEnabled() )
+        if (m_rThis.IsMultiSelectionEnabled())
             aNewSelection.Min() = aText.getLength();
-        mpSubEdit->SetSelection( aNewSelection );
+        m_pSubEdit->SetSelection( aNewSelection );
 
         bCallSelect = true;
     }
 
     // #84652# Call GrabFocus and EndPopupMode before calling Select/Modify, but after changing the text
 
-    if ( bPopup && !mpImplLB->IsTravelSelect() &&
-        ( !IsMultiSelectionEnabled() || !mpImplLB->GetSelectModifier() ) )
+    if (bPopup && !m_pImplLB->IsTravelSelect() &&
+        (!m_rThis.IsMultiSelectionEnabled() || !m_pImplLB->GetSelectModifier()))
     {
-        mpFloatWin->EndPopupMode();
-        GrabFocus();
+        m_pFloatWin->EndPopupMode();
+        m_rThis.GrabFocus();
     }
 
     if ( bCallSelect )
     {
-        mpSubEdit->SetModifyFlag();
-        mbSyntheticModify = true;
-        Modify();
-        mbSyntheticModify = false;
-        Select();
+        m_pSubEdit->SetModifyFlag();
+        m_isSyntheticModify = true;
+        m_rThis.Modify();
+        m_isSyntheticModify = false;
+        m_rThis.Select();
     }
-
-    return 0;
 }
 
-IMPL_LINK( ComboBox, ImplListItemSelectHdl,  void*, EMPTYARG )
+IMPL_LINK_NOARG( ComboBox::Impl, ImplListItemSelectHdl, LinkParamNone*, void )
 {
-    ImplCallEventListeners( VCLEVENT_DROPDOWN_SELECT );
-    return 1;
+    m_rThis.CallEventListeners( VclEventId::DropdownSelect );
 }
 
-IMPL_LINK_NOARG(ComboBox, ImplCancelHdl)
+IMPL_LINK_NOARG(ComboBox::Impl, ImplCancelHdl, LinkParamNone*, void)
 {
-    if( IsInDropDown() )
-        mpFloatWin->EndPopupMode();
-
-    return 1;
+    if (m_rThis.IsInDropDown())
+        m_pFloatWin->EndPopupMode();
 }
 
-IMPL_LINK( ComboBox, ImplSelectionChangedHdl, void*, n )
+IMPL_LINK( ComboBox::Impl, ImplSelectionChangedHdl, sal_Int32, nChanged, void )
 {
-    if ( !mpImplLB->IsTrackingSelect() )
+    if (!m_pImplLB->IsTrackingSelect())
     {
-        sal_Int32 nChanged = (sal_Int32)reinterpret_cast<sal_uLong>(n);
-        if ( !mpSubEdit->IsReadOnly() && mpImplLB->GetEntryList()->IsEntryPosSelected( nChanged ) )
-            mpSubEdit->SetText( mpImplLB->GetEntryList()->GetEntryText( nChanged ) );
+        if (!m_pSubEdit->IsReadOnly() && m_pImplLB->GetEntryList()->IsEntryPosSelected(nChanged))
+            m_pSubEdit->SetText(m_pImplLB->GetEntryList()->GetEntryText(nChanged));
     }
-    return 1;
 }
 
-IMPL_LINK_NOARG(ComboBox, ImplDoubleClickHdl)
+IMPL_LINK_NOARG(ComboBox::Impl, ImplDoubleClickHdl, ImplListBoxWindow*, void)
 {
-    DoubleClick();
-    return 0;
+    m_rThis.DoubleClick();
 }
 
 void ComboBox::ToggleDropDown()
 {
     if( IsDropDownBox() )
     {
-        if( mpFloatWin->IsInPopupMode() )
-            mpFloatWin->EndPopupMode();
+        if (m_pImpl->m_pFloatWin->IsInPopupMode())
+            m_pImpl->m_pFloatWin->EndPopupMode();
         else
         {
-            mpSubEdit->GrabFocus();
-            if ( !mpImplLB->GetEntryList()->GetMRUCount() )
-                ImplUpdateFloatSelection();
+            m_pImpl->m_pSubEdit->GrabFocus();
+            if (!m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount())
+                m_pImpl->ImplUpdateFloatSelection();
             else
-                mpImplLB->SelectEntry( 0 , true );
-            ImplCallEventListeners( VCLEVENT_DROPDOWN_PRE_OPEN );
-            mpBtn->SetPressed( true );
+                m_pImpl->m_pImplLB->SelectEntry( 0 , true );
+            CallEventListeners( VclEventId::DropdownPreOpen );
+            m_pImpl->m_pBtn->SetPressed( true );
             SetSelection( Selection( 0, SELECTION_MAX ) );
-            mpFloatWin->StartFloat( true );
-            ImplCallEventListeners( VCLEVENT_DROPDOWN_OPEN );
+            m_pImpl->m_pFloatWin->StartFloat( true );
+            CallEventListeners( VclEventId::DropdownOpen );
         }
     }
 }
 
 void ComboBox::Select()
 {
-    ImplCallEventListenersAndHandler( VCLEVENT_COMBOBOX_SELECT, maSelectHdl, this );
+    ImplCallEventListenersAndHandler( VclEventId::ComboboxSelect, [this] () { m_pImpl->m_SelectHdl.Call(*this); } );
 }
 
 void ComboBox::DoubleClick()
 {
-    ImplCallEventListenersAndHandler( VCLEVENT_COMBOBOX_DOUBLECLICK, maDoubleClickHdl, this );
+    ImplCallEventListenersAndHandler( VclEventId::ComboboxDoubleClick, [this] () { m_pImpl->m_DoubleClickHdl.Call(*this); } );
 }
+
+bool ComboBox::IsAutoSizeEnabled() const { return m_pImpl->m_isDDAutoSize; }
 
 void ComboBox::EnableAutoSize( bool bAuto )
 {
-    mbDDAutoSize = bAuto;
-    if ( mpFloatWin )
+    m_pImpl->m_isDDAutoSize = bAuto;
+    if (m_pImpl->m_pFloatWin)
     {
-        if ( bAuto && !mpFloatWin->GetDropDownLineCount() )
+        if (bAuto && !m_pImpl->m_pFloatWin->GetDropDownLineCount())
         {
             // Adapt to GetListBoxMaximumLineCount here; was on fixed number of five before
             AdaptDropDownLineCountToMaximum();
         }
         else if ( !bAuto )
         {
-            mpFloatWin->SetDropDownLineCount( 0 );
+            m_pImpl->m_pFloatWin->SetDropDownLineCount( 0 );
         }
     }
 }
 
 void ComboBox::EnableDDAutoWidth( bool b )
 {
-    if ( mpFloatWin )
-        mpFloatWin->SetAutoWidth( b );
+    if (m_pImpl->m_pFloatWin)
+        m_pImpl->m_pFloatWin->SetAutoWidth( b );
 }
 
 void ComboBox::SetDropDownLineCount( sal_uInt16 nLines )
 {
-    if ( mpFloatWin )
-        mpFloatWin->SetDropDownLineCount( nLines );
+    if (m_pImpl->m_pFloatWin)
+        m_pImpl->m_pFloatWin->SetDropDownLineCount( nLines );
 }
 
 void ComboBox::AdaptDropDownLineCountToMaximum()
@@ -581,25 +570,25 @@ void ComboBox::AdaptDropDownLineCountToMaximum()
 sal_uInt16 ComboBox::GetDropDownLineCount() const
 {
     sal_uInt16 nLines = 0;
-    if ( mpFloatWin )
-        nLines = mpFloatWin->GetDropDownLineCount();
+    if (m_pImpl->m_pFloatWin)
+        nLines = m_pImpl->m_pFloatWin->GetDropDownLineCount();
     return nLines;
 }
 
 void ComboBox::setPosSizePixel( long nX, long nY, long nWidth, long nHeight,
-                                sal_uInt16 nFlags )
+                                PosSizeFlags nFlags )
 {
-    if( IsDropDownBox() && ( nFlags & WINDOW_POSSIZE_SIZE ) )
+    if( IsDropDownBox() && ( nFlags & PosSizeFlags::Size ) )
     {
-        Size aPrefSz = mpFloatWin->GetPrefSize();
-        if ( ( nFlags & WINDOW_POSSIZE_HEIGHT ) && ( nHeight >= 2*mnDDHeight ) )
-            aPrefSz.Height() = nHeight-mnDDHeight;
-        if ( nFlags & WINDOW_POSSIZE_WIDTH )
+        Size aPrefSz = m_pImpl->m_pFloatWin->GetPrefSize();
+        if ((nFlags & PosSizeFlags::Height) && (nHeight >= 2*m_pImpl->m_nDDHeight))
+            aPrefSz.Height() = nHeight-m_pImpl->m_nDDHeight;
+        if ( nFlags & PosSizeFlags::Width )
             aPrefSz.Width() = nWidth;
-        mpFloatWin->SetPrefSize( aPrefSz );
+        m_pImpl->m_pFloatWin->SetPrefSize( aPrefSz );
 
-        if ( IsAutoSizeEnabled() && ! (nFlags & WINDOW_POSSIZE_DROPDOWN) )
-            nHeight = mnDDHeight;
+        if (IsAutoSizeEnabled())
+            nHeight = m_pImpl->m_nDDHeight;
     }
 
     Edit::setPosSizePixel( nX, nY, nWidth, nHeight, nFlags );
@@ -609,47 +598,53 @@ void ComboBox::Resize()
 {
     Control::Resize();
 
-    Size aOutSz = GetOutputSizePixel();
-    if( IsDropDownBox() )
+    if (m_pImpl->m_pSubEdit)
     {
-        ComboBoxBounds aBounds(calcComboBoxDropDownComponentBounds(aOutSz,
-            GetWindow(WINDOW_BORDER)->GetOutputSizePixel()));
-        mpSubEdit->SetPosSizePixel(aBounds.aSubEditPos, aBounds.aSubEditSize);
-        mpBtn->SetPosSizePixel(aBounds.aButtonPos, aBounds.aButtonSize);
-    }
-    else
-    {
-        mpSubEdit->SetSizePixel( Size( aOutSz.Width(), mnDDHeight ) );
-        mpImplLB->setPosSizePixel( 0, mnDDHeight, aOutSz.Width(), aOutSz.Height() - mnDDHeight );
-        if ( !GetText().isEmpty() )
-            ImplUpdateFloatSelection();
+        Size aOutSz = GetOutputSizePixel();
+        if( IsDropDownBox() )
+        {
+            ComboBoxBounds aBounds(m_pImpl->calcComboBoxDropDownComponentBounds(aOutSz,
+                GetWindow(GetWindowType::Border)->GetOutputSizePixel()));
+            m_pImpl->m_pSubEdit->SetPosSizePixel(aBounds.aSubEditPos, aBounds.aSubEditSize);
+            m_pImpl->m_pBtn->SetPosSizePixel(aBounds.aButtonPos, aBounds.aButtonSize);
+        }
+        else
+        {
+            m_pImpl->m_pSubEdit->SetSizePixel(Size(aOutSz.Width(), m_pImpl->m_nDDHeight));
+            m_pImpl->m_pImplLB->setPosSizePixel(0, m_pImpl->m_nDDHeight,
+                    aOutSz.Width(), aOutSz.Height() - m_pImpl->m_nDDHeight);
+            if ( !GetText().isEmpty() )
+                m_pImpl->ImplUpdateFloatSelection();
+        }
     }
 
     // adjust the size of the FloatingWindow even when invisible
     // as KEY_PGUP/DOWN is being processed...
-    if ( mpFloatWin )
-        mpFloatWin->SetSizePixel( mpFloatWin->CalcFloatSize() );
+    if (m_pImpl->m_pFloatWin)
+        m_pImpl->m_pFloatWin->SetSizePixel(m_pImpl->m_pFloatWin->CalcFloatSize());
 }
+
+bool ComboBox::IsDropDownBox() const { return m_pImpl->m_pFloatWin != nullptr; }
 
 void ComboBox::FillLayoutData() const
 {
-    mpControlData->mpLayoutData = new vcl::ControlLayoutData();
-    AppendLayoutData( *mpSubEdit );
-    mpSubEdit->SetLayoutDataParent( this );
-    Control& rMainWindow = mpImplLB->GetMainWindow();
-    if( mpFloatWin )
+    mpControlData->mpLayoutData.reset( new vcl::ControlLayoutData );
+    AppendLayoutData( *m_pImpl->m_pSubEdit );
+    m_pImpl->m_pSubEdit->SetLayoutDataParent( this );
+    ImplListBoxWindow* rMainWindow = m_pImpl->m_pImplLB->GetMainWindow();
+    if (m_pImpl->m_pFloatWin)
     {
         // dropdown mode
-        if( mpFloatWin->IsReallyVisible() )
+        if (m_pImpl->m_pFloatWin->IsReallyVisible())
         {
-            AppendLayoutData( rMainWindow );
-            rMainWindow.SetLayoutDataParent( this );
+            AppendLayoutData( *rMainWindow );
+            rMainWindow->SetLayoutDataParent( this );
         }
     }
     else
     {
-        AppendLayoutData( rMainWindow );
-        rMainWindow.SetLayoutDataParent( this );
+        AppendLayoutData( *rMainWindow );
+        rMainWindow->SetLayoutDataParent( this );
     }
 }
 
@@ -657,62 +652,62 @@ void ComboBox::StateChanged( StateChangedType nType )
 {
     Edit::StateChanged( nType );
 
-    if ( nType == StateChangedType::READONLY )
+    if ( nType == StateChangedType::ReadOnly )
     {
-        mpImplLB->SetReadOnly( IsReadOnly() );
-        if ( mpBtn )
-            mpBtn->Enable( IsEnabled() && !IsReadOnly() );
+        m_pImpl->m_pImplLB->SetReadOnly( IsReadOnly() );
+        if (m_pImpl->m_pBtn)
+            m_pImpl->m_pBtn->Enable( IsEnabled() && !IsReadOnly() );
     }
-    else if ( nType == StateChangedType::ENABLE )
+    else if ( nType == StateChangedType::Enable )
     {
-        mpSubEdit->Enable( IsEnabled() );
-        mpImplLB->Enable( IsEnabled() && !IsReadOnly() );
-        if ( mpBtn )
-            mpBtn->Enable( IsEnabled() && !IsReadOnly() );
+        m_pImpl->m_pSubEdit->Enable( IsEnabled() );
+        m_pImpl->m_pImplLB->Enable( IsEnabled() && !IsReadOnly() );
+        if (m_pImpl->m_pBtn)
+            m_pImpl->m_pBtn->Enable( IsEnabled() && !IsReadOnly() );
         Invalidate();
     }
-    else if( nType == StateChangedType::UPDATEMODE )
+    else if( nType == StateChangedType::UpdateMode )
     {
-        mpImplLB->SetUpdateMode( IsUpdateMode() );
+        m_pImpl->m_pImplLB->SetUpdateMode( IsUpdateMode() );
     }
-    else if ( nType == StateChangedType::ZOOM )
+    else if ( nType == StateChangedType::Zoom )
     {
-        mpImplLB->SetZoom( GetZoom() );
-        mpSubEdit->SetZoom( GetZoom() );
+        m_pImpl->m_pImplLB->SetZoom( GetZoom() );
+        m_pImpl->m_pSubEdit->SetZoom( GetZoom() );
         ImplCalcEditHeight();
         Resize();
     }
-    else if ( nType == StateChangedType::CONTROLFONT )
+    else if ( nType == StateChangedType::ControlFont )
     {
-        mpImplLB->SetControlFont( GetControlFont() );
-        mpSubEdit->SetControlFont( GetControlFont() );
+        m_pImpl->m_pImplLB->SetControlFont( GetControlFont() );
+        m_pImpl->m_pSubEdit->SetControlFont( GetControlFont() );
         ImplCalcEditHeight();
         Resize();
     }
-    else if ( nType == StateChangedType::CONTROLFOREGROUND )
+    else if ( nType == StateChangedType::ControlForeground )
     {
-        mpImplLB->SetControlForeground( GetControlForeground() );
-        mpSubEdit->SetControlForeground( GetControlForeground() );
+        m_pImpl->m_pImplLB->SetControlForeground( GetControlForeground() );
+        m_pImpl->m_pSubEdit->SetControlForeground( GetControlForeground() );
     }
-    else if ( nType == StateChangedType::CONTROLBACKGROUND )
+    else if ( nType == StateChangedType::ControlBackground )
     {
-        mpImplLB->SetControlBackground( GetControlBackground() );
-        mpSubEdit->SetControlBackground( GetControlBackground() );
+        m_pImpl->m_pImplLB->SetControlBackground( GetControlBackground() );
+        m_pImpl->m_pSubEdit->SetControlBackground( GetControlBackground() );
     }
-    else if ( nType == StateChangedType::STYLE )
+    else if ( nType == StateChangedType::Style )
     {
         SetStyle( ImplInitStyle( GetStyle() ) );
-        mpImplLB->GetMainWindow().EnableSort( ( GetStyle() & WB_SORT ) ? true : false );
+        m_pImpl->m_pImplLB->GetMainWindow()->EnableSort( ( GetStyle() & WB_SORT ) != 0 );
     }
-    else if( nType == StateChangedType::MIRRORING )
+    else if( nType == StateChangedType::Mirroring )
     {
-        if( mpBtn )
+        if (m_pImpl->m_pBtn)
         {
-            mpBtn->EnableRTL( IsRTLEnabled() );
-            ImplInitDropDownButton( mpBtn );
+            m_pImpl->m_pBtn->EnableRTL( IsRTLEnabled() );
+            ImplInitDropDownButton( m_pImpl->m_pBtn );
         }
-        mpSubEdit->StateChanged( StateChangedType::MIRRORING );
-        mpImplLB->EnableRTL( IsRTLEnabled() );
+        m_pImpl->m_pSubEdit->CompatStateChanged( StateChangedType::Mirroring );
+        m_pImpl->m_pImplLB->EnableRTL( IsRTLEnabled() );
         Resize();
     }
 }
@@ -721,35 +716,30 @@ void ComboBox::DataChanged( const DataChangedEvent& rDCEvt )
 {
     Control::DataChanged( rDCEvt );
 
-    if ( (rDCEvt.GetType() == DATACHANGED_FONTS) ||
-         (rDCEvt.GetType() == DATACHANGED_FONTSUBSTITUTION) ||
-         ((rDCEvt.GetType() == DATACHANGED_SETTINGS) &&
-          (rDCEvt.GetFlags() & SETTINGS_STYLE)) )
+    if ( (rDCEvt.GetType() == DataChangedEventType::FONTS) ||
+         (rDCEvt.GetType() == DataChangedEventType::FONTSUBSTITUTION) ||
+         ((rDCEvt.GetType() == DataChangedEventType::SETTINGS) &&
+          (rDCEvt.GetFlags() & AllSettingsFlags::STYLE)) )
     {
-        if ( mpBtn )
+        if (m_pImpl->m_pBtn)
         {
-            mpBtn->SetSettings( GetSettings() );
-            ImplInitDropDownButton( mpBtn );
+            m_pImpl->m_pBtn->SetSettings( GetSettings() );
+            ImplInitDropDownButton( m_pImpl->m_pBtn );
         }
         Resize();
-        mpImplLB->Resize(); // not called by ComboBox::Resize() if ImplLB is unchanged
+        m_pImpl->m_pImplLB->Resize(); // not called by ComboBox::Resize() if ImplLB is unchanged
 
         SetBackground();    // due to a hack in Window::UpdateSettings the background must be reset
                             // otherwise it will overpaint NWF drawn comboboxes
     }
 }
 
-bool ComboBox::PreNotify( NotifyEvent& rNEvt )
+bool ComboBox::EventNotify( NotifyEvent& rNEvt )
 {
-
-    return Edit::PreNotify( rNEvt );
-}
-
-bool ComboBox::Notify( NotifyEvent& rNEvt )
-{
-    bool nDone = false;
-    if( ( rNEvt.GetType() == EVENT_KEYINPUT ) && ( rNEvt.GetWindow() == mpSubEdit )
-            && !IsReadOnly() )
+    bool bDone = false;
+    if ((rNEvt.GetType() == MouseNotifyEvent::KEYINPUT)
+        && (rNEvt.GetWindow() == m_pImpl->m_pSubEdit)
+        && !IsReadOnly())
     {
         KeyEvent aKeyEvt = *rNEvt.GetKeyEvent();
         sal_uInt16   nKeyCode = aKeyEvt.GetKeyCode().GetCode();
@@ -760,198 +750,203 @@ bool ComboBox::Notify( NotifyEvent& rNEvt )
             case KEY_PAGEUP:
             case KEY_PAGEDOWN:
             {
-                ImplUpdateFloatSelection();
-                if( ( nKeyCode == KEY_DOWN ) && mpFloatWin && !mpFloatWin->IsInPopupMode() && aKeyEvt.GetKeyCode().IsMod2() )
+                m_pImpl->ImplUpdateFloatSelection();
+                if ((nKeyCode == KEY_DOWN) && m_pImpl->m_pFloatWin
+                    && !m_pImpl->m_pFloatWin->IsInPopupMode()
+                    && aKeyEvt.GetKeyCode().IsMod2())
                 {
-                    ImplCallEventListeners( VCLEVENT_DROPDOWN_PRE_OPEN );
-                    mpBtn->SetPressed( true );
-                    if ( mpImplLB->GetEntryList()->GetMRUCount() )
-                        mpImplLB->SelectEntry( 0 , true );
+                    CallEventListeners( VclEventId::DropdownPreOpen );
+                    m_pImpl->m_pBtn->SetPressed( true );
+                    if (m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount())
+                        m_pImpl->m_pImplLB->SelectEntry( 0 , true );
                     SetSelection( Selection( 0, SELECTION_MAX ) );
-                    mpFloatWin->StartFloat( false );
-                    ImplCallEventListeners( VCLEVENT_DROPDOWN_OPEN );
-                    nDone = true;
+                    m_pImpl->m_pFloatWin->StartFloat( false );
+                    CallEventListeners( VclEventId::DropdownOpen );
+                    bDone = true;
                 }
-                else if( ( nKeyCode == KEY_UP ) && mpFloatWin && mpFloatWin->IsInPopupMode() && aKeyEvt.GetKeyCode().IsMod2() )
+                else if ((nKeyCode == KEY_UP) && m_pImpl->m_pFloatWin
+                        && m_pImpl->m_pFloatWin->IsInPopupMode()
+                        && aKeyEvt.GetKeyCode().IsMod2())
                 {
-                    mpFloatWin->EndPopupMode();
-                    nDone = true;
+                    m_pImpl->m_pFloatWin->EndPopupMode();
+                    bDone = true;
                 }
                 else
                 {
-                    nDone = mpImplLB->ProcessKeyInput( aKeyEvt );
+                    bDone = m_pImpl->m_pImplLB->ProcessKeyInput( aKeyEvt );
                 }
             }
             break;
 
             case KEY_RETURN:
             {
-                if( ( rNEvt.GetWindow() == mpSubEdit ) && IsInDropDown() )
+                if ((rNEvt.GetWindow() == m_pImpl->m_pSubEdit) && IsInDropDown())
                 {
-                    mpImplLB->ProcessKeyInput( aKeyEvt );
-                    nDone = true;
+                    m_pImpl->m_pImplLB->ProcessKeyInput( aKeyEvt );
+                    bDone = true;
                 }
             }
             break;
         }
     }
-    else if ( (rNEvt.GetType() == EVENT_LOSEFOCUS) && mpFloatWin )
+    else if ((rNEvt.GetType() == MouseNotifyEvent::LOSEFOCUS) && m_pImpl->m_pFloatWin)
     {
-        if( mpFloatWin->HasChildPathFocus() )
-            mpSubEdit->GrabFocus();
-        else if ( mpFloatWin->IsInPopupMode() && !HasChildPathFocus( true ) )
-            mpFloatWin->EndPopupMode();
+        if (m_pImpl->m_pFloatWin->HasChildPathFocus())
+            m_pImpl->m_pSubEdit->GrabFocus();
+        else if (m_pImpl->m_pFloatWin->IsInPopupMode() && !HasChildPathFocus(true))
+            m_pImpl->m_pFloatWin->EndPopupMode();
     }
-    else if( (rNEvt.GetType() == EVENT_COMMAND) &&
-             (rNEvt.GetCommandEvent()->GetCommand() == COMMAND_WHEEL) &&
-             (rNEvt.GetWindow() == mpSubEdit) )
+    else if( (rNEvt.GetType() == MouseNotifyEvent::COMMAND) &&
+             (rNEvt.GetCommandEvent()->GetCommand() == CommandEventId::Wheel) &&
+             (rNEvt.GetWindow() == m_pImpl->m_pSubEdit) )
     {
-        sal_uInt16 nWheelBehavior( GetSettings().GetMouseSettings().GetWheelBehavior() );
-        if  (   ( nWheelBehavior == MOUSE_WHEEL_ALWAYS )
-            ||  (   ( nWheelBehavior == MOUSE_WHEEL_FOCUS_ONLY )
+        MouseWheelBehaviour nWheelBehavior( GetSettings().GetMouseSettings().GetWheelBehavior() );
+        if  (   ( nWheelBehavior == MouseWheelBehaviour::ALWAYS )
+            ||  (   ( nWheelBehavior == MouseWheelBehaviour::FocusOnly )
                 &&  HasChildPathFocus()
                 )
             )
         {
-            nDone = mpImplLB->HandleWheelAsCursorTravel( *rNEvt.GetCommandEvent() );
+            bDone = m_pImpl->m_pImplLB->HandleWheelAsCursorTravel( *rNEvt.GetCommandEvent() );
         }
         else
         {
-            nDone = false;  // don't eat this event, let the default handling happen (i.e. scroll the context)
+            bDone = false;  // don't eat this event, let the default handling happen (i.e. scroll the context)
         }
     }
-    else if( ( rNEvt.GetType() == EVENT_MOUSEBUTTONDOWN ) && ( rNEvt.GetWindow() == &mpImplLB->GetMainWindow() ) )
+    else if ((rNEvt.GetType() == MouseNotifyEvent::MOUSEBUTTONDOWN)
+            && (rNEvt.GetWindow() == m_pImpl->m_pImplLB->GetMainWindow()))
     {
-        mpSubEdit->GrabFocus();
+        m_pImpl->m_pSubEdit->GrabFocus();
     }
 
-    return nDone || Edit::Notify( rNEvt );
+    return bDone || Edit::EventNotify( rNEvt );
 }
 
 void ComboBox::SetText( const OUString& rStr )
 {
-    ImplCallEventListeners( VCLEVENT_COMBOBOX_SETTEXT );
+    CallEventListeners( VclEventId::ComboboxSetText );
 
     Edit::SetText( rStr );
-    ImplUpdateFloatSelection();
+    m_pImpl->ImplUpdateFloatSelection();
 }
 
 void ComboBox::SetText( const OUString& rStr, const Selection& rNewSelection )
 {
-    ImplCallEventListeners( VCLEVENT_COMBOBOX_SETTEXT );
+    CallEventListeners( VclEventId::ComboboxSetText );
 
     Edit::SetText( rStr, rNewSelection );
-    ImplUpdateFloatSelection();
+    m_pImpl->ImplUpdateFloatSelection();
 }
 
 void ComboBox::Modify()
 {
-    if ( !mbSyntheticModify )
-        ImplUpdateFloatSelection();
+    if (!m_pImpl->m_isSyntheticModify)
+        m_pImpl->ImplUpdateFloatSelection();
 
     Edit::Modify();
 }
 
-void ComboBox::ImplUpdateFloatSelection()
+void ComboBox::Impl::ImplUpdateFloatSelection()
 {
+    if (!m_pImplLB || !m_pSubEdit)
+        return;
+
     // move text in the ListBox into the visible region
-    mpImplLB->SetCallSelectionChangedHdl( false );
-    if ( !IsMultiSelectionEnabled() )
+    m_pImplLB->SetCallSelectionChangedHdl( false );
+    if (!m_rThis.IsMultiSelectionEnabled())
     {
-        OUString        aSearchStr( mpSubEdit->GetText() );
+        OUString        aSearchStr( m_pSubEdit->GetText() );
         sal_Int32       nSelect = LISTBOX_ENTRY_NOTFOUND;
         bool        bSelect = true;
 
-        if ( mpImplLB->GetCurrentPos() != LISTBOX_ENTRY_NOTFOUND )
+        if (m_pImplLB->GetCurrentPos() != LISTBOX_ENTRY_NOTFOUND)
         {
-            OUString aCurrent = mpImplLB->GetEntryList()->GetEntryText( mpImplLB->GetCurrentPos() );
+            OUString aCurrent = m_pImplLB->GetEntryList()->GetEntryText(
+                                    m_pImplLB->GetCurrentPos());
             if ( aCurrent == aSearchStr )
-                nSelect = mpImplLB->GetCurrentPos();
+                nSelect = m_pImplLB->GetCurrentPos();
         }
 
         if ( nSelect == LISTBOX_ENTRY_NOTFOUND )
-            nSelect = mpImplLB->GetEntryList()->FindEntry( aSearchStr );
+            nSelect = m_pImplLB->GetEntryList()->FindEntry( aSearchStr );
         if ( nSelect == LISTBOX_ENTRY_NOTFOUND )
         {
-            nSelect = mpImplLB->GetEntryList()->FindMatchingEntry( aSearchStr );
+            nSelect = m_pImplLB->GetEntryList()->FindMatchingEntry( aSearchStr, 0, true );
             bSelect = false;
         }
 
         if( nSelect != LISTBOX_ENTRY_NOTFOUND )
         {
-            if ( !mpImplLB->IsVisible( nSelect ) )
-                mpImplLB->ShowProminentEntry( nSelect );
-            mpImplLB->SelectEntry( nSelect, bSelect );
+            if (!m_pImplLB->IsVisible(nSelect))
+                m_pImplLB->ShowProminentEntry( nSelect );
+            m_pImplLB->SelectEntry( nSelect, bSelect );
         }
         else
         {
-            nSelect = mpImplLB->GetEntryList()->GetSelectEntryPos( 0 );
+            nSelect = m_pImplLB->GetEntryList()->GetSelectEntryPos( 0 );
             if( nSelect != LISTBOX_ENTRY_NOTFOUND )
-                mpImplLB->SelectEntry( nSelect, false );
-            mpImplLB->ResetCurrentPos();
+                m_pImplLB->SelectEntry( nSelect, false );
+            m_pImplLB->ResetCurrentPos();
         }
     }
     else
     {
         ::std::set< sal_Int32 > aSelInText;
-        lcl_GetSelectedEntries( aSelInText, mpSubEdit->GetText(), mcMultiSep, mpImplLB->GetEntryList() );
-        for ( sal_Int32 n = 0; n < mpImplLB->GetEntryList()->GetEntryCount(); n++ )
-            mpImplLB->SelectEntry( n, aSelInText.count( n ) );
+        lcl_GetSelectedEntries(aSelInText, m_pSubEdit->GetText(), m_cMultiSep, m_pImplLB->GetEntryList());
+        for (sal_Int32 n = 0; n < m_pImplLB->GetEntryList()->GetEntryCount(); n++)
+            m_pImplLB->SelectEntry( n, aSelInText.count( n ) );
     }
-    mpImplLB->SetCallSelectionChangedHdl( true );
+    m_pImplLB->SetCallSelectionChangedHdl( true );
 
 #ifdef USE_JAVA
     // Fix failure to clear edit area after the selected item changes when
     // in dark mode on macOS 10.14 by invalidating the entire combobox
-    Rectangle aBounds( GetPosPixel(), GetSizePixel() );
-    GetParent()->Invalidate( aBounds );
-    if ( GetParent()->IsInPaint() )
-        GetParent()->Update();
+    tools::Rectangle aBounds( m_rThis.GetPosPixel(), m_rThis.GetSizePixel() );
+    m_rThis.GetParent()->Invalidate( aBounds );
+    if ( m_rThis.GetParent()->IsInPaint() )
+        m_rThis.GetParent()->Update();
 #endif	// USE_JAVA
 }
 
 sal_Int32 ComboBox::InsertEntry(const OUString& rStr, sal_Int32 const nPos)
 {
-    if (nPos < 0 || COMBOBOX_MAX_ENTRIES <= mpImplLB->GetEntryList()->GetEntryCount())
-        return COMBOBOX_ERROR;
+    assert(nPos >= 0 && COMBOBOX_MAX_ENTRIES > m_pImpl->m_pImplLB->GetEntryList()->GetEntryCount());
 
     sal_Int32 nRealPos;
     if (nPos == COMBOBOX_APPEND)
         nRealPos = nPos;
     else
     {
-        const sal_Int32 nMRUCount = mpImplLB->GetEntryList()->GetMRUCount();
-        if (nPos > COMBOBOX_MAX_ENTRIES - nMRUCount)
-            return COMBOBOX_ERROR;
+        const sal_Int32 nMRUCount = m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount();
+        assert(nPos <= COMBOBOX_MAX_ENTRIES - nMRUCount);
         nRealPos = nPos + nMRUCount;
     }
 
-    nRealPos = mpImplLB->InsertEntry( nRealPos, rStr );
-    nRealPos -= mpImplLB->GetEntryList()->GetMRUCount();
-    CallEventListeners( VCLEVENT_COMBOBOX_ITEMADDED, reinterpret_cast<void*>(nRealPos) );
+    nRealPos = m_pImpl->m_pImplLB->InsertEntry( nRealPos, rStr );
+    nRealPos -= m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount();
+    CallEventListeners( VclEventId::ComboboxItemAdded, reinterpret_cast<void*>(nRealPos) );
     return nRealPos;
 }
 
 sal_Int32 ComboBox::InsertEntryWithImage(
         const OUString& rStr, const Image& rImage, sal_Int32 const nPos)
 {
-    if (nPos < 0 || COMBOBOX_MAX_ENTRIES <= mpImplLB->GetEntryList()->GetEntryCount())
-        return COMBOBOX_ERROR;
+    assert(nPos >= 0 && COMBOBOX_MAX_ENTRIES > m_pImpl->m_pImplLB->GetEntryList()->GetEntryCount());
 
     sal_Int32 nRealPos;
     if (nPos == COMBOBOX_APPEND)
         nRealPos = nPos;
     else
     {
-        const sal_Int32 nMRUCount = mpImplLB->GetEntryList()->GetMRUCount();
-        if (nPos > COMBOBOX_MAX_ENTRIES - nMRUCount)
-            return COMBOBOX_ERROR;
+        const sal_Int32 nMRUCount = m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount();
+        assert(nPos <= COMBOBOX_MAX_ENTRIES - nMRUCount);
         nRealPos = nPos + nMRUCount;
     }
 
-    nRealPos = mpImplLB->InsertEntry( nRealPos, rStr, rImage );
-    nRealPos -= mpImplLB->GetEntryList()->GetMRUCount();
-    CallEventListeners( VCLEVENT_COMBOBOX_ITEMADDED, reinterpret_cast<void*>(nRealPos) );
+    nRealPos = m_pImpl->m_pImplLB->InsertEntry( nRealPos, rStr, rImage );
+    nRealPos -= m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount();
+    CallEventListeners( VclEventId::ComboboxItemAdded, reinterpret_cast<void*>(nRealPos) );
     return nRealPos;
 }
 
@@ -962,81 +957,89 @@ void ComboBox::RemoveEntry( const OUString& rStr )
 
 void ComboBox::RemoveEntryAt(sal_Int32 const nPos)
 {
-    const sal_Int32 nMRUCount = mpImplLB->GetEntryList()->GetMRUCount();
+    const sal_Int32 nMRUCount = m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount();
     if (nPos < 0 || nPos > COMBOBOX_MAX_ENTRIES - nMRUCount)
         return;
 
-    mpImplLB->RemoveEntry( nPos + nMRUCount );
-    CallEventListeners( VCLEVENT_COMBOBOX_ITEMREMOVED, reinterpret_cast<void*>(nPos) );
+    m_pImpl->m_pImplLB->RemoveEntry( nPos + nMRUCount );
+    CallEventListeners( VclEventId::ComboboxItemRemoved, reinterpret_cast<void*>(nPos) );
 }
 
 void ComboBox::Clear()
 {
-    mpImplLB->Clear();
-    CallEventListeners( VCLEVENT_COMBOBOX_ITEMREMOVED, reinterpret_cast<void*>(-1) );
+    m_pImpl->m_pImplLB->Clear();
+    CallEventListeners( VclEventId::ComboboxItemRemoved, reinterpret_cast<void*>(-1) );
 }
 
 Image ComboBox::GetEntryImage( sal_Int32 nPos ) const
 {
-    if ( mpImplLB->GetEntryList()->HasEntryImage( nPos ) )
-        return mpImplLB->GetEntryList()->GetEntryImage( nPos );
+    if (m_pImpl->m_pImplLB->GetEntryList()->HasEntryImage(nPos))
+        return m_pImpl->m_pImplLB->GetEntryList()->GetEntryImage( nPos );
     return Image();
 }
 
 sal_Int32 ComboBox::GetEntryPos( const OUString& rStr ) const
 {
-    sal_Int32 nPos = mpImplLB->GetEntryList()->FindEntry( rStr );
+    sal_Int32 nPos = m_pImpl->m_pImplLB->GetEntryList()->FindEntry( rStr );
     if ( nPos != LISTBOX_ENTRY_NOTFOUND )
-        nPos -= mpImplLB->GetEntryList()->GetMRUCount();
+        nPos -= m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount();
     return nPos;
 }
 
 sal_Int32 ComboBox::GetEntryPos( const void* pData ) const
 {
-    sal_Int32 nPos = mpImplLB->GetEntryList()->FindEntry( pData );
+    sal_Int32 nPos = m_pImpl->m_pImplLB->GetEntryList()->FindEntry( pData );
     if ( nPos != LISTBOX_ENTRY_NOTFOUND )
-        nPos = nPos - mpImplLB->GetEntryList()->GetMRUCount();
+        nPos = nPos - m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount();
     return nPos;
 }
 
 OUString ComboBox::GetEntry( sal_Int32 nPos ) const
 {
-    const sal_Int32 nMRUCount = mpImplLB->GetEntryList()->GetMRUCount();
+    const sal_Int32 nMRUCount = m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount();
     if (nPos < 0 || nPos > COMBOBOX_MAX_ENTRIES - nMRUCount)
         return OUString();
 
-    return mpImplLB->GetEntryList()->GetEntryText( nPos + nMRUCount );
+    return m_pImpl->m_pImplLB->GetEntryList()->GetEntryText( nPos + nMRUCount );
 }
 
 sal_Int32 ComboBox::GetEntryCount() const
 {
-    return mpImplLB->GetEntryList()->GetEntryCount() - mpImplLB->GetEntryList()->GetMRUCount();
+    return m_pImpl->m_pImplLB->GetEntryList()->GetEntryCount() - m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount();
 }
 
 bool ComboBox::IsTravelSelect() const
 {
-    return mpImplLB->IsTravelSelect();
+    return m_pImpl->m_pImplLB->IsTravelSelect();
 }
 
 bool ComboBox::IsInDropDown() const
 {
-    return mpFloatWin && mpFloatWin->IsInPopupMode();
+    return m_pImpl->m_pFloatWin && m_pImpl->m_pFloatWin->IsInPopupMode();
 }
 
 void ComboBox::EnableMultiSelection( bool bMulti )
 {
-    mpImplLB->EnableMultiSelection( bMulti, false );
-    mpImplLB->SetMultiSelectionSimpleMode( true );
+    m_pImpl->m_pImplLB->EnableMultiSelection( bMulti, false );
+    m_pImpl->m_pImplLB->SetMultiSelectionSimpleMode( true );
 }
 
 bool ComboBox::IsMultiSelectionEnabled() const
 {
-    return mpImplLB->IsMultiSelectionEnabled();
+    return m_pImpl->m_pImplLB->IsMultiSelectionEnabled();
 }
+
+void ComboBox::SetSelectHdl(const Link<ComboBox&,void>& rLink) { m_pImpl->m_SelectHdl = rLink; }
+
+const Link<ComboBox&,void>& ComboBox::GetSelectHdl() const { return m_pImpl->m_SelectHdl; }
+
+void ComboBox::SetDoubleClickHdl(const Link<ComboBox&,void>& rLink) { m_pImpl->m_DoubleClickHdl = rLink; }
+
+const Link<ComboBox&,void>& ComboBox::GetDoubleClickHdl() const { return m_pImpl->m_DoubleClickHdl; }
 
 long ComboBox::CalcWindowSizePixel( sal_uInt16 nLines ) const
 {
-    return mpImplLB->GetEntryHeight() * nLines;
+    return m_pImpl->m_pImplLB->GetEntryHeight() * nLines;
 }
 
 Size ComboBox::GetOptimalSize() const
@@ -1048,16 +1051,16 @@ long ComboBox::getMaxWidthScrollBarAndDownButton() const
 {
     long nButtonDownWidth = 0;
 
-    vcl::Window *pBorder = GetWindow( WINDOW_BORDER );
+    vcl::Window *pBorder = GetWindow( GetWindowType::Border );
     ImplControlValue aControlValue;
     Point aPoint;
-    Rectangle aContent, aBound;
+    tools::Rectangle aContent, aBound;
 
     // use the full extent of the control
-    Rectangle aArea( aPoint, pBorder->GetOutputSizePixel() );
+    tools::Rectangle aArea( aPoint, pBorder->GetOutputSizePixel() );
 
-    if ( GetNativeControlRegion(CTRL_COMBOBOX, PART_BUTTON_DOWN,
-        aArea, 0, aControlValue, OUString(), aBound, aContent) )
+    if ( GetNativeControlRegion(ControlType::Combobox, ControlPart::ButtonDown,
+        aArea, ControlState::NONE, aControlValue, aBound, aContent) )
     {
         nButtonDownWidth = aContent.getWidth();
     }
@@ -1071,34 +1074,34 @@ Size ComboBox::CalcMinimumSize() const
 {
     Size aSz;
 
-    if (!mpImplLB)
+    if (!m_pImpl->m_pImplLB)
         return aSz;
 
     if (!IsDropDownBox())
     {
-        aSz = mpImplLB->CalcSize( mpImplLB->GetEntryList()->GetEntryCount() );
-        aSz.Height() += mnDDHeight;
+        aSz = m_pImpl->m_pImplLB->CalcSize( m_pImpl->m_pImplLB->GetEntryList()->GetEntryCount() );
+        aSz.Height() += m_pImpl->m_nDDHeight;
     }
     else
     {
         aSz.Height() = Edit::CalcMinimumSizeForText(GetText()).Height();
-        aSz.Width() = mpImplLB->GetMaxEntryWidth();
+        aSz.Width() = m_pImpl->m_pImplLB->GetMaxEntryWidth();
     }
 
-    if (m_nMaxWidthChars != -1)
+    if (m_pImpl->m_nMaxWidthChars != -1)
     {
-        long nMaxWidth = m_nMaxWidthChars * approximate_char_width();
+        long nMaxWidth = m_pImpl->m_nMaxWidthChars * approximate_char_width();
         aSz.Width() = std::min(aSz.Width(), nMaxWidth);
     }
 
     if (IsDropDownBox())
         aSz.Width() += getMaxWidthScrollBarAndDownButton();
 
-    ComboBoxBounds aBounds(calcComboBoxDropDownComponentBounds(
+    ComboBoxBounds aBounds(m_pImpl->calcComboBoxDropDownComponentBounds(
         Size(0xFFFF, 0xFFFF), Size(0xFFFF, 0xFFFF)));
     aSz.Width() += aBounds.aSubEditPos.X()*2;
 
-    aSz.Width() += ImplGetExtraOffset() * 2;
+    aSz.Width() += ImplGetExtraXOffset() * 2;
 
     aSz = CalcWindowSize( aSz );
     return aSz;
@@ -1108,7 +1111,7 @@ Size ComboBox::CalcAdjustedSize( const Size& rPrefSize ) const
 {
     Size aSz = rPrefSize;
     sal_Int32 nLeft, nTop, nRight, nBottom;
-    ((vcl::Window*)this)->GetBorder( nLeft, nTop, nRight, nBottom );
+    static_cast<vcl::Window*>(const_cast<ComboBox *>(this))->GetBorder( nLeft, nTop, nRight, nBottom );
     aSz.Height() -= nTop+nBottom;
     if ( !IsDropDownBox() )
     {
@@ -1117,11 +1120,11 @@ Size ComboBox::CalcAdjustedSize( const Size& rPrefSize ) const
         if ( nLines < 1 )
             nLines = 1;
         aSz.Height() = nLines * nEntryHeight;
-        aSz.Height() += mnDDHeight;
+        aSz.Height() += m_pImpl->m_nDDHeight;
     }
     else
     {
-        aSz.Height() = mnDDHeight;
+        aSz.Height() = m_pImpl->m_nDDHeight;
     }
     aSz.Height() += nTop+nBottom;
 
@@ -1139,9 +1142,9 @@ Size ComboBox::CalcBlockSize( sal_uInt16 nColumns, sal_uInt16 nLines ) const
     if ( nLines )
     {
         if ( !IsDropDownBox() )
-            aSz.Height() = mpImplLB->CalcSize( nLines ).Height() + mnDDHeight;
+            aSz.Height() = m_pImpl->m_pImplLB->CalcSize( nLines ).Height() + m_pImpl->m_nDDHeight;
         else
-            aSz.Height() = mnDDHeight;
+            aSz.Height() = m_pImpl->m_nDDHeight;
     }
     else
         aSz.Height() = aMinSz.Height();
@@ -1163,7 +1166,7 @@ Size ComboBox::CalcBlockSize( sal_uInt16 nColumns, sal_uInt16 nLines ) const
             aSz.Width() += GetSettings().GetStyleSettings().GetScrollBarSize();
     }
 
-    aSz.Width() += ImplGetExtraOffset() * 2;
+    aSz.Width() += ImplGetExtraXOffset() * 2;
 
     aSz = CalcWindowSize( aSz );
     return aSz;
@@ -1171,28 +1174,28 @@ Size ComboBox::CalcBlockSize( sal_uInt16 nColumns, sal_uInt16 nLines ) const
 
 void ComboBox::GetMaxVisColumnsAndLines( sal_uInt16& rnCols, sal_uInt16& rnLines ) const
 {
-    long nCharWidth = GetTextWidth(OUString(static_cast<sal_Unicode>('x')));
+    long nCharWidth = GetTextWidth(OUString(u'x'));
     if ( !IsDropDownBox() )
     {
-        Size aOutSz = mpImplLB->GetMainWindow().GetOutputSizePixel();
+        Size aOutSz = m_pImpl->m_pImplLB->GetMainWindow()->GetOutputSizePixel();
         rnCols = (nCharWidth > 0) ? (sal_uInt16)(aOutSz.Width()/nCharWidth) : 1;
-        rnLines = (sal_uInt16)(aOutSz.Height()/mpImplLB->GetEntryHeight());
+        rnLines = (sal_uInt16)(aOutSz.Height()/m_pImpl->m_pImplLB->GetEntryHeight());
     }
     else
     {
-        Size aOutSz = mpSubEdit->GetOutputSizePixel();
+        Size aOutSz = m_pImpl->m_pSubEdit->GetOutputSizePixel();
         rnCols = (nCharWidth > 0) ? (sal_uInt16)(aOutSz.Width()/nCharWidth) : 1;
         rnLines = 1;
     }
 }
 
-void ComboBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, sal_uLong nFlags )
+void ComboBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags )
 {
-    mpImplLB->GetMainWindow().ImplInitSettings( true, true, true );
+    m_pImpl->m_pImplLB->GetMainWindow()->ApplySettings(*pDev);
 
     Point aPos = pDev->LogicToPixel( rPos );
     Size aSize = pDev->LogicToPixel( rSize );
-    vcl::Font aFont = mpImplLB->GetMainWindow().GetDrawPixelFont( pDev );
+    vcl::Font aFont = m_pImpl->m_pImplLB->GetMainWindow()->GetDrawPixelFont( pDev );
     OutDevType eOutDevType = pDev->GetOutDevType();
 
     pDev->Push();
@@ -1203,11 +1206,11 @@ void ComboBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, s
     // Border/Background
     pDev->SetLineColor();
     pDev->SetFillColor();
-    bool bBorder = !(nFlags & WINDOW_DRAW_NOBORDER ) && (GetStyle() & WB_BORDER);
-    bool bBackground = !(nFlags & WINDOW_DRAW_NOBACKGROUND) && IsControlBackground();
+    bool bBorder = !(nFlags & DrawFlags::NoBorder ) && (GetStyle() & WB_BORDER);
+    bool bBackground = !(nFlags & DrawFlags::NoBackground) && IsControlBackground();
     if ( bBorder || bBackground )
     {
-        Rectangle aRect( aPos, aSize );
+        tools::Rectangle aRect( aPos, aSize );
         // aRect.Top() += nEditHeight;
         if ( bBorder )
         {
@@ -1226,26 +1229,26 @@ void ComboBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, s
         long        nOnePixel = GetDrawPixel( pDev, 1 );
         long        nTextHeight = pDev->GetTextHeight();
         long        nEditHeight = nTextHeight + 6*nOnePixel;
-        sal_uInt16      nTextStyle = TEXT_DRAW_VCENTER;
+        DrawTextFlags nTextStyle = DrawTextFlags::VCenter;
 
         // First, draw the edit part
-        mpSubEdit->Draw( pDev, aPos, Size( aSize.Width(), nEditHeight ), nFlags );
+        m_pImpl->m_pSubEdit->Draw( pDev, aPos, Size( aSize.Width(), nEditHeight ), nFlags );
 
         // Second, draw the listbox
         if ( GetStyle() & WB_CENTER )
-            nTextStyle |= TEXT_DRAW_CENTER;
+            nTextStyle |= DrawTextFlags::Center;
         else if ( GetStyle() & WB_RIGHT )
-            nTextStyle |= TEXT_DRAW_RIGHT;
+            nTextStyle |= DrawTextFlags::Right;
         else
-            nTextStyle |= TEXT_DRAW_LEFT;
+            nTextStyle |= DrawTextFlags::Left;
 
-        if ( ( nFlags & WINDOW_DRAW_MONO ) || ( eOutDevType == OUTDEV_PRINTER ) )
+        if ( ( nFlags & DrawFlags::Mono ) || ( eOutDevType == OUTDEV_PRINTER ) )
         {
             pDev->SetTextColor( Color( COL_BLACK ) );
         }
         else
         {
-            if ( !(nFlags & WINDOW_DRAW_NODISABLE ) && !IsEnabled() )
+            if ( !(nFlags & DrawFlags::NoDisable ) && !IsEnabled() )
             {
                 const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
                 pDev->SetTextColor( rStyleSettings.GetDisableColor() );
@@ -1256,14 +1259,14 @@ void ComboBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, s
             }
         }
 
-        Rectangle aClip( aPos, aSize );
+        tools::Rectangle aClip( aPos, aSize );
         pDev->IntersectClipRegion( aClip );
-        sal_uInt16 nLines = (sal_uInt16) ( ( nTextHeight > 0 ) ? ( (aSize.Height()-nEditHeight) / nTextHeight ) : 1 );
+        sal_Int32 nLines = static_cast<sal_Int32>( nTextHeight > 0 ? (aSize.Height()-nEditHeight)/nTextHeight : 1 );
         if ( !nLines )
             nLines = 1;
-        sal_uInt16 nTEntry = IsReallyVisible() ? mpImplLB->GetTopEntry() : 0;
+        const sal_Int32 nTEntry = IsReallyVisible() ? m_pImpl->m_pImplLB->GetTopEntry() : 0;
 
-        Rectangle aTextRect( aPos, aSize );
+        tools::Rectangle aTextRect( aPos, aSize );
 
         aTextRect.Left() += 3*nOnePixel;
         aTextRect.Right() -= 3*nOnePixel;
@@ -1271,9 +1274,9 @@ void ComboBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, s
         aTextRect.Bottom() = aTextRect.Top() + nTextHeight;
 
         // the drawing starts here
-        for ( sal_uInt16 n = 0; n < nLines; n++ )
+        for ( sal_Int32 n = 0; n < nLines; ++n )
         {
-            pDev->DrawText( aTextRect, mpImplLB->GetEntryList()->GetEntryText( n+nTEntry ), nTextStyle );
+            pDev->DrawText( aTextRect, m_pImpl->m_pImplLB->GetEntryList()->GetEntryText( n+nTEntry ), nTextStyle );
             aTextRect.Top() += nTextHeight;
             aTextRect.Bottom() += nTextHeight;
         }
@@ -1284,15 +1287,15 @@ void ComboBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, s
     // Call Edit::Draw after restoring the MapMode...
     if ( IsDropDownBox() )
     {
-        mpSubEdit->Draw( pDev, rPos, rSize, nFlags );
+        m_pImpl->m_pSubEdit->Draw( pDev, rPos, rSize, nFlags );
         // DD-Button ?
     }
 
 }
 
-void::ComboBox::ImplUserDrawHandler( UserDrawEvent* pEvent )
+IMPL_LINK(ComboBox::Impl, ImplUserDrawHdl, UserDrawEvent*, pEvent, void)
 {
-    UserDraw( *pEvent );
+    m_rThis.UserDraw(*pEvent);
 }
 
 void ComboBox::UserDraw( const UserDrawEvent& )
@@ -1301,84 +1304,87 @@ void ComboBox::UserDraw( const UserDrawEvent& )
 
 void ComboBox::SetUserItemSize( const Size& rSz )
 {
-    mpImplLB->GetMainWindow().SetUserItemSize( rSz );
+    m_pImpl->m_pImplLB->GetMainWindow()->SetUserItemSize( rSz );
 }
 
 void ComboBox::EnableUserDraw( bool bUserDraw )
 {
-    mpImplLB->GetMainWindow().EnableUserDraw( bUserDraw );
+    m_pImpl->m_pImplLB->GetMainWindow()->EnableUserDraw( bUserDraw );
 }
 
-void ComboBox::DrawEntry( const UserDrawEvent& rEvt, bool bDrawImage, bool bDrawText, bool bDrawTextAtImagePos )
+void ComboBox::DrawEntry(const UserDrawEvent& rEvt, bool bDrawImage, bool bDrawText, bool bDrawTextAtImagePos)
 {
-    DBG_ASSERT( rEvt.GetDevice() == &mpImplLB->GetMainWindow(), "DrawEntry?!" );
-    mpImplLB->GetMainWindow().DrawEntry( rEvt.GetItemId(), bDrawImage, bDrawText, bDrawTextAtImagePos );
+    SAL_WARN_IF(rEvt.GetWindow() != m_pImpl->m_pImplLB->GetMainWindow(), "vcl", "DrawEntry?!");
+    m_pImpl->m_pImplLB->GetMainWindow()->DrawEntry(*rEvt.GetRenderContext(), rEvt.GetItemId(), bDrawImage, bDrawText, bDrawTextAtImagePos);
 }
 
 void ComboBox::SetSeparatorPos( sal_Int32 n )
 {
-    mpImplLB->SetSeparatorPos( n );
+    m_pImpl->m_pImplLB->SetSeparatorPos( n );
 }
 
-void ComboBox::SetMRUEntries( const OUString& rEntries, sal_Unicode cSep )
+void ComboBox::SetMRUEntries( const OUString& rEntries )
 {
-    mpImplLB->SetMRUEntries( rEntries, cSep );
+    m_pImpl->m_pImplLB->SetMRUEntries( rEntries, ';' );
 }
 
-OUString ComboBox::GetMRUEntries( sal_Unicode cSep ) const
+OUString ComboBox::GetMRUEntries() const
 {
-    return mpImplLB->GetMRUEntries( cSep );
+    return m_pImpl->m_pImplLB ? m_pImpl->m_pImplLB->GetMRUEntries( ';' ) : OUString();
 }
 
 void ComboBox::SetMaxMRUCount( sal_Int32 n )
 {
-    mpImplLB->SetMaxMRUCount( n );
+    m_pImpl->m_pImplLB->SetMaxMRUCount( n );
 }
 
 sal_Int32 ComboBox::GetMaxMRUCount() const
 {
-    return mpImplLB->GetMaxMRUCount();
+    return m_pImpl->m_pImplLB ? m_pImpl->m_pImplLB->GetMaxMRUCount() : 0;
 }
 
 sal_uInt16 ComboBox::GetDisplayLineCount() const
 {
-    return mpImplLB->GetDisplayLineCount();
+    return m_pImpl->m_pImplLB ? m_pImpl->m_pImplLB->GetDisplayLineCount() : 0;
 }
 
 void ComboBox::SetEntryData( sal_Int32 nPos, void* pNewData )
 {
-    mpImplLB->SetEntryData( nPos + mpImplLB->GetEntryList()->GetMRUCount(), pNewData );
+    m_pImpl->m_pImplLB->SetEntryData( nPos + m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount(), pNewData );
 }
 
 void* ComboBox::GetEntryData( sal_Int32 nPos ) const
 {
-    return mpImplLB->GetEntryList()->GetEntryData( nPos + mpImplLB->GetEntryList()->GetMRUCount() );
+    return m_pImpl->m_pImplLB->GetEntryList()->GetEntryData(
+            nPos + m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount() );
 }
 
 sal_Int32 ComboBox::GetTopEntry() const
 {
-    sal_Int32 nPos = GetEntryCount() ? mpImplLB->GetTopEntry() : LISTBOX_ENTRY_NOTFOUND;
-    if ( nPos < mpImplLB->GetEntryList()->GetMRUCount() )
+    sal_Int32 nPos = GetEntryCount() ? m_pImpl->m_pImplLB->GetTopEntry() : LISTBOX_ENTRY_NOTFOUND;
+    if (nPos < m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount())
         nPos = 0;
     return nPos;
 }
 
 void ComboBox::SetProminentEntryType( ProminentEntry eType )
 {
-    mpImplLB->SetProminentEntryType( eType );
+    m_pImpl->m_pImplLB->SetProminentEntryType( eType );
 }
 
-Rectangle ComboBox::GetDropDownPosSizePixel() const
+tools::Rectangle ComboBox::GetDropDownPosSizePixel() const
 {
-    return mpFloatWin ? mpFloatWin->GetWindowExtentsRelative( const_cast<ComboBox*>(this) ) : Rectangle();
+    return m_pImpl->m_pFloatWin
+        ? m_pImpl->m_pFloatWin->GetWindowExtentsRelative(const_cast<ComboBox*>(this))
+        : tools::Rectangle();
 }
 
 const Wallpaper& ComboBox::GetDisplayBackground() const
 {
-    if( ! mpSubEdit->IsBackground() )
+    if (!m_pImpl->m_pSubEdit->IsBackground())
         return Control::GetDisplayBackground();
 
-    const Wallpaper& rBack = mpSubEdit->GetBackground();
+    const Wallpaper& rBack = m_pImpl->m_pSubEdit->GetBackground();
     if( ! rBack.IsBitmap() &&
         ! rBack.IsGradient() &&
         rBack.GetColor().GetColor() == COL_TRANSPARENT
@@ -1389,42 +1395,44 @@ const Wallpaper& ComboBox::GetDisplayBackground() const
 
 sal_Int32 ComboBox::GetSelectEntryCount() const
 {
-    return mpImplLB->GetEntryList()->GetSelectEntryCount();
+    return m_pImpl->m_pImplLB->GetEntryList()->GetSelectEntryCount();
 }
 
 sal_Int32 ComboBox::GetSelectEntryPos( sal_Int32 nIndex ) const
 {
-    sal_Int32 nPos = mpImplLB->GetEntryList()->GetSelectEntryPos( nIndex );
+    sal_Int32 nPos = m_pImpl->m_pImplLB->GetEntryList()->GetSelectEntryPos( nIndex );
     if ( nPos != LISTBOX_ENTRY_NOTFOUND )
     {
-        if ( nPos < mpImplLB->GetEntryList()->GetMRUCount() )
-            nPos = mpImplLB->GetEntryList()->FindEntry( mpImplLB->GetEntryList()->GetEntryText( nPos ) );
-        nPos = sal::static_int_cast<sal_Int32>(nPos - mpImplLB->GetEntryList()->GetMRUCount());
+        if (nPos < m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount())
+            nPos = m_pImpl->m_pImplLB->GetEntryList()->FindEntry(m_pImpl->m_pImplLB->GetEntryList()->GetEntryText(nPos));
+        nPos = sal::static_int_cast<sal_Int32>(nPos - m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount());
     }
     return nPos;
 }
 
 bool ComboBox::IsEntryPosSelected( sal_Int32 nPos ) const
 {
-    return mpImplLB->GetEntryList()->IsEntryPosSelected( nPos + mpImplLB->GetEntryList()->GetMRUCount() );
+    return m_pImpl->m_pImplLB->GetEntryList()->IsEntryPosSelected(
+            nPos + m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount() );
 }
 
 void ComboBox::SelectEntryPos( sal_Int32 nPos, bool bSelect)
 {
-    if ( nPos < mpImplLB->GetEntryList()->GetEntryCount() )
-        mpImplLB->SelectEntry( nPos + mpImplLB->GetEntryList()->GetMRUCount(), bSelect );
+    if (nPos < m_pImpl->m_pImplLB->GetEntryList()->GetEntryCount())
+        m_pImpl->m_pImplLB->SelectEntry(
+            nPos + m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount(), bSelect);
 }
 
 void ComboBox::SetNoSelection()
 {
-    mpImplLB->SetNoSelection();
-    mpSubEdit->SetText( OUString() );
+    m_pImpl->m_pImplLB->SetNoSelection();
+    m_pImpl->m_pSubEdit->SetText( OUString() );
 }
 
-Rectangle ComboBox::GetBoundingRectangle( sal_Int32 nItem ) const
+tools::Rectangle ComboBox::GetBoundingRectangle( sal_Int32 nItem ) const
 {
-    Rectangle aRect = mpImplLB->GetMainWindow().GetBoundingRectangle( nItem );
-    Rectangle aOffset = mpImplLB->GetMainWindow().GetWindowExtentsRelative( (vcl::Window*)this );
+    tools::Rectangle aRect = m_pImpl->m_pImplLB->GetMainWindow()->GetBoundingRectangle( nItem );
+    tools::Rectangle aOffset = m_pImpl->m_pImplLB->GetMainWindow()->GetWindowExtentsRelative( static_cast<vcl::Window*>(const_cast<ComboBox *>(this)) );
     aRect.Move( aOffset.TopLeft().X(), aOffset.TopLeft().Y() );
     return aRect;
 }
@@ -1434,8 +1442,8 @@ void ComboBox::SetBorderStyle( WindowBorderStyle nBorderStyle )
     Window::SetBorderStyle( nBorderStyle );
     if ( !IsDropDownBox() )
     {
-        mpSubEdit->SetBorderStyle( nBorderStyle );
-        mpImplLB->SetBorderStyle( nBorderStyle );
+        m_pImpl->m_pSubEdit->SetBorderStyle( nBorderStyle );
+        m_pImpl->m_pImplLB->SetBorderStyle( nBorderStyle );
     }
 }
 
@@ -1450,16 +1458,16 @@ long ComboBox::GetIndexForPoint( const Point& rPoint, sal_Int32& rPos ) const
     {
         // point must be either in main list window
         // or in impl window (dropdown case)
-        ImplListBoxWindow& rMain = mpImplLB->GetMainWindow();
+        ImplListBoxWindow* rMain = m_pImpl->m_pImplLB->GetMainWindow();
 
         // convert coordinates to ImplListBoxWindow pixel coordinate space
         Point aConvPoint = LogicToPixel( rPoint );
         aConvPoint = OutputToAbsoluteScreenPixel( aConvPoint );
-        aConvPoint = rMain.AbsoluteScreenToOutputPixel( aConvPoint );
-        aConvPoint = rMain.PixelToLogic( aConvPoint );
+        aConvPoint = rMain->AbsoluteScreenToOutputPixel( aConvPoint );
+        aConvPoint = rMain->PixelToLogic( aConvPoint );
 
         // try to find entry
-        sal_Int32 nEntry = rMain.GetEntryPosForPoint( aConvPoint );
+        sal_Int32 nEntry = rMain->GetEntryPosForPoint( aConvPoint );
         if( nEntry == LISTBOX_ENTRY_NOTFOUND )
             nIndex = -1;
         else
@@ -1473,35 +1481,35 @@ long ComboBox::GetIndexForPoint( const Point& rPoint, sal_Int32& rPos ) const
     return nIndex;
 }
 
-ComboBox::ComboBoxBounds ComboBox::calcComboBoxDropDownComponentBounds(const Size &rOutSz,
-    const Size &rBorderOutSz) const
+ComboBoxBounds ComboBox::Impl::calcComboBoxDropDownComponentBounds(
+    const Size &rOutSz, const Size &rBorderOutSz) const
 {
     ComboBoxBounds aBounds;
 
     long    nTop = 0;
     long    nBottom = rOutSz.Height();
 
-    vcl::Window *pBorder = GetWindow( WINDOW_BORDER );
+    vcl::Window *pBorder = m_rThis.GetWindow( GetWindowType::Border );
     ImplControlValue aControlValue;
     Point aPoint;
-    Rectangle aContent, aBound;
+    tools::Rectangle aContent, aBound;
 
     // use the full extent of the control
-    Rectangle aArea( aPoint, rBorderOutSz );
+    tools::Rectangle aArea( aPoint, rBorderOutSz );
 
-    if ( GetNativeControlRegion(CTRL_COMBOBOX, PART_BUTTON_DOWN,
-            aArea, 0, aControlValue, OUString(), aBound, aContent) )
+    if (m_rThis.GetNativeControlRegion(ControlType::Combobox, ControlPart::ButtonDown,
+            aArea, ControlState::NONE, aControlValue, aBound, aContent) )
     {
         // convert back from border space to local coordinates
-        aPoint = pBorder->ScreenToOutputPixel( OutputToScreenPixel( aPoint ) );
+        aPoint = pBorder->ScreenToOutputPixel(m_rThis.OutputToScreenPixel(aPoint));
         aContent.Move(-aPoint.X(), -aPoint.Y());
 
         aBounds.aButtonPos = Point(aContent.Left(), nTop);
         aBounds.aButtonSize = Size(aContent.getWidth(), (nBottom-nTop));
 
         // adjust the size of the edit field
-        if ( GetNativeControlRegion(CTRL_COMBOBOX, PART_SUB_EDIT,
-                    aArea, 0, aControlValue, OUString(), aBound, aContent) )
+        if (m_rThis.GetNativeControlRegion(ControlType::Combobox, ControlPart::SubEdit,
+                    aArea, ControlState::NONE, aControlValue, aBound, aContent) )
         {
             // convert back from border space to local coordinates
             aContent.Move(-aPoint.X(), -aPoint.Y());
@@ -1518,8 +1526,8 @@ ComboBox::ComboBoxBounds ComboBox::calcComboBoxDropDownComponentBounds(const Siz
     }
     else
     {
-        long nSBWidth = GetSettings().GetStyleSettings().GetScrollBarSize();
-        nSBWidth = CalcZoom( nSBWidth );
+        long nSBWidth = m_rThis.GetSettings().GetStyleSettings().GetScrollBarSize();
+        nSBWidth = m_rThis.CalcZoom( nSBWidth );
         aBounds.aSubEditSize = Size(rOutSz.Width() - nSBWidth, rOutSz.Height());
         aBounds.aButtonPos = Point(rOutSz.Width() - nSBWidth, nTop);
         aBounds.aButtonSize = Size(nSBWidth, (nBottom-nTop));
@@ -1529,20 +1537,25 @@ ComboBox::ComboBoxBounds ComboBox::calcComboBoxDropDownComponentBounds(const Siz
 
 void ComboBox::setMaxWidthChars(sal_Int32 nWidth)
 {
-    if (nWidth != m_nMaxWidthChars)
+    if (nWidth != m_pImpl->m_nMaxWidthChars)
     {
-        m_nMaxWidthChars = nWidth;
+        m_pImpl->m_nMaxWidthChars = nWidth;
         queue_resize();
     }
 }
 
-bool ComboBox::set_property(const OString &rKey, const OString &rValue)
+bool ComboBox::set_property(const OString &rKey, const OUString &rValue)
 {
     if (rKey == "max-width-chars")
         setMaxWidthChars(rValue.toInt32());
     else
         return Control::set_property(rKey, rValue);
     return true;
+}
+
+FactoryFunction ComboBox::GetUITestFactory() const
+{
+    return ComboBoxUIObject::create;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
