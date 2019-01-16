@@ -85,6 +85,12 @@ enum class ControlType {
 // all parts like slider, buttons
     Scrollbar          =  60,
     Slider             =  65,
+#ifndef NO_LIBO_4_4_CTRL_GROUPBOX
+// Border around a group of related
+// items, perhaps also displaying
+// a label of identification
+    Groupbox           =  70,
+#endif	// !NO_LIBO_4_4_CTRL_GROUPBOX
 // A separator line
     Fixedline          =  80,
 // A toolbar control with buttons and a grip
