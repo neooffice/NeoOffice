@@ -680,15 +680,15 @@ public:
                   bool bVertical )
         : m_aPos( rPos ), m_nNativeWidth( nNativeWidth ), m_nGlyphId( nGlyphId ),
           m_nMappedFontId( nFontId ), m_nMappedGlyphId( nMappedGlyphId ),
-          m_bVertical(bVertical)
 #if defined USE_JAVA && defined MACOSX
-          , m_nMappedFontSubId( nFontSubId )
-          , m_bIdentityGlyph( bIdentityGlyph )
-          , m_aXObjectId( aXObjectId )
-          , m_nCharPos( nCharPos )
-          , m_nRealNativeWidth( nRealNativeWidth )
-          , m_pLayout( pLayout )
+          m_nMappedFontSubId( nFontSubId ),
+          m_bIdentityGlyph( bIdentityGlyph ),
+          m_aXObjectId( aXObjectId ),
+          m_nCharPos( nCharPos ),
+          m_nRealNativeWidth( nRealNativeWidth ),
+          m_pLayout( pLayout ),
 #endif	// USE_JAVA && MACOSX
+          m_bVertical(bVertical)
         {}
     };
 
