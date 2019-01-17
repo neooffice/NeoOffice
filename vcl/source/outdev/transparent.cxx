@@ -443,10 +443,8 @@ void OutputDevice::EmulateDrawTransparent ( const tools::PolyPolygon& rPolyPoly,
     {
         bool bDrawn = false;
 
-#if !defined USE_JAVA || !defined MACOSX
         // debug helper:
         static const char* pDisableNative = getenv( "SAL_DISABLE_NATIVE_ALPHA" );
-#endif	// !USE_JAVA || !MACOSX
 
         // #i66849# Added fast path for exactly rectangular
         // polygons
