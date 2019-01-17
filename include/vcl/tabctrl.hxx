@@ -24,8 +24,6 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- */
-
 #ifndef INCLUDED_VCL_TABCTRL_HXX
 #define INCLUDED_VCL_TABCTRL_HXX
 
