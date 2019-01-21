@@ -14925,9 +14925,7 @@ void PDFWriterImpl::encodeGlyphs()
                             if ( nBytesLeft < nBytesRead )
                                 nBytesRead = nBytesLeft;
 
-                            if ( aDeflatedStream.WriteBytes( aBuf, nBytesRead ) != nBytesRead )
-                                break;
-
+                            aDeflatedStream.WriteBytes( aBuf, nBytesRead );
                             nBytesLeft -= nBytesRead;
 
                             sal_Bool bEOF = sal_False;
