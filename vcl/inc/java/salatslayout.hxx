@@ -72,17 +72,17 @@ class SalATSLayout : public GenericSalLayout
 	float				mfGlyphScaleX;
 
 public:
-	static void			GetGlyphBounds( sal_Int32 nGlyph, JavaImplFont *pFont, Rectangle &rRect );
+	static void			GetGlyphBounds( sal_Int32 nGlyph, JavaImplFont *pFont, tools::Rectangle &rRect );
 	static void			ClearLayoutDataCache();
 
 						SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel );
 	virtual				~SalATSLayout();
 
-	virtual void		AdjustLayout( ImplLayoutArgs& rArgs ) SAL_OVERRIDE;
-	virtual bool		LayoutText( ImplLayoutArgs& rArgs ) SAL_OVERRIDE;
-	virtual void		DrawText( SalGraphics& rGraphics ) const SAL_OVERRIDE;
-	virtual bool		GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) const SAL_OVERRIDE;
-	virtual bool		GetOutline( SalGraphics& rGraphics, ::basegfx::B2DPolyPolygonVector& rVector ) const SAL_OVERRIDE;
+	virtual void		AdjustLayout( ImplLayoutArgs& rArgs ) override;
+	virtual bool		LayoutText( ImplLayoutArgs& rArgs ) override;
+	virtual void		DrawText( SalGraphics& rGraphics ) const override;
+	virtual bool		GetBoundRect( SalGraphics& rGraphics, tools::Rectangle& rRect ) const override;
+	virtual bool		GetOutline( SalGraphics& rGraphics, ::basegfx::B2DPolyPolygonVector& rVector ) const override;
 
 	ImplATSLayoutData*	GetVerticalGlyphTranslation( sal_Int32 nGlyph, int nCharPos, DeviceCoordinate& fX, DeviceCoordinate& fY ) const;
 	DeviceCoordinate	GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharPos ) const;
