@@ -2374,7 +2374,11 @@ SystemTextLayoutData OutputDevice::GetSysTextLayoutData(const Point& rStartPt, c
     while (pLayout->GetNextGlyphs(1, &pGlyph, aPos, nStart))
     {
         SystemGlyphData aSystemGlyph;
+#ifdef NO_LIBO_4_4_GLYPH_FLAGS
         aSystemGlyph.index = static_cast<unsigned long> (pGlyph->maGlyphId);
+#else	// NO_LIBO_4_4_GLYPH_FLAGS
+        aSystemGlyph.index = static_cast<unsigned long> (pGlyph->maGlyphId & GF_IDXMASK);
+#endif	// NO_LIBO_4_4_GLYPH_FLAGS
         aSystemGlyph.x = aPos.X();
         aSystemGlyph.y = aPos.Y();
         int nLevel = pGlyph->mnFallbackLevel;
