@@ -1964,6 +1964,9 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						nGlyph |= GetVerticalFlags( nChar );
 
 					int nGlyphFlags = bFirstGlyph ? 0 : GlyphItem::IS_IN_CLUSTER;
+					if ( pCurrentLayoutData->mpHash->mbVertical )
+						nGlyphFlags |= GlyphItem::IS_VERTICAL;
+
 					// Mark spacing characters for LibO code
 					if ( IsSpacingGlyph( nGlyph ) )
 						nGlyphFlags |= GlyphItem::IS_SPACING;
