@@ -1964,6 +1964,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						nGlyph |= GetVerticalFlags( nChar );
 
 					int nGlyphFlags = bFirstGlyph ? 0 : GlyphItem::IS_IN_CLUSTER;
+					// Mark spacing characters for LibO code
+					if ( IsSpacingGlyph( nGlyph ) )
+						nGlyphFlags |= GlyphItem::IS_SPACING;
+
 					if ( bRunRTL )
 					{
 						nGlyphFlags |= GlyphItem::IS_RTL_GLYPH;
@@ -1999,7 +2003,14 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 			if ( bFirstGlyph )
 			{
-				AppendGlyph( GlyphItem( nCharPos, 0x0020 | GF_ISCHAR, aPos, bRunRTL ? GlyphItem::IS_RTL_GLYPH : 0, 0 ) );
+				sal_Int32 nGlyph = 0x0020 | GF_ISCHAR;
+				int nGlyphFlags = bRunRTL ? GlyphItem::IS_RTL_GLYPH : 0;
+
+				// Mark spacing characters for LibO code
+				if ( IsSpacingGlyph( nGlyph ) )
+					nGlyphFlags |= GlyphItem::IS_SPACING;
+
+				AppendGlyph( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, 0 ) );
 				bRet = true;
 			}
 		}

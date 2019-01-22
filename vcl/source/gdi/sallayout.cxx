@@ -943,7 +943,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
             // Fix bug 3582 by not shifting the glyph immediately to the left
             // of a spacing glyph and by treating nonprinting characters like
             // spaces
-            if( j == m_GlyphItems.size() || !m_GlyphItems[p].maGlyphId || ( m_GlyphItems[p].IsRTLGlyph() && rArgs.mnFlags & SalLayoutFlags::KashidaJustification && m_GlyphItems[p].AllowKashida() ) || m_GlyphItems[p + 1].IsNonprintingChar() || m_GlyphItems[p].IsNonprintingChar() || IsSpacingGlyph( m_GlyphItems[p + 1].maGlyphId ) || IsSpacingGlyph( m_GlyphItems[p].maGlyphId ) || ( p > 0 && m_GlyphItems[p - 1].mnCharPos - m_GlyphItems[p].mnCharPos > 1 ) )
+            if( j == m_GlyphItems.size() || !m_GlyphItems[p].maGlyphId || ( m_GlyphItems[p].IsRTLGlyph() && rArgs.mnFlags & SalLayoutFlags::KashidaJustification && m_GlyphItems[p].AllowKashida() ) || m_GlyphItems[p + 1].IsNonprintingChar() || m_GlyphItems[p].IsNonprintingChar() || m_GlyphItems[p + 1].IsSpacing() || m_GlyphItems[p].IsSpacing() || ( p > 0 && m_GlyphItems[p - 1].mnCharPos - m_GlyphItems[p].mnCharPos > 1 ) )
             {
                 // Apply unshifted delta to previous clusters
                 if( nUnshiftedWidth && nUnshiftedDelta && nFirstUnshiftedGlyph >= 0 && nFirstUnshiftedGlyph < p )
@@ -1037,7 +1037,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                 {
                     // Fix bug 823 by handling inappropriate placement of
                     // kashidas by upper layers.
-                    if( i == m_GlyphItems.size() - 1 || m_GlyphItems[i].AllowKashida() || m_GlyphItems[i + 1].IsNonprintingChar() || m_GlyphItems[i].IsNonprintingChar() || IsSpacingGlyph( m_GlyphItems[i + 1].maGlyphId ) || IsSpacingGlyph( m_GlyphItems[i].maGlyphId ) )
+                    if( i == m_GlyphItems.size() - 1 || m_GlyphItems[i].AllowKashida() || m_GlyphItems[i + 1].IsNonprintingChar() || m_GlyphItems[i].IsNonprintingChar() || m_GlyphItems[i + 1].IsSpacing() || m_GlyphItems[i].IsSpacing() )
                         bHandled = true;
                 }
                 else if( i > 0 )
@@ -1238,9 +1238,9 @@ void GenericSalLayout::KashidaJustify( long nKashidaIndex, int nKashidaWidth )
             continue;
         // no kashida-injection for blank justified expansion either
 #ifdef USE_JAVA
-        if( !pG->AllowKashida() || pG->IsNonprintingChar() || IsSpacingGlyph( pG->maGlyphId ) )
+        if( !pG->AllowKashida() || pG->IsNonprintingChar() || pG->IsSpacing() )
 #else	// USE_JAVA
-        if( IsSpacingGlyph( pG->maGlyphId) )
+        if( pG->IsSpacing() )
 #endif	// USE_JAVA
             continue;
 
