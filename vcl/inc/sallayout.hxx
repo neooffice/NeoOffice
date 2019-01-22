@@ -125,6 +125,10 @@ protected:
 // For nice SAL_INFO logging of ImplLayoutArgs values
 std::ostream &operator <<(std::ostream& s, ImplLayoutArgs &rArgs);
 
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
+int GetVerticalFlags( sal_UCS4 );
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
+
 // all positions/widths are in font units
 // one exception: drawposition is in pixel units
 
@@ -186,6 +190,10 @@ public:
     virtual bool    GetOutline( SalGraphics&, basegfx::B2DPolyPolygonVector& ) const;
     virtual bool    GetBoundRect( SalGraphics&, tools::Rectangle& ) const;
 
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
+    virtual bool    IsSpacingGlyph( sal_GlyphId ) const;
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
+
     // reference counting
     void            Release() const;
 
@@ -201,6 +209,11 @@ protected:
     // used by layout engines
                     SalLayout();
     virtual         ~SalLayout();
+
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
+    // used by layout layers
+    void            SetUnitsPerPixel( int n )               { mnUnitsPerPixel = n; }
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
 
     static int      CalcAsianKerning( sal_UCS4, bool bLeft, bool bVertical );
 
@@ -343,6 +356,9 @@ public:
     void            Reserve(int size) { m_GlyphItems.reserve(size + 1); }
     virtual void    ApplyDXArray(ImplLayoutArgs&) = 0;
     void            Justify(DeviceCoordinate nNewWidth);
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
+    void            KashidaJustify( long nIndex, int nWidth );
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
     void            ApplyAsianKerning(const OUString& rStr);
 
     // used by upper layers
