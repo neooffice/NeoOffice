@@ -15,6 +15,13 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <iostream>
@@ -43,6 +50,10 @@
 
 #include <algorithm>
 #include <memory>
+
+#if defined USE_JAVA && defined MACOSX && !defined USE_SUBPIXEL_TEXT_RENDERING
+#include "java/salatslayout.hxx"
+#endif	// USE_JAVA && MACOSX && !USE_SUBPIXEL_TEXT_RENDERING
 
 #ifdef NO_LIBO_4_4_GLYPH_FLAGS
 // Glyph Flags
@@ -153,8 +164,10 @@ int GetVerticalFlags( sal_UCS4 nChar )
         || (nChar >= 0xFF5B && nChar <= 0xFF9F) // halfwidth forms
         || (nChar == 0xFFE3) )
             return GF_NONE; // not rotated
+#ifndef USE_JAVA
         else if( nChar == 0x30fc )
             return GF_ROTR; // right
+#endif	// !USE_JAVA
         return GF_ROTL;     // left
     }
     else if( (nChar >= 0x20000) && (nChar <= 0x3FFFF) ) // all SIP/TIP ideographs
@@ -581,6 +594,9 @@ SalLayout::SalLayout()
     mnOrientation( 0 ),
     mnRefCount( 1 ),
     maDrawOffset( 0, 0 )
+#ifdef USE_JAVA
+    , mbSpecialSpacingGlyph( true )
+#endif	// USE_JAVA
 {}
 
 SalLayout::~SalLayout()
@@ -748,8 +764,14 @@ bool SalLayout::IsSpacingGlyph( sal_GlyphId nGlyph ) const
             || (nChar >= 0x2000 && nChar <= 0x200F) // whitespace
             || (nChar == 0x3000);                   // ideographic space
     }
+#ifdef USE_JAVA
+    // Glyph ID 3 can be a valid glyph for some fonts on Mac OS X
+    else
+        bRet = ( mbSpecialSpacingGlyph && ( nGlyph & GF_IDXMASK ) == 3 );
+#else	// USE_JAVA
     else
         bRet = ((nGlyph & GF_IDXMASK) == 3);
+#endif	// USE_JAVA
     return bRet;
 }
 
@@ -799,6 +821,275 @@ DeviceCoordinate GenericSalLayout::GetTextWidth() const
     DeviceCoordinate nWidth = nMaxPos - nMinPos;
     return nWidth;
 }
+
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
+
+void GenericSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
+{
+    SalLayout::AdjustLayout( rArgs );
+
+    if( rArgs.mpDXArray )
+        ApplyDXArray( rArgs );
+    else if( rArgs.mnLayoutWidth )
+        Justify( rArgs.mnLayoutWidth );
+}
+
+// This DXArray thing is one of the stupidest ideas I have ever seen (I've been
+// told that it probably a one-to-one mapping of some Windows 3.1 API, which is
+// telling). To justify a text string, Writer calls OutputDevice::GetTextArray()
+// to get an array that maps input characters (not glyphs) to their absolute
+// position, GetTextArray() in turn calls SalLayout::FillDXArray() to get an
+// array of character widths that it converts to absolute positions.
+
+// Writer would then apply justification adjustments to that array of absolute
+// character positions and return to OutputDevice, which eventually calls
+// ApplyDXArray(), which needs to extract the individual adjustments for each
+// character to apply it to corresponding glyphs, and since that information is
+// already lost it tries to do some heuristics to guess it again. Those
+// heuristics often fail, and have always been a source of all sorts of weird
+// text layout bugs, and instead of fixing the broken design a hack after hack
+// have been applied on top of it, making it a complete mess that nobody
+// understands.
+
+// As you can see by now, this is utterly stupid, why Writer does not just send
+// us directly the advance width transformations it wants to apply to each
+// character instead of this whole mess?
+
+void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
+{
+    if( m_GlyphItems.empty())
+        return;
+
+    // determine cluster boundaries and x base offset
+    const int nCharCount = rArgs.mnEndCharPos - rArgs.mnMinCharPos;
+    int* pLogCluster = (int*)alloca( nCharCount * sizeof(int) );
+    size_t i;
+    int n,p;
+    long nBasePointX = -1;
+    if( mnLayoutFlags & SalLayoutFlags::ForFallback )
+        nBasePointX = 0;
+    for(p = 0; p < nCharCount; ++p )
+        pLogCluster[ p ] = -1;
+
+    for( i = 0; i < m_GlyphItems.size(); ++i)
+    {
+        n = m_GlyphItems[i].mnCharPos - rArgs.mnMinCharPos;
+        if( (n < 0) || (nCharCount <= n) )
+            continue;
+        if( pLogCluster[ n ] < 0 )
+            pLogCluster[ n ] = i;
+        if( nBasePointX < 0 )
+            nBasePointX = m_GlyphItems[i].maLinearPos.X();
+    }
+    // retarget unresolved pLogCluster[n] to a glyph inside the cluster
+    // TODO: better do it while the deleted-glyph markers are still there
+    for( n = 0; n < nCharCount; ++n )
+        if( (p = pLogCluster[0]) >= 0 )
+            break;
+    if( n >= nCharCount )
+        return;
+    for( n = 0; n < nCharCount; ++n )
+    {
+        if( pLogCluster[ n ] < 0 )
+            pLogCluster[ n ] = p;
+        else
+            p = pLogCluster[ n ];
+    }
+
+    // calculate adjusted cluster widths
+    long* pNewGlyphWidths = (long*)alloca( m_GlyphItems.size() * sizeof(long) );
+    for( i = 0; i < m_GlyphItems.size(); ++i )
+        pNewGlyphWidths[ i ] = 0;
+
+#if defined USE_JAVA && defined USE_SUBPIXEL_TEXT_RENDERING
+    // Smooth out kerning by allocating deltas evenly within each word
+    long nUnshiftedWidth = 0;
+    long nUnshiftedDelta = 0;
+    int nFirstUnshiftedGlyph = -1;
+#endif	// USE_JAVA && USE_SUBPIXEL_TEXT_RENDERING
+    bool bRTL;
+    for( int nCharPos = p = -1; rArgs.GetNextPos( &nCharPos, &bRTL ); )
+    {
+        n = nCharPos - rArgs.mnMinCharPos;
+        if( (n < 0) || (nCharCount <= n) )  continue;
+
+        if( pLogCluster[ n ] >= 0 )
+            p = pLogCluster[ n ];
+        if( p >= 0 )
+        {
+#ifdef USE_JAVA
+            // Fix rounding down of nDelta on platforms where rArgs.mpDXArray
+            // is a floating point array
+            double fUnitMul = mnUnitsPerPixel;
+            long nDelta = (long)( ( rArgs.mpDXArray[ n ] * fUnitMul ) + 0.5 );
+            if( n > 0 )
+                nDelta -= (long)( ( rArgs.mpDXArray[ n-1 ] * fUnitMul ) + 0.5 );
+            pNewGlyphWidths[ p ] += nDelta;
+#else	// USE_JAVA
+            long nDelta = rArgs.mpDXArray[ n ] ;
+            if( n > 0 )
+                nDelta -= rArgs.mpDXArray[ n-1 ];
+            pNewGlyphWidths[ p ] += nDelta * mnUnitsPerPixel;
+#endif	// USE_JAVA
+
+#if defined USE_JAVA && defined USE_SUBPIXEL_TEXT_RENDERING
+            size_t j;
+            for( j = p + 1; j < m_GlyphItems.size(); ++j )
+            {
+                if( m_GlyphItems[j].IsClusterStart() )
+                    break;
+            }
+
+            // Fix bug 3582 by not shifting the glyph immediately to the left
+            // of a spacing glyph and by treating nonprinting characters like
+            // spaces
+            if( j == m_GlyphItems.size() || !m_GlyphItems[p].maGlyphId || ( m_GlyphItems[p].IsRTLGlyph() && rArgs.mnFlags & SalLayoutFlags::KashidaJustification && m_GlyphItems[p].IsKashidaAllowedAfterGlyph() ) || m_GlyphItems[p + 1].IsNonprintingChar() || m_GlyphItems[p].IsNonprintingChar() || IsSpacingGlyph( m_GlyphItems[p + 1].maGlyphId ) || IsSpacingGlyph( m_GlyphItems[p].maGlyphId ) || ( p > 0 && m_GlyphItems[p - 1].mnCharPos - m_GlyphItems[p].mnCharPos > 1 ) )
+            {
+                // Apply unshifted delta to previous clusters
+                if( nUnshiftedWidth && nUnshiftedDelta && nFirstUnshiftedGlyph >= 0 && nFirstUnshiftedGlyph < p )
+                {
+                    j = p - 1;
+                    while ( j >= (size_t)nFirstUnshiftedGlyph )
+                    {
+                        if( pNewGlyphWidths[ j ] )
+                        {
+                            // Apply delta proportionally to width of glyph so
+                            // that glyphs following narrow characters such as
+                            // "i" and "l" will not be shifted too far left
+                            int nShift = (int)((float)m_GlyphItems[j].mnNewWidth * nUnshiftedDelta / nUnshiftedWidth );
+                            if( nShift > pNewGlyphWidths[ j ] )
+                                nShift = pNewGlyphWidths[ j ];
+                            pNewGlyphWidths[ j ] = m_GlyphItems[j].mnNewWidth + nShift;
+                            if( pNewGlyphWidths[ j ] < 0 )
+                            {
+                                nShift += pNewGlyphWidths[ j ];
+                                pNewGlyphWidths[ j ] = 0;
+                            }
+                            nUnshiftedWidth -= m_GlyphItems[j].mnNewWidth;
+                            nUnshiftedDelta -= nShift;
+                        }
+
+                        if( !j-- )
+                            break;
+                    }
+                }
+
+                nUnshiftedWidth = 0;
+                nUnshiftedDelta = 0;
+                nFirstUnshiftedGlyph = -1;
+            }
+            else
+            {
+                if( nFirstUnshiftedGlyph < 0 )
+                    nFirstUnshiftedGlyph = p;
+
+                // calculate original and adjusted cluster width
+                int nOldClusterWidth = m_GlyphItems[p].mnNewWidth;
+                int nNewClusterWidth = pNewGlyphWidths[ p ];
+                for( j = p + 1; j < m_GlyphItems.size(); ++j )
+                {
+                    if( m_GlyphItems[j].IsClusterStart() )
+                        break;
+                    nOldClusterWidth += m_GlyphItems[j].mnNewWidth;
+                    nNewClusterWidth += pNewGlyphWidths[ j ];
+                }
+                nUnshiftedWidth += nOldClusterWidth;
+                nUnshiftedDelta += nNewClusterWidth - nOldClusterWidth;
+            }
+#endif	// USE_JAVA && USE_SUBPIXEL_TEXT_RENDERING
+        }
+    }
+
+    // move cluster positions using the adjusted widths
+    long nDelta = 0;
+    long nNewPos = 0;
+    for( i = 0; i < m_GlyphItems.size(); ++i)
+    {
+        if( m_GlyphItems[i].IsClusterStart() )
+        {
+            // calculate original and adjusted cluster width
+            int nOldClusterWidth = m_GlyphItems[i].mnNewWidth - m_GlyphItems[i].mnXOffset;
+            int nNewClusterWidth = pNewGlyphWidths[i];
+            size_t j;
+            for( j = i; ++j < m_GlyphItems.size(); )
+            {
+                if( m_GlyphItems[j].IsClusterStart() )
+                    break;
+                if( !m_GlyphItems[j].IsDiacritic() ) // #i99367# ignore diacritics
+                    nOldClusterWidth += m_GlyphItems[j].mnNewWidth - m_GlyphItems[j].mnXOffset;
+                nNewClusterWidth += pNewGlyphWidths[j];
+            }
+            const int nDiff = nNewClusterWidth - nOldClusterWidth;
+
+            // adjust cluster glyph widths and positions
+            nDelta = nBasePointX + (nNewPos - m_GlyphItems[i].maLinearPos.X());
+#ifdef USE_JAVA
+            if( !m_GlyphItems[i].IsRTLGlyph() )
+            {
+                // for LTR case extend rightmost glyph in cluster
+                m_GlyphItems[j - 1].mnNewWidth += nDiff;
+            }
+            else if( rArgs.mnFlags & SalLayoutFlags::KashidaJustification )
+            {
+                bool bHandled = false;
+
+                if( nDiff > 0 )
+                {
+                    // Fix bug 823 by handling inappropriate placement of
+                    // kashidas by upper layers.
+                    if( i == m_GlyphItems.size() - 1 || m_GlyphItems[i].IsKashidaAllowedAfterGlyph() || m_GlyphItems[i + 1].IsNonprintingChar() || m_GlyphItems[i].IsNonprintingChar() || IsSpacingGlyph( m_GlyphItems[i + 1].maGlyphId ) || IsSpacingGlyph( m_GlyphItems[i].maGlyphId ) )
+                        bHandled = true;
+                }
+                else if( i > 0 )
+                {
+                    // We don't want characters to be piled on top of each other
+                    bHandled = true;
+                }
+
+                // Fix bug 3564 by only adjusting the next glyph if there is a
+                // valid glyph
+                if( !bHandled && i < m_GlyphItems.size() - 1 && m_GlyphItems[i].maGlyphId & GF_IDXMASK )
+                {
+                    nNewClusterWidth -= nDiff;
+                    pNewGlyphWidths[i + 1] += nDiff;
+                }
+                else
+                {
+                    m_GlyphItems[j - 1].mnNewWidth += nDiff;
+                }
+            }
+            else
+            {
+                // Fix bug 578 by right aligning glyphs that following missing
+                // character positions
+                if( i > 0 && m_GlyphItems[i - 1].mnCharPos - m_GlyphItems[i].mnCharPos > 1 )
+                    m_GlyphItems[i - 1].mnNewWidth += nDiff;
+                else
+                    m_GlyphItems[i].mnNewWidth += nDiff;
+                nDelta += nDiff;
+            }
+#else	// USE_JAVA
+            if( !m_GlyphItems[i].IsRTLGlyph() )
+            {
+                // for LTR case extend rightmost glyph in cluster
+                m_GlyphItems[j - 1].mnNewWidth += nDiff;
+            }
+            else
+            {
+                // right align cluster in new space for RTL case
+                m_GlyphItems[i].mnNewWidth += nDiff;
+                nDelta += nDiff;
+            }
+#endif	// USE_JAVA
+
+            nNewPos += nNewClusterWidth;
+        }
+
+        m_GlyphItems[i].maLinearPos.X() += nDelta;
+    }
+}
+
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
 
 void GenericSalLayout::Justify( DeviceCoordinate nNewWidth )
 {
@@ -927,47 +1218,88 @@ void GenericSalLayout::KashidaJustify( long nKashidaIndex, int nKashidaWidth )
     if( nKashidaWidth <= 0 )
         return;
 
+#ifdef USE_JAVA
+    // Fix crash when inserting into the middle of the glyph items vector by
+    // only appending glyph items in a new vector
+    std::vector<GlyphItem> aNewGlyphItems;
+#endif  // USE_JAVA
+
     // calculate max number of needed kashidas
     int nKashidaCount = 0;
     for (std::vector<GlyphItem>::iterator pG = m_GlyphItems.begin();
             pG != m_GlyphItems.end(); ++pG)
     {
+#ifdef USE_JAVA
+        aNewGlyphItems.push_back(*pG);
+#endif	// USE_JAVA
+
         // only inject kashidas in RTL contexts
         if( !pG->IsRTLGlyph() )
             continue;
         // no kashida-injection for blank justified expansion either
+#ifdef USE_JAVA
+        if( !pG->IsKashidaAllowedAfterGlyph() || pG->IsNonprintingChar() || IsSpacingGlyph( pG->maGlyphId ) )
+#else	// USE_JAVA
         if( IsSpacingGlyph( pG->maGlyphId) )
+#endif	// USE_JAVA
             continue;
 
         // calculate gap, ignore if too small
         int nGapWidth = pG->mnNewWidth - pG->mnOrigWidth;
         // worst case is one kashida even for mini-gaps
+#ifdef USE_JAVA
+        if( 3*nGapWidth < nKashidaWidth )
+#else	// USE_JAVA
         if( nGapWidth < nKashidaWidth )
+#endif	// USE_JAVA
             continue;
 
         nKashidaCount = 0;
         Point aPos = pG->maLinearPos;
+#ifdef USE_JAVA
+        aPos.X() += pG->mnOrigWidth;
+        pG->mnNewWidth = pG->mnOrigWidth;
+#else	// USE_JAVA
         aPos.X() -= nGapWidth; // cluster is already right aligned
+#endif	// USE_JAVA
         int const nCharPos = pG->mnCharPos;
+#ifndef USE_JAVA
         std::vector<GlyphItem>::iterator pG2 = pG;
+#endif	// !USE_JAVA
         for(; nGapWidth > nKashidaWidth; nGapWidth -= nKashidaWidth, ++nKashidaCount )
         {
+#ifdef USE_JAVA
+            aNewGlyphItems.push_back(GlyphItem(nCharPos, nKashidaIndex, aPos,
+                                                      GlyphItem::IS_IN_CLUSTER|GlyphItem::IS_RTL_GLYPH, nKashidaWidth ));
+#else	// USE_JAVA
             pG2 = m_GlyphItems.insert(pG2, GlyphItem(nCharPos, nKashidaIndex, aPos,
                                                       GlyphItem::IS_IN_CLUSTER|GlyphItem::IS_RTL_GLYPH, nKashidaWidth ));
             ++pG2;
+#endif	// USE_JAVA
             aPos.X() += nKashidaWidth;
         }
 
         // fixup rightmost kashida for gap remainder
         if( nGapWidth > 0 )
         {
+#ifdef USE_JAVA
+            aNewGlyphItems.push_back(GlyphItem(nCharPos, nKashidaIndex, aPos,
+                                                      GlyphItem::IS_IN_CLUSTER|GlyphItem::IS_RTL_GLYPH, nGapWidth ));
+#else	// USE_JAVA
             pG2 = m_GlyphItems.insert(pG2, GlyphItem(nCharPos, nKashidaIndex, aPos,
                                                       GlyphItem::IS_IN_CLUSTER|GlyphItem::IS_RTL_GLYPH, nKashidaCount ? nGapWidth : nGapWidth/2 ));
             ++pG2;
+#endif	// USE_JAVA
             aPos.X() += nGapWidth;
         }
+#ifndef USE_JAVA
         pG = pG2;
+#endif	// !USE_JAVA
     }
+
+#ifdef USE_JAVA
+    m_GlyphItems = aNewGlyphItems;
+#endif	// USE_JAVA
 }
 
 #endif	// !NO_LIBO_4_4_GLYPH_FLAGS

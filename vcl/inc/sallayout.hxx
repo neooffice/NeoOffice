@@ -354,7 +354,12 @@ public:
     // used by layout engines
     void            AppendGlyph( const GlyphItem& );
     void            Reserve(int size) { m_GlyphItems.reserve(size + 1); }
+#ifdef NO_LIBO_4_4_GLYPH_FLAGS
     virtual void    ApplyDXArray(ImplLayoutArgs&) = 0;
+#else	// NO_LIBO_4_4_GLYPH_FLAGS
+    virtual void    AdjustLayout( ImplLayoutArgs& ) override;
+    virtual void    ApplyDXArray( ImplLayoutArgs& );
+#endif	// NO_LIBO_4_4_GLYPH_FLAGS
     void            Justify(DeviceCoordinate nNewWidth);
 #ifndef NO_LIBO_4_4_GLYPH_FLAGS
     void            KashidaJustify( long nIndex, int nWidth );
