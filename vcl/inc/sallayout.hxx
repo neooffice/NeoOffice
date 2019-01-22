@@ -331,8 +331,7 @@ public:
         IS_SPACING    = 0x010,
         ALLOW_KASHIDA = 0x020
 #ifdef USE_JAVA
-        , IS_KASHIDA_ALLOWED_AFTER_GLYPH = 0x100
-        , IS_NONPRINTING_CHAR=0x200
+        , IS_NONPRINTING_CHAR=0x100
 #endif	// USE_JAVA
     };
 
@@ -343,7 +342,6 @@ public:
     bool    IsSpacing() const       { return ((mnFlags & IS_SPACING) != 0); }
     bool    AllowKashida() const    { return ((mnFlags & ALLOW_KASHIDA) != 0); }
 #ifdef USE_JAVA
-    bool    IsKashidaAllowedAfterGlyph() const { return ((mnFlags & IS_KASHIDA_ALLOWED_AFTER_GLYPH) != 0); }
     bool    IsNonprintingChar() const { return ((mnFlags & IS_NONPRINTING_CHAR) != 0); }
 #endif	// USE_JAVA
 };
