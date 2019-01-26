@@ -26,13 +26,12 @@
 
 #include <sal/config.h>
 
-#include "stdio.h"
 #include "jpeg.h"
 #include <jpeglib.h>
 #include <jerror.h>
 
 #include "JpegWriter.hxx"
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/FilterConfigItem.hxx>
 #include <vcl/graphicfilter.hxx>
 
@@ -47,11 +46,11 @@ struct DestinationManagerStruct
 
 extern "C" void init_destination (j_compress_ptr cinfo)
 {
-    DestinationManagerStruct * destination = (DestinationManagerStruct *) cinfo->dest;
+    DestinationManagerStruct * destination = reinterpret_cast<DestinationManagerStruct *>(cinfo->dest);
 
     /* Allocate the output buffer -- it will be released when done with image */
-    destination->buffer = (JOCTET *)
-        (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE, BUFFER_SIZE * sizeof(JOCTET));
+    destination->buffer = static_cast<JOCTET *>(
+        (*cinfo->mem->alloc_small) (reinterpret_cast<j_common_ptr>(cinfo), JPOOL_IMAGE, BUFFER_SIZE * sizeof(JOCTET)));
 
     destination->pub.next_output_byte = destination->buffer;
     destination->pub.free_in_buffer = BUFFER_SIZE;
@@ -59,9 +58,9 @@ extern "C" void init_destination (j_compress_ptr cinfo)
 
 extern "C" boolean empty_output_buffer (j_compress_ptr cinfo)
 {
-    DestinationManagerStruct * destination = (DestinationManagerStruct *) cinfo->dest;
+    DestinationManagerStruct * destination = reinterpret_cast<DestinationManagerStruct *>(cinfo->dest);
 
-    if (destination->stream->Write(destination->buffer, BUFFER_SIZE) != (size_t) BUFFER_SIZE)
+    if (destination->stream->WriteBytes(destination->buffer, BUFFER_SIZE) != BUFFER_SIZE)
     {
         ERREXIT(cinfo, JERR_FILE_WRITE);
     }
@@ -74,13 +73,13 @@ extern "C" boolean empty_output_buffer (j_compress_ptr cinfo)
 
 extern "C" void term_destination (j_compress_ptr cinfo)
 {
-    DestinationManagerStruct * destination = (DestinationManagerStruct *) cinfo->dest;
+    DestinationManagerStruct * destination = reinterpret_cast<DestinationManagerStruct *>(cinfo->dest);
     size_t datacount = BUFFER_SIZE - destination->pub.free_in_buffer;
 
     /* Write any data remaining in the buffer */
     if (datacount > 0)
     {
-        if (destination->stream->Write(destination->buffer, datacount) != datacount)
+        if (destination->stream->WriteBytes(destination->buffer, datacount) != datacount)
         {
             ERREXIT(cinfo, JERR_FILE_WRITE);
         }
@@ -89,7 +88,7 @@ extern "C" void term_destination (j_compress_ptr cinfo)
 
 void jpeg_svstream_dest (j_compress_ptr cinfo, void* output)
 {
-    SvStream* stream = (SvStream*) output;
+    SvStream* stream = static_cast<SvStream*>(output);
     DestinationManagerStruct * destination;
 
     /* The destination object is made permanent so that multiple JPEG images
@@ -98,13 +97,13 @@ void jpeg_svstream_dest (j_compress_ptr cinfo, void* output)
      * manager serially with the same JPEG object, because their private object
      * sizes may be different.  Caveat programmer.
      */
-    if (cinfo->dest == NULL)
+    if (cinfo->dest == nullptr)
     {    /* first time for this JPEG object? */
-        cinfo->dest = (jpeg_destination_mgr*)
-        (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT, sizeof(DestinationManagerStruct));
+        cinfo->dest = static_cast<jpeg_destination_mgr*>(
+        (*cinfo->mem->alloc_small) (reinterpret_cast<j_common_ptr>(cinfo), JPOOL_PERMANENT, sizeof(DestinationManagerStruct)));
     }
 
-    destination = (DestinationManagerStruct *) cinfo->dest;
+    destination = reinterpret_cast<DestinationManagerStruct *>(cinfo->dest);
     destination->pub.init_destination = init_destination;
     destination->pub.empty_output_buffer = empty_output_buffer;
     destination->pub.term_destination = term_destination;
@@ -113,12 +112,11 @@ void jpeg_svstream_dest (j_compress_ptr cinfo, void* output)
 
 JPEGWriter::JPEGWriter( SvStream& rStream, const css::uno::Sequence< css::beans::PropertyValue >* pFilterData, bool* pExportWasGrey ) :
     mrStream     ( rStream ),
-    mpReadAccess ( NULL ),
-    mpBuffer     ( NULL ),
+    mpBuffer     ( nullptr ),
     mbNative     ( false ),
     mpExpWasGrey ( pExportWasGrey )
 {
-    FilterConfigItem aConfigItem( (css::uno::Sequence< css::beans::PropertyValue >*) pFilterData );
+    FilterConfigItem aConfigItem( const_cast<css::uno::Sequence< css::beans::PropertyValue >*>(pFilterData) );
     mbGreys = aConfigItem.ReadInt32( "ColorMode", 0 ) != 0;
     mnQuality = aConfigItem.ReadInt32( "Quality", 75 );
     maChromaSubsampling = aConfigItem.ReadInt32( "ChromaSubsamplingMode", 0 );
@@ -140,7 +138,7 @@ JPEGWriter::JPEGWriter( SvStream& rStream, const css::uno::Sequence< css::beans:
 
 void* JPEGWriter::GetScanline( long nY )
 {
-    void* pScanline = NULL;
+    void* pScanline = nullptr;
 
     if( mpReadAccess )
     {
@@ -202,11 +200,11 @@ bool JPEGWriter::Write( const Graphic& rGraphic )
 
     if ( mbGreys )
     {
-        if ( !aGraphicBmp.Convert( BMP_CONVERSION_8BIT_GREYS ) )
+        if ( !aGraphicBmp.Convert( BmpConversion::N8BitGreys ) )
             aGraphicBmp = rGraphic.GetBitmap();
     }
 
-    mpReadAccess = aGraphicBmp.AcquireReadAccess();
+    mpReadAccess = Bitmap::ScopedReadAccess(aGraphicBmp);
     if( mpReadAccess )
     {
         if ( !mbGreys )  // bitmap was not explicitly converted into greyscale,
@@ -233,8 +231,7 @@ bool JPEGWriter::Write( const Graphic& rGraphic )
             // forcefully converting non-grayscale bitmaps to grayscale
             if ( mbGreys && aGraphicBmp.GetBitCount() > 8 )
             {
-                aGraphicBmp.ReleaseAccess( mpReadAccess );
-                mpReadAccess = NULL;
+                mpReadAccess.reset();
                 return Write( aGraphicBmp );
             }
 #endif	// USE_JAVA
@@ -242,18 +239,21 @@ bool JPEGWriter::Write( const Graphic& rGraphic )
         if( mpExpWasGrey )
             *mpExpWasGrey = mbGreys;
 
-        mbNative = ( mpReadAccess->GetScanlineFormat() == BMP_FORMAT_24BIT_TC_RGB );
+        mbNative = ( mpReadAccess->GetScanlineFormat() == ScanlineFormat::N24BitTcRgb );
 
         if( !mbNative )
             mpBuffer = new sal_uInt8[ AlignedWidth4Bytes( mbGreys ? mpReadAccess->Width() * 8L : mpReadAccess->Width() * 24L ) ];
 
-        bRet = WriteJPEG( this, &mrStream, mpReadAccess->Width(), mpReadAccess->Height(), mbGreys, mnQuality, maChromaSubsampling, mxStatusIndicator );
+        SAL_INFO("vcl", "\nJPEG Export - DPI X: " << rGraphic.GetPPI().getX() << "\nJPEG Export - DPI Y: " << rGraphic.GetPPI().getY());
+
+        bRet = WriteJPEG( this, &mrStream, mpReadAccess->Width(),
+                          mpReadAccess->Height(), rGraphic.GetPPI(), mbGreys,
+                          mnQuality, maChromaSubsampling, mxStatusIndicator );
 
         delete[] mpBuffer;
-        mpBuffer = NULL;
+        mpBuffer = nullptr;
 
-        aGraphicBmp.ReleaseAccess( mpReadAccess );
-        mpReadAccess = NULL;
+        mpReadAccess.reset();
     }
     if ( mxStatusIndicator.is() )
         mxStatusIndicator->end();
