@@ -181,8 +181,8 @@ LogicalFontInstance* ImplFontCache::GetFontInstance( PhysicalFontCollection* pFo
 
 #ifdef USE_JAVA
     // Don't use the entry if the symbol flag doesn't match
-    if ( pEntry && pEntry->maFontSelData.IsSymbolFont() != aFontSelData.IsSymbolFont() )
-        pEntry = NULL;
+    if ( pFontInstance && pFontInstance ->maFontSelData.IsSymbolFont() != aFontSelData.IsSymbolFont() )
+        pFontInstance = nullptr;
 #endif	// USE_JAVA
 
     if( pFontInstance ) // cache hit => use existing font instance
@@ -213,8 +213,8 @@ LogicalFontInstance* ImplFontCache::GetFontInstance( PhysicalFontCollection* pFo
             // symbols when exporting as PDF reported in the
             // testing/sierrahighsierrabugs_emails/20170824 e-mail by merging
             // the following code into the existing LibreOffice code block.
-            if( !pEntry->mpConversion && pFontData->IsSymbolFont() && !aFontSelData.maTargetName.equalsIgnoreAsciiCaseAsciiL( "starsymbol", 10 ) && !aFontSelData.maTargetName.equalsIgnoreAsciiCaseAsciiL( "opensymbol", 10 ) )
-                pEntry->mpConversion = ConvertChar::GetRecodeData( "symbol", "opensymbol" );
+            if( !pFontInstance->mpConversion && pFontData->IsSymbolFont() && !aFontSelData.maTargetName.equalsIgnoreAsciiCaseAsciiL( "starsymbol", 10 ) && !aFontSelData.maTargetName.equalsIgnoreAsciiCaseAsciiL( "opensymbol", 10 ) )
+                pFontInstance->mpConversion = ConvertChar::GetRecodeData( "symbol", "opensymbol" );
 #endif	// USE_JAVA
         }
 
