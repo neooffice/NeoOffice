@@ -25,25 +25,28 @@
  */
 
 #include <string.h>
-#include <boost/ptr_container/ptr_vector.hpp>
 
 #include <comphelper/processfactory.hxx>
 #include <comphelper/string.hxx>
 #include <osl/mutex.hxx>
 #include <rtl/process.h>
-#include <tools/debug.hxx>
 #include <tools/resary.hxx>
 #include <tools/gen.hxx>
-#include <cppuhelper/implbase1.hxx>
 #include <uno/current_context.hxx>
 
-#include "vcl/configsettings.hxx"
-#include "vcl/svapp.hxx"
-#include "vcl/settings.hxx"
-#include "vcl/wrkwin.hxx"
-#include "vcl/layout.hxx"
-#include "vcl/button.hxx"
-#include "vcl/dockwin.hxx"
+#include <vcl/button.hxx>
+#include <vcl/configsettings.hxx>
+#include <vcl/dockwin.hxx>
+#include <vcl/layout.hxx>
+#include <vcl/menu.hxx>
+#include <vcl/print.hxx>
+#include <vcl/settings.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/virdev.hxx>
+#include <vcl/wrkwin.hxx>
+#include <scrwnd.hxx>
+#include <helpwin.hxx>
+#include <vcl/dialog.hxx>
 #include "salinst.hxx"
 #include "salframe.hxx"
 #include "salgdi.hxx"
@@ -57,9 +60,10 @@
 
 #include "officecfg/Office/Common.hxx"
 
-#include "vcl/opengl/OpenGLContext.hxx"
-
-#include <stdio.h>
+#include <config_features.h>
+#if HAVE_FEATURE_OPENGL
+#include <vcl/opengl/OpenGLContext.hxx>
+#endif
 
 using namespace com::sun::star::uno;
 using namespace com::sun::star::lang;
@@ -71,8 +75,9 @@ namespace
         public rtl::Static<ImplSVData, private_aImplSVData> {};
 }
 
-// static SV-Data
-ImplSVData* pImplSVData = NULL;
+ImplSVData* ImplGetSVData() {
+    return &private_aImplSVData::get();
+}
 
 SalSystem* ImplGetSalSystem()
 {
@@ -82,19 +87,6 @@ SalSystem* ImplGetSalSystem()
     return pSVData->mpSalSystem;
 }
 
-void ImplInitSVData()
-{
-    pImplSVData = &private_aImplSVData::get();
-
-    // init global instance data
-    memset( pImplSVData, 0, sizeof( ImplSVData ) );
-    pImplSVData->maHelpData.mbAutoHelpId = true;
-    pImplSVData->maNWFData.maMenuBarHighlightTextColor = Color( COL_TRANSPARENT );
-
-    // mark default layout border as unitialized
-    pImplSVData->maAppData.mnDefaultLayoutBorder = -1;
-}
-
 void ImplDeInitSVData()
 {
     ImplSVData* pSVData = ImplGetSVData();
@@ -102,65 +94,84 @@ void ImplDeInitSVData()
 #if defined USE_JAVA && defined MACOSX
     // Fix random crashing in native callbacks that get called after destroying
     // the SalInstance by destroying it here instead of in DeInitVCL()
-    DestroySalInstance( pSVData->mpDefInst );
+    if (pSVData->mpDefInst)
+    {
+        DestroySalInstance( pSVData->mpDefInst );
+        pSVData->mpDefInst = nullptr;
+    }
 #endif  // USE_JAVA && MACOSX
 
     // delete global instance data
     if( pSVData->mpSettingsConfigItem )
+    {
         delete pSVData->mpSettingsConfigItem;
+        pSVData->mpSettingsConfigItem = nullptr;
+    }
 
     if( pSVData->mpDockingManager )
+    {
         delete pSVData->mpDockingManager;
+        pSVData->mpDockingManager = nullptr;
+    }
 
     if( pSVData->maCtrlData.mpFieldUnitStrings )
-        delete pSVData->maCtrlData.mpFieldUnitStrings, pSVData->maCtrlData.mpFieldUnitStrings = NULL;
+    {
+        delete pSVData->maCtrlData.mpFieldUnitStrings;
+        pSVData->maCtrlData.mpFieldUnitStrings = nullptr;
+    }
     if( pSVData->maCtrlData.mpCleanUnitStrings )
-        delete pSVData->maCtrlData.mpCleanUnitStrings, pSVData->maCtrlData.mpCleanUnitStrings = NULL;
+    {
+        delete pSVData->maCtrlData.mpCleanUnitStrings;
+        pSVData->maCtrlData.mpCleanUnitStrings = nullptr;
+    }
     if( pSVData->mpPaperNames )
-        delete pSVData->mpPaperNames, pSVData->mpPaperNames = NULL;
+    {
+        delete pSVData->mpPaperNames;
+        pSVData->mpPaperNames = nullptr;
+    }
 }
 
-void ImplDestroySVData()
-{
-    pImplSVData = NULL;
-}
-
+/// Returns either the application window, or the default GL context window
 vcl::Window* ImplGetDefaultWindow()
 {
     ImplSVData* pSVData = ImplGetSVData();
     if ( pSVData->maWinData.mpAppWin )
         return pSVData->maWinData.mpAppWin;
+    else
+        return ImplGetDefaultContextWindow();
+}
 
-    // First test if we already have a default window.
-    // Don't only place a single if..else inside solar mutex lockframe
-    // because then we might have to wait for the solar mutex what is not necessary
-    // if we already have a default window.
+/// returns the default window created to hold the persistent VCL GL context.
+vcl::Window *ImplGetDefaultContextWindow()
+{
+    ImplSVData* pSVData = ImplGetSVData();
 
+    // Double check locking on mpDefaultWin.
     if ( !pSVData->mpDefaultWin )
     {
-        Application::GetSolarMutex().acquire();
+        SolarMutexGuard aGuard;
 
-        // Test again because the thread who released the solar mutex could have called
-        // the same method
-
-        if ( !pSVData->mpDefaultWin && !pSVData->mbDeInit )
+        if (!pSVData->mpDefaultWin && !pSVData->mbDeInit)
         {
-            DBG_WARNING( "ImplGetDefaultWindow(): No AppWindow" );
-            pSVData->mpDefaultWin = new WorkWindow( 0, WB_DEFAULTWIN );
-            pSVData->mpDefaultWin->SetText( OUString( "VCL ImplGetDefaultWindow"  ) );
-
-            // Add a reference to the default context so it never gets deleted
-            OpenGLContext* pContext = pSVData->mpDefaultWin->GetGraphics()->GetOpenGLContext();
-            if( pContext )
+            try
             {
-#ifdef DBG_UTIL
-                pContext->AddRef(NULL);
-#else
-                pContext->AddRef();
+                SAL_INFO( "vcl", "ImplGetDefaultWindow(): No AppWindow" );
+
+                pSVData->mpDefaultWin = VclPtr<WorkWindow>::Create( nullptr, WB_DEFAULTWIN );
+                pSVData->mpDefaultWin->SetText( "VCL ImplGetDefaultWindow" );
+
+#if HAVE_FEATURE_OPENGL
+                // Add a reference to the default context so it never gets deleted
+                rtl::Reference<OpenGLContext> pContext = pSVData->mpDefaultWin->GetGraphics()->GetOpenGLContext();
+                if( pContext.is() )
+                    pContext->acquire();
 #endif
             }
+            catch (const css::uno::Exception& e)
+            {
+                 SAL_WARN("vcl", "unable to create Default Window: " << e.Message);
+            }
         }
-        Application::GetSolarMutex().release();
     }
 
     return pSVData->mpDefaultWin;
@@ -178,12 +189,12 @@ ResMgr* ImplGetResMgr()
         if( !pSVData->mpResMgr && ! bMessageOnce )
         {
             bMessageOnce = true;
-            const char* pMsg =
+            const char pMsg[] =
                 "Missing vcl resource. This indicates that files vital to localization are missing. "
                 "You might have a corrupt installation.";
-            fprintf( stderr, "%s\n", pMsg );
-            MessageDialog aBox(NULL, OUString(pMsg, strlen(pMsg), RTL_TEXTENCODING_ASCII_US));
-            aBox.Execute();
+            SAL_WARN("vcl", "" << pMsg);
+            ScopedVclPtrInstance< MessageDialog > aBox( nullptr, pMsg );
+            aBox->Execute();
         }
     }
     return pSVData->mpResMgr;
@@ -208,7 +219,7 @@ FieldUnitStringList* ImplGetFieldUnits()
         {
             ResStringArray aUnits( ResId (SV_FUNIT_STRINGS, *pResMgr) );
             sal_uInt32 nUnits = aUnits.Count();
-            pSVData->maCtrlData.mpFieldUnitStrings = new FieldUnitStringList();
+            pSVData->maCtrlData.mpFieldUnitStrings = new FieldUnitStringList;
             pSVData->maCtrlData.mpFieldUnitStrings->reserve( nUnits );
             for( sal_uInt32 i = 0; i < nUnits; i++ )
             {
@@ -229,12 +240,12 @@ FieldUnitStringList* ImplGetCleanedFieldUnits()
         if( pUnits )
         {
             size_t nUnits = pUnits->size();
-            pSVData->maCtrlData.mpCleanUnitStrings = new FieldUnitStringList();
+            pSVData->maCtrlData.mpCleanUnitStrings = new FieldUnitStringList;
             pSVData->maCtrlData.mpCleanUnitStrings->reserve( nUnits );
             for( size_t i = 0; i < nUnits; ++i )
             {
                 OUString aUnit( (*pUnits)[i].first );
-                aUnit = comphelper::string::remove(aUnit, ' ');
+                aUnit = aUnit.replaceAll(" ", "");
                 aUnit = aUnit.toAsciiLowerCase();
                 std::pair< OUString, FieldUnit > aElement( aUnit, (*pUnits)[i].second );
                 pSVData->maCtrlData.mpCleanUnitStrings->push_back( aElement );
@@ -263,9 +274,6 @@ BlendFrameCache* ImplGetBlendFrameCache()
 }
 
 #ifdef _WIN32
-bool HasAtHook();
-#endif
-
 bool ImplInitAccessBridge()
 {
     ImplSVData* pSVData = ImplGetSVData();
@@ -273,7 +281,6 @@ bool ImplInitAccessBridge()
     {
         css::uno::Reference< XComponentContext > xContext(comphelper::getProcessComponentContext());
 
-#ifdef _WIN32
         if (!HasAtHook() && !getenv("SAL_FORCE_IACCESSIBLE2"))
         {
             SAL_INFO("vcl", "Apparently no running AT -> "
@@ -293,35 +300,22 @@ bool ImplInitAccessBridge()
                  return false;
              }
         }
-#endif
     }
 
     return true;
 }
+#endif
 
-vcl::Window* ImplFindWindow( const SalFrame* pFrame, ::Point& rSalFramePos )
-{
-    ImplSVData* pSVData = ImplGetSVData();
-    vcl::Window*     pFrameWindow = pSVData->maWinData.mpFirstFrame;
-    while ( pFrameWindow )
-    {
-        if ( pFrameWindow->ImplGetFrame() == pFrame )
-        {
-            vcl::Window* pWindow = pFrameWindow->ImplFindWindow( rSalFramePos );
-            if ( !pWindow )
-                pWindow = pFrameWindow->ImplGetWindow();
-            rSalFramePos = pWindow->ImplFrameToOutput( rSalFramePos );
-            return pWindow;
-        }
-        pFrameWindow = pFrameWindow->ImplGetFrameData()->mpNextFrame;
-    }
-
-    return NULL;
-}
-
-void LocaleConfigurationListener::ConfigurationChanged( utl::ConfigurationBroadcaster*, sal_uInt32 nHint )
+void LocaleConfigurationListener::ConfigurationChanged( utl::ConfigurationBroadcaster*, ConfigurationHints nHint )
 {
     AllSettings::LocaleSettingsChanged( nHint );
 }
+
+
+ImplSVData::~ImplSVData() {}
+ImplSVAppData::~ImplSVAppData() {}
+ImplSVGDIData::~ImplSVGDIData() {}
+ImplSVWinData::~ImplSVWinData() {}
+ImplSVHelpData::~ImplSVHelpData() {}
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
