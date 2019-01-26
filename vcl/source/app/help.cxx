@@ -26,18 +26,18 @@
 
 #include <comphelper/string.hxx>
 
-#include "tools/debug.hxx"
 #include "tools/diagnose_ex.h"
 #include "tools/time.hxx"
 
-#include "vcl/window.hxx"
-#include "vcl/event.hxx"
-#include "vcl/svapp.hxx"
-#include "vcl/wrkwin.hxx"
-#include "vcl/help.hxx"
-#include "vcl/settings.hxx"
+#include <vcl/window.hxx>
+#include <vcl/event.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/wrkwin.hxx>
+#include <vcl/help.hxx>
+#include <vcl/settings.hxx>
 
 #include "helpwin.hxx"
+#include "salframe.hxx"
 #include "svdata.hxx"
 
 #define HELPWINSTYLE_QUICK      0
@@ -154,21 +154,11 @@ bool Help::IsBalloonHelpEnabled()
 }
 
 bool Help::ShowBalloon( vcl::Window* pParent,
-                        const Point& rScreenPos,
+                        const Point& rScreenPos, const tools::Rectangle& rRect,
                         const OUString& rHelpText )
 {
-    ImplShowHelpWindow( pParent, HELPWINSTYLE_BALLOON, 0,
-                        rHelpText, OUString(), rScreenPos );
-
-    return true;
-}
-
-bool Help::ShowBalloon( vcl::Window* pParent,
-                        const Point& rScreenPos, const Rectangle& rRect,
-                        const OUString& rHelpText )
-{
-    ImplShowHelpWindow( pParent, HELPWINSTYLE_BALLOON, 0,
-                        rHelpText, OUString(), rScreenPos, &rRect );
+    ImplShowHelpWindow( pParent, HELPWINSTYLE_BALLOON, QuickHelpFlags::NONE,
+                        rHelpText, OUString(), rScreenPos, rRect );
 
     return true;
 }
@@ -189,97 +179,96 @@ bool Help::IsQuickHelpEnabled()
 }
 
 bool Help::ShowQuickHelp( vcl::Window* pParent,
-                          const Rectangle& rScreenRect,
+                          const tools::Rectangle& rScreenRect,
                           const OUString& rHelpText,
                           const OUString& rLongHelpText,
-                          sal_uInt16 nStyle )
+                          QuickHelpFlags nStyle )
 {
-    ImplShowHelpWindow( pParent, HELPWINSTYLE_QUICK, nStyle,
+    sal_uInt16 nHelpWinStyle = ( nStyle & QuickHelpFlags::TipStyleBalloon ) ? HELPWINSTYLE_BALLOON : HELPWINSTYLE_QUICK;
+    ImplShowHelpWindow( pParent, nHelpWinStyle, nStyle,
                         rHelpText, rLongHelpText,
-                        pParent->OutputToScreenPixel( pParent->GetPointerPosPixel() ), &rScreenRect );
+                        pParent->OutputToScreenPixel( pParent->GetPointerPosPixel() ), rScreenRect );
     return true;
 }
 
 void Help::HideBalloonAndQuickHelp()
 {
     HelpTextWindow const * pHelpWin = ImplGetSVData()->maHelpData.mpHelpWin;
-    bool const bIsVisible = ( pHelpWin != NULL ) && pHelpWin->IsVisible();
+    bool const bIsVisible = ( pHelpWin != nullptr ) && pHelpWin->IsVisible();
     ImplDestroyHelpWindow( bIsVisible );
 }
 
-sal_uIntPtr Help::ShowTip( vcl::Window* pParent, const Rectangle& rScreenRect,
-                     const OUString& rText, sal_uInt16 nStyle )
+sal_uIntPtr Help::ShowPopover(vcl::Window* pParent, const tools::Rectangle& rScreenRect,
+                              const OUString& rText, QuickHelpFlags nStyle)
 {
-    sal_uInt16 nHelpWinStyle = ( ( nStyle & QUICKHELP_TIP_STYLE_BALLOON ) != 0 ) ? HELPWINSTYLE_BALLOON : HELPWINSTYLE_QUICK;
-    HelpTextWindow* pHelpWin = new HelpTextWindow( pParent, rText, nHelpWinStyle, nStyle );
+    sal_uIntPtr nId = pParent->ImplGetFrame()->ShowPopover(rText, rScreenRect, nStyle);
+    if (nId)
+    {
+        //popovers are handled natively, return early
+        return nId;
+    }
 
-    sal_uIntPtr nId = reinterpret_cast< sal_uIntPtr >( pHelpWin );
-    UpdateTip( nId, pParent, rScreenRect, rText );
+    sal_uInt16 nHelpWinStyle = ( nStyle & QuickHelpFlags::TipStyleBalloon ) ? HELPWINSTYLE_BALLOON : HELPWINSTYLE_QUICK;
+    VclPtrInstance<HelpTextWindow> pHelpWin( pParent, rText, nHelpWinStyle, nStyle );
+
+    nId = reinterpret_cast< sal_uIntPtr >( pHelpWin.get() );
+    UpdatePopover(nId, pParent, rScreenRect, rText);
 
     pHelpWin->ShowHelp( HELPDELAY_NONE );
     return nId;
 }
 
-void Help::UpdateTip( sal_uIntPtr nId, vcl::Window* pParent, const Rectangle& rScreenRect, const OUString& rText )
+void Help::UpdatePopover(sal_uIntPtr nId, vcl::Window* pParent, const tools::Rectangle& rScreenRect,
+                         const OUString& rText)
 {
+    if (pParent->ImplGetFrame()->UpdatePopover(nId, rText, rScreenRect))
+    {
+        //popovers are handled natively, return early
+        return;
+    }
+
     HelpTextWindow* pHelpWin = reinterpret_cast< HelpTextWindow* >( nId );
-    ENSURE_OR_RETURN_VOID( pHelpWin != NULL, "Help::UpdateTip: invalid ID!" );
+    ENSURE_OR_RETURN_VOID( pHelpWin != nullptr, "Help::UpdatePopover: invalid ID!" );
 
     Size aSz = pHelpWin->CalcOutSize();
     pHelpWin->SetOutputSizePixel( aSz );
     ImplSetHelpWindowPos( pHelpWin, pHelpWin->GetWinStyle(), pHelpWin->GetStyle(),
-        pParent->OutputToScreenPixel( pParent->GetPointerPosPixel() ), &rScreenRect );
+        pParent->OutputToScreenPixel( pParent->GetPointerPosPixel() ), rScreenRect );
 
     pHelpWin->SetHelpText( rText );
     pHelpWin->Invalidate();
 }
 
-void Help::HideTip( sal_uLong nId )
+void Help::HidePopover(vcl::Window* pParent, sal_uLong nId)
 {
-    HelpTextWindow* pHelpWin = reinterpret_cast<HelpTextWindow*>(nId);
+    if (pParent->ImplGetFrame()->HidePopover(nId))
+    {
+        //popovers are handled natively, return early
+        return;
+    }
+
+    VclPtr<HelpTextWindow> pHelpWin = reinterpret_cast<HelpTextWindow*>(nId);
     vcl::Window* pFrameWindow = pHelpWin->ImplGetFrameWindow();
     pHelpWin->Hide();
     // trigger update, so that a Paint is instantly triggered since we do not save the background
     pFrameWindow->ImplUpdateAll();
-    delete pHelpWin;
+    pHelpWin.disposeAndClear();
     ImplGetSVData()->maHelpData.mnLastHelpHideTime = tools::Time::GetSystemTicks();
 }
 
-HelpTextWindow::HelpTextWindow( vcl::Window* pParent, const OUString& rText, sal_uInt16 nHelpWinStyle, sal_uInt16 nStyle ) :
+HelpTextWindow::HelpTextWindow( vcl::Window* pParent, const OUString& rText, sal_uInt16 nHelpWinStyle, QuickHelpFlags nStyle ) :
     FloatingWindow( pParent, WB_SYSTEMWINDOW|WB_TOOLTIPWIN ), // #105827# if we change the parent, mirroring will not work correctly when positioning this window
     maHelpText( rText )
 {
-    SetType( WINDOW_HELPTEXTWINDOW );
+    SetType( WindowType::HELPTEXTWINDOW );
     ImplSetMouseTransparent( true );
     mnHelpWinStyle = nHelpWinStyle;
     mnStyle = nStyle;
-//  on windows this will raise the application window, because help windows are system windows now
-//  EnableAlwaysOnTop();
-    EnableSaveBackground();
 
-    const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
-    SetPointFont( rStyleSettings.GetHelpFont() );
-    SetTextColor( rStyleSettings.GetHelpTextColor() );
-    SetTextAlign( ALIGN_TOP );
-    if ( IsNativeControlSupported( CTRL_TOOLTIP, PART_ENTIRE_CONTROL ) )
+    if( mnStyle & QuickHelpFlags::BiDiRtl )
     {
-        EnableChildTransparentMode( true );
-        SetParentClipMode( PARENTCLIPMODE_NOCLIP );
-        SetPaintTransparent( true );
-        SetBackground();
-    }
-    else
-        SetBackground( Wallpaper( rStyleSettings.GetHelpColor() ) );
-    if( rStyleSettings.GetHelpColor().IsDark() )
-        SetLineColor( COL_WHITE );
-    else
-        SetLineColor( COL_BLACK );
-    SetFillColor();
-
-    if( mnStyle & QUICKHELP_BIDI_RTL )
-    {
-        ComplexTextLayoutMode nLayoutMode = GetLayoutMode();
-        nLayoutMode |= TEXT_LAYOUT_BIDI_RTL | TEXT_LAYOUT_TEXTORIGIN_LEFT;
+        ComplexTextLayoutFlags nLayoutMode = GetLayoutMode();
+        nLayoutMode |= ComplexTextLayoutFlags::BiDiRtl | ComplexTextLayoutFlags::TextOriginLeft;
         SetLayoutMode( nLayoutMode );
     }
     SetHelpText( rText );
@@ -289,33 +278,68 @@ HelpTextWindow::HelpTextWindow( vcl::Window* pParent, const OUString& rText, sal
     if ( pSVData->maHelpData.mbSetKeyboardHelp )
         pSVData->maHelpData.mbKeyboardHelp = true;
 
+
+    maShowTimer.SetInvokeHandler( LINK( this, HelpTextWindow, TimerHdl ) );
+    maShowTimer.SetDebugName( "vcl::HelpTextWindow maShowTimer" );
+
     const HelpSettings& rHelpSettings = pParent->GetSettings().GetHelpSettings();
-    maShowTimer.SetTimeoutHdl( LINK( this, HelpTextWindow, TimerHdl ) );
-    maHideTimer.SetTimeoutHdl( LINK( this, HelpTextWindow, TimerHdl ) );
     maHideTimer.SetTimeout( rHelpSettings.GetTipTimeout() );
+    maHideTimer.SetInvokeHandler( LINK( this, HelpTextWindow, TimerHdl ) );
+    maHideTimer.SetDebugName( "vcl::HelpTextWindow maHideTimer" );
+}
+
+void HelpTextWindow::ApplySettings(vcl::RenderContext& rRenderContext)
+{
+    const StyleSettings& rStyleSettings = rRenderContext.GetSettings().GetStyleSettings();
+    SetPointFont(rRenderContext, rStyleSettings.GetHelpFont());
+    rRenderContext.SetTextColor(rStyleSettings.GetHelpTextColor());
+    rRenderContext.SetTextAlign(ALIGN_TOP);
+
+    if (rRenderContext.IsNativeControlSupported(ControlType::Tooltip, ControlPart::Entire))
+    {
+        EnableChildTransparentMode();
+        SetParentClipMode(ParentClipMode::NoClip);
+        SetPaintTransparent(true);
+        rRenderContext.SetBackground();
+    }
+    else
+        rRenderContext.SetBackground(Wallpaper(rStyleSettings.GetHelpColor()));
+
+    if (rStyleSettings.GetHelpColor().IsDark())
+        rRenderContext.SetLineColor(COL_WHITE);
+    else
+        rRenderContext.SetLineColor(COL_BLACK);
+    rRenderContext.SetFillColor();
 }
 
 HelpTextWindow::~HelpTextWindow()
+{
+    disposeOnce();
+}
+
+void HelpTextWindow::dispose()
 {
     maShowTimer.Stop();
     maHideTimer.Stop();
 
     if( this == ImplGetSVData()->maHelpData.mpHelpWin )
-        ImplGetSVData()->maHelpData.mpHelpWin = NULL;
+        ImplGetSVData()->maHelpData.mpHelpWin = nullptr;
+    FloatingWindow::dispose();
 }
 
 void HelpTextWindow::SetHelpText( const OUString& rHelpText )
 {
     maHelpText = rHelpText;
+    ApplySettings(*this);
     if ( mnHelpWinStyle == HELPWINSTYLE_QUICK && maHelpText.getLength() < HELPTEXTMAXLEN)
     {
         Size aSize;
         aSize.Height() = GetTextHeight();
-        if ( mnStyle & QUICKHELP_CTRLTEXT )
+        if ( mnStyle & QuickHelpFlags::CtrlText )
             aSize.Width() = GetCtrlTextWidth( maHelpText );
         else
             aSize.Width() = GetTextWidth( maHelpText );
-        maTextRect = Rectangle( Point( HELPTEXTMARGIN_QUICK, HELPTEXTMARGIN_QUICK ), aSize );
+        maTextRect = tools::Rectangle( Point( HELPTEXTMARGIN_QUICK, HELPTEXTMARGIN_QUICK ), aSize );
     }
     else // HELPWINSTYLE_BALLOON
     {
@@ -327,12 +351,12 @@ void HelpTextWindow::SetHelpText( const OUString& rHelpText )
         OUString aXXX = aBuf.makeStringAndClear();
         long nWidth = GetTextWidth( aXXX );
         Size aTmpSize( nWidth, 0x7FFFFFFF );
-        Rectangle aTry1( aTmpPoint, aTmpSize );
-        sal_uInt16 nDrawFlags = TEXT_DRAW_MULTILINE | TEXT_DRAW_WORDBREAK |
-                            TEXT_DRAW_LEFT | TEXT_DRAW_TOP;
-        if ( mnStyle & QUICKHELP_CTRLTEXT )
-            nDrawFlags |= TEXT_DRAW_MNEMONIC;
-        Rectangle aTextRect = GetTextRect( aTry1, maHelpText, nDrawFlags );
+        tools::Rectangle aTry1( aTmpPoint, aTmpSize );
+        DrawTextFlags nDrawFlags = DrawTextFlags::MultiLine | DrawTextFlags::WordBreak |
+                            DrawTextFlags::Left | DrawTextFlags::Top;
+        if ( mnStyle & QuickHelpFlags::CtrlText )
+            nDrawFlags |= DrawTextFlags::Mnemonic;
+        tools::Rectangle aTextRect = GetTextRect( aTry1, maHelpText, nDrawFlags );
 
         // get a better width later...
         maTextRect = aTextRect;
@@ -347,62 +371,58 @@ void HelpTextWindow::SetHelpText( const OUString& rHelpText )
 
 void HelpTextWindow::ImplShow()
 {
-    ImplDelData aDogTag( this );
-    Show( true, SHOW_NOACTIVATE );
-    if( !aDogTag.IsDead() )
+    VclPtr<HelpTextWindow> xWindow( this );
+    Show( true, ShowFlags::NoActivate );
+    if( !xWindow->IsDisposed() )
     Update();
 }
 
-void HelpTextWindow::Paint( const Rectangle& )
+void HelpTextWindow::Paint( vcl::RenderContext& rRenderContext, const tools::Rectangle& )
 {
     // paint native background
     bool bNativeOK = false;
-    if ( IsNativeControlSupported( CTRL_TOOLTIP, PART_ENTIRE_CONTROL ) )
+    if (rRenderContext.IsNativeControlSupported(ControlType::Tooltip, ControlPart::Entire))
     {
-        // #i46472# workaround gcc3.3 temporary problem
-        Rectangle aCtrlRegion( Point( 0, 0 ), GetOutputSizePixel() );
-        ImplControlValue    aControlValue;
-        bNativeOK = DrawNativeControl( CTRL_TOOLTIP, PART_ENTIRE_CONTROL, aCtrlRegion,
-                                       0, aControlValue, OUString() );
+        tools::Rectangle aCtrlRegion(Point(0, 0), GetOutputSizePixel());
+        ImplControlValue aControlValue;
+        bNativeOK = rRenderContext.DrawNativeControl(ControlType::Tooltip, ControlPart::Entire, aCtrlRegion,
+                                                     ControlState::NONE, aControlValue, OUString());
     }
 
     // paint text
-    if ( mnHelpWinStyle == HELPWINSTYLE_QUICK && maHelpText.getLength() < HELPTEXTMAXLEN)
+    if (mnHelpWinStyle == HELPWINSTYLE_QUICK && maHelpText.getLength() < HELPTEXTMAXLEN)
     {
-        if ( mnStyle & QUICKHELP_CTRLTEXT )
-            DrawCtrlText( maTextRect.TopLeft(), maHelpText );
+        if ( mnStyle & QuickHelpFlags::CtrlText )
+            rRenderContext.DrawCtrlText(maTextRect.TopLeft(), maHelpText);
         else
-            DrawText( maTextRect.TopLeft(), maHelpText );
+            rRenderContext.DrawText(maTextRect.TopLeft(), maHelpText);
     }
     else // HELPWINSTYLE_BALLOON
     {
-        sal_uInt16 nDrawFlags = TEXT_DRAW_MULTILINE|TEXT_DRAW_WORDBREAK|
-                                TEXT_DRAW_LEFT|TEXT_DRAW_TOP;
-        if ( mnStyle & QUICKHELP_CTRLTEXT )
-            nDrawFlags |= TEXT_DRAW_MNEMONIC;
-        DrawText( maTextRect, maHelpText, nDrawFlags );
+        DrawTextFlags nDrawFlags = DrawTextFlags::MultiLine|DrawTextFlags::WordBreak|
+                                DrawTextFlags::Left|DrawTextFlags::Top;
+        if (mnStyle & QuickHelpFlags::CtrlText)
+            nDrawFlags |= DrawTextFlags::Mnemonic;
+        rRenderContext.DrawText(maTextRect, maHelpText, nDrawFlags);
     }
 
     // border
-    if( ! bNativeOK )
+    if (!bNativeOK)
     {
         Size aSz = GetOutputSizePixel();
-#ifdef USE_JAVA
-        Color aOldColor( GetLineColor() );
-        SetLineColor( ( COL_LIGHTGRAY ) );
-#endif	// USE_JAVA
-        DrawRect( Rectangle( Point(), aSz ) );
-#ifdef USE_JAVA
-        SetLineColor( aOldColor );
-#endif	// USE_JAVA
-        if ( mnHelpWinStyle == HELPWINSTYLE_BALLOON )
+        rRenderContext.DrawRect(tools::Rectangle(Point(), aSz));
+        if (mnHelpWinStyle == HELPWINSTYLE_BALLOON)
         {
             aSz.Width() -= 2;
             aSz.Height() -= 2;
-            Color aColor( GetLineColor() );
-            SetLineColor( ( COL_GRAY ) );
-            DrawRect( Rectangle( Point( 1, 1 ), aSz ) );
-            SetLineColor( aColor );
+            Color aColor(rRenderContext.GetLineColor());
+#ifdef USE_JAVA
+            rRenderContext.SetLineColor(COL_LIGHTGRAY);
+#else	// USE_JAVA
+            rRenderContext.SetLineColor(COL_GRAY);
+#endif	// USE_JAVA
+            rRenderContext.DrawRect(tools::Rectangle(Point(1, 1), aSz));
+            rRenderContext.SetLineColor(aColor);
         }
     }
 }
@@ -432,7 +452,7 @@ void HelpTextWindow::ShowHelp( sal_uInt16 nDelayMode )
     maShowTimer.Start();
 }
 
-IMPL_LINK( HelpTextWindow, TimerHdl, Timer*, pTimer)
+IMPL_LINK( HelpTextWindow, TimerHdl, Timer*, pTimer, void)
 {
     if ( pTimer == &maShowTimer )
     {
@@ -447,11 +467,9 @@ IMPL_LINK( HelpTextWindow, TimerHdl, Timer*, pTimer)
     }
     else
     {
-        DBG_ASSERT( pTimer == &maHideTimer, "HelpTextWindow::TimerHdl with bad Timer" );
+        SAL_WARN_IF( pTimer != &maHideTimer, "vcl", "HelpTextWindow::TimerHdl with bad Timer" );
           ImplDestroyHelpWindow( true );
     }
-
-    return 1;
 }
 
 Size HelpTextWindow::CalcOutSize() const
@@ -473,31 +491,30 @@ OUString HelpTextWindow::GetText() const
     return maHelpText;
 }
 
-::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible > HelpTextWindow::CreateAccessible()
-{
-    return FloatingWindow::CreateAccessible();
-}
-
-void ImplShowHelpWindow( vcl::Window* pParent, sal_uInt16 nHelpWinStyle, sal_uInt16 nStyle,
+void ImplShowHelpWindow( vcl::Window* pParent, sal_uInt16 nHelpWinStyle, QuickHelpFlags nStyle,
                          const OUString& rHelpText, const OUString& rStatusText,
-                         const Point& rScreenPos, const Rectangle* pHelpArea )
+                         const Point& rScreenPos, const tools::Rectangle& rHelpArea )
 {
+    if (pParent->ImplGetFrame()->ShowTooltip(rHelpText, rHelpArea))
+    {
+        //tooltips are handled natively, return early
+        return;
+    }
+
     ImplSVData* pSVData = ImplGetSVData();
 
     if (rHelpText.isEmpty() && !pSVData->maHelpData.mbRequestingHelp)
         return;
 
-    HelpTextWindow* pHelpWin = pSVData->maHelpData.mpHelpWin;
+    VclPtr<HelpTextWindow> pHelpWin = pSVData->maHelpData.mpHelpWin;
     sal_uInt16 nDelayMode = HELPDELAY_NORMAL;
     if ( pHelpWin )
     {
-        DBG_ASSERT( pHelpWin != pParent, "HelpInHelp ?!" );
+        SAL_WARN_IF( pHelpWin == pParent, "vcl", "HelpInHelp ?!" );
 
         if  (   (   ( pHelpWin->GetHelpText() != rHelpText )
                 ||  ( pHelpWin->GetWinStyle() != nHelpWinStyle )
-                ||  (   pHelpArea
-                    &&  ( pHelpWin->GetHelpArea() != *pHelpArea )
-                    )
+                ||  ( pHelpWin->GetHelpArea() != rHelpArea )
                 )
             &&  pSVData->maHelpData.mbRequestingHelp
             )
@@ -507,22 +524,22 @@ void ImplShowHelpWindow( vcl::Window* pParent, sal_uInt16 nHelpWinStyle, sal_uIn
             bool bWasVisible = pHelpWin->IsVisible();
             if ( bWasVisible )
                 nDelayMode = HELPDELAY_NONE; // display it quickly if we were already in quick help mode
-            pHelpWin = NULL;
+            pHelpWin = nullptr;
             ImplDestroyHelpWindow( bWasVisible );
         }
         else
         {
             bool const bTextChanged = rHelpText != pHelpWin->GetHelpText();
-            if ( bTextChanged || ( ( nStyle & QUICKHELP_FORCE_REPOSITION ) != 0 ) )
+            if (bTextChanged)
             {
                 vcl::Window * pWindow = pHelpWin->GetParent()->ImplGetFrameWindow();
-                Rectangle aInvRect( pHelpWin->GetWindowExtentsRelative( pWindow ) );
+                tools::Rectangle aInvRect( pHelpWin->GetWindowExtentsRelative( pWindow ) );
                 if( pHelpWin->IsVisible() )
                     pWindow->Invalidate( aInvRect );
 
                 pHelpWin->SetHelpText( rHelpText );
                 // approach mouse position
-                ImplSetHelpWindowPos( pHelpWin, nHelpWinStyle, nStyle, rScreenPos, pHelpArea );
+                ImplSetHelpWindowPos( pHelpWin, nHelpWinStyle, nStyle, rScreenPos, rHelpArea );
                 if( pHelpWin->IsVisible() )
                     pHelpWin->Invalidate();
             }
@@ -531,23 +548,21 @@ void ImplShowHelpWindow( vcl::Window* pParent, sal_uInt16 nHelpWinStyle, sal_uIn
 
     if (!pHelpWin && !rHelpText.isEmpty())
     {
-        sal_uLong nCurTime = tools::Time::GetSystemTicks();
+        sal_uInt64 nCurTime = tools::Time::GetSystemTicks();
         if  (   ( ( nCurTime - pSVData->maHelpData.mnLastHelpHideTime ) < pParent->GetSettings().GetHelpSettings().GetTipDelay() )
-            ||  ( ( nStyle & QUICKHELP_NO_DELAY ) != 0 )
+            ||  ( nStyle & QuickHelpFlags::NoDelay )
             )
             nDelayMode = HELPDELAY_NONE;
 
-        DBG_ASSERT( !pHelpWin, "Noch ein HelpWin ?!" );
-        pHelpWin = new HelpTextWindow( pParent, rHelpText, nHelpWinStyle, nStyle );
+        pHelpWin = VclPtr<HelpTextWindow>::Create( pParent, rHelpText, nHelpWinStyle, nStyle );
         pSVData->maHelpData.mpHelpWin = pHelpWin;
         pHelpWin->SetStatusText( rStatusText );
-        if ( pHelpArea )
-            pHelpWin->SetHelpArea( *pHelpArea );
+        pHelpWin->SetHelpArea( rHelpArea );
 
         //  positioning
         Size aSz = pHelpWin->CalcOutSize();
         pHelpWin->SetOutputSizePixel( aSz );
-        ImplSetHelpWindowPos( pHelpWin, nHelpWinStyle, nStyle, rScreenPos, pHelpArea );
+        ImplSetHelpWindowPos( pHelpWin, nHelpWinStyle, nStyle, rScreenPos, rHelpArea );
         // if not called from Window::RequestHelp, then without delay...
         if ( !pSVData->maHelpData.mbRequestingHelp )
             nDelayMode = HELPDELAY_NONE;
@@ -558,39 +573,39 @@ void ImplShowHelpWindow( vcl::Window* pParent, sal_uInt16 nHelpWinStyle, sal_uIn
 void ImplDestroyHelpWindow( bool bUpdateHideTime )
 {
     ImplSVData* pSVData = ImplGetSVData();
-    HelpTextWindow* pHelpWin = pSVData->maHelpData.mpHelpWin;
+    VclPtr<HelpTextWindow> pHelpWin = pSVData->maHelpData.mpHelpWin;
     if ( pHelpWin )
     {
 #ifndef USE_JAVA
         vcl::Window * pWindow = pHelpWin->GetParent()->ImplGetFrameWindow();
         // find out screen area covered by system help window
-        Rectangle aInvRect( pHelpWin->GetWindowExtentsRelative( pWindow ) );
+        tools::Rectangle aInvRect( pHelpWin->GetWindowExtentsRelative( pWindow ) );
         if( pHelpWin->IsVisible() )
             pWindow->Invalidate( aInvRect );
 #endif	// !USE_JAVA
-        pSVData->maHelpData.mpHelpWin = NULL;
+        pSVData->maHelpData.mpHelpWin = nullptr;
         pSVData->maHelpData.mbKeyboardHelp = false;
         pHelpWin->Hide();
-        delete pHelpWin;
+        pHelpWin.disposeAndClear();
         if( bUpdateHideTime )
             pSVData->maHelpData.mnLastHelpHideTime = tools::Time::GetSystemTicks();
     }
 }
 
-void ImplSetHelpWindowPos( vcl::Window* pHelpWin, sal_uInt16 nHelpWinStyle, sal_uInt16 nStyle,
-                           const Point& rPos, const Rectangle* pHelpArea )
+void ImplSetHelpWindowPos( vcl::Window* pHelpWin, sal_uInt16 nHelpWinStyle, QuickHelpFlags nStyle,
+                           const Point& rPos, const tools::Rectangle& rHelpArea )
 {
     Point       aPos = rPos;
     Size        aSz = pHelpWin->GetSizePixel();
-    Rectangle   aScreenRect = pHelpWin->ImplGetFrameWindow()->GetDesktopRectPixel();
+    tools::Rectangle   aScreenRect = pHelpWin->ImplGetFrameWindow()->GetDesktopRectPixel();
     aPos = pHelpWin->GetParent()->ImplGetFrameWindow()->OutputToAbsoluteScreenPixel( aPos );
     // get mouse screen coords
-    Point mPos( pHelpWin->GetParent()->ImplGetFrameWindow()->GetPointerPosPixel() );
-    mPos = pHelpWin->GetParent()->ImplGetFrameWindow()->OutputToAbsoluteScreenPixel( mPos );
+    Point aMousePos( pHelpWin->GetParent()->ImplGetFrameWindow()->GetPointerPosPixel() );
+    aMousePos = pHelpWin->GetParent()->ImplGetFrameWindow()->OutputToAbsoluteScreenPixel( aMousePos );
 
     if ( nHelpWinStyle == HELPWINSTYLE_QUICK )
     {
-        if ( !(nStyle & QUICKHELP_NOAUTOPOS) )
+        if ( !(nStyle & QuickHelpFlags::NoAutoPos) )
         {
             long nScreenHeight = aScreenRect.GetHeight();
             aPos.X() -= 4;
@@ -604,47 +619,44 @@ void ImplSetHelpWindowPos( vcl::Window* pHelpWin, sal_uInt16 nHelpWinStyle, sal_
     {
         // If it's the mouse position, move the window slightly
         // so the mouse pointer does not cover it
-        if ( aPos == mPos )
+        if ( aPos == aMousePos )
         {
             aPos.X() += 12;
             aPos.Y() += 16;
         }
     }
 
-    if ( nStyle & QUICKHELP_NOAUTOPOS )
+    if ( nStyle & QuickHelpFlags::NoAutoPos )
     {
-        if ( pHelpArea )
-        {
-            // convert help area to screen coords
-            Rectangle devHelpArea(
-                pHelpWin->GetParent()->ImplGetFrameWindow()->OutputToAbsoluteScreenPixel( pHelpArea->TopLeft() ),
-                pHelpWin->GetParent()->ImplGetFrameWindow()->OutputToAbsoluteScreenPixel( pHelpArea->BottomRight() ) );
+        // convert help area to screen coords
+        tools::Rectangle devHelpArea(
+            pHelpWin->GetParent()->ImplGetFrameWindow()->OutputToAbsoluteScreenPixel( rHelpArea.TopLeft() ),
+            pHelpWin->GetParent()->ImplGetFrameWindow()->OutputToAbsoluteScreenPixel( rHelpArea.BottomRight() ) );
 
-            // Welche Position vom Rechteck?
-            aPos = devHelpArea.Center();
+        // Welche Position vom Rechteck?
+        aPos = devHelpArea.Center();
 
-            if ( nStyle & QUICKHELP_LEFT )
-                aPos.X() = devHelpArea.Left();
-            else if ( nStyle & QUICKHELP_RIGHT )
-                aPos.X() = devHelpArea.Right();
+        if ( nStyle & QuickHelpFlags::Left )
+            aPos.X() = devHelpArea.Left();
+        else if ( nStyle & QuickHelpFlags::Right )
+            aPos.X() = devHelpArea.Right();
 
-            if ( nStyle & QUICKHELP_TOP )
-                aPos.Y() = devHelpArea.Top();
-            else if ( nStyle & QUICKHELP_BOTTOM )
-                aPos.Y() = devHelpArea.Bottom();
-        }
+        if ( nStyle & QuickHelpFlags::Top )
+            aPos.Y() = devHelpArea.Top();
+        else if ( nStyle & QuickHelpFlags::Bottom )
+            aPos.Y() = devHelpArea.Bottom();
 
         // which direction?
-        if ( nStyle & QUICKHELP_LEFT )
+        if ( nStyle & QuickHelpFlags::Left )
             ;
-        else if ( nStyle & QUICKHELP_RIGHT )
+        else if ( nStyle & QuickHelpFlags::Right )
             aPos.X() -= aSz.Width();
         else
             aPos.X() -= aSz.Width()/2;
 
-        if ( nStyle & QUICKHELP_TOP )
+        if ( nStyle & QuickHelpFlags::Top )
             ;
-        else if ( nStyle & QUICKHELP_BOTTOM )
+        else if ( nStyle & QuickHelpFlags::Bottom )
             aPos.Y() -= aSz.Height();
         else
             aPos.Y() -= aSz.Height()/2;
@@ -659,7 +671,7 @@ void ImplSetHelpWindowPos( vcl::Window* pHelpWin, sal_uInt16 nHelpWinStyle, sal_
     else if ( ( aPos.Y() + aSz.Height() ) > aScreenRect.Bottom() )
         aPos.Y() = aScreenRect.Bottom() - aSz.Height();
 
-    if( ! (nStyle & QUICKHELP_NOEVADEPOINTER) )
+    if( ! (nStyle & QuickHelpFlags::NoEvadePointer) )
     {
         /* the remark below should be obsolete by now as the helpwindow should
         not be focusable, leaving it as a hint. However it is sensible in most
@@ -668,16 +680,16 @@ void ImplSetHelpWindowPos( vcl::Window* pHelpWin, sal_uInt16 nHelpWinStyle, sal_
         // the popup must not appear under the mouse
         // otherwise it would directly be closed due to a focus change...
         */
-        Rectangle aHelpRect( aPos, aSz );
-        if( aHelpRect.IsInside( mPos ) )
+        tools::Rectangle aHelpRect( aPos, aSz );
+        if( aHelpRect.IsInside( aMousePos ) )
         {
             Point delta(2,2);
-            Point pSize( aSz.Width(), aSz.Height() );
-            Point pTest( mPos - pSize - delta );
-            if( pTest.X() > aScreenRect.Left() &&  pTest.Y() > aScreenRect.Top() )
-                aPos = pTest;
+            Point aSize( aSz.Width(), aSz.Height() );
+            Point aTest( aMousePos - aSize - delta );
+            if( aTest.X() > aScreenRect.Left() && aTest.Y() > aScreenRect.Top() )
+                aPos = aTest;
             else
-                aPos = mPos + delta;
+                aPos = aMousePos + delta;
         }
     }
 
