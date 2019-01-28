@@ -62,11 +62,11 @@ public:
 							JavaSalVirtualDevice();
 	virtual					~JavaSalVirtualDevice();
 
-	virtual SalGraphics*	AcquireGraphics() SAL_OVERRIDE;
-	virtual void			ReleaseGraphics( SalGraphics* pGraphics ) SAL_OVERRIDE;
-	virtual bool			SetSize( long nNewDX, long nNewDY ) SAL_OVERRIDE;
-	virtual long			GetWidth() const SAL_OVERRIDE;
-	virtual long			GetHeight() const SAL_OVERRIDE;
+	virtual SalGraphics*	AcquireGraphics() override;
+	virtual void			ReleaseGraphics( SalGraphics* pGraphics ) override;
+	virtual bool			SetSize( long nNewDX, long nNewDY ) override;
+	virtual long			GetWidth() const override;
+	virtual long			GetHeight() const override;
 };
 
 #endif // _SV_SALVD_H

@@ -60,17 +60,17 @@ public:
 							JavaSalMenu();
 	virtual					~JavaSalMenu();
 
-	virtual bool			VisibleMenuBar() SAL_OVERRIDE;
-	virtual void			InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos ) SAL_OVERRIDE;
-	virtual void			RemoveItem( unsigned nPos ) SAL_OVERRIDE;
-	virtual void			SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsigned nPos ) SAL_OVERRIDE;
-	virtual void			SetFrame( const SalFrame* pFrame ) SAL_OVERRIDE;
-	virtual void			CheckItem( unsigned nPos, bool bCheck ) SAL_OVERRIDE;
-	virtual void			EnableItem( unsigned nPos, bool bEnable ) SAL_OVERRIDE;
-	virtual void			SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const OUString& rText ) SAL_OVERRIDE;
-	virtual void			SetItemImage( unsigned nPos, SalMenuItem* pSalMenuItem, const Image& rImage ) SAL_OVERRIDE;
-	virtual void			SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const vcl::KeyCode& rKeyCode, const OUString& rKeyName ) SAL_OVERRIDE;
-	virtual void			GetSystemMenuData( SystemMenuData* pData ) SAL_OVERRIDE;
+	virtual bool			VisibleMenuBar() override;
+	virtual void			InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos ) override;
+	virtual void			RemoveItem( unsigned nPos ) override;
+	virtual void			SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsigned nPos ) override;
+	virtual void			SetFrame( const SalFrame* pFrame ) override;
+	virtual void			CheckItem( unsigned nPos, bool bCheck ) override;
+	virtual void			EnableItem( unsigned nPos, bool bEnable ) override;
+	virtual void			SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const OUString& rText ) override;
+	virtual void			SetItemImage( unsigned nPos, SalMenuItem* pSalMenuItem, const Image& rImage ) override;
+	virtual void			SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const vcl::KeyCode& rKeyCode, const OUString& rKeyName ) override;
+	virtual void			GetSystemMenuData( SystemMenuData* pData ) override;
 };
 
 class JavaSalMenuItem : public SalMenuItem

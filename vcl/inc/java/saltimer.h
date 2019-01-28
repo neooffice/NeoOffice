@@ -48,8 +48,8 @@ public:
 							JavaSalTimer();
 	virtual					~JavaSalTimer();
 
-	virtual void			Start( sal_uLong nMS ) SAL_OVERRIDE;
-	virtual void			Stop() SAL_OVERRIDE;
+	virtual void			Start( sal_uLong nMS ) override;
+	virtual void			Stop() override;
 };
 
 #endif // _SV_SALTIMER_H
