@@ -66,21 +66,14 @@ unsigned int JavaSalSystem::GetDisplayBuiltInScreen()
 
 // -----------------------------------------------------------------------
 
-Rectangle JavaSalSystem::GetDisplayScreenPosSizePixel( unsigned int nScreen )
+tools::Rectangle JavaSalSystem::GetDisplayScreenPosSizePixel( unsigned int nScreen )
 {
 	return JavaSalFrame::GetScreenBounds( nScreen, sal_False );
 }
 
 // -----------------------------------------------------------------------
 
-OUString JavaSalSystem::GetDisplayScreenName( unsigned int nScreen )
-{
-	return OUString::number( (sal_Int32)nScreen );
-}
-
-// -----------------------------------------------------------------------
-
-int JavaSalSystem::ShowNativeMessageBox( const OUString& /* rTitle */, const OUString& /* rMessage */, int /* nButtonCombination */, int /* nDefaultButton */, bool /* bUseResources */ )
+int JavaSalSystem::ShowNativeMessageBox( const OUString& /* rTitle */, const OUString& /* rMessage */ )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalSystem::ShowNativeMessageBox not implemented\n" );
