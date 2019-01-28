@@ -111,10 +111,10 @@ public:
     bool        GetNextPos( int* nCharPos, bool* bRTL )
                     { return maRuns.GetNextPos( nCharPos, bRTL ); }
     bool        GetNextRun( int* nMinRunPos, int* nEndRunPos, bool* bRTL );
-#ifdef USE_JAVA
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
     void        NeedFallback( int nCharPos, bool bRTL )
                     { maFallbackRuns.AddPos( nCharPos, bRTL ); }
-#endif	// USE_JAVA
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
     void        NeedFallback( int nMinRunPos, int nEndRunPos, bool bRTL )
                     { maFallbackRuns.AddRun( nMinRunPos, nEndRunPos, bRTL ); }
     // methods used by BiDi and glyph fallback
