@@ -15,13 +15,6 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
-  
- *   Modified January 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 3.3
- *   of the Mozilla Public License, v. 2.0.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef INCLUDED_VCL_OUTDEV_HXX
@@ -145,9 +138,9 @@ enum class SalLayoutFlags
     EnableLigatures         = 0x0200,
     SubstituteDigits        = 0x0400,
     KashidaJustification    = 0x0800,
-#ifdef USE_JAVA
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
     DisableGlyphProcessing  = 0x1000,
-#endif	// USE_JAVA
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
     ForFallback             = 0x2000,
 };
 namespace o3tl
