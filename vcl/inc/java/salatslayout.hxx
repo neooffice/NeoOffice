@@ -36,9 +36,8 @@
 #ifndef _SV_SALATSLAYOUT_HXX
 #define _SV_SALATSLAYOUT_HXX
 
+#include <unordered_map>
 #include <vector>
-
-#include <boost/unordered_map.hpp>
 
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
@@ -67,7 +66,7 @@ class SalATSLayout : public GenericSalLayout
 	::std::vector< ImplATSLayoutData* >	maLayoutData;
 	::std::vector< int >	maLayoutMinCharPos;
 	ImplATSLayoutData*	mpKashidaLayoutData;
-	::boost::unordered_map< sal_Unicode, ImplATSLayoutData* >	maMirroredLayoutData;
+	::std::unordered_map< sal_Unicode, ImplATSLayoutData* >	maMirroredLayoutData;
 	DeviceCoordinate	mfOrigWidth;
 	float				mfGlyphScaleX;
 

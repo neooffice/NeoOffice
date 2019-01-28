@@ -36,7 +36,7 @@
 #ifndef _SV_SALGDI_H
 #define _SV_SALGDI_H
 
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
@@ -218,8 +218,8 @@ public:
 	JavaSalVirtualDevice*	mpVirDev;
 	JavaPhysicalFontFace*	mpFontData;
 	JavaImplFont*			mpFont;
-	::boost::unordered_map< int, JavaImplFont* >	maFallbackFonts;
-	::boost::unordered_map< int, Size >	maFallbackFontSizes;
+	::std::unordered_map< int, JavaImplFont* >	maFallbackFonts;
+	::std::unordered_map< int, Size >	maFallbackFontSizes;
 	ImplLayoutRuns			maFallbackRuns;
 	FontFamily				mnFontFamily;
 	FontWeight				mnFontWeight;

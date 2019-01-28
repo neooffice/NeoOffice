@@ -38,8 +38,8 @@
 
 #include <list>
 #include <map>
+#include <unordered_map>
 
-#include <boost/unordered_map.hpp>
 #include <osl/conditn.hxx>
 
 class JavaPhysicalFontFace;
@@ -66,12 +66,12 @@ public:
 	sal_uLong				mnTimerInterval;
 	OUString				maDefaultPrinter;
 	::std::map< OUString, JavaPhysicalFontFace* >	maFontNameMapping;
-	::boost::unordered_map< OUString, JavaPhysicalFontFace*, OUStringHash >	maJavaFontNameMapping;
-	::boost::unordered_map< OUString, sal_IntPtr, OUStringHash >	maJavaNativeFontMapping;
-	::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >	maNativeFontMapping;
-	::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >	maPlainFamilyNativeFontMapping;
-	::boost::unordered_map< sal_IntPtr, ::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* > >	maItalicNativeFontMapping;
-	::boost::unordered_map< sal_IntPtr, ::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* > >	maUnitalicNativeFontMapping;
+	::std::unordered_map< OUString, JavaPhysicalFontFace*, OUStringHash >	maJavaFontNameMapping;
+	::std::unordered_map< OUString, sal_IntPtr, OUStringHash >	maJavaNativeFontMapping;
+	::std::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >	maNativeFontMapping;
+	::std::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >	maPlainFamilyNativeFontMapping;
+	::std::unordered_map< sal_IntPtr, ::std::unordered_map< sal_IntPtr, JavaPhysicalFontFace* > >	maItalicNativeFontMapping;
+	::std::unordered_map< sal_IntPtr, ::std::unordered_map< sal_IntPtr, JavaPhysicalFontFace* > >	maUnitalicNativeFontMapping;
 	JavaSalFrame*			mpPresentationFrame;
 	::osl::Condition		maNativeEventCondition;
 	bool					mbInNativeModalSheet;
