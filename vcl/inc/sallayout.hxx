@@ -387,7 +387,11 @@ protected:
     virtual void    DropGlyph( int nStart ) override;
     virtual void    Simplify( bool bIsBase ) override;
 
+#ifdef NO_LIBO_4_4_GLYPH_FLAGS
     virtual bool    GetCharWidths(DeviceCoordinate* pCharWidths) const = 0;
+#else	// NO_LIBO_4_4_GLYPH_FLAGS
+    virtual bool    GetCharWidths(DeviceCoordinate* pCharWidths) const;
+#endif	// NO_LIBO_4_4_GLYPH_FLAGS
 
     std::vector<GlyphItem>     m_GlyphItems;
 

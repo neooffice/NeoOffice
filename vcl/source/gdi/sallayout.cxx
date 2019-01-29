@@ -788,6 +788,84 @@ void GenericSalLayout::AppendGlyph( const GlyphItem& rGlyphItem )
     m_GlyphItems.push_back(rGlyphItem);
 }
 
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
+
+bool GenericSalLayout::GetCharWidths( DeviceCoordinate* pCharWidths ) const
+{
+    // initialize character extents buffer
+    int nCharCount = mnEndCharPos - mnMinCharPos;
+    for( int n = 0; n < nCharCount; ++n )
+        pCharWidths[n] = 0;
+
+    // determine cluster extents
+    for( std::vector<GlyphItem>::const_iterator pG = m_GlyphItems.begin(), end = m_GlyphItems.end(); pG != end ; ++pG)
+    {
+        // use cluster start to get char index
+        if( !pG->IsClusterStart() )
+            continue;
+
+        int n = pG->mnCharPos;
+        if( n >= mnEndCharPos )
+            continue;
+        n -= mnMinCharPos;
+        if( n < 0 )
+            continue;
+
+        // left glyph in cluster defines default extent
+        long nXPosMin = pG->maLinearPos.X();
+        long nXPosMax = nXPosMin + pG->mnNewWidth;
+
+        // calculate right x-position for this glyph cluster
+        // break if no more glyphs in layout
+        // break at next glyph cluster start
+        while( (pG+1 != end) && !pG[1].IsClusterStart() )
+        {
+            // advance to next glyph in cluster
+            ++pG;
+
+            if( pG->IsDiacritic() )
+                continue; // ignore diacritics
+            // get leftmost x-extent of this glyph
+            long nXPos = pG->maLinearPos.X();
+            if( nXPosMin > nXPos )
+                nXPosMin = nXPos;
+
+            // get rightmost x-extent of this glyph
+            nXPos += pG->mnNewWidth;
+            if( nXPosMax < nXPos )
+                nXPosMax = nXPos;
+        }
+
+        // when the current cluster overlaps with the next one assume
+        // rightmost cluster edge is the leftmost edge of next cluster
+        // for clusters that do not have x-sorted glyphs
+        // TODO: avoid recalculation of left bound in next cluster iteration
+        for( std::vector<GlyphItem>::const_iterator pN = pG; ++pN != end; )
+        {
+            if( pN->IsClusterStart() )
+                break;
+            if( pN->IsDiacritic() )
+                continue;   // ignore diacritics
+            if( nXPosMax > pN->maLinearPos.X() )
+                nXPosMax = pN->maLinearPos.X();
+        }
+        if( nXPosMax < nXPosMin )
+            nXPosMin = nXPosMax = 0;
+
+        // character width is sum of glyph cluster widths
+        pCharWidths[n] += nXPosMax - nXPosMin;
+    }
+
+    // TODO: distribute the cluster width proportionally to the characters
+    // clusters (e.g. ligatures) correspond to more than one char index,
+    // so some character widths are still uninitialized. This is solved
+    // by setting the first charwidth of the cluster to the cluster width
+
+    return true;
+}
+
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
+
 DeviceCoordinate GenericSalLayout::FillDXArray( DeviceCoordinate* pCharWidths ) const
 {
     if( pCharWidths )
