@@ -444,6 +444,13 @@ bool JavaSalBitmap::GetSystemData( BitmapSystemData& /* rData */ )
 
 // ------------------------------------------------------------------
 
+bool JavaSalBitmap::ScalingSupported() const
+{
+	return false;
+}
+
+// ------------------------------------------------------------------
+
 bool JavaSalBitmap::Scale( const double& /* rScaleX */, const double& /* rScaleY */, BmpScaleFlag /* nScaleFlag */ )
 {
 	return false;
