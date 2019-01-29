@@ -75,10 +75,10 @@ sal_IntPtr JavaImplFont::getNativeFont()
 		SalData *pSalData = GetSalData();
 
 		OUString aPSName( getPSName() );
-		::boost::unordered_map< OUString, sal_IntPtr, OUStringHash >::iterator it = pSalData->maJavaNativeFontMapping.find( aPSName );
+		::std::unordered_map< OUString, sal_IntPtr, OUStringHash >::iterator it = pSalData->maJavaNativeFontMapping.find( aPSName );
 		if ( it == pSalData->maJavaNativeFontMapping.end() )
 		{
-			::boost::unordered_map< OUString, JavaPhysicalFontFace*, OUStringHash >::iterator jit = pSalData->maJavaFontNameMapping.find( aPSName );
+			::std::unordered_map< OUString, JavaPhysicalFontFace*, OUStringHash >::iterator jit = pSalData->maJavaFontNameMapping.find( aPSName );
 			if ( jit != pSalData->maJavaFontNameMapping.end() && jit->second->mnNativeFontID )
 			{
 				mnNativeFont = jit->second->mnNativeFontID;
@@ -87,7 +87,7 @@ sal_IntPtr JavaImplFont::getNativeFont()
 			else
 			{
 				// Fix bug 1611 by adding another search for mismatched names
-				CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aPSName.getStr(), aPSName.getLength(), kCFAllocatorNull );
+				CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, reinterpret_cast< const UniChar* >( aPSName.getStr() ), aPSName.getLength(), kCFAllocatorNull );
 				if ( aString )
 				{
 					CTFontRef aFont = CTFontCreateWithName( aString, 0, NULL );
