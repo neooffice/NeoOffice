@@ -1335,7 +1335,7 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext, CGRect aBound
 
 // -----------------------------------------------------------------------
 
-sal_uLong JavaSalGraphics::getBitmapDirectionFormat()
+ScanlineFormat JavaSalGraphics::getBitmapDirectionFormat()
 {
 	return JavaSalBitmap::GetNativeDirectionFormat();
 }

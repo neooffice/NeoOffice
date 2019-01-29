@@ -318,7 +318,7 @@ public:
 	void					copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGRect aSrcRect, CGRect aDestRect, bool bAllowXOR );
 	void					copyToContext( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGRect aSrcRect, CGRect aDestRect, bool bDestIsWindow = false, bool bDestIsUnflipped = false );
 	void					drawUndrawnNativeOps( CGContextRef aContext, CGRect aRect );
-	sal_uLong				getBitmapDirectionFormat();
+	ScanlineFormat			getBitmapDirectionFormat();
 	CGLayerRef				getLayer() { return maLayer; }
 	float					getNativeLineWidth();
 	::osl::Mutex&			getUndrawnNativeOpsMutex() { return maUndrawnNativeOpsMutex; }
