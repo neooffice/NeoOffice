@@ -149,7 +149,7 @@ struct hostent *gethostbyname_r(const char *name, struct hostent *result,
 
 void macxp_decomposeString(char *pszStr, int buflen)
 {
-    CFMutableStringRef strRef = CFStringCreateMutable (NULL, 0 );
+    CFMutableStringRef strRef = CFStringCreateMutable( nullptr, 0 );
     CFStringAppendCString( strRef, pszStr, kCFStringEncodingUTF8 );  //UTF8 is default on Mac OSX
     CFStringNormalize( strRef, kCFStringNormalizationFormD );
     CFStringGetCString( strRef, pszStr, buflen, kCFStringEncodingUTF8 );

@@ -97,7 +97,7 @@ rtl::OUString macosx_getLocale()
         CFRelease(subs);
 
         // Mac OS X will sometimes use "_" as its delimiter
-        subs = CFStringCreateArrayBySeparatingStrings(NULL, sref, CFSTR("_"));
+        subs = CFStringCreateArrayBySeparatingStrings(nullptr, sref, CFSTR("_"));
     }
 #endif	// USE_JAVA
     CFArrayGuard arrGuard(subs);
@@ -118,7 +118,7 @@ rtl::OUString macosx_getLocale()
             else if (CFStringCompare(country, CFSTR("Hant"), 0) == kCFCompareEqualTo)
                 country = CFSTR("TW");
             else
-                country = NULL;
+                country = nullptr;
         }
 
         if (country)
