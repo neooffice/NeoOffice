@@ -315,7 +315,7 @@ javaFrameworkError jfw_startVM(
             if ( !bInFallback )
             {
                 bInFallback = true;
-                if ( jfw_findAndSelectJRE( NULL ) == JFW_E_NONE )
+                if ( jfw_findAndSelectJRE( nullptr ) == JFW_E_NONE )
                     errcode = JFW_E_NO_SELECT;
                 bInFallback = false;
             }
