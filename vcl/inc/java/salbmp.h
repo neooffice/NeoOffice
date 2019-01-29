@@ -62,8 +62,8 @@ class JavaSalBitmap : public SalBitmap
 	JavaSalVirtualDevice*	mpVirDev;
 
 public:
-	static sal_uLong		Get32BitNativeFormat();
-	static sal_uLong		GetNativeDirectionFormat();
+	static ScanlineFormat	Get32BitNativeFormat();
+	static ScanlineFormat	GetNativeDirectionFormat();
 
 							JavaSalBitmap();
 	virtual					~JavaSalBitmap();
