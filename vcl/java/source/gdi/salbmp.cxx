@@ -33,7 +33,7 @@
  *
  ************************************************************************/
 
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 
 #include "java/salbmp.h"
 #include "java/saldata.hxx"
@@ -54,16 +54,16 @@ void ReleaseBitmapBufferBytePointerCallback( void* /* pInfo */, const void *pPoi
 
 // ==================================================================
 
-sal_uLong JavaSalBitmap::Get32BitNativeFormat()
+ScanlineFormat JavaSalBitmap::Get32BitNativeFormat()
 {
-	return BMP_FORMAT_32BIT_TC_BGRA;
+	return ScanlineFormat::N32BitTcBgra;
 }
 
 // ------------------------------------------------------------------
 
-sal_uLong JavaSalBitmap::GetNativeDirectionFormat()
+ScanlineFormat JavaSalBitmap::GetNativeDirectionFormat()
 {
-	return BMP_FORMAT_TOP_DOWN;
+	return ScanlineFormat::TopDown;
 }
 
 // ------------------------------------------------------------------
@@ -148,7 +148,7 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraph
 	{
 		long nWidth = maSize.Width() + ( maPoint.X() * 2 );
 		long nHeight = maSize.Height() + ( maPoint.Y() * 2 );
-		mpVirDev = (JavaSalVirtualDevice *)pInst->CreateVirtualDevice( pSrcGraphics, nWidth, nHeight, mnBitCount, NULL );
+		mpVirDev = (JavaSalVirtualDevice *)pInst->CreateVirtualDevice( pSrcGraphics, nWidth, nHeight, DeviceFormat::DEFAULT, NULL );
 		if ( mpVirDev )
 		{
 			mpGraphics = (JavaSalGraphics *)mpVirDev->AcquireGraphics();
@@ -208,23 +208,23 @@ bool JavaSalBitmap::Create( const SalBitmap& rSalBmp )
 
 	if ( bRet )
 	{
-		BitmapBuffer *pSrcBuffer = rJavaSalBmp.AcquireBuffer( BITMAP_WRITE_ACCESS );
+		BitmapBuffer *pSrcBuffer = rJavaSalBmp.AcquireBuffer( BitmapAccessMode::Write );
 		if ( pSrcBuffer )
 		{
-			BitmapBuffer *pDestBuffer = AcquireBuffer( BITMAP_READ_ACCESS );
+			BitmapBuffer *pDestBuffer = AcquireBuffer( BitmapAccessMode::Read );
 			if ( pDestBuffer && pDestBuffer->mpBits && pDestBuffer->mnScanlineSize == pSrcBuffer->mnScanlineSize && pDestBuffer->mnHeight == pSrcBuffer->mnHeight )
 			{
 				memcpy( pDestBuffer->mpBits, pSrcBuffer->mpBits, pDestBuffer->mnScanlineSize * pDestBuffer->mnHeight );
 				pDestBuffer->maColorMask = pSrcBuffer->maColorMask;
 				pDestBuffer->maPalette = pSrcBuffer->maPalette;
-				ReleaseBuffer( pDestBuffer, BITMAP_READ_ACCESS );
+				ReleaseBuffer( pDestBuffer, BitmapAccessMode::Read );
 			}
 			else
 			{
 				Destroy();
 				bRet = false;
 			}
-			rJavaSalBmp.ReleaseBuffer( pSrcBuffer, BITMAP_READ_ACCESS );
+			rJavaSalBmp.ReleaseBuffer( pSrcBuffer, BitmapAccessMode::Read );
 		}
 		else
 		{
@@ -252,7 +252,7 @@ bool JavaSalBitmap::Create( const SalBitmap& /* rSalBmp */, sal_uInt16 /* nNewBi
 
 // ------------------------------------------------------------------
 
-bool JavaSalBitmap::Create( const ::com::sun::star::uno::Reference< ::com::sun::star::rendering::XBitmapCanvas > /* xBitmapCanvas */, Size& /* rSize */, bool /** bMask */ )
+bool JavaSalBitmap::Create( const ::com::sun::star::uno::Reference< ::com::sun::star::rendering::XBitmapCanvas >& /* rBitmapCanvas */, Size& /* rSize */, bool /* bMask */ )
 {
 	return false;
 }
@@ -307,28 +307,41 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( BitmapAccessMode nMode )
 	pBuffer->mnFormat = JavaSalBitmap::GetNativeDirectionFormat();
 	if ( mnBitCount <= 1 )
 	{
-		pBuffer->mnFormat |= BMP_FORMAT_1BIT_MSB_PAL;
+		pBuffer->mnFormat |= ScanlineFormat::N1BitMsbPal;
 	}
 	else if ( mnBitCount <= 4 )
 	{
-		pBuffer->mnFormat |= BMP_FORMAT_4BIT_MSN_PAL;
+		pBuffer->mnFormat |= ScanlineFormat::N4BitMsnPal;
 	}
 	else if ( mnBitCount <= 8 )
 	{
-		pBuffer->mnFormat |= BMP_FORMAT_8BIT_PAL;
+		pBuffer->mnFormat |= ScanlineFormat::N8BitPal;
 	}
 	else if ( mnBitCount <= 16 )
 	{
-		pBuffer->mnFormat |= BMP_FORMAT_16BIT_TC_MSB_MASK;
-		pBuffer->maColorMask = ColorMask( 0x7c00, 0x03e0, 0x001f );
+		pBuffer->mnFormat |= ScanlineFormat::N16BitTcMsbMask;
+		ColorMaskElement aRedMask( 0x7c00 );
+		aRedMask.CalcMaskShift();
+		ColorMaskElement aGreenMask( 0x03e0 );
+		aGreenMask.CalcMaskShift();
+		ColorMaskElement aBlueMask( 0x001f );
+		aBlueMask.CalcMaskShift();
+		pBuffer->maColorMask = ColorMask( aRedMask, aGreenMask, aBlueMask );
 	}
 	else if ( mnBitCount <= 24 )
 	{
-		pBuffer->mnFormat |= BMP_FORMAT_24BIT_TC_RGB;
+		pBuffer->mnFormat |= ScanlineFormat::N24BitTcRgb;
 	}
 	else
 	{
 		pBuffer->mnFormat |= JavaSalBitmap::Get32BitNativeFormat();
+		ColorMaskElement aRedMask( 0x00ff0000 );
+		aRedMask.CalcMaskShift();
+		ColorMaskElement aGreenMask( 0x0000ff00 );
+		aGreenMask.CalcMaskShift();
+		ColorMaskElement aBlueMask( 0x000000ff );
+		aBlueMask.CalcMaskShift();
+		pBuffer->maColorMask = ColorMask( aRedMask, aGreenMask, aBlueMask );
 	}
 
 	pBuffer->mnWidth = maSize.Width();
@@ -378,7 +391,7 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( BitmapAccessMode nMode )
 		}
 	}
 
-	if ( nMode == BITMAP_WRITE_ACCESS )
+	if ( nMode == BitmapAccessMode::Write )
 	{
 		// Release the virtual device if the bits will change
 		if ( mpVirDev )
@@ -404,7 +417,7 @@ void JavaSalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, BitmapAccessMode nMode
 {
 	if ( pBuffer )
 	{
-		if ( nMode == BITMAP_WRITE_ACCESS )
+		if ( nMode == BitmapAccessMode::Write )
 		{
 			// Save the palette
 			sal_uInt16 nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
@@ -431,21 +444,7 @@ bool JavaSalBitmap::GetSystemData( BitmapSystemData& /* rData */ )
 
 // ------------------------------------------------------------------
 
-bool JavaSalBitmap::Crop( const Rectangle& /* rRectPixel */ )
-{
-	return false;
-}
-
-// ------------------------------------------------------------------
-
-bool JavaSalBitmap::Erase( const Color& /* rFillColor */ )
-{
-	return false;
-}
-
-// ------------------------------------------------------------------
-
-bool JavaSalBitmap::Scale( const double& /* rScaleX */, const double& /* rScaleY */, sal_uInt32 /* nScaleFlag */ )
+bool JavaSalBitmap::Scale( const double& /* rScaleX */, const double& /* rScaleY */, BmpScaleFlag /* nScaleFlag */ )
 {
 	return false;
 }
