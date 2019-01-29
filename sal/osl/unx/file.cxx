@@ -844,9 +844,14 @@ static int osl_file_adjustLockFlags (const char * path, int flags)
     // that does not exist yet by stating the path's parent directory
     else if ( flags & O_CREAT )
     {
-        const char *dirpath = dirname( (char *)path );
-        if ( dirpath )
-            flags = osl_file_adjustLockFlags( dirpath, flags & ~O_CREAT ) | O_CREAT;
+        char *pathcopy = strdup( path );
+        if ( pathcopy )
+        {
+            char *dirpath = dirname_r( path, pathcopy );
+            if ( dirpath )
+                flags = osl_file_adjustLockFlags( dirpath, flags & ~O_CREAT ) | O_CREAT;
+            free( pathcopy );
+        }
     }
 #endif	// USE_JAVA
 #endif /* MACOSX */
