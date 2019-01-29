@@ -161,9 +161,13 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 							}
 
 							// If an edit window has focus, use its text
-							Edit *pEditWindow = dynamic_cast< Edit* >( pWindow->ImplGetWindowImpl()->mpFrameData->mpFocusWin );
-							if ( pEditWindow )
-								pEditWindow->Copy();
+							vcl::Window *pFocusWindow = pWindow->ImplGetWindowImpl()->mpFrameData->mpFocusWin;
+							if ( pFocusWindow )
+							{
+								Edit *pEditWindow = dynamic_cast< Edit* >( pFocusWindow );
+								if ( pEditWindow )
+									pEditWindow->Copy();
+							}
 
 							uno::Reference< datatransfer::XTransferable > xTransferable = xClipboard->getContents();
 							if ( xTransferable.is() )
@@ -173,18 +177,17 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 								// Handle string selection
 								if ( pTextSelection )
 								{
-									uno::Type aType( getCppuType( ( OUString* )0 ) );
 									aFlavor.MimeType = "text/plain;charset=utf-16";
-									aFlavor.DataType = aType;
+									aFlavor.DataType = cppu::UnoType< OUString >::get();
 									if ( xTransferable->isDataFlavorSupported( aFlavor ) )
 									{
 										uno::Any aValue = xTransferable->getTransferData( aFlavor );
-										if ( aValue.getValueType().equals( aType ) )
+										if ( aValue.getValueType().equals( aFlavor.DataType ) )
 										{
 											OUString aText;
 											aValue >>= aText;
 											if ( aText.getLength() )
-												*pTextSelection = CFStringCreateWithCharacters( NULL, aText.getStr(), aText.getLength() );
+												*pTextSelection = CFStringCreateWithCharacters( NULL, reinterpret_cast< const UniChar* >( aText.getStr() ), aText.getLength() );
 										}
 									}
 								}
@@ -192,13 +195,12 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 								// Handle RTF selection
 								if ( pRTFSelection )
 								{
-									uno::Type aType( getCppuType( ( uno::Sequence< sal_Int8 >* )0 ) );
 									aFlavor.MimeType = "text/richtext";
-									aFlavor.DataType = aType;
+									aFlavor.DataType = cppu::UnoType< uno::Sequence< sal_Int8 > >::get();
 									if ( xTransferable->isDataFlavorSupported( aFlavor ) )
 									{
 										uno::Any aValue = xTransferable->getTransferData( aFlavor );
-										if ( aValue.getValueType().equals( aType ) )
+										if ( aValue.getValueType().equals( aFlavor.DataType ) )
 										{
 											uno::Sequence< sal_Int8 > aData;
 											aValue >>= aData;
