@@ -73,7 +73,7 @@ public:
 	id						mpWindow;
 	bool					mbAllowKeyBindings;
 	JavaSalGraphics*		mpGraphics;
-	sal_uLong				mnStyle;
+	SalFrameStyleFlags		mnStyle;
 	JavaSalFrame*			mpParent;
 	sal_Bool				mbGraphics;
 	bool					mbVisible;
@@ -111,7 +111,7 @@ public:
 	static bool				GetSelectedMenuItemTextColor( SalColor& rSalColor );
 	static bool				GetSelectedTabTextColor( SalColor& rSalColor );
 
-							JavaSalFrame( sal_uLong nSalFrameStyle, JavaSalFrame *pParent );
+							JavaSalFrame( SalFrameStyleFlags nSalFrameStyle, JavaSalFrame *pParent );
 	virtual					~JavaSalFrame();
 
 	void					AddObject( JavaSalObject *pObject, bool bVisible );
@@ -124,7 +124,7 @@ public:
 	const tools::Rectangle	GetInsets();
 	id						GetNativeWindow();
 	id						GetNativeWindowContentView( sal_Bool bTopLevelWindow );
-	sal_uLong				GetState();
+	WindowStateState		GetState();
 	void					MakeModal();
 	bool					RequestFocus();
 	void					SetState( sal_uLong nFrameState );

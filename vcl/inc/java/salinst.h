@@ -125,6 +125,7 @@ public:
 	virtual SalMenuItem*	CreateMenuItem( const SalItemParams* pItemData ) override;
 	virtual void			DestroyMenuItem( SalMenuItem* pItem ) override;
 	virtual SalSession*		CreateSalSession() override;
+	virtual OpenGLContext*	CreateOpenGLContext() override;
 	virtual OUString		GetConnectionIdentifier() override;
     virtual css::uno::Reference< css::uno::XInterface >	CreateClipboard( const css::uno::Sequence< css::uno::Any >& rArguments ) override;
     virtual css::uno::Reference< css::uno::XInterface >	CreateDragSource() override;
@@ -138,7 +139,7 @@ public:
 
 class JavaSalEvent
 {
-	sal_uInt16				mnID;
+	SalEvent				mnID;
 	JavaSalFrame*			mpFrame;
 	OUString				maPath;
 	bool					mbNative;
@@ -150,7 +151,7 @@ class JavaSalEvent
 	mutable oslInterlockedCount	mnRefCount;
 
 public:
-							JavaSalEvent( sal_uInt16 nID, JavaSalFrame *pFrame, void *pData, const OString& rPath = OString(), sal_uLong nCommittedCharacters = 0, sal_uLong nCursorPosition = 0 );
+							JavaSalEvent( SalEvent nID, JavaSalFrame *pFrame, void *pData, const OString& rPath = OString(), sal_uLong nCommittedCharacters = 0, sal_uLong nCursorPosition = 0 );
 
 protected:
 	virtual					~JavaSalEvent();
@@ -167,7 +168,7 @@ public:
 	JavaSalFrame*			getFrame();
 	sal_uInt16				getKeyChar();
 	sal_uInt16				getKeyCode();
-	sal_uInt16				getID();
+	SalEvent				getID();
 	sal_uInt16				getModifiers();
 	JavaSalEvent*			getNextOriginalKeyEvent();
 	OUString				getPath();
@@ -198,7 +199,7 @@ class SAL_DLLPRIVATE JavaSalEventQueueItem
 	JavaSalEvent*			mpEvent;
 	const ::std::list< JavaSalEventQueueItem* >*	mpEventQueue;
 	bool					mbRemove;
-	sal_uInt16				mnType;
+	VclInputFlags			mnType;
 
 public:
 							JavaSalEventQueueItem( JavaSalEvent *pEvent, const ::std::list< JavaSalEventQueueItem* > *pEventQueue );
@@ -206,7 +207,7 @@ public:
 
 	JavaSalEvent*			getEvent() { return mpEvent; }
 	const ::std::list< JavaSalEventQueueItem* >*	getEventQueue() { return mpEventQueue; }
-	sal_uInt16				getType() { return mnType; }
+	VclInputFlags			getType() { return mnType; }
 	bool					isRemove() { return mbRemove; }
 	void					remove() { mbRemove = true; }
 };
@@ -229,7 +230,7 @@ class JavaSalEventQueue
 
 public:
 	static void				purgeRemovedEventsFromFront( ::std::list< JavaSalEventQueueItem* > *pEventQueue );
-	static sal_Bool			anyCachedEvent( sal_uInt16 nType );
+	static sal_Bool			anyCachedEvent( VclInputFlags nType );
 	static void				dispatchNextEvent();
 	static double			getLastNativeEventTime();
 	static JavaSalEvent*	getNextCachedEvent( sal_uLong nTimeout, sal_Bool bNativeEvents );
