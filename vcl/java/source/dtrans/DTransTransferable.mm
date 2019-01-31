@@ -67,7 +67,7 @@ static sal_uInt16 nSupportedTypes = 7;
 // pointer to a local static NSString that the symbol address should be
 // assigned to.
 static NSString *aSupportedPasteboardTypeSymbolNames[] = {
-	NSURLPboardType, URL_TYPE_TAG,
+	NSPasteboardTypeURL, URL_TYPE_TAG,
 	NSPasteboardTypeRTF, nil,
 	NSPasteboardTypeHTML, HTML_TYPE_TAG,
 	NSPasteboardTypeString, STRING_TYPE_TAG,
@@ -119,13 +119,13 @@ static OUString aSupportedMimeTypes[] = {
 
 // List of supported data types in priority order
 static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
-	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
-	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
-	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
-	getCppuType( ( OUString* )0 ),
-	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
-	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
-	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 )
+	::cppu::UnoType< ::com::sun::star::uno::Sequence< sal_Int8 > >::get(),
+	::cppu::UnoType< ::com::sun::star::uno::Sequence< sal_Int8 > >::get(),
+	::cppu::UnoType< ::com::sun::star::uno::Sequence< sal_Int8 > >::get(),
+	::cppu::UnoType< OUString >::get(),
+	::cppu::UnoType< ::com::sun::star::uno::Sequence< sal_Int8 > >::get(),
+	::cppu::UnoType< ::com::sun::star::uno::Sequence< sal_Int8 > >::get(),
+	::cppu::UnoType< ::com::sun::star::uno::Sequence< sal_Int8 > >::get()
 };
 
 static ::std::list< DTransTransferable* > aTransferableList;
@@ -384,7 +384,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 				{
 					NSBitmapImageRep *pPasteboardImageRep = [NSBitmapImageRep imageRepWithData:pPasteboardData];
 					if ( pPasteboardImageRep )
-						mpPNGData = [pPasteboardImageRep representationUsingType:NSPNGFileType properties:[NSDictionary dictionary]];
+						mpPNGData = [pPasteboardImageRep representationUsingType:NSBitmapImageFileTypePNG properties:[NSDictionary dictionary]];
 
 					if ( !mpPNGData )
 					{
@@ -398,7 +398,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 							{
 								NSBitmapImageRep *pTIFFImageRep = [NSBitmapImageRep imageRepWithData:pTIFFData];
 								if ( pTIFFImageRep )
-									mpPNGData = [pTIFFImageRep representationUsingType:NSPNGFileType properties:[NSDictionary dictionary]];
+									mpPNGData = [pTIFFImageRep representationUsingType:NSBitmapImageFileTypePNG properties:[NSDictionary dictionary]];
 							}
 						}
 					}
@@ -877,11 +877,11 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 
 					if ( bDataFound )
 					{
-						if ( aValue.getValueType().equals( getCppuType( ( OUString* )0 ) ) )
+						if ( aValue.getValueType() == cppu::UnoType< OUString >::get() )
 						{
 							OUString aString;
 							aValue >>= aString;
-							sal_Unicode *pArray = (sal_Unicode *)aString.getStr();
+							const unichar* pArray = reinterpret_cast< const unichar *>( aString.getStr() );
 							sal_Int32 nLen = aString.getLength();
 							if ( pArray && nLen )
 							{
@@ -890,7 +890,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 									pRet = pData;
 							}
 						}
-						else if ( aValue.getValueType().equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
+						else if ( aValue.getValueType() == cppu::UnoType< Sequence< sal_Int8 > >::get() )
 						{
 							Sequence< sal_Int8 > aData;
 							aValue >>= aData;
@@ -1012,7 +1012,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 				continue;
 			}
 
-			if ( aFlavor.DataType.equals( getCppuType( ( OUString* )0 ) ) )
+			if ( aFlavor.DataType == cppu::UnoType< OUString >::get() )
 			{
 				[pHelper performSelectorOnMainThread:@selector(getStringForType:) withObject:pRequestedType waitUntilDone:YES modes:pModes];
 				bDataAvailable = [pHelper isTypeAvailable];
@@ -1020,7 +1020,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 				if ( pString )
 				{
 					NSUInteger nLen = [pString length];
-					OUStringBuffer aExportData( nLen );
+					OUStringBuffer aExportData( static_cast< unsigned int >( nLen ) );
 
 					// Replace carriage returns with line feeds
 					unsigned int nCopiedChars = 0;
@@ -1046,7 +1046,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 					bDataRetrieved = true;
 				}
 			}
-			else if ( aFlavor.DataType.equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
+			else if ( aFlavor.DataType == cppu::UnoType< Sequence< sal_Int8 > >::get() )
 			{
 				if ( bRequestedTypeIsText )
 				{

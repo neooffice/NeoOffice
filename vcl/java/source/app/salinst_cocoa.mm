@@ -469,7 +469,7 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 						// Don't lock mutex as we expect callbacks to this
 						// object from a different thread while the dialog is
 						// showing
-						sal_uLong nCount = Application::ReleaseSolarMutex();
+						sal_uLong nReleaseCount = Application::ReleaseSolarMutex();
 
 						// Ignore any AWT events while the open dialog is
 						// showing to emulate a modal dialog
@@ -486,7 +486,7 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 
 						[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(destroy:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
 
-						Application::AcquireSolarMutex( nCount );
+						Application::AcquireSolarMutex( nReleaseCount );
 					}
 				}
 			}
@@ -776,7 +776,7 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 		{
 			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
-			if ( nResult == NSFileHandlingPanelOKButton )
+			if ( nResult == NSModalResponseOK )
 			{
 				NSArray *pURLs = [mpOpenPanel URLs];
 				if ( pURLs && [pURLs count] )
@@ -1047,7 +1047,7 @@ void Application_postWakeUpEvent()
 {
 	if ( !Application::IsShutDown() )
 	{
-		JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_WAKEUP, NULL, NULL );
+		JavaSalEvent *pUserEvent = new JavaSalEvent( SalEvent::WakeUp, NULL, NULL );
 		JavaSalEventQueue::postCachedEvent( pUserEvent );
 		pUserEvent->release();
 	}
@@ -1061,9 +1061,9 @@ id Application_acquireSecurityScopedURLFromOUString( const OUString *pNonSecurit
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSString *pString = [NSString stringWithCharacters:pNonSecurityScopedURL->getStr() length:pNonSecurityScopedURL->getLength()];
+		NSString *pString = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( pNonSecurityScopedURL->getStr() ) length:pNonSecurityScopedURL->getLength()];
 		if ( pString )
-			pRet = Application_acquireSecurityScopedURLFromNSURL( [NSURL URLWithString:pString], bMustShowDialogIfNoBookmark, pDialogTitle && pDialogTitle->getLength() ? [NSString stringWithCharacters:pDialogTitle->getStr() length:pDialogTitle->getLength()] : nil );
+			pRet = Application_acquireSecurityScopedURLFromNSURL( [NSURL URLWithString:pString], bMustShowDialogIfNoBookmark, pDialogTitle && pDialogTitle->getLength() ? [NSString stringWithCharacters:reinterpret_cast< const unichar* >( pDialogTitle->getStr() ) length:pDialogTitle->getLength()] : nil );
 
 		[pPool release];
 	}
@@ -1114,7 +1114,7 @@ void Application_cacheSecurityScopedURLFromOUString( const OUString *pNonSecurit
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSString *pString = [NSString stringWithCharacters:pNonSecurityScopedURL->getStr() length:pNonSecurityScopedURL->getLength()];
+		NSString *pString = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( pNonSecurityScopedURL->getStr() ) length:pNonSecurityScopedURL->getLength()];
 		if ( pString )
 			Application_cacheSecurityScopedURL( [NSURL URLWithString:pString] );
 
