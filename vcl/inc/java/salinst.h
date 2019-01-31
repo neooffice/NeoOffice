@@ -45,20 +45,6 @@
 #include "salinst.hxx"
 #include "java/salframe.h"
 
-// Custom event types
-#define SALEVENT_OPENDOCUMENT		((sal_uInt16)100)
-#define SALEVENT_PRINTDOCUMENT		((sal_uInt16)101)
-#define SALEVENT_DEMINIMIZED		((sal_uInt16)102)
-#define SALEVENT_MINIMIZED			((sal_uInt16)103)
-#define SALEVENT_FULLSCREENENTERED	((sal_uInt16)104)
-#define SALEVENT_FULLSCREENEXITED	((sal_uInt16)105)
-#define SALEVENT_SCREENPARAMSCHANGED	((sal_uInt16)106)
-#define SALEVENT_SYSTEMCOLORSCHANGED	((sal_uInt16)107)
-#define SALEVENT_COMMANDMEDIADATA	((sal_uInt16)120)
-#define SALEVENT_ABOUT				((sal_uInt16)130)
-#define SALEVENT_PREFS				((sal_uInt16)140)
-#define SALEVENT_WAKEUP				((sal_uInt16)150)
-
 // -----------------
 // - SalYieldMutex -
 // -----------------
@@ -174,7 +160,7 @@ public:
 	OUString				getPath();
 	sal_uInt16				getRepeatCount();
 	OUString				getText();
-	const sal_uInt16*		getTextAttributes();
+	const ExtTextInputAttr*	getTextAttributes();
 	const tools::Rectangle	getUpdateRect();
 	sal_uLong				getWhen();
 	long					getX();
