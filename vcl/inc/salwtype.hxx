@@ -101,7 +101,7 @@ enum class SalEvent {
     , CommandMediaData
     , About
     , Preferences
-    , Wakeup
+    , WakeUp
 #endif	// USE_JAVA && MACOSX
 };
 
