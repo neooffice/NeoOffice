@@ -38,10 +38,11 @@
 
 #include <list>
 
-#include <cppuhelper/compbase3.hxx>
+#include <cppuhelper/compbase.hxx>
 #include <com/sun/star/datatransfer/XTransferable.hpp>
 #include <com/sun/star/datatransfer/dnd/XDragSource.hpp>
 #include <com/sun/star/datatransfer/dnd/XDropTarget.hpp>
+#include <com/sun/star/lang/IllegalArgumentException.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <osl/thread.h>
@@ -54,7 +55,7 @@ typedef void* id;
 struct NSView;
 #endif
 
-class JavaDragSource : public ::cppu::WeakComponentImplHelper3< ::com::sun::star::datatransfer::dnd::XDragSource, ::com::sun::star::lang::XInitialization, ::com::sun::star::lang::XServiceInfo >
+class JavaDragSource : public ::cppu::WeakComponentImplHelper< ::com::sun::star::datatransfer::dnd::XDragSource, ::com::sun::star::lang::XInitialization, ::com::sun::star::lang::XServiceInfo >
 {
 public:
 	sal_Int8				mnActions;
@@ -65,7 +66,7 @@ public:
 	id						mpPasteboardHelper;
 	vcl::Window*			mpWindow;
 
-							DECL_STATIC_LINK( JavaDragSource, dragDropEnd, void* );
+							DECL_STATIC_LINK( JavaDragSource, dragDropEnd, void*, void );
 
 							JavaDragSource();
 	virtual					~JavaDragSource();
@@ -87,7 +88,7 @@ public:
 	void					handleDrag( sal_Int32 nX, sal_Int32 nY );
 };
 
-class JavaDropTarget : public ::cppu::WeakComponentImplHelper3< ::com::sun::star::datatransfer::dnd::XDropTarget, ::com::sun::star::lang::XInitialization, ::com::sun::star::lang::XServiceInfo >
+class JavaDropTarget : public ::cppu::WeakComponentImplHelper< ::com::sun::star::datatransfer::dnd::XDropTarget, ::com::sun::star::lang::XInitialization, ::com::sun::star::lang::XServiceInfo >
 {
 public:
     sal_Bool				mbActive;

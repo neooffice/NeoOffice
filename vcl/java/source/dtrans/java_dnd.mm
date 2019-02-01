@@ -677,7 +677,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 				// Fix bug 1442 by dispatching and deleting the
 				// DragSourceDropEvent in the VCL event dispatch thread
-				Application::PostUserEvent( STATIC_LINK( NULL, JavaDragSource, dragDropEnd ), pDragEvent );
+				Application::PostUserEvent( LINK( nullptr, JavaDragSource, dragDropEnd ), pDragEvent );
 			}
 		}
 
@@ -953,10 +953,10 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow )
 			// We need to toggle the style to make sure that VCL resets the
 			// pointer
 			PointerStyle nStyle = pWindow->GetPointer().GetStyle();
-			if ( nStyle == POINTER_ARROW )
-				pWindow->SetPointer( Pointer( POINTER_NULL ) );
+			if ( nStyle == PointerStyle::Arrow )
+				pWindow->SetPointer( Pointer( PointerStyle::Null ) );
 			else
-				pWindow->SetPointer( Pointer( POINTER_ARROW ) );
+				pWindow->SetPointer( Pointer( PointerStyle::Arrow ) );
 			pWindow->SetPointer( Pointer( nStyle ) );
 			bSet = true;
 		}
@@ -1017,7 +1017,7 @@ static uno::Sequence< OUString > JavaDropTarget_getSupportedServiceNames()
  
 // ========================================================================
 
-IMPL_STATIC_LINK( JavaDragSource, dragDropEnd, void*, pData )
+IMPL_STATIC_LINK( JavaDragSource, dragDropEnd, void*, pData, void )
 {
 	datatransfer::dnd::DragSourceDropEvent *pDragEvent = (datatransfer::dnd::DragSourceDropEvent *)pData;
 
@@ -1036,14 +1036,12 @@ IMPL_STATIC_LINK( JavaDragSource, dragDropEnd, void*, pData )
 
 		delete pDragEvent;
 	}
-
-	return 0;
 }
 
 // ------------------------------------------------------------------------
 
 JavaDragSource::JavaDragSource() :
-	WeakComponentImplHelper3< datatransfer::dnd::XDragSource, lang::XInitialization, lang::XServiceInfo >( maMutex ),
+	WeakComponentImplHelper< datatransfer::dnd::XDragSource, lang::XInitialization, lang::XServiceInfo >( maMutex ),
 	mnActions( datatransfer::dnd::DNDConstants::ACTION_NONE ),
 	mpDraggingSource( nil ),
 	mpPasteboardHelper( nil ),
@@ -1237,7 +1235,7 @@ void JavaDragSource::handleDrag( sal_Int32 /* nX */, sal_Int32 /* nY */ )
 // ========================================================================
 
 JavaDropTarget::JavaDropTarget() :
-	WeakComponentImplHelper3< datatransfer::dnd::XDropTarget, lang::XInitialization, lang::XServiceInfo >( maMutex ),
+	WeakComponentImplHelper< datatransfer::dnd::XDropTarget, lang::XInitialization, lang::XServiceInfo >( maMutex ),
 	mbActive( sal_True ),
 	mnDefaultActions( datatransfer::dnd::DNDConstants::ACTION_NONE ),
 	mpPasteboardHelper( nil ),
@@ -1613,8 +1611,8 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	{
 		aDropEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, false );
 
-		JavaDropTargetDropContext *pContext = new JavaDropTargetDropContext( aDropEvent.DropAction );
-		aDropEvent.Context = uno::Reference< datatransfer::dnd::XDropTargetDropContext >( pContext );
+		JavaDropTargetDropContext *pDropContext = new JavaDropTargetDropContext( aDropEvent.DropAction );
+		aDropEvent.Context = uno::Reference< datatransfer::dnd::XDropTargetDropContext >( pDropContext );
 
 		listeners =  maListeners;
 
@@ -1627,8 +1625,8 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo )
 		// Fix bug 3647 by allowing the VCL event dispatch thread to run
 		Application::Reschedule();
 
-		mbRejected = pContext->isRejected();
-		bRet = ( !mbRejected && pContext->getDropComplete() );
+		mbRejected = pDropContext->isRejected();
+		bRet = ( !mbRejected && pDropContext->getDropComplete() );
 	}
 
 	return bRet;
