@@ -46,7 +46,7 @@ void JavaImplFont::clearNativeFonts()
 
 // ----------------------------------------------------------------------------
 
-JavaImplFont::JavaImplFont( OUString aName, float fSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX ) : maPSName( aName ), mnNativeFont( 0 ), mnOrientation( nOrientation ), mfScaleX( fScaleX ), mfSize( fSize ), mbAntialiased( bAntialiased ), mbVertical( bVertical ), mbNativeFontOwner( sal_True )
+JavaImplFont::JavaImplFont( OUString aName, float fSize, Orientation nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX ) : maPSName( aName ), mnNativeFont( 0 ), mnOrientation( nOrientation ), mfScaleX( fScaleX ), mfSize( fSize ), mbAntialiased( bAntialiased ), mbVertical( bVertical ), mbNativeFontOwner( sal_True )
 {
 }
 
@@ -122,7 +122,7 @@ sal_IntPtr JavaImplFont::getNativeFont()
 
 // ----------------------------------------------------------------------------
 
-short JavaImplFont::getOrientation()
+Orientation JavaImplFont::getOrientation()
 {
 	return mnOrientation;
 }

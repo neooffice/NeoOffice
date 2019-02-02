@@ -153,9 +153,10 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawPathOp : public JavaSalGraphicsOp
 	::basegfx::B2DLineJoin	meLineJoin;
 	bool					mbLineDash;
 	com::sun::star::drawing::LineCap	mnLineCap;
+	double					mfMiterMinimumAngle;
 
 public:
-							JavaSalGraphicsDrawPathOp( const CGPathRef aFrameClip, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, bool bShiftLines = true, float fLineWidth = 0, ::basegfx::B2DLineJoin eLineJoin = ::basegfx::B2DLineJoin::NONE, bool bLineDash = false, com::sun::star::drawing::LineCap nLineCap = com::sun::star::drawing::LineCap_SQUARE );
+							JavaSalGraphicsDrawPathOp( const CGPathRef aFrameClip, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, bool bShiftLines = true, float fLineWidth = 0, ::basegfx::B2DLineJoin eLineJoin = ::basegfx::B2DLineJoin::NONE, bool bLineDash = false, com::sun::star::drawing::LineCap nLineCap = com::sun::star::drawing::LineCap_SQUARE, double fMiterMinimumAngle = 15.0 * F_PI180 );
 	virtual					~JavaSalGraphicsDrawPathOp();
 
 	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds );
@@ -169,7 +170,7 @@ class JavaImplFont
 {
 	OUString				maPSName;
 	sal_IntPtr				mnNativeFont;
-	short					mnOrientation;
+	Orientation				mnOrientation;
 	double					mfScaleX;
 	float					mfSize;
 	sal_Bool				mbAntialiased;
@@ -179,12 +180,12 @@ class JavaImplFont
 public:
 	static void				clearNativeFonts();
 
-							JavaImplFont( OUString aName, float fSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX );
+							JavaImplFont( OUString aName, float fSize, Orientation nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX );
 							JavaImplFont( JavaImplFont *pFont );
 	virtual					~JavaImplFont();
 
 	sal_IntPtr				getNativeFont();
-	short					getOrientation();
+	Orientation				getOrientation();
 	OUString				getPSName();
 	double					getScaleX();
 	float					getSize();
