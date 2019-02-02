@@ -82,7 +82,7 @@ public:
 	static bool				IsBadFont( const JavaPhysicalFontFace *pFontData, bool bHandleIfBadFont = true );
 	DECL_STATIC_LINK( JavaPhysicalFontFace, RunNativeFontsTimer, void*, void );
 
-							JavaPhysicalFontFace( const ImplDevFontAttributes& rAttibutes, const OUString& rFontName, sal_IntPtr nNativeFontID, const OUString& rFamilyName );
+							JavaPhysicalFontFace( const ImplFont& rAttibutes, const OUString& rFontName, sal_IntPtr nNativeFontID, const OUString& rFamilyName );
 	virtual					~JavaPhysicalFontFace();
 
 	virtual LogicalFontInstance*	CreateFontInstance( FontSelectPattern& rData ) const override;
@@ -170,7 +170,7 @@ class JavaImplFont
 {
 	OUString				maPSName;
 	sal_IntPtr				mnNativeFont;
-	Orientation				mnOrientation;
+	short					mnOrientation;
 	double					mfScaleX;
 	float					mfSize;
 	sal_Bool				mbAntialiased;
@@ -180,12 +180,12 @@ class JavaImplFont
 public:
 	static void				clearNativeFonts();
 
-							JavaImplFont( OUString aName, float fSize, Orientation nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX );
+							JavaImplFont( OUString aName, float fSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX );
 							JavaImplFont( JavaImplFont *pFont );
 	virtual					~JavaImplFont();
 
 	sal_IntPtr				getNativeFont();
-	Orientation				getOrientation();
+	short					getOrientation();
 	OUString				getPSName();
 	double					getScaleX();
 	float					getSize();
