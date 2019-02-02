@@ -331,7 +331,7 @@ void JavaSalGraphicsDrawEPSOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef 
 		// until after the print operation has ended
 		VCLInstance_retainIfInDragPrintLock( pImageRep );
 
-		NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:aContext flipped:NO];
+		NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithCGContext:aContext flipped:NO];
 		if ( pContext )
 		{
 			NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
@@ -351,7 +351,7 @@ void JavaSalGraphicsDrawEPSOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef 
 
 // =======================================================================
 
-JavaSalGraphicsDrawPathOp::JavaSalGraphicsDrawPathOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, bool bShiftLines, float fLineWidth, ::basegfx::B2DLineJoin eLineJoin, bool bLineDash, com::sun::star::drawing::LineCap nLineCap ) :
+JavaSalGraphicsDrawPathOp::JavaSalGraphicsDrawPathOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, bool bShiftLines, float fLineWidth, ::basegfx::B2DLineJoin eLineJoin, bool bLineDash, com::sun::star::drawing::LineCap nLineCap, double fMiterMinimumAngle ) :
 	JavaSalGraphicsOp( aFrameClipPath, aNativeClipPath, bInvert, bXOR, fLineWidth ),
 	mbAntialias( bAntialias ),
 	mnFillColor( nFillColor ),
@@ -360,10 +360,14 @@ JavaSalGraphicsDrawPathOp::JavaSalGraphicsDrawPathOp( const CGPathRef aFrameClip
 	mbShiftLines( bShiftLines ),
 	meLineJoin( eLineJoin ),
 	mbLineDash( bLineDash ),
-	mnLineCap( nLineCap )
+	mnLineCap( nLineCap ),
+	mfMiterMinimumAngle( fMiterMinimumAngle )
 {
 	if ( aPath )
 		maPath = CGPathCreateCopy( aPath );
+
+	if ( mfMiterMinimumAngle < 0 )
+		mfMiterMinimumAngle = fabs( mfMiterMinimumAngle );
 }
 
 // -----------------------------------------------------------------------
@@ -420,10 +424,10 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 				// Set line join
 				switch ( meLineJoin )
 				{
-					case ::basegfx::B2DLINEJOIN_BEVEL:
+					case ::basegfx::B2DLineJoin::Bevel:
 						CGContextSetLineJoin( aContext, kCGLineJoinBevel );
 						break;
-					case ::basegfx::B2DLINEJOIN_ROUND:
+					case ::basegfx::B2DLineJoin::Round:
 						CGContextSetLineJoin( aContext, kCGLineJoinRound );
 						break;
 					default:
@@ -442,6 +446,10 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 					default:
 						break;
 				}
+
+				// Convert miter minimum angle to miter limit
+				if ( mfMiterMinimumAngle > 0 )
+					CGContextSetMiterLimit( aContext, 1.0 / sin( mfMiterMinimumAngle / 2.0 ) );
 
 				if ( mbLineDash )
 				{
@@ -598,7 +606,7 @@ JavaSalGraphics::JavaSalGraphics() :
 	maNativeClipPath( NULL ),
 	mbInvert( false ),
 	mbXOR( false ),
-	meOrientation( ORIENTATION_PORTRAIT ),
+	meOrientation( Orientation::Portrait ),
 	mbPaperRotated( sal_False ),
 	mfPageTranslateX( 0 ),
 	mfPageTranslateY( 0 ),
@@ -631,7 +639,7 @@ JavaSalGraphics::~JavaSalGraphics()
 	if ( mpFont )
 		delete mpFont;
 
-	for ( ::boost::unordered_map< int, JavaImplFont* >::const_iterator it = maFallbackFonts.begin(); it != maFallbackFonts.end(); ++it )
+	for ( ::std::unordered_map< int, JavaImplFont* >::const_iterator it = maFallbackFonts.begin(); it != maFallbackFonts.end(); ++it )
 		delete it->second;
 
 	if ( maFrameClipPath )
@@ -754,29 +762,20 @@ void JavaSalGraphics::SetFillColor( SalColor nSalColor )
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::SetXORMode( bool bSet, bool bInvertOnly )
+void JavaSalGraphics::SetXORMode( bool bSet )
 {
 	// Don't do anything if this is a printer
 	if ( mpPrinter )
-		bSet = false;
-
-	if ( bSet && bInvertOnly )
-	{
-		mbInvert = true;
 		mbXOR = false;
-	}
 	else
-	{
-		mbInvert = false;
 		mbXOR = bSet;
-	}
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalGraphics::SetROPLineColor( SalROPColor nROPColor )
 {
-	if ( nROPColor == SAL_ROP_0 )
+	if ( nROPColor == SalROPColor::N0 )
 		SetLineColor( MAKE_SALCOLOR( 0, 0, 0 ) );
 	else
 		SetLineColor( MAKE_SALCOLOR( 0xff, 0xff, 0xff ) );
@@ -786,7 +785,7 @@ void JavaSalGraphics::SetROPLineColor( SalROPColor nROPColor )
 
 void JavaSalGraphics::SetROPFillColor( SalROPColor nROPColor )
 {
-	if ( nROPColor == SAL_ROP_0 )
+	if ( nROPColor == SalROPColor::N0 )
 		SetFillColor( MAKE_SALCOLOR( 0, 0, 0 ) );
 	else
 		SetFillColor( MAKE_SALCOLOR( 0xff, 0xff, 0xff ) );
@@ -1057,7 +1056,7 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 
 // -----------------------------------------------------------------------
 
-bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, double fTransparency, const ::basegfx::B2DVector& rLineWidths, basegfx::B2DLineJoin eLineJoin, com::sun::star::drawing::LineCap nLineCap )
+bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, double fTransparency, const ::basegfx::B2DVector& rLineWidths, basegfx::B2DLineJoin eLineJoin, com::sun::star::drawing::LineCap nLineCap, double fMiterMinimumAngle )
 {
 	bool bRet = true;
 
@@ -1073,7 +1072,7 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, double f
 			float fNativeLineWidth = rLineWidths.getX();
 			if ( fNativeLineWidth <= 0 )
 				fNativeLineWidth = getNativeLineWidth();
-			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, getAntiAliasB2DDraw(), 0x00000000, mnLineColor, aPath, bShiftLines, fNativeLineWidth, eLineJoin, false, nLineCap ) );
+			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, getAntiAliasB2DDraw(), 0x00000000, mnLineColor, aPath, bShiftLines, fNativeLineWidth, eLineJoin, false, nLineCap, fMiterMinimumAngle ) );
 			CGPathRelease( aPath );
 		}
 
@@ -1085,21 +1084,21 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, double f
 
 // -----------------------------------------------------------------------
 
-bool JavaSalGraphics::drawPolyLineBezier( sal_uInt32 /* nPoints */, const SalPoint* /* pPtAry */, const sal_uInt8* /* pFlgAry */ )
+bool JavaSalGraphics::drawPolyLineBezier( sal_uInt32 /* nPoints */, const SalPoint* /* pPtAry */, const PolyFlags* /* pFlgAry */ )
 {
 	return false;
 }
 
 // -----------------------------------------------------------------------
 
-bool JavaSalGraphics::drawPolygonBezier( sal_uInt32 /* nPoints */, const SalPoint* /* pPtAry */, const sal_uInt8* /* pFlgAry */ )
+bool JavaSalGraphics::drawPolygonBezier( sal_uInt32 /* nPoints */, const SalPoint* /* pPtAry */, const PolyFlags* /* pFlgAry */ )
 {
 	return false;
 }
 
 // -----------------------------------------------------------------------
 
-bool JavaSalGraphics::drawPolyPolygonBezier( sal_uInt32 /* nPoly */, const sal_uInt32* /* nPoints */, const SalPoint* const* /* pPtAry */, const sal_uInt8* const* /* pFlgAry */ )
+bool JavaSalGraphics::drawPolyPolygonBezier( sal_uInt32 /* nPoly */, const sal_uInt32* /* pPoints */, const SalPoint* const* /* pPtAry */, const PolyFlags* const* /* pFlgAry */ )
 {
 	return false;
 }
