@@ -33,6 +33,11 @@
  *
  ************************************************************************/
 
+#include <tools/color.hxx>
+#include <tools/gen.hxx>
+#include <tools/stream.hxx>
+#include <vcl/fntstyle.hxx>
+
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
