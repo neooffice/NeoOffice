@@ -291,7 +291,7 @@ public:
 	virtual const void*		GetEmbedFontData( const PhysicalFontFace* pFont, long* pDataLen ) override;
 	virtual void			FreeEmbedFontData( const void* pData, long nDataLen ) override;
 	virtual void			GetGlyphWidths( const PhysicalFontFace* pFont, bool bVertical, std::vector< sal_Int32 >& rWidths, Ucs2UIntMap& rUnicodeEnc ) override;
-	virtual bool			GetGlyphBoundRect( const GlyphItem& rIndex, tools::Rectangle& ) override;
+	virtual bool			GetGlyphBoundRect( const GlyphItem& rIndex, tools::Rectangle& rRect ) override;
 	virtual bool			GetGlyphOutline( const GlyphItem& rIndex, basegfx::B2DPolyPolygon& rPolyPoly ) override;
 	virtual SalLayout*		GetTextLayout( ImplLayoutArgs&, int nFallbackLevel ) override;
 	virtual bool			IsNativeControlSupported( ControlType nType, ControlPart nPart ) override;
