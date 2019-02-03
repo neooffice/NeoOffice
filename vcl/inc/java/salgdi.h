@@ -78,7 +78,7 @@ public:
 	static bool				IsBadFont( const JavaPhysicalFontFace *pFontData, bool bHandleIfBadFont = true );
 	DECL_STATIC_LINK( JavaPhysicalFontFace, RunNativeFontsTimer, void*, void );
 
-							JavaPhysicalFontFace( const ImplFont& rAttibutes, const OUString& rFontName, sal_IntPtr nNativeFontID, const OUString& rFamilyName );
+							JavaPhysicalFontFace( const FontAttributes& rAttibutes, const OUString& rFontName, sal_IntPtr nNativeFontID, const OUString& rFamilyName );
 	virtual					~JavaPhysicalFontFace();
 
 	virtual LogicalFontInstance*	CreateFontInstance( FontSelectPattern& rData ) const override;
