@@ -57,10 +57,6 @@
 
 #define MIN_SCREEN_RESOLUTION 96
 
-class ImplDevFontAttributes;
-class ImplFontSelectData;
-class SalATSLayout;
-
 // ------------------------
 // - JavaPhysicalFontFace -
 // ------------------------
