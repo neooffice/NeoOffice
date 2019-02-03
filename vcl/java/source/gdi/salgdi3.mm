@@ -35,14 +35,17 @@
 
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #include <rtl/process.h>
+#include <tools/color.hxx>
+#include <vcl/fntstyle.hxx>
+#include <vcl/fontcharmap.hxx>
 #include <vcl/unohelp.hxx>
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
-#include "PhysicalFontCollection.hxx"
 #include "outdev.h"
+#include "PhysicalFontCollection.hxx"
 #include "sallayout.hxx"
 #include "impfont.hxx"
 #include "java/salatslayout.hxx"
@@ -104,7 +107,7 @@ static void ImplFontListChangedCallback( CFNotificationCenterRef, void*, CFStrin
 		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
-			Application::PostUserEvent( STATIC_LINK( NULL, JavaPhysicalFontFace, RunNativeFontsTimer ) );
+			Application::PostUserEvent( LINK( nullptr, JavaPhysicalFontFace, RunNativeFontsTimer ) );
 		rSolarMutex.release();
 	}
 
@@ -120,7 +123,7 @@ static void ImplCachePlainFontMappings( NSFont *pNSFont )
 
 	SalData *pSalData = GetSalData();
 	sal_IntPtr nNativeFont = (sal_IntPtr)pNSFont;
-	::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >::const_iterator nfit = pSalData->maNativeFontMapping.find( nNativeFont );
+	::std::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >::const_iterator nfit = pSalData->maNativeFontMapping.find( nNativeFont );
 	if ( nfit == pSalData->maNativeFontMapping.end() )
 		return;
 
@@ -136,13 +139,13 @@ static void ImplCachePlainFontMappings( NSFont *pNSFont )
 			CFRelease( aPlainPSString );
 			if ( aPlainPSName.getLength() )
 			{
-				::boost::unordered_map< OUString, JavaPhysicalFontFace*, OUStringHash >::const_iterator jfnit = pSalData->maJavaFontNameMapping.find( aPlainPSName );
+				::std::unordered_map< OUString, JavaPhysicalFontFace*, OUStringHash >::const_iterator jfnit = pSalData->maJavaFontNameMapping.find( aPlainPSName );
 				if ( jfnit != pSalData->maJavaFontNameMapping.end() )
 				{
 					pSalData->maPlainFamilyNativeFontMapping[ nNativeFont ] = jfnit->second;
 
 					sal_IntPtr nPlainNativeFont = jfnit->second->GetFontId();
-					if ( pFontData->GetSlant() == ITALIC_OBLIQUE || pFontData->GetSlant() == ITALIC_NORMAL )
+					if ( pFontData->GetItalic() == ITALIC_OBLIQUE || pFontData->GetItalic() == ITALIC_NORMAL )
 						pSalData->maItalicNativeFontMapping[ nPlainNativeFont ][ nNativeFont ] = pFontData;
 					else
 						pSalData->maUnitalicNativeFontMapping[ nPlainNativeFont ][ nNativeFont ] = pFontData;
@@ -199,7 +202,6 @@ static void ImplFontListChanged()
 				if ( pFonts )
 				{
 					const OUString aCourier( "Courier" );
-					const OUString aFontSeparator( ";" );
 					const OUString aGillSansPS( "GillSans" );
 					const OUString aGillSansBoldPS( "GillSans-Bold" );
 					const OUString aGillSansBoldItalicPS( "GillSans-BoldItalic" );
@@ -276,12 +278,14 @@ static void ImplFontListChanged()
 						if ( !aDisplayName.getLength() )
 							continue;
 
-						OUString aMapName( aPSName );
+						FontAttributes aAttributes;
+						aAttributes.AddMapName( aPSName );
+
 						sal_Int32 nColon = aDisplayName.indexOf( (sal_Unicode)':' );
 						if ( nColon >= 0 )
 						{
 							aDisplayName = OUString( aDisplayName.getStr(), nColon );
-							aMapName += aFontSeparator + aDisplayName;
+							aAttributes.AddMapName( aDisplayName );
 						}
 
 						// Ignore empty font names or font names that start
@@ -298,7 +302,8 @@ static void ImplFontListChanged()
 						else if ( aDisplayName == aNeo4Symbol )
 						{
 							aDisplayName = OUString( aOpenSymbol );
-							aMapName += aFontSeparator + "Symbol" + aFontSeparator + aNeo4Symbol;
+							aAttributes.AddMapName( "Symbol" );
+							aAttributes.AddMapName( aNeo4Symbol );
 						}
 						else if ( aDisplayName == aLastResort )
 						{
@@ -308,53 +313,57 @@ static void ImplFontListChanged()
 						}
 						else if ( aDisplayName == aTimesRoman )
 						{
-							aMapName += aFontSeparator + aTimes;
+							aAttributes.AddMapName( aTimes );
 						}
 						else if ( aDisplayName == aFamilyName + aRegular )
 						{
 							// Fix bug 3668 by adding family name to map
 							// for "regular" fonts
-							aMapName += aFontSeparator + aFamilyName;
+							aAttributes.AddMapName( aFamilyName );
 						}
 						else if ( aPSName == aGillSansPS )
 						{
-							aMapName += aFontSeparator + "Calibri";
+							aAttributes.AddMapName( "Calibri" );
 						}
 						else if ( aPSName == aGillSansBoldPS )
 						{
-							aMapName += aFontSeparator + "Calibri Bold" + aFontSeparator + "Calibri-Bold";
+							aAttributes.AddMapName( "Calibri Bold" );
+							aAttributes.AddMapName( "Calibri-Bold" );
 						}
 						else if ( aPSName == aGillSansBoldItalicPS )
 						{
-							aMapName += aFontSeparator + "Calibri Bold Italic" + aFontSeparator + "Calibri-BoldItalic";
+							aAttributes.AddMapName( "Calibri Bold Italic" );
+							aAttributes.AddMapName( "Calibri-BoldItalic" );
 						}
 						else if ( aPSName == aGillSansItalicPS )
 						{
-							aMapName += aFontSeparator + "Calibri Italic" + aFontSeparator + "Calibri-Italic";
+							aAttributes.AddMapName( "Calibri Italic" );
+							aAttributes.AddMapName( "Calibri-Italic" );
 						}
 						else if ( aPSName == aTimesNewRomanPS )
 						{
-							aMapName += aFontSeparator + "Cambria";
+							aAttributes.AddMapName( "Cambria" );
 						}
 						else if ( aPSName == aTimesNewRomanBoldPS )
 						{
-							aMapName += aFontSeparator + "Cambria Bold" + aFontSeparator + "Cambria-Bold";
+							aAttributes.AddMapName( "Cambria Bold" );
+							aAttributes.AddMapName( "Cambria-Bold" );
 						}
 						else if ( aPSName == aTimesNewRomanBoldItalicPS )
 						{
-							aMapName += aFontSeparator + "Cambria Bold Italic" + aFontSeparator + "Cambria-BoldItalic";
+							aAttributes.AddMapName( "Cambria Bold Italic" );
+							aAttributes.AddMapName( "Cambria-BoldItalic" );
 						}
 						else if ( aPSName == aTimesNewRomanItalicPS )
 						{
-							aMapName += aFontSeparator + "Cambria Italic" + aFontSeparator + "Cambria-Italic";
+							aAttributes.AddMapName( "Cambria Italic" );
+							aAttributes.AddMapName( "Cambria-Italic" );
 						}
 
 						// Skip the font if we already have it
 						::std::map< OUString, JavaPhysicalFontFace* >::iterator it = pSalData->maFontNameMapping.find( aDisplayName );
 						if ( it != pSalData->maFontNameMapping.end() )
 							continue;
-
-						ImplDevFontAttributes aAttributes;
 
 						// Determine pitch and family type
 						FontFamily nFamily;
@@ -374,12 +383,7 @@ static void ImplFontListChanged()
 						aAttributes.SetPitch( nPitch );
 						aAttributes.SetWidthType( nWidth );
 						aAttributes.SetSymbolFlag( false );
-						aAttributes.maMapNames = aMapName;
-						aAttributes.mnQuality = 0;
-						aAttributes.mbOrientation = true;
-						aAttributes.mbDevice = false;
-						aAttributes.mbSubsettable = true;
-						aAttributes.mbEmbeddable = false;
+						aAttributes.SetQuality( 0 );
 
 						JavaPhysicalFontFace *pFontData = new JavaPhysicalFontFace( aAttributes, aPSName, nNativeFont, aFamilyName );
 
@@ -510,17 +514,17 @@ static const JavaPhysicalFontFace *ImplGetFontVariant( const JavaPhysicalFontFac
 		return pFontData;
 
 	int nWeightDiff = pFontData->GetWeight() - nWeight;
-	if ( !nWeightDiff && bItalic == ( pFontData->GetSlant() == ITALIC_OBLIQUE || pFontData->GetSlant() == ITALIC_NORMAL ) )
+	if ( !nWeightDiff && bItalic == ( pFontData->GetItalic() == ITALIC_OBLIQUE || pFontData->GetItalic() == ITALIC_NORMAL ) )
 		return pFontData;
 
 	if ( nWidthType <= WIDTH_DONTKNOW || nWidthType > WIDTH_ULTRA_EXPANDED )
 		nWidthType = WIDTH_NORMAL;
 
 	SalData *pSalData = GetSalData();
-	const ::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* > *pFontVariants = NULL;
+	const ::std::unordered_map< sal_IntPtr, JavaPhysicalFontFace* > *pFontVariants = NULL;
 	if ( bItalic )
 	{
-		::boost::unordered_map< sal_IntPtr, ::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* > >::const_iterator nfit = pSalData->maItalicNativeFontMapping.find( pFontData->GetFontId() );
+		::std::unordered_map< sal_IntPtr, ::std::unordered_map< sal_IntPtr, JavaPhysicalFontFace* > >::const_iterator nfit = pSalData->maItalicNativeFontMapping.find( pFontData->GetFontId() );
 		if ( nfit != pSalData->maItalicNativeFontMapping.end() )
 		{
 			pFontVariants = &nfit->second;
@@ -535,7 +539,7 @@ static const JavaPhysicalFontFace *ImplGetFontVariant( const JavaPhysicalFontFac
 	}
 	else
 	{
-		::boost::unordered_map< sal_IntPtr, ::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* > >::const_iterator nfit = pSalData->maUnitalicNativeFontMapping.find( pFontData->GetFontId() );
+		::std::unordered_map< sal_IntPtr, ::std::unordered_map< sal_IntPtr, JavaPhysicalFontFace* > >::const_iterator nfit = pSalData->maUnitalicNativeFontMapping.find( pFontData->GetFontId() );
 		if ( nfit != pSalData->maUnitalicNativeFontMapping.end() )
 		{
 			pFontVariants = &nfit->second;
@@ -552,17 +556,17 @@ static const JavaPhysicalFontFace *ImplGetFontVariant( const JavaPhysicalFontFac
 	if ( pFontVariants )
 	{
 		const JavaPhysicalFontFace *pBestFontData = pFontData;
-		bool bBestItalic = ( pBestFontData->GetSlant() == ITALIC_OBLIQUE || pBestFontData->GetSlant() == ITALIC_NORMAL );
+		bool bBestItalic = ( pBestFontData->GetItalic() == ITALIC_OBLIQUE || pBestFontData->GetItalic() == ITALIC_NORMAL );
 		int nBestAbsWeightDiff = abs( pBestFontData->GetWeight() - nWeight );
 		int nBestAbsWidthTypeDiff = ( pBestFontData->GetWidthType() - nWidthType );
 
 		const JavaPhysicalFontFace *pBestWidthFontData = ( pFontData->GetWidthType() == nWidthType ? pFontData : NULL );
-		bool bBestWidthItalic = ( pBestWidthFontData ? ( pBestWidthFontData->GetSlant() == ITALIC_OBLIQUE || pBestWidthFontData->GetSlant() == ITALIC_NORMAL ) : bItalic );
+		bool bBestWidthItalic = ( pBestWidthFontData ? ( pBestWidthFontData->GetItalic() == ITALIC_OBLIQUE || pBestWidthFontData->GetItalic() == ITALIC_NORMAL ) : bItalic );
 		int nBestWidthAbsWeightDiff = ( pBestWidthFontData ? abs( pBestWidthFontData->GetWeight() - nWeight ) : FontWeight_FORCE_EQUAL_SIZE );
 
-		for ( ::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >::const_iterator fvit = pFontVariants->begin(); fvit != pFontVariants->end(); ++fvit )
+		for ( ::std::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >::const_iterator fvit = pFontVariants->begin(); fvit != pFontVariants->end(); ++fvit )
 		{
-			bool bCurrentItalic = ( fvit->second->GetSlant() == ITALIC_OBLIQUE || fvit->second->GetSlant() == ITALIC_NORMAL );
+			bool bCurrentItalic = ( fvit->second->GetItalic() == ITALIC_OBLIQUE || fvit->second->GetItalic() == ITALIC_NORMAL );
 			int nCurrentAbsWeightDiff = abs( fvit->second->GetWeight() - nWeight );
 			int nCurrentAbsWidthTypeDiff = abs( fvit->second->GetWidthType() - nWidthType );
 			if ( ( bBestItalic != bItalic && bCurrentItalic == bItalic ) || nBestAbsWeightDiff > nCurrentAbsWeightDiff || ( nBestAbsWeightDiff == nCurrentAbsWeightDiff && nBestAbsWidthTypeDiff > nCurrentAbsWidthTypeDiff ) )
@@ -648,7 +652,7 @@ void JavaPhysicalFontFace::HandleBadFont( const JavaPhysicalFontFace *pFontData 
 	// Fix bug 3576 by updating the fonts after all currently queued
 	// event are dispatched
 	if ( bReloadFonts )
-		Application::PostUserEvent( STATIC_LINK( NULL, JavaPhysicalFontFace, RunNativeFontsTimer ) );
+		Application::PostUserEvent( LINK( nullptr, JavaPhysicalFontFace, RunNativeFontsTimer ) );
 }
 
 // -----------------------------------------------------------------------
@@ -708,7 +712,7 @@ bool JavaPhysicalFontFace::IsBadFont( const JavaPhysicalFontFace *pFontData, boo
 								if ( bHandleIfBadFont )
 								{
 									SalData *pSalData = GetSalData();
-									::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >::const_iterator nit = pSalData->maNativeFontMapping.find( pFontData->mnNativeFontID );
+									::std::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >::const_iterator nit = pSalData->maNativeFontMapping.find( pFontData->mnNativeFontID );
 									if ( nit != pSalData->maNativeFontMapping.end() )
 										JavaPhysicalFontFace::HandleBadFont( nit->second );
 								}
@@ -735,7 +739,7 @@ bool JavaPhysicalFontFace::IsBadFont( const JavaPhysicalFontFace *pFontData, boo
 
 // -----------------------------------------------------------------------
 
-IMPL_STATIC_LINK_NOINSTANCE( JavaPhysicalFontFace, RunNativeFontsTimer, void*, /* pCallData */ )
+IMPL_STATIC_LINK( JavaPhysicalFontFace, RunNativeFontsTimer, void*, /* pCallData */, void )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -746,13 +750,11 @@ IMPL_STATIC_LINK_NOINSTANCE( JavaPhysicalFontFace, RunNativeFontsTimer, void*, /
 	Application::AcquireSolarMutex( nCount );
 
 	[pPool release];
-
-	return 0;
 }
 
 // -----------------------------------------------------------------------
 
-JavaPhysicalFontFace::JavaPhysicalFontFace( const ImplDevFontAttributes& rAttributes, const OUString& rFontName, sal_IntPtr nNativeFontID, const OUString& rFamilyName ) : PhysicalFontFace( rAttributes, 0 ), maFontName( rFontName ), mnNativeFontID( nNativeFontID ), maFamilyName( rFamilyName ), mpParent( NULL )
+JavaPhysicalFontFace::JavaPhysicalFontFace( const FontAttributes& rAttributes, const OUString& rFontName, sal_IntPtr nNativeFontID, const OUString& rFamilyName ) : PhysicalFontFace( rAttributes ), maFontName( rFontName ), mnNativeFontID( nNativeFontID ), maFamilyName( rFamilyName ), mpParent( NULL )
 {
 	if ( mnNativeFontID )
 		CFRetain( (CTFontRef)mnNativeFontID );
@@ -790,9 +792,9 @@ JavaPhysicalFontFace::~JavaPhysicalFontFace()
 
 // -----------------------------------------------------------------------
 
-ImplFontEntry* JavaPhysicalFontFace::CreateFontInstance( FontSelectPattern& rData ) const
+LogicalFontInstance* JavaPhysicalFontFace::CreateFontInstance( FontSelectPattern& rData ) const
 {
-    return new ImplFontEntry( rData );
+    return new LogicalFontInstance( rData );
 }
 
 // -----------------------------------------------------------------------
@@ -818,10 +820,10 @@ void JavaSalGraphics::SetTextColor( SalColor nSalColor )
 
 // -----------------------------------------------------------------------
 
-sal_uInt16 JavaSalGraphics::SetFont( FontSelectPattern* pFont, int nFallbackLevel )
+void JavaSalGraphics::SetFont( FontSelectPattern* pFont, int nFallbackLevel )
 {
 	if ( !pFont || !pFont->mpFontData )
-		return SAL_SETFONT_BADFONT;
+		return;
 
 	SalData *pSalData = GetSalData();
 
@@ -848,7 +850,7 @@ sal_uInt16 JavaSalGraphics::SetFont( FontSelectPattern* pFont, int nFallbackLeve
 			{
 				// We should never get here as there should always be at least
 				// one font
-				return SAL_SETFONT_BADFONT;
+				return;
 			}
 		}
 	}
@@ -856,11 +858,11 @@ sal_uInt16 JavaSalGraphics::SetFont( FontSelectPattern* pFont, int nFallbackLeve
 	if ( nFallbackLevel )
 	{
 		// Retrieve the fallback font if one has been set by a text layout
-		::boost::unordered_map< int, JavaImplFont* >::const_iterator ffit = maFallbackFonts.find( nFallbackLevel );
+		::std::unordered_map< int, JavaImplFont* >::const_iterator ffit = maFallbackFonts.find( nFallbackLevel );
 		if ( ffit != maFallbackFonts.end() )
 		{
 			sal_IntPtr nNativeFont = ffit->second->getNativeFont();
-			::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >::const_iterator it = pSalData->maNativeFontMapping.find( nNativeFont );
+			::std::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >::const_iterator it = pSalData->maNativeFontMapping.find( nNativeFont );
 			if ( it != pSalData->maNativeFontMapping.end() )
 				pFontData = it->second;
 		}
@@ -870,7 +872,7 @@ sal_uInt16 JavaSalGraphics::SetFont( FontSelectPattern* pFont, int nFallbackLeve
 	{
 		mnFontFamily = pFont->GetFamilyType();
 		mnFontWeight = pFont->GetWeight();
-		mbFontItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL );
+		mbFontItalic = ( pFont->GetItalic() == ITALIC_OBLIQUE || pFont->GetItalic() == ITALIC_NORMAL );
 		mnFontPitch = pFont->GetPitch();
 
 		// Cache font data's width type, as the request width type will always
@@ -882,7 +884,7 @@ sal_uInt16 JavaSalGraphics::SetFont( FontSelectPattern* pFont, int nFallbackLeve
 	// bold and/or italic font even if we are in a fallback level
 	const JavaPhysicalFontFace *pOldFontData = pFontData;
 	bool bAddBold = ( mnFontWeight > WEIGHT_MEDIUM && pFontData->GetWeight() <= WEIGHT_MEDIUM );
-	bool bAddItalic = ( mbFontItalic && pFontData->GetSlant() != ITALIC_OBLIQUE && pFontData->GetSlant() != ITALIC_NORMAL );
+	bool bAddItalic = ( mbFontItalic && pFontData->GetItalic() != ITALIC_OBLIQUE && pFontData->GetItalic() != ITALIC_NORMAL );
 	FontWeight nSetWeight = mnFontWeight;
 	bool bSetItalic = mbFontItalic;
 	if ( nFallbackLevel || bAddBold || bAddItalic )
@@ -894,13 +896,13 @@ sal_uInt16 JavaSalGraphics::SetFont( FontSelectPattern* pFont, int nFallbackLeve
 			if ( !bAddBold )
 				nSetWeight = pFontData->GetWeight();
 			if ( !bAddItalic )
-				bSetItalic = ( pFontData->GetSlant() == ITALIC_OBLIQUE || pFontData->GetSlant() == ITALIC_NORMAL );
+				bSetItalic = ( pFontData->GetItalic() == ITALIC_OBLIQUE || pFontData->GetItalic() == ITALIC_NORMAL );
 		}
 
 		// Remove any bold or italic variants so that we don't get drifting to
 		// bold or italic in fallback levels where none was requested by
 		// matching bold or italic variants within the same font family
-		::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >::const_iterator pfit = pSalData->maPlainFamilyNativeFontMapping.find( pFontData->GetFontId() );
+		::std::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >::const_iterator pfit = pSalData->maPlainFamilyNativeFontMapping.find( pFontData->GetFontId() );
 		if ( pfit != pSalData->maPlainFamilyNativeFontMapping.end() )
 			pFontData = pfit->second;
 	}
@@ -913,7 +915,7 @@ sal_uInt16 JavaSalGraphics::SetFont( FontSelectPattern* pFont, int nFallbackLeve
 		if ( nFallbackLevel )
 		{
 			// Avoid selecting a font that has already been used
-			for ( ::boost::unordered_map< int, JavaImplFont* >::const_iterator ffit = maFallbackFonts.begin(); ffit != maFallbackFonts.end(); ++ffit )
+			for ( ::std::unordered_map< int, JavaImplFont* >::const_iterator ffit = maFallbackFonts.begin(); ffit != maFallbackFonts.end(); ++ffit )
 			{
 				if ( ffit->first < nFallbackLevel && ffit->second->getNativeFont() == nNativeFont )
 				{
@@ -930,10 +932,10 @@ sal_uInt16 JavaSalGraphics::SetFont( FontSelectPattern* pFont, int nFallbackLeve
 
 	// Check that the font still exists as it might have been disabled or
 	// removed by the ATS server
-	::boost::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >::const_iterator nfit = pSalData->maNativeFontMapping.find( pFont->mpFontData->GetFontId() );
+	::std::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >::const_iterator nfit = pSalData->maNativeFontMapping.find( pFont->mpFontData->GetFontId() );
 	if ( nfit == pSalData->maNativeFontMapping.end() )
 	{
-		::boost::unordered_map< OUString, JavaPhysicalFontFace*, OUStringHash >::const_iterator jfnit = pSalData->maJavaFontNameMapping.find( pFontData->maFontName );
+		::std::unordered_map< OUString, JavaPhysicalFontFace*, OUStringHash >::const_iterator jfnit = pSalData->maJavaFontNameMapping.find( pFontData->maFontName );
 		if ( jfnit != pSalData->maJavaFontNameMapping.end() )
 		{
 			pFontData = jfnit->second;
@@ -946,11 +948,11 @@ sal_uInt16 JavaSalGraphics::SetFont( FontSelectPattern* pFont, int nFallbackLeve
 		{
 			// We should never get here as there should always be at least one
 			// font
-			return SAL_SETFONT_BADFONT;
+			return;
 		}
 	}
 
-	::boost::unordered_map< int, JavaImplFont* >::iterator ffit = maFallbackFonts.find( nFallbackLevel );
+	::std::unordered_map< int, JavaImplFont* >::iterator ffit = maFallbackFonts.find( nFallbackLevel );
 	if ( ffit != maFallbackFonts.end() )
 	{
 		delete ffit->second;
@@ -983,12 +985,12 @@ sal_uInt16 JavaSalGraphics::SetFont( FontSelectPattern* pFont, int nFallbackLeve
 		if ( mpFont->getNativeFont() != nOldNativeFont )
 		{
 			// If the font is a bad font, select a different font
-			ImplFontMetricData aMetricData( *pFont );
-			GetFontMetric( &aMetricData );
+			ImplFontMetricDataRef xMetricData( new ImplFontMetricData( *pFont ) );
+			GetFontMetric( xMetricData, 0 );
 			::std::map< sal_IntPtr, sal_IntPtr >::const_iterator bit = JavaPhysicalFontFace::maBadNativeFontIDMap.find( mpFont->getNativeFont() );
 			if ( bit != JavaPhysicalFontFace::maBadNativeFontIDMap.end() )
 			{
-				for ( ::boost::unordered_map< OUString, JavaPhysicalFontFace*, OUStringHash >::const_iterator jfnit = pSalData->maJavaFontNameMapping.begin(); jfnit != pSalData->maJavaFontNameMapping.end(); ++jfnit )
+				for ( ::std::unordered_map< OUString, JavaPhysicalFontFace*, OUStringHash >::const_iterator jfnit = pSalData->maJavaFontNameMapping.begin(); jfnit != pSalData->maJavaFontNameMapping.end(); ++jfnit )
 				{
 					pFontData = ImplGetFontVariant( jfnit->second, mnFontWeight, mbFontItalic, mnFontWidthType );
 
@@ -1000,7 +1002,7 @@ sal_uInt16 JavaSalGraphics::SetFont( FontSelectPattern* pFont, int nFallbackLeve
 					mpFont = new JavaImplFont( maFallbackFonts[ nFallbackLevel ] );
 					mpFontData = (JavaPhysicalFontFace *)pFontData->Clone();
 
-					GetFontMetric( &aMetricData );
+					GetFontMetric( xMetricData, 0 );
 					bit = JavaPhysicalFontFace::maBadNativeFontIDMap.find( mpFont->getNativeFont() );
 					if ( bit == JavaPhysicalFontFace::maBadNativeFontIDMap.end() )
 						break;
@@ -1042,13 +1044,11 @@ sal_uInt16 JavaSalGraphics::SetFont( FontSelectPattern* pFont, int nFallbackLeve
 		// fallback levels
 		pFont->mpFontData = pFontData;
 	}
-
-	return 0;
 }
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric, int /* nFallbackLevel */ )
+void JavaSalGraphics::GetFontMetric( ImplFontMetricDataRef& rMetric, int /* nFallbackLevel */ )
 {
 	float fFontSize = 0;
 	if ( mpFont )
@@ -1059,13 +1059,13 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric, int /* nFallba
 		// font scale to be consistent with OOo's Aqua implementation.
 		long nWidth = (long)( ( mpFont->getSize() * mpFont->getScaleX() ) + 0.5 );
 		if ( nWidth >= 0 )
-			pMetric->mnWidth = nWidth;
-		pMetric->mnOrientation = mpFont->getOrientation();
+			rMetric->SetWidth( nWidth );
+		rMetric->SetOrientation( mpFont->getOrientation() );
 	}
 
 	if ( mpFontData )
 	{
-		if ( pMetric->mnWidth )
+		if ( rMetric->GetWidth() )
 		{
 			// Fix scaling of the line height in Writer by creating a font with
 			// the same font size, not the scaled width
@@ -1075,12 +1075,13 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric, int /* nFallba
 				// Mac OS X seems to overstate the leading for some fonts
 				// (usually CJK fonts like Hiragino) so fix fix bugs 2827 and
 				// 2847 by adding combining the leading with descent
-				pMetric->mnAscent = (long)( CTFontGetAscent( aFont ) + 0.5 );
+				rMetric->SetAscent( (long)( CTFontGetAscent( aFont ) + 0.5 ) );
 				// Fix bug 2881 by handling cases where font does not have
 				// negative descent
-				pMetric->mnDescent = (long)( CTFontGetLeading( aFont ) + fabs( CTFontGetDescent( aFont ) ) + 0.5 );
-				if ( pMetric->mnDescent < 0 )
-					pMetric->mnDescent = 0;
+				long nDescent = (long)( CTFontGetLeading( aFont ) + fabs( CTFontGetDescent( aFont ) ) + 0.5 );
+				if ( nDescent < 0 )
+					nDescent = 0;
+				rMetric->SetDescent( nDescent );
 
 				CFRelease( aFont );
 			}
@@ -1091,48 +1092,44 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric, int /* nFallba
 				JavaPhysicalFontFace::HandleBadFont( mpFontData );
 			}
 
-			if ( pMetric->mnAscent < 1 )
+			if ( rMetric->GetAscent() < 1 )
 			{
-				pMetric->mnAscent = pMetric->mnWidth - pMetric->mnDescent;
-				if ( pMetric->mnAscent < 1 )
+				long nAscent = rMetric->GetWidth() - rMetric->GetDescent();
+				if ( nAscent < 1 )
 				{
-					pMetric->mnAscent = pMetric->mnDescent;
-					pMetric->mnDescent = 0;
+					nAscent = rMetric->GetDescent();
+					rMetric->SetDescent( 0 );
 				}
+				rMetric->SetAscent( nAscent );
 			}
 		}
 
-		pMetric->mbDevice = mpFontData->mbDevice;
-		pMetric->mbScalableFont = true;
-		pMetric->SetFamilyName( mpFontData->GetFamilyName() );
-		pMetric->SetStyleName( mpFontData->GetStyleName() );
-		pMetric->SetWeight( mpFontData->GetWeight() );
-		pMetric->SetFamilyType( mpFontData->GetFamilyType() );
-		pMetric->SetItalic( mpFontData->GetSlant() );
-		pMetric->SetPitch( mpFontData->GetPitch() );
-		pMetric->SetSymbolFlag( mpFontData->IsSymbolFont() );
+		rMetric->SetFamilyName( mpFontData->GetFamilyName() );
+		rMetric->SetStyleName( mpFontData->GetStyleName() );
+		rMetric->SetWeight( mpFontData->GetWeight() );
+		rMetric->SetFamilyType( mpFontData->GetFamilyType() );
+		rMetric->SetItalic( mpFontData->GetItalic() );
+		rMetric->SetPitch( mpFontData->GetPitch() );
+		rMetric->SetSymbolFlag( mpFontData->IsSymbolFont() );
 	}
 	else
 	{
-		pMetric->mbDevice = false;
-		pMetric->mbScalableFont = false;
-		pMetric->SetFamilyName( OUString() );
-		pMetric->SetStyleName( OUString() );
-		pMetric->SetWeight( WEIGHT_NORMAL );
-		pMetric->SetFamilyType( FAMILY_DONTKNOW );
-		pMetric->SetItalic( ITALIC_NONE );
-		pMetric->SetPitch( PITCH_VARIABLE );
-		pMetric->SetSymbolFlag( false );
+		rMetric->SetFamilyName( OUString() );
+		rMetric->SetStyleName( OUString() );
+		rMetric->SetWeight( WEIGHT_NORMAL );
+		rMetric->SetFamilyType( FAMILY_DONTKNOW );
+		rMetric->SetItalic( ITALIC_NONE );
+		rMetric->SetPitch( PITCH_VARIABLE );
+		rMetric->SetSymbolFlag( false );
 	}
 
-	pMetric->mnIntLeading = 0;
-	pMetric->mnExtLeading = 0;
-	pMetric->mbKernableFont = false;
-	pMetric->mnSlant = 0;
+	rMetric->SetInternalLeading( 0 );
+	rMetric->SetExternalLeading( 0 );
+	rMetric->SetSlant( 0 );
 
 	// Fix missing kashidas by setting the font's minimum kashida width to a
 	// non-zero width
-	pMetric->mnMinKashida = 1;
+	rMetric->SetMinKashida( 1 );
 }
 
 // -----------------------------------------------------------------------
@@ -1144,7 +1141,7 @@ void JavaSalGraphics::GetDevFontList( PhysicalFontCollection* pList )
 	{
 		// Invoke the native shutdown cancelled handler
 		JavaSalEventQueue::setShutdownDisabled( sal_True );
-		STATIC_LINK( NULL, JavaPhysicalFontFace, RunNativeFontsTimer ).Call( NULL );
+		LINK( nullptr, JavaPhysicalFontFace, RunNativeFontsTimer ).Call( NULL );
 		JavaSalEventQueue::setShutdownDisabled( sal_False );
 	}
 
@@ -1161,28 +1158,27 @@ void JavaSalGraphics::GetDevFontList( PhysicalFontCollection* pList )
 
 // -----------------------------------------------------------------------
 
-bool JavaSalGraphics::GetGlyphBoundRect( sal_GlyphId nIndex, Rectangle& rRect )
+bool JavaSalGraphics::GetGlyphBoundRect( const GlyphItem& rIndex, tools::Rectangle& rRect )
 {
-	rRect = Rectangle( Point( 0, 0 ), Size( 0, 0 ) );
+	rRect = tools::Rectangle( Point( 0, 0 ), Size( 0, 0 ) );
 
 	JavaImplFont *pFont = NULL;
 
-	int nFallbackLevel = nIndex >> GF_FONTSHIFT;
-	if ( !nFallbackLevel )
+	if ( !rIndex.mnFallbackLevel )
 	{
 		pFont = mpFont;
 	}
 	else
 	{
 		// Retrieve the fallback font if one has been set by a text layout
-		::boost::unordered_map< int, JavaImplFont* >::const_iterator ffit = maFallbackFonts.find( nFallbackLevel );
+		::std::unordered_map< int, JavaImplFont* >::const_iterator ffit = maFallbackFonts.find( rIndex.mnFallbackLevel );
 		if ( ffit != maFallbackFonts.end() )
 			pFont = ffit->second;
 	}
 
 	if ( pFont )
 	{
-		SalATSLayout::GetGlyphBounds( nIndex, pFont, rRect );
+		SalATSLayout::GetGlyphBounds( rIndex.maGlyphId, pFont, rRect );
 		rRect.Justify();
 	}
 
@@ -1193,7 +1189,7 @@ bool JavaSalGraphics::GetGlyphBoundRect( sal_GlyphId nIndex, Rectangle& rRect )
 
 // -----------------------------------------------------------------------
 
-bool JavaSalGraphics::GetGlyphOutline( sal_GlyphId /* nIndex */, B2DPolyPolygon& rPolyPoly )
+bool JavaSalGraphics::GetGlyphOutline( const GlyphItem& /* rIndex */, basegfx::B2DPolyPolygon& rPolyPoly )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalGraphics::GetGlyphOutline not implemented\n" );
@@ -1214,10 +1210,7 @@ bool JavaSalGraphics::AddTempDevFont( PhysicalFontCollection* /* pList */, const
 
 // -----------------------------------------------------------------------
 
-bool JavaSalGraphics::CreateFontSubset( const OUString& /* rToFile */,
-                                    const PhysicalFontFace* /* pFont */, sal_GlyphId* /* pGlyphIDs */,
-                                    sal_uInt8* /* pEncoding */, sal_Int32* /* pWidths */,
-                                    int /* nGlyphs */, FontSubsetInfo& /* rInfo */ )
+bool JavaSalGraphics::CreateFontSubset( const OUString& /* rToFile */, const PhysicalFontFace* /* pFont */, const sal_GlyphId* /* pGlyphIDs */, const sal_uInt8* /* pEncoding */, sal_Int32* /* pWidths */, int /* nGlyphs */, FontSubsetInfo& /* rInfo */ )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalGraphics::CreateFontSubset not implemented\n" );
@@ -1227,11 +1220,7 @@ bool JavaSalGraphics::CreateFontSubset( const OUString& /* rToFile */,
 
 // -----------------------------------------------------------------------
 
-const void* JavaSalGraphics::GetEmbedFontData( const PhysicalFontFace* /* pFont */,
-                                           const sal_Ucs* /* pUnicodes */,
-                                           sal_Int32* /* pWidths */,
-                                           FontSubsetInfo& /* rInfo */,
-                                           long* /* pDataLen */ )
+const void* JavaSalGraphics::GetEmbedFontData( const PhysicalFontFace* /* pFont */, long* /* pDataLen */ )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalGraphics::GetEmbedFontData not implemented\n" );
@@ -1250,7 +1239,7 @@ void JavaSalGraphics::FreeEmbedFontData( const void* /* pData */, long /* nLen *
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::GetGlyphWidths( const PhysicalFontFace* /* pFont */, bool /* bVertical */, Int32Vector& rWidths, Ucs2UIntMap& rUnicodeEnc )
+void JavaSalGraphics::GetGlyphWidths( const PhysicalFontFace* /* pFont */, bool /* bVertical */, std::vector< sal_Int32 >& rWidths, Ucs2UIntMap& rUnicodeEnc )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalGraphics::GetGlyphWidths not implemented\n" );
@@ -1261,29 +1250,9 @@ void JavaSalGraphics::GetGlyphWidths( const PhysicalFontFace* /* pFont */, bool 
 
 // -----------------------------------------------------------------------
 
-const Ucs2SIntMap* JavaSalGraphics::GetFontEncodingVector( const PhysicalFontFace*, const Ucs2OStrMap** ppNonEncoded, std::set<sal_Unicode> const** ppPriority )
+const FontCharMapRef JavaSalGraphics::GetFontCharMap() const
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalGraphics::GetFontEncodingVector not implemented\n" );
-#endif
-	if ( ppNonEncoded )
-		*ppNonEncoded = NULL;
-	if ( ppPriority )
-		*ppPriority = NULL;
-	return NULL;
-}
-
-// -----------------------------------------------------------------------
-
-void JavaSalGraphics::DrawServerFontLayout( const ServerFontLayout& )
-{
-}
-
-// -----------------------------------------------------------------------
-
-const FontCharMapPtr JavaSalGraphics::GetFontCharMap() const
-{
-	return FontCharMap::GetDefaultMap();
+	return FontCharMap::GetDefaultMap( false );
 }
 
 // -----------------------------------------------------------------------
