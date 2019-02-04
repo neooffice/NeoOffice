@@ -398,32 +398,28 @@ void NSApplication_run()
 
 							if ( pIdentifier && pIdentifierData && pIdentifierData.bytes && pIdentifierData.length && pVersion && pOpaque && pOpaque.length && pOpaque.bytes && pHash && pHash.length == CC_SHA1_DIGEST_LENGTH && pHash.bytes )
 							{
-								NSBundle *pBundle = [NSBundle mainBundle];
-								if ( pBundle )
+								NSDictionary *pInfoDict = [pBundle infoDictionary];
+								if ( pInfoDict )
 								{
-									NSDictionary *pInfoDict = [pBundle infoDictionary];
-									if ( pInfoDict )
+									NSString *pBundleIdentifier = [pInfoDict objectForKey:@"CFBundleIdentifier"];
+									if ( pBundleIdentifier && [pBundleIdentifier isEqualToString:pIdentifier] )
 									{
-										NSString *pBundleIdentifier = [pInfoDict objectForKey:@"CFBundleIdentifier"];
-										if ( pBundleIdentifier && [pBundleIdentifier isEqualToString:pIdentifier] )
+										CFDataRef aMacAddress = ImplCreateMacAddress();
+										if ( aMacAddress )
 										{
-											CFDataRef aMacAddress = ImplCreateMacAddress();
-											if ( aMacAddress )
+											const UInt8 *pMacAddressBytes = CFDataGetBytePtr( aMacAddress );
+											CFIndex nMacAddressLen = CFDataGetLength( aMacAddress );
+											unsigned char aDigest[ CC_SHA1_DIGEST_LENGTH ];
+											if ( pMacAddressBytes && nMacAddressLen )
 											{
-												const UInt8 *pMacAddressBytes = CFDataGetBytePtr( aMacAddress );
-												CFIndex nMacAddressLen = CFDataGetLength( aMacAddress );
-												unsigned char aDigest[ CC_SHA1_DIGEST_LENGTH ];
-												if ( pMacAddressBytes && nMacAddressLen )
-												{
-													CC_SHA1_CTX aContext;
-													CC_SHA1_Init( &aContext );
-													CC_SHA1_Update( &aContext, pMacAddressBytes, nMacAddressLen );
-													CC_SHA1_Update( &aContext, pOpaque.bytes, pOpaque.length );
-													CC_SHA1_Update( &aContext, pIdentifierData.bytes, pIdentifierData.length );
-													CC_SHA1_Final( aDigest, &aContext );
-													if ( !memcmp( aDigest, pHash.bytes, CC_SHA1_DIGEST_LENGTH ) )
-														mnExitCode = 0;
-												}
+												CC_SHA1_CTX aContext;
+												CC_SHA1_Init( &aContext );
+												CC_SHA1_Update( &aContext, pMacAddressBytes, nMacAddressLen );
+												CC_SHA1_Update( &aContext, pOpaque.bytes, pOpaque.length );
+												CC_SHA1_Update( &aContext, pIdentifierData.bytes, pIdentifierData.length );
+												CC_SHA1_Final( aDigest, &aContext );
+												if ( !memcmp( aDigest, pHash.bytes, CC_SHA1_DIGEST_LENGTH ) )
+													mnExitCode = 0;
 											}
 										}
 									}
