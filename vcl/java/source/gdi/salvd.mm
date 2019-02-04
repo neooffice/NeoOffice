@@ -33,6 +33,11 @@
  *
  ************************************************************************/
 
+#include <tools/color.hxx>
+#include <tools/gen.hxx>
+#include <tools/stream.hxx>
+#include <vcl/fntstyle.hxx>
+
 #include <premac.h>
 #import <AppKit/AppKit.h>
 #include <postmac.h>
@@ -163,7 +168,7 @@ JavaSalVirtualDevice::JavaSalVirtualDevice() :
 	mbGraphics( sal_False )
 {
 	// By default no mirroring for VirtualDevices
-	mpGraphics->SetLayout( 0 );
+	mpGraphics->SetLayout( SalLayoutFlags::NONE );
 	mpGraphics->mpVirDev = this;
 	mpGraphics->mnDPIX = MIN_SCREEN_RESOLUTION;
 	mpGraphics->mnDPIY = MIN_SCREEN_RESOLUTION;
