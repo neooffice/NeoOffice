@@ -98,29 +98,22 @@ void JavaSalObject::Flush()
 
 void JavaSalObject::ResetClipRegion()
 {
-	maClipRect = Rectangle();
+	maClipRect = tools::Rectangle();
 	VCLChildView_setClip( mpChildView, NSZeroRect );
-}
-
-// -----------------------------------------------------------------------
-
-sal_uInt16 JavaSalObject::GetClipRegionType()
-{
-	return SAL_OBJECT_CLIP_INCLUDERECTS;
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalObject::BeginSetClipRegion( sal_uLong /* nRects */ )
 {
-	maClipRect = Rectangle();
+	maClipRect = tools::Rectangle();
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalObject::UnionClipRegion( long nX, long nY, long nWidth, long nHeight )
 {
-	Rectangle aRect( Point( nX, nY ), Size( nWidth, nHeight ) );
+	tools::Rectangle aRect( Point( nX, nY ), Size( nWidth, nHeight ) );
 	if ( !aRect.IsEmpty() )
 	{
 		if ( maClipRect.IsEmpty() )
@@ -176,20 +169,6 @@ void JavaSalObject::Show( bool bVisible )
 
 	if ( mpParent )
 		mpParent->AddObject( this, mbVisible );
-}
-
-// -----------------------------------------------------------------------
-
-void JavaSalObject::SetBackground()
-{
-	VCLChildView_setBackgroundColor( mpChildView, 0xffffffff );
-}
-
-// -----------------------------------------------------------------------
-
-void JavaSalObject::SetBackground( SalColor nSalColor )
-{
-	VCLChildView_setBackgroundColor( mpChildView, nSalColor | 0xff000000 );
 }
 
 // -----------------------------------------------------------------------
