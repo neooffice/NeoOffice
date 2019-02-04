@@ -175,7 +175,7 @@ static sal_Bool SetSalColorFromNSColor( NSColor *pNSColor, SalColor **ppSalColor
 
 		if ( pNSColor )
 		{
-			pNSColor = [pNSColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+			pNSColor = [pNSColor colorUsingColorSpace:NSColorSpace.deviceRGBColorSpace];
 			if ( pNSColor )
 			{
 				// Remove transparency by blending color with opaque gray
@@ -554,7 +554,7 @@ static BOOL bIOPMAssertionIDSet = NO;
 	NSWindow*				mpParent;
 	BOOL					mbShowOnlyMenus;
 	NSRect					maShowOnlyMenusFrame;
-	sal_uLong				mnStyle;
+	SalFrameStyleFlags		mnStyle;
 	BOOL					mbUndecorated;
 	BOOL					mbUtility;
 	NSProgressIndicator*	mpWaitingView;
@@ -565,7 +565,7 @@ static BOOL bIOPMAssertionIDSet = NO;
 - (void)addTrackingArea:(VCLWindowWrapperArgs *)pArgs;
 - (void)adjustColorLevelAndShadow;
 - (void)animateWaitingView:(BOOL)bAnimate;
-- (id)initWithStyle:(sal_uLong)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(BOOL)bShowOnlyMenus utility:(BOOL)bUtility;
+- (id)initWithStyle:(SalFrameStyleFlags)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(BOOL)bShowOnlyMenus utility:(BOOL)bUtility;
 - (void)dealloc;
 - (void)deminimize:(VCLWindowWrapperArgs *)pArgs;
 - (void)destroy:(id)pObject;
@@ -1083,7 +1083,7 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 
 	HandleSystemColorsChangedRequest();
 
-	JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_SYSTEMCOLORSCHANGED, NULL, NULL );
+	JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::SystemColorsChanged, NULL, NULL );
 	JavaSalEventQueue::postCachedEvent( pEvent );
 	pEvent->release();
 }
@@ -1312,7 +1312,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			}
 			else if ( pMinitiarizedFrame )
 			{
-				JavaSalEvent *pGetFocusEvent = new JavaSalEvent( SALEVENT_GETFOCUS, pMinitiarizedFrame, NULL );
+				JavaSalEvent *pGetFocusEvent = new JavaSalEvent( SalEvent::GetFocus, pMinitiarizedFrame, NULL );
 				JavaSalEventQueue::postCachedEvent( pGetFocusEvent );
 				pGetFocusEvent->release();
 			}
@@ -1421,7 +1421,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	}
 }
 
-- (id)initWithStyle:(sal_uLong)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(BOOL)bShowOnlyMenus utility:(BOOL)bUtility
+- (id)initWithStyle:(SalFrameStyleFlags)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(BOOL)bShowOnlyMenus utility:(BOOL)bUtility
 {
 	[super init];
 
@@ -1443,7 +1443,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	mpWindow = nil;
 	mnWindowStyleMask = NSWindowStyleMaskBorderless;
 
-	if ( !mbUtility && ( mbShowOnlyMenus || ! ( mnStyle & ( SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE ) ) ) )
+	if ( !mbUtility && ( mbShowOnlyMenus || ! ( mnStyle & ( SalFrameStyleFlags::DEFAULT | SalFrameStyleFlags::MOVEABLE | SalFrameStyleFlags::SIZEABLE ) ) ) )
 		mbUndecorated = YES;
 
 	if ( !mbUndecorated )
@@ -1451,7 +1451,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		mnWindowStyleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable;
 		if ( mbUtility )
 			mnWindowStyleMask |= NSWindowStyleMaskUtilityWindow;
-		if ( mnStyle & SAL_FRAME_STYLE_SIZEABLE )
+		if ( mnStyle & SalFrameStyleFlags::SIZEABLE )
 		{
 			mnWindowStyleMask |= NSWindowStyleMaskResizable;
 			if ( !mbUtility )
@@ -1477,7 +1477,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			if ( mbUndecorated && !mbShowOnlyMenus && !mbFullScreen )
 			{
 				[(VCLPanel *)mpWindow setBecomesKeyOnlyIfNeeded:NO];
-				[(VCLPanel *)mpWindow setCanBecomeKeyWindow:mnStyle & SAL_FRAME_STYLE_FLOAT_FOCUSABLE ? YES : NO];
+				[(VCLPanel *)mpWindow setCanBecomeKeyWindow:NO];
 			}
 			else if ( mbUtility )
 			{
@@ -1510,7 +1510,6 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				if ( mpWaitingView )
 				{
 					[mpWaitingView setIndeterminate:YES];
-					[mpWaitingView setStyle:NSProgressIndicatorSpinningStyle];
 					[mpWaitingView setDisplayedWhenStopped:NO];
 					[mpWaitingView sizeToFit];
 					[mpWaitingView setAutoresizingMask:NSViewMinXMargin | NSViewMaxXMargin | NSViewMinYMargin | NSViewMaxYMargin];
@@ -1746,13 +1745,13 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 {
 	if ( mpWindow )
 	{
-		unsigned long nState;
+		WindowStateState nState = WindowStateState::NONE;
 		if ( [mpWindow styleMask] & NSWindowStyleMaskMiniaturizable && [mpWindow isMiniaturized] )
-			nState = WINDOWSTATE_STATE_MINIMIZED;
+			nState = WindowStateState::Minimized;
 		else
-			nState = WINDOWSTATE_STATE_NORMAL;
+			nState = WindowStateState::Normal;
 
-		[pArgs setResult:[NSNumber numberWithUnsignedLong:nState]];
+		[pArgs setResult:[NSNumber numberWithUnsignedLong:(unsigned long)nState]];
 	}
 }
 
@@ -1988,9 +1987,9 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		[self adjustColorLevelAndShadow];
 
 		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
-			[(VCLPanel *)mpWindow setCanBecomeKeyWindow:( mbFullScreen || mnStyle & SAL_FRAME_STYLE_FLOAT_FOCUSABLE ) ? YES : NO];
+			[(VCLPanel *)mpWindow setCanBecomeKeyWindow:mbFullScreen ? YES : NO];
 		else
-			[(VCLWindow *)mpWindow setCanBecomeKeyWindow:( mbFullScreen || mnStyle & SAL_FRAME_STYLE_FLOAT_FOCUSABLE ) ? YES : NO];
+			[(VCLWindow *)mpWindow setCanBecomeKeyWindow:mbFullScreen ? YES : NO];
 	}
 }
 
@@ -2035,10 +2034,10 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	// no parent window as this method can cause a deadlock with the native
 	// menu handler on Mac OS X. Also, don't allow utility windows to be
 	// minimized.
-	unsigned long nState = [pState unsignedLongValue];
+	WindowStateState nState = (WindowStateState)[pState unsignedLongValue];
 	if ( !mbUtility && !mbShowOnlyMenus && !mbUndecorated && !mpParent && mpWindow && ( [mpWindow isVisible] || [mpWindow isMiniaturized] ) )
 	{
-		if ( nState == WINDOWSTATE_STATE_MINIMIZED && [mpWindow styleMask] & NSWindowStyleMaskMiniaturizable )
+		if ( nState & WindowStateState::Minimized && [mpWindow styleMask] & NSWindowStyleMaskMiniaturizable )
 			[mpWindow miniaturize:self];
 		else if ( [mpWindow isMiniaturized] )
 			[mpWindow deminiaturize:self];
@@ -2206,12 +2205,12 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	JavaSalFrame*			mpFrame;
 	NSWindow*				mpParent;
 	BOOL					mbShowOnlyMenus;
-	sal_uLong				mnStyle;
+	SalFrameStyleFlags		mnStyle;
 	BOOL					mbUtility;
 	VCLWindowWrapper*		mpWindow;
 }
-+ (id)createWithStyle:(sal_uLong)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(BOOL)bShowOnlyMenus utility:(BOOL)bUtility;
-- (id)initWithStyle:(sal_uLong)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(BOOL)bShowOnlyMenus utility:(BOOL)bUtility;
++ (id)createWithStyle:(SalFrameStyleFlags)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(BOOL)bShowOnlyMenus utility:(BOOL)bUtility;
+- (id)initWithStyle:(SalFrameStyleFlags)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(BOOL)bShowOnlyMenus utility:(BOOL)bUtility;
 - (void)dealloc;
 - (void)createWindow:(id)pObject;
 - (VCLWindowWrapper *)window;
@@ -2219,14 +2218,14 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 @implementation VCLCreateWindow
 
-+ (id)createWithStyle:(sal_uLong)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(BOOL)bShowOnlyMenus utility:(BOOL)bUtility
++ (id)createWithStyle:(SalFrameStyleFlags)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(BOOL)bShowOnlyMenus utility:(BOOL)bUtility
 {
 	VCLCreateWindow *pRet = [[VCLCreateWindow alloc] initWithStyle:nStyle frame:pFrame parent:pParent showOnlyMenus:bShowOnlyMenus utility:bUtility];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)initWithStyle:(sal_uLong)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(BOOL)bShowOnlyMenus utility:(BOOL)bUtility
+- (id)initWithStyle:(SalFrameStyleFlags)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(BOOL)bShowOnlyMenus utility:(BOOL)bUtility
 {
 	[super init];
 
@@ -2283,10 +2282,10 @@ static void InitializeScreens()
 		{
 			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-			VCLUpdateScreens *pVCLUpdateScreens = [VCLUpdateScreens create];
+			VCLUpdateScreens *pTmpVCLUpdateScreens = [VCLUpdateScreens create];
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 			aGuard.clear();
-			[pVCLUpdateScreens performSelectorOnMainThread:@selector(updateScreens:) withObject:pVCLUpdateScreens waitUntilDone:YES modes:pModes];
+			[pTmpVCLUpdateScreens performSelectorOnMainThread:@selector(updateScreens:) withObject:pTmpVCLUpdateScreens waitUntilDone:YES modes:pModes];
 
 			[pPool release];
 		}
@@ -2306,10 +2305,10 @@ static void InitializeSystemColors()
 		{
 			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-			VCLUpdateSystemColors *pVCLUpdateSystemColors = [VCLUpdateSystemColors create];
+			VCLUpdateSystemColors *pTmpVCLUpdateSystemColors = [VCLUpdateSystemColors create];
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 			aGuard.clear();
-			[pVCLUpdateSystemColors performSelectorOnMainThread:@selector(updateSystemColors:) withObject:pVCLUpdateSystemColors waitUntilDone:YES modes:pModes];
+			[pTmpVCLUpdateSystemColors performSelectorOnMainThread:@selector(updateSystemColors:) withObject:pTmpVCLUpdateSystemColors waitUntilDone:YES modes:pModes];
 
 			[pPool release];
 		}
@@ -2474,7 +2473,7 @@ NSCursor *JavaSalFrame_getCursor( NSView *pView )
 
 // =======================================================================
 
-JavaSalFrame::JavaSalFrame( sal_uLong nSalFrameStyle, JavaSalFrame *pParent ) :
+JavaSalFrame::JavaSalFrame( SalFrameStyleFlags nSalFrameStyle, JavaSalFrame *pParent ) :
 	maFrameLayer( NULL ),
 	maFrameClipPath( NULL ),
 	mpWindow( NULL ),
@@ -2939,10 +2938,13 @@ OUString JavaSalFrame::ConvertVCLKeyCode( sal_uInt16 nKeyCode, bool bIsMenuShort
 			break;
 		case KEY_BRACKETLEFT:
 			aRet = OUString( (sal_Unicode)'[' );
+			break;
 		case KEY_BRACKETRIGHT:
 			aRet = OUString( (sal_Unicode)']' );
+			break;
 		case KEY_SEMICOLON:
 			aRet = OUString( (sal_Unicode)';' );
+			break;
 		case KEY_QUOTERIGHT:
 			aRet = OUString( (sal_Unicode)'\'' );
 			break;
@@ -3246,14 +3248,14 @@ bool JavaSalFrame::Deminimize()
 
 bool JavaSalFrame::IsFloatingFrame()
 {
-	return ( ! ( mnStyle & ( SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE | SAL_FRAME_STYLE_FLOAT_FOCUSABLE ) ) && this != GetSalData()->mpPresentationFrame && !mbShowOnlyMenus );
+	return ( ! ( mnStyle & ( SalFrameStyleFlags::DEFAULT | SalFrameStyleFlags::MOVEABLE | SalFrameStyleFlags::SIZEABLE ) ) && this != GetSalData()->mpPresentationFrame && !mbShowOnlyMenus );
 }
 
 // -----------------------------------------------------------------------
 
 bool JavaSalFrame::IsUtilityWindow()
 {
-	return ( mnStyle & SAL_FRAME_STYLE_MOVEABLE && mnStyle & SAL_FRAME_STYLE_TOOLWINDOW && !IsFloatingFrame() );
+	return ( mnStyle & SalFrameStyleFlags::MOVEABLE && mnStyle & SalFrameStyleFlags::TOOLWINDOW && !IsFloatingFrame() );
 }
 
 // -----------------------------------------------------------------------
@@ -3377,9 +3379,9 @@ id JavaSalFrame::GetNativeWindowContentView( sal_Bool bTopLevelWindow )
 
 // -----------------------------------------------------------------------
 
-sal_uLong JavaSalFrame::GetState()
+WindowStateState JavaSalFrame::GetState()
 {
-	sal_uLong nRet = 0;
+	WindowStateState nRet = WindowStateState::NONE;
 
 	if ( mpWindow )
 	{
@@ -3390,7 +3392,7 @@ sal_uLong JavaSalFrame::GetState()
 		[mpWindow performSelectorOnMainThread:@selector(getState:) withObject:pGetStateArgs waitUntilDone:YES modes:pModes];
 		NSNumber *pState = (NSNumber *)[pGetStateArgs result];
 		if ( pState )
-			nRet = [pState unsignedLongValue];
+			nRet = (WindowStateState)[pState unsignedLongValue];
 
 		[pPool release];
 	}
@@ -3438,21 +3440,21 @@ bool JavaSalFrame::RequestFocus()
 
 // -----------------------------------------------------------------------
 
-void JavaSalFrame::SetState( sal_uLong nFrameState )
+void JavaSalFrame::SetState( WindowStateState nFrameState )
 {
 	if ( mpWindow )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		sal_uLong nState;
-		if ( nFrameState & WINDOWSTATE_STATE_MINIMIZED )
-			nState = WINDOWSTATE_STATE_MINIMIZED;
-		else if ( nFrameState & WINDOWSTATE_STATE_MAXIMIZED )
-			nState = WINDOWSTATE_STATE_MAXIMIZED;
+		WindowStateState nState;
+		if ( nFrameState & WindowStateState::Minimized )
+			nState = WindowStateState::Minimized;
+		else if ( nFrameState & WindowStateState::Maximized )
+			nState = WindowStateState::Maximized;
 		else
-			nState = WINDOWSTATE_STATE_NORMAL;
+			nState = WindowStateState::Normal;
 
-		VCLWindowWrapperArgs *pSetStateArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithUnsignedLong:nState]]];
+		VCLWindowWrapperArgs *pSetStateArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithUnsignedLong:(unsigned long)nState]]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[mpWindow performSelectorOnMainThread:@selector(setState:) withObject:pSetStateArgs waitUntilDone:YES modes:pModes];
 
@@ -3537,17 +3539,17 @@ void JavaSalFrame::UpdateLayer()
 			mpGraphics->setBackgroundColor( 0xffffffff );
 
 		// If the layer size differs from the expected size, the window size is
-		// changing so post a SALEVENT_MOVERESIZE event to notify the OOo code
+		// changing so post a SalEvent::MoveResize event to notify the OOo code
 		// of the change
 		if ( !CGSizeEqualToSize( aLayerSize, aExpectedSize ) )
 		{
-			JavaSalEvent *pMoveResizeEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, this, NULL );
+			JavaSalEvent *pMoveResizeEvent = new JavaSalEvent( SalEvent::MoveResize, this, NULL );
 			JavaSalEventQueue::postCachedEvent( pMoveResizeEvent );
 			pMoveResizeEvent->release();
 		}
 
 		// Post a paint event
-		JavaSalEvent *pPaintEvent = new JavaSalEvent( SALEVENT_PAINT, this, new SalPaintEvent( 0, 0, aLayerSize.width, aLayerSize.height ) );
+		JavaSalEvent *pPaintEvent = new JavaSalEvent( SalEvent::Paint, this, new SalPaintEvent( 0, 0, aLayerSize.width, aLayerSize.height ) );
 		JavaSalEventQueue::postCachedEvent( pPaintEvent );
 		pPaintEvent->release();
 	}
@@ -3638,7 +3640,7 @@ void JavaSalFrame::ReleaseGraphics( SalGraphics* pGraphics )
 
 bool JavaSalFrame::PostEvent( ImplSVEvent *pData )
 {
-	JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_USEREVENT, this, pData );
+	JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::UserEvent, this, pData );
 	JavaSalEventQueue::postCachedEvent( pEvent );
 	pEvent->release();
 	return true;
@@ -3653,7 +3655,7 @@ void JavaSalFrame::SetTitle( const OUString& rTitle )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSString *pTitle = [NSString stringWithCharacters:maTitle.getStr() length:maTitle.getLength()];
+		NSString *pTitle = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( maTitle.getStr() ) length:maTitle.getLength()];
 		VCLWindowWrapperArgs *pSetTitleArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:pTitle]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[mpWindow performSelectorOnMainThread:@selector(setTitle:) withObject:pSetTitleArgs waitUntilDone:YES modes:pModes];
@@ -3775,7 +3777,7 @@ void JavaSalFrame::Show( bool bVisible, bool bNoActivate )
 		maSysData.mpNSView = (NSView *)GetNativeWindowContentView( bTopLevelWindow );
 		mbCenter = sal_False;
 
-		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, this, NULL );
+		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::MoveResize, this, NULL );
 		pEvent->dispatch();
 		pEvent->release();
 
@@ -3802,7 +3804,7 @@ void JavaSalFrame::Show( bool bVisible, bool bNoActivate )
 	else
 	{
 		// End composition
-		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_ENDEXTTEXTINPUT, this, NULL );
+		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::EndExtTextInput, this, NULL );
 		pEvent->dispatch();
 		pEvent->release();
 
@@ -3814,7 +3816,7 @@ void JavaSalFrame::Show( bool bVisible, bool bNoActivate )
 		// after closing a window whose child window had focus
 		if ( pSalData->mpFocusFrame == this )
 		{
-			JavaSalEvent *pFocusEvent = new JavaSalEvent( SALEVENT_LOSEFOCUS, this, NULL );
+			JavaSalEvent *pFocusEvent = new JavaSalEvent( SalEvent::LoseFocus, this, NULL );
 			pFocusEvent->dispatch();
 			pFocusEvent->release();
 		}
@@ -3904,7 +3906,7 @@ void JavaSalFrame::SetMinClientSize( long nWidth, long nHeight )
 
 void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_uInt16 nFlags )
 {
-	if ( mnStyle & SAL_FRAME_STYLE_SYSTEMCHILD )
+	if ( mnStyle & SalFrameStyleFlags::SYSTEMCHILD )
 		return;
 
 	mbInSetPosSize = sal_True;
@@ -4026,7 +4028,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_
 
 	// Update the cached position immediately
 	unsigned long nOrigHeight = maGeometry.nHeight;
-	JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, this, NULL );
+	JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::MoveResize, this, NULL );
 	pEvent->dispatch();
 	pEvent->release();
 
@@ -4037,7 +4039,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_
 	// resize the height to fit all of the dialog's children so that the user
 	// might be able to see all of the controls if they hide the OS X Dock or
 	// drag the dialog to another monitor.
-	if ( maGeometry.nHeight > nOrigHeight && mnStyle & ( SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE ) && ! ( mnStyle & SAL_FRAME_STYLE_SIZEABLE ) )
+	if ( maGeometry.nHeight > nOrigHeight && mnStyle & ( SalFrameStyleFlags::DEFAULT | SalFrameStyleFlags::MOVEABLE ) && ! ( mnStyle & SalFrameStyleFlags::SIZEABLE ) )
 	{
 		Window *pWindow = Application::GetFirstTopLevelWindow();
 		while ( pWindow && pWindow->ImplGetFrame() != this )
@@ -4073,7 +4075,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_
 			}
 
 			// Update the cached position immediately
-			pEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, this, NULL );
+			pEvent = new JavaSalEvent( SalEvent::MoveResize, this, NULL );
 			pEvent->dispatch();
 			pEvent->release();
 		}
@@ -4135,13 +4137,13 @@ void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 	mbInSetWindowState = sal_True;
 
 	sal_uInt16 nFlags = 0;
-	if ( pState->mnMask & WINDOWSTATE_MASK_X )
+	if ( pState->mnMask & WindowStateMask::X )
 		nFlags |= SAL_FRAME_POSSIZE_X;
-	if ( pState->mnMask & WINDOWSTATE_MASK_Y )
+	if ( pState->mnMask & WindowStateMask::Y )
 		nFlags |= SAL_FRAME_POSSIZE_Y;
-	if ( pState->mnMask & WINDOWSTATE_MASK_WIDTH )
+	if ( pState->mnMask & WindowStateMask::Width )
 		nFlags |= SAL_FRAME_POSSIZE_WIDTH;
-	if ( pState->mnMask & WINDOWSTATE_MASK_HEIGHT )
+	if ( pState->mnMask & WindowStateMask::Height )
 		nFlags |= SAL_FRAME_POSSIZE_HEIGHT;
 	if ( nFlags )
 	{
@@ -4152,7 +4154,7 @@ void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 	}
 
 	// Fix bug 3078 by setting the state after setting the size
-	if ( pState->mnMask & WINDOWSTATE_MASK_STATE )
+	if ( pState->mnMask & WindowStateMask::State )
 		SetState( pState->mnState );
 
 	mbInSetWindowState = bOldInSetWindowState;
@@ -4163,7 +4165,7 @@ void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 bool JavaSalFrame::GetWindowState( SalFrameState* pState )
 {
 	tools::Rectangle aBounds( GetBounds( NULL, NULL, sal_True ) );
-	pState->mnMask = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT | WINDOWSTATE_MASK_STATE;
+	pState->mnMask = WindowStateMask::X | WindowStateMask::Y | WindowStateMask::Width | WindowStateMask::Height | WindowStateMask::State;
 	pState->mnX = aBounds.Left();
 	pState->mnY = aBounds.Top();
 	pState->mnWidth = aBounds.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration;
@@ -4345,7 +4347,7 @@ void JavaSalFrame::ToTop( SalFrameToTop nFlags )
 	// 1203 by not doing this update if we are in the Show() method.
 	if ( bSuccess && !mbInShow )
 	{
-		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_GETFOCUS, pFrame, NULL );
+		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::GetFocus, pFrame, NULL );
 		pEvent->dispatch();
 		pEvent->release();
 	}
@@ -4404,7 +4406,7 @@ void JavaSalFrame::Flush()
 void JavaSalFrame::SetInputContext( SalInputContext* pContext )
 {
 	// Only allow Mac OS X key bindings when the OOo application code says so
-	if ( pContext && pContext->mnOptions & SAL_INPUTCONTEXT_TEXT )
+	if ( pContext && pContext->mnOptions & InputContextFlags::Text )
 		mbAllowKeyBindings = true;
 	else
 		mbAllowKeyBindings = false;
@@ -4490,7 +4492,6 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 		aStyleSettings.SetGroupTextColor( aThemeDialogColor );
 		aStyleSettings.SetLabelTextColor( aThemeDialogColor );
 		aStyleSettings.SetHelpTextColor( aTextColor );
-		aStyleSettings.SetInfoTextColor( aTextColor );
 		aStyleSettings.SetFieldTextColor( aTextColor );
 		aStyleSettings.SetWindowTextColor( aTextColor );
 	}
@@ -4556,14 +4557,14 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 		aStyleSettings.SetLinkColor( Color( *pVCLLinkColor ) );
 
 	// Mnemonics is needed for our code in OutputDevice::ImplDrawMnemonicLine()
-	aStyleSettings.SetOptions( aStyleSettings.GetOptions() & ~STYLE_OPTION_NOMNEMONICS );
+	aStyleSettings.SetOptions( aStyleSettings.GetOptions() & ~StyleSettingsOptions::NoMnemonics );
 
 	// Use large icons by default
-	aStyleSettings.SetToolbarIconSize( STYLE_TOOLBAR_ICONSIZE_LARGE );
+	aStyleSettings.SetToolbarIconSize( ToolbarIconSize::Large );
 
 	// Hide images in popup menus
 	aStyleSettings.SetPreferredUseImagesInMenus( false );
-	aStyleSettings.SetAcceleratorsInContextMenus( false );
+	aStyleSettings.SetContextMenuShortcuts( TRISTATE_FALSE );
 
 	if ( nVCLScrollbarSize > 0 )
 		aStyleSettings.SetScrollBarSize( nVCLScrollbarSize );
@@ -4571,8 +4572,8 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	SalData *pSalData = GetSalData();
 
 	vcl::Font aSystemFont( pSalData->maSystemFont );
-	aSystemFont.SetHeight( Float32ToLong( (float)aSystemFont.GetHeight() * 72 / mpGraphics->mnDPIY ) );
-	if ( aSystemFont.GetHeight() > 0 )
+	aSystemFont.SetFontHeight( Float32ToLong( (float)aSystemFont.GetFontHeight() * 72 / mpGraphics->mnDPIY ) );
+	if ( aSystemFont.GetFontHeight() > 0 )
 	{
 		aStyleSettings.SetAppFont( aSystemFont );
 		aStyleSettings.SetHelpFont( aSystemFont );
@@ -4581,31 +4582,30 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	}
 
 	vcl::Font aLabelFont( pSalData->maLabelFont );
-	aLabelFont.SetHeight( Float32ToLong( (float)aLabelFont.GetHeight() * 72 / mpGraphics->mnDPIY ) );
-	if ( aLabelFont.GetHeight() <= 0 )
+	aLabelFont.SetFontHeight( Float32ToLong( (float)aLabelFont.GetFontHeight() * 72 / mpGraphics->mnDPIY ) );
+	if ( aLabelFont.GetFontHeight() <= 0 )
 		aLabelFont = aSystemFont;
-	if ( aLabelFont.GetHeight() > 0 )
+	if ( aLabelFont.GetFontHeight() > 0 )
 	{
 		aStyleSettings.SetFieldFont( aLabelFont );
 		aStyleSettings.SetGroupFont( aLabelFont );
 		aStyleSettings.SetIconFont( aLabelFont );
-		aStyleSettings.SetInfoFont( aLabelFont );
 		aStyleSettings.SetLabelFont( aLabelFont );
 		aStyleSettings.SetRadioCheckFont( aLabelFont );
 	}
 
 	vcl::Font aMenuFont( pSalData->maMenuFont );
-	aMenuFont.SetHeight( Float32ToLong( (float)aMenuFont.GetHeight() * 72 / mpGraphics->mnDPIY ) );
-	if ( aMenuFont.GetHeight() <= 0 )
+	aMenuFont.SetFontHeight( Float32ToLong( (float)aMenuFont.GetFontHeight() * 72 / mpGraphics->mnDPIY ) );
+	if ( aMenuFont.GetFontHeight() <= 0 )
 		aMenuFont = aSystemFont;
-	if ( aMenuFont.GetHeight() > 0 )
+	if ( aMenuFont.GetFontHeight() > 0 )
 		aStyleSettings.SetMenuFont( aMenuFont );
 
 	vcl::Font aTitleBarFont( pSalData->maTitleBarFont );
-	aTitleBarFont.SetHeight( Float32ToLong( (float)aTitleBarFont.GetHeight() * 72 / mpGraphics->mnDPIY ) );
-	if ( aTitleBarFont.GetHeight() <= 0 )
+	aTitleBarFont.SetFontHeight( Float32ToLong( (float)aTitleBarFont.GetFontHeight() * 72 / mpGraphics->mnDPIY ) );
+	if ( aTitleBarFont.GetFontHeight() <= 0 )
 		aTitleBarFont = aSystemFont;
-	if ( aTitleBarFont.GetHeight() > 0 )
+	if ( aTitleBarFont.GetFontHeight() > 0 )
 	{
 		aStyleSettings.SetTitleFont( aTitleBarFont );
 		aStyleSettings.SetFloatTitleFont( aTitleBarFont );
