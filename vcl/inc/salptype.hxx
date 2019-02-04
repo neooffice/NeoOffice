@@ -33,6 +33,9 @@
 #include <sal/types.h>
 
 enum class JobSetFlags : sal_uInt16 {
+#if defined USE_JAVA && defined MACOSX
+    NONE         = 0,
+#endif	// USE_JAVA && MACOSX
     ORIENTATION  = 1,
     PAPERBIN     = 2,
     PAPERSIZE    = 4,
