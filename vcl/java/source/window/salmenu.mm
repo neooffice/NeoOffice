@@ -281,7 +281,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	{
 		NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:nPos];
 		if ( pMenuItem )
-			[pMenuItem setState:( [pCheck boolValue] ? NSOnState : NSOffState )];
+			[pMenuItem setState:( [pCheck boolValue] ? NSControlStateValueOn : NSControlStateValueOff )];
 	}
 }
 
@@ -718,15 +718,15 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 		if ( !Application::IsShutDown() )
 		{
-			JavaSalEvent *pActivateEvent = new JavaSalEvent( SALEVENT_MENUACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
+			JavaSalEvent *pActivateEvent = new JavaSalEvent( SalEvent::MenuActivate, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
 			JavaSalEventQueue::postCachedEvent( pActivateEvent );
 			pActivateEvent->release();
 
-			JavaSalEvent *pCommandEvent = new JavaSalEvent( SALEVENT_MENUCOMMAND, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
+			JavaSalEvent *pCommandEvent = new JavaSalEvent( SalEvent::MenuCommand, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
 			JavaSalEventQueue::postCachedEvent( pCommandEvent );
 			pCommandEvent->release();
 
-			JavaSalEvent *pDeactivateEvent = new JavaSalEvent( SALEVENT_MENUDEACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
+			JavaSalEvent *pDeactivateEvent = new JavaSalEvent( SalEvent::MenuDeactivate, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
 			JavaSalEventQueue::postCachedEvent( pDeactivateEvent );
 			pDeactivateEvent->release();
 		}
@@ -1161,7 +1161,7 @@ void JavaSalMenu::SetItemText( unsigned /* nPos */, SalMenuItem* pSalMenuItem, c
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSString *pTitle = [NSString stringWithCharacters:aText.getStr() length:aText.getLength()];
+		NSString *pTitle = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aText.getStr() ) length:aText.getLength()];
 		VCLMenuWrapperArgs *pSetMenuItemTitleArgs = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObjects:( pTitle ? pTitle : @"" ), pJavaSalMenuItem->mpMenuItem, nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[mpMenu performSelectorOnMainThread:@selector(setMenuItemTitle:) withObject:pSetMenuItemTitleArgs waitUntilDone:NO modes:pModes];
@@ -1193,7 +1193,7 @@ void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, cons
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSString *pKeyEquivalent = [NSString stringWithCharacters:aKeyEquivalent.getStr() length:aKeyEquivalent.getLength()];
+		NSString *pKeyEquivalent = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aKeyEquivalent.getStr() ) length:aKeyEquivalent.getLength()];
 		VCLMenuWrapperArgs *pSetMenuItemKeyEquivalentArgs = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithUnsignedInt:nPos], ( pKeyEquivalent ? pKeyEquivalent : @"" ), [NSNumber numberWithUnsignedShort:rKeyCode.GetFullCode()], nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[mpMenu performSelectorOnMainThread:@selector(setMenuItemKeyEquivalent:) withObject:pSetMenuItemKeyEquivalentArgs waitUntilDone:NO modes:pModes];
@@ -1294,7 +1294,7 @@ SalMenuItem* JavaSalInstance::CreateMenuItem( const SalItemParams* pItemData )
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	NSString *pTitle = [NSString stringWithCharacters:aTitle.getStr() length:aTitle.getLength()];
+	NSString *pTitle = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aTitle.getStr() ) length:aTitle.getLength()];
 	VCLCreateMenuItem *pVCLCreateMenuItem = [VCLCreateMenuItem createWithTitle:pTitle type:pItemData->eType id:pItemData->nId menu:pItemData->pMenu];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pVCLCreateMenuItem performSelectorOnMainThread:@selector(createMenuItem:) withObject:pVCLCreateMenuItem waitUntilDone:YES modes:pModes];
@@ -1325,8 +1325,8 @@ void JavaSalInstance::DestroyMenuItem( SalMenuItem* pItem )
 // ============================================================================
 
 /**
- * Given a frame and a submenu, post SALEVENT_MENUACTIVATE and
- * SALEVENT_MENUDEACTIVATE events to all of the VCL menu objects. This function
+ * Given a frame and a submenu, post SalEvent::MenuActivate and
+ * SalEvent::MenuDeactivate events to all of the VCL menu objects. This function
  * is normally called before the native menus are shown.
  */
 void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdateSubmenus )
@@ -1372,8 +1372,8 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdate
 		}
 	}
 
-	// Post the SALEVENT_MENUACTIVATE event
-	JavaSalEvent *pActivateEvent = new JavaSalEvent( SALEVENT_MENUACTIVATE, pFrame, new SalMenuEvent( 0, pVCLMenuWrapper ) );
+	// Post the SalEvent::MenuActivate event
+	JavaSalEvent *pActivateEvent = new JavaSalEvent( SalEvent::MenuActivate, pFrame, new SalMenuEvent( 0, pVCLMenuWrapper ) );
 	pActivateEvent->dispatch();
 	pActivateEvent->release();
 
@@ -1391,8 +1391,8 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdate
 		}
 	}
 
-	// Post the SALEVENT_MENUDEACTIVATE event
-	JavaSalEvent *pDeactivateEvent = new JavaSalEvent( SALEVENT_MENUDEACTIVATE, pFrame, new SalMenuEvent( 0, pVCLMenuWrapper ) );
+	// Post the SalEvent::MenuDeactivate event
+	JavaSalEvent *pDeactivateEvent = new JavaSalEvent( SalEvent::MenuDeactivate, pFrame, new SalMenuEvent( 0, pVCLMenuWrapper ) );
 	pDeactivateEvent->dispatch();
 	pDeactivateEvent->release();
 #endif	// !NO_NATIVE_MENUS
