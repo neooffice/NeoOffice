@@ -75,7 +75,7 @@ static void HandleAboutRequest()
 	// uses it.
 	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 	{
-		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_ABOUT, NULL, NULL);
+		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::About, NULL, NULL);
 		JavaSalEventQueue::postCachedEvent( pEvent );
 		pEvent->release();
 	}
@@ -90,7 +90,7 @@ static void HandleOpenPrintFileRequest( const OString &rPath, sal_Bool bPrint )
 		// Application::IsShutDown() uses it.
 		if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 		{
-			JavaSalEvent *pEvent = new JavaSalEvent( bPrint ? SALEVENT_PRINTDOCUMENT : SALEVENT_OPENDOCUMENT, NULL, NULL, rPath );
+			JavaSalEvent *pEvent = new JavaSalEvent( bPrint ? SalEvent::PrintDocument : SalEvent::OpenDocument, NULL, NULL, rPath );
 			JavaSalEventQueue::postCachedEvent( pEvent );
 			pEvent->release();
 		}
@@ -110,7 +110,7 @@ static void HandlePreferencesRequest()
 	// uses it.
 	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 	{
-		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PREFS, NULL, NULL);
+		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::Preferences, NULL, NULL);
 		JavaSalEventQueue::postCachedEvent( pEvent );
 		pEvent->release();
 	}
@@ -127,7 +127,7 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 	{
 		// Try to fix deadlocks in the framework module by not acquiring the
 		// application mutex on the main thread
-		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_SHUTDOWN, NULL, NULL );
+		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::Shutdown, NULL, NULL );
 		JavaSalEventQueue::postCachedEvent( pEvent );
 		while ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() && !pEvent->isShutdownCancelled() && !JavaSalEventQueue::isShutdownDisabled() )
 			NSApplication_dispatchPendingEvents( NO, YES );
@@ -168,7 +168,7 @@ static void HandleDidChangeScreenParametersRequest()
 	// uses it.
 	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 	{
-		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_SCREENPARAMSCHANGED, NULL, NULL);
+		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::ScreenParamsChanged, NULL, NULL);
 		JavaSalEventQueue::postCachedEvent( pEvent );
 		pEvent->release();
 	}
@@ -677,74 +677,74 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 								{
 									OUString aAbout( ResId( SV_STDTEXT_ABOUT, *pResMgr ) );
 									if ( aAbout.getLength() )
-										pAbout = [NSString stringWithCharacters:aAbout.getStr() length:aAbout.getLength()];
+										pAbout = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aAbout.getStr() ) length:aAbout.getLength()];
 
 									OUString aPreferences( ResId( SV_STDTEXT_PREFERENCES, *pResMgr ) );
 									if ( aPreferences.getLength() )
-										pPreferences = [NSString stringWithCharacters:aPreferences.getStr() length:aPreferences.getLength()];
+										pPreferences = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aPreferences.getStr() ) length:aPreferences.getLength()];
 
 									OUString aServices( ResId( SV_MENU_MAC_SERVICES, *pResMgr ) );
 									if ( aServices.getLength() )
-										pServices = [NSString stringWithCharacters:aServices.getStr() length:aServices.getLength()];
+										pServices = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aServices.getStr() ) length:aServices.getLength()];
 
 									OUString aHide( ResId( SV_MENU_MAC_HIDEAPP, *pResMgr ) );
 									if ( aHide.getLength() )
-										pHide = [NSString stringWithCharacters:aHide.getStr() length:aHide.getLength()];
+										pHide = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aHide.getStr() ) length:aHide.getLength()];
 
 									OUString aHideOthers( ResId( SV_MENU_MAC_HIDEALL, *pResMgr ) );
 									if ( aHideOthers.getLength() )
-										pHideOthers = [NSString stringWithCharacters:aHideOthers.getStr() length:aHideOthers.getLength()];
+										pHideOthers = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aHideOthers.getStr() ) length:aHideOthers.getLength()];
 
 									OUString aShowAll( ResId( SV_MENU_MAC_SHOWALL, *pResMgr ) );
 									if ( aShowAll.getLength() )
-										pShowAll = [NSString stringWithCharacters:aShowAll.getStr() length:aShowAll.getLength()];
+										pShowAll = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aShowAll.getStr() ) length:aShowAll.getLength()];
 
 									OUString aQuit( ResId( SV_MENU_MAC_QUITAPP, *pResMgr ) );
 									if ( aQuit.getLength() )
-										pQuit = [NSString stringWithCharacters:aQuit.getStr() length:aQuit.getLength()];
+										pQuit = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aQuit.getStr() ) length:aQuit.getLength()];
 								}
 
 								NSUInteger nItems = [pAppMenu numberOfItems];
 								NSUInteger i = 0;
 								for ( ; i < nItems; i++ )
 								{
-									NSMenuItem *pItem = [pAppMenu itemAtIndex:i];
-									if ( pItem )
+									NSMenuItem *pAppItem = [pAppMenu itemAtIndex:i];
+									if ( pAppItem )
 									{
-										NSString *pTitle = [pItem title];
+										NSString *pTitle = [pAppItem title];
 										if ( pTitle )
 										{
 											if ( pAbout && [pTitle isEqualToString:@"About"] )
 											{
-												[pItem setTarget:self];
-												[pItem setAction:@selector(showAbout)];
-												[pItem setTitle:pAbout];
+												[pAppItem setTarget:self];
+												[pAppItem setAction:@selector(showAbout)];
+												[pAppItem setTitle:pAbout];
 											}
 											else if ( pPreferences && [pTitle isEqualToString:@"Preferences…"] )
 											{
-												[pItem setTarget:self];
-												[pItem setAction:@selector(showPreferences)];
-												[pItem setTitle:pPreferences];
+												[pAppItem setTarget:self];
+												[pAppItem setAction:@selector(showPreferences)];
+												[pAppItem setTitle:pPreferences];
 											}
 											else if ( pServices && [pTitle isEqualToString:@"Services"] )
 											{
-												[pItem setTitle:pServices];
+												[pAppItem setTitle:pServices];
 											}
 											else if ( pHide && [pTitle isEqualToString:@"Hide"] )
 											{
-												[pItem setTitle:pHide];
+												[pAppItem setTitle:pHide];
 											}
 											else if ( pHideOthers && [pTitle isEqualToString:@"Hide Others"] )
 											{
-												[pItem setTitle:pHideOthers];
+												[pAppItem setTitle:pHideOthers];
 											}
 											else if ( pShowAll && [pTitle isEqualToString:@"Show All"] )
 											{
-												[pItem setTitle:pShowAll];
+												[pAppItem setTitle:pShowAll];
 											}
 											else if ( pQuit && [pTitle isEqualToString:@"Quit"] )
 											{
-												[pItem setTitle:pQuit];
+												[pAppItem setTitle:pQuit];
 											}
 										}
 									}
