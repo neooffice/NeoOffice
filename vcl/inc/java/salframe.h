@@ -127,7 +127,7 @@ public:
 	WindowStateState		GetState();
 	void					MakeModal();
 	bool					RequestFocus();
-	void					SetState( sal_uLong nFrameState );
+	void					SetState( WindowStateState nFrameState );
 	void					SetVisible( bool bVisible, bool bNoActivate );
 	bool					ToFront();
 	void					UpdateLayer();
