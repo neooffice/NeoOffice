@@ -200,7 +200,9 @@ public:
     virtual bool                GetGlyphOutline(const GlyphItem&, basegfx::B2DPolyPolygon&) = 0;
 
     virtual SalLayout*          GetTextLayout( ImplLayoutArgs&, int nFallbackLevel ) = 0;
+#if !defined USE_JAVA || !defined MACOSX
     virtual void                DrawTextLayout( const CommonSalLayout& ) = 0;
+#endif	// !USE_JAVA || !MACOSX
 
     virtual bool                supportsOperation( OutDevSupportType ) const = 0;
 
