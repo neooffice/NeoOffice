@@ -271,7 +271,9 @@ int ImplSVMain()
     bool bInit = isInitVCL() || InitVCL();
 
 #ifdef MACOSX
+#ifndef USE_JAVA
     postInitVCLinitNSApp();
+#endif	// !USE_JAVA
 #endif
 
     if( bInit )

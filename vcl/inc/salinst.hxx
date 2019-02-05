@@ -207,7 +207,9 @@ void DeInitSalData();                       // called from Application-Dtor
 void InitSalMain();
 
 #ifdef MACOSX
+#ifndef USE_JAVA
 void postInitVCLinitNSApp();
+#endif	// !USE_JAVA
 #endif
 
 #endif // INCLUDED_VCL_INC_SALINST_HXX
