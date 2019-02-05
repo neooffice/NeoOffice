@@ -64,11 +64,6 @@ $(call gb_UILocalizeTarget_get_clean_target,%) :
 	$(call gb_Helper_abbreviate_dirs,\
 		rm -rf $(call gb_UILocalizeTarget_get_target,$*) $(call gb_UILocalizeTarget_get_workdir,$*) \
 	)
-ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
-	$(call gb_Helper_abbreviate_dirs,\
-		rm -f $(patsubst %.done,%.ilst,$(call gb_UIConfig_get_target,$*)) \
-	)
-endif	# PRODUCT_BUILD_TYPE == java
 
 # Produce translations for one .ui file
 #
@@ -205,6 +200,11 @@ $(call gb_UIConfig_get_clean_target,%) :
 	$(call gb_Helper_abbreviate_dirs,\
 		rm -f $(call gb_UIConfig_get_target,$*) \
 	)
+ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
+	$(call gb_Helper_abbreviate_dirs,\
+		rm -f $(call gb_UIConfig_get_imagelist_target,$*) \
+	)
+endif	# PRODUCT_BUILD_TYPE == java
 
 gb_UIConfig_get_packagename = UIConfig/$(1)
 gb_UIConfig_get_packagesetname = UIConfig/$(1)
