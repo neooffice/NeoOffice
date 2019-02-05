@@ -123,7 +123,7 @@ class ControllerProperties;
 -(sal_Int32)updatePrintOperation:(sal_Int32)pLastPageCount
 #ifdef USE_JAVA
 {
-	[self updatePrintOperation:pLastPageCount needRestart:NO];
+	return [self updatePrintOperation:pLastPageCount needRestart:NO];
 }
 
 -(sal_Int32)updatePrintOperation:(sal_Int32)pLastPageCount needRestart:(BOOL)bNeedRestart
@@ -398,7 +398,11 @@ static OUString filterAccelerator( rtl::OUString const & rText )
     {
         NSButton* pBtn = (NSButton*)pSender;
         int nTag = [pBtn tag];
+#ifdef USE_JAVA
+        mpController->changePropertyWithBoolValue( nTag, [pBtn state] == NSControlStateValueOn );
+#else	// USE_JAVA
         mpController->changePropertyWithBoolValue( nTag, [pBtn state] == NSOnState );
+#endif	// USE_JAVA
     }
     else if( [pSender isMemberOfClass: [NSMatrix class]] )
     {
@@ -709,8 +713,13 @@ static void addBool( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
 {
     NSRect aCheckRect = { { static_cast<CGFloat>(rCurX + nAttachOffset), 0 }, { 0, 15 } };
     NSButton* pBtn = [[NSButton alloc] initWithFrame: aCheckRect];
+#ifdef USE_JAVA
+    [pBtn setButtonType: NSButtonTypeSwitch];                
+    [pBtn setState: bValue ? NSControlStateValueOn : NSControlStateValueOff];
+#else	// USE_JAVA
     [pBtn setButtonType: NSSwitchButton];                
     [pBtn setState: bValue ? NSOnState : NSOffState];
+#endif	// USE_JAVA
     if( ! bEnabled )
         [pBtn setEnabled: NO];
     linebreakCell( [pBtn cell], rText );
@@ -780,7 +789,11 @@ static void addRadio( NSView* pCurParent, long& rCurX, long& rCurY, long nAttach
                           { static_cast<CGFloat>(280 - rCurX),
                             static_cast<CGFloat>(5*rChoices.getLength()) } };
     [pProto setTitle: @"RadioButtonGroup"];
+#ifdef USE_JAVA
+    [pProto setButtonType: NSButtonTypeRadio];
+#else	// USE_JAVA
     [pProto setButtonType: NSRadioButton];
+#endif	// USE_JAVA
     NSMatrix* pMatrix = [[NSMatrix alloc] initWithFrame: aRadioRect
                                           mode: NSRadioModeMatrix
                                           prototype: (NSCell*)pProto
