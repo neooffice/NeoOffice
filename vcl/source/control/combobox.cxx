@@ -1558,4 +1558,13 @@ FactoryFunction ComboBox::GetUITestFactory() const
     return ComboBoxUIObject::create;
 }
 
+#ifdef USE_JAVA
+
+bool ComboBox::IsImplBtnPressed() const
+{
+    return m_pImpl->m_pBtn ? m_pImpl->m_pBtn->IsPressed() : false;
+}
+
+#endif	// USE_JAVA
+
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
