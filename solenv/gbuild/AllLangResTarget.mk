@@ -238,6 +238,10 @@ $(call gb_ResTarget_get_clean_target,%) :
 		rm -f \
 			$(call gb_ResTarget_get_target,$*) \
 			$(call gb_ResTarget_get_install_target,$*))
+ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
+	$(call gb_Helper_abbreviate_dirs,\
+		rm -f $(patsubst %.res,%.ilst,$(call gb_ResTarget_get_target,$*)))
+endif	# PRODUCT_BUILD_TYPE == java
 
 $(call gb_ResTarget_get_target,%) : $(gb_Helper_MISCDUMMY) \
 		$(gb_ResTarget_RSCDEPS)
