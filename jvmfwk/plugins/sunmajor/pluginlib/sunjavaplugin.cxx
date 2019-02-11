@@ -880,7 +880,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 
     size_t nUserMem = 256;
     OString aMemMax( "-Xmx" );
-    aMemMax += OString::number( (sal_Int32)nUserMem ) + "m";
+    aMemMax += OString::number( static_cast< sal_Int32 >( nUserMem ) ) + "m";
     options.push_back( Option( aMemMax, nullptr ) );
 
 #ifdef MACOSX
