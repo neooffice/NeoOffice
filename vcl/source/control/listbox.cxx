@@ -59,6 +59,17 @@ ListBox::ListBox( vcl::Window* pParent, WinBits nStyle ) : Control( WindowType::
 {
     ImplInitListBoxData();
     ImplInit( pParent, nStyle );
+
+#ifdef USE_JAVA
+    if ( pParent && IsNativeControlSupported( ControlType::Listbox, ControlPart::Entire ) )
+    {
+        SetMouseTransparent( true );
+        EnableChildTransparentMode( true );
+        SetParentClipMode( ParentClipMode::NoClip );
+        SetPaintTransparent( true );
+        SetBackground();
+    }
+#endif	// USE_JAVA
 }
 
 ListBox::~ListBox()
@@ -277,6 +288,16 @@ IMPL_LINK_NOARG(ListBox, ImplClickBtnHdl, void*, void)
         if( mpImplWin )
             mpImplWin->ImplClearLayoutData();
     }
+
+#ifdef USE_JAVA
+    // Fix listbox button failures reported in the following NeoOffice forum
+    // topic by invalidate the entire listbox and not just the button:
+    // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8452
+    tools::Rectangle aBounds( GetPosPixel(), GetSizePixel() );
+    GetParent()->Invalidate( aBounds );
+    if ( GetParent()->IsInPaint() )
+        GetParent()->Update();
+#endif	// USE_JAVA
 }
 
 IMPL_LINK_NOARG(ListBox, ImplPopupModeEndHdl, FloatingWindow*, void)
@@ -307,6 +328,16 @@ IMPL_LINK_NOARG(ListBox, ImplPopupModeEndHdl, FloatingWindow*, void)
 
     mpBtn->SetPressed( false );
     CallEventListeners( VclEventId::DropdownClose );
+
+#ifdef USE_JAVA
+    // Fix listbox button failures reported in the following NeoOffice forum
+    // topic by invalidate the entire listbox and not just the button:
+    // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8452
+    tools::Rectangle aBounds( GetPosPixel(), GetSizePixel() );
+    GetParent()->Invalidate( aBounds );
+    if ( GetParent()->IsInPaint() )
+        GetParent()->Update();
+#endif	// USE_JAVA
 }
 
 void ListBox::ToggleDropDown()
@@ -364,6 +395,34 @@ void ListBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, Dr
         }
     }
 
+#ifdef USE_JAVA
+    bool bNativeOK = false;
+    Color aTextColor;
+    
+    if ( IsNativeControlSupported( ControlType::Listbox, ControlPart::Entire ) )
+    {
+        ImplControlValue aValue;
+        ControlState nState = ControlState::NONE;
+
+        if ( IsImplBtnPressed() )
+            nState |= ControlState::PRESSED;
+        if ( HasFocus() )
+            nState |= ControlState::FOCUSED;
+        if ( Window::IsEnabled() )
+            nState |= ControlState::ENABLED;
+        if ( IsMouseOver() )
+            nState |= ControlState::ROLLOVER;
+
+        bNativeOK = GetNativeControlTextColor( ControlType::Listbox, ControlPart::Entire, nState, aValue, aTextColor );
+    }
+    
+    if ( bNativeOK )
+    {
+        pDev->SetTextColor( aTextColor );
+    }
+    else
+    {
+#endif	// USE_JAVA
     // Content
     if ( ( nFlags & DrawFlags::Mono ) || ( eOutDevType == OUTDEV_PRINTER ) )
     {
@@ -381,6 +440,9 @@ void ListBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, Dr
             pDev->SetTextColor( GetTextColor() );
         }
     }
+#ifdef USE_JAVA
+    }
+#endif // USE_JAVA
 
     const long nOnePixel = GetDrawPixel( pDev, 1 );
     const long nOffX = 3*nOnePixel;
@@ -1085,6 +1147,19 @@ void ListBox::SelectEntryPos( sal_Int32 nPos, bool bSelect )
                 CallEventListeners( VclEventId::ListboxFocus, reinterpret_cast<void*>(nPos));
         }
     }
+
+#ifdef USE_JAVA
+    // Fix bug 3536 by forcing a redraw when the selection is changed
+    ImplControlValue aControlValue;
+    tools::Rectangle aCtrlRegion( GetPosPixel(), GetSizePixel() );
+    tools::Rectangle aBoundingRgn, aContentRgn;
+    if ( GetNativeControlRegion( ControlType::Listbox, ControlPart::ButtonDown, aCtrlRegion, ControlState::NONE, aControlValue, aBoundingRgn, aContentRgn ) )
+    {
+        GetParent()->Invalidate();
+        if ( GetParent()->IsInPaint() )
+            GetParent()->Update();
+    }
+#endif	// USE_JAVA
 }
 
 void ListBox::SetEntryData( sal_Int32 nPos, void* pNewData )
@@ -1178,6 +1253,11 @@ Size ListBox::CalcMinimumSize() const
     {
         aSz.Height() += 4; // add a space between entry and border
         aSz.Width() += 4;  // add a little breathing space
+#ifdef USE_JAVA
+        // Add extra width so that the focus ring width does not push the text
+        // into the dropdown button
+        aSz.Width() += 5;
+#endif	// USE_JAVA
         bAddScrollWidth = true;
     }
     else
