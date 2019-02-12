@@ -111,7 +111,7 @@
 			unsigned int i = 0;
 			for ( ; i < nCount; i++ )
 			{
-				NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
+				NSView *pSubview = static_cast< NSView* >( [pSubviews objectAtIndex:i] );
 				if ( pSubview )
 					[pSubview removeFromSuperview];
 			}
@@ -402,7 +402,7 @@ void VCLChildView_release( id pVCLChildView )
 	if ( pVCLChildView )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(VCLChildView *)pVCLChildView performSelectorOnMainThread:@selector(destroy:) withObject:pVCLChildView waitUntilDone:NO modes:pModes];
+		[static_cast< VCLChildView* >( pVCLChildView ) performSelectorOnMainThread:@selector(destroy:) withObject:pVCLChildView waitUntilDone:NO modes:pModes];
 		[pVCLChildView release];
 	}
 
@@ -418,7 +418,7 @@ void VCLChildView_setBackgroundColor( id pVCLChildView, int nColor )
 		// Always force the background to be opaque
 		NSColor *pColor = [NSColor colorWithDeviceRed:( (float)( ( nColor & 0x00ff0000 ) >> 16 ) / (float)0xff ) green:( (float)( ( nColor & 0x0000ff00 ) >> 8 ) / (float)0xff ) blue:( (float)( nColor & 0x000000ff ) / (float)0xff ) alpha:1.0f];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(VCLChildView *)pVCLChildView performSelectorOnMainThread:@selector(setBackgroundColor:) withObject:pColor waitUntilDone:NO modes:pModes];
+		[static_cast< VCLChildView* >( pVCLChildView ) performSelectorOnMainThread:@selector(setBackgroundColor:) withObject:pColor waitUntilDone:NO modes:pModes];
 	}
 
 	[pPool release];
@@ -436,7 +436,7 @@ SAL_DLLPRIVATE void VCLChildView_setBounds( id pVCLChildView, NSRect aBounds )
 			aBounds.size.height = 0;
 		NSValue *pValue = [NSValue valueWithRect:aBounds];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(VCLChildView *)pVCLChildView performSelectorOnMainThread:@selector(setBounds:) withObject:pValue waitUntilDone:NO modes:pModes];
+		[static_cast< VCLChildView* >( pVCLChildView ) performSelectorOnMainThread:@selector(setBounds:) withObject:pValue waitUntilDone:NO modes:pModes];
 	}
 
 	[pPool release];
@@ -454,7 +454,7 @@ SAL_DLLPRIVATE void VCLChildView_setClip( id pVCLChildView, NSRect aClipRect )
 			aClipRect.size.height = 0;
 		NSValue *pValue = [NSValue valueWithRect:aClipRect];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(VCLChildView *)pVCLChildView performSelectorOnMainThread:@selector(setClip:) withObject:pValue waitUntilDone:NO modes:pModes];
+		[static_cast< VCLChildView* >( pVCLChildView ) performSelectorOnMainThread:@selector(setClip:) withObject:pValue waitUntilDone:NO modes:pModes];
 	}
 
 	[pPool release];
