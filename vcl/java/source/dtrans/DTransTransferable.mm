@@ -357,7 +357,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 				if ( [pChangeCount intValue] != [pPasteboard changeCount] )
 					break;
 
-				NSString *pType = (NSString *)[pTypes objectAtIndex:i];
+				NSString *pType = static_cast< NSString* >( [pTypes objectAtIndex:i] );
 				if ( pType )
 					[pPasteboard dataForType:pType];
 			}
@@ -630,7 +630,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 	// the UTTypeCreatePreferredIdentifierForTag() function to avoid "invalid
 	// UTI" errors in [DTransPasteboardOwner writeableTypesForPasteboard:].
 	if ( ( !mpTypes || ![mpTypes count] ) && mpPasteboardName && [mpPasteboardName isEqualToString:@"JavaDNDPasteboardHelper"] )
-		mpTypes = [NSArray arrayWithObject:(NSString *)UTTypeCreatePreferredIdentifierForTag( kUTTagClassNSPboardType, kNeoOfficeInternalPboardType, kUTTypeData )];
+		mpTypes = [NSArray arrayWithObject:static_cast< NSString* >( UTTypeCreatePreferredIdentifierForTag( kUTTagClassNSPboardType, kNeoOfficeInternalPboardType, kUTTypeData ) )];
 	if ( mpTypes )
 		[mpTypes retain];
 
@@ -649,9 +649,9 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 		if ( pData )
 		{
 			if ( [pData isKindOfClass:[NSString class]] )
-				[pSender setString:(NSString *)pData forType:pType];
+				[pSender setString:static_cast< NSString* >( pData ) forType:pType];
 			else if ( [pData isKindOfClass:[NSData class]] )
-				[pSender setData:(NSData *)pData forType:pType];
+				[pSender setData:static_cast< NSData* >( pData ) forType:pType];
 		}
 	}
 }
@@ -777,7 +777,7 @@ static void ImplInitializeSupportedPasteboardTypes()
 		NSBundle *pBundle = [NSBundle bundleForClass:[NSPasteboard class]];
 		if ( pBundle )
 		{
-			CFBundleRef aBundle = CFBundleGetBundleWithIdentifier( (CFStringRef)[pBundle bundleIdentifier] );
+			CFBundleRef aBundle = CFBundleGetBundleWithIdentifier( static_cast<  CFStringRef >( [pBundle bundleIdentifier] ) );
 			if ( aBundle )
 			{
 				for ( sal_uInt16 i = 0; i < nSupportedTypes; i++ )
@@ -809,7 +809,7 @@ static void ImplInitializeSupportedPasteboardTypes()
 		// Fix failure to drag slides in presentation sidebar by using the
 		// UTTypeCreatePreferredIdentifierForTag() function to avoid "invalid
 		// UTI" errors in [DTransPasteboardOwner writeableTypesForPasteboard:].
-		[pTypes addObject:(NSString *)UTTypeCreatePreferredIdentifierForTag( kUTTagClassNSPboardType, kNeoOfficeInternalPboardType, kUTTypeData )];
+		[pTypes addObject:static_cast< NSString* >( UTTypeCreatePreferredIdentifierForTag( kUTTagClassNSPboardType, kNeoOfficeInternalPboardType, kUTTypeData ) )];
 
 		[pTypes retain];
 		pSupportedPasteboardTypes = pTypes;
@@ -916,11 +916,11 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 											if ( pImageRep )
 											{
 												if ( [pImageRep isKindOfClass:[NSPDFImageRep class]] )
-													pData = [(NSPDFImageRep *)pImageRep PDFRepresentation];
+													pData = [static_cast< NSPDFImageRep* >( pImageRep ) PDFRepresentation];
 												else if ( [pImageRep isKindOfClass:[NSEPSImageRep class]] )
-													pData = [(NSEPSImageRep *)pImageRep EPSRepresentation];
+													pData = [static_cast< NSEPSImageRep* >( pImageRep ) EPSRepresentation];
 												else if ( [pImageRep isKindOfClass:[NSBitmapImageRep class]] )
-													pData = [(NSBitmapImageRep *)pImageRep TIFFRepresentation];
+													pData = [static_cast< NSBitmapImageRep* >( pImageRep ) TIFFRepresentation];
 												else
 													pData = nil;
 											}
@@ -1037,7 +1037,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 						}
 						else
 						{
-								aExportData.append( (sal_Unicode)nChar );
+								aExportData.append( static_cast< sal_Unicode >( nChar ) );
 						}
 					}
 
@@ -1055,7 +1055,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 					NSData *pData = [pHelper dataForType];
 					if ( pData )
 					{
-						const char *pArray = (const char *)[pData bytes];
+						const char *pArray = static_cast< const char* >( [pData bytes] );
 						unsigned int nLen = [pData length];
 
 						if ( pArray && nLen )
@@ -1063,7 +1063,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 							Sequence< sal_Int8 > aExportData( nLen );
 
 							// Replace carriage returns with line feeds
-							sal_Char *pCharArray = (sal_Char *)aExportData.getArray();
+							sal_Char *pCharArray = reinterpret_cast< sal_Char* >( aExportData.getArray() );
 							if ( pCharArray )
 							{
 								memset( pCharArray, 0, nLen );
@@ -1206,7 +1206,7 @@ Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors() throw ( Runt
 				unsigned int j = 0;
 				for ( ; j < nCount; j++ )
 				{
-					NSString *pType = (NSString *)[pTypes objectAtIndex:j];
+					NSString *pType = static_cast< NSString* >( [pTypes objectAtIndex:j] );
 					if ( pType && aSupportedPasteboardTypes[ i ] && [aSupportedPasteboardTypes[ i ] isEqualToString:pType] )
 					{
 						DataFlavor aFlavor;

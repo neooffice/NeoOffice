@@ -64,8 +64,8 @@ private:
 public:
 	static NSArray*		getSupportedPasteboardTypes();
 
-						// Passing NULL uses the system clipboard
-						DTransTransferable( NSString *pPasteboardName = NULL );
+						// Passing nullptr uses the system clipboard
+						DTransTransferable( NSString *pPasteboardName = nullptr );
 	virtual				~DTransTransferable();
 
 	// XTransferable
@@ -77,7 +77,7 @@ public:
 	int					getChangeCount();
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	getTransferable() { return mxTransferable; }
 	sal_Bool			hasOwnership();
-	sal_Bool			setContents( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable > &xTransferable, id *pPasteboardWriter = NULL );
+	sal_Bool			setContents( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable > &xTransferable, id *pPasteboardWriter = nullptr );
 };
 
 #endif // _DTRANSTRANSFERABLE_HXX

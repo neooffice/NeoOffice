@@ -89,9 +89,9 @@ void SAL_CALL JavaClipboard::flushClipboard( ) throw( uno::RuntimeException, std
 
 	if ( aContents.is() )
 	{
-		DTransTransferable *pTransferable = NULL;
+		DTransTransferable *pTransferable = nullptr;
 		if ( aContents.is() )
-			pTransferable = (DTransTransferable *)aContents.get();
+			pTransferable = static_cast< DTransTransferable* >( aContents.get() );
 
 		if ( pTransferable )
 			pTransferable->flush();
@@ -108,9 +108,9 @@ uno::Reference< datatransfer::XTransferable > SAL_CALL JavaClipboard::getContent
 
 	if ( mbSystemClipboard && !mbPrivateClipboard )
 	{
-		DTransTransferable *pTransferable = NULL;
+		DTransTransferable *pTransferable = nullptr;
 		if ( maContents.is() )
-			pTransferable = (DTransTransferable *)maContents.get();
+			pTransferable = static_cast< DTransTransferable* >( maContents.get() );
 
 		if ( pTransferable && pTransferable->hasOwnership() )
 		{
@@ -141,7 +141,7 @@ uno::Reference< datatransfer::XTransferable > SAL_CALL JavaClipboard::getContent
 			// by our application
 			if ( aOldContents.is() )
 			{
-				pTransferable = (DTransTransferable *)aOldContents.get();
+				pTransferable = static_cast< DTransTransferable* >( aOldContents.get() );
 				if ( pTransferable && pTransferable->getChangeCount() >= 0 )
 				{
 					::std::list< uno::Reference< datatransfer::clipboard::XClipboardListener > > listeners( maListeners );
@@ -182,9 +182,9 @@ void SAL_CALL JavaClipboard::setContents( const uno::Reference< datatransfer::XT
 
 	if ( mbSystemClipboard && !mbPrivateClipboard )
 	{
-		DTransTransferable *pTransferable = NULL;
+		DTransTransferable *pTransferable = nullptr;
 		if ( aOldContents.is() )
-			pTransferable = (DTransTransferable *)aOldContents.get();
+			pTransferable = static_cast< DTransTransferable* >( aOldContents.get() );
 		if ( pTransferable )
 			aOldContents = pTransferable->getTransferable();
 		else
@@ -295,9 +295,9 @@ void JavaClipboard::setPrivateClipboard( sal_Bool bPrivateClipboard )
 		}
 		else
 		{
-			DTransTransferable *pTransferable = NULL;
+			DTransTransferable *pTransferable = nullptr;
 			if ( maPrivateContents.is() )
-				pTransferable = (DTransTransferable *)maPrivateContents.get();
+				pTransferable = static_cast< DTransTransferable* >( maPrivateContents.get() );
 
 			if ( pTransferable && pTransferable->hasOwnership() )
 			{

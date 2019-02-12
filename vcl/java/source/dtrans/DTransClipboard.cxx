@@ -55,7 +55,7 @@ DTransTransferable *DTransClipboard::setContents( const Reference< XTransferable
 	if ( !xTransferable.is() || !out->setContents( xTransferable ) )
 	{
 		delete out;
-		out = NULL;
+		out = nullptr;
 	}
 
 	return out;
