@@ -228,7 +228,7 @@ void macxp_setFileType(const sal_Char* path)
 			NSDictionary *pAttributes = [pFileManager attributesOfItemAtPath:pPath error:nil];
 			if ( !pAttributes || ![pAttributes fileHFSTypeCode] )
 			{
-				pAttributes = [NSDictionary dictionaryWithObject:[NSNumber numberWithUnsignedLong:(unsigned long)PRODUCT_FILETYPE] forKey:NSFileHFSTypeCode];
+				pAttributes = [NSDictionary dictionaryWithObject:[NSNumber numberWithUnsignedLong:reinterpret_cast< unsigned long >( PRODUCT_FILETYPE )] forKey:NSFileHFSTypeCode];
 				if ( pAttributes )
 					[pFileManager setAttributes:pAttributes ofItemAtPath:pPath error:nil];
 			}

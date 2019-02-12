@@ -148,7 +148,7 @@ sal_Bool osl_createPortFileForPipe( oslPipe pPipe )
 	if (getsockname(pPipe->m_Socket, reinterpret_cast< struct sockaddr* >( &addr ), &len) < 0 || addr.sin_family != AF_INET || ntohs( addr.sin_port ) == 0 )
 		return bRet;
 
-	rtl::OString aPort = rtl::OString::number( (sal_Int32)ntohs( addr.sin_port ) );
+	rtl::OString aPort = rtl::OString::number( static_cast< sal_Int32 >( ntohs( addr.sin_port ) ) );
 	if ( !aPort.getLength() )
 		return bRet;
 
@@ -165,7 +165,7 @@ sal_Bool osl_createPortFileForPipe( oslPipe pPipe )
 	{
 		sal_uInt64 nWritten;
 		aFile.setSize( 0 );
-		if ( aFile.write( static_cast< const void* >( aPort.getStr() ), aPort.getLength(), nWritten ) == FileBase::E_None && nWritten == (sal_uInt64)aPort.getLength() )
+		if ( aFile.write( static_cast< const void* >( aPort.getStr() ), aPort.getLength(), nWritten ) == FileBase::E_None && nWritten == static_cast< sal_uInt64 >( aPort.getLength() ) )
 			bRet = sal_True;
 		else
 			aFile.setSize( 0 );
@@ -201,7 +201,7 @@ sal_uInt16 osl_getPortForPipeName( const sal_Char *pName )
 			rtl::OString aLine( reinterpret_cast< const sal_Char* >( aBytes.getArray() ), aBytes.getLength() );
 			sal_Int32 nPort = aLine.toInt32();
 			if ( nPort > 0 && nPort <= SAL_MAX_UINT16 )
-				nRet = (sal_uInt16)nPort;
+				nRet = static_cast< sal_uInt16 >( nPort );
 		}
 		aFile.close();
 	}
