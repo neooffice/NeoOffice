@@ -58,19 +58,19 @@
 #include "../java/VCLEventQueue_cocoa.h"
 
 static OUString aPageScalingFactorKey( "PAGE_SCALING_FACTOR" );
-static ResMgr *pSfxResMgr = NULL;
+static ResMgr *pSfxResMgr = nullptr;
 
 using namespace com::sun::star;
 using namespace osl;
 using namespace vcl;
 
-inline float Impl100thMMToPixel( long n ) { return (float)n * 72 / 2540; }
+inline float Impl100thMMToPixel( long n ) { return static_cast< float >( n ) * 72 / 2540; }
 
-inline long ImplPixelTo100thMM( float n ) { return (long)( n * 2540 / 72 ); }
+inline long ImplPixelTo100thMM( float n ) { return static_cast< long >( n * 2540 / 72 ); }
 
-inline float ImplPrinterToPixel( long n ) { return (float)n * 72 / MIN_PRINTER_RESOLUTION; }
+inline float ImplPrinterToPixel( long n ) { return static_cast< float >( n ) * 72 / MIN_PRINTER_RESOLUTION; }
 
-inline long ImplPixelToPrinter( float n ) { return (long)( n * MIN_PRINTER_RESOLUTION / 72 ); }
+inline long ImplPixelToPrinter( float n ) { return static_cast< long >( n * MIN_PRINTER_RESOLUTION / 72 ); }
 
 static OUString GetSfxResString( int nId )
 {
@@ -153,8 +153,8 @@ static sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Ori
 					if ( pValue )
 					{
 						aSize = [pValue sizeValue];
-						double fDiff = pow( (double)aSize.width - fWidth, 2 ) + pow( (double)aSize.height - fHeight, 2 );
-						double fRotatedDiff = pow( (double)aSize.width - fHeight, 2 ) + pow( (double)aSize.height - fWidth, 2 );
+						double fDiff = pow( static_cast< double >( aSize.width ) - fWidth, 2 ) + pow( static_cast< double >( aSize.height ) - fHeight, 2 );
+						double fRotatedDiff = pow( static_cast< double >( aSize.width ) - fHeight, 2 ) + pow( static_cast< double >( aSize.height ) - fWidth, 2 );
 						if ( fDiff > fRotatedDiff )
 							bRet = sal_True;
 					}
@@ -651,7 +651,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 
 	[self abortPrintOperation];
 
-	mpPrinterController = NULL;
+	mpPrinterController = nullptr;
 
 	if ( mpPrintJob )
 	{
@@ -908,7 +908,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	{
 		NSPrintInfo *pInfo = [mpPrintOperation printInfo];
 		const ImplJobSetup *pSetupData = [mpPrintJob jobSetupForPage:nPageNumber];
-		const ImplJobSetup *pPrevSetupData = ( nPageNumber > 0 && nPageNumber > (NSInteger)mnFirstPage ? [mpPrintJob jobSetupForPage:nPageNumber - 1] : NULL );
+		const ImplJobSetup *pPrevSetupData = ( nPageNumber > 0 && nPageNumber > static_cast< NSInteger >( mnFirstPage ) ? [mpPrintJob jobSetupForPage:nPageNumber - 1] : nullptr );
 		if ( pInfo && pSetupData )
 		{
 			if ( bOldPrintingStarted && pPrevSetupData )
@@ -1015,7 +1015,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		mpInfo = nil;
 	}
 
-	mpInfoPrinter = NULL;
+	mpInfoPrinter = nullptr;
 
 	if ( mpJobName )
 	{
@@ -1023,7 +1023,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		mpJobName = nil;
 	}
 
-	mpPrinterController = NULL;
+	mpPrinterController = nullptr;
 
 	if ( mpPrintOperation )
 	{
@@ -1051,7 +1051,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	if ( mpSetupDataMap )
 	{
 		delete mpSetupDataMap;
-		mpSetupDataMap = NULL;
+		mpSetupDataMap = nullptr;
 	}
 }
 
@@ -1101,7 +1101,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	mfScaleFactor = fScaleFactor;
 	if ( mfScaleFactor <= 0.0f )
 		mfScaleFactor = 1.0f;
-	mpSetupDataMap = NULL;
+	mpSetupDataMap = nullptr;
 
 	// Cache paper details for each page here as process may be time consuming
 	// and this selector should be called from the OOo event dispatch thread
@@ -1141,7 +1141,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 					// calls JavaSalInfoPrinter::SetData() so retrieve page
 					// info from the info printer. Note: use one-based
 					// page numbers to match the native page numbers.
-					NSPrintInfo *pPrintInfo = (NSPrintInfo *)mpInfoPrinter->GetPrintInfo();
+					NSPrintInfo *pPrintInfo = static_cast< NSPrintInfo* >( mpInfoPrinter->GetPrintInfo() );
 					if ( pPrintInfo && mpInfoPrinter->SetData( JobSetFlags::EXACTPAPERSIZE, &aSetupData ) )
 						(*mpSetupDataMap)[ i + 1 ] = aSetupData;
 				}
@@ -1154,7 +1154,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 
 - (const ImplJobSetup *)jobSetupForPage:(NSInteger)nPageNumber
 {
-	const ImplJobSetup *pRet = NULL;
+	const ImplJobSetup *pRet = nullptr;
 
 	if ( mpSetupDataMap )
 	{
@@ -1242,7 +1242,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 			}
 		}
 
-		VCLPrintView *pPrintView = (VCLPrintView *)[pPrintOperation view];
+		VCLPrintView *pPrintView = static_cast< VCLPrintView* >( [pPrintOperation view] );
 		if ( pPrintView )
 		{
 			if ( [pPrintView isKindOfClass:[VCLPrintView class]] )
@@ -1509,7 +1509,7 @@ JavaSalInfoPrinter::JavaSalInfoPrinter( ImplJobSetup* pSetupData ) :
 	mpVirDev->SetSize( 1, 1 );
 
 	// Set graphics resolution to match printer resolution
-	JavaSalGraphics *pGraphics = (JavaSalGraphics *)AcquireGraphics();
+	JavaSalGraphics *pGraphics = static_cast< JavaSalGraphics* >( AcquireGraphics() );
 	if ( pGraphics )
 	{
 		pGraphics->mnDPIX = MIN_PRINTER_RESOLUTION;
@@ -1781,7 +1781,7 @@ int JavaSalInfoPrinter::GetLandscapeAngle( const ImplJobSetup* /* pSetupData */ 
 // =======================================================================
 
 JavaSalPrinter::JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter ) :
-	mpGraphics( NULL ),
+	mpGraphics( nullptr ),
 	mpInfoPrinter( pInfoPrinter ),
 	mbGraphics( sal_False ),
 	mePaperFormat( PAPER_USER ),
@@ -1882,7 +1882,7 @@ bool JavaSalPrinter::StartJob( const OUString* /* pFileName */, const OUString& 
 
 				Application::AcquireSolarMutex( nCount );
 
-				bNeedsRestart = [(JavaSalPrinterPrintJob *)mpPrintJob needsRestart];
+				bNeedsRestart = [static_cast< JavaSalPrinterPrintJob* >( mpPrintJob ) needsRestart];
 				if ( bNeedsRestart )
 				{
 					[mpPrintJob performSelectorOnMainThread:@selector(destroy:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
@@ -1891,10 +1891,10 @@ bool JavaSalPrinter::StartJob( const OUString* /* pFileName */, const OUString& 
 					continue;
 				}
 
-				bRet = [(JavaSalPrinterPrintJob *)mpPrintJob result];
+				bRet = [static_cast< JavaSalPrinterPrintJob* >( mpPrintJob ) result];
 				if ( bRet )
 				{
-					bAborted = [(JavaSalPrinterPrintJob *)mpPrintJob aborted];
+					bAborted = [static_cast< JavaSalPrinterPrintJob* >( mpPrintJob ) aborted];
 
 					NSPrintInfo *pInfo = [mpPrintJob printInfo];
 					if ( pInfo )
@@ -1962,7 +1962,7 @@ bool JavaSalPrinter::EndJob()
 SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, bool /* bNewJobData */ )
 {
 	if ( mbGraphics )
-		return NULL;
+		return nullptr;
 
 	// Update print info settings
 	UpdatePageInfo( pSetupData );
@@ -2008,7 +2008,7 @@ void JavaSalPrinter::EndPage()
 		[pPool release];
 
 		delete mpGraphics;
-		mpGraphics = NULL;
+		mpGraphics = nullptr;
 	}
 
 	mbGraphics = sal_False;
