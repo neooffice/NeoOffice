@@ -416,7 +416,7 @@ void VCLChildView_setBackgroundColor( id pVCLChildView, int nColor )
 	if ( pVCLChildView )
 	{
 		// Always force the background to be opaque
-		NSColor *pColor = [NSColor colorWithDeviceRed:( (float)( ( nColor & 0x00ff0000 ) >> 16 ) / (float)0xff ) green:( (float)( ( nColor & 0x0000ff00 ) >> 8 ) / (float)0xff ) blue:( (float)( nColor & 0x000000ff ) / (float)0xff ) alpha:1.0f];
+		NSColor *pColor = [NSColor colorWithDeviceRed:( static_cast< float >( ( nColor & 0x00ff0000 ) >> 16 ) / (float)0xff ) green:( static_cast< float >( ( nColor & 0x0000ff00 ) >> 8 ) / (float)0xff ) blue:( static_cast< float >( nColor & 0x000000ff ) / (float)0xff ) alpha:1.0f];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[static_cast< VCLChildView* >( pVCLChildView ) performSelectorOnMainThread:@selector(setBackgroundColor:) withObject:pColor waitUntilDone:NO modes:pModes];
 	}

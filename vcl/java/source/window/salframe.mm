@@ -86,7 +86,7 @@ static long nVCLScrollbarSize = 0;
 static ::osl::Mutex aSystemColorsMutex;
 static NSString *pVCLTrackingAreaWindowKey = @"VCLTrackingAreaWindow";
 
-inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
+inline long Float32ToLong( Float32 f ) { return static_cast< long >( f + 0.5 ); }
 
 using namespace osl;
 using namespace vcl;
@@ -184,7 +184,7 @@ static sal_Bool SetSalColorFromNSColor( NSColor *pNSColor, SalColor **ppSalColor
 				float fGreen = [pNSColor greenComponent];
 				float fBlue = [pNSColor blueComponent];
 				*ppSalColor = new SalColor;
-				**ppSalColor = MAKE_SALCOLOR( (unsigned char)( ( 0.5f + ( ( fRed - 0.5f ) * fAlpha ) ) * 0xff ), (unsigned char)( ( 0.5f + ( ( fGreen - 0.5f ) * fAlpha ) ) * 0xff ), (unsigned char)( ( 0.5f + ( ( fBlue - 0.5f ) * fAlpha ) ) * 0xff ) );
+				**ppSalColor = MAKE_SALCOLOR( static_cast< unsigned char >( ( 0.5f + ( ( fRed - 0.5f ) * fAlpha ) ) * 0xff ), static_cast< unsigned char >( ( 0.5f + ( ( fGreen - 0.5f ) * fAlpha ) ) * 0xff ), static_cast< unsigned char >( ( 0.5f + ( ( fBlue - 0.5f ) * fAlpha ) ) * 0xff ) );
 				bRet = sal_True;
 			}
 		}
@@ -2626,7 +2626,7 @@ OUString JavaSalFrame::ConvertVCLKeyCode( sal_uInt16 nKeyCode, bool bIsMenuShort
 		case KEY_7:
 		case KEY_8:
 		case KEY_9:
-			aRet = OUString( (sal_Unicode)( '0' + nKeyCode - KEY_0 ) );
+			aRet = OUString( static_cast< sal_Unicode >( '0' + nKeyCode - KEY_0 ) );
 			break;
 		case KEY_A:
 		case KEY_B:
