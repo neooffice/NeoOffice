@@ -91,7 +91,7 @@ NSArray *NSFontManager_getAllFonts()
 					unsigned i = 0;
 					for ( ; i < nCount; i++ )
 					{
-						NSFont *pCurrentFont = [NSFont fontWithName:(NSString *)[pFontNames objectAtIndex:i] size:(float)12];
+						NSFont *pCurrentFont = [NSFont fontWithName:static_cast< NSString* >( [pFontNames objectAtIndex:i] ) size:(float)12];
 						if ( pCurrentFont )
 						{
 							// Fix bug 3097 by using the printer font when the
@@ -123,7 +123,7 @@ sal_Bool NSFontManager_isFixedPitch( NSFont *pNSFont )
 	if ( pNSFont )
 	{
 		NSFontManager *pFontManager = [NSFontManager sharedFontManager];
-		if ( pFontManager && [pFontManager traitsOfFont:(NSFont *)pNSFont] & NSFixedPitchFontMask )
+		if ( pFontManager && [pFontManager traitsOfFont:static_cast< NSFont* >( pNSFont )] & NSFixedPitchFontMask )
 			bRet = sal_True;
 	}
 
@@ -141,7 +141,7 @@ sal_Bool NSFontManager_isItalic( NSFont *pNSFont )
 	if ( pNSFont )
 	{
 		NSFontManager *pFontManager = [NSFontManager sharedFontManager];
-		if ( pFontManager && [pFontManager traitsOfFont:(NSFont *)pNSFont] & NSItalicFontMask )
+		if ( pFontManager && [pFontManager traitsOfFont:static_cast< NSFont* >( pNSFont )] & NSItalicFontMask )
 			bRet = sal_True;
 	}
 
@@ -161,7 +161,7 @@ FontWidth NSFontManager_widthOfFont( NSFont *pNSFont )
 		NSFontManager *pFontManager = [NSFontManager sharedFontManager];
 		if ( pFontManager )
 		{
-			NSFontTraitMask nTraits = [pFontManager traitsOfFont:(NSFont *)pNSFont];
+			NSFontTraitMask nTraits = [pFontManager traitsOfFont:static_cast< NSFont* >( pNSFont )];
 			if ( nTraits & NSCompressedFontMask )
 				nRet = WIDTH_ULTRA_CONDENSED;
 			else if ( nTraits & NSCondensedFontMask )
@@ -191,13 +191,13 @@ FontWeight NSFontManager_weightOfFont( NSFont *pNSFont )
 		NSFontManager *pFontManager = [NSFontManager sharedFontManager];
 		if ( pFontManager )
 		{
-			int nWeight = [pFontManager weightOfFont:(NSFont *)pNSFont];
+			int nWeight = [pFontManager weightOfFont:static_cast< NSFont* >( pNSFont )];
 
 			// Convert from NSFont weights to FontWeight values
 			if ( nWeight <= 1 )
 				nRet = WEIGHT_THIN;
 			else if ( nWeight <= 6 )
-				nRet = (FontWeight)nWeight;
+				nRet = static_cast< FontWeight >( nWeight );
 			else if ( nWeight <= 8 )
 				nRet = WEIGHT_SEMIBOLD;
 			else if ( nWeight <= 9 )

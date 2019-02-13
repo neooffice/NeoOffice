@@ -146,7 +146,7 @@ static VCLBitmapBuffer aSharedListViewHeaderBuffer;
 static VCLBitmapBuffer aSharedBevelButtonBuffer;
 static VCLBitmapBuffer aSharedCheckboxBuffer;
 
-inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
+inline long Float32ToLong( Float32 f ) { return static_cast< long >( f + 0.5 ); }
 
 // =======================================================================
 
@@ -194,7 +194,7 @@ static bool IsRunningHighSierraOrLower()
 {
 	VCLNativeControlWindow *pRet = nil;
 
-	if ( pView && ( ![pView isKindOfClass:[NSControl class]] || [(NSControl *)pView isEnabled] ) )
+	if ( pView && ( ![pView isKindOfClass:[NSControl class]] || [static_cast< NSControl* >( pView ) isEnabled] ) )
 	{
 		pRet = [[VCLNativeControlWindow alloc] initWithContentRect:[pView frame] styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:YES];
 		if ( pRet )
@@ -442,7 +442,7 @@ static bool IsRunningHighSierraOrLower()
 				}
 
 				CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
-				if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+				if ( mpBuffer->Create( static_cast< long >( maDestRect.origin.x ), static_cast< long >( maDestRect.origin.y ), static_cast< long >( maDestRect.size.width ), static_cast< long >( fOffscreenHeight ), mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
 				{
 					CGContextSaveGState( mpBuffer->maContext );
 					if ( [pButton isFlipped] )
@@ -498,7 +498,7 @@ static bool IsRunningHighSierraOrLower()
 										[pButton removeFromSuperview];
 										// Ensure that the button is not
 										// visible in the key window
-										[pButton setFrameOrigin:NSMakePoint(aBounds.size.width * -2, aBounds.size.height * -2)];
+										[pButton setFrameOrigin:NSMakePoint( aBounds.size.width * -2, aBounds.size.height * -2 )];
 										[pContentView addSubview:pButton positioned:NSWindowBelow relativeTo:nil];
 									}
 								}
@@ -522,7 +522,7 @@ static bool IsRunningHighSierraOrLower()
 							}
 						}
 
-						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, nullptr );
 						[pCell drawWithFrame:aDrawRect inView:( pControlView ? pControlView : pButton )];
 						CGContextEndTransparencyLayer( mpBuffer->maContext );
 
@@ -532,12 +532,12 @@ static bool IsRunningHighSierraOrLower()
 							// of the default button with varying alpha
 							float fAlpha = 0.15f;
 							double fTime = CFAbsoluteTimeGetCurrent();
-							fAlpha += fAlpha * sin( ( fTime - (long)fTime ) * 2 * M_PI );
+							fAlpha += fAlpha * sin( ( fTime - static_cast< long >( fTime ) ) * 2 * M_PI );
 							fAlpha += PUSHBUTTON_DEFAULT_ALPHA;
 							if ( fAlpha > 0 )
 							{
 								CGContextSetAlpha( mpBuffer->maContext, fAlpha > 1.0f ? 1.0f : fAlpha );
-								CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+								CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, nullptr );
 
 								[pButton highlight:YES];
 								[pCell drawWithFrame:aDrawRect inView:pButton];
@@ -770,7 +770,7 @@ static bool IsRunningHighSierraOrLower()
 					fCellHeight = maDestRect.size.height;
 				float fOffscreenHeight = ( maDestRect.size.height > fCellHeight ? maDestRect.size.height : fCellHeight );
 				CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
-				if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+				if ( mpBuffer->Create( static_cast< long >( maDestRect.origin.x ), static_cast< long >( maDestRect.origin.y ), static_cast< long >( maDestRect.size.width ), static_cast< long >( fOffscreenHeight ), mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
 				{
 					CGContextSaveGState( mpBuffer->maContext );
 					if ( [pControl isFlipped] )
@@ -814,7 +814,7 @@ static bool IsRunningHighSierraOrLower()
 							}
 						}
 
-						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, nullptr );
 						[pCell drawWithFrame:aDrawRect inView:( pControlView ? pControlView : pControl )];
 						CGContextEndTransparencyLayer( mpBuffer->maContext );
 
@@ -962,13 +962,13 @@ static bool IsRunningHighSierraOrLower()
 
 	if ( mpScrollbarValue )
 	{
-		float fTrackRange = (float)( mpScrollbarValue->mnMax - mpScrollbarValue->mnVisibleSize - mpScrollbarValue->mnMin );
-		float fTrackPosition = (float)( mpScrollbarValue->mnCur - mpScrollbarValue->mnMin );
+		float fTrackRange = static_cast< float >( mpScrollbarValue->mnMax - mpScrollbarValue->mnVisibleSize - mpScrollbarValue->mnMin );
+		float fTrackPosition = static_cast< float >( mpScrollbarValue->mnCur - mpScrollbarValue->mnMin );
 		if ( mpScrollbarValue->mnVisibleSize > 0 && fTrackRange > 0 )
 		{
 			mbDrawOnlyTrack = NO;
 			[pScroller setDoubleValue:fTrackPosition / fTrackRange];
-			[pScroller setKnobProportion:(float)mpScrollbarValue->mnVisibleSize / ( fTrackRange + mpScrollbarValue->mnVisibleSize )];
+			[pScroller setKnobProportion:static_cast< float >( mpScrollbarValue->mnVisibleSize ) / ( fTrackRange + mpScrollbarValue->mnVisibleSize )];
 		}
 		else
 		{
@@ -1028,7 +1028,7 @@ static bool IsRunningHighSierraOrLower()
 		{
 			float fOffscreenHeight = maDestRect.size.height;
 			CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
-			if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+			if ( mpBuffer->Create( static_cast< long >( maDestRect.origin.x ), static_cast< long >( maDestRect.origin.y ), static_cast< long >( maDestRect.size.width ), static_cast< long >( fOffscreenHeight ), mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
 			{
 				CGContextSaveGState( mpBuffer->maContext );
 				if ( [pScroller isFlipped] )
@@ -1042,7 +1042,7 @@ static bool IsRunningHighSierraOrLower()
 				{
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
-					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, nullptr );
 
 					// Fix bug 2031 by always filling the background with white.
 					// Fix incorrect dark mode drawing by filling with a system
@@ -1290,7 +1290,7 @@ static bool IsRunningHighSierraOrLower()
 
 + (id)createWithControlState:(ControlState)nControlState controlSize:(NSControlSize)nControlSize bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics progressbarValue:(const ImplControlValue *)pControlValue destRect:(CGRect)aDestRect
 {
-	VCLNativeProgressbar *pRet = [[VCLNativeProgressbar alloc] initWithControlState:nControlState controlSize:(NSControlSize)nControlSize bitmapBuffer:pBuffer graphics:pGraphics progressbarValue:pControlValue destRect:aDestRect];
+	VCLNativeProgressbar *pRet = [[VCLNativeProgressbar alloc] initWithControlState:nControlState controlSize:static_cast< NSControlSize >( nControlSize ) bitmapBuffer:pBuffer graphics:pGraphics progressbarValue:pControlValue destRect:aDestRect];
 	[pRet autorelease];
 	return pRet;
 }
@@ -1317,7 +1317,7 @@ static bool IsRunningHighSierraOrLower()
 
 	if ( mpControlValue )
 	{
-		double fValue = (double)mpControlValue->getNumericVal();
+		double fValue = static_cast< double >( mpControlValue->getNumericVal() );
 		if ( fValue > fRange )
 			fValue = fRange;
 		else if ( fValue < 0 )
@@ -1345,7 +1345,7 @@ static bool IsRunningHighSierraOrLower()
 		{
 			float fOffscreenHeight = maDestRect.size.height;
 			CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
-			if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+			if ( mpBuffer->Create( static_cast< long >( maDestRect.origin.x ), static_cast< long >( maDestRect.origin.y ), static_cast< long >( maDestRect.size.width ), static_cast< long >( fOffscreenHeight ), mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
 			{
 				CGContextSaveGState( mpBuffer->maContext );
 				if ( [pProgressIndicator isFlipped] )
@@ -1364,7 +1364,7 @@ static bool IsRunningHighSierraOrLower()
 				{
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
-					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, nullptr );
 					[pProgressIndicator drawRect:[pProgressIndicator frame]];
 					CGContextEndTransparencyLayer( mpBuffer->maContext );
 					[NSGraphicsContext setCurrentContext:pOldContext];
@@ -1474,7 +1474,7 @@ static bool IsRunningHighSierraOrLower()
 		{
 			float fOffscreenHeight = maDestRect.size.height;
 			CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
-			if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+			if ( mpBuffer->Create( static_cast< long >( maDestRect.origin.x ), static_cast< long >( maDestRect.origin.y ), static_cast< long >( maDestRect.size.width ), static_cast< long >( fOffscreenHeight ), mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
 			{
 				CGContextSaveGState( mpBuffer->maContext );
 				if ( [pBox isFlipped] )
@@ -1488,7 +1488,7 @@ static bool IsRunningHighSierraOrLower()
 				{
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
-					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, nullptr );
 					[pBox drawRect:[pBox frame]];
 					CGContextEndTransparencyLayer( mpBuffer->maContext );
 					[NSGraphicsContext setCurrentContext:pOldContext];
@@ -1579,7 +1579,7 @@ static bool IsRunningHighSierraOrLower()
 		{
 			float fOffscreenHeight = maDestRect.size.height;
 			CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
-			if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+			if ( mpBuffer->Create( static_cast< long >( maDestRect.origin.x ), static_cast< long >( maDestRect.origin.y ), static_cast< long >( maDestRect.size.width ), static_cast< long >( fOffscreenHeight ), mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
 			{
 				CGContextSaveGState( mpBuffer->maContext );
 				if ( [pView isFlipped] )
@@ -1593,7 +1593,7 @@ static bool IsRunningHighSierraOrLower()
 				{
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
-					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, nullptr );
 					[pView drawRect:[pView frame]];
 					CGContextEndTransparencyLayer( mpBuffer->maContext );
 					[NSGraphicsContext setCurrentContext:pOldContext];
@@ -1732,7 +1732,7 @@ static bool IsRunningHighSierraOrLower()
 					// bounds
 					float fOffscreenHeight = aRealDrawRect.size.height;
 					CGRect aAdjustedDestRect = CGRectMake( 0, 0, aRealDrawRect.size.width, fOffscreenHeight );
-					if ( mpBuffer->Create( (long)aRealDrawRect.origin.x, (long)aRealDrawRect.origin.y, (long)aRealDrawRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == aRealDrawRect.size.height ) )
+					if ( mpBuffer->Create( static_cast< long >( aRealDrawRect.origin.x ), static_cast< long >( aRealDrawRect.origin.y ), static_cast< long >( aRealDrawRect.size.width ), static_cast< long >( fOffscreenHeight ), mpGraphics, fOffscreenHeight == aRealDrawRect.size.height ) )
 					{
 						CGContextSaveGState( mpBuffer->maContext );
 						CGContextTranslateCTM( mpBuffer->maContext, 0, 0 );
@@ -1753,7 +1753,7 @@ static bool IsRunningHighSierraOrLower()
 
 							NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 							[NSGraphicsContext setCurrentContext:pContext];
-							CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+							CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, nullptr );
 
 							if ( bHighlighted )
 								[pTableHeaderCell highlight:YES withFrame:aDrawRect inView:pTableHeaderView];
@@ -1916,7 +1916,7 @@ static bool IsRunningHighSierraOrLower()
 					fCellHeight = maDestRect.size.height;
 				float fOffscreenHeight = ( maDestRect.size.height > fCellHeight ? maDestRect.size.height : fCellHeight );
 				CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
-				if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+				if ( mpBuffer->Create( static_cast< long >( maDestRect.origin.x ), static_cast< long >( maDestRect.origin.y ), static_cast< long >( maDestRect.size.width ), static_cast< long >( fOffscreenHeight ), mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
 				{
 					CGContextSaveGState( mpBuffer->maContext );
 					if ( [pStepper isFlipped] )
@@ -1939,7 +1939,7 @@ static bool IsRunningHighSierraOrLower()
 					{
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
-						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, nullptr );
 
 						[pStepper drawRect:[pStepper frame]];
 
@@ -2075,7 +2075,7 @@ static bool IsRunningHighSierraOrLower()
 			{
 				float fOffscreenHeight = maDestRect.size.height;
 				CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
-				if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+				if ( mpBuffer->Create( static_cast< long >( maDestRect.origin.x ), static_cast< long >( maDestRect.origin.y ), static_cast< long >( maDestRect.size.width ), static_cast< long >( fOffscreenHeight ), mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
 				{
 					CGContextSaveGState( mpBuffer->maContext );
 					if ( [pTextField isFlipped] )
@@ -2095,7 +2095,7 @@ static bool IsRunningHighSierraOrLower()
 
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
-						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, nullptr );
 
 						// Fix height of text fields on macOS 10.14 by adding
 						// height to the top of the text field
@@ -2216,7 +2216,7 @@ static bool IsRunningHighSierraOrLower()
 			{
 				float fOffscreenHeight = maDestRect.size.height;
 				CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
-				if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+				if ( mpBuffer->Create( static_cast< long >( maDestRect.origin.x ), static_cast< long >( maDestRect.origin.y ), static_cast< long >( maDestRect.size.width ), static_cast< long >( fOffscreenHeight ), mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
 				{
 					CGContextSaveGState( mpBuffer->maContext );
 					if ( [pControl isFlipped] )
@@ -2232,7 +2232,7 @@ static bool IsRunningHighSierraOrLower()
 
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
-						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, nullptr );
 
 						if ( mbDrawSeparator )
 						{
@@ -2348,7 +2348,7 @@ static bool IsRunningHighSierraOrLower()
 		{
 			float fOffscreenHeight = maDestRect.size.height;
 			CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
-			if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+			if ( mpBuffer->Create( static_cast< long >( maDestRect.origin.x ), static_cast< long >( maDestRect.origin.y ), static_cast< long >( maDestRect.size.width ), static_cast< long >( fOffscreenHeight ), mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
 			{
 				CGContextSaveGState( mpBuffer->maContext );
 				if ( [pTabView isFlipped] )
@@ -2362,7 +2362,7 @@ static bool IsRunningHighSierraOrLower()
 				{
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
-					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, nullptr );
 					[pTabView drawRect:[pTabView frame]];
 					CGContextEndTransparencyLayer( mpBuffer->maContext );
 					[NSGraphicsContext setCurrentContext:pOldContext];
@@ -2574,7 +2574,7 @@ static bool IsRunningHighSierraOrLower()
 				float fCellHeight = [pTabView _tabRectForTabViewItem:pItem].size.height;
 				float fOffscreenHeight = ( aRealDrawRect.size.height > fCellHeight ? aRealDrawRect.size.height : fCellHeight );
 				CGRect aAdjustedDestRect = CGRectMake( 0, 0, aRealDrawRect.size.width, fOffscreenHeight );
-				if ( mpBuffer->Create( (long)aRealDrawRect.origin.x, (long)aRealDrawRect.origin.y, (long)aRealDrawRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == aRealDrawRect.size.height ) )
+				if ( mpBuffer->Create( static_cast< long >( aRealDrawRect.origin.x ), static_cast< long >( aRealDrawRect.origin.y ), static_cast< long >( aRealDrawRect.size.width ), static_cast< long >( fOffscreenHeight ), mpGraphics, fOffscreenHeight == aRealDrawRect.size.height ) )
 				{
 					CGContextSaveGState( mpBuffer->maContext );
 					if ( [pTabView isFlipped] )
@@ -2595,7 +2595,7 @@ static bool IsRunningHighSierraOrLower()
 
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
-						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, nullptr );
 
 						[pTabView _drawTabViewItem:pItem inRect:[pTabView frame]];
 
@@ -2698,8 +2698,8 @@ static bool IsRunningHighSierraOrLower()
 
 VCLBitmapBuffer::VCLBitmapBuffer() :
 	BitmapBuffer(),
-	maContext( NULL ),
-	mpGraphicsMutexGuard( NULL ),
+	maContext( nullptr ),
+	mpGraphicsMutexGuard( nullptr ),
 	mbLastDrawToPrintGraphics( false ),
 	mbUseLayer( false )
 {
@@ -2708,7 +2708,7 @@ VCLBitmapBuffer::VCLBitmapBuffer() :
 	mnHeight = 0;
 	mnScanlineSize = 0;
 	mnBitCount = 0;
-	mpBits = NULL;
+	mpBits = nullptr;
 }
 
 // -----------------------------------------------------------------------
@@ -2766,7 +2766,7 @@ bool VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 			if ( !mbUseLayer )
 			{
 				delete mpGraphicsMutexGuard;
-				mpGraphicsMutexGuard = NULL;
+				mpGraphicsMutexGuard = nullptr;
 			}
 		}
 	}
@@ -2834,19 +2834,19 @@ void VCLBitmapBuffer::Destroy()
 	{
 		CGContextRestoreGState( maContext );
 		CGContextRelease( maContext );
-		maContext = NULL;
+		maContext = nullptr;
 	}
 
 	if ( mpBits )
 	{
 		delete[] mpBits;
-		mpBits = NULL;
+		mpBits = nullptr;
 	}
 
 	if ( mpGraphicsMutexGuard )
 	{
 		delete mpGraphicsMutexGuard;
-		mpGraphicsMutexGuard = NULL;
+		mpGraphicsMutexGuard = nullptr;
 	}
 }
 
@@ -2860,10 +2860,10 @@ void VCLBitmapBuffer::DrawContextAndDestroy( JavaSalGraphics *pGraphics, CGRect 
 		if ( mpBits && !mbUseLayer )
 		{
 			// Assign ownership of bits to a CGDataProvider instance
-			CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, mpBits, mnScanlineSize * mnHeight, ReleaseBitmapBufferBytePointerCallback );
+			CGDataProviderRef aProvider = CGDataProviderCreateWithData( nullptr, mpBits, mnScanlineSize * mnHeight, ReleaseBitmapBufferBytePointerCallback );
 			if ( aProvider )
 			{
-				mpBits = NULL;
+				mpBits = nullptr;
 				pGraphics->addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( pGraphics->maFrameClipPath, pGraphics->maNativeClipPath, false, false, aProvider, mnBitCount, mnScanlineSize, mnWidth, mnHeight, aSrcRect, aUnflippedRect ) );
 				CGDataProviderRelease( aProvider );
 			}
@@ -2887,13 +2887,13 @@ void VCLBitmapBuffer::ReleaseContext()
 	{
 		CGContextRestoreGState( maContext );
 		CGContextRelease( maContext );
-		maContext = NULL;
+		maContext = nullptr;
 	}
 
 	if ( mpGraphicsMutexGuard )
 	{
 		delete mpGraphicsMutexGuard;
-		mpGraphicsMutexGuard = NULL;
+		mpGraphicsMutexGuard = nullptr;
 	}
 }
 
@@ -3849,7 +3849,7 @@ bool JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case ControlType::Scrollbar:
 			if( ( nPart == ControlPart::Entire) || ( nPart == ControlPart::DrawBackgroundHorz ) || ( nPart == ControlPart::DrawBackgroundVert ) )
 			{
-				const ScrollbarValue *pValue = ( aValue.getType() == ControlType::Scrollbar ? static_cast< const ScrollbarValue* >( &aValue ) : NULL );
+				const ScrollbarValue *pValue = ( aValue.getType() == ControlType::Scrollbar ? static_cast< const ScrollbarValue* >( &aValue ) : nullptr );
 				bOK = DrawNativeScrollBar( this, rControlRegion, nState, pValue );
 			}
 			break;
@@ -3857,7 +3857,7 @@ bool JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case ControlType::Spinbox:
 			if( ( nPart == ControlPart::Entire ) || ( nPart == ControlPart::AllButtons ) )
 			{
-				const SpinbuttonValue *pValue = ( aValue.getType() == ControlType::SpinButtons ? static_cast< const SpinbuttonValue* >( &aValue ) : NULL );
+				const SpinbuttonValue *pValue = ( aValue.getType() == ControlType::SpinButtons ? static_cast< const SpinbuttonValue* >( &aValue ) : nullptr );
 				bOK = DrawNativeSpinbox( this, rControlRegion, nState, pValue );
 			}
 			break;
@@ -3865,7 +3865,7 @@ bool JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case ControlType::SpinButtons:
 			if( ( nPart == ControlPart::Entire ) || ( nPart == ControlPart::AllButtons ) )
 			{
-				const SpinbuttonValue *pValue = ( aValue.getType() == ControlType::SpinButtons ? static_cast< const SpinbuttonValue* >( &aValue ) : NULL );
+				const SpinbuttonValue *pValue = ( aValue.getType() == ControlType::SpinButtons ? static_cast< const SpinbuttonValue* >( &aValue ) : nullptr );
 				bOK = DrawNativeSpinbutton( this, rControlRegion, nState, pValue );
 			}
 			break;
@@ -3881,7 +3881,7 @@ bool JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case ControlType::TabItem:
 			if( nPart == ControlPart::Entire )
 			{
-				const TabitemValue *pValue = ( aValue.getType() == ControlType::TabItem ? static_cast< const TabitemValue* >( &aValue ) : NULL );
+				const TabitemValue *pValue = ( aValue.getType() == ControlType::TabItem ? static_cast< const TabitemValue* >( &aValue ) : nullptr );
 				bOK = DrawNativeTab( this, rControlRegion, nState, pValue );
 			}
 			break;
@@ -3933,7 +3933,7 @@ bool JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case ControlType::ListViewHeader:
 			if( nPart == ControlPart::Entire )
 			{
-				const ListViewHeaderValue *pValue = ( aValue.getType() == ControlType::ListViewHeader ? static_cast< const ListViewHeaderValue* >( &aValue ) : NULL );
+				const ListViewHeaderValue *pValue = ( aValue.getType() == ControlType::ListViewHeader ? static_cast< const ListViewHeaderValue* >( &aValue ) : nullptr );
 				bOK = DrawNativeListViewHeader( this, rControlRegion, nState, pValue );
 			}
 			break;
@@ -3962,10 +3962,10 @@ bool JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case ControlType::Frame:
 			if ( nPart == ControlPart::Border )
 			{
-				DrawFrameFlags nValue = (DrawFrameFlags)( aValue.getNumericVal() & 0xfff0 );
+				DrawFrameFlags nValue = static_cast< DrawFrameFlags >( aValue.getNumericVal() & 0xfff0 );
 				if ( ! ( nValue & ( DrawFrameFlags::Menu | DrawFrameFlags::WindowBorder ) ) )
 				{
-					DrawFrameStyle nStyle = (DrawFrameStyle)( aValue.getNumericVal() & 0x000f );
+					DrawFrameStyle nStyle = static_cast< DrawFrameStyle >( aValue.getNumericVal() & 0x000f );
 					tools::Rectangle ctrlRect( rControlRegion );
 					ctrlRect.Left() -= FRAME_TRIMWIDTH;
 					ctrlRect.Top() -= FRAME_TRIMWIDTH;
@@ -4032,7 +4032,7 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				// appropriate style.
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-				VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSButtonTypeMomentaryLight bezelStyle:NSBezelStyleRounded controlSize:NSControlSizeRegular buttonState:NSControlStateValueOff controlState:ControlState::NONE drawRTL:NO bitmapBuffer:NULL graphics:NULL destRect:CGRectZero];
+				VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSButtonTypeMomentaryLight bezelStyle:NSBezelStyleRounded controlSize:NSControlSizeRegular buttonState:NSControlStateValueOff controlState:ControlState::NONE drawRTL:NO bitmapBuffer:nullptr graphics:nullptr destRect:CGRectZero];
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 				[pVCLNativeButton performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
 				NSSize aSize = [pVCLNativeButton size];
@@ -4040,14 +4040,14 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				{
 					tools::Rectangle buttonRect( rControlRegion );
 					long buttonWidth = buttonRect.GetWidth();
-					long buttonHeight = (long)aSize.height;
+					long buttonHeight = static_cast< long >( aSize.height );
 					if ( buttonHeight >= buttonWidth )
 						buttonHeight = buttonRect.GetHeight();
 					else if ( buttonHeight != buttonRect.GetHeight() && buttonRect.GetHeight() > 0 )
 						buttonHeight = buttonRect.GetHeight();
 
-					Point topLeft( (long)(buttonRect.Left() - FOCUSRING_WIDTH), (long)(buttonRect.Top() + ((buttonRect.GetHeight() - buttonHeight) / 2) - FOCUSRING_WIDTH) );
-					Size boundsSize( (long)buttonWidth + ( FOCUSRING_WIDTH * 2 ), (long)buttonHeight + ( FOCUSRING_WIDTH * 2 ) );
+					Point topLeft( static_cast< long >( buttonRect.Left() - FOCUSRING_WIDTH), (long)(buttonRect.Top() + ( ( buttonRect.GetHeight() - buttonHeight) / 2) - FOCUSRING_WIDTH ) );
+					Size boundsSize( static_cast< long >( buttonWidth ) + ( FOCUSRING_WIDTH * 2 ), static_cast< long >( buttonHeight ) + ( FOCUSRING_WIDTH * 2 ) );
 					rNativeBoundingRegion = tools::Rectangle( topLeft, boundsSize );
 					rNativeContentRegion = rNativeBoundingRegion;
 					bReturn = true;
@@ -4061,8 +4061,8 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			if( nPart == ControlPart::Entire )
 			{
 				tools::Rectangle buttonRect( rControlRegion );
-				Point topLeft( (long)(buttonRect.Left() - FOCUSRING_WIDTH), (long)(buttonRect.Top() - FOCUSRING_WIDTH) );
-				Size boundsSize( (long)RADIOBUTTON_WIDTH + ( FOCUSRING_WIDTH * 2 ), (long)RADIOBUTTON_HEIGHT + ( FOCUSRING_WIDTH * 2 ) );
+				Point topLeft( static_cast< long >( buttonRect.Left() - FOCUSRING_WIDTH ), static_cast< long >( buttonRect.Top() - FOCUSRING_WIDTH ) );
+				Size boundsSize( static_cast< long >( RADIOBUTTON_WIDTH ) + ( FOCUSRING_WIDTH * 2 ), static_cast< long >( RADIOBUTTON_HEIGHT ) + ( FOCUSRING_WIDTH * 2 ) );
 				rNativeBoundingRegion = tools::Rectangle( topLeft, boundsSize );
 				rNativeContentRegion = rNativeBoundingRegion;
 				bReturn = true;
@@ -4073,8 +4073,8 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			if( nPart == ControlPart::Entire )
 			{
 				tools::Rectangle buttonRect( rControlRegion );
-				Point topLeft( (long)(buttonRect.Left() - FOCUSRING_WIDTH), (long)(buttonRect.Top() - FOCUSRING_WIDTH) );
-				Size boundsSize( (long)CHECKBOX_WIDTH + ( FOCUSRING_WIDTH * 2 ), (long)CHECKBOX_HEIGHT + ( FOCUSRING_WIDTH * 2 ) );
+				Point topLeft( static_cast< long >( buttonRect.Left() - FOCUSRING_WIDTH ), static_cast< long >( buttonRect.Top() - FOCUSRING_WIDTH ) );
+				Size boundsSize( static_cast< long >( CHECKBOX_WIDTH ) + ( FOCUSRING_WIDTH * 2 ), static_cast< long >( CHECKBOX_HEIGHT ) + ( FOCUSRING_WIDTH * 2 ) );
 				rNativeBoundingRegion = tools::Rectangle( topLeft, boundsSize );
 				rNativeContentRegion = rNativeBoundingRegion;
 				bReturn = true;
@@ -4096,14 +4096,14 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-				VCLNativeComboBox *pVCLNativeComboBox = [VCLNativeComboBox createWithControlState:nState editable:bEditable bitmapBuffer:NULL graphics:NULL destRect:CGRectMake( comboBoxRect.Left(), comboBoxRect.Top(), comboBoxRect.GetWidth(), comboBoxRect.GetHeight() )];
+				VCLNativeComboBox *pVCLNativeComboBox = [VCLNativeComboBox createWithControlState:nState editable:bEditable bitmapBuffer:nullptr graphics:nullptr destRect:CGRectMake( comboBoxRect.Left(), comboBoxRect.Top(), comboBoxRect.GetWidth(), comboBoxRect.GetHeight() )];
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 				[pVCLNativeComboBox performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeComboBox waitUntilDone:YES modes:pModes];
 				NSSize aSize = [pVCLNativeComboBox size];
 				if ( !NSEqualSizes( aSize, NSZeroSize ) )
 				{
 					// Vertically center the preferred bounds
-					float fYAdjust = ( (float)comboBoxRect.GetHeight() - aSize.height ) / 2;
+					float fYAdjust = ( static_cast< float >( comboBoxRect.GetHeight() ) - aSize.height ) / 2;
 					NSRect preferredRect = NSMakeRect( comboBoxRect.Left(), comboBoxRect.Top() + fYAdjust, aSize.width > comboBoxRect.GetWidth() ? aSize.width : comboBoxRect.GetWidth(), aSize.height );
 					BOOL bRTL = [pVCLNativeComboBox isRTL];
 
@@ -4113,8 +4113,8 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							{
 								// Fix vertical position of font size combobox
 								// in toolbar by returning the preferred size
-								Point topLeft( (long)preferredRect.origin.x, (long)preferredRect.origin.y );
-								Size boundsSize( (long)preferredRect.size.width, (long)preferredRect.size.height );
+								Point topLeft( static_cast< long >( preferredRect.origin.x ), static_cast< long >( preferredRect.origin.y ) );
+								Size boundsSize( static_cast< long >( preferredRect.size.width ), static_cast< long >( preferredRect.size.height ) );
 								rNativeBoundingRegion = tools::Rectangle( topLeft, boundsSize );
 								rNativeContentRegion = rNativeBoundingRegion;
 								bReturn = true;
@@ -4127,16 +4127,16 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 								{
 									Point topLeft;
 									if ( bRTL )
-										topLeft = Point( (long)preferredRect.origin.x, (long)preferredRect.origin.y );
+										topLeft = Point( static_cast< long >( preferredRect.origin.x ), static_cast< long >( preferredRect.origin.y ) );
 									else
-										topLeft = Point( (long)preferredRect.origin.x + (long)preferredRect.size.width - COMBOBOX_BUTTON_WIDTH - FOCUSRING_WIDTH, (long)preferredRect.origin.y );
-									Size boundsSize( COMBOBOX_BUTTON_WIDTH + FOCUSRING_WIDTH, (long)preferredRect.size.height );
+										topLeft = Point( static_cast< long >( preferredRect.origin.x ) + static_cast< long >( preferredRect.size.width ) - COMBOBOX_BUTTON_WIDTH - FOCUSRING_WIDTH, static_cast< long >( preferredRect.origin.y ) );
+									Size boundsSize( COMBOBOX_BUTTON_WIDTH + FOCUSRING_WIDTH, static_cast< long >( preferredRect.size.height ) );
 									rNativeBoundingRegion = tools::Rectangle( topLeft, boundsSize );
 								}
 								else
 								{
-									Point topLeft( (long)preferredRect.origin.x, (long)preferredRect.origin.y );
-									Size boundsSize( (long)preferredRect.size.width, (long)preferredRect.size.height );
+									Point topLeft( static_cast< long >( preferredRect.origin.x ), static_cast< long >( preferredRect.origin.y ) );
+									Size boundsSize( static_cast< long >( preferredRect.size.width ), static_cast< long >( preferredRect.size.height ) );
 									rNativeBoundingRegion = tools::Rectangle( topLeft, boundsSize );
 								}
 
@@ -4149,10 +4149,10 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							{
 								Point topLeft;
 								if ( bRTL )
-									topLeft = Point( (long)preferredRect.origin.x + ( bEditable ? COMBOBOX_BUTTON_WIDTH + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH : LISTBOX_BUTTON_WIDTH - EDITFRAMEPADDING_WIDTH ), (long)preferredRect.origin.y + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH );
+									topLeft = Point( static_cast< long >( preferredRect.origin.x ) + ( bEditable ? COMBOBOX_BUTTON_WIDTH + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH : LISTBOX_BUTTON_WIDTH - EDITFRAMEPADDING_WIDTH ), static_cast< long >( preferredRect.origin.y ) + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH );
 								else
-									topLeft = Point( (long)preferredRect.origin.x + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH, (long)preferredRect.origin.y + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH );
-								Size boundsSize( (long)preferredRect.size.width - ( bEditable ? COMBOBOX_BUTTON_WIDTH : LISTBOX_BUTTON_WIDTH ) - ( ( FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH ) * 2 ), (long)preferredRect.size.height - ( ( FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH ) * 2 ) );
+									topLeft = Point( static_cast< long >( preferredRect.origin.x ) + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH, static_cast< long >( preferredRect.origin.y ) + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH );
+								Size boundsSize( static_cast< long >( preferredRect.size.width ) - ( bEditable ? COMBOBOX_BUTTON_WIDTH : LISTBOX_BUTTON_WIDTH ) - ( ( FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH ) * 2 ), static_cast< long >( preferredRect.size.height ) - ( ( FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH ) * 2 ) );
 								rNativeBoundingRegion = tools::Rectangle( topLeft, boundsSize );
 								rNativeContentRegion = rNativeBoundingRegion;
 								bReturn = true;
@@ -4169,12 +4169,12 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			{
 				// Fix bug 1600 by detecting if double arrows are at both ends
 				tools::Rectangle scrollbarRect( rControlRegion );
-				const ScrollbarValue *pValue = ( aValue.getType() == ControlType::Scrollbar ? static_cast< const ScrollbarValue* >( &aValue ) : NULL );
+				const ScrollbarValue *pValue = ( aValue.getType() == ControlType::Scrollbar ? static_cast< const ScrollbarValue* >( &aValue ) : nullptr );
 				bool bDoubleScrollbarArrows = GetSalData()->mbDoubleScrollbarArrows;
 
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-				VCLNativeScrollbar *pVCLNativeScrollbar = [VCLNativeScrollbar createWithControlState:nState bitmapBuffer:NULL graphics:NULL scrollbarValue:pValue doubleScrollbarArrows:bDoubleScrollbarArrows destRect:CGRectMake( scrollbarRect.Left(), scrollbarRect.Top(), scrollbarRect.GetWidth(), scrollbarRect.GetHeight() )];
+				VCLNativeScrollbar *pVCLNativeScrollbar = [VCLNativeScrollbar createWithControlState:nState bitmapBuffer:nullptr graphics:nullptr scrollbarValue:pValue doubleScrollbarArrows:bDoubleScrollbarArrows destRect:CGRectMake( scrollbarRect.Left(), scrollbarRect.Top(), scrollbarRect.GetWidth(), scrollbarRect.GetHeight() )];
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 				[pVCLNativeScrollbar performSelectorOnMainThread:@selector(getBounds:) withObject:pVCLNativeScrollbar waitUntilDone:YES modes:pModes];
 
@@ -4266,8 +4266,8 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 						bounds.size.width++;
 				}
 
-				Point topLeft( (long)( scrollbarRect.Left() + bounds.origin.x ), (long)( scrollbarRect.Top() + bounds.origin.y ) );
-				Size boundsSize( (long)bounds.size.width, (long)bounds.size.height );
+				Point topLeft( static_cast< long >( scrollbarRect.Left() + bounds.origin.x ), static_cast< long >( scrollbarRect.Top() + bounds.origin.y ) );
+				Size boundsSize( static_cast< long >( bounds.size.width ), static_cast< long >( bounds.size.height ) );
 				rNativeBoundingRegion = tools::Rectangle( topLeft, boundsSize );
 				rNativeContentRegion = rNativeBoundingRegion;
 				bReturn = true;
@@ -4279,11 +4279,11 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 		case ControlType::Spinbox:
 			{
 				tools::Rectangle spinboxRect( rControlRegion );
-				const SpinbuttonValue *pValue = ( aValue.getType() == ControlType::SpinButtons ? static_cast< const SpinbuttonValue* >( &aValue ) : NULL );
+				const SpinbuttonValue *pValue = ( aValue.getType() == ControlType::SpinButtons ? static_cast< const SpinbuttonValue* >( &aValue ) : nullptr );
 
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-				VCLNativeSpinbuttons *pVCLNativeSpinbuttons = [VCLNativeSpinbuttons createWithControlState:nState bitmapBuffer:NULL graphics:NULL spinbuttonValue:pValue destRect:CGRectMake( spinboxRect.Left(), spinboxRect.Top(), spinboxRect.GetWidth(), spinboxRect.GetHeight() )];
+				VCLNativeSpinbuttons *pVCLNativeSpinbuttons = [VCLNativeSpinbuttons createWithControlState:nState bitmapBuffer:nullptr graphics:nullptr spinbuttonValue:pValue destRect:CGRectMake( spinboxRect.Left(), spinboxRect.Top(), spinboxRect.GetWidth(), spinboxRect.GetHeight() )];
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 				[pVCLNativeSpinbuttons performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeSpinbuttons waitUntilDone:YES modes:pModes];
 				NSSize aSize = [pVCLNativeSpinbuttons size];
@@ -4292,7 +4292,7 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					// Fix excessive reduction in spinner height in Impress'
 					// Line and Fill toolbar by setting the height to at least
 					// the full height of the native spinners
-					long nHeightAdjust = ( (long)aSize.height - spinboxRect.GetHeight() ) / 2;
+					long nHeightAdjust = ( static_cast< long >( aSize.height ) - spinboxRect.GetHeight() ) / 2;
 					if ( nHeightAdjust > 0 )
 					{
 						spinboxRect.Top() -= nHeightAdjust;
@@ -4311,8 +4311,8 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 						case ControlPart::ButtonUp:
 							{
-								Point topLeft( (long)( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), (long)( spinboxRect.Top() + ( ( spinboxRect.GetHeight() - aSize.height ) / 2 ) - FOCUSRING_WIDTH ) );
-								Size boundsSize( (long)( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), (long)( ( aSize.height / 2 ) + FOCUSRING_WIDTH ) );
+								Point topLeft( static_cast< long >( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), static_cast< long >( spinboxRect.Top() + ( ( spinboxRect.GetHeight() - aSize.height ) / 2 ) - FOCUSRING_WIDTH ) );
+								Size boundsSize( static_cast< long >( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), static_cast< long >( ( aSize.height / 2 ) + FOCUSRING_WIDTH ) );
 								rNativeBoundingRegion = tools::Rectangle( topLeft, boundsSize );
 								rNativeContentRegion = rNativeBoundingRegion;
 								bReturn = true;
@@ -4321,8 +4321,8 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 						case ControlPart::ButtonDown:
 							{
-								Point topLeft( (long)( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), (long)( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) ) );
-								Size boundsSize( (long)( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), (long)( ( aSize.height / 2 ) + FOCUSRING_WIDTH ) );
+								Point topLeft( static_cast< long >( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), static_cast< long >( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) ) );
+								Size boundsSize( static_cast< long >( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), static_cast< long >( ( aSize.height / 2 ) + FOCUSRING_WIDTH ) );
 								rNativeBoundingRegion = tools::Rectangle( topLeft, boundsSize );
 								rNativeContentRegion = rNativeBoundingRegion;
 								bReturn = true;
@@ -4332,7 +4332,7 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 						case ControlPart::SubEdit:
 							{
 								Point topLeft( spinboxRect.Left() + FOCUSRING_WIDTH, spinboxRect.Top() + FOCUSRING_WIDTH );
-								Size boundsSize( spinboxRect.GetWidth() - (long)aSize.width - ( FOCUSRING_WIDTH * 2 ), spinboxRect.GetHeight() - ( FOCUSRING_WIDTH * 2 ) );
+								Size boundsSize( spinboxRect.GetWidth() - static_cast< long >( aSize.width ) - ( FOCUSRING_WIDTH * 2 ), spinboxRect.GetHeight() - ( FOCUSRING_WIDTH * 2 ) );
 								rNativeBoundingRegion = tools::Rectangle( topLeft, boundsSize );
 								rNativeContentRegion = rNativeBoundingRegion;
 								bReturn = true;
@@ -4348,11 +4348,11 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 		case ControlType::SpinButtons:
 			{
 				tools::Rectangle spinboxRect( rControlRegion );
-				const SpinbuttonValue *pValue = ( aValue.getType() == ControlType::SpinButtons ? static_cast< const SpinbuttonValue* >( &aValue ) : NULL );
+				const SpinbuttonValue *pValue = ( aValue.getType() == ControlType::SpinButtons ? static_cast< const SpinbuttonValue* >( &aValue ) : nullptr );
 
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-				VCLNativeSpinbuttons *pVCLNativeSpinbuttons = [VCLNativeSpinbuttons createWithControlState:nState bitmapBuffer:NULL graphics:NULL spinbuttonValue:pValue destRect:CGRectMake( spinboxRect.Left(), spinboxRect.Top(), spinboxRect.GetWidth(), spinboxRect.GetHeight() )];
+				VCLNativeSpinbuttons *pVCLNativeSpinbuttons = [VCLNativeSpinbuttons createWithControlState:nState bitmapBuffer:nullptr graphics:nullptr spinbuttonValue:pValue destRect:CGRectMake( spinboxRect.Left(), spinboxRect.Top(), spinboxRect.GetWidth(), spinboxRect.GetHeight() )];
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 				[pVCLNativeSpinbuttons performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeSpinbuttons waitUntilDone:YES modes:pModes];
 				NSSize aSize = [pVCLNativeSpinbuttons size];
@@ -4362,8 +4362,8 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					{
 						case ControlPart::Entire:
 							{
-								Point topLeft( (long)( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), (long)( spinboxRect.Top() + ( ( spinboxRect.GetHeight() - aSize.height ) / 2 ) - FOCUSRING_WIDTH ) );
-								Size boundsSize( (long)( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), (long)( aSize.height + ( FOCUSRING_WIDTH * 2 ) ) );
+								Point topLeft( static_cast< long >( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), static_cast< long >( spinboxRect.Top() + ( ( spinboxRect.GetHeight() - aSize.height ) / 2 ) - FOCUSRING_WIDTH ) );
+								Size boundsSize( static_cast< long >( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), static_cast< long >( aSize.height + ( FOCUSRING_WIDTH * 2 ) ) );
 								rNativeBoundingRegion = tools::Rectangle( topLeft, boundsSize );
 								rNativeContentRegion = rNativeBoundingRegion;
 								bReturn = true;
@@ -4372,8 +4372,8 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 						case ControlPart::ButtonUp:
 							{
-								Point topLeft( (long)( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), (long)( spinboxRect.Top() + ( ( spinboxRect.GetHeight() - aSize.height ) / 2 ) - FOCUSRING_WIDTH ) );
-								Size boundsSize( (long)( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), (long)( ( aSize.height / 2 ) + FOCUSRING_WIDTH ) );
+								Point topLeft( static_cast< long >( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), static_cast< long >( spinboxRect.Top() + ( ( spinboxRect.GetHeight() - aSize.height ) / 2 ) - FOCUSRING_WIDTH ) );
+								Size boundsSize( static_cast< long >( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), static_cast< long >( ( aSize.height / 2 ) + FOCUSRING_WIDTH ) );
 								rNativeBoundingRegion = tools::Rectangle( topLeft, boundsSize );
 								rNativeContentRegion = rNativeBoundingRegion;
 								bReturn = true;
@@ -4382,8 +4382,8 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 						case ControlPart::ButtonDown:
 							{
-								Point topLeft( (long)( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), (long)( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) ) );
-								Size boundsSize( (long)( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), (long)( ( aSize.height / 2 ) + FOCUSRING_WIDTH ) );
+								Point topLeft( static_cast< long >( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), static_cast< long >( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) ) );
+								Size boundsSize( static_cast< long >( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), static_cast< long >( ( aSize.height / 2 ) + FOCUSRING_WIDTH ) );
 								rNativeBoundingRegion = tools::Rectangle( topLeft, boundsSize );
 								rNativeContentRegion = rNativeBoundingRegion;
 								bReturn = true;
@@ -4404,19 +4404,19 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-				VCLNativeProgressbar *pVCLNativeProgressbar = [VCLNativeProgressbar createWithControlState:nState controlSize:( nType == ControlType::IntroProgress ? NSControlSizeSmall : NSControlSizeRegular ) bitmapBuffer:NULL graphics:NULL progressbarValue:&aValue destRect:CGRectMake( controlRect.Left(), controlRect.Top(), controlRect.GetWidth(), controlRect.GetHeight() )];
+				VCLNativeProgressbar *pVCLNativeProgressbar = [VCLNativeProgressbar createWithControlState:nState controlSize:( nType == ControlType::IntroProgress ? NSControlSizeSmall : NSControlSizeRegular ) bitmapBuffer:nullptr graphics:nullptr progressbarValue:&aValue destRect:CGRectMake( controlRect.Left(), controlRect.Top(), controlRect.GetWidth(), controlRect.GetHeight() )];
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 				[pVCLNativeProgressbar performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeProgressbar waitUntilDone:YES modes:pModes];
 				NSSize aSize = [pVCLNativeProgressbar size];
 				if ( !NSEqualSizes( aSize, NSZeroSize ) )
 				{
 					// Vertically center the preferred bounds
-					float fYAdjust = ( (float)controlRect.GetHeight() - aSize.height ) / 2;
+					float fYAdjust = ( static_cast< float >( controlRect.GetHeight() ) - aSize.height ) / 2;
 					NSRect preferredRect = NSMakeRect( controlRect.Left(), controlRect.Top() + fYAdjust, aSize.width > controlRect.GetWidth() ? aSize.width : controlRect.GetWidth(), aSize.height );
 
 					// Fix clipping of small progress bar by adding padding
-					Point topLeft( (long)preferredRect.origin.x, (long)preferredRect.origin.y - PROGRESSBARPADDING_HEIGHT );
-					Size boundsSize( (long)preferredRect.size.width, (long)preferredRect.size.height + ( PROGRESSBARPADDING_HEIGHT * 2 ) );
+					Point topLeft( static_cast< long >( preferredRect.origin.x ), static_cast< long >( preferredRect.origin.y ) - PROGRESSBARPADDING_HEIGHT );
+					Size boundsSize( static_cast< long >( preferredRect.size.width ), static_cast< long >( preferredRect.size.height ) + ( PROGRESSBARPADDING_HEIGHT * 2 ) );
 					rNativeBoundingRegion = tools::Rectangle( topLeft, boundsSize );
 					rNativeContentRegion = rNativeBoundingRegion;
 					bReturn = true;
@@ -4430,18 +4430,18 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			if ( nPart == ControlPart::Entire )
 			{
 				tools::Rectangle controlRect( rControlRegion );
-				const TabitemValue *pValue = ( aValue.getType() == ControlType::TabItem ? static_cast< const TabitemValue* >( &aValue ) : NULL );
+				const TabitemValue *pValue = ( aValue.getType() == ControlType::TabItem ? static_cast< const TabitemValue* >( &aValue ) : nullptr );
 
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-				VCLNativeTabCell *pVCLNativeTabCell = [VCLNativeTabCell createWithControlState:nState bitmapBuffer:NULL graphics:NULL tabitemValue:pValue destRect:CGRectMake( controlRect.Left(), controlRect.Top(), controlRect.GetWidth(), controlRect.GetHeight() )];
+				VCLNativeTabCell *pVCLNativeTabCell = [VCLNativeTabCell createWithControlState:nState bitmapBuffer:nullptr graphics:nullptr tabitemValue:pValue destRect:CGRectMake( controlRect.Left(), controlRect.Top(), controlRect.GetWidth(), controlRect.GetHeight() )];
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 				[pVCLNativeTabCell performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeTabCell waitUntilDone:YES modes:pModes];
 				NSSize aSize = [pVCLNativeTabCell size];
 				if ( !NSEqualSizes( aSize, NSZeroSize ) )
 				{
 					Point topLeft( controlRect.Left(), controlRect.Top() - FOCUSRING_WIDTH );
-					Size boundsSize( (long)aSize.width, (long)aSize.height + ( FOCUSRING_WIDTH * 2 ) );
+					Size boundsSize( static_cast< long >( aSize.width ), static_cast< long >( aSize.height ) + ( FOCUSRING_WIDTH * 2 ) );
 					rNativeBoundingRegion = tools::Rectangle( topLeft, boundsSize );
 					rNativeContentRegion = rNativeBoundingRegion;
 					bReturn = true;
@@ -4559,10 +4559,10 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 		case ControlType::Frame:
 			if ( nPart == ControlPart::Border )
 			{
-				DrawFrameFlags nValue = (DrawFrameFlags)( aValue.getNumericVal() & 0xfff0 );
+				DrawFrameFlags nValue = static_cast< DrawFrameFlags >( aValue.getNumericVal() & 0xfff0 );
 				if ( ! ( nValue & ( DrawFrameFlags::Menu | DrawFrameFlags::WindowBorder ) ) )
 				{
-					DrawFrameStyle nStyle = (DrawFrameStyle)( aValue.getNumericVal() & 0x000f );
+					DrawFrameStyle nStyle = static_cast< DrawFrameStyle >( aValue.getNumericVal() & 0x000f );
 					tools::Rectangle controlRect( rControlRegion );
 					controlRect.Left() += FRAME_TRIMWIDTH;
 					controlRect.Top() += FRAME_TRIMWIDTH;

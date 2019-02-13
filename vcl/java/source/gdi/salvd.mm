@@ -75,7 +75,7 @@ using namespace vcl;
 {
 	[super init];
 
-	maLayer = NULL;
+	maLayer = nullptr;
 	mnDX = nDX;
 	if ( mnDX < 1 )
 		mnDX = 1;
@@ -101,7 +101,7 @@ using namespace vcl;
 	if ( maLayer )
 	{
 		CGLayerRelease( maLayer );
-		maLayer = NULL;
+		maLayer = nullptr;
 	}
 
 	NSApplication *pApp = [NSApplication sharedApplication];
@@ -111,12 +111,12 @@ using namespace vcl;
 		if ( pWindows )
 		{
 			float fLastBackingScaleFactor = 1.0f;
-			CGContextRef aLastContext = NULL;
+			CGContextRef aLastContext = nullptr;
 			NSUInteger nCount = [pWindows count];
 			NSUInteger i = 0;
 			for ( ; i < nCount; i++ )
 			{
-				NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
+				NSWindow *pWindow = static_cast< NSWindow* >( [pWindows objectAtIndex:i] );
 				if ( pWindow && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
 				{
 					// Fix macOS 10.14 failure to create a graphics context by
@@ -146,7 +146,7 @@ using namespace vcl;
 			}
 
 			if ( aLastContext )
-				maLayer = CGLayerCreateWithContext( aLastContext, CGSizeMake( mnDX, mnDY ), NULL );
+				maLayer = CGLayerCreateWithContext( aLastContext, CGSizeMake( mnDX, mnDY ), nullptr );
 		}
 	}
 }
@@ -163,7 +163,7 @@ using namespace vcl;
 JavaSalVirtualDevice::JavaSalVirtualDevice() :
 	mnWidth( 0 ),
 	mnHeight( 0 ),
-	maVirDevLayer( NULL ),
+	maVirDevLayer( nullptr ),
 	mpGraphics( new JavaSalGraphics() ),
 	mbGraphics( sal_False )
 {
@@ -191,7 +191,7 @@ JavaSalVirtualDevice::~JavaSalVirtualDevice()
 SalGraphics* JavaSalVirtualDevice::AcquireGraphics()
 {
 	if ( mbGraphics )
-		return NULL;
+		return nullptr;
 
 	mbGraphics = sal_True;
 
@@ -225,11 +225,11 @@ bool JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 	if ( maVirDevLayer )
 	{
 		CGLayerRelease( maVirDevLayer );
-		maVirDevLayer = NULL;
+		maVirDevLayer = nullptr;
 	}
 
 	mpGraphics->maNativeBounds = CGRectNull;
-	mpGraphics->setLayer( NULL );
+	mpGraphics->setLayer( nullptr );
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -251,7 +251,7 @@ bool JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 			CGContextRef aBitmapContext = CGBitmapContextCreate( &nBit, 1, 1, 8, sizeof( nBit ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
 			if ( aBitmapContext )
 			{
-				maVirDevLayer = CGLayerCreateWithContext( aBitmapContext, CGSizeMake( nDX, nDY ), NULL );
+				maVirDevLayer = CGLayerCreateWithContext( aBitmapContext, CGSizeMake( nDX, nDY ), nullptr );
 				CGContextRelease( aBitmapContext );
 			}
 

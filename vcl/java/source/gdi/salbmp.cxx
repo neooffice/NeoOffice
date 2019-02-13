@@ -46,7 +46,7 @@ using namespace vcl;
  
 void ReleaseBitmapBufferBytePointerCallback( void* /* pInfo */, const void *pPointer, size_t /* nSize */ )
 {
-	sal_uInt8 *pBits = (sal_uInt8 *)pPointer;
+	sal_uInt8 *pBits = static_cast< sal_uInt8* >( const_cast< void* >( pPointer ) );
 	if ( pBits )
 		delete[] pBits;
 
@@ -72,10 +72,10 @@ JavaSalBitmap::JavaSalBitmap() :
 	maPoint( 0, 0 ),
 	maSize( 0, 0 ),
 	mnBitCount( 0 ),
-	mpBits( NULL ),
-	mpBuffer( NULL ),
-	mpGraphics( NULL ),
-	mpVirDev( NULL )
+	mpBits( nullptr ),
+	mpBuffer( nullptr ),
+	mpGraphics( nullptr ),
+	mpVirDev( nullptr )
 {
 }
 
@@ -90,7 +90,7 @@ JavaSalBitmap::~JavaSalBitmap()
 
 /**
  * Warning: this method takes ownership of the BitmapBuffer's mpBits member
- * so after calling this method, the mpBits member will be set to NULL.
+ * so after calling this method, the mpBits member will be set to nullptr.
  */
 bool JavaSalBitmap::Create( BitmapBuffer *pBuffer )
 {
@@ -106,7 +106,7 @@ bool JavaSalBitmap::Create( BitmapBuffer *pBuffer )
 	if ( bRet )
 	{
 		mpBits = pBuffer->mpBits;
-		pBuffer->mpBits = NULL;
+		pBuffer->mpBits = nullptr;
 	}
 
 	return bRet;
@@ -139,7 +139,7 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraph
 	float fLineWidth = pSrcGraphics->getNativeLineWidth();
 	if ( fLineWidth > 0 )
 	{
-		long nPadding = (long)( fLineWidth + 0.5 );
+		long nPadding = static_cast< long >( fLineWidth + 0.5 );
 		maPoint = Point( nPadding, nPadding );
 	}
 
@@ -148,10 +148,10 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraph
 	{
 		long nWidth = maSize.Width() + ( maPoint.X() * 2 );
 		long nHeight = maSize.Height() + ( maPoint.Y() * 2 );
-		mpVirDev = (JavaSalVirtualDevice *)pInst->CreateVirtualDevice( pSrcGraphics, nWidth, nHeight, DeviceFormat::DEFAULT, NULL );
+		mpVirDev = static_cast< JavaSalVirtualDevice* >( pInst->CreateVirtualDevice( pSrcGraphics, nWidth, nHeight, DeviceFormat::DEFAULT, nullptr ) );
 		if ( mpVirDev )
 		{
-			mpGraphics = (JavaSalGraphics *)mpVirDev->AcquireGraphics();
+			mpGraphics = static_cast< JavaSalGraphics* >( mpVirDev->AcquireGraphics() );
 			if ( mpGraphics )
 			{
 				CGRect aUnflippedSrcRect = UnflipFlippedRect( CGRectMake( rPoint.X(), rPoint.Y(), maSize.Width(), maSize.Height() ), pSrcGraphics->maNativeBounds );
@@ -203,7 +203,7 @@ bool JavaSalBitmap::Create( const SalBitmap& rSalBmp )
 {
 	Destroy();
 
-	JavaSalBitmap& rJavaSalBmp = (JavaSalBitmap&)rSalBmp;
+	JavaSalBitmap& rJavaSalBmp = static_cast< JavaSalBitmap& >( const_cast< SalBitmap& >( rSalBmp ) );
 	bool bRet = Create( rJavaSalBmp.GetSize(), rJavaSalBmp.GetBitCount(), rJavaSalBmp.maPalette );
 
 	if ( bRet )
@@ -268,13 +268,13 @@ void JavaSalBitmap::Destroy()
 	if ( mpBits )
 	{
 		delete[] mpBits;
-		mpBits = NULL;
+		mpBits = nullptr;
 	}
 
 	if ( mpBuffer )
 	{
 		delete mpBuffer;
-		mpBuffer = NULL;
+		mpBuffer = nullptr;
 	}
 
 	maPalette.SetEntryCount( 0 );
@@ -286,8 +286,8 @@ void JavaSalBitmap::Destroy()
 		delete mpVirDev;
 	}
 
-	mpGraphics = NULL;
-	mpVirDev = NULL;
+	mpGraphics = nullptr;
+	mpVirDev = nullptr;
 }
 
 // ------------------------------------------------------------------
@@ -375,7 +375,7 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( BitmapAccessMode nMode )
 					{
 						CGRect aSrcRect = CGRectMake( maPoint.X(), maPoint.Y(), pBuffer->mnWidth, pBuffer->mnHeight );
 						CGRect aDestRect = CGRectMake( 0, 0, pBuffer->mnWidth, pBuffer->mnHeight );
-						mpGraphics->copyToContext( NULL, NULL, false, false, aContext, aDestRect, aSrcRect, aDestRect );
+						mpGraphics->copyToContext( nullptr, nullptr, false, false, aContext, aDestRect, aSrcRect, aDestRect );
 
 						CGContextRelease( aContext );
 					}
@@ -387,7 +387,7 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( BitmapAccessMode nMode )
 		else
 		{
 			delete pBuffer;
-			return NULL;
+			return nullptr;
 		}
 	}
 
@@ -402,8 +402,8 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( BitmapAccessMode nMode )
 		}
 
 		maPoint = Point( 0, 0 );
-		mpGraphics = NULL;
-		mpVirDev = NULL;
+		mpGraphics = nullptr;
+		mpVirDev = nullptr;
 	}
 
 	pBuffer->mpBits = mpBits;

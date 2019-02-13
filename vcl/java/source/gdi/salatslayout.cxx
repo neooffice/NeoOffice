@@ -91,7 +91,7 @@ static const OUString aTeluguSangamMN( "Telugu Sangam MN" );
 static const OUString aTimesNewRoman( "Times New Roman" );
 static const OUString aTimesRoman( "Times Roman" );
 
-inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
+inline long Float32ToLong( Float32 f ) { return static_cast< long >( f + 0.5 ); }
 
 inline bool IsNonprintingChar( sal_Unicode nChar ) { return ( nChar == 0x00b6 || nChar == 0x00b7 ); }
 
@@ -115,7 +115,7 @@ struct SAL_DLLPRIVATE ImplATSLayoutDataHash {
 
 struct SAL_DLLPRIVATE ImplATSLayoutDataHashHash
 {
-	size_t				operator()( const ImplATSLayoutDataHash *x ) const { return (size_t)x->mnStrHash; }
+	size_t				operator()( const ImplATSLayoutDataHash *x ) const { return static_cast< size_t >( x->mnStrHash ); }
 };
 
 struct SAL_DLLPRIVATE ImplATSLayoutDataHashEquality
@@ -198,18 +198,18 @@ using namespace vcl;
 
 ImplATSLayoutDataHash::ImplATSLayoutDataHash( const sal_Unicode *pStr, int /* nLen */, int nMinCharPos, int nEndCharPos, SalLayoutFlags nFlags, JavaImplFont *pFont ) :
 	mnLen( nEndCharPos - nMinCharPos ),
-	mnFontID( (CTFontRef)pFont->getNativeFont() ),
+	mnFontID( reinterpret_cast< CTFontRef >( pFont->getNativeFont() ) ),
 	mfFontSize( pFont->getSize() ),
 	mfFontScaleX( pFont->getScaleX() ),
 	mbAntialiased( pFont->isAntialiased() ),
 	mbRTL( nFlags & SalLayoutFlags::BiDiRtl ),
 	mbVertical( nFlags & SalLayoutFlags::Vertical ),
-	mpStr( (sal_Unicode *)( pStr + nMinCharPos ) ),
+	mpStr( const_cast< sal_Unicode* >( pStr + nMinCharPos ) ),
 	mnStrHash( rtl_ustr_hashCode_WithLength( mpStr, mnLen ) ),
 	mbOwnsStr( false )
 {
 	if ( mnFontID )
-		CFRetain( (CTFontRef)mnFontID );
+		CFRetain( static_cast< CTFontRef >( mnFontID ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -217,7 +217,7 @@ ImplATSLayoutDataHash::ImplATSLayoutDataHash( const sal_Unicode *pStr, int /* nL
 ImplATSLayoutDataHash::~ImplATSLayoutDataHash()
 {
 	if ( mnFontID )
-		CFRelease( (CTFontRef)mnFontID );
+		CFRelease( static_cast< CTFontRef >( mnFontID ) );
 
 	if ( mbOwnsStr && mpStr )
 		rtl_freeMemory( mpStr );
@@ -256,7 +256,7 @@ sal_uInt32 ImplATSLayoutData::mnSharedContextData = 0;
 
 // ----------------------------------------------------------------------------
 
-CGContextRef ImplATSLayoutData::maSharedContext = NULL;
+CGContextRef ImplATSLayoutData::maSharedContext = nullptr;
 
 // ----------------------------------------------------------------------------
 
@@ -293,7 +293,7 @@ void ImplATSLayoutData::ClearLayoutDataCache()
 
 ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, SalLayoutFlags nFlags, int nFallbackLevel, JavaImplFont *pFont, const SalATSLayout *pCurrentLayout )
 {
-	ImplATSLayoutData *pLayoutData = NULL;
+	ImplATSLayoutData *pLayoutData = nullptr;
 
 	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash( pStr, nLen, nMinCharPos, nEndCharPos, nFlags, pFont );
 
@@ -303,26 +303,26 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, in
 	{
 		pLayoutData = it->second;
 		delete pLayoutHash;
-		pLayoutHash = NULL;
+		pLayoutHash = nullptr;
 	}
 
 	if ( !pLayoutData )
 	{
 		pLayoutHash->mbOwnsStr = true;
-		pLayoutHash->mpStr = (sal_Unicode *)rtl_allocateMemory( pLayoutHash->mnLen * sizeof( sal_Unicode ) );
+		pLayoutHash->mpStr = static_cast< sal_Unicode* >( rtl_allocateMemory( pLayoutHash->mnLen * sizeof( sal_Unicode ) ) );
 		memcpy( pLayoutHash->mpStr, pStr + nMinCharPos, pLayoutHash->mnLen * sizeof( sal_Unicode ) );
 		pLayoutData = new ImplATSLayoutData( pLayoutHash, nFallbackLevel, pFont, pCurrentLayout );
 
 		if ( !pLayoutData )
 		{
 			delete pLayoutHash;
-			return NULL;
+			return nullptr;
 		}
 
 		if ( !pLayoutData->IsValid() )
 		{
 			pLayoutData->Release();
-			return NULL;
+			return nullptr;
 		}
 
 		// Limit cache size
@@ -340,14 +340,14 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, in
 				size_t nUserMemLen = sizeof( nUserMem );
 				pMib[0] = CTL_HW;
 				pMib[1] = HW_USERMEM;
-				if ( !sysctl( pMib, 2, &nUserMem, &nUserMemLen, NULL, 0 ) )
+				if ( !sysctl( pMib, 2, &nUserMem, &nUserMemLen, nullptr, 0 ) )
 					nUserMem /= 2;
 				if ( nUserMem > nMaxMem )
 					nUserMem = nMaxMem;
 				else if ( nUserMem < nMinMem )
 					nUserMem = nMinMem;
 				nLayoutCacheSize = nUserMem / ( 1024 * 8 );
-				nTargetCacheSize = (int)( nLayoutCacheSize * 0.8 );
+				nTargetCacheSize = static_cast< int >( nLayoutCacheSize * 0.8 );
 			}
 
 			while ( mnLayoutCacheSize > nTargetCacheSize )
@@ -375,18 +375,18 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, in
 ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /* nFallbackLevel */, JavaImplFont *pFont, const SalATSLayout *pCurrentLayout ) :
 	mnRefCount( 1 ),
 	mpHash( pLayoutHash ),
-	mpFont( NULL ),
-	mpNeedFallback( NULL ),
-	mpFallbackFont( NULL ),
-	maFont( NULL ),
-	maTypesetter( NULL ),
-	maLine( NULL ),
-	mpGlyphs( NULL ),
-	mpGlyphsToChars( NULL ),
+	mpFont( nullptr ),
+	mpNeedFallback( nullptr ),
+	mpFallbackFont( nullptr ),
+	maFont( nullptr ),
+	maTypesetter( nullptr ),
+	maLine( nullptr ),
+	mpGlyphs( nullptr ),
+	mpGlyphsToChars( nullptr ),
 	mnGlyphCount( 0 ),
-	mpCharsToGlyphs( NULL ),
-	mpCharsToChars( NULL ),
-	mpGlyphAdvances( NULL ),
+	mpCharsToGlyphs( nullptr ),
+	mpCharsToChars( nullptr ),
+	mpGlyphAdvances( nullptr ),
 	mnBaselineDelta( 0 ),
 	mbValid( false )
 {
@@ -403,21 +403,21 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 		return;
 	}
 
-	maFont = CTFontCreateCopyWithAttributes( (CTFontRef)mpHash->mnFontID, mpHash->mfFontSize, NULL, NULL );
+	maFont = CTFontCreateCopyWithAttributes( static_cast< CTFontRef >( mpHash->mnFontID ), mpHash->mfFontSize, nullptr, nullptr );
 	if ( !maFont )
 	{
 		Destroy();
 		return;
 	}
 
-	CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, reinterpret_cast< const UniChar* >( mpHash->mpStr ), mpHash->mnLen, kCFAllocatorNull );
+	CFStringRef aString = CFStringCreateWithCharactersNoCopy( nullptr, reinterpret_cast< const UniChar* >( mpHash->mpStr ), mpHash->mnLen, kCFAllocatorNull );
 	if ( !aString )
 	{
 		Destroy();
 		return;
 	}
 
-	CFAttributedStringRef aAttrString = CFAttributedStringCreate( NULL, aString, NULL );
+	CFAttributedStringRef aAttrString = CFAttributedStringCreate( nullptr, aString, nullptr );
 	CFRelease( aString );
 	if ( !aAttrString )
 	{
@@ -425,7 +425,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 		return;
 	}
 
-	CFMutableAttributedStringRef aMutableAttrString = CFAttributedStringCreateMutableCopy( NULL, 0, aAttrString );
+	CFMutableAttributedStringRef aMutableAttrString = CFAttributedStringCreateMutableCopy( nullptr, 0, aAttrString );
 	CFRelease( aAttrString );
 	if ( !aMutableAttrString )
 	{
@@ -499,7 +499,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 	CFIndex nBufSize;
 	for ( nCurrentGlyphRun = 0; nCurrentGlyphRun < nLineGlyphRuns; nCurrentGlyphRun++ )
 	{
-		CTRunRef aGlyphRun = (CTRunRef)CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun );
+		CTRunRef aGlyphRun = static_cast< CTRunRef >( CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun ) );
 		if ( aGlyphRun )
 			nGlyphsProcessed += CTRunGetGlyphCount( aGlyphRun );
 	}
@@ -508,24 +508,24 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 
 	// Cache mapping of characters to glyphs
 	nBufSize = mpHash->mnLen * sizeof( int );
-	mpCharsToGlyphs = (int *)rtl_allocateMemory( nBufSize );
+	mpCharsToGlyphs = static_cast< int* >( rtl_allocateMemory( nBufSize ) );
 
 	CFIndex i;
 	for ( i = 0; i < mpHash->mnLen; i++ )
 		mpCharsToGlyphs[ i ] = -1;
 	nBufSize = mnGlyphCount * sizeof( CGGlyph );
-	mpGlyphs = (CGGlyph *)rtl_allocateMemory( nBufSize );
+	mpGlyphs = static_cast< CGGlyph* >( rtl_allocateMemory( nBufSize ) );
 	memset( mpGlyphs, 0, nBufSize );
 
 	nBufSize = mnGlyphCount * sizeof( long );
-	mpGlyphsToChars = (int *)rtl_allocateMemory( nBufSize );
+	mpGlyphsToChars = static_cast< int* >( rtl_allocateMemory( nBufSize ) );
 	for ( i = 0; i < mnGlyphCount; i++ )
 		mpGlyphsToChars[ i ] = -1;
 
 	nGlyphsProcessed = 0;
 	for ( nCurrentGlyphRun = 0; nCurrentGlyphRun < nLineGlyphRuns; nCurrentGlyphRun++ )
 	{
-		CTRunRef aGlyphRun = (CTRunRef)CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun );
+		CTRunRef aGlyphRun = static_cast< CTRunRef >( CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun ) );
 		if ( aGlyphRun )
 		{
 			CFIndex nGlyphRunCount = CTRunGetGlyphCount( aGlyphRun );
@@ -554,14 +554,14 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 
 	// Cache mapping of characters to glyph character indices
 	nBufSize = mpHash->mnLen * sizeof( int );
-	mpCharsToChars = (int *)rtl_allocateMemory( nBufSize );
+	mpCharsToChars = static_cast< int* >( rtl_allocateMemory( nBufSize ) );
 
 	for ( i = 0; i < mpHash->mnLen; i++ )
 		mpCharsToChars[ i ] = -1;
 	if ( mpHash->mbRTL )
 	{
 		i = 0;
-		for ( int j = mpHash->mnLen - 1; j >= 0 && i < (int)mnGlyphCount; j-- )
+		for ( int j = mpHash->mnLen - 1; j >= 0 && i < static_cast< int >( mnGlyphCount ); j-- )
 		{
 			// Detect characters that have no glyphs
 			if ( mpCharsToGlyphs[ j ] < 0 )
@@ -569,14 +569,14 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 
 			int nIndex = mpGlyphsToChars[ i ];
 			mpCharsToChars[ j ] = nIndex;
-			for ( ; i < (int)mnGlyphCount && mpGlyphsToChars[ i ] == nIndex; i++ )
+			for ( ; i < static_cast< int >( mnGlyphCount ) && mpGlyphsToChars[ i ] == nIndex; i++ )
 				;
 		}
 	}
 	else
 	{
 		i = 0;
-		for ( int j = 0; j < mpHash->mnLen && i < (int)mnGlyphCount; j++ )
+		for ( int j = 0; j < mpHash->mnLen && i < static_cast< int >( mnGlyphCount ); j++ )
 		{
 			// Detect characters that have no glyphs
 			if ( mpCharsToGlyphs[ j ] < 0 )
@@ -584,14 +584,14 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 
 			int nIndex = mpGlyphsToChars[ i ];
 			mpCharsToChars[ j ] = nIndex;
-			for ( ; i < (int)mnGlyphCount && mpGlyphsToChars[ i ] == nIndex; i++ )
+			for ( ; i < static_cast< int >( mnGlyphCount ) && mpGlyphsToChars[ i ] == nIndex; i++ )
 				;
 		}
 	}
 
 	// Cache glyph widths
 	nBufSize = mnGlyphCount * sizeof( long );
-	mpGlyphAdvances = (long *)rtl_allocateMemory( nBufSize );
+	mpGlyphAdvances = static_cast< long* >( rtl_allocateMemory( nBufSize ) );
 	memset( mpGlyphAdvances, 0, nBufSize );
 
 	int nLastNonSpacingIndex = -1;
@@ -599,7 +599,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 	nGlyphsProcessed = 0;
 	for ( nCurrentGlyphRun = 0; nCurrentGlyphRun < nLineGlyphRuns; nCurrentGlyphRun++ )
 	{
-		CTRunRef aGlyphRun = (CTRunRef)CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun );
+		CTRunRef aGlyphRun = static_cast< CTRunRef >( CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun ) );
 		if ( aGlyphRun )
 		{
 			CFIndex nGlyphRunCount = CTRunGetGlyphCount( aGlyphRun );
@@ -611,7 +611,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 				CFDictionaryRef aDict = CTRunGetAttributes( aGlyphRun );
 				if ( aDict )
 				{
-					const CFBooleanRef aValue = (const CFBooleanRef)CFDictionaryGetValue( aDict, kCTVerticalFormsAttributeName );
+					const CFBooleanRef aValue = static_cast< const CFBooleanRef >( CFDictionaryGetValue( aDict, kCTVerticalFormsAttributeName ) );
 					if ( aValue == kCFBooleanTrue )
 						bVerticalRun = true;
 				}
@@ -630,9 +630,9 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 					if ( j == nGlyphRunCount - 1 )
 					{
 						if ( bVerticalRun )
-							mpGlyphAdvances[ i ] += Float32ToLong( CTFontGetAdvancesForGlyphs( maFont, kCTFontOrientationVertical, &aGlyphs[ j ], NULL, 1 ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
+							mpGlyphAdvances[ i ] += Float32ToLong( CTFontGetAdvancesForGlyphs( maFont, kCTFontOrientationVertical, &aGlyphs[ j ], nullptr, 1 ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
 						else
-							mpGlyphAdvances[ i ] += Float32ToLong( CTFontGetAdvancesForGlyphs( maFont, kCTFontOrientationHorizontal, &aGlyphs[ j ], NULL, 1 ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
+							mpGlyphAdvances[ i ] += Float32ToLong( CTFontGetAdvancesForGlyphs( maFont, kCTFontOrientationHorizontal, &aGlyphs[ j ], nullptr, 1 ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
 					}
 					else
 					{
@@ -701,7 +701,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 	// Find positions that require fallback fonts
 	for ( nCurrentGlyphRun = 0; nCurrentGlyphRun < nLineGlyphRuns; nCurrentGlyphRun++ )
 	{
-		CTRunRef aGlyphRun = (CTRunRef)CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun );
+		CTRunRef aGlyphRun = static_cast< CTRunRef >( CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun ) );
 		if ( aGlyphRun )
 		{
 			CFIndex nGlyphRunCount = CTRunGetGlyphCount( aGlyphRun );
@@ -715,8 +715,8 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 					// kCTVerticalFormsAttributeName attribute by detecting
 					// only assuming there is a fallback font when the font's
 					// PostScript names are different
-					CTFontRef aFont = (CTFontRef)CFDictionaryGetValue( aDict, kCTFontAttributeName );
-					CFStringRef aFallbackFontPSName = aFont ? CTFontCopyPostScriptName( aFont ) : NULL;
+					CTFontRef aFont = static_cast< CTFontRef >( CFDictionaryGetValue( aDict, kCTFontAttributeName ) );
+					CFStringRef aFallbackFontPSName = aFont ? CTFontCopyPostScriptName( aFont ) : nullptr;
 					CFStringRef aFontPSName = CTFontCopyPostScriptName( maFont );
 					bool bHasFallbackFont = ( aFallbackFontPSName && ( !aFontPSName || CFStringCompare( aFallbackFontPSName, aFontPSName, 0 ) != kCFCompareEqualTo ) );
 					if ( aFallbackFontPSName )
@@ -733,7 +733,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 						if ( !mpNeedFallback )
 						{
 							nBufSize = mpHash->mnLen * sizeof( bool );
-							mpNeedFallback = (bool *)rtl_allocateMemory( nBufSize );
+							mpNeedFallback = static_cast< bool* >( rtl_allocateMemory( nBufSize ) );
 							memset( mpNeedFallback, 0, nBufSize );
 						}
 
@@ -742,7 +742,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 							mpNeedFallback[ aRange.location + j ] = true;
 
 						// Update font for next pass through
-						JavaImplFont *pFallbackFont = NULL;
+						JavaImplFont *pFallbackFont = nullptr;
 						SalData *pSalData = GetSalData();
 						if ( aFont )
 						{
@@ -769,7 +769,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 								{
 									UniChar nChar = mpHash->mpStr[ aRange.location + j ];
 									CGGlyph nGlyph;
-									if ( CTFontGetGlyphsForCharacters( (CTFontRef)nit->first, &nChar, &nGlyph, 1 ) )
+									if ( CTFontGetGlyphsForCharacters( reinterpret_cast< CTFontRef >( nit->first ), &nChar, &nGlyph, 1 ) )
 									{
 										pFallbackFont = new JavaImplFont( nit->second->maFontName, mpHash->mfFontSize, mpFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
 										break;
@@ -789,7 +789,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int /*
 							if ( mpNeedFallback )
 							{
 								rtl_freeMemory( mpNeedFallback );
-								mpNeedFallback = NULL;
+								mpNeedFallback = nullptr;
 							}
 						}
 
@@ -815,7 +815,7 @@ ImplATSLayoutData::~ImplATSLayoutData()
 
 JavaImplFont *ImplATSLayoutData::GetFallbackFont( int nCharPos )
 {
-	JavaImplFont *pRet = NULL;
+	JavaImplFont *pRet = nullptr;
 
 	::std::map< int, JavaImplFont* >::const_iterator it = maFallbackFontMap.find( nCharPos );
 	if ( it != maFallbackFontMap.end() )
@@ -831,19 +831,19 @@ void ImplATSLayoutData::Destroy()
 	if ( mpHash )
 	{
 		delete mpHash;
-		mpHash = NULL;
+		mpHash = nullptr;
 	}
 
 	if ( mpFont )
 	{
 		delete mpFont;
-		mpFont = NULL;
+		mpFont = nullptr;
 	}
 
 	if ( mpNeedFallback )
 	{
 		rtl_freeMemory( mpNeedFallback );
-		mpNeedFallback = NULL;
+		mpNeedFallback = nullptr;
 	}
 
 	while ( maFallbackFontList.size() )
@@ -853,36 +853,36 @@ void ImplATSLayoutData::Destroy()
 	}
 
 	maFallbackFontMap.clear();
-	mpFallbackFont = NULL;
+	mpFallbackFont = nullptr;
 
 	if ( maFont )
 	{
 		CFRelease( maFont );
-		maFont = NULL;
+		maFont = nullptr;
 	}
 
 	if ( maTypesetter )
 	{
 		CFRelease( maTypesetter );
-		maTypesetter = NULL;
+		maTypesetter = nullptr;
 	}
 
 	if ( maLine )
 	{
 		CFRelease( maLine );
-		maLine = NULL;
+		maLine = nullptr;
 	}
 
 	if ( mpGlyphs )
 	{
 		rtl_freeMemory( mpGlyphs );
-		mpGlyphs = NULL;
+		mpGlyphs = nullptr;
 	}
 
 	if ( mpGlyphsToChars )
 	{
 		rtl_freeMemory( mpGlyphsToChars );
-		mpGlyphsToChars = NULL;
+		mpGlyphsToChars = nullptr;
 	}
 
 	mnGlyphCount = 0;
@@ -890,19 +890,19 @@ void ImplATSLayoutData::Destroy()
 	if ( mpCharsToChars )
 	{
 		rtl_freeMemory( mpCharsToChars );
-		mpCharsToChars = NULL;
+		mpCharsToChars = nullptr;
 	}
 
 	if ( mpCharsToGlyphs )
 	{
 		rtl_freeMemory( mpCharsToGlyphs );
-		mpCharsToGlyphs = NULL;
+		mpCharsToGlyphs = nullptr;
 	}
 
 	if ( mpGlyphAdvances )
 	{
 		rtl_freeMemory( mpGlyphAdvances );
-		mpGlyphAdvances = NULL;
+		mpGlyphAdvances = nullptr;
 	}
 
 	mnBaselineDelta = 0;
@@ -933,7 +933,7 @@ void ImplATSLayoutData::Release() const
 
 static void SalCGPathApplier( void *pInfo, const CGPathElement *pElement )
 {
-	::std::list< tools::Polygon > *pPolygonList = (::std::list< tools::Polygon > *)pInfo;
+	::std::list< tools::Polygon > *pPolygonList = static_cast< ::std::list< tools::Polygon >* >( pInfo );
 
 	switch ( pElement->type )
 	{
@@ -994,9 +994,9 @@ JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrame
 	JavaSalGraphicsOp( aFrameClipPath, aNativeClipPath ),
 	maStartPoint( aStartPoint ),
 	mnGlyphCount( nGlyphCount ),
-	mpGlyphs( NULL ),
-	mpPositions( NULL ),
-	mnFontID( (CTFontRef)pFont->getNativeFont() ),
+	mpGlyphs( nullptr ),
+	mpPositions( nullptr ),
+	mnFontID( reinterpret_cast< CTFontRef >( pFont->getNativeFont() ) ),
 	mfFontSize( pFont->getSize() ),
 	mbAntialiased( pFont->isAntialiased() ),
 	mnColor( nColor ),
@@ -1017,23 +1017,23 @@ JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrame
 			fRotateDegrees = -90.0f;
 		mfRotateAngle += fRotateDegrees * M_PI / 180;
 		// Fix scaling the wrong axis by doing all scaling vertically
-		mfScaleY *= (float)pFont->getScaleX() * fGlyphScaleX;
+		mfScaleY *= static_cast< float >( pFont->getScaleX() ) * fGlyphScaleX;
 	}
 	else
 	{
-		mfScaleX *= (float)pFont->getScaleX() * fGlyphScaleX;
+		mfScaleX *= static_cast< float >( pFont->getScaleX() ) * fGlyphScaleX;
 	}
 
 	if ( mnGlyphCount > 0 )
 	{
-		mpGlyphs = (CGGlyph *)rtl_allocateMemory( mnGlyphCount * sizeof( CGGlyph ) );
+		mpGlyphs = static_cast< CGGlyph* >( rtl_allocateMemory( mnGlyphCount * sizeof( CGGlyph ) ) );
 		if ( mpGlyphs )
 		{
 			for ( int i = 0; i < mnGlyphCount; i++ )
-				mpGlyphs[ i ] = (CGGlyph)( pGlyphs[ i ]->maGlyphId & GF_IDXMASK );
+				mpGlyphs[ i ] = static_cast< CGGlyph >( pGlyphs[ i ]->maGlyphId & GF_IDXMASK );
 		}
 
-		mpPositions = (CGPoint *)rtl_allocateMemory( ( mnGlyphCount + 1 )* sizeof( CGPoint ) );
+		mpPositions = static_cast< CGPoint* >( rtl_allocateMemory( ( mnGlyphCount + 1 )* sizeof( CGPoint ) ) );
 		if ( mpPositions )
 		{
 			mpPositions[ 0 ].x = 0.0f;
@@ -1055,7 +1055,7 @@ JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrame
 
 	// Calculate glyph rotation and scale
 	if ( nOrientation )
-		mfRotateAngle += ( (float)nOrientation / 10 ) * M_PI / 180;
+		mfRotateAngle += ( static_cast< float >( nOrientation ) / 10 ) * M_PI / 180;
 }
 
 // ----------------------------------------------------------------------------
@@ -1092,7 +1092,7 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( JavaSalGraphics *pGraphics, CGContextR
 	{
 		if ( CGColorGetAlpha( aColor ) )
 		{
-			CTFontRef aFont = CTFontCreateCopyWithAttributes( mnFontID, mfFontSize, NULL, NULL );
+			CTFontRef aFont = CTFontCreateCopyWithAttributes( mnFontID, mfFontSize, nullptr, nullptr );
 			if ( aFont )
 			{
 				// Text draw bounds is never XOR'd so don't pass any bounds
@@ -1172,7 +1172,7 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( JavaSalGraphics *pGraphics, CGContextR
 SalLayout *JavaSalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackLevel )
 {
 	if ( nFallbackLevel && rArgs.mnFlags & SalLayoutFlags::DisableGlyphProcessing )
-		return NULL;
+		return nullptr;
 	else
 		return new SalATSLayout( this, nFallbackLevel );
 }
@@ -1185,11 +1185,11 @@ void SalATSLayout::GetGlyphBounds( sal_Int32 nGlyph, JavaImplFont *pFont, tools:
 
 	if ( pFont )
 	{
-		CTFontRef aFont = CTFontCreateCopyWithAttributes( (CTFontRef)pFont->getNativeFont(), pFont->getSize(), NULL, NULL );
+		CTFontRef aFont = CTFontCreateCopyWithAttributes( reinterpret_cast< CTFontRef >( pFont->getNativeFont() ), pFont->getSize(), nullptr, nullptr );
 		if ( aFont )
 		{
-			CGGlyph nGlyphID = (CGGlyph)( nGlyph & GF_IDXMASK );
-			CGRect aRect = CTFontGetBoundingRectsForGlyphs( aFont, kCTFontOrientationDefault, &nGlyphID, NULL, 1 );
+			CGGlyph nGlyphID = static_cast< CGGlyph >( nGlyph & GF_IDXMASK );
+			CGRect aRect = CTFontGetBoundingRectsForGlyphs( aFont, kCTFontOrientationDefault, &nGlyphID, nullptr, 1 );
 			if ( !CGRectIsEmpty( aRect ) )
 			{
 				double fFontScaleX = pFont->getScaleX();
@@ -1217,8 +1217,8 @@ void SalATSLayout::ClearLayoutDataCache()
 SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 	mpGraphics( pGraphics ),
 	mnFallbackLevel( nFallbackLevel ),
-	mpFont( NULL ),
-	mpKashidaLayoutData( NULL ),
+	mpFont( nullptr ),
+	mpKashidaLayoutData( nullptr ),
 	mfOrigWidth( 0 ),
 	mfGlyphScaleX( 1.0 )
 {
@@ -1287,7 +1287,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	if ( !mpFont )
 		return bRet;
 
-	JavaImplFont *pSymbolFallbackFont = NULL;
+	JavaImplFont *pSymbolFallbackFont = nullptr;
 	bool bUseNativeFallback = false;
 
 	// Aggregate runs
@@ -1325,7 +1325,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		{
 			// The ImplLayoutArgs class does not do BIDI analysis in this case
 			// so we can be assured that the entire string is a single run
-			bool bIsStrongRTL = (bool)( rArgs.mnFlags & SalLayoutFlags::BiDiRtl );
+			bool bIsStrongRTL = static_cast< bool >( rArgs.mnFlags & SalLayoutFlags::BiDiRtl );
 
 			bool bStrongRunRTL;
 			int nStrongMinCharPos;
@@ -1336,7 +1336,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				// Improve BIDI analysis speed by trimming layout args string
 				int nMinArgsLen = rArgs.mnMinCharPos - nMinCharPos;
 				OUString aMinArgsStr = rArgs.mrStr.copy( nMinCharPos, nMinArgsLen );
-				ImplLayoutArgs aMinArgs( aMinArgsStr, 0, nMinArgsLen, rArgs.mnFlags & ~(SalLayoutFlags)( SalLayoutFlags::BiDiStrong | SalLayoutFlags::DisableGlyphProcessing ), rArgs.maLanguageTag, nullptr );
+				ImplLayoutArgs aMinArgs( aMinArgsStr, 0, nMinArgsLen, rArgs.mnFlags & ~static_cast< SalLayoutFlags >( SalLayoutFlags::BiDiStrong | SalLayoutFlags::DisableGlyphProcessing ), rArgs.maLanguageTag, nullptr );
 				aMinArgs.ResetPos();
 				while ( aMinArgs.GetNextRun( &nStrongMinCharPos, &nStrongEndCharPos, &bStrongRunRTL ) )
 				{
@@ -1357,7 +1357,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				// Improve BIDI analysis speed by trimming layout args string
 				int nEndArgsLen = nEndCharPos - rArgs.mnEndCharPos;
 				OUString aEndArgsStr = rArgs.mrStr.copy( rArgs.mnEndCharPos, nEndArgsLen );
-				ImplLayoutArgs aEndArgs( aEndArgsStr, 0, nEndArgsLen, rArgs.mnFlags & ~(SalLayoutFlags)( SalLayoutFlags::BiDiStrong | SalLayoutFlags::DisableGlyphProcessing ), rArgs.maLanguageTag, nullptr );
+				ImplLayoutArgs aEndArgs( aEndArgsStr, 0, nEndArgsLen, rArgs.mnFlags & ~static_cast< SalLayoutFlags >( SalLayoutFlags::BiDiStrong | SalLayoutFlags::DisableGlyphProcessing ), rArgs.maLanguageTag, nullptr );
 				aEndArgs.ResetPos();
 				while ( aEndArgs.GetNextRun( &nStrongMinCharPos, &nStrongEndCharPos, &bStrongRunRTL ) )
 				{
@@ -1463,7 +1463,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		}
 	}
 
-	JavaImplFont *pFallbackFont = NULL;
+	JavaImplFont *pFallbackFont = nullptr;
 	Point aPos;
 	maRuns.ResetPos();
 	mpGraphics->maFallbackRuns.ResetPos();
@@ -1511,7 +1511,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						// should always produce different glyphs for each
 						// character so if any are the same, the font does not
 						// support Arabic properly.
-						for ( int i = 0; i < (int)mpKashidaLayoutData->mnGlyphCount; i++ )
+						for ( int i = 0; i < static_cast< int >( mpKashidaLayoutData->mnGlyphCount ); i++ )
 						{
 							if ( !mpKashidaLayoutData->mpGlyphs[ i ] )
 							{
@@ -1682,7 +1682,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				{
 					// Fix bugs 1637 and 1797 by laying out mirrored characters
 					// separately
-					sal_Unicode nMirroredChar = (sal_Unicode)GetMirroredChar( nChar );
+					sal_Unicode nMirroredChar = static_cast< sal_Unicode >( GetMirroredChar( nChar ) );
 					if ( nMirroredChar != nChar )
 					{
 						::std::unordered_map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.find( nChar );
@@ -1722,7 +1722,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				for ( CFIndex i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphsToChars[ i ] == nIndex; i++ )
 				{
 					long nGlyphWidth = pCurrentLayoutData->mpGlyphAdvances[ i ];
-					sal_Int32 nGlyph = (sal_Int32)pCurrentLayoutData->mpGlyphs[ i ];
+					sal_Int32 nGlyph = static_cast< sal_Int32 >( pCurrentLayoutData->mpGlyphs[ i ] );
 
 					// Fix bug 3588 by setting fallback glyph IDs to zero
 					if ( nGlyph && pLayoutData->mpNeedFallback && pLayoutData->mpNeedFallback[ nIndex ] )
@@ -1746,7 +1746,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 									if ( pSymbolFallbackFont->getNativeFont() == mpFont->getNativeFont() )
 									{
 										delete pSymbolFallbackFont;
-										pSymbolFallbackFont = NULL;
+										pSymbolFallbackFont = nullptr;
 									}
 								}
 							}
@@ -1771,7 +1771,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 									if ( pSymbolFallbackFont->getNativeFont() == mpFont->getNativeFont() )
 									{
 										delete pSymbolFallbackFont;
-										pSymbolFallbackFont = NULL;
+										pSymbolFallbackFont = nullptr;
 									}
 								}
 							}
@@ -1834,7 +1834,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 									if ( pSymbolFallbackFont->getNativeFont() == mpFont->getNativeFont() )
 									{
 										delete pSymbolFallbackFont;
-										pSymbolFallbackFont = NULL;
+										pSymbolFallbackFont = nullptr;
 									}
 								}
 							}
@@ -1861,7 +1861,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 									if ( pSymbolFallbackFont->getNativeFont() == mpFont->getNativeFont() )
 									{
 										delete pSymbolFallbackFont;
-										pSymbolFallbackFont = NULL;
+										pSymbolFallbackFont = nullptr;
 									}
 								}
 							}
@@ -1884,7 +1884,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 									if ( pSymbolFallbackFont->getNativeFont() == mpFont->getNativeFont() )
 									{
 										delete pSymbolFallbackFont;
-										pSymbolFallbackFont = NULL;
+										pSymbolFallbackFont = nullptr;
 									}
 								}
 							}
@@ -1910,7 +1910,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 									if ( pSymbolFallbackFont->getNativeFont() == mpFont->getNativeFont() )
 									{
 										delete pSymbolFallbackFont;
-										pSymbolFallbackFont = NULL;
+										pSymbolFallbackFont = nullptr;
 									}
 								}
 							}
@@ -1990,8 +1990,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							int nPreviousIndex = nIndex - 1;
 							if ( nPreviousIndex >= 0 )
 							{
-								UJoiningType nTypeLeft = (UJoiningType)u_getIntPropertyValue( nChar, UCHAR_JOINING_TYPE );
-								UJoiningType nTypeRight = (UJoiningType)u_getIntPropertyValue( pCurrentLayoutData->mpHash->mpStr[ nPreviousIndex ], UCHAR_JOINING_TYPE );
+								UJoiningType nTypeLeft = static_cast< UJoiningType >( u_getIntPropertyValue( nChar, UCHAR_JOINING_TYPE ) );
+								UJoiningType nTypeRight = static_cast< UJoiningType >( u_getIntPropertyValue( pCurrentLayoutData->mpHash->mpStr[ nPreviousIndex ], UCHAR_JOINING_TYPE ) );
 								if ( ( nTypeLeft == U_JT_RIGHT_JOINING || nTypeLeft == U_JT_DUAL_JOINING ) && ( nTypeRight == U_JT_LEFT_JOINING || nTypeRight == U_JT_DUAL_JOINING || nTypeRight == U_JT_TRANSPARENT ) )
 									nGlyphFlags |= GlyphItem::ALLOW_KASHIDA;
 							}
@@ -2037,7 +2037,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 		// If this is the first fallback, first try using a font that most
 		// closely matches the currently requested font
-		JavaPhysicalFontFace *pHighScoreFontData = NULL;
+		JavaPhysicalFontFace *pHighScoreFontData = nullptr;
 		::std::unordered_map< sal_IntPtr, JavaPhysicalFontFace* >::const_iterator nfit = pSalData->maNativeFontMapping.find( pSymbolFallbackFont ? pSymbolFallbackFont->getNativeFont() : 0 );
 		if ( nfit != pSalData->maNativeFontMapping.end() )
 			pHighScoreFontData = nfit->second;
@@ -2103,7 +2103,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 	const GlyphItem *pGlyphs[ nMaxGlyphs ] = { nullptr };
 
 	Point aPos;
-	JavaSalGraphics& rJavaGraphics = (JavaSalGraphics&)rGraphics;
+	JavaSalGraphics& rJavaGraphics = static_cast< JavaSalGraphics& >( rGraphics );
 	int nFetchGlyphCount = nMaxGlyphs;
 	for ( int nStart = 0; ; )
 	{
@@ -2190,7 +2190,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			fTranslateX /= UNITS_PER_PIXEL;
 			fTranslateY /= UNITS_PER_PIXEL * -1.0f;
 
-			CGPoint aUnflippedStartPoint = UnflipFlippedPoint( CGPointMake( (float)aStartPos.X(), (float)aStartPos.Y() ), rJavaGraphics.maNativeBounds );
+			CGPoint aUnflippedStartPoint = UnflipFlippedPoint( CGPointMake( static_cast< float >( aStartPos.X() ), static_cast< float >( aStartPos.Y() ) ), rJavaGraphics.maNativeBounds );
 			rJavaGraphics.addUndrawnNativeOp( new JavaSalGraphicsDrawGlyphsOp( rJavaGraphics.maFrameClipPath, rJavaGraphics.maNativeClipPath, aUnflippedStartPoint, nGlyphCount, pGlyphs + nStartGlyph, mpFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX ) );
 		}
 	}
@@ -2291,18 +2291,18 @@ bool SalATSLayout::GetBoundRect( SalGraphics& /* rGraphics */, tools::Rectangle&
 
 			fTranslateX /= UNITS_PER_PIXEL;
 			fTranslateY /= UNITS_PER_PIXEL;
-			float fScale = (float)mpFont->getScaleX() * mfGlyphScaleX;
+			float fScale = static_cast< float >( mpFont->getScaleX() ) * mfGlyphScaleX;
 
 			// Fix bug 3578 by using layout's draw position
 			CGPoint aBoundPoint = CGPointMake( aStartPos.X(), aStartPos.Y() );
 			CGRect aBoundRect = CGRectNull;
-			CTFontRef aFont = CTFontCreateCopyWithAttributes( (CTFontRef)mpFont->getNativeFont(), mpFont->getSize(), NULL, NULL );
+			CTFontRef aFont = CTFontCreateCopyWithAttributes( reinterpret_cast< CTFontRef >( mpFont->getNativeFont() ), mpFont->getSize(), nullptr, nullptr );
 			if ( aFont )
 			{
 				for ( i = nStartGlyph; i < nCurrentGlyph; i++ )
 				{
-					CGGlyph nGlyphID = (CGGlyph)( pGlyphs[ i ]->maGlyphId & GF_IDXMASK );
-					CGRect aGlyphRect = CTFontGetBoundingRectsForGlyphs( aFont, kCTFontOrientationDefault, &nGlyphID, NULL, 1 );
+					CGGlyph nGlyphID = static_cast< CGGlyph >( pGlyphs[ i ]->maGlyphId & GF_IDXMASK );
+					CGRect aGlyphRect = CTFontGetBoundingRectsForGlyphs( aFont, kCTFontOrientationDefault, &nGlyphID, nullptr, 1 );
 					if ( !CGRectIsEmpty( aGlyphRect ) )
 					{
 						if ( nGlyphOrientation == GF_ROTL )
@@ -2435,19 +2435,19 @@ bool SalATSLayout::GetOutline( SalGraphics& /* rGraphics */, B2DPolyPolygonVecto
 			// Calculate position of glyphs relative to 0, 0
 			Point aBoundPos( aStartPos - GetDrawPosition() );
 			CGPoint aBoundPoint = CGPointMake( aBoundPos.X() * UNITS_PER_PIXEL, aBoundPos.Y() * UNITS_PER_PIXEL );
-			CTFontRef aFont = CTFontCreateCopyWithAttributes( (CTFontRef)mpFont->getNativeFont(), mpFont->getSize(), NULL, NULL );
+			CTFontRef aFont = CTFontCreateCopyWithAttributes( reinterpret_cast< CTFontRef >( mpFont->getNativeFont() ), mpFont->getSize(), nullptr, nullptr );
 			if ( aFont )
 			{
 				for ( i = nStartGlyph; i < nCurrentGlyph; i++ )
 				{
 					// Fix bug 2390 by ignoring the value of nErr passed by
 					// reference
-					CGGlyph nGlyphID = (CGGlyph)( pGlyphs[ i ]->maGlyphId & GF_IDXMASK );
-					CGPathRef aPath = CTFontCreatePathForGlyph( aFont, nGlyphID, NULL );
+					CGGlyph nGlyphID = static_cast< CGGlyph >( pGlyphs[ i ]->maGlyphId & GF_IDXMASK );
+					CGPathRef aPath = CTFontCreatePathForGlyph( aFont, nGlyphID, nullptr );
 					if ( aPath )
 					{
 						::std::list< tools::Polygon > aPolygonList;
-						CGPathApply( aPath, (void *)&aPolygonList, SalCGPathApplier );
+						CGPathApply( aPath, static_cast< void* >( &aPolygonList ), SalCGPathApplier );
 						CGPathRelease( aPath );
 
 						tools::PolyPolygon aPolyPolygon;
@@ -2507,7 +2507,7 @@ void SalATSLayout::Destroy()
 	if ( mpKashidaLayoutData )
 	{
 		mpKashidaLayoutData->Release();
-		mpKashidaLayoutData = NULL;
+		mpKashidaLayoutData = nullptr;
 	}
 
 	if ( maMirroredLayoutData.size() )
@@ -2525,7 +2525,7 @@ void SalATSLayout::Destroy()
 
 ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, int nCharPos, DeviceCoordinate& fX, DeviceCoordinate& fY ) const
 {
-	ImplATSLayoutData *pRet = NULL;
+	ImplATSLayoutData *pRet = nullptr;
 
 	fX = 0;
 	fY = 0;
@@ -2548,7 +2548,7 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, 
 		}
 		else
 		{
-			pLayoutData = NULL;
+			pLayoutData = nullptr;
 			break;
 		}
 	}
@@ -2578,12 +2578,12 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, 
 
 	if ( pRet->mpHash->mbVertical && nGlyphOrientation & GF_ROTMASK )
 	{
-		GlyphID nGlyphID = (GlyphID)( nGlyph & GF_IDXMASK );
+		GlyphID nGlyphID = static_cast< GlyphID >( nGlyph & GF_IDXMASK );
 
 		::std::unordered_map< GlyphID, Point >::const_iterator it = pRet->maVerticalGlyphTranslations.find( nGlyphID );
 		if ( it == pRet->maVerticalGlyphTranslations.end() )
 		{
-			CGGlyph aGlyph = (CGGlyph)nGlyphID;
+			CGGlyph aGlyph = static_cast< CGGlyph >( nGlyphID );
 			CGSize aTranslation = CGSizeMake( 0, 0 );
 			CTFontGetVerticalTranslationsForGlyphs( pRet->maFont, &aGlyph, &aTranslation, 1 );
 
@@ -2628,7 +2628,7 @@ DeviceCoordinate SalATSLayout::GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharP
 		}
 		else
 		{
-			pLayoutData = NULL;
+			pLayoutData = nullptr;
 			break;
 		}
 	}
@@ -2652,13 +2652,13 @@ DeviceCoordinate SalATSLayout::GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharP
 		}
 	}
 
-	GlyphID nGlyphID = (GlyphID)( nGlyph & GF_IDXMASK );
+	GlyphID nGlyphID = static_cast< GlyphID >( nGlyph & GF_IDXMASK );
 
 	::std::unordered_map< GlyphID, long >::const_iterator it = pLayoutData->maNativeGlyphWidths.find( nGlyphID );
 	if ( it == pLayoutData->maNativeGlyphWidths.end() )
 	{
-		CGGlyph aGlyph = (CGGlyph)nGlyphID;
-		nRet = CTFontGetAdvancesForGlyphs( pLayoutData->maFont, kCTFontOrientationHorizontal, &aGlyph, NULL, 1 ) * UNITS_PER_PIXEL;
+		CGGlyph aGlyph = static_cast< CGGlyph >( nGlyphID );
+		nRet = CTFontGetAdvancesForGlyphs( pLayoutData->maFont, kCTFontOrientationHorizontal, &aGlyph, nullptr, 1 ) * UNITS_PER_PIXEL;
 		pLayoutData->maNativeGlyphWidths[ nGlyphID ] = nRet;
 	}
 	else
