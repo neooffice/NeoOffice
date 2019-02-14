@@ -239,11 +239,11 @@ Size TabControl::ImplGetItemSize( ImplTabItem* pItem, long nMaxWidth )
 
 #ifdef USE_JAVA
     // Add a little extra width for the first and last tab items
-    if ( !mpTabCtrlData->maItemList.empty() && mpTabCtrlData->mpListBox == NULL && ( pItem == &mpTabCtrlData->maItemList.front() || pItem == &mpTabCtrlData->maItemList.back() ) )
+    if ( !mpTabCtrlData->maItemList.empty() && mpTabCtrlData->mpListBox == nullptr && ( pItem == &mpTabCtrlData->maItemList.front() || pItem == &mpTabCtrlData->maItemList.back() ) )
     	aSize.Width() += TAB_OFFSET;
 
     // [ed] 10/17/06 Call through to the NWF to get recommended tab item sizes
-    TabControl * aNonConstTabControl = (TabControl *)this;
+    TabControl * aNonConstTabControl = const_cast< TabControl* >( this );
     if ( aNonConstTabControl->IsNativeControlSupported( ControlType::TabItem, ControlPart::Entire ) )
     {
         tools::Rectangle aCtrlRegion( Point( 0, 0 ), aSize );

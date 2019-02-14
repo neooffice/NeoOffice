@@ -342,7 +342,7 @@ void FixedText::StateChanged( StateChangedType nType )
         Invalidate();
     }
 #ifdef USE_JAVA
-    else if ( ( nType == (StateChangedType)GetWindowType::FirstOverlap ) && ( IsChildTransparentModeEnabled() || ( GetBackground().GetStyle() == WallpaperStyle::NONE ) ) )
+    else if ( nType == static_cast< StateChangedType >( GetWindowType::FirstOverlap ) && ( IsChildTransparentModeEnabled() || ( GetBackground().GetStyle() == WallpaperStyle::NONE ) ) )
     {
         Invalidate();
     }
@@ -1084,7 +1084,7 @@ void FixedImage::StateChanged( StateChangedType nType )
         Invalidate();
     }
 #ifdef USE_JAVA
-    else if ( ( nType == (StateChangedType)GetWindowType::FirstOverlap ) && ( IsChildTransparentModeEnabled() || ( GetBackground().GetStyle() == WallpaperStyle::NONE ) ) )
+    else if ( nType == static_cast< StateChangedType >( GetWindowType::FirstOverlap ) && ( IsChildTransparentModeEnabled() || ( GetBackground().GetStyle() == WallpaperStyle::NONE ) ) )
     {
         GetParent()->Invalidate();
     }

@@ -47,7 +47,7 @@
 #include "java/salframe.h"
 
 static const CFStringRef kAppleScrollBarVariantPref = CFSTR( "AppleScrollBarVariant" );
-static CFStringRef aLastAppleScrollBarVariantValue = NULL;
+static CFStringRef aLastAppleScrollBarVariantValue = nullptr;
 static ::std::list< ScrollBar* > gScrollBars;
 static ::std::map< ScrollBar*, tools::Rectangle > gScrollBarTrackingRects;
 
@@ -118,14 +118,14 @@ static void RelayoutScrollBars()
         if ( CFGetTypeID( aPref ) == CFStringGetTypeID() )
         {
             CFStringRef aOldPref = aLastAppleScrollBarVariantValue;
-            aLastAppleScrollBarVariantValue = (CFStringRef)aPref;
+            aLastAppleScrollBarVariantValue = static_cast< CFStringRef >( aPref );
             if ( !aOldPref || CFStringCompare( aLastAppleScrollBarVariantValue, aOldPref, 0 ) != kCFCompareEqualTo )
                 bChanged = true;
             if ( aOldPref )
                 CFRelease( aOldPref );
 
             // Check if double scrollbar arrows are enabled
-            if ( CFStringCompare( (CFStringRef)aPref, CFSTR( "DoubleBoth" ), 0 ) == kCFCompareEqualTo )
+            if ( CFStringCompare( static_cast< CFStringRef >( aPref ), CFSTR( "DoubleBoth" ), 0 ) == kCFCompareEqualTo )
                 bDoubleScrollbarArrows = true;
         }
         else
@@ -206,7 +206,7 @@ void ScrollBar::dispose()
     ::std::map< ScrollBar*, tools::Rectangle >::iterator it = gScrollBarTrackingRects.find( this );
     if ( it != gScrollBarTrackingRects.end() )
     {
-        JavaSalFrame *pFrame = (JavaSalFrame *)ImplGetFrame();
+        JavaSalFrame *pFrame = static_cast< JavaSalFrame* >( ImplGetFrame() );
         if ( pFrame )
             pFrame->RemoveTrackingRect( this );
 
@@ -741,7 +741,7 @@ bool ScrollBar::ImplDrawNative(vcl::RenderContext& rRenderContext, sal_uInt16 nD
             ::std::map< ScrollBar*, tools::Rectangle >::iterator it = gScrollBarTrackingRects.find( this );
             if ( it == gScrollBarTrackingRects.end() || it->second != aTrackingRect )
             {
-                JavaSalFrame *pFrame = (JavaSalFrame *)ImplGetFrame();
+                JavaSalFrame *pFrame = static_cast< JavaSalFrame* >( ImplGetFrame() );
                 if ( pFrame )
                     pFrame->AddTrackingRect( this );
 
@@ -1215,7 +1215,7 @@ void ScrollBar::MouseButtonDown( const MouseEvent& rMEvt )
             CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "AppleScrollerPagingBehavior" ), kCFPreferencesCurrentApplication );
             if( aPref )
             {
-                if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
+                if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && static_cast< CFBooleanRef >( aPref ) == kCFBooleanTrue )
                     bScrollbarJumpPage = true;
                 CFRelease( aPref );
             }
@@ -1564,7 +1564,7 @@ void ScrollBar::StateChanged( StateChangedType nType )
         ::std::map< ScrollBar*, tools::Rectangle >::iterator it = gScrollBarTrackingRects.find( this );
         if ( it != gScrollBarTrackingRects.end() )
         {
-            JavaSalFrame *pFrame = (JavaSalFrame *)ImplGetFrame();
+            JavaSalFrame *pFrame = static_cast< JavaSalFrame* >( ImplGetFrame() );
             if ( pFrame )
                 pFrame->RemoveTrackingRect( this );
 

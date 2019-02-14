@@ -819,7 +819,7 @@ DrawTextFlags PushButton::ImplGetTextStyle( DrawFlags nDrawFlags ) const
     {
         Color aColor;
         ImplControlValue aValue;
-        PushButton *nonConstButton = (PushButton *)this;
+        PushButton *nonConstButton = const_cast< PushButton* >( this );
 
         if ( ! ( nonConstButton->IsNativeControlSupported( ControlType::Pushbutton, ControlPart::Entire ) && nonConstButton->GetNativeControlTextColor( ControlType::Pushbutton, ControlPart::Entire, ControlState::NONE, aValue, aColor ) ) )
 #endif	// USE_JAVA
