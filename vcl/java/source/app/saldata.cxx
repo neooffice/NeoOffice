@@ -42,18 +42,18 @@ using namespace vcl;
 // ========================================================================
 
 SalData::SalData() :
-	mpFirstInstance( NULL ),
-	mpFocusFrame( NULL ),
+	mpFirstInstance( nullptr ),
+	mpFocusFrame( nullptr ),
 	mnTimerInterval( 0 ),
-	mpPresentationFrame( NULL ),
+	mpPresentationFrame( nullptr ),
 	mbInNativeModalSheet( false ),
-	mpNativeModalSheetFrame( NULL ),
-	mpLastDragFrame( NULL ),
+	mpNativeModalSheetFrame( nullptr ),
+	mpLastDragFrame( nullptr ),
 	mbInSignalHandler( false ),
 	mbDoubleScrollbarArrows( false ),
-	mpCaptureFrame( NULL ),
-	mpLastResizeFrame( NULL ),
-	mpLastMouseMoveFrame( NULL )
+	mpCaptureFrame( nullptr ),
+	mpLastResizeFrame( nullptr ),
+	mpLastMouseMoveFrame( nullptr )
 {
 	maTimeout.tv_sec = 0;
 	maTimeout.tv_usec = 0;

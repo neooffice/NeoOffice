@@ -432,7 +432,7 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 							if ( pBookmarkData && [pBookmarkData isKindOfClass:[NSData class]] )
 							{
 								BOOL bStale = NO;
-								NSURL *pSecurityScopedURL = [NSURL URLByResolvingBookmarkData:(NSData *)pBookmarkData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+								NSURL *pSecurityScopedURL = [NSURL URLByResolvingBookmarkData:static_cast< NSData* >( pBookmarkData ) options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
 								if ( !bStale && pSecurityScopedURL )
 								{
 									if ( [pSecurityScopedURL startAccessingSecurityScopedResource] )
@@ -991,12 +991,12 @@ sal_Bool Application_beginModalSheet( id *pNSWindowForSheet )
 	if ( pSalData->mbInNativeModalSheet || !pNSWindowForSheet )
 		return sal_False;
 
-	JavaSalFrame *pFocusFrame = NULL;
+	JavaSalFrame *pFocusFrame = nullptr;
 
 	// Get the active document window
 	vcl::Window *pWindow = Application::GetActiveTopWindow();
 	if ( pWindow )
-		pFocusFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
+		pFocusFrame = static_cast< JavaSalFrame* >( pWindow->ImplGetFrame() );
 
 	if ( !pFocusFrame )
 		pFocusFrame = pSalData->mpFocusFrame;
@@ -1009,7 +1009,7 @@ sal_Bool Application_beginModalSheet( id *pNSWindowForSheet )
 	// first visible non-floating, non-utility frame.
 	if ( !pFocusFrame || !pFocusFrame->mbVisible )
 	{
-		pFocusFrame = NULL;
+		pFocusFrame = nullptr;
 		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 		{
 			if ( (*it)->mbVisible && !(*it)->IsFloatingFrame() && !(*it)->IsUtilityWindow() && !(*it)->mbShowOnlyMenus )
@@ -1040,14 +1040,14 @@ void Application_endModalSheet()
 {
 	SalData *pSalData = GetSalData();
 	pSalData->mbInNativeModalSheet = false;
-	pSalData->mpNativeModalSheetFrame = NULL;
+	pSalData->mpNativeModalSheetFrame = nullptr;
 }
 
 void Application_postWakeUpEvent()
 {
 	if ( !Application::IsShutDown() )
 	{
-		JavaSalEvent *pUserEvent = new JavaSalEvent( SalEvent::WakeUp, NULL, NULL );
+		JavaSalEvent *pUserEvent = new JavaSalEvent( SalEvent::WakeUp, nullptr, nullptr );
 		JavaSalEventQueue::postCachedEvent( pUserEvent );
 		pUserEvent->release();
 	}
@@ -1081,7 +1081,7 @@ id Application_acquireSecurityScopedURLFromNSURL( const id pNonSecurityScopedURL
 
 		if ( [pNonSecurityScopedURL isKindOfClass:[NSURL class]] )
 		{
-			NSURL *pURL = (NSURL *)pNonSecurityScopedURL;
+			NSURL *pURL = static_cast< NSURL* >( pNonSecurityScopedURL );
 			if ( [pURL isFileURL] )
 			{
 				pURL = [pURL URLByStandardizingPath];
@@ -1091,7 +1091,7 @@ id Application_acquireSecurityScopedURLFromNSURL( const id pNonSecurityScopedURL
 					if ( pURL )
 					{
 						NSMutableArray *pSecurityScopedURLs = [NSMutableArray arrayWithCapacity:2];
-						AcquireSecurityScopedURL( pURL, (BOOL)bMustShowDialogIfNoBookmark, YES, pDialogTitle && [pDialogTitle isKindOfClass:[NSString class]] ? (NSString *)pDialogTitle : nil, pSecurityScopedURLs );
+						AcquireSecurityScopedURL( pURL, static_cast< BOOL >( bMustShowDialogIfNoBookmark ), YES, pDialogTitle && [pDialogTitle isKindOfClass:[NSString class]] ? static_cast< NSString* >( pDialogTitle ) : nil, pSecurityScopedURLs );
 						if ( pSecurityScopedURLs && [pSecurityScopedURLs count] )
 						{
 							pRet = pSecurityScopedURLs;
@@ -1126,7 +1126,7 @@ void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	NSURL *pURL = (NSURL *)pNonSecurityScopedURL;
+	NSURL *pURL = static_cast< NSURL* >( pNonSecurityScopedURL );
 	if ( pURL && [pURL isKindOfClass:[NSURL class]] && [pURL isFileURL] )
 	{
 		pURL = [pURL URLByStandardizingPath];
@@ -1201,14 +1201,14 @@ void Application_releaseSecurityScopedURL( id pSecurityScopedURLs )
 	{
 		if ( [pSecurityScopedURLs isKindOfClass:[NSArray class]] )
 		{
-			NSArray *pArray = (NSArray *)pSecurityScopedURLs;
+			NSArray *pArray = static_cast< NSArray* >( pSecurityScopedURLs );
 			NSUInteger nCount = [pArray count];
 			NSUInteger i = 0;
 			for ( ; i < nCount; i++ )
 			{
 				NSURL *pURL = [pArray objectAtIndex:i];
 				if ( pURL && [pURL isKindOfClass:[NSURL class]] )
-					[(NSURL *)pURL stopAccessingSecurityScopedResource];
+					[static_cast< NSURL* >( pURL ) stopAccessingSecurityScopedResource];
 			}
 		}
 

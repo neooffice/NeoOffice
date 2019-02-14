@@ -54,7 +54,7 @@ JavaSalTimer::~JavaSalTimer()
 void JavaSalTimer::Start( sal_uLong nMS )
 {
 	SalData *pSalData = GetSalData();
-	gettimeofday( &pSalData->maTimeout, NULL );
+	gettimeofday( &pSalData->maTimeout, nullptr );
 	pSalData->maTimeout += nMS;
 	pSalData->mnTimerInterval = nMS;
 } 
