@@ -75,13 +75,13 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 	if ( pTextSelection && *pTextSelection )
 	{
 		CFRelease( *pTextSelection );
-		*pTextSelection = NULL;
+		*pTextSelection = nullptr;
 	}
 
 	if ( pRTFSelection && *pRTFSelection )
 	{
 		CFRelease( *pRTFSelection );
-		*pRTFSelection = NULL;
+		*pRTFSelection = nullptr;
 	}
 
 	if ( pNSWindow && !Application::IsShutDown() )
@@ -91,7 +91,7 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 
 		if ( !Application::IsShutDown() )
 		{
-			JavaSalFrame *pFrame = NULL;
+			JavaSalFrame *pFrame = nullptr;
 			SalData *pSalData = GetSalData();
 			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
@@ -187,7 +187,7 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 											OUString aText;
 											aValue >>= aText;
 											if ( aText.getLength() )
-												*pTextSelection = CFStringCreateWithCharacters( NULL, reinterpret_cast< const UniChar* >( aText.getStr() ), aText.getLength() );
+												*pTextSelection = CFStringCreateWithCharacters( nullptr, reinterpret_cast< const UniChar* >( aText.getStr() ), aText.getLength() );
 										}
 									}
 								}
@@ -205,7 +205,7 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 											uno::Sequence< sal_Int8 > aData;
 											aValue >>= aData;
 											if ( aData.getLength() )
-												*pRTFSelection = CFDataCreate( NULL, (const UInt8 *)aData.getArray(), aData.getLength() );
+												*pRTFSelection = CFDataCreate( nullptr, reinterpret_cast< const UInt8* >( aData.getArray() ), aData.getLength() );
 										}
 									}
 								}
@@ -239,7 +239,7 @@ sal_Bool VCLEventQueue_paste( void *pNSWindow )
 
 		if ( !Application::IsShutDown() )
 		{
-			JavaSalFrame *pFrame = NULL;
+			JavaSalFrame *pFrame = nullptr;
 			SalData *pSalData = GetSalData();
 			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{

@@ -75,7 +75,7 @@ static void HandleAboutRequest()
 	// uses it.
 	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 	{
-		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::About, NULL, NULL);
+		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::About, nullptr, nullptr );
 		JavaSalEventQueue::postCachedEvent( pEvent );
 		pEvent->release();
 	}
@@ -90,7 +90,7 @@ static void HandleOpenPrintFileRequest( const OString &rPath, sal_Bool bPrint )
 		// Application::IsShutDown() uses it.
 		if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 		{
-			JavaSalEvent *pEvent = new JavaSalEvent( bPrint ? SalEvent::PrintDocument : SalEvent::OpenDocument, NULL, NULL, rPath );
+			JavaSalEvent *pEvent = new JavaSalEvent( bPrint ? SalEvent::PrintDocument : SalEvent::OpenDocument, nullptr, nullptr, rPath );
 			JavaSalEventQueue::postCachedEvent( pEvent );
 			pEvent->release();
 		}
@@ -110,7 +110,7 @@ static void HandlePreferencesRequest()
 	// uses it.
 	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 	{
-		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::Preferences, NULL, NULL);
+		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::Preferences, nullptr, nullptr );
 		JavaSalEventQueue::postCachedEvent( pEvent );
 		pEvent->release();
 	}
@@ -127,7 +127,7 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 	{
 		// Try to fix deadlocks in the framework module by not acquiring the
 		// application mutex on the main thread
-		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::Shutdown, NULL, NULL );
+		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::Shutdown, nullptr, nullptr );
 		JavaSalEventQueue::postCachedEvent( pEvent );
 		while ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() && !pEvent->isShutdownCancelled() && !JavaSalEventQueue::isShutdownDisabled() )
 			NSApplication_dispatchPendingEvents( NO, YES );
@@ -168,7 +168,7 @@ static void HandleDidChangeScreenParametersRequest()
 	// uses it.
 	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
 	{
-		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::ScreenParamsChanged, NULL, NULL);
+		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::ScreenParamsChanged, nullptr, nullptr );
 		JavaSalEventQueue::postCachedEvent( pEvent );
 		pEvent->release();
 	}
@@ -310,7 +310,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 			CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisableResume" ), kCFPreferencesCurrentApplication );
 			if ( aPref )
 			{
-				if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
+				if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && static_cast< CFBooleanRef >( aPref ) == kCFBooleanTrue )
 					bResume = NO;
 				CFRelease( aPref );
 			}
