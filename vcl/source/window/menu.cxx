@@ -722,7 +722,7 @@ SalMenuItem* Menu::GetItemSalItem( sal_uInt16 nPos ) const
     if ( pData )
         return pData->pSalMenuItem;
     else
-        return NULL;
+        return nullptr;
 }
 
 #endif	// USE_JAVA

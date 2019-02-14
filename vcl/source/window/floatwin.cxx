@@ -689,7 +689,7 @@ void FloatingWindow::StartPopupMode( const tools::Rectangle& rRect, FloatWinPopu
     // a tear off window
     if ( GetStyle() & WB_MOVEABLE )
     {
-        JavaSalFrame *pFrame = (JavaSalFrame *)ImplGetFrame();
+        JavaSalFrame *pFrame = static_cast< JavaSalFrame* >( ImplGetFrame() );
         if ( pFrame )
             pFrame->SetMovable( nFlags & FloatWinPopupFlags::AllowTearOff ? true : false );
     }

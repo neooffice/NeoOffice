@@ -1534,7 +1534,7 @@ sal_Int32 OutputDevice::HasGlyphs( const vcl::Font& rTempFont, const OUString& r
         // Fix bug 3383 by laying out the text and testing for fallbacks
         sal_Int32 nRet = nIndex;
         OUString aStr( rStr );
-        ImplLayoutArgs aLayoutArgs = ImplPrepareLayoutArgs( aStr, nIndex, nEnd - nIndex, 0, NULL );
+        ImplLayoutArgs aLayoutArgs = ImplPrepareLayoutArgs( aStr, nIndex, nEnd - nIndex, 0, nullptr );
 
         // get matching layout object for base font
         SalLayout* pSalLayout = mpGraphics->GetTextLayout( aLayoutArgs, 0 );

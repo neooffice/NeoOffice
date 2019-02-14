@@ -1504,7 +1504,7 @@ bool HandleWheelEvent::HandleEvent(const SalWheelMouseEvent& rEvt)
     if (shouldReusePreviousMouseWindow(pSVData->maWinData.maLastWheelEvent, rEvt))
     {
         if (pSVData->maWinData.mpLastWheelWindow && !ImplIsValidWindow(pSVData->maWinData.mpLastWheelWindow))
-            pSVData->maWinData.mpLastWheelWindow = NULL;
+            pSVData->maWinData.mpLastWheelWindow = nullptr;
 
         bAcceptableWheelScrollTarget = acceptableWheelScrollTarget(pSVData->maWinData.mpLastWheelWindow);
     }

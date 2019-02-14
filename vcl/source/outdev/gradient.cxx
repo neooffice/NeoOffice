@@ -460,8 +460,8 @@ void OutputDevice::DrawLinearGradient( const tools::Rectangle& rRect,
             }
             else
             {
-                aMirrorRect.Bottom() = (long)( fMirrorGradientLine - ((double) i) * fScanInc );
-                aMirrorRect.Top() = (long)( fMirrorGradientLine - (((double) i) + 1.0)* fScanInc );
+                aMirrorRect.Bottom() = static_cast< long >( fMirrorGradientLine - ((double) i) * fScanInc );
+                aMirrorRect.Top() = static_cast< long >( fMirrorGradientLine - (((double) i) + 1.0)* fScanInc );
                 aPoly[2] = aMirrorRect.BottomRight();
                 aPoly[3] = aMirrorRect.BottomLeft();
             }
@@ -881,8 +881,8 @@ void OutputDevice::DrawLinearGradientToMetafile( const tools::Rectangle& rRect,
             }
             else
             {
-                aMirrorRect.Bottom() = (long)( fMirrorGradientLine - ((double) i) * fScanInc );
-                aMirrorRect.Top() = (long)( fMirrorGradientLine - (((double) i) + 1.0)* fScanInc );
+                aMirrorRect.Bottom() = static_cast< long >( fMirrorGradientLine - ((double) i) * fScanInc );
+                aMirrorRect.Top() = static_cast< long >( fMirrorGradientLine - (((double) i) + 1.0)* fScanInc );
                 aPoly[2] = aMirrorRect.BottomRight();
                 aPoly[3] = aMirrorRect.BottomLeft();
             }

@@ -421,13 +421,13 @@ void OutputDevice::EmulateDrawTransparent ( const tools::PolyPolygon& rPolyPoly,
         AcquireGraphics();
     if ( mpGraphics )
     {
-        ((JavaSalGraphics *)mpGraphics)->setLineTransparency( nTransparencePercent );
-        ((JavaSalGraphics *)mpGraphics)->setFillTransparency( nTransparencePercent );
+        static_cast< JavaSalGraphics* >( mpGraphics )->setLineTransparency( nTransparencePercent );
+        static_cast< JavaSalGraphics* >( mpGraphics )->setFillTransparency( nTransparencePercent );
 
         DrawPolyPolygon( rPolyPoly );
 
-        ((JavaSalGraphics *)mpGraphics)->setLineTransparency( 0 );
-        ((JavaSalGraphics *)mpGraphics)->setFillTransparency( 0 );
+        static_cast< JavaSalGraphics* >( mpGraphics )->setLineTransparency( 0 );
+        static_cast< JavaSalGraphics* >( mpGraphics )->setFillTransparency( 0 );
     }
 #else	// USE_JAVA && MACOSX
     tools::PolyPolygon aPolyPoly( LogicToPixel( rPolyPoly ) );
@@ -749,26 +749,26 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
             // Prevent runaway memory usage when drawing to the printer by
             // lowering the resolution of the temporary buffer if necessary
             tools::Rectangle aVirDevRect( Point( 0, 0 ), aDstRect.GetSize() );
-            float fExcessPixelRatio = (float)MAX_TRANSPARENT_GRADIENT_BMP_PIXELS / ( ( mnDPIX * aDstRect.GetWidth() ) + ( mnDPIY * aDstRect.GetHeight() ) );
+            float fExcessPixelRatio = static_cast< float >( MAX_TRANSPARENT_GRADIENT_BMP_PIXELS ) / ( ( mnDPIX * aDstRect.GetWidth() ) + ( mnDPIY * aDstRect.GetHeight() ) );
             if ( fExcessPixelRatio < 1.0 )
             {
-                ((OutputDevice*)xVDev.get())->mnDPIX = (sal_uInt32)( ( fExcessPixelRatio * mnDPIX ) + 0.5f );
-                ((OutputDevice*)xVDev.get())->mnDPIY = (sal_uInt32)( ( fExcessPixelRatio * mnDPIY ) + 0.5f );
+                static_cast< OutputDevice* >( xVDev.get() )->mnDPIX = static_cast< sal_uInt32 >( ( fExcessPixelRatio * mnDPIX ) + 0.5f );
+                static_cast< OutputDevice* >( xVDev.get() )->mnDPIY = static_cast< sal_uInt32 >( ( fExcessPixelRatio * mnDPIY ) + 0.5f );
 
-                if ( ((OutputDevice*)xVDev.get())->mnDPIX < MIN_TRANSPARENT_GRADIENT_RESOLUTION)
-                    ((OutputDevice*)xVDev.get())->mnDPIX = MIN_TRANSPARENT_GRADIENT_RESOLUTION;
-                if ( ((OutputDevice*)xVDev.get())->mnDPIY < MIN_TRANSPARENT_GRADIENT_RESOLUTION)
-                    ((OutputDevice*)xVDev.get())->mnDPIY = MIN_TRANSPARENT_GRADIENT_RESOLUTION;
+                if ( static_cast< OutputDevice* >( xVDev.get() )->mnDPIX < MIN_TRANSPARENT_GRADIENT_RESOLUTION )
+                    static_cast< OutputDevice* >( xVDev.get() )->mnDPIX = MIN_TRANSPARENT_GRADIENT_RESOLUTION;
+                if ( static_cast< OutputDevice* >( xVDev.get() )->mnDPIY < MIN_TRANSPARENT_GRADIENT_RESOLUTION )
+                    static_cast< OutputDevice* >( xVDev.get() )->mnDPIY = MIN_TRANSPARENT_GRADIENT_RESOLUTION;
             }
 
-            Fraction aScaleX( ((OutputDevice*)xVDev.get())->mnDPIX, mnDPIX );
-            Fraction aScaleY( ((OutputDevice*)xVDev.get())->mnDPIY, mnDPIY );
+            Fraction aScaleX( static_cast< OutputDevice* >( xVDev.get() )->mnDPIX, mnDPIX );
+            Fraction aScaleY( static_cast< OutputDevice* >( xVDev.get() )->mnDPIY, mnDPIY );
 
             // Fix slight clipping on right and/or bottom edge of oval linear
             // gradients on Retina displays by adding 2 full pixels to the
             // width and height of the the temporary buffer in addition to
             // rounding up
-            aVirDevRect = tools::Rectangle( Point( 0, 0 ), Size( (long)( ( (double)aScaleX * aDstRect.GetWidth() ) + 2.5 ), (long)( ( (double)aScaleY * aDstRect.GetHeight() ) + 2.5 ) ) );
+            aVirDevRect = tools::Rectangle( Point( 0, 0 ), Size( static_cast< long >( ( static_cast< double >( aScaleX ) * aDstRect.GetWidth() ) + 2.5 ), static_cast< long >( ( static_cast< double >( aScaleY ) * aDstRect.GetHeight() ) + 2.5 ) ) );
 
             if( xVDev->SetOutputSizePixel( aVirDevRect.GetSize() ) )
 #else	// USE_JAVA
@@ -794,9 +794,9 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
                     const Point aOutPos(PixelToLogic(aDstRect.TopLeft()));
                     aMap.SetOrigin(Point(-aOutPos.X(), -aOutPos.Y()));
 #ifdef USE_JAVA
-                    if ( (double)aScaleX > 1.0f )
+                    if ( static_cast< double >( aScaleX ) > 1.0f )
                         aMap.SetScaleX( aScaleX );
-                    if ( (double)aScaleY > 1.0f )
+                    if ( static_cast< double >( aScaleY ) > 1.0f )
                         aMap.SetScaleY( aScaleY );
 #endif	// USE_JAVA
                     xVDev->SetMapMode(aMap);
@@ -851,9 +851,9 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 
                     aMap.SetOrigin( Point( -aOutPos.X(), -aOutPos.Y() ) );
 #ifdef USE_JAVA
-                    if ( (double)aScaleX > 1.0f )
+                    if ( static_cast< double >( aScaleX ) > 1.0f )
                         aMap.SetScaleX( aScaleX );
-                    if ( (double)aScaleY > 1.0f )
+                    if ( static_cast< double >( aScaleY ) > 1.0f )
                         aMap.SetScaleY( aScaleY );
 #endif	// USE_JAVA
                     xVDev->SetMapMode( aMap );
@@ -905,17 +905,17 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
                         MetaAction *pAct = ( (GDIMetaFile&) rMtf ).GetAction( nPos );
                         if ( pAct && pAct->GetType() == MetaActionType::COMMENT )
                         {
-                            if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XGRAD_SEQ_BEGIN" ) )
+                            if ( static_cast< MetaCommentAction* >( pAct )->GetComment().equalsIgnoreAsciiCase( "XGRAD_SEQ_BEGIN" ) )
                                 nGradBeginPos = nPos;
-                            else if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XGRAD_SEQ_END" ) )
+                            else if ( static_cast< MetaCommentAction* >( pAct )->GetComment().equalsIgnoreAsciiCase( "XGRAD_SEQ_END" ) )
                                 nGradEndPos = nPos;
-                            else if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPUSHCLIP_SEQ_BEGIN" ) )
+                            else if ( static_cast< MetaCommentAction* >( pAct )->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPUSHCLIP_SEQ_BEGIN" ) )
                                 nTransGradPushClipBeginPos = nPos;
-                            else if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPUSHCLIP_SEQ_END" ) )
+                            else if ( static_cast< MetaCommentAction* >( pAct )->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPUSHCLIP_SEQ_END" ) )
                                 nTransGradPushClipEndPos = nPos;
-                            else if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPOPCLIP_SEQ_BEGIN" ) )
+                            else if ( static_cast< MetaCommentAction* >( pAct )->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPOPCLIP_SEQ_BEGIN" ) )
                                 nTransGradPopClipBeginPos = nPos;
-                            else if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPOPCLIP_SEQ_END" ) )
+                            else if ( static_cast< MetaCommentAction* >( pAct )->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPOPCLIP_SEQ_END" ) )
                                 nTransGradPopClipEndPos = nPos;
                         }
                     }

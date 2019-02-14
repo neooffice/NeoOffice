@@ -56,8 +56,8 @@ static ::osl::Module aSFXModule;
 static const OUString aSaveCommand( ".uno:Save" );
 static const OUString aVersionsCommand( ".uno:VersionDialog" );
 
-static NSDocument_revertToSavedLocalizedString_Type *pNSDocument_revertToSavedLocalizedString = NULL;
-static NSDocument_saveAVersionLocalizedString_Type *pNSDocument_saveAVersionLocalizedString = NULL;
+static NSDocument_revertToSavedLocalizedString_Type *pNSDocument_revertToSavedLocalizedString = nullptr;
+static NSDocument_saveAVersionLocalizedString_Type *pNSDocument_saveAVersionLocalizedString = nullptr;
 
 #endif	// USE_JAVA && MACOSX
 
@@ -1408,8 +1408,8 @@ OUString ToolBox::GetQuickHelpText( sal_uInt16 nItemId ) const
             {
                 if ( aSFXModule.load( "libsfxlo.dylib" ) )
                 {
-                    pNSDocument_revertToSavedLocalizedString = (NSDocument_revertToSavedLocalizedString_Type *)aSFXModule.getSymbol( "NSDocument_revertToSavedLocalizedString" );
-                    pNSDocument_saveAVersionLocalizedString = (NSDocument_saveAVersionLocalizedString_Type *)aSFXModule.getSymbol( "NSDocument_saveAVersionLocalizedString" );
+                    pNSDocument_revertToSavedLocalizedString = reinterpret_cast< NSDocument_revertToSavedLocalizedString_Type* >( aSFXModule.getSymbol( "NSDocument_revertToSavedLocalizedString" ) );
+                    pNSDocument_saveAVersionLocalizedString = reinterpret_cast< NSDocument_saveAVersionLocalizedString_Type* >( aSFXModule.getSymbol( "NSDocument_saveAVersionLocalizedString" ) );
                 }
             }
 
@@ -1422,7 +1422,7 @@ OUString ToolBox::GetQuickHelpText( sal_uInt16 nItemId ) const
                     pWindow = pWindow->GetParent();
                 if ( pWindow->IsTopWindow() )
                 {
-                    OUString *pItemText = NULL;
+                    OUString *pItemText = nullptr;
                     if ( pItem->maCommandStr == aSaveCommand && pNSDocument_saveAVersionLocalizedString )
                         pItemText = pNSDocument_saveAVersionLocalizedString( pWindow );
                     else if ( pItem->maCommandStr == aVersionsCommand && pNSDocument_revertToSavedLocalizedString )

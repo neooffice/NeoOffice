@@ -74,20 +74,20 @@ typedef struct
 	AppReceiptAttribute**	mpAttrs;
 } AppReceiptAttributes;
 
-static Application_canUseJava_Type *pApplication_canUseJava = NULL;
-static Application_canSave_Type *pApplication_canSave = NULL;
+static Application_canUseJava_Type *pApplication_canUseJava = nullptr;
+static Application_canSave_Type *pApplication_canSave = nullptr;
 
 static const SecAsn1Template aAttributeTemplate[] = {
-	{ SEC_ASN1_SEQUENCE, 0, NULL, sizeof( AppReceiptAttribute ) },
-	{ SEC_ASN1_INTEGER, offsetof( AppReceiptAttribute, type ), NULL, 0 },
-	{ SEC_ASN1_INTEGER, offsetof( AppReceiptAttribute, version ), NULL, 0 },
-	{ SEC_ASN1_OCTET_STRING, offsetof( AppReceiptAttribute, value ), NULL, 0 },
-	{ 0, 0, NULL, 0 }
+	{ SEC_ASN1_SEQUENCE, 0, nullptr, sizeof( AppReceiptAttribute ) },
+	{ SEC_ASN1_INTEGER, offsetof( AppReceiptAttribute, type ), nullptr, 0 },
+	{ SEC_ASN1_INTEGER, offsetof( AppReceiptAttribute, version ), nullptr, 0 },
+	{ SEC_ASN1_OCTET_STRING, offsetof( AppReceiptAttribute, value ), nullptr, 0 },
+	{ 0, 0, nullptr, 0 }
 };
 
 static const SecAsn1Template aAttributeSetTemplate[] = {
 	{ SEC_ASN1_SET_OF, 0, aAttributeTemplate, sizeof( AppReceiptAttributes ) },
-	{ 0, 0, NULL, 0 }
+	{ 0, 0, nullptr, 0 }
 };
 
 static int ImplConvertAttributeToInt( SecAsn1Item *pItem )
@@ -102,7 +102,7 @@ static int ImplConvertAttributeToInt( SecAsn1Item *pItem )
 
 static CFDataRef ImplCreateMacAddress()
 {
-	CFDataRef aRet = NULL;
+	CFDataRef aRet = nullptr;
 
 	mach_port_t aMasterPort;
 	if ( IOMasterPort( MACH_PORT_NULL, &aMasterPort ) == KERN_SUCCESS )
@@ -121,7 +121,7 @@ static CFDataRef ImplCreateMacAddress()
 					io_object_t aParentService;
 					if ( IORegistryEntryGetParentEntry( aService, kIOServicePlane, &aParentService ) == KERN_SUCCESS )
 					{
-						aRet = (CFDataRef)IORegistryEntryCreateCFProperty( aParentService, CFSTR( "IOMACAddress" ), kCFAllocatorDefault, 0 );
+						aRet = static_cast< CFDataRef >( IORegistryEntryCreateCFProperty( aParentService, CFSTR( "IOMACAddress" ), kCFAllocatorDefault, 0 ) );
 
 						IOObjectRelease( aParentService );
 
@@ -198,7 +198,7 @@ void NSApplication_run()
 								[pKeyMD5 appendFormat:@"%02x", aBuf[ i ]];
 
 							const char *pKeyMD5String = [pKeyMD5 UTF8String];
-							BundleCheck_Type *pBundleCheck = (BundleCheck_Type *)dlsym( RTLD_SELF, pKeyMD5String );
+							BundleCheck_Type *pBundleCheck = reinterpret_cast< BundleCheck_Type * >( dlsym( RTLD_SELF, pKeyMD5String ) );
 							if ( pBundleCheck )
 								bBundleOK = pBundleCheck();
 						}
@@ -220,7 +220,7 @@ void NSApplication_run()
 			// Make sure our application is registered with launch services
 			NSURL *pBundleURL = [pBundle bundleURL];
 			if ( pBundleURL )
-				LSRegisterURL( (CFURLRef)pBundleURL, false );
+				LSRegisterURL( static_cast< CFURLRef >( pBundleURL ), false );
 
 			// Fix deadlock waiting for the application mutex when Oracle's Java
 			// calls [NSObject performSelectorOnMainThread:withObject:waitUntilDone:]
@@ -275,9 +275,9 @@ void NSApplication_run()
 
 	NSBundle *pBundle = [NSBundle mainBundle];
 	if ( !pApplication_canUseJava )
-		pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+		pApplication_canUseJava = reinterpret_cast< Application_canUseJava_Type* >( dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" ) );
 	if ( !pApplication_canSave )
-		pApplication_canSave = (Application_canSave_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canSave" );
+		pApplication_canSave = reinterpret_cast< Application_canSave_Type* >( dlsym( RTLD_MAIN_ONLY, "Application_canSave" ) );
 	if ( ( pApplication_canUseJava && pApplication_canUseJava() ) || ( pApplication_canSave && !pApplication_canSave() ) )
 	{
 		mnExitCode = 0;
@@ -299,7 +299,7 @@ void NSApplication_run()
 			NSData *pData = [NSData dataWithContentsOfURL:pURL];
 			if ( pData && pData.length && pData.bytes )
 			{
-				CMSDecoderRef aDecoder = NULL;
+				CMSDecoderRef aDecoder = nullptr;
 				if ( CMSDecoderCreate( &aDecoder ) == errSecSuccess && aDecoder )
 				{
 					if ( CMSDecoderUpdateMessage( aDecoder, pData.bytes, pData.length ) == errSecSuccess && CMSDecoderFinalizeMessage( aDecoder ) == errSecSuccess )
@@ -314,7 +314,7 @@ void NSApplication_run()
 								for ( size_t i = 0; i < nSigners; i++ )
 								{
 									CMSSignerStatus nSignerStatus = kCMSSignerUnsigned;
-									if ( CMSDecoderCopySignerStatus( aDecoder, i, aPolicy, TRUE, &nSignerStatus, NULL, NULL ) == errSecSuccess && nSignerStatus == kCMSSignerValid )
+									if ( CMSDecoderCopySignerStatus( aDecoder, i, aPolicy, TRUE, &nSignerStatus, nullptr, nullptr ) == errSecSuccess && nSignerStatus == kCMSSignerValid )
 									{
 										bSigned = YES;
 										break;
@@ -332,15 +332,15 @@ void NSApplication_run()
 							NSString *pVersion = nil;
 							NSData *pOpaque = nil;
 							NSData *pHash = nil;
-							CFDataRef aContent = NULL;
+							CFDataRef aContent = nullptr;
 							if ( CMSDecoderCopyContent( aDecoder, &aContent ) == errSecSuccess && aContent )
 							{
 								const UInt8 *pContentBytes = CFDataGetBytePtr( aContent );
 								CFIndex nContentLen = CFDataGetLength( aContent );
-								SecAsn1CoderRef aAsn1Decoder = NULL;
+								SecAsn1CoderRef aAsn1Decoder = nullptr;
 								if ( pContentBytes && nContentLen && SecAsn1CoderCreate( &aAsn1Decoder ) == errSecSuccess && aAsn1Decoder )
 								{
-									AppReceiptAttributes aPayload = { NULL };
+									AppReceiptAttributes aPayload = { nullptr };
 									if ( SecAsn1Decode( aAsn1Decoder, pContentBytes, nContentLen, aAttributeSetTemplate, &aPayload ) == errSecSuccess && aPayload.mpAttrs )
 									{
 										for ( AppReceiptAttribute **pAttrs = aPayload.mpAttrs; pAttrs && *pAttrs; pAttrs++ )

@@ -832,7 +832,7 @@ void OutputDevice::ImplDrawMnemonicLine( long nX, long nY, long nWidth )
     if ( keyboardNavigationPref )
     {
         int prefVal;
-        if ( CFGetTypeID( keyboardNavigationPref ) == CFNumberGetTypeID() && CFNumberGetValue( (CFNumberRef)keyboardNavigationPref, kCFNumberIntType, &prefVal ) )
+        if ( CFGetTypeID( keyboardNavigationPref ) == CFNumberGetTypeID() && CFNumberGetValue( static_cast< CFNumberRef >( keyboardNavigationPref ), kCFNumberIntType, &prefVal ) )
             isFullAccessEnabled = ( prefVal % 2 ? true : false );
         CFRelease( keyboardNavigationPref );
     }
