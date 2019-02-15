@@ -8549,7 +8549,7 @@ void PDFWriterImpl::drawVerticalGlyphs(
         {
             fDeltaAngle = M_PI/2.0;
 #if defined USE_JAVA && defined MACOSX
-            SalATSLayout *pATSLayout = NULL;
+            SalATSLayout *pATSLayout = nullptr;
             MultiSalLayout *pMultiLayout = dynamic_cast<MultiSalLayout*>( rGlyphs[i].m_pLayout );
             if ( pMultiLayout )
                 pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( ( rGlyphs[i].m_nGlyphId & GF_FONTMASK ) >> GF_FONTSHIFT ) );
@@ -8562,13 +8562,13 @@ void PDFWriterImpl::drawVerticalGlyphs(
                 DeviceCoordinate fY;
                 pATSLayout->GetVerticalGlyphTranslation( rGlyphs[i].m_nGlyphId, rGlyphs[i].m_nCharPos, fX, fY );
                 aDeltaPos.X() = m_pReferenceDevice->ImplDevicePixelToLogicHeight( fY / pATSLayout->GetUnitsPerPixel() );
-                aDeltaPos.Y() = m_pReferenceDevice->ImplDevicePixelToLogicWidth( (long)( ( fXScale * fX * -1 / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) );
+                aDeltaPos.Y() = m_pReferenceDevice->ImplDevicePixelToLogicWidth( static_cast< long >( ( fXScale * fX * -1 / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) );
             }
             else
             {
 #endif	// USE_JAVA && MACOSX
             aDeltaPos.X() = m_pReferenceDevice->GetFontMetric().GetAscent();
-            aDeltaPos.Y() = (int)((double)m_pReferenceDevice->GetFontMetric().GetDescent() * fXScale);
+            aDeltaPos.Y() = static_cast< int >(static_cast< double >(m_pReferenceDevice->GetFontMetric().GetDescent()) * fXScale);
 #if defined USE_JAVA && defined MACOSX
             }
 #endif	// USE_JAVA && MACOSX
@@ -8581,7 +8581,7 @@ void PDFWriterImpl::drawVerticalGlyphs(
         {
             fDeltaAngle = -M_PI/2.0;
 #if defined USE_JAVA && defined MACOSX
-            SalATSLayout *pATSLayout = NULL;
+            SalATSLayout *pATSLayout = nullptr;
             MultiSalLayout *pMultiLayout = dynamic_cast<MultiSalLayout*>( rGlyphs[i].m_pLayout );
             if ( pMultiLayout )
                 pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( ( rGlyphs[i].m_nGlyphId & GF_FONTMASK ) >> GF_FONTSHIFT ) );
@@ -8593,13 +8593,13 @@ void PDFWriterImpl::drawVerticalGlyphs(
                 DeviceCoordinate fX;
                 DeviceCoordinate fY;
                 pATSLayout->GetVerticalGlyphTranslation( rGlyphs[i].m_nGlyphId, rGlyphs[i].m_nCharPos, fX, fY );
-                aDeltaPos.X() = m_pReferenceDevice->ImplDevicePixelToLogicHeight( (long)( ( ( (DeviceCoordinate)rGlyphs[i].m_nNativeWidth - fY ) / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) );
-                aDeltaPos.Y() = m_pReferenceDevice->ImplDevicePixelToLogicWidth( (long)( ( fXScale * fY * -1 / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) );
+                aDeltaPos.X() = m_pReferenceDevice->ImplDevicePixelToLogicHeight( static_cast< long >( ( ( static_cast< DeviceCoordinate >( rGlyphs[i].m_nNativeWidth ) - fY ) / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) );
+                aDeltaPos.Y() = m_pReferenceDevice->ImplDevicePixelToLogicWidth( static_cast< long >( ( fXScale * fY * -1 / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) );
             }
             else
             {
 #endif	// USE_JAVA && MACOSX
-            aDeltaPos.X() = (int)((double)m_pReferenceDevice->GetFontMetric().GetDescent()*fXScale);
+            aDeltaPos.X() = static_cast< int >(static_cast< double >(m_pReferenceDevice->GetFontMetric().GetDescent())*fXScale);
             aDeltaPos.Y() = -m_pReferenceDevice->GetFontMetric().GetAscent();
 #if defined USE_JAVA && defined MACOSX
             }
@@ -8632,7 +8632,7 @@ void PDFWriterImpl::drawVerticalGlyphs(
         OString aXObjectID = rGlyphs[i].m_aXObjectId;
         if ( aXObjectID.getLength() )
         {
-            double fImageScale = (double)rGlyphs[i].m_nRealNativeWidth * 72.0 / double(getReferenceDevice()->GetDPIX());
+            double fImageScale = static_cast< double >( rGlyphs[i].m_nRealNativeWidth ) * 72.0 / double(getReferenceDevice()->GetDPIX());
             Matrix3 aXObjectMat( aMat );
             aXObjectMat.scale( fImageScale, fImageScale );
             aXObjectMat.translate( aCurPos.X()+aDeltaPos.X(), aCurPos.Y()+aDeltaPos.Y() );
@@ -8659,8 +8659,8 @@ void PDFWriterImpl::drawVerticalGlyphs(
         }
         rLine.append( "<" );
         if ( rGlyphs[i].m_bIdentityGlyph )
-            appendHex( (sal_Int8)( ( rGlyphs[i].m_nMappedGlyphId & 0xff00 ) >> 8 ), rLine );
-        appendHex( (sal_Int8)( rGlyphs[i].m_nMappedGlyphId & 0x00ff ), rLine );
+            appendHex( static_cast< sal_Int8 >( ( rGlyphs[i].m_nMappedGlyphId & 0xff00 ) >> 8 ), rLine );
+        appendHex( static_cast< sal_Int8 >( rGlyphs[i].m_nMappedGlyphId & 0x00ff ), rLine );
 #else	// USE_JAVA && MACOSX
         if( i == 0 || rGlyphs[i-1].m_nMappedFontId != rGlyphs[i].m_nMappedFontId )
         {
@@ -8733,7 +8733,7 @@ void PDFWriterImpl::drawHorizontalGlyphs(
         OString aXObjectID = rGlyphs[nBeginRun].m_aXObjectId;
         double fImageScale;
         if ( aXObjectID.getLength() )
-            fImageScale = (double)rGlyphs[nBeginRun].m_nRealNativeWidth * 72.0 / double(getReferenceDevice()->GetDPIX());
+            fImageScale = static_cast< double >( rGlyphs[nBeginRun].m_nRealNativeWidth ) * 72.0 / double(getReferenceDevice()->GetDPIX());
         else
             fImageScale = 1.0f;
 #endif	// USE_JAVA && MACOSX
@@ -8795,11 +8795,11 @@ void PDFWriterImpl::drawHorizontalGlyphs(
         aUnkernedLine.append( '<' );
 #if defined USE_JAVA && defined MACOSX
         if ( rGlyphs[nBeginRun].m_bIdentityGlyph )
-            appendHex( (sal_Int8)( ( rGlyphs[nBeginRun].m_nMappedGlyphId & 0xff00 ) >> 8 ), aKernedLine );
-        appendHex( (sal_Int8)( rGlyphs[nBeginRun].m_nMappedGlyphId & 0x00ff ), aKernedLine );
+            appendHex( static_cast< sal_Int8 >( ( rGlyphs[nBeginRun].m_nMappedGlyphId & 0xff00 ) >> 8 ), aKernedLine );
+        appendHex( static_cast< sal_Int8 >( rGlyphs[nBeginRun].m_nMappedGlyphId & 0x00ff ), aKernedLine );
         if ( rGlyphs[nBeginRun].m_bIdentityGlyph )
-            appendHex( (sal_Int8)( ( rGlyphs[nBeginRun].m_nMappedGlyphId & 0xff00 ) >> 8 ), aUnkernedLine );
-        appendHex( (sal_Int8)( rGlyphs[nBeginRun].m_nMappedGlyphId & 0x00ff ), aUnkernedLine );
+            appendHex( static_cast< sal_Int8 >( ( rGlyphs[nBeginRun].m_nMappedGlyphId & 0xff00 ) >> 8 ), aUnkernedLine );
+        appendHex( static_cast< sal_Int8 >( rGlyphs[nBeginRun].m_nMappedGlyphId & 0x00ff ), aUnkernedLine );
 #else	// USE_JAVA && MACOSX
         appendHex( rGlyphs[nBeginRun].m_nMappedGlyphId, aKernedLine );
         appendHex( rGlyphs[nBeginRun].m_nMappedGlyphId, aUnkernedLine );
@@ -8811,8 +8811,8 @@ void PDFWriterImpl::drawHorizontalGlyphs(
         {
 #if defined USE_JAVA && defined MACOSX
             if ( rGlyphs[nPos].m_bIdentityGlyph )
-                appendHex( (sal_Int8)( ( rGlyphs[nPos].m_nMappedGlyphId & 0xff00 ) >> 8 ), aUnkernedLine );
-            appendHex( (sal_Int8)( rGlyphs[nPos].m_nMappedGlyphId & 0x00ff ), aUnkernedLine );
+                appendHex( static_cast< sal_Int8 >( ( rGlyphs[nPos].m_nMappedGlyphId & 0xff00 ) >> 8 ), aUnkernedLine );
+            appendHex( static_cast< sal_Int8 >( rGlyphs[nPos].m_nMappedGlyphId & 0x00ff ), aUnkernedLine );
 #else	// USE_JAVA && MACOSX
             appendHex( rGlyphs[nPos].m_nMappedGlyphId, aUnkernedLine );
 #endif	// USE_JAVA && MACOSX
@@ -8821,7 +8821,7 @@ void PDFWriterImpl::drawHorizontalGlyphs(
 #if defined USE_JAVA && defined MACOSX
             // Fix bug 3659 by subtracting the real native width from the
             // OOo kerning positions
-            const Point aPrevPos = aMat.transform( Point( rGlyphs[nPos-1].m_aPos.X() + (long)( ( fXScale * rGlyphs[nPos-1].m_nRealNativeWidth ) + 0.5 ), rGlyphs[nPos-1].m_aPos.Y() ) );
+            const Point aPrevPos = aMat.transform( Point( rGlyphs[nPos-1].m_aPos.X() + static_cast< long >( ( fXScale * rGlyphs[nPos-1].m_nRealNativeWidth ) + 0.5 ), rGlyphs[nPos-1].m_aPos.Y() ) );
             double fAdvance = aPrevPos.X() - aThisPos.X();
             fAdvance *= 1000.0 / (fXScale * nPixelFontHeight);
             const sal_Int32 nAdjustment = sal_Int32(fAdvance+0.5);
@@ -8847,8 +8847,8 @@ void PDFWriterImpl::drawHorizontalGlyphs(
             }
 
             if ( rGlyphs[nPos].m_bIdentityGlyph )
-                appendHex( (sal_Int8)( ( rGlyphs[nPos].m_nMappedGlyphId & 0xff00 ) >> 8 ), aKernedLine );
-            appendHex( (sal_Int8)( rGlyphs[nPos].m_nMappedGlyphId & 0x00ff ), aKernedLine );
+                appendHex( static_cast< sal_Int8 >( ( rGlyphs[nPos].m_nMappedGlyphId & 0xff00 ) >> 8 ), aKernedLine );
+            appendHex( static_cast< sal_Int8 >( rGlyphs[nPos].m_nMappedGlyphId & 0x00ff ), aKernedLine );
 #else	// USE_JAVA && MACOSX
             appendHex( rGlyphs[nPos].m_nMappedGlyphId, aKernedLine );
 #endif	// USE_JAVA && MACOSX
@@ -9092,13 +9092,13 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const OUString& rText, bool 
 
             // Fix bugs 3348 and 3442 by fetching each glyph's actual
             // native unkerned width
-            SalATSLayout *pATSLayout = NULL;
+            SalATSLayout *pATSLayout = nullptr;
             MultiSalLayout *pMultiLayout = dynamic_cast<MultiSalLayout*>( &rLayout );
             if ( pMultiLayout )
                 pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( pGlyphs[i]->maGlyphId ) );
             if ( !pATSLayout )
                 pATSLayout = dynamic_cast<SalATSLayout*>( &rLayout );
-            sal_Int32 nNativeGlyphWidth = ( pATSLayout ? sal_Int32( ( (double)pATSLayout->GetNativeGlyphWidth( pGlyphs[i]->maGlyphId, pGlyphs[i]->mnCharPos ) / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) : 0.0 );
+            sal_Int32 nNativeGlyphWidth = ( pATSLayout ? sal_Int32( ( static_cast< double >( pATSLayout->GetNativeGlyphWidth( pGlyphs[i]->maGlyphId, pGlyphs[i]->mnCharPos ) ) / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) : 0.0 );
 
             // Do not allow invalid glyphs to be written to the PDF output
             if( ! ( pGlyphs[i]->maGlyphId & ( GF_ISCHAR | GF_GSUB ) ) )
@@ -14394,7 +14394,7 @@ sal_Int32 PDFWriterImpl::getNextPDFObject( oslFileHandle aFile, PDFObjectMapping
     CHECK_RETURN( ( osl_File_E_None == osl_setFilePos( aFile, osl_Pos_Absolut, nEndPos ) ) );
 
     // Replace all whitespace with spaces for ease of parsing
-    for ( sal_Char *pBuf = (sal_Char *)aContentBuf.getStr(); *pBuf; pBuf++ )
+    for ( sal_Char *pBuf = const_cast< sal_Char* >( aContentBuf.getStr() ); *pBuf; pBuf++ )
     {
         switch ( *pBuf )
         {
@@ -14589,7 +14589,7 @@ void PDFWriterImpl::encodeGlyphs()
     // Create font objects using Mac OS X's PDF rendering APIs
     for ( FontSubsetData::iterator it = m_aSubsets.begin(); it != m_aSubsets.end(); ++it )
     {
-        CTFontRef aFont = CTFontCreateCopyWithAttributes( (CTFontRef)it->first, 12.0f, NULL, NULL );
+        CTFontRef aFont = CTFontCreateCopyWithAttributes( reinterpret_cast< CTFontRef >( it->first ), 12.0f, nullptr, nullptr );
         if ( !aFont )
             continue;
 
@@ -14602,24 +14602,24 @@ void PDFWriterImpl::encodeGlyphs()
             CGGlyph aGlyphIDs[ 256 ];
             int nGlyphIDs = 0;
             for ( FontEmitMapping::iterator fit = rEmit.m_aMapping.begin(); fit != rEmit.m_aMapping.end(); ++fit )
-                aGlyphIDs[ nGlyphIDs++ ] = (CGGlyph)fit->first;
+                aGlyphIDs[ nGlyphIDs++ ] = static_cast< CGGlyph >( fit->first );
 
             if ( !nGlyphIDs )
                 continue;
 
             OUString aTmpName( utl::TempFile::CreateTempName() );
 
-            CFStringRef aPath = CFStringCreateWithCharactersNoCopy( NULL, reinterpret_cast< const UniChar* >( aTmpName.getStr() ), aTmpName.getLength(), kCFAllocatorNull );
+            CFStringRef aPath = CFStringCreateWithCharactersNoCopy( nullptr, reinterpret_cast< const UniChar* >( aTmpName.getStr() ), aTmpName.getLength(), kCFAllocatorNull );
             if ( aPath )
             {
-                CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, aPath, kCFURLPOSIXPathStyle, false );
+                CFURLRef aURL = CFURLCreateWithFileSystemPath( nullptr, aPath, kCFURLPOSIXPathStyle, false );
                 if ( aURL )
                 {
-                    CGContextRef aContext = CGPDFContextCreateWithURL( aURL, NULL, NULL );
+                    CGContextRef aContext = CGPDFContextCreateWithURL( aURL, nullptr, nullptr );
                     if ( aContext )
                     {
                         // Draw each glyph separately to parse emoji fonts
-                        CGContextBeginPage( aContext, NULL );
+                        CGContextBeginPage( aContext, nullptr );
                         CGPoint aGlyphPosition = CGPointMake( 0, 0 );
                         for ( int i = 0; i < nGlyphIDs; i++ )
                             CTFontDrawGlyphs( aFont, aGlyphIDs + i, &aGlyphPosition, 1, aContext );
@@ -14947,11 +14947,11 @@ void PDFWriterImpl::encodeGlyphs()
                         if ( nContentLen )
                         {
                             aInflatedStream.Seek( 0 );
-                            OString aPageContent( (sal_Char *)aInflatedStream.GetData(), nContentLen );
+                            OString aPageContent( const_cast< sal_Char* >( static_cast< const sal_Char*>( aInflatedStream.GetData() ) ), nContentLen );
 
                             // Replace all whitespace with spaces for ease of
                             // parsing
-                            for ( sal_Char *pPageContentBuf = (sal_Char *)aPageContent.getStr(); *pPageContentBuf; pPageContentBuf++ )
+                            for ( sal_Char *pPageContentBuf = const_cast< sal_Char* >( aPageContent.getStr() ); *pPageContentBuf; pPageContentBuf++ )
                             {
                                 switch ( *pPageContentBuf )
                                 {
@@ -15153,7 +15153,7 @@ void PDFWriterImpl::encodeGlyphs()
                                             }
                                             else
                                             {
-                                                aGlyphBuf.append( (sal_Char)OString( pBuf, nTextLen - j == 1 ? 1 : 2 ).toInt32( 16 ) );
+                                                aGlyphBuf.append( static_cast< sal_Char >( OString( pBuf, nTextLen - j == 1 ? 1 : 2 ).toInt32( 16 ) ) );
                                             }
                                     }
                                     else
@@ -15167,7 +15167,7 @@ void PDFWriterImpl::encodeGlyphs()
                                             // strings to only 3 digits
                                             if ( nOctalBufLen && ( nOctalBufLen > 2 || *pBuf < '0' || *pBuf > '9' ) )
                                             {
-                                                aGlyphBuf.append( (sal_Char)aOctalBuf.makeStringAndClear().toInt32( 8 ) );
+                                                aGlyphBuf.append( static_cast< sal_Char >( aOctalBuf.makeStringAndClear().toInt32( 8 ) ) );
                                                 nOctalBufLen = 0;
                                             }
 
@@ -15221,7 +15221,7 @@ void PDFWriterImpl::encodeGlyphs()
                                         }
 
                                         if ( aOctalBuf.getLength() )
-                                            aGlyphBuf.append( (sal_Char)aOctalBuf.makeStringAndClear().toInt32( 8 ) );
+                                            aGlyphBuf.append( static_cast< sal_Char >( aOctalBuf.makeStringAndClear().toInt32( 8 ) ) );
                                     }
 
                                     int nCurrentXObjectGlyph = nCurrentGlyph;
@@ -15229,18 +15229,18 @@ void PDFWriterImpl::encodeGlyphs()
                                     nTextLen = aGlyphBuf.getLength();
                                     for ( sal_Int32 j = 0; j < nTextLen && nCurrentGlyph < nGlyphIDs; j++, nCurrentGlyph++, pBuf++ )
                                     {
-                                        sal_GlyphId nGlyph = (sal_GlyphId)aGlyphIDs[ nCurrentGlyph ];
+                                        sal_GlyphId nGlyph = static_cast< sal_GlyphId >( aGlyphIDs[ nCurrentGlyph ] );
 
                                         sal_uInt16 nEncodedGlyph;
                                         if ( bTextIsHex )
                                         {
-                                            nEncodedGlyph = (sal_uInt8)( *pBuf ) << 8;
+                                            nEncodedGlyph = static_cast< sal_uInt8 >( *pBuf ) << 8;
                                             if ( ++pBuf && ++j < nTextLen )
-                                                nEncodedGlyph |= (sal_uInt8)( *pBuf );
+                                                nEncodedGlyph |= static_cast< sal_uInt8 >( *pBuf );
                                         }
                                         else
                                         {
-                                            nEncodedGlyph = (sal_uInt16)( *pBuf & 0x00ff );
+                                            nEncodedGlyph = static_cast< sal_uInt16 >( *pBuf & 0x00ff );
                                         }
 
                                         // Cache encoding
@@ -15283,7 +15283,7 @@ void PDFWriterImpl::encodeGlyphs()
                                                             aXObjectID = aXObjectID.copy( 1 );
                                                         if ( rEmit.m_aXObjectIDMapping.find( aXObjectID ) != rEmit.m_aXObjectIDMapping.end() )
                                                         {
-                                                            sal_GlyphId nGlyph = (sal_GlyphId)aGlyphIDs[ nCurrentXObjectGlyph++ ];
+                                                            sal_GlyphId nGlyph = static_cast< sal_GlyphId >( aGlyphIDs[ nCurrentXObjectGlyph++ ] );
                                                             rSubset.m_aMapping[ nGlyph ].m_aXObjectID = aXObjectID;
                                                         }
                                                     }

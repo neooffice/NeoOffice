@@ -940,7 +940,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
 
     // determine cluster boundaries and x base offset
     const int nCharCount = rArgs.mnEndCharPos - rArgs.mnMinCharPos;
-    int* pLogCluster = (int*)alloca( nCharCount * sizeof(int) );
+    int* pLogCluster = static_cast< int* >( alloca( nCharCount * sizeof(int) ) );
     size_t i;
     int n,p;
     long nBasePointX = -1;
@@ -975,7 +975,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
     }
 
     // calculate adjusted cluster widths
-    long* pNewGlyphWidths = (long*)alloca( m_GlyphItems.size() * sizeof(long) );
+    long* pNewGlyphWidths = static_cast< long* >( alloca( m_GlyphItems.size() * sizeof(long) ) );
     for( i = 0; i < m_GlyphItems.size(); ++i )
         pNewGlyphWidths[ i ] = 0;
 
@@ -999,9 +999,9 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
             // Fix rounding down of nDelta on platforms where rArgs.mpDXArray
             // is a floating point array
             double fUnitMul = mnUnitsPerPixel;
-            long nDelta = (long)( ( rArgs.mpDXArray[ n ] * fUnitMul ) + 0.5 );
+            long nDelta = static_cast< long >( ( rArgs.mpDXArray[ n ] * fUnitMul ) + 0.5 );
             if( n > 0 )
-                nDelta -= (long)( ( rArgs.mpDXArray[ n-1 ] * fUnitMul ) + 0.5 );
+                nDelta -= static_cast< long >( ( rArgs.mpDXArray[ n-1 ] * fUnitMul ) + 0.5 );
             pNewGlyphWidths[ p ] += nDelta;
 #else	// USE_JAVA
             long nDelta = rArgs.mpDXArray[ n ] ;
@@ -1027,14 +1027,14 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                 if( nUnshiftedWidth && nUnshiftedDelta && nFirstUnshiftedGlyph >= 0 && nFirstUnshiftedGlyph < p )
                 {
                     j = p - 1;
-                    while ( j >= (size_t)nFirstUnshiftedGlyph )
+                    while ( j >= static_cast< size_t >( nFirstUnshiftedGlyph ) )
                     {
                         if( pNewGlyphWidths[ j ] )
                         {
                             // Apply delta proportionally to width of glyph so
                             // that glyphs following narrow characters such as
                             // "i" and "l" will not be shifted too far left
-                            int nShift = (int)((float)m_GlyphItems[j].mnNewWidth * nUnshiftedDelta / nUnshiftedWidth );
+                            int nShift = static_cast< int >( static_cast< float >( m_GlyphItems[j].mnNewWidth ) * nUnshiftedDelta / nUnshiftedWidth );
                             if( nShift > pNewGlyphWidths[ j ] )
                                 nShift = pNewGlyphWidths[ j ];
                             pNewGlyphWidths[ j ] = m_GlyphItems[j].mnNewWidth + nShift;
