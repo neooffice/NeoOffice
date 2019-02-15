@@ -36,15 +36,10 @@ using namespace ::com::sun::star;
 
 namespace avmedia { namespace macavf {
 
-// ----------------
-// - FrameGrabber -
-// ----------------
-
 FrameGrabber::FrameGrabber( const uno::Reference< lang::XMultiServiceFactory >& /*rxMgr*/ )
-:   mpImageGen( NULL )
+:   mpImageGen( nullptr )
 {}
 
-// ------------------------------------------------------------------------------
 
 FrameGrabber::~FrameGrabber()
 {
@@ -52,33 +47,34 @@ FrameGrabber::~FrameGrabber()
         CFRelease( mpImageGen );
 }
 
-// ------------------------------------------------------------------------------
 
 bool FrameGrabber::create( const ::rtl::OUString& rURL )
 {
-    NSString* pNSStr = [NSString stringWithCharacters:rURL.getStr() length:rURL.getLength()];
+    NSString* pNSStr = [NSString stringWithCharacters:reinterpret_cast<unichar const *>(rURL.getStr()) length:rURL.getLength()];
 #ifdef USE_JAVA
     NSURL* pNSURL = [NSURL URLWithString: [pNSStr stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLPathAllowedCharacterSet]]];
 #else	// USE_JAVA
+    SAL_WNODEPRECATED_DECLARATIONS_PUSH
+        //TODO: 10.11 stringByAddingPercentEscapesUsingEncoding
     NSURL* pNSURL = [NSURL URLWithString: [pNSStr stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+    SAL_WNODEPRECATED_DECLARATIONS_POP
 #endif	// USE_JAVA
     AVAsset* pMovie = [AVURLAsset URLAssetWithURL:pNSURL options:nil];
     if( !pMovie )
     {
-        OSL_TRACE( "AVGrabber::create() cannot load url=\"%s\"", [pNSStr UTF8String] );
+        SAL_WARN("avmedia", "AVGrabber::create() cannot load url=" << [pNSStr UTF8String] );
         return false;
     }
 
     return create( pMovie );
 }
 
-// ------------------------------------------------------------------------------
 
 bool FrameGrabber::create( AVAsset* pMovie )
 {
     if( [[pMovie tracksWithMediaType:AVMediaTypeVideo] count] == 0)
     {
-        OSL_TRACE( "AVGrabber::create() found no video content!" );
+        SAL_WARN("avmedia", "AVGrabber::create() found no video content!" );
         return false;
     }
 
@@ -87,32 +83,29 @@ bool FrameGrabber::create( AVAsset* pMovie )
     return true;
 }
 
-// ------------------------------------------------------------------------------
 
 uno::Reference< graphic::XGraphic > SAL_CALL FrameGrabber::grabFrame( double fMediaTime )
-    throw (uno::RuntimeException)
 {
     uno::Reference< graphic::XGraphic > xRet;
     if( !mpImageGen )
         return xRet;
-    OSL_TRACE( "AVPlayer::grabFrame( %.3fsec)", fMediaTime );
 
     // get the requested image from the movie
-    CGImage* pCGImage = [mpImageGen copyCGImageAtTime:CMTimeMakeWithSeconds(fMediaTime,1000) actualTime:NULL error:NULL];
+    CGImage* pCGImage = [mpImageGen copyCGImageAtTime:CMTimeMakeWithSeconds(fMediaTime,1000) actualTime:nullptr error:nullptr];
 
     // convert the image to a TIFF-formatted byte-array
     CFMutableDataRef pCFData = CFDataCreateMutable( kCFAllocatorDefault, 0 );
-    CGImageDestination* pCGImgDest = CGImageDestinationCreateWithData( pCFData, kUTTypeTIFF, 1, 0 );
-    CGImageDestinationAddImage( pCGImgDest, pCGImage, NULL );
+    CGImageDestination* pCGImgDest = CGImageDestinationCreateWithData( pCFData, kUTTypeTIFF, 1, nullptr );
+    CGImageDestinationAddImage( pCGImgDest, pCGImage, nullptr );
     CGImageDestinationFinalize( pCGImgDest );
     CFRelease( pCGImgDest );
     const long nBitmapLen = CFDataGetLength( pCFData );
-    void* pBitmapBytes = (void*)CFDataGetBytePtr( pCFData );
+    UInt8 * pBitmapBytes = const_cast<UInt8 *>(CFDataGetBytePtr( pCFData ));
 
     // convert the image into the return-value type which is a graphic::XGraphic
-    SvMemoryStream aMemStm( pBitmapBytes, nBitmapLen, STREAM_READ | STREAM_WRITE );
+    SvMemoryStream aMemStm( pBitmapBytes, nBitmapLen, StreamMode::READ | StreamMode::WRITE );
     Graphic aGraphic;
-    if( GraphicConverter::Import( aMemStm, aGraphic, CVT_TIF ) == ERRCODE_NONE )
+    if( GraphicConverter::Import( aMemStm, aGraphic, ConvertDataFormat::TIF ) == ERRCODE_NONE )
         xRet = aGraphic.GetXGraphic();
 
     // clean up resources
@@ -120,31 +113,20 @@ uno::Reference< graphic::XGraphic > SAL_CALL FrameGrabber::grabFrame( double fMe
     return xRet;
 }
 
-// ------------------------------------------------------------------------------
 
 ::rtl::OUString SAL_CALL FrameGrabber::getImplementationName(  )
-    throw (uno::RuntimeException)
 {
-    return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( AVMEDIA_MACAVF_FRAMEGRABBER_IMPLEMENTATIONNAME ) );
+    return ::rtl::OUString( AVMEDIA_MACAVF_FRAMEGRABBER_IMPLEMENTATIONNAME );
 }
-
-// ------------------------------------------------------------------------------
 
 sal_Bool SAL_CALL FrameGrabber::supportsService( const ::rtl::OUString& ServiceName )
-    throw (uno::RuntimeException)
 {
-    return ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( AVMEDIA_MACAVF_FRAMEGRABBER_SERVICENAME ) );
+    return ServiceName == AVMEDIA_MACAVF_FRAMEGRABBER_SERVICENAME;
 }
 
-// ------------------------------------------------------------------------------
-
 uno::Sequence< ::rtl::OUString > SAL_CALL FrameGrabber::getSupportedServiceNames(  )
-    throw (uno::RuntimeException)
 {
-    uno::Sequence< ::rtl::OUString > aRet(1);
-    aRet[0] = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM ( AVMEDIA_MACAVF_FRAMEGRABBER_SERVICENAME ) );
-
-    return aRet;
+    return { AVMEDIA_MACAVF_FRAMEGRABBER_SERVICENAME };
 }
 
 } // namespace macavf
