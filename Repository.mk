@@ -322,9 +322,9 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,ooo, \
 	$(call gb_Helper_optional,AVMEDIA,avmedia) \
 	$(if $(filter MACOSX,$(OS)),\
 		avmediaMacAVF \
-		$(if $(ENABLE_MACOSX_SANDBOX),,\
+		$(if $(filter $(GUIBASE),java),avmediaQuickTime,$(if $(ENABLE_MACOSX_SANDBOX),,\
 			$(if $(shell test $(MACOSX_SDK_VERSION) -ge 101200 || echo not),avmediaQuickTime) \
-		) \
+		)) \
 	) \
 	$(call gb_Helper_optional,SCRIPTING, \
 		basctl \
