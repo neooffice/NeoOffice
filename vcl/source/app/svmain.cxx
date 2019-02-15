@@ -141,10 +141,10 @@ static void ImplLoadNativeFont( OUString aPath )
     if ( !aPath.getLength() )
         return;
 
-    oslDirectory aDir = NULL;
+    oslDirectory aDir = nullptr;
     if ( osl_openDirectory( aPath.pData, &aDir ) == osl_File_E_None )
     {
-        oslDirectoryItem aDirItem = NULL;
+        oslDirectoryItem aDirItem = nullptr;
         while ( osl_getNextDirectoryItem( aDir, &aDirItem, 16 ) == osl_File_E_None )
         {
             oslFileStatus aStatus;
@@ -160,17 +160,17 @@ static void ImplLoadNativeFont( OUString aPath )
         OUString aSysPath;
         if ( osl_getSystemPathFromFileURL( aPath.pData, &aSysPath.pData ) == osl_File_E_None )
         {
-            CFStringRef aString = CFStringCreateWithCharacters( NULL, reinterpret_cast< const UniChar* >( aSysPath.getStr() ), aSysPath.getLength() );
+            CFStringRef aString = CFStringCreateWithCharacters( nullptr, reinterpret_cast< const UniChar* >( aSysPath.getStr() ), aSysPath.getLength() );
             if ( aString )
             {
-                CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, aString, kCFURLPOSIXPathStyle, false );
+                CFURLRef aURL = CFURLCreateWithFileSystemPath( nullptr, aString, kCFURLPOSIXPathStyle, false );
                 if ( aURL )
                 {
-                    CTFontManagerRegisterFontsForURL( aURL, kCTFontManagerScopeUser, NULL );
+                    CTFontManagerRegisterFontsForURL( aURL, kCTFontManagerScopeUser, nullptr );
 
                     // Loading our private fonts is a bit flaky so try loading
                     // using the process context just to be safe
-                    CTFontManagerRegisterFontsForURL( aURL, kCTFontManagerScopeProcess, NULL );
+                    CTFontManagerRegisterFontsForURL( aURL, kCTFontManagerScopeProcess, nullptr );
 
                     CFRelease( aURL );
                 }

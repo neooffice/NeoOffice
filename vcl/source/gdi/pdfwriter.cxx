@@ -490,182 +490,182 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
         {
             case MetaActionType::NEWPAGEPDF:
             {
-                const MetaNewPagePDFAction* pA = (const MetaNewPagePDFAction*)pAction;
+                const MetaNewPagePDFAction* pA = static_cast< const MetaNewPagePDFAction* >( pAction );
                 aWriter.NewPage( pA->GetPageWidth(), pA->GetPageHeight(), pA->GetOrientation() );
             }
             break;
 
             case MetaActionType::FONT:
             {
-                const MetaFontAction* pA = (const MetaFontAction*)pAction;
+                const MetaFontAction* pA = static_cast< const MetaFontAction* >( pAction );
                 aWriter.SetFont( pA->GetFont() );
             }
             break;
 
             case MetaActionType::TEXT:
             {
-                const MetaTextAction* pA = (const MetaTextAction*)pAction;
+                const MetaTextAction* pA = static_cast< const MetaTextAction* >( pAction );
                 aWriter.DrawText( pA->GetPoint(), pA->GetText() );
             }
             break;
 
             case MetaActionType::TEXTLINE:
             {
-                const MetaTextLineAction* pA = (const MetaTextLineAction*)pAction;
+                const MetaTextLineAction* pA = static_cast< const MetaTextLineAction* >( pAction );
                 aWriter.DrawTextLine( pA->GetStartPoint(), pA->GetWidth(), pA->GetStrikeout(), pA->GetUnderline(), pA->GetOverline() );
             }
             break;
 
             case MetaActionType::TEXTARRAY:
             {
-                const MetaTextArrayAction* pA = (const MetaTextArrayAction*)pAction;
+                const MetaTextArrayAction* pA = static_cast< const MetaTextArrayAction* >( pAction );
                 aWriter.DrawTextArray( pA->GetPoint(), pA->GetText(), pA->GetDXArray(), pA->GetIndex(), pA->GetLen() );
             }
             break;
 
             case MetaActionType::STRETCHTEXT:
             {
-                const MetaStretchTextAction* pA = (const MetaStretchTextAction*)pAction;
+                const MetaStretchTextAction* pA = static_cast< const MetaStretchTextAction* >( pAction );
                 aWriter.DrawStretchText( pA->GetPoint(), pA->GetWidth(), pA->GetText(), pA->GetIndex(), pA->GetLen() );
             }
             break;
 
             case MetaActionType::TEXTRECT:
             {
-                const MetaTextRectAction* pA = (const MetaTextRectAction*)pAction;
+                const MetaTextRectAction* pA = static_cast< const MetaTextRectAction* >( pAction );
                 aWriter.DrawText( pA->GetRect(), pA->GetText(), pA->GetStyle() );
             }
             break;
 
             case MetaActionType::LINE:
             {
-                const MetaLineAction* pA = (const MetaLineAction*)pAction;
+                const MetaLineAction* pA = static_cast< const MetaLineAction* >( pAction );
                 aWriter.DrawLine( pA->GetStartPoint(), pA->GetEndPoint(), pA->GetLineInfo() );
             }
             break;
 
             case MetaActionType::POLYGON:
             {
-                const MetaPolygonAction* pA = (const MetaPolygonAction*)pAction;
+                const MetaPolygonAction* pA = static_cast< const MetaPolygonAction* >( pAction );
                 aWriter.DrawPolygon( pA->GetPolygon() );
             }
             break;
 
             case MetaActionType::POLYLINE:
             {
-                const MetaPolyLineAction* pA = (const MetaPolyLineAction*)pAction;
+                const MetaPolyLineAction* pA = static_cast< const MetaPolyLineAction* >( pAction );
                 aWriter.DrawPolyLine( pA->GetPolygon(), pA->GetLineInfo() );
             }
             break;
 
             case MetaActionType::POLYLINEPDF:
             {
-                const MetaPolyLinePDFAction* pA = (const MetaPolyLinePDFAction*)pAction;
+                const MetaPolyLinePDFAction* pA = static_cast< const MetaPolyLinePDFAction* >( pAction );
                 aWriter.DrawPolyLine( pA->GetPolygon(), pA->GetExtLineInfo() );
             }
             break;
 
             case MetaActionType::RECT:
             {
-                const MetaRectAction* pA = (const MetaRectAction*)pAction;
+                const MetaRectAction* pA = static_cast< const MetaRectAction* >( pAction );
                 aWriter.DrawRect( pA->GetRect() );
             }
             break;
 
             case MetaActionType::ROUNDRECT:
             {
-                const MetaRoundRectAction* pA = (const MetaRoundRectAction*)pAction;
+                const MetaRoundRectAction* pA = static_cast< const MetaRoundRectAction* >( pAction );
                 aWriter.DrawRect( pA->GetRect(), pA->GetHorzRound(), pA->GetVertRound() );
             }
             break;
 
             case MetaActionType::ELLIPSE:
             {
-                const MetaEllipseAction* pA = (const MetaEllipseAction*)pAction;
+                const MetaEllipseAction* pA = static_cast< const MetaEllipseAction* >( pAction );
                 aWriter.DrawEllipse( pA->GetRect() );
             }
             break;
 
             case MetaActionType::PIE:
             {
-                const MetaArcAction* pA = (const MetaArcAction*)pAction;
+                const MetaArcAction* pA = static_cast< const MetaArcAction* >( pAction );
                 aWriter.DrawArc( pA->GetRect(), pA->GetStartPoint(), pA->GetEndPoint() );
             }
             break;
 
             case MetaActionType::CHORD:
             {
-                const MetaChordAction* pA = (const MetaChordAction*)pAction;
+                const MetaChordAction* pA = static_cast< const MetaChordAction* >( pAction );
                 aWriter.DrawArc( pA->GetRect(), pA->GetStartPoint(), pA->GetEndPoint() );
             }
             break;
 
             case MetaActionType::ARC:
             {
-                const MetaArcAction* pA = (const MetaArcAction*)pAction;
+                const MetaArcAction* pA = static_cast< const MetaArcAction* >( pAction );
                 aWriter.DrawArc( pA->GetRect(), pA->GetStartPoint(), pA->GetEndPoint() );
             }
             break;
 
             case MetaActionType::POLYPOLYGON:
             {
-                const MetaPolyPolygonAction* pA = (const MetaPolyPolygonAction*)pAction;
+                const MetaPolyPolygonAction* pA = static_cast< const MetaPolyPolygonAction* >( pAction );
                 aWriter.DrawPolyPolygon( pA->GetPolyPolygon() );
             }
             break;
 
             case MetaActionType::PIXEL:
             {
-                const MetaPixelAction* pA = (const MetaPixelAction*)pAction;
+                const MetaPixelAction* pA = static_cast< const MetaPixelAction* >( pAction );
                 aWriter.DrawPixel( pA->GetPoint(), pA->GetColor() );
             }
             break;
 
             case MetaActionType::BMPEXSCALE:
             {
-                const MetaBmpExScaleAction* pA = (const MetaBmpExScaleAction*)pAction;
+                const MetaBmpExScaleAction* pA = static_cast< const MetaBmpExScaleAction* >( pAction );
                 aWriter.DrawBitmapEx( pA->GetPoint(), pA->GetSize(), pA->GetBitmapEx() );
             }
             break;
 
             case MetaActionType::GRADIENT:
             {
-                const MetaGradientAction* pA = (const MetaGradientAction*)pAction;
+                const MetaGradientAction* pA = static_cast< const MetaGradientAction* >( pAction );
                 aWriter.DrawGradient( pA->GetRect(), pA->GetGradient() );
             }
             break;
 
             case MetaActionType::GRADIENTEX:
             {
-                const MetaGradientExAction* pA = (const MetaGradientExAction*)pAction;
+                const MetaGradientExAction* pA = static_cast< const MetaGradientExAction* >( pAction );
                 aWriter.DrawGradient( pA->GetPolyPolygon(), pA->GetGradient() );
             }
             break;
 
             case MetaActionType::HATCH:
             {
-                const MetaHatchAction* pA = (const MetaHatchAction*)pAction;
+                const MetaHatchAction* pA = static_cast< const MetaHatchAction* >( pAction );
                 aWriter.DrawHatch( pA->GetPolyPolygon(), pA->GetHatch() );
             }
             break;
 
             case MetaActionType::WALLPAPER:
             {
-                const MetaWallpaperAction* pA = (const MetaWallpaperAction*)pAction;
+                const MetaWallpaperAction* pA = static_cast< const MetaWallpaperAction* >( pAction );
                 aWriter.DrawWallpaper( pA->GetRect(), pA->GetWallpaper() );
             }
             break;
 
             case MetaActionType::Transparent:
             {
-                const MetaTransparentAction* pA = (const MetaTransparentAction*)pAction;
+                const MetaTransparentAction* pA = static_cast< const MetaTransparentAction* >( pAction );
                 aWriter.DrawTransparent( pA->GetPolyPolygon(), pA->GetTransparence() );
             }
             break;
 
             case MetaActionType::PUSH:
             {
-                const MetaPushAction* pA = (const MetaPushAction*)pAction;
+                const MetaPushAction* pA = static_cast< const MetaPushAction* >( pAction );
 
                 aWriter.Push( pA->GetFlags() );
             }
@@ -679,28 +679,28 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
 
             case MetaActionType::MAPMODE:
             {
-                const MetaMapModeAction* pA = (const MetaMapModeAction*)pAction;
+                const MetaMapModeAction* pA = static_cast< const MetaMapModeAction* >( pAction );
                 aWriter.SetMapMode( pA->GetMapMode() );
             }
             break;
 
             case MetaActionType::LINECOLOR:
             {
-                const MetaLineColorAction* pA = (const MetaLineColorAction*)pAction;
+                const MetaLineColorAction* pA = static_cast< const MetaLineColorAction* >( pAction );
                 aWriter.SetLineColor( pA->GetColor() );
             }
             break;
 
             case MetaActionType::FILLCOLOR:
             {
-                const MetaFillColorAction* pA = (const MetaFillColorAction*)pAction;
+                const MetaFillColorAction* pA = static_cast< const MetaFillColorAction* >( pAction );
                 aWriter.SetFillColor( pA->GetColor() );
             }
             break;
 
             case MetaActionType::CLIPREGION:
             {
-                const MetaClipRegionAction* pA = (const MetaClipRegionAction*)pAction;
+                const MetaClipRegionAction* pA = static_cast< const MetaClipRegionAction* >( pAction );
                 if( pA->IsClipping() )
                     aWriter.SetClipRegion( pA->GetRegion().GetAsB2DPolyPolygon() );
                 else
@@ -710,42 +710,42 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
 
             case MetaActionType::MOVECLIPREGION:
             {
-                const MetaMoveClipRegionAction* pA = (const MetaMoveClipRegionAction*)pAction;
+                const MetaMoveClipRegionAction* pA = static_cast< const MetaMoveClipRegionAction* >( pAction );
                 aWriter.MoveClipRegion( pA->GetHorzMove(), pA->GetVertMove() );
             }
             break;
 
             case MetaActionType::ISECTRECTCLIPREGION:
             {
-                const MetaISectRectClipRegionAction* pA = (const MetaISectRectClipRegionAction*)pAction;
+                const MetaISectRectClipRegionAction* pA = static_cast< const MetaISectRectClipRegionAction* >( pAction );
                 aWriter.IntersectClipRegion( pA->GetRect() );
             }
             break;
 
             case MetaActionType::ISECTREGIONCLIPREGION:
             {
-               const MetaISectRegionClipRegionAction* pA = (const MetaISectRegionClipRegionAction*)pAction;
+               const MetaISectRegionClipRegionAction* pA = static_cast< const MetaISectRegionClipRegionAction* >( pAction );
                aWriter.IntersectClipRegion( pA->GetRegion().GetAsB2DPolyPolygon() );
             }
             break;
 
             case MetaActionType::LAYOUTMODE:
             {
-                const MetaLayoutModeAction* pA = (const MetaLayoutModeAction*)pAction;
+                const MetaLayoutModeAction* pA = static_cast< const MetaLayoutModeAction* >( pAction );
                 aWriter.SetLayoutMode( pA->GetLayoutMode() );
             }
             break;
 
             case MetaActionType::TEXTCOLOR:
             {
-                const MetaTextColorAction* pA = (const MetaTextColorAction*)pAction;
+                const MetaTextColorAction* pA = static_cast< const MetaTextColorAction* >( pAction );
                 aWriter.SetTextColor( pA->GetColor() );
             }
             break;
 
             case MetaActionType::TEXTFILLCOLOR:
             {
-                const MetaTextFillColorAction* pA = (const MetaTextFillColorAction*)pAction;
+                const MetaTextFillColorAction* pA = static_cast< const MetaTextFillColorAction* >( pAction );
                 if ( pA->IsSetting() )
                     aWriter.SetTextFillColor( pA->GetColor() );
                 else
@@ -755,7 +755,7 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
 
             case MetaActionType::TEXTLINECOLOR:
             {
-                const MetaTextLineColorAction* pA = (const MetaTextLineColorAction*)pAction;
+                const MetaTextLineColorAction* pA = static_cast< const MetaTextLineColorAction* >( pAction );
                 if ( pA->IsSetting() )
                     aWriter.SetTextLineColor( pA->GetColor() );
                 else
@@ -765,7 +765,7 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
 
             case MetaActionType::OVERLINECOLOR:
             {
-                const MetaOverlineColorAction* pA = (const MetaOverlineColorAction*)pAction;
+                const MetaOverlineColorAction* pA = static_cast< const MetaOverlineColorAction* >( pAction );
                 if ( pA->IsSetting() )
                     aWriter.SetOverlineColor( pA->GetColor() );
                 else
@@ -775,70 +775,70 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
 
             case MetaActionType::TEXTALIGN:
             {
-                const MetaTextAlignAction* pA = (const MetaTextAlignAction*)pAction;
+                const MetaTextAlignAction* pA = static_cast< const MetaTextAlignAction* >( pAction );
                 aWriter.SetTextAlign( pA->GetTextAlign() );
             }
             break;
 
             case MetaActionType::JPGPDF:
             {
-                const MetaJpgPDFAction* pA = (const MetaJpgPDFAction*)pAction;
-                aWriter.DrawJPGBitmap( (SvStream&)pA->GetStream(), pA->IsTrueColor(), pA->GetSize(), pA->GetRect(), pA->GetMask(), pA->GetGraphic() );
+                const MetaJpgPDFAction* pA = static_cast< const MetaJpgPDFAction* >( pAction );
+                aWriter.DrawJPGBitmap( const_cast< SvStream& >( pA->GetStream() ), pA->IsTrueColor(), pA->GetSize(), pA->GetRect(), pA->GetMask(), pA->GetGraphic() );
             }
             break;
 
             case MetaActionType::CREATELINKPDF:
             {
-                const MetaCreateLinkPDFAction* pA = (const MetaCreateLinkPDFAction*)pAction;
+                const MetaCreateLinkPDFAction* pA = static_cast< const MetaCreateLinkPDFAction* >( pAction );
                 aWriter.CreateLink( pA->GetRect(), pA->GetPage() );
             }
             break;
 
             case MetaActionType::CREATEDESTPDF:
             {
-                const MetaCreateDestPDFAction* pA = (const MetaCreateDestPDFAction*)pAction;
+                const MetaCreateDestPDFAction* pA = static_cast< const MetaCreateDestPDFAction* >( pAction );
                 aWriter.CreateDest( pA->GetRect(), pA->GetPage(), pA->GetType() );
             }
             break;
 
             case MetaActionType::SETLINKDESTPDF:
             {
-                const MetaSetLinkDestPDFAction* pA = (const MetaSetLinkDestPDFAction*)pAction;
+                const MetaSetLinkDestPDFAction* pA = static_cast< const MetaSetLinkDestPDFAction* >( pAction );
                 aWriter.SetLinkDest( pA->GetLink(), pA->GetDest() );
             }
             break;
 
             case MetaActionType::SETLINKURLPDF:
             {
-                const MetaSetLinkUrlPDFAction* pA = (const MetaSetLinkUrlPDFAction*)pAction;
+                const MetaSetLinkUrlPDFAction* pA = static_cast< const MetaSetLinkUrlPDFAction* >( pAction );
                 aWriter.SetLinkURL( pA->GetLink(), pA->GetURL() );
             }
             break;
 
             case MetaActionType::SETLINKPROPERTYIDPDF:
             {
-                const MetaSetLinkPropertyIdPDFAction* pA = (const MetaSetLinkPropertyIdPDFAction*)pAction;
+                const MetaSetLinkPropertyIdPDFAction* pA = static_cast< const MetaSetLinkPropertyIdPDFAction* >( pAction );
                 aWriter.SetLinkPropertyID( pA->GetLink(), pA->GetProperty() );
             }
             break;
 
             case MetaActionType::CREATEOUTLINEITEMPDF:
             {
-                const MetaCreateOutlineItemPDFAction* pA = (const MetaCreateOutlineItemPDFAction*)pAction;
+                const MetaCreateOutlineItemPDFAction* pA = static_cast< const MetaCreateOutlineItemPDFAction* >( pAction );
                 aWriter.CreateOutlineItem( pA->GetParent(), pA->GetText(), pA->GetDest() );
             }
             break;
 
             case MetaActionType::CREATENOTEPDF:
             {
-                const MetaCreateNotePDFAction* pA = (const MetaCreateNotePDFAction*)pAction;
+                const MetaCreateNotePDFAction* pA = static_cast< const MetaCreateNotePDFAction* >( pAction );
                 aWriter.CreateNote( pA->GetRect(), pA->GetNote(), pA->GetPage() );
             }
             break;
 
             case MetaActionType::BEGINSTRUCTUREELEMENTPDF:
             {
-                const MetaBeginStructureElementPDFAction* pA = (const MetaBeginStructureElementPDFAction*)pAction;
+                const MetaBeginStructureElementPDFAction* pA = static_cast< const MetaBeginStructureElementPDFAction* >( pAction );
                 aWriter.BeginStructureElement( pA->GetType(), pA->GetAlias() );
             }
             break;
@@ -851,63 +851,63 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
 
             case MetaActionType::SETCURRENTSTRUCTUREELEMENTPDF:
             {
-                const MetaSetCurrentStructureElementPDFAction* pA = (const MetaSetCurrentStructureElementPDFAction*)pAction;
+                const MetaSetCurrentStructureElementPDFAction* pA = static_cast< const MetaSetCurrentStructureElementPDFAction* >( pAction );
                 aWriter.SetCurrentStructureElement( pA->GetElement() );
             }
             break;
 
             case MetaActionType::SETSTRUCTUREATTRIBUTEPDF:
             {
-                const MetaSetStructureAttributePDFAction* pA = (const MetaSetStructureAttributePDFAction*)pAction;
+                const MetaSetStructureAttributePDFAction* pA = static_cast< const MetaSetStructureAttributePDFAction* >( pAction );
                 aWriter.SetStructureAttribute( pA->GetAttribute(), pA->GetValue() );
             }
             break;
 
             case MetaActionType::SETSTRUCTUREATTRIBUTENUMERICALPDF:
             {
-                const MetaSetStructureAttributeNumericalPDFAction* pA = (const MetaSetStructureAttributeNumericalPDFAction*)pAction;
+                const MetaSetStructureAttributeNumericalPDFAction* pA = static_cast< const MetaSetStructureAttributeNumericalPDFAction* >( pAction );
                 aWriter.SetStructureAttributeNumerical( pA->GetAttribute(), pA->GetValue() );
             }
             break;
 
             case MetaActionType::SETSTRUCTUREBOUNDINGBOXPDF:
             {
-                const MetaSetStructureBoundingBoxPDFAction* pA = (const MetaSetStructureBoundingBoxPDFAction*)pAction;
+                const MetaSetStructureBoundingBoxPDFAction* pA = static_cast< const MetaSetStructureBoundingBoxPDFAction* >( pAction );
                 aWriter.SetStructureBoundingBox( pA->GetRect() );
             }
             break;
 
             case MetaActionType::SETACTUALTEXTPDF:
             {
-                const MetaSetActualTextPDFAction* pA = (const MetaSetActualTextPDFAction*)pAction;
+                const MetaSetActualTextPDFAction* pA = static_cast< const MetaSetActualTextPDFAction* >( pAction );
                 aWriter.SetActualText( pA->GetText() );
             }
             break;
 
             case MetaActionType::SETALTERNATETEXTPDF:
             {
-                const MetaSetAlternateTextPDFAction* pA = (const MetaSetAlternateTextPDFAction*)pAction;
+                const MetaSetAlternateTextPDFAction* pA = static_cast< const MetaSetAlternateTextPDFAction* >( pAction );
                 aWriter.SetAlternateText( pA->GetText() );
             }
             break;
 
             case MetaActionType::SETPAGETRANSITIONPDF:
             {
-                const MetaSetPageTransitionPDFAction* pA = (const MetaSetPageTransitionPDFAction*)pAction;
+                const MetaSetPageTransitionPDFAction* pA = static_cast< const MetaSetPageTransitionPDFAction* >( pAction );
                 aWriter.SetPageTransition( pA->GetType(), pA->GetMilliSeconds(), pA->GetPage() );
             }
             break;
 
             case MetaActionType::CREATECONTROLPDF:
             {
-                const MetaCreateControlPDFAction* pA = (const MetaCreateControlPDFAction*)pAction;
+                const MetaCreateControlPDFAction* pA = static_cast< const MetaCreateControlPDFAction* >( pAction );
                 aWriter.CreateControl( pA->GetControl() );
             }
             break;
 
             case MetaActionType::DIGITLANGUAGEPDF:
             {
-                const MetaDigitLanguagePDFAction* pA = (const MetaDigitLanguagePDFAction*)pAction;
+                const MetaDigitLanguagePDFAction* pA = static_cast< const MetaDigitLanguagePDFAction* >( pAction );
                 aWriter.SetDigitLanguage( pA->GetLanguage() );
             }
             break;
@@ -920,63 +920,63 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
 
             case MetaActionType::ENDTRANSPARENCYGROUPPDF:
             {
-                const MetaEndTransparencyGroupPDFAction* pA = (const MetaEndTransparencyGroupPDFAction*)pAction;
+                const MetaEndTransparencyGroupPDFAction* pA = static_cast< const MetaEndTransparencyGroupPDFAction* >( pAction );
                 aWriter.EndTransparencyGroup( pA->GetBoundingRect(), pA->GetTransparentPercent() );
             }
             break;
 
             case MetaActionType::SETLOCALEPDF:
             {
-                const MetaSetLocalePDFAction* pA = (const MetaSetLocalePDFAction*)pAction;
+                const MetaSetLocalePDFAction* pA = static_cast< const MetaSetLocalePDFAction* >( pAction );
                 aWriter.SetDocumentLocale( pA->GetLocale() );
             }
             break;
 
             case MetaActionType::CREATENAMEDDESTPDF:
             {
-                const MetaCreateNamedDestPDFAction* pA = (const MetaCreateNamedDestPDFAction*)pAction;
+                const MetaCreateNamedDestPDFAction* pA = static_cast< const MetaCreateNamedDestPDFAction* >( pAction );
                 aWriter.CreateNamedDest( pA->GetDestName(), pA->GetRect(), pA->GetPage(), pA->GetType() );
             }
             break;
 
             case MetaActionType::ADDSTREAMPDF:
             {
-                const MetaAddStreamPDFAction* pA = (const MetaAddStreamPDFAction*)pAction;
+                const MetaAddStreamPDFAction* pA = static_cast< const MetaAddStreamPDFAction* >( pAction );
                 aWriter.AddStream( pA->GetMimeType(), pA->GetPDFOutputStream() );
             }
             break;
 
             case MetaActionType::REGISTERDESTREFERENCEPDF:
             {
-                const MetaRegisterDestReferencePDFAction* pA = (const MetaRegisterDestReferencePDFAction*)pAction;
+                const MetaRegisterDestReferencePDFAction* pA = static_cast< const MetaRegisterDestReferencePDFAction* >( pAction );
                 aWriter.RegisterDestReference( pA->GetDestId(), pA->GetRect(), pA->GetPage(), pA->GetType() );
             }
             break;
 
             case MetaActionType::PLAYMETAFILEPDF:
             {
-                const MetaPlayMetafilePDFAction* pA = (const MetaPlayMetafilePDFAction*)pAction;
+                const MetaPlayMetafilePDFAction* pA = static_cast< const MetaPlayMetafilePDFAction* >( pAction );
                 aWriter.PlayMetafile( pA->GetMetaFile(), pA->GetPlayContext(), pA->GetData() );
             }
             break;
 
             case MetaActionType::BMPSCALEPDF:
             {
-                const MetaBmpScalePDFAction* pA = (const MetaBmpScalePDFAction*)pAction;
+                const MetaBmpScalePDFAction* pA = static_cast< const MetaBmpScalePDFAction* >( pAction );
                 aWriter.DrawBitmap( pA->GetPoint(), pA->GetSize(), pA->GetBitmap(), pA->GetGraphic() );
             }
             break;
 
             case MetaActionType::CREATESCREENPDF:
             {
-                const MetaCreateScreenPDFAction* pA = (const MetaCreateScreenPDFAction*)pAction;
+                const MetaCreateScreenPDFAction* pA = static_cast< const MetaCreateScreenPDFAction* >( pAction );
                 aWriter.CreateScreen( pA->GetRect(), pA->GetPage() );
             }
             break;
 
             case MetaActionType::SETSCREENSTREAMPDF:
             {
-                const MetaSetScreenStreamPDFAction* pA = (const MetaSetScreenStreamPDFAction*)pAction;
+                const MetaSetScreenStreamPDFAction* pA = static_cast< const MetaSetScreenStreamPDFAction* >( pAction );
                 aWriter.SetScreenStream( pA->GetScreen(), pA->GetURL() );
             }
             break;

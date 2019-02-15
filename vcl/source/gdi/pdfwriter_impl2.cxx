@@ -528,17 +528,17 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                                     MetaAction *pAct = aTmpMtf.GetAction( nPos );
                                     if ( pAct && pAct->GetType() == MetaActionType::COMMENT )
                                     {
-                                        if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XGRAD_SEQ_BEGIN" ) )
+                                        if ( static_cast< MetaCommentAction* >( pAct )->GetComment().equalsIgnoreAsciiCase( "XGRAD_SEQ_BEGIN" ) )
                                             nGradBeginPos = nPos;
-                                        else if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XGRAD_SEQ_END" ) )
+                                        else if ( static_cast< MetaCommentAction* >( pAct )->GetComment().equalsIgnoreAsciiCase( "XGRAD_SEQ_END" ) )
                                             nGradEndPos = nPos;
-                                        else if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPUSHCLIP_SEQ_BEGIN" ) )
+                                        else if ( static_cast< MetaCommentAction* >( pAct )->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPUSHCLIP_SEQ_BEGIN" ) )
                                             nTransGradPushClipBeginPos = nPos;
-                                        else if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPUSHCLIP_SEQ_END" ) )
+                                        else if ( static_cast< MetaCommentAction* >( pAct )->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPUSHCLIP_SEQ_END" ) )
                                             nTransGradPushClipEndPos = nPos;
-                                        else if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPOPCLIP_SEQ_BEGIN" ) )
+                                        else if ( static_cast< MetaCommentAction* >( pAct )->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPOPCLIP_SEQ_BEGIN" ) )
                                             nTransGradPopClipBeginPos = nPos;
-                                        else if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPOPCLIP_SEQ_END" ) )
+                                        else if ( static_cast< MetaCommentAction* >( pAct )->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPOPCLIP_SEQ_END" ) )
                                             nTransGradPopClipEndPos = nPos;
                                     }
                                 }
@@ -564,7 +564,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                                             aTransGradClipPushMtf.AddAction( pAct );
                                         }
                                     }
-                                    playMetafile( aTransGradClipPushMtf, NULL, i_rContext, pDummyVDev );
+                                    playMetafile( aTransGradClipPushMtf, nullptr, i_rContext, pDummyVDev );
 
                                     implWriteBitmapEx( rPos, rSize, BitmapEx( aPaint, aAlpha ), aGraphic, pDummyVDev, i_rContext );
 
@@ -579,7 +579,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                                             aTransGradClipPopMtf.AddAction( pAct );
                                         }
                                     }
-                                    playMetafile( aTransGradClipPopMtf, NULL, i_rContext, pDummyVDev );
+                                    playMetafile( aTransGradClipPopMtf, nullptr, i_rContext, pDummyVDev );
                                     m_rOuterFace.Pop();
                                 }
                                 else

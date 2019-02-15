@@ -56,7 +56,7 @@ bool ImplSVMainHook( int * )
 
 #define MIN_SVMAIN_STACK_SIZE ( 2 * 1024 * 1024 )
 
-static pthread_attr_t *pSVMainAttr = NULL;
+static pthread_attr_t *pSVMainAttr = nullptr;
 static bool bInCreateSVMainThread = false;
 
 #endif	// USE_JAVA
@@ -76,7 +76,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT const pthread_attr_t *NewSVMainThreadAttributes(
     {
         if ( !pSVMainAttr )
         {
-            pSVMainAttr = (pthread_attr_t *)rtl_allocateMemory( sizeof( pthread_attr_t ) );
+            pSVMainAttr = static_cast< pthread_attr_t* >( rtl_allocateMemory( sizeof( pthread_attr_t ) ) );
             if ( pSVMainAttr )
             {
                 if ( !pthread_attr_init( pSVMainAttr ) )
@@ -88,7 +88,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT const pthread_attr_t *NewSVMainThreadAttributes(
                 else
                 {
                     rtl_freeMemory( pSVMainAttr );
-                    pSVMainAttr = NULL;
+                    pSVMainAttr = nullptr;
                 }
             }
         }
@@ -163,16 +163,16 @@ bool ImplSVMainHook( int* pbInit )
     // Start the CFRunLoop
     CFRunLoopSourceContext aSourceContext;
     aSourceContext.version = 0;
-    aSourceContext.info = NULL;
-    aSourceContext.retain = NULL;
-    aSourceContext.release = NULL;
-    aSourceContext.copyDescription = NULL;
-    aSourceContext.equal = NULL;
-    aSourceContext.hash = NULL;
-    aSourceContext.schedule = NULL;
-    aSourceContext.cancel = NULL;
+    aSourceContext.info = nullptr;
+    aSourceContext.retain = nullptr;
+    aSourceContext.release = nullptr;
+    aSourceContext.copyDescription = nullptr;
+    aSourceContext.equal = nullptr;
+    aSourceContext.hash = nullptr;
+    aSourceContext.schedule = nullptr;
+    aSourceContext.cancel = nullptr;
     aSourceContext.perform = &SourceContextCallBack;
-    CFRunLoopSourceRef aSourceRef = CFRunLoopSourceCreate(NULL, 0, &aSourceContext);
+    CFRunLoopSourceRef aSourceRef = CFRunLoopSourceCreate(nullptr, 0, &aSourceContext);
     CFRunLoopAddSource(runLoopRef, aSourceRef, kCFRunLoopCommonModes);
     CFRunLoopRun();
 #endif	// USE_JAVA
