@@ -49,6 +49,8 @@
 #endif	// USE_QUICKTIME
 #import <postmac.h>
 
+#include <com/sun/star/media/ZoomLevel.hpp>
+
 #ifndef QTTime
 typedef struct {
 	long long		timeValue;
@@ -92,7 +94,7 @@ typedef struct {
 	NSView*					mpSuperview;
 	NSSize					maPreferredSize;
 	NSRect					maRealFrame;
-	int						mnZoomLevel;
+	com::sun::star::media::ZoomLevel	mnZoomLevel;
 	id						mpSecurityScopedURL;
 	NSURL*					mpURL;
 }

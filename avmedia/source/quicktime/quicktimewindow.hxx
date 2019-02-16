@@ -91,10 +91,10 @@ public:
 						Window( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& rxMgr );
 						~Window();
 
-	DECL_STATIC_LINK( Window, fireFocusGainedEvent, void *pEvtData );
-	DECL_STATIC_LINK( Window, fireMouseMovedEvent, void *pEvtData );
-	DECL_STATIC_LINK( Window, fireMousePressedEvent, void *pEvtData );
-	DECL_STATIC_LINK( Window, fireMouseReleasedEvent, void *pEvtData );
+	DECL_STATIC_LINK( Window, fireFocusGainedEvent, void *pEvtData, void );
+	DECL_STATIC_LINK( Window, fireMouseMovedEvent, void *pEvtData, void );
+	DECL_STATIC_LINK( Window, fireMousePressedEvent, void *pEvtData, void );
+	DECL_STATIC_LINK( Window, fireMouseReleasedEvent, void *pEvtData, void );
 
     // XPlayerWindow
     virtual void SAL_CALL update(  ) throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
