@@ -268,7 +268,6 @@ build.libo_checkout: \
 
 build.libo_patches: \
 	build.libo_configure.ac_patch \
-	build.libo_avmedia_patch \
 	build.libo_bin_patch \
 	build.libo_embeddedobj_patch \
 	build.libo_external_patch \

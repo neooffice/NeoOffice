@@ -63,11 +63,6 @@ $(eval $(call gb_Library_use_system_darwin_frameworks,avmediaQuickTime,\
 	QTKit \
 ))
 
-ifneq ($(shell test $(MACOSX_SDK_VERSION) -ge 101200; echo $$?),0)
-$(eval $(call gb_Library_add_objcxxobjects,avmediaQuickTime,\
-	avmedia/source/quicktime/quicktimeuno \
-))
-else	# MACOSX_SDK_VERSION -ge 101200
 $(eval $(call gb_Library_add_objcxxobjects,avmediaQuickTime,\
 	avmedia/source/quicktime/framegrabber \
 	avmedia/source/quicktime/manager \
@@ -75,7 +70,6 @@ $(eval $(call gb_Library_add_objcxxobjects,avmediaQuickTime,\
 	avmedia/source/quicktime/quicktimeuno \
 	avmedia/source/quicktime/window \
 ))
-endif	# MACOSX_SDK_VERSION -ge 101200
 
 endif	# GUIBASE == java
 
