@@ -39,7 +39,7 @@
 
 #include <tools/gen.hxx>
 #include <vcl/bitmap.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/graph.hxx>
 #include <vcl/salbtype.hxx>
 
@@ -57,7 +57,7 @@ namespace quicktime
 
 FrameGrabber::FrameGrabber( const Reference< XMultiServiceFactory >& rxMgr ) :
 	mxMgr( rxMgr ),
-	mpMoviePlayer( NULL )
+	mpMoviePlayer( nullptr )
 {
 }
 
@@ -69,8 +69,8 @@ FrameGrabber::~FrameGrabber()
 
 	if ( mpMoviePlayer )
 	{
-		[(AvmediaMoviePlayer *)mpMoviePlayer release];
-		mpMoviePlayer = NULL;
+		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) release];
+		mpMoviePlayer = nullptr;
 	}
 
 	[pPool release];
@@ -88,8 +88,8 @@ Reference< XGraphic > SAL_CALL FrameGrabber::grabFrame( double fMediaTime ) thro
 	{
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithDouble:fMediaTime]]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(frameImageAtTime:) withObject:pArgs waitUntilDone:YES modes:pModes];
-		NSBitmapImageRep *pImageRep = (NSBitmapImageRep *)[pArgs result];
+		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(frameImageAtTime:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		NSBitmapImageRep *pImageRep = static_cast< NSBitmapImageRep* >( [pArgs result] );
 		if ( pImageRep )
 		{
 			// Fix the color shifting reported in the following NeoOffice forum
@@ -184,14 +184,14 @@ bool FrameGrabber::create( void *pMoviePlayer )
 
 	if ( mpMoviePlayer )
 	{
-		[(AvmediaMoviePlayer *)mpMoviePlayer release];
-		mpMoviePlayer = NULL;
+		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) release];
+		mpMoviePlayer = nullptr;
 	}
 
 	if ( pMoviePlayer )
 	{
 		mpMoviePlayer = pMoviePlayer;
-		[(AvmediaMoviePlayer *)mpMoviePlayer retain];
+		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) retain];
 
 		bRet = true;
 	}

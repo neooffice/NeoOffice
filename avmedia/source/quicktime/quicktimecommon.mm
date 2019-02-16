@@ -41,7 +41,6 @@
 #include <com/sun/star/awt/KeyModifier.hpp>
 #include <com/sun/star/awt/MouseButton.hpp>
 #include <com/sun/star/awt/SystemPointer.hpp>
-#include <com/sun/star/media/ZoomLevel.hpp>
 #include <vcl/svapp.hxx>
 
 #ifndef USE_QUICKTIME
@@ -57,18 +56,18 @@ typedef QTTime QTMakeTimeWithTimeInterval_Type( NSTimeInterval timeInterval );
 typedef NSString * const QTMovieLoopsAttribute_Type;
 #endif	// USE_QUICKTIME
 
-static Application_acquireSecurityScopedURLFromNSURL_Type *pApplication_acquireSecurityScopedURLFromNSURL = NULL;
-static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
+static Application_acquireSecurityScopedURLFromNSURL_Type *pApplication_acquireSecurityScopedURLFromNSURL = nullptr;
+static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = nullptr;
 #ifdef USE_QUICKTIME
 static const short nAVMediaMinDB = -40;
 static const short nAVMediaMaxDB = 0;
 static BOOL bQTKitInitialized = NO;
 static Class aQTMovieClass = nil;
 static Class aQTMovieViewClass = nil;
-static QTGetTimeInterval_Type *pQTGetTimeInterval = NULL;
-static QTMakeTimeRange_Type *pQTMakeTimeRange = NULL;
-static QTMakeTimeWithTimeInterval_Type *pQTMakeTimeWithTimeInterval = NULL;
-static QTMovieLoopsAttribute_Type *pQTMovieLoopsAttribute = NULL;
+static QTGetTimeInterval_Type *pQTGetTimeInterval = nullptr;
+static QTMakeTimeRange_Type *pQTMakeTimeRange = nullptr;
+static QTMakeTimeWithTimeInterval_Type *pQTMakeTimeWithTimeInterval = nullptr;
+static QTMovieLoopsAttribute_Type *pQTMovieLoopsAttribute = nullptr;
 #endif	// USE_QUICKTIME
 
 using namespace ::avmedia::quicktime;
@@ -91,13 +90,13 @@ static void InitializeQTKit()
 				aQTMovieClass = [pQTKitBundle classNamed:@"QTMovie"];
 				if ( aQTMovieClass && aQTMovieViewClass )
 				{
-					void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+					void *pLib = dlopen( nullptr, RTLD_LAZY | RTLD_LOCAL );
 					if ( pLib )
 					{
-						pQTGetTimeInterval = (QTGetTimeInterval_Type *)dlsym( pLib, "QTGetTimeInterval" );
-						pQTMakeTimeRange = (QTMakeTimeRange_Type *)dlsym( pLib, "QTMakeTimeRange" );
-						pQTMakeTimeWithTimeInterval = (QTMakeTimeWithTimeInterval_Type *)dlsym( pLib, "QTMakeTimeWithTimeInterval" );
-						pQTMovieLoopsAttribute = (QTMovieLoopsAttribute_Type *)dlsym( pLib, "QTMovieLoopsAttribute" );
+						pQTGetTimeInterval = reinterpret_cast< QTGetTimeInterval_Type* >( dlsym( pLib, "QTGetTimeInterval" ) );
+						pQTMakeTimeRange = reinterpret_cast< QTMakeTimeRange_Type* >( dlsym( pLib, "QTMakeTimeRange" ) );
+						pQTMakeTimeWithTimeInterval = reinterpret_cast< QTMakeTimeWithTimeInterval_Type* >( dlsym( pLib, "QTMakeTimeWithTimeInterval" ) );
+						pQTMovieLoopsAttribute = reinterpret_cast< QTMovieLoopsAttribute_Type* >( dlsym( pLib, "QTMovieLoopsAttribute" ) );
 
 						dlclose( pLib );
 					}
@@ -121,8 +120,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		NSPoint aPoint = [pView convertPoint:[pEvent locationInWindow] fromView:nil];
 		aEvt.Modifiers = 0;
 		aEvt.Buttons = 0;
-		aEvt.X = (sal_Int32)aPoint.x;
-		aEvt.Y = (sal_Int32)aPoint.y;
+		aEvt.X = static_cast< sal_Int32 >( aPoint.x );
+		aEvt.Y = static_cast< sal_Int32 >( aPoint.y );
 		aEvt.ClickCount = 1;
 		aEvt.PopupTrigger = sal_False;
 
@@ -150,49 +149,49 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 							aEvt.Buttons = MouseButton::RIGHT;
 						else
 							aEvt.Buttons = MouseButton::LEFT;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMousePressedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
+						Application::PostUserEvent( LINK( nullptr, Window, fireMousePressedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
 						break;
 					case NSEventTypeRightMouseDown:
 						aEvt.Buttons = MouseButton::RIGHT;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMousePressedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
+						Application::PostUserEvent( LINK( nullptr, Window, fireMousePressedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
 						break;
 					case NSEventTypeOtherMouseDown:
 						aEvt.Buttons = MouseButton::MIDDLE;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMousePressedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
+						Application::PostUserEvent( LINK( nullptr, Window, fireMousePressedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
 						break;
 					case NSEventTypeLeftMouseDragged:
 						if ( nKeyModifiers & NSEventModifierFlagControl )
 							aEvt.Buttons = MouseButton::RIGHT;
 						else
 							aEvt.Buttons = MouseButton::LEFT;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMouseMovedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
+						Application::PostUserEvent( LINK( nullptr, Window, fireMouseMovedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
 						break;
 					case NSEventTypeRightMouseDragged:
 						aEvt.Buttons = MouseButton::RIGHT;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMouseMovedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
+						Application::PostUserEvent( LINK( nullptr, Window, fireMouseMovedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
 						break;
 					case NSEventTypeOtherMouseDragged:
 						aEvt.Buttons = MouseButton::MIDDLE;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMouseMovedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
+						Application::PostUserEvent( LINK( nullptr, Window, fireMouseMovedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
 						break;
 					case NSEventTypeLeftMouseUp:
 						if ( nKeyModifiers & NSEventModifierFlagControl )
 							aEvt.Buttons = MouseButton::RIGHT;
 						else
 							aEvt.Buttons = MouseButton::LEFT;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMouseReleasedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
+						Application::PostUserEvent( LINK( nullptr, Window, fireMouseReleasedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
 						break;
 					case NSEventTypeRightMouseUp:
 						aEvt.Buttons = MouseButton::RIGHT;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMouseReleasedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
+						Application::PostUserEvent( LINK( nullptr, Window, fireMouseReleasedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
 						break;
 					case NSEventTypeOtherMouseUp:
 						aEvt.Buttons = MouseButton::MIDDLE;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMouseReleasedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
+						Application::PostUserEvent( LINK( nullptr, Window, fireMouseReleasedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
 						break;
 					default:
 						aEvt.ClickCount = 0;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMouseMovedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
+						Application::PostUserEvent( LINK( nullptr, Window, fireMouseMovedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
 						break;
 				}
 			}
@@ -451,7 +450,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pArgArray || [pArgArray count] < 1 )
 		return pRet;
 
-	NSNumber *pTime = (NSNumber *)[pArgArray objectAtIndex:0];
+	NSNumber *pTime = static_cast< NSNumber* >( [pArgArray objectAtIndex:0] );
 	if ( !pTime )
 		return pRet;
 
@@ -496,7 +495,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 				{
 					pAVAssetImageGenerator.requestedTimeToleranceBefore = kCMTimeZero;
 					pAVAssetImageGenerator.requestedTimeToleranceAfter = kCMTimeZero;
-					CGImageRef aImage = [pAVAssetImageGenerator copyCGImageAtTime:CMTimeMakeWithSeconds( [pTime doubleValue], PREFERRED_TIMESCALE ) actualTime:NULL error:NULL];
+					CGImageRef aImage = [pAVAssetImageGenerator copyCGImageAtTime:CMTimeMakeWithSeconds( [pTime doubleValue], PREFERRED_TIMESCALE ) actualTime:nullptr error:nullptr];
 					if ( aImage )
 					{
 						pRet = [[NSBitmapImageRep alloc] initWithCGImage:aImage];
@@ -542,9 +541,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		// the main thread does nothing in the vcl/java/source/app/salinst.mm
 		// code.
 		if ( !pApplication_acquireSecurityScopedURLFromNSURL )
-			pApplication_acquireSecurityScopedURLFromNSURL = (Application_acquireSecurityScopedURLFromNSURL_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromNSURL" );
+			pApplication_acquireSecurityScopedURLFromNSURL = reinterpret_cast< Application_acquireSecurityScopedURLFromNSURL_Type* >( dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromNSURL" ) );
 		if ( !pApplication_releaseSecurityScopedURL )
-			pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
+			pApplication_releaseSecurityScopedURL = reinterpret_cast< Application_releaseSecurityScopedURL_Type* >( dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" ) );
 		if ( pApplication_acquireSecurityScopedURLFromNSURL && pApplication_releaseSecurityScopedURL )
 			mpSecurityScopedURL = pApplication_acquireSecurityScopedURLFromNSURL( mpURL, sal_True, nil );
 	}
@@ -608,7 +607,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 				AVAssetImageGenerator *pAVAssetImageGenerator = [AVAssetImageGenerator assetImageGeneratorWithAsset:pAVAsset];
 				if ( pAVAssetImageGenerator )
 				{
-					CGImageRef aImage = [pAVAssetImageGenerator copyCGImageAtTime:kCMTimeZero actualTime:NULL error:NULL];
+					CGImageRef aImage = [pAVAssetImageGenerator copyCGImageAtTime:kCMTimeZero actualTime:nullptr error:nullptr];
 					if ( aImage )
 					{
 						maPreferredSize = NSMakeSize( CGImageGetWidth( aImage ), CGImageGetHeight( aImage ) );
@@ -669,9 +668,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 - (double)rate:(AvmediaArgs *)pArgs
 {
 #ifdef USE_QUICKTIME
-	double fRet = (double)( mpMovie && [mpMovie respondsToSelector:@selector(rate)] ? [mpMovie rate] : 0 );
+	double fRet = static_cast< double >( mpMovie && [mpMovie respondsToSelector:@selector(rate)] ? [mpMovie rate] : 0 );
 #else	// USE_QUICKTIME
-	double fRet = (double)( mpAVPlayer ? [mpAVPlayer rate] : 0 );
+	double fRet = static_cast< double >( mpAVPlayer ? [mpAVPlayer rate] : 0 );
 #endif	// USE_QUICKTIME
 
 	if ( pArgs )
@@ -718,7 +717,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		AVPlayerItem *pAVPlayerItem = mpAVPlayer.currentItem;
 		if ( pAVPlayerItem )
 		{
-			[pAVPlayerItem seekToTime:kCMTimeZero toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+			[pAVPlayerItem seekToTime:kCMTimeZero toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:nil];
 			[mpAVPlayer play];
 		}
 	}
@@ -765,11 +764,11 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pArgArray || [pArgArray count] < 2 )
 		return;
 
-	NSView *pSuperview = (NSView *)[pArgArray objectAtIndex:0];
+	NSView *pSuperview = static_cast< NSView* >( [pArgArray objectAtIndex:0] );
 	if ( !pSuperview )
 		return;
 
-	NSValue *pRect = (NSValue *)[pArgArray objectAtIndex:1];
+	NSValue *pRect = static_cast< NSValue* >( [pArgArray objectAtIndex:1] );
 	if ( !pRect )
 		return;
 
@@ -793,7 +792,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pArgArray || [pArgArray count] < 1 )
 		return;
 
-	NSNumber *pTime = (NSNumber *)[pArgArray objectAtIndex:0];
+	NSNumber *pTime = static_cast< NSNumber* >( [pArgArray objectAtIndex:0] );
 	if ( !pTime )
 		return;
 
@@ -805,7 +804,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	{
 		AVPlayerItem *pAVPlayerItem = mpAVPlayer.currentItem;
 		if ( pAVPlayerItem )
-			[pAVPlayerItem seekToTime:CMTimeMakeWithSeconds( [pTime doubleValue], PREFERRED_TIMESCALE ) toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+			[pAVPlayerItem seekToTime:CMTimeMakeWithSeconds( [pTime doubleValue], PREFERRED_TIMESCALE ) toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:nil];
 	}
 #endif	// USE_QUICKTIME
 }
@@ -873,7 +872,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pArgArray || [pArgArray count] < 1 )
 		return;
 
-	NSNumber *pLooping = (NSNumber *)[pArgArray objectAtIndex:0];
+	NSNumber *pLooping = static_cast< NSNumber* >( [pArgArray objectAtIndex:0] );
 	if ( !pLooping )
 		return;
 
@@ -891,7 +890,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pArgArray || [pArgArray count] < 1 )
 		return;
 
-	NSNumber *pMute = (NSNumber *)[pArgArray objectAtIndex:0];
+	NSNumber *pMute = static_cast< NSNumber* >( [pArgArray objectAtIndex:0] );
 	if ( !pMute )
 		return;
 
@@ -910,7 +909,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pArgArray || [pArgArray count] < 1 )
 		return;
 
-	NSNumber *pPointer = (NSNumber *)[pArgArray objectAtIndex:0];
+	NSNumber *pPointer = static_cast< NSNumber* >( [pArgArray objectAtIndex:0] );
 	if ( !pPointer )
 		return;
 
@@ -946,7 +945,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pArgArray || [pArgArray count] < 1 )
 		return;
 
-	NSNumber *pTime = (NSNumber *)[pArgArray objectAtIndex:0];
+	NSNumber *pTime = static_cast< NSNumber* >( [pArgArray objectAtIndex:0] );
 	if ( !pTime )
 		return;
 
@@ -982,7 +981,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pArgArray || [pArgArray count] < 1 )
 		return;
 
-	NSNumber *pTime = (NSNumber *)[pArgArray objectAtIndex:0];
+	NSNumber *pTime = static_cast< NSNumber* >( [pArgArray objectAtIndex:0] );
 	if ( !pTime )
 		return;
 
@@ -1009,7 +1008,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		return;
 	}
 
-	NSView *pSuperview = (NSView *)[pArgArray objectAtIndex:0];
+	NSView *pSuperview = static_cast< NSView* >( [pArgArray objectAtIndex:0] );
 	if ( !pSuperview )
 	{
 		[mpMovieView removeFromSuperview];
@@ -1022,7 +1021,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		return;
 	}
 
-	NSValue *pRect = (NSValue *)[pArgArray objectAtIndex:1];
+	NSValue *pRect = static_cast< NSValue* >( [pArgArray objectAtIndex:1] );
 	if ( !pRect )
 		return;
 
@@ -1058,13 +1057,13 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pArgArray || [pArgArray count] < 1 )
 		return;
 
-	NSNumber *pDB = (NSNumber *)[pArgArray objectAtIndex:0];
+	NSNumber *pDB = static_cast< NSNumber* >( [pArgArray objectAtIndex:0] );
 	if ( !pDB )
 		return;
 
 #ifdef USE_QUICKTIME
 	if ( mpMovie && [mpMovie respondsToSelector:@selector(setVolume:)] )
-		[mpMovie setVolume:( (float)( [pDB shortValue] - nAVMediaMinDB ) / (float)( nAVMediaMaxDB - nAVMediaMinDB ) )];
+		[mpMovie setVolume:static_cast< float >( [pDB shortValue] - nAVMediaMinDB ) / static_cast< float >( nAVMediaMaxDB - nAVMediaMinDB ) ];
 #else	// USE_QUICKTIME
 	float fVolume = pow( 10.0f, [pDB shortValue] / 20.0f );
 	if ( fVolume < 0 )
@@ -1083,13 +1082,14 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pArgArray || [pArgArray count] < 1 )
 		return;
 
-	NSNumber *pZoomLevel = (NSNumber *)[pArgArray objectAtIndex:0];
+	NSNumber *pZoomLevel = static_cast< NSNumber* >( [pArgArray objectAtIndex:0] );
 	if ( !pZoomLevel )
 		return;
 
-	int nOldZoomLevel = mnZoomLevel;
+	ZoomLevel nOldZoomLevel = mnZoomLevel;
+	ZoomLevel nNewZoomLevel = static_cast< ZoomLevel >( [pZoomLevel intValue] );
 
-	switch ( [pZoomLevel intValue] )
+	switch ( nNewZoomLevel )
 	{
 		case ZoomLevel_ORIGINAL:
 		case ZoomLevel_FIT_TO_WINDOW:
@@ -1098,7 +1098,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		case ZoomLevel_ZOOM_1_TO_2:
 		case ZoomLevel_ZOOM_2_TO_1:
 		case ZoomLevel_ZOOM_4_TO_1:
-			mnZoomLevel = [pZoomLevel intValue];
+			mnZoomLevel = nNewZoomLevel;
 			break;
 		default:
 			mnZoomLevel = ZoomLevel_FIT_TO_WINDOW_FIXED_ASPECT;
@@ -1129,9 +1129,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 - (short)volumeDB:(AvmediaArgs *)pArgs
 {
 #ifdef USE_QUICKTIME
-	short nRet = (short)( ( mpMovie && [mpMovie respondsToSelector:@selector(volume)] ? [mpMovie volume] : 0 ) * ( nAVMediaMaxDB - nAVMediaMinDB ) ) + nAVMediaMinDB;
+	short nRet = static_cast< short >( ( mpMovie && [mpMovie respondsToSelector:@selector(volume)] ? [mpMovie volume] : 0 ) * ( nAVMediaMaxDB - nAVMediaMinDB ) ) + nAVMediaMinDB;
 #else	// USE_QUICKTIME
-	short nRet = ( mpAVPlayer ? (short)( ( 20.0f * log10f( mpAVPlayer.volume ) ) +0.5f ) : 0 );
+	short nRet = ( mpAVPlayer ? static_cast< short >( ( 20.0f * log10f( mpAVPlayer.volume ) ) +0.5f ) : 0 );
 #endif	// USE_QUICKTIME
 
 	if ( pArgs )
@@ -1157,7 +1157,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( bRet && mpMoviePlayer && [self window] && [[self window] isVisible] )
 	{
 		com::sun::star::awt::FocusEvent aEvt;
-		Application::PostUserEvent( STATIC_LINK( NULL, Window, fireFocusGainedEvent ), new FocusEventData( mpMoviePlayer, aEvt ) );
+		Application::PostUserEvent( LINK( nullptr, Window, fireFocusGainedEvent ), new FocusEventData( mpMoviePlayer, aEvt ) );
 	}
 
 	return bRet;
@@ -1213,7 +1213,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		{
 			if ( [mpQTMovieView isKindOfClass:[NSView class]] )
 			{
-				[(NSView *)mpQTMovieView initWithFrame:NSMakeRect( 0, 0, aFrame.size.width, aFrame.size.height )];
+				[static_cast< NSView* >( mpQTMovieView ) initWithFrame:NSMakeRect( 0, 0, aFrame.size.width, aFrame.size.height )];
 				if ( [mpQTMovieView respondsToSelector:@selector(setControllerVisible:)] )
 					[mpQTMovieView setControllerVisible:NO];
 				if ( [mpQTMovieView respondsToSelector:@selector(setShowsResizeIndicator:)] )
@@ -1319,10 +1319,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	[super resetCursorRects];
 
 	if ( mpCursor )
-	{
 		[self addCursorRect:[self visibleRect] cursor:mpCursor];
-		[mpCursor setOnMouseEntered:YES];
-	}
 }
 
 - (void)setCursor:(NSCursor *)pCursor
@@ -1362,7 +1359,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pMovie || [pMovie isKindOfClass:aQTMovieClass] )
 	{
 		if ( mpQTMovieView && [mpQTMovieView respondsToSelector:@selector(setMovie:)] )
-			[mpQTMovieView setMovie:(QTMovie *)pMovie];
+			[mpQTMovieView setMovie:static_cast< QTMovie* >( pMovie )];
 	}
 }
 
