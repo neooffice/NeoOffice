@@ -26,6 +26,7 @@
 #include <connectivity/DriversConfig.hxx>
 #include <tools/wldcrd.hxx>
 #include <svtools/miscopt.hxx>
+#include <comphelper/sequence.hxx>
 
 using namespace connectivity;
 using namespace utl;
@@ -51,13 +52,12 @@ namespace
         if ( aPropertiesNode.isValid() )
         {
             uno::Sequence< OUString > aStringSeq;
-            static const char s_sValue[] = "/Value";
             const uno::Sequence< OUString > aProperties = aPropertiesNode.getNodeNames();
             const OUString* pPropertiesIter = aProperties.getConstArray();
             const OUString* pPropertiesEnd  = pPropertiesIter + aProperties.getLength();
             for (;pPropertiesIter != pPropertiesEnd ; ++pPropertiesIter)
             {
-                uno::Any aValue = aPropertiesNode.getNodeValue(*pPropertiesIter + s_sValue);
+                uno::Any aValue = aPropertiesNode.getNodeValue(*pPropertiesIter + "/Value");
                 if ( aValue >>= aStringSeq )
                 {
                     lcl_convert(aStringSeq,aValue);
@@ -106,14 +106,14 @@ DriversConfigImpl::DriversConfigImpl()
 {
 }
 
-void DriversConfigImpl::Load(const uno::Reference< uno::XComponentContext >& _rxORB) const
+const TInstalledDrivers& DriversConfigImpl::getInstalledDrivers(const uno::Reference< uno::XComponentContext >& _rxORB) const
 {
     if ( m_aDrivers.empty() )
     {
         if ( !m_aInstalled.isValid() )
         {
-            static const char s_sNodeName[] = "org.openoffice.Office.DataAccess.Drivers/Installed"; ///Installed
-            m_aInstalled = ::utl::OConfigurationTreeRoot::createWithComponentContext(_rxORB, s_sNodeName, -1, ::utl::OConfigurationTreeRoot::CM_READONLY);
+            m_aInstalled = ::utl::OConfigurationTreeRoot::createWithComponentContext(_rxORB,
+                             "org.openoffice.Office.DataAccess.Drivers/Installed", -1, ::utl::OConfigurationTreeRoot::CM_READONLY);
         }
 
         if ( m_aInstalled.isValid() )
@@ -129,11 +129,12 @@ void DriversConfigImpl::Load(const uno::Reference< uno::XComponentContext >& _rx
                 lcl_readURLPatternNode(m_aInstalled,*pPatternIter,aInstalledDriver);
                 if ( !aInstalledDriver.sDriverFactory.isEmpty() &&
                      ( aMiscOptions.IsExperimentalMode() ||
-                       !aInstalledDriver.sDriverFactory.equals("com.sun.star.comp.sdbc.firebird.Driver") ))
+                       aInstalledDriver.sDriverFactory != "com.sun.star.comp.sdbc.firebird.Driver" ))
                     m_aDrivers.insert(TInstalledDrivers::value_type(*pPatternIter,aInstalledDriver));
             }
         } // if ( m_aInstalled.isValid() )
     }
+    return m_aDrivers;
 }
 
 DriversConfig::DriversConfig(const uno::Reference< uno::XComponentContext >& _rxORB)
@@ -221,7 +222,7 @@ const ::comphelper::NamedValueCollection& DriversConfig::getMetaData(const OUStr
 const ::comphelper::NamedValueCollection& DriversConfig::impl_get(const OUString& _sURL,sal_Int32 _nProps) const
 {
     const TInstalledDrivers& rDrivers = m_aNode->getInstalledDrivers(m_xORB);
-    const ::comphelper::NamedValueCollection* pRet = NULL;
+    const ::comphelper::NamedValueCollection* pRet = nullptr;
     OUString sOldPattern;
     TInstalledDrivers::const_iterator aIter = rDrivers.begin();
     TInstalledDrivers::const_iterator aEnd = rDrivers.end();
@@ -245,7 +246,7 @@ const ::comphelper::NamedValueCollection& DriversConfig::impl_get(const OUString
             sOldPattern = aIter->first;
         }
     } // for(;aIter != aEnd;++aIter)
-    if ( pRet == NULL )
+    if ( pRet == nullptr )
     {
         static const ::comphelper::NamedValueCollection s_sEmpty;
         pRet = &s_sEmpty;
@@ -256,15 +257,7 @@ const ::comphelper::NamedValueCollection& DriversConfig::impl_get(const OUString
 uno::Sequence< OUString > DriversConfig::getURLs() const
 {
     const TInstalledDrivers& rDrivers = m_aNode->getInstalledDrivers(m_xORB);
-    uno::Sequence< OUString > aRet(rDrivers.size());
-    OUString* pIter = aRet.getArray();
-    TInstalledDrivers::const_iterator aIter = rDrivers.begin();
-    TInstalledDrivers::const_iterator aEnd = rDrivers.end();
-    for(;aIter != aEnd;++aIter,++pIter)
-    {
-        *pIter = aIter->first;
-    }
-    return aRet;
+    return comphelper::mapKeysToSequence(rDrivers);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
