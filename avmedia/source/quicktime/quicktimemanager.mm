@@ -71,7 +71,7 @@ Reference< XPlayer > SAL_CALL Manager::createPlayer( const OUString& rURL ) thro
 	Player *pPlayer = new Player( mxMgr );
 	if ( pPlayer )
 	{
-		if ( pPlayer->create( aURL.GetMainURL( INetURLObject::DECODE_UNAMBIGUOUS ) ) )
+		if ( pPlayer->create( aURL.GetMainURL( INetURLObject::DecodeMechanism::Unambiguous ) ) )
 			xRet = Reference< XPlayer >( pPlayer );
 		else
 			delete pPlayer;
