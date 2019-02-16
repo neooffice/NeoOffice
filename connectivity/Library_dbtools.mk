@@ -14,7 +14,6 @@
 #   of the Mozilla Public License, v. 2.0.
 #
 #   You should have received a copy of the GNU General Public License
-#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
 $(eval $(call gb_Library_Library,dbtools))
@@ -28,6 +27,7 @@ $(eval $(call gb_Library_set_componentfile,dbtools,connectivity/source/dbtools/d
 
 $(eval $(call gb_Library_set_include,dbtools,\
 	$$(INCLUDE) \
+	-I$(SRCDIR)/connectivity/inc \
 	-I$(SRCDIR)/connectivity/source/inc \
 ))
 
@@ -48,7 +48,6 @@ $(eval $(call gb_Library_use_libraries,dbtools,\
 	tl \
 	comphelper \
 	i18nlangtag \
-	$(gb_UWINAPI) \
 	svt \
 ))
 
@@ -66,7 +65,7 @@ ifeq ($(strip $(GUIBASE)),java)
 # http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64787#64787
 $(eval $(call gb_Library_add_cxxflags,dbtools,\
 	-O0 \
-))
+)
 endif	# GUIBASE == java
 
 $(eval $(call gb_Library_add_exception_objects,dbtools,\
@@ -83,8 +82,6 @@ connectivity/source/parse/sqlflex \
 ))
 
 $(call gb_LexTarget_get_scanner_target,connectivity/source/parse/sqlflex) : T_LEXFLAGS := -i -8 -PSQLyy -L
-
-
 
 $(eval $(call gb_Library_add_exception_objects,dbtools,\
 	connectivity/source/commontools/AutoRetrievingBase \
@@ -144,11 +141,6 @@ $(eval $(call gb_Library_add_exception_objects,dbtools,\
 	connectivity/source/sdbcx/VTable \
 	connectivity/source/sdbcx/VUser \
 	connectivity/source/sdbcx/VView \
-	connectivity/source/simpledbt/charset_s \
-	connectivity/source/simpledbt/dbtfactory \
-	connectivity/source/simpledbt/parsenode_s \
-	connectivity/source/simpledbt/parser_s \
-	connectivity/source/simpledbt/staticdbtools_s \
 ))
 
 # vim: set noet sw=4 ts=4:
