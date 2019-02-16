@@ -35,14 +35,13 @@
 #ifndef USE_JAVA
 #define AVMEDIA_QUICKTIME_FRAMEGRABBER_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.FrameGrabber_Quicktime"
 #define AVMEDIA_QUICKTIME_FRAMEGRABBER_SERVICENAME "com.sun.star.media.FrameGrabber_Quicktime"
-#endif	// USE_JAVA
+#endif	// !USE_JAVA
 
 using namespace ::com::sun::star;
 
+SAL_WNODEPRECATED_DECLARATIONS_PUSH //TODO: 10.9
+
 namespace avmedia { namespace quicktime {
-
-
-// - FrameGrabber -
 
 
 FrameGrabber::FrameGrabber( const uno::Reference< lang::XMultiServiceFactory >& rxMgr ) :
@@ -54,7 +53,6 @@ FrameGrabber::FrameGrabber( const uno::Reference< lang::XMultiServiceFactory >& 
     mbInitialized = true;
     [pool release];
 }
-
 
 
 FrameGrabber::~FrameGrabber()
@@ -70,13 +68,12 @@ FrameGrabber::~FrameGrabber()
 }
 
 
-
 bool FrameGrabber::create( const ::rtl::OUString& rURL )
 {
     bool bRet = false;
     maURL = rURL;
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
-    NSString* aNSStr = [[[NSString alloc] initWithCharacters: rURL.getStr() length: rURL.getLength()]stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding] ;
+    NSString* aNSStr = [[[NSString alloc] initWithCharacters: reinterpret_cast<unichar const *>(rURL.getStr()) length: rURL.getLength()]stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding] ;
     NSURL* aURL = [NSURL URLWithString:aNSStr ];
 
     // create the Movie
@@ -90,13 +87,11 @@ bool FrameGrabber::create( const ::rtl::OUString& rURL )
 
     [pool release];
 
-    return( bRet );
+    return bRet;
 }
 
 
-
 uno::Reference< graphic::XGraphic > SAL_CALL FrameGrabber::grabFrame( double fMediaTime )
-    throw (uno::RuntimeException)
 {
     uno::Reference< graphic::XGraphic > xRet;
 
@@ -104,9 +99,9 @@ uno::Reference< graphic::XGraphic > SAL_CALL FrameGrabber::grabFrame( double fMe
     NSData *pBitmap = [pImage TIFFRepresentation];
     long nSize = [pBitmap length];
     const void* pBitmapData = [pBitmap bytes];
-    SvMemoryStream  aMemStm( (char *)pBitmapData, nSize, STREAM_READ | STREAM_WRITE );
+    SvMemoryStream  aMemStm( const_cast<void *>(pBitmapData), nSize, StreamMode::READ | StreamMode::WRITE );
     Graphic aGraphic;
-    if ( GraphicConverter::Import( aMemStm, aGraphic, CVT_TIF ) == ERRCODE_NONE )
+    if ( GraphicConverter::Import( aMemStm, aGraphic, ConvertDataFormat::TIF ) == ERRCODE_NONE )
     {
         xRet = aGraphic.GetXGraphic();
     }
@@ -115,33 +110,26 @@ uno::Reference< graphic::XGraphic > SAL_CALL FrameGrabber::grabFrame( double fMe
 }
 
 
-
 ::rtl::OUString SAL_CALL FrameGrabber::getImplementationName(  )
-    throw (uno::RuntimeException)
 {
     return ::rtl::OUString( AVMEDIA_QUICKTIME_FRAMEGRABBER_IMPLEMENTATIONNAME );
 }
 
 
-
 sal_Bool SAL_CALL FrameGrabber::supportsService( const ::rtl::OUString& ServiceName )
-    throw (uno::RuntimeException)
 {
     return ( ServiceName == AVMEDIA_QUICKTIME_FRAMEGRABBER_SERVICENAME );
 }
 
 
-
 uno::Sequence< ::rtl::OUString > SAL_CALL FrameGrabber::getSupportedServiceNames(  )
-    throw (uno::RuntimeException)
 {
-    uno::Sequence< ::rtl::OUString > aRet(1);
-    aRet[0] = ::rtl::OUString( AVMEDIA_QUICKTIME_FRAMEGRABBER_SERVICENAME );
-
-    return aRet;
+    return { AVMEDIA_QUICKTIME_FRAMEGRABBER_SERVICENAME };
 }
 
 } // namespace quicktime
 } // namespace avmedia
+
+SAL_WNODEPRECATED_DECLARATIONS_POP
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
