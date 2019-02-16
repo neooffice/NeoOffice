@@ -64,9 +64,9 @@
 
 #include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/i18n/LocaleCalendar.hpp>
+#include <com/sun/star/i18n/LocaleCalendar2.hpp>
 #include <com/sun/star/sheet/XFunctionAccess.hpp>
-#include <boost/scoped_array.hpp>
+#include <memory>
 
 using namespace comphelper;
 using namespace com::sun::star::i18n;
@@ -74,19 +74,19 @@ using namespace com::sun::star::lang;
 using namespace com::sun::star::sheet;
 using namespace com::sun::star::uno;
 
-static Reference< XCalendar3 > getLocaleCalendar( void )
+static Reference< XCalendar4 > const & getLocaleCalendar()
 {
-    static Reference< XCalendar3 > xCalendar;
+    static Reference< XCalendar4 > xCalendar;
     if( !xCalendar.is() )
     {
         Reference< XComponentContext > xContext = getProcessComponentContext();
-        xCalendar = LocaleCalendar::create(xContext);
+        xCalendar = LocaleCalendar2::create(xContext);
     }
 
-    static com::sun::star::lang::Locale aLastLocale;
+    static css::lang::Locale aLastLocale;
     static bool bNeedsInit = true;
 
-    com::sun::star::lang::Locale aLocale = Application::GetSettings().GetLanguageTag().getLocale();
+    css::lang::Locale aLocale = Application::GetSettings().GetLanguageTag().getLocale();
     bool bNeedsReload = false;
     if( bNeedsInit )
     {
@@ -123,23 +123,23 @@ RTLFUNC(CallByName)
     sal_uInt16 nParCount = rPar.Count();
     if ( nParCount < 4 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
     // 1. parameter is object
     SbxBase* pObjVar = static_cast<SbxObject*>(rPar.Get(1)->GetObject());
-    SbxObject* pObj = NULL;
+    SbxObject* pObj = nullptr;
     if( pObjVar )
-        pObj = PTR_CAST(SbxObject,pObjVar);
-    if( !pObj && pObjVar && pObjVar->ISA(SbxVariable) )
+        pObj = dynamic_cast<SbxObject*>( pObjVar );
+    if( !pObj && pObjVar && nullptr != dynamic_cast<const SbxVariable*>( pObjVar) )
     {
         SbxBase* pObjVarObj = static_cast<SbxVariable*>(pObjVar)->GetObject();
-        pObj = PTR_CAST(SbxObject,pObjVarObj);
+        pObj = dynamic_cast<SbxObject*>( pObjVarObj );
     }
     if( !pObj )
     {
-        StarBASIC::Error( SbERR_BAD_PARAMETER );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_PARAMETER );
         return;
     }
 
@@ -150,10 +150,10 @@ RTLFUNC(CallByName)
     sal_Int16 nCallType = rPar.Get(3)->GetInteger();
 
     //SbxObject* pFindObj = NULL;
-    SbxVariable* pFindVar = pObj->Find( aNameStr, SbxCLASS_DONTCARE );
-    if( pFindVar == NULL )
+    SbxVariable* pFindVar = pObj->Find( aNameStr, SbxClassType::DontCare );
+    if( pFindVar == nullptr )
     {
-        StarBASIC::Error( SbERR_PROC_UNDEFINED );
+        StarBASIC::Error( ERRCODE_BASIC_PROC_UNDEFINED );
         return;
     }
 
@@ -174,7 +174,7 @@ RTLFUNC(CallByName)
         {
             if ( nParCount != 5 )
             {
-                StarBASIC::Error( SbERR_BAD_ARGUMENT );
+                StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
                 return;
             }
             SbxVariableRef pValVar = rPar.Get(4);
@@ -189,20 +189,20 @@ RTLFUNC(CallByName)
             {
                 SbxVariableRef rFindVar = pFindVar;
                 SbiInstance* pInst = GetSbData()->pInst;
-                SbiRuntime* pRT = pInst ? pInst->pRun : NULL;
-                if( pRT != NULL )
+                SbiRuntime* pRT = pInst ? pInst->pRun : nullptr;
+                if( pRT != nullptr )
                 {
-                    pRT->StepSET_Impl( pValVar, rFindVar, false );
+                    pRT->StepSET_Impl( pValVar, rFindVar );
                 }
             }
         }
         break;
     case vbMethod:
         {
-            SbMethod* pMeth = PTR_CAST(SbMethod,pFindVar);
-            if( pMeth == NULL )
+            SbMethod* pMeth = dynamic_cast<SbMethod*>( pFindVar );
+            if( pMeth == nullptr )
             {
-                StarBASIC::Error( SbERR_PROC_UNDEFINED );
+                StarBASIC::Error( ERRCODE_BASIC_PROC_UNDEFINED );
                 return;
             }
 
@@ -221,14 +221,14 @@ RTLFUNC(CallByName)
 
             // Call method
             SbxVariableRef refVar = rPar.Get(0);
-            if( xArray.Is() )
-                pMeth->SetParameters( xArray );
-            pMeth->Call( refVar );
-            pMeth->SetParameters( NULL );
+            if( xArray.is() )
+                pMeth->SetParameters( xArray.get() );
+            pMeth->Call( refVar.get() );
+            pMeth->SetParameters( nullptr );
         }
         break;
     default:
-        StarBASIC::Error( SbERR_PROC_UNDEFINED );
+        StarBASIC::Error( ERRCODE_BASIC_PROC_UNDEFINED );
     }
 }
 
@@ -245,7 +245,7 @@ RTLFUNC(CBool) // JSM
     }
     else
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     rPar.Get(0)->PutBool(bVal);
 }
@@ -263,7 +263,7 @@ RTLFUNC(CByte) // JSM
     }
     else
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     rPar.Get(0)->PutByte(nByte);
 }
@@ -281,7 +281,7 @@ RTLFUNC(CCur)
     }
     else
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     rPar.Get(0)->PutCurrency( nCur );
 }
@@ -291,8 +291,8 @@ RTLFUNC(CDec)
     (void)pBasic;
     (void)bWrite;
 
-#ifdef WNT
-    SbxDecimal* pDec = NULL;
+#ifdef _WIN32
+    SbxDecimal* pDec = nullptr;
     if ( rPar.Count() == 2 )
     {
         SbxVariable *pSbxVariable = rPar.Get(1);
@@ -300,12 +300,12 @@ RTLFUNC(CDec)
     }
     else
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     rPar.Get(0)->PutDecimal( pDec );
 #else
     rPar.Get(0)->PutEmpty();
-    StarBASIC::Error(SbERR_NOT_IMPLEMENTED);
+    StarBASIC::Error(ERRCODE_BASIC_NOT_IMPLEMENTED);
 #endif
 }
 
@@ -322,7 +322,7 @@ RTLFUNC(CDate) // JSM
     }
     else
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     rPar.Get(0)->PutDate(nVal);
 }
@@ -341,7 +341,7 @@ RTLFUNC(CDbl)  // JSM
             // #41690
             OUString aScanStr = pSbxVariable->GetOUString();
             SbError Error = SbxValue::ScanNumIntnl( aScanStr, nVal );
-            if( Error != SbxERR_OK )
+            if( Error != ERRCODE_SBX_OK )
             {
                 StarBASIC::Error( Error );
             }
@@ -353,7 +353,7 @@ RTLFUNC(CDbl)  // JSM
     }
     else
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
 
     rPar.Get(0)->PutDouble(nVal);
@@ -372,7 +372,7 @@ RTLFUNC(CInt)  // JSM
     }
     else
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     rPar.Get(0)->PutInteger(nVal);
 }
@@ -390,7 +390,7 @@ RTLFUNC(CLng)  // JSM
     }
     else
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     rPar.Get(0)->PutLong(nVal);
 }
@@ -410,7 +410,7 @@ RTLFUNC(CSng)  // JSM
             double dVal = 0.0;
             OUString aScanStr = pSbxVariable->GetOUString();
             SbError Error = SbxValue::ScanNumIntnl( aScanStr, dVal, /*bSingle=*/true );
-            if( SbxBase::GetError() == SbxERR_OK && Error != SbxERR_OK )
+            if( SbxBase::GetError() == ERRCODE_SBX_OK && Error != ERRCODE_SBX_OK )
             {
                 StarBASIC::Error( Error );
             }
@@ -423,7 +423,7 @@ RTLFUNC(CSng)  // JSM
     }
     else
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     rPar.Get(0)->PutSingle(nVal);
 }
@@ -441,7 +441,7 @@ RTLFUNC(CStr)  // JSM
     }
     else
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     rPar.Get(0)->PutString(aString);
 }
@@ -459,7 +459,7 @@ RTLFUNC(CVar)  // JSM
     }
     else
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     rPar.Get(0)->Put( aVals );
 }
@@ -477,7 +477,7 @@ RTLFUNC(CVErr)
     }
     else
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     rPar.Get(0)->PutErr( nErrCode );
 }
@@ -500,7 +500,7 @@ RTLFUNC(Iif) // JSM
     }
     else
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
 }
 
@@ -511,7 +511,7 @@ RTLFUNC(GetSystemType)
 
     if ( rPar.Count() != 1 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     else
     {
@@ -527,18 +527,18 @@ RTLFUNC(GetGUIType)
 
     if ( rPar.Count() != 1 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     else
     {
         // 17.7.2000 Make simple solution for testtool / fat office
-#if defined (WNT)
+#if   defined(_WIN32)
         rPar.Get(0)->PutInteger( 1 );
-#elif defined UNX
+#elif defined(UNX)
 #ifdef USE_JAVA
-		// Fix bug 2631 by adding the value for Mac OS X that is in the
-		// OOo help for this function
-		rPar.Get(0)->PutInteger( 3 );
+        // Fix bug 2631 by adding the value for Mac OS X that is in the
+        // OOo help for this function
+        rPar.Get(0)->PutInteger( 3 );
 #else	// USE_JAVA
         rPar.Get(0)->PutInteger( 4 );
 #endif	// USE_JAVA
@@ -555,7 +555,7 @@ RTLFUNC(Red)
 
     if ( rPar.Count() != 2 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     else
     {
@@ -573,7 +573,7 @@ RTLFUNC(Green)
 
     if ( rPar.Count() != 2 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     else
     {
@@ -591,7 +591,7 @@ RTLFUNC(Blue)
 
     if ( rPar.Count() != 2 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     else
     {
@@ -611,7 +611,7 @@ RTLFUNC(Switch)
     if( !(nCount & 0x0001 ))
     {
         // number of arguments must be odd
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     sal_uInt16 nCurExpr = 1;
     while( nCurExpr < (nCount-1) )
@@ -632,7 +632,7 @@ void Wait_Impl( bool bDurationBased, SbxArray& rPar )
 {
     if( rPar.Count() != 2 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
     long nWait = 0;
@@ -640,7 +640,7 @@ void Wait_Impl( bool bDurationBased, SbxArray& rPar )
     {
         double dWait = rPar.Get(1)->GetDouble();
         double dNow = Now_Impl();
-         double dSecs = (double)( ( dWait - dNow ) * (double)( 24.0*3600.0) );
+        double dSecs = ( dWait - dNow ) * 24.0 * 3600.0;
         nWait = (long)( dSecs * 1000 ); // wait in thousands of sec
     }
     else
@@ -649,7 +649,7 @@ void Wait_Impl( bool bDurationBased, SbxArray& rPar )
     }
     if( nWait < 0 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
@@ -684,7 +684,7 @@ RTLFUNC(DoEvents)
     (void)pBasic;
     (void)bWrite;
     (void)rPar;
-// don't undstand what upstream are up to
+// don't understand what upstream are up to
 // we already process application events etc. in between
 // basic runtime pcode ( on a timed basis )
     // always return 0
@@ -699,7 +699,7 @@ RTLFUNC(GetGUIVersion)
 
     if ( rPar.Count() != 1 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     else
     {
@@ -715,7 +715,7 @@ RTLFUNC(Choose)
 
     if ( rPar.Count() < 2 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     sal_Int16 nIndex = rPar.Get(1)->GetInteger();
     sal_uInt16 nCount = rPar.Count();
@@ -736,7 +736,7 @@ RTLFUNC(Trim)
 
     if ( rPar.Count() < 2 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     else
     {
@@ -760,7 +760,7 @@ RTLFUNC(TwipsPerPixelX)
 
     sal_Int32 nResult = 0;
     Size aSize( 100,0 );
-    MapMode aMap( MAP_TWIP );
+    MapMode aMap( MapUnit::MapTwip );
     OutputDevice* pDevice = Application::GetDefaultDevice();
     if( pDevice )
     {
@@ -777,7 +777,7 @@ RTLFUNC(TwipsPerPixelY)
 
     sal_Int32 nResult = 0;
     Size aSize( 0,100 );
-    MapMode aMap( MAP_TWIP );
+    MapMode aMap( MapUnit::MapTwip );
     OutputDevice* pDevice = Application::GetDefaultDevice();
     if( pDevice )
     {
@@ -795,22 +795,22 @@ RTLFUNC(FreeLibrary)
 
     if ( rPar.Count() != 2 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     GetSbData()->pInst->GetDllMgr()->FreeDll( rPar.Get(1)->GetOUString() );
 }
 bool IsBaseIndexOne()
 {
-    bool result = false;
+    bool bResult = false;
     if ( GetSbData()->pInst && GetSbData()->pInst->pRun )
     {
         sal_uInt16 res = GetSbData()->pInst->pRun->GetBase();
         if ( res )
         {
-            result = true;
+            bResult = true;
         }
     }
-    return result;
+    return bResult;
 }
 
 RTLFUNC(Array)
@@ -840,30 +840,27 @@ RTLFUNC(Array)
     }
 
     // insert parameters into the array
-    // ATTENTION: Using type sal_uInt16 for loop variable is
-    // mandatory to workaround a problem with the
-    // Solaris Intel compiler optimizer! See i104354
     for( sal_uInt16 i = 0 ; i < nArraySize ; i++ )
     {
         SbxVariable* pVar = rPar.Get(i+1);
-        SbxVariable* pNew = new SbxVariable( *pVar );
-        pNew->SetFlag( SBX_WRITE );
-        short index = static_cast< short >(i);
+        SbxVariable* pNew = new SbxEnsureParentVariable(*pVar);
+        pNew->SetFlag( SbxFlagBits::Write );
+        short aIdx[1];
+        aIdx[0] = static_cast< short >(i);
         if ( bIncIndex )
         {
-            ++index;
+            ++aIdx[0];
         }
-        // coverity[callee_ptr_arith]
-        pArray->Put( pNew, &index );
+        pArray->Put(pNew, aIdx);
     }
 
     // return array
     SbxVariableRef refVar = rPar.Get(0);
     SbxFlagBits nFlags = refVar->GetFlags();
-    refVar->ResetFlag( SBX_FIXED );
+    refVar->ResetFlag( SbxFlagBits::Fixed );
     refVar->PutObject( pArray );
     refVar->SetFlags( nFlags );
-    refVar->SetParameters( NULL );
+    refVar->SetParameters( nullptr );
 }
 
 
@@ -888,7 +885,7 @@ RTLFUNC(DimArray)
             sal_Int32 ub = rPar.Get(i+1)->GetLong();
             if( ub < 0 )
             {
-                StarBASIC::Error( SbERR_OUT_OF_RANGE );
+                StarBASIC::Error( ERRCODE_BASIC_OUT_OF_RANGE );
                 ub = 0;
             }
             pArray->AddDim32( 0, ub );
@@ -900,16 +897,16 @@ RTLFUNC(DimArray)
     }
     SbxVariableRef refVar = rPar.Get(0);
     SbxFlagBits nFlags = refVar->GetFlags();
-    refVar->ResetFlag( SBX_FIXED );
+    refVar->ResetFlag( SbxFlagBits::Fixed );
     refVar->PutObject( pArray );
     refVar->SetFlags( nFlags );
-    refVar->SetParameters( NULL );
+    refVar->SetParameters( nullptr );
 }
 
 /*
  * FindObject and FindPropertyObject make it possible to
  * address objects and properties of the type Object with
- * their name as string-pararmeters at the runtime.
+ * their name as string-parameters at the runtime.
  *
  * Example:
  * MyObj.Prop1.Bla = 5
@@ -937,17 +934,17 @@ RTLFUNC(FindObject)
 
     if ( rPar.Count() < 2 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
     OUString aNameStr = rPar.Get(1)->GetOUString();
 
     SbxBase* pFind =  StarBASIC::FindSBXInCurrentScope( aNameStr );
-    SbxObject* pFindObj = NULL;
+    SbxObject* pFindObj = nullptr;
     if( pFind )
     {
-        pFindObj = PTR_CAST(SbxObject,pFind);
+        pFindObj = dynamic_cast<SbxObject*>( pFind );
     }
     SbxVariableRef refVar = rPar.Get(0);
     refVar->PutObject( pFindObj );
@@ -963,33 +960,33 @@ RTLFUNC(FindPropertyObject)
 
     if ( rPar.Count() < 3 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
     SbxBase* pObjVar = static_cast<SbxObject*>(rPar.Get(1)->GetObject());
-    SbxObject* pObj = NULL;
+    SbxObject* pObj = nullptr;
     if( pObjVar )
     {
-        pObj = PTR_CAST(SbxObject,pObjVar);
+        pObj = dynamic_cast<SbxObject*>( pObjVar );
     }
-    if( !pObj && pObjVar && pObjVar->ISA(SbxVariable) )
+    if( !pObj && pObjVar && nullptr != dynamic_cast<const SbxVariable*>( pObjVar) )
     {
         SbxBase* pObjVarObj = static_cast<SbxVariable*>(pObjVar)->GetObject();
-        pObj = PTR_CAST(SbxObject,pObjVarObj);
+        pObj = dynamic_cast<SbxObject*>( pObjVarObj );
     }
 
     OUString aNameStr = rPar.Get(2)->GetOUString();
 
-    SbxObject* pFindObj = NULL;
+    SbxObject* pFindObj = nullptr;
     if( pObj )
     {
-        SbxVariable* pFindVar = pObj->Find( aNameStr, SbxCLASS_OBJECT );
-        pFindObj = PTR_CAST(SbxObject,pFindVar);
+        SbxVariable* pFindVar = pObj->Find( aNameStr, SbxClassType::Object );
+        pFindObj = dynamic_cast<SbxObject*>( pFindVar );
     }
     else
     {
-        StarBASIC::Error( SbERR_BAD_PARAMETER );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_PARAMETER );
     }
 
     SbxVariableRef refVar = rPar.Get(0);
@@ -997,11 +994,10 @@ RTLFUNC(FindPropertyObject)
 }
 
 
-
 static bool lcl_WriteSbxVariable( const SbxVariable& rVar, SvStream* pStrm,
                                       bool bBinary, short nBlockLen, bool bIsArray )
 {
-    sal_Size nFPos = pStrm->Tell();
+    sal_uInt64 const nFPos = pStrm->Tell();
 
     bool bIsVariant = !rVar.IsFixed();
     SbxDataType eType = rVar.GetType();
@@ -1083,13 +1079,13 @@ static bool lcl_WriteSbxVariable( const SbxVariable& rVar, SvStream* pStrm,
                 // without any length information! without end-identifier!
                 // What does that mean for Unicode?! Choosing conversion to ByteString...
                 OString aByteStr(OUStringToOString(rStr, osl_getThreadTextEncoding()));
-                pStrm->WriteCharPtr( (const char*)aByteStr.getStr() );
+                pStrm->WriteCharPtr( aByteStr.getStr() );
             }
         }
         break;
 
     default:
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return false;
     }
 
@@ -1097,7 +1093,7 @@ static bool lcl_WriteSbxVariable( const SbxVariable& rVar, SvStream* pStrm,
     {
         pStrm->Seek( nFPos + nBlockLen );
     }
-    return pStrm->GetErrorCode() ? sal_False : sal_True;
+    return pStrm->GetErrorCode() == 0;
 }
 
 static bool lcl_ReadSbxVariable( SbxVariable& rVar, SvStream* pStrm,
@@ -1108,7 +1104,7 @@ static bool lcl_ReadSbxVariable( SbxVariable& rVar, SvStream* pStrm,
 
     double aDouble;
 
-    sal_Size nFPos = pStrm->Tell();
+    sal_uInt64 const nFPos = pStrm->Tell();
 
     bool bIsVariant = !rVar.IsFixed();
     SbxDataType eVarType = rVar.GetType();
@@ -1200,7 +1196,7 @@ static bool lcl_ReadSbxVariable( SbxVariable& rVar, SvStream* pStrm,
         break;
 
     default:
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return false;
     }
 
@@ -1208,7 +1204,7 @@ static bool lcl_ReadSbxVariable( SbxVariable& rVar, SvStream* pStrm,
     {
         pStrm->Seek( nFPos + nBlockLen );
     }
-    return pStrm->GetErrorCode() ? sal_False : sal_True;
+    return pStrm->GetErrorCode() == 0;
 }
 
 
@@ -1227,7 +1223,7 @@ static bool lcl_WriteReadSbxArray( SbxDimArray& rArr, SvStream* pStrm,
             lcl_WriteReadSbxArray(rArr, pStrm, bBinary, nCurDim-1, pOtherDims, bWrite);
         else
         {
-            SbxVariable* pVar = rArr.Get( (const short*)pOtherDims );
+            SbxVariable* pVar = rArr.Get( const_cast<const short*>(pOtherDims) );
             bool bRet;
             if( bWrite )
                 bRet = lcl_WriteSbxVariable(*pVar, pStrm, bBinary, 0, true );
@@ -1244,7 +1240,7 @@ void PutGet( SbxArray& rPar, bool bPut )
 {
     if ( rPar.Count() != 4 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
     sal_Int16 nFileNo = rPar.Get(1)->GetInteger();
@@ -1254,16 +1250,16 @@ void PutGet( SbxArray& rPar, bool bPut )
     long nRecordNo = pVar2->GetLong();
     if ( nFileNo < 1 || ( bHasRecordNo && nRecordNo < 1 ) )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
     nRecordNo--;
     SbiIoSystem* pIO = GetSbData()->pInst->GetIoSystem();
     SbiStream* pSbStrm = pIO->GetStream( nFileNo );
 
-    if ( !pSbStrm || !(pSbStrm->GetMode() & (SBSTRM_BINARY | SBSTRM_RANDOM)) )
+    if ( !pSbStrm || !(pSbStrm->GetMode() & (SbiStreamFlags::Binary | SbiStreamFlags::Random)) )
     {
-        StarBASIC::Error( SbERR_BAD_CHANNEL );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_CHANNEL );
         return;
     }
 
@@ -1278,25 +1274,27 @@ void PutGet( SbxArray& rPar, bool bPut )
 
     if( bHasRecordNo )
     {
-        sal_Size nFilePos = bRandom ? (sal_Size)(nBlockLen * nRecordNo) : (sal_Size)nRecordNo;
+        sal_uInt64 const nFilePos = bRandom
+            ? static_cast<sal_uInt64>(nBlockLen * nRecordNo)
+            : static_cast<sal_uInt64>(nRecordNo);
         pStrm->Seek( nFilePos );
     }
 
-    SbxDimArray* pArr = 0;
+    SbxDimArray* pArr = nullptr;
     SbxVariable* pVar = rPar.Get(3);
     if( pVar->GetType() & SbxARRAY )
     {
         SbxBase* pParObj = pVar->GetObject();
-        pArr = PTR_CAST(SbxDimArray,pParObj);
+        pArr = dynamic_cast<SbxDimArray*>( pParObj );
     }
 
     bool bRet;
 
     if( pArr )
     {
-        sal_Size nFPos = pStrm->Tell();
+        sal_uInt64 const nFPos = pStrm->Tell();
         short nDims = pArr->GetDims();
-        boost::scoped_array<short> pDims(new short[ nDims ]);
+        std::unique_ptr<short[]> pDims(new short[ nDims ]);
         bRet = lcl_WriteReadSbxArray(*pArr,pStrm,!bRandom,nDims,pDims.get(),bPut);
         pDims.reset();
         if( nBlockLen )
@@ -1310,7 +1308,7 @@ void PutGet( SbxArray& rPar, bool bPut )
             bRet = lcl_ReadSbxVariable(*pVar, pStrm, !bRandom, nBlockLen, false);
     }
     if( !bRet || pStrm->GetErrorCode() )
-        StarBASIC::Error( SbERR_IO_ERROR );
+        StarBASIC::Error( ERRCODE_BASIC_IO_ERROR );
 }
 
 RTLFUNC(Put)
@@ -1336,7 +1334,7 @@ RTLFUNC(Environ)
 
     if ( rPar.Count() != 2 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
     OUString aResult;
@@ -1360,9 +1358,9 @@ static double GetDialogZoomFactor( bool bX, long nValue )
         Size aRefSize( nValue, nValue );
         Fraction aFracX( 1, 26 );
         Fraction aFracY( 1, 24 );
-        MapMode aMap( MAP_APPFONT, Point(), aFracX, aFracY );
+        MapMode aMap( MapUnit::MapAppFont, Point(), aFracX, aFracY );
         Size aScaledSize = pDevice->LogicToPixel( aRefSize, aMap );
-        aRefSize = pDevice->LogicToPixel( aRefSize, MapMode(MAP_TWIP) );
+        aRefSize = pDevice->LogicToPixel( aRefSize, MapMode(MapUnit::MapTwip) );
 
         double nRef, nScaled;
         if( bX )
@@ -1388,7 +1386,7 @@ RTLFUNC(GetDialogZoomFactorX)
 
     if ( rPar.Count() != 2 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
     rPar.Get(0)->PutDouble( GetDialogZoomFactor( true, rPar.Get(1)->GetLong() ));
@@ -1401,7 +1399,7 @@ RTLFUNC(GetDialogZoomFactorY)
 
     if ( rPar.Count() != 2 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
     rPar.Get(0)->PutDouble( GetDialogZoomFactor( false, rPar.Get(1)->GetLong()));
@@ -1415,7 +1413,7 @@ RTLFUNC(EnableReschedule)
 
     rPar.Get(0)->PutEmpty();
     if ( rPar.Count() != 2 )
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     if( GetSbData()->pInst )
         GetSbData()->pInst->EnableReschedule( rPar.Get(1)->GetBool() );
 }
@@ -1427,7 +1425,7 @@ RTLFUNC(GetSystemTicks)
 
     if ( rPar.Count() != 1 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
     rPar.Get(0)->PutLong( tools::Time::GetSystemTicks() );
@@ -1440,7 +1438,7 @@ RTLFUNC(GetPathSeparator)
 
     if ( rPar.Count() != 1 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
     rPar.Get(0)->PutString( OUString( SAL_PATHDELIMITER ) );
@@ -1458,7 +1456,7 @@ RTLFUNC(ResolvePath)
     }
     else
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
 }
 
@@ -1469,7 +1467,7 @@ RTLFUNC(TypeLen)
 
     if ( rPar.Count() != 2 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     else
     {
@@ -1657,8 +1655,8 @@ RTLFUNC(ConvertToUrl)
     if ( rPar.Count() == 2 )
     {
         OUString aStr = rPar.Get(1)->GetOUString();
-        INetURLObject aURLObj( aStr, INET_PROT_FILE );
-        OUString aFileURL = aURLObj.GetMainURL( INetURLObject::NO_DECODE );
+        INetURLObject aURLObj( aStr, INetProtocol::File );
+        OUString aFileURL = aURLObj.GetMainURL( INetURLObject::DecodeMechanism::NONE );
         if( aFileURL.isEmpty() )
         {
             ::osl::File::getFileURLFromSystemPath( aFileURL, aFileURL );
@@ -1671,7 +1669,7 @@ RTLFUNC(ConvertToUrl)
     }
     else
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
 }
 
@@ -1693,7 +1691,7 @@ RTLFUNC(ConvertFromUrl)
     }
     else
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
 }
 
@@ -1707,13 +1705,6 @@ RTLFUNC(GetDefaultContext)
     RTL_Impl_GetDefaultContext( pBasic, rPar, bWrite );
 }
 
-#ifdef DBG_TRACE_BASIC
-RTLFUNC(TraceCommand)
-{
-    RTL_Impl_TraceCommand( pBasic, rPar, bWrite );
-}
-#endif
-
 RTLFUNC(Join)
 {
     (void)pBasic;
@@ -1722,16 +1713,16 @@ RTLFUNC(Join)
     sal_uInt16 nParCount = rPar.Count();
     if ( nParCount != 3 && nParCount != 2 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
     SbxBase* pParObj = rPar.Get(1)->GetObject();
-    SbxDimArray* pArr = PTR_CAST(SbxDimArray,pParObj);
+    SbxDimArray* pArr = dynamic_cast<SbxDimArray*>( pParObj );
     if( pArr )
     {
         if( pArr->GetDims() != 1 )
         {
-            StarBASIC::Error( SbERR_WRONG_DIMS );   // Syntax Error?!
+            StarBASIC::Error( ERRCODE_BASIC_WRONG_DIMS );   // Syntax Error?!
             return;
         }
         OUString aDelim;
@@ -1746,12 +1737,12 @@ RTLFUNC(Join)
         OUString aRetStr;
         short nLower, nUpper;
         pArr->GetDim( 1, nLower, nUpper );
-        for (short i = nLower; i <= nUpper; ++i)
+        short aIdx[1];
+        for (aIdx[0] = nLower; aIdx[0] <= nUpper; ++aIdx[0])
         {
-            // coverity[callee_ptr_arith]
-            OUString aStr = pArr->Get( &i )->GetOUString();
+            OUString aStr = pArr->Get(aIdx)->GetOUString();
             aRetStr += aStr;
-            if( i != nUpper )
+            if (aIdx[0] != nUpper)
             {
                 aRetStr += aDelim;
             }
@@ -1760,7 +1751,7 @@ RTLFUNC(Join)
     }
     else
     {
-        StarBASIC::Error( SbERR_MUST_HAVE_DIMS );
+        StarBASIC::Error( ERRCODE_BASIC_MUST_HAVE_DIMS );
     }
 }
 
@@ -1773,13 +1764,13 @@ RTLFUNC(Split)
     sal_uInt16 nParCount = rPar.Count();
     if ( nParCount < 2 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
     OUString aExpression = rPar.Get(1)->GetOUString();
     short nArraySize = 0;
-    StringVector vRet;
+    std::vector< OUString > vRet;
     if( !aExpression.isEmpty() )
     {
         OUString aDelim;
@@ -1845,16 +1836,16 @@ RTLFUNC(Split)
     {
         SbxVariableRef xVar = new SbxVariable( SbxVARIANT );
         xVar->PutString( vRet[i] );
-        pArray->Put( (SbxVariable*)xVar, &i );
+        pArray->Put( xVar.get(), &i );
     }
 
     // return array
     SbxVariableRef refVar = rPar.Get(0);
     SbxFlagBits nFlags = refVar->GetFlags();
-    refVar->ResetFlag( SBX_FIXED );
+    refVar->ResetFlag( SbxFlagBits::Fixed );
     refVar->PutObject( pArray );
     refVar->SetFlags( nFlags );
-    refVar->SetParameters( NULL );
+    refVar->SetParameters( nullptr );
 }
 
 // MonthName(month[, abbreviate])
@@ -1866,14 +1857,14 @@ RTLFUNC(MonthName)
     sal_uInt16 nParCount = rPar.Count();
     if( nParCount != 2 && nParCount != 3 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
-    Reference< XCalendar3 > xCalendar = getLocaleCalendar();
+    Reference< XCalendar4 > xCalendar = getLocaleCalendar();
     if( !xCalendar.is() )
     {
-        StarBASIC::Error( SbERR_INTERNAL_ERROR );
+        StarBASIC::Error( ERRCODE_BASIC_INTERNAL_ERROR );
         return;
     }
     Sequence< CalendarItem2 > aMonthSeq = xCalendar->getMonths2();
@@ -1882,7 +1873,7 @@ RTLFUNC(MonthName)
     sal_Int16 nVal = rPar.Get(1)->GetInteger();
     if( nVal < 1 || nVal > nMonthCount )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
@@ -1906,14 +1897,14 @@ RTLFUNC(WeekdayName)
     sal_uInt16 nParCount = rPar.Count();
     if( nParCount < 2 || nParCount > 4 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
-    Reference< XCalendar3 > xCalendar = getLocaleCalendar();
+    Reference< XCalendar4 > xCalendar = getLocaleCalendar();
     if( !xCalendar.is() )
     {
-        StarBASIC::Error( SbERR_INTERNAL_ERROR );
+        StarBASIC::Error( ERRCODE_BASIC_INTERNAL_ERROR );
         return;
     }
 
@@ -1926,7 +1917,7 @@ RTLFUNC(WeekdayName)
         nFirstDay = rPar.Get(3)->GetInteger();
         if( nFirstDay < 0 || nFirstDay > 7 )
         {
-            StarBASIC::Error( SbERR_BAD_ARGUMENT );
+            StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
             return;
         }
     }
@@ -1937,7 +1928,7 @@ RTLFUNC(WeekdayName)
     nDay = 1 + (nDay + nDayCount + nFirstDay - 2) % nDayCount;
     if( nDay < 1 || nDay > nDayCount )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
@@ -1966,7 +1957,7 @@ RTLFUNC(Weekday)
     sal_uInt16 nParCount = rPar.Count();
     if ( nParCount < 2 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
     else
     {
@@ -2030,7 +2021,7 @@ IntervalInfo const * getIntervalInfo( const OUString& rStringCode )
             return &aIntervalTable[i];
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 inline void implGetDayMonthYear( sal_Int16& rnYear, sal_Int16& rnMonth, sal_Int16& rnDay, double dDate )
@@ -2040,17 +2031,26 @@ inline void implGetDayMonthYear( sal_Int16& rnYear, sal_Int16& rnMonth, sal_Int1
     rnYear  = implGetDateYear( dDate );
 }
 
-inline sal_Int16 limitToINT16( sal_Int32 n32 )
+/** Limits a date to valid dates within tools' class Date capabilities.
+
+    @return the year number, truncated if necessary and in that case also
+            rMonth and rDay adjusted.
+ */
+inline sal_Int16 limitDate( sal_Int32 n32Year, sal_Int16& rMonth, sal_Int16& rDay )
 {
-    if( n32 > 32767 )
+    if( n32Year > SAL_MAX_INT16 )
     {
-        n32 = 32767;
+        n32Year = SAL_MAX_INT16;
+        rMonth = 12;
+        rDay = 31;
     }
-    else if( n32 < -32768 )
+    else if( n32Year < SAL_MIN_INT16 )
     {
-        n32 = -32768;
+        n32Year = SAL_MIN_INT16;
+        rMonth = 1;
+        rDay = 1;
     }
-    return (sal_Int16)n32;
+    return (sal_Int16)n32Year;
 }
 
 RTLFUNC(DateAdd)
@@ -2061,7 +2061,7 @@ RTLFUNC(DateAdd)
     sal_uInt16 nParCount = rPar.Count();
     if( nParCount != 4 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
@@ -2069,7 +2069,7 @@ RTLFUNC(DateAdd)
     IntervalInfo const * pInfo = getIntervalInfo( aStringCode );
     if( !pInfo )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
@@ -2095,9 +2095,10 @@ RTLFUNC(DateAdd)
             case INTERVAL_YYYY:
             {
                 sal_Int32 nTargetYear = lNumber + nYear;
-                nTargetYear16 = limitToINT16( nTargetYear );
+                nTargetYear16 = limitDate( nTargetYear, nMonth, nDay );
+                /* TODO: should the result be error if the date was limited? It never was. */
                 nTargetMonth = nMonth;
-                bOk = implDateSerial( nTargetYear16, nTargetMonth, nDay, dNewDate );
+                bOk = implDateSerial( nTargetYear16, nTargetMonth, nDay, false, true, dNewDate );
                 break;
             }
             case INTERVAL_Q:
@@ -2140,8 +2141,9 @@ RTLFUNC(DateAdd)
                     }
                     nTargetYear = (sal_Int32)nYear + nYearsAdd;
                 }
-                nTargetYear16 = limitToINT16( nTargetYear );
-                bOk = implDateSerial( nTargetYear16, nTargetMonth, nDay, dNewDate );
+                nTargetYear16 = limitDate( nTargetYear, nTargetMonth, nDay );
+                /* TODO: should the result be error if the date was limited? It never was. */
+                bOk = implDateSerial( nTargetYear16, nTargetMonth, nDay, false, true, dNewDate );
                 break;
             }
             default: break;
@@ -2152,16 +2154,11 @@ RTLFUNC(DateAdd)
             // Overflow?
             sal_Int16 nNewYear, nNewMonth, nNewDay;
             implGetDayMonthYear( nNewYear, nNewMonth, nNewDay, dNewDate );
-            if( nNewYear > 9999 || nNewYear < 100 )
-            {
-                StarBASIC::Error( SbERR_BAD_ARGUMENT );
-                return;
-            }
             sal_Int16 nCorrectionDay = nDay;
             while( nNewMonth > nTargetMonth )
             {
                 nCorrectionDay--;
-                implDateSerial( nTargetYear16, nTargetMonth, nCorrectionDay, dNewDate );
+                implDateSerial( nTargetYear16, nTargetMonth, nCorrectionDay, false, true, dNewDate );
                 implGetDayMonthYear( nNewYear, nNewMonth, nNewDay, dNewDate );
             }
             dNewDate += dHoursMinutesSeconds;
@@ -2186,7 +2183,7 @@ RTLFUNC(DateDiff)
     sal_uInt16 nParCount = rPar.Count();
     if( nParCount < 4 || nParCount > 6 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
@@ -2194,7 +2191,7 @@ RTLFUNC(DateDiff)
     IntervalInfo const * pInfo = getIntervalInfo( aStringCode );
     if( !pInfo )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
@@ -2254,15 +2251,15 @@ RTLFUNC(DateDiff)
                     nFirstDay = rPar.Get(4)->GetInteger();
                     if( nFirstDay < 0 || nFirstDay > 7 )
                     {
-                        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+                        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
                         return;
                     }
                     if( nFirstDay == 0 )
                     {
-                        Reference< XCalendar3 > xCalendar = getLocaleCalendar();
+                        Reference< XCalendar4 > xCalendar = getLocaleCalendar();
                         if( !xCalendar.is() )
                         {
-                            StarBASIC::Error( SbERR_INTERNAL_ERROR );
+                            StarBASIC::Error( ERRCODE_BASIC_INTERNAL_ERROR );
                             return;
                         }
                         nFirstDay = sal_Int16( xCalendar->getFirstDayOfWeek() + 1 );
@@ -2308,21 +2305,21 @@ RTLFUNC(DateDiff)
 }
 
 double implGetDateOfFirstDayInFirstWeek
-    ( sal_Int16 nYear, sal_Int16& nFirstDay, sal_Int16& nFirstWeek, bool* pbError = NULL )
+    ( sal_Int16 nYear, sal_Int16& nFirstDay, sal_Int16& nFirstWeek, bool* pbError = nullptr )
 {
     SbError nError = 0;
     if( nFirstDay < 0 || nFirstDay > 7 )
-        nError = SbERR_BAD_ARGUMENT;
+        nError = ERRCODE_BASIC_BAD_ARGUMENT;
 
     if( nFirstWeek < 0 || nFirstWeek > 3 )
-        nError = SbERR_BAD_ARGUMENT;
+        nError = ERRCODE_BASIC_BAD_ARGUMENT;
 
-    Reference< XCalendar3 > xCalendar;
+    Reference< XCalendar4 > xCalendar;
     if( nFirstDay == 0 || nFirstWeek == 0 )
     {
         xCalendar = getLocaleCalendar();
         if( !xCalendar.is() )
-            nError = SbERR_BAD_ARGUMENT;
+            nError = ERRCODE_BASIC_BAD_ARGUMENT;
     }
 
     if( nError != 0 )
@@ -2356,7 +2353,7 @@ double implGetDateOfFirstDayInFirstWeek
         nFirstWeekMinDays = 7;      // vbFirstFourDays
 
     double dBaseDate;
-    implDateSerial( nYear, 1, 1, dBaseDate );
+    implDateSerial( nYear, 1, 1, false, false, dBaseDate );
 
     sal_Int16 nWeekDay0101 = implGetWeekDay( dBaseDate );
     sal_Int16 nDayDiff = nWeekDay0101 - nFirstDay;
@@ -2383,7 +2380,7 @@ RTLFUNC(DatePart)
     sal_uInt16 nParCount = rPar.Count();
     if( nParCount < 3 || nParCount > 5 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
@@ -2391,7 +2388,7 @@ RTLFUNC(DatePart)
     IntervalInfo const * pInfo = getIntervalInfo( aStringCode );
     if( !pInfo )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
@@ -2419,7 +2416,7 @@ RTLFUNC(DatePart)
         {
             sal_Int16 nYear = implGetDateYear( dDate );
             double dBaseDate;
-            implDateSerial( nYear, 1, 1, dBaseDate );
+            implDateSerial( nYear, 1, 1, false, false, dBaseDate );
             nRet = 1 + sal_Int32( dDate - dBaseDate );
             break;
         }
@@ -2502,7 +2499,7 @@ RTLFUNC(FormatDateTime)
     sal_uInt16 nParCount = rPar.Count();
     if( nParCount < 2 || nParCount > 3 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
@@ -2513,15 +2510,15 @@ RTLFUNC(FormatDateTime)
         nNamedFormat = rPar.Get(2)->GetInteger();
         if( nNamedFormat < 0 || nNamedFormat > 4 )
         {
-            StarBASIC::Error( SbERR_BAD_ARGUMENT );
+            StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
             return;
         }
     }
 
-    Reference< XCalendar3 > xCalendar = getLocaleCalendar();
+    Reference< XCalendar4 > xCalendar = getLocaleCalendar();
     if( !xCalendar.is() )
     {
-        StarBASIC::Error( SbERR_INTERNAL_ERROR );
+        StarBASIC::Error( ERRCODE_BASIC_INTERNAL_ERROR );
         return;
     }
 
@@ -2547,7 +2544,7 @@ RTLFUNC(FormatDateTime)
         // Dienstag, 21. December 2004
     case 1:
         {
-            SvNumberFormatter* pFormatter = NULL;
+            SvNumberFormatter* pFormatter = nullptr;
             if( GetSbData()->pInst )
             {
                 pFormatter = GetSbData()->pInst->GetNumberFormatter();
@@ -2555,11 +2552,11 @@ RTLFUNC(FormatDateTime)
             else
             {
                 sal_uInt32 n;   // Dummy
-                SbiInstance::PrepareNumberFormatter( pFormatter, n, n, n );
+                pFormatter = SbiInstance::PrepareNumberFormatter( n, n, n );
             }
 
             LanguageType eLangType = Application::GetSettings().GetLanguageTag().getLanguageType();
-            sal_uIntPtr nIndex = pFormatter->GetFormatIndex( NF_DATE_SYSTEM_LONG, eLangType );
+            const sal_uInt32 nIndex = pFormatter->GetFormatIndex( NF_DATE_SYSTEM_LONG, eLangType );
             Color* pCol;
             pFormatter->GetOutputString( dDate, nIndex, aRetStr, &pCol );
 
@@ -2611,7 +2608,7 @@ RTLFUNC(Frac)
     sal_uInt16 nParCount = rPar.Count();
     if( nParCount != 2)
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
@@ -2631,7 +2628,7 @@ RTLFUNC(Round)
     sal_uInt16 nParCount = rPar.Count();
     if( nParCount != 2 && nParCount != 3 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
@@ -2653,7 +2650,7 @@ RTLFUNC(Round)
             numdecimalplaces = rPar.Get(2)->GetInteger();
             if( numdecimalplaces < 0 || numdecimalplaces > 22 )
             {
-                StarBASIC::Error( SbERR_BAD_ARGUMENT );
+                StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
                 return;
             }
         }
@@ -2696,7 +2693,7 @@ void CallFunctionAccessFunction( const Sequence< Any >& aArgs, const OUString& s
     }
     catch(const Exception& )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
     }
 }
 
@@ -2709,17 +2706,17 @@ RTLFUNC(SYD)
 
     if ( nArgCount < 4 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
     // retrieve non-optional params
 
     Sequence< Any > aParams( 4 );
-    aParams[ 0 ] <<= makeAny( rPar.Get(1)->GetDouble() );
-    aParams[ 1 ] <<= makeAny( rPar.Get(2)->GetDouble() );
-    aParams[ 2 ] <<= makeAny( rPar.Get(3)->GetDouble() );
-    aParams[ 3 ] <<= makeAny( rPar.Get(4)->GetDouble() );
+    aParams[ 0 ] <<= rPar.Get(1)->GetDouble();
+    aParams[ 1 ] <<= rPar.Get(2)->GetDouble();
+    aParams[ 2 ] <<= rPar.Get(3)->GetDouble();
+    aParams[ 3 ] <<= rPar.Get(4)->GetDouble();
 
     CallFunctionAccessFunction( aParams, "SYD", rPar.Get( 0 ) );
 }
@@ -2733,16 +2730,16 @@ RTLFUNC(SLN)
 
     if ( nArgCount < 3 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
     // retrieve non-optional params
 
     Sequence< Any > aParams( 3 );
-    aParams[ 0 ] <<= makeAny( rPar.Get(1)->GetDouble() );
-    aParams[ 1 ] <<= makeAny( rPar.Get(2)->GetDouble() );
-    aParams[ 2 ] <<= makeAny( rPar.Get(3)->GetDouble() );
+    aParams[ 0 ] <<= rPar.Get(1)->GetDouble();
+    aParams[ 1 ] <<= rPar.Get(2)->GetDouble();
+    aParams[ 2 ] <<= rPar.Get(3)->GetDouble();
 
     CallFunctionAccessFunction( aParams, "SLN", rPar.Get( 0 ) );
 }
@@ -2756,7 +2753,7 @@ RTLFUNC(Pmt)
 
     if ( nArgCount < 3 || nArgCount > 5 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
     // retrieve non-optional params
@@ -2801,7 +2798,7 @@ RTLFUNC(PPmt)
 
     if ( nArgCount < 4 || nArgCount > 6 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
     // retrieve non-optional params
@@ -2848,7 +2845,7 @@ RTLFUNC(PV)
 
     if ( nArgCount < 3 || nArgCount > 5 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
     // retrieve non-optional params
@@ -2893,21 +2890,21 @@ RTLFUNC(NPV)
 
     if ( nArgCount < 1 || nArgCount > 2 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
     Sequence< Any > aParams( 2 );
-    aParams[ 0 ] <<= makeAny( rPar.Get(1)->GetDouble() );
+    aParams[ 0 ] <<= rPar.Get(1)->GetDouble();
     Any aValues = sbxToUnoValue( rPar.Get(2),
-                getCppuType( (Sequence<double>*)0 ) );
+                cppu::UnoType<Sequence<double>>::get() );
 
     // convert for calc functions
     Sequence< Sequence< double > > sValues(1);
     aValues >>= sValues[ 0 ];
     aValues <<= sValues;
 
-    aParams[ 1 ] <<= aValues;
+    aParams[ 1 ] = aValues;
 
     CallFunctionAccessFunction( aParams, "NPV", rPar.Get( 0 ) );
 }
@@ -2921,7 +2918,7 @@ RTLFUNC(NPer)
 
     if ( nArgCount < 3 || nArgCount > 5 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
     // retrieve non-optional params
@@ -2966,7 +2963,7 @@ RTLFUNC(MIRR)
 
     if ( nArgCount < 3 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
@@ -2974,16 +2971,16 @@ RTLFUNC(MIRR)
 
     Sequence< Any > aParams( 3 );
     Any aValues = sbxToUnoValue( rPar.Get(1),
-                getCppuType( (Sequence<double>*)0 ) );
+                cppu::UnoType<Sequence<double>>::get() );
 
     // convert for calc functions
     Sequence< Sequence< double > > sValues(1);
     aValues >>= sValues[ 0 ];
     aValues <<= sValues;
 
-    aParams[ 0 ] <<= aValues;
-    aParams[ 1 ] <<= makeAny( rPar.Get(2)->GetDouble() );
-    aParams[ 2 ] <<= makeAny( rPar.Get(3)->GetDouble() );
+    aParams[ 0 ] = aValues;
+    aParams[ 1 ] <<= rPar.Get(2)->GetDouble();
+    aParams[ 2 ] <<= rPar.Get(3)->GetDouble();
 
     CallFunctionAccessFunction( aParams, "MIRR", rPar.Get( 0 ) );
 }
@@ -2997,12 +2994,12 @@ RTLFUNC(IRR)
 
     if ( nArgCount < 1 || nArgCount > 2 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
     // retrieve non-optional params
     Any aValues = sbxToUnoValue( rPar.Get(1),
-                getCppuType( (Sequence<double>*)0 ) );
+                cppu::UnoType<Sequence<double>>::get() );
 
     // convert for calc functions
     Sequence< Sequence< double > > sValues(1);
@@ -3019,7 +3016,7 @@ RTLFUNC(IRR)
     }
 
     Sequence< Any > aParams( 2 );
-    aParams[ 0 ] <<= aValues;
+    aParams[ 0 ] = aValues;
     aParams[ 1 ] <<= guess;
 
     CallFunctionAccessFunction( aParams, "IRR", rPar.Get( 0 ) );
@@ -3034,7 +3031,7 @@ RTLFUNC(IPmt)
 
     if ( nArgCount < 4 || nArgCount > 6 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
     // retrieve non-optional params
@@ -3081,7 +3078,7 @@ RTLFUNC(FV)
 
     if ( nArgCount < 3 || nArgCount > 5 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
     // retrieve non-optional params
@@ -3126,7 +3123,7 @@ RTLFUNC(DDB)
 
     if ( nArgCount < 4 || nArgCount > 5 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
     // retrieve non-optional params
@@ -3165,7 +3162,7 @@ RTLFUNC(Rate)
 
     if ( nArgCount < 3 || nArgCount > 6 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
     // retrieve non-optional params
@@ -3222,14 +3219,14 @@ RTLFUNC(StrReverse)
 
     if ( rPar.Count() != 2 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
     SbxVariable *pSbxVariable = rPar.Get(1);
     if( pSbxVariable->IsNull() )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
@@ -3245,7 +3242,7 @@ RTLFUNC(CompatibilityMode)
     bool bEnabled = false;
     sal_uInt16 nCount = rPar.Count();
     if ( nCount != 1 && nCount != 2 )
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
 
     SbiInstance* pInst = GetSbData()->pInst;
     if( pInst )
@@ -3267,7 +3264,7 @@ RTLFUNC(Input)
     // 2 parameters needed
     if ( rPar.Count() < 3 )
     {
-        StarBASIC::Error( SbERR_BAD_ARGUMENT );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
         return;
     }
 
@@ -3276,9 +3273,9 @@ RTLFUNC(Input)
 
     SbiIoSystem* pIosys = GetSbData()->pInst->GetIoSystem();
     SbiStream* pSbStrm = pIosys->GetStream( nFileNumber );
-    if ( !pSbStrm || !(pSbStrm->GetMode() & (SBSTRM_BINARY | SBSTRM_INPUT)) )
+    if ( !pSbStrm || !(pSbStrm->GetMode() & (SbiStreamFlags::Binary | SbiStreamFlags::Input)) )
     {
-        StarBASIC::Error( SbERR_BAD_CHANNEL );
+        StarBASIC::Error( ERRCODE_BASIC_BAD_CHANNEL );
         return;
     }
 
@@ -3301,15 +3298,15 @@ RTLFUNC(Me)
     (void)bWrite;
 
     SbModule* pActiveModule = GetSbData()->pInst->GetActiveModule();
-    SbClassModuleObject* pClassModuleObject = PTR_CAST(SbClassModuleObject,pActiveModule);
+    SbClassModuleObject* pClassModuleObject = dynamic_cast<SbClassModuleObject*>( pActiveModule );
     SbxVariableRef refVar = rPar.Get(0);
-    if( pClassModuleObject == NULL )
+    if( pClassModuleObject == nullptr )
     {
-        SbObjModule* pMod = PTR_CAST(SbObjModule,pActiveModule);
+        SbObjModule* pMod = dynamic_cast<SbObjModule*>( pActiveModule );
         if ( pMod )
             refVar->PutObject( pMod );
         else
-            StarBASIC::Error( SbERR_INVALID_USAGE_OBJECT );
+            StarBASIC::Error( ERRCODE_BASIC_INVALID_USAGE_OBJECT );
     }
     else
         refVar->PutObject( pClassModuleObject );
@@ -3336,17 +3333,17 @@ sal_Int16 implGetWeekDay( double aDate, bool bFirstDayParam, sal_Int16 nFirstDay
         if( nFirstDay < 0 || nFirstDay > 7 )
         {
 #if HAVE_FEATURE_SCRIPTING
-            StarBASIC::Error( SbERR_BAD_ARGUMENT );
+            StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
 #endif
             return 0;
         }
         if( nFirstDay == 0 )
         {
-            Reference< XCalendar3 > xCalendar = getLocaleCalendar();
+            Reference< XCalendar4 > xCalendar = getLocaleCalendar();
             if( !xCalendar.is() )
             {
 #if HAVE_FEATURE_SCRIPTING
-                StarBASIC::Error( SbERR_INTERNAL_ERROR );
+                StarBASIC::Error( ERRCODE_BASIC_INTERNAL_ERROR );
 #endif
                 return 0;
             }
