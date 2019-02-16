@@ -65,7 +65,7 @@ ifeq ($(strip $(GUIBASE)),java)
 # http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64787#64787
 $(eval $(call gb_Library_add_cxxflags,dbtools,\
 	-O0 \
-)
+))
 endif	# GUIBASE == java
 
 $(eval $(call gb_Library_add_exception_objects,dbtools,\
