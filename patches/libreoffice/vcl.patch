@@ -19,7 +19,7 @@
        (aFlavor.MimeType.startsWith("image/png"))
        ? DataFlavorMapper::openOfficeImageToSystemFlavor( mPasteboard )
 -      : mDataFlavorMapper->openOfficeToSystemFlavor(aFlavor, bInternal);
-+      : (NSString *)mDataFlavorMapper->openOfficeToSystemFlavor(aFlavor, bInternal);
++      : static_cast<NSString*>(mDataFlavorMapper->openOfficeToSystemFlavor(aFlavor, bInternal));
    DataProviderPtr_t dp;
  
    if ([sysFormat caseInsensitiveCompare: NSFilenamesPboardType] == NSOrderedSame)
