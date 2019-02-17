@@ -24,6 +24,8 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <config_features.h>
+
 #include <vcl/layout.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
@@ -48,24 +50,20 @@
 #include <svtools/optionsdrawinglayer.hxx>
 
 #include <sfx2/sfxuno.hxx>
-#include <sfx2/sfxcommands.h>
 #include "about.hxx"
 #include <config_buildid.h>
-#include <sfx2/sfxdefs.hxx>
 #include <sfx2/app.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <vcl/bitmap.hxx>
+
+#if HAVE_FEATURE_OPENCL
+#include <opencl/openclwrapper.hxx>
+#endif
 #include <officecfg/Office/Common.hxx>
 
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star;
-
-enum AboutDialogButton
-{
-    CREDITS_BUTTON,
-    WEBSITE_BUTTON
-};
 
 AboutDialog::AboutDialog(vcl::Window* pParent)
     : SfxModalDialog(pParent, "AboutDialog", "cui/ui/aboutdialog.ui")
@@ -79,6 +77,7 @@ AboutDialog::AboutDialog(vcl::Window* pParent)
     get(m_pDescriptionText, "description");
 #endif	// USE_JAVA
     get(m_pCopyrightText, "copyright");
+    get(m_pBuildIdLink, "buildIdLink");
     m_aCopyrightTextStr = m_pCopyrightText->GetText();
 #ifdef USE_JAVA
     get(m_pWebsiteButton, "website")->Hide();
@@ -93,22 +92,21 @@ AboutDialog::AboutDialog(vcl::Window* pParent)
     m_aVersionTextStr = m_pVersion->GetText();
     m_aBasedTextStr = get<FixedText>("libreoffice")->GetText();
     m_aBasedDerivedTextStr = get<FixedText>("derived")->GetText();
-    m_pLocaleStr = get<FixedText>("locale")->GetText();;
+    m_aLocaleStr = get<FixedText>("locale")->GetText();
+    m_buildIdLinkString = m_pBuildIdLink->GetText();
 
     m_pVersion->SetText(GetVersionString());
 
     OUString aCopyrightString = GetCopyrightString();
     m_pCopyrightText->SetText( aCopyrightString );
 
+    SetBuildIdLink();
+
     StyleControls();
 
     SetLogo();
 
 #ifndef USE_JAVA
-    // Allow the button to be identifiable once they are clicked
-    m_pCreditsButton->SetData( reinterpret_cast<void*>(CREDITS_BUTTON) );
-    m_pWebsiteButton->SetData( reinterpret_cast<void*>(WEBSITE_BUTTON) );
-
     // Connect all handlers
     m_pCreditsButton->SetClickHdl( LINK( this, AboutDialog, HandleClick ) );
     m_pWebsiteButton->SetClickHdl( LINK( this, AboutDialog, HandleClick ) );
@@ -117,15 +115,32 @@ AboutDialog::AboutDialog(vcl::Window* pParent)
     get<PushButton>("close")->GrabFocus();
 }
 
-IMPL_LINK( AboutDialog, HandleClick, PushButton*, pButton )
+AboutDialog::~AboutDialog()
+{
+    disposeOnce();
+}
+
+void AboutDialog::dispose()
+{
+    m_pVersion.clear();
+    m_pDescriptionText.clear();
+    m_pCopyrightText.clear();
+    m_pLogoImage.clear();
+    m_pLogoReplacement.clear();
+    m_pCreditsButton.clear();
+    m_pWebsiteButton.clear();
+    m_pBuildIdLink.clear();
+    SfxModalDialog::dispose();
+}
+
+IMPL_LINK( AboutDialog, HandleClick, Button*, pButton, void )
 {
     OUString sURL = "";
 
     // Find which button was pressed and from this, get the URL to be opened
-    AboutDialogButton aDialogButton = static_cast<AboutDialogButton>(reinterpret_cast<sal_Int64>(pButton->GetData()));
-    if ( aDialogButton == CREDITS_BUTTON )
+    if (pButton == m_pCreditsButton)
         sURL = m_aCreditsLinkStr;
-    else if ( aDialogButton == WEBSITE_BUTTON )
+    else if (pButton == m_pWebsiteButton)
     {
         sURL = officecfg::Office::Common::Help::StartCenter::InfoURL::get();
         localizeWebserviceURI(sURL);
@@ -133,24 +148,43 @@ IMPL_LINK( AboutDialog, HandleClick, PushButton*, pButton )
 
     // If the URL is empty, don't do anything
     if ( sURL.isEmpty() )
-        return 1;
+        return;
     try
     {
-        Reference< com::sun::star::system::XSystemShellExecute > xSystemShellExecute(
-            com::sun::star::system::SystemShellExecute::create(::comphelper::getProcessComponentContext() ) );
-        xSystemShellExecute->execute( sURL, OUString(), com::sun::star::system::SystemShellExecuteFlags::URIS_ONLY );
+        Reference< css::system::XSystemShellExecute > xSystemShellExecute(
+            css::system::SystemShellExecute::create(::comphelper::getProcessComponentContext() ) );
+        xSystemShellExecute->execute( sURL, OUString(), css::system::SystemShellExecuteFlags::URIS_ONLY );
     }
     catch (const Exception&)
     {
         Any exc( ::cppu::getCaughtException() );
         OUString msg( ::comphelper::anyToString( exc ) );
         const SolarMutexGuard guard;
-        MessageDialog aErrorBox(NULL, msg);
-        aErrorBox.SetText( GetText() );
-        aErrorBox.Execute();
+        ScopedVclPtrInstance< MessageDialog > aErrorBox(nullptr, msg);
+        aErrorBox->SetText( GetText() );
+        aErrorBox->Execute();
     }
+}
 
-    return 1;
+void AboutDialog::SetBuildIdLink()
+{
+    const OUString buildId = GetBuildId();
+
+    if (IsStringValidGitHash(buildId))
+    {
+        if (m_buildIdLinkString.indexOf("$GITHASH") == -1)
+        {
+            SAL_WARN( "cui.dialogs", "translated git hash string in translations doesn't contain $GITHASH placeholder" );
+            m_buildIdLinkString += " $GITHASH";
+        }
+
+        m_pBuildIdLink->SetText(m_buildIdLinkString.replaceAll("$GITHASH", buildId));
+        m_pBuildIdLink->SetURL("https://hub.libreoffice.org/git-core/" + buildId);
+    }
+    else
+    {
+        m_pBuildIdLink->Hide();
+    }
 }
 
 void AboutDialog::StyleControls()
@@ -162,23 +196,25 @@ void AboutDialog::StyleControls()
     m_pDescriptionText->SetPaintTransparent(true);
     m_pCopyrightText->SetPaintTransparent(true);
 
-    vcl::Font aLabelFont = GetSettings().GetStyleSettings().GetLabelFont();
+    const StyleSettings& rStyleSettings = Application::GetSettings().GetStyleSettings();
+
+    const vcl::Font& aLabelFont = rStyleSettings.GetLabelFont();
     vcl::Font aLargeFont = aLabelFont;
-    aLargeFont.SetSize( Size( 0, aLabelFont.GetSize().Height() * 3 ) );
+    aLargeFont.SetFontSize(Size( 0, aLabelFont.GetFontSize().Height() * 3));
 
     // Logo Replacement Text
-    m_pLogoReplacement->SetControlFont( aLargeFont );
+    m_pLogoReplacement->SetControlFont(aLargeFont);
 
     // Description Text
-    aLargeFont.SetSize( Size( 0, aLabelFont.GetSize().Height() * 1.3 ) );
+    aLargeFont.SetFontSize(Size(0, aLabelFont.GetFontSize().Height() * 1.3));
     m_pDescriptionText->SetControlFont(aLargeFont);
 
     // Version Text
-    aLargeFont.SetSize( Size( 0, aLabelFont.GetSize().Height() * 1.2 ) );
+    aLargeFont.SetFontSize(Size(0, aLabelFont.GetFontSize().Height() * 1.2));
     m_pVersion->SetControlFont(aLargeFont);
 
     // If not in high-contrast mode, hard-code colors
-    if ( !(Application::GetSettings().GetStyleSettings().GetHighContrastMode()) )
+    if (!rStyleSettings.GetHighContrastMode())
     {
         m_pLogoReplacement->SetControlForeground(Color(51, 51, 51));
         m_pVersion->SetControlForeground(Color(102, 102, 102));
@@ -197,8 +233,8 @@ void AboutDialog::SetLogo()
     aDrawOpt.SetAntiAliasing(true);
 
     // load svg logo, specify desired width, scale height isotrophically
-    if( SfxApplication::loadBrandSvg("flat_logo", aLogoBitmap, nWidth) &&
-        !aLogoBitmap.IsEmpty() )
+    if (SfxApplication::loadBrandSvg("flat_logo", aLogoBitmap, nWidth) &&
+        !aLogoBitmap.IsEmpty())
     {
         m_pLogoImage->SetImage(Image(aLogoBitmap));
         m_pLogoReplacement->Hide();
@@ -215,21 +251,23 @@ void AboutDialog::SetLogo()
 void AboutDialog::Resize()
 {
     SfxModalDialog::Resize();
+
     // Load background image
     if (isInitialLayout(this) && !(Application::GetSettings().GetStyleSettings().GetHighContrastMode()))
     {
-        SfxApplication::loadBrandSvg("shell/about", aBackgroundBitmap, GetOutputSizePixel().Width());
+        SfxApplication::loadBrandSvg("shell/about", aBackgroundBitmap, GetSizePixel().Width());
     }
 }
 
-void AboutDialog::Paint( const Rectangle& rRect )
+void AboutDialog::Paint(vcl::RenderContext& rRenderContext, const ::tools::Rectangle& rRect)
 {
-    SetClipRegion(vcl::Region(rRect));
+    rRenderContext.SetClipRegion(vcl::Region(rRect));
 
     Size aSize(GetOutputSizePixel());
     Point aPos(aSize.Width() - aBackgroundBitmap.GetSizePixel().Width(),
-                aSize.Height() - aBackgroundBitmap.GetSizePixel().Height());
-    DrawBitmapEx(aPos, aBackgroundBitmap);
+               aSize.Height() - aBackgroundBitmap.GetSizePixel().Height());
+
+    rRenderContext.DrawBitmapEx(aPos, aBackgroundBitmap);
 }
 
 OUString AboutDialog::GetBuildId()
@@ -255,7 +293,7 @@ OUString AboutDialog::GetBuildId()
 
 OUString AboutDialog::GetLocaleString()
 {
-    OUString pLocaleStr;
+    OUString aLocaleStr;
     rtl_Locale * pLocale;
 
     osl_getProcessLocale( &pLocale );
@@ -263,24 +301,41 @@ OUString AboutDialog::GetLocaleString()
     if ( pLocale && pLocale->Language )
     {
         if (pLocale->Country && rtl_uString_getLength( pLocale->Country) > 0)
-            pLocaleStr = OUString(pLocale->Language) + "_" + OUString(pLocale->Country);
+            aLocaleStr = OUString(pLocale->Language) + "_" + OUString(pLocale->Country);
         else
-            pLocaleStr = OUString(pLocale->Language);
+            aLocaleStr = OUString(pLocale->Language);
         if (pLocale->Variant && rtl_uString_getLength( pLocale->Variant) > 0)
-            pLocaleStr += OUString(pLocale->Variant);
+            aLocaleStr += OUString(pLocale->Variant);
     }
 
-    return pLocaleStr;
+    return aLocaleStr;
+}
+
+bool AboutDialog::IsStringValidGitHash(const OUString& hash)
+{
+    for (int i = 0; i < hash.getLength(); i++)
+    {
+        if (!rtl::isAsciiHexDigit(hash[i]))
+        {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 OUString AboutDialog::GetVersionString()
 {
     OUString sVersion = m_aVersionTextStr;
 
+#ifdef _WIN64
+    sVersion += " (x64)";
+#endif
+
     OUString sBuildId = GetBuildId();
 
 #ifndef USE_JAVA
-    OUString pLocaleStr = GetLocaleString();
+    ?UString aLocaleStr = Application::GetSettings().GetLanguageTag().getBcp47() + " (" + GetLocaleString() + ")";
 #endif	// !USE_JAVA
 
     if (!sBuildId.trim().isEmpty())
@@ -298,24 +353,38 @@ OUString AboutDialog::GetVersionString()
 #endif	// USE_JAVA
     }
 
+    sVersion += "\n" + Application::GetHWOSConfInfo();
+
 #ifndef USE_JAVA
-    if (strlen(EXTRA_BUILDID) > 0)
+    if (EXTRA_BUILDID[0] != '\0')
     {
-        sVersion += "\n";
-        sVersion += EXTRA_BUILDID;
+        sVersion += "\n" EXTRA_BUILDID;
     }
 
-    if (!pLocaleStr.trim().isEmpty())
+    if (!aLocaleStr.trim().isEmpty())
     {
         sVersion += "\n";
-        if (m_pLocaleStr.indexOf("$LOCALE") == -1)
+        if (m_aLocaleStr.indexOf("$LOCALE") == -1)
         {
             SAL_WARN( "cui.dialogs", "translated locale string in translations doesn't contain $LOCALE placeholder" );
-            m_pLocaleStr += " $LOCALE";
+            m_aLocaleStr += " $LOCALE";
         }
-        sVersion += m_pLocaleStr.replaceAll("$LOCALE", pLocaleStr);
+        sVersion += m_aLocaleStr.replaceAll("$LOCALE", aLocaleStr);
     }
 #endif	// !USE_JAVA
+
+#if HAVE_FEATURE_OPENCL
+    OUString aCalcMode = "Calc: "; // Calc calculation mode
+    bool bSWInterp = officecfg::Office::Common::Misc::UseSwInterpreter::get();
+    bool bOpenCL = opencl::GPUEnv::isOpenCLEnabled();
+    if (bOpenCL)
+        aCalcMode += "CL";
+    else if (bSWInterp)
+        aCalcMode += "group";
+    else
+        aCalcMode += "single";
+    sVersion += "; " + aCalcMode;
+#endif
 
     return sVersion;
 }
@@ -323,16 +392,13 @@ OUString AboutDialog::GetVersionString()
 OUString AboutDialog::GetCopyrightString()
 {
 #ifdef USE_JAVA
-    OUString aCopyrightString;
+    OUString aCopyrightString  = m_aCopyrightTextStr + "\n";
 #else	// USE_JAVA
-    OUString aCopyrightString = m_aVendorTextStr;
-    aCopyrightString += "\n";
+    OUString aCopyrightString  = m_aVendorTextStr + "\n"
+                               + m_aCopyrightTextStr + "\n";
 #endif	// USE_JAVA
 
-    aCopyrightString += m_aCopyrightTextStr;
-    aCopyrightString += "\n";
-
-    if (utl::ConfigManager::getProductName().equals("LibreOffice"))
+    if (utl::ConfigManager::getProductName() == "LibreOffice")
         aCopyrightString += m_aBasedTextStr;
     else
         aCopyrightString += m_aBasedDerivedTextStr;
