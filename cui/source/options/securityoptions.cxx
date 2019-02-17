@@ -25,7 +25,6 @@
  */
 
 #include <unotools/securityoptions.hxx>
-#include <svtools/stdctrl.hxx>
 #include <dialmgr.hxx>
 #include <cuires.hrc>
 #include "securityoptions.hxx"
@@ -54,28 +53,28 @@ SecurityOptionsDialog::SecurityOptionsDialog(vcl::Window* pParent, SvtSecurityOp
 {
     DBG_ASSERT( pOptions, "SecurityOptionsDialog::SecurityOptionsDialog(): invalid SvtSecurityOptions" );
     get(m_pSaveOrSendDocsCB, "savesenddocs");
-    enableAndSet(*pOptions, SvtSecurityOptions::E_DOCWARN_SAVEORSEND, *m_pSaveOrSendDocsCB,
+    enableAndSet(*pOptions, SvtSecurityOptions::EOption::DocWarnSaveOrSend, *m_pSaveOrSendDocsCB,
         *get<FixedImage>("locksavesenddocs"));
     get(m_pSignDocsCB, "whensigning");
-    enableAndSet(*pOptions, SvtSecurityOptions::E_DOCWARN_SIGNING, *m_pSignDocsCB,
+    enableAndSet(*pOptions, SvtSecurityOptions::EOption::DocWarnSigning, *m_pSignDocsCB,
         *get<FixedImage>("lockwhensigning"));
     get(m_pPrintDocsCB, "whenprinting");
-    enableAndSet(*pOptions, SvtSecurityOptions::E_DOCWARN_PRINT, *m_pPrintDocsCB,
+    enableAndSet(*pOptions, SvtSecurityOptions::EOption::DocWarnPrint, *m_pPrintDocsCB,
         *get<FixedImage>("lockwhenprinting"));
     get(m_pCreatePdfCB, "whenpdf");
-    enableAndSet(*pOptions, SvtSecurityOptions::E_DOCWARN_CREATEPDF, *m_pCreatePdfCB,
+    enableAndSet(*pOptions, SvtSecurityOptions::EOption::DocWarnCreatePdf, *m_pCreatePdfCB,
         *get<FixedImage>("lockwhenpdf"));
     get(m_pRemovePersInfoCB, "removepersonal");
-    enableAndSet(*pOptions, SvtSecurityOptions::E_DOCWARN_REMOVEPERSONALINFO, *m_pRemovePersInfoCB,
+    enableAndSet(*pOptions, SvtSecurityOptions::EOption::DocWarnRemovePersonalInfo, *m_pRemovePersInfoCB,
         *get<FixedImage>("lockremovepersonal"));
     get(m_pRecommPasswdCB, "password");
-    enableAndSet(*pOptions, SvtSecurityOptions::E_DOCWARN_RECOMMENDPASSWORD, *m_pRecommPasswdCB,
+    enableAndSet(*pOptions, SvtSecurityOptions::EOption::DocWarnRecommendPassword, *m_pRecommPasswdCB,
         *get<FixedImage>("lockpassword"));
     get(m_pCtrlHyperlinkCB, "ctrlclick");
-    enableAndSet(*pOptions, SvtSecurityOptions::E_CTRLCLICK_HYPERLINK, *m_pCtrlHyperlinkCB,
+    enableAndSet(*pOptions, SvtSecurityOptions::EOption::CtrlClickHyperlink, *m_pCtrlHyperlinkCB,
         *get<FixedImage>("lockctrlclick"));
     get(m_pBlockUntrustedRefererLinksCB, "blockuntrusted");
-    enableAndSet(*pOptions, SvtSecurityOptions::E_BLOCKUNTRUSTEDREFERERLINKS, *m_pBlockUntrustedRefererLinksCB,
+    enableAndSet(*pOptions, SvtSecurityOptions::EOption::BlockUntrustedRefererLinks, *m_pBlockUntrustedRefererLinksCB,
         *get<FixedImage>("lockblockuntrusted"));
 
 #if defined USE_JAVA && defined MACOSX
@@ -88,10 +87,23 @@ SecurityOptionsDialog::SecurityOptionsDialog(vcl::Window* pParent, SvtSecurityOp
 
 SecurityOptionsDialog::~SecurityOptionsDialog()
 {
+    disposeOnce();
 }
 
+void SecurityOptionsDialog::dispose()
+{
+    m_pSaveOrSendDocsCB.clear();
+    m_pSignDocsCB.clear();
+    m_pPrintDocsCB.clear();
+    m_pCreatePdfCB.clear();
+    m_pRemovePersInfoCB.clear();
+    m_pRecommPasswdCB.clear();
+    m_pCtrlHyperlinkCB.clear();
+    m_pBlockUntrustedRefererLinksCB.clear();
+    ModalDialog::dispose();
+}
 
-}   // namespace svx
+}
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
