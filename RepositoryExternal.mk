@@ -4078,7 +4078,7 @@ endif
 
 define gb_LinkTarget__use_clew
 $(call gb_LinkTarget_set_include,$(1), \
-    -I$(SRCDIR)/external/clew/source/include \
+	-I$(if $(filter $(PRODUCT_BUILD_TYPE),java),$(LIBO_SRCDIR),$(SRCDIR))/external/clew/source/include \
     $$(INCLUDE) \
 )
 $(call gb_LinkTarget_use_libraries,$(1),clew)
