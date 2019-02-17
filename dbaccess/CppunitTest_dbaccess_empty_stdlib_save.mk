@@ -61,11 +61,6 @@ $(eval $(call gb_CppunitTest_use_libraries,dbaccess_empty_stdlib_save, \
     vbahelper \
     vcl \
     xo \
-	$(gb_UWINAPI) \
-))
-
-$(eval $(call gb_CppunitTest_set_include,dbaccess_empty_stdlib_save,\
-    $$(INCLUDE) \
 ))
 
 $(eval $(call gb_CppunitTest_use_api,dbaccess_empty_stdlib_save,\
@@ -107,12 +102,11 @@ $(eval $(call gb_CppunitTest_use_components,dbaccess_empty_stdlib_save,\
     unotools/util/utl \
     unoxml/source/rdf/unordf \
     unoxml/source/service/unoxml \
+    uui/util/uui \
     xmloff/util/xo \
 ))
 
 $(eval $(call gb_CppunitTest_use_configuration,dbaccess_empty_stdlib_save))
-
-$(eval $(call gb_CppunitTest_use_filter_configuration,dbaccess_empty_stdlib_save))
 
 $(call gb_CppunitTest_get_target,dbaccess_empty_stdlib_save) : $(WORKDIR)/CppunitTest/testEmptyStdlibSave.odb
 $(WORKDIR)/CppunitTest/testEmptyStdlibSave.odb : $(SRCDIR)/dbaccess/qa/extras/testdocuments/testDialogSave.odb

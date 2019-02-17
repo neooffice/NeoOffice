@@ -61,11 +61,6 @@ $(eval $(call gb_CppunitTest_use_libraries,dbaccess_nolib_save, \
     vbahelper \
     vcl \
     xo \
-	$(gb_UWINAPI) \
-))
-
-$(eval $(call gb_CppunitTest_set_include,dbaccess_nolib_save,\
-    $$(INCLUDE) \
 ))
 
 $(eval $(call gb_CppunitTest_use_api,dbaccess_nolib_save,\
@@ -107,12 +102,11 @@ $(eval $(call gb_CppunitTest_use_components,dbaccess_nolib_save,\
     unotools/util/utl \
     unoxml/source/rdf/unordf \
     unoxml/source/service/unoxml \
+    uui/util/uui \
     xmloff/util/xo \
 ))
 
 $(eval $(call gb_CppunitTest_use_configuration,dbaccess_nolib_save))
-
-$(eval $(call gb_CppunitTest_use_filter_configuration,dbaccess_nolib_save))
 
 $(call gb_CppunitTest_get_target,dbaccess_nolib_save) : $(WORKDIR)/CppunitTest/testNolibSave.odb
 $(WORKDIR)/CppunitTest/testNolibSave.odb : $(SRCDIR)/dbaccess/qa/extras/testdocuments/testDialogSave.odb
