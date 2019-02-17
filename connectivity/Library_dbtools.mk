@@ -14,6 +14,7 @@
 #   of the Mozilla Public License, v. 2.0.
 #
 #   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
 $(eval $(call gb_Library_Library,dbtools))
