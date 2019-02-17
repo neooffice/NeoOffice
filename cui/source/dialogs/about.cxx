@@ -335,7 +335,7 @@ OUString AboutDialog::GetVersionString()
     OUString sBuildId = GetBuildId();
 
 #ifndef USE_JAVA
-    ?UString aLocaleStr = Application::GetSettings().GetLanguageTag().getBcp47() + " (" + GetLocaleString() + ")";
+    OUString aLocaleStr = Application::GetSettings().GetLanguageTag().getBcp47() + " (" + GetLocaleString() + ")";
 #endif	// !USE_JAVA
 
     if (!sBuildId.trim().isEmpty())
