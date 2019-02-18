@@ -37,7 +37,6 @@
 #include "dsitems.hxx"
 #include "dsnItem.hxx"
 #include "dbaccess_helpid.hrc"
-#include "localresaccess.hxx"
 #include <vcl/msgbox.hxx>
 #include <vcl/mnemonic.hxx>
 #include <svl/cjkoptions.hxx>
@@ -58,6 +57,7 @@
 #include <unotools/ucbhelper.hxx>
 #include <ucbhelper/commandenvironment.hxx>
 #include "finteraction.hxx"
+#include "moduledbu.hxx"
 #include <unotools/pathoptions.hxx>
 #include <svtools/roadmapwizard.hxx>
 #include "TextConnectionHelper.hxx"
@@ -69,7 +69,7 @@
 
 typedef sal_Bool Application_canUseJava_Type();
 
-static Application_canUseJava_Type *pApplication_canUseJava = NULL;
+static Application_canUseJava_Type *pApplication_canUseJava = nullptr;
 
 #endif	// USE_JAVA && MACOSX
 
@@ -82,15 +82,15 @@ using namespace ::com::sun::star;
     static sal_Bool lcl_canUseJava()
     {
         if ( !pApplication_canUseJava )
-            pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+            pApplication_canUseJava = reinterpret_cast< Application_canUseJava_Type* >( dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" ) );
         return ( pApplication_canUseJava && pApplication_canUseJava() );
     }
 
 #endif	// USE_JAVA && MACOSX
 
-    OGenericAdministrationPage* OTextConnectionPageSetup::CreateTextTabPage( vcl::Window* pParent, const SfxItemSet& _rAttrSet )
+    VclPtr<OGenericAdministrationPage> OTextConnectionPageSetup::CreateTextTabPage( vcl::Window* pParent, const SfxItemSet& _rAttrSet )
     {
-        return ( new OTextConnectionPageSetup( pParent, _rAttrSet ) );
+        return VclPtr<OTextConnectionPageSetup>::Create( pParent, _rAttrSet );
     }
 
     // OTextConnectionPageSetup
@@ -98,21 +98,25 @@ using namespace ::com::sun::star;
         :OConnectionTabPageSetup(pParent, "DBWizTextPage", "dbaccess/ui/dbwiztextpage.ui", _rCoreAttrs, STR_TEXT_HELPTEXT, STR_TEXT_HEADERTEXT, STR_TEXT_PATH_OR_FILE)
     {
 
-        m_pTextConnectionHelper = new OTextConnectionHelper( get<VclVBox>("TextPageContainer"), TC_EXTENSION | TC_SEPARATORS );
+        m_pTextConnectionHelper = VclPtr<OTextConnectionHelper>::Create( get<VclVBox>("TextPageContainer"), TC_EXTENSION | TC_SEPARATORS );
         m_pTextConnectionHelper->SetClickHandler(LINK( this, OTextConnectionPageSetup, ImplGetExtensionHdl ) );
     }
 
     OTextConnectionPageSetup::~OTextConnectionPageSetup()
     {
-        DELETEZ(m_pTextConnectionHelper);
-
+        disposeOnce();
     }
 
-    IMPL_LINK(OTextConnectionPageSetup, ImplGetExtensionHdl, OTextConnectionHelper*, /*_pTextConnectionHelper*/)
+    void OTextConnectionPageSetup::dispose()
+    {
+        m_pTextConnectionHelper.disposeAndClear();
+        OConnectionTabPageSetup::dispose();
+    }
+
+    IMPL_LINK_NOARG(OTextConnectionPageSetup, ImplGetExtensionHdl, OTextConnectionHelper*, void)
     {
         SetRoadmapStateValue(!m_pTextConnectionHelper->GetExtension().isEmpty() && OConnectionTabPageSetup::checkTestConnection());
         callModifiedHdl();
-        return sal_True;
     }
 
     bool OTextConnectionPageSetup::checkTestConnection()
@@ -122,12 +126,12 @@ using namespace ::com::sun::star;
         return bDoEnable;
     }
 
-    void OTextConnectionPageSetup::fillControls(::std::vector< ISaveValueWrapper* >& _rControlList)
+    void OTextConnectionPageSetup::fillControls(std::vector< ISaveValueWrapper* >& _rControlList)
     {
         OConnectionTabPageSetup::fillControls(_rControlList);
         m_pTextConnectionHelper->fillControls(_rControlList);
     }
-    void OTextConnectionPageSetup::fillWindows(::std::vector< ISaveValueWrapper* >& _rControlList)
+    void OTextConnectionPageSetup::fillWindows(std::vector< ISaveValueWrapper* >& _rControlList)
     {
         OConnectionTabPageSetup::fillWindows(_rControlList);
         m_pTextConnectionHelper->fillWindows(_rControlList);
@@ -152,9 +156,9 @@ using namespace ::com::sun::star;
         return m_pTextConnectionHelper->prepareLeave();
     }
 
-    OGenericAdministrationPage* OLDAPConnectionPageSetup::CreateLDAPTabPage( vcl::Window* pParent, const SfxItemSet& _rAttrSet )
+    VclPtr<OGenericAdministrationPage> OLDAPConnectionPageSetup::CreateLDAPTabPage( vcl::Window* pParent, const SfxItemSet& _rAttrSet )
     {
-        return ( new OLDAPConnectionPageSetup( pParent, _rAttrSet ) );
+        return VclPtr<OLDAPConnectionPageSetup>::Create( pParent, _rAttrSet );
     }
 
     // OLDAPPageSetup
@@ -172,11 +176,30 @@ using namespace ::com::sun::star;
         get(m_pFTDefaultPortNumber, "portNumDefLabel");
         get(m_pCBUseSSL, "useSSLCheckbutton");
 
-        m_pETHostServer->SetModifyHdl(getControlModifiedLink());
-        m_pETBaseDN->SetModifyHdl(getControlModifiedLink());
-        m_pNFPortNumber->SetModifyHdl(getControlModifiedLink());
-        m_pCBUseSSL->SetToggleHdl(getControlModifiedLink());
+        m_pETHostServer->SetModifyHdl(LINK(this, OGenericAdministrationPage, OnControlEditModifyHdl));
+        m_pETBaseDN->SetModifyHdl(LINK(this, OGenericAdministrationPage, OnControlEditModifyHdl));
+        m_pNFPortNumber->SetModifyHdl(LINK(this, OGenericAdministrationPage, OnControlEditModifyHdl));
+        m_pCBUseSSL->SetToggleHdl( LINK(this, OGenericAdministrationPage, ControlModifiedCheckBoxHdl) );
         SetRoadmapStateValue(false);
+    }
+
+    OLDAPConnectionPageSetup::~OLDAPConnectionPageSetup()
+    {
+        disposeOnce();
+    }
+
+    void OLDAPConnectionPageSetup::dispose()
+    {
+        m_pFTHelpText.clear();
+        m_pFTHostServer.clear();
+        m_pETHostServer.clear();
+        m_pFTBaseDN.clear();
+        m_pETBaseDN.clear();
+        m_pFTPortNumber.clear();
+        m_pNFPortNumber.clear();
+        m_pFTDefaultPortNumber.clear();
+        m_pCBUseSSL.clear();
+        OGenericAdministrationPage::dispose();
     }
 
     bool OLDAPConnectionPageSetup::FillItemSet( SfxItemSet* _rSet )
@@ -187,15 +210,14 @@ using namespace ::com::sun::star;
 
         if ( m_pETHostServer->IsValueChangedFromSaved() )
         {
-            const DbuTypeCollectionItem* pCollectionItem = PTR_CAST(DbuTypeCollectionItem, _rSet->GetItem(DSID_TYPECOLLECTION));
-            ::dbaccess::ODsnTypeCollection* pCollection = NULL;
+            const DbuTypeCollectionItem* pCollectionItem = dynamic_cast<const DbuTypeCollectionItem*>( _rSet->GetItem(DSID_TYPECOLLECTION) );
+            ::dbaccess::ODsnTypeCollection* pCollection = nullptr;
             if (pCollectionItem)
                 pCollection = pCollectionItem->getCollection();
             OSL_ENSURE(pCollection, "OLDAPConnectionPageSetup::FillItemSet : really need a DSN type collection !");
             if (pCollection)
             {
-                OUString sUrl = pCollection->getPrefix( OUString("sdbc:address:ldap:"));
-                sUrl += m_pETHostServer->GetText();
+                OUString sUrl = pCollection->getPrefix( "sdbc:address:ldap:") + m_pETHostServer->GetText();
                 _rSet->Put(SfxStringItem(DSID_CONNECTURL, sUrl));
                 bChangedSomething = true;
             }
@@ -204,14 +226,14 @@ using namespace ::com::sun::star;
         fillBool(*_rSet,m_pCBUseSSL,DSID_CONN_LDAP_USESSL,bChangedSomething);
         return bChangedSomething;
     }
-    void OLDAPConnectionPageSetup::fillControls(::std::vector< ISaveValueWrapper* >& _rControlList)
+    void OLDAPConnectionPageSetup::fillControls(std::vector< ISaveValueWrapper* >& _rControlList)
     {
         _rControlList.push_back(new OSaveValueWrapper<Edit>(m_pETHostServer));
         _rControlList.push_back(new OSaveValueWrapper<Edit>(m_pETBaseDN));
         _rControlList.push_back(new OSaveValueWrapper<NumericField>(m_pNFPortNumber));
         _rControlList.push_back(new OSaveValueWrapper<CheckBox>(m_pCBUseSSL));
     }
-    void OLDAPConnectionPageSetup::fillWindows(::std::vector< ISaveValueWrapper* >& _rControlList)
+    void OLDAPConnectionPageSetup::fillWindows(std::vector< ISaveValueWrapper* >& _rControlList)
     {
         _rControlList.push_back(new ODisableWrapper<FixedText>(m_pFTHelpText));
         _rControlList.push_back(new ODisableWrapper<FixedText>(m_pFTHostServer));
@@ -225,8 +247,8 @@ using namespace ::com::sun::star;
         bool bValid, bReadonly;
         getFlags(_rSet, bValid, bReadonly);
 
-        SFX_ITEMSET_GET(_rSet, pBaseDN, SfxStringItem, DSID_CONN_LDAP_BASEDN, true);
-        SFX_ITEMSET_GET(_rSet, pPortNumber, SfxInt32Item, DSID_CONN_LDAP_PORTNUMBER, true);
+        const SfxStringItem* pBaseDN = _rSet.GetItem<SfxStringItem>(DSID_CONN_LDAP_BASEDN);
+        const SfxInt32Item* pPortNumber = _rSet.GetItem<SfxInt32Item>(DSID_CONN_LDAP_PORTNUMBER);
 
         if ( bValid )
         {
@@ -237,17 +259,16 @@ using namespace ::com::sun::star;
         callModifiedHdl();
     }
 
-    IMPL_LINK(OLDAPConnectionPageSetup, OnEditModified, Edit*, /*_pEdit*/)
+    void OLDAPConnectionPageSetup::callModifiedHdl(void *)
     {
         bool bRoadmapState = ((!m_pETHostServer->GetText().isEmpty() ) && ( !m_pETBaseDN->GetText().isEmpty() ) && (!m_pFTPortNumber->GetText().isEmpty() ));
         SetRoadmapStateValue(bRoadmapState);
-        callModifiedHdl();
-        return 0L;
+        OGenericAdministrationPage::callModifiedHdl();
     }
 
-    OMySQLIntroPageSetup* OMySQLIntroPageSetup::CreateMySQLIntroTabPage( vcl::Window* _pParent, const SfxItemSet& _rAttrSet )
+    VclPtr<OMySQLIntroPageSetup> OMySQLIntroPageSetup::CreateMySQLIntroTabPage( vcl::Window* _pParent, const SfxItemSet& _rAttrSet )
     {
-        return ( new OMySQLIntroPageSetup( _pParent, _rAttrSet) );
+        return VclPtr<OMySQLIntroPageSetup>::Create( _pParent, _rAttrSet);
     }
 
 
@@ -262,7 +283,7 @@ using namespace ::com::sun::star;
 #if defined USE_JAVA && defined MACOSX
         if (!lcl_canUseJava())
         {
-   		    m_pJDBCDatabase->Check(sal_False);
+   		    m_pJDBCDatabase->Check(false);
    		    m_pJDBCDatabase->Hide();
         }
         else
@@ -271,29 +292,36 @@ using namespace ::com::sun::star;
         m_pNATIVEDatabase->SetToggleHdl(LINK(this, OMySQLIntroPageSetup, OnSetupModeSelected));
     }
 
-    IMPL_LINK(OMySQLIntroPageSetup, OnSetupModeSelected, RadioButton*, /*_pBox*/)
-    {
-        maClickHdl.Call( this );
-        return long(true);
-    }
-
     OMySQLIntroPageSetup::~OMySQLIntroPageSetup()
     {
+        disposeOnce();
+    }
 
+    void OMySQLIntroPageSetup::dispose()
+    {
+        m_pODBCDatabase.clear();
+        m_pJDBCDatabase.clear();
+        m_pNATIVEDatabase.clear();
+        OGenericAdministrationPage::dispose();
+    }
+
+    IMPL_LINK_NOARG(OMySQLIntroPageSetup, OnSetupModeSelected, RadioButton&, void)
+    {
+        maClickHdl.Call( this );
     }
 
     void OMySQLIntroPageSetup::implInitControls(const SfxItemSet& _rSet, bool /*_bSaveValue*/)
     {
         // show the "Connect directly" option only if the driver is installed
-        const DbuTypeCollectionItem* pCollectionItem = PTR_CAST(DbuTypeCollectionItem, _rSet.GetItem(DSID_TYPECOLLECTION));
-        bool bHasMySQLNative = ( pCollectionItem != NULL ) && pCollectionItem->getCollection()->hasDriver( "sdbc:mysqlc:" );
+        const DbuTypeCollectionItem* pCollectionItem = dynamic_cast<const DbuTypeCollectionItem*>( _rSet.GetItem(DSID_TYPECOLLECTION) );
+        bool bHasMySQLNative = ( pCollectionItem != nullptr ) && pCollectionItem->getCollection()->hasDriver( "sdbc:mysqlc:" );
         if ( bHasMySQLNative )
             m_pNATIVEDatabase->Show();
 
 #if defined USE_JAVA && defined MACOSX
         sal_Bool bCanUseJava = lcl_canUseJava();
         if ( !bCanUseJava )
-            m_pJDBCDatabase->Check(sal_False);
+            m_pJDBCDatabase->Check(false);
 #endif	// USE_JAVA && MACOSX
 
         // if any of the options is checked, then there's nothing to do
@@ -311,11 +339,11 @@ using namespace ::com::sun::star;
             m_pJDBCDatabase->Check();
     }
 
-    void OMySQLIntroPageSetup::fillControls(::std::vector< ISaveValueWrapper* >& /*_rControlList*/)
+    void OMySQLIntroPageSetup::fillControls(std::vector< ISaveValueWrapper* >& /*_rControlList*/)
     {
     }
 
-    void OMySQLIntroPageSetup::fillWindows(::std::vector< ISaveValueWrapper* >& /*_rControlList*/)
+    void OMySQLIntroPageSetup::fillWindows(std::vector< ISaveValueWrapper* >& /*_rControlList*/)
     {
     }
 
@@ -342,54 +370,61 @@ using namespace ::com::sun::star;
     // MySQLNativeSetupPage
     MySQLNativeSetupPage::MySQLNativeSetupPage( vcl::Window* _pParent, const SfxItemSet& _rCoreAttrs )
         :OGenericAdministrationPage( _pParent, "DBWizMysqlNativePage", "dbaccess/ui/dbwizmysqlnativepage.ui", _rCoreAttrs )
-        ,m_aMySQLSettings       ( *get<VclVBox>("MySQLSettingsContainer"), getControlModifiedLink() )
+        ,m_aMySQLSettings       ( VclPtr<MySQLNativeSettings>::Create(*get<VclVBox>("MySQLSettingsContainer"), LINK(this, OGenericAdministrationPage, OnControlModified)) )
     {
         get(m_pHelpText, "helptext");
-        m_aMySQLSettings.Show();
+        m_aMySQLSettings->Show();
 
         SetRoadmapStateValue(false);
     }
 
-    OGenericAdministrationPage* MySQLNativeSetupPage::Create( vcl::Window* pParent, const SfxItemSet& _rAttrSet )
+    MySQLNativeSetupPage::~MySQLNativeSetupPage()
     {
-        return new MySQLNativeSetupPage( pParent, _rAttrSet );
+        disposeOnce();
     }
 
-    void MySQLNativeSetupPage::fillControls( ::std::vector< ISaveValueWrapper* >& _rControlList )
+    void MySQLNativeSetupPage::dispose()
     {
-        m_aMySQLSettings.fillControls( _rControlList );
+        m_aMySQLSettings.disposeAndClear();
+        m_pHelpText.clear();
+        OGenericAdministrationPage::dispose();
     }
 
-    void MySQLNativeSetupPage::fillWindows( ::std::vector< ISaveValueWrapper* >& _rControlList )
+    VclPtr<OGenericAdministrationPage> MySQLNativeSetupPage::Create( vcl::Window* pParent, const SfxItemSet& _rAttrSet )
+    {
+        return VclPtr<MySQLNativeSetupPage>::Create( pParent, _rAttrSet );
+    }
+
+    void MySQLNativeSetupPage::fillControls( std::vector< ISaveValueWrapper* >& _rControlList )
+    {
+        m_aMySQLSettings->fillControls( _rControlList );
+    }
+
+    void MySQLNativeSetupPage::fillWindows( std::vector< ISaveValueWrapper* >& _rControlList )
     {
         _rControlList.push_back( new ODisableWrapper< FixedText >( m_pHelpText ) );
-        m_aMySQLSettings.fillWindows( _rControlList );
+        m_aMySQLSettings->fillWindows( _rControlList );
     }
 
     bool MySQLNativeSetupPage::FillItemSet( SfxItemSet* _rSet )
     {
-        return m_aMySQLSettings.FillItemSet( _rSet );
+        return m_aMySQLSettings->FillItemSet( _rSet );
     }
 
     void MySQLNativeSetupPage::implInitControls( const SfxItemSet& _rSet, bool _bSaveValue )
     {
-        m_aMySQLSettings.implInitControls( _rSet );
+        m_aMySQLSettings->implInitControls( _rSet );
 
         OGenericAdministrationPage::implInitControls( _rSet, _bSaveValue );
 
-        OnModified( NULL );
+        callModifiedHdl();
     }
 
-    Link MySQLNativeSetupPage::getControlModifiedLink()
+    void MySQLNativeSetupPage::callModifiedHdl(void*)
     {
-        return LINK( this, MySQLNativeSetupPage, OnModified );
-    }
+        SetRoadmapStateValue( m_aMySQLSettings->canAdvance() );
 
-    IMPL_LINK( MySQLNativeSetupPage, OnModified, Edit*, _pEdit )
-    {
-        SetRoadmapStateValue( m_aMySQLSettings.canAdvance() );
-
-        return OGenericAdministrationPage::getControlModifiedLink().Call( _pEdit );
+        OGenericAdministrationPage::callModifiedHdl();
     }
 
     // OMySQLJDBCConnectionPageSetup
@@ -419,16 +454,16 @@ using namespace ::com::sun::star;
         //TODO this code snippet is redundant
         m_pHeaderText->SetText(ModuleRes(_nHeaderTextResId));
 
-        m_pETDatabasename->SetModifyHdl(getControlModifiedLink());
-        m_pETHostname->SetModifyHdl(getControlModifiedLink());
-        m_pNFPortNumber->SetModifyHdl(getControlModifiedLink());
+        m_pETDatabasename->SetModifyHdl(LINK(this, OGenericAdministrationPage, OnControlEditModifyHdl));
+        m_pETHostname->SetModifyHdl(LINK(this, OGenericAdministrationPage, OnControlEditModifyHdl));
+        m_pNFPortNumber->SetModifyHdl(LINK(this, OGenericAdministrationPage, OnControlEditModifyHdl));
 
-        m_pETDriverClass->SetModifyHdl(LINK(this, OGeneralSpecialJDBCConnectionPageSetup, OnEditModified));
+        m_pETDriverClass->SetModifyHdl(LINK(this, OGenericAdministrationPage, OnControlEditModifyHdl));
         m_pPBTestJavaDriver->SetClickHdl(LINK(this,OGeneralSpecialJDBCConnectionPageSetup,OnTestJavaClickHdl));
 
-        SFX_ITEMSET_GET(_rCoreAttrs, pUrlItem, SfxStringItem, DSID_CONNECTURL, true);
-        SFX_ITEMSET_GET(_rCoreAttrs, pTypesItem, DbuTypeCollectionItem, DSID_TYPECOLLECTION, true);
-        ::dbaccess::ODsnTypeCollection* pTypeCollection = pTypesItem ? pTypesItem->getCollection() : NULL;
+        const SfxStringItem* pUrlItem = _rCoreAttrs.GetItem<SfxStringItem>(DSID_CONNECTURL);
+        const DbuTypeCollectionItem* pTypesItem = _rCoreAttrs.GetItem<DbuTypeCollectionItem>(DSID_TYPECOLLECTION);
+        ::dbaccess::ODsnTypeCollection* pTypeCollection = pTypesItem ? pTypesItem->getCollection() : nullptr;
         if (pTypeCollection && pUrlItem && pUrlItem->GetValue().getLength() )
         {
             m_sDefaultJdbcDriverName = pTypeCollection->getJavaDriverClass(pUrlItem->GetValue());
@@ -437,36 +472,58 @@ using namespace ::com::sun::star;
         SetRoadmapStateValue(false);
     }
 
-    OGenericAdministrationPage* OGeneralSpecialJDBCConnectionPageSetup::CreateMySQLJDBCTabPage( vcl::Window* pParent, const SfxItemSet& _rAttrSet )
+    OGeneralSpecialJDBCConnectionPageSetup::~OGeneralSpecialJDBCConnectionPageSetup()
     {
-        return ( new OGeneralSpecialJDBCConnectionPageSetup( pParent,
+        disposeOnce();
+    }
+
+    void OGeneralSpecialJDBCConnectionPageSetup::dispose()
+    {
+        m_pHeaderText.clear();
+        m_pFTHelpText.clear();
+        m_pFTDatabasename.clear();
+        m_pETDatabasename.clear();
+        m_pFTHostname.clear();
+        m_pETHostname.clear();
+        m_pFTPortNumber.clear();
+        m_pFTDefaultPortNumber.clear();
+        m_pNFPortNumber.clear();
+        m_pFTDriverClass.clear();
+        m_pETDriverClass.clear();
+        m_pPBTestJavaDriver.clear();
+        OGenericAdministrationPage::dispose();
+    }
+
+    VclPtr<OGenericAdministrationPage> OGeneralSpecialJDBCConnectionPageSetup::CreateMySQLJDBCTabPage( vcl::Window* pParent, const SfxItemSet& _rAttrSet )
+    {
+        return VclPtr<OGeneralSpecialJDBCConnectionPageSetup>::Create( pParent,
                                                          _rAttrSet,
                                                          DSID_MYSQL_PORTNUMBER ,
                                                          STR_MYSQL_DEFAULT,
                                                          STR_MYSQLJDBC_HELPTEXT,
                                                          STR_MYSQLJDBC_HEADERTEXT,
-                                                         STR_MYSQL_DRIVERCLASSTEXT) );
+                                                         STR_MYSQL_DRIVERCLASSTEXT);
     }
 
-    OGenericAdministrationPage* OGeneralSpecialJDBCConnectionPageSetup::CreateOracleJDBCTabPage( vcl::Window* pParent, const SfxItemSet& _rAttrSet )
+    VclPtr<OGenericAdministrationPage> OGeneralSpecialJDBCConnectionPageSetup::CreateOracleJDBCTabPage( vcl::Window* pParent, const SfxItemSet& _rAttrSet )
     {
-        return ( new OGeneralSpecialJDBCConnectionPageSetup( pParent,
+        return VclPtr<OGeneralSpecialJDBCConnectionPageSetup>::Create( pParent,
                                                           _rAttrSet,
                                                           DSID_ORACLE_PORTNUMBER,
                                                           STR_ORACLE_DEFAULT,
                                                           STR_ORACLE_HELPTEXT,
                                                           STR_ORACLE_HEADERTEXT,
-                                                          STR_ORACLE_DRIVERCLASSTEXT) );
+                                                          STR_ORACLE_DRIVERCLASSTEXT);
     }
 
-    void OGeneralSpecialJDBCConnectionPageSetup::fillControls(::std::vector< ISaveValueWrapper* >& _rControlList)
+    void OGeneralSpecialJDBCConnectionPageSetup::fillControls(std::vector< ISaveValueWrapper* >& _rControlList)
     {
         _rControlList.push_back(new OSaveValueWrapper<Edit>(m_pETDatabasename));
         _rControlList.push_back(new OSaveValueWrapper<Edit>(m_pETDriverClass));
         _rControlList.push_back(new OSaveValueWrapper<Edit>(m_pETHostname));
         _rControlList.push_back(new OSaveValueWrapper<NumericField>(m_pNFPortNumber));
     }
-    void OGeneralSpecialJDBCConnectionPageSetup::fillWindows(::std::vector< ISaveValueWrapper* >& _rControlList)
+    void OGeneralSpecialJDBCConnectionPageSetup::fillWindows(std::vector< ISaveValueWrapper* >& _rControlList)
     {
         _rControlList.push_back(new ODisableWrapper<FixedText>(m_pFTHelpText));
         _rControlList.push_back(new ODisableWrapper<FixedText>(m_pFTDatabasename));
@@ -492,10 +549,10 @@ using namespace ::com::sun::star;
         bool bValid, bReadonly;
         getFlags(_rSet, bValid, bReadonly);
 
-        SFX_ITEMSET_GET(_rSet, pDatabaseName, SfxStringItem, DSID_DATABASENAME, true);
-        SFX_ITEMSET_GET(_rSet, pDrvItem, SfxStringItem, DSID_JDBCDRIVERCLASS, true);
-        SFX_ITEMSET_GET(_rSet, pHostName, SfxStringItem, DSID_CONN_HOSTNAME, true);
-        SFX_ITEMSET_GET(_rSet, pPortNumber, SfxInt32Item, m_nPortId, true);
+        const SfxStringItem* pDatabaseName = _rSet.GetItem<SfxStringItem>(DSID_DATABASENAME);
+        const SfxStringItem* pDrvItem = _rSet.GetItem<SfxStringItem>(DSID_JDBCDRIVERCLASS);
+        const SfxStringItem* pHostName = _rSet.GetItem<SfxStringItem>(DSID_CONN_HOSTNAME);
+        const SfxInt32Item* pPortNumber = _rSet.GetItem<SfxInt32Item>(m_nPortId);
 
         if ( bValid )
         {
@@ -525,7 +582,7 @@ using namespace ::com::sun::star;
         SetRoadmapStateValue(bRoadmapState);
     }
 
-    IMPL_LINK(OGeneralSpecialJDBCConnectionPageSetup, OnTestJavaClickHdl, PushButton*, /*_pButton*/)
+    IMPL_LINK_NOARG(OGeneralSpecialJDBCConnectionPageSetup, OnTestJavaClickHdl, Button*, void)
     {
         OSL_ENSURE(m_pAdminDialog,"No Admin dialog set! ->GPF");
 
@@ -541,30 +598,28 @@ using namespace ::com::sun::star;
                 bSuccess = ::connectivity::existsJavaClassByName(xJVM,m_pETDriverClass->GetText());
             }
         }
-        catch(::com::sun::star::uno::Exception&)
+        catch(css::uno::Exception&)
         {
         }
 #endif
         const sal_uInt16 nMessage = bSuccess ? STR_JDBCDRIVER_SUCCESS : STR_JDBCDRIVER_NO_SUCCESS;
         const OSQLMessageBox::MessageType mt = bSuccess ? OSQLMessageBox::Info : OSQLMessageBox::Error;
-        OSQLMessageBox aMsg( this, OUString( ModuleRes( nMessage ) ), OUString(), WB_OK | WB_DEF_OK, mt );
-        aMsg.Execute();
-        return 0L;
+        ScopedVclPtrInstance< OSQLMessageBox > aMsg( this, OUString( ModuleRes( nMessage ) ), OUString(), WB_OK | WB_DEF_OK, mt );
+        aMsg->Execute();
     }
 
-    IMPL_LINK(OGeneralSpecialJDBCConnectionPageSetup, OnEditModified, Edit*, _pEdit)
+    void OGeneralSpecialJDBCConnectionPageSetup::callModifiedHdl(void* pControl)
     {
-        if ( _pEdit == m_pETDriverClass )
+        if ( pControl == m_pETDriverClass )
             m_pPBTestJavaDriver->Enable( !m_pETDriverClass->GetText().trim().isEmpty() );
         bool bRoadmapState = ((!m_pETDatabasename->GetText().isEmpty() ) && ( !m_pETHostname->GetText().isEmpty() ) && (!m_pNFPortNumber->GetText().isEmpty() ) && ( !m_pETDriverClass->GetText().trim().isEmpty() ));
         SetRoadmapStateValue(bRoadmapState);
-        callModifiedHdl();
-        return 0L;
+        OGenericAdministrationPage::callModifiedHdl();
     }
 
-    OGenericAdministrationPage* OJDBCConnectionPageSetup::CreateJDBCTabPage( vcl::Window* pParent, const SfxItemSet& _rAttrSet )
+    VclPtr<OGenericAdministrationPage> OJDBCConnectionPageSetup::CreateJDBCTabPage( vcl::Window* pParent, const SfxItemSet& _rAttrSet )
     {
-        return ( new OJDBCConnectionPageSetup( pParent, _rAttrSet));
+        return VclPtr<OJDBCConnectionPageSetup>::Create( pParent, _rAttrSet);
     }
 
     // OMySQLJDBCConnectionPageSetup
@@ -579,12 +634,25 @@ using namespace ::com::sun::star;
         m_pPBTestJavaDriver->SetClickHdl(LINK(this,OJDBCConnectionPageSetup,OnTestJavaClickHdl));
     }
 
-    void OJDBCConnectionPageSetup::fillControls(::std::vector< ISaveValueWrapper* >& _rControlList)
+    OJDBCConnectionPageSetup::~OJDBCConnectionPageSetup()
+    {
+        disposeOnce();
+    }
+
+    void OJDBCConnectionPageSetup::dispose()
+    {
+        m_pFTDriverClass.clear();
+        m_pETDriverClass.clear();
+        m_pPBTestJavaDriver.clear();
+        OConnectionTabPageSetup::dispose();
+    }
+
+    void OJDBCConnectionPageSetup::fillControls(std::vector< ISaveValueWrapper* >& _rControlList)
     {
         _rControlList.push_back(new OSaveValueWrapper<Edit>(m_pETDriverClass));
     }
 
-    void OJDBCConnectionPageSetup::fillWindows(::std::vector< ISaveValueWrapper* >& _rControlList)
+    void OJDBCConnectionPageSetup::fillWindows(std::vector< ISaveValueWrapper* >& _rControlList)
     {
         _rControlList.push_back(new ODisableWrapper<FixedText>(m_pFTDriverClass));
     }
@@ -602,7 +670,7 @@ using namespace ::com::sun::star;
         bool bValid, bReadonly;
         getFlags(_rSet, bValid, bReadonly);
 
-        SFX_ITEMSET_GET(_rSet, pDrvItem, SfxStringItem, DSID_JDBCDRIVERCLASS, true);
+        const SfxStringItem* pDrvItem = _rSet.GetItem<SfxStringItem>(DSID_JDBCDRIVERCLASS);
 
         if ( bValid )
         {
@@ -636,7 +704,7 @@ using namespace ::com::sun::star;
         return bEnableTestConnection;
     }
 
-    IMPL_LINK(OJDBCConnectionPageSetup, OnTestJavaClickHdl, PushButton*, /*_pButton*/)
+    IMPL_LINK_NOARG(OJDBCConnectionPageSetup, OnTestJavaClickHdl, Button*, void)
     {
         OSL_ENSURE(m_pAdminDialog,"No Admin dialog set! ->GPF");
         bool bSuccess = false;
@@ -651,29 +719,27 @@ using namespace ::com::sun::star;
                 bSuccess = xJVM.is() && ::connectivity::existsJavaClassByName(xJVM,m_pETDriverClass->GetText());
             }
         }
-        catch(::com::sun::star::uno::Exception&)
+        catch(css::uno::Exception&)
         {
         }
 #endif
         sal_uInt16 nMessage = bSuccess ? STR_JDBCDRIVER_SUCCESS : STR_JDBCDRIVER_NO_SUCCESS;
-        OSQLMessageBox aMsg( this, OUString( ModuleRes( nMessage ) ), OUString() );
-        aMsg.Execute();
-        return 0L;
+        ScopedVclPtrInstance< OSQLMessageBox > aMsg( this, OUString( ModuleRes( nMessage ) ), OUString() );
+        aMsg->Execute();
     }
 
-    IMPL_LINK(OJDBCConnectionPageSetup, OnEditModified, Edit*, _pEdit)
+    IMPL_LINK(OJDBCConnectionPageSetup, OnEditModified, Edit&, _rEdit, void)
     {
-        if ( _pEdit == m_pETDriverClass )
+        if ( &_rEdit == m_pETDriverClass )
             m_pPBTestJavaDriver->Enable( !m_pETDriverClass->GetText().isEmpty() );
         SetRoadmapStateValue(checkTestConnection());
         // tell the listener we were modified
         callModifiedHdl();
-        return 0L;
     }
 
-    OGenericAdministrationPage* OSpreadSheetConnectionPageSetup::CreateSpreadSheetTabPage( vcl::Window* pParent, const SfxItemSet& _rAttrSet )
+    VclPtr<OGenericAdministrationPage> OSpreadSheetConnectionPageSetup::CreateSpreadSheetTabPage( vcl::Window* pParent, const SfxItemSet& _rAttrSet )
     {
-        return ( new OSpreadSheetConnectionPageSetup( pParent, _rAttrSet ) );
+        return VclPtr<OSpreadSheetConnectionPageSetup>::Create( pParent, _rAttrSet );
     }
 
 
@@ -681,28 +747,29 @@ using namespace ::com::sun::star;
         :OConnectionTabPageSetup(pParent, "DBWizSpreadsheetPage", "dbaccess/ui/dbwizspreadsheetpage.ui", _rCoreAttrs, STR_SPREADSHEET_HELPTEXT, STR_SPREADSHEET_HEADERTEXT, STR_SPREADSHEETPATH)
     {
         get(m_pPasswordrequired, "passwordrequired");
-        m_pPasswordrequired->SetToggleHdl(getControlModifiedLink());
+        m_pPasswordrequired->SetToggleHdl( LINK(this, OGenericAdministrationPage, ControlModifiedCheckBoxHdl) );
     }
 
     OSpreadSheetConnectionPageSetup::~OSpreadSheetConnectionPageSetup()
     {
-
+        disposeOnce();
     }
 
-    void OSpreadSheetConnectionPageSetup::fillWindows(::std::vector< ISaveValueWrapper* >& /*_rControlList*/)
+    void OSpreadSheetConnectionPageSetup::dispose()
+    {
+        m_pPasswordrequired.clear();
+        OConnectionTabPageSetup::dispose();
+    }
+
+    void OSpreadSheetConnectionPageSetup::fillWindows(std::vector< ISaveValueWrapper* >& /*_rControlList*/)
     {
     }
 
-    void OSpreadSheetConnectionPageSetup::fillControls(::std::vector< ISaveValueWrapper* >& _rControlList)
+    void OSpreadSheetConnectionPageSetup::fillControls(std::vector< ISaveValueWrapper* >& _rControlList)
     {
         OConnectionTabPageSetup::fillControls(_rControlList);
         _rControlList.push_back(new OSaveValueWrapper<CheckBox>(m_pPasswordrequired));
 
-    }
-
-    void OSpreadSheetConnectionPageSetup::implInitControls(const SfxItemSet& _rSet, bool _bSaveValue)
-    {
-        OConnectionTabPageSetup::implInitControls(_rSet, _bSaveValue);
     }
 
     bool OSpreadSheetConnectionPageSetup::FillItemSet( SfxItemSet* _rSet )
@@ -712,9 +779,9 @@ using namespace ::com::sun::star;
         return bChangedSomething;
     }
 
-    OGenericAdministrationPage* OAuthentificationPageSetup::CreateAuthentificationTabPage( vcl::Window* pParent, const SfxItemSet& _rAttrSet )
+    VclPtr<OGenericAdministrationPage> OAuthentificationPageSetup::CreateAuthentificationTabPage( vcl::Window* pParent, const SfxItemSet& _rAttrSet )
     {
-        return ( new OAuthentificationPageSetup( pParent, _rAttrSet) );
+        return VclPtr<OAuthentificationPageSetup>::Create( pParent, _rAttrSet);
     }
 
 
@@ -726,26 +793,36 @@ using namespace ::com::sun::star;
         get(m_pETUserName, "generalUserNameEntry");
         get(m_pCBPasswordRequired, "passRequiredCheckbutton");
         get(m_pPBTestConnection, "testConnectionButton");
-        m_pETUserName->SetModifyHdl(getControlModifiedLink());
-        m_pCBPasswordRequired->SetClickHdl(getControlModifiedLink());
-           m_pPBTestConnection->SetClickHdl(LINK(this,OGenericAdministrationPage,OnTestConnectionClickHdl));
+        m_pETUserName->SetModifyHdl(LINK(this,OGenericAdministrationPage,OnControlEditModifyHdl));
+        m_pCBPasswordRequired->SetClickHdl(LINK(this,OGenericAdministrationPage,OnControlModifiedClick));
+        m_pPBTestConnection->SetClickHdl(LINK(this,OGenericAdministrationPage,OnTestConnectionClickHdl));
 
         LayoutHelper::fitSizeRightAligned( *m_pPBTestConnection );
     }
 
     OAuthentificationPageSetup::~OAuthentificationPageSetup()
     {
-
+        disposeOnce();
     }
 
-    void OAuthentificationPageSetup::fillWindows(::std::vector< ISaveValueWrapper* >& _rControlList)
+    void OAuthentificationPageSetup::dispose()
+    {
+        m_pFTHelpText.clear();
+        m_pFTUserName.clear();
+        m_pETUserName.clear();
+        m_pCBPasswordRequired.clear();
+        m_pPBTestConnection.clear();
+        OGenericAdministrationPage::dispose();
+    }
+
+    void OAuthentificationPageSetup::fillWindows(std::vector< ISaveValueWrapper* >& _rControlList)
     {
         _rControlList.push_back(new ODisableWrapper<FixedText>(m_pFTHelpText));
         _rControlList.push_back(new ODisableWrapper<FixedText>(m_pFTUserName));
         _rControlList.push_back(new ODisableWrapper<PushButton>(m_pPBTestConnection));
     }
 
-    void OAuthentificationPageSetup::fillControls(::std::vector< ISaveValueWrapper* >& _rControlList)
+    void OAuthentificationPageSetup::fillControls(std::vector< ISaveValueWrapper* >& _rControlList)
     {
         _rControlList.push_back(new OSaveValueWrapper<Edit>(m_pETUserName));
         _rControlList.push_back(new OSaveValueWrapper<CheckBox>(m_pCBPasswordRequired));
@@ -756,8 +833,8 @@ using namespace ::com::sun::star;
         // check whether or not the selection is invalid or readonly (invalid implies readonly, but not vice versa)
         bool bValid, bReadonly;
         getFlags(_rSet, bValid, bReadonly);
-        SFX_ITEMSET_GET(_rSet, pUidItem, SfxStringItem, DSID_USER, true);
-        SFX_ITEMSET_GET(_rSet, pAllowEmptyPwd, SfxBoolItem, DSID_PASSWORDREQUIRED, true);
+        const SfxStringItem* pUidItem = _rSet.GetItem<SfxStringItem>(DSID_USER);
+        const SfxBoolItem* pAllowEmptyPwd = _rSet.GetItem<SfxBoolItem>(DSID_PASSWORDREQUIRED);
 
         m_pETUserName->SetText(pUidItem->GetValue());
         m_pCBPasswordRequired->Check(pAllowEmptyPwd->GetValue());
@@ -779,9 +856,9 @@ using namespace ::com::sun::star;
         return bChangedSomething;
     }
 
-    OGenericAdministrationPage* OFinalDBPageSetup::CreateFinalDBTabPageSetup( vcl::Window* pParent, const SfxItemSet& _rAttrSet)
+    VclPtr<OGenericAdministrationPage> OFinalDBPageSetup::CreateFinalDBTabPageSetup( vcl::Window* pParent, const SfxItemSet& _rAttrSet)
     {
-        return ( new OFinalDBPageSetup( pParent, _rAttrSet) );
+        return VclPtr<OFinalDBPageSetup>::Create( pParent, _rAttrSet);
     }
 
 
@@ -800,17 +877,30 @@ using namespace ::com::sun::star;
 
         m_pCBOpenAfterwards->SetClickHdl(LINK(this, OFinalDBPageSetup, OnOpenSelected));
 #if defined USE_JAVA && defined MACOSX
-        if (lcl_canUseJava())
+        if (!lcl_canUseJava())
             m_pCBStartTableWizard->Hide();
         else
 #endif	// USE_JAVA && MACOSX
-        m_pCBStartTableWizard->SetClickHdl(getControlModifiedLink());
+        m_pCBStartTableWizard->SetClickHdl(LINK(this,OGenericAdministrationPage,OnControlModifiedClick));
         m_pRBRegisterDataSource->SetState(true);
     }
 
     OFinalDBPageSetup::~OFinalDBPageSetup()
     {
+        disposeOnce();
+    }
 
+    void OFinalDBPageSetup::dispose()
+    {
+        m_pFTFinalHeader.clear();
+        m_pFTFinalHelpText.clear();
+        m_pRBRegisterDataSource.clear();
+        m_pRBDontregisterDataSource.clear();
+        m_pFTAdditionalSettings.clear();
+        m_pCBOpenAfterwards.clear();
+        m_pCBStartTableWizard.clear();
+        m_pFTFinalText.clear();
+        OGenericAdministrationPage::dispose();
     }
 
     bool OFinalDBPageSetup::IsDatabaseDocumentToBeRegistered()
@@ -828,7 +918,7 @@ using namespace ::com::sun::star;
         return m_pCBStartTableWizard->IsChecked() && m_pCBStartTableWizard->IsEnabled();
     }
 
-    void OFinalDBPageSetup::fillWindows(::std::vector< ISaveValueWrapper* >& _rControlList)
+    void OFinalDBPageSetup::fillWindows(std::vector< ISaveValueWrapper* >& _rControlList)
     {
         _rControlList.push_back(new ODisableWrapper<FixedText>(m_pFTFinalHeader));
         _rControlList.push_back(new ODisableWrapper<FixedText>(m_pFTFinalHelpText));
@@ -836,7 +926,7 @@ using namespace ::com::sun::star;
         _rControlList.push_back(new ODisableWrapper<FixedText>(m_pFTFinalText));
     }
 
-    void OFinalDBPageSetup::fillControls(::std::vector< ISaveValueWrapper* >& _rControlList)
+    void OFinalDBPageSetup::fillControls(std::vector< ISaveValueWrapper* >& _rControlList)
     {
         _rControlList.push_back(new OSaveValueWrapper<CheckBox>(m_pCBOpenAfterwards));
         _rControlList.push_back(new OSaveValueWrapper<CheckBox>(m_pCBStartTableWizard));
@@ -859,12 +949,10 @@ using namespace ::com::sun::star;
         return true;
     }
 
-    IMPL_LINK(OFinalDBPageSetup, OnOpenSelected, CheckBox*, _pBox)
+    IMPL_LINK(OFinalDBPageSetup, OnOpenSelected, Button*, _pBox, void)
     {
-        m_pCBStartTableWizard->Enable( _pBox->IsEnabled() && _pBox->IsChecked() );
+        m_pCBStartTableWizard->Enable( _pBox->IsEnabled() && static_cast<CheckBox*>(_pBox)->IsChecked() );
         callModifiedHdl();
-        // outta here
-        return 0L;
     }
 }
 
