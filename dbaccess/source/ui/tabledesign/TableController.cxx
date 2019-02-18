@@ -1027,7 +1027,7 @@ void OTableController::alterColumns()
             // by checking for invalid columns:
             // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8605
             if (!xColumn.is())
-                throw NoSuchElementException(*aIter, *this);
+                throw NoSuchElementException(pField->GetName(), *this);
 #endif	// USE_JAVA
 
             sal_Int32 nType=0,nPrecision=0,nScale=0,nNullable=0;
