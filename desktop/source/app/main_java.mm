@@ -81,7 +81,7 @@ static BOOL IsSupportedMacOSXVersion()
 		char *pToken = strsep( &pMaxOSVersion, "." );
 		if ( pToken )
 		{
-			nMajorMaxOSVersion = static_cast< NSInteger >( strtol( pToken, nullptr, 10 );
+			nMajorMaxOSVersion = static_cast< NSInteger >( strtol( pToken, nullptr, 10 ) );
 			pToken = strsep( &pMaxOSVersion, "." );
 			if ( pToken )
 				nMinorMaxOSVersion = static_cast< NSInteger >( strtol( pToken, nullptr, 10 ) );
@@ -252,7 +252,7 @@ int java_main( int argc, char **argv )
 			pURL = [pURL URLByStandardizingPath];
 			if ( pURL )
 			{
-				NSString *pHomeDir = [pURL path];
+				pHomeDir = [pURL path];
 				if ( pHomeDir )
 				{
 					NSString *pHomeEnv = [NSString stringWithFormat:@"HOME=%@", pHomeDir];
@@ -390,7 +390,7 @@ int java_main( int argc, char **argv )
 					char **pNewArgv = static_cast< char** >( malloc( sizeof( char** ) * ( argc + 2 ) ) );
 					memcpy( pNewArgv, argv, sizeof( char** ) * argc );
 
-					pNewArgv[ argc ] = static_cast< char* >( [static_cast< NSString* >( aPref ) UTF8String] );
+					pNewArgv[ argc ] = const_cast< char* >( [static_cast< NSString* >( aPref ) UTF8String] );
 					if ( pNewArgv[ argc ] )
 					{
 						pNewArgv[ argc ] = strdup( pNewArgv[ argc ] );
@@ -412,7 +412,7 @@ int java_main( int argc, char **argv )
 						CFStringRef aElement = static_cast< CFStringRef >( CFArrayGetValueAtIndex( static_cast< CFArrayRef >( aPref ), i ) );
 						if ( aElement )
 						{
-							pNewArgv[ argc ] = static_cast< char* >( [static_cast< NSString* >( Element ) UTF8String] );
+							pNewArgv[ argc ] = const_cast< char* >( [static_cast< NSString* >( aElement ) UTF8String] );
 							if ( pNewArgv[ argc ] )
 							{
 								pNewArgv[ argc ] = strdup( pNewArgv[ argc ] );
