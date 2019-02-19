@@ -57,6 +57,7 @@
 #include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/uno/XInterface.hpp>
 #include <com/sun/star/uno/TypeClass.hpp>
+#include <o3tl/any.hxx>
 #include <osl/diagnose.h>
 #include <osl/mutex.hxx>
 #include <rtl/ref.hxx>
@@ -66,7 +67,7 @@
 #include <salhelper/thread.hxx>
 #include <ucbhelper/content.hxx>
 #include <cppuhelper/exc_hlp.hxx>
-#include <cppuhelper/implbase3.hxx>
+#include <cppuhelper/implbase.hxx>
 #include <comphelper/anytostring.hxx>
 #include <vcl/layout.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
@@ -84,10 +85,9 @@
 #include "dp_version.hxx"
 
 #include <queue>
-#include <boost/shared_ptr.hpp>
-#include <boost/scoped_ptr.hpp>
+#include <memory>
 
-#ifdef WNT
+#ifdef _WIN32
 #if defined _MSC_VER
 #pragma warning (push, 1)
 #pragma warning (disable: 4005)
@@ -106,7 +106,7 @@
 
 typedef sal_Bool Application_canUseJava_Type();
 
-static Application_canUseJava_Type *pApplication_canUseJava = NULL;
+static Application_canUseJava_Type *pApplication_canUseJava = nullptr;
 
 #endif	// USE_JAVA && MACOSX
 
@@ -130,9 +130,8 @@ OUString getVersion( const uno::Reference< deployment::XPackage > &rPackage )
 namespace dp_gui {
 
 
-
 class ProgressCmdEnv
-    : public ::cppu::WeakImplHelper3< ucb::XCommandEnvironment,
+    : public ::cppu::WeakImplHelper< ucb::XCommandEnvironment,
                                       task::XInteractionHandler,
                                       ucb::XProgressHandler >
 {
@@ -142,17 +141,15 @@ class ProgressCmdEnv
 
     DialogHelper*   m_pDialogHelper;
     OUString        m_sTitle;
-    bool            m_bAborted;
     bool            m_bWarnUser;
     sal_Int32       m_nCurrentProgress;
 
     void updateProgress();
 
-    void update_( uno::Any const & Status ) throw ( uno::RuntimeException );
+    /// @throws uno::RuntimeException
+    void update_( uno::Any const & Status );
 
 public:
-    virtual ~ProgressCmdEnv();
-
     /** When param bAskWhenInstalling = true, then the user is asked if he
     agrees to install this extension. In case this extension is already installed
     then the user is also notified and asked if he wants to replace that existing
@@ -160,42 +157,35 @@ public:
     will be handled and in the second case a VersionException will be handled.
     */
 
-    ProgressCmdEnv( const uno::Reference< uno::XComponentContext > rContext,
+    ProgressCmdEnv( const uno::Reference< uno::XComponentContext >& rContext,
                     DialogHelper* pDialogHelper,
                     const OUString& rTitle )
         : m_xContext( rContext )
         , m_pDialogHelper( pDialogHelper )
         , m_sTitle( rTitle )
-        , m_bAborted( false )
         , m_bWarnUser( false )
         , m_nCurrentProgress(0)
         {}
 
-    Dialog * activeDialog() { return m_pDialogHelper ? m_pDialogHelper->getWindow() : NULL; }
+    Dialog * activeDialog() { return m_pDialogHelper ? m_pDialogHelper->getWindow() : nullptr; }
 
     void startProgress();
     void stopProgress();
     void progressSection( const OUString &rText,
-                          const uno::Reference< task::XAbortChannel > &xAbortChannel = 0 );
-    inline bool isAborted() const { return m_bAborted; }
-    inline void setWarnUser( bool bNewVal ) { m_bWarnUser = bNewVal; }
+                          const uno::Reference< task::XAbortChannel > &xAbortChannel );
+    void setWarnUser( bool bNewVal ) { m_bWarnUser = bNewVal; }
 
     // XCommandEnvironment
-    virtual uno::Reference< task::XInteractionHandler > SAL_CALL getInteractionHandler()
-        throw ( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
-    virtual uno::Reference< ucb::XProgressHandler > SAL_CALL getProgressHandler()
-        throw ( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual uno::Reference< task::XInteractionHandler > SAL_CALL getInteractionHandler() override;
+    virtual uno::Reference< ucb::XProgressHandler > SAL_CALL getProgressHandler() override;
 
     // XInteractionHandler
-    virtual void SAL_CALL handle( uno::Reference< task::XInteractionRequest > const & xRequest )
-        throw ( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL handle( uno::Reference< task::XInteractionRequest > const & xRequest ) override;
 
     // XProgressHandler
-    virtual void SAL_CALL push( uno::Any const & Status )
-        throw ( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
-    virtual void SAL_CALL update( uno::Any const & Status )
-        throw ( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
-    virtual void SAL_CALL pop() throw ( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL push( uno::Any const & Status ) override;
+    virtual void SAL_CALL update( uno::Any const & Status ) override;
+    virtual void SAL_CALL pop() override;
 };
 
 
@@ -230,7 +220,7 @@ struct ExtensionCmd
           m_vExtensionList( vExtensionList ) {};
 };
 
-typedef ::boost::shared_ptr< ExtensionCmd > TExtensionCmd;
+typedef std::shared_ptr< ExtensionCmd > TExtensionCmd;
 
 
 class ExtensionCmdQueue::Thread: public salhelper::Thread
@@ -252,9 +242,9 @@ public:
     bool isBusy();
 
 private:
-    virtual ~Thread();
+    virtual ~Thread() override;
 
-    virtual void execute() SAL_OVERRIDE;
+    virtual void execute() override;
 
     void _insert(const TExtensionCmd& rExtCmd);
 
@@ -314,47 +304,31 @@ void ProgressCmdEnv::progressSection( const OUString &rText,
                                       const uno::Reference< task::XAbortChannel > &xAbortChannel )
 {
     m_xAbortChannel = xAbortChannel;
-    if (! m_bAborted)
+    m_nCurrentProgress = 0;
+    if ( m_pDialogHelper )
     {
-        m_nCurrentProgress = 0;
-        if ( m_pDialogHelper )
-        {
-            m_pDialogHelper->updateProgress( rText, xAbortChannel );
-            m_pDialogHelper->updateProgress( 5 );
-        }
+        m_pDialogHelper->updateProgress( rText, xAbortChannel );
+        m_pDialogHelper->updateProgress( 5 );
     }
 }
 
 
 void ProgressCmdEnv::updateProgress()
 {
-    if ( ! m_bAborted )
-    {
-        long nProgress = ((m_nCurrentProgress*5) % 100) + 5;
-        if ( m_pDialogHelper )
-            m_pDialogHelper->updateProgress( nProgress );
-    }
+    long nProgress = ((m_nCurrentProgress*5) % 100) + 5;
+    if ( m_pDialogHelper )
+        m_pDialogHelper->updateProgress( nProgress );
 }
-
-
-ProgressCmdEnv::~ProgressCmdEnv()
-{
-    // TODO: stop all threads and wait
-}
-
-
 
 // XCommandEnvironment
 
 uno::Reference< task::XInteractionHandler > ProgressCmdEnv::getInteractionHandler()
-    throw ( uno::RuntimeException, std::exception )
 {
     return this;
 }
 
 
 uno::Reference< ucb::XProgressHandler > ProgressCmdEnv::getProgressHandler()
-    throw ( uno::RuntimeException, std::exception )
 {
     return this;
 }
@@ -363,7 +337,6 @@ uno::Reference< ucb::XProgressHandler > ProgressCmdEnv::getProgressHandler()
 // XInteractionHandler
 
 void ProgressCmdEnv::handle( uno::Reference< task::XInteractionRequest > const & xRequest )
-    throw ( uno::RuntimeException, std::exception )
 {
     uno::Any request( xRequest->getRequest() );
     OSL_ASSERT( request.getValueTypeClass() == uno::TypeClass_EXCEPTION );
@@ -425,7 +398,7 @@ void ProgressCmdEnv::handle( uno::Reference< task::XInteractionRequest > const &
         }
         {
             SolarMutexGuard guard;
-            short n = DependencyDialog( m_pDialogHelper? m_pDialogHelper->getWindow() : NULL, deps ).Execute();
+            short n = ScopedVclPtrInstance<DependencyDialog>( m_pDialogHelper? m_pDialogHelper->getWindow() : nullptr, deps )->Execute();
             // Distinguish between closing the dialog and programatically
             // canceling the dialog (headless VCL):
             approve = n == RET_OK
@@ -436,7 +409,7 @@ void ProgressCmdEnv::handle( uno::Reference< task::XInteractionRequest > const &
     {
         uno::Reference< ui::dialogs::XExecutableDialog > xDialog(
             deployment::ui::LicenseDialog::create(
-            m_xContext, VCLUnoHelper::GetInterface( m_pDialogHelper? m_pDialogHelper->getWindow() : NULL ),
+            m_xContext, VCLUnoHelper::GetInterface( m_pDialogHelper? m_pDialogHelper->getWindow() : nullptr ),
             licExc.ExtensionName, licExc.Text ) );
         sal_Int16 res = xDialog->execute();
         if ( res == ui::dialogs::ExecutableDialogResults::CANCEL )
@@ -469,34 +442,34 @@ void ProgressCmdEnv::handle( uno::Reference< task::XInteractionRequest > const &
             verExc.Deployed->getDisplayName());
         {
             SolarMutexGuard guard;
-            MessageDialog box(m_pDialogHelper? m_pDialogHelper->getWindow() : NULL,
-                ResId(id, *DeploymentGuiResMgr::get()), VCL_MESSAGE_WARNING, VCL_BUTTONS_OK_CANCEL);
+            ScopedVclPtrInstance<MessageDialog> box(m_pDialogHelper? m_pDialogHelper->getWindow() : nullptr,
+                                                    ResId(id, *DeploymentGuiResMgr::get()), VclMessageType::Warning, VclButtonsType::OkCancel);
             OUString s;
             if (bEqualNames)
             {
-                s = box.get_primary_text();
+                s = box->get_primary_text();
             }
             else if (id == RID_STR_WARNING_VERSION_EQUAL)
             {
                 //hypothetical: requires two instances of an extension with the same
                 //version to have different display names. Probably the developer forgot
                 //to change the version.
-                s = ResId(RID_STR_WARNINGBOX_VERSION_EQUAL_DIFFERENT_NAMES, *DeploymentGuiResMgr::get()).toString();
+                s = ResId(RID_STR_WARNINGBOX_VERSION_EQUAL_DIFFERENT_NAMES, *DeploymentGuiResMgr::get());
             }
             else if (id == RID_STR_WARNING_VERSION_LESS)
             {
-                s = ResId(RID_STR_WARNINGBOX_VERSION_LESS_DIFFERENT_NAMES, *DeploymentGuiResMgr::get()).toString();
+                s = ResId(RID_STR_WARNINGBOX_VERSION_LESS_DIFFERENT_NAMES, *DeploymentGuiResMgr::get());
             }
             else if (id == RID_STR_WARNING_VERSION_GREATER)
             {
-               s = ResId(RID_STR_WARNINGBOX_VERSION_GREATER_DIFFERENT_NAMES, *DeploymentGuiResMgr::get()).toString();
+               s = ResId(RID_STR_WARNINGBOX_VERSION_GREATER_DIFFERENT_NAMES, *DeploymentGuiResMgr::get());
             }
             s = s.replaceAll("$NAME", verExc.NewDisplayName);
             s = s.replaceAll("$OLDNAME", verExc.Deployed->getDisplayName());
             s = s.replaceAll("$NEW", getVersion(verExc.NewVersion));
             s = s.replaceAll("$DEPLOYED", getVersion(verExc.Deployed));
-            box.set_primary_text(s);
-            approve = box.Execute() == RET_OK;
+            box->set_primary_text(s);
+            approve = box->Execute() == RET_OK;
             abort = !approve;
         }
     }
@@ -522,19 +495,19 @@ void ProgressCmdEnv::handle( uno::Reference< task::XInteractionRequest > const &
     else if (request >>= platExc)
     {
         SolarMutexGuard guard;
-        OUString sMsg(ResId(RID_STR_UNSUPPORTED_PLATFORM, *DeploymentGuiResMgr::get()).toString());
+        OUString sMsg(ResId(RID_STR_UNSUPPORTED_PLATFORM, *DeploymentGuiResMgr::get()));
         sMsg = sMsg.replaceAll("%Name", platExc.package->getDisplayName());
-        MessageDialog box(m_pDialogHelper? m_pDialogHelper->getWindow() : NULL, sMsg);
-        box.Execute();
+        ScopedVclPtrInstance< MessageDialog > box(m_pDialogHelper? m_pDialogHelper->getWindow() : nullptr, sMsg);
+        box->Execute();
         approve = true;
     }
 
-    if (approve == false && abort == false)
+    if (!approve && !abort)
     {
         // forward to UUI handler:
         if (! m_xHandler.is()) {
             // late init:
-            m_xHandler = task::InteractionHandler::createWithParentAndContext(m_xContext, NULL, m_sTitle);
+            m_xHandler = task::InteractionHandler::createWithParentAndContext(m_xContext, nullptr, m_sTitle);
         }
         m_xHandler->handle( xRequest );
     }
@@ -571,25 +544,23 @@ void ProgressCmdEnv::handle( uno::Reference< task::XInteractionRequest > const &
 // XProgressHandler
 
 void ProgressCmdEnv::push( uno::Any const & rStatus )
-    throw( uno::RuntimeException, std::exception )
 {
     update_( rStatus );
 }
 
 
 void ProgressCmdEnv::update_( uno::Any const & rStatus )
-    throw( uno::RuntimeException )
 {
     OUString text;
     if ( rStatus.hasValue() && !( rStatus >>= text) )
     {
-        if ( rStatus.getValueTypeClass() == uno::TypeClass_EXCEPTION )
-            text = static_cast< uno::Exception const *>( rStatus.getValue() )->Message;
+        if ( auto e = o3tl::tryAccess<uno::Exception>(rStatus) )
+            text = e->Message;
         if ( text.isEmpty() )
             text = ::comphelper::anyToString( rStatus ); // fallback
 
         const SolarMutexGuard aGuard;
-        const boost::scoped_ptr<MessageDialog> aBox(new MessageDialog(m_pDialogHelper? m_pDialogHelper->getWindow() : NULL, text));
+        ScopedVclPtrInstance< MessageDialog > aBox(m_pDialogHelper? m_pDialogHelper->getWindow() : nullptr, text);
         aBox->Execute();
     }
     ++m_nCurrentProgress;
@@ -598,14 +569,12 @@ void ProgressCmdEnv::update_( uno::Any const & rStatus )
 
 
 void ProgressCmdEnv::update( uno::Any const & rStatus )
-    throw( uno::RuntimeException, std::exception )
 {
     update_( rStatus );
 }
 
 
 void ProgressCmdEnv::pop()
-    throw( uno::RuntimeException, std::exception )
 {
     update_( uno::Any() ); // no message
 }
@@ -707,11 +676,11 @@ ExtensionCmdQueue::Thread::~Thread() {}
 
 void ExtensionCmdQueue::Thread::execute()
 {
-#ifdef WNT
+#ifdef _WIN32
     //Needed for use of the service "com.sun.star.system.SystemShellExecute" in
     //DialogHelper::openWebBrowser
     CoUninitialize();
-    (void) CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    (void) CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 #endif
     for (;;)
     {
@@ -750,7 +719,7 @@ void ExtensionCmdQueue::Thread::execute()
         // addExtension is called, which then blocks the main thread, then we deadlock.
         bool bStartProgress = true;
 
-        while ( !currentCmdEnv->isAborted() && --nSize >= 0 )
+        while ( --nSize >= 0 )
         {
             {
                 osl::MutexGuard aGuard( m_mutex );
@@ -808,9 +777,9 @@ void ExtensionCmdQueue::Thread::execute()
             catch ( const ucb::CommandFailedException & )
             {
                 //This exception is thrown when a user clicked cancel in the messagebox which was
-                //startet by the interaction handler. For example the user will be asked if he/she
+                //started by the interaction handler. For example the user will be asked if he/she
                 //really wants to install the extension.
-                //These interaction are run for exectly one extension at a time. Therefore we continue
+                //These interaction are run for exactly one extension at a time. Therefore we continue
                 //with installing the remaining extensions.
                 continue;
             }
@@ -821,17 +790,19 @@ void ExtensionCmdQueue::Thread::execute()
                 uno::Any exc( ::cppu::getCaughtException() );
                 OUString msg;
                 deployment::DeploymentException dpExc;
-                if ((exc >>= dpExc) &&
-                    dpExc.Cause.getValueTypeClass() == uno::TypeClass_EXCEPTION)
+                if (exc >>= dpExc)
                 {
-                    // notify error cause only:
-                    msg = reinterpret_cast< uno::Exception const * >( dpExc.Cause.getValue() )->Message;
+                    if (auto e = o3tl::tryAccess<uno::Exception>(dpExc.Cause))
+                    {
+                        // notify error cause only:
+                        msg = e->Message;
+                    }
                 }
 #if defined USE_JAVA && defined MACOSX
                 if ( msg.isEmpty() || msg.indexOf( "com.sun.star.loader.Java2" ) >= 0 || msg.indexOf( "com.sun.star.loader.Python" ) >= 0 )
                 {
                     if ( !pApplication_canUseJava )
-                        pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+                        pApplication_canUseJava = reinterpret_cast< Application_canUseJava_Type* >( dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" ) );
                     if ( !pApplication_canUseJava || !pApplication_canUseJava() )
                     {
                         ResMgr *pResMgr = DeploymentGuiResMgr::get();
@@ -849,8 +820,8 @@ void ExtensionCmdQueue::Thread::execute()
                     msg = ::comphelper::anyToString(exc);
 
                 const SolarMutexGuard guard;
-                boost::scoped_ptr<MessageDialog> box(
-                    new MessageDialog(currentCmdEnv->activeDialog(), msg));
+                ScopedVclPtr<MessageDialog> box(
+                    VclPtr<MessageDialog>::Create(currentCmdEnv->activeDialog(), msg));
                 if ( m_pDialogHelper )
                     box->SetText( m_pDialogHelper->getWindow()->GetText() );
                 box->Execute();
@@ -872,7 +843,7 @@ void ExtensionCmdQueue::Thread::execute()
             currentCmdEnv->stopProgress();
     }
     //end for
-#ifdef WNT
+#ifdef _WIN32
     CoUninitialize();
 #endif
 }
@@ -959,12 +930,10 @@ void ExtensionCmdQueue::Thread::_removeExtension( ::rtl::Reference< ProgressCmdE
 void ExtensionCmdQueue::Thread::_checkForUpdates(
     const std::vector<uno::Reference<deployment::XPackage > > &vExtensionList )
 {
-    UpdateDialog* pUpdateDialog;
-    std::vector< UpdateData > vData;
-
     const SolarMutexGuard guard;
 
-    pUpdateDialog = new UpdateDialog( m_xContext, m_pDialogHelper? m_pDialogHelper->getWindow() : NULL, vExtensionList, &vData );
+    std::vector< UpdateData > vData;
+    ScopedVclPtrInstance<UpdateDialog> pUpdateDialog( m_xContext, m_pDialogHelper? m_pDialogHelper->getWindow() : nullptr, vExtensionList, &vData );
 
     pUpdateDialog->notifyMenubar( true, false ); // prepare the checking, if there updates to be notified via menu bar icon
 
@@ -972,7 +941,7 @@ void ExtensionCmdQueue::Thread::_checkForUpdates(
     {
         // If there is at least one directly downloadable extension then we
         // open the install dialog.
-        ::std::vector< UpdateData > dataDownload;
+        std::vector< UpdateData > dataDownload;
         int countWebsiteDownload = 0;
         typedef std::vector< dp_gui::UpdateData >::const_iterator cit;
 
@@ -987,7 +956,7 @@ void ExtensionCmdQueue::Thread::_checkForUpdates(
         short nDialogResult = RET_OK;
         if ( !dataDownload.empty() )
         {
-            nDialogResult = UpdateInstallDialog( m_pDialogHelper? m_pDialogHelper->getWindow() : NULL, dataDownload, m_xContext ).Execute();
+            nDialogResult = ScopedVclPtrInstance<UpdateInstallDialog>( m_pDialogHelper? m_pDialogHelper->getWindow() : nullptr, dataDownload, m_xContext )->Execute();
             pUpdateDialog->notifyMenubar( false, true ); // Check, if there are still pending updates to be notified via menu bar icon
         }
         else
@@ -1006,7 +975,7 @@ void ExtensionCmdQueue::Thread::_checkForUpdates(
     else
         pUpdateDialog->notifyMenubar( false, false ); // check if there updates to be notified via menu bar icon
 
-    delete pUpdateDialog;
+    pUpdateDialog.disposeAndClear();
 }
 
 
@@ -1137,7 +1106,7 @@ void ExtensionCmdQueue::acceptLicense( const uno::Reference< deployment::XPackag
 
 void ExtensionCmdQueue::syncRepositories( const uno::Reference< uno::XComponentContext > &xContext )
 {
-    dp_misc::syncRepositories( false, new ProgressCmdEnv( xContext, NULL, "Extension Manager" ) );
+    dp_misc::syncRepositories( false, new ProgressCmdEnv( xContext, nullptr, "Extension Manager" ) );
 }
 
 void ExtensionCmdQueue::stop()
@@ -1153,7 +1122,7 @@ bool ExtensionCmdQueue::isBusy()
 void handleInteractionRequest( const uno::Reference< uno::XComponentContext > & xContext,
                                const uno::Reference< task::XInteractionRequest > & xRequest )
 {
-    ::rtl::Reference< ProgressCmdEnv > xCmdEnv( new ProgressCmdEnv( xContext, NULL, "Extension Manager" ) );
+    ::rtl::Reference< ProgressCmdEnv > xCmdEnv( new ProgressCmdEnv( xContext, nullptr, "Extension Manager" ) );
     xCmdEnv->handle( xRequest );
 }
 
