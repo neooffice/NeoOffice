@@ -51,7 +51,7 @@ static BOOL IsSupportedMacOSXVersion()
 	// following command:
 	//   defaults write $(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME) DisableMacOSXVersionCheck -bool YES
 	CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisableMacOSXVersionCheck" ), kCFPreferencesCurrentApplication );
-	if ( aPref && CFGetTypeID( aPref ) == CFBooleanGetTypeID() && CFBooleanGetValue( (CFBooleanRef)aPref ) )
+	if ( aPref && CFGetTypeID( aPref ) == CFBooleanGetTypeID() && CFBooleanGetValue( static_cast< CFBooleanRef >( aPref ) ) )
 		return YES;
 
 	NSInteger nMajorMinOSVersion = 0;
@@ -63,10 +63,10 @@ static BOOL IsSupportedMacOSXVersion()
 		char *pToken = strsep( &pMinOSVersion, "." );
 		if ( pToken )
 		{
-			nMajorMinOSVersion = (NSInteger)strtol( pToken, NULL, 10 );
+			nMajorMinOSVersion = static_cast< NSInteger >( strtol( pToken, nullptr, 10 ) );
 			pToken = strsep( &pMinOSVersion, "." );
 			if ( pToken )
-				nMinorMinOSVersion = (NSInteger)strtol( pToken, NULL, 10 );
+				nMinorMinOSVersion = static_cast< NSInteger >( strtol( pToken, nullptr, 10 ) );
 		}
 		free( pMinOSVersion );
 	}
@@ -81,10 +81,10 @@ static BOOL IsSupportedMacOSXVersion()
 		char *pToken = strsep( &pMaxOSVersion, "." );
 		if ( pToken )
 		{
-			nMajorMaxOSVersion = (NSInteger)strtol( pToken, NULL, 10 );
+			nMajorMaxOSVersion = static_cast< NSInteger >( strtol( pToken, nullptr, 10 );
 			pToken = strsep( &pMaxOSVersion, "." );
 			if ( pToken )
-				nMinorMaxOSVersion = (NSInteger)strtol( pToken, NULL, 10 );
+				nMinorMaxOSVersion = static_cast< NSInteger >( strtol( pToken, nullptr, 10 ) );
 		}
 		free( pMaxOSVersion );
 	}
@@ -140,7 +140,7 @@ static NSString *GetNSTemporaryDirectory()
 			for ( ; i < nCount && !pTempDir; i++ )
 			{
 				BOOL bDir = NO;
-				NSString *pCachePath = (NSString *)[pCachePaths objectAtIndex:i];
+				NSString *pCachePath = static_cast< NSString* >( [pCachePaths objectAtIndex:i] );
 				if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath withIntermediateDirectories:NO attributes:pDict error:nil] )
 				{
 					// Append program name to cache path
@@ -184,7 +184,7 @@ int java_main( int argc, char **argv )
 	CFURLRef aCmdURL = CFBundleCopyExecutableURL( aMainBundle );
 	if ( aCmdURL )
 	{
-		pCmdPath = (NSString *)CFURLCopyFileSystemPath( aCmdURL, kCFURLPOSIXPathStyle );
+		pCmdPath = static_cast< NSString* >( CFURLCopyFileSystemPath( aCmdURL, kCFURLPOSIXPathStyle ) );
 		if ( pCmdPath )
 			[pCmdPath autorelease];
 		CFRelease( aCmdURL );
@@ -213,7 +213,7 @@ int java_main( int argc, char **argv )
 	CFURLRef aBundleURL = CFBundleCopyBundleURL( aMainBundle );
 	if ( aBundleURL )
 	{
-		pBundlePath = (NSString *)CFURLCopyFileSystemPath( aBundleURL, kCFURLPOSIXPathStyle );
+		pBundlePath = static_cast< NSString* >( CFURLCopyFileSystemPath( aBundleURL, kCFURLPOSIXPathStyle ) );
 		if ( pBundlePath )
 			[pBundlePath autorelease];
 		CFRelease( aBundleURL );
@@ -341,20 +341,20 @@ int java_main( int argc, char **argv )
 		// Insert UNOPKGARG if missing
 		if ( argc < 2 || strcmp( UNOPKGARG, argv[ 1 ] ) )
 		{
-			char **pNewArgv = (char **)malloc( sizeof( char** ) * ( argc + 2 ) );
+			char **pNewArgv = static_cast< char** >( malloc( sizeof( char** ) * ( argc + 2 ) ) );
 			memcpy( pNewArgv + 1, argv, sizeof( char** ) * argc );
 			pNewArgv[ 0 ] = strdup( argv[ 0 ] );
 			pNewArgv[ 1 ] = strdup( UNOPKGARG );
 			argc++;
 
-			pNewArgv[ argc ] = NULL;
+			pNewArgv[ argc ] = nullptr;
 			argv = pNewArgv;
 		}
 	}
 	else
 	{
 		// Insert module argument if missing
-		const char *pNewArg = NULL;
+		const char *pNewArg = nullptr;
 		if ( [@"sbase" isEqualToString:pCmdName] )
 			pNewArg = "--base";
 		else if ( [@"scalc" isEqualToString:pCmdName] )
@@ -370,13 +370,13 @@ int java_main( int argc, char **argv )
 
 		if ( pNewArg )
 		{
-			char **pNewArgv = (char **)malloc( sizeof( char** ) * ( argc + 2 ) );
+			char **pNewArgv = static_cast< char** >( malloc( sizeof( char** ) * ( argc + 2 ) ) );
 			memcpy( pNewArgv + 1, argv, sizeof( char** ) * argc );
 			pNewArgv[ 0 ] = strdup( argv[ 0 ] );
 			pNewArgv[ 1 ] = strdup( pNewArg );
 			argc++;
 
-			pNewArgv[ argc ] = NULL;
+			pNewArgv[ argc ] = nullptr;
 			argv = pNewArgv;
 		}
 		// Use default launch options if there are no application arguments
@@ -387,32 +387,32 @@ int java_main( int argc, char **argv )
 			{
 				if ( CFGetTypeID( aPref ) == CFStringGetTypeID() )
 				{
-					char **pNewArgv = (char **)malloc( sizeof( char** ) * ( argc + 2 ) );
+					char **pNewArgv = static_cast< char** >( malloc( sizeof( char** ) * ( argc + 2 ) ) );
 					memcpy( pNewArgv, argv, sizeof( char** ) * argc );
 
-					pNewArgv[ argc ] = (char *)[(NSString *)aPref UTF8String];
+					pNewArgv[ argc ] = static_cast< char* >( [static_cast< NSString* >( aPref ) UTF8String] );
 					if ( pNewArgv[ argc ] )
 					{
 						pNewArgv[ argc ] = strdup( pNewArgv[ argc ] );
 						argc++;
 					}
 
-					pNewArgv[ argc ] = NULL;
+					pNewArgv[ argc ] = nullptr;
 					argv = pNewArgv;
 				}
 				else if ( CFGetTypeID( aPref ) == CFArrayGetTypeID() )
 				{
-					CFIndex nArrayLen = CFArrayGetCount( (CFArrayRef)aPref );
-					char **pNewArgv = (char **)malloc( sizeof( char** ) * ( argc + nArrayLen + 1 ) );
+					CFIndex nArrayLen = CFArrayGetCount( static_cast< CFArrayRef >( aPref ) );
+					char **pNewArgv = static_cast< char** >( malloc( sizeof( char** ) * ( argc + nArrayLen + 1 ) ) );
 					memcpy( pNewArgv, argv, sizeof( char** ) * argc );
 
 					int i = 0;
 					for ( ; i < nArrayLen; i++ )
 					{
-						CFStringRef aElement = (CFStringRef)CFArrayGetValueAtIndex( (CFArrayRef)aPref, i );
+						CFStringRef aElement = static_cast< CFStringRef >( CFArrayGetValueAtIndex( static_cast< CFArrayRef >( aPref ), i ) );
 						if ( aElement )
 						{
-							pNewArgv[ argc ] = (char *)[(NSString *)aElement UTF8String];
+							pNewArgv[ argc ] = static_cast< char* >( [static_cast< NSString* >( Element ) UTF8String] );
 							if ( pNewArgv[ argc ] )
 							{
 								pNewArgv[ argc ] = strdup( pNewArgv[ argc ] );
@@ -421,7 +421,7 @@ int java_main( int argc, char **argv )
 						}
 					}
 
-					pNewArgv[ argc ] = NULL;
+					pNewArgv[ argc ] = nullptr;
 					argv = pNewArgv;
 				}
 
@@ -442,13 +442,13 @@ int java_main( int argc, char **argv )
 			NSString *pHTMLPath = nil;
 			if ( aHTMLURL )
 			{
-				pHTMLPath = (NSString *)CFURLCopyFileSystemPath( aHTMLURL, kCFURLPOSIXPathStyle );
+				pHTMLPath = static_cast< NSString* >( CFURLCopyFileSystemPath( aHTMLURL, kCFURLPOSIXPathStyle ) );
 				if ( pHTMLPath )
 					[pHTMLPath autorelease];
 				CFRelease( aHTMLURL );
 			}
 			if ( !pHTMLPath )
-				pHTMLPath = [NSString stringWithFormat:@"%@/Contents/Resources/en.lproj/%@.%@", pBundlePath, (NSString *)aFile, (NSString *)aType];
+				pHTMLPath = [NSString stringWithFormat:@"%@/Contents/Resources/en.lproj/%@.%@", pBundlePath, static_cast< NSString* >( aFile ), static_cast< NSString* >( aType )];
 			if ( pHTMLPath )
 			{
 				NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
@@ -477,7 +477,7 @@ int java_main( int argc, char **argv )
 	else
 		pAppMainLibPath = [NSString stringWithFormat:@"%@/Contents/Frameworks/libsofficeapp.dylib", pBundlePath];
 
-	void *pAppMainLib = NULL;
+	void *pAppMainLib = nullptr;
 	if ( pAppMainLibPath )
 		pAppMainLib = dlopen( [pAppMainLibPath UTF8String], RTLD_LAZY | RTLD_GLOBAL );
 
@@ -486,13 +486,13 @@ int java_main( int argc, char **argv )
 	{
 		if ( bUnoPkg )
 		{
-			UnoPkgMain_Type *pUnoPkgMain = (UnoPkgMain_Type *)dlsym( pAppMainLib, "unopkg_main" );
+			UnoPkgMain_Type *pUnoPkgMain = reinterpret_cast< UnoPkgMain_Type* >( dlsym( pAppMainLib, "unopkg_main" ) );
 			if ( pUnoPkgMain )
 				nRet = pUnoPkgMain( argc, argv );
 		}
 		else
 		{
-			SofficeMain_Type *pSofficeMain = (SofficeMain_Type *)dlsym( pAppMainLib, "soffice_main" );
+			SofficeMain_Type *pSofficeMain = reinterpret_cast< SofficeMain_Type* >( dlsym( pAppMainLib, "soffice_main" ) );
 			if ( pSofficeMain )
 				nRet = pSofficeMain( argc, argv );
 		}
