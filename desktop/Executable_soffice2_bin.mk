@@ -47,7 +47,6 @@ ifneq ($(strip $(GUIBASE)),java)
 $(eval $(call gb_Executable_use_libraries,soffice2_bin,\
     sal \
     sofficeapp \
-	$(gb_UWINAPI) \
 ))
 endif	# GUIBASE != java
 
@@ -86,11 +85,6 @@ endif	# GUIBASE == java
 endif
 
 ifeq ($(OS),WNT)
-
-$(eval $(call gb_Executable_use_static_libraries,soffice2_bin,\
-    ooopathutils \
-    winextendloaderenv \
-))
 
 $(eval $(call gb_Executable_set_targettype_gui,soffice2_bin,YES))
 
