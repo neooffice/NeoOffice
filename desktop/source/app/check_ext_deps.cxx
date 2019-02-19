@@ -32,7 +32,8 @@
 
 #include <rtl/bootstrap.hxx>
 #include <rtl/ustring.hxx>
-#include <cppuhelper/compbase3.hxx>
+#include <sal/log.hxx>
+#include <cppuhelper/implbase.hxx>
 
 #include <vcl/wrkwin.hxx>
 #include <vcl/timer.hxx>
@@ -40,13 +41,17 @@
 #include <unotools/configmgr.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 
+#include <comphelper/lok.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/sequence.hxx>
 #include <cppuhelper/bootstrap.hxx>
+#include <com/sun/star/ucb/CommandAbortedException.hpp>
+#include <com/sun/star/ucb/CommandFailedException.hpp>
 #include <com/sun/star/ucb/XCommandEnvironment.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/NamedValue.hpp>
 #include <com/sun/star/configuration/theDefaultProvider.hpp>
+#include <com/sun/star/deployment/DeploymentException.hpp>
 #include <com/sun/star/deployment/XPackage.hpp>
 #include <com/sun/star/deployment/ExtensionManager.hpp>
 #include <com/sun/star/deployment/LicenseException.hpp>
@@ -61,7 +66,7 @@
 
 #include "app.hxx"
 
-#include "../deployment/inc/dp_misc.h"
+#include "dp_misc.h"
 
 using namespace desktop;
 using namespace com::sun::star;
@@ -73,7 +78,7 @@ namespace
 {
 //For use with XExtensionManager.synchronize
 class SilentCommandEnv
-    : public ::cppu::WeakImplHelper3< ucb::XCommandEnvironment,
+    : public ::cppu::WeakImplHelper< ucb::XCommandEnvironment,
                                       task::XInteractionHandler,
                                       ucb::XProgressHandler >
 {
@@ -86,25 +91,22 @@ public:
     SilentCommandEnv(
         uno::Reference<uno::XComponentContext> const & xContext,
         Desktop* pDesktop );
-    virtual ~SilentCommandEnv();
+    virtual ~SilentCommandEnv() override;
 
     // XCommandEnvironment
     virtual uno::Reference<task::XInteractionHandler > SAL_CALL
-    getInteractionHandler() throw (uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    getInteractionHandler() override;
     virtual uno::Reference<ucb::XProgressHandler >
-    SAL_CALL getProgressHandler() throw (uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    SAL_CALL getProgressHandler() override;
 
     // XInteractionHandler
     virtual void SAL_CALL handle(
-        uno::Reference<task::XInteractionRequest > const & xRequest )
-        throw (uno::RuntimeException, std::exception) SAL_OVERRIDE;
+        uno::Reference<task::XInteractionRequest > const & xRequest ) override;
 
     // XProgressHandler
-    virtual void SAL_CALL push( uno::Any const & Status )
-        throw (uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual void SAL_CALL update( uno::Any const & Status )
-        throw (uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual void SAL_CALL pop() throw (uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL push( uno::Any const & Status ) override;
+    virtual void SAL_CALL update( uno::Any const & Status ) override;
+    virtual void SAL_CALL pop() override;
 };
 
 
@@ -125,14 +127,12 @@ SilentCommandEnv::~SilentCommandEnv()
 
 
 Reference<task::XInteractionHandler> SilentCommandEnv::getInteractionHandler()
-    throw (uno::RuntimeException, std::exception)
 {
     return this;
 }
 
 
 Reference<ucb::XProgressHandler> SilentCommandEnv::getProgressHandler()
-    throw (uno::RuntimeException, std::exception)
 {
     return this;
 }
@@ -140,7 +140,6 @@ Reference<ucb::XProgressHandler> SilentCommandEnv::getProgressHandler()
 
 // XInteractionHandler
 void SilentCommandEnv::handle( Reference< task::XInteractionRequest> const & xRequest )
-    throw (uno::RuntimeException, std::exception)
 {
     deployment::LicenseException licExc;
 
@@ -151,7 +150,7 @@ void SilentCommandEnv::handle( Reference< task::XInteractionRequest> const & xRe
     {
         uno::Reference< ui::dialogs::XExecutableDialog > xDialog(
             deployment::ui::LicenseDialog::create(
-            mxContext, VCLUnoHelper::GetInterface( NULL ),
+            mxContext, VCLUnoHelper::GetInterface( nullptr ),
             licExc.ExtensionName, licExc.Text ) );
         sal_Int16 res = xDialog->execute();
         if ( res == ui::dialogs::ExecutableDialogResults::CANCEL )
@@ -189,7 +188,6 @@ void SilentCommandEnv::handle( Reference< task::XInteractionRequest> const & xRe
 
 // XProgressHandler
 void SilentCommandEnv::push( uno::Any const & rStatus )
-    throw (uno::RuntimeException, std::exception)
 {
     OUString sText;
     mnLevel += 1;
@@ -205,7 +203,6 @@ void SilentCommandEnv::push( uno::Any const & rStatus )
 
 
 void SilentCommandEnv::update( uno::Any const & rStatus )
-    throw (uno::RuntimeException, std::exception)
 {
     OUString sText;
     if ( rStatus.hasValue() && ( rStatus >>= sText) )
@@ -215,7 +212,7 @@ void SilentCommandEnv::update( uno::Any const & rStatus )
 }
 
 
-void SilentCommandEnv::pop() throw (uno::RuntimeException, std::exception)
+void SilentCommandEnv::pop()
 {
     mnLevel -= 1;
 }
@@ -293,7 +290,7 @@ static bool impl_checkDependencies( const uno::Reference< uno::XComponentContext
                         if ( reg.IsAmbiguous )
                             bRegistered = false;
                         else
-                            bRegistered = reg.Value ? true : false;
+                            bRegistered = reg.Value;
                     }
                     else
                         bRegistered = false;
@@ -333,11 +330,11 @@ static void impl_setNeedsCompatCheck()
                 comphelper::getProcessComponentContext() ) );
 
         Sequence< Any > theArgs(1);
-        beans::NamedValue v( OUString("nodepath"),
+        beans::NamedValue v( "nodepath",
                       makeAny( OUString("org.openoffice.Setup/Office") ) );
         theArgs[0] <<= v;
-        Reference< beans::XPropertySet > pset = Reference< beans::XPropertySet >(
-            theConfigProvider->createInstanceWithArguments( OUString(aAccessSrvc), theArgs ), UNO_QUERY_THROW );
+        Reference< beans::XPropertySet > pset(
+            theConfigProvider->createInstanceWithArguments( aAccessSrvc, theArgs ), UNO_QUERY_THROW );
 
         Any value = makeAny( OUString("never") );
 
@@ -364,11 +361,11 @@ static bool impl_needsCompatCheck()
                 comphelper::getProcessComponentContext() ) );
 
         Sequence< Any > theArgs(1);
-        beans::NamedValue v( OUString("nodepath"),
+        beans::NamedValue v( "nodepath",
                       makeAny( OUString("org.openoffice.Setup/Office") ) );
         theArgs[0] <<= v;
-        Reference< beans::XPropertySet > pset = Reference< beans::XPropertySet >(
-            theConfigProvider->createInstanceWithArguments( OUString(aAccessSrvc), theArgs ), UNO_QUERY_THROW );
+        Reference< beans::XPropertySet > pset(
+            theConfigProvider->createInstanceWithArguments( aAccessSrvc, theArgs ), UNO_QUERY_THROW );
 
         Any result = pset->getPropertyValue("LastCompatibilityCheckID");
 
@@ -384,7 +381,7 @@ static bool impl_needsCompatCheck()
         bNeedsCheck = true;
 #endif
     }
-    catch (const com::sun::star::uno::Exception&) {}
+    catch (const css::uno::Exception&) {}
 
     return bNeedsCheck;
 }
@@ -420,7 +417,6 @@ bool Desktop::CheckExtensionDependencies()
 
 void Desktop::SynchronizeExtensionRepositories()
 {
-    SAL_INFO( "desktop.app", "desktop (jl) ::Desktop::SynchronizeExtensionRepositories");
     uno::Reference< uno::XComponentContext > context(
         comphelper::getProcessComponentContext());
     uno::Reference< ucb::XCommandEnvironment > silent(
@@ -429,15 +425,20 @@ void Desktop::SynchronizeExtensionRepositories()
         deployment::ExtensionManager::get(context)->reinstallDeployedExtensions(
             true, "user", Reference<task::XAbortChannel>(), silent);
 #if !HAVE_FEATURE_MACOSX_SANDBOX
+        if (!comphelper::LibreOfficeKit::isActive())
 #ifdef USE_JAVA
-        // Do not force the application to restart if no bundled or shared
-        // extensions were installed
-        uno::Sequence<uno::Reference<deployment::XPackage>> bundledExtensions = deployment::ExtensionManager::get(context)->getDeployedExtensions("bundled", Reference<task::XAbortChannel>(), silent);
-        uno::Sequence<uno::Reference<deployment::XPackage>> sharedExtensions = deployment::ExtensionManager::get(context)->getDeployedExtensions("shared", Reference<task::XAbortChannel>(), silent);
-        if (bundledExtensions.getLength() || sharedExtensions.getLength())
+        {
+            // Do not force the application to restart if no bundled or shared
+            // extensions were installed
+            uno::Sequence<uno::Reference<deployment::XPackage>> bundledExtensions = deployment::ExtensionManager::get(context)->getDeployedExtensions("bundled", Reference<task::XAbortChannel>(), silent);
+            uno::Sequence<uno::Reference<deployment::XPackage>> sharedExtensions = deployment::ExtensionManager::get(context)->getDeployedExtensions("shared", Reference<task::XAbortChannel>(), silent);
+            if (bundledExtensions.getLength() || sharedExtensions.getLength())
 #endif	// USE_JAVA
-        task::OfficeRestartManager::get(context)->requestRestart(
-            silent->getInteractionHandler());
+            task::OfficeRestartManager::get(context)->requestRestart(
+                silent->getInteractionHandler());
+#ifdef USE_JAVA
+        }
+#endif	// USE_JAVA
 #endif
     } else {
         // reinstallDeployedExtensions above already calls syncRepositories
