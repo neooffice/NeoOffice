@@ -28,7 +28,6 @@
 
 #include <cassert>
 
-#include <boost/shared_ptr.hpp>
 #include <com/sun/star/uno/Exception.hpp>
 #include <comphelper/configuration.hxx>
 #include "config_folders.h"
@@ -158,7 +157,7 @@ Status create(OUString const & uri) {
         return ERROR_OTHER;
     }
 #endif
-    boost::shared_ptr<comphelper::ConfigurationChanges> batch(
+    std::shared_ptr<comphelper::ConfigurationChanges> batch(
         comphelper::ConfigurationChanges::create());
     officecfg::Setup::Office::ooSetupInstCompleted::set(true, batch);
     batch->commit();
@@ -183,7 +182,7 @@ Status finalize() {
         if (isCreated()) {
             return EXISTED;
         }
-        // fall through
+        SAL_FALLTHROUGH;
     case utl::Bootstrap::PATH_VALID:
         return create(uri);
     default:
