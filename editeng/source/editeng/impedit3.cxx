@@ -93,7 +93,7 @@
 typedef sal_Bool UseDarkModeColors_Type();
 
 static ::osl::Module aModule;
-static UseDarkModeColors_Type *pUseDarkModeColors = NULL;
+static UseDarkModeColors_Type *pUseDarkModeColors = nullptr;
 
 static sal_Bool UseDarkModeColors()
 {
