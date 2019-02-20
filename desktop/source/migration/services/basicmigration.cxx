@@ -34,14 +34,12 @@ using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 
 
-
 namespace migration
 {
 
 
-
-    #define sSourceUserBasic OUString( "/user/basic" )
-    #define sTargetUserBasic OUString( "/user/__basic_80" )
+    #define sSourceUserBasic "/user/basic"
+    #define sTargetUserBasic "/user/__basic_80"
 
 
     // component operations
@@ -53,11 +51,9 @@ namespace migration
     }
 
 
-
     Sequence< OUString > BasicMigration_getSupportedServiceNames()
     {
-        Sequence< OUString > aNames(1);
-        aNames.getArray()[0] = "com.sun.star.migration.Basic";
+        Sequence< OUString > aNames { "com.sun.star.migration.Basic" };
         return aNames;
     }
 
@@ -70,11 +66,9 @@ namespace migration
     }
 
 
-
     BasicMigration::~BasicMigration()
     {
     }
-
 
 
     TStringVectorPtr BasicMigration::getFiles( const OUString& rBaseURL ) const
@@ -113,33 +107,29 @@ namespace migration
     }
 
 
-
-    ::osl::FileBase::RC BasicMigration::checkAndCreateDirectory( INetURLObject& rDirURL )
+    void BasicMigration::checkAndCreateDirectory( INetURLObject& rDirURL )
     {
-        ::osl::FileBase::RC aResult = ::osl::Directory::create( rDirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ) );
+        ::osl::FileBase::RC aResult = ::osl::Directory::create( rDirURL.GetMainURL( INetURLObject::DecodeMechanism::ToIUri ) );
         if ( aResult == ::osl::FileBase::E_NOENT )
         {
             INetURLObject aBaseURL( rDirURL );
             aBaseURL.removeSegment();
             checkAndCreateDirectory( aBaseURL );
-            return ::osl::Directory::create( rDirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ) );
+            ::osl::Directory::create( rDirURL.GetMainURL( INetURLObject::DecodeMechanism::ToIUri ) );
         }
+#ifdef USE_JAVA
         else
         {
-#ifdef USE_JAVA
             // Fix bug 1544 by ensuring that destination directory is
             // readable, writable, and executable
             ::osl::FileStatus aDirStatus( osl_FileStatus_Mask_Attributes );
             ::osl::DirectoryItem aDirItem;
-            ::osl::DirectoryItem::get( rDirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ), aDirItem );
+            ::osl::DirectoryItem::get( rDirURL.GetMainURL( INetURLObject::DecodeMechanism::ToIUri ), aDirItem );
             aDirItem.getFileStatus( aDirStatus );
-            ::osl::File::setAttributes( rDirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ), osl_File_Attribute_OwnRead | osl_File_Attribute_OwnWrite | osl_File_Attribute_OwnExe | aDirStatus.getAttributes() );
-#endif	// USE_JAVA
-
-            return aResult;
+            ::osl::File::setAttributes( rDirURL.GetMainURL( INetURLObject::DecodeMechanism::ToIUri ), osl_File_Attribute_OwnRead | osl_File_Attribute_OwnWrite | osl_File_Attribute_OwnExe | aDirStatus.getAttributes() );
         }
+#endif	// USE_JAVA
     }
-
 
 
     void BasicMigration::copyFiles()
@@ -161,9 +151,10 @@ namespace migration
                 ::osl::FileBase::RC aResult = ::osl::File::copy( *aI, sTargetName );
                 if ( aResult != ::osl::FileBase::E_None )
                 {
-                    OString aMsg( "BasicMigration::copyFiles: cannot copy " );
-                    aMsg += OUStringToOString( *aI, RTL_TEXTENCODING_UTF8 ) + " to "
-                         +  OUStringToOString( sTargetName, RTL_TEXTENCODING_UTF8 );
+                    OString aMsg = "BasicMigration::copyFiles: cannot copy "
+                                 + OUStringToOString( *aI, RTL_TEXTENCODING_UTF8 )
+                                 + " to "
+                                 + OUStringToOString( sTargetName, RTL_TEXTENCODING_UTF8 );
                     OSL_FAIL( aMsg.getStr() );
                 }
 #ifdef USE_JAVA
@@ -191,22 +182,19 @@ namespace migration
     // XServiceInfo
 
 
-    OUString BasicMigration::getImplementationName() throw (RuntimeException, std::exception)
+    OUString BasicMigration::getImplementationName()
     {
         return BasicMigration_getImplementationName();
     }
 
 
-
     sal_Bool BasicMigration::supportsService(OUString const & ServiceName)
-        throw (css::uno::RuntimeException, std::exception)
     {
         return cppu::supportsService(this, ServiceName);
     }
 
 
-
-    Sequence< OUString > BasicMigration::getSupportedServiceNames() throw (RuntimeException, std::exception)
+    Sequence< OUString > BasicMigration::getSupportedServiceNames()
     {
         return BasicMigration_getSupportedServiceNames();
     }
@@ -215,7 +203,7 @@ namespace migration
     // XInitialization
 
 
-    void BasicMigration::initialize( const Sequence< Any >& aArguments ) throw (Exception, RuntimeException, std::exception)
+    void BasicMigration::initialize( const Sequence< Any >& aArguments )
     {
         ::osl::MutexGuard aGuard( m_aMutex );
 
@@ -242,7 +230,6 @@ namespace migration
 
 
     Any BasicMigration::execute( const Sequence< beans::NamedValue >& )
-        throw (lang::IllegalArgumentException, Exception, RuntimeException, std::exception)
     {
         ::osl::MutexGuard aGuard( m_aMutex );
 
@@ -260,8 +247,6 @@ namespace migration
     {
         return static_cast< lang::XTypeProvider * >( new BasicMigration() );
     }
-
-
 
 
 }   // namespace migration

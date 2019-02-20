@@ -15,11 +15,19 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 
 #include "oo3extensionmigration.hxx"
 #include <rtl/instance.hxx>
+#include <sal/log.hxx>
 #include <osl/file.hxx>
 #include <osl/thread.h>
 #include <tools/urlobj.hxx>
@@ -38,6 +46,8 @@
 #include <com/sun/star/ucb/NameClash.hpp>
 #include <com/sun/star/ucb/XCommandEnvironment.hpp>
 #include <com/sun/star/xml/xpath/XPathAPI.hpp>
+#include <com/sun/star/xml/xpath/XPathException.hpp>
+#include <com/sun/star/xml/dom/DOMException.hpp>
 #include <com/sun/star/xml/dom/DocumentBuilder.hpp>
 #include <com/sun/star/beans/NamedValue.hpp>
 #include <com/sun/star/deployment/ExtensionManager.hpp>
@@ -49,46 +59,18 @@ using namespace ::com::sun::star::uno;
 namespace migration
 {
 
-static const char sExtensionSubDir[] = "/user/uno_packages/";
-static const char sSubDirName[] = "cache";
-static const char sDescriptionXmlFile[] = "/description.xml";
-static const char sExtensionRootSubDirName[] = "/uno_packages";
-
-
 // component operations
 
 
 OUString OO3ExtensionMigration_getImplementationName()
 {
-    static OUString* pImplName = 0;
-    if ( !pImplName )
-    {
-        ::osl::MutexGuard aGuard( ::osl::Mutex::getGlobalMutex() );
-        if ( !pImplName )
-        {
-            static OUString aImplName( "com.sun.star.comp.desktop.migration.OOo3Extensions" );
-            pImplName = &aImplName;
-        }
-    }
-    return *pImplName;
+    return OUString( "com.sun.star.comp.desktop.migration.OOo3Extensions" );
 }
-
 
 
 Sequence< OUString > OO3ExtensionMigration_getSupportedServiceNames()
 {
-    static Sequence< OUString >* pNames = 0;
-    if ( !pNames )
-    {
-        ::osl::MutexGuard aGuard( ::osl::Mutex::getGlobalMutex() );
-        if ( !pNames )
-        {
-            static Sequence< OUString > aNames(1);
-            aNames.getArray()[0] = "com.sun.star.migration.Extensions";
-            pNames = &aNames;
-        }
-    }
-    return *pNames;
+    return Sequence< OUString > { "com.sun.star.migration.Extensions" };
 }
 
 
@@ -101,35 +83,32 @@ m_ctx(ctx)
 }
 
 
-
 OO3ExtensionMigration::~OO3ExtensionMigration()
 {
 }
 
-::osl::FileBase::RC OO3ExtensionMigration::checkAndCreateDirectory( INetURLObject& rDirURL )
+void OO3ExtensionMigration::checkAndCreateDirectory( INetURLObject& rDirURL )
 {
-    ::osl::FileBase::RC aResult = ::osl::Directory::create( rDirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ) );
+    ::osl::FileBase::RC aResult = ::osl::Directory::create( rDirURL.GetMainURL( INetURLObject::DecodeMechanism::ToIUri ) );
     if ( aResult == ::osl::FileBase::E_NOENT )
     {
         INetURLObject aBaseURL( rDirURL );
         aBaseURL.removeSegment();
         checkAndCreateDirectory( aBaseURL );
-        return ::osl::Directory::create( rDirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ) );
+        ::osl::Directory::create( rDirURL.GetMainURL( INetURLObject::DecodeMechanism::ToIUri ) );
     }
+#ifdef USE_JAVA
     else
     {
-#ifdef USE_JAVA
         // Fix bug 1544 by ensuring that destination directory is
         // readable, writable, and executable
         ::osl::FileStatus aDirStatus( osl_FileStatus_Mask_Attributes );
         ::osl::DirectoryItem aDirItem;
-        ::osl::DirectoryItem::get( rDirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ), aDirItem );
+        ::osl::DirectoryItem::get( rDirURL.GetMainURL( INetURLObject::DecodeMechanism::ToIUri ), aDirItem );
         aDirItem.getFileStatus( aDirStatus );
-        ::osl::File::setAttributes( rDirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ), osl_File_Attribute_OwnRead | osl_File_Attribute_OwnWrite | osl_File_Attribute_OwnExe | aDirStatus.getAttributes() );
-#endif	// USE_JAVA
-
-        return aResult;
+        ::osl::File::setAttributes( rDirURL.GetMainURL( INetURLObject::DecodeMechanism::ToIUri ), osl_File_Attribute_OwnRead | osl_File_Attribute_OwnWrite | osl_File_Attribute_OwnExe | aDirStatus.getAttributes() );
     }
+#endif	// USE_JAVA
 }
 
 void OO3ExtensionMigration::scanUserExtensions( const OUString& sSourceDir, TStringVector& aMigrateExtensions )
@@ -198,7 +177,7 @@ OO3ExtensionMigration::ScanResult OO3ExtensionMigration::scanExtensionFolder( co
                 else
                 {
                     aDirEntryURL = fs.getFileURL();
-                    if ( aDirEntryURL.indexOf( sDescriptionXmlFile ) > 0 )
+                    if ( aDirEntryURL.indexOf( "/description.xml" ) > 0 )
                         aResult = scanDescriptionXml( aDirEntryURL ) ? SCANRESULT_MIGRATE_EXTENSION : SCANRESULT_DONTMIGRATE_EXTENSION;
                 }
             }
@@ -218,7 +197,7 @@ bool OO3ExtensionMigration::scanDescriptionXml( const OUString& sDescriptionXmlU
 {
     if ( !m_xDocBuilder.is() )
     {
-        m_xDocBuilder = uno::Reference< xml::dom::XDocumentBuilder >( xml::dom::DocumentBuilder::create(m_ctx) );
+        m_xDocBuilder.set( xml::dom::DocumentBuilder::create(m_ctx) );
     }
 
     if ( !m_xSimpleFileAccess.is() )
@@ -267,9 +246,9 @@ bool OO3ExtensionMigration::scanDescriptionXml( const OUString& sDescriptionXmlU
         if ( !aExtIdentifier.isEmpty() )
         {
             // scan extension identifier and try to match with our black list entries
-            for ( sal_uInt32 i = 0; i < m_aBlackList.size(); i++ )
+            for (OUString & i : m_aBlackList)
             {
-                utl::SearchParam param(m_aBlackList[i], utl::SearchParam::SRCH_REGEXP);
+                utl::SearchParam param(i, utl::SearchParam::SearchType::Regexp);
                 utl::TextSearch  ts(param, LANGUAGE_DONTKNOW);
 
                 sal_Int32 start = 0;
@@ -292,9 +271,9 @@ bool OO3ExtensionMigration::scanDescriptionXml( const OUString& sDescriptionXmlU
         // Try to use the folder name to match our black list
         // as some extensions don't provide an identifier in the
         // description.xml!
-        for ( sal_uInt32 i = 0; i < m_aBlackList.size(); i++ )
+        for (OUString & i : m_aBlackList)
         {
-            utl::SearchParam param(m_aBlackList[i], utl::SearchParam::SRCH_REGEXP);
+            utl::SearchParam param(i, utl::SearchParam::SearchType::Regexp);
             utl::TextSearch  ts(param, LANGUAGE_DONTKNOW);
 
             sal_Int32 start = 0;
@@ -332,26 +311,22 @@ void OO3ExtensionMigration::migrateExtension( const OUString& sSourceDir )
 }
 
 
-
 // XServiceInfo
 
 
-OUString OO3ExtensionMigration::getImplementationName() throw (RuntimeException, std::exception)
+OUString OO3ExtensionMigration::getImplementationName()
 {
     return OO3ExtensionMigration_getImplementationName();
 }
 
 
-
 sal_Bool OO3ExtensionMigration::supportsService(OUString const & ServiceName)
-    throw (css::uno::RuntimeException, std::exception)
 {
     return cppu::supportsService(this, ServiceName);
 }
 
 
-
-Sequence< OUString > OO3ExtensionMigration::getSupportedServiceNames() throw (RuntimeException, std::exception)
+Sequence< OUString > OO3ExtensionMigration::getSupportedServiceNames()
 {
     return OO3ExtensionMigration_getSupportedServiceNames();
 }
@@ -360,7 +335,7 @@ Sequence< OUString > OO3ExtensionMigration::getSupportedServiceNames() throw (Ru
 // XInitialization
 
 
-void OO3ExtensionMigration::initialize( const Sequence< Any >& aArguments ) throw (Exception, RuntimeException, std::exception)
+void OO3ExtensionMigration::initialize( const Sequence< Any >& aArguments )
 {
     ::osl::MutexGuard aGuard( m_aMutex );
 
@@ -390,7 +365,6 @@ void OO3ExtensionMigration::initialize( const Sequence< Any >& aArguments ) thro
 }
 
 Any OO3ExtensionMigration::execute( const Sequence< beans::NamedValue >& )
-    throw (lang::IllegalArgumentException, Exception, RuntimeException, std::exception)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
 
@@ -399,9 +373,7 @@ Any OO3ExtensionMigration::execute( const Sequence< beans::NamedValue >& )
     {
         // copy all extensions
         OUString sSourceDir( m_sSourceDir );
-        sSourceDir += sExtensionSubDir;
-        sSourceDir += sSubDirName;
-        sSourceDir += sExtensionRootSubDirName;
+        sSourceDir += "/user/uno_packages/cache/uno_packages";
         TStringVector aExtensionToMigrate;
         scanUserExtensions( sSourceDir, aExtensionToMigrate );
         if ( aExtensionToMigrate.size() > 0 )
@@ -432,14 +404,12 @@ TmpRepositoryCommandEnv::~TmpRepositoryCommandEnv()
 // XCommandEnvironment
 
 uno::Reference< task::XInteractionHandler > TmpRepositoryCommandEnv::getInteractionHandler()
-throw ( uno::RuntimeException, std::exception )
 {
     return this;
 }
 
 
 uno::Reference< ucb::XProgressHandler > TmpRepositoryCommandEnv::getProgressHandler()
-throw ( uno::RuntimeException, std::exception )
 {
     return this;
 }
@@ -447,7 +417,6 @@ throw ( uno::RuntimeException, std::exception )
 // XInteractionHandler
 void TmpRepositoryCommandEnv::handle(
     uno::Reference< task::XInteractionRequest> const & xRequest )
-    throw ( uno::RuntimeException, std::exception )
 {
     OSL_ASSERT( xRequest->getRequest().getValueTypeClass() == uno::TypeClass_EXCEPTION );
 
@@ -475,17 +444,15 @@ void TmpRepositoryCommandEnv::handle(
 
 // XProgressHandler
 void TmpRepositoryCommandEnv::push( uno::Any const & /*Status*/ )
-throw (uno::RuntimeException, std::exception)
 {
 }
 
 
 void TmpRepositoryCommandEnv::update( uno::Any const & /*Status */)
-throw (uno::RuntimeException, std::exception)
 {
 }
 
-void TmpRepositoryCommandEnv::pop() throw (uno::RuntimeException, std::exception)
+void TmpRepositoryCommandEnv::pop()
 {
 }
 
@@ -499,7 +466,6 @@ Reference< XInterface > SAL_CALL OO3ExtensionMigration_create(
     return static_cast< lang::XTypeProvider * >( new OO3ExtensionMigration(
         ctx) );
 }
-
 
 
 }   // namespace migration
