@@ -26,11 +26,8 @@
 
 #include <config_folders.h>
 
-#include "deployment.hrc"
-#include "unopkg_shared.h"
-#include "dp_identifier.hxx"
-#include "../../deployment/gui/dp_gui.hrc"
-#include "lockfile.hxx"
+#include <stdio.h>
+
 #include <vcl/svapp.hxx>
 #include <vcl/msgbox.hxx>
 #include <rtl/bootstrap.hxx>
@@ -39,14 +36,20 @@
 #include <osl/process.h>
 #include <osl/file.hxx>
 #include <osl/thread.hxx>
-#include <tools/getprocessworkingdir.hxx>
-#include <comphelper/processfactory.hxx>
 #include <unotools/configmgr.hxx>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/ucb/UniversalContentBroker.hpp>
+#include <unotools/bootstrap.hxx>
 #include <cppuhelper/bootstrap.hxx>
 #include <comphelper/sequence.hxx>
-#include <stdio.h>
+#include <comphelper/processfactory.hxx>
+
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
+#include <com/sun/star/ucb/UniversalContentBroker.hpp>
+
+#include "deployment.hrc"
+#include "unopkg_shared.h"
+#include "dp_identifier.hxx"
+#include "dp_gui.hrc"
+#include "lockfile.hxx"
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -56,42 +59,33 @@ namespace unopkg {
 
 OUString toString( OptionInfo const * info )
 {
-    assert(info != 0);
+    assert(info != nullptr);
     OUStringBuffer buf;
-    buf.appendAscii("--");
+    buf.append("--");
     buf.appendAscii(info->m_name);
     if (info->m_short_option != '\0')
     {
-        buf.appendAscii(" (short -" );
+        buf.append(" (short -" );
         buf.append(info->m_short_option );
-        buf.appendAscii(")");
+        buf.append(")");
     }
     if (info->m_has_argument)
-        buf.appendAscii(" <argument>" );
+        buf.append(" <argument>" );
     return buf.makeStringAndClear();
 }
 
 
 OptionInfo const * getOptionInfo(
     OptionInfo const * list,
-    OUString const & opt, sal_Unicode copt )
+    OUString const & opt )
 {
-    for ( ; list->m_name != 0; ++list )
+    for ( ; list->m_name != nullptr; ++list )
     {
         OptionInfo const & option_info = *list;
         if (!opt.isEmpty())
         {
             if (opt.equalsAsciiL(
-                    option_info.m_name, option_info.m_name_length ) &&
-                (copt == '\0' || copt == option_info.m_short_option))
-            {
-                return &option_info;
-            }
-        }
-        else
-        {
-            OSL_ASSERT( copt != '\0' );
-            if (copt == option_info.m_short_option)
+                    option_info.m_name, option_info.m_name_length ))
             {
                 return &option_info;
             }
@@ -99,13 +93,13 @@ OptionInfo const * getOptionInfo(
     }
     OSL_FAIL( OUStringToOString(
                     opt, osl_getThreadTextEncoding() ).getStr() );
-    return 0;
+    return nullptr;
 }
 
 
 bool isOption( OptionInfo const * option_info, sal_uInt32 * pIndex )
 {
-    assert(option_info != 0);
+    assert(option_info != nullptr);
     if (osl_getCommandArgCount() <= *pIndex)
         return false;
 
@@ -120,7 +114,7 @@ bool isOption( OptionInfo const * option_info, sal_uInt32 * pIndex )
     {
         ++(*pIndex);
         dp_misc::TRACE(__FILE__ ": identified option \'\'"
-            + OUString( option_info->m_short_option ) + "\n");
+            + OUStringLiteral1( option_info->m_short_option ) + "\n");
         return true;
     }
     if (arg[ 1 ] == '-' && rtl_ustr_ascii_compare(
@@ -162,9 +156,9 @@ bool readArgument(
     {
         if (*pIndex < osl_getCommandArgCount())
         {
-            OSL_ASSERT( pValue != 0 );
+            OSL_ASSERT( pValue != nullptr );
             osl_getCommandArg( *pIndex, &pValue->pData );
-            dp_misc::TRACE(OUString( __FILE__) + ": argument value: "
+            dp_misc::TRACE(__FILE__ ": argument value: "
                 + *pValue + "\n");
             ++(*pIndex);
             return true;
@@ -181,7 +175,7 @@ struct ExecutableDir : public rtl::StaticWithInit<
     const OUString operator () () {
         OUString path;
         if (osl_getExecutableFile( &path.pData ) != osl_Process_E_None) {
-            throw RuntimeException("cannot locate executable directory!",0);
+            throw RuntimeException("cannot locate executable directory!",nullptr);
         }
         return path.copy( 0, path.lastIndexOf( '/' ) );
     }
@@ -190,7 +184,7 @@ struct ProcessWorkingDir : public rtl::StaticWithInit<
     OUString, ProcessWorkingDir> {
     const OUString operator () () {
         OUString workingDir;
-        tools::getProcessWorkingDir(workingDir);
+        utl::Bootstrap::getProcessWorkingDir(workingDir);
         return workingDir;
     }
 };
@@ -210,7 +204,7 @@ OUString const & getProcessWorkingDir()
 
 
 OUString makeAbsoluteFileUrl(
-    OUString const & sys_path, OUString const & base_url, bool throw_exc )
+    OUString const & sys_path, OUString const & base_url )
 {
     // system path to file url
     OUString file_url;
@@ -221,7 +215,7 @@ OUString makeAbsoluteFileUrl(
         {
             file_url = sys_path;
         }
-        else if (throw_exc)
+        else
         {
             throw RuntimeException("cannot get file url from system path: " +
                 sys_path );
@@ -232,16 +226,9 @@ OUString makeAbsoluteFileUrl(
     if (osl_getAbsoluteFileURL(
             base_url.pData, file_url.pData, &abs.pData ) != osl_File_E_None)
     {
-        if (throw_exc) {
-            OUStringBuffer buf;
-            buf.appendAscii( "making absolute file url failed: \"" );
-            buf.append( base_url );
-            buf.appendAscii( "\" (base-url) and \"" );
-            buf.append( file_url );
-            buf.appendAscii( "\" (file-url)!" );
-            throw RuntimeException( buf.makeStringAndClear() );
-        }
-        return OUString();
+        throw RuntimeException(
+            "making absolute file url failed: \"" + base_url
+            + "\" (base-url) and \"" + file_url + "\" (file-url)!" );
     }
     return abs[ abs.getLength() -1 ] == '/'
         ? abs.copy( 0, abs.getLength() -1 ) : abs;
@@ -308,9 +295,9 @@ void printf_package(
             xPackage->getBundle( Reference<task::XAbortChannel>(), xCmdEnv ) );
         printf_space( level + 1 );
         dp_misc::writeConsole("bundled Packages: {\n");
-        ::std::vector<Reference<deployment::XPackage> >vec_bundle;
+        std::vector<Reference<deployment::XPackage> >vec_bundle;
         ::comphelper::sequenceToContainer(vec_bundle, seq);
-        printf_packages( vec_bundle, ::std::vector<bool>(vec_bundle.size()),
+        printf_packages( vec_bundle, std::vector<bool>(vec_bundle.size()),
                          xCmdEnv, level + 2 );
         printf_space( level + 1 );
         dp_misc::writeConsole("}\n");
@@ -331,8 +318,8 @@ void printf_unaccepted_licenses(
 
 
 void printf_packages(
-    ::std::vector< Reference<deployment::XPackage> > const & allExtensions,
-    ::std::vector<bool> const & vecUnaccepted,
+    std::vector< Reference<deployment::XPackage> > const & allExtensions,
+    std::vector<bool> const & vecUnaccepted,
     Reference<XCommandEnvironment> const & xCmdEnv, sal_Int32 level )
 {
     OSL_ASSERT(allExtensions.size() == vecUnaccepted.size());
@@ -344,7 +331,7 @@ void printf_packages(
     }
     else
     {
-        typedef ::std::vector< Reference<deployment::XPackage> >::const_iterator I_EXT;
+        typedef std::vector< Reference<deployment::XPackage> >::const_iterator I_EXT;
         int index = 0;
         for (I_EXT i = allExtensions.begin(); i != allExtensions.end(); ++i, ++index)
         {
@@ -356,7 +343,6 @@ void printf_packages(
         }
     }
 }
-
 
 
 namespace {
@@ -390,9 +376,9 @@ Reference<XComponentContext> connectToOffice(
 
     OUString pipeId( ::dp_misc::generateRandomPipeId() );
     OUStringBuffer buf;
-    buf.appendAscii( "--accept=pipe,name=" );
+    buf.append( "--accept=pipe,name=" );
     buf.append( pipeId );
-    buf.appendAscii( ";urp;" );
+    buf.append( ";urp;" );
     args[ 2 ] = buf.makeStringAndClear();
     OUString appURL( getExecutableDir() + "/soffice" );
 
@@ -410,9 +396,9 @@ Reference<XComponentContext> connectToOffice(
         dp_misc::writeConsole("OK.  Connecting...");
 
     OSL_ASSERT( buf.isEmpty() );
-    buf.appendAscii( "uno:pipe,name=" );
+    buf.append( "uno:pipe,name=" );
     buf.append( pipeId );
-    buf.appendAscii( ";urp;StarOffice.ComponentContext" );
+    buf.append( ";urp;StarOffice.ComponentContext" );
     Reference<XComponentContext> xRet(
         ::dp_misc::resolveUnoURL(
             buf.makeStringAndClear(), xLocalComponentContext ),
@@ -453,9 +439,7 @@ Reference<XComponentContext> getUNO(
 {
     // do not create any user data (for the root user) in --shared mode:
     if (shared) {
-        rtl::Bootstrap::set(
-            OUString("CFG_CacheUrl"),
-            OUString());
+        rtl::Bootstrap::set("CFG_CacheUrl", OUString());
     }
 
     // hold lock during process runtime:
@@ -468,7 +452,7 @@ Reference<XComponentContext> getUNO(
     }
     else
     {
-        if (! s_lockfile.check( 0 ))
+        if (! s_lockfile.check( nullptr ))
         {
             OUString sMsg(ResId(RID_STR_CONCURRENTINSTANCE, *DeploymentResMgr::get()));
             //Create this string before we call DeInitVCL, because this will kill
@@ -484,10 +468,10 @@ Reference<XComponentContext> getUNO(
                 if ( ! InitVCL() )
                     throw RuntimeException( "Cannot initialize VCL!" );
                 {
-                    WarningBox warn(NULL, WB_OK | WB_DEF_OK, sMsg);
-                    warn.SetText(utl::ConfigManager::getProductName());
-                    warn.SetIcon(0);
-                    warn.Execute();
+                    ScopedVclPtrInstance< WarningBox > warn(nullptr, WB_OK | WB_DEF_OK, sMsg);
+                    warn->SetText(utl::ConfigManager::getProductName());
+                    warn->SetIcon(0);
+                    warn->Execute();
                 }
                 DeInitVCL();
             }
