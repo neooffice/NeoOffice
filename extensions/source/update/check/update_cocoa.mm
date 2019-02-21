@@ -259,7 +259,7 @@ OUString UpdateNSStringToOUString( NSString *pString )
 		return OUString();
 
 	sal_Unicode aBuf[ nLen + 1 ];
-	[pString getCharacters:aBuf];
+	[pString getCharacters:reinterpret_cast< unichar* >( aBuf )];
 	aBuf[ nLen ] = 0;
 
 	return OUString( aBuf );
@@ -274,11 +274,11 @@ OUString UpdateGetOSVersion()
 	NSProcessInfo *pProcessInfo = [NSProcessInfo processInfo];
 	if ( pProcessInfo )
 	{
-		aRet = OUString::number( (sal_Int32)[pProcessInfo operatingSystemVersion].majorVersion );
+		aRet = OUString::number( static_cast< sal_Int32 >( [pProcessInfo operatingSystemVersion].majorVersion ) );
         aRet += ".";
-		aRet += OUString::number( (sal_Int32)[pProcessInfo operatingSystemVersion].minorVersion );
+		aRet += OUString::number( static_cast< sal_Int32 >( [pProcessInfo operatingSystemVersion].minorVersion ) );
         aRet += ".";
-		aRet += OUString::number( (sal_Int32)[pProcessInfo operatingSystemVersion].patchVersion );
+		aRet += OUString::number( static_cast< sal_Int32 >( [pProcessInfo operatingSystemVersion].patchVersion ) );
 	}
 
 	[pool release];
@@ -295,7 +295,7 @@ sal_Bool UpdateQuitNativeDownloadWebView()
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	UpdateQuitWebViewImpl *pImp = [UpdateQuitWebViewImpl create];
 	[pImp performSelectorOnMainThread:@selector(quitWebView:) withObject:pImp waitUntilDone:YES modes:pModes];
-	bRet = (sal_Bool)[pImp webViewRequestedQuitApp];
+	bRet = static_cast< sal_Bool >( [pImp webViewRequestedQuitApp] );
 
 	[pool release];
 
@@ -308,15 +308,15 @@ sal_Bool UpdateShowNativeDownloadWebView( OUString aURL, OUString aUserAgent, OU
 
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 
-	NSString *pURL = [NSString stringWithCharacters:aURL.getStr() length:aURL.getLength()];
-	NSString *pUserAgent = [NSString stringWithCharacters:aUserAgent.getStr() length:aUserAgent.getLength()];
-	NSString *pTitle = [NSString stringWithCharacters:aTitle.getStr() length:aTitle.getLength()];
+	NSString *pURL = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aURL.getStr() ) length:aURL.getLength()];
+	NSString *pUserAgent = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aUserAgent.getStr() ) length:aUserAgent.getLength()];
+	NSString *pTitle = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aTitle.getStr() ) length:aTitle.getLength()];
 	if ( pURL )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		UpdateCreateWebViewImpl *pImp = [UpdateCreateWebViewImpl createWithURL:pURL userAgent:pUserAgent title:pTitle];
 		[pImp performSelectorOnMainThread:@selector(showWebView:) withObject:pImp waitUntilDone:YES modes:pModes];
-		bRet = (sal_Bool)[pImp isWebViewShowing];
+		bRet = static_cast< sal_Bool >( [pImp isWebViewShowing] );
 	}
 
 	[pool release];
