@@ -444,7 +444,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if (updateBaseURLEntry >= updateBaseURLCount)
 		updateBaseURLEntry = 0;
 
-	return (NSString *)[updateBaseURLEntries objectAtIndex:updateBaseURLEntry];
+	return static_cast< NSString* >( [updateBaseURLEntries objectAtIndex:updateBaseURLEntry] );
 }
 
 + (BOOL)isDownloadURL:(NSURL *)url {
