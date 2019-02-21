@@ -42,6 +42,8 @@
 #include "updatei18n_cocoa.hxx"
 #include "updatewebview_cocoa.h"
 
+#ifdef USE_NATIVE_WEB_VIEW
+
 #define kUpdateMaxInZoomHeight ( kUpdateDefaultBrowserHeight / 2 )
 #define kUpdateBottomViewPadding 2
 #define kUpdateStatusLabelFontHeight 16.0f
@@ -112,7 +114,7 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 {
 	(void)aSelector;
 
-	NSWindowController *pController = (NSWindowController *)pThis;
+	NSWindowController *pController = static_cast< NSWindowController* >( pThis );
 	if ( pController )
 	{
 		NSWindow *pWindow = [pController window];
@@ -279,7 +281,7 @@ static NSModalResponse ShowModalAlert( NSString *pMessageText, NSString *pDefaul
 	mpHeaders = nil;
 	if ([pResponse isKindOfClass:[NSHTTPURLResponse class]])
 	{
-		mpHeaders = [(NSHTTPURLResponse *)pResponse allHeaderFields];
+		mpHeaders = [static_cast< NSHTTPURLResponse* >( pResponse ) allHeaderFields];
 		if (mpHeaders)
 			[mpHeaders retain];
 	}
@@ -452,7 +454,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if (!path || [path length] < [kDownloadURI length])
 		return(NO);
 	NSRange range = NSMakeRange([path length] - [kDownloadURI length], [kDownloadURI length]);
-	return ([path compare:(NSString *)kDownloadURI options:0 range:range]==NSOrderedSame);
+	return ([path compare:static_cast< NSString* >( kDownloadURI ) options:0 range:range]==NSOrderedSame);
 }
 
 + (BOOL)isUpdateURL:(NSURL *)url syncServer:(BOOL)syncServer
@@ -471,7 +473,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 	for(unsigned int i = 0; i < updateBaseURLCount; i++)
 	{
-		NSURL *updateBaseURL = [NSURL URLWithString:(NSString *)[updateBaseURLEntries objectAtIndex:i]];
+		NSURL *updateBaseURL = [NSURL URLWithString:static_cast< NSString* >( [updateBaseURLEntries objectAtIndex:i] )];
 		if(!updateBaseURL)
 			continue;
 		NSString *updateBaseHost = [updateBaseURL host];
@@ -637,7 +639,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 	if ( mpstartingURL )
 	{
-		NSMutableURLRequest *loadRequest =(NSMutableURLRequest *)[NSMutableURLRequest requestWithURL:mpstartingURL];
+		NSMutableURLRequest *loadRequest = static_cast< NSMutableURLRequest* >( [NSMutableURLRequest requestWithURL:mpstartingURL] );
 		if(loadRequest)
 			[[self mainFrame] loadRequest:loadRequest];
 	}
@@ -896,8 +898,8 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if ( !pDataSource )
 		return;
 
-	NSHTTPURLResponse *pResponse = (NSHTTPURLResponse *)[pDataSource response];
-	if ( !pResponse || ![(NSURLResponse *)pResponse isKindOfClass:[NSHTTPURLResponse class]] )
+	NSHTTPURLResponse *pResponse = static_cast< NSHTTPURLResponse* >( [pDataSource response] );
+	if ( !pResponse || ![static_cast< NSURLResponse* >( pResponse ) isKindOfClass:[NSHTTPURLResponse class]] )
 		return;
 
 	NSURL *pURL = [pResponse URL];
@@ -915,15 +917,15 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	{
 		NSString *pKey;
 		NSEnumerator *pEnum = [pHeaders keyEnumerator];
-		while ( ( pKey = (NSString *)[pEnum nextObject] ) ) {
-			NSString *pValue = (NSString *)[pHeaders objectForKey:pKey];
+		while ( ( pKey = static_cast< NSString* >( [pEnum nextObject] ) ) ) {
+			NSString *pValue = static_cast< NSString* >( [pHeaders objectForKey:pKey] );
 			fprintf( stderr, "    %s: %s\n", [pKey cStringUsingEncoding:NSUTF8StringEncoding], pValue ? [pValue cStringUsingEncoding:NSUTF8StringEncoding] : "" );
 		}
 	}
 
 	NSData *pData = [pDataSource data];
 	if ( pData && [pData bytes] )
-		fprintf( stderr, "Content:\n%s\n\n", (const char *)[pData bytes] );
+		fprintf( stderr, "Content:\n%s\n\n", reinterpret_cast< const char* >( [pData bytes] ) );
 #endif	// DEBUG
 
 	if ( ![UpdateWebView isDownloadURL:pURL] )
@@ -998,7 +1000,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	// that this web view is running in
 	// TODO: set header value to applications's name and version
 	if ( pRequest && [pRequest isKindOfClass:[NSMutableURLRequest class]] )
-		[(NSMutableURLRequest *)pRequest addValue:( mpuserAgent ? mpuserAgent : @"Update-Application-Version" ) forHTTPHeaderField:@"Update-Application-Version"];
+		[static_cast< NSMutableURLRequest* >( pRequest ) addValue:( mpuserAgent ? mpuserAgent : @"Update-Application-Version" ) forHTTPHeaderField:@"Update-Application-Version"];
 
 	return pRequest;
 }
@@ -1080,7 +1082,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		for (; i < dirCount && !basePath; i++)
 		{
 			BOOL isDir = NO;
-			NSString *downloadPath = (NSString *)[downloadPaths objectAtIndex:i];
+			NSString *downloadPath = static_cast< NSString* >( [downloadPaths objectAtIndex:i] );
 			if ([fileManager fileExistsAtPath:downloadPath isDirectory:&isDir] && isDir && [fileManager isWritableFileAtPath:downloadPath])
 			{
 				basePath = downloadPath;
@@ -1277,7 +1279,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		if(nExpectedContentLength > 0)
 		{
 			// we got a response from the server, so we can compute a percentage
-			[mpdownloadingIndicator setDoubleValue:(double)nBytesReceived/(double)nExpectedContentLength*100];
+			[mpdownloadingIndicator setDoubleValue:static_cast< double >( nBytesReceived ) / static_cast< double >( nExpectedContentLength ) * 100];
 			if([mpdownloadingIndicator isIndeterminate])
 				[self setDownloadingIndicatorHidden:YES];
 			[mpdownloadingIndicator setIndeterminate:NO];
@@ -1302,9 +1304,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		[self setDownloadingIndicatorHidden:NO];
 
 		// add MB downloaded
-		float fMBReceived = (float)nBytesReceived/(float)(1024*1024);
-		long nMBReceived = (long)fMBReceived;
-		long n10thMBReceived = (long)((fMBReceived-nMBReceived)*10);
+		float fMBReceived = static_cast< float >( nBytesReceived ) / static_cast< float >( 1024 * 1024 );
+		long nMBReceived = static_cast< long >( fMBReceived );
+		long n10thMBReceived = static_cast< long >( ( fMBReceived - nMBReceived ) * 10 );
 		[mpstatusLabel setString:[NSString stringWithFormat:@"%@ - %ld%@%ld %@", pDownloadLabel, nMBReceived, UpdateGetLocalizedDecimalSeparator(), n10thMBReceived, UpdateGetLocalizedString(UPDATEMEGABYTE)]];
 	}
 }
@@ -1338,7 +1340,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			if ([path length] >= [kDownloadURI length])
 			{
 				NSRange range = NSMakeRange([path length] - [kDownloadURI length], [kDownloadURI length]);
-				bUseHdiUtil = ([path compare:(NSString *)kDownloadURI options:0 range:range]==NSOrderedSame);
+				bUseHdiUtil = ([path compare:static_cast< NSString* >( kDownloadURI ) options:0 range:range]==NSOrderedSame);
 			}
 
 			NSString *pErrorMessage = nil;
@@ -1861,8 +1863,8 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 		if(aFrame.size.height > kUpdateMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
 		{
 			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-			[defaults setObject:[NSString stringWithFormat:@"%d", (int)aFrame.origin.x] forKey:kUpdateXPosPref];
-			[defaults setObject:[NSString stringWithFormat:@"%d", (int)aFrame.origin.y] forKey:kUpdateYPosPref];
+			[defaults setObject:[NSString stringWithFormat:@"%d", static_cast< int >( aFrame.origin.x )] forKey:kUpdateXPosPref];
+			[defaults setObject:[NSString stringWithFormat:@"%d", static_cast< int >( aFrame.origin.y )] forKey:kUpdateYPosPref];
 			[defaults synchronize];
 		}
 	}
@@ -1881,8 +1883,8 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 			{
 				NSSize contentSize=[pContentView frame].size;
 				NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-				[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.width] forKey:kUpdateWidthPref];
-				[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.height] forKey:kUpdateHeightPref];
+				[defaults setObject:[NSString stringWithFormat:@"%d", static_cast< int >( contentSize.width )] forKey:kUpdateWidthPref];
+				[defaults setObject:[NSString stringWithFormat:@"%d", static_cast< int >( contentSize.height )] forKey:kUpdateHeightPref];
 				[defaults synchronize];
 			}
 		}
@@ -1902,7 +1904,7 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 
 		if ([self isKindOfClass:[UpdateNonRecursiveResponderWebPanel class]])
 		{
-			UpdateWebView *pWebView = [(UpdateNonRecursiveResponderWebPanel *)self webView];
+			UpdateWebView *pWebView = [static_cast< UpdateNonRecursiveResponderWebPanel* >( self ) webView];
 			if (pWebView)
 				[pWebView stopLoading:self];
 		}
@@ -1929,7 +1931,7 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 				unsigned int i = 0;
 				for ( ; i < nCount; i++ )
 				{
-					NSView *pView = (NSView *)[pSubviews objectAtIndex:i];
+					NSView *pView = static_cast< NSView* >( [pSubviews objectAtIndex:i] );
 					if ( pView )
 					{
 						if ( !pBottomView )
@@ -2139,33 +2141,33 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 	mpcancelButton = [[NSButton alloc] initWithFrame:NSMakeRect(contentSize.width-buttonSize.width-kUpdateBottomViewPadding, kUpdateBottomViewPadding, buttonSize.width, buttonSize.height)];
 	[mpcancelButton setToolTip:UpdateGetVCLResString(SV_BUTTONTEXT_CANCEL)];
 	[mpcancelButton setEnabled:YES];
-	[mpcancelButton setButtonType:NSMomentaryPushInButton];
-	[mpcancelButton setBezelStyle:NSRegularSquareBezelStyle];
+	[mpcancelButton setButtonType:NSButtonTypeMomentaryPushIn];
+	[mpcancelButton setBezelStyle:NSBezelStyleRegularSquare];
 	[mpcancelButton setImage:cancelImage];
 	[mpcancelButton setImagePosition:NSImageOnly];
 	[[mpcancelButton cell] setImageScaling:NSImageScaleNone];
-	[mpcancelButton setAutoresizingMask:(NSViewMinXMargin)];
+	[mpcancelButton setAutoresizingMask:NSViewMinXMargin];
 	
 	mpbackButton = [[NSButton alloc] initWithFrame:NSMakeRect([mpcancelButton frame].origin.x-buttonSize.width-kUpdateBottomViewPadding, kUpdateBottomViewPadding, buttonSize.width, buttonSize.height)];
 	[mpbackButton setToolTip:UpdateGetLocalizedString(UPDATEBACK)];
 	[mpbackButton setEnabled:YES];
-	[mpbackButton setButtonType:NSMomentaryPushInButton];
-	[mpbackButton setBezelStyle:NSRegularSquareBezelStyle];
+	[mpbackButton setButtonType:NSButtonTypeMomentaryPushIn];
+	[mpbackButton setBezelStyle:NSBezelStyleRegularSquare];
 	[mpbackButton setImage:backImage];
 	[mpbackButton setImagePosition:NSImageOnly];
 	[[mpbackButton cell] setImageScaling:NSImageScaleNone];
-	[mpbackButton setAutoresizingMask:(NSViewMinXMargin)];
+	[mpbackButton setAutoresizingMask:NSViewMinXMargin];
 	
 	mploadingIndicator = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect([mpbackButton frame].origin.x-buttonSize.width-kUpdateBottomViewPadding, kUpdateBottomViewPadding, buttonSize.width, buttonSize.height)];
-	[mploadingIndicator setStyle:NSProgressIndicatorSpinningStyle];
+	[mploadingIndicator setStyle:NSProgressIndicatorStyleSpinning];
 	[mploadingIndicator setHidden:YES];
-	[mploadingIndicator setAutoresizingMask:(NSViewMinXMargin)];
+	[mploadingIndicator setAutoresizingMask:NSViewMinXMargin];
 	
 	float maxButtonHeight=MAX([mploadingIndicator frame].origin.y+[mploadingIndicator frame].size.height-kUpdateBottomViewPadding, [mpbackButton frame].origin.y+[mpbackButton frame].size.height-kUpdateBottomViewPadding);
 	mpstatusLabel=[[NSText alloc] initWithFrame:NSMakeRect(kUpdateBottomViewPadding, kUpdateBottomViewPadding, [mploadingIndicator frame].origin.x-(kUpdateBottomViewPadding*2), maxButtonHeight)];
 	[mpstatusLabel setEditable:NO];
 	[mpstatusLabel setString:@""];
-	[mpstatusLabel setAutoresizingMask:(NSViewWidthSizable)];
+	[mpstatusLabel setAutoresizingMask:NSViewWidthSizable];
 	[mpstatusLabel setDrawsBackground:NO];
 
 	[mpstatusLabel setFont:[[NSFontManager sharedFontManager] convertFont:[mpstatusLabel font] toSize:kUpdateStatusLabelFontHeight]];
@@ -2173,18 +2175,18 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 
 	// Have downloading indicator overlaying most of status label
 	mpdownloadingIndicator = [[NSProgressIndicator alloc] initWithFrame:[mpstatusLabel frame]];
-	[mpdownloadingIndicator setStyle:NSProgressIndicatorBarStyle];
+	[mpdownloadingIndicator setStyle:NSProgressIndicatorStyleBar];
 	[mpdownloadingIndicator setControlSize:NSControlSizeSmall];
 	[mpdownloadingIndicator setIndeterminate:NO];
 	[mpdownloadingIndicator setMinValue:0.0];
 	[mpdownloadingIndicator setMaxValue:100.0];
 	[mpdownloadingIndicator setDoubleValue:0.0];
 	[mpdownloadingIndicator sizeToFit];
-	[mpdownloadingIndicator setAutoresizingMask:(NSViewWidthSizable)];
+	[mpdownloadingIndicator setAutoresizingMask:NSViewWidthSizable];
 	
 	mpbottomView=[[UpdateStatusBarView alloc] initWithFrame:NSMakeRect(0, 0, contentSize.width, maxButtonHeight+(kUpdateBottomViewPadding*2))];
 	[mpbottomView setAutoresizesSubviews:YES];
-	[mpbottomView setAutoresizingMask:(NSViewWidthSizable)];
+	[mpbottomView setAutoresizingMask:NSViewWidthSizable];
 	
 	[mpbottomView addSubview:mpstatusLabel];
 	[mpbottomView addSubview:mploadingIndicator];
@@ -2212,3 +2214,5 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 }
 
 @end
+
+#endif // USE_NATIVE_WEB_VIEW
