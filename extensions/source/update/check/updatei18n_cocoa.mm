@@ -34,6 +34,7 @@
 #include <map>
 
 #include <tools/rcid.h>
+#include <tools/resmgr.hxx>
 #include <unotools/localedatawrapper.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/svapp.hxx>
@@ -46,8 +47,8 @@ static NSDictionary *pPrimaryLocaleDict = nil;
 static NSDictionary *pSecondaryLocaleDict = nil;
 static NSDictionary *pTertiaryLocaleDict = nil;
 static NSString *pDecimalSep = nil;
-static ResMgr *pUPDResMgr = NULL;
-static ResMgr *pVCLResMgr = NULL;
+static ResMgr *pUPDResMgr = nullptr;
+static ResMgr *pVCLResMgr = nullptr;
 
 using namespace com::sun::star::lang;
 
@@ -247,16 +248,16 @@ NSString *UpdateGetLocalizedString( const sal_Char *key )
 	}
 
 	if ( !pRet && pPrimaryLocaleDict )
-		pRet = (NSString *)[pPrimaryLocaleDict objectForKey:pKey];
+		pRet = static_cast< NSString* >( [pPrimaryLocaleDict objectForKey:pKey] );
 
 	if ( !pRet && pSecondaryLocaleDict )
-		pRet = (NSString *)[pSecondaryLocaleDict objectForKey:pKey];
+		pRet = static_cast< NSString* >( [pSecondaryLocaleDict objectForKey:pKey] );
 
 	if ( !pRet && pTertiaryLocaleDict )
-		pRet = (NSString *)[pTertiaryLocaleDict objectForKey:pKey];
+		pRet = static_cast< NSString* >( [pTertiaryLocaleDict objectForKey:pKey] );
 
 	if ( !pRet && pDefaultLocaleDict )
-		pRet = (NSString *)[pDefaultLocaleDict objectForKey:pKey];
+		pRet = static_cast< NSString* >( [pDefaultLocaleDict objectForKey:pKey] );
 
 	if ( !pRet )
 		pRet = pKey;
@@ -271,7 +272,7 @@ NSString *UpdateGetLocalizedDecimalSeparator()
 		OUString aDecimalSep( Application::GetAppLocaleDataWrapper().getNumDecimalSep() );
 		if ( !aDecimalSep.getLength() )
 			aDecimalSep = ".";
-		pDecimalSep = [NSString stringWithCharacters:aDecimalSep.getStr() length:aDecimalSep.getLength()];
+		pDecimalSep = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDecimalSep.getStr() ) length:aDecimalSep.getLength()];
 		if ( pDecimalSep )
 			[pDecimalSep retain];
 	}
@@ -295,7 +296,7 @@ NSString *UpdateGetUPDResString( int nId )
  
 	OUString aResString( ResId( nId, *pUPDResMgr ) );
 	aResString = aResString.replaceAll( "~", "" );
-	return [NSString stringWithCharacters:aResString.getStr() length:aResString.getLength()];
+	return [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aResString.getStr() ) length:aResString.getLength()];
 }
 
 NSString *UpdateGetVCLResString( int nId )
@@ -314,5 +315,5 @@ NSString *UpdateGetVCLResString( int nId )
  
 	OUString aResString( ResId( nId, *pVCLResMgr ) );
 	aResString = aResString.replaceAll( "~", "" );
-	return [NSString stringWithCharacters:aResString.getStr() length:aResString.getLength()];
+	return [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aResString.getStr() ) length:aResString.getLength()];
 }
