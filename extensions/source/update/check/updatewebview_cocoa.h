@@ -36,6 +36,11 @@
 #import <WebKit/WebKit.h>
 #include <postmac.h>
 
+// Uncomment the following line to enable the native web view code
+// #define USE_NATIVE_WEB_VIEW
+
+#ifdef USE_NATIVE_WEB_VIEW
+
 #define kUpdateDefaultBrowserWidth	800
 #define kUpdateDefaultBrowserHeight	620
 
@@ -122,3 +127,5 @@
 - (id)initWithUserAgent:(NSString *)pUserAgent;
 - (UpdateWebView *)webView;
 @end
+
+#endif	// USE_NATIVE_WEB_VIEW

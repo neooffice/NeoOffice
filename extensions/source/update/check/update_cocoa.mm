@@ -36,10 +36,9 @@
 #include "updatei18n_cocoa.hxx"
 #include "updatewebview_cocoa.h"
 
-// Uncomment the following line to enable the native web view code
-// #define USE_NATIVE_WEB_VIEW
-
 //========================================================================
+
+#ifdef USE_NATIVE_WEB_VIEW
 
 NSString *kUpdateLastURLPref = @"updateLastURL";
 NSString *kUpdateXPosPref = @"updateXPos";
@@ -50,6 +49,8 @@ NSString *kUpdateVisiblePref = @"updateVisible";
 NSString *kUpdateServerTypePref = @"updateServerType";
 
 static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
+
+#endif	// USE_NATIVE_WEB_VIEW
 
 @interface UpdateCreateWebViewImpl : NSObject
 {
@@ -205,6 +206,7 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 {
 	(void)obj;
 
+#ifdef USE_NATIVE_WEB_VIEW
 	if (pSharedPanel)
 	{
  		if ([pSharedPanel isVisible])
@@ -214,6 +216,7 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 		if(pWebView)
 			mbWebViewRequestedQuitApp = [pWebView requestedQuitApp];
 	}
+#endif	// USE_NATIVE_WEB_VIEW
 
 	if (!mbWebViewRequestedQuitApp && UpdateHasPackagePaths())
 	{
