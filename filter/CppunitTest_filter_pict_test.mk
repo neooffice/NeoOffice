@@ -26,24 +26,30 @@ $(eval $(call gb_CppunitTest_add_exception_objects,filter_pict_test, \
     filter/qa/cppunit/filters-pict-test \
 ))
 
+ifeq ($(strip $(GUIBASE)),java)
+$(eval $(call gb_CppunitTest_use_system_darwin_frameworks,filter_pict_test,\
+	ApplicationServices \
+))
+endif	# GUIBASE == java
+
 $(eval $(call gb_CppunitTest_use_libraries,filter_pict_test, \
+	cppu \
+	comphelper \
 	basegfx \
 	sal \
 	test \
+	tk \
 	tl \
+	utl \
 	unotest \
 	vcl \
-	$(gb_UWINAPI) \
 ))
 
 $(eval $(call gb_CppunitTest_use_library_objects,filter_pict_test, \
-    ipt \
+    gie \
 ))
 
-$(eval $(call gb_CppunitTest_use_api,filter_pict_test,\
-    udkapi \
-    offapi \
-))
+$(eval $(call gb_CppunitTest_use_sdk_api,filter_pict_test))
 
 $(eval $(call gb_CppunitTest_use_ure,filter_pict_test))
 $(eval $(call gb_CppunitTest_use_vcl,filter_pict_test))
@@ -52,12 +58,6 @@ $(eval $(call gb_CppunitTest_use_components,filter_pict_test,\
     configmgr/source/configmgr \
     i18npool/util/i18npool \
 ))
-
-ifeq ($(strip $(GUIBASE)),java)
-$(eval $(call gb_CppunitTest_use_system_darwin_frameworks,filter_pict_test,\
-	ApplicationServices \
-))
-endif	# GUIBASE == java
 
 $(eval $(call gb_CppunitTest_use_configuration,filter_pict_test))
 
