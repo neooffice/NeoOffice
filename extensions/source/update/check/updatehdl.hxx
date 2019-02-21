@@ -27,7 +27,6 @@
 #ifndef INCLUDED_EXTENSIONS_SOURCE_UPDATE_CHECK_UPDATEHDL_HXX
 #define INCLUDED_EXTENSIONS_SOURCE_UPDATE_CHECK_UPDATEHDL_HXX
 
-#include "boost/utility.hpp"
 #include <osl/mutex.hxx>
 #include "com/sun/star/uno/Any.h"
 #include "com/sun/star/uno/Reference.h"
@@ -41,7 +40,7 @@
 #include "com/sun/star/frame/XTerminateListener.hpp"
 #include <com/sun/star/resource/XResourceBundle.hpp>
 #include <com/sun/star/task/XInteractionHandler.hpp>
-#include "cppuhelper/implbase4.hxx"
+#include <cppuhelper/implbase.hxx>
 
 #include "actionlistener.hxx"
 
@@ -62,10 +61,10 @@ enum DialogControls
     CLOSE_BUTTON,
     HELP_BUTTON,
     BUTTON_COUNT,
+    THROBBER_CTRL,
 #ifdef USE_JAVA
     INSTALL_BUTTON,
 #endif	// USE_JAVA
-    THROBBER_CTRL,
     PROGRESS_CTRL
 };
 
@@ -84,17 +83,16 @@ enum UpdateState {
     UPDATESTATES_COUNT
 };
 
-class UpdateHandler : ::boost::noncopyable,
-                      public cppu::WeakImplHelper4< com::sun::star::awt::XActionListener,
-                                                    com::sun::star::awt::XTopWindowListener,
-                                                    com::sun::star::task::XInteractionHandler,
-                                                    com::sun::star::frame::XTerminateListener >
+class UpdateHandler : public cppu::WeakImplHelper< css::awt::XActionListener,
+                                                    css::awt::XTopWindowListener,
+                                                    css::task::XInteractionHandler,
+                                                    css::frame::XTerminateListener >
 {
 private:
-    com::sun::star::uno::Reference< com::sun::star::uno::XComponentContext > mxContext;
-    com::sun::star::uno::Reference< com::sun::star::awt::XDialog > mxUpdDlg;
-    com::sun::star::uno::Reference< com::sun::star::task::XInteractionHandler > mxInteractionHdl;
-    rtl::Reference< IActionListener > mxActionListener;
+    css::uno::Reference< css::uno::XComponentContext >    mxContext;
+    css::uno::Reference< css::awt::XDialog >              mxUpdDlg;
+    css::uno::Reference< css::task::XInteractionHandler > mxInteractionHdl;
+    rtl::Reference< IActionListener >                     mxActionListener;
 
     UpdateState             meCurState;
     UpdateState             meLastState;
@@ -153,31 +151,30 @@ private:
     void                    startThrobber( bool bStart = true );
     void                    setControlProperty( const OUString &rCtrlName,
                                                 const OUString &rPropName,
-                                                const com::sun::star::uno::Any &rPropValue );
+                                                const css::uno::Any &rPropValue );
     void                    showControl( const OUString &rCtrlName, bool bShow = true );
     void                    showControls( short nControls );
     void                    focusControl( DialogControls eID );
     void                    enableControls( short nCtrlState );
     void                    setDownloadBtnLabel( bool bAppendDots );
     void                    loadStrings();
-    OUString           loadString( const com::sun::star::uno::Reference< com::sun::star::resource::XResourceBundle > xBundle,
-                                        sal_Int32 nResourceId ) const;
-    OUString           substVariables( const OUString &rSource ) const;
-    static void             setProperty( com::sun::star::uno::Sequence< com::sun::star::beans::NamedValue > &rProps,
-                                         const int nIndex, const OUString &rPropName, const com::sun::star::uno::Any &rPropValue )
-                                         { rProps[ nIndex ].Name = rPropName; rProps[ nIndex ].Value = rPropValue; }
-    static void             insertControlModel( com::sun::star::uno::Reference< com::sun::star::awt::XControlModel > const & rxDialogModel,
+    static OUString         loadString( const css::uno::Reference< css::resource::XResourceBundle >& xBundle,
+                                        sal_Int32 nResourceId );
+    OUString                substVariables( const OUString &rSource ) const;
+    static void             insertControlModel( css::uno::Reference< css::awt::XControlModel > const & rxDialogModel,
                                                 OUString const & rServiceName,
                                                 OUString const & rControlName,
-                                                com::sun::star::awt::Rectangle const & rPosSize,
-                                                com::sun::star::uno::Sequence< com::sun::star::beans::NamedValue > const & rProps );
+                                                css::awt::Rectangle const & rPosSize,
+                                                css::uno::Sequence< css::beans::NamedValue > const & rProps );
 
     void                    setFullVersion( OUString& rString );
 
 public:
-                            UpdateHandler( const com::sun::star::uno::Reference< com::sun::star::uno::XComponentContext > & rxContext,
+                            UpdateHandler( const css::uno::Reference< css::uno::XComponentContext > & rxContext,
                                            const rtl::Reference< IActionListener > & rxActionListener );
-    virtual                ~UpdateHandler();
+    virtual                ~UpdateHandler() override;
+                            UpdateHandler(const UpdateHandler&) = delete;
+    UpdateHandler&          operator=(const UpdateHandler&) = delete;
 
     bool                    isVisible() const;
     bool                    isMinimized() const { return mbMinimized; }
@@ -202,29 +199,28 @@ public:
 #endif	// USE_JAVA
 
     // Allows runtime exceptions to be thrown by const methods
-    inline SAL_CALL operator com::sun::star::uno::Reference< com::sun::star::uno::XInterface > () const
+    SAL_CALL operator css::uno::Reference< css::uno::XInterface > () const
         { return const_cast< cppu::OWeakObject * > (static_cast< cppu::OWeakObject const * > (this)); };
 
     // XActionListener
-    virtual void SAL_CALL   disposing( const com::sun::star::lang::EventObject &rObj ) throw( com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
-    virtual void SAL_CALL   actionPerformed( com::sun::star::awt::ActionEvent const & rEvent) throw( com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL   disposing( const css::lang::EventObject &rObj ) override;
+    virtual void SAL_CALL   actionPerformed( css::awt::ActionEvent const & rEvent) override;
 
     // XTopWindowListener
-    virtual void SAL_CALL   windowOpened( const ::com::sun::star::lang::EventObject& e ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual void SAL_CALL   windowClosing( const ::com::sun::star::lang::EventObject& e ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual void SAL_CALL   windowClosed( const ::com::sun::star::lang::EventObject& e ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual void SAL_CALL   windowMinimized( const ::com::sun::star::lang::EventObject& e ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual void SAL_CALL   windowNormalized( const ::com::sun::star::lang::EventObject& e ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual void SAL_CALL   windowActivated( const ::com::sun::star::lang::EventObject& e ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual void SAL_CALL   windowDeactivated( const ::com::sun::star::lang::EventObject& e ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL   windowOpened( const css::lang::EventObject& e ) override;
+    virtual void SAL_CALL   windowClosing( const css::lang::EventObject& e ) override;
+    virtual void SAL_CALL   windowClosed( const css::lang::EventObject& e ) override;
+    virtual void SAL_CALL   windowMinimized( const css::lang::EventObject& e ) override;
+    virtual void SAL_CALL   windowNormalized( const css::lang::EventObject& e ) override;
+    virtual void SAL_CALL   windowActivated( const css::lang::EventObject& e ) override;
+    virtual void SAL_CALL   windowDeactivated( const css::lang::EventObject& e ) override;
 
     // XInteractionHandler
-    virtual void SAL_CALL   handle( const com::sun::star::uno::Reference< com::sun::star::task::XInteractionRequest >& Request )
-                                throw( com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL   handle( const css::uno::Reference< css::task::XInteractionRequest >& Request ) override;
 
     // XTerminateListener
-    virtual void SAL_CALL queryTermination( const ::com::sun::star::lang::EventObject& e ) throw (::com::sun::star::frame::TerminationVetoException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual void SAL_CALL notifyTermination( const ::com::sun::star::lang::EventObject& e ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL queryTermination( const css::lang::EventObject& e ) override;
+    virtual void SAL_CALL notifyTermination( const css::lang::EventObject& e ) override;
 };
 
 #endif // INCLUDED_EXTENSIONS_SOURCE_UPDATE_CHECK_UPDATEHDL_HXX
