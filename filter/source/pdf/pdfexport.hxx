@@ -39,9 +39,6 @@ class Size;
 namespace vcl { class PDFWriter; }
 
 
-// - PDFExport -
-
-
 class PDFExport
 {
 private:
@@ -52,14 +49,16 @@ private:
     Reference< task::XInteractionHandler > mxIH;
 
     bool                mbUseTaggedPDF;
-    sal_Int32               mnPDFTypeSelection;
+    sal_Int32           mnPDFTypeSelection;
     bool                mbExportNotes;
-    bool                mbViewPDF;
+    bool                mbExportPlaceholders;
+    bool                mbUseReferenceXObject;
     bool                mbExportNotesPages;
+    bool                mbExportOnlyNotesPages;
     bool                mbUseTransitionEffects;
     bool                mbExportBookmarks;
     bool                mbExportHiddenSlides;
-    sal_Int32               mnOpenBookmarkLevels;
+    sal_Int32           mnOpenBookmarkLevels;
 #ifdef USE_JAVA
     bool                mbThumbnail;
 #endif	// USE_JAVA
@@ -68,19 +67,18 @@ private:
     bool                mbReduceImageResolution;
     bool                mbSkipEmptyPages;
     bool                mbAddStream;
-    sal_Int32               mnMaxImageResolution;
-    sal_Int32               mnQuality;
-    sal_Int32               mnFormsFormat;
+    sal_Int32           mnMaxImageResolution;
+    sal_Int32           mnQuality;
+    sal_Int32           mnFormsFormat;
     bool                mbExportFormFields;
     bool                mbAllowDuplicateFieldNames;
-    sal_Int32               mnProgressValue;
+    sal_Int32           mnProgressValue;
     bool                mbRemoveTransparencies;
 
-    bool                mbWatermark;
-    uno::Any                maWatermark;
+    OUString            msWatermark;
 
-//these variable are here only to have a location in filter/pdf to set the default
-//to be used by the macro (when the FilterData are set by the macro itself)
+    // these variable are here only to have a location in filter/pdf to set the default
+    // to be used by the macro (when the FilterData are set by the macro itself)
     bool                mbHideViewerToolbar;
     bool                mbHideViewerMenubar;
     bool                mbHideViewerWindowControls;
@@ -88,58 +86,57 @@ private:
     bool                mbCenterWindow;
     bool                mbOpenInFullScreenMode;
     bool                mbDisplayPDFDocumentTitle;
-    sal_Int32               mnPDFDocumentMode;
-    sal_Int32               mnPDFDocumentAction;
-    sal_Int32               mnZoom;
-    sal_Int32               mnInitialPage;
-    sal_Int32               mnPDFPageLayout;
-    bool                mbFirstPageLeft;
+    sal_Int32           mnPDFDocumentMode;
+    sal_Int32           mnPDFDocumentAction;
+    sal_Int32           mnZoom;
+    sal_Int32           mnInitialPage;
+    sal_Int32           mnPDFPageLayout;
 
     bool                mbEncrypt;
     bool                mbRestrictPermissions;
-    sal_Int32               mnPrintAllowed;
-    sal_Int32               mnChangesAllowed;
+    sal_Int32           mnPrintAllowed;
+    sal_Int32           mnChangesAllowed;
     bool                mbCanCopyOrExtract;
     bool                mbCanExtractForAccessibility;
 
-    SvtGraphicFill          maCacheFill;
-
-//--->i56629
+    // #i56629
     bool                mbExportRelativeFsysLinks;
-    sal_Int32               mnDefaultLinkAction;
+    sal_Int32           mnDefaultLinkAction;
     bool                mbConvertOOoTargetToPDFTarget;
     bool                mbExportBmkToDest;
-    bool                ImplExportPage( ::vcl::PDFWriter& rWriter, ::vcl::PDFExtOutDevData& rPDFExtOutDevData,
-                                                const GDIMetaFile& rMtf );
+    bool                ImplExportPage( vcl::PDFWriter& rWriter, vcl::PDFExtOutDevData& rPDFExtOutDevData,
+                                        const GDIMetaFile& rMtf );
 
     bool                mbSignPDF;
-    OUString                msSignLocation;
-    OUString                msSignContact;
-    OUString                msSignReason;
-    OUString                msSignPassword;
+    OUString            msSignLocation;
+    OUString            msSignContact;
+    OUString            msSignReason;
+    OUString            msSignPassword;
     Reference< security::XCertificate > maSignCertificate;
+    OUString            msSignTSA;
 
-    void                    ImplWriteWatermark( ::vcl::PDFWriter& rWriter, const Size& rPageSize );
+    void                ImplWriteWatermark( vcl::PDFWriter& rWriter, const Size& rPageSize );
+
 public:
 
-                            PDFExport( const Reference< XComponent >& rxSrcDoc,
-                                       const Reference< task::XStatusIndicator >& xStatusIndicator,
-                                      const Reference< task::XInteractionHandler >& xIH,
-                                       const Reference< uno::XComponentContext >& xFact );
-                            ~PDFExport();
+                        PDFExport(  const Reference< XComponent >& rxSrcDoc,
+                                    const Reference< task::XStatusIndicator >& xStatusIndicator,
+                                    const Reference< task::XInteractionHandler >& xIH,
+                                    const Reference< uno::XComponentContext >& xFact );
+                        ~PDFExport();
 
     bool                ExportSelection( vcl::PDFWriter& rPDFWriter,
-                                Reference< com::sun::star::view::XRenderable >& rRenderable,
-                                const Any& rSelection,
-                                const StringRangeEnumerator& rRangeEnum,
-                                Sequence< PropertyValue >& rRenderOptions,
-                                sal_Int32 nPageCount );
+                                    Reference< css::view::XRenderable >& rRenderable,
+                                    const Any& rSelection,
+                                    const StringRangeEnumerator& rRangeEnum,
+                                    Sequence< PropertyValue >& rRenderOptions,
+                                    sal_Int32 nPageCount );
 
     bool                Export( const OUString& rFile, const Sequence< PropertyValue >& rFilterData );
 
-    void                    showErrors( const std::set<vcl::PDFWriter::ErrorCode>& );
+    void                showErrors( const std::set<vcl::PDFWriter::ErrorCode>& );
 };
 
-#endif
+#endif // INCLUDED_FILTER_SOURCE_PDF_PDFEXPORT_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
