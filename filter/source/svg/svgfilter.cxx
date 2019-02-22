@@ -27,12 +27,14 @@
 
 #include <cstdio>
 
+#include <comphelper/lok.hxx>
 #include <comphelper/servicedecl.hxx>
 #include <uno/environment.h>
 #include <com/sun/star/drawing/XDrawPage.hpp>
 #include <com/sun/star/drawing/XDrawView.hpp>
 #include <com/sun/star/frame/Desktop.hpp>
 #include <com/sun/star/frame/XController.hpp>
+#include <com/sun/star/io/IOException.hpp>
 #include <com/sun/star/view/XSelectionSupplier.hpp>
 #include <com/sun/star/drawing/XDrawSubController.hpp>
 #include <com/sun/star/container/XNamed.hpp>
@@ -57,6 +59,8 @@
 #include "svgfilter.hxx"
 #include "svgwriter.hxx"
 
+#include <memory>
+
 using namespace ::com::sun::star;
 
 namespace
@@ -66,37 +70,36 @@ namespace
 
 SVGFilter::SVGFilter( const Reference< XComponentContext >& rxCtx ) :
     mxContext( rxCtx ),
-    mpSVGDoc( NULL ),
-    mpSVGExport( NULL ),
-    mpSVGFontExport( NULL ),
-    mpSVGWriter( NULL ),
-    mpDefaultSdrPage( NULL ),
-    mpSdrModel( NULL ),
+    mpSVGDoc( nullptr ),
+    mpSVGExport( nullptr ),
+    mpSVGFontExport( nullptr ),
+    mpSVGWriter( nullptr ),
+    mpDefaultSdrPage( nullptr ),
+    mpSdrModel( nullptr ),
     mbPresentation( false ),
     mbSinglePage( false ),
     mnVisiblePage( -1 ),
-    mpObjects( NULL ),
+    mpObjects( nullptr ),
     mxSrcDoc(),
     mxDstDoc(),
     mxDefaultPage(),
     maFilterData(),
     maShapeSelection(),
-    mbExportSelection(false),
+    mbExportShapeSelection(false),
     maOldFieldHdl()
 {
 }
 
 SVGFilter::~SVGFilter()
 {
-    DBG_ASSERT( mpSVGDoc == NULL, "mpSVGDoc not destroyed" );
-    DBG_ASSERT( mpSVGExport == NULL, "mpSVGExport not destroyed" );
-    DBG_ASSERT( mpSVGFontExport == NULL, "mpSVGFontExport not destroyed" );
-    DBG_ASSERT( mpSVGWriter == NULL, "mpSVGWriter not destroyed" );
-    DBG_ASSERT( mpObjects == NULL, "mpObjects not destroyed" );
+    DBG_ASSERT( mpSVGDoc == nullptr, "mpSVGDoc not destroyed" );
+    DBG_ASSERT( mpSVGExport == nullptr, "mpSVGExport not destroyed" );
+    DBG_ASSERT( mpSVGFontExport == nullptr, "mpSVGFontExport not destroyed" );
+    DBG_ASSERT( mpSVGWriter == nullptr, "mpSVGWriter not destroyed" );
+    DBG_ASSERT( mpObjects == nullptr, "mpObjects not destroyed" );
 }
 
 sal_Bool SAL_CALL SVGFilter::filter( const Sequence< PropertyValue >& rDescriptor )
-    throw (RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
     vcl::Window*     pFocusWindow = Application::GetFocusWindow();
@@ -107,34 +110,38 @@ sal_Bool SAL_CALL SVGFilter::filter( const Sequence< PropertyValue >& rDescripto
 
     if( mxDstDoc.is() )
         bRet = implImport( rDescriptor );
-#ifndef DISABLE_EXPORT
     else if( mxSrcDoc.is() )
     {
-        // #i124608# detext selection
+        // #i124608# detect selection
         bool bSelectionOnly = false;
-        bool bGotSelection(false);
+        bool bGotSelection = false;
 
-        // #i124608# extract Single selection wanted from dialog return values
-        for ( sal_Int32 nInd = 0; nInd < rDescriptor.getLength(); nInd++ )
+        // when using LibreOfficeKit, default to exporting everything (-1)
+        bool bPageProvided = comphelper::LibreOfficeKit::isActive();
+        sal_Int32 nPageToExport = -1;
+
+        for (sal_Int32 nInd = 0; nInd < rDescriptor.getLength(); nInd++)
         {
-            if ( rDescriptor[nInd].Name == "SelectionOnly" )
+            if (rDescriptor[nInd].Name == "SelectionOnly")
             {
+                // #i124608# extract single selection wanted from dialog return values
                 rDescriptor[nInd].Value >>= bSelectionOnly;
+            }
+            else if (rDescriptor[nInd].Name == "PagePos")
+            {
+                rDescriptor[nInd].Value >>= nPageToExport;
+                bPageProvided = true;
             }
         }
 
-        uno::Reference< frame::XDesktop2 >                           xDesktop(frame::Desktop::create(mxContext));
-        uno::Reference< frame::XFrame >                              xFrame(xDesktop->getCurrentFrame(),
-                                                                            uno::UNO_QUERY_THROW);
-        uno::Reference<frame::XController >                          xController(xFrame->getController(),
-                                                                                     uno::UNO_QUERY_THROW);
-
-        if( !mSelectedPages.hasElements() )
+        uno::Reference<frame::XDesktop2> xDesktop(frame::Desktop::create(mxContext));
+        uno::Reference<frame::XController > xController;
+        if (xDesktop->getCurrentFrame().is() && !bPageProvided) // Manage headless case
         {
-            uno::Reference<drawing::XDrawView >                          xDrawView(xController,
-                                                                                   uno::UNO_QUERY_THROW);
-            uno::Reference<drawing::framework::XControllerManager>       xManager(xController,
-                                                                                  uno::UNO_QUERY_THROW);
+            uno::Reference<frame::XFrame> xFrame(xDesktop->getCurrentFrame(), uno::UNO_QUERY_THROW);
+            xController.set(xFrame->getController(), uno::UNO_QUERY_THROW);
+            uno::Reference<drawing::XDrawView> xDrawView(xController, uno::UNO_QUERY_THROW);
+            uno::Reference<drawing::framework::XControllerManager> xManager(xController, uno::UNO_QUERY_THROW);
             uno::Reference<drawing::framework::XConfigurationController> xConfigController(xManager->getConfigurationController());
 
             // which view configuration are we in?
@@ -167,8 +174,8 @@ sal_Bool SAL_CALL SVGFilter::filter( const Sequence< PropertyValue >& rDescripto
                         {
                             ObjectSequence aSelectedPageSequence;
                             aSelection >>= aSelectedPageSequence;
-                            mSelectedPages.realloc( aSelectedPageSequence.getLength() );
-                            for( sal_Int32 j=0; j<mSelectedPages.getLength(); ++j )
+                            mSelectedPages.resize( aSelectedPageSequence.getLength() );
+                            for( size_t j=0; j<mSelectedPages.size(); ++j )
                             {
                                 uno::Reference< drawing::XDrawPage > xDrawPage( aSelectedPageSequence[j],
                                                                                 uno::UNO_QUERY );
@@ -182,10 +189,10 @@ sal_Bool SAL_CALL SVGFilter::filter( const Sequence< PropertyValue >& rDescripto
                 }
             }
 
-            if( !mSelectedPages.hasElements() )
+            if( mSelectedPages.empty() )
             {
-                // apparently failed to glean selection - fallback to current page
-                mSelectedPages.realloc( 1 );
+                // apparently failed to clean selection - fallback to current page
+                mSelectedPages.resize( 1 );
                 mSelectedPages[0] = xDrawView->getCurrentPage();
             }
         }
@@ -193,20 +200,8 @@ sal_Bool SAL_CALL SVGFilter::filter( const Sequence< PropertyValue >& rDescripto
         /*
          * Export all slides, or requested "PagePos"
          */
-        if( !mSelectedPages.hasElements() )
+        if( mSelectedPages.empty() )
         {
-            sal_Int32            nLength = rDescriptor.getLength();
-            const PropertyValue* pValue = rDescriptor.getConstArray();
-            sal_Int32            nPageToExport = -1;
-
-            for ( sal_Int32 i = 0 ; i < nLength; ++i)
-            {
-                if ( pValue[ i ].Name == "PagePos" )
-                {
-                    pValue[ i ].Value >>= nPageToExport;
-                }
-            }
-
             uno::Reference< drawing::XMasterPagesSupplier > xMasterPagesSupplier( mxSrcDoc, uno::UNO_QUERY );
             uno::Reference< drawing::XDrawPagesSupplier >   xDrawPagesSupplier( mxSrcDoc, uno::UNO_QUERY );
 
@@ -219,7 +214,7 @@ sal_Bool SAL_CALL SVGFilter::filter( const Sequence< PropertyValue >& rDescripto
                 {
                     sal_Int32 nDPCount = xDrawPages->getCount();
 
-                    mSelectedPages.realloc( nPageToExport != -1 ? 1 : nDPCount );
+                    mSelectedPages.resize( nPageToExport != -1 ? 1 : nDPCount );
                     sal_Int32 i;
                     for( i = 0; i < nDPCount; ++i )
                     {
@@ -246,12 +241,8 @@ sal_Bool SAL_CALL SVGFilter::filter( const Sequence< PropertyValue >& rDescripto
 
             if (xSelection.is())
             {
-                uno::Any aSelection;
-
-                if (xSelection->getSelection() >>= aSelection)
-                {
-                    bGotSelection = ( aSelection >>= maShapeSelection );
-                }
+                bGotSelection
+                    = ( xSelection->getSelection() >>= maShapeSelection );
             }
         }
 
@@ -262,33 +253,33 @@ sal_Bool SAL_CALL SVGFilter::filter( const Sequence< PropertyValue >& rDescripto
             // may be useful; it may have happened by error)
             bRet = false;
         }
-        else {
-        /*
-         *  We get all master page that are targeted by at least one draw page.
-         *  The master page are put in an unordered set.
-         */
-        ObjectSet aMasterPageTargetSet;
-        for( sal_Int32 i = 0; i < mSelectedPages.getLength(); ++i )
+        else
         {
-            uno::Reference< drawing::XMasterPageTarget > xMasterPageTarget( mSelectedPages[i], uno::UNO_QUERY );
-            if( xMasterPageTarget.is() )
+            /*
+             *  We get all master page that are targeted by at least one draw page.
+             *  The master page are put in an unordered set.
+             */
+            ObjectSet aMasterPageTargetSet;
+            for(uno::Reference<drawing::XDrawPage> & mSelectedPage : mSelectedPages)
             {
-                aMasterPageTargetSet.insert( xMasterPageTarget->getMasterPage() );
+                uno::Reference< drawing::XMasterPageTarget > xMasterPageTarget( mSelectedPage, uno::UNO_QUERY );
+                if( xMasterPageTarget.is() )
+                {
+                    aMasterPageTargetSet.insert( xMasterPageTarget->getMasterPage() );
+                }
             }
-        }
-        // Later we move them to a uno::Sequence so we can get them by index
-        mMasterPageTargets.realloc( aMasterPageTargetSet.size() );
-        ObjectSet::const_iterator aElem = aMasterPageTargetSet.begin();
-        for( sal_Int32 i = 0; aElem != aMasterPageTargetSet.end(); ++aElem, ++i)
-        {
-            uno::Reference< drawing::XDrawPage > xMasterPage( *aElem,  uno::UNO_QUERY );
-            mMasterPageTargets[i] = xMasterPage;
-        }
+            // Later we move them to a uno::Sequence so we can get them by index
+            mMasterPageTargets.resize( aMasterPageTargetSet.size() );
+            ObjectSet::const_iterator aElem = aMasterPageTargetSet.begin();
+            for( sal_Int32 i = 0; aElem != aMasterPageTargetSet.end(); ++aElem, ++i)
+            {
+                uno::Reference< drawing::XDrawPage > xMasterPage( *aElem,  uno::UNO_QUERY );
+                mMasterPageTargets[i] = xMasterPage;
+            }
 
-        bRet = implExport( rDescriptor );
+            bRet = implExport( rDescriptor );
         }
     }
-#endif
     else
         bRet = false;
 
@@ -298,23 +289,21 @@ sal_Bool SAL_CALL SVGFilter::filter( const Sequence< PropertyValue >& rDescripto
     return bRet;
 }
 
-void SAL_CALL SVGFilter::cancel( ) throw (RuntimeException, std::exception)
+void SAL_CALL SVGFilter::cancel( )
 {
 }
 
 void SAL_CALL SVGFilter::setSourceDocument( const Reference< XComponent >& xDoc )
-    throw (IllegalArgumentException, RuntimeException, std::exception)
 {
     mxSrcDoc = xDoc;
 }
 
 void SAL_CALL SVGFilter::setTargetDocument( const Reference< XComponent >& xDoc )
-    throw (::com::sun::star::lang::IllegalArgumentException, RuntimeException, std::exception)
 {
     mxDstDoc = xDoc;
 }
 
-bool SVGFilter::isStreamGZip(uno::Reference<io::XInputStream> xInput)
+bool SVGFilter::isStreamGZip(const uno::Reference<io::XInputStream>& xInput)
 {
     uno::Reference<io::XSeekable> xSeek(xInput, uno::UNO_QUERY);
     if(xSeek.is())
@@ -331,7 +320,7 @@ bool SVGFilter::isStreamGZip(uno::Reference<io::XInputStream> xInput)
     return false;
 }
 
-bool SVGFilter::isStreamSvg(uno::Reference<io::XInputStream> xInput)
+bool SVGFilter::isStreamSvg(const uno::Reference<io::XInputStream>& xInput)
 {
     uno::Reference<io::XSeekable> xSeek(xInput, uno::UNO_QUERY);
     if(xSeek.is())
@@ -351,64 +340,52 @@ bool SVGFilter::isStreamSvg(uno::Reference<io::XInputStream> xInput)
     sal_Int8 aMagic2[] = {'D', 'O', 'C', 'T', 'Y', 'P', 'E', ' ', 's', 'v', 'g'};
     sal_Int32 aMagic2Size = sizeof(aMagic2) / sizeof(*aMagic2);
 
-    if (std::search(pBuffer, pBuffer + nBytes, aMagic2, aMagic2 + aMagic2Size) != pBuffer + nBytes)
-        return true;
-
-    return false;
+    return std::search(pBuffer, pBuffer + nBytes, aMagic2, aMagic2 + aMagic2Size) != pBuffer + nBytes;
 }
 
-OUString SAL_CALL SVGFilter::detect(Sequence<PropertyValue>& rDescriptor) throw (RuntimeException, std::exception)
+OUString SAL_CALL SVGFilter::detect(Sequence<PropertyValue>& rDescriptor)
 {
-#ifdef USE_JAVA
-    // Fix crash on some machines when handling stream by catching any
-    // unexpected exception types
-    try
-    {
-#endif  // USE_JAVA
     utl::MediaDescriptor aMediaDescriptor(rDescriptor);
     uno::Reference<io::XInputStream> xInput(aMediaDescriptor[utl::MediaDescriptor::PROP_INPUTSTREAM()], UNO_QUERY);
 
     if (!xInput.is())
         return OUString();
 
-    if (isStreamGZip(xInput))
-    {
-        boost::scoped_ptr<SvStream> aStream(utl::UcbStreamHelper::CreateStream(xInput, true ));
-        if(!aStream.get())
-            return OUString();
+    try {
+        if (isStreamGZip(xInput))
+        {
+            std::unique_ptr<SvStream> aStream(utl::UcbStreamHelper::CreateStream(xInput, true ));
+            if(!aStream.get())
+                return OUString();
 
-        SvStream* pMemoryStream = new SvMemoryStream;
-        uno::Reference<io::XSeekable> xSeek(xInput, uno::UNO_QUERY);
-        if (!xSeek.is())
-            return OUString();
-        xSeek->seek(0);
+            SvStream* pMemoryStream = new SvMemoryStream;
+            uno::Reference<io::XSeekable> xSeek(xInput, uno::UNO_QUERY);
+            if (!xSeek.is())
+                return OUString();
+            xSeek->seek(0);
 
-        ZCodec aCodec;
-        aCodec.BeginCompression(ZCODEC_DEFAULT_COMPRESSION, false, true);
-        aCodec.Decompress(*aStream.get(), *pMemoryStream);
-        aCodec.EndCompression();
-        pMemoryStream->Seek(STREAM_SEEK_TO_BEGIN);
-        uno::Reference<io::XInputStream> xDecompressedInput(new utl::OSeekableInputStreamWrapper(pMemoryStream, true));
+            ZCodec aCodec;
+            aCodec.BeginCompression(ZCODEC_DEFAULT_COMPRESSION, false, true);
+            aCodec.Decompress(*aStream.get(), *pMemoryStream);
+            aCodec.EndCompression();
+            pMemoryStream->Seek(STREAM_SEEK_TO_BEGIN);
+            uno::Reference<io::XInputStream> xDecompressedInput(new utl::OSeekableInputStreamWrapper(pMemoryStream, true));
 
-        if (xDecompressedInput.is() && isStreamSvg(xDecompressedInput))
-            return OUString(constFilterName);
-    }
-    else
-    {
-        if (isStreamSvg(xInput))
-            return OUString(constFilterName);
+            if (xDecompressedInput.is() && isStreamSvg(xDecompressedInput))
+                return OUString(constFilterName);
+        }
+        else
+        {
+            if (isStreamSvg(xInput))
+                return OUString(constFilterName);
+        }
+    } catch (css::io::IOException & e) {
+        SAL_WARN("filter.svg", "caught IOException " + e.Message);
     }
 #ifdef USE_JAVA
-    }
-    catch( const com::sun::star::uno::RuntimeException &e )
-    {
-        throw;
-    }
-    catch( const std::exception &e )
-    {
-        throw;
-    }
-    catch ( ... )
+    // Fix crash on some machines when handling stream by catching any
+    // unexpected exception types
+    catch( ... )
     {
         throw RuntimeException( "SVGFilter::detect method raised an unknown exception" );
     }
@@ -420,7 +397,7 @@ OUString SAL_CALL SVGFilter::detect(Sequence<PropertyValue>& rDescriptor) throw 
 #define SVG_WRITER_IMPL_NAME "com.sun.star.comp.Draw.SVGWriter"
 
 namespace sdecl = comphelper::service_decl;
- sdecl::class_<SVGFilter> serviceFilterImpl;
+ sdecl::class_<SVGFilter> const serviceFilterImpl;
  const sdecl::ServiceDecl svgFilter(
      serviceFilterImpl,
      SVG_FILTER_IMPL_NAME,
@@ -428,7 +405,7 @@ namespace sdecl = comphelper::service_decl;
      "com.sun.star.document.ExportFilter;"
      "com.sun.star.document.ExtendedTypeDetection" );
 
- sdecl::class_<SVGWriter, sdecl::with_args<true> > serviceWriterImpl;
+ sdecl::class_<SVGWriter, sdecl::with_args<true> > const serviceWriterImpl;
  const sdecl::ServiceDecl svgWriter(
      serviceWriterImpl,
      SVG_WRITER_IMPL_NAME,
@@ -436,19 +413,17 @@ namespace sdecl = comphelper::service_decl;
 
 // The C shared lib entry points
 extern "C" SAL_DLLPUBLIC_EXPORT void* SAL_CALL svgfilter_component_getFactory(
-    sal_Char const* pImplName,
-    ::com::sun::star::lang::XMultiServiceFactory* pServiceManager,
-    ::com::sun::star::registry::XRegistryKey* pRegistryKey )
+    sal_Char const* pImplName, void*, void*)
 {
     if ( rtl_str_compare (pImplName, SVG_FILTER_IMPL_NAME) == 0 )
     {
-        return component_getFactoryHelper( pImplName, pServiceManager, pRegistryKey, svgFilter );
+        return sdecl::component_getFactoryHelper( pImplName, {&svgFilter} );
     }
     else if ( rtl_str_compare (pImplName, SVG_WRITER_IMPL_NAME) == 0 )
     {
-        return component_getFactoryHelper( pImplName, pServiceManager, pRegistryKey, svgWriter );
+        return sdecl::component_getFactoryHelper( pImplName, {&svgWriter} );
     }
-    return NULL;
+    return nullptr;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
