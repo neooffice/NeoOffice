@@ -64,7 +64,7 @@ static Sequence< OUString > SAL_CALL JavaFolderPicker_getSupportedServiceNames()
 
 JavaFolderPicker::JavaFolderPicker( const Reference< XMultiServiceFactory >& /* xServiceMgr */ ) : WeakImplHelper3< XFolderPicker2, XServiceInfo, XEventListener >()
 {
-	mpDialog = NSFileDialog_create( NULL, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE );
+	mpDialog = NSFileDialog_create( nullptr, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE );
 	if ( !mpDialog )
 		throw NullPointerException();
 }
@@ -79,9 +79,9 @@ JavaFolderPicker::~JavaFolderPicker()
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFolderPicker::setTitle( const OUString& aTitle ) throw( RuntimeException )
+void SAL_CALL JavaFolderPicker::setTitle( const OUString& aTitle )
 {
-	CFStringRef aString = CFStringCreateWithCharacters( NULL, aTitle.getStr(), aTitle.getLength() );
+	CFStringRef aString = CFStringCreateWithCharacters( nullptr, reinterpret_cast< const UniChar* >( aTitle.getStr() ), aTitle.getLength() );
 	if ( aString )
 	{
 		NSFileDialog_setTitle( mpDialog, aString );
@@ -91,18 +91,18 @@ void SAL_CALL JavaFolderPicker::setTitle( const OUString& aTitle ) throw( Runtim
 
 // ------------------------------------------------------------------------
 
-sal_Int16 SAL_CALL JavaFolderPicker::execute() throw( RuntimeException )
+sal_Int16 SAL_CALL JavaFolderPicker::execute()
 {
 	return NSFileDialog_showFileDialog( mpDialog );
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFolderPicker::setDisplayDirectory( const OUString& aDirectory ) throw( IllegalArgumentException, RuntimeException )
+void SAL_CALL JavaFolderPicker::setDisplayDirectory( const OUString& aDirectory )
 {
 	if ( aDirectory.getLength() )
 	{
-		CFStringRef aString = CFStringCreateWithCharacters( NULL, aDirectory.getStr(), aDirectory.getLength() );
+		CFStringRef aString = CFStringCreateWithCharacters( nullptr, reinterpret_cast< const UniChar* >( aDirectory.getStr() ), aDirectory.getLength() );
 		if ( aString )
 		{
 			NSFileDialog_setDirectory( mpDialog, aString );
@@ -113,7 +113,7 @@ void SAL_CALL JavaFolderPicker::setDisplayDirectory( const OUString& aDirectory 
 
 // ------------------------------------------------------------------------
 
-OUString SAL_CALL JavaFolderPicker::getDisplayDirectory() throw( RuntimeException )
+OUString SAL_CALL JavaFolderPicker::getDisplayDirectory()
 {
 	OUString aRet;
 
@@ -129,7 +129,7 @@ OUString SAL_CALL JavaFolderPicker::getDisplayDirectory() throw( RuntimeExceptio
 
 // ------------------------------------------------------------------------
 
-OUString SAL_CALL JavaFolderPicker::getDirectory() throw( RuntimeException )
+OUString SAL_CALL JavaFolderPicker::getDirectory()
 {
 	OUString aRet;
 
@@ -147,7 +147,7 @@ OUString SAL_CALL JavaFolderPicker::getDirectory() throw( RuntimeException )
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFolderPicker::setDescription( const OUString& /* rDescription */ ) throw( RuntimeException )
+void SAL_CALL JavaFolderPicker::setDescription( const OUString& /* rDescription */ )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaFolderPicker::setDescription not implemented\n" );
@@ -156,14 +156,14 @@ void SAL_CALL JavaFolderPicker::setDescription( const OUString& /* rDescription 
 
 // ------------------------------------------------------------------------
 
-OUString SAL_CALL JavaFolderPicker::getImplementationName() throw( RuntimeException )
+OUString SAL_CALL JavaFolderPicker::getImplementationName()
 {
 	return FOLDER_PICKER_IMPL_NAME;
 }
 
 // ------------------------------------------------------------------------
 
-sal_Bool SAL_CALL JavaFolderPicker::supportsService( const OUString& ServiceName ) throw( RuntimeException )
+sal_Bool SAL_CALL JavaFolderPicker::supportsService( const OUString& ServiceName )
 {
 	Sequence < OUString > aSupportedServicesNames = JavaFolderPicker_getSupportedServiceNames();
  
@@ -176,20 +176,20 @@ sal_Bool SAL_CALL JavaFolderPicker::supportsService( const OUString& ServiceName
 
 // ------------------------------------------------------------------------
 
-Sequence< OUString > SAL_CALL JavaFolderPicker::getSupportedServiceNames() throw( RuntimeException )
+Sequence< OUString > SAL_CALL JavaFolderPicker::getSupportedServiceNames()
 {
 	return JavaFolderPicker_getSupportedServiceNames();
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFolderPicker::cancel() throw( RuntimeException )
+void SAL_CALL JavaFolderPicker::cancel()
 {
 	NSFileDialog_cancel( mpDialog );
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFolderPicker::disposing( const EventObject& /* aEvent */ ) throw( RuntimeException )
+void SAL_CALL JavaFolderPicker::disposing( const EventObject& /* aEvent */ )
 {
 }

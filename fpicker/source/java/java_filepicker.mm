@@ -37,6 +37,7 @@
 
 #include "java_filepicker.hxx"
 #include "../aqua/FPServiceInfo.hxx"
+#include <com/sun/star/lang/IllegalArgumentException.hpp>
 #include <com/sun/star/lang/NullPointerException.hpp>
 #include <com/sun/star/ui/dialogs/CommonFilePickerElementIds.hpp>
 #include <com/sun/star/ui/dialogs/ControlActions.hpp>
@@ -128,12 +129,12 @@ void JavaFilePicker_controlStateChanged( int nID, void *pPicker )
 		{
 			rSolarMutex.acquire();
 
-			JavaFilePicker *pJavaFilePicker = NULL;
+			JavaFilePicker *pJavaFilePicker = nullptr;
 			for ( ::std::list< JavaFilePicker* >::const_iterator it = aFilePickers.begin(); it != aFilePickers.end(); ++it )
 			{
 				if ( *it == pPicker )
 				{
-					pJavaFilePicker = (JavaFilePicker *)pPicker;
+					pJavaFilePicker = static_cast< JavaFilePicker* >( pPicker );
 					break;
 				}
 			}
@@ -163,7 +164,7 @@ static Sequence< OUString > SAL_CALL JavaFilePicker_getSupportedServiceNames()
 
 // ========================================================================
 
-JavaFilePicker::JavaFilePicker() :  WeakComponentImplHelper4< XFilePicker3, XFilePickerControlAccess, XInitialization, XServiceInfo >( maMutex ), mpDialog( NULL ), mbInExecute( false ), mpResMgr( NULL ), mnType( TemplateDescription::FILEOPEN_SIMPLE )
+JavaFilePicker::JavaFilePicker() :  WeakComponentImplHelper4< XFilePicker3, XFilePickerControlAccess, XInitialization, XServiceInfo >( maMutex ), mpDialog( nullptr ), mbInExecute( false ), mpResMgr( nullptr ), mnType( TemplateDescription::FILEOPEN_SIMPLE )
 {
 }
 
@@ -186,25 +187,25 @@ JavaFilePicker::~JavaFilePicker()
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFilePicker::addFilePickerListener( const Reference< XFilePickerListener >& xListener ) throw( RuntimeException )
+void SAL_CALL JavaFilePicker::addFilePickerListener( const Reference< XFilePickerListener >& xListener )
 {
 	maListeners.push_back( xListener );
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFilePicker::removeFilePickerListener( const Reference< XFilePickerListener >& xListener ) throw( RuntimeException )
+void SAL_CALL JavaFilePicker::removeFilePickerListener( const Reference< XFilePickerListener >& xListener )
 {
 	maListeners.remove( xListener );
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFilePicker::setTitle( const OUString& aTitle ) throw( RuntimeException )
+void SAL_CALL JavaFilePicker::setTitle( const OUString& aTitle )
 {
 	implInit();
 
-	CFStringRef aString = CFStringCreateWithCharacters( NULL, aTitle.getStr(), aTitle.getLength() );
+	CFStringRef aString = CFStringCreateWithCharacters( nullptr, reinterpret_cast< const UniChar* >( aTitle.getStr() ), aTitle.getLength() );
 	if ( aString )
 	{
 		NSFileDialog_setTitle( mpDialog, aString );
@@ -214,7 +215,7 @@ void SAL_CALL JavaFilePicker::setTitle( const OUString& aTitle ) throw( RuntimeE
 
 // ------------------------------------------------------------------------
 
-sal_Int16 SAL_CALL JavaFilePicker::execute() throw( RuntimeException )
+sal_Int16 SAL_CALL JavaFilePicker::execute()
 {
 	sal_Int16 nRet = 0;
 
@@ -233,7 +234,7 @@ sal_Int16 SAL_CALL JavaFilePicker::execute() throw( RuntimeException )
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFilePicker::setMultiSelectionMode( sal_Bool bMode ) throw( RuntimeException )
+void SAL_CALL JavaFilePicker::setMultiSelectionMode( sal_Bool bMode )
 {
 	implInit();
 
@@ -242,11 +243,11 @@ void SAL_CALL JavaFilePicker::setMultiSelectionMode( sal_Bool bMode ) throw( Run
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFilePicker::setDefaultName( const OUString& aName ) throw( RuntimeException )
+void SAL_CALL JavaFilePicker::setDefaultName( const OUString& aName )
 {
 	implInit();
 
-	CFStringRef aString = CFStringCreateWithCharacters( NULL, aName.getStr(), aName.getLength() );
+	CFStringRef aString = CFStringCreateWithCharacters( nullptr, reinterpret_cast< const UniChar* >( aName.getStr() ), aName.getLength() );
 	if ( aString )
 	{
 		NSFileDialog_setDefaultName( mpDialog, aString );
@@ -256,13 +257,13 @@ void SAL_CALL JavaFilePicker::setDefaultName( const OUString& aName ) throw( Run
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFilePicker::setDisplayDirectory( const OUString& aDirectory ) throw( com::sun::star::lang::IllegalArgumentException, RuntimeException )
+void SAL_CALL JavaFilePicker::setDisplayDirectory( const OUString& aDirectory )
 {
 	implInit();
 
 	if ( aDirectory.getLength() )
 	{
-		CFStringRef aString = CFStringCreateWithCharacters( NULL, aDirectory.getStr(), aDirectory.getLength() );
+		CFStringRef aString = CFStringCreateWithCharacters( nullptr, reinterpret_cast< const UniChar* >( aDirectory.getStr() ), aDirectory.getLength() );
 		if ( aString )
 		{
 			NSFileDialog_setDirectory( mpDialog, aString );
@@ -273,7 +274,7 @@ void SAL_CALL JavaFilePicker::setDisplayDirectory( const OUString& aDirectory ) 
 
 // ------------------------------------------------------------------------
 
-OUString SAL_CALL JavaFilePicker::getDisplayDirectory() throw( RuntimeException )
+OUString SAL_CALL JavaFilePicker::getDisplayDirectory()
 {
 	OUString aRet;
 
@@ -291,7 +292,14 @@ OUString SAL_CALL JavaFilePicker::getDisplayDirectory() throw( RuntimeException 
 
 // ------------------------------------------------------------------------
 
-Sequence< OUString > SAL_CALL JavaFilePicker::getFiles() throw( RuntimeException )
+Sequence< OUString > SAL_CALL JavaFilePicker::getFiles()
+{
+	return getSelectedFiles();
+}
+
+// ------------------------------------------------------------------------
+
+Sequence< OUString > SAL_CALL JavaFilePicker::getSelectedFiles()
 {
 	Sequence< OUString > aRet;
 
@@ -324,18 +332,18 @@ Sequence< OUString > SAL_CALL JavaFilePicker::getFiles() throw( RuntimeException
 				CFRange aFoundRange;
 				if ( CFStringFindWithOptions( aString, CFSTR( "/" ), aSearchRange, kCFCompareBackwards, &aFoundRange ) )
 				{
-					CFStringRef aSplitString = NULL;
+					CFStringRef aSplitString = nullptr;
 					if ( i )
 					{
 						aFoundRange.location++;
 						aFoundRange.length = aSearchRange.length - aFoundRange.location;
-						aSplitString = CFStringCreateWithSubstring( NULL, aString, aFoundRange );
+						aSplitString = CFStringCreateWithSubstring( nullptr, aString, aFoundRange );
 					}
 					else
 					{
 						aFoundRange.length = aFoundRange.location + 1;
 						aFoundRange.location = 0;
-						aSplitString = CFStringCreateWithSubstring( NULL, aString, aFoundRange );
+						aSplitString = CFStringCreateWithSubstring( nullptr, aString, aFoundRange );
 					}
 
 					if ( aSplitString )
@@ -355,14 +363,14 @@ Sequence< OUString > SAL_CALL JavaFilePicker::getFiles() throw( RuntimeException
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFilePicker::appendFilter( const OUString& aTitle, const OUString& aFilter ) throw( IllegalArgumentException, RuntimeException )
+void SAL_CALL JavaFilePicker::appendFilter( const OUString& aTitle, const OUString& aFilter )
 {
 	implInit();
 
-	CFStringRef aString = CFStringCreateWithCharacters( NULL, aTitle.getStr(), aTitle.getLength() );
+	CFStringRef aString = CFStringCreateWithCharacters( nullptr, reinterpret_cast< const UniChar* >( aTitle.getStr() ), aTitle.getLength() );
 	if ( aString )
 	{
-		CFStringRef aFilterString = CFStringCreateWithCharacters( NULL, aFilter.getStr(), aFilter.getLength() );
+		CFStringRef aFilterString = CFStringCreateWithCharacters( nullptr, reinterpret_cast< const UniChar* >( aFilter.getStr() ), aFilter.getLength() );
 		if ( aFilterString )
 		{
 			NSFileDialog_addFilter( mpDialog, aString, aFilterString );
@@ -375,11 +383,11 @@ void SAL_CALL JavaFilePicker::appendFilter( const OUString& aTitle, const OUStri
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFilePicker::setCurrentFilter( const OUString& aTitle ) throw( IllegalArgumentException, RuntimeException )
+void SAL_CALL JavaFilePicker::setCurrentFilter( const OUString& aTitle )
 {
 	implInit();
 
-	CFStringRef aString = CFStringCreateWithCharacters( NULL, aTitle.getStr(), aTitle.getLength() );
+	CFStringRef aString = CFStringCreateWithCharacters( nullptr, reinterpret_cast< const UniChar* >( aTitle.getStr() ), aTitle.getLength() );
 	if ( aString )
 	{
 		NSFileDialog_setSelectedFilter( mpDialog, aString );
@@ -389,7 +397,7 @@ void SAL_CALL JavaFilePicker::setCurrentFilter( const OUString& aTitle ) throw( 
 
 // ------------------------------------------------------------------------
 
-OUString SAL_CALL JavaFilePicker::getCurrentFilter() throw( RuntimeException )
+OUString SAL_CALL JavaFilePicker::getCurrentFilter()
 {
 	OUString aRet;
 
@@ -407,7 +415,7 @@ OUString SAL_CALL JavaFilePicker::getCurrentFilter() throw( RuntimeException )
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFilePicker::appendFilterGroup( const OUString& /* sGroupTitle */, const Sequence< StringPair >& aFilters ) throw( IllegalArgumentException, RuntimeException )
+void SAL_CALL JavaFilePicker::appendFilterGroup( const OUString& /* sGroupTitle */, const Sequence< StringPair >& aFilters )
 {
 	int nCount = aFilters.getLength();
 	for ( int i = 0; i < nCount; i++ )
@@ -416,7 +424,7 @@ void SAL_CALL JavaFilePicker::appendFilterGroup( const OUString& /* sGroupTitle 
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControlAction, const Any& aValue ) throw( RuntimeException )
+void SAL_CALL JavaFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControlAction, const Any& aValue )
 {
 	implInit();
 
@@ -437,7 +445,7 @@ void SAL_CALL JavaFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControl
 						OUString aItem;
 						aValue >>= aItem;
 						OUString aRealItem( aItem.replaceAll( "~", "" ) );
-						CFStringRef aString = CFStringCreateWithCharacters( NULL, aRealItem.getStr(), aRealItem.getLength() );
+						CFStringRef aString = CFStringCreateWithCharacters( nullptr, reinterpret_cast< const UniChar* >( aRealItem.getStr() ), aRealItem.getLength() );
 						if ( aString )
 						{
 							NSFileDialog_addItem( mpDialog, nCocoaControlId, aString );
@@ -453,7 +461,7 @@ void SAL_CALL JavaFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControl
 						for ( sal_Int32 i = 0; i < nCount; i++ )
 						{
 							OUString aRealItem( aItems[ i ].replaceAll( "~", "" ) );
-							CFStringRef aString = CFStringCreateWithCharacters( NULL, aRealItem.getStr(), aRealItem.getLength() );
+							CFStringRef aString = CFStringCreateWithCharacters( nullptr, reinterpret_cast< const UniChar* >( aRealItem.getStr() ), aRealItem.getLength() );
 							if ( aString )
 							{
 								NSFileDialog_addItem( mpDialog, nCocoaControlId, aString );
@@ -467,7 +475,7 @@ void SAL_CALL JavaFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControl
 						OUString aItem;
 						aValue >>= aItem;
 						OUString aRealItem( aItem.replaceAll( "~", "" ) );
-						CFStringRef aString = CFStringCreateWithCharacters( NULL, aRealItem.getStr(), aRealItem.getLength() );
+						CFStringRef aString = CFStringCreateWithCharacters( nullptr, reinterpret_cast< const UniChar* >( aRealItem.getStr() ), aRealItem.getLength() );
 						if ( aString )
 						{
 							NSFileDialog_deleteItem( mpDialog, nCocoaControlId, aString );
@@ -483,7 +491,7 @@ void SAL_CALL JavaFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControl
 						for ( sal_Int32 i = 0; i < nCount; i++ )
 						{
 							OUString aRealItem( aItems[ i ].replaceAll( "~", "" ) );
-							CFStringRef aString = CFStringCreateWithCharacters( NULL, aRealItem.getStr(), aRealItem.getLength() );
+							CFStringRef aString = CFStringCreateWithCharacters( nullptr, reinterpret_cast< const UniChar* >( aRealItem.getStr() ), aRealItem.getLength() );
 							if ( aString )
 							{
 								NSFileDialog_addItem( mpDialog, nCocoaControlId, aString );
@@ -508,7 +516,7 @@ void SAL_CALL JavaFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControl
 
 // ------------------------------------------------------------------------
 
-Any SAL_CALL JavaFilePicker::getValue( sal_Int16 nControlId, sal_Int16 nControlAction ) throw( RuntimeException )
+Any SAL_CALL JavaFilePicker::getValue( sal_Int16 nControlId, sal_Int16 nControlAction )
 {
 	Any aRet;
 
@@ -519,7 +527,7 @@ Any SAL_CALL JavaFilePicker::getValue( sal_Int16 nControlId, sal_Int16 nControlA
 	switch ( nCocoaControlType )
 	{
 		case COCOA_CONTROL_TYPE_CHECKBOX:
-			aRet <<= (sal_Bool)NSFileDialog_isChecked( mpDialog, nCocoaControlId );
+			aRet <<= static_cast< sal_Bool >( NSFileDialog_isChecked( mpDialog, nCocoaControlId ) );
 			break;
 		case COCOA_CONTROL_TYPE_POPUP:
 			switch ( nControlAction )
@@ -556,7 +564,7 @@ Any SAL_CALL JavaFilePicker::getValue( sal_Int16 nControlId, sal_Int16 nControlA
 					}
 					break;
 				case ControlActions::GET_SELECTED_ITEM_INDEX:
-					aRet <<= (sal_Int32)NSFileDialog_selectedItemIndex( mpDialog, nCocoaControlId );
+					aRet <<= static_cast< sal_Int32 >( NSFileDialog_selectedItemIndex( mpDialog, nCocoaControlId ) );
 					break;
 			}
 			break;
@@ -569,7 +577,7 @@ Any SAL_CALL JavaFilePicker::getValue( sal_Int16 nControlId, sal_Int16 nControlA
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFilePicker::enableControl( sal_Int16 nControlId, sal_Bool bEnable ) throw( RuntimeException )
+void SAL_CALL JavaFilePicker::enableControl( sal_Int16 nControlId, sal_Bool bEnable )
 {
 	implInit();
 
@@ -578,13 +586,13 @@ void SAL_CALL JavaFilePicker::enableControl( sal_Int16 nControlId, sal_Bool bEna
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFilePicker::setLabel( sal_Int16 nControlId, const OUString& aLabel ) throw( RuntimeException )
+void SAL_CALL JavaFilePicker::setLabel( sal_Int16 nControlId, const OUString& aLabel )
 {
 	implInit();
 
 	OUString aRealLabel( aLabel.replaceAll( "~", "" ) );
 
-	CFStringRef aString = CFStringCreateWithCharacters( NULL, aRealLabel.getStr(), aRealLabel.getLength() );
+	CFStringRef aString = CFStringCreateWithCharacters( nullptr, reinterpret_cast< const UniChar* >( aRealLabel.getStr() ), aRealLabel.getLength() );
 	if ( !aString )
 		return;
 
@@ -595,7 +603,7 @@ void SAL_CALL JavaFilePicker::setLabel( sal_Int16 nControlId, const OUString& aL
 
 // ------------------------------------------------------------------------
 
-OUString SAL_CALL JavaFilePicker::getLabel( sal_Int16 nControlId ) throw( RuntimeException )
+OUString SAL_CALL JavaFilePicker::getLabel( sal_Int16 nControlId )
 {
 	OUString aRet;
 
@@ -613,7 +621,7 @@ OUString SAL_CALL JavaFilePicker::getLabel( sal_Int16 nControlId ) throw( Runtim
 
 // ------------------------------------------------------------------------
 
-void JavaFilePicker::implInit() throw( Exception )
+void JavaFilePicker::implInit()
 {
 	// Check if this instance has already been initialized
 	if ( mpDialog )
@@ -749,13 +757,13 @@ void JavaFilePicker::implInit() throw( Exception )
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) throw( Exception, RuntimeException )
+void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments )
 {
 	if ( !aArguments.getLength() )
 		throw IllegalArgumentException( "no arguments", static_cast< XFilePicker* >( static_cast< XFilePicker3* >( this ) ), 1 );
 
 	Any aAny = aArguments[0];
-	if ( ( aAny.getValueType() != getCppuType( (sal_Int16*)0) ) && ( aAny.getValueType() != getCppuType( (sal_Int8*)0 ) ) )
+	if ( aAny.getValueType() != cppu::UnoType< Sequence< sal_Int16 > >::get() && aAny.getValueType() != cppu::UnoType< Sequence< sal_Int8 > >::get() )
 		throw IllegalArgumentException( "invalid argument type", static_cast< XFilePicker* >( static_cast< XFilePicker3* >( this ) ), 1 );
 
 	aAny >>= mnType;
@@ -765,7 +773,7 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFilePicker::cancel() throw( RuntimeException )
+void SAL_CALL JavaFilePicker::cancel()
 {
 	implInit();
 
@@ -774,7 +782,7 @@ void SAL_CALL JavaFilePicker::cancel() throw( RuntimeException )
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFilePicker::disposing( const EventObject& aEvent ) throw( RuntimeException )
+void SAL_CALL JavaFilePicker::disposing( const EventObject& aEvent )
 {
 	Reference< XFilePickerListener > xListener( aEvent.Source, UNO_QUERY );
 	if ( xListener.is() )
@@ -783,14 +791,14 @@ void SAL_CALL JavaFilePicker::disposing( const EventObject& aEvent ) throw( Runt
 
 // ------------------------------------------------------------------------
 
-OUString SAL_CALL JavaFilePicker::getImplementationName() throw( RuntimeException )
+OUString SAL_CALL JavaFilePicker::getImplementationName()
 {
 	return FILE_PICKER_IMPL_NAME;
 }
 
 // ------------------------------------------------------------------------
 
-sal_Bool SAL_CALL JavaFilePicker::supportsService( const OUString& ServiceName ) throw( RuntimeException )
+sal_Bool SAL_CALL JavaFilePicker::supportsService( const OUString& ServiceName )
 {
 	Sequence < OUString > aSupportedServicesNames = JavaFilePicker_getSupportedServiceNames();
  
@@ -803,7 +811,7 @@ sal_Bool SAL_CALL JavaFilePicker::supportsService( const OUString& ServiceName )
 
 // ------------------------------------------------------------------------
 
-Sequence< OUString > SAL_CALL JavaFilePicker::getSupportedServiceNames() throw( RuntimeException )
+Sequence< OUString > SAL_CALL JavaFilePicker::getSupportedServiceNames()
 {
 	return JavaFilePicker_getSupportedServiceNames();
 }
