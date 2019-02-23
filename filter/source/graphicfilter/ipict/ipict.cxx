@@ -1265,9 +1265,9 @@ sal_uLong PictReader::ReadQuickTimeImage()
     vcl::Font aOldActFont = vcl::Font( aActFont );
 
     GDIMetaFile aMtf;
-    VirtualDevice *pOldVirDev = pVirDev;
+    VclPtr< VirtualDevice > pOldVirDev = pVirDev;
     pVirDev = new VirtualDevice();
-    pVirDev->EnableOutput( FALSE );
+    pVirDev->EnableOutput( false );
     aMtf.Record( pVirDev );
 
     // Skip the QuickTime error messages by reading until the next NOP opcode
@@ -1321,7 +1321,6 @@ sal_uLong PictReader::ReadQuickTimeImage()
     }
 
     aMtf.Stop();
-    delete pVirDev;
     pVirDev = pOldVirDev;
 
     // Restore cached drawing state
