@@ -514,7 +514,7 @@ class VCL_DLLPUBLIC ListViewHeaderValue : public ImplControlValue
 {
 public:
     ListViewHeaderValue() : ImplControlValue( ControlType::ListViewHeader, 0 )
-    , mbPrimarySortColumn( false ), mnSortDirection( LISTVIEWHEADER_SORT_DONTKNOW ) {}
+    , mbPrimarySortColumn( false ), mnSortDirection( ListViewHeaderSortValue::SORT_DONTKNOW ) {}
     virtual ~ListViewHeaderValue() override;
     virtual ListViewHeaderValue* clone() const override;
     
