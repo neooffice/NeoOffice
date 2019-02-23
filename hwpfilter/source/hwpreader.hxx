@@ -26,6 +26,7 @@
 
 #ifndef INCLUDED_HWPFILTER_SOURCE_HWPREADER_HXX
 #define INCLUDED_HWPFILTER_SOURCE_HWPREADER_HXX
+
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -44,11 +45,10 @@
 #include <com/sun/star/document/XExtendedFilterDetection.hpp>
 
 #include <cppuhelper/factory.hxx>
-#include <cppuhelper/implbase1.hxx>
-#include <cppuhelper/implbase2.hxx>
-#include <cppuhelper/implbase4.hxx>
+#include <cppuhelper/implbase.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <cppuhelper/weak.hxx>
+#include <memory>
 
 using namespace ::cppu;
 using namespace ::com::sun::star::lang;
@@ -67,7 +67,7 @@ using namespace ::com::sun::star::xml::sax;
 #include "hcode.h"
 #include "hbox.h"
 #include "htags.h"
-#include "hstream.h"
+#include "hstream.hxx"
 #include "drawdef.h"
 #include "attributes.hxx"
 
@@ -80,29 +80,28 @@ struct HwpReaderPrivate;
 /**
  * This class implements the external Parser interface
  */
-class HwpReader : public WeakImplHelper1<XFilter>
+class HwpReader : public WeakImplHelper<XFilter>
 {
 
 public:
     HwpReader();
-    virtual ~HwpReader();
+    virtual ~HwpReader() override;
 
 public:
     /**
      * parseStream does Parser-startup initializations
      */
-    virtual sal_Bool SAL_CALL filter(const Sequence< PropertyValue >& aDescriptor) throw (RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual void SAL_CALL cancel() throw(RuntimeException, std::exception) SAL_OVERRIDE {}
-    virtual void SAL_CALL setDocumentHandler(Reference< XDocumentHandler > xHandler)
+    virtual sal_Bool SAL_CALL filter(const Sequence< PropertyValue >& aDescriptor) override;
+    virtual void SAL_CALL cancel() override {}
+    void SAL_CALL setDocumentHandler(Reference< XDocumentHandler > const & xHandler)
     {
         m_rxDocumentHandler = xHandler;
     }
 private:
     Reference< XDocumentHandler > m_rxDocumentHandler;
-    Reference< XAttributeList > rList;
-    AttributeListImpl *pList;
+    rtl::Reference<AttributeListImpl> mxList;
     HWPFile hwpfile;
-    HwpReaderPrivate *d;
+    std::unique_ptr<HwpReaderPrivate> d;
 private:
     /* -------- Document Parsing --------- */
     void makeMeta();
@@ -115,10 +114,10 @@ private:
     void makeTextDecls();
 
     /* -------- Paragraph Parsing --------- */
-    void parsePara(HWPPara *para, bool bParaStart = false);
-    void make_text_p0(HWPPara *para, bool bParaStart = false);
-    void make_text_p1(HWPPara *para, bool bParaStart = false);
-    void make_text_p3(HWPPara *para, bool bParaStart = false);
+    void parsePara(HWPPara *para);
+    void make_text_p0(HWPPara *para, bool bParaStart);
+    void make_text_p1(HWPPara *para, bool bParaStart);
+    void make_text_p3(HWPPara *para, bool bParaStart);
 
     /* -------- rDocument->characters(x) --------- */
     void makeChars(hchar_string & rStr);
@@ -128,21 +127,19 @@ private:
     void makeBookmark(Bookmark *hbox);      //6
     void makeDateFormat(DateCode *hbox);    //7
     void makeDateCode(DateCode *hbox);      //8
-    void makeTab(Tab *hbox);            //9
+    void makeTab();            //9
     void makeTable(TxtBox *hbox);
     void makeTextBox(TxtBox *hbox);
     void makeFormula(TxtBox *hbox);
     void makeHyperText(TxtBox *hbox);
     void makePicture(Picture *hbox);
     void makePictureDRAW(HWPDrawingObject *drawobj, Picture *hbox);
-    void makeLine(Line *hbox);
+    void makeLine();
     void makeHidden(Hidden *hbox);
     void makeFootnote(Footnote *hbox);
     void makeAutoNum(AutoNum *hbox);
     void makeShowPageNum();
     void makeMailMerge(MailMerge *hbox);
-    void makeTocMark(TocMark *hbox);
-    void makeIndexMark(IndexMark *hbox);
     void makeOutline(Outline *hbox);
 
     /* --------- Styles Parsing ------------ */
@@ -156,15 +153,15 @@ private:
     void makeTableStyle(Table *);
     void parseCharShape(CharShape *);
     void parseParaShape(ParaShape *);
-    char* getTStyleName(int, char *);
-    char* getPStyleName(int, char *);
+    static char* getTStyleName(int, char *);
+    static char* getPStyleName(int, char *);
 };
 
-class HwpImportFilter : public WeakImplHelper4< XFilter, XImporter, XServiceInfo, XExtendedFilterDetection >
+class HwpImportFilter : public WeakImplHelper< XFilter, XImporter, XServiceInfo, XExtendedFilterDetection >
 {
 public:
-    HwpImportFilter( const Reference< XMultiServiceFactory > xFact );
-    virtual ~HwpImportFilter();
+    explicit HwpImportFilter(const Reference< XMultiServiceFactory >& rFact);
+    virtual ~HwpImportFilter() override;
 
 public:
     static Sequence< OUString > getSupportedServiceNames_Static() throw();
@@ -172,55 +169,52 @@ public:
 
 public:
     // XFilter
-    virtual sal_Bool SAL_CALL filter( const Sequence< PropertyValue >& aDescriptor )
-        throw( RuntimeException, std::exception ) SAL_OVERRIDE;
-    virtual void SAL_CALL cancel() throw(RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual sal_Bool SAL_CALL filter( const Sequence< PropertyValue >& aDescriptor ) override;
+    virtual void SAL_CALL cancel() override;
 
     // XImporter
-    virtual void SAL_CALL setTargetDocument( const Reference< XComponent >& xDoc)
-        throw( IllegalArgumentException, RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL setTargetDocument( const Reference< XComponent >& xDoc) override;
 
     // XServiceInfo
-    OUString SAL_CALL getImplementationName() throw (RuntimeException, std::exception) SAL_OVERRIDE;
-    Sequence< OUString > SAL_CALL getSupportedServiceNames(void) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    sal_Bool SAL_CALL supportsService(const OUString& ServiceName) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    OUString SAL_CALL getImplementationName() override;
+    Sequence< OUString > SAL_CALL getSupportedServiceNames() override;
+    sal_Bool SAL_CALL supportsService(const OUString& ServiceName) override;
 
     //XExtendedFilterDetection
-    virtual OUString SAL_CALL detect( ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& rDescriptor ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual OUString SAL_CALL detect( css::uno::Sequence< css::beans::PropertyValue >& rDescriptor ) override;
 
 public:
     Reference< XFilter > rFilter;
     Reference< XImporter > rImporter;
 };
 
+/// @throws Exception
 Reference< XInterface > HwpImportFilter_CreateInstance(
-    const Reference< XMultiServiceFactory >& rSMgr ) throw( Exception )
+    const Reference< XMultiServiceFactory >& rSMgr )
 {
     HwpImportFilter *p = new HwpImportFilter( rSMgr );
 
-    return Reference< XInterface > ( (OWeakObject* )p );
+    return Reference< XInterface > ( static_cast<OWeakObject*>(p) );
 }
 
 Sequence< OUString > HwpImportFilter::getSupportedServiceNames_Static() throw ()
 {
-    Sequence< OUString > aRet(1);
-    aRet.getArray()[0] = HwpImportFilter::getImplementationName_Static();
+    Sequence< OUString > aRet { HwpImportFilter::getImplementationName_Static() };
     return aRet;
 }
 
-HwpImportFilter::HwpImportFilter( const Reference< XMultiServiceFactory > xFact )
+HwpImportFilter::HwpImportFilter(const Reference< XMultiServiceFactory >& rFact)
 {
     OUString sService( WRITER_IMPORTER_NAME );
     try {
-        Reference< XDocumentHandler >
-            xHandler( xFact->createInstance( sService ), UNO_QUERY );
+        Reference< XDocumentHandler > xHandler( rFact->createInstance( sService ), UNO_QUERY );
 
         HwpReader *p = new HwpReader;
         p->setDocumentHandler( xHandler );
 
-        Reference< XImporter > xImporter = Reference< XImporter >( xHandler, UNO_QUERY );
+        Reference< XImporter > xImporter( xHandler, UNO_QUERY );
         rImporter = xImporter;
-        Reference< XFilter > xFilter = Reference< XFilter >( p );
+        Reference< XFilter > xFilter( p );
         rFilter = xFilter;
     }
     catch( Exception & )
@@ -235,19 +229,17 @@ HwpImportFilter::~HwpImportFilter()
 }
 
 sal_Bool HwpImportFilter::filter( const Sequence< PropertyValue >& aDescriptor )
-    throw( RuntimeException, std::exception )
 {
     // delegate to IchitaroImpoter
     return rFilter->filter( aDescriptor );
 }
 
-void HwpImportFilter::cancel() throw(::com::sun::star::uno::RuntimeException, std::exception)
+void HwpImportFilter::cancel()
 {
     rFilter->cancel();
 }
 
 void HwpImportFilter::setTargetDocument( const Reference< XComponent >& xDoc )
-    throw( IllegalArgumentException, RuntimeException, std::exception )
 {
         // delegate
     rImporter->setTargetDocument( xDoc );
@@ -258,18 +250,18 @@ OUString HwpImportFilter::getImplementationName_Static() throw()
     return OUString( IMPLEMENTATION_NAME );
 }
 
-OUString HwpImportFilter::getImplementationName() throw(::com::sun::star::uno::RuntimeException, std::exception)
+OUString HwpImportFilter::getImplementationName()
 {
     return OUString( IMPLEMENTATION_NAME );
 }
 
-sal_Bool HwpImportFilter::supportsService( const OUString& ServiceName ) throw(::com::sun::star::uno::RuntimeException, std::exception)
+sal_Bool HwpImportFilter::supportsService( const OUString& ServiceName )
 {
     return cppu::supportsService(this, ServiceName);
 }
 
 //XExtendedFilterDetection
-OUString HwpImportFilter::detect( ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& rDescriptor ) throw (::com::sun::star::uno::RuntimeException, std::exception)
+OUString HwpImportFilter::detect( css::uno::Sequence< css::beans::PropertyValue >& rDescriptor )
 {
 #ifdef USE_JAVA
     // Fix crash on some machines when handling stream by catching any
@@ -294,20 +286,12 @@ OUString HwpImportFilter::detect( ::com::sun::star::uno::Sequence< ::com::sun::s
              detect_hwp_version(reinterpret_cast<const char*>(aData.getConstArray()))
            )
         {
-            sTypeName = OUString("writer_MIZI_Hwp_97");
+            sTypeName = "writer_MIZI_Hwp_97";
         }
     }
 
     return sTypeName;
 #ifdef USE_JAVA
-    }
-    catch( const com::sun::star::uno::RuntimeException &e )
-    {
-        throw;
-    }
-    catch( const std::exception &e )
-    {
-        throw;
     }
     catch ( ... )
     {
@@ -316,12 +300,12 @@ OUString HwpImportFilter::detect( ::com::sun::star::uno::Sequence< ::com::sun::s
 #endif	// USE_JAVA
 }
 
-Sequence< OUString> HwpImportFilter::getSupportedServiceNames() throw(::com::sun::star::uno::RuntimeException, std::exception)
+Sequence< OUString> HwpImportFilter::getSupportedServiceNames()
 {
     Sequence < OUString > aRet(2);
     OUString* pArray = aRet.getArray();
-    pArray[0] = OUString(SERVICE_NAME1);
-    pArray[1] = OUString(SERVICE_NAME2);
+    pArray[0] = SERVICE_NAME1;
+    pArray[1] = SERVICE_NAME2;
     return aRet;
 }
 
@@ -329,12 +313,12 @@ extern "C"
 {
     SAL_DLLPUBLIC_EXPORT void * SAL_CALL hwp_component_getFactory( const sal_Char * pImplName, void * pServiceManager, void *  )
     {
-        void * pRet = 0;
+        void * pRet = nullptr;
 
         if (pServiceManager )
         {
             Reference< XSingleServiceFactory > xRet;
-            Reference< XMultiServiceFactory > xSMgr = reinterpret_cast< XMultiServiceFactory * > ( pServiceManager );
+            Reference< XMultiServiceFactory > xSMgr = static_cast< XMultiServiceFactory * > ( pServiceManager );
 
             OUString aImplementationName = OUString::createFromAscii( pImplName );
 
