@@ -29,9 +29,6 @@
 #include "services.h"
 #include <classes/resource.hrc>
 #include <classes/fwkresid.hxx>
-#include <framework/bmkmenu.hxx>
-#include <framework/imageproducer.hxx>
-#include <framework/menuconfiguration.hxx>
 
 #include <com/sun/star/awt/XDevice.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
@@ -44,16 +41,21 @@
 #include <vcl/svapp.hxx>
 #include <vcl/i18nhelp.hxx>
 #include <vcl/settings.hxx>
+#include <vcl/commandinfoprovider.hxx>
 #include <rtl/ustrbuf.hxx>
-#include <cppuhelper/implbase1.hxx>
 #include <osl/file.hxx>
 #include <svtools/menuoptions.hxx>
 #include <svtools/acceleratorexecute.hxx>
+#include <svtools/imagemgr.hxx>
+#include <tools/urlobj.hxx>
+#include <unotools/dynamicmenuoptions.hxx>
 #include <unotools/moduleoptions.hxx>
 #include <osl/mutex.hxx>
-#include <boost/scoped_ptr.hpp>
+#include <memory>
 
 //  Defines
+#define aSlotNewDocDirect ".uno:AddDirect"
+#define aSlotAutoPilot ".uno:AutoPilotMenu"
 
 using namespace com::sun::star::uno;
 using namespace com::sun::star::lang;
@@ -77,45 +79,32 @@ DEFINE_INIT_SERVICE                     (   NewMenuController, {} )
 void NewMenuController::setMenuImages( PopupMenu* pPopupMenu, bool bSetImages )
 {
     sal_uInt16 nItemCount = pPopupMenu->GetItemCount();
-    Image               aImage;
     Reference< XFrame > xFrame( m_xFrame );
 
     for ( sal_uInt16 i = 0; i < nItemCount; i++ )
     {
-        sal_uInt16 nItemId = pPopupMenu->GetItemId( sal::static_int_cast<sal_uInt16>( i ));
+        sal_uInt16 nItemId = pPopupMenu->GetItemId( i );
         if ( nItemId != 0 )
         {
             if ( bSetImages )
             {
-                bool        bImageSet( false );
                 OUString aImageId;
+                OUString aCmd( pPopupMenu->GetItemCommand( nItemId ) );
+                sal_uLong nAttributePtr = pPopupMenu->GetUserValue( nItemId );
+                MenuAttributes* pAttributes = reinterpret_cast<MenuAttributes *>(nAttributePtr);
+                if (pAttributes)
+                    aImageId = pAttributes->aImageId;
 
-                AddInfoForId::const_iterator pInfo = m_aAddInfoForItem.find( nItemId );
-                if ( pInfo != m_aAddInfoForItem.end() )
-                    aImageId = pInfo->second.aImageId; // Retrieve image id for menu item
+                INetURLObject aURLObj( aImageId.isEmpty() ? aCmd : aImageId );
+                Image aImage = SvFileInformationManager::GetImageNoDefault( aURLObj );
+                if ( !aImage )
+                    aImage = vcl::CommandInfoProvider::GetImageForCommand(aCmd, xFrame);
 
-                if ( !aImageId.isEmpty() )
-                {
-                    aImage = GetImageFromURL( xFrame, aImageId, false );
-                    if ( !!aImage )
-                    {
-                        bImageSet = true;
-                        pPopupMenu->SetItemImage( nItemId, aImage );
-                    }
-                }
-
-                if ( !bImageSet )
-                {
-                    OUString aCmd( pPopupMenu->GetItemCommand( nItemId ) );
-                    if ( !aCmd.isEmpty() )
-                        aImage = GetImageFromURL( xFrame, aCmd, false );
-
-                    if ( !!aImage )
-                        pPopupMenu->SetItemImage( nItemId, aImage );
-                }
+                if ( !!aImage )
+                    pPopupMenu->SetItemImage( nItemId, aImage );
             }
             else
-                pPopupMenu->SetItemImage( nItemId, aImage );
+                pPopupMenu->SetItemImage( nItemId, Image() );
         }
     }
 }
@@ -131,11 +120,11 @@ void NewMenuController::determineAndSetNewDocAccel( PopupMenu* pPopupMenu, const
     {
         // Search for the empty document URL
 
-        for ( sal_uInt32 i = 0; i < sal_uInt32( nCount ); i++ )
+        for ( sal_uInt16 i = 0; i < nCount; i++ )
         {
-            nId = pPopupMenu->GetItemId( sal_uInt16( i ));
-            if ( nId != 0 && pPopupMenu->GetItemType( nId ) != MenuItemType::SEPARATOR )
+            if ( pPopupMenu->GetItemType( i ) != MenuItemType::SEPARATOR )
             {
+                nId = pPopupMenu->GetItemId( i );
                 aCommand = pPopupMenu->GetItemCommand( nId );
                 if ( aCommand.startsWith( m_aEmptyDocURL ) )
                 {
@@ -153,11 +142,11 @@ void NewMenuController::determineAndSetNewDocAccel( PopupMenu* pPopupMenu, const
         OUString aDefaultModuleName( SvtModuleOptions().GetDefaultModuleName() );
         if ( !aDefaultModuleName.isEmpty() )
         {
-            for ( sal_uInt32 i = 0; i < sal_uInt32( nCount ); i++ )
+            for ( sal_uInt16 i = 0; i < nCount; i++ )
             {
-                nId = pPopupMenu->GetItemId( sal_uInt16( i ));
-                if ( nId != 0 && pPopupMenu->GetItemType( nId ) != MenuItemType::SEPARATOR )
+                if ( pPopupMenu->GetItemType( i ) != MenuItemType::SEPARATOR )
                 {
+                    nId = pPopupMenu->GetItemId( i );
                     aCommand = pPopupMenu->GetItemCommand( nId );
 #if defined USE_JAVA && defined MACOSX
                     if ( !bFound && aCommand.indexOf( aDefaultModuleName ) >= 0 )
@@ -239,15 +228,15 @@ void NewMenuController::setAccelerators( PopupMenu* pPopupMenu )
         }
 
         vcl::KeyCode                    aEmptyKeyCode;
-        sal_uInt32                      nItemCount( pPopupMenu->GetItemCount() );
+        sal_uInt16                      nItemCount( pPopupMenu->GetItemCount() );
         std::vector< vcl::KeyCode >     aMenuShortCuts;
         std::vector< OUString >    aCmds;
-        std::vector< sal_uInt32 >       aIds;
-        for ( sal_uInt32 i = 0; i < nItemCount; i++ )
+        std::vector< sal_uInt16 >       aIds;
+        for ( sal_uInt16 i = 0; i < nItemCount; i++ )
         {
-            sal_uInt16 nId( pPopupMenu->GetItemId( sal_uInt16( i )));
-            if ( nId && ( pPopupMenu->GetItemType( nId ) != MenuItemType::SEPARATOR ))
+            if ( pPopupMenu->GetItemType( i ) != MenuItemType::SEPARATOR )
             {
+                sal_uInt16 nId( pPopupMenu->GetItemId( i ));
                 aIds.push_back( nId );
                 aMenuShortCuts.push_back( aEmptyKeyCode );
                 aCmds.push_back( pPopupMenu->GetItemCommand( nId ));
@@ -277,11 +266,11 @@ void NewMenuController::setAccelerators( PopupMenu* pPopupMenu )
         if ( m_xModuleAcceleratorManager.is() )
             retrieveShortcutsFromConfiguration( xModuleAccelCfg, aSeq, aMenuShortCuts );
         if ( m_xDocAcceleratorManager.is() )
-            retrieveShortcutsFromConfiguration( xGlobalAccelCfg, aSeq, aMenuShortCuts );
+            retrieveShortcutsFromConfiguration( xDocAccelCfg, aSeq, aMenuShortCuts );
 
         const sal_uInt32 nCount2 = aIds.size();
         for ( sal_uInt32 i = 0; i < nCount2; i++ )
-            pPopupMenu->SetAccelKey( sal_uInt16( aIds[i] ), aMenuShortCuts[i] );
+            pPopupMenu->SetAccelKey( aIds[i], aMenuShortCuts[i] );
 
         // Special handling for "New" menu short-cut should be set at the
         // document which will be opened using it.
@@ -302,7 +291,7 @@ void NewMenuController::retrieveShortcutsFromConfiguration(
     {
         try
         {
-            com::sun::star::awt::KeyEvent aKeyEvent;
+            css::awt::KeyEvent aKeyEvent;
             Sequence< Any > aSeqKeyCode = rAccelCfg->getPreferredKeyEventsForCommandList( rCommands );
             for ( sal_Int32 i = 0; i < aSeqKeyCode.getLength(); i++ )
             {
@@ -316,7 +305,7 @@ void NewMenuController::retrieveShortcutsFromConfiguration(
     }
 }
 
-NewMenuController::NewMenuController( const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext >& xContext ) :
+NewMenuController::NewMenuController( const css::uno::Reference< css::uno::XComponentContext >& xContext ) :
     svt::PopupMenuControllerBase( xContext ),
     m_bShowImages( true ),
     m_bNewMenu( false ),
@@ -335,7 +324,7 @@ NewMenuController::~NewMenuController()
 void NewMenuController::fillPopupMenu( Reference< css::awt::XPopupMenu >& rPopupMenu )
 {
     VCLXPopupMenu* pPopupMenu    = static_cast<VCLXPopupMenu *>(VCLXMenu::GetImplementation( rPopupMenu ));
-    PopupMenu*     pVCLPopupMenu = 0;
+    PopupMenu*     pVCLPopupMenu = nullptr;
 
     SolarMutexGuard aSolarMutexGuard;
 
@@ -345,48 +334,69 @@ void NewMenuController::fillPopupMenu( Reference< css::awt::XPopupMenu >& rPopup
 
     if ( pVCLPopupMenu )
     {
-        MenuConfiguration aMenuCfg( m_xContext );
-        boost::scoped_ptr<BmkMenu> pSubMenu;
+        Reference< XDispatchProvider > xDispatchProvider( m_xFrame, UNO_QUERY );
+        URL aTargetURL;
+        aTargetURL.Complete = rtl::OUString::createFromAscii(m_bNewMenu ? aSlotNewDocDirect : aSlotAutoPilot);
+        m_xURLTransformer->parseStrict( aTargetURL );
+        Reference< XDispatch > xMenuItemDispatch = xDispatchProvider->queryDispatch( aTargetURL, OUString(), 0 );
+        if(xMenuItemDispatch == nullptr)
+            return;
 
-        if ( m_bNewMenu )
-            pSubMenu.reset(static_cast<BmkMenu*>(aMenuCfg.CreateBookmarkMenu( m_xFrame, BOOKMARK_NEWMENU )));
-        else
-            pSubMenu.reset(static_cast<BmkMenu*>(aMenuCfg.CreateBookmarkMenu( m_xFrame, BOOKMARK_WIZARDMENU )));
+        css::uno::Sequence< css::uno::Sequence< css::beans::PropertyValue > > aDynamicMenuEntries =
+            SvtDynamicMenuOptions().GetMenu( m_bNewMenu ? EDynamicMenuType::NewMenu : EDynamicMenuType::WizardMenu );
 
-        // copy entries as we have to use the provided popup menu
-        *pVCLPopupMenu = *pSubMenu;
+        OUString aTitle;
+        OUString aURL;
+        OUString aTargetFrame;
+        OUString aImageId;
+        sal_uInt16 nItemId = 1;
 
-        Image           aImage;
-        AddInfo         aAddInfo;
-
-        // retrieve additional parameters from bookmark menu and
-        // store it in a boost::unordered_map.
-        for ( sal_uInt16 i = 0; i < pSubMenu->GetItemCount(); i++ )
+        for ( const auto& aDynamicMenuEntry : aDynamicMenuEntries )
         {
-            sal_uInt16 nItemId = pSubMenu->GetItemId( sal::static_int_cast<sal_uInt16>( i ) );
-            if (( nItemId != 0 ) &&
-                ( pSubMenu->GetItemType( nItemId ) != MenuItemType::SEPARATOR ))
+            for ( const auto& aProperty : aDynamicMenuEntry )
             {
-                MenuConfiguration::Attributes* pBmkAttributes = reinterpret_cast<MenuConfiguration::Attributes *>(pSubMenu->GetUserValue( nItemId ));
-                if ( pBmkAttributes != 0 )
-                {
-                    aAddInfo.aTargetFrame = pBmkAttributes->aTargetFrame;
-                    aAddInfo.aImageId     = pBmkAttributes->aImageId;
+                if ( aProperty.Name == DYNAMICMENU_PROPERTYNAME_URL )
+                    aProperty.Value >>= aURL;
+                else if ( aProperty.Name == DYNAMICMENU_PROPERTYNAME_TITLE )
+                    aProperty.Value >>= aTitle;
+                else if ( aProperty.Name == DYNAMICMENU_PROPERTYNAME_IMAGEIDENTIFIER )
+                    aProperty.Value >>= aImageId;
+                else if ( aProperty.Name == DYNAMICMENU_PROPERTYNAME_TARGETNAME )
+                    aProperty.Value >>= aTargetFrame;
+            }
 
-                    m_aAddInfoForItem.insert( AddInfoForId::value_type( nItemId, aAddInfo ));
-                }
+            if ( aTitle.isEmpty() && aURL.isEmpty() )
+                continue;
+
+            if ( aURL == "private:separator" )
+                pVCLPopupMenu->InsertSeparator();
+            else
+            {
+                pVCLPopupMenu->InsertItem( nItemId, aTitle );
+                pVCLPopupMenu->SetItemCommand( nItemId, aURL );
+
+                sal_uIntPtr nAttributePtr = MenuAttributes::CreateAttribute( aTargetFrame, aImageId );
+                pVCLPopupMenu->SetUserValue( nItemId, nAttributePtr, MenuAttributes::ReleaseAttribute );
+
+                nItemId++;
             }
         }
 
         if ( m_bShowImages )
             setMenuImages( pVCLPopupMenu, m_bShowImages );
+
+#ifdef USE_JAVA
+        // Remove separators at the beginning of menu
+        while ( pVCLPopupMenu->GetItemCount() && pVCLPopupMenu->GetItemType( 0 ) == MenuItemType::SEPARATOR )
+            pVCLPopupMenu->RemoveItem( 0 );
+#endif	// USE_JAVA
     }
 }
 
 // XEventListener
-void SAL_CALL NewMenuController::disposing( const EventObject& ) throw ( RuntimeException, std::exception )
+void SAL_CALL NewMenuController::disposing( const EventObject& )
 {
-    Reference< css::awt::XMenuListener > xHolder(( OWeakObject *)this, UNO_QUERY );
+    Reference< css::awt::XMenuListener > xHolder(static_cast<OWeakObject *>(this), UNO_QUERY );
 
     osl::MutexGuard aLock( m_aMutex );
     m_xFrame.clear();
@@ -394,73 +404,54 @@ void SAL_CALL NewMenuController::disposing( const EventObject& ) throw ( Runtime
     m_xContext.clear();
 
     if ( m_xPopupMenu.is() )
-        m_xPopupMenu->removeMenuListener( Reference< css::awt::XMenuListener >(( OWeakObject *)this, UNO_QUERY ));
+        m_xPopupMenu->removeMenuListener( Reference< css::awt::XMenuListener >(static_cast<OWeakObject *>(this), UNO_QUERY ));
     m_xPopupMenu.clear();
 }
 
 // XStatusListener
-void SAL_CALL NewMenuController::statusChanged( const FeatureStateEvent& ) throw ( RuntimeException, std::exception )
+void SAL_CALL NewMenuController::statusChanged( const FeatureStateEvent& )
 {
 }
 
 // XMenuListener
-void SAL_CALL NewMenuController::itemSelected( const css::awt::MenuEvent& rEvent ) throw (RuntimeException, std::exception)
+void SAL_CALL NewMenuController::itemSelected( const css::awt::MenuEvent& rEvent )
 {
     Reference< css::awt::XPopupMenu > xPopupMenu;
-    Reference< XDispatch >            xDispatch;
-    Reference< XDispatchProvider >    xDispatchProvider;
     Reference< XComponentContext >    xContext;
-    Reference< XURLTransformer >      xURLTransformer;
 
     osl::ClearableMutexGuard aLock( m_aMutex );
-    xPopupMenu          = m_xPopupMenu;
-    xDispatchProvider   = Reference< XDispatchProvider >( m_xFrame, UNO_QUERY );
-    xContext     = m_xContext;
-    xURLTransformer     = m_xURLTransformer;
+    xPopupMenu = m_xPopupMenu;
+    xContext   = m_xContext;
     aLock.clear();
 
-    css::util::URL aTargetURL;
-    Sequence< PropertyValue > aArgsList( 1 );
-
-    if ( xPopupMenu.is() && xDispatchProvider.is() )
+    if ( xPopupMenu.is() )
     {
         VCLXPopupMenu* pPopupMenu = static_cast<VCLXPopupMenu *>(VCLXPopupMenu::GetImplementation( xPopupMenu ));
         if ( pPopupMenu )
         {
+            OUString aURL;
+            OUString aTargetFrame( m_aTargetFrame );
+
             {
                 SolarMutexGuard aSolarMutexGuard;
                 PopupMenu* pVCLPopupMenu = static_cast<PopupMenu *>(pPopupMenu->GetMenu());
-                aTargetURL.Complete = pVCLPopupMenu->GetItemCommand( rEvent.MenuId );
+                aURL = pVCLPopupMenu->GetItemCommand(rEvent.MenuId);
+                sal_uLong nAttributePtr = pVCLPopupMenu->GetUserValue(rEvent.MenuId);
+                MenuAttributes* pAttributes = reinterpret_cast<MenuAttributes *>(nAttributePtr);
+                if (pAttributes)
+                    aTargetFrame = pAttributes->aTargetFrame;
             }
 
-            xURLTransformer->parseStrict( aTargetURL );
-
+            Sequence< PropertyValue > aArgsList( 1 );
             aArgsList[0].Name = "Referer";
-            aArgsList[0].Value = makeAny( OUString( "private:user" ));
+            aArgsList[0].Value <<= OUString( "private:user" );
 
-            OUString aTargetFrame( m_aTargetFrame );
-            AddInfoForId::const_iterator pItem = m_aAddInfoForItem.find( rEvent.MenuId );
-            if ( pItem != m_aAddInfoForItem.end() )
-                aTargetFrame = pItem->second.aTargetFrame;
-
-            xDispatch = xDispatchProvider->queryDispatch( aTargetURL, aTargetFrame, 0 );
+            dispatchCommand( aURL, aArgsList, aTargetFrame );
         }
-    }
-
-    if ( xDispatch.is() )
-    {
-        // Call dispatch asychronously as we can be destroyed while dispatch is
-        // executed. VCL is not able to survive this as it wants to call listeners
-        // after select!!!
-        NewDocument* pNewDocument = new NewDocument;
-        pNewDocument->xDispatch  = xDispatch;
-        pNewDocument->aTargetURL = aTargetURL;
-        pNewDocument->aArgSeq    = aArgsList;
-        Application::PostUserEvent( STATIC_LINK(0, NewMenuController, ExecuteHdl_Impl), pNewDocument );
     }
 }
 
-void SAL_CALL NewMenuController::itemActivated( const css::awt::MenuEvent& ) throw (RuntimeException, std::exception)
+void SAL_CALL NewMenuController::itemActivated( const css::awt::MenuEvent& )
 {
     SolarMutexGuard aSolarMutexGuard;
     if ( m_xFrame.is() && m_xPopupMenu.is() )
@@ -470,12 +461,14 @@ void SAL_CALL NewMenuController::itemActivated( const css::awt::MenuEvent& ) thr
         {
             const StyleSettings& rSettings = Application::GetSettings().GetStyleSettings();
             bool bShowImages( rSettings.GetUseImagesInMenus() );
+            OUString aIconTheme( rSettings.DetermineIconTheme() );
 
             PopupMenu* pVCLPopupMenu = static_cast<PopupMenu *>(pPopupMenu->GetMenu());
 
-            if ( m_bShowImages != bShowImages )
+            if ( m_bShowImages != bShowImages || m_aIconTheme != aIconTheme )
             {
                 m_bShowImages = bShowImages;
+                m_aIconTheme = aIconTheme;
                 setMenuImages( pVCLPopupMenu, m_bShowImages );
             }
 
@@ -525,7 +518,7 @@ void NewMenuController::impl_setPopupMenu()
 }
 
 // XInitialization
-void SAL_CALL NewMenuController::initialize( const Sequence< Any >& aArguments ) throw ( Exception, RuntimeException, std::exception )
+void SAL_CALL NewMenuController::initialize( const Sequence< Any >& aArguments )
 {
     osl::MutexGuard aLock( m_aMutex );
 
@@ -539,24 +532,10 @@ void SAL_CALL NewMenuController::initialize( const Sequence< Any >& aArguments )
             const StyleSettings& rSettings = Application::GetSettings().GetStyleSettings();
 
             m_bShowImages   = rSettings.GetUseImagesInMenus();
-            m_bNewMenu      = m_aCommandURL == ".uno:AddDirect";
+            m_aIconTheme    = rSettings.DetermineIconTheme();
+            m_bNewMenu      = m_aCommandURL == aSlotNewDocDirect;
         }
     }
-}
-
-IMPL_STATIC_LINK_NOINSTANCE( NewMenuController, ExecuteHdl_Impl, NewDocument*, pNewDocument )
-{
-/*  i62706: Don't catch all exceptions. We hide all problems here and are not able
-            to handle them on higher levels.
-    try
-    {
-*/
-        // Asynchronous execution as this can lead to our own destruction!
-        // Framework can recycle our current frame and the layout manager disposes all user interface
-        // elements if a component gets detached from its frame!
-        pNewDocument->xDispatch->dispatch( pNewDocument->aTargetURL, pNewDocument->aArgSeq );
-    delete pNewDocument;
-    return 0;
 }
 
 }
