@@ -69,9 +69,9 @@ public:
 	virtual				~DTransTransferable();
 
 	// XTransferable
-	virtual ::com::sun::star::uno::Any getTransferData( const ::com::sun::star::datatransfer::DataFlavor& aFlavor ) throw ( ::com::sun::star::datatransfer::UnsupportedFlavorException, ::com::sun::star::io::IOException, ::com::sun::star::uno::RuntimeException, std::exception ) override;
-	virtual ::com::sun::star::uno::Sequence< ::com::sun::star::datatransfer::DataFlavor > getTransferDataFlavors() throw ( ::com::sun::star::uno::RuntimeException, std::exception ) override;
-	virtual sal_Bool	isDataFlavorSupported( const ::com::sun::star::datatransfer::DataFlavor& aFlavor ) throw ( ::com::sun::star::uno::RuntimeException, std::exception ) override;
+	virtual ::com::sun::star::uno::Any getTransferData( const ::com::sun::star::datatransfer::DataFlavor& aFlavor ) override;
+	virtual ::com::sun::star::uno::Sequence< ::com::sun::star::datatransfer::DataFlavor > getTransferDataFlavors() override;
+	virtual sal_Bool	isDataFlavorSupported( const ::com::sun::star::datatransfer::DataFlavor& aFlavor ) override;
 
 	void				flush();
 	int					getChangeCount();

@@ -981,7 +981,7 @@ int DTransTransferable::getChangeCount()
 
 // ----------------------------------------------------------------------------
 
-Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( UnsupportedFlavorException, IOException, RuntimeException, std::exception )
+Any DTransTransferable::getTransferData( const DataFlavor& aFlavor )
 {
 	if ( mxTransferable.is() )
 		return mxTransferable->getTransferData( aFlavor );
@@ -1183,7 +1183,7 @@ DTransTransferable::~DTransTransferable()
 
 // ----------------------------------------------------------------------------
 
-Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors() throw ( RuntimeException, std::exception )
+Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors()
 {
 	if ( mxTransferable.is() )
 		return mxTransferable->getTransferDataFlavors();
@@ -1253,7 +1253,7 @@ sal_Bool DTransTransferable::hasOwnership()
 
 // ----------------------------------------------------------------------------
 
-sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) throw ( RuntimeException, std::exception )
+sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor )
 {
 	if ( mxTransferable.is() )
 		return mxTransferable->isDataFlavorSupported( aFlavor );
