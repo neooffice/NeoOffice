@@ -176,14 +176,14 @@ Window::~Window()
 
 // ----------------------------------------------------------------------------
 
-void Window::update() throw( RuntimeException )
+void Window::update()
 {
 	setVisible( mbVisible );
 }
 
 // ----------------------------------------------------------------------------
 
-sal_Bool Window::setZoomLevel( ZoomLevel nZoomLevel ) throw( RuntimeException )
+sal_Bool Window::setZoomLevel( ZoomLevel nZoomLevel )
 {
 	sal_Bool bRet = sal_False;
 
@@ -206,14 +206,14 @@ sal_Bool Window::setZoomLevel( ZoomLevel nZoomLevel ) throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-ZoomLevel Window::getZoomLevel() throw( RuntimeException )
+ZoomLevel Window::getZoomLevel()
 {
 	return mnZoomLevel;
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::setPointerType( sal_Int32 nPointerType ) throw( RuntimeException )
+void Window::setPointerType( sal_Int32 nPointerType )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -229,7 +229,7 @@ void Window::setPointerType( sal_Int32 nPointerType ) throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32 nHeight, sal_Int16 /* nFlags*/ ) throw( RuntimeException )
+void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32 nHeight, sal_Int16 /* nFlags*/ )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -247,7 +247,7 @@ void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32
 
 // ----------------------------------------------------------------------------
 
-::com::sun::star::awt::Rectangle Window::getPosSize() throw( RuntimeException )
+::com::sun::star::awt::Rectangle Window::getPosSize()
 {
 	::com::sun::star::awt::Rectangle aRet( 0, 0, 0, 0 );
 
@@ -274,7 +274,7 @@ void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32
 
 // ----------------------------------------------------------------------------
 
-void Window::setVisible( sal_Bool bVisible ) throw( RuntimeException )
+void Window::setVisible( sal_Bool bVisible )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -296,7 +296,7 @@ void Window::setVisible( sal_Bool bVisible ) throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-void Window::setEnable( sal_Bool /* bEnable */ ) throw( RuntimeException )
+void Window::setEnable( sal_Bool /* bEnable */ )
 {
 #ifdef DEBUG
 	fprintf( stderr, "Window::setEnable not implemented\n" );
@@ -305,7 +305,7 @@ void Window::setEnable( sal_Bool /* bEnable */ ) throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-void Window::setFocus() throw( RuntimeException )
+void Window::setFocus()
 {
 	if ( mpMoviePlayer )
 	{
@@ -316,91 +316,91 @@ void Window::setFocus() throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-void Window::addWindowListener( const Reference< XWindowListener >& xListener ) throw( RuntimeException )
+void Window::addWindowListener( const Reference< XWindowListener >& xListener )
 {
 	maListeners.addInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::removeWindowListener( const Reference< XWindowListener >& xListener ) throw( RuntimeException )
+void Window::removeWindowListener( const Reference< XWindowListener >& xListener )
 {
 	maListeners.removeInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::addFocusListener( const Reference< XFocusListener >& xListener ) throw( RuntimeException )
+void Window::addFocusListener( const Reference< XFocusListener >& xListener )
 {
 	maListeners.addInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::removeFocusListener( const Reference< XFocusListener >& xListener ) throw( RuntimeException )
+void Window::removeFocusListener( const Reference< XFocusListener >& xListener )
 {
 	maListeners.removeInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::addKeyListener( const Reference< XKeyListener >& xListener ) throw( RuntimeException )
+void Window::addKeyListener( const Reference< XKeyListener >& xListener )
 {
 	maListeners.addInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::removeKeyListener( const Reference< XKeyListener >& xListener ) throw( RuntimeException )
+void Window::removeKeyListener( const Reference< XKeyListener >& xListener )
 {
 	maListeners.removeInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::addMouseListener( const Reference< XMouseListener >& xListener ) throw( RuntimeException )
+void Window::addMouseListener( const Reference< XMouseListener >& xListener )
 {
 	maListeners.addInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::removeMouseListener( const Reference< XMouseListener >& xListener ) throw( RuntimeException )
+void Window::removeMouseListener( const Reference< XMouseListener >& xListener )
 {
 	maListeners.removeInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::addMouseMotionListener( const Reference< XMouseMotionListener >& xListener ) throw( RuntimeException )
+void Window::addMouseMotionListener( const Reference< XMouseMotionListener >& xListener )
 {
 	maListeners.addInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::removeMouseMotionListener( const Reference< XMouseMotionListener >& xListener ) throw( RuntimeException )
+void Window::removeMouseMotionListener( const Reference< XMouseMotionListener >& xListener )
 {
 	maListeners.removeInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::addPaintListener( const Reference< XPaintListener >& xListener ) throw( RuntimeException )
+void Window::addPaintListener( const Reference< XPaintListener >& xListener )
 {
 	maListeners.addInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::removePaintListener( const Reference< XPaintListener >& xListener ) throw( RuntimeException )
+void Window::removePaintListener( const Reference< XPaintListener >& xListener )
 {
 	maListeners.removeInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::dispose() throw( RuntimeException )
+void Window::dispose()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -421,35 +421,35 @@ void Window::dispose() throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-void Window::addEventListener( const Reference< XEventListener >& xListener ) throw( RuntimeException )
+void Window::addEventListener( const Reference< XEventListener >& xListener )
 {
 	maListeners.addInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::removeEventListener( const Reference< XEventListener >& xListener ) throw( RuntimeException )
+void Window::removeEventListener( const Reference< XEventListener >& xListener )
 {
 	maListeners.removeInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-OUString SAL_CALL Window::getImplementationName() throw( RuntimeException )
+OUString SAL_CALL Window::getImplementationName()
 {
 	return OUString( AVMEDIA_QUICKTIME_WINDOW_IMPLEMENTATIONNAME );
 }
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL Window::supportsService( const OUString& ServiceName ) throw( RuntimeException )
+sal_Bool SAL_CALL Window::supportsService( const OUString& ServiceName )
 {
 	return ServiceName == AVMEDIA_QUICKTIME_WINDOW_SERVICENAME;
 }
 
 // ----------------------------------------------------------------------------
 
-Sequence< OUString > SAL_CALL Window::getSupportedServiceNames() throw( RuntimeException )
+Sequence< OUString > SAL_CALL Window::getSupportedServiceNames()
 {
 	Sequence< OUString > aRet(1);
 	aRet[0] = OUString( AVMEDIA_QUICKTIME_WINDOW_SERVICENAME );

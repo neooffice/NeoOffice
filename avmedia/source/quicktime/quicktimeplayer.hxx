@@ -71,26 +71,26 @@ public:
 	bool				create( const OUString& rURL );
 
     // XPlayer
-    virtual void SAL_CALL start(  ) throw (::com::sun::star::uno::RuntimeException) override;
-    virtual void SAL_CALL stop(  ) throw (::com::sun::star::uno::RuntimeException) override;
-    virtual sal_Bool SAL_CALL isPlaying(  ) throw (::com::sun::star::uno::RuntimeException) override;
-    virtual double SAL_CALL getDuration(  ) throw (::com::sun::star::uno::RuntimeException) override;
-    virtual void SAL_CALL setMediaTime( double fTime ) throw (::com::sun::star::uno::RuntimeException) override;
-    virtual double SAL_CALL getMediaTime(  ) throw (::com::sun::star::uno::RuntimeException) override;
-    virtual void SAL_CALL setPlaybackLoop( sal_Bool bSet ) throw (::com::sun::star::uno::RuntimeException) override;
-    virtual sal_Bool SAL_CALL isPlaybackLoop(  ) throw (::com::sun::star::uno::RuntimeException) override;
-    virtual void SAL_CALL setMute( sal_Bool bSet ) throw (::com::sun::star::uno::RuntimeException) override;
-    virtual sal_Bool SAL_CALL isMute(  ) throw (::com::sun::star::uno::RuntimeException) override;
-    virtual void SAL_CALL setVolumeDB( sal_Int16 nVolumeDB ) throw (::com::sun::star::uno::RuntimeException) override;
-    virtual sal_Int16 SAL_CALL getVolumeDB(  ) throw (::com::sun::star::uno::RuntimeException) override;
-    virtual ::com::sun::star::awt::Size SAL_CALL getPreferredPlayerWindowSize(  ) throw (::com::sun::star::uno::RuntimeException) override;
-    virtual ::com::sun::star::uno::Reference< ::com::sun::star::media::XPlayerWindow > SAL_CALL createPlayerWindow( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& aArguments ) throw (::com::sun::star::uno::RuntimeException) override;
-    virtual ::com::sun::star::uno::Reference< ::com::sun::star::media::XFrameGrabber > SAL_CALL createFrameGrabber(  ) throw (::com::sun::star::uno::RuntimeException) override;
+    virtual void SAL_CALL start(  ) override;
+    virtual void SAL_CALL stop(  ) override;
+    virtual sal_Bool SAL_CALL isPlaying(  ) override;
+    virtual double SAL_CALL getDuration(  ) override;
+    virtual void SAL_CALL setMediaTime( double fTime ) override;
+    virtual double SAL_CALL getMediaTime(  ) override;
+    virtual void SAL_CALL setPlaybackLoop( sal_Bool bSet ) override;
+    virtual sal_Bool SAL_CALL isPlaybackLoop(  ) override;
+    virtual void SAL_CALL setMute( sal_Bool bSet ) override;
+    virtual sal_Bool SAL_CALL isMute(  ) override;
+    virtual void SAL_CALL setVolumeDB( sal_Int16 nVolumeDB ) override;
+    virtual sal_Int16 SAL_CALL getVolumeDB(  ) override;
+    virtual ::com::sun::star::awt::Size SAL_CALL getPreferredPlayerWindowSize(  ) override;
+    virtual ::com::sun::star::uno::Reference< ::com::sun::star::media::XPlayerWindow > SAL_CALL createPlayerWindow( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& aArguments ) override;
+    virtual ::com::sun::star::uno::Reference< ::com::sun::star::media::XFrameGrabber > SAL_CALL createFrameGrabber(  ) override;
 
     // XServiceInfo
-    virtual OUString SAL_CALL getImplementationName(  ) throw (::com::sun::star::uno::RuntimeException) override;
-    virtual sal_Bool SAL_CALL supportsService( const OUString& ServiceName ) throw (::com::sun::star::uno::RuntimeException) override;
-    virtual ::com::sun::star::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames(  ) throw (::com::sun::star::uno::RuntimeException) override;
+    virtual OUString SAL_CALL getImplementationName(  ) override;
+    virtual sal_Bool SAL_CALL supportsService( const OUString& ServiceName ) override;
+    virtual ::com::sun::star::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames(  ) override;
 
 	bool					isValid();
 };

@@ -63,7 +63,7 @@ Manager::~Manager()
 
 // ----------------------------------------------------------------------------
 
-Reference< XPlayer > SAL_CALL Manager::createPlayer( const OUString& rURL ) throw( RuntimeException )
+Reference< XPlayer > SAL_CALL Manager::createPlayer( const OUString& rURL )
 {
 	Reference< XPlayer > xRet;
 
@@ -82,21 +82,21 @@ Reference< XPlayer > SAL_CALL Manager::createPlayer( const OUString& rURL ) thro
 
 // ----------------------------------------------------------------------------
 
-OUString SAL_CALL Manager::getImplementationName() throw( RuntimeException )
+OUString SAL_CALL Manager::getImplementationName()
 {
 	return OUString( AVMEDIA_QUICKTIME_MANAGER_IMPLEMENTATIONNAME );
 }
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL Manager::supportsService( const OUString& ServiceName ) throw( RuntimeException )
+sal_Bool SAL_CALL Manager::supportsService( const OUString& ServiceName )
 {
 	return ServiceName == AVMEDIA_QUICKTIME_MANAGER_SERVICENAME;
 }
 
 // ----------------------------------------------------------------------------
 
-Sequence< OUString > SAL_CALL Manager::getSupportedServiceNames() throw( RuntimeException )
+Sequence< OUString > SAL_CALL Manager::getSupportedServiceNames()
 {
 	Sequence< OUString > aRet(1);
 	aRet[0] = OUString( AVMEDIA_QUICKTIME_MANAGER_SERVICENAME );

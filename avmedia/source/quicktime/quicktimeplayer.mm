@@ -191,7 +191,7 @@ bool Player::create( const OUString& rURL )
 
 // ----------------------------------------------------------------------------
 
-void SAL_CALL Player::start() throw( RuntimeException )
+void SAL_CALL Player::start()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -206,7 +206,7 @@ void SAL_CALL Player::start() throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-void SAL_CALL Player::stop() throw( RuntimeException )
+void SAL_CALL Player::stop()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -221,7 +221,7 @@ void SAL_CALL Player::stop() throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL Player::isPlaying() throw( RuntimeException )
+sal_Bool SAL_CALL Player::isPlaying()
 {
 	sal_Bool bRet = sal_False;
 
@@ -244,14 +244,14 @@ sal_Bool SAL_CALL Player::isPlaying() throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-double SAL_CALL Player::getDuration() throw( RuntimeException )
+double SAL_CALL Player::getDuration()
 {
 	return mfDuration;
 }
 
 // ----------------------------------------------------------------------------
 
-void SAL_CALL Player::setMediaTime( double fTime ) throw( RuntimeException )
+void SAL_CALL Player::setMediaTime( double fTime )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -273,7 +273,7 @@ void SAL_CALL Player::setMediaTime( double fTime ) throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-double SAL_CALL Player::getMediaTime() throw( RuntimeException )
+double SAL_CALL Player::getMediaTime()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -296,7 +296,7 @@ double SAL_CALL Player::getMediaTime() throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-void SAL_CALL Player::setStopTime( double fTime ) throw( RuntimeException )
+void SAL_CALL Player::setStopTime( double fTime )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -318,14 +318,14 @@ void SAL_CALL Player::setStopTime( double fTime ) throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-double SAL_CALL Player::getStopTime() throw( RuntimeException )
+double SAL_CALL Player::getStopTime()
 {
 	return mfStopTime;
 }
 
 // ----------------------------------------------------------------------------
 
-void SAL_CALL Player::setRate( double fRate ) throw( RuntimeException )
+void SAL_CALL Player::setRate( double fRate )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -341,7 +341,7 @@ void SAL_CALL Player::setRate( double fRate ) throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-double SAL_CALL Player::getRate() throw( RuntimeException )
+double SAL_CALL Player::getRate()
 {
 	double fRet = 1.0f;
 
@@ -366,7 +366,7 @@ double SAL_CALL Player::getRate() throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-void SAL_CALL Player::setPlaybackLoop( sal_Bool bSet ) throw( RuntimeException )
+void SAL_CALL Player::setPlaybackLoop( sal_Bool bSet )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -385,14 +385,14 @@ void SAL_CALL Player::setPlaybackLoop( sal_Bool bSet ) throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL Player::isPlaybackLoop() throw( RuntimeException )
+sal_Bool SAL_CALL Player::isPlaybackLoop()
 {
 	return mbLooping;
 }
 
 // ----------------------------------------------------------------------------
 
-void SAL_CALL Player::setMute( sal_Bool bSet ) throw( RuntimeException )
+void SAL_CALL Player::setMute( sal_Bool bSet )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -409,14 +409,14 @@ void SAL_CALL Player::setMute( sal_Bool bSet ) throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL Player::isMute() throw( RuntimeException )
+sal_Bool SAL_CALL Player::isMute()
 {
 	return mbMute;
 }
 
 // ----------------------------------------------------------------------------
 
-void SAL_CALL Player::setVolumeDB( sal_Int16 nVolumeDB ) throw( RuntimeException )
+void SAL_CALL Player::setVolumeDB( sal_Int16 nVolumeDB )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -433,21 +433,21 @@ void SAL_CALL Player::setVolumeDB( sal_Int16 nVolumeDB ) throw( RuntimeException
 
 // ----------------------------------------------------------------------------
 
-sal_Int16 SAL_CALL Player::getVolumeDB() throw( RuntimeException )
+sal_Int16 SAL_CALL Player::getVolumeDB()
 {
 	return mnVolumeDB;
 }
 
 // ----------------------------------------------------------------------------
 
-Size SAL_CALL Player::getPreferredPlayerWindowSize() throw( RuntimeException )
+Size SAL_CALL Player::getPreferredPlayerWindowSize()
 {
 	return maPreferredSize;
 }
 
 // ----------------------------------------------------------------------------
 
-Reference< XPlayerWindow > SAL_CALL Player::createPlayerWindow( const Sequence< Any >& rArguments ) throw( RuntimeException )
+Reference< XPlayerWindow > SAL_CALL Player::createPlayerWindow( const Sequence< Any >& rArguments )
 {
 	Reference< XPlayerWindow > xRet;
 
@@ -468,7 +468,7 @@ Reference< XPlayerWindow > SAL_CALL Player::createPlayerWindow( const Sequence< 
 
 // ----------------------------------------------------------------------------
 
-Reference< XFrameGrabber > SAL_CALL Player::createFrameGrabber() throw( RuntimeException )
+Reference< XFrameGrabber > SAL_CALL Player::createFrameGrabber()
 {
 	Reference< XFrameGrabber > xRet;
 
@@ -488,21 +488,21 @@ Reference< XFrameGrabber > SAL_CALL Player::createFrameGrabber() throw( RuntimeE
 
 // ----------------------------------------------------------------------------
 
-OUString SAL_CALL Player::getImplementationName() throw( RuntimeException )
+OUString SAL_CALL Player::getImplementationName()
 {
 	return OUString( AVMEDIA_QUICKTIME_PLAYER_IMPLEMENTATIONNAME );
 }
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL Player::supportsService( const OUString& ServiceName ) throw( RuntimeException )
+sal_Bool SAL_CALL Player::supportsService( const OUString& ServiceName )
 {
 	return ServiceName == AVMEDIA_QUICKTIME_PLAYER_SERVICENAME;
 }
 
 // ----------------------------------------------------------------------------
 
-Sequence< OUString > SAL_CALL Player::getSupportedServiceNames() throw( RuntimeException )
+Sequence< OUString > SAL_CALL Player::getSupportedServiceNames()
 {
 	Sequence< OUString > aRet(1);
 	aRet[0] = OUString( AVMEDIA_QUICKTIME_PLAYER_SERVICENAME );

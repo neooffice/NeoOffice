@@ -78,7 +78,7 @@ FrameGrabber::~FrameGrabber()
 
 // ----------------------------------------------------------------------------
 
-Reference< XGraphic > SAL_CALL FrameGrabber::grabFrame( double fMediaTime ) throw( RuntimeException )
+Reference< XGraphic > SAL_CALL FrameGrabber::grabFrame( double fMediaTime )
 {
 	Reference< XGraphic > xRet;
 
@@ -152,21 +152,21 @@ Reference< XGraphic > SAL_CALL FrameGrabber::grabFrame( double fMediaTime ) thro
 
 // ----------------------------------------------------------------------------
 
-OUString SAL_CALL FrameGrabber::getImplementationName() throw( RuntimeException )
+OUString SAL_CALL FrameGrabber::getImplementationName()
 {
 	return OUString( AVMEDIA_QUICKTIME_FRAMEGRABBER_IMPLEMENTATIONNAME );
 }
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL FrameGrabber::supportsService( const OUString& ServiceName ) throw( RuntimeException )
+sal_Bool SAL_CALL FrameGrabber::supportsService( const OUString& ServiceName )
 {
 	return ServiceName == AVMEDIA_QUICKTIME_FRAMEGRABBER_SERVICENAME;
 }
 
 // ----------------------------------------------------------------------------
 
-Sequence< OUString > SAL_CALL FrameGrabber::getSupportedServiceNames() throw( RuntimeException )
+Sequence< OUString > SAL_CALL FrameGrabber::getSupportedServiceNames()
 {
 	Sequence< OUString > aRet(1);
 	aRet[0] = OUString( AVMEDIA_QUICKTIME_FRAMEGRABBER_SERVICENAME );
