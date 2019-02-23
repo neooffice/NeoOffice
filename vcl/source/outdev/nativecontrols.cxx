@@ -370,4 +370,12 @@ bool OutputDevice::GetNativeControlRegion(  ControlType nType,
     return bRet;
 }
 
+#ifdef USE_JAVA
+
+ListViewHeaderValue::~ListViewHeaderValue()
+{
+}
+
+#endif	// USE_JAVA
+
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

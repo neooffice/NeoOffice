@@ -1765,12 +1765,12 @@ static bool IsRunningHighSierraOrLower()
 							{
 								BOOL bDrawSortIndicator = NO;
 								BOOL bSortAscending = YES;
-								if ( mpListViewHeaderValue->mnSortDirection == ListViewHeaderSortValue::LISTVIEWHEADER_SORT_ASCENDING )
+								if ( mpListViewHeaderValue->mnSortDirection == ListViewHeaderSortValue::SORT_ASCENDING )
 								{
 									bDrawSortIndicator = YES;
 									bSortAscending = YES;
 								}
-								else if ( mpListViewHeaderValue->mnSortDirection == ListViewHeaderSortValue::LISTVIEWHEADER_SORT_DESCENDING )
+								else if ( mpListViewHeaderValue->mnSortDirection == ListViewHeaderSortValue::SORT_DESCENDING )
 								{
 									bDrawSortIndicator = YES;
 									bSortAscending = NO;
