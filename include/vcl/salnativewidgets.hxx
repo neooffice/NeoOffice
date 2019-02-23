@@ -498,10 +498,10 @@ public:
  */
 
 enum ListViewHeaderSortValue {
-    LISTVIEWHEADER_SORT_DONTKNOW,
-    LISTVIEWHEADER_SORT_DESCENDING,
-    LISTVIEWHEADER_SORT_ASCENDING,
-    LISTVIEWHEADER_SORT_UNSORTED
+    SORT_DONTKNOW,
+    SORT_DESCENDING,
+    SORT_ASCENDING,
+    SORT_UNSORTED
 };
 
 /*    ListViewHeaderValue
@@ -515,8 +515,8 @@ class VCL_DLLPUBLIC ListViewHeaderValue : public ImplControlValue
 public:
     ListViewHeaderValue() : ImplControlValue( ControlType::ListViewHeader, 0 )
     , mbPrimarySortColumn( false ), mnSortDirection( LISTVIEWHEADER_SORT_DONTKNOW ) {}
-    virtual ~ListViewHeaderValue() {}
-    virtual ListViewHeaderValue* clone() const SAL_OVERRIDE;
+    virtual ~ListViewHeaderValue() override;
+    virtual ListViewHeaderValue* clone() const override;
     
     bool                    mbPrimarySortColumn;
     ListViewHeaderSortValue mnSortDirection;
