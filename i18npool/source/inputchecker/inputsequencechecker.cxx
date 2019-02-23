@@ -38,42 +38,42 @@ namespace com { namespace sun { namespace star { namespace i18n {
 InputSequenceCheckerImpl::InputSequenceCheckerImpl( const Reference < XComponentContext >& rxContext ) : m_xContext( rxContext )
 {
     serviceName = "com.sun.star.i18n.InputSequenceChecker";
-    cachedItem = NULL;
+    cachedItem = nullptr;
 }
 
 InputSequenceCheckerImpl::InputSequenceCheckerImpl(const char *pServiceName)
     : serviceName(pServiceName)
-    , cachedItem(NULL)
+    , cachedItem(nullptr)
 {
 }
 
 InputSequenceCheckerImpl::~InputSequenceCheckerImpl()
 {
     // Clear lookuptable
-    for (size_t l = 0; l < lookupTable.size(); l++)
-        delete lookupTable[l];
+    for (lookupTableItem* p : lookupTable)
+        delete p;
 
     lookupTable.clear();
 }
 
 sal_Bool SAL_CALL
 InputSequenceCheckerImpl::checkInputSequence(const OUString& Text, sal_Int32 nStartPos,
-        sal_Unicode inputChar, sal_Int16 inputCheckMode) throw(RuntimeException, std::exception)
+        sal_Unicode inputChar, sal_Int16 inputCheckMode)
 {
     if (inputCheckMode == InputSequenceCheckMode::PASSTHROUGH)
-        return sal_True;
+        return true;
 
     sal_Char* language = getLanguageByScripType(Text[nStartPos], inputChar);
 
     if (language)
         return getInputSequenceChecker(language)->checkInputSequence(Text, nStartPos, inputChar, inputCheckMode);
     else
-        return sal_True; // not a checkable languages.
+        return true; // not a checkable languages.
 }
 
 sal_Int32 SAL_CALL
 InputSequenceCheckerImpl::correctInputSequence(OUString& Text, sal_Int32 nStartPos,
-        sal_Unicode inputChar, sal_Int16 inputCheckMode) throw(RuntimeException, std::exception)
+        sal_Unicode inputChar, sal_Int16 inputCheckMode)
 {
     if (inputCheckMode != InputSequenceCheckMode::PASSTHROUGH) {
         sal_Char* language = getLanguageByScripType(Text[nStartPos], inputChar);
@@ -88,21 +88,21 @@ InputSequenceCheckerImpl::correctInputSequence(OUString& Text, sal_Int32 nStartP
 static ScriptTypeList typeList[] = {
     //{ UnicodeScript_kHebrew,              UnicodeScript_kHebrew },        // 10,
     //{ UnicodeScript_kArabic,              UnicodeScript_kArabic },        // 11,
-    { UnicodeScript_kDevanagari,UnicodeScript_kDevanagari,          UnicodeScript_kDevanagari },    // 14,
-    { UnicodeScript_kThai,  UnicodeScript_kThai,                  UnicodeScript_kThai },          // 24,
+    { UnicodeScript_kDevanagari,  UnicodeScript_kDevanagari,    (sal_Int16)UnicodeScript_kDevanagari },    // 14,
+    { UnicodeScript_kThai,        UnicodeScript_kThai,          (sal_Int16)UnicodeScript_kThai },          // 24,
 
-    { UnicodeScript_kScriptCount,   UnicodeScript_kScriptCount,           UnicodeScript_kScriptCount }    // 88
+    { UnicodeScript_kScriptCount, UnicodeScript_kScriptCount,   (sal_Int16)UnicodeScript_kScriptCount }    // 88
 };
 
 sal_Char* SAL_CALL
 InputSequenceCheckerImpl::getLanguageByScripType(sal_Unicode cChar, sal_Unicode nChar)
 {
-    sal_Int16 type = unicode::getUnicodeScriptType( cChar, typeList, UnicodeScript_kScriptCount );
+    css::i18n::UnicodeScript type = (css::i18n::UnicodeScript)unicode::getUnicodeScriptType( cChar, typeList, (sal_Int16)UnicodeScript_kScriptCount );
 
     if (type != UnicodeScript_kScriptCount &&
-            type == unicode::getUnicodeScriptType( nChar, typeList, UnicodeScript_kScriptCount )) {
+            type == (css::i18n::UnicodeScript)unicode::getUnicodeScriptType( nChar, typeList, (sal_Int16)UnicodeScript_kScriptCount )) {
         switch(type) {
-            case UnicodeScript_kThai:           return (sal_Char*)"th";
+            case UnicodeScript_kThai:           return const_cast<sal_Char*>("th");
                                                 //case UnicodeScript_kArabic:       return (sal_Char*)"ar";
                                                 //case UnicodeScript_kHebrew:       return (sal_Char*)"he";
 #ifdef USE_JAVA
@@ -110,28 +110,29 @@ InputSequenceCheckerImpl::getLanguageByScripType(sal_Unicode cChar, sal_Unicode 
             // is broken. For example, typing valid Hindi words (see bug 1429)
             // using the "Devanagari - QWERTY" keyboard will fail.
 #else	// USE_JAVA
-            case UnicodeScript_kDevanagari:   return (sal_Char*)"hi";
+            case UnicodeScript_kDevanagari:   return const_cast<sal_Char*>("hi");
 #endif	// USE_JAVA
+            default: break;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 Reference< XExtendedInputSequenceChecker >& SAL_CALL
-InputSequenceCheckerImpl::getInputSequenceChecker(sal_Char* rLanguage) throw (RuntimeException)
+InputSequenceCheckerImpl::getInputSequenceChecker(sal_Char* rLanguage)
 {
     if (cachedItem && cachedItem->aLanguage == rLanguage) {
         return cachedItem->xISC;
     }
     else {
-        for (size_t l = 0; l < lookupTable.size(); l++) {
-            cachedItem = lookupTable[l];
+        for (lookupTableItem* l : lookupTable) {
+            cachedItem = l;
             if (cachedItem->aLanguage == rLanguage)
                 return cachedItem->xISC;
         }
 
         Reference < uno::XInterface > xI = m_xContext->getServiceManager()->createInstanceWithContext(
-                OUString("com.sun.star.i18n.InputSequenceChecker_") +
+                "com.sun.star.i18n.InputSequenceChecker_" +
                 OUString::createFromAscii(rLanguage),
                 m_xContext);
 
@@ -147,22 +148,21 @@ InputSequenceCheckerImpl::getInputSequenceChecker(sal_Char* rLanguage) throw (Ru
 }
 
 OUString SAL_CALL
-InputSequenceCheckerImpl::getImplementationName(void) throw( RuntimeException, std::exception )
+InputSequenceCheckerImpl::getImplementationName()
 {
     return OUString::createFromAscii(serviceName);
 }
 
 sal_Bool SAL_CALL
-InputSequenceCheckerImpl::supportsService(const OUString& rServiceName) throw( RuntimeException, std::exception )
+InputSequenceCheckerImpl::supportsService(const OUString& rServiceName)
 {
     return cppu::supportsService(this, rServiceName);
 }
 
 Sequence< OUString > SAL_CALL
-InputSequenceCheckerImpl::getSupportedServiceNames(void) throw( RuntimeException, std::exception )
+InputSequenceCheckerImpl::getSupportedServiceNames()
 {
-    Sequence< OUString > aRet(1);
-    aRet[0] = OUString::createFromAscii(serviceName);
+    Sequence< OUString > aRet { OUString::createFromAscii(serviceName) };
     return aRet;
 }
 
