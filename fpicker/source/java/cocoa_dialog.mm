@@ -213,11 +213,11 @@ static NSString *pBlankItem = @" ";
 	if ( !pArgArray || [pArgArray count] < 2 )
 		return;
 
-	NSString *pItem = (NSString *)[pArgArray objectAtIndex:0];
+	NSString *pItem = static_cast< NSString* >( [pArgArray objectAtIndex:0] );
 	if ( !pItem )
 		return;
 
-	NSString *pFilter = (NSString *)[pArgArray objectAtIndex:1];
+	NSString *pFilter = static_cast< NSString* >( [pArgArray objectAtIndex:1] );
 	if ( !pFilter )
 		return;
 
@@ -232,7 +232,7 @@ static NSString *pBlankItem = @" ";
 			NSUInteger i = 0;
 			for ( ; i < nCount; i++ )
 			{
-				NSString *pCurrentFilter = [(NSString *)[pArray objectAtIndex:i] pathExtension];
+				NSString *pCurrentFilter = [static_cast< NSString* >( [pArray objectAtIndex:i] ) pathExtension];
 				if ( !pCurrentFilter || ![pCurrentFilter length] || [pCurrentFilter isEqualToString:@"*"] )
 				{
 					bAllowAll = YES;
@@ -247,7 +247,7 @@ static NSString *pBlankItem = @" ";
 		}
 	}
 
-	NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
+	NSPopUpButton *pPopup = static_cast< NSPopUpButton* >( [mpControls objectForKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]] );
 	if ( pPopup )
 	{
 		if ( [pPopup numberOfItems] == 1 && [pBlankItem isEqualToString:[pPopup itemTitleAtIndex:0]] )
@@ -262,11 +262,11 @@ static NSString *pBlankItem = @" ";
 	if ( !pArgArray || [pArgArray count] < 2 )
 		return;
 
-	NSNumber *pID = (NSNumber *)[pArgArray objectAtIndex:0];
+	NSNumber *pID = static_cast< NSNumber* >( [pArgArray objectAtIndex:0] );
 	if ( !pID )
 		return;
 
-	NSString *pItem = (NSString *)[pArgArray objectAtIndex:1];
+	NSString *pItem = static_cast< NSString* >( [pArgArray objectAtIndex:1] );
 	if ( !pItem )
 		return;
 
@@ -277,7 +277,7 @@ static NSString *pBlankItem = @" ";
 
 	if ( NSFileDialog_controlType( nID ) == COCOA_CONTROL_TYPE_POPUP )
 	{
-		NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
+		NSPopUpButton *pPopup = static_cast< NSPopUpButton* >( [mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]] );
 		if ( pPopup )
 		{
 			if ( [pPopup numberOfItems] == 1 && [pBlankItem isEqualToString:[pPopup itemTitleAtIndex:0]] )
@@ -334,11 +334,11 @@ static NSString *pBlankItem = @" ";
 	if ( !pArgArray || [pArgArray count] < 2 )
 		return;
 
-	NSNumber *pID = (NSNumber *)[pArgArray objectAtIndex:0];
+	NSNumber *pID = static_cast< NSNumber* >( [pArgArray objectAtIndex:0] );
 	if ( !pID )
 		return;
 
-	NSString *pItem = (NSString *)[pArgArray objectAtIndex:1];
+	NSString *pItem = static_cast< NSString* >( [pArgArray objectAtIndex:1] );
 	if ( !pItem )
 		return;
 
@@ -349,7 +349,7 @@ static NSString *pBlankItem = @" ";
 
 	if ( NSFileDialog_controlType( nID ) == COCOA_CONTROL_TYPE_POPUP )
 	{
-		NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
+		NSPopUpButton *pPopup = static_cast< NSPopUpButton* >( [mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]] );
 		if ( pPopup )
 		{
 			[pPopup removeItemWithTitle:pItem];
