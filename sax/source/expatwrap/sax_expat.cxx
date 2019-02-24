@@ -18,11 +18,10 @@
  */
 #include <stdlib.h>
 #include <string.h>
-#include <sal/alloca.h>
 #include <cassert>
+#include <memory>
 #include <vector>
 
-#include <osl/diagnose.h>
 
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
@@ -30,12 +29,16 @@
 #include <com/sun/star/xml/sax/XExtendedDocumentHandler.hpp>
 #include <com/sun/star/xml/sax/XParser.hpp>
 #include <com/sun/star/xml/sax/SAXParseException.hpp>
+#include <com/sun/star/io/IOException.hpp>
 #include <com/sun/star/io/XSeekable.hpp>
+#include <com/sun/star/lang/WrappedTargetRuntimeException.hpp>
 
+#include <comphelper/attributelist.hxx>
 #include <cppuhelper/weak.hxx>
-#include <cppuhelper/implbase3.hxx>
+#include <cppuhelper/implbase.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <rtl/ref.hxx>
+#include <sal/log.hxx>
 
 #include <expat.h>
 
@@ -46,52 +49,12 @@ using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::xml::sax;
 using namespace ::com::sun::star::io;
 
-#include "attrlistimpl.hxx"
 #include "xml2utf.hxx"
 
 namespace {
 
-// Useful macros for correct String conversion depending on the chosen expat-mode
-#ifdef XML_UNICODE
-OUString XmlNChar2OUString( const XML_Char *p , int nLen )
-{
-    if( p ) {
-        if( sizeof( sal_Unicode ) == sizeof( XML_Char ) )
-        {
-            return OUString( (sal_Unicode*)p,nLen);
-        }
-        else
-        {
-            sal_Unicode *pWchar = (sal_Unicode *)alloca( sizeof( sal_Unicode ) * nLen );
-            for( int n = 0 ; n < nLen ; n++ ) {
-                pWchar[n] = (sal_Unicode) p[n];
-            }
-            return OUString( pWchar , nLen );
-        }
-    }
-    else {
-        return OUString();
-    }
-}
-
-OUString XmlChar2OUString( const XML_Char *p )
-{
-    if( p ) {
-        int nLen;
-        for( nLen = 0 ; p[nLen] ; nLen ++ )
-            ;
-         return XmlNChar2OUString( p , nLen );
-     }
-     else return OUString();
-}
-
-
-#define XML_CHAR_TO_OUSTRING(x) XmlChar2OUString(x)
-#define XML_CHAR_N_TO_USTRING(x,n) XmlNChar2OUString(x,n)
-#else
 #define XML_CHAR_TO_OUSTRING(x) OUString(x , strlen( x ), RTL_TEXTENCODING_UTF8)
 #define XML_CHAR_N_TO_USTRING(x,n) OUString(x,n, RTL_TEXTENCODING_UTF8 )
-#endif
 
 
 /*
@@ -118,10 +81,15 @@ OUString XmlChar2OUString( const XML_Char *p )
                                             pThis->rDocumentLocator->getColumnNumber()\
                                      ) );\
         }\
-        catch( const com::sun::star::uno::RuntimeException &e ) {\
+        catch( const css::uno::RuntimeException &e ) {\
             pThis->bExceptionWasThrown = true; \
             pThis->bRTExceptionWasThrown = true; \
             pImpl->rtexception = e; \
+        }\
+        catch( const css::uno::Exception &e ) {\
+            pThis->bExceptionWasThrown = true; \
+            pThis->bRTExceptionWasThrown = true; \
+            pImpl->rtexception = WrappedTargetRuntimeException("Non-runtime UNO exception caught during parse", e.Context, makeAny(e)); \
         }\
     }\
     ((void)0)
@@ -131,45 +99,34 @@ class SaxExpatParser_Impl;
 
 // This class implements the external Parser interface
 class SaxExpatParser
-    : public WeakImplHelper3< XInitialization
+    : public WeakImplHelper< XInitialization
                             , XServiceInfo
                             , XParser >
 {
 
 public:
     SaxExpatParser();
-    virtual ~SaxExpatParser();
 
-    // ::com::sun::star::lang::XInitialization:
-    virtual void SAL_CALL initialize(css::uno::Sequence<css::uno::Any> const& rArguments)
-        throw (css::uno::RuntimeException, css::uno::Exception, std::exception) SAL_OVERRIDE;
+    // css::lang::XInitialization:
+    virtual void SAL_CALL initialize(css::uno::Sequence<css::uno::Any> const& rArguments) override;
 
     // The SAX-Parser-Interface
-    virtual void SAL_CALL parseStream(  const InputSource& structSource)
-        throw ( SAXException,
-                IOException,
-                css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual void SAL_CALL setDocumentHandler(const css::uno::Reference< XDocumentHandler > & xHandler)
-        throw (css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL parseStream(  const InputSource& structSource) override;
+    virtual void SAL_CALL setDocumentHandler(const css::uno::Reference< XDocumentHandler > & xHandler) override;
 
-    virtual void SAL_CALL setErrorHandler(const css::uno::Reference< XErrorHandler > & xHandler)
-        throw (css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual void SAL_CALL setDTDHandler(const css::uno::Reference < XDTDHandler > & xHandler)
-        throw (css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual void SAL_CALL setEntityResolver(const css::uno::Reference<  XEntityResolver >& xResolver)
-        throw (css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL setErrorHandler(const css::uno::Reference< XErrorHandler > & xHandler) override;
+    virtual void SAL_CALL setDTDHandler(const css::uno::Reference < XDTDHandler > & xHandler) override;
+    virtual void SAL_CALL setEntityResolver(const css::uno::Reference<  XEntityResolver >& xResolver) override;
 
-    virtual void SAL_CALL setLocale( const Locale &locale )                     throw (css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL setLocale( const Locale &locale ) override;
 
 public: // XServiceInfo
-    OUString                     SAL_CALL getImplementationName() throw (std::exception) SAL_OVERRIDE;
-    css::uno::Sequence< OUString >         SAL_CALL getSupportedServiceNames(void) throw (std::exception) SAL_OVERRIDE;
-    sal_Bool                     SAL_CALL supportsService(const OUString& ServiceName) throw (std::exception) SAL_OVERRIDE;
+    OUString                     SAL_CALL getImplementationName() override;
+    css::uno::Sequence< OUString >         SAL_CALL getSupportedServiceNames() override;
+    sal_Bool                     SAL_CALL supportsService(const OUString& ServiceName) override;
 
 private:
-
-    SaxExpatParser_Impl         *m_pImpl;
-
+    std::unique_ptr<SaxExpatParser_Impl>   m_pImpl;
 };
 
 
@@ -198,7 +155,7 @@ public: // module scope
     css::uno::Reference < XLocator >      rDocumentLocator;
 
 
-    rtl::Reference < sax_expatwrap::AttributeList > rAttrList;
+    rtl::Reference < comphelper::AttributeList > rAttrList;
 
     // External entity stack
     vector<struct Entity>   vecEntity;
@@ -346,47 +303,46 @@ extern "C"
 }
 
 
-
 // LocatorImpl
 
 class LocatorImpl :
-    public WeakImplHelper2< XLocator, com::sun::star::io::XSeekable >
+    public WeakImplHelper< XLocator, css::io::XSeekable >
     // should use a different interface for stream positions!
 {
 public:
-    LocatorImpl( SaxExpatParser_Impl *p )
+    explicit LocatorImpl(SaxExpatParser_Impl *p)
+        : m_pParser(p)
     {
-        m_pParser    = p;
     }
 
 public: //XLocator
-    virtual sal_Int32 SAL_CALL getColumnNumber(void) throw (std::exception) SAL_OVERRIDE
+    virtual sal_Int32 SAL_CALL getColumnNumber() override
     {
         return XML_GetCurrentColumnNumber( m_pParser->getEntity().pParser );
     }
-    virtual sal_Int32 SAL_CALL getLineNumber(void) throw (std::exception) SAL_OVERRIDE
+    virtual sal_Int32 SAL_CALL getLineNumber() override
     {
         return XML_GetCurrentLineNumber( m_pParser->getEntity().pParser );
     }
-    virtual OUString SAL_CALL getPublicId(void) throw (std::exception) SAL_OVERRIDE
+    virtual OUString SAL_CALL getPublicId() override
     {
         return m_pParser->getEntity().structSource.sPublicId;
     }
-    virtual OUString SAL_CALL getSystemId(void) throw (std::exception) SAL_OVERRIDE
+    virtual OUString SAL_CALL getSystemId() override
     {
         return m_pParser->getEntity().structSource.sSystemId;
     }
 
     // XSeekable (only for getPosition)
 
-    virtual void SAL_CALL seek( sal_Int64 ) throw(std::exception) SAL_OVERRIDE
+    virtual void SAL_CALL seek( sal_Int64 ) override
     {
     }
-    virtual sal_Int64 SAL_CALL getPosition() throw(std::exception) SAL_OVERRIDE
+    virtual sal_Int64 SAL_CALL getPosition() override
     {
         return XML_GetCurrentByteIndex( m_pParser->getEntity().pParser );
     }
-    virtual ::sal_Int64 SAL_CALL getLength() throw(std::exception) SAL_OVERRIDE
+    virtual ::sal_Int64 SAL_CALL getLength() override
     {
         return 0;
     }
@@ -397,32 +353,24 @@ private:
 };
 
 
-
-
 SaxExpatParser::SaxExpatParser(  )
 {
-    m_pImpl = new SaxExpatParser_Impl;
+    m_pImpl.reset( new SaxExpatParser_Impl );
 
-    LocatorImpl *pLoc = new LocatorImpl( m_pImpl );
-    m_pImpl->rDocumentLocator = css::uno::Reference< XLocator > ( pLoc );
+    LocatorImpl *pLoc = new LocatorImpl( m_pImpl.get() );
+    m_pImpl->rDocumentLocator.set( pLoc );
 
     // Performance-improvement; handing out the same object with every call of
     // the startElement callback is allowed (see sax-specification):
-    m_pImpl->rAttrList = new sax_expatwrap::AttributeList;
+    m_pImpl->rAttrList = new comphelper::AttributeList;
 
     m_pImpl->bExceptionWasThrown = false;
     m_pImpl->bRTExceptionWasThrown = false;
 }
 
-SaxExpatParser::~SaxExpatParser()
-{
-    delete m_pImpl;
-}
-
-// ::com::sun::star::lang::XInitialization:
+// css::lang::XInitialization:
 void SAL_CALL
 SaxExpatParser::initialize(css::uno::Sequence< css::uno::Any > const& rArguments)
-    throw (css::uno::RuntimeException, css::uno::Exception, std::exception)
 {
     // possible arguments: a string "DoSmeplease"
     if (rArguments.getLength())
@@ -469,9 +417,6 @@ namespace
 *
 ****************/
 void SaxExpatParser::parseStream(   const InputSource& structSource)
-    throw (SAXException,
-           IOException,
-           css::uno::RuntimeException, std::exception)
 {
     // Only one text at one time
     MutexGuard guard( m_pImpl->aMutex );
@@ -494,7 +439,7 @@ void SaxExpatParser::parseStream(   const InputSource& structSource)
     }
 
     // create parser with proper encoding
-    entity.pParser = XML_ParserCreate( 0 );
+    entity.pParser = XML_ParserCreate( nullptr );
     if( ! entity.pParser )
     {
         throw SAXException("Couldn't create parser",
@@ -502,7 +447,7 @@ void SaxExpatParser::parseStream(   const InputSource& structSource)
     }
 
     // set all necessary C-Callbacks
-    XML_SetUserData( entity.pParser , m_pImpl );
+    XML_SetUserData( entity.pParser, m_pImpl.get() );
     XML_SetElementHandler(  entity.pParser ,
                             call_callbackStartElement ,
                             call_callbackEndElement );
@@ -516,7 +461,7 @@ void SaxExpatParser::parseStream(   const InputSource& structSource)
     XML_SetNotationDeclHandler( entity.pParser, call_callbackNotationDecl );
     XML_SetExternalEntityRefHandler(    entity.pParser,
                                         call_callbackExternalEntityRef);
-    XML_SetUnknownEncodingHandler( entity.pParser,  call_callbackUnknownEncoding ,0);
+    XML_SetUnknownEncodingHandler( entity.pParser,  call_callbackUnknownEncoding ,nullptr);
 
     if( m_pImpl->rExtendedDocumentHandler.is() ) {
 
@@ -573,6 +518,7 @@ void SaxExpatParser::parseStream(   const InputSource& structSource)
         m_pImpl->popEntity();
         XML_ParserFree( entity.pParser );
         throw;
+    }
 
     m_pImpl->popEntity();
     XML_ParserFree( entity.pParser );
@@ -595,7 +541,6 @@ void SaxExpatParser::parseStream(   const InputSource& structSource)
 }
 
 void SaxExpatParser::setDocumentHandler(const css::uno::Reference< XDocumentHandler > & xHandler)
-    throw (css::uno::RuntimeException, std::exception)
 {
     m_pImpl->rDocumentHandler = xHandler;
     m_pImpl->rExtendedDocumentHandler =
@@ -603,46 +548,42 @@ void SaxExpatParser::setDocumentHandler(const css::uno::Reference< XDocumentHand
 }
 
 void SaxExpatParser::setErrorHandler(const css::uno::Reference< XErrorHandler > & xHandler)
-    throw (css::uno::RuntimeException, std::exception)
 {
     m_pImpl->rErrorHandler = xHandler;
 }
 
 void SaxExpatParser::setDTDHandler(const css::uno::Reference< XDTDHandler > & xHandler)
-    throw (css::uno::RuntimeException, std::exception)
 {
     m_pImpl->rDTDHandler = xHandler;
 }
 
 void SaxExpatParser::setEntityResolver(const css::uno::Reference < XEntityResolver > & xResolver)
-    throw (css::uno::RuntimeException, std::exception)
 {
     m_pImpl->rEntityResolver = xResolver;
 }
 
 
-void SaxExpatParser::setLocale( const Locale & locale ) throw (css::uno::RuntimeException, std::exception)
+void SaxExpatParser::setLocale( const Locale & locale )
 {
     m_pImpl->locale = locale;
 }
 
 // XServiceInfo
-OUString SaxExpatParser::getImplementationName() throw (std::exception)
+OUString SaxExpatParser::getImplementationName()
 {
     return OUString("com.sun.star.comp.extensions.xml.sax.ParserExpat");
 }
 
 // XServiceInfo
-sal_Bool SaxExpatParser::supportsService(const OUString& ServiceName) throw (std::exception)
+sal_Bool SaxExpatParser::supportsService(const OUString& ServiceName)
 {
     return cppu::supportsService(this, ServiceName);
 }
 
 // XServiceInfo
-css::uno::Sequence< OUString > SaxExpatParser::getSupportedServiceNames(void) throw (std::exception)
+css::uno::Sequence< OUString > SaxExpatParser::getSupportedServiceNames()
 {
-    css::uno::Sequence<OUString> seq(1);
-    seq[0] = "com.sun.star.xml.sax.Parser";
+    css::uno::Sequence<OUString> seq { "com.sun.star.xml.sax.Parser" };
     return seq;
 }
 
@@ -749,18 +690,23 @@ void SaxExpatParser_Impl::parse( )
     while( nRead ) {
         nRead = getEntity().converter.readAndConvert( seqOut , nBufSize );
 
+        bool bContinue(false);
+
         if( ! nRead ) {
-            XML_Parse( getEntity().pParser ,
-                                   ( const char * ) seqOut.getArray() ,
+            // last call - must return OK
+            XML_Status const ret = XML_Parse( getEntity().pParser,
+                                   reinterpret_cast<const char *>(seqOut.getConstArray()),
                                    0 ,
                                    1 );
-            break;
-        }
-
-        bool bContinue = ( XML_Parse( getEntity().pParser ,
-                                                (const char *) seqOut.getArray(),
+            if (ret == XML_STATUS_OK) {
+                break;
+            }
+        } else {
+            bContinue = ( XML_Parse( getEntity().pParser,
+                                                reinterpret_cast<const char *>(seqOut.getConstArray()),
                                                 nRead,
                                                 0 ) != XML_STATUS_ERROR );
+        }
 
         if( ! bContinue || this->bExceptionWasThrown ) {
 
@@ -775,7 +721,7 @@ void SaxExpatParser_Impl::parse( )
             SAXParseException aExcept(
                 getErrorMessage(xmlE , sSystemId, nLine) ,
                 css::uno::Reference< css::uno::XInterface >(),
-                css::uno::Any( &exception , getCppuType( &exception) ),
+                css::uno::Any( &exception , cppu::UnoType<decltype(exception)>::get() ),
                 rDocumentLocator->getPublicId(),
                 rDocumentLocator->getSystemId(),
                 rDocumentLocator->getLineNumber(),
@@ -798,7 +744,6 @@ void SaxExpatParser_Impl::parse( )
 }
 
 
-
 // The C-Callbacks
 
 
@@ -806,16 +751,16 @@ void SaxExpatParser_Impl::callbackStartElement( void *pvThis ,
                                                 const XML_Char *pwName ,
                                                 const XML_Char **awAttributes )
 {
-    SaxExpatParser_Impl *pImpl = ((SaxExpatParser_Impl*)pvThis);
+    SaxExpatParser_Impl *pImpl = static_cast<SaxExpatParser_Impl*>(pvThis);
 
     if( pImpl->rDocumentHandler.is() ) {
 
         int i = 0;
-        pImpl->rAttrList->clear();
+        pImpl->rAttrList->Clear();
 
         while( awAttributes[i] ) {
             assert(awAttributes[i+1]);
-            pImpl->rAttrList->addAttribute(
+            pImpl->rAttrList->AddAttribute(
                 XML_CHAR_TO_OUSTRING( awAttributes[i] ) ,
                 pImpl->sCDATA,  // expat doesn't know types
                 XML_CHAR_TO_OUSTRING( awAttributes[i+1] ) );
@@ -831,7 +776,7 @@ void SaxExpatParser_Impl::callbackStartElement( void *pvThis ,
 
 void SaxExpatParser_Impl::callbackEndElement( void *pvThis , const XML_Char *pwName  )
 {
-    SaxExpatParser_Impl  *pImpl = ((SaxExpatParser_Impl*)pvThis);
+    SaxExpatParser_Impl  *pImpl = static_cast<SaxExpatParser_Impl*>(pvThis);
 
     if( pImpl->rDocumentHandler.is() ) {
         CALL_ELEMENT_HANDLER_AND_CARE_FOR_EXCEPTIONS( pImpl,
@@ -842,7 +787,7 @@ void SaxExpatParser_Impl::callbackEndElement( void *pvThis , const XML_Char *pwN
 
 void SaxExpatParser_Impl::callbackCharacters( void *pvThis , const XML_Char *s , int nLen )
 {
-    SaxExpatParser_Impl *pImpl = ((SaxExpatParser_Impl*)pvThis);
+    SaxExpatParser_Impl *pImpl = static_cast<SaxExpatParser_Impl*>(pvThis);
 
     if( pImpl->rDocumentHandler.is() ) {
         CALL_ELEMENT_HANDLER_AND_CARE_FOR_EXCEPTIONS( pImpl ,
@@ -854,7 +799,7 @@ void SaxExpatParser_Impl::callbackProcessingInstruction(    void *pvThis,
                                                     const XML_Char *sTarget ,
                                                     const XML_Char *sData )
 {
-    SaxExpatParser_Impl *pImpl = ((SaxExpatParser_Impl*)pvThis);
+    SaxExpatParser_Impl *pImpl = static_cast<SaxExpatParser_Impl*>(pvThis);
     if( pImpl->rDocumentHandler.is() ) {
         CALL_ELEMENT_HANDLER_AND_CARE_FOR_EXCEPTIONS(
                     pImpl ,
@@ -871,13 +816,13 @@ void SaxExpatParser_Impl::callbackEntityDecl(
     SAL_UNUSED_PARAMETER const XML_Char * /*base*/, const XML_Char *systemId,
     const XML_Char *publicId, const XML_Char *notationName)
 {
-    SaxExpatParser_Impl *pImpl = ((SaxExpatParser_Impl*)pvThis);
+    SaxExpatParser_Impl *pImpl = static_cast<SaxExpatParser_Impl*>(pvThis);
     if (value) { // value != 0 means internal entity
         SAL_INFO("sax","SaxExpatParser: internal entity declaration, stopping");
         XML_StopParser(pImpl->getEntity().pParser, XML_FALSE);
         pImpl->exception = SAXParseException(
             "SaxExpatParser: internal entity declaration, stopping",
-            0, css::uno::Any(),
+            nullptr, css::uno::Any(),
             pImpl->rDocumentLocator->getPublicId(),
             pImpl->rDocumentLocator->getSystemId(),
             pImpl->rDocumentLocator->getLineNumber(),
@@ -901,7 +846,7 @@ void SaxExpatParser_Impl::callbackNotationDecl(
     SAL_UNUSED_PARAMETER const XML_Char * /*base*/, const XML_Char *systemId,
     const XML_Char *publicId)
 {
-    SaxExpatParser_Impl *pImpl = ((SaxExpatParser_Impl*)pvThis);
+    SaxExpatParser_Impl *pImpl = static_cast<SaxExpatParser_Impl*>(pvThis);
     if( pImpl->rDTDHandler.is() ) {
         CALL_ELEMENT_HANDLER_AND_CARE_FOR_EXCEPTIONS( pImpl,
                 rDTDHandler->notationDecl(  XML_CHAR_TO_OUSTRING( notationName ) ,
@@ -912,7 +857,6 @@ void SaxExpatParser_Impl::callbackNotationDecl(
 }
 
 
-
 bool SaxExpatParser_Impl::callbackExternalEntityRef(
     XML_Parser parser, const XML_Char *context,
     SAL_UNUSED_PARAMETER const XML_Char * /*base*/, const XML_Char *systemId,
@@ -920,7 +864,7 @@ bool SaxExpatParser_Impl::callbackExternalEntityRef(
 {
     bool bOK = true;
     InputSource source;
-    SaxExpatParser_Impl *pImpl = ((SaxExpatParser_Impl*)XML_GetUserData( parser ));
+    SaxExpatParser_Impl *pImpl = static_cast<SaxExpatParser_Impl*>(XML_GetUserData( parser ));
 
     struct Entity entity;
 
@@ -949,7 +893,7 @@ bool SaxExpatParser_Impl::callbackExternalEntityRef(
     }
 
     if( entity.structSource.aInputStream.is() ) {
-        entity.pParser = XML_ExternalEntityParserCreate( parser , context, 0 );
+        entity.pParser = XML_ExternalEntityParserCreate( parser , context, nullptr );
         if( ! entity.pParser )
         {
             return false;
@@ -995,7 +939,7 @@ int SaxExpatParser_Impl::callbackUnknownEncoding(
 
 void SaxExpatParser_Impl::callbackDefault( void *pvThis,  const XML_Char *s,  int len)
 {
-    SaxExpatParser_Impl *pImpl = ((SaxExpatParser_Impl*)pvThis);
+    SaxExpatParser_Impl *pImpl = static_cast<SaxExpatParser_Impl*>(pvThis);
 
     CALL_ELEMENT_HANDLER_AND_CARE_FOR_EXCEPTIONS(  pImpl,
                 rExtendedDocumentHandler->unknown( XML_CHAR_N_TO_USTRING( s ,len) ) );
@@ -1003,14 +947,14 @@ void SaxExpatParser_Impl::callbackDefault( void *pvThis,  const XML_Char *s,  in
 
 void SaxExpatParser_Impl::callbackComment( void *pvThis , const XML_Char *s )
 {
-    SaxExpatParser_Impl *pImpl = ((SaxExpatParser_Impl*)pvThis);
+    SaxExpatParser_Impl *pImpl = static_cast<SaxExpatParser_Impl*>(pvThis);
     CALL_ELEMENT_HANDLER_AND_CARE_FOR_EXCEPTIONS( pImpl,
                 rExtendedDocumentHandler->comment( XML_CHAR_TO_OUSTRING( s ) ) );
 }
 
 void SaxExpatParser_Impl::callbackStartCDATA( void *pvThis )
 {
-    SaxExpatParser_Impl *pImpl = ((SaxExpatParser_Impl*)pvThis);
+    SaxExpatParser_Impl *pImpl = static_cast<SaxExpatParser_Impl*>(pvThis);
 
     CALL_ELEMENT_HANDLER_AND_CARE_FOR_EXCEPTIONS( pImpl, rExtendedDocumentHandler->startCDATA() );
 }
@@ -1051,7 +995,7 @@ void SaxExpatParser_Impl::callErrorHandler( SaxExpatParser_Impl *pImpl ,
 
 void SaxExpatParser_Impl::callbackEndCDATA( void *pvThis )
 {
-    SaxExpatParser_Impl *pImpl = ((SaxExpatParser_Impl*)pvThis);
+    SaxExpatParser_Impl *pImpl = static_cast<SaxExpatParser_Impl*>(pvThis);
 
     CALL_ELEMENT_HANDLER_AND_CARE_FOR_EXCEPTIONS(pImpl,rExtendedDocumentHandler->endCDATA() );
 }
