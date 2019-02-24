@@ -28,15 +28,16 @@
 #include <com/sun/star/linguistic2/XSearchableDictionaryList.hpp>
 
 #include <com/sun/star/linguistic2/SpellFailure.hpp>
+#include <comphelper/processfactory.hxx>
 #include <cppuhelper/factory.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <com/sun/star/registry/XRegistryKey.hpp>
 #include <tools/debug.hxx>
 #include <osl/mutex.hxx>
+#include <com/sun/star/ucb/XSimpleFileAccess.hpp>
 
 #include <lingutil.hxx>
 #include <hunspell.hxx>
-#include <dictmgr.hxx>
 #include <sspellimp.hxx>
 
 #include <linguistic/lngprops.hxx>
@@ -48,6 +49,7 @@
 #include <osl/file.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <rtl/textenc.h>
+#include <sal/log.hxx>
 
 #include <list>
 #include <set>
@@ -63,7 +65,14 @@ using namespace com::sun::star::linguistic2;
 using namespace linguistic;
 
 // XML-header of SPELLML queries
-#define SPELLML_HEADER "<?xml?>"
+#if !defined SPELL_XML
+#define SPELL_XML "<?xml?>"
+#endif
+
+// only available in hunspell >= 1.5
+#if !defined MAXWORDLEN
+#define MAXWORDLEN 176
+#endif
 
 #if defined USE_JAVA && defined MACOSX
 
@@ -82,18 +91,18 @@ static OUString ImplGetLocaleString( Locale aLocale )
 #endif // USE_JAVA && MACOSX
 
 SpellChecker::SpellChecker() :
-    aDicts(NULL),
-    aDEncs(NULL),
-    aDLocs(NULL),
-    aDNames(NULL),
-    numdict(0),
-    aEvtListeners(GetLinguMutex()),
-    pPropHelper(NULL),
-    bDisposing(false)
+    m_aDicts(nullptr),
+    m_aDEncs(nullptr),
+    m_aDLocs(nullptr),
+    m_aDNames(nullptr),
+    m_nNumDict(0),
+    m_aEvtListeners(GetLinguMutex()),
+    m_pPropHelper(nullptr),
+    m_bDisposing(false)
 #ifdef USE_JAVA
-    , mnLastNumDics(0)
+    , m_nLastNumDicts(0)
 #ifdef MACOSX
-    , maLocales(NULL)
+    , m_aLocales(nullptr)
 #endif	// MACOSX
 #endif	// USE_JAVA
 {
@@ -102,49 +111,48 @@ SpellChecker::SpellChecker() :
 SpellChecker::~SpellChecker()
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( maLocales )
-        CFRelease( maLocales );
+    if ( m_aLocales )
+        CFRelease( m_aLocales );
 #endif	// USE_JAVA && MACOSX
 
-    if (aDicts)
+    if (m_aDicts)
     {
-       for (int i = 0; i < numdict; ++i)
+       for (int i = 0; i < m_nNumDict; ++i)
        {
-            delete aDicts[i];
+            delete m_aDicts[i];
        }
-       delete[] aDicts;
+       delete[] m_aDicts;
     }
-    delete[] aDEncs;
-    delete[] aDLocs;
-    delete[] aDNames;
-    if (pPropHelper)
+    delete[] m_aDEncs;
+    delete[] m_aDLocs;
+    delete[] m_aDNames;
+    if (m_pPropHelper)
     {
-        pPropHelper->RemoveAsPropListener();
-        delete pPropHelper;
+        m_pPropHelper->RemoveAsPropListener();
+        delete m_pPropHelper;
     }
 }
 
 PropertyHelper_Spelling & SpellChecker::GetPropHelper_Impl()
 {
-    if (!pPropHelper)
+    if (!m_pPropHelper)
     {
         Reference< XLinguProperties >   xPropSet( GetLinguProperties(), UNO_QUERY );
 
-        pPropHelper = new PropertyHelper_Spelling( (XSpellChecker *) this, xPropSet );
-        pPropHelper->AddAsPropListener();   //! after a reference is established
+        m_pPropHelper = new PropertyHelper_Spelling( static_cast<XSpellChecker *>(this), xPropSet );
+        m_pPropHelper->AddAsPropListener();   //! after a reference is established
     }
-    return *pPropHelper;
+    return *m_pPropHelper;
 }
 
 Sequence< Locale > SAL_CALL SpellChecker::getLocales()
-        throw(RuntimeException, std::exception)
 {
     MutexGuard  aGuard( GetLinguMutex() );
 
     // this routine should return the locales supported by the installed
     // dictionaries.
 #ifndef USE_JAVA
-    if (!numdict)
+    if (!m_nNumDict)
     {
 #endif	// !USE_JAVA
         SvtLinguConfig aLinguCfg;
@@ -179,36 +187,54 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
         // Update list of locales when the user installs or removes any
         // dictionaries
 #ifdef MACOSX
-        if (mnLastNumDics != aDics.size() || !maLocales)
+        if (m_nLastNumDicts != aDics.size() || !m_aLocales)
 #else	// MACOSX
-        if (mnLastNumDics != aDics.size())
+        if (m_nLastNumDicts != aDics.size())
 #endif	// MACOSX
         {
-            mnLastNumDics = aDics.size();
+            m_nLastNumDicts = aDics.size();
 #endif	// USE_JAVA
         if (!aDics.empty())
         {
+            uno::Reference< lang::XMultiServiceFactory > xServiceFactory(comphelper::getProcessServiceFactory());
+            uno::Reference< ucb::XSimpleFileAccess > xAccess(xServiceFactory->createInstance("com.sun.star.ucb.SimpleFileAccess"), uno::UNO_QUERY);
             // get supported locales from the dictionaries-to-use...
             sal_Int32 k = 0;
-            std::set< OUString, lt_rtl_OUString > aLocaleNamesSet;
+            std::set<OUString> aLocaleNamesSet;
             std::list< SvtLinguConfigDictionaryEntry >::const_iterator aDictIt;
             for (aDictIt = aDics.begin();  aDictIt != aDics.end();  ++aDictIt)
             {
                 uno::Sequence< OUString > aLocaleNames( aDictIt->aLocaleNames );
-                sal_Int32 nLen2 = aLocaleNames.getLength();
-                for (k = 0;  k < nLen2;  ++k)
+                uno::Sequence< OUString > aLocations( aDictIt->aLocations );
+                SAL_WARN_IF(
+                    aLocaleNames.hasElements() && !aLocations.hasElements(),
+                    "lingucomponent", "no locations");
+                if (aLocations.hasElements())
                 {
-                    aLocaleNamesSet.insert( aLocaleNames[k] );
+                    if (xAccess.is() && xAccess->exists(aLocations[0]))
+                    {
+                        sal_Int32 nLen2 = aLocaleNames.getLength();
+                        for (k = 0;  k < nLen2;  ++k)
+                        {
+                            aLocaleNamesSet.insert( aLocaleNames[k] );
+                        }
+                    }
+                    else
+                    {
+                        SAL_WARN(
+                            "lingucomponent",
+                            "missing <" << aLocations[0] << ">");
+                    }
                 }
             }
             // ... and add them to the resulting sequence
-            aSuppLocales.realloc( aLocaleNamesSet.size() );
-            std::set< OUString, lt_rtl_OUString >::const_iterator aItB;
+            m_aSuppLocales.realloc( aLocaleNamesSet.size() );
+            std::set<OUString>::const_iterator aItB;
             k = 0;
             for (aItB = aLocaleNamesSet.begin();  aItB != aLocaleNamesSet.end();  ++aItB)
             {
                 Locale aTmp( LanguageTag::convertToLocale( *aItB ));
-                aSuppLocales[k++] = aTmp;
+                m_aSuppLocales[k++] = aTmp;
             }
 
             //! For each dictionary and each locale we need a separate entry.
@@ -216,15 +242,15 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
             //! it is undefined which dictionary gets used.
             //! In the future the implementation should support using several dictionaries
             //! for one locale.
-            numdict = 0;
+            m_nNumDict = 0;
             for (aDictIt = aDics.begin();  aDictIt != aDics.end();  ++aDictIt)
-                numdict = numdict + aDictIt->aLocaleNames.getLength();
+                m_nNumDict = m_nNumDict + aDictIt->aLocaleNames.getLength();
 
             // add dictionary information
-            aDicts  = new Hunspell* [numdict];
-            aDEncs  = new rtl_TextEncoding [numdict];
-            aDLocs  = new Locale [numdict];
-            aDNames = new OUString [numdict];
+            m_aDicts  = new Hunspell* [m_nNumDict];
+            m_aDEncs  = new rtl_TextEncoding [m_nNumDict];
+            m_aDLocs  = new Locale [m_nNumDict];
+            m_aDNames = new OUString [m_nNumDict];
             k = 0;
             for (aDictIt = aDics.begin();  aDictIt != aDics.end();  ++aDictIt)
             {
@@ -236,39 +262,39 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 
                     // currently only one language per dictionary is supported in the actual implementation...
                     // Thus here we work-around this by adding the same dictionary several times.
-                    // Once for each of it's supported locales.
+                    // Once for each of its supported locales.
                     for (sal_Int32 i = 0;  i < nLocales;  ++i)
                     {
-                        aDicts[k]  = NULL;
-                        aDEncs[k]  = RTL_TEXTENCODING_DONTKNOW;
-                        aDLocs[k]  = LanguageTag::convertToLocale( aLocaleNames[i] );
+                        m_aDicts[k]  = nullptr;
+                        m_aDEncs[k]  = RTL_TEXTENCODING_DONTKNOW;
+                        m_aDLocs[k]  = LanguageTag::convertToLocale( aLocaleNames[i] );
                         // also both files have to be in the same directory and the
                         // file names must only differ in the extension (.aff/.dic).
                         // Thus we use the first location only and strip the extension part.
                         OUString aLocation = aDictIt->aLocations[0];
                         sal_Int32 nPos = aLocation.lastIndexOf( '.' );
                         aLocation = aLocation.copy( 0, nPos );
-                        aDNames[k] = aLocation;
+                        m_aDNames[k] = aLocation;
 
                         ++k;
                     }
                 }
             }
-            DBG_ASSERT( k == numdict, "index mismatch?" );
+            DBG_ASSERT( k == m_nNumDict, "index mismatch?" );
         }
         else
         {
             // no dictionary found so register no dictionaries
-            numdict = 0;
-            delete[] aDicts;
-            aDicts  = NULL;
-            delete[] aDEncs;
-            aDEncs = NULL;
-            delete[] aDLocs;
-            aDLocs  = NULL;
-            delete[] aDNames;
-            aDNames = NULL;
-            aSuppLocales.realloc(0);
+            m_nNumDict = 0;
+            delete[] m_aDicts;
+            m_aDicts  = nullptr;
+            delete[] m_aDEncs;
+            m_aDEncs = nullptr;
+            delete[] m_aDLocs;
+            m_aDLocs  = nullptr;
+            delete[] m_aDNames;
+            m_aDNames = nullptr;
+            m_aSuppLocales.realloc(0);
         }
 
 #if defined USE_JAVA && defined MACOSX
@@ -276,13 +302,13 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
         CFMutableArrayRef aAppLocales = CFArrayCreateMutable( kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks );
         if ( aAppLocales )
         {
-            for ( unsigned short nLang = 0x0; nLang < 0xffff; nLang++ )
+            for ( sal_uInt16 nLang = 0x0; nLang < 0xffff; nLang++ )
             {
-                Locale aLocale = LanguageTag::convertToLocale( nLang, false );
+                Locale aLocale = LanguageTag::convertToLocale( LanguageType( nLang ), false );
                 OUString aLocaleString( ImplGetLocaleString( aLocale ) );
                 if ( aLocaleString.getLength() )
                 {
-                    CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aLocaleString.getStr(), aLocaleString.getLength(), kCFAllocatorNull );
+                    CFStringRef aString = CFStringCreateWithCharactersNoCopy( nullptr, reinterpret_cast< const UniChar* >( aLocaleString.getStr() ), aLocaleString.getLength(), kCFAllocatorNull );
                     if ( aString )
                     {
                         CFArrayAppendValue( aAppLocales, aString );
@@ -296,7 +322,7 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
                         OUString aTmpLocaleString( ImplGetLocaleString( aTmpLocale ) );
                         if ( aTmpLocaleString.getLength() )
                         {
-                            CFStringRef aTmpString = CFStringCreateWithCharactersNoCopy( NULL, aTmpLocaleString.getStr(), aTmpLocaleString.getLength(), kCFAllocatorNull );
+                            CFStringRef aTmpString = CFStringCreateWithCharactersNoCopy( nullptr, reinterpret_cast< const UniChar* >( aTmpLocaleString.getStr() ), aTmpLocaleString.getLength(), kCFAllocatorNull );
                             if ( aTmpString )
                             {
                                 CFArrayAppendValue( aAppLocales, aTmpString );
@@ -311,7 +337,7 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
                         OUString aTmpLocaleString( ImplGetLocaleString( aTmpLocale ) );
                         if ( aTmpLocaleString.getLength() )
                         {
-                            CFStringRef aTmpString = CFStringCreateWithCharactersNoCopy( NULL, aTmpLocaleString.getStr(), aTmpLocaleString.getLength(), kCFAllocatorNull );
+                            CFStringRef aTmpString = CFStringCreateWithCharactersNoCopy( nullptr, reinterpret_cast< const UniChar* >( aTmpLocaleString.getStr() ), aTmpLocaleString.getLength(), kCFAllocatorNull );
                             if ( aTmpString )
                             {
                                 CFArrayAppendValue( aAppLocales, aTmpString );
@@ -323,34 +349,34 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
             }
         }
 
-        if ( maLocales )
+        if ( m_aLocales )
         {
-            CFRelease( maLocales );
-            maLocales = NULL;
+            CFRelease( m_aLocales );
+            m_aLocales = nullptr;
         }
-        maPrimaryNativeLocaleMap.clear();
-        maSecondaryNativeLocaleMap.clear();
+        m_aPrimaryNativeLocaleMap.clear();
+        m_aSecondaryNativeLocaleMap.clear();
 
-        maLocales = NSSpellChecker_getLocales( aAppLocales );
-        if ( maLocales )
+        m_aLocales = NSSpellChecker_getLocales( aAppLocales );
+        if ( m_aLocales )
         {
-            sal_Int32 nStart = aSuppLocales.getLength();
-            CFIndex nItems = CFArrayGetCount( maLocales );
-            aSuppLocales.realloc( nStart + nItems );
-            Locale *pLocaleArray = aSuppLocales.getArray();
+            sal_Int32 nStart = m_aSuppLocales.getLength();
+            CFIndex nItems = CFArrayGetCount( m_aLocales );
+            m_aSuppLocales.realloc( nStart + nItems );
+            Locale *pLocaleArray = m_aSuppLocales.getArray();
 
             CFIndex nItemsAdded = nStart;
             for ( CFIndex i = 0; i < nItems; i++ )
             {
-                CFStringRef aString = (CFStringRef)CFArrayGetValueAtIndex( maLocales, i );
+                CFStringRef aString = static_cast< CFStringRef >( CFArrayGetValueAtIndex( m_aLocales, i ) );
                 if ( aString )
                 {
-                    CFIndex nLen = CFStringGetLength( aString );
-                    CFRange aRange = CFRangeMake( 0, nLen );
-                    sal_Unicode pBuffer[ nLen + 1 ];
-                    CFStringGetCharacters( aString, aRange, pBuffer );
-                    pBuffer[ nLen ] = 0;
-                    OUString aItem( pBuffer );
+                    CFIndex nStringLen = CFStringGetLength( aString );
+                    CFRange aStringRange = CFRangeMake( 0, nStringLen );
+                    sal_Unicode pStringBuffer[ nStringLen + 1 ];
+                    CFStringGetCharacters( aString, aStringRange, reinterpret_cast< UniChar* >( pStringBuffer ) );
+                    pStringBuffer[ nStringLen ] = 0;
+                    OUString aItem( pStringBuffer );
 
                     if ( !aItem.getLength() )
                         continue;
@@ -384,10 +410,10 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
                     if ( !aLocaleString.getLength() )
                         continue;
 
-                    ::std::map< OUString, CFStringRef >::const_iterator it = maPrimaryNativeLocaleMap.find( aLocaleString );
-                    if ( it == maPrimaryNativeLocaleMap.end() )
+                    ::std::map< OUString, CFStringRef >::const_iterator it = m_aPrimaryNativeLocaleMap.find( aLocaleString );
+                    if ( it == m_aPrimaryNativeLocaleMap.end() )
                     {
-                        maPrimaryNativeLocaleMap[ aLocaleString ] = aString;
+                        m_aPrimaryNativeLocaleMap[ aLocaleString ] = aString;
 
                         // Fix bug 2532 by checking for approximate and
                         // duplicate matches in the native locales
@@ -407,7 +433,7 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
                                 {
                                     OUString aTmpLocaleString( ImplGetLocaleString( aTmpLocale ) );
                                     if ( aTmpLocaleString.getLength() )
-                                        maSecondaryNativeLocaleMap[ aTmpLocaleString ] = aString;
+                                        m_aSecondaryNativeLocaleMap[ aTmpLocaleString ] = aString;
                                 }
                             }
 
@@ -418,7 +444,7 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
                                 {
                                     OUString aTmpLocaleString( ImplGetLocaleString( aTmpLocale ) );
                                     if ( aTmpLocaleString.getLength() )
-                                        maSecondaryNativeLocaleMap[ aTmpLocaleString ] = aString;
+                                        m_aSecondaryNativeLocaleMap[ aTmpLocaleString ] = aString;
                                 }
                             }
                         }
@@ -429,14 +455,14 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
                 }
             }
 
-            aSuppLocales.realloc( nItemsAdded );
+            m_aSuppLocales.realloc( nItemsAdded );
         }
 
         // Fix 2686 by finding partial matches to application locales
-        sal_Int32 nStart = aSuppLocales.getLength();
-        aSuppLocales.realloc( nStart + aAppLocalesList.size() );
+        sal_Int32 nStart = m_aSuppLocales.getLength();
+        m_aSuppLocales.realloc( nStart + aAppLocalesList.size() );
         CFIndex nItemsAdded = nStart;
-        Locale *pLocaleArray = aSuppLocales.getArray();
+        Locale *pLocaleArray = m_aSuppLocales.getArray();
         for ( ::std::list< Locale >::const_iterator it = aAppLocalesList.begin(); it != aAppLocalesList.end(); ++it )
         {
             OUString aLocaleString( ImplGetLocaleString( *it ) );
@@ -456,21 +482,21 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
                     {
                         bool bFound = false;
                         OUString aTmpLocaleString( ImplGetLocaleString( aTmpLocale ) );
-                        ::std::map< OUString, CFStringRef >::const_iterator nlit = maPrimaryNativeLocaleMap.find( aTmpLocaleString );
-                        if ( nlit != maPrimaryNativeLocaleMap.end() )
+                        ::std::map< OUString, CFStringRef >::const_iterator nlit = m_aPrimaryNativeLocaleMap.find( aTmpLocaleString );
+                        if ( nlit != m_aPrimaryNativeLocaleMap.end() )
                         {
                             bFound = true;
                         }
                         else
                         {
-                            nlit = maSecondaryNativeLocaleMap.find( aTmpLocaleString );
-                            if ( nlit != maSecondaryNativeLocaleMap.end() )
+                            nlit = m_aSecondaryNativeLocaleMap.find( aTmpLocaleString );
+                            if ( nlit != m_aSecondaryNativeLocaleMap.end() )
                                 bFound = true;
                         }
 
                         if ( bFound )
                         {
-                            maSecondaryNativeLocaleMap[ aLocaleString ] = nlit->second;
+                            m_aSecondaryNativeLocaleMap[ aLocaleString ] = nlit->second;
                             bAddLocale = true;
                             break;
                         }
@@ -484,21 +510,21 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
                     {
                         bool bFound = false;
                         OUString aTmpLocaleString( ImplGetLocaleString( aTmpLocale ) );
-                        ::std::map< OUString, CFStringRef >::const_iterator nlit = maPrimaryNativeLocaleMap.find( aTmpLocaleString );
-                        if ( nlit != maPrimaryNativeLocaleMap.end() )
+                        ::std::map< OUString, CFStringRef >::const_iterator nlit = m_aPrimaryNativeLocaleMap.find( aTmpLocaleString );
+                        if ( nlit != m_aPrimaryNativeLocaleMap.end() )
                         {
                             bFound = true;
                         }
                         else
                         {
-                            nlit = maSecondaryNativeLocaleMap.find( aTmpLocaleString );
-                            if ( nlit != maSecondaryNativeLocaleMap.end() )
+                            nlit = m_aSecondaryNativeLocaleMap.find( aTmpLocaleString );
+                            if ( nlit != m_aSecondaryNativeLocaleMap.end() )
                                 bFound = true;
                         }
 
                         if ( bFound )
                         {
-                            maSecondaryNativeLocaleMap[ aLocaleString ] = nlit->second;
+                            m_aSecondaryNativeLocaleMap[ aLocaleString ] = nlit->second;
                             bAddLocale = true;
                             break;
                         }
@@ -510,38 +536,37 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
                 pLocaleArray[ nItemsAdded++ ] = *it;
         }
 
-        aSuppLocales.realloc( nItemsAdded );
+        m_aSuppLocales.realloc( nItemsAdded );
 
         if ( aAppLocales )
             CFRelease( aAppLocales );
 #endif	// USE_JAVA && MACOSX
     }
 
-    return aSuppLocales;
+    return m_aSuppLocales;
 }
 
 sal_Bool SAL_CALL SpellChecker::hasLocale(const Locale& rLocale)
-        throw(RuntimeException, std::exception)
 {
     MutexGuard  aGuard( GetLinguMutex() );
 
     bool bRes = false;
-    if (!aSuppLocales.getLength())
+    if (!m_aSuppLocales.getLength())
         getLocales();
 
-    const Locale *pLocale = aSuppLocales.getConstArray();
-    sal_Int32 nLen = aSuppLocales.getLength();
+    const Locale *pLocale = m_aSuppLocales.getConstArray();
+    sal_Int32 nLen = m_aSuppLocales.getLength();
 #if defined USE_JAVA && defined MACOSX
     // Check native locales first 
     OUString aLocaleString( ImplGetLocaleString( rLocale ) );
     if ( aLocaleString.getLength() )
     {
-        ::std::map< OUString, CFStringRef >::const_iterator it = maPrimaryNativeLocaleMap.find( aLocaleString );
-        if ( it != maPrimaryNativeLocaleMap.end() )
+        ::std::map< OUString, CFStringRef >::const_iterator it = m_aPrimaryNativeLocaleMap.find( aLocaleString );
+        if ( it != m_aPrimaryNativeLocaleMap.end() )
             return sal_True;
 
-        it = maSecondaryNativeLocaleMap.find( aLocaleString );
-        if ( it != maSecondaryNativeLocaleMap.end() )
+        it = m_aSecondaryNativeLocaleMap.find( aLocaleString );
+        if ( it != m_aSecondaryNativeLocaleMap.end() )
             return sal_True;
 
         // Fix bug 2513 by checking for approximate matches in the native locales
@@ -550,24 +575,24 @@ sal_Bool SAL_CALL SpellChecker::hasLocale(const Locale& rLocale)
             bool bFound = false;
             Locale aTmpLocale( rLocale.Language, rLocale.Country, OUString() );
             OUString aTmpLocaleString = ImplGetLocaleString( aTmpLocale );
-            it = maPrimaryNativeLocaleMap.find( aTmpLocaleString );
-            if ( it != maPrimaryNativeLocaleMap.end() )
+            it = m_aPrimaryNativeLocaleMap.find( aTmpLocaleString );
+            if ( it != m_aPrimaryNativeLocaleMap.end() )
             {
                 bFound = true;
             }
             else
             {
-                it = maSecondaryNativeLocaleMap.find( aTmpLocaleString );
-                if ( it != maSecondaryNativeLocaleMap.end() )
+                it = m_aSecondaryNativeLocaleMap.find( aTmpLocaleString );
+                if ( it != m_aSecondaryNativeLocaleMap.end() )
                     bFound = true;
             }
 
             if ( bFound )
             {
-                aSuppLocales.realloc( ++nLen );
-                Locale *pLocaleArray = aSuppLocales.getArray();
+                m_aSuppLocales.realloc( ++nLen );
+                Locale *pLocaleArray = m_aSuppLocales.getArray();
                 pLocaleArray[ nLen - 1 ] = rLocale;
-                maSecondaryNativeLocaleMap[ aLocaleString ] = it->second;
+                m_aSecondaryNativeLocaleMap[ aLocaleString ] = it->second;
                 return sal_True;
             }
         }
@@ -577,24 +602,24 @@ sal_Bool SAL_CALL SpellChecker::hasLocale(const Locale& rLocale)
             bool bFound = false;
             Locale aTmpLocale( rLocale.Language, OUString(), OUString() );
             OUString aTmpLocaleString = ImplGetLocaleString( aTmpLocale );
-            it = maPrimaryNativeLocaleMap.find( aTmpLocaleString );
-            if ( it != maPrimaryNativeLocaleMap.end() )
+            it = m_aPrimaryNativeLocaleMap.find( aTmpLocaleString );
+            if ( it != m_aPrimaryNativeLocaleMap.end() )
             {
                 bFound = true;
             }
             else
             {
-                it = maSecondaryNativeLocaleMap.find( aTmpLocaleString );
-                if ( it != maSecondaryNativeLocaleMap.end() )
+                it = m_aSecondaryNativeLocaleMap.find( aTmpLocaleString );
+                if ( it != m_aSecondaryNativeLocaleMap.end() )
                     bFound = true;
             }
 
             if ( bFound )
             {
-                aSuppLocales.realloc( ++nLen );
-                Locale *pLocaleArray = aSuppLocales.getArray();
+                m_aSuppLocales.realloc( ++nLen );
+                Locale *pLocaleArray = m_aSuppLocales.getArray();
                 pLocaleArray[ nLen - 1 ] = rLocale;
-                maSecondaryNativeLocaleMap[ aLocaleString ] = it->second;
+                m_aSecondaryNativeLocaleMap[ aLocaleString ] = it->second;
                 return sal_True;
             }
         }
@@ -612,9 +637,12 @@ sal_Bool SAL_CALL SpellChecker::hasLocale(const Locale& rLocale)
     return bRes;
 }
 
-sal_Int16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rLocale )
+sal_Int16 SpellChecker::GetSpellFailure(const OUString &rWord, const Locale &rLocale)
 {
-    Hunspell * pMS = NULL;
+    if (rWord.getLength() > MAXWORDLEN)
+        return -1;
+
+    Hunspell * pMS = nullptr;
     rtl_TextEncoding eEnc = RTL_TEXTENCODING_DONTKNOW;
 
     // initialize a myspell object for each dictionary once
@@ -632,9 +660,9 @@ sal_Int16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rL
     {
         c = rBuf[ix];
         if ((c == 0x201C) || (c == 0x201D))
-            rBuf[ix] = (sal_Unicode)0x0022;
+            rBuf[ix] = u'"';
         else if ((c == 0x2018) || (c == 0x2019))
-            rBuf[ix] = (sal_Unicode)0x0027;
+            rBuf[ix] = u'\'';
 
         // recognize words with Unicode ligatures and ZWNJ/ZWJ characters (only
         // with 8-bit encoded dictionaries. For UTF-8 encoded dictionaries
@@ -651,32 +679,32 @@ sal_Int16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rL
         bool bHandled = false;
         bool bFound = false;
         OUString aLocaleString( ImplGetLocaleString( rLocale ) );
-        ::std::map< OUString, CFStringRef >::const_iterator it = maPrimaryNativeLocaleMap.find( aLocaleString );
-        if ( it != maPrimaryNativeLocaleMap.end() )
+        ::std::map< OUString, CFStringRef >::const_iterator it = m_aPrimaryNativeLocaleMap.find( aLocaleString );
+        if ( it != m_aPrimaryNativeLocaleMap.end() )
         {
             bFound = true;
         }
         else
         {
 #endif	// USE_JAVA && MACOSX
-        for (sal_Int32 i = 0; i < numdict; ++i)
+        for (sal_Int32 i = 0; i < m_nNumDict; ++i)
         {
-            pMS = NULL;
+            pMS = nullptr;
             eEnc = RTL_TEXTENCODING_DONTKNOW;
 
-            if (rLocale == aDLocs[i])
+            if (rLocale == m_aDLocs[i])
             {
-                if (!aDicts[i])
+                if (!m_aDicts[i])
                 {
-                    OUString dicpath = aDNames[i] + ".dic";
-                    OUString affpath = aDNames[i] + ".aff";
+                    OUString dicpath = m_aDNames[i] + ".dic";
+                    OUString affpath = m_aDNames[i] + ".aff";
                     OUString dict;
                     OUString aff;
                     osl::FileBase::getSystemPathFromFileURL(dicpath,dict);
                     osl::FileBase::getSystemPathFromFileURL(affpath,aff);
-#if defined(WNT)
+#if defined(_WIN32)
                     // workaround for Windows specific problem that the
-                    // path length in calls to 'fopen' is limted to somewhat
+                    // path length in calls to 'fopen' is limited to somewhat
                     // about 120+ characters which will usually be exceed when
                     // using dictionaries as extensions. (Hunspell waits UTF-8 encoded
                     // path with \\?\ long path prefix.)
@@ -687,13 +715,15 @@ sal_Int16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rL
                     OString aTmpdict(OU2ENC(dict,osl_getThreadTextEncoding()));
 #endif
 
-                    aDicts[i] = new Hunspell(aTmpaff.getStr(),aTmpdict.getStr());
-                    aDEncs[i] = RTL_TEXTENCODING_DONTKNOW;
-                    if (aDicts[i])
-                        aDEncs[i] = getTextEncodingFromCharset(aDicts[i]->get_dic_encoding());
+                    m_aDicts[i] = new Hunspell(aTmpaff.getStr(),aTmpdict.getStr());
+#if defined(H_DEPRECATED)
+                    m_aDEncs[i] = getTextEncodingFromCharset(m_aDicts[i]->get_dict_encoding().c_str());
+#else
+                    m_aDEncs[i] = getTextEncodingFromCharset(m_aDicts[i]->get_dic_encoding());
+#endif
                 }
-                pMS = aDicts[i];
-                eEnc = aDEncs[i];
+                pMS = m_aDicts[i];
+                eEnc = m_aDEncs[i];
             }
 
             if (pMS)
@@ -710,33 +740,41 @@ sal_Int16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rL
                 bHandled = true;
 #endif	// USE_JAVA && MACOSX
                 OString aWrd(OU2ENC(nWord,eEnc));
-                int rVal = pMS->spell((char*)aWrd.getStr());
-                if (rVal != 1) {
+#if defined(H_DEPRECATED)
+                bool bVal = pMS->spell(std::string(aWrd.getStr()));
+#else
+                bool bVal = pMS->spell(aWrd.getStr()) != 0;
+#endif
+                if (!bVal) {
                     if (extrachar && (eEnc != RTL_TEXTENCODING_UTF8)) {
-                        OUStringBuffer mBuf(nWord);
-                        n = mBuf.getLength();
+                        OUStringBuffer aBuf(nWord);
+                        n = aBuf.getLength();
                         for (sal_Int32 ix=n-1; ix >= 0; ix--)
                         {
-                          switch (mBuf[ix]) {
-                            case 0xFB00: mBuf.remove(ix, 1); mBuf.insert(ix, "ff"); break;
-                            case 0xFB01: mBuf.remove(ix, 1); mBuf.insert(ix, "fi"); break;
-                            case 0xFB02: mBuf.remove(ix, 1); mBuf.insert(ix, "fl"); break;
-                            case 0xFB03: mBuf.remove(ix, 1); mBuf.insert(ix, "ffi"); break;
-                            case 0xFB04: mBuf.remove(ix, 1); mBuf.insert(ix, "ffl"); break;
+                          switch (aBuf[ix]) {
+                            case 0xFB00: aBuf.remove(ix, 1); aBuf.insert(ix, "ff"); break;
+                            case 0xFB01: aBuf.remove(ix, 1); aBuf.insert(ix, "fi"); break;
+                            case 0xFB02: aBuf.remove(ix, 1); aBuf.insert(ix, "fl"); break;
+                            case 0xFB03: aBuf.remove(ix, 1); aBuf.insert(ix, "ffi"); break;
+                            case 0xFB04: aBuf.remove(ix, 1); aBuf.insert(ix, "ffl"); break;
                             case 0x200C:
-                            case 0x200D: mBuf.remove(ix, 1); break;
+                            case 0x200D: aBuf.remove(ix, 1); break;
                           }
                         }
-                        OUString mWord(mBuf.makeStringAndClear());
-                        OString bWrd(OU2ENC(mWord, eEnc));
-                        rVal = pMS->spell((char*)bWrd.getStr());
-                        if (rVal == 1) return -1;
+                        OUString aWord(aBuf.makeStringAndClear());
+                        OString bWrd(OU2ENC(aWord, eEnc));
+#if defined(H_DEPRECATED)
+                        bVal = pMS->spell(std::string(bWrd.getStr()));
+#else
+                        bVal = pMS->spell(bWrd.getStr()) != 0;
+#endif
+                        if (bVal) return -1;
                     }
                     nRes = SpellFailure::SPELLING_ERROR;
                 } else {
                     return -1;
                 }
-                pMS = NULL;
+                pMS = nullptr;
             }
         }
 #if defined USE_JAVA && defined MACOSX
@@ -746,14 +784,14 @@ sal_Int16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rL
         {
             if ( !bFound )
             {
-                it = maSecondaryNativeLocaleMap.find( aLocaleString );
-                if ( it != maSecondaryNativeLocaleMap.end() )
+                it = m_aSecondaryNativeLocaleMap.find( aLocaleString );
+                if ( it != m_aSecondaryNativeLocaleMap.end() )
                     bFound = true;
             }
 
             if ( bFound )
             {
-                CFStringRef aString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, rWord.getStr(), rWord.getLength(), kCFAllocatorNull );
+                CFStringRef aString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, reinterpret_cast< const UniChar* >( rWord.getStr() ), rWord.getLength(), kCFAllocatorNull );
                 if ( aString )
                 {
                     if ( !NSSpellChecker_checkSpellingOfString( aString, it->second ) )
@@ -770,7 +808,6 @@ sal_Int16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rL
 
 sal_Bool SAL_CALL SpellChecker::isValid( const OUString& rWord, const Locale& rLocale,
             const PropertyValues& rProperties )
-        throw(IllegalArgumentException, RuntimeException, std::exception)
 {
     MutexGuard  aGuard( GetLinguMutex() );
 
@@ -780,13 +817,13 @@ sal_Bool SAL_CALL SpellChecker::isValid( const OUString& rWord, const Locale& rL
 #else	// USE_JAVA
      if (rLocale == Locale()  ||  rWord.isEmpty())
 #endif	// USE_JAVA
-        return sal_True;
+        return true;
 
     if (!hasLocale( rLocale ))
-        return sal_True;
+        return true;
 
     // return sal_False to process SPELLML requests (they are longer than the header)
-    if (rWord.match(SPELLML_HEADER, 0) && (rWord.getLength() > 10)) return sal_False;
+    if (rWord.match(SPELL_XML, 0) && (rWord.getLength() > 10)) return false;
 
     // Get property values to be used.
     // These are be the default values set in the SN_LINGU_PROPERTIES
@@ -798,9 +835,9 @@ sal_Bool SAL_CALL SpellChecker::isValid( const OUString& rWord, const Locale& rL
     rHelper.SetTmpPropVals( rProperties );
 
     sal_Int16 nFailure = GetSpellFailure( rWord, rLocale );
-    if (nFailure != -1 && !rWord.match(SPELLML_HEADER, 0))
+    if (nFailure != -1 && !rWord.match(SPELL_XML, 0))
     {
-        sal_Int16 nLang = LinguLocaleToLanguage( rLocale );
+        LanguageType nLang = LinguLocaleToLanguage( rLocale );
         // postprocess result for errors that should be ignored
         const bool bIgnoreError =
                 (!rHelper.IsSpellUpperCase()  && IsUpper( rWord, nLang )) ||
@@ -822,7 +859,7 @@ Reference< XSpellAlternatives >
     Reference< XSpellAlternatives > xRes;
     // note: mutex is held by higher up by spell which covers both
 
-    Hunspell* pMS = NULL;
+    Hunspell* pMS = nullptr;
     rtl_TextEncoding eEnc = RTL_TEXTENCODING_DONTKNOW;
 
     // first handle smart quotes (single and double)
@@ -833,15 +870,15 @@ Reference< XSpellAlternatives >
     {
         c = rBuf[ix];
         if ((c == 0x201C) || (c == 0x201D))
-            rBuf[ix] = (sal_Unicode)0x0022;
+            rBuf[ix] = u'"';
         if ((c == 0x2018) || (c == 0x2019))
-            rBuf[ix] = (sal_Unicode)0x0027;
+            rBuf[ix] = u'\'';
     }
     OUString nWord(rBuf.makeStringAndClear());
 
     if (n)
     {
-        sal_Int16 nLang = LinguLocaleToLanguage( rLocale );
+        LanguageType nLang = LinguLocaleToLanguage( rLocale );
         int numsug = 0;
 
         Sequence< OUString > aStr( 0 );
@@ -849,23 +886,23 @@ Reference< XSpellAlternatives >
         bool bHandled = false;
         bool bFound = false;
         OUString aLocaleString( ImplGetLocaleString( rLocale ) );
-        ::std::map< OUString, CFStringRef >::const_iterator it = maPrimaryNativeLocaleMap.find( aLocaleString );
-        if ( it != maPrimaryNativeLocaleMap.end() )
+        ::std::map< OUString, CFStringRef >::const_iterator it = m_aPrimaryNativeLocaleMap.find( aLocaleString );
+        if ( it != m_aPrimaryNativeLocaleMap.end() )
         {
             bFound = true;
         }
         else
         {
 #endif	// USE_JAVA && MACOSX
-        for (int i = 0; i < numdict; i++)
+        for (int i = 0; i < m_nNumDict; i++)
         {
-            pMS = NULL;
+            pMS = nullptr;
             eEnc = RTL_TEXTENCODING_DONTKNOW;
 
-            if (rLocale == aDLocs[i])
+            if (rLocale == m_aDLocs[i])
             {
-                pMS = aDicts[i];
-                eEnc = aDEncs[i];
+                pMS = m_aDicts[i];
+                eEnc = m_aDEncs[i];
             }
 
             if (pMS)
@@ -873,10 +910,23 @@ Reference< XSpellAlternatives >
 #if defined USE_JAVA && defined MACOSX
                 bHandled = true;
 #endif	// USE_JAVA && MACOSX
-                char ** suglst = NULL;
                 OString aWrd(OU2ENC(nWord,eEnc));
-                int count = pMS->suggest(&suglst, (const char *) aWrd.getStr());
-
+#if defined(H_DEPRECATED)
+                std::vector<std::string> suglst = pMS->suggest(std::string(aWrd.getStr()));
+                if (!suglst.empty())
+                {
+                    aStr.realloc(numsug + suglst.size());
+                    OUString *pStr = aStr.getArray();
+                    for (size_t ii = 0; ii < suglst.size(); ++ii)
+                    {
+                        OUString cvtwrd(suglst[ii].c_str(), suglst[ii].size(), eEnc);
+                        pStr[numsug + ii] = cvtwrd;
+                    }
+                    numsug += suglst.size();
+                }
+#else
+                char ** suglst = nullptr;
+                int count = pMS->suggest(&suglst, aWrd.getStr());
                 if (count)
                 {
                     aStr.realloc( numsug + count );
@@ -888,46 +938,46 @@ Reference< XSpellAlternatives >
                     }
                     numsug += count;
                 }
-
                 pMS->free_list(&suglst, count);
+#endif
             }
         }
 #if defined USE_JAVA && defined MACOSX
-       }
+        }
 
-       if ( !bHandled )
-       {
-           if ( !bFound )
-           {
-               it = maSecondaryNativeLocaleMap.find( aLocaleString );
-               if ( it != maSecondaryNativeLocaleMap.end() )
-                   bFound = true;
-           }
+        if ( !bHandled )
+        {
+            if ( !bFound )
+            {
+                it = m_aSecondaryNativeLocaleMap.find( aLocaleString );
+                if ( it != m_aSecondaryNativeLocaleMap.end() )
+                    bFound = true;
+            }
 
-           if ( bFound )
-           {
-               CFStringRef aString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, rWord.getStr(), rWord.getLength(), kCFAllocatorNull );
-               if ( aString )
-               {
-                   CFArrayRef aGuesses = NSSpellChecker_getGuesses( aString, it->second );
-                   if ( aGuesses )
-                   {
-                       CFIndex nItems = CFArrayGetCount( aGuesses );
-                       aStr.realloc( nItems );
-                       OUString *pAlternativesArray = aStr.getArray();
+            if ( bFound )
+            {
+                CFStringRef aString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, reinterpret_cast< const UniChar* >( rWord.getStr() ), rWord.getLength(), kCFAllocatorNull );
+                if ( aString )
+                {
+                    CFArrayRef aGuesses = NSSpellChecker_getGuesses( aString, it->second );
+                    if ( aGuesses )
+                    {
+                        CFIndex nItems = CFArrayGetCount( aGuesses );
+                        aStr.realloc( nItems );
+                        OUString *pAlternativesArray = aStr.getArray();
 
                         CFIndex nItemsAdded = 0;
                         for ( CFIndex i = 0; i < nItems; i++ )
                         {
-                            CFStringRef aGuessString = (CFStringRef)CFArrayGetValueAtIndex( aGuesses, i );
+                            CFStringRef aGuessString = static_cast< CFStringRef >( CFArrayGetValueAtIndex( aGuesses, i ) );
                             if ( aGuessString )
                             {
-                                CFIndex nLen = CFStringGetLength( aGuessString );
-                                CFRange aRange = CFRangeMake( 0, nLen );
-                                sal_Unicode pBuffer[ nLen + 1 ];
-                                CFStringGetCharacters( aGuessString, aRange, pBuffer );
-                                pBuffer[ nLen ] = 0;
-                                OUString aItem( pBuffer );
+                                CFIndex nStringLen = CFStringGetLength( aGuessString );
+                                CFRange aStringRange = CFRangeMake( 0, nStringLen );
+                                sal_Unicode pStringBuffer[ nStringLen + 1 ];
+                                CFStringGetCharacters( aGuessString, aStringRange, reinterpret_cast< UniChar* >( pStringBuffer ) );
+                                pStringBuffer[ nStringLen ] = 0;
+                                OUString aItem( pStringBuffer );
 
                                 if ( !aItem.getLength() )
                                     continue;
@@ -948,8 +998,7 @@ Reference< XSpellAlternatives >
 #endif	// USE_JAVA && MACOSX
 
         // now return an empty alternative for no suggestions or the list of alternatives if some found
-        OUString aTmp(rWord);
-        xRes = SpellAlternatives::CreateSpellAlternatives( aTmp, nLang, SpellFailure::SPELLING_ERROR, aStr );
+        xRes = SpellAlternatives::CreateSpellAlternatives( rWord, nLang, SpellFailure::SPELLING_ERROR, aStr );
         return xRes;
     }
     return xRes;
@@ -958,7 +1007,6 @@ Reference< XSpellAlternatives >
 Reference< XSpellAlternatives > SAL_CALL SpellChecker::spell(
         const OUString& rWord, const Locale& rLocale,
         const PropertyValues& rProperties )
-        throw(IllegalArgumentException, RuntimeException, std::exception)
 {
     MutexGuard  aGuard( GetLinguMutex() );
 
@@ -968,10 +1016,10 @@ Reference< XSpellAlternatives > SAL_CALL SpellChecker::spell(
 #else	// USE_JAVA
      if (rLocale == Locale()  ||  rWord.isEmpty())
 #endif	// USE_JAVA
-        return NULL;
+        return nullptr;
 
     if (!hasLocale( rLocale ))
-        return NULL;
+        return nullptr;
 
     Reference< XSpellAlternatives > xAlt;
     if (!isValid( rWord, rLocale, rProperties ))
@@ -981,23 +1029,22 @@ Reference< XSpellAlternatives > SAL_CALL SpellChecker::spell(
     return xAlt;
 }
 
+/// @throws Exception
 Reference< XInterface > SAL_CALL SpellChecker_CreateInstance(
         const Reference< XMultiServiceFactory > & /*rSMgr*/ )
-        throw(Exception)
 {
 
-    Reference< XInterface > xService = (cppu::OWeakObject*) new SpellChecker;
+    Reference< XInterface > xService = static_cast<cppu::OWeakObject*>(new SpellChecker);
     return xService;
 }
 
 sal_Bool SAL_CALL SpellChecker::addLinguServiceEventListener(
         const Reference< XLinguServiceEventListener >& rxLstnr )
-        throw(RuntimeException, std::exception)
 {
     MutexGuard  aGuard( GetLinguMutex() );
 
     bool bRes = false;
-    if (!bDisposing && rxLstnr.is())
+    if (!m_bDisposing && rxLstnr.is())
     {
         bRes = GetPropHelper().addLinguServiceEventListener( rxLstnr );
     }
@@ -1006,12 +1053,11 @@ sal_Bool SAL_CALL SpellChecker::addLinguServiceEventListener(
 
 sal_Bool SAL_CALL SpellChecker::removeLinguServiceEventListener(
         const Reference< XLinguServiceEventListener >& rxLstnr )
-        throw(RuntimeException, std::exception)
 {
     MutexGuard  aGuard( GetLinguMutex() );
 
     bool bRes = false;
-    if (!bDisposing && rxLstnr.is())
+    if (!m_bDisposing && rxLstnr.is())
     {
         bRes = GetPropHelper().removeLinguServiceEventListener( rxLstnr );
     }
@@ -1019,9 +1065,7 @@ sal_Bool SAL_CALL SpellChecker::removeLinguServiceEventListener(
 }
 
 OUString SAL_CALL SpellChecker::getServiceDisplayName( const Locale& /*rLocale*/ )
-        throw(RuntimeException, std::exception)
 {
-    MutexGuard  aGuard( GetLinguMutex() );
 #if defined USE_JAVA && defined MACOSX && defined PRODUCT_NAME
     return OUString( PRODUCT_NAME " Mac Spellchecker + Grammarchecker" );
 #else	// USE_JAVA && MACOSX && PRODUCT_NAME
@@ -1030,11 +1074,10 @@ OUString SAL_CALL SpellChecker::getServiceDisplayName( const Locale& /*rLocale*/
 }
 
 void SAL_CALL SpellChecker::initialize( const Sequence< Any >& rArguments )
-        throw(Exception, RuntimeException, std::exception)
 {
     MutexGuard  aGuard( GetLinguMutex() );
 
-    if (!pPropHelper)
+    if (!m_pPropHelper)
     {
         sal_Int32 nLen = rArguments.getLength();
         if (2 == nLen)
@@ -1046,9 +1089,9 @@ void SAL_CALL SpellChecker::initialize( const Sequence< Any >& rArguments )
             //! Pointer allows for access of the non-UNO functions.
             //! And the reference to the UNO-functions while increasing
             //! the ref-count and will implicitly free the memory
-            //! when the object is not longer used.
-            pPropHelper = new PropertyHelper_Spelling( (XSpellChecker *) this, xPropSet );
-            pPropHelper->AddAsPropListener();   //! after a reference is established
+            //! when the object is no longer used.
+            m_pPropHelper = new PropertyHelper_Spelling( static_cast<XSpellChecker *>(this), xPropSet );
+            m_pPropHelper->AddAsPropListener();   //! after a reference is established
         }
         else {
             OSL_FAIL( "wrong number of arguments in sequence" );
@@ -1057,146 +1100,126 @@ void SAL_CALL SpellChecker::initialize( const Sequence< Any >& rArguments )
 }
 
 void SAL_CALL SpellChecker::dispose()
-        throw(RuntimeException, std::exception)
 {
     MutexGuard  aGuard( GetLinguMutex() );
 
-    if (!bDisposing)
+    if (!m_bDisposing)
     {
-        bDisposing = true;
-        EventObject aEvtObj( (XSpellChecker *) this );
-        aEvtListeners.disposeAndClear( aEvtObj );
-        if (pPropHelper)
+        m_bDisposing = true;
+        EventObject aEvtObj( static_cast<XSpellChecker *>(this) );
+        m_aEvtListeners.disposeAndClear( aEvtObj );
+        if (m_pPropHelper)
         {
-            pPropHelper->RemoveAsPropListener();
-            delete pPropHelper;
-            pPropHelper = NULL;
+            m_pPropHelper->RemoveAsPropListener();
+            delete m_pPropHelper;
+            m_pPropHelper = nullptr;
         }
     }
 }
 
 void SAL_CALL SpellChecker::addEventListener( const Reference< XEventListener >& rxListener )
-        throw(RuntimeException, std::exception)
 {
     MutexGuard  aGuard( GetLinguMutex() );
 
-    if (!bDisposing && rxListener.is())
-        aEvtListeners.addInterface( rxListener );
+    if (!m_bDisposing && rxListener.is())
+        m_aEvtListeners.addInterface( rxListener );
 }
 
 void SAL_CALL SpellChecker::removeEventListener( const Reference< XEventListener >& rxListener )
-        throw(RuntimeException, std::exception)
 {
     MutexGuard  aGuard( GetLinguMutex() );
 
-    if (!bDisposing && rxListener.is())
-        aEvtListeners.removeInterface( rxListener );
+    if (!m_bDisposing && rxListener.is())
+        m_aEvtListeners.removeInterface( rxListener );
 }
 
 // Service specific part
 OUString SAL_CALL SpellChecker::getImplementationName()
-        throw(RuntimeException, std::exception)
 {
-    MutexGuard  aGuard( GetLinguMutex() );
-
     return getImplementationName_Static();
 }
 
 sal_Bool SAL_CALL SpellChecker::supportsService( const OUString& ServiceName )
-        throw(RuntimeException, std::exception)
 {
     return cppu::supportsService(this, ServiceName);
 }
 
 Sequence< OUString > SAL_CALL SpellChecker::getSupportedServiceNames()
-        throw(RuntimeException, std::exception)
 {
-    MutexGuard  aGuard( GetLinguMutex() );
-
     return getSupportedServiceNames_Static();
 }
 
 #if defined USE_JAVA && defined MACOSX
 
 sal_Bool SpellChecker::isSpellChecker()
-		throw(RuntimeException)
 {
-	return sal_True;
+    return sal_True;
 }
 
 
 ProofreadingResult SpellChecker::doProofreading( const OUString& aDocumentIdentifier, const OUString& aText, const Locale& aLocale, sal_Int32 nStartOfSentencePosition, sal_Int32 nSuggestedBehindEndOfSentencePosition, const Sequence< PropertyValue >& /* aProperties */ )
-		throw (IllegalArgumentException, RuntimeException)
 {
-	MutexGuard	aGuard( GetLinguMutex() );
+    MutexGuard    aGuard( GetLinguMutex() );
 
-	ProofreadingResult aRet;
-	aRet.aDocumentIdentifier = aDocumentIdentifier;
-	aRet.aText = aText;
-	aRet.aLocale = aLocale;
-	aRet.nStartOfSentencePosition = nStartOfSentencePosition;
-	aRet.nBehindEndOfSentencePosition = nSuggestedBehindEndOfSentencePosition;
-	aRet.xProofreader = this;
+    ProofreadingResult aRet;
+    aRet.aDocumentIdentifier = aDocumentIdentifier;
+    aRet.aText = aText;
+    aRet.aLocale = aLocale;
+    aRet.nStartOfSentencePosition = nStartOfSentencePosition;
+    aRet.nBehindEndOfSentencePosition = nSuggestedBehindEndOfSentencePosition;
+    aRet.xProofreader = this;
 
-	bool bFound = false;
-	OUString aLocaleString( ImplGetLocaleString( aLocale ) );
-	::std::map< OUString, CFStringRef >::const_iterator it = maPrimaryNativeLocaleMap.find( aLocaleString );
-	if ( it != maPrimaryNativeLocaleMap.end() )
-	{
-		bFound = true;
-	}
-	else
-	{
-		it = maSecondaryNativeLocaleMap.find( aLocaleString );
-		if ( it != maSecondaryNativeLocaleMap.end() )
-			bFound = true;
-	}
+    bool bFound = false;
+    OUString aLocaleString( ImplGetLocaleString( aLocale ) );
+    ::std::map< OUString, CFStringRef >::const_iterator it = m_aPrimaryNativeLocaleMap.find( aLocaleString );
+    if ( it != m_aPrimaryNativeLocaleMap.end() )
+    {
+        bFound = true;
+    }
+    else
+    {
+        it = m_aSecondaryNativeLocaleMap.find( aLocaleString );
+        if ( it != m_aSecondaryNativeLocaleMap.end() )
+            bFound = true;
+    }
 
-	if ( bFound )
-		NSSpellChecker_checkGrammarOfString( &aRet, it->second );
+    if ( bFound )
+        NSSpellChecker_checkGrammarOfString( &aRet, it->second );
 
-	return aRet;
+    return aRet;
 }
 
 void SpellChecker::ignoreRule( const OUString& /* aRuleIdentifier */, const Locale& /* aLocale */ )
-		throw (IllegalArgumentException, RuntimeException)
 {
 #ifdef DEBUG
-	fprintf( stderr, "SpellChecker::resetIgnoreRules not implemented\n" );
+    fprintf( stderr, "SpellChecker::resetIgnoreRules not implemented\n" );
 #endif
 }
 
 void SpellChecker::resetIgnoreRules()
-		throw(RuntimeException)
 {
 #ifdef DEBUG
-	fprintf( stderr, "SpellChecker::resetIgnoreRules not implemented\n" );
+    fprintf( stderr, "SpellChecker::resetIgnoreRules not implemented\n" );
 #endif
 }
 
-#endif	// USE_JAVA && MACOSX
+#endif    // USE_JAVA && MACOSX
 
 Sequence< OUString > SpellChecker::getSupportedServiceNames_Static()
         throw()
 {
-    MutexGuard  aGuard( GetLinguMutex() );
-
 #if defined USE_JAVA && defined MACOSX
-    Sequence< OUString > aSNS( 2 );
+    Sequence< OUString > aSNS { SN_SPELLCHECKER, SN_GRAMMARCHECKER };
 #else	// USE_JAVA && MACOSX
-    Sequence< OUString > aSNS( 1 ); // more than 1 service is possible, too
-#endif	// USE_JAVA && MACOSX
-    aSNS.getArray()[0] = SN_SPELLCHECKER;
-#if defined USE_JAVA && defined MACOSX
-    aSNS.getArray()[1] = SN_GRAMMARCHECKER;
+    Sequence< OUString > aSNS { SN_SPELLCHECKER };
 #endif	// USE_JAVA && MACOSX
     return aSNS;
 }
 
 void * SAL_CALL SpellChecker_getFactory( const sal_Char * pImplName,
-            XMultiServiceFactory * pServiceManager, void *  )
+            XMultiServiceFactory * pServiceManager  )
 {
-    void * pRet = 0;
+    void * pRet = nullptr;
     if ( SpellChecker::getImplementationName_Static().equalsAscii( pImplName ) )
     {
         Reference< XSingleServiceFactory > xFactory =

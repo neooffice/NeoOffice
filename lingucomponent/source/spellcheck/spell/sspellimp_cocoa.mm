@@ -52,7 +52,7 @@ static OUString NSStringToOUString( NSString *pString )
 		if ( nLen )
 		{
 			sal_Unicode aBuf[ nLen + 1 ];
-			[pString getCharacters:aBuf];
+			[pString getCharacters:reinterpret_cast< unichar* >( aBuf )];
 			aBuf[ nLen ] = 0;
 			aRet = OUString( aBuf );
 		}
@@ -152,11 +152,11 @@ static OUString NSStringToOUString( NSString *pString )
     if ( !pArgArray || [pArgArray count] < 2 )
         return;
 
-	NSValue *pResultValue = (NSValue *)[pArgArray objectAtIndex:0];
+	NSValue *pResultValue = static_cast< NSValue* >( [pArgArray objectAtIndex:0] );
 	if ( !pResultValue )
 		return;
 
-    ProofreadingResult *pResult = (ProofreadingResult *)[pResultValue pointerValue];
+    ProofreadingResult *pResult = static_cast< ProofreadingResult* >( [pResultValue pointerValue] );
 	if ( !pResult )
 		return;
 
@@ -165,7 +165,7 @@ static OUString NSStringToOUString( NSString *pString )
 	if ( !pResult->aText.getLength() || pResult->nStartOfSentencePosition < 0 || pResult->nStartOfSentencePosition >= pResult->nBehindEndOfSentencePosition || pResult->nStartOfSentencePosition >= pResult->aText.getLength() )
 		return;
 
-    NSString *pLocale = (NSString *)[pArgArray objectAtIndex:1];
+    NSString *pLocale = static_cast< NSString* >( [pArgArray objectAtIndex:1] );
 	if ( !pLocale )
 		return;
 
@@ -179,12 +179,12 @@ static OUString NSStringToOUString( NSString *pString )
 				nLen = pResult->aText.getLength() - pResult->nStartOfSentencePosition;
 			else
  				nLen = pResult->nBehindEndOfSentencePosition - pResult->nStartOfSentencePosition;
-			NSString *pString = [NSString stringWithCharacters:pResult->aText.getStr() + pResult->nStartOfSentencePosition length:nLen];
+			NSString *pString = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( pResult->aText.getStr() ) + pResult->nStartOfSentencePosition length:nLen];
 			if ( pString )
 			{
-				NSUInteger nLen = [pString length];
+				NSUInteger nStringLen = [pString length];
 				NSUInteger nStart = 0;
-				while ( nStart < nLen )
+				while ( nStart < nStringLen )
 				{
 					NSArray *pDetails = nil;
 					NSRange aCheckRange = [pChecker checkGrammarOfString:pString startingAt:nStart language:pLocale wrap:NO inSpellDocumentWithTag:0 details:&pDetails];
@@ -267,11 +267,11 @@ static OUString NSStringToOUString( NSString *pString )
     if ( !pArgArray || [pArgArray count] < 2 )
         return;
 
-    NSString *pString = (NSString *)[pArgArray objectAtIndex:0];
+    NSString *pString = static_cast< NSString* >( [pArgArray objectAtIndex:0] );
 	if ( !pString )
 		return;
 
-    NSString *pLocale = (NSString *)[pArgArray objectAtIndex:1];
+    NSString *pLocale = static_cast< NSString* >( [pArgArray objectAtIndex:1] );
 	if ( !pLocale )
 		return;
 
@@ -298,11 +298,11 @@ static OUString NSStringToOUString( NSString *pString )
     if ( !pArgArray || [pArgArray count] < 2 )
         return;
 
-    NSString *pString = (NSString *)[pArgArray objectAtIndex:0];
+    NSString *pString = static_cast< NSString* >( [pArgArray objectAtIndex:0] );
 	if ( !pString )
 		return;
 
-    NSString *pLocale = (NSString *)[pArgArray objectAtIndex:1];
+    NSString *pLocale = static_cast< NSString* >( [pArgArray objectAtIndex:1] );
 	if ( !pLocale )
 		return;
 
@@ -328,7 +328,7 @@ static OUString NSStringToOUString( NSString *pString )
     if ( !pArgArray || [pArgArray count] < 1 )
         return;
 
-    NSMutableSet *pLocales = (NSMutableSet *)[pArgArray objectAtIndex:0];
+    NSMutableSet *pLocales = static_cast< NSMutableSet* >( [pArgArray objectAtIndex:0] );
 	if ( !pLocales )
 		return;
 
@@ -370,8 +370,8 @@ static OUString NSStringToOUString( NSString *pString )
 						unsigned i = 0;
 						for ( ; i < nCount; i++ )
 						{
-							NSString *pLocale = (NSString *)[pLocaleArray objectAtIndex:i];
-							if ( pLocale && [pChecker setLanguage:(NSString *)pLocale] )
+							NSString *pLocale = static_cast< NSString* >( [pLocaleArray objectAtIndex:i] );
+							if ( pLocale && [pChecker setLanguage:static_cast< NSString* >( pLocale )] )
 								[pRet addObject:pLocale];
 						}
 					}
@@ -395,7 +395,7 @@ void NSSpellChecker_checkGrammarOfString( ::com::sun::star::linguistic2::Proofre
 
 	if ( pResult && aLocale && CFStringGetLength( aLocale ) && pResult->aText.getLength() && pResult->aText.getLength() > pResult->nStartOfSentencePosition )
 	{
-		RunSpellCheckerArgs *pArgs = [RunSpellCheckerArgs argsWithArgs:[NSArray arrayWithObjects:[NSValue valueWithPointer:pResult], (NSString *)aLocale, nil]];
+		RunSpellCheckerArgs *pArgs = [RunSpellCheckerArgs argsWithArgs:[NSArray arrayWithObjects:[NSValue valueWithPointer:pResult], static_cast< NSString* >( aLocale ), nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		RunSpellChecker *pRunSpellChecker = [RunSpellChecker create];
 		[pRunSpellChecker performSelectorOnMainThread:@selector(checkGrammarOfString:) withObject:pArgs waitUntilDone:YES modes:pModes];
@@ -412,13 +412,13 @@ sal_Bool NSSpellChecker_checkSpellingOfString( CFStringRef aString, CFStringRef 
 
 	if ( aString && aLocale && CFStringGetLength( aString ) && CFStringGetLength( aLocale ) )
 	{
-		RunSpellCheckerArgs *pArgs = [RunSpellCheckerArgs argsWithArgs:[NSArray arrayWithObjects:(NSString *)aString, (NSString *)aLocale, nil]];
+		RunSpellCheckerArgs *pArgs = [RunSpellCheckerArgs argsWithArgs:[NSArray arrayWithObjects:static_cast< NSString* >( aString ), static_cast< NSString* >( aLocale ), nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		RunSpellChecker *pRunSpellChecker = [RunSpellChecker create];
 		[pRunSpellChecker performSelectorOnMainThread:@selector(checkSpellingOfString:) withObject:pArgs waitUntilDone:YES modes:pModes];
-		NSNumber *pRet = (NSNumber *)[pArgs result];
+		NSNumber *pRet = static_cast< NSNumber* >( [pArgs result] );
 		if ( pRet )
-			bRet = (sal_Bool)[pRet boolValue];
+			bRet = static_cast< sal_Bool >( [pRet boolValue] );
 	}
 
 	[pPool release];
@@ -434,28 +434,28 @@ CFArrayRef NSSpellChecker_getGuesses( CFStringRef aString, CFStringRef aLocale )
 
 	if ( aString && aLocale && CFStringGetLength( aString ) && CFStringGetLength( aLocale ) )
 	{
-		RunSpellCheckerArgs *pArgs = [RunSpellCheckerArgs argsWithArgs:[NSArray arrayWithObjects:(NSString *)aString, (NSString *)aLocale, nil]];
+		RunSpellCheckerArgs *pArgs = [RunSpellCheckerArgs argsWithArgs:[NSArray arrayWithObjects:static_cast< NSString* >( aString ), static_cast< NSString* >( aLocale ), nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		RunSpellChecker *pRunSpellChecker = [RunSpellChecker create];
 		[pRunSpellChecker performSelectorOnMainThread:@selector(getGuesses:) withObject:pArgs waitUntilDone:YES modes:pModes];
-		NSArray *pRet = (NSArray *)[pArgs result];
+		NSArray *pRet = static_cast< NSArray* >( [pArgs result] );
 		if ( pRet )
 		{
 			unsigned int nCount = [pRet count];
-			aRet = CFArrayCreateMutable( NULL, 0, &kCFTypeArrayCallBacks );
+			aRet = CFArrayCreateMutable( nullptr, 0, &kCFTypeArrayCallBacks );
 			if ( aRet )
 			{
 				unsigned i = 0;
 				for ( ; i < nCount; i++ )
 				{
-					NSString *pString = [pRet objectAtIndex:i];
+					NSString *pString = static_cast< NSString* >( [pRet objectAtIndex:i] );
 					if ( pString )
 					{
-						CFStringRef aString = CFStringCreateCopy( NULL, (CFStringRef)pString );
-						if ( aString )
+						CFStringRef aCFString = CFStringCreateCopy( nullptr, static_cast< CFStringRef >( pString ) );
+						if ( aCFString )
 						{
-							CFArrayAppendValue( aRet, aString );
-							CFRelease( aString );
+							CFArrayAppendValue( aRet, aCFString );
+							CFRelease( aCFString );
 						}
 					}
 				}
@@ -474,24 +474,24 @@ CFArrayRef NSSpellChecker_getLocales( CFArrayRef aAppLocales )
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	RunSpellCheckerArgs *pArgs = [RunSpellCheckerArgs argsWithArgs:[NSArray arrayWithObject:( aAppLocales ? [NSMutableSet setWithArray:(NSArray *)aAppLocales] : [NSMutableSet setWithCapacity:64] )]];
+	RunSpellCheckerArgs *pArgs = [RunSpellCheckerArgs argsWithArgs:[NSArray arrayWithObject:( aAppLocales ? [NSMutableSet setWithArray:static_cast< NSArray* >( aAppLocales )] : [NSMutableSet setWithCapacity:64] )]];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	RunSpellChecker *pRunSpellChecker = [RunSpellChecker create];
 	[pRunSpellChecker performSelectorOnMainThread:@selector(getLocales:) withObject:pArgs waitUntilDone:YES modes:pModes];
-	NSArray *pRet = (NSArray *)[pArgs result];
+	NSArray *pRet = static_cast< NSArray* >( [pArgs result] );
 	if ( pRet )
 	{
 		unsigned int nCount = [pRet count];
-		aRet = CFArrayCreateMutable( NULL, 0, &kCFTypeArrayCallBacks );
+		aRet = CFArrayCreateMutable( nullptr, 0, &kCFTypeArrayCallBacks );
 		if ( aRet )
 		{
 			unsigned i = 0;
 			for ( ; i < nCount; i++ )
 			{
-				NSString *pString = [pRet objectAtIndex:i];
+				NSString *pString = static_cast< NSString* >( [pRet objectAtIndex:i] );
 				if ( pString && [pString length] )
 				{
-					CFStringRef aString = CFStringCreateCopy( NULL, (CFStringRef)pString );
+					CFStringRef aString = CFStringCreateCopy( nullptr, static_cast< CFStringRef >( pString ) );
 					if ( aString )
 					{
 						CFArrayAppendValue( aRet, aString );
