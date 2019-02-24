@@ -1114,7 +1114,7 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 
 + (id)argsWithArgs:(NSArray *)pArgs
 {
-	VCLWindowWrapperArgs *pRet = [[VCLWindowWrapperArgs alloc] initWithArgs:(NSArray *)pArgs];
+	VCLWindowWrapperArgs *pRet = [[VCLWindowWrapperArgs alloc] initWithArgs:pArgs];
 	[pRet autorelease];
 	return pRet;
 }

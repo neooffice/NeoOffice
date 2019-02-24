@@ -76,7 +76,7 @@ using namespace vcl;
 
 + (id)argsWithArgs:(NSArray *)pArgs
 {
-	VCLMenuWrapperArgs *pRet = [[VCLMenuWrapperArgs alloc] initWithArgs:(NSArray *)pArgs];
+	VCLMenuWrapperArgs *pRet = [[VCLMenuWrapperArgs alloc] initWithArgs:pArgs];
 	[pRet autorelease];
 	return pRet;
 }
