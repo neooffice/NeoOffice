@@ -23,6 +23,7 @@ $(eval $(call gb_CppunitTest_CppunitTest,sc_ucalc))
 $(eval $(call gb_CppunitTest_add_exception_objects,sc_ucalc, \
     sc/qa/unit/ucalc \
     sc/qa/unit/ucalc_column \
+    sc/qa/unit/ucalc_condformat \
     sc/qa/unit/ucalc_formula \
     sc/qa/unit/ucalc_pivottable \
     sc/qa/unit/ucalc_sharedformula \
@@ -34,12 +35,10 @@ $(eval $(call gb_CppunitTest_use_library_objects,sc_ucalc, \
 	scqahelper \
 ))
 
-ifeq ($(ENABLE_TELEPATHY),TRUE)
-$(eval $(call gb_CppunitTest_use_libraries,sc_ucalc,tubes))
-endif
-
 $(eval $(call gb_CppunitTest_use_externals,sc_ucalc,\
 	boost_headers \
+    $(call gb_Helper_optional,OPENCL, \
+        clew) \
     icu_headers \
     icui18n \
     icuuc \
@@ -52,11 +51,10 @@ $(eval $(call gb_CppunitTest_use_externals,sc_ucalc,\
 $(eval $(call gb_CppunitTest_use_libraries,sc_ucalc, \
 	$(call gb_Helper_optional,AVMEDIA,avmedia) \
     basegfx \
-    $(call gb_Helper_optional,OPENCL, \
-        clew) \
     comphelper \
     cppu \
     cppuhelper \
+    dbtools \
     drawinglayer \
     editeng \
     for \
@@ -84,7 +82,6 @@ $(eval $(call gb_CppunitTest_use_libraries,sc_ucalc, \
     vbahelper \
     vcl \
     xo \
-	$(gb_UWINAPI) \
 ))
 
 $(eval $(call gb_CppunitTest_set_include,sc_ucalc,\
@@ -94,9 +91,10 @@ $(eval $(call gb_CppunitTest_set_include,sc_ucalc,\
     $$(INCLUDE) \
 ))
 
-$(eval $(call gb_CppunitTest_use_api,sc_ucalc,\
-    offapi \
-    udkapi \
+$(eval $(call gb_CppunitTest_use_sdk_api,sc_ucalc))
+
+$(eval $(call gb_CppunitTest_use_custom_headers,sc_ucalc,\
+	officecfg/registry \
 ))
 
 $(eval $(call gb_CppunitTest_use_ure,sc_ucalc))
