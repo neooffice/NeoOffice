@@ -37,7 +37,7 @@ $(eval $(call gb_Library_use_libraries,pyuno,\
     cppuhelper \
     sal \
     salhelper \
-    $(if $(filter $(PRODUCT_BUILD_TYPE),java),tl) \
+    $(if $(filter $(PRODUCT_BUILD_TYPE),java),comphelper) \
 ))
 
 $(eval $(call gb_Library_use_externals,pyuno,\
