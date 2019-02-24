@@ -78,7 +78,7 @@ static OUString NSStringToOUString( NSString *pString )
 
 + (id)argsWithArgs:(NSArray *)pArgs
 {
-	RunSpellCheckerArgs *pRet = [[RunSpellCheckerArgs alloc] initWithArgs:(NSArray *)pArgs];
+	RunSpellCheckerArgs *pRet = [[RunSpellCheckerArgs alloc] initWithArgs:pArgs];
 	[pRet autorelease];
 	return pRet;
 }
