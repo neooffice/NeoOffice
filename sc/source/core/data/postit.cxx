@@ -67,7 +67,7 @@
 typedef sal_Bool UseDarkModeColors_Type();
 
 static ::osl::Module aModule;
-static UseDarkModeColors_Type *pUseDarkModeColors = NULL;
+static UseDarkModeColors_Type *pUseDarkModeColors = nullptr;
 
 static sal_Bool UseDarkModeColors()
 {
@@ -77,7 +77,7 @@ static sal_Bool UseDarkModeColors()
     if (!pUseDarkModeColors)
     {
         if (aModule.load("libvcllo.dylib"))
-            pUseDarkModeColors = (UseDarkModeColors_Type *)aModule.getSymbol( "UseDarkModeColors");
+            pUseDarkModeColors = reinterpret_cast< UseDarkModeColors_Type* >(aModule.getSymbol("UseDarkModeColors"));
     }
 
     if (pUseDarkModeColors)
@@ -109,17 +109,17 @@ const long SC_NOTECAPTION_BORDERDIST_TEMP   =   100;    /// Distance of temporar
 // is already set.
 static bool ImplAdjustTextColor( SfxItemSet &rItemSet, bool bInvertFillColorIfDarkMode )
 {
-	bool bRet = false;
+    bool bRet = false;
 
     // The LibreOffice code saves the note's background color even when it is
     // set to COL_AUTO but does not save the text color if it is COL_AUTO. This
     // causes black text when editing a note created in macOS Dark Mode. To fix
     // this problem, set the text color to a reasonable color if the background
     // color is already set.
-    SFX_ITEMSET_GET( rItemSet, pColorItem, SvxColorItem, EE_CHAR_COLOR, false );
+    const SvxColorItem *pColorItem = rItemSet.GetItem< SvxColorItem >( EE_CHAR_COLOR, false );
     if ( !pColorItem )
     {
-        SFX_ITEMSET_GET( rItemSet, pFillColorItem, XFillColorItem, XATTR_FILLCOLOR, false );
+        const XFillColorItem *pFillColorItem = rItemSet.GetItem< XFillColorItem >( XATTR_FILLCOLOR, false );
         if ( pFillColorItem )
         {
             // The following code should match the logic in the
@@ -213,11 +213,7 @@ void ScCaptionUtil::SetDefaultItems( SdrCaptionObj& rCaption, ScDocument& rDoc )
     aItemSet.Put( XLineStartCenterItem( false ) );
     aItemSet.Put( XFillStyleItem( drawing::FillStyle_SOLID ) );
     aItemSet.Put( XFillColorItem( OUString(), ScDetectiveFunc::GetCommentColor() ) );
-#ifdef NO_LIBO_4_4_TYPES
     aItemSet.Put( SdrCaptionEscDirItem( SdrCaptionEscDir::BestFit ) );
-#else	// NO_LIBO_4_4_TYPES
-    aItemSet.Put( SdrCaptionEscDirItem( SDRCAPT_ESCBESTFIT ) );
-#endif	// NO_LIBO_4_4_TYPES
 
     // shadow
     /*  SdrShadowItem has sal_False, instead the shadow is set for the
@@ -268,17 +264,9 @@ public:
     ScCaptionPtr GetCaption() { return mxCaption; }
 
     /** Moves the caption inside the passed rectangle. Uses page area if 0 is passed. */
-#ifdef NO_LIBO_4_4_TYPES
     void                FitCaptionToRect( const tools::Rectangle* pVisRect = nullptr );
-#else	// NO_LIBO_4_4_TYPES
-    void                FitCaptionToRect( const Rectangle* pVisRect = nullptr );
-#endif	// NO_LIBO_4_4_TYPES
     /** Places the caption inside the passed rectangle, tries to keep the cell rectangle uncovered. Uses page area if 0 is passed. */
-#ifdef NO_LIBO_4_4_TYPES
     void                AutoPlaceCaption( const tools::Rectangle* pVisRect = nullptr );
-#else	// NO_LIBO_4_4_TYPES
-    void                AutoPlaceCaption( const Rectangle* pVisRect = nullptr );
-#endif	// NO_LIBO_4_4_TYPES
     /** Updates caption tail and textbox according to current cell position. Uses page area if 0 is passed. */
     void                UpdateCaptionPos();
 
@@ -295,23 +283,14 @@ private:
     /** Initializes all members. */
     void                Initialize();
     /** Returns the passed rectangle if existing, page rectangle otherwise. */
-#ifdef NO_LIBO_4_4_TYPES
     const tools::Rectangle& GetVisRect( const tools::Rectangle* pVisRect ) const { return pVisRect ? *pVisRect : maPageRect; }
-#else	// NO_LIBO_4_4_TYPES
-    const Rectangle& GetVisRect( const Rectangle* pVisRect ) const { return pVisRect ? *pVisRect : maPageRect; }
-#endif	// NO_LIBO_4_4_TYPES
 
 private:
     ScDocument&         mrDoc;
     ScAddress           maPos;
     ScCaptionPtr        mxCaption;
-#ifdef NO_LIBO_4_4_TYPES
     tools::Rectangle           maPageRect;
     tools::Rectangle           maCellRect;
-#else	// NO_LIBO_4_4_TYPES
-    Rectangle           maPageRect;
-    Rectangle           maCellRect;
-#endif	// NO_LIBO_4_4_TYPES
     bool                mbNegPage;
 };
 
@@ -344,17 +323,9 @@ SdrPage* ScCaptionCreator::GetDrawPage()
     return pDrawLayer ? pDrawLayer->GetPage( static_cast< sal_uInt16 >( maPos.Tab() ) ) : nullptr;
 }
 
-#ifdef NO_LIBO_4_4_TYPES
 void ScCaptionCreator::FitCaptionToRect( const tools::Rectangle* pVisRect )
-#else	// NO_LIBO_4_4_TYPES
-void ScCaptionCreator::FitCaptionToRect( const Rectangle* pVisRect )
-#endif	// NO_LIBO_4_4_TYPES
 {
-#ifdef NO_LIBO_4_4_TYPES
     const tools::Rectangle& rVisRect = GetVisRect( pVisRect );
-#else	// NO_LIBO_4_4_TYPES
-    const Rectangle& rVisRect = GetVisRect( pVisRect );
-#endif	// NO_LIBO_4_4_TYPES
 
     // tail position
     Point aTailPos = mxCaption->GetTailPos();
@@ -363,11 +334,7 @@ void ScCaptionCreator::FitCaptionToRect( const Rectangle* pVisRect )
     mxCaption->SetTailPos( aTailPos );
 
     // caption rectangle
-#ifdef NO_LIBO_4_4_TYPES
     tools::Rectangle aCaptRect = mxCaption->GetLogicRect();
-#else	// NO_LIBO_4_4_TYPES
-    Rectangle aCaptRect = mxCaption->GetLogicRect();
-#endif	// NO_LIBO_4_4_TYPES
     Point aCaptPos = aCaptRect.TopLeft();
     // move textbox inside right border of visible area
     aCaptPos.X() = ::std::min< long >( aCaptPos.X(), rVisRect.Right() - aCaptRect.GetWidth() );
@@ -382,24 +349,12 @@ void ScCaptionCreator::FitCaptionToRect( const Rectangle* pVisRect )
     mxCaption->SetLogicRect( aCaptRect );
 }
 
-#ifdef NO_LIBO_4_4_TYPES
 void ScCaptionCreator::AutoPlaceCaption( const tools::Rectangle* pVisRect )
-#else	// NO_LIBO_4_4_TYPES
-void ScCaptionCreator::AutoPlaceCaption( const Rectangle* pVisRect )
-#endif	// NO_LIBO_4_4_TYPES
 {
-#ifdef NO_LIBO_4_4_TYPES
     const tools::Rectangle& rVisRect = GetVisRect( pVisRect );
-#else	// NO_LIBO_4_4_TYPES
-    const Rectangle& rVisRect = GetVisRect( pVisRect );
-#endif	// NO_LIBO_4_4_TYPES
 
     // caption rectangle
-#ifdef NO_LIBO_4_4_TYPES
     tools::Rectangle aCaptRect = mxCaption->GetLogicRect();
-#else	// NO_LIBO_4_4_TYPES
-    Rectangle aCaptRect = mxCaption->GetLogicRect();
-#endif	// NO_LIBO_4_4_TYPES
     long nWidth = aCaptRect.GetWidth();
     long nHeight = aCaptRect.GetHeight();
 
@@ -474,11 +429,7 @@ void ScCaptionCreator::UpdateCaptionPos()
         if( pDrawLayer && pDrawLayer->IsRecording() )
             pDrawLayer->AddCalcUndo( new SdrUndoGeoObj( *mxCaption ) );
         // calculate new caption rectangle (#i98141# handle LTR<->RTL switch correctly)
-#ifdef NO_LIBO_4_4_TYPES
         tools::Rectangle aCaptRect = mxCaption->GetLogicRect();
-#else	// NO_LIBO_4_4_TYPES
-        Rectangle aCaptRect = mxCaption->GetLogicRect();
-#endif	// NO_LIBO_4_4_TYPES
         long nDiffX = (rOldTailPos.X() >= 0) ? (aCaptRect.Left() - rOldTailPos.X()) : (rOldTailPos.X() - aCaptRect.Right());
         if( mbNegPage ) nDiffX = -nDiffX - aCaptRect.GetWidth();
         long nDiffY = aCaptRect.Top() - rOldTailPos.Y();
@@ -516,11 +467,7 @@ Point ScCaptionCreator::CalcTailPos( bool bTailFront )
 void ScCaptionCreator::CreateCaption( bool bShown, bool bTailFront )
 {
     // create the caption drawing object
-#ifdef NO_LIBO_4_4_TYPES
     tools::Rectangle aTextRect( Point( 0 , 0 ), Size( SC_NOTECAPTION_WIDTH, SC_NOTECAPTION_HEIGHT ) );
-#else	// NO_LIBO_4_4_TYPES
-    Rectangle aTextRect( Point( 0 , 0 ), Size( SC_NOTECAPTION_WIDTH, SC_NOTECAPTION_HEIGHT ) );
-#endif	// NO_LIBO_4_4_TYPES
     Point aTailPos = CalcTailPos( bTailFront );
     mxCaption.reset( new SdrCaptionObj( aTextRect, aTailPos ));
     // basic caption settings
@@ -533,11 +480,7 @@ void ScCaptionCreator::Initialize()
     mbNegPage = mrDoc.IsNegativePage( maPos.Tab() );
     if( SdrPage* pDrawPage = GetDrawPage() )
     {
-#ifdef NO_LIBO_4_4_TYPES
         maPageRect = tools::Rectangle( Point( 0, 0 ), pDrawPage->GetSize() );
-#else	// NO_LIBO_4_4_TYPES
-        maPageRect = Rectangle( Point( 0, 0 ), pDrawPage->GetSize() );
-#endif	// NO_LIBO_4_4_TYPES
         /*  #i98141# SdrPage::GetSize() returns negative width in RTL mode.
             The call to Rectangle::Adjust() orders left/right coordinate
             accordingly. */
@@ -991,26 +934,31 @@ ScNoteData::~ScNoteData()
 {
 }
 
-ScPostIt::ScPostIt( ScDocument& rDoc, const ScAddress& rPos ) :
+sal_uInt32 ScPostIt::mnLastPostItId = 1;
+
+ScPostIt::ScPostIt( ScDocument& rDoc, const ScAddress& rPos, sal_uInt32 nPostItId ) :
     mrDoc( rDoc ),
     maNoteData( false )
 {
+    mnPostItId = nPostItId == 0 ? mnLastPostItId++ : nPostItId;
     AutoStamp();
     CreateCaption( rPos );
 }
 
-ScPostIt::ScPostIt( ScDocument& rDoc, const ScAddress& rPos, const ScPostIt& rNote ) :
+ScPostIt::ScPostIt( ScDocument& rDoc, const ScAddress& rPos, const ScPostIt& rNote, sal_uInt32 nPostItId ) :
     mrDoc( rDoc ),
     maNoteData( rNote.maNoteData )
 {
+    mnPostItId = nPostItId == 0 ? mnLastPostItId++ : nPostItId;
     maNoteData.mxCaption.reset(nullptr);
     CreateCaption( rPos, rNote.maNoteData.mxCaption.get() );
 }
 
-ScPostIt::ScPostIt( ScDocument& rDoc, const ScAddress& rPos, const ScNoteData& rNoteData, bool bAlwaysCreateCaption ) :
+ScPostIt::ScPostIt( ScDocument& rDoc, const ScAddress& rPos, const ScNoteData& rNoteData, bool bAlwaysCreateCaption, sal_uInt32 nPostItId ) :
     mrDoc( rDoc ),
     maNoteData( rNoteData )
 {
+    mnPostItId = nPostItId == 0 ? mnLastPostItId++ : nPostItId;
     if( bAlwaysCreateCaption || maNoteData.mbShown )
         CreateCaptionFromInitData( rPos );
 }
@@ -1023,7 +971,7 @@ ScPostIt::~ScPostIt()
 ScPostIt* ScPostIt::Clone( const ScAddress& rOwnPos, ScDocument& rDestDoc, const ScAddress& rDestPos, bool bCloneCaption ) const
 {
     CreateCaptionFromInitData( rOwnPos );
-    return bCloneCaption ? new ScPostIt( rDestDoc, rDestPos, *this ) : new ScPostIt( rDestDoc, rDestPos, maNoteData, false );
+    return bCloneCaption ? new ScPostIt( rDestDoc, rDestPos, *this, mnPostItId ) : new ScPostIt( rDestDoc, rDestPos, maNoteData, false, mnPostItId );
 }
 
 void ScPostIt::SetDate( const OUString& rDate )
@@ -1184,10 +1132,8 @@ void ScPostIt::CreateCaptionFromInitData( const ScAddress& rPos ) const
             ScNoteCaptionCreator aCreator( mrDoc, rPos, maNoteData );
             if( maNoteData.mxCaption )
             {
-#ifdef NO_LIBO_4_4_TYPES
                 // Prevent triple change broadcasts of the same object.
                 SdrDelayBroadcastObjectChange aDelayChange( *maNoteData.mxCaption);
-#endif	// NO_LIBO_4_4_TYPES
 
                 ScCaptionInitData& rInitData = *maNoteData.mxInitData;
 
@@ -1215,19 +1161,11 @@ void ScPostIt::CreateCaptionFromInitData( const ScAddress& rPos ) const
                 }
                 else
                 {
-#ifdef NO_LIBO_4_4_TYPES
                     tools::Rectangle aCellRect = ScDrawLayer::GetCellRect( mrDoc, rPos, true );
-#else	// NO_LIBO_4_4_TYPES
-                    Rectangle aCellRect = ScDrawLayer::GetCellRect( mrDoc, rPos, true );
-#endif	// NO_LIBO_4_4_TYPES
                     bool bNegPage = mrDoc.IsNegativePage( rPos.Tab() );
                     long nPosX = bNegPage ? (aCellRect.Left() - rInitData.maCaptionOffset.X()) : (aCellRect.Right() + rInitData.maCaptionOffset.X());
                     long nPosY = aCellRect.Top() + rInitData.maCaptionOffset.Y();
-#ifdef NO_LIBO_4_4_TYPES
                     tools::Rectangle aCaptRect( Point( nPosX, nPosY ), rInitData.maCaptionSize );
-#else	// NO_LIBO_4_4_TYPES
-                    Rectangle aCaptRect( Point( nPosX, nPosY ), rInitData.maCaptionSize );
-#endif	// NO_LIBO_4_4_TYPES
                     maNoteData.mxCaption->SetLogicRect( aCaptRect );
                     aCreator.FitCaptionToRect();
                 }
@@ -1266,11 +1204,7 @@ void ScPostIt::CreateCaption( const ScAddress& rPos, const SdrCaptionObj* pCapti
             // copy formatting items (after text has been copied to apply font formatting)
             maNoteData.mxCaption->SetMergedItemSetAndBroadcast( pCaption->GetMergedItemSet() );
             // move textbox position relative to new cell, copy textbox size
-#ifdef NO_LIBO_4_4_TYPES
             tools::Rectangle aCaptRect = pCaption->GetLogicRect();
-#else	// NO_LIBO_4_4_TYPES
-            Rectangle aCaptRect = pCaption->GetLogicRect();
-#endif	// NO_LIBO_4_4_TYPES
             Point aDist = maNoteData.mxCaption->GetTailPos() - pCaption->GetTailPos();
             aCaptRect.Move( aDist.X(), aDist.Y() );
             maNoteData.mxCaption->SetLogicRect( aCaptRect );
@@ -1316,11 +1250,7 @@ void ScPostIt::RemoveCaption()
 
 ScCaptionPtr ScNoteUtil::CreateTempCaption(
         ScDocument& rDoc, const ScAddress& rPos, SdrPage& rDrawPage,
-#ifdef NO_LIBO_4_4_TYPES
         const OUString& rUserText, const tools::Rectangle& rVisRect, bool bTailFront )
-#else	// NO_LIBO_4_4_TYPES
-        const OUString& rUserText, const Rectangle& rVisRect, bool bTailFront )
-#endif	// NO_LIBO_4_4_TYPES
 {
     OUStringBuffer aBuffer( rUserText );
     // add plain text of invisible (!) cell note (no formatting etc.)
@@ -1338,11 +1268,7 @@ ScCaptionPtr ScNoteUtil::CreateTempCaption(
         return ScCaptionPtr();
 
     // prepare visible rectangle (add default distance to all borders)
-#ifdef NO_LIBO_4_4_TYPES
     tools::Rectangle aVisRect(
-#else	// NO_LIBO_4_4_TYPES
-    Rectangle aVisRect(
-#endif	// NO_LIBO_4_4_TYPES
         rVisRect.Left() + SC_NOTECAPTION_BORDERDIST_TEMP,
         rVisRect.Top() + SC_NOTECAPTION_BORDERDIST_TEMP,
         rVisRect.Right() - SC_NOTECAPTION_BORDERDIST_TEMP,
@@ -1363,11 +1289,7 @@ ScCaptionPtr ScNoteUtil::CreateTempCaption(
             pCaption->SetOutlinerParaObject( new OutlinerParaObject( *pOPO ) );
         // set formatting (must be done after setting text) and resize the box to fit the text
         pCaption->SetMergedItemSetAndBroadcast( pNoteCaption->GetMergedItemSet() );
-#ifdef NO_LIBO_4_4_TYPES
         tools::Rectangle aCaptRect( pCaption->GetLogicRect().TopLeft(), pNoteCaption->GetLogicRect().GetSize() );
-#else	// NO_LIBO_4_4_TYPES
-        Rectangle aCaptRect( pCaption->GetLogicRect().TopLeft(), pNoteCaption->GetLogicRect().GetSize() );
-#endif	// NO_LIBO_4_4_TYPES
         pCaption->SetLogicRect( aCaptRect );
     }
     else
@@ -1409,12 +1331,8 @@ ScPostIt* ScNoteUtil::CreateNoteFromCaption(
 
 ScPostIt* ScNoteUtil::CreateNoteFromObjectData(
         ScDocument& rDoc, const ScAddress& rPos, SfxItemSet* pItemSet,
-#ifdef NO_LIBO_4_4_TYPES
         OutlinerParaObject* pOutlinerObj, const tools::Rectangle& rCaptionRect,
-#else	// NO_LIBO_4_4_TYPES
-        OutlinerParaObject* pOutlinerObj, const Rectangle& rCaptionRect,
-#endif	// NO_LIBO_4_4_TYPES
-        bool bShown, bool bAlwaysCreateCaption )
+        bool bShown, bool bAlwaysCreateCaption, sal_uInt32 nPostItId )
 {
     OSL_ENSURE( pItemSet && pOutlinerObj, "ScNoteUtil::CreateNoteFromObjectData - item set and outliner object expected" );
     ScNoteData aNoteData( bShown );
@@ -1430,11 +1348,7 @@ ScPostIt* ScNoteUtil::CreateNoteFromObjectData(
     rInitData.mbDefaultPosSize = rCaptionRect.IsEmpty();
     if( !rInitData.mbDefaultPosSize )
     {
-#ifdef NO_LIBO_4_4_TYPES
         tools::Rectangle aCellRect = ScDrawLayer::GetCellRect( rDoc, rPos, true );
-#else	// NO_LIBO_4_4_TYPES
-        Rectangle aCellRect = ScDrawLayer::GetCellRect( rDoc, rPos, true );
-#endif	// NO_LIBO_4_4_TYPES
         bool bNegPage = rDoc.IsNegativePage( rPos.Tab() );
         rInitData.maCaptionOffset.X() = bNegPage ? (aCellRect.Left() - rCaptionRect.Right()) : (rCaptionRect.Left() - aCellRect.Right());
         rInitData.maCaptionOffset.Y() = rCaptionRect.Top() - aCellRect.Top();
@@ -1443,7 +1357,7 @@ ScPostIt* ScNoteUtil::CreateNoteFromObjectData(
 
     /*  Create the note and insert it into the document. If the note is
         visible, the caption object will be created automatically. */
-    ScPostIt* pNote = new ScPostIt( rDoc, rPos, aNoteData, bAlwaysCreateCaption );
+    ScPostIt* pNote = new ScPostIt( rDoc, rPos, aNoteData, bAlwaysCreateCaption, nPostItId );
     pNote->AutoStamp();
 
     rDoc.SetNote(rPos, pNote);
@@ -1453,7 +1367,7 @@ ScPostIt* ScNoteUtil::CreateNoteFromObjectData(
 
 ScPostIt* ScNoteUtil::CreateNoteFromString(
         ScDocument& rDoc, const ScAddress& rPos, const OUString& rNoteText,
-        bool bShown, bool bAlwaysCreateCaption )
+        bool bShown, bool bAlwaysCreateCaption, sal_uInt32 nPostItId )
 {
     ScPostIt* pNote = nullptr;
     if( !rNoteText.isEmpty() )
@@ -1466,7 +1380,7 @@ ScPostIt* ScNoteUtil::CreateNoteFromString(
 
         /*  Create the note and insert it into the document. If the note is
             visible, the caption object will be created automatically. */
-        pNote = new ScPostIt( rDoc, rPos, aNoteData, bAlwaysCreateCaption );
+        pNote = new ScPostIt( rDoc, rPos, aNoteData, bAlwaysCreateCaption, nPostItId );
         pNote->AutoStamp();
         //insert takes ownership
         rDoc.SetNote(rPos, pNote);
