@@ -46,7 +46,7 @@ namespace editeng {
     struct MisspellRanges;
 }
 
-class Rectangle;
+namespace tools { class Rectangle; }
 namespace vcl { class Font; }
 class OutputDevice;
 class EditEngine;
@@ -71,11 +71,12 @@ class ScFieldEditEngine;
 class ScOutputData
 {
 friend class ScDrawStringsVars;
+friend class ScGridWindow;
 private:
     struct OutputAreaParam
     {
-        Rectangle   maAlignRect;
-        Rectangle   maClipRect;
+        tools::Rectangle   maAlignRect;
+        tools::Rectangle   maClipRect;
         long        mnColWidth;
         long        mnLeftClipLength; /// length of the string getting cut off on the left.
         long        mnRightClipLength; /// length of the string getting cut off on the right.
@@ -123,7 +124,7 @@ private:
         bool readCellContent(ScDocument* pDoc, bool bShowNullValues, bool bShowFormulas, bool bSyntaxMode, bool bUseStyleColor, bool bForceAutoColor, bool& rWrapFields);
         void setPatternToEngine(bool bUseStyleColor);
         void calcMargins(long& rTop, long& rLeft, long& rBottom, long& rRight, double nPPTX, double nPPTY) const;
-        void calcPaperSize(Size& rPaperSize, const Rectangle& rAlignRect, double nPPTX, double nPPTY) const;
+        void calcPaperSize(Size& rPaperSize, const tools::Rectangle& rAlignRect, double nPPTX, double nPPTY) const;
         void getEngineSize(ScFieldEditEngine* pEngine, long& rWidth, long& rHeight) const;
         bool hasLineBreak() const;
         bool isHyperlinkCell() const;
@@ -151,9 +152,9 @@ private:
         void adjustForHyperlinkInPDF(Point aURLStart, OutputDevice* pDev);
     };
 
-    OutputDevice* mpDev;        // Device
-    OutputDevice* mpRefDevice;  // printer if used for preview
-    OutputDevice* pFmtDevice;   // reference for text formatting
+    VclPtr<OutputDevice> mpDev;        // Device
+    VclPtr<OutputDevice> mpRefDevice;  // printer if used for preview
+    VclPtr<OutputDevice> pFmtDevice;   // reference for text formatting
     ScTableInfo& mrTabInfo;
     RowInfo* pRowInfo;          // Info block
     SCSIZE nArrCount;           // occupied lines in info block
@@ -182,7 +183,6 @@ private:
 
     ScTabViewShell* pViewShell; // for connect from visible plug-ins
 
-    // #114135#
     FmFormView* pDrawView;      // SdrView to paint to
 
     bool bEditMode;             // InPlace edited cell - do not output
@@ -190,7 +190,6 @@ private:
     SCROW nEditRow;
 
     bool bMetaFile;             // Output to metafile (not pixels!)
-    bool bSingleGrid;           // beim Gitter bChanged auswerten
 
     bool bPagebreakMode;        // Page break preview
     bool bSolidBackground;      // white instead of transparant
@@ -241,7 +240,7 @@ private:
                                    bool bBreak, bool bOverwrite,
                                    OutputAreaParam& rParam );
 
-    void            ShrinkEditEngine( EditEngine& rEngine, const Rectangle& rAlignRect,
+    void            ShrinkEditEngine( EditEngine& rEngine, const tools::Rectangle& rAlignRect,
                                     long nLeftM, long nTopM, long nRightM, long nBottomM,
                                     bool bWidth, sal_uInt16 nOrient, long nAttrRotate, bool bPixelToLogic,
                                     long& rEngineWidth, long& rEngineHeight, long& rNeededPixel,
@@ -252,7 +251,7 @@ private:
 
     double          GetStretch();
 
-    void            DrawRotatedFrame( const Color* pForceColor );       // pixel
+    void            DrawRotatedFrame(vcl::RenderContext& rRenderContext, const Color* pForceColor);       // pixel
 
     drawinglayer::processor2d::BaseProcessor2D*  CreateProcessor2D( );
 
@@ -276,8 +275,8 @@ public:
                                     SCTAB nNewTab, long nNewScrX, long nNewScrY,
                                     SCCOL nNewX1, SCROW nNewY1, SCCOL nNewX2, SCROW nNewY2,
                                     double nPixelPerTwipsX, double nPixelPerTwipsY,
-                                    const Fraction* pZoomX = NULL,
-                                    const Fraction* pZoomY = NULL );
+                                    const Fraction* pZoomX = nullptr,
+                                    const Fraction* pZoomY = nullptr );
 
                     ~ScOutputData();
 
@@ -289,7 +288,6 @@ public:
     void    SetEditObject( SdrObject* pObj )    { pEditObj = pObj; }
     void    SetViewShell( ScTabViewShell* pSh ) { pViewShell = pSh; }
 
-    // #114135#
     void    SetDrawView( FmFormView* pNew )     { pDrawView = pNew; }
 
     void    SetSolidBackground( bool bSet )     { bSolidBackground = bSet; }
@@ -298,25 +296,28 @@ public:
     void    SetEditCell( SCCOL nCol, SCROW nRow );
     void    SetSyntaxMode( bool bNewMode );
     void    SetMetaFileMode( bool bNewMode );
-    void    SetSingleGrid( bool bNewMode );
     void    SetGridColor( const Color& rColor );
     void    SetMarkClipped( bool bSet );
-    void    SetShowNullValues ( bool bSet = true );
-    void    SetShowFormulas   ( bool bSet = true );
-    void    SetShowSpellErrors( bool bSet = true );
+    void    SetShowNullValues ( bool bSet );
+    void    SetShowFormulas   ( bool bSet );
+    void    SetShowSpellErrors( bool bSet );
     void    SetMirrorWidth( long nNew );
     long    GetScrW() const     { return nScrW; }
     long    GetScrH() const     { return nScrH; }
 
-    void    SetSnapPixel( bool bSet = true );
+    void    SetSnapPixel();
 
-    void    DrawGrid( bool bGrid, bool bPage );
+    void    DrawGrid(vcl::RenderContext& rRenderContext, bool bGrid, bool bPage);
     void    DrawStrings( bool bPixelToLogic = false );
+
+    /// Draw all strings, or provide Rectangle where the text (defined by rAddress) would be drawn.
+    tools::Rectangle LayoutStrings(bool bPixelToLogic, bool bPaint = true, const ScAddress &rAddress = ScAddress());
+
     void    DrawDocumentBackground();
-    void    DrawBackground();
+    void    DrawBackground(vcl::RenderContext& rRenderContext);
     void    DrawShadow();
     void    DrawExtraShadow(bool bLeft, bool bTop, bool bRight, bool bBottom);
-    void    DrawFrame();
+    void    DrawFrame(vcl::RenderContext& rRenderContext);
 
                     // with logic MapMode set!
     void    DrawEdit(bool bPixelToLogic);
@@ -327,13 +328,12 @@ public:
     void    DrawClear();
 
     // #i72502# printer only command set
-    Point PrePrintDrawingLayer(long nLogStX, long nLogStY );
-    void PostPrintDrawingLayer(const Point& rMMOffset); // #i74768# need offset for FormLayer
-    void PrintDrawingLayer(const sal_uInt16 nLayer, const Point& rMMOffset);
+    Point   PrePrintDrawingLayer(long nLogStX, long nLogStY );
+    void    PostPrintDrawingLayer(const Point& rMMOffset); // #i74768# need offset for FormLayer
+    void    PrintDrawingLayer(SdrLayerID nLayer, const Point& rMMOffset);
 
     // only screen:
-    void    DrawingSingle(const sal_uInt16 nLayer);
-    void    DrawSelectiveObjects(const sal_uInt16 nLayer);
+    void    DrawSelectiveObjects(SdrLayerID nLayer);
 
     bool    SetChangedClip();       // sal_False = not
     vcl::Region  GetChangedAreaRegion();
@@ -349,7 +349,7 @@ public:
     void    DrawChangeTrack();
     void    DrawClipMarks();
 
-    void    DrawNoteMarks();
+    void    DrawNoteMarks(vcl::RenderContext& rRenderContext);
     void    AddPDFNotes();
 #ifdef USE_JAVA
     void    SetGridWindow( ScGridWindow *pGridWindow ) { mpGridWindow = pGridWindow; }
