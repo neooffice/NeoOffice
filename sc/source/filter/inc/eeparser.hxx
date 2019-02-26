@@ -25,7 +25,7 @@
 #include <svl/itemset.hxx>
 #include <editeng/editdata.hxx>
 #include <address.hxx>
-#include <boost/ptr_container/ptr_vector.hpp>
+#include <memory>
 #include <vector>
 
 const sal_Char nHorizontal = 1;
@@ -34,30 +34,28 @@ const sal_Char nHoriVerti = nHorizontal | nVertical;
 
 struct ScHTMLImage
 {
-    OUString       aURL;
+    OUString            aURL;
     Size                aSize;
     Point               aSpace;
-    OUString       aFilterName;
-    Graphic*            pGraphic;       // wird von WriteToDocument uebernommen
+    OUString            aFilterName;
+    std::unique_ptr<Graphic>
+                        pGraphic;       // wird von WriteToDocument uebernommen
     sal_Char            nDir;           // 1==hori, 2==verti, 3==beides
 
     ScHTMLImage() :
-        aSize( 0, 0 ), aSpace( 0, 0 ), pGraphic( NULL ),
-        nDir( nHorizontal )
+        aSize( 0, 0 ), aSpace( 0, 0 ), nDir( nHorizontal )
         {}
-
-    ~ScHTMLImage() { delete pGraphic; }
 };
 
 struct ScEEParseEntry
 {
     SfxItemSet          aItemSet;
     ESelection          aSel;           // Selection in EditEngine
-    OUString*      pValStr;        // HTML evtl. SDVAL String
-    OUString*      pNumStr;        // HTML evtl. SDNUM String
-    OUString*      pName;          // HTML evtl. Anchor/RangeName
-    OUString       aAltText;       // HTML IMG ALT Text
-    boost::ptr_vector< ScHTMLImage > maImageList;       // Grafiken in dieser Zelle
+    OUString*           pValStr;        // HTML evtl. SDVAL String
+    OUString*           pNumStr;        // HTML evtl. SDNUM String
+    OUString*           pName;          // HTML evtl. Anchor/RangeName
+    OUString            aAltText;       // HTML IMG ALT Text
+    std::vector< std::unique_ptr<ScHTMLImage> > maImageList;       // Grafiken in dieser Zelle
     SCCOL               nCol;           // relativ zum Beginn des Parse
     SCROW               nRow;
     sal_uInt16          nTab;           // HTML TableInTable
@@ -70,16 +68,16 @@ struct ScEEParseEntry
     bool                bEntirePara:1;  // true = use entire paragraph, false = use selection
 
     ScEEParseEntry( SfxItemPool* pPool ) :
-        aItemSet( *pPool ), pValStr( NULL ),
-        pNumStr( NULL ), pName( NULL ),
+        aItemSet( *pPool ), pValStr( nullptr ),
+        pNumStr( nullptr ), pName( nullptr ),
         nCol(SCCOL_MAX), nRow(SCROW_MAX), nTab(0),
         nTwips(0), nColOverlap(1), nRowOverlap(1),
         nOffset(0), nWidth(0), bHasGraphic(false), bEntirePara(true)
         {}
 
     ScEEParseEntry( const SfxItemSet& rItemSet ) :
-        aItemSet( rItemSet ), pValStr( NULL ),
-        pNumStr( NULL ), pName( NULL ),
+        aItemSet( rItemSet ), pValStr( nullptr ),
+        pNumStr( nullptr ), pName( nullptr ),
         nCol(SCCOL_MAX), nRow(SCROW_MAX), nTab(0),
         nTwips(0), nColOverlap(1), nRowOverlap(1),
         nOffset(0), nWidth(0), bHasGraphic(false), bEntirePara(true)
@@ -112,7 +110,8 @@ protected:
     std::shared_ptr<ScEEParseEntry> mxActEntry;
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     ColWidthsMap        maColWidths;
-    int                 nLastToken;
+    int                 nRtfLastToken;
+    HtmlTokenId         nHtmlLastToken;
     SCCOL               nColCnt;
     SCROW               nRowCnt;
     SCCOL               nColMax;
@@ -131,7 +130,7 @@ public:
     void                    GetDimensions( SCCOL& nCols, SCROW& nRows ) const
                                 { nCols = nColMax; nRows = nRowMax; }
 
-    inline size_t           ListSize() const{ return maList.size(); }
+    size_t           ListSize() const{ return maList.size(); }
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     ScEEParseEntry*         ListEntry( size_t index ) { return maList[ index ]; }
     const ScEEParseEntry*   ListEntry( size_t index ) const { return maList[ index ]; }

@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-//  Discover WKS, WK1 und WK3; s.a op.cpp
+//  Discover WKS, WK1 and WK3; s.a op.cpp
 
 #include <string.h>
 #include <map>
@@ -54,12 +54,12 @@ generate_Opcodes(LotusContext &rContext, SvStream& aStream,
     {
         case eWK_1:
         case eWK_2:
-        pOps = rContext.pOpFkt;
-        nOps = FKT_LIMIT;
+            pOps = LotusContext::pOpFkt;
+            nOps = FKT_LIMIT;
         break;
         case eWK123:
-        pOps = rContext.pOpFkt123;
-        nOps = FKT_LIMIT123;
+            pOps = LotusContext::pOpFkt123;
+            nOps = FKT_LIMIT123;
         break;
 #ifdef NO_LIBO_LOTUS_OPCODE_LEAK_FIX
         case eWK3:      return eERR_NI;
@@ -87,7 +87,7 @@ generate_Opcodes(LotusContext &rContext, SvStream& aStream,
 
     // #i76299# seems that SvStream::IsEof() does not work correctly
     aStream.Seek( STREAM_SEEK_TO_END );
-    sal_Size nStrmSize = aStream.Tell();
+    sal_uInt64 const nStrmSize = aStream.Tell();
     aStream.Seek( STREAM_SEEK_TO_BEGIN );
     while( !rContext.bEOF && !aStream.IsEof() && (aStream.Tell() < nStrmSize) )
     {
@@ -146,15 +146,15 @@ generate_Opcodes(LotusContext &rContext, SvStream& aStream,
 #endif	// NO_LIBO_LOTUS_OPCODE_LEAK_FIX
 }
 
-WKTYP ScanVersion(LotusContext &rContext, SvStream& aStream)
+WKTYP ScanVersion(SvStream& aStream)
 {
-    // PREC:    pWKDatei:   pointer to open file
+    // PREC:    pWKFile:   pointer to open file
     // POST:    return:     type of file
     sal_uInt16 nOpcode(0), nVersNr(0), nRecLen(0);
 
     // first byte has to be 0 because of BOF!
     aStream.ReadUInt16( nOpcode );
-    if (nOpcode != rContext.nBOF)
+    if (nOpcode != LotusContext::nBOF)
         return eWK_UNKNOWN;
 
     aStream.ReadUInt16( nRecLen ).ReadUInt16( nVersNr );
@@ -180,9 +180,9 @@ WKTYP ScanVersion(LotusContext &rContext, SvStream& aStream)
             aStream.ReadUInt16( nVersNr );
             if( aStream.IsEof() ) return eWK_Error;
             if( nVersNr == 0x0004 && nRecLen == 26 )
-			{	// 4 bytes of 26 read => skip 22 (read instead of seek to make IsEof() work just in case)
+            {   // 4 bytes of 26 read => skip 22 (read instead of seek to make IsEof() work just in case)
                 sal_Char aDummy[22];
-                aStream.Read( aDummy, 22 );
+                aStream.ReadBytes(aDummy, 22);
                 return aStream.IsEof() ? eWK_Error : eWK3;
             }
             break;
@@ -214,13 +214,15 @@ FltError ScImportLotus123old(LotusContext& rContext, SvStream& aStream, ScDocume
     if( !MemNew(rContext) )
         return eERR_NOMEM;
 
-    InitPage(); // initialize page format (only Tab 0!)
+    // initialize page format (only Tab 0!)
+    // initialize page format; meaning: get defaults from SC TODO:
+    //scGetPageFormat( 0, &aPage );
 
-        // start progressbar
+    // start progressbar
     ScfStreamProgressBar aPrgrsBar( aStream, pDocument->GetDocumentShell() );
 
     // detect file type
-    rContext.eTyp = ScanVersion(rContext, aStream);
+    rContext.eTyp = ScanVersion(aStream);
     rContext.aLotusPatternPool.clear();
 
     return generate_Opcodes(rContext, aStream, aPrgrsBar);
