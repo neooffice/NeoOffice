@@ -44,15 +44,12 @@
 #include "sdresid.hxx"
 #include "htmlpublishmode.hxx"
 
+#include <memory>
 #include <vector>
-#include <boost/scoped_ptr.hpp>
 
 #define PUB_LOWRES_WIDTH    640
-#define PUB_LOWRES_HEIGHT   480
 #define PUB_MEDRES_WIDTH    800
-#define PUB_MEDRES_HEIGHT   600
 #define PUB_HIGHRES_WIDTH   1024
-#define PUB_HIGHRES_HEIGHT  768
 
 #define PUB_THUMBNAIL_WIDTH  256
 #define PUB_THUMBNAIL_HEIGHT 192
@@ -76,17 +73,16 @@ private:
     OUString  maURL2;
 
 public:
-                    HtmlErrorContext(vcl::Window *pWin=0);
-                    virtual ~HtmlErrorContext() {};
+                    explicit HtmlErrorContext();
 
-    virtual bool    GetString( sal_uLong nErrId, OUString& rCtxStr ) SAL_OVERRIDE;
+    virtual bool    GetString( sal_uInt32 nErrId, OUString& rCtxStr ) override;
 
     void            SetContext( sal_uInt16 nResId, const OUString& rURL );
     void            SetContext( sal_uInt16 nResId, const OUString& rURL1, const OUString& rURL2 );
 };
 
 /// this class exports an Impress Document as a HTML Presentation.
-class HtmlExport
+class HtmlExport final
 {
     std::vector< SdPage* > maPages;
     std::vector< SdPage* > maNotesPages;
@@ -152,11 +148,11 @@ class HtmlExport
 
     const OUString maHTMLHeader;
 
-    boost::scoped_ptr< ButtonSet > mpButtonSet;
+    std::unique_ptr< ButtonSet > mpButtonSet;
 
-    SdrTextObj* GetLayoutTextObject(SdrPage* pPage);
+    static SdrTextObj* GetLayoutTextObject(SdrPage* pPage);
 
-    void SetDocColors( SdPage* pPage = NULL );
+    void SetDocColors( SdPage* pPage = nullptr );
 
     bool        CreateImagesForPresPages( bool bThumbnails = false );
     bool    CreateHtmlTextForPresPages();
@@ -175,14 +171,14 @@ class HtmlExport
     bool    CreateImageNumberFile();
 
     bool    checkForExistingFiles();
-    bool    checkFileExists( ::com::sun::star::uno::Reference< ::com::sun::star::ucb::XSimpleFileAccess3 >& xFileAccess, OUString const & aFileName );
+    bool    checkFileExists( css::uno::Reference< css::ucb::XSimpleFileAccess3 >& xFileAccess, OUString const & aFileName );
 
-    OUString getDocumentTitle();
+    OUString const & getDocumentTitle();
     bool    SavePresentation();
 
-    OUString CreateLink( const OUString& aLink, const OUString& aText,
-                        const OUString& aTarget = OUString()) const;
-    OUString CreateImage( const OUString& aImage, const OUString& aAltText, sal_Int16 nWidth = -1, sal_Int16 nHeight = -1 ) const;
+    static OUString CreateLink( const OUString& aLink, const OUString& aText,
+                        const OUString& aTarget = OUString());
+    static OUString CreateImage( const OUString& aImage, const OUString& aAltText, sal_Int16 nWidth = -1 );
     OUString CreateNavBar( sal_uInt16 nSdPage, bool bIsText ) const;
     OUString CreateBodyTag() const;
 
@@ -191,13 +187,13 @@ class HtmlExport
 
     OUString CreateTextForTitle( SdrOutliner* pOutliner, SdPage* pPage, const Color& rBackgroundColor );
     OUString CreateTextForPage( SdrOutliner* pOutliner, SdPage* pPage, bool bHeadLine, const Color& rBackgroundColor );
-    OUString CreateTextForNotesPage( SdrOutliner* pOutliner, SdPage* pPage, bool bHeadLine, const Color& rBackgroundColor );
+    OUString CreateTextForNotesPage( SdrOutliner* pOutliner, SdPage* pPage, const Color& rBackgroundColor );
 
-    OUString CreateHTMLCircleArea( sal_uLong nRadius, sal_uLong nCenterX,
-                                  sal_uLong nCenterY, const OUString& rHRef ) const;
-    OUString CreateHTMLPolygonArea( const ::basegfx::B2DPolyPolygon& rPolyPoly, Size aShift, double fFactor, const OUString& rHRef ) const;
-    OUString CreateHTMLRectArea( const Rectangle& rRect,
-                                const OUString& rHRef ) const;
+    static OUString CreateHTMLCircleArea( sal_uLong nRadius, sal_uLong nCenterX,
+                                  sal_uLong nCenterY, const OUString& rHRef );
+    static OUString CreateHTMLPolygonArea( const ::basegfx::B2DPolyPolygon& rPolyPoly, Size aShift, double fFactor, const OUString& rHRef );
+    static OUString CreateHTMLRectArea( const ::tools::Rectangle& rRect,
+                                const OUString& rHRef );
 
     OUString CreatePageURL( sal_uInt16 nPgNum );
 
@@ -213,19 +209,19 @@ class HtmlExport
     void ResetProgress();
 
     /// Output only the charset metadata, title etc. will be handled separately.
-    OUString CreateMetaCharset() const;
+    static OUString CreateMetaCharset();
 
     /// Output document metadata.
     OUString DocumentMetadata() const;
 
-    void InitExportParameters( const com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue >& rParams);
+    void InitExportParameters( const css::uno::Sequence< css::beans::PropertyValue >& rParams);
     void ExportHtml();
     void ExportKiosk();
     void ExportWebCast();
     void ExportSingleDocument();
 
     bool WriteHtml( const OUString& rFileName, bool bAddExtension, const OUString& rHtmlData );
-    OUString GetButtonName( int nButton ) const;
+    static OUString GetButtonName( int nButton );
 
     void WriteOutlinerParagraph(OUStringBuffer& aStr, SdrOutliner* pOutliner,
                                 OutlinerParaObject* pOutlinerParagraphObject,
@@ -243,7 +239,7 @@ class HtmlExport
                SdDrawDocument* pExpDoc,
                sd::DrawDocShell* pDocShell);
 
-    virtual ~HtmlExport();
+    ~HtmlExport();
 
     static OUString ColorToHTMLString( Color aColor );
     static OUString StringToHTMLString( const OUString& rString );
