@@ -58,7 +58,6 @@ $(eval $(call gb_SrsTarget_add_files,sfx/res,\
     sfx2/source/doc/doc.src \
     sfx2/source/doc/doctempl.src \
     sfx2/source/doc/templatelocnames.src \
-    sfx2/source/menu/menu.src \
     sfx2/source/sidebar/Sidebar.src \
     sfx2/source/view/view.src \
 ))
@@ -69,11 +68,5 @@ $(eval $(call gb_SrsTarget_add_files,sfx/res,\
     sfx2/source/doc/objserv_cocoa.src \
 ))
 endif	# GUIBASE == java
-
-$(eval $(call gb_SrsTarget_add_nonlocalizable_files,sfx/res,\
-    sfx2/source/bastyp/bastyp.src \
-    sfx2/source/dialog/titledockwin.src \
-    sfx2/source/doc/graphhelp.src \
-))
 
 # vim: set noet sw=4 ts=4:

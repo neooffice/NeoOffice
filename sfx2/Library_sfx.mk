@@ -93,12 +93,13 @@ $(eval $(call gb_Library_use_libraries,sfx,\
     ucbhelper \
     utl \
     vcl \
-    $(gb_UWINAPI) \
 ))
 
 $(eval $(call gb_Library_use_externals,sfx,\
     boost_headers \
     libxml2 \
+    orcus \
+    orcus-parser\
 ))
 
 $(eval $(call gb_Library_add_exception_objects,sfx,\
@@ -119,11 +120,11 @@ $(eval $(call gb_Library_add_exception_objects,sfx,\
     sfx2/source/appl/appserv \
     sfx2/source/appl/appuno \
     sfx2/source/appl/childwin \
+    sfx2/source/appl/childwinimpl \
     sfx2/source/appl/fileobj \
     sfx2/source/appl/fwkhelper \
     sfx2/source/appl/helpdispatch \
     sfx2/source/appl/helpinterceptor \
-    sfx2/source/appl/imagemgr \
     sfx2/source/appl/imestatuswindow \
     sfx2/source/appl/impldde \
     sfx2/source/appl/linkmgr2 \
@@ -136,6 +137,7 @@ $(eval $(call gb_Library_add_exception_objects,sfx,\
     sfx2/source/appl/openuriexternally \
     sfx2/source/appl/sfxhelp \
     sfx2/source/appl/sfxpicklist \
+    sfx2/source/appl/shellimpl \
     sfx2/source/appl/shutdownicon \
     sfx2/source/appl/workwin \
     sfx2/source/appl/xpackcreator \
@@ -153,13 +155,13 @@ $(eval $(call gb_Library_add_exception_objects,sfx,\
     sfx2/source/config/evntconf \
     sfx2/source/control/bindings \
     sfx2/source/control/ctrlitem \
+    sfx2/source/control/ctrlfactoryimpl \
 	sfx2/source/control/dispatch \
 	sfx2/source/control/itemdel \
     sfx2/source/control/minfitem \
     sfx2/source/control/msg \
     sfx2/source/control/msgpool \
     sfx2/source/control/objface \
-    sfx2/source/control/querystatus \
     sfx2/source/control/recentdocsview \
     sfx2/source/control/recentdocsviewitem \
     sfx2/source/control/request \
@@ -167,16 +169,18 @@ $(eval $(call gb_Library_add_exception_objects,sfx,\
     sfx2/source/control/shell \
     sfx2/source/control/sorgitm \
     sfx2/source/control/statcach \
-    sfx2/source/control/templateabstractview \
 	sfx2/source/control/templatedefaultview \
     sfx2/source/control/templateviewitem \
     sfx2/source/control/templatelocalview \
     sfx2/source/control/templatecontaineritem \
-    sfx2/source/control/templateremoteview \
     sfx2/source/control/templatesearchview \
     sfx2/source/control/thumbnailviewitem \
     sfx2/source/control/thumbnailviewacc \
     sfx2/source/control/thumbnailview \
+    sfx2/source/control/emojiviewitem \
+    sfx2/source/control/emojiview \
+    sfx2/source/control/emojicontrol \
+    sfx2/source/control/emojipopup \
     sfx2/source/control/unoctitm \
     sfx2/source/dialog/alienwarn \
     sfx2/source/dialog/backingcomp \
@@ -185,7 +189,6 @@ $(eval $(call gb_Library_add_exception_objects,sfx,\
     sfx2/source/dialog/checkin \
     sfx2/source/dialog/dialoghelper \
     sfx2/source/dialog/dinfdlg \
-    sfx2/source/dialog/dinfedt \
     sfx2/source/dialog/dockwin \
     sfx2/source/dialog/documentfontsdialog \
     sfx2/source/dialog/filedlghelper \
@@ -209,8 +212,6 @@ $(eval $(call gb_Library_add_exception_objects,sfx,\
     sfx2/source/dialog/styfitem \
     sfx2/source/dialog/styledlg \
     sfx2/source/dialog/tabdlg \
-    sfx2/source/dialog/taskpane \
-    sfx2/source/dialog/templateinfodlg \
     sfx2/source/dialog/templdlg \
     sfx2/source/dialog/titledockwin \
     sfx2/source/dialog/tplcitem \
@@ -244,35 +245,38 @@ $(eval $(call gb_Library_add_exception_objects,sfx,\
     sfx2/source/doc/objxtor \
     sfx2/source/doc/oleprops \
     sfx2/source/doc/ownsubfilterservice \
-    sfx2/source/doc/plugin \
     sfx2/source/doc/printhelper \
     sfx2/source/doc/querytemplate \
     sfx2/source/doc/docundomanager \
-    sfx2/source/doc/sfxacldetect \
     sfx2/source/doc/sfxbasemodel \
     sfx2/source/doc/sfxmodelfactory \
     sfx2/source/doc/syspath \
     sfx2/source/doc/zoomitem \
     sfx2/source/doc/templatedlg \
+    sfx2/source/doc/watermarkitem \
+    sfx2/source/doc/saveastemplatedlg \
     sfx2/source/explorer/nochaos \
     sfx2/source/inet/inettbc \
-    sfx2/source/menu/mnuitem \
-    sfx2/source/menu/mnumgr \
-    sfx2/source/menu/thessubmenu \
-    sfx2/source/menu/virtmenu \
+    sfx2/source/notebookbar/ContextVBox \
+    sfx2/source/notebookbar/DropdownBox \
+    sfx2/source/notebookbar/PriorityHBox \
+    sfx2/source/notebookbar/SfxNotebookBar \
+    sfx2/source/notebookbar/NotebookbarTabControl \
     sfx2/source/notify/eventsupplier \
-	sfx2/source/notify/globalevents \
+    sfx2/source/notify/globalevents \
     sfx2/source/notify/hintpost \
+    sfx2/source/notify/openurlhint \
+    sfx2/source/safemode/safemode \
     sfx2/source/sidebar/Sidebar \
     sfx2/source/sidebar/SidebarChildWindow \
     sfx2/source/sidebar/SidebarDockingWindow \
     sfx2/source/sidebar/SidebarController \
+    sfx2/source/sidebar/SidebarModelUpdate \
     sfx2/source/sidebar/SidebarPanelBase \
     sfx2/source/sidebar/SidebarToolBox \
     sfx2/source/sidebar/Accessible \
     sfx2/source/sidebar/AccessibleTitleBar \
     sfx2/source/sidebar/AsynchronousCall \
-    sfx2/source/sidebar/CommandInfoProvider \
     sfx2/source/sidebar/Context \
     sfx2/source/sidebar/ContextChangeBroadcaster \
     sfx2/source/sidebar/ContextList \
@@ -284,7 +288,6 @@ $(eval $(call gb_Library_add_exception_objects,sfx,\
     sfx2/source/sidebar/DeckLayouter \
     sfx2/source/sidebar/DeckTitleBar \
     sfx2/source/sidebar/DrawHelper \
-    sfx2/source/sidebar/EnumContext \
     sfx2/source/sidebar/FocusManager \
     sfx2/source/sidebar/MenuButton \
     sfx2/source/sidebar/IContextChangeReceiver \
@@ -299,13 +302,22 @@ $(eval $(call gb_Library_add_exception_objects,sfx,\
     sfx2/source/sidebar/TitleBar \
     sfx2/source/sidebar/Theme \
     sfx2/source/sidebar/Tools \
+    sfx2/source/sidebar/UnoPanel \
+    sfx2/source/sidebar/UnoPanels \
+    sfx2/source/sidebar/UnoDeck \
+    sfx2/source/sidebar/UnoDecks \
+    sfx2/source/sidebar/UnoSidebar \
     sfx2/source/statbar/stbitem \
-    sfx2/source/toolbox/imgmgr \
+    sfx2/source/styles/StyleManager \
     sfx2/source/toolbox/tbxitem \
+    sfx2/source/uitest/sfx_uiobject \
+    sfx2/source/view/classificationcontroller \
+    sfx2/source/view/classificationhelper \
     sfx2/source/view/frame \
     sfx2/source/view/frame2 \
     sfx2/source/view/frmload \
     sfx2/source/view/ipclient \
+    sfx2/source/view/lokhelper \
     $(if $(filter $(GUIBASE),java),,sfx2/source/view/printer) \
     sfx2/source/view/sfxbasecontroller \
     sfx2/source/view/userinputinterception \
