@@ -29,6 +29,11 @@ $(eval $(call gb_Library_use_custom_headers,utl,\
 # in case UNO services are exported: declare location of component file
 $(eval $(call gb_Library_set_componentfile,utl,unotools/util/utl))
 
+$(eval $(call gb_Library_set_include,utl, \
+    $$(INCLUDE) \
+    -I$(SRCDIR)/unotools/inc \
+))
+
 # add any additional definitions to be set for compilation here
 # (e.g. -DLIB_DLLIMPLEMENTATION)
 $(eval $(call gb_Library_add_defs,utl,\
@@ -56,7 +61,6 @@ $(eval $(call gb_Library_use_libraries,utl,\
     salhelper \
     tl \
     ucbhelper \
-	$(gb_UWINAPI) \
 ))
 
 # add all source files that shall be compiled with exceptions enabled
@@ -83,7 +87,6 @@ $(eval $(call gb_Library_add_exception_objects,utl,\
     unotools/source/config/historyoptions \
     unotools/source/config/itemholder1 \
     unotools/source/config/lingucfg \
-    unotools/source/config/localisationoptions \
     unotools/source/config/misccfg \
     unotools/source/config/moduleoptions \
     unotools/source/config/options \
@@ -96,7 +99,6 @@ $(eval $(call gb_Library_add_exception_objects,utl,\
     unotools/source/config/syslocaleoptions \
     unotools/source/config/useroptions \
     unotools/source/config/viewoptions \
-    unotools/source/config/xmlaccelcfg \
     unotools/source/i18n/calendarwrapper \
     unotools/source/i18n/caserotate \
     unotools/source/i18n/charclass \
@@ -104,11 +106,9 @@ $(eval $(call gb_Library_add_exception_objects,utl,\
     unotools/source/i18n/intlwrapper \
     unotools/source/i18n/localedatawrapper \
     unotools/source/i18n/nativenumberwrapper \
-    unotools/source/i18n/numberformatcodewrapper \
     unotools/source/i18n/readwritemutexguard \
     unotools/source/i18n/textsearch \
     unotools/source/i18n/transliterationwrapper \
-    unotools/source/misc/atom \
     unotools/source/misc/closeveto \
     unotools/source/misc/componentresmodule \
     unotools/source/misc/datetime \
@@ -119,6 +119,10 @@ $(eval $(call gb_Library_add_exception_objects,utl,\
     unotools/source/misc/mediadescriptor \
     unotools/source/misc/sharedunocomponent \
     unotools/source/misc/syslocale \
+    unotools/source/misc/unotoolsservices \
+    unotools/source/misc/wincodepage \
+    unotools/source/misc/ServiceDocumenter \
+    unotools/source/misc/ZipPackageHelper \
     unotools/source/streaming/streamhelper \
     unotools/source/streaming/streamwrap \
     unotools/source/ucbhelper/localfilehelper \
