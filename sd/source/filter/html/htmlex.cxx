@@ -2887,7 +2887,7 @@ bool HtmlExport::CopyScript( const OUString& rPath, const OUString& rSource, con
 #ifdef USE_JAVA
         if ( bPrependPerlCommand )
         {
-            aScriptBuf.appendAscii( "#!/usr/bin/perl" );
+            aScriptBuf.appendAscii( "#!/usr/bin/env perl" );
             if( bUnix )
                 aScriptBuf.appendAscii( "\n" );
             else
