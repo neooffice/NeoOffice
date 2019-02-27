@@ -126,7 +126,7 @@ public:
     sdr::table::SdrTableObj* GetTableObj() { return dynamic_cast< sdr::table::SdrTableObj* >( mxTableObj.get() ); }
 #ifdef USE_JAVA
     static SvxTableController *GetTableController( const SdrTableObj *pObj );
-    Rectangle GetNativeHighlightColorRect();
+    tools::Rectangle GetNativeHighlightColorRect();
     bool IsNativeHighlightColorCellPos( CellPos aPos );
 #endif  // USE_JAVA
 private:
