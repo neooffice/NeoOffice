@@ -1492,7 +1492,7 @@ void SAL_CALL BluetoothServer::run()
     IOBluetoothSDPServiceRecordRef serviceRecordRef;
 #ifdef USE_JAVA
     IOReturn rc = kIOReturnError;
-    void *pLib = dlopen(NULL, RTLD_LAZY | RTLD_LOCAL);
+    void *pLib = dlopen(nullptr, RTLD_LAZY | RTLD_LOCAL);
     if (pLib)
     {
         IOBluetoothAddServiceDict_Type *pIOBluetoothAddServiceDict = reinterpret_cast< IOBluetoothAddServiceDict_Type* >(dlsym(pLib, "IOBluetoothAddServiceDict"));
