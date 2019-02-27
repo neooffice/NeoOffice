@@ -42,7 +42,6 @@
 #include <unotools/fontoptions.hxx>
 #include <unotools/historyoptions.hxx>
 #include <unotools/lingucfg.hxx>
-#include <unotools/localisationoptions.hxx>
 #include <unotools/moduleoptions.hxx>
 #include <unotools/pathoptions.hxx>
 #include <unotools/printwarningoptions.hxx>
@@ -51,12 +50,11 @@
 #include <unotools/searchopt.hxx>
 #include <unotools/securityoptions.hxx>
 #include <unotools/viewoptions.hxx>
-#include <unotools/xmlaccelcfg.hxx>
 #include <unotools/options.hxx>
 #include <unotools/syslocaleoptions.hxx>
 
 #ifdef USE_JAVA
-static ItemHolder1* pHolder = NULL;
+static ItemHolder1* pHolder = nullptr;
 #endif	// USE_JAVA
 
 ItemHolder1::ItemHolder1()
@@ -95,7 +93,7 @@ ItemHolder1::~ItemHolder1()
     // Attempt to fix Mac App Store crash by detecting when the static instance
     // used in the ItemHolder1::holdConfigItem() method is deleted
     if (this == pHolder)
-        pHolder = NULL;
+        pHolder = nullptr;
 #endif	// USE_JAVA
 
     impl_releaseAllItems();
@@ -113,7 +111,6 @@ void ItemHolder1::holdConfigItem(EItem eItem)
 }
 
 void SAL_CALL ItemHolder1::disposing(const css::lang::EventObject&)
-    throw(css::uno::RuntimeException, std::exception)
 {
     css::uno::Reference< css::uno::XInterface > xSelfHold(static_cast< css::lang::XEventListener* >(this), css::uno::UNO_QUERY);
     impl_releaseAllItems();
@@ -159,103 +156,91 @@ void ItemHolder1::impl_newItem(TItemInfo& rItem)
 {
     switch(rItem.eItem)
     {
-        case E_CMDOPTIONS :
+        case EItem::CmdOptions :
             rItem.pItem = new SvtCommandOptions();
             break;
 
-        case E_COMPATIBILITY :
+        case EItem::Compatibility :
             rItem.pItem = new SvtCompatibilityOptions();
             break;
 
-        case E_DEFAULTOPTIONS :
+        case EItem::DefaultOptions :
             rItem.pItem = new SvtDefaultOptions();
             break;
 
-        case E_DYNAMICMENUOPTIONS :
+        case EItem::DynamicMenuOptions :
             rItem.pItem = new SvtDynamicMenuOptions();
             break;
 
-        case E_EVENTCFG :
+        case EItem::EventConfig :
             //rItem.pItem = new GlobalEventConfig();
             break;
 
-        case E_EXTENDEDSECURITYOPTIONS :
+        case EItem::ExtendedSecurityOptions :
             rItem.pItem = new SvtExtendedSecurityOptions();
             break;
 
-        case E_FLTRCFG :
-// no ref count            rItem.pItem = new SvtFilterOptions();
-            break;
-
-        case E_FONTOPTIONS :
+        case EItem::FontOptions :
             rItem.pItem = new SvtFontOptions();
             break;
 
-        case E_HISTORYOPTIONS :
+        case EItem::HistoryOptions :
             rItem.pItem = new SvtHistoryOptions();
             break;
 
-        case E_LINGUCFG :
+        case EItem::LinguConfig :
             rItem.pItem = new SvtLinguConfig();
             break;
 
-        case E_LOCALISATIONOPTIONS :
-            rItem.pItem = new SvtLocalisationOptions();
-            break;
-
-        case E_MODULEOPTIONS :
+        case EItem::ModuleOptions :
             rItem.pItem = new SvtModuleOptions();
             break;
 
-        case E_OPTIONSDLGOPTIONS :
+        case EItem::OptionsDialogOptions :
             rItem.pItem = new SvtOptionsDialogOptions();
             break;
 
-        case E_PATHOPTIONS :
+        case EItem::PathOptions :
             rItem.pItem = new SvtPathOptions();
             break;
 
-        case E_PRINTWARNINGOPTIONS :
+        case EItem::PrintWarningOptions :
             rItem.pItem = new SvtPrintWarningOptions();
             break;
 
-        case E_MISCCFG :
+        case EItem::MiscConfig :
             rItem.pItem = new ::utl::MiscCfg();
             break;
 
-        case E_SAVEOPTIONS :
+        case EItem::SaveOptions :
             rItem.pItem = new SvtSaveOptions();
             break;
 
-        case E_SEARCHOPT :
-// no ref count            rItem.pItem = new SvtSearchOptions();
-            break;
-
-        case E_SECURITYOPTIONS :
+        case EItem::SecurityOptions :
             rItem.pItem = new SvtSecurityOptions();
             break;
 
-        case E_VIEWOPTIONS_DIALOG :
-            rItem.pItem = new SvtViewOptions(E_DIALOG, OUString());
+        case EItem::ViewOptionsDialog :
+            rItem.pItem = new SvtViewOptions(EViewType::Dialog, OUString());
             break;
 
-        case E_VIEWOPTIONS_TABDIALOG :
-            rItem.pItem = new SvtViewOptions(E_TABDIALOG, OUString());
+        case EItem::ViewOptionsTabDialog :
+            rItem.pItem = new SvtViewOptions(EViewType::TabDialog, OUString());
             break;
 
-        case E_VIEWOPTIONS_TABPAGE :
-            rItem.pItem = new SvtViewOptions(E_TABPAGE, OUString());
+        case EItem::ViewOptionsTabPage :
+            rItem.pItem = new SvtViewOptions(EViewType::TabPage, OUString());
             break;
 
-        case E_VIEWOPTIONS_WINDOW :
-            rItem.pItem = new SvtViewOptions(E_WINDOW, OUString());
+        case EItem::ViewOptionsWindow :
+            rItem.pItem = new SvtViewOptions(EViewType::Window, OUString());
             break;
 
-        case E_USEROPTIONS :
+        case EItem::UserOptions :
             rItem.pItem = new SvtUserOptions();
             break;
 
-        case E_SYSLOCALEOPTIONS :
+        case EItem::SysLocaleOptions :
             rItem.pItem = new SvtSysLocaleOptions();
             break;
 
@@ -270,7 +255,7 @@ void ItemHolder1::impl_deleteItem(TItemInfo& rItem)
     if (rItem.pItem)
     {
         delete rItem.pItem;
-        rItem.pItem = 0;
+        rItem.pItem = nullptr;
     }
 }
 

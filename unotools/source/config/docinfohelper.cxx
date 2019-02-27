@@ -77,9 +77,9 @@ OUString DocInfoHelper::GetGeneratorString()
     // and ':' replaced by '-'
     {
 #ifdef PRODUCT_NAME
-        aResult.appendAscii( PRODUCT_NAME "_project/" );
+        aResult.append( PRODUCT_NAME "_project/" );
 #else	// PRODUCT_NAME
-        aResult.appendAscii( "LibreOffice_project/" );
+        aResult.append( "LibreOffice_project/" );
 #endif	// PRODUCT_NAME
         OUString aDefault;
         OUString aBuildId( Bootstrap::getBuildIdData( aDefault ) );
