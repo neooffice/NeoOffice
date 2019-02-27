@@ -32,13 +32,12 @@
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/XMultiPropertySet.hpp>
 #include <com/sun/star/i18n/XForbiddenCharacters.hpp>
-#include <cppuhelper/implbase3.hxx>
+#include <cppuhelper/implbase.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <comphelper/propertysethelper.hxx>
 #include <comphelper/propertysetinfo.hxx>
 #include <tools/urlobj.hxx>
 #include <svx/xtable.hxx>
-#include <osl/diagnose.h>
 #include <osl/mutex.hxx>
 #include <vcl/svapp.hxx>
 
@@ -50,8 +49,8 @@
 #include "optsitem.hxx"
 #include <sfx2/printer.hxx>
 #include "sdattr.hxx"
-#include "../inc/ViewShell.hxx"
-#include "../inc/FrameView.hxx"
+#include "ViewShell.hxx"
+#include "FrameView.hxx"
 #include "Outliner.hxx"
 #include <xmloff/settingsstore.hxx>
 #include <editeng/editstat.hxx>
@@ -73,52 +72,51 @@ using namespace ::com::sun::star::i18n;
 
 namespace sd
 {
-    class DocumentSettings : public WeakImplHelper3< XPropertySet, XMultiPropertySet, XServiceInfo >,
+    class DocumentSettings : public WeakImplHelper< XPropertySet, XMultiPropertySet, XServiceInfo >,
                              public comphelper::PropertySetHelper,
                              public DocumentSettingsSerializer
     {
     public:
-        DocumentSettings( SdXImpressDocument* pModel );
-        virtual ~DocumentSettings() throw();
+        explicit DocumentSettings( SdXImpressDocument* pModel );
 
         // XInterface
-        virtual Any SAL_CALL queryInterface( const Type& aType ) throw (RuntimeException, std::exception) SAL_OVERRIDE;
-        virtual void SAL_CALL acquire(  ) throw () SAL_OVERRIDE;
-        virtual void SAL_CALL release(  ) throw () SAL_OVERRIDE;
+        virtual Any SAL_CALL queryInterface( const Type& aType ) override;
+        virtual void SAL_CALL acquire(  ) throw () override;
+        virtual void SAL_CALL release(  ) throw () override;
 
         // XPropertySet
-        virtual ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySetInfo > SAL_CALL getPropertySetInfo(  ) throw(::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-        virtual void SAL_CALL setPropertyValue( const OUString& aPropertyName, const ::com::sun::star::uno::Any& aValue ) throw(::com::sun::star::beans::UnknownPropertyException, ::com::sun::star::beans::PropertyVetoException, ::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::lang::WrappedTargetException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-        virtual ::com::sun::star::uno::Any SAL_CALL getPropertyValue( const OUString& PropertyName ) throw(::com::sun::star::beans::UnknownPropertyException, ::com::sun::star::lang::WrappedTargetException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-        virtual void SAL_CALL addPropertyChangeListener( const OUString& aPropertyName, const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertyChangeListener >& xListener ) throw(::com::sun::star::beans::UnknownPropertyException, ::com::sun::star::lang::WrappedTargetException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-        virtual void SAL_CALL removePropertyChangeListener( const OUString& aPropertyName, const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertyChangeListener >& aListener ) throw(::com::sun::star::beans::UnknownPropertyException, ::com::sun::star::lang::WrappedTargetException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-        virtual void SAL_CALL addVetoableChangeListener( const OUString& PropertyName, const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XVetoableChangeListener >& aListener ) throw(::com::sun::star::beans::UnknownPropertyException, ::com::sun::star::lang::WrappedTargetException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-        virtual void SAL_CALL removeVetoableChangeListener( const OUString& PropertyName, const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XVetoableChangeListener >& aListener ) throw(::com::sun::star::beans::UnknownPropertyException, ::com::sun::star::lang::WrappedTargetException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+        virtual css::uno::Reference< css::beans::XPropertySetInfo > SAL_CALL getPropertySetInfo(  ) override;
+        virtual void SAL_CALL setPropertyValue( const OUString& aPropertyName, const css::uno::Any& aValue ) override;
+        virtual css::uno::Any SAL_CALL getPropertyValue( const OUString& PropertyName ) override;
+        virtual void SAL_CALL addPropertyChangeListener( const OUString& aPropertyName, const css::uno::Reference< css::beans::XPropertyChangeListener >& xListener ) override;
+        virtual void SAL_CALL removePropertyChangeListener( const OUString& aPropertyName, const css::uno::Reference< css::beans::XPropertyChangeListener >& aListener ) override;
+        virtual void SAL_CALL addVetoableChangeListener( const OUString& PropertyName, const css::uno::Reference< css::beans::XVetoableChangeListener >& aListener ) override;
+        virtual void SAL_CALL removeVetoableChangeListener( const OUString& PropertyName, const css::uno::Reference< css::beans::XVetoableChangeListener >& aListener ) override;
 
         // XMultiPropertySet
-        virtual void SAL_CALL setPropertyValues( const ::com::sun::star::uno::Sequence< OUString >& aPropertyNames, const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& aValues ) throw(::com::sun::star::beans::PropertyVetoException, ::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::lang::WrappedTargetException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-        virtual ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any > SAL_CALL getPropertyValues( const ::com::sun::star::uno::Sequence< OUString >& aPropertyNames ) throw(::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-        virtual void SAL_CALL addPropertiesChangeListener( const ::com::sun::star::uno::Sequence< OUString >& aPropertyNames, const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertiesChangeListener >& xListener ) throw(::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-        virtual void SAL_CALL removePropertiesChangeListener( const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertiesChangeListener >& xListener ) throw(::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-        virtual void SAL_CALL firePropertiesChangeEvent( const ::com::sun::star::uno::Sequence< OUString >& aPropertyNames, const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertiesChangeListener >& xListener ) throw(::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+        virtual void SAL_CALL setPropertyValues( const css::uno::Sequence< OUString >& aPropertyNames, const css::uno::Sequence< css::uno::Any >& aValues ) override;
+        virtual css::uno::Sequence< css::uno::Any > SAL_CALL getPropertyValues( const css::uno::Sequence< OUString >& aPropertyNames ) override;
+        virtual void SAL_CALL addPropertiesChangeListener( const css::uno::Sequence< OUString >& aPropertyNames, const css::uno::Reference< css::beans::XPropertiesChangeListener >& xListener ) override;
+        virtual void SAL_CALL removePropertiesChangeListener( const css::uno::Reference< css::beans::XPropertiesChangeListener >& xListener ) override;
+        virtual void SAL_CALL firePropertiesChangeEvent( const css::uno::Sequence< OUString >& aPropertyNames, const css::uno::Reference< css::beans::XPropertiesChangeListener >& xListener ) override;
 
         // XServiceInfo
-        virtual OUString SAL_CALL getImplementationName(  ) throw(RuntimeException, std::exception) SAL_OVERRIDE;
-        virtual sal_Bool SAL_CALL supportsService( const OUString& ServiceName ) throw(RuntimeException, std::exception) SAL_OVERRIDE;
-        virtual Sequence< OUString > SAL_CALL getSupportedServiceNames(  ) throw(RuntimeException, std::exception) SAL_OVERRIDE;
+        virtual OUString SAL_CALL getImplementationName(  ) override;
+        virtual sal_Bool SAL_CALL supportsService( const OUString& ServiceName ) override;
+        virtual Sequence< OUString > SAL_CALL getSupportedServiceNames(  ) override;
 
         // DocumentSettingsSerializer cf. xmloff
         virtual uno::Sequence<beans::PropertyValue>
                 filterStreamsFromStorage(OUString const & referer,
                                          const uno::Reference< embed::XStorage > &xStorage,
-                                         const uno::Sequence<beans::PropertyValue>& aConfigProps ) SAL_OVERRIDE;
+                                         const uno::Sequence<beans::PropertyValue>& aConfigProps ) override;
         virtual uno::Sequence<beans::PropertyValue>
                 filterStreamsToStorage(const uno::Reference< embed::XStorage > &xStorage,
-                                       const uno::Sequence<beans::PropertyValue>& aConfigProps ) SAL_OVERRIDE;
+                                       const uno::Sequence<beans::PropertyValue>& aConfigProps ) override;
 
     protected:
-        virtual void _setPropertyValues( const comphelper::PropertyMapEntry** ppEntries, const ::com::sun::star::uno::Any* pValues ) throw(::com::sun::star::beans::UnknownPropertyException, ::com::sun::star::beans::PropertyVetoException, ::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::lang::WrappedTargetException, RuntimeException, std::exception ) SAL_OVERRIDE;
-        virtual void _getPropertyValues( const comphelper::PropertyMapEntry** ppEntries, ::com::sun::star::uno::Any* pValue ) throw(::com::sun::star::beans::UnknownPropertyException, ::com::sun::star::lang::WrappedTargetException, RuntimeException, std::exception ) SAL_OVERRIDE;
+        virtual void _setPropertyValues( const comphelper::PropertyMapEntry** ppEntries, const css::uno::Any* pValues ) override;
+        virtual void _getPropertyValues( const comphelper::PropertyMapEntry** ppEntries, css::uno::Any* pValue ) override;
 
     private:
         bool LoadList( XPropertyListType t, const OUString &rPath,
@@ -133,7 +131,7 @@ namespace sd
         throw ()
     {
         DBG_ASSERT( pModel, "I need a model for the DocumentSettings!" );
-        return (XWeak*)new DocumentSettings( pModel );
+        return static_cast<XWeak*>(new DocumentSettings( pModel ));
     }
 
 enum SdDocumentSettingsPropertyHandles
@@ -156,12 +154,12 @@ enum SdDocumentSettingsPropertyHandles
     {
         static PropertyMapEntry const aImpressSettingsInfoMap[] =
         {
-            { OUString("IsPrintDrawing"),        HANDLE_PRINTDRAWING,        ::getBooleanCppuType(),                0,  MID_PRINTER },
-            { OUString("IsPrintNotes"),          HANDLE_PRINTNOTES,          ::getBooleanCppuType(),                0,  MID_PRINTER },
-            { OUString("IsPrintHandout"),        HANDLE_PRINTHANDOUT,        ::getBooleanCppuType(),                0,  MID_PRINTER },
-            { OUString("IsPrintOutline"),        HANDLE_PRINTOUTLINE,        ::getBooleanCppuType(),                0,  MID_PRINTER },
+            { OUString("IsPrintDrawing"),        HANDLE_PRINTDRAWING,        cppu::UnoType<bool>::get(),                0,  MID_PRINTER },
+            { OUString("IsPrintNotes"),          HANDLE_PRINTNOTES,          cppu::UnoType<bool>::get(),                0,  MID_PRINTER },
+            { OUString("IsPrintHandout"),        HANDLE_PRINTHANDOUT,        cppu::UnoType<bool>::get(),                0,  MID_PRINTER },
+            { OUString("IsPrintOutline"),        HANDLE_PRINTOUTLINE,        cppu::UnoType<bool>::get(),                0,  MID_PRINTER },
             { OUString("SlidesPerHandout"),      HANDLE_SLIDESPERHANDOUT,    ::cppu::UnoType<sal_Int16>::get(),    0,  MID_PRINTER },
-            { OUString("HandoutsHorizontal"),    HANDLE_HANDOUTHORIZONTAL,   ::getBooleanCppuType(),                0,  MID_PRINTER },
+            { OUString("HandoutsHorizontal"),    HANDLE_HANDOUTHORIZONTAL,   cppu::UnoType<bool>::get(),                0,  MID_PRINTER },
             { OUString(), 0, css::uno::Type(), 0, 0 }
         };
 
@@ -177,17 +175,17 @@ enum SdDocumentSettingsPropertyHandles
         {
             { OUString("DefaultTabStop"),        HANDLE_TABSTOP,             ::cppu::UnoType<sal_Int32>::get(),    0,  0 },
             { OUString("PrinterName"),           HANDLE_PRINTERNAME,         ::cppu::UnoType<OUString>::get(),     0,  0 },
-            { OUString("PrinterSetup"),          HANDLE_PRINTERJOB,          ::getCppuType((const uno::Sequence < sal_Int8 > *)0),  0, MID_PRINTER },
+            { OUString("PrinterSetup"),          HANDLE_PRINTERJOB,          cppu::UnoType<uno::Sequence < sal_Int8 >>::get(),  0, MID_PRINTER },
 
-            { OUString("IsPrintPageName"),       HANDLE_PRINTPAGENAME,       ::getBooleanCppuType(),                0,  MID_PRINTER },
-            { OUString("IsPrintDate"),           HANDLE_PRINTDATE,           ::getBooleanCppuType(),                0,  MID_PRINTER },
-            { OUString("IsPrintTime"),           HANDLE_PRINTTIME,           ::getBooleanCppuType(),                0,  MID_PRINTER },
-            { OUString("IsPrintHiddenPages"),    HANDLE_PRINTHIDENPAGES,     ::getBooleanCppuType(),                0,  MID_PRINTER },
-            { OUString("IsPrintFitPage"),        HANDLE_PRINTFITPAGE,        ::getBooleanCppuType(),                0,  MID_PRINTER },
-            { OUString("IsPrintTilePage"),       HANDLE_PRINTTILEPAGE,       ::getBooleanCppuType(),                0,  MID_PRINTER },
-            { OUString("IsPrintBooklet"),        HANDLE_PRINTBOOKLET,        ::getBooleanCppuType(),                0,  MID_PRINTER },
-            { OUString("IsPrintBookletFront"),   HANDLE_PRINTBOOKLETFRONT,   ::getBooleanCppuType(),                0,  MID_PRINTER },
-            { OUString("IsPrintBookletBack"),    HANDLE_PRINTBOOKLETBACK,    ::getBooleanCppuType(),                0,  MID_PRINTER },
+            { OUString("IsPrintPageName"),       HANDLE_PRINTPAGENAME,       cppu::UnoType<bool>::get(),                0,  MID_PRINTER },
+            { OUString("IsPrintDate"),           HANDLE_PRINTDATE,           cppu::UnoType<bool>::get(),                0,  MID_PRINTER },
+            { OUString("IsPrintTime"),           HANDLE_PRINTTIME,           cppu::UnoType<bool>::get(),                0,  MID_PRINTER },
+            { OUString("IsPrintHiddenPages"),    HANDLE_PRINTHIDENPAGES,     cppu::UnoType<bool>::get(),                0,  MID_PRINTER },
+            { OUString("IsPrintFitPage"),        HANDLE_PRINTFITPAGE,        cppu::UnoType<bool>::get(),                0,  MID_PRINTER },
+            { OUString("IsPrintTilePage"),       HANDLE_PRINTTILEPAGE,       cppu::UnoType<bool>::get(),                0,  MID_PRINTER },
+            { OUString("IsPrintBooklet"),        HANDLE_PRINTBOOKLET,        cppu::UnoType<bool>::get(),                0,  MID_PRINTER },
+            { OUString("IsPrintBookletFront"),   HANDLE_PRINTBOOKLETFRONT,   cppu::UnoType<bool>::get(),                0,  MID_PRINTER },
+            { OUString("IsPrintBookletBack"),    HANDLE_PRINTBOOKLETBACK,    cppu::UnoType<bool>::get(),                0,  MID_PRINTER },
             { OUString("PrintQuality"),          HANDLE_PRINTQUALITY,        ::cppu::UnoType<sal_Int32>::get(),    0,  MID_PRINTER },
             { OUString("ColorTableURL"),         HANDLE_COLORTABLEURL,       ::cppu::UnoType<OUString>::get(),     0,  0 },
             { OUString("DashTableURL"),          HANDLE_DASHTABLEURL,        ::cppu::UnoType<OUString>::get(),     0,  0 },
@@ -197,19 +195,19 @@ enum SdDocumentSettingsPropertyHandles
             { OUString("BitmapTableURL"),        HANDLE_BITMAPTABLEURL,      ::cppu::UnoType<OUString>::get(),     0,  0 },
 
             { OUString("ForbiddenCharacters"),   HANDLE_FORBIDDENCHARS,      cppu::UnoType<XForbiddenCharacters>::get(),    0, 0 },
-            { OUString("ApplyUserData"),         HANDLE_APPLYUSERDATA,       ::getBooleanCppuType(),                0,  0 },
+            { OUString("ApplyUserData"),         HANDLE_APPLYUSERDATA,       cppu::UnoType<bool>::get(),                0,  0 },
 
             { OUString("PageNumberFormat"),      HANDLE_PAGENUMFMT,          ::cppu::UnoType<sal_Int32>::get(),    0,  0 },
-            { OUString("ParagraphSummation"),    HANDLE_PARAGRAPHSUMMATION,  ::getBooleanCppuType(),                0,  0 },
+            { OUString("ParagraphSummation"),    HANDLE_PARAGRAPHSUMMATION,  cppu::UnoType<bool>::get(),                0,  0 },
             { OUString("CharacterCompressionType"),HANDLE_CHARCOMPRESS,      ::cppu::UnoType<sal_Int16>::get(),          0,  0 },
-            { OUString("IsKernAsianPunctuation"),HANDLE_ASIANPUNCT,          ::getBooleanCppuType(),                0,  0 },
-            { OUString("UpdateFromTemplate"),    HANDLE_UPDATEFROMTEMPLATE,  ::getBooleanCppuType(),                0,  0 },
+            { OUString("IsKernAsianPunctuation"),HANDLE_ASIANPUNCT,          cppu::UnoType<bool>::get(),                0,  0 },
+            { OUString("UpdateFromTemplate"),    HANDLE_UPDATEFROMTEMPLATE,  cppu::UnoType<bool>::get(),                0,  0 },
             { OUString("PrinterIndependentLayout"),HANDLE_PRINTER_INDEPENDENT_LAYOUT,::cppu::UnoType<sal_Int16>::get(), 0,  0 },
             // --> #i33095#
-            { OUString("LoadReadonly"),          HANDLE_LOAD_READONLY,       ::getBooleanCppuType(),                0,  0 },
-            { OUString("ModifyPasswordInfo"),    HANDLE_MODIFY_PASSWD,       ::getCppuType((uno::Sequence < beans::PropertyValue > *)0),  0,  0 },
-            { OUString("SaveVersionOnClose"),    HANDLE_SAVE_VERSION,        ::getBooleanCppuType(),                0,  0 },
-            { OUString("EmbedFonts"),            HANDLE_EMBED_FONTS,         ::getBooleanCppuType(),                0,  0 },
+            { OUString("LoadReadonly"),          HANDLE_LOAD_READONLY,       cppu::UnoType<bool>::get(),                0,  0 },
+            { OUString("ModifyPasswordInfo"),    HANDLE_MODIFY_PASSWD,       cppu::UnoType<uno::Sequence < beans::PropertyValue >>::get(),  0,  0 },
+            { OUString("SaveVersionOnClose"),    HANDLE_SAVE_VERSION,        cppu::UnoType<bool>::get(),                0,  0 },
+            { OUString("EmbedFonts"),            HANDLE_EMBED_FONTS,         cppu::UnoType<bool>::get(),                0,  0 },
             { OUString(), 0, css::uno::Type(), 0, 0 }
         };
 
@@ -228,10 +226,6 @@ DocumentSettings::DocumentSettings( SdXImpressDocument* pModel )
 {
 }
 
-DocumentSettings::~DocumentSettings() throw()
-{
-}
-
 bool DocumentSettings::LoadList( XPropertyListType t, const OUString &rInPath,
                                  const OUString &rReferer,
                                  const uno::Reference< embed::XStorage > &xStorage )
@@ -240,7 +234,7 @@ bool DocumentSettings::LoadList( XPropertyListType t, const OUString &rInPath,
 
     sal_Int32 nSlash = rInPath.lastIndexOf('/');
     OUString aPath, aName;
-    if (nSlash < -1)
+    if (nSlash < 0)
         aName = rInPath;
     else {
         aName = rInPath.copy( nSlash + 1 );
@@ -264,7 +258,7 @@ void DocumentSettings::AssignURL( XPropertyListType t, const Any* pValue,
                                   bool *pOk, bool *pChanged )
 {
     OUString aURL;
-    if( !(bool)( *pValue >>= aURL ) )
+    if( !( *pValue >>= aURL ) )
         return;
 
     if( LoadList( t, aURL, ""/*TODO?*/, uno::Reference< embed::XStorage >() ) )
@@ -275,30 +269,30 @@ static struct {
     const char *pName;
     XPropertyListType t;
 } aURLPropertyNames[] = {
-    { "ColorTableURL", XCOLOR_LIST },
-    { "DashTableURL", XDASH_LIST },
-    { "LineEndTableURL", XLINE_END_LIST },
-    { "HatchTableURL", XHATCH_LIST },
-    { "GradientTableURL", XGRADIENT_LIST },
-    { "BitmapTableURL", XBITMAP_LIST }
+    { "ColorTableURL", XPropertyListType::Color },
+    { "DashTableURL", XPropertyListType::Dash },
+    { "LineEndTableURL", XPropertyListType::LineEnd },
+    { "HatchTableURL", XPropertyListType::Hatch },
+    { "GradientTableURL", XPropertyListType::Gradient },
+    { "BitmapTableURL", XPropertyListType::Bitmap }
 };
 
 static XPropertyListType getTypeOfName( const OUString &aName )
 {
-    for( size_t i = 0; i < SAL_N_ELEMENTS( aURLPropertyNames ); i++ ) {
-        if( aName.equalsAscii( aURLPropertyNames[i].pName ) )
-            return aURLPropertyNames[i].t;
+    for(const auto & rURLPropertyName : aURLPropertyNames) {
+        if( aName.equalsAscii( rURLPropertyName.pName ) )
+            return rURLPropertyName.t;
     }
-    return UNKNOWN_XPROPERTYLISTTYPE;
+    return XPropertyListType::Unknown;
 }
 
 static OUString getNameOfType( XPropertyListType t )
 {
-    for( size_t i = 0; i < SAL_N_ELEMENTS( aURLPropertyNames ); i++ ) {
-        if( t == aURLPropertyNames[i].t )
-            return OUString( aURLPropertyNames[i].pName,
-                                  strlen( aURLPropertyNames[i].pName ) - 3,
-                                  RTL_TEXTENCODING_UTF8 );
+    for(const auto & rURLPropertyName : aURLPropertyNames) {
+        if( t == rURLPropertyName.t )
+            return OUString( rURLPropertyName.pName,
+                                  strlen( rURLPropertyName.pName ) - 3,
+                                  RTL_TEXTENCODING_ASCII_US );
     }
     return OUString();
 }
@@ -314,7 +308,7 @@ uno::Sequence<beans::PropertyValue>
     for( sal_Int32 i = 0; i < aConfigProps.getLength(); i++ )
     {
         XPropertyListType t = getTypeOfName( aConfigProps[i].Name );
-        if (t == UNKNOWN_XPROPERTYLISTTYPE)
+        if (t == XPropertyListType::Unknown)
             aRet[nRet++] = aConfigProps[i];
         else
         {
@@ -339,7 +333,8 @@ uno::Sequence<beans::PropertyValue>
     for( size_t i = 0; i < SAL_N_ELEMENTS( aURLPropertyNames ); i++ )
     {
         XPropertyListRef pList = pDoc->GetPropertyList( (XPropertyListType) i );
-        if( ( bHasEmbed = pList.is() && pList->IsEmbedInDocument() ) )
+        bHasEmbed = pList.is() && pList->IsEmbedInDocument();
+        if( bHasEmbed )
             break;
     }
     if( !bHasEmbed )
@@ -358,7 +353,7 @@ uno::Sequence<beans::PropertyValue>
         {
             XPropertyListType t = getTypeOfName( aConfigProps[i].Name );
             aRet[i] = aConfigProps[i];
-            if (t >= 0) {
+            if (t != XPropertyListType::Unknown) {
                 XPropertyListRef pList = pDoc->GetPropertyList( t );
                 if( !pList.is() || !pList->IsEmbedInDocument() )
                     continue; // no change ...
@@ -403,14 +398,12 @@ uno::Sequence<beans::PropertyValue>
 void
 DocumentSettings::_setPropertyValues(const PropertyMapEntry** ppEntries,
         const Any* pValues)
-throw (UnknownPropertyException, PropertyVetoException,
-    IllegalArgumentException, WrappedTargetException, RuntimeException, std::exception)
 {
     ::SolarMutexGuard aGuard;
 
     SdDrawDocument* pDoc = mxModel->GetDoc();
     ::sd::DrawDocShell* pDocSh = mxModel->GetDocShell();
-    if( NULL == pDoc || NULL == pDocSh )
+    if( nullptr == pDoc || nullptr == pDocSh )
     {
         throw RuntimeException("Document or Shell missing",
                 static_cast<OWeakObject *>(this));
@@ -419,19 +412,19 @@ throw (UnknownPropertyException, PropertyVetoException,
     bool bValue = false;
     bool bOk, bChanged = false, bOptionsChanged = false;
 
-    SdOptionsPrintItem aOptionsPrintItem( ATTR_OPTIONS_PRINT );
+    SdOptionsPrintItem aOptionsPrintItem;
 
-    SfxPrinter* pPrinter = pDocSh->GetPrinter( false );
+    VclPtr<SfxPrinter> pPrinter = pDocSh->GetPrinter( false );
 #ifdef USE_JAVA
     // Attempt to fix Mac App Store crash by detecting if the printer has been
     // deleted
-    if( pPrinter && ImplIsValidPrinter( pPrinter ) )
+    if( pPrinter && ImplIsValidPrinter( pPrinter.get() ) )
 #else	// USE_JAVA
     if( pPrinter )
 #endif	// USE_JAVA
     {
-        SdOptionsPrintItem* pPrinterOptions = NULL;
-        if(pPrinter->GetOptions().GetItemState( ATTR_OPTIONS_PRINT, false, (const SfxPoolItem**) &pPrinterOptions) == SfxItemState::SET)
+        SdOptionsPrintItem const * pPrinterOptions = nullptr;
+        if(pPrinter->GetOptions().GetItemState( ATTR_OPTIONS_PRINT, false, reinterpret_cast<const SfxPoolItem**>(&pPrinterOptions)) == SfxItemState::SET)
             aOptionsPrintItem.GetOptionsPrint() = pPrinterOptions->GetOptionsPrint();
     }
     else
@@ -447,27 +440,27 @@ throw (UnknownPropertyException, PropertyVetoException,
         switch( (*ppEntries)->mnHandle )
         {
             case HANDLE_COLORTABLEURL:
-                AssignURL( XCOLOR_LIST, pValues, &bOk, &bChanged );
+                AssignURL( XPropertyListType::Color, pValues, &bOk, &bChanged );
                 break;
 
             case HANDLE_DASHTABLEURL:
-                AssignURL( XDASH_LIST, pValues, &bOk, &bChanged );
+                AssignURL( XPropertyListType::Dash, pValues, &bOk, &bChanged );
                 break;
 
             case HANDLE_LINEENDTABLEURL:
-                AssignURL( XLINE_END_LIST, pValues, &bOk, &bChanged );
+                AssignURL( XPropertyListType::LineEnd, pValues, &bOk, &bChanged );
                 break;
 
             case HANDLE_HATCHTABLEURL:
-                AssignURL( XHATCH_LIST, pValues, &bOk, &bChanged );
+                AssignURL( XPropertyListType::Hatch, pValues, &bOk, &bChanged );
                 break;
 
             case HANDLE_GRADIENTTABLEURL:
-                AssignURL( XGRADIENT_LIST, pValues, &bOk, &bChanged );
+                AssignURL( XPropertyListType::Gradient, pValues, &bOk, &bChanged );
                 break;
 
             case HANDLE_BITMAPTABLEURL:
-                AssignURL( XBITMAP_LIST, pValues, &bOk, &bChanged );
+                AssignURL( XPropertyListType::Bitmap, pValues, &bOk, &bChanged );
                 break;
 
             case HANDLE_FORBIDDENCHARS:
@@ -724,7 +717,7 @@ throw (UnknownPropertyException, PropertyVetoException,
             case HANDLE_PAGENUMFMT:
                 {
                     sal_Int32 nValue = 0;
-                    if( (*pValues >>= nValue ) && (nValue >= SVX_CHARS_UPPER_LETTER ) && (nValue <= SVX_PAGEDESC) )
+                    if( (*pValues >>= nValue ) && (nValue >= css::style::NumberingType::CHARS_UPPER_LETTER ) && (nValue <= css::style::NumberingType::PAGE_DESCRIPTOR) )
                     {
                         pDoc->SetPageNumType((SvxNumType)nValue);
                         bOk = true;
@@ -738,7 +731,7 @@ throw (UnknownPropertyException, PropertyVetoException,
                     if( *pValues >>= aPrinterName )
                     {
                         bOk = true;
-                        if( !aPrinterName.isEmpty() && pDocSh->GetCreateMode() != SFX_CREATE_MODE_EMBEDDED )
+                        if( !aPrinterName.isEmpty() && pDocSh->GetCreateMode() != SfxObjectCreateMode::EMBEDDED )
                         {
                             SfxPrinter *pTempPrinter = pDocSh->GetPrinter( true );
 #ifdef USE_JAVA
@@ -749,7 +742,7 @@ throw (UnknownPropertyException, PropertyVetoException,
                             if (pTempPrinter)
 #endif	// USE_JAVA
                             {
-                                SfxPrinter *pNewPrinter = new SfxPrinter( pTempPrinter->GetOptions().Clone(), aPrinterName );
+                                VclPtr<SfxPrinter> pNewPrinter = VclPtr<SfxPrinter>::Create( pTempPrinter->GetOptions().Clone(), aPrinterName );
                                 pDocSh->SetPrinter( pNewPrinter );
                             }
                         }
@@ -765,7 +758,7 @@ throw (UnknownPropertyException, PropertyVetoException,
                         sal_uInt32 nSize = aSequence.getLength();
                         if( nSize )
                         {
-                            SvMemoryStream aStream (aSequence.getArray(), nSize, STREAM_READ );
+                            SvMemoryStream aStream (aSequence.getArray(), nSize, StreamMode::READ );
                             aStream.Seek ( STREAM_SEEK_TO_BEGIN );
                             SfxItemSet* pItemSet;
 
@@ -785,12 +778,12 @@ throw (UnknownPropertyException, PropertyVetoException,
                             pPrinter = SfxPrinter::Create ( aStream, pItemSet );
 
                             MapMode aMM (pPrinter->GetMapMode());
-                            aMM.SetMapUnit(MAP_100TH_MM);
+                            aMM.SetMapUnit(MapUnit::Map100thMM);
                             pPrinter->SetMapMode(aMM);
 
                             pDocSh->SetPrinter( pPrinter );
 
-                            pPrinter = NULL;
+                            pPrinter = nullptr;
                         }
                     }
                 }
@@ -803,26 +796,26 @@ throw (UnknownPropertyException, PropertyVetoException,
                 {
                     bOk = true;
                     bChanged = true;
-                    if ( pDoc->GetDocumentType() == DOCUMENT_TYPE_IMPRESS )
+                    if ( pDoc->GetDocumentType() == DocumentType::Impress )
                     {
-                        sal_uInt32 nSum = bIsSummationOfParagraphs ? EE_CNTRL_ULSPACESUMMATION : 0;
-                        sal_uInt32 nCntrl;
+                        EEControlBits nSum = bIsSummationOfParagraphs ? EEControlBits::ULSPACESUMMATION : EEControlBits::NONE;
+                        EEControlBits nCntrl;
 
                         pDoc->SetSummationOfParagraphs( bIsSummationOfParagraphs );
                         SdDrawDocument* pDocument = pDocSh->GetDoc();
                         SdrOutliner& rOutl = pDocument->GetDrawOutliner();
-                        nCntrl = rOutl.GetControlWord() &~ EE_CNTRL_ULSPACESUMMATION;
+                        nCntrl = rOutl.GetControlWord() &~ EEControlBits::ULSPACESUMMATION;
                         rOutl.SetControlWord( nCntrl | nSum );
-                        ::sd::Outliner* pOutl = pDocument->GetOutliner( false );
+                        SdOutliner* pOutl = pDocument->GetOutliner( false );
                         if( pOutl )
                         {
-                            nCntrl = pOutl->GetControlWord() &~ EE_CNTRL_ULSPACESUMMATION;
+                            nCntrl = pOutl->GetControlWord() &~ EEControlBits::ULSPACESUMMATION;
                             pOutl->SetControlWord( nCntrl | nSum );
                         }
                         pOutl = pDocument->GetInternalOutliner( false );
                         if( pOutl )
                         {
-                            nCntrl = pOutl->GetControlWord() &~ EE_CNTRL_ULSPACESUMMATION;
+                            nCntrl = pOutl->GetControlWord() &~ EEControlBits::ULSPACESUMMATION;
                             pOutl->SetControlWord( nCntrl | nSum );
                         }
                     }
@@ -837,19 +830,19 @@ throw (UnknownPropertyException, PropertyVetoException,
                 {
                     bOk = true;
 
-                    pDoc->SetCharCompressType( (sal_uInt16)nCharCompressType );
+                    pDoc->SetCharCompressType( (CharCompressType)nCharCompressType );
                     SdDrawDocument* pDocument = pDocSh->GetDoc();
                     SdrOutliner& rOutl = pDocument->GetDrawOutliner();
-                    rOutl.SetAsianCompressionMode( (sal_uInt16)nCharCompressType );
-                    ::sd::Outliner* pOutl = pDocument->GetOutliner( false );
+                    rOutl.SetAsianCompressionMode( (CharCompressType)nCharCompressType );
+                    SdOutliner* pOutl = pDocument->GetOutliner( false );
                     if( pOutl )
                     {
-                        pOutl->SetAsianCompressionMode( (sal_uInt16)nCharCompressType );
+                        pOutl->SetAsianCompressionMode( (CharCompressType)nCharCompressType );
                     }
                     pOutl = pDocument->GetInternalOutliner( false );
                     if( pOutl )
                     {
-                        pOutl->SetAsianCompressionMode( (sal_uInt16)nCharCompressType );
+                        pOutl->SetAsianCompressionMode( (CharCompressType)nCharCompressType );
                     }
                 }
                 break;
@@ -866,7 +859,7 @@ throw (UnknownPropertyException, PropertyVetoException,
                     SdDrawDocument* pDocument = pDocSh->GetDoc();
                     SdrOutliner& rOutl = pDocument->GetDrawOutliner();
                     rOutl.SetKernAsianPunctuation( bAsianPunct );
-                    ::sd::Outliner* pOutl = pDocument->GetOutliner( false );
+                    SdOutliner* pOutl = pDocument->GetOutliner( false );
                     if( pOutl )
                     {
                         pOutl->SetKernAsianPunctuation( bAsianPunct );
@@ -927,7 +920,7 @@ throw (UnknownPropertyException, PropertyVetoException,
                 uno::Sequence< beans::PropertyValue > aInfo;
                 if ( !( *pValues >>= aInfo ) )
                     throw lang::IllegalArgumentException(
-                        OUString( "Value of type Sequence<PropertyValue> expected!" ),
+                        "Value of type Sequence<PropertyValue> expected!",
                         uno::Reference< uno::XInterface >(),
                         2 );
 
@@ -963,7 +956,7 @@ throw (UnknownPropertyException, PropertyVetoException,
             break;
 
             default:
-                throw UnknownPropertyException();
+                throw UnknownPropertyException( OUString::number((*ppEntries)->mnHandle), static_cast<cppu::OWeakObject*>(this));
         }
 
         if( !bOk )
@@ -980,7 +973,7 @@ throw (UnknownPropertyException, PropertyVetoException,
     }
 
     if( bChanged || bOptionsChanged )
-        mxModel->SetModified( true );
+        mxModel->SetModified();
 }
 
 void DocumentSettings::ExtractURL( XPropertyListType t, Any* pValue )
@@ -992,26 +985,25 @@ void DocumentSettings::ExtractURL( XPropertyListType t, Any* pValue )
     INetURLObject aPathURL( pList->GetPath() );
     aPathURL.insertName( pList->GetName() );
     aPathURL.setExtension( pList->GetDefaultExt() );
-    OUString aPath( aPathURL.GetMainURL( INetURLObject::NO_DECODE ) );
+    OUString aPath( aPathURL.GetMainURL( INetURLObject::DecodeMechanism::NONE ) );
     *pValue <<= aPath;
 }
 
 void
 DocumentSettings::_getPropertyValues(
         const PropertyMapEntry** ppEntries, Any* pValue)
-throw (UnknownPropertyException, WrappedTargetException, RuntimeException, std::exception)
 {
     ::SolarMutexGuard aGuard;
 
     SdDrawDocument* pDoc = mxModel->GetDoc();
     ::sd::DrawDocShell* pDocSh = mxModel->GetDocShell();
-    if( NULL == pDoc || NULL == pDocSh )
+    if( nullptr == pDoc || nullptr == pDocSh )
     {
         throw RuntimeException("Document or Shell missing",
                 static_cast<OWeakObject *>(this));
     }
 
-    SdOptionsPrintItem aOptionsPrintItem( ATTR_OPTIONS_PRINT );
+    SdOptionsPrintItem aOptionsPrintItem;
 
     SfxPrinter* pPrinter = pDocSh->GetPrinter( false );
 #ifdef USE_JAVA
@@ -1022,8 +1014,8 @@ throw (UnknownPropertyException, WrappedTargetException, RuntimeException, std::
     if( pPrinter )
 #endif	// USE_JAVA
     {
-        SdOptionsPrintItem* pPrinterOptions = NULL;
-        if(pPrinter->GetOptions().GetItemState( ATTR_OPTIONS_PRINT, false, (const SfxPoolItem**) &pPrinterOptions) == SfxItemState::SET)
+        SdOptionsPrintItem const * pPrinterOptions = nullptr;
+        if(pPrinter->GetOptions().GetItemState( ATTR_OPTIONS_PRINT, false, reinterpret_cast<const SfxPoolItem**>(&pPrinterOptions)) == SfxItemState::SET)
             aOptionsPrintItem.GetOptionsPrint() = pPrinterOptions->GetOptionsPrint();
     }
     else
@@ -1037,22 +1029,22 @@ throw (UnknownPropertyException, WrappedTargetException, RuntimeException, std::
         switch( (*ppEntries)->mnHandle )
         {
             case HANDLE_COLORTABLEURL:
-                ExtractURL( XCOLOR_LIST, pValue );
+                ExtractURL( XPropertyListType::Color, pValue );
                 break;
             case HANDLE_DASHTABLEURL:
-                ExtractURL( XDASH_LIST, pValue );
+                ExtractURL( XPropertyListType::Dash, pValue );
                 break;
             case HANDLE_LINEENDTABLEURL:
-                ExtractURL( XLINE_END_LIST, pValue );
+                ExtractURL( XPropertyListType::LineEnd, pValue );
                 break;
             case HANDLE_HATCHTABLEURL:
-                ExtractURL( XHATCH_LIST, pValue );
+                ExtractURL( XPropertyListType::Hatch, pValue );
                 break;
             case HANDLE_GRADIENTTABLEURL:
-                ExtractURL( XGRADIENT_LIST, pValue );
+                ExtractURL( XPropertyListType::Gradient, pValue );
                 break;
             case HANDLE_BITMAPTABLEURL:
-                ExtractURL( XBITMAP_LIST, pValue );
+                ExtractURL( XPropertyListType::Bitmap, pValue );
                 break;
             case HANDLE_FORBIDDENCHARS:
                 *pValue <<= mxModel->getForbiddenCharsTable();
@@ -1226,104 +1218,101 @@ throw (UnknownPropertyException, WrappedTargetException, RuntimeException, std::
             break;
 
             default:
-                throw UnknownPropertyException();
+                throw UnknownPropertyException( OUString::number((*ppEntries)->mnHandle), static_cast<cppu::OWeakObject*>(this));
         }
     }
 }
 
 // XInterface
-Any SAL_CALL DocumentSettings::queryInterface( const Type& aType ) throw (RuntimeException, std::exception)
+Any SAL_CALL DocumentSettings::queryInterface( const Type& aType )
 {
-    return WeakImplHelper3< XPropertySet, XMultiPropertySet, XServiceInfo >::queryInterface( aType );
+    return WeakImplHelper< XPropertySet, XMultiPropertySet, XServiceInfo >::queryInterface( aType );
 }
 
 void SAL_CALL DocumentSettings::acquire(  ) throw ()
 {
-    WeakImplHelper3< XPropertySet, XMultiPropertySet, XServiceInfo >::acquire();
+    WeakImplHelper< XPropertySet, XMultiPropertySet, XServiceInfo >::acquire();
 }
 
 void SAL_CALL DocumentSettings::release(  ) throw ()
 {
-    WeakImplHelper3< XPropertySet, XMultiPropertySet, XServiceInfo >::release();
+    WeakImplHelper< XPropertySet, XMultiPropertySet, XServiceInfo >::release();
 }
 
 // XPropertySet
-Reference< XPropertySetInfo > SAL_CALL DocumentSettings::getPropertySetInfo(  ) throw(RuntimeException, std::exception)
+Reference< XPropertySetInfo > SAL_CALL DocumentSettings::getPropertySetInfo(  )
 {
     return PropertySetHelper::getPropertySetInfo();
 }
 
-void SAL_CALL DocumentSettings::setPropertyValue( const OUString& aPropertyName, const Any& aValue ) throw(UnknownPropertyException, PropertyVetoException, IllegalArgumentException, WrappedTargetException, RuntimeException, std::exception)
+void SAL_CALL DocumentSettings::setPropertyValue( const OUString& aPropertyName, const Any& aValue )
 {
     PropertySetHelper::setPropertyValue( aPropertyName, aValue );
 }
 
-Any SAL_CALL DocumentSettings::getPropertyValue( const OUString& PropertyName ) throw(UnknownPropertyException, WrappedTargetException, RuntimeException, std::exception)
+Any SAL_CALL DocumentSettings::getPropertyValue( const OUString& PropertyName )
 {
     return PropertySetHelper::getPropertyValue( PropertyName );
 }
 
-void SAL_CALL DocumentSettings::addPropertyChangeListener( const OUString& aPropertyName, const Reference< XPropertyChangeListener >& xListener ) throw(UnknownPropertyException, WrappedTargetException, RuntimeException, std::exception)
+void SAL_CALL DocumentSettings::addPropertyChangeListener( const OUString& aPropertyName, const Reference< XPropertyChangeListener >& xListener )
 {
     PropertySetHelper::addPropertyChangeListener( aPropertyName, xListener );
 }
 
-void SAL_CALL DocumentSettings::removePropertyChangeListener( const OUString& aPropertyName, const Reference< XPropertyChangeListener >& aListener ) throw(UnknownPropertyException, WrappedTargetException, RuntimeException, std::exception)
+void SAL_CALL DocumentSettings::removePropertyChangeListener( const OUString& aPropertyName, const Reference< XPropertyChangeListener >& aListener )
 {
     PropertySetHelper::removePropertyChangeListener( aPropertyName, aListener );
 }
 
-void SAL_CALL DocumentSettings::addVetoableChangeListener( const OUString& PropertyName, const Reference< XVetoableChangeListener >& aListener ) throw(UnknownPropertyException, WrappedTargetException, RuntimeException, std::exception)
+void SAL_CALL DocumentSettings::addVetoableChangeListener( const OUString& PropertyName, const Reference< XVetoableChangeListener >& aListener )
 {
     PropertySetHelper::addVetoableChangeListener( PropertyName, aListener );
 }
 
-void SAL_CALL DocumentSettings::removeVetoableChangeListener( const OUString& PropertyName, const Reference< XVetoableChangeListener >& aListener ) throw(UnknownPropertyException, WrappedTargetException, RuntimeException, std::exception)
+void SAL_CALL DocumentSettings::removeVetoableChangeListener( const OUString& PropertyName, const Reference< XVetoableChangeListener >& aListener )
 {
     PropertySetHelper::removeVetoableChangeListener( PropertyName, aListener );
 }
 
 // XMultiPropertySet
-void SAL_CALL DocumentSettings::setPropertyValues( const Sequence< OUString >& aPropertyNames, const Sequence< Any >& aValues ) throw(PropertyVetoException, IllegalArgumentException, WrappedTargetException, RuntimeException, std::exception)
+void SAL_CALL DocumentSettings::setPropertyValues( const Sequence< OUString >& aPropertyNames, const Sequence< Any >& aValues )
 {
     PropertySetHelper::setPropertyValues( aPropertyNames, aValues );
 }
 
-Sequence< Any > SAL_CALL DocumentSettings::getPropertyValues( const Sequence< OUString >& aPropertyNames ) throw(RuntimeException, std::exception)
+Sequence< Any > SAL_CALL DocumentSettings::getPropertyValues( const Sequence< OUString >& aPropertyNames )
 {
     return PropertySetHelper::getPropertyValues( aPropertyNames );
 }
 
-void SAL_CALL DocumentSettings::addPropertiesChangeListener( const Sequence< OUString >& aPropertyNames, const Reference< XPropertiesChangeListener >& xListener ) throw(RuntimeException, std::exception)
+void SAL_CALL DocumentSettings::addPropertiesChangeListener( const Sequence< OUString >& aPropertyNames, const Reference< XPropertiesChangeListener >& xListener )
 {
     PropertySetHelper::addPropertiesChangeListener( aPropertyNames, xListener );
 }
 
-void SAL_CALL DocumentSettings::removePropertiesChangeListener( const Reference< XPropertiesChangeListener >& xListener ) throw(RuntimeException, std::exception)
+void SAL_CALL DocumentSettings::removePropertiesChangeListener( const Reference< XPropertiesChangeListener >& xListener )
 {
     PropertySetHelper::removePropertiesChangeListener( xListener );
 }
 
-void SAL_CALL DocumentSettings::firePropertiesChangeEvent( const Sequence< OUString >& aPropertyNames, const Reference< XPropertiesChangeListener >& xListener ) throw(RuntimeException, std::exception)
+void SAL_CALL DocumentSettings::firePropertiesChangeEvent( const Sequence< OUString >& aPropertyNames, const Reference< XPropertiesChangeListener >& xListener )
 {
     PropertySetHelper::firePropertiesChangeEvent( aPropertyNames, xListener );
 }
 
 // XServiceInfo
 OUString SAL_CALL DocumentSettings::getImplementationName(  )
-    throw(RuntimeException, std::exception)
 {
     return OUString( "com.sun.star.comp.Draw.DocumentSettings" );
 }
 
 sal_Bool SAL_CALL DocumentSettings::supportsService( const OUString& ServiceName )
-    throw(RuntimeException, std::exception)
 {
     return cppu::supportsService(this, ServiceName);
 }
 
 Sequence< OUString > SAL_CALL DocumentSettings::getSupportedServiceNames(  )
-    throw(RuntimeException, std::exception)
 {
     Sequence< OUString > aSeq( 2 );
     aSeq[0] = "com.sun.star.document.Settings" ;

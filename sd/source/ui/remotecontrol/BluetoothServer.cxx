@@ -5,24 +5,14 @@
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- * 
- * This file incorporates work covered by the following license notice:
- *
- *   Modified February 2017 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 3.3
- *   of the Mozilla Public License, v. 2.0.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "BluetoothServer.hxx"
 
 #include <iostream>
 #include <iomanip>
+#include <memory>
 #include <new>
-
-#include <boost/scoped_ptr.hpp>
 
 #include <sal/log.hxx>
 
@@ -39,7 +29,7 @@
   #include "BufferedStreamSocket.hxx"
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
   // LO vs WinAPI conflict
   #undef WB_LEFT
   #undef WB_RIGHT
@@ -70,11 +60,6 @@
 typedef IOReturn IOBluetoothAddServiceDict_Type( CFDictionaryRef aServiceDict, IOBluetoothSDPServiceRecordRef *pOutServiceRecord );
 
 #endif	// USE_JAVA
-#endif
-
-#ifdef __MINGW32__
-// Value taken from http://msdn.microsoft.com/en-us/library/windows/desktop/ms738518%28v=vs.85%29.aspx
-#define NS_BTH 16
 #endif
 
 #include "Communicator.hxx"
@@ -116,15 +101,13 @@ struct sd::BluetoothServer::Impl {
     GMainContext *mpContext;
     DBusConnection *mpConnection;
     DBusObject *mpService;
-    volatile bool mbExitMainloop;
     enum BluezVersion { BLUEZ4, BLUEZ5, UNKNOWN };
     BluezVersion maBluezVersion;
 
     Impl()
         : mpContext( g_main_context_new() )
-        , mpConnection( NULL )
-        , mpService( NULL )
-        , mbExitMainloop( false )
+        , mpConnection( nullptr )
+        , mpService( nullptr )
         , maBluezVersion( UNKNOWN )
     { }
 
@@ -141,7 +124,7 @@ struct sd::BluetoothServer::Impl {
         }
         else
         {
-            return NULL;
+            return nullptr;
         }
     }
 };
@@ -159,7 +142,7 @@ dbusConnectToNameOnBus()
     {
         SAL_WARN( "sdremote.bluetooth", "failed to get dbus system bus: " << aError.message );
         dbus_error_free( &aError );
-        return NULL;
+        return nullptr;
     }
 
     return pConnection;
@@ -168,14 +151,14 @@ dbusConnectToNameOnBus()
 static DBusMessage *
 sendUnrefAndWaitForReply( DBusConnection *pConnection, DBusMessage *pMsg )
 {
-    DBusPendingCall *pPending = NULL;
+    DBusPendingCall *pPending = nullptr;
 
     if( !pMsg || !dbus_connection_send_with_reply( pConnection, pMsg, &pPending,
                                                    -1 /* default timeout */ ) )
     {
         SAL_WARN( "sdremote.bluetooth", "Memory allocation failed on message send" );
         dbus_message_unref( pMsg );
-        return NULL;
+        return nullptr;
     }
     dbus_connection_flush( pConnection );
     dbus_message_unref( pMsg );
@@ -235,9 +218,9 @@ getBluez5Adapter(DBusConnection *pConnection)
     // org.bluez.Adapter1 .
     pMsg = DBusObject( "org.bluez", "/", "org.freedesktop.DBus.ObjectManager" ).getMethodCall( "GetManagedObjects" );
     if (!pMsg)
-        return NULL;
+        return nullptr;
 
-    const gchar* pInterfaceType = "org.bluez.Adapter1";
+    const gchar* const pInterfaceType = "org.bluez.Adapter1";
 
     pMsg = sendUnrefAndWaitForReply( pConnection, pMsg );
 
@@ -254,7 +237,7 @@ getBluez5Adapter(DBusConnection *pConnection)
                 {
                     DBusMessageIter aContainerIter;
                     dbus_message_iter_recurse(&aObject, &aContainerIter);
-                    char *pPath = 0;
+                    char *pPath = nullptr;
                     do
                     {
                         if (DBUS_TYPE_OBJECT_PATH == dbus_message_iter_get_arg_type(&aContainerIter))
@@ -305,7 +288,7 @@ getBluez5Adapter(DBusConnection *pConnection)
         dbus_message_unref(pMsg);
     }
 
-    return NULL;
+    return nullptr;
 }
 
 static DBusObject *
@@ -313,7 +296,7 @@ bluez4GetDefaultService( DBusConnection *pConnection )
 {
     DBusMessage *pMsg;
     DBusMessageIter it;
-    const gchar* pInterfaceType = "org.bluez.Service";
+    const gchar* const pInterfaceType = "org.bluez.Service";
 
     // org.bluez.manager only exists for bluez 4.
     // getMethodCall should return NULL if there is any issue e.g. the
@@ -323,7 +306,7 @@ bluez4GetDefaultService( DBusConnection *pConnection )
     if (!pMsg)
     {
         SAL_WARN("sdremote.bluetooth", "Couldn't retrieve DBusObject for DefaultAdapter");
-        return NULL;
+        return nullptr;
     }
 
     SAL_INFO("sdremote.bluetooth", "successfully retrieved org.bluez.Manager.DefaultAdapter, attempting to use.");
@@ -331,13 +314,13 @@ bluez4GetDefaultService( DBusConnection *pConnection )
 
     if(!pMsg || !dbus_message_iter_init( pMsg, &it ) )
     {
-        return NULL;
+        return nullptr;
     }
 
     // This works for Bluez 4
     if( DBUS_TYPE_OBJECT_PATH == dbus_message_iter_get_arg_type( &it ) )
     {
-        const char *pObjectPath = NULL;
+        const char *pObjectPath = nullptr;
         dbus_message_iter_get_basic( &it, &pObjectPath );
         SAL_INFO( "sdremote.bluetooth", "DefaultAdapter retrieved: '"
                 << pObjectPath << "' '" << pInterfaceType << "'" );
@@ -348,7 +331,7 @@ bluez4GetDefaultService( DBusConnection *pConnection )
     // this method doesn't exist.
     else if ( DBUS_TYPE_STRING == dbus_message_iter_get_arg_type( &it ) )
     {
-        const char *pMessage = NULL;
+        const char *pMessage = nullptr;
         dbus_message_iter_get_basic( &it, &pMessage );
         SAL_INFO( "sdremote.bluetooth", "Error message: '"
                 << pMessage << "' '" << pInterfaceType << "'" );
@@ -359,7 +342,7 @@ bluez4GetDefaultService( DBusConnection *pConnection )
                 << (const char) dbus_message_iter_get_arg_type( &it ) << "'" );
     }
     dbus_message_unref(pMsg);
-    return NULL;
+    return nullptr;
 }
 
 static bool
@@ -412,7 +395,7 @@ bluezCreateAttachListeningSocket( GMainContext *pContext, GPollFD *pSocketFD )
     aAddr.rc_channel = 5;
 
     int a;
-    if ( ( a = bind( nSocket, (sockaddr*) &aAddr, sizeof(aAddr) ) ) < 0 ) {
+    if ( ( a = bind( nSocket, reinterpret_cast<sockaddr*>(&aAddr), sizeof(aAddr) ) ) < 0 ) {
         SAL_WARN( "sdremote.bluetooth", "bind failed with error" << a );
         close( nSocket );
         return;
@@ -484,7 +467,7 @@ sal_Int32 OSXBluetoothWrapper::readLine( OString& aLine )
             std::ostringstream s;
             if (mBuffer.size() > 0)
             {
-                for (unsigned char *p = (unsigned char *) &mBuffer.front(); p != (unsigned char *) &mBuffer.front() + mBuffer.size(); p++)
+                for (unsigned char *p = reinterpret_cast<unsigned char *>(mBuffer.data()); p != reinterpret_cast<unsigned char *>(mBuffer.data()) + mBuffer.size(); p++)
                 {
                     if (*p == '\n')
                         s << "\\n";
@@ -529,7 +512,7 @@ sal_Int32 OSXBluetoothWrapper::write( const void* pBuffer, sal_uInt32 n )
 {
     SAL_INFO( "sdremote.bluetooth", "OSXBluetoothWrapper::write(" << pBuffer << ", " << n << ") mpChannel=" << mpChannel );
 
-    char* ptr = (char*)pBuffer;
+    char const * ptr = static_cast<char const *>(pBuffer);
     sal_uInt32 nBytesWritten = 0;
 
     if (mpChannel == nil)
@@ -539,9 +522,9 @@ sal_Int32 OSXBluetoothWrapper::write( const void* pBuffer, sal_uInt32 n )
     {
         int toWrite = n - nBytesWritten;
         toWrite = toWrite <= mnMTU ? toWrite : mnMTU;
-        if ( [mpChannel writeSync:ptr length:toWrite] != kIOReturnSuccess )
+        if ( [mpChannel writeSync:const_cast<char *>(ptr) length:toWrite] != kIOReturnSuccess )
         {
-            SAL_INFO( "sdremote.bluetooth", "  [mpChannel writeSync:" << (void *) ptr << " length:" << toWrite << "] returned error, total written " << nBytesWritten );
+            SAL_INFO( "sdremote.bluetooth", "  [mpChannel writeSync:" << static_cast<void const *>(ptr) << " length:" << toWrite << "] returned error, total written " << nBytesWritten );
             return nBytesWritten;
         }
         ptr += toWrite;
@@ -561,7 +544,7 @@ void OSXBluetoothWrapper::appendData(void* pBuffer, size_t len)
         ::osl::MutexGuard aQueueGuard( mMutex );
         SAL_INFO( "sdremote.bluetooth", "OSXBluetoothWrapper::appendData: entered mutex" );
         mBuffer.insert(mBuffer.begin()+mBuffer.size(),
-                       (char*)pBuffer, (char *)pBuffer+len);
+                       static_cast<char*>(pBuffer), static_cast<char *>(pBuffer)+len);
         SAL_INFO( "sdremote.bluetooth", "  setting mHaveBytes" );
         mHaveBytes.set();
         SAL_INFO( "sdremote.bluetooth", "  leaving mutex" );
@@ -583,9 +566,9 @@ void incomingCallback( void *userRefCon,
 
     SAL_INFO( "sdremote.bluetooth", "incomingCallback()" );
 
-    BluetoothServer* pServer = (BluetoothServer*)userRefCon;
+    BluetoothServer* pServer = static_cast<BluetoothServer*>(userRefCon);
 
-    IOBluetoothRFCOMMChannel* channel = [IOBluetoothRFCOMMChannel withRFCOMMChannelRef:(IOBluetoothRFCOMMChannelRef)objectRef];
+    IOBluetoothRFCOMMChannel* channel = [IOBluetoothRFCOMMChannel withRFCOMMChannelRef:reinterpret_cast<IOBluetoothRFCOMMChannelRef>(objectRef)];
 
     OSXBluetoothWrapper* socket = new OSXBluetoothWrapper( channel);
     Communicator* pCommunicator = new Communicator( socket );
@@ -660,11 +643,11 @@ getBluez4BooleanProperty( DBusConnection *pConnection, DBusObject *pAdapter,
         DBusMessageIter dictIt;
         dbus_message_iter_recurse( &arrayIt, &dictIt );
 
-        const char *pName = NULL;
+        const char *pName = nullptr;
         if( dbus_message_iter_get_arg_type( &dictIt ) == DBUS_TYPE_STRING )
         {
             dbus_message_iter_get_basic( &dictIt, &pName );
-            if( pName != NULL && !strcmp( pName, pPropertyName ) )
+            if( pName != nullptr && !strcmp( pName, pPropertyName ) )
             {
                 SAL_INFO( "sdremote.bluetooth", "hit " << pPropertyName << " property" );
                 dbus_message_iter_next( &dictIt );
@@ -719,7 +702,7 @@ getDBusBooleanProperty( DBusConnection *pConnection, DBusObject *pAdapter,
     *pBoolean = false;
     bool bRet = false;
 
-    ::boost::scoped_ptr< DBusObject > pProperties (
+    std::unique_ptr< DBusObject > pProperties (
             pAdapter->cloneForInterface( "org.freedesktop.DBus.Properties" ) );
 
     DBusMessage *pMsg = pProperties->getMethodCall( "Get" );
@@ -780,7 +763,7 @@ setDBusBooleanProperty( DBusConnection *pConnection, DBusObject *pAdapter,
 {
     assert( pAdapter );
 
-    ::boost::scoped_ptr< DBusObject > pProperties(
+    std::unique_ptr< DBusObject > pProperties(
             pAdapter->cloneForInterface( "org.freedesktop.DBus.Properties" ) );
 
     DBusMessage *pMsg = pProperties->getMethodCall( "Set" );
@@ -861,7 +844,7 @@ setDiscoverable( DBusConnection *pConnection, DBusObject *pAdapter, bool bDiscov
         dbus_uint32_t nTimeout = 0;
         dbus_message_iter_append_basic( &varIt, DBUS_TYPE_UINT32, &nTimeout );
         dbus_message_iter_close_container( &it, &varIt );
-        dbus_connection_send( pConnection, pMsg, NULL ); // async send - why not ?
+        dbus_connection_send( pConnection, pMsg, nullptr ); // async send - why not ?
         dbus_message_unref( pMsg );
 
         // set discoverable value
@@ -874,7 +857,7 @@ setDiscoverable( DBusConnection *pConnection, DBusObject *pAdapter, bool bDiscov
         dbus_bool_t bValue = bDiscoverable;
         dbus_message_iter_append_basic( &varIt, DBUS_TYPE_BOOLEAN, &bValue );
         dbus_message_iter_close_container( &it, &varIt ); // async send - why not ?
-        dbus_connection_send( pConnection, pMsg, NULL );
+        dbus_connection_send( pConnection, pMsg, nullptr );
         dbus_message_unref( pMsg );
     }
     else if  (pAdapter->maInterface == "org.bluez.Adapter1") // Bluez 5
@@ -894,7 +877,7 @@ registerWithDefaultAdapter( DBusConnection *pConnection )
                                      bluetooth_service_record ) )
         {
             delete pService;
-            return NULL;
+            return nullptr;
         }
     }
 
@@ -947,7 +930,7 @@ DBusHandlerResult ProfileMessageFunction
 
                     int nDescriptor;
                     dbus_message_iter_get_basic(&it, &nDescriptor);
-                    std::vector<Communicator*>* pCommunicators = (std::vector<Communicator*>*) user_data;
+                    std::vector<Communicator*>* pCommunicators = static_cast<std::vector<Communicator*>*>(user_data);
 
                     // Bluez gives us non-blocking sockets, but our code relies
                     // on blocking behaviour.
@@ -961,7 +944,7 @@ DBusHandlerResult ProfileMessageFunction
 
                 // For some reason an (empty?) reply is expected.
                 DBusMessage* pRet = dbus_message_new_method_return(pMessage);
-                dbus_connection_send(pConnection, pRet, NULL);
+                dbus_connection_send(pConnection, pRet, nullptr);
                 dbus_message_unref(pRet);
 
                 // We could read the remote profile version and features here
@@ -1050,7 +1033,7 @@ registerBluez5Profile(DBusConnection* pConnection, std::vector<Communicator*>* p
     DBusMessageIter aEntry;
 
     {
-        dbus_message_iter_open_container(&aOptionsIter, DBUS_TYPE_DICT_ENTRY, NULL, &aEntry);
+        dbus_message_iter_open_container(&aOptionsIter, DBUS_TYPE_DICT_ENTRY, nullptr, &aEntry);
 
         const char *pString = "Name";
         dbus_message_iter_append_basic(&aEntry, DBUS_TYPE_STRING, &pString);
@@ -1082,7 +1065,7 @@ registerBluez5Profile(DBusConnection* pConnection, std::vector<Communicator*>* p
         bSuccess = false;
         SAL_WARN("sdremote.bluetooth",
                  "Failed to register our Profile1 with bluez ProfileManager "
-                 << (const char *)(aError.message ? aError.message : "<null>"));
+                 << (aError.message ? aError.message : "<null>"));
     }
 
     dbus_error_free(&aError);
@@ -1123,7 +1106,7 @@ void BluetoothServer::ensureDiscoverable()
     if( !spServer )
         return;
     GSource *pIdle = g_idle_source_new();
-    g_source_set_callback( pIdle, ensureDiscoverable_cb, NULL, NULL );
+    g_source_set_callback( pIdle, ensureDiscoverable_cb, nullptr, nullptr );
     g_source_set_priority( pIdle, G_PRIORITY_DEFAULT );
     g_source_attach( pIdle, spServer->mpImpl->mpContext );
     g_source_unref( pIdle );
@@ -1137,7 +1120,7 @@ void BluetoothServer::restoreDiscoverable()
     if( !spServer )
         return;
     GSource *pIdle = g_idle_source_new();
-    g_source_set_callback( pIdle, restoreDiscoverable_cb, NULL, NULL );
+    g_source_set_callback( pIdle, restoreDiscoverable_cb, nullptr, nullptr );
     g_source_set_priority( pIdle, G_PRIORITY_DEFAULT_IDLE );
     g_source_attach( pIdle, spServer->mpImpl->mpContext );
     g_source_unref( pIdle );
@@ -1222,12 +1205,12 @@ void SAL_CALL BluetoothServer::run()
 
         // We don't need to listen to adapter changes anymore -- profile
         // registration is done globally for the entirety of bluez, so we only
-        // need adapters when setting discovereability, which can be done
-        // dyanmically without the need to listen for changes.
+        // need adapters when setting discoverability, which can be done
+        // dynamically without the need to listen for changes.
 
         // TODO: exit on SD deinit
         // Probably best to do that in SdModule::~SdModule?
-        while (!mpImpl->mbExitMainloop)
+        while (true)
         {
             aDBusFD.revents = 0;
             g_main_context_iteration( mpImpl->mpContext, TRUE );
@@ -1240,8 +1223,8 @@ void SAL_CALL BluetoothServer::run()
         }
         unregisterBluez5Profile( pConnection );
         g_main_context_unref( mpImpl->mpContext );
-        mpImpl->mpConnection = NULL;
-        mpImpl->mpContext = NULL;
+        mpImpl->mpConnection = nullptr;
+        mpImpl->mpContext = nullptr;
         return;
     }
 
@@ -1267,7 +1250,7 @@ void SAL_CALL BluetoothServer::run()
 
     mpImpl->mpConnection = pConnection;
 
-    while( !mpImpl->mbExitMainloop )
+    while( true )
     {
         aDBusFD.revents = 0;
         aSocketFD.revents = 0;
@@ -1314,7 +1297,7 @@ void SAL_CALL BluetoothServer::run()
 
             int nClient;
             SAL_INFO( "sdremote.bluetooth", "performing accept" );
-            if ( ( nClient = accept( aSocketFD.fd, (sockaddr*) &aRemoteAddr, &aRemoteAddrLen)) < 0 &&
+            if ( ( nClient = accept( aSocketFD.fd, reinterpret_cast<sockaddr*>(&aRemoteAddr), &aRemoteAddrLen)) < 0 &&
                  errno != EAGAIN )
             {
                 SAL_WARN( "sdremote.bluetooth", "accept failed with errno " << errno );
@@ -1329,8 +1312,8 @@ void SAL_CALL BluetoothServer::run()
 
     unregisterBluez5Profile( pConnection );
     g_main_context_unref( mpImpl->mpContext );
-    mpImpl->mpConnection = NULL;
-    mpImpl->mpContext = NULL;
+    mpImpl->mpConnection = nullptr;
+    mpImpl->mpContext = nullptr;
 
 #elif defined(WIN32)
     WORD wVersionRequested;
@@ -1354,23 +1337,21 @@ void SAL_CALL BluetoothServer::run()
     aAddr.btAddr = 0;
     aAddr.serviceClassId = GUID_NULL;
     aAddr.port = BT_PORT_ANY; // Select any free socket.
-    if ( bind( aSocket, (SOCKADDR*) &aAddr, sizeof(aAddr) ) == SOCKET_ERROR )
+    if ( bind( aSocket, reinterpret_cast<SOCKADDR*>(&aAddr), sizeof(aAddr) ) == SOCKET_ERROR )
     {
         closesocket( aSocket );
         WSACleanup();
         return;
     }
 
-    SOCKADDR aName;
+    SOCKADDR_BTH aName;
     int aNameSize = sizeof(aName);
-    getsockname( aSocket, &aName, &aNameSize ); // Retrieve the local address and port
+    getsockname( aSocket, reinterpret_cast<SOCKADDR*>(&aName), &aNameSize ); // Retrieve the local address and port
 
     CSADDR_INFO aAddrInfo;
     memset( &aAddrInfo, 0, sizeof(aAddrInfo) );
-    aAddrInfo.LocalAddr.lpSockaddr = &aName;
+    aAddrInfo.LocalAddr.lpSockaddr = reinterpret_cast<SOCKADDR*>(&aName);
     aAddrInfo.LocalAddr.iSockaddrLength = sizeof( SOCKADDR_BTH );
-    aAddrInfo.RemoteAddr.lpSockaddr = &aName;
-    aAddrInfo.RemoteAddr.iSockaddrLength = sizeof( SOCKADDR_BTH );
     aAddrInfo.iSocketType = SOCK_STREAM;
     aAddrInfo.iProtocol = BTHPROTO_RFCOMM;
 
@@ -1383,17 +1364,18 @@ void SAL_CALL BluetoothServer::run()
 //    ULONGLONG aData4 = 0x800000805F9B34FB;
 //    memcpy( uuid.Data4, &aData4, sizeof(uuid.Data4) );
 
-    WSAQUERYSET aRecord;
+    WSAQUERYSETW aRecord;
     memset( &aRecord, 0, sizeof(aRecord));
     aRecord.dwSize = sizeof(aRecord);
-    aRecord.lpszServiceInstanceName = (char *)"LibreOffice Impress Remote Control";
-    aRecord.lpszComment = (char *)"Remote control of presentations over bluetooth.";
-    aRecord.lpServiceClassId = (LPGUID) &SerialPortServiceClass_UUID;
+    aRecord.lpszServiceInstanceName = const_cast<wchar_t *>(
+        L"LibreOffice Impress Remote Control");
+    aRecord.lpszComment = const_cast<wchar_t *>(
+        L"Remote control of presentations over bluetooth.");
+    aRecord.lpServiceClassId = const_cast<LPGUID>(&SerialPortServiceClass_UUID);
     aRecord.dwNameSpace = NS_BTH;
     aRecord.dwNumberOfCsAddrs = 1;
     aRecord.lpcsaBuffer = &aAddrInfo;
-
-    if ( WSASetService( &aRecord, RNRSERVICE_REGISTER, 0 ) == SOCKET_ERROR )
+    if (WSASetServiceW( &aRecord, RNRSERVICE_REGISTER, 0 ) == SOCKET_ERROR)
     {
         closesocket( aSocket );
         WSACleanup();
@@ -1412,7 +1394,7 @@ void SAL_CALL BluetoothServer::run()
     while ( true )
     {
         SOCKET socket;
-        if ( (socket = accept(aSocket, (sockaddr*) &aRemoteAddr, &aRemoteAddrLen)) == INVALID_SOCKET )
+        if ( (socket = accept(aSocket, reinterpret_cast<sockaddr*>(&aRemoteAddr), &aRemoteAddrLen)) == INVALID_SOCKET )
         {
             closesocket( aSocket );
             WSACleanup();
@@ -1513,13 +1495,15 @@ void SAL_CALL BluetoothServer::run()
     void *pLib = dlopen(NULL, RTLD_LAZY | RTLD_LOCAL);
     if (pLib)
     {
-        IOBluetoothAddServiceDict_Type *pIOBluetoothAddServiceDict = (IOBluetoothAddServiceDict_Type *)dlsym(pLib, "IOBluetoothAddServiceDict");
+        IOBluetoothAddServiceDict_Type *pIOBluetoothAddServiceDict = reinterpret_cast< IOBluetoothAddServiceDict_Type* >(dlsym(pLib, "IOBluetoothAddServiceDict"));
         if (pIOBluetoothAddServiceDict)
-            rc = pIOBluetoothAddServiceDict((CFDictionaryRef) dict, &serviceRecordRef);
+            rc = pIOBluetoothAddServiceDict(static_cast< CFDictionaryRef >(dict), &serviceRecordRef);
         dlclose(pLib);
     }
 #else	// USE_JAVA
-    IOReturn rc = IOBluetoothAddServiceDict((CFDictionaryRef) dict, &serviceRecordRef);
+    SAL_WNODEPRECATED_DECLARATIONS_PUSH //TODO: 10.9 IOBluetoothAddServiceDict
+    IOReturn rc = IOBluetoothAddServiceDict(reinterpret_cast<CFDictionaryRef>(dict), &serviceRecordRef);
+    SAL_WNODEPRECATED_DECLARATIONS_POP
 #endif	// USE_JAVA
 
     SAL_INFO("sdremote.bluetooth", "IOBluetoothAddServiceDict returned " << rc);
@@ -1556,7 +1540,7 @@ void SAL_CALL BluetoothServer::run()
 #endif
 }
 
-BluetoothServer *sd::BluetoothServer::spServer = NULL;
+BluetoothServer *sd::BluetoothServer::spServer = nullptr;
 
 void BluetoothServer::setup( std::vector<Communicator*>* pCommunicators )
 {
