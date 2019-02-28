@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <com/sun/star/uno/Reference.h>
 #include <com/sun/star/frame/Desktop.hpp>
+#include <com/sun/star/frame/UnknownModuleException.hpp>
 #include <com/sun/star/frame/XFrame2.hpp>
 #include <com/sun/star/frame/XComponentLoader.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
@@ -60,6 +61,7 @@
 #include <osl/file.hxx>
 #include <unotools/bootstrap.hxx>
 #include <rtl/uri.hxx>
+#include <vcl/commandinfoprovider.hxx>
 #include <vcl/layout.hxx>
 #include <svtools/ehdl.hxx>
 #include <svtools/sfxecode.hxx>
@@ -73,7 +75,6 @@
 #include <sfx2/sfxuno.hxx>
 #include <vcl/svapp.hxx>
 #include <sfx2/frame.hxx>
-#include <rtl/strbuf.hxx>
 #include <rtl/string.hxx>
 
 using namespace ::com::sun::star::beans;
@@ -86,9 +87,9 @@ using namespace ::com::sun::star::system;
 class NoHelpErrorBox : public MessageDialog
 {
 public:
-    NoHelpErrorBox( vcl::Window* _pParent );
+    explicit NoHelpErrorBox( vcl::Window* _pParent );
 
-    virtual void    RequestHelp( const HelpEvent& rHEvt ) SAL_OVERRIDE;
+    virtual void    RequestHelp( const HelpEvent& rHEvt ) override;
 };
 
 NoHelpErrorBox::NoHelpErrorBox( vcl::Window* _pParent )
@@ -105,7 +106,7 @@ void NoHelpErrorBox::RequestHelp( const HelpEvent& )
 static bool impl_hasHelpInstalled( const OUString &rLang );
 
 /// Return the locale we prefer for displaying help
-static OUString HelpLocaleString()
+static OUString const & HelpLocaleString()
 {
     static OUString aLocaleStr;
     if (aLocaleStr.isEmpty())
@@ -120,10 +121,9 @@ static OUString HelpLocaleString()
         {
             OUString aBaseInstallPath;
             utl::Bootstrap::locateBaseInstallation(aBaseInstallPath);
-            static const char *szHelpPath = "/help/";
+            static const char szHelpPath[] = "/help/";
 
-            OUString sHelpPath = aBaseInstallPath +
-                OUString::createFromAscii(szHelpPath) + aLocaleStr;
+            OUString sHelpPath = aBaseInstallPath + szHelpPath + aLocaleStr;
             osl::DirectoryItem aDirItem;
 
             if (osl::DirectoryItem::get(sHelpPath, aDirItem) != osl::FileBase::E_None)
@@ -135,8 +135,7 @@ static OUString HelpLocaleString()
                 {
                     bOk = true;
                     sLang = sLang.copy( 0, nSepPos );
-                    sHelpPath = aBaseInstallPath +
-                        OUString::createFromAscii(szHelpPath) + sLang;
+                    sHelpPath = aBaseInstallPath + szHelpPath + sLang;
                     if (osl::DirectoryItem::get(sHelpPath, aDirItem) != osl::FileBase::E_None)
                         bOk = false;
                 }
@@ -180,8 +179,8 @@ bool GetHelpAnchor_Impl( const OUString& _rURL, OUString& _rAnchor )
 
     try
     {
-        ::ucbhelper::Content aCnt( INetURLObject( _rURL ).GetMainURL( INetURLObject::NO_DECODE ),
-                             Reference< ::com::sun::star::ucb::XCommandEnvironment >(),
+        ::ucbhelper::Content aCnt( INetURLObject( _rURL ).GetMainURL( INetURLObject::DecodeMechanism::NONE ),
+                             Reference< css::ucb::XCommandEnvironment >(),
                              comphelper::getProcessComponentContext() );
         if ( ( aCnt.getPropertyValue("AnchorName") >>= sAnchor ) )
         {
@@ -197,7 +196,7 @@ bool GetHelpAnchor_Impl( const OUString& _rURL, OUString& _rAnchor )
             SAL_WARN( "sfx.appl", "Property 'AnchorName' is missing" );
         }
     }
-    catch (const ::com::sun::star::uno::Exception&)
+    catch (const css::uno::Exception&)
     {
     }
 
@@ -224,8 +223,7 @@ OUString SfxHelp_Impl::GetHelpText( const OUString& aCommandURL, const OUString&
 }
 
 SfxHelp::SfxHelp() :
-    bIsDebug( false ),
-    pImp    ( NULL )
+    bIsDebug( false )
 {
     // read the environment variable "HELP_DEBUG"
     // if it's set, you will see debug output on active help
@@ -235,34 +233,31 @@ SfxHelp::SfxHelp() :
         osl_getEnvironment( sEnvVarName.pData, &sHelpDebug.pData );
         bIsDebug = !sHelpDebug.isEmpty();
     }
-
-    pImp = new SfxHelp_Impl();
 }
 
 SfxHelp::~SfxHelp()
 {
-    delete pImp;
 }
 
 OUString getDefaultModule_Impl()
 {
     OUString sDefaultModule;
     SvtModuleOptions aModOpt;
-    if ( aModOpt.IsModuleInstalled( SvtModuleOptions::E_SWRITER ) )
+    if ( aModOpt.IsModuleInstalled( SvtModuleOptions::EModule::WRITER ) )
         sDefaultModule = "swriter";
-    else if ( aModOpt.IsModuleInstalled( SvtModuleOptions::E_SCALC ) )
+    else if ( aModOpt.IsModuleInstalled( SvtModuleOptions::EModule::CALC ) )
         sDefaultModule = "scalc";
-    else if ( aModOpt.IsModuleInstalled( SvtModuleOptions::E_SIMPRESS ) )
+    else if ( aModOpt.IsModuleInstalled( SvtModuleOptions::EModule::IMPRESS ) )
         sDefaultModule = "simpress";
-    else if ( aModOpt.IsModuleInstalled( SvtModuleOptions::E_SDRAW ) )
+    else if ( aModOpt.IsModuleInstalled( SvtModuleOptions::EModule::DRAW ) )
         sDefaultModule = "sdraw";
-    else if ( aModOpt.IsModuleInstalled( SvtModuleOptions::E_SMATH ) )
+    else if ( aModOpt.IsModuleInstalled( SvtModuleOptions::EModule::MATH ) )
         sDefaultModule = "smath";
-    else if ( aModOpt.IsModuleInstalled( SvtModuleOptions::E_SCHART ) )
+    else if ( aModOpt.IsModuleInstalled( SvtModuleOptions::EModule::CHART ) )
         sDefaultModule = "schart";
-    else if ( aModOpt.IsModuleInstalled( SvtModuleOptions::E_SBASIC ) )
+    else if ( aModOpt.IsModuleInstalled( SvtModuleOptions::EModule::BASIC ) )
         sDefaultModule = "sbasic";
-    else if ( aModOpt.IsModuleInstalled( SvtModuleOptions::E_SDATABASE ) )
+    else if ( aModOpt.IsModuleInstalled( SvtModuleOptions::EModule::DATABASE ) )
         sDefaultModule = "sdatabase";
     else
     {
@@ -285,9 +280,9 @@ OUString getCurrentModuleIdentifier_Impl()
         {
             sIdentifier = xModuleManager->identify( xCurrentFrame );
         }
-        catch (const ::com::sun::star::frame::UnknownModuleException&)
+        catch (const css::frame::UnknownModuleException&)
         {
-            DBG_WARNING( "SfxHelp::getCurrentModuleIdentifier_Impl(): unknown module (help in help?)" );
+            SAL_INFO( "sfx.appl", "SfxHelp::getCurrentModuleIdentifier_Impl(): unknown module (help in help?)" );
         }
         catch (const Exception&)
         {
@@ -298,37 +293,12 @@ OUString getCurrentModuleIdentifier_Impl()
     return sIdentifier;
 }
 
-OUString SfxHelp::GetHelpModuleName_Impl()
+namespace
 {
-    OUString aFactoryShortName;
-    OUString aModuleIdentifier = getCurrentModuleIdentifier_Impl();
-
-    if ( !aModuleIdentifier.isEmpty() )
+    OUString MapModuleIdentifier(const OUString &rFactoryShortName)
     {
-        try
-        {
-            Reference < XModuleManager2 > xModuleManager(
-                ModuleManager::create(::comphelper::getProcessComponentContext()) );
-            Sequence< PropertyValue > lProps;
-            xModuleManager->getByName( aModuleIdentifier ) >>= lProps;
-            for ( sal_Int32 i = 0; i < lProps.getLength(); ++i )
-            {
-                if ( lProps[i].Name == "ooSetupFactoryShortName" )
-                {
-                    lProps[i].Value >>= aFactoryShortName;
-                    break;
-                }
-            }
-        }
-        catch (const Exception&)
-        {
-            SAL_WARN( "sfx.appl", "SfxHelp::GetHelpModuleName_Impl(): exception of XNameAccess::getByName()" );
-        }
-    }
+        OUString aFactoryShortName(rFactoryShortName);
 
-    OUString sDefaultModule = getDefaultModule_Impl();
-    if ( !aFactoryShortName.isEmpty() )
-    {
         // Map some module identifiers to their "real" help module string.
         if ( aFactoryShortName == "chart2" )
             aFactoryShortName = "schart" ;
@@ -344,15 +314,68 @@ OUString SfxHelp::GetHelpModuleName_Impl()
                 || aFactoryShortName == "dbtable"
                 || aFactoryShortName == "dbapp"
                 || aFactoryShortName == "dbreport"
+                || aFactoryShortName == "dbtdata"
                 || aFactoryShortName == "swreport"
                 || aFactoryShortName == "swform" )
             aFactoryShortName = "sdatabase";
         else if ( aFactoryShortName == "sbibliography"
+                || aFactoryShortName == "sabpilot"
+                || aFactoryShortName == "scanner"
+                || aFactoryShortName == "spropctrlr"
                 || aFactoryShortName == "StartModule" )
-            aFactoryShortName = sDefaultModule;
+            aFactoryShortName.clear();
+
+        return aFactoryShortName;
     }
-    else
-        aFactoryShortName = sDefaultModule;
+}
+
+OUString SfxHelp::GetHelpModuleName_Impl(const OUString& rHelpID)
+{
+    OUString aFactoryShortName;
+
+    //rhbz#1438876 detect preferred module for this help id, e.g. csv dialog
+    //for calc import before any toplevel is created and so context is
+    //otherwise unknown. Cosmetic, same help is shown in any case because its
+    //in the shared section, but title bar would state "Writer" when context is
+    //expected to be "Calc"
+    OUString sRemainder;
+    if (rHelpID.startsWith("modules/", &sRemainder))
+    {
+        sal_Int32 nEndModule = sRemainder.indexOf('/');
+        aFactoryShortName = nEndModule != -1 ? sRemainder.copy(0, nEndModule) : sRemainder;
+    }
+
+    if (aFactoryShortName.isEmpty())
+    {
+        OUString aModuleIdentifier = getCurrentModuleIdentifier_Impl();
+        if (!aModuleIdentifier.isEmpty())
+        {
+            try
+            {
+                Reference < XModuleManager2 > xModuleManager(
+                    ModuleManager::create(::comphelper::getProcessComponentContext()) );
+                Sequence< PropertyValue > lProps;
+                xModuleManager->getByName( aModuleIdentifier ) >>= lProps;
+                for ( sal_Int32 i = 0; i < lProps.getLength(); ++i )
+                {
+                    if ( lProps[i].Name == "ooSetupFactoryShortName" )
+                    {
+                        lProps[i].Value >>= aFactoryShortName;
+                        break;
+                    }
+                }
+            }
+            catch (const Exception&)
+            {
+                SAL_WARN( "sfx.appl", "SfxHelp::GetHelpModuleName_Impl(): exception of XNameAccess::getByName()" );
+            }
+        }
+    }
+
+    if (!aFactoryShortName.isEmpty())
+        aFactoryShortName = MapModuleIdentifier(aFactoryShortName);
+    if (aFactoryShortName.isEmpty())
+        aFactoryShortName = getDefaultModule_Impl();
 
     return aFactoryShortName;
 }
@@ -406,13 +429,13 @@ SfxHelpWindow_Impl* impl_createHelp(Reference< XFrame2 >& rHelpTask   ,
         xDesktop->findFrame(  "OFFICE_HELP_TASK", FrameSearchFlag::TASKS | FrameSearchFlag::CREATE),
         UNO_QUERY);
     if (!xHelpTask.is())
-        return 0;
+        return nullptr;
 
     // create all internal windows and sub frames ...
-    Reference< ::com::sun::star::awt::XWindow > xParentWindow = xHelpTask->getContainerWindow();
-    vcl::Window*                                     pParentWindow = VCLUnoHelper::GetWindow( xParentWindow );
-    SfxHelpWindow_Impl*                         pHelpWindow   = new SfxHelpWindow_Impl( xHelpTask, pParentWindow, WB_DOCKBORDER );
-    Reference< ::com::sun::star::awt::XWindow > xHelpWindow   = VCLUnoHelper::GetInterface( pHelpWindow );
+    Reference< css::awt::XWindow >      xParentWindow = xHelpTask->getContainerWindow();
+    VclPtr<vcl::Window>                 pParentWindow = VCLUnoHelper::GetWindow( xParentWindow );
+    VclPtrInstance<SfxHelpWindow_Impl>  pHelpWindow( xHelpTask, pParentWindow );
+    Reference< css::awt::XWindow >      xHelpWindow   = VCLUnoHelper::GetInterface( pHelpWindow );
 
     Reference< XFrame > xHelpContent;
     if (xHelpTask->setComponent( xHelpWindow, Reference< XController >() ))
@@ -424,21 +447,21 @@ SfxHelpWindow_Impl* impl_createHelp(Reference< XFrame2 >& rHelpTask   ,
         if (xProps.is())
             xProps->setPropertyValue(
                 "Title",
-                makeAny(SfxResId(STR_HELP_WINDOW_TITLE).toString()));
+                makeAny(SfxResId(STR_HELP_WINDOW_TITLE)));
 
         pHelpWindow->setContainerWindow( xParentWindow );
-        xParentWindow->setVisible(sal_True);
-        xHelpWindow->setVisible(sal_True);
+        xParentWindow->setVisible(true);
+        xHelpWindow->setVisible(true);
 
         // This sub frame is created internally (if we called new SfxHelpWindow_Impl() ...)
         // It should exist :-)
-        xHelpContent = xHelpTask->findFrame(OUString("OFFICE_HELP"), FrameSearchFlag::CHILDREN);
+        xHelpContent = xHelpTask->findFrame("OFFICE_HELP", FrameSearchFlag::CHILDREN);
     }
 
     if (!xHelpContent.is())
     {
-        delete pHelpWindow;
-        return NULL;
+        pHelpWindow.disposeAndClear();
+        return nullptr;
     }
 
     xHelpContent->setName("OFFICE_HELP");
@@ -450,8 +473,9 @@ SfxHelpWindow_Impl* impl_createHelp(Reference< XFrame2 >& rHelpTask   ,
 
 OUString SfxHelp::GetHelpText( const OUString& aCommandURL, const vcl::Window* pWindow )
 {
-    OUString sModuleName = GetHelpModuleName_Impl();
-    OUString sHelpText = SfxHelp_Impl::GetHelpText( aCommandURL, sModuleName );
+    OUString sModuleName = GetHelpModuleName_Impl(aCommandURL);
+    OUString sRealCommand = vcl::CommandInfoProvider::GetRealCommandForCommand( aCommandURL, getCurrentModuleIdentifier_Impl() );
+    OUString sHelpText = SfxHelp_Impl::GetHelpText( sRealCommand.isEmpty() ? aCommandURL : sRealCommand, sModuleName );
 
     OString aNewHelpId;
 
@@ -464,7 +488,7 @@ OUString SfxHelp::GetHelpText( const OUString& aCommandURL, const vcl::Window* p
             aNewHelpId = pParent->GetHelpId();
             sHelpText = SfxHelp_Impl::GetHelpText( OStringToOUString(aNewHelpId, RTL_TEXTENCODING_UTF8), sModuleName );
             if (!sHelpText.isEmpty())
-                pParent = NULL;
+                pParent = nullptr;
             else
                 pParent = pParent->GetParent();
         }
@@ -502,7 +526,7 @@ static bool impl_hasHelpInstalled( const OUString &rLang = OUString() )
 
 bool SfxHelp::SearchKeyword( const OUString& rKeyword )
 {
-    return Start_Impl( OUString(), NULL, rKeyword );
+    return Start_Impl( OUString(), nullptr, rKeyword );
 }
 
 bool SfxHelp::Start( const OUString& rURL, const vcl::Window* pWindow )
@@ -561,15 +585,21 @@ bool SfxHelp::Start_Impl(const OUString& rURL, const vcl::Window* pWindow, const
 
     switch ( nProtocol )
     {
-        case INET_PROT_VND_SUN_STAR_HELP:
+        case INetProtocol::VndSunStarHelp:
             // already a vnd.sun.star.help URL -> nothing to do
             aHelpURL = rURL;
             break;
         default:
         {
-            OUString aHelpModuleName( GetHelpModuleName_Impl() );
+            OUString aHelpModuleName(GetHelpModuleName_Impl(rURL));
+            OUString aRealCommand;
+
+            if ( nProtocol == INetProtocol::Uno )
+                // Command can be just an alias to another command.
+                aRealCommand = vcl::CommandInfoProvider::GetRealCommandForCommand( rURL, getCurrentModuleIdentifier_Impl() );
+
             // no URL, just a HelpID (maybe empty in case of keyword search)
-            aHelpURL = CreateHelpURL_Impl( rURL, aHelpModuleName );
+            aHelpURL = CreateHelpURL_Impl( aRealCommand.isEmpty() ? rURL : aRealCommand, aHelpModuleName );
 
             if ( impl_hasHelpInstalled() && pWindow && SfxContentHelper::IsHelpErrorDocument( aHelpURL ) )
             {
@@ -599,9 +629,9 @@ bool SfxHelp::Start_Impl(const OUString& rURL, const vcl::Window* pWindow, const
                             //that for help
                             bTriedTabPage = true;
                             Dialog *pDialog = static_cast<Dialog*>(pParent);
-                            TabControl *pCtrl = pDialog->hasBuilder() ? pDialog->get<TabControl>("tabcontrol") : NULL;
-                            TabPage* pTabPage = pCtrl ? pCtrl->GetTabPage(pCtrl->GetCurPageId()) : NULL;
-                            vcl::Window *pTabChild = pTabPage ? pTabPage->GetWindow(WINDOW_FIRSTCHILD) : NULL;
+                            TabControl *pCtrl = pDialog->hasBuilder() ? pDialog->get<TabControl>("tabcontrol") : nullptr;
+                            TabPage* pTabPage = pCtrl ? pCtrl->GetTabPage(pCtrl->GetCurPageId()) : nullptr;
+                            vcl::Window *pTabChild = pTabPage ? pTabPage->GetWindow(GetWindowType::FirstChild) : nullptr;
                             if (pTabChild)
                                 pParent = pTabChild;
                         }
@@ -614,48 +644,57 @@ bool SfxHelp::Start_Impl(const OUString& rURL, const vcl::Window* pWindow, const
 
     if ( !impl_hasHelpInstalled() )
     {
-#ifndef USE_JAVA
-        if ( impl_showOnlineHelp( aHelpURL ) )
-            return true;
-#endif	// !USE_JAVA
+        ScopedVclPtrInstance< MessageDialog > aQueryBox(const_cast< vcl::Window* >( pWindow ),"onlinehelpmanual","sfx/ui/helpmanual.ui");
+        short OnlineHelpBox = aQueryBox->Execute();
 
-        NoHelpErrorBox aErrBox( const_cast< vcl::Window* >( pWindow ) );
-        aErrBox.Execute();
-        return false;
+        if(OnlineHelpBox == RET_OK)
+        {
+#ifndef USE_JAVA
+            if ( impl_showOnlineHelp( aHelpURL ) )
+                return true;
+            else
+#endif	// !USE_JAVA
+            {
+                ScopedVclPtrInstance< NoHelpErrorBox > aErrBox(const_cast< vcl::Window* >( pWindow ));
+                aErrBox->Execute();
+                return false;
+            }
+        }
+        else
+        {
+            return false;
+        }
+
     }
 
     Reference < XDesktop2 > xDesktop = Desktop::create( ::comphelper::getProcessComponentContext() );
 
     // check if help window is still open
     // If not, create a new one and return access directly to the internal sub frame showing the help content
-    // search must be done here; search one desktop level could return an arbitraty frame
+    // search must be done here; search one desktop level could return an arbitrary frame
     Reference< XFrame2 > xHelp(
         xDesktop->findFrame( "OFFICE_HELP_TASK", FrameSearchFlag::CHILDREN),
         UNO_QUERY);
     Reference< XFrame > xHelpContent = xDesktop->findFrame(
-        OUString("OFFICE_HELP"),
+        "OFFICE_HELP",
         FrameSearchFlag::CHILDREN);
 
-    SfxHelpWindow_Impl* pHelpWindow = 0;
+    SfxHelpWindow_Impl* pHelpWindow = nullptr;
     if (!xHelp.is())
         pHelpWindow = impl_createHelp(xHelp, xHelpContent);
     else
-        pHelpWindow = static_cast<SfxHelpWindow_Impl*>(VCLUnoHelper::GetWindow(xHelp->getComponentWindow()));
+        pHelpWindow = static_cast<SfxHelpWindow_Impl*>(VCLUnoHelper::GetWindow(xHelp->getComponentWindow()).get());
     if (!xHelp.is() || !xHelpContent.is() || !pHelpWindow)
         return false;
 
-#ifdef DBG_UTIL
-    OStringBuffer aTmp("SfxHelp: HelpId = ");
-    aTmp.append(OUStringToOString(aHelpURL, RTL_TEXTENCODING_UTF8));
-    OSL_TRACE( aTmp.getStr() );
-#endif
+    SAL_INFO("sfx.appl", "HelpId = " << aHelpURL);
 
     pHelpWindow->SetHelpURL( aHelpURL );
     pHelpWindow->loadHelpContent(aHelpURL);
     if (!rKeyword.isEmpty())
         pHelpWindow->OpenKeyword( rKeyword );
 
-    Reference < ::com::sun::star::awt::XTopWindow > xTopWindow( xHelp->getContainerWindow(), UNO_QUERY );
+    Reference < css::awt::XTopWindow > xTopWindow( xHelp->getContainerWindow(), UNO_QUERY );
     if ( xTopWindow.is() )
         xTopWindow->toFront();
 
@@ -665,7 +704,7 @@ bool SfxHelp::Start_Impl(const OUString& rURL, const vcl::Window* pWindow, const
 OUString SfxHelp::CreateHelpURL(const OUString& aCommandURL, const OUString& rModuleName)
 {
     SfxHelp* pHelp = static_cast< SfxHelp* >(Application::GetHelp());
-    return pHelp ? pHelp->CreateHelpURL_Impl( aCommandURL, rModuleName ) : OUString();
+    return pHelp ? SfxHelp::CreateHelpURL_Impl( aCommandURL, rModuleName ) : OUString();
 }
 
 OUString SfxHelp::GetDefaultHelpModule()

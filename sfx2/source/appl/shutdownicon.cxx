@@ -38,6 +38,7 @@
 #include <svtools/miscopt.hxx>
 #include <com/sun/star/task/InteractionHandler.hpp>
 #include <com/sun/star/frame/Desktop.hpp>
+#include <com/sun/star/frame/TerminationVetoException.hpp>
 #include <com/sun/star/frame/XDispatchResultListener.hpp>
 #include <com/sun/star/frame/XNotifyingDispatch.hpp>
 #include <com/sun/star/frame/XFramesSupplier.hpp>
@@ -46,6 +47,7 @@
 #include <com/sun/star/util/URLTransformer.hpp>
 #include <com/sun/star/util/XURLTransformer.hpp>
 #include <com/sun/star/ui/dialogs/XFilePickerControlAccess.hpp>
+#include <com/sun/star/ui/dialogs/XFilePicker2.hpp>
 #include <com/sun/star/ui/dialogs/XFilterManager.hpp>
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
 #include <com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp>
@@ -56,11 +58,12 @@
 #include <sfx2/filedlghelper.hxx>
 #include <sfx2/fcontnr.hxx>
 #include <comphelper/processfactory.hxx>
-#include <cppuhelper/compbase1.hxx>
+#include <cppuhelper/implbase.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <sfx2/dispatch.hxx>
 #include <comphelper/extract.hxx>
 #include <tools/urlobj.hxx>
+#include <tools/rcid.h>
 #include <osl/security.hxx>
 #include <osl/file.hxx>
 #include <rtl/bootstrap.hxx>
@@ -90,58 +93,51 @@ extern "C" { static void SAL_CALL thisModule() {} }
 # endif
 #endif
 
-class SfxNotificationListener_Impl : public cppu::WeakImplHelper1< XDispatchResultListener >
+class SfxNotificationListener_Impl : public cppu::WeakImplHelper< XDispatchResultListener >
 {
 public:
-    virtual void SAL_CALL dispatchFinished( const DispatchResultEvent& aEvent ) throw( RuntimeException, std::exception ) SAL_OVERRIDE;
-    virtual void SAL_CALL disposing( const EventObject& aEvent ) throw( RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL dispatchFinished( const DispatchResultEvent& aEvent ) override;
+    virtual void SAL_CALL disposing( const EventObject& aEvent ) override;
 };
 
-void SAL_CALL SfxNotificationListener_Impl::dispatchFinished( const DispatchResultEvent& ) throw( RuntimeException, std::exception )
+void SAL_CALL SfxNotificationListener_Impl::dispatchFinished( const DispatchResultEvent& )
 {
     ShutdownIcon::LeaveModalMode();
 }
 
-void SAL_CALL SfxNotificationListener_Impl::disposing( const EventObject& ) throw( RuntimeException, std::exception )
+void SAL_CALL SfxNotificationListener_Impl::disposing( const EventObject& )
 {
 }
 
 OUString SAL_CALL ShutdownIcon::getImplementationName()
-    throw (css::uno::RuntimeException, std::exception)
 {
     return OUString("com.sun.star.comp.desktop.QuickstartWrapper");
 }
 
 sal_Bool SAL_CALL ShutdownIcon::supportsService(OUString const & ServiceName)
-    throw (css::uno::RuntimeException, std::exception)
 {
     return cppu::supportsService(this, ServiceName);
 }
 
 css::uno::Sequence<OUString> SAL_CALL ShutdownIcon::getSupportedServiceNames()
-    throw (css::uno::RuntimeException, std::exception)
 {
-    css::uno::Sequence< OUString > aSeq(1);
-    aSeq[0] = OUString("com.sun.star.office.Quickstart");
+    css::uno::Sequence< OUString > aSeq { "com.sun.star.office.Quickstart" };
     return aSeq;
 }
 
 bool ShutdownIcon::bModalMode = false;
-ShutdownIcon* ShutdownIcon::pShutdownIcon = NULL;
+ShutdownIcon* ShutdownIcon::pShutdownIcon = nullptr;
 
-#if !defined( ENABLE_QUICKSTART_APPLET )
-// To remove conditionals
 extern "C" {
     static void disabled_initSystray() { }
     static void disabled_deInitSystray() { }
 }
-#endif
 
 namespace {
 
 boost::logic::tribool loaded(boost::logic::indeterminate);
-oslGenericFunction pInitSystray(nullptr);
-oslGenericFunction pDeInitSystray(nullptr);
+oslGenericFunction pInitSystray = disabled_initSystray;
+oslGenericFunction pDeInitSystray = disabled_deInitSystray;
 
 bool LoadModule()
 {
@@ -163,8 +159,8 @@ bool LoadModule()
         loaded = true;
 #  else // UNX
         osl::Module plugin;
-        oslGenericFunction pTmpInit = NULL;
-        oslGenericFunction pTmpDeInit = NULL;
+        oslGenericFunction pTmpInit = nullptr;
+        oslGenericFunction pTmpDeInit = nullptr;
         if ( plugin.loadRelative( &thisModule, "libqstart_gtklo.so" ) )
         {
             pTmpInit = plugin.getFunctionSymbol( "plugin_init_sys_tray" );
@@ -182,10 +178,6 @@ bool LoadModule()
             loaded = true;
         }
 #  endif // UNX
-#else
-        pInitSystray = disabled_initSystray;
-        pDeInitSystray = disabled_deInitSystray;
-        loaded = false;
 #endif // ENABLE_QUICKSTART_APPLET
     }
     assert(!boost::logic::indeterminate(loaded));
@@ -214,22 +206,22 @@ void ShutdownIcon::deInitSystray()
         pDeInitSystray();
 
     m_bVeto = false;
-    pInitSystray = 0;
-    pDeInitSystray = 0;
+    pInitSystray = nullptr;
+    pDeInitSystray = nullptr;
 
     delete m_pFileDlg;
-    m_pFileDlg = NULL;
+    m_pFileDlg = nullptr;
     m_bInitialized = false;
 }
 
 
-ShutdownIcon::ShutdownIcon( const ::com::sun::star::uno::Reference< XComponentContext > & rxContext ) :
+ShutdownIcon::ShutdownIcon( const css::uno::Reference< XComponentContext > & rxContext ) :
     ShutdownIconServiceBase( m_aMutex ),
     m_bVeto ( false ),
     m_bListenForTermination ( false ),
     m_bSystemDialogs( false ),
-    m_pResMgr( NULL ),
-    m_pFileDlg( NULL ),
+    m_pResMgr( nullptr ),
+    m_pFileDlg( nullptr ),
     m_xContext( rxContext ),
     m_bInitialized( false )
 {
@@ -242,38 +234,36 @@ ShutdownIcon::~ShutdownIcon()
 }
 
 
-
 void ShutdownIcon::OpenURL( const OUString& aURL, const OUString& rTarget, const Sequence< PropertyValue >& aArgs )
 {
     if ( getInstance() && getInstance()->m_xDesktop.is() )
     {
-        ::com::sun::star::uno::Reference < XDispatchProvider > xDispatchProvider( getInstance()->m_xDesktop, UNO_QUERY );
+        css::uno::Reference < XDispatchProvider > xDispatchProvider( getInstance()->m_xDesktop, UNO_QUERY );
         if ( xDispatchProvider.is() )
         {
-            com::sun::star::util::URL aDispatchURL;
+            css::util::URL aDispatchURL;
             aDispatchURL.Complete = aURL;
 
-            ::com::sun::star::uno::Reference< util::XURLTransformer > xURLTransformer( util::URLTransformer::create( ::comphelper::getProcessComponentContext() ) );
+            css::uno::Reference< util::XURLTransformer > xURLTransformer( util::URLTransformer::create( ::comphelper::getProcessComponentContext() ) );
             try
             {
-                ::com::sun::star::uno::Reference< com::sun::star::frame::XDispatch > xDispatch;
+                css::uno::Reference< css::frame::XDispatch > xDispatch;
 
                 xURLTransformer->parseStrict( aDispatchURL );
                 xDispatch = xDispatchProvider->queryDispatch( aDispatchURL, rTarget, 0 );
                 if ( xDispatch.is() )
                     xDispatch->dispatch( aDispatchURL, aArgs );
             }
-            catch ( com::sun::star::uno::RuntimeException& )
+            catch ( css::uno::RuntimeException& )
             {
                 throw;
             }
-            catch ( com::sun::star::uno::Exception& )
+            catch ( css::uno::Exception& )
             {
             }
         }
     }
 }
-
 
 
 void ShutdownIcon::FileOpen()
@@ -287,29 +277,25 @@ void ShutdownIcon::FileOpen()
 }
 
 
-
 void ShutdownIcon::FromTemplate()
 {
     if ( getInstance() && getInstance()->m_xDesktop.is() )
     {
-        ::com::sun::star::uno::Reference < ::com::sun::star::frame::XFramesSupplier > xDesktop ( getInstance()->m_xDesktop, UNO_QUERY);
-        ::com::sun::star::uno::Reference < ::com::sun::star::frame::XFrame > xFrame( xDesktop->getActiveFrame() );
+        css::uno::Reference < css::frame::XFramesSupplier > xDesktop ( getInstance()->m_xDesktop, UNO_QUERY);
+        css::uno::Reference < css::frame::XFrame > xFrame( xDesktop->getActiveFrame() );
         if ( !xFrame.is() )
-            xFrame = ::com::sun::star::uno::Reference < ::com::sun::star::frame::XFrame >( xDesktop, UNO_QUERY );
+            xFrame.set( xDesktop, UNO_QUERY );
 
         URL aTargetURL;
-        aTargetURL.Complete = "slot:5500";
-        ::com::sun::star::uno::Reference< util::XURLTransformer > xTrans( util::URLTransformer::create( ::comphelper::getProcessComponentContext() ) );
+        aTargetURL.Complete = ".uno:NewDoc";
+        css::uno::Reference< util::XURLTransformer > xTrans( util::URLTransformer::create( ::comphelper::getProcessComponentContext() ) );
         xTrans->parseStrict( aTargetURL );
 
-        ::com::sun::star::uno::Reference < ::com::sun::star::frame::XDispatchProvider > xProv( xFrame, UNO_QUERY );
-        ::com::sun::star::uno::Reference < ::com::sun::star::frame::XDispatch > xDisp;
+        css::uno::Reference < css::frame::XDispatchProvider > xProv( xFrame, UNO_QUERY );
+        css::uno::Reference < css::frame::XDispatch > xDisp;
         if ( xProv.is() )
         {
-            if (aTargetURL.Protocol == "slot:")
-                xDisp = xProv->queryDispatch( aTargetURL, OUString(), 0 );
-            else
-                xDisp = xProv->queryDispatch( aTargetURL, OUString("_blank"), 0 );
+            xDisp = xProv->queryDispatch( aTargetURL, "_self", 0 );
         }
         if ( xDisp.is() )
         {
@@ -317,11 +303,11 @@ void ShutdownIcon::FromTemplate()
             PropertyValue* pArg = aArgs.getArray();
             pArg[0].Name = "Referer";
             pArg[0].Value <<= OUString("private:user");
-            ::com::sun::star::uno::Reference< ::com::sun::star::frame::XNotifyingDispatch > xNotifyer( xDisp, UNO_QUERY );
-            if ( xNotifyer.is() )
+            css::uno::Reference< css::frame::XNotifyingDispatch > xNotifier(xDisp, UNO_QUERY);
+            if (xNotifier.is())
             {
                 EnterModalMode();
-                xNotifyer->dispatchWithNotification( aTargetURL, aArgs, new SfxNotificationListener_Impl() );
+                xNotifier->dispatchWithNotification(aTargetURL, aArgs, new SfxNotificationListener_Impl);
             }
             else
                 xDisp->dispatch( aTargetURL, aArgs );
@@ -330,21 +316,19 @@ void ShutdownIcon::FromTemplate()
 }
 
 
-#include <tools/rcid.h>
 OUString ShutdownIcon::GetResString( int id )
 {
     ::SolarMutexGuard aGuard;
 
     if( ! m_pResMgr )
-        m_pResMgr = SfxResId::GetResMgr();
+        m_pResMgr = SfxResMgr::GetResMgr();
     ResId aResId( id, *m_pResMgr );
     aResId.SetRT( RSC_STRING );
-    if( !m_pResMgr || !m_pResMgr->IsAvailable( aResId ) )
+    if (!m_pResMgr->IsAvailable(aResId))
         return OUString();
 
-    return ResId(id, *m_pResMgr).toString();
+    return ResId(id, *m_pResMgr);
 }
-
 
 
 OUString ShutdownIcon::GetUrlDescription( const OUString& aUrl )
@@ -355,38 +339,36 @@ OUString ShutdownIcon::GetUrlDescription( const OUString& aUrl )
 }
 
 
-
 void ShutdownIcon::StartFileDialog()
 {
     ::SolarMutexGuard aGuard;
 
-    bool bDirty = ( m_bSystemDialogs != static_cast<bool>(SvtMiscOptions().UseSystemFileDialog()) );
+    bool bDirty = ( m_bSystemDialogs != SvtMiscOptions().UseSystemFileDialog() );
 
     if ( m_pFileDlg && bDirty )
     {
         // Destroy instance as changing the system file dialog setting
         // forces us to create a new FileDialogHelper instance!
         delete m_pFileDlg;
-        m_pFileDlg = NULL;
+        m_pFileDlg = nullptr;
     }
 
     if ( !m_pFileDlg )
         m_pFileDlg = new FileDialogHelper(
                 ui::dialogs::TemplateDescription::FILEOPEN_READONLY_VERSION,
-                SFXWB_MULTISELECTION, OUString() );
-    m_pFileDlg->StartExecuteModal( STATIC_LINK( this, ShutdownIcon, DialogClosedHdl_Impl ) );
+                FileDialogFlags::MultiSelection, OUString() );
+    m_pFileDlg->StartExecuteModal( LINK( this, ShutdownIcon, DialogClosedHdl_Impl ) );
 }
 
 
-
-IMPL_STATIC_LINK( ShutdownIcon, DialogClosedHdl_Impl, FileDialogHelper*, EMPTYARG )
+IMPL_LINK( ShutdownIcon, DialogClosedHdl_Impl, FileDialogHelper*, /*unused*/, void )
 {
-    DBG_ASSERT( pThis->m_pFileDlg, "ShutdownIcon, DialogClosedHdl_Impl(): no file dialog" );
+    DBG_ASSERT( m_pFileDlg, "ShutdownIcon, DialogClosedHdl_Impl(): no file dialog" );
 
     // use constructor for filling up filters automatically!
-    if ( ERRCODE_NONE == pThis->m_pFileDlg->GetError() )
+    if ( ERRCODE_NONE == m_pFileDlg->GetError() )
     {
-        ::com::sun::star::uno::Reference< XFilePicker >    xPicker = pThis->m_pFileDlg->GetFilePicker();
+        css::uno::Reference< XFilePicker2 >    xPicker = m_pFileDlg->GetFilePicker();
 
         try
         {
@@ -394,32 +376,31 @@ IMPL_STATIC_LINK( ShutdownIcon, DialogClosedHdl_Impl, FileDialogHelper*, EMPTYAR
             if ( xPicker.is() )
             {
 
-                ::com::sun::star::uno::Reference < XFilePickerControlAccess > xPickerControls ( xPicker, UNO_QUERY );
-                ::com::sun::star::uno::Reference < XFilterManager > xFilterManager ( xPicker, UNO_QUERY );
+                css::uno::Reference < XFilePickerControlAccess > xPickerControls ( xPicker, UNO_QUERY );
 
-                Sequence< OUString >        sFiles = xPicker->getFiles();
+                Sequence< OUString >        sFiles = xPicker->getSelectedFiles();
                 int                         nFiles = sFiles.getLength();
 
                 int                         nArgs=3;
                 Sequence< PropertyValue >   aArgs(3);
 
-                ::com::sun::star::uno::Reference < com::sun::star::task::XInteractionHandler2 > xInteraction(
-                    task::InteractionHandler::createWithParent(::comphelper::getProcessComponentContext(), 0) );
+                css::uno::Reference < css::task::XInteractionHandler2 > xInteraction(
+                    task::InteractionHandler::createWithParent(::comphelper::getProcessComponentContext(), nullptr) );
 
                 aArgs[0].Name = "InteractionHandler";
                 aArgs[0].Value <<= xInteraction;
 
-                sal_Int16 nMacroExecMode = ::com::sun::star::document::MacroExecMode::USE_CONFIG;
+                sal_Int16 nMacroExecMode = css::document::MacroExecMode::USE_CONFIG;
                 aArgs[1].Name = "MacroExecutionMode";
                 aArgs[1].Value <<= nMacroExecMode;
 
-                sal_Int16 nUpdateDoc = ::com::sun::star::document::UpdateDocMode::ACCORDING_TO_CONFIG;
+                sal_Int16 nUpdateDoc = css::document::UpdateDocMode::ACCORDING_TO_CONFIG;
                 aArgs[2].Name = "UpdateDocMode";
                 aArgs[2].Value <<= nUpdateDoc;
 
                 // use the filedlghelper to get the current filter name,
                 // because it removes the extensions before you get the filter name.
-                OUString aFilterName( pThis->m_pFileDlg->GetCurrentFilter() );
+                OUString aFilterName( m_pFileDlg->GetCurrentFilter() );
 
                 if ( xPickerControls.is() )
                 {
@@ -431,7 +412,7 @@ IMPL_STATIC_LINK( ShutdownIcon, DialogClosedHdl_Impl, FileDialogHelper*, EMPTYAR
 
                     xPickerControls->getValue( ExtendedFilePickerElementIds::CHECKBOX_READONLY, 0 ) >>= bReadOnly;
 
-                    // Only set porperty if readonly is set to TRUE
+                    // Only set property if readonly is set to TRUE
 
                     if ( bReadOnly )
                     {
@@ -467,7 +448,7 @@ IMPL_STATIC_LINK( ShutdownIcon, DialogClosedHdl_Impl, FileDialogHelper*, EMPTYAR
 
                 if ( !aFilterName.isEmpty() )
                 {
-                    const SfxFilter* pFilter = SfxGetpApp()->GetFilterMatcher().GetFilter4UIName( aFilterName, 0, SFX_FILTER_NOTINFILEDLG );
+                    std::shared_ptr<const SfxFilter> pFilter = SfxGetpApp()->GetFilterMatcher().GetFilter4UIName( aFilterName, SfxFilterFlags::NONE, SfxFilterFlags::NOTINFILEDLG );
 
                     if ( pFilter )
                     {
@@ -483,7 +464,7 @@ IMPL_STATIC_LINK( ShutdownIcon, DialogClosedHdl_Impl, FileDialogHelper*, EMPTYAR
                 }
 
                 if ( 1 == nFiles )
-                    OpenURL( sFiles[0], OUString( "_default"  ), aArgs );
+                    OpenURL( sFiles[0], "_default", aArgs );
                 else
                 {
                     OUString    aBaseDirURL = sFiles[0];
@@ -495,7 +476,7 @@ IMPL_STATIC_LINK( ShutdownIcon, DialogClosedHdl_Impl, FileDialogHelper*, EMPTYAR
                     {
                         OUString    aURL = aBaseDirURL;
                         aURL += sFiles[iFiles];
-                        OpenURL( aURL, OUString( "_default"  ), aArgs );
+                        OpenURL( aURL, "_default", aArgs );
                     }
                 }
             }
@@ -505,22 +486,20 @@ IMPL_STATIC_LINK( ShutdownIcon, DialogClosedHdl_Impl, FileDialogHelper*, EMPTYAR
         }
     }
 
-#ifdef WNT
+#ifdef _WIN32
     // Destroy dialog to prevent problems with custom controls
     // This fix is dependent on the dialog settings. Destroying the dialog here will
     // crash the non-native dialog implementation! Therefore make this dependent on
     // the settings.
     if ( SvtMiscOptions().UseSystemFileDialog() )
     {
-        delete pThis->m_pFileDlg;
-        pThis->m_pFileDlg = NULL;
+        delete m_pFileDlg;
+        m_pFileDlg = nullptr;
     }
 #endif
 
     LeaveModalMode();
-    return 0;
 }
-
 
 
 void ShutdownIcon::addTerminateListener()
@@ -532,7 +511,7 @@ void ShutdownIcon::addTerminateListener()
     if (pInst->m_bListenForTermination)
         return;
 
-    ::com::sun::star::uno::Reference< XDesktop2 > xDesktop = pInst->m_xDesktop;
+    css::uno::Reference< XDesktop2 > xDesktop = pInst->m_xDesktop;
     if ( ! xDesktop.is())
         return;
 
@@ -541,14 +520,13 @@ void ShutdownIcon::addTerminateListener()
 }
 
 
-
 void ShutdownIcon::terminateDesktop()
 {
     ShutdownIcon* pInst = getInstance();
     if ( ! pInst)
         return;
 
-    ::com::sun::star::uno::Reference< XDesktop2 > xDesktop = pInst->m_xDesktop;
+    css::uno::Reference< XDesktop2 > xDesktop = pInst->m_xDesktop;
     if ( ! xDesktop.is())
         return;
 
@@ -557,14 +535,13 @@ void ShutdownIcon::terminateDesktop()
     xDesktop->removeTerminateListener( pInst );
 
     // terminate desktop only if no tasks exist
-    ::com::sun::star::uno::Reference< XIndexAccess > xTasks ( xDesktop->getFrames(), UNO_QUERY );
+    css::uno::Reference< XIndexAccess > xTasks ( xDesktop->getFrames(), UNO_QUERY );
     if( xTasks.is() && xTasks->getCount() < 1 )
         Application::Quit();
 
     // remove the instance pointer
-    ShutdownIcon::pShutdownIcon = 0;
+    ShutdownIcon::pShutdownIcon = nullptr;
 }
-
 
 
 ShutdownIcon* ShutdownIcon::getInstance()
@@ -574,13 +551,12 @@ ShutdownIcon* ShutdownIcon::getInstance()
 }
 
 
-
 ShutdownIcon* ShutdownIcon::createInstance()
 {
     if (pShutdownIcon)
         return pShutdownIcon;
 
-    ShutdownIcon *pIcon = NULL;
+    ShutdownIcon *pIcon = nullptr;
     try {
         pIcon = new ShutdownIcon( comphelper::getProcessComponentContext() );
         pIcon->init ();
@@ -592,20 +568,19 @@ ShutdownIcon* ShutdownIcon::createInstance()
     return pShutdownIcon;
 }
 
-void ShutdownIcon::init() throw( ::com::sun::star::uno::Exception )
+void ShutdownIcon::init()
 {
     // access resource system and sfx only protected by solarmutex
     ::SolarMutexGuard aSolarGuard;
-    ResMgr *pResMgr = SfxResId::GetResMgr();
+    ResMgr *pResMgr = SfxResMgr::GetResMgr();
 
     ::osl::ResettableMutexGuard aGuard( m_aMutex );
     m_pResMgr = pResMgr;
     aGuard.clear();
-    ::com::sun::star::uno::Reference < XDesktop2 > xDesktop = Desktop::create( m_xContext );
+    css::uno::Reference < XDesktop2 > xDesktop = Desktop::create( m_xContext );
     aGuard.reset();
     m_xDesktop = xDesktop;
 }
-
 
 
 void SAL_CALL ShutdownIcon::disposing()
@@ -617,41 +592,31 @@ void SAL_CALL ShutdownIcon::disposing()
 }
 
 
-
 // XEventListener
-void SAL_CALL ShutdownIcon::disposing( const ::com::sun::star::lang::EventObject& )
-    throw(::com::sun::star::uno::RuntimeException, std::exception)
+void SAL_CALL ShutdownIcon::disposing( const css::lang::EventObject& )
 {
 }
 
 
-
 // XTerminateListener
-void SAL_CALL ShutdownIcon::queryTermination( const ::com::sun::star::lang::EventObject& )
-throw(::com::sun::star::frame::TerminationVetoException, ::com::sun::star::uno::RuntimeException, std::exception)
+void SAL_CALL ShutdownIcon::queryTermination( const css::lang::EventObject& )
 {
 #if !defined USE_JAVA || !defined MACOSX
     SAL_INFO("sfx.appl", "ShutdownIcon::queryTermination: veto is " << m_bVeto);
     ::osl::ClearableMutexGuard  aGuard( m_aMutex );
 
     if ( m_bVeto )
-        throw ::com::sun::star::frame::TerminationVetoException();
+        throw css::frame::TerminationVetoException();
 #endif	// !USE_JAVA || !MACOSX
 }
 
 
-
-
-void SAL_CALL ShutdownIcon::notifyTermination( const ::com::sun::star::lang::EventObject& )
-throw(::com::sun::star::uno::RuntimeException, std::exception)
+void SAL_CALL ShutdownIcon::notifyTermination( const css::lang::EventObject& )
 {
 }
 
 
-
-
-void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any>& aArguments )
-    throw( ::com::sun::star::uno::Exception, std::exception )
+void SAL_CALL ShutdownIcon::initialize( const css::uno::Sequence< css::uno::Any>& aArguments )
 {
     ::osl::ResettableMutexGuard aGuard( m_aMutex );
 
@@ -682,7 +647,7 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
                 ShutdownIcon::pShutdownIcon = this;
                 initSystray();
             }
-            catch(const ::com::sun::star::lang::IllegalArgumentException&)
+            catch(const css::lang::IllegalArgumentException&)
             {
             }
         }
@@ -699,12 +664,10 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 }
 
 
-
 void ShutdownIcon::EnterModalMode()
 {
     bModalMode = true;
 }
-
 
 
 void ShutdownIcon::LeaveModalMode()
@@ -712,7 +675,7 @@ void ShutdownIcon::LeaveModalMode()
     bModalMode = false;
 }
 
-#ifdef WNT
+#ifdef _WIN32
 // defined in shutdowniconw32.cxx
 #elif defined MACOSX
 // defined in shutdowniconaqua.cxx
@@ -730,7 +693,6 @@ bool ShutdownIcon::IsQuickstarterInstalled()
 #endif // !WNT
 
 
-
 #if defined (ENABLE_QUICKSTART_APPLET) && defined (UNX)
 /**
 * Return the XDG autostart directory.
@@ -739,7 +701,7 @@ bool ShutdownIcon::IsQuickstarterInstalled()
 * @param bCreate Create the directory if it does not exist yet.
 * @return OUString containing the autostart directory path.
 */
-static OUString getAutostartDir( bool bCreate = false )
+static OUString getAutostartDir( bool bCreate )
 {
     OUString aShortcut;
     const char *pConfigHome;
@@ -771,20 +733,20 @@ OUString ShutdownIcon::getShortcutName()
 #else
 
     OUString aShortcutName( "StarOffice 6.0"  );
-    ResMgr* pMgr = SfxResId::GetResMgr();
+    ResMgr* pMgr = SfxResMgr::GetResMgr();
     if( pMgr )
     {
         ::SolarMutexGuard aGuard;
-        aShortcutName = SFX2_RESSTR(STR_QUICKSTART_LNKNAME);
+        aShortcutName = SfxResId(STR_QUICKSTART_LNKNAME);
     }
-#ifdef WNT
+#ifdef _WIN32
     aShortcutName += ".lnk";
 
     OUString aShortcut(GetAutostartFolderNameW32());
     aShortcut += "\\";
     aShortcut += aShortcutName;
 #else // UNX
-    OUString aShortcut = getAutostartDir();
+    OUString aShortcut = getAutostartDir(false);
     aShortcut += "/qstart.desktop";
 #endif // UNX
     return aShortcut;
@@ -820,7 +782,7 @@ void ShutdownIcon::SetAutostart( bool bActivate )
 
     if( bActivate && IsQuickstarterInstalled() )
     {
-#ifdef WNT
+#ifdef _WIN32
         EnableAutostartW32( aShortcut );
 #else // UNX
         getAutostartDir( true );
@@ -869,12 +831,7 @@ static const ::sal_Int32 PROPHANDLE_TERMINATEVETOSTATE = 0;
 
 // XFastPropertySet
 void SAL_CALL ShutdownIcon::setFastPropertyValue(       ::sal_Int32                  nHandle,
-                                                  const ::com::sun::star::uno::Any& aValue )
-    throw (::com::sun::star::beans::UnknownPropertyException,
-            ::com::sun::star::beans::PropertyVetoException,
-            ::com::sun::star::lang::IllegalArgumentException,
-            ::com::sun::star::lang::WrappedTargetException,
-            ::com::sun::star::uno::RuntimeException, std::exception)
+                                                  const css::uno::Any& aValue )
 {
     switch(nHandle)
     {
@@ -892,17 +849,14 @@ void SAL_CALL ShutdownIcon::setFastPropertyValue(       ::sal_Int32             
              break;
 
         default :
-            throw ::com::sun::star::beans::UnknownPropertyException();
+            throw css::beans::UnknownPropertyException();
     }
 }
 
 // XFastPropertySet
-::com::sun::star::uno::Any SAL_CALL ShutdownIcon::getFastPropertyValue( ::sal_Int32 nHandle )
-    throw (::com::sun::star::beans::UnknownPropertyException,
-            ::com::sun::star::lang::WrappedTargetException,
-            ::com::sun::star::uno::RuntimeException, std::exception)
+css::uno::Any SAL_CALL ShutdownIcon::getFastPropertyValue( ::sal_Int32 nHandle )
 {
-    ::com::sun::star::uno::Any aValue;
+    css::uno::Any aValue;
     switch(nHandle)
     {
         case PROPHANDLE_TERMINATEVETOSTATE :
@@ -913,7 +867,7 @@ void SAL_CALL ShutdownIcon::setFastPropertyValue(       ::sal_Int32             
              break;
 
         default :
-            throw ::com::sun::star::beans::UnknownPropertyException();
+            throw css::beans::UnknownPropertyException();
     }
 
     return aValue;

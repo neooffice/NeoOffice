@@ -24,8 +24,8 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __SHUTDOWNICON_HXX__
-#define __SHUTDOWNICON_HXX__
+#ifndef INCLUDED_SFX2_SOURCE_APPL_SHUTDOWNICON_HXX
+#define INCLUDED_SFX2_SOURCE_APPL_SHUTDOWNICON_HXX
 
 #include <com/sun/star/frame/XTerminateListener.hpp>
 #include <com/sun/star/frame/XDesktop2.hpp>
@@ -37,9 +37,16 @@
 #include <rtl/ustring.hxx>
 #include <osl/mutex.hxx>
 #include <sfx2/sfxuno.hxx>
-#include <cppuhelper/compbase4.hxx>
+#include <cppuhelper/compbase.hxx>
 #include <sfx2/dllapi.h>
 #include <tools/link.hxx>
+
+extern "C" {
+
+void SAL_DLLPUBLIC_EXPORT plugin_init_sys_tray();
+void SAL_DLLPUBLIC_EXPORT plugin_shutdown_sys_tray();
+
+}
 
 class ResMgr;
 namespace sfx2
@@ -47,22 +54,20 @@ namespace sfx2
     class FileDialogHelper;
 }
 
-typedef ::cppu::WeakComponentImplHelper4<
-    ::com::sun::star::lang::XInitialization,
-    ::com::sun::star::frame::XTerminateListener,
-    ::com::sun::star::lang::XServiceInfo,
-    ::com::sun::star::beans::XFastPropertySet > ShutdownIconServiceBase;
+typedef ::cppu::WeakComponentImplHelper<
+    css::lang::XInitialization,
+    css::frame::XTerminateListener,
+    css::lang::XServiceInfo,
+    css::beans::XFastPropertySet > ShutdownIconServiceBase;
 
-#if defined(USE_APP_SHORTCUTS)
-#define WRITER_URL      "private:factory/swriter"
-#define CALC_URL        "private:factory/scalc"
-#define IMPRESS_URL     "private:factory/simpress"
-#define IMPRESS_WIZARD_URL     "private:factory/simpress?slot=6686"
-#define DRAW_URL        "private:factory/sdraw"
-#define MATH_URL        "private:factory/smath"
-#define BASE_URL        "private:factory/sdatabase?Interactive"
-#define STARTMODULE_URL ".uno:ShowStartModule"
-#endif
+#define WRITER_URL          "private:factory/swriter"
+#define CALC_URL            "private:factory/scalc"
+#define IMPRESS_URL         "private:factory/simpress"
+#define IMPRESS_WIZARD_URL  "private:factory/simpress?slot=6686"
+#define DRAW_URL            "private:factory/sdraw"
+#define MATH_URL            "private:factory/smath"
+#define BASE_URL            "private:factory/sdatabase?Interactive"
+#define STARTMODULE_URL     ".uno:ShowStartModule"
 
 class SFX2_DLLPUBLIC ShutdownIcon : public ShutdownIconServiceBase
 {
@@ -72,7 +77,7 @@ class SFX2_DLLPUBLIC ShutdownIcon : public ShutdownIconServiceBase
         bool                    m_bSystemDialogs;
         ResMgr*                 m_pResMgr;
         sfx2::FileDialogHelper* m_pFileDlg;
-        ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext > m_xContext;
+        css::uno::Reference< css::uno::XComponentContext > m_xContext;
 
         static ShutdownIcon *pShutdownIcon; // one instance
 
@@ -87,18 +92,15 @@ class SFX2_DLLPUBLIC ShutdownIcon : public ShutdownIconServiceBase
         friend class SfxNotificationListener_Impl;
 
     public:
-        ShutdownIcon( const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext > & rxContext );
+        explicit ShutdownIcon( const css::uno::Reference< css::uno::XComponentContext > & rxContext );
 
-        virtual ~ShutdownIcon();
+        virtual ~ShutdownIcon() override;
 
-        virtual OUString SAL_CALL getImplementationName()
-            throw (css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+        virtual OUString SAL_CALL getImplementationName() override;
 
-        virtual sal_Bool SAL_CALL supportsService(OUString const & ServiceName)
-            throw (css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+        virtual sal_Bool SAL_CALL supportsService(OUString const & ServiceName) override;
 
-        virtual css::uno::Sequence<OUString> SAL_CALL getSupportedServiceNames()
-            throw (css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+        virtual css::uno::Sequence<OUString> SAL_CALL getSupportedServiceNames() override;
 
         static ShutdownIcon* getInstance();
         static ShutdownIcon* createInstance();
@@ -107,62 +109,48 @@ class SFX2_DLLPUBLIC ShutdownIcon : public ShutdownIconServiceBase
         static void addTerminateListener();
 
         static void FileOpen();
-        static void OpenURL( const OUString& aURL, const OUString& rTarget, const ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& =
-            ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >( 0 ) );
+        static void OpenURL( const OUString& aURL, const OUString& rTarget, const css::uno::Sequence< css::beans::PropertyValue >& =
+            css::uno::Sequence< css::beans::PropertyValue >( 0 ) );
         static void FromTemplate();
 
         static void SetAutostart( bool bActivate );
         static bool GetAutostart();
         static bool bModalMode;
 
-        void init() throw( ::com::sun::star::uno::Exception );
+        /// @throws css::uno::Exception
+        void init();
 
         OUString GetResString( int id );
-        OUString GetUrlDescription( const OUString& aUrl );
+        static OUString GetUrlDescription( const OUString& aUrl );
 
         void SetVeto( bool bVeto )  { m_bVeto = bVeto;}
-        bool GetVeto()              { return m_bVeto; }
 
         void                    StartFileDialog();
-        sfx2::FileDialogHelper* GetFileDialog() const { return m_pFileDlg; }
-        DECL_STATIC_LINK(
-            ShutdownIcon, DialogClosedHdl_Impl, sfx2::FileDialogHelper*);
+        DECL_LINK(DialogClosedHdl_Impl, sfx2::FileDialogHelper*, void);
 
         static bool IsQuickstarterInstalled();
 
         // Component Helper - force override
-        virtual void SAL_CALL disposing() SAL_OVERRIDE;
+        virtual void SAL_CALL disposing() override;
 
         // XEventListener
-        virtual void SAL_CALL disposing( const ::com::sun::star::lang::EventObject& Source )
-            throw(::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+        virtual void SAL_CALL disposing( const css::lang::EventObject& Source ) override;
 
         // XTerminateListener
-        virtual void SAL_CALL queryTermination( const ::com::sun::star::lang::EventObject& aEvent )
-            throw(::com::sun::star::frame::TerminationVetoException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-        virtual void SAL_CALL notifyTermination( const ::com::sun::star::lang::EventObject& aEvent )
-            throw(::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+        virtual void SAL_CALL queryTermination( const css::lang::EventObject& aEvent ) override;
+        virtual void SAL_CALL notifyTermination( const css::lang::EventObject& aEvent ) override;
 
         // XInitialization
-        virtual void SAL_CALL initialize( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& aArguments )
-            throw( ::com::sun::star::uno::Exception, std::exception ) SAL_OVERRIDE;
+        virtual void SAL_CALL initialize( const css::uno::Sequence< css::uno::Any >& aArguments ) override;
 
         // XFastPropertySet
         virtual void SAL_CALL setFastPropertyValue(       ::sal_Int32                  nHandle,
-                                                    const ::com::sun::star::uno::Any& aValue )
-            throw (::com::sun::star::beans::UnknownPropertyException,
-                    ::com::sun::star::beans::PropertyVetoException,
-                    ::com::sun::star::lang::IllegalArgumentException,
-                    ::com::sun::star::lang::WrappedTargetException,
-                    ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-        virtual ::com::sun::star::uno::Any SAL_CALL getFastPropertyValue( ::sal_Int32 nHandle )
-            throw (::com::sun::star::beans::UnknownPropertyException,
-                    ::com::sun::star::lang::WrappedTargetException,
-                    ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+                                                    const css::uno::Any& aValue ) override;
+        virtual css::uno::Any SAL_CALL getFastPropertyValue( ::sal_Int32 nHandle ) override;
 
-        ::com::sun::star::uno::Reference< ::com::sun::star::frame::XDesktop2 > m_xDesktop;
+        css::uno::Reference< css::frame::XDesktop2 > m_xDesktop;
 
-#ifdef WNT
+#ifdef _WIN32
         static void EnableAutostartW32( const OUString &aShortcutName );
         static OUString GetAutostartFolderNameW32();
 #endif
@@ -182,9 +170,6 @@ extern "C" {
     void aqua_shutdown_systray();
 #endif	// USE_JAVA
 #  endif
-    // external plugin systray impl.
-    void plugin_init_sys_tray();
-    void plugin_shutdown_sys_tray();
 }
 
 #endif
