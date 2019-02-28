@@ -16,6 +16,7 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <memory>
 #include <basegfx/polygon/b2dpolygon.hxx>
 #include <drawinglayer/primitive2d/polygonprimitive2d.hxx>
 #include <drawinglayer/primitive2d/polypolygonprimitive2d.hxx>
@@ -57,342 +58,445 @@ static sal_Bool UseDarkModeColors()
 #endif	// USE_JAVA && MACOSX
 
 using namespace std;
+using namespace drawinglayer::geometry;
+using namespace drawinglayer::processor2d;
+using namespace drawinglayer::primitive2d;
+using namespace drawinglayer::attribute;
+using namespace drawinglayer::geometry;
+using namespace basegfx;
 
 namespace
 {
-    class SfxCloseButton : public PushButton
-    {
-        public:
-            SfxCloseButton( vcl::Window* pParent ) : PushButton( pParent, 0 )
-            {
-            }
 
-            virtual ~SfxCloseButton( ) { }
+const long INFO_BAR_BASE_HEIGHT = 40;
 
-            virtual void Paint( const Rectangle& rRect ) SAL_OVERRIDE;
-    };
-
-    void SfxCloseButton::Paint( const Rectangle& )
-    {
-        const drawinglayer::geometry::ViewInformation2D aNewViewInfos;
-        drawinglayer::processor2d::BaseProcessor2D * pProcessor =
-            drawinglayer::processor2d::createBaseProcessor2DFromOutputDevice(
-                        *this, aNewViewInfos );
-
-        const Rectangle aRect( Rectangle( Point( 0, 0 ), PixelToLogic( GetSizePixel() ) ) );
-
-        drawinglayer::primitive2d::Primitive2DSequence aSeq( 2 );
-
-        basegfx::BColor aLightColor( 1.0, 1.0, 191.0 / 255.0 );
-        basegfx::BColor aDarkColor( 217.0 / 255.0, 217.0 / 255.0, 78.0 / 255.0 );
-
-        const StyleSettings& rSettings = Application::GetSettings().GetStyleSettings();
-        if ( rSettings.GetHighContrastMode() )
-        {
-            aLightColor = rSettings.GetLightColor( ).getBColor( );
-            aDarkColor = rSettings.GetDialogTextColor( ).getBColor( );
-
-        }
-#if defined USE_JAVA && defined MACOSX
-        else if ( UseDarkModeColors() )
-        {
-            aLightColor.invert();
-            aDarkColor.invert();
-        }
-#endif	// USE_JAVA && MACOSX
-
-        // Light background
-        basegfx::B2DPolygon aPolygon;
-        aPolygon.append( basegfx::B2DPoint( aRect.Left( ), aRect.Top( ) ) );
-        aPolygon.append( basegfx::B2DPoint( aRect.Right( ), aRect.Top( ) ) );
-        aPolygon.append( basegfx::B2DPoint( aRect.Right( ), aRect.Bottom( ) ) );
-        aPolygon.append( basegfx::B2DPoint( aRect.Left( ), aRect.Bottom( ) ) );
-        aPolygon.setClosed( true );
-        drawinglayer::primitive2d::PolyPolygonColorPrimitive2D* pBack =
-            new drawinglayer::primitive2d::PolyPolygonColorPrimitive2D(
-                    basegfx::B2DPolyPolygon( aPolygon ), aLightColor );
-        aSeq[0] = pBack;
-
-        drawinglayer::attribute::LineAttribute aLineAttribute( aDarkColor, 2.0 );
-
-        // Cross
-        basegfx::B2DPolyPolygon aCross;
-        basegfx::B2DPolygon aLine1;
-        aLine1.append( basegfx::B2DPoint( aRect.Left(), aRect.Top( ) ) );
-        aLine1.append( basegfx::B2DPoint( aRect.Right(), aRect.Bottom( ) ) );
-        aCross.append( aLine1 );
-        basegfx::B2DPolygon aLine2;
-        aLine2.append( basegfx::B2DPoint( aRect.Right(), aRect.Top( ) ) );
-        aLine2.append( basegfx::B2DPoint( aRect.Left(), aRect.Bottom( ) ) );
-        aCross.append( aLine2 );
-
-        drawinglayer::primitive2d::PolyPolygonStrokePrimitive2D * pCross =
-                new drawinglayer::primitive2d::PolyPolygonStrokePrimitive2D (
-                    aCross, aLineAttribute, drawinglayer::attribute::StrokeAttribute( ) );
-
-        aSeq[1] = pCross;
-
-        pProcessor->process( aSeq );
-        delete pProcessor;
-    }
-}
-
-SfxInfoBarWindow::SfxInfoBarWindow( vcl::Window* pParent, const OUString& sId,
-       const OUString& sMessage, vector< PushButton* > aButtons ) :
-    Window( pParent, 0 ),
-    m_sId( sId ),
-    m_pMessage( NULL ),
-    m_pCloseBtn( NULL ),
-    m_aActionBtns( aButtons )
+void GetInfoBarColors(InfoBarType ibType, BColor&  rBackgroundColor, BColor& rForegroundColor, BColor& rMessageColor)
 {
-    long nWidth = pParent->GetSizePixel().getWidth();
-    SetPosSizePixel( Point( 0, 0 ), Size( nWidth, 40 ) );
-    m_pMessage = new FixedText( this, 0 );
-    m_pMessage->SetText( sMessage );
-    m_pMessage->SetBackground( Wallpaper( Color(  255, 255, 191 ) ) );
-    m_pMessage->Show( );
-
-    m_pCloseBtn = new SfxCloseButton( this );
-    m_pCloseBtn->SetPosSizePixel( Point( nWidth - 25, 15 ), Size( 10, 10 ) );
-    m_pCloseBtn->SetClickHdl( LINK( this, SfxInfoBarWindow, CloseHandler ) );
-    m_pCloseBtn->Show( );
-
-    // Reparent the buttons and place them on the right of the bar
-    long nX = m_pCloseBtn->GetPosPixel( ).getX( ) - 15;
-    long nBtnGap = 5;
-    for ( vector< PushButton* >::iterator it = m_aActionBtns.begin( );
-            it != m_aActionBtns.end( ); ++it )
+    switch (ibType)
     {
-        PushButton* pBtn = *it;
-        pBtn->SetParent( this );
-        long nBtnWidth = pBtn->GetSizePixel( ).getWidth();
-        nX -= nBtnWidth;
-        pBtn->SetPosSizePixel( Point( nX, 5 ), Size( nBtnWidth, 30 ) );
-        nX -= nBtnGap;
-        pBtn->Show( );
-    }
+    case InfoBarType::Info: // blue; #00529B/0,82,155; #BDE5F8/189,229,248
+        rBackgroundColor = basegfx::BColor(0.741, 0.898, 0.973);
+        rForegroundColor = basegfx::BColor(0.0, 0.322, 0.608);
+        rMessageColor = basegfx::BColor(0.0, 0.322, 0.608);
+        break;
+    case InfoBarType::Success: // green; #4F8A10/79,138,16; #DFF2BF/223,242,191
+        rBackgroundColor = basegfx::BColor(0.874,0.949,0.749);
+        rForegroundColor = basegfx::BColor(0.31,0.541,0.063);
+        rMessageColor = basegfx::BColor(0.31,0.541,0.063);
+        break;
+    case InfoBarType::Warning: // orange; #9F6000/159,96,0; #FEEFB3/254,239,179
+        rBackgroundColor = basegfx::BColor(0.996,0.937,0.702);
+        rForegroundColor = basegfx::BColor(0.623,0.376,0.0);
+        rMessageColor = basegfx::BColor(0.623,0.376,0.0);
+        break;
+    case InfoBarType::Danger: // red; #D8000C/216,0,12; #FFBABA/255,186,186
+        rBackgroundColor = basegfx::BColor(1.0,0.729,0.729);
+        rForegroundColor = basegfx::BColor(0.847,0.0,0.047);
+        rMessageColor = basegfx::BColor(0.847,0.0,0.047);
+        break;
+    }//switch
 
-    m_pMessage->SetPosSizePixel( Point( 10, 10 ), Size( nX - 20, 20 ) );
-}
-
-SfxInfoBarWindow::~SfxInfoBarWindow( )
-{
-    delete m_pMessage;
-    delete m_pCloseBtn;
-
-    for ( vector< PushButton* >::iterator it = m_aActionBtns.begin( );
-            it != m_aActionBtns.end( ); ++it )
-    {
-        delete *it;
-    }
-    m_aActionBtns.clear( );
-}
-
-void SfxInfoBarWindow::Paint( const Rectangle& rPaintRect )
-{
-    const drawinglayer::geometry::ViewInformation2D aNewViewInfos;
-    drawinglayer::processor2d::BaseProcessor2D * pProcessor =
-        drawinglayer::processor2d::createBaseProcessor2DFromOutputDevice(
-                    *this, aNewViewInfos );
-
-    const Rectangle aRect( Rectangle( Point( 0, 0 ), PixelToLogic( GetSizePixel() ) ) );
-
-    drawinglayer::primitive2d::Primitive2DSequence aSeq( 2 );
-
-    basegfx::BColor aLightColor( 1.0, 1.0, 191.0 / 255.0 );
-    basegfx::BColor aDarkColor( 217.0 / 255.0, 217.0 / 255.0, 78.0 / 255.0 );
-
+    //remove this?
     const StyleSettings& rSettings = Application::GetSettings().GetStyleSettings();
-    if ( rSettings.GetHighContrastMode() )
+    if (rSettings.GetHighContrastMode())
     {
-        aLightColor = rSettings.GetLightColor( ).getBColor( );
-        aDarkColor = rSettings.GetDialogTextColor( ).getBColor( );
+        rBackgroundColor = rSettings.GetLightColor().getBColor();
+        rForegroundColor = rSettings.GetDialogTextColor().getBColor();
     }
 #if defined USE_JAVA && defined MACOSX
-    else if ( UseDarkModeColors() )
+    else if (UseDarkModeColors())
     {
-        aLightColor.invert();
-        aDarkColor.invert();
+        rBackgroundColor.invert();
+        rForegroundColor.invert();
     }
 #endif	// USE_JAVA && MACOSX
 
-    // Update the label background color
-    m_pMessage->SetBackground( Wallpaper( Color( aLightColor ) ) );
+}
+OUString GetInfoBarIconName(InfoBarType ibType)
+{
 
-    // Light background
-    basegfx::B2DPolygon aPolygon;
-    aPolygon.append( basegfx::B2DPoint( aRect.Left( ), aRect.Top( ) ) );
-    aPolygon.append( basegfx::B2DPoint( aRect.Right( ), aRect.Top( ) ) );
-    aPolygon.append( basegfx::B2DPoint( aRect.Right( ), aRect.Bottom( ) ) );
-    aPolygon.append( basegfx::B2DPoint( aRect.Left( ), aRect.Bottom( ) ) );
-    aPolygon.setClosed( true );
-    drawinglayer::primitive2d::PolyPolygonColorPrimitive2D* pBack =
-        new drawinglayer::primitive2d::PolyPolygonColorPrimitive2D(
-                basegfx::B2DPolyPolygon( aPolygon ), aLightColor );
+    OUString aRet;
+
+    switch (ibType)
+    {
+    case InfoBarType::Info:
+       aRet = "vcl/res/infobox.svg";
+       break;
+    case InfoBarType::Success:
+        aRet = "cmd/lc_apply.svg";
+        break;
+    case InfoBarType::Warning:
+        aRet = "vcl/res/warningbox.svg";
+        break;
+    case InfoBarType::Danger:
+        aRet = "vcl/res/errorbox.svg";
+        break;
+    }//switch
+
+    return aRet;
+}
+
+class SfxCloseButton : public PushButton
+{
+    basegfx::BColor m_aBackgroundColor;
+    basegfx::BColor m_aForegroundColor;
+    basegfx::BColor m_aMessageColor;
+
+public:
+    explicit SfxCloseButton(vcl::Window* pParent) : PushButton(pParent, 0)
+    {
+        GetInfoBarColors(InfoBarType::Warning,m_aBackgroundColor,m_aForegroundColor,m_aMessageColor);
+    }
+
+    virtual void Paint(vcl::RenderContext& rRenderContext, const ::tools::Rectangle& rRect) override;
+
+    void setBackgroundColor(const basegfx::BColor& rColor);
+    void setForegroundColor(const basegfx::BColor& rColor);
+};
+
+void SfxCloseButton::Paint(vcl::RenderContext& rRenderContext, const ::tools::Rectangle&)
+{
+    const ViewInformation2D aNewViewInfos;
+    const unique_ptr<BaseProcessor2D> pProcessor(
+                createBaseProcessor2DFromOutputDevice(rRenderContext, aNewViewInfos));
+
+    const ::tools::Rectangle aRect(Point(0, 0), PixelToLogic(GetSizePixel()));
+
+    drawinglayer::primitive2d::Primitive2DContainer aSeq(2);
+
+    //  background
+    B2DPolygon aPolygon;
+    aPolygon.append(B2DPoint(aRect.Left(), aRect.Top()));
+    aPolygon.append(B2DPoint(aRect.Right(), aRect.Top()));
+    aPolygon.append(B2DPoint(aRect.Right(), aRect.Bottom()));
+    aPolygon.append(B2DPoint(aRect.Left(), aRect.Bottom()));
+    aPolygon.setClosed(true);
+
+    PolyPolygonColorPrimitive2D* pBack =
+        new PolyPolygonColorPrimitive2D(B2DPolyPolygon(aPolygon), m_aBackgroundColor);
     aSeq[0] = pBack;
 
-    drawinglayer::attribute::LineAttribute aLineAttribute( aDarkColor, 1.0 );
+    LineAttribute aLineAttribute(m_aForegroundColor, 2.0);
+
+    // Cross
+    B2DPolyPolygon aCross;
+
+    B2DPolygon aLine1;
+    aLine1.append(B2DPoint(aRect.Left(), aRect.Top()));
+    aLine1.append(B2DPoint(aRect.Right(), aRect.Bottom()));
+    aCross.append(aLine1);
+
+    B2DPolygon aLine2;
+    aLine2.append(B2DPoint(aRect.Right(), aRect.Top()));
+    aLine2.append(B2DPoint(aRect.Left(), aRect.Bottom()));
+    aCross.append(aLine2);
+
+    PolyPolygonStrokePrimitive2D* pCross =
+        new PolyPolygonStrokePrimitive2D(aCross, aLineAttribute, StrokeAttribute());
+
+    aSeq[1] = pCross;
+
+    pProcessor->process(aSeq);
+}
+
+void SfxCloseButton::setBackgroundColor(const basegfx::BColor& rColor)
+{
+    m_aBackgroundColor = rColor;
+}
+
+void SfxCloseButton::setForegroundColor(const basegfx::BColor& rColor)
+{
+    m_aForegroundColor = rColor;
+}
+
+} // anonymous namespace
+
+SfxInfoBarWindow::SfxInfoBarWindow(vcl::Window* pParent, const OUString& sId,
+       const OUString& sMessage,
+       InfoBarType ibType,
+       WinBits nMessageStyle = WB_LEFT|WB_VCENTER) :
+    Window(pParent, 0),
+    m_sId(sId),
+    m_eType(ibType),
+    m_pImage(VclPtr<FixedImage>::Create(this, nMessageStyle)),
+    m_pMessage(VclPtr<FixedText>::Create(this, nMessageStyle)),
+    m_pCloseBtn(VclPtr<SfxCloseButton>::Create(this)),
+    m_aActionBtns()
+{
+    SetForeAndBackgroundColors(m_eType);
+    float fScaleFactor = GetDPIScaleFactor();
+    long nWidth = pParent->GetSizePixel().getWidth();
+    SetPosSizePixel(Point(0, 0), Size(nWidth, INFO_BAR_BASE_HEIGHT * fScaleFactor));
+
+    m_pImage->SetImage(Image(BitmapEx(GetInfoBarIconName(ibType))));
+    m_pImage->SetPaintTransparent(true);
+    m_pImage->Show();
+
+    m_pMessage->SetText(sMessage);
+    m_pMessage->Show();
+
+    m_pCloseBtn->SetClickHdl(LINK(this, SfxInfoBarWindow, CloseHandler));
+    m_pCloseBtn->Show();
+
+    EnableChildTransparentMode();
+
+    Resize();
+}
+
+void SfxInfoBarWindow::addButton(PushButton* pButton) {
+    pButton->SetParent(this);
+    pButton->Show();
+    m_aActionBtns.push_back(pButton);
+    Resize();
+}
+
+SfxInfoBarWindow::~SfxInfoBarWindow()
+{
+    disposeOnce();
+}
+
+void SfxInfoBarWindow::SetForeAndBackgroundColors(InfoBarType eType)
+{
+    basegfx::BColor aMessageColor;
+    GetInfoBarColors(eType,m_aBackgroundColor,m_aForegroundColor,aMessageColor);
+
+    static_cast<SfxCloseButton*>(m_pCloseBtn.get())->setBackgroundColor(m_aBackgroundColor);
+    static_cast<SfxCloseButton*>(m_pCloseBtn.get())->setForegroundColor(m_aForegroundColor);
+    m_pMessage->SetControlForeground(Color(aMessageColor));
+}
+
+void SfxInfoBarWindow::dispose()
+{
+    for ( auto it = m_aActionBtns.begin( ); it != m_aActionBtns.end( ); ++it )
+        it->disposeAndClear();
+
+    m_pImage.disposeAndClear();
+    m_pMessage.disposeAndClear();
+    m_pCloseBtn.disposeAndClear();
+    m_aActionBtns.clear( );
+    vcl::Window::dispose();
+}
+
+void SfxInfoBarWindow::Paint(vcl::RenderContext& rRenderContext, const ::tools::Rectangle& rPaintRect)
+{
+    const ViewInformation2D aNewViewInfos;
+    const unique_ptr<BaseProcessor2D> pProcessor(
+                createBaseProcessor2DFromOutputDevice(rRenderContext, aNewViewInfos));
+
+    const ::tools::Rectangle aRect(Point(0, 0), PixelToLogic(GetSizePixel()));
+
+    drawinglayer::primitive2d::Primitive2DContainer aSeq(2);
+
+    // Light background
+    B2DPolygon aPolygon;
+    aPolygon.append(B2DPoint(aRect.Left(), aRect.Top()));
+    aPolygon.append(B2DPoint(aRect.Right(), aRect.Top()));
+    aPolygon.append(B2DPoint(aRect.Right(), aRect.Bottom()));
+    aPolygon.append(B2DPoint(aRect.Left(), aRect.Bottom()));
+    aPolygon.setClosed(true);
+
+    PolyPolygonColorPrimitive2D* pBack =
+        new PolyPolygonColorPrimitive2D(B2DPolyPolygon(aPolygon), m_aBackgroundColor);
+    aSeq[0] = pBack;
+
+    LineAttribute aLineAttribute(m_aForegroundColor, 1.0);
 
     // Bottom dark line
-    basegfx::B2DPolygon aPolygonBottom;
-    aPolygonBottom.append( basegfx::B2DPoint( aRect.Left(), aRect.Bottom( ) ) );
-    aPolygonBottom.append( basegfx::B2DPoint( aRect.Right(), aRect.Bottom( ) ) );
+    B2DPolygon aPolygonBottom;
+    aPolygonBottom.append(B2DPoint(aRect.Left(), aRect.Bottom()));
+    aPolygonBottom.append(B2DPoint(aRect.Right(), aRect.Bottom()));
 
-    drawinglayer::primitive2d::PolygonStrokePrimitive2D * pLineBottom =
-            new drawinglayer::primitive2d::PolygonStrokePrimitive2D (
-                aPolygonBottom, aLineAttribute );
+    PolygonStrokePrimitive2D* pLineBottom =
+            new PolygonStrokePrimitive2D (aPolygonBottom, aLineAttribute);
 
     aSeq[1] = pLineBottom;
 
-    pProcessor->process( aSeq );
-    delete pProcessor;
+    pProcessor->process(aSeq);
 
-    Window::Paint( rPaintRect );
+    Window::Paint(rRenderContext, rPaintRect);
 }
 
-void SfxInfoBarWindow::Resize( )
+void SfxInfoBarWindow::Resize()
 {
+    float fScaleFactor = GetDPIScaleFactor();
+
     long nWidth = GetSizePixel().getWidth();
-    m_pCloseBtn->SetPosSizePixel( Point( nWidth - 25, 15 ), Size( 10, 10 ) );
+    m_pCloseBtn->SetPosSizePixel(Point(nWidth - 25 * fScaleFactor, 15 * fScaleFactor), Size(10 * fScaleFactor, 10 * fScaleFactor));
 
     // Reparent the buttons and place them on the right of the bar
-    long nX = m_pCloseBtn->GetPosPixel( ).getX( ) - 15;
-    long nBtnGap = 5;
-    for ( vector< PushButton* >::iterator it = m_aActionBtns.begin( );
-            it != m_aActionBtns.end( ); ++it )
+    long nX = m_pCloseBtn->GetPosPixel().getX() - 15 * fScaleFactor;
+    long nButtonGap = 5 * fScaleFactor;
+
+    for (auto it = m_aActionBtns.begin(); it != m_aActionBtns.end(); ++it)
     {
-        PushButton* pBtn = *it;
-        long nBtnWidth = pBtn->GetSizePixel( ).getWidth();
-        nX -= nBtnWidth;
-        pBtn->SetPosSizePixel( Point( nX, 5 ), Size( nBtnWidth, 30 ) );
-        nX -= nBtnGap;
+        long nButtonWidth = (*it)->GetSizePixel().getWidth();
+        nX -= nButtonWidth;
+        (*it)->SetPosSizePixel(Point(nX, 5 * fScaleFactor), Size(nButtonWidth, 30 * fScaleFactor));
+        nX -= nButtonGap;
     }
 
-    m_pMessage->SetPosSizePixel( Point( 10, 10 ), Size( nX - 20, 20 ) );
+    m_pImage->SetPosSizePixel(Point(4,4), Size(32* fScaleFactor, 32* fScaleFactor));
+
+    Point aMessagePosition(32 * fScaleFactor + 10 * fScaleFactor, 10 * fScaleFactor);
+    Size aMessageSize(nX - 20 * fScaleFactor, 20 * fScaleFactor);
+
+    m_pMessage->SetPosSizePixel(aMessagePosition, aMessageSize);
+
 }
 
-IMPL_LINK_NOARG( SfxInfoBarWindow, CloseHandler )
+void SfxInfoBarWindow::Update( const OUString &sNewMessage, InfoBarType eType )
 {
-    static_cast<SfxInfoBarContainerWindow*>(GetParent())->removeInfoBar( this );
-    return 0;
-}
-
-SfxInfoBarContainerWindow::SfxInfoBarContainerWindow( SfxInfoBarContainerChild* pChildWin ) :
-    Window( pChildWin->GetParent( ), 0 ),
-    m_pChildWin( pChildWin ),
-    m_pInfoBars( )
-{
-}
-
-SfxInfoBarContainerWindow::~SfxInfoBarContainerWindow( )
-{
-    for ( vector< SfxInfoBarWindow* >::iterator it = m_pInfoBars.begin( );
-            it != m_pInfoBars.end( ); ++it )
+#ifndef USE_JAVA
+    if (m_eType != eType)
+#endif	// !USE_JAVA
     {
-        delete *it;
+        m_eType = eType;
+        SetForeAndBackgroundColors(m_eType);
+        m_pImage->SetImage(Image(BitmapEx(GetInfoBarIconName(eType))));
     }
+
+    m_pMessage->SetText( sNewMessage );
+    Resize();
+    Invalidate();
+}
+
+IMPL_LINK_NOARG(SfxInfoBarWindow, CloseHandler, Button*, void)
+{
+    static_cast<SfxInfoBarContainerWindow*>(GetParent())->removeInfoBar(this);
+}
+
+SfxInfoBarContainerWindow::SfxInfoBarContainerWindow(SfxInfoBarContainerChild* pChildWin ) :
+    Window(pChildWin->GetParent(), 0),
+    m_pChildWin(pChildWin),
+    m_pInfoBars()
+{
+}
+
+SfxInfoBarContainerWindow::~SfxInfoBarContainerWindow()
+{
+    disposeOnce();
+}
+
+void SfxInfoBarContainerWindow::dispose()
+{
+    for ( auto it = m_pInfoBars.begin( ); it != m_pInfoBars.end( ); ++it )
+        it->disposeAndClear();
     m_pInfoBars.clear( );
+    Window::dispose();
 }
 
-void SfxInfoBarContainerWindow::appendInfoBar( const OUString& sId, const OUString& sMessage, vector< PushButton* > aButtons )
+VclPtr<SfxInfoBarWindow> SfxInfoBarContainerWindow::appendInfoBar(const OUString& sId,
+                                                           const OUString& sMessage,
+                                                           InfoBarType ibType,
+                                                           WinBits nMessageStyle)
 {
-    Size aSize = GetSizePixel( );
+    Size aSize = GetSizePixel();
 
-    SfxInfoBarWindow* pInfoBar = new SfxInfoBarWindow( this, sId, sMessage, aButtons );
-    pInfoBar->SetPosPixel( Point( 0, aSize.getHeight( ) ) );
-    pInfoBar->Show( );
-    m_pInfoBars.push_back( pInfoBar );
+    VclPtrInstance<SfxInfoBarWindow> pInfoBar(this, sId, sMessage, ibType, nMessageStyle);
 
-    long nHeight = pInfoBar->GetSizePixel( ).getHeight( );
-    aSize.setHeight( aSize.getHeight() + nHeight );
-    SetSizePixel( aSize );
+    basegfx::BColor aBackgroundColor;
+    basegfx::BColor aForegroundColor;
+    basegfx::BColor aMessageColor;
+    GetInfoBarColors(ibType,aBackgroundColor,aForegroundColor,aMessageColor);
+    pInfoBar->m_aBackgroundColor = aBackgroundColor;
+    pInfoBar->m_aForegroundColor = aForegroundColor;
+
+    pInfoBar->SetPosPixel(Point(0, aSize.getHeight()));
+    pInfoBar->Show();
+    m_pInfoBars.push_back(pInfoBar);
+
+    long nHeight = pInfoBar->GetSizePixel().getHeight();
+    aSize.setHeight(aSize.getHeight() + nHeight);
+    SetSizePixel(aSize);
+    return pInfoBar;
 }
 
-SfxInfoBarWindow* SfxInfoBarContainerWindow::getInfoBar( const OUString& sId )
+VclPtr<SfxInfoBarWindow> SfxInfoBarContainerWindow::getInfoBar(const OUString& sId)
 {
-    SfxInfoBarWindow* pRet = NULL;
-    for ( vector< SfxInfoBarWindow* >::iterator it = m_pInfoBars.begin( );
-            it != m_pInfoBars.end( ) && pRet == NULL; ++it )
+    for (auto it = m_pInfoBars.begin(); it != m_pInfoBars.end(); ++it)
     {
-        SfxInfoBarWindow* pBar = *it;
-        if ( pBar->getId( ) == sId )
-            pRet = pBar;
+        if ((*it)->getId() == sId)
+            return *it;
     }
-    return pRet;
+    return nullptr;
 }
 
-void SfxInfoBarContainerWindow::removeInfoBar( SfxInfoBarWindow* pInfoBar )
+bool SfxInfoBarContainerWindow::hasInfoBarWithID( const OUString &sId )
 {
-    for ( vector< SfxInfoBarWindow* >::iterator it = m_pInfoBars.begin( );
-            it != m_pInfoBars.end( ); ++it )
+    return ( getInfoBar( sId ) != nullptr );
+}
+
+void SfxInfoBarContainerWindow::removeInfoBar(VclPtr<SfxInfoBarWindow> const & pInfoBar)
+{
+    // Remove
+    for (auto it = m_pInfoBars.begin(); it != m_pInfoBars.end(); ++it)
     {
-        if ( pInfoBar == *it )
+        if (pInfoBar == *it)
         {
-            m_pInfoBars.erase( it );
+            it->disposeAndClear();
+            m_pInfoBars.erase(it);
             break;
         }
     }
-    delete pInfoBar;
 
+    // Resize
     long nY = 0;
-    for ( vector< SfxInfoBarWindow* >::iterator it = m_pInfoBars.begin( ); it != m_pInfoBars.end( ); ++it )
+    for (auto it = m_pInfoBars.begin(); it != m_pInfoBars.end(); ++it)
     {
-        SfxInfoBarWindow* pBar = *it;
-        pBar->SetPosPixel( Point( 0, nY ) );
-        nY += pBar->GetSizePixel( ).getHeight( );
+        (*it)->SetPosPixel(Point(0, nY));
+        nY += (*it)->GetSizePixel().getHeight();
     }
 
-    Size aSize = GetSizePixel( );
-    aSize.setHeight( nY );
-    SetSizePixel( aSize );
+    Size aSize = GetSizePixel();
+    aSize.setHeight(nY);
+    SetSizePixel(aSize);
 
-    m_pChildWin->Update( );
+    m_pChildWin->Update();
 }
 
-void SfxInfoBarContainerWindow::Resize( )
+void SfxInfoBarContainerWindow::Resize()
 {
     // Only need to change the width of the infobars
-    long nWidth = GetSizePixel( ).getWidth( );
-    for ( vector< SfxInfoBarWindow * >::iterator it = m_pInfoBars.begin( );
-            it != m_pInfoBars.end( ); ++it )
+    long nWidth = GetSizePixel().getWidth();
+
+    for (auto it = m_pInfoBars.begin(); it != m_pInfoBars.end(); ++it)
     {
-        SfxInfoBarWindow* pInfoBar = *it;
-        Size aSize = pInfoBar->GetSizePixel( );
-        aSize.setWidth( nWidth );
-        pInfoBar->SetSizePixel( aSize );
-        pInfoBar->Resize( );
+        Size aSize = (*it)->GetSizePixel();
+        aSize.setWidth(nWidth);
+        (*it)->SetSizePixel(aSize);
+        (*it)->Resize();
     }
 }
 
-SFX_IMPL_POS_CHILDWINDOW_WITHID( SfxInfoBarContainerChild, SID_INFOBARCONTAINER, SFX_OBJECTBAR_OBJECT );
+SFX_IMPL_POS_CHILDWINDOW_WITHID(SfxInfoBarContainerChild, SID_INFOBAR, SFX_OBJECTBAR_OBJECT);
 
 SfxInfoBarContainerChild::SfxInfoBarContainerChild( vcl::Window* _pParent, sal_uInt16 nId, SfxBindings* pBindings, SfxChildWinInfo* ) :
-    SfxChildWindow( _pParent, nId ),
-    m_pBindings( pBindings )
+    SfxChildWindow(_pParent, nId),
+    m_pBindings(pBindings)
 {
-    pWindow = new SfxInfoBarContainerWindow( this );
-    pWindow->SetPosSizePixel( Point( 0, 0 ), Size( _pParent->GetSizePixel( ).getWidth(), 0 ) );
-    pWindow->Show( );
+    SetWindow( VclPtr<SfxInfoBarContainerWindow>::Create(this) );
+    GetWindow()->SetPosSizePixel(Point(0, 0), Size(_pParent->GetSizePixel().getWidth(), 0));
+    GetWindow()->Show();
 
-    eChildAlignment = SFX_ALIGN_LOWESTTOP;
+    SetAlignment(SfxChildAlignment::LOWESTTOP);
 }
 
-SfxInfoBarContainerChild::~SfxInfoBarContainerChild( )
+SfxInfoBarContainerChild::~SfxInfoBarContainerChild()
 {
 }
 
-SfxChildWinInfo SfxInfoBarContainerChild::GetInfo( ) const
+SfxChildWinInfo SfxInfoBarContainerChild::GetInfo() const
 {
     SfxChildWinInfo aInfo = SfxChildWindow::GetInfo();
     return aInfo;
 }
 
-void SfxInfoBarContainerChild::Update( )
+void SfxInfoBarContainerChild::Update()
 {
     // Refresh the frame to take the infobars container height change into account
     const sal_uInt16 nId = GetChildWindowId();
-    SfxViewFrame* pVFrame = m_pBindings->GetDispatcher( )->GetFrame( );
-    pVFrame->ShowChildWindow( nId );
+    SfxViewFrame* pVFrame = m_pBindings->GetDispatcher()->GetFrame();
+    pVFrame->ShowChildWindow(nId);
 
     // Give the focus to the document view
     pVFrame->GetWindow().GrabFocusToDocument();
