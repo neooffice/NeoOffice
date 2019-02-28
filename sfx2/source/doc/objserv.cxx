@@ -32,6 +32,7 @@
 #include <com/sun/star/ui/dialogs/XFilePickerControlAccess.hpp>
 #include <com/sun/star/ui/dialogs/CommonFilePickerElementIds.hpp>
 #include <com/sun/star/ui/dialogs/XControlAccess.hpp>
+#include <com/sun/star/util/CloseVetoException.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/beans/XPropertyAccess.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
@@ -69,8 +70,8 @@
 #include <unotools/useroptions.hxx>
 #include <unotools/saveopt.hxx>
 #include <svtools/asynclink.hxx>
-#include <svtools/miscopt.hxx>
 #include <comphelper/documentconstants.hxx>
+#include <tools/link.hxx>
 
 #include <sfx2/app.hxx>
 #include <sfx2/signaturestate.hxx>
@@ -97,8 +98,9 @@
 #include <sfx2/msgpool.hxx>
 #include <sfx2/objface.hxx>
 #include <sfx2/checkin.hxx>
+#include <sfx2/infobar.hxx>
 
-#include "../appl/app.hrc"
+#include "app.hrc"
 #include <com/sun/star/document/XDocumentSubStorageSupplier.hpp>
 #include <com/sun/star/embed/XTransactedObject.hpp>
 #include <com/sun/star/util/XCloneable.hpp>
@@ -107,8 +109,11 @@
 #include "helpid.hrc"
 
 #include "guisaveas.hxx"
-#include <sfx2/templatedlg.hxx>
-#include <boost/scoped_ptr.hpp>
+#include <sfx2/saveastemplatedlg.hxx>
+#include <memory>
+#include <cppuhelper/implbase.hxx>
+#include <unotools/ucbstreamhelper.hxx>
+#include <unotools/streamwrap.hxx>
 
 #if defined USE_JAVA && defined MACOSX
 #include "objserv_cocoa.h"
@@ -128,13 +133,13 @@ using namespace ::com::sun::star::task;
 #define SfxObjectShell
 #include "sfxslots.hxx"
 
-SFX_IMPL_INTERFACE(SfxObjectShell, SfxShell, SfxResId(0))
+SFX_IMPL_SUPERCLASS_INTERFACE(SfxObjectShell, SfxShell)
 
 void SfxObjectShell::InitInterface_Impl()
 {
 }
 
-class SfxClosePreventer_Impl : public ::cppu::WeakImplHelper1< ::com::sun::star::util::XCloseListener >
+class SfxClosePreventer_Impl : public ::cppu::WeakImplHelper< css::util::XCloseListener >
 {
     bool m_bGotOwnership;
     bool m_bPreventClose;
@@ -146,12 +151,11 @@ public:
 
     void SetPreventClose( bool bPrevent ) { m_bPreventClose = bPrevent; }
 
-    virtual void SAL_CALL queryClosing( const lang::EventObject& aEvent, sal_Bool bDeliverOwnership )
-        throw ( uno::RuntimeException, util::CloseVetoException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL queryClosing( const lang::EventObject& aEvent, sal_Bool bDeliverOwnership ) override;
 
-    virtual void SAL_CALL notifyClosing( const lang::EventObject& aEvent ) throw ( uno::RuntimeException, std::exception ) SAL_OVERRIDE ;
+    virtual void SAL_CALL notifyClosing( const lang::EventObject& aEvent ) override ;
 
-    virtual void SAL_CALL disposing( const lang::EventObject& aEvent ) throw ( uno::RuntimeException, std::exception ) SAL_OVERRIDE ;
+    virtual void SAL_CALL disposing( const lang::EventObject& aEvent ) override ;
 
 } ;
 
@@ -162,7 +166,6 @@ SfxClosePreventer_Impl::SfxClosePreventer_Impl()
 }
 
 void SAL_CALL SfxClosePreventer_Impl::queryClosing( const lang::EventObject&, sal_Bool bDeliverOwnership )
-        throw ( uno::RuntimeException, util::CloseVetoException, std::exception )
 {
     if ( m_bPreventClose )
     {
@@ -173,23 +176,20 @@ void SAL_CALL SfxClosePreventer_Impl::queryClosing( const lang::EventObject&, sa
     }
 }
 
-void SAL_CALL SfxClosePreventer_Impl::notifyClosing( const lang::EventObject& ) throw ( uno::RuntimeException, std::exception )
+void SAL_CALL SfxClosePreventer_Impl::notifyClosing( const lang::EventObject& )
 {}
 
-void SAL_CALL SfxClosePreventer_Impl::disposing( const lang::EventObject& ) throw ( uno::RuntimeException, std::exception )
+void SAL_CALL SfxClosePreventer_Impl::disposing( const lang::EventObject& )
 {}
 
 
 class SfxInstanceCloseGuard_Impl
 {
-    SfxClosePreventer_Impl* m_pPreventer;
-    uno::Reference< util::XCloseListener > m_xPreventer;
+    rtl::Reference<SfxClosePreventer_Impl> m_xPreventer;
     uno::Reference< util::XCloseable > m_xCloseable;
 
 public:
-    SfxInstanceCloseGuard_Impl()
-    : m_pPreventer( NULL )
-    {}
+    SfxInstanceCloseGuard_Impl() {}
 
     ~SfxInstanceCloseGuard_Impl();
 
@@ -205,15 +205,14 @@ bool SfxInstanceCloseGuard_Impl::Init_Impl( const uno::Reference< util::XCloseab
     {
         try
         {
-            m_pPreventer = new SfxClosePreventer_Impl();
-            m_xPreventer = uno::Reference< util::XCloseListener >( m_pPreventer );
-            xCloseable->addCloseListener( m_xPreventer );
+            m_xPreventer = new SfxClosePreventer_Impl();
+            xCloseable->addCloseListener( m_xPreventer.get() );
             m_xCloseable = xCloseable;
             bResult = true;
         }
         catch( uno::Exception& )
         {
-            OSL_FAIL( "Could not register close listener!\n" );
+            OSL_FAIL( "Could not register close listener!" );
         }
     }
 
@@ -226,7 +225,7 @@ SfxInstanceCloseGuard_Impl::~SfxInstanceCloseGuard_Impl()
     {
         try
         {
-            m_xCloseable->removeCloseListener( m_xPreventer );
+            m_xCloseable->removeCloseListener( m_xPreventer.get() );
         }
         catch( uno::Exception& )
         {
@@ -234,12 +233,12 @@ SfxInstanceCloseGuard_Impl::~SfxInstanceCloseGuard_Impl()
 
         try
         {
-            if ( m_pPreventer )
+            if ( m_xPreventer.is() )
             {
-                m_pPreventer->SetPreventClose( false );
+                m_xPreventer->SetPreventClose( false );
 
-                if ( m_pPreventer->HasOwnership() )
-                    m_xCloseable->close( sal_True ); // TODO: do it asynchronously
+                if ( m_xPreventer->HasOwnership() )
+                    m_xCloseable->close( true ); // TODO: do it asynchronously
             }
         }
         catch( uno::Exception& )
@@ -247,7 +246,6 @@ SfxInstanceCloseGuard_Impl::~SfxInstanceCloseGuard_Impl()
         }
     }
 }
-
 
 
 void SfxObjectShell::PrintExec_Impl(SfxRequest &rReq)
@@ -259,7 +257,6 @@ void SfxObjectShell::PrintExec_Impl(SfxRequest &rReq)
         pFrame->GetViewShell()->ExecuteSlot(rReq);
     }
 }
-
 
 
 void SfxObjectShell::PrintState_Impl(SfxItemSet &rSet)
@@ -274,13 +271,7 @@ void SfxObjectShell::PrintState_Impl(SfxItemSet &rSet)
     rSet.Put( SfxBoolItem( SID_PRINTOUT, bPrinting ) );
 }
 
-
-
-bool SfxObjectShell::APISaveAs_Impl
-(
-    const OUString& aFileName,
-    SfxItemSet*   aParams
-)
+bool SfxObjectShell::APISaveAs_Impl(const OUString& aFileName, SfxItemSet& rItemSet)
 {
     bool bOk = false;
 
@@ -288,7 +279,7 @@ bool SfxObjectShell::APISaveAs_Impl
     if ( GetMedium() )
     {
         OUString aFilterName;
-        SFX_ITEMSET_ARG( aParams, pFilterNameItem, SfxStringItem, SID_FILTER_NAME, false );
+        const SfxStringItem* pFilterNameItem = rItemSet.GetItem<SfxStringItem>(SID_FILTER_NAME, false);
         if( pFilterNameItem )
         {
             aFilterName = pFilterNameItem->GetValue();
@@ -297,25 +288,25 @@ bool SfxObjectShell::APISaveAs_Impl
             // Fix bug 3430 by checking if we accidently got a filter that is
             // an import only filter and, if so, try to find a filter that
             // supports export
-            const SfxFilter* pFilter = GetFactory().GetFilterContainer()->GetFilter4FilterName( aFilterName );
+            std::shared_ptr< const SfxFilter > pFilter = GetFactory().GetFilterContainer()->GetFilter4FilterName( aFilterName );
             if ( pFilter && !pFilter->CanExport() )
             {
-                pFilter = SfxFilterMatcher( OUString::createFromAscii( GetFactory().GetShortName() ) ).GetFilter4Mime( pFilter->GetMimeType(), SFX_FILTER_EXPORT );
+                pFilter = SfxFilterMatcher( GetFactory().GetFactoryName() ).GetFilter4Mime( pFilter->GetMimeType(), SfxFilterFlags::EXPORT );
                 if ( pFilter )
                 {
                     aFilterName = pFilter->GetName();
                     if ( aFilterName.getLength() )
-                        aParams->Put(SfxStringItem( SID_FILTER_NAME, aFilterName));
+                        rItemSet.Put(SfxStringItem( SID_FILTER_NAME, aFilterName));
                 }
             }
 #endif	// USE_JAVA
         }
         else
         {
-            SFX_ITEMSET_ARG( aParams, pContentTypeItem, SfxStringItem, SID_CONTENTTYPE, false );
+            const SfxStringItem* pContentTypeItem = rItemSet.GetItem<SfxStringItem>(SID_CONTENTTYPE, false);
             if ( pContentTypeItem )
             {
-                const SfxFilter* pFilter = SfxFilterMatcher( OUString::createFromAscii(GetFactory().GetShortName()) ).GetFilter4Mime( pContentTypeItem->GetValue(), SFX_FILTER_EXPORT );
+                std::shared_ptr<const SfxFilter> pFilter = SfxFilterMatcher( GetFactory().GetFactoryName() ).GetFilter4Mime( pContentTypeItem->GetValue(), SfxFilterFlags::EXPORT );
                 if ( pFilter )
                     aFilterName = pFilter->GetName();
             }
@@ -324,13 +315,13 @@ bool SfxObjectShell::APISaveAs_Impl
         // in case no filter defined use default one
         if( aFilterName.isEmpty() )
         {
-            const SfxFilter* pFilt = SfxFilter::GetDefaultFilterFromFactory(GetFactory().GetFactoryName());
+            std::shared_ptr<const SfxFilter> pFilt = SfxFilter::GetDefaultFilterFromFactory(GetFactory().GetFactoryName());
 
             DBG_ASSERT( pFilt, "No default filter!\n" );
             if( pFilt )
                 aFilterName = pFilt->GetFilterName();
 
-            aParams->Put(SfxStringItem( SID_FILTER_NAME, aFilterName));
+            rItemSet.Put(SfxStringItem(SID_FILTER_NAME, aFilterName));
         }
 
 
@@ -338,13 +329,11 @@ bool SfxObjectShell::APISaveAs_Impl
             SfxObjectShellRef xLock( this ); // ???
 
             // use the title that is provided in the media descriptor
-            SFX_ITEMSET_ARG( aParams, pDocTitleItem, SfxStringItem, SID_DOCINFO_TITLE, false );
+            const SfxStringItem* pDocTitleItem = rItemSet.GetItem<SfxStringItem>(SID_DOCINFO_TITLE, false);
             if ( pDocTitleItem )
                 getDocProperties()->setTitle( pDocTitleItem->GetValue() );
 
-            bOk = CommonSaveAs_Impl( INetURLObject(aFileName), aFilterName,
-                aParams );
-
+            bOk = CommonSaveAs_Impl(INetURLObject(aFileName), aFilterName, rItemSet);
         }
     }
 
@@ -364,7 +353,7 @@ void SfxObjectShell::CheckOut( )
     }
     catch ( const uno::RuntimeException& e )
     {
-        boost::scoped_ptr<MessageDialog> pErrorBox(new MessageDialog( &GetFrame()->GetWindow(), e.Message ));
+        ScopedVclPtrInstance< MessageDialog > pErrorBox( &GetFrame()->GetWindow(), e.Message );
         pErrorBox->Execute( );
     }
 }
@@ -378,11 +367,11 @@ void SfxObjectShell::CancelCheckOut( )
 
         uno::Reference< util::XModifiable > xModifiable( GetModel( ), uno::UNO_QUERY );
         if ( xModifiable.is( ) )
-            xModifiable->setModified( sal_False );
+            xModifiable->setModified( false );
     }
     catch ( const uno::RuntimeException& e )
     {
-        boost::scoped_ptr<MessageDialog> pErrorBox(new MessageDialog(&GetFrame()->GetWindow(), e.Message));
+        ScopedVclPtrInstance< MessageDialog > pErrorBox(&GetFrame()->GetWindow(), e.Message);
         pErrorBox->Execute( );
     }
 }
@@ -393,20 +382,18 @@ void SfxObjectShell::CheckIn( )
     {
         uno::Reference< document::XCmisDocument > xCmisDoc( GetModel(), uno::UNO_QUERY_THROW );
         // Pop up dialog to ask for comment and major
-        SfxCheckinDialog checkinDlg( &GetFrame( )->GetWindow( ) );
-        if ( checkinDlg.Execute( ) == RET_OK )
+        ScopedVclPtrInstance< SfxCheckinDialog > checkinDlg(&GetFrame( )->GetWindow( ));
+        if ( checkinDlg->Execute( ) == RET_OK )
         {
-            OUString sComment = checkinDlg.GetComment( );
-            bool bMajor = checkinDlg.IsMajor( );
-            xCmisDoc->checkIn( bMajor, sComment );
+            xCmisDoc->checkIn( checkinDlg->IsMajor(), checkinDlg->GetComment() );
             uno::Reference< util::XModifiable > xModifiable( GetModel( ), uno::UNO_QUERY );
             if ( xModifiable.is( ) )
-                xModifiable->setModified( sal_False );
+                xModifiable->setModified( false );
         }
     }
     catch ( const uno::RuntimeException& e )
     {
-        boost::scoped_ptr<MessageDialog> pErrorBox(new MessageDialog(&GetFrame()->GetWindow(), e.Message));
+        ScopedVclPtrInstance< MessageDialog > pErrorBox(&GetFrame()->GetWindow(), e.Message);
         pErrorBox->Execute( );
     }
 }
@@ -420,7 +407,7 @@ uno::Sequence< document::CmisVersion > SfxObjectShell::GetCmisVersions( )
     }
     catch ( const uno::RuntimeException& e )
     {
-        boost::scoped_ptr<MessageDialog> pErrorBox(new MessageDialog(&GetFrame()->GetWindow(), e.Message));
+        ScopedVclPtrInstance< MessageDialog > pErrorBox(&GetFrame()->GetWindow(), e.Message);
         pErrorBox->Execute( );
     }
     return uno::Sequence< document::CmisVersion > ( );
@@ -459,7 +446,7 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
         }
 #endif	// MACOSX
 
-        if ( nId == SID_SAVEDOC && pImp->IsDeleted() )
+        if ( nId == SID_SAVEDOC && pImpl->IsDeleted() )
         {
             nId = SID_SAVEASDOC;
             rReq.SetSlot( nId );
@@ -469,7 +456,7 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
 
     if( SID_SIGNATURE == nId || SID_MACRO_SIGNATURE == nId )
     {
-        if ( QueryHiddenInformation( WhenSigning, NULL ) == RET_YES )
+        if ( QueryHiddenInformation( HiddenWarningFact::WhenSigning, nullptr ) == RET_YES )
             ( SID_SIGNATURE == nId ) ? SignDocumentContent() : SignScriptingContent();
         return;
     }
@@ -494,12 +481,6 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
             if ( !pFrame )
                 return;
 
-            if ( pFrame->GetFrame().GetParentFrame() )
-            {
-                pFrame->GetTopViewFrame()->GetObjectShell()->ExecuteSlot( rReq );
-                return;
-            }
-
 #if defined USE_JAVA && defined MACOSX
             if ( NSDocument_versionsEnabled() )
             {
@@ -508,10 +489,10 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
             else
             {
 #endif	// USE_JAVA && MACOSX
-            if ( !IsOwnStorageFormat_Impl( *GetMedium() ) )
+            if ( !IsOwnStorageFormat( *GetMedium() ) )
                 return;
 
-            boost::scoped_ptr<SfxVersionDialog> pDlg(new SfxVersionDialog( pFrame, IsSaveVersionOnClose() ));
+            ScopedVclPtrInstance< SfxVersionDialog > pDlg( pFrame, IsSaveVersionOnClose() );
             pDlg->Execute();
             SetSaveVersionOnClose( pDlg->IsSaveVersionOnClose() );
 #if defined USE_JAVA && defined MACOSX
@@ -524,42 +505,32 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         case SID_DOCINFO:
         {
-            SFX_REQUEST_ARG(rReq, pDocInfItem, SfxDocumentInfoItem, SID_DOCINFO, false);
+            const SfxDocumentInfoItem* pDocInfItem = rReq.GetArg<SfxDocumentInfoItem>(SID_DOCINFO);
             if ( pDocInfItem )
             {
                 // parameter, e.g. from replayed macro
                 pDocInfItem->UpdateDocumentInfo(getDocProperties(), true);
                 SetUseUserData( pDocInfItem->IsUseUserData() );
+                SetUseThumbnailSave( pDocInfItem->IsUseThumbnailSave() );
             }
             else
             {
                 // no argument containing DocInfo; check optional arguments
                 bool bReadOnly = IsReadOnly();
-                SFX_REQUEST_ARG(rReq, pROItem, SfxBoolItem, SID_DOC_READONLY, false);
+                const SfxBoolItem* pROItem = rReq.GetArg<SfxBoolItem>(SID_DOC_READONLY);
                 if ( pROItem )
                     // override readonly attribute of document
                     // e.g. if a readonly document is saved elsewhere and user asks for editing DocInfo before
                     bReadOnly = pROItem->GetValue();
 
-                // collect data for dialog
-                OUString aURL, aTitle;
-                if ( HasName() )
-                {
-                    aURL = GetMedium()->GetName();
-                    aTitle = GetTitle();
-                }
-                else
-                {
-                    aURL = "private:factory/" + OUString::createFromAscii( GetFactory().GetShortName() );
-
-                    aTitle = GetTitle();
-                }
+                // URL for dialog
+                const OUString aURL( HasName() ? GetMedium()->GetName() : GetFactory().GetFactoryURL() );
 
                 Reference< XCmisDocument > xCmisDoc( GetModel(), uno::UNO_QUERY );
                 uno::Sequence< document::CmisProperty> aCmisProperties = xCmisDoc->getCmisProperties();
 
                 SfxDocumentInfoItem aDocInfoItem( aURL, getDocProperties(), aCmisProperties,
-                    IsUseUserData() );
+                    IsUseUserData(), IsUseThumbnailSave() );
                 if ( !GetSlotState( SID_DOCTEMPLATE ) )
                     // templates not supported
                     aDocInfoItem.SetTemplate(false);
@@ -569,15 +540,15 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
                                 0L );
                 aSet.Put( aDocInfoItem );
                 aSet.Put( SfxBoolItem( SID_DOC_READONLY, bReadOnly ) );
-                aSet.Put( SfxStringItem( SID_EXPLORER_PROPS_START, aTitle ) );
+                aSet.Put( SfxStringItem( SID_EXPLORER_PROPS_START, GetTitle() ) );
                 aSet.Put( SfxStringItem( SID_BASEURL, GetMedium()->GetBaseURL() ) );
 
                 // creating dialog is done via virtual method; application will
                 // add its own statistics page
-                boost::scoped_ptr<SfxDocumentInfoDialog> pDlg(CreateDocumentInfoDialog(0, aSet));
+                ScopedVclPtr<SfxDocumentInfoDialog> pDlg(CreateDocumentInfoDialog(aSet));
                 if ( RET_OK == pDlg->Execute() )
                 {
-                    SFX_ITEMSET_ARG( pDlg->GetOutputItemSet(), pDocInfoItem, SfxDocumentInfoItem, SID_DOCINFO, false);
+                    const SfxDocumentInfoItem* pDocInfoItem = SfxItemSet::GetItem<SfxDocumentInfoItem>(pDlg->GetOutputItemSet(), SID_DOCINFO, false);
                     if ( pDocInfoItem )
                     {
                         // user has done some changes to DocumentInfo
@@ -586,10 +557,11 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
                             pDocInfoItem->GetCmisProperties( );
                         if ( aNewCmisProperties.getLength( ) > 0 )
                             xCmisDoc->updateCmisProperties( aNewCmisProperties );
-                        SetUseUserData( ((const SfxDocumentInfoItem *)pDocInfoItem)->IsUseUserData() );
+                        SetUseUserData( pDocInfoItem->IsUseUserData() );
+                        SetUseThumbnailSave( pDocInfoItem-> IsUseThumbnailSave() );
                         // add data from dialog for possible recording purpose
                         rReq.AppendItem( SfxDocumentInfoItem( GetTitle(),
-                            getDocProperties(), aNewCmisProperties, IsUseUserData() ) );
+                            getDocProperties(), aNewCmisProperties, IsUseUserData(), IsUseThumbnailSave() ) );
                     }
 
                     rReq.Done();
@@ -603,13 +575,13 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
         }
 
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
         case SID_EXPORTDOCASPDF:
         case SID_DIRECTEXPORTDOCASPDF:
             bIsPDFExport = true;
-            //fall-through
+            SAL_FALLTHROUGH;
         case SID_EXPORTDOC:
         case SID_SAVEASDOC:
+        case SID_SAVEASREMOTE:
         case SID_SAVEDOC:
         {
             // derived class may decide to abort this
@@ -631,23 +603,23 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
 
             // by default versions should be preserved always except in case of an explicit
             // SaveAs via GUI, so the flag must be set accordingly
-            pImp->bPreserveVersions = (nId == SID_SAVEDOC);
+            pImpl->bPreserveVersions = (nId == SID_SAVEDOC);
             try
             {
                 SfxErrorContext aEc( ERRCTX_SFX_SAVEASDOC, GetTitle() ); // ???
 
-                if ( nId == SID_SAVEASDOC )
+                if ( nId == SID_SAVEASDOC || nId == SID_SAVEASREMOTE )
                 {
                     // in case of plugin mode the SaveAs operation means SaveTo
-                    SFX_ITEMSET_ARG( GetMedium()->GetItemSet(), pViewOnlyItem, SfxBoolItem, SID_VIEWONLY, false );
+                    const SfxBoolItem* pViewOnlyItem = SfxItemSet::GetItem<SfxBoolItem>(GetMedium()->GetItemSet(), SID_VIEWONLY, false);
                     if ( pViewOnlyItem && pViewOnlyItem->GetValue() )
                         rReq.AppendItem( SfxBoolItem( SID_SAVETO, true ) );
                 }
 
-                // TODO/LATER: do the following GUI related actions in standalown method
+                // TODO/LATER: do the following GUI related actions in standalone method
 
                 // Introduce a status indicator for GUI operation
-                SFX_REQUEST_ARG( rReq, pStatusIndicatorItem, SfxUnoAnyItem, SID_PROGRESS_STATUSBAR_CONTROL, false );
+                const SfxUnoAnyItem* pStatusIndicatorItem = rReq.GetArg<SfxUnoAnyItem>(SID_PROGRESS_STATUSBAR_CONTROL);
                 if ( !pStatusIndicatorItem )
                 {
                     // get statusindicator
@@ -660,7 +632,7 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
                             xStatusIndicator = xStatFactory->createStatusIndicator();
                     }
 
-                    OSL_ENSURE( xStatusIndicator.is(), "Can not retrieve default status indicator!\n" );
+                    OSL_ENSURE( xStatusIndicator.is(), "Can not retrieve default status indicator!" );
 
                     if ( xStatusIndicator.is() )
                     {
@@ -684,12 +656,12 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
                 }
 
                 // Introduce an interaction handler for GUI operation
-                SFX_REQUEST_ARG( rReq, pInteractionHandlerItem, SfxUnoAnyItem, SID_INTERACTIONHANDLER, false );
+                const SfxUnoAnyItem* pInteractionHandlerItem = rReq.GetArg<SfxUnoAnyItem>(SID_INTERACTIONHANDLER);
                 if ( !pInteractionHandlerItem )
                 {
                     uno::Reference< uno::XComponentContext > xContext = ::comphelper::getProcessComponentContext();
                     uno::Reference< task::XInteractionHandler2 > xInteract(
-                        task::InteractionHandler::createWithParent(xContext, 0) );
+                        task::InteractionHandler::createWithParent(xContext, nullptr) );
 
                     SfxUnoAnyItem aInteractionItem( SID_INTERACTIONHANDLER, uno::makeAny( xInteract ) );
                     if ( nId == SID_SAVEDOC )
@@ -710,8 +682,8 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
 
 
                 bool bPreselectPassword = false;
-                SFX_ITEMSET_ARG( GetMedium()->GetItemSet(), pOldEncryptionDataItem, SfxUnoAnyItem, SID_ENCRYPTIONDATA, false );
-                SFX_ITEMSET_ARG( GetMedium()->GetItemSet(), pOldPasswordItem, SfxStringItem, SID_PASSWORD, false );
+                const SfxUnoAnyItem* pOldEncryptionDataItem = SfxItemSet::GetItem<SfxUnoAnyItem>(GetMedium()->GetItemSet(), SID_ENCRYPTIONDATA, false);
+                const SfxStringItem* pOldPasswordItem = SfxItemSet::GetItem<SfxStringItem>(GetMedium()->GetItemSet(), SID_PASSWORD, false);
                 if ( pOldEncryptionDataItem || pOldPasswordItem )
                     bPreselectPassword = true;
 
@@ -719,22 +691,21 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
                 if ( rReq.GetArgs() )
                     TransformItems( nId,
                                     *rReq.GetArgs(),
-                                     aDispatchArgs,
-                                     NULL );
+                                     aDispatchArgs );
 
-                const SfxSlot* pSlot = GetModule()->GetSlotPool()->GetSlot( nId );
+                bool bForceSaveAs = nId == SID_SAVEDOC && IsReadOnlyMedium();
+                const SfxSlot* pSlot = GetModule()->GetSlotPool()->GetSlot( bForceSaveAs ? SID_SAVEASDOC : nId );
                 if ( !pSlot )
                     throw uno::Exception();
 
                 SfxStoringHelper aHelper;
 
-                if ( QueryHiddenInformation( bIsPDFExport ? WhenCreatingPDF : WhenSaving, NULL ) == RET_YES )
+                if ( QueryHiddenInformation( bIsPDFExport ? HiddenWarningFact::WhenCreatingPDF : HiddenWarningFact::WhenSaving, nullptr ) == RET_YES )
                 {
                     aHelper.GUIStoreModel( GetModel(),
                                                          OUString::createFromAscii( pSlot->GetUnoName() ),
                                                          aDispatchArgs,
                                                          bPreselectPassword,
-                                                         GetSharedFileURL(),
                                                          GetDocumentSignatureState() );
                 }
                 else
@@ -749,17 +720,16 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
                 SfxAllItemSet aResultParams( GetPool() );
                 TransformParameters( nId,
                                      aDispatchArgs,
-                                     aResultParams,
-                                     NULL );
+                                     aResultParams );
                 rReq.SetArgs( aResultParams );
 
                 // the StoreAsURL/StoreToURL method have called this method with false
                 // so it has to be restored to true here since it is a call from GUI
                 GetMedium()->SetUpdatePickList( true );
 
-                // TODO: in future it must be done in followind way
-                // if document is opened from GUI it is immediatelly appears in the picklist
-                // if the document is a new one then it appears in the picklist immediatelly
+                // TODO: in future it must be done in following way
+                // if document is opened from GUI, it immediately appears in the picklist
+                // if the document is a new one then it appears in the picklist immediately
                 // after SaveAs operation triggered from GUI
             }
             catch( const task::ErrorCodeIOException& aErrorEx )
@@ -773,7 +743,7 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
 
             // by default versions should be preserved always except in case of an explicit
             // SaveAs via GUI, so the flag must be reset to guarantee this
-            pImp->bPreserveVersions = true;
+            pImpl->bPreserveVersions = true;
             sal_uIntPtr lErr=GetErrorCode();
 
             if ( !lErr && nErrorCode )
@@ -781,7 +751,7 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
 
             if ( lErr && nErrorCode == ERRCODE_NONE )
             {
-                SFX_REQUEST_ARG( rReq, pWarnItem, SfxBoolItem, SID_FAIL_ON_WARNING, false );
+                const SfxBoolItem* pWarnItem = rReq.GetArg<SfxBoolItem>(SID_FAIL_ON_WARNING);
                 if ( pWarnItem && pWarnItem->GetValue() )
                     nErrorCode = lErr;
             }
@@ -801,20 +771,21 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
                 nErrorCode = ( lErr != ERRCODE_IO_ABORT ) && ( nErrorCode == ERRCODE_NONE ) ? nErrorCode : lErr;
             }
 
-            if ( nId == SID_SAVEASDOC  && nErrorCode == ERRCODE_NONE )
+            if ( ( nId == SID_SAVEASDOC || nId == SID_SAVEASREMOTE ) && nErrorCode == ERRCODE_NONE )
             {
-                SfxBoolItem const * saveTo = static_cast<SfxBoolItem const *>(
-                    rReq.GetArg(SID_SAVETO, false, TYPE(SfxBoolItem)));
-                if (saveTo == 0 || !saveTo->GetValue())
+                const SfxBoolItem* saveTo = rReq.GetArg<SfxBoolItem>(SID_SAVETO);
+                if (saveTo == nullptr || !saveTo->GetValue())
                 {
-                    GetFrame()->RemoveInfoBar("readonly");
+                    SfxViewFrame *pFrame = GetFrame();
+                    if (pFrame)
+                        pFrame->RemoveInfoBar("readonly");
                     SetReadOnlyUI(false);
                 }
             }
 
 #ifdef USE_JAVA
-            if ( pImp->IsDeleted() && nId == SID_SAVEASDOC && lErr != ERRCODE_IO_ABORT && nErrorCode == ERRCODE_NONE )
-                pImp->SetIsDeleted( sal_False );
+            if ( pImpl->IsDeleted() && nId == SID_SAVEASDOC && lErr != ERRCODE_IO_ABORT && nErrorCode == ERRCODE_NONE )
+                pImpl->SetIsDeleted( sal_False );
 #endif	// USE_JAVA
 
             rReq.SetReturnValue( SfxBoolItem(0, nErrorCode == ERRCODE_NONE ) );
@@ -844,31 +815,13 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
         case SID_CLOSEDOC:
         {
             SfxViewFrame *pFrame = GetFrame();
-            if ( pFrame && pFrame->GetFrame().GetParentFrame() )
-            {
-                // If SID_CLOSEDOC is executed through menu and so on, but
-                // the current document is in a frame, then the
-                // FrameSetDocument should actually be closed.
-                pFrame->GetTopViewFrame()->GetObjectShell()->ExecuteSlot( rReq );
-                rReq.Done();
-                return;
-            }
 
             bool bInFrameSet = false;
             sal_uInt16 nFrames=0;
             pFrame = SfxViewFrame::GetFirst( this );
             while ( pFrame )
             {
-                if ( pFrame->GetFrame().GetParentFrame() )
-                {
-                    // In this document there still exists a view that is
-                    // in a FrameSet , which of course may not be closed
-                    // geclosed werden
-                    bInFrameSet = true;
-                }
-                else
-                    nFrames++;
-
+                nFrames++;
                 pFrame = SfxViewFrame::GetNext( *pFrame, this );
             }
 
@@ -878,15 +831,14 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
                 pFrame = SfxViewFrame::GetFirst( this );
                 while ( pFrame )
                 {
-                    if ( !pFrame->GetFrame().GetParentFrame() )
-                        pFrame->GetFrame().DoClose();
+                    pFrame->GetFrame().DoClose();
                     pFrame = SfxViewFrame::GetNext( *pFrame, this );
                 }
             }
 
             // Evaluate Parameter
-            SFX_REQUEST_ARG(rReq, pSaveItem, SfxBoolItem, SID_CLOSEDOC_SAVE, false);
-            SFX_REQUEST_ARG(rReq, pNameItem, SfxStringItem, SID_CLOSEDOC_FILENAME, false);
+            const SfxBoolItem* pSaveItem = rReq.GetArg<SfxBoolItem>(SID_CLOSEDOC_SAVE);
+            const SfxStringItem* pNameItem = rReq.GetArg<SfxStringItem>(SID_CLOSEDOC_FILENAME);
             if ( pSaveItem )
             {
                 if ( pSaveItem->GetValue() )
@@ -894,7 +846,7 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
                     if ( !pNameItem )
                     {
 #if HAVE_FEATURE_SCRIPTING
-                        SbxBase::SetError( SbxERR_WRONG_ARGS );
+                        SbxBase::SetError( ERRCODE_SBX_WRONG_ARGS );
 #endif
                         rReq.Ignore();
                         return;
@@ -915,7 +867,7 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
             }
 
             // Cancelled by the user?
-            if (!PrepareClose(true))
+            if (!PrepareClose())
             {
                 rReq.SetReturnValue( SfxBoolItem(0, false) );
                 rReq.Done();
@@ -937,11 +889,9 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
         case SID_DOCTEMPLATE:
         {
             // save as document templates
-            SfxTemplateManagerDlg aDlg;
-            aDlg.setDocumentModel(GetModel());
-            aDlg.setSaveMode();
-            aDlg.Execute();
-
+            ScopedVclPtrInstance<SfxSaveAsTemplateDialog> aDlg;
+            aDlg->setDocumentModel(GetModel());
+            aDlg->Execute();
             break;
         }
 
@@ -952,7 +902,7 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
         }
         case SID_CANCELCHECKOUT:
         {
-            if (MessageDialog(NULL, SfxResId(STR_QUERY_CANCELCHECKOUT), VCL_MESSAGE_QUESTION, VCL_BUTTONS_YES_NO).Execute() == RET_YES)
+            if (ScopedVclPtrInstance<MessageDialog>(nullptr, SfxResId(STR_QUERY_CANCELCHECKOUT), VclMessageType::Question, VclButtonsType::YesNo)->Execute() == RET_YES)
             {
                 CancelCheckOut( );
 
@@ -975,7 +925,7 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
         GetMedium()->SetUpdatePickList( false );
     else if ( rReq.GetArgs() )
     {
-        SFX_ITEMSET_GET( *rReq.GetArgs(), pPicklistItem, SfxBoolItem, SID_PICKLIST, false );
+        const SfxBoolItem* pPicklistItem = rReq.GetArgs()->GetItem<SfxBoolItem>(SID_PICKLIST, false);
         if ( pPicklistItem )
             GetMedium()->SetUpdatePickList( pPicklistItem->GetValue() );
     }
@@ -983,7 +933,6 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
     // Ignore()-branches have already returned
     rReq.Done();
 }
-
 
 
 void SfxObjectShell::GetState_Impl(SfxItemSet &rSet)
@@ -1075,65 +1024,42 @@ void SfxObjectShell::GetState_Impl(SfxItemSet &rSet)
                     SfxViewFrame* pFrame = GetFrame();
                     if ( !pFrame )
                         pFrame = SfxViewFrame::GetFirst( this );
-                    if ( pFrame  )
-                    {
-                        if ( pFrame->GetFrame().GetParentFrame() )
-                        {
-                            pFrame = pFrame->GetTopViewFrame();
-                            pDoc = pFrame->GetObjectShell();
-                        }
-                    }
 
                     if ( !pFrame || !pDoc->HasName() ||
 #if defined USE_JAVA && defined MACOSX
                         NSDocument_versionsEnabled() ? !SFXDocument_hasDocument( pFrame->GetTopViewFrame() ) :
 #endif	// USE_JAVA && MACOSX
-                        !IsOwnStorageFormat_Impl( *pDoc->GetMedium() ) )
+                        !IsOwnStorageFormat( *pDoc->GetMedium() ) )
                         rSet.DisableItem( nWhich );
                     break;
                 }
             case SID_SAVEDOC:
                 {
-                    SvtMiscOptions aMiscOptions;
-                    bool bAlwaysAllowSave = aMiscOptions.IsSaveAlwaysAllowed();
-                    bool bAllowSave = (bAlwaysAllowSave || IsModified());
-                    bool bMediumRO = IsReadOnlyMedium();
-                    if ( !bMediumRO && GetMedium() && bAllowSave )
+                    if ( !IsReadOnly() )
                         rSet.Put(SfxStringItem(
-                            nWhich, SfxResId(STR_SAVEDOC).toString()));
+                            nWhich, SfxResId(STR_SAVEDOC)));
                     else
                         rSet.DisableItem(nWhich);
                 }
                 break;
 
             case SID_DOCINFO:
-                if ( 0 != ( pImp->eFlags & SFXOBJECTSHELL_NODOCINFO ) )
+                if ( pImpl->eFlags & SfxObjectShellFlags::NODOCINFO )
                     rSet.DisableItem( nWhich );
                 break;
 
             case SID_CLOSEDOC:
             {
-                SfxObjectShell *pDoc = this;
-                SfxViewFrame *pFrame = GetFrame();
-                if ( pFrame && pFrame->GetFrame().GetParentFrame() )
-                {
-
-                    // If SID_CLOSEDOC is executed through menu and so on, but
-                    // the current document is in a frame, then the
-                    // FrameSetDocument should actually be closed.
-                    pDoc = pFrame->GetTopViewFrame()->GetObjectShell();
-                }
-
-                if ( pDoc->GetFlags() & SFXOBJECTSHELL_DONTCLOSE )
+                if ( GetFlags() & SfxObjectShellFlags::DONTCLOSE )
                     rSet.DisableItem(nWhich);
                 else
-                    rSet.Put(SfxStringItem(nWhich, SfxResId(STR_CLOSEDOC).toString()));
+                    rSet.Put(SfxStringItem(nWhich, SfxResId(STR_CLOSEDOC)));
                 break;
             }
 
             case SID_SAVEASDOC:
             {
-                if( ( pImp->nLoadedFlags & SFX_LOADED_MAINDOCUMENT ) != SFX_LOADED_MAINDOCUMENT )
+                if( !( pImpl->nLoadedFlags & SfxLoadedFlags::MAINDOCUMENT ) )
                 {
                     rSet.DisableItem( nWhich );
                     break;
@@ -1141,13 +1067,13 @@ void SfxObjectShell::GetState_Impl(SfxItemSet &rSet)
                 if ( /*!pCombinedFilters ||*/ !GetMedium() )
                     rSet.DisableItem( nWhich );
                 else
-                    rSet.Put( SfxStringItem( nWhich, SfxResId(STR_SAVEASDOC).toString() ) );
+                    rSet.Put( SfxStringItem( nWhich, SfxResId(STR_SAVEASDOC) ) );
                 break;
             }
 
             case SID_SAVEACOPY:
             {
-                if( ( pImp->nLoadedFlags & SFX_LOADED_MAINDOCUMENT ) != SFX_LOADED_MAINDOCUMENT )
+                if( !( pImpl->nLoadedFlags & SfxLoadedFlags::MAINDOCUMENT ) )
                 {
                     rSet.DisableItem( nWhich );
                     break;
@@ -1155,7 +1081,7 @@ void SfxObjectShell::GetState_Impl(SfxItemSet &rSet)
                 if ( /*!pCombinedFilters ||*/ !GetMedium() )
                     rSet.DisableItem( nWhich );
                 else
-                    rSet.Put( SfxStringItem( nWhich, SfxResId(STR_SAVEACOPY).toString() ) );
+                    rSet.Put( SfxStringItem( nWhich, SfxResId(STR_SAVEACOPY) ) );
                 break;
             }
 
@@ -1192,14 +1118,73 @@ void SfxObjectShell::GetState_Impl(SfxItemSet &rSet)
             }
             case SID_SIGNATURE:
             {
-                rSet.Put( SfxUInt16Item( SID_SIGNATURE, GetDocumentSignatureState() ) );
+                SfxViewFrame *pFrame = SfxViewFrame::GetFirst(this);
+                if ( pFrame )
+                {
+                    SignatureState eState = GetDocumentSignatureState();
+                    InfoBarType aInfoBarType(InfoBarType::Info);
+                    OUString sMessage("");
+
+                    switch (eState)
+                    {
+                    case SignatureState::BROKEN:
+                        sMessage = SfxResId(STR_SIGNATURE_BROKEN);
+                        aInfoBarType = InfoBarType::Danger;
+                        break;
+                    case SignatureState::INVALID:
+                        sMessage = SfxResId(STR_SIGNATURE_INVALID);
+                        // Warning only, I've tried Danger and it looked too scary
+                        aInfoBarType = InfoBarType::Warning;
+                        break;
+                    case SignatureState::NOTVALIDATED:
+                        sMessage = SfxResId(STR_SIGNATURE_NOTVALIDATED);
+                        aInfoBarType = InfoBarType::Warning;
+                        break;
+                    case SignatureState::PARTIAL_OK:
+                        sMessage = SfxResId(STR_SIGNATURE_PARTIAL_OK);
+                        aInfoBarType = InfoBarType::Warning;
+                        break;
+                    case SignatureState::OK:
+                        sMessage = SfxResId(STR_SIGNATURE_OK);
+                        aInfoBarType = InfoBarType::Info;
+                        break;
+                    //FIXME SignatureState::Unknown, own message?
+                    default:
+                        break;
+                    }
+
+                    // new info bar
+                    if ( !pFrame->HasInfoBarWithID("signature") )
+                    {
+                        if ( !sMessage.isEmpty() )
+                        {
+                            auto pInfoBar = pFrame->AppendInfoBar("signature", sMessage, aInfoBarType);
+                            if (pInfoBar == nullptr || pInfoBar->isDisposed())
+                                return;
+                            VclPtrInstance<PushButton> xBtn(&(pFrame->GetWindow()));
+                            xBtn->SetText(SfxResId(STR_SIGNATURE_SHOW));
+                            xBtn->SetSizePixel(xBtn->GetOptimalSize());
+                            xBtn->SetClickHdl(LINK(this, SfxObjectShell, SignDocumentHandler));
+                            pInfoBar->addButton(xBtn);
+                        }
+                    }
+                    else // info bar exists already
+                    {
+                        if ( eState == SignatureState::NOSIGNATURES )
+                            pFrame->RemoveInfoBar("signature");
+                        else
+                            pFrame->UpdateInfoBar("signature", sMessage, aInfoBarType);
+                    }
+                }
+
+                rSet.Put( SfxUInt16Item( SID_SIGNATURE, static_cast<sal_uInt16>(GetDocumentSignatureState()) ) );
                 break;
             }
             case SID_MACRO_SIGNATURE:
             {
                 // the slot makes sense only if there is a macro in the document
-                if ( pImp->documentStorageHasMacros() || pImp->aMacroMode.hasMacroLibrary() )
-                    rSet.Put( SfxUInt16Item( SID_MACRO_SIGNATURE, GetScriptingSignatureState() ) );
+                if ( pImpl->documentStorageHasMacros() || pImpl->aMacroMode.hasMacroLibrary() )
+                    rSet.Put( SfxUInt16Item( SID_MACRO_SIGNATURE, static_cast<sal_uInt16>(GetScriptingSignatureState()) ) );
                 else
                     rSet.DisableItem( nWhich );
                 break;
@@ -1208,7 +1193,10 @@ void SfxObjectShell::GetState_Impl(SfxItemSet &rSet)
     }
 }
 
-
+IMPL_LINK_NOARG(SfxObjectShell, SignDocumentHandler, Button*, void)
+{
+    GetDispatcher()->Execute(SID_SIGNATURE);
+}
 
 void SfxObjectShell::ExecProps_Impl(SfxRequest &rReq)
 {
@@ -1227,29 +1215,22 @@ void SfxObjectShell::ExecProps_Impl(SfxRequest &rReq)
             break;
 
         case SID_DOCINFO_AUTHOR :
-        {
-            OUString aStr = static_cast<const SfxStringItem&>(rReq.GetArgs()->Get(rReq.GetSlot())).GetValue();
-            getDocProperties()->setAuthor( aStr );
+            getDocProperties()->setAuthor( static_cast<const SfxStringItem&>(rReq.GetArgs()->Get(rReq.GetSlot())).GetValue() );
             break;
-        }
 
         case SID_DOCINFO_COMMENTS :
-        {
-            OUString aStr = static_cast<const SfxStringItem&>(rReq.GetArgs()->Get(rReq.GetSlot())).GetValue();
-            getDocProperties()->setDescription( aStr );
+            getDocProperties()->setDescription( static_cast<const SfxStringItem&>(rReq.GetArgs()->Get(rReq.GetSlot())).GetValue() );
             break;
-        }
 
         case SID_DOCINFO_KEYWORDS :
         {
-            OUString aStr = static_cast<const SfxStringItem&>(rReq.GetArgs()->Get(rReq.GetSlot())).GetValue();
+            const OUString aStr = static_cast<const SfxStringItem&>(rReq.GetArgs()->Get(rReq.GetSlot())).GetValue();
             getDocProperties()->setKeywords(
                 ::comphelper::string::convertCommaSeparated(aStr) );
             break;
         }
     }
 }
-
 
 
 void SfxObjectShell::StateProps_Impl(SfxItemSet &rSet)
@@ -1317,18 +1298,15 @@ void SfxObjectShell::StateProps_Impl(SfxItemSet &rSet)
             }
 
             case SID_DOC_LOADING:
-                rSet.Put( SfxBoolItem( nSID, SFX_LOADED_MAINDOCUMENT !=
-                            ( pImp->nLoadedFlags & SFX_LOADED_MAINDOCUMENT ) ) );
+                rSet.Put( SfxBoolItem( nSID, ! ( pImpl->nLoadedFlags & SfxLoadedFlags::MAINDOCUMENT ) ) );
                 break;
 
             case SID_IMG_LOADING:
-                rSet.Put( SfxBoolItem( nSID, SFX_LOADED_IMAGES !=
-                            ( pImp->nLoadedFlags & SFX_LOADED_IMAGES ) ) );
+                rSet.Put( SfxBoolItem( nSID, ! ( pImpl->nLoadedFlags & SfxLoadedFlags::IMAGES ) ) );
                 break;
         }
     }
 }
-
 
 
 void SfxObjectShell::ExecView_Impl(SfxRequest &rReq)
@@ -1337,71 +1315,51 @@ void SfxObjectShell::ExecView_Impl(SfxRequest &rReq)
     {
         case SID_ACTIVATE:
         {
-            SfxViewFrame *pFrame = SfxViewFrame::GetFirst( this, true );
+            SfxViewFrame *pFrame = SfxViewFrame::GetFirst( this );
             if ( pFrame )
                 pFrame->GetFrame().Appear();
             rReq.SetReturnValue( SfxObjectItem( 0, pFrame ) );
             rReq.Done();
             break;
         }
-        case SID_NEWWINDOWFOREDIT:
-        {
-            SfxViewFrame* pFrame = SfxViewFrame::Current();
-            if( pFrame->GetObjectShell() == this &&
-                ( pFrame->GetFrameType() & SFXFRAME_HASTITLE ) )
-                pFrame->ExecuteSlot( rReq );
-            else
-            {
-                OUString aFileName( GetObjectShell()->GetMedium()->GetName() );
-                if ( !aFileName.isEmpty() )
-                {
-                    SfxStringItem aName( SID_FILE_NAME, aFileName );
-                    SfxBoolItem aCreateView( SID_OPEN_NEW_VIEW, true );
-                    SfxGetpApp()->GetAppDispatcher_Impl()->Execute(
-                        SID_OPENDOC, SfxCallMode::ASYNCHRON, &aName,
-                        &aCreateView, 0L);
-                }
-            }
-        }
     }
 }
-
 
 
 void SfxObjectShell::StateView_Impl(SfxItemSet& /*rSet*/)
 {
 }
 
-sal_uInt16 SfxObjectShell::ImplCheckSignaturesInformation( const uno::Sequence< security::DocumentSignatureInformation >& aInfos )
+SignatureState SfxObjectShell::ImplCheckSignaturesInformation( const uno::Sequence< security::DocumentSignatureInformation >& aInfos )
 {
     bool bCertValid = true;
-    sal_uInt16 nResult = SIGNATURESTATE_NOSIGNATURES;
+    SignatureState nResult = SignatureState::NOSIGNATURES;
     int nInfos = aInfos.getLength();
     bool bCompleteSignature = true;
     if( nInfos )
     {
-        nResult = SIGNATURESTATE_SIGNATURES_OK;
+        nResult = SignatureState::OK;
         for ( int n = 0; n < nInfos; n++ )
         {
             if ( bCertValid )
             {
                 sal_Int32 nCertStat = aInfos[n].CertificateStatus;
-                bCertValid = nCertStat == security::CertificateValidity::VALID ? sal_True : sal_False;
+                bCertValid = nCertStat == security::CertificateValidity::VALID;
             }
 
             if ( !aInfos[n].SignatureIsValid )
             {
-                nResult = SIGNATURESTATE_SIGNATURES_BROKEN;
+                nResult = SignatureState::BROKEN;
                 break; // we know enough
             }
             bCompleteSignature &= !aInfos[n].PartialDocumentSignature;
         }
     }
 
-    if ( nResult == SIGNATURESTATE_SIGNATURES_OK && !bCertValid )
-        nResult = SIGNATURESTATE_SIGNATURES_NOTVALIDATED;
-    else if ( nResult == SIGNATURESTATE_SIGNATURES_OK && bCertValid && !bCompleteSignature)
-        nResult = SIGNATURESTATE_SIGNATURES_PARTIAL_OK;
+    if ( nResult == SignatureState::OK && !bCertValid )
+        nResult = SignatureState::NOTVALIDATED;
+    else if ( nResult == SignatureState::OK && bCertValid && !bCompleteSignature)
+        nResult = SignatureState::PARTIAL_OK;
 
     // this code must not check whether the document is modified
     // it should only check the provided info
@@ -1414,7 +1372,8 @@ uno::Sequence< security::DocumentSignatureInformation > SfxObjectShell::ImplAnal
     uno::Sequence< security::DocumentSignatureInformation > aResult;
     uno::Reference< security::XDocumentDigitalSignatures > xLocSigner = xSigner;
 
-    if ( GetMedium() && !GetMedium()->GetName().isEmpty() && IsOwnStorageFormat_Impl( *GetMedium())  && GetMedium()->GetStorage().is() )
+    bool bSupportsSigning = GetMedium() && GetMedium()->GetFilter() && GetMedium()->GetFilter()->GetSupportsSigning();
+    if (GetMedium() && !GetMedium()->GetName().isEmpty() && ((IsOwnStorageFormat(*GetMedium()) && GetMedium()->GetStorage().is()) || bSupportsSigning))
     {
         try
         {
@@ -1438,10 +1397,24 @@ uno::Sequence< security::DocumentSignatureInformation > SfxObjectShell::ImplAnal
                 aResult = xLocSigner->verifyScriptingContentSignatures( GetMedium()->GetZipStorageToSign_Impl(),
                                                                 uno::Reference< io::XInputStream >() );
             else
-                aResult = xLocSigner->verifyDocumentContentSignatures( GetMedium()->GetZipStorageToSign_Impl(),
-                                                                uno::Reference< io::XInputStream >() );
+            {
+                if (GetMedium()->GetStorage().is())
+                {
+                    // Something ZIP-based.
+                    aResult = xLocSigner->verifyDocumentContentSignatures( GetMedium()->GetZipStorageToSign_Impl(),
+                                                                    uno::Reference< io::XInputStream >() );
+                }
+                else
+                {
+                    // Not ZIP-based, e.g. PDF.
+                    std::unique_ptr<SvStream> pStream(utl::UcbStreamHelper::CreateStream(GetMedium()->GetName(), StreamMode::READ));
+                    uno::Reference<io::XStream> xStream(new utl::OStreamWrapper(*pStream));
+                    uno::Reference<io::XInputStream> xInputStream(xStream, uno::UNO_QUERY);
+                    aResult = xLocSigner->verifyDocumentContentSignatures(uno::Reference<embed::XStorage>(), xInputStream);
+                }
+            }
         }
-        catch( com::sun::star::uno::Exception& )
+        catch( css::uno::Exception& )
         {
         }
     }
@@ -1449,26 +1422,26 @@ uno::Sequence< security::DocumentSignatureInformation > SfxObjectShell::ImplAnal
     return aResult;
 }
 
-sal_uInt16 SfxObjectShell::ImplGetSignatureState( bool bScriptingContent )
+SignatureState SfxObjectShell::ImplGetSignatureState( bool bScriptingContent )
 {
-    sal_Int16* pState = bScriptingContent ? &pImp->nScriptingSignatureState : &pImp->nDocumentSignatureState;
+    SignatureState* pState = bScriptingContent ? &pImpl->nScriptingSignatureState : &pImpl->nDocumentSignatureState;
 
-    if ( *pState == SIGNATURESTATE_UNKNOWN )
+    if ( *pState == SignatureState::UNKNOWN )
     {
-        *pState = SIGNATURESTATE_NOSIGNATURES;
+        *pState = SignatureState::NOSIGNATURES;
 
         uno::Sequence< security::DocumentSignatureInformation > aInfos = ImplAnalyzeSignature( bScriptingContent );
         *pState = ImplCheckSignaturesInformation( aInfos );
     }
 
-    if ( *pState == SIGNATURESTATE_SIGNATURES_OK || *pState == SIGNATURESTATE_SIGNATURES_NOTVALIDATED
-        || *pState == SIGNATURESTATE_SIGNATURES_PARTIAL_OK)
+    if ( *pState == SignatureState::OK || *pState == SignatureState::NOTVALIDATED
+        || *pState == SignatureState::PARTIAL_OK)
     {
         if ( IsModified() )
-            *pState = SIGNATURESTATE_SIGNATURES_INVALID;
+            *pState = SignatureState::INVALID;
     }
 
-    return (sal_uInt16)*pState;
+    return *pState;
 }
 
 void SfxObjectShell::ImplSign( bool bScriptingContent )
@@ -1477,22 +1450,31 @@ void SfxObjectShell::ImplSign( bool bScriptingContent )
     if  (   GetMedium()
         &&  GetMedium()->GetFilter()
         &&  !GetMedium()->GetName().isEmpty()
-        &&  (   !GetMedium()->GetFilter()->IsOwnFormat()
-            ||  !GetMedium()->HasStorage_Impl()
+        &&  (   (!GetMedium()->GetFilter()->IsOwnFormat() && !GetMedium()->GetFilter()->GetSupportsSigning())
+            ||  (GetMedium()->GetFilter()->IsOwnFormat() && !GetMedium()->HasStorage_Impl())
             )
         )
     {
         // Only OASIS and OOo6.x formats will be handled further
-        MessageDialog( NULL, SfxResId( STR_INFO_WRONGDOCFORMAT ), VCL_MESSAGE_INFO ).Execute();
+        ScopedVclPtrInstance<MessageDialog>( nullptr, SfxResId( STR_INFO_WRONGDOCFORMAT ), VclMessageType::Info )->Execute();
         return;
     }
 
     // check whether the document is signed
-    ImplGetSignatureState( false ); // document signature
-    ImplGetSignatureState( true ); // script signature
-    bool bHasSign = ( pImp->nScriptingSignatureState != SIGNATURESTATE_NOSIGNATURES || pImp->nDocumentSignatureState != SIGNATURESTATE_NOSIGNATURES );
+    ImplGetSignatureState(); // document signature
+    if (GetMedium() && GetMedium()->GetFilter() && GetMedium()->GetFilter()->IsOwnFormat())
+        ImplGetSignatureState( true ); // script signature
+    bool bHasSign = ( pImpl->nScriptingSignatureState != SignatureState::NOSIGNATURES || pImpl->nDocumentSignatureState != SignatureState::NOSIGNATURES );
 
     // the target ODF version on saving
+
+    // Please fix this comment if you can: Note that the talk about "ODF version" around here is a
+    // bit silly, as there should be nothing ODF-specific in this code, right? What we mean, I
+    // think, is "ODF version iff it is ODF that is the format the document is being stored as", and
+    // otherwise the "ODF version" is ignored. Not sure why such format-specific things needs to be
+    // handled here. Digital signatures then complicate matters further, as it's only ODF 1.2 and
+    // OOXML that have digital signatures.
+
     SvtSaveOptions aSaveOpt;
     SvtSaveOptions::ODFDefaultVersion nVersion = aSaveOpt.GetODFDefaultVersion();
 
@@ -1500,7 +1482,9 @@ void SfxObjectShell::ImplSign( bool bScriptingContent )
     OUString aODFVersion;
     try
     {
-        // check the version of the document
+        // check the ODF version of the document
+        // No idea what relevance this has if the document has not been loaded from ODF (or is not
+        // being saved to ODF)
         uno::Reference < beans::XPropertySet > xPropSet( GetStorage(), uno::UNO_QUERY_THROW );
         xPropSet->getPropertyValue("Version") >>= aODFVersion;
     }
@@ -1510,22 +1494,22 @@ void SfxObjectShell::ImplSign( bool bScriptingContent )
     bool bNoSig = false;
 
     if ( IsModified() || !GetMedium() || GetMedium()->GetName().isEmpty()
-      || (!aODFVersion.equals( ODFVER_012_TEXT ) && !bHasSign) )
+      || (aODFVersion != ODFVER_012_TEXT && !bHasSign) )
     {
         // the document might need saving ( new, modified or in ODF1.1 format without signature )
 
         if ( nVersion >= SvtSaveOptions::ODFVER_012 )
         {
 
-            if ( (bHasSign && MessageDialog(NULL, SfxResId(STR_XMLSEC_QUERY_SAVESIGNEDBEFORESIGN), VCL_MESSAGE_QUESTION, VCL_BUTTONS_YES_NO).Execute() == RET_YES)
-              || (!bHasSign && MessageDialog(NULL, SfxResId(RID_SVXSTR_XMLSEC_QUERY_SAVEBEFORESIGN), VCL_MESSAGE_QUESTION, VCL_BUTTONS_YES_NO).Execute() == RET_YES) )
+            if ( (bHasSign && ScopedVclPtrInstance<MessageDialog>(nullptr, SfxResId(STR_XMLSEC_QUERY_SAVESIGNEDBEFORESIGN), VclMessageType::Question, VclButtonsType::YesNo)->Execute() == RET_YES)
+              || (!bHasSign && ScopedVclPtrInstance<MessageDialog>(nullptr, SfxResId(RID_SVXSTR_XMLSEC_QUERY_SAVEBEFORESIGN), VclMessageType::Question, VclButtonsType::YesNo)->Execute() == RET_YES) )
             {
                 sal_uInt16 nId = SID_SAVEDOC;
                 if ( !GetMedium() || GetMedium()->GetName().isEmpty() )
                     nId = SID_SAVEASDOC;
                 SfxRequest aSaveRequest( nId, SfxCallMode::SLOT, GetPool() );
                 //ToDo: Review. We needed to call SetModified, otherwise the document would not be saved.
-                SetModified(true);
+                SetModified();
                 ExecFile_Impl( aSaveRequest );
 
                 // Check if it is stored in OASIS format...
@@ -1534,7 +1518,7 @@ void SfxObjectShell::ImplSign( bool bScriptingContent )
                     || SotStorage::GetVersion( GetMedium()->GetStorage() ) <= SOFFICE_FILEFORMAT_60 ) )
                 {
                     // Only OASIS format will be handled further
-                    MessageDialog( NULL, SfxResId( STR_INFO_WRONGDOCFORMAT ), VCL_MESSAGE_INFO ).Execute();
+                    ScopedVclPtrInstance<MessageDialog>( nullptr, SfxResId( STR_INFO_WRONGDOCFORMAT ), VclMessageType::Info )->Execute();
                     return;
                 }
             }
@@ -1549,7 +1533,7 @@ void SfxObjectShell::ImplSign( bool bScriptingContent )
         }
         else
         {
-            MessageDialog(NULL, SfxResId(STR_XMLSEC_ODF12_EXPECTED)).Execute();
+            ScopedVclPtrInstance<MessageDialog>(nullptr, SfxResId(STR_XMLSEC_ODF12_EXPECTED))->Execute();
             return;
         }
 
@@ -1577,47 +1561,47 @@ void SfxObjectShell::ImplSign( bool bScriptingContent )
         bool bSigned = GetMedium()->SignContents_Impl(
             bScriptingContent,
             aODFVersion,
-            pImp->nDocumentSignatureState == SIGNATURESTATE_SIGNATURES_OK
-            || pImp->nDocumentSignatureState == SIGNATURESTATE_SIGNATURES_NOTVALIDATED
-            || pImp->nDocumentSignatureState == SIGNATURESTATE_SIGNATURES_PARTIAL_OK);
+            pImpl->nDocumentSignatureState == SignatureState::OK
+            || pImpl->nDocumentSignatureState == SignatureState::NOTVALIDATED
+            || pImpl->nDocumentSignatureState == SignatureState::PARTIAL_OK);
 
+        pImpl->m_bSavingForSigning = true;
         DoSaveCompleted( GetMedium() );
+        pImpl->m_bSavingForSigning = false;
 
         if ( bSigned )
         {
             if ( bScriptingContent )
             {
-                pImp->nScriptingSignatureState = SIGNATURESTATE_UNKNOWN;// Re-Check
+                pImpl->nScriptingSignatureState = SignatureState::UNKNOWN;// Re-Check
 
                 // adding of scripting signature removes existing document signature
-                pImp->nDocumentSignatureState = SIGNATURESTATE_UNKNOWN;// Re-Check
+                pImpl->nDocumentSignatureState = SignatureState::UNKNOWN;// Re-Check
             }
             else
-                pImp->nDocumentSignatureState = SIGNATURESTATE_UNKNOWN;// Re-Check
-
-            pImp->bSignatureErrorIsShown = false;
+                pImpl->nDocumentSignatureState = SignatureState::UNKNOWN;// Re-Check
 
             Invalidate( SID_SIGNATURE );
             Invalidate( SID_MACRO_SIGNATURE );
-            Broadcast( SfxSimpleHint(SFX_HINT_TITLECHANGED) );
+            Broadcast( SfxHint(SfxHintId::TitleChanged) );
         }
     }
 
     if ( bAllowModifiedBack )
-        EnableSetModified( true );
+        EnableSetModified();
 }
 
-sal_uInt16 SfxObjectShell::GetDocumentSignatureState()
+SignatureState SfxObjectShell::GetDocumentSignatureState()
 {
-    return ImplGetSignatureState( false );
+    return ImplGetSignatureState();
 }
 
 void SfxObjectShell::SignDocumentContent()
 {
-    ImplSign( false );
+    ImplSign();
 }
 
-sal_uInt16 SfxObjectShell::GetScriptingSignatureState()
+SignatureState SfxObjectShell::GetScriptingSignatureState()
 {
     return ImplGetSignatureState( true );
 }
