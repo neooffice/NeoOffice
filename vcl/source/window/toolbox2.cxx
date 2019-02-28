@@ -866,6 +866,15 @@ Point ToolBox::ImplGetPopupPosition( const tools::Rectangle& rRect ) const
     return aPos;
 }
 
+#ifndef NO_LIBO_4_4_TOOLBOX_METHODS
+
+Point ToolBox::GetItemPopupPosition( sal_uInt16 nItemId, const Size& /* rSize */ ) const
+{
+    return ImplGetPopupPosition( const_cast< ToolBox* >( this )->GetItemRect( nItemId ) );
+}
+
+#endif	// !NO_LIBO_4_4_TOOLBOX_METHODS
+
 tools::Rectangle ToolBox::GetItemRect( sal_uInt16 nItemId )
 {
     if ( mbCalc || mbFormat )
