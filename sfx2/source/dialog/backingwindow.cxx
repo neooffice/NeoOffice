@@ -25,13 +25,15 @@
  */
 
 #include "backingwindow.hxx"
-#include "inputdlg.hxx"
+#include <sfx2/inputdlg.hxx>
 
 #include <vcl/settings.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/virdev.hxx>
 
 #include <unotools/dynamicmenuoptions.hxx>
+#include <unotools/historyoptions.hxx>
+#include <unotools/moduleoptions.hxx>
 #include <svtools/openfiledroptargetlistener.hxx>
 #include <svtools/colorcfg.hxx>
 #include <svtools/langhelp.hxx>
@@ -68,72 +70,25 @@ using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::document;
 
-#ifndef USE_JAVA
-const char WRITER_URL[] =         "private:factory/swriter";
-const char CALC_URL[] =           "private:factory/scalc";
-const char IMPRESS_WIZARD_URL[] = "private:factory/simpress?slot=6686";
-const char DRAW_URL[] =           "private:factory/sdraw";
-const char BASE_URL[] =           "private:factory/sdatabase?Interactive";
-const char MATH_URL[] =           "private:factory/smath";
-const char TEMPLATE_URL[] =       "slot:5500";
-const char OPEN_URL[] =           ".uno:Open";
-#endif	// !USE_JAVA
 const char SERVICENAME_CFGREADACCESS[] = "com.sun.star.configuration.ConfigurationAccess";
 
-float fMultiplier = 1.4f;
-const Color aButtonsText(COL_WHITE);
-
-/***
- *
- * Order items in ascending order (useful for the selection sets and move/copy operations since the associated ids
- * change when processed by the SfxDocumentTemplates class so we want to process to ones with higher id first)
- *
- ***/
-
-static bool cmpSelectionItems (const ThumbnailViewItem *pItem1, const ThumbnailViewItem *pItem2)
-{
-    return pItem1->mnId > pItem2->mnId;
-}
-
+// increase size of the text in the buttons on the left fMultiplier-times
+float const fMultiplier = 1.4f;
 
 BackingWindow::BackingWindow( vcl::Window* i_pParent ) :
     Window( i_pParent ),
-    mxDesktop( Desktop::create(comphelper::getProcessComponentContext()) ),
-    mbIsSaveMode( false ),
+    mbLocalViewInitialized(false),
+    maButtonsTextColor(officecfg::Office::Common::Help::StartCenter::StartCenterTextColor::get()),
     mbInitControls( false ),
-    mnHideExternalLinks( 0 ),
-    mpAccExec( NULL ),
-    maSelTemplates(cmpSelectionItems),
-    maSelFolders(cmpSelectionItems)
-
+    mnHideExternalLinks( 0 )
 {
 #ifdef USE_JAVA
-    mpOpenButton = NULL;
-    mpRecentButton = NULL;
-    mpTemplateButton = NULL;
-    mpCreateLabel = NULL;
-    mpWriterAllButton = NULL;
-    mpCalcAllButton = NULL;
-    mpImpressAllButton = NULL;
-    mpDrawAllButton = NULL;
-    mpDBAllButton = NULL;
-    mpMathAllButton = NULL;
-    mpHelpButton = NULL;
-    mpExtensionsButton = NULL;
-    mpAllButtonsBox = NULL;
-    mpButtonsBox = NULL;
-    mpSmallButtonsBox = NULL;
-    mpThinBox1 = NULL;
-    mpThinBox2 = NULL;
-    mpHelpBox = NULL;
-    mpExtensionsBox = NULL;
-    mpAllRecentThumbnails = NULL;
-    mpLocalView = NULL;
-    mpCurrentView = NULL;
+    mnHideExternalLinks = 0;
 #else	// USE_JAVA
-    m_pUIBuilder = new VclBuilder(this, getUIRootDir(), "sfx/ui/startcenter.ui", "StartCenter" );
+    m_pUIBuilder.reset(new VclBuilder(this, getUIRootDir(), "sfx/ui/startcenter.ui", "StartCenter" ));
 
     get(mpOpenButton, "open_all");
+    get(mpRemoteButton, "open_remote");
     get(mpRecentButton, "open_recent");
     get(mpTemplateButton, "templates_all");
 
@@ -174,14 +129,9 @@ BackingWindow::BackingWindow( vcl::Window* i_pParent ) :
     get(mpAllButtonsBox, "all_buttons_box");
     get(mpButtonsBox, "buttons_box");
     get(mpSmallButtonsBox, "small_buttons_box");
-    get(mpThinBox1, "thin_box1");
-    get(mpThinBox2, "thin_box2");
-    get(mpHelpBox, "help_box");
-    get(mpExtensionsBox, "extensions_box");
 
     get(mpAllRecentThumbnails, "all_recent");
     get(mpLocalView, "local_view");
-    mpCurrentView = mpLocalView;
 
     maDndWindows.push_back(mpAllRecentThumbnails);
 
@@ -226,16 +176,18 @@ BackingWindow::BackingWindow( vcl::Window* i_pParent ) :
     SetBackground();
 }
 
-
 BackingWindow::~BackingWindow()
+{
+    disposeOnce();
+}
+
+void BackingWindow::dispose()
 {
     // deregister drag&drop helper
     if (mxDropTargetListener.is())
     {
-        for (std::vector<vcl::Window*>::iterator aI = maDndWindows.begin(),
-            aEnd = maDndWindows.end(); aI != aEnd; ++aI)
+        for (auto const & pDndWin : maDndWindows)
         {
-            vcl::Window *pDndWin = *aI;
             css::uno::Reference< css::datatransfer::dnd::XDropTarget > xDropTarget =
                     pDndWin->GetDropTarget();
             if (xDropTarget.is())
@@ -244,8 +196,29 @@ BackingWindow::~BackingWindow()
                 xDropTarget->setActive(false);
             }
         }
-        mxDropTargetListener = css::uno::Reference< css::datatransfer::dnd::XDropTargetListener >();
+        mxDropTargetListener.clear();
     }
+    disposeBuilder();
+    maDndWindows.clear();
+    mpOpenButton.clear();
+    mpRemoteButton.clear();
+    mpRecentButton.clear();
+    mpTemplateButton.clear();
+    mpCreateLabel.clear();
+    mpWriterAllButton.clear();
+    mpCalcAllButton.clear();
+    mpImpressAllButton.clear();
+    mpDrawAllButton.clear();
+    mpDBAllButton.clear();
+    mpMathAllButton.clear();
+    mpHelpButton.clear();
+    mpExtensionsButton.clear();
+    mpAllButtonsBox.clear();
+    mpButtonsBox.clear();
+    mpSmallButtonsBox.clear();
+    mpAllRecentThumbnails.clear();
+    mpLocalView.clear();
+    vcl::Window::dispose();
 }
 
 void BackingWindow::initControls()
@@ -261,7 +234,7 @@ void BackingWindow::initControls()
 #endif	// !USE_JAVA
     std::set< OUString > aFileNewAppsAvailable;
     SvtDynamicMenuOptions aOpt;
-    Sequence < Sequence < PropertyValue > > aNewMenu = aOpt.GetMenu( E_NEWMENU );
+    Sequence < Sequence < PropertyValue > > aNewMenu = aOpt.GetMenu( EDynamicMenuType::NewMenu );
     const OUString sURLKey( "URL"  );
 
     const Sequence< PropertyValue >* pNewMenu = aNewMenu.getConstArray();
@@ -275,45 +248,46 @@ void BackingWindow::initControls()
     }
 
 #ifndef USE_JAVA
-    if (aModuleOptions.IsModuleInstalled(SvtModuleOptions::E_SWRITER))
-        mpAllRecentThumbnails->mnFileTypes |= TYPE_WRITER;
+    if (aModuleOptions.IsModuleInstalled(SvtModuleOptions::EModule::WRITER))
+        mpAllRecentThumbnails->mnFileTypes |= sfx2::ApplicationType::TYPE_WRITER;
 
-    if (aModuleOptions.IsModuleInstalled(SvtModuleOptions::E_SCALC))
-        mpAllRecentThumbnails->mnFileTypes |= TYPE_CALC;
+    if (aModuleOptions.IsModuleInstalled(SvtModuleOptions::EModule::CALC))
+        mpAllRecentThumbnails->mnFileTypes |= sfx2::ApplicationType::TYPE_CALC;
 
-    if (aModuleOptions.IsModuleInstalled(SvtModuleOptions::E_SIMPRESS))
-        mpAllRecentThumbnails->mnFileTypes |= TYPE_IMPRESS;
+    if (aModuleOptions.IsModuleInstalled(SvtModuleOptions::EModule::IMPRESS))
+        mpAllRecentThumbnails->mnFileTypes |= sfx2::ApplicationType::TYPE_IMPRESS;
 
-    if (aModuleOptions.IsModuleInstalled(SvtModuleOptions::E_SDRAW))
-        mpAllRecentThumbnails->mnFileTypes |= TYPE_DRAW;
+    if (aModuleOptions.IsModuleInstalled(SvtModuleOptions::EModule::DRAW))
+        mpAllRecentThumbnails->mnFileTypes |= sfx2::ApplicationType::TYPE_DRAW;
 
-    if (aModuleOptions.IsModuleInstalled(SvtModuleOptions::E_SDATABASE))
-        mpAllRecentThumbnails->mnFileTypes |= TYPE_DATABASE;
+    if (aModuleOptions.IsModuleInstalled(SvtModuleOptions::EModule::DATABASE))
+        mpAllRecentThumbnails->mnFileTypes |= sfx2::ApplicationType::TYPE_DATABASE;
 
-    if (aModuleOptions.IsModuleInstalled(SvtModuleOptions::E_SMATH))
-        mpAllRecentThumbnails->mnFileTypes |= TYPE_MATH;
+    if (aModuleOptions.IsModuleInstalled(SvtModuleOptions::EModule::MATH))
+        mpAllRecentThumbnails->mnFileTypes |= sfx2::ApplicationType::TYPE_MATH;
 
-    mpAllRecentThumbnails->mnFileTypes |= TYPE_OTHER;
+    mpAllRecentThumbnails->mnFileTypes |= sfx2::ApplicationType::TYPE_OTHER;
     mpAllRecentThumbnails->Reload();
     mpAllRecentThumbnails->ShowTooltips( true );
+    mpRecentButton->SetActive(true);
 
     //initialize Template view
     mpLocalView->SetStyle( mpLocalView->GetStyle() | WB_VSCROLL);
-    mpLocalView->Populate();
-    mpLocalView->showRootRegion();
     mpLocalView->Hide();
-    mpLocalView->filterItems(ViewFilter_Application(FILTER_APP_NONE));
 
-
-    mpCurrentView = mpLocalView;
-
-    mpTemplateButton->SetMenuMode( MENUBUTTON_MENUMODE_TIMED );
+    mpTemplateButton->SetDelayMenu(true);
+    mpTemplateButton->SetDropDown(PushButtonDropdownStyle::SplitMenuButton);
+    mpRecentButton->SetDelayMenu(true);
+    mpRecentButton->SetDropDown(PushButtonDropdownStyle::SplitMenuButton);
 
     //set handlers
-    mpLocalView->setOpenRegionHdl(LINK(this, BackingWindow, OpenRegionHdl));
-    mpLocalView->setOpenTemplateHdl(LINK(this,BackingWindow,OpenTemplateHdl));
+    mpLocalView->setCreateContextMenuHdl(LINK(this, BackingWindow, CreateContextMenuHdl));
+    mpLocalView->setOpenTemplateHdl(LINK(this, BackingWindow, OpenTemplateHdl));
+    mpLocalView->setEditTemplateHdl(LINK(this, BackingWindow, EditTemplateHdl));
+    mpLocalView->ShowTooltips( true );
 
     setupButton( mpOpenButton );
+    setupButton( mpRemoteButton );
     setupButton( mpRecentButton );
     setupButton( mpTemplateButton );
     setupButton( mpWriterAllButton );
@@ -323,107 +297,142 @@ void BackingWindow::initControls()
     setupButton( mpImpressAllButton );
     setupButton( mpMathAllButton );
 
+    checkInstalledModules();
+
     mpExtensionsButton->SetClickHdl(LINK(this, BackingWindow, ExtLinkClickHdl));
 
     // setup nice colors
-    mpCreateLabel->SetControlForeground(aButtonsText);
+    mpCreateLabel->SetControlForeground(maButtonsTextColor);
     vcl::Font aFont(mpCreateLabel->GetSettings().GetStyleSettings().GetLabelFont());
-    aFont.SetSize(Size(0, aFont.GetSize().Height() * fMultiplier));
+    aFont.SetFontSize(Size(0, aFont.GetFontSize().Height() * fMultiplier));
     mpCreateLabel->SetControlFont(aFont);
 
-    mpHelpButton->SetControlForeground(aButtonsText);
-    mpExtensionsButton->SetControlForeground(aButtonsText);
+    mpHelpButton->SetControlForeground(maButtonsTextColor);
+    mpExtensionsButton->SetControlForeground(maButtonsTextColor);
 
     const Color aButtonsBackground(officecfg::Office::Common::Help::StartCenter::StartCenterBackgroundColor::get());
 
     mpAllButtonsBox->SetBackground(aButtonsBackground);
     mpSmallButtonsBox->SetBackground(aButtonsBackground);
-    mpHelpBox->SetBackground(aButtonsBackground);
-    mpExtensionsBox->SetBackground(aButtonsBackground);
 
     // motif image under the buttons
     Wallpaper aWallpaper(get<FixedImage>("motif")->GetImage().GetBitmapEx());
-    aWallpaper.SetStyle(WALLPAPER_BOTTOMRIGHT);
+    aWallpaper.SetStyle(WallpaperStyle::BottomRight);
     aWallpaper.SetColor(aButtonsBackground);
 
     mpButtonsBox->SetBackground(aWallpaper);
 
-    // thin white rectangle aronud the Help and Extensions buttons
-    mpThinBox1->SetBackground(aButtonsText);
-    mpThinBox2->SetBackground(aButtonsText);
-
     Resize();
 
+    // compute the menubar height
+    sal_Int32 nMenuHeight = 0;
+    SystemWindow* pSystemWindow = GetSystemWindow();
+    if (pSystemWindow)
+    {
+        MenuBar* pMenuBar = pSystemWindow->GetMenuBar();
+        if (pMenuBar)
+            nMenuHeight = pMenuBar->ImplGetWindow()->GetOutputSizePixel().Height();
+    }
+
     set_width_request(mpAllRecentThumbnails->get_width_request() + mpAllButtonsBox->GetOptimalSize().Width());
-    set_height_request(mpAllButtonsBox->GetOptimalSize().Height());
+    set_height_request(nMenuHeight + mpAllButtonsBox->GetOptimalSize().Height());
 #endif	// !USE_JAVA
+}
+
+void BackingWindow::initializeLocalView()
+{
+    if (!mbLocalViewInitialized)
+    {
+        mbLocalViewInitialized = true;
+        mpLocalView->Populate();
+        mpLocalView->filterItems(ViewFilter_Application(FILTER_APPLICATION::NONE));
+        mpLocalView->showAllTemplates();
+    }
 }
 
 void BackingWindow::setupButton( PushButton* pButton )
 {
     // the buttons should have a bit bigger font
     vcl::Font aFont(pButton->GetSettings().GetStyleSettings().GetPushButtonFont());
-    aFont.SetSize(Size(0, aFont.GetSize().Height() * fMultiplier));
+    aFont.SetFontSize(Size(0, aFont.GetFontSize().Height() * fMultiplier));
     pButton->SetControlFont(aFont);
 
     // color that fits the theme
-    pButton->SetControlForeground(aButtonsText);
+    pButton->SetControlForeground(maButtonsTextColor);
     pButton->SetClickHdl( LINK( this, BackingWindow, ClickHdl ) );
 }
 
-void BackingWindow::setupButton( MenuButton* pButton )
+void BackingWindow::setupButton( MenuToggleButton* pButton )
 {
     vcl::Font aFont(pButton->GetSettings().GetStyleSettings().GetPushButtonFont());
-    aFont.SetSize(Size(0, aFont.GetSize().Height() * fMultiplier));
+    aFont.SetFontSize(Size(0, aFont.GetFontSize().Height() * fMultiplier));
     pButton->SetControlFont(aFont);
 
     // color that fits the theme
-    pButton->SetControlForeground(aButtonsText);
+    pButton->SetControlForeground(maButtonsTextColor);
 
     PopupMenu* pMenu = pButton->GetPopupMenu();
-    pMenu->SetMenuFlags(pMenu->GetMenuFlags() | MENU_FLAG_ALWAYSSHOWDISABLEDENTRIES);
+    pMenu->SetMenuFlags(pMenu->GetMenuFlags() | MenuFlags::AlwaysShowDisabledEntries);
 
     pButton->SetClickHdl(LINK(this, BackingWindow, ClickHdl));
     pButton->SetSelectHdl(LINK(this, BackingWindow, MenuSelectHdl));
 }
 
-void BackingWindow::Paint( const Rectangle& )
+void BackingWindow::checkInstalledModules()
+{
+    SvtModuleOptions aModuleOpt;
+
+    mpWriterAllButton->Enable( aModuleOpt.IsModuleInstalled( SvtModuleOptions::EModule::WRITER ));
+
+    mpCalcAllButton->Enable( aModuleOpt.IsModuleInstalled( SvtModuleOptions::EModule::CALC ) );
+
+    mpImpressAllButton->Enable( aModuleOpt.IsModuleInstalled( SvtModuleOptions::EModule::IMPRESS ) );
+
+    mpDrawAllButton->Enable( aModuleOpt.IsModuleInstalled( SvtModuleOptions::EModule::DRAW ) );
+
+    mpMathAllButton->Enable(aModuleOpt.IsModuleInstalled( SvtModuleOptions::EModule::MATH ));
+
+    mpDBAllButton->Enable(aModuleOpt.IsModuleInstalled( SvtModuleOptions::EModule::DATABASE ));
+}
+
+void BackingWindow::Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle&)
 {
     Resize();
 
-    Wallpaper aBack( svtools::ColorConfig().GetColorValue(::svtools::APPBACKGROUND).nColor );
-    vcl::Region aClip( Rectangle( Point( 0, 0 ), GetOutputSizePixel() ) );
+    Wallpaper aBack(svtools::ColorConfig().GetColorValue(::svtools::APPBACKGROUND).nColor);
+    vcl::Region aClip(tools::Rectangle(Point(0, 0), GetOutputSizePixel()));
 
-    aClip.Exclude( maStartCentButtons );
+    aClip.Exclude(maStartCentButtons);
 
-    Push( PushFlags::CLIPREGION );
-    IntersectClipRegion( aClip );
-    DrawWallpaper( Rectangle( Point( 0, 0 ), GetOutputSizePixel() ), aBack );
-    Pop();
+    rRenderContext.Push(PushFlags::CLIPREGION);
+    rRenderContext.IntersectClipRegion(aClip);
+    rRenderContext.DrawWallpaper(tools::Rectangle(Point(0, 0), GetOutputSizePixel()), aBack);
+    rRenderContext.Pop();
 
-    VirtualDevice aDev( *this );
-    aDev.EnableRTL( IsRTLEnabled() );
-    aDev.SetOutputSizePixel( maStartCentButtons.GetSize() );
-    Point aOffset( Point( 0, 0 ) - maStartCentButtons.TopLeft());
-    aDev.DrawWallpaper( Rectangle( aOffset, GetOutputSizePixel() ), aBack );
+    ScopedVclPtrInstance<VirtualDevice> pVDev(rRenderContext);
+    pVDev->EnableRTL(rRenderContext.IsRTLEnabled());
+    pVDev->SetOutputSizePixel(maStartCentButtons.GetSize());
+    Point aOffset(Point(0, 0) - maStartCentButtons.TopLeft());
+    pVDev->DrawWallpaper(tools::Rectangle(aOffset, GetOutputSizePixel()), aBack);
 
-    DrawOutDev( maStartCentButtons.TopLeft(), maStartCentButtons.GetSize(),
-                Point( 0, 0 ), maStartCentButtons.GetSize(),
-                aDev );
+    rRenderContext.DrawOutDev(maStartCentButtons.TopLeft(), maStartCentButtons.GetSize(),
+                              Point(0, 0), maStartCentButtons.GetSize(),
+                              *pVDev.get());
 }
 
-bool BackingWindow::PreNotify( NotifyEvent& rNEvt )
+bool BackingWindow::PreNotify(NotifyEvent& rNEvt)
 {
-    if( rNEvt.GetType() == EVENT_KEYINPUT )
+    if( rNEvt.GetType() == MouseNotifyEvent::KEYINPUT )
     {
         const KeyEvent* pEvt = rNEvt.GetKeyEvent();
         const vcl::KeyCode& rKeyCode(pEvt->GetKeyCode());
+
         // Subwindows of BackingWindow: Sidebar and Thumbnail view
         if( rKeyCode.GetCode() == KEY_F6 )
         {
             if( rKeyCode.IsShift() ) // Shift + F6
             {
-                if( mpAllRecentThumbnails->HasFocus() )
+                if( mpAllRecentThumbnails->HasFocus() || mpLocalView->HasFocus())
                 {
                     mpOpenButton->GrabFocus();
                     return true;
@@ -431,48 +440,57 @@ bool BackingWindow::PreNotify( NotifyEvent& rNEvt )
             }
             else if ( rKeyCode.IsMod1() ) // Ctrl + F6
             {
-                mpAllRecentThumbnails->GrabFocus();
-                return true;
-            }
-            else // F6
-            {
-                if( mpAllButtonsBox->HasChildPathFocus() )
+                if(mpAllRecentThumbnails->IsVisible())
                 {
                     mpAllRecentThumbnails->GrabFocus();
                     return true;
                 }
+                else if(mpLocalView->IsVisible())
+                {
+                    mpLocalView->GrabFocus();
+                    return true;
+                }
+            }
+            else // F6
+            {
+                if(mpAllRecentThumbnails->IsVisible())
+                {
+                    mpAllRecentThumbnails->GrabFocus();
+                    return true;
+                }
+                else if(mpLocalView->IsVisible())
+                {
+                    mpLocalView->GrabFocus();
+                    return true;
+                }
             }
         }
-    }
-    return Window::PreNotify( rNEvt );
-}
 
-bool BackingWindow::Notify( NotifyEvent& rNEvt )
-{
-    if( rNEvt.GetType() == EVENT_KEYINPUT )
-    {
         // try the 'normal' accelerators (so that eg. Ctrl+Q works)
-        if( !mpAccExec )
+        if (!mpAccExec)
         {
             mpAccExec = svt::AcceleratorExecute::createAcceleratorHelper();
             mpAccExec->init( comphelper::getProcessComponentContext(), mxFrame);
         }
-        const KeyEvent* pEvt = rNEvt.GetKeyEvent();
-        const vcl::KeyCode& rKeyCode(pEvt->GetKeyCode());
+
         const OUString aCommand = mpAccExec->findCommand(svt::AcceleratorExecute::st_VCLKey2AWTKey(rKeyCode));
-        if((aCommand != "vnd.sun.star.findbar:FocusToFindbar") && pEvt && mpAccExec->execute(rKeyCode))
+        if ((aCommand != "vnd.sun.star.findbar:FocusToFindbar") && pEvt && mpAccExec->execute(rKeyCode))
             return true;
     }
+    else if (rNEvt.GetType() == MouseNotifyEvent::COMMAND)
+    {
+        Accelerator::ToggleMnemonicsOnHierarchy(*rNEvt.GetCommandEvent(), this);
+    }
 
-    return Window::Notify( rNEvt );
+    return Window::PreNotify( rNEvt );
 }
 
 void BackingWindow::GetFocus()
 {
-    sal_uInt16 nFlags = GetParent()->GetGetFocusFlags();
-    if( nFlags & GETFOCUS_F6 )
+    GetFocusFlags nFlags = GetParent()->GetGetFocusFlags();
+    if( nFlags & GetFocusFlags::F6 )
     {
-        if( nFlags & GETFOCUS_FORWARD ) // F6
+        if( nFlags & GetFocusFlags::Forward ) // F6
         {
             mpOpenButton->GrabFocus();
             return;
@@ -486,7 +504,7 @@ void BackingWindow::GetFocus()
     Window::GetFocus();
 }
 
-void BackingWindow::setOwningFrame( const com::sun::star::uno::Reference< com::sun::star::frame::XFrame >& xFrame )
+void BackingWindow::setOwningFrame( const css::uno::Reference< css::frame::XFrame >& xFrame )
 {
     mxFrame = xFrame;
     if( ! mbInitControls )
@@ -495,10 +513,8 @@ void BackingWindow::setOwningFrame( const com::sun::star::uno::Reference< com::s
     // establish drag&drop mode
     mxDropTargetListener.set(new OpenFileDropTargetListener(mxContext, mxFrame));
 
-    for (std::vector<vcl::Window*>::iterator aI = maDndWindows.begin(),
-        aEnd = maDndWindows.end(); aI != aEnd; ++aI)
+    for (auto const & pDndWin : maDndWindows)
     {
-        vcl::Window *pDndWin = *aI;
         css::uno::Reference< css::datatransfer::dnd::XDropTarget > xDropTarget =
             pDndWin->GetDropTarget();
         if (xDropTarget.is())
@@ -511,17 +527,17 @@ void BackingWindow::setOwningFrame( const com::sun::star::uno::Reference< com::s
 
 void BackingWindow::Resize()
 {
-    maStartCentButtons = Rectangle( Point(0, 0), GetOutputSizePixel() );
+    maStartCentButtons = tools::Rectangle( Point(0, 0), GetOutputSizePixel() );
 
     if (isLayoutEnabled(this))
-        VclContainer::setLayoutAllocation(*GetWindow(WINDOW_FIRSTCHILD),
+        VclContainer::setLayoutAllocation(*GetWindow(GetWindowType::FirstChild),
             maStartCentButtons.TopLeft(), maStartCentButtons.GetSize());
 
-    if( !IsInPaint())
+    if (!IsInPaint())
         Invalidate();
 }
 
-IMPL_LINK(BackingWindow, ExtLinkClickHdl, Button*, pButton)
+IMPL_LINK(BackingWindow, ExtLinkClickHdl, Button*, pButton, void)
 {
     OUString aNode;
 
@@ -558,160 +574,205 @@ IMPL_LINK(BackingWindow, ExtLinkClickHdl, Button*, pButton)
         {
         }
     }
-    return 0;
 }
 
-IMPL_LINK( BackingWindow, ClickHdl, Button*, pButton )
-{
 #ifdef USE_JAVA
-    (void)pButton;
+IMPL_LINK_NOARG( BackingWindow, ClickHdl, Button*, void )
 #else	// USE_JAVA
+IMPL_LINK( BackingWindow, ClickHdl, Button*, pButton, void )
+#endif	// USE_JAVA
+{
+#ifndef USE_JAVA
     // dispatch the appropriate URL and end the dialog
     if( pButton == mpWriterAllButton )
-        dispatchURL( WRITER_URL );
+        dispatchURL( "private:factory/swriter" );
     else if( pButton == mpCalcAllButton )
-        dispatchURL( CALC_URL );
+        dispatchURL( "private:factory/scalc" );
     else if( pButton == mpImpressAllButton )
-        dispatchURL( IMPRESS_WIZARD_URL );
+        dispatchURL( "private:factory/simpress?slot=6686" );
     else if( pButton == mpDrawAllButton )
-        dispatchURL( DRAW_URL );
+        dispatchURL( "private:factory/sdraw" );
     else if( pButton == mpDBAllButton )
-        dispatchURL( BASE_URL );
+        dispatchURL( "private:factory/sdatabase?Interactive" );
     else if( pButton == mpMathAllButton )
-        dispatchURL( MATH_URL );
+        dispatchURL( "private:factory/smath" );
     else if( pButton == mpOpenButton )
     {
         Reference< XDispatchProvider > xFrame( mxFrame, UNO_QUERY );
 
-        Sequence< com::sun::star::beans::PropertyValue > aArgs(1);
+        Sequence< css::beans::PropertyValue > aArgs(1);
         PropertyValue* pArg = aArgs.getArray();
         pArg[0].Name = "Referer";
         pArg[0].Value <<= OUString("private:user");
 
-        dispatchURL( OPEN_URL, OUString(), xFrame, aArgs );
+        dispatchURL( ".uno:Open", OUString(), xFrame, aArgs );
+    }
+    else if( pButton == mpRemoteButton )
+    {
+        Reference< XDispatchProvider > xFrame( mxFrame, UNO_QUERY );
+
+        Sequence< css::beans::PropertyValue > aArgs(0);
+
+        dispatchURL( ".uno:OpenRemote", OUString(), xFrame, aArgs );
     }
     else if( pButton == mpRecentButton )
     {
         mpLocalView->Hide();
         mpAllRecentThumbnails->Show();
         mpAllRecentThumbnails->GrabFocus();
+        mpRecentButton->SetActive(true);
+        mpTemplateButton->SetActive(false);
+        mpTemplateButton->Invalidate();
     }
     else if( pButton == mpTemplateButton )
     {
         mpAllRecentThumbnails->Hide();
-        mpCurrentView->filterItems(ViewFilter_Application(FILTER_APP_NONE));
+        initializeLocalView();
+        mpLocalView->filterItems(ViewFilter_Application(FILTER_APPLICATION::NONE));
         mpLocalView->Show();
         mpLocalView->reload();
         mpLocalView->GrabFocus();
+        mpRecentButton->SetActive(false);
+        mpRecentButton->Invalidate();
+        mpTemplateButton->SetActive(true);
     }
-#endif	// USE_JAVA
-    return 0;
+#endif	// !USE_JAVA
 }
 
-IMPL_LINK( BackingWindow, MenuSelectHdl, MenuButton*, pButton )
-{
 #ifdef USE_JAVA
-    (void)pButton;
+IMPL_LINK_NOARG( BackingWindow, MenuSelectHdl, MenuButton*, void )
 #else	// USE_JAVA
-    OString sId = pButton->GetCurItemIdent();
-
-    if( sId == "filter_writer" )
-    {
-        mpCurrentView->filterItems(ViewFilter_Application(FILTER_APP_WRITER));
-    }
-    else if( sId == "filter_calc" )
-    {
-        mpCurrentView->filterItems(ViewFilter_Application(FILTER_APP_CALC));
-    }
-    else if( sId == "filter_impress" )
-    {
-        mpCurrentView->filterItems(ViewFilter_Application(FILTER_APP_IMPRESS));
-    }
-    else if( sId == "filter_draw" )
-    {
-        mpCurrentView->filterItems(ViewFilter_Application(FILTER_APP_DRAW));
-    }
-    else if( sId == "edit" )
-    {
-        Reference< XDispatchProvider > xFrame( mxFrame, UNO_QUERY );
-
-        Sequence< com::sun::star::beans::PropertyValue > aArgs(1);
-        PropertyValue* pArg = aArgs.getArray();
-        pArg[0].Name = "Referer";
-        pArg[0].Value <<= OUString("private:user");
-
-        dispatchURL( TEMPLATE_URL, OUString(), xFrame, aArgs );
-
-    }
-
-    mpAllRecentThumbnails->Hide();
-    mpLocalView->Show();
-    mpLocalView->reload();
-    mpLocalView->GrabFocus();
+IMPL_LINK( BackingWindow, MenuSelectHdl, MenuButton*, pButton, void )
 #endif	// USE_JAVA
-
-    return 0;
-}
-
-
-IMPL_LINK_NOARG( BackingWindow, OpenRegionHdl)
 {
-    maSelFolders.clear();
-    maSelTemplates.clear();
-
-    return 0;
-}
-
-IMPL_LINK(BackingWindow, OpenTemplateHdl, ThumbnailViewItem*, pItem)
-{
-    if (!mbIsSaveMode)
+#ifndef USE_JAVA
+    if(pButton == mpRecentButton)
     {
-        uno::Sequence< PropertyValue > aArgs(4);
-        aArgs[0].Name = "AsTemplate";
-        aArgs[0].Value <<= sal_True;
-        aArgs[1].Name = "MacroExecutionMode";
-        aArgs[1].Value <<= MacroExecMode::USE_CONFIG;
-        aArgs[2].Name = "UpdateDocMode";
-        aArgs[2].Value <<= UpdateDocMode::ACCORDING_TO_CONFIG;
-        aArgs[3].Name = "InteractionHandler";
-        aArgs[3].Value <<= task::InteractionHandler::createWithParent( ::comphelper::getProcessComponentContext(), 0 );
-
-        TemplateViewItem *pTemplateItem = static_cast<TemplateViewItem*>(pItem);
-
-        Reference< XDispatchProvider > xFrame( mxFrame, UNO_QUERY );
-
-        try
-        {
-            dispatchURL( pTemplateItem->getPath(), "_default", xFrame, aArgs );
-        }
-        catch( const uno::Exception& )
-        {
-        }
+        SvtHistoryOptions().Clear(ePICKLIST);
+        mpAllRecentThumbnails->Reload();
+        return;
     }
+    else if(pButton == mpTemplateButton)
+    {
+        initializeLocalView();
 
-    return 0;
+        OString sId = pButton->GetCurItemIdent();
+
+        if( sId == "filter_writer" )
+        {
+            mpLocalView->filterItems(ViewFilter_Application(FILTER_APPLICATION::WRITER));
+        }
+        else if( sId == "filter_calc" )
+        {
+            mpLocalView->filterItems(ViewFilter_Application(FILTER_APPLICATION::CALC));
+        }
+        else if( sId == "filter_impress" )
+        {
+            mpLocalView->filterItems(ViewFilter_Application(FILTER_APPLICATION::IMPRESS));
+        }
+        else if( sId == "filter_draw" )
+        {
+            mpLocalView->filterItems(ViewFilter_Application(FILTER_APPLICATION::DRAW));
+        }
+        else if( sId == "manage" )
+        {
+            Reference< XDispatchProvider > xFrame( mxFrame, UNO_QUERY );
+
+            Sequence< css::beans::PropertyValue > aArgs(1);
+            PropertyValue* pArg = aArgs.getArray();
+            pArg[0].Name = "Referer";
+            pArg[0].Value <<= OUString("private:user");
+
+            dispatchURL( ".uno:NewDoc", OUString(), xFrame, aArgs );
+            return;
+        }
+
+        mpAllRecentThumbnails->Hide();
+        mpLocalView->Show();
+        mpLocalView->reload();
+        mpLocalView->GrabFocus();
+        mpRecentButton->SetActive(false);
+        mpTemplateButton->SetActive(true);
+        mpRecentButton->Invalidate();
+    }
+#endif	// !USE_JAVA
+}
+
+IMPL_LINK(BackingWindow, CreateContextMenuHdl, ThumbnailViewItem*, pItem, void)
+{
+    const TemplateViewItem *pViewItem = dynamic_cast<TemplateViewItem*>(pItem);
+
+    if (pViewItem)
+        mpLocalView->createContextMenu();
+}
+
+IMPL_LINK(BackingWindow, OpenTemplateHdl, ThumbnailViewItem*, pItem, void)
+{
+    uno::Sequence< PropertyValue > aArgs(4);
+    aArgs[0].Name = "AsTemplate";
+    aArgs[0].Value <<= true;
+    aArgs[1].Name = "MacroExecutionMode";
+    aArgs[1].Value <<= MacroExecMode::USE_CONFIG;
+    aArgs[2].Name = "UpdateDocMode";
+    aArgs[2].Value <<= UpdateDocMode::ACCORDING_TO_CONFIG;
+    aArgs[3].Name = "InteractionHandler";
+    aArgs[3].Value <<= task::InteractionHandler::createWithParent( ::comphelper::getProcessComponentContext(), nullptr );
+
+    TemplateViewItem *pTemplateItem = static_cast<TemplateViewItem*>(pItem);
+
+    Reference< XDispatchProvider > xFrame( mxFrame, UNO_QUERY );
+
+    try
+    {
+        dispatchURL( pTemplateItem->getPath(), "_default", xFrame, aArgs );
+    }
+    catch( const uno::Exception& )
+    {
+    }
+}
+
+IMPL_LINK(BackingWindow, EditTemplateHdl, ThumbnailViewItem*, pItem, void)
+{
+    uno::Sequence< PropertyValue > aArgs(3);
+    aArgs[0].Name = "AsTemplate";
+    aArgs[0].Value <<= false;
+    aArgs[1].Name = "MacroExecutionMode";
+    aArgs[1].Value <<= MacroExecMode::USE_CONFIG;
+    aArgs[2].Name = "UpdateDocMode";
+    aArgs[2].Value <<= UpdateDocMode::ACCORDING_TO_CONFIG;
+
+    TemplateViewItem *pViewItem = static_cast<TemplateViewItem*>(pItem);
+
+    Reference< XDispatchProvider > xFrame( mxFrame, UNO_QUERY );
+
+    try
+    {
+        dispatchURL( pViewItem->getPath(), "_default", xFrame, aArgs );
+    }
+    catch( const uno::Exception& )
+    {
+    }
 }
 
 struct ImplDelayedDispatch
 {
     Reference< XDispatch >      xDispatch;
-    com::sun::star::util::URL   aDispatchURL;
+    css::util::URL   aDispatchURL;
     Sequence< PropertyValue >   aArgs;
 
     ImplDelayedDispatch( const Reference< XDispatch >& i_xDispatch,
-                         const com::sun::star::util::URL& i_rURL,
+                         const css::util::URL& i_rURL,
                          const Sequence< PropertyValue >& i_rArgs )
     : xDispatch( i_xDispatch ),
       aDispatchURL( i_rURL ),
       aArgs( i_rArgs )
     {
     }
-    ~ImplDelayedDispatch() {}
 };
 
-static long implDispatchDelayed( void*, void* pArg )
+static void implDispatchDelayed( void*, void* pArg )
 {
-    struct ImplDelayedDispatch* pDispatch = reinterpret_cast<ImplDelayedDispatch*>(pArg);
+    struct ImplDelayedDispatch* pDispatch = static_cast<ImplDelayedDispatch*>(pArg);
     try
     {
         pDispatch->xDispatch->dispatch( pDispatch->aDispatchURL, pDispatch->aArgs );
@@ -722,8 +783,6 @@ static long implDispatchDelayed( void*, void* pArg )
 
     // clean up
     delete pDispatch;
-
-    return 0;
 }
 
 void BackingWindow::dispatchURL( const OUString& i_rURL,
@@ -739,11 +798,11 @@ void BackingWindow::dispatchURL( const OUString& i_rURL,
         return;
 
     // get an URL transformer to clean up the URL
-    com::sun::star::util::URL aDispatchURL;
+    css::util::URL aDispatchURL;
     aDispatchURL.Complete = i_rURL;
 
-    Reference < com::sun::star::util::XURLTransformer > xURLTransformer(
-        com::sun::star::util::URLTransformer::create( comphelper::getProcessComponentContext() ) );
+    Reference < css::util::XURLTransformer > xURLTransformer(
+        css::util::URLTransformer::create( comphelper::getProcessComponentContext() ) );
     try
     {
         // clean up the URL
@@ -756,15 +815,15 @@ void BackingWindow::dispatchURL( const OUString& i_rURL,
         if ( xDispatch.is() )
         {
             ImplDelayedDispatch* pDisp = new ImplDelayedDispatch( xDispatch, aDispatchURL, i_rArgs );
-            if( Application::PostUserEvent( Link( NULL, implDispatchDelayed ), pDisp ) == 0 )
+            if( Application::PostUserEvent( Link<void*,void>( nullptr, implDispatchDelayed ), pDisp ) == nullptr )
                 delete pDisp; // event could not be posted for unknown reason, at least don't leak
         }
     }
-    catch (const com::sun::star::uno::RuntimeException&)
+    catch (const css::uno::RuntimeException&)
     {
         throw;
     }
-    catch (const com::sun::star::uno::Exception&)
+    catch (const css::uno::Exception&)
     {
     }
 }
@@ -772,7 +831,7 @@ void BackingWindow::dispatchURL( const OUString& i_rURL,
 Size BackingWindow::GetOptimalSize() const
 {
     if (isLayoutEnabled(this))
-        return VclContainer::getLayoutRequisition(*GetWindow(WINDOW_FIRSTCHILD));
+        return VclContainer::getLayoutRequisition(*GetWindow(GetWindowType::FirstChild));
 
     return Window::GetOptimalSize();
 }
