@@ -142,7 +142,7 @@ static NSAlert *pSaveDisabledAlert = nil;
 
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
 #ifdef PRODUCT_MAC_APP_STORE_URL
-	NSURL *pURL = [NSURL URLWithString:(NSString *)CFSTR( PRODUCT_MAC_APP_STORE_URL )];
+	NSURL *pURL = [NSURL URLWithString:static_cast< NSString* >( CFSTR( PRODUCT_MAC_APP_STORE_URL ) )];
 	if ( pURL && ![@"macappstores" isEqualToString:[pURL scheme]] && ![@"http" isEqualToString:[pURL scheme]] && ![@"https" isEqualToString:[pURL scheme]] )
 		pURL = nil;
 #else	// PRODUCT_MAC_APP_STORE_URL
@@ -218,7 +218,7 @@ sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, sal_uInt16 nID )
 	if ( pObjShell && ( nID == SID_DOCTEMPLATE || nID == SID_SAVEDOC || nID == SID_SAVEASDOC ) )
 	{
 		if ( !pApplication_canSave )
-			pApplication_canSave = (Application_canSave_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canSave" );
+			pApplication_canSave = reinterpret_cast< Application_canSave_Type* >( dlsym( RTLD_MAIN_ONLY, "Application_canSave" ) );
 		if ( !pApplication_canSave || !pApplication_canSave() )
 		{
 			bRet = sal_False;
