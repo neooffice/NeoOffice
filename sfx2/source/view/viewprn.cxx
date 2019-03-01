@@ -24,6 +24,8 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <memory>
+
 #include <com/sun/star/document/XDocumentProperties.hpp>
 #include <com/sun/star/view/XRenderable.hpp>
 
@@ -53,7 +55,6 @@
 #include <sfx2/docfilt.hxx>
 
 #include <toolkit/awt/vclxdevice.hxx>
-#include <boost/scoped_ptr.hpp>
 
 #include "view.hrc"
 #include "helpid.hrc"
@@ -76,7 +77,7 @@ class SfxPrinterController : public vcl::PrinterController, public SfxListener
     Any                                     maCompleteSelection;
     Any                                     maSelection;
     Reference< view::XRenderable >          mxRenderable;
-    mutable Printer*                        mpLastPrinter;
+    mutable VclPtr<Printer>                 mpLastPrinter;
     mutable Reference<awt::XDevice>         mxDevice;
     SfxViewShell*                           mpViewShell;
     SfxObjectShell*                         mpObjectShell;
@@ -95,7 +96,7 @@ class SfxPrinterController : public vcl::PrinterController, public SfxListener
     const Any& getSelectionObject() const;
 
 public:
-    SfxPrinterController( const boost::shared_ptr<Printer>& i_rPrinter,
+    SfxPrinterController( const VclPtr<Printer>& i_rPrinter,
                           const Any& i_rComplete,
                           const Any& i_rSelection,
                           const Any& i_rViewProp,
@@ -105,17 +106,16 @@ public:
                           const uno::Sequence< beans::PropertyValue >& rProps
                         );
 
-    virtual ~SfxPrinterController();
-    virtual void Notify( SfxBroadcaster&, const SfxHint& ) SAL_OVERRIDE;
+    virtual void Notify( SfxBroadcaster&, const SfxHint& ) override;
 
-    virtual int  getPageCount() const SAL_OVERRIDE;
-    virtual Sequence< beans::PropertyValue > getPageParameters( int i_nPage ) const SAL_OVERRIDE;
-    virtual void printPage( int i_nPage ) const SAL_OVERRIDE;
-    virtual void jobStarted() SAL_OVERRIDE;
-    virtual void jobFinished( com::sun::star::view::PrintableState ) SAL_OVERRIDE;
+    virtual int  getPageCount() const override;
+    virtual Sequence< beans::PropertyValue > getPageParameters( int i_nPage ) const override;
+    virtual void printPage( int i_nPage ) const override;
+    virtual void jobStarted() override;
+    virtual void jobFinished( css::view::PrintableState ) override;
 };
 
-SfxPrinterController::SfxPrinterController( const boost::shared_ptr<Printer>& i_rPrinter,
+SfxPrinterController::SfxPrinterController( const VclPtr<Printer>& i_rPrinter,
                                             const Any& i_rComplete,
                                             const Any& i_rSelection,
                                             const Any& i_rViewProp,
@@ -128,13 +128,13 @@ SfxPrinterController::SfxPrinterController( const boost::shared_ptr<Printer>& i_
     , maCompleteSelection( i_rComplete )
     , maSelection( i_rSelection )
     , mxRenderable( i_xRender )
-    , mpLastPrinter( NULL )
+    , mpLastPrinter( nullptr )
     , mpViewShell( pView )
-    , mpObjectShell(0)
+    , mpObjectShell(nullptr)
     , m_bOrigStatus( false )
     , m_bNeedsChange( false )
     , m_bApi(i_bApi)
-    , m_bTempPrinter( i_rPrinter.get() != NULL )
+    , m_bTempPrinter( i_rPrinter.get() != nullptr )
 #ifdef USE_JAVA
     , m_bReChangeToNormalView( sal_False )
     , m_bThumbnail( sal_False )
@@ -158,7 +158,7 @@ SfxPrinterController::SfxPrinterController( const boost::shared_ptr<Printer>& i_
         aRenderOptions[1].Name = "View" ;
         aRenderOptions[1].Value = i_rViewProp;
         aRenderOptions[2].Name = "IsPrinter";
-        aRenderOptions[2].Value <<= sal_True;
+        aRenderOptions[2].Value <<= true;
         try
         {
             Sequence< beans::PropertyValue > aRenderParms( mxRenderable->getRenderer( 0 , getSelectionObject(), aRenderOptions ) );
@@ -203,29 +203,21 @@ SfxPrinterController::SfxPrinterController( const boost::shared_ptr<Printer>& i_
     }
 
     // set some job parameters
-    setValue( OUString( "IsApi"  ), makeAny( i_bApi ) );
-    setValue( OUString( "IsDirect"  ), makeAny( i_bDirect ) );
-    setValue( OUString( "IsPrinter"  ), makeAny( sal_True ) );
-    setValue( OUString( "View"  ), i_rViewProp );
+    setValue( "IsApi", makeAny( i_bApi ) );
+    setValue( "IsDirect", makeAny( i_bDirect ) );
+    setValue( "IsPrinter", makeAny( true ) );
+    setValue( "View", i_rViewProp );
 }
 
 void SfxPrinterController::Notify( SfxBroadcaster& , const SfxHint& rHint )
 {
-    const SfxSimpleHint* pSimpleHint = dynamic_cast<const SfxSimpleHint*>(&rHint);
-    if ( pSimpleHint )
+    if ( rHint.GetId() == SfxHintId::Dying )
     {
-        if ( pSimpleHint->GetId() == SFX_HINT_DYING )
-        {
-            EndListening(*mpViewShell);
-            EndListening(*mpObjectShell);
-            mpViewShell = 0;
-            mpObjectShell = 0;
-        }
+        EndListening(*mpViewShell);
+        EndListening(*mpObjectShell);
+        mpViewShell = nullptr;
+        mpObjectShell = nullptr;
     }
-}
-
-SfxPrinterController::~SfxPrinterController()
-{
 }
 
 const Any& SfxPrinterController::getSelectionObject() const
@@ -247,13 +239,13 @@ const Any& SfxPrinterController::getSelectionObject() const
 
 Sequence< beans::PropertyValue > SfxPrinterController::getMergedOptions() const
 {
-    boost::shared_ptr<Printer> pPrinter( getPrinter() );
-    if( pPrinter.get() != mpLastPrinter )
+    VclPtr<Printer> xPrinter( getPrinter() );
+    if( xPrinter.get() != mpLastPrinter )
     {
-        mpLastPrinter = pPrinter.get();
+        mpLastPrinter = xPrinter.get();
         VCLXDevice* pXDevice = new VCLXDevice();
         pXDevice->SetOutputDevice( mpLastPrinter );
-        mxDevice = Reference< awt::XDevice >( pXDevice );
+        mxDevice.set( pXDevice );
     }
 
 #ifdef USE_JAVA
@@ -281,8 +273,8 @@ Sequence< beans::PropertyValue > SfxPrinterController::getMergedOptions() const
 int SfxPrinterController::getPageCount() const
 {
     int nPages = 0;
-    boost::shared_ptr<Printer> pPrinter( getPrinter() );
-    if( mxRenderable.is() && pPrinter )
+    VclPtr<Printer> xPrinter( getPrinter() );
+    if( mxRenderable.is() && xPrinter )
     {
         Sequence< beans::PropertyValue > aJobOptions( getMergedOptions() );
         try
@@ -291,7 +283,7 @@ int SfxPrinterController::getPageCount() const
         }
         catch (lang::DisposedException &)
         {
-            OSL_TRACE("SfxPrinterController: document disposed while printing");
+            SAL_WARN("sfx", "SfxPrinterController: document disposed while printing");
             const_cast<SfxPrinterController*>(this)->setJobState(
                     view::PrintableState_JOB_ABORTED);
         }
@@ -301,10 +293,10 @@ int SfxPrinterController::getPageCount() const
 
 Sequence< beans::PropertyValue > SfxPrinterController::getPageParameters( int i_nPage ) const
 {
-    boost::shared_ptr<Printer> pPrinter( getPrinter() );
+    VclPtr<Printer> xPrinter( getPrinter() );
     Sequence< beans::PropertyValue > aResult;
 
-    if( mxRenderable.is() && pPrinter )
+    if (mxRenderable.is() && xPrinter)
     {
         Sequence< beans::PropertyValue > aJobOptions( getMergedOptions() );
         try
@@ -316,7 +308,7 @@ Sequence< beans::PropertyValue > SfxPrinterController::getPageParameters( int i_
         }
         catch (lang::DisposedException &)
         {
-            OSL_TRACE("SfxPrinterController: document disposed while printing");
+            SAL_WARN("sfx", "SfxPrinterController: document disposed while printing");
             const_cast<SfxPrinterController*>(this)->setJobState(
                     view::PrintableState_JOB_ABORTED);
         }
@@ -326,8 +318,8 @@ Sequence< beans::PropertyValue > SfxPrinterController::getPageParameters( int i_
 
 void SfxPrinterController::printPage( int i_nPage ) const
 {
-    boost::shared_ptr<Printer> pPrinter( getPrinter() );
-    if( mxRenderable.is() && pPrinter )
+    VclPtr<Printer> xPrinter( getPrinter() );
+    if( mxRenderable.is() && xPrinter )
     {
         Sequence< beans::PropertyValue > aJobOptions( getMergedOptions() );
         try
@@ -336,12 +328,12 @@ void SfxPrinterController::printPage( int i_nPage ) const
         }
         catch( lang::IllegalArgumentException& )
         {
-            // don't care enough about nonexistant page here
+            // don't care enough about nonexistent page here
             // to provoke a crash
         }
         catch (lang::DisposedException &)
         {
-            OSL_TRACE("SfxPrinterController: document disposed while printing");
+            SAL_WARN("sfx", "SfxPrinterController: document disposed while printing");
             const_cast<SfxPrinterController*>(this)->setJobState(
                     view::PrintableState_JOB_ABORTED);
         }
@@ -371,11 +363,9 @@ void SfxPrinterController::jobStarted()
             : OUString() );
         ::DateTime now( ::DateTime::SYSTEM );
 
-        xDocProps->setPrintDate( util::DateTime(
-            now.GetNanoSec(), now.GetSec(), now.GetMin(), now.GetHour(),
-            now.GetDay(), now.GetMonth(), now.GetYear(), false) );
+        xDocProps->setPrintDate( now.GetUNODateTime() );
 
-        SfxGetpApp()->NotifyEvent( SfxEventHint(SFX_EVENT_PRINTDOC, GlobalEventConfig::GetEventName( STR_EVENT_PRINTDOC ), mpObjectShell ) );
+        SfxGetpApp()->NotifyEvent( SfxEventHint(SfxEventHintId::PrintDoc, GlobalEventConfig::GetEventName( GlobalEventId::PRINTDOC ), mpObjectShell ) );
         uno::Sequence < beans::PropertyValue > aOpts;
         aOpts = getJobProperties( aOpts );
 
@@ -388,7 +378,7 @@ void SfxPrinterController::jobStarted()
     }
 }
 
-void SfxPrinterController::jobFinished( com::sun::star::view::PrintableState nState )
+void SfxPrinterController::jobFinished( css::view::PrintableState nState )
 {
     if ( mpObjectShell )
     {
@@ -400,10 +390,10 @@ void SfxPrinterController::jobFinished( com::sun::star::view::PrintableState nSt
             case view::PrintableState_JOB_FAILED :
             {
                 // "real" problem (not simply printing cancelled by user)
-                OUString aMsg( SfxResId(STR_NOSTARTPRINTER).toString() );
+                OUString aMsg( SfxResId(STR_NOSTARTPRINTER) );
                 if ( !m_bApi )
-                    MessageDialog(mpViewShell->GetWindow(), aMsg).Execute();
-                // intentionally no break
+                    ScopedVclPtrInstance<MessageDialog>(mpViewShell->GetWindow(), aMsg)->Execute();
+                SAL_FALLTHROUGH;
             }
             case view::PrintableState_JOB_ABORTED :
             {
@@ -440,7 +430,7 @@ void SfxPrinterController::jobFinished( com::sun::star::view::PrintableState nSt
 #ifdef USE_JAVA
             // Attempt to fix Mac App Store crash by detecting if the printer
             // has been deleted
-            if( pDocPrt && ImplIsValidPrinter( (Printer *)pDocPrt ) && ImplIsValidPrinter( getPrinter().get() ) )
+            if( pDocPrt && ImplIsValidPrinter( static_cast< Printer* >( pDocPrt ) ) && ImplIsValidPrinter( getPrinter().get() ) )
 #else	// USE_JAVA
             if( pDocPrt )
 #endif	// USE_JAVA
@@ -456,9 +446,9 @@ void SfxPrinterController::jobFinished( com::sun::star::view::PrintableState nSt
                     if ( pOptions )
                     {
 #endif	// USE_JAVA
-                    SfxPrinter* pNewPrt = new SfxPrinter( pDocPrt->GetOptions().Clone(), getPrinter()->GetName() );
+                    VclPtr<SfxPrinter> pNewPrt = VclPtr<SfxPrinter>::Create( pDocPrt->GetOptions().Clone(), getPrinter()->GetName() );
                     pNewPrt->SetJobSetup( getPrinter()->GetJobSetup() );
-                    mpViewShell->SetPrinter( pNewPrt, SFX_PRINTER_PRINTER | SFX_PRINTER_JOBSETUP );
+                    mpViewShell->SetPrinter( pNewPrt, SfxPrinterChangeFlags::PRINTER | SfxPrinterChangeFlags::JOBSETUP );
 #ifdef USE_JAVA
                     }
 #endif	// USE_JAVA
@@ -471,7 +461,7 @@ void SfxPrinterController::jobFinished( com::sun::star::view::PrintableState nSt
 
         if ( mpViewShell )
         {
-            mpViewShell->pImp->m_pPrinterController.reset();
+            mpViewShell->pImpl->m_xPrinterController.reset();
         }
     }
 
@@ -504,18 +494,17 @@ class SfxDialogExecutor_Impl
 {
 private:
     SfxViewShell*           _pViewSh;
-    PrinterSetupDialog*     _pSetupParent;
-    SfxItemSet*             _pOptions;
-    bool                _bHelpDisabled;
+    VclPtr<PrinterSetupDialog>  _pSetupParent;
+    std::unique_ptr<SfxItemSet> _pOptions;
+    bool                    _bHelpDisabled;
 
-    DECL_LINK( Execute, void * );
+    DECL_LINK( Execute, Button*, void );
 
 public:
             SfxDialogExecutor_Impl( SfxViewShell* pViewSh, PrinterSetupDialog* pParent );
-            ~SfxDialogExecutor_Impl() { delete _pOptions; }
 
-    Link                GetLink() const { return LINK(const_cast<SfxDialogExecutor_Impl*>(this), SfxDialogExecutor_Impl, Execute); }
-    const SfxItemSet*   GetOptions() const { return _pOptions; }
+    Link<Button*, void> GetLink() const { return LINK(const_cast<SfxDialogExecutor_Impl*>(this), SfxDialogExecutor_Impl, Execute); }
+    const SfxItemSet*   GetOptions() const { return _pOptions.get(); }
     void                DisableHelp() { _bHelpDisabled = true; }
 };
 
@@ -523,65 +512,52 @@ SfxDialogExecutor_Impl::SfxDialogExecutor_Impl( SfxViewShell* pViewSh, PrinterSe
 
     _pViewSh        ( pViewSh ),
     _pSetupParent   ( pParent ),
-    _pOptions       ( NULL ),
+    _pOptions       ( nullptr ),
     _bHelpDisabled  ( false )
 
 {
 }
 
-IMPL_LINK_NOARG(SfxDialogExecutor_Impl, Execute)
+IMPL_LINK_NOARG(SfxDialogExecutor_Impl, Execute, Button*, void)
 {
     // Options noted locally
     if ( !_pOptions )
     {
         DBG_ASSERT( _pSetupParent, "no dialog parent" );
         if( _pSetupParent )
-            _pOptions = static_cast<SfxPrinter*>( _pSetupParent->GetPrinter() )->GetOptions().Clone();
+            _pOptions.reset( static_cast<SfxPrinter*>( _pSetupParent->GetPrinter() )->GetOptions().Clone() );
     }
 
     assert(_pOptions);
     if (!_pOptions)
-        return 0;
+        return;
 
     // Create Dialog
-    boost::scoped_ptr<SfxPrintOptionsDialog> pDlg(new SfxPrintOptionsDialog( static_cast<vcl::Window*>(_pSetupParent),
-                                                             _pViewSh, _pOptions ));
+    VclPtrInstance<SfxPrintOptionsDialog> pDlg( static_cast<vcl::Window*>(_pSetupParent),
+                                                _pViewSh, _pOptions.get() );
     if ( _bHelpDisabled )
         pDlg->DisableHelp();
-#if defined USE_JAVA && defined MACOSX
-    short nRet = pDlg->Execute();
-    if ( nRet == RET_OK )
-#else	// USE_JAVA && MACOSX
     if ( pDlg->Execute() == RET_OK )
-#endif	// USE_JAVA && MACOSX
     {
-        delete _pOptions;
-        _pOptions = pDlg->GetOptions().Clone();
-
+        _pOptions.reset( pDlg->GetOptions().Clone() );
     }
-
-#if defined USE_JAVA && defined MACOSX
-    return nRet;
-#else	// USE_JAVA && MACOSX
-    return 0;
-#endif	// USE_JAVA && MACOSX
 }
 
 /**
    Internal method for setting the differences between 'pNewPrinter' to the
    current printer. pNewPrinter is either taken over or deleted.
 */
-SfxPrinter* SfxViewShell::SetPrinter_Impl( SfxPrinter *pNewPrinter )
+void SfxViewShell::SetPrinter_Impl( VclPtr<SfxPrinter>& pNewPrinter )
 {
     // get current Printer
     SfxPrinter *pDocPrinter = GetPrinter();
 
     // Evaluate Printer Options
     sal_uInt16 nWhich = GetPool().GetWhich(SID_PRINTER_CHANGESTODOC);
-    const SfxFlagItem *pFlagItem = 0;
-    pDocPrinter->GetOptions().GetItemState( nWhich, false, (const SfxPoolItem**) &pFlagItem );
-    bool bOriToDoc = pFlagItem && (pFlagItem->GetValue() & SFX_PRINTER_CHG_ORIENTATION);
-    bool bSizeToDoc = pFlagItem && (pFlagItem->GetValue() & SFX_PRINTER_CHG_SIZE);
+    const SfxFlagItem *pFlagItem = nullptr;
+    pDocPrinter->GetOptions().GetItemState( nWhich, false, reinterpret_cast<const SfxPoolItem**>(&pFlagItem) );
+    bool bOriToDoc = pFlagItem && (static_cast<SfxPrinterChangeFlags>(pFlagItem->GetValue()) & SfxPrinterChangeFlags::CHG_ORIENTATION);
+    bool bSizeToDoc = pFlagItem && (static_cast<SfxPrinterChangeFlags>(pFlagItem->GetValue()) & SfxPrinterChangeFlags::CHG_SIZE);
 
     // Determine the previous format and size
     Orientation eOldOri = pDocPrinter->GetOrientation();
@@ -601,29 +577,29 @@ SfxPrinter* SfxViewShell::SetPrinter_Impl( SfxPrinter *pNewPrinter )
 
     // Message and Flags for page format, summaries changes
     OUString aMsg;
-    sal_uInt16 nNewOpt=0;
+    SfxPrinterChangeFlags nNewOpt = SfxPrinterChangeFlags::NONE;
     if( bOriChg && bPgSzChg )
     {
-        aMsg = SfxResId(STR_PRINT_NEWORISIZE).toString();
-        nNewOpt = SFX_PRINTER_CHG_ORIENTATION | SFX_PRINTER_CHG_SIZE;
+        aMsg = SfxResId(STR_PRINT_NEWORISIZE);
+        nNewOpt = SfxPrinterChangeFlags::CHG_ORIENTATION | SfxPrinterChangeFlags::CHG_SIZE;
     }
     else if (bOriChg )
     {
-        aMsg = SfxResId(STR_PRINT_NEWORI).toString();
-        nNewOpt = SFX_PRINTER_CHG_ORIENTATION;
+        aMsg = SfxResId(STR_PRINT_NEWORI);
+        nNewOpt = SfxPrinterChangeFlags::CHG_ORIENTATION;
     }
     else if (bPgSzChg)
     {
-        aMsg = SfxResId(STR_PRINT_NEWSIZE).toString();
-        nNewOpt = SFX_PRINTER_CHG_SIZE;
+        aMsg = SfxResId(STR_PRINT_NEWSIZE);
+        nNewOpt = SfxPrinterChangeFlags::CHG_SIZE;
     }
 
     // Summaries in this variable what has been changed.
-    sal_uInt16 nChangedFlags = 0;
+    SfxPrinterChangeFlags nChangedFlags = SfxPrinterChangeFlags::NONE;
 
     // Ask if possible, if page format should be taken over from printer.
     if ( ( bOriChg  || bPgSzChg ) &&
-        RET_YES == MessageDialog(NULL, aMsg, VCL_MESSAGE_QUESTION, VCL_BUTTONS_YES_NO).Execute() )
+        RET_YES == ScopedVclPtrInstance<MessageDialog>(nullptr, aMsg, VclMessageType::Question, VclButtonsType::YesNo)->Execute() )
     {
         // Flags with changes for  <SetPrinter(SfxPrinter*)> are maintained
         nChangedFlags |= nNewOpt;
@@ -637,7 +613,7 @@ SfxPrinter* SfxViewShell::SetPrinter_Impl( SfxPrinter *pNewPrinter )
     // or the other way around?
     if ( (aTempPrtName != aDocPrtName) || (pDocPrinter->IsDefPrinter() != pNewPrinter->IsDefPrinter()) )
     {
-        nChangedFlags |= SFX_PRINTER_PRINTER|SFX_PRINTER_JOBSETUP;
+        nChangedFlags |= SfxPrinterChangeFlags::PRINTER|SfxPrinterChangeFlags::JOBSETUP;
         pDocPrinter = pNewPrinter;
     }
     else
@@ -647,7 +623,7 @@ SfxPrinter* SfxViewShell::SetPrinter_Impl( SfxPrinter *pNewPrinter )
         {
             // Option have changed
             pDocPrinter->SetOptions( pNewPrinter->GetOptions() );
-            nChangedFlags |= SFX_PRINTER_OPTIONS;
+            nChangedFlags |= SfxPrinterChangeFlags::OPTIONS;
         }
 
         // Compare JobSetups
@@ -655,22 +631,23 @@ SfxPrinter* SfxViewShell::SetPrinter_Impl( SfxPrinter *pNewPrinter )
         JobSetup aOldJobSetup = pDocPrinter->GetJobSetup();
         if ( aNewJobSetup != aOldJobSetup )
         {
-            nChangedFlags |= SFX_PRINTER_JOBSETUP;
+            nChangedFlags |= SfxPrinterChangeFlags::JOBSETUP;
         }
 
         // Keep old changed Printer.
         pDocPrinter->SetPrinterProps( pNewPrinter );
-        delete pNewPrinter;
+        pNewPrinter.disposeAndClear();
     }
 
-    if ( 0 != nChangedFlags )
+    if ( SfxPrinterChangeFlags::NONE != nChangedFlags )
         // SetPrinter will delete the old printer if it changes
         SetPrinter( pDocPrinter, nChangedFlags );
-    return pDocPrinter;
 }
 
-void SfxViewShell::ExecPrint( const uno::Sequence < beans::PropertyValue >& rProps, bool bIsAPI, bool bIsDirect )
+void SfxViewShell::StartPrint( const uno::Sequence < beans::PropertyValue >& rProps, bool bIsAPI, bool bIsDirect )
 {
+    assert( pImpl->m_xPrinterController.get() == nullptr );
+
     // get the current selection; our controller should know it
     Reference< frame::XController > xController( GetController() );
     Reference< view::XSelectionSupplier > xSupplier( xController, UNO_QUERY );
@@ -682,7 +659,7 @@ void SfxViewShell::ExecPrint( const uno::Sequence < beans::PropertyValue >& rPro
         aSelection <<= GetObjectShell()->GetModel();
     Any aComplete( makeAny( GetObjectShell()->GetModel() ) );
     Any aViewProp( makeAny( xController ) );
-    boost::shared_ptr<Printer> aPrt;
+    VclPtr<Printer> aPrt;
 
     const beans::PropertyValue* pVal = rProps.getConstArray();
     for( sal_Int32 i = 0; i < rProps.getLength(); i++ )
@@ -691,12 +668,12 @@ void SfxViewShell::ExecPrint( const uno::Sequence < beans::PropertyValue >& rPro
         {
             OUString aPrinterName;
             pVal[i].Value >>= aPrinterName;
-            aPrt.reset( new Printer( aPrinterName ) );
+            aPrt.reset( VclPtr<Printer>::Create( aPrinterName ) );
             break;
         }
     }
 
-    boost::shared_ptr<vcl::PrinterController> pController( new SfxPrinterController(
+    std::shared_ptr<vcl::PrinterController> xNewController(std::make_shared<SfxPrinterController>(
                                                                                aPrt,
                                                                                aComplete,
                                                                                aSelection,
@@ -706,35 +683,45 @@ void SfxViewShell::ExecPrint( const uno::Sequence < beans::PropertyValue >& rPro
                                                                                bIsDirect,
                                                                                this,
                                                                                rProps
-                                                                               ) );
-    pImp->m_pPrinterController = pController;
+                                                                               ));
+    pImpl->m_xPrinterController = xNewController;
 
     SfxObjectShell *pObjShell = GetObjectShell();
-    pController->setValue( OUString( "JobName"  ),
-                        makeAny( OUString( pObjShell->GetTitle(0) ) ) );
+    xNewController->setValue( "JobName",
+                        makeAny( OUString( pObjShell->GetTitle(1) ) ) );
+    xNewController->setPrinterModified( mbPrinterSettingsModified );
+}
 
+void SfxViewShell::ExecPrint( const uno::Sequence < beans::PropertyValue >& rProps, bool bIsAPI, bool bIsDirect )
+{
+    StartPrint( rProps, bIsAPI, bIsDirect );
     // FIXME: job setup
-    SfxPrinter* pDocPrt = GetPrinter(false);
+    SfxPrinter* pDocPrt = GetPrinter();
 #ifdef USE_JAVA
     // Attempt to fix Mac App Store crash by detecting if the printer has been
     // deleted
     if ( pDocPrt && !ImplIsValidPrinter( pDocPrt ) )
-        pDocPrt = NULL;
+        pDocPrt = nullptr;
 #endif	// USE_JAVA
-    JobSetup aJobSetup = pDocPrt ? pDocPrt->GetJobSetup() : GetJobSetup();
-    Printer::PrintJob( pController, aJobSetup );
+    JobSetup aJobSetup = pDocPrt ? pDocPrt->GetJobSetup() : JobSetup();
+    Printer::PrintJob( GetPrinterController(), aJobSetup );
+}
+
+const std::shared_ptr< vcl::PrinterController >& SfxViewShell::GetPrinterController() const
+{
+    return pImpl->m_xPrinterController;
 }
 
 Printer* SfxViewShell::GetActivePrinter() const
 {
-    return (pImp->m_pPrinterController)
-        ?  pImp->m_pPrinterController->getPrinter().get() : 0;
+    return (pImpl->m_xPrinterController)
+        ?  pImpl->m_xPrinterController->getPrinter().get() : nullptr;
 }
 
 void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 {
     sal_uInt16              nDialogRet = RET_CANCEL;
-    SfxPrinter*             pPrinter = 0;
+    VclPtr<SfxPrinter>      pPrinter;
     bool                    bSilent = false;
 
     // does the function have been called by the user interface or by an API call
@@ -745,7 +732,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 
         // Should it be visible on the user interface,
         // should it launch popup dialogue ?
-        SFX_REQUEST_ARG(rReq, pSilentItem, SfxBoolItem, SID_SILENT, false);
+        const SfxBoolItem* pSilentItem = rReq.GetArg<SfxBoolItem>(SID_SILENT);
         bSilent = pSilentItem && pSilentItem->GetValue();
     }
 
@@ -754,7 +741,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
     // document that is going to be printed!)
     OUString aHelpFilterName( "writer_web_HTML_help" );
     SfxMedium* pMedium = GetViewFrame()->GetObjectShell()->GetMedium();
-    const SfxFilter* pFilter = pMedium ? pMedium->GetFilter() : NULL;
+    std::shared_ptr<const SfxFilter> pFilter = pMedium ? pMedium->GetFilter() : nullptr;
     bool bPrintOnHelp = ( pFilter && pFilter->GetFilterName() == aHelpFilterName );
 
 #if defined USE_JAVA && defined MACOSX
@@ -776,18 +763,18 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 #endif	// USE_JAVA && MACOSX
 
             // derived class may decide to abort this
-            if( pDoc == NULL || !pDoc->QuerySlotExecutable( nId ) )
+            if( pDoc == nullptr || !pDoc->QuerySlotExecutable( nId ) )
             {
                 rReq.SetReturnValue( SfxBoolItem( 0, false ) );
                 return;
             }
 
-            if ( !bSilent && pDoc->QueryHiddenInformation( WhenPrinting, NULL ) != RET_YES )
+            if ( !bSilent && pDoc->QueryHiddenInformation( HiddenWarningFact::WhenPrinting, nullptr ) != RET_YES )
                 return;
 
             // should we print only the selection or the whole document
-            SFX_REQUEST_ARG(rReq, pSelectItem, SfxBoolItem, SID_SELECTION, false);
-            bool bSelection = ( pSelectItem != NULL && pSelectItem->GetValue() );
+            const SfxBoolItem* pSelectItem = rReq.GetArg<SfxBoolItem>(SID_SELECTION);
+            bool bSelection = ( pSelectItem != nullptr && pSelectItem->GetValue() );
             // detect non api call from writer ( that adds SID_SELECTION ) and reset bIsAPI
             if ( pSelectItem && rReq.GetArgs()->Count() == 1 )
                 bIsAPI = false;
@@ -850,13 +837,13 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
             if( nId == SID_PRINTDOCDIRECT )
             {
                 aProps[nLen].Name = "PrintSelectionOnly";
-                aProps[nLen].Value = makeAny( bSelection );
+                aProps[nLen].Value <<= bSelection;
             }
             else // if nId == SID_PRINTDOC ; nothing to do with the previous HACK
             {
                 // should the printer selection and properties dialogue display an help button
                 aProps[nLen].Name = "HideHelpButton";
-                aProps[nLen].Value = makeAny( bPrintOnHelp );
+                aProps[nLen].Value <<= bPrintOnHelp;
             }
 
             ExecPrint( aProps, bIsAPI, (nId == SID_PRINTDOCDIRECT) );
@@ -873,22 +860,22 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
             SfxPrinter *pDocPrinter = GetPrinter(true);
 
             // look for printer in parameters
-            SFX_REQUEST_ARG( rReq, pPrinterItem, SfxStringItem, SID_PRINTER_NAME, false );
+            const SfxStringItem* pPrinterItem = rReq.GetArg<SfxStringItem>(SID_PRINTER_NAME);
             if ( pPrinterItem )
             {
                 // use PrinterName parameter to create a printer
-                pPrinter = new SfxPrinter( pDocPrinter->GetOptions().Clone(), ((const SfxStringItem*) pPrinterItem)->GetValue() );
+                pPrinter = VclPtr<SfxPrinter>::Create( pDocPrinter->GetOptions().Clone(), pPrinterItem->GetValue() );
 
                 // if printer is unknown, it can't be used - now printer from document will be used
                 if ( !pPrinter->IsKnown() )
-                    DELETEZ(pPrinter);
+                    pPrinter.disposeAndClear();
             }
 
             if ( SID_PRINTER_NAME == nId )
             {
                 // just set a recorded printer name
                 if ( pPrinter )
-                    SetPrinter( pPrinter, SFX_PRINTER_PRINTER  );
+                    SetPrinter( pPrinter, SfxPrinterChangeFlags::PRINTER  );
                 return;
             }
 
@@ -907,7 +894,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
             {
                 // no valid printer either in ItemSet or at the document
                 if ( !bSilent )
-                    MessageDialog(NULL, SfxResId(STR_NODEFPRINTER)).Execute();
+                    ScopedVclPtrInstance<MessageDialog>(nullptr, SfxResId(STR_NODEFPRINTER))->Execute();
 
                 rReq.SetReturnValue(SfxBoolItem(0,false));
 
@@ -919,7 +906,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
             {
                 // if printer is busy, abort configuration
                 if ( !bSilent )
-                    MessageDialog(NULL, SfxResId(STR_ERROR_PRINTER_BUSY), VCL_MESSAGE_INFO).Execute();
+                    ScopedVclPtrInstance<MessageDialog>(nullptr, SfxResId(STR_ERROR_PRINTER_BUSY), VclMessageType::Info)->Execute();
                 rReq.SetReturnValue(SfxBoolItem(0,false));
 
                 return;
@@ -929,17 +916,16 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
             if ( !bIsAPI )
             {
                 // PrinterDialog needs a temporary printer
-                SfxPrinter* pDlgPrinter = pPrinter->Clone();
-                nDialogRet = 0;
+                VclPtr<SfxPrinter> pDlgPrinter = pPrinter->Clone();
 
                 // execute PrinterSetupDialog
-                PrinterSetupDialog* pPrintSetupDlg = new PrinterSetupDialog( GetWindow() );
-                SfxDialogExecutor_Impl* pExecutor = 0;
+                VclPtrInstance<PrinterSetupDialog> pPrintSetupDlg( GetWindow() );
+                std::unique_ptr<SfxDialogExecutor_Impl> pExecutor;
 
-                if (pImp->m_bHasPrintOptions && HasPrintOptionsPage())
+                if (pImpl->m_bHasPrintOptions && HasPrintOptionsPage())
                 {
                     // additional controls for dialog
-                    pExecutor = new SfxDialogExecutor_Impl( this, pPrintSetupDlg );
+                    pExecutor.reset( new SfxDialogExecutor_Impl( this, pPrintSetupDlg ) );
                     if ( bPrintOnHelp )
                         pExecutor->DisableHelp();
                     pPrintSetupDlg->SetOptionsHdl( pExecutor->GetLink() );
@@ -956,7 +942,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
                     else
                     {
                         pPrinter->SetOptions( *pExecutor->GetOptions() );
-                        SetPrinter( pPrinter, SFX_PRINTER_OPTIONS );
+                        SetPrinter( pPrinter, SfxPrinterChangeFlags::OPTIONS );
                     }
                 }
 
@@ -966,11 +952,10 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
                 // change the attributes of the current printer, not the
                 // printer itself.
                 if ( nDialogRet == RET_OK )
-                    SetPrinter( pDlgPrinter, SFX_PRINTER_CHG_ORIENTATION | SFX_PRINTER_CHG_SIZE );
+                    SetPrinter( pDlgPrinter,  SfxPrinterChangeFlags::CHG_ORIENTATION |  SfxPrinterChangeFlags::CHG_SIZE );
 #endif	// USE_JAVA && MACOSX
 
-                DELETEZ( pPrintSetupDlg );
-                delete pExecutor;
+                pPrintSetupDlg.disposeAndClear();
 
                 // no recording of PrinterSetup except printer name (is printer dependent)
                 rReq.Ignore();
@@ -996,14 +981,14 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
                     SetPrinter_Impl( pDlgPrinter );
 
                     // forget new printer, it was taken over (as pPrinter) or deleted
-                    pDlgPrinter = NULL;
-
+                    pDlgPrinter = nullptr;
+                    mbPrinterSettingsModified = true;
                 }
                 else
                 {
                     // PrinterDialog is used to transfer information on printing,
                     // so it will only be deleted here if dialog was cancelled
-                    DELETEZ( pDlgPrinter );
+                    pDlgPrinter.disposeAndClear();
                     rReq.Ignore();
                 }
             }
@@ -1013,31 +998,26 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 
 SfxPrinter* SfxViewShell::GetPrinter( bool /*bCreate*/ )
 {
-    return 0;
+    return nullptr;
 }
 
-sal_uInt16 SfxViewShell::SetPrinter( SfxPrinter* /*pNewPrinter*/, sal_uInt16 /*nDiffFlags*/, bool )
+sal_uInt16 SfxViewShell::SetPrinter( SfxPrinter* /*pNewPrinter*/, SfxPrinterChangeFlags /*nDiffFlags*/ )
 {
     return 0;
 }
 
-SfxTabPage* SfxViewShell::CreatePrintOptionsPage
+VclPtr<SfxTabPage> SfxViewShell::CreatePrintOptionsPage
 (
     vcl::Window*             /*pParent*/,
     const SfxItemSet&   /*rOptions*/
 )
 {
-    return 0;
+    return VclPtr<SfxTabPage>();
 }
 
 bool SfxViewShell::HasPrintOptionsPage() const
 {
     return false;
-}
-
-JobSetup SfxViewShell::GetJobSetup() const
-{
-    return JobSetup();
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

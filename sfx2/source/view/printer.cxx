@@ -58,7 +58,6 @@ struct SfxPrinter_Impl
         mbSelection ( true ),
         mbFromTo    ( true ),
         mbRange     ( true ) {}
-    ~SfxPrinter_Impl() {}
 };
 
 struct SfxPrintOptDlg_Impl
@@ -78,7 +77,7 @@ struct SfxPrintOptDlg_Impl
 
 // class SfxPrinter ------------------------------------------------------
 
-SfxPrinter* SfxPrinter::Create( SvStream& rStream, SfxItemSet* pOptions )
+VclPtr<SfxPrinter> SfxPrinter::Create( SvStream& rStream, SfxItemSet* pOptions )
 
 /*  [Description]
 
@@ -97,13 +96,12 @@ SfxPrinter* SfxPrinter::Create( SvStream& rStream, SfxItemSet* pOptions )
     ReadJobSetup( rStream, aFileJobSetup );
 
     // Get printers
-    SfxPrinter *pPrinter = new SfxPrinter( pOptions, aFileJobSetup );
+    VclPtr<SfxPrinter> pPrinter = VclPtr<SfxPrinter>::Create( pOptions, aFileJobSetup );
     return pPrinter;
 }
 
 
-
-SvStream& SfxPrinter::Store( SvStream& rStream ) const
+void SfxPrinter::Store( SvStream& rStream ) const
 
 /*  [Description]
 
@@ -111,9 +109,8 @@ SvStream& SfxPrinter::Store( SvStream& rStream ) const
 */
 
 {
-    return WriteJobSetup( rStream, GetJobSetup() );
+    WriteJobSetup( rStream, GetJobSetup() );
 }
-
 
 
 SfxPrinter::SfxPrinter( SfxItemSet* pTheOptions ) :
@@ -122,26 +119,21 @@ SfxPrinter::SfxPrinter( SfxItemSet* pTheOptions ) :
 
     This constructor creates a default printer.
 */
-
     pOptions( pTheOptions ),
-    bKnown(true)
-
+    pImpl( new SfxPrinter_Impl ),
+    bKnown( true )
 {
     assert(pOptions);
-    pImpl = new SfxPrinter_Impl;
 }
-
 
 
 SfxPrinter::SfxPrinter( SfxItemSet* pTheOptions,
                         const JobSetup& rTheOrigJobSetup ) :
-
-    Printer         ( rTheOrigJobSetup.GetPrinterName() ),
-    pOptions        ( pTheOptions )
-
+    Printer( rTheOrigJobSetup.GetPrinterName() ),
+    pOptions( pTheOptions ),
+    pImpl( new SfxPrinter_Impl )
 {
     assert(pOptions);
-    pImpl = new SfxPrinter_Impl;
     bKnown = GetName() == rTheOrigJobSetup.GetPrinterName();
 
     if ( bKnown )
@@ -149,33 +141,29 @@ SfxPrinter::SfxPrinter( SfxItemSet* pTheOptions,
 }
 
 
-
 SfxPrinter::SfxPrinter( SfxItemSet* pTheOptions,
                         const OUString& rPrinterName ) :
-
-    Printer         ( rPrinterName ),
-    pOptions        ( pTheOptions ),
-    bKnown          ( GetName() == rPrinterName )
-
+    Printer( rPrinterName ),
+    pOptions( pTheOptions ),
+    pImpl( new SfxPrinter_Impl ),
+    bKnown( GetName() == rPrinterName )
 {
     assert(pOptions);
-    pImpl = new SfxPrinter_Impl;
 }
 
 
-
 SfxPrinter::SfxPrinter( const SfxPrinter& rPrinter ) :
-
-    Printer ( rPrinter.GetName() ),
+    VclReferenceBase(),
+    Printer( rPrinter.GetName() ),
     pOptions( rPrinter.GetOptions().Clone() ),
-    bKnown  ( rPrinter.IsKnown() )
+    pImpl( new SfxPrinter_Impl ),
+    bKnown( rPrinter.IsKnown() )
 {
     assert(pOptions);
     SetJobSetup( rPrinter.GetJobSetup() );
     SetPrinterProps( &rPrinter );
     SetMapMode( rPrinter.GetMapMode() );
 
-    pImpl = new SfxPrinter_Impl;
     pImpl->mbAll = rPrinter.pImpl->mbAll;
     pImpl->mbSelection = rPrinter.pImpl->mbSelection;
     pImpl->mbFromTo = rPrinter.pImpl->mbFromTo;
@@ -183,13 +171,11 @@ SfxPrinter::SfxPrinter( const SfxPrinter& rPrinter ) :
 }
 
 
-
-SfxPrinter* SfxPrinter::Clone() const
+VclPtr<SfxPrinter> SfxPrinter::Clone() const
 {
     if ( IsDefPrinter() )
     {
-        SfxPrinter *pNewPrinter;
-        pNewPrinter = new SfxPrinter( GetOptions().Clone() );
+        VclPtr<SfxPrinter> pNewPrinter = VclPtr<SfxPrinter>::Create( GetOptions().Clone() );
         pNewPrinter->SetJobSetup( GetJobSetup() );
         pNewPrinter->SetPrinterProps( this );
         pNewPrinter->SetMapMode( GetMapMode() );
@@ -200,24 +186,27 @@ SfxPrinter* SfxPrinter::Clone() const
         return pNewPrinter;
     }
     else
-        return new SfxPrinter( *this );
+        return VclPtr<SfxPrinter>::Create( *this );
 }
-
 
 
 SfxPrinter::~SfxPrinter()
 {
-    delete pOptions;
-    delete pImpl;
+    disposeOnce();
 }
 
+void SfxPrinter::dispose()
+{
+    delete pOptions;
+    pImpl.reset();
+    Printer::dispose();
+}
 
 
 void SfxPrinter::SetOptions( const SfxItemSet &rNewOptions )
 {
     pOptions->Set(rNewOptions);
 }
-
 
 
 SfxPrintOptionsDialog::SfxPrintOptionsDialog(vcl::Window *pParent,
@@ -233,7 +222,7 @@ SfxPrintOptionsDialog::SfxPrintOptionsDialog(vcl::Window *pParent,
     VclContainer *pVBox = get_content_area();
 
     // Insert TabPage
-    pPage = pViewSh->CreatePrintOptionsPage(pVBox, *pOptions);
+    pPage.reset(pViewSh->CreatePrintOptionsPage(pVBox, *pOptions));
     DBG_ASSERT( pPage, "CreatePrintOptions != SFX_VIEW_HAS_PRINTOPTIONS" );
     if( pPage )
     {
@@ -244,14 +233,18 @@ SfxPrintOptionsDialog::SfxPrintOptionsDialog(vcl::Window *pParent,
 }
 
 
-
 SfxPrintOptionsDialog::~SfxPrintOptionsDialog()
 {
-    delete pDlgImpl;
-    delete pPage;
-    delete pOptions;
+    disposeOnce();
 }
 
+void SfxPrintOptionsDialog::dispose()
+{
+    pDlgImpl.reset();
+    pPage.disposeAndClear();
+    delete pOptions;
+    ModalDialog::dispose();
+}
 
 
 short SfxPrintOptionsDialog::Execute()
@@ -281,7 +274,7 @@ short SfxPrintOptionsDialog::Execute()
                         if ( pViewPrinter )
                         {
                             pViewPrinter->SetJobSetup( aTempPrinter.GetJobSetup() );
-                            pViewSh->SetPrinter( pViewPrinter, SFX_PRINTER_CHG_ORIENTATION | SFX_PRINTER_CHG_SIZE );
+                            pViewSh->SetPrinter( pViewPrinter, SfxPrinterChangeFlags::CHG_ORIENTATION | SfxPrinterChangeFlags::CHG_SIZE );
                         }
                     }
                 }
@@ -302,16 +295,15 @@ short SfxPrintOptionsDialog::Execute()
 }
 
 
-
-bool SfxPrintOptionsDialog::Notify( NotifyEvent& rNEvt )
+bool SfxPrintOptionsDialog::EventNotify( NotifyEvent& rNEvt )
 {
-    if ( rNEvt.GetType() == EVENT_KEYINPUT )
+    if ( rNEvt.GetType() == MouseNotifyEvent::KEYINPUT )
     {
         if ( rNEvt.GetKeyEvent()->GetKeyCode().GetCode() == KEY_F1 && pDlgImpl->mbHelpDisabled )
             return true; // help disabled -> <F1> does nothing
     }
 #if defined USE_JAVA && defined MACOSX
-    else if ( pDlgImpl->mbShowPrintSetupDialog && rNEvt.GetType() == EVENT_GETFOCUS )
+    else if ( pDlgImpl->mbShowPrintSetupDialog && rNEvt.GetType() == MouseNotifyEvent::GETFOCUS )
     {
         PrinterSetupDialog *pSetupDlg = dynamic_cast< PrinterSetupDialog* >( GetParent() );
         if ( pSetupDlg )
@@ -338,9 +330,8 @@ bool SfxPrintOptionsDialog::Notify( NotifyEvent& rNEvt )
     }
 #endif	// USE_JAVA && MACOSX
 
-    return ModalDialog::Notify( rNEvt );
+    return ModalDialog::EventNotify( rNEvt );
 }
-
 
 
 void SfxPrintOptionsDialog::DisableHelp()
