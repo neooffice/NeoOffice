@@ -46,7 +46,7 @@ static sal_Bool UseDarkModeColors()
     if (!pUseDarkModeColors)
     {
         if (aModule.load("libvcllo.dylib"))
-            pUseDarkModeColors = (UseDarkModeColors_Type *)aModule.getSymbol( "UseDarkModeColors");
+            pUseDarkModeColors = reinterpret_cast< UseDarkModeColors_Type* >( aModule.getSymbol( "UseDarkModeColors") );
     }
 
     if (pUseDarkModeColors)
