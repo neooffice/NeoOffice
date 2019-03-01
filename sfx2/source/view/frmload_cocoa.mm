@@ -114,7 +114,7 @@ void SfxFrameLoader_openDocumentOfType( OUString aDocType )
 
 						if ( MIN_NUMBER_DOCS_OPENED > 0 && nTotalDocTypeCount > 0 && nTotalDocTypeCount > MIN_NUMBER_DOCS_OPENED )
 						{
-							float fDocTypeFraction = (float)nDocTypeCount / (float)nTotalDocTypeCount;
+							float fDocTypeFraction = static_cast< float >( nDocTypeCount ) / static_cast< float >( nTotalDocTypeCount );
 							if ( MIN_FRACTION_DOCS_OPENED > 0 && fDocTypeFraction > MIN_FRACTION_DOCS_OPENED )
 								bSetDefaultLaunchOption = YES;
 						}

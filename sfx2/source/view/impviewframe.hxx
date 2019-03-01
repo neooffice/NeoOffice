@@ -45,39 +45,31 @@ struct SfxViewFrame_Impl
     Size                aSize;
     OUString            aActualURL;
     SfxFrame&           rFrame;
-    svtools::AsynchronLink* pReloader;
-    vcl::Window*             pWindow;
-    SfxViewFrame*       pActiveChild;
-    vcl::Window*             pFocusWin;
+    VclPtr<vcl::Window> pWindow;
+    VclPtr<vcl::Window> pFocusWin;
     sal_uInt16          nDocViewNo;
-    sal_uInt16          nCurViewId;
-    bool            bResizeInToOut:1;
-    bool            bDontOverwriteResizeInToOut:1;
-    bool            bObjLocked:1;
-    bool            bReloading:1;
-    bool            bIsDowning:1;
-    bool            bModal:1;
-    bool            bEnabled:1;
-    bool            bWindowWasEnabled:1;
-    bool            bActive;
+    SfxInterfaceId      nCurViewId;
+    bool                bResizeInToOut:1;
+    bool                bObjLocked:1;
+    bool                bReloading:1;
+    bool                bIsDowning:1;
+    bool                bModal:1;
+    bool                bEnabled:1;
+    bool                bWindowWasEnabled:1;
+    bool                bActive;
     OUString            aFactoryName;
-    ::boost::optional< bool >
-                        aHasToolPanels;
 #if defined USE_JAVA && defined MACOSX
     sal_Bool            bNeedsUpdateTitle;
     Timer               aTimer;
 #endif	// USE_JAVA && MACOSX
 
-    SfxViewFrame_Impl(SfxFrame& i_rFrame)
+    explicit SfxViewFrame_Impl(SfxFrame& i_rFrame)
         : rFrame(i_rFrame)
-        , pReloader(0)
-        , pWindow(0)
-        , pActiveChild(0)
-        , pFocusWin(0)
+        , pWindow(nullptr)
+        , pFocusWin(nullptr)
         , nDocViewNo(0)
         , nCurViewId(0)
         , bResizeInToOut(false)
-        , bDontOverwriteResizeInToOut(false)
         , bObjLocked(false)
         , bReloading(false)
         , bIsDowning(false)
@@ -90,11 +82,6 @@ struct SfxViewFrame_Impl
 #endif	// USE_JAVA && MACOSX
     {
     }
-
-    ~SfxViewFrame_Impl()
-    {
-        delete pReloader;
-    }
 };
 
 class SfxFrameViewWindow_Impl : public vcl::Window
@@ -102,15 +89,15 @@ class SfxFrameViewWindow_Impl : public vcl::Window
     SfxViewFrame*   pFrame;
 
 public:
-                        SfxFrameViewWindow_Impl( SfxViewFrame* p, vcl::Window& rParent, WinBits nBits=0 ) :
-                            Window( &rParent, nBits | WB_CLIPCHILDREN ),
+                        SfxFrameViewWindow_Impl( SfxViewFrame* p, vcl::Window& rParent ) :
+                            Window( &rParent, WB_CLIPCHILDREN ),
                             pFrame( p )
                         {
                             p->GetFrame().GetWindow().SetBorderStyle( WindowBorderStyle::NOBORDER );
                         }
 
-    virtual void        Resize() SAL_OVERRIDE;
-    virtual void        StateChanged( StateChangedType nStateChange ) SAL_OVERRIDE;
+    virtual void        Resize() override;
+    virtual void        StateChanged( StateChangedType nStateChange ) override;
 };
 
 #endif // INCLUDED_SFX2_SOURCE_VIEW_IMPVIEWFRAME_HXX
