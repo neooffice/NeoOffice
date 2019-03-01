@@ -38,6 +38,7 @@
 #include <sfx2/sfxresid.hxx>
 #include <sfx2/sfxsids.hrc>
 #include <tools/rcid.h>
+#include <tools/resmgr.hxx>
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
@@ -54,8 +55,8 @@
 
 typedef sal_Bool Application_canSave_Type();
 
-static Application_canSave_Type *pApplication_canSave = NULL;
-static ResMgr *pUpdResMgr = NULL;
+static Application_canSave_Type *pApplication_canSave = nullptr;
+static ResMgr *pUpdResMgr = nullptr;
 
 static OUString GetUpdResString( int nId )
 {
@@ -226,19 +227,19 @@ sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, sal_uInt16 nID )
 
 			OUString aDesc = SfxResId( STR_SAVEDISABLEDCANNOTSAVE );
 			aDesc = aDesc.replaceAll( "~", "" );
-			NSString *pMessageText = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
+			NSString *pMessageText = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDesc.getStr() ) length:aDesc.getLength()];
 
 			aDesc = SfxResId( STR_SAVEDISABLEDDOWNLOADPRODUCTTOSAVE );
 			aDesc = aDesc.replaceAll( "~", "" );
-			NSString *pInformativeText = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
+			NSString *pInformativeText = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDesc.getStr() ) length:aDesc.getLength()];
 
 			aDesc = GetUpdResString( RID_UPDATE_BTN_DOWNLOAD );
 			aDesc = aDesc.replaceAll( "~", "" );
-			NSString *pDefaultButton = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
+			NSString *pDefaultButton = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDesc.getStr() ) length:aDesc.getLength()];
 
 			aDesc = GetUpdResString( RID_UPDATE_BTN_CANCEL );
 			aDesc = aDesc.replaceAll( "~", "" );
-			NSString *pAlternateButton = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
+			NSString *pAlternateButton = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDesc.getStr() ) length:aDesc.getLength()];
 
 			ShowSaveDisabledDialog *pShowSaveDisabledDialog = [ShowSaveDisabledDialog createWithMessageText:pMessageText defaultButton:pDefaultButton alternateButton:pAlternateButton informativeText:pInformativeText];
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];

@@ -84,7 +84,7 @@ void DoCocoaSetWindowModifiedBit( void *pView, bool isModified )
 
 	if ( pView )
 	{
-		DoSetModified *pDoSetModified = [DoSetModified createWithState:((isModified) ? YES : NO) view:(NSView *)pView ];
+		DoSetModified *pDoSetModified = [DoSetModified createWithState:((isModified) ? YES : NO) view:static_cast< NSView* >( pView )];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pDoSetModified performSelectorOnMainThread:@selector(setModified:) withObject:pDoSetModified waitUntilDone:YES modes:pModes];
 	}

@@ -61,7 +61,7 @@ void SfxFrameLoader_openDocumentOfType( OUString aDocType )
 			[pDocTypeLaunchOptions retain];
 	}
 
-	NSString *pDocTypeKey = [NSString stringWithCharacters:aDocType.getStr() length:aDocType.getLength()];
+	NSString *pDocTypeKey = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDocType.getStr() ) length:aDocType.getLength()];
 	if ( pDocTypeLaunchOptions && pDocTypeKey && [pDocTypeKey length] )
 	{
 		NSString *pLaunchOption = [pDocTypeLaunchOptions objectForKey:pDocTypeKey];

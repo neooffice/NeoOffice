@@ -54,7 +54,7 @@
 
 typedef void Application_cacheSecurityScopedURL_Type( id pURL );
 
-static Application_cacheSecurityScopedURL_Type *pApplication_cacheSecurityScopedURL = NULL;
+static Application_cacheSecurityScopedURL_Type *pApplication_cacheSecurityScopedURL = nullptr;
 static NSString *pNoTranslationValue = @" ";
 
 using namespace com::sun::star;
@@ -251,7 +251,7 @@ static OUString NSStringToOUString( NSString *pString )
 		if ( nLen )
 		{
 			sal_Unicode aBuf[ nLen + 1 ];
-			[pString getCharacters:aBuf];
+			[pString getCharacters:reinterpret_cast< unichar* >( aBuf )];
 			aBuf[ nLen ] = 0;
 			aRet = OUString( aBuf );
 		}
@@ -268,7 +268,7 @@ static SFXDocument *GetDocumentForFrame( SfxViewFrame *pFrame )
 
 	if ( pFrame && pFrameDict )
 	{
-		NSNumber *pKey = [NSNumber numberWithUnsignedLong:(unsigned long)pFrame];
+		NSNumber *pKey = [NSNumber numberWithUnsignedLong:reinterpret_cast< unsigned long >( pFrame )];
 		if ( pKey )
 			pRet = [pFrameDict objectForKey:pKey];
 	}
@@ -292,7 +292,7 @@ static void SetDocumentForFrame( SfxViewFrame *pFrame, SFXDocument *pDoc )
 
 	if ( pFrameDict )
 	{
-		NSNumber *pKey = [NSNumber numberWithUnsignedLong:(unsigned long)pFrame];
+		NSNumber *pKey = [NSNumber numberWithUnsignedLong:reinterpret_cast< unsigned long >( pFrame )];
 		if ( pKey )
 		{
 			// If we are replacing an existing document, close the old document
@@ -307,7 +307,7 @@ static void SetDocumentForFrame( SfxViewFrame *pFrame, SFXDocument *pDoc )
 				NSArray *pOldWinControllers = [pOldDoc windowControllers];
 				while ( pOldWinControllers && [pOldWinControllers count] )
 				{
-					NSWindowController *pOldWinController = (NSWindowController *)[pOldWinControllers objectAtIndex:0];
+					NSWindowController *pOldWinController = static_cast< NSWindowController* >( [pOldWinControllers objectAtIndex:0] );
 					if ( pOldWinController )
 						[pOldDoc removeWindowController:pOldWinController];
 
@@ -536,7 +536,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 		if ( !pError && pURL )
 		{
 			if ( !pApplication_cacheSecurityScopedURL )
-				pApplication_cacheSecurityScopedURL = (Application_cacheSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" );
+				pApplication_cacheSecurityScopedURL = reinterpret_cast< Application_cacheSecurityScopedURL_Type* >( dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" ) );
 			if ( pApplication_cacheSecurityScopedURL )
 				pApplication_cacheSecurityScopedURL( pURL );
 
@@ -585,7 +585,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 	BOOL bOldIsRelinquished = [self setRelinquished:YES];
 
-	SfxObjectShell *pObjSh = NULL;
+	SfxObjectShell *pObjSh = nullptr;
 	sal_Bool bOldEnableSetModified = sal_False;
 	NSDate *pModDate = nil;
 	id pFileID = nil;
@@ -610,7 +610,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 				if ( pDoc == self )
 					pObjSh = mpFrame->GetObjectShell();
 				else
-					pObjSh = NULL;
+					pObjSh = nullptr;
 			}
 
 			// Block editing and saving
@@ -650,8 +650,8 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	rSolarMutex.release();
 
 	aReacquirer(^{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
+		comphelper::SolarMutex& rReacqSolarMutex = Application::GetSolarMutex();
+		rReacqSolarMutex.acquire();
 
 		sal_Bool bRelocked = !bWriter;
 		NSDate *pNewModDate = nil;
@@ -694,7 +694,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 					if ( pNewDoc == self )
 						pNewObjSh = mpFrame->GetObjectShell();
 					else
-						pNewObjSh = NULL;
+						pNewObjSh = nullptr;
 				}
 
 				if ( pNewObjSh && !Application::IsShutDown() )
@@ -734,7 +734,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 						if ( bMoved && pNewURL )
 						{
 							if ( !pApplication_cacheSecurityScopedURL )
-								pApplication_cacheSecurityScopedURL = (Application_cacheSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" );
+								pApplication_cacheSecurityScopedURL = reinterpret_cast< Application_cacheSecurityScopedURL_Type* >( dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" ) );
 							if ( pApplication_cacheSecurityScopedURL )
 								pApplication_cacheSecurityScopedURL( pNewURL );
 							SFXDocument_documentHasMoved( mpFrame, NSStringToOUString( [pNewURL absoluteString] ) );
@@ -747,7 +747,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 			}
 		}
 
-		rSolarMutex.release();
+		rReacqSolarMutex.release();
 
 		[self setRelinquished:bOldIsRelinquished];
 	});
@@ -976,16 +976,16 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	if ( pFileURL )
 	{
 		if ( !pApplication_cacheSecurityScopedURL )
-			pApplication_cacheSecurityScopedURL = (Application_cacheSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" );
+			pApplication_cacheSecurityScopedURL = reinterpret_cast< Application_cacheSecurityScopedURL_Type* >( dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" ) );
 		if ( pApplication_cacheSecurityScopedURL )
 			pApplication_cacheSecurityScopedURL( pFileURL );
 
 		OUString aFileURL( NSStringToOUString( [pFileURL absoluteString] ) );
 		if ( aFileURL.getLength() )
 		{
-			SfxMedium aMedium( aFileURL, STREAM_STD_READ );
+			SfxMedium aMedium( aFileURL, StreamMode::STD_READ );
 			uno::Reference< io::XInputStream > xPDFInputStream;
-		try
+			try
 			{
 				uno::Reference< embed::XStorage > xStorage( aMedium.GetStorage() );
 				if ( xStorage.is() )
@@ -996,7 +996,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 						uno::Reference< io::XStream > xPDFStream = xThumbnails->openStreamElement( "thumbnail.pdf", embed::ElementModes::READ );
 						if ( xPDFStream.is() )
 						{
-							uno::Reference< io::XInputStream > xPDFInputStream = xPDFStream->getInputStream();
+							xPDFInputStream = xPDFStream->getInputStream();
 							if ( xPDFInputStream.is() )
 							{
 								pPDFData = [NSMutableData dataWithCapacity:PDF_BUF_SIZE];
@@ -1086,7 +1086,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 					if ( mpPDFView )
 					{
 						[mpPDFView setDocument:pPDFDoc];
-						[mpPDFView setAllowsDragging:NO];
+						[mpPDFView setAcceptsDraggedFiles:NO];
 						[mpPDFView setAutoScales:YES];
 						[mpPDFView setDisplaysPageBreaks:NO];
 						[pWindow setContentView:mpPDFView];
@@ -1365,7 +1365,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	[self getDocument:pObject];
 	if ( mpDoc )
 	{
-		if ( pObject && [pObject isKindOfClass:[NSNumber class]] && [(NSNumber *)pObject boolValue] )
+		if ( pObject && [pObject isKindOfClass:[NSNumber class]] && [static_cast< NSNumber* >( pObject ) boolValue] )
 			[mpDoc setDocumentModified:YES];
 		else
 			[mpDoc setDocumentModified:NO];
@@ -1453,7 +1453,7 @@ sal_Bool NSDocument_isValidMoveToPath( OUString aPath )
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	NSString *pPath = [NSString stringWithCharacters:aPath.getStr() length:aPath.getLength()];
+	NSString *pPath = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aPath.getStr() ) length:aPath.getLength()];
 	if ( pPath )
 		bRet = IsValidMoveToPath( pPath );
 
@@ -1472,7 +1472,7 @@ sal_Bool NSDocument_versionsEnabled()
 		CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisableVersions" ), kCFPreferencesCurrentApplication );
 		if ( aPref )
 		{
-			if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
+			if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && static_cast< CFBooleanRef >( aPref ) == kCFBooleanTrue )
 				bRet = sal_False;
 			CFRelease( aPref );
 		}
@@ -1501,7 +1501,7 @@ void SFXDocument_createDocument( SfxViewFrame *pFrame, NSView *pView, CFURLRef a
 	if ( pFrame && pView )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame view:pView URL:(NSURL *)aURL readOnly:bReadOnly];
+		RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame view:pView URL:static_cast< NSURL* >( aURL ) readOnly:bReadOnly];
 		[pRunSFXDocument performSelectorOnMainThread:@selector(createDocument:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
 	}
 
