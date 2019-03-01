@@ -219,7 +219,7 @@ public:
 
 #if defined USE_JAVA && defined MACOSX
     SAL_DLLPRIVATE sal_Bool IsNeedsUpdateTitle_Impl() const;
-    DECL_LINK( CheckForMovedFile, void*, void );
+    DECL_LINK( CheckForMovedFile, Timer*, void );
 #endif  // USE_JAVA && MACOSX
 
 private:
