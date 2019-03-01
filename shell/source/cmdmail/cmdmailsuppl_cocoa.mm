@@ -149,7 +149,7 @@ sal_Bool CmdMailSuppl_sendSimpleMailMessage( Sequence< OUString > &rStringList, 
 			OUString aSystemPath;
 			if ( ::osl::FileBase::E_None == ::osl::FileBase::getSystemPathFromFileURL( rStringList[ i ], aSystemPath ) )
 			{
-				NSString *pAttachPath = [NSString stringWithCharacters:aSystemPath.getStr() length:aSystemPath.getLength()];
+				NSString *pAttachPath = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aSystemPath.getStr() ) length:aSystemPath.getLength()];
 				if ( pAttachPath )
 				{
 					NSURL *pAttachURL = [NSURL fileURLWithPath:pAttachPath];
@@ -164,7 +164,7 @@ sal_Bool CmdMailSuppl_sendSimpleMailMessage( Sequence< OUString > &rStringList, 
 			NSString *pAppID = nil;
 			if ( aMailerPath.getLength() )
 			{
-				NSString *pMailerPath = [NSString stringWithCharacters:aMailerPath.getStr() length:aMailerPath.getLength()];
+				NSString *pMailerPath = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aMailerPath.getStr() ) length:aMailerPath.getLength()];
 				if ( pMailerPath )
 				{
 					NSBundle *pBundle = [NSBundle bundleWithPath:pMailerPath];

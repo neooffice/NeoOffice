@@ -26,7 +26,6 @@
 
 #include <config_folders.h>
 
-#include <osl/diagnose.h>
 #include <osl/thread.h>
 
 #include <rtl/bootstrap.hxx>
@@ -51,18 +50,12 @@
 #include "cmdmailsuppl_cocoa.h"
 #endif  // USE_JAVA
 
-
-// namespace directives
-
-
 using com::sun::star::beans::PropertyValue;
 using com::sun::star::system::XSimpleMailClientSupplier;
 using com::sun::star::system::XSimpleMailClient;
 using com::sun::star::system::XSimpleMailMessage;
 using com::sun::star::system::XSimpleMailMessage2;
 using com::sun::star::container::XNameAccess;
-using com::sun::star::container::NoSuchElementException;
-using osl::MutexGuard;
 using osl::FileBase;
 
 using namespace cppu;
@@ -71,54 +64,35 @@ using namespace com::sun::star::uno;
 using namespace com::sun::star::lang;
 using namespace com::sun::star::configuration;
 
-#define COMP_IMPL_NAME  "com.sun.star.comp.system.SimpleCommandMail2"
-
-
-// helper functions
-
-
-namespace // private
+namespace
 {
     Sequence< OUString > SAL_CALL Component_getSupportedServiceNames()
     {
-        Sequence< OUString > aRet(1);
-        aRet[0] = "com.sun.star.system.SimpleCommandMail";
+        Sequence< OUString > aRet { "com.sun.star.system.SimpleCommandMail" };
         return aRet;
     }
 
-} // end private namespace
-
-
+}
 
 CmdMailSuppl::CmdMailSuppl( const Reference< XComponentContext >& xContext ) :
-    WeakImplHelper3< XSimpleMailClientSupplier, XSimpleMailClient, XServiceInfo >()
+    WeakImplHelper< XSimpleMailClientSupplier, XSimpleMailClient, XServiceInfo >()
 {
     m_xConfigurationProvider = theDefaultProvider::get(xContext);
 }
 
-
 // XSimpleMailClientSupplier
 
-
 Reference< XSimpleMailClient > SAL_CALL CmdMailSuppl::querySimpleMailClient(  )
-    throw (RuntimeException, std::exception)
 {
     return static_cast < XSimpleMailClient * > (this);
 }
 
-
 // XSimpleMailClient
 
-
 Reference< XSimpleMailMessage > SAL_CALL CmdMailSuppl::createSimpleMailMessage(  )
-        throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
     return Reference< XSimpleMailMessage >( new CmdMailMsg(  ) );
 }
-
-
-// XSimpleMailClient
-
 
 namespace {
 
@@ -166,17 +140,16 @@ void appendShellWord(OStringBuffer & buffer, OUString const & word, bool strict)
 }
 
 void SAL_CALL CmdMailSuppl::sendSimpleMailMessage( const Reference< XSimpleMailMessage >& xSimpleMailMessage, sal_Int32 /*aFlag*/ )
-    throw (IllegalArgumentException, Exception, RuntimeException, std::exception)
 {
     if ( ! xSimpleMailMessage.is() )
     {
-        throw ::com::sun::star::lang::IllegalArgumentException( "No message specified" ,
+        throw css::lang::IllegalArgumentException( "No message specified" ,
             static_cast < XSimpleMailClient * > (this), 1 );
     }
 
     if( ! m_xConfigurationProvider.is() )
     {
-        throw ::com::sun::star::uno::Exception( "Can not access configuration" ,
+        throw css::uno::Exception( "Can not access configuration" ,
             static_cast < XSimpleMailClient * > (this) );
     }
 
@@ -190,7 +163,7 @@ void SAL_CALL CmdMailSuppl::sendSimpleMailMessage( const Reference< XSimpleMailM
     OUString aProgram;
     if ( FileBase::E_None != FileBase::getSystemPathFromFileURL(aProgramURL, aProgram))
     {
-        throw ::com::sun::star::uno::Exception("Cound not convert executable path",
+        throw css::uno::Exception("Cound not convert executable path",
             static_cast < XSimpleMailClient * > (this));
     }
 
@@ -201,21 +174,21 @@ void SAL_CALL CmdMailSuppl::sendSimpleMailMessage( const Reference< XSimpleMailM
     try
     {
         // Query XNameAccess interface of the org.openoffice.Office.Common/ExternalMailer
-        // configuration node to retriece the users preferred email application. This may
+        // configuration node to retrieve the users preferred email application. This may
         // transparently by redirected to e.g. the corresponding GConf setting in GNOME.
         OUString aConfigRoot = "org.openoffice.Office.Common/ExternalMailer";
 
         PropertyValue aProperty;
         aProperty.Name = "nodepath";
-        aProperty.Value = makeAny( aConfigRoot );
+        aProperty.Value <<= aConfigRoot;
 
         Sequence< Any > aArgumentList( 1 );
-        aArgumentList[0] = makeAny( aProperty );
+        aArgumentList[0] <<= aProperty;
 
         Reference< XNameAccess > xNameAccess =
             Reference< XNameAccess > (
                 m_xConfigurationProvider->createInstanceWithArguments(
-                    OUString("com.sun.star.configuration.ConfigurationAccess"),
+                    "com.sun.star.configuration.ConfigurationAccess",
                     aArgumentList ),
                 UNO_QUERY );
 
@@ -250,8 +223,7 @@ void SAL_CALL CmdMailSuppl::sendSimpleMailMessage( const Reference< XSimpleMailM
     catch(const RuntimeException &e )
     {
         m_xConfigurationProvider.clear();
-        OSL_TRACE( "RuntimeException caught accessing configuration provider." );
-        OSL_TRACE( "%s", OUStringToOString( e.Message, RTL_TEXTENCODING_ASCII_US ).getStr() );
+        SAL_WARN("shell", "RuntimeException caught accessing configuration provider. " << e.Message );
         throw;
     }
 
@@ -279,7 +251,7 @@ void SAL_CALL CmdMailSuppl::sendSimpleMailMessage( const Reference< XSimpleMailM
         appendShellWord(aBuffer, xSimpleMailMessage->getOriginator(), false);
     }
 
-    // Append receipient if set in the message
+    // Append recipient if set in the message
     if ( !xSimpleMailMessage->getRecipient().isEmpty() )
     {
         aBuffer.append(" --to ");
@@ -331,31 +303,27 @@ void SAL_CALL CmdMailSuppl::sendSimpleMailMessage( const Reference< XSimpleMailM
 #else	// USE_JAVA
     OString cmd = aBuffer.makeStringAndClear();
     FILE * f = popen(cmd.getStr(), "w");
-    if (f == 0 || pclose(f) != 0)
+    if (f == nullptr || pclose(f) != 0)
 #endif	// USE_JAVA
     {
-        throw ::com::sun::star::uno::Exception("No mail client configured",
+        throw css::uno::Exception("No mail client configured",
             static_cast < XSimpleMailClient * > (this) );
     }
 }
 
 // XServiceInfo
+
 OUString SAL_CALL CmdMailSuppl::getImplementationName(  )
-    throw( RuntimeException, std::exception )
 {
-    return OUString(COMP_IMPL_NAME);
+    return OUString("com.sun.star.comp.system.SimpleCommandMail");
 }
 
-//  XServiceInfo
 sal_Bool SAL_CALL CmdMailSuppl::supportsService( const OUString& ServiceName )
-    throw( RuntimeException, std::exception )
 {
     return cppu::supportsService(this, ServiceName);
 }
 
-//  XServiceInfo
 Sequence< OUString > SAL_CALL CmdMailSuppl::getSupportedServiceNames(    )
-    throw( RuntimeException, std::exception )
 {
     return Component_getSupportedServiceNames();
 }

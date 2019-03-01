@@ -124,7 +124,7 @@ sal_Bool ShellExec_openURL( OUString &rURL )
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	NSString *pURLString = [NSString stringWithCharacters:rURL.getStr() length:rURL.getLength()];
+	NSString *pURLString = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( rURL.getStr() ) length:rURL.getLength()];
 	if ( pURLString )
 	{
 		NSURL *pURL = [NSURL URLWithString:pURLString];

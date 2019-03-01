@@ -26,14 +26,15 @@
 
 #include <config_folders.h>
 
-#include <osl/diagnose.h>
 #include <osl/thread.h>
 #include <osl/process.h>
 #include <osl/file.hxx>
+#include <rtl/strbuf.hxx>
 #include <rtl/ustrbuf.hxx>
 
 #include <rtl/uri.hxx>
 #include "shellexec.hxx"
+#include <com/sun/star/system/SystemShellExecuteException.hpp>
 #include <com/sun/star/system/SystemShellExecuteFlags.hpp>
 
 #include <com/sun/star/util/theMacroExpander.hpp>
@@ -58,59 +59,44 @@ typedef void* id;
 typedef id Application_acquireSecurityScopedURLFromOUString_Type( const OUString *pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const OUString *pDialogTitle );
 typedef void Application_releaseSecurityScopedURL_Type( id pSecurityScopedURLs );
 
-static Application_acquireSecurityScopedURLFromOUString_Type *pApplication_acquireSecurityScopedURLFromOUString = NULL;
-static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
+static Application_acquireSecurityScopedURLFromOUString_Type *pApplication_acquireSecurityScopedURLFromOUString = nullptr;
+static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = nullptr;
 
 #endif	// USE_JAVA && MACOSX
 
-
-// namespace directives
-
-
 using com::sun::star::system::XSystemShellExecute;
 using com::sun::star::system::SystemShellExecuteException;
-
-using osl::FileBase;
 
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::system::SystemShellExecuteFlags;
 using namespace cppu;
 
-#define SHELLEXEC_IMPL_NAME  "com.sun.star.comp.system.SystemShellExecute2"
-
-
-// helper functions
-
-
-namespace // private
+namespace
 {
     Sequence< OUString > SAL_CALL ShellExec_getSupportedServiceNames()
     {
-        Sequence< OUString > aRet(1);
-        aRet[0] = "com.sun.star.sys.shell.SystemShellExecute";
+        Sequence< OUString > aRet { "com.sun.star.system.SystemShellExecute" };
         return aRet;
     }
-}
 
-void escapeForShell( OStringBuffer & rBuffer, const OString & rURL)
-{
-    sal_Int32 nmax = rURL.getLength();
-    for(sal_Int32 n=0; n < nmax; ++n)
+    void escapeForShell( OStringBuffer & rBuffer, const OString & rURL)
     {
-        // escape every non alpha numeric characters (excluding a few "known good") by prepending a '\'
-        sal_Char c = rURL[n];
-        if( ( c < 'A' || c > 'Z' ) && ( c < 'a' || c > 'z' ) && ( c < '0' || c > '9' )  && c != '/' && c != '.' )
-            rBuffer.append( '\\' );
+        sal_Int32 nmax = rURL.getLength();
+        for(sal_Int32 n=0; n < nmax; ++n)
+        {
+            // escape every non alpha numeric characters (excluding a few "known good") by prepending a '\'
+            sal_Char c = rURL[n];
+            if( ( c < 'A' || c > 'Z' ) && ( c < 'a' || c > 'z' ) && ( c < '0' || c > '9' )  && c != '/' && c != '.' )
+                rBuffer.append( '\\' );
 
-        rBuffer.append( c );
+            rBuffer.append( c );
+        }
     }
 }
 
-
-
 ShellExec::ShellExec( const Reference< XComponentContext >& xContext ) :
-    WeakImplHelper2< XSystemShellExecute, XServiceInfo >(),
+    WeakImplHelper< XSystemShellExecute, XServiceInfo >(),
     m_xContext(xContext)
 {
     try {
@@ -118,8 +104,7 @@ ShellExec::ShellExec( const Reference< XComponentContext >& xContext ) :
 
         if (xCurrentContext.is())
         {
-            Any aValue = xCurrentContext->getValueByName(
-                OUString( "system.desktop-environment"  ) );
+            Any aValue = xCurrentContext->getValueByName( "system.desktop-environment" );
 
             OUString aDesktopEnvironment;
             if (aValue >>= aDesktopEnvironment)
@@ -131,15 +116,17 @@ ShellExec::ShellExec( const Reference< XComponentContext >& xContext ) :
     }
 }
 
-
-
 void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aParameter, sal_Int32 nFlags )
-    throw (IllegalArgumentException, SystemShellExecuteException, RuntimeException, std::exception)
 {
+#if defined USE_JAVA && defined MACOSX
+    OStringBuffer aBuffer;
+
+#else	// USE_JAVA && MACOSX
     OStringBuffer aBuffer, aLaunchBuffer;
 
     // DESKTOP_LAUNCH, see http://freedesktop.org/pipermail/xdg/2004-August/004489.html
     static const char *pDesktopLaunch = getenv( "DESKTOP_LAUNCH" );
+#endif	// USE_JAVA && MACOSX
 
     // Check whether aCommand contains an absolute URI reference:
     css::uno::Reference< css::uri::XUriReference > uri(
@@ -150,13 +137,12 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
         // We need to re-encode file urls because osl_getFileURLFromSystemPath converts
         // to UTF-8 before encoding non ascii characters, which is not what other apps
         // expect.
-        OUString aURL(
-            com::sun::star::uri::ExternalUriReferenceTranslator::create(
-                m_xContext)->translateToExternal(aCommand));
+        OUString aURL = css::uri::ExternalUriReferenceTranslator::create(
+                            m_xContext)->translateToExternal(aCommand);
         if ( aURL.isEmpty() && !aCommand.isEmpty() )
         {
             throw RuntimeException(
-                OUString("Cannot translate URI reference to external format: ")
+                "Cannot translate URI reference to external format: "
                  + aCommand,
                 static_cast< cppu::OWeakObject * >(this));
         }
@@ -164,19 +150,19 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
 #if defined USE_JAVA && defined MACOSX
         // Fix failure to open file URL hyperlinks by obtaining a security
         // scoped bookmark before opening the URL
-        id pSecurityScopedURL = NULL;
+        id pSecurityScopedURL = nullptr;
         if ( 0 == aURL.startsWith("file://") )
         {
             if ( !pApplication_acquireSecurityScopedURLFromOUString )
-                pApplication_acquireSecurityScopedURLFromOUString = (Application_acquireSecurityScopedURLFromOUString_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromOUString" );
+                pApplication_acquireSecurityScopedURLFromOUString = reinterpret_cast< Application_acquireSecurityScopedURLFromOUString_Type* >( dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromOUString" ) );
             if ( !pApplication_releaseSecurityScopedURL )
-                pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
+                pApplication_releaseSecurityScopedURL = reinterpret_cast< Application_releaseSecurityScopedURL_Type* >( dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" ) );
             if ( pApplication_acquireSecurityScopedURLFromOUString && pApplication_releaseSecurityScopedURL )
-                pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromOUString( &aURL, sal_True, NULL );
+                pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromOUString( &aURL, sal_True, nullptr );
         }
 
         // Fix bug 3584 by not throwing an exception if we can't open a URL
-        sal_Bool bOpened = ShellExec_openURL( aURL );
+        ShellExec_openURL( aURL );
 
         if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
             pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
@@ -206,54 +192,8 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
         //  the CWD) on stderr and SystemShellExecuteException.
         aBuffer.append("open --");
 #else
-        // The url launchers are expected to be in the $BRAND_BASE_DIR/LIBO_LIBEXEC_FOLDER
-        // directory:
-        com::sun::star::uno::Reference< com::sun::star::util::XMacroExpander >
-            exp = com::sun::star::util::theMacroExpander::get(m_xContext);
-        OUString aProgramURL;
-        try {
-            aProgramURL = exp->expandMacros(
-                OUString( "$BRAND_BASE_DIR/" LIBO_LIBEXEC_FOLDER "/"));
-        } catch (com::sun::star::lang::IllegalArgumentException &)
-        {
-            throw SystemShellExecuteException(
-                "Could not expand $BRAND_BASE_DIR path",
-                static_cast < XSystemShellExecute * > (this), ENOENT );
-        }
-
-        OUString aProgram;
-        if ( FileBase::E_None != FileBase::getSystemPathFromFileURL(aProgramURL, aProgram))
-        {
-            throw SystemShellExecuteException(
-                "Cound not convert executable path",
-                static_cast < XSystemShellExecute * > (this), ENOENT );
-        }
-
-        OString aTmp = OUStringToOString(aProgram, osl_getThreadTextEncoding());
-        escapeForShell(aBuffer, aTmp);
-
-#ifdef SOLARIS
-        if ( m_aDesktopEnvironment.getLength() == 0 )
-             m_aDesktopEnvironment = OString("GNOME");
-#endif
-
-        // Respect the desktop environment - if there is an executable named
-        // <desktop-environement-is>-open-url, pass the url to this one instead
-        // of the default "open-url" script.
-        if ( !m_aDesktopEnvironment.isEmpty() )
-        {
-            OString aDesktopEnvironment(m_aDesktopEnvironment.toAsciiLowerCase());
-            OStringBuffer aCopy(aTmp);
-
-            aCopy.append(aDesktopEnvironment + "-open-url");
-
-            if ( 0 == access( aCopy.getStr(), X_OK) )
-            {
-                aBuffer.append(aDesktopEnvironment + "-");
-            }
-        }
-
-        aBuffer.append("open-url");
+        // Just use xdg-open on non-Mac
+        aBuffer.append("/usr/bin/xdg-open");
 #endif
         aBuffer.append(" ");
         escapeForShell(aBuffer, OUStringToOString(aURL, osl_getThreadTextEncoding()));
@@ -266,8 +206,8 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
     } else if ((nFlags & css::system::SystemShellExecuteFlags::URIS_ONLY) != 0)
     {
         throw css::lang::IllegalArgumentException(
-            OUString("XSystemShellExecute.execute URIS_ONLY with non-absolute"
-                     " URI reference ")
+            "XSystemShellExecute.execute URIS_ONLY with non-absolute"
+                     " URI reference "
              + aCommand,
             static_cast< cppu::OWeakObject * >(this), 0);
 #endif	// USE_JAVA && MACOSX
@@ -285,13 +225,13 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
     if ( !aLaunchBuffer.isEmpty() )
     {
         FILE *pLaunch = popen( aLaunchBuffer.makeStringAndClear().getStr(), "w" );
-        if ( pLaunch != NULL )
+        if ( pLaunch != nullptr )
         {
             if ( 0 == pclose( pLaunch ) )
                 return;
         }
         // Failed, do not try DESKTOP_LAUNCH any more
-        pDesktopLaunch = NULL;
+        pDesktopLaunch = nullptr;
     }
 #endif	// !USE_JAVA
 
@@ -303,7 +243,7 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
         aBuffer.makeStringAndClear();
 #endif
     FILE *pLaunch = popen(cmd.getStr(), "w");
-    if ( pLaunch != NULL )
+    if ( pLaunch != nullptr )
     {
         if ( 0 == pclose( pLaunch ) )
             return;
@@ -315,22 +255,18 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
 }
 
 // XServiceInfo
+
 OUString SAL_CALL ShellExec::getImplementationName(  )
-    throw( RuntimeException, std::exception )
 {
-    return OUString(SHELLEXEC_IMPL_NAME );
+    return OUString("com.sun.star.comp.system.SystemShellExecute");
 }
 
-//  XServiceInfo
 sal_Bool SAL_CALL ShellExec::supportsService( const OUString& ServiceName )
-    throw( RuntimeException, std::exception )
 {
     return cppu::supportsService(this, ServiceName);
 }
 
-//  XServiceInfo
 Sequence< OUString > SAL_CALL ShellExec::getSupportedServiceNames(   )
-    throw( RuntimeException, std::exception )
 {
     return ShellExec_getSupportedServiceNames();
 }
