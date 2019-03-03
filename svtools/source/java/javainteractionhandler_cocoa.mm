@@ -69,7 +69,7 @@
 
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
 #ifdef PRODUCT_JAVA_DOWNLOAD_URL
-	NSURL *pURL = [NSURL URLWithString:(NSString *)CFSTR( PRODUCT_JAVA_DOWNLOAD_URL )];
+	NSURL *pURL = [NSURL URLWithString:static_cast< NSString* >( CFSTR( PRODUCT_JAVA_DOWNLOAD_URL ) )];
 	if ( pWorkspace && pURL && ( [@"macappstores" isEqualToString:[pURL scheme]] || [@"http" isEqualToString:[pURL scheme]] || [@"https" isEqualToString:[pURL scheme]] ) )
 		[pWorkspace openURL:pURL];
 #endif	// PRODUCT_JAVA_DOWNLOAD_URL
