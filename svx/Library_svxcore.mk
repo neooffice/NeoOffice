@@ -15,7 +15,7 @@
 #   License, Version 2.0 (the "License"); you may not use this file
 #   except in compliance with the License. You may obtain a copy of
 #   the License at http://www.apache.org/licenses/LICENSE-2.0 .
-# 
+#
 #   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
 #   under the GNU General Public License, Version 3 as allowed by Section 3.3
 #   of the Mozilla Public License, v. 2.0.
@@ -54,7 +54,6 @@ $(eval $(call gb_Library_set_precompiled_header,svxcore,$(SRCDIR)/svx/inc/pch/pr
 $(eval $(call gb_Library_add_defs,svxcore,\
     -DSVX_DLLIMPLEMENTATION \
     -DBOOST_SPIRIT_USE_OLD_NAMESPACE \
-    -DDBTOOLS_DLL_NAME=\"$(call gb_Library_get_runtime_filename,$(call gb_Library__get_name,dbtools))\" \
 ))
 
 $(eval $(call gb_Library_use_libraries,svxcore,\
@@ -85,16 +84,19 @@ $(eval $(call gb_Library_use_libraries,svxcore,\
     utl \
     vcl \
     xo \
-	$(gb_UWINAPI) \
 ))
 
 $(eval $(call gb_Library_use_externals,svxcore,\
 	boost_headers \
 	icuuc \
 	icu_headers \
-	mesa_headers \
-	glew \
+	libxml2 \
 ))
+ifeq ($(ENABLE_HEADLESS),)
+$(eval $(call gb_Library_use_externals,svxcore,\
+     epoxy \
+ ))
+endif
 
 ifeq ($(OS),MACOSX)
 
@@ -120,10 +122,16 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/dialog/checklbx \
     svx/source/dialog/dialmgr \
     svx/source/dialog/dlgutil \
+    svx/source/dialog/hexcolorcontrol \
     svx/source/dialog/framelink \
     svx/source/dialog/langbox \
+    svx/source/dialog/pagenumberlistbox \
+    svx/source/dialog/papersizelistbox \
+    svx/source/dialog/samecontentlistbox \
+    svx/source/dialog/spacinglistbox \
     svx/source/dialog/stddlg \
     svx/source/dialog/svxdlg \
+    svx/source/dialog/SvxNumOptionsTabPageHelper \
     svx/source/engine3d/camera3d \
     svx/source/engine3d/cube3d \
     svx/source/engine3d/deflt3d \
@@ -137,7 +145,6 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/engine3d/obj3d \
     svx/source/engine3d/objfac3d \
     svx/source/engine3d/polygn3d \
-    svx/source/engine3d/polysc3d \
     svx/source/engine3d/scene3d \
     svx/source/engine3d/sphere3d \
     svx/source/engine3d/svx3ditems \
@@ -184,7 +191,6 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/sdr/contact/viewobjectcontactofpageobj \
     svx/source/sdr/contact/viewobjectcontactofe3dscene \
     svx/source/sdr/contact/viewcontactofgraphic \
-    svx/source/sdr/contact/viewcontactofopenglobj \
     svx/source/sdr/contact/viewobjectcontactredirector \
     svx/source/sdr/contact/viewcontactofsdrcircobj \
     svx/source/sdr/contact/viewcontactofgroup \
@@ -219,7 +225,6 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/sdr/contact/viewcontactofsdrmeasureobj \
     svx/source/sdr/contact/objectcontactofobjlistpainter \
     svx/source/sdr/contact/viewobjectcontactofe3d \
-    svx/source/sdr/contact/viewobjectcontactofopenglobj \
     svx/source/sdr/event/eventhandler \
     svx/source/sdr/overlay/overlayline \
     svx/source/sdr/overlay/overlaycrosshair \
@@ -238,6 +243,7 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/sdr/overlay/overlayobject \
     svx/source/sdr/overlay/overlaymanager \
     svx/source/sdr/overlay/overlayobjectlist \
+    svx/source/sdr/overlay/overlayhandle \
     svx/source/sdr/primitive2d/sdrellipseprimitive2d \
     svx/source/sdr/primitive2d/sdrprimitivetools \
     svx/source/sdr/primitive2d/sdrtextprimitive2d \
@@ -321,7 +327,6 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/svdraw/svdomeas \
     svx/source/svdraw/svdomedia \
     svx/source/svdraw/svdoole2 \
-    svx/source/svdraw/svdoopengl \
     svx/source/svdraw/svdopage \
     svx/source/svdraw/svdopath \
     svx/source/svdraw/svdorect \
@@ -349,6 +354,12 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/svdraw/svdview \
     svx/source/svdraw/svdviter \
     svx/source/svdraw/svdxcgv \
+    svx/source/svdraw/textchain \
+    svx/source/svdraw/textchainflow \
+    svx/source/svdraw/textchaincursor \
+    svx/source/styles/CommonStylePreviewRenderer \
+    svx/source/styles/CommonStyleManager \
+    svx/source/styles/ColorSets \
     svx/source/table/cell \
     svx/source/table/cellcursor \
     svx/source/table/cellrange \
@@ -371,6 +382,7 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/tbxctrls/tbcontrl \
     svx/source/tbxctrls/tbxcolorupdate \
     svx/source/tbxctrls/SvxColorValueSet \
+    svx/source/tbxctrls/SvxPresetListBox \
     svx/source/toolbars/extrusionbar \
     svx/source/toolbars/fontworkbar \
     svx/source/unodraw/gluepts \
@@ -413,6 +425,7 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/xoutdev/xtabgrdt \
     svx/source/xoutdev/xtabhtch \
     svx/source/xoutdev/xtable \
+    svx/source/xoutdev/xtabptrn \
     svx/source/xoutdev/XPropertyEntry \
     svx/source/xoutdev/xtablend \
 ))
@@ -428,7 +441,6 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/form/dataaccessdescriptor \
     svx/source/form/datalistener \
     svx/source/form/datanavi \
-    svx/source/form/dbtoolsclient \
     svx/source/form/delayedevent \
     svx/source/form/fmcontrolbordermanager \
     svx/source/form/fmcontrollayout \
@@ -465,9 +477,9 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/form/ParseContext \
     svx/source/form/sdbdatacolumn \
     svx/source/form/sqlparserclient \
-    svx/source/form/stringlistresource \
     svx/source/form/typemap \
     svx/source/form/xfm_addcondition \
+    svx/source/uitest/sdrobject \
 ))
 
 $(eval $(call gb_SdiTarget_SdiTarget,svx/sdi/svxslots,svx/sdi/svx))
