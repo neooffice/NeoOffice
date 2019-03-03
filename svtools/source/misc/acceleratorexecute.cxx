@@ -24,6 +24,7 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <memory>
 #include <svtools/acceleratorexecute.hxx>
 
 #include <com/sun/star/frame/ModuleManager.hpp>
@@ -40,6 +41,7 @@
 #include <com/sun/star/util/URLTransformer.hpp>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <comphelper/processfactory.hxx>
+#include <cppuhelper/implbase.hxx>
 
 #include <vcl/window.hxx>
 #include <vcl/svapp.hxx>
@@ -49,14 +51,16 @@
 #include <com/sun/star/uno/XReference.hpp>
 #endif	// USE_JAVA
 
-
 namespace svt
 {
 
-
-
-class SVT_DLLPRIVATE AsyncAccelExec
+class AsyncAccelExec : public cppu::WeakImplHelper<css::lang::XEventListener>
 {
+    private:
+        css::uno::Reference<css::lang::XComponent> m_xFrame;
+        css::uno::Reference< css::frame::XDispatch > m_xDispatch;
+        css::util::URL m_aURL;
+        vcl::EventPoster m_aAsyncCallback;
     public:
 
         /** creates a new instance of this class, which can be used
@@ -65,43 +69,35 @@ class SVT_DLLPRIVATE AsyncAccelExec
             This instance can be forced to execute it's internal set request
             asynchronous. After that it deletes itself !
          */
-        static AsyncAccelExec* createOnShotInstance(const css::uno::Reference< css::frame::XDispatch >& xDispatch,
-                                                    const css::util::URL&                               aURL     );
+        static AsyncAccelExec* createOnShotInstance(const css::uno::Reference<css::lang::XComponent>& xFrame,
+                                                    const css::uno::Reference<css::frame::XDispatch>& xDispatch,
+                                                    const css::util::URL& rURL);
 
         void execAsync();
-
     private:
+
+        virtual void SAL_CALL disposing(const css::lang::EventObject&) override
+        {
+            m_xFrame->removeEventListener(this);
+            m_xFrame.clear();
+            m_xDispatch.clear();
+        }
 
         /** @short  allow creation of instances of this class
                     by using our factory only!
          */
-        SVT_DLLPRIVATE AsyncAccelExec(const css::uno::Reference< css::frame::XDispatch >& xDispatch,
-                                      const css::util::URL&                               aURL     );
+        AsyncAccelExec(const css::uno::Reference<css::lang::XComponent>& xFrame,
+                                      const css::uno::Reference< css::frame::XDispatch >& xDispatch,
+                                      const css::util::URL& rURL);
 
-        DECL_DLLPRIVATE_LINK(impl_ts_asyncCallback, void*);
-
-    private:
-        ::vcl::EventPoster m_aAsyncCallback;
-        css::uno::Reference< css::frame::XDispatch > m_xDispatch;
-        css::util::URL m_aURL;
+        DECL_LINK(impl_ts_asyncCallback, LinkParamNone*, void);
 };
 
 
 AcceleratorExecute::AcceleratorExecute()
-    : TMutexInit      (                                                     )
-    , m_aAsyncCallback(LINK(this, AcceleratorExecute, impl_ts_asyncCallback))
+    : TMutexInit()
 {
 }
-
-
-AcceleratorExecute::AcceleratorExecute(const AcceleratorExecute&)
-    : TMutexInit      (                                                     )
-    , m_aAsyncCallback(LINK(this, AcceleratorExecute, impl_ts_asyncCallback))
-{
-    // copy construction sint supported in real ...
-    // but we need this ctor to init our async callback ...
-}
-
 
 AcceleratorExecute::~AcceleratorExecute()
 {
@@ -126,10 +122,9 @@ AcceleratorExecute::~AcceleratorExecute()
 }
 
 
-AcceleratorExecute* AcceleratorExecute::createAcceleratorHelper()
+std::unique_ptr<AcceleratorExecute> AcceleratorExecute::createAcceleratorHelper()
 {
-    AcceleratorExecute* pNew = new AcceleratorExecute();
-    return pNew;
+    return std::unique_ptr<AcceleratorExecute>(new AcceleratorExecute);
 }
 
 
@@ -145,7 +140,7 @@ void AcceleratorExecute::init(const css::uno::Reference< css::uno::XComponentCon
     // specify our internal dispatch provider
     // frame or desktop?! => document or global config.
     bool bDesktopIsUsed = false;
-    m_xDispatcher  = css::uno::Reference< css::frame::XDispatchProvider >(xEnv, css::uno::UNO_QUERY);
+    m_xDispatcher.set(xEnv, css::uno::UNO_QUERY);
     if (!m_xDispatcher.is())
     {
         aLock.clear();
@@ -241,7 +236,8 @@ bool AcceleratorExecute::execute(const css::awt::KeyEvent& aAWTKey)
     if ( bRet )
     {
         // Note: Such instance can be used one times only and destroy itself afterwards .-)
-        AsyncAccelExec* pExec = AsyncAccelExec::createOnShotInstance(xDispatch, aURL);
+        css::uno::Reference<css::lang::XComponent> xFrame(xProvider, css::uno::UNO_QUERY);
+        AsyncAccelExec* pExec = AsyncAccelExec::createOnShotInstance(xFrame, xDispatch, aURL);
         pExec->execAsync();
     }
 
@@ -332,65 +328,65 @@ OUString AcceleratorExecute::impl_ts_findCommand(const css::awt::KeyEvent& aKey)
     {
         switch( aKey.KeyCode )
         {
-        case com::sun::star::awt::Key::DELETE_TO_BEGIN_OF_LINE:
+        case css::awt::Key::DELETE_TO_BEGIN_OF_LINE:
             return OUString( ".uno:DelToStartOfLine" );
-        case com::sun::star::awt::Key::DELETE_TO_END_OF_LINE:
+        case css::awt::Key::DELETE_TO_END_OF_LINE:
             return OUString( ".uno:DelToEndOfLine" );
-        case com::sun::star::awt::Key::DELETE_TO_BEGIN_OF_PARAGRAPH:
+        case css::awt::Key::DELETE_TO_BEGIN_OF_PARAGRAPH:
             return OUString( ".uno:DelToStartOfPara" );
-        case com::sun::star::awt::Key::DELETE_TO_END_OF_PARAGRAPH:
+        case css::awt::Key::DELETE_TO_END_OF_PARAGRAPH:
             return OUString( ".uno:DelToEndOfPara" );
-        case com::sun::star::awt::Key::DELETE_WORD_BACKWARD:
+        case css::awt::Key::DELETE_WORD_BACKWARD:
             return OUString( ".uno:DelToStartOfWord" );
-        case com::sun::star::awt::Key::DELETE_WORD_FORWARD:
+        case css::awt::Key::DELETE_WORD_FORWARD:
             return OUString( ".uno:DelToEndOfWord" );
-        case com::sun::star::awt::Key::INSERT_LINEBREAK:
+        case css::awt::Key::INSERT_LINEBREAK:
             return OUString( ".uno:InsertLinebreak" );
-        case com::sun::star::awt::Key::INSERT_PARAGRAPH:
+        case css::awt::Key::INSERT_PARAGRAPH:
             return OUString( ".uno:InsertPara" );
-        case com::sun::star::awt::Key::MOVE_WORD_BACKWARD:
+        case css::awt::Key::MOVE_WORD_BACKWARD:
             return OUString( ".uno:GoToPrevWord" );
-        case com::sun::star::awt::Key::MOVE_WORD_FORWARD:
+        case css::awt::Key::MOVE_WORD_FORWARD:
             return OUString( ".uno:GoToNextWord" );
-        case com::sun::star::awt::Key::MOVE_TO_BEGIN_OF_LINE:
+        case css::awt::Key::MOVE_TO_BEGIN_OF_LINE:
             return OUString( ".uno:GoToStartOfLine" );
-        case com::sun::star::awt::Key::MOVE_TO_END_OF_LINE:
+        case css::awt::Key::MOVE_TO_END_OF_LINE:
             return OUString( ".uno:GoToEndOfLine" );
-        case com::sun::star::awt::Key::MOVE_TO_BEGIN_OF_PARAGRAPH:
+        case css::awt::Key::MOVE_TO_BEGIN_OF_PARAGRAPH:
             return OUString( ".uno:GoToStartOfPara" );
-        case com::sun::star::awt::Key::MOVE_TO_END_OF_PARAGRAPH:
+        case css::awt::Key::MOVE_TO_END_OF_PARAGRAPH:
             return OUString( ".uno:GoToEndOfPara" );
-        case com::sun::star::awt::Key::MOVE_TO_BEGIN_OF_DOCUMENT:
+        case css::awt::Key::MOVE_TO_BEGIN_OF_DOCUMENT:
             return OUString( ".uno:GoToStartOfDoc" );
-        case com::sun::star::awt::Key::MOVE_TO_END_OF_DOCUMENT:
+        case css::awt::Key::MOVE_TO_END_OF_DOCUMENT:
             return OUString( ".uno:GoToEndOfDoc" );
-        case com::sun::star::awt::Key::SELECT_BACKWARD:
+        case css::awt::Key::SELECT_BACKWARD:
             return OUString( ".uno:CharLeftSel" );
-        case com::sun::star::awt::Key::SELECT_FORWARD:
+        case css::awt::Key::SELECT_FORWARD:
             return OUString( ".uno:CharRightSel" );
-        case com::sun::star::awt::Key::SELECT_WORD_BACKWARD:
+        case css::awt::Key::SELECT_WORD_BACKWARD:
             return OUString( ".uno:WordLeftSel" );
-        case com::sun::star::awt::Key::SELECT_WORD_FORWARD:
+        case css::awt::Key::SELECT_WORD_FORWARD:
             return OUString( ".uno:WordRightSel" );
-        case com::sun::star::awt::Key::SELECT_WORD:
+        case css::awt::Key::SELECT_WORD:
             return OUString( ".uno:SelectWord" );
-        case com::sun::star::awt::Key::SELECT_LINE:
+        case css::awt::Key::SELECT_LINE:
             return OUString();
-        case com::sun::star::awt::Key::SELECT_PARAGRAPH:
+        case css::awt::Key::SELECT_PARAGRAPH:
             return OUString( ".uno:SelectText" );
-        case com::sun::star::awt::Key::SELECT_TO_BEGIN_OF_LINE:
+        case css::awt::Key::SELECT_TO_BEGIN_OF_LINE:
             return OUString( ".uno:StartOfLineSel" );
-        case com::sun::star::awt::Key::SELECT_TO_END_OF_LINE:
+        case css::awt::Key::SELECT_TO_END_OF_LINE:
             return OUString( ".uno:EndOfLineSel" );
-        case com::sun::star::awt::Key::SELECT_TO_BEGIN_OF_PARAGRAPH:
+        case css::awt::Key::SELECT_TO_BEGIN_OF_PARAGRAPH:
             return OUString( ".uno:StartOfParaSel" );
-        case com::sun::star::awt::Key::SELECT_TO_END_OF_PARAGRAPH:
+        case css::awt::Key::SELECT_TO_END_OF_PARAGRAPH:
             return OUString( ".uno:EndOfParaSel" );
-        case com::sun::star::awt::Key::SELECT_TO_BEGIN_OF_DOCUMENT:
+        case css::awt::Key::SELECT_TO_BEGIN_OF_DOCUMENT:
             return OUString( ".uno:StartOfDocumentSel" );
-        case com::sun::star::awt::Key::SELECT_TO_END_OF_DOCUMENT:
+        case css::awt::Key::SELECT_TO_END_OF_DOCUMENT:
             return OUString( ".uno:EndOfDocumentSel" );
-        case com::sun::star::awt::Key::SELECT_ALL:
+        case css::awt::Key::SELECT_ALL:
             return OUString( ".uno:SelectAll" );
         default:
             break;
@@ -474,56 +470,48 @@ css::uno::Reference< css::util::XURLTransformer > AcceleratorExecute::impl_ts_ge
     return xParser;
 }
 
-
-IMPL_LINK_NOARG(AcceleratorExecute, impl_ts_asyncCallback)
-{
-    // replaced by AsyncAccelExec!
-    return 0;
-}
-
-
-AsyncAccelExec::AsyncAccelExec(const css::uno::Reference< css::frame::XDispatch >& xDispatch,
-                               const css::util::URL&                               aURL     )
-    : m_aAsyncCallback(LINK(this, AsyncAccelExec, impl_ts_asyncCallback))
-    , m_xDispatch     (xDispatch                                        )
-    , m_aURL          (aURL                                             )
+AsyncAccelExec::AsyncAccelExec(const css::uno::Reference<css::lang::XComponent>& xFrame,
+                               const css::uno::Reference<css::frame::XDispatch>& xDispatch,
+                               const css::util::URL& rURL)
+    : m_xFrame(xFrame)
+    , m_xDispatch(xDispatch)
+    , m_aURL(rURL)
+    , m_aAsyncCallback(LINK(this, AsyncAccelExec, impl_ts_asyncCallback))
 {
 }
 
-
-AsyncAccelExec* AsyncAccelExec::createOnShotInstance(const css::uno::Reference< css::frame::XDispatch >& xDispatch,
-                                                     const css::util::URL&                               aURL     )
+AsyncAccelExec* AsyncAccelExec::createOnShotInstance(const css::uno::Reference<css::lang::XComponent> &xFrame,
+                                                     const css::uno::Reference< css::frame::XDispatch >& xDispatch,
+                                                     const css::util::URL& rURL)
 {
-    AsyncAccelExec* pExec = new AsyncAccelExec(xDispatch, aURL);
+    AsyncAccelExec* pExec = new AsyncAccelExec(xFrame, xDispatch, rURL);
     return pExec;
 }
 
 
 void AsyncAccelExec::execAsync()
 {
-    m_aAsyncCallback.Post(0);
+    acquire();
+    if (m_xFrame.is())
+        m_xFrame->addEventListener(this);
+    m_aAsyncCallback.Post();
 }
 
-
-IMPL_LINK(AsyncAccelExec, impl_ts_asyncCallback, void*,)
+IMPL_LINK_NOARG(AsyncAccelExec, impl_ts_asyncCallback, LinkParamNone*, void)
 {
-    if (! m_xDispatch.is())
-        return 0;
-
-    try
+    if (m_xDispatch.is())
     {
-        m_xDispatch->dispatch(m_aURL, css::uno::Sequence< css::beans::PropertyValue >());
+        try
+        {
+            if (m_xFrame.is())
+                m_xFrame->removeEventListener(this);
+            m_xDispatch->dispatch(m_aURL, css::uno::Sequence< css::beans::PropertyValue >());
+        }
+        catch(const css::uno::Exception&)
+        {
+        }
     }
-    catch(const css::lang::DisposedException&)
-        {}
-    catch(const css::uno::RuntimeException& )
-        { throw; }
-    catch(const css::uno::Exception&)
-        {}
-
-    delete this;
-
-    return 0;
+    release();
 }
 
 } // namespace svt
