@@ -49,8 +49,6 @@ public:
     OUString            maHelpText;
 };
 
-
-
 #define HEAD_ARROWSIZE1             4
 #define HEAD_ARROWSIZE2             7
 
@@ -62,8 +60,6 @@ public:
 
 #define HEAD_HITTEST_ITEM           ((sal_uInt16)0x0001)
 #define HEAD_HITTEST_DIVIDER        ((sal_uInt16)0x0002)
-
-
 
 void HeaderBar::ImplInit( WinBits nWinStyle )
 {
@@ -84,7 +80,7 @@ void HeaderBar::ImplInit( WinBits nWinStyle )
     mbOutDrag       = false;
     mbItemMode      = false;
 
-    m_pVCLXHeaderBar = NULL;
+    m_pVCLXHeaderBar = nullptr;
     // StyleBits auswerten
     if ( nWinStyle & WB_DRAG )
         mbDragable = true;
@@ -108,8 +104,6 @@ void HeaderBar::ImplInit( WinBits nWinStyle )
     ImplInitSettings( true, true, true );
 }
 
-
-
 HeaderBar::HeaderBar( vcl::Window* pParent, WinBits nWinStyle ) :
     Window( pParent, nWinStyle & WB_3DLOOK )
 {
@@ -117,57 +111,51 @@ HeaderBar::HeaderBar( vcl::Window* pParent, WinBits nWinStyle ) :
     SetSizePixel( CalcWindowSizePixel() );
 }
 
-
-
 HeaderBar::~HeaderBar()
 {
-    // Alle Items loeschen
-    for ( size_t i = 0, n = mpItemList->size(); i < n; ++i ) {
-        delete (*mpItemList)[ i ];
-    }
-    mpItemList->clear();
-    delete mpItemList;
+    disposeOnce();
 }
 
+void HeaderBar::dispose()
+{
+    if (mpItemList)
+    {
+        for (ImplHeadItem* i : *mpItemList)
+            delete i;
+        delete mpItemList;
+        mpItemList = nullptr;
+    }
+    Window::dispose();
+}
 
-
-void HeaderBar::ImplInitSettings( bool bFont,
-                                  bool bForeground, bool bBackground )
+void HeaderBar::ApplySettings(vcl::RenderContext& rRenderContext)
 {
     const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
 
-    if ( bFont )
-    {
-        vcl::Font aFont;
-        aFont = rStyleSettings.GetToolFont();
-        if ( IsControlFont() )
-            aFont.Merge( GetControlFont() );
-        SetZoomedPointFont( aFont );
-    }
+    ApplyControlFont(rRenderContext, rStyleSettings.GetToolFont());
 
-    if ( bForeground || bFont )
+    ApplyControlForeground(rRenderContext, rStyleSettings.GetButtonTextColor());
+    SetTextFillColor();
+
+    ApplyControlBackground(rRenderContext, rStyleSettings.GetFaceColor());
+}
+
+void HeaderBar::ImplInitSettings(bool bFont, bool bForeground, bool bBackground)
+{
+    const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
+
+    if (bFont)
+        ApplyControlFont(*this, rStyleSettings.GetToolFont());
+
+    if (bForeground || bFont)
     {
-        Color aColor;
-        if ( IsControlForeground() )
-            aColor = GetControlForeground();
-        else
-            aColor = rStyleSettings.GetButtonTextColor();
-        SetTextColor( aColor );
+        ApplyControlForeground(*this, rStyleSettings.GetButtonTextColor());
         SetTextFillColor();
     }
 
-    if ( bBackground )
-    {
-        Color aColor;
-        if ( IsControlBackground() )
-            aColor = GetControlBackground();
-        else
-            aColor = rStyleSettings.GetFaceColor();
-        SetBackground( aColor );
-    }
+    if (bBackground)
+        ApplyControlBackground(*this, rStyleSettings.GetFaceColor());
 }
-
-
 
 long HeaderBar::ImplGetItemPos( sal_uInt16 nPos ) const
 {
@@ -177,19 +165,15 @@ long HeaderBar::ImplGetItemPos( sal_uInt16 nPos ) const
     return nX;
 }
 
-
-
-Rectangle HeaderBar::ImplGetItemRect( sal_uInt16 nPos ) const
+tools::Rectangle HeaderBar::ImplGetItemRect( sal_uInt16 nPos ) const
 {
-    Rectangle aRect( ImplGetItemPos( nPos ), 0, 0, mnDY-1 );
+    tools::Rectangle aRect( ImplGetItemPos( nPos ), 0, 0, mnDY-1 );
     aRect.Right() = aRect.Left() + (*mpItemList)[ nPos ]->mnSize - 1;
     // check for overflow on various systems
     if ( aRect.Right() > 16000 )
         aRect.Right() = 16000;
     return aRect;
 }
-
-
 
 sal_uInt16 HeaderBar::ImplHitTest( const Point& rPos,
                                long& nMouseOff, sal_uInt16& nPos ) const
@@ -217,7 +201,7 @@ sal_uInt16 HeaderBar::ImplHitTest( const Point& rPos,
             {
                 nPos = i;
 
-                if ( !(pItem->mnBits & HIB_FIXED) && (rPos.X() >= (nX+pItem->mnSize-HEADERBAR_SPLITOFF)) )
+                if ( !(pItem->mnBits & HeaderBarItemBits::FIXED) && (rPos.X() >= (nX+pItem->mnSize-HEADERBAR_SPLITOFF)) )
                 {
                     nMode = HEAD_HITTEST_DIVIDER;
                     nMouseOff = rPos.X()-(nX+pItem->mnSize);
@@ -232,10 +216,7 @@ sal_uInt16 HeaderBar::ImplHitTest( const Point& rPos,
             return nMode;
         }
 
-        if ( pItem->mnBits & HIB_FIXED )
-            bLastFixed = true;
-        else
-            bLastFixed = false;
+        bLastFixed = static_cast<bool>(pItem->mnBits & HeaderBarItemBits::FIXED);
 
         nX += pItem->mnSize;
     }
@@ -254,15 +235,13 @@ sal_uInt16 HeaderBar::ImplHitTest( const Point& rPos,
     return 0;
 }
 
-
-
 void HeaderBar::ImplInvertDrag( sal_uInt16 nStartPos, sal_uInt16 nEndPos )
 {
-    Rectangle aRect1 = ImplGetItemRect( nStartPos );
-    Rectangle aRect2 = ImplGetItemRect( nEndPos );
+    tools::Rectangle aRect1 = ImplGetItemRect( nStartPos );
+    tools::Rectangle aRect2 = ImplGetItemRect( nEndPos );
     Point     aStartPos = aRect1.Center();
     Point     aEndPos = aStartPos;
-    Rectangle aStartRect( aStartPos.X()-2, aStartPos.Y()-2,
+    tools::Rectangle aStartRect( aStartPos.X()-2, aStartPos.Y()-2,
                           aStartPos.X()+2, aStartPos.Y()+2 );
 
     if ( nEndPos > nStartPos )
@@ -276,7 +255,7 @@ void HeaderBar::ImplInvertDrag( sal_uInt16 nStartPos, sal_uInt16 nEndPos )
         aEndPos.X() = aRect2.Left()+6;
     }
 
-    SetRasterOp( ROP_INVERT );
+    SetRasterOp( RasterOp::Invert );
     DrawRect( aStartRect );
     DrawLine( aStartPos, aEndPos );
     if ( nEndPos > nStartPos )
@@ -299,54 +278,47 @@ void HeaderBar::ImplInvertDrag( sal_uInt16 nStartPos, sal_uInt16 nEndPos )
                   Point( aEndPos.X()-3, aEndPos.Y()+1 ) );
         DrawPixel( Point( aEndPos.X()-4, aEndPos.Y() ) );
     }
-    SetRasterOp( ROP_OVERPAINT );
+    SetRasterOp( RasterOp::OverPaint );
 }
 
-
-
-void HeaderBar::ImplDrawItem( OutputDevice* pDev,
-                              sal_uInt16 nPos, bool bHigh, bool bDrag,
-                              const Rectangle& rItemRect,
-                              const Rectangle* pRect,
-                              sal_uLong )
+void HeaderBar::ImplDrawItem(vcl::RenderContext& rRenderContext, sal_uInt16 nPos, bool bHigh,
+                             const tools::Rectangle& rItemRect, const tools::Rectangle* pRect )
 {
-    vcl::Window *const pWin = (pDev->GetOutDevType()==OUTDEV_WINDOW) ? static_cast<vcl::Window*>(pDev) : NULL;
     ImplControlValue aControlValue(0);
-    Rectangle aCtrlRegion;
-    ControlState nState(0);
+    tools::Rectangle aCtrlRegion;
+    ControlState nState(ControlState::NONE);
 
-    Rectangle aRect = rItemRect;
+    tools::Rectangle aRect = rItemRect;
 
     // do not display if there is no space
-    if ( aRect.GetWidth() <= 1 )
+    if (aRect.GetWidth() <= 1)
         return;
 
     // check of rectangle is visible
-    if ( pRect )
+    if (pRect)
     {
-        if ( aRect.Right() < pRect->Left() )
+        if (aRect.Right() < pRect->Left())
             return;
-        else if ( aRect.Left() > pRect->Right() )
+        else if (aRect.Left() > pRect->Right())
             return;
     }
     else
     {
-        if ( aRect.Right() < 0 )
+        if (aRect.Right() < 0)
             return;
-        else if ( aRect.Left() > mnDX )
+        else if (aRect.Left() > mnDX)
             return;
     }
 
-    ImplHeadItem*           pItem  = (*mpItemList)[ nPos ];
-    HeaderBarItemBits       nBits = pItem->mnBits;
-    const StyleSettings&    rStyleSettings = GetSettings().GetStyleSettings();
+    ImplHeadItem* pItem  = (*mpItemList)[nPos];
+    HeaderBarItemBits nBits = pItem->mnBits;
+    const StyleSettings& rStyleSettings = rRenderContext.GetSettings().GetStyleSettings();
 
-    if( pWin && pWin->IsNativeControlSupported(CTRL_WINDOW_BACKGROUND, PART_ENTIRE_CONTROL) )
+    if (rRenderContext.IsNativeControlSupported(ControlType::WindowBackground, ControlPart::Entire))
     {
-        aCtrlRegion=aRect;
-        pWin->DrawNativeControl( CTRL_WINDOW_BACKGROUND, PART_ENTIRE_CONTROL,
-                                 aCtrlRegion, nState, aControlValue,
-                                 OUString() );
+        aCtrlRegion = aRect;
+        rRenderContext.DrawNativeControl(ControlType::WindowBackground, ControlPart::Entire,
+                                         aCtrlRegion, nState, aControlValue, OUString());
 
     }
     else
@@ -356,92 +328,83 @@ void HeaderBar::ImplDrawItem( OutputDevice* pDev,
         aRect.Bottom()  -= mnBorderOff2;
 
         // delete background
-        if ( !pRect || bDrag )
+        if ( !pRect )
         {
-            if ( bDrag )
-            {
-                pDev->SetLineColor();
-                pDev->SetFillColor( rStyleSettings.GetCheckedColor() );
-                pDev->DrawRect( aRect );
-            }
-            else
-                pDev->DrawWallpaper( aRect, GetBackground() );
+            rRenderContext.DrawWallpaper(aRect, rRenderContext.GetBackground());
         }
     }
 
-    Color aSelectionTextColor( COL_TRANSPARENT );
+    Color aSelectionTextColor(COL_TRANSPARENT);
 
 #ifdef USE_JAVA
-    if ( pWin && pWin->IsNativeControlSupported( CTRL_LISTVIEWHEADER, PART_ENTIRE_CONTROL ) )
+    if ( rRenderContext.IsNativeControlSupported( ControlType::ListViewHeader, ControlPart::ListViewHeaderSortMark ) )
     {
-        ControlState nState = CTRL_STATE_ENABLED;
+        ControlState nCtrlState = ControlState::ENABLED;
         if ( !IsEnabled() )
-            nState &= ~CTRL_STATE_ENABLED;
+            nCtrlState &= ~ControlState::ENABLED;
         if ( HasFocus() )
-            nState |= CTRL_STATE_FOCUSED;
+            nCtrlState |= ControlState::FOCUSED;
 
         ListViewHeaderValue aHeaderValue;
-        aHeaderValue.mbPrimarySortColumn = ( bHigh || nBits & ( HIB_UPARROW | HIB_DOWNARROW | HIB_FLAT ) );
-        if ( nBits & HIB_UPARROW )
-            aHeaderValue.mnSortDirection = LISTVIEWHEADER_SORT_ASCENDING;
-        else if ( nBits & HIB_DOWNARROW )
-            aHeaderValue.mnSortDirection = LISTVIEWHEADER_SORT_DESCENDING;
-        else if ( bHigh || nBits & HIB_FLAT )
-            aHeaderValue.mnSortDirection = LISTVIEWHEADER_SORT_DONTKNOW;
+        aHeaderValue.mbPrimarySortColumn = ( bHigh || nBits & ( HeaderBarItemBits::UPARROW | HeaderBarItemBits::DOWNARROW | HeaderBarItemBits::FLAT ) );
+        if ( nBits & HeaderBarItemBits::UPARROW )
+            aHeaderValue.mnSortDirection = ListViewHeaderSortValue::SORT_ASCENDING;
+        else if ( nBits & HeaderBarItemBits::DOWNARROW )
+            aHeaderValue.mnSortDirection = ListViewHeaderSortValue::SORT_DESCENDING;
+        else if ( bHigh || nBits & HeaderBarItemBits::FLAT )
+            aHeaderValue.mnSortDirection = ListViewHeaderSortValue::SORT_DONTKNOW;
 
-        pWin->DrawNativeControl( CTRL_LISTVIEWHEADER, PART_ENTIRE_CONTROL, aRect, nState, aHeaderValue, pItem->maOutText );
+        rRenderContext.DrawNativeControl( ControlType::ListViewHeader, ControlPart::Entire, aRect, nCtrlState, aHeaderValue, pItem->maOutText );
     }
     else
     {
 #endif	// USE_JAVA
-    if( pWin && pWin->IsNativeControlSupported(CTRL_LISTHEADER, PART_BUTTON) )
+    if (rRenderContext.IsNativeControlSupported(ControlType::ListHeader, ControlPart::Button))
     {
-        aCtrlRegion=aRect;
-        aControlValue.setTristateVal(BUTTONVALUE_ON);
-        nState|=CTRL_STATE_ENABLED;
-        if(bHigh)
-            nState|=CTRL_STATE_PRESSED;
-        pWin->DrawNativeControl( CTRL_LISTHEADER, PART_BUTTON,
-                                 aCtrlRegion, nState, aControlValue,
-                                 OUString() );
+        aCtrlRegion = aRect;
+        aControlValue.setTristateVal(ButtonValue::On);
+        nState |= ControlState::ENABLED;
+        if (bHigh)
+            nState |= ControlState::PRESSED;
+        rRenderContext.DrawNativeControl(ControlType::ListHeader, ControlPart::Button,
+                                         aCtrlRegion, nState, aControlValue, OUString());
     }
     else
     {
         // draw separation line
-        pDev->SetLineColor( rStyleSettings.GetDarkShadowColor() );
-        pDev->DrawLine( Point( aRect.Right(), aRect.Top() ),
-                        Point( aRect.Right(), aRect.Bottom() ) );
+        rRenderContext.SetLineColor(rStyleSettings.GetDarkShadowColor());
+        rRenderContext.DrawLine(Point(aRect.Right(), aRect.Top()), Point(aRect.Right(), aRect.Bottom()));
 
         // draw ButtonStyle
         // avoid 3D borders
-        if( bHigh )
-            DrawSelectionBackground( aRect, 1, true, false, false, &aSelectionTextColor );
-        else if ( !mbButtonStyle || (nBits & HIB_FLAT) )
-            DrawSelectionBackground( aRect, 0, true, false, false, &aSelectionTextColor );
+        if (bHigh)
+            vcl::RenderTools::DrawSelectionBackground(rRenderContext, *this, aRect, 1, true, false, false, &aSelectionTextColor);
+        else if (!mbButtonStyle || (nBits & HeaderBarItemBits::FLAT))
+            vcl::RenderTools::DrawSelectionBackground(rRenderContext, *this, aRect, 0, true, false, false, &aSelectionTextColor);
     }
 #ifdef USE_JAVA
     }
 #endif	// USE_JAVA
 
     // do not draw if there is no space
-    if ( aRect.GetWidth() < 1 )
+    if (aRect.GetWidth() < 1)
         return;
 
     // calculate size and position and draw content
     pItem->maOutText = pItem->maText;
     Size aImageSize = pItem->maImage.GetSizePixel();
-    Size aTxtSize( pDev->GetTextWidth( pItem->maOutText ), 0  );
+    Size aTxtSize(rRenderContext.GetTextWidth(pItem->maOutText), 0);
     if (!pItem->maOutText.isEmpty())
-        aTxtSize.Height() = pDev->GetTextHeight();
+        aTxtSize.Height() = rRenderContext.GetTextHeight();
     long nArrowWidth = 0;
-    if ( nBits & (HIB_UPARROW | HIB_DOWNARROW) )
-        nArrowWidth = HEAD_ARROWSIZE2+HEADERBAR_ARROWOFF;
+    if (nBits & (HeaderBarItemBits::UPARROW | HeaderBarItemBits::DOWNARROW))
+        nArrowWidth = HEAD_ARROWSIZE2 + HEADERBAR_ARROWOFF;
 
     // do not draw if there is not enough space for the image
     long nTestHeight = aImageSize.Height();
-    if ( !(nBits & (HIB_LEFTIMAGE | HIB_RIGHTIMAGE)) )
+    if (!(nBits & (HeaderBarItemBits::LEFTIMAGE | HeaderBarItemBits::RIGHTIMAGE)))
         nTestHeight += aTxtSize.Height();
-    if ( (aImageSize.Width() > aRect.GetWidth()) || (nTestHeight > aRect.GetHeight()) )
+    if ((aImageSize.Width() > aRect.GetWidth()) || (nTestHeight > aRect.GetHeight()))
     {
         aImageSize.Width() = 0;
         aImageSize.Height() = 0;
@@ -449,83 +412,82 @@ void HeaderBar::ImplDrawItem( OutputDevice* pDev,
 
     // cut text to correct length
     bool bLeftText = false;
-    long nMaxTxtWidth = aRect.GetWidth()-(HEADERBAR_TEXTOFF*2)-nArrowWidth;
-    if ( nBits & (HIB_LEFTIMAGE | HIB_RIGHTIMAGE) )
+    long nMaxTxtWidth = aRect.GetWidth() - (HEADERBAR_TEXTOFF * 2) - nArrowWidth;
+    if (nBits & (HeaderBarItemBits::LEFTIMAGE | HeaderBarItemBits::RIGHTIMAGE))
         nMaxTxtWidth -= aImageSize.Width();
     long nTxtWidth = aTxtSize.Width();
-    if ( nTxtWidth > nMaxTxtWidth )
+    if (nTxtWidth > nMaxTxtWidth)
     {
         bLeftText = true;
         OUStringBuffer aBuf(pItem->maOutText);
         aBuf.append("...");
         do
         {
-            aBuf.remove(aBuf.getLength()-3-1, 1);
-            nTxtWidth = pDev->GetTextWidth( aBuf.toString() );
+            aBuf.remove(aBuf.getLength() - 3 - 1, 1);
+            nTxtWidth = rRenderContext.GetTextWidth(aBuf.toString());
         }
-        while ( (nTxtWidth > nMaxTxtWidth) && (aBuf.getLength() > 3) );
+        while ((nTxtWidth > nMaxTxtWidth) && (aBuf.getLength() > 3));
         pItem->maOutText = aBuf.makeStringAndClear();
-        if ( pItem->maOutText.getLength() == 3 )
+        if (pItem->maOutText.getLength() == 3)
         {
             nTxtWidth = 0;
-            (pItem->maOutText).clear();
+            pItem->maOutText.clear();
         }
     }
 
     // calculate text/imageposition
     long nTxtPos;
-    if ( !bLeftText && (nBits & HIB_RIGHT) )
+    if (!bLeftText && (nBits & HeaderBarItemBits::RIGHT))
     {
-        nTxtPos = aRect.Right()-nTxtWidth-HEADERBAR_TEXTOFF;
-        if ( nBits & HIB_RIGHTIMAGE )
+        nTxtPos = aRect.Right() - nTxtWidth - HEADERBAR_TEXTOFF;
+        if (nBits & HeaderBarItemBits::RIGHTIMAGE)
             nTxtPos -= aImageSize.Width();
     }
-    else if ( !bLeftText && (nBits & HIB_CENTER) )
+    else if (!bLeftText && (nBits & HeaderBarItemBits::CENTER))
     {
         long nTempWidth = nTxtWidth;
-        if ( nBits & (HIB_LEFTIMAGE | HIB_RIGHTIMAGE) )
+        if (nBits & (HeaderBarItemBits::LEFTIMAGE | HeaderBarItemBits::RIGHTIMAGE))
             nTempWidth += aImageSize.Width();
-        nTxtPos = aRect.Left()+(aRect.GetWidth()-nTempWidth)/2;
-        if ( nBits & HIB_LEFTIMAGE )
+        nTxtPos = aRect.Left() + (aRect.GetWidth() - nTempWidth) / 2;
+        if (nBits & HeaderBarItemBits::LEFTIMAGE)
             nTxtPos += aImageSize.Width();
-        if ( nArrowWidth )
+        if (nArrowWidth)
         {
-            if ( nTxtPos+nTxtWidth+nArrowWidth >= aRect.Right() )
+            if (nTxtPos + nTxtWidth + nArrowWidth >= aRect.Right())
             {
-                nTxtPos = aRect.Left()+HEADERBAR_TEXTOFF;
-                if ( nBits & HIB_LEFTIMAGE )
+                nTxtPos = aRect.Left() + HEADERBAR_TEXTOFF;
+                if (nBits & HeaderBarItemBits::LEFTIMAGE)
                     nTxtPos += aImageSize.Width();
             }
         }
     }
     else
     {
-        nTxtPos = aRect.Left()+HEADERBAR_TEXTOFF;
-        if ( nBits & HIB_LEFTIMAGE )
+        nTxtPos = aRect.Left() + HEADERBAR_TEXTOFF;
+        if (nBits & HeaderBarItemBits::LEFTIMAGE)
             nTxtPos += aImageSize.Width();
-        if ( nBits & HIB_RIGHT )
+        if (nBits & HeaderBarItemBits::RIGHT)
             nTxtPos += nArrowWidth;
     }
 
     // calculate text/imageposition
     long nTxtPosY = 0;
-    if ( !pItem->maOutText.isEmpty() || (nArrowWidth && aTxtSize.Height()) )
+    if (!pItem->maOutText.isEmpty() || (nArrowWidth && aTxtSize.Height()))
     {
-        if ( nBits & HIB_TOP )
+        if (nBits & HeaderBarItemBits::TOP)
         {
             nTxtPosY = aRect.Top();
-            if ( !(nBits & (HIB_LEFTIMAGE | HIB_RIGHTIMAGE)) )
+            if (!(nBits & (HeaderBarItemBits::LEFTIMAGE | HeaderBarItemBits::RIGHTIMAGE)))
                 nTxtPosY += aImageSize.Height();
         }
-        else if ( nBits & HIB_BOTTOM )
+        else if (nBits & HeaderBarItemBits::BOTTOM)
             nTxtPosY = aRect.Bottom()-aTxtSize.Height();
         else
         {
             long nTempHeight = aTxtSize.Height();
-            if ( !(nBits & (HIB_LEFTIMAGE | HIB_RIGHTIMAGE)) )
                 nTempHeight += aImageSize.Height();
             nTxtPosY = aRect.Top()+((aRect.GetHeight()-nTempHeight)/2);
-            if ( !(nBits & (HIB_LEFTIMAGE | HIB_RIGHTIMAGE)) )
+            if (!(nBits & (HeaderBarItemBits::LEFTIMAGE | HeaderBarItemBits::RIGHTIMAGE)))
                 nTxtPosY += aImageSize.Height();
         }
     }
@@ -533,86 +495,86 @@ void HeaderBar::ImplDrawItem( OutputDevice* pDev,
     // display text
     if (!pItem->maOutText.isEmpty())
     {
-        if( aSelectionTextColor != Color( COL_TRANSPARENT ) )
+        if (aSelectionTextColor != Color(COL_TRANSPARENT))
         {
-            pDev->Push( PushFlags::TEXTCOLOR );
-            pDev->SetTextColor( aSelectionTextColor );
+            rRenderContext.Push(PushFlags::TEXTCOLOR);
+            rRenderContext.SetTextColor(aSelectionTextColor);
         }
-        if ( IsEnabled() )
-            pDev->DrawText( Point( nTxtPos, nTxtPosY ), pItem->maOutText );
+        if (IsEnabled())
+            rRenderContext.DrawText(Point(nTxtPos, nTxtPosY), pItem->maOutText);
         else
-            pDev->DrawCtrlText( Point( nTxtPos, nTxtPosY ), pItem->maOutText, 0, pItem->maOutText.getLength(), TEXT_DRAW_DISABLE );
-        if( aSelectionTextColor != Color( COL_TRANSPARENT ) )
-            pDev->Pop();
+            rRenderContext.DrawCtrlText(Point(nTxtPos, nTxtPosY), pItem->maOutText, 0, pItem->maOutText.getLength(), DrawTextFlags::Disable);
+        if (aSelectionTextColor != Color(COL_TRANSPARENT))
+            rRenderContext.Pop();
     }
 
     // calculate the position and draw image if it is available
     long nImagePosY = 0;
-    if ( aImageSize.Width() && aImageSize.Height() )
+    if (aImageSize.Width() && aImageSize.Height())
     {
         long nImagePos = nTxtPos;
-        if ( nBits & HIB_LEFTIMAGE )
+        if (nBits & HeaderBarItemBits::LEFTIMAGE)
         {
             nImagePos -= aImageSize.Width();
-            if ( nBits & HIB_RIGHT )
+            if (nBits & HeaderBarItemBits::RIGHT)
                 nImagePos -= nArrowWidth;
         }
-        else if ( nBits & HIB_RIGHTIMAGE )
+        else if (nBits & HeaderBarItemBits::RIGHTIMAGE)
         {
             nImagePos += nTxtWidth;
-            if ( !(nBits & HIB_RIGHT) )
+            if (!(nBits & HeaderBarItemBits::RIGHT))
                 nImagePos += nArrowWidth;
         }
         else
         {
-            if ( nBits & HIB_RIGHT )
+            if (nBits & HeaderBarItemBits::RIGHT )
                 nImagePos = aRect.Right()-aImageSize.Width();
-            else if ( nBits & HIB_CENTER )
-                nImagePos = aRect.Left()+(aRect.GetWidth()-aImageSize.Width())/2;
+            else if (nBits & HeaderBarItemBits::CENTER)
+                nImagePos = aRect.Left() + (aRect.GetWidth() - aImageSize.Width()) / 2;
             else
-                nImagePos = aRect.Left()+HEADERBAR_TEXTOFF;
+                nImagePos = aRect.Left() + HEADERBAR_TEXTOFF;
         }
 
-        if ( nBits & HIB_TOP )
+        if (nBits & HeaderBarItemBits::TOP)
             nImagePosY = aRect.Top();
-        else if ( nBits & HIB_BOTTOM )
+        else if (nBits & HeaderBarItemBits::BOTTOM)
         {
-            nImagePosY = aRect.Bottom()-aImageSize.Height();
-            if ( !(nBits & (HIB_LEFTIMAGE | HIB_RIGHTIMAGE)) )
+            nImagePosY = aRect.Bottom() - aImageSize.Height();
+            if (!(nBits & (HeaderBarItemBits::LEFTIMAGE | HeaderBarItemBits::RIGHTIMAGE)))
                 nImagePosY -= aTxtSize.Height();
         }
         else
         {
             long nTempHeight = aImageSize.Height();
-            if ( !(nBits & (HIB_LEFTIMAGE | HIB_RIGHTIMAGE)) )
+            if (!(nBits & (HeaderBarItemBits::LEFTIMAGE | HeaderBarItemBits::RIGHTIMAGE)))
                 nTempHeight += aTxtSize.Height();
-            nImagePosY = aRect.Top()+((aRect.GetHeight()-nTempHeight)/2);
+            nImagePosY = aRect.Top() + ((aRect.GetHeight() - nTempHeight) / 2);
         }
-        if ( nImagePos+aImageSize.Width() <= aRect.Right() )
+        if (nImagePos + aImageSize.Width() <= aRect.Right())
         {
-            sal_uInt16 nStyle = 0;
-            if ( !IsEnabled() )
-                nStyle |= IMAGE_DRAW_DISABLE;
-            pDev->DrawImage( Point( nImagePos, nImagePosY ), pItem->maImage, nStyle );
+            DrawImageFlags nStyle = DrawImageFlags::NONE;
+            if (!IsEnabled())
+                nStyle |= DrawImageFlags::Disable;
+            rRenderContext.DrawImage(Point(nImagePos, nImagePosY), pItem->maImage, nStyle);
         }
     }
 
 #ifdef USE_JAVA
     // if native control supports the sort indicator, it should already have
     // been drawn with the call to DrawEntireControl
-    if ( !IsNativeControlSupported( CTRL_LISTVIEWHEADER, PART_LISTVIEWHEADER_SORT_MARK ) )
+    if ( !rRenderContext.IsNativeControlSupported( ControlType::ListViewHeader, ControlPart::ListViewHeaderSortMark ) )
     {
 #endif	// USE_JAVA
-    if ( nBits & (HIB_UPARROW | HIB_DOWNARROW) )
+    if (nBits & (HeaderBarItemBits::UPARROW | HeaderBarItemBits::DOWNARROW))
     {
         long nArrowX = nTxtPos;
-        if ( nBits & HIB_RIGHT )
+        if (nBits & HeaderBarItemBits::RIGHT)
             nArrowX -= nArrowWidth;
         else
-            nArrowX += nTxtWidth+HEADERBAR_ARROWOFF;
-        if ( !(nBits & (HIB_LEFTIMAGE | HIB_RIGHTIMAGE)) && pItem->maText.isEmpty() )
+            nArrowX += nTxtWidth + HEADERBAR_ARROWOFF;
+        if (!(nBits & (HeaderBarItemBits::LEFTIMAGE | HeaderBarItemBits::RIGHTIMAGE)) && pItem->maText.isEmpty())
         {
-            if ( nBits & HIB_RIGHT )
+            if (nBits & HeaderBarItemBits::RIGHT)
                 nArrowX -= aImageSize.Width();
             else
                 nArrowX += aImageSize.Width();
@@ -620,63 +582,62 @@ void HeaderBar::ImplDrawItem( OutputDevice* pDev,
 
         // is there enough space to draw the item?
         bool bDraw = true;
-        if ( nArrowX < aRect.Left()+HEADERBAR_TEXTOFF )
+        if (nArrowX < aRect.Left() + HEADERBAR_TEXTOFF)
             bDraw = false;
-        else if ( nArrowX+HEAD_ARROWSIZE2 > aRect.Right() )
+        else if (nArrowX + HEAD_ARROWSIZE2 > aRect.Right())
             bDraw = false;
 
-        if ( bDraw )
+        if (bDraw)
         {
-            if( pWin && pWin->IsNativeControlSupported(CTRL_LISTHEADER, PART_ARROW) )
+            if (rRenderContext.IsNativeControlSupported(ControlType::ListHeader, ControlPart::Arrow))
             {
-                aCtrlRegion=Rectangle(Point(nArrowX,aRect.Top()),Size(nArrowWidth,aRect.GetHeight()));
+                aCtrlRegion = tools::Rectangle(Point(nArrowX, aRect.Top()), Size(nArrowWidth, aRect.GetHeight()));
                 // control value passes 1 if arrow points down, 0 otherwise
-                aControlValue.setNumericVal((nBits&HIB_DOWNARROW)?1:0);
-                nState|=CTRL_STATE_ENABLED;
-                if(bHigh)
-                    nState|=CTRL_STATE_PRESSED;
-                pWin->DrawNativeControl( CTRL_LISTHEADER, PART_ARROW,
-                                         aCtrlRegion, nState, aControlValue,
-                                         OUString() );
+                aControlValue.setNumericVal((nBits & HeaderBarItemBits::DOWNARROW) ? 1 : 0);
+                nState |= ControlState::ENABLED;
+                if (bHigh)
+                    nState |= ControlState::PRESSED;
+                rRenderContext.DrawNativeControl(ControlType::ListHeader, ControlPart::Arrow, aCtrlRegion,
+                                                 nState, aControlValue, OUString());
             }
             else
             {
                 long nArrowY;
-                if ( aTxtSize.Height() )
-                    nArrowY = nTxtPosY+(aTxtSize.Height()/2);
-                else if ( aImageSize.Width() && aImageSize.Height() )
-                    nArrowY = nImagePosY+(aImageSize.Height()/2);
+                if (aTxtSize.Height())
+                    nArrowY = nTxtPosY + (aTxtSize.Height() / 2);
+                else if (aImageSize.Width() && aImageSize.Height())
+                    nArrowY = nImagePosY + (aImageSize.Height() / 2);
                 else
                 {
-                    if ( nBits & HIB_TOP )
-                        nArrowY = aRect.Top()+1;
-                    else if ( nBits & HIB_BOTTOM )
-                        nArrowY = aRect.Bottom()-HEAD_ARROWSIZE2-1;
+                    if (nBits & HeaderBarItemBits::TOP)
+                        nArrowY = aRect.Top() + 1;
+                    else if (nBits & HeaderBarItemBits::BOTTOM)
+                        nArrowY = aRect.Bottom() - HEAD_ARROWSIZE2 - 1;
                     else
-                        nArrowY = aRect.Top()+((aRect.GetHeight()-HEAD_ARROWSIZE2)/2);
+                        nArrowY = aRect.Top() + ((aRect.GetHeight() - HEAD_ARROWSIZE2) / 2);
                 }
-                nArrowY -= HEAD_ARROWSIZE1-1;
-                if ( nBits & HIB_DOWNARROW )
+                nArrowY -= HEAD_ARROWSIZE1 - 1;
+                if (nBits & HeaderBarItemBits::DOWNARROW)
                 {
-                    pDev->SetLineColor( rStyleSettings.GetLightColor() );
-                    pDev->DrawLine( Point( nArrowX, nArrowY ),
-                                    Point( nArrowX+HEAD_ARROWSIZE2, nArrowY ) );
-                    pDev->DrawLine( Point( nArrowX, nArrowY ),
-                                    Point( nArrowX+HEAD_ARROWSIZE1, nArrowY+HEAD_ARROWSIZE2 ) );
-                    pDev->SetLineColor( rStyleSettings.GetShadowColor() );
-                    pDev->DrawLine( Point( nArrowX+HEAD_ARROWSIZE1, nArrowY+HEAD_ARROWSIZE2 ),
-                                    Point( nArrowX+HEAD_ARROWSIZE2, nArrowY ) );
+                    rRenderContext.SetLineColor(rStyleSettings.GetLightColor());
+                    rRenderContext.DrawLine(Point(nArrowX, nArrowY),
+                                            Point(nArrowX + HEAD_ARROWSIZE2, nArrowY));
+                    rRenderContext.DrawLine(Point(nArrowX, nArrowY),
+                                            Point(nArrowX + HEAD_ARROWSIZE1, nArrowY + HEAD_ARROWSIZE2));
+                    rRenderContext.SetLineColor(rStyleSettings.GetShadowColor());
+                    rRenderContext.DrawLine(Point(nArrowX + HEAD_ARROWSIZE1, nArrowY + HEAD_ARROWSIZE2),
+                                            Point(nArrowX + HEAD_ARROWSIZE2, nArrowY));
                 }
                 else
                 {
-                    pDev->SetLineColor( rStyleSettings.GetLightColor() );
-                    pDev->DrawLine( Point( nArrowX, nArrowY+HEAD_ARROWSIZE2 ),
-                                    Point( nArrowX+HEAD_ARROWSIZE1, nArrowY ) );
-                    pDev->SetLineColor( rStyleSettings.GetShadowColor() );
-                    pDev->DrawLine( Point( nArrowX, nArrowY+HEAD_ARROWSIZE2 ),
-                                    Point( nArrowX+HEAD_ARROWSIZE2, nArrowY+HEAD_ARROWSIZE2 ) );
-                    pDev->DrawLine( Point( nArrowX+HEAD_ARROWSIZE2, nArrowY+HEAD_ARROWSIZE2 ),
-                                    Point( nArrowX+HEAD_ARROWSIZE1, nArrowY ) );
+                    rRenderContext.SetLineColor(rStyleSettings.GetLightColor());
+                    rRenderContext.DrawLine(Point(nArrowX, nArrowY + HEAD_ARROWSIZE2),
+                                            Point(nArrowX + HEAD_ARROWSIZE1, nArrowY));
+                    rRenderContext.SetLineColor(rStyleSettings.GetShadowColor());
+                    rRenderContext.DrawLine(Point(nArrowX, nArrowY + HEAD_ARROWSIZE2),
+                                            Point(nArrowX + HEAD_ARROWSIZE2, nArrowY + HEAD_ARROWSIZE2));
+                    rRenderContext.DrawLine(Point(nArrowX + HEAD_ARROWSIZE2, nArrowY + HEAD_ARROWSIZE2),
+                                            Point(nArrowX + HEAD_ARROWSIZE1, nArrowY));
                 }
             }
         }
@@ -684,74 +645,36 @@ void HeaderBar::ImplDrawItem( OutputDevice* pDev,
 #ifdef USE_JAVA
     }
 #endif	// USE_JAVA
-
-    // all UserDraw if required
-    if ( nBits & HIB_USERDRAW )
-    {
-        vcl::Region aRegion( aRect );
-        if ( pRect )
-            aRegion.Intersect( *pRect );
-        pDev->SetClipRegion( aRegion );
-        UserDrawEvent aODEvt( pDev, aRect, pItem->mnId );
-        UserDraw( aODEvt );
-        pDev->SetClipRegion();
-    }
 }
 
-
-
-void HeaderBar::ImplDrawItem( sal_uInt16 nPos, bool bHigh, bool bDrag,
-                              const Rectangle* pRect )
+void HeaderBar::ImplDrawItem(vcl::RenderContext& rRenderContext, sal_uInt16 nPos,
+                             bool bHigh, const tools::Rectangle* pRect )
 {
-    Rectangle aRect = ImplGetItemRect( nPos );
-    ImplDrawItem( this, nPos, bHigh, bDrag, aRect, pRect, 0 );
+    tools::Rectangle aRect = ImplGetItemRect(nPos);
+    ImplDrawItem(rRenderContext, nPos, bHigh, aRect, pRect );
 }
 
-
-
-void HeaderBar::ImplUpdate( sal_uInt16 nPos, bool bEnd, bool bDirect )
+void HeaderBar::ImplUpdate(sal_uInt16 nPos, bool bEnd)
 {
-    if ( IsVisible() && IsUpdateMode() )
+    if (IsVisible() && IsUpdateMode())
     {
-        if ( !bDirect )
-        {
-            Rectangle   aRect;
-            size_t      nItemCount = mpItemList->size();
-            if ( nPos < nItemCount )
-                aRect = ImplGetItemRect( nPos );
-            else
-            {
-                aRect.Bottom() = mnDY-1;
-                if ( nItemCount )
-                    aRect.Left() = ImplGetItemRect( nItemCount-1 ).Right();
-            }
-            if ( bEnd )
-                aRect.Right() = mnDX-1;
-            aRect.Top()     += mnBorderOff1;
-            aRect.Bottom()  -= mnBorderOff2;
-            Invalidate( aRect );
-        }
+        tools::Rectangle aRect;
+        size_t nItemCount = mpItemList->size();
+        if (nPos < nItemCount)
+            aRect = ImplGetItemRect(nPos);
         else
         {
-            for ( size_t i = nPos; i < mpItemList->size(); i++ )
-                ImplDrawItem( i );
-            if ( bEnd )
-            {
-                Rectangle aRect = ImplGetItemRect( (sal_uInt16)mpItemList->size() );
-                aRect.Left()  = aRect.Right();
-                aRect.Right() = mnDX-1;
-                if ( aRect.Left() < aRect.Right() )
-                {
-                    aRect.Top()     += mnBorderOff1;
-                    aRect.Bottom()  -= mnBorderOff2;
-                    Erase( aRect );
-                }
-            }
+            aRect.Bottom() = mnDY - 1;
+            if (nItemCount)
+                aRect.Left() = ImplGetItemRect(nItemCount - 1).Right();
         }
+        if (bEnd)
+            aRect.Right() = mnDX - 1;
+        aRect.Top() += mnBorderOff1;
+        aRect.Bottom() -= mnBorderOff2;
+        Invalidate(aRect);
     }
 }
-
-
 
 void HeaderBar::ImplStartDrag( const Point& rMousePos, bool bCommand )
 {
@@ -765,8 +688,8 @@ void HeaderBar::ImplStartDrag( const Point& rMousePos, bool bCommand )
             mbDrag = true;
         else
         {
-            if ( ((pItem->mnBits & HIB_CLICKABLE) && !(pItem->mnBits & HIB_FLAT)) ||
-                 (mbDragable && !(pItem->mnBits & HIB_FIXEDPOS)) )
+            if ( ((pItem->mnBits & HeaderBarItemBits::CLICKABLE) && !(pItem->mnBits & HeaderBarItemBits::FLAT)) ||
+                 (mbDragable && !(pItem->mnBits & HeaderBarItemBits::FIXEDPOS)) )
             {
                 mbItemMode = true;
                 mbDrag = true;
@@ -800,13 +723,13 @@ void HeaderBar::ImplStartDrag( const Point& rMousePos, bool bCommand )
             StartTracking();
             mnStartPos = rMousePos.X()-mnMouseOff;
             mnDragPos = mnStartPos;
-            StartDrag();
-            if ( mbItemMode )
-                ImplDrawItem( nPos, true, mbItemDrag );
+            maStartDragHdl.Call( this );
+            if (mbItemMode)
+                Invalidate();
             else
             {
-                Rectangle aSizeRect( mnDragPos, 0, mnDragPos, mnDragSize+mnDY );
-                ShowTracking( aSizeRect, SHOWTRACK_SPLIT );
+                tools::Rectangle aSizeRect( mnDragPos, 0, mnDragPos, mnDragSize+mnDY );
+                ShowTracking( aSizeRect, ShowTrackFlags::Split );
             }
         }
         else
@@ -814,40 +737,33 @@ void HeaderBar::ImplStartDrag( const Point& rMousePos, bool bCommand )
     }
 }
 
-
-
 void HeaderBar::ImplDrag( const Point& rMousePos )
 {
-    bool        bNewOutDrag;
     sal_uInt16  nPos = GetItemPos( mnCurItemId );
 
     mnDragPos = rMousePos.X()-mnMouseOff;
     if ( mbItemMode )
     {
-        Rectangle aItemRect = ImplGetItemRect( nPos );
-        if ( aItemRect.IsInside( rMousePos ) )
-            bNewOutDrag = false;
-        else
-            bNewOutDrag = true;
+        bool bNewOutDrag;
+
+        tools::Rectangle aItemRect = ImplGetItemRect( nPos );
+        bNewOutDrag = !aItemRect.IsInside( rMousePos );
 
         //  if needed switch on ItemDrag
         if ( bNewOutDrag && mbDragable && !mbItemDrag &&
-             !((*mpItemList)[ nPos ]->mnBits & HIB_FIXEDPOS) )
+             !((*mpItemList)[ nPos ]->mnBits & HeaderBarItemBits::FIXEDPOS) )
         {
             if ( (rMousePos.Y() >= aItemRect.Top()) && (rMousePos.Y() <= aItemRect.Bottom()) )
             {
                 mbItemDrag = true;
-                ImplDrawItem( nPos, true, mbItemDrag );
+                Invalidate();
             }
         }
 
         sal_uInt16 nOldItemDragPos = mnItemDragPos;
         if ( mbItemDrag )
         {
-            if ( (rMousePos.Y() < -HEADERBAR_DRAGOUTOFF) || (rMousePos.Y() > mnDY+HEADERBAR_DRAGOUTOFF) )
-                bNewOutDrag = true;
-            else
-                bNewOutDrag = false;
+            bNewOutDrag = (rMousePos.Y() < -HEADERBAR_DRAGOUTOFF) || (rMousePos.Y() > mnDY+HEADERBAR_DRAGOUTOFF);
 
             if ( bNewOutDrag )
                 mnItemDragPos = HEADERBAR_ITEM_NOTFOUND;
@@ -867,13 +783,13 @@ void HeaderBar::ImplDrag( const Point& rMousePos )
                 // do not use non-movable items
                 if ( mnItemDragPos < nPos )
                 {
-                    while ( ((*mpItemList)[ mnItemDragPos ]->mnBits & HIB_FIXEDPOS) &&
+                    while ( ((*mpItemList)[ mnItemDragPos ]->mnBits & HeaderBarItemBits::FIXEDPOS) &&
                             (mnItemDragPos < nPos) )
                         mnItemDragPos++;
                 }
                 else if ( mnItemDragPos > nPos )
                 {
-                    while ( ((*mpItemList)[ mnItemDragPos ]->mnBits & HIB_FIXEDPOS) &&
+                    while ( ((*mpItemList)[ mnItemDragPos ]->mnBits & HeaderBarItemBits::FIXEDPOS) &&
                             (mnItemDragPos > nPos) )
                         mnItemDragPos--;
                 }
@@ -884,12 +800,12 @@ void HeaderBar::ImplDrag( const Point& rMousePos )
                  (nOldItemDragPos != HEADERBAR_ITEM_NOTFOUND) )
             {
                 ImplInvertDrag( nPos, nOldItemDragPos );
-                ImplDrawItem( nOldItemDragPos );
+                Invalidate();
             }
         }
 
         if ( bNewOutDrag != mbOutDrag )
-            ImplDrawItem( nPos, !bNewOutDrag, mbItemDrag );
+            Invalidate();
 
         if ( mbItemDrag  )
         {
@@ -897,7 +813,7 @@ void HeaderBar::ImplDrag( const Point& rMousePos )
                  (mnItemDragPos != nPos) &&
                  (mnItemDragPos != HEADERBAR_ITEM_NOTFOUND) )
             {
-                ImplDrawItem( mnItemDragPos, false, true );
+                Invalidate();
                 ImplInvertDrag( nPos, mnItemDragPos );
             }
         }
@@ -906,22 +822,20 @@ void HeaderBar::ImplDrag( const Point& rMousePos )
     }
     else
     {
-        Rectangle aItemRect = ImplGetItemRect( nPos );
+        tools::Rectangle aItemRect = ImplGetItemRect( nPos );
         if ( mnDragPos < aItemRect.Left() )
             mnDragPos = aItemRect.Left();
         if ( (mnDragPos < 0) || (mnDragPos > mnDX-1) )
             HideTracking();
         else
         {
-            Rectangle aSizeRect( mnDragPos, 0, mnDragPos, mnDragSize+mnDY );
-            ShowTracking( aSizeRect, SHOWTRACK_SPLIT );
+            tools::Rectangle aSizeRect( mnDragPos, 0, mnDragPos, mnDragSize+mnDY );
+            ShowTracking( aSizeRect, ShowTrackFlags::Split );
         }
     }
 
-    Drag();
+    maDragHdl.Call( this );
 }
-
-
 
 void HeaderBar::ImplEndDrag( bool bCancel )
 {
@@ -931,8 +845,7 @@ void HeaderBar::ImplEndDrag( bool bCancel )
     {
         if ( mbItemMode && (!mbOutDrag || mbItemDrag) )
         {
-            sal_uInt16 nPos = GetItemPos( mnCurItemId );
-            ImplDrawItem( nPos );
+            Invalidate();
         }
 
         mnCurItemId = 0;
@@ -944,7 +857,7 @@ void HeaderBar::ImplEndDrag( bool bCancel )
         {
             if ( mbItemDrag )
             {
-                Pointer aPointer( POINTER_ARROW );
+                Pointer aPointer( PointerStyle::Arrow );
                 SetPointer( aPointer );
                 if ( (mnItemDragPos != nPos) &&
                      (mnItemDragPos != HEADERBAR_ITEM_NOTFOUND) )
@@ -953,7 +866,7 @@ void HeaderBar::ImplEndDrag( bool bCancel )
                     MoveItem( mnCurItemId, mnItemDragPos );
                 }
                 else
-                    ImplDrawItem( nPos );
+                    Invalidate();
             }
             else
             {
@@ -982,8 +895,6 @@ void HeaderBar::ImplEndDrag( bool bCancel )
     mbItemDrag      = false;
 }
 
-
-
 void HeaderBar::MouseButtonDown( const MouseEvent& rMEvt )
 {
     if ( rMEvt.IsLeft() )
@@ -1011,22 +922,18 @@ void HeaderBar::MouseButtonDown( const MouseEvent& rMEvt )
     }
 }
 
-
-
 void HeaderBar::MouseMove( const MouseEvent& rMEvt )
 {
     long            nTemp1;
     sal_uInt16          nTemp2;
-    PointerStyle    eStyle = POINTER_ARROW;
+    PointerStyle    eStyle = PointerStyle::Arrow;
     sal_uInt16          nHitTest = ImplHitTest( rMEvt.GetPosPixel(), nTemp1, nTemp2 );
 
     if ( nHitTest & HEAD_HITTEST_DIVIDER )
-        eStyle = POINTER_HSIZEBAR;
+        eStyle = PointerStyle::HSizeBar;
     Pointer aPtr( eStyle );
     SetPointer( aPtr );
 }
-
-
 
 void HeaderBar::Tracking( const TrackingEvent& rTEvt )
 {
@@ -1038,55 +945,51 @@ void HeaderBar::Tracking( const TrackingEvent& rTEvt )
         ImplDrag( aMousePos );
 }
 
-
-
-void HeaderBar::Paint( const Rectangle& rRect )
+void HeaderBar::Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect)
 {
-    if ( mnBorderOff1 || mnBorderOff2 )
+    if (mnBorderOff1 || mnBorderOff2)
     {
-        SetLineColor( GetSettings().GetStyleSettings().GetDarkShadowColor() );
-        if ( mnBorderOff1 )
-            DrawLine( Point( 0, 0 ), Point( mnDX-1, 0 ) );
-        if ( mnBorderOff2 )
-            DrawLine( Point( 0, mnDY-1 ), Point( mnDX-1, mnDY-1 ) );
+        rRenderContext.SetLineColor(rRenderContext.GetSettings().GetStyleSettings().GetDarkShadowColor());
+        if (mnBorderOff1)
+            rRenderContext.DrawLine(Point(0, 0), Point(mnDX - 1, 0));
+        if (mnBorderOff2)
+            rRenderContext.DrawLine(Point(0, mnDY - 1), Point(mnDX - 1, mnDY - 1));
         // #i40393# draw left and right border, if WB_BORDER was set in ImplInit()
-        if ( mnBorderOff1 && mnBorderOff2 )
+        if (mnBorderOff1 && mnBorderOff2)
         {
-            DrawLine( Point( 0, 0 ), Point( 0, mnDY-1 ) );
-            DrawLine( Point( mnDX-1, 0 ), Point( mnDX-1, mnDY-1 ) );
+            rRenderContext.DrawLine(Point(0, 0), Point(0, mnDY - 1));
+            rRenderContext.DrawLine(Point(mnDX - 1, 0), Point(mnDX - 1, mnDY - 1));
         }
     }
 
     sal_uInt16 nCurItemPos;
-    if ( mbDrag )
-        nCurItemPos = GetItemPos( mnCurItemId );
+    if (mbDrag)
+        nCurItemPos = GetItemPos(mnCurItemId);
     else
         nCurItemPos = HEADERBAR_ITEM_NOTFOUND;
-    sal_uInt16 nItemCount = (sal_uInt16)mpItemList->size();
-    for ( sal_uInt16 i = 0; i < nItemCount; i++ )
-        ImplDrawItem( i, (i == nCurItemPos), false, &rRect );
+    sal_uInt16 nItemCount = static_cast<sal_uInt16>(mpItemList->size());
+    for (sal_uInt16 i = 0; i < nItemCount; i++)
+        ImplDrawItem(rRenderContext, i, (i == nCurItemPos), &rRect);
 }
 
-
-
 void HeaderBar::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
-                      sal_uLong nFlags )
+                      DrawFlags nFlags )
 {
     Point       aPos  = pDev->LogicToPixel( rPos );
     Size        aSize = pDev->LogicToPixel( rSize );
-    Rectangle   aRect( aPos, aSize );
+    tools::Rectangle   aRect( aPos, aSize );
     vcl::Font   aFont = GetDrawPixelFont( pDev );
 
     pDev->Push();
     pDev->SetMapMode();
     pDev->SetFont( aFont );
-    if ( nFlags & WINDOW_DRAW_MONO )
+    if ( nFlags & DrawFlags::Mono )
         pDev->SetTextColor( Color( COL_BLACK ) );
     else
         pDev->SetTextColor( GetTextColor() );
     pDev->SetTextFillColor();
 
-    if ( !(nFlags & WINDOW_DRAW_NOBACKGROUND) )
+    if ( !(nFlags & DrawFlags::NoBackground) )
     {
         pDev->DrawWallpaper( aRect, GetBackground() );
         if ( mnBorderOff1 || mnBorderOff2 )
@@ -1105,7 +1008,7 @@ void HeaderBar::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
         }
     }
 
-    Rectangle aItemRect( aRect );
+    tools::Rectangle aItemRect( aRect );
     size_t nItemCount = mpItemList->size();
     for ( size_t i = 0; i < nItemCount; i++ )
     {
@@ -1116,14 +1019,12 @@ void HeaderBar::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
             aItemRect.Right() = 16000;
         vcl::Region aRegion( aRect );
         pDev->SetClipRegion( aRegion );
-        ImplDrawItem( pDev, i, false, false, aItemRect, &aRect, nFlags );
+        ImplDrawItem(*pDev, i, false, aItemRect, &aRect );
         pDev->SetClipRegion();
     }
 
     pDev->Pop();
 }
-
-
 
 void HeaderBar::Resize()
 {
@@ -1134,11 +1035,9 @@ void HeaderBar::Resize()
     mnDY = aSize.Height();
 }
 
-
-
 void HeaderBar::Command( const CommandEvent& rCEvt )
 {
-    if ( rCEvt.IsMouseEvent() && (rCEvt.GetCommand() == COMMAND_STARTDRAG) && !mbDrag )
+    if ( rCEvt.IsMouseEvent() && (rCEvt.GetCommand() == CommandEventId::StartDrag) && !mbDrag )
     {
         ImplStartDrag( rCEvt.GetMousePosPixel(), true );
         return;
@@ -1147,8 +1046,6 @@ void HeaderBar::Command( const CommandEvent& rCEvt )
     Window::Command( rCEvt );
 }
 
-
-
 void HeaderBar::RequestHelp( const HelpEvent& rHEvt )
 {
     sal_uInt16 nItemId = GetItemId( ScreenToOutputPixel( rHEvt.GetMousePosPixel() ) );
@@ -1156,7 +1053,7 @@ void HeaderBar::RequestHelp( const HelpEvent& rHEvt )
     {
         if ( rHEvt.GetMode() & (HelpEventMode::QUICK | HelpEventMode::BALLOON) )
         {
-            Rectangle aItemRect = GetItemRect( nItemId );
+            tools::Rectangle aItemRect = GetItemRect( nItemId );
             Point aPt = OutputToScreenPixel( aItemRect.TopLeft() );
             aItemRect.Left()   = aPt.X();
             aItemRect.Top()    = aPt.Y();
@@ -1202,90 +1099,58 @@ void HeaderBar::RequestHelp( const HelpEvent& rHEvt )
     Window::RequestHelp( rHEvt );
 }
 
-
-
 void HeaderBar::StateChanged( StateChangedType nType )
 {
     Window::StateChanged( nType );
 
-    if ( nType == StateChangedType::ENABLE )
+    if ( nType == StateChangedType::Enable )
         Invalidate();
-    else if ( (nType == StateChangedType::ZOOM) ||
-              (nType == StateChangedType::CONTROLFONT) )
+    else if ( (nType == StateChangedType::Zoom) ||
+              (nType == StateChangedType::ControlFont) )
     {
         ImplInitSettings( true, false, false );
         Invalidate();
     }
-    else if ( nType == StateChangedType::CONTROLFOREGROUND )
+    else if ( nType == StateChangedType::ControlForeground )
     {
         ImplInitSettings( false, true, false );
         Invalidate();
     }
-    else if ( nType == StateChangedType::CONTROLBACKGROUND )
+    else if ( nType == StateChangedType::ControlBackground )
     {
         ImplInitSettings( false, false, true );
         Invalidate();
     }
 }
 
-
-
 void HeaderBar::DataChanged( const DataChangedEvent& rDCEvt )
 {
     Window::DataChanged( rDCEvt );
 
-    if ( (rDCEvt.GetType() == DATACHANGED_FONTS) ||
-         (rDCEvt.GetType() == DATACHANGED_FONTSUBSTITUTION) ||
-         ((rDCEvt.GetType() == DATACHANGED_SETTINGS) &&
-          (rDCEvt.GetFlags() & SETTINGS_STYLE)) )
+    if ( (rDCEvt.GetType() == DataChangedEventType::FONTS) ||
+         (rDCEvt.GetType() == DataChangedEventType::FONTSUBSTITUTION) ||
+         ((rDCEvt.GetType() == DataChangedEventType::SETTINGS) &&
+          (rDCEvt.GetFlags() & AllSettingsFlags::STYLE)) )
     {
         ImplInitSettings( true, true, true );
         Invalidate();
     }
 }
 
-
-
-void HeaderBar::UserDraw( const UserDrawEvent& )
-{
-}
-
-
-
-void HeaderBar::StartDrag()
-{
-    maStartDragHdl.Call( this );
-}
-
-
-
-void HeaderBar::Drag()
-{
-    maDragHdl.Call( this );
-}
-
-
-
 void HeaderBar::EndDrag()
 {
     maEndDragHdl.Call( this );
 }
-
-
 
 void HeaderBar::Select()
 {
     maSelectHdl.Call( this );
 }
 
-
-
 void HeaderBar::DoubleClick()
 {
     maDoubleClickHdl.Call( this );
 }
-
-
 
 void HeaderBar::InsertItem( sal_uInt16 nItemId, const OUString& rText,
                             long nSize, HeaderBarItemBits nBits, sal_uInt16 nPos )
@@ -1312,8 +1177,6 @@ void HeaderBar::InsertItem( sal_uInt16 nItemId, const OUString& rText,
     ImplUpdate( nPos, true );
 }
 
-
-
 void HeaderBar::RemoveItem( sal_uInt16 nItemId )
 {
     sal_uInt16 nPos = GetItemPos( nItemId );
@@ -1327,8 +1190,6 @@ void HeaderBar::RemoveItem( sal_uInt16 nItemId )
         }
     }
 }
-
-
 
 void HeaderBar::MoveItem( sal_uInt16 nItemId, sal_uInt16 nNewPos )
 {
@@ -1351,38 +1212,30 @@ void HeaderBar::MoveItem( sal_uInt16 nItemId, sal_uInt16 nNewPos )
     }
 }
 
-
-
 void HeaderBar::Clear()
 {
     // delete all items
-    for ( size_t i = 0, n = mpItemList->size(); i < n; ++i ) {
-        delete (*mpItemList)[ i ];
+    for (ImplHeadItem* i : *mpItemList) {
+        delete i;
     }
     mpItemList->clear();
 
     ImplUpdate( 0, true );
 }
 
-
-
 void HeaderBar::SetOffset( long nNewOffset )
 {
     // move area
-    Rectangle aRect( 0, mnBorderOff1, mnDX-1, mnDY-mnBorderOff1-mnBorderOff2-1 );
+    tools::Rectangle aRect( 0, mnBorderOff1, mnDX-1, mnDY-mnBorderOff1-mnBorderOff2-1 );
     long nDelta = mnOffset-nNewOffset;
     mnOffset = nNewOffset;
     Scroll( nDelta, 0, aRect );
 }
 
-
-
 sal_uInt16 HeaderBar::GetItemCount() const
 {
     return (sal_uInt16)mpItemList->size();
 }
-
-
 
 sal_uInt16 HeaderBar::GetItemPos( sal_uInt16 nItemId ) const
 {
@@ -1394,18 +1247,14 @@ sal_uInt16 HeaderBar::GetItemPos( sal_uInt16 nItemId ) const
     return HEADERBAR_ITEM_NOTFOUND;
 }
 
-
-
 sal_uInt16 HeaderBar::GetItemId( sal_uInt16 nPos ) const
 {
-    ImplHeadItem* pItem = (nPos < mpItemList->size() ) ? (*mpItemList)[ nPos ] : NULL;
+    ImplHeadItem* pItem = (nPos < mpItemList->size() ) ? (*mpItemList)[ nPos ] : nullptr;
     if ( pItem )
         return pItem->mnId;
     else
         return 0;
 }
-
-
 
 sal_uInt16 HeaderBar::GetItemId( const Point& rPos ) const
 {
@@ -1417,18 +1266,14 @@ sal_uInt16 HeaderBar::GetItemId( const Point& rPos ) const
     return 0;
 }
 
-
-
-Rectangle HeaderBar::GetItemRect( sal_uInt16 nItemId ) const
+tools::Rectangle HeaderBar::GetItemRect( sal_uInt16 nItemId ) const
 {
-    Rectangle aRect;
+    tools::Rectangle aRect;
     sal_uInt16 nPos = GetItemPos( nItemId );
     if ( nPos != HEADERBAR_ITEM_NOTFOUND )
         aRect = ImplGetItemRect( nPos );
     return aRect;
 }
-
-
 
 void HeaderBar::SetItemSize( sal_uInt16 nItemId, long nNewSize )
 {
@@ -1444,8 +1289,6 @@ void HeaderBar::SetItemSize( sal_uInt16 nItemId, long nNewSize )
     }
 }
 
-
-
 long HeaderBar::GetItemSize( sal_uInt16 nItemId ) const
 {
     sal_uInt16 nPos = GetItemPos( nItemId );
@@ -1454,8 +1297,6 @@ long HeaderBar::GetItemSize( sal_uInt16 nItemId ) const
     else
         return 0;
 }
-
-
 
 void HeaderBar::SetItemBits( sal_uInt16 nItemId, HeaderBarItemBits nNewBits )
 {
@@ -1471,18 +1312,14 @@ void HeaderBar::SetItemBits( sal_uInt16 nItemId, HeaderBarItemBits nNewBits )
     }
 }
 
-
-
 HeaderBarItemBits HeaderBar::GetItemBits( sal_uInt16 nItemId ) const
 {
     sal_uInt16 nPos = GetItemPos( nItemId );
     if ( nPos != HEADERBAR_ITEM_NOTFOUND )
         return (*mpItemList)[ nPos ]->mnBits;
     else
-        return 0;
+        return HeaderBarItemBits::NONE;
 }
-
-
 
 void HeaderBar::SetItemText( sal_uInt16 nItemId, const OUString& rText )
 {
@@ -1494,8 +1331,6 @@ void HeaderBar::SetItemText( sal_uInt16 nItemId, const OUString& rText )
     }
 }
 
-
-
 OUString HeaderBar::GetItemText( sal_uInt16 nItemId ) const
 {
     sal_uInt16 nPos = GetItemPos( nItemId );
@@ -1503,8 +1338,6 @@ OUString HeaderBar::GetItemText( sal_uInt16 nItemId ) const
         return (*mpItemList)[ nPos ]->maText;
     return OUString();
 }
-
-
 
 OUString HeaderBar::GetHelpText( sal_uInt16 nItemId ) const
 {
@@ -1525,8 +1358,6 @@ OUString HeaderBar::GetHelpText( sal_uInt16 nItemId ) const
     return OUString();
 }
 
-
-
 OString HeaderBar::GetHelpId( sal_uInt16 nItemId ) const
 {
     sal_uInt16 nPos = GetItemPos( nItemId );
@@ -1536,19 +1367,16 @@ OString HeaderBar::GetHelpId( sal_uInt16 nItemId ) const
     return aRet;
 }
 
-
-
 Size HeaderBar::CalcWindowSizePixel() const
 {
     long nMaxImageSize = 0;
     Size aSize( 0, GetTextHeight() );
 
-    for ( size_t i = 0, n = mpItemList->size(); i < n; ++i )
+    for (ImplHeadItem* pItem : *mpItemList)
     {
-        ImplHeadItem* pItem = (*mpItemList)[ i ];
         // take image size into account
         long nImageHeight = pItem->maImage.GetSizePixel().Height();
-        if ( !(pItem->mnBits & (HIB_LEFTIMAGE | HIB_RIGHTIMAGE)) && !pItem->maText.isEmpty() )
+        if ( !(pItem->mnBits & (HeaderBarItemBits::LEFTIMAGE | HeaderBarItemBits::RIGHTIMAGE)) && !pItem->maText.isEmpty() )
             nImageHeight += aSize.Height();
         if ( nImageHeight > nMaxImageSize )
             nMaxImageSize = nImageHeight;
@@ -1570,12 +1398,11 @@ Size HeaderBar::CalcWindowSizePixel() const
     return aSize;
 }
 
-::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible > HeaderBar::CreateAccessible()
+css::uno::Reference< css::accessibility::XAccessible > HeaderBar::CreateAccessible()
 {
     if ( !mxAccessible.is() )
     {
-        if ( maCreateAccessibleHdl.IsSet() )
-            maCreateAccessibleHdl.Call( this );
+        maCreateAccessibleHdl.Call( this );
 
         if ( !mxAccessible.is() )
             mxAccessible = Window::CreateAccessible();
@@ -1584,25 +1411,23 @@ Size HeaderBar::CalcWindowSizePixel() const
     return mxAccessible;
 }
 
-void HeaderBar::SetAccessible( ::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible > _xAccessible )
+void HeaderBar::SetAccessible( const css::uno::Reference< css::accessibility::XAccessible >& _xAccessible )
 {
     mxAccessible = _xAccessible;
 }
 
-::com::sun::star::uno::Reference< ::com::sun::star::awt::XWindowPeer > HeaderBar::GetComponentInterface( bool bCreate )
+css::uno::Reference< css::awt::XWindowPeer > HeaderBar::GetComponentInterface( bool bCreate )
 {
-    ::com::sun::star::uno::Reference< ::com::sun::star::awt::XWindowPeer > xPeer
+    css::uno::Reference< css::awt::XWindowPeer > xPeer
         (Window::GetComponentInterface(false));
     if ( !xPeer.is() && bCreate )
     {
-        ::com::sun::star::awt::XWindowPeer* mxPeer = new VCLXHeaderBar(this);
-        m_pVCLXHeaderBar = static_cast<VCLXHeaderBar*>(mxPeer);
-        SetComponentInterface(mxPeer);
-        return mxPeer;
+        css::awt::XWindowPeer* pPeer = new VCLXHeaderBar(this);
+        m_pVCLXHeaderBar = static_cast<VCLXHeaderBar*>(pPeer);
+        SetComponentInterface(pPeer);
+        return pPeer;
     }
     else
         return xPeer;
 }
-
-
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
