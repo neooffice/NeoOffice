@@ -25,17 +25,23 @@
  */
 
 #include <string>
+#include <typeinfo>
 #include <utility>
 
+#include <comphelper/propertysequence.hxx>
 #include <tools/color.hxx>
 #include <svl/poolitem.hxx>
 #include <svl/eitem.hxx>
 #include <svl/itemset.hxx>
+#include <vcl/commandinfoprovider.hxx>
 #include <vcl/toolbox.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/menubtn.hxx>
+#include <vcl/vclptr.hxx>
 #include <svtools/valueset.hxx>
 #include <svtools/ctrlbox.hxx>
+#include <svtools/popupwindowcontroller.hxx>
+#include <svtools/toolbarmenu.hxx>
 #include <svl/style.hxx>
 #include <svtools/ctrltool.hxx>
 #include <svtools/borderhelper.hxx>
@@ -46,21 +52,23 @@
 #include <sfx2/docfac.hxx>
 #include <sfx2/templdlg.hxx>
 #include <svl/isethint.hxx>
-#include <sfx2/querystatus.hxx>
 #include <sfx2/sfxstatuslistener.hxx>
+#include <toolkit/helper/vclunohelper.hxx>
 #include <tools/urlobj.hxx>
 #include <sfx2/childwin.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <unotools/fontoptions.hxx>
+#include <vcl/builderfactory.hxx>
 #include <vcl/mnemonic.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
-#include <svl/smplhint.hxx>
 #include <svtools/colorcfg.hxx>
+#include <com/sun/star/table/BorderLine2.hpp>
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/frame/status/ItemStatus.hpp>
+#include <com/sun/star/util/XNumberFormatsSupplier.hpp>
 #include <svx/dialogs.hrc>
 #include <svx/svxitems.hrc>
 #include "helpid.hrc"
@@ -84,11 +92,12 @@
 #include <editeng/wghtitem.hxx>
 #include <editeng/svxfont.hxx>
 #include <editeng/cmapitem.hxx>
+#include <svx/colorwindow.hxx>
+#include <svx/colorbox.hxx>
 #include "svx/drawitem.hxx"
 #include <svx/tbcontrl.hxx>
 #include "svx/dlgutil.hxx"
 #include <svx/dialmgr.hxx>
-#include "colorwindow.hxx"
 #include <memory>
 
 #include <svx/framelink.hxx>
@@ -98,18 +107,17 @@
 #include <svx/xlnclit.hxx>
 #include <svx/xfillit0.hxx>
 #include <svx/xflclit.hxx>
-
+#include <svl/currencytable.hxx>
+#include <svtools/langtab.hxx>
+#include <cppu/unotype.hxx>
+#include <officecfg/Office/Common.hxx>
+#include <o3tl/typed_flags_set.hxx>
+#include "bitmaps.hlst"
 
 #define MAX_MRU_FONTNAME_ENTRIES    5
-#define LOGICAL_EDIT_HEIGHT         12
 
-#ifndef DELETEZ
-#define DELETEZ(p) (delete (p), (p)=NULL)
-#endif
 // don't make more than 15 entries visible at once
-#define MAX_STYLES_ENTRIES          static_cast< sal_uInt16 >( 15 )
-
-static void lcl_CalcSizeValueSet( vcl::Window &rWin, ValueSet &rValueSet, const Size &aItemSize );
+#define MAX_STYLES_ENTRIES          15
 
 // namespaces
 using namespace ::editeng;
@@ -120,10 +128,8 @@ using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::lang;
 
 SFX_IMPL_TOOLBOX_CONTROL( SvxStyleToolBoxControl, SfxTemplateItem );
-SFX_IMPL_TOOLBOX_CONTROL( SvxFontNameToolBoxControl, SvxFontItem );
-SFX_IMPL_TOOLBOX_CONTROL( SvxFrameToolBoxControl, SvxBoxItem );
-SFX_IMPL_TOOLBOX_CONTROL( SvxFrameLineStyleToolBoxControl, SvxLineItem );
 SFX_IMPL_TOOLBOX_CONTROL( SvxSimpleUndoRedoController, SfxStringItem );
+SFX_IMPL_TOOLBOX_CONTROL( SvxCurrencyToolBoxControl, SfxBoolItem );
 
 class SvxStyleBox_Impl : public ComboBox
 {
@@ -131,33 +137,35 @@ class SvxStyleBox_Impl : public ComboBox
 public:
     SvxStyleBox_Impl( vcl::Window* pParent, const OUString& rCommand, SfxStyleFamily eFamily, const Reference< XDispatchProvider >& rDispatchProvider,
                         const Reference< XFrame >& _xFrame,const OUString& rClearFormatKey, const OUString& rMoreKey, bool bInSpecialMode );
-    virtual ~SvxStyleBox_Impl();
+    virtual ~SvxStyleBox_Impl() override;
+    virtual void dispose() override;
 
     void            SetFamily( SfxStyleFamily eNewFamily );
     bool            IsVisible() const { return bVisible; }
 
-    virtual bool    PreNotify( NotifyEvent& rNEvt ) SAL_OVERRIDE;
-    virtual bool    Notify( NotifyEvent& rNEvt ) SAL_OVERRIDE;
-    virtual void    DataChanged( const DataChangedEvent& rDCEvt ) SAL_OVERRIDE;
-    virtual void    StateChanged( StateChangedType nStateChange ) SAL_OVERRIDE;
+    virtual bool    PreNotify( NotifyEvent& rNEvt ) override;
+    virtual bool    EventNotify( NotifyEvent& rNEvt ) override;
+    virtual void    DataChanged( const DataChangedEvent& rDCEvt ) override;
+    virtual void    StateChanged( StateChangedType nStateChange ) override;
 
-    virtual void    UserDraw( const UserDrawEvent& rUDEvt ) SAL_OVERRIDE;
+    virtual void    UserDraw( const UserDrawEvent& rUDEvt ) override;
 
-    void            SetVisibilityListener( const Link& aVisListener ) { aVisibilityListener = aVisListener; }
+    void            SetVisibilityListener( const Link<SvxStyleBox_Impl&,void>& aVisListener ) { aVisibilityListener = aVisListener; }
 
     void            SetDefaultStyle( const OUString& rDefault ) { sDefaultStyle = rDefault; }
 
-    void            CalcOptimalExtraUserWidth();
-
 protected:
-    virtual void    Select() SAL_OVERRIDE;
+    /// Calculate the optimal width of the dropdown.  Very expensive operation, triggers lots of font measurement.
+    DECL_LINK(CalcOptimalExtraUserWidth, VclWindowEvent&, void);
+
+    virtual void    Select() override;
 
 private:
     SfxStyleFamily                  eStyleFamily;
-    sal_uInt16                      nCurSel;
+    sal_Int32                       nCurSel;
     bool                            bRelease;
     Size                            aLogicalSize;
-    Link                            aVisibilityListener;
+    Link<SvxStyleBox_Impl&,void>    aVisibilityListener;
     bool                            bVisible;
     Reference< XDispatchProvider >  m_xDispatchProvider;
     Reference< XFrame >             m_xFrame;
@@ -166,15 +174,17 @@ private:
     OUString                        aMoreKey;
     OUString                        sDefaultStyle;
     bool                            bInSpecialMode;
-    MenuButton*                     m_pButtons[MAX_STYLES_ENTRIES];
-    PopupMenu                       m_aMenu;
+    VclPtr<MenuButton>              m_pButtons[MAX_STYLES_ENTRIES];
+    VclBuilder                      m_aBuilder;
+    VclPtr<PopupMenu>               m_pMenu;
 
     void            ReleaseFocus();
-    Color           TestColorsVisible(const Color &FontCol, const Color &BackCol);
-    void            UserDrawEntry(const UserDrawEvent& rUDEvt, const OUString &rStyleName);
-    void            SetupEntry(sal_uInt16 nItem, const Rectangle& rRect, OutputDevice *pDevice, const OUString &rStyleName, bool bIsNotSelected);
-    bool            AdjustFontForItemHeight(OutputDevice* pDevice, Rectangle& rTextRect, long nHeight);
-    DECL_LINK( MenuSelectHdl, Menu * );
+    static Color    TestColorsVisible(const Color &FontCol, const Color &BackCol);
+    static void     UserDrawEntry(const UserDrawEvent& rUDEvt, const OUString &rStyleName);
+    void            SetupEntry(vcl::RenderContext& rRenderContext, vcl::Window* pParent, sal_Int32 nItem, const tools::Rectangle& rRect, const OUString& rStyleName, bool bIsNotSelected);
+    static bool     AdjustFontForItemHeight(OutputDevice* pDevice, tools::Rectangle& rTextRect, long nHeight);
+    void            SetOptimalSize();
+    DECL_LINK( MenuSelectHdl, Menu *, bool );
 };
 
 class SvxFontNameBox_Impl : public FontNameBox
@@ -202,32 +212,35 @@ private:
     {
         Sequence< PropertyValue > aArgs;
         SfxToolBoxControl::Dispatch( m_xDispatchProvider,
-                                         OUString( ".uno:CharEndPreviewFontName" ),
+                                         ".uno:CharEndPreviewFontName",
                                          aArgs );
     }
-    DECL_DLLPRIVATE_LINK( CheckAndMarkUnknownFont, VclWindowEvent* );
+    DECL_LINK( CheckAndMarkUnknownFont, VclWindowEvent&, void );
+
+    void            SetOptimalSize();
 
 protected:
-    virtual void    Select() SAL_OVERRIDE;
-    virtual void    DataChanged( const DataChangedEvent& rDCEvt ) SAL_OVERRIDE;
+    virtual void    Select() override;
+    virtual void    DataChanged( const DataChangedEvent& rDCEvt ) override;
 
 public:
     SvxFontNameBox_Impl( vcl::Window* pParent, const Reference< XDispatchProvider >& rDispatchProvider,const Reference< XFrame >& _xFrame
-        , WinBits nStyle = WB_SORT
+        , WinBits nStyle
         );
-    virtual ~SvxFontNameBox_Impl();
+    virtual ~SvxFontNameBox_Impl() override;
+    virtual void dispose() override;
 
     void            FillList();
-    void            Update( const SvxFontItem* pFontItem );
+    void            Update( const css::awt::FontDescriptor* pFontDesc );
     sal_uInt16      GetListCount() { return nFtCount; }
     void            Clear() { FontNameBox::Clear(); nFtCount = 0; }
     void            Fill( const FontList* pList )
                         { FontNameBox::Fill( pList );
                           nFtCount = pList->GetFontNameCount(); }
-    virtual void    UserDraw( const UserDrawEvent& rUDEvt ) SAL_OVERRIDE;
-    virtual bool    PreNotify( NotifyEvent& rNEvt ) SAL_OVERRIDE;
-    virtual bool    Notify( NotifyEvent& rNEvt ) SAL_OVERRIDE;
-    virtual Reference< ::com::sun::star::accessibility::XAccessible > CreateAccessible() SAL_OVERRIDE;
+    virtual void    UserDraw( const UserDrawEvent& rUDEvt ) override;
+    virtual bool    PreNotify( NotifyEvent& rNEvt ) override;
+    virtual bool    EventNotify( NotifyEvent& rNEvt ) override;
+    virtual Reference< css::accessibility::XAccessible > CreateAccessible() override;
     void     SetOwnFontList(::std::unique_ptr<FontList> && _aOwnFontList) { m_aOwnFontList = std::move(_aOwnFontList); }
 };
 
@@ -235,7 +248,7 @@ public:
 class SvxFrmValueSet_Impl : public ValueSet
 {
     sal_uInt16          nModifier;
-    virtual void    MouseButtonUp( const MouseEvent& rMEvt ) SAL_OVERRIDE;
+    virtual void    MouseButtonUp( const MouseEvent& rMEvt ) override;
 public:
     SvxFrmValueSet_Impl(vcl::Window* pParent,  WinBits nWinStyle)
         : ValueSet(pParent, nWinStyle), nModifier(0) {}
@@ -249,64 +262,71 @@ void SvxFrmValueSet_Impl::MouseButtonUp( const MouseEvent& rMEvt )
     ValueSet::MouseButtonUp(rMEvt);
 }
 
-class SAL_DLLPRIVATE SvxFrameWindowState_Impl
+class SvxFrameWindow_Impl : public svtools::ToolbarPopup
 {
-public:
-    const SvxBoxItem        maBorderOuter;
-    const SvxBoxInfoItem    maBorderInner;
-
-                            SvxFrameWindowState_Impl( SvxBoxItem& rBorderOuter, SvxBoxInfoItem& rBorderInner ) : maBorderOuter( rBorderOuter ), maBorderInner( rBorderInner ) {}
-                            ~SvxFrameWindowState_Impl() {}
-};
-
-class SvxFrameWindow_Impl : public SfxPopupWindow
-{
-    using FloatingWindow::StateChanged;
-
 private:
-    SvxFrmValueSet_Impl  aFrameSet;
-    ImageList       aImgList;
-    bool        bParagraphMode;
-    Link            aBorderChangedHdl;
+    VclPtr<SvxFrmValueSet_Impl> aFrameSet;
+    svt::ToolboxController&     mrController;
+    std::vector<BitmapEx>       aImgVec;
+    bool                        bParagraphMode;
 
-    DECL_LINK( SelectHdl, void * );
+    void InitImageList();
+    void CalcSizeValueSet();
+    DECL_LINK( SelectHdl, ValueSet*, void );
 
 protected:
-    virtual void    Resize() SAL_OVERRIDE;
-    virtual bool    Close() SAL_OVERRIDE;
-    virtual vcl::Window* GetPreferredKeyInputWindow() SAL_OVERRIDE;
-    virtual void    GetFocus() SAL_OVERRIDE;
+    virtual void    GetFocus() override;
+    virtual void    KeyInput( const KeyEvent& rKEvt ) override;
 
 public:
-    SvxFrameWindow_Impl( sal_uInt16 nId, const Reference< XFrame >& rFrame, vcl::Window* pParentWindow );
-    virtual ~SvxFrameWindow_Impl();
-    void            StartSelection();
+    SvxFrameWindow_Impl( svt::ToolboxController& rController, vcl::Window* pParentWindow );
+    virtual ~SvxFrameWindow_Impl() override;
+    virtual void dispose() override;
 
-    virtual void    StateChanged( sal_uInt16 nSID, SfxItemState eState,
-                                  const SfxPoolItem* pState ) SAL_OVERRIDE;
-    virtual SfxPopupWindow* Clone() const SAL_OVERRIDE;
-    virtual void    DataChanged( const DataChangedEvent& rDCEvt ) SAL_OVERRIDE;
-    void            SetBorderChangedHdl( const Link& rLink ) { aBorderChangedHdl = rLink; }
+    virtual void    statusChanged( const css::frame::FeatureStateEvent& rEvent ) override;
+    virtual void    DataChanged( const DataChangedEvent& rDCEvt ) override;
 };
 
-class SvxLineWindow_Impl : public SfxPopupWindow
+class SvxLineWindow_Impl : public svtools::ToolbarPopup
 {
 private:
-    LineListBox         m_aLineStyleLb;
+    VclPtr<LineListBox> m_aLineStyleLb;
+    svt::ToolboxController& m_rController;
     bool                m_bIsWriter;
 
-    DECL_LINK( SelectHdl, void * );
+    DECL_LINK( SelectHdl, ListBox&, void );
 
 protected:
-    virtual void    Resize() SAL_OVERRIDE;
-    virtual bool    Close() SAL_OVERRIDE;
-    virtual vcl::Window* GetPreferredKeyInputWindow() SAL_OVERRIDE;
-    virtual void    GetFocus() SAL_OVERRIDE;
-    virtual void    DataChanged( const DataChangedEvent& rDCEvt ) SAL_OVERRIDE;
+    virtual void    Resize() override;
+    virtual void    GetFocus() override;
 public:
-    SvxLineWindow_Impl( sal_uInt16 nId, const Reference< XFrame >& rFrame, vcl::Window* pParentWindow );
+    SvxLineWindow_Impl( svt::ToolboxController& rController, vcl::Window* pParentWindow );
+    virtual ~SvxLineWindow_Impl() override { disposeOnce(); }
+    virtual void dispose() override { m_aLineStyleLb.disposeAndClear(); ToolbarPopup::dispose(); }
+};
 
-    virtual SfxPopupWindow* Clone() const SAL_OVERRIDE;
+class SvxCurrencyToolBoxControl;
+class SvxCurrencyList_Impl : public SfxPopupWindow
+{
+private:
+    VclPtr<ListBox> m_pCurrencyLb;
+    rtl::Reference<SvxCurrencyToolBoxControl> m_xControl;
+    OUString&       m_rSelectedFormat;
+    LanguageType&   m_eSelectedLanguage;
+
+    std::vector<OUString> m_aFormatEntries;
+    LanguageType          m_eFormatLanguage;
+    DECL_LINK( SelectHdl, ListBox&, void );
+
+public:
+    SvxCurrencyList_Impl( sal_uInt16 nId, const Reference< XFrame >& rxFrame,
+                          vcl::Window* pParentWindow,
+                          const Reference< css::uno::XComponentContext >& rxContext,
+                          SvxCurrencyToolBoxControl *pControl,
+                          OUString&     rSelectFormat,
+                          LanguageType& eSelectLanguage );
+    virtual ~SvxCurrencyList_Impl() override { disposeOnce(); }
+    virtual void dispose() override;
 };
 
 class SvxStyleToolBoxControl;
@@ -320,13 +340,14 @@ class SfxStyleControllerItem_Impl : public SfxStatusListener
                                      SvxStyleToolBoxControl& rTbxCtl );
 
     protected:
-        virtual void StateChanged( sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem* pState ) SAL_OVERRIDE;
+        virtual void StateChanged( sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem* pState ) override;
 
     private:
         SvxStyleToolBoxControl& rControl;
 };
 
 #define BUTTON_WIDTH 20
+#define BUTTON_PADDING 10
 #define ITEM_HEIGHT 30
 
 SvxStyleBox_Impl::SvxStyleBox_Impl(vcl::Window* pParent,
@@ -337,10 +358,11 @@ SvxStyleBox_Impl::SvxStyleBox_Impl(vcl::Window* pParent,
                                    const OUString& rClearFormatKey,
                                    const OUString& rMoreKey,
                                    bool bInSpec)
-    : ComboBox( pParent, SVX_RES( RID_SVXTBX_STYLE ) )
+    : ComboBox(pParent, WB_SORT | WB_BORDER | WB_HIDE | WB_DROPDOWN | WB_AUTOHSCROLL)
     , eStyleFamily( eFamily )
     , nCurSel(0)
     , bRelease( true )
+    , aLogicalSize(60, 86)
     , bVisible(false)
     , m_xDispatchProvider( rDispatchProvider )
     , m_xFrame(_xFrame)
@@ -348,21 +370,38 @@ SvxStyleBox_Impl::SvxStyleBox_Impl(vcl::Window* pParent,
     , aClearFormatKey( rClearFormatKey )
     , aMoreKey( rMoreKey )
     , bInSpecialMode( bInSpec )
-    , m_aMenu ( SVX_RES( RID_SVX_STYLE_MENU ) )
+    , m_aBuilder(nullptr, VclBuilderContainer::getUIRootDir(), "svx/ui/stylemenu.ui", "")
+    , m_pMenu(m_aBuilder.get_menu("menu"))
 {
-    m_aMenu.SetSelectHdl( LINK( this, SvxStyleBox_Impl, MenuSelectHdl ) );
-    for(int i = 0; i < MAX_STYLES_ENTRIES; i++)
-        m_pButtons[i] = NULL;
-    aLogicalSize = PixelToLogic( GetSizePixel(), MAP_APPFONT );
+    SetHelpId(HID_STYLE_LISTBOX);
+    m_pMenu->SetSelectHdl( LINK( this, SvxStyleBox_Impl, MenuSelectHdl ) );
+    for(VclPtr<MenuButton> & rpButton : m_pButtons)
+        rpButton = nullptr;
+    SetOptimalSize();
     EnableAutocomplete( true );
     EnableUserDraw( true );
+    AddEventListener(LINK(this, SvxStyleBox_Impl, CalcOptimalExtraUserWidth));
     SetUserItemSize( Size( 0, ITEM_HEIGHT ) );
 }
 
 SvxStyleBox_Impl::~SvxStyleBox_Impl()
 {
-    for(int i = 0; i < MAX_STYLES_ENTRIES; i++)
-        delete m_pButtons[i];
+    disposeOnce();
+}
+
+void SvxStyleBox_Impl::dispose()
+{
+    RemoveEventListener(LINK(this, SvxStyleBox_Impl, CalcOptimalExtraUserWidth));
+
+    for (VclPtr<MenuButton>& rButton : m_pButtons)
+    {
+        rButton.disposeAndClear();
+    }
+
+    m_pMenu.clear();
+    m_aBuilder.disposeBuilder();
+
+    ComboBox::dispose();
 }
 
 void SvxStyleBox_Impl::ReleaseFocus()
@@ -376,32 +415,31 @@ void SvxStyleBox_Impl::ReleaseFocus()
         m_xFrame->getContainerWindow()->setFocus();
 }
 
-IMPL_LINK( SvxStyleBox_Impl, MenuSelectHdl, Menu*, pMenu)
+IMPL_LINK( SvxStyleBox_Impl, MenuSelectHdl, Menu*, pMenu, bool)
 {
-    OUString sEntry = OUString( (GetEntry(GetSelectEntryPos())) );
+    OUString sEntry = GetSelectEntry();
+    OString sMenuIdent = pMenu->GetCurItemIdent();
     ReleaseFocus(); // It must be after getting entry pos!
+    if (IsInDropDown())
+        ToggleDropDown();
     Sequence< PropertyValue > aArgs( 2 );
     aArgs[0].Name   = "Param";
-    aArgs[0].Value  = makeAny( sEntry );
+    aArgs[0].Value  <<= sEntry;
     aArgs[1].Name   = "Family";
-    aArgs[1].Value  = makeAny( sal_Int16( eStyleFamily ));
+    aArgs[1].Value  <<= sal_Int16( eStyleFamily );
 
-    sal_uInt16 nMenuId = pMenu->GetCurItemId();
-    switch(nMenuId) {
-        case RID_SVX_UPDATE_STYLE:
-        {
-            SfxToolBoxControl::Dispatch( m_xDispatchProvider,
-                OUString( ".uno:StyleUpdateByExample" ), aArgs );
-            break;
-        }
-        case RID_SVX_MODIFY_STYLE:
-        {
-            SfxToolBoxControl::Dispatch( m_xDispatchProvider,
-                OUString( ".uno:EditStyle" ), aArgs );
-            break;
-        }
+    if (sMenuIdent == "update")
+    {
+        SfxToolBoxControl::Dispatch( m_xDispatchProvider,
+            ".uno:StyleUpdateByExample", aArgs );
     }
-    return 0;
+    else if (sMenuIdent == "edit")
+    {
+        SfxToolBoxControl::Dispatch( m_xDispatchProvider,
+            ".uno:EditStyle", aArgs );
+    }
+
+    return false;
 }
 
 void SvxStyleBox_Impl::Select()
@@ -421,7 +459,7 @@ void SvxStyleBox_Impl::Select()
                 bClear = true;
                 //not only apply default style but also call 'ClearFormatting'
                 Sequence< PropertyValue > aEmptyVals;
-                SfxToolBoxControl::Dispatch( m_xDispatchProvider, OUString(".uno:ResetAttributes"),
+                SfxToolBoxControl::Dispatch( m_xDispatchProvider, ".uno:ResetAttributes",
                     aEmptyVals);
             }
             else if( aSearchEntry == aMoreKey && GetSelectEntryPos() == ( GetEntryCount() - 1 ) )
@@ -431,6 +469,8 @@ void SvxStyleBox_Impl::Select()
                 pViewFrm->ShowChildWindow( SID_SIDEBAR );
                 ::sfx2::sidebar::Sidebar::ShowPanel("StyleListPanel",
                                                     pViewFrm->GetFrame().GetFrameInterface());
+                //tdf#113214 change text back to previous entry
+                SetText(GetSavedValue());
                 bDoIt = false;
             }
         }
@@ -438,13 +478,13 @@ void SvxStyleBox_Impl::Select()
         //Do we need to create a new style?
         SfxObjectShell *pShell = SfxObjectShell::Current();
         SfxStyleSheetBasePool* pPool = pShell->GetStyleSheetPool();
-        SfxStyleSheetBase* pStyle = NULL;
+        SfxStyleSheetBase* pStyle = nullptr;
 
         bool bCreateNew = false;
 
         if ( pPool )
         {
-            pPool->SetSearchMask( eStyleFamily, SFXSTYLEBIT_ALL );
+            pPool->SetSearchMask( eStyleFamily );
 
             pStyle = pPool->First();
             while ( pStyle && OUString( pStyle->GetName() ) != aSearchEntry )
@@ -470,13 +510,13 @@ void SvxStyleBox_Impl::Select()
             SaveValue();
 
             Sequence< PropertyValue > aArgs( 2 );
-            aArgs[0].Value  = makeAny( OUString( aSearchEntry ) );
+            aArgs[0].Value  <<= aSearchEntry;
             aArgs[1].Name   = "Family";
-            aArgs[1].Value  = makeAny( sal_Int16( eStyleFamily ));
+            aArgs[1].Value  <<= sal_Int16( eStyleFamily );
             if( bCreateNew )
             {
                 aArgs[0].Name   = "Param";
-                SfxToolBoxControl::Dispatch( m_xDispatchProvider, OUString(".uno:StyleNewByExample"), aArgs);
+                SfxToolBoxControl::Dispatch( m_xDispatchProvider, ".uno:StyleNewByExample", aArgs);
             }
             else
             {
@@ -494,24 +534,24 @@ void SvxStyleBox_Impl::SetFamily( SfxStyleFamily eNewFamily )
 
 bool SvxStyleBox_Impl::PreNotify( NotifyEvent& rNEvt )
 {
-    sal_uInt16 nType = rNEvt.GetType();
+    MouseNotifyEvent nType = rNEvt.GetType();
 
-    if ( EVENT_MOUSEBUTTONDOWN == nType || EVENT_GETFOCUS == nType )
+    if ( MouseNotifyEvent::MOUSEBUTTONDOWN == nType || MouseNotifyEvent::GETFOCUS == nType )
         nCurSel = GetSelectEntryPos();
-    else if ( EVENT_LOSEFOCUS == nType )
+    else if ( MouseNotifyEvent::LOSEFOCUS == nType )
     {
         // don't handle before our Select() is called
-        if ( !HasFocus() && !HasChildPathFocus() )
+        if (!HasFocus() && !HasChildPathFocus() && !IsChild(rNEvt.GetWindow()))
             SetText( GetSavedValue() );
     }
     return ComboBox::PreNotify( rNEvt );
 }
 
-bool SvxStyleBox_Impl::Notify( NotifyEvent& rNEvt )
+bool SvxStyleBox_Impl::EventNotify( NotifyEvent& rNEvt )
 {
-    bool nHandled = false;
+    bool bHandled = false;
 
-    if ( rNEvt.GetType() == EVENT_KEYINPUT )
+    if ( rNEvt.GetType() == MouseNotifyEvent::KEYINPUT )
     {
         sal_uInt16 nCode = rNEvt.GetKeyEvent()->GetKeyCode().GetCode();
 
@@ -521,10 +561,10 @@ bool SvxStyleBox_Impl::Notify( NotifyEvent& rNEvt )
             {
                 if(IsInDropDown())
                 {
-                    sal_uInt16 nItem = GetSelectEntryPos() - 1;
+                    const sal_Int32 nItem = GetSelectEntryPos() - 1;
                     if(nItem < MAX_STYLES_ENTRIES)
                         m_pButtons[nItem]->ExecuteMenu();
-                    nHandled = true;
+                    bHandled = true;
                 }
                 break;
             }
@@ -534,7 +574,7 @@ bool SvxStyleBox_Impl::Notify( NotifyEvent& rNEvt )
                 if ( KEY_TAB == nCode )
                     bRelease = false;
                 else
-                    nHandled = true;
+                    bHandled = true;
                 Select();
                 break;
             }
@@ -542,21 +582,19 @@ bool SvxStyleBox_Impl::Notify( NotifyEvent& rNEvt )
             case KEY_ESCAPE:
                 SelectEntryPos( nCurSel );
                 ReleaseFocus();
-                nHandled = true;
+                bHandled = true;
                 break;
         }
     }
-    return nHandled || ComboBox::Notify( rNEvt );
+    return bHandled || ComboBox::EventNotify( rNEvt );
 }
 
 void SvxStyleBox_Impl::DataChanged( const DataChangedEvent& rDCEvt )
 {
-    if ( (rDCEvt.GetType() == DATACHANGED_SETTINGS) &&
-         (rDCEvt.GetFlags() & SETTINGS_STYLE) )
+    if ( (rDCEvt.GetType() == DataChangedEventType::SETTINGS) &&
+         (rDCEvt.GetFlags() & AllSettingsFlags::STYLE) )
     {
-        SetSizePixel(LogicToPixel(aLogicalSize, MAP_APPFONT));
-        Size aDropSize( aLogicalSize.Width(), LOGICAL_EDIT_HEIGHT);
-        SetDropDownSizePixel(LogicToPixel(aDropSize, MAP_APPFONT));
+        SetOptimalSize();
     }
 
     ComboBox::DataChanged( rDCEvt );
@@ -566,47 +604,53 @@ void SvxStyleBox_Impl::StateChanged( StateChangedType nStateChange )
 {
     ComboBox::StateChanged( nStateChange );
 
-    if ( nStateChange == StateChangedType::VISIBLE )
+    if ( nStateChange == StateChangedType::Visible )
     {
         bVisible = IsReallyVisible();
-        if ( aVisibilityListener.IsSet() )
-            aVisibilityListener.Call( this );
+        aVisibilityListener.Call( *this );
     }
-    else if ( nStateChange == StateChangedType::INITSHOW )
+    else if ( nStateChange == StateChangedType::InitShow )
     {
         bVisible = true;
-        if ( aVisibilityListener.IsSet() )
-            aVisibilityListener.Call( this );
+        aVisibilityListener.Call( *this );
     }
 }
 
-bool SvxStyleBox_Impl::AdjustFontForItemHeight(OutputDevice* pDevice, Rectangle& rTextRect, long nHeight)
+bool SvxStyleBox_Impl::AdjustFontForItemHeight(OutputDevice* pDevice, tools::Rectangle& rTextRect, long nHeight)
 {
     if (rTextRect.Bottom() > nHeight)
     {
         // the text does not fit, adjust the font size
         double ratio = static_cast< double >( nHeight ) / rTextRect.Bottom();
         vcl::Font aFont(pDevice->GetFont());
-        Size aPixelSize(aFont.GetSize());
+        Size aPixelSize(aFont.GetFontSize());
         aPixelSize.Width() *= ratio;
         aPixelSize.Height() *= ratio;
-        aFont.SetSize(aPixelSize);
+        aFont.SetFontSize(aPixelSize);
         pDevice->SetFont(aFont);
         return true;
     }
     return false;
 }
 
+void SvxStyleBox_Impl::SetOptimalSize()
+{
+    Size aSize(LogicToPixel(aLogicalSize, MapUnit::MapAppFont));
+    set_width_request(aSize.Width());
+    set_height_request(aSize.Height());
+    SetSizePixel(aSize);
+}
+
 void SvxStyleBox_Impl::UserDrawEntry(const UserDrawEvent& rUDEvt, const OUString &rStyleName)
 {
-    OutputDevice *pDevice = rUDEvt.GetDevice();
+    vcl::RenderContext *pDevice = rUDEvt.GetRenderContext();
 
     // IMG_TXT_DISTANCE in ilstbox.hxx is 6, then 1 is added as
     // nBorder, and we are adding 1 in order to look better when
     // italics is present
     const int nLeftDistance = 8;
 
-    Rectangle aTextRect;
+    tools::Rectangle aTextRect;
     pDevice->GetTextBoundRect(aTextRect, rStyleName);
 
     Point aPos( rUDEvt.GetRect().TopLeft() );
@@ -618,11 +662,11 @@ void SvxStyleBox_Impl::UserDrawEntry(const UserDrawEvent& rUDEvt, const OUString
     pDevice->DrawText(aPos, rStyleName);
 }
 
-void SvxStyleBox_Impl::SetupEntry(sal_uInt16 nItem, const Rectangle& rRect, OutputDevice* pDevice, const OUString& rStyleName, bool bIsNotSelected)
+void SvxStyleBox_Impl::SetupEntry(vcl::RenderContext& rRenderContext, vcl::Window* pParent, sal_Int32 nItem, const tools::Rectangle& rRect, const OUString& rStyleName, bool bIsNotSelected)
 {
+    unsigned int nId = rRect.GetHeight() != 0 ? (rRect.getY() / rRect.GetHeight()) : MAX_STYLES_ENTRIES;
     if (nItem == 0 || nItem == GetEntryCount() - 1)
     {
-        unsigned int nId = (rRect.getY() / rRect.GetSize().Height());
         if(nId < MAX_STYLES_ENTRIES && m_pButtons[nId])
             m_pButtons[nId]->Hide();
     }
@@ -630,11 +674,11 @@ void SvxStyleBox_Impl::SetupEntry(sal_uInt16 nItem, const Rectangle& rRect, Outp
     {
         SfxObjectShell *pShell = SfxObjectShell::Current();
         SfxStyleSheetBasePool* pPool = pShell->GetStyleSheetPool();
-        SfxStyleSheetBase* pStyle = NULL;
+        SfxStyleSheetBase* pStyle = nullptr;
 
         if ( pPool )
         {
-            pPool->SetSearchMask( eStyleFamily, SFXSTYLEBIT_ALL );
+            pPool->SetSearchMask( eStyleFamily );
 
             pStyle = pPool->First();
             while (pStyle && pStyle->GetName() != rStyleName)
@@ -643,79 +687,82 @@ void SvxStyleBox_Impl::SetupEntry(sal_uInt16 nItem, const Rectangle& rRect, Outp
 
         if (pStyle )
         {
-            const SfxItemSet& aItemSet = pStyle->GetItemSet();
+            std::unique_ptr<const SfxItemSet> const pItemSet(pStyle->GetItemSetForPreview());
+            if (!pItemSet) return;
 
-            const SvxFontItem *pFontItem = static_cast< const SvxFontItem* >( aItemSet.GetItem( SID_ATTR_CHAR_FONT ) );
-            const SvxFontHeightItem *pFontHeightItem = static_cast< const SvxFontHeightItem* >( aItemSet.GetItem( SID_ATTR_CHAR_FONTHEIGHT ) );
+            const SvxFontItem * const pFontItem =
+                pItemSet->GetItem<SvxFontItem>(SID_ATTR_CHAR_FONT);
+            const SvxFontHeightItem * const pFontHeightItem =
+                pItemSet->GetItem<SvxFontHeightItem>(SID_ATTR_CHAR_FONTHEIGHT);
 
             if ( pFontItem && pFontHeightItem )
             {
                 Size aFontSize( 0, pFontHeightItem->GetHeight() );
-                Size aPixelSize( pDevice->LogicToPixel( aFontSize, pShell->GetMapUnit() ) );
+                Size aPixelSize(rRenderContext.LogicToPixel(aFontSize, pShell->GetMapUnit()));
 
                 // setup the font properties
                 SvxFont aFont;
-                aFont.SetName(pFontItem->GetFamilyName());
+                aFont.SetFamilyName(pFontItem->GetFamilyName());
                 aFont.SetStyleName(pFontItem->GetStyleName());
-                aFont.SetSize(aPixelSize);
+                aFont.SetFontSize(aPixelSize);
 
-                const SfxPoolItem *pItem = aItemSet.GetItem( SID_ATTR_CHAR_WEIGHT );
+                const SfxPoolItem *pItem = pItemSet->GetItem( SID_ATTR_CHAR_WEIGHT );
                 if ( pItem )
                     aFont.SetWeight( static_cast< const SvxWeightItem* >( pItem )->GetWeight() );
 
-                pItem = aItemSet.GetItem( SID_ATTR_CHAR_POSTURE );
+                pItem = pItemSet->GetItem( SID_ATTR_CHAR_POSTURE );
                 if ( pItem )
                     aFont.SetItalic( static_cast< const SvxPostureItem* >( pItem )->GetPosture() );
 
-                pItem = aItemSet.GetItem( SID_ATTR_CHAR_CONTOUR );
+                pItem = pItemSet->GetItem( SID_ATTR_CHAR_CONTOUR );
                 if ( pItem )
                     aFont.SetOutline( static_cast< const SvxContourItem* >( pItem )->GetValue() );
 
-                pItem = aItemSet.GetItem( SID_ATTR_CHAR_SHADOWED );
+                pItem = pItemSet->GetItem( SID_ATTR_CHAR_SHADOWED );
                 if ( pItem )
                     aFont.SetShadow( static_cast< const SvxShadowedItem* >( pItem )->GetValue() );
 
-                pItem = aItemSet.GetItem( SID_ATTR_CHAR_RELIEF );
+                pItem = pItemSet->GetItem( SID_ATTR_CHAR_RELIEF );
                 if ( pItem )
-                    aFont.SetRelief( static_cast< FontRelief >( static_cast< const SvxCharReliefItem* >( pItem )->GetValue() ) );
+                    aFont.SetRelief( static_cast< const SvxCharReliefItem* >( pItem )->GetValue() );
 
-                pItem = aItemSet.GetItem( SID_ATTR_CHAR_UNDERLINE );
+                pItem = pItemSet->GetItem( SID_ATTR_CHAR_UNDERLINE );
                 if ( pItem )
                     aFont.SetUnderline( static_cast< const SvxUnderlineItem* >( pItem )->GetLineStyle() );
 
-                pItem = aItemSet.GetItem( SID_ATTR_CHAR_OVERLINE );
+                pItem = pItemSet->GetItem( SID_ATTR_CHAR_OVERLINE );
                 if ( pItem )
-                    aFont.SetOverline( static_cast< FontUnderline >( static_cast< const SvxOverlineItem* >( pItem )->GetValue() ) );
+                    aFont.SetOverline( static_cast< const SvxOverlineItem* >( pItem )->GetValue() );
 
-                pItem = aItemSet.GetItem( SID_ATTR_CHAR_STRIKEOUT );
+                pItem = pItemSet->GetItem( SID_ATTR_CHAR_STRIKEOUT );
                 if ( pItem )
                     aFont.SetStrikeout( static_cast< const SvxCrossedOutItem* >( pItem )->GetStrikeout() );
 
-                pItem = aItemSet.GetItem( SID_ATTR_CHAR_CASEMAP );
+                pItem = pItemSet->GetItem( SID_ATTR_CHAR_CASEMAP );
                 if ( pItem )
                     aFont.SetCaseMap(static_cast<const SvxCaseMapItem*>(pItem)->GetCaseMap());
 
-                pItem = aItemSet.GetItem( SID_ATTR_CHAR_EMPHASISMARK );
+                pItem = pItemSet->GetItem( SID_ATTR_CHAR_EMPHASISMARK );
                 if ( pItem )
                     aFont.SetEmphasisMark( static_cast< const SvxEmphasisMarkItem* >( pItem )->GetEmphasisMark() );
 
                 // setup the device & draw
-                vcl::Font aOldFont( pDevice->GetFont() );
+                vcl::Font aOldFont(rRenderContext.GetFont());
 
                 Color aFontCol = COL_AUTO, aBackCol = COL_AUTO;
 
-                pDevice->SetFont( aFont );
+                rRenderContext.SetFont(aFont);
 
-                pItem = aItemSet.GetItem( SID_ATTR_CHAR_COLOR );
+                pItem = pItemSet->GetItem( SID_ATTR_CHAR_COLOR );
                 // text color, when nothing is selected
-                if ( (NULL != pItem) && bIsNotSelected)
+                if ( (nullptr != pItem) && bIsNotSelected)
                     aFontCol = Color( static_cast< const SvxColorItem* >( pItem )->GetValue() );
 
-                sal_uInt16 style = drawing::FillStyle_NONE;
+                drawing::FillStyle style = drawing::FillStyle_NONE;
                 // which kind of Fill style is selected
-                pItem = aItemSet.GetItem( XATTR_FILLSTYLE );
+                pItem = pItemSet->GetItem( XATTR_FILLSTYLE );
                 // only when ok and not selected
-                if ( (NULL != pItem) && bIsNotSelected)
+                if ( (nullptr != pItem) && bIsNotSelected)
                     style = static_cast< const XFillStyleItem* >( pItem )->GetValue();
 
                 switch(style)
@@ -723,46 +770,45 @@ void SvxStyleBox_Impl::SetupEntry(sal_uInt16 nItem, const Rectangle& rRect, Outp
                     case drawing::FillStyle_SOLID:
                     {
                         // set background color
-                        pItem = aItemSet.GetItem( XATTR_FILLCOLOR );
-                        if ( NULL != pItem )
+                        pItem = pItemSet->GetItem( XATTR_FILLCOLOR );
+                        if ( nullptr != pItem )
                             aBackCol = Color( static_cast< const XFillColorItem* >( pItem )->GetColorValue() );
 
                         if ( aBackCol != COL_AUTO )
                         {
-                            pDevice->SetFillColor( aBackCol );
-                            pDevice->DrawRect(rRect);
+                            rRenderContext.SetFillColor(aBackCol);
+                            rRenderContext.DrawRect(rRect);
                         }
                     }
                     break;
 
+                    default: break;
                     //TODO Draw the other background styles: gradient, hatching and bitmap
                 }
 
                 // when the font and background color are too similar, adjust the Font-Color
                 if( (aFontCol != COL_AUTO) || (aBackCol != COL_AUTO) )
-                    aFontCol = TestColorsVisible(aFontCol, (aBackCol != COL_AUTO) ? aBackCol : pDevice->GetBackground().GetColor());
+                    aFontCol = TestColorsVisible(aFontCol, (aBackCol != COL_AUTO) ? aBackCol : rRenderContext.GetBackground().GetColor());
 
                 // set text color
                 if ( aFontCol != COL_AUTO )
-                    pDevice->SetTextColor( aFontCol );
+                    rRenderContext.SetTextColor(aFontCol);
 
                 // handle the push-button
                 if (bIsNotSelected)
                 {
-                    unsigned int nId = (rRect.getY() / rRect.GetSize().Height());
-                    if(nId < MAX_STYLES_ENTRIES && m_pButtons[nId])
+                    if (nId < MAX_STYLES_ENTRIES && m_pButtons[nId])
                         m_pButtons[nId]->Hide();
                 }
                 else
                 {
-                    unsigned int nId = (rRect.getY() / rRect.GetSize().Height());
-                    if(nId < MAX_STYLES_ENTRIES)
+                    if (nId < MAX_STYLES_ENTRIES)
                     {
-                        if(m_pButtons[nId] == NULL)
+                        if (!m_pButtons[nId] && pParent)
                         {
-                            m_pButtons[nId] = new MenuButton(static_cast<vcl::Window*>(pDevice), WB_FLATBUTTON | WB_NOPOINTERFOCUS);
-                            m_pButtons[nId]->SetSizePixel(Size(BUTTON_WIDTH, rRect.GetSize().Height()));
-                            m_pButtons[nId]->SetPopupMenu(&m_aMenu);
+                            m_pButtons[nId] = VclPtr<MenuButton>::Create(pParent, WB_FLATBUTTON | WB_NOPOINTERFOCUS);
+                            m_pButtons[nId]->SetSizePixel(Size(BUTTON_WIDTH, rRect.GetHeight()));
+                            m_pButtons[nId]->SetPopupMenu(m_pMenu);
                         }
                         m_pButtons[nId]->SetPosPixel(Point(rRect.GetWidth() - BUTTON_WIDTH, rRect.getY()));
                         m_pButtons[nId]->Show();
@@ -778,13 +824,13 @@ void SvxStyleBox_Impl::UserDraw( const UserDrawEvent& rUDEvt )
     sal_uInt16 nItem = rUDEvt.GetItemId();
     OUString aStyleName( GetEntry( nItem ) );
 
-    OutputDevice *pDevice = rUDEvt.GetDevice();
+    vcl::RenderContext *pDevice = rUDEvt.GetRenderContext();
     pDevice->Push(PushFlags::FILLCOLOR | PushFlags::FONT | PushFlags::TEXTCOLOR);
 
-    const Rectangle& rRect(rUDEvt.GetRect());
+    const tools::Rectangle& rRect(rUDEvt.GetRect());
     bool bIsNotSelected = rUDEvt.GetItemId() != GetSelectEntryPos();
 
-    SetupEntry(nItem, rRect, pDevice, aStyleName, bIsNotSelected);
+    SetupEntry(*pDevice, rUDEvt.GetWindow(), nItem, rRect, aStyleName, bIsNotSelected);
 
     UserDrawEntry(rUDEvt, aStyleName);
 
@@ -793,14 +839,18 @@ void SvxStyleBox_Impl::UserDraw( const UserDrawEvent& rUDEvt )
     DrawEntry( rUDEvt, false, false );
 }
 
-void SvxStyleBox_Impl::CalcOptimalExtraUserWidth()
+IMPL_LINK(SvxStyleBox_Impl, CalcOptimalExtraUserWidth, VclWindowEvent&, event, void)
 {
+    // perform the calculation only when we are opening the dropdown
+    if (event.GetId() != VclEventId::DropdownPreOpen)
+        return;
+
     long nMaxNormalFontWidth = 0;
     sal_Int32 nEntryCount = GetEntryCount();
     for (sal_Int32 i = 0; i < nEntryCount; ++i)
     {
         OUString sStyleName(GetEntry(i));
-        Rectangle aTextRectForDefaultFont;
+        tools::Rectangle aTextRectForDefaultFont;
         GetTextBoundRect(aTextRectForDefaultFont, sStyleName);
 
         const long nWidth = aTextRectForDefaultFont.GetWidth();
@@ -814,8 +864,8 @@ void SvxStyleBox_Impl::CalcOptimalExtraUserWidth()
         OUString sStyleName(GetEntry(i));
 
         Push(PushFlags::FILLCOLOR | PushFlags::FONT | PushFlags::TEXTCOLOR);
-        SetupEntry(i, Rectangle(0, 0, RECT_MAX, ITEM_HEIGHT), this, sStyleName, false);
-        Rectangle aTextRectForActualFont;
+        SetupEntry(*this /*FIXME rendercontext*/, this, i, tools::Rectangle(0, 0, RECT_MAX, ITEM_HEIGHT), sStyleName, true);
+        tools::Rectangle aTextRectForActualFont;
         GetTextBoundRect(aTextRectForActualFont, sStyleName);
         if (AdjustFontForItemHeight(this, aTextRectForActualFont, ITEM_HEIGHT))
         {
@@ -824,7 +874,7 @@ void SvxStyleBox_Impl::CalcOptimalExtraUserWidth()
         }
         Pop();
 
-        const long nWidth = aTextRectForActualFont.GetWidth() + BUTTON_WIDTH;
+        const long nWidth = aTextRectForActualFont.GetWidth() + BUTTON_WIDTH + BUTTON_PADDING;
 
         nMaxUserDrawFontWidth = std::max(nWidth, nMaxUserDrawFontWidth);
     }
@@ -836,7 +886,7 @@ void SvxStyleBox_Impl::CalcOptimalExtraUserWidth()
 // return is always the Font-Color
 //        when both light or dark, change the Contrast
 //        in other case do not change the origin color
-//        when the color is R=G=B=128 the DecreaseContast make 128 the need a exception
+//        when the color is R=G=B=128 the DecreaseContrast make 128 the need a exception
 Color SvxStyleBox_Impl::TestColorsVisible(const Color &FontCol, const Color &BackCol)
 {
     const sal_uInt8  ChgVal = 60;       // increase/decrease the Contrast
@@ -856,19 +906,18 @@ Color SvxStyleBox_Impl::TestColorsVisible(const Color &FontCol, const Color &Bac
 }
 
 
-
 static bool lcl_GetDocFontList( const FontList** ppFontList, SvxFontNameBox_Impl* pBox )
 {
     bool bChanged = false;
     const SfxObjectShell* pDocSh = SfxObjectShell::Current();
-    const SvxFontListItem* pFontListItem = NULL;
+    const SvxFontListItem* pFontListItem = nullptr;
 
     if ( pDocSh )
         pFontListItem =
             static_cast<const SvxFontListItem*>(pDocSh->GetItem( SID_ATTR_CHAR_FONTLIST ));
     else
     {
-        ::std::unique_ptr<FontList> aFontList(new FontList( pBox ));
+        ::std::unique_ptr<FontList> aFontList(new FontList( pBox->GetParent() ));
         *ppFontList = aFontList.get();
         pBox->SetOwnFontList(std::move(aFontList));
         bChanged = true;
@@ -904,7 +953,7 @@ static bool lcl_GetDocFontList( const FontList** ppFontList, SvxFontNameBox_Impl
         if ( pBox )
             pBox->Enable();
     }
-    else if ( pBox && ( pDocSh || ( !pDocSh && !ppFontList )))
+    else if ( pBox && ( pDocSh || !ppFontList ))
     {
         // Disable box only when we have a SfxObjectShell and didn't get a font list OR
         // we don't have a SfxObjectShell and no current font list.
@@ -930,7 +979,7 @@ static bool lcl_GetDocFontList( const FontList** ppFontList, SvxFontNameBox_Impl
 SvxFontNameBox_Impl::SvxFontNameBox_Impl( vcl::Window* pParent, const Reference< XDispatchProvider >& rDispatchProvider,const Reference< XFrame >& _xFrame, WinBits nStyle ) :
 
     FontNameBox        ( pParent, nStyle | WinBits( WB_DROPDOWN | WB_AUTOHSCROLL ) ),
-    pFontList          ( NULL ),
+    pFontList          ( nullptr ),
     aLogicalSize       ( 60,160 ),
     nFtCount           ( 0 ),
     bRelease           ( true ),
@@ -941,17 +990,20 @@ SvxFontNameBox_Impl::SvxFontNameBox_Impl( vcl::Window* pParent, const Reference<
     , mbInCheckAndMarkUnknownFont(false)
 #endif	// USE_JAVA
 {
-    Size aSize(LogicToPixel(aLogicalSize, MAP_APPFONT));
-    set_width_request(aSize.Width());
-    set_height_request(aSize.Height());
-    SetSizePixel(aSize);
+    SetOptimalSize();
     EnableControls_Impl();
     GetSubEdit()->AddEventListener( LINK( this, SvxFontNameBox_Impl, CheckAndMarkUnknownFont ));
 }
 
 SvxFontNameBox_Impl::~SvxFontNameBox_Impl()
 {
+    disposeOnce();
+}
+
+void SvxFontNameBox_Impl::dispose()
+{
     GetSubEdit()->RemoveEventListener( LINK( this, SvxFontNameBox_Impl, CheckAndMarkUnknownFont ));
+    FontNameBox::dispose();
 }
 
 void SvxFontNameBox_Impl::FillList()
@@ -964,14 +1016,14 @@ void SvxFontNameBox_Impl::FillList()
     SetSelection( aOldSel );
 }
 
-IMPL_LINK( SvxFontNameBox_Impl, CheckAndMarkUnknownFont, VclWindowEvent*, event )
+IMPL_LINK( SvxFontNameBox_Impl, CheckAndMarkUnknownFont, VclWindowEvent&, event, void )
 {
-    if( event->GetId() != VCLEVENT_EDIT_MODIFY )
-        return 0;
+    if( event.GetId() != VclEventId::EditModify )
+        return;
 #ifdef USE_JAVA
     // Fix Mac App Store crashing bug by ignoring recursive calls to this method
     if ( mbInCheckAndMarkUnknownFont )
-        return 0;
+        return;
 
     mbInCheckAndMarkUnknownFont = true;
 #endif	// USE_JAVA
@@ -980,13 +1032,13 @@ IMPL_LINK( SvxFontNameBox_Impl, CheckAndMarkUnknownFont, VclWindowEvent*, event 
     lcl_GetDocFontList( &pFontList, this );
     // If the font is unknown, show it in italic.
     vcl::Font font = GetControlFont();
-    if( pFontList != NULL && pFontList->IsAvailable( fontname ))
+    if( pFontList != nullptr && pFontList->IsAvailable( fontname ))
     {
         if( font.GetItalic() != ITALIC_NONE )
         {
             font.SetItalic( ITALIC_NONE );
             SetControlFont( font );
-            SetQuickHelpText( SVX_RESSTR( RID_SVXSTR_CHARFONTNAME ));
+            SetQuickHelpText( SvxResId( RID_SVXSTR_CHARFONTNAME ));
         }
     }
     else
@@ -995,36 +1047,35 @@ IMPL_LINK( SvxFontNameBox_Impl, CheckAndMarkUnknownFont, VclWindowEvent*, event 
         {
             font.SetItalic( ITALIC_NORMAL );
             SetControlFont( font );
-            SetQuickHelpText( SVX_RESSTR( RID_SVXSTR_CHARFONTNAME_NOTAVAILABLE ));
+            SetQuickHelpText( SvxResId( RID_SVXSTR_CHARFONTNAME_NOTAVAILABLE ));
         }
     }
 
 #ifdef USE_JAVA
     mbInCheckAndMarkUnknownFont = false;
 #endif	// USE_JAVA
-    return 0;
 }
 
-void SvxFontNameBox_Impl::Update( const SvxFontItem* pFontItem )
+void SvxFontNameBox_Impl::Update( const css::awt::FontDescriptor* pFontDesc )
 {
-    if ( pFontItem )
+    if ( pFontDesc )
     {
-        aCurFont.SetName        ( pFontItem->GetFamilyName() );
-        aCurFont.SetFamily      ( pFontItem->GetFamily() );
-        aCurFont.SetStyleName   ( pFontItem->GetStyleName() );
-        aCurFont.SetPitch       ( pFontItem->GetPitch() );
-        aCurFont.SetCharSet     ( pFontItem->GetCharSet() );
+        aCurFont.SetFamilyName  ( pFontDesc->Name );
+        aCurFont.SetFamily      ( FontFamily( pFontDesc->Family ) );
+        aCurFont.SetStyleName   ( pFontDesc->StyleName );
+        aCurFont.SetPitch       ( FontPitch( pFontDesc->Pitch ) );
+        aCurFont.SetCharSet     ( rtl_TextEncoding( pFontDesc->CharSet ) );
     }
-    OUString aCurName = aCurFont.GetName();
+    OUString aCurName = aCurFont.GetFamilyName();
     if ( GetText() != aCurName )
         SetText( aCurName );
 }
 
 bool SvxFontNameBox_Impl::PreNotify( NotifyEvent& rNEvt )
 {
-    sal_uInt16 nType = rNEvt.GetType();
+    MouseNotifyEvent nType = rNEvt.GetType();
 
-    if ( EVENT_MOUSEBUTTONDOWN == nType || EVENT_GETFOCUS == nType )
+    if ( MouseNotifyEvent::MOUSEBUTTONDOWN == nType || MouseNotifyEvent::GETFOCUS == nType )
     {
         EnableControls_Impl();
         FillList();
@@ -1032,14 +1083,14 @@ bool SvxFontNameBox_Impl::PreNotify( NotifyEvent& rNEvt )
     return FontNameBox::PreNotify( rNEvt );
 }
 
-bool SvxFontNameBox_Impl::Notify( NotifyEvent& rNEvt )
+bool SvxFontNameBox_Impl::EventNotify( NotifyEvent& rNEvt )
 {
-    bool nHandled = false;
+    bool bHandled = false;
     mbEndPreview = false;
-    if ( rNEvt.GetType() == EVENT_KEYUP )
+    if ( rNEvt.GetType() == MouseNotifyEvent::KEYUP )
         mbEndPreview = true;
 
-    if ( rNEvt.GetType() == EVENT_KEYINPUT )
+    if ( rNEvt.GetType() == MouseNotifyEvent::KEYINPUT )
     {
         sal_uInt16 nCode = rNEvt.GetKeyEvent()->GetKeyCode().GetCode();
 
@@ -1051,7 +1102,7 @@ bool SvxFontNameBox_Impl::Notify( NotifyEvent& rNEvt )
                 if ( KEY_TAB == nCode )
                     bRelease = false;
                 else
-                    nHandled = true;
+                    bHandled = true;
                 Select();
                 break;
             }
@@ -1063,7 +1114,7 @@ bool SvxFontNameBox_Impl::Notify( NotifyEvent& rNEvt )
                 break;
         }
     }
-    else if ( EVENT_LOSEFOCUS == rNEvt.GetType() )
+    else if ( MouseNotifyEvent::LOSEFOCUS == rNEvt.GetType() )
     {
         vcl::Window* pFocusWin = Application::GetFocusWindow();
         if ( !HasFocus() && GetSubEdit() != pFocusWin )
@@ -1072,20 +1123,26 @@ bool SvxFontNameBox_Impl::Notify( NotifyEvent& rNEvt )
         EndPreview();
     }
 
-    return nHandled || FontNameBox::Notify( rNEvt );
+    return bHandled || FontNameBox::EventNotify( rNEvt );
+}
+
+void SvxFontNameBox_Impl::SetOptimalSize()
+{
+    Size aSize(LogicToPixel(aLogicalSize, MapUnit::MapAppFont));
+    set_width_request(aSize.Width());
+    set_height_request(aSize.Height());
+    SetSizePixel(aSize);
 }
 
 void SvxFontNameBox_Impl::DataChanged( const DataChangedEvent& rDCEvt )
 {
-    if ( (rDCEvt.GetType() == DATACHANGED_SETTINGS) &&
-         (rDCEvt.GetFlags() & SETTINGS_STYLE) )
+    if ( (rDCEvt.GetType() == DataChangedEventType::SETTINGS) &&
+         (rDCEvt.GetFlags() & AllSettingsFlags::STYLE) )
     {
-        SetSizePixel(LogicToPixel(aLogicalSize, MAP_APPFONT));
-        Size aDropSize( aLogicalSize.Width(), LOGICAL_EDIT_HEIGHT);
-        SetDropDownSizePixel(LogicToPixel(aDropSize, MAP_APPFONT));
+        SetOptimalSize();
     }
-    else if ( ( rDCEvt.GetType() == DATACHANGED_FONTS ) ||
-              ( rDCEvt.GetType() == DATACHANGED_DISPLAY ) )
+    else if ( ( rDCEvt.GetType() == DataChangedEventType::FONTS ) ||
+              ( rDCEvt.GetType() == DataChangedEventType::DISPLAY ) )
     {
         // The old font list in shell has likely been destroyed at this point, so we need to get
         // the new one before doing anything further.
@@ -1114,7 +1171,7 @@ void SvxFontNameBox_Impl::EnableControls_Impl()
     if ( GetMaxMRUCount() != nEntries )
     {
         // refill in the next GetFocus-Handler
-        pFontList = NULL;
+        pFontList = nullptr;
         Clear();
         SetMaxMRUCount( nEntries );
     }
@@ -1133,21 +1190,30 @@ void SvxFontNameBox_Impl::UserDraw( const UserDrawEvent& rUDEvt )
     // or select
     if (  rUDEvt.GetItemId() == rUDEvt.GetStyle() )
     {
+        OUString fontName(GetText());
+        if (IsInDropDown())
+        {
+            /*
+             * when in dropdown mode the selected item should be
+             * used and not the current selection
+             */
+             fontName = GetEntry(rUDEvt.GetItemId());
+        }
         Sequence< PropertyValue > aArgs( 1 );
-        vcl::FontInfo aInfo( pFontList->Get( GetEntry( rUDEvt.GetItemId() ),
+        FontMetric aFontMetric( pFontList->Get( fontName,
             aCurFont.GetWeight(),
             aCurFont.GetItalic() ) );
 
-        SvxFontItem aFontItem( aInfo.GetFamily(),
-            aInfo.GetName(),
-            aInfo.GetStyleName(),
-            aInfo.GetPitch(),
-            aInfo.GetCharSet(),
+        SvxFontItem aFontItem( aFontMetric.GetFamilyType(),
+            aFontMetric.GetFamilyName(),
+            aFontMetric.GetStyleName(),
+            aFontMetric.GetPitch(),
+            aFontMetric.GetCharSet(),
             SID_ATTR_CHAR_FONT );
         aFontItem.QueryValue( aArgs[0].Value );
         aArgs[0].Name   = "CharPreviewFontName";
         SfxToolBoxControl::Dispatch( m_xDispatchProvider,
-            OUString( ".uno:CharPreviewFontName" ),
+            ".uno:CharPreviewFontName",
                 aArgs );
     }
 }
@@ -1160,16 +1226,16 @@ void SvxFontNameBox_Impl::Select()
     std::unique_ptr<SvxFontItem> pFontItem;
     if ( pFontList )
     {
-        vcl::FontInfo aInfo( pFontList->Get( GetText(),
+        FontMetric aFontMetric( pFontList->Get( GetText(),
             aCurFont.GetWeight(),
             aCurFont.GetItalic() ) );
-        aCurFont = aInfo;
+        aCurFont = aFontMetric;
 
-        pFontItem.reset( new SvxFontItem( aInfo.GetFamily(),
-            aInfo.GetName(),
-            aInfo.GetStyleName(),
-            aInfo.GetPitch(),
-            aInfo.GetCharSet(),
+        pFontItem.reset( new SvxFontItem( aFontMetric.GetFamilyType(),
+            aFontMetric.GetFamilyName(),
+            aFontMetric.GetStyleName(),
+            aFontMetric.GetPitch(),
+            aFontMetric.GetCharSet(),
             SID_ATTR_CHAR_FONT ) );
 
         Any a;
@@ -1187,7 +1253,7 @@ void SvxFontNameBox_Impl::Select()
         {
             aArgs[0].Name   = "CharFontName";
             SfxToolBoxControl::Dispatch( m_xDispatchProvider,
-                                         OUString( ".uno:CharFontName" ),
+                                         ".uno:CharFontName",
                                          aArgs );
         }
     }
@@ -1202,7 +1268,7 @@ void SvxFontNameBox_Impl::Select()
         {
             aArgs[0].Name   = "CharPreviewFontName";
             SfxToolBoxControl::Dispatch( m_xDispatchProvider,
-                                         OUString( ".uno:CharPreviewFontName" ),
+                                         ".uno:CharPreviewFontName",
                                          aArgs );
         }
     }
@@ -1213,24 +1279,26 @@ void SvxFontNameBox_Impl::Select()
 #endif
 
 
-SvxColorWindow_Impl::SvxColorWindow_Impl( const OUString&            rCommand,
-                                          PaletteManager&            rPaletteManager,
-                                          BorderColorStatus&         rBorderColorStatus,
-                                          sal_uInt16                 nSlotId,
-                                          const Reference< XFrame >& rFrame,
-                                          const OUString&            rWndTitle,
-                                          vcl::Window*                    pParentWindow ):
+SvxColorWindow::SvxColorWindow(const OUString&            rCommand,
+                               std::shared_ptr<PaletteManager>& rPaletteManager,
+                               BorderColorStatus&         rBorderColorStatus,
+                               sal_uInt16                 nSlotId,
+                               const Reference< XFrame >& rFrame,
+                               vcl::Window*               pParentWindow,
+                               std::function<void(const OUString&, const NamedColor&)> const & aFunction):
 
     SfxPopupWindow( nSlotId, pParentWindow,
                     "palette_popup_window", "svx/ui/colorwindow.ui",
                     rFrame ),
     theSlotId( nSlotId ),
     maCommand( rCommand ),
-    mrPaletteManager( rPaletteManager ),
-    mrBorderColorStatus( rBorderColorStatus )
+    mxPaletteManager( rPaletteManager ),
+    mrBorderColorStatus( rBorderColorStatus ),
+    maColorSelectFunction(aFunction)
 {
     get(mpPaletteListBox,     "palette_listbox");
     get(mpButtonAutoColor,    "auto_color_button");
+    get(mpButtonNoneColor,    "none_color_button");
     get(mpButtonPicker,       "color_picker_button");
     get(mpColorSet,           "colorset");
     get(mpRecentColorSet,     "recent_colorset");
@@ -1239,70 +1307,78 @@ SvxColorWindow_Impl::SvxColorWindow_Impl( const OUString&            rCommand,
     mpColorSet->SetStyle( WinBits(WB_FLATVALUESET | WB_ITEMBORDER | WB_3DLOOK | WB_NO_DIRECTSELECT | WB_TABSTOP) );
     mpRecentColorSet->SetStyle( WinBits(WB_FLATVALUESET | WB_ITEMBORDER | WB_3DLOOK | WB_NO_DIRECTSELECT | WB_TABSTOP) );
 
-    if ( SID_ATTR_CHAR_COLOR_BACKGROUND == theSlotId || SID_BACKGROUND_COLOR == theSlotId )
+    switch ( theSlotId )
     {
-        mpButtonAutoColor->SetText( SVX_RESSTR( RID_SVXSTR_TRANSPARENT ) );
-        mpColorSet->SetAccessibleName( SVX_RESSTR( RID_SVXSTR_BACKGROUND ) );
-    }
-    else if ( SID_ATTR_CHAR_COLOR == theSlotId || SID_ATTR_CHAR_COLOR2 == theSlotId || SID_EXTRUSION_3D_COLOR == theSlotId )
-    {
-        SfxPoolItem* pDummy;
-
-        Reference< XDispatchProvider > aDisp( GetFrame()->getController(), UNO_QUERY );
-        SfxQueryStatus aQueryStatus( aDisp,
-                                     SID_ATTR_AUTO_COLOR_INVALID,
-                                     OUString( ".uno:AutoColorInvalid" ));
-        SfxItemState eState = aQueryStatus.QueryState( pDummy );
-        if( (SfxItemState::DEFAULT > eState) || ( SID_EXTRUSION_3D_COLOR == theSlotId ) )
+        case SID_ATTR_CHAR_COLOR_BACKGROUND:
+        case SID_BACKGROUND_COLOR:
+        case SID_ATTR_CHAR_BACK_COLOR:
         {
-            mpButtonAutoColor->SetText( SVX_RESSTR( RID_SVXSTR_AUTOMATIC ) );
-            mpColorSet->SetAccessibleName( SVX_RESSTR( RID_SVXSTR_TEXTCOLOR ) );
+            mpButtonAutoColor->SetText( SvxResId( RID_SVXSTR_NOFILL ) );
+            break;
+        }
+        case SID_AUTHOR_COLOR:
+        {
+            mpButtonAutoColor->SetText( SvxResId( RID_SVXSTR_BY_AUTHOR ) );
+            break;
+        }
+        case SID_BMPMASK_COLOR:
+        {
+            mpButtonAutoColor->SetText( SvxResId( RID_SVXSTR_TRANSPARENT ) );
+            break;
+        }
+        case SID_ATTR_CHAR_COLOR:
+        case SID_ATTR_CHAR_COLOR2:
+        case SID_EXTRUSION_3D_COLOR:
+        {
+            mpButtonAutoColor->SetText(EditResId::GetString(RID_SVXSTR_AUTOMATIC));
+            break;
+        }
+        case SID_FM_CTL_PROPERTIES:
+        {
+            mpButtonAutoColor->SetText( SvxResId( RID_SVXSTR_DEFAULT ) );
+            break;
+        }
+        default:
+        {
+            mpButtonAutoColor->Hide();
+            mpAutomaticSeparator->Hide();
+            break;
         }
     }
-    else if ( SID_FRAME_LINECOLOR == theSlotId )
-    {
-        mpButtonAutoColor->Hide();
-        mpAutomaticSeparator->Hide();
-        mpColorSet->SetAccessibleName( SVX_RESSTR( RID_SVXSTR_FRAME_COLOR ) );
-    }
-    else if ( SID_ATTR_LINE_COLOR == theSlotId )
-    {
-        mpButtonAutoColor->Hide();
-        mpAutomaticSeparator->Hide();
-        mpColorSet->SetAccessibleName( SVX_RESSTR( RID_SVXSTR_LINECOLOR ) );
-    }
-    else if ( SID_ATTR_FILL_COLOR == theSlotId )
-    {
-        mpButtonAutoColor->Hide();
-        mpAutomaticSeparator->Hide();
-        mpColorSet->SetAccessibleName( SVX_RESSTR( RID_SVXSTR_FILLCOLOR ) );
-    }
+
+    mpColorSet->SetAccessibleName( GetText() );
 
     mpPaletteListBox->SetStyle( mpPaletteListBox->GetStyle() | WB_BORDER | WB_AUTOSIZE );
-    mpPaletteListBox->SetSelectHdl( LINK( this, SvxColorWindow_Impl, SelectPaletteHdl ) );
+    mpPaletteListBox->SetSelectHdl( LINK( this, SvxColorWindow, SelectPaletteHdl ) );
     mpPaletteListBox->AdaptDropDownLineCountToMaximum();
-    std::vector<OUString> aPaletteList = mrPaletteManager.GetPaletteList();
+    std::vector<OUString> aPaletteList = mxPaletteManager->GetPaletteList();
     for( std::vector<OUString>::iterator it = aPaletteList.begin(); it != aPaletteList.end(); ++it )
     {
         mpPaletteListBox->InsertEntry( *it );
     }
-    mpPaletteListBox->SelectEntryPos(mrPaletteManager.GetPalette(), true);
+    OUString aPaletteName( officecfg::Office::Common::UserColors::PaletteName::get() );
+    mpPaletteListBox->SelectEntry( aPaletteName );
+    const sal_Int32 nSelectedEntry(mpPaletteListBox->GetSelectEntryPos());
+    if (nSelectedEntry != LISTBOX_ENTRY_NOTFOUND)
+        mxPaletteManager->SetPalette(nSelectedEntry);
 
-    mpButtonAutoColor->SetClickHdl( LINK( this, SvxColorWindow_Impl, AutoColorClickHdl ) );
-    mpButtonPicker->SetClickHdl( LINK( this, SvxColorWindow_Impl, OpenPickerClickHdl ) );
+    mpButtonAutoColor->SetClickHdl( LINK( this, SvxColorWindow, AutoColorClickHdl ) );
+    mpButtonNoneColor->SetClickHdl( LINK( this, SvxColorWindow, AutoColorClickHdl ) );
+    mpButtonPicker->SetClickHdl( LINK( this, SvxColorWindow, OpenPickerClickHdl ) );
 
-    mpColorSet->SetSelectHdl( LINK( this, SvxColorWindow_Impl, SelectHdl ) );
-    mpRecentColorSet->SetSelectHdl( LINK( this, SvxColorWindow_Impl, SelectHdl ) );
+    mpColorSet->SetSelectHdl( LINK( this, SvxColorWindow, SelectHdl ) );
+    mpRecentColorSet->SetSelectHdl( LINK( this, SvxColorWindow, SelectHdl ) );
     SetHelpId( HID_POPUP_COLOR );
     mpColorSet->SetHelpId( HID_POPUP_COLOR_CTRL );
-    SetText( rWndTitle );
 
-    mrPaletteManager.ReloadColorSet(*mpColorSet);
-    mpColorSet->layoutToGivenHeight(mpColorSet->GetSizePixel().Height(), mrPaletteManager.GetColorCount());
+    mxPaletteManager->ReloadColorSet(*mpColorSet);
+    const sal_uInt32 nMaxItems(SvxColorValueSet::getMaxRowCount() * SvxColorValueSet::getColumnCount());
+    Size aSize = mpColorSet->layoutAllVisible(nMaxItems);
+    mpColorSet->set_height_request(aSize.Height());
+    mpColorSet->set_width_request(aSize.Width());
 
-    mrPaletteManager.ReloadRecentColorSet(*mpRecentColorSet);
-    mpRecentColorSet->SetLineCount( 1 );
-    Size aSize = mpRecentColorSet->layoutAllVisible(mrPaletteManager.GetRecentColorCount());
+    mxPaletteManager->ReloadRecentColorSet(*mpRecentColorSet);
+    aSize = mpRecentColorSet->layoutAllVisible(mxPaletteManager->GetRecentColorCount());
     mpRecentColorSet->set_height_request(aSize.Height());
     mpRecentColorSet->set_width_request(aSize.Width());
 
@@ -1315,23 +1391,100 @@ SvxColorWindow_Impl::SvxColorWindow_Impl( const OUString&            rCommand,
     }
 }
 
-SvxColorWindow_Impl::~SvxColorWindow_Impl()
+void SvxColorWindow::ShowNoneButton()
 {
+    mpButtonNoneColor->Show();
 }
 
-void SvxColorWindow_Impl::KeyInput( const KeyEvent& rKEvt )
+SvxColorWindow::~SvxColorWindow()
+{
+    disposeOnce();
+}
+
+void SvxColorWindow::dispose()
+{
+    mpColorSet.clear();
+    mpRecentColorSet.clear();
+    mpPaletteListBox.clear();
+    mpButtonAutoColor.clear();
+    mpButtonNoneColor.clear();
+    mpButtonPicker.clear();
+    mpAutomaticSeparator.clear();
+    SfxPopupWindow::dispose();
+}
+
+void SvxColorWindow::KeyInput( const KeyEvent& rKEvt )
 {
     mpColorSet->KeyInput(rKEvt);
 }
 
-SfxPopupWindow* SvxColorWindow_Impl::Clone() const
+NamedColor SvxColorWindow::GetSelectEntryColor(ValueSet* pColorSet)
 {
-    return new SvxColorWindow_Impl( maCommand, mrPaletteManager, mrBorderColorStatus, theSlotId, GetFrame(), GetText(), GetParent() );
+    Color aColor = pColorSet->GetItemColor(pColorSet->GetSelectItemId());
+    OUString sColorName = pColorSet->GetItemText(pColorSet->GetSelectItemId());
+    return std::make_pair(aColor, sColorName);
 }
 
-IMPL_LINK(SvxColorWindow_Impl, SelectHdl, SvxColorValueSet*, pColorSet)
+namespace
 {
-    Color aColor = pColorSet->GetItemColor( pColorSet->GetSelectItemId() );
+    NamedColor GetAutoColor(sal_uInt16 nSlotId)
+    {
+        Color aColor;
+        OUString sColorName;
+        switch (nSlotId)
+        {
+            case SID_ATTR_CHAR_COLOR_BACKGROUND:
+            case SID_BACKGROUND_COLOR:
+            case SID_ATTR_CHAR_BACK_COLOR:
+                aColor = COL_TRANSPARENT;
+                sColorName = SvxResId(RID_SVXSTR_NOFILL);
+                break;
+            case SID_AUTHOR_COLOR:
+                aColor = COL_TRANSPARENT;
+                sColorName = SvxResId(RID_SVXSTR_BY_AUTHOR);
+                break;
+            case SID_BMPMASK_COLOR:
+                aColor = COL_TRANSPARENT;
+                sColorName = SvxResId(RID_SVXSTR_TRANSPARENT);
+                break;
+            case SID_FM_CTL_PROPERTIES:
+                aColor = COL_TRANSPARENT;
+                sColorName = SvxResId(RID_SVXSTR_DEFAULT);
+                break;
+            case SID_ATTR_CHAR_COLOR:
+            case SID_ATTR_CHAR_COLOR2:
+            case SID_EXTRUSION_3D_COLOR:
+            default:
+                aColor = COL_AUTO;
+                sColorName = EditResId::GetString(RID_SVXSTR_AUTOMATIC);
+                break;
+        }
+
+        return std::make_pair(aColor, sColorName);
+    }
+
+    NamedColor GetNoneColor()
+    {
+        return std::make_pair(Color(COL_NONE_COLOR), SvxResId(RID_SVXSTR_NONE));
+    }
+}
+
+NamedColor SvxColorWindow::GetSelectEntryColor() const
+{
+    if (!mpColorSet->IsNoSelection())
+        return GetSelectEntryColor(mpColorSet);
+    if (!mpRecentColorSet->IsNoSelection())
+        return GetSelectEntryColor(mpRecentColorSet);
+    if (mpButtonNoneColor->GetStyle() & WB_DEFBUTTON)
+        return GetNoneColor();
+    return GetAutoColor();
+}
+
+IMPL_LINK(SvxColorWindow, SelectHdl, ValueSet*, pColorSet, void)
+{
+    VclPtr<SvxColorWindow> xThis(this);
+
+    NamedColor aNamedColor = GetSelectEntryColor(pColorSet);
     /*  #i33380# DR 2004-09-03 Moved the following line above the Dispatch() calls.
         This instance may be deleted in the meantime (i.e. when a dialog is opened
         while in Dispatch()), accessing members will crash in this case. */
@@ -1339,118 +1492,159 @@ IMPL_LINK(SvxColorWindow_Impl, SelectHdl, SvxColorValueSet*, pColorSet)
 
     if ( pColorSet != mpRecentColorSet )
     {
-         mrPaletteManager.AddRecentColor( aColor );
+         mxPaletteManager->AddRecentColor(aNamedColor.first, aNamedColor.second);
          if ( !IsInPopupMode() )
-            mrPaletteManager.ReloadRecentColorSet( *mpRecentColorSet );
+            mxPaletteManager->ReloadRecentColorSet(*mpRecentColorSet);
     }
 
     if ( IsInPopupMode() )
         EndPopupMode();
 
-    if ( maSelectedLink.IsSet() )
-        maSelectedLink.Call(&aColor);
+    maSelectedLink.Call(aNamedColor);
 
-    PaletteManager::DispatchColorCommand(maCommand, aColor);
-    return 0;
+    maColorSelectFunction(maCommand, aNamedColor);
 }
 
-IMPL_LINK_NOARG(SvxColorWindow_Impl, SelectPaletteHdl)
+IMPL_LINK_NOARG(SvxColorWindow, SelectPaletteHdl, ListBox&, void)
 {
     sal_Int32 nPos = mpPaletteListBox->GetSelectEntryPos();
-    mrPaletteManager.SetPalette( nPos );
-    mrPaletteManager.ReloadColorSet(*mpColorSet);
-    mpColorSet->layoutToGivenHeight(mpColorSet->GetSizePixel().Height(), mrPaletteManager.GetColorCount());
-    return 0;
+    mxPaletteManager->SetPalette( nPos );
+    mxPaletteManager->ReloadColorSet(*mpColorSet);
+    mpColorSet->layoutToGivenHeight(mpColorSet->GetSizePixel().Height(), mxPaletteManager->GetColorCount());
 }
 
-IMPL_LINK_NOARG(SvxColorWindow_Impl, AutoColorClickHdl)
+NamedColor SvxColorWindow::GetAutoColor() const
 {
-    Color aColor;
-    if (SID_ATTR_CHAR_COLOR_BACKGROUND == theSlotId || SID_BACKGROUND_COLOR == theSlotId)
-        aColor = COL_TRANSPARENT;
-    else if (SID_ATTR_CHAR_COLOR == theSlotId || SID_ATTR_CHAR_COLOR2 == theSlotId || SID_EXTRUSION_3D_COLOR == theSlotId)
-        aColor = COL_AUTO;
+    return ::GetAutoColor(theSlotId);
+}
+
+IMPL_LINK(SvxColorWindow, AutoColorClickHdl, Button*, pButton, void)
+{
+    VclPtr<SvxColorWindow> xThis(this);
+
+    NamedColor aNamedColor = pButton == mpButtonAutoColor ? GetAutoColor() : GetNoneColor();
 
     mpRecentColorSet->SetNoSelection();
 
     if ( IsInPopupMode() )
         EndPopupMode();
 
-    if ( maSelectedLink.IsSet() )
-        maSelectedLink.Call(&aColor);
+    maSelectedLink.Call(aNamedColor);
 
-    PaletteManager::DispatchColorCommand(maCommand, aColor);
-    return 0;
+    maColorSelectFunction(maCommand, aNamedColor);
 }
 
-IMPL_LINK_NOARG(SvxColorWindow_Impl, OpenPickerClickHdl)
+IMPL_LINK_NOARG(SvxColorWindow, OpenPickerClickHdl, Button*, void)
 {
+    VclPtr<SvxColorWindow> xThis(this);
+
     if ( IsInPopupMode() )
         EndPopupMode();
-    mrPaletteManager.PopupColorPicker(maCommand);
-    return 0;
+    mxPaletteManager->PopupColorPicker(maCommand, GetSelectEntryColor().first);
 }
 
-void SvxColorWindow_Impl::Resize()
-{
-}
-
-void SvxColorWindow_Impl::StartSelection()
+void SvxColorWindow::StartSelection()
 {
     mpColorSet->StartSelection();
 }
 
-bool SvxColorWindow_Impl::Close()
+void SvxColorWindow::SetNoSelection()
 {
-    return SfxPopupWindow::Close();
+    mpColorSet->SetNoSelection();
+    mpRecentColorSet->SetNoSelection();
+    mpButtonAutoColor->set_property("has-default", "false");
+    mpButtonNoneColor->set_property("has-default", "false");
 }
 
-void SvxColorWindow_Impl::StateChanged( sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem* pState )
+bool SvxColorWindow::IsNoSelection() const
 {
-    if ( nSID == SID_COLOR_TABLE )
+    if (!mpColorSet->IsNoSelection())
+        return false;
+    if (!mpRecentColorSet->IsNoSelection())
+        return false;
+    return !mpButtonAutoColor->IsVisible() && !mpButtonNoneColor->IsVisible();
+}
+
+void SvxColorWindow::statusChanged( const css::frame::FeatureStateEvent& rEvent )
+{
+    if ( rEvent.IsEnabled && rEvent.FeatureURL.Complete == ".uno:ColorTableState"
+         && mxPaletteManager->GetPalette() == 0)
     {
-        if ( SfxItemState::DEFAULT == eState && mrPaletteManager.GetPalette() == 0 )
-        {
-            mrPaletteManager.ReloadColorSet(*mpColorSet);
-            mpColorSet->layoutToGivenHeight(mpColorSet->GetSizePixel().Height(), mrPaletteManager.GetColorCount());
-        }
+        mxPaletteManager->ReloadColorSet(*mpColorSet);
+        mpColorSet->layoutToGivenHeight(mpColorSet->GetSizePixel().Height(), mxPaletteManager->GetColorCount());
     }
     else
     {
-        mpColorSet->SetNoSelection();
-        Color aColor( COL_TRANSPARENT );
+        Color aColor(COL_TRANSPARENT);
 
-        if ( nSID == SID_FRAME_LINECOLOR
-          || nSID == SID_ATTR_BORDER_DIAG_TLBR
-          || nSID == SID_ATTR_BORDER_DIAG_BLTR )
+        if (mrBorderColorStatus.statusChanged(rEvent))
         {
-            mrBorderColorStatus.StateChanged( nSID, eState, pState );
             aColor = mrBorderColorStatus.GetColor();
         }
-        else if ( SfxItemState::DEFAULT <= eState && pState )
+        else if (rEvent.IsEnabled)
         {
-            if ( pState->ISA( SvxColorItem ) )
-                aColor = static_cast<const SvxColorItem*>(pState)->GetValue();
-            else if ( pState->ISA( XLineColorItem ) )
-                aColor = static_cast<const XLineColorItem*>(pState)->GetColorValue();
-            else if ( pState->ISA( XFillColorItem ) )
-                aColor = static_cast<const XFillColorItem*>(pState)->GetColorValue();
+            sal_Int32 nValue;
+            if (rEvent.State >>= nValue)
+                aColor = nValue;
         }
 
-        if ( aColor == COL_TRANSPARENT )
-            return;
-
-        for ( size_t i = 1; i <= mpColorSet->GetItemCount(); ++i )
-        {
-            if ( aColor == mpColorSet->GetItemColor(i) )
-            {
-                mpColorSet->SelectItem(i);
-                break;
-            }
-        }
+        SelectEntry(aColor);
     }
 }
 
+bool SvxColorWindow::SelectValueSetEntry(SvxColorValueSet* pColorSet, const Color& rColor)
+{
+    for (size_t i = 1; i <= pColorSet->GetItemCount(); ++i)
+    {
+        if (rColor == pColorSet->GetItemColor(i))
+        {
+            pColorSet->SelectItem(i);
+            return true;
+        }
+    }
+    return false;
+}
+
+void SvxColorWindow::SelectEntry(const NamedColor& rNamedColor)
+{
+    SetNoSelection();
+
+    const Color &rColor = rNamedColor.first;
+
+    if (rColor == COL_TRANSPARENT || rColor == COL_AUTO)
+    {
+        mpButtonAutoColor->set_property("has-default", "true");
+        return;
+    }
+
+    if (mpButtonNoneColor->IsVisible() && rColor == COL_NONE_COLOR)
+    {
+        mpButtonNoneColor->set_property("has-default", "true");
+        return;
+    }
+
+    // try current palette
+    bool bFoundColor = SelectValueSetEntry(mpColorSet, rColor);
+    // try recently used
+    if (!bFoundColor)
+        bFoundColor = SelectValueSetEntry(mpRecentColorSet, rColor);
+    // if its not there, add it there now to the end of the recently used
+    // so its available somewhere handy, but not without trashing the
+    // whole recently used
+    if (!bFoundColor)
+    {
+        const OUString& rColorName = rNamedColor.second;
+        mxPaletteManager->AddRecentColor(rColor, rColorName, false);
+        mxPaletteManager->ReloadRecentColorSet(*mpRecentColorSet);
+        SelectValueSetEntry(mpRecentColorSet, rColor);
+    }
+}
+
+void SvxColorWindow::SelectEntry(const Color& rColor)
+{
+    OUString sColorName = ("#" + rColor.AsRGBHexString().toAsciiUpperCase());
+    SvxColorWindow::SelectEntry(std::make_pair(rColor, sColorName));
+}
 
 BorderColorStatus::BorderColorStatus() :
     maColor( COL_TRANSPARENT ),
@@ -1463,33 +1657,38 @@ BorderColorStatus::~BorderColorStatus()
 {
 }
 
-void BorderColorStatus::StateChanged( sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem *pState )
+bool BorderColorStatus::statusChanged( const css::frame::FeatureStateEvent& rEvent )
 {
-    if ( SfxItemState::DEFAULT <= eState && pState )
-    {
-        if ( nSID == SID_FRAME_LINECOLOR && pState->ISA( SvxColorItem ) )
-        {
-            maColor = static_cast< const SvxColorItem* >(pState)->GetValue();
-        }
-        else if ( pState->ISA( SvxLineItem ) )
-        {
-            const SvxBorderLine* pLine = static_cast< const SvxLineItem* >(pState)->GetLine();
-            Color aColor ( COL_TRANSPARENT );
-            if ( pLine )
-                aColor = pLine->GetColor();
+    Color aColor( COL_TRANSPARENT );
 
-            if ( nSID == SID_ATTR_BORDER_DIAG_TLBR )
-                maTLBRColor = aColor;
-            else if ( nSID == SID_ATTR_BORDER_DIAG_BLTR )
-                maBLTRColor = aColor;
+    if ( rEvent.FeatureURL.Complete == ".uno:FrameLineColor" )
+    {
+        sal_Int32 nValue;
+        if ( rEvent.IsEnabled && ( rEvent.State >>= nValue ) )
+            aColor = nValue;
+
+        maColor = aColor;
+        return true;
+    }
+    else
+    {
+        css::table::BorderLine2 aTable;
+        if ( rEvent.IsEnabled && ( rEvent.State >>= aTable ) )
+            aColor = aTable.Color;
+
+        if ( rEvent.FeatureURL.Complete == ".uno:BorderTLBR" )
+        {
+            maTLBRColor = aColor;
+            return true;
+        }
+        else if ( rEvent.FeatureURL.Complete == ".uno:BorderBLTR" )
+        {
+            maBLTRColor = aColor;
+            return true;
         }
     }
-    else if ( nSID == SID_FRAME_LINECOLOR )
-        maColor = COL_TRANSPARENT;
-    else if ( nSID == SID_ATTR_BORDER_DIAG_TLBR )
-        maTLBRColor = COL_TRANSPARENT;
-    else if ( nSID == SID_ATTR_BORDER_DIAG_BLTR )
-        maBLTRColor = COL_TRANSPARENT;
+
+    return false;
 }
 
 Color BorderColorStatus::GetColor()
@@ -1534,25 +1733,14 @@ Color BorderColorStatus::GetColor()
 }
 
 
-SvxFrameWindow_Impl::SvxFrameWindow_Impl( sal_uInt16 nId, const Reference< XFrame >& rFrame, vcl::Window* pParentWindow ) :
-    SfxPopupWindow( nId, rFrame, pParentWindow, WinBits( WB_STDPOPUP | WB_OWNERDRAWDECORATION ) ),
-    aFrameSet   ( this, WinBits( WB_ITEMBORDER | WB_DOUBLEBORDER | WB_3DLOOK | WB_NO_DIRECTSELECT ) ),
+SvxFrameWindow_Impl::SvxFrameWindow_Impl ( svt::ToolboxController& rController, vcl::Window* pParentWindow ) :
+    ToolbarPopup( rController.getFrameInterface(), pParentWindow, WB_STDPOPUP | WB_MOVEABLE | WB_CLOSEABLE ),
+    aFrameSet   ( VclPtr<SvxFrmValueSet_Impl>::Create(this, WinBits( WB_ITEMBORDER | WB_DOUBLEBORDER | WB_3DLOOK | WB_NO_DIRECTSELECT )) ),
+    mrController( rController ),
     bParagraphMode(false)
 {
-    BindListener();
-    AddStatusListener(OUString(".uno:BorderReducedMode"));
-    aImgList = ImageList( SVX_RES( RID_SVXIL_FRAME ) );
-
-    if( pParentWindow->GetDPIScaleFactor() > 1 )
-    {
-        for (short i = 0; i < aImgList.GetImageCount(); i++)
-        {
-            OUString rImageName = aImgList.GetImageName(i);
-            BitmapEx b = aImgList.GetImage(rImageName).GetBitmapEx();
-            b.Scale(pParentWindow->GetDPIScaleFactor(), pParentWindow->GetDPIScaleFactor());
-            aImgList.ReplaceImage(rImageName, Image(b));
-        }
-    }
+    AddStatusListener(".uno:BorderReducedMode");
+    InitImageList();
 
     /*
      *  1       2        3         4
@@ -1566,160 +1754,167 @@ SvxFrameWindow_Impl::SvxFrameWindow_Impl( sal_uInt16 nId, const Reference< XFram
     sal_uInt16 i = 0;
 
     for ( i=1; i<9; i++ )
-        aFrameSet.InsertItem( i, aImgList.GetImage(i) );
+        aFrameSet->InsertItem(i, Image(aImgVec[i-1]));
 
     //bParagraphMode should have been set in StateChanged
     if ( !bParagraphMode )
         for ( i = 9; i < 13; i++ )
-            aFrameSet.InsertItem( i, aImgList.GetImage(i) );
+            aFrameSet->InsertItem(i, Image(aImgVec[i-1]));
 
-    aFrameSet.SetColCount( 4 );
-    aFrameSet.SetSelectHdl( LINK( this, SvxFrameWindow_Impl, SelectHdl ) );
-
-    lcl_CalcSizeValueSet( *this, aFrameSet, Size( 20 * pParentWindow->GetDPIScaleFactor(), 20 * pParentWindow->GetDPIScaleFactor() ));
+    aFrameSet->SetColCount( 4 );
+    aFrameSet->SetSelectHdl( LINK( this, SvxFrameWindow_Impl, SelectHdl ) );
+    CalcSizeValueSet();
 
     SetHelpId( HID_POPUP_FRAME );
-    SetText( SVX_RESSTR(RID_SVXSTR_FRAME) );
-    aFrameSet.SetAccessibleName( SVX_RESSTR(RID_SVXSTR_FRAME) );
-    aFrameSet.Show();
+    SetText( SvxResId(RID_SVXSTR_FRAME) );
+    aFrameSet->SetAccessibleName( SvxResId(RID_SVXSTR_FRAME) );
+    aFrameSet->Show();
 }
 
 SvxFrameWindow_Impl::~SvxFrameWindow_Impl()
 {
-    UnbindListener();
+    disposeOnce();
 }
 
-SfxPopupWindow* SvxFrameWindow_Impl::Clone() const
+void SvxFrameWindow_Impl::dispose()
 {
-    //! HACK: How do I get the Paragraph mode?
-    return new SvxFrameWindow_Impl( GetId(), GetFrame(), GetParent() );
-}
-
-vcl::Window* SvxFrameWindow_Impl::GetPreferredKeyInputWindow()
-{
-    return &aFrameSet;
+    aFrameSet.disposeAndClear();
+    ToolbarPopup::dispose();
 }
 
 void SvxFrameWindow_Impl::GetFocus()
 {
-    aFrameSet.GrabFocus();
+    if (aFrameSet)
+        aFrameSet->StartSelection();
+}
+
+void SvxFrameWindow_Impl::KeyInput( const KeyEvent& rKEvt )
+{
+    aFrameSet->GrabFocus();
+    aFrameSet->KeyInput( rKEvt );
 }
 
 void SvxFrameWindow_Impl::DataChanged( const DataChangedEvent& rDCEvt )
 {
-    SfxPopupWindow::DataChanged( rDCEvt );
+    ToolbarPopup::DataChanged( rDCEvt );
 
-    if( ( rDCEvt.GetType() == DATACHANGED_SETTINGS ) && ( rDCEvt.GetFlags() & SETTINGS_STYLE ) )
+    if ( ( rDCEvt.GetType() == DataChangedEventType::SETTINGS ) && ( rDCEvt.GetFlags() & AllSettingsFlags::STYLE ) )
     {
-        aImgList = ImageList( SVX_RES( RID_SVXIL_FRAME ) );
+        InitImageList();
 
-        sal_uInt16  nNumOfItems = aFrameSet.GetItemCount();
-
-        for( sal_uInt16 i = 1 ; i <= nNumOfItems ; ++i )
-            aFrameSet.SetItemImage( i, aImgList.GetImage( i ) );
+        sal_uInt16 nNumOfItems = aFrameSet->GetItemCount();
+        for ( sal_uInt16 i = 1 ; i <= nNumOfItems ; ++i )
+            aFrameSet->SetItemImage( i, Image(aImgVec[i-1]) );
     }
 }
 
-#define FRM_VALID_LEFT      0x01
-#define FRM_VALID_RIGHT     0x02
-#define FRM_VALID_TOP       0x04
-#define FRM_VALID_BOTTOM    0x08
-#define FRM_VALID_HINNER    0x10
-#define FRM_VALID_VINNER    0x20
-#define FRM_VALID_OUTER     0x0f
-#define FRM_VALID_ALL       0xff
+enum class FrmValidFlags {
+    NONE      = 0x00,
+    Left      = 0x01,
+    Right     = 0x02,
+    Top       = 0x04,
+    Bottom    = 0x08,
+    HInner    = 0x10,
+    VInner    = 0x20,
+    AllMask   = 0x3f,
+};
+namespace o3tl {
+    template<> struct typed_flags<FrmValidFlags> : is_typed_flags<FrmValidFlags, 0x3f> {};
+}
 
 // By default unset lines remain unchanged.
 // Via Shift unset lines are reset
 
-IMPL_LINK_NOARG(SvxFrameWindow_Impl, SelectHdl)
+IMPL_LINK_NOARG(SvxFrameWindow_Impl, SelectHdl, ValueSet*, void)
 {
+    VclPtr<SvxFrameWindow_Impl> xThis(this);
+
     SvxBoxItem          aBorderOuter( SID_ATTR_BORDER_OUTER );
     SvxBoxInfoItem      aBorderInner( SID_ATTR_BORDER_INNER );
     SvxBorderLine       theDefLine;
-    SvxBorderLine       *pLeft = 0,
-                        *pRight = 0,
-                        *pTop = 0,
-                        *pBottom = 0;
-    sal_uInt16              nSel = aFrameSet.GetSelectItemId();
-    sal_uInt16              nModifier = aFrameSet.GetModifier();
-    sal_uInt8               nValidFlags = 0;
+    SvxBorderLine       *pLeft = nullptr,
+                        *pRight = nullptr,
+                        *pTop = nullptr,
+                        *pBottom = nullptr;
+    sal_uInt16           nSel = aFrameSet->GetSelectItemId();
+    sal_uInt16           nModifier = aFrameSet->GetModifier();
+    FrmValidFlags        nValidFlags = FrmValidFlags::NONE;
 
     theDefLine.GuessLinesWidths(theDefLine.GetBorderLineStyle(),
             DEF_LINE_WIDTH_0);
     switch ( nSel )
     {
-        case 1: nValidFlags |= FRM_VALID_ALL;
+        case 1: nValidFlags |= FrmValidFlags::AllMask;
         break;  // NONE
         case 2: pLeft = &theDefLine;
-                nValidFlags |= FRM_VALID_LEFT;
+                nValidFlags |= FrmValidFlags::Left;
         break;  // LEFT
         case 3: pRight = &theDefLine;
-                nValidFlags |= FRM_VALID_RIGHT;
+                nValidFlags |= FrmValidFlags::Right;
         break;  // RIGHT
         case 4: pLeft = pRight = &theDefLine;
-                nValidFlags |=  FRM_VALID_RIGHT|FRM_VALID_LEFT;
+                nValidFlags |=  FrmValidFlags::Right|FrmValidFlags::Left;
         break;  // LEFTRIGHT
         case 5: pTop = &theDefLine;
-                nValidFlags |= FRM_VALID_TOP;
+                nValidFlags |= FrmValidFlags::Top;
         break;  // TOP
         case 6: pBottom = &theDefLine;
-                nValidFlags |= FRM_VALID_BOTTOM;
+                nValidFlags |= FrmValidFlags::Bottom;
         break;  // BOTTOM
         case 7: pTop =  pBottom = &theDefLine;
-                nValidFlags |= FRM_VALID_BOTTOM|FRM_VALID_TOP;
+                nValidFlags |= FrmValidFlags::Bottom|FrmValidFlags::Top;
         break;  // TOPBOTTOM
         case 8: pLeft = pRight = pTop = pBottom = &theDefLine;
-                nValidFlags |= FRM_VALID_OUTER;
+                nValidFlags |= FrmValidFlags::Left | FrmValidFlags::Right | FrmValidFlags::Top | FrmValidFlags::Bottom;
         break;  // OUTER
 
         // Inner Table:
         case 9: // HOR
             pTop = pBottom = &theDefLine;
-            aBorderInner.SetLine( &theDefLine, BOXINFO_LINE_HORI );
-            aBorderInner.SetLine( NULL, BOXINFO_LINE_VERT );
-            nValidFlags |= FRM_VALID_HINNER|FRM_VALID_TOP|FRM_VALID_BOTTOM;
+            aBorderInner.SetLine( &theDefLine, SvxBoxInfoItemLine::HORI );
+            aBorderInner.SetLine( nullptr, SvxBoxInfoItemLine::VERT );
+            nValidFlags |= FrmValidFlags::HInner|FrmValidFlags::Top|FrmValidFlags::Bottom;
             break;
 
         case 10: // HORINNER
             pLeft = pRight = pTop = pBottom = &theDefLine;
-            aBorderInner.SetLine( &theDefLine, BOXINFO_LINE_HORI );
-            aBorderInner.SetLine( NULL, BOXINFO_LINE_VERT );
-            nValidFlags |= FRM_VALID_RIGHT|FRM_VALID_LEFT|FRM_VALID_HINNER|FRM_VALID_TOP|FRM_VALID_BOTTOM;
+            aBorderInner.SetLine( &theDefLine, SvxBoxInfoItemLine::HORI );
+            aBorderInner.SetLine( nullptr, SvxBoxInfoItemLine::VERT );
+            nValidFlags |= FrmValidFlags::Right|FrmValidFlags::Left|FrmValidFlags::HInner|FrmValidFlags::Top|FrmValidFlags::Bottom;
             break;
 
         case 11: // VERINNER
             pLeft = pRight = pTop = pBottom = &theDefLine;
-            aBorderInner.SetLine( NULL, BOXINFO_LINE_HORI );
-            aBorderInner.SetLine( &theDefLine, BOXINFO_LINE_VERT );
-            nValidFlags |= FRM_VALID_RIGHT|FRM_VALID_LEFT|FRM_VALID_VINNER|FRM_VALID_TOP|FRM_VALID_BOTTOM;
+            aBorderInner.SetLine( nullptr, SvxBoxInfoItemLine::HORI );
+            aBorderInner.SetLine( &theDefLine, SvxBoxInfoItemLine::VERT );
+            nValidFlags |= FrmValidFlags::Right|FrmValidFlags::Left|FrmValidFlags::VInner|FrmValidFlags::Top|FrmValidFlags::Bottom;
         break;
 
         case 12: // ALL
             pLeft = pRight = pTop = pBottom = &theDefLine;
-            aBorderInner.SetLine( &theDefLine, BOXINFO_LINE_HORI );
-            aBorderInner.SetLine( &theDefLine, BOXINFO_LINE_VERT );
-            nValidFlags |= FRM_VALID_ALL;
+            aBorderInner.SetLine( &theDefLine, SvxBoxInfoItemLine::HORI );
+            aBorderInner.SetLine( &theDefLine, SvxBoxInfoItemLine::VERT );
+            nValidFlags |= FrmValidFlags::AllMask;
             break;
 
         default:
         break;
     }
-    aBorderOuter.SetLine( pLeft, BOX_LINE_LEFT );
-    aBorderOuter.SetLine( pRight, BOX_LINE_RIGHT );
-    aBorderOuter.SetLine( pTop, BOX_LINE_TOP );
-    aBorderOuter.SetLine( pBottom, BOX_LINE_BOTTOM );
+    aBorderOuter.SetLine( pLeft, SvxBoxItemLine::LEFT );
+    aBorderOuter.SetLine( pRight, SvxBoxItemLine::RIGHT );
+    aBorderOuter.SetLine( pTop, SvxBoxItemLine::TOP );
+    aBorderOuter.SetLine( pBottom, SvxBoxItemLine::BOTTOM );
 
     if(nModifier == KEY_SHIFT)
-        nValidFlags |= FRM_VALID_ALL;
-    aBorderInner.SetValid( VALID_TOP,       0 != (nValidFlags&FRM_VALID_TOP ));
-    aBorderInner.SetValid( VALID_BOTTOM,    0 != (nValidFlags&FRM_VALID_BOTTOM ));
-    aBorderInner.SetValid( VALID_LEFT,      0 != (nValidFlags&FRM_VALID_LEFT));
-    aBorderInner.SetValid( VALID_RIGHT,     0 != (nValidFlags&FRM_VALID_RIGHT ));
-    aBorderInner.SetValid( VALID_HORI,      0 != (nValidFlags&FRM_VALID_HINNER ));
-    aBorderInner.SetValid( VALID_VERT,      0 != (nValidFlags&FRM_VALID_VINNER));
-    aBorderInner.SetValid( VALID_DISTANCE,  true );
-    aBorderInner.SetValid( VALID_DISABLE,   false );
+        nValidFlags |= FrmValidFlags::AllMask;
+    aBorderInner.SetValid( SvxBoxInfoItemValidFlags::TOP,       bool(nValidFlags&FrmValidFlags::Top ));
+    aBorderInner.SetValid( SvxBoxInfoItemValidFlags::BOTTOM,    bool(nValidFlags&FrmValidFlags::Bottom ));
+    aBorderInner.SetValid( SvxBoxInfoItemValidFlags::LEFT,      bool(nValidFlags&FrmValidFlags::Left));
+    aBorderInner.SetValid( SvxBoxInfoItemValidFlags::RIGHT,     bool(nValidFlags&FrmValidFlags::Right ));
+    aBorderInner.SetValid( SvxBoxInfoItemValidFlags::HORI,      bool(nValidFlags&FrmValidFlags::HInner ));
+    aBorderInner.SetValid( SvxBoxInfoItemValidFlags::VERT,      bool(nValidFlags&FrmValidFlags::VInner));
+    aBorderInner.SetValid( SvxBoxInfoItemValidFlags::DISTANCE );
+    aBorderInner.SetValid( SvxBoxInfoItemValidFlags::DISABLE,   false );
 
     if ( IsInPopupMode() )
         EndPopupMode();
@@ -1733,76 +1928,86 @@ IMPL_LINK_NOARG(SvxFrameWindow_Impl, SelectHdl)
     aBorderInner.QueryValue( a );
     aArgs[1].Value = a;
 
-    if ( aBorderChangedHdl.IsSet() )
+    if (aFrameSet)
     {
-        SvxFrameWindowState_Impl aBorderState( aBorderOuter, aBorderInner );
-        aBorderChangedHdl.Call( &aBorderState );
+        /* #i33380# Moved the following line above the Dispatch() call.
+           This instance may be deleted in the meantime (i.e. when a dialog is opened
+           while in Dispatch()), accessing members will crash in this case. */
+        aFrameSet->SetNoSelection();
     }
 
-    /*  #i33380# DR 2004-09-03 Moved the following line above the Dispatch() call.
-        This instance may be deleted in the meantime (i.e. when a dialog is opened
-        while in Dispatch()), accessing members will crash in this case. */
-    aFrameSet.SetNoSelection();
-
-    SfxToolBoxControl::Dispatch( Reference< XDispatchProvider >( GetFrame()->getController(), UNO_QUERY ),
-                                 OUString( ".uno:SetBorderStyle" ),
-                                 aArgs );
-    return 0;
+    mrController.dispatchCommand( ".uno:SetBorderStyle", aArgs );
 }
 
-void SvxFrameWindow_Impl::Resize()
+void SvxFrameWindow_Impl::statusChanged( const css::frame::FeatureStateEvent& rEvent )
 {
-    const Size aSize(this->GetOutputSizePixel());
-    aFrameSet.SetPosSizePixel(Point(2,2), Size(aSize.Width() - 4, aSize.Height() - 4));
-}
-
-void SvxFrameWindow_Impl::StateChanged(
-    sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem* pState )
-{
-    if ( pState && nSID == SID_BORDER_REDUCED_MODE)
+    if ( rEvent.FeatureURL.Complete == ".uno:BorderReducedMode" )
     {
-        const SfxBoolItem* pItem = PTR_CAST( SfxBoolItem, pState );
-
-        if ( pItem )
+        bool bValue;
+        if ( rEvent.State >>= bValue )
         {
-            bParagraphMode = pItem->GetValue();
+            bParagraphMode = bValue;
             //initial calls mustn't insert or remove elements
-            if(aFrameSet.GetItemCount())
+            if(aFrameSet->GetItemCount())
             {
-                bool bTableMode = ( aFrameSet.GetItemCount() == 12 );
+                bool bTableMode = ( aFrameSet->GetItemCount() == 12 );
                 bool bResize    = false;
 
                 if ( bTableMode && bParagraphMode )
                 {
                     for ( sal_uInt16 i = 9; i < 13; i++ )
-                        aFrameSet.RemoveItem(i);
+                        aFrameSet->RemoveItem(i);
                     bResize = true;
                 }
                 else if ( !bTableMode && !bParagraphMode )
                 {
                     for ( sal_uInt16 i = 9; i < 13; i++ )
-                        aFrameSet.InsertItem( i, aImgList.GetImage(i) );
+                        aFrameSet->InsertItem(i, Image(aImgVec[i-1]));
                     bResize = true;
                 }
 
                 if ( bResize )
                 {
-                    lcl_CalcSizeValueSet( *this, aFrameSet,Size( 20, 20 ));
+                    CalcSizeValueSet();
                 }
             }
         }
     }
-    SfxPopupWindow::StateChanged( nSID, eState, pState );
 }
 
-void SvxFrameWindow_Impl::StartSelection()
+void SvxFrameWindow_Impl::CalcSizeValueSet()
 {
-    aFrameSet.StartSelection();
+    Size aItemSize( 20 * GetParent()->GetDPIScaleFactor(), 20 * GetParent()->GetDPIScaleFactor() );
+    Size aSize = aFrameSet->CalcWindowSizePixel( aItemSize );
+    aFrameSet->SetPosSizePixel( Point( 2, 2 ), aSize );
+    aSize.Width()  += 4;
+    aSize.Height() += 4;
+    SetOutputSizePixel( aSize );
 }
 
-bool SvxFrameWindow_Impl::Close()
+void SvxFrameWindow_Impl::InitImageList()
 {
-    return SfxPopupWindow::Close();
+    aImgVec.clear();
+    aImgVec.push_back(BitmapEx(RID_SVXBMP_FRAME1));
+    aImgVec.push_back(BitmapEx(RID_SVXBMP_FRAME2));
+    aImgVec.push_back(BitmapEx(RID_SVXBMP_FRAME3));
+    aImgVec.push_back(BitmapEx(RID_SVXBMP_FRAME4));
+    aImgVec.push_back(BitmapEx(RID_SVXBMP_FRAME5));
+    aImgVec.push_back(BitmapEx(RID_SVXBMP_FRAME6));
+    aImgVec.push_back(BitmapEx(RID_SVXBMP_FRAME7));
+    aImgVec.push_back(BitmapEx(RID_SVXBMP_FRAME8));
+    aImgVec.push_back(BitmapEx(RID_SVXBMP_FRAME9));
+    aImgVec.push_back(BitmapEx(RID_SVXBMP_FRAME10));
+    aImgVec.push_back(BitmapEx(RID_SVXBMP_FRAME11));
+    aImgVec.push_back(BitmapEx(RID_SVXBMP_FRAME12));
+
+    if (GetParent()->GetDPIScaleFactor() > 1)
+    {
+        for (size_t i = 0; i < aImgVec.size(); ++i)
+        {
+            aImgVec[i].Scale(GetParent()->GetDPIScaleFactor(), GetParent()->GetDPIScaleFactor());
+        }
+    }
 }
 
 static Color lcl_mediumColor( Color aMain, Color /*aDefault*/ )
@@ -1810,73 +2015,148 @@ static Color lcl_mediumColor( Color aMain, Color /*aDefault*/ )
     return SvxBorderLine::threeDMediumColor( aMain );
 }
 
-SvxLineWindow_Impl::SvxLineWindow_Impl( sal_uInt16 nId, const Reference< XFrame >& rFrame, vcl::Window* pParentWindow ) :
+SvxCurrencyList_Impl::SvxCurrencyList_Impl(
+    sal_uInt16 nId, const Reference< XFrame >& rxFrame,
+    vcl::Window* pParentWindow,
+    const Reference< XComponentContext >& rxContext,
+    SvxCurrencyToolBoxControl *pControl,
+    OUString& rSelectedFormat,
+    LanguageType& eSelectedLanguage ) :
+    SfxPopupWindow( nId, rxFrame, pParentWindow, WinBits( WB_STDPOPUP | WB_OWNERDRAWDECORATION | WB_AUTOSIZE | WB_3DLOOK ) ),
+    m_pCurrencyLb( VclPtr<ListBox>::Create(this) ),
+    m_xControl( pControl ),
+    m_rSelectedFormat( rSelectedFormat ),
+    m_eSelectedLanguage( eSelectedLanguage )
+{
+    m_pCurrencyLb->setPosSizePixel( 2, 2, 300, 140 );
+    SetOutputSizePixel( Size( 304, 144 ) );
 
-    SfxPopupWindow( nId, rFrame, pParentWindow, WinBits( WB_STDPOPUP | WB_OWNERDRAWDECORATION | WB_AUTOSIZE ) ),
-    m_aLineStyleLb( this )
+    std::vector< OUString > aList;
+    std::vector< sal_uInt16 > aCurrencyList;
+    const NfCurrencyTable& rCurrencyTable = SvNumberFormatter::GetTheCurrencyTable();
+    sal_uInt16 nLen = rCurrencyTable.size();
+
+    SvNumberFormatter aFormatter( rxContext, LANGUAGE_SYSTEM );
+    m_eFormatLanguage = aFormatter.GetLanguage();
+
+    SvxCurrencyToolBoxControl::GetCurrencySymbols( aList, true, aCurrencyList );
+
+    sal_uInt16 nPos = 0, nCount = 0;
+    sal_Int32 nSelectedPos = -1;
+    bool bIsSymbol;
+    NfWSStringsDtor aStringsDtor;
+
+    for( std::vector< OUString >::iterator i = aList.begin(); i != aList.end(); ++i, ++nCount )
+    {
+        sal_uInt16& rCurrencyIndex = aCurrencyList[ nCount ];
+        if ( rCurrencyIndex < nLen )
+        {
+            m_pCurrencyLb->InsertEntry( *i );
+            const NfCurrencyEntry& aCurrencyEntry = rCurrencyTable[ rCurrencyIndex ];
+
+            bIsSymbol = nPos >= nLen;
+
+            sal_uInt16 nDefaultFormat = aFormatter.GetCurrencyFormatStrings( aStringsDtor, aCurrencyEntry, bIsSymbol );
+            const OUString& rFormatStr = aStringsDtor[ nDefaultFormat ];
+            m_aFormatEntries.push_back( rFormatStr );
+            if( rFormatStr == m_rSelectedFormat )
+                nSelectedPos = nPos;
+            ++nPos;
+        }
+    }
+    m_pCurrencyLb->SetSelectHdl( LINK( this, SvxCurrencyList_Impl, SelectHdl ) );
+    SetText( SvxResId( RID_SVXSTR_TBLAFMT_CURRENCY ) );
+    if ( nSelectedPos >= 0 )
+        m_pCurrencyLb->SelectEntryPos( nSelectedPos );
+    m_pCurrencyLb->Show();
+}
+
+void SvxCurrencyList_Impl::dispose()
+{
+    m_xControl.clear();
+    m_pCurrencyLb.disposeAndClear();
+    SfxPopupWindow::dispose();
+}
+
+SvxLineWindow_Impl::SvxLineWindow_Impl( svt::ToolboxController& rController, vcl::Window* pParentWindow ) :
+    ToolbarPopup( rController.getFrameInterface(), pParentWindow, WB_STDPOPUP | WB_MOVEABLE | WB_CLOSEABLE ),
+    m_aLineStyleLb( VclPtr<LineListBox>::Create(this) ),
+    m_rController( rController )
 {
     try
     {
-        Reference< lang::XServiceInfo > xServices( rFrame->getController()->getModel(), UNO_QUERY_THROW );
+        Reference< lang::XServiceInfo > xServices( rController.getFrameInterface()->getController()->getModel(), UNO_QUERY_THROW );
         m_bIsWriter = xServices->supportsService("com.sun.star.text.TextDocument");
     }
     catch(const uno::Exception& )
     {
     }
 
-    m_aLineStyleLb.setPosSizePixel( 2, 2, 110, 140 );
+    m_aLineStyleLb->setPosSizePixel( 2, 2, 110, 140 );
     SetOutputSizePixel( Size( 114, 144 ) );
 
-    m_aLineStyleLb.SetSourceUnit( FUNIT_TWIP );
-    m_aLineStyleLb.SetNone( SVX_RESSTR(RID_SVXSTR_NONE) );
+    m_aLineStyleLb->SetSourceUnit( FUNIT_TWIP );
+    m_aLineStyleLb->SetNone( SvxResId(RID_SVXSTR_NONE) );
 
-    using namespace table::BorderLineStyle;
-    m_aLineStyleLb.InsertEntry( SvxBorderLine::getWidthImpl( SOLID ), SOLID );
-    m_aLineStyleLb.InsertEntry( SvxBorderLine::getWidthImpl( DOTTED ), DOTTED );
-    m_aLineStyleLb.InsertEntry( SvxBorderLine::getWidthImpl( DASHED ), DASHED );
+    m_aLineStyleLb->InsertEntry( SvxBorderLine::getWidthImpl( SvxBorderLineStyle::SOLID ), SvxBorderLineStyle::SOLID );
+    m_aLineStyleLb->InsertEntry( SvxBorderLine::getWidthImpl( SvxBorderLineStyle::DOTTED ), SvxBorderLineStyle::DOTTED );
+    m_aLineStyleLb->InsertEntry( SvxBorderLine::getWidthImpl( SvxBorderLineStyle::DASHED ), SvxBorderLineStyle::DASHED );
 
     // Double lines
-    m_aLineStyleLb.InsertEntry( SvxBorderLine::getWidthImpl( DOUBLE ), DOUBLE );
-    m_aLineStyleLb.InsertEntry( SvxBorderLine::getWidthImpl( THINTHICK_SMALLGAP ), THINTHICK_SMALLGAP, 20 );
-    m_aLineStyleLb.InsertEntry( SvxBorderLine::getWidthImpl( THINTHICK_MEDIUMGAP ), THINTHICK_MEDIUMGAP );
-    m_aLineStyleLb.InsertEntry( SvxBorderLine::getWidthImpl( THINTHICK_LARGEGAP ), THINTHICK_LARGEGAP );
-    m_aLineStyleLb.InsertEntry( SvxBorderLine::getWidthImpl( THICKTHIN_SMALLGAP ), THICKTHIN_SMALLGAP, 20 );
-    m_aLineStyleLb.InsertEntry( SvxBorderLine::getWidthImpl( THICKTHIN_MEDIUMGAP ), THICKTHIN_MEDIUMGAP );
-    m_aLineStyleLb.InsertEntry( SvxBorderLine::getWidthImpl( THICKTHIN_LARGEGAP ), THICKTHIN_LARGEGAP );
+    m_aLineStyleLb->InsertEntry( SvxBorderLine::getWidthImpl( SvxBorderLineStyle::DOUBLE ), SvxBorderLineStyle::DOUBLE );
+    m_aLineStyleLb->InsertEntry( SvxBorderLine::getWidthImpl( SvxBorderLineStyle::THINTHICK_SMALLGAP ), SvxBorderLineStyle::THINTHICK_SMALLGAP, 20 );
+    m_aLineStyleLb->InsertEntry( SvxBorderLine::getWidthImpl( SvxBorderLineStyle::THINTHICK_MEDIUMGAP ), SvxBorderLineStyle::THINTHICK_MEDIUMGAP );
+    m_aLineStyleLb->InsertEntry( SvxBorderLine::getWidthImpl( SvxBorderLineStyle::THINTHICK_LARGEGAP ), SvxBorderLineStyle::THINTHICK_LARGEGAP );
+    m_aLineStyleLb->InsertEntry( SvxBorderLine::getWidthImpl( SvxBorderLineStyle::THICKTHIN_SMALLGAP ), SvxBorderLineStyle::THICKTHIN_SMALLGAP, 20 );
+    m_aLineStyleLb->InsertEntry( SvxBorderLine::getWidthImpl( SvxBorderLineStyle::THICKTHIN_MEDIUMGAP ), SvxBorderLineStyle::THICKTHIN_MEDIUMGAP );
+    m_aLineStyleLb->InsertEntry( SvxBorderLine::getWidthImpl( SvxBorderLineStyle::THICKTHIN_LARGEGAP ), SvxBorderLineStyle::THICKTHIN_LARGEGAP );
 
     // Engraved / Embossed
-    m_aLineStyleLb.InsertEntry( SvxBorderLine::getWidthImpl( EMBOSSED ), EMBOSSED, 15,
+    m_aLineStyleLb->InsertEntry( SvxBorderLine::getWidthImpl( SvxBorderLineStyle::EMBOSSED ), SvxBorderLineStyle::EMBOSSED, 15,
             &SvxBorderLine::threeDLightColor, &SvxBorderLine::threeDDarkColor,
             &lcl_mediumColor );
-    m_aLineStyleLb.InsertEntry( SvxBorderLine::getWidthImpl( ENGRAVED ), ENGRAVED, 15,
+    m_aLineStyleLb->InsertEntry( SvxBorderLine::getWidthImpl( SvxBorderLineStyle::ENGRAVED ), SvxBorderLineStyle::ENGRAVED, 15,
             &SvxBorderLine::threeDDarkColor, &SvxBorderLine::threeDLightColor,
             &lcl_mediumColor );
 
     // Inset / Outset
-    m_aLineStyleLb.InsertEntry( SvxBorderLine::getWidthImpl( OUTSET ), OUTSET, 10,
+    m_aLineStyleLb->InsertEntry( SvxBorderLine::getWidthImpl( SvxBorderLineStyle::OUTSET ), SvxBorderLineStyle::OUTSET, 10,
            &SvxBorderLine::lightColor, &SvxBorderLine::darkColor );
-    m_aLineStyleLb.InsertEntry( SvxBorderLine::getWidthImpl( INSET ), INSET, 10,
+    m_aLineStyleLb->InsertEntry( SvxBorderLine::getWidthImpl( SvxBorderLineStyle::INSET ), SvxBorderLineStyle::INSET, 10,
            &SvxBorderLine::darkColor, &SvxBorderLine::lightColor );
-    m_aLineStyleLb.SetWidth( 20 ); // 1pt by default
+    m_aLineStyleLb->SetWidth( 20 ); // 1pt by default
 
-    m_aLineStyleLb.SetSelectHdl( LINK( this, SvxLineWindow_Impl, SelectHdl ) );
+    m_aLineStyleLb->SetSelectHdl( LINK( this, SvxLineWindow_Impl, SelectHdl ) );
 
     SetHelpId( HID_POPUP_LINE );
-    SetText( SVX_RESSTR(RID_SVXSTR_FRAME_STYLE) );
-    m_aLineStyleLb.Show();
+    SetText( SvxResId(RID_SVXSTR_FRAME_STYLE) );
+    m_aLineStyleLb->Show();
 }
 
-SfxPopupWindow* SvxLineWindow_Impl::Clone() const
+IMPL_LINK_NOARG(SvxCurrencyList_Impl, SelectHdl, ListBox&, void)
 {
-    return new SvxLineWindow_Impl( GetId(), GetFrame(), GetParent() );
+    VclPtr<SvxCurrencyList_Impl> xThis(this);
+
+    if ( IsInPopupMode() )
+        EndPopupMode();
+
+    if (!m_xControl.is())
+        return;
+
+    m_rSelectedFormat = m_aFormatEntries[ m_pCurrencyLb->GetSelectEntryPos() ];
+    m_eSelectedLanguage = m_eFormatLanguage;
+
+    m_xControl->Select( m_pCurrencyLb->GetSelectEntryPos() + 1 );
 }
 
-IMPL_LINK_NOARG(SvxLineWindow_Impl, SelectHdl)
+IMPL_LINK_NOARG(SvxLineWindow_Impl, SelectHdl, ListBox&, void)
 {
+    VclPtr<SvxLineWindow_Impl> xThis(this);
+
     SvxLineItem     aLineItem( SID_FRAME_LINESTYLE );
-    SvxBorderStyle  nStyle = SvxBorderStyle( m_aLineStyleLb.GetSelectEntryStyle() );
+    SvxBorderLineStyle  nStyle = SvxBorderLineStyle( m_aLineStyleLb->GetSelectEntryStyle() );
 
-    if ( m_aLineStyleLb.GetSelectEntryPos( ) > 0 )
+    if ( m_aLineStyleLb->GetSelectEntryPos( ) > 0 )
     {
         SvxBorderLine aTmp;
         aTmp.SetBorderLineStyle( nStyle );
@@ -1884,7 +2164,7 @@ IMPL_LINK_NOARG(SvxLineWindow_Impl, SelectHdl)
         aLineItem.SetLine( &aTmp );
     }
     else
-        aLineItem.SetLine( NULL );
+        aLineItem.SetLine( nullptr );
 
     if ( IsInPopupMode() )
         EndPopupMode();
@@ -1895,42 +2175,18 @@ IMPL_LINK_NOARG(SvxLineWindow_Impl, SelectHdl)
     aLineItem.QueryValue( a, m_bIsWriter ? CONVERT_TWIPS : 0 );
     aArgs[0].Value = a;
 
-    SfxToolBoxControl::Dispatch( Reference< XDispatchProvider >( GetFrame()->getController(), UNO_QUERY ),
-                                 OUString( ".uno:LineStyle" ),
-                                 aArgs );
-    return 0;
+    m_rController.dispatchCommand( ".uno:LineStyle", aArgs );
 }
 
 void SvxLineWindow_Impl::Resize()
 {
-    m_aLineStyleLb.Resize();
-}
-
-bool SvxLineWindow_Impl::Close()
-{
-    return SfxPopupWindow::Close();
-}
-
-vcl::Window* SvxLineWindow_Impl::GetPreferredKeyInputWindow()
-{
-    return &m_aLineStyleLb;
+    m_aLineStyleLb->Resize();
 }
 
 void SvxLineWindow_Impl::GetFocus()
 {
-    m_aLineStyleLb.GrabFocus();
-}
-
-void SvxLineWindow_Impl::DataChanged( const DataChangedEvent& rDCEvt )
-{
-    SfxPopupWindow::DataChanged( rDCEvt );
-#if 0
-    if( ( rDCEvt.GetType() == DATACHANGED_SETTINGS ) && ( rDCEvt.GetFlags() & SETTINGS_STYLE ) )
-    {
-        CreateBitmaps();
-        Invalidate();
-    }
-#endif
+    if ( m_aLineStyleLb )
+        m_aLineStyleLb->GrabFocus();
 }
 
 SfxStyleControllerItem_Impl::SfxStyleControllerItem_Impl(
@@ -1959,12 +2215,12 @@ void SfxStyleControllerItem_Impl::StateChanged(
             if ( SfxItemState::DEFAULT == eState )
             {
                 const SfxTemplateItem* pStateItem =
-                    PTR_CAST( SfxTemplateItem, pState );
-                DBG_ASSERT( pStateItem != NULL, "SfxTemplateItem expected" );
+                    dynamic_cast<const SfxTemplateItem*>( pState  );
+                DBG_ASSERT( pStateItem != nullptr, "SfxTemplateItem expected" );
                 rControl.SetFamilyState( nIdx, pStateItem );
             }
             else
-                rControl.SetFamilyState( nIdx, NULL );
+                rControl.SetFamilyState( nIdx, nullptr );
             break;
         }
     }
@@ -1978,16 +2234,16 @@ struct SvxStyleToolBoxControl::Impl
     bool                     bSpecModeWriter;
     bool                     bSpecModeCalc;
 
-    inline Impl( void )
-        :aClearForm         ( SVX_RESSTR( RID_SVXSTR_CLEARFORM ) )
-        ,aMore              ( SVX_RESSTR( RID_SVXSTR_MORE_STYLES ) )
+    Impl()
+        :aClearForm         ( SvxResId( RID_SVXSTR_CLEARFORM ) )
+        ,aMore              ( SvxResId( RID_SVXSTR_MORE_STYLES ) )
         ,bSpecModeWriter    ( false )
         ,bSpecModeCalc      ( false )
     {
 
 
     }
-    void InitializeStyles(Reference < frame::XModel > xModel)
+    void InitializeStyles(const Reference < frame::XModel >& xModel)
     {
         //now convert the default style names to the localized names
         try
@@ -2000,7 +2256,7 @@ struct SvxStyleToolBoxControl::Impl
                 Reference<container::XNameAccess> xParaStyles;
                     xStylesSupplier->getStyleFamilies()->getByName("ParagraphStyles") >>=
                     xParaStyles;
-                static const sal_Char* aWriterStyles[] =
+                static const std::vector<OUString> aWriterStyles =
                 {
                     "Text body",
                     "Quotations",
@@ -2010,12 +2266,12 @@ struct SvxStyleToolBoxControl::Impl
                     "Heading 2",
                     "Heading 3"
                 };
-                for( sal_uInt32 nStyle = 0; nStyle < sizeof( aWriterStyles ) / sizeof( sal_Char*); ++nStyle )
+                for( const OUString& aStyle: aWriterStyles )
                 {
                     try
                     {
                         Reference< beans::XPropertySet > xStyle;
-                        xParaStyles->getByName( OUString::createFromAscii( aWriterStyles[nStyle] )) >>= xStyle;
+                        xParaStyles->getByName( aStyle ) >>= xStyle;
                         OUString sName;
                         xStyle->getPropertyValue("DisplayName") >>= sName;
                         if( !sName.isEmpty() )
@@ -2027,8 +2283,8 @@ struct SvxStyleToolBoxControl::Impl
 
             }
             else if( (
-                bSpecModeCalc = xServices->supportsService(OUString(
-                    "com.sun.star.sheet.SpreadsheetDocument"))))
+                bSpecModeCalc = xServices->supportsService(
+                    "com.sun.star.sheet.SpreadsheetDocument")))
             {
                 static const sal_Char* aCalcStyles[] =
                 {
@@ -2038,14 +2294,12 @@ struct SvxStyleToolBoxControl::Impl
                     "Result2"
                 };
                 Reference<container::XNameAccess> xCellStyles;
-                    xStylesSupplier->getStyleFamilies()->getByName(
-                        OUString("CellStyles")) >>=
-                        xCellStyles;
-                for( sal_uInt32 nStyle = 0; nStyle < sizeof( aCalcStyles ) / sizeof( sal_Char*); ++nStyle )
+                xStylesSupplier->getStyleFamilies()->getByName("CellStyles") >>= xCellStyles;
+                for(const char* pCalcStyle : aCalcStyles)
                 {
                     try
                     {
-                        const OUString sStyleName( OUString::createFromAscii( aCalcStyles[nStyle] ) );
+                        const OUString sStyleName( OUString::createFromAscii( pCalcStyle ) );
                         if( xCellStyles->hasByName( sStyleName ) )
                         {
                             Reference< beans::XPropertySet > xStyle( xCellStyles->getByName( sStyleName), UNO_QUERY_THROW );
@@ -2082,25 +2336,23 @@ static const char* StyleSlotToStyleCommand[MAX_FAMILIES] =
 SvxStyleToolBoxControl::SvxStyleToolBoxControl(
     sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rTbx )
     :   SfxToolBoxControl   ( nSlotId, nId, rTbx ),
-        pStyleSheetPool     ( NULL ),
-        nActFamily          ( 0xffff ),
-        pImpl               ( new Impl )
+        pImpl               ( new Impl ),
+        pStyleSheetPool     ( nullptr ),
+        nActFamily          ( 0xffff )
 {
     for ( sal_uInt16 i=0; i<MAX_FAMILIES; i++ )
     {
-        pBoundItems[i] = 0;
+        pBoundItems[i] = nullptr;
         m_xBoundItems[i].clear();
-        pFamilyState[i]  = NULL;
+        pFamilyState[i]  = nullptr;
     }
 }
 
 SvxStyleToolBoxControl::~SvxStyleToolBoxControl()
 {
-    delete pImpl;
 }
 
 void SAL_CALL SvxStyleToolBoxControl::initialize( const Sequence< Any >& aArguments )
-throw ( Exception, RuntimeException, std::exception)
 {
     SfxToolBoxControl::initialize( aArguments );
 
@@ -2116,15 +2368,14 @@ throw ( Exception, RuntimeException, std::exception)
                                                                 SID_STYLE_FAMILY_START + i,
                                                                 OUString::createFromAscii( StyleSlotToStyleCommand[i] ),
                                                                 *this );
-            m_xBoundItems[i] = Reference< XComponent >( static_cast< OWeakObject* >( pBoundItems[i] ), UNO_QUERY );
-            pFamilyState[i]  = NULL;
+            m_xBoundItems[i].set( static_cast< OWeakObject* >( pBoundItems[i] ), UNO_QUERY );
+            pFamilyState[i]  = nullptr;
         }
     }
 }
 
 // XComponent
 void SAL_CALL SvxStyleToolBoxControl::dispose()
-throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
     SfxToolBoxControl::dispose();
 
@@ -2141,23 +2392,24 @@ throw (::com::sun::star::uno::RuntimeException, std::exception)
             }
 
             m_xBoundItems[i].clear();
-            pBoundItems[i] = 0;
+            pBoundItems[i] = nullptr;
         }
-        DELETEZ( pFamilyState[i] );
+        delete pFamilyState[i];
+        pFamilyState[i] = nullptr;
     }
-    pStyleSheetPool = NULL;
-    DELETEZ( pImpl );
+    pStyleSheetPool = nullptr;
+    pImpl.reset();
 }
 
-void SAL_CALL SvxStyleToolBoxControl::update() throw (RuntimeException, std::exception)
+void SAL_CALL SvxStyleToolBoxControl::update()
 {
     // Do nothing, we will start binding our listener when we are visible.
     // See link SvxStyleToolBoxControl::VisibilityNotification.
     SvxStyleBox_Impl* pBox = static_cast<SvxStyleBox_Impl*>(GetToolBox().GetItemWindow( GetId() ));
     if ( pBox->IsVisible() )
     {
-        for ( int i=0; i<MAX_FAMILIES; i++ )
-            pBoundItems [i]->ReBind();
+        for (SfxStyleControllerItem_Impl* pBoundItem : pBoundItems)
+            pBoundItem->ReBind();
 
         bindListener();
     }
@@ -2167,16 +2419,16 @@ SfxStyleFamily SvxStyleToolBoxControl::GetActFamily()
 {
     switch ( nActFamily-1 + SID_STYLE_FAMILY_START )
     {
-        case SID_STYLE_FAMILY1: return SFX_STYLE_FAMILY_CHAR;
-        case SID_STYLE_FAMILY2: return SFX_STYLE_FAMILY_PARA;
-        case SID_STYLE_FAMILY3: return SFX_STYLE_FAMILY_FRAME;
-        case SID_STYLE_FAMILY4: return SFX_STYLE_FAMILY_PAGE;
-        case SID_STYLE_FAMILY5: return SFX_STYLE_FAMILY_PSEUDO;
+        case SID_STYLE_FAMILY1: return SfxStyleFamily::Char;
+        case SID_STYLE_FAMILY2: return SfxStyleFamily::Para;
+        case SID_STYLE_FAMILY3: return SfxStyleFamily::Frame;
+        case SID_STYLE_FAMILY4: return SfxStyleFamily::Page;
+        case SID_STYLE_FAMILY5: return SfxStyleFamily::Pseudo;
         default:
             OSL_FAIL( "unknown style family" );
             break;
     }
-    return SFX_STYLE_FAMILY_PARA;
+    return SfxStyleFamily::Para;
 }
 
 void SvxStyleToolBoxControl::FillStyleBox()
@@ -2190,7 +2442,7 @@ void SvxStyleToolBoxControl::FillStyleBox()
     {
         const SfxStyleFamily    eFamily     = GetActFamily();
         sal_uInt16              nCount      = pStyleSheetPool->Count();
-        SfxStyleSheetBase*      pStyle      = NULL;
+        SfxStyleSheetBase*      pStyle      = nullptr;
         bool                    bDoFill     = false;
 
         pStyleSheetPool->SetSearchMask( eFamily, SFXSTYLEBIT_USED );
@@ -2220,22 +2472,18 @@ void SvxStyleToolBoxControl::FillStyleBox()
             pBox->Clear();
 
             {
-                sal_uInt16  _i;
-                sal_uInt32  nCnt = pImpl->aDefaultStyles.size();
-
                 pStyle = pStyleSheetPool->First();
 
                 if( pImpl->bSpecModeWriter || pImpl->bSpecModeCalc )
                 {
-                    bool bInsert;
                     while ( pStyle )
                     {
                         // sort out default styles
-                        bInsert = true;
+                        bool bInsert = true;
                         OUString aName( pStyle->GetName() );
-                        for( _i = 0 ; _i < nCnt ; ++_i )
+                        for( auto const & _i: pImpl->aDefaultStyles )
                         {
-                            if( pImpl->aDefaultStyles[_i] == aName )
+                            if( _i == aName )
                             {
                                 bInsert = false;
                                 break;
@@ -2265,12 +2513,10 @@ void SvxStyleToolBoxControl::FillStyleBox()
                 pBox->SetStyle( nWinBits );
 
                 // insert default styles
-                sal_uInt16  _i;
-                sal_uInt32  nCnt = pImpl->aDefaultStyles.size();
                 sal_uInt16 nPos = 1;
-                for( _i = 0 ; _i < nCnt ; ++_i )
+                for( auto const & _i: pImpl->aDefaultStyles )
                 {
-                    pBox->InsertEntry( pImpl->aDefaultStyles[_i], nPos );
+                    pBox->InsertEntry( _i, nPos );
                     ++nPos;
                 }
 
@@ -2290,8 +2536,6 @@ void SvxStyleToolBoxControl::FillStyleBox()
             sal_uInt16 nLines = static_cast<sal_uInt16>(
                     std::min( pBox->GetEntryCount(), static_cast<sal_Int32>(MAX_STYLES_ENTRIES)));
             pBox->SetDropDownLineCount( nLines );
-
-            pBox->CalcOptimalExtraUserWidth();
         }
     }
 }
@@ -2318,7 +2562,7 @@ void SvxStyleToolBoxControl::SelectStyle( const OUString& rStyleName )
 
 void SvxStyleToolBoxControl::Update()
 {
-    SfxStyleSheetBasePool*  pPool     = NULL;
+    SfxStyleSheetBasePool*  pPool     = nullptr;
     SfxObjectShell*         pDocShell = SfxObjectShell::Current();
 
     if ( pDocShell )
@@ -2336,9 +2580,9 @@ void SvxStyleToolBoxControl::Update()
     }
 
 
-    const SfxTemplateItem* pItem = NULL;
+    const SfxTemplateItem* pItem = nullptr;
 
-    if ( nActFamily == 0xffff || 0 == (pItem = pFamilyState[nActFamily-1]) )
+    if ( nActFamily == 0xffff || nullptr == (pItem = pFamilyState[nActFamily-1]) )
     // Current range not within allowed ranges or default
     {
         pStyleSheetPool = pPool;
@@ -2353,7 +2597,7 @@ void SvxStyleToolBoxControl::Update()
 
         if ( !pItem )
         {
-            DBG_WARNING( "Unknown Family" ); // can happen
+            SAL_INFO( "svx", "Unknown Family" ); // can happen
         }
     }
     else if ( pPool != pStyleSheetPool )
@@ -2368,7 +2612,8 @@ void SvxStyleToolBoxControl::Update()
 void SvxStyleToolBoxControl::SetFamilyState( sal_uInt16 nIdx,
                                              const SfxTemplateItem* pItem )
 {
-    DELETEZ( pFamilyState[nIdx] );
+    delete pFamilyState[nIdx];
+    pFamilyState[nIdx] = nullptr;
 
     if ( pItem )
         pFamilyState[nIdx] = new SfxTemplateItem( *pItem );
@@ -2376,28 +2621,24 @@ void SvxStyleToolBoxControl::SetFamilyState( sal_uInt16 nIdx,
     Update();
 }
 
-IMPL_LINK_NOARG(SvxStyleToolBoxControl, VisibilityNotification)
+IMPL_LINK_NOARG(SvxStyleToolBoxControl, VisibilityNotification, SvxStyleBox_Impl&, void)
 {
-
-    sal_uInt16 i;
-
     // Call ReBind() && UnBind() according to visibility
     SvxStyleBox_Impl* pBox = static_cast<SvxStyleBox_Impl*>( GetToolBox().GetItemWindow( GetId() ));
-    if ( pBox->IsVisible() && !isBound() )
+
+    if ( pBox && pBox->IsVisible() && !isBound() )
     {
-        for ( i=0; i<MAX_FAMILIES; i++ )
-            pBoundItems [i]->ReBind();
+        for (SfxStyleControllerItem_Impl* pBoundItem : pBoundItems)
+            pBoundItem->ReBind();
 
         bindListener();
     }
-    else if ( !pBox->IsVisible() && isBound() )
+    else if ( (!pBox || !pBox->IsVisible()) && isBound() )
     {
-        for ( i=0; i<MAX_FAMILIES; i++ )
-            pBoundItems[i]->UnBind();
+        for (SfxStyleControllerItem_Impl* pBoundItem : pBoundItems)
+            pBoundItem->UnBind();
         unbindListener();
     }
-
-    return 0;
 }
 
 void SvxStyleToolBoxControl::StateChanged(
@@ -2439,248 +2680,236 @@ void SvxStyleToolBoxControl::StateChanged(
         Update();
 }
 
-vcl::Window* SvxStyleToolBoxControl::CreateItemWindow( vcl::Window *pParent )
+VclPtr<vcl::Window> SvxStyleToolBoxControl::CreateItemWindow( vcl::Window *pParent )
 {
-    SvxStyleBox_Impl* pBox = new SvxStyleBox_Impl( pParent,
-                                                   OUString( ".uno:StyleApply" ),
-                                                   SFX_STYLE_FAMILY_PARA,
-                                                   Reference< XDispatchProvider >( m_xFrame->getController(), UNO_QUERY ),
-                                                   m_xFrame,
-                                                   pImpl->aClearForm,
-                                                   pImpl->aMore,
-                                                   pImpl->bSpecModeWriter || pImpl->bSpecModeCalc );
+    VclPtrInstance<SvxStyleBox_Impl> pBox( pParent,
+                                           OUString( ".uno:StyleApply" ),
+                                           SfxStyleFamily::Para,
+                                           Reference< XDispatchProvider >( m_xFrame->getController(), UNO_QUERY ),
+                                           m_xFrame,
+                                           pImpl->aClearForm,
+                                           pImpl->aMore,
+                                           pImpl->bSpecModeWriter || pImpl->bSpecModeCalc );
     if( !pImpl->aDefaultStyles.empty())
         pBox->SetDefaultStyle( pImpl->aDefaultStyles[0] );
     // Set visibility listener to bind/unbind controller
     pBox->SetVisibilityListener( LINK( this, SvxStyleToolBoxControl, VisibilityNotification ));
 
-    return pBox;
+    return pBox.get();
 }
 
-SvxFontNameToolBoxControl::SvxFontNameToolBoxControl(
-                                            sal_uInt16          nSlotId,
-                                            sal_uInt16          nId,
-                                            ToolBox&        rTbx )
-    :   SfxToolBoxControl( nSlotId, nId, rTbx )
+class SvxFontNameToolBoxControl : public cppu::ImplInheritanceHelper< svt::ToolboxController,
+                                                                      css::lang::XServiceInfo >
+{
+public:
+    SvxFontNameToolBoxControl();
+
+    // XStatusListener
+    virtual void SAL_CALL statusChanged( const css::frame::FeatureStateEvent& rEvent ) override;
+
+    // XToolbarController
+    virtual css::uno::Reference< css::awt::XWindow > SAL_CALL createItemWindow( const css::uno::Reference< css::awt::XWindow >& rParent ) override;
+
+    // XComponent
+    virtual void SAL_CALL dispose() override;
+
+    // XServiceInfo
+    virtual OUString SAL_CALL getImplementationName() override;
+    virtual sal_Bool SAL_CALL supportsService( const OUString& rServiceName ) override;
+    virtual css::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames() override;
+
+private:
+    VclPtr<SvxFontNameBox_Impl> m_pBox;
+};
+
+SvxFontNameToolBoxControl::SvxFontNameToolBoxControl()
 {
 }
 
-void SvxFontNameToolBoxControl::StateChanged(
-    sal_uInt16 , SfxItemState eState, const SfxPoolItem* pState )
+void SvxFontNameToolBoxControl::statusChanged( const css::frame::FeatureStateEvent& rEvent )
 {
-    sal_uInt16               nId    = GetId();
-    ToolBox&             rTbx   = GetToolBox();
-    SvxFontNameBox_Impl* pBox   = static_cast<SvxFontNameBox_Impl*>(rTbx.GetItemWindow( nId ));
+    SolarMutexGuard aGuard;
+    ToolBox* pToolBox = nullptr;
+    sal_uInt16 nId = 0;
+    if ( !getToolboxId( nId, &pToolBox ) )
+        return;
 
-    DBG_ASSERT( pBox, "Control not found!" );
-
-    if ( SfxItemState::DISABLED == eState )
+    if ( !rEvent.IsEnabled )
     {
-        pBox->Disable();
-        pBox->Update( (const SvxFontItem*)NULL );
+        m_pBox->Disable();
+        m_pBox->Update( nullptr );
     }
     else
     {
-        pBox->Enable();
+        m_pBox->Enable();
 
-        if ( SfxItemState::DEFAULT == eState )
-        {
-            const SvxFontItem* pFontItem = dynamic_cast< const SvxFontItem* >( pState );
-
-            DBG_ASSERT( pFontItem, "svx::SvxFontNameToolBoxControl::StateChanged(), wrong item type!" );
-            if( pFontItem )
-                pBox->Update( pFontItem );
-        }
+        css::awt::FontDescriptor aFontDesc;
+        if ( rEvent.State >>= aFontDesc )
+            m_pBox->Update( &aFontDesc );
         else
-            pBox->SetText( "" );
-        pBox->SaveValue();
+            m_pBox->SetText( "" );
+        m_pBox->SaveValue();
     }
 
-    rTbx.EnableItem( nId, SfxItemState::DISABLED != eState );
+    pToolBox->EnableItem( nId, rEvent.IsEnabled );
 }
 
-vcl::Window* SvxFontNameToolBoxControl::CreateItemWindow( vcl::Window *pParent )
+css::uno::Reference< css::awt::XWindow > SvxFontNameToolBoxControl::createItemWindow( const css::uno::Reference< css::awt::XWindow >& rParent )
 {
-    SvxFontNameBox_Impl* pBox = new SvxFontNameBox_Impl( pParent,
-                                                         Reference< XDispatchProvider >( m_xFrame->getController(), UNO_QUERY ),
-                                                         m_xFrame,0);
-    return pBox;
+    SolarMutexGuard aGuard;
+    m_pBox = VclPtr<SvxFontNameBox_Impl>::Create( VCLUnoHelper::GetWindow( rParent ),
+                                                  Reference< XDispatchProvider >( m_xFrame->getController(), UNO_QUERY ),
+                                                  m_xFrame, 0);
+    return VCLUnoHelper::GetInterface( m_pBox );
 }
 
-/* Note:
-   The initial color shown on the button is set in /core/svx/source/tbxctrls/tbxcolorupdate.cxx
-   (ToolboxButtonColorUpdater::ToolboxButtonColorUpdater()) .
-   The initial color used by the button is set in /core/svx/source/tbxcntrls/tbcontrl.cxx
-   (SvxColorToolBoxControl::SvxColorToolBoxControl())
-   and in case of writer for text(background)color also in /core/sw/source/uibase/docvw/edtwin.cxx
-   (SwEditWin::m_aTextBackColor and SwEditWin::m_aTextColor)
- */
+void SvxFontNameToolBoxControl::dispose()
+{
+    m_pBox.disposeAndClear();
+    ToolboxController::dispose();
+}
+
+OUString SvxFontNameToolBoxControl::getImplementationName()
+{
+    return OUString( "com.sun.star.comp.svx.FontNameToolBoxControl" );
+}
+
+sal_Bool SvxFontNameToolBoxControl::supportsService( const OUString& rServiceName )
+{
+    return cppu::supportsService( this, rServiceName );
+}
+
+css::uno::Sequence< OUString > SvxFontNameToolBoxControl::getSupportedServiceNames()
+{
+    return { "com.sun.star.frame.ToolbarController" };
+}
+
+extern "C" SAL_DLLPUBLIC_EXPORT css::uno::XInterface * SAL_CALL
+com_sun_star_comp_svx_FontNameToolBoxControl_get_implementation(
+    css::uno::XComponentContext*,
+    css::uno::Sequence<css::uno::Any> const & )
+{
+    return cppu::acquire( new SvxFontNameToolBoxControl() );
+}
 
 SvxColorToolBoxControl::SvxColorToolBoxControl(
     sal_uInt16 nSlotId,
     sal_uInt16 nId,
-    ToolBox& rTbx ) :
-    SfxToolBoxControl( nSlotId, nId, rTbx )
+    ToolBox& rTbx ):
+    ImplInheritanceHelper( nSlotId, nId, rTbx ),
+    m_bSplitButton(typeid(rTbx) != typeid(sfx2::sidebar::SidebarToolBox)),
+    m_aColorSelectFunction(PaletteManager::DispatchColorCommand)
 {
-    if ( dynamic_cast< sfx2::sidebar::SidebarToolBox* >(&rTbx) )
-        bSidebarType = true;
-    else
-        bSidebarType = false;
-
-    // The following commands are available at the various modules
     switch( nSlotId )
     {
-        case SID_ATTR_CHAR_COLOR:
-            addStatusListener( OUString( ".uno:Color" ));
-            mPaletteManager.SetLastColor( COL_RED );
-            bSidebarType = false;
-            break;
-
         case SID_ATTR_CHAR_COLOR2:
-            addStatusListener( OUString( ".uno:CharColorExt" ));
-            mPaletteManager.SetLastColor( COL_RED );
-            bSidebarType = false;
-            break;
+            addStatusListener( ".uno:CharColorExt");
+            SAL_FALLTHROUGH;
 
-        case SID_BACKGROUND_COLOR:
-            addStatusListener( OUString( ".uno:BackgroundColor" ));
-            mPaletteManager.SetLastColor( COL_YELLOW );
-            bSidebarType = false;
+        case SID_ATTR_CHAR_COLOR:
+        case SID_ATTR_CHAR_BACK_COLOR:
+            m_bSplitButton = true;
             break;
 
         case SID_ATTR_CHAR_COLOR_BACKGROUND:
-            addStatusListener( OUString( ".uno:CharBackgroundExt" ));
-            mPaletteManager.SetLastColor( COL_YELLOW );
-            bSidebarType = false;
+            addStatusListener( ".uno:CharBackgroundExt");
+            m_bSplitButton = true;
             break;
 
         case SID_FRAME_LINECOLOR:
-            addStatusListener( OUString( ".uno:FrameLineColor" ));
-            addStatusListener( OUString( ".uno:BorderTLBR" ));
-            addStatusListener( OUString( ".uno:BorderBLTR" ));
-            mPaletteManager.SetLastColor( COL_BLUE );
-            break;
-
-        case SID_EXTRUSION_3D_COLOR:
-            addStatusListener( OUString( ".uno:Extrusion3DColor"));
-            break;
-
-        case SID_ATTR_LINE_COLOR:
-            addStatusListener( OUString( ".uno:XLineColor" ));
-            mPaletteManager.SetLastColor( COL_BLACK );
-            break;
-
-        case SID_ATTR_FILL_COLOR:
-            addStatusListener( OUString( ".uno:FillColor" ));
-            mPaletteManager.SetLastColor( COL_DEFAULT_SHAPE_FILLING );
+            addStatusListener( ".uno:BorderTLBR");
+            addStatusListener( ".uno:BorderBLTR");
             break;
     }
 
-    if ( bSidebarType )
-        rTbx.SetItemBits( nId, ToolBoxItemBits::DROPDOWNONLY | rTbx.GetItemBits( nId ) );
-    else
-        rTbx.SetItemBits( nId, ToolBoxItemBits::DROPDOWN | rTbx.GetItemBits( nId ) );
+    rTbx.SetItemBits( nId, rTbx.GetItemBits( nId ) | ( m_bSplitButton ? ToolBoxItemBits::DROPDOWN : ToolBoxItemBits::DROPDOWNONLY ) );
+    m_xBtnUpdater.reset( new svx::ToolboxButtonColorUpdater( nSlotId, nId, &GetToolBox() ) );
+}
 
-    pBtnUpdater.reset( new ::svx::ToolboxButtonColorUpdater( nSlotId, nId, &GetToolBox() ) );
-    mPaletteManager.SetBtnUpdater( pBtnUpdater.get() );
+void SvxColorToolBoxControl::EnsurePaletteManager()
+{
+    if (!m_xPaletteManager)
+    {
+        m_xPaletteManager.reset(new PaletteManager);
+        m_xPaletteManager->SetBtnUpdater(m_xBtnUpdater.get());
+        m_xPaletteManager->SetLastColor(m_xBtnUpdater->GetCurrentColor());
+    }
 }
 
 SvxColorToolBoxControl::~SvxColorToolBoxControl()
 {
+    if (m_xPaletteManager)
+        m_xPaletteManager->SetBtnUpdater(nullptr);
 }
 
-SfxPopupWindowType SvxColorToolBoxControl::GetPopupWindowType() const
+void SvxColorToolBoxControl::setColorSelectFunction(const ColorSelectFunction& aColorSelectFunction)
 {
-    return SFX_POPUPWINDOW_ONTIMEOUT;
+    m_aColorSelectFunction = aColorSelectFunction;
+    if (m_xPaletteManager)
+        m_xPaletteManager->SetColorSelectFunction(aColorSelectFunction);
 }
 
-SfxPopupWindow* SvxColorToolBoxControl::CreatePopupWindow()
+VclPtr<SfxPopupWindow> SvxColorToolBoxControl::CreatePopupWindow()
 {
-    SvxColorWindow_Impl* pColorWin =
-        new SvxColorWindow_Impl(
+    EnsurePaletteManager();
+
+    VclPtrInstance<SvxColorWindow> pColorWin(
                             m_aCommandURL,
-                            mPaletteManager,
-                            maBorderColorStatus,
+                            m_xPaletteManager,
+                            m_aBorderColorStatus,
                             GetSlotId(),
                             m_xFrame,
-                            SVX_RESSTR( RID_SVXITEMS_EXTRAS_CHARCOLOR ),
-                            &GetToolBox() );
+                            &GetToolBox(),
+                            m_aColorSelectFunction);
 
-    switch( GetSlotId() )
-    {
-        case SID_ATTR_CHAR_COLOR_BACKGROUND :
-            pColorWin->SetText( SVX_RESSTR( RID_SVXSTR_EXTRAS_CHARBACKGROUND ) );
-            break;
-
-        case SID_BACKGROUND_COLOR :
-            pColorWin->SetText( SVX_RESSTR( RID_SVXSTR_BACKGROUND ) );
-            break;
-
-        case SID_FRAME_LINECOLOR:
-            pColorWin->SetText( SVX_RESSTR( RID_SVXSTR_FRAME_COLOR ) );
-            break;
-
-        case SID_EXTRUSION_3D_COLOR:
-            pColorWin->SetText( SVX_RESSTR( RID_SVXSTR_EXTRUSION_COLOR ) );
-            break;
-
-        case SID_ATTR_LINE_COLOR:
-            pColorWin->SetText( SVX_RESSTR( RID_SVXSTR_LINECOLOR ) );
-            break;
-
-        case SID_ATTR_FILL_COLOR:
-            pColorWin->SetText( SVX_RESSTR( RID_SVXSTR_FILLCOLOR ) );
-            break;
-    }
-
-    pColorWin->StartPopupMode( &GetToolBox(),
-        FLOATWIN_POPUPMODE_ALLOWTEAROFF|FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE );
+    OUString aWindowTitle = vcl::CommandInfoProvider::GetLabelForCommand( m_aCommandURL, m_sModuleName );
+    pColorWin->SetText( aWindowTitle );
+    pColorWin->StartPopupMode(&GetToolBox(), FloatWinPopupFlags::GrabFocus);
     pColorWin->StartSelection();
-    SetPopupWindow( pColorWin );
-    if ( !bSidebarType )
+    SetPopupWindow(pColorWin);
+    if ( m_bSplitButton )
         pColorWin->SetSelectedHdl( LINK( this, SvxColorToolBoxControl, SelectedHdl ) );
     return pColorWin;
 }
 
-IMPL_LINK(SvxColorToolBoxControl, SelectedHdl, Color*, pColor)
+IMPL_LINK(SvxColorToolBoxControl, SelectedHdl, const NamedColor&, rColor, void)
 {
-    pBtnUpdater->Update( *pColor );
-    mPaletteManager.SetLastColor( *pColor );
-    return 0;
+    m_xBtnUpdater->Update(rColor.first);
+    if (m_xPaletteManager)
+        m_xPaletteManager->SetLastColor(rColor.first);
 }
 
-void SvxColorToolBoxControl::StateChanged(
-    sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem* pState )
+void SvxColorToolBoxControl::statusChanged( const css::frame::FeatureStateEvent& rEvent )
 {
-    if ( nSID == SID_ATTR_CHAR_COLOR_EXT || nSID == SID_ATTR_CHAR_COLOR_BACKGROUND_EXT )
-        SfxToolBoxControl::StateChanged( nSID, eState, pState );
-    else if ( bSidebarType )
+    if ( rEvent.FeatureURL.Complete == m_aCommandURL )
+        GetToolBox().EnableItem( GetId(), rEvent.IsEnabled );
+
+    bool bValue;
+    if ( !m_bSplitButton )
     {
         Color aColor( COL_TRANSPARENT );
 
-        if ( nSID == SID_FRAME_LINECOLOR
-          || nSID == SID_ATTR_BORDER_DIAG_TLBR
-          || nSID == SID_ATTR_BORDER_DIAG_BLTR )
+        if ( m_aBorderColorStatus.statusChanged( rEvent ) )
         {
-            maBorderColorStatus.StateChanged( nSID, eState, pState );
-            aColor = maBorderColorStatus.GetColor();
+            aColor = m_aBorderColorStatus.GetColor();
         }
-        else if ( SfxItemState::DEFAULT <= eState && pState )
+        else if ( rEvent.IsEnabled )
         {
-            if ( pState->ISA( SvxColorItem ) )
-                aColor = static_cast< const SvxColorItem* >(pState)->GetValue();
-            else if ( pState->ISA( XLineColorItem ) )
-                aColor = static_cast< const XLineColorItem* >(pState)->GetColorValue();
-            else if ( pState->ISA( XFillColorItem ) )
-                aColor = static_cast< const XFillColorItem* >(pState)->GetColorValue();
+            sal_Int32 nValue;
+            if ( rEvent.State >>= nValue )
+                aColor = nValue;
         }
-        pBtnUpdater->Update( aColor );
+        m_xBtnUpdater->Update( aColor );
+        if (m_xPaletteManager)
+            m_xPaletteManager->SetLastColor(aColor);
     }
+    else if ( rEvent.State >>= bValue )
+        GetToolBox().CheckItem( GetId(), bValue );
 }
 
 void SvxColorToolBoxControl::Select(sal_uInt16 /*nSelectModifier*/)
 {
-    if ( bSidebarType )
+    if ( !m_bSplitButton )
     {
         // Open the popup also when Enter key is pressed.
         css::uno::Reference< css::awt::XWindow > xWin = createPopupWindow();
@@ -2689,56 +2918,53 @@ void SvxColorToolBoxControl::Select(sal_uInt16 /*nSelectModifier*/)
         return;
     }
 
-    OUString aCommand;
-    OUString aParamName;
+    OUString aCommand = m_aCommandURL;
 
     switch( GetSlotId() )
     {
         case SID_ATTR_CHAR_COLOR2 :
             aCommand    = ".uno:CharColorExt";
-            aParamName  = "FontColor";
-            break;
-
-        case SID_ATTR_CHAR_COLOR  :
-            aCommand    = ".uno:Color";
-            aParamName  = "Color";
-            break;
-
-        case SID_BACKGROUND_COLOR :
-            aCommand    = ".uno:BackgroundColor";
-            aParamName  = "BackgroundColor";
             break;
 
         case SID_ATTR_CHAR_COLOR_BACKGROUND :
             aCommand    = ".uno:CharBackgroundExt";
-            aParamName  = "BackColor";
-            break;
-
-        case SID_FRAME_LINECOLOR  :
-            aCommand    = ".uno:FrameLineColor";
-            aParamName  = "FrameLineColor";
-            break;
-
-        case SID_EXTRUSION_3D_COLOR:
-            aCommand    = ".uno:Extrusion3DColor";
-            aParamName  = "Extrusion3DColor";
-            break;
-
-        case SID_ATTR_LINE_COLOR:
-            aCommand    = ".uno:XLineColor";
-            aParamName  = "XLineColor";
-            break;
-
-        case SID_ATTR_FILL_COLOR:
-            aCommand    = ".uno:FillColor";
-            aParamName  = "FillColor";
             break;
     }
 
-    Sequence< PropertyValue > aArgs( 1 );
-    aArgs[0].Name  = aParamName;
-    aArgs[0].Value = makeAny( (sal_uInt32)( mPaletteManager.GetLastColor().GetColor() ));
+    EnsurePaletteManager();
+
+    auto aArgs( comphelper::InitPropertySequence( {
+        { m_aCommandURL.copy(5), css::uno::makeAny( m_xPaletteManager->GetLastColor().GetColor() ) }
+    } ) );
     Dispatch( aCommand, aArgs );
+}
+
+sal_Bool SvxColorToolBoxControl::opensSubToolbar()
+{
+    // For a split button, we mark this controller as a sub-toolbar controller,
+    // so we get notified (through updateImage method) on button image changes,
+    // and could redraw the last used color on top of it.
+    return m_bSplitButton;
+}
+
+void SvxColorToolBoxControl::updateImage()
+{
+    Image aImage = vcl::CommandInfoProvider::GetImageForCommand(m_aCommandURL, m_xFrame, GetToolBox().GetImageSize());
+    if ( !!aImage )
+    {
+        GetToolBox().SetItemImage( GetId(), aImage );
+        EnsurePaletteManager();
+        m_xBtnUpdater->Update(m_xPaletteManager->GetLastColor(), true);
+    }
+}
+
+OUString SvxColorToolBoxControl::getSubToolbarName()
+{
+    return OUString();
+}
+
+void SvxColorToolBoxControl::functionSelected( const OUString& /*rCommand*/ )
+{
 }
 
 SfxToolBoxControl* SvxColorToolBoxControl::CreateImpl( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox &rTbx )
@@ -2749,120 +2975,72 @@ SfxToolBoxControl* SvxColorToolBoxControl::CreateImpl( sal_uInt16 nSlotId, sal_u
 void SvxColorToolBoxControl::RegisterControl(sal_uInt16 nSlotId, SfxModule *pMod)
 {
     if ( nSlotId == SID_ATTR_LINE_COLOR )
-        SfxToolBoxControl::RegisterToolBoxControl( pMod, new SfxTbxCtrlFactory( SvxColorToolBoxControl::CreateImpl, TYPE(XLineColorItem), nSlotId ) );
+        SfxToolBoxControl::RegisterToolBoxControl( pMod, SfxTbxCtrlFactory( SvxColorToolBoxControl::CreateImpl, typeid(XLineColorItem), nSlotId ) );
     else if ( nSlotId == SID_ATTR_FILL_COLOR )
-        SfxToolBoxControl::RegisterToolBoxControl( pMod, new SfxTbxCtrlFactory( SvxColorToolBoxControl::CreateImpl, TYPE(XFillColorItem), nSlotId ) );
+        SfxToolBoxControl::RegisterToolBoxControl( pMod, SfxTbxCtrlFactory( SvxColorToolBoxControl::CreateImpl, typeid(XFillColorItem), nSlotId ) );
+    else if ( nSlotId == SID_ATTR_CHAR_BACK_COLOR )
+        SfxToolBoxControl::RegisterToolBoxControl( pMod, SfxTbxCtrlFactory( SvxColorToolBoxControl::CreateImpl, typeid(SvxBackgroundColorItem), nSlotId ) );
     else
-        SfxToolBoxControl::RegisterToolBoxControl( pMod, new SfxTbxCtrlFactory( SvxColorToolBoxControl::CreateImpl, TYPE(SvxColorItem), nSlotId ) );
+        SfxToolBoxControl::RegisterToolBoxControl( pMod, SfxTbxCtrlFactory( SvxColorToolBoxControl::CreateImpl, typeid(SvxColorItem), nSlotId ) );
 }
 
 // class SvxFrameToolBoxControl --------------------------------------------
 
-SvxFrameToolBoxControl::SvxFrameToolBoxControl(
-    sal_uInt16      nSlotId,
-    sal_uInt16      nId,
-    ToolBox&    rTbx )
-    :   SfxToolBoxControl( nSlotId, nId, rTbx )
-    , aCurBorderOuter( SID_ATTR_BORDER_OUTER )
-    , aCurBorderInner( SID_ATTR_BORDER_INNER )
+class SvxFrameToolBoxControl : public svt::PopupWindowController
 {
-    rTbx.SetItemBits( nId, ToolBoxItemBits::DROPDOWN | rTbx.GetItemBits( nId ) );
+public:
+    explicit SvxFrameToolBoxControl( const css::uno::Reference< css::uno::XComponentContext >& rContext );
+
+    // XInitialization
+    virtual void SAL_CALL initialize( const css::uno::Sequence< css::uno::Any >& rArguments ) override;
+
+    // XServiceInfo
+    virtual OUString SAL_CALL getImplementationName() override;
+    virtual css::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames() override;
+
+private:
+    virtual VclPtr<vcl::Window> createPopupWindow( vcl::Window* pParent ) override;
+    using svt::ToolboxController::createPopupWindow;
+};
+
+SvxFrameToolBoxControl::SvxFrameToolBoxControl( const css::uno::Reference< css::uno::XComponentContext >& rContext )
+    : svt::PopupWindowController( rContext, nullptr, OUString() )
+{
 }
 
-SfxPopupWindowType SvxFrameToolBoxControl::GetPopupWindowType() const
+void SvxFrameToolBoxControl::initialize( const css::uno::Sequence< css::uno::Any >& rArguments )
 {
-    return SFX_POPUPWINDOW_ONCLICK;
+    svt::PopupWindowController::initialize( rArguments );
+    ToolBox* pToolBox = nullptr;
+    sal_uInt16 nId = 0;
+    if ( getToolboxId( nId, &pToolBox ) )
+        pToolBox->SetItemBits( nId, pToolBox->GetItemBits( nId ) | ToolBoxItemBits::DROPDOWNONLY );
 }
 
-SfxPopupWindow* SvxFrameToolBoxControl::CreatePopupWindow()
+VclPtr<vcl::Window> SvxFrameToolBoxControl::createPopupWindow( vcl::Window* pParent )
 {
-    SvxFrameWindow_Impl* pFrameWin = new SvxFrameWindow_Impl(
-                                        GetSlotId(), m_xFrame, &GetToolBox() );
+    if ( m_aCommandURL == ".uno:LineStyle" )
+        return VclPtr<SvxLineWindow_Impl>::Create( *this, pParent );
 
-    pFrameWin->StartPopupMode( &GetToolBox(),
-                               FLOATWIN_POPUPMODE_GRABFOCUS |
-                               FLOATWIN_POPUPMODE_ALLOWTEAROFF |
-                               FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE );
-    pFrameWin->StartSelection();
-    SetPopupWindow( pFrameWin );
-    pFrameWin->SetBorderChangedHdl( LINK( this, SvxFrameToolBoxControl, BorderChangedHdl ) );
-
-    return pFrameWin;
+    return VclPtr<SvxFrameWindow_Impl>::Create( *this, pParent );
 }
 
-void SvxFrameToolBoxControl::StateChanged(
-    sal_uInt16, SfxItemState eState, const SfxPoolItem*  )
+OUString SvxFrameToolBoxControl::getImplementationName()
 {
-    sal_uInt16                  nId     = GetId();
-    ToolBox&                rTbx    = GetToolBox();
-
-    rTbx.EnableItem( nId, SfxItemState::DISABLED != eState );
-    rTbx.SetItemState( nId, (SfxItemState::DONTCARE == eState)
-                            ? TRISTATE_INDET
-                            : TRISTATE_FALSE );
+    return OUString( "com.sun.star.comp.svx.FrameToolBoxControl" );
 }
 
-void SvxFrameToolBoxControl::Select(sal_uInt16 /*nSelectModifier*/)
+css::uno::Sequence< OUString > SvxFrameToolBoxControl::getSupportedServiceNames()
 {
-    Any a;
-    Sequence< PropertyValue > aArgs( 2 );
-    aArgs[0].Name = "OuterBorder";
-    aCurBorderOuter.QueryValue( a );
-    aArgs[0].Value = a;
-    aArgs[1].Name = "InnerBorder";
-    aCurBorderInner.QueryValue( a );
-    aArgs[1].Value = a;
-    Dispatch( ".uno:SetBorderStyle", aArgs );
+    return { "com.sun.star.frame.ToolbarController" };
 }
 
-IMPL_LINK( SvxFrameToolBoxControl, BorderChangedHdl, SvxFrameWindowState_Impl *, pBorderState )
+extern "C" SAL_DLLPUBLIC_EXPORT css::uno::XInterface * SAL_CALL
+com_sun_star_comp_svx_FrameToolBoxControl_get_implementation(
+    css::uno::XComponentContext* rContext,
+    css::uno::Sequence<css::uno::Any> const & )
 {
-    if ( pBorderState )
-    {
-        aCurBorderOuter = pBorderState->maBorderOuter;
-        aCurBorderInner = pBorderState->maBorderInner;
-    }
-
-    return 0;
-}
-
-SvxFrameLineStyleToolBoxControl::SvxFrameLineStyleToolBoxControl(
-    sal_uInt16          nSlotId,
-    sal_uInt16          nId,
-    ToolBox&        rTbx )
-
-    :    SfxToolBoxControl( nSlotId, nId, rTbx )
-{
-    rTbx.SetItemBits( nId, ToolBoxItemBits::DROPDOWNONLY | rTbx.GetItemBits( nId ) );
-}
-
-SfxPopupWindowType SvxFrameLineStyleToolBoxControl::GetPopupWindowType() const
-{
-    return SFX_POPUPWINDOW_ONCLICK;
-}
-
-SfxPopupWindow* SvxFrameLineStyleToolBoxControl::CreatePopupWindow()
-{
-    SvxLineWindow_Impl* pLineWin = new SvxLineWindow_Impl( GetSlotId(), m_xFrame, &GetToolBox() );
-    pLineWin->StartPopupMode( &GetToolBox(),
-                              FLOATWIN_POPUPMODE_GRABFOCUS |
-                              FLOATWIN_POPUPMODE_ALLOWTEAROFF |
-                              FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE );
-    SetPopupWindow( pLineWin );
-
-    return pLineWin;
-}
-
-void SvxFrameLineStyleToolBoxControl::StateChanged(
-    sal_uInt16 , SfxItemState eState, const SfxPoolItem*  )
-{
-    sal_uInt16       nId    = GetId();
-    ToolBox&     rTbx   = GetToolBox();
-
-    rTbx.EnableItem( nId, SfxItemState::DISABLED != eState );
-    rTbx.SetItemState( nId, (SfxItemState::DONTCARE == eState)
-                                ? TRISTATE_INDET
-                                : TRISTATE_FALSE );
+    return cppu::acquire( new SvxFrameToolBoxControl( rContext ) );
 }
 
 SvxSimpleUndoRedoController::SvxSimpleUndoRedoController( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rTbx  )
@@ -2877,7 +3055,7 @@ SvxSimpleUndoRedoController::~SvxSimpleUndoRedoController()
 
 void SvxSimpleUndoRedoController::StateChanged( sal_uInt16, SfxItemState eState, const SfxPoolItem* pState )
 {
-    const SfxStringItem* pItem = PTR_CAST( SfxStringItem, pState );
+    const SfxStringItem* pItem = dynamic_cast<const SfxStringItem*>( pState  );
     ToolBox& rBox = GetToolBox();
     if ( pItem && eState != SfxItemState::DISABLED )
     {
@@ -2889,20 +3067,374 @@ void SvxSimpleUndoRedoController::StateChanged( sal_uInt16, SfxItemState eState,
     rBox.EnableItem( GetId(), eState != SfxItemState::DISABLED );
 }
 
-
-
-static void lcl_CalcSizeValueSet( vcl::Window &rWin, ValueSet &rValueSet, const Size &aItemSize )
+SvxCurrencyToolBoxControl::SvxCurrencyToolBoxControl( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rBox ) :
+    SfxToolBoxControl( nSlotId, nId, rBox ),
+    m_eLanguage( Application::GetSettings().GetLanguageTag().getLanguageType() ),
+    m_nFormatKey( NUMBERFORMAT_ENTRY_NOT_FOUND )
 {
-    Size aSize = rValueSet.CalcWindowSizePixel( aItemSize );
-    aSize.Width()  += 4;
-    aSize.Height() += 4;
-    rWin.SetOutputSizePixel( aSize );
 }
 
-Reference< ::com::sun::star::accessibility::XAccessible > SvxFontNameBox_Impl::CreateAccessible()
+SvxCurrencyToolBoxControl::~SvxCurrencyToolBoxControl() {}
+
+void SvxCurrencyToolBoxControl::initialize( const css::uno::Sequence< css::uno::Any >& rArguments )
+{
+    SfxToolBoxControl::initialize(rArguments);
+    if (GetToolBox().GetItemCommand(GetId()) == m_aCommandURL)
+        GetToolBox().SetItemBits(GetId(), ToolBoxItemBits::DROPDOWN | GetToolBox().GetItemBits(GetId()));
+}
+
+VclPtr<SfxPopupWindow> SvxCurrencyToolBoxControl::CreatePopupWindow()
+{
+    VclPtr<SvxCurrencyList_Impl> xCurrencyWin =
+        VclPtr<SvxCurrencyList_Impl>::Create( GetSlotId(), m_xFrame,
+                                              &GetToolBox(), getContext(),
+                                              this, m_aFormatString,
+                                              m_eLanguage );
+    xCurrencyWin->StartPopupMode( &GetToolBox(),
+                              FloatWinPopupFlags::GrabFocus |
+                              FloatWinPopupFlags::AllowTearOff |
+                              FloatWinPopupFlags::NoAppFocusClose );
+    SetPopupWindow( xCurrencyWin );
+
+    return xCurrencyWin;
+}
+
+void SvxCurrencyToolBoxControl::Select( sal_uInt16 nSelectModifier )
+{
+    sal_uInt32 nFormatKey;
+    if (m_aFormatString.isEmpty())
+        nFormatKey = NUMBERFORMAT_ENTRY_NOT_FOUND;
+    else
+    {
+        if ( nSelectModifier > 0 )
+        {
+            try
+            {
+                uno::Reference< util::XNumberFormatsSupplier > xRef( m_xFrame->getController()->getModel(), uno::UNO_QUERY );
+                uno::Reference< util::XNumberFormats > rxNumberFormats( xRef->getNumberFormats(), uno::UNO_QUERY_THROW );
+                css::lang::Locale aLocale = LanguageTag::convertToLocale( m_eLanguage );
+                nFormatKey = rxNumberFormats->queryKey( m_aFormatString, aLocale, false );
+                if ( nFormatKey == NUMBERFORMAT_ENTRY_NOT_FOUND )
+                    nFormatKey = rxNumberFormats->addNew( m_aFormatString, aLocale );
+                }
+                catch( const uno::Exception& )
+                {
+                    nFormatKey = m_nFormatKey;
+                }
+        }
+        else
+            nFormatKey = m_nFormatKey;
+    }
+
+    if( nFormatKey != NUMBERFORMAT_ENTRY_NOT_FOUND )
+    {
+        Sequence< PropertyValue > aArgs( 1 );
+        aArgs[0].Name = "NumberFormatCurrency";
+        aArgs[0].Value <<= nFormatKey;
+        Dispatch( m_aCommandURL, aArgs );
+        m_nFormatKey = nFormatKey;
+    }
+    else
+        SfxToolBoxControl::Select( nSelectModifier );
+}
+
+Reference< css::accessibility::XAccessible > SvxFontNameBox_Impl::CreateAccessible()
 {
     FillList();
     return FontNameBox::CreateAccessible();
+}
+
+//static
+void SvxCurrencyToolBoxControl::GetCurrencySymbols( std::vector<OUString>& rList, bool bFlag,
+                                                    std::vector<sal_uInt16>& rCurrencyList )
+{
+    rCurrencyList.clear();
+
+    const NfCurrencyTable& rCurrencyTable = SvNumberFormatter::GetTheCurrencyTable();
+    sal_uInt16 nCount = rCurrencyTable.size();
+
+    sal_uInt16 nStart = 1;
+
+    OUString aString( ApplyLreOrRleEmbedding( rCurrencyTable[0].GetSymbol() ) );
+    aString += " ";
+    aString += ApplyLreOrRleEmbedding( SvtLanguageTable::GetLanguageString(
+                                       rCurrencyTable[0].GetLanguage() ) );
+
+    rList.push_back( aString );
+    sal_uInt16 nAuto = ( sal_uInt16 )-1;
+    rCurrencyList.push_back( nAuto );
+
+    if( bFlag )
+    {
+        rList.push_back( aString );
+        rCurrencyList.push_back( 0 );
+        ++nStart;
+    }
+
+    CollatorWrapper aCollator( ::comphelper::getProcessComponentContext() );
+    aCollator.loadDefaultCollator( Application::GetSettings().GetLanguageTag().getLocale(), 0 );
+
+    const OUString aTwoSpace("  ");
+
+    for( sal_uInt16 i = 1; i < nCount; ++i )
+    {
+        OUString aStr( ApplyLreOrRleEmbedding( rCurrencyTable[i].GetBankSymbol() ) );
+        aStr += aTwoSpace;
+        aStr += ApplyLreOrRleEmbedding( rCurrencyTable[i].GetSymbol() );
+        aStr += aTwoSpace;
+        aStr += ApplyLreOrRleEmbedding( SvtLanguageTable::GetLanguageString(
+                                        rCurrencyTable[i].GetLanguage() ) );
+
+        std::vector<OUString>::size_type j = nStart;
+        for( ; j < rList.size(); ++j )
+            if ( aCollator.compareString( aStr, rList[j] ) < 0 )
+                break;  // insert before first greater than
+
+        rList.insert( rList.begin() + j, aStr );
+        rCurrencyList.insert( rCurrencyList.begin() + j, i );
+    }
+
+    // Append ISO codes to symbol list.
+    // XXX If this is to be changed, various other places would had to be
+    // adapted that assume this order!
+    std::vector<OUString>::size_type nCont = rList.size();
+
+    for ( sal_uInt16 i = 1; i < nCount; ++i )
+    {
+        bool bInsert = true;
+        OUString aStr( ApplyLreOrRleEmbedding( rCurrencyTable[i].GetBankSymbol() ) );
+
+        std::vector<OUString>::size_type j = nCont;
+        for ( ; j < rList.size() && bInsert; ++j )
+        {
+            if( rList[j] == aStr )
+                bInsert = false;
+            else if ( aCollator.compareString( aStr, rList[j] ) < 0 )
+                break;  // insert before first greater than
+        }
+        if ( bInsert )
+        {
+            rList.insert( rList.begin() + j, aStr );
+            rCurrencyList.insert( rCurrencyList.begin() + j, i );
+        }
+    }
+}
+
+SvxListBoxColorWrapper::SvxListBoxColorWrapper(SvxColorListBox* pControl)
+    : mxControl(pControl)
+{
+}
+
+void SvxListBoxColorWrapper::operator()(const OUString& /*rCommand*/, const NamedColor& rColor)
+{
+    if (!mxControl)
+        return;
+    mxControl->Selected(rColor);
+}
+
+void SvxListBoxColorWrapper::dispose()
+{
+    mxControl.clear();
+}
+
+SvxColorListBox::SvxColorListBox(vcl::Window* pParent, WinBits nStyle)
+    : MenuButton(pParent, nStyle)
+    , m_aColorWrapper(this)
+    , m_aAutoDisplayColor(Application::GetSettings().GetStyleSettings().GetDialogColor())
+    , m_nSlotId(0)
+    , m_bShowNoneButton(false)
+{
+    m_aSelectedColor = GetAutoColor(m_nSlotId);
+    LockWidthRequest();
+    ShowPreview(m_aSelectedColor);
+    SetActivateHdl(LINK(this, SvxColorListBox, MenuActivateHdl));
+}
+
+void SvxColorListBox::EnsurePaletteManager()
+{
+    if (!m_xPaletteManager)
+    {
+        m_xPaletteManager.reset(new PaletteManager);
+        m_xPaletteManager->SetColorSelectFunction(std::ref(m_aColorWrapper));
+        m_xPaletteManager->SetLastColor(m_aSelectedColor.first);
+    }
+}
+
+void SvxColorListBox::SetSlotId(sal_uInt16 nSlotId, bool bShowNoneButton)
+{
+    m_nSlotId = nSlotId;
+    m_bShowNoneButton = bShowNoneButton;
+    m_xColorWindow.disposeAndClear();
+    m_aSelectedColor = bShowNoneButton ? GetNoneColor() : GetAutoColor(m_nSlotId);
+    ShowPreview(m_aSelectedColor);
+    createColorWindow();
+}
+
+//to avoid the box resizing every time the color is changed to
+//the optimal size of the individual color, get the longest
+//standard color and stick with that as the size for all
+void SvxColorListBox::LockWidthRequest()
+{
+    if (get_width_request() != -1)
+        return;
+    NamedColor aLongestColor;
+    long nMaxStandardColorTextWidth = 0;
+    XColorListRef const xColorTable = XColorList::CreateStdColorList();
+    for (long i = 0; i != xColorTable->Count(); ++i)
+    {
+        XColorEntry& rEntry = *xColorTable->GetColor(i);
+        long nColorTextWidth = GetTextWidth(rEntry.GetName());
+        if (nColorTextWidth > nMaxStandardColorTextWidth)
+        {
+            nMaxStandardColorTextWidth = nColorTextWidth;
+            aLongestColor.second = rEntry.GetName();
+        }
+    }
+    ShowPreview(aLongestColor);
+    set_width_request(get_preferred_size().Width());
+}
+
+void SvxColorListBox::ShowPreview(const NamedColor &rColor)
+{
+    const StyleSettings& rStyleSettings = Application::GetSettings().GetStyleSettings();
+    Size aImageSize(rStyleSettings.GetListBoxPreviewDefaultPixelSize());
+
+    ScopedVclPtrInstance<VirtualDevice> xDevice;
+    xDevice->SetOutputSize(aImageSize);
+    const tools::Rectangle aRect(Point(0, 0), aImageSize);
+    if (m_bShowNoneButton && rColor.first == COL_NONE_COLOR)
+    {
+        const Color aW(COL_WHITE);
+        const Color aG(0xef, 0xef, 0xef);
+        xDevice->DrawCheckered(aRect.TopLeft(), aRect.GetSize(), 8, aW, aG);
+        xDevice->SetFillColor();
+    }
+    else
+    {
+        if (rColor.first == COL_AUTO)
+            xDevice->SetFillColor(m_aAutoDisplayColor);
+        else
+            xDevice->SetFillColor(rColor.first);
+    }
+
+    xDevice->SetLineColor(rStyleSettings.GetDisableColor());
+    xDevice->DrawRect(aRect);
+
+    Bitmap aBitmap(xDevice->GetBitmap(Point(0, 0), xDevice->GetOutputSize()));
+    SetImageAlign(ImageAlign::Left);
+    SetModeImage(Image(aBitmap));
+    SetText(rColor.second);
+}
+
+IMPL_LINK(SvxColorListBox, MenuActivateHdl, MenuButton *, pBtn, void)
+{
+    (void)pBtn;
+    if (!m_xColorWindow || m_xColorWindow->isDisposed())
+        createColorWindow();
+}
+
+void SvxColorListBox::createColorWindow()
+{
+    const SfxViewFrame* pViewFrame = SfxViewFrame::Current();
+    const SfxFrame* pFrame = pViewFrame ? &pViewFrame->GetFrame() : nullptr;
+    css::uno::Reference<css::frame::XFrame> xFrame(pFrame ? pFrame->GetFrameInterface() : uno::Reference<css::frame::XFrame>());
+
+    EnsurePaletteManager();
+
+    m_xColorWindow = VclPtr<SvxColorWindow>::Create(
+                            OUString() /*m_aCommandURL*/,
+                            m_xPaletteManager,
+                            m_aBorderColorStatus,
+                            m_nSlotId,
+                            xFrame,
+                            this,
+                            m_aColorWrapper);
+    SetNoSelection();
+    if (m_bShowNoneButton)
+        m_xColorWindow->ShowNoneButton();
+    m_xColorWindow->SelectEntry(m_aSelectedColor);
+    SetPopover(m_xColorWindow);
+}
+
+void SvxColorListBox::Selected(const NamedColor& rColor)
+{
+    ShowPreview(rColor);
+    if (m_xPaletteManager)
+        m_xPaletteManager->SetLastColor(rColor.first);
+    m_aSelectedColor = rColor;
+    if (m_aSelectedLink.IsSet())
+        m_aSelectedLink.Call(*this);
+}
+
+VCL_BUILDER_FACTORY(SvxColorListBox)
+
+SvxColorListBox::~SvxColorListBox()
+{
+    disposeOnce();
+}
+
+void SvxColorListBox::dispose()
+{
+    m_xColorWindow.disposeAndClear();
+    m_aColorWrapper.dispose();
+    MenuButton::dispose();
+}
+
+VclPtr<SvxColorWindow> SvxColorListBox::getColorWindow() const
+{
+    if (!m_xColorWindow || m_xColorWindow->isDisposed())
+        const_cast<SvxColorListBox*>(this)->createColorWindow();
+    return m_xColorWindow;
+}
+
+void SvxColorListBox::SelectEntry(const NamedColor& rColor)
+{
+    if (rColor.second.trim().isEmpty())
+    {
+        SelectEntry(rColor.first);
+        return;
+    }
+    VclPtr<SvxColorWindow> xColorWindow = getColorWindow();
+    xColorWindow->SelectEntry(rColor);
+    m_aSelectedColor = xColorWindow->GetSelectEntryColor();
+    ShowPreview(m_aSelectedColor);
+}
+
+void SvxColorListBox::SelectEntry(const Color& rColor)
+{
+    VclPtr<SvxColorWindow> xColorWindow = getColorWindow();
+    xColorWindow->SelectEntry(rColor);
+    m_aSelectedColor = xColorWindow->GetSelectEntryColor();
+    ShowPreview(m_aSelectedColor);
+}
+
+SvxColorListBoxWrapper::SvxColorListBoxWrapper(SvxColorListBox& rListBox)
+    : sfx::SingleControlWrapper<SvxColorListBox, Color>(rListBox)
+{
+}
+
+SvxColorListBoxWrapper::~SvxColorListBoxWrapper()
+{
+}
+
+bool SvxColorListBoxWrapper::IsControlDontKnow() const
+{
+    return GetControl().IsNoSelection();
+}
+
+void SvxColorListBoxWrapper::SetControlDontKnow( bool bSet )
+{
+    if( bSet ) GetControl().SetNoSelection();
+}
+
+Color SvxColorListBoxWrapper::GetControlValue() const
+{
+    return GetControl().GetSelectEntryColor();
+}
+
+void SvxColorListBoxWrapper::SetControlValue( Color aColor )
+{
+    GetControl().SelectEntry( aColor );
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
