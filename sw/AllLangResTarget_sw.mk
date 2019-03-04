@@ -32,10 +32,6 @@ $(eval $(call gb_AllLangResTarget_add_srs,sw,\
 
 $(eval $(call gb_SrsTarget_SrsTarget,sw/res))
 
-$(eval $(call gb_SrsTarget_use_srstargets,sw/res,\
-	svx/res \
-))
-
 $(eval $(call gb_SrsTarget_set_include,sw/res,\
     $$(INCLUDE) \
     -I$(SRCDIR)/sw/inc \
@@ -68,8 +64,6 @@ $(eval $(call gb_SrsTarget_set_include,sw/res,\
     -I$(SRCDIR)/sw/source/ui/utlui \
     -I$(SRCDIR)/sw/source/ui/web \
     -I$(SRCDIR)/sw/source/ui/wrtsh \
-    -I$(call gb_SrsTemplateTarget_get_include_dir,) \
-    -I$(call gb_SrsTemplateTarget_get_include_dir,sw) \
 ))
 
 $(eval $(call gb_SrsTarget_add_files,sw/res,\
@@ -79,10 +73,8 @@ $(eval $(call gb_SrsTarget_add_files,sw/res,\
     sw/source/uibase/dialog/regionsw.src \
     sw/source/uibase/docvw/docvw.src \
     sw/source/uibase/lingu/olmenu.src \
-    sw/source/uibase/misc/redlndlg.src \
     sw/source/uibase/ribbar/inputwin.src \
     sw/source/uibase/ribbar/workctrl.src \
-    sw/source/uibase/smartmenu/stmenu.src \
     sw/source/uibase/uiview/view.src \
     sw/source/uibase/utlui/attrdesc.src \
     sw/source/uibase/utlui/navipi.src \
@@ -93,7 +85,6 @@ $(eval $(call gb_SrsTarget_add_files,sw/res,\
     sw/source/uibase/dbui/mailmergechildwindow.src \
     sw/source/ui/app/app.src \
     sw/source/ui/app/error.src \
-    sw/source/ui/app/mn.src \
     sw/source/ui/chrdlg/chrdlg.src \
     sw/source/ui/config/optdlg.src \
     sw/source/ui/config/optload.src \
@@ -114,9 +105,7 @@ $(eval $(call gb_SrsTarget_add_files,sw/res,\
     sw/source/ui/index/cnttab.src \
     sw/source/ui/index/idxmrk.src \
     sw/source/ui/misc/glossary.src \
-    sw/source/ui/misc/numberingtypelistbox.src \
     sw/source/ui/misc/swruler.src \
-    sw/source/ui/ribbar/tbxanchr.src \
     sw/source/ui/shells/shells.src \
     sw/source/ui/sidebar/PagePropertyPanel.src \
     sw/source/ui/utlui/poolfmt.src \
@@ -129,13 +118,5 @@ $(eval $(call gb_SrsTarget_add_files,sw/res,\
     sw/source/uibase/docvw/macdictlookup.src \
 ))
 endif
-
-$(eval $(call gb_SrsTarget_add_nonlocalizable_files,sw/res,\
-    sw/source/ui/envelp/envprt.src \
-))
-
-$(eval $(call gb_SrsTarget_add_templates,sw/res,\
-    sw/source/uibase/inc/redline_tmpl.hrc \
-))
 
 # vim: set noet sw=4 ts=4:

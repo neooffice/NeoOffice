@@ -26,6 +26,7 @@ $(eval $(call gb_CppunitTest_add_exception_objects,sw_uwriter, \
     sw/qa/core/test_ToxWhitespaceStripper \
     sw/qa/core/test_ToxLinkProcessor \
     sw/qa/core/test_ToxTextGenerator \
+    sw/qa/core/test_ToxMiscTest \
 ))
 
 $(eval $(call gb_CppunitTest_use_library_objects,sw_uwriter,sw))
@@ -36,6 +37,8 @@ $(eval $(call gb_CppunitTest_use_libraries,sw_uwriter, \
     comphelper \
     cppu \
     cppuhelper \
+    $(call gb_Helper_optional,DBCONNECTIVITY, \
+        dbtools) \
     drawinglayer \
     editeng \
     i18nlangtag \
@@ -57,12 +60,12 @@ $(eval $(call gb_CppunitTest_use_libraries,sw_uwriter, \
     tk \
     tl \
     ucbhelper \
+    unotest \
     utl \
     vbahelper \
     vcl \
 	xmlreader \
     xo \
-	$(gb_UWINAPI) \
 ))
 
 $(eval $(call gb_CppunitTest_use_externals,sw_uwriter,\
@@ -77,10 +80,7 @@ $(eval $(call gb_CppunitTest_set_include,sw_uwriter,\
     $$(INCLUDE) \
 ))
 
-$(eval $(call gb_CppunitTest_use_api,sw_uwriter,\
-    offapi \
-    udkapi \
-))
+$(eval $(call gb_CppunitTest_use_sdk_api,sw_uwriter))
 
 $(eval $(call gb_CppunitTest_use_ure,sw_uwriter))
 $(eval $(call gb_CppunitTest_use_vcl,sw_uwriter))
@@ -97,6 +97,7 @@ $(eval $(call gb_CppunitTest_use_components,sw_uwriter,\
     ucb/source/ucp/file/ucpfile1 \
     unotools/util/utl \
     unoxml/source/service/unoxml \
+    uui/util/uui \
 ))
 
 $(eval $(call gb_CppunitTest_use_configuration,sw_uwriter))
