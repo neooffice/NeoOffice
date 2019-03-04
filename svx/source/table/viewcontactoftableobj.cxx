@@ -60,10 +60,8 @@
 #endif	// USE_JAVA
 
 
-
 using editeng::SvxBorderLine;
 using namespace com::sun::star;
-
 
 
 namespace drawinglayer
@@ -78,10 +76,11 @@ namespace drawinglayer
 #ifdef USE_JAVA
             bool                                        mbUseNativeHighlighting;
 #endif	// USE_JAVA
+ 
 
         protected:
             // local decomposition.
-            virtual Primitive2DSequence create2DDecomposition(const geometry::ViewInformation2D& aViewInformation) const SAL_OVERRIDE;
+            virtual void create2DDecomposition(Primitive2DContainer& rContainer, const geometry::ViewInformation2D& aViewInformation) const override;
 
         public:
             SdrCellPrimitive2D(
@@ -109,16 +108,15 @@ namespace drawinglayer
 #endif	// USE_JAVA
 
             // compare operator
-            virtual bool operator==(const BasePrimitive2D& rPrimitive) const SAL_OVERRIDE;
+            virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
 
             // provide unique ID
             DeclPrimitive2DIDBlock()
         };
 
-        Primitive2DSequence SdrCellPrimitive2D::create2DDecomposition(const geometry::ViewInformation2D& /*aViewInformation*/) const
+        void SdrCellPrimitive2D::create2DDecomposition(Primitive2DContainer& rContainer, const geometry::ViewInformation2D& /*aViewInformation*/) const
         {
             // prepare unit polygon
-            Primitive2DSequence aRetval;
             const basegfx::B2DPolyPolygon aUnitPolyPolygon(basegfx::tools::createUnitPolygon());
 
             // add fill
@@ -127,7 +125,7 @@ namespace drawinglayer
                 basegfx::B2DPolyPolygon aTransformed(aUnitPolyPolygon);
 
                 aTransformed.transform(getTransform());
-                appendPrimitive2DReferenceToPrimitive2DSequence(aRetval,
+                rContainer.push_back(
                     createPolyPolygonFillPrimitive(
                         aTransformed,
                         getSdrFTAttribute().getFill(),
@@ -136,7 +134,7 @@ namespace drawinglayer
             else
             {
                 // if no fill create one for HitTest and BoundRect fallback
-                appendPrimitive2DReferenceToPrimitive2DSequence(aRetval,
+                rContainer.push_back(
                     createHiddenGeometryPrimitives2D(
                         true,
                         aUnitPolyPolygon,
@@ -154,7 +152,7 @@ namespace drawinglayer
                 attribute::FillHatchAttribute aHatch;
                 attribute::SdrFillGraphicAttribute aFillGraphic;
                 attribute::SdrFillAttribute aNativeHighlightFillAttr(0.25, Application::GetSettings().GetStyleSettings().GetHighlightColor().getBColor(), aGradient, aHatch, aFillGraphic);
-                appendPrimitive2DReferenceToPrimitive2DSequence(aRetval, createPolyPolygonFillPrimitive(
+                rContainer.push_back(createPolyPolygonFillPrimitive(
                     aTransformed, 
                     aNativeHighlightFillAttr,
                     aGradient));
@@ -164,7 +162,7 @@ namespace drawinglayer
             // add text
             if(!getSdrFTAttribute().getText().isDefault())
             {
-                appendPrimitive2DReferenceToPrimitive2DSequence(aRetval,
+                rContainer.push_back(
                     createTextPrimitive(
                         aUnitPolyPolygon,
                         getTransform(),
@@ -174,8 +172,6 @@ namespace drawinglayer
                         false,
                         false));
             }
-
-            return aRetval;
         }
 
         bool SdrCellPrimitive2D::operator==(const BasePrimitive2D& rPrimitive) const
@@ -201,7 +197,6 @@ namespace drawinglayer
 } // end of namespace drawinglayer
 
 
-
 namespace drawinglayer
 {
     namespace primitive2d
@@ -225,16 +220,14 @@ namespace drawinglayer
             SvxBorderLine                               maBottomFromLLine;
             SvxBorderLine                               maBottomFromRLine;
 
-            // bitfield
             bool                                        mbLeftIsOutside : 1;
             bool                                        mbBottomIsOutside : 1;
             bool                                        mbRightIsOutside : 1;
             bool                                        mbTopIsOutside : 1;
-            bool                                        mbInTwips : 1;
 
         protected:
             // local decomposition.
-            virtual Primitive2DSequence create2DDecomposition(const geometry::ViewInformation2D& aViewInformation) const SAL_OVERRIDE;
+            virtual void create2DDecomposition(Primitive2DContainer& rContainer, const geometry::ViewInformation2D& aViewInformation) const override;
 
         public:
             SdrBorderlinePrimitive2D(
@@ -254,8 +247,7 @@ namespace drawinglayer
                 bool bLeftIsOutside,
                 bool bBottomIsOutside,
                 bool bRightIsOutside,
-                bool bTopIsOutside,
-                bool bInTwips)
+                bool bTopIsOutside)
             :   BufferedDecompositionPrimitive2D(),
                 maTransform(rTransform),
                 maLeftLine(rLeftLine),
@@ -273,8 +265,7 @@ namespace drawinglayer
                 mbLeftIsOutside(bLeftIsOutside),
                 mbBottomIsOutside(bBottomIsOutside),
                 mbRightIsOutside(bRightIsOutside),
-                mbTopIsOutside(bTopIsOutside),
-                mbInTwips(bInTwips)
+                mbTopIsOutside(bTopIsOutside)
             {
             }
 
@@ -284,14 +275,9 @@ namespace drawinglayer
             const SvxBorderLine& getBottomLine() const { return maBottomLine; }
             const SvxBorderLine& getRightLine() const { return maRightLine; }
             const SvxBorderLine& getTopLine() const { return maTopLine; }
-            bool getLeftIsOutside() const { return mbLeftIsOutside; }
-            bool getBottomIsOutside() const { return mbBottomIsOutside; }
-            bool getRightIsOutside() const { return mbRightIsOutside; }
-            bool getTopIsOutside() const { return mbTopIsOutside; }
-            bool getInTwips() const { return mbInTwips; }
 
             // compare operator
-            virtual bool operator==(const BasePrimitive2D& rPrimitive) const SAL_OVERRIDE;
+            virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
 
             // provide unique ID
             DeclPrimitive2DIDBlock()
@@ -344,11 +330,9 @@ namespace drawinglayer
             return (double)nValue;
         }
 
-        Primitive2DSequence SdrBorderlinePrimitive2D::create2DDecomposition(const geometry::ViewInformation2D& /*aViewInformation*/) const
+        void SdrBorderlinePrimitive2D::create2DDecomposition(Primitive2DContainer& rContainer, const geometry::ViewInformation2D& /*aViewInformation*/) const
         {
-            Primitive2DSequence xRetval(4);
-            sal_uInt32 nInsert(0);
-            const double fTwipsToMM(getInTwips() ? (127.0 / 72.0) : 1.0);
+            const double fTwipsToMM(127.0 / 72.0);
 
             if(!getLeftLine().isEmpty())
             {
@@ -357,7 +341,7 @@ namespace drawinglayer
                 basegfx::B2DPoint aEnd(getTransform() * basegfx::B2DPoint(0.0, 1.0));
 
                 // Move the left border to the left.
-                double fOffset = getChangedValue(getLeftLine().GetDistance(), getInTwips());
+                double fOffset = getChangedValue(getLeftLine().GetDistance(), true/*InTwips*/);
                 aStart += basegfx::B2DPoint(-fOffset,-fOffset);
                 aEnd += basegfx::B2DPoint(-fOffset,fOffset);
 
@@ -368,25 +352,25 @@ namespace drawinglayer
                     const double fExtendOS(getExtend(maTopFromLLine, getTopLine()));
                     const double fExtendOE(getExtend(maBottomFromLLine, getBottomLine()));
 
-                    xRetval[nInsert++] = Primitive2DReference(new BorderLinePrimitive2D(
+                    rContainer.push_back(new BorderLinePrimitive2D(
                         aStart,
                         aEnd,
-                        getChangedValue(getLeftLine().GetOutWidth(), getInTwips()),
-                        getChangedValue(getLeftLine().GetDistance(), getInTwips()),
-                        getChangedValue(getLeftLine().GetInWidth(), getInTwips()),
+                        getChangedValue(getLeftLine().GetOutWidth(), true/*InTwips*/),
+                        getChangedValue(getLeftLine().GetDistance(), true/*InTwips*/),
+                        getChangedValue(getLeftLine().GetInWidth(), true/*InTwips*/),
                         fExtendIS * fTwipsToMM,
                         fExtendIE * fTwipsToMM,
                         fExtendOS * fTwipsToMM,
                         fExtendOE * fTwipsToMM,
-                        getLeftLine().GetColorOut(true).getBColor(),
-                        getLeftLine().GetColorIn(true).getBColor(),
+                        getLeftLine().GetColorOut().getBColor(),
+                        getLeftLine().GetColorIn().getBColor(),
                         getLeftLine().GetColorGap().getBColor(),
                         getLeftLine().HasGapColor(),
                         getLeftLine().GetBorderLineStyle()));
                 }
             }
 
-            if(!getBottomLine().isEmpty() && getBottomIsOutside())
+            if(!getBottomLine().isEmpty() && mbBottomIsOutside)
             {
                 // create bottom line from left to right
                 const basegfx::B2DPoint aStart(getTransform() * basegfx::B2DPoint(0.0, 1.0));
@@ -399,12 +383,12 @@ namespace drawinglayer
                     const double fExtendOS(getExtend(maLeftFromBLine, getLeftLine()));
                     const double fExtendOE(getExtend(maRightFromBLine, getRightLine()));
 
-                    xRetval[nInsert++] = Primitive2DReference(new BorderLinePrimitive2D(
+                    rContainer.push_back(new BorderLinePrimitive2D(
                         aStart,
                         aEnd,
-                        getChangedValue(getBottomLine().GetOutWidth(), getInTwips()),
-                        getChangedValue(getBottomLine().GetDistance(), getInTwips()),
-                        getChangedValue(getBottomLine().GetInWidth(), getInTwips()),
+                        getChangedValue(getBottomLine().GetOutWidth(), true/*InTwips*/),
+                        getChangedValue(getBottomLine().GetDistance(), true/*InTwips*/),
+                        getChangedValue(getBottomLine().GetInWidth(), true/*InTwips*/),
                         fExtendIS * fTwipsToMM,
                         fExtendIE * fTwipsToMM,
                         fExtendOS * fTwipsToMM,
@@ -430,18 +414,18 @@ namespace drawinglayer
                     const double fExtendOS(getExtend(maTopFromRLine, getTopLine()));
                     const double fExtendOE(getExtend(maBottomFromRLine, getBottomLine()));
 
-                    xRetval[nInsert++] = Primitive2DReference(new BorderLinePrimitive2D(
+                    rContainer.push_back(new BorderLinePrimitive2D(
                         aStart,
                         aEnd,
-                        getChangedValue(getRightLine().GetOutWidth(), getInTwips()),
-                        getChangedValue(getRightLine().GetDistance(), getInTwips()),
-                        getChangedValue(getRightLine().GetInWidth(), getInTwips()),
+                        getChangedValue(getRightLine().GetOutWidth(), true/*InTwips*/),
+                        getChangedValue(getRightLine().GetDistance(), true/*InTwips*/),
+                        getChangedValue(getRightLine().GetInWidth(), true/*InTwips*/),
                         fExtendOS * fTwipsToMM,
                         fExtendOE * fTwipsToMM,
                         fExtendIS * fTwipsToMM,
                         fExtendIE * fTwipsToMM,
-                        getRightLine().GetColorOut(true).getBColor(),
-                        getRightLine().GetColorIn(true).getBColor(),
+                        getRightLine().GetColorOut().getBColor(),
+                        getRightLine().GetColorIn().getBColor(),
                         getRightLine().GetColorGap().getBColor(),
                         getRightLine().HasGapColor(),
                         getRightLine().GetBorderLineStyle()));
@@ -455,7 +439,7 @@ namespace drawinglayer
                 basegfx::B2DPoint aEnd(getTransform() * basegfx::B2DPoint(1.0, 0.0));
 
                 // Move the top border up a bit.
-                double fOffset = getChangedValue(getTopLine().GetDistance(), getInTwips());
+                double fOffset = getChangedValue(getTopLine().GetDistance(), true/*InTwips*/);
                 aStart += basegfx::B2DPoint(-fOffset,-fOffset);
                 aEnd += basegfx::B2DPoint(fOffset,-fOffset);
 
@@ -466,12 +450,12 @@ namespace drawinglayer
                     const double fExtendOS(getExtend(maLeftFromTLine, getLeftLine()));
                     const double fExtendOE(getExtend(maRightFromTLine, getRightLine()));
 
-                    xRetval[nInsert++] = Primitive2DReference(new BorderLinePrimitive2D(
+                    rContainer.push_back(new BorderLinePrimitive2D(
                         aStart,
                         aEnd,
-                        getChangedValue(getTopLine().GetOutWidth(), getInTwips()),
-                        getChangedValue(getTopLine().GetDistance(), getInTwips()),
-                        getChangedValue(getTopLine().GetInWidth(), getInTwips()),
+                        getChangedValue(getTopLine().GetOutWidth(), true/*InTwips*/),
+                        getChangedValue(getTopLine().GetDistance(), true/*InTwips*/),
+                        getChangedValue(getTopLine().GetInWidth(), true/*InTwips*/),
                         fExtendOS * fTwipsToMM,
                         fExtendOE * fTwipsToMM,
                         fExtendIS * fTwipsToMM,
@@ -483,9 +467,6 @@ namespace drawinglayer
                         getTopLine().GetBorderLineStyle()));
                 }
             }
-
-            xRetval.realloc(nInsert);
-            return xRetval;
         }
 
         bool SdrBorderlinePrimitive2D::operator==(const BasePrimitive2D& rPrimitive) const
@@ -507,11 +488,10 @@ namespace drawinglayer
                     && maTopFromRLine == rCompare.maTopFromRLine
                     && maBottomFromLLine == rCompare.maBottomFromLLine
                     && maBottomFromRLine == rCompare.maBottomFromRLine
-                    && getLeftIsOutside() == rCompare.getLeftIsOutside()
-                    && getBottomIsOutside() == rCompare.getBottomIsOutside()
-                    && getRightIsOutside() == rCompare.getRightIsOutside()
-                    && getTopIsOutside() == rCompare.getTopIsOutside()
-                    && getInTwips() == rCompare.getInTwips());
+                    && mbLeftIsOutside == rCompare.mbLeftIsOutside
+                    && mbBottomIsOutside == rCompare.mbBottomIsOutside
+                    && mbRightIsOutside == rCompare.mbRightIsOutside
+                    && mbTopIsOutside == rCompare.mbTopIsOutside);
             }
 
             return false;
@@ -522,7 +502,6 @@ namespace drawinglayer
 
     } // end of namespace primitive2d
 } // end of namespace drawinglayer
-
 
 
 namespace sdr
@@ -572,15 +551,15 @@ namespace sdr
             aLine = aEmptyLine;
         }
 
-        drawinglayer::primitive2d::Primitive2DSequence ViewContactOfTableObj::createViewIndependentPrimitive2DSequence() const
+        drawinglayer::primitive2d::Primitive2DContainer ViewContactOfTableObj::createViewIndependentPrimitive2DSequence() const
         {
-            const sdr::table::SdrTableObj& rTableObj = GetTableObj();
-            const uno::Reference< com::sun::star::table::XTable > xTable = rTableObj.getTable();
+            const sdr::table::SdrTableObj& rTableObj = static_cast<const sdr::table::SdrTableObj&>(GetSdrObject());
+            const uno::Reference< css::table::XTable > xTable = rTableObj.getTable();
 
             if(xTable.is())
             {
                 // create primitive representation for table
-                drawinglayer::primitive2d::Primitive2DSequence xRetval;
+                drawinglayer::primitive2d::Primitive2DContainer xRetval;
                 const sal_Int32 nRowCount(xTable->getRowCount());
                 const sal_Int32 nColCount(xTable->getColumnCount());
                 const sal_Int32 nAllCount(nRowCount * nColCount);
@@ -588,20 +567,20 @@ namespace sdr
                 if(nAllCount)
                 {
                     const sdr::table::TableLayouter& rTableLayouter = rTableObj.getTableLayouter();
-                    const bool bIsRTL(com::sun::star::text::WritingMode_RL_TB == rTableObj.GetWritingMode());
+                    const bool bIsRTL(css::text::WritingMode_RL_TB == rTableObj.GetWritingMode());
                     sdr::table::CellPos aCellPos;
                     sdr::table::CellRef xCurrentCell;
                     basegfx::B2IRectangle aCellArea;
 
                     // create range using the model data directly. This is in SdrTextObj::aRect which i will access using
                     // GetGeoRect() to not trigger any calculations. It's the unrotated geometry.
-                    const Rectangle& rObjectRectangle(rTableObj.GetGeoRect());
+                    const tools::Rectangle& rObjectRectangle(rTableObj.GetGeoRect());
                     const basegfx::B2DRange aObjectRange(rObjectRectangle.Left(), rObjectRectangle.Top(), rObjectRectangle.Right(), rObjectRectangle.Bottom());
 
                     // for each cell we need potentially a cell primitive and a border primitive
                     // (e.g. single cell). Prepare sequences and input counters
-                    drawinglayer::primitive2d::Primitive2DSequence xCellSequence(nAllCount);
-                    drawinglayer::primitive2d::Primitive2DSequence xBorderSequence(nAllCount);
+                    drawinglayer::primitive2d::Primitive2DContainer xCellSequence(nAllCount);
+                    drawinglayer::primitive2d::Primitive2DContainer xBorderSequence(nAllCount);
                     sal_uInt32 nCellInsert(0);
                     sal_uInt32 nBorderInsert(0);
 
@@ -729,26 +708,25 @@ namespace sdr
                                             bIsRTL ? nX == nColCount : 0 == nX,
                                             nRowCount == nYBottom,
                                             bIsRTL ? 0 == nXRight : nXRight == nColCount,
-                                            0 == nY,
-                                            true));
+                                            0 == nY));
                                 }
                             }
                         }
                     }
 
                     // no empty references; reallocate sequences by used count
-                    xCellSequence.realloc(nCellInsert);
-                    xBorderSequence.realloc(nBorderInsert);
+                    xCellSequence.resize(nCellInsert);
+                    xBorderSequence.resize(nBorderInsert);
 
                     // append to target. We want fillings and text first
                     xRetval = xCellSequence;
-                    drawinglayer::primitive2d::appendPrimitive2DSequenceToPrimitive2DSequence(xRetval, xBorderSequence);
+                    xRetval.append(xBorderSequence);
                 }
 
-                if(xRetval.hasElements())
+                if(!xRetval.empty())
                 {
                     // check and create evtl. shadow for created content
-                       const SfxItemSet& rObjectItemSet = rTableObj.GetMergedItemSet();
+                    const SfxItemSet& rObjectItemSet = rTableObj.GetMergedItemSet();
                     const drawinglayer::attribute::SdrShadowAttribute aNewShadowAttribute(
                         drawinglayer::primitive2d::createNewSdrShadowAttribute(rObjectItemSet));
 
@@ -763,7 +741,7 @@ namespace sdr
             else
             {
                 // take unrotated snap rect (direct model data) for position and size
-                const Rectangle& rRectangle = rTableObj.GetGeoRect();
+                const tools::Rectangle& rRectangle = rTableObj.GetGeoRect();
                 const basegfx::B2DRange aObjectRange(
                     rRectangle.Left(), rRectangle.Top(),
                     rRectangle.Right(), rRectangle.Bottom());
@@ -776,17 +754,16 @@ namespace sdr
                     aObjectRange.getWidth(), aObjectRange.getHeight(), fShearX, fRotate,
                     aObjectRange.getMinX(), aObjectRange.getMinY()));
 
-                // credate an invisible outline for the cases where no visible content exists
+                // created an invisible outline for the cases where no visible content exists
                 const drawinglayer::primitive2d::Primitive2DReference xReference(
                     drawinglayer::primitive2d::createHiddenGeometryPrimitives2D(
-                        false,
                         aObjectMatrix));
 
-                return drawinglayer::primitive2d::Primitive2DSequence(&xReference, 1);
+                return drawinglayer::primitive2d::Primitive2DContainer { xReference };
             }
         }
 
-        ViewContactOfTableObj::ViewContactOfTableObj(::sdr::table::SdrTableObj& rTableObj)
+        ViewContactOfTableObj::ViewContactOfTableObj(sdr::table::SdrTableObj& rTableObj)
         :   ViewContactOfSdrObj(rTableObj)
         {
         }
