@@ -30,8 +30,8 @@
 
 #include <svx/dialmgr.hxx>
 #include <svx/dialogs.hrc>
+#include "bitmaps.hlst"
 #include "docrecovery.hxx"
-#include "docrecovery.hrc"
 
 #include <comphelper/processfactory.hxx>
 #include <comphelper/sequenceashashmap.hxx>
@@ -62,11 +62,9 @@
 #include <osl/security.hxx>
 #include <rtl/bootstrap.hxx>
 #include <unotools/pathoptions.hxx>
-#include <unotools/localfilehelper.hxx>
 #include "svtools/treelistentry.hxx"
 #include <officecfg/Office/Recovery.hxx>
-#include <boost/scoped_ptr.hpp>
-
+#include <o3tl/make_unique.hxx>
 namespace svx{
     namespace DocRecovery{
 
@@ -75,7 +73,7 @@ using namespace ::osl;
 RecoveryCore::RecoveryCore(const css::uno::Reference< css::uno::XComponentContext >& rxContext,
                                  bool                                            bUsedForSaving)
     : m_xContext        ( rxContext    )
-    , m_pListener       ( 0            )
+    , m_pListener       ( nullptr            )
     , m_bListenForSaving(bUsedForSaving)
 {
     impl_startListening();
@@ -88,15 +86,15 @@ RecoveryCore::~RecoveryCore()
 }
 
 
-css::uno::Reference< css::uno::XComponentContext > RecoveryCore::getComponentContext()
+const css::uno::Reference< css::uno::XComponentContext >& RecoveryCore::getComponentContext()
 {
     return m_xContext;
 }
 
 
-TURLList* RecoveryCore::getURLListAccess()
+TURLList& RecoveryCore::getURLListAccess()
 {
-    return &m_lURLs;
+    return m_lURLs;
 }
 
 
@@ -129,13 +127,13 @@ void RecoveryCore::saveBrokenTempEntries(const OUString& rPath)
     css::util::URL aCopyURL = impl_getParsedURL(RECOVERY_CMD_DO_ENTRY_BACKUP);
     css::uno::Sequence< css::beans::PropertyValue > lCopyArgs(3);
     lCopyArgs[0].Name    = PROP_DISPATCHASYNCHRON;
-    lCopyArgs[0].Value <<= sal_False;
+    lCopyArgs[0].Value <<= false;
     lCopyArgs[1].Name    = PROP_SAVEPATH;
     lCopyArgs[1].Value <<= rPath;
     lCopyArgs[2].Name    = PROP_ENTRYID;
-    // lCopyArgs[2].Value will be changed during next loop ...
+    // lCopyArgs[2].Value will be changed during next loop...
 
-    // work on a copied list only ...
+    // work on a copied list only...
     // Reason: We will get notifications from the core for every
     // changed or removed element. And that will change our m_lURLs list.
     // That's not a good idea, if we use a stl iterator inbetween .-)
@@ -167,7 +165,7 @@ void RecoveryCore::saveAllTempEntries(const OUString& rPath)
     css::util::URL aCopyURL = impl_getParsedURL(RECOVERY_CMD_DO_ENTRY_BACKUP);
     css::uno::Sequence< css::beans::PropertyValue > lCopyArgs(3);
     lCopyArgs[0].Name    = PROP_DISPATCHASYNCHRON;
-    lCopyArgs[0].Value <<= sal_False;
+    lCopyArgs[0].Value <<= false;
     lCopyArgs[1].Name    = PROP_SAVEPATH;
     lCopyArgs[1].Value <<= rPath;
     lCopyArgs[2].Name    = PROP_ENTRYID;
@@ -201,7 +199,7 @@ void RecoveryCore::forgetBrokenTempEntries()
     css::util::URL aRemoveURL = impl_getParsedURL(RECOVERY_CMD_DO_ENTRY_CLEANUP);
     css::uno::Sequence< css::beans::PropertyValue > lRemoveArgs(2);
     lRemoveArgs[0].Name    = PROP_DISPATCHASYNCHRON;
-    lRemoveArgs[0].Value <<= sal_False;
+    lRemoveArgs[0].Value <<= false;
     lRemoveArgs[1].Name    = PROP_ENTRYID;
     // lRemoveArgs[1].Value will be changed during next loop ...
 
@@ -233,7 +231,7 @@ void RecoveryCore::forgetAllRecoveryEntries()
     css::util::URL aRemoveURL = impl_getParsedURL(RECOVERY_CMD_DO_ENTRY_CLEANUP);
     css::uno::Sequence< css::beans::PropertyValue > lRemoveArgs(2);
     lRemoveArgs[0].Name    = PROP_DISPATCHASYNCHRON;
-    lRemoveArgs[0].Value <<= sal_False;
+    lRemoveArgs[0].Value <<= false;
     lRemoveArgs[1].Name    = PROP_ENTRYID;
     // lRemoveArgs[1].Value will be changed during next loop ...
 
@@ -262,7 +260,7 @@ void RecoveryCore::forgetBrokenRecoveryEntries()
     css::util::URL aRemoveURL = impl_getParsedURL(RECOVERY_CMD_DO_ENTRY_CLEANUP);
     css::uno::Sequence< css::beans::PropertyValue > lRemoveArgs(2);
     lRemoveArgs[0].Name    = PROP_DISPATCHASYNCHRON;
-    lRemoveArgs[0].Value <<= sal_False;
+    lRemoveArgs[0].Value <<= false;
     lRemoveArgs[1].Name    = PROP_ENTRYID;
     // lRemoveArgs[1].Value will be changed during next loop ...
 
@@ -307,7 +305,7 @@ void RecoveryCore::doEmergencySavePrepare()
 
     css::uno::Sequence< css::beans::PropertyValue > lArgs(1);
     lArgs[0].Name    = PROP_DISPATCHASYNCHRON;
-    lArgs[0].Value <<= sal_False;
+    lArgs[0].Value <<= false;
 
     m_xRealCore->dispatch(aURL, lArgs);
 }
@@ -323,13 +321,13 @@ void RecoveryCore::doEmergencySave()
 #ifdef USE_JAVA
     css::uno::Sequence< css::beans::PropertyValue > lArgs(1);
     lArgs[0].Name    = PROP_DISPATCHASYNCHRON;
-    lArgs[0].Value <<= sal_False;
+    lArgs[0].Value <<= false;
 #else	// USE_JAVA
     css::uno::Sequence< css::beans::PropertyValue > lArgs(2);
     lArgs[0].Name    = PROP_STATUSINDICATOR;
     lArgs[0].Value <<= m_xProgress;
     lArgs[1].Name    = PROP_DISPATCHASYNCHRON;
-    lArgs[1].Value <<= sal_True;
+    lArgs[1].Value <<= true;
 #endif	// USE_JAVA
 
     m_xRealCore->dispatch(aURL, lArgs);
@@ -347,13 +345,13 @@ void RecoveryCore::doRecovery()
     lArgs[0].Name    = PROP_STATUSINDICATOR;
     lArgs[0].Value <<= m_xProgress;
     lArgs[1].Name    = PROP_DISPATCHASYNCHRON;
-    lArgs[1].Value <<= sal_True;
+    lArgs[1].Value <<= true;
 
     m_xRealCore->dispatch(aURL, lArgs);
 }
 
 
-ERecoveryState RecoveryCore::mapDocState2RecoverState(sal_Int32 eDocState)
+ERecoveryState RecoveryCore::mapDocState2RecoverState(EDocStates eDocState)
 {
     // ???
     ERecoveryState eRecState = E_NOT_RECOVERED_YET;
@@ -367,18 +365,18 @@ ERecoveryState RecoveryCore::mapDocState2RecoverState(sal_Int32 eDocState)
 
     // running ...
     if (
-        ((eDocState & E_TRY_LOAD_BACKUP  ) == E_TRY_LOAD_BACKUP  ) ||
-        ((eDocState & E_TRY_LOAD_ORIGINAL) == E_TRY_LOAD_ORIGINAL)
+        (eDocState & EDocStates::TryLoadBackup  ) ||
+        (eDocState & EDocStates::TryLoadOriginal)
        )
         eRecState = E_RECOVERY_IS_IN_PROGRESS;
     // red
-    else if ((eDocState & E_DAMAGED) == E_DAMAGED)
+    else if (eDocState & EDocStates::Damaged)
         eRecState = E_RECOVERY_FAILED;
     // yellow
-    else if ((eDocState & E_INCOMPLETE) == E_INCOMPLETE)
+    else if (eDocState & EDocStates::Incomplete)
         eRecState = E_ORIGINAL_DOCUMENT_RECOVERED;
     // green
-    else if ((eDocState & E_SUCCEDED) == E_SUCCEDED)
+    else if (eDocState & EDocStates::Succeeded)
         eRecState = E_SUCCESSFULLY_RECOVERED;
 
     return eRecState;
@@ -386,18 +384,17 @@ ERecoveryState RecoveryCore::mapDocState2RecoverState(sal_Int32 eDocState)
 
 
 void SAL_CALL RecoveryCore::statusChanged(const css::frame::FeatureStateEvent& aEvent)
-    throw(css::uno::RuntimeException, std::exception)
 {
     // a) special notification about start/stop async dispatch!
     //    FeatureDescriptor = "start" || "stop"
-    if (aEvent.FeatureDescriptor.equals(RECOVERY_OPERATIONSTATE_START))
+    if (aEvent.FeatureDescriptor == RECOVERY_OPERATIONSTATE_START)
     {
         if (m_pListener)
             m_pListener->start();
         return;
     }
 
-    if (aEvent.FeatureDescriptor.equals(RECOVERY_OPERATIONSTATE_STOP))
+    if (aEvent.FeatureDescriptor == RECOVERY_OPERATIONSTATE_STOP)
     {
         if (m_pListener)
             m_pListener->end();
@@ -407,14 +404,14 @@ void SAL_CALL RecoveryCore::statusChanged(const css::frame::FeatureStateEvent& a
     // b) normal notification about changed items
     //    FeatureDescriptor = "Update"
     //    State             = Lits of information [seq< NamedValue >]
-    if (! aEvent.FeatureDescriptor.equals(RECOVERY_OPERATIONSTATE_UPDATE))
+    if (aEvent.FeatureDescriptor != RECOVERY_OPERATIONSTATE_UPDATE)
         return;
 
     ::comphelper::SequenceAsHashMap lInfo(aEvent.State);
     TURLInfo                        aNew;
 
     aNew.ID          = lInfo.getUnpackedValueOrDefault(STATEPROP_ID         , (sal_Int32)0     );
-    aNew.DocState    = lInfo.getUnpackedValueOrDefault(STATEPROP_STATE      , (sal_Int32)0     );
+    aNew.DocState    = (EDocStates)lInfo.getUnpackedValueOrDefault(STATEPROP_STATE      , (sal_Int32)0     );
     aNew.OrgURL      = lInfo.getUnpackedValueOrDefault(STATEPROP_ORGURL     , OUString());
     aNew.TempURL     = lInfo.getUnpackedValueOrDefault(STATEPROP_TEMPURL    , OUString());
     aNew.FactoryURL  = lInfo.getUnpackedValueOrDefault(STATEPROP_FACTORYURL , OUString());
@@ -432,7 +429,7 @@ void SAL_CALL RecoveryCore::statusChanged(const css::frame::FeatureStateEvent& a
         // If there is a file URL, parse out the filename part as the display name.
         INetURLObject aOrgURL(aNew.OrgURL);
         aNew.DisplayName = aOrgURL.getName(INetURLObject::LAST_SEGMENT, true,
-                                           INetURLObject::DECODE_WITH_CHARSET);
+                                           INetURLObject::DecodeMechanism::WithCharset);
     }
 
     // search for already existing items and update her nState value ...
@@ -457,7 +454,7 @@ void SAL_CALL RecoveryCore::statusChanged(const css::frame::FeatureStateEvent& a
     }
 
     // append as new one
-    // TODO think about mmatching Module name to a corresponding icon
+    // TODO think about matching Module name to a corresponding icon
     OUString sURL = aNew.OrgURL;
     if (sURL.isEmpty())
         sURL = aNew.FactoryURL;
@@ -466,10 +463,10 @@ void SAL_CALL RecoveryCore::statusChanged(const css::frame::FeatureStateEvent& a
     if (sURL.isEmpty())
         sURL = aNew.TemplateURL;
     INetURLObject aURL(sURL);
-    aNew.StandardImage = SvFileInformationManager::GetFileImage(aURL, false);
+    aNew.StandardImage = SvFileInformationManager::GetFileImage(aURL);
 
-    /* set the right UI state for this item to NOT_RECOVERED_YET ... because nDocState shows the state of
-       the last emergency save operation before and is interessting for the used recovery core service only ...
+    /* set the right UI state for this item to NOT_RECOVERED_YET... because nDocState shows the state of
+       the last emergency save operation before and is interesting for the used recovery core service only...
        for now! But if there is a further notification for this item (see lines above!) we must
        map the doc state to an UI state. */
     aNew.RecoveryState = E_NOT_RECOVERED_YET;
@@ -482,7 +479,6 @@ void SAL_CALL RecoveryCore::statusChanged(const css::frame::FeatureStateEvent& a
 
 
 void SAL_CALL RecoveryCore::disposing(const css::lang::EventObject& /*aEvent*/)
-    throw(css::uno::RuntimeException, std::exception)
 {
     m_xRealCore.clear();
 }
@@ -552,17 +548,23 @@ PluginProgressWindow::PluginProgressWindow(      vcl::Window*                   
 
 PluginProgressWindow::~PluginProgressWindow()
 {
+    disposeOnce();
+}
+
+void PluginProgressWindow::dispose()
+{
     if (m_xProgress.is())
         m_xProgress->dispose();
+    vcl::Window::dispose();
 }
 
 
 PluginProgress::PluginProgress(      vcl::Window*                                             pParent,
                                const css::uno::Reference< css::uno::XComponentContext >& xContext  )
 {
-    m_pPlugProgressWindow = new PluginProgressWindow(pParent, static_cast< css::lang::XComponent* >(this));
+    m_pPlugProgressWindow = VclPtr<PluginProgressWindow>::Create(pParent, static_cast< css::lang::XComponent* >(this));
     css::uno::Reference< css::awt::XWindow > xProgressWindow = VCLUnoHelper::GetInterface(m_pPlugProgressWindow);
-    m_xProgressFactory = css::task::StatusIndicatorFactory::createWithWindow(xContext, xProgressWindow, sal_False/*DisableReschedule*/, sal_True/*AllowParentShow*/);
+    m_xProgressFactory = css::task::StatusIndicatorFactory::createWithWindow(xContext, xProgressWindow, false/*DisableReschedule*/, true/*AllowParentShow*/);
     m_xProgress = m_xProgressFactory->createStatusIndicator();
 }
 
@@ -573,7 +575,6 @@ PluginProgress::~PluginProgress()
 
 
 void SAL_CALL PluginProgress::dispose()
-    throw(css::uno::RuntimeException, std::exception)
 {
     // m_pPluginProgressWindow was deleted ...
     // So the internal pointer of this progress
@@ -583,20 +584,17 @@ void SAL_CALL PluginProgress::dispose()
 
 
 void SAL_CALL PluginProgress::addEventListener(const css::uno::Reference< css::lang::XEventListener >& )
-    throw(css::uno::RuntimeException, std::exception)
 {
 }
 
 
 void SAL_CALL PluginProgress::removeEventListener( const css::uno::Reference< css::lang::XEventListener >& )
-    throw(css::uno::RuntimeException, std::exception)
 {
 }
 
 
 void SAL_CALL PluginProgress::start(const OUString&,
                                           sal_Int32        nRange)
-    throw(css::uno::RuntimeException, std::exception)
 {
     if (m_xProgress.is())
         m_xProgress->start(OUString(), nRange);
@@ -604,7 +602,6 @@ void SAL_CALL PluginProgress::start(const OUString&,
 
 
 void SAL_CALL PluginProgress::end()
-    throw(css::uno::RuntimeException, std::exception)
 {
     if (m_xProgress.is())
         m_xProgress->end();
@@ -612,7 +609,6 @@ void SAL_CALL PluginProgress::end()
 
 
 void SAL_CALL PluginProgress::setText(const OUString& sText)
-    throw(css::uno::RuntimeException, std::exception)
 {
     if (m_xProgress.is())
         m_xProgress->setText(sText);
@@ -620,7 +616,6 @@ void SAL_CALL PluginProgress::setText(const OUString& sText)
 
 
 void SAL_CALL PluginProgress::setValue(sal_Int32 nValue)
-    throw(css::uno::RuntimeException, std::exception)
 {
     if (m_xProgress.is())
         m_xProgress->setValue(nValue);
@@ -628,7 +623,6 @@ void SAL_CALL PluginProgress::setValue(sal_Int32 nValue)
 
 
 void SAL_CALL PluginProgress::reset()
-    throw(css::uno::RuntimeException, std::exception)
 {
     if (m_xProgress.is())
         m_xProgress->reset();
@@ -640,20 +634,16 @@ SaveDialog::SaveDialog(vcl::Window* pParent, RecoveryCore* pCore)
         "svx/ui/docrecoverysavedialog.ui")
     , m_pCore(pCore)
 {
-    get(m_pTitleFT, "title");
     get(m_pFileListLB, "filelist");
     m_pFileListLB->set_height_request(m_pFileListLB->GetTextHeight() * 10);
-    m_pFileListLB->set_width_request(m_pFileListLB->approximate_char_width() * 72);
     get(m_pOkBtn, "ok");
 
     // Prepare the office for the following crash save step.
-    // E.g. hide all open widows so the user can't influence our
+    // E.g. hide all open windows so the user can't influence our
     // operation .-)
     m_pCore->doEmergencySavePrepare();
 
     const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
-    m_pTitleFT->SetBackground(rStyleSettings.GetWindowColor());
-    m_pTitleFT->set_height_request(m_pTitleFT->get_preferred_size().Height() + 48);
 
     m_pOkBtn->SetClickHdl( LINK( this, SaveDialog, OKButtonHdl ) );
     m_pFileListLB->SetControlBackground( rStyleSettings.GetDialogColor() );
@@ -661,11 +651,11 @@ SaveDialog::SaveDialog(vcl::Window* pParent, RecoveryCore* pCore)
     // fill listbox with current open documents
     m_pFileListLB->Clear();
 
-    TURLList*                pURLs = m_pCore->getURLListAccess();
+    TURLList&                rURLs = m_pCore->getURLListAccess();
     TURLList::const_iterator pIt;
 
-    for (  pIt  = pURLs->begin();
-           pIt != pURLs->end()  ;
+    for (  pIt  = rURLs.begin();
+           pIt != rURLs.end()  ;
          ++pIt                  )
     {
         const TURLInfo& rInfo = *pIt;
@@ -673,12 +663,24 @@ SaveDialog::SaveDialog(vcl::Window* pParent, RecoveryCore* pCore)
     }
 }
 
-IMPL_LINK_NOARG(SaveDialog, OKButtonHdl)
+SaveDialog::~SaveDialog()
+{
+    disposeOnce();
+}
+
+void SaveDialog::dispose()
+{
+    m_pFileListLB.clear();
+    m_pOkBtn.clear();
+    Dialog::dispose();
+}
+
+IMPL_LINK_NOARG(SaveDialog, OKButtonHdl, Button*, void)
 {
     // start crash-save with progress
-    boost::scoped_ptr<SaveProgressDialog> pProgress(new SaveProgressDialog(this, m_pCore));
+    ScopedVclPtrInstance< SaveProgressDialog > pProgress(this, m_pCore);
     short nResult = pProgress->Execute();
-    pProgress.reset();
+    pProgress.disposeAndClear();
 
     // if "CANCEL" => return "CANCEL"
     // if "OK"     => "AUTOLUNCH" always !
@@ -686,7 +688,6 @@ IMPL_LINK_NOARG(SaveDialog, OKButtonHdl)
         nResult = DLG_RET_OK_AUTOLUNCH;
 
     EndDialog(nResult);
-    return 0;
 }
 
 SaveProgressDialog::SaveProgressDialog(vcl::Window* pParent, RecoveryCore* pCore)
@@ -695,12 +696,20 @@ SaveProgressDialog::SaveProgressDialog(vcl::Window* pParent, RecoveryCore* pCore
     , m_pCore(pCore)
 {
     get(m_pProgrParent, "progress");
-    Size aSize(LogicToPixel(Size(SAVEPROGR_CONTROLWIDTH, PROGR_HEIGHT)));
-    m_pProgrParent->set_width_request(aSize.Width());
-    m_pProgrParent->set_height_request(aSize.Height());
 
     PluginProgress* pProgress   = new PluginProgress(m_pProgrParent, pCore->getComponentContext());
-    m_xProgress = css::uno::Reference< css::task::XStatusIndicator >(static_cast< css::task::XStatusIndicator* >(pProgress), css::uno::UNO_QUERY_THROW);
+    m_xProgress.set(static_cast< css::task::XStatusIndicator* >(pProgress), css::uno::UNO_QUERY_THROW);
+}
+
+SaveProgressDialog::~SaveProgressDialog()
+{
+    disposeOnce();
+}
+
+void SaveProgressDialog::dispose()
+{
+    m_pProgrParent.clear();
+    ModalDialog::dispose();
 }
 
 short SaveProgressDialog::Execute()
@@ -711,7 +720,7 @@ short SaveProgressDialog::Execute()
     m_pCore->setUpdateListener(this);
     m_pCore->doEmergencySave();
     short nRet = ModalDialog::Execute();
-    m_pCore->setUpdateListener(0);
+    m_pCore->setUpdateListener(nullptr);
     return nRet;
 }
 
@@ -724,9 +733,9 @@ void SaveProgressDialog::stepNext(TURLInfo* )
 {
     /* TODO
 
-        wenn die m_pCore noch ein Member m_nCurrentItem haette
-        koennte man dort erkennen, wer gerade drann war, wer demnaechst
-        dran ist ... Diese Info kann man dann in unserem Progress FixText anzeigen ...
+       if m_pCore would have a member m_mCurrentItem, you could see,
+       who is current, who is next ... You can show this information
+       in progress report FixText
     */
 }
 
@@ -742,86 +751,80 @@ void SaveProgressDialog::end()
 }
 
 
-RecovDocListEntry::RecovDocListEntry(      SvTreeListEntry* pEntry,
-                                           sal_uInt16       nFlags,
-                                     const OUString&        sText )
-    : SvLBoxString( pEntry, nFlags, sText )
+RecovDocListEntry::RecovDocListEntry( const OUString&        sText )
+    : SvLBoxString( sText )
 {
 }
 
 
-void RecovDocListEntry::Paint(
-    const Point& aPos, SvTreeListBox& aDevice, const SvViewDataEntry* /*pView*/, const SvTreeListEntry* pEntry)
+void RecovDocListEntry::Paint(const Point& aPos, SvTreeListBox& aDevice, vcl::RenderContext& rRenderContext,
+                              const SvViewDataEntry* /*pView*/, const SvTreeListEntry& rEntry)
 {
-    const Image*        pImg  = 0;
-    const OUString*     pTxt  = 0;
-          RecovDocList* pList = static_cast< RecovDocList* >(&aDevice);
+    const Image* pImg = nullptr;
+    const OUString* pTxt = nullptr;
+    RecovDocList* pList = static_cast<RecovDocList*>(&aDevice);
 
-    TURLInfo* pInfo  = (TURLInfo*)pEntry->GetUserData();
-    switch(pInfo->RecoveryState)
+    TURLInfo* pInfo = static_cast<TURLInfo*>(rEntry.GetUserData());
+    switch (pInfo->RecoveryState)
     {
-        case E_SUCCESSFULLY_RECOVERED :
+        case E_SUCCESSFULLY_RECOVERED:
         {
             pImg = &pList->m_aGreenCheckImg;
             pTxt = &pList->m_aSuccessRecovStr;
         }
         break;
 
-        case E_ORIGINAL_DOCUMENT_RECOVERED : // TODO must be renamed into ORIGINAL DOCUMENT recovered! Because its marked as yellow
+        case E_ORIGINAL_DOCUMENT_RECOVERED: // TODO must be renamed into ORIGINAL DOCUMENT recovered! Because its marked as yellow
         {
             pImg = &pList->m_aYellowCheckImg;
             pTxt = &pList->m_aOrigDocRecovStr;
         }
         break;
 
-        case E_RECOVERY_FAILED :
+        case E_RECOVERY_FAILED:
         {
             pImg = &pList->m_aRedCrossImg;
             pTxt = &pList->m_aRecovFailedStr;
         }
         break;
 
-        case E_RECOVERY_IS_IN_PROGRESS :
+        case E_RECOVERY_IS_IN_PROGRESS:
         {
-            pImg = 0;
+            pImg = nullptr;
             pTxt = &pList->m_aRecovInProgrStr;
         }
         break;
 
-        case E_NOT_RECOVERED_YET :
+        case E_NOT_RECOVERED_YET:
         {
-            pImg = 0;
+            pImg = nullptr;
             pTxt = &pList->m_aNotRecovYetStr;
         }
         break;
     }
 
     if (pImg)
-        aDevice.DrawImage(aPos, *pImg);
+        rRenderContext.DrawImage(aPos, *pImg);
 
     if (pTxt)
     {
         Point aPnt(aPos);
         aPnt.X() += pList->m_aGreenCheckImg.GetSizePixel().Width();
         aPnt.X() += 10;
-        aDevice.DrawText(aPnt, *pTxt);
+        rRenderContext.DrawText(aPnt, *pTxt);
     }
 }
 
 RecovDocList::RecovDocList(SvSimpleTableContainer& rParent, ResMgr &rResMgr)
     : SvSimpleTable      ( rParent )
-    , m_aGreenCheckImg    ( ResId(RID_SVXIMG_GREENCHECK, rResMgr ) )
-    , m_aYellowCheckImg   ( ResId(RID_SVXIMG_YELLOWCHECK, rResMgr ) )
-    , m_aRedCrossImg      ( ResId(RID_SVXIMG_REDCROSS, rResMgr ) )
+    , m_aGreenCheckImg    (BitmapEx(RID_SVXBMP_GREENCHECK))
+    , m_aYellowCheckImg   (BitmapEx(RID_SVXBMP_YELLOWCHECK))
+    , m_aRedCrossImg      (BitmapEx(RID_SVXBMP_REDCROSS))
     , m_aSuccessRecovStr  ( ResId(RID_SVXSTR_SUCCESSRECOV, rResMgr ) )
     , m_aOrigDocRecovStr  ( ResId(RID_SVXSTR_ORIGDOCRECOV, rResMgr ) )
     , m_aRecovFailedStr   ( ResId(RID_SVXSTR_RECOVFAILED, rResMgr ) )
     , m_aRecovInProgrStr  ( ResId(RID_SVXSTR_RECOVINPROGR, rResMgr ) )
     , m_aNotRecovYetStr   ( ResId(RID_SVXSTR_NOTRECOVYET, rResMgr ) )
-{
-}
-
-RecovDocList::~RecovDocList()
 {
 }
 
@@ -834,16 +837,15 @@ void RecovDocList::InitEntry(SvTreeListEntry* pEntry,
     SvTabListBox::InitEntry(pEntry, rText, rImage1, rImage2, eButtonKind);
     DBG_ASSERT( TabCount() == 2, "*RecovDocList::InitEntry(): structure missmatch" );
 
-    SvLBoxString*       pCol = static_cast<SvLBoxString*>(pEntry->GetItem(2));
-    RecovDocListEntry*  p    = new RecovDocListEntry(pEntry, 0, pCol->GetText());
-    pEntry->ReplaceItem(p, 2);
+    SvLBoxString&       rCol = static_cast<SvLBoxString&>(pEntry->GetItem(2));
+    pEntry->ReplaceItem(o3tl::make_unique<RecovDocListEntry>(rCol.GetText()), 2);
 }
 
 
 short impl_askUserForWizardCancel(vcl::Window* pParent, sal_Int16 nRes)
 {
-    MessageDialog aQuery(pParent, SVX_RES(nRes), VCL_MESSAGE_QUESTION, VCL_BUTTONS_YES_NO);
-    if (aQuery.Execute() == RET_YES)
+    ScopedVclPtrInstance< MessageDialog > aQuery(pParent, SvxResId(nRes), VclMessageType::Question, VclButtonsType::YesNo);
+    if (aQuery->Execute() == RET_YES)
         return DLG_RET_OK;
     else
         return DLG_RET_CANCEL;
@@ -852,49 +854,45 @@ short impl_askUserForWizardCancel(vcl::Window* pParent, sal_Int16 nRes)
 RecoveryDialog::RecoveryDialog(vcl::Window* pParent, RecoveryCore* pCore)
     : Dialog(pParent, "DocRecoveryRecoverDialog",
         "svx/ui/docrecoveryrecoverdialog.ui")
-    , m_aTitleRecoveryInProgress(SVX_RESSTR(RID_SVXSTR_RECOVERY_INPROGRESS))
-    , m_aRecoveryOnlyFinish (SVX_RESSTR(RID_SVXSTR_RECOVERYONLY_FINISH))
-    , m_aRecoveryOnlyFinishDescr(SVX_RESSTR(RID_SVXSTR_RECOVERYONLY_FINISH_DESCR))
+    , m_aTitleRecoveryInProgress(SvxResId(RID_SVXSTR_RECOVERY_INPROGRESS))
+    , m_aRecoveryOnlyFinish (SvxResId(RID_SVXSTR_RECOVERYONLY_FINISH))
+    , m_aRecoveryOnlyFinishDescr(SvxResId(RID_SVXSTR_RECOVERYONLY_FINISH_DESCR))
     , m_pCore(pCore)
     , m_eRecoveryState(RecoveryDialog::E_RECOVERY_PREPARED)
     , m_bWaitForCore(false)
     , m_bWasRecoveryStarted(false)
 {
-    get(m_pTitleFT, "title");
     get(m_pDescrFT, "desc");
     get(m_pProgrParent, "progress");
-    m_pProgrParent->set_height_request(LogicToPixel(Size(0, PROGR_HEIGHT), MAP_APPFONT).Height());
     get(m_pNextBtn, "next");
     get(m_pCancelBtn, "cancel");
 
+    constexpr int RECOV_CONTROLWIDTH = 278;
     SvSimpleTableContainer* pFileListLBContainer = get<SvSimpleTableContainer>("filelist");
-    Size aSize(LogicToPixel(Size(RECOV_CONTROLWIDTH, RECOV_FILELISTHEIGHT), MAP_APPFONT));
-    pFileListLBContainer->set_width_request(aSize.Width());
+    Size aSize(LogicToPixel(Size(RECOV_CONTROLWIDTH, 68), MapUnit::MapAppFont));
     pFileListLBContainer->set_height_request(aSize.Height());
-    m_pFileListLB = new RecovDocList(*pFileListLBContainer, DIALOG_MGR());
+    m_pFileListLB = VclPtr<RecovDocList>::Create(*pFileListLBContainer, DIALOG_MGR());
 
     static long nTabs[] = { 2, 0, 40*RECOV_CONTROLWIDTH/100 };
     m_pFileListLB->SetTabs( &nTabs[0] );
     m_pFileListLB->InsertHeaderEntry(get<FixedText>("nameft")->GetText() + "\t" + get<FixedText>("statusft")->GetText());
 
     PluginProgress* pProgress   = new PluginProgress(m_pProgrParent, pCore->getComponentContext());
-    m_xProgress = css::uno::Reference< css::task::XStatusIndicator >(static_cast< css::task::XStatusIndicator* >(pProgress), css::uno::UNO_QUERY_THROW);
+    m_xProgress.set(static_cast< css::task::XStatusIndicator* >(pProgress), css::uno::UNO_QUERY_THROW);
 
     const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
-    m_pTitleFT->SetBackground(rStyleSettings.GetWindowColor());
-    m_pTitleFT->set_height_request(m_pTitleFT->get_preferred_size().Height() + 48);
 
     m_pFileListLB->SetBackground( rStyleSettings.GetDialogColor() );
 
-    m_pNextBtn->Enable(true);
+    m_pNextBtn->Enable();
     m_pNextBtn->SetClickHdl( LINK( this, RecoveryDialog, NextButtonHdl ) );
     m_pCancelBtn->SetClickHdl( LINK( this, RecoveryDialog, CancelButtonHdl ) );
 
     // fill list box first time
-    TURLList*                pURLList = m_pCore->getURLListAccess();
+    TURLList&                rURLList = m_pCore->getURLListAccess();
     TURLList::const_iterator pIt;
-    for (  pIt  = pURLList->begin();
-           pIt != pURLList->end()  ;
+    for (  pIt  = rURLList.begin();
+           pIt != rURLList.end()  ;
          ++pIt                     )
     {
         const TURLInfo& rInfo = *pIt;
@@ -903,7 +901,7 @@ RecoveryDialog::RecoveryDialog(vcl::Window* pParent, RecoveryCore* pCore)
         sName += "\t";
         sName += impl_getStatusString( rInfo );
         SvTreeListEntry* pEntry = m_pFileListLB->InsertEntry(sName, rInfo.StandardImage, rInfo.StandardImage);
-        pEntry->SetUserData((void*)&rInfo);
+        pEntry->SetUserData(const_cast<TURLInfo *>(&rInfo));
     }
 
     // mark first item
@@ -914,7 +912,17 @@ RecoveryDialog::RecoveryDialog(vcl::Window* pParent, RecoveryCore* pCore)
 
 RecoveryDialog::~RecoveryDialog()
 {
-    delete m_pFileListLB;
+    disposeOnce();
+}
+
+void RecoveryDialog::dispose()
+{
+    m_pFileListLB.disposeAndClear();
+    m_pDescrFT.clear();
+    m_pProgrParent.clear();
+    m_pNextBtn.clear();
+    m_pCancelBtn.clear();
+    Dialog::dispose();
 }
 
 short RecoveryDialog::execute()
@@ -940,7 +948,7 @@ short RecoveryDialog::execute()
                 while(m_bWaitForCore)
                     Application::Yield();
 
-                m_pCore->setUpdateListener(0);
+                m_pCore->setUpdateListener(nullptr);
                 m_eRecoveryState = RecoveryDialog::E_RECOVERY_CORE_DONE;
                 return execute();
              }
@@ -951,27 +959,27 @@ short RecoveryDialog::execute()
                  // let the user decide the next step.
                  m_pDescrFT->SetText(m_aRecoveryOnlyFinishDescr);
                  m_pNextBtn->SetText(m_aRecoveryOnlyFinish);
-                 m_pNextBtn->Enable(true);
+                 m_pNextBtn->Enable();
                  m_pCancelBtn->Enable(false);
                  return 0;
              }
 
         case RecoveryDialog::E_RECOVERY_DONE :
              {
-                 // All documents was reovered.
+                 // All documents were recovered.
                  // User decided to step to the "next" wizard page.
                  // Do it ... but check first, if there exist some
                  // failed recovery documents. They must be saved to
-                 // a user selected directrory.
+                 // a user selected directory.
                  short                 nRet                  = DLG_RET_UNKNOWN;
-                 boost::scoped_ptr<BrokenRecoveryDialog> pBrokenRecoveryDialog(new BrokenRecoveryDialog(this, m_pCore, !m_bWasRecoveryStarted));
+                 ScopedVclPtrInstance< BrokenRecoveryDialog > pBrokenRecoveryDialog(this, m_pCore, !m_bWasRecoveryStarted);
                  OUString              sSaveDir              = pBrokenRecoveryDialog->getSaveDirURL(); // get the default dir
                  if (pBrokenRecoveryDialog->isExecutionNeeded())
                  {
                      nRet = pBrokenRecoveryDialog->Execute();
                      sSaveDir = pBrokenRecoveryDialog->getSaveDirURL();
                  }
-                 pBrokenRecoveryDialog.reset();
+                 pBrokenRecoveryDialog.disposeAndClear();
 
                  switch(nRet)
                  {
@@ -1033,7 +1041,7 @@ short RecoveryDialog::execute()
                  // If no temp files exists or user decided to ignore it ...
                  // we have to remove all recovery/session data anyway!
                  short                 nRet                  = DLG_RET_UNKNOWN;
-                 boost::scoped_ptr<BrokenRecoveryDialog> pBrokenRecoveryDialog(new BrokenRecoveryDialog(this, m_pCore, !m_bWasRecoveryStarted));
+                 ScopedVclPtrInstance< BrokenRecoveryDialog > pBrokenRecoveryDialog(this, m_pCore, !m_bWasRecoveryStarted);
                  OUString              sSaveDir              = pBrokenRecoveryDialog->getSaveDirURL(); // get the default save location
 
                  // dialog itself checks if there is a need to copy files for this mode.
@@ -1043,7 +1051,7 @@ short RecoveryDialog::execute()
                      nRet     = pBrokenRecoveryDialog->Execute();
                      sSaveDir = pBrokenRecoveryDialog->getSaveDirURL();
                  }
-                 pBrokenRecoveryDialog.reset();
+                 pBrokenRecoveryDialog.disposeAndClear();
 
                  // Possible states:
                  // a) nRet == DLG_RET_UNKNOWN
@@ -1101,7 +1109,7 @@ void RecoveryDialog::updateItems()
         if ( !pEntry )
             continue;
 
-        TURLInfo* pInfo = (TURLInfo*)pEntry->GetUserData();
+        TURLInfo* pInfo = static_cast<TURLInfo*>(pEntry->GetUserData());
         if ( !pInfo )
             continue;
 
@@ -1125,7 +1133,7 @@ void RecoveryDialog::stepNext(TURLInfo* pItem)
         if (!pEntry)
             continue;
 
-        TURLInfo* pInfo = (TURLInfo*)pEntry->GetUserData();
+        TURLInfo* pInfo = static_cast<TURLInfo*>(pEntry->GetUserData());
         if (pInfo->ID != pItem->ID)
             continue;
 
@@ -1142,7 +1150,7 @@ void RecoveryDialog::end()
     m_bWaitForCore = false;
 }
 
-IMPL_LINK_NOARG(RecoveryDialog, NextButtonHdl)
+IMPL_LINK_NOARG(RecoveryDialog, NextButtonHdl, Button*, void)
 {
     switch (m_eRecoveryState)
     {
@@ -1159,13 +1167,10 @@ IMPL_LINK_NOARG(RecoveryDialog, NextButtonHdl)
     if (m_eRecoveryState == RecoveryDialog::E_RECOVERY_HANDLED)
     {
         EndDialog(DLG_RET_OK);
-        return DLG_RET_OK;
     }
-
-    return 0;
 }
 
-IMPL_LINK_NOARG(RecoveryDialog, CancelButtonHdl)
+IMPL_LINK_NOARG(RecoveryDialog, CancelButtonHdl, Button*, void)
 {
     switch (m_eRecoveryState)
     {
@@ -1184,11 +1189,8 @@ IMPL_LINK_NOARG(RecoveryDialog, CancelButtonHdl)
 
     if (m_eRecoveryState == RecoveryDialog::E_RECOVERY_HANDLED)
     {
-        EndDialog(DLG_RET_CANCEL);
-        return DLG_RET_CANCEL;
+        EndDialog();
     }
-
-    return 0;
 }
 
 OUString RecoveryDialog::impl_getStatusString( const TURLInfo& rInfo ) const
@@ -1238,25 +1240,35 @@ BrokenRecoveryDialog::BrokenRecoveryDialog(vcl::Window*       pParent        ,
     m_sSavePath = SvtPathOptions().GetWorkPath();
     INetURLObject aObj( m_sSavePath );
     OUString sPath;
-    ::utl::LocalFileHelper::ConvertURLToSystemPath( aObj.GetMainURL( INetURLObject::NO_DECODE ), sPath );
+    osl::FileBase::getSystemPathFromFileURL(aObj.GetMainURL( INetURLObject::DecodeMechanism::NONE ), sPath);
     m_pSaveDirED->SetText( sPath );
 
     impl_refresh();
 }
 
-
 BrokenRecoveryDialog::~BrokenRecoveryDialog()
 {
+    disposeOnce();
+}
+
+void BrokenRecoveryDialog::dispose()
+{
+    m_pFileListLB.clear();
+    m_pSaveDirED.clear();
+    m_pSaveDirBtn.clear();
+    m_pOkBtn.clear();
+    m_pCancelBtn.clear();
+    ModalDialog::dispose();
 }
 
 
 void BrokenRecoveryDialog::impl_refresh()
 {
                              m_bExecutionNeeded = false;
-    TURLList*                pURLList           = m_pCore->getURLListAccess();
+    TURLList&                rURLList           = m_pCore->getURLListAccess();
     TURLList::const_iterator pIt;
-    for (  pIt  = pURLList->begin();
-           pIt != pURLList->end()  ;
+    for (  pIt  = rURLList.begin();
+           pIt != rURLList.end()  ;
          ++pIt                     )
     {
         const TURLInfo& rInfo = *pIt;
@@ -1278,10 +1290,10 @@ void BrokenRecoveryDialog::impl_refresh()
 
         m_bExecutionNeeded = true;
 
-        sal_uInt16 nPos = m_pFileListLB->InsertEntry(rInfo.DisplayName, rInfo.StandardImage );
-        m_pFileListLB->SetEntryData( nPos, (void*)&rInfo );
+        const sal_Int32 nPos = m_pFileListLB->InsertEntry(rInfo.DisplayName, rInfo.StandardImage );
+        m_pFileListLB->SetEntryData( nPos, const_cast<TURLInfo *>(&rInfo) );
     }
-    m_sSavePath = "";
+    m_sSavePath.clear();
     m_pOkBtn->GrabFocus();
 }
 
@@ -1292,37 +1304,34 @@ bool BrokenRecoveryDialog::isExecutionNeeded()
 }
 
 
-OUString BrokenRecoveryDialog::getSaveDirURL()
+const OUString& BrokenRecoveryDialog::getSaveDirURL()
 {
     return m_sSavePath;
 }
 
 
-IMPL_LINK_NOARG(BrokenRecoveryDialog, OkButtonHdl)
+IMPL_LINK_NOARG(BrokenRecoveryDialog, OkButtonHdl, Button*, void)
 {
     OUString sPhysicalPath = comphelper::string::strip(m_pSaveDirED->GetText(), ' ');
     OUString sURL;
-    ::utl::LocalFileHelper::ConvertPhysicalNameToURL( sPhysicalPath, sURL );
+    osl::FileBase::getFileURLFromSystemPath( sPhysicalPath, sURL );
     m_sSavePath = sURL;
     while (m_sSavePath.isEmpty())
         impl_askForSavePath();
 
     EndDialog(DLG_RET_OK);
-    return 0;
 }
 
 
-IMPL_LINK_NOARG(BrokenRecoveryDialog, CancelButtonHdl)
+IMPL_LINK_NOARG(BrokenRecoveryDialog, CancelButtonHdl, Button*, void)
 {
-    EndDialog(DLG_RET_CANCEL);
-    return 0;
+    EndDialog();
 }
 
 
-IMPL_LINK_NOARG(BrokenRecoveryDialog, SaveButtonHdl)
+IMPL_LINK_NOARG(BrokenRecoveryDialog, SaveButtonHdl, Button*, void)
 {
     impl_askForSavePath();
-    return 0;
 }
 
 
@@ -1331,19 +1340,19 @@ void BrokenRecoveryDialog::impl_askForSavePath()
     css::uno::Reference< css::ui::dialogs::XFolderPicker2 > xFolderPicker =
         css::ui::dialogs::FolderPicker::create( m_pCore->getComponentContext() );
 
-    INetURLObject aURL(m_sSavePath, INET_PROT_FILE);
-    xFolderPicker->setDisplayDirectory(aURL.GetMainURL(INetURLObject::NO_DECODE));
+    INetURLObject aURL(m_sSavePath, INetProtocol::File);
+    xFolderPicker->setDisplayDirectory(aURL.GetMainURL(INetURLObject::DecodeMechanism::NONE));
     short nRet = xFolderPicker->execute();
     if (nRet == css::ui::dialogs::ExecutableDialogResults::OK)
     {
         m_sSavePath = xFolderPicker->getDirectory();
         OUString sPath;
-        ::utl::LocalFileHelper::ConvertURLToSystemPath( m_sSavePath, sPath );
+        osl::FileBase::getSystemPathFromFileURL(m_sSavePath, sPath);
         m_pSaveDirED->SetText( sPath );
     }
 }
 
-    }   // namespace DocRecovery
-}   // namespace svx
+    }
+}
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
