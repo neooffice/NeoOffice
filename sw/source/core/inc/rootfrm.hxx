@@ -30,45 +30,63 @@
 #include <viewsh.hxx>
 #include <doc.hxx>
 #include <IDocumentTimerAccess.hxx>
+#include <o3tl/typed_flags_set.hxx>
+#include <set>
+#include <vector>
 
-class SwCntntFrm;
+class SwContentFrame;
 class SwViewShell;
 class SdrPage;
-class SwFrmFmt;
+class SwFrameFormat;
 class SwPaM;
 class SwCursor;
-class SwShellCrsr;
+class SwShellCursor;
 class SwTableCursor;
 class SwLayVout;
-class SwDestroyList;
-class SwCurrShells;
 class SwViewOption;
 class SwSelectionList;
 struct SwPosition;
-struct SwCrsrMoveState;
+struct SwCursorMoveState;
 
-#define INV_SIZE    1
-#define INV_PRTAREA 2
-#define INV_POS     4
-#define INV_TABLE   8
-#define INV_SECTION 16
-#define INV_LINENUM 32
-#define INV_DIRECTION 64
+enum class SwInvalidateFlags
+{
+    Size      = 0x01,
+    PrtArea   = 0x02,
+    Pos       = 0x04,
+    Table     = 0x08,
+    Section   = 0x10,
+    LineNum   = 0x20,
+    Direction = 0x40,
+};
 
-#include <vector>
+namespace o3tl
+{
+    template<> struct typed_flags<SwInvalidateFlags> : is_typed_flags<SwInvalidateFlags, 0x7f> {};
+};
+
+enum class SwRemoveResult
+{
+    Next,
+    Prev
+};
+
+using SwCurrShells = std::set<CurrShell*>;
+
+class SwSectionFrame;
+using SwDestroyList = std::set<SwSectionFrame*>;
 
 /// The root element of a Writer document layout.
-class SwRootFrm: public SwLayoutFrm
+class SwRootFrame: public SwLayoutFrame
 {
     // Needs to disable the Superfluous temporarily
-    friend void AdjustSizeChgNotify( SwRootFrm *pRoot );
+    friend void AdjustSizeChgNotify( SwRootFrame *pRoot );
 
-    // Maintains the pLastPage (Cut() and Paste() of SwPageFrm
-    friend inline void SetLastPage( SwPageFrm* );
+    // Maintains the mpLastPage (Cut() and Paste() of SwPageFrame
+    friend inline void SetLastPage( SwPageFrame* );
 
     // For creating and destroying of the virtual output device manager
-    friend void _FrmInit(); // Creates pVout
-    friend void _FrmFinit(); // Destroys pVout
+    friend void FrameInit(); // Creates s_pVout
+    friend void FrameFinit(); // Destroys s_pVout
 
     std::vector<SwRect> maPageRects;// returns the current rectangle for each page frame
                                     // the rectangle is extended to the top/bottom/left/right
@@ -81,80 +99,83 @@ class SwRootFrm: public SwLayoutFrm
 
     bool    mbNeedGrammarCheck;     // true when sth needs to be checked (not necessarily started yet!)
 
-    static SwLayVout     *pVout;
-    static bool           bInPaint; // Protection against double Paints
-    static bool           bNoVirDev;// No virt. Device for SystemPaints
+    static SwLayVout     *s_pVout;
+    static bool           s_isInPaint; // Protection against double Paints
+    static bool           s_isNoVirDev;// No virt. Device for SystemPaints
 
-    bool    bCheckSuperfluous   :1; // Search for empty Pages?
-    bool    bIdleFormat         :1; // Trigger Idle Formatter?
-    bool    bBrowseWidthValid   :1; // Is nBrowseWidth valid?
-    bool    bTurboAllowed       :1;
-    bool    bAssertFlyPages     :1; // Insert more Pages for Flys if needed?
-    bool    bIsVirtPageNum      :1; // Do we have a virtual pagenumber?
-    bool    bIsNewLayout        :1; // Layout loaded or newly created
-    bool    bCallbackActionEnabled:1; // No Action in Notification desired
+    bool    mbCheckSuperfluous   :1; // Search for empty Pages?
+    bool    mbIdleFormat         :1; // Trigger Idle Formatter?
+    bool    mbBrowseWidthValid   :1; // Is mnBrowseWidth valid?
+    bool    mbTurboAllowed       :1;
+    bool    mbAssertFlyPages     :1; // Insert more Pages for Flys if needed?
+    bool    mbIsVirtPageNum      :1; // Do we have a virtual pagenumber?
+    bool    mbIsNewLayout        :1; // Layout loaded or newly created
+    bool    mbCallbackActionEnabled:1; // No Action in Notification desired
                                       // @see dcontact.cxx, ::Changed()
-    bool    bLayoutFreezed;
+    bool    mbLayoutFreezed;
 
     /**
      * For BrowseMode
-     * nBrowseWidth is the outer margin of the object most to the right.
+     * mnBrowseWidth is the outer margin of the object most to the right.
      * The page's right edge should not be smaller than this value.
      */
-    long    nBrowseWidth;
+    long    mnBrowseWidth;
 
-    /// If we only have to format one CntntFrm, its in pTurbo
-    const SwCntntFrm *pTurbo;
+    /// If we only have to format one ContentFrame, its in mpTurbo
+    const SwContentFrame *mpTurbo;
 
     /// We should not need to always struggle to find the last page, so store it here
-    SwPageFrm *pLastPage;
+    SwPageFrame *mpLastPage;
 
     /** [ Comment from the original StarOffice checkin ]:
      * The root takes care of the shell access. Via the document
      * it should be possible to get at the root frame, and thus always
      * have access to the shell.
-     * the pointer pCurrShell is the pointer to any of the shells for
+     * the pointer mpCurrShell is the pointer to any of the shells for
      * the document.
      * Because sometimes it matters which shell is used, it is necessary to
      * know the active shell.
-     * this is approximated by setting the pointer pCurrShell when a
-     * shell gets the focus (FEShell). Acditionally the pointer will be
+     * this is approximated by setting the pointer mpCurrShell when a
+     * shell gets the focus (FEShell). Additionally the pointer will be
      * set temporarily by SwCurrShell typically via  SET_CURR_SHELL
      * The macro and class can be found in the SwViewShell. These object can
      * be created nested (also for different kinds of Shells). They are
-     * collected into the Array pCurrShells.
+     * collected into the Array mpCurrShells.
      * Furthermore it can happen that a shell is activated while a curshell
-     * object is still 'active'. This one will be entered into pWaitingCurrShell
+     * object is still 'active'. This one will be entered into mpWaitingCurrShell
      * and will be activated by the last d'tor of CurrShell.
      * One other problem is the destruction of a shell while it is active.
-     * The pointer pCurrShell is then reset to an arbitrary other shell.
-     * If at the time of the destruction of a shell, which is still referneced
+     * The pointer mpCurrShell is then reset to an arbitrary other shell.
+     * If at the time of the destruction of a shell, which is still referenced
      * by a curshell object, that will be cleaned up as well.
      */
     friend class CurrShell;
     friend void SetShell( SwViewShell *pSh );
-    friend void InitCurrShells( SwRootFrm *pRoot );
-    SwViewShell *pCurrShell;
-    SwViewShell *pWaitingCurrShell;
-    SwCurrShells *pCurrShells;
+    friend void InitCurrShells( SwRootFrame *pRoot );
+    SwViewShell *mpCurrShell;
+    SwViewShell *mpWaitingCurrShell;
+    SwCurrShells *mpCurrShells;
 
     /// One Page per DrawModel per Document; is always the size of the Root
-    SdrPage *pDrawPage;
+    SdrPage *mpDrawPage;
 
-    SwDestroyList* pDestroy;
+    SwDestroyList* mpDestroy;
 
-    sal_uInt16  nPhyPageNums; /// Page count
-    sal_uInt16 nAccessibleShells; // Number of accessible shells
+    sal_uInt16  mnPhyPageNums; /// Page count
+    sal_uInt16 mnAccessibleShells; // Number of accessible shells
 
     void ImplCalcBrowseWidth();
     void ImplInvalidateBrowseWidth();
 
-    void _DeleteEmptySct(); // Destroys the registered SectionFrms
-    void _RemoveFromList( SwSectionFrm* pSct ); // Removes SectionFrms from the Delete List
+    void DeleteEmptySct_(); // Destroys the registered SectionFrames
+    void RemoveFromList_( SwSectionFrame* pSct ); // Removes SectionFrames from the Delete List
+
+    virtual void DestroyImpl() override;
+    virtual ~SwRootFrame() override;
 
 protected:
 
-    virtual void MakeAll() SAL_OVERRIDE;
+    virtual void MakeAll(vcl::RenderContext* pRenderContext) override;
 
 public:
 
@@ -164,7 +185,7 @@ public:
     void AllCheckPageDescs() const;
     void AllInvalidateAutoCompleteWords() const;
     void AllAddPaintRect() const;
-    void AllRemoveFtns() ;
+    void AllRemoveFootnotes() ;
     void AllInvalidateSmartTagsOrSpelling(bool bSmartTags) const;
 
     /// Output virtual Device (e.g. for animations)
@@ -173,18 +194,17 @@ public:
     /// Save Clipping if exactly the ClipRect is outputted
     static bool HasSameRect( const SwRect& rRect );
 
-    SwRootFrm( SwFrmFmt*, SwViewShell* );
-    virtual ~SwRootFrm();
-    void Init(SwFrmFmt*);
+    SwRootFrame( SwFrameFormat*, SwViewShell* );
+    void Init(SwFrameFormat*);
 
-    SwViewShell *GetCurrShell() const { return pCurrShell; }
+    SwViewShell *GetCurrShell() const { return mpCurrShell; }
     void DeRegisterShell( SwViewShell *pSh );
 
     /**
      * Set up Start-/EndAction for all Shells on a as high as possible
      * (Shell section) level.
      * For the StarONE binding, which does not know the Shells directly.
-     * The ChangeLinkd of the CrsrShell (UI notifications) is called
+     * The ChangeLinkd of the CursorShell (UI notifications) is called
      * automatically in the EndAllAction.
      */
     void StartAllAction();
@@ -197,46 +217,46 @@ public:
     void UnoRemoveAllActions();
     void UnoRestoreAllActions();
 
-    const SdrPage* GetDrawPage() const { return pDrawPage; }
-          SdrPage* GetDrawPage()       { return pDrawPage; }
-          void     SetDrawPage( SdrPage* pNew ){ pDrawPage = pNew; }
+    const SdrPage* GetDrawPage() const { return mpDrawPage; }
+          SdrPage* GetDrawPage()       { return mpDrawPage; }
+          void     SetDrawPage( SdrPage* pNew ){ mpDrawPage = pNew; }
 
-    virtual bool  GetCrsrOfst( SwPosition *, Point&,
-                               SwCrsrMoveState* = 0, bool bTestBackground = false ) const SAL_OVERRIDE;
+    virtual bool  GetCursorOfst( SwPosition *, Point&,
+                               SwCursorMoveState* = nullptr, bool bTestBackground = false ) const override;
 
-    virtual void Paint( SwRect const&,
-                        SwPrintData const*const pPrintData = NULL ) const SAL_OVERRIDE;
-    virtual SwTwips ShrinkFrm( SwTwips, bool bTst = false, bool bInfo = false ) SAL_OVERRIDE;
-    virtual SwTwips GrowFrm  ( SwTwips, bool bTst = false, bool bInfo = false ) SAL_OVERRIDE;
+    virtual void Paint( vcl::RenderContext& rRenderContext, SwRect const&,
+                        SwPrintData const*const pPrintData = nullptr ) const override;
+    virtual SwTwips ShrinkFrame( SwTwips, bool bTst = false, bool bInfo = false ) override;
+    virtual SwTwips GrowFrame  ( SwTwips, bool bTst = false, bool bInfo = false ) override;
 #ifdef DBG_UTIL
-    virtual void Cut() SAL_OVERRIDE;
-    virtual void Paste( SwFrm* pParent, SwFrm* pSibling = 0 ) SAL_OVERRIDE;
+    virtual void Cut() override;
+    virtual void Paste( SwFrame* pParent, SwFrame* pSibling = nullptr ) override;
 #endif
 
-    virtual bool FillSelection( SwSelectionList& rList, const SwRect& rRect ) const SAL_OVERRIDE;
+    virtual bool FillSelection( SwSelectionList& rList, const SwRect& rRect ) const override;
 
-    Point  GetNextPrevCntntPos( const Point &rPoint, bool bNext ) const;
+    Point  GetNextPrevContentPos( const Point &rPoint, bool bNext ) const;
 
-    virtual Size ChgSize( const Size& aNewSize ) SAL_OVERRIDE;
+    virtual Size ChgSize( const Size& aNewSize ) override;
 
     void SetIdleFlags()
     {
-        bIdleFormat = true;
+        mbIdleFormat = true;
 
-        SwViewShell* lcl_pCurrShell = GetCurrShell();
+        SwViewShell* pCurrShell = GetCurrShell();
         // May be NULL if called from SfxBaseModel::dispose
         // (this happens in the build test 'rtfexport').
 #ifdef USE_JAVA
         // Fix crash when printing comments by checking the current shell's
         // document is NULL
-        if (lcl_pCurrShell != NULL && lcl_pCurrShell->GetDoc() != NULL)
+        if (pCurrShell != nullptr && pCurrShell->GetDoc() != nullptr)
 #else	// USE_JAVA
-        if (lcl_pCurrShell != NULL)
+        if (pCurrShell != nullptr)
 #endif	// USE_JAVA
-            lcl_pCurrShell->GetDoc()->getIDocumentTimerAccess().StartBackgroundJobs();
+            pCurrShell->GetDoc()->getIDocumentTimerAccess().StartBackgroundJobs();
     }
-    bool IsIdleFormat()  const { return bIdleFormat; }
-    void ResetIdleFormat()     { bIdleFormat = false; }
+    bool IsIdleFormat()  const { return mbIdleFormat; }
+    void ResetIdleFormat()     { mbIdleFormat = false; }
 
     bool IsNeedGrammarCheck() const         { return mbNeedGrammarCheck; }
     void SetNeedGrammarCheck( bool bVal )
@@ -245,33 +265,33 @@ public:
 
         if ( bVal )
         {
-            SwViewShell* lcl_pCurrShell = GetCurrShell();
+            SwViewShell* pCurrShell = GetCurrShell();
             // May be NULL if called from SfxBaseModel::dispose
             // (this happens in the build test 'rtfexport').
 #ifdef USE_JAVA
             // Fix Mac App Store crash by checking the current shell's
             // document is NULL
-            if (lcl_pCurrShell != NULL && lcl_pCurrShell->GetDoc() != NULL)
+            if (pCurrShell != nullptr && pCurrShell->GetDoc() != nullptr)
 #else	// USE_JAVA
-            if (lcl_pCurrShell != NULL)
+            if (pCurrShell != nullptr)
 #endif	// USE_JAVA
-                lcl_pCurrShell->GetDoc()->getIDocumentTimerAccess().StartBackgroundJobs();
+                pCurrShell->GetDoc()->getIDocumentTimerAccess().StartBackgroundJobs();
         }
     }
 
     /// Makes sure that all requested page-bound Flys find a Page
-    void SetAssertFlyPages() { bAssertFlyPages = true; }
+    void SetAssertFlyPages() { mbAssertFlyPages = true; }
     void AssertFlyPages();
-    bool IsAssertFlyPages()  { return bAssertFlyPages; }
+    bool IsAssertFlyPages()  { return mbAssertFlyPages; }
 
     /**
      * Makes sure that, starting from the passed Page, all page-bound Frames
      * are on the right Page (pagenumber).
      */
-    void AssertPageFlys( SwPageFrm * );
+    static void AssertPageFlys( SwPageFrame * );
 
-    /// Invalidate all Cntnt, Size or PrtArea
-    void InvalidateAllCntnt( sal_uInt8 nInvalidate = INV_SIZE );
+    /// Invalidate all Content, Size or PrtArea
+    void InvalidateAllContent( SwInvalidateFlags nInvalidate );
 
     /**
      * Invalidate/re-calculate the position of all floating
@@ -281,8 +301,8 @@ public:
     void InvalidateAllObjPos();
 
     /// Remove superfluous Pages
-    void SetSuperfluous()      { bCheckSuperfluous = true; }
-    bool IsSuperfluous() const { return bCheckSuperfluous; }
+    void SetSuperfluous()      { mbCheckSuperfluous = true; }
+    bool IsSuperfluous() const { return mbCheckSuperfluous; }
     void RemoveSuperfluous();
 
     /**
@@ -292,10 +312,10 @@ public:
     sal_uInt16  GetCurrPage( const SwPaM* ) const;
     sal_uInt16  SetCurrPage( SwCursor*, sal_uInt16 nPageNum );
     Point   GetPagePos( sal_uInt16 nPageNum ) const;
-    sal_uInt16  GetPageNum() const      { return nPhyPageNums; }
-    void    DecrPhyPageNums()       { --nPhyPageNums; }
-    void    IncrPhyPageNums()       { ++nPhyPageNums; }
-    bool    IsVirtPageNum() const   { return bIsVirtPageNum; }
+    sal_uInt16  GetPageNum() const      { return mnPhyPageNums; }
+    void    DecrPhyPageNums()       { --mnPhyPageNums; }
+    void    IncrPhyPageNums()       { ++mnPhyPageNums; }
+    bool    IsVirtPageNum() const   { return mbIsVirtPageNum; }
     inline  void SetVirtPageNum( const bool bOf ) const;
     bool    IsDummyPage( sal_uInt16 nPageNum ) const;
 
@@ -306,9 +326,18 @@ public:
      * bool bExtend: Extend each page to the left/right/top/botton up to the
      * next page margin
      */
-    const SwPageFrm* GetPageAtPos( const Point& rPt, const Size* pSize = 0, bool bExtend = false ) const;
+    const SwPageFrame* GetPageAtPos( const Point& rPt, const Size* pSize = nullptr, bool bExtend = false ) const;
 
-    void CalcFrmRects( SwShellCrsr& );
+    /**
+    * Point rPt: The point to test
+    * @returns true: if rPt is between top/bottom margins of two pages
+    *                in hide-whitespace, rPt can be near the gap, but
+    *                not strictly between pages (in a page) as gap is small.
+    * @returns false: if rPt is in a page or not strictly between two pages
+    */
+    bool IsBetweenPages(const Point& rPt) const;
+
+    void CalcFrameRects( SwShellCursor& );
 
     /**
      * Calculates the cells included from the current selection
@@ -316,54 +345,53 @@ public:
      * @returns false: There was no result because of an invalid layout
      * @returns true: Everything worked fine.
      */
-    bool MakeTblCrsrs( SwTableCursor& );
+    bool MakeTableCursors( SwTableCursor& );
 
-    void DisallowTurbo()  const { ((SwRootFrm*)this)->bTurboAllowed = false; }
-    void ResetTurboFlag() const { ((SwRootFrm*)this)->bTurboAllowed = true; }
-    bool IsTurboAllowed() const { return bTurboAllowed; }
-    void SetTurbo( const SwCntntFrm *pCntnt ) { pTurbo = pCntnt; }
-    void ResetTurbo() { pTurbo = 0; }
-    const SwCntntFrm *GetTurbo() { return pTurbo; }
+    void DisallowTurbo()  const { const_cast<SwRootFrame*>(this)->mbTurboAllowed = false; }
+    void ResetTurboFlag() const { const_cast<SwRootFrame*>(this)->mbTurboAllowed = true; }
+    bool IsTurboAllowed() const { return mbTurboAllowed; }
+    void SetTurbo( const SwContentFrame *pContent ) { mpTurbo = pContent; }
+    void ResetTurbo() { mpTurbo = nullptr; }
+    const SwContentFrame *GetTurbo() { return mpTurbo; }
 
     /// Update the footernumbers of all Pages
-    void UpdateFtnNums(); // Only for page by page numnbering!
+    void UpdateFootnoteNums(); // Only for page by page numnbering!
 
     /// Remove all footnotes (but no references)
-    void RemoveFtns( SwPageFrm *pPage = 0, bool bPageOnly = false,
+    void RemoveFootnotes( SwPageFrame *pPage = nullptr, bool bPageOnly = false,
                      bool bEndNotes = false );
-    void CheckFtnPageDescs( bool bEndNote );
+    void CheckFootnotePageDescs( bool bEndNote );
 
-    const SwPageFrm *GetLastPage() const { return pLastPage; }
-          SwPageFrm *GetLastPage()       { return pLastPage; }
+    const SwPageFrame *GetLastPage() const { return mpLastPage; }
+          SwPageFrame *GetLastPage()       { return mpLastPage; }
 
-    static bool IsInPaint() { return bInPaint; }
+    static bool IsInPaint() { return s_isInPaint; }
 
-    static void SetNoVirDev( const bool bNew ) { bNoVirDev = bNew; }
+    static void SetNoVirDev(const bool bNew) { s_isNoVirDev = bNew; }
 
     inline long GetBrowseWidth() const;
-    void SetBrowseWidth( long n ) { bBrowseWidthValid = true; nBrowseWidth = n;}
     inline void InvalidateBrowseWidth();
 
-    bool IsNewLayout() const { return bIsNewLayout; }
-    void ResetNewLayout()    { bIsNewLayout = false;}
+    bool IsNewLayout() const { return mbIsNewLayout; }
+    void ResetNewLayout()    { mbIsNewLayout = false;}
 
     /**
-     * Empty SwSectionFrms are registered here for deletion and
+     * Empty SwSectionFrames are registered here for deletion and
      * destroyed later on or deregistered.
      */
-    void InsertEmptySct( SwSectionFrm* pDel );
-    void DeleteEmptySct() { if( pDestroy ) _DeleteEmptySct(); }
-    void RemoveFromList( SwSectionFrm* pSct ) { if( pDestroy ) _RemoveFromList( pSct ); }
+    void InsertEmptySct( SwSectionFrame* pDel );
+    void DeleteEmptySct() { if( mpDestroy ) DeleteEmptySct_(); }
+    void RemoveFromList( SwSectionFrame* pSct ) { if( mpDestroy ) RemoveFromList_( pSct ); }
 #ifdef DBG_UTIL
-    bool IsInDelList( SwSectionFrm* pSct ) const;
+    bool IsInDelList( SwSectionFrame* pSct ) const;
 #endif
 
-    void SetCallbackActionEnabled( bool b ) { bCallbackActionEnabled = b; }
-    bool IsCallbackActionEnabled() const    { return bCallbackActionEnabled; }
+    void SetCallbackActionEnabled( bool b ) { mbCallbackActionEnabled = b; }
+    bool IsCallbackActionEnabled() const    { return mbCallbackActionEnabled; }
 
-    bool IsAnyShellAccessible() const { return nAccessibleShells > 0; }
-    void AddAccessibleShell() { ++nAccessibleShells; }
-    void RemoveAccessibleShell() { --nAccessibleShells; }
+    bool IsAnyShellAccessible() const { return mnAccessibleShells > 0; }
+    void AddAccessibleShell() { ++mnAccessibleShells; }
+    void RemoveAccessibleShell() { --mnAccessibleShells; }
 
     /**
      * Get page frame by phyiscal page number
@@ -377,34 +405,58 @@ public:
      *
      * @return pointer to the page frame with the given physical page number
     */
-    SwPageFrm* GetPageByPageNum( sal_uInt16 _nPageNum ) const;
+    SwPageFrame* GetPageByPageNum( sal_uInt16 _nPageNum ) const;
 
     void CheckViewLayout( const SwViewOption* pViewOpt, const SwRect* pVisArea );
     bool IsLeftToRightViewLayout() const;
     const SwRect& GetPagesArea() const { return maPagesArea; }
     void SetSidebarChanged() { mbSidebarChanged = true; }
 
-    bool IsLayoutFreezed() const { return bLayoutFreezed; }
-    void FreezeLayout( bool freeze ) { bLayoutFreezed = freeze; }
+    bool IsLayoutFreezed() const { return mbLayoutFreezed; }
+    void FreezeLayout( bool freeze ) { mbLayoutFreezed = freeze; }
+
+    void RemovePage( SwPageFrame **pDel, SwRemoveResult eResult );
 };
 
-inline long SwRootFrm::GetBrowseWidth() const
+inline long SwRootFrame::GetBrowseWidth() const
 {
-    if ( !bBrowseWidthValid )
-        ((SwRootFrm*)this)->ImplCalcBrowseWidth();
-    return nBrowseWidth;
+    if ( !mbBrowseWidthValid )
+        const_cast<SwRootFrame*>(this)->ImplCalcBrowseWidth();
+    return mnBrowseWidth;
 }
 
-inline void SwRootFrm::InvalidateBrowseWidth()
+inline void SwRootFrame::InvalidateBrowseWidth()
 {
-    if ( bBrowseWidthValid )
+    if ( mbBrowseWidthValid )
         ImplInvalidateBrowseWidth();
 }
 
-inline  void SwRootFrm::SetVirtPageNum( const bool bOf) const
+inline  void SwRootFrame::SetVirtPageNum( const bool bOf) const
 {
-    ((SwRootFrm*)this)->bIsVirtPageNum = bOf;
+    const_cast<SwRootFrame*>(this)->mbIsVirtPageNum = bOf;
 }
+
+/// helper class to disable creation of an action by a callback event
+/// in particular, change event from a drawing object (SwDrawContact::Changed())
+class DisableCallbackAction
+{
+    private:
+        SwRootFrame & m_rRootFrame;
+        bool m_bOldCallbackActionState;
+
+    public:
+        explicit DisableCallbackAction(SwRootFrame & rRootFrame)
+            : m_rRootFrame(rRootFrame)
+            , m_bOldCallbackActionState(rRootFrame.IsCallbackActionEnabled())
+        {
+            m_rRootFrame.SetCallbackActionEnabled(false);
+        }
+
+        ~DisableCallbackAction()
+        {
+            m_rRootFrame.SetCallbackActionEnabled(m_bOldCallbackActionState);
+        }
+};
 
 #endif // INCLUDED_SW_SOURCE_CORE_INC_ROOTFRM_HXX
 

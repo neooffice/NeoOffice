@@ -40,7 +40,7 @@
 
 #include "crsrsh.hxx"
 
-bool ImplIsValidSwCrsrShell( const SwCrsrShell *pCrsrShell );
+bool ImplIsValidSwCursorShell( const SwCursorShell *pCrsrShell );
 
 #endif	// USE_JAVA
 
