@@ -37,11 +37,19 @@ class SwFrameFormat;
 
 class SwHTMLTableLayoutCnts
 {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     SwHTMLTableLayoutCnts *pNext;   ///< The next content.
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    std::shared_ptr<SwHTMLTableLayoutCnts> xNext;   ///< The next content.
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     /// Only one of the following two pointers may be set!
     SwTableBox *pBox;               ///< A Box.
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     SwHTMLTableLayout *pTable;      ///< A "table within a table".
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    std::shared_ptr<SwHTMLTableLayout> xTable;      ///< A "table within a table".
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     /** During first run there are still no boxes. In this case
        pStartNode is used instead of pBox. */
@@ -58,20 +66,33 @@ class SwHTMLTableLayoutCnts
 
 public:
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     SwHTMLTableLayoutCnts( const SwStartNode* pSttNd, SwHTMLTableLayout* pTab,
                            bool bNoBreakTag, SwHTMLTableLayoutCnts* pNxt );
 
     ~SwHTMLTableLayoutCnts();
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    SwHTMLTableLayoutCnts(const SwStartNode* pSttNd, SwHTMLTableLayout* pTab,
+                          bool bNoBreakTag, std::shared_ptr<SwHTMLTableLayoutCnts> const& rNxt);
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     void SetTableBox( SwTableBox *pBx ) { pBox = pBx; }
     SwTableBox *GetTableBox() const { return pBox; }
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     SwHTMLTableLayout *GetTable() const { return pTable; }
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    SwHTMLTableLayout *GetTable() const { return xTable.get(); }
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     const SwStartNode *GetStartNode() const;
 
     /// Calculation of next node.
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     SwHTMLTableLayoutCnts *GetNext() const { return pNext; }
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    const std::shared_ptr<SwHTMLTableLayoutCnts>& GetNext() const { return xNext; }
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     void SetWidthSet( sal_uInt8 nRef ) { nWidthSet = nRef; }
     bool IsWidthSet( sal_uInt8 nRef ) const { return nRef==nWidthSet; }
@@ -84,7 +105,11 @@ public:
 
 class SwHTMLTableLayoutCell
 {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     SwHTMLTableLayoutCnts *pContents;  ///< Content of cell.
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    std::shared_ptr<SwHTMLTableLayoutCnts> xContents;  ///< Content of cell.
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     sal_uInt16 nRowSpan;               ///< ROWSPAN of cell.
     sal_uInt16 nColSpan;               ///< COLSPAN of cell.
@@ -95,16 +120,27 @@ class SwHTMLTableLayoutCell
 
 public:
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     SwHTMLTableLayoutCell( SwHTMLTableLayoutCnts *pCnts,
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    SwHTMLTableLayoutCell(std::shared_ptr<SwHTMLTableLayoutCnts> const& rCnts,
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                          sal_uInt16 nRSpan, sal_uInt16 nCSpan,
                          sal_uInt16 nWidthOpt, bool bPrcWdthOpt,
                          bool bNWrapOpt );
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     ~SwHTMLTableLayoutCell();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     /// Set or get content of a cell.
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     void SetContents( SwHTMLTableLayoutCnts *pCnts ) { pContents = pCnts; }
     SwHTMLTableLayoutCnts *GetContents() const { return pContents; }
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    void SetContents(std::shared_ptr<SwHTMLTableLayoutCnts> const& rCnts) { xContents = rCnts; }
+    const std::shared_ptr<SwHTMLTableLayoutCnts>& GetContents() const { return xContents; }
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 
     inline void SetProtected();
 
@@ -355,7 +391,11 @@ inline void SwHTMLTableLayoutCell::SetProtected()
     nRowSpan = 1;
     nColSpan = 1;
 
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     pContents = nullptr;
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+    xContents.reset();
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 }
 
 inline void SwHTMLTableLayoutColumn::MergeMinMaxNoAlign( sal_uLong nCMin,
