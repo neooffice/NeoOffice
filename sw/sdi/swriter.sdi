@@ -7645,23 +7645,16 @@ SfxUInt16Item JumpToSpecificPage SID_JUMP_TO_SPECIFIC_PAGE
 SfxVoidItem LookupInMacDictAttributes FN_LOOKUP_IN_MACOSX_DICTIONARY
 ()
 [
-    /* flags: */
     AutoUpdate = FALSE,
-    Cachable = Cachable,
-    FastCall = TRUE,
-    HasCoreId = FALSE,
-    HasDialog = FALSE,
+    FastCall = FALSE,
     ReadOnlyDoc = FALSE,
     Toggle = FALSE,
     Container = FALSE,
     RecordAbsolute = FALSE,
     RecordPerSet;
-    Synchron;
 
-    /* config: */
     AccelConfig = TRUE,
     MenuConfig = TRUE,
-    StatusBarConfig = FALSE,
     ToolBoxConfig = TRUE,
     GroupId = GID_FORMAT;
 ]
