@@ -21,7 +21,7 @@
 
 #include <tools/solar.h>
 
-class SwDoc;
+#include <doc.hxx>
 
 class SW_DLLPUBLIC SwDocFac
 {
@@ -33,7 +33,7 @@ protected:
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
 public:
-    SwDocFac( SwDoc *pDoc = 0 );
+    SwDocFac( SwDoc *pDoc = nullptr );
     ~SwDocFac();
 
     /// Document is created after calling Read(...).
