@@ -57,7 +57,7 @@ sal_uInt16 SwImpBlocks::Hash( const OUString& r )
 
 SwBlockName::SwBlockName( const OUString& rShort, const OUString& rLong )
     : aShort( rShort ), aLong( rLong ), aPackageName (rShort),
-    bIsOnlyTxtFlagInit( false ), bIsOnlyTxt( false ), bInPutMuchBlocks(false)
+    bIsOnlyTextFlagInit( false ), bIsOnlyText( false )
 {
     nHashS = SwImpBlocks::Hash( rShort );
     nHashL = SwImpBlocks::Hash( rLong );
@@ -65,7 +65,7 @@ SwBlockName::SwBlockName( const OUString& rShort, const OUString& rLong )
 
 SwBlockName::SwBlockName( const OUString& rShort, const OUString& rLong, const OUString& rPackageName)
     : aShort( rShort ), aLong( rLong ), aPackageName (rPackageName),
-    bIsOnlyTxtFlagInit( false ), bIsOnlyTxt( false ), bInPutMuchBlocks(false)
+    bIsOnlyTextFlagInit( false ), bIsOnlyText( false )
 {
     nHashS = SwImpBlocks::Hash( rShort );
     nHashL = SwImpBlocks::Hash( rLong );
@@ -74,40 +74,40 @@ SwBlockName::SwBlockName( const OUString& rShort, const OUString& rLong, const O
 /**
  * Is the provided file a storage or doesn't it exist?
  */
-short SwImpBlocks::GetFileType( const OUString& rFile )
+SwImpBlocks::FileType SwImpBlocks::GetFileType( const OUString& rFile )
 {
     if( !FStatHelper::IsDocument( rFile ) )
-        return SWBLK_NO_FILE;
+        return FileType::NoFile;
     if( SwXMLTextBlocks::IsFileUCBStorage( rFile ) )
-        return SWBLK_XML;
-    if( SvStorage::IsStorageFile( rFile ) )
-        return SWBLK_SW3;
+        return FileType::XML;
+    if( SotStorage::IsStorageFile( rFile ) )
+        return FileType::SW3;
     //otherwise return NONE
-    return SWBLK_NONE;
+    return FileType::None;
 }
 
-SwImpBlocks::SwImpBlocks( const OUString& rFile, bool )
-    : aFile( rFile ),
-    aDateModified( Date::EMPTY ),
-    aTimeModified( tools::Time::EMPTY ),
+SwImpBlocks::SwImpBlocks( const OUString& rFile )
+    : m_aFile( rFile ),
+    m_aDateModified( Date::EMPTY ),
+    m_aTimeModified( tools::Time::EMPTY ),
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    pDoc( 0 ), nCur( USHRT_MAX ),
+    m_pDoc( nullptr ), m_nCurrentIndex( USHRT_MAX ),
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    nCur( USHRT_MAX ),
+    m_nCurrentIndex( USHRT_MAX ),
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    bReadOnly( true ), bInPutMuchBlocks( false ),
-    bInfoChanged(false)
+    m_bReadOnly( true ), m_bInPutMuchBlocks( false ),
+    m_bInfoChanged(false)
 {
     FStatHelper::GetModifiedDateTimeOfFile( rFile,
-                                            &aDateModified, &aTimeModified );
+                                            &m_aDateModified, &m_aTimeModified );
     INetURLObject aObj(rFile);
     aObj.setExtension( OUString() );
-    aName = aObj.GetBase();
+    m_aName = aObj.GetBase();
 }
 
 SwImpBlocks::~SwImpBlocks()
 {
-    aNames.DeleteAndDestroyAll();
+    m_aNames.DeleteAndDestroyAll();
 }
 
 /**
@@ -116,7 +116,7 @@ SwImpBlocks::~SwImpBlocks()
 void SwImpBlocks::ClearDoc()
 {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    pDoc->ClearDoc();
+    m_pDoc->ClearDoc();
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     m_xDoc->ClearDoc();
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -128,20 +128,20 @@ void SwImpBlocks::ClearDoc()
 SwPaM* SwImpBlocks::MakePaM()
 {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    SwPaM* pPam = new SwPaM( pDoc->GetNodes().GetEndOfContent() );
+    SwPaM* pPam = new SwPaM( m_pDoc->GetNodes().GetEndOfContent() );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwPaM* pPam = new SwPaM( m_xDoc->GetNodes().GetEndOfContent() );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    pPam->Move( fnMoveBackward, fnGoDoc );
+    pPam->Move( fnMoveBackward, GoInDoc );
     pPam->SetMark();
-    pPam->Move( fnMoveForward, fnGoDoc );
+    pPam->Move( fnMoveForward, GoInDoc );
     pPam->Exchange();
     return pPam;
 }
 
 sal_uInt16 SwImpBlocks::GetCount() const
 {
-    return aNames.size();
+    return m_aNames.size();
 }
 
 /**
@@ -151,9 +151,9 @@ sal_uInt16 SwImpBlocks::GetIndex( const OUString& rShort ) const
 {
     const OUString s( GetAppCharClass().uppercase( rShort ) );
     const sal_uInt16 nHash = Hash( s );
-    for( sal_uInt16 i = 0; i < aNames.size(); i++ )
+    for( size_t i = 0; i < m_aNames.size(); i++ )
     {
-        const SwBlockName* pName = aNames[ i ];
+        const SwBlockName* pName = m_aNames[ i ];
         if( pName->nHashS == nHash
          && pName->aShort == s )
             return i;
@@ -164,9 +164,9 @@ sal_uInt16 SwImpBlocks::GetIndex( const OUString& rShort ) const
 sal_uInt16 SwImpBlocks::GetLongIndex( const OUString& rLong ) const
 {
     sal_uInt16 nHash = Hash( rLong );
-    for( sal_uInt16 i = 0; i < aNames.size(); i++ )
+    for( size_t i = 0; i < m_aNames.size(); i++ )
     {
-        const SwBlockName* pName = aNames[ i ];
+        const SwBlockName* pName = m_aNames[ i ];
         if( pName->nHashL == nHash
          && pName->aLong == rLong )
             return i;
@@ -176,52 +176,52 @@ sal_uInt16 SwImpBlocks::GetLongIndex( const OUString& rLong ) const
 
 OUString SwImpBlocks::GetShortName( sal_uInt16 n ) const
 {
-    if( n < aNames.size() )
-        return aNames[n]->aShort;
+    if( n < m_aNames.size() )
+        return m_aNames[n]->aShort;
     return OUString();
 }
 
 OUString SwImpBlocks::GetLongName( sal_uInt16 n ) const
 {
-    if( n < aNames.size() )
-        return aNames[n]->aLong;
+    if( n < m_aNames.size() )
+        return m_aNames[n]->aLong;
     return OUString();
 }
 
 OUString SwImpBlocks::GetPackageName( sal_uInt16 n ) const
 {
-    if( n < aNames.size() )
-        return aNames[n]->aPackageName;
+    if( n < m_aNames.size() )
+        return m_aNames[n]->aPackageName;
     return OUString();
 }
 
 void SwImpBlocks::AddName( const OUString& rShort, const OUString& rLong,
-                           bool bOnlyTxt )
+                           bool bOnlyText )
 {
     sal_uInt16 nIdx = GetIndex( rShort );
     if( nIdx != USHRT_MAX )
     {
-        delete aNames[nIdx];
-        aNames.erase( aNames.begin() + nIdx );
+        delete m_aNames[nIdx];
+        m_aNames.erase( m_aNames.begin() + nIdx );
     }
     SwBlockName* pNew = new SwBlockName( rShort, rLong );
-    pNew->bIsOnlyTxtFlagInit = true;
-    pNew->bIsOnlyTxt = bOnlyTxt;
-    aNames.insert( pNew );
+    pNew->bIsOnlyTextFlagInit = true;
+    pNew->bIsOnlyText = bOnlyText;
+    m_aNames.insert( pNew );
 }
 
 bool SwImpBlocks::IsFileChanged() const
 {
-    Date aTempDateModified( aDateModified );
-    tools::Time aTempTimeModified( aTimeModified );
-    return FStatHelper::GetModifiedDateTimeOfFile( aFile, &aTempDateModified, &aTempTimeModified ) &&
-          ( aDateModified != aTempDateModified ||
-            aTimeModified != aTempTimeModified );
+    Date aTempDateModified( m_aDateModified );
+    tools::Time aTempTimeModified( m_aTimeModified );
+    return FStatHelper::GetModifiedDateTimeOfFile( m_aFile, &aTempDateModified, &aTempTimeModified ) &&
+          ( m_aDateModified != aTempDateModified ||
+            m_aTimeModified != aTempTimeModified );
 }
 
 void SwImpBlocks::Touch()
 {
-    FStatHelper::GetModifiedDateTimeOfFile( aFile, &aDateModified, &aTimeModified );
+    FStatHelper::GetModifiedDateTimeOfFile( m_aFile, &m_aDateModified, &m_aTimeModified );
 }
 
 bool SwImpBlocks::IsOnlyTextBlock( const OUString& ) const
@@ -229,12 +229,12 @@ bool SwImpBlocks::IsOnlyTextBlock( const OUString& ) const
     return false;
 }
 
-sal_uLong SwImpBlocks::GetMacroTable( sal_uInt16, SvxMacroTableDtor&, bool )
+sal_uLong SwImpBlocks::GetMacroTable( sal_uInt16, SvxMacroTableDtor& )
 {
     return 0;
 }
 
-sal_uLong SwImpBlocks::SetMacroTable( sal_uInt16 , const SvxMacroTableDtor& , bool )
+sal_uLong SwImpBlocks::SetMacroTable( sal_uInt16 , const SvxMacroTableDtor& )
 {
     return 0;
 }
@@ -245,14 +245,15 @@ bool SwImpBlocks::PutMuchEntries( bool )
 }
 
 SwTextBlocks::SwTextBlocks( const OUString& rFile )
-    : pImp( 0 ), nErr( 0 )
+    : pImp( nullptr ), nErr( 0 )
 {
     INetURLObject aObj(rFile);
-    const OUString sFileName = aObj.GetMainURL( INetURLObject::NO_DECODE );
+    const OUString sFileName = aObj.GetMainURL( INetURLObject::DecodeMechanism::NONE );
     switch( SwImpBlocks::GetFileType( rFile ) )
     {
-    case SWBLK_XML:     pImp = new SwXMLTextBlocks( sFileName ); break;
-    case SWBLK_NO_FILE: pImp = new SwXMLTextBlocks( sFileName ); break;
+    case SwImpBlocks::FileType::XML:    pImp.reset( new SwXMLTextBlocks( sFileName ) ); break;
+    case SwImpBlocks::FileType::NoFile: pImp.reset( new SwXMLTextBlocks( sFileName ) ); break;
+    default: break;
     }
     if( !pImp )
         nErr = ERR_SWG_FILE_FORMAT_ERROR;
@@ -260,12 +261,11 @@ SwTextBlocks::SwTextBlocks( const OUString& rFile )
 
 SwTextBlocks::~SwTextBlocks()
 {
-    delete pImp;
 }
 
 OUString SwTextBlocks::GetName()
 {
-    return pImp ? pImp->aName : OUString();
+    return pImp ? pImp->m_aName : OUString();
 }
 
 void SwTextBlocks::SetName( const OUString& r )
@@ -278,8 +278,8 @@ bool SwTextBlocks::IsOld() const
 {
     if (pImp)
     {
-        short nType = pImp->GetFileType();
-        if (SWBLK_SW3 == nType || SWBLK_SW2 == nType )
+        SwImpBlocks::FileType nType = pImp->GetFileType();
+        if (SwImpBlocks::FileType::SW3 == nType)
             return true;
     }
     return false;
@@ -316,7 +316,7 @@ OUString SwTextBlocks::GetLongName( sal_uInt16 n ) const
 
 bool SwTextBlocks::Delete( sal_uInt16 n )
 {
-    if( pImp && !pImp->bInPutMuchBlocks )
+    if( pImp && !pImp->m_bInPutMuchBlocks )
     {
         if( pImp->IsFileChanged() )
             nErr = ERR_TXTBLOCK_NEWFILE_ERROR;
@@ -325,11 +325,11 @@ bool SwTextBlocks::Delete( sal_uInt16 n )
             nErr = pImp->Delete( n );
             if( !nErr )
             {
-                delete pImp->aNames[n];
-                pImp->aNames.erase( pImp->aNames.begin() + n );
+                delete pImp->m_aNames[n];
+                pImp->m_aNames.erase( pImp->m_aNames.begin() + n );
             }
-            if( n == pImp->nCur )
-                pImp->nCur = USHRT_MAX;
+            if( n == pImp->m_nCurrentIndex )
+                pImp->m_nCurrentIndex = USHRT_MAX;
             if( !nErr )
                 nErr = pImp->MakeBlockList();
         }
@@ -341,12 +341,11 @@ bool SwTextBlocks::Delete( sal_uInt16 n )
     return false;
 }
 
-sal_uInt16 SwTextBlocks::Rename( sal_uInt16 n, const OUString* s, const OUString* l )
+void SwTextBlocks::Rename( sal_uInt16 n, const OUString* s, const OUString* l )
 {
-    sal_uInt16 nIdx = USHRT_MAX;
-    if( pImp && !pImp->bInPutMuchBlocks )
+    if( pImp && !pImp->m_bInPutMuchBlocks )
     {
-        pImp->nCur = nIdx;
+        pImp->m_nCurrentIndex = USHRT_MAX;
         OUString aNew;
         OUString aLong;
         if( s )
@@ -357,7 +356,7 @@ sal_uInt16 SwTextBlocks::Rename( sal_uInt16 n, const OUString* s, const OUString
         {
             OSL_ENSURE( false, "No short name provided in the rename" );
             nErr = ERR_SWG_INTERNAL_ERROR;
-            return USHRT_MAX;
+            return;
         }
 
         if( pImp->IsFileChanged() )
@@ -369,19 +368,16 @@ sal_uInt16 SwTextBlocks::Rename( sal_uInt16 n, const OUString* s, const OUString
              nErr = pImp->Rename( n, aNew, aLong );
             if( !nErr )
             {
-                bool bOnlyTxt = pImp->aNames[ n ]->bIsOnlyTxt;
-                delete pImp->aNames[n];
-                pImp->aNames.erase( pImp->aNames.begin() + n );
-                pImp->AddName( aNew, aLong, bOnlyTxt );
+                bool bOnlyText = pImp->m_aNames[ n ]->bIsOnlyText;
+                delete pImp->m_aNames[n];
+                pImp->m_aNames.erase( pImp->m_aNames.begin() + n );
+                pImp->AddName( aNew, aLong, bOnlyText );
                 nErr = pImp->MakeBlockList();
             }
         }
         pImp->CloseFile();
         pImp->Touch();
-        if( !nErr )
-            nIdx = pImp->GetIndex( aNew );
     }
-    return nIdx;
 }
 
 sal_uLong SwTextBlocks::CopyBlock( SwTextBlocks& rSource, OUString& rSrcShort,
@@ -390,13 +386,13 @@ sal_uLong SwTextBlocks::CopyBlock( SwTextBlocks& rSource, OUString& rSrcShort,
     bool bIsOld = false;
     if (rSource.pImp)
     {
-        short nType = rSource.pImp->GetFileType();
-        if (SWBLK_SW2 == nType || SWBLK_SW3 == nType )
+        SwImpBlocks::FileType nType = rSource.pImp->GetFileType();
+        if (SwImpBlocks::FileType::SW3 == nType)
             bIsOld = true;
     }
     if( bIsOld ) //rSource.IsOld() )
         nErr = ERR_SWG_OLD_GLOSSARY;
-    else if( pImp->bInPutMuchBlocks )
+    else if( pImp->m_bInPutMuchBlocks )
         nErr = ERR_SWG_INTERNAL_ERROR;
     else
         nErr = pImp->CopyBlock(*rSource.pImp, rSrcShort, rLong);
@@ -405,18 +401,18 @@ sal_uLong SwTextBlocks::CopyBlock( SwTextBlocks& rSource, OUString& rSrcShort,
 
 bool SwTextBlocks::BeginGetDoc( sal_uInt16 n )
 {
-    if( pImp && !pImp->bInPutMuchBlocks )
+    if( pImp && !pImp->m_bInPutMuchBlocks )
     {
         if( pImp->IsFileChanged() )
             nErr = ERR_TXTBLOCK_NEWFILE_ERROR;
-        else if( 0 == ( nErr = pImp->OpenFile( true )))
+        else if( 0 == ( nErr = pImp->OpenFile()))
         {
             pImp->ClearDoc();
             nErr = pImp->GetDoc( n );
             if( nErr )
-                pImp->nCur = USHRT_MAX;
+                pImp->m_nCurrentIndex = USHRT_MAX;
             else
-                pImp->nCur = n;
+                pImp->m_nCurrentIndex = n;
         }
         return ( nErr == 0 );
     }
@@ -425,7 +421,7 @@ bool SwTextBlocks::BeginGetDoc( sal_uInt16 n )
 
 void SwTextBlocks::EndGetDoc()
 {
-    if( pImp && !pImp->bInPutMuchBlocks )
+    if( pImp && !pImp->m_bInPutMuchBlocks )
         pImp->CloseFile();
 }
 
@@ -433,7 +429,7 @@ bool SwTextBlocks::BeginPutDoc( const OUString& s, const OUString& l )
 {
     if( pImp )
     {
-        bool bOk = pImp->bInPutMuchBlocks;
+        bool bOk = pImp->m_bInPutMuchBlocks;
         if( !bOk )
         {
             if( pImp->IsFileChanged() )
@@ -461,34 +457,34 @@ sal_uInt16 SwTextBlocks::PutDoc()
         nErr = pImp->PutDoc();
         if( !nErr )
         {
-            pImp->nCur = GetIndex( pImp->aShort );
-            if( pImp->nCur != USHRT_MAX )
-                pImp->aNames[ pImp->nCur ]->aLong = pImp->aLong;
+            pImp->m_nCurrentIndex = GetIndex( pImp->m_aShort );
+            if( pImp->m_nCurrentIndex != USHRT_MAX )
+                pImp->m_aNames[ pImp->m_nCurrentIndex ]->aLong = pImp->m_aLong;
             else
             {
-                pImp->AddName( pImp->aShort, pImp->aLong );
-                pImp->nCur = pImp->GetIndex( pImp->aShort );
+                pImp->AddName( pImp->m_aShort, pImp->m_aLong );
+                pImp->m_nCurrentIndex = pImp->GetIndex( pImp->m_aShort );
             }
-            if( !pImp->bInPutMuchBlocks )
+            if( !pImp->m_bInPutMuchBlocks )
                 nErr = pImp->MakeBlockList();
         }
-        if( !pImp->bInPutMuchBlocks )
+        if( !pImp->m_bInPutMuchBlocks )
         {
             pImp->CloseFile();
             pImp->Touch();
         }
-        nIdx = pImp->nCur;
+        nIdx = pImp->m_nCurrentIndex;
     }
     return nIdx;
 }
 
 sal_uInt16 SwTextBlocks::PutText( const OUString& rShort, const OUString& rName,
-                                  const OUString& rTxt )
+                                  const OUString& rText )
 {
     sal_uInt16 nIdx = USHRT_MAX;
     if( pImp )
     {
-        bool bOk = pImp->bInPutMuchBlocks;
+        bool bOk = pImp->m_bInPutMuchBlocks;
         if( !bOk )
         {
             if( pImp->IsFileChanged() )
@@ -500,23 +496,23 @@ sal_uInt16 SwTextBlocks::PutText( const OUString& rShort, const OUString& rName,
         if( bOk )
         {
             OUString aNew = GetAppCharClass().uppercase( rShort );
-            nErr = pImp->PutText( aNew, rName, rTxt );
-            pImp->nCur = USHRT_MAX;
+            nErr = pImp->PutText( aNew, rName, rText );
+            pImp->m_nCurrentIndex = USHRT_MAX;
             if( !nErr )
             {
-                nIdx = GetIndex( pImp->aShort );
+                nIdx = GetIndex( pImp->m_aShort );
                 if( nIdx != USHRT_MAX )
-                    pImp->aNames[ nIdx ]->aLong = rName;
+                    pImp->m_aNames[ nIdx ]->aLong = rName;
                 else
                 {
-                    pImp->AddName( pImp->aShort, rName, true );
-                    nIdx = pImp->GetIndex( pImp->aShort );
+                    pImp->AddName( pImp->m_aShort, rName, true );
+                    nIdx = pImp->GetIndex( pImp->m_aShort );
                 }
-                if( !pImp->bInPutMuchBlocks )
+                if( !pImp->m_bInPutMuchBlocks )
                     nErr = pImp->MakeBlockList();
             }
         }
-        if( !pImp->bInPutMuchBlocks )
+        if( !pImp->m_bInPutMuchBlocks )
         {
             pImp->CloseFile();
             pImp->Touch();
@@ -529,11 +525,11 @@ SwDoc* SwTextBlocks::GetDoc()
 {
     if( pImp )
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        return pImp->pDoc;
+        return pImp->m_pDoc;
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         return pImp->m_xDoc.get();
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    return 0;
+    return nullptr;
 }
 
 void SwTextBlocks::ClearDoc()
@@ -541,7 +537,7 @@ void SwTextBlocks::ClearDoc()
     if( pImp )
     {
         pImp->ClearDoc();
-        pImp->nCur = USHRT_MAX;
+        pImp->m_nCurrentIndex = USHRT_MAX;
     }
 }
 
@@ -552,23 +548,23 @@ OUString SwTextBlocks::GetFileName() const
 
 bool SwTextBlocks::IsReadOnly() const
 {
-    return pImp->bReadOnly;
+    return pImp->m_bReadOnly;
 }
 
 bool SwTextBlocks::IsOnlyTextBlock( sal_uInt16 nIdx ) const
 {
     bool bRet = false;
-    if( pImp && !pImp->bInPutMuchBlocks )
+    if( pImp && !pImp->m_bInPutMuchBlocks )
     {
-        SwBlockName* pBlkNm = const_cast<SwBlockName*>( pImp->aNames[ nIdx ] );
-        if( !pBlkNm->bIsOnlyTxtFlagInit &&
-            !pImp->IsFileChanged() && !pImp->OpenFile( true ) )
+        SwBlockName* pBlkNm = pImp->m_aNames[ nIdx ];
+        if( !pBlkNm->bIsOnlyTextFlagInit &&
+            !pImp->IsFileChanged() && !pImp->OpenFile() )
         {
-            pBlkNm->bIsOnlyTxt = pImp->IsOnlyTextBlock( pBlkNm->aShort );
-            pBlkNm->bIsOnlyTxtFlagInit = true;
+            pBlkNm->bIsOnlyText = pImp->IsOnlyTextBlock( pBlkNm->aShort );
+            pBlkNm->bIsOnlyTextFlagInit = true;
             pImp->CloseFile();
         }
-        bRet = pBlkNm->bIsOnlyTxt;
+        bRet = pBlkNm->bIsOnlyText;
     }
     return bRet;
 }
@@ -578,8 +574,8 @@ bool SwTextBlocks::IsOnlyTextBlock( const OUString& rShort ) const
     sal_uInt16 nIdx = pImp->GetIndex( rShort );
     if( USHRT_MAX != nIdx )
     {
-        if( pImp->aNames[ nIdx ]->bIsOnlyTxtFlagInit )
-            return pImp->aNames[ nIdx ]->bIsOnlyTxt;
+        if( pImp->m_aNames[ nIdx ]->bIsOnlyTextFlagInit )
+            return pImp->m_aNames[ nIdx ]->bIsOnlyText;
         return IsOnlyTextBlock( nIdx );
     }
 
@@ -587,19 +583,19 @@ bool SwTextBlocks::IsOnlyTextBlock( const OUString& rShort ) const
     return false;
 }
 
-bool SwTextBlocks::GetMacroTable( sal_uInt16 nIdx, SvxMacroTableDtor& rMacroTbl )
+bool SwTextBlocks::GetMacroTable( sal_uInt16 nIdx, SvxMacroTableDtor& rMacroTable )
 {
     bool bRet = true;
-    if ( pImp && !pImp->bInPutMuchBlocks )
-        bRet = ( 0 == pImp->GetMacroTable( nIdx, rMacroTbl ) );
+    if ( pImp && !pImp->m_bInPutMuchBlocks )
+        bRet = ( 0 == pImp->GetMacroTable( nIdx, rMacroTable ) );
     return bRet;
 }
 
-bool SwTextBlocks::SetMacroTable( sal_uInt16 nIdx, const SvxMacroTableDtor& rMacroTbl )
+bool SwTextBlocks::SetMacroTable( sal_uInt16 nIdx, const SvxMacroTableDtor& rMacroTable )
 {
     bool bRet = true;
-    if ( pImp && !pImp->bInPutMuchBlocks )
-        bRet = ( 0 == pImp->SetMacroTable( nIdx, rMacroTbl ) );
+    if ( pImp && !pImp->m_bInPutMuchBlocks )
+        bRet = ( 0 == pImp->SetMacroTable( nIdx, rMacroTable ) );
     return bRet;
 }
 
