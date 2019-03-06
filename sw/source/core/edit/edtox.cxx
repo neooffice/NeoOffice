@@ -17,10 +17,11 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <com/sun/star/util/SearchOptions.hpp>
+#include <com/sun/star/util/SearchAlgorithms2.hpp>
 #include <com/sun/star/util/SearchFlags.hpp>
-#include <com/sun/star/i18n/TransliterationModules.hpp>
 #include <comphelper/string.hxx>
+#include <i18nutil/transliteration.hxx>
+#include <i18nutil/searchopt.hxx>
 #include <svl/fstathelper.hxx>
 #include <osl/thread.h>
 #include <unotools/textsearch.hxx>
@@ -60,22 +61,22 @@ void SwEditShell::Insert(const SwTOXMark& rMark)
 {
     bool bInsAtPos = rMark.IsAlternativeText();
     StartAllAction();
-    FOREACHPAM_START(GetCrsr())
-
-        const SwPosition *pStt = PCURCRSR->Start(),
-                         *pEnd = PCURCRSR->End();
+    for(SwPaM& rPaM : GetCursor()->GetRingContainer())
+    {
+        const SwPosition *pStt = rPaM.Start(),
+                         *pEnd = rPaM.End();
         if( bInsAtPos )
         {
             SwPaM aTmp( *pStt );
-            GetDoc()->getIDocumentContentOperations().InsertPoolItem( aTmp, rMark, 0 );
+            GetDoc()->getIDocumentContentOperations().InsertPoolItem( aTmp, rMark );
         }
         else if( *pEnd != *pStt )
         {
             GetDoc()->getIDocumentContentOperations().InsertPoolItem(
-                *PCURCRSR, rMark, nsSetAttrMode::SETATTR_DONTEXPAND );
+                rPaM, rMark, SetAttrMode::DONTEXPAND );
         }
 
-    FOREACHPAM_END()
+    }
     EndAllAction();
 }
 
@@ -94,28 +95,28 @@ void SwEditShell::DeleteTOXMark( SwTOXMark* pMark )
 }
 
 /// Collect all listing markers
-sal_uInt16 SwEditShell::GetCurTOXMarks(SwTOXMarks& rMarks) const
+void SwEditShell::GetCurTOXMarks(SwTOXMarks& rMarks) const
 {
-    return GetDoc()->GetCurTOXMark( *GetCrsr()->Start(), rMarks );
+    SwDoc::GetCurTOXMark( *GetCursor()->Start(), rMarks );
 }
 
-bool SwEditShell::IsTOXBaseReadonly(const SwTOXBase& rTOXBase) const
+bool SwEditShell::IsTOXBaseReadonly(const SwTOXBase& rTOXBase)
 {
-    OSL_ENSURE( rTOXBase.ISA( SwTOXBaseSection ), "no TOXBaseSection!" );
+    OSL_ENSURE( dynamic_cast<const SwTOXBaseSection*>( &rTOXBase) !=  nullptr, "no TOXBaseSection!" );
     const SwTOXBaseSection& rTOXSect = static_cast<const SwTOXBaseSection&>(rTOXBase);
     return  rTOXSect.IsProtect();
 }
 
 void SwEditShell::SetTOXBaseReadonly(const SwTOXBase& rTOXBase, bool bReadonly)
 {
-    OSL_ENSURE( rTOXBase.ISA( SwTOXBaseSection ), "no TOXBaseSection!" );
+    OSL_ENSURE( dynamic_cast<const SwTOXBaseSection*>( &rTOXBase) !=  nullptr, "no TOXBaseSection!" );
     const SwTOXBaseSection& rTOXSect = static_cast<const SwTOXBaseSection&>(rTOXBase);
-    ((SwTOXBase&)rTOXBase).SetProtected(bReadonly);
+    const_cast<SwTOXBase&>(rTOXBase).SetProtected(bReadonly);
     OSL_ENSURE( rTOXSect.SwSection::GetType() == TOX_CONTENT_SECTION, "not a TOXContentSection" );
 
     SwSectionData aSectionData(rTOXSect);
     aSectionData.SetProtectFlag(bReadonly);
-    UpdateSection( GetSectionFmtPos( *rTOXSect.GetFmt()  ), aSectionData, 0 );
+    UpdateSection( GetSectionFormatPos( *rTOXSect.GetFormat()  ), aSectionData );
 }
 
 const SwTOXBase*    SwEditShell::GetDefaultTOXBase( TOXTypes eTyp, bool bCreate )
@@ -144,16 +145,16 @@ void SwEditShell::InsertTableOf( const SwTOXBase& rTOX, const SfxItemSet* pSet )
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     const SwTOXBaseSection* pTOX = mxDoc->InsertTableOf(
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                                        *GetCrsr()->GetPoint(), rTOX, pSet, true );
+                                        *GetCursor()->GetPoint(), rTOX, pSet, true );
     OSL_ENSURE(pTOX, "No current TOx");
 
     // start formatting
     CalcLayout();
 
     // insert page numbering
-    ((SwTOXBaseSection*)pTOX)->UpdatePageNum();
+    const_cast<SwTOXBaseSection*>(pTOX)->UpdatePageNum();
 
-    pTOX->SetPosAtStartEnd( *GetCrsr()->GetPoint() );
+    pTOX->SetPosAtStartEnd( *GetCursor()->GetPoint() );
 
     // Fix for empty listing
     InvalidateWindows( maVisArea );
@@ -166,10 +167,10 @@ bool SwEditShell::UpdateTableOf( const SwTOXBase& rTOX, const SfxItemSet* pSet )
 {
     bool bRet = false;
 
-    OSL_ENSURE( rTOX.ISA( SwTOXBaseSection ),  "no TOXBaseSection!" );
+    OSL_ENSURE( dynamic_cast<const SwTOXBaseSection*>( &rTOX) !=  nullptr,  "no TOXBaseSection!" );
     SwTOXBaseSection* pTOX = const_cast<SwTOXBaseSection*>(static_cast<const SwTOXBaseSection*>(&rTOX));
     OSL_ENSURE(pTOX, "no current listing");
-    if( pTOX && 0 != pTOX->GetFmt()->GetSectionNode() )
+    if( pTOX && nullptr != pTOX->GetFormat()->GetSectionNode() )
     {
         SwDoc* pMyDoc = GetDoc();
         SwDocShell* pDocSh = pMyDoc->GetDocShell();
@@ -181,14 +182,14 @@ bool SwEditShell::UpdateTableOf( const SwTOXBase& rTOX, const SfxItemSet* pSet )
         ::StartProgress( STR_STATSTR_TOX_UPDATE, 0, 0, pDocSh );
         ::SetProgressText( STR_STATSTR_TOX_UPDATE, pDocSh );
 
-        pMyDoc->GetIDocumentUndoRedo().StartUndo(UNDO_TOXCHANGE, NULL);
+        pMyDoc->GetIDocumentUndoRedo().StartUndo(SwUndoId::TOXCHANGE, nullptr);
 
         // create listing stub
         pTOX->Update(pSet);
 
         // correct Cursor
         if( bInIndex )
-            pTOX->SetPosAtStartEnd( *GetCrsr()->GetPoint() );
+            pTOX->SetPosAtStartEnd( *GetCursor()->GetPoint() );
 
         // start formatting
         CalcLayout();
@@ -196,7 +197,7 @@ bool SwEditShell::UpdateTableOf( const SwTOXBase& rTOX, const SfxItemSet* pSet )
         // insert page numbering
         pTOX->UpdatePageNum();
 
-        pMyDoc->GetIDocumentUndoRedo().EndUndo(UNDO_TOXCHANGE, NULL);
+        pMyDoc->GetIDocumentUndoRedo().EndUndo(SwUndoId::TOXCHANGE, nullptr);
 
         ::EndProgress( pDocSh );
         EndAllAction();
@@ -207,7 +208,7 @@ bool SwEditShell::UpdateTableOf( const SwTOXBase& rTOX, const SfxItemSet* pSet )
 /// Get current listing before or at the Cursor
 const SwTOXBase* SwEditShell::GetCurTOX() const
 {
-    return GetDoc()->GetCurTOX( *GetCrsr()->GetPoint() );
+    return SwDoc::GetCurTOX( *GetCursor()->GetPoint() );
 }
 
 bool SwEditShell::DeleteTOX( const SwTOXBase& rTOXBase, bool bDelNodes )
@@ -228,20 +229,20 @@ const SwTOXType* SwEditShell::GetTOXType(TOXTypes eTyp, sal_uInt16 nId) const
 
 // manage keys for the alphabetical index
 
-sal_uInt16 SwEditShell::GetTOIKeys( SwTOIKeyType eTyp, std::vector<OUString>& rArr ) const
+void SwEditShell::GetTOIKeys( SwTOIKeyType eTyp, std::vector<OUString>& rArr ) const
 {
-    return GetDoc()->GetTOIKeys( eTyp, rArr );
+    GetDoc()->GetTOIKeys( eTyp, rArr );
 }
 
 sal_uInt16 SwEditShell::GetTOXCount() const
 {
-    const SwSectionFmts& rFmts = GetDoc()->GetSections();
+    const SwSectionFormats& rFormats = GetDoc()->GetSections();
     sal_uInt16 nRet = 0;
-    for( sal_uInt16 n = rFmts.size(); n; )
+    for( auto n = rFormats.size(); n; )
     {
-        const SwSection* pSect = rFmts[ --n ]->GetSection();
+        const SwSection* pSect = rFormats[ --n ]->GetSection();
         if( TOX_CONTENT_SECTION == pSect->GetType() &&
-            pSect->GetFmt()->GetSectionNode() )
+            pSect->GetFormat()->GetSectionNode() )
             ++nRet;
     }
     return nRet;
@@ -249,19 +250,20 @@ sal_uInt16 SwEditShell::GetTOXCount() const
 
 const SwTOXBase* SwEditShell::GetTOX( sal_uInt16 nPos ) const
 {
-    const SwSectionFmts& rFmts = GetDoc()->GetSections();
-    for( sal_uInt16 n = 0, nCnt = 0; n < rFmts.size(); ++n )
+    const SwSectionFormats& rFormats = GetDoc()->GetSections();
+    sal_uInt16 nCnt {0};
+    for( const SwSectionFormat *pFormat : rFormats )
     {
-        const SwSection* pSect = rFmts[ n ]->GetSection();
+        const SwSection* pSect = pFormat->GetSection();
         if( TOX_CONTENT_SECTION == pSect->GetType() &&
-            pSect->GetFmt()->GetSectionNode() &&
+            pSect->GetFormat()->GetSectionNode() &&
             nCnt++ == nPos )
         {
-            OSL_ENSURE( pSect->ISA( SwTOXBaseSection ), "no TOXBaseSection!" );
+            OSL_ENSURE( dynamic_cast<const SwTOXBaseSection*>( pSect) !=  nullptr, "no TOXBaseSection!" );
             return static_cast<const SwTOXBaseSection*>(pSect);
         }
     }
-    return 0;
+    return nullptr;
 }
 
 /** Update of all listings after reading-in a file */
@@ -304,18 +306,16 @@ void SwEditShell::ApplyAutoMark()
 
         SwTOXMarks aMarks;
         SwTOXMark::InsertTOXMarks( aMarks, *pTOXType );
-        for( sal_uInt16 nMark=0; nMark<aMarks.size(); nMark++ )
+        for( SwTOXMark* pMark : aMarks )
         {
-            SwTOXMark* pMark = aMarks[nMark];
-            if(pMark->IsAutoGenerated() && pMark->GetTxtTOXMark())
+            if(pMark->IsAutoGenerated() && pMark->GetTextTOXMark())
                 // mba: test iteration; objects are deleted in iteration
                 DeleteTOXMark(pMark);
         }
 
         //2.
-        SfxMedium aMedium( sAutoMarkURL, STREAM_STD_READ );
+        SfxMedium aMedium( sAutoMarkURL, StreamMode::STD_READ );
         SvStream& rStrm = *aMedium.GetInStream();
-        const sal_Unicode cZero('0');
         Push();
         rtl_TextEncoding eChrSet = ::osl_getThreadTextEncoding();
 
@@ -323,17 +323,17 @@ void SwEditShell::ApplyAutoMark()
         sal_Int32 nLEV_Other    = 2;    //  -> changedChars;
         sal_Int32 nLEV_Longer   = 3;    //! -> deletedChars;
         sal_Int32 nLEV_Shorter  = 1;    //! -> insertedChars;
-        sal_Int32 nTransliterationFlags = 0;
 
         sal_Int32 nSrchFlags = SearchFlags::LEV_RELAXED;
 
-        OUString sEmpty;
-        SearchOptions aSearchOpt(
+        i18nutil::SearchOptions2 aSearchOpt(
                             SearchAlgorithms_ABSOLUTE, nSrchFlags,
-                            sEmpty, sEmpty,
+                            "", "",
                             SvtSysLocale().GetLanguageTag().getLocale(),
                             nLEV_Other, nLEV_Longer, nLEV_Shorter,
-                            nTransliterationFlags );
+                            TransliterationFlags::NONE,
+                            SearchAlgorithms2::ABSOLUTE,
+                            '\\' );
 
         while( !rStrm.GetError() && !rStrm.IsEof() )
         {
@@ -359,18 +359,18 @@ void SwEditShell::ApplyAutoMark()
                     OUString sWordOnly    = sLine.getToken(0, ';', nTokenPos);
 
                     //3.
-                    bool bCaseSensitive = !sCase.isEmpty() && !comphelper::string::equals(sCase, cZero);
-                    bool bWordOnly = !sWordOnly.isEmpty() && !comphelper::string::equals(sWordOnly, cZero);
+                    bool bCaseSensitive = !sCase.isEmpty() && sCase != "0";
+                    bool bWordOnly = !sWordOnly.isEmpty() && sWordOnly != "0";
 
                     if (!bCaseSensitive)
                     {
                         aSearchOpt.transliterateFlags |=
-                                     TransliterationModules_IGNORE_CASE;
+                                     TransliterationFlags::IGNORE_CASE;
                     }
                     else
                     {
                         aSearchOpt.transliterateFlags &=
-                                    ~TransliterationModules_IGNORE_CASE;
+                                    ~TransliterationFlags::IGNORE_CASE;
                     }
                     if ( bWordOnly)
                         aSearchOpt.searchFlag |=  SearchFlags::NORM_WORD_ONLY;
@@ -384,8 +384,8 @@ void SwEditShell::ApplyAutoMark()
 
                     // todo/mba: assuming that notes shouldn't be searched
                     bool bSearchInNotes = false;
-                    sal_uLong nRet = Find( aSearchOpt,  bSearchInNotes, DOCPOS_START, DOCPOS_END, bCancel,
-                                    (FindRanges)(FND_IN_SELALL), false );
+                    sal_uLong nRet = Find( aSearchOpt, bSearchInNotes, SwDocPositions::Start, SwDocPositions::End, bCancel,
+                                    FindRanges::InSelAll );
 
                     if(nRet)
                     {
@@ -407,7 +407,7 @@ void SwEditShell::ApplyAutoMark()
             }
         }
         KillPams();
-        Pop(false);
+        Pop(PopMode::DeleteCurrent);
     }
     DoUndo(bDoesUndo);
     EndAllAction();
