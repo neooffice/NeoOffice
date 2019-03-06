@@ -36,15 +36,13 @@ public:
     OUString aShort;               /// Shortname
     OUString aLong;                /// Longname
     OUString aPackageName;         /// Package name
-    bool bIsOnlyTxtFlagInit : 1;   /// Is the Flag valid?
-    bool bIsOnlyTxt : 1;           /// Unformatted text
-    bool bInPutMuchBlocks : 1;     /// Put serveral block entries
+    bool bIsOnlyTextFlagInit : 1;   /// Is the Flag valid?
+    bool bIsOnlyText : 1;           /// Unformatted text
 
     SwBlockName( const OUString& rShort, const OUString& rLong );
     SwBlockName( const OUString& rShort, const OUString& rLong, const OUString& rPackageName );
 
     /// For sorting in the array
-    bool operator==( const SwBlockName& r ) const { return aShort == r.aShort; }
     bool operator< ( const SwBlockName& r ) const { return aShort <  r.aShort; }
 };
 
@@ -54,42 +52,44 @@ class SwImpBlocks
 {
     friend class SwTextBlocks;
 protected:
-    OUString aFile;                     // Physical file name
-    OUString aName;                     // Logical file name
-    OUString aCur;                      // Current text
-    OUString aShort, aLong;             // Short- and longname (PutDoc)
-    OUString sBaseURL;                  // Base URL - has to be set at the Readers and Writers
-    SwBlockNames aNames;                // List of all Blocks
-    Date aDateModified;                 // For aligning the Actions
-    tools::Time aTimeModified;
+    OUString m_aFile;                     // Physical file name
+    OUString m_aName;                     // Logical file name
+    OUString m_aCurrentText;                      // Current text
+    OUString m_aShort, m_aLong;             // Short- and longname (PutDoc)
+    OUString m_sBaseURL;                  // Base URL - has to be set at the Readers and Writers
+    SwBlockNames m_aNames;                // List of all Blocks
+    Date m_aDateModified;                 // For aligning the Actions
+    tools::Time m_aTimeModified;
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    SwDoc* pDoc;                        // Document to be switched
+    SwDoc* m_pDoc;                        // Document to be switched
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     rtl::Reference<SwDoc> m_xDoc;                        // Document to be switched
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    sal_uInt16 nCur;                    // Current Index
-    bool bReadOnly : 1;
-    bool bInPutMuchBlocks : 1;          // Put serveral block entries
-    bool bInfoChanged : 1;              // Whether any info of TextBlock changed
+    sal_uInt16 m_nCurrentIndex;                    // Current Index
+    bool m_bReadOnly : 1;
+    bool m_bInPutMuchBlocks : 1;          // Put several block entries
+    bool m_bInfoChanged : 1;              // Whether any info of TextBlock changed
 
-    SwImpBlocks( const OUString&, bool = false );
-    virtual ~SwImpBlocks();
+    explicit SwImpBlocks( const OUString& );
 
-    static short GetFileType( const OUString& );
-    virtual short GetFileType() const = 0;
-#define SWBLK_NO_FILE   0               // Not present
-#define SWBLK_NONE      1               // No TB file
-#define SWBLK_SW2       2               // SW2 file
-#define SWBLK_SW3       3               // SW3 file
-#define SWBLK_XML       4               // XML Block List
+    enum class FileType {
+        NoFile,  // Not present
+        None,    // No TB file
+        SW3,     // SW3 file
+        XML      // XML Block List
+    };
+    static FileType GetFileType( const OUString& );
+    virtual FileType GetFileType() const = 0;
 
     virtual void   ClearDoc();          // Delete Doc content
     SwPaM* MakePaM();                   // Span PaM over Doc
-    virtual void   AddName( const OUString&, const OUString&, bool bOnlyTxt = false );
+    virtual void   AddName( const OUString&, const OUString&, bool bOnlyText = false );
     bool   IsFileChanged() const;
     void   Touch();
 
 public:
+    virtual ~SwImpBlocks();
+
     static sal_uInt16 Hash( const OUString& );        /// Hashcode for Block names
     sal_uInt16 GetCount() const;                      /// Get count of Text Blocks
     sal_uInt16 GetIndex( const OUString& ) const;     /// Index for shortnames
@@ -98,14 +98,14 @@ public:
     OUString GetLongName( sal_uInt16 ) const;         /// Return longname for index
     OUString GetPackageName( sal_uInt16 ) const;      /// Return packagename for index
 
-    OUString GetFileName() const {return aFile;}      /// Return physical file name
+    const OUString& GetFileName() const {return m_aFile;}      /// Return physical file name
     void SetName( const OUString& rName )             /// Logic name
-        { aName = rName; bInfoChanged = true; }
-    OUString GetName( void )
-        { return aName; }
+        { m_aName = rName; m_bInfoChanged = true; }
+    const OUString& GetName()
+        { return m_aName; }
 
-    OUString            GetBaseURL() const { return sBaseURL;}
-    void                SetBaseURL( const OUString& rURL ) { sBaseURL = rURL; }
+    const OUString&     GetBaseURL() const { return m_sBaseURL;}
+    void                SetBaseURL( const OUString& rURL ) { m_sBaseURL = rURL; }
 
     virtual sal_uLong Delete( sal_uInt16 ) = 0;
     virtual sal_uLong Rename( sal_uInt16, const OUString&, const OUString& ) = 0;
@@ -113,7 +113,6 @@ public:
     virtual sal_uLong GetDoc( sal_uInt16 ) = 0;
     virtual sal_uLong BeginPutDoc( const OUString&, const OUString& ) = 0;
     virtual sal_uLong PutDoc() = 0;
-    virtual sal_uLong GetText( sal_uInt16, OUString& ) = 0;
     virtual sal_uLong PutText( const OUString&, const OUString&, const OUString& ) = 0;
     virtual sal_uLong MakeBlockList() = 0;
 
@@ -122,11 +121,9 @@ public:
 
     virtual bool IsOnlyTextBlock( const OUString& rShort ) const;
 
-    virtual sal_uLong GetMacroTable( sal_uInt16 nIdx, SvxMacroTableDtor& rMacroTbl,
-                                 bool bFileAlreadyOpen = false );
+    virtual sal_uLong GetMacroTable( sal_uInt16 nIdx, SvxMacroTableDtor& rMacroTable );
     virtual sal_uLong SetMacroTable( sal_uInt16 nIdx,
-                                 const SvxMacroTableDtor& rMacroTbl,
-                                 bool bFileAlreadyOpen = false );
+                                 const SvxMacroTableDtor& rMacroTable );
     virtual bool PutMuchEntries( bool bOn );
 };
 

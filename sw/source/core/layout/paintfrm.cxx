@@ -34,7 +34,7 @@
 #include <svx/framelink.hxx>
 #include <drawdoc.hxx>
 #include <tgrditem.hxx>
-#include <switerator.hxx>
+#include <calbck.hxx>
 #include <fmtsrnd.hxx>
 #include <fmtclds.hxx>
 #include <comcore.hrc>
@@ -77,6 +77,7 @@
 
 #include <ndole.hxx>
 #include <PostItMgr.hxx>
+#include <FrameControlsManager.hxx>
 #include <vcl/settings.hxx>
 
 #include <svx/sdr/attribute/sdrallfillattributeshelper.hxx>
@@ -85,6 +86,7 @@
 #include <svtools/borderhelper.hxx>
 
 #include "pagefrm.hrc"
+#include "bitmaps.hlst"
 #include <drawinglayer/primitive2d/polygonprimitive2d.hxx>
 #include <drawinglayer/primitive2d/polypolygonprimitive2d.hxx>
 #include <drawinglayer/primitive2d/borderlineprimitive2d.hxx>
@@ -94,16 +96,21 @@
 #include <drawinglayer/primitive2d/textlayoutdevice.hxx>
 #include <drawinglayer/processor2d/processorfromoutputdevice.hxx>
 #include <svx/unoapi.hxx>
-#include <comphelper/sequenceasvector.hxx>
+#include <comphelper/sequence.hxx>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
 #include <basegfx/color/bcolortools.hxx>
 
+#include <memory>
 #include <vector>
 #include <algorithm>
 #include <wrtsh.hxx>
 #include <edtwin.hxx>
 #include <view.hxx>
 #include <paintfrm.hxx>
+#include <textboxhelper.hxx>
+#include <o3tl/typed_flags_set.hxx>
+
+#include <vcl/BitmapTools.hxx>
 
 #ifdef USE_JAVA
 #include <crsrsh.hxx>
@@ -118,7 +125,7 @@
 typedef sal_Bool UseDarkModeColors_Type();
 
 static ::osl::Module aModule;
-static UseDarkModeColors_Type *pUseDarkModeColors = NULL;
+static UseDarkModeColors_Type *pUseDarkModeColors = nullptr;
 
 static sal_Bool UseDarkModeColors()
 {
@@ -128,7 +135,7 @@ static sal_Bool UseDarkModeColors()
     if (!pUseDarkModeColors)
     {
         if (aModule.load("libvcllo.dylib"))
-            pUseDarkModeColors = (UseDarkModeColors_Type *)aModule.getSymbol( "UseDarkModeColors");
+            pUseDarkModeColors = reinterpret_cast< UseDarkModeColors_Type* >(aModule.getSymbol("UseDarkModeColors"));
     }
 
     if (pUseDarkModeColors)
@@ -142,14 +149,17 @@ static sal_Bool UseDarkModeColors()
 using namespace ::editeng;
 using namespace ::com::sun::star;
 using ::drawinglayer::primitive2d::BorderLinePrimitive2D;
-using ::std::pair;
-using ::std::make_pair;
+using std::pair;
+using std::make_pair;
+
+struct SwPaintProperties;
 
 //other subsidiary lines enabled?
 #define IS_SUBS (!gProp.pSGlobalShell->GetViewOptions()->IsPagePreview() && \
-        !gProp.pSGlobalShell->GetViewOptions()->IsReadonly() && \
-        !gProp.pSGlobalShell->GetViewOptions()->IsFormView() &&\
-         SwViewOption::IsDocBoundaries())
+                 !gProp.pSGlobalShell->GetViewOptions()->IsReadonly() && \
+                 !gProp.pSGlobalShell->GetViewOptions()->IsFormView() &&\
+                 !gProp.pSGlobalShell->GetViewOptions()->IsWhitespaceHidden() &&\
+                 SwViewOption::IsDocBoundaries())
 //subsidiary lines for sections
 #define IS_SUBS_SECTION (!gProp.pSGlobalShell->GetViewOptions()->IsPagePreview() && \
                          !gProp.pSGlobalShell->GetViewOptions()->IsReadonly()&&\
@@ -161,39 +171,43 @@ using ::std::make_pair;
                        SwViewOption::IsObjectBoundaries())
 
 //Class declaration; here because they are only used in this file
-
-#define SUBCOL_PAGE     0x01    //Helplines of the page
-#define SUBCOL_TAB      0x08    //Helplines inside tables
-#define SUBCOL_FLY      0x10    //Helplines inside fly frames
-#define SUBCOL_SECT     0x20    //Helplines inside sections
+enum class SubColFlags {
+    Page     = 0x01,    //Helplines of the page
+    Tab      = 0x08,   //Helplines inside tables
+    Fly      = 0x10,    //Helplines inside fly frames
+    Sect     = 0x20,    //Helplines inside sections
+};
+namespace o3tl {
+    template<> struct typed_flags<SubColFlags> : is_typed_flags<SubColFlags, 0x39> {};
+}
 
 // Classes collecting the border lines and help lines
 class SwLineRect : public SwRect
 {
-    Color aColor;
-    SvxBorderStyle  nStyle;
-    const SwTabFrm *pTab;
-          sal_uInt8     nSubColor;  //colorize subsidiary lines
-          bool          bPainted;   //already painted?
-          sal_uInt8     nLock;      //To distinguish the line and the hell layer.
+    Color             aColor;
+    SvxBorderLineStyle nStyle;
+    const SwTabFrame *pTab;
+    SubColFlags       nSubColor;  //colorize subsidiary lines
+    bool              bPainted;   //already painted?
+    sal_uInt8         nLock;      //To distinguish the line and the hell layer.
 public:
-    SwLineRect( const SwRect &rRect, const Color *pCol, const SvxBorderStyle nStyle,
-                const SwTabFrm *pT , const sal_uInt8 nSCol );
+    SwLineRect( const SwRect &rRect, const Color *pCol, const SvxBorderLineStyle nStyle,
+                const SwTabFrame *pT , const SubColFlags nSCol );
 
     const Color&         GetColor() const { return aColor;}
-    SvxBorderStyle       GetStyle() const { return nStyle; }
-    const SwTabFrm      *GetTab()   const { return pTab;  }
+    SvxBorderLineStyle   GetStyle() const { return nStyle; }
+    const SwTabFrame      *GetTab()   const { return pTab;  }
     void  SetPainted()                    { bPainted = true; }
     void  Lock( bool bLock )              { if ( bLock )
                                                 ++nLock;
                                             else if ( nLock )
                                                 --nLock;
                                           }
-    bool  IsPainted()               const { return bPainted; }
-    bool  IsLocked()                const { return nLock != 0;  }
-    sal_uInt8  GetSubColor()                const { return nSubColor;}
+    bool        IsPainted()               const { return bPainted; }
+    bool        IsLocked()                const { return nLock != 0;  }
+    SubColFlags GetSubColor()             const { return nSubColor;}
 
-    bool MakeUnion( const SwRect &rRect );
+    bool MakeUnion( const SwRect &rRect, SwPaintProperties &properties );
 };
 
 #ifdef IOS
@@ -224,10 +238,10 @@ public:
         dummy_function();
 #endif
     }
-    void AddLineRect( const SwRect& rRect,  const Color *pColor, const SvxBorderStyle nStyle,
-                      const SwTabFrm *pTab, const sal_uInt8 nSCol );
-    void ConnectEdges( OutputDevice *pOut );
-    void PaintLines  ( OutputDevice *pOut );
+    void AddLineRect( const SwRect& rRect,  const Color *pColor, const SvxBorderLineStyle nStyle,
+                      const SwTabFrame *pTab, const SubColFlags nSCol, SwPaintProperties &properties );
+    void ConnectEdges( OutputDevice *pOut, SwPaintProperties &properties );
+    void PaintLines  ( OutputDevice *pOut, SwPaintProperties &properties );
     void LockLines( bool bLock );
 
     //Limit lines to 100
@@ -236,40 +250,38 @@ public:
 
 class SwSubsRects : public SwLineRects
 {
-    void RemoveSuperfluousSubsidiaryLines( const SwLineRects &rRects );
+    void RemoveSuperfluousSubsidiaryLines( const SwLineRects &rRects, SwPaintProperties &properties );
 public:
-    void PaintSubsidiary( OutputDevice *pOut, const SwLineRects *pRects );
+    void PaintSubsidiary( OutputDevice *pOut, const SwLineRects *pRects, SwPaintProperties &properties );
 };
 
 class BorderLines
 {
-    typedef ::comphelper::SequenceAsVector<
-        ::rtl::Reference<BorderLinePrimitive2D> > Lines_t;
-    Lines_t m_Lines;
+    drawinglayer::primitive2d::Primitive2DContainer m_Lines;
 public:
-    void AddBorderLine(::rtl::Reference<BorderLinePrimitive2D> const& xLine);
-    drawinglayer::primitive2d::Primitive2DSequence GetBorderLines_Clear()
+    void AddBorderLine(css::uno::Reference<BorderLinePrimitive2D> const& xLine, SwPaintProperties& properties);
+    drawinglayer::primitive2d::Primitive2DContainer GetBorderLines_Clear()
     {
-        ::comphelper::SequenceAsVector<
-            ::drawinglayer::primitive2d::Primitive2DReference> lines;
-        for (Lines_t::const_iterator it = m_Lines.begin(); it != m_Lines.end();
-                ++it)
-        {
-            lines.push_back(it->get());
-        }
-        m_Lines.clear();
-        return lines.getAsConstList();
+        drawinglayer::primitive2d::Primitive2DContainer lines;
+        lines.swap(m_Lines);
+        return lines;
     }
 };
 
-// Current zoom factor
+// Default zoom factor
 const static double aMinDistScale = 0.73;
 const static double aEdgeScale = 0.5;
 
-//static SwSubsRects *gProp.pSSubsLines = 0;
-
 //To optimize the expensive RetouchColor determination
 Color aGlobalRetoucheColor;
+
+namespace sw
+{
+Color* GetActiveRetoucheColor()
+{
+    return &aGlobalRetoucheColor;
+}
+}
 
 /**
  * Container for static properties
@@ -278,15 +290,15 @@ struct SwPaintProperties {
     // Only repaint the Fly content as well as the background of the Fly content if
     // a metafile is taken of the Fly.
     bool                bSFlyMetafile;
-    OutputDevice       *pSFlyMetafileOut;
+    VclPtr<OutputDevice> pSFlyMetafileOut;
     SwViewShell        *pSGlobalShell;
 
     // Retouch for transparent Flys is done by the background of the Flys.
     // The Fly itself should certainly not be spared out. See PaintBackground and
     // lcl_SubtractFlys()
-    SwFlyFrm           *pSRetoucheFly;
-    SwFlyFrm           *pSRetoucheFly2;
-    SwFlyFrm           *pSFlyOnlyDraw;
+    SwFlyFrame           *pSRetoucheFly;
+    SwFlyFrame           *pSRetoucheFly2;
+    SwFlyFrame           *pSFlyOnlyDraw;
 
     // The borders will be collected in pSLines during the Paint and later
     // possibly merge them.
@@ -302,7 +314,7 @@ struct SwPaintProperties {
     SfxProgress        *pSProgress;
 
     // Sizes of a pixel and the corresponding halves. Will be reset when
-    // entering SwRootFrm::Paint
+    // entering SwRootFrame::Paint
     long                nSPixelSzW;
     long                nSPixelSzH;
     long                nSHalfPixelSzW;
@@ -318,16 +330,16 @@ struct SwPaintProperties {
 
     SwPaintProperties()
       : bSFlyMetafile(false)
-      , pSFlyMetafileOut(0)
-      , pSGlobalShell(0)
-      , pSRetoucheFly(0)
-      , pSRetoucheFly2(0)
-      , pSFlyOnlyDraw(0)
-      , pBLines(0)
-      , pSLines(0)
-      , pSSubsLines(0)
-      , pSSpecSubsLines(0)
-      , pSProgress(0)
+      , pSFlyMetafileOut(nullptr)
+      , pSGlobalShell(nullptr)
+      , pSRetoucheFly(nullptr)
+      , pSRetoucheFly2(nullptr)
+      , pSFlyOnlyDraw(nullptr)
+      , pBLines(nullptr)
+      , pSLines(nullptr)
+      , pSSubsLines(nullptr)
+      , pSSpecSubsLines(nullptr)
+      , pSProgress(nullptr)
       , nSPixelSzW(0)
       , nSPixelSzH(0)
       , nSHalfPixelSzW(0)
@@ -370,7 +382,7 @@ bool isTableBoundariesEnabled()
  * For 'small' twip-to-pixel relations (less then 2:1)
  * values of <gProp.nSHalfPixelSzW> and <gProp.nSHalfPixelSzH> are set to ZERO
  */
-void SwCalcPixStatics( OutputDevice *pOut )
+void SwCalcPixStatics( vcl::RenderContext *pOut )
 {
     // determine 'small' twip-to-pixel relation
     bool bSmallTwipToPxRelW = false;
@@ -424,7 +436,7 @@ void SwCalcPixStatics( OutputDevice *pOut )
 }
 
 /**
- * To be able to save the statics so the paint is more or lees reentrant
+ * To be able to save the statics so the paint is more or less reentrant
  */
 class SwSavePaintStatics : public SwPaintProperties
 {
@@ -459,18 +471,18 @@ SwSavePaintStatics::SwSavePaintStatics()
 
     // Restoring globales to default
     gProp.bSFlyMetafile = false;
-    gProp.pSFlyMetafileOut = 0;
-    gProp.pSRetoucheFly  = 0;
-    gProp.pSRetoucheFly2 = 0;
+    gProp.pSFlyMetafileOut = nullptr;
+    gProp.pSRetoucheFly  = nullptr;
+    gProp.pSRetoucheFly2 = nullptr;
     gProp.nSPixelSzW = gProp.nSPixelSzH =
     gProp.nSHalfPixelSzW = gProp.nSHalfPixelSzH =
     gProp.nSMinDistPixelW = gProp.nSMinDistPixelH = 0;
     gProp.aSScaleX = gProp.aSScaleY = 1.0;
-    gProp.pBLines = 0;
-    gProp.pSLines = 0;
-    gProp.pSSubsLines = 0;
-    gProp.pSSpecSubsLines = 0L;
-    gProp.pSProgress = 0;
+    gProp.pBLines = nullptr;
+    gProp.pSLines = nullptr;
+    gProp.pSSubsLines = nullptr;
+    gProp.pSSpecSubsLines = nullptr;
+    gProp.pSProgress = nullptr;
 }
 
 SwSavePaintStatics::~SwSavePaintStatics()
@@ -481,8 +493,8 @@ SwSavePaintStatics::~SwSavePaintStatics()
     gProp.pSFlyMetafileOut    = pSFlyMetafileOut;
     gProp.pSRetoucheFly       = pSRetoucheFly;
     gProp.pSRetoucheFly2      = pSRetoucheFly2;
-    gProp.pSFlyOnlyDraw = pSFlyOnlyDraw;
-    gProp.pBLines     = pBLines;
+    gProp.pSFlyOnlyDraw       = pSFlyOnlyDraw;
+    gProp.pBLines             = pBLines;
     gProp.pSLines             = pSLines;
     gProp.pSSubsLines         = pSSubsLines;
     gProp.pSSpecSubsLines     = pSSpecSubsLines;
@@ -493,9 +505,9 @@ SwSavePaintStatics::~SwSavePaintStatics()
     gProp.nSHalfPixelSzH      = nSHalfPixelSzH;
     gProp.nSMinDistPixelW     = nSMinDistPixelW;
     gProp.nSMinDistPixelH     = nSMinDistPixelH;
-    aGlobalRetoucheColor = aSGlobalRetoucheColor;
-    gProp.aSScaleX = aSScaleX;
-    gProp.aSScaleY = aSScaleY;
+    aGlobalRetoucheColor      = aSGlobalRetoucheColor;
+    gProp.aSScaleX            = aSScaleX;
+    gProp.aSScaleY            = aSScaleY;
 }
 
 /**
@@ -508,10 +520,11 @@ SwSavePaintStatics::~SwSavePaintStatics()
  *              0       if A and B can't be merged
 **/
 static sal_uInt8 lcl_TryMergeLines(
-    pair<double, double> const mergeA,
-    pair<double, double> const mergeB)
+    pair<double, double> const& mergeA,
+    pair<double, double> const& mergeB,
+    SwPaintProperties& properties)
 {
-    double const fMergeGap(gProp.nSPixelSzW + gProp.nSHalfPixelSzW); // NOT static!
+    double const fMergeGap(properties.nSPixelSzW + properties.nSHalfPixelSzW); // NOT static!
     // A is above/before B
     if( mergeA.second <= mergeB.first &&
         mergeA.second + fMergeGap >= mergeB.first )
@@ -536,7 +549,7 @@ static sal_uInt8 lcl_TryMergeLines(
  * @param[in]   rEnd        ending point of merged primitive
  * @return      merged primitive
 **/
-static ::rtl::Reference<BorderLinePrimitive2D>
+static rtl::Reference<BorderLinePrimitive2D>
 lcl_MergeBorderLines(
     BorderLinePrimitive2D const& rLine, BorderLinePrimitive2D const& rOther,
     basegfx::B2DPoint const& rStart, basegfx::B2DPoint const& rEnd)
@@ -564,9 +577,10 @@ lcl_MergeBorderLines(
  * @return      merged borderline including the two input primitive, if they can be merged
  *              0, otherwise
 **/
-static ::rtl::Reference<BorderLinePrimitive2D>
+static rtl::Reference<BorderLinePrimitive2D>
 lcl_TryMergeBorderLine(BorderLinePrimitive2D const& rThis,
-                       BorderLinePrimitive2D const& rOther)
+                       BorderLinePrimitive2D const& rOther,
+                       SwPaintProperties& properties)
 {
     assert(rThis.getEnd().getX() >= rThis.getStart().getX());
     assert(rThis.getEnd().getY() >= rThis.getStart().getY());
@@ -578,9 +592,9 @@ lcl_TryMergeBorderLine(BorderLinePrimitive2D const& rThis,
     double otherWidth  = rOther.getEnd().getX() -  rOther.getStart().getX();
     // check for same orientation, same line width, same style and matching colors
     if (    ((thisHeight > thisWidth) == (otherHeight > otherWidth))
-        &&  (rThis.getLeftWidth()     == rOther.getLeftWidth())
-        &&  (rThis.getDistance()      == rOther.getDistance())
-        &&  (rThis.getRightWidth()    == rOther.getRightWidth())
+        &&  (rtl::math::approxEqual(rThis.getLeftWidth(),  rOther.getLeftWidth()))
+        &&  (rtl::math::approxEqual(rThis.getDistance(),   rOther.getDistance()))
+        &&  (rtl::math::approxEqual(rThis.getRightWidth(), rOther.getRightWidth()))
         &&  (rThis.getStyle()         == rOther.getStyle())
         &&  (rThis.getRGBColorLeft()  == rOther.getRGBColorLeft())
         &&  (rThis.getRGBColorRight() == rOther.getRGBColorRight())
@@ -591,22 +605,24 @@ lcl_TryMergeBorderLine(BorderLinePrimitive2D const& rThis,
         int nRet = 0;
         if (thisHeight > thisWidth) // vertical line
         {
-            if (rThis.getStart().getX() == rOther.getStart().getX())
+            if (rtl::math::approxEqual(rThis.getStart().getX(), rOther.getStart().getX()))
             {
-                assert(rThis.getEnd().getX() == rOther.getEnd().getX());
+                assert(rtl::math::approxEqual(rThis.getEnd().getX(), rOther.getEnd().getX()));
                 nRet = lcl_TryMergeLines(
                     make_pair(rThis.getStart().getY(), rThis.getEnd().getY()),
-                    make_pair(rOther.getStart().getY(),rOther.getEnd().getY()));
+                    make_pair(rOther.getStart().getY(),rOther.getEnd().getY()),
+                    properties);
             }
         }
         else // horizontal line
         {
-            if (rThis.getStart().getY() == rOther.getStart().getY())
+            if (rtl::math::approxEqual(rThis.getStart().getY(), rOther.getStart().getY()))
             {
-                assert(rThis.getEnd().getY() == rOther.getEnd().getY());
+                assert(rtl::math::approxEqual(rThis.getEnd().getY(), rOther.getEnd().getY()));
                 nRet = lcl_TryMergeLines(
                     make_pair(rThis.getStart().getX(), rThis.getEnd().getX()),
-                    make_pair(rOther.getStart().getX(),rOther.getEnd().getX()));
+                    make_pair(rOther.getStart().getX(),rOther.getEnd().getX()),
+                    properties);
             }
         }
 
@@ -617,7 +633,7 @@ lcl_TryMergeBorderLine(BorderLinePrimitive2D const& rThis,
                 rThis.getStart().getX(), rThis.getStart().getY());
             basegfx::B2DPoint const end(
                 rOther.getEnd().getX(), rOther.getEnd().getY());
-            return lcl_MergeBorderLines(rThis, rOther, start, end);
+            return lcl_MergeBorderLines(rThis, rOther, start, end).get();
         }
         // The merged primitive starts with rOther and ends with rThis
         else if(nRet == 2)
@@ -626,31 +642,31 @@ lcl_TryMergeBorderLine(BorderLinePrimitive2D const& rThis,
                 rOther.getStart().getX(), rOther.getStart().getY());
             basegfx::B2DPoint const end(
                 rThis.getEnd().getX(), rThis.getEnd().getY());
-            return lcl_MergeBorderLines(rOther, rThis, start, end);
+            return lcl_MergeBorderLines(rOther, rThis, start, end).get();
         }
     }
-    return 0;
+    return nullptr;
 }
 
 void BorderLines::AddBorderLine(
-        rtl::Reference<BorderLinePrimitive2D> const& xLine)
+        css::uno::Reference<BorderLinePrimitive2D> const& xLine, SwPaintProperties& properties)
 {
-    for (Lines_t::reverse_iterator it = m_Lines.rbegin(); it != m_Lines.rend();
+    for (drawinglayer::primitive2d::Primitive2DContainer::reverse_iterator it = m_Lines.rbegin(); it != m_Lines.rend();
          ++it)
     {
-        ::rtl::Reference<BorderLinePrimitive2D> const xMerged =
-            lcl_TryMergeBorderLine(**it, *xLine);
+        rtl::Reference<BorderLinePrimitive2D> const xMerged(
+            lcl_TryMergeBorderLine(*static_cast<BorderLinePrimitive2D*>((*it).get()), *xLine.get(), properties).get());
         if (xMerged.is())
         {
-            *it = xMerged; // replace existing line with merged
+            *it = xMerged.get(); // replace existing line with merged
             return;
         }
     }
     m_Lines.push_back(xLine);
 }
 
-SwLineRect::SwLineRect( const SwRect &rRect, const Color *pCol, const SvxBorderStyle nStyl,
-                        const SwTabFrm *pT, const sal_uInt8 nSCol ) :
+SwLineRect::SwLineRect( const SwRect &rRect, const Color *pCol, const SvxBorderLineStyle nStyl,
+                        const SwTabFrame *pT, const SubColFlags nSCol ) :
     SwRect( rRect ),
     nStyle( nStyl ),
     pTab( pT ),
@@ -658,11 +674,11 @@ SwLineRect::SwLineRect( const SwRect &rRect, const Color *pCol, const SvxBorderS
     bPainted( false ),
     nLock( 0 )
 {
-    if ( pCol != NULL )
+    if ( pCol != nullptr )
         aColor = *pCol;
 }
 
-bool SwLineRect::MakeUnion( const SwRect &rRect )
+bool SwLineRect::MakeUnion( const SwRect &rRect, SwPaintProperties& properties)
 {
     // It has already been tested outside, whether the rectangles have
     // the same orientation (horizontal or vertical), color, etc.
@@ -671,7 +687,7 @@ bool SwLineRect::MakeUnion( const SwRect &rRect )
         if ( Left()  == rRect.Left() && Width() == rRect.Width() )
         {
             // Merge when there is no gap between the lines
-            const long nAdd = gProp.nSPixelSzW + gProp.nSHalfPixelSzW;
+            const long nAdd = properties.nSPixelSzW + properties.nSHalfPixelSzW;
             if ( Bottom() + nAdd >= rRect.Top() &&
                  Top()    - nAdd <= rRect.Bottom()  )
             {
@@ -686,7 +702,7 @@ bool SwLineRect::MakeUnion( const SwRect &rRect )
         if ( Top()  == rRect.Top() && Height() == rRect.Height() )
         {
             // Merge when there is no gap between the lines
-            const long nAdd = gProp.nSPixelSzW + gProp.nSHalfPixelSzW;
+            const long nAdd = properties.nSPixelSzW + properties.nSHalfPixelSzW;
             if ( Right() + nAdd >= rRect.Left() &&
                  Left()  - nAdd <= rRect.Right() )
             {
@@ -699,8 +715,8 @@ bool SwLineRect::MakeUnion( const SwRect &rRect )
     return false;
 }
 
-void SwLineRects::AddLineRect( const SwRect &rRect, const Color *pCol, const SvxBorderStyle nStyle,
-                               const SwTabFrm *pTab, const sal_uInt8 nSCol )
+void SwLineRects::AddLineRect( const SwRect &rRect, const Color *pCol, const SvxBorderLineStyle nStyle,
+                               const SwTabFrame *pTab, const SubColFlags nSCol, SwPaintProperties& properties )
 {
     // Loop backwards because lines which can be combined, can usually be painted
     // in the same context
@@ -714,19 +730,19 @@ void SwLineRects::AddLineRect( const SwRect &rRect, const Color *pCol, const Svx
              (rLRect.Height() > rLRect.Width()) == (rRect.Height() > rRect.Width()) &&
              (pCol && rLRect.GetColor() == *pCol) )
         {
-            if ( rLRect.MakeUnion( rRect ) )
+            if ( rLRect.MakeUnion( rRect, properties ) )
                 return;
         }
     }
     aLineRects.push_back( SwLineRect( rRect, pCol, nStyle, pTab, nSCol ) );
 }
 
-void SwLineRects::ConnectEdges( OutputDevice *pOut )
+void SwLineRects::ConnectEdges( OutputDevice *pOut, SwPaintProperties& properties )
 {
     if ( pOut->GetOutDevType() != OUTDEV_PRINTER )
     {
         // I'm not doing anything for a too small zoom
-        if ( gProp.aSScaleX < aEdgeScale || gProp.aSScaleY < aEdgeScale )
+        if ( properties.aSScaleX < aEdgeScale || properties.aSScaleY < aEdgeScale )
             return;
     }
 
@@ -801,8 +817,8 @@ void SwLineRects::ConnectEdges( OutputDevice *pOut )
                 SwLineRect &rR2 = *aCheck[k2];
                 if ( bVert )
                 {
-                    SwLineRect *pLA = 0;
-                    SwLineRect *pLB = 0;
+                    SwLineRect *pLA = nullptr;
+                    SwLineRect *pLB = nullptr;
                     if ( rR1.Top() < rR2.Top() )
                     {
                         pLA = &rR1; pLB = &rR2;
@@ -824,8 +840,8 @@ void SwLineRects::ConnectEdges( OutputDevice *pOut )
                             if ( !rL1.IsInside( aIns ) )
                                 continue;
                             aLineRects.push_back( SwLineRect( aIns, &rL1.GetColor(),
-                                        table::BorderLineStyle::SOLID,
-                                        rL1.GetTab(), SUBCOL_TAB ) );
+                                        SvxBorderLineStyle::SOLID,
+                                        rL1.GetTab(), SubColFlags::Tab ) );
                             if ( isFull() )
                             {
                                 --i;
@@ -842,8 +858,8 @@ void SwLineRects::ConnectEdges( OutputDevice *pOut )
                 }
                 else
                 {
-                    SwLineRect *pLA = 0;
-                    SwLineRect *pLB = 0;
+                    SwLineRect *pLA = nullptr;
+                    SwLineRect *pLB = nullptr;
                     if ( rR1.Left() < rR2.Left() )
                     {
                         pLA = &rR1; pLB = &rR2;
@@ -865,8 +881,8 @@ void SwLineRects::ConnectEdges( OutputDevice *pOut )
                             if ( !rL1.IsInside( aIns ) )
                                 continue;
                             aLineRects.push_back( SwLineRect( aIns, &rL1.GetColor(),
-                                        table::BorderLineStyle::SOLID,
-                                        rL1.GetTab(), SUBCOL_TAB ) );
+                                        SvxBorderLineStyle::SOLID,
+                                        rL1.GetTab(), SubColFlags::Tab ) );
                             if ( isFull() )
                             {
                                 --i;
@@ -890,7 +906,7 @@ void SwLineRects::ConnectEdges( OutputDevice *pOut )
     }
 }
 
-void SwSubsRects::RemoveSuperfluousSubsidiaryLines( const SwLineRects &rRects )
+void SwSubsRects::RemoveSuperfluousSubsidiaryLines( const SwLineRects &rRects, SwPaintProperties& properties )
 {
     // All help lines that are covered by any border will be removed or split
     for (size_t i = 0; i < aLineRects.size(); ++i)
@@ -909,13 +925,13 @@ void SwSubsRects::RemoveSuperfluousSubsidiaryLines( const SwLineRects &rRects )
         SwRect aSubsRect( aSubsLineRect );
         if ( bVerticalSubs )
         {
-            aSubsRect.Left  ( aSubsRect.Left()  - (gProp.nSPixelSzW+gProp.nSHalfPixelSzW) );
-            aSubsRect.Right ( aSubsRect.Right() + (gProp.nSPixelSzW+gProp.nSHalfPixelSzW) );
+            aSubsRect.Left  ( aSubsRect.Left()  - (properties.nSPixelSzW+properties.nSHalfPixelSzW) );
+            aSubsRect.Right ( aSubsRect.Right() + (properties.nSPixelSzW+properties.nSHalfPixelSzW) );
         }
         else
         {
-            aSubsRect.Top   ( aSubsRect.Top()    - (gProp.nSPixelSzH+gProp.nSHalfPixelSzH) );
-            aSubsRect.Bottom( aSubsRect.Bottom() + (gProp.nSPixelSzH+gProp.nSHalfPixelSzH) );
+            aSubsRect.Top   ( aSubsRect.Top()    - (properties.nSPixelSzH+properties.nSHalfPixelSzH) );
+            aSubsRect.Bottom( aSubsRect.Bottom() + (properties.nSPixelSzH+properties.nSHalfPixelSzH) );
         }
         for (const_iterator itK = rRects.aLineRects.begin(); itK != rRects.aLineRects.end(); ++itK)
         {
@@ -936,20 +952,20 @@ void SwSubsRects::RemoveSuperfluousSubsidiaryLines( const SwLineRects &rRects )
                     if ( aSubsRect.Left()  <= rLine.Right() &&
                          aSubsRect.Right() >= rLine.Left() )
                     {
-                        long nTmp = rLine.Top()-(gProp.nSPixelSzH+1);
+                        long nTmp = rLine.Top()-(properties.nSPixelSzH+1);
                         if ( aSubsLineRect.Top() < nTmp )
                         {
                             SwRect aNewSubsRect( aSubsLineRect );
                             aNewSubsRect.Bottom( nTmp );
-                            aLineRects.push_back( SwLineRect( aNewSubsRect, 0, aSubsLineRect.GetStyle(), 0,
+                            aLineRects.push_back( SwLineRect( aNewSubsRect, nullptr, aSubsLineRect.GetStyle(), nullptr,
                                                 aSubsLineRect.GetSubColor() ) );
                         }
-                        nTmp = rLine.Bottom()+gProp.nSPixelSzH+1;
+                        nTmp = rLine.Bottom()+properties.nSPixelSzH+1;
                         if ( aSubsLineRect.Bottom() > nTmp )
                         {
                             SwRect aNewSubsRect( aSubsLineRect );
                             aNewSubsRect.Top( nTmp );
-                            aLineRects.push_back( SwLineRect( aNewSubsRect, 0, aSubsLineRect.GetStyle(), 0,
+                            aLineRects.push_back( SwLineRect( aNewSubsRect, nullptr, aSubsLineRect.GetStyle(), nullptr,
                                                 aSubsLineRect.GetSubColor() ) );
                         }
                         aLineRects.erase(aLineRects.begin() + i);
@@ -962,20 +978,20 @@ void SwSubsRects::RemoveSuperfluousSubsidiaryLines( const SwLineRects &rRects )
                     if ( aSubsRect.Top() <= rLine.Bottom() &&
                          aSubsRect.Bottom() >= rLine.Top() )
                     {
-                        long nTmp = rLine.Left()-(gProp.nSPixelSzW+1);
+                        long nTmp = rLine.Left()-(properties.nSPixelSzW+1);
                         if ( aSubsLineRect.Left() < nTmp )
                         {
                             SwRect aNewSubsRect( aSubsLineRect );
                             aNewSubsRect.Right( nTmp );
-                            aLineRects.push_back( SwLineRect( aNewSubsRect, 0, aSubsLineRect.GetStyle(), 0,
+                            aLineRects.push_back( SwLineRect( aNewSubsRect, nullptr, aSubsLineRect.GetStyle(), nullptr,
                                                 aSubsLineRect.GetSubColor() ) );
                         }
-                        nTmp = rLine.Right()+gProp.nSPixelSzW+1;
+                        nTmp = rLine.Right()+properties.nSPixelSzW+1;
                         if ( aSubsLineRect.Right() > nTmp )
                         {
                             SwRect aNewSubsRect( aSubsLineRect );
                             aNewSubsRect.Left( nTmp );
-                            aLineRects.push_back(  SwLineRect( aNewSubsRect, 0, aSubsLineRect.GetStyle(), 0,
+                            aLineRects.push_back(  SwLineRect( aNewSubsRect, nullptr, aSubsLineRect.GetStyle(), nullptr,
                                                 aSubsLineRect.GetSubColor() ) );
                         }
                         aLineRects.erase(aLineRects.begin() + i);
@@ -996,56 +1012,44 @@ void SwLineRects::LockLines( bool bLock )
 
 static void lcl_DrawDashedRect( OutputDevice * pOut, SwLineRect & rLRect )
 {
-    double nHalfLWidth = rLRect.Height(  );
-    if ( nHalfLWidth > 1 )
-    {
-        nHalfLWidth = nHalfLWidth / 2;
-    }
-    else
-    {
-        nHalfLWidth = 1;
-    }
+    long startX = rLRect.Left(  ), endX;
+    long startY = rLRect.Top(  ),  endY;
 
-    long startX = rLRect.Left(  );
-    long startY = rLRect.Top(  ) + static_cast<long>(nHalfLWidth);
-    long endX = rLRect.Left(  ) + rLRect.Width(  );
-    long endY = rLRect.Top(  ) + static_cast<long>(nHalfLWidth);
+    // Discriminate vertically stretched rect from horizontally stretched
+    // and restrict minimum nHalfLWidth to 1
+    long nHalfLWidth = std::max( static_cast<long>(std::min( rLRect.Width(  ), rLRect.Height(  ) ) / 2), 1L );
 
     if ( rLRect.Height(  ) > rLRect.Width(  ) )
     {
-        nHalfLWidth = rLRect.Width(  );
-        if ( nHalfLWidth > 1 )
-        {
-            nHalfLWidth = nHalfLWidth / 2;
-        }
-        else
-        {
-            nHalfLWidth = 1;
-        }
-        startX = rLRect.Left(  ) + static_cast<long>(nHalfLWidth);
-        startY = rLRect.Top(  );
-        endX = rLRect.Left(  ) + static_cast<long>(nHalfLWidth);
-        endY = rLRect.Top(  ) + rLRect.Height(  );
+        startX += nHalfLWidth;
+        endX = startX;
+        endY = startY + rLRect.Height(  );
+    }
+    else
+    {
+        startY += nHalfLWidth;
+        endY = startY;
+        endX = startX + rLRect.Width(  );
     }
 
     svtools::DrawLine( *pOut, Point( startX, startY ), Point( endX, endY ),
             sal_uInt32( nHalfLWidth * 2 ), rLRect.GetStyle( ) );
 }
 
-void SwLineRects::PaintLines( OutputDevice *pOut )
+void SwLineRects::PaintLines( OutputDevice *pOut, SwPaintProperties &properties )
 {
     // Paint the borders. Sadly two passes are needed.
     // Once for the inside and once for the outside edges of tables
     if ( aLineRects.size() != nLastCount )
     {
         // #i16816# tagged pdf support
-        SwTaggedPDFHelper aTaggedPDFHelper( 0, 0, 0, *pOut );
+        SwTaggedPDFHelper aTaggedPDFHelper( nullptr, nullptr, nullptr, *pOut );
 
         pOut->Push( PushFlags::FILLCOLOR|PushFlags::LINECOLOR );
         pOut->SetFillColor();
         pOut->SetLineColor();
-        ConnectEdges( pOut );
-        const Color *pLast = 0;
+        ConnectEdges( pOut, properties );
+        const Color *pLast = nullptr;
 
         bool bPaint2nd = false;
         size_t nMinCount = aLineRects.size();
@@ -1072,8 +1076,8 @@ void SwLineRects::PaintLines( OutputDevice *pOut )
                     // Vertical edge, overlapping with the table edge?
                     SwTwips nLLeft  = rLRect.Left()  - 30,
                             nLRight = rLRect.Right() + 30,
-                            nTLeft  = rLRect.GetTab()->Frm().Left() + rLRect.GetTab()->Prt().Left(),
-                            nTRight = rLRect.GetTab()->Frm().Left() + rLRect.GetTab()->Prt().Right();
+                            nTLeft  = rLRect.GetTab()->Frame().Left() + rLRect.GetTab()->Prt().Left(),
+                            nTRight = rLRect.GetTab()->Frame().Left() + rLRect.GetTab()->Prt().Right();
                     if ( (nTLeft >= nLLeft && nTLeft <= nLRight) ||
                          (nTRight>= nLLeft && nTRight<= nLRight) )
                         bPaint = false;
@@ -1083,8 +1087,8 @@ void SwLineRects::PaintLines( OutputDevice *pOut )
                     // Horizontal edge, overlapping with the table edge?
                     SwTwips nLTop    = rLRect.Top()    - 30,
                             nLBottom = rLRect.Bottom() + 30,
-                            nTTop    = rLRect.GetTab()->Frm().Top()  + rLRect.GetTab()->Prt().Top(),
-                            nTBottom = rLRect.GetTab()->Frm().Top()  + rLRect.GetTab()->Prt().Bottom();
+                            nTTop    = rLRect.GetTab()->Frame().Top()  + rLRect.GetTab()->Prt().Top(),
+                            nTBottom = rLRect.GetTab()->Frame().Top()  + rLRect.GetTab()->Prt().Bottom();
                     if ( (nTTop    >= nLTop && nTTop      <= nLBottom) ||
                          (nTBottom >= nLTop && nTBottom <= nLBottom) )
                         bPaint = false;
@@ -1096,10 +1100,10 @@ void SwLineRects::PaintLines( OutputDevice *pOut )
                 {
                     pLast = &rLRect.GetColor();
 
-                    sal_uLong nOldDrawMode = pOut->GetDrawMode();
-                    if( gProp.pSGlobalShell->GetWin() &&
+                    DrawModeFlags nOldDrawMode = pOut->GetDrawMode();
+                    if( properties.pSGlobalShell->GetWin() &&
                         Application::GetSettings().GetStyleSettings().GetHighContrastMode() )
-                        pOut->SetDrawMode( 0 );
+                        pOut->SetDrawMode( DrawModeFlags::Default );
 
                     pOut->SetLineColor( *pLast );
                     pOut->SetFillColor( *pLast );
@@ -1131,11 +1135,11 @@ void SwLineRects::PaintLines( OutputDevice *pOut )
                 {
                     pLast = &rLRect.GetColor();
 
-                    sal_uLong nOldDrawMode = pOut->GetDrawMode();
-                    if( gProp.pSGlobalShell->GetWin() &&
+                    DrawModeFlags nOldDrawMode = pOut->GetDrawMode();
+                    if( properties.pSGlobalShell->GetWin() &&
                         Application::GetSettings().GetStyleSettings().GetHighContrastMode() )
                     {
-                        pOut->SetDrawMode( 0 );
+                        pOut->SetDrawMode( DrawModeFlags::Default );
                     }
 
                     pOut->SetFillColor( *pLast );
@@ -1152,12 +1156,13 @@ void SwLineRects::PaintLines( OutputDevice *pOut )
 }
 
 void SwSubsRects::PaintSubsidiary( OutputDevice *pOut,
-                                   const SwLineRects *pRects )
+                                   const SwLineRects *pRects,
+                                   SwPaintProperties& properties )
 {
     if ( !aLineRects.empty() )
     {
         // #i16816# tagged pdf support
-        SwTaggedPDFHelper aTaggedPDFHelper( 0, 0, 0, *pOut );
+        SwTaggedPDFHelper aTaggedPDFHelper( nullptr, nullptr, nullptr, *pOut );
 
         // Remove all help line that are almost covered (tables)
         for (size_type i = 0; i != aLineRects.size(); ++i)
@@ -1208,7 +1213,7 @@ void SwSubsRects::PaintSubsidiary( OutputDevice *pOut,
         }
 
         if ( pRects && (!pRects->aLineRects.empty()) )
-            RemoveSuperfluousSubsidiaryLines( *pRects );
+            RemoveSuperfluousSubsidiaryLines( *pRects, properties );
 
         if ( !aLineRects.empty() )
         {
@@ -1218,11 +1223,11 @@ void SwSubsRects::PaintSubsidiary( OutputDevice *pOut,
             // Reset draw mode in high contrast mode in order to get fill color
             // set at output device. Recover draw mode after draw of lines.
             // Necessary for the subsidiary lines painted by the fly frames.
-            sal_uLong nOldDrawMode = pOut->GetDrawMode();
+            DrawModeFlags nOldDrawMode = pOut->GetDrawMode();
             if( gProp.pSGlobalShell->GetWin() &&
                 Application::GetSettings().GetStyleSettings().GetHighContrastMode() )
             {
-                pOut->SetDrawMode( 0 );
+                pOut->SetDrawMode( DrawModeFlags::Default );
             }
 
             for (SwSubsRects::iterator it = aLineRects.begin(); it != aLineRects.end();
@@ -1233,13 +1238,13 @@ void SwSubsRects::PaintSubsidiary( OutputDevice *pOut,
                 if ( !rLRect.IsPainted() &&
                      !rLRect.IsLocked() )
                 {
-                    const Color *pCol = 0;
+                    const Color *pCol = nullptr;
                     switch ( rLRect.GetSubColor() )
                     {
-                        case SUBCOL_PAGE: pCol = &SwViewOption::GetDocBoundariesColor(); break;
-                        case SUBCOL_FLY: pCol = &SwViewOption::GetObjectBoundariesColor(); break;
-                        case SUBCOL_TAB: pCol = &SwViewOption::GetTableBoundariesColor(); break;
-                        case SUBCOL_SECT: pCol = &SwViewOption::GetSectionBoundColor(); break;
+                        case SubColFlags::Page: pCol = &SwViewOption::GetDocBoundariesColor(); break;
+                        case SubColFlags::Fly: pCol = &SwViewOption::GetObjectBoundariesColor(); break;
+                        case SubColFlags::Tab: pCol = &SwViewOption::GetTableBoundariesColor(); break;
+                        case SubColFlags::Sect: pCol = &SwViewOption::GetSectionBoundColor(); break;
                     }
 
                     if (pCol && pOut->GetFillColor() != *pCol)
@@ -1266,7 +1271,7 @@ void SwSubsRects::PaintSubsidiary( OutputDevice *pOut,
  * that the border "leaves its original pixel", if it has to
  * No prior adjustments for odd relation between pixel and twip
  */
-void SwAlignRect( SwRect &rRect, const SwViewShell *pSh )
+void SwAlignRect( SwRect &rRect, const SwViewShell *pSh, const vcl::RenderContext* pRenderContext )
 {
     if( !rRect.HasArea() )
         return;
@@ -1279,11 +1284,11 @@ void SwAlignRect( SwRect &rRect, const SwViewShell *pSh )
         return;
     }
 
-    const OutputDevice *pOut = gProp.bSFlyMetafile ?
-                        gProp.pSFlyMetafileOut : pSh->GetOut();
+    const vcl::RenderContext *pOut = gProp.bSFlyMetafile ?
+                        gProp.pSFlyMetafileOut.get() : pRenderContext;
 
     // Hold original rectangle in pixel
-    const Rectangle aOrgPxRect = pOut->LogicToPixel( rRect.SVRect() );
+    const tools::Rectangle aOrgPxRect = pOut->LogicToPixel( rRect.SVRect() );
     // Determine pixel-center rectangle in twip
     const SwRect aPxCenterRect( pOut->PixelToLogic( aOrgPxRect ) );
 
@@ -1364,7 +1369,7 @@ void SwAlignRect( SwRect &rRect, const SwViewShell *pSh )
  * If the x-/y-pixel positions are the same, the x-/y-pixel position of
  * the second twip point is adjusted by a given amount of pixels
 */
-static void lcl_CompPxPosAndAdjustPos( const OutputDevice&  _rOut,
+static void lcl_CompPxPosAndAdjustPos( const vcl::RenderContext&  _rOut,
                                 const Point&         _rRefPt,
                                 Point&               _rCompPt,
                                 const bool          _bChkXPos,
@@ -1408,50 +1413,51 @@ static void lcl_CompPxPosAndAdjustPos( const OutputDevice&  _rOut,
  *
  * NOTE: Call this method before each <GraphicObject.Draw(...)>
 */
-void SwAlignGrfRect( SwRect *pGrfRect, const OutputDevice &rOut )
+void SwAlignGrfRect( SwRect *pGrfRect, const vcl::RenderContext &rOut )
 {
-    Rectangle aPxRect = rOut.LogicToPixel( pGrfRect->SVRect() );
+    tools::Rectangle aPxRect = rOut.LogicToPixel( pGrfRect->SVRect() );
     pGrfRect->Pos( rOut.PixelToLogic( aPxRect.TopLeft() ) );
     pGrfRect->SSize( rOut.PixelToLogic( aPxRect.GetSize() ) );
 }
 
-static long lcl_AlignWidth( const long nWidth )
+static long lcl_AlignWidth( const long nWidth, SwPaintProperties& properties )
 {
     if ( nWidth )
     {
-        const long nW = nWidth % gProp.nSPixelSzW;
+        const long nW = nWidth % properties.nSPixelSzW;
 
-        if ( !nW || nW > gProp.nSHalfPixelSzW )
-            return std::max(1L, nWidth - gProp.nSHalfPixelSzW);
+        if ( !nW || nW > properties.nSHalfPixelSzW )
+            return std::max(1L, nWidth - properties.nSHalfPixelSzW);
     }
     return nWidth;
 }
 
-static long lcl_AlignHeight( const long nHeight )
+static long lcl_AlignHeight( const long nHeight, SwPaintProperties& properties )
 {
     if ( nHeight )
     {
-        const long nH = nHeight % gProp.nSPixelSzH;
+        const long nH = nHeight % properties.nSPixelSzH;
 
-        if ( !nH || nH > gProp.nSHalfPixelSzH )
-            return std::max(1L, nHeight - gProp.nSHalfPixelSzH);
+        if ( !nH || nH > properties.nSHalfPixelSzH )
+            return std::max(1L, nHeight - properties.nSHalfPixelSzH);
     }
     return nHeight;
 }
 
-static long lcl_MinHeightDist( const long nDist )
+static long lcl_MinHeightDist( const long nDist, SwPaintProperties& properties )
 {
-    if ( gProp.aSScaleX < aMinDistScale || gProp.aSScaleY < aMinDistScale )
+    if ( properties.aSScaleX < aMinDistScale || properties.aSScaleY < aMinDistScale )
         return nDist;
-    return ::lcl_AlignHeight( std::max( nDist, gProp.nSMinDistPixelH ));
+    return ::lcl_AlignHeight( std::max( nDist, properties.nSMinDistPixelH ), properties);
 }
 
 /**
  * Calculate PrtArea plus surrounding plus shadow
  */
-static void lcl_CalcBorderRect( SwRect &rRect, const SwFrm *pFrm,
+static void lcl_CalcBorderRect( SwRect &rRect, const SwFrame *pFrame,
                                         const SwBorderAttrs &rAttrs,
-                                        const bool bShadow )
+                                        const bool bShadow,
+                                        SwPaintProperties& properties)
 {
     // Special handling for cell frames.
     // The printing area of a cell frame is completely enclosed in the frame area
@@ -1460,87 +1466,87 @@ static void lcl_CalcBorderRect( SwRect &rRect, const SwFrm *pFrm,
     // Notes: Borders of cell frames in R2L text direction will switch its side
     //        - left border is painted on the right; right border on the left.
     //        See <lcl_PaintLeftLine> and <lcl_PaintRightLine>.
-    if( pFrm->IsSctFrm() )
+    if( pFrame->IsSctFrame() )
     {
-        rRect = pFrm->Prt();
-        rRect.Pos() += pFrm->Frm().Pos();
+        rRect = pFrame->Prt();
+        rRect.Pos() += pFrame->Frame().Pos();
     }
-    else if ( pFrm->IsCellFrm() )
-        rRect = pFrm->Frm();
+    else if ( pFrame->IsCellFrame() )
+        rRect = pFrame->Frame();
     else
     {
-        rRect = pFrm->Prt();
-        rRect.Pos() += pFrm->Frm().Pos();
+        rRect = pFrame->Prt();
+        rRect.Pos() += pFrame->Frame().Pos();
 
         if ( rAttrs.IsLine() || rAttrs.IsBorderDist() ||
-             (bShadow && rAttrs.GetShadow().GetLocation() != SVX_SHADOW_NONE) )
+             (bShadow && rAttrs.GetShadow().GetLocation() != SvxShadowLocation::NONE) )
         {
-            SwRectFn fnRect = pFrm->IsVertical() ? ( pFrm->IsVertLR() ? fnRectVertL2R : fnRectVert ) : fnRectHori;
+            SwRectFn fnRect = pFrame->IsVertical() ? ( pFrame->IsVertLR() ? fnRectVertL2R : fnRectVert ) : fnRectHori;
 
             const SvxBoxItem &rBox = rAttrs.GetBox();
-            const bool bTop = 0 != (pFrm->*fnRect->fnGetTopMargin)();
+            const bool bTop = 0 != (pFrame->*fnRect->fnGetTopMargin)();
             if ( bTop )
             {
                 SwTwips nDiff = rBox.GetTop() ?
-                    rBox.CalcLineSpace( BOX_LINE_TOP ) :
+                    rBox.CalcLineSpace( SvxBoxItemLine::TOP ) :
                     ( rAttrs.IsBorderDist() ?
                       // Increase of distance by one twip is incorrect.
-                      rBox.GetDistance( BOX_LINE_TOP ) : 0 );
+                      rBox.GetDistance( SvxBoxItemLine::TOP ) : 0 );
                 if( nDiff )
                     (rRect.*fnRect->fnSubTop)( nDiff );
             }
 
-            const bool bBottom = 0 != (pFrm->*fnRect->fnGetBottomMargin)();
+            const bool bBottom = 0 != (pFrame->*fnRect->fnGetBottomMargin)();
             if ( bBottom )
             {
                 SwTwips nDiff = 0;
                 // #i29550#
-                if ( pFrm->IsTabFrm() &&
-                     ((SwTabFrm*)pFrm)->IsCollapsingBorders() )
+                if ( pFrame->IsTabFrame() &&
+                     static_cast<const SwTabFrame*>(pFrame)->IsCollapsingBorders() )
                 {
                     // For collapsing borders, we have to add the height of
                     // the height of the last line
-                    nDiff = ((SwTabFrm*)pFrm)->GetBottomLineSize();
+                    nDiff = static_cast<const SwTabFrame*>(pFrame)->GetBottomLineSize();
                 }
                 else
                 {
                     nDiff = rBox.GetBottom() ?
-                    rBox.CalcLineSpace( BOX_LINE_BOTTOM ) :
+                    rBox.CalcLineSpace( SvxBoxItemLine::BOTTOM ) :
                     ( rAttrs.IsBorderDist() ?
                       // Increase of distance by one twip is incorrect.
-                      rBox.GetDistance( BOX_LINE_BOTTOM ) : 0 );
+                      rBox.GetDistance( SvxBoxItemLine::BOTTOM ) : 0 );
                 }
                 if( nDiff )
                     (rRect.*fnRect->fnAddBottom)( nDiff );
             }
 
             if ( rBox.GetLeft() )
-                (rRect.*fnRect->fnSubLeft)( rBox.CalcLineSpace( BOX_LINE_LEFT ) );
+                (rRect.*fnRect->fnSubLeft)( rBox.CalcLineSpace( SvxBoxItemLine::LEFT ) );
             else if ( rAttrs.IsBorderDist() )
                  // Increase of distance by one twip is incorrect.
-                (rRect.*fnRect->fnSubLeft)( rBox.GetDistance( BOX_LINE_LEFT ) );
+                (rRect.*fnRect->fnSubLeft)( rBox.GetDistance( SvxBoxItemLine::LEFT ) );
 
             if ( rBox.GetRight() )
-                (rRect.*fnRect->fnAddRight)( rBox.CalcLineSpace( BOX_LINE_RIGHT ) );
+                (rRect.*fnRect->fnAddRight)( rBox.CalcLineSpace( SvxBoxItemLine::RIGHT ) );
             else if ( rAttrs.IsBorderDist() )
                  // Increase of distance by one twip is incorrect.
-                (rRect.*fnRect->fnAddRight)( rBox.GetDistance( BOX_LINE_RIGHT ) );
+                (rRect.*fnRect->fnAddRight)( rBox.GetDistance( SvxBoxItemLine::RIGHT ) );
 
-            if ( bShadow && rAttrs.GetShadow().GetLocation() != SVX_SHADOW_NONE )
+            if ( bShadow && rAttrs.GetShadow().GetLocation() != SvxShadowLocation::NONE )
             {
                 const SvxShadowItem &rShadow = rAttrs.GetShadow();
                 if ( bTop )
-                    (rRect.*fnRect->fnSubTop)(rShadow.CalcShadowSpace(SHADOW_TOP));
-                (rRect.*fnRect->fnSubLeft)(rShadow.CalcShadowSpace(SHADOW_LEFT));
+                    (rRect.*fnRect->fnSubTop)(rShadow.CalcShadowSpace(SvxShadowItemSide::TOP));
+                (rRect.*fnRect->fnSubLeft)(rShadow.CalcShadowSpace(SvxShadowItemSide::LEFT));
                 if ( bBottom )
                     (rRect.*fnRect->fnAddBottom)
-                                    (rShadow.CalcShadowSpace( SHADOW_BOTTOM ));
-                (rRect.*fnRect->fnAddRight)(rShadow.CalcShadowSpace(SHADOW_RIGHT));
+                                    (rShadow.CalcShadowSpace( SvxShadowItemSide::BOTTOM ));
+                (rRect.*fnRect->fnAddRight)(rShadow.CalcShadowSpace(SvxShadowItemSide::RIGHT));
             }
         }
     }
 
-    ::SwAlignRect( rRect, gProp.pSGlobalShell );
+    ::SwAlignRect( rRect, properties.pSGlobalShell, properties.pSGlobalShell ? properties.pSGlobalShell->GetOut() : nullptr );
 }
 
 /**
@@ -1548,27 +1554,42 @@ static void lcl_CalcBorderRect( SwRect &rRect, const SwFrm *pFrm,
  * top of next frame, if border/shadow is joined with previous/next frame
  */
 static void lcl_ExtendLeftAndRight( SwRect&                _rRect,
-                                         const SwFrm&           _rFrm,
+                                         const SwFrame&           _rFrame,
                                          const SwBorderAttrs&   _rAttrs,
                                          const SwRectFn&        _rRectFn )
 {
-    if ( _rAttrs.JoinedWithPrev( _rFrm ) )
+    if ( _rAttrs.JoinedWithPrev( _rFrame ) )
     {
-        const SwFrm* pPrevFrm = _rFrm.GetPrev();
-        (_rRect.*_rRectFn->fnSetTop)( (pPrevFrm->*_rRectFn->fnGetPrtBottom)() );
+        const SwFrame* pPrevFrame = _rFrame.GetPrev();
+        (_rRect.*_rRectFn->fnSetTop)( (pPrevFrame->*_rRectFn->fnGetPrtBottom)() );
     }
-    if ( _rAttrs.JoinedWithNext( _rFrm ) )
+    if ( _rAttrs.JoinedWithNext( _rFrame ) )
     {
-        const SwFrm* pNextFrm = _rFrm.GetNext();
-        (_rRect.*_rRectFn->fnSetBottom)( (pNextFrm->*_rRectFn->fnGetPrtTop)() );
+        const SwFrame* pNextFrame = _rFrame.GetNext();
+        (_rRect.*_rRectFn->fnSetBottom)( (pNextFrame->*_rRectFn->fnGetPrtTop)() );
     }
 }
 
-static void lcl_SubtractFlys( const SwFrm *pFrm, const SwPageFrm *pPage,
-   const SwRect &rRect, SwRegionRects &rRegion)
+/// Returns a range suitable for subtraction when lcl_SubtractFlys() is used.
+/// Otherwise DrawFillAttributes() expands the clip path itself.
+static basegfx::B2DRange lcl_ShrinkFly(const SwRect& rRect)
+{
+    static MapMode aMapMode(MapUnit::MapTwip);
+    static const Size aSingleUnit = Application::GetDefaultDevice()->PixelToLogic(Size(1, 1), aMapMode);
+
+    double x1 = rRect.Left() + aSingleUnit.getWidth();
+    double y1 = rRect.Top() + aSingleUnit.getHeight();
+    double x2 = rRect.Right() - aSingleUnit.getWidth();
+    double y2 = rRect.Bottom() - aSingleUnit.getHeight();
+
+    return basegfx::B2DRange(x1, y1, x2, y2);
+}
+
+static void lcl_SubtractFlys( const SwFrame *pFrame, const SwPageFrame *pPage,
+   const SwRect &rRect, SwRegionRects &rRegion, basegfx::tools::B2DClipState& rClipState, SwPaintProperties & rProperties)
 {
     const SwSortedObjs& rObjs = *pPage->GetSortedObjs();
-    const SwFlyFrm* pSelfFly = pFrm->IsInFly() ? pFrm->FindFlyFrm() : gProp.pSRetoucheFly2;
+    const SwFlyFrame* pSelfFly = pFrame->IsInFly() ? pFrame->FindFlyFrame() : gProp.pSRetoucheFly2;
     if (!gProp.pSRetoucheFly)
         gProp.pSRetoucheFly = gProp.pSRetoucheFly2;
 
@@ -1578,18 +1599,18 @@ static void lcl_SubtractFlys( const SwFrm *pFrm, const SwPageFrm *pPage,
         const SdrObject* pSdrObj = pAnchoredObj->GetDrawObj();
 
         // Do not consider invisible objects
-        if (!pPage->GetFmt()->GetDoc()->getIDocumentDrawModelAccess().IsVisibleLayerId(pSdrObj->GetLayer()))
+        if (!pPage->GetFormat()->GetDoc()->getIDocumentDrawModelAccess().IsVisibleLayerId(pSdrObj->GetLayer()))
             continue;
 
-        if (!pAnchoredObj->ISA(SwFlyFrm))
+        if (dynamic_cast< const SwFlyFrame *>( pAnchoredObj ) ==  nullptr)
             continue;
 
-        const SwFlyFrm *pFly = static_cast<const SwFlyFrm*>(pAnchoredObj);
+        const SwFlyFrame *pFly = static_cast<const SwFlyFrame*>(pAnchoredObj);
 
-        if (pSelfFly == pFly || gProp.pSRetoucheFly == pFly || !rRect.IsOver(pFly->Frm()))
+        if (pSelfFly == pFly || gProp.pSRetoucheFly == pFly || !rRect.IsOver(pFly->Frame()))
             continue;
 
-        if (!pFly->GetFmt()->GetPrint().GetValue() &&
+        if (!pFly->GetFormat()->GetPrint().GetValue() &&
                 (OUTDEV_PRINTER == gProp.pSGlobalShell->GetOut()->GetOutDevType() ||
                 gProp.pSGlobalShell->IsPreview()))
             continue;
@@ -1612,7 +1633,7 @@ static void lcl_SubtractFlys( const SwFrm *pFrm, const SwPageFrm *pPage,
         //or be character bound.
         if (pSelfFly && bLowerOfSelf)
         {
-            OSL_ENSURE( pFly->IsFlyInCntFrm() ||
+            OSL_ENSURE( pFly->IsFlyInContentFrame() ||
                     pSdrObj->GetOrdNumDirect() > pSelfFly->GetVirtDrawObj()->GetOrdNumDirect(),
                     "Fly with wrong z-Order" );
         }
@@ -1630,7 +1651,7 @@ static void lcl_SubtractFlys( const SwFrm *pFrm, const SwPageFrm *pPage,
             }
             else
             {
-                if (!bLowerOfSelf && !pFly->GetFmt()->GetOpaque().GetValue())
+                if (!bLowerOfSelf && !pFly->GetFormat()->GetOpaque().GetValue())
                     //From other layers we are only interested in non
                     //transparent ones or those that are internal
                     continue;
@@ -1648,7 +1669,7 @@ static void lcl_SubtractFlys( const SwFrm *pFrm, const SwPageFrm *pPage,
             }
             else
             {
-                if (!pFly->IsLowerOf( gProp.pSRetoucheFly ) && !pFly->GetFmt()->GetOpaque().GetValue())
+                if (!pFly->IsLowerOf( gProp.pSRetoucheFly ) && !pFly->GetFormat()->GetOpaque().GetValue())
                     //From other layers we are only interested in non
                     //transparent ones or those that are internal
                     continue;
@@ -1658,16 +1679,16 @@ static void lcl_SubtractFlys( const SwFrm *pFrm, const SwPageFrm *pPage,
 
         //If the content of the Fly is transparent, we subtract it only if it's
         //contained in the hell layer.
-        const IDocumentDrawModelAccess* pIDDMA = pFly->GetFmt()->getIDocumentDrawModelAccess();
-        bool bHell = pSdrObj->GetLayer() == pIDDMA->GetHellId();
+        const IDocumentDrawModelAccess& rIDDMA = pFly->GetFormat()->getIDocumentDrawModelAccess();
+        bool bHell = pSdrObj->GetLayer() == rIDDMA.GetHellId();
         if ( (bStopOnHell && bHell) ||
              /// Change internal order of condition
-             ///    first check "!bHell", then "..->Lower()" and "..->IsNoTxtFrm()"
+             ///    first check "!bHell", then "..->Lower()" and "..->IsNoTextFrame()"
              ///    have not to be performed, if frame is in "Hell"
-             ( !bHell && pFly->Lower() && pFly->Lower()->IsNoTxtFrm() &&
-               (static_cast<SwNoTxtFrm const*>(pFly->Lower())->IsTransparent() ||
-                static_cast<SwNoTxtFrm const*>(pFly->Lower())->HasAnimation() ||
-                 pFly->GetFmt()->GetSurround().IsContour()
+             ( !bHell && pFly->Lower() && pFly->Lower()->IsNoTextFrame() &&
+               (static_cast<SwNoTextFrame const*>(pFly->Lower())->IsTransparent() ||
+                static_cast<SwNoTextFrame const*>(pFly->Lower())->HasAnimation() ||
+                 pFly->GetFormat()->GetSurround().IsContour()
                )
              )
            )
@@ -1688,16 +1709,17 @@ static void lcl_SubtractFlys( const SwFrm *pFrm, const SwPageFrm *pPage,
             //     avoids drawing of transparent areas more than once, if
             //     a fly frame inherites a transparent background from its
             //     parent fly frame.
-            if (pFrm->IsFlyFrm() &&
-                (pFly->GetAnchorFrm()->FindFlyFrm() == pFrm) &&
-                static_cast<const SwFlyFrmFmt*>(pFly->GetFmt())->IsBackgroundBrushInherited()
+            if (pFrame->IsFlyFrame() &&
+                (pFly->GetAnchorFrame()->FindFlyFrame() == pFrame) &&
+                pFly->GetFormat()->IsBackgroundBrushInherited()
                )
             {
                 SwRect aRect;
-                SwBorderAttrAccess aAccess( SwFrm::GetCache(), (SwFrm*)pFly );
+                SwBorderAttrAccess aAccess( SwFrame::GetCache(), static_cast<SwFrame const *>(pFly) );
                 const SwBorderAttrs &rAttrs = *aAccess.Get();
-                ::lcl_CalcBorderRect( aRect, pFly, rAttrs, true );
+                ::lcl_CalcBorderRect( aRect, pFly, rAttrs, true, rProperties );
                 rRegion -= aRect;
+                rClipState.subtractRange(lcl_ShrinkFly(aRect));
                 continue;
             }
             else
@@ -1706,37 +1728,40 @@ static void lcl_SubtractFlys( const SwFrm *pFrm, const SwPageFrm *pPage,
             }
         }
 
-        if (bHell && pFly->GetAnchorFrm()->IsInFly())
+        if (bHell && pFly->GetAnchorFrame()->IsInFly())
         {
             //So the border won't get dismantled by the background of the other
             //Fly.
             SwRect aRect;
-            SwBorderAttrAccess aAccess( SwFrm::GetCache(), (SwFrm*)pFly );
+            SwBorderAttrAccess aAccess( SwFrame::GetCache(), static_cast<SwFrame const *>(pFly) );
             const SwBorderAttrs &rAttrs = *aAccess.Get();
-            ::lcl_CalcBorderRect( aRect, pFly, rAttrs, true );
+            ::lcl_CalcBorderRect( aRect, pFly, rAttrs, true, rProperties );
             rRegion -= aRect;
+            rClipState.subtractRange(lcl_ShrinkFly(aRect));
         }
         else
         {
             SwRect aRect( pFly->Prt() );
-            aRect += pFly->Frm().Pos();
+            aRect += pFly->Frame().Pos();
             rRegion -= aRect;
+            rClipState.subtractRange(lcl_ShrinkFly(aRect));
         }
     }
     if (gProp.pSRetoucheFly == gProp.pSRetoucheFly2)
-        gProp.pSRetoucheFly = 0;
+        gProp.pSRetoucheFly = nullptr;
 }
 
 static void lcl_implDrawGraphicBackgrd( const SvxBrushItem& _rBackgrdBrush,
-                                 OutputDevice* _pOut,
+                                 vcl::RenderContext* _pOut,
                                  const SwRect& _rAlignedPaintRect,
-                                 const GraphicObject& _rGraphicObj )
+                                 const GraphicObject& _rGraphicObj,
+                                 SwPaintProperties& properties)
 {
     /// determine color of background
     ///     If color of background brush is not "no fill"/"auto fill" or
-    ///     <gProp.bSFlyMetafile> is set, use color of background brush, otherwise
+    ///     <SwPaintProperties.bSFlyMetafile> is set, use color of background brush, otherwise
     ///     use global retouche color.
-    const Color aColor( ( (_rBackgrdBrush.GetColor() != COL_TRANSPARENT) || gProp.bSFlyMetafile )
+    const Color aColor( ( (_rBackgrdBrush.GetColor() != COL_TRANSPARENT) || properties.bSFlyMetafile )
                         ? _rBackgrdBrush.GetColor()
                         : aGlobalRetoucheColor );
 
@@ -1813,7 +1838,8 @@ static inline void lcl_DrawGraphicBackgrd( const SvxBrushItem& _rBackgrdBrush,
                                     const SwRect& _rAlignedPaintRect,
                                     const GraphicObject& _rGraphicObj,
                                     bool _bNumberingGraphic,
-                                    bool _bBackgrdAlreadyDrawn = false )
+                                    SwPaintProperties& properties,
+                                    bool _bBackgrdAlreadyDrawn = false)
 {
     // draw background with background color, if
     //     (1) graphic is not used as a numbering AND
@@ -1821,10 +1847,10 @@ static inline void lcl_DrawGraphicBackgrd( const SvxBrushItem& _rBackgrdBrush,
     //     (3) intrinsic graphic is transparent OR intrinsic graphic doesn't exists
     if ( !_bNumberingGraphic &&
          !_bBackgrdAlreadyDrawn &&
-         ( _rGraphicObj.IsTransparent() || _rGraphicObj.GetType() == GRAPHIC_NONE  )
+         ( _rGraphicObj.IsTransparent() || _rGraphicObj.GetType() == GraphicType::NONE  )
        )
     {
-        lcl_implDrawGraphicBackgrd( _rBackgrdBrush, _pOut, _rAlignedPaintRect, _rGraphicObj );
+        lcl_implDrawGraphicBackgrd( _rBackgrdBrush, _pOut, _rAlignedPaintRect, _rGraphicObj, properties );
     }
 }
 
@@ -1843,17 +1869,18 @@ static inline void lcl_DrawGraphicBackgrd( const SvxBrushItem& _rBackgrdBrush,
  *
  * Also, change type of <bGrfNum> and <bClip> from <bool> to <bool>
  */
-static void lcl_DrawGraphic( const SvxBrushItem& rBrush, OutputDevice *pOut,
+static void lcl_DrawGraphic( const SvxBrushItem& rBrush, vcl::RenderContext *pOut,
                       SwViewShell &rSh, const SwRect &rGrf, const SwRect &rOut,
                       bool bClip, bool bGrfNum,
-                      bool bBackgrdAlreadyDrawn = false )
+                      SwPaintProperties& properties,
+                      bool bBackgrdAlreadyDrawn )
                       // add parameter <bBackgrdAlreadyDrawn> to indicate
                       // that the background is already drawn.
 {
     // Calculate align rectangle from parameter <rGrf> and use aligned
     // rectangle <aAlignedGrfRect> in the following code
     SwRect aAlignedGrfRect = rGrf;
-    ::SwAlignRect( aAlignedGrfRect, &rSh );
+    ::SwAlignRect( aAlignedGrfRect, &rSh, pOut );
 
     // Change type from <bool> to <bool>.
     const bool bNotInside = bClip && !rOut.IsInside( aAlignedGrfRect );
@@ -1863,12 +1890,10 @@ static void lcl_DrawGraphic( const SvxBrushItem& rBrush, OutputDevice *pOut,
         pOut->IntersectClipRegion( rOut.SVRect() );
     }
 
-    // No Link here, we want to load the graphic synchronously!
-    ((SvxBrushItem&)rBrush).SetDoneLink( Link() );
-    GraphicObject *pGrf = (GraphicObject*)rBrush.GetGraphicObject();
+    GraphicObject *pGrf = const_cast<GraphicObject*>(rBrush.GetGraphicObject());
 
     // Outsource drawing of background with a background color
-    ::lcl_DrawGraphicBackgrd( rBrush, pOut, aAlignedGrfRect, *pGrf, bGrfNum, bBackgrdAlreadyDrawn );
+    ::lcl_DrawGraphicBackgrd( rBrush, pOut, aAlignedGrfRect, *pGrf, bGrfNum, properties, bBackgrdAlreadyDrawn );
 
     // Because for drawing a graphic left-top-corner and size coordinates are
     // used, these coordinates have to be determined on pixel level.
@@ -1885,7 +1910,8 @@ bool DrawFillAttributes(
     const drawinglayer::attribute::SdrAllFillAttributesHelperPtr& rFillAttributes,
     const SwRect& rOriginalLayoutRect,
     const SwRegionRects& rPaintRegion,
-    OutputDevice& rOut)
+    const basegfx::tools::B2DClipState& rClipState,
+    vcl::RenderContext& rOut)
 {
     if(rFillAttributes.get() && rFillAttributes->isUsed())
     {
@@ -1902,7 +1928,7 @@ bool DrawFillAttributes(
         {
             const SvtOptionsDrawinglayer aSvtOptionsDrawinglayer;
 
-            //UUUU need to expand for correct AAed and non-AAed visualization as primitive.
+            // need to expand for correct AAed and non-AAed visualization as primitive.
             // This must probably be removed again when we will be able to get all Writer visualization
             // as primitives and Writer prepares all it's stuff in high precision coordinates (also
             // needs to avoid moving boundaries around to better show overlapping stuff...)
@@ -1912,7 +1938,7 @@ bool DrawFillAttributes(
                 // AAed regions does not add to no transparence (0.5 opacity covered by 0.5 opacity
                 // is not full opacity but 0.75 opacity) we need some overlap here to avoid paint
                 // artifacts. Checked experimentally - a little bit more in Y is needed, probably
-                // due to still existing integer alignment and cruncing in writer.
+                // due to still existing integer alignment and crunching in writer.
                 static double fExpandX = 0.55;
                 static double fExpandY = 0.70;
                 const basegfx::B2DVector aSingleUnit(rOut.GetInverseViewTransformation() * basegfx::B2DVector(fExpandX, fExpandY));
@@ -1935,37 +1961,31 @@ bool DrawFillAttributes(
                 rOriginalLayoutRect.Right(),
                 rOriginalLayoutRect.Bottom());
 
-            const drawinglayer::primitive2d::Primitive2DSequence& rSequence = rFillAttributes->getPrimitive2DSequence(
+            const drawinglayer::primitive2d::Primitive2DContainer& rSequence = rFillAttributes->getPrimitive2DSequence(
                 aPaintRange,
                 aDefineRange);
 
-            if(rSequence.getLength())
+            if(rSequence.size())
             {
-                drawinglayer::primitive2d::Primitive2DSequence const*
+                drawinglayer::primitive2d::Primitive2DContainer const*
                     pPrimitives(&rSequence);
-                drawinglayer::primitive2d::Primitive2DSequence primitives;
+                drawinglayer::primitive2d::Primitive2DContainer primitives;
                 // tdf#86578 the awful lcl_SubtractFlys hack
                 if (rPaintRegion.size() > 1 || rPaintRegion[0] != rPaintRegion.GetOrigin())
                 {
-                    tools::PolyPolygon tempRegion;
-                    for (size_t i = 0; i < rPaintRegion.size(); ++i)
-                    {
-                        tempRegion.Insert(Polygon(rPaintRegion[i].SVRect()));
-                    }
-                    basegfx::B2DPolyPolygon const maskRegion(
-                            tempRegion.getB2DPolyPolygon());
-                    primitives.realloc(1);
+                    basegfx::B2DPolyPolygon const maskRegion(rClipState.getClipPoly());
+                    primitives.resize(1);
                     primitives[0] = new drawinglayer::primitive2d::MaskPrimitive2D(
                             maskRegion, rSequence);
                     pPrimitives = &primitives;
                 }
-                assert(pPrimitives && pPrimitives->getLength());
+                assert(pPrimitives && pPrimitives->size());
 
                 const drawinglayer::geometry::ViewInformation2D aViewInformation2D(
                     basegfx::B2DHomMatrix(),
                     rOut.GetViewTransformation(),
                     aPaintRange,
-                    0,
+                    nullptr,
                     0.0,
                     uno::Sequence< beans::PropertyValue >());
                 drawinglayer::processor2d::BaseProcessor2D* pProcessor = drawinglayer::processor2d::createProcessor2DFromOutputDevice(
@@ -1989,7 +2009,7 @@ bool DrawFillAttributes(
 
 void DrawGraphic(
     const SvxBrushItem *pBrush,
-    OutputDevice *pOutDev,
+    vcl::RenderContext *pOutDev,
     const SwRect &rOrg,
     const SwRect &rOut,
     const sal_uInt8 nGrfNum,
@@ -2010,29 +2030,18 @@ void DrawGraphic(
     {
         if( rSh.GetViewOptions()->IsGraphic() )
         {
-            // load graphic directly in PDF import
-            // #i68953# - also during print load graphic directly.
-            if ( (rSh).GetViewOptions()->IsPDFExport() ||
-                 rSh.GetOut()->GetOutDevType() == OUTDEV_PRINTER )
-            {
-                ((SvxBrushItem*)pBrush)->PurgeMedium();
-                ((SvxBrushItem*)pBrush)->SetDoneLink( Link() );
-            }
-            else
-                ((SvxBrushItem*)pBrush)->SetDoneLink( STATIC_LINK(
-                                    rSh.GetDoc(), SwDoc, BackgroundDone ) );
             OUString referer;
             SfxObjectShell * sh = rSh.GetDoc()->GetPersist();
-            if (sh != 0 && sh->HasName()) {
+            if (sh != nullptr && sh->HasName()) {
                 referer = sh->GetMedium()->GetName();
             }
             const Graphic* pGrf = pBrush->GetGraphic(referer);
-            if( pGrf && GRAPHIC_NONE != pGrf->GetType() )
+            if( pGrf && GraphicType::NONE != pGrf->GetType() )
             {
                 ePos = pBrush->GetGraphicPos();
                 if( pGrf->IsSupportedGraphic() )
                     // don't the use the specific output device! Bug 94802
-                    aGrfSize = ::GetGraphicSizeTwip( *pGrf, 0 );
+                    aGrfSize = ::GetGraphicSizeTwip( *pGrf, nullptr );
             }
         }
         else
@@ -2108,9 +2117,9 @@ void DrawGraphic(
             GraphicObject* pGraphicObj = const_cast< GraphicObject* >(pBrush->GetGraphicObject());
             // calculate aligned paint rectangle
             SwRect aAlignedPaintRect = rOut;
-            ::SwAlignRect( aAlignedPaintRect, &rSh );
+            ::SwAlignRect( aAlignedPaintRect, &rSh, pOutDev );
             // draw background color for aligned paint rectangle
-            lcl_DrawGraphicBackgrd( *pBrush, pOutDev, aAlignedPaintRect, *pGraphicObj, bGrfNum );
+            lcl_DrawGraphicBackgrd( *pBrush, pOutDev, aAlignedPaintRect, *pGraphicObj, bGrfNum, gProp );
 
             // set left-top-corner of background graphic to left-top-corner of the
             // area, from which the background brush is determined.
@@ -2151,8 +2160,8 @@ void DrawGraphic(
                                         aAlignedPaintRect.SVRect(),
                                         aGrf.SSize(),
                                         Size( aPaintOffset.X(), aPaintOffset.Y() ),
-                                        NULL, GRFMGR_DRAW_STANDARD,
-                                        ::std::max( 128, static_cast<int>( sqrt(sqrt( Abitmap)) + .5 ) ) );
+                                        GraphicManagerDrawFlags::STANDARD,
+                                        std::max( 128, static_cast<int>( sqrt(sqrt( Abitmap)) + .5 ) ) );
             }
             // reset clipping at output device
             pOutDev->Pop();
@@ -2181,7 +2190,7 @@ void DrawGraphic(
         // background) is transparent drawn and the background color is
         // "no fill" respectively "auto fill", if background transparency
         // has to be considered.
-        // If YES, memorise transparency of background graphic.
+        // If YES, memorize transparency of background graphic.
         // check also, if background graphic bitmap is transparent.
         bool bTransparentGrfWithNoFillBackgrd = false;
         sal_Int32 nGrfTransparency = 0;
@@ -2190,16 +2199,16 @@ void DrawGraphic(
              (ePos != GPOS_TILED) && (ePos != GPOS_AREA)
            )
         {
-            GraphicObject *pGrf = (GraphicObject*)pBrush->GetGraphicObject();
+            GraphicObject *pGrf = const_cast<GraphicObject*>(pBrush->GetGraphicObject());
             if ( bConsiderBackgroundTransparency )
             {
-                GraphicAttr pGrfAttr = pGrf->GetAttr();
-                if ( (pGrfAttr.GetTransparency() != 0) &&
+                GraphicAttr aGrfAttr = pGrf->GetAttr();
+                if ( (aGrfAttr.GetTransparency() != 0) &&
                      (pBrush->GetColor() == COL_TRANSPARENT)
                    )
                 {
                     bTransparentGrfWithNoFillBackgrd = true;
-                    nGrfTransparency = pGrfAttr.GetTransparency();
+                    nGrfTransparency = aGrfAttr.GetTransparency();
                 }
             }
             if ( pGrf->IsTransparent() )
@@ -2238,18 +2247,18 @@ void DrawGraphic(
         }
 
         // #i75614# reset draw mode in high contrast mode in order to get fill color set
-        const sal_uLong nOldDrawMode = pOutDev->GetDrawMode();
+        const DrawModeFlags nOldDrawMode = pOutDev->GetDrawMode();
         if ( gProp.pSGlobalShell->GetWin() &&
              Application::GetSettings().GetStyleSettings().GetHighContrastMode() )
         {
-            pOutDev->SetDrawMode( 0 );
+            pOutDev->SetDrawMode( DrawModeFlags::Default );
         }
 
 #ifdef USE_JAVA
         Color aNativeHighlightColor( COL_TRANSPARENT );
         sal_uInt16 nNativeHighlightTransparentPercent = 0;
         tools::PolyPolygon aNativeHighlightPolyPoly;
-        SwCrsrShell *pCrsrSh = dynamic_cast< SwCrsrShell* >( pSh );
+        SwCursorShell *pCrsrSh = dynamic_cast< SwCursorShell* >( pSh );
         if ( pCrsrSh )
         {
             aNativeHighlightColor = pOutDev->GetSettings().GetStyleSettings().GetHighlightColor();
@@ -2258,14 +2267,14 @@ void DrawGraphic(
             if ( aSvtOptionsDrawinglayer.IsTransparentSelection() )
                 nNativeHighlightTransparentPercent = aSvtOptionsDrawinglayer.GetTransparentSelectionPercent();
 
-            std::vector< Rectangle > aPixelRects;
+            std::vector< tools::Rectangle > aPixelRects;
 
-            SwShellTableCrsr *pTblCrsr = pCrsrSh->GetTableCrsr();
+            SwShellTableCursor *pTblCrsr = pCrsrSh->GetTableCursor();
             if ( pTblCrsr )
             {
-                std::vector< Rectangle > aTblCrsrPixelRects;
+                std::vector< tools::Rectangle > aTblCrsrPixelRects;
                 pTblCrsr->GetNativeHightlightColorRects( aTblCrsrPixelRects );
-                for ( std::vector< Rectangle >::const_iterator it = aTblCrsrPixelRects.begin() ; it != aTblCrsrPixelRects.end() ; ++it )
+                for ( std::vector< tools::Rectangle >::const_iterator it = aTblCrsrPixelRects.begin() ; it != aTblCrsrPixelRects.end() ; ++it )
                 {
                     if ( !(*it).IsEmpty() )
                         aPixelRects.push_back( *it );
@@ -2274,12 +2283,12 @@ void DrawGraphic(
             else
             {
                 // Fix bug 3585 by not duplicating pixel rects
-                SwShellCrsr *pCurCrsr = pCrsrSh->_GetCrsr();
+                SwShellCursor *pCurCrsr = pCrsrSh->GetCursor_();
                 if ( pCurCrsr )
                 {
-                    std::vector< Rectangle > aCurCrsrPixelRects;
+                    std::vector< tools::Rectangle > aCurCrsrPixelRects;
                     pCurCrsr->GetNativeHightlightColorRects( aCurCrsrPixelRects );
-                    for ( std::vector< Rectangle >::const_iterator it = aCurCrsrPixelRects.begin() ; it != aCurCrsrPixelRects.end() ; ++it )
+                    for ( std::vector< tools::Rectangle >::const_iterator it = aCurCrsrPixelRects.begin() ; it != aCurCrsrPixelRects.end() ; ++it )
                     {
                         if ( !(*it).IsEmpty() )
                             aPixelRects.push_back( *it );
@@ -2287,8 +2296,8 @@ void DrawGraphic(
                 }
             }
 
-            for ( std::vector< Rectangle >::const_iterator it = aPixelRects.begin() ; it != aPixelRects.end() ; ++it )
-                aNativeHighlightPolyPoly.Insert( Polygon( *it ) );
+            for ( std::vector< tools::Rectangle >::const_iterator it = aPixelRects.begin() ; it != aPixelRects.end() ; ++it )
+                aNativeHighlightPolyPoly.Insert( tools::Polygon( *it ) );
         }
 #endif	// USE_JAVA
 
@@ -2322,7 +2331,7 @@ void DrawGraphic(
             {
                 // background region have to be drawn transparent.
                 // Thus, create a poly-polygon from the region and draw it with
-                // the corresponding transparency precent.
+                // the corresponding transparency percent.
                 tools::PolyPolygon aDrawPoly( rOut.SVRect() );
                 if ( aGrf.HasArea() )
                 {
@@ -2335,7 +2344,7 @@ void DrawGraphic(
                         aTmpGrf.Intersection( rOut );
                         if ( aTmpGrf.HasArea() )
                         {
-                            Polygon aGrfPoly( aTmpGrf.SVRect() );
+                            tools::Polygon aGrfPoly( aTmpGrf.SVRect() );
                             aDrawPoly.Insert( aGrfPoly );
                         }
                     }
@@ -2424,26 +2433,26 @@ void DrawGraphic(
     if( bDraw && aGrf.IsOver( rOut ) )
         // OD 02.09.2002 #99657#
         // add parameter <bGrfBackgrdAlreadyDrawn>
-        lcl_DrawGraphic( *pBrush, pOutDev, rSh, aGrf, rOut, true, bGrfNum,
+        lcl_DrawGraphic( *pBrush, pOutDev, rSh, aGrf, rOut, true, bGrfNum, gProp,
                          bGrfBackgrdAlreadyDrawn );
 
     if( bReplaceGrfNum )
     {
-        const BitmapEx& rBmp = SwViewShell::GetReplacementBitmap( false );
+        const BitmapEx& rBmp = rSh.GetReplacementBitmap(false);
         vcl::Font aTmp( pOutDev->GetFont() );
         Graphic::DrawEx( pOutDev, aEmptyOUStr, aTmp, rBmp, rOrg.Pos(), rOrg.SSize() );
     }
 }
 
 /**
- * Local helper for SwRootFrm::Paint(..) - Adjust given rectangle to pixel size
+ * Local helper for SwRootFrame::Paint(..) - Adjust given rectangle to pixel size
  *
  * By OD at 27.09.2002 for #103636#
  * In order to avoid paint errors caused by multiple alignments (e.g. ::SwAlignRect(..))
  * and other changes to the to be painted rectangle, this method is called for the
  * rectangle to be painted in order to adjust it to the pixel it is overlapping
 */
-static void lcl_AdjustRectToPixelSize( SwRect& io_aSwRect, const OutputDevice &aOut )
+static void lcl_AdjustRectToPixelSize( SwRect& io_aSwRect, const vcl::RenderContext &aOut )
 {
     // local constant object of class <Size> to determine number of Twips
     // representing a pixel.
@@ -2451,18 +2460,18 @@ static void lcl_AdjustRectToPixelSize( SwRect& io_aSwRect, const OutputDevice &a
 
     // local object of class <Rectangle> in Twip coordinates
     // calculated from given rectangle aligned to pixel centers.
-    const Rectangle aPxCenterRect = aOut.PixelToLogic(
+    const tools::Rectangle aPxCenterRect = aOut.PixelToLogic(
             aOut.LogicToPixel( io_aSwRect.SVRect() ) );
 
     // local constant object of class <Rectangle> representing given rectangle
     // in pixel.
-    const Rectangle aOrgPxRect = aOut.LogicToPixel( io_aSwRect.SVRect() );
+    const tools::Rectangle aOrgPxRect = aOut.LogicToPixel( io_aSwRect.SVRect() );
 
     // calculate adjusted rectangle from pixel centered rectangle.
     // Due to rounding differences <aPxCenterRect> doesn't exactly represents
     // the Twip-centers. Thus, adjust borders by half of pixel width/height plus 1.
     // Afterwards, adjust calculated Twip-positions of the all borders.
-    Rectangle aSizedRect = aPxCenterRect;
+    tools::Rectangle aSizedRect = aPxCenterRect;
     aSizedRect.Left() -= (aTwipToPxSize.Width()/2 + 1);
     aSizedRect.Right() += (aTwipToPxSize.Width()/2 + 1);
     aSizedRect.Top() -= (aTwipToPxSize.Height()/2 + 1);
@@ -2492,8 +2501,8 @@ static void lcl_AdjustRectToPixelSize( SwRect& io_aSwRect, const OutputDevice &a
     io_aSwRect = SwRect( aSizedRect );
 
 #if OSL_DEBUG_LEVEL > 0
-    Rectangle aTestOrgPxRect = aOut.LogicToPixel( io_aSwRect.SVRect() );
-    Rectangle aTestNewPxRect = aOut.LogicToPixel( aSizedRect );
+    tools::Rectangle aTestOrgPxRect = aOut.LogicToPixel( io_aSwRect.SVRect() );
+    tools::Rectangle aTestNewPxRect = aOut.LogicToPixel( aSizedRect );
     OSL_ENSURE( aTestOrgPxRect == aTestNewPxRect,
             "Error in lcl_AlignRectToPixelSize(..): Adjusted rectangle has incorrect position or size");
     // check Left()
@@ -2622,21 +2631,17 @@ struct lt_SwLineEntry
 };
 
 typedef std::set< SwLineEntry, lt_SwLineEntry > SwLineEntrySet;
-typedef std::set< SwLineEntry, lt_SwLineEntry >::iterator SwLineEntrySetIter;
-typedef std::set< SwLineEntry, lt_SwLineEntry >::const_iterator SwLineEntrySetConstIter;
 typedef std::map< SwTwips, SwLineEntrySet > SwLineEntryMap;
-typedef std::map< SwTwips, SwLineEntrySet >::iterator SwLineEntryMapIter;
-typedef std::map< SwTwips, SwLineEntrySet >::const_iterator SwLineEntryMapConstIter;
 
-class SwTabFrmPainter
+class SwTabFramePainter
 {
     SwLineEntryMap maVertLines;
     SwLineEntryMap maHoriLines;
-    const SwTabFrm& mrTabFrm;
+    const SwTabFrame& mrTabFrame;
 
     void Insert( SwLineEntry&, bool bHori );
-    void Insert( const SwFrm& rFrm, const SvxBoxItem& rBoxItem );
-    void HandleFrame( const SwLayoutFrm& rFrm );
+    void Insert( const SwFrame& rFrame, const SvxBoxItem& rBoxItem );
+    void HandleFrame( const SwLayoutFrame& rFrame );
     void FindStylesForLine( const Point&,
                             const Point&,
                             svx::frame::Style*,
@@ -2645,54 +2650,54 @@ class SwTabFrmPainter
     void AdjustTopLeftFrames();
 
 public:
-    SwTabFrmPainter( const SwTabFrm& rTabFrm );
+    explicit SwTabFramePainter( const SwTabFrame& rTabFrame );
 
     void PaintLines( OutputDevice& rDev, const SwRect& rRect ) const;
 };
 
-SwTabFrmPainter::SwTabFrmPainter( const SwTabFrm& rTabFrm )
-    : mrTabFrm( rTabFrm )
+SwTabFramePainter::SwTabFramePainter( const SwTabFrame& rTabFrame )
+    : mrTabFrame( rTabFrame )
 {
-    HandleFrame( rTabFrm );
+    HandleFrame( rTabFrame );
     AdjustTopLeftFrames();
 }
 
-void SwTabFrmPainter::HandleFrame( const SwLayoutFrm& rLayoutFrm )
+void SwTabFramePainter::HandleFrame( const SwLayoutFrame& rLayoutFrame )
 {
     // Add border lines of cell frames. Skip covered cells. Skip cells
     // in special row span row, which do not have a negative row span:
-    if ( rLayoutFrm.IsCellFrm() && !rLayoutFrm.IsCoveredCell() )
+    if ( rLayoutFrame.IsCellFrame() && !rLayoutFrame.IsCoveredCell() )
     {
-        const SwCellFrm* pThisCell = static_cast<const SwCellFrm*>(&rLayoutFrm);
-        const SwRowFrm* pRowFrm = static_cast<const SwRowFrm*>(pThisCell->GetUpper());
+        const SwCellFrame* pThisCell = static_cast<const SwCellFrame*>(&rLayoutFrame);
+        const SwRowFrame* pRowFrame = static_cast<const SwRowFrame*>(pThisCell->GetUpper());
         const long nRowSpan = pThisCell->GetTabBox()->getRowSpan();
-        if ( !pRowFrm->IsRowSpanLine() || nRowSpan > 1 || nRowSpan < -1 )
+        if ( !pRowFrame->IsRowSpanLine() || nRowSpan > 1 || nRowSpan < -1 )
         {
-            SwBorderAttrAccess aAccess( SwFrm::GetCache(), &rLayoutFrm );
+            SwBorderAttrAccess aAccess( SwFrame::GetCache(), &rLayoutFrame );
             const SwBorderAttrs& rAttrs = *aAccess.Get();
             const SvxBoxItem& rBox = rAttrs.GetBox();
-            Insert( rLayoutFrm, rBox );
+            Insert( rLayoutFrame, rBox );
         }
     }
 
     // Recurse into lower layout frames, but do not recurse into lower tabframes.
-    const SwFrm* pLower = rLayoutFrm.Lower();
+    const SwFrame* pLower = rLayoutFrame.Lower();
     while ( pLower )
     {
-        const SwLayoutFrm* pLowerLayFrm = dynamic_cast<const SwLayoutFrm*>(pLower);
-        if ( pLowerLayFrm && !pLowerLayFrm->IsTabFrm() )
-            HandleFrame( *pLowerLayFrm );
+        const SwLayoutFrame* pLowerLayFrame = dynamic_cast<const SwLayoutFrame*>(pLower);
+        if ( pLowerLayFrame && !pLowerLayFrame->IsTabFrame() )
+            HandleFrame( *pLowerLayFrame );
 
         pLower = pLower->GetNext();
     }
 }
 
-void SwTabFrmPainter::PaintLines(OutputDevice& rDev, const SwRect& rRect) const
+void SwTabFramePainter::PaintLines(OutputDevice& rDev, const SwRect& rRect) const
 {
     // #i16816# tagged pdf support
-    SwTaggedPDFHelper aTaggedPDFHelper( 0, 0, 0, rDev );
+    SwTaggedPDFHelper aTaggedPDFHelper( nullptr, nullptr, nullptr, rDev );
 
-    SwLineEntryMapConstIter aIter = maHoriLines.begin();
+    SwLineEntryMap::const_iterator aIter = maHoriLines.begin();
     bool bHori = true;
 
     // color for subsidiary lines:
@@ -2700,20 +2705,20 @@ void SwTabFrmPainter::PaintLines(OutputDevice& rDev, const SwRect& rRect) const
 
     // high contrast mode:
     // overrides the color of non-subsidiary lines.
-    const Color* pHCColor = 0;
-    sal_uLong nOldDrawMode = rDev.GetDrawMode();
+    const Color* pHCColor = nullptr;
+    DrawModeFlags nOldDrawMode = rDev.GetDrawMode();
     if( gProp.pSGlobalShell->GetWin() &&
         Application::GetSettings().GetStyleSettings().GetHighContrastMode() )
     {
         pHCColor = &SwViewOption::GetFontColor();
-        rDev.SetDrawMode( 0 );
+        rDev.SetDrawMode( DrawModeFlags::Default );
     }
 
-    const SwFrm* pUpper = mrTabFrm.GetUpper();
+    const SwFrame* pUpper = mrTabFrame.GetUpper();
     SwRect aUpper( pUpper->Prt() );
-    aUpper.Pos() += pUpper->Frm().Pos();
+    aUpper.Pos() += pUpper->Frame().Pos();
     SwRect aUpperAligned( aUpper );
-    ::SwAlignRect( aUpperAligned, gProp.pSGlobalShell );
+    ::SwAlignRect( aUpperAligned, gProp.pSGlobalShell, &rDev );
 
     while ( true )
     {
@@ -2727,7 +2732,7 @@ void SwTabFrmPainter::PaintLines(OutputDevice& rDev, const SwRect& rRect) const
             break;
 
         const SwLineEntrySet& rEntrySet = (*aIter).second;
-        for (SwLineEntrySetConstIter aSetIter = rEntrySet.begin();
+        for (SwLineEntrySet::const_iterator aSetIter = rEntrySet.begin();
                  aSetIter != rEntrySet.end(); ++aSetIter)
         {
             const SwLineEntry& rEntry = *aSetIter;
@@ -2809,13 +2814,13 @@ void SwTabFrmPainter::PaintLines(OutputDevice& rDev, const SwRect& rRect) const
             }
 
             // subsidiary lines
-            const Color* pTmpColor = 0;
+            const Color* pTmpColor = nullptr;
             if (0 == aStyles[ 0 ].GetWidth())
             {
                 if (isTableBoundariesEnabled() && gProp.pSGlobalShell->GetWin())
                     aStyles[ 0 ].Set( rCol, rCol, rCol, false, 1, 0, 0 );
                 else
-                    aStyles[0].SetType(table::BorderLineStyle::NONE);
+                    aStyles[0].SetType(SvxBorderLineStyle::NONE);
             }
             else
                 pTmpColor = pHCColor;
@@ -2838,26 +2843,26 @@ void SwTabFrmPainter::PaintLines(OutputDevice& rDev, const SwRect& rRect) const
                 // borders match the subsidiary lines of the upper:
                 if (aStart.X() == aUpper.Left())
                     aPaintStart.X() = aUpperAligned.Left();
-                else if (aStart.X() == aUpper._Right())
-                    aPaintStart.X() = aUpperAligned._Right();
+                else if (aStart.X() == aUpper.Rigth_())
+                    aPaintStart.X() = aUpperAligned.Rigth_();
                 if (aStart.Y() == aUpper.Top())
                     aPaintStart.Y() = aUpperAligned.Top();
-                else if (aStart.Y() == aUpper._Bottom())
-                    aPaintStart.Y() = aUpperAligned._Bottom();
+                else if (aStart.Y() == aUpper.Bottom_())
+                    aPaintStart.Y() = aUpperAligned.Bottom_();
 
                 if (aEnd.X() == aUpper.Left())
                     aPaintEnd.X() = aUpperAligned.Left();
-                else if (aEnd.X() == aUpper._Right())
-                    aPaintEnd.X() = aUpperAligned._Right();
+                else if (aEnd.X() == aUpper.Rigth_())
+                    aPaintEnd.X() = aUpperAligned.Rigth_();
                 if (aEnd.Y() == aUpper.Top())
                     aPaintEnd.Y() = aUpperAligned.Top();
-                else if (aEnd.Y() == aUpper._Bottom())
-                    aPaintEnd.Y() = aUpperAligned._Bottom();
+                else if (aEnd.Y() == aUpper.Bottom_())
+                    aPaintEnd.Y() = aUpperAligned.Bottom_();
             }
 
             // logically vertical lines are painted centered on the line,
             // logically horizontal lines are painted "below" the line
-            bool const isBelow((mrTabFrm.IsVertical()) ? !bHori : bHori);
+            bool const isBelow((mrTabFrame.IsVertical()) ? !bHori : bHori);
             double const offsetStart = (isBelow)
                 ?   aStyles[0].GetWidth() / 2.0
                 :   std::max<double>(aStyles[1].GetWidth(),
@@ -2866,7 +2871,7 @@ void SwTabFrmPainter::PaintLines(OutputDevice& rDev, const SwRect& rRect) const
                 ?   aStyles[0].GetWidth() / 2.0
                 :   std::max<double>(aStyles[4].GetWidth(),
                         aStyles[6].GetWidth()) / 2.0;
-            if (mrTabFrm.IsVertical())
+            if (mrTabFrame.IsVertical())
             {
                 aPaintStart.X() -= static_cast<long>(offsetStart + 0.5);
                 aPaintEnd.X()   -= static_cast<long>(offsetEnd   + 0.5);
@@ -2879,7 +2884,7 @@ void SwTabFrmPainter::PaintLines(OutputDevice& rDev, const SwRect& rRect) const
 
             if (bHori)
             {
-                mrTabFrm.ProcessPrimitives( svx::frame::CreateBorderPrimitives(
+                mrTabFrame.ProcessPrimitives( svx::frame::CreateBorderPrimitives(
                     aPaintStart,
                     aPaintEnd,
                     aStyles[ 0 ],   // current style
@@ -2894,7 +2899,7 @@ void SwTabFrmPainter::PaintLines(OutputDevice& rDev, const SwRect& rRect) const
             }
             else
             {
-                mrTabFrm.ProcessPrimitives( svx::frame::CreateBorderPrimitives(
+                mrTabFrame.ProcessPrimitives( svx::frame::CreateBorderPrimitives(
                     aPaintEnd,
                     aPaintStart,
                     aStyles[ 0 ],   // current style
@@ -2921,7 +2926,7 @@ void SwTabFrmPainter::PaintLines(OutputDevice& rDev, const SwRect& rRect) const
  * StartPoint or Endpoint. The styles of these lines are required for DR's magic
  * line painting functions
  */
-void SwTabFrmPainter::FindStylesForLine( const Point& rStartPoint,
+void SwTabFramePainter::FindStylesForLine( const Point& rStartPoint,
                                          const Point& rEndPoint,
                                          svx::frame::Style* pStyles,
                                          bool bHori ) const
@@ -2933,10 +2938,10 @@ void SwTabFrmPainter::FindStylesForLine( const Point& rStartPoint,
     // pStyles[ 5 ] = bHori ? aRFromR : BFromB,
     // pStyles[ 6 ] = bHori ? aRFromB : BFromR,
 
-    SwLineEntryMapConstIter aMapIter = maVertLines.find( rStartPoint.X() );
+    SwLineEntryMap::const_iterator aMapIter = maVertLines.find( rStartPoint.X() );
     OSL_ENSURE( aMapIter != maVertLines.end(), "FindStylesForLine: Error" );
     const SwLineEntrySet& rVertSet = (*aMapIter).second;
-    SwLineEntrySetConstIter aIter = rVertSet.begin();
+    SwLineEntrySet::const_iterator aIter = rVertSet.begin();
 
     while ( aIter != rVertSet.end() )
     {
@@ -3065,7 +3070,7 @@ void calcOffsetForDoubleLine( SwLineEntryMap& rLines )
 
 }
 
-void SwTabFrmPainter::AdjustTopLeftFrames()
+void SwTabFramePainter::AdjustTopLeftFrames()
 {
     calcOffsetForDoubleLine(maHoriLines);
     calcOffsetForDoubleLine(maVertLines);
@@ -3076,37 +3081,37 @@ void SwTabFrmPainter::AdjustTopLeftFrames()
  * first line in follow table without repeated headlines
  */
 static bool lcl_IsFirstRowInFollowTableWithoutRepeatedHeadlines(
-        SwTabFrm const& rTabFrm, SwFrm const& rFrm, SvxBoxItem const& rBoxItem)
+        SwTabFrame const& rTabFrame, SwFrame const& rFrame, SvxBoxItem const& rBoxItem)
 {
-    SwRowFrm const*const pThisRowFrm =
-        dynamic_cast<const SwRowFrm*>(rFrm.GetUpper());
-    return (pThisRowFrm
-        && (pThisRowFrm->GetUpper() == &rTabFrm)
-        && rTabFrm.IsFollow()
-        && !rTabFrm.GetTable()->GetRowsToRepeat()
-        &&  (  !pThisRowFrm->GetPrev()
-            || static_cast<const SwRowFrm*>(pThisRowFrm->GetPrev())
+    SwRowFrame const*const pThisRowFrame =
+        dynamic_cast<const SwRowFrame*>(rFrame.GetUpper());
+    return (pThisRowFrame
+        && (pThisRowFrame->GetUpper() == &rTabFrame)
+        && rTabFrame.IsFollow()
+        && !rTabFrame.GetTable()->GetRowsToRepeat()
+        &&  (  !pThisRowFrame->GetPrev()
+            || static_cast<const SwRowFrame*>(pThisRowFrame->GetPrev())
                     ->IsRowSpanLine())
         && !rBoxItem.GetTop()
         && rBoxItem.GetBottom());
 }
 
-void SwTabFrmPainter::Insert( const SwFrm& rFrm, const SvxBoxItem& rBoxItem )
+void SwTabFramePainter::Insert( const SwFrame& rFrame, const SvxBoxItem& rBoxItem )
 {
     // build 4 line entries for the 4 borders:
-    SwRect aBorderRect = rFrm.Frm();
-    if ( rFrm.IsTabFrm() )
+    SwRect aBorderRect = rFrame.Frame();
+    if ( rFrame.IsTabFrame() )
     {
-        aBorderRect = rFrm.Prt();
-        aBorderRect.Pos() += rFrm.Frm().Pos();
+        aBorderRect = rFrame.Prt();
+        aBorderRect.Pos() += rFrame.Frame().Pos();
     }
 
     bool const bBottomAsTop(lcl_IsFirstRowInFollowTableWithoutRepeatedHeadlines(
-                mrTabFrm, rFrm, rBoxItem));
-    bool const bVert = mrTabFrm.IsVertical();
-    bool const bR2L  = mrTabFrm.IsRightToLeft();
+                mrTabFrame, rFrame, rBoxItem));
+    bool const bVert = mrTabFrame.IsVertical();
+    bool const bR2L  = mrTabFrame.IsRightToLeft();
 
-    SwViewShell* pViewShell = mrTabFrm.getRootFrm()->GetCurrShell();
+    SwViewShell* pViewShell = mrTabFrame.getRootFrame()->GetCurrShell();
     OutputDevice* pOutDev = pViewShell->GetOut();
     const MapMode& rMapMode = pOutDev->GetMapMode();
     const Fraction& rFracX = rMapMode.GetScaleX();
@@ -3124,15 +3129,15 @@ void SwTabFrmPainter::Insert( const SwFrm& rFrm, const SvxBoxItem& rBoxItem )
     aR.MirrorSelf();
     aB.MirrorSelf();
 
-    const SwTwips nLeft   = aBorderRect._Left();
-    const SwTwips nRight  = aBorderRect._Right();
-    const SwTwips nTop    = aBorderRect._Top();
-    const SwTwips nBottom = aBorderRect._Bottom();
+    const SwTwips nLeft   = aBorderRect.Left_();
+    const SwTwips nRight  = aBorderRect.Rigth_();
+    const SwTwips nTop    = aBorderRect.Top_();
+    const SwTwips nBottom = aBorderRect.Bottom_();
 
-    aL.SetRefMode( svx::frame::REFMODE_CENTERED );
-    aR.SetRefMode( svx::frame::REFMODE_CENTERED );
-    aT.SetRefMode( !bVert ? svx::frame::REFMODE_BEGIN : svx::frame::REFMODE_END );
-    aB.SetRefMode( !bVert ? svx::frame::REFMODE_BEGIN : svx::frame::REFMODE_END );
+    aL.SetRefMode( svx::frame::RefMode::Centered );
+    aR.SetRefMode( svx::frame::RefMode::Centered );
+    aT.SetRefMode( !bVert ? svx::frame::RefMode::Begin : svx::frame::RefMode::End );
+    aB.SetRefMode( !bVert ? svx::frame::RefMode::Begin : svx::frame::RefMode::End );
 
     SwLineEntry aLeft  (nLeft,   nTop,  nBottom,
             (bVert) ? aB                         : ((bR2L) ? aR : aL));
@@ -3149,21 +3154,21 @@ void SwTabFrmPainter::Insert( const SwFrm& rFrm, const SvxBoxItem& rBoxItem )
     Insert( aBottom, true );
 }
 
-void SwTabFrmPainter::Insert( SwLineEntry& rNew, bool bHori )
+void SwTabFramePainter::Insert( SwLineEntry& rNew, bool bHori )
 {
     // get all lines from structure, that have key entry of pLE
     SwLineEntryMap* pLine2 = bHori ? &maHoriLines : &maVertLines;
     const SwTwips nKey = rNew.mnKey;
-    SwLineEntryMapIter aMapIter = pLine2->find( nKey );
+    SwLineEntryMap::iterator aMapIter = pLine2->find( nKey );
 
-    SwLineEntrySet* pLineSet = aMapIter != pLine2->end() ? &((*aMapIter).second) : 0;
+    SwLineEntrySet* pLineSet = aMapIter != pLine2->end() ? &((*aMapIter).second) : nullptr;
     if ( !pLineSet )
     {
         SwLineEntrySet aNewSet;
         (*pLine2)[ nKey ] = aNewSet;
         pLineSet = &(*pLine2)[ nKey ];
     }
-    SwLineEntrySetIter aIter = pLineSet->begin();
+    SwLineEntrySet::iterator aIter = pLineSet->begin();
 
     while ( aIter != pLineSet->end() && rNew.mnStartPos < rNew.mnEndPos )
     {
@@ -3252,34 +3257,31 @@ void SwTabFrmPainter::Insert( SwLineEntry& rNew, bool bHori )
  */
 namespace
 {
-    class SwViewObjectContactRedirector : public ::sdr::contact::ViewObjectContactRedirector
+    class SwViewObjectContactRedirector : public sdr::contact::ViewObjectContactRedirector
     {
         private:
             const SwViewShell& mrViewShell;
 
         public:
-            SwViewObjectContactRedirector( const SwViewShell& rSh )
+            explicit SwViewObjectContactRedirector( const SwViewShell& rSh )
                 : mrViewShell( rSh )
             {};
 
-            virtual ~SwViewObjectContactRedirector()
-            {}
-
-            virtual drawinglayer::primitive2d::Primitive2DSequence createRedirectedPrimitive2DSequence(
+            virtual drawinglayer::primitive2d::Primitive2DContainer createRedirectedPrimitive2DSequence(
                                     const sdr::contact::ViewObjectContact& rOriginal,
-                                    const sdr::contact::DisplayInfo& rDisplayInfo) SAL_OVERRIDE
+                                    const sdr::contact::DisplayInfo& rDisplayInfo) override
             {
                 bool bPaint( true );
 
                 SdrObject* pObj = rOriginal.GetViewContact().TryToGetSdrObject();
                 if ( pObj )
                 {
-                    bPaint = SwFlyFrm::IsPaint( pObj, &mrViewShell );
+                    bPaint = SwFlyFrame::IsPaint( pObj, &mrViewShell );
                 }
 
                 if ( !bPaint )
                 {
-                    return drawinglayer::primitive2d::Primitive2DSequence();
+                    return drawinglayer::primitive2d::Primitive2DContainer();
                 }
 
                 return sdr::contact::ViewObjectContactRedirector::createRedirectedPrimitive2DSequence(
@@ -3299,14 +3301,14 @@ namespace
  * 3. Paint the document content (text)
  * 4. Paint the draw layer that is above the document
 |*/
-void SwRootFrm::Paint(SwRect const& rRect, SwPrintData const*const pPrintData) const
+void SwRootFrame::Paint(vcl::RenderContext& rRenderContext, SwRect const& rRect, SwPrintData const*const pPrintData) const
 {
-    OSL_ENSURE( Lower() && Lower()->IsPageFrm(), "Lower of root is no page." );
+    OSL_ENSURE( Lower() && Lower()->IsPageFrame(), "Lower of root is no page." );
 
-    PROTOCOL( this, PROT_FILE_INIT, 0, 0)
+    PROTOCOL( this, PROT::FileInit, DbgAction::NONE, nullptr)
 
     bool bResetRootPaint = false;
-    SwViewShell *pSh = pCurrShell;
+    SwViewShell *pSh = mpCurrShell;
 
     if ( pSh->GetWin() )
     {
@@ -3314,22 +3316,22 @@ void SwRootFrm::Paint(SwRect const& rRect, SwPrintData const*const pPrintData) c
         {
             return;
         }
-        if ( SwRootFrm::bInPaint )
+        if (SwRootFrame::s_isInPaint)
         {
             SwPaintQueue::Add( pSh, rRect );
             return;
         }
     }
     else
-        SwRootFrm::bInPaint = bResetRootPaint = true;
+        SwRootFrame::s_isInPaint = bResetRootPaint = true;
 
-    SwSavePaintStatics *pStatics = 0;
+    SwSavePaintStatics *pStatics = nullptr;
     if ( gProp.pSGlobalShell )
         pStatics = new SwSavePaintStatics();
     gProp.pSGlobalShell = pSh;
 
     if( !pSh->GetWin() )
-        gProp.pSProgress = SfxProgress::GetActiveProgress( (SfxObjectShell*) pSh->GetDoc()->GetDocShell() );
+        gProp.pSProgress = SfxProgress::GetActiveProgress( static_cast<SfxObjectShell*>(pSh->GetDoc()->GetDocShell()) );
 
     ::SwCalcPixStatics( pSh->GetOut() );
     aGlobalRetoucheColor = pSh->Imp()->GetRetoucheColor();
@@ -3342,28 +3344,29 @@ void SwRootFrm::Paint(SwRect const& rRect, SwPrintData const*const pPrintData) c
     // all existing <SwViewShell> instances.
     bool bPerformLayoutAction( true );
     {
-        SwViewShell* pTmpViewShell = pSh;
-        do {
-            if ( pTmpViewShell->IsInEndAction() ||
-                 pTmpViewShell->IsPaintInProgress() ||
-                 ( pTmpViewShell->Imp()->IsAction() &&
-                   pTmpViewShell->Imp()->GetLayAction().IsActionInProgress() ) )
+        for(SwViewShell& rTmpViewShell : pSh->GetRingContainer())
+        {
+            if ( rTmpViewShell.IsInEndAction() ||
+                 rTmpViewShell.IsPaintInProgress() ||
+                 ( rTmpViewShell.Imp()->IsAction() &&
+                   rTmpViewShell.Imp()->GetLayAction().IsActionInProgress() ) )
             {
                 bPerformLayoutAction = false;
             }
 
-            pTmpViewShell = static_cast<SwViewShell*>(pTmpViewShell->GetNext());
-        } while ( bPerformLayoutAction && pTmpViewShell != pSh );
+            if(!bPerformLayoutAction)
+                break;
+        }
     }
     if ( bPerformLayoutAction )
     {
-        ((SwRootFrm*)this)->ResetTurbo();
-        SwLayAction aAction( (SwRootFrm*)this, pSh->Imp() );
+        const_cast<SwRootFrame*>(this)->ResetTurbo();
+        SwLayAction aAction( const_cast<SwRootFrame*>(this), pSh->Imp() );
         aAction.SetPaint( false );
         aAction.SetComplete( false );
         aAction.SetReschedule( gProp.pSProgress != nullptr );
-        aAction.Action();
-        ((SwRootFrm*)this)->ResetTurboFlag();
+        aAction.Action(&rRenderContext);
+        ResetTurboFlag();
         if ( !pSh->ActionPend() )
             pSh->Imp()->DelRegion();
     }
@@ -3371,7 +3374,7 @@ void SwRootFrm::Paint(SwRect const& rRect, SwPrintData const*const pPrintData) c
     SwRect aRect( rRect );
     aRect.Intersection( pSh->VisArea() );
 
-    const bool bExtraData = ::IsExtraData( GetFmt()->GetDoc() );
+    const bool bExtraData = ::IsExtraData( GetFormat()->GetDoc() );
 
     gProp.pSLines = new SwLineRects;   //Container for borders.
 
@@ -3380,13 +3383,13 @@ void SwRootFrm::Paint(SwRect const& rRect, SwPrintData const*const pPrintData) c
     // of the document. Dangerous! We better set this flag to
     // avoid the reformat.
     const bool bOldAction = IsCallbackActionEnabled();
-    ((SwRootFrm*)this)->SetCallbackActionEnabled( false );
+    const_cast<SwRootFrame*>(this)->SetCallbackActionEnabled( false );
 
-    const SwPageFrm *pPage = pSh->Imp()->GetFirstVisPage();
+    const SwPageFrame *pPage = pSh->Imp()->GetFirstVisPage(&rRenderContext);
 
     const bool bBookMode = gProp.pSGlobalShell->GetViewOptions()->IsViewLayoutBookMode();
-    if ( bBookMode && pPage->GetPrev() && static_cast<const SwPageFrm*>(pPage->GetPrev())->IsEmptyPage() )
-        pPage = static_cast<const SwPageFrm*>(pPage->GetPrev());
+    if ( bBookMode && pPage->GetPrev() && static_cast<const SwPageFrame*>(pPage->GetPrev())->IsEmptyPage() )
+        pPage = static_cast<const SwPageFrame*>(pPage->GetPrev());
 
     // #i68597#
     const bool bGridPainting(pSh->GetWin() && pSh->Imp()->HasDrawView() && pSh->Imp()->GetDrawView()->IsGridVisible());
@@ -3397,10 +3400,10 @@ void SwRootFrm::Paint(SwRect const& rRect, SwPrintData const*const pPrintData) c
     {
         SwEditWin& rEditWin = pWrtSh->GetView().GetEditWin();
         SwFrameControlsManager& rMngr = rEditWin.GetFrameControlsManager();
-        const SwPageFrm* pHiddenPage = pPage;
-        while ( pHiddenPage->GetPrev() != NULL )
+        const SwPageFrame* pHiddenPage = pPage;
+        while ( pHiddenPage->GetPrev() != nullptr )
         {
-            pHiddenPage = static_cast< const SwPageFrm* >( pHiddenPage->GetPrev() );
+            pHiddenPage = static_cast< const SwPageFrame* >( pHiddenPage->GetPrev() );
             SwFrameControlPtr pControl = rMngr.GetControl( PageBreak, pHiddenPage );
             if ( pControl.get() )
                 pControl->ShowAll( false );
@@ -3414,12 +3417,12 @@ void SwRootFrm::Paint(SwRect const& rRect, SwPrintData const*const pPrintData) c
     {
         const bool bPaintRightShadow =  pPage->IsRightShadowNeeded();
         const bool bPaintLeftShadow = pPage->IsLeftShadowNeeded();
-        const bool bRightSidebar = pPage->SidebarPosition() == sw::sidebarwindows::SIDEBAR_RIGHT;
+        const bool bRightSidebar = pPage->SidebarPosition() == sw::sidebarwindows::SidebarPosition::RIGHT;
 
         if ( !pPage->IsEmptyPage() )
         {
             SwRect aPaintRect;
-            SwPageFrm::GetBorderAndShadowBoundRect( pPage->Frm(), pSh, aPaintRect,
+            SwPageFrame::GetBorderAndShadowBoundRect( pPage->Frame(), pSh, &rRenderContext, aPaintRect,
                 bPaintLeftShadow, bPaintRightShadow, bRightSidebar );
 
             if ( aRect.IsOver( aPaintRect ) )
@@ -3431,22 +3434,22 @@ void SwRootFrm::Paint(SwRect const& rRect, SwPrintData const*const pPrintData) c
                 }
                 gProp.pBLines = new BorderLines;
 
-                aPaintRect._Intersection( aRect );
+                aPaintRect.Intersection_( aRect );
 
                 if ( bExtraData &&
                      pSh->GetWin() && pSh->IsInEndAction() )
                 {
                     // enlarge paint rectangle to complete page width, subtract
                     // current paint area and invalidate the resulting region.
-                    SWRECTFN( pPage )
+                    SwRectFnSet aRectFnSet(pPage);
                     SwRect aPageRectTemp( aPaintRect );
-                    (aPageRectTemp.*fnRect->fnSetLeftAndWidth)(
-                         (pPage->Frm().*fnRect->fnGetLeft)(),
-                         (pPage->Frm().*fnRect->fnGetWidth)() );
-                    aPageRectTemp._Intersection( pSh->VisArea() );
+                    aRectFnSet.SetLeftAndWidth( aPageRectTemp,
+                         aRectFnSet.GetLeft(pPage->Frame()),
+                         aRectFnSet.GetWidth(pPage->Frame()) );
+                    aPageRectTemp.Intersection_( pSh->VisArea() );
                     vcl::Region aPageRectRegion( aPageRectTemp.SVRect() );
                     aPageRectRegion.Exclude( aPaintRect.SVRect() );
-                    pSh->GetWin()->Invalidate( aPageRectRegion, INVALIDATE_CHILDREN );
+                    pSh->GetWin()->Invalidate( aPageRectRegion, InvalidateFlags::Children );
                 }
 
                 // #i80793#
@@ -3470,7 +3473,7 @@ void SwRootFrm::Paint(SwRect const& rRect, SwPrintData const*const pPrintData) c
                     // 2nd parameter is no longer <const> and will be set to the
                     // rectangle the virtual output device is calculated from <aPaintRect>,
                     // if the virtual output is used.
-                    pVout->Enter( pSh, aPaintRect, !bNoVirDev );
+                    s_pVout->Enter(pSh, aPaintRect, !s_isNoVirDev);
 
                     // OD 27.09.2002 #103636# - adjust paint rectangle to pixel size
                     // Thus, all objects overlapping on pixel level with the unadjusted
@@ -3479,54 +3482,54 @@ void SwRootFrm::Paint(SwRect const& rRect, SwPrintData const*const pPrintData) c
                 }
 
                 // maybe this can be put in the above scope. Since we are not sure, just leave it ATM
-                pVout->SetOrgRect( aPaintRect );
+                s_pVout->SetOrgRect( aPaintRect );
 
                 // OD 29.08.2002 #102450#
                 // determine background color of page for <PaintLayer> method
                 // calls, paint <hell> or <heaven>
                 const Color aPageBackgrdColor(pPage->GetDrawBackgrdColor());
 
-                pPage->PaintBaBo( aPaintRect, pPage, true );
+                pPage->PaintBaBo( aPaintRect, pPage );
 
                 if ( pSh->Imp()->HasDrawView() )
                 {
                     gProp.pSLines->LockLines( true );
-                    const IDocumentDrawModelAccess* pIDDMA = pSh->getIDocumentDrawModelAccess();
-                    pSh->Imp()->PaintLayer( pIDDMA->GetHellId(),
+                    const IDocumentDrawModelAccess& rIDDMA = pSh->getIDocumentDrawModelAccess();
+                    pSh->Imp()->PaintLayer( rIDDMA.GetHellId(),
                                             pPrintData,
-                                            pPage->Frm(),
+                                            *pPage, pPage->Frame(),
                                             &aPageBackgrdColor,
                                             pPage->IsRightToLeft(),
                                             &aSwRedirector );
-                    gProp.pSLines->PaintLines( pSh->GetOut() );
+                    gProp.pSLines->PaintLines( pSh->GetOut(), gProp );
                     gProp.pSLines->LockLines( false );
                 }
 
-                if ( pSh->GetDoc()->GetDocumentSettingManager().get( IDocumentSettingAccess::BACKGROUND_PARA_OVER_DRAWINGS ) )
-                    pPage->PaintBaBo( aPaintRect, pPage, true, /*bOnlyTxtBackground=*/true );
+                if ( pSh->GetDoc()->GetDocumentSettingManager().get( DocumentSettingId::BACKGROUND_PARA_OVER_DRAWINGS ) )
+                    pPage->PaintBaBo( aPaintRect, pPage, /*bOnlyTextBackground=*/true );
 
                 if( pSh->GetWin() )
                 {
                     // collect sub-lines
                     pPage->RefreshSubsidiary( aPaintRect );
                     // paint special sub-lines
-                    gProp.pSSpecSubsLines->PaintSubsidiary( pSh->GetOut(), NULL );
+                    gProp.pSSpecSubsLines->PaintSubsidiary( pSh->GetOut(), nullptr, gProp );
                 }
 
-                pPage->Paint( aPaintRect );
+                pPage->Paint( rRenderContext, aPaintRect );
 
                 // no paint of page border and shadow, if writer is in place mode.
                 if( pSh->GetWin() && pSh->GetDoc()->GetDocShell() &&
                     !pSh->GetDoc()->GetDocShell()->IsInPlaceActive() )
                 {
-                    SwPageFrm::PaintBorderAndShadow( pPage->Frm(), pSh, bPaintLeftShadow, bPaintRightShadow, bRightSidebar );
-                    SwPageFrm::PaintNotesSidebar( pPage->Frm(), pSh, pPage->GetPhyPageNum(), bRightSidebar);
+                    SwPageFrame::PaintBorderAndShadow( pPage->Frame(), pSh, bPaintLeftShadow, bPaintRightShadow, bRightSidebar );
+                    SwPageFrame::PaintNotesSidebar( pPage->Frame(), pSh, pPage->GetPhyPageNum(), bRightSidebar);
                 }
 
-                gProp.pSLines->PaintLines( pSh->GetOut() );
+                gProp.pSLines->PaintLines( pSh->GetOut(), gProp );
                 if ( pSh->GetWin() )
                 {
-                    gProp.pSSubsLines->PaintSubsidiary( pSh->GetOut(), gProp.pSLines );
+                    gProp.pSSubsLines->PaintSubsidiary( pSh->GetOut(), gProp.pSLines, gProp );
                     DELETEZ( gProp.pSSubsLines );
                     DELETEZ( gProp.pSSpecSubsLines );
                 }
@@ -3541,7 +3544,7 @@ void SwRootFrm::Paint(SwRect const& rRect, SwPrintData const*const pPrintData) c
                     // OD 09.12.2002 #103045# - add 4th parameter for horizontal text direction.
                     pSh->Imp()->PaintLayer( pSh->GetDoc()->getIDocumentDrawModelAccess().GetHeavenId(),
                                             pPrintData,
-                                            pPage->Frm(),
+                                            *pPage, pPage->Frame(),
                                             &aPageBackgrdColor,
                                             pPage->IsRightToLeft(),
                                             &aSwRedirector );
@@ -3551,7 +3554,7 @@ void SwRootFrm::Paint(SwRect const& rRect, SwPrintData const*const pPrintData) c
                     pPage->RefreshExtraData( aPaintRect );
 
                 DELETEZ(gProp.pBLines);
-                pVout->Leave();
+                s_pVout->Leave();
 
                 // #i68597#
                 // needed to move grid painting inside Begin/EndDrawLayer bounds and to change
@@ -3577,15 +3580,15 @@ void SwRootFrm::Paint(SwRect const& rRect, SwPrintData const*const pPrintData) c
         {
             // paint empty page
             SwRect aPaintRect;
-            SwRect aEmptyPageRect( pPage->Frm() );
+            SwRect aEmptyPageRect( pPage->Frame() );
 
             // code from vprint.cxx
-            const SwPageFrm& rFormatPage = pPage->GetFormatPage();
-            aEmptyPageRect.SSize() = rFormatPage.Frm().SSize();
+            const SwPageFrame& rFormatPage = pPage->GetFormatPage();
+            aEmptyPageRect.SSize() = rFormatPage.Frame().SSize();
 
-            SwPageFrm::GetBorderAndShadowBoundRect( aEmptyPageRect, pSh, aPaintRect,
+            SwPageFrame::GetBorderAndShadowBoundRect( aEmptyPageRect, pSh, &rRenderContext, aPaintRect,
                 bPaintLeftShadow, bPaintRightShadow, bRightSidebar );
-            aPaintRect._Intersection( aRect );
+            aPaintRect.Intersection_( aRect );
 
             if ( aRect.IsOver( aEmptyPageRect ) )
             {
@@ -3603,28 +3606,28 @@ void SwRootFrm::Paint(SwRect const& rRect, SwPrintData const*const pPrintData) c
                 // OD 20.02.2003 #107369# - use aligned page rectangle
                 {
                     SwRect aTmpPageRect( aEmptyPageRect );
-                    ::SwAlignRect( aTmpPageRect, pSh );
+                    ::SwAlignRect( aTmpPageRect, pSh, &rRenderContext );
                     aEmptyPageRect = aTmpPageRect;
                 }
 
                 pSh->GetOut()->DrawRect( aEmptyPageRect.SVRect() );
 
                 // paint empty page text
-                const vcl::Font& rEmptyPageFont = SwPageFrm::GetEmptyPageFont();
+                const vcl::Font& rEmptyPageFont = SwPageFrame::GetEmptyPageFont();
                 const vcl::Font aOldFont( pSh->GetOut()->GetFont() );
 
                 pSh->GetOut()->SetFont( rEmptyPageFont );
-                pSh->GetOut()->DrawText( aEmptyPageRect.SVRect(), SW_RESSTR( STR_EMPTYPAGE ),
-                                    TEXT_DRAW_VCENTER |
-                                    TEXT_DRAW_CENTER |
-                                    TEXT_DRAW_CLIP );
+                pSh->GetOut()->DrawText( aEmptyPageRect.SVRect(), SwResId( STR_EMPTYPAGE ),
+                                    DrawTextFlags::VCenter |
+                                    DrawTextFlags::Center |
+                                    DrawTextFlags::Clip );
 
                 pSh->GetOut()->SetFont( aOldFont );
                 // paint shadow and border for empty page
                 // OD 19.02.2003 #107369# - use new method to paint page border and
                 // shadow
-                SwPageFrm::PaintBorderAndShadow( aEmptyPageRect, pSh, bPaintLeftShadow, bPaintRightShadow, bRightSidebar );
-                SwPageFrm::PaintNotesSidebar( aEmptyPageRect, pSh, pPage->GetPhyPageNum(), bRightSidebar);
+                SwPageFrame::PaintBorderAndShadow( aEmptyPageRect, pSh, bPaintLeftShadow, bPaintRightShadow, bRightSidebar );
+                SwPageFrame::PaintNotesSidebar( aEmptyPageRect, pSh, pPage->GetPhyPageNum(), bRightSidebar);
 
                 {
                     pSh->DLPostPaint2(true);
@@ -3632,34 +3635,36 @@ void SwRootFrm::Paint(SwRect const& rRect, SwPrintData const*const pPrintData) c
             }
         }
 
-        OSL_ENSURE( !pPage->GetNext() || pPage->GetNext()->IsPageFrm(),
+        OSL_ENSURE( !pPage->GetNext() || pPage->GetNext()->IsPageFrame(),
                 "Neighbour of page is not a page." );
-        pPage = (SwPageFrm*)pPage->GetNext();
+        pPage = static_cast<const SwPageFrame*>(pPage->GetNext());
     }
 
     DELETEZ( gProp.pSLines );
 
     if ( bResetRootPaint )
-        SwRootFrm::bInPaint = false;
+        SwRootFrame::s_isInPaint = false;
     if ( pStatics )
         delete pStatics;
     else
     {
-        gProp.pSProgress = 0;
-        gProp.pSGlobalShell = 0;
+        gProp.pSProgress = nullptr;
+        gProp.pSGlobalShell = nullptr;
     }
 
-    ((SwRootFrm*)this)->SetCallbackActionEnabled( bOldAction );
+    const_cast<SwRootFrame*>(this)->SetCallbackActionEnabled( bOldAction );
 }
 
-static void lcl_EmergencyFormatFtnCont( SwFtnContFrm *pCont )
+static void lcl_EmergencyFormatFootnoteCont( SwFootnoteContFrame *pCont )
 {
+    vcl::RenderContext* pRenderContext = pCont->getRootFrame()->GetCurrShell()->GetOut();
+
     //It's possible that the Cont will get destroyed.
-    SwCntntFrm *pCnt = pCont->ContainsCntnt();
-    while ( pCnt && pCnt->IsInFtn() )
+    SwContentFrame *pCnt = pCont->ContainsContent();
+    while ( pCnt && pCnt->IsInFootnote() )
     {
-        pCnt->Calc();
-        pCnt = pCnt->GetNextCntntFrm();
+        pCnt->Calc(pRenderContext);
+        pCnt = pCnt->GetNextContentFrame();
     }
 }
 
@@ -3668,16 +3673,16 @@ class SwShortCut
     SwRectDist fnCheck;
     long nLimit;
 public:
-    SwShortCut( const SwFrm& rFrm, const SwRect& rRect );
+    SwShortCut( const SwFrame& rFrame, const SwRect& rRect );
     bool Stop( const SwRect& rRect ) const
         { return (rRect.*fnCheck)( nLimit ) > 0; }
 };
 
-SwShortCut::SwShortCut( const SwFrm& rFrm, const SwRect& rRect )
+SwShortCut::SwShortCut( const SwFrame& rFrame, const SwRect& rRect )
 {
-    bool bVert = rFrm.IsVertical();
-    bool bR2L = rFrm.IsRightToLeft();
-    if( rFrm.IsNeighbourFrm() && bVert == bR2L )
+    bool bVert = rFrame.IsVertical();
+    bool bR2L = rFrame.IsRightToLeft();
+    if( rFrame.IsNeighbourFrame() && bVert == bR2L )
     {
         if( bVert )
         {
@@ -3690,14 +3695,14 @@ SwShortCut::SwShortCut( const SwFrm& rFrm, const SwRect& rRect )
             nLimit = rRect.Left() + rRect.Width();
         }
     }
-    else if( bVert == rFrm.IsNeighbourFrm() )
+    else if( bVert == rFrame.IsNeighbourFrame() )
     {
         fnCheck = &SwRect::GetTopDistance;
         nLimit = rRect.Top() + rRect.Height();
     }
     else
     {
-        if ( rFrm.IsVertLR() )
+        if ( rFrame.IsVertLR() )
         {
                fnCheck = &SwRect::GetLeftDistance;
                nLimit = rRect.Right();
@@ -3710,35 +3715,33 @@ SwShortCut::SwShortCut( const SwFrm& rFrm, const SwRect& rRect )
     }
 }
 
-void SwLayoutFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
+void SwLayoutFrame::Paint(vcl::RenderContext& rRenderContext, SwRect const& rRect, SwPrintData const*const) const
 {
-    SwViewShell *pSh = getRootFrm()->GetCurrShell();
-
     // #i16816# tagged pdf support
-    Frm_Info aFrmInfo( *this );
-    SwTaggedPDFHelper aTaggedPDFHelper( 0, &aFrmInfo, 0, *pSh->GetOut() );
+    Frame_Info aFrameInfo( *this );
+    SwTaggedPDFHelper aTaggedPDFHelper( nullptr, &aFrameInfo, nullptr, rRenderContext );
 
-    const SwFrm *pFrm = Lower();
-    if ( !pFrm )
+    const SwFrame *pFrame = Lower();
+    if ( !pFrame )
         return;
 
-    SwShortCut aShortCut( *pFrm, rRect );
-    bool bCnt;
-    if ( (bCnt = pFrm->IsCntntFrm()) )
-        pFrm->Calc();
+    SwShortCut aShortCut( *pFrame, rRect );
+    bool bCnt = pFrame->IsContentFrame();
+    if ( bCnt )
+        pFrame->Calc(&rRenderContext);
 
-    if ( pFrm->IsFtnContFrm() )
+    if ( pFrame->IsFootnoteContFrame() )
     {
-        ::lcl_EmergencyFormatFtnCont( (SwFtnContFrm*)pFrm );
-        pFrm = Lower();
+        ::lcl_EmergencyFormatFootnoteCont( const_cast<SwFootnoteContFrame*>(static_cast<const SwFootnoteContFrame*>(pFrame)) );
+        pFrame = Lower();
     }
 
-    const SwPageFrm *pPage = 0;
-    const bool bWin   = gProp.pSGlobalShell->GetWin() ? true : false;
+    const SwPageFrame *pPage = nullptr;
+    const bool bWin   = gProp.pSGlobalShell->GetWin() != nullptr;
 
-    while ( IsAnLower( pFrm ) )
+    while ( IsAnLower( pFrame ) )
     {
-        SwRect aPaintRect( pFrm->PaintArea() );
+        SwRect aPaintRect( pFrame->PaintArea() );
         if( aShortCut.Stop( aPaintRect ) )
             break;
         if ( bCnt && gProp.pSProgress )
@@ -3746,20 +3749,20 @@ void SwLayoutFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
 
         //We need to retouch if a frame explicitly requests it.
         //First do the retouch, because this could flatten the borders.
-        if ( pFrm->IsRetouche() )
+        if ( pFrame->IsRetouche() )
         {
-            if ( pFrm->IsRetoucheFrm() && bWin && !pFrm->GetNext() )
+            if ( pFrame->IsRetoucheFrame() && bWin && !pFrame->GetNext() )
             {   if ( !pPage )
-                    pPage = FindPageFrm();
-               pFrm->Retouche( pPage, rRect );
+                    pPage = FindPageFrame();
+               pFrame->Retouch( pPage, rRect );
             }
-            pFrm->ResetRetouche();
+            pFrame->ResetRetouche();
         }
 
         if ( rRect.IsOver( aPaintRect ) )
         {
-            if ( bCnt && pFrm->IsCompletePaint() &&
-                 !rRect.IsInside( aPaintRect ) && Application::AnyInput( VCL_INPUT_KEYBOARD ) )
+            if ( bCnt && pFrame->IsCompletePaint() &&
+                 !rRect.IsInside( aPaintRect ) && Application::AnyInput( VclInputFlags::KEYBOARD ) )
             {
                 //fix(8104): It may happen, that the processing wasn't complete
                 //but some parts of the paragraph were still repainted.
@@ -3776,63 +3779,71 @@ void SwLayoutFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
                     if ( aPaintRect.Height() > 0 )
                         gProp.pSGlobalShell->InvalidateWindows(aPaintRect);
                     aPaintRect.Top( rRect.Bottom() + 1 );
-                    aPaintRect.Bottom( pFrm->Frm().Bottom() );
+                    aPaintRect.Bottom( pFrame->Frame().Bottom() );
                     if ( aPaintRect.Height() > 0 )
                         gProp.pSGlobalShell->InvalidateWindows(aPaintRect);
-                    aPaintRect.Top( pFrm->Frm().Top() );
-                    aPaintRect.Bottom( pFrm->Frm().Bottom() );
+                    aPaintRect.Top( pFrame->Frame().Top() );
+                    aPaintRect.Bottom( pFrame->Frame().Bottom() );
                 }
                 else
                 {
                     gProp.pSGlobalShell->InvalidateWindows( aPaintRect );
-                    pFrm = pFrm->GetNext();
-                    if ( pFrm && (bCnt = pFrm->IsCntntFrm()) )
-                        pFrm->Calc();
+                    pFrame = pFrame->GetNext();
+                    if ( pFrame )
+                    {
+                        bCnt = pFrame->IsContentFrame();
+                        if ( bCnt )
+                            pFrame->Calc(&rRenderContext);
+                    }
                     continue;
                 }
             }
-            pFrm->ResetCompletePaint();
-            aPaintRect._Intersection( rRect );
+            pFrame->ResetCompletePaint();
+            aPaintRect.Intersection_( rRect );
 
-            pFrm->Paint( aPaintRect );
+            pFrame->Paint( rRenderContext, aPaintRect );
 
-            if ( Lower() && Lower()->IsColumnFrm() )
+            if ( Lower() && Lower()->IsColumnFrame() )
             {
                 //Paint the column separator line if needed. The page is
                 //responsible for the page frame - not the upper.
-                const SwFrmFmt *pFmt = GetUpper() && GetUpper()->IsPageFrm()
-                                            ? GetUpper()->GetFmt()
-                                            : GetFmt();
-                const SwFmtCol &rCol = pFmt->GetCol();
+                const SwFrameFormat *pFormat = GetUpper() && GetUpper()->IsPageFrame()
+                                            ? GetUpper()->GetFormat()
+                                            : GetFormat();
+                const SwFormatCol &rCol = pFormat->GetCol();
                 if ( rCol.GetLineAdj() != COLADJ_NONE )
                 {
                     if ( !pPage )
-                        pPage = pFrm->FindPageFrm();
+                        pPage = pFrame->FindPageFrame();
 
                     PaintColLines( aPaintRect, rCol, pPage );
                 }
             }
         }
-        if ( !bCnt && pFrm->GetNext() && pFrm->GetNext()->IsFtnContFrm() )
-            ::lcl_EmergencyFormatFtnCont( (SwFtnContFrm*)pFrm->GetNext() );
+        if ( !bCnt && pFrame->GetNext() && pFrame->GetNext()->IsFootnoteContFrame() )
+            ::lcl_EmergencyFormatFootnoteCont( const_cast<SwFootnoteContFrame*>(static_cast<const SwFootnoteContFrame*>(pFrame->GetNext())) );
 
-        pFrm = pFrm->GetNext();
+        pFrame = pFrame->GetNext();
 
-        if ( pFrm && (bCnt = pFrm->IsCntntFrm()) )
-            pFrm->Calc();
+        if ( pFrame )
+        {
+            bCnt = pFrame->IsContentFrame();
+            if ( bCnt )
+                pFrame->Calc(&rRenderContext);
+        }
     }
 }
 
-static drawinglayer::primitive2d::Primitive2DSequence lcl_CreateDashedIndicatorPrimitive(
-        basegfx::B2DPoint aStart, basegfx::B2DPoint aEnd,
+static drawinglayer::primitive2d::Primitive2DContainer lcl_CreateDashedIndicatorPrimitive(
+        const basegfx::B2DPoint& rStart, const basegfx::B2DPoint& rEnd,
         basegfx::BColor aColor )
 {
-    drawinglayer::primitive2d::Primitive2DSequence aSeq( 1 );
+    drawinglayer::primitive2d::Primitive2DContainer aSeq( 1 );
 
     std::vector< double > aStrokePattern;
     basegfx::B2DPolygon aLinePolygon;
-    aLinePolygon.append( aStart );
-    aLinePolygon.append( aEnd );
+    aLinePolygon.append(rStart);
+    aLinePolygon.append(rEnd);
 
     const StyleSettings& rSettings = Application::GetSettings().GetStyleSettings();
     if ( rSettings.GetHighContrastMode( ) )
@@ -3863,7 +3874,7 @@ static drawinglayer::primitive2d::Primitive2DSequence lcl_CreateDashedIndicatorP
         aStrokePattern.push_back( 40 );
         aStrokePattern.push_back( 40 );
 
-        aSeq.realloc( 2 );
+        aSeq.resize( 2 );
     }
 
     // Compute the dashed line primitive
@@ -3873,31 +3884,31 @@ static drawinglayer::primitive2d::Primitive2DSequence lcl_CreateDashedIndicatorP
                 drawinglayer::attribute::LineAttribute( aColor ),
                 drawinglayer::attribute::StrokeAttribute( aStrokePattern ) );
 
-    aSeq[ aSeq.getLength( ) - 1 ] = drawinglayer::primitive2d::Primitive2DReference( pLine );
+    aSeq[ aSeq.size( ) - 1 ] = drawinglayer::primitive2d::Primitive2DReference( pLine );
 
     return aSeq;
 }
 
-void SwPageFrm::PaintBreak( ) const
+void SwPageFrame::PaintBreak( ) const
 {
     if ( gProp.pSGlobalShell->GetOut()->GetOutDevType() != OUTDEV_PRINTER  &&
          !gProp.pSGlobalShell->GetViewOptions()->IsPDFExport() &&
          !gProp.pSGlobalShell->GetViewOptions()->IsReadonly() &&
          !gProp.pSGlobalShell->IsPreview() )
     {
-        const SwFrm* pBodyFrm = Lower();
-        while ( pBodyFrm && !pBodyFrm->IsBodyFrm() )
-            pBodyFrm = pBodyFrm->GetNext();
+        const SwFrame* pBodyFrame = Lower();
+        while ( pBodyFrame && !pBodyFrame->IsBodyFrame() )
+            pBodyFrame = pBodyFrame->GetNext();
 
-        if ( pBodyFrm )
+        if ( pBodyFrame )
         {
-            const SwLayoutFrm* pLayBody = static_cast< const SwLayoutFrm* >( pBodyFrm );
-            const SwFlowFrm *pFlowFrm = pLayBody->ContainsCntnt();
+            const SwLayoutFrame* pLayBody = static_cast< const SwLayoutFrame* >( pBodyFrame );
+            const SwFlowFrame *pFlowFrame = pLayBody->ContainsContent();
 
             // Test if the first node is a table
-            const SwFrm* pFirstFrm = pLayBody->Lower();
-            if ( pFirstFrm && pFirstFrm->IsTabFrm() )
-                pFlowFrm = static_cast< const SwTabFrm* >( pFirstFrm );
+            const SwFrame* pFirstFrame = pLayBody->Lower();
+            if ( pFirstFrame && pFirstFrame->IsTabFrame() )
+                pFlowFrame = static_cast< const SwTabFrame* >( pFirstFrame );
 
             SwWrtShell* pWrtSh = dynamic_cast< SwWrtShell* >( gProp.pSGlobalShell );
             if ( pWrtSh )
@@ -3905,30 +3916,30 @@ void SwPageFrm::PaintBreak( ) const
                 SwEditWin& rEditWin = pWrtSh->GetView().GetEditWin();
                 SwFrameControlsManager& rMngr = rEditWin.GetFrameControlsManager();
 
-                if ( pFlowFrm && pFlowFrm->IsPageBreak( true ) )
+                if ( pFlowFrame && pFlowFrame->IsPageBreak( true ) )
                     rMngr.SetPageBreakControl( this );
                 else
                     rMngr.RemoveControlsByType( PageBreak, this );
             }
         }
-        SwLayoutFrm::PaintBreak( );
+        SwLayoutFrame::PaintBreak( );
     }
 }
 
-void SwColumnFrm::PaintBreak( ) const
+void SwColumnFrame::PaintBreak( ) const
 {
     if ( gProp.pSGlobalShell->GetOut()->GetOutDevType() != OUTDEV_PRINTER  &&
          !gProp.pSGlobalShell->GetViewOptions()->IsPDFExport() &&
          !gProp.pSGlobalShell->GetViewOptions()->IsReadonly() &&
          !gProp.pSGlobalShell->IsPreview() )
     {
-        const SwFrm* pBodyFrm = Lower();
-        while ( pBodyFrm && !pBodyFrm->IsBodyFrm() )
-            pBodyFrm = pBodyFrm->GetNext();
+        const SwFrame* pBodyFrame = Lower();
+        while ( pBodyFrame && !pBodyFrame->IsBodyFrame() )
+            pBodyFrame = pBodyFrame->GetNext();
 
-        if ( pBodyFrm )
+        if ( pBodyFrame )
         {
-            const SwCntntFrm *pCnt = static_cast< const SwLayoutFrm* >( pBodyFrm )->ContainsCntnt();
+            const SwContentFrame *pCnt = static_cast< const SwLayoutFrame* >( pBodyFrame )->ContainsContent();
             if ( pCnt && pCnt->IsColBreak( true ) )
             {
                 // Paint the break only if:
@@ -3937,10 +3948,11 @@ void SwColumnFrm::PaintBreak( ) const
                 //    * Non-printing characters are shown, as this is more consistent
                 //      with other formatting marks
                 if ( !gProp.pSGlobalShell->IsShowHeaderFooterSeparator( Header ) &&
-                     !gProp.pSGlobalShell->IsShowHeaderFooterSeparator( Footer ) )
+                     !gProp.pSGlobalShell->IsShowHeaderFooterSeparator( Footer ) &&
+                      gProp.pSGlobalShell->GetViewOptions()->IsLineBreak() )
                 {
                     SwRect aRect( pCnt->Prt() );
-                    aRect.Pos() += pCnt->Frm().Pos();
+                    aRect.Pos() += pCnt->Frame().Pos();
 
                     // Draw the line
                     basegfx::B2DPoint aStart( double( aRect.Left() ), aRect.Top() );
@@ -3955,22 +3967,22 @@ void SwColumnFrm::PaintBreak( ) const
 
                     basegfx::BColor aLineColor = SwViewOption::GetPageBreakColor().getBColor();
 
-                    drawinglayer::primitive2d::Primitive2DSequence aSeq =
+                    drawinglayer::primitive2d::Primitive2DContainer aSeq =
                         lcl_CreateDashedIndicatorPrimitive( aStart, aEnd, aLineColor );
-                    aSeq.realloc( aSeq.getLength( ) + 1 );
+                    aSeq.resize( aSeq.size( ) + 1 );
 
                     // Add the text above
-                    OUString aBreakText = SW_RESSTR(STR_COLUMN_BREAK);
+                    OUString aBreakText = SwResId(STR_COLUMN_BREAK);
 
                     basegfx::B2DVector aFontSize;
                     OutputDevice* pOut = gProp.pSGlobalShell->GetOut();
                     vcl::Font aFont = pOut->GetSettings().GetStyleSettings().GetToolFont();
-                    aFont.SetHeight( 8 * 20 );
+                    aFont.SetFontHeight( 8 * 20 );
                     pOut->SetFont( aFont );
                     drawinglayer::attribute::FontAttribute aFontAttr = drawinglayer::primitive2d::getFontAttributeFromVclFont(
                             aFontSize, aFont, false, false );
 
-                    Rectangle aTextRect;
+                    tools::Rectangle aTextRect;
                     pOut->GetTextBoundRect( aTextRect, aBreakText );
                     long nTextOff = ( nWidth - aTextRect.GetWidth() ) / 2;
 
@@ -3992,7 +4004,7 @@ void SwColumnFrm::PaintBreak( ) const
                                 aFontAttr,
                                 lang::Locale(),
                                 aLineColor );
-                    aSeq[ aSeq.getLength() - 1 ] = drawinglayer::primitive2d::Primitive2DReference( pText );
+                    aSeq[ aSeq.size() - 1 ] = drawinglayer::primitive2d::Primitive2DReference( pText );
 
                     ProcessPrimitives( aSeq );
                 }
@@ -4001,28 +4013,28 @@ void SwColumnFrm::PaintBreak( ) const
     }
 }
 
-void SwLayoutFrm::PaintBreak( ) const
+void SwLayoutFrame::PaintBreak( ) const
 {
-    const SwFrm* pFrm = Lower();
-    while ( pFrm )
+    const SwFrame* pFrame = Lower();
+    while ( pFrame )
     {
-        if ( pFrm->IsLayoutFrm() )
-            static_cast< const SwLayoutFrm*>( pFrm )->PaintBreak( );
-        pFrm = pFrm->GetNext();
+        if ( pFrame->IsLayoutFrame() )
+            static_cast< const SwLayoutFrame*>( pFrame )->PaintBreak( );
+        pFrame = pFrame->GetNext();
     }
 }
 
-void SwPageFrm::PaintDecorators( ) const
+void SwPageFrame::PaintDecorators( ) const
 {
     SwWrtShell* pWrtSh = dynamic_cast< SwWrtShell* >( gProp.pSGlobalShell );
     if ( pWrtSh )
     {
         SwEditWin& rEditWin = pWrtSh->GetView().GetEditWin();
 
-        const SwLayoutFrm* pBody = FindBodyCont();
+        const SwLayoutFrame* pBody = FindBodyCont();
         if ( pBody )
         {
-            SwRect aBodyRect( pBody->Frm() );
+            SwRect aBodyRect( pBody->Frame() );
 
             if ( gProp.pSGlobalShell->GetOut()->GetOutDevType() != OUTDEV_PRINTER &&
                  !gProp.pSGlobalShell->GetViewOptions()->IsPDFExport() &&
@@ -4032,7 +4044,7 @@ void SwPageFrm::PaintDecorators( ) const
                  ( gProp.pSGlobalShell->IsShowHeaderFooterSeparator( Header ) ||
                    gProp.pSGlobalShell->IsShowHeaderFooterSeparator( Footer ) ) )
             {
-                bool bRtl = Application::GetSettings().GetLayoutRTL();
+                bool bRtl = AllSettings::GetLayoutRTL();
                 const SwRect& rVisArea = gProp.pSGlobalShell->VisArea();
                 long nXOff = std::min( aBodyRect.Right(), rVisArea.Right() );
                 if ( bRtl )
@@ -4041,9 +4053,9 @@ void SwPageFrm::PaintDecorators( ) const
                 // Header
                 if ( gProp.pSGlobalShell->IsShowHeaderFooterSeparator( Header ) )
                 {
-                    const SwFrm* pHeaderFrm = Lower();
-                    if ( !pHeaderFrm->IsHeaderFrm() )
-                        pHeaderFrm = NULL;
+                    const SwFrame* pHeaderFrame = Lower();
+                    if ( !pHeaderFrame->IsHeaderFrame() )
+                        pHeaderFrame = nullptr;
 
                     long nHeaderYOff = aBodyRect.Top();
                     Point nOutputOff = rEditWin.LogicToPixel( Point( nXOff, nHeaderYOff ) );
@@ -4053,12 +4065,12 @@ void SwPageFrm::PaintDecorators( ) const
                 // Footer
                 if ( gProp.pSGlobalShell->IsShowHeaderFooterSeparator( Footer ) )
                 {
-                    const SwFrm* pFtnContFrm = Lower();
-                    while ( pFtnContFrm )
+                    const SwFrame* pFootnoteContFrame = Lower();
+                    while ( pFootnoteContFrame )
                     {
-                        if ( pFtnContFrm->IsFtnContFrm() )
-                            aBodyRect.AddBottom( pFtnContFrm->Frm().Bottom() - aBodyRect.Bottom() );
-                        pFtnContFrm = pFtnContFrm->GetNext();
+                        if ( pFootnoteContFrame->IsFootnoteContFrame() )
+                            aBodyRect.AddBottom( pFootnoteContFrame->Frame().Bottom() - aBodyRect.Bottom() );
+                        pFootnoteContFrame = pFootnoteContFrame->GetNext();
                     }
 
                     long nFooterYOff = aBodyRect.Bottom();
@@ -4083,19 +4095,18 @@ void SwPageFrm::PaintDecorators( ) const
  *
  * @return true, if background is transparent drawn
 */
-bool SwFlyFrm::IsBackgroundTransparent() const
+bool SwFlyFrame::IsBackgroundTransparent() const
 {
-    bool bBackgroundTransparent = GetFmt()->IsBackgroundTransparent();
+    bool bBackgroundTransparent = GetFormat()->IsBackgroundTransparent();
     if ( !bBackgroundTransparent &&
-         static_cast<const SwFlyFrmFmt*>(GetFmt())->IsBackgroundBrushInherited() )
+         GetFormat()->IsBackgroundBrushInherited() )
     {
-        const SvxBrushItem* pBackgrdBrush = 0;
-        const Color* pSectionTOXColor = 0;
+        const SvxBrushItem* pBackgrdBrush = nullptr;
+        const Color* pSectionTOXColor = nullptr;
         SwRect aDummyRect;
-        //UUUU
         drawinglayer::attribute::SdrAllFillAttributesHelperPtr aFillAttributes;
 
-        if ( GetBackgroundBrush( aFillAttributes, pBackgrdBrush, pSectionTOXColor, aDummyRect, false) )
+        if ( GetBackgroundBrush( aFillAttributes, pBackgrdBrush, pSectionTOXColor, aDummyRect, false, /*bConsiderTextBox=*/false) )
         {
             if ( pSectionTOXColor &&
                  (pSectionTOXColor->GetTransparency() != 0) &&
@@ -4103,7 +4114,7 @@ bool SwFlyFrm::IsBackgroundTransparent() const
             {
                 bBackgroundTransparent = true;
             }
-            else if(aFillAttributes.get() && aFillAttributes->isUsed()) //UUUU
+            else if(aFillAttributes.get() && aFillAttributes->isUsed())
             {
                 bBackgroundTransparent = aFillAttributes->isTransparent();
             }
@@ -4117,7 +4128,7 @@ bool SwFlyFrm::IsBackgroundTransparent() const
                 else
                 {
                     const GraphicObject *pTmpGrf =
-                            static_cast<const GraphicObject*>(pBackgrdBrush->GetGraphicObject());
+                            pBackgrdBrush->GetGraphicObject();
                     if ( (pTmpGrf) &&
                          (pTmpGrf->GetAttr().GetTransparency() != 0)
                        )
@@ -4132,43 +4143,30 @@ bool SwFlyFrm::IsBackgroundTransparent() const
     return bBackgroundTransparent;
 };
 
-/**
- * For feature #99657#
- *
- * OD 13.08.2002
- * determine, if shadow color of fly frame has to be drawn transparent
- * declaration found in /core/inc/flyfrm.cxx
- * @return true, if shadow color is transparent.
-*/
-bool SwFlyFrm::IsShadowTransparent() const
-{
-    return GetFmt()->IsShadowTransparent();
-};
-
-bool SwFlyFrm::IsPaint( SdrObject *pObj, const SwViewShell *pSh )
+bool SwFlyFrame::IsPaint( SdrObject *pObj, const SwViewShell *pSh )
 {
     SdrObjUserCall *pUserCall;
 
-    if ( 0 == ( pUserCall = GetUserCall(pObj) ) )
+    if ( nullptr == ( pUserCall = GetUserCall(pObj) ) )
         return true;
 
     //Attribute dependent, don't paint for printer or Preview
     bool bPaint =  gProp.pSFlyOnlyDraw ||
-                       ((SwContact*)pUserCall)->GetFmt()->GetPrint().GetValue();
+                       static_cast<SwContact*>(pUserCall)->GetFormat()->GetPrint().GetValue();
     if ( !bPaint )
         bPaint = pSh->GetWin() && !pSh->IsPreview();
 
     if ( bPaint )
     {
         //The paint may be prevented by the superior Flys.
-        SwFrm *pAnch = 0;
-        if ( pObj->ISA(SwFlyDrawObj) ) // i#117962#
+        SwFrame *pAnch = nullptr;
+        if ( dynamic_cast< const SwFlyDrawObj *>( pObj ) !=  nullptr ) // i#117962#
         {
             bPaint = false;
         }
-        if ( pObj->ISA(SwVirtFlyDrawObj) )
+        if ( dynamic_cast< const SwVirtFlyDrawObj *>( pObj ) !=  nullptr )
         {
-            SwFlyFrm *pFly = ((SwVirtFlyDrawObj*)pObj)->GetFlyFrm();
+            SwFlyFrame *pFly = static_cast<SwVirtFlyDrawObj*>(pObj)->GetFlyFrame();
             if ( gProp.pSFlyOnlyDraw && gProp.pSFlyOnlyDraw == pFly )
                 return true;
 
@@ -4177,10 +4175,10 @@ bool SwFlyFrm::IsPaint( SdrObject *pObj, const SwViewShell *pSh )
             //painted.
             //HACK: exception: printing of frames in tables, those can overlap
             //a page once in a while when dealing with oversized tables (HTML).
-            SwPageFrm *pPage = pFly->FindPageFrm();
-            if ( pPage && pPage->Frm().IsOver( pFly->Frm() ) )
+            SwPageFrame *pPage = pFly->FindPageFrame();
+            if ( pPage && pPage->Frame().IsOver( pFly->Frame() ) )
             {
-                    pAnch = pFly->AnchorFrm();
+                    pAnch = pFly->AnchorFrame();
             }
 
         }
@@ -4189,36 +4187,36 @@ bool SwFlyFrm::IsPaint( SdrObject *pObj, const SwViewShell *pSh )
             // OD 13.10.2003 #i19919# - consider 'virtual' drawing objects
             // OD 2004-03-29 #i26791#
             SwDrawContact* pDrawContact = dynamic_cast<SwDrawContact*>(pUserCall);
-            pAnch = pDrawContact ? pDrawContact->GetAnchorFrm(pObj) : NULL;
+            pAnch = pDrawContact ? pDrawContact->GetAnchorFrame(pObj) : nullptr;
             if ( pAnch )
             {
                 if ( !pAnch->GetValidPosFlag() )
-                    pAnch = 0;
-                else if ( sal_IntPtr(pSh->GetOut()) == sal_IntPtr(pSh->getIDocumentDeviceAccess()->getPrinter( false )))
+                    pAnch = nullptr;
+                else if ( sal_IntPtr(pSh->GetOut()) == sal_IntPtr(pSh->getIDocumentDeviceAccess().getPrinter( false )))
                 {
                     //HACK: we have to omit some of the objects for printing,
                     //otherwise they would be printed twice.
                     //The objects should get printed if the TableHack is active
                     //right now. Afterwards they must not be printed if the
                     //page over which they float position wise gets printed.
-                    const SwPageFrm *pPage = pAnch->FindPageFrm();
-                    if ( !pPage->Frm().IsOver( pObj->GetCurrentBoundRect() ) )
-                        pAnch = 0;
+                    const SwPageFrame *pPage = pAnch->FindPageFrame();
+                    if ( !pPage->Frame().IsOver( pObj->GetCurrentBoundRect() ) )
+                        pAnch = nullptr;
                 }
             }
             else
             {
                 // OD 02.07.2003 #108784# - debug assert
-                if ( !pObj->ISA(SdrObjGroup) )
+                if ( dynamic_cast< const SdrObjGroup *>( pObj ) ==  nullptr )
                 {
-                    OSL_FAIL( "<SwFlyFrm::IsPaint(..)> - paint of drawing object without anchor frame!?" );
+                    OSL_FAIL( "<SwFlyFrame::IsPaint(..)> - paint of drawing object without anchor frame!?" );
                 }
             }
         }
         if ( pAnch )
         {
             if ( pAnch->IsInFly() )
-                bPaint = SwFlyFrm::IsPaint( pAnch->FindFlyFrm()->GetVirtDrawObj(),
+                bPaint = SwFlyFrame::IsPaint( pAnch->FindFlyFrame()->GetVirtDrawObj(),
                                             pSh );
             else if ( gProp.pSFlyOnlyDraw )
                 bPaint = false;
@@ -4229,10 +4227,10 @@ bool SwFlyFrm::IsPaint( SdrObject *pObj, const SwViewShell *pSh )
     return bPaint;
 }
 
-void SwCellFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
+void SwCellFrame::Paint(vcl::RenderContext& rRenderContext, SwRect const& rRect, SwPrintData const*const) const
 {
     if ( GetLayoutRowSpan() >= 1 )
-        SwLayoutFrm::Paint( rRect );
+        SwLayoutFrame::Paint( rRenderContext, rRect );
 }
 
 struct BorderLinesGuard
@@ -4250,17 +4248,17 @@ private:
     BorderLines *const m_pBorderLines;
 };
 
-void SwFlyFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
+void SwFlyFrame::Paint(vcl::RenderContext& rRenderContext, SwRect const& rRect, SwPrintData const*const) const
 {
     //optimize thumbnail generation and store procedure to improve odt saving performance, #i120030#
-    SwViewShell *pShell = getRootFrm()->GetCurrShell();
+    SwViewShell *pShell = getRootFrame()->GetCurrShell();
     if (pShell && pShell->GetDoc() && pShell->GetDoc()->GetDocShell())
     {
         bool bInGenerateThumbnail = pShell->GetDoc()->GetDocShell()->IsInGenerateAndStoreThumbnail();
         if (bInGenerateThumbnail)
         {
             SwRect aVisRect = pShell->VisArea();
-            if (!aVisRect.IsOver(Frm()))
+            if (!aVisRect.IsOver(Frame()))
                 return;
         }
     }
@@ -4272,21 +4270,20 @@ void SwFlyFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
     BorderLinesGuard blg; // this should not paint borders added from PaintBaBo
 
     SwRect aRect( rRect );
-    aRect._Intersection( Frm() );
+    aRect.Intersection_( Frame() );
 
-    OutputDevice* pOut = gProp.pSGlobalShell->GetOut();
-    pOut->Push( PushFlags::CLIPREGION );
-    pOut->SetClipRegion();
-    const SwPageFrm* pPage = FindPageFrm();
+    rRenderContext.Push( PushFlags::CLIPREGION );
+    rRenderContext.SetClipRegion();
+    const SwPageFrame* pPage = FindPageFrame();
 
-    const SwNoTxtFrm *pNoTxt = Lower() && Lower()->IsNoTxtFrm()
-                                                ? (SwNoTxtFrm*)Lower() : 0;
+    const SwNoTextFrame *pNoText = Lower() && Lower()->IsNoTextFrame()
+                                                ? static_cast<const SwNoTextFrame*>(Lower()) : nullptr;
 
     bool bIsChart = false; //#i102950# don't paint additional borders for charts
     //check whether we have a chart
-    if(pNoTxt)
+    if(pNoText)
     {
-        const SwNoTxtNode* pNoTNd = dynamic_cast<const SwNoTxtNode*>(pNoTxt->GetNode());
+        const SwNoTextNode* pNoTNd = dynamic_cast<const SwNoTextNode*>(pNoText->GetNode());
         if( pNoTNd )
         {
             SwOLENode* pOLENd = const_cast<SwOLENode*>(pNoTNd->GetOLENode());
@@ -4296,7 +4293,7 @@ void SwFlyFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
     }
 
     {
-        bool bContour = GetFmt()->GetSurround().IsContour();
+        bool bContour = GetFormat()->GetSurround().IsContour();
         tools::PolyPolygon aPoly;
         if ( bContour )
         {
@@ -4309,19 +4306,19 @@ void SwFlyFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
         // #i47804# - distinguish complete background paint
         // and margin paint.
         // paint complete background for Writer text fly frames
-        bool bPaintCompleteBack( !pNoTxt );
+        bool bPaintCompleteBack( !pNoText );
         // paint complete background for transparent graphic and contour,
         // if own background color exists.
-        const bool bIsGraphicTransparent = pNoTxt && pNoTxt->IsTransparent();
+        const bool bIsGraphicTransparent = pNoText && pNoText->IsTransparent();
         if ( !bPaintCompleteBack &&
              ( bIsGraphicTransparent|| bContour ) )
         {
-            const SwFrmFmt* pSwFrmFmt = dynamic_cast< const SwFrmFmt* >(GetFmt());
+            const SwFrameFormat* pSwFrameFormat = dynamic_cast< const SwFrameFormat* >(GetFormat());
 
-            if (pSwFrmFmt && pSwFrmFmt->supportsFullDrawingLayerFillAttributeSet())
+            if (pSwFrameFormat && pSwFrameFormat->supportsFullDrawingLayerFillAttributeSet())
             {
-                //UUUU check for transparency
-                const drawinglayer::attribute::SdrAllFillAttributesHelperPtr aFillAttributes(pSwFrmFmt->getSdrAllFillAttributesHelper());
+                // check for transparency
+                const drawinglayer::attribute::SdrAllFillAttributesHelperPtr aFillAttributes(pSwFrameFormat->getSdrAllFillAttributesHelper());
 
                 // check if the new fill attributes are used
                 if(aFillAttributes.get() && aFillAttributes->isUsed())
@@ -4331,7 +4328,7 @@ void SwFlyFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
             }
             else
             {
-                SvxBrushItem aBack = GetFmt()->makeBackgroundBrushItem();
+                SvxBrushItem aBack = GetFormat()->makeBackgroundBrushItem();
                 // OD 07.08.2002 #99657# #GetTransChg#
                 //     to determine, if background has to be painted, by checking, if
                 //     background color is not COL_TRANSPARENT ("no fill"/"auto fill")
@@ -4342,31 +4339,31 @@ void SwFlyFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
         }
         // paint of margin needed.
         const bool bPaintMarginOnly( !bPaintCompleteBack &&
-                                     Prt().SSize() != Frm().SSize() );
+                                     Prt().SSize() != Frame().SSize() );
 
         // #i47804# - paint background of parent fly frame
         // for transparent graphics in layer Hell, if parent fly frame isn't
         // in layer Hell. It's only painted the intersection between the
         // parent fly frame area and the paint area <aRect>
-        const IDocumentDrawModelAccess* pIDDMA = GetFmt()->getIDocumentDrawModelAccess();
+        const IDocumentDrawModelAccess& rIDDMA = GetFormat()->getIDocumentDrawModelAccess();
 
         if (bIsGraphicTransparent &&
-            GetFmt()->GetDoc()->getIDocumentSettingAccess().get(IDocumentSettingAccess::SUBTRACT_FLYS) &&
-            GetVirtDrawObj()->GetLayer() == pIDDMA->GetHellId() &&
-            GetAnchorFrm()->FindFlyFrm() )
+            GetFormat()->GetDoc()->getIDocumentSettingAccess().get(DocumentSettingId::SUBTRACT_FLYS) &&
+            GetVirtDrawObj()->GetLayer() == rIDDMA.GetHellId() &&
+            GetAnchorFrame()->FindFlyFrame() )
         {
-            const SwFlyFrm* pParentFlyFrm = GetAnchorFrm()->FindFlyFrm();
-            if ( pParentFlyFrm->GetDrawObj()->GetLayer() !=
-                                            pIDDMA->GetHellId() )
+            const SwFlyFrame* pParentFlyFrame = GetAnchorFrame()->FindFlyFrame();
+            if ( pParentFlyFrame->GetDrawObj()->GetLayer() !=
+                                            rIDDMA.GetHellId() )
             {
-                SwFlyFrm* pOldRet = gProp.pSRetoucheFly2;
-                gProp.pSRetoucheFly2 = const_cast<SwFlyFrm*>(this);
+                SwFlyFrame* pOldRet = gProp.pSRetoucheFly2;
+                gProp.pSRetoucheFly2 = const_cast<SwFlyFrame*>(this);
 
-                SwBorderAttrAccess aAccess( SwFrm::GetCache(), pParentFlyFrm );
+                SwBorderAttrAccess aAccess( SwFrame::GetCache(), pParentFlyFrame );
                 const SwBorderAttrs &rAttrs = *aAccess.Get();
                 SwRect aPaintRect( aRect );
-                aPaintRect._Intersection( pParentFlyFrm->Frm() );
-                pParentFlyFrm->PaintBackground( aPaintRect, pPage, rAttrs, false, false );
+                aPaintRect.Intersection_( pParentFlyFrame->Frame() );
+                pParentFlyFrame->PaintBackground( aPaintRect, pPage, rAttrs );
 
                 gProp.pSRetoucheFly2 = pOldRet;
             }
@@ -4379,12 +4376,12 @@ void SwFlyFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
             //one.
 
             // OD 2004-04-23 #116347#
-            pOut->Push( PushFlags::FILLCOLOR|PushFlags::LINECOLOR );
-            pOut->SetLineColor();
+            rRenderContext.Push( PushFlags::FILLCOLOR|PushFlags::LINECOLOR );
+            rRenderContext.SetLineColor();
 
-            pPage = FindPageFrm();
+            pPage = FindPageFrame();
 
-            SwBorderAttrAccess aAccess( SwFrm::GetCache(), (SwFrm*)this );
+            SwBorderAttrAccess aAccess( SwFrame::GetCache(), static_cast<SwFrame const *>(this) );
             const SwBorderAttrs &rAttrs = *aAccess.Get();
 
             // paint background
@@ -4394,29 +4391,29 @@ void SwFlyFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
                 // suppress painting of background in printing area for
                 // non-transparent graphics.
                 if ( bPaintMarginOnly ||
-                     ( pNoTxt && !bIsGraphicTransparent ) )
+                     ( pNoText && !bIsGraphicTransparent ) )
                 {
                     //What we actually want to paint is the small stripe between
                     //PrtArea and outer border.
-                    SwRect aTmp( Prt() ); aTmp += Frm().Pos();
+                    SwRect aTmp( Prt() ); aTmp += Frame().Pos();
                     aRegion -= aTmp;
                 }
                 if ( bContour )
                 {
-                    pOut->Push();
+                    rRenderContext.Push();
                     // #i80822#
                     // apply clip region under the same conditions, which are
-                    // used in <SwNoTxtFrm::Paint(..)> to set the clip region
+                    // used in <SwNoTextFrame::Paint(..)> to set the clip region
                     // for painting the graphic/OLE. Thus, the clip region is
                     // also applied for the PDF export.
-                    SwViewShell *pSh = getRootFrm()->GetCurrShell();
-                    if ( !pOut->GetConnectMetaFile() || !pSh || !pSh->GetWin() )
+                    SwViewShell *pSh = getRootFrame()->GetCurrShell();
+                    if ( !rRenderContext.GetConnectMetaFile() || !pSh || !pSh->GetWin() )
                     {
-                        pOut->SetClipRegion(vcl::Region(aPoly));
+                        rRenderContext.SetClipRegion(vcl::Region(aPoly));
                     }
                     for ( size_t i = 0; i < aRegion.size(); ++i )
                         PaintBackground( aRegion[i], pPage, rAttrs, false, true );
-                    pOut->Pop();
+                    rRenderContext.Pop();
                 }
                 else
                     for ( size_t i = 0; i < aRegion.size(); ++i )
@@ -4425,12 +4422,9 @@ void SwFlyFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
 
             // OD 06.08.2002 #99657# - paint border before painting background
             // paint border
-            {
-                SwRect aTmp( rRect );
-                PaintBorder( aTmp, pPage, rAttrs );
-            }
+            PaintBorder( rRect, pPage, rAttrs );
 
-            pOut->Pop();
+            rRenderContext.Pop();
         }
     }
 
@@ -4449,7 +4443,7 @@ void SwFlyFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
         }
         else
         {
-            // create new subsidiardy lines
+            // create new subsidiary lines
             gProp.pSSubsLines = new SwSubsRects;
             bSubsLineRectsCreated = true;
         }
@@ -4463,15 +4457,15 @@ void SwFlyFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
         }
         else
         {
-            // create new special subsidiardy lines
+            // create new special subsidiary lines
             gProp.pSSpecSubsLines = new SwSubsRects;
             bSpecSubsLineRectsCreated = true;
         }
         // Add subsidiary lines of fly frame and its lowers
         RefreshLaySubsidiary( pPage, aRect );
         // paint subsidiary lines of fly frame and its lowers
-        gProp.pSSpecSubsLines->PaintSubsidiary( pOut, NULL );
-        gProp.pSSubsLines->PaintSubsidiary( pOut, gProp.pSLines );
+        gProp.pSSpecSubsLines->PaintSubsidiary( &rRenderContext, nullptr, gProp );
+        gProp.pSSubsLines->PaintSubsidiary( &rRenderContext, gProp.pSLines, gProp );
         if ( !bSubsLineRectsCreated )
             // unlock subsidiary lines
             gProp.pSSubsLines->LockLines( false );
@@ -4489,24 +4483,24 @@ void SwFlyFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
         }
     }
 
-    SwLayoutFrm::Paint( aRect );
+    SwLayoutFrame::Paint( rRenderContext, aRect );
 
     Validate();
 
     // OD 19.12.2002 #106318# - first paint lines added by fly frame paint
     // and then unlock other lines.
-    gProp.pSLines->PaintLines( pOut );
+    gProp.pSLines->PaintLines( &rRenderContext, gProp );
     gProp.pSLines->LockLines( false );
     // have to paint frame borders added in heaven layer here...
     ProcessPrimitives(gProp.pBLines->GetBorderLines_Clear());
 
-    pOut->Pop();
+    rRenderContext.Pop();
 
-    if ( gProp.pSProgress && pNoTxt )
+    if ( gProp.pSProgress && pNoText )
         gProp.pSProgress->Reschedule();
 }
 
-void SwTabFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
+void SwTabFrame::Paint(vcl::RenderContext& rRenderContext, SwRect const& rRect, SwPrintData const*const) const
 {
     const SwViewOption* pViewOption = gProp.pSGlobalShell->GetViewOptions();
     if (pViewOption->IsTable())
@@ -4514,34 +4508,34 @@ void SwTabFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
         // #i29550#
         if ( IsCollapsingBorders() )
         {
-            SwBorderAttrAccess aAccess( SwFrm::GetCache(), (SwFrm*)this );
+            SwBorderAttrAccess aAccess( SwFrame::GetCache(), static_cast<SwFrame const *>(this) );
             const SwBorderAttrs &rAttrs = *aAccess.Get();
 
             // paint shadow
-            if ( rAttrs.GetShadow().GetLocation() != SVX_SHADOW_NONE )
+            if ( rAttrs.GetShadow().GetLocation() != SvxShadowLocation::NONE )
             {
                 SwRect aRect;
-                ::lcl_CalcBorderRect( aRect, this, rAttrs, true );
+                ::lcl_CalcBorderRect( aRect, this, rAttrs, true, gProp );
                 PaintShadow( rRect, aRect, rAttrs );
             }
 
-            SwTabFrmPainter aHelper(*this);
-            aHelper.PaintLines(*gProp.pSGlobalShell->GetOut(), rRect);
+            SwTabFramePainter aHelper(*this);
+            aHelper.PaintLines(rRenderContext, rRect);
         }
 
-        SwLayoutFrm::Paint( rRect );
+        SwLayoutFrame::Paint( rRenderContext, rRect );
     }
     // OD 10.01.2003 #i6467# - no light grey rectangle for page preview
     else if ( gProp.pSGlobalShell->GetWin() && !gProp.pSGlobalShell->IsPreview() )
     {
         // OD 10.01.2003 #i6467# - intersect output rectangle with table frame
         SwRect aTabRect( Prt() );
-        aTabRect.Pos() += Frm().Pos();
+        aTabRect.Pos() += Frame().Pos();
         SwRect aTabOutRect( rRect );
         aTabOutRect.Intersection( aTabRect );
-        pViewOption->DrawRect( gProp.pSGlobalShell->GetOut(), aTabOutRect, COL_LIGHTGRAY );
+        SwViewOption::DrawRect( &rRenderContext, aTabOutRect, COL_LIGHTGRAY );
     }
-    ((SwTabFrm*)this)->ResetComplete();
+    const_cast<SwTabFrame*>(this)->ResetComplete();
 }
 
 /**
@@ -4560,17 +4554,18 @@ void SwTabFrm::Paint(SwRect const& rRect, SwPrintData const*const) const
 static void lcl_PaintShadow( const SwRect& rRect, SwRect& rOutRect,
     const SvxShadowItem& rShadow, const bool bDrawFullShadowRectangle,
     const bool bTop, const bool bBottom,
-    const bool bLeft, const bool bRight )
+    const bool bLeft, const bool bRight,
+    SwPaintProperties& properties)
 {
-    const long nWidth  = ::lcl_AlignWidth ( rShadow.GetWidth() );
-    const long nHeight = ::lcl_AlignHeight( rShadow.GetWidth() );
+    const long nWidth  = ::lcl_AlignWidth ( rShadow.GetWidth(), properties );
+    const long nHeight = ::lcl_AlignHeight( rShadow.GetWidth(), properties );
 
-    SwRects aRegion( 2 );
+    SwRects aRegion;
     SwRect aOut( rOutRect );
 
     switch ( rShadow.GetLocation() )
     {
-        case SVX_SHADOW_BOTTOMRIGHT:
+        case SvxShadowLocation::BottomRight:
             {
                 if ( bDrawFullShadowRectangle )
                 {
@@ -4607,7 +4602,7 @@ static void lcl_PaintShadow( const SwRect& rRect, SwRect& rOutRect,
                     rOutRect.Bottom( rOutRect.Bottom()- nHeight );
             }
             break;
-        case SVX_SHADOW_TOPLEFT:
+        case SvxShadowLocation::TopLeft:
             {
                 if ( bDrawFullShadowRectangle )
                 {
@@ -4644,7 +4639,7 @@ static void lcl_PaintShadow( const SwRect& rRect, SwRect& rOutRect,
                     rOutRect.Top( rOutRect.Top() + nHeight );
             }
             break;
-        case SVX_SHADOW_TOPRIGHT:
+        case SvxShadowLocation::TopRight:
             {
                 if ( bDrawFullShadowRectangle )
                 {
@@ -4681,7 +4676,7 @@ static void lcl_PaintShadow( const SwRect& rRect, SwRect& rOutRect,
                     rOutRect.Top( rOutRect.Top() + nHeight );
             }
             break;
-        case SVX_SHADOW_BOTTOMLEFT:
+        case SvxShadowLocation::BottomLeft:
             {
                 if ( bDrawFullShadowRectangle )
                 {
@@ -4723,18 +4718,18 @@ static void lcl_PaintShadow( const SwRect& rRect, SwRect& rOutRect,
             break;
     }
 
-    OutputDevice *pOut = gProp.pSGlobalShell->GetOut();
+    vcl::RenderContext *pOut = properties.pSGlobalShell->GetOut();
 
-    sal_uLong nOldDrawMode = pOut->GetDrawMode();
+    DrawModeFlags nOldDrawMode = pOut->GetDrawMode();
     Color aShadowColor( rShadow.GetColor().GetRGBColor() );
-    if( !aRegion.empty() && gProp.pSGlobalShell->GetWin() &&
+    if( !aRegion.empty() && properties.pSGlobalShell->GetWin() &&
         Application::GetSettings().GetStyleSettings().GetHighContrastMode() )
     {
         // In high contrast mode, the output device has already set the
-        // DRAWMODE_SETTINGSFILL flag. This causes the SetFillColor function
+        // DrawModeFlags::SettingsFill flag. This causes the SetFillColor function
         // to ignore the setting of a new color. Therefore we have to reset
         // the drawing mode
-        pOut->SetDrawMode( 0 );
+        pOut->SetDrawMode( DrawModeFlags::Default );
         aShadowColor = SwViewOption::GetFontColor();
     }
 
@@ -4745,13 +4740,12 @@ static void lcl_PaintShadow( const SwRect& rRect, SwRect& rOutRect,
 
     pOut->SetDrawMode( nOldDrawMode );
 
-    for ( size_t i = 0; i < aRegion.size(); ++i )
+    for (SwRect & rOut : aRegion)
     {
-        SwRect &rOut = aRegion[i];
         aOut = rOut;
         if ( rRect.IsOver( aOut ) && aOut.Height() > 0 && aOut.Width() > 0 )
         {
-            aOut._Intersection( rRect );
+            aOut.Intersection_( rRect );
             pOut->DrawRect( aOut.SVRect() );
         }
     }
@@ -4766,12 +4760,12 @@ static void lcl_PaintShadow( const SwRect& rRect, SwRect& rOutRect,
  *
  * @note: draw full shadow rectangle for frames with transparent drawn backgrounds (OD 23.08.2002 #99657#)
  */
-void SwFrm::PaintShadow( const SwRect& rRect, SwRect& rOutRect,
+void SwFrame::PaintShadow( const SwRect& rRect, SwRect& rOutRect,
                          const SwBorderAttrs &rAttrs ) const
 {
     SvxShadowItem rShadow = rAttrs.GetShadow();
 
-    const bool bCnt    = IsCntntFrm();
+    const bool bCnt    = IsContentFrame();
     const bool bTop    = !bCnt || rAttrs.GetTopLine  ( *(this) );
     const bool bBottom = !bCnt || rAttrs.GetBottomLine( *(this) );
 
@@ -4779,10 +4773,10 @@ void SwFrm::PaintShadow( const SwRect& rRect, SwRect& rOutRect,
     {
         switch( rShadow.GetLocation() )
         {
-            case SVX_SHADOW_BOTTOMRIGHT: rShadow.SetLocation(SVX_SHADOW_BOTTOMLEFT);  break;
-            case SVX_SHADOW_TOPLEFT:     rShadow.SetLocation(SVX_SHADOW_TOPRIGHT);    break;
-            case SVX_SHADOW_TOPRIGHT:    rShadow.SetLocation(SVX_SHADOW_BOTTOMRIGHT); break;
-            case SVX_SHADOW_BOTTOMLEFT:  rShadow.SetLocation(SVX_SHADOW_TOPLEFT);     break;
+            case SvxShadowLocation::BottomRight: rShadow.SetLocation(SvxShadowLocation::BottomLeft);  break;
+            case SvxShadowLocation::TopLeft:     rShadow.SetLocation(SvxShadowLocation::TopRight);    break;
+            case SvxShadowLocation::TopRight:    rShadow.SetLocation(SvxShadowLocation::BottomRight); break;
+            case SvxShadowLocation::BottomLeft:  rShadow.SetLocation(SvxShadowLocation::TopLeft);     break;
             default: break;
         }
     }
@@ -4791,35 +4785,37 @@ void SwFrm::PaintShadow( const SwRect& rRect, SwRect& rOutRect,
     //     be drawn or only two shadow rectangles beside the frame.
     //     draw full shadow rectangle, if frame background is drawn transparent.
     //     Status Quo:
-    //         SwLayoutFrm can have transparent drawn backgrounds. Thus,
+    //         SwLayoutFrame can have transparent drawn backgrounds. Thus,
     //         "asked" their frame format.
     const bool bDrawFullShadowRectangle =
-            ( IsLayoutFrm() &&
-              (static_cast<const SwLayoutFrm*>(this))->GetFmt()->IsBackgroundTransparent()
+            ( IsLayoutFrame() &&
+              (static_cast<const SwLayoutFrame*>(this))->GetFormat()->IsBackgroundTransparent()
             );
 
-    SWRECTFN( this );
-    ::lcl_ExtendLeftAndRight( rOutRect, *(this), rAttrs, fnRect );
+    SwRectFnSet aRectFnSet(this);
+    ::lcl_ExtendLeftAndRight( rOutRect, *(this), rAttrs, aRectFnSet.FnRect() );
 
-    lcl_PaintShadow(rRect, rOutRect, rShadow, bDrawFullShadowRectangle, bTop, bBottom, true, true);
+    lcl_PaintShadow(rRect, rOutRect, rShadow, bDrawFullShadowRectangle, bTop, bBottom, true, true, gProp);
 }
 
-void SwFrm::PaintBorderLine( const SwRect& rRect,
+void SwFrame::PaintBorderLine( const SwRect& rRect,
                              const SwRect& rOutRect,
-                             const SwPageFrm * pPage,
+                             const SwPageFrame * pPage,
                              const Color *pColor,
-                             const SvxBorderStyle nStyle ) const
+                             const SvxBorderLineStyle nStyle ) const
 {
     if ( !rOutRect.IsOver( rRect ) )
         return;
 
     SwRect aOut( rOutRect );
-    aOut._Intersection( rRect );
+    aOut.Intersection_( rRect );
 
-    const SwTabFrm *pTab = IsCellFrm() ? FindTabFrm() : 0;
-    sal_uInt8 nSubCol = ( IsCellFrm() || IsRowFrm() ) ? SUBCOL_TAB :
-                   ( IsInSct() ? SUBCOL_SECT :
-                   ( IsInFly() ? SUBCOL_FLY : SUBCOL_PAGE ) );
+    const SwTabFrame *pTab = IsCellFrame() ? FindTabFrame() : nullptr;
+    SubColFlags nSubCol = ( IsCellFrame() || IsRowFrame() )
+                          ? SubColFlags::Tab
+                          : ( IsInSct()
+                              ? SubColFlags::Sect
+                              : ( IsInFly() ? SubColFlags::Fly : SubColFlags::Page ) );
     if( pColor && gProp.pSGlobalShell->GetWin() &&
         Application::GetSettings().GetStyleSettings().GetHighContrastMode() )
     {
@@ -4827,15 +4823,16 @@ void SwFrm::PaintBorderLine( const SwRect& rRect,
     }
 
     if (pPage->GetSortedObjs() &&
-        pPage->GetFmt()->GetDoc()->getIDocumentSettingAccess().get(IDocumentSettingAccess::SUBTRACT_FLYS))
+        pPage->GetFormat()->GetDoc()->getIDocumentSettingAccess().get(DocumentSettingId::SUBTRACT_FLYS))
     {
         SwRegionRects aRegion( aOut, 4 );
-        ::lcl_SubtractFlys( this, pPage, aOut, aRegion );
+        basegfx::tools::B2DClipState aClipState;
+        ::lcl_SubtractFlys( this, pPage, aOut, aRegion, aClipState, gProp );
         for ( size_t i = 0; i < aRegion.size(); ++i )
-            gProp.pSLines->AddLineRect( aRegion[i], pColor, nStyle, pTab, nSubCol );
+            gProp.pSLines->AddLineRect( aRegion[i], pColor, nStyle, pTab, nSubCol, gProp );
     }
     else
-        gProp.pSLines->AddLineRect( aOut, pColor, nStyle, pTab, nSubCol );
+        gProp.pSLines->AddLineRect( aOut, pColor, nStyle, pTab, nSubCol, gProp );
 }
 
 /**
@@ -4851,17 +4848,18 @@ void SwFrm::PaintBorderLine( const SwRect& rRect,
 static void lcl_SubTopBottom( SwRect&              _iorRect,
                                    const SvxBoxItem&    _rBox,
                                    const SwBorderAttrs& _rAttrs,
-                                   const SwFrm&         _rFrm,
+                                   const SwFrame&         _rFrame,
                                    const SwRectFn&      _rRectFn,
-                                   const bool       _bPrtOutputDev )
+                                   const bool       _bPrtOutputDev,
+                                   SwPaintProperties& properties )
 {
-    const bool bCnt = _rFrm.IsCntntFrm();
+    const bool bCnt = _rFrame.IsContentFrame();
     if ( _rBox.GetTop() && _rBox.GetTop()->GetInWidth() &&
-         ( !bCnt || _rAttrs.GetTopLine( _rFrm ) )
+         ( !bCnt || _rAttrs.GetTopLine( _rFrame ) )
        )
     {
         // subtract distance between outer and inner line.
-        SwTwips nDist = ::lcl_MinHeightDist( _rBox.GetTop()->GetDistance() );
+        SwTwips nDist = ::lcl_MinHeightDist( _rBox.GetTop()->GetDistance(), properties );
         // OD 19.05.2003 #109667# - non-overlapping border rectangles:
         // adjust x-/y-position, if inner top line is a hair line (width = 1)
         bool bIsInnerTopLineHairline = false;
@@ -4869,13 +4867,13 @@ static void lcl_SubTopBottom( SwRect&              _iorRect,
         {
             // additionally subtract width of top outer line
             // --> left/right inner/outer line doesn't overlap top outer line.
-            nDist += ::lcl_AlignHeight( _rBox.GetTop()->GetOutWidth() );
+            nDist += ::lcl_AlignHeight( _rBox.GetTop()->GetOutWidth(), properties );
         }
         else
         {
             // OD 29.04.2003 #107169# - additionally subtract width of top inner line
             // --> left/right inner/outer line doesn't overlap top inner line.
-            nDist += ::lcl_AlignHeight( _rBox.GetTop()->GetInWidth() );
+            nDist += ::lcl_AlignHeight( _rBox.GetTop()->GetInWidth(), properties );
             bIsInnerTopLineHairline = _rBox.GetTop()->GetInWidth() == 1;
         }
         (_iorRect.*_rRectFn->fnSubTop)( -nDist );
@@ -4883,12 +4881,12 @@ static void lcl_SubTopBottom( SwRect&              _iorRect,
         // is a hair line
         if ( bIsInnerTopLineHairline )
         {
-            if ( _rFrm.IsVertical() )
+            if ( _rFrame.IsVertical() )
             {
                 // right of border rectangle has to be checked and adjusted
                 Point aCompPt( _iorRect.Right(), 0 );
                 Point aRefPt( aCompPt.X() + 1, aCompPt.Y() );
-                lcl_CompPxPosAndAdjustPos( *(gProp.pSGlobalShell->GetOut()),
+                lcl_CompPxPosAndAdjustPos( *(properties.pSGlobalShell->GetOut()),
                                           aRefPt, aCompPt,
                                           true, -1 );
                 _iorRect.Right( aCompPt.X() );
@@ -4898,7 +4896,7 @@ static void lcl_SubTopBottom( SwRect&              _iorRect,
                 // top of border rectangle has to be checked and adjusted
                 Point aCompPt( 0, _iorRect.Top() );
                 Point aRefPt( aCompPt.X(), aCompPt.Y() - 1 );
-                lcl_CompPxPosAndAdjustPos( *(gProp.pSGlobalShell->GetOut()),
+                lcl_CompPxPosAndAdjustPos( *(properties.pSGlobalShell->GetOut()),
                                           aRefPt, aCompPt,
                                           false, +1 );
                 _iorRect.Top( aCompPt.Y() );
@@ -4907,11 +4905,11 @@ static void lcl_SubTopBottom( SwRect&              _iorRect,
     }
 
     if ( _rBox.GetBottom() && _rBox.GetBottom()->GetInWidth() &&
-         ( !bCnt || _rAttrs.GetBottomLine( _rFrm ) )
+         ( !bCnt || _rAttrs.GetBottomLine( _rFrame ) )
        )
     {
         // subtract distance between outer and inner line.
-        SwTwips nDist = ::lcl_MinHeightDist( _rBox.GetBottom()->GetDistance() );
+        SwTwips nDist = ::lcl_MinHeightDist( _rBox.GetBottom()->GetDistance(), properties );
         // OD 19.05.2003 #109667# - non-overlapping border rectangles:
         // adjust x-/y-position, if inner bottom line is a hair line (width = 1)
         bool bIsInnerBottomLineHairline = false;
@@ -4919,13 +4917,13 @@ static void lcl_SubTopBottom( SwRect&              _iorRect,
         {
             // additionally subtract width of bottom outer line
             // --> left/right inner/outer line doesn't overlap bottom outer line.
-            nDist += ::lcl_AlignHeight( _rBox.GetBottom()->GetOutWidth() );
+            nDist += ::lcl_AlignHeight( _rBox.GetBottom()->GetOutWidth(), properties );
         }
         else
         {
             // OD 29.04.2003 #107169# - additionally subtract width of bottom inner line
             // --> left/right inner/outer line doesn't overlap bottom inner line.
-            nDist += ::lcl_AlignHeight( _rBox.GetBottom()->GetInWidth() );
+            nDist += ::lcl_AlignHeight( _rBox.GetBottom()->GetInWidth(), properties );
             bIsInnerBottomLineHairline = _rBox.GetBottom()->GetInWidth() == 1;
         }
         (_iorRect.*_rRectFn->fnAddBottom)( -nDist );
@@ -4933,12 +4931,12 @@ static void lcl_SubTopBottom( SwRect&              _iorRect,
         // bottom line is a hair line.
         if ( bIsInnerBottomLineHairline )
         {
-            if ( _rFrm.IsVertical() )
+            if ( _rFrame.IsVertical() )
             {
                 // left of border rectangle has to be checked and adjusted
                 Point aCompPt( _iorRect.Left(), 0 );
                 Point aRefPt( aCompPt.X() - 1, aCompPt.Y() );
-                lcl_CompPxPosAndAdjustPos( *(gProp.pSGlobalShell->GetOut()),
+                lcl_CompPxPosAndAdjustPos( *(properties.pSGlobalShell->GetOut()),
                                           aRefPt, aCompPt,
                                           true, +1 );
                 _iorRect.Left( aCompPt.X() );
@@ -4948,7 +4946,7 @@ static void lcl_SubTopBottom( SwRect&              _iorRect,
                 // bottom of border rectangle has to be checked and adjusted
                 Point aCompPt( 0, _iorRect.Bottom() );
                 Point aRefPt( aCompPt.X(), aCompPt.Y() + 1 );
-                lcl_CompPxPosAndAdjustPos( *(gProp.pSGlobalShell->GetOut()),
+                lcl_CompPxPosAndAdjustPos( *(properties.pSGlobalShell->GetOut()),
                                           aRefPt, aCompPt,
                                           false, -1 );
                 _iorRect.Bottom( aCompPt.Y() );
@@ -4959,7 +4957,7 @@ static void lcl_SubTopBottom( SwRect&              _iorRect,
 
 static sal_uInt16 lcl_GetLineWidth( const SvxBorderLine* pLine )
 {
-    if ( pLine != NULL )
+    if ( pLine != nullptr )
         return pLine->GetScaledWidth();
 
     return 0;
@@ -4983,7 +4981,8 @@ static void lcl_MakeBorderLine(SwRect const& rRect,
         bool const isVertical,
         SvxBorderLine const& rBorder,
         SvxBorderLine const*const pLeftOrTopNeighbour,
-        SvxBorderLine const*const pRightOrBottomNeighbour)
+        SvxBorderLine const*const pRightOrBottomNeighbour,
+        SwPaintProperties& properties)
 {
     bool const isLeftOrTopBorder((isVerticalInModel == isVertical)
             ? isLeftOrTopBorderInModel
@@ -5004,10 +5003,10 @@ static void lcl_MakeBorderLine(SwRect const& rRect,
                 : rRect.Right() - (rRect.Width() / 2.0));
         aStart.setX(fStartX);
         aStart.setY(rRect.Top() +
-                lcl_AlignHeight(lcl_GetLineWidth(pStartNeighbour))/2.0);
+                lcl_AlignHeight(lcl_GetLineWidth(pStartNeighbour), properties)/2.0);
         aEnd.setX(fStartX);
         aEnd.setY(rRect.Bottom() -
-                lcl_AlignHeight(lcl_GetLineWidth(pEndNeighbour))/2.0);
+                lcl_AlignHeight(lcl_GetLineWidth(pEndNeighbour), properties)/2.0);
     }
     else
     {   // fdo#38635: always from outer edge
@@ -5015,10 +5014,10 @@ static void lcl_MakeBorderLine(SwRect const& rRect,
                 ? rRect.Top()    + (rRect.Height() / 2.0)
                 : rRect.Bottom() - (rRect.Height() / 2.0));
         aStart.setX(rRect.Left() +
-                lcl_AlignWidth(lcl_GetLineWidth(pStartNeighbour))/2.0);
+                lcl_AlignWidth(lcl_GetLineWidth(pStartNeighbour), properties)/2.0);
         aStart.setY(fStartY);
         aEnd.setX(rRect.Right() -
-                lcl_AlignWidth(lcl_GetLineWidth(pEndNeighbour))/2.0);
+                lcl_AlignWidth(lcl_GetLineWidth(pEndNeighbour), properties)/2.0);
         aEnd.setY(fStartY);
     }
 
@@ -5032,24 +5031,24 @@ static void lcl_MakeBorderLine(SwRect const& rRect,
         return;
 
     double const nExtentLeftStart = (isLeftOrTopBorder == isVertical)
-        ?   lcl_GetExtent(pStartNeighbour, 0)
-        :   lcl_GetExtent(0, pStartNeighbour);
+        ?   lcl_GetExtent(pStartNeighbour, nullptr)
+        :   lcl_GetExtent(nullptr, pStartNeighbour);
     double const nExtentLeftEnd = (isLeftOrTopBorder == isVertical)
-        ?   lcl_GetExtent(pEndNeighbour, 0)
-        :   lcl_GetExtent(0, pEndNeighbour);
+        ?   lcl_GetExtent(pEndNeighbour, nullptr)
+        :   lcl_GetExtent(nullptr, pEndNeighbour);
     double const nExtentRightStart = (isLeftOrTopBorder == isVertical)
-        ?   lcl_GetExtent(0, pStartNeighbour)
-        :   lcl_GetExtent(pStartNeighbour, 0);
+        ?   lcl_GetExtent(nullptr, pStartNeighbour)
+        :   lcl_GetExtent(pStartNeighbour, nullptr);
     double const nExtentRightEnd = (isLeftOrTopBorder == isVertical)
-        ?   lcl_GetExtent(0, pEndNeighbour)
-        :   lcl_GetExtent(pEndNeighbour, 0);
+        ?   lcl_GetExtent(nullptr, pEndNeighbour)
+        :   lcl_GetExtent(pEndNeighbour, nullptr);
 
     double const nLeftWidth = rBorder.GetOutWidth();
     double const nRightWidth = rBorder.GetInWidth();
     Color const aLeftColor = rBorder.GetColorOut(isLeftOrTopBorder);
     Color const aRightColor = rBorder.GetColorIn(isLeftOrTopBorder);
 
-    ::rtl::Reference<BorderLinePrimitive2D> const xLine =
+    rtl::Reference<BorderLinePrimitive2D> const xLine =
         new BorderLinePrimitive2D(
             aStart, aEnd, nLeftWidth, rBorder.GetDistance(), nRightWidth,
             nExtentLeftStart, nExtentLeftEnd,
@@ -5057,7 +5056,7 @@ static void lcl_MakeBorderLine(SwRect const& rRect,
             aLeftColor.getBColor(), aRightColor.getBColor(),
             rBorder.GetColorGap().getBColor(), rBorder.HasGapColor(),
             rBorder.GetBorderLineStyle() );
-    gProp.pBLines->AddBorderLine(xLine);
+    properties.pBLines->AddBorderLine(xLine.get(), properties);
 }
 
 /**
@@ -5065,16 +5064,17 @@ static void lcl_MakeBorderLine(SwRect const& rRect,
  * into new method <lcl_PaintLeftRightLine(..)>
  */
 static void lcl_PaintLeftRightLine( const bool         _bLeft,
-                             const SwFrm&           _rFrm,
-                             const SwPageFrm&       /*_rPage*/,
+                             const SwFrame&           _rFrame,
+                             const SwPageFrame&       /*_rPage*/,
                              const SwRect&          _rOutRect,
                              const SwRect&          /*_rRect*/,
                              const SwBorderAttrs&   _rAttrs,
-                             const SwRectFn&        _rRectFn )
+                             const SwRectFn&        _rRectFn,
+                             SwPaintProperties& properties)
 {
     const SvxBoxItem& rBox = _rAttrs.GetBox();
-    const bool bR2L = _rFrm.IsCellFrm() && _rFrm.IsRightToLeft();
-    const SvxBorderLine* pLeftRightBorder = 0;
+    const bool bR2L = _rFrame.IsCellFrame() && _rFrame.IsRightToLeft();
+    const SvxBorderLine* pLeftRightBorder = nullptr;
     const SvxBorderLine* pTopBorder = rBox.GetTop();
     const SvxBorderLine* pBottomBorder = rBox.GetBottom();
 
@@ -5095,7 +5095,7 @@ static void lcl_PaintLeftRightLine( const bool         _bLeft,
     SwRect aRect( _rOutRect );
     if ( _bLeft )
     {
-        (aRect.*_rRectFn->fnAddRight)( ::lcl_AlignWidth( lcl_GetLineWidth( pLeftRightBorder ) ) -
+        (aRect.*_rRectFn->fnAddRight)( ::lcl_AlignWidth( lcl_GetLineWidth( pLeftRightBorder ), properties ) -
                                        (aRect.*_rRectFn->fnGetWidth)() );
 
         // Shift the left border to the left.
@@ -5110,34 +5110,34 @@ static void lcl_PaintLeftRightLine( const bool         _bLeft,
     }
     else
     {
-        (aRect.*_rRectFn->fnSubLeft)( ::lcl_AlignWidth( lcl_GetLineWidth( pLeftRightBorder ) ) -
+        (aRect.*_rRectFn->fnSubLeft)( ::lcl_AlignWidth( lcl_GetLineWidth( pLeftRightBorder ), properties ) -
                                       (aRect.*_rRectFn->fnGetWidth)() );
     }
 
-    if ( _rFrm.IsCntntFrm() )
+    if ( _rFrame.IsContentFrame() )
     {
-        ::lcl_ExtendLeftAndRight( aRect, _rFrm, _rAttrs, _rRectFn );
+        ::lcl_ExtendLeftAndRight( aRect, _rFrame, _rAttrs, _rRectFn );
 
         // No Top / bottom borders for joint borders
-        if ( _rAttrs.JoinedWithPrev( _rFrm ) ) pTopBorder = NULL;
-        if ( _rAttrs.JoinedWithNext( _rFrm ) ) pBottomBorder = NULL;
+        if ( _rAttrs.JoinedWithPrev( _rFrame ) ) pTopBorder = nullptr;
+        if ( _rAttrs.JoinedWithNext( _rFrame ) ) pBottomBorder = nullptr;
     }
 
     if ( !pLeftRightBorder->GetInWidth() )
     {
         // OD 06.05.2003 #107169# - init boolean indicating printer output device.
         const bool bPrtOutputDev =
-                ( OUTDEV_PRINTER == gProp.pSGlobalShell->GetOut()->GetOutDevType() );
+                ( OUTDEV_PRINTER == properties.pSGlobalShell->GetOut()->GetOutDevType() );
 
         // OD 06.05.2003 #107169# - add 6th parameter
-        ::lcl_SubTopBottom( aRect, rBox, _rAttrs, _rFrm, _rRectFn, bPrtOutputDev );
+        ::lcl_SubTopBottom( aRect, rBox, _rAttrs, _rFrame, _rRectFn, bPrtOutputDev, properties);
     }
 
     if ( lcl_GetLineWidth( pLeftRightBorder ) > 0 )
     {
         lcl_MakeBorderLine(
             aRect, true, _bLeft, aRect.Height() > aRect.Width(),
-            *pLeftRightBorder, pTopBorder, pBottomBorder);
+            *pLeftRightBorder, pTopBorder, pBottomBorder, properties);
     }
 }
 
@@ -5146,15 +5146,16 @@ static void lcl_PaintLeftRightLine( const bool         _bLeft,
  * into <lcl_PaintTopLine>
  */
 static void lcl_PaintTopBottomLine( const bool         _bTop,
-                             const SwFrm&           ,
-                             const SwPageFrm&       /*_rPage*/,
+                             const SwFrame&           ,
+                             const SwPageFrame&       /*_rPage*/,
                              const SwRect&          _rOutRect,
                              const SwRect&          /*_rRect*/,
                              const SwBorderAttrs&   _rAttrs,
-                             const SwRectFn&        _rRectFn )
+                             const SwRectFn&        _rRectFn,
+                             SwPaintProperties& properties)
 {
     const SvxBoxItem& rBox = _rAttrs.GetBox();
-    const SvxBorderLine* pTopBottomBorder = 0;
+    const SvxBorderLine* pTopBottomBorder = nullptr;
 
     if ( _bTop )
     {
@@ -5173,7 +5174,7 @@ static void lcl_PaintTopBottomLine( const bool         _bTop,
     SwRect aRect( _rOutRect );
     if ( _bTop )
     {
-        (aRect.*_rRectFn->fnAddBottom)( ::lcl_AlignHeight( lcl_GetLineWidth( pTopBottomBorder ) ) -
+        (aRect.*_rRectFn->fnAddBottom)( ::lcl_AlignHeight( lcl_GetLineWidth( pTopBottomBorder ), properties ) -
                                         (aRect.*_rRectFn->fnGetHeight)() );
 
         // Push the top border up a bit.
@@ -5188,7 +5189,7 @@ static void lcl_PaintTopBottomLine( const bool         _bTop,
     }
     else
     {
-        (aRect.*_rRectFn->fnSubTop)( ::lcl_AlignHeight( lcl_GetLineWidth( pTopBottomBorder ) ) -
+        (aRect.*_rRectFn->fnSubTop)( ::lcl_AlignHeight( lcl_GetLineWidth( pTopBottomBorder ), properties ) -
                                      (aRect.*_rRectFn->fnGetHeight)() );
     }
 
@@ -5196,7 +5197,7 @@ static void lcl_PaintTopBottomLine( const bool         _bTop,
     {
         lcl_MakeBorderLine(
             aRect, false, _bTop, aRect.Height() > aRect.Width(),
-            *pTopBottomBorder, rBox.GetLeft(), rBox.GetRight());
+            *pTopBottomBorder, rBox.GetLeft(), rBox.GetRight(), properties);
     }
 }
 
@@ -5208,7 +5209,7 @@ void PaintCharacterBorder(
     const bool bJoinWithNext )
 {
     SwRect aAlignedRect(rPaintArea);
-    SwAlignRect(aAlignedRect, gProp.pSGlobalShell);
+    SwAlignRect(aAlignedRect, gProp.pSGlobalShell, gProp.pSGlobalShell->GetOut());
 
     bool bTop = true;
     bool bBottom = true;
@@ -5241,10 +5242,10 @@ void PaintCharacterBorder(
             0, &rFont.GetShadowColor(), rFont.GetShadowWidth(),
             rFont.GetAbsShadowLocation(bVerticalLayout));
 
-        if( aShadow.GetLocation() != SVX_SHADOW_NONE )
+        if( aShadow.GetLocation() != SvxShadowLocation::NONE )
         {
             lcl_PaintShadow( SwRect(aAlignedRect), aAlignedRect, aShadow,
-                             false, bTop, bBottom, bLeft, bRight);
+                             false, bTop, bBottom, bLeft, bRight, gProp);
         }
     }
 
@@ -5275,13 +5276,14 @@ void PaintCharacterBorder(
             false, true, false,
             aTopBorder.get(),
             aLeftBorder.get_ptr(),
-            aRightBorder.get_ptr());
+            aRightBorder.get_ptr(),
+            gProp);
     }
 
     if( aBottomBorder )
     {
         if( aBottomBorder->isDouble() )
-            aBottomBorder->SetMirrorWidths(true);
+            aBottomBorder->SetMirrorWidths();
 
         Point aLeftTop(
             aAlignedRect.Left(),
@@ -5295,7 +5297,8 @@ void PaintCharacterBorder(
             false, false, false,
             aBottomBorder.get(),
             aLeftBorder.get_ptr(),
-            aRightBorder.get_ptr());
+            aRightBorder.get_ptr(),
+            gProp );
     }
 
     if( aLeftBorder )
@@ -5314,13 +5317,14 @@ void PaintCharacterBorder(
             true, true, true,
             aLeftBorder.get(),
             aTopBorder.get_ptr(),
-            aBottomBorder.get_ptr());
+            aBottomBorder.get_ptr(),
+            gProp );
     }
 
     if( aRightBorder )
     {
         if( aRightBorder->isDouble() )
-            aRightBorder->SetMirrorWidths(true);
+            aRightBorder->SetMirrorWidths();
 
         Point aLeftTop(
             aAlignedRect.Right() - aRightBorder.get().GetScaledWidth(),
@@ -5334,27 +5338,28 @@ void PaintCharacterBorder(
             true, false, true,
             aRightBorder.get(),
             aTopBorder.get_ptr(),
-            aBottomBorder.get_ptr());
+            aBottomBorder.get_ptr(),
+            gProp );
     }
 }
 
 /// #i15844#
-static const SwFrm* lcl_HasNextCell( const SwFrm& rFrm )
+static const SwFrame* lcl_HasNextCell( const SwFrame& rFrame )
 {
-    OSL_ENSURE( rFrm.IsCellFrm(),
-            "lcl_HasNextCell( const SwFrm& rFrm ) should be called with SwCellFrm" );
+    OSL_ENSURE( rFrame.IsCellFrame(),
+            "lcl_HasNextCell( const SwFrame& rFrame ) should be called with SwCellFrame" );
 
-    const SwFrm* pTmpFrm = &rFrm;
+    const SwFrame* pTmpFrame = &rFrame;
     do
     {
-        if ( pTmpFrm->GetNext() )
-            return pTmpFrm->GetNext();
+        if ( pTmpFrame->GetNext() )
+            return pTmpFrame->GetNext();
 
-        pTmpFrm = pTmpFrm->GetUpper()->GetUpper();
+        pTmpFrame = pTmpFrame->GetUpper()->GetUpper();
     }
-    while ( pTmpFrm->IsCellFrm() );
+    while ( pTmpFrame->IsCellFrame() );
 
-    return 0;
+    return nullptr;
 }
 
 /**
@@ -5363,13 +5368,13 @@ static const SwFrm* lcl_HasNextCell( const SwFrm& rFrm )
  *
  * OD 21.02.2003 #b4779636#, #107692#
  *
- * @param _pCellFrm
+ * @param _pCellFrame
  * input parameter - constant pointer to cell frame for which the cell frame
  * for the border attributes has to be determined.
  *
  * @param _rCellBorderAttrs
  * input parameter - constant reference to the border attributes of cell frame
- * <_pCellFrm>.
+ * <_pCellFrame>.
  *
  * @param _bTop
  * input parameter - boolean, that controls, if cell frame for top border or
@@ -5378,83 +5383,83 @@ static const SwFrm* lcl_HasNextCell( const SwFrm& rFrm )
  * @return constant pointer to cell frame, for which the border attributes has
  * to be used
  */
-static const SwFrm* lcl_GetCellFrmForBorderAttrs( const SwFrm*         _pCellFrm,
+static const SwFrame* lcl_GetCellFrameForBorderAttrs( const SwFrame*         _pCellFrame,
                                            const SwBorderAttrs& _rCellBorderAttrs,
                                            const bool           _bTop )
 {
-    OSL_ENSURE( _pCellFrm, "No cell frame available, dying soon" );
+    OSL_ENSURE( _pCellFrame, "No cell frame available, dying soon" );
 
     // determine, if cell frame is at bottom/top border of a table frame and
     // the table frame has/is a follow.
-    const SwFrm* pTmpFrm = _pCellFrm;
+    const SwFrame* pTmpFrame = _pCellFrame;
     bool bCellAtBorder = true;
-    bool bCellAtLeftBorder = !_pCellFrm->GetPrev();
-    bool bCellAtRightBorder = !_pCellFrm->GetNext();
-    while( !pTmpFrm->IsRowFrm() || !pTmpFrm->GetUpper()->IsTabFrm() )
+    bool bCellAtLeftBorder = !_pCellFrame->GetPrev();
+    bool bCellAtRightBorder = !_pCellFrame->GetNext();
+    while( !pTmpFrame->IsRowFrame() || !pTmpFrame->GetUpper()->IsTabFrame() )
     {
-        pTmpFrm = pTmpFrm->GetUpper();
-        if ( pTmpFrm->IsRowFrm() &&
-             (_bTop ? pTmpFrm->GetPrev() : pTmpFrm->GetNext())
+        pTmpFrame = pTmpFrame->GetUpper();
+        if ( pTmpFrame->IsRowFrame() &&
+             (_bTop ? pTmpFrame->GetPrev() : pTmpFrame->GetNext())
            )
         {
             bCellAtBorder = false;
         }
-        if ( pTmpFrm->IsCellFrm() )
+        if ( pTmpFrame->IsCellFrame() )
         {
-            if ( pTmpFrm->GetPrev() )
+            if ( pTmpFrame->GetPrev() )
             {
                 bCellAtLeftBorder = false;
             }
-            if ( pTmpFrm->GetNext() )
+            if ( pTmpFrame->GetNext() )
             {
                 bCellAtRightBorder = false;
             }
         }
     }
-    OSL_ENSURE( pTmpFrm && pTmpFrm->IsRowFrm(), "No RowFrm available" );
+    OSL_ENSURE( pTmpFrame && pTmpFrame->IsRowFrame(), "No RowFrame available" );
 
-    const SwLayoutFrm* pParentRowFrm = static_cast<const SwLayoutFrm*>(pTmpFrm);
-    const SwTabFrm* pParentTabFrm =
-            static_cast<const SwTabFrm*>(pParentRowFrm->GetUpper());
+    const SwLayoutFrame* pParentRowFrame = static_cast<const SwLayoutFrame*>(pTmpFrame);
+    const SwTabFrame* pParentTabFrame =
+            static_cast<const SwTabFrame*>(pParentRowFrame->GetUpper());
 
     const bool bCellNeedsAttribute = bCellAtBorder &&
                                      ( _bTop ?
                                       // bCellInFirstRowWithMaster
-                                       ( !pParentRowFrm->GetPrev() &&
-                                         pParentTabFrm->IsFollow() &&
-                                         0 == pParentTabFrm->GetTable()->GetRowsToRepeat() ) :
+                                       ( !pParentRowFrame->GetPrev() &&
+                                         pParentTabFrame->IsFollow() &&
+                                         0 == pParentTabFrame->GetTable()->GetRowsToRepeat() ) :
                                       // bCellInLastRowWithFollow
-                                       ( !pParentRowFrm->GetNext() &&
-                                         pParentTabFrm->GetFollow() )
+                                       ( !pParentRowFrame->GetNext() &&
+                                         pParentTabFrame->GetFollow() )
                                      );
 
-    const SwFrm* pRet = _pCellFrm;
+    const SwFrame* pRet = _pCellFrame;
     if ( bCellNeedsAttribute )
     {
         // determine, if cell frame has no borders inside the table.
-        const SwFrm* pNextCell = 0;
+        const SwFrame* pNextCell = nullptr;
         bool bNoBordersInside = false;
 
-        if ( bCellAtLeftBorder && ( 0 != ( pNextCell = lcl_HasNextCell( *_pCellFrm ) ) ) )
+        if ( bCellAtLeftBorder && ( nullptr != ( pNextCell = lcl_HasNextCell( *_pCellFrame ) ) ) )
         {
-            SwBorderAttrAccess aAccess( SwFrm::GetCache(), pNextCell );
+            SwBorderAttrAccess aAccess( SwFrame::GetCache(), pNextCell );
             const SwBorderAttrs &rBorderAttrs = *aAccess.Get();
             const SvxBoxItem& rBorderBox = rBorderAttrs.GetBox();
             bCellAtRightBorder = !lcl_HasNextCell( *pNextCell );
             bNoBordersInside =
-                ( !rBorderBox.GetTop()    || !pParentRowFrm->GetPrev() ) &&
+                ( !rBorderBox.GetTop()    || !pParentRowFrame->GetPrev() ) &&
                   !rBorderBox.GetLeft() &&
                 ( !rBorderBox.GetRight()  || bCellAtRightBorder ) &&
-                ( !rBorderBox.GetBottom() || !pParentRowFrm->GetNext() );
+                ( !rBorderBox.GetBottom() || !pParentRowFrame->GetNext() );
         }
         else
         {
             const SvxBoxItem& rBorderBox = _rCellBorderAttrs.GetBox();
             bNoBordersInside =
-                ( !rBorderBox.GetTop()    || !pParentRowFrm->GetPrev() ) &&
+                ( !rBorderBox.GetTop()    || !pParentRowFrame->GetPrev() ) &&
                 ( !rBorderBox.GetLeft()   || bCellAtLeftBorder ) &&
                 ( !rBorderBox.GetRight()  || bCellAtRightBorder ) &&
-                ( !rBorderBox.GetBottom() || !pParentRowFrm->GetNext() );
+                ( !rBorderBox.GetBottom() || !pParentRowFrame->GetNext() );
         }
 
         if ( bNoBordersInside )
@@ -5466,18 +5471,18 @@ static const SwFrm* lcl_GetCellFrmForBorderAttrs( const SwFrm*         _pCellFrm
                 // it is at the top border of a table frame, which is a follow.
                 // Thus, use border attributes of cell frame in first row of complete table.
                 // First, determine first table frame of complete table.
-                SwTabFrm* pMasterTabFrm = pParentTabFrm->FindMaster( true );
+                SwTabFrame* pMasterTabFrame = pParentTabFrame->FindMaster( true );
                 // determine first row of complete table.
-                const SwFrm* pFirstRow = pMasterTabFrm->GetLower();
+                const SwFrame* pFirstRow = pMasterTabFrame->GetLower();
                 // return first cell in first row
-                SwFrm* pLowerCell = const_cast<SwFrm*>(pFirstRow->GetLower());
-                while ( !pLowerCell->IsCellFrm() ||
-                        ( pLowerCell->GetLower() && pLowerCell->GetLower()->IsRowFrm() )
+                SwFrame* pLowerCell = const_cast<SwFrame*>(pFirstRow->GetLower());
+                while ( !pLowerCell->IsCellFrame() ||
+                        ( pLowerCell->GetLower() && pLowerCell->GetLower()->IsRowFrame() )
                       )
                 {
                     pLowerCell = pLowerCell->GetLower();
                 }
-                OSL_ENSURE( pLowerCell && pLowerCell->IsCellFrm(), "No CellFrm available" );
+                OSL_ENSURE( pLowerCell && pLowerCell->IsCellFrame(), "No CellFrame available" );
                 pRet = pLowerCell;
             }
             else if ( !_bTop && !_rCellBorderAttrs.GetBox().GetBottom() )
@@ -5487,20 +5492,20 @@ static const SwFrm* lcl_GetCellFrmForBorderAttrs( const SwFrm*         _pCellFrm
                 // but it is at the bottom border of a table frame, which has a follow.
                 // Thus, use border attributes of cell frame in last row of complete table.
                 // First, determine last table frame of complete table.
-                SwTabFrm* pLastTabFrm = const_cast<SwTabFrm*>(pParentTabFrm->GetFollow());
-                while ( pLastTabFrm->GetFollow() )
+                SwTabFrame* pLastTabFrame = const_cast<SwTabFrame*>(pParentTabFrame->GetFollow());
+                while ( pLastTabFrame->GetFollow() )
                 {
-                    pLastTabFrm = pLastTabFrm->GetFollow();
+                    pLastTabFrame = pLastTabFrame->GetFollow();
                 }
                 // determine last row of complete table.
-                SwFrm* pLastRow = pLastTabFrm->GetLastLower();
+                SwFrame* pLastRow = pLastTabFrame->GetLastLower();
                 // return first bottom border cell in last row
-                SwFrm* pLowerCell = const_cast<SwFrm*>(pLastRow->GetLower());
-                while ( !pLowerCell->IsCellFrm() ||
-                        ( pLowerCell->GetLower() && pLowerCell->GetLower()->IsRowFrm() )
+                SwFrame* pLowerCell = pLastRow->GetLower();
+                while ( !pLowerCell->IsCellFrame() ||
+                        ( pLowerCell->GetLower() && pLowerCell->GetLower()->IsRowFrame() )
                       )
                 {
-                    if ( pLowerCell->IsRowFrm() )
+                    if ( pLowerCell->IsRowFrame() )
                     {
                         while ( pLowerCell->GetNext() )
                         {
@@ -5509,7 +5514,7 @@ static const SwFrm* lcl_GetCellFrmForBorderAttrs( const SwFrm*         _pCellFrm
                     }
                     pLowerCell = pLowerCell->GetLower();
                 }
-                OSL_ENSURE( pLowerCell && pLowerCell->IsCellFrm(), "No CellFrm available" );
+                OSL_ENSURE( pLowerCell && pLowerCell->IsCellFrame(), "No CellFrame available" );
                 pRet = pLowerCell;
             }
         }
@@ -5518,25 +5523,25 @@ static const SwFrm* lcl_GetCellFrmForBorderAttrs( const SwFrm*         _pCellFrm
     return pRet;
 }
 
-drawinglayer::processor2d::BaseProcessor2D * SwFrm::CreateProcessor2D( ) const
+drawinglayer::processor2d::BaseProcessor2D * SwFrame::CreateProcessor2D( ) const
 {
     basegfx::B2DRange aViewRange;
 
-    SdrPage *pDrawPage = getRootFrm()->GetCurrShell()->Imp()->GetPageView()->GetPage();
+    SdrPage *pDrawPage = getRootFrame()->GetCurrShell()->Imp()->GetPageView()->GetPage();
     const drawinglayer::geometry::ViewInformation2D aNewViewInfos(
             basegfx::B2DHomMatrix(  ),
-            getRootFrm()->GetCurrShell()->GetOut()->GetViewTransformation(),
+            getRootFrame()->GetCurrShell()->GetOut()->GetViewTransformation(),
             aViewRange,
             GetXDrawPageForSdrPage( pDrawPage ),
             0.0,
             uno::Sequence< beans::PropertyValue >() );
 
     return  drawinglayer::processor2d::createBaseProcessor2DFromOutputDevice(
-                    *getRootFrm()->GetCurrShell()->GetOut(),
+                    *getRootFrame()->GetCurrShell()->GetOut(),
                     aNewViewInfos );
 }
 
-void SwFrm::ProcessPrimitives( const drawinglayer::primitive2d::Primitive2DSequence& rSequence ) const
+void SwFrame::ProcessPrimitives( const drawinglayer::primitive2d::Primitive2DContainer& rSequence ) const
 {
     drawinglayer::processor2d::BaseProcessor2D * pProcessor2D = CreateProcessor2D();
 
@@ -5548,45 +5553,44 @@ void SwFrm::ProcessPrimitives( const drawinglayer::primitive2d::Primitive2DSeque
 }
 
 /// Paints shadows and borders
-void SwFrm::PaintBorder( const SwRect& rRect, const SwPageFrm *pPage,
+void SwFrame::PaintBorder( const SwRect& rRect, const SwPageFrame *pPage,
                          const SwBorderAttrs &rAttrs ) const
 {
-    // There's nothing (Row,Body,Ftn,Root,Column,NoTxt) need to do here
-    if ( (GetType() & 0x90C5) )
+    // There's nothing (Row,Body,Footnote,Root,Column,NoText) need to do here
+    if ((GetType() & (SwFrameType::NoTxt|SwFrameType::Row|SwFrameType::Body|SwFrameType::Ftn|SwFrameType::Column|SwFrameType::Root)))
         return;
 
-    if ( (GetType() & 0x2000) &&    //Cell
-         !gProp.pSGlobalShell->GetViewOptions()->IsTable() )
+    if (IsCellFrame() && !gProp.pSGlobalShell->GetViewOptions()->IsTable())
         return;
 
     // #i29550#
-    if ( IsTabFrm() || IsCellFrm() || IsRowFrm() )
+    if ( IsTabFrame() || IsCellFrame() || IsRowFrame() )
     {
-        const SwTabFrm* pTabFrm = FindTabFrm();
-        if ( pTabFrm->IsCollapsingBorders() )
+        const SwTabFrame* pTabFrame = FindTabFrame();
+        if ( pTabFrame->IsCollapsingBorders() )
             return;
 
-        if ( pTabFrm->GetTable()->IsNewModel() && ( !IsCellFrm() || IsCoveredCell() ) )
+        if ( pTabFrame->GetTable()->IsNewModel() && ( !IsCellFrame() || IsCoveredCell() ) )
             return;
     }
 
     const bool bLine = rAttrs.IsLine();
-    const bool bShadow = rAttrs.GetShadow().GetLocation() != SVX_SHADOW_NONE;
+    const bool bShadow = rAttrs.GetShadow().GetLocation() != SvxShadowLocation::NONE;
 
     // - flag to control,
     //-hack has to be used.
     const bool bb4779636HackActive = true;
 
-    const SwFrm* pCellFrmForBottomBorderAttrs = 0;
-    const SwFrm* pCellFrmForTopBorderAttrs = 0;
+    const SwFrame* pCellFrameForBottomBorderAttrs = nullptr;
+    const SwFrame* pCellFrameForTopBorderAttrs = nullptr;
     bool         bFoundCellForTopOrBorderAttrs = false;
-    if ( bb4779636HackActive && IsCellFrm() )
+    if ( bb4779636HackActive && IsCellFrame() )
     {
-        pCellFrmForBottomBorderAttrs = lcl_GetCellFrmForBorderAttrs( this, rAttrs, false );
-        if ( pCellFrmForBottomBorderAttrs != this )
+        pCellFrameForBottomBorderAttrs = lcl_GetCellFrameForBorderAttrs( this, rAttrs, false );
+        if ( pCellFrameForBottomBorderAttrs != this )
             bFoundCellForTopOrBorderAttrs = true;
-        pCellFrmForTopBorderAttrs = lcl_GetCellFrmForBorderAttrs( this, rAttrs, true );
-        if ( pCellFrmForTopBorderAttrs != this )
+        pCellFrameForTopBorderAttrs = lcl_GetCellFrameForBorderAttrs( this, rAttrs, true );
+        if ( pCellFrameForTopBorderAttrs != this )
             bFoundCellForTopOrBorderAttrs = true;
     }
 
@@ -5599,8 +5603,8 @@ void SwFrm::PaintBorder( const SwRect& rRect, const SwPageFrm *pPage,
         //For the PrtArea the aligned value needs to be used, otherwise it could
         //happen, that some parts won't be processed.
         SwRect aRect( Prt() );
-        aRect += Frm().Pos();
-        ::SwAlignRect( aRect, gProp.pSGlobalShell );
+        aRect += Frame().Pos();
+        ::SwAlignRect( aRect, gProp.pSGlobalShell, gProp.pSGlobalShell->GetOut() );
         // OD 27.09.2002 #103636# - new local boolean variable in order to
         // suspend border paint under special cases - see below.
         // NOTE: This is a fix for the implementation of feature #99657#.
@@ -5616,8 +5620,8 @@ void SwFrm::PaintBorder( const SwRect& rRect, const SwPageFrm *pPage,
             //     On transparent background, continue processing, but suspend
             //     drawing of border by setting <bDrawOnlyShadowForTransparentFrame>
             //     to true.
-            if ( IsLayoutFrm() &&
-                 static_cast<const SwLayoutFrm*>(this)->GetFmt()->IsBackgroundTransparent() )
+            if ( IsLayoutFrame() &&
+                 static_cast<const SwLayoutFrame*>(this)->GetFormat()->IsBackgroundTransparent() )
             {
                  bDrawOnlyShadowForTransparentFrame = true;
             }
@@ -5628,9 +5632,9 @@ void SwFrm::PaintBorder( const SwRect& rRect, const SwPageFrm *pPage,
         }
 
         if ( !pPage )
-            pPage = FindPageFrm();
+            pPage = FindPageFrame();
 
-        ::lcl_CalcBorderRect( aRect, this, rAttrs, true );
+        ::lcl_CalcBorderRect( aRect, this, rAttrs, true, gProp );
         rAttrs.SetGetCacheLine( true );
         if ( bShadow )
             PaintShadow( rRect, aRect, rAttrs );
@@ -5641,42 +5645,42 @@ void SwFrm::PaintBorder( const SwRect& rRect, const SwPageFrm *pPage,
         if ( ( bLine || bFoundCellForTopOrBorderAttrs ) &&
              !bDrawOnlyShadowForTransparentFrame )
         {
-            const SwFrm* pDirRefFrm = IsCellFrm() ? FindTabFrm() : this;
-            SWRECTFN( pDirRefFrm )
-            ::lcl_PaintLeftRightLine ( true, *(this), *(pPage), aRect, rRect, rAttrs, fnRect );
-            ::lcl_PaintLeftRightLine ( false, *(this), *(pPage), aRect, rRect, rAttrs, fnRect );
-            if ( !IsCntntFrm() || rAttrs.GetTopLine( *(this) ) )
+            const SwFrame* pDirRefFrame = IsCellFrame() ? FindTabFrame() : this;
+            SwRectFnSet aRectFnSet(pDirRefFrame);
+            ::lcl_PaintLeftRightLine ( true, *(this), *(pPage), aRect, rRect, rAttrs, aRectFnSet.FnRect(), gProp);
+            ::lcl_PaintLeftRightLine ( false, *(this), *(pPage), aRect, rRect, rAttrs, aRectFnSet.FnRect(), gProp);
+            if ( !IsContentFrame() || rAttrs.GetTopLine( *(this) ) )
             {
                 // -
                 //-hack
                 // paint is found, paint its top border.
-                if ( IsCellFrm() && pCellFrmForTopBorderAttrs != this )
+                if ( IsCellFrame() && pCellFrameForTopBorderAttrs != this )
                 {
-                    SwBorderAttrAccess aAccess( SwFrm::GetCache(),
-                                                pCellFrmForTopBorderAttrs );
+                    SwBorderAttrAccess aAccess( SwFrame::GetCache(),
+                                                pCellFrameForTopBorderAttrs );
                     const SwBorderAttrs &rTopAttrs = *aAccess.Get();
-                    ::lcl_PaintTopBottomLine( true, *(this), *(pPage), aRect, rRect, rTopAttrs, fnRect );
+                    ::lcl_PaintTopBottomLine( true, *(this), *(pPage), aRect, rRect, rTopAttrs, aRectFnSet.FnRect(), gProp);
                 }
                 else
                 {
-                    ::lcl_PaintTopBottomLine( true, *(this), *(pPage), aRect, rRect, rAttrs, fnRect );
+                    ::lcl_PaintTopBottomLine( true, *(this), *(pPage), aRect, rRect, rAttrs, aRectFnSet.FnRect(), gProp );
                 }
             }
-            if ( !IsCntntFrm() || rAttrs.GetBottomLine( *(this) ) )
+            if ( !IsContentFrame() || rAttrs.GetBottomLine( *(this) ) )
             {
                 // -
                 //-hack
                 // paint is found, paint its bottom border.
-                if ( IsCellFrm() && pCellFrmForBottomBorderAttrs != this )
+                if ( IsCellFrame() && pCellFrameForBottomBorderAttrs != this )
                 {
-                    SwBorderAttrAccess aAccess( SwFrm::GetCache(),
-                                                pCellFrmForBottomBorderAttrs );
+                    SwBorderAttrAccess aAccess( SwFrame::GetCache(),
+                                                pCellFrameForBottomBorderAttrs );
                     const SwBorderAttrs &rBottomAttrs = *aAccess.Get();
-                    ::lcl_PaintTopBottomLine(false, *(this), *(pPage), aRect, rRect, rBottomAttrs, fnRect);
+                    ::lcl_PaintTopBottomLine(false, *(this), *(pPage), aRect, rRect, rBottomAttrs, aRectFnSet.FnRect(), gProp);
                 }
                 else
                 {
-                    ::lcl_PaintTopBottomLine(false, *(this), *(pPage), aRect, rRect, rAttrs, fnRect);
+                    ::lcl_PaintTopBottomLine(false, *(this), *(pPage), aRect, rRect, rAttrs, aRectFnSet.FnRect(), gProp);
                 }
             }
         }
@@ -5690,75 +5694,76 @@ void SwFrm::PaintBorder( const SwRect& rRect, const SwPageFrm *pPage,
  * Currently only the top frame needs to be taken into account
  * Other lines and shadows are set aside
  */
-void SwFtnContFrm::PaintBorder( const SwRect& rRect, const SwPageFrm *pPage,
+void SwFootnoteContFrame::PaintBorder( const SwRect& rRect, const SwPageFrame *pPage,
                                 const SwBorderAttrs & ) const
 {
     //If the rectangle is completely inside the PrtArea, no border needs to
     //be painted.
     SwRect aRect( Prt() );
-    aRect.Pos() += Frm().Pos();
+    aRect.Pos() += Frame().Pos();
     if ( !aRect.IsInside( rRect ) )
         PaintLine( rRect, pPage );
 }
 
 /// Paint footnote lines.
-void SwFtnContFrm::PaintLine( const SwRect& rRect,
-                              const SwPageFrm *pPage ) const
+void SwFootnoteContFrame::PaintLine( const SwRect& rRect,
+                              const SwPageFrame *pPage ) const
 {
     //The length of the line is derived from the percentual indication on the
     //PageDesc. The position is also stated on the PageDesc.
     //The pen can directly be taken from the PageDesc.
 
     if ( !pPage )
-        pPage = FindPageFrm();
-    const SwPageFtnInfo &rInf = pPage->GetPageDesc()->GetFtnInfo();
+        pPage = FindPageFrame();
+    const SwPageFootnoteInfo &rInf = pPage->GetPageDesc()->GetFootnoteInfo();
 
-    SWRECTFN( this )
-    SwTwips nPrtWidth = (Prt().*fnRect->fnGetWidth)();
+    SwRectFnSet aRectFnSet(this);
+    SwTwips nPrtWidth = aRectFnSet.GetWidth(Prt());
     Fraction aFract( nPrtWidth, 1 );
     const SwTwips nWidth = (long)(aFract *= rInf.GetWidth());
 
-    SwTwips nX = (this->*fnRect->fnGetPrtLeft)();
+    SwTwips nX = aRectFnSet.GetPrtLeft(*this);
     switch ( rInf.GetAdj() )
     {
-        case FTNADJ_CENTER:
+        case css::text::HorizontalAdjust_CENTER:
             nX += nPrtWidth/2 - nWidth/2; break;
-        case FTNADJ_RIGHT:
+        case css::text::HorizontalAdjust_RIGHT:
             nX += nPrtWidth - nWidth; break;
-        case FTNADJ_LEFT:
+        case css::text::HorizontalAdjust_LEFT:
             /* do nothing */; break;
         default:
-            OSL_ENSURE( false, "New adjustment for footnote lines?" );
+            SAL_WARN("sw.core", "New adjustment for footnote lines?");
+            assert(false);
     }
     SwTwips nLineWidth = rInf.GetLineWidth();
-    const SwRect aLineRect = bVert ?
-        SwRect( Point(Frm().Left()+Frm().Width()-rInf.GetTopDist()-nLineWidth,
+    const SwRect aLineRect = aRectFnSet.IsVert() ?
+        SwRect( Point(Frame().Left()+Frame().Width()-rInf.GetTopDist()-nLineWidth,
                       nX), Size( nLineWidth, nWidth ) )
-            : SwRect( Point( nX, Frm().Pos().Y() + rInf.GetTopDist() ),
+            : SwRect( Point( nX, Frame().Pos().Y() + rInf.GetTopDist() ),
                             Size( nWidth, rInf.GetLineWidth()));
-    if ( aLineRect.HasArea() )
+    if ( aLineRect.HasArea() && rInf.GetLineStyle() != SvxBorderLineStyle::NONE)
         PaintBorderLine( rRect, aLineRect , pPage, &rInf.GetLineColor(),
                 rInf.GetLineStyle() );
 }
 
 /// Paints the separator line for inside columns
-void SwLayoutFrm::PaintColLines( const SwRect &rRect, const SwFmtCol &rFmtCol,
-                                 const SwPageFrm *pPage ) const
+void SwLayoutFrame::PaintColLines( const SwRect &rRect, const SwFormatCol &rFormatCol,
+                                 const SwPageFrame *pPage ) const
 {
-    const SwFrm *pCol = Lower();
-    if ( !pCol || !pCol->IsColumnFrm() )
+    const SwFrame *pCol = Lower();
+    if ( !pCol || !pCol->IsColumnFrame() )
         return;
 
     SwRectFn fnRect = pCol->IsVertical() ? ( pCol->IsVertLR() ? fnRectVertL2R : fnRectVert ) : fnRectHori;
 
     SwRect aLineRect = Prt();
-    aLineRect += Frm().Pos();
+    aLineRect += Frame().Pos();
 
-    SwTwips nTop = ((aLineRect.*fnRect->fnGetHeight)()*rFmtCol.GetLineHeight())
+    SwTwips nTop = ((aLineRect.*fnRect->fnGetHeight)()*rFormatCol.GetLineHeight())
                    / 100 - (aLineRect.*fnRect->fnGetHeight)();
     SwTwips nBottom = 0;
 
-    switch ( rFmtCol.GetLineAdj() )
+    switch ( rFormatCol.GetLineAdj() )
     {
         case COLADJ_CENTER:
             nBottom = nTop / 2; nTop -= nBottom; break;
@@ -5775,7 +5780,7 @@ void SwLayoutFrm::PaintColLines( const SwRect &rRect, const SwFmtCol &rFmtCol,
     if( nBottom )
         (aLineRect.*fnRect->fnAddBottom)( nBottom );
 
-    SwTwips nPenHalf = rFmtCol.GetLineWidth();
+    SwTwips nPenHalf = rFormatCol.GetLineWidth();
     (aLineRect.*fnRect->fnSetWidth)( nPenHalf );
     nPenHalf /= 2;
 
@@ -5787,27 +5792,27 @@ void SwLayoutFrm::PaintColLines( const SwRect &rRect, const SwFmtCol &rFmtCol,
     while ( pCol->GetNext() )
     {
         (aLineRect.*fnRect->fnSetPosX)
-            ( (pCol->Frm().*fnGetX)() - nPenHalf );
+            ( (pCol->Frame().*fnGetX)() - nPenHalf );
         if ( aRect.IsOver( aLineRect ) )
-            PaintBorderLine( aRect, aLineRect , pPage, &rFmtCol.GetLineColor(),
-                   rFmtCol.GetLineStyle() );
+            PaintBorderLine( aRect, aLineRect , pPage, &rFormatCol.GetLineColor(),
+                   rFormatCol.GetLineStyle() );
         pCol = pCol->GetNext();
     }
 }
 
-void SwPageFrm::PaintGrid( OutputDevice* pOut, SwRect &rRect ) const
+void SwPageFrame::PaintGrid( OutputDevice* pOut, SwRect &rRect ) const
 {
-    if( !bHasGrid || gProp.pSRetoucheFly || gProp.pSRetoucheFly2 )
+    if( !m_bHasGrid || gProp.pSRetoucheFly || gProp.pSRetoucheFly2 )
         return;
     SwTextGridItem const*const pGrid(GetGridItem(this));
     if( pGrid && ( OUTDEV_PRINTER != pOut->GetOutDevType() ?
         pGrid->GetDisplayGrid() : pGrid->GetPrintGrid() ) )
     {
-        const SwLayoutFrm* pBody = FindBodyCont();
+        const SwLayoutFrame* pBody = FindBodyCont();
         if( pBody )
         {
             SwRect aGrid( pBody->Prt() );
-            aGrid += pBody->Frm().Pos();
+            aGrid += pBody->Frame().Pos();
 
             SwRect aInter( aGrid );
             aInter.Intersection( rRect );
@@ -5816,7 +5821,7 @@ void SwPageFrm::PaintGrid( OutputDevice* pOut, SwRect &rRect ) const
                 bool bGrid = pGrid->GetRubyTextBelow();
                 bool bCell = GRID_LINES_CHARS == pGrid->GetGridType();
                 long nGrid = pGrid->GetBaseHeight();
-                const SwDoc* pDoc = GetFmt()->GetDoc();
+                const SwDoc* pDoc = GetFormat()->GetDoc();
                 long nGridWidth = GetGridWidth(*pGrid, *pDoc);
                 long nRuby = pGrid->GetRubyHeight();
                 long nSum = nGrid + nRuby;
@@ -6105,14 +6110,14 @@ void SwPageFrm::PaintGrid( OutputDevice* pOut, SwRect &rRect ) const
  * input parameter - instance of the view shell, on which the output
  * has to be generated.
  */
-void SwPageFrm::PaintMarginArea( const SwRect& _rOutputRect,
+void SwPageFrame::PaintMarginArea( const SwRect& _rOutputRect,
                                  SwViewShell* _pViewShell ) const
 {
     if (  _pViewShell->GetWin() && !_pViewShell->GetViewOptions()->getBrowseMode() )
     {
-        //UUUU Simplified paint with DrawingLayer FillStyle
-        SwRect aPgRect = Frm();
-        aPgRect._Intersection( _rOutputRect );
+        // Simplified paint with DrawingLayer FillStyle
+        SwRect aPgRect = Frame();
+        aPgRect.Intersection_( _rOutputRect );
 
         if(!aPgRect.IsEmpty())
         {
@@ -6128,12 +6133,12 @@ void SwPageFrm::PaintMarginArea( const SwRect& _rOutputRect,
     }
 }
 
-const sal_Int8 SwPageFrm::mnShadowPxWidth = 9;
+const sal_Int8 SwPageFrame::mnShadowPxWidth = 9;
 
-bool SwPageFrm::IsRightShadowNeeded() const
+bool SwPageFrame::IsRightShadowNeeded() const
 {
-    const SwViewShell *pSh = getRootFrm()->GetCurrShell();
-    const bool bIsLTR = getRootFrm()->IsLeftToRightViewLayout();
+    const SwViewShell *pSh = getRootFrame()->GetCurrShell();
+    const bool bIsLTR = getRootFrame()->IsLeftToRightViewLayout();
 
     // We paint the right shadow if we're not in book mode
     // or if we've no sibling or are the last page of the "row"
@@ -6143,10 +6148,10 @@ bool SwPageFrm::IsRightShadowNeeded() const
 
 }
 
-bool SwPageFrm::IsLeftShadowNeeded() const
+bool SwPageFrame::IsLeftShadowNeeded() const
 {
-    const SwViewShell *pSh = getRootFrm()->GetCurrShell();
-    const bool bIsLTR = getRootFrm()->IsLeftToRightViewLayout();
+    const SwViewShell *pSh = getRootFrame()->GetCurrShell();
+    const bool bIsLTR = getRootFrame()->IsLeftToRightViewLayout();
 
     // We paint the left shadow if we're not in book mode
     // or if we've no sibling or are the last page of the "row"
@@ -6157,10 +6162,11 @@ bool SwPageFrm::IsLeftShadowNeeded() const
 
 /**
  * Determine rectangle for bottom page shadow
- * OD 12.02.2003 for #i9719# and #105645#
+ * for #i9719#
  */
-/*static*/ void SwPageFrm::GetHorizontalShadowRect( const SwRect& _rPageRect,
+/*static*/ void SwPageFrame::GetHorizontalShadowRect( const SwRect& _rPageRect,
                                                 const SwViewShell*    _pViewShell,
+                                                OutputDevice* pRenderContext,
                                                 SwRect&       _orHorizontalShadowRect,
                                                 bool bPaintLeftShadow,
                                                 bool bPaintRightShadow,
@@ -6168,9 +6174,8 @@ bool SwPageFrm::IsLeftShadowNeeded() const
 {
     const SwPostItMgr *pMgr = _pViewShell->GetPostItMgr();
     SwRect aAlignedPageRect( _rPageRect );
-    ::SwAlignRect( aAlignedPageRect, _pViewShell );
-    SwRect aPagePxRect =
-            _pViewShell->GetOut()->LogicToPixel( aAlignedPageRect.SVRect() );
+    ::SwAlignRect( aAlignedPageRect, _pViewShell, pRenderContext );
+    SwRect aPagePxRect = pRenderContext->LogicToPixel( aAlignedPageRect.SVRect() );
 
     long lShadowAdjustment = mnShadowPxWidth - 1; // TODO: extract this
 
@@ -6193,12 +6198,12 @@ bool SwPageFrm::IsLeftShadowNeeded() const
 enum PaintArea {LEFT, RIGHT, TOP, BOTTOM};
 
 /// Wrapper around pOut->DrawBitmapEx.
-static void lcl_paintBitmapExToRect(OutputDevice *pOut, const Point& aPoint, const Size& aSize, const BitmapEx& rBitmapEx, PaintArea eArea)
+static void lcl_paintBitmapExToRect(vcl::RenderContext *pOut, const Point& aPoint, const Size& aSize, const BitmapEx& rBitmapEx, PaintArea eArea)
 {
     // The problem is that if we get called multiple times and the color is
     // partly transparent, then the result will get darker and darker. To avoid
     // this, always paint the background color before doing the real paint.
-    Rectangle aRect(aPoint, aSize);
+    tools::Rectangle aRect(aPoint, aSize);
 
     switch (eArea)
     {
@@ -6220,10 +6225,10 @@ static void lcl_paintBitmapExToRect(OutputDevice *pOut, const Point& aPoint, con
 /**
  * Paint page border and shadow
  *
- * OD 12.02.2003 for #i9719# and #105645#
+ * for #i9719#
  * implement paint of page border and shadow
 */
-/*static*/ void SwPageFrm::PaintBorderAndShadow( const SwRect& _rPageRect,
+/*static*/ void SwPageFrame::PaintBorderAndShadow( const SwRect& _rPageRect,
                                                  const SwViewShell*    _pViewShell,
                                                  bool bPaintLeftShadow,
                                                  bool bPaintRightShadow,
@@ -6234,11 +6239,14 @@ static void lcl_paintBitmapExToRect(OutputDevice *pOut, const Point& aPoint, con
         return;
 
     // #i16816# tagged pdf support
-    SwTaggedPDFHelper aTaggedPDFHelper( 0, 0, 0, *_pViewShell->GetOut() );
+    SwTaggedPDFHelper aTaggedPDFHelper( nullptr, nullptr, nullptr, *_pViewShell->GetOut() );
 
-    static vcl::DeleteOnDeinit< drawinglayer::primitive2d::DiscreteShadow > shadowMaskObj
-        ( new drawinglayer::primitive2d::DiscreteShadow( SW_RES( BMP_PAGE_SHADOW_MASK ) ));
-    static drawinglayer::primitive2d::DiscreteShadow& shadowMask = *shadowMaskObj.get();
+    static vcl::DeleteOnDeinit<drawinglayer::primitive2d::DiscreteShadow> shadowMaskObj(
+        new drawinglayer::primitive2d::DiscreteShadow(
+            vcl::bitmap::loadFromName(BMP_PAGE_SHADOW_MASK,
+                                      ImageLoadFlags::IgnoreDarkTheme | ImageLoadFlags::IgnoreScalingFactor)));
+
+    drawinglayer::primitive2d::DiscreteShadow& shadowMask = *shadowMaskObj.get();
     static vcl::DeleteOnDeinit< BitmapEx > aPageTopRightShadowObj( new BitmapEx );
     static vcl::DeleteOnDeinit< BitmapEx > aPageBottomRightShadowObj( new BitmapEx );
     static vcl::DeleteOnDeinit< BitmapEx > aPageBottomLeftShadowObj( new BitmapEx );
@@ -6247,18 +6255,18 @@ static void lcl_paintBitmapExToRect(OutputDevice *pOut, const Point& aPoint, con
     static vcl::DeleteOnDeinit< BitmapEx > aPageTopShadowBaseObj( new BitmapEx );
     static vcl::DeleteOnDeinit< BitmapEx > aPageTopLeftShadowObj( new BitmapEx );
     static vcl::DeleteOnDeinit< BitmapEx > aPageLeftShadowBaseObj( new BitmapEx );
-    static BitmapEx& aPageTopRightShadow = *aPageTopRightShadowObj.get();
-    static BitmapEx& aPageBottomRightShadow = *aPageBottomRightShadowObj.get();
-    static BitmapEx& aPageBottomLeftShadow = *aPageBottomLeftShadowObj.get();
-    static BitmapEx& aPageBottomShadow = *aPageBottomShadowBaseObj.get();
-    static BitmapEx& aPageRightShadow = *aPageRightShadowBaseObj.get();
-    static BitmapEx& aPageTopShadow = *aPageTopShadowBaseObj.get();
-    static BitmapEx& aPageTopLeftShadow = *aPageTopLeftShadowObj.get();
-    static BitmapEx& aPageLeftShadow = *aPageLeftShadowBaseObj.get();
+    BitmapEx& aPageTopRightShadow = *aPageTopRightShadowObj.get();
+    BitmapEx& aPageBottomRightShadow = *aPageBottomRightShadowObj.get();
+    BitmapEx& aPageBottomLeftShadow = *aPageBottomLeftShadowObj.get();
+    BitmapEx& aPageBottomShadow = *aPageBottomShadowBaseObj.get();
+    BitmapEx& aPageRightShadow = *aPageRightShadowBaseObj.get();
+    BitmapEx& aPageTopShadow = *aPageTopShadowBaseObj.get();
+    BitmapEx& aPageTopLeftShadow = *aPageTopLeftShadowObj.get();
+    BitmapEx& aPageLeftShadow = *aPageLeftShadowBaseObj.get();
     static Color aShadowColor( COL_AUTO );
 
     SwRect aAlignedPageRect( _rPageRect );
-    ::SwAlignRect( aAlignedPageRect, _pViewShell );
+    ::SwAlignRect( aAlignedPageRect, _pViewShell, _pViewShell->GetOut() );
     SwRect aPagePxRect = _pViewShell->GetOut()->LogicToPixel( aAlignedPageRect.SVRect() );
 
     if (aShadowColor != SwViewOption::GetShadowColor())
@@ -6309,7 +6317,7 @@ static void lcl_paintBitmapExToRect(OutputDevice *pOut, const Point& aPoint, con
     SwRect aPaintRect;
     OutputDevice *pOut = _pViewShell->GetOut();
 
-    SwPageFrm::GetHorizontalShadowRect( _rPageRect, _pViewShell, aPaintRect, bPaintLeftShadow, bPaintRightShadow, bRightSidebar );
+    SwPageFrame::GetHorizontalShadowRect( _rPageRect, _pViewShell, pOut, aPaintRect, bPaintLeftShadow, bPaintRightShadow, bRightSidebar );
 
     // Right shadow & corners
     if ( bPaintRightShadow )
@@ -6324,7 +6332,7 @@ static void lcl_paintBitmapExToRect(OutputDevice *pOut, const Point& aPoint, con
             const long nWidth = aPageRightShadow.GetSizePixel().Width();
             const long nHeight = aPagePxRect.Height() - 2 * (mnShadowPxWidth - 1);
             if (aPageRightShadow.GetSizePixel().Height() < nHeight)
-                aPageRightShadow.Scale(Size(nWidth, nHeight), BMP_SCALE_FAST);
+                aPageRightShadow.Scale(Size(nWidth, nHeight), BmpScaleFlag::Fast);
 
             lcl_paintBitmapExToRect(pOut,
                     Point(aPaintRect.Right() + mnShadowPxWidth, aPagePxRect.Top() + mnShadowPxWidth - 1),
@@ -6345,7 +6353,7 @@ static void lcl_paintBitmapExToRect(OutputDevice *pOut, const Point& aPoint, con
             const long nWidth = aPageLeftShadow.GetSizePixel().Width();
             const long nHeight = aPagePxRect.Height() - 2 * (mnShadowPxWidth - 1);
             if (aPageLeftShadow.GetSizePixel().Height() < nHeight)
-                aPageLeftShadow.Scale(Size(nWidth, nHeight), BMP_SCALE_FAST);
+                aPageLeftShadow.Scale(Size(nWidth, nHeight), BmpScaleFlag::Fast);
 
             lcl_paintBitmapExToRect(pOut,
                     Point(lLeft, aPagePxRect.Top() + mnShadowPxWidth - 1),
@@ -6357,7 +6365,7 @@ static void lcl_paintBitmapExToRect(OutputDevice *pOut, const Point& aPoint, con
     // Bottom shadow
     const long nBottomHeight = aPageBottomShadow.GetSizePixel().Height();
     if (aPageBottomShadow.GetSizePixel().Width() < aPaintRect.Width())
-        aPageBottomShadow.Scale(Size(aPaintRect.Width(), nBottomHeight), BMP_SCALE_FAST);
+        aPageBottomShadow.Scale(Size(aPaintRect.Width(), nBottomHeight), BmpScaleFlag::Fast);
 
     lcl_paintBitmapExToRect(pOut,
             Point(aPaintRect.Left(), aPagePxRect.Bottom() + 2),
@@ -6367,7 +6375,7 @@ static void lcl_paintBitmapExToRect(OutputDevice *pOut, const Point& aPoint, con
     // Top shadow
     const long nTopHeight = aPageTopShadow.GetSizePixel().Height();
     if (aPageTopShadow.GetSizePixel().Width() < aPaintRect.Width())
-        aPageTopShadow.Scale(Size(aPaintRect.Width(), nTopHeight), BMP_SCALE_FAST);
+        aPageTopShadow.Scale(Size(aPaintRect.Width(), nTopHeight), BmpScaleFlag::Fast);
 
     lcl_paintBitmapExToRect(pOut,
             Point(aPaintRect.Left(), aPagePxRect.Top() - mnShadowPxWidth),
@@ -6379,26 +6387,26 @@ static void lcl_paintBitmapExToRect(OutputDevice *pOut, const Point& aPoint, con
  * mod #i6193# paint sidebar for notes
  * IMPORTANT: if you change the rects here, also change SwPostItMgr::ScrollbarHit
  */
-/*static*/void SwPageFrm::PaintNotesSidebar(const SwRect& _rPageRect, SwViewShell* _pViewShell, sal_uInt16 nPageNum, bool bRight)
+/*static*/void SwPageFrame::PaintNotesSidebar(const SwRect& _rPageRect, SwViewShell* _pViewShell, sal_uInt16 nPageNum, bool bRight)
 {
     //TODO: cut out scrollbar area and arrows out of sidepane rect, otherwise it could flicker when pressing arrow buttons
     if (!_pViewShell )
         return;
 
     SwRect aPageRect( _rPageRect );
-    SwAlignRect( aPageRect, _pViewShell );
+    SwAlignRect( aPageRect, _pViewShell, _pViewShell->GetOut() );
 
     const SwPostItMgr *pMgr = _pViewShell->GetPostItMgr();
     if (pMgr && pMgr->ShowNotes() && pMgr->HasNotes())  // do not show anything in print preview
     {
         sal_Int32 nScrollerHeight = pMgr->GetSidebarScrollerHeight();
-        const Rectangle &aVisRect = _pViewShell->VisArea().SVRect();
+        const tools::Rectangle &aVisRect = _pViewShell->VisArea().SVRect();
         //draw border and sidepane
         _pViewShell->GetOut()->SetLineColor();
         if (!bRight)
         {
             _pViewShell->GetOut()->SetFillColor(COL_NOTES_SIDEPANE_BORDER);
-            _pViewShell->GetOut()->DrawRect(Rectangle(Point(aPageRect.Left()-pMgr->GetSidebarBorderWidth(),aPageRect.Top()),Size(pMgr->GetSidebarBorderWidth(),aPageRect.Height())))    ;
+            _pViewShell->GetOut()->DrawRect(tools::Rectangle(Point(aPageRect.Left()-pMgr->GetSidebarBorderWidth(),aPageRect.Top()),Size(pMgr->GetSidebarBorderWidth(),aPageRect.Height())))    ;
             if (Application::GetSettings().GetStyleSettings().GetHighContrastMode() )
                 _pViewShell->GetOut()->SetFillColor(COL_BLACK);
 #if defined USE_JAVA && defined MACOSX
@@ -6411,7 +6419,7 @@ static void lcl_paintBitmapExToRect(OutputDevice *pOut, const Point& aPoint, con
 #endif	// USE_JAVA && MACOSX
             else
                 _pViewShell->GetOut()->SetFillColor(COL_NOTES_SIDEPANE);
-            _pViewShell->GetOut()->DrawRect(Rectangle(Point(aPageRect.Left()-pMgr->GetSidebarWidth()-pMgr->GetSidebarBorderWidth(),aPageRect.Top()),Size(pMgr->GetSidebarWidth(),aPageRect.Height())))  ;
+            _pViewShell->GetOut()->DrawRect(tools::Rectangle(Point(aPageRect.Left()-pMgr->GetSidebarWidth()-pMgr->GetSidebarBorderWidth(),aPageRect.Top()),Size(pMgr->GetSidebarWidth(),aPageRect.Height())))  ;
         }
         else
         {
@@ -6443,8 +6451,8 @@ static void lcl_paintBitmapExToRect(OutputDevice *pOut, const Point& aPoint, con
             aPointTop = !bRight ?    Point(aPageRect.Left() - pMgr->GetSidebarWidth() + _pViewShell->GetOut()->PixelToLogic(Size(2,0)).Width(),aPageRect.Top() + _pViewShell->GetOut()->PixelToLogic(Size(0,2)).Height()) :
                                 Point(aPageRect.Right() + pMgr->GetSidebarBorderWidth() + _pViewShell->GetOut()->PixelToLogic(Size(2,0)).Width(),aPageRect.Top() + _pViewShell->GetOut()->PixelToLogic(Size(0,2)).Height());
             Size aSize(pMgr->GetSidebarWidth() - _pViewShell->GetOut()->PixelToLogic(Size(4,0)).Width(), _pViewShell->GetOut()->PixelToLogic(Size(0,nScrollerHeight)).Height()) ;
-            Rectangle aRectBottom(aPointBottom,aSize);
-            Rectangle aRectTop(aPointTop,aSize);
+            tools::Rectangle aRectBottom(aPointBottom,aSize);
+            tools::Rectangle aRectTop(aPointTop,aSize);
 
             if (aRectBottom.IsOver(aVisRect))
             {
@@ -6491,10 +6499,10 @@ static void lcl_paintBitmapExToRect(OutputDevice *pOut, const Point& aPoint, con
     }
 }
 
-/*static*/ void SwPageFrm::PaintNotesSidebarArrows(const Point &aMiddleFirst, const Point &aMiddleSecond, SwViewShell* _pViewShell, const Color aColorUp, const Color aColorDown)
+/*static*/ void SwPageFrame::PaintNotesSidebarArrows(const Point &aMiddleFirst, const Point &aMiddleSecond, SwViewShell* _pViewShell, const Color& rColorUp, const Color& rColorDown)
 {
-    Polygon aTriangleUp(3);
-    Polygon aTriangleDown(3);
+    tools::Polygon aTriangleUp(3);
+    tools::Polygon aTriangleDown(3);
 
     aTriangleUp.SetPoint(aMiddleFirst + Point(0,_pViewShell->GetOut()->PixelToLogic(Size(0,-3)).Height()),0);
     aTriangleUp.SetPoint(aMiddleFirst + Point(_pViewShell->GetOut()->PixelToLogic(Size(-3,0)).Width(),_pViewShell->GetOut()->PixelToLogic(Size(0,3)).Height()),1);
@@ -6504,19 +6512,20 @@ static void lcl_paintBitmapExToRect(OutputDevice *pOut, const Point& aPoint, con
     aTriangleDown.SetPoint(aMiddleSecond + Point(_pViewShell->GetOut()->PixelToLogic(Size(+3,0)).Width(),_pViewShell->GetOut()->PixelToLogic(Size(0,-3)).Height()),1);
     aTriangleDown.SetPoint(aMiddleSecond + Point(0,_pViewShell->GetOut()->PixelToLogic(Size(0,3)).Height()),2);
 
-    _pViewShell->GetOut()->SetFillColor(aColorUp);
+    _pViewShell->GetOut()->SetFillColor(rColorUp);
     _pViewShell->GetOut()->DrawPolygon(aTriangleUp);
-    _pViewShell->GetOut()->SetFillColor(aColorDown);
+    _pViewShell->GetOut()->SetFillColor(rColorDown);
     _pViewShell->GetOut()->DrawPolygon(aTriangleDown);
 }
 
 /**
  * Get bound rectangle of border and shadow for repaints
  *
- * OD 12.02.2003 for #i9719# and #105645#
+ * for #i9719#
  */
-/*static*/ void SwPageFrm::GetBorderAndShadowBoundRect( const SwRect& _rPageRect,
+/*static*/ void SwPageFrame::GetBorderAndShadowBoundRect( const SwRect& _rPageRect,
                                                         const SwViewShell*    _pViewShell,
+                                                        OutputDevice* pRenderContext,
                                                         SwRect& _orBorderAndShadowBoundRect,
                                                         bool bLeftShadow,
                                                         bool bRightShadow,
@@ -6524,9 +6533,8 @@ static void lcl_paintBitmapExToRect(OutputDevice *pOut, const Point& aPoint, con
                                                       )
 {
     SwRect aAlignedPageRect( _rPageRect );
-    ::SwAlignRect( aAlignedPageRect, _pViewShell );
-    SwRect aPagePxRect =
-            _pViewShell->GetOut()->LogicToPixel( aAlignedPageRect.SVRect() );
+    ::SwAlignRect( aAlignedPageRect, _pViewShell, pRenderContext );
+    SwRect aPagePxRect = pRenderContext->LogicToPixel( aAlignedPageRect.SVRect() );
     aPagePxRect.Bottom( aPagePxRect.Bottom() + mnShadowPxWidth + 1 );
     aPagePxRect.Top( aPagePxRect.Top() - mnShadowPxWidth - 1 );
 
@@ -6534,74 +6542,74 @@ static void lcl_paintBitmapExToRect(OutputDevice *pOut, const Point& aPoint, con
 
     // Always ask for full shadow since we want a bounding rect
     // including at least the page frame
-    SwPageFrm::GetHorizontalShadowRect( _rPageRect, _pViewShell, aTmpRect, false, false, bRightSidebar );
+    SwPageFrame::GetHorizontalShadowRect( _rPageRect, _pViewShell, pRenderContext, aTmpRect, false, false, bRightSidebar );
 
     if(bLeftShadow) aPagePxRect.Left( aTmpRect.Left() - mnShadowPxWidth - 1);
     if(bRightShadow) aPagePxRect.Right( aTmpRect.Right() + mnShadowPxWidth + 1);
 
-    _orBorderAndShadowBoundRect = _pViewShell->GetOut()->PixelToLogic( aPagePxRect.SVRect() );
+    _orBorderAndShadowBoundRect = pRenderContext->PixelToLogic( aPagePxRect.SVRect() );
 }
 
-SwRect SwPageFrm::GetBoundRect() const
+SwRect SwPageFrame::GetBoundRect(OutputDevice* pOutputDevice) const
 {
-    const SwViewShell *pSh = getRootFrm()->GetCurrShell();
-    SwRect aPageRect( Frm() );
+    const SwViewShell *pSh = getRootFrame()->GetCurrShell();
+    SwRect aPageRect( Frame() );
     SwRect aResult;
 
     if(!pSh) {
         return SwRect( Point(0, 0), Size(0, 0) );
     }
 
-    SwPageFrm::GetBorderAndShadowBoundRect( aPageRect, pSh, aResult,
-        IsLeftShadowNeeded(), IsRightShadowNeeded(), SidebarPosition() ==  sw::sidebarwindows::SIDEBAR_RIGHT );
+    SwPageFrame::GetBorderAndShadowBoundRect( aPageRect, pSh, pOutputDevice, aResult,
+        IsLeftShadowNeeded(), IsRightShadowNeeded(), SidebarPosition() ==  sw::sidebarwindows::SidebarPosition::RIGHT );
     return aResult;
 }
 
-/*static*/ SwTwips SwPageFrm::GetSidebarBorderWidth( const SwViewShell* _pViewShell )
+/*static*/ SwTwips SwPageFrame::GetSidebarBorderWidth( const SwViewShell* _pViewShell )
 {
-    const SwPostItMgr* pPostItMgr = _pViewShell ? _pViewShell->GetPostItMgr() : 0;
+    const SwPostItMgr* pPostItMgr = _pViewShell ? _pViewShell->GetPostItMgr() : nullptr;
     const SwTwips nRet = pPostItMgr && pPostItMgr->HasNotes() && pPostItMgr->ShowNotes() ? pPostItMgr->GetSidebarWidth() + pPostItMgr->GetSidebarBorderWidth() : 0;
     return nRet;
 }
 
-void SwFrm::PaintBaBo( const SwRect& rRect, const SwPageFrm *pPage,
-                       const bool bLowerBorder, const bool bOnlyTxtBackground ) const
+void SwFrame::PaintBaBo( const SwRect& rRect, const SwPageFrame *pPage,
+                         const bool bOnlyTextBackground ) const
 {
     if ( !pPage )
-        pPage = FindPageFrm();
+        pPage = FindPageFrame();
 
     OutputDevice *pOut = gProp.pSGlobalShell->GetOut();
 
     // #i16816# tagged pdf support
-    SwTaggedPDFHelper aTaggedPDFHelper( 0, 0, 0, *pOut );
+    SwTaggedPDFHelper aTaggedPDFHelper( nullptr, nullptr, nullptr, *pOut );
 
     // OD 2004-04-23 #116347#
     pOut->Push( PushFlags::FILLCOLOR|PushFlags::LINECOLOR );
     pOut->SetLineColor();
 
-    SwBorderAttrAccess aAccess( SwFrm::GetCache(), (SwFrm*)this );
+    SwBorderAttrAccess aAccess( SwFrame::GetCache(), this );
     const SwBorderAttrs &rAttrs = *aAccess.Get();
 
     // OD 20.11.2002 #104598# - take care of page margin area
-    // Note: code move from <SwFrm::PaintBackground(..)> to new method
-    // <SwPageFrm::Paintmargin(..)>.
-    if ( IsPageFrm() && !bOnlyTxtBackground)
+    // Note: code move from <SwFrame::PaintBackground(..)> to new method
+    // <SwPageFrame::Paintmargin(..)>.
+    if ( IsPageFrame() && !bOnlyTextBackground)
     {
-        static_cast<const SwPageFrm*>(this)->PaintMarginArea( rRect, gProp.pSGlobalShell );
+        static_cast<const SwPageFrame*>(this)->PaintMarginArea( rRect, gProp.pSGlobalShell );
     }
 
     // paint background
     {
-        PaintBackground( rRect, pPage, rAttrs, false, bLowerBorder, bOnlyTxtBackground );
+        PaintBackground( rRect, pPage, rAttrs, false, true/*bLowerBorder*/, bOnlyTextBackground );
     }
 
     // OD 06.08.2002 #99657# - paint border before painting background
     // paint grid for page frame and paint border
-    if (!bOnlyTxtBackground)
+    if (!bOnlyTextBackground)
     {
         SwRect aRect( rRect );
-        if( IsPageFrm() )
-            ((SwPageFrm*)this)->PaintGrid( pOut, aRect );
+        if( IsPageFrame() )
+            static_cast<const SwPageFrame*>(this)->PaintGrid( pOut, aRect );
         PaintBorder( aRect, pPage, rAttrs );
     }
 
@@ -6620,44 +6628,42 @@ static bool lcl_compareFillAttributes(const drawinglayer::attribute::SdrAllFillA
 /// OD 05.09.2002 #102912#
 /// Do not paint background for fly frames without a background brush by
 /// calling <PaintBaBo> at the page or at the fly frame its anchored
-void SwFrm::PaintBackground( const SwRect &rRect, const SwPageFrm *pPage,
+void SwFrame::PaintBackground( const SwRect &rRect, const SwPageFrame *pPage,
                              const SwBorderAttrs & rAttrs,
                              const bool bLowerMode,
                              const bool bLowerBorder,
-                             const bool bOnlyTxtBackground ) const
+                             const bool bOnlyTextBackground ) const
 {
     // OD 20.01.2003 #i1837# - no paint of table background, if corresponding
     // option is *not* set.
-    if( IsTabFrm() &&
+    if( IsTabFrame() &&
         !gProp.pSGlobalShell->GetViewOptions()->IsTable() )
     {
         return;
     }
 
     // nothing to do for covered table cells:
-    if( IsCellFrm() && IsCoveredCell() )
+    if( IsCellFrame() && IsCoveredCell() )
         return;
 
     SwViewShell *pSh = gProp.pSGlobalShell;
 
     // #i16816# tagged pdf support
-    SwTaggedPDFHelper aTaggedPDFHelper( 0, 0, 0, *pSh->GetOut() );
+    SwTaggedPDFHelper aTaggedPDFHelper( nullptr, nullptr, nullptr, *pSh->GetOut() );
 
     const SvxBrushItem* pItem;
     // OD 05.09.2002 #102912#
     // temporary background brush for a fly frame without a background brush
-    SvxBrushItem* pTmpBackBrush = 0;
+    SvxBrushItem* pTmpBackBrush = nullptr;
     const Color* pCol;
     SwRect aOrigBackRect;
-    const bool bPageFrm = IsPageFrm();
+    const bool bPageFrame = IsPageFrame();
     bool bLowMode = true;
-
-    //UUUU
     drawinglayer::attribute::SdrAllFillAttributesHelperPtr aFillAttributes;
 
-    bool bBack = GetBackgroundBrush( aFillAttributes, pItem, pCol, aOrigBackRect, bLowerMode );
+    bool bBack = GetBackgroundBrush( aFillAttributes, pItem, pCol, aOrigBackRect, bLowerMode, /*bConsiderTextBox=*/false );
     //- Output if a separate background is used.
-    bool bNoFlyBackground = !gProp.bSFlyMetafile && !bBack && IsFlyFrm();
+    bool bNoFlyBackground = !gProp.bSFlyMetafile && !bBack && IsFlyFrame();
     if ( bNoFlyBackground )
     {
         // OD 05.09.2002 #102912# - Fly frame has no background.
@@ -6665,7 +6671,7 @@ void SwFrm::PaintBackground( const SwRect &rRect, const SwPageFrm *pPage,
         // <GetBackgroundBrush> disabled this option with the parameter <bLowerMode>
         if ( bLowerMode )
         {
-            bBack = GetBackgroundBrush( aFillAttributes, pItem, pCol, aOrigBackRect, false );
+            bBack = GetBackgroundBrush( aFillAttributes, pItem, pCol, aOrigBackRect, false, /*bConsiderTextBox=*/false );
         }
         // If still no background found for the fly frame, initialize the
         // background brush <pItem> with global retouche color and set <bBack>
@@ -6677,7 +6683,7 @@ void SwFrm::PaintBackground( const SwRect &rRect, const SwPageFrm *pPage,
             // the global retouche color.
             if ( pSh->GetOut()->GetOutDevType() == OUTDEV_PRINTER ||
                  pSh->GetViewOptions()->IsPDFExport() ||
-                 ( pSh->GetDoc()->GetDocShell()->GetCreateMode() == SFX_CREATE_MODE_EMBEDDED &&
+                 ( pSh->GetDoc()->GetDocShell()->GetCreateMode() == SfxObjectCreateMode::EMBEDDED &&
                    !pSh->GetDoc()->GetDocShell()->IsInPlaceActive()
                  )
                )
@@ -6700,31 +6706,33 @@ void SwFrm::PaintBackground( const SwRect &rRect, const SwPageFrm *pPage,
         }
     }
 
-    SwRect aPaintRect( Frm() );
-    if( IsTxtFrm() || IsSctFrm() )
-        aPaintRect = UnionFrm( true );
+    SwRect aPaintRect( Frame() );
+    if( IsTextFrame() || IsSctFrame() )
+        aPaintRect = UnionFrame( true );
 
-    if ( aPaintRect.IsOver( rRect ) )
+    // bOnlyTextBackground means background that's on top of background shapes,
+    // this includes both text and cell frames.
+    if ( (!bOnlyTextBackground || IsTextFrame() || IsCellFrame()) && aPaintRect.IsOver( rRect ) )
     {
-        if ( bBack || bPageFrm || !bLowerMode )
+        if ( bBack || bPageFrame || !bLowerMode )
         {
             const bool bBrowse = pSh->GetViewOptions()->getBrowseMode();
             SwRect aRect;
-            if ( (bPageFrm && bBrowse) ||
-                 (IsTxtFrm() && Prt().SSize() == Frm().SSize()) )
+            if ( (bPageFrame && bBrowse) ||
+                 (IsTextFrame() && Prt().SSize() == Frame().SSize()) )
             {
-                aRect = Frm();
-                ::SwAlignRect( aRect, gProp.pSGlobalShell );
+                aRect = Frame();
+                ::SwAlignRect( aRect, gProp.pSGlobalShell, gProp.pSGlobalShell->GetOut() );
             }
             else
             {
-                ::lcl_CalcBorderRect( aRect, this, rAttrs, false );
-                if ( (IsTxtFrm() || IsTabFrm()) && GetPrev() )
+                ::lcl_CalcBorderRect( aRect, this, rAttrs, false, gProp);
+                if ( (IsTextFrame() || IsTabFrame()) && GetPrev() )
                 {
                     if ( GetPrev()->GetAttrSet()->GetBackground() == GetAttrSet()->GetBackground() &&
                          lcl_compareFillAttributes(GetPrev()->getSdrAllFillAttributesHelper(), getSdrAllFillAttributesHelper()))
                     {
-                        aRect.Top( Frm().Top() );
+                        aRect.Top( Frame().Top() );
                     }
                 }
             }
@@ -6734,29 +6742,29 @@ void SwFrm::PaintBackground( const SwRect &rRect, const SwPageFrm *pPage,
 
             if ( aRect.HasArea() )
             {
-                SvxBrushItem* pNewItem = 0;
+                SvxBrushItem* pNewItem = nullptr;
 
                 if( pCol )
                 {
                     pNewItem = new SvxBrushItem( *pCol, RES_BACKGROUND );
                     pItem = pNewItem;
-
-                    //UUUU
                     aFillAttributes.reset(new drawinglayer::attribute::SdrAllFillAttributesHelper(*pCol));
                 }
 
                 SwRegionRects aRegion( aRect );
+                basegfx::B2DPolygon aB2DPolygon{tools::Polygon(aRect.SVRect()).getB2DPolygon()};
+                basegfx::tools::B2DClipState aClipState{basegfx::B2DPolyPolygon(aB2DPolygon)};
                 if (pPage->GetSortedObjs() &&
-                    pSh->GetDoc()->getIDocumentSettingAccess().get(IDocumentSettingAccess::SUBTRACT_FLYS))
+                    pSh->GetDoc()->getIDocumentSettingAccess().get(DocumentSettingId::SUBTRACT_FLYS))
                 {
-                    ::lcl_SubtractFlys( this, pPage, aRect, aRegion );
+                    ::lcl_SubtractFlys( this, pPage, aRect, aRegion, aClipState, gProp );
                 }
 
                 // OD 06.08.2002 #99657# - determine, if background transparency
                 //     have to be considered for drawing.
                 //     --> Status Quo: background transparency have to be
                 //        considered for fly frames
-                const bool bConsiderBackgroundTransparency = IsFlyFrm();
+                const bool bConsiderBackgroundTransparency = IsFlyFrame();
                 bool bDone(false);
 
                 // #i125189# We are also done when the new DrawingLayer FillAttributes are used
@@ -6766,7 +6774,7 @@ void SwFrm::PaintBackground( const SwRect &rRect, const SwPageFrm *pPage,
                     if(aFillAttributes->isUsed())
                     {
                         // check if really something is painted
-                        bDone = DrawFillAttributes(aFillAttributes, aOrigBackRect, aRegion, *pOut);
+                        bDone = DrawFillAttributes(aFillAttributes, aOrigBackRect, aRegion, aClipState, *pOut);
                     }
 
                     if(!bDone)
@@ -6790,7 +6798,7 @@ void SwFrm::PaintBackground( const SwRect &rRect, const SwPageFrm *pPage,
                     {
                         if (1 < aRegion.size())
                         {
-                            ::SwAlignRect( aRegion[i], gProp.pSGlobalShell );
+                            ::SwAlignRect( aRegion[i], gProp.pSGlobalShell, gProp.pSGlobalShell->GetOut() );
                             if( !aRegion[i].HasArea() )
                               continue;
                         }
@@ -6798,7 +6806,6 @@ void SwFrm::PaintBackground( const SwRect &rRect, const SwPageFrm *pPage,
                     //     background transparency have to be considered
                     //     Set missing 5th parameter to the default value GRFNUM_NO
                     //         - see declaration in /core/inc/frmtool.hxx.
-                        if (IsTxtFrm() || !bOnlyTxtBackground)
                             ::DrawGraphic(
                                 pItem,
                                 pOut,
@@ -6806,7 +6813,7 @@ void SwFrm::PaintBackground( const SwRect &rRect, const SwPageFrm *pPage,
                                 aRegion[i],
                                 GRFNUM_NO,
 #ifdef USE_JAVA
-                                bConsiderBackgroundTransparency, !IsTxtFrm() ? pSh : NULL );
+                                bConsiderBackgroundTransparency, !IsTextFrame() ? pSh : nullptr );
 #else	// USE_JAVA
                                 bConsiderBackgroundTransparency );
 #endif	// USE_JAVA
@@ -6825,45 +6832,44 @@ void SwFrm::PaintBackground( const SwRect &rRect, const SwPageFrm *pPage,
     delete pTmpBackBrush;
 
     //Now process lower and his neighbour.
-    //We end this as soon as a Frm leaves the chain and therefore is not a lower
+    //We end this as soon as a Frame leaves the chain and therefore is not a lower
     //of me anymore
-    const SwFrm *pFrm = GetLower();
-    if ( pFrm )
+    const SwFrame *pFrame = GetLower();
+    if ( pFrame )
     {
-        SwRect aFrmRect;
+        SwRect aFrameRect;
         SwRect aRect( PaintArea() );
-        aRect._Intersection( rRect );
+        aRect.Intersection_( rRect );
         SwRect aBorderRect( aRect );
-        SwShortCut aShortCut( *pFrm, aBorderRect );
+        SwShortCut aShortCut( *pFrame, aBorderRect );
         do
         {   if ( gProp.pSProgress )
                 gProp.pSProgress->Reschedule();
 
-            aFrmRect = pFrm->PaintArea();
-            if ( aFrmRect.IsOver( aBorderRect ) )
+            aFrameRect = pFrame->PaintArea();
+            if ( aFrameRect.IsOver( aBorderRect ) )
             {
-                SwBorderAttrAccess aAccess( SwFrm::GetCache(), (SwFrm*)pFrm );
+                SwBorderAttrAccess aAccess( SwFrame::GetCache(), pFrame );
                 const SwBorderAttrs &rTmpAttrs = *aAccess.Get();
-                if ( ( pFrm->IsLayoutFrm() && bLowerBorder ) ||
-                     aFrmRect.IsOver( aRect ) )
-                    pFrm->PaintBackground( aRect, pPage, rTmpAttrs, bLowMode,
-                                           bLowerBorder );
+                if ( ( pFrame->IsLayoutFrame() && bLowerBorder ) ||
+                     aFrameRect.IsOver( aRect ) )
+                    pFrame->PaintBackground( aRect, pPage, rTmpAttrs, bLowMode,
+                                           bLowerBorder, bOnlyTextBackground );
                 if ( bLowerBorder )
-                    pFrm->PaintBorder( aBorderRect, pPage, rTmpAttrs );
+                    pFrame->PaintBorder( aBorderRect, pPage, rTmpAttrs );
             }
-            pFrm = pFrm->GetNext();
-        } while ( pFrm && pFrm->GetUpper() == this &&
-                  !aShortCut.Stop( aFrmRect ) );
+            pFrame = pFrame->GetNext();
+        } while ( pFrame && pFrame->GetUpper() == this &&
+                  !aShortCut.Stop( aFrameRect ) );
     }
 }
 
 /// Refreshes all subsidiary lines of a page.
-void SwPageFrm::RefreshSubsidiary( const SwRect &rRect ) const
+void SwPageFrame::RefreshSubsidiary( const SwRect &rRect ) const
 {
     if ( IS_SUBS || isTableBoundariesEnabled() || IS_SUBS_SECTION || IS_SUBS_FLYS )
     {
-        SwRect aRect( rRect );
-        if ( aRect.HasArea() )
+        if ( rRect.HasArea() )
         {
             //During paint using the root, the array is controlled from there.
             //Otherwise we'll handle it for our self.
@@ -6876,55 +6882,54 @@ void SwPageFrm::RefreshSubsidiary( const SwRect &rRect ) const
                 bDelSubs = true;
             }
 
-            RefreshLaySubsidiary( this, aRect );
+            RefreshLaySubsidiary( this, rRect );
 
             if ( bDelSubs )
             {
                 // OD 20.12.2002 #106318# - paint special subsidiary lines
                 // and delete its container
-                gProp.pSSpecSubsLines->PaintSubsidiary( gProp.pSGlobalShell->GetOut(), NULL );
+                gProp.pSSpecSubsLines->PaintSubsidiary( gProp.pSGlobalShell->GetOut(), nullptr, gProp );
                 DELETEZ( gProp.pSSpecSubsLines );
 
-                gProp.pSSubsLines->PaintSubsidiary( gProp.pSGlobalShell->GetOut(), gProp.pSLines );
+                gProp.pSSubsLines->PaintSubsidiary( gProp.pSGlobalShell->GetOut(), gProp.pSLines, gProp );
                 DELETEZ( gProp.pSSubsLines );
             }
         }
     }
 }
 
-void SwLayoutFrm::RefreshLaySubsidiary( const SwPageFrm *pPage,
+void SwLayoutFrame::RefreshLaySubsidiary( const SwPageFrame *pPage,
                                         const SwRect &rRect ) const
 {
     const bool bSubsOpt   = IS_SUBS;
     if ( bSubsOpt )
         PaintSubsidiaryLines( pPage, rRect );
 
-    const SwFrm *pLow = Lower();
+    const SwFrame *pLow = Lower();
     if( !pLow )
         return;
     SwShortCut aShortCut( *pLow, rRect );
-    while( pLow && !aShortCut.Stop( pLow->Frm() ) )
+    while( pLow && !aShortCut.Stop( pLow->Frame() ) )
     {
-        if ( pLow->Frm().IsOver( rRect ) && pLow->Frm().HasArea() )
+        if ( pLow->Frame().IsOver( rRect ) && pLow->Frame().HasArea() )
         {
-            if ( pLow->IsLayoutFrm() )
-                ((const SwLayoutFrm*)pLow)->RefreshLaySubsidiary( pPage, rRect);
+            if ( pLow->IsLayoutFrame() )
+                static_cast<const SwLayoutFrame*>(pLow)->RefreshLaySubsidiary( pPage, rRect);
             else if ( pLow->GetDrawObjs() )
             {
                 const SwSortedObjs& rObjs = *(pLow->GetDrawObjs());
-                for ( size_t i = 0; i < rObjs.size(); ++i )
+                for (SwAnchoredObject* pAnchoredObj : rObjs)
                 {
-                    const SwAnchoredObject* pAnchoredObj = rObjs[i];
-                    if ( pPage->GetFmt()->GetDoc()->getIDocumentDrawModelAccess().IsVisibleLayerId(
+                    if ( pPage->GetFormat()->GetDoc()->getIDocumentDrawModelAccess().IsVisibleLayerId(
                                     pAnchoredObj->GetDrawObj()->GetLayer() ) &&
-                         pAnchoredObj->ISA(SwFlyFrm) )
+                         dynamic_cast< const SwFlyFrame *>( pAnchoredObj ) !=  nullptr )
                     {
-                        const SwFlyFrm *pFly =
-                                    static_cast<const SwFlyFrm*>(pAnchoredObj);
-                        if ( pFly->IsFlyInCntFrm() && pFly->Frm().IsOver( rRect ) )
+                        const SwFlyFrame *pFly =
+                                    static_cast<const SwFlyFrame*>(pAnchoredObj);
+                        if ( pFly->IsFlyInContentFrame() && pFly->Frame().IsOver( rRect ) )
                         {
-                            if ( !pFly->Lower() || !pFly->Lower()->IsNoTxtFrm() ||
-                                 !((SwNoTxtFrm*)pFly->Lower())->HasAnimation())
+                            if ( !pFly->Lower() || !pFly->Lower()->IsNoTextFrame() ||
+                                 !static_cast<const SwNoTextFrame*>(pFly->Lower())->HasAnimation())
                                 pFly->RefreshLaySubsidiary( pPage, rRect );
                         }
                     }
@@ -6937,14 +6942,14 @@ void SwLayoutFrm::RefreshLaySubsidiary( const SwPageFrm *pPage,
 
 /**
  * Subsidiary lines to paint the PrtAreas
- * Only the LayoutFrms which directly contain Cntnt
+ * Only the LayoutFrames which directly contain Content
  * Paints the desired line and pays attention to not overpaint any flys
  */
-static void lcl_RefreshLine( const SwLayoutFrm *pLay,
-                                  const SwPageFrm *pPage,
+static void lcl_RefreshLine( const SwLayoutFrame *pLay,
+                                  const SwPageFrame *pPage,
                                   const Point &rP1,
                                   const Point &rP2,
-                                  const sal_uInt8 nSubColor,
+                                  const SubColFlags nSubColor,
                                   SwLineRects* pSubsLines )
 {
     //In which direction do we loop? Can only be horizontal or vertical.
@@ -6975,11 +6980,11 @@ static void lcl_RefreshLine( const SwLayoutFrm *pLay,
         //Even if I'm inside a fly or inside a fly inside a fly a.s.o I won't
         //avoid any of those flys.
         SwOrderIter aIter( pPage );
-        const SwFlyFrm *pMyFly = pLay->FindFlyFrm();
+        const SwFlyFrame *pMyFly = pLay->FindFlyFrame();
         if ( pMyFly )
         {
             aIter.Current( pMyFly->GetVirtDrawObj() );
-            while ( 0 != (pMyFly = pMyFly->GetAnchorFrm()->FindFlyFrm()) )
+            while ( nullptr != (pMyFly = pMyFly->GetAnchorFrame()->FindFlyFrame()) )
             {
                 if ( aIter()->GetOrdNum() > pMyFly->GetVirtDrawObj()->GetOrdNum() )
                     aIter.Current( pMyFly->GetVirtDrawObj() );
@@ -6990,8 +6995,8 @@ static void lcl_RefreshLine( const SwLayoutFrm *pLay,
 
         while ( aIter() )
         {
-            const SwVirtFlyDrawObj *pObj = (SwVirtFlyDrawObj*)aIter();
-            const SwFlyFrm *pFly = pObj ? pObj->GetFlyFrm() : 0;
+            const SwVirtFlyDrawObj *pObj = static_cast<const SwVirtFlyDrawObj*>(aIter());
+            const SwFlyFrame *pFly = pObj ? pObj->GetFlyFrame() : nullptr;
 
             //I certainly won't avoid myself, even if I'm placed _inside_ the
             //fly I won't avoid it.
@@ -7006,7 +7011,7 @@ static void lcl_RefreshLine( const SwLayoutFrm *pLay,
             // OD 2004-02-12 #110582#-2 - do *not* consider fly frame, which
             // belongs to a invisible layer
             if ( pFly->IsBackgroundTransparent() ||
-                 !pFly->GetFmt()->GetDoc()->getIDocumentDrawModelAccess().IsVisibleLayerId( pObj->GetLayer() ) )
+                 !pFly->GetFormat()->GetDoc()->getIDocumentDrawModelAccess().IsVisibleLayerId( pObj->GetLayer() ) )
             {
                 aIter.Next();
                 continue;
@@ -7014,7 +7019,7 @@ static void lcl_RefreshLine( const SwLayoutFrm *pLay,
 
             //Is the Obj placed on the line
             const long nP1OthPt = !bHori ? rP1.X() : rP1.Y();
-            const Rectangle &rBound = pObj->GetCurrentBoundRect();
+            const tools::Rectangle &rBound = pObj->GetCurrentBoundRect();
             const Point aDrPt( rBound.TopLeft() );
             const long nDrOthPt = !bHori ? aDrPt.X() : aDrPt.Y();
             const Size  aDrSz( rBound.GetSize() );
@@ -7039,8 +7044,8 @@ static void lcl_RefreshLine( const SwLayoutFrm *pLay,
             SwRect aRect( aP1, aP2 );
             // OD 18.11.2002 #99672# - use parameter <pSubsLines> instead of
             // global variable <gProp.pSSubsLines>.
-            pSubsLines->AddLineRect( aRect, 0, table::BorderLineStyle::SOLID,
-                    0, nSubColor );
+            pSubsLines->AddLineRect( aRect, nullptr, SvxBorderLineStyle::SOLID,
+                    nullptr, nSubColor, gProp );
         }
         aP1 = aP2;
         (aP1.*pDirPt)() += 1;
@@ -7048,10 +7053,10 @@ static void lcl_RefreshLine( const SwLayoutFrm *pLay,
     }
 }
 
-static drawinglayer::primitive2d::Primitive2DSequence lcl_CreatePageAreaDelimiterPrimitives(
+static drawinglayer::primitive2d::Primitive2DContainer lcl_CreatePageAreaDelimiterPrimitives(
         const SwRect& rRect )
 {
-    drawinglayer::primitive2d::Primitive2DSequence aSeq( 4 );
+    drawinglayer::primitive2d::Primitive2DContainer aSeq( 4 );
 
     basegfx::BColor aLineColor = SwViewOption::GetDocBoundariesColor().getBColor();
     double nLineLength = 200.0; // in Twips
@@ -7082,10 +7087,10 @@ static drawinglayer::primitive2d::Primitive2DSequence lcl_CreatePageAreaDelimite
     return aSeq;
 }
 
-static drawinglayer::primitive2d::Primitive2DSequence lcl_CreateRectangleDelimiterPrimitives (
+static drawinglayer::primitive2d::Primitive2DContainer lcl_CreateRectangleDelimiterPrimitives (
         const SwRect& rRect )
 {
-    drawinglayer::primitive2d::Primitive2DSequence aSeq( 1 );
+    drawinglayer::primitive2d::Primitive2DContainer aSeq( 1 );
     basegfx::BColor aLineColor = SwViewOption::GetDocBoundariesColor().getBColor();
 
     basegfx::B2DPolygon aPolygon;
@@ -7103,10 +7108,10 @@ static drawinglayer::primitive2d::Primitive2DSequence lcl_CreateRectangleDelimit
     return aSeq;
 }
 
-static drawinglayer::primitive2d::Primitive2DSequence lcl_CreateColumnAreaDelimiterPrimitives(
+static drawinglayer::primitive2d::Primitive2DContainer lcl_CreateColumnAreaDelimiterPrimitives(
         const SwRect& rRect )
 {
-    drawinglayer::primitive2d::Primitive2DSequence aSeq( 4 );
+    drawinglayer::primitive2d::Primitive2DContainer aSeq( 4 );
 
     basegfx::BColor aLineColor = SwViewOption::GetDocBoundariesColor().getBColor();
     double nLineLength = 100.0; // in Twips
@@ -7137,26 +7142,26 @@ static drawinglayer::primitive2d::Primitive2DSequence lcl_CreateColumnAreaDelimi
     return aSeq;
 }
 
-void SwPageFrm::PaintSubsidiaryLines( const SwPageFrm *,
+void SwPageFrame::PaintSubsidiaryLines( const SwPageFrame *,
                                         const SwRect & ) const
 {
     if ( !gProp.pSGlobalShell->IsHeaderFooterEdit() )
     {
-        const SwFrm* pLay = Lower();
-        const SwFrm* pFtnCont = NULL;
-        const SwFrm* pPageBody = NULL;
-        while ( pLay && !( pFtnCont && pPageBody ) )
+        const SwFrame* pLay = Lower();
+        const SwFrame* pFootnoteCont = nullptr;
+        const SwFrame* pPageBody = nullptr;
+        while ( pLay && !( pFootnoteCont && pPageBody ) )
         {
-            if ( pLay->IsFtnContFrm( ) )
-                pFtnCont = pLay;
-            if ( pLay->IsBodyFrm() )
+            if ( pLay->IsFootnoteContFrame( ) )
+                pFootnoteCont = pLay;
+            if ( pLay->IsBodyFrame() )
                 pPageBody = pLay;
             pLay = pLay->GetNext();
         }
 
-        SwRect aArea( pPageBody->Frm() );
-        if ( pFtnCont )
-            aArea.AddBottom( pFtnCont->Frm().Bottom() - aArea.Bottom() );
+        SwRect aArea( pPageBody->Frame() );
+        if ( pFootnoteCont )
+            aArea.AddBottom( pFootnoteCont->Frame().Bottom() - aArea.Bottom() );
 
         if ( !gProp.pSGlobalShell->GetViewOptions()->IsViewMetaChars( ) )
             ProcessPrimitives( lcl_CreatePageAreaDelimiterPrimitives( aArea ) );
@@ -7165,38 +7170,38 @@ void SwPageFrm::PaintSubsidiaryLines( const SwPageFrm *,
     }
 }
 
-void SwColumnFrm::PaintSubsidiaryLines( const SwPageFrm *,
+void SwColumnFrame::PaintSubsidiaryLines( const SwPageFrame *,
                                         const SwRect & ) const
 {
-    const SwFrm* pLay = Lower();
-    const SwFrm* pFtnCont = NULL;
-    const SwFrm* pColBody = NULL;
-    while ( pLay && !( pFtnCont && pColBody ) )
+    const SwFrame* pLay = Lower();
+    const SwFrame* pFootnoteCont = nullptr;
+    const SwFrame* pColBody = nullptr;
+    while ( pLay && !( pFootnoteCont && pColBody ) )
     {
-        if ( pLay->IsFtnContFrm( ) )
-            pFtnCont = pLay;
-        if ( pLay->IsBodyFrm() )
+        if ( pLay->IsFootnoteContFrame( ) )
+            pFootnoteCont = pLay;
+        if ( pLay->IsBodyFrame() )
             pColBody = pLay;
         pLay = pLay->GetNext();
     }
 
-    SwRect aArea( pColBody->Frm() );
+    SwRect aArea( pColBody->Frame() );
 
     // #i3662# - enlarge top of column body frame's printing area
     // in sections to top of section frame.
-    const bool bColInSection =  GetUpper()->IsSctFrm();
+    const bool bColInSection =  GetUpper()->IsSctFrame();
     if ( bColInSection )
     {
         if ( IsVertical() )
-            aArea.Right( GetUpper()->Frm().Right() );
+            aArea.Right( GetUpper()->Frame().Right() );
         else
-            aArea.Top( GetUpper()->Frm().Top() );
+            aArea.Top( GetUpper()->Frame().Top() );
     }
 
-    if ( pFtnCont )
-        aArea.AddBottom( pFtnCont->Frm().Bottom() - aArea.Bottom() );
+    if ( pFootnoteCont )
+        aArea.AddBottom( pFootnoteCont->Frame().Bottom() - aArea.Bottom() );
 
-    ::SwAlignRect( aArea, gProp.pSGlobalShell );
+    ::SwAlignRect( aArea, gProp.pSGlobalShell, gProp.pSGlobalShell->GetOut() );
 
     if ( !gProp.pSGlobalShell->GetViewOptions()->IsViewMetaChars( ) )
         ProcessPrimitives( lcl_CreateColumnAreaDelimiterPrimitives( aArea ) );
@@ -7204,31 +7209,31 @@ void SwColumnFrm::PaintSubsidiaryLines( const SwPageFrm *,
         ProcessPrimitives( lcl_CreateRectangleDelimiterPrimitives( aArea ) );
 }
 
-void SwSectionFrm::PaintSubsidiaryLines( const SwPageFrm * pPage,
+void SwSectionFrame::PaintSubsidiaryLines( const SwPageFrame * pPage,
                                         const SwRect & rRect ) const
 {
-    const bool bNoLowerColumn = !Lower() || !Lower()->IsColumnFrm();
+    const bool bNoLowerColumn = !Lower() || !Lower()->IsColumnFrame();
     if ( bNoLowerColumn )
     {
-        SwLayoutFrm::PaintSubsidiaryLines( pPage, rRect );
+        SwLayoutFrame::PaintSubsidiaryLines( pPage, rRect );
     }
 }
 
 /**
- * The SwBodyFrm doesn't print any subsidiary line: it's bounds are painted
+ * The SwBodyFrame doesn't print any subsidiary line: it's bounds are painted
  * either by the parent page or the parent column frame.
  */
-void SwBodyFrm::PaintSubsidiaryLines( const SwPageFrm *,
+void SwBodyFrame::PaintSubsidiaryLines( const SwPageFrame *,
                                         const SwRect & ) const
 {
 }
 
-void SwHeadFootFrm::PaintSubsidiaryLines( const SwPageFrm *, const SwRect & ) const
+void SwHeadFootFrame::PaintSubsidiaryLines( const SwPageFrame *, const SwRect & ) const
 {
     if ( gProp.pSGlobalShell->IsHeaderFooterEdit() )
     {
         SwRect aArea( Prt() );
-        aArea.Pos() += Frm().Pos();
+        aArea.Pos() += Frame().Pos();
         if ( !gProp.pSGlobalShell->GetViewOptions()->IsViewMetaChars( ) )
             ProcessPrimitives( lcl_CreatePageAreaDelimiterPrimitives( aArea ) );
         else
@@ -7240,7 +7245,7 @@ void SwHeadFootFrm::PaintSubsidiaryLines( const SwPageFrm *, const SwRect & ) co
  * This method is overridden in order to have no subsidiary lines
  * around the footnotes.
  */
-void SwFtnFrm::PaintSubsidiaryLines( const SwPageFrm *,
+void SwFootnoteFrame::PaintSubsidiaryLines( const SwPageFrame *,
                                         const SwRect & ) const
 {
 }
@@ -7249,50 +7254,50 @@ void SwFtnFrm::PaintSubsidiaryLines( const SwPageFrm *,
  * This method is overridden in order to have no subsidiary lines
  * around the footnotes containers.
  */
-void SwFtnContFrm::PaintSubsidiaryLines( const SwPageFrm *,
+void SwFootnoteContFrame::PaintSubsidiaryLines( const SwPageFrame *,
                                         const SwRect & ) const
 {
 }
 
-void SwLayoutFrm::PaintSubsidiaryLines( const SwPageFrm *pPage,
+void SwLayoutFrame::PaintSubsidiaryLines( const SwPageFrame *pPage,
                                         const SwRect &rRect ) const
 {
     bool bNewTableModel = false;
 
     // #i29550#
-    if ( IsTabFrm() || IsCellFrm() || IsRowFrm() )
+    if ( IsTabFrame() || IsCellFrame() || IsRowFrame() )
     {
-        const SwTabFrm* pTabFrm = FindTabFrm();
-        if ( pTabFrm->IsCollapsingBorders() )
+        const SwTabFrame* pTabFrame = FindTabFrame();
+        if ( pTabFrame->IsCollapsingBorders() )
             return;
 
-        bNewTableModel = pTabFrm->GetTable()->IsNewModel();
+        bNewTableModel = pTabFrame->GetTable()->IsNewModel();
         // in the new table model, we have an early return for all cell-related
         // frames, except from non-covered table cells
         if ( bNewTableModel )
-            if ( IsTabFrm() ||
-                 IsRowFrm() ||
-                 ( IsCellFrm() && IsCoveredCell() ) )
+            if ( IsTabFrame() ||
+                 IsRowFrame() ||
+                 ( IsCellFrame() && IsCoveredCell() ) )
                 return;
     }
 
-    const bool bFlys = pPage->GetSortedObjs() ? true : false;
+    const bool bFlys = pPage->GetSortedObjs() != nullptr;
 
-    const bool bCell = IsCellFrm();
+    const bool bCell = IsCellFrame();
     // use frame area for cells
     // OD 13.02.2003 #i3662# - for section use also frame area
-    const bool bUseFrmArea = bCell || IsSctFrm();
-    SwRect aOriginal( bUseFrmArea ? Frm() : Prt() );
-    if ( !bUseFrmArea )
-        aOriginal.Pos() += Frm().Pos();
+    const bool bUseFrameArea = bCell || IsSctFrame();
+    SwRect aOriginal( bUseFrameArea ? Frame() : Prt() );
+    if ( !bUseFrameArea )
+        aOriginal.Pos() += Frame().Pos();
 
-    ::SwAlignRect( aOriginal, gProp.pSGlobalShell );
+    ::SwAlignRect( aOriginal, gProp.pSGlobalShell, gProp.pSGlobalShell->GetOut() );
 
     if ( !aOriginal.IsOver( rRect ) )
         return;
 
     SwRect aOut( aOriginal );
-    aOut._Intersection( rRect );
+    aOut.Intersection_( rRect );
 
     const SwTwips nRight = aOut.Right();
     const SwTwips nBottom= aOut.Bottom();
@@ -7301,14 +7306,16 @@ void SwLayoutFrm::PaintSubsidiaryLines( const SwPageFrm *pPage,
     const Point aRB( nRight, nBottom );
     const Point aLB( aOut.Left(), nBottom );
 
-    sal_uInt8 nSubColor = ( bCell || IsRowFrm() ) ? SUBCOL_TAB :
-                     ( IsInSct() ? SUBCOL_SECT :
-                     ( IsInFly() ? SUBCOL_FLY : SUBCOL_PAGE ) );
+    SubColFlags nSubColor = ( bCell || IsRowFrame() )
+                            ? SubColFlags::Tab
+                            : ( IsInSct()
+                                ? SubColFlags::Sect
+                                : ( IsInFly() ? SubColFlags::Fly : SubColFlags::Page ) );
 
     // OD 18.11.2002 #99672# - collect body, header, footer, footnote and section
     // sub-lines in <pSpecSubsLine> array.
-    const bool bSpecialSublines = IsBodyFrm() || IsHeaderFrm() || IsFooterFrm() ||
-                                  IsFtnFrm() || IsSctFrm();
+    const bool bSpecialSublines = IsBodyFrame() || IsHeaderFrame() || IsFooterFrame() ||
+                                  IsFootnoteFrame() || IsSctFrame();
     SwLineRects* pUsedSubsLines = bSpecialSublines ? gProp.pSSpecSubsLines : gProp.pSSubsLines;
 
     // NOTE: for cell frames only left and right (horizontal layout) respectively
@@ -7346,15 +7353,15 @@ void SwLayoutFrm::PaintSubsidiaryLines( const SwPageFrm *pPage,
             if ( aOriginal.Left() == aOut.Left() )
             {
                 const SwRect aRect( aOut.Pos(), aLB );
-                pUsedSubsLines->AddLineRect( aRect, 0,
-                        table::BorderLineStyle::SOLID, 0, nSubColor );
+                pUsedSubsLines->AddLineRect( aRect, nullptr,
+                        SvxBorderLineStyle::SOLID, nullptr, nSubColor, gProp );
             }
             // OD 14.11.2002 #104821# - in vertical layout set page/column break at right
             if ( aOriginal.Right() == nRight )
             {
                 const SwRect aRect( aRT, aRB );
-                pUsedSubsLines->AddLineRect( aRect, 0,
-                        table::BorderLineStyle::SOLID, 0, nSubColor );
+                pUsedSubsLines->AddLineRect( aRect, nullptr,
+                        SvxBorderLineStyle::SOLID, nullptr, nSubColor, gProp );
             }
         }
         // OD 14.11.2002 #104822# - adjust control for drawing top and bottom lines
@@ -7364,14 +7371,14 @@ void SwLayoutFrm::PaintSubsidiaryLines( const SwPageFrm *pPage,
             {
                 // OD 14.11.2002 #104821# - in horizontal layout set page/column break at top
                 const SwRect aRect( aOut.Pos(), aRT );
-                pUsedSubsLines->AddLineRect( aRect, 0,
-                        table::BorderLineStyle::SOLID, 0, nSubColor );
+                pUsedSubsLines->AddLineRect( aRect, nullptr,
+                        SvxBorderLineStyle::SOLID, nullptr, nSubColor, gProp );
             }
             if ( aOriginal.Bottom() == nBottom )
             {
                 const SwRect aRect( aLB, aRB );
-                pUsedSubsLines->AddLineRect( aRect, 0,
-                        table::BorderLineStyle::SOLID, 0, nSubColor );
+                pUsedSubsLines->AddLineRect( aRect, nullptr,
+                        SvxBorderLineStyle::SOLID, nullptr, nSubColor, gProp );
             }
         }
     }
@@ -7381,67 +7388,65 @@ void SwLayoutFrm::PaintSubsidiaryLines( const SwPageFrm *pPage,
  * Refreshes all extra data (line breaks a.s.o) of the page. Basically only those objects
  * are considered which horizontally overlap the Rect.
  */
-void SwPageFrm::RefreshExtraData( const SwRect &rRect ) const
+void SwPageFrame::RefreshExtraData( const SwRect &rRect ) const
 {
-    const SwLineNumberInfo &rInfo = GetFmt()->GetDoc()->GetLineNumberInfo();
+    const SwLineNumberInfo &rInfo = GetFormat()->GetDoc()->GetLineNumberInfo();
     bool bLineInFly = (rInfo.IsPaintLineNumbers() && rInfo.IsCountInFlys())
         || (sal_Int16)SW_MOD()->GetRedlineMarkPos() != text::HoriOrientation::NONE;
 
     SwRect aRect( rRect );
-    ::SwAlignRect( aRect, gProp.pSGlobalShell );
+    ::SwAlignRect( aRect, gProp.pSGlobalShell, gProp.pSGlobalShell->GetOut() );
     if ( aRect.HasArea() )
     {
-        SwLayoutFrm::RefreshExtraData( aRect );
+        SwLayoutFrame::RefreshExtraData( aRect );
 
         if ( bLineInFly && GetSortedObjs() )
-            for ( size_t i = 0; i < GetSortedObjs()->size(); ++i )
+            for (SwAnchoredObject* pAnchoredObj : *GetSortedObjs())
             {
-                const SwAnchoredObject* pAnchoredObj = (*GetSortedObjs())[i];
-                if ( pAnchoredObj->ISA(SwFlyFrm) )
+                if ( dynamic_cast< const SwFlyFrame *>( pAnchoredObj ) !=  nullptr )
                 {
-                    const SwFlyFrm *pFly = static_cast<const SwFlyFrm*>(pAnchoredObj);
-                    if ( pFly->Frm().Top() <= aRect.Bottom() &&
-                         pFly->Frm().Bottom() >= aRect.Top() )
+                    const SwFlyFrame *pFly = static_cast<const SwFlyFrame*>(pAnchoredObj);
+                    if ( pFly->Frame().Top() <= aRect.Bottom() &&
+                         pFly->Frame().Bottom() >= aRect.Top() )
                         pFly->RefreshExtraData( aRect );
                 }
             }
     }
 }
 
-void SwLayoutFrm::RefreshExtraData( const SwRect &rRect ) const
+void SwLayoutFrame::RefreshExtraData( const SwRect &rRect ) const
 {
 
-    const SwLineNumberInfo &rInfo = GetFmt()->GetDoc()->GetLineNumberInfo();
+    const SwLineNumberInfo &rInfo = GetFormat()->GetDoc()->GetLineNumberInfo();
     bool bLineInBody = rInfo.IsPaintLineNumbers(),
              bLineInFly  = bLineInBody && rInfo.IsCountInFlys(),
              bRedLine = (sal_Int16)SW_MOD()->GetRedlineMarkPos()!=text::HoriOrientation::NONE;
 
-    const SwCntntFrm *pCnt = ContainsCntnt();
+    const SwContentFrame *pCnt = ContainsContent();
     while ( pCnt && IsAnLower( pCnt ) )
     {
-        if ( pCnt->IsTxtFrm() && ( bRedLine ||
+        if ( pCnt->IsTextFrame() && ( bRedLine ||
              ( !pCnt->IsInTab() &&
                ((bLineInBody && pCnt->IsInDocBody()) ||
                (bLineInFly  && pCnt->IsInFly())) ) ) &&
-             pCnt->Frm().Top() <= rRect.Bottom() &&
-             pCnt->Frm().Bottom() >= rRect.Top() )
+             pCnt->Frame().Top() <= rRect.Bottom() &&
+             pCnt->Frame().Bottom() >= rRect.Top() )
         {
-            ((SwTxtFrm*)pCnt)->PaintExtraData( rRect );
+            static_cast<const SwTextFrame*>(pCnt)->PaintExtraData( rRect );
         }
         if ( bLineInFly && pCnt->GetDrawObjs() )
-            for ( size_t i = 0; i < pCnt->GetDrawObjs()->size(); ++i )
+            for (SwAnchoredObject* pAnchoredObj : *pCnt->GetDrawObjs())
             {
-                const SwAnchoredObject* pAnchoredObj = (*pCnt->GetDrawObjs())[i];
-                if ( pAnchoredObj->ISA(SwFlyFrm) )
+                if ( dynamic_cast< const SwFlyFrame *>( pAnchoredObj ) !=  nullptr )
                 {
-                    const SwFlyFrm *pFly = static_cast<const SwFlyFrm*>(pAnchoredObj);
-                    if ( pFly->IsFlyInCntFrm() &&
-                         pFly->Frm().Top() <= rRect.Bottom() &&
-                         pFly->Frm().Bottom() >= rRect.Top() )
+                    const SwFlyFrame *pFly = static_cast<const SwFlyFrame*>(pAnchoredObj);
+                    if ( pFly->IsFlyInContentFrame() &&
+                         pFly->Frame().Top() <= rRect.Bottom() &&
+                         pFly->Frame().Bottom() >= rRect.Top() )
                         pFly->RefreshExtraData( rRect );
                 }
         }
-        pCnt = pCnt->GetNextCntntFrm();
+        pCnt = pCnt->GetNextContentFrame();
     }
 }
 
@@ -7449,24 +7454,22 @@ void SwLayoutFrm::RefreshExtraData( const SwRect &rRect ) const
  * For #102450#
  * Determine the color, that is respectively will be drawn as background
  * for the page frame.
- * Using existing method SwFrm::GetBackgroundBrush to determine the color
+ * Using existing method SwFrame::GetBackgroundBrush to determine the color
  * that is set at the page frame respectively is parent. If none is found
  * return the global retouche color
  *
  * @return Color
  */
-const Color SwPageFrm::GetDrawBackgrdColor() const
+const Color SwPageFrame::GetDrawBackgrdColor() const
 {
     const SvxBrushItem* pBrushItem;
     const Color* pDummyColor;
     SwRect aDummyRect;
-
-    //UUUU
     drawinglayer::attribute::SdrAllFillAttributesHelperPtr aFillAttributes;
 
-    if ( GetBackgroundBrush( aFillAttributes, pBrushItem, pDummyColor, aDummyRect, true) )
+    if ( GetBackgroundBrush( aFillAttributes, pBrushItem, pDummyColor, aDummyRect, true, /*bConsiderTextBox=*/false) )
     {
-        if(aFillAttributes.get() && aFillAttributes->isUsed()) //UUUU
+        if(aFillAttributes.get() && aFillAttributes->isUsed())
         {
             // let SdrAllFillAttributesHelper do the average color calculation
             return Color(aFillAttributes->getAverageColor(aGlobalRetoucheColor.getBColor()));
@@ -7474,10 +7477,10 @@ const Color SwPageFrm::GetDrawBackgrdColor() const
         else if(pBrushItem)
         {
             OUString referer;
-            SwViewShell * sh1 = getRootFrm()->GetCurrShell();
-            if (sh1 != 0) {
+            SwViewShell * sh1 = getRootFrame()->GetCurrShell();
+            if (sh1 != nullptr) {
                 SfxObjectShell * sh2 = sh1->GetDoc()->GetPersist();
-                if (sh2 != 0 && sh2->HasName()) {
+                if (sh2 != nullptr && sh2->HasName()) {
                     referer = sh2->GetMedium()->GetName();
                 }
             }
@@ -7503,16 +7506,16 @@ const Color SwPageFrm::GetDrawBackgrdColor() const
 }
 
 /// create/return font used to paint the "empty page" string
-const vcl::Font& SwPageFrm::GetEmptyPageFont()
+const vcl::Font& SwPageFrame::GetEmptyPageFont()
 {
-    static vcl::Font* pEmptyPgFont = 0;
-    if ( 0 == pEmptyPgFont )
+    static vcl::Font* pEmptyPgFont = nullptr;
+    if ( nullptr == pEmptyPgFont )
     {
         pEmptyPgFont = new vcl::Font;
-        pEmptyPgFont->SetSize( Size( 0, 80 * 20 )); // == 80 pt
+        pEmptyPgFont->SetFontSize( Size( 0, 80 * 20 )); // == 80 pt
         pEmptyPgFont->SetWeight( WEIGHT_BOLD );
         pEmptyPgFont->SetStyleName( aEmptyOUStr );
-        pEmptyPgFont->SetName(OUString("Helvetica"));
+        pEmptyPgFont->SetFamilyName("Helvetica");
         pEmptyPgFont->SetFamily( FAMILY_SWISS );
         pEmptyPgFont->SetTransparent( true );
         pEmptyPgFont->SetColor( COL_GRAY );
@@ -7524,20 +7527,20 @@ const vcl::Font& SwPageFrm::GetEmptyPageFont()
 /**
  * Retouch for a section
  *
- * Retouch will only be done, if the Frm is the last one in his chain.
- * The whole area of the upper which is located below the Frm will be
+ * Retouch will only be done, if the Frame is the last one in his chain.
+ * The whole area of the upper which is located below the Frame will be
  * cleared using PaintBackground.
  */
-void SwFrm::Retouche( const SwPageFrm * pPage, const SwRect &rRect ) const
+void SwFrame::Retouch( const SwPageFrame * pPage, const SwRect &rRect ) const
 {
     if ( gProp.bSFlyMetafile )
         return;
 
     OSL_ENSURE( GetUpper(), "Retouche try without Upper." );
-    OSL_ENSURE( getRootFrm()->GetCurrShell() && gProp.pSGlobalShell->GetWin(), "Retouche on a printer?" );
+    OSL_ENSURE( getRootFrame()->GetCurrShell() && gProp.pSGlobalShell->GetWin(), "Retouche on a printer?" );
 
     SwRect aRetouche( GetUpper()->PaintArea() );
-    aRetouche.Top( Frm().Top() + Frm().Height() );
+    aRetouche.Top( Frame().Top() + Frame().Height() );
     aRetouche.Intersection( gProp.pSGlobalShell->VisArea() );
 
     if ( aRetouche.HasArea() )
@@ -7546,35 +7549,34 @@ void SwFrm::Retouche( const SwPageFrm * pPage, const SwRect &rRect ) const
         //cut out.
         SwRegionRects aRegion( aRetouche );
         aRegion -= rRect;
-        SwViewShell *pSh = getRootFrm()->GetCurrShell();
+        SwViewShell *pSh = getRootFrame()->GetCurrShell();
 
         // #i16816# tagged pdf support
-        SwTaggedPDFHelper aTaggedPDFHelper( 0, 0, 0, *pSh->GetOut() );
+        SwTaggedPDFHelper aTaggedPDFHelper( nullptr, nullptr, nullptr, *pSh->GetOut() );
 
         for ( size_t i = 0; i < aRegion.size(); ++i )
         {
-            SwRect &rRetouche = aRegion[i];
+            const SwRect &rRetouche = aRegion[i];
 
-            GetUpper()->PaintBaBo( rRetouche, pPage, true );
+            GetUpper()->PaintBaBo( rRetouche, pPage );
 
             //Hell and Heaven need to be refreshed too.
             //To avoid recursion my retouch flag needs to be reset first!
             ResetRetouche();
-            SwRect aRetouchePart( rRetouche );
-            if ( aRetouchePart.HasArea() )
+            if ( rRetouche.HasArea() )
             {
                 const Color aPageBackgrdColor(pPage->GetDrawBackgrdColor());
-                const IDocumentDrawModelAccess* pIDDMA = pSh->getIDocumentDrawModelAccess();
+                const IDocumentDrawModelAccess& rIDDMA = pSh->getIDocumentDrawModelAccess();
                 // --> OD #i76669#
                 SwViewObjectContactRedirector aSwRedirector( *pSh );
                 // <--
 
-                pSh->Imp()->PaintLayer( pIDDMA->GetHellId(), 0,
-                                        aRetouchePart, &aPageBackgrdColor,
+                pSh->Imp()->PaintLayer( rIDDMA.GetHellId(), nullptr,
+                                        *pPage, rRetouche, &aPageBackgrdColor,
                                         pPage->IsRightToLeft(),
                                         &aSwRedirector );
-                pSh->Imp()->PaintLayer( pIDDMA->GetHeavenId(), 0,
-                                        aRetouchePart, &aPageBackgrdColor,
+                pSh->Imp()->PaintLayer( rIDDMA.GetHeavenId(), nullptr,
+                                        *pPage, rRetouche, &aPageBackgrdColor,
                                         pPage->IsRightToLeft(),
                                         &aSwRedirector );
             }
@@ -7583,7 +7585,7 @@ void SwFrm::Retouche( const SwPageFrm * pPage, const SwRect &rRect ) const
 
             //Because we leave all paint areas, we need to refresh the
             //subsidiary lines.
-            pPage->RefreshSubsidiary( aRetouchePart );
+            pPage->RefreshSubsidiary( rRetouche );
         }
     }
     if ( SwViewShell::IsLstEndAction() )
@@ -7603,9 +7605,9 @@ void SwFrm::Retouche( const SwPageFrm * pPage, const SwRect &rRect ) const
  *     of the frame transparency is considered and its color is not "no fill"/"auto fill"
  *
  * Old description in German:
- * Returns the Backgroundbrush for the area of the Frm.
- * The Brush is defined by the Frm or by an upper, the first Brush is
- * used. If no Brush is defined for a Frm, false is returned.
+ * Returns the Backgroundbrush for the area of the Frame.
+ * The Brush is defined by the Frame or by an upper, the first Brush is
+ * used. If no Brush is defined for a Frame, false is returned.
  *
  * @param rpBrush
  * output parameter - constant reference pointer the found background brush
@@ -7629,34 +7631,62 @@ void SwFrm::Retouche( const SwPageFrm * pPage, const SwRect &rRect ) const
  * input parameter - boolean indicating, if background brush should *not* be
  * taken from parent.
  *
+ * @param bConsiderTextBox
+ * consider the TextBox of this fly frame (if there is any) when determining
+ * the background color, useful for automatic font color.
+ *
  * @return true, if a background brush for the frame is found
  */
-bool SwFrm::GetBackgroundBrush(
+bool SwFrame::GetBackgroundBrush(
     drawinglayer::attribute::SdrAllFillAttributesHelperPtr& rFillAttributes,
     const SvxBrushItem* & rpBrush,
     const Color*& rpCol,
     SwRect &rOrigRect,
-    bool bLowerMode ) const
+    bool bLowerMode,
+    bool bConsiderTextBox ) const
 {
-    const SwFrm *pFrm = this;
-    SwViewShell *pSh = getRootFrm()->GetCurrShell();
+    const SwFrame *pFrame = this;
+    SwViewShell *pSh = getRootFrame()->GetCurrShell();
     const SwViewOption *pOpt = pSh->GetViewOptions();
-    rpBrush = 0;
-    rpCol = NULL;
+    rpBrush = nullptr;
+    rpCol = nullptr;
     do
-    {   if ( pFrm->IsPageFrm() && !pOpt->IsPageBack() )
+    {
+        if ( pFrame->IsPageFrame() && !pOpt->IsPageBack() )
             return false;
 
-        //UUUU
-        if (pFrm->supportsFullDrawingLayerFillAttributeSet())
-            rFillAttributes = pFrm->getSdrAllFillAttributesHelper();
-        const SvxBrushItem &rBack = pFrm->GetAttrSet()->GetBackground();
-
-        if( pFrm->IsSctFrm() )
+        if (pFrame->supportsFullDrawingLayerFillAttributeSet())
         {
-            const SwSection* pSection = ((SwSectionFrm*)pFrm)->GetSection();
+            bool bHandledTextBox = false;
+            if (pFrame->IsFlyFrame() && bConsiderTextBox)
+            {
+                const SwFlyFrame* pFlyFrame = static_cast<const SwFlyFrame*>(pFrame);
+                SwFrameFormat* pShape
+                    = SwTextBoxHelper::getOtherTextBoxFormat(pFlyFrame->GetFormat(), RES_FLYFRMFMT);
+                if (pShape)
+                {
+                    SdrObject* pObject = pShape->FindRealSdrObject();
+                    if (pObject)
+                    {
+                        // Work with the fill attributes of the shape of the fly frame.
+                        rFillAttributes.reset(
+                            new drawinglayer::attribute::SdrAllFillAttributesHelper(
+                                pObject->GetMergedItemSet()));
+                        bHandledTextBox = true;
+                    }
+                }
+            }
+
+            if (!bHandledTextBox)
+                rFillAttributes = pFrame->getSdrAllFillAttributesHelper();
+        }
+        const SvxBrushItem &rBack = pFrame->GetAttrSet()->GetBackground();
+
+        if( pFrame->IsSctFrame() )
+        {
+            const SwSection* pSection = static_cast<const SwSectionFrame*>(pFrame)->GetSection();
             // OD 20.08.2002 #99657# #GetTransChg#
-            //     Note: If frame <pFrm> is a section of the index and
+            //     Note: If frame <pFrame> is a section of the index and
             //         it its background color is "no fill"/"auto fill" and
             //         it has no background graphic and
             //         we are not in the page preview and
@@ -7681,10 +7711,10 @@ bool SwFrm::GetBackgroundBrush(
         }
 
         // OD 20.08.2002 #99657#
-        //     determine, if background draw of frame <pFrm> considers transparency
+        //     determine, if background draw of frame <pFrame> considers transparency
         //     --> Status Quo: background transparency have to be
         //                     considered for fly frames
-        const bool bConsiderBackgroundTransparency = pFrm->IsFlyFrm();
+        const bool bConsiderBackgroundTransparency = pFrame->IsFlyFrame();
 
         // #i125189# Do not base the decision for using the parent's fill style for this
         // frame when the new DrawingLayer FillAttributes are used on the SdrAllFillAttributesHelper
@@ -7704,7 +7734,7 @@ bool SwFrm::GetBackgroundBrush(
             {
                 // maybe optimized already when 100% transparency is used somewhere, need to test
                 // XFillStyleItem directly from the model data
-                const drawing::FillStyle eFillStyle(static_cast< const XFillStyleItem& >(pFrm->GetAttrSet()->Get(XATTR_FILLSTYLE)).GetValue());
+                const drawing::FillStyle eFillStyle(static_cast< const XFillStyleItem& >(pFrame->GetAttrSet()->Get(XATTR_FILLSTYLE)).GetValue());
 
                 if(drawing::FillStyle_NONE != eFillStyle)
                 {
@@ -7716,7 +7746,7 @@ bool SwFrm::GetBackgroundBrush(
         // OD 20.08.2002 #99657#
         //     add condition:
         //     If <bConsiderBackgroundTransparency> is set - see above -,
-        //     return brush of frame <pFrm>, if its color is *not* "no fill"/"auto fill"
+        //     return brush of frame <pFrame>, if its color is *not* "no fill"/"auto fill"
         if (
             // #i125189# Done when the new DrawingLayer FillAttributes are used and
             // not drawing::FillStyle_NONE (see above)
@@ -7733,22 +7763,22 @@ bool SwFrm::GetBackgroundBrush(
            )
         {
             rpBrush = &rBack;
-            if ( pFrm->IsPageFrm() && pSh->GetViewOptions()->getBrowseMode() )
+            if ( pFrame->IsPageFrame() && pSh->GetViewOptions()->getBrowseMode() )
             {
-                rOrigRect = pFrm->Frm();
+                rOrigRect = pFrame->Frame();
             }
             else
             {
-                if ( pFrm->Frm().SSize() != pFrm->Prt().SSize() )
+                if ( pFrame->Frame().SSize() != pFrame->Prt().SSize() )
                 {
-                    SwBorderAttrAccess aAccess( SwFrm::GetCache(), pFrm );
+                    SwBorderAttrAccess aAccess( SwFrame::GetCache(), pFrame );
                     const SwBorderAttrs &rAttrs = *aAccess.Get();
-                    ::lcl_CalcBorderRect( rOrigRect, pFrm, rAttrs, false );
+                    ::lcl_CalcBorderRect( rOrigRect, pFrame, rAttrs, false, gProp );
                 }
                 else
                 {
-                    rOrigRect = pFrm->Prt();
-                    rOrigRect += pFrm->Frm().Pos();
+                    rOrigRect = pFrame->Prt();
+                    rOrigRect += pFrame->Frame().Pos();
                 }
             }
 
@@ -7762,16 +7792,16 @@ bool SwFrm::GetBackgroundBrush(
         }
 
         // get parent frame - anchor or upper - for next loop
-        if ( pFrm->IsFlyFrm() )
+        if ( pFrame->IsFlyFrame() )
         {
             // OD 20.08.2002 - use "static_cast" instead of "old C-cast"
-            pFrm = (static_cast<const SwFlyFrm*>(pFrm))->GetAnchorFrm();
+            pFrame = (static_cast<const SwFlyFrame*>(pFrame))->GetAnchorFrame();
         }
         else
         {
-            pFrm = pFrm->GetUpper();
+            pFrame = pFrame->GetUpper();
         }
-    } while ( pFrm );
+    } while ( pFrame );
 
     return false;
 }
@@ -7784,52 +7814,53 @@ void SetOutDevAndWin( SwViewShell *pSh, OutputDevice *pO,
     pSh->mpOpt->SetZoom( nZoom );
 }
 
-Graphic SwFrmFmt::MakeGraphic( ImageMap* )
+Graphic SwFrameFormat::MakeGraphic( ImageMap* )
 {
     return Graphic();
 }
 
-Graphic SwFlyFrmFmt::MakeGraphic( ImageMap* pMap )
+Graphic SwFlyFrameFormat::MakeGraphic( ImageMap* pMap )
 {
     Graphic aRet;
     //search any Fly!
-    SwIterator<SwFrm,SwFmt> aIter( *this );
-    SwFrm *pFirst = aIter.First();
-    SwViewShell *pSh;
-    if ( pFirst && 0 != ( pSh = pFirst->getRootFrm()->GetCurrShell()) )
+    SwIterator<SwFrame,SwFormat> aIter( *this );
+    SwFrame *pFirst = aIter.First();
+    SwViewShell *const pSh =
+        (pFirst) ? pFirst->getRootFrame()->GetCurrShell() : nullptr;
+    if (nullptr != pSh)
     {
         SwViewShell *pOldGlobal = gProp.pSGlobalShell;
         gProp.pSGlobalShell = pSh;
 
         bool bNoteURL = pMap &&
-            SfxItemState::SET != GetAttrSet().GetItemState( RES_URL, true );
+            SfxItemState::SET != GetAttrSet().GetItemState( RES_URL );
         if( bNoteURL )
         {
             OSL_ENSURE( !pNoteURL, "MakeGraphic: pNoteURL already used? " );
             pNoteURL = new SwNoteURL;
         }
-        SwFlyFrm *pFly = (SwFlyFrm*)pFirst;
+        SwFlyFrame *pFly = static_cast<SwFlyFrame*>(pFirst);
 
         OutputDevice *pOld = pSh->GetOut();
-        VirtualDevice aDev( *pOld );
-        aDev.EnableOutput( false );
+        ScopedVclPtrInstance< VirtualDevice > pDev( *pOld );
+        pDev->EnableOutput( false );
 
         GDIMetaFile aMet;
         MapMode aMap( pOld->GetMapMode().GetMapUnit() );
-        aDev.SetMapMode( aMap );
+        pDev->SetMapMode( aMap );
         aMet.SetPrefMapMode( aMap );
 
         ::SwCalcPixStatics( pSh->GetOut() );
-        aMet.SetPrefSize( pFly->Frm().SSize() );
+        aMet.SetPrefSize( pFly->Frame().SSize() );
 
-        aMet.Record( &aDev );
-        aDev.SetLineColor();
-        aDev.SetFillColor();
-        aDev.SetFont( pOld->GetFont() );
+        aMet.Record( pDev.get() );
+        pDev->SetLineColor();
+        pDev->SetFillColor();
+        pDev->SetFont( pOld->GetFont() );
 
         //Enlarge the rectangle if needed, so the border is painted too.
-        SwRect aOut( pFly->Frm() );
-        SwBorderAttrAccess aAccess( SwFrm::GetCache(), pFly );
+        SwRect aOut( pFly->Frame() );
+        SwBorderAttrAccess aAccess( SwFrame::GetCache(), pFly );
         const SwBorderAttrs &rAttrs = *aAccess.Get();
         if ( rAttrs.CalcRightLine() )
             aOut.SSize().Width() += 2*gProp.nSPixelSzW;
@@ -7842,37 +7873,39 @@ Graphic SwFlyFrmFmt::MakeGraphic( ImageMap* pMap )
 
         vcl::Window *pWin = pSh->GetWin();
         sal_uInt16 nZoom = pSh->GetViewOptions()->GetZoom();
-        ::SetOutDevAndWin( pSh, &aDev, 0, 100 );
+        ::SetOutDevAndWin( pSh, pDev, nullptr, 100 );
         gProp.bSFlyMetafile = true;
         gProp.pSFlyMetafileOut = pWin;
 
-        SwViewImp *pImp = pSh->Imp();
+        SwViewShellImp *pImp = pSh->Imp();
         gProp.pSFlyOnlyDraw = pFly;
         gProp.pSLines = new SwLineRects;
 
         // OD 09.12.2002 #103045# - determine page, fly frame is on
-        const SwPageFrm* pFlyPage = pFly->FindPageFrm();
+        const SwPageFrame* pFlyPage = pFly->FindPageFrame();
         const Color aPageBackgrdColor(pFlyPage->GetDrawBackgrdColor());
-        const IDocumentDrawModelAccess* pIDDMA = pSh->getIDocumentDrawModelAccess();
+        const IDocumentDrawModelAccess& rIDDMA = pSh->getIDocumentDrawModelAccess();
         // --> OD #i76669#
         SwViewObjectContactRedirector aSwRedirector( *pSh );
         // <--
-        pImp->PaintLayer( pIDDMA->GetHellId(), 0, aOut, &aPageBackgrdColor,
+        pImp->PaintLayer( rIDDMA.GetHellId(), nullptr,
+                          *pFlyPage, aOut, &aPageBackgrdColor,
                           pFlyPage->IsRightToLeft(),
                           &aSwRedirector );
-        gProp.pSLines->PaintLines( &aDev );
-        if ( pFly->IsFlyInCntFrm() )
-            pFly->Paint( aOut );
-        gProp.pSLines->PaintLines( &aDev );
+        gProp.pSLines->PaintLines( pDev, gProp );
+        if ( pFly->IsFlyInContentFrame() )
+            pFly->Paint( *pDev, aOut );
+        gProp.pSLines->PaintLines( pDev, gProp );
         // OD 30.08.2002 #102450# - add 3rd parameter
-        pImp->PaintLayer( pIDDMA->GetHeavenId(), 0, aOut, &aPageBackgrdColor,
+        pImp->PaintLayer( rIDDMA.GetHeavenId(), nullptr,
+                          *pFlyPage, aOut, &aPageBackgrdColor,
                           pFlyPage->IsRightToLeft(),
                           &aSwRedirector );
-        gProp.pSLines->PaintLines( &aDev );
+        gProp.pSLines->PaintLines( pDev, gProp );
         DELETEZ( gProp.pSLines );
-        gProp.pSFlyOnlyDraw = 0;
+        gProp.pSFlyOnlyDraw = nullptr;
 
-        gProp.pSFlyMetafileOut = 0;
+        gProp.pSFlyMetafileOut = nullptr;
         gProp.bSFlyMetafile = false;
         ::SetOutDevAndWin( pSh, pOld, pWin, nZoom );
 
@@ -7880,34 +7913,33 @@ Graphic SwFlyFrmFmt::MakeGraphic( ImageMap* pMap )
            pSh->DLPostPaint2(true);
 
         aMet.Stop();
-        aMet.Move( -pFly->Frm().Left(), -pFly->Frm().Top() );
+        aMet.Move( -pFly->Frame().Left(), -pFly->Frame().Top() );
         aRet = Graphic( aMet );
 
         if( bNoteURL )
         {
             OSL_ENSURE( pNoteURL, "MakeGraphic: Good Bye, NoteURL." );
-            pNoteURL->FillImageMap( pMap, pFly->Frm().Pos(), aMap );
+            pNoteURL->FillImageMap( pMap, pFly->Frame().Pos(), aMap );
             delete pNoteURL;
-            pNoteURL = NULL;
+            pNoteURL = nullptr;
         }
         gProp.pSGlobalShell = pOldGlobal;
     }
     return aRet;
 }
 
-Graphic SwDrawFrmFmt::MakeGraphic( ImageMap* )
+Graphic SwDrawFrameFormat::MakeGraphic( ImageMap* )
 {
     Graphic aRet;
-    SwDrawModel* pMod = getIDocumentDrawModelAccess()->GetDrawModel();
+    SwDrawModel* pMod = getIDocumentDrawModelAccess().GetDrawModel();
     if ( pMod )
     {
         SdrObject *pObj = FindSdrObject();
-        SdrView *pView = new SdrView( pMod );
+        std::unique_ptr<SdrView> pView( new SdrView( pMod ) );
         SdrPageView *pPgView = pView->ShowSdrPage(pView->GetModel()->GetPage(0));
         pView->MarkObj( pObj, pPgView );
         aRet = pView->GetMarkedObjBitmapEx();
         pView->HideSdrPage();
-        delete pView;
     }
     return aRet;
 }
