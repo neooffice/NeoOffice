@@ -56,6 +56,7 @@
 #include <undobj.hxx>
 #include <swundo.hxx>
 #include <swtable.hxx>
+#include <tblafmt.hxx>
 #include <tblsel.hxx>
 #include <pagedesc.hxx>
 #include <poolfmt.hxx>
@@ -71,14 +72,15 @@ using namespace ::com::sun::star;
 sal_uLong SwReader::Read( const Reader& rOptions )
 {
     // copy variables
-    Reader* po = (Reader*) &rOptions;
+    Reader* po = const_cast<Reader*>(&rOptions);
     po->pStrm = pStrm;
     po->pStg  = pStg;
     po->xStg  = xStg;
-    po->bInsertMode = 0 != pCrsr;
+    po->bInsertMode = nullptr != pCursor;
+    po->bSkipImages = mbSkipImages;
 
     // if a Medium is selected, get its Stream
-    if( 0 != (po->pMedium = pMedium ) &&
+    if( nullptr != (po->pMedium = pMedium ) &&
         !po->SetStrmStgPtr() )
     {
         po->SetReadUTF8( false );
@@ -94,22 +96,22 @@ sal_uLong SwReader::Read( const Reader& rOptions )
 
     // while reading, do not call OLE-Modified
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    Link aOLELink( pDoc->GetOle2Link() );
-    pDoc->SetOle2Link( Link() );
+    Link<bool,void> aOLELink( pDoc->GetOle2Link() );
+    pDoc->SetOle2Link( Link<bool,void>() );
 
     pDoc->SetInReading( true );
-    pDoc->SetInXMLImport( 0 != dynamic_cast< XMLReader* >(po) );
+    pDoc->SetInXMLImport( dynamic_cast< XMLReader* >(po) !=  nullptr );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    Link aOLELink( mxDoc->GetOle2Link() );
-    mxDoc->SetOle2Link( Link() );
+    Link<bool,void> aOLELink( mxDoc->GetOle2Link() );
+    mxDoc->SetOle2Link( Link<bool,void>() );
 
     mxDoc->SetInReading( true );
-    mxDoc->SetInXMLImport( 0 != dynamic_cast< XMLReader* >(po) );
+    mxDoc->SetInXMLImport( dynamic_cast< XMLReader* >(po) !=  nullptr );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     SwPaM *pPam;
-    if( pCrsr )
-        pPam = pCrsr;
+    if( pCursor )
+        pPam = pCursor;
     else
     {
         // if the Reader was not called by a Shell, create a PaM ourselves
@@ -123,17 +125,17 @@ sal_uLong SwReader::Read( const Reader& rOptions )
         // unless the filter is not HTML,
         // or a SetTemplateName was called in ConvertFrom.
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        if( !pDoc->getIDocumentSettingAccess().get(IDocumentSettingAccess::HTML_MODE) || ReadHTML != po || !po->pTemplate  )
+        if( !pDoc->getIDocumentSettingAccess().get(DocumentSettingId::HTML_MODE) || ReadHTML != po || !po->mxTemplate.is()  )
             po->SetTemplate( *pDoc );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        if( !mxDoc->getIDocumentSettingAccess().get(IDocumentSettingAccess::HTML_MODE) || ReadHTML != po || !po->mxTemplate.is()  )
+        if( !mxDoc->getIDocumentSettingAccess().get(DocumentSettingId::HTML_MODE) || ReadHTML != po || !po->mxTemplate.is()  )
             po->SetTemplate( *mxDoc );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     }
 
     // Pams are connected like rings; stop when we return to the 1st element
     SwPaM *pEnd = pPam;
-    SwUndoInsDoc* pUndo = 0;
+    SwUndoInsDoc* pUndo = nullptr;
 
     bool bReadPageDescs = false;
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -141,11 +143,12 @@ sal_uLong SwReader::Read( const Reader& rOptions )
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     bool const bDocUndo = mxDoc->GetIDocumentUndoRedo().DoesUndo();
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    bool bSaveUndo = bDocUndo && pCrsr;
+    bool bSaveUndo = bDocUndo && pCursor;
     if( bSaveUndo )
     {
         // the reading of the page template cannot be undone!
-        if( ( bReadPageDescs = po->aOpt.IsPageDescs() ) )
+        bReadPageDescs = po->aOpt.IsPageDescs();
+        if( bReadPageDescs )
         {
             bSaveUndo = false;
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -158,10 +161,10 @@ sal_uLong SwReader::Read( const Reader& rOptions )
         {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pDoc->GetIDocumentUndoRedo().ClearRedo();
-            pDoc->GetIDocumentUndoRedo().StartUndo( UNDO_INSDOKUMENT, NULL );
+            pDoc->GetIDocumentUndoRedo().StartUndo( SwUndoId::INSDOKUMENT, nullptr );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             mxDoc->GetIDocumentUndoRedo().ClearRedo();
-            mxDoc->GetIDocumentUndoRedo().StartUndo( UNDO_INSDOKUMENT, NULL );
+            mxDoc->GetIDocumentUndoRedo().StartUndo( SwUndoId::INSDOKUMENT, nullptr );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         }
     }
@@ -170,20 +173,20 @@ sal_uLong SwReader::Read( const Reader& rOptions )
 
     SwNodeIndex aSplitIdx( pDoc->GetNodes() );
 
-    RedlineMode_t eOld = pDoc->getIDocumentRedlineAccess().GetRedlineMode();
+    RedlineFlags eOld = pDoc->getIDocumentRedlineAccess().GetRedlineFlags();
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     mxDoc->GetIDocumentUndoRedo().DoUndo(false);
 
     SwNodeIndex aSplitIdx( mxDoc->GetNodes() );
 
-    RedlineMode_t eOld = mxDoc->getIDocumentRedlineAccess().GetRedlineMode();
+    RedlineFlags eOld = mxDoc->getIDocumentRedlineAccess().GetRedlineFlags();
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    RedlineMode_t ePostReadRedlineMode( nsRedlineMode_t::REDLINE_IGNORE );
+    RedlineFlags ePostReadRedlineFlags( RedlineFlags::Ignore );
 
     // Array of FlyFormats
-    SwFrmFmts aFlyFrmArr;
+    SwFrameFormatsV aFlyFrameArr;
     // only read templates? then ignore multi selection!
-    bool bFmtsOnly = po->aOpt.IsFmtsOnly();
+    bool bFormatsOnly = po->aOpt.IsFormatsOnly();
 
     while( true )
     {
@@ -191,13 +194,13 @@ sal_uLong SwReader::Read( const Reader& rOptions )
             pUndo = new SwUndoInsDoc( *pPam );
 
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        pDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( nsRedlineMode_t::REDLINE_IGNORE );
+        pDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( RedlineFlags::Ignore );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        mxDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( nsRedlineMode_t::REDLINE_IGNORE );
+        mxDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( RedlineFlags::Ignore );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
-        SwPaM* pUndoPam = 0;
-        if( bDocUndo || pCrsr )
+        SwPaM* pUndoPam = nullptr;
+        if( bDocUndo || pCursor )
         {
             // set Pam to the previous node, so that it is not also moved
             const SwNodeIndex& rTmp = pPam->GetPoint()->nNode;
@@ -205,118 +208,118 @@ sal_uLong SwReader::Read( const Reader& rOptions )
         }
 
         // store for now all Fly's
-        if( pCrsr )
+        if( pCursor )
         {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            std::copy(pDoc->GetSpzFrmFmts()->begin(),
-                pDoc->GetSpzFrmFmts()->end(), std::back_inserter(aFlyFrmArr));
+            std::copy(pDoc->GetSpzFrameFormats()->begin(),
+                pDoc->GetSpzFrameFormats()->end(), std::back_inserter(aFlyFrameArr));
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            std::copy(mxDoc->GetSpzFrmFmts()->begin(),
-                mxDoc->GetSpzFrmFmts()->end(), std::back_inserter(aFlyFrmArr));
+            std::copy(mxDoc->GetSpzFrameFormats()->begin(),
+                mxDoc->GetSpzFrameFormats()->end(), std::back_inserter(aFlyFrameArr));
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         }
 
-        const sal_Int32 nSttCntnt = pPam->GetPoint()->nContent.GetIndex();
+        const sal_Int32 nSttContent = pPam->GetPoint()->nContent.GetIndex();
 
         // make sure the End position is correct for all Readers
-        SwCntntNode* pCNd = pPam->GetCntntNode();
-        sal_Int32 nEndCntnt = pCNd ? pCNd->Len() - nSttCntnt : 0;
+        SwContentNode* pCNd = pPam->GetContentNode();
+        sal_Int32 nEndContent = pCNd ? pCNd->Len() - nSttContent : 0;
         SwNodeIndex aEndPos( pPam->GetPoint()->nNode, 1 );
 
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        pDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( eOld );
+        pDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( eOld );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        mxDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( eOld );
+        mxDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( eOld );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        nError = po->Read( *pDoc, GetBaseURL(), *pPam, aFileName );
+        nError = po->Read( *pDoc, sBaseURL, *pPam, aFileName );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        nError = po->Read( *mxDoc, GetBaseURL(), *pPam, aFileName );
+        nError = po->Read( *mxDoc, sBaseURL, *pPam, aFileName );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         // an ODF document may contain redline mode in settings.xml; save it!
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        ePostReadRedlineMode = pDoc->getIDocumentRedlineAccess().GetRedlineMode();
+        ePostReadRedlineFlags = pDoc->getIDocumentRedlineAccess().GetRedlineFlags();
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        ePostReadRedlineMode = mxDoc->getIDocumentRedlineAccess().GetRedlineMode();
+        ePostReadRedlineFlags = mxDoc->getIDocumentRedlineAccess().GetRedlineFlags();
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        pDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( nsRedlineMode_t::REDLINE_IGNORE );
+        pDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( RedlineFlags::Ignore );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        mxDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( nsRedlineMode_t::REDLINE_IGNORE );
+        mxDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( RedlineFlags::Ignore );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         if( !IsError( nError ))     // set the End position already
         {
-            aEndPos--;
-            pCNd = aEndPos.GetNode().GetCntntNode();
+            --aEndPos;
+            pCNd = aEndPos.GetNode().GetContentNode();
+            if( !pCNd && nullptr == ( pCNd = SwNodes::GoPrevious( &aEndPos ) ))
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            if( !pCNd && 0 == ( pCNd = pDoc->GetNodes().GoPrevious( &aEndPos ) ))
                 pCNd = pDoc->GetNodes().GoNext( &aEndPos );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            if( !pCNd && 0 == ( pCNd = mxDoc->GetNodes().GoPrevious( &aEndPos ) ))
                 pCNd = mxDoc->GetNodes().GoNext( &aEndPos );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
             pPam->GetPoint()->nNode = aEndPos;
             const sal_Int32 nLen = pCNd->Len();
-            if( nLen < nEndCntnt )
-                nEndCntnt = 0;
+            if( nLen < nEndContent )
+                nEndContent = 0;
             else
-                nEndCntnt = nLen - nEndCntnt;
-            pPam->GetPoint()->nContent.Assign( pCNd, nEndCntnt );
+                nEndContent = nLen - nEndContent;
+            pPam->GetPoint()->nContent.Assign( pCNd, nEndContent );
 
-            const SwStartNode* pTblBoxStart = pCNd->FindTableBoxStartNode();
-            if ( pTblBoxStart )
+            const SwStartNode* pTableBoxStart = pCNd->FindTableBoxStartNode();
+            if ( pTableBoxStart )
             {
-                SwTableBox* pBox = pTblBoxStart->GetTblBox();
+                SwTableBox* pBox = pTableBoxStart->GetTableBox();
                 if ( pBox )
                 {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                    pDoc->ChkBoxNumFmt( *pBox, true );
+                    pDoc->ChkBoxNumFormat( *pBox, true );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                    mxDoc->ChkBoxNumFmt( *pBox, true );
+                    mxDoc->ChkBoxNumFormat( *pBox, true );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 }
             }
         }
 
-        if( pCrsr )
+        if( pCursor )
         {
             *pUndoPam->GetMark() = *pPam->GetPoint();
-            pUndoPam->GetPoint()->nNode++;
+            ++pUndoPam->GetPoint()->nNode;
             SwNode& rNd = pUndoPam->GetNode();
-            if( rNd.IsCntntNode() )
+            if( rNd.IsContentNode() )
                 pUndoPam->GetPoint()->nContent.Assign(
-                                    (SwCntntNode*)&rNd, nSttCntnt );
+                                    static_cast<SwContentNode*>(&rNd), nSttContent );
             else
-                pUndoPam->GetPoint()->nContent.Assign( 0, 0 );
+                pUndoPam->GetPoint()->nContent.Assign( nullptr, 0 );
 
             bool bChkHeaderFooter = rNd.FindHeaderStartNode() ||
                                    rNd.FindFooterStartNode();
 
             // search all new Fly's, and store them as individual Undo Objects
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            for( sal_uInt16 n = 0; n < pDoc->GetSpzFrmFmts()->size(); ++n )
+            for( SwFrameFormats::size_type n = 0; n < pDoc->GetSpzFrameFormats()->size(); ++n )
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            for( sal_uInt16 n = 0; n < mxDoc->GetSpzFrmFmts()->size(); ++n )
+            for( SwFrameFormats::size_type n = 0; n < mxDoc->GetSpzFrameFormats()->size(); ++n )
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                SwFrmFmt* pFrmFmt = (*pDoc->GetSpzFrmFmts())[ n ];
+                SwFrameFormat* pFrameFormat = (*pDoc->GetSpzFrameFormats())[ n ];
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                SwFrmFmt* pFrmFmt = (*mxDoc->GetSpzFrmFmts())[ n ];
+                SwFrameFormat* pFrameFormat = (*mxDoc->GetSpzFrameFormats())[ n ];
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                const SwFmtAnchor& rAnchor = pFrmFmt->GetAnchor();
-                if( USHRT_MAX == aFlyFrmArr.GetPos( pFrmFmt) )
+                const SwFormatAnchor& rAnchor = pFrameFormat->GetAnchor();
+                // ok, here IsAlive is a misnomer...
+                if (!aFlyFrameArr.IsAlive(pFrameFormat))
                 {
                     SwPosition const*const pFrameAnchor(
-                            rAnchor.GetCntntAnchor());
-                    if  (   (FLY_AT_PAGE == rAnchor.GetAnchorId())
+                            rAnchor.GetContentAnchor());
+                    if  (   (RndStdIds::FLY_AT_PAGE == rAnchor.GetAnchorId())
                         ||  (   pFrameAnchor
-                            &&  (   (   (FLY_AT_PARA == rAnchor.GetAnchorId())
+                            &&  (   (   (RndStdIds::FLY_AT_PARA == rAnchor.GetAnchorId())
                                     &&  (   (pUndoPam->GetPoint()->nNode ==
                                              pFrameAnchor->nNode)
                                         ||  (pUndoPam->GetMark()->nNode ==
@@ -324,35 +327,26 @@ sal_uLong SwReader::Read( const Reader& rOptions )
                                         )
                                     )
                                 // #i97570# also check frames anchored AT char
-                                ||  (   (FLY_AT_CHAR == rAnchor.GetAnchorId())
+                                ||  (   (RndStdIds::FLY_AT_CHAR == rAnchor.GetAnchorId())
                                     &&  !IsDestroyFrameAnchoredAtChar(
                                               *pFrameAnchor,
                                               *pUndoPam->GetPoint(),
-#ifdef NO_LIBO_BUG_107975_FIX
-                                              *pUndoPam->GetMark(),
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                                              pDoc)
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                                              mxDoc.get())
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-#else	// NO_LIBO_BUG_107975_FIX
                                               *pUndoPam->GetMark())
-#endif	// NO_LIBO_BUG_107975_FIX
                                     )
                                 )
                             )
                         )
                     {
                         if( bChkHeaderFooter &&
-                            (FLY_AT_PARA == rAnchor.GetAnchorId()) &&
-                            RES_DRAWFRMFMT == pFrmFmt->Which() )
+                            (RndStdIds::FLY_AT_PARA == rAnchor.GetAnchorId()) &&
+                            RES_DRAWFRMFMT == pFrameFormat->Which() )
                         {
                             // DrawObjects are not allowed in Headers/Footers!
-                            pFrmFmt->DelFrms();
+                            pFrameFormat->DelFrames();
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                            pDoc->DelFrmFmt( pFrmFmt );
+                            pDoc->DelFrameFormat( pFrameFormat );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                            mxDoc->DelFrmFmt( pFrmFmt );
+                            mxDoc->DelFrameFormat( pFrameFormat );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                             --n;
                         }
@@ -361,38 +355,38 @@ sal_uLong SwReader::Read( const Reader& rOptions )
                             if( bSaveUndo )
                             {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                                pDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( eOld );
+                                pDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( eOld );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                                mxDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( eOld );
+                                mxDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( eOld );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                 // UGLY: temp. enable undo
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                 pDoc->GetIDocumentUndoRedo().DoUndo(true);
                                 pDoc->GetIDocumentUndoRedo().AppendUndo(
-                                    new SwUndoInsLayFmt( pFrmFmt,0,0 ) );
+                                    new SwUndoInsLayFormat( pFrameFormat,0,0 ) );
                                 pDoc->GetIDocumentUndoRedo().DoUndo(false);
-                                pDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( nsRedlineMode_t::REDLINE_IGNORE );
+                                pDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( RedlineFlags::Ignore );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                 mxDoc->GetIDocumentUndoRedo().DoUndo(true);
                                 mxDoc->GetIDocumentUndoRedo().AppendUndo(
-                                    new SwUndoInsLayFmt( pFrmFmt,0,0 ) );
+                                    new SwUndoInsLayFormat( pFrameFormat,0,0 ) );
                                 mxDoc->GetIDocumentUndoRedo().DoUndo(false);
-                                mxDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( nsRedlineMode_t::REDLINE_IGNORE );
+                                mxDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( RedlineFlags::Ignore );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                             }
-                            if( pFrmFmt->GetDepends() )
+                            if( pFrameFormat->HasWriterListeners() )
                             {
                                 // Draw-Objects create a Frame when being inserted; thus delete them
-                                pFrmFmt->DelFrms();
+                                pFrameFormat->DelFrames();
                             }
 
-                            if (FLY_AT_PAGE == rAnchor.GetAnchorId())
+                            if (RndStdIds::FLY_AT_PAGE == rAnchor.GetAnchorId())
                             {
-                                if( !rAnchor.GetCntntAnchor() )
+                                if( !rAnchor.GetContentAnchor() )
                                 {
-                                    pFrmFmt->MakeFrms();
+                                    pFrameFormat->MakeFrames();
                                 }
-                                else if( pCrsr )
+                                else if( pCursor )
                                 {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                     pDoc->SetContainsAtPageObjWithContentAnchor( true );
@@ -402,36 +396,36 @@ sal_uLong SwReader::Read( const Reader& rOptions )
                                 }
                             }
                             else
-                                pFrmFmt->MakeFrms();
+                                pFrameFormat->MakeFrames();
                         }
                     }
                 }
             }
-            if( !aFlyFrmArr.empty() )
-                aFlyFrmArr.clear();
+            if( !aFlyFrameArr.empty() )
+                aFlyFrameArr.clear();
 
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            pDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( eOld );
+            pDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( eOld );
             if( pDoc->getIDocumentRedlineAccess().IsRedlineOn() )
                 pDoc->getIDocumentRedlineAccess().AppendRedline( new SwRangeRedline( nsRedlineType_t::REDLINE_INSERT, *pUndoPam ), true);
             else
                 pDoc->getIDocumentRedlineAccess().SplitRedline( *pUndoPam );
-            pDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( nsRedlineMode_t::REDLINE_IGNORE );
+            pDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( RedlineFlags::Ignore );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            mxDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( eOld );
+            mxDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( eOld );
             if( mxDoc->getIDocumentRedlineAccess().IsRedlineOn() )
                 mxDoc->getIDocumentRedlineAccess().AppendRedline( new SwRangeRedline( nsRedlineType_t::REDLINE_INSERT, *pUndoPam ), true);
             else
                 mxDoc->getIDocumentRedlineAccess().SplitRedline( *pUndoPam );
-            mxDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( nsRedlineMode_t::REDLINE_IGNORE );
+            mxDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( RedlineFlags::Ignore );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         }
         if( bSaveUndo )
         {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            pDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( eOld );
+            pDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( eOld );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            mxDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( eOld );
+            mxDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( eOld );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pUndo->SetInsertRange( *pUndoPam, false );
             // UGLY: temp. enable undo
@@ -439,28 +433,28 @@ sal_uLong SwReader::Read( const Reader& rOptions )
             pDoc->GetIDocumentUndoRedo().DoUndo(true);
             pDoc->GetIDocumentUndoRedo().AppendUndo( pUndo );
             pDoc->GetIDocumentUndoRedo().DoUndo(false);
-            pDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( nsRedlineMode_t::REDLINE_IGNORE );
+            pDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( RedlineFlags::Ignore );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             mxDoc->GetIDocumentUndoRedo().DoUndo(true);
             mxDoc->GetIDocumentUndoRedo().AppendUndo( pUndo );
             mxDoc->GetIDocumentUndoRedo().DoUndo(false);
-            mxDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( nsRedlineMode_t::REDLINE_IGNORE );
+            mxDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( RedlineFlags::Ignore );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         }
 
         delete pUndoPam;
 
-        pPam = (SwPaM *) pPam->GetNext();
+        pPam = pPam->GetNext();
         if( pPam == pEnd )
             break;
 
         // only read templates? then ignore multi selection! Bug 68593
-        if( bFmtsOnly )
+        if( bFormatsOnly )
             break;
 
         /*
          * !!! The Status of the Stream has to be reset directly. !!!
-         *     When Seeking, the current Status-, EOF- und bad-Bit is set;
+         *     When Seeking, the current Status-, EOF- and bad-Bit is set;
          *     nobody knows why
          */
         if( pStrm )
@@ -478,7 +472,9 @@ sal_uLong SwReader::Read( const Reader& rOptions )
     pDoc->UpdateNumRule();
     pDoc->ChkCondColls();
     pDoc->SetAllUniqueFlyNames();
-    pDoc->getIDocumentState().SetLoaded( true );
+    pDoc->getIDocumentState().SetLoaded();
+    // Clear unassigned cell styles, because they aren't needed anymore.
+    pDoc->GetCellStyles().clear();
 
     pDoc->GetIDocumentUndoRedo().DoUndo(bDocUndo);
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -489,7 +485,9 @@ sal_uLong SwReader::Read( const Reader& rOptions )
     mxDoc->UpdateNumRule();
     mxDoc->ChkCondColls();
     mxDoc->SetAllUniqueFlyNames();
-    mxDoc->getIDocumentState().SetLoaded( true );
+    mxDoc->getIDocumentState().SetLoaded();
+    // Clear unassigned cell styles, because they aren't needed anymore.
+    mxDoc->GetCellStyles().clear();
 
     mxDoc->GetIDocumentUndoRedo().DoUndo(bDocUndo);
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -498,19 +496,19 @@ sal_uLong SwReader::Read( const Reader& rOptions )
         if( bSaveUndo )
         {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            pDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( eOld );
-            pDoc->GetIDocumentUndoRedo().EndUndo( UNDO_INSDOKUMENT, NULL );
-            pDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( nsRedlineMode_t::REDLINE_IGNORE );
+            pDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( eOld );
+            pDoc->GetIDocumentUndoRedo().EndUndo( SwUndoId::INSDOKUMENT, nullptr );
+            pDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( RedlineFlags::Ignore );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            mxDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( eOld );
-            mxDoc->GetIDocumentUndoRedo().EndUndo( UNDO_INSDOKUMENT, NULL );
-            mxDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( nsRedlineMode_t::REDLINE_IGNORE );
+            mxDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( eOld );
+            mxDoc->GetIDocumentUndoRedo().EndUndo( SwUndoId::INSDOKUMENT, nullptr );
+            mxDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( RedlineFlags::Ignore );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         }
     }
 
     // delete Pam if it was created only for reading
-    if( !pCrsr )
+    if( !pCursor )
     {
         delete pPam;          // open a new one
 
@@ -524,25 +522,24 @@ sal_uLong SwReader::Read( const Reader& rOptions )
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         // not insert: set the redline mode read from settings.xml
-        eOld = static_cast<RedlineMode_t>(
-                ePostReadRedlineMode & ~nsRedlineMode_t::REDLINE_IGNORE);
+        eOld = ePostReadRedlineFlags & ~RedlineFlags::Ignore;
 
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        pDoc->getIDocumentFieldsAccess().SetFieldsDirty(false, NULL, 0);
+        pDoc->getIDocumentFieldsAccess().SetFieldsDirty(false, nullptr, 0);
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        mxDoc->getIDocumentFieldsAccess().SetFieldsDirty(false, NULL, 0);
+        mxDoc->getIDocumentFieldsAccess().SetFieldsDirty(false, nullptr, 0);
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     }
 
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    pDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( eOld );
+    pDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( eOld );
     pDoc->SetOle2Link( aOLELink );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    mxDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( eOld );
+    mxDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( eOld );
     mxDoc->SetOle2Link( aOLELink );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
-    if( pCrsr )                 // das Doc ist jetzt modifiziert
+    if( pCursor )                 // the document is now modified
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pDoc->getIDocumentState().SetModified();
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -575,53 +572,46 @@ sal_uLong SwReader::Read( const Reader& rOptions )
 
 
 SwReader::SwReader(SfxMedium& rMedium, const OUString& rFileName, SwDoc *pDocument)
-    : SwDocFac(pDocument), pStrm(0), pMedium(&rMedium), pCrsr(0),
-    aFileName(rFileName)
+    : SwDocFac(pDocument), pStrm(nullptr), pMedium(&rMedium), pCursor(nullptr),
+    aFileName(rFileName), mbSkipImages(false)
 {
     SetBaseURL( rMedium.GetBaseURL() );
+    SetSkipImages( rMedium.IsSkipImages() );
 }
 
 
 // Read into an existing document
 SwReader::SwReader(SvStream& rStrm, const OUString& rFileName, const OUString& rBaseURL, SwPaM& rPam)
-    : SwDocFac(rPam.GetDoc()), pStrm(&rStrm), pMedium(0), pCrsr(&rPam),
-    aFileName(rFileName)
+    : SwDocFac(rPam.GetDoc()), pStrm(&rStrm), pMedium(nullptr), pCursor(&rPam),
+    aFileName(rFileName), mbSkipImages(false)
 {
     SetBaseURL( rBaseURL );
 }
 
 SwReader::SwReader(SfxMedium& rMedium, const OUString& rFileName, SwPaM& rPam)
-    : SwDocFac(rPam.GetDoc()), pStrm(0), pMedium(&rMedium),
-    pCrsr(&rPam), aFileName(rFileName)
+    : SwDocFac(rPam.GetDoc()), pStrm(nullptr), pMedium(&rMedium),
+    pCursor(&rPam), aFileName(rFileName), mbSkipImages(false)
 {
     SetBaseURL( rMedium.GetBaseURL() );
 }
 
 SwReader::SwReader( const uno::Reference < embed::XStorage > &rStg, const OUString& rFilename, SwPaM &rPam )
-    : SwDocFac(rPam.GetDoc()), pStrm(0), xStg( rStg ), pMedium(0), pCrsr(&rPam), aFileName(rFilename)
+    : SwDocFac(rPam.GetDoc()), pStrm(nullptr), xStg( rStg ), pMedium(nullptr), pCursor(&rPam), aFileName(rFilename), mbSkipImages(false)
 {
 }
 
 Reader::Reader()
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    : pTemplate(0),
-    aDStamp( Date::EMPTY ),
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    : aDStamp( Date::EMPTY ),
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+  : aDStamp( Date::EMPTY ),
     aTStamp( tools::Time::EMPTY ),
     aChkDateTime( DateTime::EMPTY ),
-    pStrm(0), pMedium(0), bInsertMode(false),
+    pStrm(nullptr), pMedium(nullptr), bInsertMode(false),
     bTmplBrowseMode(false), bReadUTF8(false), bBlockMode(false), bOrganizerMode(false),
-    bHasAskTemplateName(false), bIgnoreHTMLComments(false)
+    bHasAskTemplateName(false), bIgnoreHTMLComments(false), bSkipImages(false)
 {
 }
 
 Reader::~Reader()
 {
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    delete pTemplate;
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 
 OUString Reader::GetTemplateName() const
@@ -643,28 +633,20 @@ SwDoc* Reader::GetTemplateDoc()
     else
     {
         INetURLObject aTDir( aTemplateNm );
-        const OUString aFileName = aTDir.GetMainURL( INetURLObject::NO_DECODE );
+        const OUString aFileName = aTDir.GetMainURL( INetURLObject::DecodeMechanism::NONE );
         OSL_ENSURE( !aTDir.HasError(), "No absolute path for template name!" );
         DateTime aCurrDateTime( DateTime::SYSTEM );
         bool bLoad = false;
 
         // if the template is already loaded, check once-a-minute if it has changed
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        if( !pTemplate || aCurrDateTime >= aChkDateTime )
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( !mxTemplate.is() || aCurrDateTime >= aChkDateTime )
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         {
             Date aTstDate( Date::EMPTY );
             tools::Time aTstTime( tools::Time::EMPTY );
             if( FStatHelper::GetModifiedDateTimeOfFile(
-                            aTDir.GetMainURL( INetURLObject::NO_DECODE ),
+                            aTDir.GetMainURL( INetURLObject::DecodeMechanism::NONE ),
                             &aTstDate, &aTstTime ) &&
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                ( !pTemplate || aDStamp != aTstDate || aTStamp != aTstTime ))
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 ( !mxTemplate.is() || aDStamp != aTstDate || aTStamp != aTstTime ))
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             {
                 bLoad = true;
                 aDStamp = aTstDate;
@@ -676,75 +658,43 @@ SwDoc* Reader::GetTemplateDoc()
             aChkDateTime += tools::Time( 0L, 1L );
         }
 
-        if( bLoad )
+        if (bLoad)
         {
             ClearTemplate();
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            OSL_ENSURE( !pTemplate, "Who holds the template doc?" );
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             OSL_ENSURE( !mxTemplate.is(), "Who holds the template doc?" );
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
-                // If the writer module is not installed,
-                // we cannot create a SwDocShell. We could create a
-                // SwWebDocShell however, because this exists always
-                // for the help.
-                SvtModuleOptions aModuleOptions;
-                if( aModuleOptions.IsWriter() )
+            // If the writer module is not installed,
+            // we cannot create a SwDocShell. We could create a
+            // SwWebDocShell however, because this exists always
+            // for the help.
+            SvtModuleOptions aModuleOptions;
+            if (aModuleOptions.IsWriter())
+            {
+                SwDocShell *pDocSh = new SwDocShell(SfxObjectCreateMode::INTERNAL);
+                SfxObjectShellLock xDocSh = pDocSh;
+                if (pDocSh->DoInitNew())
                 {
-                    SwDocShell *pDocSh =
-                        new SwDocShell ( SFX_CREATE_MODE_INTERNAL );
-                    SfxObjectShellLock xDocSh = pDocSh;
-                    if( pDocSh->DoInitNew( 0 ) )
-                    {
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                        pTemplate = pDocSh->GetDoc();
-                        pTemplate->SetOle2Link( Link() );
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                        mxTemplate = pDocSh->GetDoc();
-                        mxTemplate->SetOle2Link( Link() );
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                        // always FALSE
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                        pTemplate->GetIDocumentUndoRedo().DoUndo( false );
-                        pTemplate->getIDocumentSettingAccess().set(IDocumentSettingAccess::BROWSE_MODE, bTmplBrowseMode );
-                        pTemplate->RemoveAllFmtLanguageDependencies();
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                        mxTemplate->GetIDocumentUndoRedo().DoUndo( false );
-                        mxTemplate->getIDocumentSettingAccess().set(IDocumentSettingAccess::BROWSE_MODE, bTmplBrowseMode );
-                        mxTemplate->RemoveAllFmtLanguageDependencies();
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    mxTemplate = pDocSh->GetDoc();
+                    mxTemplate->SetOle2Link( Link<bool,void>() );
+                    // always FALSE
+                    mxTemplate->GetIDocumentUndoRedo().DoUndo( false );
+                    mxTemplate->getIDocumentSettingAccess().set(DocumentSettingId::BROWSE_MODE, bTmplBrowseMode );
+                    mxTemplate->RemoveAllFormatLanguageDependencies();
 
-                        ReadXML->SetOrganizerMode( true );
-                        SfxMedium aMedium( aFileName, sal_False );
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                        SwReader aRdr( aMedium, OUString(), pTemplate );
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                        SwReader aRdr( aMedium, OUString(), mxTemplate.get() );
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                        aRdr.Read( *ReadXML );
-                        ReadXML->SetOrganizerMode( false );
-
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                        pTemplate->acquire();
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                    }
+                    ReadXML->SetOrganizerMode( true );
+                    SfxMedium aMedium( aFileName, StreamMode::NONE );
+                    SwReader aRdr( aMedium, OUString(), mxTemplate.get() );
+                    aRdr.Read( *ReadXML );
+                    ReadXML->SetOrganizerMode( false );
                 }
+            }
         }
 
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        OSL_ENSURE( !pTemplate || FStatHelper::IsDocument( aFileName ) || aTemplateNm=="$$Dummy$$",
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         OSL_ENSURE( !mxTemplate.is() || FStatHelper::IsDocument( aFileName ) || aTemplateNm=="$$Dummy$$",
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 "TemplatePtr but no template exist!" );
     }
 
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    return pTemplate;
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     return mxTemplate.get();
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 
 bool Reader::SetTemplate( SwDoc& rDoc )
@@ -752,19 +702,11 @@ bool Reader::SetTemplate( SwDoc& rDoc )
     bool bRet = false;
 
     GetTemplateDoc();
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    if( pTemplate )
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( mxTemplate.is() )
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
-        rDoc.RemoveAllFmtLanguageDependencies();
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        rDoc.ReplaceStyles( *pTemplate );
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        rDoc.RemoveAllFormatLanguageDependencies();
         rDoc.ReplaceStyles( *mxTemplate );
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        rDoc.getIDocumentFieldsAccess().SetFixFields(false, NULL);
+        rDoc.getIDocumentFieldsAccess().SetFixFields(nullptr);
         bRet = true;
     }
 
@@ -773,16 +715,7 @@ bool Reader::SetTemplate( SwDoc& rDoc )
 
 void Reader::ClearTemplate()
 {
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    if( pTemplate )
-    {
-        if( 0 == pTemplate->release() )
-            delete pTemplate,
-        pTemplate = 0;
-    }
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     mxTemplate.clear();
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 
 void Reader::SetTemplateName( const OUString& rDir )
@@ -797,24 +730,16 @@ void Reader::SetTemplateName( const OUString& rDir )
 void Reader::MakeHTMLDummyTemplateDoc()
 {
     ClearTemplate();
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    pTemplate = new SwDoc;
-    pTemplate->acquire();
-    pTemplate->getIDocumentSettingAccess().set(IDocumentSettingAccess::BROWSE_MODE, bTmplBrowseMode );
-    pTemplate->getIDocumentDeviceAccess().getPrinter( true );
-    pTemplate->RemoveAllFmtLanguageDependencies();
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     mxTemplate = new SwDoc;
-    mxTemplate->getIDocumentSettingAccess().set(IDocumentSettingAccess::BROWSE_MODE, bTmplBrowseMode );
+    mxTemplate->getIDocumentSettingAccess().set(DocumentSettingId::BROWSE_MODE, bTmplBrowseMode );
     mxTemplate->getIDocumentDeviceAccess().getPrinter( true );
-    mxTemplate->RemoveAllFmtLanguageDependencies();
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    mxTemplate->RemoveAllFormatLanguageDependencies();
     aChkDateTime = Date( 1, 1, 2300 );  // year 2300 should be sufficient
     aTemplateNm = "$$Dummy$$";
 }
 
 // Users that do not need to open these Streams / Storages,
-// have to overload this method
+// have to override this method
 bool Reader::SetStrmStgPtr()
 {
     OSL_ENSURE( pMedium, "Where is the Media??" );
@@ -833,11 +758,11 @@ bool Reader::SetStrmStgPtr()
         if ( pStrm && SotStorage::IsStorageFile(pStrm) && (SW_STORAGE_READER & GetReaderType()) )
         {
             pStg = new SotStorage( *pStrm );
-            pStrm = NULL;
+            pStrm = nullptr;
         }
         else if ( !(SW_STREAM_READER & GetReaderType()) )
         {
-            pStrm = NULL;
+            pStrm = nullptr;
             return false;
         }
 
@@ -855,25 +780,25 @@ void Reader::SetFltName( const OUString& )
 {
 }
 
-void Reader::ResetFrmFmtAttrs( SfxItemSet &rFrmSet )
+void Reader::ResetFrameFormatAttrs( SfxItemSet &rFrameSet )
 {
-    rFrmSet.Put( SvxLRSpaceItem(RES_LR_SPACE) );
-    rFrmSet.Put( SvxULSpaceItem(RES_UL_SPACE) );
-    rFrmSet.Put( SvxBoxItem(RES_BOX) );
+    rFrameSet.Put( SvxLRSpaceItem(RES_LR_SPACE) );
+    rFrameSet.Put( SvxULSpaceItem(RES_UL_SPACE) );
+    rFrameSet.Put( SvxBoxItem(RES_BOX) );
 }
 
-void Reader::ResetFrmFmts( SwDoc& rDoc )
+void Reader::ResetFrameFormats( SwDoc& rDoc )
 {
     sal_uInt16 const s_ids[3] = {
         RES_POOLFRM_FRAME, RES_POOLFRM_GRAPHIC, RES_POOLFRM_OLE
     };
-    for (sal_uInt16 i = 0; i < SAL_N_ELEMENTS(s_ids); ++i)
+    for (sal_uInt16 i : s_ids)
     {
-        SwFrmFmt *const pFrmFmt = rDoc.getIDocumentStylePoolAccess().GetFrmFmtFromPool( s_ids[i] );
+        SwFrameFormat *const pFrameFormat = rDoc.getIDocumentStylePoolAccess().GetFrameFormatFromPool( i );
 
-        pFrmFmt->ResetFmtAttr( RES_LR_SPACE );
-        pFrmFmt->ResetFmtAttr( RES_UL_SPACE );
-        pFrmFmt->ResetFmtAttr( RES_BOX );
+        pFrameFormat->ResetFormatAttr( RES_LR_SPACE );
+        pFrameFormat->ResetFormatAttr( RES_UL_SPACE );
+        pFrameFormat->ResetFormatAttr( RES_BOX );
     }
 }
 
@@ -887,14 +812,14 @@ size_t Reader::GetSectionList( SfxMedium&, std::vector<OUString*>& ) const
 bool SwReader::HasGlossaries( const Reader& rOptions )
 {
     // copy variables
-    Reader* po = (Reader*) &rOptions;
+    Reader* po = const_cast<Reader*>(&rOptions);
     po->pStrm = pStrm;
     po->pStg  = pStg;
     po->bInsertMode = false;
 
     // if a Medium is selected, get its Stream
     bool bRet = false;
-    if( !( 0 != (po->pMedium = pMedium ) && !po->SetStrmStgPtr() ))
+    if( !( nullptr != (po->pMedium = pMedium ) && !po->SetStrmStgPtr() ))
         bRet = po->HasGlossaries();
     return bRet;
 }
@@ -903,14 +828,14 @@ bool SwReader::ReadGlossaries( const Reader& rOptions,
                                 SwTextBlocks& rBlocks, bool bSaveRelFiles )
 {
     // copy variables
-    Reader* po = (Reader*) &rOptions;
+    Reader* po = const_cast<Reader*>(&rOptions);
     po->pStrm = pStrm;
     po->pStg  = pStg;
     po->bInsertMode = false;
 
     // if a Medium is selected, get its Stream
     bool bRet = false;
-    if( !( 0 != (po->pMedium = pMedium ) && !po->SetStrmStgPtr() ))
+    if( !( nullptr != (po->pMedium = pMedium ) && !po->SetStrmStgPtr() ))
         bRet = po->ReadGlossaries( rBlocks, bSaveRelFiles );
     return bRet;
 }
@@ -938,37 +863,37 @@ int StgReader::GetReaderType()
  * Constructors, Destructors are inline (inc/shellio.hxx).
  */
 
-SwWriter::SwWriter(SvStream& rStrm, SwCrsrShell &rShell, bool bInWriteAll)
-    : pStrm(&rStrm), pMedium(0), pOutPam(0), pShell(&rShell),
+SwWriter::SwWriter(SvStream& rStrm, SwCursorShell &rShell, bool bInWriteAll)
+    : pStrm(&rStrm), pMedium(nullptr), pOutPam(nullptr), pShell(&rShell),
     rDoc(*rShell.GetDoc()), bWriteAll(bInWriteAll)
 {
 }
 
 SwWriter::SwWriter(SvStream& rStrm,SwDoc &rDocument)
-    : pStrm(&rStrm), pMedium(0), pOutPam(0), pShell(0), rDoc(rDocument),
+    : pStrm(&rStrm), pMedium(nullptr), pOutPam(nullptr), pShell(nullptr), rDoc(rDocument),
     bWriteAll(true)
 {
 }
 
 SwWriter::SwWriter(SvStream& rStrm, SwPaM& rPam, bool bInWriteAll)
-    : pStrm(&rStrm), pMedium(0), pOutPam(&rPam), pShell(0),
+    : pStrm(&rStrm), pMedium(nullptr), pOutPam(&rPam), pShell(nullptr),
     rDoc(*rPam.GetDoc()), bWriteAll(bInWriteAll)
 {
 }
 
 SwWriter::SwWriter( const uno::Reference < embed::XStorage >& rStg, SwDoc &rDocument)
-    : pStrm(0), xStg( rStg ), pMedium(0), pOutPam(0), pShell(0), rDoc(rDocument), bWriteAll(true)
+    : pStrm(nullptr), xStg( rStg ), pMedium(nullptr), pOutPam(nullptr), pShell(nullptr), rDoc(rDocument), bWriteAll(true)
 {
 }
 
-SwWriter::SwWriter(SfxMedium& rMedium, SwCrsrShell &rShell, bool bInWriteAll)
-    : pStrm(0), pMedium(&rMedium), pOutPam(0), pShell(&rShell),
+SwWriter::SwWriter(SfxMedium& rMedium, SwCursorShell &rShell, bool bInWriteAll)
+    : pStrm(nullptr), pMedium(&rMedium), pOutPam(nullptr), pShell(&rShell),
     rDoc(*rShell.GetDoc()), bWriteAll(bInWriteAll)
 {
 }
 
 SwWriter::SwWriter(SfxMedium& rMedium, SwDoc &rDocument)
-    : pStrm(0), pMedium(&rMedium), pOutPam(0), pShell(0), rDoc(rDocument),
+    : pStrm(nullptr), pMedium(&rMedium), pOutPam(nullptr), pShell(nullptr), rDoc(rDocument),
     bWriteAll(true)
 {
 }
@@ -981,21 +906,12 @@ sal_uLong SwWriter::Write( WriterRef& rxWriter, const OUString* pRealFileName )
     bool bHasMark = false;
     SwPaM * pPam;
 
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    SwDoc *pDoc = 0;
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     rtl::Reference<SwDoc> xDoc;
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     if ( pShell && !bWriteAll && pShell->IsTableMode() )
     {
         bWriteAll = true;
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        pDoc = new SwDoc;
-        pDoc->acquire();
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         xDoc = new SwDoc;
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         // Copy parts of a table:
         // Create a table with the width of the original and copy the selected cells.
@@ -1003,27 +919,19 @@ sal_uLong SwWriter::Write( WriterRef& rxWriter, const OUString* pRealFileName )
 
         // search the layout for cells
         SwSelBoxes aBoxes;
-        GetTblSel( *pShell, aBoxes );
-        SwTableNode* pTblNd = (SwTableNode*)aBoxes[0]->GetSttNd()->StartOfSectionNode();
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        SwNodeIndex aIdx( pDoc->GetNodes().GetEndOfExtras(), 2 );
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        GetTableSel( *pShell, aBoxes );
+        const SwTableNode* pTableNd = static_cast<const SwTableNode*>(aBoxes[0]->GetSttNd()->StartOfSectionNode());
         SwNodeIndex aIdx( xDoc->GetNodes().GetEndOfExtras(), 2 );
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        SwCntntNode *pNd = aIdx.GetNode().GetCntntNode();
+        SwContentNode *pNd = aIdx.GetNode().GetContentNode();
         OSL_ENSURE( pNd, "Node not found" );
         SwPosition aPos( aIdx, SwIndex( pNd ) );
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        pTblNd->GetTable().MakeCopy( pDoc, aPos, aBoxes );
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        pTblNd->GetTable().MakeCopy( xDoc.get(), aPos, aBoxes );
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        pTableNd->GetTable().MakeCopy( xDoc.get(), aPos, aBoxes );
     }
 
     if( !bWriteAll && ( pShell || pOutPam ))
     {
         if( pShell )
-            pPam = pShell->GetCrsr();
+            pPam = pShell->GetCursor();
         else
             pPam = pOutPam;
 
@@ -1033,7 +941,7 @@ sal_uLong SwWriter::Write( WriterRef& rxWriter, const OUString* pRealFileName )
         while(true)
         {
             bHasMark = bHasMark || pPam->HasMark();
-            pPam = (SwPaM *) pPam->GetNext();
+            pPam = pPam->GetNext();
             if(bHasMark || pPam == pEnd)
                 break;
         }
@@ -1050,10 +958,10 @@ sal_uLong SwWriter::Write( WriterRef& rxWriter, const OUString* pRealFileName )
             }
             else
             {
-                pPam = new SwPaM( *pPam );
-                pPam->Move( fnMoveBackward, fnGoDoc );
+                pPam = new SwPaM( *pPam, pPam );
+                pPam->Move( fnMoveBackward, GoInDoc );
                 pPam->SetMark();
-                pPam->Move( fnMoveForward, fnGoDoc );
+                pPam->Move( fnMoveForward, GoInDoc );
             }
         }
         // pPam is still the current Cursor !!
@@ -1061,56 +969,43 @@ sal_uLong SwWriter::Write( WriterRef& rxWriter, const OUString* pRealFileName )
     else
     {
         // no Shell or write-everything -> create a Pam
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        SwDoc* pOutDoc = pDoc ? pDoc : &rDoc;
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SwDoc* pOutDoc = xDoc.is() ? xDoc.get() : &rDoc;
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pPam = new SwPaM( pOutDoc->GetNodes().GetEndOfContent() );
         if( pOutDoc->IsClipBoard() )
         {
-            pPam->Move( fnMoveBackward, fnGoDoc );
+            pPam->Move( fnMoveBackward, GoInDoc );
             pPam->SetMark();
-            pPam->Move( fnMoveForward, fnGoDoc );
+            pPam->Move( fnMoveForward, GoInDoc );
         }
         else
         {
             pPam->SetMark();
-            pPam->Move( fnMoveBackward, fnGoDoc );
+            pPam->Move( fnMoveBackward, GoInDoc );
         }
     }
 
     rxWriter->bWriteAll = bWriteAll;
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    SwDoc* pOutDoc = pDoc ? pDoc : &rDoc;
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwDoc* pOutDoc = xDoc.is() ? xDoc.get() : &rDoc;
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     // If the default PageDesc has still the initial value,
     // (e.g. if no printer was set) then set it to DIN A4.
     // #i37248# - Modifications are only allowed at a new document.
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    // <pOutDoc> contains a new document, if <pDoc> is set - see above.
-    if ( pDoc && !pOutDoc->getIDocumentDeviceAccess().getPrinter( false ) )
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     // <pOutDoc> contains a new document, if <xDoc> is set - see above.
     if ( xDoc.is() && !pOutDoc->getIDocumentDeviceAccess().getPrinter( false ) )
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
         const SwPageDesc& rPgDsc = pOutDoc->GetPageDesc( 0 );
         //const SwPageDesc& rPgDsc = *pOutDoc->GetPageDescFromPool( RES_POOLPAGE_STANDARD );
-        const SwFmtFrmSize& rSz = rPgDsc.GetMaster().GetFrmSize();
+        const SwFormatFrameSize& rSz = rPgDsc.GetMaster().GetFrameSize();
         // Clipboard-Document is always created w/o printer; thus the
         // default PageDesc is always aug LONG_MAX !! Set then to DIN A4
         if( LONG_MAX == rSz.GetHeight() || LONG_MAX == rSz.GetWidth() )
         {
             SwPageDesc aNew( rPgDsc );
-            SwFmtFrmSize aNewSz( rSz );
+            SwFormatFrameSize aNewSz( rSz );
             Size a4(SvxPaperInfo::GetPaperSize( PAPER_A4 ));
             aNewSz.SetHeight( a4.Width() );
             aNewSz.SetWidth( a4.Height() );
-            aNew.GetMaster().SetFmtAttr( aNewSz );
+            aNew.GetMaster().SetFormatAttr( aNewSz );
             pOutDoc->ChgPageDesc( 0, aNew );
         }
     }
@@ -1124,20 +1019,20 @@ sal_uLong SwWriter::Write( WriterRef& rxWriter, const OUString* pRealFileName )
         pESh->StartAllAction();
     }
 
-    bool bWasPurgeOle = pOutDoc->getIDocumentSettingAccess().get(IDocumentSettingAccess::PURGE_OLE);
-    pOutDoc->getIDocumentSettingAccess().set(IDocumentSettingAccess::PURGE_OLE, false);
+    const bool bOrigPurgeOle = pOutDoc->getIDocumentSettingAccess().get(DocumentSettingId::PURGE_OLE);
+    pOutDoc->getIDocumentSettingAccess().set(DocumentSettingId::PURGE_OLE, false);
 
     sal_uLong nError = 0;
     if( pMedium )
         nError = rxWriter->Write( *pPam, *pMedium, pRealFileName );
-    else if( pStg )
+    else if( pStg.is() )
         nError = rxWriter->Write( *pPam, *pStg, pRealFileName );
     else if( pStrm )
         nError = rxWriter->Write( *pPam, *pStrm, pRealFileName );
     else if( xStg.is() )
         nError = rxWriter->Write( *pPam, xStg, pRealFileName );
 
-    pOutDoc->getIDocumentSettingAccess().set(IDocumentSettingAccess::PURGE_OLE, bWasPurgeOle );
+    pOutDoc->getIDocumentSettingAccess().set(DocumentSettingId::PURGE_OLE, bOrigPurgeOle );
 
 #ifdef USE_JAVA
     // Attempt to fix Mac App Store crash by checking if the document's edit
@@ -1156,7 +1051,7 @@ sal_uLong SwWriter::Write( WriterRef& rxWriter, const OUString* pRealFileName )
         if(!bHasMark)
         {
             if( pShell )
-                pShell->Pop( false );
+                pShell->Pop(SwCursorShell::PopMode::DeleteCurrent);
             else
                 delete pPam;
         }
@@ -1165,11 +1060,7 @@ sal_uLong SwWriter::Write( WriterRef& rxWriter, const OUString* pRealFileName )
     {
         delete pPam;            // delete the created Pam
         // Everything was written successfully? Tell the document!
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        if ( !IsError( nError ) && !pDoc )
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if ( !IsError( nError ) && !xDoc.is() )
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         {
             rDoc.getIDocumentState().ResetModified();
             // #i38810# - reset also flag, that indicates updated links
@@ -1177,18 +1068,9 @@ sal_uLong SwWriter::Write( WriterRef& rxWriter, const OUString* pRealFileName )
         }
     }
 
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    if ( pDoc )
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if ( xDoc.is() )
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        if ( !pDoc->release() )
-            delete pDoc;
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         xDoc.clear();
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         bWriteAll = false;
     }
 
@@ -1205,12 +1087,12 @@ bool SetHTMLTemplate( SwDoc & rDoc )
 
     SwNodes& rNds = rDoc.GetNodes();
     SwNodeIndex aIdx( rNds.GetEndOfExtras(), 1 );
-    SwCntntNode* pCNd = rNds.GoNext( &aIdx );
+    SwContentNode* pCNd = rNds.GoNext( &aIdx );
     if( pCNd )
     {
         pCNd->SetAttr
-            ( SwFmtPageDesc(rDoc.getIDocumentStylePoolAccess().GetPageDescFromPool(RES_POOLPAGE_HTML, false) ) );
-        pCNd->ChgFmtColl( rDoc.getIDocumentStylePoolAccess().GetTxtCollFromPool( RES_POOLCOLL_TEXT, false ));
+            ( SwFormatPageDesc(rDoc.getIDocumentStylePoolAccess().GetPageDescFromPool(RES_POOLPAGE_HTML, false) ) );
+        pCNd->ChgFormatColl( rDoc.getIDocumentStylePoolAccess().GetTextCollFromPool( RES_POOLCOLL_TEXT, false ));
     }
 
     return bRet;
