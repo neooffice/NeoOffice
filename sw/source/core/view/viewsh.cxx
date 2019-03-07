@@ -1032,11 +1032,11 @@ void SwViewShell::CalcLayout()
         if ( mbThumbnail )
             break;
 
-        QueryBox aQueryBox( mpWin, WB_OK_CANCEL | WB_DEF_OK, SwResId( STR_STATSTR_REFORMAT ) );
+        ScopedVclPtrInstance< QueryBox > aQueryBox( mpWin, WB_OK_CANCEL | WB_DEF_OK, SwResId( STR_STATSTR_REFORMAT ) );
         OUString aContinue( SwResId( ST_CONTINUE ) );
         if ( aContinue.getLength() )
-            aQueryBox.SetButtonText( RET_OK, aContinue );
-        if ( aQueryBox.Execute() == RET_CANCEL )
+            aQueryBox->SetButtonText( RET_OK, aContinue );
+        if ( aQueryBox->Execute() == RET_CANCEL )
             break;
     }
 #endif	// USE_JAVA
