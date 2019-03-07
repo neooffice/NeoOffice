@@ -170,10 +170,10 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
             aDownload = aDownload.replaceAll("~", "");
             if (aDownload.getLength())
             {
-                QueryBox aQueryBox(nullptr, WB_OK_CANCEL | WB_DEF_OK, SvtResId(STR_WARNING_JAVANOTFOUND));
-                aQueryBox.SetText(aWarningBox->GetText());
-                aQueryBox.SetButtonText(RET_OK, aDownload);
-                nResult = aQueryBox.Execute();
+                ScopedVclPtrInstance< QueryBox > aQueryBox(nullptr, WB_OK_CANCEL | WB_DEF_OK, SvtResId(STR_WARNING_JAVANOTFOUND));
+                aQueryBox->SetText(aWarningBox->GetText());
+                aQueryBox->SetButtonText(RET_OK, aDownload);
+                nResult = aQueryBox->Execute();
                 if (nResult == RET_OK)
                     JavaInteractionHandler_downloadJava();
             }
@@ -208,10 +208,10 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
             aDownload = aDownload.replaceAll("~", "");
             if (aDownload.getLength())
             {
-                QueryBox aQueryBox(nullptr, WB_OK_CANCEL | WB_DEF_OK, SvtResId(STR_WARNING_INVALIDJAVASETTINGS_TITLE));
-                aQueryBox.SetText(aWarningBox->GetText());
-                aQueryBox.SetButtonText(RET_OK, aDownload);
-                nResult = aQueryBox.Execute();
+                ScopedVclPtrInstance< QueryBox > aQueryBox(nullptr, WB_OK_CANCEL | WB_DEF_OK, SvtResId(STR_WARNING_INVALIDJAVASETTINGS_TITLE));
+                aQueryBox->SetText(aWarningBox->GetText());
+                aQueryBox->SetButtonText(RET_OK, aDownload);
+                nResult = aQueryBox->Execute();
                 if (nResult == RET_OK)
                     JavaInteractionHandler_downloadJava();
             }
@@ -269,10 +269,10 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
             aDownload = aDownload.replaceAll("~", "");
             if (aDownload.getLength())
             {
-                QueryBox aQueryBox(nullptr, WB_OK_CANCEL | WB_DEF_OK, SvtResId(STR_ERROR_JVMCREATIONFAILED));
-                aQueryBox.SetText(aErrorBox->GetText());
-                aQueryBox.SetButtonText(RET_OK, aDownload);
-                nResult = aQueryBox.Execute();
+                ScopedVclPtrInstance< QueryBox > aQueryBox(nullptr, WB_OK_CANCEL | WB_DEF_OK, SvtResId(STR_ERROR_JVMCREATIONFAILED));
+                aQueryBox->SetText(aErrorBox->GetText());
+                aQueryBox->SetButtonText(RET_OK, aDownload);
+                nResult = aQueryBox->Execute();
                 if (nResult == RET_OK)
                     JavaInteractionHandler_downloadJava();
             }
