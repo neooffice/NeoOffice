@@ -43,73 +43,65 @@
 using namespace css;
 
 // <UL TYPE=...>
-static HTMLOptionEnum aHTMLULTypeTable[] =
+static HTMLOptionEnum<sal_Unicode> aHTMLULTypeTable[] =
 {
-    { OOO_STRING_SVTOOLS_HTML_ULTYPE_disc,      HTML_BULLETCHAR_DISC   },
-    { OOO_STRING_SVTOOLS_HTML_ULTYPE_circle,    HTML_BULLETCHAR_CIRCLE },
-    { OOO_STRING_SVTOOLS_HTML_ULTYPE_square,    HTML_BULLETCHAR_SQUARE },
-    { 0,                                        0                      }
+    { OOO_STRING_SVTOOLS_HTML_ULTYPE_disc,    HTML_BULLETCHAR_DISC   },
+    { OOO_STRING_SVTOOLS_HTML_ULTYPE_circle,  HTML_BULLETCHAR_CIRCLE },
+    { OOO_STRING_SVTOOLS_HTML_ULTYPE_square,  HTML_BULLETCHAR_SQUARE },
+    { nullptr,                                0                      }
 };
 
 
-void SwHTMLParser::NewNumBulList( int nToken )
+void SwHTMLParser::NewNumBulList( HtmlTokenId nToken )
 {
     SwHTMLNumRuleInfo& rInfo = GetNumInfo();
 
-    // Erstmal einen neuen Absatz aufmachen
-    bool bSpace = (rInfo.GetDepth() + nDefListDeep) == 0;
-    if( pPam->GetPoint()->nContent.GetIndex() )
-        AppendTxtNode( bSpace ? AM_SPACE : AM_NOSPACE, false );
+    // Create a new paragraph
+    bool bSpace = (rInfo.GetDepth() + m_nDefListDeep) == 0;
+    if( m_pPam->GetPoint()->nContent.GetIndex() )
+        AppendTextNode( bSpace ? AM_SPACE : AM_NOSPACE, false );
     else if( bSpace )
         AddParSpace();
 
-    // Die Numerierung-Ebene erhoehen
+    // Increment the numbering depth
     rInfo.IncDepth();
     sal_uInt8 nLevel = (sal_uInt8)( (rInfo.GetDepth() <= MAXLEVEL ? rInfo.GetDepth()
                                                         : MAXLEVEL) - 1 );
 
-    // ggf. ein Regelwerk anlegen
+    // Create rules if needed
     if( !rInfo.GetNumRule() )
     {
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        sal_uInt16 nPos = pDoc->MakeNumRule( pDoc->GetUniqueNumRuleName() );
-        rInfo.SetNumRule( pDoc->GetNumRuleTbl()[nPos] );
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         sal_uInt16 nPos = m_xDoc->MakeNumRule( m_xDoc->GetUniqueNumRuleName() );
-        rInfo.SetNumRule( m_xDoc->GetNumRuleTbl()[nPos] );
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        rInfo.SetNumRule( m_xDoc->GetNumRuleTable()[nPos] );
     }
 
-    // das Format anpassen, falls es fuer den Level noch nicht
-    // geschehen ist!
-    bool bNewNumFmt = rInfo.GetNumRule()->GetNumFmt( nLevel ) == 0;
-    bool bChangeNumFmt = false;
+    // Change the format for this level if that hasn't happened yet for this level
+    bool bNewNumFormat = rInfo.GetNumRule()->GetNumFormat( nLevel ) == nullptr;
+    bool bChangeNumFormat = false;
 
-    // das default Numerierungsformat erstellen
-    SwNumFmt aNumFmt( rInfo.GetNumRule()->Get(nLevel) );
+    // Create the default numbering format
+    SwNumFormat aNumFormat( rInfo.GetNumRule()->Get(nLevel) );
     rInfo.SetNodeStartValue( nLevel );
-    if( bNewNumFmt )
+    if( bNewNumFormat )
     {
-        sal_uInt16 nChrFmtPoolId = 0;
-        if( HTML_ORDERLIST_ON == nToken )
+        sal_uInt16 nChrFormatPoolId = 0;
+        if( HtmlTokenId::ORDERLIST_ON == nToken )
         {
-            aNumFmt.SetNumberingType(SVX_NUM_ARABIC);
-            nChrFmtPoolId = RES_POOLCHR_NUM_LEVEL;
+            aNumFormat.SetNumberingType(SVX_NUM_ARABIC);
+            nChrFormatPoolId = RES_POOLCHR_NUM_LEVEL;
         }
         else
         {
-            // Wir setzen hier eine Zeichenvorlage, weil die UI das auch
-            // so macht. Dadurch wurd immer auch eine 9pt-Schrift
-            // eingestellt, was in Netscape nicht der Fall ist. Bisher hat
-            // das noch niemanden gestoert.
+            // We'll set a default style because the UI does the same. This meant a 9pt font, which
+            // was not the case in Netscape. That didn't bother anyone so far
             // #i63395# - Only apply user defined default bullet font
             if ( numfunc::IsDefBulletFontUserDefined() )
             {
-                aNumFmt.SetBulletFont( &numfunc::GetDefBulletFont() );
+                aNumFormat.SetBulletFont( &numfunc::GetDefBulletFont() );
             }
-            aNumFmt.SetNumberingType(SVX_NUM_CHAR_SPECIAL);
-            aNumFmt.SetBulletChar( cBulletChar );       // das Bulletzeichen !!
-            nChrFmtPoolId = RES_POOLCHR_BUL_LEVEL;
+            aNumFormat.SetNumberingType(SVX_NUM_CHAR_SPECIAL);
+            aNumFormat.SetBulletChar( cBulletChar );
+            nChrFormatPoolId = RES_POOLCHR_BUL_LEVEL;
         }
 
         sal_uInt16 nAbsLSpace = HTML_NUMBUL_MARGINLEFT;
@@ -117,24 +109,23 @@ void SwHTMLParser::NewNumBulList( int nToken )
         short nFirstLineIndent  = HTML_NUMBUL_INDENT;
         if( nLevel > 0 )
         {
-            const SwNumFmt& rPrevNumFmt = rInfo.GetNumRule()->Get( nLevel-1 );
-            nAbsLSpace = nAbsLSpace + rPrevNumFmt.GetAbsLSpace();
-            nFirstLineIndent = rPrevNumFmt.GetFirstLineOffset();
+            const SwNumFormat& rPrevNumFormat = rInfo.GetNumRule()->Get( nLevel-1 );
+            nAbsLSpace = nAbsLSpace + rPrevNumFormat.GetAbsLSpace();
+            nFirstLineIndent = rPrevNumFormat.GetFirstLineOffset();
         }
-        aNumFmt.SetAbsLSpace( nAbsLSpace );
-        aNumFmt.SetFirstLineOffset( nFirstLineIndent );
-        aNumFmt.SetCharFmt( pCSS1Parser->GetCharFmtFromPool(nChrFmtPoolId) );
+        aNumFormat.SetAbsLSpace( nAbsLSpace );
+        aNumFormat.SetFirstLineOffset( nFirstLineIndent );
+        aNumFormat.SetCharFormat( m_pCSS1Parser->GetCharFormatFromPool(nChrFormatPoolId) );
 
-        bChangeNumFmt = true;
+        bChangeNumFormat = true;
     }
-    else if( 1 != aNumFmt.GetStart() )
+    else if( 1 != aNumFormat.GetStart() )
     {
-        // Wenn die Ebene schon mal benutzt wurde, muss der Start-Wert
-        // ggf. hart am Absatz gesetzt werden.
+        // If the layer has already been used, the start value may need to be set hard to the paragraph.
         rInfo.SetNodeStartValue( nLevel, 1 );
     }
 
-    // und es ggf. durch die Optionen veraendern
+    // and set that in the options
     OUString aId, aStyle, aClass, aLang, aDir;
     OUString aBulletSrc;
     sal_Int16 eVertOri = text::VertOrientation::NONE;
@@ -145,41 +136,42 @@ void SwHTMLParser::NewNumBulList( int nToken )
         const HTMLOption& rOption = rHTMLOptions[--i];
         switch( rOption.GetToken() )
         {
-        case HTML_O_ID:
+        case HtmlOptionId::ID:
             aId = rOption.GetString();
             break;
-        case HTML_O_TYPE:
-            if( bNewNumFmt && !rOption.GetString().isEmpty() )
+        case HtmlOptionId::TYPE:
+            if( bNewNumFormat && !rOption.GetString().isEmpty() )
             {
                 switch( nToken )
                 {
-                case HTML_ORDERLIST_ON:
-                    bChangeNumFmt = true;
+                case HtmlTokenId::ORDERLIST_ON:
+                    bChangeNumFormat = true;
                     switch( rOption.GetString()[0] )
                     {
-                    case 'A':   aNumFmt.SetNumberingType(SVX_NUM_CHARS_UPPER_LETTER); break;
-                    case 'a':   aNumFmt.SetNumberingType(SVX_NUM_CHARS_LOWER_LETTER); break;
-                    case 'I':   aNumFmt.SetNumberingType(SVX_NUM_ROMAN_UPPER);        break;
-                    case 'i':   aNumFmt.SetNumberingType(SVX_NUM_ROMAN_LOWER);        break;
-                    default:    bChangeNumFmt = false;
+                    case 'A':   aNumFormat.SetNumberingType(SVX_NUM_CHARS_UPPER_LETTER); break;
+                    case 'a':   aNumFormat.SetNumberingType(SVX_NUM_CHARS_LOWER_LETTER); break;
+                    case 'I':   aNumFormat.SetNumberingType(SVX_NUM_ROMAN_UPPER);        break;
+                    case 'i':   aNumFormat.SetNumberingType(SVX_NUM_ROMAN_LOWER);        break;
+                    default:    bChangeNumFormat = false;
                     }
                     break;
 
-                case HTML_UNORDERLIST_ON:
-                    aNumFmt.SetBulletChar( (sal_Unicode)rOption.GetEnum(
-                                    aHTMLULTypeTable,aNumFmt.GetBulletChar() ) );
-                    bChangeNumFmt = true;
+                case HtmlTokenId::UNORDERLIST_ON:
+                    aNumFormat.SetBulletChar( rOption.GetEnum(
+                                    aHTMLULTypeTable,aNumFormat.GetBulletChar() ) );
+                    bChangeNumFormat = true;
                     break;
+                default: break;
                 }
             }
             break;
-        case HTML_O_START:
+        case HtmlOptionId::START:
             {
                 sal_uInt16 nStart = (sal_uInt16)rOption.GetNumber();
-                if( bNewNumFmt )
+                if( bNewNumFormat )
                 {
-                    aNumFmt.SetStart( nStart );
-                    bChangeNumFmt = true;
+                    aNumFormat.SetStart( nStart );
+                    bChangeNumFormat = true;
                 }
                 else
                 {
@@ -187,143 +179,142 @@ void SwHTMLParser::NewNumBulList( int nToken )
                 }
             }
             break;
-        case HTML_O_STYLE:
+        case HtmlOptionId::STYLE:
             aStyle = rOption.GetString();
             break;
-        case HTML_O_CLASS:
+        case HtmlOptionId::CLASS:
             aClass = rOption.GetString();
             break;
-        case HTML_O_LANG:
+        case HtmlOptionId::LANG:
             aLang = rOption.GetString();
             break;
-        case HTML_O_DIR:
+        case HtmlOptionId::DIR:
             aDir = rOption.GetString();
             break;
-        case HTML_O_SRC:
-            if( bNewNumFmt )
+        case HtmlOptionId::SRC:
+            if( bNewNumFormat )
             {
                 aBulletSrc = rOption.GetString();
                 if( !InternalImgToPrivateURL(aBulletSrc) )
-                    aBulletSrc = URIHelper::SmartRel2Abs( INetURLObject( sBaseURL ), aBulletSrc, Link(), false );
+                    aBulletSrc = URIHelper::SmartRel2Abs( INetURLObject( m_sBaseURL ), aBulletSrc, Link<OUString *, bool>(), false );
             }
             break;
-        case HTML_O_WIDTH:
+        case HtmlOptionId::WIDTH:
             nWidth = (sal_uInt16)rOption.GetNumber();
             break;
-        case HTML_O_HEIGHT:
+        case HtmlOptionId::HEIGHT:
             nHeight = (sal_uInt16)rOption.GetNumber();
             break;
-        case HTML_O_ALIGN:
-            eVertOri =
-                (sal_Int16)rOption.GetEnum( aHTMLImgVAlignTable,
-                                                static_cast< sal_uInt16 >(eVertOri) );
+        case HtmlOptionId::ALIGN:
+            eVertOri = rOption.GetEnum( aHTMLImgVAlignTable, eVertOri );
             break;
+        default: break;
         }
     }
 
     if( !aBulletSrc.isEmpty() )
     {
-        // Eine Bullet-Liste mit Grafiken
-        aNumFmt.SetNumberingType(SVX_NUM_BITMAP);
+        // A bullet list with graphics
+        aNumFormat.SetNumberingType(SVX_NUM_BITMAP);
 
-        // Die Grafik als Brush anlegen
+        // Create the graphic as a brush
         SvxBrushItem aBrushItem( RES_BACKGROUND );
         aBrushItem.SetGraphicLink( aBulletSrc );
         aBrushItem.SetGraphicPos( GPOS_AREA );
 
-        // Die Groesse nur beachten, wenn Breite und Hoehe vorhanden sind
-        Size aTwipSz( nWidth, nHeight), *pTwipSz=0;
+        // Only set size if given a width and a height
+        Size aTwipSz( nWidth, nHeight), *pTwipSz=nullptr;
         if( nWidth!=USHRT_MAX && nHeight!=USHRT_MAX )
         {
             aTwipSz =
                 Application::GetDefaultDevice()->PixelToLogic( aTwipSz,
-                                                    MapMode(MAP_TWIP) );
+                                                    MapMode(MapUnit::MapTwip) );
             pTwipSz = &aTwipSz;
         }
 
-        // Die Ausrichtung auch nur beachten, wenn eine Ausrichtung
-        // angegeben wurde
-        aNumFmt.SetGraphicBrush( &aBrushItem, pTwipSz,
-                            text::VertOrientation::NONE!=eVertOri ? &eVertOri : 0);
+        // Only set orientation if given one
+        aNumFormat.SetGraphicBrush( &aBrushItem, pTwipSz,
+                            text::VertOrientation::NONE!=eVertOri ? &eVertOri : nullptr);
 
-        // Und noch die Grafik merken, um sie in den Absaetzen nicht
-        // einzufuegen
-        aBulletGrfs[nLevel] = aBulletSrc;
-        bChangeNumFmt = true;
+        // Remember the graphic to not put it into the paragraph
+        m_aBulletGrfs[nLevel] = aBulletSrc;
+        bChangeNumFormat = true;
     }
     else
-        aBulletGrfs[nLevel] = "";
+        m_aBulletGrfs[nLevel].clear();
 
-    // den aktuellen Absatz erst einmal nicht numerieren
+    // don't number the current paragraph (for now)
     {
         sal_uInt8 nLvl = nLevel;
-        SetNodeNum( nLvl, false );
+        SetNodeNum( nLvl );
     }
 
-    // einen neuen Kontext anlegen
+    // create a new context
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
-    _HTMLAttrContext *pCntxt = new _HTMLAttrContext( static_cast< sal_uInt16 >(nToken) );
+    HTMLAttrContext *pCntxt = new HTMLAttrContext( nToken );
 #else	// NO_LIBO_HTML_PARSER_LEAK_FIX
-    std::unique_ptr<_HTMLAttrContext> xCntxt(new _HTMLAttrContext(static_cast< sal_uInt16 >(nToken)));
+    std::unique_ptr<HTMLAttrContext> xCntxt(new HTMLAttrContext(nToken));
 #endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
-    // Styles parsen
+    // Parse styles
     if( HasStyleOptions( aStyle, aId, aClass, &aLang, &aDir ) )
     {
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), m_pCSS1Parser->GetWhichMap() );
         SvxCSS1PropertyInfo aPropInfo;
 
         if( ParseStyleOptions( aStyle, aId, aClass, aItemSet, aPropInfo, &aLang, &aDir ) )
         {
-            if( bNewNumFmt )
+            if( bNewNumFormat )
             {
-                if( aPropInfo.bLeftMargin )
+                if( aPropInfo.m_bLeftMargin )
                 {
-                    // Der Der Default-Einzug wurde schon eingefuegt.
+                    // Default indent has already been added
                     sal_uInt16 nAbsLSpace =
-                        aNumFmt.GetAbsLSpace() - HTML_NUMBUL_MARGINLEFT;
-                    if( aPropInfo.nLeftMargin < 0 &&
-                        nAbsLSpace < -aPropInfo.nLeftMargin )
+                        aNumFormat.GetAbsLSpace() - HTML_NUMBUL_MARGINLEFT;
+                    if( aPropInfo.m_nLeftMargin < 0 &&
+                        nAbsLSpace < -aPropInfo.m_nLeftMargin )
                         nAbsLSpace = 0U;
-                    else if( aPropInfo.nLeftMargin > USHRT_MAX ||
+                    else if( aPropInfo.m_nLeftMargin > USHRT_MAX ||
                              (long)nAbsLSpace +
-                                            aPropInfo.nLeftMargin > USHRT_MAX )
+                                            aPropInfo.m_nLeftMargin > USHRT_MAX )
                         nAbsLSpace = USHRT_MAX;
                     else
-                        nAbsLSpace = nAbsLSpace + (sal_uInt16)aPropInfo.nLeftMargin;
+                        nAbsLSpace = nAbsLSpace + (sal_uInt16)aPropInfo.m_nLeftMargin;
 
-                    aNumFmt.SetAbsLSpace( nAbsLSpace );
-                    bChangeNumFmt = true;
+                    aNumFormat.SetAbsLSpace( nAbsLSpace );
+                    bChangeNumFormat = true;
                 }
-                if( aPropInfo.bTextIndent )
+                if( aPropInfo.m_bTextIndent )
                 {
                     short nTextIndent =
-                        ((const SvxLRSpaceItem &)aItemSet.Get( RES_LR_SPACE ))
-                                                        .GetTxtFirstLineOfst();
-                    aNumFmt.SetFirstLineOffset( nTextIndent );
-                    bChangeNumFmt = true;
+                        static_cast<const SvxLRSpaceItem &>(aItemSet.Get( RES_LR_SPACE ))
+                                                        .GetTextFirstLineOfst();
+                    aNumFormat.SetFirstLineOffset( nTextIndent );
+                    bChangeNumFormat = true;
+                }
+                if( aPropInfo.m_bNumbering )
+                {
+                    aNumFormat.SetNumberingType(aPropInfo.m_nNumberingType);
+                    bChangeNumFormat = true;
+                }
+                if( aPropInfo.m_bBullet )
+                {
+                    aNumFormat.SetBulletChar( aPropInfo.m_cBulletChar );
+                    bChangeNumFormat = true;
                 }
             }
-            aPropInfo.bLeftMargin = aPropInfo.bTextIndent = false;
-            if( !aPropInfo.bRightMargin )
+            aPropInfo.m_bLeftMargin = aPropInfo.m_bTextIndent = false;
+            if( !aPropInfo.m_bRightMargin )
                 aItemSet.ClearItem( RES_LR_SPACE );
 
             // #i89812# - Perform change to list style before calling <DoPositioning(..)>,
             // because <DoPositioning(..)> may open a new context and thus may
             // clear the <SwHTMLNumRuleInfo> instance hold by local variable <rInfo>.
-            if( bChangeNumFmt )
+            if( bChangeNumFormat )
             {
-                rInfo.GetNumRule()->Set( nLevel, aNumFmt );
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                pDoc->ChgNumRuleFmts( *rInfo.GetNumRule() );
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                m_xDoc->ChgNumRuleFmts( *rInfo.GetNumRule() );
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                bChangeNumFmt = false;
+                rInfo.GetNumRule()->Set( nLevel, aNumFormat );
+                m_xDoc->ChgNumRuleFormats( *rInfo.GetNumRule() );
+                bChangeNumFormat = false;
             }
 
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
@@ -340,14 +331,10 @@ void SwHTMLParser::NewNumBulList( int nToken )
         }
     }
 
-    if( bChangeNumFmt )
+    if( bChangeNumFormat )
     {
-        rInfo.GetNumRule()->Set( nLevel, aNumFmt );
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        pDoc->ChgNumRuleFmts( *rInfo.GetNumRule() );
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        m_xDoc->ChgNumRuleFmts( *rInfo.GetNumRule() );
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        rInfo.GetNumRule()->Set( nLevel, aNumFormat );
+        m_xDoc->ChgNumRuleFormats( *rInfo.GetNumRule() );
     }
 
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
@@ -356,110 +343,102 @@ void SwHTMLParser::NewNumBulList( int nToken )
     PushContext(xCntxt);
 #endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
-    // die Attribute der neuen Vorlage setzen
+    // set attributes to the current template
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
-    SetTxtCollAttrs( pCntxt );
+    SetTextCollAttrs( pCntxt );
 #else	// NO_LIBO_HTML_PARSER_LEAK_FIX
-    SetTxtCollAttrs(aContexts.back().get());
+    SetTextCollAttrs(m_aContexts.back().get());
 #endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 }
 
-void SwHTMLParser::EndNumBulList( int nToken )
+void SwHTMLParser::EndNumBulList( HtmlTokenId nToken )
 {
     SwHTMLNumRuleInfo& rInfo = GetNumInfo();
 
-    // Ein neuer Absatz muss aufgemacht werden, wenn
-    // - der aktuelle nicht leer ist, also Text oder absatzgebundene Objekte
-    //   enthaelt.
-    // - der aktuelle Absatz numeriert ist.
-    bool bAppend = pPam->GetPoint()->nContent.GetIndex() > 0;
+    // A new paragraph needs to be created, when
+    // - the current one isn't empty (it contains text or paragraph-bound objects)
+    // - the current one is numbered
+    bool bAppend = m_pPam->GetPoint()->nContent.GetIndex() > 0;
     if( !bAppend )
     {
-        SwTxtNode* pTxtNode = pPam->GetNode().GetTxtNode();
+        SwTextNode* pTextNode = m_pPam->GetNode().GetTextNode();
 
-        bAppend = (pTxtNode && ! pTxtNode->IsOutline() && pTxtNode->IsCountedInList()) ||
+        bAppend = (pTextNode && ! pTextNode->IsOutline() && pTextNode->IsCountedInList()) ||
 
             HasCurrentParaFlys();
     }
 
-    bool bSpace = (rInfo.GetDepth() + nDefListDeep) == 1;
+    bool bSpace = (rInfo.GetDepth() + m_nDefListDeep) == 1;
     if( bAppend )
-        AppendTxtNode( bSpace ? AM_SPACE : AM_NOSPACE, false );
+        AppendTextNode( bSpace ? AM_SPACE : AM_NOSPACE, false );
     else if( bSpace )
         AddParSpace();
 
-    // den aktuellen Kontext vom Stack holen
+    // get current context from stack
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
-    _HTMLAttrContext *pCntxt = nToken!=0 ? PopContext( static_cast< sal_uInt16 >(nToken & ~1) ) : 0;
+    HTMLAttrContext *pCntxt = nToken != HtmlTokenId::NONE ? PopContext( getOnToken(nToken) ) : nullptr;
 #else	// NO_LIBO_HTML_PARSER_LEAK_FIX
-    std::unique_ptr<_HTMLAttrContext> xCntxt(nToken != 0 ? PopContext(static_cast< sal_uInt16 >(nToken & ~1)) : nullptr);
+    std::unique_ptr<HTMLAttrContext> xCntxt(nToken != HtmlTokenId::NONE ? PopContext(getOnToken(nToken)) : nullptr);
 #endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
-    // Keine Liste aufgrund eines Tokens beenden, wenn der Kontext
-    // nie angelgt wurde oder nicht beendet werden darf.
+    // Don't end a list because of a token, if the context wasn't created or mustn't be ended
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
-    if( rInfo.GetDepth()>0 && (!nToken || pCntxt) )
+    if( rInfo.GetDepth()>0 && (nToken == HtmlTokenId::NONE || pCntxt) )
 #else	// NO_LIBO_HTML_PARSER_LEAK_FIX
-    if( rInfo.GetDepth()>0 && (nToken == 0 || xCntxt) )
+    if( rInfo.GetDepth()>0 && (nToken == HtmlTokenId::NONE || xCntxt) )
 #endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     {
         rInfo.DecDepth();
-        if( !rInfo.GetDepth() )     // wars der letze Level ?
+        if( !rInfo.GetDepth() )     // was that the last level?
         {
-            // Die noch nicht angepassten Formate werden jetzt noch
-            // angepasst, damit es sich besser Editieren laesst.
-            const SwNumFmt *pRefNumFmt = 0;
+            // The formats not yet modified are now modified, to ease editing
+            const SwNumFormat *pRefNumFormat = nullptr;
             bool bChanged = false;
             for( sal_uInt16 i=0; i<MAXLEVEL; i++ )
             {
-                const SwNumFmt *pNumFmt = rInfo.GetNumRule()->GetNumFmt(i);
-                if( pNumFmt )
+                const SwNumFormat *pNumFormat = rInfo.GetNumRule()->GetNumFormat(i);
+                if( pNumFormat )
                 {
-                    pRefNumFmt = pNumFmt;
+                    pRefNumFormat = pNumFormat;
                 }
-                else if( pRefNumFmt )
+                else if( pRefNumFormat )
                 {
-                    SwNumFmt aNumFmt( rInfo.GetNumRule()->Get(i) );
-                    aNumFmt.SetNumberingType(pRefNumFmt->GetNumberingType() != SVX_NUM_BITMAP
-                                        ? pRefNumFmt->GetNumberingType() : style::NumberingType::CHAR_SPECIAL);
-                    if( SVX_NUM_CHAR_SPECIAL == aNumFmt.GetNumberingType() )
+                    SwNumFormat aNumFormat( rInfo.GetNumRule()->Get(i) );
+                    aNumFormat.SetNumberingType(pRefNumFormat->GetNumberingType() != SVX_NUM_BITMAP
+                                                ? pRefNumFormat->GetNumberingType() : SVX_NUM_CHAR_SPECIAL);
+                    if( SVX_NUM_CHAR_SPECIAL == aNumFormat.GetNumberingType() )
                     {
                         // #i63395# - Only apply user defined default bullet font
                         if ( numfunc::IsDefBulletFontUserDefined() )
                         {
-                            aNumFmt.SetBulletFont( &numfunc::GetDefBulletFont() );
+                            aNumFormat.SetBulletFont( &numfunc::GetDefBulletFont() );
                         }
-                        aNumFmt.SetBulletChar( cBulletChar );
+                        aNumFormat.SetBulletChar( cBulletChar );
                     }
-                    aNumFmt.SetAbsLSpace( (i+1) * HTML_NUMBUL_MARGINLEFT );
-                    aNumFmt.SetFirstLineOffset( HTML_NUMBUL_INDENT );
-                    aNumFmt.SetCharFmt( pRefNumFmt->GetCharFmt() );
-                    rInfo.GetNumRule()->Set( i, aNumFmt );
+                    aNumFormat.SetAbsLSpace( (i+1) * HTML_NUMBUL_MARGINLEFT );
+                    aNumFormat.SetFirstLineOffset( HTML_NUMBUL_INDENT );
+                    aNumFormat.SetCharFormat( pRefNumFormat->GetCharFormat() );
+                    rInfo.GetNumRule()->Set( i, aNumFormat );
                     bChanged = true;
                 }
             }
             if( bChanged )
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                pDoc->ChgNumRuleFmts( *rInfo.GetNumRule() );
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                m_xDoc->ChgNumRuleFmts( *rInfo.GetNumRule() );
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                m_xDoc->ChgNumRuleFormats( *rInfo.GetNumRule() );
 
-            // Beim letzen Append wurde das NumRule-Item und das
-            // NodeNum-Objekt mit kopiert. Beides muessen wir noch
-            // loeschen. Das ResetAttr loescht das NodeNum-Objekt mit!
-            pPam->GetNode().GetTxtNode()->ResetAttr( RES_PARATR_NUMRULE );
+            // On the last append, the NumRule item and NodeNum object were copied.
+            // Now we need to delete them. ResetAttr deletes the NodeNum object aswell
+            m_pPam->GetNode().GetTextNode()->ResetAttr( RES_PARATR_NUMRULE );
 
             rInfo.Clear();
         }
         else
         {
             // the next paragraph not numbered first
-            SetNodeNum( rInfo.GetLevel(), false );
+            SetNodeNum( rInfo.GetLevel() );
         }
     }
 
-    // und noch Attribute beenden
+    // end attributes
     bool bSetAttrs = false;
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     if( pCntxt )
@@ -477,19 +456,19 @@ void SwHTMLParser::EndNumBulList( int nToken )
         bSetAttrs = true;
     }
 
-    if( nToken )
-        SetTxtCollAttrs();
+    if( nToken != HtmlTokenId::NONE )
+        SetTextCollAttrs();
 
     if( bSetAttrs )
-        SetAttr();  // Absatz-Atts wegen JavaScript moeglichst schnell setzen
+        SetAttr();  // Set paragraph attributes asap because of Javascript
 
 }
 
-void SwHTMLParser::NewNumBulListItem( int nToken )
+void SwHTMLParser::NewNumBulListItem( HtmlTokenId nToken )
 {
     sal_uInt8 nLevel = GetNumInfo().GetLevel();
     OUString aId, aStyle, aClass, aLang, aDir;
-    sal_uInt16 nStart = HTML_LISTHEADER_ON != nToken
+    sal_uInt16 nStart = HtmlTokenId::LISTHEADER_ON != nToken
                         ? GetNumInfo().GetNodeStartValue( nLevel )
                         : USHRT_MAX;
     if( USHRT_MAX != nStart )
@@ -501,38 +480,46 @@ void SwHTMLParser::NewNumBulListItem( int nToken )
         const HTMLOption& rOption = rHTMLOptions[--i];
         switch( rOption.GetToken() )
         {
-            case HTML_O_VALUE:
+            case HtmlOptionId::VALUE:
                 nStart = (sal_uInt16)rOption.GetNumber();
                 break;
-            case HTML_O_ID:
+            case HtmlOptionId::ID:
                 aId = rOption.GetString();
                 break;
-            case HTML_O_STYLE:
+            case HtmlOptionId::STYLE:
                 aStyle = rOption.GetString();
                 break;
-            case HTML_O_CLASS:
+            case HtmlOptionId::CLASS:
                 aClass = rOption.GetString();
                 break;
-            case HTML_O_LANG:
+            case HtmlOptionId::LANG:
                 aLang = rOption.GetString();
                 break;
-            case HTML_O_DIR:
+            case HtmlOptionId::DIR:
                 aDir = rOption.GetString();
                 break;
+            default: break;
         }
     }
 
-    // einen neuen Absatz aufmachen
-    if( pPam->GetPoint()->nContent.GetIndex() )
-        AppendTxtNode( AM_NOSPACE, false );
-    bNoParSpace = false;    // In <LI> wird kein Abstand eingefuegt!
+    // create a new paragraph
+    if( m_pPam->GetPoint()->nContent.GetIndex() )
+        AppendTextNode( AM_NOSPACE, false );
+    m_bNoParSpace = false;    // no space in <LI>!
 
-    const bool bCountedInList( HTML_LISTHEADER_ON==nToken ? false : true );
+    SwTextNode* pTextNode = m_pPam->GetNode().GetTextNode();
+    if (!pTextNode)
+    {
+        SAL_WARN("sw.html", "No Text-Node at PaM-Position");
+        return;
+    }
+
+    const bool bCountedInList = nToken != HtmlTokenId::LISTHEADER_ON;
 
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
-    _HTMLAttrContext *pCntxt = new _HTMLAttrContext( static_cast< sal_uInt16 >(nToken) );
+    HTMLAttrContext *pCntxt = new HTMLAttrContext( nToken );
 #else	// NO_LIBO_HTML_PARSER_LEAK_FIX
-    std::unique_ptr<_HTMLAttrContext> xCntxt(new _HTMLAttrContext(static_cast< sal_uInt16 >(nToken)));
+    std::unique_ptr<HTMLAttrContext> xCntxt(new HTMLAttrContext(nToken));
 #endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     OUString aNumRuleName;
@@ -542,47 +529,36 @@ void SwHTMLParser::NewNumBulListItem( int nToken )
     }
     else
     {
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        aNumRuleName = pDoc->GetUniqueNumRuleName();
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         aNumRuleName = m_xDoc->GetUniqueNumRuleName();
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SwNumRule aNumRule( aNumRuleName,
                             SvxNumberFormat::LABEL_WIDTH_AND_POSITION );
-        SwNumFmt aNumFmt( aNumRule.Get( 0 ) );
+        SwNumFormat aNumFormat( aNumRule.Get( 0 ) );
         // #i63395# - Only apply user defined default bullet font
         if ( numfunc::IsDefBulletFontUserDefined() )
         {
-            aNumFmt.SetBulletFont( &numfunc::GetDefBulletFont() );
+            aNumFormat.SetBulletFont( &numfunc::GetDefBulletFont() );
         }
-        aNumFmt.SetNumberingType(SVX_NUM_CHAR_SPECIAL);
-        aNumFmt.SetBulletChar( cBulletChar );   // das Bulletzeichen !!
-        aNumFmt.SetCharFmt( pCSS1Parser->GetCharFmtFromPool(RES_POOLCHR_BUL_LEVEL) );
-        aNumFmt.SetFirstLineOffset( HTML_NUMBUL_INDENT );
-        aNumRule.Set( 0, aNumFmt );
+        aNumFormat.SetNumberingType(SVX_NUM_CHAR_SPECIAL);
+        aNumFormat.SetBulletChar( cBulletChar );   // the bullet character !!
+        aNumFormat.SetCharFormat( m_pCSS1Parser->GetCharFormatFromPool(RES_POOLCHR_BUL_LEVEL) );
+        aNumFormat.SetFirstLineOffset( HTML_NUMBUL_INDENT );
+        aNumRule.Set( 0, aNumFormat );
 
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        pDoc->MakeNumRule( aNumRuleName, &aNumRule );
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         m_xDoc->MakeNumRule( aNumRuleName, &aNumRule );
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
-        OSL_ENSURE( !nOpenParaToken,
-                "Jetzt geht ein offenes Absatz-Element verloren" );
-        // Wir tun so, als ob wir in einem Absatz sind. Dann wird
-        // beim naechsten Absatz wenigstens die Numerierung
-        // weggeschmissen, die nach dem naechsten AppendTxtNode uebernommen
-        // wird.
-        nOpenParaToken = static_cast< sal_uInt16 >(nToken);
+        OSL_ENSURE( m_nOpenParaToken == HtmlTokenId::NONE,
+                "Now an open paragraph element is lost" );
+        // We'll act like we're in a paragraph. On the next paragraph, at least numbering is gone,
+        // that's gonna be taken over by the next AppendTextNode
+        m_nOpenParaToken = nToken;
     }
 
-    SwTxtNode* pTxtNode = pPam->GetNode().GetTxtNode();
-    ((SwCntntNode *)pTxtNode)->SetAttr( SwNumRuleItem(aNumRuleName) );
-    pTxtNode->SetAttrListLevel(nLevel);
+    static_cast<SwContentNode *>(pTextNode)->SetAttr( SwNumRuleItem(aNumRuleName) );
+    pTextNode->SetAttrListLevel(nLevel);
     // #i57656# - <IsCounted()> state of text node has to be adjusted accordingly.
     if ( nLevel < MAXLEVEL )
     {
-        pTxtNode->SetCountedInList( bCountedInList );
+        pTextNode->SetCountedInList( bCountedInList );
     }
     // #i57919#
     // correction of refactoring done by cws swnumtree
@@ -591,21 +567,17 @@ void SwHTMLParser::NewNumBulListItem( int nToken )
     //   restarted at this text node
     if ( nStart != USHRT_MAX )
     {
-        pTxtNode->SetListRestart( true );
-        pTxtNode->SetAttrListRestartValue( nStart );
+        pTextNode->SetListRestart( true );
+        pTextNode->SetAttrListRestartValue( nStart );
     }
 
     if( GetNumInfo().GetNumRule() )
         GetNumInfo().GetNumRule()->SetInvalidRule( true );
 
-    // Styles parsen
+    // parse styles
     if( HasStyleOptions( aStyle, aId, aClass, &aLang, &aDir ) )
     {
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), m_pCSS1Parser->GetWhichMap() );
         SvxCSS1PropertyInfo aPropInfo;
 
         if( ParseStyleOptions( aStyle, aId, aClass, aItemSet, aPropInfo, &aLang, &aDir ) )
@@ -626,64 +598,64 @@ void SwHTMLParser::NewNumBulListItem( int nToken )
     PushContext(xCntxt);
 #endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
-    // die neue Vorlage setzen
+    // set the new template
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
-    SetTxtCollAttrs( pCntxt );
+    SetTextCollAttrs( pCntxt );
 #else	// NO_LIBO_HTML_PARSER_LEAK_FIX
-    SetTxtCollAttrs(aContexts.back().get());
+    SetTextCollAttrs(m_aContexts.back().get());
 #endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
-    // Laufbalkenanzeige aktualisieren
+    // Refresh scroll bar
     ShowStatline();
 }
 
-void SwHTMLParser::EndNumBulListItem( int nToken, bool bSetColl,
-                                      bool /*bLastPara*/ )
+void SwHTMLParser::EndNumBulListItem( HtmlTokenId nToken, bool bSetColl )
 {
-    // einen neuen Absatz aufmachen
-    if( !nToken && pPam->GetPoint()->nContent.GetIndex() )
-        AppendTxtNode( AM_NOSPACE );
+    // Create a new paragraph
+    if( nToken == HtmlTokenId::NONE && m_pPam->GetPoint()->nContent.GetIndex() )
+        AppendTextNode( AM_NOSPACE );
 
-    // Kontext zu dem Token suchen und vom Stack holen
+    // Get context to that token and pop it from stack
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
-    _HTMLAttrContext *pCntxt = 0;
+    HTMLAttrContext *pCntxt = nullptr;
 #else	// NO_LIBO_HTML_PARSER_LEAK_FIX
-    std::unique_ptr<_HTMLAttrContext> xCntxt;
+    std::unique_ptr<HTMLAttrContext> xCntxt;
 #endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
-    sal_uInt16 nPos = aContexts.size();
-    nToken &= ~1;
+    auto nPos = m_aContexts.size();
+    nToken = getOnToken(nToken);
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
-    while( !pCntxt && nPos>nContextStMin )
+    while( !pCntxt && nPos>m_nContextStMin )
 #else	// NO_LIBO_HTML_PARSER_LEAK_FIX
-    while (!xCntxt && nPos>nContextStMin)
+    while (!xCntxt && nPos>m_nContextStMin)
 #endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     {
-        sal_uInt16 nCntxtToken = aContexts[--nPos]->GetToken();
+        HtmlTokenId nCntxtToken = m_aContexts[--nPos]->GetToken();
         switch( nCntxtToken )
         {
-        case HTML_LI_ON:
-        case HTML_LISTHEADER_ON:
-            if( !nToken || nToken == nCntxtToken  )
+        case HtmlTokenId::LI_ON:
+        case HtmlTokenId::LISTHEADER_ON:
+            if( nToken == HtmlTokenId::NONE || nToken == nCntxtToken  )
             {
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
-                pCntxt = aContexts[nPos];
+                pCntxt = m_aContexts[nPos];
 #else	// NO_LIBO_HTML_PARSER_LEAK_FIX
-                xCntxt = std::move(aContexts[nPos]);
+                xCntxt = std::move(m_aContexts[nPos]);
 #endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
-                aContexts.erase( aContexts.begin() + nPos );
+                m_aContexts.erase( m_aContexts.begin() + nPos );
             }
             break;
-        case HTML_ORDERLIST_ON:
-        case HTML_UNORDERLIST_ON:
-        case HTML_MENULIST_ON:
-        case HTML_DIRLIST_ON:
-            // keine LI/LH ausserhalb der aktuellen Liste betrachten
-            nPos = nContextStMin;
+        case HtmlTokenId::ORDERLIST_ON:
+        case HtmlTokenId::UNORDERLIST_ON:
+        case HtmlTokenId::MENULIST_ON:
+        case HtmlTokenId::DIRLIST_ON:
+            // Don't care about LI/LH outside the current list
+            nPos = m_nContextStMin;
             break;
+        default: break;
         }
     }
 
-    // und noch Attribute beenden
+    // end attributes
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     if( pCntxt )
 #else	// NO_LIBO_HTML_PARSER_LEAK_FIX
@@ -695,7 +667,7 @@ void SwHTMLParser::EndNumBulListItem( int nToken, bool bSetColl,
 #else	// NO_LIBO_HTML_PARSER_LEAK_FIX
         EndContext(xCntxt.get());
 #endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
-        SetAttr();  // Absatz-Atts wegen JavaScript moeglichst schnell setzen
+        SetAttr();  // set paragraph attributes asap because of Javascript
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         delete pCntxt;
 #else	// NO_LIBO_HTML_PARSER_LEAK_FIX
@@ -703,25 +675,28 @@ void SwHTMLParser::EndNumBulListItem( int nToken, bool bSetColl,
 #endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
 
-    // und die bisherige Vorlage setzen
+    // set current template
     if( bSetColl )
-        SetTxtCollAttrs();
+        SetTextCollAttrs();
 }
 
-void SwHTMLParser::SetNodeNum( sal_uInt8 nLevel, bool bCountedInList )
+void SwHTMLParser::SetNodeNum( sal_uInt8 nLevel )
 {
-    SwTxtNode* pTxtNode = pPam->GetNode().GetTxtNode();
-    OSL_ENSURE( pTxtNode, "Kein Text-Node an PaM-Position" );
+    SwTextNode* pTextNode = m_pPam->GetNode().GetTextNode();
+    if (!pTextNode)
+    {
+        SAL_WARN("sw.html", "No Text-Node at PaM-Position");
+        return;
+    }
 
-    OSL_ENSURE( GetNumInfo().GetNumRule(), "Kein Numerierungs-Regel" );
+    OSL_ENSURE( GetNumInfo().GetNumRule(), "No numbering rule" );
     const OUString& rName = GetNumInfo().GetNumRule()->GetName();
-    ((SwCntntNode *)pTxtNode)->SetAttr( SwNumRuleItem(rName) );
+    static_cast<SwContentNode *>(pTextNode)->SetAttr( SwNumRuleItem(rName) );
 
-    pTxtNode->SetAttrListLevel( nLevel );
-    pTxtNode->SetCountedInList( bCountedInList );
+    pTextNode->SetAttrListLevel( nLevel );
+    pTextNode->SetCountedInList( false );
 
-    // NumRule invalidieren, weil sie durch ein EndAction bereits
-    // auf valid geschaltet worden sein kann.
+    // Invalidate NumRule, it may have been set valid because of an EndAction
     GetNumInfo().GetNumRule()->SetInvalidRule( false );
 }
 
