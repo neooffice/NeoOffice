@@ -580,10 +580,11 @@ void SwHTMLParser::NewField()
         }
         else
         {
-            m_xDoc->getIDocumentContentOperations().InsertPoolItem(*m_pPam, SwFormatField(*pNewField));
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            m_xDoc->getIDocumentContentOperations().InsertPoolItem(*m_pPam, SwFormatField(*pNewField));
             delete pNewField;
 #else	// NO_LIBO_HTML_FIELD_LEAK_FIX
+            m_xDoc->getIDocumentContentOperations().InsertPoolItem(*m_pPam, SwFormatField(*xNewField));
             xNewField.reset();
 #endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
         }
@@ -643,7 +644,7 @@ void SwHTMLParser::EndField()
 #ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
             static_cast<SwAuthorField*>(m_pField)->SetExpansion( m_aContents );
 #else	// NO_LIBO_HTML_FIELD_LEAK_FIX
-            static_cast<SwAuthorField*>(m_xpField.get())->SetExpansion( m_aContents );
+            static_cast<SwAuthorField*>(m_xField.get())->SetExpansion( m_aContents );
 #endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
             break;
 
@@ -663,11 +664,12 @@ void SwHTMLParser::EndField()
         default: break;
         }
 
-        m_xDoc->getIDocumentContentOperations().InsertPoolItem( *m_pPam, SwFormatField(*m_pField) );
 #ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
+        m_xDoc->getIDocumentContentOperations().InsertPoolItem( *m_pPam, SwFormatField(*m_pField) );
         delete m_pField;
         m_pField = nullptr;
 #else	// NO_LIBO_HTML_FIELD_LEAK_FIX
+        m_xDoc->getIDocumentContentOperations().InsertPoolItem( *m_pPam, SwFormatField(*m_xField) );
         m_xField.reset();
 #endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
     }
