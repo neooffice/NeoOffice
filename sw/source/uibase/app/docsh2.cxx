@@ -27,14 +27,15 @@
 #include <config_features.h>
 
 #include <com/sun/star/drawing/ModuleDispatcher.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/frame/DispatchHelper.hpp>
 
 #include <comphelper/processfactory.hxx>
 
+#include <edtwin.hxx>
 #include <hintids.hxx>
 #include <tools/urlobj.hxx>
 #include <unotools/tempfile.hxx>
+#include <unotools/configmgr.hxx>
 #include <vcl/wrkwin.hxx>
 #include <vcl/msgbox.hxx>
 #include <svl/lckbitem.hxx>
@@ -48,6 +49,7 @@
 #include <sfx2/request.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/new.hxx>
+#include <sfx2/notebookbar/SfxNotebookBar.hxx>
 #include <sfx2/filedlghelper.hxx>
 #include <sfx2/printer.hxx>
 #include <sfx2/evntconf.hxx>
@@ -60,6 +62,8 @@
 #include <editeng/langitem.hxx>
 #include <svx/fmshell.hxx>
 #include <sfx2/linkmgr.hxx>
+#include <sfx2/classificationhelper.hxx>
+#include <sfx2/watermarkitem.hxx>
 
 #include <svtools/htmlcfg.hxx>
 #include <svx/ofaitem.hxx>
@@ -110,7 +114,7 @@
 #include <app.hrc>
 #include <poolfmt.hrc>
 #include <globals.hrc>
-#include <com/sun/star/ui/dialogs/XFilePicker.hpp>
+#include <com/sun/star/ui/dialogs/XFilePicker2.hpp>
 #include <com/sun/star/ui/dialogs/XFilterManager.hpp>
 #include <com/sun/star/ui/dialogs/XFilePickerControlAccess.hpp>
 #include <com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp>
@@ -121,15 +125,17 @@
 #include <com/sun/star/script/vba/VBAEventId.hpp>
 #include <editeng/acorrcfg.hxx>
 #include <SwStyleNameMapper.hxx>
+#include <officecfg/Office/Security.hxx>
 
 #include <sfx2/fcontnr.hxx>
 
 #include "dialog.hrc"
 #include "swabstdlg.hxx"
+#include "watermarkdialog.hxx"
 
 #include <ndtxt.hxx>
 
-#include <boost/scoped_ptr.hpp>
+#include <memory>
 
 using namespace ::com::sun::star::ui::dialogs;
 using namespace ::com::sun::star::lang;
@@ -138,85 +144,81 @@ using namespace ::com::sun::star;
 using namespace ::sfx2;
 
 // create DocInfo (virtual)
-SfxDocumentInfoDialog* SwDocShell::CreateDocumentInfoDialog(
-                                vcl::Window *pParent, const SfxItemSet &rSet)
+VclPtr<SfxDocumentInfoDialog> SwDocShell::CreateDocumentInfoDialog(const SfxItemSet &rSet)
 {
-    SfxDocumentInfoDialog* pDlg = new SfxDocumentInfoDialog(pParent, rSet);
+    VclPtr<SfxDocumentInfoDialog> pDlg = VclPtr<SfxDocumentInfoDialog>::Create(nullptr, rSet);
     //only with statistics, when this document is being shown, not
     //from within the Doc-Manager
-    SwDocShell* pDocSh = (SwDocShell*) SfxObjectShell::Current();
+    SwDocShell* pDocSh = static_cast<SwDocShell*>( SfxObjectShell::Current());
     if( pDocSh == this )
     {
         //Not for SourceView.
         SfxViewShell *pVSh = SfxViewShell::Current();
-        if ( pVSh && !pVSh->ISA(SwSrcView) )
+        if ( pVSh && dynamic_cast< const SwSrcView *>( pVSh ) ==  nullptr )
         {
             SwAbstractDialogFactory* pFact = SwAbstractDialogFactory::Create();
             OSL_ENSURE(pFact, "SwAbstractDialogFactory fail!");
             pDlg->AddFontTabPage();
-            pDlg->AddTabPage(TP_DOC_STAT, SW_RESSTR(STR_DOC_STAT),pFact->GetTabPageCreatorFunc( TP_DOC_STAT ),0);
+            pDlg->AddTabPage(TP_DOC_STAT, SwResId(STR_DOC_STAT),pFact->GetTabPageCreatorFunc( TP_DOC_STAT ),nullptr);
         }
     }
     return pDlg;
 }
 
-// Disable "multiple layout"
-
-void SwDocShell::ToggleBrowserMode(bool bSet, SwView* _pView )
+void SwDocShell::ToggleLayoutMode(SwView* pView)
 {
-    GetDoc()->getIDocumentSettingAccess().set(IDocumentSettingAccess::BROWSE_MODE, bSet );
-    UpdateFontList();
-    SwView* pTempView = _pView ? _pView : (SwView*)GetView();
-    if( pTempView )
+    OSL_ENSURE( pView, "SwDocShell::ToggleLayoutMode, pView is null." );
+
+    const SwViewOption& rViewOptions = *pView->GetWrtShell().GetViewOptions();
+
+    //TODO: Should HideWhitespace flag be saved in the document settings?
+    GetDoc()->getIDocumentSettingAccess().set(DocumentSettingId::BROWSE_MODE, rViewOptions.getBrowseMode());
+    UpdateFontList();  // Why is this necessary here?
+
+    pView->GetViewFrame()->GetBindings().Invalidate(FN_SHADOWCURSOR);
+    if( !GetDoc()->getIDocumentDeviceAccess().getPrinter( false ) )
+        pView->SetPrinter( GetDoc()->getIDocumentDeviceAccess().getPrinter( false ), SfxPrinterChangeFlags::PRINTER | SfxPrinterChangeFlags::JOBSETUP );
+    GetDoc()->CheckDefaultPageFormat();
+    SfxViewFrame *pTmpFrame = SfxViewFrame::GetFirst(this, false);
+    while (pTmpFrame)
     {
-        pTempView->GetViewFrame()->GetBindings().Invalidate(FN_SHADOWCURSOR);
-        if( !GetDoc()->getIDocumentDeviceAccess().getPrinter( false ) )
-            pTempView->SetPrinter( GetDoc()->getIDocumentDeviceAccess().getPrinter( false ), SFX_PRINTER_PRINTER | SFX_PRINTER_JOBSETUP );
-        GetDoc()->CheckDefaultPageFmt();
-        SfxViewFrame *pTmpFrm = SfxViewFrame::GetFirst(this, false);
-        while (pTmpFrm)
+        if( pTmpFrame != pView->GetViewFrame() )
         {
-            if( pTmpFrm != pTempView->GetViewFrame() )
-            {
-                pTmpFrm->DoClose();
-                pTmpFrm = SfxViewFrame::GetFirst(this, false);
-            }
-            else
-                pTmpFrm = SfxViewFrame::GetNext(*pTmpFrm, this, false);
+            pTmpFrame->DoClose();
+            pTmpFrame = SfxViewFrame::GetFirst(this, false);
         }
-        const SwViewOption& rViewOptions = *pTempView->GetWrtShell().GetViewOptions();
-        pTempView->GetWrtShell().CheckBrowseView( true );
-        pTempView->CheckVisArea();
-        if( bSet )
-        {
-            const SvxZoomType eType = (SvxZoomType)rViewOptions.GetZoomType();
-            if ( SVX_ZOOM_PERCENT != eType)
-                ((SwView*)GetView())->SetZoom( eType );
-        }
-        pTempView->InvalidateBorder();
-        pTempView->SetNewWindowAllowed(!bSet);
+        else
+            pTmpFrame = SfxViewFrame::GetNext(*pTmpFrame, this, false);
     }
+
+    pView->GetWrtShell().InvalidateLayout(true);
+
+    pView->RecheckBrowseMode();
+
+    pView->SetNewWindowAllowed(!rViewOptions.getBrowseMode());
 }
-// End of disabled "multiple layout"
 
 // update text fields on document properties changes
 void SwDocShell::DoFlushDocInfo()
 {
-    if ( !mpDoc ) return;
+    if (!m_pDoc) return;
 
     bool bUnlockView(true);
-    if ( mpWrtShell ) {
-        bUnlockView = !mpWrtShell->IsViewLocked();
-        mpWrtShell->LockView( true );    // lock visible section
-        mpWrtShell->StartAllAction();
+    if (m_pWrtShell)
+    {
+        bUnlockView = !m_pWrtShell->IsViewLocked();
+        m_pWrtShell->LockView( true );    // lock visible section
+        m_pWrtShell->StartAllAction();
     }
 
-    mpDoc->getIDocumentStatistics().DocInfoChgd();
+    m_pDoc->getIDocumentStatistics().DocInfoChgd(IsEnableSetModified());
 
-    if ( mpWrtShell ) {
-        mpWrtShell->EndAllAction();
-        if ( bUnlockView ) {
-            mpWrtShell->LockView( false );
+    if (m_pWrtShell)
+    {
+        m_pWrtShell->EndAllAction();
+        if (bUnlockView)
+        {
+            m_pWrtShell->LockView( false );
         }
     }
 }
@@ -224,18 +226,18 @@ void SwDocShell::DoFlushDocInfo()
 static void lcl_processCompatibleSfxHint( const uno::Reference< script::vba::XVBAEventProcessor >& xVbaEvents, const SfxHint& rHint )
 {
     using namespace com::sun::star::script::vba::VBAEventId;
-    if ( dynamic_cast<const SfxEventHint*>(&rHint) )
+    if ( const SfxEventHint* pSfxEventHint = dynamic_cast<const SfxEventHint*>(&rHint) )
     {
         uno::Sequence< uno::Any > aArgs;
-        sal_uLong nEventId = ((SfxEventHint&)rHint).GetEventId();
-        switch( nEventId )
+        switch( pSfxEventHint->GetEventId() )
         {
-            case SFX_EVENT_CREATEDOC:
+            case SfxEventHintId::CreateDoc:
                 xVbaEvents->processVbaEvent( DOCUMENT_NEW, aArgs );
             break;
-            case SFX_EVENT_OPENDOC:
+            case SfxEventHintId::OpenDoc:
                 xVbaEvents->processVbaEvent( DOCUMENT_OPEN, aArgs );
             break;
+            default: break;
         }
     }
 }
@@ -243,47 +245,46 @@ static void lcl_processCompatibleSfxHint( const uno::Reference< script::vba::XVB
 // Notification on DocInfo changes
 void SwDocShell::Notify( SfxBroadcaster&, const SfxHint& rHint )
 {
-    if( !mpDoc )
+    if (!m_pDoc)
     {
         return ;
     }
 
-    uno::Reference< script::vba::XVBAEventProcessor > xVbaEvents = mpDoc->GetVbaEventProcessor();
+    uno::Reference< script::vba::XVBAEventProcessor > const xVbaEvents =
+        m_pDoc->GetVbaEventProcessor();
     if( xVbaEvents.is() )
         lcl_processCompatibleSfxHint( xVbaEvents, rHint );
 
     sal_uInt16 nAction = 0;
-    if( dynamic_cast<const SfxSimpleHint*>(&rHint) )
-    {
-        // switch for more actions
-        switch( ((SfxSimpleHint&) rHint).GetId() )
-        {
-            case SFX_HINT_TITLECHANGED:
-                if( GetMedium() )
-                    nAction = 2;
-            break;
-        }
-    }
-    else if( dynamic_cast<const SfxEventHint*>(&rHint) &&
-        ((SfxEventHint&) rHint).GetEventId() == SFX_EVENT_LOADFINISHED )
+    auto pEventHint = dynamic_cast<const SfxEventHint*>(&rHint);
+    if( pEventHint && pEventHint->GetEventId() == SfxEventHintId::LoadFinished )
     {
         // #i38126# - own action id
         nAction = 3;
+    }
+    else
+    {
+        // switch for more actions
+        if( rHint.GetId() == SfxHintId::TitleChanged)
+        {
+            if( GetMedium() )
+                nAction = 2;
+        }
     }
 
     if( nAction )
     {
         bool bUnlockView = true; //initializing prevents warning
-        if( mpWrtShell )
+        if (m_pWrtShell)
         {
-            bUnlockView = !mpWrtShell->IsViewLocked();
-            mpWrtShell->LockView( true );    //lock visible section
-            mpWrtShell->StartAllAction();
+            bUnlockView = !m_pWrtShell->IsViewLocked();
+            m_pWrtShell->LockView( true );    //lock visible section
+            m_pWrtShell->StartAllAction();
         }
         switch( nAction )
         {
         case 2:
-            mpDoc->getIDocumentFieldsAccess().GetSysFldType( RES_FILENAMEFLD )->UpdateFlds();
+            m_pDoc->getIDocumentFieldsAccess().GetSysFieldType( SwFieldIds::Filename )->UpdateFields();
             break;
         // #i38126# - own action for event LOADFINISHED
         // in order to avoid a modified document.
@@ -296,24 +297,25 @@ void SwDocShell::Notify( SfxBroadcaster&, const SfxHint& rHint )
                 if ( bResetModified )
                     EnableSetModified( false );
                 // #i41679#
-                const bool bIsDocModified = mpDoc->getIDocumentState().IsModified();
+                const bool bIsDocModified = m_pDoc->getIDocumentState().IsModified();
+                // TODO: is the ResetModified() below because of only the direct call from DocInfoChgd, or does UpdateFields() set it too?
 
-                mpDoc->getIDocumentStatistics().DocInfoChgd( );
+                m_pDoc->getIDocumentStatistics().DocInfoChgd(false);
 
                 // #i41679#
                 if ( !bIsDocModified )
-                    mpDoc->getIDocumentState().ResetModified();
+                    m_pDoc->getIDocumentState().ResetModified();
                 if ( bResetModified )
-                    EnableSetModified( true );
+                    EnableSetModified();
             }
             break;
         }
 
-        if( mpWrtShell )
+        if (m_pWrtShell)
         {
-            mpWrtShell->EndAllAction();
+            m_pWrtShell->EndAllAction();
             if( bUnlockView )
-                mpWrtShell->LockView( false );
+                m_pWrtShell->LockView( false );
         }
     }
 }
@@ -321,14 +323,15 @@ void SwDocShell::Notify( SfxBroadcaster&, const SfxHint& rHint )
 // Notification Close Doc
 bool SwDocShell::PrepareClose( bool bUI )
 {
-    bool nRet = SfxObjectShell::PrepareClose( bUI );
+    bool bRet = SfxObjectShell::PrepareClose( bUI );
 
-    if( nRet )
+    if( bRet )
         EndListening( *this );
 
-    if( mpDoc && IsInPrepareClose() )
+    if (m_pDoc && IsInPrepareClose())
     {
-        uno::Reference< script::vba::XVBAEventProcessor > xVbaEvents = mpDoc->GetVbaEventProcessor();
+        uno::Reference< script::vba::XVBAEventProcessor > const xVbaEvents =
+            m_pDoc->GetVbaEventProcessor();
         if( xVbaEvents.is() )
         {
             using namespace com::sun::star::script::vba::VBAEventId;
@@ -336,7 +339,7 @@ bool SwDocShell::PrepareClose( bool bUI )
             xVbaEvents->processVbaEvent( DOCUMENT_CLOSE, aArgs );
         }
     }
-    return nRet;
+    return bRet;
 }
 
 void SwDocShell::Execute(SfxRequest& rReq)
@@ -349,7 +352,7 @@ void SwDocShell::Execute(SfxRequest& rReq)
     {
         case SID_AUTO_CORRECT_DLG:
         {
-            SvxSwAutoFmtFlags* pAFlags = &SvxAutoCorrCfg::Get().GetAutoCorrect()->GetSwFlags();
+            SvxSwAutoFormatFlags* pAFlags = &SvxAutoCorrCfg::Get().GetAutoCorrect()->GetSwFlags();
             SwAutoCompleteWord& rACW = SwDoc::GetAutoCompleteWords();
 
             bool bOldLocked = rACW.IsLockWordLstLocked(),
@@ -370,25 +373,26 @@ void SwDocShell::Execute(SfxRequest& rReq)
             SfxItemSet aSet( pApp->GetPool(), SID_AUTO_CORRECT_DLG, SID_AUTO_CORRECT_DLG, SID_OPEN_SMARTTAGOPTIONS, SID_OPEN_SMARTTAGOPTIONS, 0 );
             aSet.Put( aSwOptions );
 
-            const SfxPoolItem* pOpenSmartTagOptionsItem = 0;
+            const SfxPoolItem* pOpenSmartTagOptionsItem = nullptr;
             if( pArgs && SfxItemState::SET == pArgs->GetItemState( SID_OPEN_SMARTTAGOPTIONS, false, &pOpenSmartTagOptionsItem ) )
                 aSet.Put( *static_cast<const SfxBoolItem*>(pOpenSmartTagOptionsItem) );
 
             SfxAbstractDialogFactory* pFact = SfxAbstractDialogFactory::Create();
-              SfxAbstractTabDialog* pDlg = pFact->CreateTabDialog( RID_OFA_AUTOCORR_DLG, NULL, &aSet, NULL );
-              pDlg->Execute();
-              delete pDlg;
+            VclPtr<SfxAbstractTabDialog> pDlg = pFact->CreateAutoCorrTabDialog( &aSet );
+            pDlg->Execute();
+            pDlg.disposeAndClear();
+
 
             rACW.SetLockWordLstLocked( bOldLocked );
 
-            SwEditShell::SetAutoFmtFlags( pAFlags );
+            SwEditShell::SetAutoFormatFlags( pAFlags );
             rACW.SetMinWordLen( pAFlags->nAutoCmpltWordLen );
             rACW.SetMaxCount( pAFlags->nAutoCmpltListLen );
             if (pAFlags->m_pAutoCompleteList)  // any changes?
             {
                 rACW.CheckChangedList( aTmpLst );
                 // clear the temp WordList pointer
-                pAFlags->m_pAutoCompleteList = 0;
+                pAFlags->m_pAutoCompleteList = nullptr;
             }
             // remove all pointer we never delete the strings
             aTmpLst.clear();
@@ -398,10 +402,9 @@ void SwDocShell::Execute(SfxRequest& rReq)
             {
                 // call on all Docs the idle formatter to start
                 // the collection of Words
-                TypeId aType = TYPE(SwDocShell);
-                for( SwDocShell *pDocSh = (SwDocShell*)SfxObjectShell::GetFirst(&aType);
+                for( SwDocShell *pDocSh = static_cast<SwDocShell*>(SfxObjectShell::GetFirst(checkSfxObjectShell<SwDocShell>));
                      pDocSh;
-                     pDocSh = (SwDocShell*)SfxObjectShell::GetNext( *pDocSh, &aType ) )
+                     pDocSh = static_cast<SwDocShell*>(SfxObjectShell::GetNext( *pDocSh, checkSfxObjectShell<SwDocShell> )) )
                 {
                     SwDoc* pTmp = pDocSh->GetDoc();
                     if ( pTmp->getIDocumentLayoutAccess().GetCurrentViewShell() )
@@ -415,28 +418,28 @@ void SwDocShell::Execute(SfxRequest& rReq)
             {
                 bool bSet = false;
                 bool bFound = false, bOnly = true;
-                SfxViewFrame *pTmpFrm = SfxViewFrame::GetFirst(this);
+                SfxViewFrame *pTmpFrame = SfxViewFrame::GetFirst(this);
                 SfxViewShell* pViewShell = SfxViewShell::Current();
                 SwView* pCurrView = dynamic_cast< SwView *> ( pViewShell );
-                bool bCurrent = IS_TYPE( SwPagePreview, pViewShell );
+                bool bCurrent = typeid(SwPagePreview) == typeid( pViewShell );
 
-                while( pTmpFrm )    // search Preview
+                while( pTmpFrame )    // search Preview
                 {
-                    if( IS_TYPE( SwView, pTmpFrm->GetViewShell()) )
+                    if( typeid(SwView) == typeid( pTmpFrame->GetViewShell()) )
                         bOnly = false;
-                    else if( IS_TYPE( SwPagePreview, pTmpFrm->GetViewShell()))
+                    else if( typeid(SwPagePreview) == typeid( pTmpFrame->GetViewShell()))
                     {
-                        pTmpFrm->GetFrame().Appear();
+                        pTmpFrame->GetFrame().Appear();
                         bFound = true;
                     }
                     if( bFound && !bOnly )
                         break;
-                    pTmpFrm = SfxViewFrame::GetNext(*pTmpFrm, this);
+                    pTmpFrame = SfxViewFrame::GetNext(*pTmpFrame, this);
                 }
 
                 if( pArgs && SfxItemState::SET ==
                     pArgs->GetItemState( SID_PRINTPREVIEW, false, &pItem ))
-                    bSet = ((SfxBoolItem*)pItem)->GetValue();
+                    bSet = static_cast<const SfxBoolItem*>(pItem)->GetValue();
                 else
                     bSet = !bCurrent;
 
@@ -450,16 +453,16 @@ void SwDocShell::Execute(SfxRequest& rReq)
                 {
                     // PagePreview in the WebDocShell
                     // is found under Id VIEWSHELL2.
-                    if( ISA(SwWebDocShell) && SID_VIEWSHELL1 == nSlotId )
+                    if( dynamic_cast< const SwWebDocShell *>( this ) !=  nullptr && SID_VIEWSHELL1 == nSlotId )
                         nSlotId = SID_VIEWSHELL2;
 
                     if( pCurrView && pCurrView->GetDocShell() == this )
-                        pTmpFrm = pCurrView->GetViewFrame();
+                        pTmpFrame = pCurrView->GetViewFrame();
                     else
-                        pTmpFrm = SfxViewFrame::GetFirst( this );
+                        pTmpFrame = SfxViewFrame::GetFirst( this );
 
-                    if (pTmpFrm)
-                        pTmpFrm->GetDispatcher()->Execute( nSlotId, SfxCallMode::ASYNCHRON );
+                    if (pTmpFrame)
+                        pTmpFrame->GetDispatcher()->Execute( nSlotId, SfxCallMode::ASYNCHRON );
                 }
 
                 rReq.SetReturnValue(SfxBoolItem(SID_PRINTPREVIEW, bSet ));
@@ -475,48 +478,48 @@ void SwDocShell::Execute(SfxRequest& rReq)
                 static bool bMerge = false;
                 sal_uInt16 nRet = USHRT_MAX;
 
-                sal_uInt16 nFlags = bFrame ? SFX_LOAD_FRAME_STYLES : 0;
+                SfxTemplateFlags nFlags = bFrame ? SfxTemplateFlags::LOAD_FRAME_STYLES : SfxTemplateFlags::NONE;
                 if(bPage)
-                    nFlags|= SFX_LOAD_PAGE_STYLES;
+                    nFlags |= SfxTemplateFlags::LOAD_PAGE_STYLES;
                 if(bNum)
-                    nFlags|= SFX_LOAD_NUM_STYLES;
-                if(!nFlags || bText)
-                    nFlags|= SFX_LOAD_TEXT_STYLES;
+                    nFlags |= SfxTemplateFlags::LOAD_NUM_STYLES;
+                if(nFlags == SfxTemplateFlags::NONE || bText)
+                    nFlags |= SfxTemplateFlags::LOAD_TEXT_STYLES;
                 if(bMerge)
-                    nFlags|= SFX_MERGE_STYLES;
+                    nFlags |= SfxTemplateFlags::MERGE_STYLES;
 
                 if ( pArgs )
                 {
-                    SFX_REQUEST_ARG( rReq, pTemplateItem, SfxStringItem, SID_TEMPLATE_NAME, false );
+                    const SfxStringItem* pTemplateItem = rReq.GetArg<SfxStringItem>(SID_TEMPLATE_NAME);
                     if ( pTemplateItem )
                     {
                         aFileName = pTemplateItem->GetValue();
-                        SFX_REQUEST_ARG( rReq, pFlagsItem, SfxInt32Item, SID_TEMPLATE_LOAD, false );
+                        const SfxInt32Item* pFlagsItem = rReq.GetArg<SfxInt32Item>(SID_TEMPLATE_LOAD);
                         if ( pFlagsItem )
-                            nFlags = (sal_uInt16) pFlagsItem->GetValue();
+                            nFlags = static_cast<SfxTemplateFlags>((sal_uInt16) pFlagsItem->GetValue());
                     }
                 }
 
                 if ( aFileName.isEmpty() )
                 {
                     SvtPathOptions aPathOpt;
-                    boost::scoped_ptr<SfxNewFileDialog> pNewFileDlg(
-                        new SfxNewFileDialog(&GetView()->GetViewFrame()->GetWindow(), SFXWB_LOAD_TEMPLATE));
+                    ScopedVclPtr<SfxNewFileDialog> pNewFileDlg(
+                        VclPtr<SfxNewFileDialog>::Create(&GetView()->GetViewFrame()->GetWindow(), SfxNewFileDialogMode::LoadTemplate));
                     pNewFileDlg->SetTemplateFlags(nFlags);
 
                     nRet = pNewFileDlg->Execute();
                     if(RET_TEMPLATE_LOAD == nRet)
                     {
-                        FileDialogHelper aDlgHelper( TemplateDescription::FILEOPEN_SIMPLE, 0 );
-                        uno::Reference < XFilePicker > xFP = aDlgHelper.GetFilePicker();
+                        FileDialogHelper aDlgHelper( TemplateDescription::FILEOPEN_SIMPLE );
+                        uno::Reference < XFilePicker2 > xFP = aDlgHelper.GetFilePicker();
 
                         xFP->setDisplayDirectory( aPathOpt.GetWorkPath() );
 
                         SfxObjectFactory &rFact = GetFactory();
-                        SfxFilterMatcher aMatcher( OUString::createFromAscii(rFact.GetShortName()) );
+                        SfxFilterMatcher aMatcher( rFact.GetFactoryName() );
                         SfxFilterMatcherIter aIter( aMatcher );
                         uno::Reference<XFilterManager> xFltMgr(xFP, UNO_QUERY);
-                        const SfxFilter* pFlt = aIter.First();
+                        std::shared_ptr<const SfxFilter> pFlt = aIter.First();
                         while( pFlt )
                         {
                             // --> OD #i117339#
@@ -529,10 +532,10 @@ void SwDocShell::Execute(SfxRequest& rReq)
                             }
                             pFlt = aIter.Next();
                         }
-                        bool bWeb = 0 != dynamic_cast< SwWebDocShell *>( this );
-                        const SfxFilter *pOwnFlt =
+                        bool bWeb = dynamic_cast< SwWebDocShell *>( this ) !=  nullptr;
+                        std::shared_ptr<const SfxFilter> pOwnFlt =
                                 SwDocShell::Factory().GetFilterContainer()->
-                                GetFilter4FilterName(OUString("writer8"));
+                                GetFilter4FilterName("writer8");
 
                         // make sure the default file format is also available
                         if(bWeb)
@@ -554,7 +557,7 @@ void SwDocShell::Execute(SfxRequest& rReq)
 
                         if( !bError && ERRCODE_NONE == aDlgHelper.Execute() )
                         {
-                            aFileName = xFP->getFiles().getConstArray()[0];
+                            aFileName = xFP->getSelectedFiles().getConstArray()[0];
                         }
                     }
                     else if( RET_OK == nRet)
@@ -570,15 +573,15 @@ void SwDocShell::Execute(SfxRequest& rReq)
                 if( !aFileName.isEmpty() )
                 {
                     SwgReaderOption aOpt;
-                    aOpt.SetTxtFmts(    bText = (0 != (nFlags&SFX_LOAD_TEXT_STYLES) ));
-                    aOpt.SetFrmFmts(    bFrame = (0 != (nFlags&SFX_LOAD_FRAME_STYLES)));
-                    aOpt.SetPageDescs(  bPage = (0 != (nFlags&SFX_LOAD_PAGE_STYLES )));
-                    aOpt.SetNumRules(   bNum = (0 != (nFlags&SFX_LOAD_NUM_STYLES  )));
+                    aOpt.SetTextFormats(    bText  = bool(nFlags & SfxTemplateFlags::LOAD_TEXT_STYLES ));
+                    aOpt.SetFrameFormats(    bFrame = bool(nFlags & SfxTemplateFlags::LOAD_FRAME_STYLES));
+                    aOpt.SetPageDescs(  bPage  = bool(nFlags & SfxTemplateFlags::LOAD_PAGE_STYLES ));
+                    aOpt.SetNumRules(   bNum   = bool(nFlags & SfxTemplateFlags::LOAD_NUM_STYLES  ));
                     //different meaning between SFX_MERGE_STYLES and aOpt.SetMerge!
-                    bMerge = 0 != (nFlags&SFX_MERGE_STYLES);
+                    bMerge = bool(nFlags & SfxTemplateFlags::MERGE_STYLES);
                     aOpt.SetMerge( !bMerge );
 
-                    SetError( LoadStylesFromFile( aFileName, aOpt, false ), OUString( OSL_LOG_PREFIX ));
+                    SetError(LoadStylesFromFile(aFileName, aOpt, false));
                     if ( !GetError() )
                         rReq.Done();
                 }
@@ -587,9 +590,9 @@ void SwDocShell::Execute(SfxRequest& rReq)
             case SID_SOURCEVIEW:
             {
                 SfxViewShell* pViewShell = GetView()
-                                            ? (SfxViewShell*)GetView()
+                                            ? static_cast<SfxViewShell*>(GetView())
                                             : SfxViewShell::Current();
-                SfxViewFrame*  pViewFrm = pViewShell->GetViewFrame();
+                SfxViewFrame*  pViewFrame = pViewShell->GetViewFrame();
                 SwSrcView* pSrcView = dynamic_cast< SwSrcView *>( pViewShell );
                 if(!pSrcView)
                 {
@@ -597,21 +600,21 @@ void SwDocShell::Execute(SfxRequest& rReq)
                     // 1 - file unsaved -> save as HTML
                     // 2 - file modified and HTML filter active -> save
                     // 3 - file saved in non-HTML -> QueryBox to save as HTML
-                    const SfxFilter* pHtmlFlt =
+                    std::shared_ptr<const SfxFilter> pHtmlFlt =
                                     SwIoSystem::GetFilterOfFormat(
-                                        OUString("HTML"),
+                                        "HTML",
                                         SwWebDocShell::Factory().GetFilterContainer() );
                     bool bLocalHasName = HasName();
                     if(bLocalHasName)
                     {
                         //check for filter type
-                        const SfxFilter* pFlt = GetMedium()->GetFilter();
+                        std::shared_ptr<const SfxFilter> pFlt = GetMedium()->GetFilter();
                         if(!pFlt || pFlt->GetUserData() != pHtmlFlt->GetUserData())
                         {
-                            MessageDialog aQuery(&pViewFrm->GetWindow(),
-                                "SaveAsHTMLDialog", "modules/swriter/ui/saveashtmldialog.ui");
+                            ScopedVclPtrInstance<MessageDialog> aQuery(&pViewFrame->GetWindow(),
+                                                                       "SaveAsHTMLDialog", "modules/swriter/ui/saveashtmldialog.ui");
 
-                            if(RET_YES == aQuery.Execute())
+                            if(RET_YES == aQuery->Execute())
                                 bLocalHasName = false;
                             else
                                 break;
@@ -619,7 +622,7 @@ void SwDocShell::Execute(SfxRequest& rReq)
                     }
                     if(!bLocalHasName)
                     {
-                        FileDialogHelper aDlgHelper( TemplateDescription::FILESAVE_AUTOEXTENSION, 0 );
+                        FileDialogHelper aDlgHelper( TemplateDescription::FILESAVE_AUTOEXTENSION );
                         aDlgHelper.AddFilter( pHtmlFlt->GetFilterName(), pHtmlFlt->GetDefaultExtension() );
                         aDlgHelper.SetCurrentFilter( pHtmlFlt->GetFilterName() );
                         if( ERRCODE_NONE != aDlgHelper.Execute())
@@ -629,9 +632,10 @@ void SwDocShell::Execute(SfxRequest& rReq)
                         OUString sPath = aDlgHelper.GetPath();
                         SfxStringItem aName(SID_FILE_NAME, sPath);
                         SfxStringItem aFilter(SID_FILTER_NAME, pHtmlFlt->GetName());
-                        const SfxBoolItem* pBool = (const SfxBoolItem*)
-                                pViewFrm->GetDispatcher()->Execute(
-                                        SID_SAVEASDOC, SfxCallMode::SYNCHRON, &aName, &aFilter, 0L );
+                        const SfxBoolItem* pBool = static_cast<const SfxBoolItem*>(
+                                pViewFrame->GetDispatcher()->ExecuteList(
+                                        SID_SAVEASDOC, SfxCallMode::SYNCHRON,
+                                        { &aName, &aFilter }));
                         if(!pBool || !pBool->GetValue())
                             break;
                     }
@@ -643,12 +647,12 @@ void SwDocShell::Execute(SfxRequest& rReq)
                 // the SourceView is not the 1 for SwWebDocShell
                 sal_uInt16 nSlot = SID_VIEWSHELL1;
                 bool bSetModified = false;
-                SfxPrinter* pSavePrinter = 0;
-                if( 0 != pSrcView)
+                VclPtr<SfxPrinter> pSavePrinter;
+                if( nullptr != pSrcView)
                 {
                     SfxPrinter* pTemp = GetDoc()->getIDocumentDeviceAccess().getPrinter( false );
                     if(pTemp)
-                        pSavePrinter = new SfxPrinter(*pTemp);
+                        pSavePrinter = VclPtr<SfxPrinter>::Create(*pTemp);
                     bSetModified = IsModified() || pSrcView->IsModified();
                     if(pSrcView->IsModified()||pSrcView->HasSourceSaved())
                     {
@@ -657,10 +661,10 @@ void SwDocShell::Execute(SfxRequest& rReq)
                         pSrcView->SaveContent(aTempFile.GetURL());
                         bDone = true;
                         SvxMacro aMac(aEmptyOUStr, aEmptyOUStr, STARBASIC);
-                        SfxEventConfiguration::ConfigureEvent(GlobalEventConfig::GetEventName( STR_EVENT_OPENDOC ), aMac, this);
-                        SfxEventConfiguration::ConfigureEvent(GlobalEventConfig::GetEventName( STR_EVENT_PREPARECLOSEDOC ), aMac, this);
-                        SfxEventConfiguration::ConfigureEvent(GlobalEventConfig::GetEventName( STR_EVENT_ACTIVATEDOC ),     aMac, this);
-                        SfxEventConfiguration::ConfigureEvent(GlobalEventConfig::GetEventName( STR_EVENT_DEACTIVATEDOC ), aMac, this);
+                        SfxEventConfiguration::ConfigureEvent(GlobalEventConfig::GetEventName( GlobalEventId::OPENDOC ), aMac, this);
+                        SfxEventConfiguration::ConfigureEvent(GlobalEventConfig::GetEventName( GlobalEventId::PREPARECLOSEDOC ), aMac, this);
+                        SfxEventConfiguration::ConfigureEvent(GlobalEventConfig::GetEventName( GlobalEventId::ACTIVATEDOC ),     aMac, this);
+                        SfxEventConfiguration::ConfigureEvent(GlobalEventConfig::GetEventName( GlobalEventId::DEACTIVATEDOC ), aMac, this);
                         ReloadFromHtml(aTempFile.GetURL(), pSrcView);
                         nSlot = 0;
                     }
@@ -670,7 +674,7 @@ void SwDocShell::Execute(SfxRequest& rReq)
                     }
                 }
                 if(nSlot)
-                    pViewFrm->GetDispatcher()->Execute(nSlot, SfxCallMode::SYNCHRON);
+                    pViewFrame->GetDispatcher()->Execute(nSlot, SfxCallMode::SYNCHRON);
                 if(bSetModified)
                     GetDoc()->getIDocumentState().SetModified();
                 if(pSavePrinter)
@@ -678,15 +682,15 @@ void SwDocShell::Execute(SfxRequest& rReq)
                     GetDoc()->getIDocumentDeviceAccess().setPrinter( pSavePrinter, true, true);
                     //pSavePrinter must not be deleted again
                 }
-                pViewFrm->GetBindings().SetState(SfxBoolItem(SID_SOURCEVIEW, nSlot == SID_VIEWSHELL2));
-                pViewFrm->GetBindings().Invalidate( SID_NEWWINDOW );
-                pViewFrm->GetBindings().Invalidate( SID_BROWSER_MODE );
-                pViewFrm->GetBindings().Invalidate( FN_PRINT_LAYOUT );
+                pViewFrame->GetBindings().SetState(SfxBoolItem(SID_SOURCEVIEW, nSlot == SID_VIEWSHELL2));
+                pViewFrame->GetBindings().Invalidate( SID_NEWWINDOW );
+                pViewFrame->GetBindings().Invalidate( SID_BROWSER_MODE );
+                pViewFrame->GetBindings().Invalidate( FN_PRINT_LAYOUT );
             }
             break;
             case SID_GET_COLORLIST:
             {
-                SvxColorListItem* pColItem = (SvxColorListItem*)GetItem(SID_COLOR_TABLE);
+                const SvxColorListItem* pColItem = static_cast<const SvxColorListItem*>(GetItem(SID_COLOR_TABLE));
                 XColorListRef pList = pColItem->GetColorList();
                 rReq.SetReturnValue(OfaRefItem<XColorList>(SID_GET_COLORLIST, pList));
             }
@@ -697,18 +701,18 @@ void SwDocShell::Execute(SfxRequest& rReq)
             SwAbstractDialogFactory* pFact = SwAbstractDialogFactory::Create();
             OSL_ENSURE(pFact, "SwAbstractDialogFactory fail!");
 
-            boost::scoped_ptr<AbstractSwInsertAbstractDlg> pDlg(pFact->CreateSwInsertAbstractDlg(0));
+            ScopedVclPtr<AbstractSwInsertAbstractDlg> pDlg(pFact->CreateSwInsertAbstractDlg());
             OSL_ENSURE(pDlg, "Dialog creation failed!");
             if(RET_OK == pDlg->Execute())
             {
                 sal_uInt8 nLevel = pDlg->GetLevel();
                 sal_uInt8 nPara = pDlg->GetPara();
                 SwDoc* pSmryDoc = new SwDoc();
-                SfxObjectShellLock xDocSh( new SwDocShell( pSmryDoc, SFX_CREATE_MODE_STANDARD));
-                xDocSh->DoInitNew( 0 );
+                SfxObjectShellLock xDocSh( new SwDocShell( pSmryDoc, SfxObjectCreateMode::STANDARD));
+                xDocSh->DoInitNew();
 
                 bool bImpress = FN_ABSTRACT_STARIMPRESS == nWhich;
-                mpDoc->Summary( pSmryDoc, nLevel, nPara, bImpress );
+                m_pDoc->Summary( pSmryDoc, nLevel, nPara, bImpress );
                 if( bImpress )
                 {
                     WriterRef xWrt;
@@ -735,7 +739,7 @@ void SwDocShell::Execute(SfxRequest& rReq)
                         if ( aLockBytes.Stat( &aStat, SVSTATFLAG_DEFAULT ) == ERRCODE_NONE )
                         {
                             sal_uInt32 nLen = aStat.nSize;
-                            sal_uLong nRead = 0;
+                            std::size_t nRead = 0;
                             uno::Sequence< sal_Int8 > aSeq( nLen );
                             aLockBytes.ReadAt( 0, aSeq.getArray(), nLen, &nRead );
 
@@ -751,11 +755,11 @@ void SwDocShell::Execute(SfxRequest& rReq)
                 else
                 {
                     // Create new document
-                    SfxViewFrame *pFrame = SfxViewFrame::LoadDocument( *xDocSh, 0 );
-                    SwView      *pCurrView = (SwView*) pFrame->GetViewShell();
+                    SfxViewFrame *pFrame = SfxViewFrame::LoadDocument( *xDocSh, SFX_INTERFACE_NONE );
+                    SwView      *pCurrView = static_cast<SwView*>( pFrame->GetViewShell());
 
                     // Set document's title
-                    OUString aTmp( SW_RES(STR_ABSTRACT_TITLE) );
+                    OUString aTmp( SwResId(STR_ABSTRACT_TITLE) );
                     aTmp += GetTitle();
                     xDocSh->SetTitle( aTmp );
                     pCurrView->GetWrtShell().SetNewDoc();
@@ -801,7 +805,7 @@ void SwDocShell::Execute(SfxRequest& rReq)
                         if ( aLockBytes.Stat( &aStat, SVSTATFLAG_DEFAULT ) == ERRCODE_NONE )
                         {
                             sal_uInt32 nLen = aStat.nSize;
-                            sal_uLong nRead = 0;
+                            std::size_t nRead = 0;
                             uno::Sequence< sal_Int8 > aSeq( nLen );
                             aLockBytes.ReadAt( 0, aSeq.getArray(), nLen, &nRead );
 
@@ -813,15 +817,12 @@ void SwDocShell::Execute(SfxRequest& rReq)
                     }
                     else
                     {
-                        TransferDataContainer* pClipCntnr =
-                                                    new TransferDataContainer;
-                        ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >
-                                                        xRef( pClipCntnr );
+                        rtl::Reference<TransferDataContainer> pClipCntnr = new TransferDataContainer;
 
-                        pClipCntnr->CopyAnyData( FORMAT_RTF, (sal_Char*)
-                                    pStrm->GetData(), pStrm->GetEndOfData() );
+                        pClipCntnr->CopyAnyData( SotClipboardFormatId::RTF, static_cast<sal_Char const *>(
+                                    pStrm->GetData()), pStrm->GetEndOfData() );
                         pClipCntnr->CopyToClipboard(
-                            GetView()? (vcl::Window*)&GetView()->GetEditWin() : 0 );
+                            GetView()? &GetView()->GetEditWin() : nullptr );
                         delete pStrm;
                     }
                 }
@@ -831,30 +832,34 @@ void SwDocShell::Execute(SfxRequest& rReq)
             break;
             case SID_SPELLCHECKER_CHANGED:
                 //! false, true, true is on the save side but a probably overdone
-                SW_MOD()->CheckSpellChanges(false, true, true, false );
+                SwModule::CheckSpellChanges(false, true, true, false );
             break;
 
         case SID_MAIL_PREPAREEXPORT:
         {
             //pWrtShell is not set in page preview
-            if(mpWrtShell)
-                mpWrtShell->StartAllAction();
-            mpDoc->getIDocumentFieldsAccess().UpdateFlds( NULL, false );
-            mpDoc->getIDocumentLinksAdministration().EmbedAllLinks();
-            mpDoc->RemoveInvisibleContent();
-            if(mpWrtShell)
-                mpWrtShell->EndAllAction();
+            if (m_pWrtShell)
+                m_pWrtShell->StartAllAction();
+            m_pDoc->getIDocumentFieldsAccess().UpdateFields( false );
+            m_pDoc->getIDocumentLinksAdministration().EmbedAllLinks();
+            m_IsRemovedInvisibleContent
+                = officecfg::Office::Security::HiddenContent::RemoveHiddenContent::get();
+            if (m_IsRemovedInvisibleContent)
+                m_pDoc->RemoveInvisibleContent();
+            if (m_pWrtShell)
+                m_pWrtShell->EndAllAction();
         }
         break;
 
         case SID_MAIL_EXPORT_FINISHED:
         {
-                if(mpWrtShell)
-                    mpWrtShell->StartAllAction();
+                if (m_pWrtShell)
+                    m_pWrtShell->StartAllAction();
                 //try to undo the removal of invisible content
-                mpDoc->RestoreInvisibleContent();
-                if(mpWrtShell)
-                    mpWrtShell->EndAllAction();
+                if (m_IsRemovedInvisibleContent)
+                    m_pDoc->RestoreInvisibleContent();
+                if (m_pWrtShell)
+                    m_pWrtShell->EndAllAction();
         }
         break;
         case FN_NEW_HTML_DOC:
@@ -869,15 +874,16 @@ void SwDocShell::Execute(SfxRequest& rReq)
                 OUString aFileName, aTemplateName;
                 if( pArgs && SfxItemState::SET == pArgs->GetItemState( nWhich, false, &pItem ) )
                 {
-                    aFileName = ((const SfxStringItem*)pItem)->GetValue();
-                    SFX_ITEMSET_ARG( pArgs, pTemplItem, SfxStringItem, SID_TEMPLATE_NAME, false );
+                    aFileName = static_cast<const SfxStringItem*>(pItem)->GetValue();
+                    const SfxStringItem* pTemplItem = SfxItemSet::GetItem<SfxStringItem>(pArgs, SID_TEMPLATE_NAME, false);
                     if ( pTemplItem )
                         aTemplateName = pTemplItem->GetValue();
                 }
-                bool bError = false;
                 if ( aFileName.isEmpty() )
                 {
-                    FileDialogHelper aDlgHelper( TemplateDescription::FILESAVE_AUTOEXTENSION_TEMPLATE, 0 );
+                    bool bError = false;
+
+                    FileDialogHelper aDlgHelper( TemplateDescription::FILESAVE_AUTOEXTENSION_TEMPLATE );
 
                     const sal_Int16 nControlIds[] = {
                         CommonFilePickerElementIds::PUSHBUTTON_OK,
@@ -916,16 +922,16 @@ void SwDocShell::Execute(SfxRequest& rReq)
 
                     const char** pHelpIds = bCreateHtml ? aHTMLHelpIds : aMasterHelpIds;
                     aDlgHelper.SetControlHelpIds( nControlIds, pHelpIds );
-                    uno::Reference < XFilePicker > xFP = aDlgHelper.GetFilePicker();
+                    uno::Reference < XFilePicker2 > xFP = aDlgHelper.GetFilePicker();
 
-                    const SfxFilter* pFlt;
+                    std::shared_ptr<const SfxFilter> pFlt;
                     sal_uInt16 nStrId;
 
                     if( bCreateHtml )
                     {
                         // for HTML there is only one filter!!
                         pFlt = SwIoSystem::GetFilterOfFormat(
-                                OUString("HTML"),
+                                "HTML",
                                 SwWebDocShell::Factory().GetFilterContainer() );
                         nStrId = STR_LOAD_HTML_DOC;
                     }
@@ -933,7 +939,7 @@ void SwDocShell::Execute(SfxRequest& rReq)
                     {
                         // for Global-documents we now only offer the current one.
                         pFlt = SwGlobalDocShell::Factory().GetFilterContainer()->
-                                    GetFilter4Extension( OUString("odm")  );
+                                    GetFilter4Extension( "odm"  );
                         nStrId = STR_LOAD_GLOBAL_DOC;
                     }
 
@@ -956,37 +962,38 @@ void SwDocShell::Execute(SfxRequest& rReq)
                         uno::Reference<XFilePickerControlAccess> xCtrlAcc(xFP, UNO_QUERY);
 
                         bool    bOutline[MAXLEVEL] = {false};
-                        const SwOutlineNodes& rOutlNds = mpDoc->GetNodes().GetOutLineNds();
+                        const SwOutlineNodes& rOutlNds = m_pDoc->GetNodes().GetOutLineNds();
                         if( !rOutlNds.empty() )
                         {
-                            int nLevel;
-                            for(sal_uInt16 n = 0; n < rOutlNds.size(); ++n )
-                                if( ( nLevel = rOutlNds[n]->GetTxtNode()->GetAttrOutlineLevel()) > 0 &&
-                                    ! bOutline[nLevel-1] )
+                            for( size_t n = 0; n < rOutlNds.size(); ++n )
+                            {
+                                const int nLevel = rOutlNds[n]->GetTextNode()->GetAttrOutlineLevel();
+                                if( nLevel > 0 && ! bOutline[nLevel-1] )
                                 {
                                     bOutline[nLevel-1] = true;
                                 }
+                            }
                         }
 
-                        const sal_uInt16 nStyleCount = mpDoc->GetTxtFmtColls()->size();
+                        const sal_uInt16 nStyleCount = m_pDoc->GetTextFormatColls()->size();
                         Sequence<OUString> aListBoxEntries( MAXLEVEL + nStyleCount);
                         OUString* pEntries = aListBoxEntries.getArray();
                         sal_Int32   nIdx = 0 ;
 
-                        OUString    sOutline( SW_RESSTR(STR_FDLG_OUTLINE_LEVEL) );
+                        OUString    sOutline( SwResId(STR_FDLG_OUTLINE_LEVEL) );
                         for( sal_uInt16 i = 0; i < MAXLEVEL; ++i )
                         {
                             if( bOutline[i] )
                                 pEntries[nIdx++] = sOutline + OUString::number( i+1 );
                         }
 
-                        OUString    sStyle( SW_RESSTR(STR_FDLG_STYLE) );
+                        OUString    sStyle( SwResId(STR_FDLG_STYLE) );
                         for(sal_uInt16 i = 0; i < nStyleCount; ++i)
                         {
-                            SwTxtFmtColl &rTxtColl = *(*mpDoc->GetTxtFmtColls())[ i ];
-                            if( !rTxtColl.IsDefault() && rTxtColl.IsAtDocNodeSet() )
+                            SwTextFormatColl &rTextColl = *(*m_pDoc->GetTextFormatColls())[ i ];
+                            if( !rTextColl.IsDefault() && rTextColl.IsAtDocNodeSet() )
                             {
-                                pEntries[nIdx++] = sStyle + rTxtColl.GetName();
+                                pEntries[nIdx++] = sStyle + rTextColl.GetName();
                             }
                         }
 
@@ -995,27 +1002,27 @@ void SwDocShell::Execute(SfxRequest& rReq)
 
                         try
                         {
-                            Any aTemplates(&aListBoxEntries, ::getCppuType(&aListBoxEntries));
+                            Any aTemplates(&aListBoxEntries, cppu::UnoType<decltype(aListBoxEntries)>::get());
 
                             xCtrlAcc->setValue( ExtendedFilePickerElementIds::LISTBOX_TEMPLATE,
                                 ListboxControlActions::ADD_ITEMS , aTemplates );
-                            Any aSelectPos(&nSelect, ::getCppuType(&nSelect));
+                            Any aSelectPos(&nSelect, cppu::UnoType<decltype(nSelect)>::get());
                             xCtrlAcc->setValue( ExtendedFilePickerElementIds::LISTBOX_TEMPLATE,
                                 ListboxControlActions::SET_SELECT_ITEM, aSelectPos );
                             xCtrlAcc->setLabel( ExtendedFilePickerElementIds::LISTBOX_TEMPLATE,
-                                                    OUString(SW_RES( STR_FDLG_TEMPLATE_NAME )));
+                                                    SwResId( STR_FDLG_TEMPLATE_NAME ));
                         }
                         catch (const Exception&)
                         {
-                            OSL_FAIL("control acces failed");
+                            OSL_FAIL("control access failed");
                         }
 
-                        xFP->setTitle( SW_RESSTR( nStrId ));
+                        xFP->setTitle( SwResId( nStrId ));
                         SvtPathOptions aPathOpt;
                         xFP->setDisplayDirectory( aPathOpt.GetWorkPath() );
                         if( ERRCODE_NONE == aDlgHelper.Execute())
                         {
-                            aFileName = xFP->getFiles().getConstArray()[0];
+                            aFileName = xFP->getSelectedFiles().getConstArray()[0];
                             Any aTemplateValue = xCtrlAcc->getValue(
                                 ExtendedFilePickerElementIds::LISTBOX_TEMPLATE,
                                 ListboxControlActions::GET_SELECTED_ITEM );
@@ -1053,17 +1060,17 @@ void SwDocShell::Execute(SfxRequest& rReq)
                         if ( bCreateByOutlineLevel )
                         {
                             bDone = bCreateHtml
-                                ? mpDoc->GenerateHTMLDoc( aFileName, nTemplateOutlineLevel )
-                                : mpDoc->GenerateGlobalDoc( aFileName, nTemplateOutlineLevel );
+                                ? m_pDoc->GenerateHTMLDoc( aFileName, nTemplateOutlineLevel )
+                                : m_pDoc->GenerateGlobalDoc( aFileName, nTemplateOutlineLevel );
                         }
                         else
                         {
-                            const SwTxtFmtColl* pSplitColl = 0;
+                            const SwTextFormatColl* pSplitColl = nullptr;
                             if ( !aTemplateName.isEmpty() )
-                                pSplitColl = mpDoc->FindTxtFmtCollByName(aTemplateName);
+                                pSplitColl = m_pDoc->FindTextFormatCollByName(aTemplateName);
                             bDone = bCreateHtml
-                                ? mpDoc->GenerateHTMLDoc( aFileName, pSplitColl )
-                                : mpDoc->GenerateGlobalDoc( aFileName, pSplitColl );
+                                ? m_pDoc->GenerateHTMLDoc( aFileName, pSplitColl )
+                                : m_pDoc->GenerateGlobalDoc( aFileName, pSplitColl );
                         }
                         if( bDone )
                         {
@@ -1075,15 +1082,12 @@ void SwDocShell::Execute(SfxRequest& rReq)
                                 //search for the view that created the call
                                 if(pViewShell->GetObjectShell() == this && pViewShell->GetDispatcher())
                                 {
-                                    boost::scoped_ptr<SfxFrameItem> pFrameItem(new SfxFrameItem( SID_DOCFRAME,
+                                    std::unique_ptr<SfxFrameItem> pFrameItem(new SfxFrameItem( SID_DOCFRAME,
                                                         pViewShell->GetViewFrame() ));
                                     SfxDispatcher* pDispatch = pViewShell->GetDispatcher();
-                                    pDispatch->Execute(
-                                            SID_OPENDOC,
-                                            SfxCallMode::ASYNCHRON,
-                                            &aName,
-                                            &aReferer,
-                                            pFrameItem.get(), 0L );
+                                    pDispatch->ExecuteList(SID_OPENDOC,
+                                        SfxCallMode::ASYNCHRON,
+                                        { &aName, &aReferer, pFrameItem.get() });
                                     break;
                                 }
                                 pViewShell = SfxViewShell::GetNext(*pViewShell);
@@ -1092,7 +1096,7 @@ void SwDocShell::Execute(SfxRequest& rReq)
                     }
                     if( !bDone && !rReq.IsAPI() )
                     {
-                        InfoBox( 0, SW_RESSTR( STR_CANTCREATE )).Execute();
+                        ScopedVclPtrInstance<InfoBox>(nullptr, SwResId( STR_CANTCREATE))->Execute();
                     }
                 }
             }
@@ -1106,12 +1110,12 @@ void SwDocShell::Execute(SfxRequest& rReq)
         case SID_ATTR_YEAR2000:
             if ( pArgs && SfxItemState::SET == pArgs->GetItemState( nWhich , false, &pItem ))
             {
-                OSL_ENSURE(pItem->ISA(SfxUInt16Item), "wrong Item");
-                sal_uInt16 nYear2K = ((SfxUInt16Item*)pItem)->GetValue();
+                OSL_ENSURE(dynamic_cast< const SfxUInt16Item *>( pItem ) !=  nullptr, "wrong Item");
+                sal_uInt16 nYear2K = static_cast<const SfxUInt16Item*>(pItem)->GetValue();
                 // iterate over Views and put the State to FormShells
 
                 SfxViewFrame* pVFrame = SfxViewFrame::GetFirst( this );
-                SfxViewShell* pViewShell = pVFrame ? pVFrame->GetViewShell() : 0;
+                SfxViewShell* pViewShell = pVFrame ? pVFrame->GetViewShell() : nullptr;
                 SwView* pCurrView = dynamic_cast< SwView* >( pViewShell );
                 while(pCurrView)
                 {
@@ -1119,10 +1123,10 @@ void SwDocShell::Execute(SfxRequest& rReq)
                     if(pFormShell)
                         pFormShell->SetY2KState(nYear2K);
                     pVFrame = SfxViewFrame::GetNext( *pVFrame, this );
-                    pViewShell = pVFrame ? pVFrame->GetViewShell() : 0;
+                    pViewShell = pVFrame ? pVFrame->GetViewShell() : nullptr;
                     pCurrView = dynamic_cast<SwView*>( pViewShell );
                 }
-                mpDoc->GetNumberFormatter(true)->SetYear2000(nYear2K);
+                m_pDoc->GetNumberFormatter()->SetYear2000(nYear2K);
             }
         break;
         case FN_OPEN_FILE:
@@ -1143,8 +1147,73 @@ void SwDocShell::Execute(SfxRequest& rReq)
 
             SfxStringItem aApp(SID_DOC_SERVICE, OUString("com.sun.star.text.TextDocument"));
             SfxStringItem aTarget(SID_TARGETNAME, OUString("_blank"));
-            pViewShell->GetDispatcher()->Execute(
-                SID_OPENDOC, SfxCallMode::API|SfxCallMode::SYNCHRON, &aApp, &aTarget, 0L);
+            pViewShell->GetDispatcher()->ExecuteList(SID_OPENDOC,
+                SfxCallMode::API|SfxCallMode::SYNCHRON,
+                { &aApp, &aTarget });
+        }
+        break;
+        case SID_CLASSIFICATION_APPLY:
+        {
+            if (pArgs && pArgs->GetItemState(nWhich, false, &pItem) == SfxItemState::SET)
+            {
+                SwWrtShell* pSh = GetWrtShell();
+                const OUString& rValue = static_cast<const SfxStringItem*>(pItem)->GetValue();
+                auto eType = SfxClassificationPolicyType::IntellectualProperty;
+                if (pArgs->GetItemState(SID_TYPE_NAME, false, &pItem) == SfxItemState::SET)
+                {
+                    const OUString& rType = static_cast<const SfxStringItem*>(pItem)->GetValue();
+                    eType = SfxClassificationHelper::stringToPolicyType(rType);
+                }
+                pSh->SetClassification(rValue, eType);
+            }
+            else
+                SAL_WARN("sw.ui", "missing parameter for SID_CLASSIFICATION_APPLY");
+        }
+        break;
+        case SID_WATERMARK:
+        {
+            SwWrtShell* pSh = GetWrtShell();
+            if ( pSh )
+            {
+                if (pArgs && pArgs->GetItemState( SID_WATERMARK, false, &pItem ) == SfxItemState::SET)
+                {
+                    SfxWatermarkItem aItem;
+                    aItem.SetText( static_cast<const SfxStringItem*>( pItem )->GetValue() );
+
+                    if ( pArgs->GetItemState( SID_WATERMARK_FONT, false, &pItem ) == SfxItemState::SET )
+                        aItem.SetFont( static_cast<const SfxStringItem*>( pItem )->GetValue() );
+                    if ( pArgs->GetItemState( SID_WATERMARK_ANGLE, false, &pItem ) == SfxItemState::SET )
+                        aItem.SetAngle( static_cast<const SfxInt16Item*>( pItem )->GetValue() );
+                    if ( pArgs->GetItemState( SID_WATERMARK_TRANSPARENCY, false, &pItem ) == SfxItemState::SET )
+                        aItem.SetTransparency( static_cast<const SfxInt16Item*>( pItem )->GetValue() );
+                    if ( pArgs->GetItemState( SID_WATERMARK_COLOR, false, &pItem ) == SfxItemState::SET )
+                        aItem.SetColor( static_cast<const SfxUInt32Item*>( pItem )->GetValue() );
+
+                    pSh->SetWatermark( aItem );
+                }
+                else
+                {
+                    SfxViewShell* pViewShell = GetView()? GetView(): SfxViewShell::Current();
+                    SfxBindings& rBindings( pViewShell->GetViewFrame()->GetBindings() );
+                    ScopedVclPtr<SwWatermarkDialog> pDlg( VclPtr<SwWatermarkDialog>::Create( nullptr, rBindings ) );
+                    pDlg->Execute();
+                    pDlg.disposeAndClear();
+                }
+            }
+        }
+        break;
+        case SID_NOTEBOOKBAR:
+        {
+            const SfxStringItem* pFile = rReq.GetArg<SfxStringItem>( SID_NOTEBOOKBAR );
+            SfxViewShell* pViewShell = GetView()? GetView(): SfxViewShell::Current();
+            SfxBindings& rBindings( pViewShell->GetViewFrame()->GetBindings() );
+
+            if ( SfxNotebookBar::IsActive() )
+                sfx2::SfxNotebookBar::ExecMethod( rBindings, pFile ? pFile->GetValue() : "" );
+            else
+            {
+                sfx2::SfxNotebookBar::CloseMethod( rBindings );
+            }
         }
         break;
 
@@ -1152,62 +1221,37 @@ void SwDocShell::Execute(SfxRequest& rReq)
     }
 }
 
- // #FIXME - align with NEW event stuff ( if possible )
-#if 0
-void lcl_processCompatibleSfxHint( const uno::Reference< document::XVbaEventsHelper >& xVbaEventsHelper, const SfxHint& rHint )
-{
-    if ( rHint.ISA( SfxEventHint ) )
-    {
-        uno::Sequence< uno::Any > aArgs;
-        sal_uLong nEventId = ((SfxEventHint&)rHint).GetEventId();
-        switch( nEventId )
-        {
-            case SFX_EVENT_CREATEDOC:
-            {
-                xVbaEventsHelper->ProcessCompatibleVbaEvent( VBAEVENT_DOCUMENT_NEW, aArgs );
-                break;
-            }
-            case SFX_EVENT_OPENDOC:
-            {
-                xVbaEventsHelper->ProcessCompatibleVbaEvent( VBAEVENT_DOCUMENT_OPEN, aArgs );
-                break;
-            }
-            default:
-            {
-                //do nothing
-            }
-        }
-    }
-}
-#endif
-
+#if defined(_WIN32)
 bool SwDocShell::DdeGetData( const OUString& rItem, const OUString& rMimeType,
                              uno::Any & rValue )
 {
-    return mpDoc->getIDocumentLinksAdministration().GetData( rItem, rMimeType, rValue );
+    return m_pDoc->getIDocumentLinksAdministration().GetData( rItem, rMimeType, rValue );
 }
 
 bool SwDocShell::DdeSetData( const OUString& rItem, const OUString& rMimeType,
                              const uno::Any & rValue )
 {
-    return mpDoc->getIDocumentLinksAdministration().SetData( rItem, rMimeType, rValue );
+    return m_pDoc->getIDocumentLinksAdministration().SetData( rItem, rMimeType, rValue );
 }
+
+#endif
 
 ::sfx2::SvLinkSource* SwDocShell::DdeCreateLinkSource( const OUString& rItem )
 {
-    return mpDoc->getIDocumentLinksAdministration().CreateLinkSource( rItem );
+    return m_pDoc->getIDocumentLinksAdministration().CreateLinkSource( rItem );
 }
 
 void SwDocShell::ReconnectDdeLink(SfxObjectShell& rServer)
 {
-    if ( mpDoc ) {
-        ::sfx2::LinkManager& rLinkManager = mpDoc->getIDocumentLinksAdministration().GetLinkManager();
+    if (m_pDoc)
+    {
+        ::sfx2::LinkManager& rLinkManager = m_pDoc->getIDocumentLinksAdministration().GetLinkManager();
         rLinkManager.ReconnectDdeLink(rServer);
     }
 }
 
 void SwDocShell::FillClass( SvGlobalName * pClassName,
-                                   sal_uInt32 * pClipFormat,
+                                   SotClipboardFormatId * pClipFormat,
                                    OUString * /*pAppName*/,
                                    OUString * pLongUserName,
                                    OUString * pUserName,
@@ -1217,67 +1261,69 @@ void SwDocShell::FillClass( SvGlobalName * pClassName,
     if (nVersion == SOFFICE_FILEFORMAT_60)
     {
         *pClassName     = SvGlobalName( SO3_SW_CLASSID_60 );
-        *pClipFormat    = SOT_FORMATSTR_ID_STARWRITER_60;
-        *pLongUserName = SW_RESSTR(STR_WRITER_DOCUMENT_FULLTYPE);
+        *pClipFormat    = SotClipboardFormatId::STARWRITER_60;
+        *pLongUserName = SwResId(STR_WRITER_DOCUMENT_FULLTYPE);
     }
     else if (nVersion == SOFFICE_FILEFORMAT_8)
     {
         *pClassName     = SvGlobalName( SO3_SW_CLASSID_60 );
-        *pClipFormat    = bTemplate ? SOT_FORMATSTR_ID_STARWRITER_8_TEMPLATE : SOT_FORMATSTR_ID_STARWRITER_8;
-        *pLongUserName = SW_RESSTR(STR_WRITER_DOCUMENT_FULLTYPE);
+        *pClipFormat    = bTemplate ? SotClipboardFormatId::STARWRITER_8_TEMPLATE : SotClipboardFormatId::STARWRITER_8;
+        *pLongUserName = SwResId(STR_WRITER_DOCUMENT_FULLTYPE);
     }
 // #FIXME check with new Event handling
 #if 0
-    uno::Reference< document::XVbaEventsHelper > xVbaEventsHelper = mpDoc->GetVbaEventsHelper();
+    uno::Reference< document::XVbaEventsHelper > xVbaEventsHelper = m_pDoc->GetVbaEventsHelper();
     if( xVbaEventsHelper.is() )
         lcl_processCompatibleSfxHint( xVbaEventsHelper, rHint );
 #endif
 
-    *pUserName = SW_RESSTR(STR_HUMAN_SWDOC_NAME);
+    *pUserName = SwResId(STR_HUMAN_SWDOC_NAME);
 }
 
 void SwDocShell::SetModified( bool bSet )
 {
+    if (utl::ConfigManager::IsAvoidConfig())
+        return;
     SfxObjectShell::SetModified( bSet );
     if( IsEnableSetModified())
     {
-         if (!mpDoc->getIDocumentState().IsInCallModified() )
+         if (!m_pDoc->getIDocumentState().IsInCallModified())
          {
             EnableSetModified( false );
             if( bSet )
             {
-                bool bOld = mpDoc->getIDocumentState().IsModified();
-                mpDoc->getIDocumentState().SetModified();
+                bool const bOld = m_pDoc->getIDocumentState().IsModified();
+                m_pDoc->getIDocumentState().SetModified();
                 if( !bOld )
                 {
-                    mpDoc->GetIDocumentUndoRedo().SetUndoNoResetModified();
+                    m_pDoc->GetIDocumentUndoRedo().SetUndoNoResetModified();
                 }
             }
             else
-                mpDoc->getIDocumentState().ResetModified();
+                m_pDoc->getIDocumentState().ResetModified();
 
-            EnableSetModified( true );
+            EnableSetModified();
          }
 
         UpdateChildWindows();
-        Broadcast(SfxSimpleHint(SFX_HINT_DOCCHANGED));
+        Broadcast(SfxHint(SfxHintId::DocChanged));
     }
 }
 
 void SwDocShell::UpdateChildWindows()
 {
-    // if necessary newly initialize Flddlg (i.e. for TYP_SETVAR)
+    // if necessary newly initialize Fielddlg (i.e. for TYP_SETVAR)
     if(!GetView())
         return;
     SfxViewFrame* pVFrame = GetView()->GetViewFrame();
-    SwFldDlgWrapper *pWrp = (SwFldDlgWrapper*)pVFrame->
-            GetChildWindow( SwFldDlgWrapper::GetChildWindowId() );
+    SwFieldDlgWrapper *pWrp = static_cast<SwFieldDlgWrapper*>(pVFrame->
+            GetChildWindow( SwFieldDlgWrapper::GetChildWindowId() ));
     if( pWrp )
         pWrp->ReInitDlg( this );
 
     // if necessary newly initialize RedlineDlg
-    SwRedlineAcceptChild *pRed = (SwRedlineAcceptChild*)pVFrame->
-            GetChildWindow( SwRedlineAcceptChild::GetChildWindowId() );
+    SwRedlineAcceptChild *pRed = static_cast<SwRedlineAcceptChild*>(pVFrame->
+            GetChildWindow( SwRedlineAcceptChild::GetChildWindowId() ));
     if( pRed )
         pRed->ReInitDlg( this );
 }
@@ -1315,7 +1361,7 @@ void SwDocShell::ReloadFromHtml( const OUString& rStreamName, SwSrcView* pSrcVie
     if( rHtmlOptions.IsStarBasic() && HasBasic())
     {
         BasicManager *pBasicMan = GetBasicManager();
-        if( pBasicMan && (pBasicMan != SfxGetpApp()->GetBasicManager()) )
+        if( pBasicMan && (pBasicMan != SfxApplication::GetBasicManager()) )
         {
             sal_uInt16 nLibCount = pBasicMan->GetLibCount();
             while( nLibCount )
@@ -1327,10 +1373,10 @@ void SwDocShell::ReloadFromHtml( const OUString& rStreamName, SwSrcView* pSrcVie
                     SfxUsrAnyItem aShellItem( SID_BASICIDE_ARG_DOCUMENT_MODEL, makeAny( GetModel() ) );
                     OUString aLibName( pBasic->GetName() );
                     SfxStringItem aLibNameItem( SID_BASICIDE_ARG_LIBNAME, aLibName );
-                    pSrcView->GetViewFrame()->GetDispatcher()->Execute(
+                    pSrcView->GetViewFrame()->GetDispatcher()->ExecuteList(
                                             SID_BASICIDE_LIBREMOVED,
                                             SfxCallMode::SYNCHRON,
-                                            &aShellItem, &aLibNameItem, 0L );
+                                            { &aShellItem, &aLibNameItem });
 
                     // Only the modules are deleted from the standard-lib
                     if( nLibCount )
@@ -1345,18 +1391,18 @@ void SwDocShell::ReloadFromHtml( const OUString& rStreamName, SwSrcView* pSrcVie
         }
     }
 #endif
-    bool bWasBrowseMode = mpDoc->getIDocumentSettingAccess().get(IDocumentSettingAccess::BROWSE_MODE);
+    bool bWasBrowseMode = m_pDoc->getIDocumentSettingAccess().get(DocumentSettingId::BROWSE_MODE);
     RemoveLink();
 
     // now also the UNO-Model has to be informed about the new Doc #51535#
     uno::Reference<text::XTextDocument> xDoc(GetBaseModel(), uno::UNO_QUERY);
     text::XTextDocument* pxDoc = xDoc.get();
-    ((SwXTextDocument*)pxDoc)->InitNewDoc();
+    static_cast<SwXTextDocument*>(pxDoc)->InitNewDoc();
 
     AddLink();
     //#116402# update font list when new document is created
     UpdateFontList();
-    mpDoc->getIDocumentSettingAccess().set(IDocumentSettingAccess::BROWSE_MODE, bWasBrowseMode);
+    m_pDoc->getIDocumentSettingAccess().set(DocumentSettingId::BROWSE_MODE, bWasBrowseMode);
     pSrcView->SetPool(&GetPool());
 
     const OUString& rMedname = GetMedium()->GetName();
@@ -1364,19 +1410,19 @@ void SwDocShell::ReloadFromHtml( const OUString& rStreamName, SwSrcView* pSrcVie
     // The HTML template still has to be set
     SetHTMLTemplate( *GetDoc() );   //Styles from HTML.vor
 
-    SfxViewShell* pViewShell = GetView() ? (SfxViewShell*)GetView()
+    SfxViewShell* pViewShell = GetView() ? static_cast<SfxViewShell*>(GetView())
                                          : SfxViewShell::Current();
-    SfxViewFrame*  pViewFrm = pViewShell->GetViewFrame();
-    pViewFrm->GetDispatcher()->Execute( SID_VIEWSHELL0, SfxCallMode::SYNCHRON );
+    SfxViewFrame*  pViewFrame = pViewShell->GetViewFrame();
+    pViewFrame->GetDispatcher()->Execute( SID_VIEWSHELL0, SfxCallMode::SYNCHRON );
 
     SubInitNew();
 
-    SfxMedium aMed( rStreamName, STREAM_READ );
+    SfxMedium aMed( rStreamName, StreamMode::READ );
     // #i48748# - use class <SwReloadFromHtmlReader>, because
     // the base URL has to be set to the filename of the document <rMedname>
     // and not to the base URL of the temporary file <aMed> in order to get
     // the URLs of the linked graphics correctly resolved.
-    SwReloadFromHtmlReader aReader( aMed, rMedname, mpDoc );
+    SwReloadFromHtmlReader aReader( aMed, rMedname, m_pDoc );
 
     aReader.Read( *ReadHTML );
 
@@ -1387,10 +1433,10 @@ void SwDocShell::ReloadFromHtml( const OUString& rStreamName, SwSrcView* pSrcVie
     {
         SwWrtShell& rWrtSh = pCurrView->GetWrtShell();
         if( rWrtSh.GetLayout())
-            rWrtSh.CheckBrowseView( true );
+            rWrtSh.InvalidateLayout( true );
     }
 
-    // Take HTTP-Header-Attibutes over into the DokInfo again.
+    // Take HTTP-Header-Attributes over into the DocInfo again.
     // The Base-URL doesn't matter here because TLX uses the one from the document
     // for absolutization.
     SetHeaderAttributesForSourceViewHack();
@@ -1398,7 +1444,7 @@ void SwDocShell::ReloadFromHtml( const OUString& rStreamName, SwSrcView* pSrcVie
     if(bModified && !IsReadOnly())
         SetModified();
     else
-        mpDoc->getIDocumentState().ResetModified();
+        m_pDoc->getIDocumentState().ResetModified();
 }
 
 sal_uLong SwDocShell::LoadStylesFromFile( const OUString& rURL,
@@ -1407,18 +1453,16 @@ sal_uLong SwDocShell::LoadStylesFromFile( const OUString& rURL,
     sal_uLong nErr = 0;
 
     // Set filter:
-    OUString sFactory(OUString::createFromAscii(SwDocShell::Factory().GetShortName()));
-    SfxFilterMatcher aMatcher( sFactory );
+    SfxFilterMatcher aMatcher( SwDocShell::Factory().GetFactoryName() );
 
     // search for filter in WebDocShell, too
-    SfxMedium aMed( rURL, STREAM_STD_READ );
-    const SfxFilter* pFlt = 0;
-    aMatcher.DetectFilter( aMed, &pFlt, false, false );
+    SfxMedium aMed( rURL, StreamMode::STD_READ );
+    std::shared_ptr<const SfxFilter> pFlt;
+    aMatcher.DetectFilter( aMed, pFlt );
     if(!pFlt)
     {
-        OUString sWebFactory(OUString::createFromAscii(SwWebDocShell::Factory().GetShortName()));
-        SfxFilterMatcher aWebMatcher( sWebFactory );
-        aWebMatcher.DetectFilter( aMed, &pFlt, false, false );
+        SfxFilterMatcher aWebMatcher( SwWebDocShell::Factory().GetFactoryName() );
+        aWebMatcher.DetectFilter( aMed, pFlt );
     }
     // --> OD #i117339# - trigger import only for own formats
     bool bImport( false );
@@ -1450,37 +1494,37 @@ sal_uLong SwDocShell::LoadStylesFromFile( const OUString& rURL,
     if ( bImport )
     {
         SwRead pRead =  ReadXML;
-        boost::scoped_ptr<SwReader> pReader;
-        boost::scoped_ptr<SwPaM> pPam;
+        std::unique_ptr<SwReader> pReader;
+        std::unique_ptr<SwPaM> pPam;
         // the SW3IO - Reader need the pam/wrtshell, because only then he
         // insert the styles!
         if( bUnoCall )
         {
-            SwNodeIndex aIdx( mpDoc->GetNodes().GetEndOfContent(), -1 );
+            SwNodeIndex aIdx( m_pDoc->GetNodes().GetEndOfContent(), -1 );
             pPam.reset(new SwPaM( aIdx ));
             pReader.reset(new SwReader( aMed, rURL, *pPam ));
         }
         else
         {
-            pReader.reset(new SwReader( aMed, rURL, *mpWrtShell->GetCrsr() ));
+            pReader.reset(new SwReader( aMed, rURL, *m_pWrtShell->GetCursor() ));
         }
 
-        pRead->GetReaderOpt().SetTxtFmts( rOpt.IsTxtFmts() );
-        pRead->GetReaderOpt().SetFrmFmts( rOpt.IsFrmFmts() );
+        pRead->GetReaderOpt().SetTextFormats( rOpt.IsTextFormats() );
+        pRead->GetReaderOpt().SetFrameFormats( rOpt.IsFrameFormats() );
         pRead->GetReaderOpt().SetPageDescs( rOpt.IsPageDescs() );
         pRead->GetReaderOpt().SetNumRules( rOpt.IsNumRules() );
         pRead->GetReaderOpt().SetMerge( rOpt.IsMerge() );
 
         if( bUnoCall )
         {
-            UnoActionContext aAction( mpDoc );
+            UnoActionContext aAction( m_pDoc );
             nErr = pReader->Read( *pRead );
         }
         else
         {
-            mpWrtShell->StartAllAction();
+            m_pWrtShell->StartAllAction();
             nErr = pReader->Read( *pRead );
-            mpWrtShell->EndAllAction();
+            m_pWrtShell->EndAllAction();
         }
     }
 
@@ -1490,12 +1534,12 @@ sal_uLong SwDocShell::LoadStylesFromFile( const OUString& rURL,
 // Get a client for an embedded object if possible.
 SfxInPlaceClient* SwDocShell::GetIPClient( const ::svt::EmbeddedObjectRef& xObjRef )
 {
-    SfxInPlaceClient* pResult = NULL;
+    SfxInPlaceClient* pResult = nullptr;
 
     SwWrtShell* pShell = GetWrtShell();
     if ( pShell )
     {
-        pResult = pShell->GetView().FindIPClient( xObjRef.GetObject(), (vcl::Window*)&pShell->GetView().GetEditWin() );
+        pResult = pShell->GetView().FindIPClient( xObjRef.GetObject(), &pShell->GetView().GetEditWin() );
         if ( !pResult )
             pResult = new SwOleClient( &pShell->GetView(), &pShell->GetView().GetEditWin(), xObjRef );
     }
@@ -1505,9 +1549,9 @@ SfxInPlaceClient* SwDocShell::GetIPClient( const ::svt::EmbeddedObjectRef& xObjR
 
 static bool lcl_MergePortions(SwNode *const& pNode, void *)
 {
-    if (pNode->IsTxtNode())
+    if (pNode->IsTextNode())
     {
-        pNode->GetTxtNode()->FileLoadedInitHints();
+        pNode->GetTextNode()->FileLoadedInitHints();
     }
     return true;
 }
@@ -1528,14 +1572,13 @@ int SwFindDocShell( SfxObjectShellRef& xDocSh,
     aTmpObj.SetMark( OUString() );
 
     // Iterate over the DocShell and get the ones with the name
-    TypeId aType( TYPE(SwDocShell) );
 
     SfxObjectShell* pShell = pDestSh;
-    bool bFirst = 0 != pShell;
+    bool bFirst = nullptr != pShell;
 
     if( !bFirst )
         // No DocShell passed, starting with the first from the DocShell list
-        pShell = SfxObjectShell::GetFirst( &aType );
+        pShell = SfxObjectShell::GetFirst( checkSfxObjectShell<SwDocShell> );
 
     while( pShell )
     {
@@ -1546,7 +1589,7 @@ int SwFindDocShell( SfxObjectShellRef& xDocSh,
             const SfxPoolItem* pItem;
             if( ( SfxItemState::SET == pMed->GetItemSet()->GetItemState(
                                             SID_VERSION, false, &pItem ) )
-                    ? (nVersion == ((SfxInt16Item*)pItem)->GetValue())
+                    ? (nVersion == static_cast<const SfxInt16Item*>(pItem)->GetValue())
                     : !nVersion )
             {
                 // Found, thus return
@@ -1558,22 +1601,24 @@ int SwFindDocShell( SfxObjectShellRef& xDocSh,
         if( bFirst )
         {
             bFirst = false;
-            pShell = SfxObjectShell::GetFirst( &aType );
+            pShell = SfxObjectShell::GetFirst( checkSfxObjectShell<SwDocShell> );
         }
         else
-            pShell = SfxObjectShell::GetNext( *pShell, &aType );
+            pShell = SfxObjectShell::GetNext( *pShell, checkSfxObjectShell<SwDocShell> );
     }
 
     // 2. Open the file ourselves
-    SfxMedium* pMed = new SfxMedium( aTmpObj.GetMainURL(
-                             INetURLObject::NO_DECODE ), STREAM_READ );
-    if( INET_PROT_FILE == aTmpObj.GetProtocol() )
-        pMed->Download(); // Touch the medium (download it)
+    std::unique_ptr<SfxMedium> xMed(new SfxMedium( aTmpObj.GetMainURL(
+                             INetURLObject::DecodeMechanism::NONE ), StreamMode::READ ));
+    if( INetProtocol::File == aTmpObj.GetProtocol() )
+        xMed->Download(); // Touch the medium (download it)
 
-    const SfxFilter* pSfxFlt = 0;
-    if( !pMed->GetError() )
+    std::shared_ptr<const SfxFilter> pSfxFlt;
+    if (!xMed->GetError())
     {
-        SfxFilterMatcher aMatcher( OUString::createFromAscii(SwDocShell::Factory().GetShortName()) );
+        SfxFilterMatcher aMatcher( rFilter == "writerglobal8"
+            ? SwGlobalDocShell::Factory().GetFactoryName()
+            : SwDocShell::Factory().GetFactoryName() );
 
         // No Filter, so search for it. Else test if the one passed is a valid one
         if( !rFilter.isEmpty() )
@@ -1582,24 +1627,24 @@ int SwFindDocShell( SfxObjectShellRef& xDocSh,
         }
 
         if( nVersion )
-            pMed->GetItemSet()->Put( SfxInt16Item( SID_VERSION, nVersion ));
+            xMed->GetItemSet()->Put( SfxInt16Item( SID_VERSION, nVersion ));
 
         if( !rPasswd.isEmpty() )
-            pMed->GetItemSet()->Put( SfxStringItem( SID_PASSWORD, rPasswd ));
+            xMed->GetItemSet()->Put( SfxStringItem( SID_PASSWORD, rPasswd ));
 
         if( !pSfxFlt )
-            aMatcher.DetectFilter( *pMed, &pSfxFlt, false, false );
+            aMatcher.DetectFilter( *xMed, pSfxFlt );
 
         if( pSfxFlt )
         {
             // We cannot do anything without a Filter
-            pMed->SetFilter( pSfxFlt );
+            xMed->SetFilter( pSfxFlt );
 
             // If the new shell is created, SfxObjectShellLock should be used to let it be closed later for sure
-            SwDocShell *const pNew(new SwDocShell(SFX_CREATE_MODE_INTERNAL));
+            SwDocShell *const pNew(new SwDocShell(SfxObjectCreateMode::INTERNAL));
             xLockRef = pNew;
-            xDocSh = (SfxObjectShell*)xLockRef;
-            if( xDocSh->DoLoad( pMed ) )
+            xDocSh = static_cast<SfxObjectShell*>(xLockRef);
+            if (xDocSh->DoLoad(xMed.release()))
             {
                 SwDoc const& rDoc(*pNew->GetDoc());
                 const_cast<SwDoc&>(rDoc).GetNodes().ForEach(&lcl_MergePortions);
@@ -1607,9 +1652,6 @@ int SwFindDocShell( SfxObjectShellRef& xDocSh,
             }
         }
     }
-
-    if( !xDocSh.Is() ) // Medium still needs to be deleted
-        delete pMed;
 
     return 0;
 }
