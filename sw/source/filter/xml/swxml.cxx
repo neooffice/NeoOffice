@@ -777,11 +777,7 @@ __attribute__ ((optnone))
         }
     }
 
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     (void)rDoc.acquire(); // prevent deletion
-#else   // NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    rtl::Reference<SwDoc> aHoldRef(&rDoc); // prevent deletion
-#endif  // NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     sal_uInt32 nRet = 0;
 
     // save redline mode into import info property set
@@ -936,11 +932,7 @@ __attribute__ ((optnone))
     if( pObjectHelper )
         SvXMLEmbeddedObjectHelper::Destroy( pObjectHelper );
     xObjectResolver = nullptr;
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     (void)rDoc.release();
-#else   // NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    aHoldRef.clear();
-#endif  // NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     if ( !bOASIS )
     {

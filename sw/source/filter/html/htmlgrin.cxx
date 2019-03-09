@@ -1427,11 +1427,7 @@ void SwHTMLParser::StripTrailingPara()
             m_pPam->GetPoint()->nContent.Assign( nullptr, 0 );
             m_pPam->SetMark();
             m_pPam->DeleteMark();
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             m_xDoc->GetNodes().Delete( m_pPam->GetPoint()->nNode );
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            m_xDoc->GetNodes().Delete( m_pPam->GetPoint()->nNode );
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             m_pPam->Move( fnMoveBackward, GoInNode );
         }
 #ifdef NO_LIBO_HTML_FIELD_LEAK_FIX

@@ -580,13 +580,8 @@ void SwHTMLParser::NewField()
         }
         else
         {
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             m_xDoc->getIDocumentContentOperations().InsertPoolItem(*m_pPam, SwFormatField(*pNewField));
             delete pNewField;
-#else	// NO_LIBO_HTML_FIELD_LEAK_FIX
-            m_xDoc->getIDocumentContentOperations().InsertPoolItem(*m_pPam, SwFormatField(*xNewField));
-            xNewField.reset();
-#endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
         }
         m_bInField = true;
     }
