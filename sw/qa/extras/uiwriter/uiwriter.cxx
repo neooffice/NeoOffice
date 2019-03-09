@@ -295,25 +295,15 @@ void SwUiWriterTest::testExportRTF()
     pWrtShell->Left(CRSR_SKIP_CHARS, /*bSelect=*/true, 3, /*bBasicCall=*/false);
 
     // Create the clipboard document.
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     boost::shared_ptr<SwDoc> pClpDoc(new SwDoc());
     pClpDoc->SetClipBoard(true);
     pWrtShell->Copy(pClpDoc.get());
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    std::shared_ptr<SwDoc> xClpDoc(new SwDoc());
-    xClpDoc->SetClipBoard(true);
-    pWrtShell->Copy(xClpDoc.get());
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     // And finally export it as RTF.
     WriterRef xWrt;
     SwReaderWriter::GetWriter("RTF", OUString(), xWrt);
     SvMemoryStream aStream;
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwWriter aWrt(aStream, *pClpDoc);
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    SwWriter aWrt(aStream, *xClpDoc);
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     aWrt.Write(xWrt);
 
     OString aData(static_cast<const sal_Char*>(aStream.GetBuffer()), aStream.GetSize());
