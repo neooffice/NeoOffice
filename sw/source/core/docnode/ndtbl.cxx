@@ -4361,38 +4361,20 @@ bool SwDoc::InsCopyOfTable( SwPosition& rInsPos, const SwSelBoxes& rBoxes,
             GetIDocumentUndoRedo().DoUndo(false);
         }
 
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SwDoc* pCpyDoc = const_cast<SwDoc*>(pSrcTableNd->GetDoc());
         bool bDelCpyDoc = pCpyDoc == this;
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        rtl::Reference<SwDoc> xCpyDoc( const_cast<SwDoc*>(pSrcTableNd->GetDoc()) );
-        bool bDelCpyDoc = xCpyDoc == this;
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         if( bDelCpyDoc )
         {
             // Copy the Table into a temporary Doc
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pCpyDoc = new SwDoc;
             pCpyDoc->acquire();
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            xCpyDoc = new SwDoc;
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             SwPosition aPos( SwNodeIndex( pCpyDoc->GetNodes().GetEndOfContent() ));
             if( !pSrcTableNd->GetTable().MakeCopy( pCpyDoc, aPos, rBoxes, true ))
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            SwPosition aPos( SwNodeIndex( xCpyDoc->GetNodes().GetEndOfContent() ));
-            if( !pSrcTableNd->GetTable().MakeCopy( xCpyDoc.get(), aPos, rBoxes, true ))
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             {
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 if( pCpyDoc->release() == 0 )
                     delete pCpyDoc;
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                xCpyDoc.clear();
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
                 if( pUndo )
                 {
@@ -4449,15 +4431,11 @@ bool SwDoc::InsCopyOfTable( SwPosition& rInsPos, const SwSelBoxes& rBoxes,
                                                     aNdIdx, pUndo );
         }
 
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( bDelCpyDoc )
         {
             if( pCpyDoc->release() == 0 )
                 delete pCpyDoc;
         }
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        xCpyDoc.clear();
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         if( pUndo )
         {
