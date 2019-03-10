@@ -88,11 +88,14 @@
 #include <basegfx/point/b2dpoint.hxx>
 #include <basegfx/polygon/b2dpolygon.hxx>
 #include <editeng/editobj.hxx>
-#include <boost/scoped_ptr.hpp>
 #include <math.h>
 #include <fmturl.hxx>
 #include <svx/hlnkitem.hxx>
 #include <svl/whiter.hxx>
+#include <o3tl/enumrange.hxx>
+#include <memory>
+#include <filter/msfilter/escherex.hxx>
+#include <sprmids.hxx>
 
 using ::editeng::SvxBorderLine;
 using namespace ::com::sun::star;
@@ -104,10 +107,10 @@ Color WW8TransCol(SVBT32 nWC)
 {
 #if 1               // 1 = use predefined color, 0 = ignore
 
-    // Farbtabelle zum Umrechnen RGB-Werte in vordefinierte Farben
-    // ( Damit bei der Writer-UI die Farbnamen stimmen )
-    // Die Tabelle int im *3er-System* aufgeteilt. Die Grauwerte fehlen,
-    // da sie nicht ins 3er-System passen ( 4 Werte: sw, ws, 2 * grau )
+    // color table to convert RGB values to pre-defined colors
+    // (to make the writer UI show the right color names)
+    // the table is split in base 3, the greys are missing as
+    // they don't fit into that system (4 values: bw, wb, 2 * grey)
     static const ColorData eColA[] = {              //  B G R  B G R  B G R
         COL_BLACK, COL_RED, COL_LIGHTRED,           //  0 0 0, 0 0 1, 0 0 2
         COL_GREEN, COL_BROWN, COL_BLACK,            //  0 1 0, 0 1 1, 0 1 2
@@ -119,18 +122,17 @@ Color WW8TransCol(SVBT32 nWC)
         COL_BLACK, COL_BLACK, COL_BLACK,            //  2 1 0, 2 1 1, 2 1 2
         COL_LIGHTCYAN, COL_BLACK, COL_WHITE };      //  2 2 0, 2 2 1, 2 2 2
 
-    // In nWC[3] steht ein Byte, dass in der WW-Doku nicht beschrieben ist.
-    // Die Bedeutung ist anscheinend folgende: Bei 0 ist es eine normale
-    // Farbe, dessen RGB-Wert in nWC[0..2] steht. stehen in nWC[3] die
-    // Werte 0x1, 0x7d oder 0x83, dann ist es ein Grauwert, dessen
-    // Schwarzanteil in 1/2 % in nWC[0] steht.
-    // Ich vermute, dass es auf Bit0 in nWV[3] ankommt, ob es RGB oder Grau ist.
+    // In nWC[3] is a byte that's not described in the WW documentation.
+    // Its meaning appears to be the following: For 0, it's a normal color
+    // whose RGB values are in nWC[0..2]. If nWC[3] is 0x1, 0x7d or 0x83,
+    // it's a grey value whose black portion is given in 0.5% in nWC[0].
+    // I guess that BIT(0) in nWC[3] is relevant for distinguishing RGB/Grey.
 
-    if( !( nWC[3] & 0x1 ) &&                        // keine Spezial-Farbe (grau)
-        (    ( nWC[0] == 0 ||  nWC[0]== 0x80 || nWC[0] == 0xff )    // R-Anteil
-          && ( nWC[1] == 0 ||  nWC[1]== 0x80 || nWC[1] == 0xff )    // G-Anteil
-          && ( nWC[2] == 0 ||  nWC[2]== 0x80 || nWC[2] == 0xff ) ) ){// B-Anteil
-        int nIdx = 0;       // and now: Idx-calculation im 3er-System
+    if( !( nWC[3] & 0x1 ) &&                        // not special (grey)
+        (    ( nWC[0] == 0 ||  nWC[0]== 0x80 || nWC[0] == 0xff )    // R
+          && ( nWC[1] == 0 ||  nWC[1]== 0x80 || nWC[1] == 0xff )    // G
+          && ( nWC[2] == 0 ||  nWC[2]== 0x80 || nWC[2] == 0xff ) ) ){// B
+        int nIdx = 0;       // and now: Idx-calculation in base 3
         for (int i = 2; i >= 0; i--)
         {
             nIdx *= 3;
@@ -153,69 +155,56 @@ Color WW8TransCol(SVBT32 nWC)
     return Color(nWC[0], nWC[1], nWC[2]);
 }
 
-void wwFrameNamer::SetUniqueGraphName(SwFrmFmt *pFrmFmt, const OUString &rFixed)
+void wwFrameNamer::SetUniqueGraphName(SwFrameFormat *pFrameFormat, const OUString &rFixed)
 {
     if (mbIsDisabled || rFixed.isEmpty())
         return;
 
-    pFrmFmt->SetName(msSeed+OUString::number(++mnImportedGraphicsCount) + ": " + rFixed);
+    pFrameFormat->SetName(msSeed+OUString::number(++mnImportedGraphicsCount) + ": " + rFixed);
 }
 
-// ReadGrafStart liest die ObjektDaten ein und erzeugt falls noetig einen Anker
+// ReadGrafStart reads object data and if necessary creates an anchor
 bool SwWW8ImplReader::ReadGrafStart(void* pData, short nDataSiz,
-    WW8_DPHEAD* pHd, const WW8_DO* pDo, SfxAllItemSet &rSet)
+    WW8_DPHEAD* pHd, SfxAllItemSet &rSet)
 {
     if (SVBT16ToShort(pHd->cb) < sizeof(WW8_DPHEAD) + nDataSiz)
     {
-        OSL_ENSURE( false, "+Grafik-Element: Size ?" );
-        pStrm->SeekRel(SVBT16ToShort(pHd->cb) - sizeof(WW8_DPHEAD));
+        OSL_ENSURE( false, "+graphic element: too short?" );
+        m_pStrm->SeekRel(SVBT16ToShort(pHd->cb) - sizeof(WW8_DPHEAD));
         return false;
     }
 
-    bool bCouldRead = checkRead(*pStrm, pData, nDataSiz);
+    bool bCouldRead = checkRead(*m_pStrm, pData, nDataSiz);
     OSL_ENSURE(bCouldRead, "Short Graphic header");
     if (!bCouldRead)
         return false;
 
-    RndStdIds eAnchor = (pDo->by < 2) ? FLY_AT_PAGE : FLY_AT_PARA;
-    rSet.Put(SwFmtAnchor(eAnchor));
+    SwFormatAnchor aAnchor( RndStdIds::FLY_AT_CHAR );
+    aAnchor.SetAnchor( m_pPaM->GetPoint() );
+    rSet.Put( aAnchor );
 
-    nDrawXOfs2 = nDrawXOfs;
-    nDrawYOfs2 = nDrawYOfs;
-
-    if (eAnchor == FLY_AT_PARA)
-    {
-        if( pDo->bx == 1 )       // Position: actually left
-            nDrawXOfs2 = static_cast< short >(nDrawXOfs2 - maSectionManager.GetPageLeft());
-        if( nInTable )                          // Object in table
-            nDrawXOfs2 = nDrawXOfs2 - GetTableLeft();       // -> see comment
-                                                // at GetTableLeft()
-    }
-    else
-    {
-        if( pDo->bx != 1 )
-            nDrawXOfs2 = static_cast< short >(nDrawXOfs2 + maSectionManager.GetPageLeft());
-    }
+    m_nDrawXOfs2 = m_nDrawXOfs;
+    m_nDrawYOfs2 = m_nDrawYOfs;
 
     return true;
 }
 
-// SetStdAttr() setzt die Attribute, die jedes Objekt hat
+// SetStdAttr() sets standard attributes
 static void SetStdAttr( SfxItemSet& rSet, WW8_DP_LINETYPE& rL,
                         WW8_DP_SHADOW& rSh )
 {
     if( SVBT16ToShort( rL.lnps ) == 5 ){            // invisible
-        rSet.Put( XLineStyleItem( XLINE_NONE ) );
-    }else{                                          // sichtbar
-        Color aCol( WW8TransCol( rL.lnpc ) );           // LinienFarbe
+        rSet.Put( XLineStyleItem( drawing::LineStyle_NONE ) );
+    }else{                                          // visible
+        Color aCol( WW8TransCol( rL.lnpc ) );           // line color
         rSet.Put( XLineColorItem( OUString(), aCol ) );
         rSet.Put( XLineWidthItem( SVBT16ToShort( rL.lnpw ) ) );
                                                     // line thickness
         if( SVBT16ToShort( rL.lnps ) >= 1
             && SVBT16ToShort(rL.lnps ) <= 4 ){      // line style
-            rSet.Put( XLineStyleItem( XLINE_DASH ) );
+            rSet.Put( XLineStyleItem( drawing::LineStyle_DASH ) );
             sal_Int16 nLen = SVBT16ToShort( rL.lnpw );
-            XDash aD( XDASH_RECT, 1, 2 * nLen, 1, 5 * nLen, 5 * nLen );
+            XDash aD( css::drawing::DashStyle_RECT, 1, 2 * nLen, 1, 5 * nLen, 5 * nLen );
             switch( SVBT16ToShort( rL.lnps ) ){
             case 1: aD.SetDots( 0 );            // Dash
                     aD.SetDashLen( 6 * nLen );
@@ -227,7 +216,7 @@ static void SetStdAttr( SfxItemSet& rSet, WW8_DP_LINETYPE& rL,
             }
             rSet.Put( XLineDashItem( OUString(), aD ) );
         }else{
-            rSet.Put( XLineStyleItem( XLINE_SOLID ) );  // needed for TextBox
+            rSet.Put( XLineStyleItem( drawing::LineStyle_SOLID ) );  // needed for TextBox
         }
     }
     if( SVBT16ToShort( rSh.shdwpi ) ){                  // shadow
@@ -237,13 +226,11 @@ static void SetStdAttr( SfxItemSet& rSet, WW8_DP_LINETYPE& rL,
     }
 }
 
-// SetFill setzt Fuellattribute wie Vordergrund- und Hintergrund-Farbe
-// und Muster durch Reduktion auf eine Farbe.
-// SetFill() setzt z.Zt kein Muster, da Sdr das nur sehr umstaendlich kann
-// und die Sdr-Schraffur ( XDash ) noch nicht fertig ist.
-// Statt dessen wird eine Mischfarbe gewaehlt, die auf den entsprechenden
-// Farbton zwischen den Farben liegt.
-
+// SetFill() sets fill attributes such as fore- and background color and
+// pattern by reducing to a color
+// SetFill() doesn't yet set a pattern, because Sdr can't easily do that
+// and the Sdr hatching (XDash) isn't finished yet.
+// Instead, a mixed color will be picked that's between the selected ones.
 static void SetFill( SfxItemSet& rSet, WW8_DP_FILL& rFill )
 {
     static const sal_uInt8 nPatA[] =
@@ -258,7 +245,7 @@ static void SetFill( SfxItemSet& rSet, WW8_DP_FILL& rFill )
     else
     {
         rSet.Put(XFillStyleItem(drawing::FillStyle_SOLID));  // necessary for textbox
-        if (nPat <= 1 || ((sizeof(nPatA)/sizeof(nPatA[0])) <= nPat))
+        if (nPat <= 1 || (SAL_N_ELEMENTS(nPatA) <= nPat))
         {
             // Solid background or unknown
             rSet.Put(XFillColorItem(OUString(), WW8TransCol(rFill.dlpcBg)));
@@ -313,22 +300,21 @@ static void SetLineEndAttr( SfxItemSet& rSet, WW8_DP_LINEEND& rLe,
     }
 }
 
-// Ab hier folgen die Routinen fuer die einzelnen Objekte
-SdrObject* SwWW8ImplReader::ReadLine( WW8_DPHEAD* pHd, const WW8_DO* pDo,
-    SfxAllItemSet &rSet)
+// start of routines for the different objects
+SdrObject* SwWW8ImplReader::ReadLine(WW8_DPHEAD* pHd, SfxAllItemSet &rSet)
 {
     WW8_DP_LINE aLine;
 
-    if( !ReadGrafStart( (void*)&aLine, sizeof( aLine ), pHd, pDo, rSet ) )
-        return 0;
+    if( !ReadGrafStart( static_cast<void*>(&aLine), sizeof( aLine ), pHd, rSet ) )
+        return nullptr;
 
     Point aP[2];
     {
         Point& rP0 = aP[0];
         Point& rP1 = aP[1];
 
-        rP0.X() = (sal_Int16)SVBT16ToShort( pHd->xa ) + nDrawXOfs2;
-        rP0.Y() = (sal_Int16)SVBT16ToShort( pHd->ya ) + nDrawYOfs2;
+        rP0.X() = (sal_Int16)SVBT16ToShort( pHd->xa ) + m_nDrawXOfs2;
+        rP0.Y() = (sal_Int16)SVBT16ToShort( pHd->ya ) + m_nDrawYOfs2;
         rP1 = rP0;
         rP0.X() += (sal_Int16)SVBT16ToShort( aLine.xaStart );
         rP0.Y() += (sal_Int16)SVBT16ToShort( aLine.yaStart );
@@ -347,21 +333,20 @@ SdrObject* SwWW8ImplReader::ReadLine( WW8_DPHEAD* pHd, const WW8_DO* pDo,
     return pObj;
 }
 
-SdrObject* SwWW8ImplReader::ReadRect( WW8_DPHEAD* pHd, const WW8_DO* pDo,
-    SfxAllItemSet &rSet)
+SdrObject* SwWW8ImplReader::ReadRect(WW8_DPHEAD* pHd, SfxAllItemSet &rSet)
 {
     WW8_DP_RECT aRect;
 
-    if( !ReadGrafStart( (void*)&aRect, sizeof( aRect ), pHd, pDo, rSet ) )
-        return 0;
+    if( !ReadGrafStart( static_cast<void*>(&aRect), sizeof( aRect ), pHd, rSet ) )
+        return nullptr;
 
-    Point aP0( (sal_Int16)SVBT16ToShort( pHd->xa ) + nDrawXOfs2,
-               (sal_Int16)SVBT16ToShort( pHd->ya ) + nDrawYOfs2 );
+    Point aP0( (sal_Int16)SVBT16ToShort( pHd->xa ) + m_nDrawXOfs2,
+               (sal_Int16)SVBT16ToShort( pHd->ya ) + m_nDrawYOfs2 );
     Point aP1( aP0 );
     aP1.X() += (sal_Int16)SVBT16ToShort( pHd->dxa );
     aP1.Y() += (sal_Int16)SVBT16ToShort( pHd->dya );
 
-    SdrObject* pObj = new SdrRectObj( Rectangle( aP0, aP1 ) );
+    SdrObject* pObj = new SdrRectObj( tools::Rectangle( aP0, aP1 ) );
 
     SetStdAttr( rSet, aRect.aLnt, aRect.aShd );
     SetFill( rSet, aRect.aFill );
@@ -369,21 +354,20 @@ SdrObject* SwWW8ImplReader::ReadRect( WW8_DPHEAD* pHd, const WW8_DO* pDo,
     return pObj;
 }
 
-SdrObject* SwWW8ImplReader::ReadElipse( WW8_DPHEAD* pHd, const WW8_DO* pDo,
-    SfxAllItemSet &rSet)
+SdrObject* SwWW8ImplReader::ReadElipse(WW8_DPHEAD* pHd, SfxAllItemSet &rSet)
 {
     WW8_DP_ELIPSE aElipse;
 
-    if( !ReadGrafStart( (void*)&aElipse, sizeof( aElipse ), pHd, pDo, rSet ) )
-        return 0;
+    if( !ReadGrafStart( static_cast<void*>(&aElipse), sizeof( aElipse ), pHd, rSet ) )
+        return nullptr;
 
-    Point aP0( (sal_Int16)SVBT16ToShort( pHd->xa ) + nDrawXOfs2,
-               (sal_Int16)SVBT16ToShort( pHd->ya ) + nDrawYOfs2 );
+    Point aP0( (sal_Int16)SVBT16ToShort( pHd->xa ) + m_nDrawXOfs2,
+               (sal_Int16)SVBT16ToShort( pHd->ya ) + m_nDrawYOfs2 );
     Point aP1( aP0 );
     aP1.X() += (sal_Int16)SVBT16ToShort( pHd->dxa );
     aP1.Y() += (sal_Int16)SVBT16ToShort( pHd->dya );
 
-    SdrObject* pObj = new SdrCircObj( OBJ_CIRC, Rectangle( aP0, aP1 ) );
+    SdrObject* pObj = new SdrCircObj( OBJ_CIRC, tools::Rectangle( aP0, aP1 ) );
 
     SetStdAttr( rSet, aElipse.aLnt, aElipse.aShd );
     SetFill( rSet, aElipse.aFill );
@@ -391,16 +375,15 @@ SdrObject* SwWW8ImplReader::ReadElipse( WW8_DPHEAD* pHd, const WW8_DO* pDo,
     return pObj;
 }
 
-SdrObject* SwWW8ImplReader::ReadArc( WW8_DPHEAD* pHd, const WW8_DO* pDo,
-    SfxAllItemSet &rSet)
+SdrObject* SwWW8ImplReader::ReadArc(WW8_DPHEAD* pHd, SfxAllItemSet &rSet)
 {
     WW8_DP_ARC aArc;
 
-    if( !ReadGrafStart( (void*)&aArc, sizeof( aArc ), pHd, pDo, rSet ) )
-        return 0;
+    if( !ReadGrafStart( static_cast<void*>(&aArc), sizeof( aArc ), pHd, rSet ) )
+        return nullptr;
 
-    Point aP0( (sal_Int16)SVBT16ToShort( pHd->xa ) + nDrawXOfs2,
-               (sal_Int16)SVBT16ToShort( pHd->ya ) + nDrawYOfs2 );
+    Point aP0( (sal_Int16)SVBT16ToShort( pHd->xa ) + m_nDrawXOfs2,
+               (sal_Int16)SVBT16ToShort( pHd->ya ) + m_nDrawYOfs2 );
     Point aP1( aP0 );
     aP1.X() += (sal_Int16)SVBT16ToShort( pHd->dxa ) * 2;
     aP1.Y() += (sal_Int16)SVBT16ToShort( pHd->dya ) * 2;
@@ -416,7 +399,7 @@ SdrObject* SwWW8ImplReader::ReadArc( WW8_DPHEAD* pHd, const WW8_DO* pDo,
         aP1.X() -= (sal_Int16)SVBT16ToShort( pHd->dxa );
     }
 
-    SdrObject* pObj = new SdrCircObj( OBJ_SECT, Rectangle( aP0, aP1 ),
+    SdrObject* pObj = new SdrCircObj( OBJ_SECT, tools::Rectangle( aP0, aP1 ),
                                nW * 9000, ( ( nW + 1 ) & 3 ) * 9000 );
 
     SetStdAttr( rSet, aArc.aLnt, aArc.aShd );
@@ -425,29 +408,28 @@ SdrObject* SwWW8ImplReader::ReadArc( WW8_DPHEAD* pHd, const WW8_DO* pDo,
     return pObj;
 }
 
-SdrObject* SwWW8ImplReader::ReadPolyLine( WW8_DPHEAD* pHd, const WW8_DO* pDo,
-    SfxAllItemSet &rSet)
+SdrObject* SwWW8ImplReader::ReadPolyLine(WW8_DPHEAD* pHd, SfxAllItemSet &rSet)
 {
     WW8_DP_POLYLINE aPoly;
 
-    if( !ReadGrafStart( (void*)&aPoly, sizeof( aPoly ), pHd, pDo, rSet ) )
-        return 0;
+    if( !ReadGrafStart( static_cast<void*>(&aPoly), sizeof( aPoly ), pHd, rSet ) )
+        return nullptr;
 
     sal_uInt16 nCount = SVBT16ToShort( aPoly.aBits1 ) >> 1 & 0x7fff;
-    boost::scoped_array<SVBT16> xP(new SVBT16[nCount * 2]);
+    std::unique_ptr<SVBT16[]> xP(new SVBT16[nCount * 2]);
 
-    bool bCouldRead = checkRead(*pStrm, xP.get(), nCount * 4);      // Punkte einlesen
+    bool bCouldRead = checkRead(*m_pStrm, xP.get(), nCount * 4);      // read points
     OSL_ENSURE(bCouldRead, "Short PolyLine header");
     if (!bCouldRead)
-        return 0;
+        return nullptr;
 
-    Polygon aP( nCount );
+    tools::Polygon aP( nCount );
     Point aPt;
     for (sal_uInt16 i=0; i<nCount; ++i)
     {
-        aPt.X() = SVBT16ToShort( xP[i << 1] ) + nDrawXOfs2
+        aPt.X() = SVBT16ToShort( xP[i << 1] ) + m_nDrawXOfs2
                   + (sal_Int16)SVBT16ToShort( pHd->xa );
-        aPt.Y() = SVBT16ToShort( xP[( i << 1 ) + 1] ) + nDrawYOfs2
+        aPt.Y() = SVBT16ToShort( xP[( i << 1 ) + 1] ) + m_nDrawYOfs2
                   + (sal_Int16)SVBT16ToShort( pHd->ya );
         aP[i] = aPt;
     }
@@ -471,8 +453,8 @@ ESelection GetESelection(EditEngine &rDrawEditEngine, long nCpStart, long nCpEnd
         nCpStart -= rDrawEditEngine.GetTextLen( nSP ) + 1;
         nSP++;
     }
-        // Beim Ende erst 1 Zeichen spaeter auf naechste Zeile umschalten,
-        // da sonst Zeilenattribute immer eine Zeile zu weit reichen.
+        // at the end, switch to the new line only 1 character later as
+        // otherwise line attributes reach one line too far
     while(      (nEP < nPCnt)
             &&  (nCpEnd > rDrawEditEngine.GetTextLen( nEP ) + 1) )
     {
@@ -482,32 +464,29 @@ ESelection GetESelection(EditEngine &rDrawEditEngine, long nCpStart, long nCpEnd
     return ESelection( nSP, nCpStart, nEP, nCpEnd );
 }
 
-// InsertTxbxStyAttrs() setzt die Style-Attribute in den uebergebenen ItemSet.
-// Es werden die SW-Styles genommen, die Import-WW-Styles sind zu diesem
-// Zeitpunkt schon destruiert.
-// Die SW-Styles werden per Tiefensuche, d.h. mit Parent-Styles nach den
-// in aSrcTab angegebenen Attributen untersucht. Diese werden per Clone
-// dupliziert, bei den Duplikaten werden die Which-IDs
-// gemaess der Tabelle aDstTab umgesetzt, damit die EditEngine sie nicht
-// ignoriert.
-// Es werden hierbei sowohl Para- wie auch Zeichen-Attribute in den
-// ItemSet gestopft.
+// InsertTxbxStyAttrs() sets style attributes into the passed ItemSet.
+// SW styles are used since import-WW-styles are already destroyed.
+// SW styles are examined in depth first search order (with parent styles)
+// for the attributes given in aSrcTab. They're cloned, and the clones'
+// Which-IDs are changed according to the aDstTab table so that the
+// EditEngine will not ignore them.
+// Both Paragraph and character attributes are stuffed into the ItemSet.
 void SwWW8ImplReader::InsertTxbxStyAttrs( SfxItemSet& rS, sal_uInt16 nColl )
 {
     SwWW8StyInf * pStyInf = GetStyle(nColl);
-    if( pStyInf != NULL && pStyInf->pFmt && pStyInf->bColl )
+    if( pStyInf != nullptr && pStyInf->m_pFormat && pStyInf->m_bColl )
     {
         const SfxPoolItem* pItem;
         for( sal_uInt16 i = POOLATTR_BEGIN; i < POOLATTR_END; i++ )
         {
             // If we are set in the source and not set in the destination
             // then add it in.
-            if ( SfxItemState::SET == pStyInf->pFmt->GetItemState(
+            if ( SfxItemState::SET == pStyInf->m_pFormat->GetItemState(
                 i, true, &pItem ) )
             {
                 SfxItemPool *pEditPool = rS.GetPool();
                 sal_uInt16 nWhich = i;
-                sal_uInt16 nSlotId = rDoc.GetAttrPool().GetSlotId(nWhich);
+                sal_uInt16 nSlotId = m_rDoc.GetAttrPool().GetSlotId(nWhich);
                 if (
                     nSlotId && nWhich != nSlotId &&
                     0 != (nWhich = pEditPool->GetWhich(nSlotId)) &&
@@ -526,7 +505,7 @@ void SwWW8ImplReader::InsertTxbxStyAttrs( SfxItemSet& rS, sal_uInt16 nColl )
 
 }
 
-static void lcl_StripFields(OUString &rString, long &rNewStartCp)
+static void lcl_StripFields(OUString &rString, WW8_CP &rNewStartCp)
 {
     sal_Int32 nStartPos = 0;
     for (;;)
@@ -580,10 +559,9 @@ public:
     }
 };
 
-// InsertAttrsAsDrawingAttrs() setzt zwischen StartCp und EndCp die Attribute.
-// Dabei werden Style-Attribute als harte Attribute, Absatz- und Zeichen-
-// attribute gesetzt.
-void SwWW8ImplReader::InsertAttrsAsDrawingAttrs(long nStartCp, long nEndCp,
+// InsertAttrsAsDrawingAttrs() sets attributes between StartCp and EndCp.
+// Style attributes are set as hard, paragraph and character attributes.
+void SwWW8ImplReader::InsertAttrsAsDrawingAttrs(WW8_CP nStartCp, WW8_CP nEndCp,
     ManTypes eType, bool bONLYnPicLocFc)
 {
     /*
@@ -594,31 +572,32 @@ void SwWW8ImplReader::InsertAttrsAsDrawingAttrs(long nStartCp, long nEndCp,
      paragraph mark as part of the paragraph text.
     */
     WW8ReaderSave aSave(this);
-    pPlcxMan = new WW8PLCFMan(pSBase, eType, nStartCp, true);
+    m_pPlcxMan = new WW8PLCFMan(m_pSBase, eType, nStartCp, true);
 
-    WW8_CP nStart = pPlcxMan->Where();
-    WW8_CP nNext, nEnd, nStartReplace=0;
+    WW8_CP nStart = m_pPlcxMan->Where();
+    WW8_CP nNext, nStartReplace=0;
 
     bool bDoingSymbol = false;
-    sal_Unicode cReplaceSymbol = cSymbol;
+    sal_Unicode cReplaceSymbol = m_cSymbol;
 
-    SfxItemSet *pS = new SfxItemSet(mpDrawEditEngine->GetEmptyItemSet());
+    SfxItemSet *pS = new SfxItemSet(m_pDrawEditEngine->GetEmptyItemSet());
     WW8PLCFManResult aRes;
 
     std::deque<Chunk> aChunks;
 
     // Here store stack location
-    size_t nCurrentCount = pCtrlStck->size();
+    size_t nCurrentCount = m_pCtrlStck->size();
     while (nStart < nEndCp)
     {
         // nStart is the beginning of the attributes for this range, and
         // may be before the text itself. So watch out for that
-        WW8_CP nTxtStart = nStart;
-        if (nTxtStart < nStartCp)
-            nTxtStart = nStartCp;
+        WW8_CP nTextStart = nStart;
+        if (nTextStart < nStartCp)
+            nTextStart = nStartCp;
+
         // get position of next SPRM
-        bool bStartAttr = pPlcxMan->Get(&aRes);
-        nAktColl = pPlcxMan->GetColl();
+        bool bStartAttr = m_pPlcxMan->Get(&aRes);
+        m_nAktColl = m_pPlcxMan->GetColl();
         if (aRes.nSprmId)
         {
             if( bONLYnPicLocFc )
@@ -626,7 +605,7 @@ void SwWW8ImplReader::InsertAttrsAsDrawingAttrs(long nStartCp, long nEndCp,
                 if ( (68 == aRes.nSprmId) || (0x6A03 == aRes.nSprmId) )
                 {
                     Read_PicLoc(aRes.nSprmId, aRes.pMemPos +
-                        mpSprmParser->DistanceToData(aRes.nSprmId), 4);
+                        m_pSprmParser->DistanceToData(aRes.nSprmId), 4);
                      // Ok, that's what we were looking for.  Now let's get
                      // out of here!
                     break;
@@ -639,26 +618,26 @@ void SwWW8ImplReader::InsertAttrsAsDrawingAttrs(long nStartCp, long nEndCp,
                 // off and convert them later
                 if (bStartAttr)
                 {
-                    ImportSprm(aRes.pMemPos, aRes.nSprmId);
-                    if (!bDoingSymbol && bSymbol == true)
+                    ImportSprm(aRes.pMemPos, aRes.nMemLen, aRes.nSprmId);
+                    if (!bDoingSymbol && m_bSymbol)
                     {
                         bDoingSymbol = true;
-                        nStartReplace = nTxtStart;
-                        cReplaceSymbol = cSymbol;
+                        nStartReplace = nTextStart;
+                        cReplaceSymbol = m_cSymbol;
                     }
                 }
                 else
                 {
                     EndSprm( aRes.nSprmId );
-                    if (bSymbol == false && bDoingSymbol)
+                    if (!m_bSymbol && bDoingSymbol)
                     {
                         bDoingSymbol = false;
                         OUStringBuffer sTemp;
                         comphelper::string::padToLength(sTemp,
-                            nTxtStart - nStartReplace, cReplaceSymbol);
-                        mpDrawEditEngine->QuickInsertText(sTemp.makeStringAndClear(),
-                            GetESelection(*mpDrawEditEngine, nStartReplace - nStartCp,
-                            nTxtStart - nStartCp ) );
+                            nTextStart - nStartReplace, cReplaceSymbol);
+                        m_pDrawEditEngine->QuickInsertText(sTemp.makeStringAndClear(),
+                            GetESelection(*m_pDrawEditEngine, nStartReplace - nStartCp,
+                            nTextStart - nStartCp ) );
                     }
                 }
             }
@@ -666,54 +645,54 @@ void SwWW8ImplReader::InsertAttrsAsDrawingAttrs(long nStartCp, long nEndCp,
             {
                 if (bStartAttr)
                 {
-                    size_t nCount = pCtrlStck->size();
-                    if (maFieldStack.empty() && Read_Field(&aRes))
+                    size_t nCount = m_pCtrlStck->size();
+                    if (m_aFieldStack.empty() && Read_Field(&aRes))
                     {
                         OUString sURL;
-                        for (size_t nI = pCtrlStck->size(); nI > nCount; --nI)
+                        for (size_t nI = m_pCtrlStck->size(); nI > nCount; --nI)
                         {
-                            const SfxPoolItem *pItem = ((*pCtrlStck)[nI-1]).pAttr;
+                            const SfxPoolItem *pItem = ((*m_pCtrlStck)[nI-1]).pAttr.get();
                             sal_uInt16 nWhich = pItem->Which();
                             if (nWhich == RES_TXTATR_INETFMT)
                             {
-                                const SwFmtINetFmt *pURL =
-                                    (const SwFmtINetFmt *)pItem;
+                                const SwFormatINetFormat *pURL =
+                                    static_cast<const SwFormatINetFormat *>(pItem);
                                 sURL = pURL->GetValue();
                             }
-                            pCtrlStck->DeleteAndDestroy(nI-1);
+                            m_pCtrlStck->DeleteAndDestroy(nI-1);
                         }
                         aChunks.push_back(Chunk(nStart, sURL));
                     }
                 }
                 else
                 {
-                    if (!maFieldStack.empty() && End_Field())
+                    if (!m_aFieldStack.empty() && End_Field())
                         aChunks.back().SetEndPos(nStart+1);
                 }
             }
         }
 
-        pPlcxMan->advance();
-        nNext = pPlcxMan->Where();
+        m_pPlcxMan->advance();
+        nNext = m_pPlcxMan->Where();
 
-        if( (nNext != nStart) && !bONLYnPicLocFc )
+        const WW8_CP nEnd = ( nNext < nEndCp ) ? nNext : nEndCp;
+        if (!bONLYnPicLocFc && nNext != nStart && nEnd >= nStartCp)
         {
-            nEnd = ( nNext < nEndCp ) ? nNext : nEndCp;
             SfxItemPool *pEditPool = pS->GetPool();
 
             // Here read current properties and convert them into pS
             // and put those attrs into the draw box if they can be converted
             // to draw attributes
-            if (pCtrlStck->size() - nCurrentCount)
+            if (m_pCtrlStck->size() - nCurrentCount)
             {
-                for (size_t i = nCurrentCount; i < pCtrlStck->size(); ++i)
+                for (size_t i = nCurrentCount; i < m_pCtrlStck->size(); ++i)
                 {
-                    const SfxPoolItem *pItem = ((*pCtrlStck)[i]).pAttr;
+                    const SfxPoolItem *pItem = ((*m_pCtrlStck)[i]).pAttr.get();
                     sal_uInt16 nWhich = pItem->Which();
                     if( nWhich < RES_FLTRATTR_BEGIN ||
                         nWhich >= RES_FLTRATTR_END )
                     {
-                        sal_uInt16 nSlotId = rDoc.GetAttrPool().GetSlotId(nWhich);
+                        sal_uInt16 nSlotId = m_rDoc.GetAttrPool().GetSlotId(nWhich);
                         if (
                             nSlotId && nWhich != nSlotId &&
                             0 != (nWhich = pEditPool->GetWhich(nSlotId)) &&
@@ -729,14 +708,14 @@ void SwWW8ImplReader::InsertAttrsAsDrawingAttrs(long nStartCp, long nEndCp,
                 }
             }
             // Fill in the remainder from the style
-            InsertTxbxStyAttrs(*pS, nAktColl);
+            InsertTxbxStyAttrs(*pS, m_nAktColl);
 
             if( pS->Count() )
             {
-                mpDrawEditEngine->QuickSetAttribs( *pS,
-                    GetESelection(*mpDrawEditEngine, nTxtStart - nStartCp, nEnd - nStartCp) );
+                m_pDrawEditEngine->QuickSetAttribs( *pS,
+                    GetESelection(*m_pDrawEditEngine, nTextStart - nStartCp, nEnd - nStartCp ) );
                 delete pS;
-                pS = new SfxItemSet(mpDrawEditEngine->GetEmptyItemSet());
+                pS = new SfxItemSet(m_pDrawEditEngine->GetEmptyItemSet());
             }
         }
         nStart = nNext;
@@ -745,18 +724,18 @@ void SwWW8ImplReader::InsertAttrsAsDrawingAttrs(long nStartCp, long nEndCp,
 
     // pop off as far as recorded location just in case there were some left
     // unclosed
-    for (size_t nI = pCtrlStck->size(); nI > nCurrentCount; --nI)
-        pCtrlStck->DeleteAndDestroy(nI-1);
+    for (size_t nI = m_pCtrlStck->size(); nI > nCurrentCount; --nI)
+        m_pCtrlStck->DeleteAndDestroy(nI-1);
 
     typedef std::deque<Chunk>::iterator myIter;
     myIter aEnd = aChunks.end();
     for (myIter aIter = aChunks.begin(); aIter != aEnd; ++aIter)
     {
-        ESelection aSel(GetESelection(*mpDrawEditEngine, aIter->GetStartPos()-nStartCp,
+        ESelection aSel(GetESelection(*m_pDrawEditEngine, aIter->GetStartPos()-nStartCp,
             aIter->GetEndPos()-nStartCp));
-        OUString aString(mpDrawEditEngine->GetText(aSel));
+        OUString aString(m_pDrawEditEngine->GetText(aSel));
         const sal_Int32 nOrigLen = aString.getLength();
-        long nDummy(0);
+        WW8_CP nDummy(0);
         lcl_StripFields(aString, nDummy);
 
         sal_Int32 nChanged;
@@ -764,17 +743,17 @@ void SwWW8ImplReader::InsertAttrsAsDrawingAttrs(long nStartCp, long nEndCp,
         {
             SvxURLField aURL(aIter->GetURL(), aString,
                 SVXURLFORMAT_APPDEFAULT);
-            mpDrawEditEngine->QuickInsertField(SvxFieldItem(aURL, EE_FEATURE_FIELD), aSel);
+            m_pDrawEditEngine->QuickInsertField(SvxFieldItem(aURL, EE_FEATURE_FIELD), aSel);
             nChanged = nOrigLen - 1;
         }
         else
         {
-            mpDrawEditEngine->QuickInsertText(aString, aSel);
+            m_pDrawEditEngine->QuickInsertText(aString, aSel);
             nChanged = nOrigLen - aString.getLength();
         }
         for (myIter aIter2 = aIter+1; aIter2 != aEnd; ++aIter2)
             aIter2->Adjust(nChanged);
-        }
+    }
 
     /*
      Don't worry about the new pPlcxMan, the restorer removes it when
@@ -787,10 +766,10 @@ bool SwWW8ImplReader::GetTxbxTextSttEndCp(WW8_CP& rStartCp, WW8_CP& rEndCp,
     sal_uInt16 nTxBxS, sal_uInt16 nSequence)
 {
     // grab the TextBox-PLCF quickly
-    WW8PLCFspecial* pT = pPlcxMan ? pPlcxMan->GetTxbx() : 0;
+    WW8PLCFspecial* pT = m_pPlcxMan ? m_pPlcxMan->GetTxbx() : nullptr;
     if( !pT )
     {
-        OSL_ENSURE( false, "+Wo ist der Grafik-Text (1) ?" );
+        OSL_ENSURE( false, "+where's the text graphic (1)?" );
         return false;
     }
 
@@ -803,69 +782,68 @@ bool SwWW8ImplReader::GetTxbxTextSttEndCp(WW8_CP& rStartCp, WW8_CP& rEndCp,
     void* pT0;
     if( !pT->Get( rStartCp, pT0 ) )
     {
-        OSL_ENSURE( false, "+Wo ist der Grafik-Text (2) ?" );
+        OSL_ENSURE( false, "+where's the text graphic (2)?" );
         return false;
     }
 
     if( bCheckTextBoxStory )
     {
-        bool bReusable = (0 != SVBT16ToShort( ((WW8_TXBXS*)pT0)->fReusable ));
+        bool bReusable = (0 != SVBT16ToShort( static_cast<WW8_TXBXS*>(pT0)->fReusable ));
         while( bReusable )
         {
             pT->advance();
             if( !pT->Get( rStartCp, pT0 ) )
             {
-                OSL_ENSURE( false, "+Wo ist der Grafik-Text (2-a) ?" );
+                OSL_ENSURE( false, "+where's the text graphic (2a)?" );
                 return false;
             }
-            bReusable = (0 != SVBT16ToShort( ((WW8_TXBXS*)pT0)->fReusable ));
+            bReusable = (0 != SVBT16ToShort( static_cast<WW8_TXBXS*>(pT0)->fReusable ));
         }
     }
     pT->advance();
     if( !pT->Get( rEndCp, pT0 ) )
     {
-        OSL_ENSURE( false, "+Wo ist der Grafik-Text (3) ?" );
+        OSL_ENSURE( false, "+where's the text graphic (3)?" );
         return false;
     }
 
-    // jetzt ggfs. die passende Page in der Break-Table finden
+    // find the right page in the break table (if necessary)
     if( bCheckTextBoxStory )
     {
-        // Sonderfall: gesamte(!) Kette soll ermittelt werden,
-        //             dann sind wir hier schon fertig!
+        // special case: entire chain should be determined - done!
         if( USHRT_MAX > nSequence )
         {
             long nMinStartCp = rStartCp;
             long nMaxEndCp   = rEndCp;
-            // rasch den TextBox-Break-Deskriptor-PLCF greifen
-            pT = pPlcxMan->GetTxbxBkd();
+            // quickly grab the TextBox-Break-Deskriptor-PLCF
+            pT = m_pPlcxMan->GetTxbxBkd();
             if (!pT) // It can occur on occasion, Caolan
                 return false;
 
-            // den ersten Eintrag fuer diese TextBox-Story finden
+            // find first entry for this TextBox story
             if( !pT->SeekPos( rStartCp ) )
             {
-                OSL_ENSURE( false, "+Wo ist der Grafik-Text (4) ?" );
+                OSL_ENSURE( false, "+where's the text graphic (4)" );
                 return false;
             }
-            // ggfs. entsprechende Anzahl Eintraege weitergehen
+            // if needed skip the appropriate number of entries
             for (sal_uInt16 iSequence = 0; iSequence < nSequence; ++iSequence)
                 pT->advance();
-            // dann die tatsaechlichen Start und Ende ermitteln
+            // and determine actual start and end
             if(    (!pT->Get( rStartCp, pT0 ))
                 || ( nMinStartCp > rStartCp  ) )
             {
-                OSL_ENSURE( false, "+Wo ist der Grafik-Text (5) ?" );
+                OSL_ENSURE( false, "+where's the text graphic (5)?" );
                 return false;
             }
             if( rStartCp >= nMaxEndCp )
-                rEndCp = rStartCp;  // kein Error: leerer String!
+                rEndCp = rStartCp;  // not an error: empty string
             else
             {
                 pT->advance();
                 if ( (!pT->Get(rEndCp, pT0)) || (nMaxEndCp < rEndCp-1) )
                 {
-                    OSL_ENSURE( false, "+Wo ist der Grafik-Text (6) ?" );
+                    OSL_ENSURE( false, "+where's the text graphic (6)?" );
                     return false;
                 }
                 rEndCp -= 1;
@@ -879,22 +857,22 @@ bool SwWW8ImplReader::GetTxbxTextSttEndCp(WW8_CP& rStartCp, WW8_CP& rEndCp,
     return true;
 }
 
-// TxbxText() holt aus WW-File den Text und gibt diesen und den Anfangs- und
-// den um -2 (bzw. -1 bei Ver8) korrigierten End-Cp zurueck
+// TxbxText() grabs the text from the WW file and returns that along with
+// the StartCp and the corrected (by -2, or -1 for version 8) EndCp.
 sal_Int32 SwWW8ImplReader::GetRangeAsDrawingString(OUString& rString, long nStartCp, long nEndCp, ManTypes eType)
 {
     WW8_CP nOffset = 0;
-    pWwFib->GetBaseCp(eType, &nOffset); //TODO: check return value
+    m_pWwFib->GetBaseCp(eType, &nOffset); //TODO: check return value
 
     OSL_ENSURE(nStartCp <= nEndCp, "+Wo ist der Grafik-Text (7) ?");
     if (nStartCp == nEndCp)
-        rString.clear();      // leerer String: durchaus denkbar!
+        rString.clear();      // empty string: entirely possible
     else if (nStartCp < nEndCp)
     {
-        // den Text einlesen: kann sich ueber mehrere Pieces erstrecken!!!
-        const sal_Int32 nLen = pSBase->WW8ReadString(*pStrm, rString,
+        // read the text: can be split into multiple pieces
+        const sal_Int32 nLen = m_pSBase->WW8ReadString(*m_pStrm, rString,
             nStartCp + nOffset, nEndCp - nStartCp, GetCurrentCharSet());
-        OSL_ENSURE(nLen, "+Wo ist der Grafik-Text (8) ?");
+        OSL_ENSURE(nLen, "+where's the text graphic (8)?");
         if (nLen>0)
         {
             if( rString[nLen-1]==0x0d )
@@ -950,48 +928,48 @@ void removePositions(EditEngine &rDrawEditEngine, const std::vector<sal_Int32>& 
 
 OutlinerParaObject* SwWW8ImplReader::ImportAsOutliner(OUString &rString, WW8_CP nStartCp, WW8_CP nEndCp, ManTypes eType)
 {
-    OutlinerParaObject* pRet = 0;
+    OutlinerParaObject* pRet = nullptr;
 
     sal_Int32 nLen = GetRangeAsDrawingString(rString, nStartCp, nEndCp, eType);
     if (nLen > 0)
     {
-        if (!mpDrawEditEngine)
-            mpDrawEditEngine = new EditEngine(0);
+        if (!m_pDrawEditEngine)
+            m_pDrawEditEngine = new EditEngine(nullptr);
 
         //replace dos line endings with editeng ones, replace any extra chars with
         //placeholders to keep the inserted string len in sync with the attribute cps
         //and record in aDosLineEnds the superfluous positions
         OUString sEEString(rString);
         std::vector<sal_Int32> aDosLineEnds(replaceDosLineEndsButPreserveLength(sEEString));
-        mpDrawEditEngine->SetText(sEEString);
+        m_pDrawEditEngine->SetText(sEEString);
         InsertAttrsAsDrawingAttrs(nStartCp, nStartCp+nLen, eType);
         //remove any superfluous placeholders of replaceDosLineEndsButPreserveLength
         //after attributes have been inserted
-        removePositions(*mpDrawEditEngine, aDosLineEnds);
+        removePositions(*m_pDrawEditEngine, aDosLineEnds);
 
         // Annotations typically begin with a (useless) 0x5
-        if ((eType == MAN_AND) && mpDrawEditEngine->GetTextLen())
+        if ((eType == MAN_AND) && m_pDrawEditEngine->GetTextLen())
         {
             ESelection aFirstChar(0, 0, 0, 1);
-            if (comphelper::string::equals(mpDrawEditEngine->GetText( aFirstChar ), 0x5))
-                mpDrawEditEngine->QuickDelete(aFirstChar);
+            if (m_pDrawEditEngine->GetText( aFirstChar ) == "\x05")
+                m_pDrawEditEngine->QuickDelete(aFirstChar);
         }
 
-        EditTextObject* pTemporaryText = mpDrawEditEngine->CreateTextObject();
+        EditTextObject* pTemporaryText = m_pDrawEditEngine->CreateTextObject();
         pRet = new OutlinerParaObject(*pTemporaryText);
-        pRet->SetOutlinerMode( OUTLINERMODE_TEXTOBJECT );
+        pRet->SetOutlinerMode( OutlinerMode::TextObject );
         delete pTemporaryText;
 
-        mpDrawEditEngine->SetText( OUString() );
-        mpDrawEditEngine->SetParaAttribs(0, mpDrawEditEngine->GetEmptyItemSet());
+        m_pDrawEditEngine->SetText( OUString() );
+        m_pDrawEditEngine->SetParaAttribs(0, m_pDrawEditEngine->GetEmptyItemSet());
 
         // Strip out fields, leaving the result
-        long nDummy(0);
+        WW8_CP nDummy(0);
         lcl_StripFields(rString, nDummy);
         // Strip out word's special characters for the simple string
-        rString = rString.replaceAll(OUString(0x1), "");
-        rString = rString.replaceAll(OUString(0x5), "");
-        rString = rString.replaceAll(OUString(0x8), "");
+        rString = rString.replaceAll("\x01", "");
+        rString = rString.replaceAll("\x05", "");
+        rString = rString.replaceAll("\x08", "");
         rString = rString.replaceAll("\007\007", "\007\012");
         rString = rString.replace(0x7, ' ');
     }
@@ -999,18 +977,17 @@ OutlinerParaObject* SwWW8ImplReader::ImportAsOutliner(OUString &rString, WW8_CP 
     return pRet;
 }
 
-// InsertTxbxText() fuegt fuer TextBoxen und CaptionBoxen den Text
-// und die Attribute ein
-SwFrmFmt* SwWW8ImplReader::InsertTxbxText(SdrTextObj* pTextObj,
+// InsertTxbxText() adds the Text and the Attributs for TextBoxes and CaptionBoxes
+void SwWW8ImplReader::InsertTxbxText(SdrTextObj* pTextObj,
     Size* pObjSiz, sal_uInt16 nTxBxS, sal_uInt16 nSequence, long nPosCp,
-    SwFrmFmt* pOldFlyFmt, bool bMakeSdrGrafObj, bool& rbEraseTextObj,
+    SwFrameFormat* pOldFlyFormat, bool bMakeSdrGrafObj, bool& rbEraseTextObj,
     bool* pbTestTxbxContainsText, long* pnStartCp, long* pnEndCp,
     bool* pbContainsGraphics, SvxMSDffImportRec* pRecord)
 {
-    SwFrmFmt* pFlyFmt = 0;
-    sal_uLong nOld = pStrm->Tell();
+    SwFrameFormat* pFlyFormat = nullptr;
+    sal_uLong nOld = m_pStrm->Tell();
 
-    ManTypes eType = pPlcxMan->GetManType() == MAN_HDFT ? MAN_TXBX_HDFT : MAN_TXBX;
+    ManTypes eType = m_pPlcxMan->GetManType() == MAN_HDFT ? MAN_TXBX_HDFT : MAN_TXBX;
 
     rbEraseTextObj = false;
 
@@ -1020,15 +997,15 @@ SwFrmFmt* SwWW8ImplReader::InsertTxbxText(SdrTextObj* pTextObj,
     bool bTextWasRead = GetTxbxTextSttEndCp(nStartCp, nEndCp, nTxBxS, nSequence) &&
                         GetRangeAsDrawingString(aString, nStartCp, nEndCp, eType) > 0;
 
-    if (!mpDrawEditEngine)
-        mpDrawEditEngine = new EditEngine(0);
+    if (!m_pDrawEditEngine)
+        m_pDrawEditEngine = new EditEngine(nullptr);
     if( pObjSiz )
-        mpDrawEditEngine->SetPaperSize( *pObjSiz );
+        m_pDrawEditEngine->SetPaperSize( *pObjSiz );
 
     const OUString aOrigString(aString);
     if( bTextWasRead )
     {
-        long nNewStartCp = nStartCp;
+        WW8_CP nNewStartCp = nStartCp;
         lcl_StripFields(aString, nNewStartCp);
 
         if (aString.getLength()!=1)
@@ -1044,24 +1021,25 @@ SwFrmFmt* SwWW8ImplReader::InsertTxbxText(SdrTextObj* pTextObj,
                     if (!pbTestTxbxContainsText)
                     {
                         WW8ReaderSave aSave(this, nNewStartCp -1);
-                        bool bOldEmbeddObj = bEmbeddObj;
+                        bool bOldEmbeddObj = m_bEmbeddObj;
                         // bEmbedd Ordinarily would have been set by field
                         // parse, but this is impossible here so...
-                        bEmbeddObj = true;
+                        m_bEmbeddObj = true;
 
                         // 1st look for OLE- or Graph-Indicator Sprms
-                        WW8PLCFx_Cp_FKP* pChp = pPlcxMan->GetChpPLCF();
+                        WW8PLCFx_Cp_FKP* pChp = m_pPlcxMan->GetChpPLCF();
                         WW8PLCFxDesc aDesc;
                         pChp->GetSprms( &aDesc );
                         WW8SprmIter aSprmIter(aDesc.pMemPos, aDesc.nSprmsLen,
-                            *mpSprmParser);
+                            *m_pSprmParser);
 
                         for( int nLoop = 0; nLoop < 2; ++nLoop )
                         {
-                            const sal_uInt8* pParams;
-                            while( aSprmIter.GetSprms()
-                                && (0 != (pParams = aSprmIter.GetAktParams())) )
+                            while (aSprmIter.GetSprms())
                             {
+                                const sal_uInt8 *const pParams(aSprmIter.GetAktParams());
+                                if (nullptr == pParams)
+                                    break;
                                 sal_uInt16 nAktId = aSprmIter.GetAktId();
                                 switch( nAktId )
                                 {
@@ -1073,7 +1051,7 @@ SwFrmFmt* SwWW8ImplReader::InsertTxbxText(SdrTextObj* pTextObj,
                                         break;
                                     case     68:  // Read_Pic()
                                     case 0x6A03:
-                                    case 0x680E:
+                                    case NS_sprm::LN_CObjLocation:
                                             Read_PicLoc(nAktId, pParams, 1);
                                         break;
                                 }
@@ -1088,16 +1066,16 @@ SwFrmFmt* SwWW8ImplReader::InsertTxbxText(SdrTextObj* pTextObj,
                             }
                         }
                         aSave.Restore(this);
-                        bEmbeddObj=bOldEmbeddObj;
+                        m_bEmbeddObj=bOldEmbeddObj;
 
                         // then import either an OLE of a Graphic
-                        if( bObj )
+                        if( m_bObj )
                         {
                             if( bMakeSdrGrafObj && pTextObj &&
                                 pTextObj->GetUpGroup() )
                             {
-                                // SdrOleObj/SdrGrafObj anstatt des
-                                // SdrTextObj in dessen Gruppe einsetzen
+                                // use SdrOleObj/SdrGrafObj instead of
+                                // SdrTextObj in this Group
 
                                 Graphic aGraph;
                                 SdrObject* pNew = ImportOleBase(aGraph);
@@ -1105,12 +1083,12 @@ SwFrmFmt* SwWW8ImplReader::InsertTxbxText(SdrTextObj* pTextObj,
                                 if( !pNew )
                                 {
                                     pNew = new SdrGrafObj;
-                                    ((SdrGrafObj*)pNew)->SetGraphic(aGraph);
+                                    static_cast<SdrGrafObj*>(pNew)->SetGraphic(aGraph);
                                 }
 
                                 GrafikCtor();
 
-                                pNew->SetModel( pDrawModel );
+                                pNew->SetModel( m_pDrawModel );
                                 pNew->SetLogicRect( pTextObj->GetCurrentBoundRect() );
                                 pNew->SetLayer( pTextObj->GetLayer() );
 
@@ -1118,21 +1096,21 @@ SwFrmFmt* SwWW8ImplReader::InsertTxbxText(SdrTextObj* pTextObj,
                                     ReplaceObject(pNew, pTextObj->GetOrdNum());
                             }
                             else
-                                pFlyFmt = ImportOle();
-                            bObj = false;
+                                pFlyFormat = ImportOle();
+                            m_bObj = false;
                         }
                         else
                         {
                             InsertAttrsAsDrawingAttrs(nNewStartCp, nNewStartCp+1,
                                 eType, true);
-                            pFlyFmt = ImportGraf(bMakeSdrGrafObj ? pTextObj : 0,
-                                pOldFlyFmt);
+                            pFlyFormat = ImportGraf(bMakeSdrGrafObj ? pTextObj : nullptr,
+                                pOldFlyFormat);
                         }
                     }
                     break;
                 case 0x8:
-                    if ( (!pbTestTxbxContainsText) && (!bObj) )
-                        pFlyFmt = Read_GrafLayer( nPosCp );
+                    if ( (!pbTestTxbxContainsText) && (!m_bObj) )
+                        pFlyFormat = Read_GrafLayer( nPosCp );
                     break;
                 default:
                     bDone = false;
@@ -1141,14 +1119,14 @@ SwFrmFmt* SwWW8ImplReader::InsertTxbxText(SdrTextObj* pTextObj,
 
             if( bDone )
             {
-                if( pFlyFmt )
+                if( pFlyFormat )
                 {
                     if( pRecord )
                     {
-                        SfxItemSet aFlySet( rDoc.GetAttrPool(),
+                        SfxItemSet aFlySet( m_rDoc.GetAttrPool(),
                             RES_FRMATR_BEGIN, RES_FRMATR_END-1 );
 
-                        Rectangle aInnerDist(   pRecord->nDxTextLeft,
+                        tools::Rectangle aInnerDist(   pRecord->nDxTextLeft,
                                                 pRecord->nDyTextTop,
                                                 pRecord->nDxTextRight,
                                                 pRecord->nDyTextBottom  );
@@ -1159,13 +1137,13 @@ SwFrmFmt* SwWW8ImplReader::InsertTxbxText(SdrTextObj* pTextObj,
                                                  pRecord->eShapeType,
                                                  aInnerDist );
 
-                        pFlyFmt->SetFmtAttr( aFlySet );
+                        pFlyFormat->SetFormatAttr( aFlySet );
 
-                        MapWrapIntoFlyFmt(pRecord, pFlyFmt);
+                        MapWrapIntoFlyFormat(pRecord, pFlyFormat);
                     }
                 }
                 aString.clear();
-                rbEraseTextObj = (0 != pFlyFmt);
+                rbEraseTextObj = (nullptr != pFlyFormat);
             }
         }
     }
@@ -1181,14 +1159,14 @@ SwFrmFmt* SwWW8ImplReader::InsertTxbxText(SdrTextObj* pTextObj,
     {
         if( bTextWasRead )
         {
-            mpDrawEditEngine->SetText(aOrigString);
+            m_pDrawEditEngine->SetText(aOrigString);
             InsertAttrsAsDrawingAttrs(nStartCp, nEndCp, eType);
         }
 
         bool bVertical = pTextObj->IsVerticalWriting();
-        EditTextObject* pTemporaryText = mpDrawEditEngine->CreateTextObject();
+        EditTextObject* pTemporaryText = m_pDrawEditEngine->CreateTextObject();
         OutlinerParaObject* pOp = new OutlinerParaObject(*pTemporaryText);
-        pOp->SetOutlinerMode( OUTLINERMODE_TEXTOBJECT );
+        pOp->SetOutlinerMode( OutlinerMode::TextObject );
         pOp->SetVertical( bVertical );
         delete pTemporaryText;
         pTextObj->NbcSetOutlinerParaObject( pOp );
@@ -1200,56 +1178,54 @@ SwFrmFmt* SwWW8ImplReader::InsertTxbxText(SdrTextObj* pTextObj,
         // Vorgehen: Text loeschen = auf 1 Absatz reduzieren
         // und an diesem Absatz die Absatzattribute und Styles loeschen
         // (Empfehlung JOE)
-        mpDrawEditEngine->SetText( OUString() );
-        mpDrawEditEngine->SetParaAttribs(0, mpDrawEditEngine->GetEmptyItemSet());
+        m_pDrawEditEngine->SetText( OUString() );
+        m_pDrawEditEngine->SetParaAttribs(0, m_pDrawEditEngine->GetEmptyItemSet());
     }
 
-    pStrm->Seek( nOld );
+    m_pStrm->Seek( nOld );
     if (pbContainsGraphics)
         *pbContainsGraphics = bContainsGraphics;
-    return pFlyFmt;
 }
 
 bool SwWW8ImplReader::TxbxChainContainsRealText(sal_uInt16 nTxBxS, long& rStartCp,
     long&  rEndCp)
 {
     bool bErase, bContainsText;
-    InsertTxbxText( 0,0,nTxBxS,USHRT_MAX,0,0,false, bErase, &bContainsText,
+    InsertTxbxText( nullptr,nullptr,nTxBxS,USHRT_MAX,0,nullptr,false, bErase, &bContainsText,
         &rStartCp, &rEndCp );
     return bContainsText;
 }
 
 // TextBoxes only for Ver67 !!
-SdrObject* SwWW8ImplReader::ReadTxtBox( WW8_DPHEAD* pHd, const WW8_DO* pDo,
-    SfxAllItemSet &rSet)
+SdrObject* SwWW8ImplReader::ReadTextBox(WW8_DPHEAD* pHd, SfxAllItemSet &rSet)
 {
     bool bDummy;
-    WW8_DP_TXTBOX aTxtB;
+    WW8_DP_TXTBOX aTextB;
 
-    if( !ReadGrafStart( (void*)&aTxtB, sizeof( aTxtB ), pHd, pDo, rSet ) )
-        return 0;
+    if( !ReadGrafStart( static_cast<void*>(&aTextB), sizeof( aTextB ), pHd, rSet ) )
+        return nullptr;
 
-    Point aP0( (sal_Int16)SVBT16ToShort( pHd->xa ) + nDrawXOfs2,
-               (sal_Int16)SVBT16ToShort( pHd->ya ) + nDrawYOfs2 );
+    Point aP0( (sal_Int16)SVBT16ToShort( pHd->xa ) + m_nDrawXOfs2,
+               (sal_Int16)SVBT16ToShort( pHd->ya ) + m_nDrawYOfs2 );
     Point aP1( aP0 );
     aP1.X() += (sal_Int16)SVBT16ToShort( pHd->dxa );
     aP1.Y() += (sal_Int16)SVBT16ToShort( pHd->dya );
 
-    SdrObject* pObj = new SdrRectObj( OBJ_TEXT, Rectangle( aP0, aP1 ) );
-    pObj->SetModel( pDrawModel );
-    pObj->NbcSetSnapRect(Rectangle(aP0, aP1));
+    SdrObject* pObj = new SdrRectObj( OBJ_TEXT, tools::Rectangle( aP0, aP1 ) );
+    pObj->SetModel( m_pDrawModel );
+    pObj->NbcSetSnapRect(tools::Rectangle(aP0, aP1));
     Size aSize( (sal_Int16)SVBT16ToShort( pHd->dxa ) ,
         (sal_Int16)SVBT16ToShort( pHd->dya ) );
 
     long nStartCpFly,nEndCpFly;
     bool bContainsGraphics;
-    InsertTxbxText(dynamic_cast<SdrTextObj*>(pObj), &aSize, 0, 0, 0, 0, false,
-        bDummy,0,&nStartCpFly,&nEndCpFly,&bContainsGraphics);
+    InsertTxbxText(dynamic_cast<SdrTextObj*>(pObj), &aSize, 0, 0, 0, nullptr, false,
+        bDummy,nullptr,&nStartCpFly,&nEndCpFly,&bContainsGraphics);
 
-    SetStdAttr( rSet, aTxtB.aLnt, aTxtB.aShd );
-    SetFill( rSet, aTxtB.aFill );
+    SetStdAttr( rSet, aTextB.aLnt, aTextB.aShd );
+    SetFill( rSet, aTextB.aFill );
 
-    rSet.Put( SdrTextFitToSizeTypeItem( SDRTEXTFIT_NONE ) );
+    rSet.Put( SdrTextFitToSizeTypeItem( SdrFitToSizeType::NONE ) );
     rSet.Put( makeSdrTextAutoGrowWidthItem(false));
     rSet.Put( makeSdrTextAutoGrowHeightItem(false));
     rSet.Put( makeSdrTextLeftDistItem(  MIN_BORDER_DIST*2 ) );
@@ -1260,85 +1236,91 @@ SdrObject* SwWW8ImplReader::ReadTxtBox( WW8_DPHEAD* pHd, const WW8_DO* pDo,
     return pObj;
 }
 
-SdrObject* SwWW8ImplReader::ReadCaptionBox( WW8_DPHEAD* pHd, const WW8_DO* pDo,
-    SfxAllItemSet &rSet)
+SdrObject* SwWW8ImplReader::ReadCaptionBox(WW8_DPHEAD* pHd, SfxAllItemSet &rSet)
 {
-    static const SdrCaptionType aCaptA[] = { SDRCAPT_TYPE1, SDRCAPT_TYPE2,
-                                       SDRCAPT_TYPE3, SDRCAPT_TYPE4 };
+    static const SdrCaptionType aCaptA[] = { SdrCaptionType::Type1, SdrCaptionType::Type2,
+                                       SdrCaptionType::Type3, SdrCaptionType::Type4 };
 
     WW8_DP_CALLOUT_TXTBOX aCallB;
 
-    if( !ReadGrafStart( (void*)&aCallB, sizeof( aCallB ), pHd, pDo, rSet ) )
-        return 0;
+    if( !ReadGrafStart( static_cast<void*>(&aCallB), sizeof( aCallB ), pHd, rSet ) )
+        return nullptr;
 
     sal_uInt16 nCount = SVBT16ToShort( aCallB.dpPolyLine.aBits1 ) >> 1 & 0x7fff;
-    boost::scoped_array<SVBT16> xP(new SVBT16[nCount * 2]);
+    if (nCount < 1)
+    {
+        SAL_WARN("sw.ww8", "Short CaptionBox header");
+        return nullptr;
+    }
 
-    bool bCouldRead = checkRead(*pStrm, xP.get(), nCount * 4);      // Punkte einlesen
-    OSL_ENSURE(bCouldRead, "Short CaptionBox header");
+    std::unique_ptr<SVBT16[]> xP(new SVBT16[nCount * 2]);
+
+    bool bCouldRead = checkRead(*m_pStrm, xP.get(), nCount * 4);      // read points
     if (!bCouldRead)
-        return 0;
+    {
+        SAL_WARN("sw.ww8", "Short CaptionBox header");
+        return nullptr;
+    }
 
     sal_uInt8 nTyp = (sal_uInt8)nCount - 1;
     if( nTyp == 1 && SVBT16ToShort( xP[0] ) == SVBT16ToShort( xP[2] ) )
         nTyp = 0;
 
     Point aP0( (sal_Int16)SVBT16ToShort( pHd->xa ) +
-               (sal_Int16)SVBT16ToShort( aCallB.dpheadTxbx.xa ) + nDrawXOfs2,
+               (sal_Int16)SVBT16ToShort( aCallB.dpheadTxbx.xa ) + m_nDrawXOfs2,
                (sal_Int16)SVBT16ToShort( pHd->ya )
-               + (sal_Int16)SVBT16ToShort( aCallB.dpheadTxbx.ya ) + nDrawYOfs2 );
+               + (sal_Int16)SVBT16ToShort( aCallB.dpheadTxbx.ya ) + m_nDrawYOfs2 );
     Point aP1( aP0 );
     aP1.X() += (sal_Int16)SVBT16ToShort( aCallB.dpheadTxbx.dxa );
     aP1.Y() += (sal_Int16)SVBT16ToShort( aCallB.dpheadTxbx.dya );
     Point aP2( (sal_Int16)SVBT16ToShort( pHd->xa )
                 + (sal_Int16)SVBT16ToShort( aCallB.dpheadPolyLine.xa )
-                + nDrawXOfs2 + (sal_Int16)SVBT16ToShort( xP[0] ),
+                + m_nDrawXOfs2 + (sal_Int16)SVBT16ToShort( xP[0] ),
                (sal_Int16)SVBT16ToShort( pHd->ya )
                + (sal_Int16)SVBT16ToShort( aCallB.dpheadPolyLine.ya )
-               + nDrawYOfs2 + (sal_Int16)SVBT16ToShort( xP[1] ) );
+               + m_nDrawYOfs2 + (sal_Int16)SVBT16ToShort( xP[1] ) );
     xP.reset();
 
-    SdrCaptionObj* pObj = new SdrCaptionObj( Rectangle( aP0, aP1 ), aP2 );
-    pObj->SetModel( pDrawModel );
-    pObj->NbcSetSnapRect(Rectangle(aP0, aP1));
+    SdrCaptionObj* pObj = new SdrCaptionObj( tools::Rectangle( aP0, aP1 ), aP2 );
+    pObj->SetModel( m_pDrawModel );
+    pObj->NbcSetSnapRect(tools::Rectangle(aP0, aP1));
     Size aSize( (sal_Int16)SVBT16ToShort( aCallB.dpheadTxbx.dxa ),
                            (sal_Int16)SVBT16ToShort(  aCallB.dpheadTxbx.dya ) );
     bool bEraseThisObject;
 
-    InsertTxbxText(pObj, &aSize, 0, 0, 0, 0, false, bEraseThisObject );
+    InsertTxbxText(pObj, &aSize, 0, 0, 0, nullptr, false, bEraseThisObject );
 
-    if( SVBT16ToShort( aCallB.dptxbx.aLnt.lnps ) != 5 ) // Umrandung sichtbar ?
+    if( SVBT16ToShort( aCallB.dptxbx.aLnt.lnps ) != 5 ) // Is border visible ?
         SetStdAttr( rSet, aCallB.dptxbx.aLnt, aCallB.dptxbx.aShd );
-    else                                                // nein -> Nimm Linie
+    else                                                // no -> take lines
         SetStdAttr( rSet, aCallB.dpPolyLine.aLnt, aCallB.dptxbx.aShd );
     SetFill( rSet, aCallB.dptxbx.aFill );
-    rSet.Put( SdrCaptionTypeItem( aCaptA[nTyp] ) );
+    rSet.Put(SdrCaptionTypeItem(aCaptA[nTyp % SAL_N_ELEMENTS(aCaptA)]));
 
     return pObj;
 }
 
-SdrObject *SwWW8ImplReader::ReadGroup( WW8_DPHEAD* pHd, const WW8_DO* pDo,
-    SfxAllItemSet &rSet)
+SdrObject *SwWW8ImplReader::ReadGroup(WW8_DPHEAD* pHd, SfxAllItemSet &rSet)
 {
     sal_Int16 nGrouped;
 
-    if( !ReadGrafStart( (void*)&nGrouped, sizeof( nGrouped ), pHd, pDo, rSet ) )
-        return 0;
+    if( !ReadGrafStart( static_cast<void*>(&nGrouped), sizeof( nGrouped ), pHd, rSet ) )
+        return nullptr;
 
 #ifdef OSL_BIGENDIAN
     nGrouped = (sal_Int16)OSL_SWAPWORD( nGrouped );
 #endif
 
-    nDrawXOfs = nDrawXOfs + (sal_Int16)SVBT16ToShort( pHd->xa );
-    nDrawYOfs = nDrawYOfs + (sal_Int16)SVBT16ToShort( pHd->ya );
+    m_nDrawXOfs = m_nDrawXOfs + (sal_Int16)SVBT16ToShort( pHd->xa );
+    m_nDrawYOfs = m_nDrawYOfs + (sal_Int16)SVBT16ToShort( pHd->ya );
 
     SdrObject* pObj = new SdrObjGroup;
 
     short nLeft = (sal_Int16)SVBT16ToShort( pHd->cb ) - sizeof( WW8_DPHEAD );
     for (int i = 0; i < nGrouped; i++)
     {
-        SfxAllItemSet aSet(pDrawModel->GetItemPool());
-        if (SdrObject *pObject = ReadGrafPrimitive(nLeft, pDo, aSet))
+        SfxAllItemSet aSet(m_pDrawModel->GetItemPool());
+        if (SdrObject *pObject = ReadGrafPrimitive(nLeft, aSet))
         {
             // first add and then set ItemSet
             SdrObjList *pSubGroup = pObj->GetSubList();
@@ -1349,20 +1331,20 @@ SdrObject *SwWW8ImplReader::ReadGroup( WW8_DPHEAD* pHd, const WW8_DO* pDo,
         }
     }
 
-    nDrawXOfs = nDrawXOfs - (sal_Int16)SVBT16ToShort( pHd->xa );
-    nDrawYOfs = nDrawYOfs - (sal_Int16)SVBT16ToShort( pHd->ya );
+    m_nDrawXOfs = m_nDrawXOfs - (sal_Int16)SVBT16ToShort( pHd->xa );
+    m_nDrawYOfs = m_nDrawYOfs - (sal_Int16)SVBT16ToShort( pHd->ya );
 
     return pObj;
 }
 
-SdrObject* SwWW8ImplReader::ReadGrafPrimitive( short& rLeft, const WW8_DO* pDo,
-    SfxAllItemSet &rSet)
+SdrObject* SwWW8ImplReader::ReadGrafPrimitive(short& rLeft, SfxAllItemSet &rSet)
 {
-    // cmc: This whole archaic word 6 graphic import can probably be refactored
-    // into an object hierarachy with a little effort.
-    SdrObject *pRet=0;
+    // This whole archaic word 6 graphic import can probably be refactored
+    // into an object hierarchy with a little effort.
+    SdrObject *pRet=nullptr;
     WW8_DPHEAD aHd;                         // Lese Draw-Primitive-Header
-    bool bCouldRead = checkRead(*pStrm, &aHd, sizeof(WW8_DPHEAD));
+    bool bCouldRead = checkRead(*m_pStrm, &aHd, sizeof(WW8_DPHEAD)) &&
+                      SVBT16ToShort(aHd.cb) >= sizeof(WW8_DPHEAD);
     OSL_ENSURE(bCouldRead, "Graphic Primitive header short read" );
     if (!bCouldRead)
     {
@@ -1370,37 +1352,37 @@ SdrObject* SwWW8ImplReader::ReadGrafPrimitive( short& rLeft, const WW8_DO* pDo,
         return pRet;
     }
 
-    if( rLeft >= SVBT16ToShort(aHd.cb) )    // Vorsichtsmassmahme
+    if( rLeft >= SVBT16ToShort(aHd.cb) )    // precautions
     {
-        rSet.Put(SwFmtSurround(SURROUND_THROUGHT));
+        rSet.Put(SwFormatSurround(css::text::WrapTextMode_THROUGH));
         switch (SVBT16ToShort(aHd.dpk) & 0xff )
         {
             case 0:
-                pRet = ReadGroup( &aHd, pDo, rSet );
+                pRet = ReadGroup(&aHd, rSet);
                 break;
             case 1:
-                pRet = ReadLine( &aHd, pDo, rSet );
+                pRet = ReadLine(&aHd, rSet);
                 break;
             case 2:
-                pRet = ReadTxtBox( &aHd, pDo, rSet );
+                pRet = ReadTextBox(&aHd, rSet);
                 break;
             case 3:
-                pRet = ReadRect( &aHd, pDo, rSet );
+                pRet = ReadRect(&aHd, rSet);
                 break;
             case 4:
-                pRet = ReadElipse( &aHd, pDo, rSet );
+                pRet = ReadElipse(&aHd, rSet);
                 break;
             case 5:
-                pRet = ReadArc( &aHd, pDo, rSet );
+                pRet = ReadArc(&aHd, rSet);
                 break;
             case 6:
-                pRet = ReadPolyLine( &aHd, pDo, rSet );
+                pRet = ReadPolyLine(&aHd, rSet);
                 break;
             case 7:
-                pRet = ReadCaptionBox( &aHd, pDo, rSet );
+                pRet = ReadCaptionBox(&aHd, rSet);
                 break;
-            default:    // unbekannt
-                pStrm->SeekRel(SVBT16ToShort(aHd.cb) - sizeof(WW8_DPHEAD));
+            default:    // unknown
+                m_pStrm->SeekRel(SVBT16ToShort(aHd.cb) - sizeof(WW8_DPHEAD));
                 break;
         }
     }
@@ -1419,38 +1401,73 @@ void SwWW8ImplReader::ReadGrafLayer1( WW8PLCFspecial* pPF, long nGrafAnchorCp )
     void* pF0;
     if( !pPF->Get( nStartFc, pF0 ) )
     {
-        OSL_ENSURE( false, "+Wo ist die Grafik (2) ?" );
+        OSL_ENSURE( false, "+Where is the graphic (2) ?" );
         return;
     }
-    WW8_FDOA* pF = (WW8_FDOA*)pF0;
+    WW8_FDOA* pF = static_cast<WW8_FDOA*>(pF0);
     if( !SVBT32ToUInt32( pF->fc ) )
     {
-        OSL_ENSURE( false, "+Wo ist die Grafik (3) ?" );
+        OSL_ENSURE( false, "+Where is the graphic (3) ?" );
         return;
     }
 
-    bool bCouldSeek = checkSeek(*pStrm, SVBT32ToUInt32(pF->fc));
-    OSL_ENSURE(bCouldSeek, "Invalid Graphic offset");
+    bool bCouldSeek = checkSeek(*m_pStrm, SVBT32ToUInt32(pF->fc));
+    OSL_ENSURE(bCouldSeek, "Invalid graphic offset");
     if (!bCouldSeek)
         return;
 
-    // Lese Draw-Header
+    // read Draw-Header
     WW8_DO aDo;
-    bool bCouldRead = checkRead(*pStrm, &aDo, sizeof(WW8_DO));
-    OSL_ENSURE(bCouldRead, "Short Graphic header");
+    bool bCouldRead = checkRead(*m_pStrm, &aDo, sizeof(WW8_DO));
+    OSL_ENSURE(bCouldRead, "Short graphic header");
     if (!bCouldRead)
         return;
 
     short nLeft = SVBT16ToShort( aDo.cb ) - sizeof( WW8_DO );
     while (nLeft > static_cast<short>(sizeof(WW8_DPHEAD)))
     {
-        SfxAllItemSet aSet( pDrawModel->GetItemPool() );
-        if (SdrObject *pObject = ReadGrafPrimitive( nLeft, &aDo, aSet ))
+        SfxAllItemSet aSet( m_pDrawModel->GetItemPool() );
+        if (SdrObject *pObject = ReadGrafPrimitive(nLeft, aSet))
         {
-            pWWZOrder->InsertDrawingObject(pObject, SVBT16ToShort(aDo.dhgt));
-            SwFrmFmt *pFrm = rDoc.getIDocumentContentOperations().InsertDrawObj( *pPaM, *pObject, aSet );
+            m_pWWZOrder->InsertDrawingObject(pObject, SVBT16ToShort(aDo.dhgt));
+
+            tools::Rectangle aRect(pObject->GetSnapRect());
+
+            const sal_uInt32 nCntRelTo = 3;
+
+            // Adjustment is horizontally relative to...
+            static const sal_Int16 aHoriRelOriTab[nCntRelTo] =
+            {
+                text::RelOrientation::PAGE_PRINT_AREA, // 0 is page textarea margin
+                text::RelOrientation::PAGE_FRAME,   // 1 is page margin
+                text::RelOrientation::FRAME,          // 2 is relative to paragraph
+            };
+
+            // Adjustment is vertically relative to...
+            static const sal_Int16 aVertRelOriTab[nCntRelTo] =
+            {
+                text::RelOrientation::PAGE_PRINT_AREA, // 0 is page textarea margin
+                text::RelOrientation::PAGE_FRAME,   // 1 is page margin
+                text::RelOrientation::FRAME,          // 2 is relative to paragraph
+            };
+
+            const int nXAlign = aDo.bx < nCntRelTo ? aDo.bx : 0;
+            const int nYAlign = aDo.by < nCntRelTo ? aDo.by : 0;
+
+            aSet.Put(SwFormatHoriOrient(aRect.Left(), text::HoriOrientation::NONE,
+                aHoriRelOriTab[ nXAlign ]));
+            aSet.Put(SwFormatVertOrient(aRect.Top(), text::VertOrientation::NONE,
+                aVertRelOriTab[ nYAlign ]));
+
+            SwFrameFormat *pFrame = m_rDoc.getIDocumentContentOperations().InsertDrawObj( *m_pPaM, *pObject, aSet );
             pObject->SetMergedItemSet(aSet);
-            pAnchorStck->AddAnchor(*pPaM->GetPoint(), pFrm);
+
+            if (dynamic_cast< const SwDrawFrameFormat *>( pFrame ) !=  nullptr)
+            {
+                static_cast<SwDrawFrameFormat*>(pFrame)->PosAttrSet();
+            }
+
+            AddAutoAnchor(pFrame);
         }
     }
 }
@@ -1522,7 +1539,7 @@ sal_Int32 SwWW8ImplReader::MatchSdrBoxIntoFlyBoxItem(const Color& rLineColor,
     if( !rLineThick )
         return nOutsideThick;
 
-    ::editeng::SvxBorderStyle nIdx = table::BorderLineStyle::NONE;
+    SvxBorderLineStyle nIdx = SvxBorderLineStyle::NONE;
 
     sal_Int32 nLineThick=rLineThick;
     nOutsideThick = SwMSDffManager::GetEscherLineMatch(eLineStyle,
@@ -1541,23 +1558,23 @@ sal_Int32 SwWW8ImplReader::MatchSdrBoxIntoFlyBoxItem(const Color& rLineColor,
     */
     switch( +eLineStyle )
     {
-    // zuerst die Einzel-Linien
+    // first the single lines
     case mso_lineSimple:
-        nIdx = table::BorderLineStyle::SOLID;
+        nIdx = SvxBorderLineStyle::SOLID;
     break;
-    // dann die Doppel-Linien, fuer die wir feine Entsprechungen haben :-)))
+    // second the double lines
     case mso_lineDouble:
-        nIdx = table::BorderLineStyle::DOUBLE;
+        nIdx = SvxBorderLineStyle::DOUBLE;
     break;
     case mso_lineThickThin:
-        nIdx = table::BorderLineStyle::THICKTHIN_SMALLGAP;
+        nIdx = SvxBorderLineStyle::THICKTHIN_SMALLGAP;
     break;
     case mso_lineThinThick:
-        nIdx = table::BorderLineStyle::THINTHICK_SMALLGAP;
+        nIdx = SvxBorderLineStyle::THINTHICK_SMALLGAP;
     break;
     // We have no triple border, use double instead.
     case mso_lineTriple:
-        nIdx = table::BorderLineStyle::DOUBLE;
+        nIdx = SvxBorderLineStyle::DOUBLE;
     break;
     // no line style is set
     case (MSO_LineStyle)USHRT_MAX:
@@ -1571,16 +1588,16 @@ sal_Int32 SwWW8ImplReader::MatchSdrBoxIntoFlyBoxItem(const Color& rLineColor,
     switch( eDashing )
     {
         case mso_lineDashGEL:
-            nIdx = table::BorderLineStyle::DASHED;
+            nIdx = SvxBorderLineStyle::DASHED;
             break;
         case mso_lineDotGEL:
-            nIdx = table::BorderLineStyle::DOTTED;
+            nIdx = SvxBorderLineStyle::DOTTED;
             break;
         default:
             break;
     }
 
-    if (table::BorderLineStyle::NONE != nIdx)
+    if (SvxBorderLineStyle::NONE != nIdx)
     {
         SvxBorderLine aLine;
         aLine.SetColor( rLineColor );
@@ -1588,7 +1605,7 @@ sal_Int32 SwWW8ImplReader::MatchSdrBoxIntoFlyBoxItem(const Color& rLineColor,
         aLine.SetWidth( nLineThick ); // No conversion here, nLineThick is already in twips
         aLine.SetBorderLineStyle(nIdx);
 
-        for(sal_uInt16 nLine = 0; nLine < 4; ++nLine)
+        for(SvxBoxItemLine nLine : o3tl::enumrange<SvxBoxItemLine>())
         {
             // aLine is cloned by SetLine
             rBox.SetLine(&aLine, nLine);
@@ -1598,23 +1615,23 @@ sal_Int32 SwWW8ImplReader::MatchSdrBoxIntoFlyBoxItem(const Color& rLineColor,
     return nOutsideThick;
 }
 
-#define WW8ITEMVALUE(ItemSet,Id,Cast)  ((const Cast&)(ItemSet).Get(Id)).GetValue()
+#define WW8ITEMVALUE(ItemSet,Id,Cast)  ItemSet.GetItem<Cast>(Id)->GetValue()
 
 void SwWW8ImplReader::MatchSdrItemsIntoFlySet( SdrObject* pSdrObj,
     SfxItemSet& rFlySet, MSO_LineStyle eLineStyle, MSO_LineDashing eDashing, MSO_SPT eShapeType,
-    Rectangle& rInnerDist )
+    tools::Rectangle& rInnerDist )
 {
 /*
     am Rahmen zu setzende Frame-Attribute
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    SwFmtFrmSize            falls noch nicht gesetzt, hier setzen
+    SwFormatFrameSize            falls noch nicht gesetzt, hier setzen
     SvxLRSpaceItem          hier setzen
     SvxULSpaceItem          hier setzen
     SvxOpaqueItem           (Derzeit bei Rahmen nicht moeglich! khz 10.2.1999)
-    SwFmtSurround           bereits gesetzt
-    SwFmtVertOrient         bereits gesetzt
-    SwFmtHoriOrient         bereits gesetzt
-    SwFmtAnchor             bereits gesetzt
+    SwFormatSurround           bereits gesetzt
+    SwFormatVertOrient         bereits gesetzt
+    SwFormatHoriOrient         bereits gesetzt
+    SwFormatAnchor             bereits gesetzt
     SvxBoxItem              hier setzen
     SvxBrushItem            hier setzen
     SvxShadowItem           hier setzen
@@ -1633,9 +1650,9 @@ void SwWW8ImplReader::MatchSdrItemsIntoFlySet( SdrObject* pSdrObj,
         RES_UL_SPACE    // Aussenabstand Oben/unten:   SvxULSpaceItem
     };
     const SfxPoolItem* pPoolItem;
-    for(sal_uInt16 nItem = 0; nItem < nDirectMatch; ++nItem)
+    for(RES_FRMATR i : aDirectMatch)
         if( SfxItemState::SET == rOldSet.GetItemState(
-                    static_cast< sal_uInt16 >(aDirectMatch[ nItem ]), false, &pPoolItem) )
+                    static_cast< sal_uInt16 >(i), false, &pPoolItem) )
         {
             rFlySet.Put( *pPoolItem );
         }
@@ -1671,55 +1688,39 @@ void SwWW8ImplReader::MatchSdrItemsIntoFlySet( SdrObject* pSdrObj,
     rInnerDist.Right()+=nLineThick;
     rInnerDist.Bottom()+=nLineThick;
 
-    const SvxBorderLine *pLine;
-    if (0 != (pLine = aBox.GetLine(BOX_LINE_LEFT)))
-    {
-        rInnerDist.Left() -= (pLine->GetScaledWidth());
-    }
-
-    if (0 != (pLine = aBox.GetLine(BOX_LINE_TOP)))
-    {
-        rInnerDist.Top() -= (pLine->GetScaledWidth());
-    }
-
-    if (0 != (pLine = aBox.GetLine(BOX_LINE_RIGHT)))
-    {
-        rInnerDist.Right() -= (pLine->GetScaledWidth());
-    }
-
-    if (0 != (pLine = aBox.GetLine(BOX_LINE_BOTTOM)))
-    {
-        rInnerDist.Bottom() -= (pLine->GetScaledWidth());
-    }
+    rInnerDist.Left()   -= aBox.CalcLineWidth( SvxBoxItemLine::LEFT );
+    rInnerDist.Top()    -= aBox.CalcLineWidth( SvxBoxItemLine::TOP );
+    rInnerDist.Right()  -= aBox.CalcLineWidth( SvxBoxItemLine::RIGHT );
+    rInnerDist.Bottom() -= aBox.CalcLineWidth( SvxBoxItemLine::BOTTOM );
 
     // set distances from box's border to text contained within the box
     if( 0 < rInnerDist.Left() )
-        aBox.SetDistance( (sal_uInt16)rInnerDist.Left(), BOX_LINE_LEFT );
+        aBox.SetDistance( (sal_uInt16)rInnerDist.Left(), SvxBoxItemLine::LEFT );
     if( 0 < rInnerDist.Top() )
-        aBox.SetDistance( (sal_uInt16)rInnerDist.Top(), BOX_LINE_TOP );
+        aBox.SetDistance( (sal_uInt16)rInnerDist.Top(), SvxBoxItemLine::TOP );
     if( 0 < rInnerDist.Right() )
-        aBox.SetDistance( (sal_uInt16)rInnerDist.Right(), BOX_LINE_RIGHT );
+        aBox.SetDistance( (sal_uInt16)rInnerDist.Right(), SvxBoxItemLine::RIGHT );
     if( 0 < rInnerDist.Bottom() )
-        aBox.SetDistance( (sal_uInt16)rInnerDist.Bottom(), BOX_LINE_BOTTOM );
+        aBox.SetDistance( (sal_uInt16)rInnerDist.Bottom(), SvxBoxItemLine::BOTTOM );
 
     bool bFixSize = !(WW8ITEMVALUE(rOldSet, SDRATTR_TEXT_AUTOGROWHEIGHT,
         SdrOnOffItem));
 
-    // Size: SwFmtFrmSize
+    // Size: SwFormatFrameSize
     if( SfxItemState::SET != rFlySet.GetItemState(RES_FRM_SIZE, false) )
     {
-        const Rectangle& rSnapRect = pSdrObj->GetSnapRect();
+        const tools::Rectangle& rSnapRect = pSdrObj->GetSnapRect();
         // if necessary adapt width and position of the framework: The
         // recorded interior is to remain equally large despite thick edges.
-        rFlySet.Put( SwFmtFrmSize(bFixSize ? ATT_FIX_SIZE : ATT_VAR_SIZE,
+        rFlySet.Put( SwFormatFrameSize(bFixSize ? ATT_FIX_SIZE : ATT_VAR_SIZE,
             rSnapRect.GetWidth()  + 2*nOutside,
             rSnapRect.GetHeight() + 2*nOutside) );
     }
     else // If a size is set, adjust it to consider border thickness
     {
-        SwFmtFrmSize aSize = (const SwFmtFrmSize &)(rFlySet.Get(RES_FRM_SIZE));
+        SwFormatFrameSize aSize = static_cast<const SwFormatFrameSize &>(rFlySet.Get(RES_FRM_SIZE));
 
-        SwFmtFrmSize aNewSize = SwFmtFrmSize(bFixSize ? ATT_FIX_SIZE : ATT_VAR_SIZE,
+        SwFormatFrameSize aNewSize = SwFormatFrameSize(bFixSize ? ATT_FIX_SIZE : ATT_VAR_SIZE,
             aSize.GetWidth()  + 2*nOutside,
             aSize.GetHeight() + 2*nOutside);
         aNewSize.SetWidthSizeType(aSize.GetWidthSizeType());
@@ -1730,12 +1731,12 @@ void SwWW8ImplReader::MatchSdrItemsIntoFlySet( SdrObject* pSdrObj,
     // graphic in relation to the top left inside the border. We don't
     if (nOutside)
     {
-        SwFmtHoriOrient aHori = (const SwFmtHoriOrient &)(rFlySet.Get(
+        SwFormatHoriOrient aHori = static_cast<const SwFormatHoriOrient &>(rFlySet.Get(
             RES_HORI_ORIENT));
         aHori.SetPos(MakeSafePositioningValue(aHori.GetPos()-nOutside));
         rFlySet.Put(aHori);
 
-        SwFmtVertOrient aVert = (const SwFmtVertOrient &)(rFlySet.Get(
+        SwFormatVertOrient aVert = static_cast<const SwFormatVertOrient &>(rFlySet.Get(
             RES_VERT_ORIENT));
         aVert.SetPos(aVert.GetPos()-nOutside);
         rFlySet.Put(aVert);
@@ -1765,16 +1766,16 @@ void SwWW8ImplReader::MatchSdrItemsIntoFlySet( SdrObject* pSdrObj,
         if( 0 <= nShdDistX )
         {
             if( 0 <= nShdDistY )
-                eShdPosi = SVX_SHADOW_BOTTOMRIGHT;
+                eShdPosi = SvxShadowLocation::BottomRight;
             else
-                eShdPosi = SVX_SHADOW_TOPRIGHT;
+                eShdPosi = SvxShadowLocation::TopRight;
         }
         else
         {
             if( 0 <= nShdDistY )
-                eShdPosi = SVX_SHADOW_BOTTOMLEFT;
+                eShdPosi = SvxShadowLocation::BottomLeft;
             else
-                eShdPosi = SVX_SHADOW_TOPLEFT;
+                eShdPosi = SvxShadowLocation::TopLeft;
         }
         aShadow.SetLocation( eShdPosi );
 
@@ -1796,11 +1797,11 @@ void SwWW8ImplReader::MatchSdrItemsIntoFlySet( SdrObject* pSdrObj,
         bBrushItemOk = true;
     }
 
-    // Hintergrund: SvxBrushItem
+    // Background: SvxBrushItem
     eState = rOldSet.GetItemState(XATTR_FILLSTYLE, true, &pItem);
     if (eState == SfxItemState::SET)
     {
-        const drawing::FillStyle eFill = ((const XFillStyleItem*)pItem)->GetValue();
+        const drawing::FillStyle eFill = static_cast<const XFillStyleItem*>(pItem)->GetValue();
 
         switch (eFill)
         {
@@ -1831,7 +1832,7 @@ void SwWW8ImplReader::MatchSdrItemsIntoFlySet( SdrObject* pSdrObj,
             case drawing::FillStyle_BITMAP:
                 {
                     GraphicObject aGrfObj(static_cast< XFillBitmapItem const & >(rOldSet.Get(XATTR_FILLBITMAP)).GetGraphicObject());
-                    const bool bTile(WW8ITEMVALUE(rOldSet, XATTR_FILLBMP_TILE, SfxBoolItem) ? true: false);
+                    const bool bTile(WW8ITEMVALUE(rOldSet, XATTR_FILLBMP_TILE, SfxBoolItem));
 
                     if(bBrushItemOk) // has trans
                     {
@@ -1850,7 +1851,7 @@ void SwWW8ImplReader::MatchSdrItemsIntoFlySet( SdrObject* pSdrObj,
     }
 
     if (bBrushItemOk)
-        rFlySet.Put(aBrushItem, RES_BACKGROUND);
+        rFlySet.Put(aBrushItem);
 }
 
 void SwWW8ImplReader::AdjustLRWrapForWordMargins(
@@ -1921,10 +1922,10 @@ void SwWW8ImplReader::AdjustULWrapForWordMargins(
         rUL.SetUpper((sal_uInt16)0);
 }
 
-void SwWW8ImplReader::MapWrapIntoFlyFmt(SvxMSDffImportRec* pRecord,
-    SwFrmFmt* pFlyFmt)
+void SwWW8ImplReader::MapWrapIntoFlyFormat(SvxMSDffImportRec* pRecord,
+    SwFrameFormat* pFlyFormat)
 {
-    if (!pRecord || !pFlyFmt)
+    if (!pRecord || !pFlyFormat)
         return;
 
     if (pRecord->nDxWrapDistLeft || pRecord->nDxWrapDistRight)
@@ -1932,20 +1933,20 @@ void SwWW8ImplReader::MapWrapIntoFlyFmt(SvxMSDffImportRec* pRecord,
         SvxLRSpaceItem aLR(writer_cast<sal_uInt16>(pRecord->nDxWrapDistLeft),
             writer_cast<sal_uInt16>(pRecord->nDxWrapDistRight), 0, 0, RES_LR_SPACE);
         AdjustLRWrapForWordMargins(*pRecord, aLR);
-        pFlyFmt->SetFmtAttr(aLR);
+        pFlyFormat->SetFormatAttr(aLR);
     }
     if (pRecord->nDyWrapDistTop || pRecord->nDyWrapDistBottom)
     {
         SvxULSpaceItem aUL(writer_cast<sal_uInt16>(pRecord->nDyWrapDistTop),
             writer_cast<sal_uInt16>(pRecord->nDyWrapDistBottom), RES_UL_SPACE);
         AdjustULWrapForWordMargins(*pRecord, aUL);
-        pFlyFmt->SetFmtAttr(aUL);
+        pFlyFormat->SetFormatAttr(aUL);
     }
 
     // If we are contoured and have a custom polygon...
-    if (pRecord->pWrapPolygon && pFlyFmt->GetSurround().IsContour())
+    if (pRecord->pWrapPolygon && pFlyFormat->GetSurround().IsContour())
     {
-        if (SwNoTxtNode *pNd = GetNoTxtNodeFromSwFrmFmt(*pFlyFmt))
+        if (SwNoTextNode *pNd = GetNoTextNodeFromSwFrameFormat(*pFlyFormat))
         {
 
             /*
@@ -2039,11 +2040,12 @@ static sal_Int32 lcl_ConvertCrop(sal_uInt32 const nCrop, sal_Int32 const nSize)
 
 void
 SwWW8ImplReader::SetAttributesAtGrfNode(SvxMSDffImportRec const*const pRecord,
-    SwFrmFmt *pFlyFmt, WW8_FSPA *pF )
+    SwFrameFormat *pFlyFormat, WW8_FSPA *pF )
 {
-    const SwNodeIndex* pIdx = pFlyFmt->GetCntnt(false).GetCntntIdx();
-    SwGrfNode* pGrfNd;
-    if( pIdx && 0 != (pGrfNd = rDoc.GetNodes()[pIdx->GetIndex() + 1]->GetGrfNode() ))
+    const SwNodeIndex* pIdx = pFlyFormat->GetContent(false).GetContentIdx();
+    SwGrfNode *const pGrfNd(
+        pIdx ? m_rDoc.GetNodes()[pIdx->GetIndex() + 1]->GetGrfNode() : nullptr);
+    if (pGrfNd)
     {
         Size aSz(pGrfNd->GetTwipSize());
         // use type <sal_uInt64> instead of sal_uLong to get correct results
@@ -2080,6 +2082,24 @@ SwWW8ImplReader::SetAttributesAtGrfNode(SvxMSDffImportRec const*const pRecord,
             pGrfNd->SetAttr( aCrop );
         }
 
+        bool bFlipH = pRecord->nFlags & SHAPEFLAG_FLIPH;
+        bool bFlipV = pRecord->nFlags & SHAPEFLAG_FLIPV;
+        if ( bFlipH || bFlipV )
+        {
+            SwMirrorGrf aMirror = pGrfNd->GetSwAttrSet().GetMirrorGrf();
+            if( bFlipH )
+            {
+                if( bFlipV )
+                    aMirror.SetValue(MirrorGraph::Both);
+                else
+                    aMirror.SetValue(MirrorGraph::Vertical);
+            }
+            else
+                aMirror.SetValue(MirrorGraph::Horizontal);
+
+            pGrfNd->SetAttr( aMirror );
+        }
+
         if (pRecord->pObj)
         {
             const SfxItemSet& rOldSet = pRecord->pObj->GetMergedItemSet();
@@ -2110,33 +2130,31 @@ SwWW8ImplReader::SetAttributesAtGrfNode(SvxMSDffImportRec const*const pRecord,
             }
 
             // drawmode
-            if (WW8ITEMVALUE(rOldSet, SDRATTR_GRAFMODE, SdrGrafModeItem))
+            auto nGrafMode = rOldSet.GetItem<SdrGrafModeItem>(SDRATTR_GRAFMODE)->GetValue();
+            if ( nGrafMode != GraphicDrawMode::Standard)
             {
-                SwDrawModeGrf aDrawMode( static_cast< sal_uInt16 >(WW8ITEMVALUE(rOldSet,
-                    SDRATTR_GRAFMODE, SdrGrafModeItem)) );
+                SwDrawModeGrf aDrawMode( nGrafMode );
                 pGrfNd->SetAttr( aDrawMode );
             }
         }
     }
 }
 
-SdrObject* SwWW8ImplReader::CreateContactObject(SwFrmFmt* pFlyFmt)
+SdrObject* SwWW8ImplReader::CreateContactObject(SwFrameFormat* pFlyFormat)
 {
-    if (pFlyFmt)
+    if (pFlyFormat)
     {
-        SdrObject* pNewObject = mbNewDoc ? 0 : pFlyFmt->FindRealSdrObject();
+        SdrObject* pNewObject = m_bNewDoc ? nullptr : pFlyFormat->FindRealSdrObject();
         if (!pNewObject)
-            pNewObject = pFlyFmt->FindSdrObject();
-        if (!pNewObject && pFlyFmt->ISA(SwFlyFrmFmt))
+            pNewObject = pFlyFormat->FindSdrObject();
+        if (!pNewObject && dynamic_cast< const SwFlyFrameFormat *>( pFlyFormat ) !=  nullptr)
         {
-            SwFlyDrawContact* pContactObject
-                = new SwFlyDrawContact(static_cast<SwFlyFrmFmt*>(pFlyFmt),
-                pDrawModel);
+            SwFlyDrawContact* pContactObject(static_cast<SwFlyFrameFormat*>(pFlyFormat)->GetOrCreateContact());
             pNewObject = pContactObject->GetMaster();
         }
         return pNewObject;
     }
-    return 0;
+    return nullptr;
 }
 
 // Miserable miserable hack to fudge word's graphic layout in RTL mode to ours.
@@ -2146,18 +2164,18 @@ bool SwWW8ImplReader::MiserableRTLGraphicsHack(SwTwips &rLeft, SwTwips nWidth,
     if (!IsRightToLeft())
         return false;
     return RTLGraphicsHack(rLeft, nWidth, eHoriOri, eHoriRel,
-            maSectionManager.GetPageLeft(),
-            maSectionManager.GetPageRight(),
-            maSectionManager.GetPageWidth());
+            m_aSectionManager.GetPageLeft(),
+            m_aSectionManager.GetPageRight(),
+            m_aSectionManager.GetPageWidth());
 }
 
 RndStdIds SwWW8ImplReader::ProcessEscherAlign(SvxMSDffImportRec* pRecord,
-    WW8_FSPA *pFSPA, SfxItemSet &rFlySet, bool /*bOrgObjectWasReplace*/)
+    WW8_FSPA *pFSPA, SfxItemSet &rFlySet)
 {
     OSL_ENSURE(pRecord || pFSPA, "give me something! to work with for anchoring");
     if (!pRecord && !pFSPA)
-        return FLY_AT_PAGE;
-    bool bCurSectionVertical = maSectionManager.CurrentSectionIsVertical();
+        return RndStdIds::FLY_AT_PAGE;
+    bool bCurSectionVertical = m_aSectionManager.CurrentSectionIsVertical();
 
     SvxMSDffImportRec aRecordFromFSPA;
     if (!pRecord)
@@ -2195,7 +2213,7 @@ RndStdIds SwWW8ImplReader::ProcessEscherAlign(SvxMSDffImportRec* pRecord,
         // by <SwMSDffManager::ProcessObj(..)>
         const bool bXYRelHaveDefaultValues = *(pRecord->pXRelTo) == 2 && *(pRecord->pYRelTo) == 2;
         if ( bXYRelHaveDefaultValues
-             && nInTable > 0
+             && m_nInTable > 0
              && !bCurSectionVertical )
         {
             if ( pFSPA->nby != *(pRecord->pYRelTo) )
@@ -2208,10 +2226,10 @@ RndStdIds SwWW8ImplReader::ProcessEscherAlign(SvxMSDffImportRec* pRecord,
     sal_uInt32 nXRelTo = (pRecord->pXRelTo && nCntRelTo > *(pRecord->pXRelTo)) ? *(pRecord->pXRelTo) : 1;
     sal_uInt32 nYRelTo = (pRecord->pYRelTo && nCntRelTo > *(pRecord->pYRelTo)) ? *(pRecord->pYRelTo) : 1;
 
-    RndStdIds eAnchor = IsInlineEscherHack() ? FLY_AS_CHAR : FLY_AT_CHAR; // #i43718#
+    RndStdIds eAnchor = IsInlineEscherHack() ? RndStdIds::FLY_AS_CHAR : RndStdIds::FLY_AT_CHAR; // #i43718#
 
-    SwFmtAnchor aAnchor( eAnchor );
-    aAnchor.SetAnchor( pPaM->GetPoint() );
+    SwFormatAnchor aAnchor( eAnchor );
+    aAnchor.SetAnchor( m_pPaM->GetPoint() );
     rFlySet.Put( aAnchor );
 
     if (pFSPA)
@@ -2316,7 +2334,7 @@ RndStdIds SwWW8ImplReader::ProcessEscherAlign(SvxMSDffImportRec* pRecord,
         // at frame|character and has wrap through, but its attribute
         // 'layout in table cell' isn't set, convert its horizontal alignment to page text area.
         // #i84783# - use new method <IsObjectLayoutInTableCell()>
-        if ( nInTable &&
+        if ( m_nInTable &&
              ( eHoriRel == text::RelOrientation::FRAME || eHoriRel == text::RelOrientation::CHAR ) &&
              pFSPA->nwr == 3 &&
              !IsObjectLayoutInTableCell( pRecord->nLayoutInTableCell ) )
@@ -2354,14 +2372,14 @@ RndStdIds SwWW8ImplReader::ProcessEscherAlign(SvxMSDffImportRec* pRecord,
         if ((eVertRel == text::RelOrientation::TEXT_LINE) && (eVertOri == text::VertOrientation::NONE))
             nYPos = -nYPos;
 
-        SwFmtHoriOrient aHoriOri(MakeSafePositioningValue(  bCurSectionVertical ? nYPos : pFSPA->nXaLeft ),
+        SwFormatHoriOrient aHoriOri(MakeSafePositioningValue(  bCurSectionVertical ? nYPos : pFSPA->nXaLeft ),
                                                             bCurSectionVertical ? eVertOri : eHoriOri,
                                                             bCurSectionVertical ? eVertRel : eHoriRel);
         if( 4 <= nXAlign )
             aHoriOri.SetPosToggle(true);
         rFlySet.Put( aHoriOri );
 
-        rFlySet.Put(SwFmtVertOrient(MakeSafePositioningValue( !bCurSectionVertical ? nYPos : -pFSPA->nXaRight ),
+        rFlySet.Put(SwFormatVertOrient(MakeSafePositioningValue( !bCurSectionVertical ? nYPos : -pFSPA->nXaRight ),
                                                                 !bCurSectionVertical ? eVertOri : eHoriOri,
                                                                 !bCurSectionVertical ? eVertRel : eHoriRel ));
     }
@@ -2374,9 +2392,9 @@ bool SwWW8ImplReader::IsObjectLayoutInTableCell( const sal_uInt32 nLayoutInTable
 {
     bool bIsObjectLayoutInTableCell = false;
 
-    if ( bVer8 )
+    if ( m_bVer8 )
     {
-        const sal_uInt16 nWWVersion = pWwFib->nProduct & 0xE000;
+        const sal_uInt16 nWWVersion = m_pWwFib->m_nProduct & 0xE000;
         switch ( nWWVersion )
         {
             case 0x0000: // version 8 aka Microsoft Word 97
@@ -2418,34 +2436,34 @@ bool SwWW8ImplReader::IsObjectLayoutInTableCell( const sal_uInt32 nLayoutInTable
     return bIsObjectLayoutInTableCell;
 }
 
-SwFrmFmt* SwWW8ImplReader::Read_GrafLayer( long nGrafAnchorCp )
+SwFrameFormat* SwWW8ImplReader::Read_GrafLayer( long nGrafAnchorCp )
 {
-    if( nIniFlags & WW8FL_NO_GRAFLAYER )
-        return 0;
+    if( m_nIniFlags & WW8FL_NO_GRAFLAYER )
+        return nullptr;
 
-    ::SetProgressState(nProgress, mpDocShell);     // Update
+    ::SetProgressState(m_nProgress, m_pDocShell);     // Update
 
-    nDrawCpO = 0;
-    pWwFib->GetBaseCp(pPlcxMan->GetManType() == MAN_HDFT ? MAN_TXBX_HDFT : MAN_TXBX, &nDrawCpO); //TODO: check return value
+    m_nDrawCpO = 0;
+    m_bDrawCpOValid = m_pWwFib->GetBaseCp(m_pPlcxMan->GetManType() == MAN_HDFT ? MAN_TXBX_HDFT : MAN_TXBX, &m_nDrawCpO);
 
     GrafikCtor();
 
-    WW8PLCFspecial* pPF = pPlcxMan->GetFdoa();
+    WW8PLCFspecial* pPF = m_pPlcxMan->GetFdoa();
     if( !pPF )
     {
         OSL_ENSURE( false, "Where is the graphic (1) ?" );
-        return 0;
+        return nullptr;
     }
 
-    if( bVer67 )
+    if( m_bVer67 )
     {
-        long nOldPos = pStrm->Tell();
+        long nOldPos = m_pStrm->Tell();
 
-        nDrawXOfs = nDrawYOfs = 0;
+        m_nDrawXOfs = m_nDrawYOfs = 0;
         ReadGrafLayer1( pPF, nGrafAnchorCp );
 
-        pStrm->Seek( nOldPos );
-        return 0;
+        m_pStrm->Seek( nOldPos );
+        return nullptr;
     }
 
     // Normal case of Word 8+ version stuff
@@ -2454,25 +2472,25 @@ SwFrmFmt* SwWW8ImplReader::Read_GrafLayer( long nGrafAnchorCp )
     WW8_FC nStartFc;
     void* pF0;
     if( !pPF->Get( nStartFc, pF0 ) ){
-        OSL_ENSURE( false, "+Wo ist die Grafik (2) ?" );
-        return 0;
+        OSL_ENSURE( false, "+Where is the graphic (2) ?" );
+        return nullptr;
     }
 
-    WW8_FSPA_SHADOW* pFS = (WW8_FSPA_SHADOW*)pF0;
+    WW8_FSPA_SHADOW* pFS = static_cast<WW8_FSPA_SHADOW*>(pF0);
     WW8_FSPA*        pF;
     WW8_FSPA aFSFA;
     pF = &aFSFA;
     WW8FSPAShadowToReal( pFS, pF );
     if( !pF->nSpId )
     {
-        OSL_ENSURE( false, "+Wo ist die Grafik (3) ?" );
-        return 0;
+        OSL_ENSURE( false, "+Where is the graphic (3) ?" );
+        return nullptr;
     }
 
-    if (!pMSDffManager->GetModel())
-         pMSDffManager->SetModel(pDrawModel, 1440);
+    if (!m_pMSDffManager->GetModel())
+         m_pMSDffManager->SetModel(m_pDrawModel, 1440);
 
-    Rectangle aRect(pF->nXaLeft,  pF->nYaTop, pF->nXaRight, pF->nYaBottom);
+    tools::Rectangle aRect(pF->nXaLeft,  pF->nYaTop, pF->nXaRight, pF->nYaBottom);
     SvxMSDffImportData aData( aRect );
 
     /*
@@ -2480,22 +2498,22 @@ SwFrmFmt* SwWW8ImplReader::Read_GrafLayer( long nGrafAnchorCp )
     The SdrOle2Obj will try and manage any ole objects it finds, causing all
     sorts of trouble later on
     */
-    SwDocShell* pPersist = rDoc.GetDocShell();
-    rDoc.SetDocShell(0);         // #i20540# Persist guard
+    SwDocShell* pPersist = m_rDoc.GetDocShell();
+    m_rDoc.SetDocShell(nullptr);         // #i20540# Persist guard
 
-    SdrObject* pObject = 0;
-    bool bOk = (pMSDffManager->GetShape(pF->nSpId, pObject, aData) && pObject);
+    SdrObject* pObject = nullptr;
+    bool bOk = (m_pMSDffManager->GetShape(pF->nSpId, pObject, aData) && pObject);
 
-    rDoc.SetDocShell(pPersist);  // #i20540# Persist guard
+    m_rDoc.SetDocShell(pPersist);  // #i20540# Persist guard
 
     if (!bOk)
     {
         OSL_ENSURE( false, "Where is the Shape ?" );
-        return 0;
+        return nullptr;
     }
 
     bool bDone = false;
-    SdrObject* pOurNewObject = 0;
+    SdrObject* pOurNewObject = nullptr;
     bool bReplaceable = false;
 
     switch (SdrObjKind(pObject->GetObjIdentifier()))
@@ -2515,24 +2533,24 @@ SwFrmFmt* SwWW8ImplReader::Read_GrafLayer( long nGrafAnchorCp )
     // when in a header or footer word appears to treat all elements as wrap through
 
     // Umfluss-Modus ermitteln
-    SfxItemSet aFlySet(rDoc.GetAttrPool(), RES_FRMATR_BEGIN, RES_FRMATR_END-1);
-    SwSurround eSurround = SURROUND_PARALLEL;
+    SfxItemSet aFlySet(m_rDoc.GetAttrPool(), RES_FRMATR_BEGIN, RES_FRMATR_END-1);
+    css::text::WrapTextMode eSurround = css::text::WrapTextMode_PARALLEL;
     bool bContour = false;
     switch (pF->nwr)
     {
         case 0: // 0 like 2, but doesn't require absolute object
         case 2: // 2 wrap around absolute object
-            eSurround = SURROUND_PARALLEL;
+            eSurround = css::text::WrapTextMode_PARALLEL;
             break;
         case 1: // 1 no text next to shape
-            eSurround = SURROUND_NONE;
+            eSurround = css::text::WrapTextMode_NONE;
             break;
         case 3: // 3 wrap as if no object present
-            eSurround = SURROUND_THROUGHT;
+            eSurround = css::text::WrapTextMode_THROUGH;
             break;
         case 4: // 4 wrap tightly around object
         case 5: // 5 wrap tightly, but allow holes
-            eSurround = SURROUND_PARALLEL;
+            eSurround = css::text::WrapTextMode_PARALLEL;
             bContour = true;
             break;
     }
@@ -2544,26 +2562,26 @@ SwFrmFmt* SwWW8ImplReader::Read_GrafLayer( long nGrafAnchorCp )
         {
             // 0 wrap both sides
             case 0:
-                eSurround = SURROUND_PARALLEL;
+                eSurround = css::text::WrapTextMode_PARALLEL;
                 break;
             // 1 wrap only on left
             case 1:
-                eSurround = SURROUND_LEFT;
+                eSurround = css::text::WrapTextMode_LEFT;
                 break;
             // 2 wrap only on right
             case 2:
-                eSurround = SURROUND_RIGHT;
+                eSurround = css::text::WrapTextMode_RIGHT;
                 break;
             // 3 wrap only on largest side
             case 3:
-                eSurround = SURROUND_IDEAL;
+                eSurround = css::text::WrapTextMode_DYNAMIC;
                 break;
         }
     }
 
-    SwFmtSurround aSur( eSurround );
+    SwFormatSurround aSur( eSurround );
     aSur.SetContour( bContour );
-    aSur.SetOutside(true); // Winword kann nur Aussen-Konturen
+    aSur.SetOutside(true); // Winword can only do outside contours
     aFlySet.Put( aSur );
 
     // eingelesenes Objekt (kann eine ganze Gruppe sein) jetzt korrekt
@@ -2575,17 +2593,16 @@ SwFrmFmt* SwWW8ImplReader::Read_GrafLayer( long nGrafAnchorCp )
     if (aData.size() != 1)
         bReplaceable = false;
 
-    SvxMSDffImportRec* pRecord = 0;
+    SvxMSDffImportRec* pRecord = nullptr;
     /*
         Get the record for top level object, so we can get the word anchoring
         and wrapping information for it.
     */
-    for (MSDffImportRecords::const_iterator it = aData.begin();
-            it != aData.end(); ++it) // MSVC2008 wants const_iterator here???
+    for (auto const & it : aData)
     {
         if (it->pObj == pObject)
         {
-            pRecord = &const_cast<SvxMSDffImportRec&>(*it);
+            pRecord = it.get();
             break;
         }
     }
@@ -2593,24 +2610,25 @@ SwFrmFmt* SwWW8ImplReader::Read_GrafLayer( long nGrafAnchorCp )
     OSL_ENSURE(pRecord, "how did that happen?");
     if (!pRecord)
 #ifdef NO_LIBO_SDROBJECT_LEAK_FIX
-        return 0;
+        return nullptr;
 #else	// NO_LIBO_SDROBJECT_LEAK_FIX
     {
         // remove old object from the Z-Order list
-        pMSDffManager->RemoveFromShapeOrder(pObject);
+        m_pMSDffManager->RemoveFromShapeOrder(pObject);
         // and delete the object
         SdrObject::Free(pObject);
+        return nullptr;
     }
 #endif	// NO_LIBO_SDROBJECT_LEAK_FIX
 
     const bool bLayoutInTableCell =
-        nInTable && IsObjectLayoutInTableCell( pRecord->nLayoutInTableCell );
+        m_nInTable && IsObjectLayoutInTableCell( pRecord->nLayoutInTableCell );
 
     // #i18732# - Switch on 'follow text flow', if object is laid out
     // inside table cell and its wrapping isn't 'SURROUND_THROUGH'
-    if (bLayoutInTableCell && eSurround != SURROUND_THROUGHT)
+    if (bLayoutInTableCell && eSurround != css::text::WrapTextMode_THROUGH)
     {
-        SwFmtFollowTextFlow aFollowTextFlow( true );
+        SwFormatFollowTextFlow aFollowTextFlow( true );
         aFlySet.Put( aFollowTextFlow );
     }
 
@@ -2620,11 +2638,11 @@ SwFrmFmt* SwWW8ImplReader::Read_GrafLayer( long nGrafAnchorCp )
 #ifndef NO_LIBO_SDROBJECT_LEAK_FIX
     {
         // remove old object from the Z-Order list
-        pMSDffManager->RemoveFromShapeOrder(pObject);
+        m_pMSDffManager->RemoveFromShapeOrder(pObject);
         // and delete the object
         SdrObject::Free(pObject);
 #endif	// !NO_LIBO_SDROBJECT_LEAK_FIX
-        return 0;
+        return nullptr;
 #ifndef NO_LIBO_SDROBJECT_LEAK_FIX
     }
 #endif	// !NO_LIBO_SDROBJECT_LEAK_FIX
@@ -2632,35 +2650,31 @@ SwFrmFmt* SwWW8ImplReader::Read_GrafLayer( long nGrafAnchorCp )
     sal_uInt16 nCount = pObject->GetUserDataCount();
     if(nCount)
     {
-        OUString lnName, aObjName, aTarFrm;
+        OUString lnName, aObjName, aTarFrame;
         for (sal_uInt16 i = 0; i < nCount; i++ )
         {
             SdrObjUserData* pData = pObject->GetUserData( i );
-            if( pData && pData->GetInventor() == SW_DRAWLAYER
+            if( pData && pData->GetInventor() == SdrInventor::ScOrSwDraw
                     && pData->GetId() == SW_UD_IMAPDATA)
             {
                 SwMacroInfo* macInf = dynamic_cast<SwMacroInfo*>(pData);
-                if( macInf )// && macInf->GetShapeId() == pF->nSpId)
+                if( macInf && macInf->GetShapeId() == pF->nSpId )
                 {
-                    sal_Int32 nShapeId = macInf->GetShapeId();
-                    if ( nShapeId ==  pF->nSpId )
-                    {
-                        lnName = macInf->GetHlink();
-                        aObjName = macInf->GetName();
-                        aTarFrm = macInf->GetTarFrm();
-                        break;
-                    }
+                    lnName = macInf->GetHlink();
+                    aObjName = macInf->GetName();
+                    aTarFrame = macInf->GetTarFrame();
+                    break;
                 }
             }
         }
-        SwFmtURL* pFmtURL = new SwFmtURL();
-        pFmtURL->SetURL( lnName, false );
+        SwFormatURL* pFormatURL = new SwFormatURL();
+        pFormatURL->SetURL( lnName, false );
         if (!aObjName.isEmpty())
-            pFmtURL->SetName(aObjName);
-        if (!aTarFrm.isEmpty())
-            pFmtURL->SetTargetFrameName(aTarFrm);
-        pFmtURL->SetMap(0);
-        aFlySet.Put(*pFmtURL);
+            pFormatURL->SetName(aObjName);
+        if (!aTarFrame.isEmpty())
+            pFormatURL->SetTargetFrameName(aTarFrame);
+        pFormatURL->SetMap(nullptr);
+        aFlySet.Put(*pFormatURL);
     }
 
     // If we are to be "below text" then we are not to be opaque
@@ -2670,17 +2684,17 @@ SwFrmFmt* SwWW8ImplReader::Read_GrafLayer( long nGrafAnchorCp )
     // both flags <bBelowText> and <bDrawHell> have to be set to move object into the background.
     // #i46794# - it reveals that value of flag <bBelowText> can be neglected.
     const bool bMoveToBackgrd = pRecord->bDrawHell ||
-                                ( ( bIsHeader || bIsFooter ) && pF->nwr == 3 );
+                                ( ( m_bIsHeader || m_bIsFooter ) && pF->nwr == 3 );
     if ( bMoveToBackgrd )
         aFlySet.Put(SvxOpaqueItem(RES_OPAQUE,false));
 
     OUString aObjName = pObject->GetName();
 
-    SwFrmFmt* pRetFrmFmt = 0;
+    SwFrameFormat* pRetFrameFormat = nullptr;
     if (bReplaceable)
     {
         // Single graphics or ole objects
-        pRetFrmFmt = ImportReplaceableDrawables(pObject, pOurNewObject, pRecord,
+        pRetFrameFormat = ImportReplaceableDrawables(pObject, pOurNewObject, pRecord,
             pF, aFlySet);
     }
     else
@@ -2692,21 +2706,20 @@ SwFrmFmt* SwWW8ImplReader::Read_GrafLayer( long nGrafAnchorCp )
             pF->nby = WW8_FSPA::RelPageBorder;
         }
 
-        RndStdIds eAnchor = ProcessEscherAlign(pRecord, pF, aFlySet,
-            bReplaceable);
+        RndStdIds eAnchor = ProcessEscherAlign(pRecord, pF, aFlySet);
 
         // Should we, and is it possible to make this into a writer textbox
-        if ((!(nIniFlags1 & WW8FL_NO_FLY_FOR_TXBX)) && pRecord->bReplaceByFly)
+        if ((!(m_nIniFlags1 & WW8FL_NO_FLY_FOR_TXBX)) && pRecord->bReplaceByFly)
         {
-            pRetFrmFmt = ConvertDrawTextToFly(pObject, pOurNewObject, pRecord,
+            pRetFrameFormat = ConvertDrawTextToFly(pObject, pOurNewObject, pRecord,
                 eAnchor, pF, aFlySet);
-            if (pRetFrmFmt)
+            if (pRetFrameFormat)
                 bDone = true;
         }
 
         if (!bDone)
         {
-            sw::util::SetLayer aSetLayer(rDoc);
+            sw::util::SetLayer aSetLayer(m_rDoc);
             if ( bMoveToBackgrd )
                 aSetLayer.SendObjectToHell(*pObject);
             else
@@ -2716,17 +2729,17 @@ SwFrmFmt* SwWW8ImplReader::Read_GrafLayer( long nGrafAnchorCp )
             {
                 /* Need to make sure that the correct layer ordering is applied. */
                 //  pass information, if object is in page header|footer to method.
-                pWWZOrder->InsertEscherObject( pObject, pF->nSpId,
-                                               bIsHeader || bIsFooter );
+                m_pWWZOrder->InsertEscherObject( pObject, pF->nSpId,
+                                               m_bIsHeader || m_bIsFooter );
             }
             else
             {
-                pWWZOrder->InsertTextLayerObject(pObject);
+                m_pWWZOrder->InsertTextLayerObject(pObject);
             }
 
-            pRetFrmFmt = rDoc.getIDocumentContentOperations().InsertDrawObj(*pPaM, *pObject, aFlySet );
+            pRetFrameFormat = m_rDoc.getIDocumentContentOperations().InsertDrawObj(*m_pPaM, *pObject, aFlySet );
 
-            OSL_ENSURE(pRetFrmFmt->GetAnchor().GetAnchorId() ==
+            OSL_ENSURE(pRetFrameFormat->GetAnchor().GetAnchorId() ==
                 eAnchor, "Not the anchor type requested!");
 
             /*
@@ -2737,11 +2750,11 @@ SwFrmFmt* SwWW8ImplReader::Read_GrafLayer( long nGrafAnchorCp )
                 for (MSDffImportRecords::const_iterator it = aData.begin();
                         it != aData.end(); ++it)
                 {
-                    pRecord = &const_cast<SvxMSDffImportRec&>(*it);
+                    pRecord = it->get();
                     if (pRecord->pObj && pRecord->aTextId.nTxBxS)
-                    { // #i52825# pRetFrmFmt can be NULL
-                        pRetFrmFmt = MungeTextIntoDrawBox(pRecord->pObj,
-                            pRecord, nGrafAnchorCp, pRetFrmFmt);
+                    { // #i52825# pRetFrameFormat can be NULL
+                        pRetFrameFormat = MungeTextIntoDrawBox(pRecord->pObj,
+                            pRecord, nGrafAnchorCp, pRetFrameFormat);
                     }
                 }
             }
@@ -2749,20 +2762,20 @@ SwFrmFmt* SwWW8ImplReader::Read_GrafLayer( long nGrafAnchorCp )
     }
 
     // #i44344#, #i44681# - positioning attributes already set
-    if ( pRetFrmFmt /*#i52825# */ && pRetFrmFmt->ISA(SwDrawFrmFmt) )
+    if ( pRetFrameFormat /*#i52825# */ && dynamic_cast< const SwDrawFrameFormat *>( pRetFrameFormat ) !=  nullptr )
     {
-        static_cast<SwDrawFrmFmt*>(pRetFrmFmt)->PosAttrSet();
+        static_cast<SwDrawFrameFormat*>(pRetFrameFormat)->PosAttrSet();
     }
     if (!IsInlineEscherHack())
-        MapWrapIntoFlyFmt(pRecord, pRetFrmFmt);
+        MapWrapIntoFlyFormat(pRecord, pRetFrameFormat);
 
     // Set frame name with object name
-    if( pRetFrmFmt /*#i52825# */ && !aObjName.isEmpty() )
-        pRetFrmFmt->SetName( aObjName );
-    return AddAutoAnchor(pRetFrmFmt);
+    if( pRetFrameFormat /*#i52825# */ && !aObjName.isEmpty() )
+        pRetFrameFormat->SetName( aObjName );
+    return AddAutoAnchor(pRetFrameFormat);
 }
 
-SwFrmFmt *SwWW8ImplReader::AddAutoAnchor(SwFrmFmt *pFmt)
+SwFrameFormat *SwWW8ImplReader::AddAutoAnchor(SwFrameFormat *pFormat)
 {
     /*
      * anchored to character at the current position will move along the
@@ -2770,46 +2783,37 @@ SwFrmFmt *SwWW8ImplReader::AddAutoAnchor(SwFrmFmt *pFmt)
      *
      * Leave to later and set the correct location then.
      */
-    if ((pFmt) && (pFmt->GetAnchor().GetAnchorId() != FLY_AS_CHAR))
+    if ((pFormat) && (pFormat->GetAnchor().GetAnchorId() != RndStdIds::FLY_AS_CHAR))
     {
-        pAnchorStck->AddAnchor(*pPaM->GetPoint(), pFmt);
+        m_pAnchorStck->AddAnchor(*m_pPaM->GetPoint(), pFormat);
     }
-    return pFmt;
+    return pFormat;
 }
 
-SwFrmFmt* SwWW8ImplReader::MungeTextIntoDrawBox(SdrObject* pTrueObject,
-    SvxMSDffImportRec *pRecord, long nGrafAnchorCp, SwFrmFmt* pRetFrmFmt)
+SwFrameFormat* SwWW8ImplReader::MungeTextIntoDrawBox(SdrObject* pTrueObject,
+    SvxMSDffImportRec *pRecord, long nGrafAnchorCp, SwFrameFormat* pRetFrameFormat)
 {
     SdrTextObj* pSdrTextObj;
 
     // Pruefen, ob Gruppenobjekt (z.B. zwei Klammern) vorliegt
-    if (SdrObjGroup* pThisGroup = PTR_CAST(SdrObjGroup, pRecord->pObj))
+    if (SdrObjGroup* pThisGroup = dynamic_cast<SdrObjGroup*>( pRecord->pObj) )
     {
         // Gruppenobjekte haben keinen Text. Fuege ein Textobjekt in die
         // Gruppe ein, um den Text zu halten.
         pSdrTextObj = new SdrRectObj( OBJ_TEXT, pThisGroup->GetCurrentBoundRect());
 
-        SfxItemSet aSet(pDrawModel->GetItemPool());
+        SfxItemSet aSet(m_pDrawModel->GetItemPool());
         aSet.Put(XFillStyleItem(drawing::FillStyle_NONE));
-        aSet.Put(XLineStyleItem(XLINE_NONE));
-        aSet.Put(SdrTextFitToSizeTypeItem( SDRTEXTFIT_NONE ));
+        aSet.Put(XLineStyleItem(drawing::LineStyle_NONE));
+        aSet.Put(SdrTextFitToSizeTypeItem( SdrFitToSizeType::NONE ));
         aSet.Put(makeSdrTextAutoGrowHeightItem(false));
         aSet.Put(makeSdrTextAutoGrowWidthItem(false));
         pSdrTextObj->SetMergedItemSet(aSet);
-
-        long nAngle = pRecord->nTextRotationAngle;
-        if ( nAngle )
-        {
-            double a = nAngle*nPi180;
-            pSdrTextObj->NbcRotate(pSdrTextObj->GetCurrentBoundRect().Center(), nAngle,
-                sin(a), cos(a) );
-        }
-
         pSdrTextObj->NbcSetLayer( pThisGroup->GetLayer() );
         pThisGroup->GetSubList()->NbcInsertObject(pSdrTextObj);
     }
     else
-        pSdrTextObj = PTR_CAST(SdrTextObj, pRecord->pObj);
+        pSdrTextObj = dynamic_cast<SdrTextObj*>( pRecord->pObj );
 
     if( pSdrTextObj )
     {
@@ -2822,11 +2826,11 @@ SwFrmFmt* SwWW8ImplReader::MungeTextIntoDrawBox(SdrObject* pTrueObject,
         const size_t nOrdNum = pSdrTextObj->GetOrdNum();
         bool bEraseThisObject;
         InsertTxbxText( pSdrTextObj, &aObjSize, pRecord->aTextId.nTxBxS,
-            pRecord->aTextId.nSequence, nGrafAnchorCp, pRetFrmFmt,
-            (pSdrTextObj != pTrueObject) || (0 != pGroupObject),
-            bEraseThisObject, 0, 0, 0, 0, pRecord);
+            pRecord->aTextId.nSequence, nGrafAnchorCp, pRetFrameFormat,
+            (pSdrTextObj != pTrueObject) || (nullptr != pGroupObject),
+            bEraseThisObject, nullptr, nullptr, nullptr, nullptr, pRecord);
 
-        // wurde dieses Objekt ersetzt ??
+        // was this object replaced ??
         if (bEraseThisObject)
         {
             if( pGroupObject || (pSdrTextObj != pTrueObject) )
@@ -2839,7 +2843,7 @@ SwFrmFmt* SwWW8ImplReader::MungeTextIntoDrawBox(SdrObject* pTrueObject,
                 if (pSdrTextObj != pNewObj)
                 {
                     // Objekt in der Z-Order-Liste ersetzen
-                    pMSDffManager->ExchangeInShapeOrder(pSdrTextObj, 0,0, pNewObj);
+                    m_pMSDffManager->ExchangeInShapeOrder(pSdrTextObj, 0, pNewObj);
                     // Objekt jetzt noch loeschen
                     SdrObject::Free( pRecord->pObj );
                     // und das neue Objekt merken.
@@ -2848,23 +2852,23 @@ SwFrmFmt* SwWW8ImplReader::MungeTextIntoDrawBox(SdrObject* pTrueObject,
             }
             else
             {
-                // Objekt aus der Z-Order-Liste loeschen
-                pMSDffManager->RemoveFromShapeOrder( pSdrTextObj );
-                // Objekt aus der Drawing-Page rausnehmen
+                // remove the object from Z-Order list
+                m_pMSDffManager->RemoveFromShapeOrder( pSdrTextObj );
+                // take the object from the drawing page
                 if( pSdrTextObj->GetPage() )
-                    pDrawPg->RemoveObject( pSdrTextObj->GetOrdNum() );
+                    m_pDrawPg->RemoveObject( pSdrTextObj->GetOrdNum() );
                 // und FrameFormat entfernen, da durch Grafik ersetzt (dies
                 // loescht auch das Objekt)
-                rDoc.DelFrmFmt( pRetFrmFmt );
-                pRetFrmFmt = 0;
+                m_rDoc.DelFrameFormat( pRetFrameFormat );
+                pRetFrameFormat = nullptr;
                 // auch den Objektmerker loeschen
-                pRecord->pObj = 0;
+                pRecord->pObj = nullptr;
             }
         }
         else
         {
-            // ww8-default Randabstand einsetzen
-            SfxItemSet aItemSet(pDrawModel->GetItemPool(),
+            // use ww8-default border distance
+            SfxItemSet aItemSet(m_pDrawModel->GetItemPool(),
                 SDRATTR_TEXT_LEFTDIST, SDRATTR_TEXT_LOWERDIST);
             aItemSet.Put( makeSdrTextLeftDistItem( pRecord->nDxTextLeft ) );
             aItemSet.Put( makeSdrTextRightDistItem( pRecord->nDxTextRight  ) );
@@ -2873,14 +2877,14 @@ SwFrmFmt* SwWW8ImplReader::MungeTextIntoDrawBox(SdrObject* pTrueObject,
             pSdrTextObj->SetMergedItemSetAndBroadcast(aItemSet);
         }
     }
-    return pRetFrmFmt;
+    return pRetFrameFormat;
 }
 
-SwFlyFrmFmt* SwWW8ImplReader::ConvertDrawTextToFly(SdrObject* &rpObject,
+SwFlyFrameFormat* SwWW8ImplReader::ConvertDrawTextToFly(SdrObject* &rpObject,
     SdrObject* &rpOurNewObject, SvxMSDffImportRec* pRecord, RndStdIds eAnchor,
     WW8_FSPA *pF, SfxItemSet &rFlySet)
 {
-    SwFlyFrmFmt* pRetFrmFmt = 0;
+    SwFlyFrameFormat* pRetFrameFormat = nullptr;
     long nStartCp;
     long nEndCp;
 
@@ -2893,30 +2897,30 @@ SwFlyFrmFmt* SwWW8ImplReader::ConvertDrawTextToFly(SdrObject* &rpObject,
 
         // More attributes can be used in a frame compared to the
         // Edit-Engine, and it can contain field, OLEs or graphics...
-        Rectangle aInnerDist(pRecord->nDxTextLeft, pRecord->nDyTextTop,
+        tools::Rectangle aInnerDist(pRecord->nDxTextLeft, pRecord->nDyTextTop,
             pRecord->nDxTextRight, pRecord->nDyTextBottom);
 
-        SwFmtFrmSize aFrmSize(ATT_FIX_SIZE, pF->nXaRight - pF->nXaLeft, pF->nYaBottom - pF->nYaTop);
-        aFrmSize.SetWidthSizeType(pRecord->bAutoWidth ? ATT_VAR_SIZE : ATT_FIX_SIZE);
-        rFlySet.Put(aFrmSize);
+        SwFormatFrameSize aFrameSize(ATT_FIX_SIZE, pF->nXaRight - pF->nXaLeft, pF->nYaBottom - pF->nYaTop);
+        aFrameSize.SetWidthSizeType(pRecord->bAutoWidth ? ATT_VAR_SIZE : ATT_FIX_SIZE);
+        rFlySet.Put(aFrameSize);
 
         MatchSdrItemsIntoFlySet( rpObject, rFlySet, pRecord->eLineStyle,
             pRecord->eLineDashing, pRecord->eShapeType, aInnerDist );
 
         SdrTextObj *pSdrTextObj = dynamic_cast<SdrTextObj*>(rpObject);
         if (pSdrTextObj && pSdrTextObj->IsVerticalWriting())
-            rFlySet.Put(SvxFrameDirectionItem(FRMDIR_VERT_TOP_RIGHT, RES_FRAMEDIR));
+            rFlySet.Put(SvxFrameDirectionItem(SvxFrameDirection::Vertical_RL_TB, RES_FRAMEDIR));
 
-        pRetFrmFmt = rDoc.MakeFlySection(eAnchor, pPaM->GetPoint(), &rFlySet);
-        OSL_ENSURE(pRetFrmFmt->GetAnchor().GetAnchorId() == eAnchor,
+        pRetFrameFormat = m_rDoc.MakeFlySection(eAnchor, m_pPaM->GetPoint(), &rFlySet);
+        OSL_ENSURE(pRetFrameFormat->GetAnchor().GetAnchorId() == eAnchor,
             "Not the anchor type requested!");
 
         // if everything is OK, find pointer on new object and correct
         // Z-order list (oder delete entry)
-        rpOurNewObject = CreateContactObject(pRetFrmFmt);
+        rpOurNewObject = CreateContactObject(pRetFrameFormat);
 
         // remove old object from the Z-Order list
-        pMSDffManager->RemoveFromShapeOrder( rpObject );
+        m_pMSDffManager->RemoveFromShapeOrder( rpObject );
 
         // and delete the object
         SdrObject::Free( rpObject );
@@ -2928,26 +2932,26 @@ SwFlyFrmFmt* SwWW8ImplReader::ConvertDrawTextToFly(SdrObject* &rpObject,
         {
             /*
             We do not store our rpOutNewObject in the ShapeOrder because we
-            have a FrmFmt from which we can regenerate the contact object when
+            have a FrameFormat from which we can regenerate the contact object when
             we need it. Because, we can have frames anchored to paragraphs in
             header/footers and we can copy header/footers, if we do copy a
             header/footer with a nonpage anchored frame in it then the contact
-            objects are invalidated. Under this condition the FrmFmt will be
+            objects are invalidated. Under this condition the FrameFormat will be
             updated to reflect this change and can be used to get a new
             contact object, while a raw rpOutNewObject stored here becomes
             deleted and useless.
             */
-            pMSDffManager->StoreShapeOrder(pF->nSpId,
+            m_pMSDffManager->StoreShapeOrder(pF->nSpId,
                 (((sal_uLong)pRecord->aTextId.nTxBxS) << 16) +
-                pRecord->aTextId.nSequence, 0, pRetFrmFmt);
+                pRecord->aTextId.nSequence, nullptr, pRetFrameFormat);
 
             // The Contact object has to be inserted into the draw page, so
             // SwWW8ImplReader::LoadDoc1() can determine the z-order.
             if (!rpOurNewObject->IsInserted())
             {
                 // pass information, if object is in page header|footer to method.
-                pWWZOrder->InsertEscherObject( rpOurNewObject, pF->nSpId,
-                                               bIsHeader || bIsFooter );
+                m_pWWZOrder->InsertEscherObject( rpOurNewObject, pF->nSpId,
+                                               m_bIsHeader || m_bIsFooter );
             }
         }
 
@@ -2957,26 +2961,29 @@ SwFlyFrmFmt* SwWW8ImplReader::ConvertDrawTextToFly(SdrObject* &rpObject,
             // save flags etc and reset them
             WW8ReaderSave aSave( this );
 
-            MoveInsideFly(pRetFrmFmt);
+            MoveInsideFly(pRetFrameFormat);
 
-            SwNodeIndex aStart(pPaM->GetPoint()->nNode);
+            SwNodeIndex aStart(m_pPaM->GetPoint()->nNode);
 
-            pWWZOrder->InsideEscher(pF->nSpId);
+            m_pWWZOrder->InsideEscher(pF->nSpId);
 
             // read in the text
-            bTxbxFlySection = true;
+            m_bTxbxFlySection = true;
             bool bJoined = ReadText(nStartCp, (nEndCp-nStartCp),
-                MAN_MAINTEXT == pPlcxMan->GetManType() ?
+                MAN_MAINTEXT == m_pPlcxMan->GetManType() ?
                         MAN_TXBX : MAN_TXBX_HDFT);
 
-            pWWZOrder->OutsideEscher();
+            m_pWWZOrder->OutsideEscher();
 
-            MoveOutsideFly(pRetFrmFmt, aSave.GetStartPos(),!bJoined);
+            MoveOutsideFly(pRetFrameFormat, aSave.GetStartPos(),!bJoined);
 
             aSave.Restore( this );
+
+            StripNegativeAfterIndent(pRetFrameFormat);
         }
+
     }
-    return pRetFrmFmt;
+    return pRetFrameFormat;
 }
 
 void MatchEscherMirrorIntoFlySet(const SvxMSDffImportRec &rRecord,
@@ -2984,22 +2991,22 @@ void MatchEscherMirrorIntoFlySet(const SvxMSDffImportRec &rRecord,
 {
     if (rRecord.bVFlip || rRecord.bHFlip)
     {
-        MirrorGraph eType(RES_MIRROR_GRAPH_DONT);
+        MirrorGraph eType(MirrorGraph::Dont);
         if (rRecord.bVFlip && rRecord.bHFlip)
-            eType = RES_MIRROR_GRAPH_BOTH;
+            eType = MirrorGraph::Both;
         else if (rRecord.bVFlip)
-            eType = RES_MIRROR_GRAPH_HOR;
+            eType = MirrorGraph::Horizontal;
         else
-            eType = RES_MIRROR_GRAPH_VERT;
+            eType = MirrorGraph::Vertical;
         rFlySet.Put( SwMirrorGrf(eType) );
     }
 }
 
-SwFlyFrmFmt* SwWW8ImplReader::ImportReplaceableDrawables( SdrObject* &rpObject,
+SwFlyFrameFormat* SwWW8ImplReader::ImportReplaceableDrawables( SdrObject* &rpObject,
     SdrObject* &rpOurNewObject, SvxMSDffImportRec* pRecord, WW8_FSPA *pF,
     SfxItemSet &rFlySet )
 {
-    SwFlyFrmFmt* pRetFrmFmt = 0;
+    SwFlyFrameFormat* pRetFrameFormat = nullptr;
     long nWidthTw  = pF->nXaRight - pF->nXaLeft;
     if (0 > nWidthTw)
         nWidthTw = 0;
@@ -3007,17 +3014,17 @@ SwFlyFrmFmt* SwWW8ImplReader::ImportReplaceableDrawables( SdrObject* &rpObject,
     if (0 > nHeightTw)
         nHeightTw = 0;
 
-    ProcessEscherAlign(pRecord, pF, rFlySet, true);
+    ProcessEscherAlign(pRecord, pF, rFlySet);
 
-    rFlySet.Put(SwFmtFrmSize(ATT_FIX_SIZE, nWidthTw, nHeightTw));
+    rFlySet.Put(SwFormatFrameSize(ATT_FIX_SIZE, nWidthTw, nHeightTw));
 
-    SfxItemSet aGrSet(rDoc.GetAttrPool(), RES_GRFATR_BEGIN, RES_GRFATR_END-1);
+    SfxItemSet aGrSet(m_rDoc.GetAttrPool(), RES_GRFATR_BEGIN, RES_GRFATR_END-1);
 
     if (pRecord)
     {
         // Note that the escher inner distance only seems to be honoured in
         // word for textboxes, not for graphics and ole objects.
-        Rectangle aInnerDist(0, 0, 0, 0);
+        tools::Rectangle aInnerDist(0, 0, 0, 0);
 
         MatchSdrItemsIntoFlySet(rpObject, rFlySet, pRecord->eLineStyle,
             pRecord->eLineDashing, pRecord->eShapeType, aInnerDist);
@@ -3027,113 +3034,115 @@ SwFlyFrmFmt* SwWW8ImplReader::ImportReplaceableDrawables( SdrObject* &rpObject,
 
     OUString aObjectName(rpObject->GetName());
     if (OBJ_OLE2 == SdrObjKind(rpObject->GetObjIdentifier()))
-        pRetFrmFmt = InsertOle(*((SdrOle2Obj*)rpObject), rFlySet, aGrSet);
+        pRetFrameFormat = InsertOle(*static_cast<SdrOle2Obj*>(rpObject), rFlySet, &aGrSet);
     else
     {
-        const SdrGrafObj *pGrf= (const SdrGrafObj*)rpObject;
+        const SdrGrafObj *pGrf = static_cast<const SdrGrafObj*>(rpObject);
         bool bDone = false;
         if (pGrf->IsLinkedGraphic() && !pGrf->GetFileName().isEmpty())
         {
             GraphicType eType = pGrf->GetGraphicType();
             OUString aGrfName(
                 URIHelper::SmartRel2Abs(
-                    INetURLObject(sBaseURL), pGrf->GetFileName(),
+                    INetURLObject(m_sBaseURL), pGrf->GetFileName(),
                     URIHelper::GetMaybeFileHdl()));
             // correction of fix for issue #i10939#:
             // One of the two conditions have to be true to insert the graphic
             // as a linked graphic -
-            if (GRAPHIC_NONE == eType || CanUseRemoteLink(aGrfName))
+            if (GraphicType::NONE == eType || CanUseRemoteLink(aGrfName))
             {
-                pRetFrmFmt = rDoc.getIDocumentContentOperations().Insert(*pPaM, aGrfName, OUString(), 0,
-                    &rFlySet, &aGrSet, NULL);
+                pRetFrameFormat = m_rDoc.getIDocumentContentOperations().InsertGraphic(
+                    *m_pPaM, aGrfName, OUString(), nullptr,
+                    &rFlySet, &aGrSet, nullptr);
                 bDone = true;
             }
         }
         if (!bDone)
         {
             const Graphic& rGraph = pGrf->GetGraphic();
-            pRetFrmFmt = rDoc.getIDocumentContentOperations().Insert(*pPaM, OUString(), OUString(), &rGraph,
-                &rFlySet, &aGrSet, NULL);
+            pRetFrameFormat = m_rDoc.getIDocumentContentOperations().InsertGraphic(
+                *m_pPaM, OUString(), OUString(), &rGraph,
+                &rFlySet, &aGrSet, nullptr);
         }
     }
 
-    if (pRetFrmFmt)
+    if (pRetFrameFormat)
     {
         if( pRecord )
         {
             if( OBJ_OLE2 != SdrObjKind(rpObject->GetObjIdentifier()) )
-                SetAttributesAtGrfNode( pRecord, pRetFrmFmt, pF );
+                SetAttributesAtGrfNode( pRecord, pRetFrameFormat, pF );
         }
         // mehrfaches Auftreten gleicher Grafik-Namen vermeiden
-        maGrfNameGenerator.SetUniqueGraphName(pRetFrmFmt, aObjectName);
+        m_aGrfNameGenerator.SetUniqueGraphName(pRetFrameFormat, aObjectName);
     }
     // falls alles Ok, Zeiger auf neues Objekt ermitteln und Z-Order-Liste
     // entsprechend korrigieren (oder Eintrag loeschen)
-    rpOurNewObject = CreateContactObject(pRetFrmFmt);
+    rpOurNewObject = CreateContactObject(pRetFrameFormat);
 
     // altes Objekt aus der Z-Order-Liste entfernen
-    pMSDffManager->RemoveFromShapeOrder( rpObject );
+    m_pMSDffManager->RemoveFromShapeOrder( rpObject );
     // aus der Drawing-Page rausnehmen
     if( rpObject->GetPage() )
-        pDrawPg->RemoveObject( rpObject->GetOrdNum() );
+        m_pDrawPg->RemoveObject( rpObject->GetOrdNum() );
 
-    // und das Objekt loeschen
+    // and delete the object
     SdrObject::Free( rpObject );
     /*
-        Achtung: ab jetzt nur noch pOrgShapeObject abfragen!
+        Warning: from now on query only pOrgShapeObject!
     */
 
     // Kontakt-Objekt in die Z-Order-Liste und die Page aufnehmen
     if (rpOurNewObject)
     {
-        if (!bHdFtFtnEdn)
-            pMSDffManager->StoreShapeOrder(pF->nSpId, 0, rpOurNewObject, 0 );
+        if (!m_bHdFtFootnoteEdn)
+            m_pMSDffManager->StoreShapeOrder(pF->nSpId, 0, rpOurNewObject );
 
         // Das Kontakt-Objekt MUSS in die Draw-Page gesetzt werden, damit in
         // SwWW8ImplReader::LoadDoc1() die Z-Order festgelegt werden kann !!!
         if (!rpOurNewObject->IsInserted())
         {
             // pass information, if object is in page header|footer to method.
-            pWWZOrder->InsertEscherObject( rpOurNewObject, pF->nSpId,
-                                           bIsHeader || bIsFooter );
+            m_pWWZOrder->InsertEscherObject( rpOurNewObject, pF->nSpId,
+                                           m_bIsHeader || m_bIsFooter );
         }
     }
-    return pRetFrmFmt;
+    return pRetFrameFormat;
 }
 
-void SwWW8ImplReader::GrafikCtor()  // Fuer SVDraw und VCControls und Escher
+void SwWW8ImplReader::GrafikCtor()  // For SVDraw and VCControls and Escher
 {
-    if (!pDrawModel)
+    if (!m_pDrawModel)
     {
-        rDoc.getIDocumentDrawModelAccess().GetOrCreateDrawModel(); // #i52858# - method name changed
-        pDrawModel  = rDoc.getIDocumentDrawModelAccess().GetDrawModel();
-        OSL_ENSURE(pDrawModel, "Kann DrawModel nicht anlegen");
-        pDrawPg = pDrawModel->GetPage(0);
+        m_rDoc.getIDocumentDrawModelAccess().GetOrCreateDrawModel(); // #i52858# - method name changed
+        m_pDrawModel  = m_rDoc.getIDocumentDrawModelAccess().GetDrawModel();
+        OSL_ENSURE(m_pDrawModel, "Kann DrawModel nicht anlegen");
+        m_pDrawPg = m_pDrawModel->GetPage(0);
 
-        pMSDffManager = new SwMSDffManager(*this);
-        pMSDffManager->SetModel(pDrawModel, 1440);
+        m_pMSDffManager = new SwMSDffManager(*this, m_bSkipImages);
+        m_pMSDffManager->SetModel(m_pDrawModel, 1440);
         /*
-         Now the dff manager always needs a controls // converter as well, but a
-         control converter may still exist // without a dffmanager. cmc
+         Now the dff manager always needs a controls converter as well, but a
+         control converter may still exist without a dffmanager.
         */
-        pFormImpl = new SwMSConvertControls(mpDocShell, pPaM);
+        m_pFormImpl = new SwMSConvertControls(m_pDocShell, m_pPaM);
 
-        pWWZOrder = new wwZOrderer(sw::util::SetLayer(rDoc), pDrawPg,
-            pMSDffManager->GetShapeOrders());
+        m_pWWZOrder = new wwZOrderer(sw::util::SetLayer(m_rDoc), m_pDrawPg,
+            m_pMSDffManager->GetShapeOrders());
     }
 }
 
 void SwWW8ImplReader::GrafikDtor()
 {
-    DELETEZ(mpDrawEditEngine); // evtl. von Grafik angelegt
-    DELETEZ(pWWZOrder);       // dito
+    DELETEZ(m_pDrawEditEngine); // evtl. von Grafik angelegt
+    DELETEZ(m_pWWZOrder);       // dito
 }
 
-void SwWW8FltAnchorStack::AddAnchor(const SwPosition& rPos, SwFrmFmt *pFmt)
+void SwWW8FltAnchorStack::AddAnchor(const SwPosition& rPos, SwFrameFormat *pFormat)
 {
-    OSL_ENSURE(pFmt->GetAnchor().GetAnchorId() != FLY_AS_CHAR,
+    OSL_ENSURE(pFormat->GetAnchor().GetAnchorId() != RndStdIds::FLY_AS_CHAR,
         "Don't use fltanchors with inline frames, slap!");
-    NewAttr(rPos, SwFltAnchor(pFmt));
+    NewAttr(rPos, SwFltAnchor(pFormat));
 }
 
 void SwWW8FltAnchorStack::Flush()
