@@ -2600,6 +2600,7 @@ SwFrmFmt* SwWW8ImplReader::Read_GrafLayer( long nGrafAnchorCp )
         pMSDffManager->RemoveFromShapeOrder(pObject);
         // and delete the object
         SdrObject::Free(pObject);
+        return 0;
     }
 #endif	// NO_LIBO_SDROBJECT_LEAK_FIX
 
