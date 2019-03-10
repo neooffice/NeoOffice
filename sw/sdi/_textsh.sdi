@@ -1681,7 +1681,7 @@ interface BaseText
     [
         ExecMethod = Execute ;
         StateMethod = NoState ;
-        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
+        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
     ]
 // #endif	// USE_JAVA
 
