@@ -20,7 +20,6 @@
 #include <svx/svdpagv.hxx>
 #include <svx/svdview.hxx>
 #include <svx/ruler.hxx>
-#include <svx/sidebar/ContextChangeEventMultiplexer.hxx>
 #include <idxmrk.hxx>
 #include <view.hxx>
 #include <wrtsh.hxx>
@@ -37,8 +36,7 @@
 #include <cmdid.h>
 #include <sfx2/request.hxx>
 #include <sfx2/viewfrm.hxx>
-
-extern bool bDocSzUpdated;
+#include <wordcountdialog.hxx>
 
 void SwView::Activate(bool bMDIActivate)
 {
@@ -65,44 +63,44 @@ void SwView::Activate(bool bMDIActivate)
         m_pWrtShell->MakeSelVisible();
         m_bMakeSelectionVisible = false;
     }
-    m_pHRuler->SetActive( true );
-    m_pVRuler->SetActive( true );
+    m_pHRuler->SetActive();
+    m_pVRuler->SetActive();
 
     if ( bMDIActivate )
     {
-        m_pWrtShell->ShGetFcs(false);     // Selections visible
+        m_pWrtShell->ShellGetFocus();     // Selections visible
 
         if( !m_sSwViewData.isEmpty() )
         {
-            ReadUserData(m_sSwViewData, false);
-            m_sSwViewData = "";
+            ReadUserData(m_sSwViewData);
+            m_sSwViewData.clear();
         }
 
         AttrChangedNotify(m_pWrtShell);
 
-        // Initialize Flddlg newly if necessary (e.g. for TYP_SETVAR)
-        sal_uInt16 nId = SwFldDlgWrapper::GetChildWindowId();
+        // Initialize Fielddlg newly if necessary (e.g. for TYP_SETVAR)
+        sal_uInt16 nId = SwFieldDlgWrapper::GetChildWindowId();
         SfxViewFrame* pVFrame = GetViewFrame();
-        SwFldDlgWrapper *pWrp = (SwFldDlgWrapper*)pVFrame->GetChildWindow(nId);
+        SwFieldDlgWrapper *pWrp = static_cast<SwFieldDlgWrapper*>(pVFrame->GetChildWindow(nId));
         if (pWrp)
             pWrp->ReInitDlg(GetDocShell());
 
         // Initialize RedlineDlg newly if necessary
         nId = SwRedlineAcceptChild::GetChildWindowId();
-        SwRedlineAcceptChild *pRed = (SwRedlineAcceptChild*)pVFrame->GetChildWindow(nId);
+        SwRedlineAcceptChild *pRed = static_cast<SwRedlineAcceptChild*>(pVFrame->GetChildWindow(nId));
         if (pRed)
             pRed->ReInitDlg(GetDocShell());
 
         // reinit IdxMarkDlg
         nId = SwInsertIdxMarkWrapper::GetChildWindowId();
-        SwInsertIdxMarkWrapper *pIdxMrk = (SwInsertIdxMarkWrapper*)pVFrame->GetChildWindow(nId);
+        SwInsertIdxMarkWrapper *pIdxMrk = static_cast<SwInsertIdxMarkWrapper*>(pVFrame->GetChildWindow(nId));
         if (pIdxMrk)
             pIdxMrk->ReInitDlg(*m_pWrtShell);
 
         // reinit AuthMarkDlg
         nId = SwInsertAuthMarkWrapper::GetChildWindowId();
-        SwInsertAuthMarkWrapper *pAuthMrk = (SwInsertAuthMarkWrapper*)pVFrame->
-                                                                GetChildWindow(nId);
+        SwInsertAuthMarkWrapper *pAuthMrk = static_cast<SwInsertAuthMarkWrapper*>(pVFrame->
+                                                                GetChildWindow(nId));
         if (pAuthMrk)
             pAuthMrk->ReInitDlg(*m_pWrtShell);
     }
@@ -115,14 +113,12 @@ void SwView::Activate(bool bMDIActivate)
 
 void SwView::Deactivate(bool bMDIActivate)
 {
-    extern bool bFlushCharBuffer ;
-        // Are Characters still in the input buffer?
-    if( bFlushCharBuffer )
+    if( g_bFlushCharBuffer ) // Are Characters still in the input buffer?
         GetEditWin().FlushInBuffer();
 
     if( bMDIActivate )
     {
-        m_pWrtShell->ShLooseFcs();    // Selections invisible
+        m_pWrtShell->ShellLoseFocus();    // Selections invisible
 
         m_pHRuler->SetActive( false );
         m_pVRuler->SetActive( false );
@@ -153,8 +149,8 @@ void SwView::ExecFormatPaintbrush(SfxRequest& rReq)
         const SfxItemSet *pArgs = rReq.GetArgs();
         if( pArgs && pArgs->Count() >= 1 )
         {
-            bPersistentCopy = static_cast<bool>(((SfxBoolItem &)pArgs->Get(
-                                    SID_FORMATPAINTBRUSH)).GetValue());
+            bPersistentCopy = static_cast<const SfxBoolItem &>(pArgs->Get(
+                                    SID_FORMATPAINTBRUSH)).GetValue();
         }
 
         m_pFormatClipboard->Copy( GetWrtShell(), GetPool(), bPersistentCopy );
@@ -182,7 +178,7 @@ void SwView::StateFormatPaintbrush(SfxItemSet &rSet)
 #endif	// NO_LIBO_FORMAT_PAINT_BRUSH_PUT_LEAK_FIX
     {
 #ifdef NO_LIBO_FORMAT_PAINT_BRUSH_PUT_LEAK_FIX
-        if( !m_pFormatClipboard->CanCopyThisType( GetWrtShell().GetSelectionType() ) )
+        if( !SwFormatClipboard::CanCopyThisType( GetWrtShell().GetSelectionType() ) )
             rSet.DisableItem( SID_FORMATPAINTBRUSH );
 #else	// NO_LIBO_FORMAT_PAINT_BRUSH_PUT_LEAK_FIX
         rSet.DisableItem( SID_FORMATPAINTBRUSH );
@@ -192,6 +188,20 @@ void SwView::StateFormatPaintbrush(SfxItemSet &rSet)
     else
         rSet.Put(SfxBoolItem(SID_FORMATPAINTBRUSH, bHasContent));
 #endif	// !NO_LIBO_FORMAT_PAINT_BRUSH_PUT_LEAK_FIX
+}
+
+void SwView::UpdateWordCount(SfxShell* pShell, sal_uInt16 nSlot)
+{
+    SfxViewFrame* pVFrame = GetViewFrame();
+    if (pVFrame != nullptr)
+    {
+        pVFrame->ToggleChildWindow(FN_WORDCOUNT_DIALOG);
+        pShell->Invalidate(nSlot);
+
+        SwWordCountWrapper *pWrdCnt = static_cast<SwWordCountWrapper*>(pVFrame->GetChildWindow(SwWordCountWrapper::GetChildWindowId()));
+        if (pWrdCnt)
+            pWrdCnt->UpdateCounts();
+    }
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
