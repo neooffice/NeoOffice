@@ -317,7 +317,7 @@ public:
     virtual FactoryFunction GetUITestFactory() const override;
 
 #ifdef USE_JAVA
-    DECL_LINK( ApplicationEventListener, VclSimpleEvent*, void );
+    DECL_LINK( ApplicationEventListener, VclSimpleEvent&, void );
 #endif	// USE_JAVA
 };
 
