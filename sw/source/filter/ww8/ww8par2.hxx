@@ -207,7 +207,11 @@ class WW8TabDesc
     WW8TabBandDesc* m_pFirstBand;
     WW8TabBandDesc* m_pActBand;
 
+#ifdef NO_LIBO_WW8_TABLE_LEAK_FIX
     SwPosition* m_pTmpPos;
+#else   // NO_LIBO_WW8_TABLE_LEAK_FIX
+    std::unique_ptr<SwPosition> m_xTmpPos;
+#endif  // NO_LIBO_WW8_TABLE_LEAK_FIX
 
     SwTableNode* m_pTableNd;          // table node
     const SwTableLines* m_pTabLines;  // row array of node
