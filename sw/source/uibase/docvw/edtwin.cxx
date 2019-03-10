@@ -165,13 +165,6 @@
 #include <unotools/syslocaleoptions.hxx>
 #include <memory>
 
-#if defined USE_JAVA && defined MACOSX
-
-//#include <ndtxt.hxx>
-//#include <editeng/editview.hxx>
-
-#endif	// USE_JAVA && MACOSX
-
 using namespace sw::mark;
 using namespace ::com::sun::star;
 
