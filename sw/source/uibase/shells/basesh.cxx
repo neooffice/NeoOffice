@@ -2518,7 +2518,7 @@ void SwBaseShell::ExecDlg(SfxRequest &rReq)
             // the border dialog is opened before the Format :: Paragraph menu
             // or Format :: Page menu is selected:
             // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8504
-            FieldUnit eMetric = ::GetDfltMetric(dynamic_cast< SwWebView* >(&rSh.GetView()));
+            FieldUnit eMetric = ::GetDfltMetric(dynamic_cast< SwWebView* >(&rSh.GetView()) != nullptr);
             SW_MOD()->PutItem(SfxUInt16Item(SID_ATTR_METRIC, static_cast< sal_uInt16 >(eMetric)));
 #endif	// USE_JAVA
             SfxItemSet aSet( rSh.GetAttrPool(),
