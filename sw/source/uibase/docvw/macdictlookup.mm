@@ -35,6 +35,7 @@
 
 #include <sfx2/app.hxx>
 #include <tools/rcid.h>
+#include <tools/resmgr.hxx>
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
@@ -82,8 +83,8 @@ OUString GetMacDictLoookupResString( int nId )
 		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithUniqueName];
 		if ( pPasteboard )
 		{
-			[pPasteboard declareTypes:[NSArray arrayWithObject:NSStringPboardType] owner:nil];
-			[pPasteboard setString:pString forType:NSStringPboardType];
+			[pPasteboard declareTypes:[NSArray arrayWithObject:NSPasteboardTypeString] owner:nil];
+			[pPasteboard setString:pString forType:NSPasteboardTypeString];
 			NSPerformService( @"Look Up in Dictionary", pPasteboard );
 		}
 	}
@@ -97,7 +98,7 @@ void LookupInMacDict( const OUString &aString )
 
 	if ( aString.getLength() )
 	{
-		NSString *pString = [NSString stringWithCharacters:aString.getStr() length:aString.getLength()];
+		NSString *pString = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aString.getStr() ) length:aString.getLength()];
 		if ( pString )
 		{
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
