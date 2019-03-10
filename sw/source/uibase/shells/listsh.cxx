@@ -58,14 +58,13 @@
 
 #include <IDocumentOutlineNodes.hxx>
 
-SFX_IMPL_INTERFACE(SwListShell, SwBaseShell, SW_RES(STR_SHELLNAME_LIST))
+SFX_IMPL_INTERFACE(SwListShell, SwBaseShell)
 
 void SwListShell::InitInterface_Impl()
 {
-    GetStaticInterface()->RegisterObjectBar(SFX_OBJECTBAR_OBJECT, SW_RES(RID_NUM_TOOLBOX));
+    GetStaticInterface()->RegisterObjectBar(SFX_OBJECTBAR_OBJECT, SfxVisibilityFlags::Invisible, RID_NUM_TOOLBOX);
 }
 
-TYPEINIT1(SwListShell,SwBaseShell)
 
 // #i35572# Functionality of Numbering/Bullet toolbar
 // for outline numbered paragraphs should match the functions for outlines
@@ -73,8 +72,8 @@ TYPEINIT1(SwListShell,SwBaseShell)
 // function is quite similar the code in SwContentTree::ExecCommand.
 static void lcl_OutlineUpDownWithSubPoints( SwWrtShell& rSh, bool bMove, bool bUp )
 {
-    const sal_uInt16 nActPos = rSh.GetOutlinePos();
-    if ( nActPos < USHRT_MAX && rSh.IsOutlineMovable( nActPos ) )
+    const SwOutlineNodes::size_type nActPos = rSh.GetOutlinePos();
+    if ( nActPos < SwOutlineNodes::npos && rSh.IsOutlineMovable( nActPos ) )
     {
         rSh.Push();
         rSh.MakeOutlineSel( nActPos, nActPos, true );
@@ -83,8 +82,8 @@ static void lcl_OutlineUpDownWithSubPoints( SwWrtShell& rSh, bool bMove, bool bU
         {
             const IDocumentOutlineNodes* pIDoc( rSh.getIDocumentOutlineNodesAccess() );
             const int nActLevel = pIDoc->getOutlineLevel( nActPos );
-            sal_Int32 nActEndPos = nActPos + 1;
-            sal_Int16 nDir = 0;
+            SwOutlineNodes::size_type nActEndPos = nActPos + 1;
+            SwOutlineNodes::difference_type nDir = 0;
 
             if ( !bUp )
             {
@@ -98,7 +97,7 @@ static void lcl_OutlineUpDownWithSubPoints( SwWrtShell& rSh, bool bMove, bool bU
                     // The current subpoint which should be moved
                     // starts at nActPos and ends at nActEndPos - 1
                     --nActEndPos;
-                    sal_Int32 nDest = nActEndPos + 2;
+                    SwOutlineNodes::size_type nDest = nActEndPos + 2;
                     while ( nDest < pIDoc->getOutlineNodesCount() &&
                             pIDoc->getOutlineLevel( nDest ) > nActLevel )
                         ++nDest;
@@ -112,7 +111,7 @@ static void lcl_OutlineUpDownWithSubPoints( SwWrtShell& rSh, bool bMove, bool bU
                 if ( nActPos > 0 )
                 {
                     --nActEndPos;
-                    sal_Int32 nDest = nActPos - 1;
+                    SwOutlineNodes::size_type nDest = nActPos - 1;
                     while ( nDest > 0 && pIDoc->getOutlineLevel( nDest ) > nActLevel )
                         --nDest;
 
@@ -133,7 +132,7 @@ static void lcl_OutlineUpDownWithSubPoints( SwWrtShell& rSh, bool bMove, bool bU
         }
 
         rSh.ClearMark();
-        rSh.Pop( false );
+        rSh.Pop(SwCursorShell::PopMode::DeleteCurrent);
     }
 }
 
@@ -144,7 +143,7 @@ void SwListShell::Execute(SfxRequest &rReq)
     SwWrtShell& rSh = GetShell();
 
     // #i35572#
-    const SwNumRule* pCurRule = rSh.GetNumRuleAtCurrCrsrPos();
+    const SwNumRule* pCurRule = rSh.GetNumRuleAtCurrCursorPos();
     OSL_ENSURE( pCurRule, "SwListShell::Execute without NumRule" );
     bool bOutline = pCurRule && pCurRule->IsOutlineRule();
 
@@ -155,7 +154,7 @@ void SwListShell::Execute(SfxRequest &rReq)
 #ifdef USE_JAVA
             // Fix bug 2741 by detecting the strange case where GetView()
             // returns NULL
-            if ( (const SwView *)&GetView() )
+            if ( static_cast< const SwView* >( &GetView() ) )
 #endif	// USE_JAVA
             {
                 SfxViewFrame * pFrame = GetView().GetViewFrame();
@@ -228,7 +227,7 @@ void SwListShell::Execute(SfxRequest &rReq)
             bool bApi = rReq.IsAPI();
             bool bDelete = !rSh.IsNoNum(!bApi);
             if(pArgs )
-                bDelete = ((SfxBoolItem &)pArgs->Get(rReq.GetSlot())).GetValue();
+                bDelete = static_cast<const SfxBoolItem &>(pArgs->Get(rReq.GetSlot())).GetValue();
             rSh.NumOrNoNum( bDelete, !bApi );
             rReq.AppendItem( SfxBoolItem( nSlot, bDelete ) );
             rReq.Done();
@@ -273,7 +272,7 @@ void SwListShell::GetState(SfxItemSet &rSet)
             break;
 
             case FN_NUM_BULLET_NONUM:
-                if ( rSh.CrsrInsideInputFld() )
+                if ( rSh.CursorInsideInputField() )
                 {
                     rSet.DisableItem(nWhich);
                 }
@@ -286,8 +285,7 @@ void SwListShell::GetState(SfxItemSet &rSet)
 SwListShell::SwListShell(SwView &_rView) :
     SwBaseShell(_rView)
 {
-    SetName(OUString("List"));
-    SetHelpId(SW_LISTSHELL);
+    SetName("List");
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

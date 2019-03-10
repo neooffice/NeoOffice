@@ -42,7 +42,7 @@
 
 #include "macdictlookup.hxx"
 
-static ResMgr *pSwResMgr = NULL;
+static ResMgr *pSwResMgr = nullptr;
 
 OUString GetMacDictLoookupResString( int nId )
 {
