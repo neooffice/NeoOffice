@@ -195,6 +195,10 @@ static PyRef importUnoModule( )
     return dict;
 #ifdef USE_JAVA
     }
+    catch( const css::uno::RuntimeException& e )
+    {
+        throw;
+    }
     catch ( ... )
     {
         throw RuntimeException( "python module \"uno\" raised an unknown exception" );
