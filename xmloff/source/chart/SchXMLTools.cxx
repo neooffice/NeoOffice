@@ -27,7 +27,6 @@
 #include "SchXMLTools.hxx"
 
 #include <rtl/ustrbuf.hxx>
-#include <comphelper/InlineContainer.hxx>
 #include <xmloff/xmluconv.hxx>
 #include <xmloff/xmlement.hxx>
 #include <xmloff/xmlimppr.hxx>
@@ -44,6 +43,7 @@
 #include <com/sun/star/chart2/data/XDataProvider.hpp>
 #include <com/sun/star/chart2/data/XDataReceiver.hpp>
 #include <com/sun/star/chart2/data/XRangeXMLConversion.hpp>
+#include <com/sun/star/chart2/data/XPivotTableDataProvider.hpp>
 #include <com/sun/star/chart2/XChartDocument.hpp>
 #include <com/sun/star/chart2/XCoordinateSystemContainer.hpp>
 #include <com/sun/star/chart2/XRegressionCurveContainer.hpp>
@@ -54,6 +54,8 @@
 #include <com/sun/star/lang/XServiceName.hpp>
 
 #include <comphelper/processfactory.hxx>
+#include <algorithm>
+#include <map>
 
 using namespace com::sun::star;
 using namespace ::xmloff::token;
@@ -132,7 +134,7 @@ Reference< chart2::data::XDataSequence > lcl_createNewSequenceFromCachedXMLRange
 namespace SchXMLTools
 {
 
-static const SvXMLEnumMapEntry aXMLChartClassMap[] =
+static const SvXMLEnumMapEntry<SchXMLChartTypeEnum> aXMLChartClassMap[] =
 {
     { XML_LINE,         XML_CHART_CLASS_LINE    },
     { XML_AREA,         XML_CHART_CLASS_AREA    },
@@ -152,54 +154,39 @@ static const SvXMLEnumMapEntry aXMLChartClassMap[] =
 
 SchXMLChartTypeEnum GetChartTypeEnum( const OUString& rClassName )
 {
-    sal_uInt16 nEnumVal = XML_CHART_CLASS_UNKNOWN;
-    if( !SvXMLUnitConverter::convertEnum(
-                                    nEnumVal, rClassName, aXMLChartClassMap ) )
-        nEnumVal = XML_CHART_CLASS_UNKNOWN;
-    return SchXMLChartTypeEnum(nEnumVal);
+    SchXMLChartTypeEnum nEnumVal = XML_CHART_CLASS_UNKNOWN;
+    SvXMLUnitConverter::convertEnum( nEnumVal, rClassName, aXMLChartClassMap );
+    return nEnumVal;
 }
 
-typedef ::comphelper::MakeMap< OUString, OUString > tMakeStringStringMap;
+typedef std::map< OUString, OUString > tMakeStringStringMap;
 //static
 const tMakeStringStringMap& lcl_getChartTypeNameMap()
 {
     //shape property -- chart model object property
-    static const tMakeStringStringMap g_aChartTypeNameMap =
-        tMakeStringStringMap
-        ( OUString( "com.sun.star.chart.LineDiagram" )
-        , OUString( "com.sun.star.chart2.LineChartType" ) )
-
-        ( OUString( "com.sun.star.chart.AreaDiagram" )
-        , OUString( "com.sun.star.chart2.AreaChartType" ) )
-
-        ( OUString( "com.sun.star.chart.BarDiagram" )
-        , OUString( "com.sun.star.chart2.ColumnChartType" ) )
-
-        ( OUString( "com.sun.star.chart.PieDiagram" )
-        , OUString( "com.sun.star.chart2.PieChartType" ) )
-
-        ( OUString( "com.sun.star.chart.DonutDiagram" )
-        , OUString( "com.sun.star.chart2.DonutChartType" ) )
-
-        ( OUString( "com.sun.star.chart.XYDiagram" )
-        , OUString( "com.sun.star.chart2.ScatterChartType" ) )
-
-        ( OUString( "com.sun.star.chart.NetDiagram" )
-        , OUString( "com.sun.star.chart2.NetChartType" ) )
-
-        ( OUString( "com.sun.star.chart.FilledNetDiagram" )
-        , OUString( "com.sun.star.chart2.FilledNetChartType" ) )
-
-        ( OUString( "com.sun.star.chart.StockDiagram" )
-        , OUString( "com.sun.star.chart2.CandleStickChartType" ) )
-
-        ( OUString( "com.sun.star.chart.BubbleDiagram" )
-        , OUString( "com.sun.star.chart2.BubbleChartType" ) )
-
-        ( OUString( "com.sun.star.chart.GL3DBarDiagram" )
-        , OUString( "com.sun.star.chart2.GL3DBarChartType" ) )
-
-        ;
+    static const tMakeStringStringMap g_aChartTypeNameMap{
+        {"com.sun.star.chart.LineDiagram",
+         "com.sun.star.chart2.LineChartType"},
+        {"com.sun.star.chart.AreaDiagram",
+         "com.sun.star.chart2.AreaChartType"},
+        {"com.sun.star.chart.BarDiagram",
+         "com.sun.star.chart2.ColumnChartType"},
+        {"com.sun.star.chart.PieDiagram",
+         "com.sun.star.chart2.PieChartType"},
+        {"com.sun.star.chart.DonutDiagram",
+         "com.sun.star.chart2.DonutChartType"},
+        {"com.sun.star.chart.XYDiagram",
+         "com.sun.star.chart2.ScatterChartType"},
+        {"com.sun.star.chart.NetDiagram",
+         "com.sun.star.chart2.NetChartType"},
+        {"com.sun.star.chart.FilledNetDiagram",
+         "com.sun.star.chart2.FilledNetChartType"},
+        {"com.sun.star.chart.StockDiagram",
+         "com.sun.star.chart2.CandleStickChartType"},
+        {"com.sun.star.chart.BubbleDiagram",
+         "com.sun.star.chart2.BubbleChartType"},
+        {"com.sun.star.chart.GL3DBarDiagram",
+         "com.sun.star.chart2.GL3DBarChartType"}};
     return g_aChartTypeNameMap;
 }
 
@@ -389,7 +376,7 @@ Reference< chart2::data::XDataSequence > CreateDataSequence(
             bool bVal = false;
             uno::Any any = xPropSet->getPropertyValue("UseInternalDataProvider");
             if (any >>= bVal)
-                bUseInternal = static_cast<bool>(bVal);
+                bUseInternal = bVal;
         }
         catch (const beans::UnknownPropertyException&)
         {
@@ -413,7 +400,7 @@ Reference< chart2::data::XDataSequence > CreateDataSequence(
     if( !xRet.is() && !xChartDoc->hasInternalDataProvider() && !rRange.isEmpty() )
     {
         //#i103911# switch to internal data in case the parent cannot provide the requested data
-        xChartDoc->createInternalDataProvider( sal_True /* bCloneExistingData */ );
+        xChartDoc->createInternalDataProvider( true /* bCloneExistingData */ );
         xDataProvider = xChartDoc->getDataProvider();
         try
         {
@@ -509,11 +496,21 @@ void CreateCategories(
                                             bRangeConverted = true;
                                         }
                                     }
-                                    Reference< chart2::data::XDataSequence > xSeq(
-                                        xDataProvider->createDataSequenceByRangeRepresentation( aConvertedRange ));
-                                    xLabeledSeq->setValues( xSeq );
-                                    if( bRangeConverted )
-                                        setXMLRangePropertyAtDataSequence( xSeq, rRangeAddress );
+
+                                    Reference<chart2::data::XDataSequence> xSequence;
+                                    Reference<chart2::data::XPivotTableDataProvider> xPivotTableDataProvider(xDataProvider, uno::UNO_QUERY);
+                                    if (xPivotTableDataProvider.is())
+                                    {
+                                        xSequence.set(xPivotTableDataProvider->createDataSequenceOfCategories());
+                                    }
+                                    else
+                                    {
+                                        xSequence.set(xDataProvider->createDataSequenceByRangeRepresentation(aConvertedRange));
+                                        if (bRangeConverted)
+                                            setXMLRangePropertyAtDataSequence(xSequence, rRangeAddress);
+                                    }
+                                    xLabeledSeq->setValues(xSequence);
+
                                 }
                                 catch( const lang::IllegalArgumentException & ex )
                                 {
@@ -752,7 +749,7 @@ bool switchBackToDataProviderFromParent( const Reference< chart2::XChartDocument
     return true;
 }
 
-void setBuildIDAtImportInfo( uno::Reference< frame::XModel > xModel, Reference< beans::XPropertySet > xImportInfo )
+void setBuildIDAtImportInfo( const uno::Reference< frame::XModel >& xModel, const Reference< beans::XPropertySet >& xImportInfo )
 {
     OUString aGenerator( lcl_getGeneratorFromModelOrItsParent(xModel) );
     if( !aGenerator.isEmpty() )
@@ -862,7 +859,7 @@ bool isDocumentGeneratedWithOpenOfficeOlderThan2_3( const uno::Reference< frame:
     return bResult;
 }
 
-bool isDocumentGeneratedWithOpenOfficeOlderThan2_0( const ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel >& xChartModel)
+bool isDocumentGeneratedWithOpenOfficeOlderThan2_0( const css::uno::Reference< css::frame::XModel >& xChartModel)
 {
     bool bResult = false;
     OUString aGenerator( lcl_getGeneratorFromModelOrItsParent(xChartModel) );
@@ -898,8 +895,7 @@ Reference< chart2::data::XDataProvider > getDataProviderFromParent( const Refere
             const OUString * pEnd = pBegin + aServiceNames.getLength();
             if( ::std::find( pBegin, pEnd, aDataProviderServiceName ) != pEnd )
             {
-                xRet = Reference< chart2::data::XDataProvider >(
-                    xFact->createInstance( aDataProviderServiceName ), uno::UNO_QUERY );
+                xRet.set( xFact->createInstance( aDataProviderServiceName ), uno::UNO_QUERY );
             }
         }
     }
