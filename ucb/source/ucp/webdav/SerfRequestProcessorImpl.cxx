@@ -69,7 +69,7 @@ void SerfRequestProcessorImpl::handleChunkedEncoding (
     serf_bucket_t* pRequestBucket,
     apr_int64_t nLength) const
 {
-    if (pRequestBucket != NULL)
+    if (pRequestBucket != nullptr)
     {
         if (useChunkedEncoding())
         {
