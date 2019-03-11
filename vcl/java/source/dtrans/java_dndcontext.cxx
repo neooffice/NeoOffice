@@ -58,7 +58,7 @@ JavaDragSourceContext::~JavaDragSourceContext()
 
 // ------------------------------------------------------------------------
 
-sal_Int32 SAL_CALL JavaDragSourceContext::getCurrentCursor() throw( ::com::sun::star::uno::RuntimeException, std::exception )
+sal_Int32 SAL_CALL JavaDragSourceContext::getCurrentCursor() throw()
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaDragSourceContext::getCurrentCursor not implemented\n" );
@@ -68,7 +68,7 @@ sal_Int32 SAL_CALL JavaDragSourceContext::getCurrentCursor() throw( ::com::sun::
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaDragSourceContext::setCursor( sal_Int32 /* cursorId */ ) throw( ::com::sun::star::uno::RuntimeException, std::exception )
+void SAL_CALL JavaDragSourceContext::setCursor( sal_Int32 /* cursorId */ ) throw()
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaDragSourceContext::setCursor not implemented\n" );
@@ -77,7 +77,7 @@ void SAL_CALL JavaDragSourceContext::setCursor( sal_Int32 /* cursorId */ ) throw
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaDragSourceContext::setImage( sal_Int32 /* imageId */ ) throw( ::com::sun::star::uno::RuntimeException, std::exception )
+void SAL_CALL JavaDragSourceContext::setImage( sal_Int32 /* imageId */ ) throw()
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaDragSourceContext::setImage not implemented\n" );
@@ -86,7 +86,7 @@ void SAL_CALL JavaDragSourceContext::setImage( sal_Int32 /* imageId */ ) throw( 
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaDragSourceContext::transferablesFlavorsChanged() throw( ::com::sun::star::uno::RuntimeException, std::exception )
+void SAL_CALL JavaDragSourceContext::transferablesFlavorsChanged() throw()
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaDragSourceContext::transferablesFlavorsChanged not implemented\n" );
@@ -170,7 +170,7 @@ JavaDropTargetDragContext::~JavaDropTargetDragContext()
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaDropTargetDragContext::acceptDrag( sal_Int8 dragOperation ) throw( ::com::sun::star::uno::RuntimeException, std::exception )
+void SAL_CALL JavaDropTargetDragContext::acceptDrag( sal_Int8 dragOperation ) throw()
 {
 	mnAction &= datatransfer::dnd::DNDConstants::ACTION_DEFAULT;
 
@@ -184,7 +184,7 @@ void SAL_CALL JavaDropTargetDragContext::acceptDrag( sal_Int8 dragOperation ) th
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaDropTargetDragContext::rejectDrag() throw( ::com::sun::star::uno::RuntimeException, std::exception )
+void SAL_CALL JavaDropTargetDragContext::rejectDrag() throw()
 {
 	mbRejected = true;
 }

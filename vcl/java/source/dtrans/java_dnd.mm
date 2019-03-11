@@ -1073,7 +1073,7 @@ JavaDragSource::~JavaDragSource()
 
 // ------------------------------------------------------------------------
 
-void JavaDragSource::initialize( const uno::Sequence< uno::Any >& arguments ) throw( uno::RuntimeException, std::exception )
+void JavaDragSource::initialize( const uno::Sequence< uno::Any >& arguments )
 {
 	NSView *pView = nil;
 	if ( arguments.getLength() > 1 )
@@ -1110,21 +1110,21 @@ void JavaDragSource::initialize( const uno::Sequence< uno::Any >& arguments ) th
 
 // ------------------------------------------------------------------------
 
-sal_Bool JavaDragSource::isDragImageSupported() throw( uno::RuntimeException, std::exception )
+sal_Bool JavaDragSource::isDragImageSupported() throw()
 {
 	return sal_False;
 }
 
 // ------------------------------------------------------------------------
 
-sal_Int32 JavaDragSource::getDefaultCursor( sal_Int8 /* dragAction */ ) throw( lang::IllegalArgumentException, uno::RuntimeException, std::exception )
+sal_Int32 JavaDragSource::getDefaultCursor( sal_Int8 /* dragAction */ ) throw()
 {
 	return 0;
 }
 
 // ------------------------------------------------------------------------
 
-void JavaDragSource::startDrag( const datatransfer::dnd::DragGestureEvent& /* trigger */, sal_Int8 sourceActions, sal_Int32 /* cursor */, sal_Int32 /* image */, const uno::Reference< datatransfer::XTransferable >& transferable, const uno::Reference< datatransfer::dnd::XDragSourceListener >& listener ) throw( uno::RuntimeException, std::exception )
+void JavaDragSource::startDrag( const datatransfer::dnd::DragGestureEvent& /* trigger */, sal_Int8 sourceActions, sal_Int32 /* cursor */, sal_Int32 /* image */, const uno::Reference< datatransfer::XTransferable >& transferable, const uno::Reference< datatransfer::dnd::XDragSourceListener >& listener ) throw()
 {
 	datatransfer::dnd::DragSourceDropEvent aDragEvent;
 	aDragEvent.Source = uno::Reference< uno::XInterface >( static_cast< OWeakObject* >( this ) );
@@ -1183,14 +1183,14 @@ void JavaDragSource::startDrag( const datatransfer::dnd::DragGestureEvent& /* tr
 
 // ------------------------------------------------------------------------
 
-OUString JavaDragSource::getImplementationName() throw( uno::RuntimeException, std::exception )
+OUString JavaDragSource::getImplementationName() throw()
 {
 	return "com.sun.star.comp.datatransfer.dnd.OleDragSource_V1";
 }
 
 // ------------------------------------------------------------------------
 
-sal_Bool JavaDragSource::supportsService( const OUString& serviceName ) throw( uno::RuntimeException, std::exception )
+sal_Bool JavaDragSource::supportsService( const OUString& serviceName ) throw()
 {
 	uno::Sequence < OUString > aSupportedServicesNames = JavaDragSource_getSupportedServiceNames();
 
@@ -1203,7 +1203,7 @@ sal_Bool JavaDragSource::supportsService( const OUString& serviceName ) throw( u
 
 // ------------------------------------------------------------------------
 
-uno::Sequence< OUString > JavaDragSource::getSupportedServiceNames() throw( uno::RuntimeException, std::exception )
+uno::Sequence< OUString > JavaDragSource::getSupportedServiceNames() throw()
 {
 	return JavaDragSource_getSupportedServiceNames();
 }
@@ -1275,7 +1275,7 @@ void JavaDropTarget::disposing()
 
 // --------------------------------------------------------------------------
 
-void JavaDropTarget::initialize( const uno::Sequence< uno::Any >& arguments ) throw( uno::RuntimeException, std::exception )
+void JavaDropTarget::initialize( const uno::Sequence< uno::Any >& arguments )
 {
 	NSView *pView = nil;
 
@@ -1313,56 +1313,56 @@ void JavaDropTarget::initialize( const uno::Sequence< uno::Any >& arguments ) th
 
 // --------------------------------------------------------------------------
 
-void JavaDropTarget::addDropTargetListener( const uno::Reference< datatransfer::dnd::XDropTargetListener >& xListener ) throw( uno::RuntimeException, std::exception )
+void JavaDropTarget::addDropTargetListener( const uno::Reference< datatransfer::dnd::XDropTargetListener >& xListener ) throw()
 {
 	maListeners.push_back( xListener );
 }
 
 // --------------------------------------------------------------------------
 
-void JavaDropTarget::removeDropTargetListener( const uno::Reference< datatransfer::dnd::XDropTargetListener >& xListener ) throw( uno::RuntimeException, std::exception )
+void JavaDropTarget::removeDropTargetListener( const uno::Reference< datatransfer::dnd::XDropTargetListener >& xListener ) throw()
 {
 	maListeners.remove( xListener );
 }
 
 // --------------------------------------------------------------------------
 
-sal_Bool JavaDropTarget::isActive() throw( uno::RuntimeException, std::exception )
+sal_Bool JavaDropTarget::isActive() throw()
 {
 	return mbActive;
 }
 
 // --------------------------------------------------------------------------
 
-void JavaDropTarget::setActive( sal_Bool active ) throw( uno::RuntimeException, std::exception, std::exception )
+void JavaDropTarget::setActive( sal_Bool active ) throw()
 {
 	mbActive = active;
 }
 
 // --------------------------------------------------------------------------
 
-sal_Int8 JavaDropTarget::getDefaultActions() throw( uno::RuntimeException, std::exception )
+sal_Int8 JavaDropTarget::getDefaultActions() throw()
 {
 	return mnDefaultActions;
 }
 
 // --------------------------------------------------------------------------
 
-void JavaDropTarget::setDefaultActions( sal_Int8 actions ) throw( uno::RuntimeException, std::exception )
+void JavaDropTarget::setDefaultActions( sal_Int8 actions ) throw()
 {
 	mnDefaultActions = actions;
 }
 
 // --------------------------------------------------------------------------
 
-OUString JavaDropTarget::getImplementationName() throw( uno::RuntimeException, std::exception )
+OUString JavaDropTarget::getImplementationName() throw()
 {
 	return "com.sun.star.comp.datatransfer.dnd.OleDropTarget_V1";
 }
 
 // ------------------------------------------------------------------------
 
-sal_Bool JavaDropTarget::supportsService( const OUString& ServiceName ) throw( uno::RuntimeException, std::exception )
+sal_Bool JavaDropTarget::supportsService( const OUString& ServiceName ) throw()
 {
 	uno::Sequence < OUString > aSupportedServicesNames = JavaDropTarget_getSupportedServiceNames();
 
@@ -1375,7 +1375,7 @@ sal_Bool JavaDropTarget::supportsService( const OUString& ServiceName ) throw( u
 
 // ------------------------------------------------------------------------
 
-uno::Sequence< OUString > JavaDropTarget::getSupportedServiceNames() throw( uno::RuntimeException, std::exception )
+uno::Sequence< OUString > JavaDropTarget::getSupportedServiceNames() throw()
 {
 	return JavaDropTarget_getSupportedServiceNames();
 }

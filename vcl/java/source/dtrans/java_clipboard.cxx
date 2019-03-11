@@ -76,7 +76,7 @@ JavaClipboard::~JavaClipboard()
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaClipboard::flushClipboard( ) throw( uno::RuntimeException, std::exception )
+void SAL_CALL JavaClipboard::flushClipboard( ) throw()
 {
 	uno::Reference< datatransfer::XTransferable > aContents;
 
@@ -100,7 +100,7 @@ void SAL_CALL JavaClipboard::flushClipboard( ) throw( uno::RuntimeException, std
 
 // ------------------------------------------------------------------------
 
-uno::Reference< datatransfer::XTransferable > SAL_CALL JavaClipboard::getContents() throw( uno::RuntimeException, std::exception )
+uno::Reference< datatransfer::XTransferable > SAL_CALL JavaClipboard::getContents() throw()
 {
 	MutexGuard aGuard( maMutex );
 
@@ -170,7 +170,7 @@ uno::Reference< datatransfer::XTransferable > SAL_CALL JavaClipboard::getContent
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaClipboard::setContents( const uno::Reference< datatransfer::XTransferable >& xTransferable, const uno::Reference< datatransfer::clipboard::XClipboardOwner >& xClipboardOwner ) throw( uno::RuntimeException, std::exception )
+void SAL_CALL JavaClipboard::setContents( const uno::Reference< datatransfer::XTransferable >& xTransferable, const uno::Reference< datatransfer::clipboard::XClipboardOwner >& xClipboardOwner ) throw()
 {
 	ClearableMutexGuard aGuard( maMutex );
 
@@ -215,21 +215,21 @@ void SAL_CALL JavaClipboard::setContents( const uno::Reference< datatransfer::XT
 
 // ------------------------------------------------------------------------
 
-OUString SAL_CALL JavaClipboard::getName() throw( uno::RuntimeException, std::exception )
+OUString SAL_CALL JavaClipboard::getName() throw()
 {
 	return OUString();
 }
 
 // ------------------------------------------------------------------------
 
-sal_Int8 SAL_CALL JavaClipboard::getRenderingCapabilities() throw( uno::RuntimeException, std::exception )
+sal_Int8 SAL_CALL JavaClipboard::getRenderingCapabilities() throw()
 {
 	return datatransfer::clipboard::RenderingCapabilities::Delayed;
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaClipboard::addClipboardListener( const uno::Reference< datatransfer::clipboard::XClipboardListener >& listener ) throw( uno::RuntimeException, std::exception )
+void SAL_CALL JavaClipboard::addClipboardListener( const uno::Reference< datatransfer::clipboard::XClipboardListener >& listener ) throw()
 {
 	MutexGuard aGuard( maMutex );
 
@@ -238,7 +238,7 @@ void SAL_CALL JavaClipboard::addClipboardListener( const uno::Reference< datatra
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaClipboard::removeClipboardListener( const uno::Reference< datatransfer::clipboard::XClipboardListener >& listener ) throw( uno::RuntimeException, std::exception )
+void SAL_CALL JavaClipboard::removeClipboardListener( const uno::Reference< datatransfer::clipboard::XClipboardListener >& listener ) throw()
 {
 	MutexGuard aGuard( maMutex );
 
@@ -247,14 +247,14 @@ void SAL_CALL JavaClipboard::removeClipboardListener( const uno::Reference< data
 
 // ------------------------------------------------------------------------
 
-OUString SAL_CALL JavaClipboard::getImplementationName() throw( uno::RuntimeException, std::exception )
+OUString SAL_CALL JavaClipboard::getImplementationName() throw()
 {
 	return "com.sun.star.datatransfer.clipboard.AquaClipboard";
 }
 
 // ------------------------------------------------------------------------
 
-sal_Bool SAL_CALL JavaClipboard::supportsService( const OUString& ServiceName ) throw( uno::RuntimeException, std::exception )
+sal_Bool SAL_CALL JavaClipboard::supportsService( const OUString& ServiceName ) throw()
 {
 	uno::Sequence < OUString > aSupportedServicesNames = JavaClipboard_getSupportedServiceNames();
 
@@ -267,7 +267,7 @@ sal_Bool SAL_CALL JavaClipboard::supportsService( const OUString& ServiceName ) 
 
 // ------------------------------------------------------------------------
 
-uno::Sequence< OUString > SAL_CALL JavaClipboard::getSupportedServiceNames() throw( uno::RuntimeException, std::exception )
+uno::Sequence< OUString > SAL_CALL JavaClipboard::getSupportedServiceNames() throw()
 {
 	return JavaClipboard_getSupportedServiceNames();
 }
