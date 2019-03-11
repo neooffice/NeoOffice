@@ -16,7 +16,7 @@
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified March 2018 by Patrick Luby. NeoOffice is only distributed
+ *   Modified March 2019 by Patrick Luby. NeoOffice is only distributed
  *   under the GNU General Public License, Version 3 as allowed by Section 3.3
  *   of the Mozilla Public License, v. 2.0.
  *
