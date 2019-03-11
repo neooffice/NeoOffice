@@ -74,7 +74,7 @@ public:
 	static void			GetGlyphBounds( sal_Int32 nGlyph, JavaImplFont *pFont, tools::Rectangle &rRect );
 	static void			ClearLayoutDataCache();
 
-						SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel );
+						SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel, JavaImplFont *pFont );
 	virtual				~SalATSLayout();
 
 	virtual void		AdjustLayout( ImplLayoutArgs& rArgs ) override;

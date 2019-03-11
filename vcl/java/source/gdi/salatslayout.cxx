@@ -1173,8 +1173,25 @@ SalLayout *JavaSalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackL
 {
 	if ( nFallbackLevel && rArgs.mnFlags & SalLayoutFlags::DisableGlyphProcessing )
 		return nullptr;
+
+	// Fix crash in the CppunitTest_chart2_export unit by returning NULL if
+	// this graphic's font has not been set
+	JavaImplFont *pFont = nullptr;
+	if ( nFallbackLevel )
+	{
+		::std::unordered_map< int, JavaImplFont* >::const_iterator it = maFallbackFonts.find( nFallbackLevel );
+		if ( it != maFallbackFonts.end() && nFallbackLevel < MAX_FALLBACK )
+			pFont = it->second;
+	}
+	else if ( mpFont )
+	{
+		pFont = mpFont;
+	}
+
+	if ( pFont )
+		return new SalATSLayout( this, nFallbackLevel, pFont );
 	else
-		return new SalATSLayout( this, nFallbackLevel );
+		return nullptr;
 }
 
 // ============================================================================
@@ -1214,26 +1231,15 @@ void SalATSLayout::ClearLayoutDataCache()
 
 // ----------------------------------------------------------------------------
 
-SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
+SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel, JavaImplFont *pFont ) :
 	mpGraphics( pGraphics ),
 	mnFallbackLevel( nFallbackLevel ),
-	mpFont( nullptr ),
+	mpFont( new JavaImplFont( pFont ) ),
 	mpKashidaLayoutData( nullptr ),
 	mfOrigWidth( 0 ),
 	mfGlyphScaleX( 1.0 )
 {
 	SetUnitsPerPixel( UNITS_PER_PIXEL );
-
-	if ( mnFallbackLevel )
-	{
-		::std::unordered_map< int, JavaImplFont* >::const_iterator it = mpGraphics->maFallbackFonts.find( mnFallbackLevel );
-		if ( it != mpGraphics->maFallbackFonts.end() && mnFallbackLevel < MAX_FALLBACK )
-			mpFont = new JavaImplFont( it->second );
-	}
-	else
-	{
-		mpFont = new JavaImplFont( mpGraphics->mpFont );
-	}
 }
 
 // ----------------------------------------------------------------------------
