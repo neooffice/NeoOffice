@@ -16,7 +16,7 @@
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
- *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+ *   Modified March 2019 by Patrick Luby. NeoOffice is only distributed
  *   under the GNU General Public License, Version 3 as allowed by Section 3.3
  *   of the Mozilla Public License, v. 2.0.
  *
@@ -26,52 +26,55 @@
 
 #include <config_features.h>
 
-#include <sys/stat.h>
-
-#include <stack>
-#include "osl/diagnose.h"
-#include <rtl/uri.hxx>
-#include <rtl/ustrbuf.hxx>
-#include <osl/time.h>
-#include <osl/file.hxx>
-#include <com/sun/star/lang/IllegalAccessException.hpp>
-#include <com/sun/star/beans/IllegalTypeException.hpp>
-#include <com/sun/star/ucb/InteractiveAugmentedIOException.hpp>
-#include <com/sun/star/ucb/InsertCommandArgument.hpp>
-#include <com/sun/star/ucb/NameClash.hpp>
-#include <com/sun/star/ucb/Store.hpp>
-#include <com/sun/star/ucb/XContentIdentifier.hpp>
-#include <com/sun/star/lang/XComponent.hpp>
-#include <com/sun/star/ucb/XContentAccess.hpp>
-#include <com/sun/star/beans/PropertyAttribute.hpp>
-#include <com/sun/star/io/XSeekable.hpp>
-#include <com/sun/star/io/XTruncate.hpp>
-#include <com/sun/star/ucb/OpenCommandArgument.hpp>
-#include <com/sun/star/ucb/XPropertySetRegistryFactory.hpp>
-#include <com/sun/star/ucb/TransferInfo.hpp>
-#include <com/sun/star/ucb/ContentInfoAttribute.hpp>
-#include <com/sun/star/beans/PropertyChangeEvent.hpp>
-#include <com/sun/star/beans/XPropertiesChangeListener.hpp>
-#include <rtl/string.hxx>
-#include "filerror.hxx"
-#include "filglob.hxx"
-#include "filcmd.hxx"
-#include "filinpstr.hxx"
-#include "filstr.hxx"
-#include "filrset.hxx"
-#include "filrow.hxx"
-#include "filprp.hxx"
-#include "filid.hxx"
-#include "shell.hxx"
-#include "prov.hxx"
-#include "bc.hxx"
+#include <sal/config.h>
 
 #if defined USE_JAVA && defined MACOSX
+#include <sys/stat.h>
+
 #include <osl/thread.h>
+#else	// USE_JAVA && MACOSX
+#if HAVE_FEATURE_MACOSX_SANDBOX
+#include <sys/stat.h>
+#endif
 #endif	// USE_JAVA && MACOSX
+
+#include <com/sun/star/beans/IllegalTypeException.hpp>
+#include <com/sun/star/beans/NotRemoveableException.hpp>
+#include <com/sun/star/beans/PropertyAttribute.hpp>
+#include <com/sun/star/beans/PropertyExistException.hpp>
+#include <com/sun/star/io/BufferSizeExceededException.hpp>
+#include <com/sun/star/io/NotConnectedException.hpp>
+#include <com/sun/star/io/IOException.hpp>
+#include <com/sun/star/lang/IllegalAccessException.hpp>
+#include <com/sun/star/task/InteractionClassification.hpp>
+#include <com/sun/star/ucb/ContentInfoAttribute.hpp>
+#include <com/sun/star/ucb/IOErrorCode.hpp>
+#include <com/sun/star/ucb/InsertCommandArgument.hpp>
+#include <com/sun/star/ucb/InteractiveAugmentedIOException.hpp>
+#include <com/sun/star/ucb/NameClash.hpp>
+#include <com/sun/star/ucb/OpenCommandArgument.hpp>
+#include <com/sun/star/ucb/Store.hpp>
+#include <rtl/uri.hxx>
+
+#include "filtask.hxx"
+#include "filcmd.hxx"
+#include "filglob.hxx"
+#include "filinpstr.hxx"
+#include "filprp.hxx"
+#include "filrset.hxx"
+#include "filstr.hxx"
+#include "prov.hxx"
+
+/******************************************************************************/
+/*                                                                            */
+/*                              TaskHandling                                  */
+/*                                                                            */
+/******************************************************************************/
+
 
 using namespace fileaccess;
 using namespace com::sun::star;
+using namespace com::sun::star::uno;
 using namespace com::sun::star::ucb;
 
 #if OSL_DEBUG_LEVEL > 0
@@ -80,18 +83,18 @@ using namespace com::sun::star::ucb;
 #define THROW_WHERE ""
 #endif
 
-shell::UnqPathData::UnqPathData()
-    : properties( 0 ),
-      notifier( 0 ),
-      xS( 0 ),
-      xC( 0 ),
-      xA( 0 )
+TaskManager::UnqPathData::UnqPathData()
+    : properties( nullptr ),
+      notifier( nullptr ),
+      xS( nullptr ),
+      xC( nullptr ),
+      xA( nullptr )
 {
     // empty
 }
 
 
-shell::UnqPathData::UnqPathData( const UnqPathData& a )
+TaskManager::UnqPathData::UnqPathData( const UnqPathData& a )
     : properties( a.properties ),
       notifier( a.notifier ),
       xS( a.xS ),
@@ -101,29 +104,29 @@ shell::UnqPathData::UnqPathData( const UnqPathData& a )
 }
 
 
-shell::UnqPathData& shell::UnqPathData::operator=( UnqPathData& a )
+TaskManager::UnqPathData& TaskManager::UnqPathData::operator=( UnqPathData& a )
 {
     properties = a.properties;
     notifier = a.notifier;
     xS = a.xS;
     xC = a.xC;
     xA = a.xA;
-    a.properties = 0;
-    a.notifier = 0;
-    a.xS = 0;
-    a.xC = 0;
-    a.xA = 0;
+    a.properties = nullptr;
+    a.notifier = nullptr;
+    a.xS = nullptr;
+    a.xC = nullptr;
+    a.xA = nullptr;
     return *this;
 }
 
-shell::UnqPathData::~UnqPathData()
+TaskManager::UnqPathData::~UnqPathData()
 {
     delete properties;
     delete notifier;
 }
 
-shell::MyProperty::MyProperty( const OUString&                         __PropertyName )
-    : PropertyName( __PropertyName )
+TaskManager::MyProperty::MyProperty( const OUString&                         thePropertyName )
+    : PropertyName( thePropertyName )
     , Handle(-1)
     , isNative(false)
     , State(beans::PropertyState_AMBIGUOUS_VALUE)
@@ -132,36 +135,34 @@ shell::MyProperty::MyProperty( const OUString&                         __Propert
     // empty
 }
 
-shell::MyProperty::MyProperty( const bool&                                  __isNative,
-                               const OUString&                              __PropertyName,
-                               const sal_Int32&                             __Handle,
-                               const com::sun::star::uno::Type&              __Typ,
-                               const com::sun::star::uno::Any&              __Value,
-                               const com::sun::star::beans::PropertyState&  __State,
-                               const sal_Int16&                             __Attributes )
-    : PropertyName( __PropertyName ),
-      Handle( __Handle ),
-      isNative( __isNative ),
-      Typ( __Typ ),
-      Value( __Value ),
-      State( __State ),
-      Attributes( __Attributes )
+TaskManager::MyProperty::MyProperty( bool                               theisNative,
+                               const OUString&                    thePropertyName,
+                               sal_Int32                          theHandle,
+                               const css::uno::Type&              theTyp,
+                               const css::uno::Any&               theValue,
+                               const css::beans::PropertyState&   theState,
+                               sal_Int16                          theAttributes )
+    : PropertyName( thePropertyName ),
+      Handle( theHandle ),
+      isNative( theisNative ),
+      Typ( theTyp ),
+      Value( theValue ),
+      State( theState ),
+      Attributes( theAttributes )
 {
     // empty
 }
 
-shell::MyProperty::~MyProperty()
+TaskManager::MyProperty::~MyProperty()
 {
     // empty for now
 }
 
-
 #include "filinl.hxx"
 
-
-shell::shell( const uno::Reference< uno::XComponentContext >& rxContext,
+TaskManager::TaskManager( const uno::Reference< uno::XComponentContext >& rxContext,
               FileProvider* pProvider, bool bWithConfig )
-    : TaskManager(),
+    : m_nCommandId( 0 ),
       m_bWithConfig( bWithConfig ),
       m_pProvider( pProvider ),
       m_xContext( rxContext ),
@@ -297,7 +298,7 @@ shell::shell( const uno::Reference< uno::XComponentContext >& rxContext,
             beans::PropertyState_DEFAULT_VALUE,
             beans::PropertyAttribute::MAYBEVOID
             | beans::PropertyAttribute::BOUND
-#if defined( WNT )
+#if defined(_WIN32)
         ));
 #else
     | beans::PropertyAttribute::READONLY)); // under unix/linux only readable
@@ -305,13 +306,11 @@ shell::shell( const uno::Reference< uno::XComponentContext >& rxContext,
 
 
     // ContentType
-    uno::Any aAny;
-    aAny <<= OUString();
     m_aDefaultProperties.insert( MyProperty( false,
                                              ContentType,
                                              -1 ,
                                              cppu::UnoType<OUString>::get(),
-                                             aAny,
+                                             uno::Any(OUString()),
                                              beans::PropertyState_DEFAULT_VALUE,
                                              beans::PropertyAttribute::MAYBEVOID
                                              | beans::PropertyAttribute::BOUND
@@ -353,7 +352,7 @@ shell::shell( const uno::Reference< uno::XComponentContext >& rxContext,
     m_aDefaultProperties.insert( MyProperty( true,
                                              CreatableContentsInfo,
                                              -1 ,
-                                             getCppuType( static_cast< const uno::Sequence< ucb::ContentInfo > * >( 0 ) ),
+                                             cppu::UnoType<uno::Sequence< ucb::ContentInfo >>::get(),
                                              uno::Any(),
                                              beans::PropertyState_DEFAULT_VALUE,
                                              beans::PropertyAttribute::MAYBEVOID
@@ -363,19 +362,19 @@ shell::shell( const uno::Reference< uno::XComponentContext >& rxContext,
     // Commands
     m_sCommandInfo[0].Name = "getCommandInfo";
     m_sCommandInfo[0].Handle = -1;
-    m_sCommandInfo[0].ArgType = getCppuVoidType();
+    m_sCommandInfo[0].ArgType = cppu::UnoType<void>::get();
 
     m_sCommandInfo[1].Name = "getPropertySetInfo";
     m_sCommandInfo[1].Handle = -1;
-    m_sCommandInfo[1].ArgType = getCppuVoidType();
+    m_sCommandInfo[1].ArgType = cppu::UnoType<void>::get();
 
     m_sCommandInfo[2].Name = "getPropertyValues";
     m_sCommandInfo[2].Handle = -1;
-    m_sCommandInfo[2].ArgType = getCppuType( static_cast< uno::Sequence< beans::Property >* >( 0 ) );
+    m_sCommandInfo[2].ArgType = cppu::UnoType<uno::Sequence< beans::Property >>::get();
 
     m_sCommandInfo[3].Name = "setPropertyValues";
     m_sCommandInfo[3].Handle = -1;
-    m_sCommandInfo[3].ArgType = getCppuType( static_cast< uno::Sequence< beans::PropertyValue >* >( 0 ) );
+    m_sCommandInfo[3].ArgType = cppu::UnoType<uno::Sequence< beans::PropertyValue >>::get();
 
     m_sCommandInfo[4].Name = "open";
     m_sCommandInfo[4].Handle = -1;
@@ -406,10 +405,128 @@ shell::shell( const uno::Reference< uno::XComponentContext >& rxContext,
 }
 
 
-shell::~shell()
+TaskManager::~TaskManager()
 {
 }
 
+
+void SAL_CALL
+TaskManager::startTask(
+    sal_Int32 CommandId,
+    const uno::Reference< XCommandEnvironment >& xCommandEnv )
+{
+    osl::MutexGuard aGuard( m_aMutex );
+    TaskMap::iterator it = m_aTaskMap.find( CommandId );
+    if( it != m_aTaskMap.end() )
+    {
+        throw DuplicateCommandIdentifierException( OSL_LOG_PREFIX );
+    }
+    m_aTaskMap[ CommandId ] = TaskHandling( xCommandEnv );
+}
+
+
+void SAL_CALL
+TaskManager::endTask( sal_Int32 CommandId,
+                      const OUString& aUncPath,
+                      BaseContent* pContent)
+{
+    osl::MutexGuard aGuard( m_aMutex );
+    TaskMap::iterator it = m_aTaskMap.find( CommandId );
+    if( it == m_aTaskMap.end() )
+        return;
+
+    sal_Int32 ErrorCode = it->second.getInstalledError();
+    sal_Int32 MinorCode = it->second.getMinorErrorCode();
+    bool isHandled = it->second.isHandled();
+
+    Reference< XCommandEnvironment > xComEnv
+        = it->second.getCommandEnvironment();
+
+    m_aTaskMap.erase( it );
+
+    if( ErrorCode != TASKHANDLER_NO_ERROR )
+        throw_handler(
+            ErrorCode,
+            MinorCode,
+            xComEnv,
+            aUncPath,
+            pContent,
+            isHandled);
+}
+
+
+void SAL_CALL
+TaskManager::abort( sal_Int32 CommandId )
+{
+    if( CommandId )
+    {
+        osl::MutexGuard aGuard( m_aMutex );
+        TaskMap::iterator it = m_aTaskMap.find( CommandId );
+        if( it == m_aTaskMap.end() )
+            return;
+        else
+            it->second.abort();
+    }
+}
+
+
+void SAL_CALL TaskManager::clearError( sal_Int32 CommandId )
+{
+    osl::MutexGuard aGuard( m_aMutex );
+    TaskMap::iterator it = m_aTaskMap.find( CommandId );
+    if( it != m_aTaskMap.end() )
+        it->second.clearError();
+}
+
+
+void SAL_CALL TaskManager::retrieveError( sal_Int32 CommandId,
+                                          sal_Int32 &ErrorCode,
+                                          sal_Int32 &minorCode)
+{
+    osl::MutexGuard aGuard( m_aMutex );
+    TaskMap::iterator it = m_aTaskMap.find( CommandId );
+    if( it != m_aTaskMap.end() )
+    {
+        ErrorCode = it->second.getInstalledError();
+        minorCode = it->second. getMinorErrorCode();
+    }
+}
+
+
+void SAL_CALL TaskManager::installError( sal_Int32 CommandId,
+                                         sal_Int32 ErrorCode,
+                                         sal_Int32 MinorCode )
+{
+    osl::MutexGuard aGuard( m_aMutex );
+    TaskMap::iterator it = m_aTaskMap.find( CommandId );
+    if( it != m_aTaskMap.end() )
+        it->second.installError( ErrorCode,MinorCode );
+}
+
+
+sal_Int32 SAL_CALL
+TaskManager::getCommandId()
+{
+    osl::MutexGuard aGuard( m_aMutex );
+    return ++m_nCommandId;
+}
+
+
+void SAL_CALL TaskManager::handleTask(
+    sal_Int32 CommandId,
+    const uno::Reference< task::XInteractionRequest >& request )
+{
+    osl::MutexGuard aGuard( m_aMutex );
+    TaskMap::iterator it = m_aTaskMap.find( CommandId );
+    uno::Reference< task::XInteractionHandler > xInt;
+    if( it != m_aTaskMap.end() )
+    {
+        xInt = it->second.getInteractionHandler();
+        if( xInt.is() )
+            xInt->handle( request );
+        it->second.setHandled();
+    }
+}
 
 /*********************************************************************************/
 /*                                                                               */
@@ -423,7 +540,7 @@ shell::~shell()
 
 
 void SAL_CALL
-shell::registerNotifier( const OUString& aUnqPath, Notifier* pNotifier )
+TaskManager::registerNotifier( const OUString& aUnqPath, Notifier* pNotifier )
 {
     osl::MutexGuard aGuard( m_aMutex );
 
@@ -431,7 +548,7 @@ shell::registerNotifier( const OUString& aUnqPath, Notifier* pNotifier )
         m_aContent.insert( ContentMap::value_type( aUnqPath,UnqPathData() ) ).first;
 
     if( ! it->second.notifier )
-        it->second.notifier = new NotifierList();
+        it->second.notifier = new NotifierList;
 
     std::list< Notifier* >& nlist = *( it->second.notifier );
 
@@ -445,9 +562,8 @@ shell::registerNotifier( const OUString& aUnqPath, Notifier* pNotifier )
 }
 
 
-
 void SAL_CALL
-shell::deregisterNotifier( const OUString& aUnqPath,Notifier* pNotifier )
+TaskManager::deregisterNotifier( const OUString& aUnqPath,Notifier* pNotifier )
 {
     osl::MutexGuard aGuard( m_aMutex );
 
@@ -457,10 +573,9 @@ shell::deregisterNotifier( const OUString& aUnqPath,Notifier* pNotifier )
 
     it->second.notifier->remove( pNotifier );
 
-    if( ! it->second.notifier->size() )
+    if( it->second.notifier->empty() )
         m_aContent.erase( it );
 }
-
 
 
 /*********************************************************************************/
@@ -475,13 +590,10 @@ shell::deregisterNotifier( const OUString& aUnqPath,Notifier* pNotifier )
 
 
 void SAL_CALL
-shell::associate( const OUString& aUnqPath,
+TaskManager::associate( const OUString& aUnqPath,
                   const OUString& PropertyName,
                   const uno::Any& DefaultValue,
                   const sal_Int16 Attributes )
-    throw( beans::PropertyExistException,
-           beans::IllegalTypeException,
-           uno::RuntimeException )
 {
     MyProperty newProperty( false,
                             PropertyName,
@@ -491,7 +603,7 @@ shell::associate( const OUString& aUnqPath,
                             beans::PropertyState_DEFAULT_VALUE,
                             Attributes );
 
-    shell::PropertySet::iterator it1 = m_aDefaultProperties.find( newProperty );
+    TaskManager::PropertySet::iterator it1 = m_aDefaultProperties.find( newProperty );
     if( it1 != m_aDefaultProperties.end() )
         throw beans::PropertyExistException( THROW_WHERE );
 
@@ -516,18 +628,13 @@ shell::associate( const OUString& aUnqPath,
 }
 
 
-
-
 void SAL_CALL
-shell::deassociate( const OUString& aUnqPath,
+TaskManager::deassociate( const OUString& aUnqPath,
             const OUString& PropertyName )
-  throw( beans::UnknownPropertyException,
-     beans::NotRemoveableException,
-     uno::RuntimeException )
 {
     MyProperty oldProperty( PropertyName );
 
-    shell::PropertySet::iterator it1 = m_aDefaultProperties.find( oldProperty );
+    TaskManager::PropertySet::iterator it1 = m_aDefaultProperties.find( oldProperty );
     if( it1 != m_aDefaultProperties.end() )
         throw beans::NotRemoveableException( THROW_WHERE );
 
@@ -554,17 +661,15 @@ shell::deassociate( const OUString& aUnqPath,
 
         if( properties.find( ContentTProperty )->getState() == beans::PropertyState_DEFAULT_VALUE )
         {
-            it->second.xS = 0;
-            it->second.xC = 0;
-            it->second.xA = 0;
+            it->second.xS = nullptr;
+            it->second.xC = nullptr;
+            it->second.xA = nullptr;
             if(m_xFileRegistry.is())
                 m_xFileRegistry->removePropertySet( aUnqPath );
         }
     }
     notifyPropertyRemoved( getPropertySetListeners( aUnqPath ), PropertyName );
 }
-
-
 
 
 /*********************************************************************************/
@@ -577,13 +682,10 @@ shell::deassociate( const OUString& aUnqPath,
 //  URL aUnqPath into the XOutputStream
 
 
-
-void SAL_CALL shell::page( sal_Int32 CommandId,
+void SAL_CALL TaskManager::page( sal_Int32 CommandId,
                            const OUString& aUnqPath,
                            const uno::Reference< io::XOutputStream >& xOutputStream )
-    throw()
 {
-    uno::Reference< XContentProvider > xProvider( m_pProvider );
     osl::File aFile( aUnqPath );
     osl::FileBase::RC err = aFile.open( osl_File_OpenFlag_Read );
 
@@ -602,7 +704,7 @@ void SAL_CALL shell::page( sal_Int32 CommandId,
 
     do
     {
-        err = aFile.read( (void*) BFF,bfz,nrc );
+        err = aFile.read( static_cast<void*>(BFF),bfz,nrc );
         if(  err == osl::FileBase::E_None )
         {
             uno::Sequence< sal_Int8 > seq( BFF, (sal_uInt32)nrc );
@@ -667,31 +769,27 @@ void SAL_CALL shell::page( sal_Int32 CommandId,
 //  Given a file URL aUnqPath, this methods returns a XInputStream which reads from the open file.
 
 
-
 uno::Reference< io::XInputStream > SAL_CALL
-shell::open( sal_Int32 CommandId,
+TaskManager::open( sal_Int32 CommandId,
              const OUString& aUnqPath,
              bool bLock )
-    throw()
 {
-    XInputStream_impl* xInputStream = new XInputStream_impl( this, aUnqPath, bLock ); // from filinpstr.hxx
+    XInputStream_impl* pInputStream = new XInputStream_impl( aUnqPath, bLock ); // from filinpstr.hxx
 
-    sal_Int32 ErrorCode = xInputStream->CtorSuccess();
+    sal_Int32 ErrorCode = pInputStream->CtorSuccess();
 
     if( ErrorCode != TASKHANDLER_NO_ERROR )
     {
         installError( CommandId,
                       ErrorCode,
-                      xInputStream->getMinorError() );
+                      pInputStream->getMinorError() );
 
-        delete xInputStream;
-        xInputStream = 0;
+        delete pInputStream;
+        pInputStream = nullptr;
     }
 
-    return uno::Reference< io::XInputStream >( xInputStream );
+    return uno::Reference< io::XInputStream >( pInputStream );
 }
-
-
 
 
 /*********************************************************************************/
@@ -704,29 +802,26 @@ shell::open( sal_Int32 CommandId,
 //  to read and write from/to the file.
 
 
-
 uno::Reference< io::XStream > SAL_CALL
-shell::open_rw( sal_Int32 CommandId,
+TaskManager::open_rw( sal_Int32 CommandId,
                 const OUString& aUnqPath,
                 bool bLock )
-    throw()
 {
-    XStream_impl* xStream = new XStream_impl( this, aUnqPath, bLock );  // from filstr.hxx
+    XStream_impl* pStream = new XStream_impl( aUnqPath, bLock );  // from filstr.hxx
 
-    sal_Int32 ErrorCode = xStream->CtorSuccess();
+    sal_Int32 ErrorCode = pStream->CtorSuccess();
 
     if( ErrorCode != TASKHANDLER_NO_ERROR )
     {
         installError( CommandId,
                       ErrorCode,
-                      xStream->getMinorError() );
+                      pStream->getMinorError() );
 
-        delete xStream;
-        xStream = 0;
+        delete pStream;
+        pStream = nullptr;
     }
-    return uno::Reference< io::XStream >( xStream );
+    return uno::Reference< io::XStream >( pStream );
 }
-
 
 
 /*********************************************************************************/
@@ -739,14 +834,12 @@ shell::open_rw( sal_Int32 CommandId,
 //  to file URL aUnqPath
 
 
-
 uno::Reference< XDynamicResultSet > SAL_CALL
-shell::ls( sal_Int32 CommandId,
+TaskManager::ls( sal_Int32 CommandId,
            const OUString& aUnqPath,
            const sal_Int32 OpenMode,
            const uno::Sequence< beans::Property >& seq,
            const uno::Sequence< NumberedSortingInfo >& seqSort )
-    throw()
 {
     XResultSet_impl* p = new XResultSet_impl( this,aUnqPath,OpenMode,seq,seqSort );
 
@@ -759,13 +852,11 @@ shell::ls( sal_Int32 CommandId,
                       p->getMinorError() );
 
         delete p;
-        p = 0;
+        p = nullptr;
     }
 
     return uno::Reference< XDynamicResultSet > ( p );
 }
-
-
 
 
 /*********************************************************************************/
@@ -776,14 +867,11 @@ shell::ls( sal_Int32 CommandId,
 // Info for commands
 
 uno::Reference< XCommandInfo > SAL_CALL
-shell::info_c()
-    throw()
+TaskManager::info_c()
 {
     XCommandInfo_impl* p = new XCommandInfo_impl( this );
     return uno::Reference< XCommandInfo >( p );
 }
-
-
 
 
 /*********************************************************************************/
@@ -794,15 +882,12 @@ shell::info_c()
 // Info for the properties
 
 uno::Reference< beans::XPropertySetInfo > SAL_CALL
-shell::info_p( const OUString& aUnqPath )
-    throw()
+TaskManager::info_p( const OUString& aUnqPath )
 {
     osl::MutexGuard aGuard( m_aMutex );
     XPropertySetInfo_impl* p = new XPropertySetInfo_impl( this,aUnqPath );
     return uno::Reference< beans::XPropertySetInfo >( p );
 }
-
-
 
 
 /*********************************************************************************/
@@ -814,11 +899,9 @@ shell::info_p( const OUString& aUnqPath )
 //  Sets the values of the properties belonging to fileURL aUnqPath
 
 
-
 uno::Sequence< uno::Any > SAL_CALL
-shell::setv( const OUString& aUnqPath,
+TaskManager::setv( const OUString& aUnqPath,
              const uno::Sequence< beans::PropertyValue >& values )
-    throw()
 {
     osl::MutexGuard aGuard( m_aMutex );
 
@@ -826,9 +909,9 @@ shell::setv( const OUString& aUnqPath,
     uno::Sequence< uno::Any > ret( values.getLength() );
     uno::Sequence< beans::PropertyChangeEvent > seqChanged( values.getLength() );
 
-    shell::ContentMap::iterator it = m_aContent.find( aUnqPath );
+    TaskManager::ContentMap::iterator it = m_aContent.find( aUnqPath );
     PropertySet& properties = *( it->second.properties );
-    shell::PropertySet::iterator it1;
+    TaskManager::PropertySet::iterator it1;
     uno::Any aAny;
 
     for( sal_Int32 i = 0; i < values.getLength(); ++i )
@@ -854,7 +937,7 @@ shell::setv( const OUString& aUnqPath,
         seqChanged[ propChanged   ].PropertyName = values[i].Name;
         seqChanged[ propChanged   ].PropertyHandle   = -1;
         seqChanged[ propChanged   ].Further   = false;
-        seqChanged[ propChanged   ].OldValue <<= aAny;
+        seqChanged[ propChanged   ].OldValue = aAny;
         seqChanged[ propChanged++ ].NewValue = values[i].Value;
 
         it1->setValue( values[i].Value );  // Put the new value into the local cash
@@ -905,13 +988,13 @@ shell::setv( const OUString& aUnqPath,
                         --propChanged; // unsuccessful setting
                         uno::Sequence< uno::Any > names( 1 );
                         ret[0] <<= beans::PropertyValue(
-                            OUString("Uri"), -1,
+                            "Uri", -1,
                             uno::makeAny(aUnqPath),
                             beans::PropertyState_DIRECT_VALUE);
                         IOErrorCode ioError(IOErrorCode_GENERAL);
                         ret[i] <<= InteractiveAugmentedIOException(
                             OUString(),
-                            0,
+                            nullptr,
                             task::InteractionClassification_ERROR,
                             ioError,
                             names );
@@ -969,7 +1052,7 @@ shell::setv( const OUString& aUnqPath,
                         --propChanged; // unsuccessful setting
                         uno::Sequence< uno::Any > names( 1 );
                         names[0] <<= beans::PropertyValue(
-                            OUString("Uri"), -1,
+                            "Uri", -1,
                             uno::makeAny(aUnqPath),
                             beans::PropertyState_DIRECT_VALUE);
                         IOErrorCode ioError;
@@ -1019,7 +1102,7 @@ shell::setv( const OUString& aUnqPath,
                         }
                         ret[i] <<= InteractiveAugmentedIOException(
                             OUString(),
-                            0,
+                            nullptr,
                             task::InteractionClassification_ERROR,
                             ioError,
                             names );
@@ -1050,12 +1133,10 @@ shell::setv( const OUString& aUnqPath,
 //  Returns an XRow object containing the values in the requested order.
 
 
-
 uno::Reference< sdbc::XRow > SAL_CALL
-shell::getv( sal_Int32 CommandId,
+TaskManager::getv( sal_Int32 CommandId,
              const OUString& aUnqPath,
              const uno::Sequence< beans::Property >& properties )
-    throw()
 {
     uno::Sequence< uno::Any > seq( properties.getLength() );
 
@@ -1080,10 +1161,10 @@ shell::getv( sal_Int32 CommandId,
     {
         osl::MutexGuard aGuard( m_aMutex );
 
-        shell::ContentMap::iterator it = m_aContent.find( aUnqPath );
+        TaskManager::ContentMap::iterator it = m_aContent.find( aUnqPath );
         commit( it,aFileStatus );
 
-        shell::PropertySet::iterator it1;
+        TaskManager::PropertySet::iterator it1;
         PropertySet& propset = *(it->second.properties);
 
         for( sal_Int32 i = 0; i < seq.getLength(); ++i )
@@ -1119,11 +1200,10 @@ shell::getv( sal_Int32 CommandId,
 
 
 void SAL_CALL
-shell::move( sal_Int32 CommandId,
+TaskManager::move( sal_Int32 CommandId,
              const OUString& srcUnqPath,
              const OUString& dstUnqPathIn,
              const sal_Int32 NameClash )
-    throw()
 {
     // --> #i88446# Method notifyContentExchanged( getContentExchangedEventListeners( srcUnqPath,dstUnqPath,!isDocument ) ); crashes if
     // srcUnqPath and dstUnqPathIn are equal
@@ -1294,7 +1374,6 @@ shell::move( sal_Int32 CommandId,
 }
 
 
-
 /********************************************************************************/
 /*                                                                              */
 /*                         copy-implementation                                  */
@@ -1310,7 +1389,7 @@ bool getType(
     TaskManager & task, sal_Int32 id, OUString const & fileUrl,
     osl::DirectoryItem * item, osl::FileStatus::Type * type)
 {
-    OSL_ASSERT(item != 0 && type != 0);
+    OSL_ASSERT(item != nullptr && type != nullptr);
     osl::FileBase::RC err = osl::DirectoryItem::get(fileUrl, *item);
     if (err != osl::FileBase::E_None) {
         task.installError(id, TASKHANDLING_TRANSFER_BY_COPY_SOURCE, err);
@@ -1329,12 +1408,11 @@ bool getType(
 }
 
 void SAL_CALL
-shell::copy(
+TaskManager::copy(
     sal_Int32 CommandId,
     const OUString& srcUnqPath,
     const OUString& dstUnqPathIn,
     sal_Int32 NameClash )
-    throw()
 {
     osl::FileBase::RC nError;
     OUString dstUnqPath( dstUnqPathIn );
@@ -1368,7 +1446,7 @@ shell::copy(
 
     bool isDocument
         = type != osl::FileStatus::Directory && type != osl::FileStatus::Volume;
-    sal_Int32 IsWhat = isDocument ? -1 : 1;
+    FileUrlType IsWhat = isDocument ? FileUrlType::File : FileUrlType::Folder;
 
     switch( NameClash )
     {
@@ -1491,7 +1569,6 @@ shell::copy(
 }
 
 
-
 /********************************************************************************/
 /*                                                                              */
 /*                         remove-implementation                                */
@@ -1502,13 +1579,11 @@ shell::copy(
 //  Return: success of operation
 
 
-
 bool SAL_CALL
-shell::remove( sal_Int32 CommandId,
+TaskManager::remove( sal_Int32 CommandId,
                const OUString& aUnqPath,
-               sal_Int32 IsWhat,
+               FileUrlType IsWhat,
                bool  MustExist )
-    throw()
 {
     sal_Int32 nMask = osl_FileStatus_Mask_Type | osl_FileStatus_Mask_FileURL;
 
@@ -1516,7 +1591,7 @@ shell::remove( sal_Int32 CommandId,
     osl::FileStatus aStatus( nMask );
     osl::FileBase::RC nError;
 
-    if( IsWhat == 0 ) // Determine whether we are removing a directory or a file
+    if( IsWhat == FileUrlType::Unknown ) // Determine whether we are removing a directory or a file
     {
         nError = osl::DirectoryItem::get( aUnqPath, aItem );
         if( nError != osl::FileBase::E_None )
@@ -1541,14 +1616,14 @@ shell::remove( sal_Int32 CommandId,
 
         if( aStatus.getFileType() == osl::FileStatus::Regular ||
             aStatus.getFileType() == osl::FileStatus::Link )
-            IsWhat = -1;  // RemoveFile
+            IsWhat = FileUrlType::File;
         else if(  aStatus.getFileType() == osl::FileStatus::Directory ||
                   aStatus.getFileType() == osl::FileStatus::Volume )
-            IsWhat = +1;  // RemoveDirectory
+            IsWhat = FileUrlType::Folder;
     }
 
 
-    if( IsWhat == -1 )    // Removing a file
+    if( IsWhat == FileUrlType::File )
     {
         nError = osl::File::remove( aUnqPath );
         if( nError != osl::FileBase::E_None )
@@ -1567,7 +1642,7 @@ shell::remove( sal_Int32 CommandId,
             erasePersistentSet( aUnqPath ); // Removes from XPersistentPropertySet
         }
     }
-    else if( IsWhat == +1 )    // Removing a directory
+    else if( IsWhat == FileUrlType::Folder )
     {
         osl::Directory aDirectory( aUnqPath );
 
@@ -1584,7 +1659,7 @@ shell::remove( sal_Int32 CommandId,
         }
 
         bool whileSuccess = true;
-        sal_Int32 recurse = 0;
+        FileUrlType recurse = FileUrlType::Unknown;
         OUString name;
 
         nError = aDirectory.getNextItem( aItem );
@@ -1602,14 +1677,13 @@ shell::remove( sal_Int32 CommandId,
 
             if( aStatus.getFileType() == osl::FileStatus::Regular ||
                 aStatus.getFileType() == osl::FileStatus::Link )
-                recurse = -1;
+                recurse = FileUrlType::File;
             else if( aStatus.getFileType() == osl::FileStatus::Directory ||
                      aStatus.getFileType() == osl::FileStatus::Volume )
-                recurse = +1;
+                recurse = FileUrlType::Folder;
 
             name = aStatus.getFileURL();
-            whileSuccess = remove(
-                CommandId, name, recurse, MustExist );
+            whileSuccess = remove( CommandId, name, recurse, MustExist );
             if( !whileSuccess )
                 break;
 
@@ -1668,10 +1742,9 @@ shell::remove( sal_Int32 CommandId,
 
 
 bool SAL_CALL
-shell::mkdir( sal_Int32 CommandId,
+TaskManager::mkdir( sal_Int32 CommandId,
               const OUString& rUnqPath,
               bool OverWrite )
-    throw()
 {
     OUString aUnqPath;
 
@@ -1729,11 +1802,10 @@ shell::mkdir( sal_Int32 CommandId,
 
 
 bool SAL_CALL
-shell::mkfil( sal_Int32 CommandId,
+TaskManager::mkfil( sal_Int32 CommandId,
               const OUString& aUnqPath,
               bool Overwrite,
               const uno::Reference< io::XInputStream >& aInputStream )
-    throw()
 {
     // return value unimportant
     bool bSuccess = write( CommandId,
@@ -1761,11 +1833,10 @@ shell::mkfil( sal_Int32 CommandId,
 
 
 bool SAL_CALL
-shell::write( sal_Int32 CommandId,
+TaskManager::write( sal_Int32 CommandId,
               const OUString& aUnqPath,
               bool OverWrite,
               const uno::Reference< io::XInputStream >& aInputStream )
-    throw()
 {
     if( ! aInputStream.is() )
     {
@@ -1879,7 +1950,7 @@ shell::write( sal_Int32 CommandId,
         {
             const sal_Int8* p = seq.getConstArray();
 
-            err = aFile.write( ((void*)(p)),
+            err = aFile.write( (static_cast<void const *>(p)),
                                sal_uInt64( nReadBytes ),
                                nWrittenBytes );
 
@@ -1914,7 +1985,6 @@ shell::write( sal_Int32 CommandId,
 }
 
 
-
 /*********************************************************************************/
 /*                                                                               */
 /*                 insertDefaultProperties-Implementation                        */
@@ -1922,7 +1992,7 @@ shell::write( sal_Int32 CommandId,
 /*********************************************************************************/
 
 
-void SAL_CALL shell::insertDefaultProperties( const OUString& aUnqPath )
+void SAL_CALL TaskManager::insertDefaultProperties( const OUString& aUnqPath )
 {
     osl::MutexGuard aGuard( m_aMutex );
 
@@ -1936,7 +2006,7 @@ void SAL_CALL shell::insertDefaultProperties( const OUString& aUnqPath )
     PropertySet& properties = *(it->second.properties);
     bool ContentNotDefau = properties.find( ContentTProperty ) != properties.end();
 
-    shell::PropertySet::iterator it1 = m_aDefaultProperties.begin();
+    TaskManager::PropertySet::iterator it1 = m_aDefaultProperties.begin();
     while( it1 != m_aDefaultProperties.end() )
     {
         if( ContentNotDefau && it1->getPropertyName() == ContentType )
@@ -1950,8 +2020,6 @@ void SAL_CALL shell::insertDefaultProperties( const OUString& aUnqPath )
 }
 
 
-
-
 /******************************************************************************/
 /*                                                                            */
 /*                          mapping of file urls                              */
@@ -1960,7 +2028,7 @@ void SAL_CALL shell::insertDefaultProperties( const OUString& aUnqPath )
 /******************************************************************************/
 
 
-bool SAL_CALL shell::getUnqFromUrl( const OUString& Url, OUString& Unq )
+bool SAL_CALL TaskManager::getUnqFromUrl( const OUString& Url, OUString& Unq )
 {
     if ( Url == "file:///" || Url == "file://localhost/" || Url == "file://127.0.0.1/" )
     {
@@ -1981,8 +2049,7 @@ bool SAL_CALL shell::getUnqFromUrl( const OUString& Url, OUString& Unq )
 }
 
 
-
-bool SAL_CALL shell::getUrlFromUnq( const OUString& Unq,OUString& Url )
+bool SAL_CALL TaskManager::getUrlFromUnq( const OUString& Unq,OUString& Url )
 {
     bool err = osl::FileBase::E_None != osl::FileBase::getSystemPathFromFileURL( Unq,Url );
 
@@ -1992,23 +2059,21 @@ bool SAL_CALL shell::getUrlFromUnq( const OUString& Unq,OUString& Url )
 }
 
 
-
 // Helper function for public copy
 
 osl::FileBase::RC SAL_CALL
-shell::copy_recursive( const OUString& srcUnqPath,
+TaskManager::copy_recursive( const OUString& srcUnqPath,
                        const OUString& dstUnqPath,
-                       sal_Int32 TypeToCopy,
+                       FileUrlType TypeToCopy,
                        bool testExistBeforeCopy )
-    throw()
 {
     osl::FileBase::RC err = osl::FileBase::E_None;
 
-    if( TypeToCopy == -1 ) // Document
+    if( TypeToCopy == FileUrlType::File ) // Document
     {
         err = osl_File_copy( srcUnqPath,dstUnqPath,testExistBeforeCopy );
     }
-    else if( TypeToCopy == +1 ) // Folder
+    else if( TypeToCopy == FileUrlType::Folder )
     {
         osl::Directory aDir( srcUnqPath );
         aDir.open();
@@ -2030,7 +2095,7 @@ shell::copy_recursive( const OUString& srcUnqPath,
                     IsDoc = aFileStatus.getFileType() == osl::FileStatus::Regular;
 
                 // Getting the information for the next recursive copy
-                sal_Int32 newTypeToCopy = IsDoc ? -1 : +1;
+                FileUrlType newTypeToCopy = IsDoc ? FileUrlType::File : FileUrlType::Folder;
 
                 OUString newSrcUnqPath;
                 if( aFileStatus.isValid( osl_FileStatus_Mask_FileURL ) )
@@ -2063,16 +2128,14 @@ shell::copy_recursive( const OUString& srcUnqPath,
 }
 
 
-
 // Helper function for mkfil,mkdir and write
 // Creates whole path
 // returns success of the operation
 
 
-bool SAL_CALL shell::ensuredir( sal_Int32 CommandId,
+bool SAL_CALL TaskManager::ensuredir( sal_Int32 CommandId,
                                     const OUString& rUnqPath,
                                     sal_Int32 errorCode )
-    throw()
 {
     OUString aPath;
 
@@ -2084,6 +2147,17 @@ bool SAL_CALL shell::ensuredir( sal_Int32 CommandId,
     else
         aPath = rUnqPath;
 
+#if defined USE_JAVA && defined MACOSX
+    // Eliminate sandbox deny file-read-data messages by checking if the
+    // directory exists using the stat() function. Only do this if the
+    // stat() function indicates that the directory exists. Otherwise, use the
+    // original OOo code so that any folder aliases in the path can be
+    // resolved.
+    OUString aSystemPath;
+    struct stat aSystemPathStat;
+    if ( osl::FileBase::getSystemPathFromFileURL( aPath, aSystemPath ) == osl::FileBase::E_None && !stat( OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ).getStr(), &aSystemPathStat ) && S_ISDIR( aSystemPathStat.st_mode ) )
+        return true;
+#else	// USE_JAVA && MACOSX
 #if HAVE_FEATURE_MACOSX_SANDBOX
 
     // Avoid annoying sandbox messages in the system.log from the
@@ -2101,17 +2175,6 @@ bool SAL_CALL shell::ensuredir( sal_Int32 CommandId,
         S_ISDIR( s.st_mode ) )
         return sal_True;
 #endif
-
-#if defined USE_JAVA && defined MACOSX
-    // Eliminate sandbox deny file-read-data messages by checking if the
-    // directory exists using the stat() function. Only do this if the
-    // stat() function indicates that the directory exists. Otherwise, use the
-    // original OOo code so that any folder aliases in the path can be
-    // resolved.
-    OUString aSystemPath;
-    struct stat aSystemPathStat;
-    if ( osl::FileBase::getSystemPathFromFileURL( aPath, aSystemPath ) == osl::FileBase::E_None && !stat( OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ).getStr(), &aSystemPathStat ) && S_ISDIR( aSystemPathStat.st_mode ) )
-        return true;
 #endif	// USE_JAVA && MACOSX
 
     // HACK: create directory on a mount point with nobrowse option
@@ -2163,17 +2226,13 @@ bool SAL_CALL shell::ensuredir( sal_Int32 CommandId,
 }
 
 
-
-
-
 //  Given a sequence of properties seq, this method determines the mask
 //  used to instantiate a osl::FileStatus, so that a call to
 //  osl::DirectoryItem::getFileStatus fills the required fields.
 
 
-
 void SAL_CALL
-shell::getMaskFromProperties(
+TaskManager::getMaskFromProperties(
     sal_Int32& n_Mask,
     const uno::Sequence< beans::Property >& seq )
 {
@@ -2205,7 +2264,6 @@ shell::getMaskFromProperties(
 }
 
 
-
 /*********************************************************************************/
 /*                                                                               */
 /*                     load-Implementation                                       */
@@ -2217,7 +2275,7 @@ shell::getMaskFromProperties(
 
 
 void SAL_CALL
-shell::load( const ContentMap::iterator& it, bool create )
+TaskManager::load( const ContentMap::iterator& it, bool create )
 {
     if( ! it->second.properties )
         it->second.properties = new PropertySet;
@@ -2264,8 +2322,6 @@ shell::load( const ContentMap::iterator& it, bool create )
 }
 
 
-
-
 /*********************************************************************************/
 /*                                                                               */
 /*                     commit-Implementation                                     */
@@ -2277,13 +2333,12 @@ shell::load( const ContentMap::iterator& it, bool create )
 
 
 void SAL_CALL
-shell::commit( const shell::ContentMap::iterator& it,
+TaskManager::commit( const TaskManager::ContentMap::iterator& it,
                const osl::FileStatus& aFileStatus )
 {
-    uno::Any aAny;
-    shell::PropertySet::iterator it1;
+    TaskManager::PropertySet::iterator it1;
 
-    if( it->second.properties == 0 )
+    if( it->second.properties == nullptr )
     {
         OUString aPath = it->first;
         insertDefaultProperties( aPath );
@@ -2296,8 +2351,7 @@ shell::commit( const shell::ContentMap::iterator& it,
     {
         if( aFileStatus.isValid( osl_FileStatus_Mask_FileName ) )
         {
-            aAny <<= aFileStatus.getFileName();
-            it1->setValue( aAny );
+            it1->setValue( uno::Any(aFileStatus.getFileName()) );
         }
     }
 
@@ -2306,8 +2360,7 @@ shell::commit( const shell::ContentMap::iterator& it,
     {
         if( aFileStatus.isValid( osl_FileStatus_Mask_FileURL ) )
         {
-            aAny <<= aFileStatus.getFileURL();
-            it1->setValue( aAny );
+            it1->setValue( uno::Any(aFileStatus.getFileURL()) );
         }
     }
 
@@ -2344,7 +2397,7 @@ shell::commit( const shell::ContentMap::iterator& it,
             {
                 // extremely ugly, but otherwise default construction
                 // of aDirItem and aFileStatus2
-                // before the preciding if
+                // before the preceding if
                 isVolume = osl::FileStatus::Volume == aFileStatus.getFileType();
                 isDirectory =
                     osl::FileStatus::Volume == aFileStatus.getFileType() ||
@@ -2404,8 +2457,7 @@ shell::commit( const shell::ContentMap::iterator& it,
         }
         else
         {
-            bool dummy = false;
-            aAny <<= dummy;
+            uno::Any aAny(false);
             it1 = properties.find( MyProperty( IsRemote ) );
             if( it1 != properties.end() )
                 it1->setValue( aAny );
@@ -2500,13 +2552,14 @@ shell::commit( const shell::ContentMap::iterator& it,
 // directoryitem, which is returned by osl::DirectoryItem::getNextItem()
 
 
-uno::Reference< sdbc::XRow > SAL_CALL
-shell::getv(
+bool SAL_CALL
+TaskManager::getv(
     Notifier* pNotifier,
     const uno::Sequence< beans::Property >& properties,
     osl::DirectoryItem& aDirItem,
     OUString& aUnqPath,
-    bool& aIsRegular )
+    bool& aIsRegular,
+    uno::Reference< sdbc::XRow > & row )
 {
     uno::Sequence< uno::Any > seq( properties.getLength() );
 
@@ -2520,75 +2573,78 @@ shell::getv(
                                  osl_FileStatus_Mask_LinkTargetURL );
 
     osl::FileBase::RC aRes = aDirItem.getFileStatus( aFileStatus );
-    if ( aRes == osl::FileBase::E_None )
+    if ( aRes != osl::FileBase::E_None )
     {
-        aUnqPath = aFileStatus.getFileURL();
-
-        // If the directory item type is a link retrieve the type of the target
-
-        if ( aFileStatus.getFileType() == osl::FileStatus::Link )
-        {
-            // Assume failure
-            aIsRegular = false;
-            osl::FileBase::RC result = osl::FileBase::E_INVAL;
-            osl::DirectoryItem aTargetItem;
-            osl::DirectoryItem::get( aFileStatus.getLinkTargetURL(), aTargetItem );
-            if ( aTargetItem.is() )
-            {
-                osl::FileStatus aTargetStatus( osl_FileStatus_Mask_Type );
-
-                if ( osl::FileBase::E_None ==
-                     ( result = aTargetItem.getFileStatus( aTargetStatus ) ) )
-                    aIsRegular =
-                        aTargetStatus.getFileType() == osl::FileStatus::Regular;
-            }
-        }
-        else
-            aIsRegular = aFileStatus.getFileType() == osl::FileStatus::Regular;
-
-        registerNotifier( aUnqPath,pNotifier );
-        insertDefaultProperties( aUnqPath );
-        {
-            osl::MutexGuard aGuard( m_aMutex );
-
-            shell::ContentMap::iterator it = m_aContent.find( aUnqPath );
-            commit( it,aFileStatus );
-
-            shell::PropertySet::iterator it1;
-            PropertySet& propset = *(it->second.properties);
-
-            for( sal_Int32 i = 0; i < seq.getLength(); ++i )
-            {
-                MyProperty readProp( properties[i].Name );
-                it1 = propset.find( readProp );
-                if( it1 == propset.end() )
-                    seq[i] = uno::Any();
-                else
-                    seq[i] = it1->getValue();
-            }
-        }
-        deregisterNotifier( aUnqPath,pNotifier );
+        SAL_WARN(
+            "ucb.ucp.file",
+            "osl::DirectoryItem::getFileStatus failed with " << +aRes);
+        return false;
     }
+
+    aUnqPath = aFileStatus.getFileURL();
+
+    // If the directory item type is a link retrieve the type of the target
+
+    if ( aFileStatus.getFileType() == osl::FileStatus::Link )
+    {
+        // Assume failure
+        aIsRegular = false;
+        osl::FileBase::RC result = osl::FileBase::E_INVAL;
+        osl::DirectoryItem aTargetItem;
+        osl::DirectoryItem::get( aFileStatus.getLinkTargetURL(), aTargetItem );
+        if ( aTargetItem.is() )
+        {
+            osl::FileStatus aTargetStatus( osl_FileStatus_Mask_Type );
+
+            if ( osl::FileBase::E_None ==
+                 ( result = aTargetItem.getFileStatus( aTargetStatus ) ) )
+                aIsRegular =
+                    aTargetStatus.getFileType() == osl::FileStatus::Regular;
+        }
+    }
+    else
+        aIsRegular = aFileStatus.getFileType() == osl::FileStatus::Regular;
+
+    registerNotifier( aUnqPath,pNotifier );
+    insertDefaultProperties( aUnqPath );
+    {
+        osl::MutexGuard aGuard( m_aMutex );
+
+        TaskManager::ContentMap::iterator it = m_aContent.find( aUnqPath );
+        commit( it,aFileStatus );
+
+        TaskManager::PropertySet::iterator it1;
+        PropertySet& propset = *(it->second.properties);
+
+        for( sal_Int32 i = 0; i < seq.getLength(); ++i )
+        {
+            MyProperty readProp( properties[i].Name );
+            it1 = propset.find( readProp );
+            if( it1 == propset.end() )
+                seq[i] = uno::Any();
+            else
+                seq[i] = it1->getValue();
+        }
+    }
+    deregisterNotifier( aUnqPath,pNotifier );
+
     XRow_impl* p = new XRow_impl( this,seq );
-    return uno::Reference< sdbc::XRow >( p );
+    row = uno::Reference< sdbc::XRow >( p );
+    return true;
 }
-
-
-
-
 
 
 // EventListener
 
 
 std::list< ContentEventNotifier* >* SAL_CALL
-shell::getContentEventListeners( const OUString& aName )
+TaskManager::getContentEventListeners( const OUString& aName )
 {
     std::list< ContentEventNotifier* >* p = new std::list< ContentEventNotifier* >;
     std::list< ContentEventNotifier* >& listeners = *p;
     {
         osl::MutexGuard aGuard( m_aMutex );
-        shell::ContentMap::iterator it = m_aContent.find( aName );
+        TaskManager::ContentMap::iterator it = m_aContent.find( aName );
         if( it != m_aContent.end() && it->second.notifier )
         {
             std::list<Notifier*>& listOfNotifiers = *( it->second.notifier );
@@ -2607,15 +2663,14 @@ shell::getContentEventListeners( const OUString& aName )
 }
 
 
-
 std::list< ContentEventNotifier* >* SAL_CALL
-shell::getContentDeletedEventListeners( const OUString& aName )
+TaskManager::getContentDeletedEventListeners( const OUString& aName )
 {
     std::list< ContentEventNotifier* >* p = new std::list< ContentEventNotifier* >;
     std::list< ContentEventNotifier* >& listeners = *p;
     {
         osl::MutexGuard aGuard( m_aMutex );
-        shell::ContentMap::iterator it = m_aContent.find( aName );
+        TaskManager::ContentMap::iterator it = m_aContent.find( aName );
         if( it != m_aContent.end() && it->second.notifier )
         {
             std::list<Notifier*>& listOfNotifiers = *( it->second.notifier );
@@ -2635,7 +2690,7 @@ shell::getContentDeletedEventListeners( const OUString& aName )
 
 
 void SAL_CALL
-shell::notifyInsert( std::list< ContentEventNotifier* >* listeners,const OUString& aChildName )
+TaskManager::notifyInsert( std::list< ContentEventNotifier* >* listeners,const OUString& aChildName )
 {
     std::list< ContentEventNotifier* >::iterator it = listeners->begin();
     while( it != listeners->end() )
@@ -2649,7 +2704,7 @@ shell::notifyInsert( std::list< ContentEventNotifier* >* listeners,const OUStrin
 
 
 void SAL_CALL
-shell::notifyContentDeleted( std::list< ContentEventNotifier* >* listeners )
+TaskManager::notifyContentDeleted( std::list< ContentEventNotifier* >* listeners )
 {
     std::list< ContentEventNotifier* >::iterator it = listeners->begin();
     while( it != listeners->end() )
@@ -2663,7 +2718,7 @@ shell::notifyContentDeleted( std::list< ContentEventNotifier* >* listeners )
 
 
 void SAL_CALL
-shell::notifyContentRemoved( std::list< ContentEventNotifier* >* listeners,
+TaskManager::notifyContentRemoved( std::list< ContentEventNotifier* >* listeners,
                              const OUString& aChildName )
 {
     std::list< ContentEventNotifier* >::iterator it = listeners->begin();
@@ -2677,16 +2732,14 @@ shell::notifyContentRemoved( std::list< ContentEventNotifier* >* listeners,
 }
 
 
-
-
 std::list< PropertySetInfoChangeNotifier* >* SAL_CALL
-shell::getPropertySetListeners( const OUString& aName )
+TaskManager::getPropertySetListeners( const OUString& aName )
 {
     std::list< PropertySetInfoChangeNotifier* >* p = new std::list< PropertySetInfoChangeNotifier* >;
     std::list< PropertySetInfoChangeNotifier* >& listeners = *p;
     {
         osl::MutexGuard aGuard( m_aMutex );
-        shell::ContentMap::iterator it = m_aContent.find( aName );
+        TaskManager::ContentMap::iterator it = m_aContent.find( aName );
         if( it != m_aContent.end() && it->second.notifier )
         {
             std::list<Notifier*>& listOfNotifiers = *( it->second.notifier );
@@ -2706,7 +2759,7 @@ shell::getPropertySetListeners( const OUString& aName )
 
 
 void SAL_CALL
-shell::notifyPropertyAdded( std::list< PropertySetInfoChangeNotifier* >* listeners,
+TaskManager::notifyPropertyAdded( std::list< PropertySetInfoChangeNotifier* >* listeners,
                             const OUString& aPropertyName )
 {
     std::list< PropertySetInfoChangeNotifier* >::iterator it = listeners->begin();
@@ -2721,7 +2774,7 @@ shell::notifyPropertyAdded( std::list< PropertySetInfoChangeNotifier* >* listene
 
 
 void SAL_CALL
-shell::notifyPropertyRemoved( std::list< PropertySetInfoChangeNotifier* >* listeners,
+TaskManager::notifyPropertyRemoved( std::list< PropertySetInfoChangeNotifier* >* listeners,
                               const OUString& aPropertyName )
 {
     std::list< PropertySetInfoChangeNotifier* >::iterator it = listeners->begin();
@@ -2735,9 +2788,8 @@ shell::notifyPropertyRemoved( std::list< PropertySetInfoChangeNotifier* >* liste
 }
 
 
-
 std::vector< std::list< ContentEventNotifier* >* >* SAL_CALL
-shell::getContentExchangedEventListeners( const OUString& aOldPrefix,
+TaskManager::getContentExchangedEventListeners( const OUString& aOldPrefix,
                                           const OUString& aNewPrefix,
                                           bool withChildren )
 {
@@ -2786,21 +2838,21 @@ shell::getContentExchangedEventListeners( const OUString& aOldPrefix,
                 aNewName = newName( aNewPrefix,aOldPrefix,aOldName );
             }
 
-            shell::ContentMap::iterator itold = m_aContent.find( aOldName );
+            TaskManager::ContentMap::iterator itold = m_aContent.find( aOldName );
             if( itold != m_aContent.end() )
             {
-                shell::ContentMap::iterator itnew = m_aContent.insert(
+                TaskManager::ContentMap::iterator itnew = m_aContent.insert(
                     ContentMap::value_type( aNewName,UnqPathData() ) ).first;
 
                 // copy Ownership also
                 delete itnew->second.properties;
                 itnew->second.properties = itold->second.properties;
-                itold->second.properties = 0;
+                itold->second.properties = nullptr;
 
                 // copy existing list
                 std::list< Notifier* >* copyList = itnew->second.notifier;
                 itnew->second.notifier = itold->second.notifier;
-                itold->second.notifier = 0;
+                itold->second.notifier = nullptr;
 
                 m_aContent.erase( itold );
 
@@ -2820,7 +2872,7 @@ shell::getContentExchangedEventListeners( const OUString& aOldPrefix,
 
                 // Merge with preexisting notifiers
                 // However, these may be in status BaseContent::Deleted
-                if( copyList != 0 )
+                if( copyList != nullptr )
                 {
                     std::list< Notifier* >::iterator copyIt = copyList->begin();
                     while( copyIt != copyList->end() )
@@ -2839,14 +2891,11 @@ shell::getContentExchangedEventListeners( const OUString& aOldPrefix,
 }
 
 
-
 void SAL_CALL
-shell::notifyContentExchanged( std::vector< std::list< ContentEventNotifier* >* >* listeners_vec )
+TaskManager::notifyContentExchanged( std::vector< std::list< ContentEventNotifier* >* >* listeners_vec )
 {
-    std::list< ContentEventNotifier* >* listeners;
-    for( sal_uInt32 i = 0; i < listeners_vec->size(); ++i )
+    for( std::list< ContentEventNotifier* >* listeners : *listeners_vec)
     {
-        listeners = (*listeners_vec)[i];
         std::list< ContentEventNotifier* >::iterator it = listeners->begin();
         while( it != listeners->end() )
         {
@@ -2860,15 +2909,14 @@ shell::notifyContentExchanged( std::vector< std::list< ContentEventNotifier* >* 
 }
 
 
-
 std::list< PropertyChangeNotifier* >* SAL_CALL
-shell::getPropertyChangeNotifier( const OUString& aName )
+TaskManager::getPropertyChangeNotifier( const OUString& aName )
 {
     std::list< PropertyChangeNotifier* >* p = new std::list< PropertyChangeNotifier* >;
     std::list< PropertyChangeNotifier* >& listeners = *p;
     {
         osl::MutexGuard aGuard( m_aMutex );
-        shell::ContentMap::iterator it = m_aContent.find( aName );
+        TaskManager::ContentMap::iterator it = m_aContent.find( aName );
         if( it != m_aContent.end() && it->second.notifier )
         {
             std::list<Notifier*>& listOfNotifiers = *( it->second.notifier );
@@ -2887,7 +2935,7 @@ shell::getPropertyChangeNotifier( const OUString& aName )
 }
 
 
-void SAL_CALL shell::notifyPropertyChanges( std::list< PropertyChangeNotifier* >* listeners,
+void SAL_CALL TaskManager::notifyPropertyChanges( std::list< PropertyChangeNotifier* >* listeners,
                                             const uno::Sequence< beans::PropertyChangeEvent >& seqChanged )
 {
     std::list< PropertyChangeNotifier* >::iterator it = listeners->begin();
@@ -2901,14 +2949,12 @@ void SAL_CALL shell::notifyPropertyChanges( std::list< PropertyChangeNotifier* >
 }
 
 
-
-
 /********************************************************************************/
 /*                       remove persistent propertyset                          */
 /********************************************************************************/
 
 void SAL_CALL
-shell::erasePersistentSet( const OUString& aUnqPath,
+TaskManager::erasePersistentSet( const OUString& aUnqPath,
                            bool withChildren )
 {
     if( ! m_xFileRegistry.is() )
@@ -2946,12 +2992,12 @@ shell::erasePersistentSet( const OUString& aUnqPath,
             ContentMap::iterator it = m_aContent.find( old_Name );
             if( it != m_aContent.end() )
             {
-                it->second.xS = 0;
-                it->second.xC = 0;
-                it->second.xA = 0;
+                it->second.xS = nullptr;
+                it->second.xC = nullptr;
+                it->second.xA = nullptr;
 
                 delete it->second.properties;
-                it->second.properties = 0;
+                it->second.properties = nullptr;
             }
         }
 
@@ -2961,8 +3007,6 @@ shell::erasePersistentSet( const OUString& aUnqPath,
 }
 
 
-
-
 /********************************************************************************/
 /*                       copy persistent propertyset                            */
 /*                       from srcUnqPath to dstUnqPath                          */
@@ -2970,7 +3014,7 @@ shell::erasePersistentSet( const OUString& aUnqPath,
 
 
 void SAL_CALL
-shell::copyPersistentSet( const OUString& srcUnqPath,
+TaskManager::copyPersistentSet( const OUString& srcUnqPath,
                           const OUString& dstUnqPath,
                           bool withChildren )
 {
@@ -3036,7 +3080,7 @@ shell::copyPersistentSet( const OUString& srcUnqPath,
     }         // end for( sal_Int...
 }
 
-uno::Sequence< ucb::ContentInfo > shell::queryCreatableContentsInfo()
+uno::Sequence< ucb::ContentInfo > TaskManager::queryCreatableContentsInfo()
 {
     uno::Sequence< ucb::ContentInfo > seq(2);
 
@@ -3047,7 +3091,7 @@ uno::Sequence< ucb::ContentInfo > shell::queryCreatableContentsInfo()
 
     uno::Sequence< beans::Property > props( 1 );
     props[0] = beans::Property(
-        OUString("Title"),
+        "Title",
         -1,
         cppu::UnoType<OUString>::get(),
         beans::PropertyAttribute::MAYBEVOID
@@ -3068,23 +3112,23 @@ uno::Sequence< ucb::ContentInfo > shell::queryCreatableContentsInfo()
 /*******************************************************************************/
 
 void SAL_CALL
-shell::getScheme( OUString& Scheme )
+TaskManager::getScheme( OUString& Scheme )
 {
   Scheme = "file";
 }
 
 OUString SAL_CALL
-shell::getImplementationName_static( void )
+TaskManager::getImplementationName_static()
 {
   return OUString("com.sun.star.comp.ucb.FileProvider");
 }
 
 
 uno::Sequence< OUString > SAL_CALL
-shell::getSupportedServiceNames_static( void )
+TaskManager::getSupportedServiceNames_static()
 {
   OUString Supported("com.sun.star.ucb.FileContentProvider");
-  com::sun::star::uno::Sequence< OUString > Seq( &Supported,1 );
+  css::uno::Sequence< OUString > Seq( &Supported,1 );
   return Seq;
 }
 
