@@ -43,7 +43,6 @@
 #include <com/sun/star/task/InteractionHandler.hpp>
 #include <com/sun/star/task/XInteractionAbort.hpp>
 #include <com/sun/star/task/XInteractionApprove.hpp>
-#include <com/sun/star/task/XInteractionAskLater.hpp>
 #include <com/sun/star/task/XInteractionDisapprove.hpp>
 #include <com/sun/star/task/XInteractionHandler2.hpp>
 #include <com/sun/star/task/XInteractionRequest.hpp>
@@ -70,7 +69,7 @@
 #include <rtl/strbuf.hxx>
 #include <osl/conditn.hxx>
 #include <tools/rcid.h>
-#include <tools/errinf.hxx>
+#include <vcl/errinf.hxx>
 #include <osl/mutex.hxx>
 #include <osl/thread.hxx>
 #include <tools/diagnose_ex.h>
@@ -93,15 +92,12 @@
 #include "iahndl.hxx"
 #include "nameclashdlg.hxx"
 
-#include <boost/scoped_ptr.hpp>
-
 using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::UNO_QUERY;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::task::XInteractionContinuation;
 using ::com::sun::star::task::XInteractionAbort;
 using ::com::sun::star::task::XInteractionApprove;
-using ::com::sun::star::task::XInteractionAskLater;
 using ::com::sun::star::uno::XInterface;
 using ::com::sun::star::lang::XInitialization;
 using ::com::sun::star::uno::UNO_QUERY_THROW;
@@ -119,7 +115,7 @@ namespace {
 class HandleData : public osl::Condition
 {
 public:
-    HandleData(
+    explicit HandleData(
         uno::Reference< task::XInteractionRequest > const & rRequest)
         : osl::Condition(),
           m_rRequest(rRequest),
@@ -153,8 +149,7 @@ UUIInteractionHelper::~UUIInteractionHelper()
 {
 }
 
-long
-UUIInteractionHelper::handlerequest(
+void UUIInteractionHelper::handlerequest(
     void* pHandleData, void* pInteractionHelper)
 {
     HandleData* pHND
@@ -166,7 +161,6 @@ UUIInteractionHelper::handlerequest(
     pHND->bHandled
         = pUUI->handleRequest_impl(pHND->m_rRequest, false, bDummy, aDummy);
     pHND->set();
-    return 0;
 }
 
 bool
@@ -184,20 +178,17 @@ UUIInteractionHelper::handleRequest(
     return handleRequest_impl(rRequest, false, bDummy, aDummy);
 #else	// USE_JAVA && MACOSX
     if(
-        // be aware,it is the same type
-        static_cast< oslThreadIdentifier >(
-            Application::GetMainThreadIdentifier())
+        Application::GetMainThreadIdentifier()
         != osl::Thread::getCurrentIdentifier()
         &&
         GetpApp()
     ) {
         // we are not in the main thread, let it handle that stuff
         HandleData aHD(rRequest);
-        Link aLink(&aHD,handlerequest);
+        Link<void*,void> aLink(&aHD,handlerequest);
         Application::PostUserEvent(aLink,this);
-        sal_uLong locks = Application::ReleaseSolarMutex();
+        SolarMutexReleaser aReleaser;
         aHD.wait();
-        Application::AcquireSolarMutex(locks);
         return aHD.bHandled;
     }
     else
@@ -209,15 +200,13 @@ UUIInteractionHelper::handleRequest(
 #endif	// USE_JAVA && MACOSX
 }
 
-long
-UUIInteractionHelper::getstringfromrequest(
+void UUIInteractionHelper::getstringfromrequest(
     void* pHandleData,void* pInteractionHelper)
 {
-    HandleData* pHND = (HandleData*) pHandleData;
-    UUIInteractionHelper* pUUI = (UUIInteractionHelper*) pInteractionHelper;
+    HandleData* pHND = static_cast<HandleData*>(pHandleData);
+    UUIInteractionHelper* pUUI = static_cast<UUIInteractionHelper*>(pInteractionHelper);
     pHND->m_aResult = pUUI->getStringFromRequest_impl(pHND->m_rRequest);
     pHND->set();
-    return 0;
 }
 
 beans::Optional< OUString >
@@ -250,20 +239,17 @@ UUIInteractionHelper::getStringFromRequest(
     return getStringFromRequest_impl(rRequest);
 #else	// USE_JAVA && MACOSX
     if(
-        // be aware,it is the same type
-        static_cast< oslThreadIdentifier >(
-            Application::GetMainThreadIdentifier())
+        Application::GetMainThreadIdentifier()
         != osl::Thread::getCurrentIdentifier()
         &&
         GetpApp()
     ) {
         // we are not in the main thread, let it handle that stuff
         HandleData aHD(rRequest);
-        Link aLink(&aHD,getstringfromrequest);
+        Link<void*,void> aLink(&aHD,getstringfromrequest);
         Application::PostUserEvent(aLink,this);
-        sal_uLong locks = Application::ReleaseSolarMutex();
+        SolarMutexReleaser aReleaser;
         aHD.wait();
-        Application::AcquireSolarMutex(locks);
         return aHD.m_aResult;
     }
     else
@@ -306,10 +292,7 @@ UUIInteractionHelper::isInformationalErrorMessageRequest(
 
     uno::Reference< task::XInteractionAbort > xAbort(
         rContinuations[0], uno::UNO_QUERY);
-    if (xAbort.is())
-        return true;
-
-    return false;
+    return xAbort.is();
 }
 
 bool
@@ -333,9 +316,9 @@ UUIInteractionHelper::tryOtherInteractionHandler(
 namespace
 {
 
-    static bool lcl_matchesRequest( const Any& i_rRequest, const OUString& i_rTypeName, const OUString& i_rPropagation )
+    bool lcl_matchesRequest( const Any& i_rRequest, const OUString& i_rTypeName, const OUString& i_rPropagation )
     {
-        const ::com::sun::star::uno::TypeDescription aTypeDesc( i_rTypeName );
+        const css::uno::TypeDescription aTypeDesc( i_rTypeName );
         const typelib_TypeDescription* pTypeDesc = aTypeDesc.get();
         if ( !pTypeDesc || !pTypeDesc->pWeakRef )
         {
@@ -348,9 +331,9 @@ namespace
 #endif
             return false;
         }
-        const ::com::sun::star::uno::Type aType( pTypeDesc->pWeakRef );
+        const css::uno::Type aType( pTypeDesc->pWeakRef );
 
-        const bool bExactMatch = i_rPropagation.equalsAscii( "named-only" );
+        const bool bExactMatch = i_rPropagation == "named-only";
         if ( bExactMatch )
             return i_rRequest.getValueType().equals( aType );
 
@@ -396,7 +379,7 @@ bool UUIInteractionHelper::handleTypedHandlerImplementations( Reference< XIntera
     // the base registration node for "typed" interaction handlers
     const ::utl::OConfigurationTreeRoot aConfigRoot( ::utl::OConfigurationTreeRoot::createWithComponentContext(
         m_xContext,
-        OUString( "/org.openoffice.Interaction/InteractionHandlers" ),
+        "/org.openoffice.Interaction/InteractionHandlers",
         -1,
         ::utl::OConfigurationTreeRoot::CM_READONLY
     ) );
@@ -464,7 +447,7 @@ UUIInteractionHelper::handleRequest_impl(
                 for ( sal_Int32 index=0; index< sModules.getLength(); ++index )
                 {
                     if ( index )
-                        aName = aName + OUString( ',' ) + sModules[index];
+                        aName += "," + sModules[index];
                     else
                         aName = sModules[index]; // 1st name
                 }
@@ -776,26 +759,11 @@ UUIInteractionHelper::handleRequest_impl(
         task::ErrorCodeRequest aErrorCodeRequest;
         if (aAnyRequest >>= aErrorCodeRequest)
         {
-            // Sucky special handling for xlsx macro filter warning
-            if ( (sal_uInt32)ERRCODE_SFX_VBASIC_CANTSAVE_STORAGE == (sal_uInt32)aErrorCodeRequest.ErrCode)
-            {
-                std::vector< OUString > aArguments;
-                handleErrorHandlerRequest( task::InteractionClassification_WARNING,
-                                       ERRCODE_UUI_IO_WARN_CANTSAVE_MACROS,
-                                       aArguments,
-                                       rRequest->getContinuations(),
-                                       bObtainErrorStringOnly,
-                                       bHasErrorString,
-                                       rErrorString);
-            }
-            else
-            {
-                handleGenericErrorRequest( aErrorCodeRequest.ErrCode,
-                                       rRequest->getContinuations(),
-                                       bObtainErrorStringOnly,
-                                       bHasErrorString,
-                                       rErrorString);
-            }
+            handleGenericErrorRequest( aErrorCodeRequest.ErrCode,
+                    rRequest->getContinuations(),
+                    bObtainErrorStringOnly,
+                    bHasErrorString,
+                    rErrorString);
             return true;
         }
 
@@ -826,7 +794,6 @@ UUIInteractionHelper::handleRequest_impl(
                                        rErrorString );
             return true;
         }
-
 
 
         // Handle requests which do not have a plain string representation.
@@ -928,7 +895,7 @@ UUIInteractionHelper::getInteractionHandlerList(
             configuration::theDefaultProvider::get( m_xContext );
 
         OUStringBuffer aFullPath;
-        aFullPath.appendAscii(
+        aFullPath.append(
             "/org.openoffice.ucb.InteractionHandler/InteractionHandlers" );
 
         uno::Sequence< uno::Any > aArguments( 1 );
@@ -945,11 +912,7 @@ UUIInteractionHelper::getInteractionHandlerList(
             throw uno::RuntimeException("unable to instanciate config access");
 
         uno::Reference< container::XNameAccess > xNameAccess(
-            xInterface, uno::UNO_QUERY );
-        if ( !xNameAccess.is() )
-            throw uno::RuntimeException(
-                    "config access does not implement XNameAccess");
-
+            xInterface, uno::UNO_QUERY_THROW );
         uno::Sequence< OUString > aElems = xNameAccess->getElementNames();
         const OUString* pElems = aElems.getConstArray();
         sal_Int32 nCount = aElems.getLength();
@@ -957,17 +920,13 @@ UUIInteractionHelper::getInteractionHandlerList(
         if ( nCount > 0 )
         {
             uno::Reference< container::XHierarchicalNameAccess >
-                                xHierNameAccess( xInterface, uno::UNO_QUERY );
-
-            if ( !xHierNameAccess.is() )
-                throw uno::RuntimeException(
-                    "config access does not implement XHierarchicalNameAccess");
+                                xHierNameAccess( xInterface, uno::UNO_QUERY_THROW );
 
             // Iterate over children.
             for ( sal_Int32 n = 0; n < nCount; ++n )
             {
                 OUStringBuffer aElemBuffer;
-                aElemBuffer.appendAscii( "['" );
+                aElemBuffer.append( "['" );
                 aElemBuffer.append( pElems[ n ] );
 
                 try
@@ -976,7 +935,7 @@ UUIInteractionHelper::getInteractionHandlerList(
 
                     // Obtain service name.
                     OUStringBuffer aKeyBuffer = aElemBuffer;
-                    aKeyBuffer.appendAscii( "']/ServiceName" );
+                    aKeyBuffer.append( "']/ServiceName" );
 
                     OUString aValue;
                     if ( !( xHierNameAccess->getByHierarchicalName(
@@ -1019,19 +978,13 @@ UUIInteractionHelper::getParentProperty()
     if ( xWindow.is() )
         return VCLUnoHelper::GetWindow(xWindow);
 
-    return 0;
+    return nullptr;
 }
 
-uno::Reference< awt::XWindow>
+const uno::Reference< awt::XWindow>&
 UUIInteractionHelper::getParentXWindow() const
 {
     return m_xWindowParam;
-}
-
-OUString
-UUIInteractionHelper::getContextProperty()
-{
-    return m_aContextParam;
 }
 
 uno::Reference< task::XInteractionHandler2 >
@@ -1044,7 +997,7 @@ UUIInteractionHelper::getInteractionHandler()
 
 namespace {
 
-sal_uInt16
+DialogMask
 executeMessageBox(
     vcl::Window * pParent,
     OUString const & rTitle,
@@ -1053,26 +1006,28 @@ executeMessageBox(
 {
     SolarMutexGuard aGuard;
 
-    MessBox xBox( pParent, nButtonMask, rTitle, rMessage );
+    ScopedVclPtrInstance< MessBox > xBox(pParent, nButtonMask, rTitle, rMessage);
 
-    sal_uInt16 aResult = xBox.Execute();
-    switch( aResult )
+    sal_uInt16 aMessResult = xBox->Execute();
+    DialogMask aResult = DialogMask::NONE;
+    switch( aMessResult )
     {
     case RET_OK:
-        aResult = ERRCODE_BUTTON_OK;
+        aResult = DialogMask::ButtonsOk;
         break;
     case RET_CANCEL:
-        aResult = ERRCODE_BUTTON_CANCEL;
+        aResult = DialogMask::ButtonsCancel;
         break;
     case RET_YES:
-        aResult = ERRCODE_BUTTON_YES;
+        aResult = DialogMask::ButtonsYes;
         break;
     case RET_NO:
-        aResult = ERRCODE_BUTTON_NO;
+        aResult = DialogMask::ButtonsNo;
         break;
     case RET_RETRY:
-        aResult = ERRCODE_BUTTON_RETRY;
+        aResult = DialogMask::ButtonsRetry;
         break;
+    default: assert(false);
     }
 
     return aResult;
@@ -1084,15 +1039,15 @@ NameClashResolveDialogResult executeSimpleNameClashResolveDialog( vcl::Window *p
                                                                   OUString & rProposedNewName,
                                                                   bool bAllowOverwrite )
 {
-    boost::scoped_ptr< ResMgr > xManager( ResMgr::CreateResMgr( "uui" ) );
+    std::unique_ptr< ResMgr > xManager( ResMgr::CreateResMgr( "uui" ) );
     if ( !xManager.get() )
         return ABORT;
 
-    NameClashDialog aDialog( pParent, xManager.get(), rTargetFolderURL,
-                             rClashingName, rProposedNewName, bAllowOverwrite );
+    ScopedVclPtrInstance<NameClashDialog> aDialog(pParent, xManager.get(), rTargetFolderURL,
+                                                  rClashingName, rProposedNewName, bAllowOverwrite);
 
-    NameClashResolveDialogResult eResult = (NameClashResolveDialogResult) aDialog.Execute();
-    rProposedNewName = aDialog.getNewName();
+    NameClashResolveDialogResult eResult = (NameClashResolveDialogResult) aDialog->Execute();
+    rProposedNewName = aDialog->getNewName();
     return eResult;
 }
 
@@ -1183,22 +1138,18 @@ UUIInteractionHelper::handleGenericErrorRequest(
         ErrCode  nError   = static_cast< ErrCode >(nErrorCode);
         bool bWarning = !ERRCODE_TOERROR(nError);
 
-        if ( nError == ERRCODE_SFX_BROKENSIGNATURE
-             || nError == ERRCODE_SFX_INCOMPLETE_ENCRYPTION )
+        if ( nError == ERRCODE_SFX_INCOMPLETE_ENCRYPTION )
         {
             // the security warning box needs a special title
             OUString aErrorString;
             ErrorHandler::GetErrorString( nErrorCode, aErrorString );
 
-            boost::scoped_ptr< ResMgr > xManager(
+            std::unique_ptr< ResMgr > xManager(
                 ResMgr::CreateResMgr( "uui" ) );
             OUString aTitle( utl::ConfigManager::getProductName() );
 
-            OUString aErrTitle
-                  = ResId( nError == ERRCODE_SFX_BROKENSIGNATURE
-                                       ? STR_WARNING_BROKENSIGNATURE_TITLE
-                                       : STR_WARNING_INCOMPLETE_ENCRYPTION_TITLE,
-                                   *xManager.get() ).toString();
+            OUString aErrTitle = ResId( STR_WARNING_INCOMPLETE_ENCRYPTION_TITLE,
+                *xManager.get() ).toString();
 
             if ( !aTitle.isEmpty() && !aErrTitle.isEmpty() )
                 aTitle += " - " ;
@@ -1232,25 +1183,21 @@ UUIInteractionHelper::handleMacroConfirmRequest(
 
     bool bApprove = false;
 
-    boost::scoped_ptr< ResMgr > pResMgr( ResMgr::CreateResMgr( "uui" ) );
-    if ( pResMgr.get() )
+    bool bShowSignatures = aSignInfo.getLength() > 0;
+    ScopedVclPtrInstance<MacroWarning> aWarning(
+        getParentProperty(), bShowSignatures );
+
+    aWarning->SetDocumentURL( aDocumentURL );
+    if ( aSignInfo.getLength() > 1 )
     {
-        bool bShowSignatures = aSignInfo.getLength() > 0;
-        MacroWarning aWarning(
-            getParentProperty(), bShowSignatures, *pResMgr.get() );
-
-        aWarning.SetDocumentURL( aDocumentURL );
-        if ( aSignInfo.getLength() > 1 )
-        {
-            aWarning.SetStorage( xZipStorage, aDocumentVersion, aSignInfo );
-        }
-        else if ( aSignInfo.getLength() == 1 )
-        {
-            aWarning.SetCertificate( aSignInfo[ 0 ].Signer );
-        }
-
-        bApprove = aWarning.Execute() == RET_OK;
+        aWarning->SetStorage( xZipStorage, aDocumentVersion, aSignInfo );
     }
+    else if ( aSignInfo.getLength() == 1 )
+    {
+        aWarning->SetCertificate( aSignInfo[ 0 ].Signer );
+    }
+
+    bApprove = aWarning->Execute() == RET_OK;
 
     if ( bApprove && xApprove.is() )
         xApprove->select();
@@ -1294,7 +1241,7 @@ UUIInteractionHelper::handleBrokenPackageRequest(
     OUString aMessage;
     {
         SolarMutexGuard aGuard;
-        boost::scoped_ptr< ResMgr > xManager(ResMgr::CreateResMgr("uui"));
+        std::unique_ptr< ResMgr > xManager(ResMgr::CreateResMgr("uui"));
         if (!xManager.get())
             return;
 
@@ -1325,29 +1272,31 @@ UUIInteractionHelper::handleBrokenPackageRequest(
 
     OUString title(
         utl::ConfigManager::getProductName() +
-        OUString( " " ) +
+        " " +
         utl::ConfigManager::getProductVersion() );
 
     switch (
         executeMessageBox( getParentProperty(), title, aMessage, nButtonMask ) )
     {
-    case ERRCODE_BUTTON_OK:
+    case DialogMask::ButtonsOk:
         OSL_ENSURE( xAbort.is(), "unexpected situation" );
         if (xAbort.is())
             xAbort->select();
         break;
 
-    case ERRCODE_BUTTON_NO:
+    case DialogMask::ButtonsNo:
         OSL_ENSURE(xDisapprove.is(), "unexpected situation");
         if (xDisapprove.is())
             xDisapprove->select();
         break;
 
-    case ERRCODE_BUTTON_YES:
+    case DialogMask::ButtonsYes:
         OSL_ENSURE(xApprove.is(), "unexpected situation");
         if (xApprove.is())
             xApprove->select();
         break;
+
+    default: break;
     }
 }
 
@@ -1359,14 +1308,10 @@ bool
 ErrorResource::getString(ErrCode nErrorCode, OUString &rString)
     const
 {
-    ResId aResId(static_cast< sal_uInt16 >(nErrorCode & ERRCODE_RES_MASK),
-                 *m_pResMgr);
-    aResId.SetRT(RSC_STRING);
-    if (!IsAvailableRes(aResId))
+    sal_uInt32 nIdx = m_aStringArray.FindIndex(nErrorCode & ERRCODE_RES_MASK);
+    if (nIdx == RESARRAY_INDEX_NOTFOUND)
         return false;
-    aResId.SetAutoRelease(false);
-    rString = aResId.toString();
-    m_pResMgr->PopContext();
+    rString = m_aStringArray.GetString(nIdx);
     return true;
 }
 
