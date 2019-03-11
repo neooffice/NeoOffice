@@ -196,7 +196,6 @@ PRODUCT_MODULES = \
 	filter \
 	fpicker \
 	framework \
-	hwpfilter \
 	i18npool \
 	i18nutil \
 	lingucomponent \
