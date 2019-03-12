@@ -69,7 +69,7 @@ BUNDLE_FILE_TYPE=Mach-O 64-bit bundle $(TARGET_MACHINE)
 else
 OS_TYPE=Win32
 endif
-BUILD_MACHINE=$(shell echo `id -nu`:`hostname`.`domainname`)
+BUILD_MACHINE=$(shell echo `id -nu`:`hostname`.)
 
 # Build location macros
 BUILD_HOME:=build
