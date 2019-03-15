@@ -542,8 +542,25 @@ static void RegisterMainBundleWithLaunchServices()
 	}
 }
 
+static void postSystemColorsDidChange()
+{
+	// Post a NSSystemColorsDidChangeNotification notification so
+	// that colors will be updated in our system color change
+	// handler
+	NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+	if ( pNotificationCenter )
+	{
+		// Delay posting of notification to allow NSColor class to
+		// update system colors to match the new appearance
+		NSNotification *pNotification = [NSNotification notificationWithName:NSSystemColorsDidChangeNotification object:nil];
+		if ( pNotification )
+			[pNotificationCenter performSelector:@selector(postNotification:) withObject:pNotification afterDelay:0];
+	}
+}
+
 static NSString *pAppleInterfaceStylePref = @"AppleInterfaceStyle";
 static NSString *pDisableDarkModePref = @"DisableDarkMode";
+static NSString *pScrollerPagingPref = @"AppleScrollerPagingBehavior";
 
 @interface VCLUpdateSystemAppearance : NSObject
 {
@@ -575,6 +592,7 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 		{
 			pVCLUpdateSystemAppearance = self;
 			[pVCLUpdateSystemAppearance retain];
+			[pDefaults addObserver:self forKeyPath:pScrollerPagingPref options:NSKeyValueObservingOptionNew context:NULL];
 			[pDefaults addObserver:self forKeyPath:pDisableDarkModePref options:NSKeyValueObservingOptionNew context:NULL];
 			// Force observer to fire immediately to set initial appearance
 			[pDefaults addObserver:self forKeyPath:pAppleInterfaceStylePref options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:NULL];
@@ -586,10 +604,15 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 
 - (void)observeValueForKeyPath:(NSString *)pKeyPath ofObject:(id)pObject change:(NSDictionary<NSKeyValueChangeKey, id> *)pChange context:(void *)pContext
 {
-	(void)pKeyPath;
 	(void)pObject;
 	(void)pChange;
 	(void)pContext;
+
+	if ( [pScrollerPagingPref isEqualToString:pKeyPath] )
+	{
+		postSystemColorsDidChange();
+		return;
+	}
 
 #if MACOSX_SDK_VERSION >= 101400
 	if ( @available(macOS 10.14, * ) )
@@ -626,19 +649,7 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 #endif	// MACOSX_SDK_VERSION < 101400
 			{
 				[pApp setAppearance:pAppearance];
-
-				// Post a NSSystemColorsDidChangeNotification notification so
-				// that colors will be updated in our system color change
-				// handler
-				NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
-				if ( pNotificationCenter )
-				{
-					// Delay posting of notification to allow NSColor class to
-					// update system colors to match the new appearance
-					NSNotification *pNotification = [NSNotification notificationWithName:NSSystemColorsDidChangeNotification object:nil];
-					if ( pNotification )
-						[pNotificationCenter performSelector:@selector(postNotification:) withObject:pNotification afterDelay:0];
-				}
+				postSystemColorsDidChange();
 			}
 		}
 	}

@@ -82,6 +82,7 @@ static SalColor *pVCLWindowColor = NULL;
 static SalColor *pVCLLinkColor = NULL;
 static SalColor *pVCLUnderPageColor = NULL;
 static long nVCLScrollbarSize = 0;
+static bool bScrollbarJumpPage = false;
 
 static ::osl::Mutex aSystemColorsMutex;
 static NSString *pVCLTrackingAreaWindowKey = @"VCLTrackingAreaWindow";
@@ -265,6 +266,16 @@ static void HandleSystemColorsChangedRequest()
 	// Always use NSScrollerStyleLegacy scrollbars as we always draw scrollbars 
 	// with that style in vcl/java/source/gdi/salnativewidgets.mm
 	nVCLScrollbarSize = Float32ToLong( [NSScroller scrollerWidthForControlSize:NSControlSizeRegular scrollerStyle:NSScrollerStyleLegacy] );
+
+	// Fix bug 3306 by updating scrollbar paging behavior
+	bScrollbarJumpPage = false;
+	CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "AppleScrollerPagingBehavior" ), kCFPreferencesCurrentApplication );
+	if( aPref )
+	{
+		if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
+			bScrollbarJumpPage = true;
+		CFRelease( aPref );
+	}
 }
 
 @interface VCLSetSystemUIMode : NSObject
@@ -4627,6 +4638,8 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 		aStyleSettings.SetTitleFont( aTitleBarFont );
 		aStyleSettings.SetFloatTitleFont( aTitleBarFont );
 	}
+
+	aStyleSettings.SetPrimaryButtonWarpsSlider( bScrollbarJumpPage );
 
 	rSettings.SetStyleSettings( aStyleSettings );
 
