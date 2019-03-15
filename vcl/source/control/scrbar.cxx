@@ -1209,19 +1209,6 @@ void ScrollBar::MouseButtonDown( const MouseEvent& rMEvt )
         }
         else
         {
-#if defined USE_JAVA && defined MACOSX
-            // Fix bug 3306 by updating scrollbar paging behavior
-            bool bScrollbarJumpPage = false;
-            CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "AppleScrollerPagingBehavior" ), kCFPreferencesCurrentApplication );
-            if( aPref )
-            {
-                if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && static_cast< CFBooleanRef >( aPref ) == kCFBooleanTrue )
-                    bScrollbarJumpPage = true;
-                CFRelease( aPref );
-            }
-            ImplGetSVData()->maNWFData.mbScrollbarJumpPage = bScrollbarJumpPage;
-#endif	// USE_JAVA && MACOSX
-
             bool bThumbHit = HitTestNativeScrollbar( bHorizontal? ControlPart::ThumbHorz : ControlPart::ThumbVert,
                                                    maThumbRect, rMousePos, bIsInside )
                              ? bIsInside : maThumbRect.IsInside( rMousePos );
