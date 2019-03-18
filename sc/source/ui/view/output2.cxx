@@ -1635,7 +1635,7 @@ void ScOutputData::DrawStrings( bool bPixelToLogic )
 #ifdef USE_JAVA
                     // Attempt to fix Mac App Store crash by detecting if the
                     // pattern's item set is NULL
-                    if (aCell.hasNumeric() && &pPattern->GetItemSet() &&
+                    if (aCell.hasNumeric() && pPattern && static_cast< const SfxItemSet* >(&pPattern->GetItemSet()) &&
 #else	// USE_JAVA
                     if (aCell.hasNumeric() &&
 #endif	// USE_JAVA
