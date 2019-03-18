@@ -155,7 +155,7 @@ void SwListShell::Execute(SfxRequest &rReq)
 #ifdef USE_JAVA
             // Fix bug 2741 by detecting the strange case where GetView()
             // returns NULL
-            if ( (const SwView *)&GetView() )
+            if ( static_cast< const SwView* >( &GetView() ) )
 #endif	// USE_JAVA
             {
                 SfxViewFrame * pFrame = GetView().GetViewFrame();
