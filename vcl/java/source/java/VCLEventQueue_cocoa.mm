@@ -54,6 +54,9 @@
 // Comment out the following line to disable automatic window tabbing
 #define USE_AUTOMATIC_WINDOW_TABBING
 
+// Uncomment the following line to enable the NSPopover fix
+// #define USE_NSPOPOVER_FIX
+
 #define MODIFIER_RELEASE_INTERVAL 100
 #define UNDEFINED_KEY_CODE 0xffff
 
@@ -542,7 +545,7 @@ static void RegisterMainBundleWithLaunchServices()
 	}
 }
 
-static void postSystemColorsDidChange()
+static void PostSystemColorsDidChange()
 {
 	// Post a NSSystemColorsDidChangeNotification notification so
 	// that colors will be updated in our system color change
@@ -610,9 +613,19 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 
 	if ( [pScrollerPagingPref isEqualToString:pKeyPath] )
 	{
-		postSystemColorsDidChange();
-		return;
+		PostSystemColorsDidChange();
 	}
+	else
+	{
+		// Attempt to fix Mac App Store crash by delaying setting of the
+		// appearance
+		[self performSelector:@selector(handleAppearanceChange:) withObject:self afterDelay:0];
+	}
+}
+
+- (void)handleAppearanceChange:(id)pObject
+{
+	(void)pObject;
 
 #if MACOSX_SDK_VERSION >= 101400
 	if ( @available(macOS 10.14, * ) )
@@ -649,7 +662,7 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 #endif	// MACOSX_SDK_VERSION < 101400
 			{
 				[pApp setAppearance:pAppearance];
-				postSystemColorsDidChange();
+				PostSystemColorsDidChange();
 			}
 		}
 	}
@@ -1182,6 +1195,7 @@ static NSUInteger nMouseMask = 0;
 				[pNotificationCenter removeObserver:self name:@"NSWindowWillEnterFullScreenNotification" object:self];
 			}
 		}
+#ifdef USE_NSPOPOVER_FIX
 		else if ( [[self className] isEqualToString:@"_NSPopoverWindow"] )
 		{
 			// Fix crashing on OS X 10.10 when displaying the Save dialog while
@@ -1193,6 +1207,7 @@ static NSUInteger nMouseMask = 0;
 			[self setContentView:pContentView];
 			[pContentView autorelease];
 		}
+#endif	// USE_NSPOPOVER_FIX
 	}
 
 	if ( [super respondsToSelector:@selector(poseAsOrderWindow:relativeTo:)] )
