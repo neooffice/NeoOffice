@@ -545,7 +545,7 @@ static void RegisterMainBundleWithLaunchServices()
 	}
 }
 
-static void postSystemColorsDidChange()
+static void PostSystemColorsDidChange()
 {
 	// Post a NSSystemColorsDidChangeNotification notification so
 	// that colors will be updated in our system color change
@@ -613,9 +613,19 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 
 	if ( [pScrollerPagingPref isEqualToString:pKeyPath] )
 	{
-		postSystemColorsDidChange();
-		return;
+		PostSystemColorsDidChange();
 	}
+	else
+	{
+		// Attempt to fix Mac App Store crash by delaying setting of the
+		// appearance
+		[self performSelector:@selector(handleAppearanceChange:) withObject:self afterDelay:0];
+	}
+}
+
+- (void)handleAppearanceChange:(id)pObject
+{
+	(void)pObject;
 
 #if MACOSX_SDK_VERSION >= 101400
 	if ( @available(macOS 10.14, * ) )
@@ -652,7 +662,7 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 #endif	// MACOSX_SDK_VERSION < 101400
 			{
 				[pApp setAppearance:pAppearance];
-				postSystemColorsDidChange();
+				PostSystemColorsDidChange();
 			}
 		}
 	}
