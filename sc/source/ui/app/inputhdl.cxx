@@ -1776,6 +1776,12 @@ void ScInputHandler::UpdateAdjust( sal_Unicode cTyped )
             break;
     }
 
+#ifdef USE_JAVA
+    // Attempt to fix Mac App Store crash by checking if the last pattern's
+    // item set is NULL
+    if ( pLastPattern && static_cast< const SfxItemSet* >( &pLastPattern->GetItemSet() ) == NULL )
+        pLastPattern = NULL;
+#endif	// USE_JAVA
     bool bAsianVertical = pLastPattern &&
         static_cast<const SfxBoolItem&>(pLastPattern->GetItem( ATTR_STACKED )).GetValue() &&
         static_cast<const SfxBoolItem&>(pLastPattern->GetItem( ATTR_VERTICAL_ASIAN )).GetValue();
