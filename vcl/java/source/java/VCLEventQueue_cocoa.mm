@@ -54,6 +54,9 @@
 // Comment out the following line to disable automatic window tabbing
 #define USE_AUTOMATIC_WINDOW_TABBING
 
+// Uncomment the following line to enable the NSPopover fix
+// #define USE_NSPOPOVER_FIX
+
 #define MODIFIER_RELEASE_INTERVAL 100
 #define UNDEFINED_KEY_CODE 0xffff
 
@@ -1182,6 +1185,7 @@ static NSUInteger nMouseMask = 0;
 				[pNotificationCenter removeObserver:self name:@"NSWindowWillEnterFullScreenNotification" object:self];
 			}
 		}
+#ifdef USE_NSPOPOVER_FIX
 		else if ( [[self className] isEqualToString:@"_NSPopoverWindow"] )
 		{
 			// Fix crashing on OS X 10.10 when displaying the Save dialog while
@@ -1193,6 +1197,7 @@ static NSUInteger nMouseMask = 0;
 			[self setContentView:pContentView];
 			[pContentView autorelease];
 		}
+#endif	// USE_NSPOPOVER_FIX
 	}
 
 	if ( [super respondsToSelector:@selector(poseAsOrderWindow:relativeTo:)] )
