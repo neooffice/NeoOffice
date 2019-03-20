@@ -811,9 +811,8 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
                     // Attempt to fix Mac App Store crash by checking if the
                     // frame is NULL
                     if (GetFrame())
-#else	// USE_JAVA
-                    GetFrame()->RemoveInfoBar("readonly");
 #endif	// USE_JAVA
+                    GetFrame()->RemoveInfoBar("readonly");
                     SetReadOnlyUI(false);
                 }
             }
