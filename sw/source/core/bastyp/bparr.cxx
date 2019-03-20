@@ -28,6 +28,7 @@
 
 #include <limits.h>
 #include <string.h>
+#include <stdio.h>
 
 /** Resize block management by this constant.
     As a result there are approx. 20 * MAXENTRY == 20000 entries available */
@@ -135,6 +136,11 @@ sal_uInt16 BigPtrArray::Index2Block( sal_uLong pos ) const
             return 0;
 #endif	// USE_JAVA
         p = ppInf[ cur ];
+#ifdef USE_JAVA
+        // Attempt to fix Mac App Store crash by skipping NULL array elements
+        if ( !p )
+            continue;
+#endif	// USE_JAVA
         if( p->nStart <= pos && p->nEnd >= pos )
             return cur;
 
