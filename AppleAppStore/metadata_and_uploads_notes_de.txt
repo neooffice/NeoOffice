@@ -36,6 +36,8 @@ Bevor Sie NeoOffice kaufen, klicken Sie bitte auf den „NeoOffice Support” Li
 This version of NeoOffice fixes the following bugs:
 • While another application was using a lot of CPU, NeoOffice would freeze for several seconds when saving some Calc documents
 • If the "jump to the spot that's clicked" preference was selected in the System Preferences application, clicking on a scrollbar in NeoOffice would only jump to the next page
+• While running on macOS Mojave, NeoOffice would crash when switching into or out of Dark Mode while redrawing native controls
+• While running on macOS Mojave, NeoOffice would crash when closing the popover attached to a document window's titlebar
 
 
 Promotional Text:
