@@ -1225,12 +1225,21 @@ uno::Reference< container::XEnumeration >  SwXCell::createEnumeration(void) thro
 
         // remember table and start node for later travelling
         // (used in export of tables in tables)
+#ifdef USE_JAVA
+        // Attempt to fix Mac App Store crash by checking if the table node is
+        // NULL
+        if (pSttNd->FindTableNode())
+        {
+#endif	// USE_JAVA
         SwTable const*const pTable( & pSttNd->FindTableNode()->GetTable() );
         SwXParagraphEnumeration *const pEnum =
             new SwXParagraphEnumeration(this, std::move(pUnoCursor), CURSOR_TBLTEXT,
                     pSttNd, pTable);
 
         aRef = pEnum;
+#ifdef USE_JAVA
+        }
+#endif	// USE_JAVA
     }
     return aRef;
 }
