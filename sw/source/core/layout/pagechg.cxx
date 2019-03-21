@@ -1159,6 +1159,13 @@ void SwFrm::CheckPageDescs( SwPageFrm *pStart, bool bNotifyFields, SwPageFrm** p
 
 SwPageFrm *SwFrm::InsertPage( SwPageFrm *pPrevPage, bool bFtn )
 {
+#ifdef USE_JAVA
+    // Attempt to fix Mac App Store crash by checking if the previous page is
+    // NULL
+    if ( !pPrevPage )
+        return NULL;
+#endif	// USE_JAVA
+
     SwRootFrm *pRoot = (SwRootFrm*)pPrevPage->GetUpper();
     SwPageFrm *pSibling = (SwPageFrm*)pPrevPage->GetNext();
     SwPageDesc *pDesc = 0;
