@@ -34,10 +34,11 @@ What's New in this Version:
 Before you buy NeoOffice, please click on the "NeoOffice Support" link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would crash due to LibreOffice bugs #57550 and #66496
-• NeoOffice would crash when selecting the Load Styles option in the Styles and Formatting panel in a Writer document
-• NeoOffice would crash printing a Writer document if printing comments had been enabled in the Comments section of the Printer Options dialog
-• NeoOffice would crash quitting if a database that uses Calc files for its tables was open
+• While another application was using a lot of CPU, NeoOffice would freeze for several seconds when saving some Calc documents
+• If the "jump to the spot that's clicked" preference was selected in the System Preferences application, clicking on a scrollbar in NeoOffice would only jump to the next page
+• While running on macOS Mojave, NeoOffice would crash when switching into or out of Dark Mode while redrawing native controls
+• While running on macOS Mojave, NeoOffice would crash when closing the popover attached to a document window's titlebar
+• NeoOffice would crash due to LibreOffice bug #102233
 
 
 Promotional Text:
