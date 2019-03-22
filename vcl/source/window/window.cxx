@@ -1425,6 +1425,12 @@ void Window::ImplAddDel( ImplDelData* pDel ) // TODO: make "const" when incompat
     if( !pDel->mpWindow )
     {
         pDel->mpWindow = this;  // #112873# store ref to this window, so pDel can remove itself
+#ifdef USE_JAVA
+        // Attempt to fix Mac App Store crash by checking if the window
+        // implementation is NULL
+        if ( !mpWindowImpl )
+            return;
+#endif	// USE_JAVA
         pDel->mpNext = mpWindowImpl->mpFirstDel;
         mpWindowImpl->mpFirstDel = pDel;
     }
