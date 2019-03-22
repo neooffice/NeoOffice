@@ -1235,6 +1235,13 @@ namespace
 
 SwPageFrame *SwFrame::InsertPage( SwPageFrame *pPrevPage, bool bFootnote )
 {
+#ifdef USE_JAVA
+    // Attempt to fix Mac App Store crash by checking if the previous page is
+    // NULL
+    if ( !pPrevPage )
+        return nullptr;
+#endif	// USE_JAVA
+
     SwRootFrame *pRoot = static_cast<SwRootFrame*>(pPrevPage->GetUpper());
     SwPageFrame *pSibling = static_cast<SwPageFrame*>(pPrevPage->GetNext());
     SwPageDesc *pDesc = nullptr;
