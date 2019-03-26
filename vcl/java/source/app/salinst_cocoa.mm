@@ -54,8 +54,9 @@
 
 static ::osl::Mutex aCurrentInstanceSecurityURLCacheMutex;
 static NSMutableDictionary *pCurrentInstanceSecurityURLCacheDictionary = nil;
-static BOOL bIsCppUnitTesterInitialized = false;
-static BOOL bIsCppUnitTester = false;
+static BOOL bIsCppUnitTesterInitialized = NO;
+static BOOL bIsCppUnitTester = NO;
+static BOOL bIsRunningInSandbox = YES;
 
 using namespace osl;
 
@@ -65,6 +66,7 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 {
 	BOOL					mbCancelled;
 	BOOL					mbFinished;
+	BOOL					mbIsRunningInSandbox;
 	NSOpenPanel*			mpOpenPanel;
 	NSURL*					mpSecurityScopedURL;
 	NSString*				mpTitle;
@@ -76,6 +78,7 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 - (void)destroy:(id)pObject;
 - (BOOL)finished;
 - (id)initWithURL:(NSURL *)pURL title:(NSString *)pTitle;
+- (BOOL)isRunningInSandbox;
 #ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (BOOL)panel:(id)pSender shouldEnableURL:(NSURL *)pURL;
 #else	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
@@ -92,14 +95,14 @@ static BOOL ImplIsCppUnitTester()
 {
 	if ( !bIsCppUnitTesterInitialized )
 	{
-		bIsCppUnitTesterInitialized = true;
+		bIsCppUnitTesterInitialized = YES;
 
 		OUString sFile;
 		if ( osl_getExecutableFile( &sFile.pData ) == osl_Process_E_None )
 		{
 			sFile = sFile.copy( sFile.lastIndexOf( '/' ) + 1 );
 			if ( sFile == "cppunittester" )
-				bIsCppUnitTester = true;
+				bIsCppUnitTester = YES;
 		}
 	}
 
@@ -418,8 +421,10 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 				if ( pURL )
 				{
 					// Check if there are any cached security scoped bookmarks
-					// for this URL or any of its parent folders
-					BOOL bShowOpenPanel = !ImplIsCppUnitTester();
+					// for this URL or any of its parent folders. Fix slowness
+					// during saving by suppressing the open panel when not
+					// running in the sandbox.
+					BOOL bShowOpenPanel = bIsRunningInSandbox && !ImplIsCppUnitTester();
 					NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
 					NSURL *pTmpURL = pURL;
 					BOOL bSecurityScopedURLFound = NO;
@@ -484,6 +489,7 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 							[pSecurityScopedURLs addObject:pSecurityScopedURL];
 						}
 
+						bIsRunningInSandbox = [pVCLRequestSecurityScopedURL isRunningInSandbox];
 						[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(destroy:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
 
 						Application::AcquireSolarMutex( nReleaseCount );
@@ -588,6 +594,7 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 
 	mbCancelled = NO;
 	mbFinished = NO;
+	mbIsRunningInSandbox = YES;
 	mpOpenPanel = nil;
 	mpSecurityScopedURL = nil;
 
@@ -611,6 +618,11 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 	}
 
 	return self;
+}
+
+- (BOOL)isRunningInSandbox
+{
+	return mbIsRunningInSandbox;
 }
 
 #ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
@@ -735,7 +747,10 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 			// Display open panel only if we are running in the sandbox. In the
 			// sandbox, NSOpenPanel should not be a subclass of NSOpenPanel.
 			if ( mpOpenPanel && [mpOpenPanel isKindOfClass:[NSOpenPanel class]] )
+			{
+				mbIsRunningInSandbox = NO;
 				mpOpenPanel = nil;
+			}
 
 			if ( mpOpenPanel )
 			{
