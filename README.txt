@@ -13,8 +13,8 @@ At this time, NeoOffice will only build on macOS 10.12 Sierra or macOS 10.14 Moj
      Xcode v8.3.3
      Command Line Tools for Xcode v8.3.2
    macOS 10.14 Mojave:
-     Xcode v10.0
-     Command Line Tools for Xcode v10
+     Xcode v10.2
+     Command Line Tools for Xcode v10.2
 
 2. Download and install Oracle's Java 1.8 Development Kit (JDK) from the following URL:
 
