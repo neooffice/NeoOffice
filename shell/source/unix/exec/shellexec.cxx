@@ -48,6 +48,12 @@
 #include <errno.h>
 #include <unistd.h>
 
+#ifndef NO_LIBO_OPEN_EXECUTABLE_FIX
+#if defined MACOSX
+#include <sys/stat.h>
+#endif
+#endif	// !NO_LIBO_OPEN_EXECUTABLE_FIX
+
 #if defined USE_JAVA && defined MACOSX
 
 #include <dlfcn.h>
@@ -136,10 +142,16 @@ ShellExec::ShellExec( const Reference< XComponentContext >& xContext ) :
 void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aParameter, sal_Int32 nFlags )
     throw (IllegalArgumentException, SystemShellExecuteException, RuntimeException, std::exception)
 {
+#if defined USE_JAVA && defined MACOSX
+    OStringBuffer aBuffer;
+#else	// USE_JAVA && MACOSX
     OStringBuffer aBuffer, aLaunchBuffer;
+#endif	// USE_JAVA && MACOSX
 
+#if !defined USE_JAVA || !defined MACOSX
     // DESKTOP_LAUNCH, see http://freedesktop.org/pipermail/xdg/2004-August/004489.html
     static const char *pDesktopLaunch = getenv( "DESKTOP_LAUNCH" );
+#endif	// !USE_JAVA || !MACOSX
 
     // Check whether aCommand contains an absolute URI reference:
     css::uno::Reference< css::uri::XUriReference > uri(
@@ -161,7 +173,43 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
                 static_cast< cppu::OWeakObject * >(this));
         }
 
-#if defined USE_JAVA && defined MACOSX
+#ifdef MACOSX
+#ifndef NO_LIBO_OPEN_EXECUTABLE_FIX
+        if (uri->getScheme().equalsIgnoreAsciiCase("file")) {
+            OUString pathname;
+            auto const e1 = osl::FileBase::getSystemPathFromFileURL(aCommand, pathname);
+            if (e1 != osl::FileBase::E_None) {
+                throw css::lang::IllegalArgumentException(
+                    ("XSystemShellExecute.execute, getSystemPathFromFileURL <" + aCommand
+                     + "> failed with " + OUString::number(e1)),
+                    {}, 0);
+            }
+            OString pathname8;
+            if (!pathname.convertToString(
+                    &pathname8, RTL_TEXTENCODING_UTF8,
+                    (RTL_UNICODETOTEXT_FLAGS_UNDEFINED_ERROR
+                     | RTL_UNICODETOTEXT_FLAGS_INVALID_ERROR)))
+            {
+                throw css::lang::IllegalArgumentException(
+                    "XSystemShellExecute.execute, cannot convert \"" + pathname + "\" to UTF-8", {},
+                    0);
+            }
+            struct stat st;
+            auto const e2 = stat(pathname8.getStr(), &st);
+            if (e2 != 0) {
+                auto const e3 = errno;
+                SAL_INFO("shell", "stat(" << pathname8 << ") failed with errno " << e3);
+            }
+            if (e2 != 0 || !S_ISREG(st.st_mode)
+                || (st.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) != 0)
+            {
+                throw css::lang::IllegalArgumentException(
+                    "XSystemShellExecute.execute, cannot process <" + aCommand + ">", {}, 0);
+            }
+        }
+#endif	// !NO_LIBO_OPEN_EXECUTABLE_FIX
+
+#ifdef USE_JAVA
         // Fix failure to open file URL hyperlinks by obtaining a security
         // scoped bookmark before opening the URL
         id pSecurityScopedURL = NULL;
@@ -176,12 +224,13 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
         }
 
         // Fix bug 3584 by not throwing an exception if we can't open a URL
-        sal_Bool bOpened = ShellExec_openURL( aURL );
+        ShellExec_openURL( aURL );
 
         if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
             pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
-#else	// USE_JAVA && MACOSX
-#ifdef MACOSX
+
+		return;
+#else	// USE_JAVA
         //TODO: Using open(1) with an argument that syntactically is an absolute
         // URI reference does not necessarily give expected results:
         // 1  If the given URI reference matches a supported scheme (e.g.,
@@ -205,6 +254,7 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
         //  Results in "The file /.../foo:bar does not exits." (where "/..." is
         //  the CWD) on stderr and SystemShellExecuteException.
         aBuffer.append("open --");
+#endif	// USE_JAVA
 #else
         // The url launchers are expected to be in the $BRAND_BASE_DIR/LIBO_LIBEXEC_FOLDER
         // directory:
@@ -255,6 +305,7 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
 
         aBuffer.append("open-url");
 #endif
+#if !defined USE_JAVA || !defined MACOSX
         aBuffer.append(" ");
         escapeForShell(aBuffer, OUStringToOString(aURL, osl_getThreadTextEncoding()));
 
@@ -263,6 +314,7 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
             aLaunchBuffer.append( OString(pDesktopLaunch) + " ");
             escapeForShell(aLaunchBuffer, OUStringToOString(aURL, osl_getThreadTextEncoding()));
         }
+#endif	// !USE_JAVA || !MACOSX
     } else if ((nFlags & css::system::SystemShellExecuteFlags::URIS_ONLY) != 0)
     {
         throw css::lang::IllegalArgumentException(
@@ -270,7 +322,6 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
                      " URI reference ")
              + aCommand,
             static_cast< cppu::OWeakObject * >(this), 0);
-#endif	// USE_JAVA && MACOSX
     } else {
         escapeForShell(aBuffer, OUStringToOString(aCommand, osl_getThreadTextEncoding()));
         aBuffer.append(" ");

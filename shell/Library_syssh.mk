@@ -34,6 +34,12 @@ $(eval $(call gb_Library_use_system_win32_libs,syssh,\
 	shell32 \
 ))
 
+ifndef NO_LIBO_OPEN_EXECUTABLE_FIX
+$(eval $(call gb_Library_use_libraries,syssh, \
+    tl \
+))
+endif	 # !NO_LIBO_OPEN_EXECUTABLE_FIX
+
 $(eval $(call gb_Library_set_componentfile,syssh,shell/source/win32/syssh))
 
 $(eval $(call gb_Library_add_exception_objects,syssh,\
