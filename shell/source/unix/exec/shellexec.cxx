@@ -146,12 +146,10 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
     OStringBuffer aBuffer;
 #else	// USE_JAVA && MACOSX
     OStringBuffer aBuffer, aLaunchBuffer;
-#endif	// USE_JAVA && MACOSX
 
-#if !defined USE_JAVA || !defined MACOSX
     // DESKTOP_LAUNCH, see http://freedesktop.org/pipermail/xdg/2004-August/004489.html
     static const char *pDesktopLaunch = getenv( "DESKTOP_LAUNCH" );
-#endif	// !USE_JAVA || !MACOSX
+#endif	// USE_JAVA && MACOSX
 
     // Check whether aCommand contains an absolute URI reference:
     css::uno::Reference< css::uri::XUriReference > uri(
@@ -224,10 +222,14 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
         }
 
         // Fix bug 3584 by not throwing an exception if we can't open a URL
-        ShellExec_openURL( aURL );
+        sal_Bool bOpened = ShellExec_openURL( aURL );
 
         if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
             pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
+
+        if ( !bOpened )
+            throw SystemShellExecuteException( "Cound not open path",
+                static_cast < XSystemShellExecute * > (this), ENOENT );
 
 		return;
 #else	// USE_JAVA
