@@ -231,7 +231,7 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
             throw SystemShellExecuteException( "Cound not open path",
                 static_cast < XSystemShellExecute * > (this), ENOENT );
 
-		return;
+        return;
 #else	// USE_JAVA
         //TODO: Using open(1) with an argument that syntactically is an absolute
         // URI reference does not necessarily give expected results:
