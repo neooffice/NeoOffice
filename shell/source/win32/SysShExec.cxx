@@ -308,8 +308,8 @@ void SAL_CALL CSysShExec::execute( const OUString& aCommand, const OUString& aPa
                     "XSystemShellExecute.execute, cannot process <" + aCommand + ">", {}, 0);
             }
         }
-    }
 #endif	// !NO_LIBO_OPEN_EXECUTABLE_FIX
+    }
 
     /*  #i4789#; jump mark detection on system paths
         if the given command is a system path (not http or
