@@ -291,21 +291,99 @@ void SAL_CALL CSysShExec::execute( const OUString& aCommand, const OUString& aPa
         }
 #ifndef NO_LIBO_OPEN_EXECUTABLE_FIX
         if (uri->getScheme().equalsIgnoreAsciiCase("file")) {
-            INetURLObject url(aCommand);
-            auto ok = !url.HasError();
-            SAL_INFO_IF(!ok, "shell", "INetURLObject(" << aCommand << ") failed");
-            if (ok) {
-                auto const ext = url.getExtension(
-                    INetURLObject::LAST_SEGMENT, true, INetURLObject::DecodeMechanism::WithCharset);
-                if (ext.equalsIgnoreAsciiCase("bat") || ext.equalsIgnoreAsciiCase("com")
-                    || ext.equalsIgnoreAsciiCase("exe"))
+            OUString pathname;
+            auto const e1 = osl::FileBase::getSystemPathFromFileURL(aCommand, pathname);
+            if (e1 != osl::FileBase::E_None) {
+                throw css::lang::IllegalArgumentException(
+                    ("XSystemShellExecute.execute, getSystemPathFromFileURL <" + aCommand
+                     + "> failed with " + OUString::number(e1)),
+                    {}, 0);
+            }
+            for (int i = 0;; ++i) {
+                SHFILEINFOW info;
+                if (SHGetFileInfoW(
+                        o3tl::toW(pathname.getStr()), 0, &info, sizeof info, SHGFI_EXETYPE)
+                    != 0)
                 {
-                    ok = false;
+                    throw css::lang::IllegalArgumentException(
+                        "XSystemShellExecute.execute, cannot process <" + aCommand + ">", {}, 0);
+                }
+                if (SHGetFileInfoW(
+                        o3tl::toW(pathname.getStr()), 0, &info, sizeof info, SHGFI_ATTRIBUTES)
+                    == 0)
+                {
+                    throw css::lang::IllegalArgumentException(
+                        "XSystemShellExecute.execute, SHGetFileInfoW(" + pathname + ") failed", {},
+                        0);
+                }
+                if ((info.dwAttributes & SFGAO_LINK) == 0) {
+                    break;
+                }
+                sal::systools::COMReference<IShellLinkW> link;
+                auto e2 = CoCreateInstance(
+                    CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_IShellLinkW,
+                    reinterpret_cast<LPVOID *>(&link));
+                if (FAILED(e2)) {
+                    throw css::lang::IllegalArgumentException(
+                        ("XSystemShellExecute.execute, CoCreateInstance failed with "
+                         + OUString::number(e2)),
+                        {}, 0);
+                }
+                sal::systools::COMReference<IPersistFile> file;
+                try {
+                    file = link.QueryInterface<IPersistFile>(IID_IPersistFile);
+                } catch(sal::systools::ComError & e3) {
+                    throw css::lang::IllegalArgumentException(
+                        ("XSystemShellExecute.execute, QueryInterface failed with: "
+                         + o3tl::runtimeToOUString(e3.what())),
+                        {}, 0);
+                }
+                e2 = file->Load(o3tl::toW(pathname.getStr()), STGM_READ);
+                if (FAILED(e2)) {
+                    throw css::lang::IllegalArgumentException(
+                        ("XSystemShellExecute.execute, IPersistFile.Load failed with "
+                         + OUString::number(e2)),
+                        {}, 0);
+                }
+                e2 = link->Resolve(nullptr, SLR_UPDATE | SLR_NO_UI);
+                if (FAILED(e2)) {
+                    throw css::lang::IllegalArgumentException(
+                        ("XSystemShellExecute.execute, IShellLink.Resolve failed with "
+                         + OUString::number(e2)),
+                        {}, 0);
+                }
+                wchar_t path[MAX_PATH];
+                WIN32_FIND_DATAW wfd;
+                e2 = link->GetPath(path, MAX_PATH, &wfd, SLGP_RAWPATH);
+                if (FAILED(e2)) {
+                    throw css::lang::IllegalArgumentException(
+                        ("XSystemShellExecute.execute, IShellLink.GetPath failed with "
+                         + OUString::number(e2)),
+                        {}, 0);
+                }
+                pathname = o3tl::toU(path);
+                // Fail at some arbitrary nesting depth, to avoid an infinite loop:
+                if (i == 30) {
+                    throw css::lang::IllegalArgumentException(
+                        "XSystemShellExecute.execute, link depth exceeded for <" + aCommand + ">",
+                        {}, 0);
                 }
             }
-            if (!ok) {
-                throw css::lang::IllegalArgumentException(
-                    "XSystemShellExecute.execute, cannot process <" + aCommand + ">", {}, 0);
+            auto const n = pathname.lastIndexOf('.');
+            if (n > pathname.lastIndexOf('\\')) {
+                auto const ext = pathname.copy(n + 1);
+                OUString env;
+                if (osl_getEnvironment(OUString("PATHEXT").pData, &env.pData) != osl_Process_E_None)
+                {
+                    SAL_INFO("shell", "osl_getEnvironment(PATHEXT) failed");
+                }
+                if (!(checkExtension(ext, env)
+                      && checkExtension(
+                          ext, ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY")))
+                {
+                    throw css::lang::IllegalArgumentException(
+                        "XSystemShellExecute.execute, cannot process <" + aCommand + ">", {}, 0);
+                }
             }
         }
 #endif	// !NO_LIBO_OPEN_EXECUTABLE_FIX
