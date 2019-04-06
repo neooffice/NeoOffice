@@ -617,6 +617,12 @@ WW8TableInfo::processSwTableByLayout(const SwTable * pTable)
                         bDone = true;
                 }
 
+#ifdef USE_JAVA
+                // Attempt to fix Mac App Store crash in BigPtrArray::Index2Block()
+                if (aPam.GetPoint()->nNode.GetIndex() >= aPam.GetPoint()->nNode.GetNodes().Count())
+                    bDone = true;
+                else
+#endif	// USE_JAVA
                 aPam.GetPoint()->nNode++;
             }
             while (!bDone);
@@ -732,6 +738,11 @@ WW8TableInfo::processTableBoxLines(const SwTableBox * pBox,
 
             if (aPaM.GetPoint()->nNode == aEndPaM.GetPoint()->nNode)
                 bDone = true;
+#ifdef USE_JAVA
+            // Attempt to fix Mac App Store crash in BigPtrArray::Index2Block()
+            else if (aPaM.GetPoint()->nNode.GetIndex() >= aPaM.GetPoint()->nNode.GetNodes().Count())
+                bDone = true;
+#endif	// USE_JAVA
             else
                 aPaM.GetPoint()->nNode++;
         }
@@ -802,12 +813,7 @@ WW8TableInfo::processTableBox(const SwTable * pTable,
             if (nDepthInsideCell == 1 && rNode.IsTxtNode())
                 pEndOfCellInfo = pNodeInfo;
 
-#ifdef USE_JAVA
-            // Attempt to fix Mac App Store crash in BigPtrArray::Index2Block()
-            if (rNode.IsEndNode() || aPaM.GetPoint()->nNode.GetIndex() >= aPaM.GetPoint()->nNode.GetNodes().Count())
-#else	// USE_JAVA
             if (rNode.IsEndNode())
-#endif	// USE_JAVA
             {
                 nDepthInsideCell--;
 
@@ -822,7 +828,9 @@ WW8TableInfo::processTableBox(const SwTable * pTable,
 
 #ifdef USE_JAVA
             // Attempt to fix Mac App Store crash in BigPtrArray::Index2Block()
-            if (aPaM.GetPoint()->nNode.GetIndex() < aPaM.GetPoint()->nNode.GetNodes().Count())
+            if (aPaM.GetPoint()->nNode.GetIndex() >= aPaM.GetPoint()->nNode.GetNodes().Count())
+                bDone = true;
+            else
 #endif	// USE_JAVA
             aPaM.GetPoint()->nNode++;
         }
