@@ -189,7 +189,7 @@ static OUString NSStringToOUString( NSString *pString )
 				if ( pCheckingResults && [pCheckingResults count] )
 				{
 					NSMutableArray< NSDictionary< NSString*, id > * > *pGrammarDetails = [NSMutableArray arrayWithCapacity:[pCheckingResults count] * 2];
-					if ( pCheckingResults )
+					if ( pGrammarDetails )
 					{
 						for ( NSTextCheckingResult *pCheckingResult in pCheckingResults )
 						{
@@ -208,7 +208,6 @@ static OUString NSStringToOUString( NSString *pString )
 						}
 
 						sal_Int32 nErrors = pResult->aErrors.getLength();
-
 						pResult->aErrors.realloc( nErrors + [pGrammarDetails count] );
 						SingleProofreadingError *pErrors = pResult->aErrors.getArray();
 						if ( pErrors )
