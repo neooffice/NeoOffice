@@ -4583,6 +4583,14 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	if ( pVCLLinkColor )
 		aStyleSettings.SetLinkColor( Color( *pVCLLinkColor ) );
 
+	// Fix light background in explanatory text in the Spelling and Grammar
+	// dialog by inverting the help color when running in Dark Mode
+	StyleSettings aStandardStyleSettings;
+	Color aHelpColor( aStandardStyleSettings.GetHelpColor() );
+	if ( bVCLUseDarkModeColors )
+		aHelpColor.Invert();
+	aStyleSettings.SetHelpColor( aHelpColor );
+
 	// Mnemonics is needed for our code in OutputDevice::ImplDrawMnemonicLine()
 	aStyleSettings.SetOptions( aStyleSettings.GetOptions() & ~STYLE_OPTION_NOMNEMONICS );
 
