@@ -182,48 +182,60 @@ static OUString NSStringToOUString( NSString *pString )
 			NSString *pString = [NSString stringWithCharacters:pResult->aText.getStr() + pResult->nStartOfSentencePosition length:nLen];
 			if ( pString )
 			{
-				NSUInteger nLen = [pString length];
-				NSUInteger nStart = 0;
-				while ( nStart < nLen )
+				// Doing a combined spelling and grammar check appears to yield
+				// results more consistent with Apple's TextEdit application
+				[pChecker setLanguage:pLocale];
+				NSArray *pCheckingResults = [pChecker checkString:pString range:NSMakeRange( 0, [pString length] ) types:NSTextCheckingTypeSpelling | NSTextCheckingTypeGrammar options:nil inSpellDocumentWithTag:0 orthography:nil wordCount:nil];
+				if ( pCheckingResults && [pCheckingResults count] )
 				{
-					NSArray *pDetails = nil;
-					NSRange aCheckRange = [pChecker checkGrammarOfString:pString startingAt:nStart language:pLocale wrap:NO inSpellDocumentWithTag:0 details:&pDetails];
-					if ( aCheckRange.location == NSNotFound || !aCheckRange.length || !pDetails )
-						break;
-
-					nStart = aCheckRange.location + aCheckRange.length;
-
-					NSUInteger nCount = [pDetails count];
-					NSUInteger i = 0;
-					sal_Int32 nErrors = pResult->aErrors.getLength();
-
-					pResult->aErrors.realloc( nErrors + nCount );
-					SingleProofreadingError *pErrors = pResult->aErrors.getArray();
-					if ( pErrors )
+					NSMutableArray< NSDictionary< NSString*, id > * > *pGrammarDetails = [NSMutableArray arrayWithCapacity:[pCheckingResults count] * 2];
+					if ( pCheckingResults )
 					{
-						for ( ; i < nCount; i++ )
+						for ( NSTextCheckingResult *pCheckingResult in pCheckingResults )
 						{
-							NSDictionary *pDict = [pDetails objectAtIndex:i];
-							if ( pDict )
+							if ( pCheckingResult )
 							{
+								NSArray *pCheckingDetails = [pCheckingResult grammarDetails];
+								if ( pCheckingDetails )
+								{
+									for ( NSDictionary *pCheckingDetail in pCheckingDetails )
+									{
+										if ( pCheckingDetail )
+											[pGrammarDetails addObject:pCheckingDetail];
+									}
+								}
+							}
+						}
+
+						sal_Int32 nErrors = pResult->aErrors.getLength();
+
+						pResult->aErrors.realloc( nErrors + [pGrammarDetails count] );
+						SingleProofreadingError *pErrors = pResult->aErrors.getArray();
+						if ( pErrors )
+						{
+							for ( NSDictionary *pGrammarDetail in pGrammarDetails )
+							{
+								if ( !pGrammarDetail )
+									continue;
+
 								NSRange aRange = NSMakeRange( NSNotFound, 0 );
-								NSValue *pRangeValue = [pDict objectForKey:NSGrammarRange];
+								NSValue *pRangeValue = [pGrammarDetail objectForKey:NSGrammarRange];
 								if ( pRangeValue )
 									aRange = [pRangeValue rangeValue];
 
 								if ( aRange.location != NSNotFound && aRange.length > 0 )
 								{
-									OUString aDesc = NSStringToOUString( [pDict objectForKey:NSGrammarUserDescription] );
+									OUString aDesc = NSStringToOUString( [pGrammarDetail objectForKey:NSGrammarUserDescription] );
 									if ( aDesc.getLength() )
 									{
 										SingleProofreadingError aError;
-										aError.nErrorStart = pResult->nStartOfSentencePosition + aCheckRange.location + aRange.location;
+										aError.nErrorStart = pResult->nStartOfSentencePosition + aRange.location;
 										aError.nErrorLength = aRange.length;
 										aError.nErrorType = TextMarkupType::PROOFREADING;
 										aError.aRuleIdentifier = aDesc;
 										aError.aShortComment = aDesc;
 										aError.aFullComment = aDesc;
-										NSArray *pCorrections = [pDict objectForKey:NSGrammarCorrections];
+										NSArray *pCorrections = [pGrammarDetail objectForKey:NSGrammarCorrections];
 										if ( pCorrections )
 										{
 											NSUInteger nCorrections = [pCorrections count];
@@ -249,8 +261,9 @@ static OUString NSStringToOUString( NSString *pString )
 								}
 							}
 						}
+
+						pResult->aErrors.realloc( nErrors );
 					}
-					pResult->aErrors.realloc( nErrors );
 				}
 			}
 		}
