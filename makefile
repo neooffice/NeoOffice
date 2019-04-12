@@ -939,6 +939,58 @@ build.notarize_all: build.notarize_package2 build.notarize_package3
 build.notarize_all_patches: build.notarize_patch_package build.notarize_patch_package3
 	touch "$@"
 
+build.staple_package2: build.notarize_package2
+ifndef PRODUCT_BUILD2
+ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
+	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.staple_package2"
+else
+	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
+	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD2=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION2)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT2)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME2)" "build.staple_package_shared"
+	touch "$@"
+endif
+endif
+
+build.staple_package3: build.notarize_package3
+ifndef PRODUCT_BUILD3
+ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
+	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.staple_package3"
+else
+	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
+	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "build.staple_package_shared"
+	touch "$@"
+endif
+endif
+
 build.staple_package_shared:
 # Check that stapler executables exist before proceeding
 	@sh -e -c 'for i in stapler; do if [ -z "`which $$i`" ] ; then echo "$$i command not found" ; exit 1 ; fi ; done'
+ifeq ("$(PRODUCT_NAME)","NeoOffice")
+	stapler staple "$(INSTALL_HOME)/$(PRODUCT_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg"
+else
+	stapler staple "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg"
+endif
+
+build.staple_patch_package: build.notarize_patch_package
+	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
+	"$(MAKE)" $(MFLAGS) "build.staple_patch_package_shared"
+	touch "$@"
+
+build.staple_patch_package3: build.notarize_patch_package3
+ifndef PRODUCT_BUILD3
+	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
+	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "build.staple_patch_package_shared"
+	touch "$@"
+endif
+
+build.staple_patch_package_shared:
+ifeq ("$(PRODUCT_NAME)","NeoOffice")
+	stapler staple "$(PATCH_INSTALL_HOME)/$(PRODUCT_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg"
+else
+	stapler staple "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg"
+endif
+
+build.staple_all: build.staple_package2 build.staple_package3
+	touch "$@"
+
+build.staple_all_patches: build.staple_patch_package build.staple_patch_package3
+	touch "$@"
