@@ -879,22 +879,66 @@ else
 endif
 	rm -Rf "$(PATCH_INSTALL_HOME)/tmp"
 
-build.source_zip:
-	"$(MAKE)" $(MFLAGS) "build.source_zip_shared"
-	touch "$@"
-
-build.source_zip_shared:
-	rm -Rf "$(SOURCE_HOME)"
-	mkdir -p "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
-	cd "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)" ; cvs -d "$(NEO_CVSROOT)" co $(NEO_TAG) "$(NEO_PACKAGE)"
-# Prune out empty directories
-	cd "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)" ; sh -e -c 'for i in `ls -1`; do cd "$${i}" ; cvs update -P -d ; done'
-	cp "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/neojava/etc/gpl.html" "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/LICENSE.html"
-	chmod -Rf u+w,og-w,a+r "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
-	cd "$(SOURCE_HOME)" ; gnutar zcf "$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION).src.tar.gz" "$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
-
 build.all: build.package build.package2 build.package3
 	touch "$@"
 
 build.all_patches: build.patch_package build.patch_package2 build.patch_package3
 	touch "$@"
+
+build.notarize_package2: build.package2
+ifndef PRODUCT_BUILD2
+ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
+	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.notarize_package2"
+else
+	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
+	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD2=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION2)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT2)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME2)" "build.notarize_package_shared"
+	touch "$@"
+endif
+endif
+
+build.notarize_package3: build.package3
+ifndef PRODUCT_BUILD3
+ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
+	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.notarize_package3"
+else
+	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
+	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "build.notarize_package_shared"
+	touch "$@"
+endif
+endif
+
+build.notarize_package_shared:
+ifeq ("$(PRODUCT_NAME)","NeoOffice")
+	xcrun altool --notarize-app -f "$(INSTALL_HOME)/$(PRODUCT_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg" --primary-bundle-id "$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" -u "$(APPLEDEVELOPERID)"
+else
+	xcrun altool --notarize-app -f "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg" --primary-bundle-id "$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" -u "$(APPLEDEVELOPERID)"
+endif
+
+build.notarize_patch_package: build.patch_package
+	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
+	"$(MAKE)" $(MFLAGS) "build.notarize_patch_package_shared"
+	touch "$@"
+
+build.notarize_patch_package3: build.patch_package3
+ifndef PRODUCT_BUILD3
+	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
+	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "build.notarize_patch_package_shared"
+	touch "$@"
+endif
+
+build.notarize_patch_package_shared:
+ifeq ("$(PRODUCT_NAME)","NeoOffice")
+	xcrun altool --notarize-app -f "$(PATCH_INSTALL_HOME)/$(PRODUCT_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg" --primary-bundle-id "$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" -u "$(APPLEDEVELOPERID)"
+else
+	xcrun altool --notarize-app -f "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg" --primary-bundle-id "$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" -u "$(APPLEDEVELOPERID)"
+endif
+
+build.notarize_all: build.notarize_package2 build.notarize_package3
+	touch "$@"
+
+build.notarize_all_patches: build.notarize_patch_package build.notarize_patch_package3
+	touch "$@"
+
+build.staple_package_shared:
+# Check that stapler executables exist before proceeding
+	@sh -e -c 'for i in stapler; do if [ -z "`which $$i`" ] ; then echo "$$i command not found" ; exit 1 ; fi ; done'
