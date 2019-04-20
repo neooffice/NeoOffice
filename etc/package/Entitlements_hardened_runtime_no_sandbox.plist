@@ -1,0 +1,14 @@
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Allow the user to query their addressbook and use the query results for creating a "mail merge" from a template document -->
+	<key>com.apple.security.personal-information.addressbook</key>
+	<true/>
+	<!-- Disable page protection or the application will crash on startup -->
+	<key>com.apple.security.cs.disable-executable-page-protection</key>
+	<true/>
+	<!-- Disable library validation or Java and native plugins won't load -->
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+</dict>
+</plist>

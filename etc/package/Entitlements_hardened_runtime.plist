@@ -1,0 +1,32 @@
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- Allow the user to open and edit any of their files that were created in other applications such as Microsoft Office, iWork, NeoOffice, OpenOffice, and LibreOffice -->
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+	<key>com.apple.security.files.bookmarks.app-scope</key>
+	<true/>
+	<!-- Allow the user to use their Mac's remote control infrared receiver to control slide shows for their presentation documents -->
+	<key>com.apple.security.device.usb</key>
+	<true/>
+	<!-- Allow creation of a TCP socket on a unreserved port bound only to the localhost network interface to do interprocess communication between different threads or subprocesses of the application -->
+	<key>com.apple.security.network.server</key>
+	<true/>
+	<!-- Allow the user to connect to their NeoOffice Mobile account in the Mobile :: Open NeoOffice Mobile menu's window and allow connection to the TCP socket created with the "com.apple.security.network.server" entitlement -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<!-- Allow the user to query their addressbook and use the query results for creating a "mail merge" from a template document -->
+	<key>com.apple.security.personal-information.addressbook</key>
+	<true/>
+	<key>com.apple.security.print</key>
+	<true/>
+	<!-- Disable page protection or the application will crash on startup -->
+	<key>com.apple.security.cs.disable-executable-page-protection</key>
+	<true/>
+	<!-- Disable library validation or Java and native plugins won't load -->
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+</dict>
+</plist>
