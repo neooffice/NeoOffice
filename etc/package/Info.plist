@@ -937,5 +937,8 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<!-- Allow access to the Address Book when compiled on macOS 10.14 or higher -->
+	<key>NSContactsUsageDescription</key>
+	<string>Allow contact use</string>
 </dict>
 </plist>
