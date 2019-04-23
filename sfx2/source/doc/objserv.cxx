@@ -1027,9 +1027,12 @@ void SfxObjectShell::GetState_Impl(SfxItemSet &rSet)
 
                     if ( !pFrame || !pDoc->HasName() ||
 #if defined USE_JAVA && defined MACOSX
-                        NSDocument_versionsEnabled() ? !SFXDocument_hasDocument( pFrame->GetTopViewFrame() ) :
-#endif	// USE_JAVA && MACOSX
+                        // Attempt to fix Mac App Store crash by checking if
+                        // the frame is NULL a second time
+                        ( pFrame && NSDocument_versionsEnabled() ? !SFXDocument_hasDocument( pFrame->GetTopViewFrame() ) : !IsOwnStorageFormat( *pDoc->GetMedium() ) ) )
+#else	// USE_JAVA && MACOSX
                         !IsOwnStorageFormat( *pDoc->GetMedium() ) )
+#endif	// USE_JAVA && MACOSX
                         rSet.DisableItem( nWhich );
                     break;
                 }
