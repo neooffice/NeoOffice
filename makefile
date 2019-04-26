@@ -63,7 +63,10 @@ OS_MAJOR_VERSION:=$(shell /usr/bin/sw_vers -productVersion | awk -F. '{ print $$
 OS_MINOR_VERSION:=$(shell /usr/bin/sw_vers -productVersion | awk -F. '{ print $$2 }')
 OS_VERSION:=$(OS_MAJOR_VERSION).$(OS_MINOR_VERSION)
 ifeq ($(shell test $(OS_MAJOR_VERSION) -eq 10 && test $(OS_MINOR_VERSION) -ge 14; echo $$?),0)
-CODESIGN_EXTRA_OPTIONS:=--timestamp --options runtime
+CODESIGN_EXTRA_OPTIONS:=--timestamp
+ifndef NO_HARDENED_RUNTIME
+CODESIGN_EXTRA_OPTIONS+=--options runtime
+endif
 else
 CODESIGN_EXTRA_OPTIONS:=
 endif
