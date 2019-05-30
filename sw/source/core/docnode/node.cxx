@@ -15,6 +15,13 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified May 2019 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <hintids.hxx>
@@ -1976,6 +1983,10 @@ void SwNode::RemoveAnchoredFly(SwFrmFmt *const pFlyFmt)
     assert(IsTxtNode() || IsStartNode() || IsTableNode());
     if (!m_pAnchoredFlys)
     {
+#ifdef USE_JAVA
+        // Attempt to fix Mac App Store crash by returning if vector is NULL
+        return;
+#else	// USE_JAVA
         SwNodeIndex idx(GetNodes());
         while (true)
         {
@@ -1990,6 +2001,7 @@ void SwNode::RemoveAnchoredFly(SwFrmFmt *const pFlyFmt)
             }
             ++idx;
         }
+#endif	// USE_JAVA
     }
     assert(m_pAnchoredFlys);
     auto it(std::find(m_pAnchoredFlys->begin(), m_pAnchoredFlys->end(), pFlyFmt));
