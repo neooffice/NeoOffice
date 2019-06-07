@@ -565,6 +565,7 @@ static NSString *pAppleInterfaceStylePref = @"AppleInterfaceStyle";
 static NSString *pAppleInterfaceStyleSwitchesAutomaticallyPref = @"AppleInterfaceStyleSwitchesAutomatically";
 static NSString *pDisableDarkModePref = @"DisableDarkMode";
 static NSString *pScrollerPagingPref = @"AppleScrollerPagingBehavior";
+static NSAppearance *pLastAppearance = nil;
 
 @interface VCLUpdateSystemAppearance : NSObject
 {
@@ -667,13 +668,13 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 			}
 
 #if MACOSX_SDK_VERSION < 101400
-			if ( [pApp respondsToSelector:@selector(appearance)] && [pApp respondsToSelector:@selector(setAppearance:)] && pAppearance != [pApp appearance] )
-#else	// MACOSX_SDK_VERSION < 101400
-			if ( pAppearance != [pApp appearance] )
+			if ( [pApp respondsToSelector:@selector(appearance)] && [pApp respondsToSelector:@selector(setAppearance:)] )
 #endif	// MACOSX_SDK_VERSION < 101400
 			{
 				[pApp setAppearance:pAppearance];
-				PostSystemColorsDidChange();
+				if ( pLastAppearance != pAppearance )
+					PostSystemColorsDidChange();
+				pLastAppearance = pAppearance;
 			}
 		}
 	}
