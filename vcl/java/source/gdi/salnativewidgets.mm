@@ -1049,7 +1049,7 @@ static bool IsRunningHighSierraOrLower()
 					// Fix incorrect dark mode drawing by filling with a system
 					// color instead of white.
 #if MACOSX_SDK_VERSION < 101400
-					if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedContentBackgroundColor) ) && !VCLEventQueue_isDarkModeDisabled() )
+					if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedContentBackgroundColor) ) )
 #else // MACOSX_SDK_VERSION < 101400
 					if ( @available(macOS 10.14, * ) )
 #endif	// MACOSX_SDK_VERSION < 101400
@@ -2245,7 +2245,7 @@ static bool IsRunningHighSierraOrLower()
 						else
 						{
 #if MACOSX_SDK_VERSION < 101400
-							if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedContentBackgroundColor) ) && !VCLEventQueue_isDarkModeDisabled() )
+							if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedContentBackgroundColor) ) )
 #else // MACOSX_SDK_VERSION < 101400
 							if ( @available(macOS 10.14, * ) )
 #endif	// MACOSX_SDK_VERSION < 101400

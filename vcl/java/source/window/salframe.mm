@@ -235,7 +235,7 @@ static void HandleSystemColorsChangedRequest()
 	SetSalColorFromNSColor( [NSColor selectedTextColor], &pVCLHighlightTextColor );
 	SetSalColorFromNSColor( [NSColor disabledControlTextColor], &pVCLDisabledControlTextColor );
 #if MACOSX_SDK_VERSION < 101400
-	if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedContentBackgroundColor) ) && !VCLEventQueue_isDarkModeDisabled() )
+	if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedContentBackgroundColor) ) )
 #else // MACOSX_SDK_VERSION < 101400
 	if ( @available(macOS 10.14, * ) )
 #endif	// MACOSX_SDK_VERSION < 101400
