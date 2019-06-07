@@ -640,18 +640,21 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 		NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
 		if ( pDefaults )
 		{
-			NSAppearance *pAppearance = nil;
-			NSNumber *pDisableDarkMode = [pDefaults objectForKey:pDisableDarkModePref];
+
+			// Reset to system appearance
+			if ( [pApp appearance] )
+				[pApp setAppearance:nil];
 
 			// Dark mode is enabled by default
-			if ( !pDisableDarkMode || ![pDisableDarkMode isKindOfClass:[NSNumber class]] || ![pDisableDarkMode boolValue] )
+			NSString *pAppearanceName = nil;
+			NSNumber *pDisableDarkMode = [pDefaults objectForKey:pDisableDarkModePref];
+			if ( pDisableDarkMode && [pDisableDarkMode isKindOfClass:[NSNumber class]] && [pDisableDarkMode boolValue] )
+			{
+				pAppearanceName = NSAppearanceNameAqua;
+			}
+			else
 			{
 				NSString *pStyle = nil;
-
-				// Reset to system appearance
-				if ( [pApp appearance] )
-					[pApp setAppearance:nil];
-
 				NSAppearance *pEffectiveAppearance = [pApp effectiveAppearance];
 				if ( pEffectiveAppearance )
 					pStyle = [pEffectiveAppearance name];
@@ -660,14 +663,13 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 				if ( pStyle )
 					aRange = [pStyle rangeOfString:@"dark" options:NSCaseInsensitiveSearch];
 
-				NSString *pAppearanceName = nil;
 				if ( aRange.location != NSNotFound && aRange.length )
 					pAppearanceName = NSAppearanceNameDarkAqua;
 				else
 					pAppearanceName = NSAppearanceNameAqua;
-
-				pAppearance = [NSAppearance appearanceNamed:pAppearanceName];
 			}
+
+			NSAppearance *pAppearance = [NSAppearance appearanceNamed:pAppearanceName];
 
 #if MACOSX_SDK_VERSION < 101400
 			if ( [pApp respondsToSelector:@selector(appearance)] && [pApp respondsToSelector:@selector(setAppearance:)] )
