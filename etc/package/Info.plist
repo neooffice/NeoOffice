@@ -937,6 +937,9 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<!-- Enable Dark Mode in 10.14 or higher -->
+	<key>NSRequiresAquaSystemAppearance</key>
+	<string>false</string>
 	<!-- Allow access to the Address Book when compiled on macOS 10.14 or higher -->
 	<key>NSContactsUsageDescription</key>
 	<string>Allow contact use</string>
