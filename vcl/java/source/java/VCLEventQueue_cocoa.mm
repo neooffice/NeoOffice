@@ -562,6 +562,7 @@ static void PostSystemColorsDidChange()
 }
 
 static NSString *pAppleInterfaceStylePref = @"AppleInterfaceStyle";
+static NSString *pAppleInterfaceStyleSwitchesAutomaticallyPref = @"AppleInterfaceStyleSwitchesAutomatically";
 static NSString *pDisableDarkModePref = @"DisableDarkMode";
 static NSString *pScrollerPagingPref = @"AppleScrollerPagingBehavior";
 
@@ -597,8 +598,9 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 			[pVCLUpdateSystemAppearance retain];
 			[pDefaults addObserver:self forKeyPath:pScrollerPagingPref options:NSKeyValueObservingOptionNew context:NULL];
 			[pDefaults addObserver:self forKeyPath:pDisableDarkModePref options:NSKeyValueObservingOptionNew context:NULL];
+			[pDefaults addObserver:self forKeyPath:pAppleInterfaceStylePref options:NSKeyValueObservingOptionNew context:NULL];
 			// Force observer to fire immediately to set initial appearance
-			[pDefaults addObserver:self forKeyPath:pAppleInterfaceStylePref options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:NULL];
+			[pDefaults addObserver:self forKeyPath:pAppleInterfaceStyleSwitchesAutomaticallyPref options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:NULL];
 		}
 	}
 
@@ -641,7 +643,16 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 			// Dark mode is enabled by default
 			if ( !pDisableDarkMode || ![pDisableDarkMode isKindOfClass:[NSNumber class]] || ![pDisableDarkMode boolValue] )
 			{
-				NSString *pStyle = [pDefaults stringForKey:pAppleInterfaceStylePref];
+				NSString *pStyle = nil;
+
+				// Reset to system appearance
+				if ( [pApp appearance] )
+					[pApp setAppearance:nil];
+
+				NSAppearance *pEffectiveAppearance = [pApp effectiveAppearance];
+				if ( pEffectiveAppearance )
+					pStyle = [pEffectiveAppearance name];
+
 				NSRange aRange = NSMakeRange( NSNotFound, 0 );
 				if ( pStyle )
 					aRange = [pStyle rangeOfString:@"dark" options:NSCaseInsensitiveSearch];
