@@ -47,6 +47,7 @@ int java_main( int argc, char **argv );
 
 sal_Bool SAL_DLLPUBLIC_EXPORT Application_canSave();
 sal_Bool SAL_DLLPUBLIC_EXPORT Application_canUseJava();
+sal_Bool SAL_DLLPUBLIC_EXPORT Application_isRunningInSandbox();
 
 #if defined __cplusplus
 }
