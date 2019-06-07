@@ -204,5 +204,6 @@ SAL_DLLPRIVATE sal_Bool VCLEventQueue_paste( void *pNSWindow );
 SAL_DLLPRIVATE void VCLEventQueue_removeCachedEvents();
 SAL_DLLPRIVATE sal_Bool NSApplication_isActive();
 SAL_DLLPRIVATE void VCLEventQueue_installVCLEventQueueClasses();
+SAL_DLLPRIVATE BOOL VCLEventQueue_isDarkModeDisabled();
 
 #endif
