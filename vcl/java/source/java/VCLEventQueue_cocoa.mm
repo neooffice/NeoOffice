@@ -630,13 +630,15 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 {
 	(void)pObject;
 
+	NSApplication *pApp = [NSApplication sharedApplication];
 #if MACOSX_SDK_VERSION >= 101400
-	if ( @available(macOS 10.14, * ) )
+	if ( pApp && @available(macOS 10.14, * ) )
+#else	// MACOSX_SDK_VERSION >= 101400
+	if ( pApp && [pApp respondsToSelector:@selector(appearance)] && [pApp respondsToSelector:@selector(effectiveAppearance)] )
 #endif	// MACOSX_SDK_VERSION >= 101400
 	{
-		NSApplication *pApp = [NSApplication sharedApplication];
 		NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
-		if ( pApp && pDefaults )
+		if ( pDefaults )
 		{
 			NSAppearance *pAppearance = nil;
 			NSNumber *pDisableDarkMode = [pDefaults objectForKey:pDisableDarkModePref];
