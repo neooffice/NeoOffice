@@ -42,3 +42,8 @@ sal_Bool Application_canUseJava()
 {
 	return sal_True;
 }
+
+sal_Bool Application_isRunningInSandbox()
+{
+	return sal_False;
+}
