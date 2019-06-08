@@ -52,11 +52,14 @@
 // Open dialogs after a Save panel has been displayed on Mac OS X 10.9
 // #define USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 
+typedef sal_Bool Application_isRunningInSandbox_Type();
+
 static ::osl::Mutex aCurrentInstanceSecurityURLCacheMutex;
 static NSMutableDictionary *pCurrentInstanceSecurityURLCacheDictionary = nil;
 static BOOL bIsCppUnitTesterInitialized = NO;
 static BOOL bIsCppUnitTester = NO;
 static BOOL bIsRunningInSandbox = YES;
+static Application_isRunningInSandbox_Type *pApplication_isRunningInSandbox = nullptr;
 
 using namespace osl;
 
@@ -66,7 +69,6 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 {
 	BOOL					mbCancelled;
 	BOOL					mbFinished;
-	BOOL					mbIsRunningInSandbox;
 	NSOpenPanel*			mpOpenPanel;
 	NSURL*					mpSecurityScopedURL;
 	NSString*				mpTitle;
@@ -78,7 +80,6 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 - (void)destroy:(id)pObject;
 - (BOOL)finished;
 - (id)initWithURL:(NSURL *)pURL title:(NSString *)pTitle;
-- (BOOL)isRunningInSandbox;
 #ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (BOOL)panel:(id)pSender shouldEnableURL:(NSURL *)pURL;
 #else	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
@@ -420,6 +421,13 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 
 				if ( pURL )
 				{
+					// Don't display open panel if we are not running in the
+					// sandbox
+					if ( !pApplication_isRunningInSandbox )
+						pApplication_isRunningInSandbox = (Application_isRunningInSandbox_Type *)dlsym( RTLD_MAIN_ONLY, "Application_isRunningInSandbox" );
+					if ( bIsRunningInSandbox && pApplication_isRunningInSandbox && !pApplication_isRunningInSandbox() )
+						bIsRunningInSandbox = NO;
+
 					// Check if there are any cached security scoped bookmarks
 					// for this URL or any of its parent folders. Fix slowness
 					// during saving by suppressing the open panel when not
@@ -489,7 +497,6 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 							[pSecurityScopedURLs addObject:pSecurityScopedURL];
 						}
 
-						bIsRunningInSandbox = [pVCLRequestSecurityScopedURL isRunningInSandbox];
 						[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(destroy:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
 
 						Application::AcquireSolarMutex( nReleaseCount );
@@ -594,7 +601,6 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 
 	mbCancelled = NO;
 	mbFinished = NO;
-	mbIsRunningInSandbox = YES;
 	mpOpenPanel = nil;
 	mpSecurityScopedURL = nil;
 
@@ -618,11 +624,6 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 	}
 
 	return self;
-}
-
-- (BOOL)isRunningInSandbox
-{
-	return mbIsRunningInSandbox;
 }
 
 #ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
@@ -743,15 +744,6 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
 			mpOpenPanel = [NSOpenPanel openPanel];
-
-			// Display open panel only if we are running in the sandbox. In the
-			// sandbox, NSOpenPanel should not be a subclass of NSOpenPanel.
-			if ( mpOpenPanel && [mpOpenPanel isKindOfClass:[NSOpenPanel class]] )
-			{
-				mbIsRunningInSandbox = NO;
-				mpOpenPanel = nil;
-			}
-
 			if ( mpOpenPanel )
 			{
 				[mpOpenPanel retain];

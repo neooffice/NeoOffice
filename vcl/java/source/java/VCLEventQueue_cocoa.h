@@ -46,6 +46,7 @@
 
 @interface NSApplication (VCLApplication)
 - (NSAppearance *)appearance;
+- (NSAppearance *)effectiveAppearance;
 - (void)setAppearance:(NSAppearance *)pAppearance;
 @end
 

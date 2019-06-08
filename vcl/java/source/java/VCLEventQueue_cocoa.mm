@@ -562,8 +562,10 @@ static void PostSystemColorsDidChange()
 }
 
 static NSString *pAppleInterfaceStylePref = @"AppleInterfaceStyle";
+static NSString *pAppleInterfaceStyleSwitchesAutomaticallyPref = @"AppleInterfaceStyleSwitchesAutomatically";
 static NSString *pDisableDarkModePref = @"DisableDarkMode";
 static NSString *pScrollerPagingPref = @"AppleScrollerPagingBehavior";
+static NSAppearance *pLastAppearance = nil;
 
 @interface VCLUpdateSystemAppearance : NSObject
 {
@@ -597,8 +599,9 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 			[pVCLUpdateSystemAppearance retain];
 			[pDefaults addObserver:self forKeyPath:pScrollerPagingPref options:NSKeyValueObservingOptionNew context:nullptr];
 			[pDefaults addObserver:self forKeyPath:pDisableDarkModePref options:NSKeyValueObservingOptionNew context:nullptr];
+			[pDefaults addObserver:self forKeyPath:pAppleInterfaceStylePref options:NSKeyValueObservingOptionNew context:nullptr];
 			// Force observer to fire immediately to set initial appearance
-			[pDefaults addObserver:self forKeyPath:pAppleInterfaceStylePref options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:nullptr];
+			[pDefaults addObserver:self forKeyPath:pAppleInterfaceStyleSwitchesAutomaticallyPref options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:nullptr];
 		}
 	}
 
@@ -627,42 +630,55 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 {
 	(void)pObject;
 
-#if MACOSX_SDK_VERSION >= 101400
-	if ( @available(macOS 10.14, * ) )
-#endif	// MACOSX_SDK_VERSION >= 101400
+	NSApplication *pApp = [NSApplication sharedApplication];
+	NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
+	if ( pApp && pDefaults )
 	{
-		NSApplication *pApp = [NSApplication sharedApplication];
-		NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
-		if ( pApp && pDefaults )
+#if MACOSX_SDK_VERSION >= 101400
+		if ( @available(macOS 10.14, * ) )
+#else	// MACOSX_SDK_VERSION >= 101400
+		if ( [pApp respondsToSelector:@selector(appearance)] && [pApp respondsToSelector:@selector(effectiveAppearance)] )
+#endif	// MACOSX_SDK_VERSION >= 101400
 		{
-			NSAppearance *pAppearance = nil;
-			NSNumber *pDisableDarkMode = [pDefaults objectForKey:pDisableDarkModePref];
+
+			// Reset to system appearance
+			if ( [pApp appearance] )
+				[pApp setAppearance:nil];
 
 			// Dark mode is enabled by default
-			if ( !pDisableDarkMode || ![pDisableDarkMode isKindOfClass:[NSNumber class]] || ![pDisableDarkMode boolValue] )
+			NSString *pAppearanceName = nil;
+			NSNumber *pDisableDarkMode = [pDefaults objectForKey:pDisableDarkModePref];
+			if ( pDisableDarkMode && [pDisableDarkMode isKindOfClass:[NSNumber class]] && [pDisableDarkMode boolValue] )
 			{
-				NSString *pStyle = [pDefaults stringForKey:pAppleInterfaceStylePref];
+				pAppearanceName = NSAppearanceNameAqua;
+			}
+			else
+			{
+				NSString *pStyle = nil;
+				NSAppearance *pEffectiveAppearance = [pApp effectiveAppearance];
+				if ( pEffectiveAppearance )
+					pStyle = [pEffectiveAppearance name];
+
 				NSRange aRange = NSMakeRange( NSNotFound, 0 );
 				if ( pStyle )
 					aRange = [pStyle rangeOfString:@"dark" options:NSCaseInsensitiveSearch];
 
-				NSString *pAppearanceName = nil;
 				if ( aRange.location != NSNotFound && aRange.length )
 					pAppearanceName = NSAppearanceNameDarkAqua;
 				else
 					pAppearanceName = NSAppearanceNameAqua;
-
-				pAppearance = [NSAppearance appearanceNamed:pAppearanceName];
 			}
 
+			NSAppearance *pAppearance = [NSAppearance appearanceNamed:pAppearanceName];
+
 #if MACOSX_SDK_VERSION < 101400
-			if ( [pApp respondsToSelector:@selector(appearance)] && [pApp respondsToSelector:@selector(setAppearance:)] && pAppearance != [pApp appearance] )
-#else	// MACOSX_SDK_VERSION < 101400
-			if ( pAppearance != [pApp appearance] )
+			if ( [pApp respondsToSelector:@selector(appearance)] && [pApp respondsToSelector:@selector(setAppearance:)] )
 #endif	// MACOSX_SDK_VERSION < 101400
 			{
 				[pApp setAppearance:pAppearance];
-				PostSystemColorsDidChange();
+				if ( pLastAppearance != pAppearance )
+					PostSystemColorsDidChange();
+				pLastAppearance = pAppearance;
 			}
 		}
 	}
