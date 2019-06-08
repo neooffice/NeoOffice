@@ -48,6 +48,7 @@
 #include "java/salframe.h"
 
 #include "VCLApplicationDelegate_cocoa.h"
+#include "VCLEventQueue_cocoa.h"
 #include "../app/salinst_cocoa.h"
 
 // Comment out the following line to disable native resume support
@@ -465,6 +466,16 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	}
 
 	return YES;
+}
+
+- (void)applicationDidBecomeActive:(NSNotification *)pNotification
+{
+	(void)pNotification;
+
+	// There seems to be a lag on macOS 10.15 before the effective
+	// appearance changes when the application is not active so reset the
+	// appearance when the application becomes active
+	VCLUpdateSystemAppearance_handleAppearanceChange();
 }
 
 - (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification
