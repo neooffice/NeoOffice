@@ -623,6 +623,13 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 		// Attempt to fix Mac App Store crash by delaying setting of the
 		// appearance
 		[self performSelector:@selector(handleAppearanceChange:) withObject:self afterDelay:0];
+
+		// There seems to be a lag on macOS 10.15 before the effective
+		// appearance changes when the application is not active so add an
+		// additional delayed setting of the appearance
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp && !pApp.active )
+			[self performSelector:@selector(handleAppearanceChange:) withObject:self afterDelay:5.0f];
 	}
 }
 
@@ -640,7 +647,6 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 		if ( [pApp respondsToSelector:@selector(appearance)] && [pApp respondsToSelector:@selector(effectiveAppearance)] )
 #endif	// MACOSX_SDK_VERSION >= 101400
 		{
-
 			// Reset to system appearance
 			if ( [pApp appearance] )
 				[pApp setAppearance:nil];
@@ -3761,4 +3767,12 @@ SAL_DLLPRIVATE void NSWindow_setCachedGraphicsContext( NSWindow *pWindow, NSGrap
 
 	if ( pContext )
 		aNativeGraphicsContextMap[ pWindow ] = pContext;
+}
+
+SAL_DLLPRIVATE void VCLUpdateSystemAppearance_handleAppearanceChange()
+{
+	// Attempt to fix Mac App Store crash by delaying setting of the
+	// appearance
+	if ( pVCLUpdateSystemAppearance )
+		[pVCLUpdateSystemAppearance performSelector:@selector(handleAppearanceChange:) withObject:pVCLUpdateSystemAppearance afterDelay:0];
 }

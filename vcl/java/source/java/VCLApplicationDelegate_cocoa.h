@@ -60,6 +60,7 @@
 - (void)addMenuBarItem:(NSNotification *)pNotification;
 - (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
 - (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
+- (void)applicationDidBecomeActive:(NSNotification *)pNotification;
 - (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification;
 - (NSMenu *)applicationDockMenu:(NSApplication *)pApplication;
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
