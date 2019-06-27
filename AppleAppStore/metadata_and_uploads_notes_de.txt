@@ -40,7 +40,7 @@ This version of NeoOffice fixes the following bugs:
 
 
 Promotional Text:
-NeoOffice unterstützt jetzt den nativen Dunkelmodus!
+NeoOffice enthält den nativen Dunkelmodus!
 
 
 Keywords:
