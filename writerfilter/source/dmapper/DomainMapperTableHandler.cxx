@@ -897,6 +897,16 @@ bool lcl_emptyRow(TableSequence_t& rTableSeq, sal_Int32 nRow)
         return false;
     }
 
+#ifndef NO_LIBO_BUG_104162_FIX
+    if (!rRowSeq[0][0].is())
+    {
+        // This can happen when we can't import the table, e.g. we're inside a
+        // comment.
+        SAL_WARN("writerfilter.dmapper", "rRowSeq[0][0] is an empty reference");
+        return false;
+    }
+#endif	// !NO_LIBO_BUG_104162_FIX
+
     uno::Reference<text::XTextRangeCompare> xTextRangeCompare(rRowSeq[0][0]->getText(), uno::UNO_QUERY);
     try
     {
