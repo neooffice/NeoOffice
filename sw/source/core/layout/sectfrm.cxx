@@ -79,11 +79,17 @@ SwSectionFrame::SwSectionFrame( SwSectionFrame &rSect, bool bMaster ) :
 
     if( bMaster )
     {
+#ifdef NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
         if( rSect.IsFollow() )
         {
             SwSectionFrame* pMaster = rSect.FindMaster();
             pMaster->SetFollow( this );
         }
+#else	// NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
+        SwSectionFrame* pMaster = rSect.IsFollow() ? rSect.FindMaster() : nullptr;
+        if (pMaster)
+             pMaster->SetFollow( this );
+#endif	// NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
         SetFollow( &rSect );
     }
     else
@@ -1892,8 +1898,17 @@ SwTwips SwSectionFrame::Grow_( SwTwips nDist, bool bTst )
 
         bool bInCalcContent = GetUpper() && IsInFly() && FindFlyFrame()->IsLocked();
         // OD 2004-03-15 #116561# - allow grow in online layout
+#ifdef NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
         bool bGrow = !Lower() || !Lower()->IsColumnFrame() || !Lower()->GetNext() ||
              GetSection()->GetFormat()->GetBalancedColumns().GetValue();
+#else	// NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
+        bool bGrow = !Lower() || !Lower()->IsColumnFrame() || !Lower()->GetNext();
+        if (!bGrow)
+        {
+            SwSection* pSection = GetSection();
+            bGrow = pSection && pSection->GetFormat()->GetBalancedColumns().GetValue();
+        }
+#endif	// NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
         if( !bGrow )
         {
              const SwViewShell *pSh = getRootFrame()->GetCurrShell();

@@ -1878,7 +1878,15 @@ void SwTabFrame::MakeAll(vcl::RenderContext* pRenderContext)
         SwFrame *pPre = GetPrev();
         if ( pPre && pPre->IsTabFrame() && static_cast<SwTabFrame*>(pPre)->GetFollow() == this)
         {
+#ifdef NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
             if ( !MoveFwd( bMakePage, false ) )
+#else	// NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
+            // don't make the effort to move fwd if its known
+            // conditions that are known not to work
+            if (IsInFootnote() && ForbiddenForFootnoteCntFwd())
+                bMakePage = false;
+            else if (!MoveFwd(bMakePage, false))
+#endif	// NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
                 bMakePage = false;
             bMovedFwd = true;
         }
@@ -2498,8 +2506,20 @@ void SwTabFrame::MakeAll(vcl::RenderContext* pRenderContext)
         const SwFrame* pOldUpper = GetUpper();
 
         //Let's see if we find some place anywhere...
+#ifdef NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
         if ( !bMovedFwd && !MoveFwd( bMakePage, false ) )
             bMakePage = false;
+#else	// NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
+        if (!bMovedFwd)
+        {
+            // don't make the effort to move fwd if its known
+            // conditions that are known not to work
+            if (IsInFootnote() && ForbiddenForFootnoteCntFwd())
+                bMakePage = false;
+            else if (!MoveFwd(bMakePage, false))
+                bMakePage = false;
+        }
+#endif	// NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
 
         // #i29771# Reset bSplitError flag on change of upper
         if ( GetUpper() != pOldUpper )
