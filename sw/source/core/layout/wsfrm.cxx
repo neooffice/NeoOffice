@@ -699,10 +699,18 @@ void SwFrm::Remove()
 {
     OSL_ENSURE( mpUpper, "Remove without upper?" );
 
+#ifdef NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
     if( mpPrev )
+#else	// NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
+    if (mpPrev)
+#endif	// NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
         // one out of the middle is removed
         mpPrev->mpNext = mpNext;
+#ifdef NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
     else
+#else	// NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
+    else if (mpUpper)
+#endif	// NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
     {   // the first in a list is removed //TODO
         OSL_ENSURE( mpUpper->pLower == this, "Layout is inconsistent." );
         mpUpper->pLower = mpNext;
