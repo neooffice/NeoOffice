@@ -34,9 +34,10 @@ What's New in this Version:
 Avant d'acheter NeoOffice, s'il vous plaît cliquer sur le lien « Assistance : NeoOffice » et lire les notes d'installation.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would crash when saving a .docx file that contains complex tables
-• NeoOffice would not catch many common grammar errors that Apple's TextEdit application catches
-• NeoOffice would crash when executing certain macros attached to spreadsheet cells
+• NeoOffice would crash due to LibreOffice bugs #98868, #106131, and #104162
+• NeoOffice would crash when dragging text within a spreadsheet
+• NeoOffice would crash when closing a spreadsheet document
+• NeoOffice would crash when moving a table in a footnote in a word processing document
 
 
 Promotional Text:
