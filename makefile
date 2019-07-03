@@ -896,7 +896,7 @@ endif
 build.all: build.package build.package2 build.package3
 	touch "$@"
 
-build.all_patches: build.patch_package build.patch_package2 build.patch_package3
+build.all_patches: build.patch_package build.patch_package3
 	touch "$@"
 
 build.notarize_package2: build.package2
