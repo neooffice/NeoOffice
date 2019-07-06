@@ -271,6 +271,22 @@ void NSApplication_run()
 {
 	(void)pObject;
 
+	// Close any windows still showing so that all windows
+	// get the appropriate window closing delegate calls
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+	{
+		NSArray *pWindows = [pApp windows];
+		if ( pWindows )
+		{
+			for ( NSWindow *pWindow in pWindows )
+			{
+				if ( pWindow )
+					[pWindow orderOut:pWindow];
+			}
+		}
+	}
+
 	mnExitCode = 173;
 
 	NSBundle *pBundle = [NSBundle mainBundle];
