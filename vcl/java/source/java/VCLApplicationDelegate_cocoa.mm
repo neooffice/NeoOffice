@@ -133,30 +133,6 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 		while ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() && !pEvent->isShutdownCancelled() && !JavaSalEventQueue::isShutdownDisabled() )
 			NSApplication_dispatchPendingEvents( NO, YES );
 		pEvent->release();
-
-		if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && Application::IsShutDown() )
-		{
-			nRet = NSTerminateLater;
-
-			// Close any windows still showing so that all windows
-			// get the appropriate window closing delegate calls
-			NSApplication *pApp = [NSApplication sharedApplication];
-			if ( pApp )
-			{
-				NSArray *pWindows = [pApp windows];
-				if ( pWindows )
-				{
-					unsigned int i = 0;
-					unsigned int nCount = [pWindows count];
-					for ( ; i < nCount ; i++ )
-					{
-						NSWindow *pWindow = [pWindows objectAtIndex:i];
-						if ( pWindow )
-							[pWindow orderOut:pWindow];
-					}
-				}
-			}
-		}
 	}
 
 	return nRet;
