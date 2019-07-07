@@ -486,7 +486,9 @@ void ZipPackage::parseContentType()
 void ZipPackage::getZipFileContents()
 {
     std::unique_ptr<ZipEnumeration> xEnum = m_pZipFile->entries();
+#ifdef NO_LIBO_ZIP_PACKAGE_STREAM_LEAK_FIX
     ZipPackageStream *pPkgStream;
+#endif	// NO_LIBO_ZIP_PACKAGE_STREAM_LEAK_FIX
     ZipPackageFolder *pPkgFolder, *pCurrent;
     OUString sTemp, sDirName;
     sal_Int32 nOldIndex, nStreamIndex;
@@ -546,11 +548,23 @@ void ZipPackage::getZipFileContents()
         {
             nStreamIndex++;
             sTemp = rName.copy( nStreamIndex, rName.getLength() - nStreamIndex );
+#ifdef NO_LIBO_ZIP_PACKAGE_STREAM_LEAK_FIX
             pPkgStream = new ZipPackageStream( *this, m_xContext, m_nFormat, m_bAllowRemoveOnInsert );
             pPkgStream->SetPackageMember( true );
             pPkgStream->setZipEntryOnLoading( rEntry );
             pPkgStream->setName( sTemp );
             pPkgStream->doSetParent( pCurrent );
+#else	// NO_LIBO_ZIP_PACKAGE_STREAM_LEAK_FIX
+
+            if (!pCurrent->hasByName(sTemp))
+            {
+                ZipPackageStream *pPkgStream = new ZipPackageStream(*this, m_xContext, m_nFormat, m_bAllowRemoveOnInsert);
+                pPkgStream->SetPackageMember(true);
+                pPkgStream->setZipEntryOnLoading(rEntry);
+                pPkgStream->setName(sTemp);
+                pPkgStream->doSetParent(pCurrent);
+            }
+#endif	// NO_LIBO_ZIP_PACKAGE_STREAM_LEAK_FIX
         }
     }
 
