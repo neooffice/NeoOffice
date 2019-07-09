@@ -211,7 +211,11 @@ sal_uLong HTMLReader::Read( SwDoc &rDoc, const OUString& rBaseURL, SwPaM &rPam, 
     }
 
     // so nobody steals the document!
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     rDoc.acquire();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    rtl::Reference<SwDoc> aHoldRef(&rDoc);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     sal_uLong nRet = 0;
     tools::SvRef<SwHTMLParser> xParser = new SwHTMLParser( &rDoc, rPam, *pStrm,
                                             rName, rBaseURL, !bInsertMode, pMedium,

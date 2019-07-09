@@ -80,8 +80,13 @@ void SwViewShell::Init( const SwViewOption *pNewOpt )
         }
     }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwDocShell* pDShell = mpDoc->GetDocShell();
     mpDoc->GetDocumentSettingManager().set(DocumentSettingId::HTML_MODE, 0 != ::GetHtmlMode( pDShell ) );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwDocShell* pDShell = mxDoc->GetDocShell();
+    mxDoc->GetDocumentSettingManager().set(DocumentSettingId::HTML_MODE, 0 != ::GetHtmlMode( pDShell ) );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     // set readonly flag at ViewOptions before creating layout. Otherwise,
     // one would have to reformat again.
 
@@ -103,7 +108,11 @@ void SwViewShell::Init( const SwViewOption *pNewOpt )
     // page descriptions are still set to (LONG_MAX, LONG_MAX) (html import)
     if ( !bBrowseMode )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         mpDoc->CheckDefaultPageFormat();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        mxDoc->CheckDefaultPageFormat();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     }
 
     SAL_INFO( "sw.core", "View::Init - after InitPrt" );
@@ -128,9 +137,17 @@ void SwViewShell::Init( const SwViewOption *pNewOpt )
         if( !mpLayout )
         {
             // switched to two step construction because creating the layout in SwRootFrame needs a valid pLayout set
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             mpLayout = SwRootFramePtr(new SwRootFrame(mpDoc->GetDfltFrameFormat(), this),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            mpLayout = SwRootFramePtr(new SwRootFrame(mxDoc->GetDfltFrameFormat(), this),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                     &SwFrame::DestroyFrame);
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             mpLayout->Init( mpDoc->GetDfltFrameFormat() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            mpLayout->Init( mxDoc->GetDfltFrameFormat() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         }
     }
     SizeChgNotify();
@@ -169,7 +186,11 @@ SwViewShell::SwViewShell( SwDoc& rDocument, vcl::Window *pWindow,
 #endif	// USE_JAVA
     mpTargetPaintWindow(nullptr),
     mpBufferedOut(nullptr),
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     mpDoc( &rDocument ),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    mxDoc( &rDocument ),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     mnStartAction( 0 ),
     mnLockPaint( 0 ),
     mbSelectAll(false),
@@ -188,8 +209,12 @@ SwViewShell::SwViewShell( SwDoc& rDocument, vcl::Window *pWindow,
 
     // i#38810 Do not reset modified state of document,
     // if it's already been modified.
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     const bool bIsDocModified( mpDoc->getIDocumentState().IsModified() );
     mpDoc->acquire();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    const bool bIsDocModified( mxDoc->getIDocumentState().IsModified() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     pOutput = mpOut;
     Init( pNewOpt );    // may change the Outdev (InitPrt())
     mpOut = pOutput;
@@ -204,14 +229,26 @@ SwViewShell::SwViewShell( SwDoc& rDocument, vcl::Window *pWindow,
 
     SET_CURR_SHELL( this );
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     static_cast<SwHiddenTextFieldType*>(mpDoc->getIDocumentFieldsAccess().GetSysFieldType( SwFieldIds::HiddenText ))->
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    static_cast<SwHiddenTextFieldType*>(mxDoc->getIDocumentFieldsAccess().GetSysFieldType( SwFieldIds::HiddenText ))->
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SetHiddenFlag( !mpOpt->IsShowHiddenField() );
 
     // In Init a standard FrameFormat is created.
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if (   !mpDoc->GetIDocumentUndoRedo().IsUndoNoResetModified()
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    if (   !mxDoc->GetIDocumentUndoRedo().IsUndoNoResetModified()
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         && !bIsDocModified )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         mpDoc->getIDocumentState().ResetModified();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        mxDoc->getIDocumentState().ResetModified();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     }
 
     // extend format cache.
@@ -246,7 +283,11 @@ SwViewShell::SwViewShell( SwViewShell& rShell, vcl::Window *pWindow,
 #endif	// USE_JAVA
     mpTargetPaintWindow(nullptr),
     mpBufferedOut(nullptr),
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     mpDoc( rShell.GetDoc() ),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    mxDoc( rShell.GetDoc() ),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     mnStartAction( 0 ),
     mnLockPaint( 0 ),
     mbSelectAll(false),
@@ -268,8 +309,12 @@ SwViewShell::SwViewShell( SwViewShell& rShell, vcl::Window *pWindow,
 
     SET_CURR_SHELL( this );
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     mpDoc->acquire();
     bool bModified = mpDoc->getIDocumentState().IsModified();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    bool bModified = mxDoc->getIDocumentState().IsModified();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     pOutput = mpOut;
     Init( rShell.GetViewOptions() ); // might change Outdev (InitPrt())
@@ -278,13 +323,25 @@ SwViewShell::SwViewShell( SwViewShell& rShell, vcl::Window *pWindow,
     if ( mbPreview )
         mpImp->InitPagePreviewLayout();
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     static_cast<SwHiddenTextFieldType*>(mpDoc->getIDocumentFieldsAccess().GetSysFieldType( SwFieldIds::HiddenText ))->
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    static_cast<SwHiddenTextFieldType*>(mxDoc->getIDocumentFieldsAccess().GetSysFieldType( SwFieldIds::HiddenText ))->
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             SetHiddenFlag( !mpOpt->IsShowHiddenField() );
 
     // In Init a standard FrameFormat is created.
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( !bModified && !mpDoc->GetIDocumentUndoRedo().IsUndoNoResetModified() )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    if( !bModified && !mxDoc->GetIDocumentUndoRedo().IsUndoNoResetModified() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         mpDoc->getIDocumentState().ResetModified();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        mxDoc->getIDocumentState().ResetModified();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     }
 
     // extend format cache.
@@ -299,6 +356,14 @@ SwViewShell::SwViewShell( SwViewShell& rShell, vcl::Window *pWindow,
 
 SwViewShell::~SwViewShell()
 {
+#ifndef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+#ifdef USE_JAVA
+    IDocumentLayoutAccess * pLayoutAccess = mxDoc.get() ? &mxDoc->getIDocumentLayoutAccess() : nullptr;
+#else	// USE_JAVA
+    IDocumentLayoutAccess * const pLayoutAccess = mxDoc.get() ? &mxDoc->getIDocumentLayoutAccess() : nullptr;
+#endif	// USE_JAVA
+#endif	// !NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+
     {
         SET_CURR_SHELL( this );
         mbPaintWorks = false;
@@ -306,9 +371,17 @@ SwViewShell::~SwViewShell()
         // i#9684 Stopping the animated graphics is not
         // necessary during printing or pdf export, because the animation
         // has not been started in this case.
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( mpDoc && GetWin() )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        if( mxDoc.get() && GetWin() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             SwNodes& rNds = mpDoc->GetNodes();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            SwNodes& rNds = mxDoc->GetNodes();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
             SwStartNode *pStNd;
             SwNodeIndex aIdx( *rNds.GetEndOfAutotext().StartOfSectionNode(), 1 );
@@ -337,14 +410,32 @@ SwViewShell::~SwViewShell()
         delete mpImp; // Delete first, so that the LayoutViews are destroyed.
         mpImp = nullptr;   // Set to zero, because ~SwFrame relies on it.
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if ( mpDoc )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        if ( mxDoc.get() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             if( !mpDoc->release() )
             {
                 delete mpDoc;
                 mpDoc = nullptr;
             }
             else
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            auto x = mxDoc->getReferenceCount();
+            mxDoc.clear();
+#ifdef USE_JAVA
+            // Fix crash when printing comments by checking the current shell's
+            // document is NULL
+            if( x <= 1 )
+                pLayoutAccess = nullptr;
+            else
+#else   // USE_JAVA 
+            if( x > 1 )
+#endif	// USE_JAVA 
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 GetLayout()->ResetNewLayout();
         }
 
@@ -360,18 +451,34 @@ SwViewShell::~SwViewShell()
         OSL_ENSURE( !mnStartAction, "EndAction() pending." );
     }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if ( mpDoc )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    if ( pLayoutAccess )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
         GetLayout()->DeRegisterShell( this );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         auto& rLayoutAccess(mpDoc->getIDocumentLayoutAccess());
         if(rLayoutAccess.GetCurrentViewShell()==this)
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        if(pLayoutAccess->GetCurrentViewShell()==this)
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             rLayoutAccess.SetCurrentViewShell(nullptr);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            pLayoutAccess->SetCurrentViewShell(nullptr);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             for(SwViewShell& rShell : GetRingContainer())
             {
                 if(&rShell != this)
                 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     rLayoutAccess.SetCurrentViewShell(&rShell);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    pLayoutAccess->SetCurrentViewShell(&rShell);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     break;
                 }
             }

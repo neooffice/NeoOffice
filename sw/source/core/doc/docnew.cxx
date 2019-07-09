@@ -869,12 +869,20 @@ void SwDoc::ReplaceCompatibilityOptions(const SwDoc& rSource)
 SfxObjectShell* SwDoc::CreateCopy( bool bCallInitNew, bool bEmpty ) const
 {
     SAL_INFO( "sw.pageframe", "(SwDoc::CreateCopy in" );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwDoc* pRet = new SwDoc;
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    rtl::Reference<SwDoc> xRet( new SwDoc );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     // we have to use pointer here, since the callee has to decide whether
     // SfxObjectShellLock or SfxObjectShellRef should be used sometimes the
     // object will be returned with refcount set to 0 ( if no DoInitNew is done )
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SfxObjectShell* pRetShell = new SwDocShell( pRet, SfxObjectCreateMode::STANDARD );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SfxObjectShell* pRetShell = new SwDocShell( xRet.get(), SfxObjectCreateMode::STANDARD );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( bCallInitNew )
     {
         // it could happen that DoInitNew creates model,
@@ -882,30 +890,60 @@ SfxObjectShell* SwDoc::CreateCopy( bool bCallInitNew, bool bEmpty ) const
         pRetShell->DoInitNew();
     }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     (void)pRet->acquire();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     pRet->ReplaceDefaults(*this);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    xRet->ReplaceDefaults(*this);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     pRet->ReplaceCompatibilityOptions(*this);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    xRet->ReplaceCompatibilityOptions(*this);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     pRet->ReplaceStyles(*this);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    xRet->ReplaceStyles(*this);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     if( !bEmpty )
     {
 #ifdef DBG_UTIL
         SAL_INFO( "sw.createcopy", "CC-Nd-Src: " << CNTNT_DOC( this ) );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SAL_INFO( "sw.createcopy", "CC-Nd: " << CNTNT_DOC( pRet ) );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SAL_INFO( "sw.createcopy", "CC-Nd: " << CNTNT_DOC( xRet ) );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 #endif
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         pRet->AppendDoc(*this, 0, bCallInitNew, 0, 0);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        xRet->AppendDoc(*this, 0, bCallInitNew, 0, 0);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 #ifdef DBG_UTIL
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SAL_INFO( "sw.createcopy", "CC-Nd: " << CNTNT_DOC( pRet ) );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SAL_INFO( "sw.createcopy", "CC-Nd: " << CNTNT_DOC( xRet ) );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 #endif
     }
 
     // remove the temporary shell if it is there as it was done before
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     pRet->SetTmpDocShell( nullptr );
 
     (void)pRet->release();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    xRet->SetTmpDocShell( nullptr );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     SAL_INFO( "sw.pageframe", "SwDoc::CreateCopy out)" );
     return pRetShell;

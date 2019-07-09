@@ -196,12 +196,20 @@ SwFrameFormat *SwEditShell::GetTableFormat() // fastest test on a table
 // TODO: Why is this called 3x for a new document?
 sal_uInt16 SwEditShell::GetTOXTypeCount(TOXTypes eTyp) const
 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     return mpDoc->GetTOXTypeCount(eTyp);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    return mxDoc->GetTOXTypeCount(eTyp);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 
 void SwEditShell::InsertTOXType(const SwTOXType& rTyp)
 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     mpDoc->InsertTOXType(rTyp);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    mxDoc->InsertTOXType(rTyp);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 
 void SwEditShell::DoUndo( bool bOn )

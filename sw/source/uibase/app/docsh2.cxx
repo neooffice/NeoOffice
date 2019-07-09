@@ -201,7 +201,11 @@ void SwDocShell::ToggleLayoutMode(SwView* pView)
 // update text fields on document properties changes
 void SwDocShell::DoFlushDocInfo()
 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if (!m_pDoc) return;
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    if (!m_xDoc.get()) return;
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     bool bUnlockView(true);
     if (m_pWrtShell)
@@ -211,7 +215,11 @@ void SwDocShell::DoFlushDocInfo()
         m_pWrtShell->StartAllAction();
     }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     m_pDoc->getIDocumentStatistics().DocInfoChgd(IsEnableSetModified());
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    m_xDoc->getIDocumentStatistics().DocInfoChgd(IsEnableSetModified());
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     if (m_pWrtShell)
     {
@@ -245,13 +253,21 @@ static void lcl_processCompatibleSfxHint( const uno::Reference< script::vba::XVB
 // Notification on DocInfo changes
 void SwDocShell::Notify( SfxBroadcaster&, const SfxHint& rHint )
 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if (!m_pDoc)
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    if (!m_xDoc.get())
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
         return ;
     }
 
     uno::Reference< script::vba::XVBAEventProcessor > const xVbaEvents =
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         m_pDoc->GetVbaEventProcessor();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->GetVbaEventProcessor();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( xVbaEvents.is() )
         lcl_processCompatibleSfxHint( xVbaEvents, rHint );
 
@@ -284,7 +300,11 @@ void SwDocShell::Notify( SfxBroadcaster&, const SfxHint& rHint )
         switch( nAction )
         {
         case 2:
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             m_pDoc->getIDocumentFieldsAccess().GetSysFieldType( SwFieldIds::Filename )->UpdateFields();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            m_xDoc->getIDocumentFieldsAccess().GetSysFieldType( SwFieldIds::Filename )->UpdateFields();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             break;
         // #i38126# - own action for event LOADFINISHED
         // in order to avoid a modified document.
@@ -297,14 +317,26 @@ void SwDocShell::Notify( SfxBroadcaster&, const SfxHint& rHint )
                 if ( bResetModified )
                     EnableSetModified( false );
                 // #i41679#
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 const bool bIsDocModified = m_pDoc->getIDocumentState().IsModified();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                const bool bIsDocModified = m_xDoc->getIDocumentState().IsModified();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 // TODO: is the ResetModified() below because of only the direct call from DocInfoChgd, or does UpdateFields() set it too?
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 m_pDoc->getIDocumentStatistics().DocInfoChgd(false);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                m_xDoc->getIDocumentStatistics().DocInfoChgd(false);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
                 // #i41679#
                 if ( !bIsDocModified )
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     m_pDoc->getIDocumentState().ResetModified();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    m_xDoc->getIDocumentState().ResetModified();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 if ( bResetModified )
                     EnableSetModified();
             }
@@ -328,10 +360,18 @@ bool SwDocShell::PrepareClose( bool bUI )
     if( bRet )
         EndListening( *this );
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if (m_pDoc && IsInPrepareClose())
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    if (m_xDoc && IsInPrepareClose())
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
         uno::Reference< script::vba::XVBAEventProcessor > const xVbaEvents =
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             m_pDoc->GetVbaEventProcessor();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            m_xDoc->GetVbaEventProcessor();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( xVbaEvents.is() )
         {
             using namespace com::sun::star::script::vba::VBAEventId;
@@ -712,7 +752,11 @@ void SwDocShell::Execute(SfxRequest& rReq)
                 xDocSh->DoInitNew();
 
                 bool bImpress = FN_ABSTRACT_STARIMPRESS == nWhich;
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 m_pDoc->Summary( pSmryDoc, nLevel, nPara, bImpress );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                m_xDoc->Summary( pSmryDoc, nLevel, nPara, bImpress );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 if( bImpress )
                 {
                     WriterRef xWrt;
@@ -840,12 +884,21 @@ void SwDocShell::Execute(SfxRequest& rReq)
             //pWrtShell is not set in page preview
             if (m_pWrtShell)
                 m_pWrtShell->StartAllAction();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             m_pDoc->getIDocumentFieldsAccess().UpdateFields( false );
             m_pDoc->getIDocumentLinksAdministration().EmbedAllLinks();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            m_xDoc->getIDocumentFieldsAccess().UpdateFields( false );
+            m_xDoc->getIDocumentLinksAdministration().EmbedAllLinks();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             m_IsRemovedInvisibleContent
                 = officecfg::Office::Security::HiddenContent::RemoveHiddenContent::get();
             if (m_IsRemovedInvisibleContent)
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 m_pDoc->RemoveInvisibleContent();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                m_xDoc->RemoveInvisibleContent();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             if (m_pWrtShell)
                 m_pWrtShell->EndAllAction();
         }
@@ -857,7 +910,11 @@ void SwDocShell::Execute(SfxRequest& rReq)
                     m_pWrtShell->StartAllAction();
                 //try to undo the removal of invisible content
                 if (m_IsRemovedInvisibleContent)
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     m_pDoc->RestoreInvisibleContent();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    m_xDoc->RestoreInvisibleContent();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 if (m_pWrtShell)
                     m_pWrtShell->EndAllAction();
         }
@@ -962,7 +1019,11 @@ void SwDocShell::Execute(SfxRequest& rReq)
                         uno::Reference<XFilePickerControlAccess> xCtrlAcc(xFP, UNO_QUERY);
 
                         bool    bOutline[MAXLEVEL] = {false};
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         const SwOutlineNodes& rOutlNds = m_pDoc->GetNodes().GetOutLineNds();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                        const SwOutlineNodes& rOutlNds = m_xDoc->GetNodes().GetOutLineNds();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         if( !rOutlNds.empty() )
                         {
                             for( size_t n = 0; n < rOutlNds.size(); ++n )
@@ -975,7 +1036,11 @@ void SwDocShell::Execute(SfxRequest& rReq)
                             }
                         }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         const sal_uInt16 nStyleCount = m_pDoc->GetTextFormatColls()->size();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                        const sal_uInt16 nStyleCount = m_xDoc->GetTextFormatColls()->size();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         Sequence<OUString> aListBoxEntries( MAXLEVEL + nStyleCount);
                         OUString* pEntries = aListBoxEntries.getArray();
                         sal_Int32   nIdx = 0 ;
@@ -990,7 +1055,11 @@ void SwDocShell::Execute(SfxRequest& rReq)
                         OUString    sStyle( SwResId(STR_FDLG_STYLE) );
                         for(sal_uInt16 i = 0; i < nStyleCount; ++i)
                         {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                             SwTextFormatColl &rTextColl = *(*m_pDoc->GetTextFormatColls())[ i ];
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                            SwTextFormatColl &rTextColl = *(*m_xDoc->GetTextFormatColls())[ i ];
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                             if( !rTextColl.IsDefault() && rTextColl.IsAtDocNodeSet() )
                             {
                                 pEntries[nIdx++] = sStyle + rTextColl.GetName();
@@ -1060,17 +1129,31 @@ void SwDocShell::Execute(SfxRequest& rReq)
                         if ( bCreateByOutlineLevel )
                         {
                             bDone = bCreateHtml
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                 ? m_pDoc->GenerateHTMLDoc( aFileName, nTemplateOutlineLevel )
                                 : m_pDoc->GenerateGlobalDoc( aFileName, nTemplateOutlineLevel );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                                ? m_xDoc->GenerateHTMLDoc( aFileName, nTemplateOutlineLevel )
+                                : m_xDoc->GenerateGlobalDoc( aFileName, nTemplateOutlineLevel );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         }
                         else
                         {
                             const SwTextFormatColl* pSplitColl = nullptr;
                             if ( !aTemplateName.isEmpty() )
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                 pSplitColl = m_pDoc->FindTextFormatCollByName(aTemplateName);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                                pSplitColl = m_xDoc->FindTextFormatCollByName(aTemplateName);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                             bDone = bCreateHtml
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                 ? m_pDoc->GenerateHTMLDoc( aFileName, pSplitColl )
                                 : m_pDoc->GenerateGlobalDoc( aFileName, pSplitColl );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                                ? m_xDoc->GenerateHTMLDoc( aFileName, pSplitColl )
+                                : m_xDoc->GenerateGlobalDoc( aFileName, pSplitColl );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         }
                         if( bDone )
                         {
@@ -1126,7 +1209,11 @@ void SwDocShell::Execute(SfxRequest& rReq)
                     pViewShell = pVFrame ? pVFrame->GetViewShell() : nullptr;
                     pCurrView = dynamic_cast<SwView*>( pViewShell );
                 }
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 m_pDoc->GetNumberFormatter()->SetYear2000(nYear2K);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                m_xDoc->GetNumberFormatter()->SetYear2000(nYear2K);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             }
         break;
         case FN_OPEN_FILE:
@@ -1225,27 +1312,47 @@ void SwDocShell::Execute(SfxRequest& rReq)
 bool SwDocShell::DdeGetData( const OUString& rItem, const OUString& rMimeType,
                              uno::Any & rValue )
 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     return m_pDoc->getIDocumentLinksAdministration().GetData( rItem, rMimeType, rValue );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    return m_xDoc->getIDocumentLinksAdministration().GetData( rItem, rMimeType, rValue );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 
 bool SwDocShell::DdeSetData( const OUString& rItem, const OUString& rMimeType,
                              const uno::Any & rValue )
 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     return m_pDoc->getIDocumentLinksAdministration().SetData( rItem, rMimeType, rValue );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    return m_xDoc->getIDocumentLinksAdministration().SetData( rItem, rMimeType, rValue );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 
 #endif
 
 ::sfx2::SvLinkSource* SwDocShell::DdeCreateLinkSource( const OUString& rItem )
 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     return m_pDoc->getIDocumentLinksAdministration().CreateLinkSource( rItem );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    return m_xDoc->getIDocumentLinksAdministration().CreateLinkSource( rItem );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 
 void SwDocShell::ReconnectDdeLink(SfxObjectShell& rServer)
 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if (m_pDoc)
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    if (m_xDoc)
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         ::sfx2::LinkManager& rLinkManager = m_pDoc->getIDocumentLinksAdministration().GetLinkManager();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        ::sfx2::LinkManager& rLinkManager = m_xDoc->getIDocumentLinksAdministration().GetLinkManager();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         rLinkManager.ReconnectDdeLink(rServer);
     }
 }
@@ -1272,7 +1379,11 @@ void SwDocShell::FillClass( SvGlobalName * pClassName,
     }
 // #FIXME check with new Event handling
 #if 0
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     uno::Reference< document::XVbaEventsHelper > xVbaEventsHelper = m_pDoc->GetVbaEventsHelper();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    uno::Reference< document::XVbaEventsHelper > xVbaEventsHelper = m_xDoc->GetVbaEventsHelper();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( xVbaEventsHelper.is() )
         lcl_processCompatibleSfxHint( xVbaEventsHelper, rHint );
 #endif
@@ -1287,20 +1398,37 @@ void SwDocShell::SetModified( bool bSet )
     SfxObjectShell::SetModified( bSet );
     if( IsEnableSetModified())
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
          if (!m_pDoc->getIDocumentState().IsInCallModified())
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+         if (!m_xDoc->getIDocumentState().IsInCallModified())
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
          {
             EnableSetModified( false );
             if( bSet )
             {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 bool const bOld = m_pDoc->getIDocumentState().IsModified();
                 m_pDoc->getIDocumentState().SetModified();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                bool const bOld = m_xDoc->getIDocumentState().IsModified();
+                m_xDoc->getIDocumentState().SetModified();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 if( !bOld )
                 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     m_pDoc->GetIDocumentUndoRedo().SetUndoNoResetModified();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    m_xDoc->GetIDocumentUndoRedo().SetUndoNoResetModified();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 }
             }
             else
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 m_pDoc->getIDocumentState().ResetModified();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                m_xDoc->getIDocumentState().ResetModified();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
             EnableSetModified();
          }
@@ -1391,7 +1519,11 @@ void SwDocShell::ReloadFromHtml( const OUString& rStreamName, SwSrcView* pSrcVie
         }
     }
 #endif
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     bool bWasBrowseMode = m_pDoc->getIDocumentSettingAccess().get(DocumentSettingId::BROWSE_MODE);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    bool bWasBrowseMode = m_xDoc->getIDocumentSettingAccess().get(DocumentSettingId::BROWSE_MODE);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     RemoveLink();
 
     // now also the UNO-Model has to be informed about the new Doc #51535#
@@ -1402,7 +1534,11 @@ void SwDocShell::ReloadFromHtml( const OUString& rStreamName, SwSrcView* pSrcVie
     AddLink();
     //#116402# update font list when new document is created
     UpdateFontList();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     m_pDoc->getIDocumentSettingAccess().set(DocumentSettingId::BROWSE_MODE, bWasBrowseMode);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    m_xDoc->getIDocumentSettingAccess().set(DocumentSettingId::BROWSE_MODE, bWasBrowseMode);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     pSrcView->SetPool(&GetPool());
 
     const OUString& rMedname = GetMedium()->GetName();
@@ -1422,7 +1558,11 @@ void SwDocShell::ReloadFromHtml( const OUString& rStreamName, SwSrcView* pSrcVie
     // the base URL has to be set to the filename of the document <rMedname>
     // and not to the base URL of the temporary file <aMed> in order to get
     // the URLs of the linked graphics correctly resolved.
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwReloadFromHtmlReader aReader( aMed, rMedname, m_pDoc );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwReloadFromHtmlReader aReader( aMed, rMedname, m_xDoc.get() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     aReader.Read( *ReadHTML );
 
@@ -1444,7 +1584,11 @@ void SwDocShell::ReloadFromHtml( const OUString& rStreamName, SwSrcView* pSrcVie
     if(bModified && !IsReadOnly())
         SetModified();
     else
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         m_pDoc->getIDocumentState().ResetModified();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        m_xDoc->getIDocumentState().ResetModified();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 
 sal_uLong SwDocShell::LoadStylesFromFile( const OUString& rURL,
@@ -1500,7 +1644,11 @@ sal_uLong SwDocShell::LoadStylesFromFile( const OUString& rURL,
         // insert the styles!
         if( bUnoCall )
         {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             SwNodeIndex aIdx( m_pDoc->GetNodes().GetEndOfContent(), -1 );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            SwNodeIndex aIdx( m_xDoc->GetNodes().GetEndOfContent(), -1 );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             pPam.reset(new SwPaM( aIdx ));
             pReader.reset(new SwReader( aMed, rURL, *pPam ));
         }
@@ -1517,7 +1665,11 @@ sal_uLong SwDocShell::LoadStylesFromFile( const OUString& rURL,
 
         if( bUnoCall )
         {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             UnoActionContext aAction( m_pDoc );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            UnoActionContext aAction( m_xDoc.get() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             nErr = pReader->Read( *pRead );
         }
         else

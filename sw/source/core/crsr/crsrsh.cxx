@@ -395,11 +395,19 @@ void SwCursorShell::MarkListLevel( const OUString& sListId,
          nListLevel != m_nMarkedListLevel)
     {
         if ( !m_sMarkedListId.isEmpty() )
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             mpDoc->MarkListLevel( m_sMarkedListId, m_nMarkedListLevel, false );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            mxDoc->MarkListLevel( m_sMarkedListId, m_nMarkedListLevel, false );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         if ( !sListId.isEmpty() )
         {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             mpDoc->MarkListLevel( sListId, nListLevel, true );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            mxDoc->MarkListLevel( sListId, nListLevel, true );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         }
 
         m_sMarkedListId = sListId;
@@ -1463,7 +1471,11 @@ void SwCursorShell::UpdateCursor( sal_uInt16 eFlags, bool bIdleEnd )
     // then the table mode is active (also if it is already active: m_pTableCursor)
     SwPaM* pTstCursor = getShellCursor( true );
     if( pTstCursor->HasMark() && !m_pBlockCursor &&
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         mpDoc->IsIdxInTable( pTstCursor->GetPoint()->nNode ) &&
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        mxDoc->IsIdxInTable( pTstCursor->GetPoint()->nNode ) &&
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
           ( m_pTableCursor ||
             pTstCursor->GetNode().StartOfSectionNode() !=
             pTstCursor->GetNode( false ).StartOfSectionNode() ) && !mbSelectAll)
@@ -1646,8 +1658,13 @@ void SwCursorShell::UpdateCursor( sal_uInt16 eFlags, bool bIdleEnd )
         if( pSectNd && ( pSectNd->GetSection().IsHiddenFlag() ||
             ( !IsReadOnlyAvailable() &&
               pSectNd->GetSection().IsProtectFlag() &&
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
              ( !mpDoc->GetDocShell() ||
                !mpDoc->GetDocShell()->IsReadOnly() || m_bAllProtect )) ) )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+             ( !mxDoc->GetDocShell() ||
+               !mxDoc->GetDocShell()->IsReadOnly() || m_bAllProtect )) ) )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         {
             if( !FindValidContentNode( !HasDrawView() ||
                     0 == Imp()->GetDrawView()->GetMarkedObjectList().GetMarkCount()))
@@ -1746,8 +1763,13 @@ void SwCursorShell::UpdateCursor( sal_uInt16 eFlags, bool bIdleEnd )
             if( !IsReadOnlyAvailable() && pFrame->IsProtected() &&
                 ( !Imp()->GetDrawView() ||
                   !Imp()->GetDrawView()->GetMarkedObjectList().GetMarkCount() ) &&
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 (!mpDoc->GetDocShell() ||
                  !mpDoc->GetDocShell()->IsReadOnly() || m_bAllProtect ) )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                (!mxDoc->GetDocShell() ||
+                 !mxDoc->GetDocShell()->IsReadOnly() || m_bAllProtect ) )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             {
                 // look for a valid position
                 bool bChgState = true;
@@ -2901,7 +2923,11 @@ bool SwCursorShell::FindValidContentNode( bool bOnlyText )
     // first check for frames
     SwNodeIndex& rNdIdx = m_pCurrentCursor->GetPoint()->nNode;
     sal_uLong nNdIdx = rNdIdx.GetIndex(); // keep backup
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwNodes& rNds = mpDoc->GetNodes();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwNodes& rNds = mxDoc->GetNodes();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwContentNode* pCNd = rNdIdx.GetNode().GetContentNode();
     const SwContentFrame * pFrame;
 
@@ -2932,8 +2958,13 @@ bool SwCursorShell::FindValidContentNode( bool bOnlyText )
     else if( bOnlyText && pCNd && pCNd->IsNoTextNode() )
     {
         // set to beginning of document
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         rNdIdx = mpDoc->GetNodes().GetEndOfExtras();
         m_pCurrentCursor->GetPoint()->nContent.Assign( mpDoc->GetNodes().GoNext(
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        rNdIdx = mxDoc->GetNodes().GetEndOfExtras();
+        m_pCurrentCursor->GetPoint()->nContent.Assign( mxDoc->GetNodes().GoNext(
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                                             &rNdIdx ), 0 );
         nNdIdx = rNdIdx.GetIndex();
     }
@@ -3177,7 +3208,11 @@ SvxFrameDirection SwCursorShell::GetTextDirection( const Point* pPt ) const
         GetLayout()->GetCursorOfst( &aPos, aPt, &aTmpState );
     }
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     return mpDoc->GetTextDirection( aPos, &aPt );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    return mxDoc->GetTextDirection( aPos, &aPt );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 
 bool SwCursorShell::IsInVerticalText( const Point* pPt ) const

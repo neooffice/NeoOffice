@@ -895,7 +895,11 @@ void SwFEShell::InsertDrawObj( SdrObject& rDrawObj,
     rDrawObj.SetLayer( getIDocumentDrawModelAccess().GetHeavenId() );
 
     // find anchor position
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwPaM aPam( mpDoc->GetNodes() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwPaM aPam( mxDoc->GetNodes() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
         SwCursorMoveState aState( MV_SETONLYTEXT );
         Point aTmpPt( rInsertPosition );
@@ -931,7 +935,11 @@ void SwFEShell::GetPageObjs( std::vector<SwFrameFormat*>& rFillArr )
 {
     rFillArr.clear();
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     for( auto pFormat : *mpDoc->GetSpzFrameFormats() )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    for( auto pFormat : *mxDoc->GetSpzFrameFormats() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
         if (RndStdIds::FLY_AT_PAGE == pFormat->GetAnchor().GetAnchorId())
         {
@@ -954,7 +962,11 @@ void SwFEShell::SetPageObjsNewPage( std::vector<SwFrameFormat*>& rFillArr )
     bool bTmpAssert = false;
     for( auto pFormat : rFillArr )
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if (mpDoc->GetSpzFrameFormats()->IsAlive(pFormat))
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        if (mxDoc->GetSpzFrameFormats()->IsAlive(pFormat))
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         {
             // FlyFormat is still valid, therefore process
 
@@ -974,7 +986,11 @@ void SwFEShell::SetPageObjsNewPage( std::vector<SwFrameFormat*>& rFillArr )
                 bTmpAssert = true;
             }
             aNewAnchor.SetPageNum( sal_uInt16(nNewPage) );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             mpDoc->SetAttr( aNewAnchor, *pFormat );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            mxDoc->SetAttr( aNewAnchor, *pFormat );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         }
     }
 
@@ -1386,11 +1402,19 @@ SwFrameFormat* SwFEShell::WizardGetFly()
 {
     // do not search the Fly via the layout. Now we can delete a frame
     // without a valid layout. ( e.g. for the wizards )
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwFrameFormats& rSpzArr = *mpDoc->GetSpzFrameFormats();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwFrameFormats& rSpzArr = *mxDoc->GetSpzFrameFormats();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( !rSpzArr.empty() )
     {
         SwNodeIndex& rCursorNd = GetCursor()->GetPoint()->nNode;
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( rCursorNd.GetIndex() > mpDoc->GetNodes().GetEndOfExtras().GetIndex() )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        if( rCursorNd.GetIndex() > mxDoc->GetNodes().GetEndOfExtras().GetIndex() )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             // Cursor is in the body area!
             return nullptr;
 
@@ -1752,7 +1776,11 @@ bool SwFEShell::ReplaceSdrObj( const OUString& rGrfName, const Graphic* pGrf )
         SwFrameFormat *pFormat = FindFrameFormat( pObj );
 
         // store attributes, then set the graphic
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aFrameSet( mpDoc->GetAttrPool(),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aFrameSet( mxDoc->GetAttrPool(),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                             pFormat->GetAttrSet().GetRanges() );
         aFrameSet.Set( pFormat->GetAttrSet() );
 
@@ -1826,21 +1854,41 @@ void SwFEShell::GetConnectableFrameFormats(SwFrameFormat & rFormat,
     SwFrameFormat * pOldChainPrev = static_cast<SwFrameFormat *>(rChain.GetPrev());
 
     if (pOldChainNext)
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         mpDoc->Unchain(rFormat);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        mxDoc->Unchain(rFormat);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     if (pOldChainPrev)
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         mpDoc->Unchain(*pOldChainPrev);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        mxDoc->Unchain(*pOldChainPrev);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     const size_t nCnt = mpDoc->GetFlyCount(FLYCNTTYPE_FRM);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    const size_t nCnt = mxDoc->GetFlyCount(FLYCNTTYPE_FRM);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     /* potential successors resp. predecessors */
     std::vector< const SwFrameFormat * > aTmpSpzArray;
 
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     mpDoc->FindFlyByName(rReference);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    mxDoc->FindFlyByName(rReference);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     for (size_t n = 0; n < nCnt; ++n)
     {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         const SwFrameFormat & rFormat1 = *(mpDoc->GetFlyNum(n, FLYCNTTYPE_FRM));
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        const SwFrameFormat & rFormat1 = *(mxDoc->GetFlyNum(n, FLYCNTTYPE_FRM));
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         /*
            pFormat is a potential successor of rFormat if it is chainable after
@@ -1853,9 +1901,17 @@ void SwFEShell::GetConnectableFrameFormats(SwFrameFormat & rFormat,
         SwChainRet nChainState;
 
         if (bSuccessors)
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             nChainState = mpDoc->Chainable(rFormat, rFormat1);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            nChainState = mxDoc->Chainable(rFormat, rFormat1);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         else
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             nChainState = mpDoc->Chainable(rFormat1, rFormat);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            nChainState = mxDoc->Chainable(rFormat1, rFormat);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         if (nChainState == SwChainRet::OK)
         {
@@ -1902,10 +1958,18 @@ void SwFEShell::GetConnectableFrameFormats(SwFrameFormat & rFormat,
     }
 
     if (pOldChainNext)
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         mpDoc->Chain(rFormat, *pOldChainNext);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        mxDoc->Chain(rFormat, *pOldChainNext);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     if (pOldChainPrev)
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         mpDoc->Chain(*pOldChainPrev, rFormat);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        mxDoc->Chain(*pOldChainPrev, rFormat);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     EndAction();
 }
