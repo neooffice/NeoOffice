@@ -1120,7 +1120,14 @@ void SwFrame::CheckPageDescs( SwPageFrame *pStart, bool bNotifyFields, SwPageFra
             else if ( !pFormatWish )                                       //6.
             {
                 // get format with inverted logic
+#ifdef NO_LIBO_BUG_57550_FIX
                 pFormatWish = bWantOdd ? pDesc->GetLeftFormat() : pDesc->GetRightFormat();
+#else	// NO_LIBO_BUG_57550_FIX
+                if (bFirst)
+                    pFormatWish = bWantOdd ? pDesc->GetRightFormat() : pDesc->GetLeftFormat();
+                if (!pFormatWish)
+                    pFormatWish = bWantOdd ? pDesc->GetLeftFormat() : pDesc->GetRightFormat();
+#endif	// NO_LIBO_BUG_57550_FIX
                 if ( pFormatWish && pPage->GetFormat() != pFormatWish )
                 {
                     pPage->SetFrameFormat( pFormatWish );
