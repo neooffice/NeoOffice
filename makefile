@@ -475,32 +475,29 @@ build.package_shared:
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Library"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Resources/extensions"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Resources/uno_packages"
-	rm -Rf "$(INSTALL_HOME)/package/Contents/share/uno_packages"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/user"
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Resources/extensions"
 # Eliminate sandbox deny file-write-create messages by recreating the cache
 # subdirectory in uno_packages
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Resources/uno_packages/cache"
 	chmod -Rf u+w,a+r "$(INSTALL_HOME)/package"
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program" ; mv -f "MacOS" "program" ; mkdir -p "MacOS"
+	cd "$(INSTALL_HOME)/package/Contents" ; mv -f "MacOS" "program" ; mkdir -p "MacOS"
 ifdef PRODUCT_BUILD3
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice2"
 	cd "$(INSTALL_HOME)/package/Contents" ; mv "program/soffice3" "MacOS/soffice.bin"
-	cd "$(INSTALL_HOME)/package/Contents" ; mv "program/updateruninstallers" "MacOS/updchkruninstallers.bin"
 else ifdef PRODUCT_BUILD2
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice"
 	cd "$(INSTALL_HOME)/package/Contents" ; mv "program/soffice2" "MacOS/soffice.bin"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice3"
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/updateruninstallers"
 else
 	cd "$(INSTALL_HOME)/package/Contents" ; mv "program/soffice" "MacOS/soffice.bin"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice2"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice3"
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/updateruninstallers"
 endif
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/updateruninstallers"
 # Remove unnecessary executables and files
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf CREDITS* LICENSE* NOTICE* Resources/oasis-*.icns program/gengal program/gengal.bin program/python program/regmerge program/regview program/senddoc program/ui-previewer program/unoinfo program/unopkg program/unpack_update
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf Resources/CREDITS* Resources/LICENSE* Resources/NOTICE* Resources/oasis-*.icns Resources/python program/gengal program/regmerge program/regview program/senddoc program/ui-previewer program/unoinfo program/unopkg
 # Add executable softlinks
 	cd "$(INSTALL_HOME)/package/Contents" ; ln -sf "soffice.bin" "MacOS/soffice"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/unopkg"
@@ -648,16 +645,20 @@ ifdef PRODUCT_BUILD3
 # Sign "A" version of each framework
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "Contents/Frameworks" -type d -name "A"` ; do codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 # Sign LibreOfficePython framework
-	cd "$(INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" "Contents/Frameworks/LibreOfficePython.framework/Versions/3.3"
+	cd "$(INSTALL_HOME)/package" ; DYLD_INSERT_LIBRARIES="$(PWD)/$(INSTALL_HOME)/package/Contents/Frameworks/LibreOfficePython.framework/Versions/3.5/LibreOfficePython" ; export DYLD_INSERT_LIBRARIES ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" "Contents/Frameworks/LibreOfficePython.framework/Versions/3.5"
 	cat "etc/package/Entitlements_hardened_runtime_no_sandbox.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$(INSTALL_HOME)/Entitlements.plist"
 	cd "$(INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(INSTALL_HOME)/Entitlements.plist" .
+# Test that all libraries will load
+	cd "$(INSTALL_HOME)/package" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; $(CC) -arch "$(TARGET_MACHINE)" -o "Contents/MacOS/loaddyliblist" "$(PWD)/etc/package/loaddyliblist.c" ; sh -e -c 'grep -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "$(BUNDLE_FILE_TYPE)" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" | sed "s#:.*\$$##" | ( DYLD_INSERT_LIBRARIES="$(PWD)/$(INSTALL_HOME)/package/Contents/Frameworks/LibreOfficePython.framework/Versions/3.5/LibreOfficePython" ; export DYLD_INSERT_LIBRARIES ; "Contents/MacOS/loaddyliblist" ) ; rm -f "Contents/MacOS/loaddyliblist"'
 else
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `grep "$(TARGET_FILE_TYPE)" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" | sed "s#:.*\\$$##" | grep -v "\/soffice\.bin"` ; do codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/etc/package/Entitlements_inherit_only.plist" "$$i" ; done'
 	cat "etc/package/Entitlements_hardened_runtime.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$(INSTALL_HOME)/Entitlements.plist"
 	cd "$(INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(INSTALL_HOME)/Entitlements.plist" .
-endif
 # Test that all libraries will load
 	cd "$(INSTALL_HOME)/package" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; $(CC) -arch "$(TARGET_MACHINE)" -o "Contents/MacOS/loaddyliblist" "$(PWD)/etc/package/loaddyliblist.c" ; sh -e -c 'grep -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "$(BUNDLE_FILE_TYPE)" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" | sed "s#:.*\$$##" | "Contents/MacOS/loaddyliblist" ; rm -f "Contents/MacOS/loaddyliblist"'
+endif
+# Verify codesigning
+	cd "$(INSTALL_HOME)/package" ; codesign --verify --deep .
 	mkdir -p "$(INSTALL_HOME)/tmp"
 	mkdir "$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app"
 	mv -f "$(INSTALL_HOME)/package/Contents" "$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app"
@@ -809,6 +810,8 @@ else
 	cat "etc/package/Entitlements_hardened_runtime.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$(PATCH_INSTALL_HOME)/Entitlements.plist"
 	cd "$(PATCH_INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(PATCH_INSTALL_HOME)/Entitlements.plist" .
 endif
+# Verify codesigning
+	cd "$(PATCH_INSTALL_HOME)/package" ; codesign --verify --deep .
 # Mac App Store requires files to be writable by root
 	chmod -Rf u+w,og-w,a+r "$(PATCH_INSTALL_HOME)/package"
 # Mark certain directories writable for group
