@@ -1805,13 +1805,23 @@ uno::Reference<drawing::XShape> DomainMapper_Impl::PopPendingShape()
 
 void DomainMapper_Impl::PushShapeContext( const uno::Reference< drawing::XShape > & xShape )
 {
+#ifndef NO_LIBO_BUG_108123_FIX
+    // Append these early, so the context and the table manager stack will be
+    // in sync, even if the text append stack is empty.
+    appendTableManager();
+    appendTableHandler();
+    getTableManager().startLevel();
+#endif	// !NO_LIBO_BUG_108123_FIX
+
     if (m_aTextAppendStack.empty())
         return;
     uno::Reference<text::XTextAppend> xTextAppend = m_aTextAppendStack.top().xTextAppend;
 
+#ifdef NO_LIBO_BUG_108123_FIX
     appendTableManager( );
     appendTableHandler( );
     getTableManager().startLevel();
+#endif	// NO_LIBO_BUG_108123_FIX
     try
     {
         uno::Reference< lang::XServiceInfo > xSInfo( xShape, uno::UNO_QUERY_THROW );
