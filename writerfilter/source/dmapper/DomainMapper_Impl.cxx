@@ -4498,7 +4498,14 @@ void DomainMapper_Impl::StartOrEndBookmark( const OUString& rId )
             {
                 uno::Reference< text::XTextCursor > xCursor = xTextAppend->createTextCursorByRange( xTextAppend->getEnd() );
 
+#ifdef NO_LIBO_BUG_113230_FIX
                 if(!bIsAfterDummyPara)
+#else	// NO_LIBO_BUG_113230_FIX
+                if (!xCursor.is())
+                    return;
+
+                if (!bIsAfterDummyPara)
+#endif	// NO_LIBO_BUG_113230_FIX
                     bIsStart = !xCursor->goLeft(1, false);
                 xCurrent = xCursor->getStart();
             }
