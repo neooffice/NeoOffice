@@ -1,42 +1,42 @@
 <?xml version="1.0" encoding="utf8"?>
 <components xmlns="http://openoffice.org/2010/uno-components">
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="animcore" uri="vnd.sun.star.expand:$LO_LIB_DIR/libanimcorelo.dylib">
-    <implementation name="animcore::Animate">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libanimcorelo.dylib">
+    <implementation name="animcore::Animate" constructor="com_sun_star_animations_Animate_get_implementation">
       <service name="com.sun.star.animations.Animate"/>
     </implementation>
-    <implementation name="animcore::AnimateColor">
+    <implementation name="animcore::AnimateColor" constructor="com_sun_star_animations_AnimateColor_get_implementation">
       <service name="com.sun.star.animations.AnimateColor"/>
     </implementation>
-    <implementation name="animcore::AnimateMotion">
+    <implementation name="animcore::AnimateMotion" constructor="com_sun_star_animations_AnimateMotion_get_implementation">
       <service name="com.sun.star.animations.AnimateMotion"/>
     </implementation>
-    <implementation name="animcore::AnimateSet">
+    <implementation name="animcore::AnimateSet" constructor="com_sun_star_animations_AnimateSet_get_implementation">
       <service name="com.sun.star.animations.AnimateSet"/>
     </implementation>
-    <implementation name="animcore::AnimateTransform">
+    <implementation name="animcore::AnimateTransform" constructor="com_sun_star_animations_AnimateTransform_get_implementation">
       <service name="com.sun.star.animations.AnimateTransform"/>
     </implementation>
-    <implementation name="animcore::Audio">
+    <implementation name="animcore::Audio" constructor="com_sun_star_animations_Audio_get_implementation">
       <service name="com.sun.star.animations.Audio"/>
     </implementation>
-    <implementation name="animcore::Command">
+    <implementation name="animcore::Command" constructor="com_sun_star_animations_Command_get_implementation">
       <service name="com.sun.star.animations.Command"/>
     </implementation>
-    <implementation name="animcore::IterateContainer">
+    <implementation name="animcore::IterateContainer" constructor="com_sun_star_animations_IterateContainer_get_implementation">
       <service name="com.sun.star.animations.IterateContainer"/>
     </implementation>
-    <implementation name="animcore::ParallelTimeContainer">
+    <implementation name="animcore::ParallelTimeContainer" constructor="com_sun_star_animations_ParallelTimeContainer_get_implementation">
       <service name="com.sun.star.animations.ParallelTimeContainer"/>
     </implementation>
-    <implementation name="animcore::SequenceTimeContainer">
+    <implementation name="animcore::SequenceTimeContainer" constructor="com_sun_star_animations_SequenceTimeContainer_get_implementation">
       <service name="com.sun.star.animations.SequenceTimeContainer"/>
     </implementation>
-    <implementation name="animcore::TransitionFilter">
+    <implementation name="animcore::TransitionFilter" constructor="com_sun_star_animations_TransitionFilter_get_implementation">
       <service name="com.sun.star.animations.TransitionFilter"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="avmedia" uri="vnd.sun.star.expand:$LO_LIB_DIR/libavmedialo.dylib">
-    <implementation name="com.sun.star.comp.framework.SoundHandler">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libavmedialo.dylib">
+    <implementation name="com.sun.star.comp.framework.SoundHandler" constructor="com_sun_star_comp_framework_SoundHandler_get_implementation">
       <service name="com.sun.star.frame.ContentHandler"/>
     </implementation>
   </component>
@@ -60,173 +60,176 @@
     <implementation name="com.sun.star.comp.chart2.ChartTypeDialog" constructor="com_sun_star_comp_chart2_ChartTypeDialog_get_implementation">
       <service name="com.sun.star.chart2.ChartTypeDialog"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.ShapeToolbarController" constructor="com_sun_star_comp_chart2_ShapeToolbarController_get_implementation">
-      <service name="com.sun.star.chart2.ShapeToolbarController"/>
-    </implementation>
     <implementation name="com.sun.star.comp.chart2.WizardDialog" constructor="com_sun_star_comp_chart2_WizardDialog_get_implementation">
       <service name="com.sun.star.chart2.WizardDialog"/>
     </implementation>
+    <implementation name="org.libreoffice.comp.chart2.sidebar.ChartPanelFactory" constructor="org_libreoffice_comp_chart2_sidebar_ChartPanelFactory">
+      <service name="com.sun.star.ui.UIElementFactory"/>
+    </implementation>
+    <implementation name="org.libreoffice.chart2.Chart2ToolboxController" constructor="org_libreoffice_chart2_Chart2ToolboxController">
+      <service name="com.sun.star.frame.ToolbarController"/>
+    </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="chartcore" uri="vnd.sun.star.expand:$LO_LIB_DIR/libchartcorelo.dylib">
-    <implementation name="com.sun.star.chart2.ExponentialScaling">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libchartcorelo.dylib">
+    <implementation name="com.sun.star.chart2.ExponentialScaling" constructor="com_sun_star_chart2_ExponentialScaling_get_implementation">
       <service name="com.sun.star.chart2.ExponentialScaling"/>
     </implementation>
-    <implementation name="com.sun.star.chart2.LinearScaling">
+    <implementation name="com.sun.star.chart2.LinearScaling" constructor="com_sun_star_chart2_LinearScaling_get_implementation">
       <service name="com.sun.star.chart2.LinearScaling"/>
     </implementation>
-    <implementation name="com.sun.star.chart2.LogarithmicScaling">
+    <implementation name="com.sun.star.chart2.LogarithmicScaling" constructor="com_sun_star_chart2_LogarithmicScaling_get_implementation">
       <service name="com.sun.star.chart2.LogarithmicScaling"/>
     </implementation>
-    <implementation name="com.sun.star.chart2.PowerScaling">
+    <implementation name="com.sun.star.chart2.PowerScaling" constructor="com_sun_star_chart2_PowerScaling_get_implementation">
       <service name="com.sun.star.chart2.PowerScaling"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart.CachedDataSequence">
+    <implementation name="com.sun.star.comp.chart.CachedDataSequence" constructor="com_sun_star_comp_chart_CachedDataSequence_get_implementation">
       <service name="com.sun.star.chart2.data.DataSequence"/>
       <service name="com.sun.star.chart2.data.NumericalDataSequence"/>
       <service name="com.sun.star.chart2.data.TextualDataSequence"/>
       <service name="com.sun.star.comp.chart.CachedDataSequence"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart.DataSource">
+    <implementation name="com.sun.star.comp.chart.DataSource" constructor="com_sun_star_comp_chart_DataSource_get_implementation">
       <service name="com.sun.star.chart2.data.DataSource"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart.InternalDataProvider">
+    <implementation name="com.sun.star.comp.chart.InternalDataProvider" constructor="com_sun_star_comp_chart_InternalDataProvider_get_implementation">
       <service name="com.sun.star.chart2.data.DataProvider"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.ConfigDefaultColorScheme">
+    <implementation name="com.sun.star.comp.chart2.ConfigDefaultColorScheme" constructor="com_sun_star_comp_chart2_ConfigDefaultColorScheme_get_implementation">
       <service name="com.sun.star.chart2.ColorScheme"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.ErrorBar">
+    <implementation name="com.sun.star.comp.chart2.ErrorBar" constructor="com_sun_star_comp_chart2_ErrorBar_get_implementation">
       <service name="com.sun.star.chart2.ErrorBar"/>
       <service name="com.sun.star.comp.chart2.ErrorBar"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.ExponentialRegressionCurve">
+    <implementation name="com.sun.star.comp.chart2.ExponentialRegressionCurve" constructor="com_sun_star_comp_chart2_ExponentialRegressionCurve_get_implementation">
       <service name="com.sun.star.chart2.ExponentialRegressionCurve"/>
       <service name="com.sun.star.chart2.RegressionCurve"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.LabeledDataSequence">
+    <implementation name="com.sun.star.comp.chart2.LabeledDataSequence" constructor="com_sun_star_comp_chart2_LabeledDataSequence_get_implementation">
       <service name="com.sun.star.chart2.data.LabeledDataSequence"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.LinearRegressionCurve">
+    <implementation name="com.sun.star.comp.chart2.LinearRegressionCurve" constructor="com_sun_star_comp_chart2_LinearRegressionCurve_get_implementation">
       <service name="com.sun.star.chart2.LinearRegressionCurve"/>
       <service name="com.sun.star.chart2.RegressionCurve"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.LogarithmicRegressionCurve">
+    <implementation name="com.sun.star.comp.chart2.LogarithmicRegressionCurve" constructor="com_sun_star_comp_chart2_LogarithmicRegressionCurve_get_implementation">
       <service name="com.sun.star.chart2.LogarithmicRegressionCurve"/>
       <service name="com.sun.star.chart2.RegressionCurve"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.MeanValueRegressionCurve">
+    <implementation name="com.sun.star.comp.chart2.MeanValueRegressionCurve" constructor="com_sun_star_comp_chart2_MeanValueRegressionCurve_get_implementation">
       <service name="com.sun.star.chart2.MeanValueRegressionCurve"/>
       <service name="com.sun.star.chart2.RegressionCurve"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.PotentialRegressionCurve">
+    <implementation name="com.sun.star.comp.chart2.PotentialRegressionCurve" constructor="com_sun_star_comp_chart2_PotentialRegressionCurve_get_implementation">
       <service name="com.sun.star.chart2.PotentialRegressionCurve"/>
       <service name="com.sun.star.chart2.RegressionCurve"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.PolynomialRegressionCurve">
+    <implementation name="com.sun.star.comp.chart2.PolynomialRegressionCurve" constructor="com_sun_star_comp_chart2_PolynomialRegressionCurve_get_implementation">
       <service name="com.sun.star.chart2.PolynomialRegressionCurve"/>
       <service name="com.sun.star.chart2.RegressionCurve"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.MovingAverageRegressionCurve">
+    <implementation name="com.sun.star.comp.chart2.MovingAverageRegressionCurve" constructor="com_sun_star_comp_chart2_MovingAverageRegressionCurve_get_implementation">
       <service name="com.sun.star.chart2.MovingAverageRegressionCurve"/>
       <service name="com.sun.star.chart2.RegressionCurve"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.RegressionEquation">
+    <implementation name="com.sun.star.comp.chart2.RegressionEquation" constructor="com_sun_star_comp_chart2_RegressionEquation_get_implementation">
       <service name="com.sun.star.beans.PropertySet"/>
       <service name="com.sun.star.chart2.RegressionEquation"/>
       <service name="com.sun.star.drawing.FillProperties"/>
       <service name="com.sun.star.drawing.LineProperties"/>
       <service name="com.sun.star.style.CharacterProperties"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart.AreaChartType">
+    <implementation name="com.sun.star.comp.chart.AreaChartType" constructor="com_sun_star_comp_chart_AreaChartType_get_implementation">
       <service name="com.sun.star.chart2.AreaChartType"/>
       <service name="com.sun.star.chart2.ChartType"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart.BarChartType">
+    <implementation name="com.sun.star.comp.chart.BarChartType" constructor="com_sun_star_comp_chart_BarChartType_get_implementation">
       <service name="com.sun.star.chart2.BarChartType"/>
       <service name="com.sun.star.chart2.ChartType"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart.BubbleChartType">
+    <implementation name="com.sun.star.comp.chart.BubbleChartType" constructor="com_sun_star_comp_chart_BubbleChartType_get_implementation">
       <service name="com.sun.star.beans.PropertySet"/>
       <service name="com.sun.star.chart2.BubbleChartType"/>
       <service name="com.sun.star.chart2.ChartType"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart.GL3DBarChartType">
+    <implementation name="com.sun.star.comp.chart.GL3DBarChartType" constructor="com_sun_star_comp_chart_GL3DBarChartType_get_implementation">
       <service name="com.sun.star.chart2.GL3DBarChartType"/>
       <service name="com.sun.star.chart2.ChartType"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart.CandleStickChartType">
+    <implementation name="com.sun.star.comp.chart.CandleStickChartType" constructor="com_sun_star_comp_chart_CandleStickChartType_get_implementation">
       <service name="com.sun.star.beans.PropertySet"/>
       <service name="com.sun.star.chart2.CandleStickChartType"/>
       <service name="com.sun.star.chart2.ChartType"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart.ChartTypeManager">
+    <implementation name="com.sun.star.comp.chart.ChartTypeManager" constructor="com_sun_star_comp_chart_ChartTypeManager_get_implementation">
       <service name="com.sun.star.chart2.ChartTypeManager"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart.ColumnChartType">
+    <implementation name="com.sun.star.comp.chart.ColumnChartType" constructor="com_sun_star_comp_chart_ColumnChartType_get_implementation">
       <service name="com.sun.star.chart2.ChartType"/>
       <service name="com.sun.star.chart2.ColumnChartType"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart.DataSeries">
+    <implementation name="com.sun.star.comp.chart.DataSeries" constructor="com_sun_star_comp_chart_DataSeries_get_implementation">
       <service name="com.sun.star.beans.PropertySet"/>
       <service name="com.sun.star.chart2.DataPointProperties"/>
       <service name="com.sun.star.chart2.DataSeries"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart.FilledNetChartType">
+    <implementation name="com.sun.star.comp.chart.FilledNetChartType" constructor="com_sun_star_comp_chart_FilledNetChartType_get_implementation">
       <service name="com.sun.star.beans.PropertySet"/>
       <service name="com.sun.star.chart2.ChartType"/>
       <service name="com.sun.star.chart2.FilledNetChartType"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart.FormattedString">
+    <implementation name="com.sun.star.comp.chart.FormattedString" constructor="com_sun_star_comp_chart_FormattedString_get_implementation">
       <service name="com.sun.star.beans.PropertySet"/>
       <service name="com.sun.star.chart2.FormattedString"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart.LineChartType">
+    <implementation name="com.sun.star.comp.chart.LineChartType" constructor="com_sun_star_comp_chart_LineChartType_get_implementation">
       <service name="com.sun.star.beans.PropertySet"/>
       <service name="com.sun.star.chart2.ChartType"/>
       <service name="com.sun.star.chart2.LineChartType"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart.NetChartType">
+    <implementation name="com.sun.star.comp.chart.NetChartType" constructor="com_sun_star_comp_chart_NetChartType_get_implementation">
       <service name="com.sun.star.beans.PropertySet"/>
       <service name="com.sun.star.chart2.ChartType"/>
       <service name="com.sun.star.chart2.NetChartType"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart.PieChartType">
+    <implementation name="com.sun.star.comp.chart.PieChartType" constructor="com_sun_star_comp_chart_PieChartType_get_implementation">
       <service name="com.sun.star.beans.PropertySet"/>
       <service name="com.sun.star.chart2.ChartType"/>
       <service name="com.sun.star.chart2.PieChartType"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart.ScatterChartType">
+    <implementation name="com.sun.star.comp.chart.ScatterChartType" constructor="com_sun_star_comp_chart_ScatterChartType_get_implementation">
       <service name="com.sun.star.beans.PropertySet"/>
       <service name="com.sun.star.chart2.ChartType"/>
       <service name="com.sun.star.chart2.ScatterChartType"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.Axis">
+    <implementation name="com.sun.star.comp.chart2.Axis" constructor="com_sun_star_comp_chart2_Axis_get_implementation">
       <service name="com.sun.star.beans.PropertySet"/>
       <service name="com.sun.star.chart2.Axis"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.CartesianCoordinateSystem2d">
+    <implementation name="com.sun.star.comp.chart2.CartesianCoordinateSystem2d" constructor="com_sun_star_comp_chart2_CartesianCoordinateSystem2d_get_implementation">
       <service name="com.sun.star.chart2.CartesianCoordinateSystem2d"/>
       <service name="com.sun.star.chart2.CoordinateSystems.Cartesian"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.CartesianCoordinateSystem3d">
+    <implementation name="com.sun.star.comp.chart2.CartesianCoordinateSystem3d" constructor="com_sun_star_comp_chart2_CartesianCoordinateSystem3d_get_implementation">
       <service name="com.sun.star.chart2.CartesianCoordinateSystem3d"/>
       <service name="com.sun.star.chart2.CoordinateSystems.Cartesian"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.ChartModel">
+    <implementation name="com.sun.star.comp.chart2.ChartModel" constructor="com_sun_star_comp_chart2_ChartModel_get_implementation">
       <service name="com.sun.star.chart.ChartDocument"/>
       <service name="com.sun.star.chart2.ChartDocument"/>
       <service name="com.sun.star.document.OfficeDocument"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.Diagram">
+    <implementation name="com.sun.star.comp.chart2.Diagram" constructor="com_sun_star_comp_chart2_Diagram_get_implementation">
       <service name="com.sun.star.beans.PropertySet"/>
       <service name="com.sun.star.chart2.Diagram"/>
       <service name="com.sun.star.layout.LayoutElement"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.GridProperties">
+    <implementation name="com.sun.star.comp.chart2.GridProperties" constructor="com_sun_star_comp_chart2_GridProperties_get_implementation">
       <service name="com.sun.star.beans.PropertySet"/>
       <service name="com.sun.star.chart2.GridProperties"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.Legend">
+    <implementation name="com.sun.star.comp.chart2.Legend" constructor="com_sun_star_comp_chart2_Legend_get_implementation">
       <service name="com.sun.star.beans.PropertySet"/>
       <service name="com.sun.star.chart2.Legend"/>
       <service name="com.sun.star.drawing.FillProperties"/>
@@ -234,38 +237,38 @@
       <service name="com.sun.star.layout.LayoutElement"/>
       <service name="com.sun.star.style.CharacterProperties"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.PageBackground">
+    <implementation name="com.sun.star.comp.chart2.PageBackground" constructor="com_sun_star_comp_chart2_PageBackground_get_implementation">
       <service name="com.sun.star.beans.PropertySet"/>
       <service name="com.sun.star.chart2.PageBackground"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.PolarCoordinateSystem2d">
+    <implementation name="com.sun.star.comp.chart2.PolarCoordinateSystem2d" constructor="com_sun_star_comp_chart2_PolarCoordinateSystem2d_get_implementation">
       <service name="com.sun.star.chart2.CoordinateSystems.Polar"/>
       <service name="com.sun.star.chart2.PolarCoordinateSystem2d"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.PolarCoordinateSystem3d">
+    <implementation name="com.sun.star.comp.chart2.PolarCoordinateSystem3d" constructor="com_sun_star_comp_chart2_PolarCoordinateSystem3d_get_implementation">
       <service name="com.sun.star.chart2.CoordinateSystems.Polar"/>
       <service name="com.sun.star.chart2.PolarCoordinateSystem3d"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.Title">
+    <implementation name="com.sun.star.comp.chart2.Title" constructor="com_sun_star_comp_chart2_Title_get_implementation">
       <service name="com.sun.star.beans.PropertySet"/>
       <service name="com.sun.star.chart2.Title"/>
       <service name="com.sun.star.layout.LayoutElement"/>
       <service name="com.sun.star.style.ParagraphProperties"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.XMLFilter">
+    <implementation name="com.sun.star.comp.chart2.XMLFilter" constructor="com_sun_star_comp_chart2_XMLFilter_get_implementation">
       <service name="com.sun.star.document.ExportFilter"/>
       <service name="com.sun.star.document.ImportFilter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.report.XMLFilter">
+    <implementation name="com.sun.star.comp.chart2.report.XMLFilter" constructor="com_sun_star_comp_chart2_report_XMLFilter_get_implementation">
       <service name="com.sun.star.document.ExportFilter"/>
       <service name="com.sun.star.document.ImportFilter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.chart2.ChartView">
+    <implementation name="com.sun.star.comp.chart2.ChartView" constructor="com_sun_star_comp_chart2_ChartView_get_implementation">
       <service name="com.sun.star.chart2.ChartView"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="canvasfactory" uri="vnd.sun.star.expand:$LO_LIB_DIR/libcanvasfactorylo.dylib">
-    <implementation name="com.sun.star.comp.rendering.CanvasFactory">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libcanvasfactorylo.dylib">
+    <implementation name="com.sun.star.comp.rendering.CanvasFactory" constructor="com_sun_star_comp_rendering_CanvasFactory_get_implementation">
       <service name="com.sun.star.rendering.CanvasFactory"/>
     </implementation>
   </component>
@@ -283,39 +286,35 @@
     </implementation>
   </component>
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="comphelp" uri="vnd.sun.star.expand:$LO_LIB_DIR/libcomphelper.dylib">
-    <implementation name="AnyCompareFactory">
+    <implementation name="AnyCompareFactory" constructor="AnyCompareFactory_get_implementation">
       <service name="com.sun.star.ucb.AnyCompareFactory"/>
     </implementation>
-    <implementation name="IndexedPropertyValuesContainer">
+    <implementation name="IndexedPropertyValuesContainer" constructor="IndexedPropertyValuesContainer_get_implementation">
       <service name="com.sun.star.document.IndexedPropertyValues"/>
     </implementation>
-    <implementation name="NamedPropertyValuesContainer">
+    <implementation name="NamedPropertyValuesContainer" constructor="NamedPropertyValuesContainer_get_implementation">
       <service name="com.sun.star.document.NamedPropertyValues"/>
     </implementation>
-    <implementation name="com.sun.star.comp.MemoryStream">
+    <implementation name="com.sun.star.comp.MemoryStream" constructor="com_sun_star_comp_MemoryStream">
       <service name="com.sun.star.comp.MemoryStream"/>
     </implementation>
-    <implementation name="com.sun.star.comp.SequenceInputStreamService">
+    <implementation name="com.sun.star.comp.SequenceInputStreamService" constructor="com_sun_star_comp_SequenceInputStreamService">
       <service name="com.sun.star.io.SequenceInputStream"/>
     </implementation>
-    <implementation name="com.sun.star.comp.SequenceOutputStreamService">
+    <implementation name="com.sun.star.comp.SequenceOutputStreamService" constructor="com_sun_star_comp_SequenceOutputStreamService">
       <service name="com.sun.star.io.SequenceOutputStream"/>
     </implementation>
-    <implementation name="com.sun.star.comp.comphelper.OPropertyBag">
+    <implementation name="com.sun.star.comp.comphelper.OPropertyBag" constructor="com_sun_star_comp_comphelper_OPropertyBag">
       <service name="com.sun.star.beans.PropertyBag"/>
     </implementation>
-    <implementation name="com.sun.star.comp.embed.InstanceLocker">
+    <implementation name="com.sun.star.comp.embed.InstanceLocker" constructor="com_sun_star_comp_embed_InstanceLocker">
       <service name="com.sun.star.embed.InstanceLocker"/>
     </implementation>
-    <implementation name="com.sun.star.comp.logging.SimpleLogRing">
-      <service name="com.sun.star.logging.SimpleLogRing"/>
-      <singleton name="com.sun.star.logging.DocumentIOLogRing"/>
-    </implementation>
-    <implementation name="com.sun.star.comp.task.OfficeRestartManager">
+    <implementation name="com.sun.star.comp.task.OfficeRestartManager" constructor="com_sun_star_comp_task_OfficeRestartManager">
       <service name="com.sun.star.comp.task.OfficeRestartManager"/>
       <singleton name="com.sun.star.task.OfficeRestartManager"/>
     </implementation>
-    <implementation name="com.sun.star.comp.util.OfficeInstallationDirectories">
+    <implementation name="com.sun.star.comp.util.OfficeInstallationDirectories" constructor="com_sun_star_comp_util_OfficeInstallationDirectories">
       <service name="com.sun.star.util.OfficeInstallationDirectories"/>
       <singleton name="com.sun.star.util.theOfficeInstallationDirectories"/>
     </implementation>
@@ -474,11 +473,6 @@
       <service name="com.sun.star.filter.pdfexport.PDFExportInteractionHandler"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="placeware" uri="vnd.sun.star.expand:$LO_LIB_DIR/libplacewarelo.dylib">
-    <implementation name="com.sun.star.comp.Impress.PlaceWareExportFilter">
-      <service name="com.sun.star.document.ExportFilter"/>
-    </implementation>
-  </component>
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="storagefd" uri="vnd.sun.star.expand:$LO_LIB_DIR/libstoragefdlo.dylib">
     <implementation name="com.sun.star.comp.filters.StorageFilterDetect">
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
@@ -503,9 +497,10 @@
       <service name="com.sun.star.ui.dialogs.FilterOptionsDialog"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="textfd" uri="vnd.sun.star.expand:$LO_LIB_DIR/libtextfdlo.dylib">
-    <implementation name="com.sun.star.comp.filters.PlainTextFilterDetect">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libtextfdlo.dylib">
+    <implementation name="com.sun.star.comp.filters.PlainTextFilterDetect" constructor="com_sun_star_comp_filters_PlainTextFilterDetect_get_implementation">
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
+      <service name="com.sun.star.comp.filters.PlainTextFilterDetect"/>
     </implementation>
   </component>
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="xmlfa" uri="vnd.sun.star.expand:$LO_LIB_DIR/libxmlfalo.dylib">
@@ -540,6 +535,9 @@
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="fps_office" uri="vnd.sun.star.expand:$LO_LIB_DIR/libfps_officelo.dylib">
     <implementation name="com.sun.star.svtools.OfficeFilePicker">
       <service name="com.sun.star.ui.dialogs.OfficeFilePicker"/>
+    </implementation>
+    <implementation name="com.sun.star.svtools.RemoteFilePicker">
+      <service name="com.sun.star.ui.dialogs.RemoteFilePicker"/>
     </implementation>
     <implementation name="com.sun.star.svtools.OfficeFolderPicker">
       <service name="com.sun.star.ui.dialogs.OfficeFolderPicker"/>
@@ -621,6 +619,9 @@
     <implementation name="com.sun.star.comp.framework.RecentFilesMenuController" constructor="com_sun_star_comp_framework_RecentFilesMenuController_get_implementation">
       <service name="com.sun.star.frame.PopupMenuController"/>
     </implementation>
+    <implementation name="com.sun.star.comp.framework.SaveAsMenuController" constructor="com_sun_star_comp_framework_SaveAsMenuController_get_implementation">
+      <service name="com.sun.star.frame.PopupMenuController"/>
+    </implementation>
     <implementation name="com.sun.star.comp.framework.StatusBarControllerFactory" constructor="com_sun_star_comp_framework_StatusBarControllerFactory_get_implementation">
       <service name="com.sun.star.frame.StatusbarControllerFactory"/>
       <singleton name="com.sun.star.frame.theStatusbarControllerFactory"/>
@@ -670,17 +671,26 @@
     <implementation name="com.sun.star.comp.framework.jobs.JobDispatch" constructor="com_sun_star_comp_framework_jobs_JobDispatch_get_implementation">
       <service name="com.sun.star.frame.ProtocolHandler"/>
     </implementation>
-    <implementation name="com.sun.star.comp.framework.TabWindowService" constructor="com_sun_star_comp_framework_TabWindowService_get_implementation">
-      <service name="com.sun.star.ui.dialogs.TabContainerWindow"/>
+    <implementation name="com.sun.star.comp.framework.GenericPopupToolbarController" constructor="com_sun_star_comp_framework_GenericPopupToolbarController_get_implementation">
+      <service name="com.sun.star.frame.ToolbarController"/>
     </implementation>
-    <implementation name="org.apache.openoffice.comp.framework.OpenToolbarController" constructor="org_apache_openoffice_comp_framework_OpenToolbarController_get_implementation">
+    <implementation name="com.sun.star.comp.framework.SaveToolbarController" constructor="com_sun_star_comp_framework_SaveToolbarController_get_implementation">
       <service name="com.sun.star.frame.ToolbarController"/>
     </implementation>
     <implementation name="org.apache.openoffice.comp.framework.NewToolbarController" constructor="org_apache_openoffice_comp_framework_NewToolbarController_get_implementation">
       <service name="com.sun.star.frame.ToolbarController"/>
     </implementation>
-    <implementation name="org.apache.openoffice.comp.framework.WizardsToolbarController" constructor="org_apache_openoffice_comp_framework_WizardsToolbarController_get_implementation">
+    <implementation name="com.sun.star.comp.framework.SubToolBarController" constructor="com_sun_star_comp_framework_SubToolBarController_get_implementation">
       <service name="com.sun.star.frame.ToolbarController"/>
+    </implementation>
+    <implementation name="com.sun.star.comp.framework.ThesaurusMenuController" constructor="com_sun_star_comp_framework_ThesaurusMenuController_get_implementation">
+      <service name="com.sun.star.frame.PopupMenuController"/>
+    </implementation>
+    <implementation name="com.sun.star.comp.framework.ToolbarAsMenuController" constructor="com_sun_star_comp_framework_ToolbarAsMenuController_get_implementation">
+      <service name="com.sun.star.frame.PopupMenuController"/>
+    </implementation>
+    <implementation name="com.sun.star.comp.framework.ResourceMenuController" constructor="com_sun_star_comp_framework_ResourceMenuController_get_implementation">
+      <service name="com.sun.star.frame.PopupMenuController"/>
     </implementation>
   </component>
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="fwl" uri="vnd.sun.star.expand:$LO_LIB_DIR/libfwllo.dylib">
@@ -726,7 +736,13 @@
     <implementation name="com.sun.star.comp.framework.ServiceHandler">
       <service name="com.sun.star.frame.ProtocolHandler"/>
     </implementation>
+    <implementation name="com.sun.star.comp.framework.ToolbarModeMenuController">
+      <service name="com.sun.star.frame.PopupMenuController"/>
+    </implementation>
     <implementation name="com.sun.star.comp.framework.ToolBarsMenuController">
+      <service name="com.sun.star.frame.PopupMenuController"/>
+    </implementation>
+    <implementation name="com.sun.star.comp.framework.NotebookbarMenuController">
       <service name="com.sun.star.frame.PopupMenuController"/>
     </implementation>
     <implementation name="com.sun.star.comp.framework.UriAbbreviation">
@@ -734,6 +750,9 @@
     </implementation>
     <implementation name="com.sun.star.comp.framework.services.DispatchHelper">
       <service name="com.sun.star.frame.DispatchHelper"/>
+    </implementation>
+    <implementation name="com.sun.star.comp.framework.services.DispatchDisabler">
+      <service name="com.sun.star.frame.DispatchDisabler"/>
     </implementation>
   </component>
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="fwm" uri="vnd.sun.star.expand:$LO_LIB_DIR/libfwmlo.dylib">
@@ -759,6 +778,7 @@
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="i18nsearch" uri="vnd.sun.star.expand:$LO_LIB_DIR/libi18nsearchlo.dylib">
     <implementation name="com.sun.star.util.TextSearch_i18n">
       <service name="com.sun.star.util.TextSearch"/>
+      <service name="com.sun.star.util.TextSearch2"/>
     </implementation>
   </component>
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="i18npool" uri="vnd.sun.star.expand:$LO_LIB_DIR/libi18npoollo.dylib">
@@ -785,6 +805,7 @@
     </implementation>
     <implementation name="com.sun.star.i18n.CalendarImpl">
       <service name="com.sun.star.i18n.LocaleCalendar"/>
+      <service name="com.sun.star.i18n.LocaleCalendar2"/>
     </implementation>
     <implementation name="com.sun.star.i18n.Calendar_ROC">
       <service name="com.sun.star.i18n.Calendar_ROC"/>
@@ -1262,8 +1283,8 @@
     </implementation>
   </component>
   <!-- Remove liblwpftlo.dylib
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="lotuswordpro" uri="vnd.sun.star.expand:$LO_LIB_DIR/liblwpftlo.dylib">
-    <implementation name="com.sun.star.comp.Writer.LotusWordProImportFilter">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/liblwpftlo.dylib">
+    <implementation name="com.sun.star.comp.Writer.LotusWordProImportFilter" constructor="LotusWordProImportFilter_get_implementation">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
@@ -1318,93 +1339,99 @@
     <implementation name="com.sun.star.comp.extensions.xml.sax.FastParser" constructor="com_sun_star_comp_extensions_xml_sax_FastParser_get_implementation">
       <service name="com.sun.star.xml.sax.FastParser"/>
     </implementation>
+    <implementation name="com.sun.star.comp.extensions.xml.sax.LegacyFastParser" constructor="com_sun_star_comp_extensions_xml_sax_LegacyFastParser_get_implementation">
+      <service name="com.sun.star.xml.sax.LegacyFastParser"/>
+    </implementation>
   </component>
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="sc" uri="vnd.sun.star.expand:$LO_LIB_DIR/libsclo.dylib">
-    <implementation name="com.sun.star.comp.Calc.FilterOptionsDialog">
+    <implementation name="com.sun.star.comp.Calc.FilterOptionsDialog" constructor="Calc_FilterOptionsDialog_get_implementation">
       <service name="com.sun.star.ui.dialogs.FilterOptionsDialog"/>
     </implementation>
     <implementation name="com.sun.star.comp.Calc.SpreadsheetDocument">
       <service name="com.sun.star.sheet.SpreadsheetDocument"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Calc.XMLContentExporter">
+    <implementation name="com.sun.star.comp.Calc.XMLContentExporter" constructor="Calc_XMLContentExporter_get_implementation">
       <service name="com.sun.star.comp.Calc.XMLContentExporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Calc.XMLExporter">
+    <implementation name="com.sun.star.comp.Calc.XMLExporter" constructor="Calc_XMLExporter_get_implementation">
       <service name="com.sun.star.comp.Calc.XMLExporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Calc.XMLMetaExporter">
+    <implementation name="com.sun.star.comp.Calc.XMLMetaExporter" constructor="Calc_XMLMetaExporter_get_implementation">
       <service name="com.sun.star.comp.Calc.XMLMetaExporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Calc.XMLOasisContentExporter">
+    <implementation name="com.sun.star.comp.Calc.XMLOasisContentExporter" constructor="Calc_XMLOasisContentExporter_get_implementation">
       <service name="com.sun.star.comp.Calc.XMLOasisContentExporter"/>
     </implementation>
     <implementation name="com.sun.star.comp.Calc.XMLOasisContentImporter">
       <service name="com.sun.star.comp.Calc.XMLOasisContentImporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Calc.XMLOasisExporter">
+    <implementation name="com.sun.star.comp.Calc.XMLOasisExporter" constructor="Calc_XMLOasisExporter_get_implementation">
       <service name="com.sun.star.comp.Calc.XMLOasisExporter"/>
     </implementation>
     <implementation name="com.sun.star.comp.Calc.XMLOasisImporter">
       <service name="com.sun.star.comp.Calc.XMLOasisImporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Calc.XMLOasisMetaExporter">
+    <implementation name="com.sun.star.comp.Calc.XMLOasisMetaExporter" constructor="Calc_XMLOasisMetaExporter_get_implementation">
       <service name="com.sun.star.comp.Calc.XMLOasisMetaExporter"/>
     </implementation>
     <implementation name="com.sun.star.comp.Calc.XMLOasisMetaImporter">
       <service name="com.sun.star.comp.Calc.XMLOasisMetaImporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Calc.XMLOasisSettingsExporter">
+    <implementation name="com.sun.star.comp.Calc.XMLOasisSettingsExporter" constructor="Calc_XMLOasisSettingsExporter_get_implementation">
       <service name="com.sun.star.comp.Calc.XMLOasisSettingsExporter"/>
     </implementation>
     <implementation name="com.sun.star.comp.Calc.XMLOasisSettingsImporter">
       <service name="com.sun.star.comp.Calc.XMLOasisSettingsImporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Calc.XMLOasisStylesExporter">
+    <implementation name="com.sun.star.comp.Calc.XMLOasisStylesExporter" constructor="Calc_XMLOasisStylesExporter_get_implementation">
       <service name="com.sun.star.comp.Calc.XMLOasisStylesExporter"/>
     </implementation>
     <implementation name="com.sun.star.comp.Calc.XMLOasisStylesImporter">
       <service name="com.sun.star.comp.Calc.XMLOasisStylesImporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Calc.XMLSettingsExporter">
+    <implementation name="com.sun.star.comp.Calc.XMLSettingsExporter" constructor="Calc_XMLSettingsExporter_get_implementation">
       <service name="com.sun.star.comp.Calc.XMLSettingsExporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Calc.XMLStylesExporter">
+    <implementation name="com.sun.star.comp.Calc.XMLStylesExporter" constructor="Calc_XMLStylesExporter_get_implementation">
       <service name="com.sun.star.comp.Calc.XMLStylesExporter"/>
     </implementation>
-    <implementation name="stardiv.StarCalc.ScAutoFormatsObj">
+    <implementation name="stardiv.StarCalc.ScAutoFormatsObj" constructor="ScAutoFormatsObj_get_implementation">
       <service name="com.sun.star.sheet.TableAutoFormats"/>
     </implementation>
-    <implementation name="stardiv.StarCalc.ScFunctionAccess">
+    <implementation name="stardiv.StarCalc.ScFunctionAccess" constructor="ScFunctionAcceess_get_implementation">
       <service name="com.sun.star.sheet.FunctionAccess"/>
     </implementation>
-    <implementation name="stardiv.StarCalc.ScFunctionListObj">
+    <implementation name="stardiv.StarCalc.ScFunctionListObj" constructor="ScFunctionListObj_get_implementation">
       <service name="com.sun.star.sheet.FunctionDescriptions"/>
     </implementation>
-    <implementation name="stardiv.StarCalc.ScRecentFunctionsObj">
+    <implementation name="stardiv.StarCalc.ScRecentFunctionsObj" constructor="ScRecentFunctionsObj_get_implementation">
       <service name="com.sun.star.sheet.RecentFunctions"/>
     </implementation>
     <implementation name="stardiv.StarCalc.ScSpreadsheetSettings">
       <service name="com.sun.star.sheet.GlobalSheetSettings"/>
     </implementation>
-    <implementation name="org.apache.openoffice.comp.sc.sidebar.ScPanelFactory">
+    <implementation name="org.apache.openoffice.comp.sc.sidebar.ScPanelFactory" constructor="ScPanelFactory_get_implementation">
       <service name="com.sun.star.ui.UIElementFactory"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="scd" uri="vnd.sun.star.expand:$LO_LIB_DIR/libscdlo.dylib">
-    <implementation name="com.sun.star.comp.calc.FormatDetector">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libscdlo.dylib">
+    <implementation name="com.sun.star.comp.calc.FormatDetector" constructor="com_sun_star_comp_calc_FormatDetector_get_implementation">
       <service name="com.sun.star.frame.ExtendedTypeDetection"/>
     </implementation>
-    <implementation name="com.sun.star.comp.calc.ExcelBiffFormatDetector">
+    <implementation name="com.sun.star.comp.calc.ExcelBiffFormatDetector" constructor="com_sun_star_comp_calc_ExcelBiffFormatDetector_get_implementation">
       <service name="com.sun.star.frame.ExtendedTypeDetection"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="scfilt" uri="vnd.sun.star.expand:$LO_LIB_DIR/libscfiltlo.dylib">
-    <implementation name="com.sun.star.comp.oox.xls.ExcelFilter">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libscfiltlo.dylib">
+    <implementation name="com.sun.star.comp.oox.xls.ExcelFilter" constructor="com_sun_star_comp_oox_xls_ExcelFilter_get_implementation">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExportFilter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.oox.xls.FormulaParser">
+    <implementation name="com.sun.star.comp.oox.xls.FormulaParser" constructor="com_sun_star_comp_oox_xls_FormulaParser_get_implementation">
       <service name="com.sun.star.sheet.FilterFormulaParser"/>
+    </implementation>
+    <implementation name="com.sun.star.comp.sc.OrcusFilterDetect" constructor="com_sun_star_comp_sc_OrcusFormatDetect_get_implementation">
+      <service name="com.sun.star.frame.ExtendedTypeDetection"/>
     </implementation>
   </component>
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="analysis" uri="vnd.sun.star.expand:$LO_LIB_DIR/libanalysislo.dylib">
@@ -1430,73 +1457,73 @@
       <service name="com.sun.star.drawing.DrawingDocument"/>
       <service name="com.sun.star.drawing.DrawingDocumentFactory"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.DrawingModule">
+    <implementation name="com.sun.star.comp.Draw.DrawingModule" constructor="com_sun_star_comp_Draw_DrawingModule_get_implementation">
       <service name="com.sun.star.drawing.ModuleDispatcher"/>
     </implementation>
     <implementation name="com.sun.star.comp.Draw.PresentationDocument">
       <service name="com.sun.star.drawing.DrawingDocumentFactory"/>
       <service name="com.sun.star.presentation.PresentationDocument"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.PresenterCanvasFactory">
-      <service name="com.sun.star.rendering.Canvas"/>
-    </implementation>
-    <implementation name="com.sun.star.comp.Draw.PresenterHelper">
+    <implementation name="com.sun.star.comp.Draw.PresenterHelper" constructor="com_sun_star_comp_Draw_PresenterHelper_get_implementation">
       <service name="com.sun.star.drawing.PresenterHelper"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.PresenterPreviewCache">
+    <implementation name="com.sun.star.comp.Draw.PresenterPreviewCache" constructor="com_sun_star_comp_Draw_PresenterPreviewCache_get_implementation">
       <service name="com.sun.star.drawing.PresenterPreviewCache"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.PresenterTextView">
+    <implementation name="com.sun.star.comp.Draw.PresenterTextView" constructor="com_sun_star_comp_Draw_PresenterTextView_get_implementation">
       <service name="com.sun.star.drawing.PresenterTextView"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.SlideRenderer">
+    <implementation name="com.sun.star.comp.Draw.SlideRenderer" constructor="com_sun_star_comp_Draw_SlideRenderer_get_implementation">
       <service name="com.sun.star.drawing.SlideRenderer"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.SlideSorter">
+    <implementation name="com.sun.star.comp.Draw.SlideSorter" constructor="com_sun_star_comp_Draw_SlideSorter_get_implementation">
       <service name="com.sun.star.drawing.SlideSorter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.framework.BasicPaneFactory">
+    <implementation name="com.sun.star.comp.Draw.framework.BasicPaneFactory" constructor="com_sun_star_comp_Draw_framework_BasicPaneFactory_get_implementation">
       <service name="com.sun.star.drawing.framework.BasicPaneFactory"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.framework.BasicToolBarFactory">
+    <implementation name="com.sun.star.comp.Draw.framework.BasicToolBarFactory" constructor="com_sun_star_comp_Draw_framework_BasicToolBarFactory_get_implementation">
       <service name="com.sun.star.drawing.framework.BasicToolBarFactory"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.framework.BasicViewFactory">
+    <implementation name="com.sun.star.comp.Draw.framework.BasicViewFactory" constructor="com_sun_star_comp_Draw_framework_BasicViewFactory_get_implementation">
       <service name="com.sun.star.drawing.framework.BasicViewFactory"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.framework.PresentationFactoryProvider">
+    <implementation name="com.sun.star.comp.Draw.framework.PresentationFactoryProvider" constructor="com_sun_star_comp_Draw_framework_PresentationFactoryProvider_get_implementation">
       <service name="com.sun.star.drawing.framework.PresentationFactoryProvider"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.framework.ResourceId">
+    <implementation name="com.sun.star.comp.Draw.framework.ResourceId" constructor="com_sun_star_comp_Draw_framework_ResourceID_get_implementation">
       <service name="com.sun.star.drawing.framework.ResourceId"/>
     </implementation>
-    <implementation name="org.openoffice.comp.Draw.framework.PanelFactory">
+    <implementation name="org.openoffice.comp.Draw.framework.PanelFactory" constructor="org_openoffice_comp_Draw_framework_PanelFactory_get_implementation">
       <service name="com.sun.star.drawing.framework.PanelFactory"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.framework.configuration.Configuration">
+    <implementation name="com.sun.star.comp.Draw.framework.configuration.Configuration" constructor="com_sun_star_comp_Draw_framework_configuration_Configuration_get_implementation">
       <service name="com.sun.star.drawing.framework.Configuration"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.framework.configuration.ConfigurationController">
+    <implementation name="com.sun.star.comp.Draw.framework.configuration.ConfigurationController" constructor="com_sun_star_comp_Draw_framework_configuration_ConfigurationController_get_implementation">
       <service name="com.sun.star.drawing.framework.ConfigurationController"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.framework.module.ModuleController">
+    <implementation name="com.sun.star.comp.Draw.framework.module.ModuleController" constructor="com_sun_star_comp_Draw_framework_module_ModuleController_get_implementation">
       <service name="com.sun.star.drawing.framework.ModuleController"/>
     </implementation>
-    <implementation name="com.sun.star.comp.draw.SdHtmlOptionsDialog">
+    <implementation name="com.sun.star.comp.draw.SdHtmlOptionsDialog" constructor="com_sun_star_comp_draw_SdHtmlOptionsDialog_get_implementation">
       <service name="com.sun.star.ui.dialog.FilterOptionsDialog"/>
     </implementation>
-    <implementation name="com.sun.star.comp.sd.InsertSlideController">
+    <implementation name="com.sun.star.comp.sd.InsertSlideController" constructor="com_sun_star_comp_sd_InsertSlideController_get_implementation">
       <service name="com.sun.star.frame.ToolbarController"/>
     </implementation>
-    <implementation name="com.sun.star.comp.sd.SlideLayoutController">
+    <implementation name="com.sun.star.comp.sd.SlideLayoutController" constructor="com_sun_star_comp_sd_SlideLayoutController_get_implementation">
       <service name="com.sun.star.frame.ToolbarController"/>
     </implementation>
-    <implementation name="sd::RandomAnimationNode">
+    <implementation name="com.sun.star.comp.sd.DisplayModeController" constructor="com_sun_star_comp_sd_DisplayModeController_get_implementation">
+      <service name="com.sun.star.frame.ToolbarController"/>
+    </implementation>
+    <implementation name="sd::RandomAnimationNode" constructor="RandomAnimationNode_get_implementation">
       <service name="com.sun.star.comp.sd.RandomAnimationNode"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="sdd" uri="vnd.sun.star.expand:$LO_LIB_DIR/libsddlo.dylib">
-    <implementation name="com.sun.star.comp.draw.FormatDetector">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libsddlo.dylib">
+    <implementation name="com.sun.star.comp.draw.FormatDetector" constructor="com_sun_star_comp_draw_FormatDetector_get_implementation">
       <service name="com.sun.star.frame.ExtendedTypeDetection"/>
     </implementation>
   </component>
@@ -1561,11 +1588,11 @@
     <implementation name="com.sun.star.comp.sfx2.IFrameObject" constructor="com_sun_star_comp_sfx2_IFrameObject_get_implementation">
       <service name="com.sun.star.frame.SpecialEmbeddedObject"/>
     </implementation>
-    <implementation name="com.sun.star.comp.sfx2.PluginObject" constructor="com_sun_star_comp_sfx2_PluginObject_get_implementation">
-      <service name="com.sun.star.frame.SpecialEmbeddedObject"/>
-    </implementation>
     <implementation name="com.sun.star.comp.sfx2.SfxMacroLoader" constructor="com_sun_star_comp_sfx2_SfxMacroLoader_get_implementation">
       <service name="com.sun.star.frame.ProtocolHandler"/>
+    </implementation>
+    <implementation name="com.sun.star.comp.sfx2.ClassificationCategoriesController" constructor="com_sun_star_sfx2_ClassificationCategoriesController_get_implementation">
+      <service name="com.sun.star.frame.ToolbarController"/>
     </implementation>
   </component>
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="slideshow" uri="vnd.sun.star.expand:$LO_LIB_DIR/libslideshowlo.dylib">
@@ -1573,8 +1600,8 @@
       <service name="com.sun.star.presentation.SlideShow"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="sot" uri="vnd.sun.star.expand:$LO_LIB_DIR/libsotlo.dylib">
-    <implementation name="com.sun.star.comp.embed.OLESimpleStorage">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libsotlo.dylib">
+    <implementation name="com.sun.star.comp.embed.OLESimpleStorage" constructor="com_sun_star_comp_embed_OLESimpleStorage">
       <service name="com.sun.star.embed.OLESimpleStorage"/>
     </implementation>
   </component>
@@ -1582,32 +1609,35 @@
     <implementation name="com.sun.star.comp.Math.FormulaDocument">
       <service name="com.sun.star.formula.FormulaProperties"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Math.XMLContentExporter">
+    <implementation name="com.sun.star.comp.Math.XMLContentExporter" constructor="Math_XMLContentExporter_get_implementation">
       <service name="com.sun.star.xml.XMLExportFilter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Math.XMLExporter">
+    <implementation name="com.sun.star.comp.Math.XMLExporter" constructor="Math_XMLExporter_get_implementation">
       <service name="com.sun.star.xml.XMLExportFilter"/>
     </implementation>
     <implementation name="com.sun.star.comp.Math.XMLImporter">
       <service name="com.sun.star.xml.XMLImportFilter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Math.XMLMetaExporter">
+    <implementation name="com.sun.star.comp.Math.XMLMetaExporter" constructor="Math_XMLMetaExporter_get_implementation">
       <service name="com.sun.star.xml.XMLExportFilter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Math.XMLOasisMetaExporter">
+    <implementation name="com.sun.star.comp.Math.XMLOasisMetaExporter" constructor="Math_XMLOasisMetaExporter_get_implementation">
       <service name="com.sun.star.xml.XMLExportFilter"/>
     </implementation>
     <implementation name="com.sun.star.comp.Math.XMLOasisMetaImporter">
       <service name="com.sun.star.xml.XMLImportFilter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Math.XMLOasisSettingsExporter">
+    <implementation name="com.sun.star.comp.Math.XMLOasisSettingsExporter" constructor="Math_XMLOasisSettingsExporter_get_implementation">
       <service name="com.sun.star.xml.XMLExportFilter"/>
     </implementation>
     <implementation name="com.sun.star.comp.Math.XMLOasisSettingsImporter">
       <service name="com.sun.star.xml.XMLImportFilter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Math.XMLSettingsExporter">
+    <implementation name="com.sun.star.comp.Math.XMLSettingsExporter" constructor="Math_XMLSettingsExporter_get_implementation">
       <service name="com.sun.star.xml.XMLExportFilter"/>
+    </implementation>
+    <implementation name="com.sun.star.comp.Math.MathTypeFilter" constructor="com_sun_star_comp_Math_MathTypeFilter_get_implementation">
+      <service name="com.sun.star.document.ImportFilter"/>
     </implementation>
   </component>
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="smd" uri="vnd.sun.star.expand:$LO_LIB_DIR/libsmdlo.dylib">
@@ -1626,14 +1656,14 @@
       <service name="com.sun.star.task.PasswordContainer"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="svl" uri="vnd.sun.star.expand:$LO_LIB_DIR/libsvllo.dylib">
-    <implementation name="com.sun.star.comp.svl.PathService">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libsvllo.dylib">
+    <implementation name="com.sun.star.comp.svl.PathService" constructor="com_sun_star_comp_svl_PathService_get_implementation">
       <service name="com.sun.star.config.SpecialConfigManager"/>
     </implementation>
-    <implementation name="com.sun.star.uno.util.numbers.SvNumberFormatsSupplierServiceObject">
+    <implementation name="com.sun.star.uno.util.numbers.SvNumberFormatsSupplierServiceObject" constructor="com_sun_star_uno_util_numbers_SvNumberFormatsSupplierServiceObject_get_implementation">
       <service name="com.sun.star.util.NumberFormatsSupplier"/>
     </implementation>
-    <implementation name="com.sun.star.uno.util.numbers.SvNumberFormatterServiceObject">
+    <implementation name="com.sun.star.uno.util.numbers.SvNumberFormatterServiceObject" constructor="com_sun_star_uno_util_numbers_SvNumberFormatterServiceObject_get_implementation">
       <service name="com.sun.star.util.NumberFormatter"/>
     </implementation>
   </component>
@@ -1686,6 +1716,12 @@
     <implementation name="com.sun.star.comp.svx.RecoveryUI" constructor="com_sun_star_comp_svx_RecoveryUI_get_implementation">
       <service name="com.sun.star.dialog.RecoveryUI"/>
     </implementation>
+    <implementation name="com.sun.star.comp.svx.CrashReportUI" constructor="com_sun_star_comp_svx_CrashReportUI_get_implementation">
+      <service name="com.sun.star.dialog.CrashReportUI"/>
+    </implementation>
+    <implementation name="com.sun.star.comp.svx.SafeModeUI" constructor="com_sun_star_comp_svx_SafeModeUI_get_implementation">
+      <service name="com.sun.star.dialog.SafeModeUI"/>
+    </implementation>
     <implementation name="com.sun.star.drawing.EnhancedCustomShapeEngine" constructor="com_sun_star_drawing_EnhancedCustomShapeEngine_get_implementation">
       <service name="com.sun.star.drawing.CustomShapeEngine"/>
     </implementation>
@@ -1702,6 +1738,9 @@
       <service name="com.sun.star.frame.ToolbarController"/>
     </implementation>
     <implementation name="com.sun.star.svx.MatchCaseToolboxController" constructor="com_sun_star_svx_MatchCaseToolboxController_get_implementation">
+      <service name="com.sun.star.frame.ToolbarController"/>
+    </implementation>
+    <implementation name="com.sun.star.svx.SearchFormattedToolboxController" constructor="com_sun_star_svx_SearchFormattedToolboxController_get_implementation">
       <service name="com.sun.star.frame.ToolbarController"/>
     </implementation>
     <implementation name="com.sun.star.svx.FindAllToolboxController" constructor="com_sun_star_svx_FindAllToolboxController_get_implementation">
@@ -1725,6 +1764,12 @@
     <implementation name="com.sun.star.comp.svx.NumberingToolBoxControl" constructor="com_sun_star_comp_svx_NumberingToolBoxControl_get_implementation">
       <service name="com.sun.star.frame.ToolbarController"/>
     </implementation>
+    <implementation name="com.sun.star.comp.svx.SmartTagMenuController" constructor="com_sun_star_comp_svx_SmartTagMenuController_get_implementation">
+      <service name="com.sun.star.frame.PopupMenuController"/>
+    </implementation>
+    <implementation name="com.sun.star.comp.svx.LineEndToolBoxControl" constructor="com_sun_star_comp_svx_LineEndToolBoxControl_get_implementation">
+      <service name="com.sun.star.frame.ToolbarController"/>
+    </implementation>
   </component>
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="svxcore" uri="vnd.sun.star.expand:$LO_LIB_DIR/libsvxcorelo.dylib">
     <implementation name="com.sun.star.comp.Draw.GraphicExporter" constructor="com_sun_star_comp_Draw_GraphicExporter_get_implementation">
@@ -1746,6 +1791,12 @@
       <service name="com.sun.star.frame.ToolbarController"/>
     </implementation>
     <implementation name="com.sun.star.comp.svx.FontworkCharacterSpacingController">
+      <service name="com.sun.star.frame.ToolbarController"/>
+    </implementation>
+    <implementation name="com.sun.star.comp.svx.FrameToolBoxControl" constructor="com_sun_star_comp_svx_FrameToolBoxControl_get_implementation">
+      <service name="com.sun.star.frame.ToolbarController"/>
+    </implementation>
+    <implementation name="com.sun.star.comp.svx.FontNameToolBoxControl" constructor="com_sun_star_comp_svx_FontNameToolBoxControl_get_implementation">
       <service name="com.sun.star.frame.ToolbarController"/>
     </implementation>
     <implementation name="com.sun.star.comp.Svx.GraphicExportHelper" constructor="com_sun_star_comp_Svx_GraphicExportHelper_get_implementation">
@@ -1774,88 +1825,94 @@
     </implementation>
   </component>
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="sw" uri="vnd.sun.star.expand:$LO_LIB_DIR/libswlo.dylib">
-    <implementation name="SwXAutoTextContainer">
+    <implementation name="SwXAutoTextContainer" constructor="SwXAutoTextContainer_get_implementation">
       <service name="com.sun.star.text.AutoTextContainer"/>
     </implementation>
-    <implementation name="SwXMailMerge">
+    <implementation name="SwXMailMerge" constructor="SwXMailMerge_get_implementation">
       <service name="com.sun.star.sdb.DataAccessDescriptor"/>
       <service name="com.sun.star.text.MailMerge"/>
     </implementation>
-    <implementation name="SwXModule">
+    <implementation name="lo.writer.MMCurrentEntryController" constructor="lo_writer_MMCurrentEntryController_get_implementation">
+      <service name="com.sun.star.frame.ToolbarController"/>
+    </implementation>
+    <implementation name="lo.writer.MMExcludeEntryController" constructor="lo_writer_MMExcludeEntryController_get_implementation">
+      <service name="com.sun.star.frame.ToolbarController"/>
+    </implementation>
+    <implementation name="SwXModule" constructor="SwXModule_get_implementation">
       <service name="com.sun.star.text.GlobalSettings"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.FilterOptionsDialog">
+    <implementation name="com.sun.star.comp.Writer.FilterOptionsDialog" constructor="com_sun_star_comp_Writer_FilterOptionsDialog_get_implementation">
       <service name="com.sun.star.ui.dialogs.FilterOptionsDialog"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.GlobalDocument">
+    <implementation name="com.sun.star.comp.Writer.GlobalDocument" constructor="com_sun_star_comp_Writer_GlobalDocument_get_implementation">
       <service name="com.sun.star.text.GlobalDocument"/>
     </implementation>
     <implementation name="com.sun.star.comp.Writer.TextDocument">
       <service name="com.sun.star.text.TextDocument"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.WebDocument">
+    <implementation name="com.sun.star.comp.Writer.WebDocument" constructor="com_sun_star_comp_Writer_WebDocument_get_implementation">
       <service name="com.sun.star.text.WebDocument"/>
     </implementation>
     <implementation name="com.sun.star.comp.Writer.WriterModule">
       <service name="com.sun.star.text.ModuleDispatcher"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.XMLContentExporter">
+    <implementation name="com.sun.star.comp.Writer.XMLContentExporter" constructor="com_sun_star_comp_Writer_XMLContentExporter_get_implementation">
       <service name="com.sun.star.comp.Writer.XMLContentExporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.XMLExporter">
+    <implementation name="com.sun.star.comp.Writer.XMLExporter" constructor="com_sun_star_comp_Writer_XMLExporter_get_implementation">
       <service name="com.sun.star.comp.Writer.XMLExporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.XMLMetaExporter">
+    <implementation name="com.sun.star.comp.Writer.XMLMetaExporter" constructor="com_sun_star_comp_Writer_XMLMetaExporter_get_implementation">
       <service name="com.sun.star.comp.Writer.XMLMetaExporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.XMLOasisContentExporter">
+    <implementation name="com.sun.star.comp.Writer.XMLOasisContentExporter" constructor="com_sun_star_comp_Writer_XMLOasisContentExporter_get_implementation">
       <service name="com.sun.star.comp.Writer.XMLOasisContentExporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.XMLOasisContentImporter">
+    <implementation name="com.sun.star.comp.Writer.XMLOasisContentImporter" constructor="com_sun_star_comp_Writer_XMLOasisContentImporter_get_implementation">
       <service name="com.sun.star.comp.Writer.XMLOasisContentImporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.XMLOasisExporter">
+    <implementation name="com.sun.star.comp.Writer.XMLOasisExporter" constructor="com_sun_star_comp_Writer_XMLOasisExporter_get_implementation">
       <service name="com.sun.star.comp.Writer.XMLOasisExporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.XMLOasisImporter">
+    <implementation name="com.sun.star.comp.Writer.XMLOasisImporter" constructor="com_sun_star_comp_Writer_XMLOasisImporter_get_implementation">
       <service name="com.sun.star.comp.Writer.XMLOasisImporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.XMLOasisMetaExporter">
+    <implementation name="com.sun.star.comp.Writer.XMLOasisMetaExporter" constructor="com_sun_star_comp_Writer_XMLOasisMetaExporter_get_implementation">
       <service name="com.sun.star.comp.Writer.XMLOasisMetaExporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.XMLOasisMetaImporter">
+    <implementation name="com.sun.star.comp.Writer.XMLOasisMetaImporter" constructor="com_sun_star_comp_Writer_XMLOasisMetaImporter_get_implementation">
       <service name="com.sun.star.comp.Writer.XMLOasisMetaImporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.XMLOasisSettingsExporter">
+    <implementation name="com.sun.star.comp.Writer.XMLOasisSettingsExporter" constructor="com_sun_star_comp_Writer_XMLOasisSettingsExporter_get_implementation">
       <service name="com.sun.star.comp.Writer.XMLOasisSettingsExporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.XMLOasisSettingsImporter">
+    <implementation name="com.sun.star.comp.Writer.XMLOasisSettingsImporter" constructor="com_sun_star_comp_Writer_XMLOasisSettingsImporter_get_implementation">
       <service name="com.sun.star.comp.Writer.XMLOasisSettingsImporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.XMLOasisStylesExporter">
+    <implementation name="com.sun.star.comp.Writer.XMLOasisStylesExporter" constructor="com_sun_star_comp_Writer_XMLOasisStylesExporter_get_implementation">
       <service name="com.sun.star.comp.Writer.XMLOasisStylesExporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.XMLOasisStylesImporter">
+    <implementation name="com.sun.star.comp.Writer.XMLOasisStylesImporter" constructor="com_sun_star_comp_Writer_XMLOasisStylesImporter_get_implementation">
       <service name="com.sun.star.comp.Writer.XMLOasisStylesImporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.XMLSettingsExporter">
+    <implementation name="com.sun.star.comp.Writer.XMLSettingsExporter" constructor="com_sun_star_comp_Writer_XMLSettingsExporter_get_implementation">
       <service name="com.sun.star.comp.Writer.XMLSettingsExporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.XMLStylesExporter">
+    <implementation name="com.sun.star.comp.Writer.XMLStylesExporter" constructor="com_sun_star_comp_Writer_XMLStylesExporter_get_implementation">
       <service name="com.sun.star.comp.Writer.XMLStylesExporter"/>
     </implementation>
-    <implementation name="com.sun.star.util.comp.FinalThreadManager">
+    <implementation name="com.sun.star.util.comp.FinalThreadManager" constructor="com_sun_star_util_comp_FinalThreadManager_get_implementation">
       <service name="com.sun.star.util.JobManager"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.LayoutDump">
+    <implementation name="com.sun.star.comp.Writer.LayoutDump" constructor="com_sun_star_comp_Writer_LayoutDump_get_implementation">
       <service name="com.sun.star.comp.Writer.LayoutDump"/>
     </implementation>
     <implementation name="org.apache.openoffice.comp.sw.sidebar.SwPanelFactory" constructor="org_apache_openoffice_comp_sw_sidebar_SwPanelFactory_get_implementation">
       <service name="com.sun.star.ui.UIElementFactory"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="swd" uri="vnd.sun.star.expand:$LO_LIB_DIR/libswdlo.dylib">
-    <implementation name="com.sun.star.comp.writer.FormatDetector">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libswdlo.dylib">
+    <implementation name="com.sun.star.comp.writer.FormatDetector" constructor="com_sun_star_comp_writer_FormatDetector_get_implementation">
       <service name="com.sun.star.frame.ExtendedTypeDetection"/>
       <service name="com.sun.star.text.FormatDetector"/>
       <service name="com.sun.star.text.W4WFormatDetector"/>
@@ -2225,6 +2282,11 @@
       <service name="com.sun.star.ucb.HierarchyDataSource"/>
     </implementation>
   </component>
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libucpimagelo.dylib">
+    <implementation name="com.sun.star.comp.ucb.ImageContentProvider" constructor="com_sun_star_comp_ucb_ImageContentProvider_get_implementation">
+      <service name="com.sun.star.ucb.ImageContentProvider"/>
+    </implementation>
+  </component>
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="ucppkg1" uri="vnd.sun.star.expand:$LO_LIB_DIR/libucppkg1.dylib">
     <implementation name="com.sun.star.comp.ucb.PackageContentProvider">
       <service name="com.sun.star.ucb.PackageContentProvider"/>
@@ -2249,6 +2311,9 @@
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="utl" uri="vnd.sun.star.expand:$LO_LIB_DIR/libutllo.dylib">
     <implementation name="com.sun.star.io.comp.TempFile">
       <service name="com.sun.star.io.TempFile"/>
+    </implementation>
+    <implementation name="com.sun.star.comp.unotools.misc.ServiceDocumenter">
+      <singleton name="com.sun.star.util.theServiceDocumenter"/>
     </implementation>
   </component>
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="unordf" uri="vnd.sun.star.expand:$LO_LIB_DIR/libunordflo.dylib">
@@ -2285,7 +2350,7 @@
       <service name="com.sun.star.task.InteractionHandler"/>
       <service name="com.sun.star.uui.InteractionHandler"/>
     </implementation>
-    <implementation name="com.sun.star.comp.uui.UUIInteractionRequestStringResolver">
+    <implementation name="com.sun.star.comp.uui.UUIInteractionRequestStringResolver" constructor="com_sun_star_comp_uui_UUIInteractionRequestStringResolver_get_implementation">
       <service name="com.sun.star.task.InteractionRequestStringResolver"/>
     </implementation>
   </component>
@@ -2500,13 +2565,13 @@
       <service name="com.sun.star.comp.Draw.XMLOasisStylesImporter"/>
       <service name="com.sun.star.comp.Impress.XMLOasisStylesImporter"/>
     </implementation>
-    <implementation name="XMLMetaExportComponent">
+    <implementation name="XMLMetaExportComponent" constructor="XMLMetaExportComponent_get_implementation">
       <service name="com.sun.star.document.XMLOasisMetaExporter"/>
     </implementation>
     <implementation name="XMLMetaExportOOo">
       <service name="com.sun.star.document.XMLMetaExporter"/>
     </implementation>
-    <implementation name="XMLMetaImportComponent">
+    <implementation name="XMLMetaImportComponent" constructor="XMLMetaImportComponent_get_implementation">
       <service name="com.sun.star.document.XMLOasisMetaImporter"/>
     </implementation>
     <implementation name="XMLVersionListPersistence" constructor="XMLVersionListPersistence_get_implementation">
@@ -2529,16 +2594,16 @@
     <implementation name="com.sun.star.comp.xml.input.SaxDocumentHandler">
       <service name="com.sun.star.xml.input.SaxDocumentHandler"/>
     </implementation>
-    <implementation name="com.sun.star.comp.xmlscript.XMLBasicExporter">
+    <implementation name="com.sun.star.comp.xmlscript.XMLBasicExporter" constructor="com_sun_star_comp_xmlscript_XMLBasicExporter">
       <service name="com.sun.star.document.XMLBasicExporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.xmlscript.XMLBasicImporter">
+    <implementation name="com.sun.star.comp.xmlscript.XMLBasicImporter" constructor="com_sun_star_comp_xmlscript_XMLBasicImporter">
       <service name="com.sun.star.document.XMLBasicImporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.xmlscript.XMLOasisBasicExporter">
+    <implementation name="com.sun.star.comp.xmlscript.XMLOasisBasicExporter" constructor="com_sun_star_comp_xmlscript_XMLOasisBasicExporter">
       <service name="com.sun.star.document.XMLOasisBasicExporter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.xmlscript.XMLOasisBasicImporter">
+    <implementation name="com.sun.star.comp.xmlscript.XMLOasisBasicImporter" constructor="com_sun_star_comp_xmlscript_XMLOasisBasicImporter">
       <service name="com.sun.star.document.XMLOasisBasicImporter"/>
     </implementation>
   </component>
@@ -2548,29 +2613,6 @@
     </implementation>
     <implementation name="com.sun.star.security.DocumentDigitalSignatures">
       <service name="com.sun.star.security.DocumentDigitalSignatures"/>
-    </implementation>
-  </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="xsec_fw" uri="vnd.sun.star.expand:$LO_LIB_DIR/libxsec_fw.dylib">
-    <implementation name="com.sun.star.xml.security.framework.DecryptorImpl">
-      <service name="com.sun.star.xml.crypto.sax.Decryptor"/>
-    </implementation>
-    <implementation name="com.sun.star.xml.security.framework.EncryptorImpl">
-      <service name="com.sun.star.xml.crypto.sax.Encryptor"/>
-    </implementation>
-    <implementation name="com.sun.star.xml.security.framework.SAXEventKeeperImpl">
-      <service name="com.sun.star.xml.crypto.sax.SAXEventKeeper"/>
-    </implementation>
-    <implementation name="com.sun.star.xml.security.framework.SignatureCreatorImpl">
-      <service name="com.sun.star.xml.crypto.sax.SignatureCreator"/>
-    </implementation>
-    <implementation name="com.sun.star.xml.security.framework.SignatureVerifierImpl">
-      <service name="com.sun.star.xml.crypto.sax.SignatureVerifier"/>
-    </implementation>
-    <implementation name="com.sun.star.xml.security.framework.XMLEncryptionTemplateImpl">
-      <service name="com.sun.star.xml.crypto.XMLEncryptionTemplate"/>
-    </implementation>
-    <implementation name="com.sun.star.xml.security.framework.XMLSignatureTemplateImpl">
-      <service name="com.sun.star.xml.crypto.XMLSignatureTemplate"/>
     </implementation>
   </component>
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="xsec_xmlsec" uri="vnd.sun.star.expand:$LO_LIB_DIR/libxsec_xmlsec.dylib">
@@ -2610,91 +2652,119 @@
       <service name="com.sun.star.sheet.Solver"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="writerfilter" uri="vnd.sun.star.expand:$LO_LIB_DIR/libwriterfilterlo.dylib">
-    <implementation name="com.sun.star.comp.Writer.WriterFilter">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libwriterfilterlo.dylib">
+    <implementation name="com.sun.star.comp.Writer.WriterFilter" constructor="com_sun_star_comp_Writer_WriterFilter_get_implementation">
       <service name="com.sun.star.document.ExportFilter"/>
       <service name="com.sun.star.document.ImportFilter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.WriterFilterDetector">
+    <implementation name="com.sun.star.comp.Writer.WriterFilterDetector" constructor="com_sun_star_comp_Writer_WriterFilterDetector_get_implementation">
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.RtfFilter">
+    <implementation name="com.sun.star.comp.Writer.RtfFilter" constructor="com_sun_star_comp_Writer_RtfFilter_get_implementation">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExportFilter"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="wpftdraw" uri="vnd.sun.star.expand:$LO_LIB_DIR/libwpftdrawlo.dylib">
-    <implementation name="com.sun.star.comp.Draw.CDRImportFilter">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libwpftdrawlo.dylib">
+    <implementation name="com.sun.star.comp.Draw.CDRImportFilter" constructor="com_sun_star_comp_Draw_CDRImportFilter_get_implementation">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.CMXImportFilter">
+    <implementation name="com.sun.star.comp.Draw.CMXImportFilter" constructor="com_sun_star_comp_Draw_CMXImportFilter_get_implementation">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.FreehandImportFilter">
+    <implementation name="com.sun.star.comp.Draw.FreehandImportFilter" constructor="com_sun_star_comp_Draw_FreehandImportFilter_get_implementation">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.MSPUBImportFilter">
+    <implementation name="com.sun.star.comp.Draw.MSPUBImportFilter" constructor="com_sun_star_comp_Draw_MSPUBImportFilter_get_implementation">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.MWAWDrawImportFilter">
+    <implementation name="com.sun.star.comp.Draw.MWAWDrawImportFilter" constructor="com_sun_star_comp_Draw_MWAWDrawImportFilter_get_implementation">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.VisioImportFilter">
+    <implementation name="org.libreoffice.comp.Draw.StarOfficeDrawImportFilter" constructor="org_libreoffice_comp_Draw_StarOfficeDrawImportFilter_get_implementation">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Draw.WPGImportFilter">
+    <implementation name="com.sun.star.comp.Draw.VisioImportFilter" constructor="com_sun_star_comp_Draw_VisioImportFilter_get_implementation">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
-    <implementation name="org.libreoffice.comp.Draw.PageMakerImportFilter">
+    <implementation name="com.sun.star.comp.Draw.WPGImportFilter" constructor="com_sun_star_comp_Draw_WPGImportFilter_get_implementation">
+      <service name="com.sun.star.document.ImportFilter"/>
+      <service name="com.sun.star.document.ExtendedTypeDetection"/>
+    </implementation>
+    <implementation name="org.libreoffice.comp.Draw.PageMakerImportFilter" constructor="org_libreoffice_comp_Draw_PageMakerImportFilter_get_implementation">
+      <service name="com.sun.star.document.ImportFilter"/>
+      <service name="com.sun.star.document.ExtendedTypeDetection"/>
+    </implementation>
+    <implementation name="org.libreoffice.comp.Draw.ZMFImportFilter" constructor="org_libreoffice_comp_Draw_ZMFImportFilter_get_implementation">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="wpftimpress" uri="vnd.sun.star.expand:$LO_LIB_DIR/libwpftimpresslo.dylib">
-    <implementation name="org.libreoffice.comp.Impress.KeynoteImportFilter">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libwpftimpresslo.dylib">
+    <implementation name="org.libreoffice.comp.Impress.KeynoteImportFilter" constructor="org_libreoffice_comp_Impress_KeynoteImportFilter_get_implementation">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Impress.MWAWPresentationImportFilter">
+    <implementation name="com.sun.star.comp.Impress.MWAWPresentationImportFilter" constructor="com_sun_star_comp_Impress_MWAWPresentationImportFilter_get_implementation">
+      <service name="com.sun.star.document.ImportFilter"/>
+      <service name="com.sun.star.document.ExtendedTypeDetection"/>
+    </implementation>
+    <implementation name="org.libreoffice.comp.Impress.StarOfficePresentationImportFilter" constructor="org_libreoffice_comp_Presentation_StarOfficePresentationImportFilter_get_implementation">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="wpftwriter" uri="vnd.sun.star.expand:$LO_LIB_DIR/libwpftwriterlo.dylib">
-    <implementation name="com.sun.star.comp.Writer.AbiWordImportFilter">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libwpftwriterlo.dylib">
+    <implementation name="com.sun.star.comp.Writer.AbiWordImportFilter" constructor="com_sun_star_comp_Writer_AbiWordImportFilter_get_implementation">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.MSWorksImportFilter">
+    <implementation name="com.sun.star.comp.Writer.MSWorksImportFilter" constructor="com_sun_star_comp_Writer_MSWorksImportFilter_get_implementation">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.MWAWImportFilter">
+    <implementation name="com.sun.star.comp.Writer.MWAWImportFilter" constructor="com_sun_star_comp_Writer_MWAWImportFilter_get_implementation">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Writer.WordPerfectImportFilter">
+    <implementation name="com.sun.star.comp.Writer.WordPerfectImportFilter" constructor="com_sun_star_comp_Writer_WordPerfectImportFilter_get_implementation">
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
       <service name="com.sun.star.document.ImportFilter"/>
     </implementation>
-    <implementation name="org.libreoffice.comp.Writer.EBookImportFilter">
+    <implementation name="org.libreoffice.comp.Writer.EBookImportFilter" constructor="org_libreoffice_comp_Writer_EBookImportFilter_get_implementation">
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
       <service name="com.sun.star.document.ImportFilter"/>
+    </implementation>
+    <implementation name="org.libreoffice.comp.Writer.PagesImportFilter" constructor="org_libreoffice_comp_Writer_PagesImportFilter_get_implementation">
+      <service name="com.sun.star.document.ExtendedTypeDetection"/>
+      <service name="com.sun.star.document.ImportFilter"/>
+    </implementation>
+    <implementation name="org.libreoffice.comp.Writer.StarOfficeWriterImportFilter" constructor="org_libreoffice_comp_Writer_StarOfficeWriterImportFilter_get_implementation">
+      <service name="com.sun.star.document.ImportFilter"/>
+      <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="wpftcalc" uri="vnd.sun.star.expand:$LO_LIB_DIR/libwpftcalclo.dylib">
-    <implementation name="com.sun.star.comp.Calc.MSWorksCalcImportFilter">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libwpftcalclo.dylib">
+    <implementation name="com.sun.star.comp.Calc.MSWorksCalcImportFilter" constructor="com_sun_star_comp_Calc_MSWorksCalcImportFilter_get_implementation">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
-    <implementation name="com.sun.star.comp.Calc.MWAWCalcImportFilter">
+    <implementation name="com.sun.star.comp.Calc.MWAWCalcImportFilter" constructor="com_sun_star_comp_Calc_MWAWCalcImportFilter_get_implementation">
+      <service name="com.sun.star.document.ImportFilter"/>
+      <service name="com.sun.star.document.ExtendedTypeDetection"/>
+    </implementation>
+    <implementation name="org.libreoffice.comp.Calc.NumbersImportFilter" constructor="org_libreoffice_comp_Calc_NumbersImportFilter_get_implementation">
+      <service name="com.sun.star.document.ImportFilter"/>
+      <service name="com.sun.star.document.ExtendedTypeDetection"/>
+    </implementation>
+    <implementation name="org.libreoffice.comp.Calc.StarOfficeCalcImportFilter" constructor="org_libreoffice_comp_Calc_StarOfficeCalcImportFilter_get_implementation">
       <service name="com.sun.star.document.ImportFilter"/>
       <service name="com.sun.star.document.ExtendedTypeDetection"/>
     </implementation>
@@ -2706,11 +2776,13 @@
     </implementation>
   </component>
   -->
+  <!-- Add libavmediaQuickTimelo.dylib
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="avmediaQuickTime" uri="vnd.sun.star.expand:$LO_LIB_DIR/libavmediaQuickTimelo.dylib">
     <implementation name="com.sun.star.comp.avmedia.Manager_QuickTime">
       <service name="com.sun.star.media.Manager_QuickTime"/>
     </implementation>
   </component>
+  -->
   <!-- Remove libMacOSXSpelllo.dylib
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="MacOSXSpell" uri="vnd.sun.star.expand:$LO_LIB_DIR/libMacOSXSpelllo.dylib">
     <implementation name="org.openoffice.lingu.MacOSXSpellChecker">
@@ -2764,12 +2836,12 @@
       <service name="com.sun.star.script.BasicIDE"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="sb" uri="vnd.sun.star.expand:$LO_LIB_DIR/libsblo.dylib">
-    <implementation name="com.sun.star.comp.sfx2.DialogLibraryContainer">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libsblo.dylib">
+    <implementation name="com.sun.star.comp.sfx2.DialogLibraryContainer" constructor="com_sun_star_comp_sfx2_DialogLibraryContainer_get_implementation">
       <service name="com.sun.star.script.DialogLibraryContainer"/>
       <service name="com.sun.star.script.DocumentDialogLibraryContainer"/>
     </implementation>
-    <implementation name="com.sun.star.comp.sfx2.ScriptLibraryContainer">
+    <implementation name="com.sun.star.comp.sfx2.ScriptLibraryContainer" constructor="com_sun_star_comp_sfx2_ScriptLibraryContainer_get_implementation">
       <service name="com.sun.star.script.DocumentScriptLibraryContainer"/>
       <service name="com.sun.star.script.ScriptLibraryContainer"/>
     </implementation>
@@ -2826,44 +2898,6 @@
       <service name="com.sun.star.frame.ProtocolHandler"/>
     </implementation>
   </component>
-  <!-- Remove mailmerge
-  <component loader="com.sun.star.loader.Python" uri="vnd.openoffice.pymodule:mailmerge">
-    <implementation name="org.openoffice.pyuno.MailMessage">
-      <service name="com.sun.star.mail.MailMessage"/>
-    </implementation>
-    <implementation name="org.openoffice.pyuno.MailServiceProvider">
-      <service name="com.sun.star.mail.MailServiceProvider"/>
-    </implementation>
-  </component>
-  -->
-  <!-- Remove wizards.fax.CallWizard
-  <component loader="com.sun.star.loader.Python" uri="vnd.openoffice.pymodule:wizards.fax.CallWizard">
-    <implementation name="com.sun.star.wizards.fax.CallWizard">
-      <service name="com.sun.star.task.Job"/>
-    </implementation>
-  </component>
-  -->
-  <!-- Remove wizards.letter.CallWizard
-  <component loader="com.sun.star.loader.Python" uri="vnd.openoffice.pymodule:wizards.letter.CallWizard">
-    <implementation name="com.sun.star.wizards.letter.CallWizard">
-      <service name="com.sun.star.task.Job"/>
-    </implementation>
-  </component>
-  -->
-  <!-- Remove wizards.agenda.CallWizard
-  <component loader="com.sun.star.loader.Python" uri="vnd.openoffice.pymodule:wizards.agenda.CallWizard">
-    <implementation name="com.sun.star.wizards.agenda.CallWizard">
-      <service name="com.sun.star.task.Job"/>
-    </implementation>
-  </component>
-  -->
-  <!-- Remove wizards.web.CallWizard
-  <component loader="com.sun.star.loader.Python" uri="vnd.openoffice.pymodule:wizards.web.CallWizard">
-    <implementation name="com.sun.star.wizards.web.CallWizard">
-      <service name="com.sun.star.task.Job"/>
-    </implementation>
-  </component>
-  -->
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="stringresource" uri="vnd.sun.star.expand:$LO_LIB_DIR/libstringresourcelo.dylib">
     <implementation name="com.sun.star.comp.scripting.StringResource">
       <service name="com.sun.star.resource.StringResource"/>
@@ -2875,11 +2909,11 @@
       <service name="com.sun.star.resource.StringResourceWithStorage"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="vbaevents" uri="vnd.sun.star.expand:$LO_LIB_DIR/libvbaeventslo.dylib">
-    <implementation name="ooo.vba.EventListener">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libvbaeventslo.dylib">
+    <implementation name="ooo.vba.EventListener" constructor="ooo_vba_EventListener_get_implementation">
       <service name="ooo.vba.EventListener"/>
     </implementation>
-    <implementation name="ooo.vba.VBAToOOEventDesc">
+    <implementation name="ooo.vba.VBAToOOEventDesc" constructor="ooo_vba_VBAToOOEventDesc_get_implementation">
       <service name="ooo.vba.VBAToOOEventDesc"/>
     </implementation>
   </component>
@@ -2923,6 +2957,37 @@
       <service name="ooo.vba.msforms.UserForm"/>
     </implementation>
   </component>
+  <!-- Remove mailmerge
+  <component loader="com.sun.star.loader.Python" uri="vnd.openoffice.pymodule:mailmerge">
+    <implementation name="org.openoffice.pyuno.MailMessage">
+      <service name="com.sun.star.mail.MailMessage"/>
+    </implementation>
+    <implementation name="org.openoffice.pyuno.MailServiceProvider">
+      <service name="com.sun.star.mail.MailServiceProvider"/>
+    </implementation>
+  </component>
+  -->
+  <!-- Remove wizards.agenda.CallWizard
+  <component loader="com.sun.star.loader.Python" uri="vnd.openoffice.pymodule:wizards.agenda.CallWizard">
+    <implementation name="com.sun.star.wizards.agenda.CallWizard">
+      <service name="com.sun.star.task.Job"/>
+    </implementation>
+  </component>
+  -->
+  <!-- Remove wizards.fax.CallWizard
+  <component loader="com.sun.star.loader.Python" uri="vnd.openoffice.pymodule:wizards.fax.CallWizard">
+    <implementation name="com.sun.star.wizards.fax.CallWizard">
+      <service name="com.sun.star.task.Job"/>
+    </implementation>
+  </component>
+  -->
+  <!-- Remove wizards.letter.CallWizard
+  <component loader="com.sun.star.loader.Python" uri="vnd.openoffice.pymodule:wizards.letter.CallWizard">
+    <implementation name="com.sun.star.wizards.letter.CallWizard">
+      <service name="com.sun.star.task.Job"/>
+    </implementation>
+  </component>
+  -->
   <!-- Remove liboglcanvaslo.dylib
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="oglcanvas" uri="vnd.sun.star.expand:$LO_LIB_DIR/liboglcanvaslo.dylib">
     <implementation name="com.sun.star.comp.rendering.SpriteCanvas.OGL">
@@ -2930,7 +2995,7 @@
     </implementation>
   </component>
   -->
-  <!-- Remove liboglcanvaslo.dylib
+  <!-- Remove libupdchklo.dylib
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="updchk" uri="vnd.sun.star.expand:$LO_LIB_DIR/libupdchklo.dylib">
     <implementation name="vnd.sun.UpdateCheck">
       <service name="com.sun.star.setup.UpdateCheck"/>
@@ -3126,6 +3191,7 @@
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="firebird_sdbc" uri="vnd.sun.star.expand:$LO_LIB_DIR/libfirebird_sdbclo.dylib">
     <implementation name="com.sun.star.comp.sdbc.firebird.Driver">
       <service name="com.sun.star.sdbc.Driver"/>
+      <service name="com.sun.star.sdbcx.Driver"/>
     </implementation>
   </component>
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="flat" uri="vnd.sun.star.expand:$LO_LIB_DIR/libflatlo.dylib">
@@ -3194,28 +3260,28 @@
     <implementation name="com.sun.star.comp.dbaccess.DatabaseDataProvider">
       <service name="com.sun.star.chart2.data.DatabaseDataProvider"/>
     </implementation>
-    <implementation name="com.sun.star.comp.dba.DataAccessDescriptorFactory">
+    <implementation name="com.sun.star.comp.dba.DataAccessDescriptorFactory" constructor="com_sun_star_comp_dba_DataAccessDescriptorFactory">
       <singleton name="com.sun.star.sdb.DataAccessDescriptorFactory"/>
     </implementation>
-    <implementation name="com.sun.star.comp.dba.OCommandDefinition">
+    <implementation name="com.sun.star.comp.dba.OCommandDefinition" constructor="com_sun_star_comp_dba_OCommandDefinition">
       <service name="com.sun.star.sdb.CommandDefinition"/>
       <service name="com.sun.star.sdb.QueryDefinition"/>
     </implementation>
-    <implementation name="com.sun.star.comp.dba.OComponentDefinition">
+    <implementation name="com.sun.star.comp.dba.OComponentDefinition" constructor="com_sun_star_comp_dba_OComponentDefinition">
       <service name="com.sun.star.sdb.TableDefinition"/>
     </implementation>
     <implementation name="com.sun.star.comp.dba.ODatabaseContext">
       <service name="com.sun.star.sdb.DatabaseContext"/>
     </implementation>
-    <implementation name="com.sun.star.comp.dba.ODatabaseDocument">
+    <implementation name="com.sun.star.comp.dba.ODatabaseDocument" constructor="com_sun_star_comp_dba_ODatabaseDocument">
       <service name="com.sun.star.document.OfficeDocument"/>
       <service name="com.sun.star.sdb.OfficeDatabaseDocument"/>
     </implementation>
-    <implementation name="com.sun.star.comp.dba.ODatabaseSource">
+    <implementation name="com.sun.star.comp.dba.ODatabaseSource" constructor="com_sun_star_comp_dba_ODatabaseSource">
       <service name="com.sun.star.sdb.DataSource"/>
       <service name="com.sun.star.sdb.DocumentDataSource"/>
     </implementation>
-    <implementation name="com.sun.star.comp.dba.ORowSet">
+    <implementation name="com.sun.star.comp.dba.ORowSet" constructor="com_sun_star_comp_dba_ORowSet_get_implementation">
       <service name="com.sun.star.sdb.ResultSet"/>
       <service name="com.sun.star.sdb.RowSet"/>
       <service name="com.sun.star.sdbc.ResultSet"/>
@@ -3245,9 +3311,6 @@
     </implementation>
     <implementation name="com.sun.star.comp.sdb.DirectSQLDialog">
       <service name="org.openoffice.comp.dbu.DirectSqlDialog"/>
-    </implementation>
-    <implementation name="com.sun.star.sdb.ApplicationToolboxController">
-      <service name="com.sun.star.frame.ToolboxController"/>
     </implementation>
     <implementation name="com.sun.star.uno.comp.sdb.RowsetFilterDialog">
       <service name="com.sun.star.sdb.FilterDialog"/>
@@ -3313,22 +3376,22 @@
       <service name="com.sun.star.sdb.tools.ConnectionTools"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="frm" uri="vnd.sun.star.expand:$LO_LIB_DIR/libfrmlo.dylib">
-    <implementation name="com.sun.star.comp.form.ONavigationBarControl">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libfrmlo.dylib">
+    <implementation name="com.sun.star.comp.form.ONavigationBarControl" constructor="com_sun_star_comp_form_ONavigationBarControl_get_implementation">
       <service name="com.sun.star.form.control.NavigationToolBar"/>
     </implementation>
-    <implementation name="com.sun.star.comp.form.ONavigationBarModel">
+    <implementation name="com.sun.star.comp.form.ONavigationBarModel" constructor="com_sun_star_comp_form_ONavigationBarModel_get_implementation">
       <service name="com.sun.star.form.FormComponent"/>
       <service name="com.sun.star.form.FormControlModel"/>
       <service name="com.sun.star.form.component.NavigationToolBar"/>
     </implementation>
-    <implementation name="com.sun.star.comp.form.ORichTextControl">
+    <implementation name="com.sun.star.comp.form.ORichTextControl" constructor="com_sun_star_comp_form_ORichTextControl_get_implementation">
       <service name="com.sun.star.form.control.RichTextControl"/>
     </implementation>
-    <implementation name="com.sun.star.comp.forms.FormOperations">
+    <implementation name="com.sun.star.comp.forms.FormOperations" constructor="com_sun_star_comp_forms_FormOperations_get_implementation">
       <service name="com.sun.star.form.runtime.FormOperations"/>
     </implementation>
-    <implementation name="com.sun.star.comp.forms.ODatabaseForm">
+    <implementation name="com.sun.star.comp.forms.ODatabaseForm" constructor="com_sun_star_comp_forms_ODatabaseForm_get_implementation">
       <service name="com.sun.star.form.FormComponent"/>
       <service name="com.sun.star.form.FormComponents"/>
       <service name="com.sun.star.form.component.DataForm"/>
@@ -3336,17 +3399,17 @@
       <service name="com.sun.star.form.component.HTMLForm"/>
       <service name="stardiv.one.form.component.Form"/>
     </implementation>
-    <implementation name="com.sun.star.comp.forms.OFilterControl">
+    <implementation name="com.sun.star.comp.forms.OFilterControl" constructor="com_sun_star_comp_forms_OFilterControl_get_implementation">
       <service name="com.sun.star.awt.UnoControl"/>
       <service name="com.sun.star.form.control.FilterControl"/>
     </implementation>
-    <implementation name="com.sun.star.comp.forms.OFormattedFieldWrapper_ForcedFormatted">
+    <implementation name="com.sun.star.comp.forms.OFormattedFieldWrapper_ForcedFormatted" constructor="com_sun_star_comp_forms_OFormattedFieldWrapper_ForcedFormatted_get_implementation">
       <service name="com.sun.star.form.binding.BindableDatabaseFormattedField"/>
       <service name="com.sun.star.form.component.DatabaseFormattedField"/>
       <service name="com.sun.star.form.component.FormattedField"/>
       <service name="stardiv.one.form.component.FormattedField"/>
     </implementation>
-    <implementation name="com.sun.star.comp.forms.ORichTextModel">
+    <implementation name="com.sun.star.comp.forms.ORichTextModel" constructor="com_sun_star_comp_forms_ORichTextModel_get_implementation">
       <service name="com.sun.star.form.FormComponent"/>
       <service name="com.sun.star.form.FormControlModel"/>
       <service name="com.sun.star.form.component.RichTextControl"/>
@@ -3357,185 +3420,185 @@
       <service name="com.sun.star.style.ParagraphPropertiesComplex"/>
       <service name="com.sun.star.text.TextRange"/>
     </implementation>
-    <implementation name="com.sun.star.comp.forms.OScrollBarModel">
+    <implementation name="com.sun.star.comp.forms.OScrollBarModel" constructor="com_sun_star_comp_forms_OScrollBarModel_get_implementation">
       <service name="com.sun.star.form.FormComponent"/>
       <service name="com.sun.star.form.FormControlModel"/>
       <service name="com.sun.star.form.binding.BindableIntegerValueRange"/>
       <service name="com.sun.star.form.component.ScrollBar"/>
     </implementation>
-    <implementation name="com.sun.star.comp.forms.OSpinButtonModel">
+    <implementation name="com.sun.star.comp.forms.OSpinButtonModel" constructor="com_sun_star_comp_forms_OSpinButtonModel_get_implementation">
       <service name="com.sun.star.form.FormComponent"/>
       <service name="com.sun.star.form.FormControlModel"/>
       <service name="com.sun.star.form.binding.BindableIntegerValueRange"/>
       <service name="com.sun.star.form.component.SpinButton"/>
     </implementation>
-    <implementation name="com.sun.star.comp.xml.xpath.XFormsExtension">
+    <implementation name="com.sun.star.comp.xml.xpath.XFormsExtension" constructor="com_sun_star_comp_xml_xpath_XFormsExtension_get_implementation">
       <service name="com.sun.star.xml.xpath.XPathExtension"/>
     </implementation>
-    <implementation name="com.sun.star.form.ImageProducer">
+    <implementation name="com.sun.star.form.ImageProducer" constructor="com_sun_star_form_ImageProducer_get_implementation">
       <service name="com.sun.star.awt.ImageProducer"/>
     </implementation>
-    <implementation name="com.sun.star.form.Model">
+    <implementation name="com.sun.star.form.Model" constructor="com_sun_star_form_Model_get_implementation">
       <service name="com.sun.star.xforms.Model"/>
     </implementation>
-    <implementation name="com.sun.star.form.OButtonControl">
+    <implementation name="com.sun.star.form.OButtonControl" constructor="com_sun_star_form_OButtonControl_get_implementation">
       <service name="com.sun.star.form.control.CommandButton"/>
       <service name="stardiv.one.form.control.CommandButton"/>
     </implementation>
-    <implementation name="com.sun.star.form.OButtonModel">
+    <implementation name="com.sun.star.form.OButtonModel" constructor="com_sun_star_form_OButtonModel_get_implementation">
       <service name="com.sun.star.form.component.CommandButton"/>
       <service name="stardiv.one.form.component.CommandButton"/>
     </implementation>
-    <implementation name="com.sun.star.form.OCheckBoxControl">
+    <implementation name="com.sun.star.form.OCheckBoxControl" constructor="com_sun_star_form_OCheckBoxControl_get_implementation">
       <service name="com.sun.star.form.control.CheckBox"/>
       <service name="stardiv.one.form.control.CheckBox"/>
     </implementation>
-    <implementation name="com.sun.star.form.OCheckBoxModel">
+    <implementation name="com.sun.star.form.OCheckBoxModel" constructor="com_sun_star_form_OCheckBoxModel_get_implementation">
       <service name="com.sun.star.form.binding.BindableDatabaseCheckBox"/>
       <service name="com.sun.star.form.component.CheckBox"/>
       <service name="com.sun.star.form.component.DatabaseCheckBox"/>
       <service name="stardiv.one.form.component.CheckBox"/>
     </implementation>
-    <implementation name="com.sun.star.form.OComboBoxControl">
+    <implementation name="com.sun.star.form.OComboBoxControl" constructor="com_sun_star_form_OComboBoxControl_get_implementation">
       <service name="com.sun.star.form.control.ComboBox"/>
       <service name="stardiv.one.form.control.ComboBox"/>
     </implementation>
-    <implementation name="com.sun.star.form.OComboBoxModel">
+    <implementation name="com.sun.star.form.OComboBoxModel" constructor="com_sun_star_form_OComboBoxModel_get_implementation">
       <service name="com.sun.star.form.binding.BindableDatabaseComboBox"/>
       <service name="com.sun.star.form.component.ComboBox"/>
       <service name="com.sun.star.form.component.DatabaseComboBox"/>
       <service name="stardiv.one.form.component.ComboBox"/>
     </implementation>
-    <implementation name="com.sun.star.form.OCurrencyControl">
+    <implementation name="com.sun.star.form.OCurrencyControl" constructor="com_sun_star_form_OCurrencyControl_get_implementation">
       <service name="com.sun.star.form.control.CurrencyField"/>
       <service name="stardiv.one.form.control.CurrencyField"/>
     </implementation>
-    <implementation name="com.sun.star.form.OCurrencyModel">
+    <implementation name="com.sun.star.form.OCurrencyModel" constructor="com_sun_star_form_OCurrencyModel_get_implementation">
       <service name="com.sun.star.form.component.CurrencyField"/>
       <service name="com.sun.star.form.component.DatabaseCurrencyField"/>
       <service name="stardiv.one.form.component.CurrencyField"/>
     </implementation>
-    <implementation name="com.sun.star.form.ODateControl">
+    <implementation name="com.sun.star.form.ODateControl" constructor="com_sun_star_form_ODateControl_get_implementation">
       <service name="com.sun.star.form.control.DateField"/>
       <service name="stardiv.one.form.control.DateField"/>
     </implementation>
-    <implementation name="com.sun.star.form.ODateModel">
+    <implementation name="com.sun.star.form.ODateModel" constructor="com_sun_star_form_ODateModel_get_implementation">
       <service name="com.sun.star.form.component.DatabaseDateField"/>
       <service name="com.sun.star.form.component.DateField"/>
       <service name="stardiv.one.form.component.DateField"/>
     </implementation>
-    <implementation name="com.sun.star.form.OEditControl">
+    <implementation name="com.sun.star.form.OEditControl" constructor="com_sun_star_form_OEditControl_get_implementation">
       <service name="com.sun.star.form.control.TextField"/>
       <service name="stardiv.one.form.control.Edit"/>
       <service name="stardiv.one.form.control.TextField"/>
     </implementation>
-    <implementation name="com.sun.star.form.OEditModel">
+    <implementation name="com.sun.star.form.OEditModel" constructor="com_sun_star_form_OEditModel_get_implementation">
       <service name="com.sun.star.form.binding.BindableDatabaseTextField"/>
       <service name="com.sun.star.form.component.DatabaseTextField"/>
       <service name="com.sun.star.form.component.TextField"/>
       <service name="stardiv.one.form.component.TextField"/>
     </implementation>
-    <implementation name="com.sun.star.form.OFileControlModel">
+    <implementation name="com.sun.star.form.OFileControlModel" constructor="com_sun_star_form_OFileControlModel_get_implementation">
       <service name="com.sun.star.form.component.FileControl"/>
       <service name="stardiv.one.form.component.FileControl"/>
     </implementation>
-    <implementation name="com.sun.star.form.OFixedTextModel">
+    <implementation name="com.sun.star.form.OFixedTextModel" constructor="com_sun_star_form_OFixedTextModel_get_implementation">
       <service name="com.sun.star.form.component.FixedText"/>
       <service name="stardiv.one.form.component.FixedText"/>
     </implementation>
-    <implementation name="com.sun.star.form.OFormattedControl">
+    <implementation name="com.sun.star.form.OFormattedControl" constructor="com_sun_star_form_OFormattedControl_get_implementation">
       <service name="com.sun.star.form.control.FormattedField"/>
       <service name="stardiv.one.form.control.FormattedField"/>
     </implementation>
-    <implementation name="com.sun.star.form.OFormattedFieldWrapper">
+    <implementation name="com.sun.star.form.OFormattedFieldWrapper" constructor="com_sun_star_form_OFormattedFieldWrapper_get_implementation">
       <service name="stardiv.one.form.component.Edit"/>
     </implementation>
-    <implementation name="com.sun.star.form.OFormsCollection">
+    <implementation name="com.sun.star.form.OFormsCollection" constructor="com_sun_star_form_OFormsCollection_get_implementation">
       <service name="com.sun.star.form.Forms"/>
     </implementation>
-    <implementation name="com.sun.star.form.OGridControlModel">
+    <implementation name="com.sun.star.form.OGridControlModel" constructor="com_sun_star_form_OGridControlModel_get_implementation">
       <service name="com.sun.star.form.component.GridControl"/>
       <service name="stardiv.one.form.component.Grid"/>
       <service name="stardiv.one.form.component.GridControl"/>
     </implementation>
-    <implementation name="com.sun.star.form.OGroupBoxControl">
+    <implementation name="com.sun.star.form.OGroupBoxControl" constructor="com_sun_star_form_OGroupBoxControl_get_implementation">
       <service name="com.sun.star.form.control.GroupBox"/>
       <service name="stardiv.one.form.control.GroupBox"/>
     </implementation>
-    <implementation name="com.sun.star.form.OGroupBoxModel">
+    <implementation name="com.sun.star.form.OGroupBoxModel" constructor="com_sun_star_form_OGroupBoxModel_get_implementation">
       <service name="com.sun.star.form.component.GroupBox"/>
       <service name="stardiv.one.form.component.GroupBox"/>
     </implementation>
-    <implementation name="com.sun.star.form.OHiddenModel">
+    <implementation name="com.sun.star.form.OHiddenModel" constructor="com_sun_star_form_OHiddenModel_get_implementation">
       <service name="com.sun.star.form.component.HiddenControl"/>
       <service name="stardiv.one.form.component.Hidden"/>
       <service name="stardiv.one.form.component.HiddenControl"/>
     </implementation>
-    <implementation name="com.sun.star.form.OImageButtonControl">
+    <implementation name="com.sun.star.form.OImageButtonControl" constructor="com_sun_star_form_OImageButtonControl_get_implementation">
       <service name="com.sun.star.form.control.ImageButton"/>
       <service name="stardiv.one.form.control.ImageButton"/>
     </implementation>
-    <implementation name="com.sun.star.form.OImageButtonModel">
+    <implementation name="com.sun.star.form.OImageButtonModel" constructor="com_sun_star_form_OImageButtonModel_get_implementation">
       <service name="com.sun.star.form.component.ImageButton"/>
       <service name="stardiv.one.form.component.ImageButton"/>
     </implementation>
-    <implementation name="com.sun.star.form.OImageControlControl">
+    <implementation name="com.sun.star.form.OImageControlControl" constructor="com_sun_star_form_OImageControlControl_get_implementation">
       <service name="com.sun.star.form.control.ImageControl"/>
       <service name="stardiv.one.form.control.ImageControl"/>
     </implementation>
-    <implementation name="com.sun.star.form.OImageControlModel">
+    <implementation name="com.sun.star.form.OImageControlModel" constructor="com_sun_star_form_OImageControlModel_get_implementation">
       <service name="com.sun.star.form.component.DatabaseImageControl"/>
       <service name="stardiv.one.form.component.ImageControl"/>
     </implementation>
-    <implementation name="com.sun.star.form.OListBoxControl">
+    <implementation name="com.sun.star.form.OListBoxControl" constructor="com_sun_star_form_OListBoxControl_get_implementation">
       <service name="com.sun.star.form.control.ListBox"/>
       <service name="stardiv.one.form.control.ListBox"/>
     </implementation>
-    <implementation name="com.sun.star.form.OListBoxModel">
+    <implementation name="com.sun.star.form.OListBoxModel" constructor="com_sun_star_form_OListBoxModel_get_implementation">
       <service name="com.sun.star.form.binding.BindableDatabaseListBox"/>
       <service name="com.sun.star.form.component.DatabaseListBox"/>
       <service name="com.sun.star.form.component.ListBox"/>
       <service name="stardiv.one.form.component.ListBox"/>
     </implementation>
-    <implementation name="com.sun.star.form.ONumericControl">
+    <implementation name="com.sun.star.form.ONumericControl" constructor="com_sun_star_form_ONumericControl_get_implementation">
       <service name="com.sun.star.form.control.NumericField"/>
       <service name="stardiv.one.form.control.NumericField"/>
     </implementation>
-    <implementation name="com.sun.star.form.ONumericModel">
+    <implementation name="com.sun.star.form.ONumericModel" constructor="com_sun_star_form_ONumericModel_get_implementation">
       <service name="com.sun.star.form.binding.BindableDatabaseNumericField"/>
       <service name="com.sun.star.form.component.DatabaseNumericField"/>
       <service name="com.sun.star.form.component.NumericField"/>
       <service name="stardiv.one.form.component.NumericField"/>
     </implementation>
-    <implementation name="com.sun.star.form.OPatternControl">
+    <implementation name="com.sun.star.form.OPatternControl" constructor="com_sun_star_form_OPatternControl_get_implementation">
       <service name="com.sun.star.form.control.PatternField"/>
       <service name="stardiv.one.form.control.PatternField"/>
     </implementation>
-    <implementation name="com.sun.star.form.OPatternModel">
+    <implementation name="com.sun.star.form.OPatternModel" constructor="com_sun_star_form_OPatternModel_get_implementation">
       <service name="com.sun.star.form.component.DatabasePatternField"/>
       <service name="com.sun.star.form.component.PatternField"/>
       <service name="stardiv.one.form.component.PatternField"/>
     </implementation>
-    <implementation name="com.sun.star.form.ORadioButtonControl">
+    <implementation name="com.sun.star.form.ORadioButtonControl" constructor="com_sun_star_form_ORadioButtonControl_get_implementation">
       <service name="com.sun.star.form.control.RadioButton"/>
       <service name="stardiv.one.form.control.RadioButton"/>
     </implementation>
-    <implementation name="com.sun.star.form.ORadioButtonModel">
+    <implementation name="com.sun.star.form.ORadioButtonModel" constructor="com_sun_star_form_ORadioButtonModel_get_implementation">
       <service name="com.sun.star.form.binding.BindableDatabaseRadioButton"/>
       <service name="com.sun.star.form.component.DatabaseRadioButton"/>
       <service name="com.sun.star.form.component.RadioButton"/>
       <service name="stardiv.one.form.component.RadioButton"/>
     </implementation>
-    <implementation name="com.sun.star.form.OTimeControl">
+    <implementation name="com.sun.star.form.OTimeControl" constructor="com_sun_star_form_OTimeControl_get_implementation">
       <service name="com.sun.star.form.control.TimeField"/>
       <service name="stardiv.one.form.control.TimeField"/>
     </implementation>
-    <implementation name="com.sun.star.form.OTimeModel">
+    <implementation name="com.sun.star.form.OTimeModel" constructor="com_sun_star_form_OTimeModel_get_implementation">
       <service name="com.sun.star.form.component.DatabaseTimeField"/>
       <service name="com.sun.star.form.component.TimeField"/>
       <service name="stardiv.one.form.component.TimeField"/>
     </implementation>
-    <implementation name="com.sun.star.form.XForms">
+    <implementation name="com.sun.star.form.XForms" constructor="com_sun_star_form_XForms_get_implementation">
       <service name="com.sun.star.xforms.XForms"/>
     </implementation>
   </component>
@@ -3645,8 +3708,8 @@
       <service name="com.sun.star.sdbc.Driver"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="mork" uri="vnd.sun.star.expand:$LO_LIB_DIR/libmorklo.dylib">
-    <implementation name="com.sun.star.comp.sdbc.MorkDriver">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libmorklo.dylib">
+    <implementation name="com.sun.star.comp.sdbc.MorkDriver" constructor="com_sun_star_comp_sdbc_MorkDriver_get_implementation">
       <service name="com.sun.star.sdbc.Driver"/>
     </implementation>
   </component>
@@ -3685,9 +3748,6 @@
     </implementation>
   </component>
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="spl" uri="vnd.sun.star.expand:$LO_LIB_DIR/libspllo.dylib">
-    <implementation name="com.sun.star.comp.desktop.FirstStart">
-      <service name="com.sun.star.task.Job"/>
-    </implementation>
     <implementation name="com.sun.star.office.comp.SplashScreen">
       <service name="com.sun.star.office.SplashScreen"/>
     </implementation>
@@ -3695,8 +3755,8 @@
       <service name="com.sun.star.office.PipeSplashScreen"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="abp" uri="vnd.sun.star.expand:$LO_LIB_DIR/libabplo.dylib">
-    <implementation name="org.openoffice.comp.abp.OAddressBookSourcePilot">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libabplo.dylib">
+    <implementation name="org.openoffice.comp.abp.OAddressBookSourcePilot" constructor="org_openoffice_comp_abp_OAddressBookSourcePilot">
       <service name="com.sun.star.ui.dialogs.AddressBookSourcePilot"/>
     </implementation>
   </component>
@@ -3705,20 +3765,20 @@
       <service name="com.sun.star.configuration.backend.LdapUserProfileBe"/>
     </implementation>
   </component>
-  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="log" uri="vnd.sun.star.expand:$LO_LIB_DIR/libloglo.dylib">
-    <implementation name="com.sun.star.comp.extensions.ConsoleHandler">
+  <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" uri="vnd.sun.star.expand:$LO_LIB_DIR/libloglo.dylib">
+    <implementation name="com.sun.star.comp.extensions.ConsoleHandler" constructor="com_sun_star_comp_extensions_ConsoleHandler">
       <service name="com.sun.star.logging.ConsoleHandler"/>
     </implementation>
-    <implementation name="com.sun.star.comp.extensions.CsvFormatter">
+    <implementation name="com.sun.star.comp.extensions.CsvFormatter" constructor="com_sun_star_comp_extensions_CsvFormatter">
       <service name="com.sun.star.logging.CsvFormatter"/>
     </implementation>
-    <implementation name="com.sun.star.comp.extensions.FileHandler">
+    <implementation name="com.sun.star.comp.extensions.FileHandler" constructor="com_sun_star_comp_extensions_FileHandler">
       <service name="com.sun.star.logging.FileHandler"/>
     </implementation>
-    <implementation name="com.sun.star.comp.extensions.LoggerPool">
+    <implementation name="com.sun.star.comp.extensions.LoggerPool" constructor="com_sun_star_comp_extensions_LoggerPool">
       <singleton name="com.sun.star.logging.LoggerPool"/>
     </implementation>
-    <implementation name="com.sun.star.comp.extensions.PlainTextFormatter">
+    <implementation name="com.sun.star.comp.extensions.PlainTextFormatter" constructor="com_sun_star_comp_extensions_PlainTextFormatter">
       <service name="com.sun.star.logging.PlainTextFormatter"/>
     </implementation>
   </component>
