@@ -1148,6 +1148,7 @@ void DomainMapper_Impl::finishParagraph( PropertyMapPtr pPropertyMap )
                 }
                 getTableManager( ).handle(xTextRange);
 
+#ifdef NO_LIBO_BUG_103063_FIX
                 // Get the end of paragraph character inserted
                 uno::Reference< text::XTextCursor > xCur = xTextRange->getText( )->createTextCursor( );
                 if (rAppendContext.xInsertPosition.is())
@@ -1157,6 +1158,20 @@ void DomainMapper_Impl::finishParagraph( PropertyMapPtr pPropertyMap )
                 xCur->goLeft( 1 , true );
                 uno::Reference< text::XTextRange > xParaEnd( xCur, uno::UNO_QUERY );
                 CheckParaMarkerRedline( xParaEnd );
+#else	// NO_LIBO_BUG_103063_FIX
+                if (xTextRange.is())
+                {
+                    // Get the end of paragraph character inserted
+                    uno::Reference< text::XTextCursor > xCur = xTextRange->getText( )->createTextCursor( );
+                    if (rAppendContext.xInsertPosition.is())
+                        xCur->gotoRange( rAppendContext.xInsertPosition, false );
+                    else
+                        xCur->gotoEnd( false );
+                    xCur->goLeft( 1 , true );
+                    uno::Reference< text::XTextRange > xParaEnd( xCur, uno::UNO_QUERY );
+                    CheckParaMarkerRedline( xParaEnd );
+                }
+#endif	 // NO_LIBO_BUG_103063_FIX
 
             }
             if( !bKeepLastParagraphProperties )
