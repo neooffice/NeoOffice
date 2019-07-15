@@ -218,6 +218,7 @@ static void ImplFontListChanged()
 					const OUString aNeoSymbol( "Neo Symbol" );
 					const OUString aNeo3Symbol( "Neo3Symbol" );
 					const OUString aNeo4Symbol( "Neo4Symbol" );
+					const OUString aNeo5Symbol( "Neo5Symbol" );
 					const OUString aOpenSymbol( "OpenSymbol" );
 					const OUString aRegular( " Regular" );
 					const OUString aStarSymbol( "StarSymbol" );
@@ -293,17 +294,17 @@ static void ImplFontListChanged()
 						if ( !aDisplayName.getLength() || aDisplayName.startsWith( "." ) )
 							continue;
 
-						if ( aDisplayName == aOpenSymbol || aDisplayName == aStarSymbol || aDisplayName == aNeoSymbol || aDisplayName == aNeo3Symbol )
+						if ( aDisplayName == aOpenSymbol || aDisplayName == aStarSymbol || aDisplayName == aNeoSymbol || aDisplayName == aNeo3Symbol || aDisplayName == aNeo4Symbol )
 						{
-							// Don't allow Sun's symbol fonts our older
-							// NeoOffice fonts to override our symbol font
+							// Don't allow older versoin of the OpenSymbol font
+							// to override the current version of that font
 							continue;
 						}
-						else if ( aDisplayName == aNeo4Symbol )
+						else if ( aDisplayName == aNeo5Symbol )
 						{
 							aDisplayName = OUString( aOpenSymbol );
 							aAttributes.AddMapName( "Symbol" );
-							aAttributes.AddMapName( aNeo4Symbol );
+							aAttributes.AddMapName( aNeo5Symbol );
 						}
 						else if ( aDisplayName == aLastResort )
 						{
