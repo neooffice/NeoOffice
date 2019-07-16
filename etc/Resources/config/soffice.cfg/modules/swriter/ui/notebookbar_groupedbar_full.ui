@@ -1967,6 +1967,7 @@
         <property name="action_name">.uno:Gallery</property>
       </object>
     </child>
+    <!-- Remove select scanner menu item
     <child>
       <object class="GtkMenuItem" id="TwainSelectD">
         <property name="visible">True</property>
@@ -1974,6 +1975,7 @@
         <property name="action_name">.uno:TwainSelect</property>
       </object>
     </child>
+    -->
     <child>
       <object class="GtkMenuItem" id="InsertAVMediaD">
         <property name="visible">True</property>
