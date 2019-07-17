@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <!--
  *   Modified April 2017 by Patrick Luby. NeoOffice is only distributed
  *   under the GNU General Public License, Version 3 as allowed by Section 3.3
@@ -6,7 +7,6 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 -->
-<?xml version="1.0"?>
 <menu:menubar xmlns:menu="http://openoffice.org/2001/menu" menu:id="menubar">
     <menu:menu menu:id=".uno:PickList">
         <menu:menupopup>
@@ -65,7 +65,7 @@
                 <menu:menupopup>
                     <menu:menuitem menu:id=".uno:MacroRecorder"/>
                     <menu:menuitem menu:id=".uno:RunMacro"/>
-                    <menu:menu menu:id=".uno:ScriptOrganizer"/>
+                    <menu:menuitem menu:id=".uno:ScriptOrganizer"/>
                     <menu:menuseparator/>
                     <menu:menuitem menu:id=".uno:MacroOrganizer?TabId:short=1"/>
                 </menu:menupopup>
@@ -88,9 +88,15 @@
             <menu:menuitem menu:id=".uno:HelpIndex"/>
             <menu:menuitem menu:id=".uno:ExtendedHelp"/>
             <!-- Remove feedback and license menu items
+            <menu:menuitem menu:id=".uno:Documentation"/>
             <menu:menuseparator/>
+            <menu:menuitem menu:id=".uno:QuestionAnswers"/>
             <menu:menuitem menu:id=".uno:SendFeedback"/>
+            -->
             <menu:menuseparator/>
+            <menu:menuitem menu:id=".uno:SafeMode"/>
+            <menu:menuseparator/>
+            <!-- Remove feedback and license menu items
             <menu:menuitem menu:id=".uno:ShowLicense"/>
             -->
             <!-- Add back About menu item -->
