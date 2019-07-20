@@ -22,29 +22,49 @@
           <value xml:lang="ar">خُطاطة تقرير أوپن‌أوفيس.أورغ 1.0</value>
         </prop>
       </node>
+      <node oor:name="HTML (StarWriter)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند HTML (رايتر)</value>
+        </prop>
+      </node>
       <node oor:name="MS WinWord 5">
         <prop oor:name="UIName">
-          <value xml:lang="ar">Microsoft WinWord 1/2/5</value>
+          <value xml:lang="ar">ميكروسوفت وِن‌وورد ١\٢\٥</value>
         </prop>
       </node>
       <node oor:name="MS WinWord 6.0">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مايكروسوفت وورد 6.0</value>
+          <value xml:lang="ar">ميكروسوفت وورد ٦٫٠</value>
         </prop>
       </node>
       <node oor:name="MS Word 95">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مايكروسوفت وورد 95</value>
+          <value xml:lang="ar">ميكروسوفت وورد ٩٥</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 95 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب ميكروسوفت وورد ٩٥</value>
         </prop>
       </node>
       <node oor:name="MS Word 97">
         <prop oor:name="UIName">
-          <value xml:lang="ar">قالب مايكروسوفت وورد 97/2000/إكس‌پي/2003</value>
+          <value xml:lang="ar">ميكروسوفت وورد ٩٧-٢٠٠٣</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 97 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب ميكروسوفت وورد ٩٧-٢٠٠٣</value>
         </prop>
       </node>
       <node oor:name="Rich Text Format">
         <prop oor:name="UIName">
           <value xml:lang="ar">نصّ غنيّ</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Writer)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند أوپن‌أوفيس.أورغ 1.0 نصّيّ</value>
         </prop>
       </node>
       <node oor:name="WordPerfect">
@@ -54,12 +74,17 @@
       </node>
       <node oor:name="MS_Works">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مستند مايكروسوفت ووركس</value>
+          <value xml:lang="ar">مستند ميكروسوفت ووركس</value>
         </prop>
       </node>
-      <node oor:name="Beagle_Works">
+      <node oor:name="MS_Write">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مستند بيغل‌ووركس/وورد‌بيرفكت ووركس الإصدار 1 نصّي</value>
+          <value xml:lang="ar">ميكروسوفت رايت</value>
+        </prop>
+      </node>
+      <node oor:name="DosWord">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">ميكروسوفت وورد ل‍ DOS</value>
         </prop>
       </node>
       <node oor:name="ClarisWorks">
@@ -67,69 +92,14 @@
           <value xml:lang="ar">مستند كلارِس‌ووركس/آبل‌ووركس نصّي</value>
         </prop>
       </node>
-      <node oor:name="DocMaker">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند دوك‌ميكر (الإصدار 4)</value>
-        </prop>
-      </node>
-      <node oor:name="eDoc_Document">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند إي‌دُك (الإصدار 2)</value>
-        </prop>
-      </node>
-      <node oor:name="FullWrite_Professional">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند فُل‌رايت الاحترافي</value>
-        </prop>
-      </node>
-      <node oor:name="Great_Works">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند غريت‌ووركس نصّيّ</value>
-        </prop>
-      </node>
-      <node oor:name="HanMac_Word_J">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند هان‌ماك وورد-جي</value>
-        </prop>
-      </node>
-      <node oor:name="HanMac_Word_K">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند هان‌ماك وورد-كي</value>
-        </prop>
-      </node>
-      <node oor:name="LightWayText">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">لايت‌وي‌تِكست لِماك الإصدار 4.5</value>
-        </prop>
-      </node>
-      <node oor:name="Mac_Acta">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">Acta Mac Classic Document</value>
-        </prop>
-      </node>
-      <node oor:name="Mac_More">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند مُور ماك الإصدار 2-3</value>
-        </prop>
-      </node>
-      <node oor:name="Mac_RagTime">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">RagTime Mac v2-3 Document</value>
-        </prop>
-      </node>
       <node oor:name="Mac_Word">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مايكروسوفت وورد لِماك (الإصدار 1 - الإصدار 5)</value>
+          <value xml:lang="ar">ميكروسوفت وورد لِماك (الإصدار 1 - الإصدار 5)</value>
         </prop>
       </node>
       <node oor:name="Mac_Works">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مستند مايكروسوفت ووركس لِماك نصّي (الإصدار 1 - الإصدار 4)</value>
-        </prop>
-      </node>
-      <node oor:name="MacDoc">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند ماك‌دوك الإصدار 1</value>
+          <value xml:lang="ar">مستند ميكروسوفت ووركس لِماك نصّي (الإصدار 1 - الإصدار 4)</value>
         </prop>
       </node>
       <node oor:name="MacWrite">
@@ -137,49 +107,14 @@
           <value xml:lang="ar">مستند ماك‌رايت</value>
         </prop>
       </node>
-      <node oor:name="MacWritePro">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند ماك‌رايت الإصدار 2 أو ماك‌رايت‌پرو</value>
-        </prop>
-      </node>
       <node oor:name="Mariner_Write">
         <prop oor:name="UIName">
           <value xml:lang="ar">Mariner Write Mac Classic v1.6 - v3.5</value>
         </prop>
       </node>
-      <node oor:name="MindWrite">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند مايند‌رايت</value>
-        </prop>
-      </node>
-      <node oor:name="Nisus_Writer">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">Nisus Writer Mac Classic v3.4 - 6.5</value>
-        </prop>
-      </node>
-      <node oor:name="TeachText">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند تيچ‌تِكست/سمپل‌تِكست الإصدار 1</value>
-        </prop>
-      </node>
-      <node oor:name="TexEdit">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">Tex-Edit v2 Document</value>
-        </prop>
-      </node>
       <node oor:name="WriteNow">
         <prop oor:name="UIName">
           <value xml:lang="ar">مستند رايت‌ناو</value>
-        </prop>
-      </node>
-      <node oor:name="WriterPlus">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند رايتر‌پلس</value>
-        </prop>
-      </node>
-      <node oor:name="ZWrite">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند زِد-رايت 1.3</value>
         </prop>
       </node>
       <node oor:name="AbiWord">
@@ -197,9 +132,24 @@
           <value xml:lang="ar">مستند لوتس ووردبرو</value>
         </prop>
       </node>
+      <node oor:name="Text">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">نصّ</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">نصّ - اختر ترميزًا</value>
+        </prop>
+      </node>
       <node oor:name="writer_MIZI_Hwp_97">
         <prop oor:name="UIName">
           <value xml:lang="ar">Hangul WP 97</value>
+        </prop>
+      </node>
+      <node oor:name="writer_StarOffice_XML_Writer_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب مستند أوپن‌أوفس.أورغ 1.0 نصّيّ</value>
         </prop>
       </node>
       <node oor:name="writer_pdf_Export">
@@ -207,14 +157,29 @@
           <value xml:lang="ar">PDF - هيئة المستند المحمول</value>
         </prop>
       </node>
+      <node oor:name="writer8">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند ODF نصّيّ</value>
+        </prop>
+      </node>
+      <node oor:name="writer8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب مستند ODF نصّيّ</value>
+        </prop>
+      </node>
       <node oor:name="MS Word 2007 XML">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مايكروسوفت وورد 2007-2016 بِمخطّط XML</value>
+          <value xml:lang="ar">Microsoft Word 2007-2019 XML</value>
         </prop>
       </node>
       <node oor:name="MS Word 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="ar">قالب مايكروسوفت وورد 2007-2016 بِمخطّط XML</value>
+          <value xml:lang="ar">Microsoft Word 2007-2019 XML Template</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML VBA">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">Microsoft Word 2007-2019 XML VBA</value>
         </prop>
       </node>
       <node oor:name="Office Open XML Text">
@@ -237,11 +202,6 @@
           <value xml:lang="ar">كتاب برود‌باند إلكترونيّ</value>
         </prop>
       </node>
-      <node oor:name="eReader eBook">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">كتاب إي‌ريدر إلكترونيّ</value>
-        </prop>
-      </node>
       <node oor:name="FictionBook 2">
         <prop oor:name="UIName">
           <value xml:lang="ar">فِكشِن‌بُك 2.0</value>
@@ -257,84 +217,24 @@
           <value xml:lang="ar">كتاب پلكر إلكترونيّ</value>
         </prop>
       </node>
-      <node oor:name="TealDoc">
+      <node oor:name="Apple Pages">
         <prop oor:name="UIName">
-          <value xml:lang="ar">كتاب تِل‌دُك إلكترونيّ</value>
+          <value xml:lang="ar">Apple Pages 4</value>
         </prop>
       </node>
-      <node oor:name="zTXT">
+      <node oor:name="MWAW_Text_Document">
         <prop oor:name="UIName">
-          <value xml:lang="ar">كتاب زِد‌تي‌إكس‌تي إلكتروني</value>
+          <value xml:lang="ar">Legacy Mac Text Document</value>
         </prop>
       </node>
-      <node oor:name="HTML (StarWriter)">
+      <node oor:name="Palm_Text_Document">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مستند HTML (رايتر)</value>
+          <value xml:lang="ar">Palm Text Document</value>
         </prop>
       </node>
-      <node oor:name="MS Word 95 Vorlage">
+      <node oor:name="StarOffice_Writer">
         <prop oor:name="UIName">
-          <value xml:lang="ar">قالب مايكروسوفت وورد 95</value>
-        </prop>
-      </node>
-      <node oor:name="MS Word 97 Vorlage">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">قالب مايكروسوفت وورد 97/2000/إكس‌پي/2003</value>
-        </prop>
-      </node>
-      <node oor:name="StarOffice XML (Writer)">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند أوپن‌أوفيس.أورغ 1.0 نصّيّ</value>
-        </prop>
-      </node>
-      <node oor:name="Text">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">نصّ</value>
-        </prop>
-      </node>
-      <node oor:name="Text (encoded)">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">نصّ - اختر ترميزًا</value>
-        </prop>
-      </node>
-      <node oor:name="writer_StarOffice_XML_Writer_Template">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">قالب مستند أوپن‌أوفس.أورغ 1.0 نصّيّ</value>
-        </prop>
-      </node>
-      <node oor:name="writer8">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند ODF نصّيّ</value>
-        </prop>
-      </node>
-      <node oor:name="writer8_template">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">قالب مستند ODF نصّيّ</value>
-        </prop>
-      </node>
-      <node oor:name="MS Word 2007 XML">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مايكروسوفت وورد 2007-2016 بِمخطّط XML</value>
-        </prop>
-      </node>
-      <node oor:name="MS Word 2007 XML Template">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">قالب مايكروسوفت وورد 2007-2016 بِمخطّط XML</value>
-        </prop>
-      </node>
-      <node oor:name="Office Open XML Text">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">نصّ أوفيس أوپن بِمخطّط XML</value>
-        </prop>
-      </node>
-      <node oor:name="Office Open XML Text Template">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">قالب أوفيس أوپن نصّيّ بِمخطّط XML</value>
-        </prop>
-      </node>
-      <node oor:name="writer_web_pdf_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">PDF - هيئة المستند المحمول</value>
+          <value xml:lang="ar">Legacy StarOffice Text Document</value>
         </prop>
       </node>
       <node oor:name="HTML">
@@ -362,6 +262,21 @@
           <value xml:lang="ar">قالب أوبن‌أوفس.أورج 1.0 HTML</value>
         </prop>
       </node>
+      <node oor:name="writer_web_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">PDF - هيئة المستند المحمول</value>
+        </prop>
+      </node>
+      <node oor:name="writer_web_png_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">PNG - Portable Network Graphic</value>
+        </prop>
+      </node>
+      <node oor:name="writer_web_jpg_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">JPEG - Joint Photographic Experts Group</value>
+        </prop>
+      </node>
       <node oor:name="writerweb8_writer_template">
         <prop oor:name="UIName">
           <value xml:lang="ar">قالب مستند HTML</value>
@@ -370,16 +285,6 @@
       <node oor:name="writerweb8_writer">
         <prop oor:name="UIName">
           <value xml:lang="ar">نص (رايتر/شبكة)</value>
-        </prop>
-      </node>
-      <node oor:name="writer_globaldocument_pdf_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">PDF - هيئة المستند المحمول</value>
-        </prop>
-      </node>
-      <node oor:name="writerglobal8_HTML">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">HTML (رايتر/عالمي)</value>
         </prop>
       </node>
       <node oor:name="Text (encoded) (StarWriter/GlobalDocument)">
@@ -397,6 +302,11 @@
           <value xml:lang="ar">مستند أوپن‌أوفس.أورغ 1.0 رئيس</value>
         </prop>
       </node>
+      <node oor:name="writer_globaldocument_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">PDF - هيئة المستند المحمول</value>
+        </prop>
+      </node>
       <node oor:name="writerglobal8">
         <prop oor:name="UIName">
           <value xml:lang="ar">المستند الرئيسي لـ ODF</value>
@@ -412,9 +322,19 @@
           <value xml:lang="ar">مستند نص ODF</value>
         </prop>
       </node>
+      <node oor:name="writerglobal8_HTML">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">HTML (رايتر/عالمي)</value>
+        </prop>
+      </node>
       <node oor:name="DIF">
         <prop oor:name="UIName">
           <value xml:lang="ar">نسق بيانات تبادليّة</value>
+        </prop>
+      </node>
+      <node oor:name="HTML (StarCalc)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند HTML (كالك)</value>
         </prop>
       </node>
       <node oor:name="Lotus">
@@ -429,22 +349,42 @@
       </node>
       <node oor:name="MS Excel 4.0">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مايكروسوفت إكسل 4.0</value>
+          <value xml:lang="ar">ميكروسوفت إكسل ٤٫٠</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 4.0 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب ميكروسوفت إكسل ٤٫٠</value>
         </prop>
       </node>
       <node oor:name="MS Excel 5.0/95">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مايكروسوفت إكسل 5.0</value>
+          <value xml:lang="ar">ميكروسوفت إكسل ٥٫٠</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 5.0/95 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب ميكروسوفت إكسل ٥٫٠</value>
         </prop>
       </node>
       <node oor:name="MS Excel 95">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مايكروسوفت إكسل 95</value>
+          <value xml:lang="ar">ميكروسوفت إكسل ٩٥</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 95 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب ميكروسوفت إكسل ٩٥</value>
         </prop>
       </node>
       <node oor:name="MS Excel 97">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مايكروسوفت إكسل 97/2000/إكس‌پي/2003</value>
+          <value xml:lang="ar">ميكروسوفت إكسل ٩٧-٢٠٠٣</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 97 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب ميكروسوفت إكسل ٩٧-٢٠٠٣</value>
         </prop>
       </node>
       <node oor:name="Rich Text Format (StarCalc)">
@@ -455,76 +395,6 @@
       <node oor:name="SYLK">
         <prop oor:name="UIName">
           <value xml:lang="ar">SYLK</value>
-        </prop>
-      </node>
-      <node oor:name="calc_pdf_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">PDF - نسق المستند المحمول</value>
-        </prop>
-      </node>
-      <node oor:name="dBase">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">dBASE</value>
-        </prop>
-      </node>
-      <node oor:name="MS_Works_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند مايكروسوفت ووركس</value>
-        </prop>
-      </node>
-      <node oor:name="Beagle_Works_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">جدول بيغل‌ووركس/وورد‌بيرفكت ووركس الإصدار 1 ممتدّ</value>
-        </prop>
-      </node>
-      <node oor:name="ClarisWorks_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">جدول كلارِس‌ووركس/آبل‌ووركس ممتدّ</value>
-        </prop>
-      </node>
-      <node oor:name="Claris_Resolve_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند كلارِس‌رِسولڤ</value>
-        </prop>
-      </node>
-      <node oor:name="Great_Works_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">جدول غريت‌ووركس ممتدّ</value>
-        </prop>
-      </node>
-      <node oor:name="Mac_Wingz_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند وِنغس لِماك</value>
-        </prop>
-      </node>
-      <node oor:name="Mac_Works_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">جدول مايكروسوفت ووركس لِماك ممتدّ (الإصدار 1 - الإصدار 4)</value>
-        </prop>
-      </node>
-      <node oor:name="HTML (StarCalc)">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند HTML (كالك)</value>
-        </prop>
-      </node>
-      <node oor:name="MS Excel 4.0 Vorlage/Template">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">قالب مايكروسوفت إكسل 4.0</value>
-        </prop>
-      </node>
-      <node oor:name="MS Excel 5.0/95 Vorlage/Template">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">قالب مايكروسوفت إكسل 5.0</value>
-        </prop>
-      </node>
-      <node oor:name="MS Excel 95 Vorlage/Template">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">قالب مايكروسوفت إكسل 95</value>
-        </prop>
-      </node>
-      <node oor:name="MS Excel 97 Vorlage/Template">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">قالب مايكروسوفت إكسل 97/2000/إكس‌پي/2003</value>
         </prop>
       </node>
       <node oor:name="StarOffice XML (Calc)">
@@ -547,6 +417,16 @@
           <value xml:lang="ar">قالب جدول أوپن‌أوفيس.أورغ 1.0 ممتدّ</value>
         </prop>
       </node>
+      <node oor:name="calc_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">PDF - نسق المستند المحمول</value>
+        </prop>
+      </node>
+      <node oor:name="dBase">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">dBASE</value>
+        </prop>
+      </node>
       <node oor:name="calc8">
         <prop oor:name="UIName">
           <value xml:lang="ar">جدول ODF ممتدّ</value>
@@ -557,19 +437,29 @@
           <value xml:lang="ar">قالب جدول ODF ممتدّ</value>
         </prop>
       </node>
+      <node oor:name="Gnumeric Spreadsheet">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">Gnumeric Spreadsheet</value>
+        </prop>
+      </node>
       <node oor:name="Calc MS Excel 2007 XML">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مايكروسوفت إكسل 2007-2016 بِمخطّط XML</value>
+          <value xml:lang="ar">Microsoft Excel 2007-2019 XML</value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 VBA XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">Microsoft Excel 2007-2019 XML (الماكرو مفعل)</value>
         </prop>
       </node>
       <node oor:name="Calc MS Excel 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="ar">قالب مايكروسوفت إكسل 2007-2016 بِمخطّط XML</value>
+          <value xml:lang="ar">Microsoft Excel 2007-2019 XML Template</value>
         </prop>
       </node>
       <node oor:name="Calc MS Excel 2007 Binary">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مايكروسوفت إكسل 2007 ثنائيّ</value>
+          <value xml:lang="ar">Microsoft Excel 2007 Binary</value>
         </prop>
       </node>
       <node oor:name="Calc Office Open XML">
@@ -582,9 +472,79 @@
           <value xml:lang="ar">قالب جدول أوفيس أوپن بِمخطّط XML ممتدّ</value>
         </prop>
       </node>
+      <node oor:name="MS_Works_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند ميكروسوفت ووركس</value>
+        </prop>
+      </node>
+      <node oor:name="WPS_Lotus_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">Lotus Document</value>
+        </prop>
+      </node>
+      <node oor:name="WPS_QPro_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">QuattroPro Document</value>
+        </prop>
+      </node>
+      <node oor:name="ClarisWorks_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">جدول كلارِس‌ووركس/آبل‌ووركس ممتدّ</value>
+        </prop>
+      </node>
+      <node oor:name="Claris_Resolve_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند كلارِس‌رِسولڤ</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Works_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">جدول ميكروسوفت ووركس لِماك ممتدّ (الإصدار 1 - الإصدار 4)</value>
+        </prop>
+      </node>
+      <node oor:name="Apple Numbers">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">Apple Numbers 2</value>
+        </prop>
+      </node>
+      <node oor:name="MWAW_Database">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">Legacy Mac Database</value>
+        </prop>
+      </node>
+      <node oor:name="MWAW_Spreadsheet">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">Legacy Mac Spreadsheet</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice_Spreadsheet">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">Legacy StarOffice Spreadsheet</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Draw)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">رسمة أوپن‌أوفيس.أورغ 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="draw_StarOffice_XML_Draw_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب رسمة أوپن‌أوفيس.أورغ 1.0</value>
+        </prop>
+      </node>
       <node oor:name="draw_pdf_Export">
         <prop oor:name="UIName">
           <value xml:lang="ar">PDF - نسق المستند المحمول</value>
+        </prop>
+      </node>
+      <node oor:name="draw8">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">رسمة ODF</value>
+        </prop>
+      </node>
+      <node oor:name="draw8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب رسمة ODF</value>
         </prop>
       </node>
       <node oor:name="WordPerfect Graphics">
@@ -594,12 +554,12 @@
       </node>
       <node oor:name="Visio Document">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مايكروسوفت ڤازيو 2000-2013</value>
+          <value xml:lang="ar">ميكروسوفت ڤازيو ٢٠٠٠-٢٠١٣</value>
         </prop>
       </node>
       <node oor:name="Publisher Document">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مايكروسوفت ببلِشِرّ 98-2010</value>
+          <value xml:lang="ar">Microsoft Publisher 98-2010</value>
         </prop>
       </node>
       <node oor:name="Corel Draw Document">
@@ -617,44 +577,9 @@
           <value xml:lang="ar">أدُبي/ماكروميديا فري‌هاند</value>
         </prop>
       </node>
-      <node oor:name="Beagle_Works_Draw">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">رسمة بيغل‌ووركس/وورد‌بيرفكت ووركس الإصدار 1</value>
-        </prop>
-      </node>
       <node oor:name="ClarisWorks_Draw">
         <prop oor:name="UIName">
           <value xml:lang="ar">رسمة كلارِس‌ووركس/آبل‌ووركس</value>
-        </prop>
-      </node>
-      <node oor:name="Great_Works_Draw">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">رسمة غريت‌ووركس</value>
-        </prop>
-      </node>
-      <node oor:name="MacDraw_Draw">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">MacDraw (v0-v1)</value>
-        </prop>
-      </node>
-      <node oor:name="MacDrawPro_Draw">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">MacDraw II</value>
-        </prop>
-      </node>
-      <node oor:name="Mac_Works_Draw">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">رسمة مايكروسوفت ووركس لِماك (الإصدار 1 - الإصدار 4)</value>
-        </prop>
-      </node>
-      <node oor:name="MacPaint_Draw">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">ماك‌پينت</value>
-        </prop>
-      </node>
-      <node oor:name="SuperPaint_Draw">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">سوپر‌پينت (الإصدار 1)</value>
         </prop>
       </node>
       <node oor:name="PageMaker Document">
@@ -662,24 +587,24 @@
           <value xml:lang="ar">Adobe PageMaker</value>
         </prop>
       </node>
-      <node oor:name="StarOffice XML (Draw)">
+      <node oor:name="ZMF Document">
         <prop oor:name="UIName">
-          <value xml:lang="ar">رسمة أوپن‌أوفيس.أورغ 1.0</value>
+          <value xml:lang="ar">Zoner Callisto/Draw</value>
         </prop>
       </node>
-      <node oor:name="draw_StarOffice_XML_Draw_Template">
+      <node oor:name="MWAW_Bitmap">
         <prop oor:name="UIName">
-          <value xml:lang="ar">قالب رسمة أوپن‌أوفيس.أورغ 1.0</value>
+          <value xml:lang="ar">Legacy Mac Bitmap</value>
         </prop>
       </node>
-      <node oor:name="draw8">
+      <node oor:name="MWAW_Drawing">
         <prop oor:name="UIName">
-          <value xml:lang="ar">رسمة ODF</value>
+          <value xml:lang="ar">Legacy Mac Drawing</value>
         </prop>
       </node>
-      <node oor:name="draw8_template">
+      <node oor:name="StarOffice_Drawing">
         <prop oor:name="UIName">
-          <value xml:lang="ar">قالب رسمة ODF</value>
+          <value xml:lang="ar">Legacy StarOffice Drawing</value>
         </prop>
       </node>
       <node oor:name="Apple Keynote">
@@ -689,12 +614,32 @@
       </node>
       <node oor:name="MS PowerPoint 97">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مايكروسوفت باوربوينت 97/2000/إكس‌پي/2003</value>
+          <value xml:lang="ar">ميكروسوفت بوربوينت ٩٧-٢٠٠٣</value>
         </prop>
       </node>
       <node oor:name="MS PowerPoint 97 AutoPlay">
         <prop oor:name="UIName">
-          <value xml:lang="ar">Microsoft PowerPoint 97/2000/XP/2003 AutoPlay</value>
+          <value xml:lang="ar">Microsoft PowerPoint 97-2003 AutoPlay</value>
+        </prop>
+      </node>
+      <node oor:name="MS PowerPoint 97 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب ميكروسوفت بوربوينت ٩٧-٢٠٠٣</value>
+        </prop>
+      </node>
+      <node oor:name="impress_StarOffice_XML_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">رسمة أوپن‌أوفيس.أورغ 1.0 (إمبريس)</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Impress)">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">عرض أوپن‌أوفيس.أورغ 1.0 تقديميّ</value>
+        </prop>
+      </node>
+      <node oor:name="impress_StarOffice_XML_Impress_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب عرض أوپن‌أوفيس.أورغ 1.0 تقديميّ</value>
         </prop>
       </node>
       <node oor:name="impress_pdf_Export">
@@ -702,19 +647,34 @@
           <value xml:lang="ar">PDF - نسق المستند المحمول</value>
         </prop>
       </node>
-      <node oor:name="placeware_Export">
+      <node oor:name="impress8">
         <prop oor:name="UIName">
-          <value xml:lang="ar">PWP - PlaceWare</value>
+          <value xml:lang="ar">عرض ODF تقديميّ</value>
+        </prop>
+      </node>
+      <node oor:name="impress8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">قالب عرض ODF تقديميّ</value>
+        </prop>
+      </node>
+      <node oor:name="impress8_draw">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">رسمة ODF (إمپرس)</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">Microsoft PowerPoint 2007-2019 XML</value>
         </prop>
       </node>
       <node oor:name="Impress MS PowerPoint 2007 XML AutoPlay">
         <prop oor:name="UIName">
-          <value xml:lang="ar">Microsoft PowerPoint 2007-2016 XML AutoPlay</value>
+          <value xml:lang="ar">Microsoft PowerPoint 2007-2019 XML AutoPlay</value>
         </prop>
       </node>
       <node oor:name="Impress MS PowerPoint 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="ar">قالب مايكروسوفت باوربوينت 2007-2016 بِمخطّط XML</value>
+          <value xml:lang="ar">Microsoft PowerPoint 2007-2019 XML Template</value>
         </prop>
       </node>
       <node oor:name="Impress Office Open XML">
@@ -737,59 +697,19 @@
           <value xml:lang="ar">ClarisWorks/AppleWorks Presentation</value>
         </prop>
       </node>
-      <node oor:name="MS PowerPoint 97 Vorlage">
+      <node oor:name="StarOffice_Presentation">
         <prop oor:name="UIName">
-          <value xml:lang="ar">قالب مايكروسوفت باوربوينت 97/2000/إكس‌پي/2003</value>
+          <value xml:lang="ar">Legacy StarOffice Presentation</value>
         </prop>
       </node>
-      <node oor:name="impress_StarOffice_XML_Draw">
+      <node oor:name="MWAW_Presentation">
         <prop oor:name="UIName">
-          <value xml:lang="ar">رسمة أوپن‌أوفيس.أورغ 1.0 (إمبريس)</value>
+          <value xml:lang="ar">Legacy Mac Presentation</value>
         </prop>
       </node>
-      <node oor:name="StarOffice XML (Impress)">
+      <node oor:name="PowerPoint 3">
         <prop oor:name="UIName">
-          <value xml:lang="ar">عرض أوپن‌أوفيس.أورغ 1.0 تقديميّ</value>
-        </prop>
-      </node>
-      <node oor:name="impress_StarOffice_XML_Impress_Template">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">قالب عرض أوپن‌أوفيس.أورغ 1.0 تقديميّ</value>
-        </prop>
-      </node>
-      <node oor:name="impress8">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">عرض ODF تقديميّ</value>
-        </prop>
-      </node>
-      <node oor:name="impress8_template">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">قالب عرض ODF تقديميّ</value>
-        </prop>
-      </node>
-      <node oor:name="impress8_draw">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">رسمة ODF (إمپرس)</value>
-        </prop>
-      </node>
-      <node oor:name="Impress MS PowerPoint 2007 XML">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مايكروسوفت باوربوينت 2007-2016 بِمخطّط XML</value>
-        </prop>
-      </node>
-      <node oor:name="Impress MS PowerPoint 2007 XML Template">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">قالب مايكروسوفت باوربوينت 2007-2016 بِمخطّط XML</value>
-        </prop>
-      </node>
-      <node oor:name="Impress Office Open XML">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">عرض أوفيس أوپن بِمخطّط XML تقديميّ</value>
-        </prop>
-      </node>
-      <node oor:name="Impress Office Open XML Template">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">قالب عرض أوفيس أوپن بِمخطّط XML تقديميّ</value>
+          <value xml:lang="ar">Microsoft PowerPoint 1-4 and 95's</value>
         </prop>
       </node>
       <node oor:name="StarOffice XML (Chart)">
@@ -804,7 +724,7 @@
       </node>
       <node oor:name="MathML XML (Math)">
         <prop oor:name="UIName">
-          <value xml:lang="ar">ماث‌إم‌إل 1.01</value>
+          <value xml:lang="ar">MathML 2.0</value>
         </prop>
       </node>
       <node oor:name="MathType 3.x">
@@ -812,14 +732,14 @@
           <value xml:lang="ar">ماث‌تايپ ‎3.x</value>
         </prop>
       </node>
-      <node oor:name="math_pdf_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">PDF - هيئة المستند المحمول</value>
-        </prop>
-      </node>
       <node oor:name="StarOffice XML (Math)">
         <prop oor:name="UIName">
           <value xml:lang="ar">صيغة أوپن‌أوفيس.أورغ 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="math_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">PDF - هيئة المستند المحمول</value>
         </prop>
       </node>
       <node oor:name="math8">
@@ -992,29 +912,14 @@
           <value xml:lang="ar">GIF - نسق رسومات تبادليّ</value>
         </prop>
       </node>
+      <node oor:name="draw_html_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند HTML (درو)</value>
+        </prop>
+      </node>
       <node oor:name="draw_jpg_Export">
         <prop oor:name="UIName">
           <value xml:lang="ar">JPEG - مجموعة الخبراء للربط الفوتوغرافيّ</value>
-        </prop>
-      </node>
-      <node oor:name="draw_met_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">MET - ملف OS/2 وصفيّ</value>
-        </prop>
-      </node>
-      <node oor:name="draw_pbm_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">PBM - صورة نقطيّة محمولة</value>
-        </prop>
-      </node>
-      <node oor:name="draw_pct_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">PCT - ماك پِكت</value>
-        </prop>
-      </node>
-      <node oor:name="draw_pgm_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">PGM - خريطة رصاصيّة محمولة</value>
         </prop>
       </node>
       <node oor:name="draw_png_Export">
@@ -1022,24 +927,9 @@
           <value xml:lang="ar">PNG - رسومات شبكيّة محمولة</value>
         </prop>
       </node>
-      <node oor:name="draw_ppm_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">PPM - خريطة بكسل محمولة</value>
-        </prop>
-      </node>
-      <node oor:name="draw_ras_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">RAS - صورة صَنْ تسامتيّة</value>
-        </prop>
-      </node>
       <node oor:name="draw_svg_Export">
         <prop oor:name="UIName">
           <value xml:lang="ar">SVG - رسومات متّجهيّة قابلة للتحجيم</value>
-        </prop>
-      </node>
-      <node oor:name="draw_svm_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">SVM - ملف ستارڤيو وصفيّ</value>
         </prop>
       </node>
       <node oor:name="draw_tif_Export">
@@ -1050,16 +940,6 @@
       <node oor:name="draw_wmf_Export">
         <prop oor:name="UIName">
           <value xml:lang="ar">WMF - ملف وِندوز وصفيّ</value>
-        </prop>
-      </node>
-      <node oor:name="draw_xpm_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">XPM - X PixMap</value>
-        </prop>
-      </node>
-      <node oor:name="draw_html_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند HTML (درو)</value>
         </prop>
       </node>
       <node oor:name="CGM - Computer Graphics Metafile">
@@ -1092,29 +972,14 @@
           <value xml:lang="ar">GIF - نسق رسومات تبادليّ</value>
         </prop>
       </node>
+      <node oor:name="impress_html_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">مستند HTML (إمبريس)</value>
+        </prop>
+      </node>
       <node oor:name="impress_jpg_Export">
         <prop oor:name="UIName">
           <value xml:lang="ar">JPEG - مجموعة الخبراء للربط الفوتوغرافيّ</value>
-        </prop>
-      </node>
-      <node oor:name="impress_met_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">MET - ملف OS/2 وصفيّ</value>
-        </prop>
-      </node>
-      <node oor:name="impress_pbm_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">PBM - صورة نقطيّة محمولة</value>
-        </prop>
-      </node>
-      <node oor:name="impress_pct_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">PCT - ماك پِكت</value>
-        </prop>
-      </node>
-      <node oor:name="impress_pgm_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">PGM - خريطة رصاصيّة محمولة</value>
         </prop>
       </node>
       <node oor:name="impress_png_Export">
@@ -1122,24 +987,9 @@
           <value xml:lang="ar">PNG - رسوم شبكيّة محمولة</value>
         </prop>
       </node>
-      <node oor:name="impress_ppm_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">PPM - خريطة بكسل محمولة</value>
-        </prop>
-      </node>
-      <node oor:name="impress_ras_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">RAS - صورة صَنْ تسامتيّة</value>
-        </prop>
-      </node>
       <node oor:name="impress_svg_Export">
         <prop oor:name="UIName">
           <value xml:lang="ar">SVG - رسومات متّجهيّة قابلة للتحجيم</value>
-        </prop>
-      </node>
-      <node oor:name="impress_svm_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">SVM - ملف ستارڤيو وصفيّ</value>
         </prop>
       </node>
       <node oor:name="impress_tif_Export">
@@ -1152,16 +1002,6 @@
           <value xml:lang="ar">WMF - ملف وِندوز وصفيّ</value>
         </prop>
       </node>
-      <node oor:name="impress_xpm_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">XPM - X PixMap</value>
-        </prop>
-      </node>
-      <node oor:name="impress_html_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="ar">مستند HTML (إمبريس)</value>
-        </prop>
-      </node>
       <node oor:name="writer_jpg_Export">
         <prop oor:name="UIName">
           <value xml:lang="ar">JPEG - هيئة مجموعة خبراء الفوتوغرافية</value>
@@ -1172,14 +1012,39 @@
           <value xml:lang="ar">PNG - رسوم شبكية محمولة</value>
         </prop>
       </node>
+      <node oor:name="calc_png_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">PNG - Portable Network Graphic</value>
+        </prop>
+      </node>
+      <node oor:name="ADO Rowset XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">ADO Rowset XML</value>
+        </prop>
+      </node>
       <node oor:name="MS Excel 2003 XML">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مايكروسوفت إكسل 2003 بِمخطّط XML</value>
+          <value xml:lang="ar">ميكروسوفت إكسل ٢٠٠٣ بِمخطّط XML</value>
         </prop>
       </node>
       <node oor:name="MS Word 2003 XML">
         <prop oor:name="UIName">
-          <value xml:lang="ar">مايكروسوفت وورد 2003 بِمخطّط XML</value>
+          <value xml:lang="ar">ميكروسوفت وورد ٢٠٠٣ بِمخطّط XML</value>
+        </prop>
+      </node>
+      <node oor:name="UOF text">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">نصّ نسق أوفيس الموحّد</value>
+        </prop>
+      </node>
+      <node oor:name="UOF spreadsheet">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">جدول نسق أوفيس الموحّد ممتدّ</value>
+        </prop>
+      </node>
+      <node oor:name="UOF presentation">
+        <prop oor:name="UIName">
+          <value xml:lang="ar">عرض نسق أوفيس الموحّد تقديميّ</value>
         </prop>
       </node>
     </node>
