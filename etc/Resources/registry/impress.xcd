@@ -80,10 +80,10 @@
           <value>~Delete</value>
         </prop>
         <prop oor:name="STR_GRAPHIC_OPTIMIZATION" oor:type="xs:string" oor:localized="true">
-          <value>Choose settings for optimizing pictures and graphics</value>
+          <value>Choose settings for optimizing images</value>
         </prop>
         <prop oor:name="STR_IMAGE_OPTIMIZATION" oor:type="xs:string" oor:localized="true">
-          <value>Graphics</value>
+          <value>Images</value>
         </prop>
         <prop oor:name="STR_LOSSLESS_COMPRESSION" oor:type="xs:string" oor:localized="true">
           <value>~Lossless compression</value>
@@ -95,7 +95,7 @@
           <value>~Quality</value>
         </prop>
         <prop oor:name="STR_REMOVE_CROP_AREA" oor:type="xs:string" oor:localized="true">
-          <value>~Delete cropped graphic areas</value>
+          <value>~Delete cropped image areas</value>
         </prop>
         <prop oor:name="STR_IMAGE_RESOLUTION" oor:type="xs:string" oor:localized="true">
           <value>~Image Resolution</value>
@@ -113,7 +113,7 @@
           <value>300;300 DPI (print resolution)</value>
         </prop>
         <prop oor:name="STR_EMBED_LINKED_GRAPHICS" oor:type="xs:string" oor:localized="true">
-          <value>~Break links to external graphics</value>
+          <value>~Embed external images</value>
         </prop>
         <prop oor:name="STR_OLE_OBJECTS" oor:type="xs:string" oor:localized="true">
           <value>OLE Objects</value>
@@ -122,7 +122,7 @@
           <value>Choose settings for replacing OLE objects</value>
         </prop>
         <prop oor:name="STR_OLE_REPLACE" oor:type="xs:string" oor:localized="true">
-          <value>Create static replacement graphics for OLE objects</value>
+          <value>Create static replacement images for OLE objects</value>
         </prop>
         <prop oor:name="STR_ALL_OLE_OBJECTS" oor:type="xs:string" oor:localized="true">
           <value>For ~all OLE objects</value>
@@ -146,9 +146,6 @@ The current presentation contains no OLE objects.</value>
         <prop oor:name="STR_CHOOSE_SLIDES" oor:type="xs:string" oor:localized="true">
           <value>Choose which slides to delete</value>
         </prop>
-        <prop oor:name="STR_MASTER_PAGES" oor:type="xs:string" oor:localized="true">
-          <value>Master Pages</value>
-        </prop>
         <prop oor:name="STR_DELETE_MASTER_PAGES" oor:type="xs:string" oor:localized="true">
           <value>Delete unused ~master pages</value>
         </prop>
@@ -167,12 +164,6 @@ The current presentation contains no OLE objects.</value>
         <prop oor:name="STR_SUMMARY_TITLE" oor:type="xs:string" oor:localized="true">
           <value>Choose where to apply the following changes</value>
         </prop>
-        <prop oor:name="STR_PROGRESS" oor:type="xs:string" oor:localized="true">
-          <value>Progress</value>
-        </prop>
-        <prop oor:name="STR_OBJECTS_OPTIMIZED" oor:type="xs:string" oor:localized="true">
-          <value>Objects optimized</value>
-        </prop>
         <prop oor:name="STR_APPLY_TO_CURRENT" oor:type="xs:string" oor:localized="true">
           <value>~Apply changes to current presentation</value>
         </prop>
@@ -189,10 +180,10 @@ The current presentation contains no OLE objects.</value>
           <value>Delete %SLIDES slides</value>
         </prop>
         <prop oor:name="STR_OPTIMIZE_IMAGES" oor:type="xs:string" oor:localized="true">
-          <value>Optimize %IMAGES graphics to %QUALITY% JPEG quality at %RESOLUTION DPI.</value>
+          <value>Optimize %IMAGES images to %QUALITY% JPEG quality at %RESOLUTION DPI.</value>
         </prop>
         <prop oor:name="STR_CREATE_REPLACEMENT" oor:type="xs:string" oor:localized="true">
-          <value>Create replacement graphics for %OLE objects.</value>
+          <value>Create replacement images for %OLE objects.</value>
         </prop>
         <prop oor:name="STR_CURRENT_FILESIZE" oor:type="xs:string" oor:localized="true">
           <value>Current file size:</value>
@@ -200,20 +191,8 @@ The current presentation contains no OLE objects.</value>
         <prop oor:name="STR_ESTIMATED_FILESIZE" oor:type="xs:string" oor:localized="true">
           <value>Estimated new file size:</value>
         </prop>
-        <prop oor:name="STR_MB" oor:type="xs:string" oor:localized="true">
-          <value>%1 MB</value>
-        </prop>
         <prop oor:name="MY_SETTINGS" oor:type="xs:string" oor:localized="true">
           <value>My Settings</value>
-        </prop>
-        <prop oor:name="STR_DEFAULT_SESSION" oor:type="xs:string" oor:localized="true">
-          <value>default session</value>
-        </prop>
-        <prop oor:name="STR_MODIFY_WARNING" oor:type="xs:string" oor:localized="true">
-          <value>The optimization will modify the current document. Do you want to continue?</value>
-        </prop>
-        <prop oor:name="STR_YES" oor:type="xs:string" oor:localized="true">
-          <value>~Yes</value>
         </prop>
         <prop oor:name="STR_OK" oor:type="xs:string" oor:localized="true">
           <value>OK</value>
@@ -237,10 +216,10 @@ The current presentation contains no OLE objects.</value>
           <value>Deleting slides...</value>
         </prop>
         <prop oor:name="STR_OPTIMIZING_GRAPHICS" oor:type="xs:string" oor:localized="true">
-          <value>Optimizing graphics...</value>
+          <value>Optimizing images...</value>
         </prop>
         <prop oor:name="STR_CREATING_OLE_REPLACEMENTS" oor:type="xs:string" oor:localized="true">
-          <value>Creating replacement graphics for OLE objects...</value>
+          <value>Creating replacement images for OLE objects...</value>
         </prop>
         <prop oor:name="STR_FILESIZESEPARATOR" oor:type="xs:string" oor:localized="true">
           <value>.</value>
@@ -429,6 +408,14 @@ The current presentation contains no OLE objects.</value>
       <group oor:name="LabelType">
         <prop oor:name="Label" oor:type="xs:string" oor:localized="true"/>
       </group>
+      <group oor:name="TransitionType">
+        <prop oor:name="Set" oor:type="xs:string" oor:localized="false"/>
+        <prop oor:name="Variant" oor:type="xs:string" oor:localized="false"/>
+      </group>
+      <group oor:name="TransitionSetType">
+        <prop oor:name="Label" oor:type="xs:string" oor:localized="true"/>
+        <prop oor:name="Group" oor:type="xs:string" oor:localized="false"/>
+      </group>
       <group oor:name="PresetCategory">
         <prop oor:name="Label" oor:type="xs:string" oor:localized="true"/>
         <prop oor:name="Effects" oor:type="oor:string-list" oor:localized="false"/>
@@ -437,7 +424,10 @@ The current presentation contains no OLE objects.</value>
     <component>
       <group oor:name="UserInterface">
         <set oor:name="Effects" oor:node-type="LabelType"/>
-        <set oor:name="Transitions" oor:node-type="LabelType"/>
+        <set oor:name="TransitionGroups" oor:node-type="LabelType"/>
+        <set oor:name="TransitionSets" oor:node-type="TransitionSetType"/>
+        <set oor:name="TransitionVariants" oor:node-type="LabelType"/>
+        <set oor:name="Transitions" oor:node-type="TransitionType"/>
         <set oor:name="Properties" oor:node-type="LabelType"/>
       </group>
       <group oor:name="Presets">
@@ -495,7 +485,7 @@ The current presentation contains no OLE objects.</value>
         <value xml:lang="en-US">Choose settings for optimizing images</value>
       </prop>
       <prop oor:name="STR_IMAGE_OPTIMIZATION">
-        <value xml:lang="en-US">Graphics</value>
+        <value xml:lang="en-US">Images</value>
       </prop>
       <prop oor:name="STR_LOSSLESS_COMPRESSION">
         <value xml:lang="en-US">~Lossless compression</value>
@@ -507,7 +497,7 @@ The current presentation contains no OLE objects.</value>
         <value xml:lang="en-US">~Quality in %</value>
       </prop>
       <prop oor:name="STR_REMOVE_CROP_AREA">
-        <value xml:lang="en-US">~Delete cropped graphic areas</value>
+        <value xml:lang="en-US">~Delete cropped image areas</value>
       </prop>
       <prop oor:name="STR_IMAGE_RESOLUTION">
         <value xml:lang="en-US">Reduce ~image resolution</value>
@@ -525,7 +515,7 @@ The current presentation contains no OLE objects.</value>
         <value xml:lang="en-US">300;300 DPI (print resolution)</value>
       </prop>
       <prop oor:name="STR_EMBED_LINKED_GRAPHICS">
-        <value xml:lang="en-US">~Break links to external graphics</value>
+        <value xml:lang="en-US">~Embed external images</value>
       </prop>
       <prop oor:name="STR_OLE_OBJECTS">
         <value xml:lang="en-US">OLE Objects</value>
@@ -534,7 +524,7 @@ The current presentation contains no OLE objects.</value>
         <value xml:lang="en-US">Choose settings for replacing OLE objects</value>
       </prop>
       <prop oor:name="STR_OLE_REPLACE">
-        <value xml:lang="en-US">Create static replacement graphics for OLE objects</value>
+        <value xml:lang="en-US">Create static replacement images for OLE objects</value>
       </prop>
       <prop oor:name="STR_ALL_OLE_OBJECTS">
         <value xml:lang="en-US">For ~all OLE objects</value>
@@ -558,9 +548,6 @@ The current presentation contains no OLE objects.</value>
       <prop oor:name="STR_CHOOSE_SLIDES">
         <value xml:lang="en-US">Choose which slides to delete</value>
       </prop>
-      <prop oor:name="STR_MASTER_PAGES">
-        <value xml:lang="en-US">Master Pages</value>
-      </prop>
       <prop oor:name="STR_DELETE_MASTER_PAGES">
         <value xml:lang="en-US">Delete unused ~master pages</value>
       </prop>
@@ -579,12 +566,6 @@ The current presentation contains no OLE objects.</value>
       <prop oor:name="STR_SUMMARY_TITLE">
         <value xml:lang="en-US">Choose where to apply the following changes</value>
       </prop>
-      <prop oor:name="STR_PROGRESS">
-        <value xml:lang="en-US">Progress</value>
-      </prop>
-      <prop oor:name="STR_OBJECTS_OPTIMIZED">
-        <value xml:lang="en-US">Objects optimized</value>
-      </prop>
       <prop oor:name="STR_APPLY_TO_CURRENT">
         <value xml:lang="en-US">~Apply changes to current presentation</value>
       </prop>
@@ -601,10 +582,10 @@ The current presentation contains no OLE objects.</value>
         <value xml:lang="en-US">Delete %SLIDES slides.</value>
       </prop>
       <prop oor:name="STR_OPTIMIZE_IMAGES">
-        <value xml:lang="en-US">Optimize %IMAGES graphics to %QUALITY% JPEG quality at %RESOLUTION DPI.</value>
+        <value xml:lang="en-US">Optimize %IMAGES images to %QUALITY% JPEG quality at %RESOLUTION DPI.</value>
       </prop>
       <prop oor:name="STR_CREATE_REPLACEMENT">
-        <value xml:lang="en-US">Create replacement graphics for %OLE objects.</value>
+        <value xml:lang="en-US">Create replacement images for %OLE objects.</value>
       </prop>
       <prop oor:name="STR_CURRENT_FILESIZE">
         <value xml:lang="en-US">Current file size:</value>
@@ -612,20 +593,8 @@ The current presentation contains no OLE objects.</value>
       <prop oor:name="STR_ESTIMATED_FILESIZE">
         <value xml:lang="en-US">Estimated new file size:</value>
       </prop>
-      <prop oor:name="STR_MB">
-        <value xml:lang="en-US">%1 MB</value>
-      </prop>
       <prop oor:name="MY_SETTINGS">
         <value xml:lang="en-US">My Settings </value>
-      </prop>
-      <prop oor:name="STR_DEFAULT_SESSION">
-        <value xml:lang="en-US">default session</value>
-      </prop>
-      <prop oor:name="STR_MODIFY_WARNING">
-        <value xml:lang="en-US">The optimization will modify the current document. Do you want to continue?</value>
-      </prop>
-      <prop oor:name="STR_YES">
-        <value xml:lang="en-US">~Yes</value>
       </prop>
       <prop oor:name="STR_OK">
         <value xml:lang="en-US">OK</value>
@@ -649,10 +618,10 @@ The current presentation contains no OLE objects.</value>
         <value xml:lang="en-US">Deleting slides...</value>
       </prop>
       <prop oor:name="STR_OPTIMIZING_GRAPHICS">
-        <value xml:lang="en-US">Optimizing graphics...</value>
+        <value xml:lang="en-US">Optimizing images...</value>
       </prop>
       <prop oor:name="STR_CREATING_OLE_REPLACEMENTS">
-        <value xml:lang="en-US">Creating replacement graphics for OLE objects...</value>
+        <value xml:lang="en-US">Creating replacement images for OLE objects...</value>
       </prop>
       <prop oor:name="STR_FILESIZESEPARATOR">
         <value xml:lang="en-US">.</value>
@@ -1029,6 +998,53 @@ The current presentation contains no OLE objects.</value>
               </prop>
             </node>
             <node oor:name="k" oor:op="replace">
+              <prop oor:name="Name">
+                <value>RestartTimer</value>
+              </prop>
+              <prop oor:name="Type">
+                <value>Button</value>
+              </prop>
+              <node oor:name="Normal">
+                <prop oor:name="Text">
+                  <value xml:lang="en-US">Restart</value>
+                </prop>
+                <node oor:name="Icon">
+                  <prop oor:name="NormalFileName">
+                    <value>bitmaps/ButtonRestartTimerNormal.png</value>
+                  </prop>
+                </node>
+                <prop oor:name="Action">
+                  <value>vnd.org.libreoffice.presenterscreen:RestartTimer</value>
+                </prop>
+                <node oor:name="Font">
+                  <prop oor:name="Size">
+                    <value>12</value>
+                  </prop>
+                  <prop oor:name="Style">
+                    <value>Bold</value>
+                  </prop>
+                  <prop oor:name="Color">
+                    <value>B3B7BC</value>
+                  </prop>
+                  <prop oor:name="Anchor">
+                    <value>Center</value>
+                  </prop>
+                </node>
+              </node>
+              <node oor:name="MouseOver">
+                <node oor:name="Icon">
+                  <prop oor:name="NormalFileName">
+                    <value>bitmaps/ButtonRestartTimerMouseOver.png</value>
+                  </prop>
+                </node>
+                <node oor:name="Font">
+                  <prop oor:name="Color">
+                    <value>FFFFFF</value>
+                  </prop>
+                </node>
+              </node>
+            </node>
+            <node oor:name="l" oor:op="replace">
               <prop oor:name="Type">
                 <value>VerticalSeparator</value>
               </prop>
@@ -1040,7 +1056,7 @@ The current presentation contains no OLE objects.</value>
                 </node>
               </node>
             </node>
-            <node oor:name="l" oor:op="replace">
+            <node oor:name="m" oor:op="replace">
               <prop oor:name="Name">
                 <value>SwitchMonitor</value>
               </prop>
@@ -1094,7 +1110,7 @@ The current presentation contains no OLE objects.</value>
                 </node>
               </node>
             </node>
-            <node oor:name="m" oor:op="replace">
+            <node oor:name="n" oor:op="replace">
               <prop oor:name="Type">
                 <value>VerticalSeparator</value>
               </prop>
@@ -1106,7 +1122,7 @@ The current presentation contains no OLE objects.</value>
                 </node>
               </node>
             </node>
-            <node oor:name="n" oor:op="replace">
+            <node oor:name="o" oor:op="replace">
               <prop oor:name="Name">
                 <value>Help</value>
               </prop>
@@ -1623,6 +1639,14 @@ The current presentation contains no OLE objects.</value>
             </prop>
             <prop oor:name="Right">
               <value xml:lang="en-US">Shows the Slides Overview</value>
+            </prop>
+          </node>
+          <node oor:name="x" oor:op="replace">
+            <prop oor:name="Left">
+              <value xml:lang="en-US">Ctrl-'4'</value>
+            </prop>
+            <prop oor:name="Right">
+              <value xml:lang="en-US">Switches monitors</value>
             </prop>
           </node>
         </node>
@@ -2574,6 +2598,11 @@ The current presentation contains no OLE objects.</value>
         <node oor:name="ooo-entrance-circle" oor:op="replace">
           <prop oor:name="Label" oor:type="xs:string">
             <value xml:lang="en-US">Circle</value>
+          </prop>
+        </node>
+        <node oor:name="ooo-entrance-oval" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Oval Vertical</value>
           </prop>
         </node>
         <node oor:name="ooo-entrance-fly-in-slow" oor:op="replace">
@@ -3839,365 +3868,1076 @@ The current presentation contains no OLE objects.</value>
           </prop>
         </node>
       </node>
-      <node oor:name="Transitions">
-        <node oor:name="venetian-blinds-horizontal" oor:op="replace">
+      <node oor:name="TransitionGroups">
+        <node oor:name="subtle" oor:op="replace">
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Venetian Blinds Horizontal</value>
+            <value xml:lang="en-US">Subtle</value>
           </prop>
         </node>
-        <node oor:name="venetian-blinds-vertical" oor:op="replace">
+        <node oor:name="exciting" oor:op="replace">
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Venetian Blinds Vertical</value>
+            <value xml:lang="en-US">Exciting</value>
           </prop>
         </node>
-        <node oor:name="box-in" oor:op="replace">
+      </node>
+      <node oor:name="TransitionSets">
+        <node oor:name="venetian-blinds" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>subtle</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Box In</value>
+            <value xml:lang="en-US">Venetian</value>
           </prop>
         </node>
-        <node oor:name="box-out" oor:op="replace">
+        <node oor:name="venetian-blinds-3d" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>exciting</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Box Out</value>
+            <value xml:lang="en-US">3D Venetian</value>
           </prop>
         </node>
-        <node oor:name="checkerboard-across" oor:op="replace">
+        <node oor:name="box" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>subtle</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Checkerboard Across</value>
+            <value xml:lang="en-US">Box</value>
           </prop>
         </node>
-        <node oor:name="checkerboard-down" oor:op="replace">
+        <node oor:name="checkerboard" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>subtle</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Checkerboard Down</value>
+            <value xml:lang="en-US">Checkers</value>
           </prop>
         </node>
-        <node oor:name="comb-horizontal" oor:op="replace">
+        <node oor:name="comb" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>subtle</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Comb Horizontal</value>
+            <value xml:lang="en-US">Comb</value>
           </prop>
         </node>
-        <node oor:name="comb-vertical" oor:op="replace">
+        <node oor:name="cover" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>subtle</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Comb Vertical</value>
+            <value xml:lang="en-US">Cover</value>
           </prop>
         </node>
-        <node oor:name="cover-down" oor:op="replace">
+        <node oor:name="uncover" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>subtle</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Cover Down</value>
+            <value xml:lang="en-US">Uncover</value>
           </prop>
         </node>
-        <node oor:name="cover-left" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Cover Left</value>
+        <node oor:name="wipe" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>subtle</value>
           </prop>
-        </node>
-        <node oor:name="cover-right" oor:op="replace">
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Cover Right</value>
-          </prop>
-        </node>
-        <node oor:name="cover-up" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Cover Up</value>
-          </prop>
-        </node>
-        <node oor:name="cover-left-down" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Cover Left-Down</value>
-          </prop>
-        </node>
-        <node oor:name="cover-left-up" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Cover Left-Up</value>
-          </prop>
-        </node>
-        <node oor:name="cover-right-down" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Cover Right-Down</value>
-          </prop>
-        </node>
-        <node oor:name="cover-right-up" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Cover Right-Up</value>
-          </prop>
-        </node>
-        <node oor:name="cut" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Cut</value>
-          </prop>
-        </node>
-        <node oor:name="cut-through-black" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Cut Through Black</value>
-          </prop>
-        </node>
-        <node oor:name="dissolve" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Dissolve</value>
-          </prop>
-        </node>
-        <node oor:name="fade-smoothly" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Fade Smoothly</value>
-          </prop>
-        </node>
-        <node oor:name="fade-through-black" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Fade Through Black</value>
-          </prop>
-        </node>
-        <node oor:name="zoom-rotate-in" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Newsflash</value>
-          </prop>
-        </node>
-        <node oor:name="push-down" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Push Down</value>
-          </prop>
-        </node>
-        <node oor:name="push-left" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Push Left</value>
-          </prop>
-        </node>
-        <node oor:name="push-right" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Push Right</value>
-          </prop>
-        </node>
-        <node oor:name="push-up" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Push Up</value>
-          </prop>
-        </node>
-        <node oor:name="random-bars-horizontal" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Random Bars Horizontal</value>
-          </prop>
-        </node>
-        <node oor:name="random-bars-vertical" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Random Bars Vertical</value>
-          </prop>
-        </node>
-        <node oor:name="shape-circle" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Shape Circle</value>
-          </prop>
-        </node>
-        <node oor:name="shape-diamond" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Shape Diamond</value>
-          </prop>
-        </node>
-        <node oor:name="shape-plus" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Shape Plus</value>
-          </prop>
-        </node>
-        <node oor:name="split-horizontal-in" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Split Horizontal In</value>
-          </prop>
-        </node>
-        <node oor:name="split-horizontal-out" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Split Horizontal Out</value>
-          </prop>
-        </node>
-        <node oor:name="split-vertical-in" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Split Vertical In</value>
-          </prop>
-        </node>
-        <node oor:name="split-vertical-out" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Split Vertical Out</value>
-          </prop>
-        </node>
-        <node oor:name="diagonal-squares-left-down" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Diagonal Squares Left-Down</value>
-          </prop>
-        </node>
-        <node oor:name="diagonal-squares-left-up" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Diagonal Squares Left-Up</value>
-          </prop>
-        </node>
-        <node oor:name="diagonal-squares-right-down" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Diagonal Squares Right-Down</value>
-          </prop>
-        </node>
-        <node oor:name="diagonal-squares-right-up" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Diagonal Squares Right-Up</value>
-          </prop>
-        </node>
-        <node oor:name="uncover-down" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Uncover Down</value>
-          </prop>
-        </node>
-        <node oor:name="uncover-left" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Uncover Left</value>
-          </prop>
-        </node>
-        <node oor:name="uncover-right" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Uncover Right</value>
-          </prop>
-        </node>
-        <node oor:name="uncover-up" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Uncover Up</value>
-          </prop>
-        </node>
-        <node oor:name="uncover-left-down" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Uncover Left-Down</value>
-          </prop>
-        </node>
-        <node oor:name="uncover-left-up" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Uncover Left-Up</value>
-          </prop>
-        </node>
-        <node oor:name="uncover-right-down" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Uncover Right-Down</value>
-          </prop>
-        </node>
-        <node oor:name="uncover-right-up" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Uncover Right-Up</value>
+            <value xml:lang="en-US">Wipe</value>
           </prop>
         </node>
         <node oor:name="wedge" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>subtle</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
             <value xml:lang="en-US">Wedge</value>
           </prop>
         </node>
-        <node oor:name="wheel-clockwise-1-spoke" oor:op="replace">
+        <node oor:name="wheel" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>subtle</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Wheel Clockwise, 1 Spoke</value>
+            <value xml:lang="en-US">Wheel</value>
           </prop>
         </node>
-        <node oor:name="wheel-clockwise-2-spokes" oor:op="replace">
+        <node oor:name="push" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>subtle</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Wheel Clockwise, 2 Spokes</value>
+            <value xml:lang="en-US">Push</value>
           </prop>
         </node>
-        <node oor:name="wheel-clockwise-3-spokes" oor:op="replace">
+        <node oor:name="cut" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>subtle</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Wheel Clockwise, 3 Spokes</value>
+            <value xml:lang="en-US">Cut</value>
           </prop>
         </node>
-        <node oor:name="wheel-clockwise-4-spokes" oor:op="replace">
+        <node oor:name="fade" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>subtle</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Wheel Clockwise, 4 Spokes</value>
+            <value xml:lang="en-US">Fade</value>
           </prop>
         </node>
-        <node oor:name="wheel-clockwise-8-spokes" oor:op="replace">
+        <node oor:name="random-bars" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>subtle</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Wheel Clockwise, 8 Spokes</value>
+            <value xml:lang="en-US">Bars</value>
           </prop>
         </node>
-        <node oor:name="wipe-down" oor:op="replace">
+        <node oor:name="shape" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>subtle</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Wipe Down</value>
+            <value xml:lang="en-US">Shape</value>
           </prop>
         </node>
-        <node oor:name="wipe-left" oor:op="replace">
+        <node oor:name="split" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>subtle</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Wipe Left</value>
+            <value xml:lang="en-US">Split</value>
           </prop>
         </node>
-        <node oor:name="wipe-right" oor:op="replace">
+        <node oor:name="diagonal-squares" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>subtle</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Wipe Right</value>
+            <value xml:lang="en-US">Diagonal</value>
           </prop>
         </node>
-        <node oor:name="wipe-up" oor:op="replace">
+        <node oor:name="random" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>subtle</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Wipe Up</value>
+            <value xml:lang="en-US">Random</value>
           </prop>
         </node>
-        <node oor:name="random-transition" oor:op="replace">
+        <node oor:name="dissolve" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>subtle</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Random Transition</value>
+            <value xml:lang="en-US">Dissolve</value>
+          </prop>
+        </node>
+        <node oor:name="finedissolve" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>exciting</value>
+          </prop>
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Fine Dissolve</value>
+          </prop>
+        </node>
+        <node oor:name="newsflash" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>exciting</value>
+          </prop>
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Newsflash</value>
           </prop>
         </node>
         <node oor:name="tile-flip" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>exciting</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Flipping tiles</value>
+            <value xml:lang="en-US">Tiles</value>
           </prop>
         </node>
-        <node oor:name="outside-cube" oor:op="replace">
+        <node oor:name="cube-turning" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>exciting</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Outside turning cube</value>
+            <value xml:lang="en-US">Cube</value>
           </prop>
         </node>
         <node oor:name="revolving-circles" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>exciting</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Revolving circles</value>
+            <value xml:lang="en-US">Circles</value>
           </prop>
         </node>
         <node oor:name="turning-helix" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Turning helix</value>
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>exciting</value>
           </prop>
-        </node>
-        <node oor:name="inside-cube" oor:op="replace">
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Inside turning cube</value>
+            <value xml:lang="en-US">Helix</value>
           </prop>
         </node>
         <node oor:name="fall" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>exciting</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
             <value xml:lang="en-US">Fall</value>
           </prop>
         </node>
         <node oor:name="turn-around" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>exciting</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Turn around</value>
+            <value xml:lang="en-US">Turn Around</value>
+          </prop>
+        </node>
+        <node oor:name="turn-down" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>exciting</value>
+          </prop>
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Turn Down</value>
           </prop>
         </node>
         <node oor:name="iris" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>exciting</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
             <value xml:lang="en-US">Iris</value>
           </prop>
         </node>
-        <node oor:name="turn-down" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Turn down</value>
-          </prop>
-        </node>
         <node oor:name="rochade" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>exciting</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
             <value xml:lang="en-US">Rochade</value>
           </prop>
         </node>
-        <node oor:name="venetian3dv" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Venetian Blinds 3D Vertical</value>
-          </prop>
-        </node>
-        <node oor:name="venetian3dh" oor:op="replace">
-          <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Venetian Blinds 3D Horizontal</value>
-          </prop>
-        </node>
         <node oor:name="static" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>exciting</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
             <value xml:lang="en-US">Static</value>
           </prop>
         </node>
-        <node oor:name="finedissolve" oor:op="replace">
+        <node oor:name="vortex" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>exciting</value>
+          </prop>
           <prop oor:name="Label" oor:type="xs:string">
-            <value xml:lang="en-US">Fine Dissolve</value>
+            <value xml:lang="en-US">Vortex</value>
+          </prop>
+        </node>
+        <node oor:name="ripple" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>exciting</value>
+          </prop>
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Ripple</value>
+          </prop>
+        </node>
+        <node oor:name="glitter" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>exciting</value>
+          </prop>
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Glitter</value>
+          </prop>
+        </node>
+        <node oor:name="honeycomb" oor:op="replace">
+          <prop oor:name="Group" oor:type="xs:string">
+            <value>exciting</value>
+          </prop>
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Honeycomb</value>
+          </prop>
+        </node>
+      </node>
+      <node oor:name="TransitionVariants">
+        <node oor:name="plain" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Plain</value>
+          </prop>
+        </node>
+        <node oor:name="smoothly" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Smoothly</value>
+          </prop>
+        </node>
+        <node oor:name="through-black" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Through Black</value>
+          </prop>
+        </node>
+        <node oor:name="left-right" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Left to Right</value>
+          </prop>
+        </node>
+        <node oor:name="top-left-bottom-right" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Top Left to Bottom Right</value>
+          </prop>
+        </node>
+        <node oor:name="top-bottom" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Top to Bottom</value>
+          </prop>
+        </node>
+        <node oor:name="top-right-bottom-left" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Top Right to Bottom Left</value>
+          </prop>
+        </node>
+        <node oor:name="right-left" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Right to Left</value>
+          </prop>
+        </node>
+        <node oor:name="bottom-right-top-left" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Bottom Right to Top Left</value>
+          </prop>
+        </node>
+        <node oor:name="bottom-top" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Bottom to Top</value>
+          </prop>
+        </node>
+        <node oor:name="bottom-left-top-right" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Bottom Left to Top Right</value>
+          </prop>
+        </node>
+        <node oor:name="vertical" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Vertical</value>
+          </prop>
+        </node>
+        <node oor:name="horizontal" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Horizontal</value>
+          </prop>
+        </node>
+        <node oor:name="in" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">In</value>
+          </prop>
+        </node>
+        <node oor:name="out" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Out</value>
+          </prop>
+        </node>
+        <node oor:name="across" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Across</value>
+          </prop>
+        </node>
+        <node oor:name="down" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Down</value>
+          </prop>
+        </node>
+        <node oor:name="up" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Up</value>
+          </prop>
+        </node>
+        <node oor:name="right" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Right</value>
+          </prop>
+        </node>
+        <node oor:name="left" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Left</value>
+          </prop>
+        </node>
+        <node oor:name="circle" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Circle</value>
+          </prop>
+        </node>
+        <node oor:name="oval-horizontal" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Oval Horizontal</value>
+          </prop>
+        </node>
+        <node oor:name="oval-vertical" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Oval Vertical</value>
+          </prop>
+        </node>
+        <node oor:name="diamond" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Diamond</value>
+          </prop>
+        </node>
+        <node oor:name="plus" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Plus</value>
+          </prop>
+        </node>
+        <node oor:name="horizontal-in" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Horizontal In</value>
+          </prop>
+        </node>
+        <node oor:name="horizontal-out" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Horizontal Out</value>
+          </prop>
+        </node>
+        <node oor:name="vertical-in" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Vertical In</value>
+          </prop>
+        </node>
+        <node oor:name="vertical-out" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Vertical Out</value>
+          </prop>
+        </node>
+        <node oor:name="cw-1-spoke" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Clockwise 1 Spoke</value>
+          </prop>
+        </node>
+        <node oor:name="cw-2-spoke" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Clockwise 2 Spokes</value>
+          </prop>
+        </node>
+        <node oor:name="cw-3-spoke" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Clockwise 3 Spokes</value>
+          </prop>
+        </node>
+        <node oor:name="cw-4-spoke" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Clockwise 4 Spokes</value>
+          </prop>
+        </node>
+        <node oor:name="cw-8-spoke" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Clockwise 8 Spokes</value>
+          </prop>
+        </node>
+        <node oor:name="ccw-1-spoke" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Counterclockwise 1 Spoke</value>
+          </prop>
+        </node>
+        <node oor:name="ccw-2-spoke" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Counterclockwise 2 Spokes</value>
+          </prop>
+        </node>
+        <node oor:name="ccw-3-spoke" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Counterclockwise 3 Spokes</value>
+          </prop>
+        </node>
+        <node oor:name="ccw-4-spoke" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Counterclockwise 4 Spokes</value>
+          </prop>
+        </node>
+        <node oor:name="ccw-8-spoke" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Counterclockwise 8 Spokes</value>
+          </prop>
+        </node>
+        <node oor:name="inside" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Inside</value>
+          </prop>
+        </node>
+        <node oor:name="outside" oor:op="replace">
+          <prop oor:name="Label" oor:type="xs:string">
+            <value xml:lang="en-US">Outside</value>
+          </prop>
+        </node>
+      </node>
+      <node oor:name="Transitions">
+        <node oor:name="venetian-blinds-horizontal" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>venetian-blinds</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>horizontal</value>
+          </prop>
+        </node>
+        <node oor:name="venetian-blinds-vertical" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>venetian-blinds</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>vertical</value>
+          </prop>
+        </node>
+        <node oor:name="box-in" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>box</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>in</value>
+          </prop>
+        </node>
+        <node oor:name="box-out" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>box</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>out</value>
+          </prop>
+        </node>
+        <node oor:name="checkerboard-across" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>checkerboard</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>across</value>
+          </prop>
+        </node>
+        <node oor:name="checkerboard-down" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>checkerboard</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>down</value>
+          </prop>
+        </node>
+        <node oor:name="comb-horizontal" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>comb</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>horizontal</value>
+          </prop>
+        </node>
+        <node oor:name="comb-vertical" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>comb</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>vertical</value>
+          </prop>
+        </node>
+        <node oor:name="cover-down" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>cover</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>top-bottom</value>
+          </prop>
+        </node>
+        <node oor:name="cover-left" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>cover</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>right-left</value>
+          </prop>
+        </node>
+        <node oor:name="cover-right" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>cover</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>left-right</value>
+          </prop>
+        </node>
+        <node oor:name="cover-up" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>cover</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>bottom-top</value>
+          </prop>
+        </node>
+        <node oor:name="cover-left-down" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>cover</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>top-right-bottom-left</value>
+          </prop>
+        </node>
+        <node oor:name="cover-left-up" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>cover</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>bottom-right-top-left</value>
+          </prop>
+        </node>
+        <node oor:name="cover-right-down" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>cover</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>top-left-bottom-right</value>
+          </prop>
+        </node>
+        <node oor:name="cover-right-up" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>cover</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>bottom-left-top-right</value>
+          </prop>
+        </node>
+        <node oor:name="cut" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>cut</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>plain</value>
+          </prop>
+        </node>
+        <node oor:name="cut-through-black" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>cut</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>through-black</value>
+          </prop>
+        </node>
+        <node oor:name="dissolve" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>dissolve</value>
+          </prop>
+        </node>
+        <node oor:name="finedissolve" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>finedissolve</value>
+          </prop>
+        </node>
+        <node oor:name="fade-smoothly" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>fade</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>smoothly</value>
+          </prop>
+        </node>
+        <node oor:name="fade-through-black" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>fade</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>through-black</value>
+          </prop>
+        </node>
+        <node oor:name="zoom-rotate-in" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>newsflash</value>
+          </prop>
+        </node>
+        <node oor:name="push-down" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>push</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>top-bottom</value>
+          </prop>
+        </node>
+        <node oor:name="push-left" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>push</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>right-left</value>
+          </prop>
+        </node>
+        <node oor:name="push-right" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>push</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>left-right</value>
+          </prop>
+        </node>
+        <node oor:name="push-up" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>push</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>bottom-top</value>
+          </prop>
+        </node>
+        <node oor:name="random-bars-horizontal" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>random-bars</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>horizontal</value>
+          </prop>
+        </node>
+        <node oor:name="random-bars-vertical" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>random-bars</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>vertical</value>
+          </prop>
+        </node>
+        <node oor:name="shape-circle" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>shape</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>circle</value>
+          </prop>
+        </node>
+        <node oor:name="shape-oval-horizontal" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>shape</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>oval-horizontal</value>
+          </prop>
+        </node>
+        <node oor:name="shape-oval-vertical" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>shape</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>oval-vertical</value>
+          </prop>
+        </node>
+        <node oor:name="shape-diamond" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>shape</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>diamond</value>
+          </prop>
+        </node>
+        <node oor:name="shape-plus" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>shape</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>plus</value>
+          </prop>
+        </node>
+        <node oor:name="split-horizontal-in" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>split</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>horizontal-in</value>
+          </prop>
+        </node>
+        <node oor:name="split-horizontal-out" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>split</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>horizontal-out</value>
+          </prop>
+        </node>
+        <node oor:name="split-vertical-in" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>split</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>vertical-in</value>
+          </prop>
+        </node>
+        <node oor:name="split-vertical-out" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>split</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>vertical-out</value>
+          </prop>
+        </node>
+        <node oor:name="diagonal-squares-left-down" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>diagonal-squares</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>top-right-bottom-left</value>
+          </prop>
+        </node>
+        <node oor:name="diagonal-squares-left-up" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>diagonal-squares</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>bottom-right-top-left</value>
+          </prop>
+        </node>
+        <node oor:name="diagonal-squares-right-down" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>diagonal-squares</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>top-left-bottom-right</value>
+          </prop>
+        </node>
+        <node oor:name="diagonal-squares-right-up" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>diagonal-squares</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>bottom-left-top-right</value>
+          </prop>
+        </node>
+        <node oor:name="uncover-down" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>uncover</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>top-bottom</value>
+          </prop>
+        </node>
+        <node oor:name="uncover-left" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>uncover</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>right-left</value>
+          </prop>
+        </node>
+        <node oor:name="uncover-right" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>uncover</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>left-right</value>
+          </prop>
+        </node>
+        <node oor:name="uncover-up" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>uncover</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>bottom-top</value>
+          </prop>
+        </node>
+        <node oor:name="uncover-left-down" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>uncover</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>top-right-bottom-left</value>
+          </prop>
+        </node>
+        <node oor:name="uncover-left-up" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>uncover</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>bottom-right-top-left</value>
+          </prop>
+        </node>
+        <node oor:name="uncover-right-down" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>uncover</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>top-left-bottom-right</value>
+          </prop>
+        </node>
+        <node oor:name="uncover-right-up" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>uncover</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>bottom-left-top-right</value>
+          </prop>
+        </node>
+        <node oor:name="wedge" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>wedge</value>
+          </prop>
+        </node>
+        <node oor:name="wheel-clockwise-1-spoke" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>wheel</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>cw-1-spoke</value>
+          </prop>
+        </node>
+        <node oor:name="wheel-clockwise-2-spokes" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>wheel</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>cw-2-spoke</value>
+          </prop>
+        </node>
+        <node oor:name="wheel-clockwise-3-spokes" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>wheel</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>cw-3-spoke</value>
+          </prop>
+        </node>
+        <node oor:name="wheel-clockwise-4-spokes" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>wheel</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>cw-4-spoke</value>
+          </prop>
+        </node>
+        <node oor:name="wheel-clockwise-8-spokes" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>wheel</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>cw-8-spoke</value>
+          </prop>
+        </node>
+        <node oor:name="wipe-down" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>wipe</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>top-bottom</value>
+          </prop>
+        </node>
+        <node oor:name="wipe-left" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>wipe</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>right-left</value>
+          </prop>
+        </node>
+        <node oor:name="wipe-right" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>wipe</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>left-right</value>
+          </prop>
+        </node>
+        <node oor:name="wipe-up" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>wipe</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>bottom-top</value>
+          </prop>
+        </node>
+        <node oor:name="random-transition" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>random</value>
+          </prop>
+        </node>
+        <node oor:name="tile-flip" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>tile-flip</value>
+          </prop>
+        </node>
+        <node oor:name="outside-cube" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>cube-turning</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>outside</value>
+          </prop>
+        </node>
+        <node oor:name="inside-cube" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>cube-turning</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>inside</value>
+          </prop>
+        </node>
+        <node oor:name="revolving-circles" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>revolving-circles</value>
+          </prop>
+        </node>
+        <node oor:name="turning-helix" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>turning-helix</value>
+          </prop>
+        </node>
+        <node oor:name="fall" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>fall</value>
+          </prop>
+        </node>
+        <node oor:name="turn-around" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>turn-around</value>
+          </prop>
+        </node>
+        <node oor:name="iris" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>iris</value>
+          </prop>
+        </node>
+        <node oor:name="turn-down" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>turn-down</value>
+          </prop>
+        </node>
+        <node oor:name="rochade" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>rochade</value>
+          </prop>
+        </node>
+        <node oor:name="venetian3dv" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>venetian-blinds-3d</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>vertical</value>
+          </prop>
+        </node>
+        <node oor:name="venetian3dh" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>venetian-blinds-3d</value>
+          </prop>
+          <prop oor:name="Variant" oor:type="xs:string">
+            <value>horizontal</value>
+          </prop>
+        </node>
+        <node oor:name="static" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>static</value>
+          </prop>
+        </node>
+        <node oor:name="vortex" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>vortex</value>
+          </prop>
+        </node>
+        <node oor:name="ripple" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>ripple</value>
+          </prop>
+        </node>
+        <node oor:name="glitter" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>glitter</value>
+          </prop>
+        </node>
+        <node oor:name="honeycomb" oor:op="replace">
+          <prop oor:name="Set" oor:type="xs:string">
+            <value>honeycomb</value>
           </prop>
         </node>
       </node>
@@ -4209,7 +4949,7 @@ The current presentation contains no OLE objects.</value>
             <value xml:lang="en-US">Basic</value>
           </prop>
           <prop oor:name="Effects" oor:type="oor:string-list">
-            <value oor:separator=";">ooo-entrance-appear;ooo-entrance-fly-in;ooo-entrance-venetian-blinds;ooo-entrance-box;ooo-entrance-checkerboard;ooo-entrance-circle;ooo-entrance-fly-in-slow;ooo-entrance-diamond;ooo-entrance-dissolve-in;ooo-entrance-flash-once;ooo-entrance-peek-in;ooo-entrance-plus;ooo-entrance-random-bars;ooo-entrance-split;ooo-entrance-diagonal-squares;ooo-entrance-wedge;ooo-entrance-wheel;ooo-entrance-wipe;ooo-entrance-random</value>
+            <value oor:separator=";">ooo-entrance-appear;ooo-entrance-fly-in;ooo-entrance-venetian-blinds;ooo-entrance-box;ooo-entrance-checkerboard;ooo-entrance-circle;ooo-entrance-oval;ooo-entrance-fly-in-slow;ooo-entrance-diamond;ooo-entrance-dissolve-in;ooo-entrance-flash-once;ooo-entrance-peek-in;ooo-entrance-plus;ooo-entrance-random-bars;ooo-entrance-split;ooo-entrance-diagonal-squares;ooo-entrance-wedge;ooo-entrance-wheel;ooo-entrance-wipe;ooo-entrance-random</value>
           </prop>
         </node>
         <node oor:name="special" oor:op="replace">
@@ -4346,12 +5086,147 @@ The current presentation contains no OLE objects.</value>
   <oor:component-data xmlns:install="http://openoffice.org/2004/installation" oor:name="ImpressWindowState" oor:package="org.openoffice.Office.UI">
     <node oor:name="UIElements">
       <node oor:name="States">
+        <node oor:name="private:resource/popupmenu/3dobject" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">3D Object</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/3dscene" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">3D Scene</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/3dscene2" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">3D Scene (group)</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/connector" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Connector/Freeform Line</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/curve" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Curve</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/draw" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Shape</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/drawtext" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Shape Text</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/form" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Form Control</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/formrichtext" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Text Box Formatting</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/gluepoint" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Glue Point</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/graphic" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Image</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/group" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Group</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/line" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Line/Arrow</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/measure" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Dimension Line</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/media" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Media</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/multiselect" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Multiple Selection</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/notebookbar" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Notebookbar</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/oleobject" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">OLE Object</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/outline" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Outline</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/page" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Slide</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/pagepane" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Slide Sorter/Pane</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/pagepanenosel" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Slide Sorter/Pane (no selection)</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/pagepanemaster" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Slide Master Sorter/Pane</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/pagepanenoselmaster" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Slide Master Sorter/Pane (no selection)</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/table" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Table</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/tabletext" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Table Text</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/popupmenu/textbox" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Text Box (drawing)</value>
+          </prop>
+        </node>
         <node oor:name="private:resource/toolbar/extrusionobjectbar" oor:op="replace">
           <prop oor:name="DockPos" oor:type="xs:string">
-            <value>0,0</value>
+            <value>1,1</value>
           </prop>
           <prop oor:name="DockingArea" oor:type="xs:int">
-            <value>1</value>
+            <value>0</value>
           </prop>
           <prop oor:name="Visible" oor:type="xs:boolean">
             <value>true</value>
@@ -4371,7 +5246,7 @@ The current presentation contains no OLE objects.</value>
             <value>0</value>
           </prop>
           <prop oor:name="Visible" oor:type="xs:boolean">
-            <value>true</value>
+            <value>false</value>
           </prop>
           <prop oor:name="UIName" oor:type="xs:string">
             <value xml:lang="en-US">Line and Filling</value>
@@ -4486,7 +5361,7 @@ The current presentation contains no OLE objects.</value>
             <value>false</value>
           </prop>
           <prop oor:name="UIName" oor:type="xs:string">
-            <value xml:lang="en-US">Circles and Ovals</value>
+            <value xml:lang="en-US">Legacy Circles and Ovals</value>
           </prop>
           <prop oor:name="Visible" oor:type="xs:boolean">
             <value>false</value>
@@ -4627,7 +5502,7 @@ The current presentation contains no OLE objects.</value>
             <value xml:lang="en-US">Image</value>
           </prop>
           <prop oor:name="Visible" oor:type="xs:boolean">
-            <value>true</value>
+            <value>false</value>
           </prop>
           <prop oor:name="ContextSensitive" oor:type="xs:boolean">
             <value>true</value>
@@ -4638,7 +5513,7 @@ The current presentation contains no OLE objects.</value>
             <value>false</value>
           </prop>
           <prop oor:name="UIName" oor:type="xs:string">
-            <value xml:lang="en-US">Graphic Filter</value>
+            <value xml:lang="en-US">Image Filter</value>
           </prop>
           <prop oor:name="Visible" oor:type="xs:boolean">
             <value>false</value>
@@ -4649,7 +5524,7 @@ The current presentation contains no OLE objects.</value>
         </node>
         <node oor:name="private:resource/toolbar/outlinetoolbar" oor:op="replace">
           <prop oor:name="DockPos" oor:type="xs:string">
-            <value>1,0</value>
+            <value>0,1</value>
           </prop>
           <prop oor:name="DockingArea" oor:type="xs:int">
             <value>0</value>
@@ -4687,6 +5562,20 @@ The current presentation contains no OLE objects.</value>
           </prop>
           <prop oor:name="HideFromToolbarMenu" oor:type="xs:boolean">
             <value>true</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/toolbar/classificationbar" oor:op="replace">
+          <prop oor:name="DockPos" oor:type="xs:string">
+            <value>0,2</value>
+          </prop>
+          <prop oor:name="DockingArea" oor:type="xs:int">
+            <value>0</value>
+          </prop>
+          <prop oor:name="Visible" oor:type="xs:boolean">
+            <value>false</value>
+          </prop>
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">TSCP Classification</value>
           </prop>
         </node>
         <node oor:name="private:resource/toolbar/basicshapes" oor:op="replace">
@@ -4789,7 +5678,7 @@ The current presentation contains no OLE objects.</value>
             <value>false</value>
           </prop>
           <prop oor:name="UIName" oor:type="xs:string">
-            <value xml:lang="en-US">Rectangles</value>
+            <value xml:lang="en-US">Legacy Rectangles</value>
           </prop>
           <prop oor:name="Visible" oor:type="xs:boolean">
             <value>false</value>
@@ -4811,7 +5700,7 @@ The current presentation contains no OLE objects.</value>
         </node>
         <node oor:name="private:resource/toolbar/slideviewtoolbar" oor:op="replace">
           <prop oor:name="DockPos" oor:type="xs:string">
-            <value>0,1</value>
+            <value>1,0</value>
           </prop>
           <prop oor:name="DockingArea" oor:type="xs:int">
             <value>0</value>
@@ -4820,7 +5709,7 @@ The current presentation contains no OLE objects.</value>
             <value xml:lang="en-US">Slide Sorter</value>
           </prop>
           <prop oor:name="Visible" oor:type="xs:boolean">
-            <value>true</value>
+            <value>false</value>
           </prop>
           <prop oor:name="ContextSensitive" oor:type="xs:boolean">
             <value>true</value>
@@ -4828,7 +5717,7 @@ The current presentation contains no OLE objects.</value>
         </node>
         <node oor:name="private:resource/toolbar/slideviewobjectbar" oor:op="replace">
           <prop oor:name="DockPos" oor:type="xs:string">
-            <value>0,1</value>
+            <value>1,0</value>
           </prop>
           <prop oor:name="DockingArea" oor:type="xs:int">
             <value>0</value>
@@ -4876,7 +5765,7 @@ The current presentation contains no OLE objects.</value>
             <value>0,1</value>
           </prop>
           <prop oor:name="Visible" oor:type="xs:boolean">
-            <value>true</value>
+            <value>false</value>
           </prop>
           <prop oor:name="UIName" oor:type="xs:string">
             <value xml:lang="en-US">Text Formatting</value>
@@ -4886,17 +5775,17 @@ The current presentation contains no OLE objects.</value>
           </prop>
         </node>
         <node oor:name="private:resource/toolbar/toolbar" oor:op="replace">
+          <prop oor:name="DockPos" oor:type="xs:string">
+            <value>0,1</value>
+          </prop>
           <prop oor:name="DockingArea" oor:type="xs:int">
-            <value>1</value>
+            <value>0</value>
           </prop>
           <prop oor:name="Visible" oor:type="xs:boolean">
             <value>true</value>
           </prop>
           <prop oor:name="UIName" oor:type="xs:string">
             <value xml:lang="en-US">Drawing</value>
-          </prop>
-          <prop oor:name="ContextSensitive" oor:type="xs:boolean">
-            <value>true</value>
           </prop>
         </node>
         <node oor:name="private:resource/toolbar/tableobjectbar" oor:op="replace">
@@ -4946,10 +5835,10 @@ The current presentation contains no OLE objects.</value>
         </node>
         <node oor:name="private:resource/toolbar/bezierobjectbar" oor:op="replace">
           <prop oor:name="DockPos" oor:type="xs:string">
-            <value>0,0</value>
+            <value>1,1</value>
           </prop>
           <prop oor:name="DockingArea" oor:type="xs:int">
-            <value>1</value>
+            <value>0</value>
           </prop>
           <prop oor:name="UIName" oor:type="xs:string">
             <value xml:lang="en-US">Edit Points</value>
@@ -4989,7 +5878,7 @@ The current presentation contains no OLE objects.</value>
             <value xml:lang="en-US">Media Playback</value>
           </prop>
           <prop oor:name="Visible" oor:type="xs:boolean">
-            <value>true</value>
+            <value>false</value>
           </prop>
           <prop oor:name="ContextSensitive" oor:type="xs:boolean">
             <value>true</value>
@@ -5021,20 +5910,14 @@ The current presentation contains no OLE objects.</value>
           </prop>
         </node>
         <node oor:name="private:resource/toolbar/masterviewtoolbar" oor:op="replace">
-          <prop oor:name="Docked" oor:type="xs:boolean">
-            <value>false</value>
+          <prop oor:name="DockPos" oor:type="xs:string">
+            <value>2,0</value>
           </prop>
           <prop oor:name="DockingArea" oor:type="xs:int">
             <value>0</value>
           </prop>
-          <prop oor:name="Locked" oor:type="xs:boolean">
-            <value>true</value>
-          </prop>
           <prop oor:name="Visible" oor:type="xs:boolean">
             <value>true</value>
-          </prop>
-          <prop oor:name="Pos" oor:type="xs:string">
-            <value>500,100</value>
           </prop>
           <prop oor:name="UIName" oor:type="xs:string">
             <value xml:lang="en-US">Master View</value>
@@ -5074,6 +5957,31 @@ The current presentation contains no OLE objects.</value>
             <value>false</value>
           </prop>
         </node>
+        <node oor:name="private:resource/toolbar/singlemode" oor:op="replace">
+          <prop oor:name="DockPos" oor:type="xs:string">
+            <value>0,0</value>
+          </prop>
+          <prop oor:name="DockingArea" oor:type="xs:int">
+            <value>0</value>
+          </prop>
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Standard (Single Mode)</value>
+          </prop>
+          <prop oor:name="Visible" oor:type="xs:boolean">
+            <value>false</value>
+          </prop>
+        </node>
+        <node oor:name="private:resource/toolbar/notebookbarshortcuts" oor:op="replace">
+          <prop oor:name="UIName" oor:type="xs:string">
+            <value xml:lang="en-US">Notebookbar shortcuts</value>
+          </prop>
+          <prop oor:name="Visible" oor:type="xs:boolean">
+            <value>false</value>
+          </prop>
+          <prop oor:name="HideFromToolbarMenu" oor:type="xs:boolean">
+            <value>true</value>
+          </prop>
+        </node>
       </node>
     </node>
   </oor:component-data>
@@ -5081,7 +5989,7 @@ The current presentation contains no OLE objects.</value>
     <node oor:name="Filters">
       <node oor:name="Apple Keynote" oor:op="replace">
         <prop oor:name="Flags">
-          <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
+          <value>IMPORT ALIEN 3RDPARTYFILTER PREFERRED</value>
         </prop>
         <prop oor:name="FilterService">
           <value>org.libreoffice.comp.Impress.KeynoteImportFilter</value>
@@ -5109,7 +6017,7 @@ The current presentation contains no OLE objects.</value>
           <value>sdfilt</value>
         </prop>
         <prop oor:name="UIName">
-          <value xml:lang="en-US">Microsoft PowerPoint 97/2000/XP/2003</value>
+          <value xml:lang="en-US">Microsoft PowerPoint 97-2003</value>
         </prop>
         <prop oor:name="FileFormatVersion">
           <value>0</value>
@@ -5132,7 +6040,7 @@ The current presentation contains no OLE objects.</value>
           <value>sdfilt</value>
         </prop>
         <prop oor:name="UIName">
-          <value xml:lang="en-US">Microsoft PowerPoint 97/2000/XP/2003 AutoPlay</value>
+          <value xml:lang="en-US">Microsoft PowerPoint 97-2003 AutoPlay</value>
         </prop>
         <prop oor:name="FileFormatVersion">
           <value>0</value>
@@ -5164,6 +6072,9 @@ The current presentation contains no OLE objects.</value>
         <prop oor:name="DocumentService">
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
+        <prop oor:name="UIName">
+          <value xml:lang="en-US">Microsoft PowerPoint 97-2003 Template</value>
+        </prop>
       </node>
       <node oor:name="impress_StarOffice_XML_Draw" oor:op="replace">
         <prop oor:name="Flags">
@@ -5183,6 +6094,9 @@ The current presentation contains no OLE objects.</value>
         <prop oor:name="TemplateName"/>
         <prop oor:name="DocumentService">
           <value>com.sun.star.presentation.PresentationDocument</value>
+        </prop>
+        <prop oor:name="UIName">
+          <value xml:lang="en-US">OpenOffice.org 1.0 Drawing (Impress)</value>
         </prop>
       </node>
       <node oor:name="OpenDocument Presentation Flat XML" oor:op="replace">
@@ -5229,6 +6143,9 @@ The current presentation contains no OLE objects.</value>
         <prop oor:name="DocumentService">
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
+        <prop oor:name="UIName">
+          <value xml:lang="en-US">OpenOffice.org 1.0 Presentation</value>
+        </prop>
       </node>
       <node oor:name="impress_StarOffice_XML_Impress_Template" oor:op="replace">
         <prop oor:name="Flags">
@@ -5248,6 +6165,9 @@ The current presentation contains no OLE objects.</value>
         <prop oor:name="TemplateName"/>
         <prop oor:name="DocumentService">
           <value>com.sun.star.presentation.PresentationDocument</value>
+        </prop>
+        <prop oor:name="UIName">
+          <value xml:lang="en-US">OpenOffice.org 1.0 Presentation Template</value>
         </prop>
       </node>
       <node oor:name="impress_pdf_Export" oor:op="replace">
@@ -5277,31 +6197,6 @@ The current presentation contains no OLE objects.</value>
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
       </node>
-      <node oor:name="placeware_Export" oor:op="replace">
-        <prop oor:name="Flags">
-          <value>EXPORT ALIEN 3RDPARTYFILTER</value>
-        </prop>
-        <prop oor:name="UIComponent"/>
-        <prop oor:name="FilterService">
-          <value>com.sun.star.comp.Impress.PlaceWareExportFilter</value>
-        </prop>
-        <prop oor:name="UserData">
-          <value/>
-        </prop>
-        <prop oor:name="UIName">
-          <value xml:lang="en-US">PWP - PlaceWare</value>
-        </prop>
-        <prop oor:name="FileFormatVersion">
-          <value>0</value>
-        </prop>
-        <prop oor:name="Type">
-          <value>pwp_PlaceWare</value>
-        </prop>
-        <prop oor:name="TemplateName"/>
-        <prop oor:name="DocumentService">
-          <value>com.sun.star.presentation.PresentationDocument</value>
-        </prop>
-      </node>
       <node oor:name="impress8" oor:op="replace">
         <prop oor:name="Flags">
           <value>IMPORT EXPORT TEMPLATE OWN DEFAULT PREFERRED ENCRYPTION PASSWORDTOMODIFY</value>
@@ -5320,6 +6215,9 @@ The current presentation contains no OLE objects.</value>
         <prop oor:name="TemplateName"/>
         <prop oor:name="DocumentService">
           <value>com.sun.star.presentation.PresentationDocument</value>
+        </prop>
+        <prop oor:name="UIName">
+          <value xml:lang="en-US">ODF Presentation</value>
         </prop>
       </node>
       <node oor:name="impress8_template" oor:op="replace">
@@ -5341,6 +6239,9 @@ The current presentation contains no OLE objects.</value>
         <prop oor:name="DocumentService">
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
+        <prop oor:name="UIName">
+          <value xml:lang="en-US">ODF Presentation Template</value>
+        </prop>
       </node>
       <node oor:name="impress8_draw" oor:op="replace">
         <prop oor:name="Flags">
@@ -5361,10 +6262,13 @@ The current presentation contains no OLE objects.</value>
         <prop oor:name="DocumentService">
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
+        <prop oor:name="UIName">
+          <value xml:lang="en-US">ODF Drawing (Impress)</value>
+        </prop>
       </node>
       <node oor:name="Impress MS PowerPoint 2007 XML" oor:op="replace">
         <prop oor:name="Flags">
-          <value>IMPORT EXPORT ALIEN 3RDPARTYFILTER PREFERRED ENCRYPTION PASSWORDTOMODIFY</value>
+          <value>IMPORT EXPORT ALIEN 3RDPARTYFILTER PREFERRED ENCRYPTION PASSWORDTOMODIFY SUPPORTSSIGNING</value>
         </prop>
         <prop oor:name="UIComponent"/>
         <prop oor:name="FilterService">
@@ -5381,6 +6285,9 @@ The current presentation contains no OLE objects.</value>
         <prop oor:name="DocumentService">
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
+        <prop oor:name="UIName">
+          <value xml:lang="en-US">Microsoft PowerPoint 2007-2019 XML</value>
+        </prop>
       </node>
       <node oor:name="Impress MS PowerPoint 2007 XML AutoPlay" oor:op="replace">
         <prop oor:name="Flags">
@@ -5394,7 +6301,7 @@ The current presentation contains no OLE objects.</value>
           <value>OXML</value>
         </prop>
         <prop oor:name="UIName">
-          <value xml:lang="en-US">Microsoft PowerPoint 2007-2016 XML AutoPlay</value>
+          <value xml:lang="en-US">Microsoft PowerPoint 2007-2019 XML AutoPlay</value>
         </prop>
         <prop oor:name="FileFormatVersion"/>
         <prop oor:name="Type">
@@ -5417,7 +6324,7 @@ The current presentation contains no OLE objects.</value>
           <value>OXML</value>
         </prop>
         <prop oor:name="UIName">
-          <value xml:lang="en-US">Microsoft PowerPoint 2007-2016 XML Template</value>
+          <value xml:lang="en-US">Microsoft PowerPoint 2007-2019 XML Template</value>
         </prop>
         <prop oor:name="FileFormatVersion"/>
         <prop oor:name="Type">
@@ -5503,7 +6410,7 @@ The current presentation contains no OLE objects.</value>
       </node>
       <node oor:name="ClarisWorks_Impress" oor:op="replace">
         <prop oor:name="Flags">
-          <value>IMPORT ALIEN USESOPTIONS 3RDPARTYFILTER PREFERRED</value>
+          <value>IMPORT ALIEN 3RDPARTYFILTER PREFERRED</value>
         </prop>
         <prop oor:name="UIComponent"/>
         <prop oor:name="FilterService">
@@ -5522,6 +6429,66 @@ The current presentation contains no OLE objects.</value>
           <value>impress_ClarisWorks</value>
         </prop>
         <prop oor:name="TemplateName"/>
+        <prop oor:name="DocumentService">
+          <value>com.sun.star.presentation.PresentationDocument</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice_Presentation" oor:op="replace">
+        <prop oor:name="Flags">
+          <value>IMPORT ALIEN 3RDPARTYFILTER PREFERRED</value>
+        </prop>
+        <prop oor:name="FilterService">
+          <value>org.libreoffice.comp.Impress.StarOfficePresentationImportFilter</value>
+        </prop>
+        <prop oor:name="UIName">
+          <value xml:lang="en-US">Legacy StarOffice Presentation</value>
+        </prop>
+        <prop oor:name="FileFormatVersion">
+          <value>0</value>
+        </prop>
+        <prop oor:name="Type">
+          <value>StarOffice_Presentation</value>
+        </prop>
+        <prop oor:name="DocumentService">
+          <value>com.sun.star.presentation.PresentationDocument</value>
+        </prop>
+      </node>
+      <node oor:name="MWAW_Presentation" oor:op="replace">
+        <prop oor:name="Flags">
+          <value>IMPORT ALIEN 3RDPARTYFILTER PREFERRED</value>
+        </prop>
+        <prop oor:name="FilterService">
+          <value>com.sun.star.comp.Impress.MWAWPresentationImportFilter</value>
+        </prop>
+        <prop oor:name="UIName">
+          <value xml:lang="en-US">Legacy Mac Presentation</value>
+        </prop>
+        <prop oor:name="FileFormatVersion">
+          <value>0</value>
+        </prop>
+        <prop oor:name="Type">
+          <value>MWAW_Presentation</value>
+        </prop>
+        <prop oor:name="DocumentService">
+          <value>com.sun.star.presentation.PresentationDocument</value>
+        </prop>
+      </node>
+      <node oor:name="PowerPoint 3" oor:op="replace">
+        <prop oor:name="Flags">
+          <value>IMPORT ALIEN 3RDPARTYFILTER</value>
+        </prop>
+        <prop oor:name="FilterService">
+          <value>com.sun.star.comp.Impress.MWAWPresentationImportFilter</value>
+        </prop>
+        <prop oor:name="UIName">
+          <value xml:lang="en-US">Microsoft PowerPoint 1-4 and 95's</value>
+        </prop>
+        <prop oor:name="FileFormatVersion">
+          <value>0</value>
+        </prop>
+        <prop oor:name="Type">
+          <value>impress_PowerPoint3</value>
+        </prop>
         <prop oor:name="DocumentService">
           <value>com.sun.star.presentation.PresentationDocument</value>
         </prop>
@@ -5580,7 +6547,7 @@ The current presentation contains no OLE objects.</value>
         </prop>
         <prop oor:name="URLPattern"/>
         <prop oor:name="Extensions">
-          <value>ppt</value>
+          <value>ppt dps</value>
         </prop>
         <prop oor:name="MediaType">
           <value>application/vnd.ms-powerpoint</value>
@@ -5592,7 +6559,7 @@ The current presentation contains no OLE objects.</value>
           <value>MS PowerPoint 97</value>
         </prop>
         <prop oor:name="UIName">
-          <value>Microsoft PowerPoint 97/2000/XP/2003</value>
+          <value>Microsoft PowerPoint 97-2003</value>
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
@@ -5614,7 +6581,7 @@ The current presentation contains no OLE objects.</value>
           <value>MS PowerPoint 97 AutoPlay</value>
         </prop>
         <prop oor:name="UIName">
-          <value>Microsoft PowerPoint 97/2000/XP/2003</value>
+          <value>Microsoft PowerPoint 97-2003</value>
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
@@ -5624,7 +6591,7 @@ The current presentation contains no OLE objects.</value>
         </prop>
         <prop oor:name="URLPattern"/>
         <prop oor:name="Extensions">
-          <value>pot</value>
+          <value>pot dpt</value>
         </prop>
         <prop oor:name="MediaType">
           <value>application/vnd.ms-powerpoint</value>
@@ -5730,22 +6697,6 @@ The current presentation contains no OLE objects.</value>
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
-      <node oor:name="pwp_PlaceWare" oor:op="replace">
-        <prop oor:name="DetectService"/>
-        <prop oor:name="URLPattern"/>
-        <prop oor:name="Extensions">
-          <value>pwp</value>
-        </prop>
-        <prop oor:name="MediaType"/>
-        <prop oor:name="Preferred">
-          <value>false</value>
-        </prop>
-        <prop oor:name="PreferredFilter"/>
-        <prop oor:name="UIName">
-          <value>PWP - PlaceWare</value>
-        </prop>
-        <prop oor:name="ClipboardFormat"/>
-      </node>
       <node oor:name="impress8" oor:op="replace">
         <prop oor:name="DetectService">
           <value>com.sun.star.comp.filters.StorageFilterDetect</value>
@@ -5840,7 +6791,7 @@ The current presentation contains no OLE objects.</value>
           <value>Impress MS PowerPoint 2007 XML</value>
         </prop>
         <prop oor:name="UIName">
-          <value xml:lang="en-US">Microsoft PowerPoint 2007-2016 XML</value>
+          <value xml:lang="en-US">Microsoft PowerPoint 2007-2019 XML</value>
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
@@ -5862,7 +6813,7 @@ The current presentation contains no OLE objects.</value>
           <value>Impress MS PowerPoint 2007 XML AutoPlay</value>
         </prop>
         <prop oor:name="UIName">
-          <value xml:lang="en-US">Microsoft PowerPoint 2007-2016 XML</value>
+          <value xml:lang="en-US">Microsoft PowerPoint 2007-2019 XML</value>
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
@@ -5884,7 +6835,7 @@ The current presentation contains no OLE objects.</value>
           <value>Impress MS PowerPoint 2007 XML Template</value>
         </prop>
         <prop oor:name="UIName">
-          <value xml:lang="en-US">Microsoft PowerPoint 2007-2016 XML Template</value>
+          <value xml:lang="en-US">Microsoft PowerPoint 2007-2019 XML Template</value>
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
@@ -5976,6 +6927,56 @@ The current presentation contains no OLE objects.</value>
         </prop>
         <prop oor:name="ClipboardFormat"/>
       </node>
+      <node oor:name="StarOffice_Presentation" oor:op="replace">
+        <prop oor:name="DetectService">
+          <value>org.libreoffice.comp.Impress.StarOfficePresentationImportFilter</value>
+        </prop>
+        <prop oor:name="Extensions">
+          <value>sdd</value>
+        </prop>
+        <prop oor:name="MediaType"/>
+        <prop oor:name="Preferred">
+          <value>true</value>
+        </prop>
+        <prop oor:name="PreferredFilter">
+          <value>StarOffice_Presentation</value>
+        </prop>
+        <prop oor:name="UIName">
+          <value>Legacy StarOffice Presentation</value>
+        </prop>
+      </node>
+      <node oor:name="MWAW_Presentation" oor:op="replace">
+        <prop oor:name="DetectService">
+          <value>com.sun.star.comp.Impress.MWAWImpressImportFilter</value>
+        </prop>
+        <prop oor:name="Extensions">
+          <value>*</value>
+        </prop>
+        <prop oor:name="MediaType"/>
+        <prop oor:name="Preferred">
+          <value>true</value>
+        </prop>
+        <prop oor:name="PreferredFilter">
+          <value>MWAW_Presentation</value>
+        </prop>
+        <prop oor:name="UIName">
+          <value>Legacy Mac Presentation</value>
+        </prop>
+      </node>
+      <node oor:name="impress_PowerPoint3" oor:op="replace">
+        <prop oor:name="DetectService">
+          <value>com.sun.star.comp.Impress.MWAWPresentationImportFilter</value>
+        </prop>
+        <prop oor:name="Extensions">
+          <value>ppt pot</value>
+        </prop>
+        <prop oor:name="PreferredFilter">
+          <value>PowerPoint 3</value>
+        </prop>
+        <prop oor:name="UIName">
+          <value>Microsoft PowerPoint 1-4</value>
+        </prop>
+      </node>
     </node>
   </oor:component-data>
   <oor:component-data xmlns:install="http://openoffice.org/2004/installation" oor:name="Common" oor:package="org.openoffice.Office">
@@ -5990,22 +6991,6 @@ The current presentation contains no OLE objects.</value>
           </prop>
           <prop oor:name="TargetName" oor:type="xs:string">
             <value>_default</value>
-          </prop>
-        </node>
-      </node>
-      <node oor:name="Wizard">
-        <node oor:name="m5" oor:op="replace">
-          <prop oor:name="URL" oor:type="xs:string">
-            <value>slot:10425</value>
-          </prop>
-          <prop oor:name="Title">
-            <value xml:lang="en-US">~Presentation...</value>
-          </prop>
-          <prop oor:name="TargetName" oor:type="xs:string">
-            <value>_self</value>
-          </prop>
-          <prop oor:name="ImageIdentifier" oor:type="xs:string">
-            <value>private:image/3216</value>
           </prop>
         </node>
       </node>
