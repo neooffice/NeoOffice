@@ -221,9 +221,16 @@ bool SwFlowFrm::IsKeep( const SwAttrSet& rAttrs, bool bCheckIfLastRowShouldKeep 
                 {
                     const SwAttrSet* pSet = NULL;
 
+#ifdef NO_LIBO_BUG_100813_FIX
                     if ( pNxt->IsInTab() )
+#else	// NO_LIBO_BUG_100813_FIX
+                    SwTabFrm* pTab = pNxt->IsInTab() ? pNxt->FindTabFrm() : nullptr;
+                    if (pTab)
+#endif	// NO_LIBO_BUG_100813_FIX
                     {
+#ifdef NO_LIBO_BUG_100813_FIX
                         SwTabFrm* pTab = pNxt->FindTabFrm();
+#endif	// NO_LIBO_BUG_100813_FIX
                         if ( ! m_rThis.IsInTab() || m_rThis.FindTabFrm() != pTab )
                             pSet = &pTab->GetFmt()->GetAttrSet();
                     }
@@ -1789,7 +1796,11 @@ bool SwFlowFrm::MoveFwd( bool bMakePage, bool bPageBreak, bool bMoveAlways )
     SwFtnBossFrm *pOldBoss = m_rThis.FindFtnBossFrm();
     if (m_rThis.IsInFtn())
     {
+#ifdef NO_LIBO_BUG_100813_FIX
         if (!m_rThis.IsCntntFrm())
+#else	// NO_LIBO_BUG_100813_FIX
+        if (!m_rThis.IsCntntFrm() || !pOldBoss)
+#endif	// NO_LIBO_BUG_100813_FIX
         {
 #ifndef NO_LIBO_MOVE_TABLE_IN_FOOTNOTE_FIX
             assert(!ForbiddenForFootnoteCntFwd()); // prevented by IsMoveable()
@@ -2012,6 +2023,11 @@ bool SwFlowFrm::MoveBwd( bool &rbReformat )
     }
 
     SwFtnBossFrm * pOldBoss = m_rThis.FindFtnBossFrm();
+#ifndef NO_LIBO_BUG_100813_FIX
+    if (!pOldBoss)
+        return false;
+#endif	// !NO_LIBO_BUG_100813_FIX
+
     SwPageFrm * const pOldPage = pOldBoss->FindPageFrm();
     SwLayoutFrm *pNewUpper = 0;
     bool bCheckPageDescs = false;
