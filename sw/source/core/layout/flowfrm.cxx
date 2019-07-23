@@ -2405,6 +2405,13 @@ bool SwFlowFrm::MoveBwd( bool &rbReformat )
              ( pNextNewUpper == m_rThis.GetUpper() ||
                pNextNewUpper->GetType() != m_rThis.GetUpper()->GetType() ) )
         {
+#ifndef NO_LIBO_BUG_107398_FIX
+            // tdf#107398 do not leave empty footnote container around
+            if (!pNewUpper->Lower() && pNewUpper->IsFtnContFrm())
+            {
+                pNewUpper->Cut();
+            }
+#endif	 // !NO_LIBO_BUG_107398_FIX
             pNewUpper = 0L;
             OSL_FAIL( "<SwFlowFrm::MoveBwd(..)> - layout loop control for layout action <Move Backward> applied!" );
         }
