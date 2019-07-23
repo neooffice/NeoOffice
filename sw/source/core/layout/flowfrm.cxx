@@ -2410,6 +2410,7 @@ bool SwFlowFrm::MoveBwd( bool &rbReformat )
             if (!pNewUpper->Lower() && pNewUpper->IsFtnContFrm())
             {
                 pNewUpper->Cut();
+                delete pNewUpper;
             }
 #endif	 // !NO_LIBO_BUG_107398_FIX
             pNewUpper = 0L;
