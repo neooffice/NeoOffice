@@ -357,6 +357,9 @@ void SwFrame::PrepareMake(vcl::RenderContext* pRenderContext)
     StackHack aHack;
     if ( GetUpper() )
     {
+#ifndef NO_LIBO_BUG_119126_FIX
+        SwFrameDeleteGuard aDeleteGuard(this);
+#endif	// !NO_LIBO_BUG_119126_FIX
         if ( lcl_IsCalcUpperAllowed( *this ) )
             GetUpper()->Calc(pRenderContext);
         OSL_ENSURE( GetUpper(), ":-( Layout unstable (Upper gone)." );

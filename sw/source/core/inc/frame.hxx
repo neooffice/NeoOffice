@@ -711,7 +711,11 @@ public:
     bool IsProtected() const;
 
     bool IsColLocked()  const { return mbColLocked; }
+#ifdef NO_LIBO_BUG_119126_FIX
     bool IsDeleteForbidden()  const { return mbForbidDelete; }
+#else	// NO_LIBO_BUG_119126_FIX
+    virtual bool IsDeleteForbidden() const { return mbForbidDelete; }
+#endif	// NO_LIBO_BUG_119126_FIX
 
     /// this is the only way to delete a SwFrame instance
     static void DestroyFrame(SwFrame *const pFrame);
