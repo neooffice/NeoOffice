@@ -1867,6 +1867,10 @@ bool SwFlowFrame::MoveFwd( bool bMakePage, bool bPageBreak, bool bMoveAlways )
         }
     }
 
+#ifndef NO_LIBO_BUG_117086_FIX
+    std::unique_ptr<SwFrameDeleteGuard> xDeleteGuard(bMakePage ? new SwFrameDeleteGuard(pOldBoss) : nullptr);
+#endif	// !NO_LIBO_BUG_117086_FIX
+
     bool bSamePage = true;
     SwLayoutFrame *pNewUpper =
             m_rThis.GetLeaf( bMakePage ? MAKEPAGE_INSERT : MAKEPAGE_NONE, true );
@@ -1904,6 +1908,10 @@ bool SwFlowFrame::MoveFwd( bool bMakePage, bool bPageBreak, bool bMoveAlways )
         pNewBoss = pNewBoss->FindFootnoteBossFrame( true );
         pOldBoss = pOldBoss->FindFootnoteBossFrame( true );
         SwPageFrame* pNewPage = pOldPage;
+
+#ifndef NO_LIBO_BUG_117086_FIX
+        xDeleteGuard.reset();
+#endif	// !NO_LIBO_BUG_117086_FIX
 
         // First, we move the footnotes.
         bool bFootnoteMoved = false;
