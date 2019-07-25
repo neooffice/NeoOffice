@@ -1247,7 +1247,14 @@ bool SwLayAction::FormatLayout( SwLayoutFrm *pLay, bool bAddRect )
             aOldRect = static_cast<SwPageFrm*>(pLay)->GetBoundRect();
         }
 
+#ifdef NO_LIBO_BUG_91695_FIX
         pLay->Calc();
+#else	// NO_LIBO_BUG_91695_FIX
+        {
+            SwFrmDeleteGuard aDeleteGuard(pLay);
+            pLay->Calc();
+        }
+#endif	// NO_LIBO_BUG_91695_FIX
         if ( aOldFrame != pLay->Frm() )
             bChanged = true;
 
@@ -1395,6 +1402,9 @@ bool SwLayAction::FormatLayout( SwLayoutFrm *pLay, bool bAddRect )
     if ( pLay->IsFtnFrm() ) // no LayFrms as Lower
         return bChanged;
 
+#ifndef NO_LIBO_BUG_91695_FIX
+    SwFrmDeleteGuard aDeleteGuard(pLay);
+#endif	// !NO_LIBO_BUG_91695_FIX
     SwFrm *pLow = pLay->Lower();
     bool bTabChanged = false;
     while ( pLow && pLow->GetUpper() == pLay )

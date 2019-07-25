@@ -355,6 +355,9 @@ void SwFrm::PrepareMake()
     StackHack aHack;
     if ( GetUpper() )
     {
+#ifndef NO_LIBO_BUG_119126_FIX
+        SwFrmDeleteGuard aDeleteGuard(this);
+#endif	// !NO_LIBO_BUG_119126_FIX
         if ( lcl_IsCalcUpperAllowed( *this ) )
             GetUpper()->Calc();
         OSL_ENSURE( GetUpper(), ":-( Layout unstable (Upper gone)." );
@@ -458,7 +461,14 @@ void SwFrm::OptPrepareMake()
     if ( GetUpper() && !GetUpper()->IsFooterFrm() &&
          !GetUpper()->IsFlyFrm() )
     {
+#ifdef NO_LIBO_BUG_91695_FIX
         GetUpper()->Calc();
+#else	// NO_LIBO_BUG_91695_FIX
+        {
+            SwFrmDeleteGuard aDeleteGuard(this);
+            GetUpper()->Calc();
+        }
+#endif	// NO_LIBO_BUG_91695_FIX
         OSL_ENSURE( GetUpper(), ":-( Layout unstable (Upper gone)." );
         if ( !GetUpper() )
             return;
@@ -1167,6 +1177,10 @@ void SwCntntFrm::MakeAll()
     bool bStopFormat = PushToStopFormatStack( this );
 #endif	// USE_JAVA
 
+#ifndef NO_LIBO_BUG_95974_FIX
+    bool const bDeleteForbidden(IsDeleteForbidden());
+    ForbidDelete();
+#endif	// !NO_LIBO_BUG_95974_FIX
     LockJoin();
     long nFormatCount = 0;
     // - loop prevention
@@ -1739,6 +1753,28 @@ void SwCntntFrm::MakeAll()
         if ( !bMovedFwd && !MoveFwd( bMakePage, false ) )
             bMakePage = false;
         SWREFRESHFN( this )
+#ifndef NO_LIBO_BUG_101821_FIX
+        if (!bMovedFwd && bFtn && GetIndPrev() != pPre)
+        {   // SwFlowFrame::CutTree() could have formatted and deleted pPre
+            auto const pPrevFtnFrm(static_cast<SwFtnFrm const*>(GetUpper())->GetMaster());
+            bool bReset = true;
+            if (pPrevFtnFrm)
+            {   // use GetIndNext() in case there are sections
+                for (auto p = pPrevFtnFrm->Lower(); p; p = p->GetIndNext())
+                {
+                    if (p == pPre)
+                    {
+                        bReset = false;
+                        break;
+                    }
+                }
+            }
+            if (bReset)
+            {
+                pPre = nullptr;
+            }
+        }
+#endif	// !NO_LIBO_BUG_101821_FIX
 
         // If MoveFwd moves the paragraph to the next page, a following
         // paragraph, which contains footnotes can cause the old upper
@@ -1804,6 +1840,10 @@ void SwCntntFrm::MakeAll()
     delete pSaveFtn;
 
     UnlockJoin();
+#ifndef NO_LIBO_BUG_95974_FIX
+    if (!bDeleteForbidden)
+        AllowDelete();
+#endif	// !NO_LIBO_BUG_95974_FIX
     if ( bMovedFwd || bMovedBwd )
         pNotify->SetInvaKeep();
     // OD 2004-02-26 #i25029#

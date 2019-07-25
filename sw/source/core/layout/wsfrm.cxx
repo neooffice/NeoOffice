@@ -77,6 +77,9 @@ SwFrm::SwFrm( SwModify *pMod, SwFrm* pSib ) :
     mbValidPos = mbValidPrtArea = mbValidSize = mbValidLineNum = mbRetouche =
     mbFixSize = mbColLocked = false;
     mbCompletePaint = mbInfInvalid = true;
+#ifndef NO_LIBO_BUG_119155_FIX
+    mbForbidDelete = false;
+#endif	// !NO_LIBO_BUG_119155_FIX
 }
 
 const IDocumentDrawModelAccess* SwFrm::getIDocumentDrawModelAccess()

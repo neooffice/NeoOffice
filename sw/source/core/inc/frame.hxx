@@ -384,6 +384,9 @@ protected:
     bool mbInfSct        : 1;  // Frm is in a section
     bool mbColLocked     : 1;  // lock Grow/Shrink for column-wise section
                                   // or fly frames, will be set in Format
+#ifndef NO_LIBO_BUG_119155_FIX
+    bool mbForbidDelete : 1;
+#endif	// !NO_LIBO_BUG_119155_FIX
 
     void ColLock()      { mbColLocked = true; }
     void ColUnlock()    { mbColLocked = false; }
@@ -851,6 +854,9 @@ public:
     bool IsProtected() const;
 
     bool IsColLocked()  const { return mbColLocked; }
+#ifndef NO_LIBO_BUG_119155_FIX
+    virtual bool IsDeleteForbidden()  const { return mbForbidDelete; }
+#endif	// !NO_LIBO_BUG_119155_FIX
 
     virtual ~SwFrm();
 
@@ -899,6 +905,11 @@ public:
     bool KnowsFormat( const SwFmt& rFmt ) const;
     void RegisterToFormat( SwFmt& rFmt );
     void ValidateThisAndAllLowers( const sal_uInt16 nStage );
+
+#ifndef NO_LIBO_BUG_119155_FIX
+    void ForbidDelete()      { mbForbidDelete = true; }
+    void AllowDelete()    { mbForbidDelete = false; }
+#endif	// !NO_LIBO_BUG_119155_FIX
 
     //UUUU
     drawinglayer::attribute::SdrAllFillAttributesHelperPtr getSdrAllFillAttributesHelper() const;
@@ -1233,6 +1244,33 @@ inline bool SwFrm::IsAccessibleFrm() const
 {
     return (GetType() & FRM_ACCESSIBLE) != 0;
 }
+
+#ifndef NO_LIBO_BUG_91695_FIX
+//use this to protect a SwFrm for a given scope from getting deleted
+class SwFrmDeleteGuard
+{
+private:
+    SwFrm *m_pFrm;
+    bool m_bOldDeleteAllowed;
+public:
+    //Flag pFrm for SwFrmDeleteGuard lifetime that we shouldn't delete
+    //it in e.g. SwSectionFrm::MergeNext etc because we will need it
+    //again after the SwFrmDeleteGuard dtor
+    SwFrmDeleteGuard(SwFrm* pFrm)
+        : m_pFrm(pFrm)
+    {
+        m_bOldDeleteAllowed = m_pFrm && !m_pFrm->IsDeleteForbidden();
+        if (m_bOldDeleteAllowed)
+            m_pFrm->ForbidDelete();
+    }
+
+    ~SwFrmDeleteGuard()
+    {
+        if (m_bOldDeleteAllowed)
+            m_pFrm->AllowDelete();
+    }
+};
+#endif	// !NO_LIBO_BUG_91695_FIX
 
 #ifdef USE_JAVA
 bool PushToStopFormatStack( SwFrm *pFrm, bool bDisableTimer = false, sal_uInt32 nTimerInterval = 0 );

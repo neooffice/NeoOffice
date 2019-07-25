@@ -400,8 +400,23 @@ SwLayoutFrm *SwFlowFrm::CutTree( SwFrm *pStart )
         if ( !pLay->Lower() && !pLay->IsColLocked() &&
              !static_cast<SwFtnFrm*>(pLay)->IsBackMoveLocked() )
         {
+#ifdef NO_LIBO_BUG_101821_FIX
             pLay->Cut();
             delete pLay;
+#else	// NO_LIBO_BUG_101821_FIX
+            // tdf#101821 don't delete it while iterating over it
+            if (!pLay->IsDeleteForbidden())
+            {
+                pLay->Cut();
+                delete pLay;
+            }
+            // else: assume there is code on the stack to clean up empty
+            // footnote frames
+            // (don't go into the else branch below, it produces a disconnected
+            // footnote with null upper that can be returned by
+            // SwFootnoteBossFrame::FindFootnote() causing null pointer deref
+            // in SwTextFrame::ConnectFootnote()
+#endif	// NO_LIBO_BUG_101821_FIX
         }
         else
         {
@@ -578,6 +593,12 @@ void SwFlowFrm::MoveSubTree( SwLayoutFrm* pParent, SwFrm* pSibling )
 
     SwPageFrm *pOldPage = m_rThis.FindPageFrm();
 
+#ifndef NO_LIBO_BUG_91695_FIX
+    //Ensure pParent persists for the lifetime of the Cut/Paste call to
+    //avoid SwSectionFrm::MergeNext removing the pParent we're trying to
+    //reparent into
+    SwFrmDeleteGuard aDeleteGuard(pParent);
+#endif	// !NO_LIBO_BUG_91695_FIX
     SwLayoutFrm *pOldParent = CutTree( &m_rThis );
     const bool bInvaLay = PasteTree( &m_rThis, pParent, pSibling, pOldParent );
 
@@ -1844,6 +1865,10 @@ bool SwFlowFrm::MoveFwd( bool bMakePage, bool bPageBreak, bool bMoveAlways )
         }
     }
 
+#ifndef NO_LIBO_BUG_117086_FIX
+    std::unique_ptr<SwFrmDeleteGuard> xDeleteGuard(bMakePage ? new SwFrmDeleteGuard(pOldBoss) : nullptr);
+#endif	// !NO_LIBO_BUG_117086_FIX
+
     bool bSamePage = true;
     SwLayoutFrm *pNewUpper =
             m_rThis.GetLeaf( bMakePage ? MAKEPAGE_INSERT : MAKEPAGE_NONE, true );
@@ -1881,6 +1906,10 @@ bool SwFlowFrm::MoveFwd( bool bMakePage, bool bPageBreak, bool bMoveAlways )
         pNewBoss = pNewBoss->FindFtnBossFrm( true );
         pOldBoss = pOldBoss->FindFtnBossFrm( true );
         SwPageFrm* pNewPage = pOldPage;
+
+#ifndef NO_LIBO_BUG_117086_FIX
+        xDeleteGuard.reset();
+#endif	// !NO_LIBO_BUG_117086_FIX
 
         // First, we move the footnotes.
         bool bFtnMoved = false;
