@@ -1368,6 +1368,9 @@ bool SwLayAction::FormatLayout( OutputDevice *pRenderContext, SwLayoutFrame *pLa
     if ( pLay->IsFootnoteFrame() ) // no LayFrames as Lower
         return bChanged;
 
+#ifndef NO_LIBO_BUG_91695_FIX
+    SwFrameDeleteGuard aDeleteGuard(pLay);
+#endif	// !NO_LIBO_BUG_91695_FIX
     SwFrame *pLow = pLay->Lower();
     bool bTabChanged = false;
     while ( pLow && pLow->GetUpper() == pLay )

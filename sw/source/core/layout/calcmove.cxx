@@ -1818,6 +1818,28 @@ void SwContentFrame::MakeAll(vcl::RenderContext* /*pRenderContext*/)
         if ( !bMovedFwd && !MoveFwd( bMakePage, false ) )
             bMakePage = false;
         aRectFnSet.Refresh(this);
+#ifndef NO_LIBO_BUG_101821_FIX
+        if (!bMovedFwd && bFootnote && GetIndPrev() != pPre)
+        {   // SwFlowFrame::CutTree() could have formatted and deleted pPre
+            auto const pPrevFootnoteFrame(static_cast<SwFootnoteFrame const*>(GetUpper())->GetMaster());
+            bool bReset = true;
+            if (pPrevFootnoteFrame)
+            {   // use GetIndNext() in case there are sections
+                for (auto p = pPrevFootnoteFrame->Lower(); p; p = p->GetIndNext())
+                {
+                    if (p == pPre)
+                    {
+                        bReset = false;
+                        break;
+                    }
+                }
+            }
+            if (bReset)
+            {
+                pPre = nullptr;
+            }
+        }
+#endif	// !NO_LIBO_BUG_101821_FIX
 
         // If MoveFwd moves the paragraph to the next page, a following
         // paragraph, which contains footnotes can cause the old upper
