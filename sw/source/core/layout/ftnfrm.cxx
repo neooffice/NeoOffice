@@ -484,6 +484,29 @@ SwTwips SwFtnFrm::ShrinkFrm( SwTwips nDist, bool bTst, bool bInfo )
 }
 #endif
 
+#ifndef NO_LIBO_BUG_119126_FIX
+bool SwFtnFrm::IsDeleteForbidden() const
+{
+    if (SwLayoutFrm::IsDeleteForbidden())
+        return true;
+    // needs to be in sync with the ::Cut logic
+    const SwLayoutFrm *pUp = GetUpper();
+    if (pUp)
+    {
+        if (GetPrev())
+            return false;
+
+        // The last footnote takes its container along if it
+        // is deleted. Cut would put pUp->Lower() to the value
+        // of GetNext(), so if there is no GetNext then
+        // Cut would delete pUp. If that condition is true
+        // here then check if the container is delete-forbidden
+        return !GetNext() && pUp->IsDeleteForbidden();
+    }
+    return false;
+}
+#endif	// !NO_LIBO_BUG_119126_FIX
+
 void SwFtnFrm::Cut()
 {
     if ( GetNext() )
@@ -509,7 +532,11 @@ void SwFtnFrm::Cut()
     if ( pUp )
     {
         // The last footnote takes its container along
+#ifdef NO_LIBO_BUG_119126_FIX
         if ( !pUp->Lower() )
+#else	// NO_LIBO_BUG_119126_FIX
+        if (!pUp->Lower())
+#endif	// NO_LIBO_BUG_119126_FIX
         {
             SwPageFrm *pPage = pUp->FindPageFrm();
             if ( pPage )
@@ -1599,7 +1626,12 @@ void SwFtnBossFrm::AppendFtn( SwCntntFrm *pRef, SwTxtFtn *pAttr )
             pNew->Calc();
             // #i57914# - adjust fix #i49383#
             if ( !bOldFtnFrmLocked && !pNew->GetLower() &&
+#ifdef NO_LIBO_BUG_119126_FIX
                  !pNew->IsColLocked() && !pNew->IsBackMoveLocked() )
+#else	// NO_LIBO_BUG_119126_FIX
+                 !pNew->IsColLocked() && !pNew->IsBackMoveLocked() &&
+                 !pNew->IsDeleteForbidden() )
+#endif	// NO_LIBO_BUG_119126_FIX
             {
                 pNew->Cut();
                 delete pNew;
@@ -2189,7 +2221,12 @@ void SwFtnBossFrm::RearrangeFtns( const SwTwips nDeadLine, const bool bLock,
                         if ( !bLock && bUnlockLastFtnFrm &&
                              !pLastFtnFrm->GetLower() &&
                              !pLastFtnFrm->IsColLocked() &&
+#ifdef NO_LIBO_BUG_119126_FIX
                              !pLastFtnFrm->IsBackMoveLocked() )
+#else	// NO_LIBO_BUG_119126_FIX
+                             !pLastFtnFrm->IsBackMoveLocked() &&
+                             !pLastFtnFrm->IsDeleteForbidden() )
+#endif	// NO_LIBO_BUG_119126_FIX
                         {
                             pLastFtnFrm->Cut();
                             delete pLastFtnFrm;

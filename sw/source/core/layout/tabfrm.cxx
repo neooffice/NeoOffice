@@ -814,6 +814,13 @@ bool SwTabFrm::RemoveFollowFlowLine()
     // #140081# Make code robust.
     if ( !pFollowFlowLine || !pLastLine )
         return true;
+#ifndef NO_LIBO_BUG_119126_FIX
+    if (pFollowFlowLine->IsDeleteForbidden())
+    {
+        SAL_WARN("sw.layout", "Cannot remove in-use Follow Flow Line");
+        return true;
+    }
+#endif	// !NO_LIBO_BUG_119126_FIX
 
     // Move content
     lcl_MoveRowContent( *pFollowFlowLine, *(SwRowFrm*)pLastLine );
