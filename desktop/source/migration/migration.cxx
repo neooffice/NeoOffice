@@ -593,14 +593,6 @@ install_info MigrationImpl::findInstallation(const strings_v& rVersions)
                 break;
 #endif	// PRODUCT_DIR_NAME
         }
-#ifdef PRODUCT_DIR_NAME3
-        else if ( aVersion == "OpenOffice.org 2" )
-        {
-            setInstallInfoIfExist( aInfo, usAltInstall + PRODUCT_DIR_NAME3 + "-2.2", aVersion );
-            if ( !aInfo.userdata.isEmpty() )
-                break;
-        }
-#endif	// PRODUCT_DIR_NAME3
 #else	// PRODUCT_DIR_NAME || PRODUCT_DIR_NAME2 || PRODUCT_DIR_NAME3
         if ( !aVersion.isEmpty() && !aProfileName.isEmpty() &&
              ( aInfo.userdata.isEmpty() ||
