@@ -626,6 +626,8 @@ SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvent
 	{
 		timeval aCurrentTime;
 		gettimeofday( &aCurrentTime, nullptr );
+		// Fire timer if timer is within 10 milliseconds away from expiring
+		aCurrentTime += 10;
 		if ( aCurrentTime >= pSalData->maTimeout )
 		{
 			gettimeofday( &pSalData->maTimeout, nullptr );
