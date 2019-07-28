@@ -626,8 +626,9 @@ SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvent
 	{
 		timeval aCurrentTime;
 		gettimeofday( &aCurrentTime, nullptr );
-		// Fire timer if timer is within 10 milliseconds away from expiring
-		aCurrentTime += 10;
+		// Fix cursor drawing failure in Writer by firing timer if timer is
+		// within 500 milliseconds away from expiring
+		aCurrentTime += 500;
 		if ( aCurrentTime >= pSalData->maTimeout )
 		{
 			gettimeofday( &pSalData->maTimeout, nullptr );
