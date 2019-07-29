@@ -498,7 +498,7 @@ else
 endif
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/updateruninstallers"
 # Remove unnecessary executables and files
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf Resources/CREDITS* Resources/LICENSE* Resources/NOTICE* Resources/oasis-*.icns Resources/python program/gengal program/regmerge program/regview program/senddoc program/ui-previewer program/unoinfo program/unopkg
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf Resources/CREDITS* Resources/LICENSE* Resources/NOTICE* Resources/oasis-*.icns Resources/python Resources/readmes program/gengal program/regmerge program/regview program/senddoc program/ui-previewer program/unoinfo program/unopkg
 # Add executable softlinks
 	cd "$(INSTALL_HOME)/package/Contents" ; ln -sf "soffice.bin" "MacOS/soffice"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/unopkg"
