@@ -763,7 +763,7 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments )
 		throw IllegalArgumentException( "no arguments", static_cast< XFilePicker* >( static_cast< XFilePicker3* >( this ) ), 1 );
 
 	Any aAny = aArguments[0];
-	if ( aAny.getValueType() != cppu::UnoType< Sequence< sal_Int16 > >::get() && aAny.getValueType() != cppu::UnoType< Sequence< sal_Int8 > >::get() )
+	if ( aAny.getValueType() != cppu::UnoType< sal_Int16 >::get() && aAny.getValueType() != cppu::UnoType< sal_Int8 >::get() )
 		throw IllegalArgumentException( "invalid argument type", static_cast< XFilePicker* >( static_cast< XFilePicker3* >( this ) ), 1 );
 
 	aAny >>= mnType;
