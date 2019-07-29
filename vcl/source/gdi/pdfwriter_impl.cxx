@@ -3325,7 +3325,7 @@ bool PDFWriterImpl::emitFonts()
 
             int nNumObjs = m_aObjects.size();
             sal_uInt64 nStartPos;
-            CHECK_RETURN( ( osl_File_E_None == m_aFile.getPos( nStartPos ) ) );
+            CHECK_RETURN( ( osl::File::RC::E_None == m_aFile.getPos( nStartPos ) ) );
 
             oslFileHandle aFontFile;
             CHECK_RETURN( ( osl_File_E_None == osl_openFile( rEmit.m_aFontFileName.pData, &aFontFile, osl_File_OpenFlag_Read ) ) );
@@ -3342,8 +3342,8 @@ bool PDFWriterImpl::emitFonts()
                 {
                     // If writePDFObjectTree() fails, truncate any data and
                     // remove any objects that were added
-                    CHECK_RETURN( ( osl_File_E_None == m_aFile.setPos( osl_Pos_Absolut, nStartPos ) ) );
-                    CHECK_RETURN( ( osl_File_E_None == m_aFile.setSize( nStartPos ) ) );
+                    CHECK_RETURN( ( osl::File::RC::E_None == m_aFile.setPos( osl_Pos_Absolut, nStartPos ) ) );
+                    CHECK_RETURN( ( osl::File::RC::E_None == m_aFile.setSize( nStartPos ) ) );
 
                     std::vector< sal_uInt64 > aObjects;
                     for ( int i = 0; i < nNumObjs; i++ )
@@ -3369,8 +3369,8 @@ bool PDFWriterImpl::emitFonts()
                 {
                     // If writePDFObjectTree() fails, truncate any data and
                     // remove any objects that were added
-                    CHECK_RETURN( ( osl_File_E_None == m_aFile.setPos( osl_Pos_Absolut, nStartPos ) ) );
-                    CHECK_RETURN( ( osl_File_E_None == m_aFile.setSize( nStartPos ) ) );
+                    CHECK_RETURN( ( osl::File::RC::E_None == m_aFile.setPos( osl_Pos_Absolut, nStartPos ) ) );
+                    CHECK_RETURN( ( osl::File::RC::E_None == m_aFile.setSize( nStartPos ) ) );
 
                     std::vector< sal_uInt64 > aObjects;
                     for ( int i = 0; i < nNumObjs; i++ )
