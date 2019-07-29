@@ -9095,7 +9095,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const OUString& rText, bool 
             SalATSLayout *pATSLayout = nullptr;
             MultiSalLayout *pMultiLayout = dynamic_cast<MultiSalLayout*>( &rLayout );
             if ( pMultiLayout )
-                pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( pGlyphs[i]->maGlyphId ) );
+                pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( ( pGlyphs[i]->maGlyphId & GF_FONTMASK ) >> GF_FONTSHIFT ) );
             if ( !pATSLayout )
                 pATSLayout = dynamic_cast<SalATSLayout*>( &rLayout );
             sal_Int32 nNativeGlyphWidth = ( pATSLayout ? sal_Int32( ( static_cast< double >( pATSLayout->GetNativeGlyphWidth( pGlyphs[i]->maGlyphId, pGlyphs[i]->mnCharPos ) ) / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) : 0.0 );
