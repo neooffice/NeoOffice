@@ -1315,6 +1315,9 @@ JavaSalEvent::JavaSalEvent( SalEvent nID, JavaSalFrame *pFrame, void *pData, con
 		case SalEvent::Resize:
 		case SalEvent::WheelMouse:
 			mbNative = true;
+			break;
+		default:
+			break;
 	}
 
 	maPath = OUString( rPath.getStr(), rPath.getLength(), RTL_TEXTENCODING_UTF8 );
@@ -1658,6 +1661,8 @@ void JavaSalEvent::dispatch()
 		{
 			return;
 		}
+		default:
+			break;
 	}
 	
 	// Handle events that require a JavaSalFrame pointer
