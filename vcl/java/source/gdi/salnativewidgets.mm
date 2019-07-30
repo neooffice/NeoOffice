@@ -3749,6 +3749,9 @@ bool JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			if( nPart == ControlPart::Entire )
 				isSupported = true;
 			break;
+
+		default:
+			break;
 	}
 
 	return isSupported;
@@ -3995,6 +3998,9 @@ bool JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				}
 			}
 			break;
+
+		default:
+			break;
 	}
 
 	[pPool release];
@@ -4175,6 +4181,9 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 								bReturn = true;
 							}
 							break;
+
+						default:
+							break;
 					}
 				}
 
@@ -4272,6 +4281,9 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					case ControlPart::TrackVertArea:
 						bounds = aTrackBounds;
 						break;
+
+					default:
+						break;
 				}
 
 				// Fix bug 2031 by incrementing the scrollbar width slightly
@@ -4355,6 +4367,9 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 								bReturn = true;
 							}
 							break;
+
+						default:
+							break;
 					}
 				}
 
@@ -4405,6 +4420,9 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 								rNativeContentRegion = rNativeBoundingRegion;
 								bReturn = true;
 							}
+							break;
+
+						default:
 							break;
 					}
 				}
@@ -4531,6 +4549,9 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							bReturn = true;
 						}
 						break;
+
+					default:
+						break;
 				}
 
 				bReturn = true;
@@ -4594,6 +4615,9 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				}
 			}
 			break;
+
+		default:
+			break;
 	}
 
 	return bReturn;
@@ -4626,7 +4650,6 @@ bool JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 
 	switch( nType )
 	{
-
 		case ControlType::Pushbutton:
 			{
 				if( nState & ( ControlState::DEFAULT | ControlState::FOCUSED | ControlState::PRESSED ) )
@@ -4702,6 +4725,9 @@ bool JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 				else
 					bReturn = JavaSalFrame::GetControlTextColor( nTextColor );
 			}
+			break;
+
+		default:
 			break;
 	}
 
