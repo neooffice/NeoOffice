@@ -53,7 +53,8 @@ SalData::SalData() :
 	mbDoubleScrollbarArrows( false ),
 	mpCaptureFrame( nullptr ),
 	mpLastResizeFrame( nullptr ),
-	mpLastMouseMoveFrame( nullptr )
+	mpLastMouseMoveFrame( nullptr ),
+	mbNeedsFlushAllFrames( false )
 {
 	maTimeout.tv_sec = 0;
 	maTimeout.tv_usec = 0;

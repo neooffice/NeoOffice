@@ -1188,6 +1188,10 @@ void JavaSalGraphics::addNeedsDisplayRect( const CGRect aRect, float fLineWidth 
 		fNativeLineWidth = getNativeLineWidth();
 
 	maNeedsDisplayRect = CGRectUnion( maNeedsDisplayRect, CGRectMake( aRect.origin.x - fNativeLineWidth, aRect.origin.y - fNativeLineWidth, aRect.size.width + ( fNativeLineWidth * 2 ), aRect.size.height + ( fNativeLineWidth * 2 ) ) );
+
+	SalData *pSalData = GetSalData();
+	if ( !pSalData->mbNeedsFlushAllFrames && maNeedsDisplayRect.size.width > 0 && maNeedsDisplayRect.size.height > 0 )
+		pSalData->mbNeedsFlushAllFrames = true;
 }
 
 // -----------------------------------------------------------------------

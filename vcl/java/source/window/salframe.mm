@@ -2983,6 +2983,12 @@ OUString JavaSalFrame::ConvertVCLKeyCode( sal_uInt16 nKeyCode, bool bIsMenuShort
 
 void JavaSalFrame::FlushAllFrames()
 {
+	SalData *pSalData = GetSalData();
+	if ( !pSalData->mbNeedsFlushAllFrames )
+		return;
+
+	pSalData->mbNeedsFlushAllFrames = false;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	VCLSetNeedsDisplayAllViews *pVCLSetNeedsDisplayAllViews = [VCLSetNeedsDisplayAllViews create];

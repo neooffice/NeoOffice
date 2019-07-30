@@ -597,6 +597,9 @@ SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvent
 		pEvent->release();
 		if ( !bMainEventLoop )
 			aEventQueueMutex.release();
+
+		JavaSalFrame::FlushAllFrames();
+
 		return SalYieldResult::EVENT;
 	}
 
@@ -609,6 +612,9 @@ SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvent
 		pEvent->release();
 		if ( !bMainEventLoop )
 			aEventQueueMutex.release();
+
+		JavaSalFrame::FlushAllFrames();
+
 		return SalYieldResult::EVENT;
 	}
 
@@ -627,15 +633,13 @@ SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvent
 		timeval aCurrentTime;
 		gettimeofday( &aCurrentTime, nullptr );
 		// Fix cursor drawing failure in Writer by firing timer if timer is
-		// within 500 milliseconds away from expiring
-		aCurrentTime += 500;
+		// within the blink rate away from expiring
+		aCurrentTime += Application::GetSettings().GetStyleSettings().GetCursorBlinkTime();
 		if ( aCurrentTime >= pSalData->maTimeout )
 		{
 			gettimeofday( &pSalData->maTimeout, nullptr );
 			pSalData->maTimeout += pSalData->mnTimerInterval;
 			pSVData->mpSalTimer->CallCallback( true );
-
-			JavaSalFrame::FlushAllFrames();
 
 			// Reduce noticeable pause when opening a new document by delaying
 			// update of submenus until next available timer timeout.
@@ -647,6 +651,8 @@ SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvent
 			}
 		}
 	}
+
+	JavaSalFrame::FlushAllFrames();
 
 	// Determine timeout
 	SalYieldResult nRet = SalYieldResult::TIMEOUT;
@@ -690,7 +696,6 @@ SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvent
 	// Desktop::doShutdown() displays a modal dialog.
 	size_t nFrames = pSalData->maFrameList.size();
 	bool bContinue = true;
-	bool bFlushAllFrames = false;
 	while ( bContinue && ( !Application::IsShutDown() || pSVData->maWinData.mpLastExecuteDlg ) && ( pEvent = JavaSalEventQueue::getNextCachedEvent( nTimeout, sal_True ) ) != nullptr )
 	{
 		nRet = SalYieldResult::EVENT;
@@ -740,8 +745,6 @@ SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvent
 		}
 		pEvent->release();
 
-		bFlushAllFrames = true;
-
 		// Fix bug 2941 without triggering bugs 2962 and 2963 by
 		// breaking if any frames have been created or destroyed
 		if ( bContinue && pSalData->maFrameList.size() != nFrames )
@@ -750,29 +753,12 @@ SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvent
 
 	nCurrentTimeout = 0;
 
-	if ( bFlushAllFrames )
-	{
-		// Check timer
-		if ( pSVData && pSVData->mpSalTimer && pSalData->mnTimerInterval )
-		{
-			// Reduce flicker in native controls by only flushing if timer is
-			// more than 100 milliseconds away from expiring
-			timeval aCurrentTime;
-			gettimeofday( &aCurrentTime, nullptr );
-			aCurrentTime += 100;
-			if ( pSalData->maTimeout > aCurrentTime )
-				JavaSalFrame::FlushAllFrames();
-		}
-		else
-		{
-			JavaSalFrame::FlushAllFrames();
-		}
-	}
-
 	AcquireYieldMutex( nCount );
 
 	if ( !bMainEventLoop )
 		aEventQueueMutex.release();
+
+	JavaSalFrame::FlushAllFrames();
 
 	// Update all objects
 	for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )

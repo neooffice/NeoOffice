@@ -90,6 +90,7 @@ public:
 	::vcl::Font				maLabelFont;
 	::vcl::Font				maMenuFont;
 	::vcl::Font				maTitleBarFont;
+	bool					mbNeedsFlushAllFrames;
 
 							SalData();
 							~SalData();
