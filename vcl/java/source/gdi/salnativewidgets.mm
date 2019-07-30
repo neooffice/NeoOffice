@@ -61,6 +61,9 @@
 // Comment out the following line to disable native frame
 #define USE_NATIVE_CTRL_FRAME
 
+// Uncomment the following line to enable native group box
+// #define USE_NATIVE_CTRL_GROUPBOX
+
 #define COMBOBOX_BUTTON_WIDTH			19
 #define COMBOBOX_HEIGHT					28
 #define COMBOBOX_HEIGHT_SLOP			1
@@ -3692,10 +3695,12 @@ bool JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 				isSupported = true;
 			break;
 
+#ifdef USE_NATIVE_CTRL_GROUPBOX
 		case ControlType::Groupbox:
 			if( nPart == ControlPart::Entire )
 				isSupported = true;
 			break;
+#endif	// USE_NATIVE_CTRL_GROUPBOX
 
 		case ControlType::MenuPopup:
 			if( nPart == ControlPart::Entire )
