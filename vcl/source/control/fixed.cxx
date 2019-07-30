@@ -223,7 +223,9 @@ void FixedText::ApplySettings(vcl::RenderContext& rRenderContext)
         if ( GetParent()->GetType() == WindowType::CONTAINER )
         {
             EnableChildTransparentMode( true );
-            Invalidate();
+            // Eliminate flicker in dialogs by only invalidating when painting
+            if ( GetParent()->IsInPaint() )
+                Invalidate();
         }
         else
         {
@@ -235,7 +237,10 @@ void FixedText::ApplySettings(vcl::RenderContext& rRenderContext)
                 if ( pChild->GetType() == WindowType::CONTAINER )
                 {
                     EnableChildTransparentMode( true );
-                    Invalidate();
+                    // Eliminate flicker in dialogs by only invalidating when
+                    // painting
+                    if ( GetParent()->IsInPaint() )
+                        Invalidate();
                     rRenderContext.SetBackground();
                     SetControlBackground();
                     break;
