@@ -3695,12 +3695,12 @@ bool JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 				isSupported = true;
 			break;
 
-#ifdef USE_NATIVE_CTRL_GROUPBOX
 		case ControlType::Groupbox:
+#ifdef USE_NATIVE_CTRL_GROUPBOX
 			if( nPart == ControlPart::Entire )
 				isSupported = true;
-			break;
 #endif	// USE_NATIVE_CTRL_GROUPBOX
+			break;
 
 		case ControlType::MenuPopup:
 			if( nPart == ControlPart::Entire )
@@ -3738,12 +3738,12 @@ bool JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 				isSupported = true;
 			break;
 
-#ifdef USE_NATIVE_CTRL_FRAME
 		case ControlType::Frame:
+#ifdef USE_NATIVE_CTRL_FRAME
 			if ( nPart == ControlPart::Border )
 				isSupported = true;
-			break;
 #endif	// USE_NATIVE_CTRL_FRAME
+			break;
 
 		case ControlType::Tooltip:
 			if( nPart == ControlPart::Entire )
