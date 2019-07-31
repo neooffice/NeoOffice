@@ -423,19 +423,8 @@ long Edit::ImplGetExtraXOffset() const
     // #94095# Use extra offset only when edit has a border
     long nExtraOffset = 0;
     if( ( GetStyle() & WB_BORDER ) || ( mbIsSubEdit && ( GetParent()->GetStyle() & WB_BORDER ) ) )
-        nExtraOffset = 2;
-
-    return nExtraOffset;
-}
-
-long Edit::ImplGetExtraYOffset() const
-{
-    long nExtraOffset = 0;
-    ControlType eCtrlType = ImplGetNativeControlType();
-    if (eCtrlType != ControlType::EditboxNoBorder)
-    {
-        // add some space between text entry and border
 #ifdef USE_JAVA
+    {
         if ( GetStyle() & WB_LEFT )
         {
             if ( !mbIsSubEdit )
@@ -447,9 +436,22 @@ long Edit::ImplGetExtraYOffset() const
         {
             nExtraOffset = 2;
         }
+    }
 #else	// USE_JAVA
         nExtraOffset = 2;
 #endif	// USE_JAVA
+
+    return nExtraOffset;
+}
+
+long Edit::ImplGetExtraYOffset() const
+{
+    long nExtraOffset = 0;
+    ControlType eCtrlType = ImplGetNativeControlType();
+    if (eCtrlType != ControlType::EditboxNoBorder)
+    {
+        // add some space between text entry and border
+        nExtraOffset = 2;
     }
     return nExtraOffset;
 }
