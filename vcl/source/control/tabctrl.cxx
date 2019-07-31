@@ -1283,13 +1283,22 @@ void TabControl::ImplPaint(vcl::RenderContext& rRenderContext, const tools::Rect
         if (bDrawTabsRTL)
         {
             pFirstTab = mpTabCtrlData->maItemList.data();
+#ifdef USE_JAVA
+            pLastTab = pFirstTab + mpTabCtrlData->maItemList.size() - 1;
+#else	// USE_JAVA
             pLastTab = pFirstTab + mpTabCtrlData->maItemList.size();
+#endif	// USE_JAVA
             idx = mpTabCtrlData->maItemList.size() - 1;
         }
         else
         {
+#ifdef USE_JAVA
+            pFirstTab = mpTabCtrlData->maItemList.data();
+            pLastTab = pFirstTab + mpTabCtrlData->maItemList.size() - 1;
+#else	// USE_JAVA
             pLastTab = mpTabCtrlData->maItemList.data();
             pFirstTab = pLastTab + mpTabCtrlData->maItemList.size();
+#endif	// USE_JAVA
             idx = 0;
         }
 
@@ -2829,13 +2838,22 @@ void NotebookbarTabControlBase::ImplPaint(vcl::RenderContext& rRenderContext, co
         if (bDrawTabsRTL)
         {
             pFirstTab = mpTabCtrlData->maItemList.data();
+#ifdef USE_JAVA
+            pLastTab = pFirstTab + mpTabCtrlData->maItemList.size() - 1;
+#else	// USE_JAVA
             pLastTab = pFirstTab + mpTabCtrlData->maItemList.size();
+#endif	// USE_JAVA
             idx = mpTabCtrlData->maItemList.size() - 1;
         }
         else
         {
+#ifdef USE_JAVA
+            pFirstTab = mpTabCtrlData->maItemList.data();
+            pLastTab = pFirstTab + mpTabCtrlData->maItemList.size() - 1;
+#else	// USE_JAVA
             pLastTab = mpTabCtrlData->maItemList.data();
             pFirstTab = pLastTab + mpTabCtrlData->maItemList.size();
+#endif	// USE_JAVA
             idx = 0;
         }
 
