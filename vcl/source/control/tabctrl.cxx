@@ -1158,7 +1158,7 @@ void TabControl::ImplPaint(vcl::RenderContext& rRenderContext, const tools::Rect
 #endif	// USE_JAVA
     }
 #ifdef USE_JAVA
-    if ( ! pCurItem )
+    if (!pCurItem )
         curItemIndex = mpTabCtrlData->maItemList.size();
 #endif	// USE_JAVA
 
@@ -1328,8 +1328,7 @@ void TabControl::ImplPaint(vcl::RenderContext& rRenderContext, const tools::Rect
                         if ( mpTabCtrlData->maItemList[ idx + 1 ].mnLine != pItem->mnLine )
                             isLastTabInRow = true;
                     }
-                    ImplDrawItem(rRenderContext, pItem, aCurRect, isFirstTabInRow,
-                                    isLastTabInRow);
+                    ImplDrawItem(rRenderContext, pItem, aCurRect, isFirstTabInRow, isLastTabInRow);
 #else	// USE_JAVA
                     ImplDrawItem(rRenderContext, pItem, aCurRect, false/*bLayout*/,
                                     pItem == pFirstTab);
@@ -1365,8 +1364,7 @@ void TabControl::ImplPaint(vcl::RenderContext& rRenderContext, const tools::Rect
                     if ( mpTabCtrlData->maItemList[ curItemIndex + 1 ].mnLine != pCurItem->mnLine )
                         isLastTabInRow = true;
                 }
-                ImplDrawItem(rRenderContext, pCurItem, aCurRect,
-                             isFirstTabInRow, isLastTabInRow);
+                ImplDrawItem(rRenderContext, pCurItem, aCurRect, isFirstTabInRow, isLastTabInRow);
 #else	// USE_JAVA
                 ImplDrawItem(rRenderContext, pCurItem, aCurRect,
                              pCurItem == pFirstTab, pCurItem == pLastTab);
@@ -2706,6 +2704,9 @@ void NotebookbarTabControlBase::ImplPaint(vcl::RenderContext& rRenderContext, co
     tools::Rectangle aRect = ImplGetTabRect(TAB_PAGERECT);
 
     // find current item
+#ifdef USE_JAVA
+    size_t curItemIndex = 0;
+#endif	// USE_JAVA
     ImplTabItem* pCurItem = nullptr;
     for (std::vector< ImplTabItem >::iterator it = mpTabCtrlData->maItemList.begin();
          it != mpTabCtrlData->maItemList.end(); ++it )
@@ -2715,7 +2716,14 @@ void NotebookbarTabControlBase::ImplPaint(vcl::RenderContext& rRenderContext, co
             pCurItem = &(*it);
             break;
         }
+#ifdef USE_JAVA
+        curItemIndex++;
+#endif	// USE_JAVA
     }
+#ifdef USE_JAVA
+    if (!pCurItem )
+        curItemIndex = mpTabCtrlData->maItemList.size();
+#endif	// USE_JAVA
 
     // Draw the TabPage border
     const StyleSettings& rStyleSettings = rRenderContext.GetSettings().GetStyleSettings();
@@ -2857,6 +2865,48 @@ void NotebookbarTabControlBase::ImplPaint(vcl::RenderContext& rRenderContext, co
             idx = 0;
         }
 
+#ifdef USE_JAVA
+        // Skip disabled first and last tab items since they won't be drawn
+        size_t tmpidx = idx;
+        while (tmpidx < mpTabCtrlData->maItemList.size())
+        {
+            ImplTabItem* pItem = &mpTabCtrlData->maItemList[tmpidx];
+            if (pItem != pCurItem && pItem == pFirstTab && pItem != pLastTab && !pItem->mbEnabled)
+            {
+                if (bDrawTabsRTL)
+                    pFirstTab--;
+                else
+                    pFirstTab++;
+            }
+
+            if (bDrawTabsRTL)
+                tmpidx--;
+            else
+                tmpidx++;
+        }
+
+        if (bDrawTabsRTL)
+            tmpidx = 0;
+        else
+            tmpidx = mpTabCtrlData->maItemList.size() - 1;
+        while (tmpidx < mpTabCtrlData->maItemList.size())
+        {
+            ImplTabItem* pItem = &mpTabCtrlData->maItemList[tmpidx];
+            if (pItem != pCurItem && pItem == pLastTab && pItem != pFirstTab && !pItem->mbEnabled)
+            {
+                if (bDrawTabsRTL)
+                    pLastTab++;
+                else
+                    pLastTab--;
+            }
+
+            if (bDrawTabsRTL)
+                tmpidx++;
+            else
+                tmpidx--;
+        }
+#endif	// USE_JAVA
+
         while (idx < mpTabCtrlData->maItemList.size())
         {
             ImplTabItem* pItem = &mpTabCtrlData->maItemList[idx];
@@ -2869,8 +2919,25 @@ void NotebookbarTabControlBase::ImplPaint(vcl::RenderContext& rRenderContext, co
                     aClipRgn.Intersect(rRect);
                 if (!aClipRgn.IsEmpty())
                 {
+#ifdef USE_JAVA
+                    bool isLastTabInRow = (pItem == pLastTab);
+                    bool isFirstTabInRow = (pItem == pFirstTab);
+                    if ( pItem != pFirstTab && idx && mpTabCtrlData->maItemList.size() > idx - 1 )
+                    {
+                        if ( mpTabCtrlData->maItemList[ idx - 1 ].mnLine != pItem->mnLine )
+                            isFirstTabInRow = true;
+                    }
+
+                    if ( pItem != pLastTab && mpTabCtrlData->maItemList.size() > idx + 1 )
+                    {
+                        if ( mpTabCtrlData->maItemList[ idx + 1 ].mnLine != pItem->mnLine )
+                            isLastTabInRow = true;
+                    }
+                    ImplDrawItem(rRenderContext, pItem, aCurRect, isFirstTabInRow, isLastTabInRow);
+#else	// USE_JAVA
                     ImplDrawItem(rRenderContext, pItem, aCurRect, false/*bLayout*/,
                                     pItem == pFirstTab);
+#endif	// USE_JAVA
                 }
             }
 
@@ -2888,8 +2955,25 @@ void NotebookbarTabControlBase::ImplPaint(vcl::RenderContext& rRenderContext, co
                 aClipRgn.Intersect(rRect);
             if (!aClipRgn.IsEmpty())
             {
+#ifdef USE_JAVA
+                bool isLastTabInRow = (pCurItem == pLastTab);
+                bool isFirstTabInRow = (pCurItem == pFirstTab);
+                if ( pCurItem != pFirstTab && curItemIndex && mpTabCtrlData->maItemList.size() > curItemIndex - 1 )
+                {
+                    if ( mpTabCtrlData->maItemList[ curItemIndex - 1 ].mnLine != pCurItem->mnLine )
+                        isFirstTabInRow = true;
+                }
+
+                if ( pCurItem != pLastTab && mpTabCtrlData->maItemList.size() > curItemIndex + 1 )
+                {
+                    if ( mpTabCtrlData->maItemList[ curItemIndex + 1 ].mnLine != pCurItem->mnLine )
+                        isLastTabInRow = true;
+                }
+                ImplDrawItem(rRenderContext, pCurItem, aCurRect, isFirstTabInRow, isLastTabInRow);
+#else	// USE_JAVA
                 ImplDrawItem(rRenderContext, pCurItem, aCurRect,
                              pCurItem == pFirstTab, pCurItem == pLastTab);
+#endif	// USE_JAVA
             }
         }
     }
