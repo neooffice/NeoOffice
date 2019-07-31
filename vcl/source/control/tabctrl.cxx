@@ -926,15 +926,6 @@ void TabControl::ImplDrawItem(vcl::RenderContext& rRenderContext, ImplTabItem* p
         tools::Rectangle aCtrlRegion( pItem->maRect );
         bNativeOK = rRenderContext.DrawNativeControl(ControlType::TabItem, ControlPart::Entire,
                                                      aCtrlRegion, nState, tiValue, OUString() );
-#ifdef USE_JAVA
-        if ( bNativeOK )
-        {
-            ImplControlValue aControlValue;
-            Color aTextColor;
-            if ( GetNativeControlTextColor( ControlType::TabItem, ControlPart::Entire, nState, aControlValue, aTextColor ) )
-                SetTextColor( aTextColor );
-        }
-#endif	// USE_JAVA
     }
 
     if (!bNativeOK)
@@ -1024,6 +1015,18 @@ void TabControl::ImplDrawItem(vcl::RenderContext& rRenderContext, ImplTabItem* p
             aColor = rStyleSettings.GetTabRolloverTextColor();
 
         Color aOldColor(rRenderContext.GetTextColor());
+#ifdef USE_JAVA
+        if (bNativeOK)
+        {
+            ImplControlValue aControlValue;
+            Color aTextColor;
+            if (GetNativeControlTextColor(ControlType::TabItem, ControlPart::Entire, nState, aControlValue, aTextColor))
+                rRenderContext.SetTextColor(aTextColor);
+            else
+                rRenderContext.SetTextColor(aColor);
+        }
+        else
+#endif	// USE_JAVA
         rRenderContext.SetTextColor(aColor);
 
         const tools::Rectangle aOutRect(nXPos + aImageSize.Width(), nYPos,
