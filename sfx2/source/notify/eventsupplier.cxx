@@ -239,6 +239,7 @@ void SfxEvents_Impl::Execute( uno::Any& aEventData, const document::DocumentEven
 #endif	// NO_LIBO_LIBRELOGO_FIX
                 aURL.Complete = aScript;
                 xTrans->parseStrict( aURL );
+
 #ifndef NO_LIBO_LIBRELOGO_FIX
                 bAllowed = !SfxObjectShell::UnTrustedScript(aURL.Complete);
             }
