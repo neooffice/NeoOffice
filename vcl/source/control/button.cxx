@@ -1195,8 +1195,9 @@ void PushButton::ImplDrawPushButton(vcl::RenderContext& rRenderContext)
         // Allow room for the button's focus ring when drawing text in buttons
         // in toolbar popup windows such as the color palettes. Avoid small
         // symbol size in symbol buttons by limiting this fix to only flat
-        // buttons.
-        if ( GetStyle() & WB_FLATBUTTON )
+        // buttons. Fix failure to draw Calc's sheet bar buttons by not
+        // allowing the width to be reduced to zero.
+        if ( GetStyle() & WB_FLATBUTTON && aInRect.GetWidth() > 10 )
         {
             aInRect.Left()+=5;
             aInRect.Right()-=5;
