@@ -2192,7 +2192,7 @@ void RadioButton::ImplDraw( OutputDevice* pDev, DrawFlags nDrawFlags,
                     nState |= ControlState::ROLLOVER;
         
                 if ( GetNativeControlTextColor( ControlType::Radiobutton, ControlPart::Entire, nState, aControlValue, aColor ) )
-                    SetTextColor( aColor );
+                    pDev->SetTextColor( aColor );
             }
 #endif	// USE_JAVA
 
@@ -3251,7 +3251,7 @@ void CheckBox::ImplDraw( OutputDevice* pDev, DrawFlags nDrawFlags,
                 nState |= ControlState::ROLLOVER;
 
             if ( GetNativeControlTextColor( ControlType::Checkbox, ControlPart::Entire, nState, aControlValue, aColor ) )
-                SetTextColor( aColor );
+                pDev->SetTextColor( aColor );
         }
 #endif	// USE_JAVA
 
