@@ -4636,8 +4636,12 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
  * @return true if a native widget text color is provided, false if the standard
  *	VCL text color should be used.
  */
-bool JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart /* nPart */, ControlState nState, const ImplControlValue& /* aValue */, SalColor& nTextColor )
+bool JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& /* aValue */, SalColor& nTextColor )
 {
+#ifdef USE_NATIVE_CONTROLS
+	(void)nPart;
+#endif	// USE_NATIVE_CONTROLS
+
 	bool bReturn = false;
 
 #ifndef USE_NATIVE_CONTROLS
