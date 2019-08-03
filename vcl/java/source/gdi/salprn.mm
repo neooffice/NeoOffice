@@ -1191,9 +1191,9 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		// application's appearance
 		NSApplication *pApp = [NSApplication sharedApplication];
 #if MACOSX_SDK_VERSION < 101400
-		if ( pApp )
-#else	// MACOSX_SDK_VERSION < 101400
 		if ( pApp && [pApp respondsToSelector:@selector(appearance)] )
+#else	// MACOSX_SDK_VERSION < 101400
+		if ( pApp )
 #endif	// MACOSX_SDK_VERSION < 101400
 		{
 			NSAppearance *pAppearance = [pApp appearance];
