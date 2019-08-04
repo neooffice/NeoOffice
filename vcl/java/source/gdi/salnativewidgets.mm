@@ -3642,8 +3642,10 @@ bool JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			break;
 
 		case ControlType::Toolbar:
-			// Suppress the non-native toolbar background
-			if( nPart == ControlPart::Button )
+			// Suppress the non-native toolbar background by returning true
+			// ControlPart::Entire even though we don't actually support
+			// it in the size and drawing methods
+			if( nPart == ControlPart::Entire || nPart == ControlPart::Button )
 				isSupported = true;
 			break;
 
