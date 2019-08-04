@@ -1058,7 +1058,7 @@ void ScOutputData::DrawBackground(vcl::RenderContext& rRenderContext)
         for ( std::vector< tools::Rectangle >::const_iterator it = aPixelRects.begin(); it != aPixelRects.end(); ++it )
         {
             if ( !it->IsEmpty() )
-                aNativeHighlightPolyPoly.Insert( tools::Polygon( *it ) );
+                aNativeHighlightPolyPoly.Insert( tools::Polygon( rRenderContext.PixelToLogic( *it ) ) );
         }
     }
 #endif	 // USE_JAVA
