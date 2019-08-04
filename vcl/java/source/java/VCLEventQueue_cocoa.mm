@@ -641,11 +641,7 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 	NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
 	if ( pApp && pDefaults )
 	{
-#if MACOSX_SDK_VERSION >= 101400
 		if ( @available(macOS 10.14, * ) )
-#else	// MACOSX_SDK_VERSION >= 101400
-		if ( [pApp respondsToSelector:@selector(appearance)] && [pApp respondsToSelector:@selector(effectiveAppearance)] )
-#endif	// MACOSX_SDK_VERSION >= 101400
 		{
 			// Reset to system appearance
 			if ( [pApp appearance] )
@@ -676,16 +672,10 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 			}
 
 			NSAppearance *pAppearance = [NSAppearance appearanceNamed:pAppearanceName];
-
-#if MACOSX_SDK_VERSION < 101400
-			if ( [pApp respondsToSelector:@selector(appearance)] && [pApp respondsToSelector:@selector(setAppearance:)] )
-#endif	// MACOSX_SDK_VERSION < 101400
-			{
-				[pApp setAppearance:pAppearance];
-				if ( pLastAppearance != pAppearance )
-					PostSystemColorsDidChange();
-				pLastAppearance = pAppearance;
-			}
+			[pApp setAppearance:pAppearance];
+			if ( pLastAppearance != pAppearance )
+				PostSystemColorsDidChange();
+			pLastAppearance = pAppearance;
 		}
 	}
 }

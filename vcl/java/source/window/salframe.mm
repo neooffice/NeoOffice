@@ -202,16 +202,10 @@ static void HandleSystemColorsChangedRequest()
 
 	bVCLUseDarkModeColors = false;
 
-#if MACOSX_SDK_VERSION >= 101400
 	if ( @available(macOS 10.14, * ) )
-#endif	// MACOSX_SDK_VERSION >= 101400
 	{
 		NSApplication *pApp = [NSApplication sharedApplication];
-#if MACOSX_SDK_VERSION < 101400
-		if ( pApp && [pApp respondsToSelector:@selector(appearance)] )
-#else	// MACOSX_SDK_VERSION < 101400
 		if ( pApp )
-#endif	// MACOSX_SDK_VERSION < 101400
 		{
 			NSAppearance *pAppearance = [pApp appearance];
 			if ( !pAppearance )
@@ -234,11 +228,7 @@ static void HandleSystemColorsChangedRequest()
 	SetSalColorFromNSColor( [NSColor selectedTextBackgroundColor], &pVCLHighlightColor );
 	SetSalColorFromNSColor( [NSColor selectedTextColor], &pVCLHighlightTextColor );
 	SetSalColorFromNSColor( [NSColor disabledControlTextColor], &pVCLDisabledControlTextColor );
-#if MACOSX_SDK_VERSION < 101400
-	if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedContentBackgroundColor) ) )
-#else // MACOSX_SDK_VERSION < 101400
 	if ( @available(macOS 10.14, * ) )
-#endif	// MACOSX_SDK_VERSION < 101400
 		SetSalColorFromNSColor( [NSColor unemphasizedSelectedContentBackgroundColor], &pVCLBackColor );
 	else if ( class_getClassMethod( [NSColor class], @selector(controlHighlightColor) ) )
 		SetSalColorFromNSColor( [NSColor controlHighlightColor], &pVCLBackColor );
@@ -247,11 +237,7 @@ static void HandleSystemColorsChangedRequest()
 	// Use deprecated selector for selected menu item for macOS 10.14 light mode
 	if ( !bVCLUseDarkModeColors && class_getClassMethod( [NSColor class], @selector(selectedMenuItemColor) ) )
 		SetSalColorFromNSColor( [NSColor selectedMenuItemColor], &pVCLSelectedMenuItemColor );
-#if MACOSX_SDK_VERSION < 101400
-	else if ( class_getClassMethod( [NSColor class], @selector(selectedContentBackgroundColor) ) )
-#else // MACOSX_SDK_VERSION < 101400
 	else if ( @available(macOS 10.14, * ) )
-#endif	// MACOSX_SDK_VERSION < 101400
 		SetSalColorFromNSColor( [NSColor selectedContentBackgroundColor], &pVCLSelectedMenuItemColor );
 	else if ( class_getClassMethod( [NSColor class], @selector(selectedMenuItemColor) ) )
 		SetSalColorFromNSColor( [NSColor selectedMenuItemColor], &pVCLSelectedMenuItemColor );

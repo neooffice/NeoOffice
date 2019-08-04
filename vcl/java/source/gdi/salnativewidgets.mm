@@ -80,9 +80,6 @@
 #define FOCUSRING_WIDTH					3
 #define FRAME_TRIMWIDTH					1
 #define LISTBOX_BUTTON_WIDTH			19
-#if MACOSX_SDK_VERSION < 101400
-#define SCROLLBAR_SUPPRESS_ARROWS		true
-#endif	// MACOSX_SDK_VERSION < 101400
 #define SPINNER_WIDTH_SLOP				1
 #define SPINNER_FOCUSRING_LEFT_OFFSET	0
 #define SPINNER_FOCUSRING_TOP_OFFSET	1
@@ -1053,87 +1050,13 @@ static bool IsRunningHighSierraOrLower()
 					// Fix bug 2031 by always filling the background with white.
 					// Fix incorrect dark mode drawing by filling with a system
 					// color instead of white.
-#if MACOSX_SDK_VERSION < 101400
-					if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedContentBackgroundColor) ) )
-#else // MACOSX_SDK_VERSION < 101400
 					if ( @available(macOS 10.14, * ) )
-#endif	// MACOSX_SDK_VERSION < 101400
 						[[NSColor unemphasizedSelectedContentBackgroundColor] set];
 					else if ( class_getClassMethod( [NSColor class], @selector(scrollBarColor) ) )
 						[[NSColor scrollBarColor] set];
 					else
 						[[NSColor controlBackgroundColor] set];
 					[NSBezierPath fillRect:NSRectFromCGRect( aAdjustedDestRect )];
-
-#if MACOSX_SDK_VERSION < 101400
-					// Draw arrows on Mac OS X 10.6
-					if ( !SCROLLBAR_SUPPRESS_ARROWS )
-					{
-						// Disabling on Mac OS X 10.6 draws the scroller with
-						// no arrows
-						if ( mbDrawOnlyTrack )
-						{
-							[pScroller setEnabled:NO];
-						}
-						else
-						{
-							BOOL bHighlight = NO;
-							NSUInteger nHighlightArrow = 0;
-							NSUInteger nHighlightPart = 0;
-							if ( mpScrollbarValue )
-							{
-								// Note that if a pressed button is selected,
-								// we have highlight the inner arrow of the
-								// the arrow pair
-								if ( mpScrollbarValue->mnButton1State & ControlState::PRESSED )
-								{
-									bHighlight = YES;
-									nHighlightArrow = NSScrollerDecrementArrow;
-									if ( mpScrollbarValue->mnButton1State & ControlState::SELECTED )
-										nHighlightPart = NSScrollerIncrementArrow;
-									else
-										nHighlightPart = NSScrollerDecrementArrow;
-								}
-								else if ( mpScrollbarValue->mnButton2State & ControlState::PRESSED )
-								{
-									bHighlight = YES;
-									nHighlightArrow = NSScrollerIncrementArrow;
-									if ( mpScrollbarValue->mnButton2State & ControlState::SELECTED )
-										nHighlightPart = NSScrollerDecrementArrow;
-									else
-										nHighlightPart = NSScrollerIncrementArrow;
-								}
-							}
-
-							if ( bHighlight && [pScroller respondsToSelector:@selector(drawArrow:highlightPart:)] )
-							{
-								if ( mbDoubleScrollbarArrows )
-								{
-									if ( nHighlightArrow == NSScrollerDecrementArrow )
-									{
-										[pScroller drawArrow:NSScrollerDecrementArrow highlightPart:nHighlightPart];
-										[pScroller drawArrow:NSScrollerIncrementArrow highlight:NO];
-									}
-									else
-									{
-										[pScroller drawArrow:NSScrollerDecrementArrow highlight:NO];
-										[pScroller drawArrow:NSScrollerIncrementArrow highlightPart:nHighlightPart];
-									}
-								}
-								else
-								{
-									[pScroller drawArrow:NSScrollerDecrementArrow highlightPart:nHighlightPart];
-									[pScroller drawArrow:NSScrollerIncrementArrow highlightPart:nHighlightPart];
-								}
-							}
-							else
-							{
-								[pScroller drawArrow:NSScrollerDecrementArrow highlight:NO];
-								[pScroller drawArrow:NSScrollerIncrementArrow highlight:NO];
-							}
-						}
-					}
-#endif	// MACOSX_SDK_VERSION < 101400
 
 					[pScroller drawKnobSlotInRect:[pScroller rectForPart:NSScrollerKnobSlot] highlight:NO];
 					if ( !mbDrawOnlyTrack )
@@ -1171,16 +1094,6 @@ static bool IsRunningHighSierraOrLower()
 		if ( pScroller )
 		{
 			BOOL bFlipped = [pScroller isFlipped];
-
-#if MACOSX_SDK_VERSION < 101400
-			maDecrementArrowBounds = [pScroller rectForPart:NSScrollerDecrementLine];
-			if ( !bFlipped )
-				maDecrementArrowBounds.origin.y = maDestRect.size.height - maDecrementArrowBounds.origin.y - maDecrementArrowBounds.size.height;
-
-			maIncrementArrowBounds = [pScroller rectForPart:NSScrollerIncrementLine];
-			if ( !bFlipped )
-				maIncrementArrowBounds.origin.y = maDestRect.size.height - maIncrementArrowBounds.origin.y - maIncrementArrowBounds.size.height;
-#endif	// MACOSX_SDK_VERSION < 101400
 
 			maDecrementPageBounds = [pScroller rectForPart:NSScrollerDecrementPage];
 			if ( !bFlipped )
@@ -2253,11 +2166,7 @@ static bool IsRunningHighSierraOrLower()
 						}
 						else
 						{
-#if MACOSX_SDK_VERSION < 101400
-							if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedContentBackgroundColor) ) )
-#else // MACOSX_SDK_VERSION < 101400
 							if ( @available(macOS 10.14, * ) )
-#endif	// MACOSX_SDK_VERSION < 101400
 								[[NSColor unemphasizedSelectedContentBackgroundColor] set];
 							else
 								[[NSColor controlColor] set];
