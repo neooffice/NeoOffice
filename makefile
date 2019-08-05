@@ -79,7 +79,7 @@ BUNDLE_FILE_TYPE=Mach-O 64-bit bundle $(TARGET_MACHINE)
 else
 OS_TYPE=Win32
 endif
-ifeq ($(shell test -z `which domainname`; echo $$?),0)
+ifeq ($(shell test ! -z `which domainname`; echo $$?),0)
 BUILD_MACHINE=$(shell echo `id -nu`:`hostname`.`domainname`)
 else
 BUILD_MACHINE=$(shell echo `id -nu`:`hostname`.)
