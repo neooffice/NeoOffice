@@ -124,6 +124,11 @@ update_installation() {
 		done
 	fi
 
+	# Remove LibreLogo
+	if [ -d "$2/Contents/Resources/Scripts/python/LibreLogo" ] ; then
+		rm -Rf "$2/Contents/Resources/Scripts/python/LibreLogo" ]
+	fi
+
     # Make sure that all directories and files are readable by all
     chmod -Rf a+r "$2" || return 1
 
