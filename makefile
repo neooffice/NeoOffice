@@ -213,7 +213,6 @@ PRODUCT_MODULES = \
 	framework \
 	i18npool \
 	i18nutil \
-	librelogo \
 	lingucomponent \
 	linguistic \
 	oox \
@@ -581,6 +580,8 @@ endif
 ifdef PRODUCT_BUILD3
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find "Resources/wizards" -type f -not -path "*/CVS/*" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find "Resources/wizards" -type f -name "*.py" -not -path "*/CVS/*"` ; do sed "s#\$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$(PWD)/etc/$${i}" > "$${i}" ; done'
+# Remove LibreLogo
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "Resources/Scripts/python/LibreLogo"
 else
 # Remove update check files since the Mac App Store has its own update
 # check. Do not remove updatefeed.uno.dylib as it is needed by the pdfimport
