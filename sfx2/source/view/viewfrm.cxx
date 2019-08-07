@@ -2825,12 +2825,20 @@ void SfxViewFrame::AddDispatchMacroToBasic_Impl( const OUString& sMacro )
         }
 
         BasicManager* pBasMgr = 0;
+#ifdef NO_LIBO_DOCUMENT_PARAM_FIX
         if ( aLocation.equalsIgnoreAsciiCase( "application" ) )
+#else	// NO_LIBO_DOCUMENT_PARAM_FIX
+        if ( aLocation == "application" )
+#endif	// NO_LIBO_DOCUMENT_PARAM_FIX
         {
             // application basic
             pBasMgr = pSfxApp->GetBasicManager();
         }
+#ifdef NO_LIBO_DOCUMENT_PARAM_FIX
         else if ( aLocation.equalsIgnoreAsciiCase( "document" ) )
+#else	// NO_LIBO_DOCUMENT_PARAM_FIX
+        else if ( aLocation == "document" )
+#endif	// NO_LIBO_DOCUMENT_PARAM_FIX
         {
             pBasMgr = GetObjectShell()->GetBasicManager();
         }
@@ -2857,11 +2865,19 @@ void SfxViewFrame::AddDispatchMacroToBasic_Impl( const OUString& sMacro )
 
         // open lib container and break operation if it couldn't be opened
         com::sun::star::uno::Reference< com::sun::star::script::XLibraryContainer > xLibCont;
+#ifdef NO_LIBO_DOCUMENT_PARAM_FIX
         if ( aLocation.equalsIgnoreAsciiCase( "application" ) )
+#else	// NO_LIBO_DOCUMENT_PARAM_FIX
+        if ( aLocation == "application" )
+#endif	// NO_LIBO_DOCUMENT_PARAM_FIX
         {
             xLibCont = SfxGetpApp()->GetBasicContainer();
         }
+#ifdef NO_LIBO_DOCUMENT_PARAM_FIX
         else if ( aLocation.equalsIgnoreAsciiCase( "document" ) )
+#else	// NO_LIBO_DOCUMENT_PARAM_FIX
+        else if ( aLocation == "document" )
+#endif	// NO_LIBO_DOCUMENT_PARAM_FIX
         {
             xLibCont = GetObjectShell()->GetBasicContainer();
         }
