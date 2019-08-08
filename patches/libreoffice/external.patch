@@ -92,3 +92,13 @@
  			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM))\
  			$(if $(filter AIX,$(OS)),CFLAGS="-D_LINUX_SOURCE_COMPAT") \
  			$(if $(hunspell_CPPFLAGS),CPPFLAGS='$(hunspell_CPPFLAGS)') \
+--- libvisio/UnpackedTarball_libvisio.mk	2018-05-09 03:27:29.000000000 -0700
++++ libvisio/UnpackedTarball_libvisio.mk	2019-08-07 21:48:55.000000000 -0700
+@@ -15,6 +15,7 @@
+ 
+ $(eval $(call gb_UnpackedTarball_add_patches,libvisio, \
+     external/libvisio/ubsan.patch \
++    external/libvisio/libvisio.patch \
+ ))
+ 
+ ifeq ($(COM_IS_CLANG),TRUE)
