@@ -119,7 +119,7 @@
  
  $(eval $(call gb_UnpackedTarball_add_patches,libvisio,\
         external/libvisio/vsd-msvc-max.patch.1 \
-+       external/libvisio/libvisio.patch \
++       external/libvisio/libvisio.patch.1 \
  ))
  
  # vim: set noet sw=4 ts=4:
