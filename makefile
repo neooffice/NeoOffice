@@ -267,6 +267,7 @@ build.libo_external_tarballs_checkout: build.libo_src_checkout
 
 build.libo_external_patches_checkout: build.libo_src_checkout
 	cd "$(LIBO_PATCHES_HOME)/external/hsqldb/patches" ; sh -c -e 'for i in `find . -type f -maxdepth 1 | grep -v /CVS/` ; do cp "$$i" "$(PWD)/$(LIBO_BUILD_HOME)/external/hsqldb/patches/$$i" ; done'
+	cd "$(LIBO_PATCHES_HOME)/external/libvisio" ; sh -c -e 'for i in `find . -type f -maxdepth 1 | grep -v /CVS/` ; do cp "$$i" "$(PWD)/$(LIBO_BUILD_HOME)/external/libvisio/$$i" ; done'
 	touch "$@"
 
 build.libo_checkout: \
