@@ -1,0 +1,66 @@
+--- src/lib/VDXParser.cpp	2014-11-18 03:01:26.000000000 -0800
++++ src/lib/VDXParser.cpp	2019-08-07 19:32:24.000000000 -0700
+@@ -73,7 +73,7 @@
+   if (!input)
+     return false;
+ 
+-  xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET|XML_PARSE_RECOVER);
++  xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NONET|XML_PARSE_RECOVER);
+   if (!reader)
+     return false;
+   int ret = xmlTextReaderRead(reader);
+--- src/lib/VSDXMLHelper.cpp	2014-07-29 09:19:38.000000000 -0700
++++ src/lib/VSDXMLHelper.cpp	2019-08-07 19:31:55.000000000 -0700
+@@ -244,7 +244,7 @@
+ {
+   if (input)
+   {
+-    xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET|XML_PARSE_RECOVER);
++    xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NONET|XML_PARSE_RECOVER);
+     if (reader)
+     {
+       bool inRelationships = false;
+--- src/lib/VSDXMetaData.cpp	2015-01-01 13:11:45.000000000 -0800
++++ src/lib/VSDXMetaData.cpp	2019-08-07 19:31:12.000000000 -0700
+@@ -94,7 +94,7 @@
+   if (!input)
+     return false;
+ 
+-  xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET);
++  xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NONET);
+   if (!reader)
+     return false;
+ 
+--- src/lib/VSDXParser.cpp	2015-01-01 13:11:45.000000000 -0800
++++ src/lib/VSDXParser.cpp	2019-08-07 19:30:32.000000000 -0700
+@@ -306,7 +306,7 @@
+ 
+   m_rels = &rels;
+ 
+-  xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET);
++  xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NONET);
+   if (!reader)
+     return;
+   int ret = xmlTextReaderRead(reader);
+--- src/lib/VSDXTheme.cpp	2014-03-29 03:25:18.000000000 -0700
++++ src/lib/VSDXTheme.cpp	2019-08-07 19:29:55.000000000 -0700
+@@ -60,7 +60,7 @@
+   if (!input)
+     return false;
+ 
+-  xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET);
++  xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NONET);
+   if (!reader)
+     return false;
+ 
+--- src/lib/VisioDocument.cpp	2014-12-04 08:19:59.000000000 -0800
++++ src/lib/VisioDocument.cpp	2019-08-07 19:33:45.000000000 -0700
+@@ -249,7 +249,7 @@
+   try
+   {
+     input->seek(0, librevenge::RVNG_SEEK_SET);
+-    reader = libvisio::xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET|XML_PARSE_RECOVER);
++    reader = libvisio::xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NONET|XML_PARSE_RECOVER);
+     if (!reader)
+       return false;
+     int ret = xmlTextReaderRead(reader);

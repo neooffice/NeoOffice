@@ -113,3 +113,13 @@
 + #endif // isinf
 + #endif // WIN_NT
 + 
+--- libvisio/UnpackedTarball_libvisio.mk	2015-11-25 04:55:38.000000000 -0800
++++ libvisio/UnpackedTarball_libvisio.mk	2019-08-07 19:37:41.000000000 -0700
+@@ -13,6 +13,7 @@
+ 
+ $(eval $(call gb_UnpackedTarball_add_patches,libvisio,\
+        external/libvisio/vsd-msvc-max.patch.1 \
++       external/libvisio/libvisio.patch \
+ ))
+ 
+ # vim: set noet sw=4 ts=4:
