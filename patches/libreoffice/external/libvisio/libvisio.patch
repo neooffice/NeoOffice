@@ -1,0 +1,66 @@
+--- src/lib/VDXParser.cpp
++++ src/lib/VDXParser.cpp
+@@ -76,7 +76,7 @@
+     return false;
+ 
+   const boost::shared_ptr<xmlTextReader> reader(
+-    xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET|XML_PARSE_RECOVER),
++    xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NONET|XML_PARSE_RECOVER),
+     xmlFreeTextReader);
+   if (!reader)
+     return false;
+--- src/lib/VSDXMLHelper.cpp
++++ src/lib/VSDXMLHelper.cpp
+@@ -96,7 +96,7 @@
+   if (input)
+   {
+     const boost::shared_ptr<xmlTextReader> reader(
+-      xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET|XML_PARSE_RECOVER),
++      xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NONET|XML_PARSE_RECOVER),
+       xmlFreeTextReader);
+     if (reader)
+     {
+--- src/lib/VSDXMetaData.cpp
++++ src/lib/VSDXMetaData.cpp
+@@ -120,7 +120,7 @@
+   XMLErrorWatcher watcher;
+ 
+   const boost::shared_ptr<xmlTextReader> reader(
+-    xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET, &watcher),
++    xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NONET, &watcher),
+     xmlFreeTextReader);
+   if (!reader)
+     return false;
+--- src/lib/VSDXParser.cpp
++++ src/lib/VSDXParser.cpp
+@@ -302,7 +302,7 @@
+   XMLErrorWatcher watcher;
+ 
+   const boost::shared_ptr<xmlTextReader> reader(
+-    xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET, &watcher),
++    xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NONET, &watcher),
+     xmlFreeTextReader);
+   if (!reader)
+     return;
+--- src/lib/VSDXTheme.cpp
++++ src/lib/VSDXTheme.cpp
+@@ -67,7 +67,7 @@
+     return false;
+ 
+   const shared_ptr<xmlTextReader> reader(
+-    xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET),
++    xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NONET),
+     xmlFreeTextReader);
+   if (!reader)
+     return false;
+--- src/lib/VisioDocument.cpp
++++ src/lib/VisioDocument.cpp
+@@ -251,7 +251,7 @@
+   {
+     input->seek(0, librevenge::RVNG_SEEK_SET);
+     const boost::shared_ptr<xmlTextReader> reader(
+-      libvisio::xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET|XML_PARSE_RECOVER),
++      libvisio::xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NONET|XML_PARSE_RECOVER),
+       xmlFreeTextReader);
+     if (!reader)
+       return false;
