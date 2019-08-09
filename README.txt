@@ -33,7 +33,11 @@ At this time, NeoOffice will only build on macOS 10.14 Mojave.
 
    sudo cpan -i Archive::Zip
 
-5. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of your workspace's "neojava" directory:
+5. Disable System Integrity Protection (SIP). SIP must be disabled as it causes exporting DYLD_* environment variables in makefiles to fail which will break the build. To disable SIP, reboot into Recovery mode, run the following command in the Terminal, and then reboot normally:
+
+   csrutil disable
+
+6. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of your workspace's "neojava" directory:
 
    cd $NEO_HOME
    make
