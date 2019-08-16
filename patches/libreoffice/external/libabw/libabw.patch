@@ -1,0 +1,11 @@
+--- src/lib/ABWXMLHelper.cpp
++++ src/lib/ABWXMLHelper.cpp
+@@ -76,7 +76,7 @@
+ xmlTextReaderPtr libabw::xmlReaderForStream(librevenge::RVNGInputStream *input)
+ {
+   xmlTextReaderPtr reader = xmlReaderForIO(abwxmlInputReadFunc, abwxmlInputCloseFunc, (void *)input, 0, 0,
+-                                           XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET|XML_PARSE_RECOVER);
++                                           XML_PARSE_NOBLANKS|XML_PARSE_NONET|XML_PARSE_RECOVER);
+   xmlTextReaderSetErrorHandler(reader, abwxmlReaderErrorFunc, 0);
+   return reader;
+ }

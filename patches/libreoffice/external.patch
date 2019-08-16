@@ -102,3 +102,14 @@
  ))
  
  ifeq ($(COM_IS_CLANG),TRUE)
+--- libabw/UnpackedTarball_libabw.mk	2018-05-09 03:27:29.000000000 -0700
++++ libabw/UnpackedTarball_libabw.mk	2019-08-16 11:38:06.000000000 -0700
+@@ -21,4 +21,8 @@
+ endif
+ endif
+ 
++$(eval $(call gb_UnpackedTarball_add_patches,libabw, \
++    external/libabw/libabw.patch \
++))
++
+ # vim: set noet sw=4 ts=4:
