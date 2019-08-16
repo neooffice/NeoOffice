@@ -123,3 +123,14 @@
  ))
  
  # vim: set noet sw=4 ts=4:
+--- libabw/UnpackedTarball_libabw.mk	2015-11-25 04:55:38.000000000 -0800
++++ libabw/UnpackedTarball_libabw.mk	2019-08-16 10:44:25.000000000 -0700
+@@ -11,4 +11,8 @@
+ 
+ $(eval $(call gb_UnpackedTarball_set_tarball,libabw,$(ABW_TARBALL)))
+ 
++$(eval $(call gb_UnpackedTarball_add_patches,libabw,\
++       external/libabw/libabw.patch.1 \
++))
++
+ # vim: set noet sw=4 ts=4:
