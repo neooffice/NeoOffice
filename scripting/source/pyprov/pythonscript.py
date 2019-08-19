@@ -779,7 +779,7 @@ class DummyProgressHandler( unohelper.Base, XProgressHandler ):
 
     def push( self,status ):
         log.debug( "pythonscript: DummyProgressHandler.push " + str( status ) )
-    def update( self,status ): 
+    def update( self,status ):
         log.debug( "pythonscript: DummyProgressHandler.update " + str( status ) )
     def pop( self, event ):
         log.debug( "pythonscript: DummyProgressHandler.push " + str( event ) )
@@ -919,7 +919,7 @@ class PythonScript( unohelper.Base, XScript ):
             # some people may beat me up for modifying the exception text,
             # but otherwise office just shows
             # the type name and message text with no more information,
-            # this is really bad for most users. 
+            # this is really bad for most users.
             e.Message = e.Message + " (" + complete + ")"
             raise
         except Exception as e:
