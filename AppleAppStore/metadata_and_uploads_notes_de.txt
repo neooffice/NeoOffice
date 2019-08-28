@@ -34,9 +34,7 @@ What's New in this Version:
 Bevor Sie NeoOffice kaufen, klicken Sie bitte auf den „NeoOffice Support” Link und lesen die Installationshinweise.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would crash when saving a .docx file that contains complex tables
-• NeoOffice would not catch many common grammar errors that Apple's TextEdit application catches
-• NeoOffice would crash when executing certain macros attached to spreadsheet cells
+• NeoOffice would crash due to LibreOffice bugs #97879, #101821, #103063, #108123, and #113230
 
 
 Promotional Text:
