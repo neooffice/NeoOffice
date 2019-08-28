@@ -34,10 +34,7 @@ What's New in this Version:
 Avant d'acheter NeoOffice, s'il vous plaît cliquer sur le lien « Assistance : NeoOffice » et lire les notes d'installation.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would crash due to LibreOffice bugs #98868, #106131, and #104162
-• NeoOffice would crash when dragging text within a spreadsheet
-• NeoOffice would crash when closing a spreadsheet document
-• NeoOffice would crash when moving a table in a footnote in a word processing document
+• NeoOffice would crash due to LibreOffice bugs #97879, #101821, #103063, #108123, and #113230
 
 
 Promotional Text:
