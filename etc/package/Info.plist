@@ -27,8 +27,8 @@
 			<string>$(PRODUCT_NAME) Drawing Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -56,8 +56,8 @@
 			<string>$(PRODUCT_NAME) Spreadsheet Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -88,8 +88,8 @@
 			<string>$(PRODUCT_NAME) Presentation Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -114,8 +114,8 @@
 			<string>$(PRODUCT_NAME) Chart Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -143,8 +143,8 @@
 			<string>$(PRODUCT_NAME) Text Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -167,8 +167,8 @@
 			<string>$(PRODUCT_NAME) Spreadsheet Template</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -191,8 +191,8 @@
 			<string>$(PRODUCT_NAME) Drawing Template</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -215,8 +215,8 @@
 			<string>$(PRODUCT_NAME) Presentation Template</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -241,8 +241,8 @@
 			<string>$(PRODUCT_NAME) Text Template</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -308,8 +308,8 @@
 			<string>$(PRODUCT_NAME) Image Template</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -330,8 +330,8 @@
 			<string>$(PRODUCT_NAME) Database Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -356,8 +356,8 @@
 			<string>$(PRODUCT_NAME) Master Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -378,8 +378,8 @@
 			<string>$(PRODUCT_NAME) Extension</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -450,8 +450,8 @@
 			<string>$(PRODUCT_NAME) Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
-			<key>LSIsAppleDefaultForType</key>
-			<false/>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -476,8 +476,8 @@
 			<string>$(PRODUCT_NAME) Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
-			<key>LSIsAppleDefaultForType</key>
-			<false/>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -495,8 +495,8 @@
 			<string>$(PRODUCT_NAME) Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
-			<key>LSIsAppleDefaultForType</key>
-			<false/>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -525,8 +525,8 @@
 			<string>$(PRODUCT_NAME) Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -569,8 +569,8 @@
 			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
-			<key>LSIsAppleDefaultForType</key>
-			<false/>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -595,8 +595,8 @@
 			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -618,8 +618,8 @@
 			<string>$(PRODUCT_NAME) HTML Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
-			<key>LSIsAppleDefaultForType</key>
-			<false/>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -640,8 +640,8 @@
 			<string>$(PRODUCT_NAME) HTML Template</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -663,8 +663,8 @@
 			<string>$(PRODUCT_NAME) MathML Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
-			<key>LSIsAppleDefaultForType</key>
-			<false/>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -687,8 +687,8 @@
 			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -726,8 +726,8 @@
 			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -752,8 +752,8 @@
 			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
-			<key>LSIsAppleDefaultForType</key>
-			<false/>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -784,8 +784,8 @@
 			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
-			<key>LSIsAppleDefaultForType</key>
-			<false/>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -830,8 +830,8 @@
 			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -868,8 +868,8 @@
 			<string>$(PRODUCT_NAME) Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
-			<key>LSIsAppleDefaultForType</key>
-			<false/>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
@@ -895,8 +895,8 @@
 			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 			<key>NSIsRelatedItemType</key>
