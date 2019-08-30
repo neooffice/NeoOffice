@@ -2776,13 +2776,12 @@
     </implementation>
   </component>
   -->
-  <!-- Add libavmediaQuickTimelo.dylib
+  <!-- Add libavmediaQuickTimelo.dylib -->
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="avmediaQuickTime" uri="vnd.sun.star.expand:$LO_LIB_DIR/libavmediaQuickTimelo.dylib">
     <implementation name="com.sun.star.comp.avmedia.Manager_QuickTime">
       <service name="com.sun.star.media.Manager_QuickTime"/>
     </implementation>
   </component>
-  -->
   <!-- Remove libMacOSXSpelllo.dylib
   <component loader="com.sun.star.loader.SharedLibrary" environment="gcc3" prefix="MacOSXSpell" uri="vnd.sun.star.expand:$LO_LIB_DIR/libMacOSXSpelllo.dylib">
     <implementation name="org.openoffice.lingu.MacOSXSpellChecker">
