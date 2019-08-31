@@ -179,8 +179,14 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
                 auto const e3 = errno;
                 SAL_INFO("shell", "stat(" << pathname8 << ") failed with errno " << e3);
             }
+#ifdef USE_JAVA
+            // Fix failure to open directories 
+            if (e2 != 0 || (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
+                || ((st.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) != 0 && !S_ISDIR(st.st_mode)))
+#else	// USE_JAVA
             if (e2 != 0 || !S_ISREG(st.st_mode)
                 || (st.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) != 0)
+#endif	// USE_JAVA
             {
                 throw css::lang::IllegalArgumentException(
                     "XSystemShellExecute.execute, cannot process <" + aCommand + ">", {}, 0);
