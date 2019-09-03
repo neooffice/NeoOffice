@@ -168,6 +168,7 @@ IMPL_LINK( AboutDialog, HandleClick, Button*, pButton, void )
 
 void AboutDialog::SetBuildIdLink()
 {
+#ifndef USE_JAVA
     const OUString buildId = GetBuildId();
 
     if (IsStringValidGitHash(buildId))
@@ -182,6 +183,7 @@ void AboutDialog::SetBuildIdLink()
         m_pBuildIdLink->SetURL("https://hub.libreoffice.org/git-core/" + buildId);
     }
     else
+#endif	// !USE_JAVA
     {
         m_pBuildIdLink->Hide();
     }
@@ -353,9 +355,9 @@ OUString AboutDialog::GetVersionString()
 #endif	// USE_JAVA
     }
 
+#ifndef USE_JAVA
     sVersion += "\n" + Application::GetHWOSConfInfo();
 
-#ifndef USE_JAVA
     if (EXTRA_BUILDID[0] != '\0')
     {
         sVersion += "\n" EXTRA_BUILDID;
@@ -371,7 +373,6 @@ OUString AboutDialog::GetVersionString()
         }
         sVersion += m_aLocaleStr.replaceAll("$LOCALE", aLocaleStr);
     }
-#endif	// !USE_JAVA
 
 #if HAVE_FEATURE_OPENCL
     OUString aCalcMode = "Calc: "; // Calc calculation mode
@@ -385,6 +386,7 @@ OUString AboutDialog::GetVersionString()
         aCalcMode += "single";
     sVersion += "; " + aCalcMode;
 #endif
+#endif	// !USE_JAVA
 
     return sVersion;
 }
