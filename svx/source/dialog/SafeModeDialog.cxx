@@ -363,6 +363,14 @@ namespace {
     ProfileExportedDialog::ProfileExportedDialog()
         : ModalDialog(nullptr, "ProfileExportedDialog", "svx/ui/profileexporteddialog.ui")
     {
+#ifdef PRODUCT_NAME
+        OUString aLabelText = get<FixedText>("label")->GetText();
+        OUString aReplacementText(PRODUCT_NAME "-profile.zip");
+        aLabelText = aLabelText.replaceAll("libreoffice-profile.zip", aReplacementText);
+        aLabelText = aLabelText.replaceAll("libreoffice-profil.zip", aReplacementText);
+        get<FixedText>("label")->SetText(aLabelText);
+#endif	// PRODUCT_NAME
+
         get<Button>("openfolder")->SetClickHdl(LINK(this, ProfileExportedDialog, OpenHdl));
     }
 
@@ -381,7 +389,11 @@ namespace {
 
 IMPL_LINK(SafeModeDialog, CreateZipBtnHdl, Button*, /*pBtn*/, void)
 {
+#ifdef PRODUCT_NAME
+    const OUString zipFileName(PRODUCT_NAME "-profile.zip");
+#else	// PRODUCT_NAME
     const OUString zipFileName("libreoffice-profile.zip");
+#endif	// PRODUCT_NAME
     const OUString zipFileURL(comphelper::BackupFileHelper::getUserProfileURL() + "/" + zipFileName);
     osl::File::remove(zipFileURL); // Remove previous exports
     try
