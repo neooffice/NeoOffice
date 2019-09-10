@@ -778,7 +778,12 @@ void OutputDevice::ImplDrawTextLines( SalLayout& rSalLayout, FontStrikeout eStri
         DeviceCoordinate nWidth = 0;
         const GlyphItem* pGlyph;
         int nStart = 0;
+#ifdef NO_LIBO_4_4_GLYPH_FLAGS
         while (rSalLayout.GetNextGlyphs(1, &pGlyph, aPos, nStart))
+#else	// NO_LIBO_4_4_GLYPH_FLAGS
+        DeviceCoordinate nAdvance = 0;
+        while (rSalLayout.GetNextGlyphs(1, &pGlyph, aPos, nStart, &nAdvance))
+#endif	// NO_LIBO_4_4_GLYPH_FLAGS
         {
             // calculate the boundaries of each word
             if (!pGlyph->IsSpacing())
@@ -796,7 +801,11 @@ void OutputDevice::ImplDrawTextLines( SalLayout& rSalLayout, FontStrikeout eStri
                 }
 
                 // update the length of the textline
+#ifdef NO_LIBO_4_4_GLYPH_FLAGS
                 nWidth += pGlyph->mnNewWidth;
+#else	// NO_LIBO_4_4_GLYPH_FLAGS
+                nWidth += nAdvance;
+#endif	// NO_LIBO_4_4_GLYPH_FLAGS
             }
             else if( nWidth > 0 )
             {

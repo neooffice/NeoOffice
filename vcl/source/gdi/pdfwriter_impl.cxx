@@ -8879,6 +8879,9 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const OUString& rText, bool 
     const int nMaxGlyphs = 256;
 
     const GlyphItem* pGlyphs[nMaxGlyphs] = { nullptr };
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
+    DeviceCoordinate nAdvanceWidths[nMaxGlyphs];
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
     const PhysicalFontFace* pFallbackFonts[nMaxGlyphs] = { nullptr };
     sal_Int32 pGlyphWidths[nMaxGlyphs];
 #if defined USE_JAVA && defined MACOSX
@@ -9027,7 +9030,11 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const OUString& rText, bool 
     aGlyphs.reserve( nTmpMaxGlyphs );
     // first get all the glyphs and register them; coordinates still in Pixel
     Point aGNGlyphPos;
+#ifdef NO_LIBO_4_4_GLYPH_FLAGS
     while ((nGlyphs = rLayout.GetNextGlyphs(nTmpMaxGlyphs, pGlyphs, aGNGlyphPos, nIndex, pFallbackFonts)) != 0)
+#else	// NO_LIBO_4_4_GLYPH_FLAGS
+    while( (nGlyphs = rLayout.GetNextGlyphs( nTmpMaxGlyphs, pGlyphs, aGNGlyphPos, nIndex, nAdvanceWidths, pFallbackFonts )) != 0 )
+#endif	// NO_LIBO_4_4_GLYPH_FLAGS
     {
         aCodeUnits.clear();
         for( int i = 0; i < nGlyphs; i++ )
@@ -9087,8 +9094,8 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const OUString& rText, bool 
         {
 #if defined USE_JAVA && defined MACOSX
             // Use the same units for glyph width as is used for position
-            pGlyphWidths[i] = ( ( pGlyphs[i]->mnNewWidth + nTotalAdvance ) / rLayout.GetUnitsPerPixel() ) - ( nTotalAdvance / rLayout.GetUnitsPerPixel() );
-            nTotalAdvance += pGlyphs[i]->mnNewWidth;
+            pGlyphWidths[i] = ( ( nAdvanceWidths[i] + nTotalAdvance ) / rLayout.GetUnitsPerPixel() ) - ( nTotalAdvance / rLayout.GetUnitsPerPixel() );
+            nTotalAdvance += nAdvanceWidths[i];
 
             // Fix bugs 3348 and 3442 by fetching each glyph's actual
             // native unkerned width
@@ -9218,14 +9225,23 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const OUString& rText, bool 
             sal_Int32 nWidth = 0;
             const GlyphItem* pGlyph;
             int nStart = 0;
+#ifdef NO_LIBO_4_4_GLYPH_FLAGS
             while (rLayout.GetNextGlyphs(1, &pGlyph, aPos, nStart))
+#else	// NO_LIBO_4_4_GLYPH_FLAGS
+            DeviceCoordinate nAdvance = 0;
+            while (rLayout.GetNextGlyphs(1, &pGlyph, aPos, nStart, &nAdvance))
+#endif	// NO_LIBO_4_4_GLYPH_FLAGS
             {
                 if (!pGlyph->IsSpacing())
                 {
                     if( !nWidth )
                         aStartPt = aPos;
 
+#ifdef NO_LIBO_4_4_GLYPH_FLAGS
                     nWidth += pGlyph->mnNewWidth;
+#else	// NO_LIBO_4_4_GLYPH_FLAGS
+                    nWidth += nAdvance;
+#endif	// NO_LIBO_4_4_GLYPH_FLAGS
                 }
                 else if( nWidth > 0 )
                 {
@@ -9314,12 +9330,21 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const OUString& rText, bool 
         Point aPos;
         const GlyphItem* pGlyph;
         int nStart = 0;
+#ifdef NO_LIBO_4_4_GLYPH_FLAGS
         while (rLayout.GetNextGlyphs(1, &pGlyph, aPos, nStart))
+#else	// NO_LIBO_4_4_GLYPH_FLAGS
+        DeviceCoordinate nAdvance;
+        while (rLayout.GetNextGlyphs(1, &pGlyph, aPos, nStart, &nAdvance))
+#endif	// NO_LIBO_4_4_GLYPH_FLAGS
         {
             if (pGlyph->IsSpacing())
             {
                 Point aAdjOffset = aOffset;
+#ifdef NO_LIBO_4_4_GLYPH_FLAGS
                 aAdjOffset.X() += (pGlyph->mnNewWidth - nEmphWidth) / 2;
+#else	// NO_LIBO_4_4_GLYPH_FLAGS
+                aAdjOffset.X() += (nAdvance - nEmphWidth) / 2;
+#endif	// NO_LIBO_4_4_GLYPH_FLAGS
                 aAdjOffset = aRotScale.transform( aAdjOffset );
 
                 aAdjOffset -= Point( nEmphWidth2, nEmphHeight2 );

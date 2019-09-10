@@ -184,7 +184,7 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawGlyphsOp : public JavaSalGraphicsOp
 	float					mfScaleY;
 
 public:
-							JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, const CGPoint aStartPoint, int nGlyphCount, const GlyphItem **pGlyphs, JavaImplFont *pFont, SalColor nColor, int nOrientation, int nGlyphOrientation, DeviceCoordinate fTranslateX, DeviceCoordinate fTranslateY, float fGlyphScaleX );
+							JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, const CGPoint aStartPoint, int nGlyphCount, const GlyphItem **pGlyphs, const DeviceCoordinate *pAdvances, JavaImplFont *pFont, SalColor nColor, int nOrientation, int nGlyphOrientation, DeviceCoordinate fTranslateX, DeviceCoordinate fTranslateY, float fGlyphScaleX );
 	virtual					~JavaSalGraphicsDrawGlyphsOp();
 
 	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds );
@@ -990,7 +990,7 @@ static void SalCGPathApplier( void *pInfo, const CGPathElement *pElement )
 
 // ============================================================================
 
-JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, const CGPoint aStartPoint, int nGlyphCount, const GlyphItem **pGlyphs, JavaImplFont *pFont, SalColor nColor, int nOrientation, int nGlyphOrientation, DeviceCoordinate fTranslateX, DeviceCoordinate fTranslateY, float fGlyphScaleX ) :
+JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, const CGPoint aStartPoint, int nGlyphCount, const GlyphItem **pGlyphs, const DeviceCoordinate *pAdvances, JavaImplFont *pFont, SalColor nColor, int nOrientation, int nGlyphOrientation, DeviceCoordinate fTranslateX, DeviceCoordinate fTranslateY, float fGlyphScaleX ) :
 	JavaSalGraphicsOp( aFrameClipPath, aNativeClipPath ),
 	maStartPoint( aStartPoint ),
 	mnGlyphCount( nGlyphCount ),
@@ -1044,7 +1044,7 @@ JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrame
 				// to elcapitanbugs@neooffice.org by unscaling the glyph
 				// positions by the same amount of X scale in the context's
 				// text matrix
-				mpPositions[ i ].x = mpPositions[ i - 1 ].x + ( ( pGlyphs[ i - 1 ]->mnNewWidth / mfScaleX ) / UNITS_PER_PIXEL );
+				mpPositions[ i ].x = mpPositions[ i - 1 ].x + ( ( pAdvances[ i - 1 ] / mfScaleX ) / UNITS_PER_PIXEL );
 				mpPositions[ i ].y = 0.0f;
 			}
 		}
@@ -2107,6 +2107,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 {
 	const int nMaxGlyphs = 256;
 	const GlyphItem *pGlyphs[ nMaxGlyphs ] = { nullptr };
+	DeviceCoordinate aDXArray[ nMaxGlyphs ];
 
 	Point aPos;
 	JavaSalGraphics& rJavaGraphics = static_cast< JavaSalGraphics& >( rGraphics );
@@ -2114,7 +2115,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 	for ( int nStart = 0; ; )
 	{
 		int nOldStart = nStart;
-		int nTotalGlyphCount = GetNextGlyphs( nFetchGlyphCount, pGlyphs, aPos, nStart );
+		int nTotalGlyphCount = GetNextGlyphs( nFetchGlyphCount, pGlyphs, aPos, nStart, aDXArray );
 
 		if ( !nTotalGlyphCount )
 			break;
@@ -2145,7 +2146,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 			// Skip spacing glyphs
 			for ( ; nStartGlyph < nTotalGlyphCount && pGlyphs[ nStartGlyph ]->maGlyphId & GF_ISCHAR; nStartGlyph++ )
-				aCurrentPos.X() += Float32ToLong( pGlyphs[ nStartGlyph ]->mnNewWidth );
+				aCurrentPos.X() += Float32ToLong( aDXArray[ nStartGlyph ] );
 
 			// Determine glyph count but only allow one glyph at a time for
 			// rotated glyphs
@@ -2155,14 +2156,14 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 				if ( nGlyphOrientation )
 				{
 					nGlyphCount++;
-					aCurrentPos.Y() += Float32ToLong( pGlyphs[ nStartGlyph ]->mnNewWidth );
+					aCurrentPos.Y() += Float32ToLong( aDXArray[ nStartGlyph ] );
 				}
 				else
 				{
 					for ( i = nStartGlyph; i < nTotalGlyphCount && ! ( pGlyphs[ i ]->maGlyphId & GF_ISCHAR ); i++ )
 					{
 						nGlyphCount++;
-						aCurrentPos.X() += Float32ToLong( pGlyphs[ i ]->mnNewWidth );
+						aCurrentPos.X() += Float32ToLong( aDXArray[ i ] );
 					}
 				}
 			}
@@ -2189,7 +2190,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 				else
 				{
 					fTranslateX = fX;
-					fTranslateY = pGlyphs[ nStartGlyph ]->mnNewWidth - fY;
+					fTranslateY = aDXArray[ nStartGlyph ] - fY;
 				}
 			}
 
@@ -2197,7 +2198,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			fTranslateY /= UNITS_PER_PIXEL * -1.0f;
 
 			CGPoint aUnflippedStartPoint = UnflipFlippedPoint( CGPointMake( static_cast< float >( aStartPos.X() ), static_cast< float >( aStartPos.Y() ) ), rJavaGraphics.maNativeBounds );
-			rJavaGraphics.addUndrawnNativeOp( new JavaSalGraphicsDrawGlyphsOp( rJavaGraphics.maFrameClipPath, rJavaGraphics.maNativeClipPath, aUnflippedStartPoint, nGlyphCount, pGlyphs + nStartGlyph, mpFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX ) );
+			rJavaGraphics.addUndrawnNativeOp( new JavaSalGraphicsDrawGlyphsOp( rJavaGraphics.maFrameClipPath, rJavaGraphics.maNativeClipPath, aUnflippedStartPoint, nGlyphCount, pGlyphs + nStartGlyph, aDXArray + nStartGlyph, mpFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX ) );
 		}
 	}
 }
@@ -2210,13 +2211,14 @@ bool SalATSLayout::GetBoundRect( SalGraphics& /* rGraphics */, tools::Rectangle&
 
 	const int nMaxGlyphs = 256;
 	const GlyphItem *pGlyphs[ nMaxGlyphs ] = { nullptr };
+	DeviceCoordinate aDXArray[ nMaxGlyphs ];
 
 	Point aPos;
 	int nFetchGlyphCount = nMaxGlyphs;
 	for ( int nStart = 0; ; )
 	{
 		int nOldStart = nStart;
-		int nTotalGlyphCount = GetNextGlyphs( nFetchGlyphCount, pGlyphs, aPos, nStart );
+		int nTotalGlyphCount = GetNextGlyphs( nFetchGlyphCount, pGlyphs, aPos, nStart, aDXArray );
 
 		if ( !nTotalGlyphCount )
 			break;
@@ -2247,7 +2249,7 @@ bool SalATSLayout::GetBoundRect( SalGraphics& /* rGraphics */, tools::Rectangle&
 
 			// Skip spacing glyphs
 			for ( ; nStartGlyph < nTotalGlyphCount && pGlyphs[ nStartGlyph ]->maGlyphId & GF_ISCHAR; nStartGlyph++ )
-				aCurrentPos.X() += Float32ToLong( pGlyphs[ nStartGlyph ]->mnNewWidth );
+				aCurrentPos.X() += Float32ToLong( aDXArray[ nStartGlyph ] );
 
 			// Determine glyph count but only allow one glyph at a time for
 			// rotated glyphs
@@ -2257,14 +2259,14 @@ bool SalATSLayout::GetBoundRect( SalGraphics& /* rGraphics */, tools::Rectangle&
 				if ( nGlyphOrientation )
 				{
 					nGlyphCount++;
-					aCurrentPos.Y() += Float32ToLong( pGlyphs[ nStartGlyph ]->mnNewWidth );
+					aCurrentPos.Y() += Float32ToLong( aDXArray[ nStartGlyph ] );
 				}
 				else
 				{
 					for ( i = nStartGlyph; i < nTotalGlyphCount && ! ( pGlyphs[ i ]->maGlyphId & GF_ISCHAR ); i++ )
 					{
 						nGlyphCount++;
-						aCurrentPos.X() += Float32ToLong( pGlyphs[ i ]->mnNewWidth );
+						aCurrentPos.X() += Float32ToLong( aDXArray[ i ] );
 					}
 				}
 			}
@@ -2291,7 +2293,7 @@ bool SalATSLayout::GetBoundRect( SalGraphics& /* rGraphics */, tools::Rectangle&
 				else
 				{
 					fTranslateX = fX;
-					fTranslateY = pGlyphs[ nStartGlyph ]->mnNewWidth - fY;
+					fTranslateY = aDXArray[ nStartGlyph ] - fY;
 				}
 			}
 
@@ -2325,7 +2327,7 @@ bool SalATSLayout::GetBoundRect( SalGraphics& /* rGraphics */, tools::Rectangle&
 						aBoundRect = CGRectUnion( aBoundRect, aGlyphRect );
 					}
 
-					aBoundPoint.x += pGlyphs[ i ]->mnNewWidth / UNITS_PER_PIXEL;
+					aBoundPoint.x += aDXArray[ i ] / UNITS_PER_PIXEL;
 				}
 
 				if ( !CGRectIsEmpty( aBoundRect ) )
@@ -2351,13 +2353,14 @@ bool SalATSLayout::GetOutline( SalGraphics& /* rGraphics */, B2DPolyPolygonVecto
 {
 	const int nMaxGlyphs = 256;
 	const GlyphItem *pGlyphs[ nMaxGlyphs ] = { nullptr };
+	DeviceCoordinate aDXArray[ nMaxGlyphs ];
 
 	Point aPos;
 	int nFetchGlyphCount = nMaxGlyphs;
 	for ( int nStart = 0; ; )
 	{
 		int nOldStart = nStart;
-		int nTotalGlyphCount = GetNextGlyphs( nFetchGlyphCount, pGlyphs, aPos, nStart );
+		int nTotalGlyphCount = GetNextGlyphs( nFetchGlyphCount, pGlyphs, aPos, nStart, aDXArray );
 
 		if ( !nTotalGlyphCount )
 			break;
@@ -2388,7 +2391,7 @@ bool SalATSLayout::GetOutline( SalGraphics& /* rGraphics */, B2DPolyPolygonVecto
 
 			// Skip spacing glyphs
 			for ( ; nStartGlyph < nTotalGlyphCount && pGlyphs[ nStartGlyph ]->maGlyphId & GF_ISCHAR; nStartGlyph++ )
-				aCurrentPos.X() += Float32ToLong( pGlyphs[ nStartGlyph ]->mnNewWidth );
+				aCurrentPos.X() += Float32ToLong( aDXArray[ nStartGlyph ] );
 
 			// Determine glyph count but only allow one glyph at a time for
 			// rotated glyphs
@@ -2398,14 +2401,14 @@ bool SalATSLayout::GetOutline( SalGraphics& /* rGraphics */, B2DPolyPolygonVecto
 				if ( nGlyphOrientation )
 				{
 					nGlyphCount++;
-					aCurrentPos.Y() += Float32ToLong( pGlyphs[ nStartGlyph ]->mnNewWidth );
+					aCurrentPos.Y() += Float32ToLong( aDXArray[ nStartGlyph ] );
 				}
 				else
 				{
 					for ( i = nStartGlyph; i < nTotalGlyphCount && ! ( pGlyphs[ i ]->maGlyphId & GF_ISCHAR ); i++ )
 					{
 						nGlyphCount++;
-						aCurrentPos.X() += Float32ToLong( pGlyphs[ i ]->mnNewWidth );
+						aCurrentPos.X() += Float32ToLong( aDXArray[ i ] );
 					}
 				}
 			}
@@ -2432,7 +2435,7 @@ bool SalATSLayout::GetOutline( SalGraphics& /* rGraphics */, B2DPolyPolygonVecto
 				else
 				{
 					fTranslateX = fX;
-					fTranslateY = pGlyphs[ nStartGlyph ]->mnNewWidth - fY;
+					fTranslateY = aDXArray[ nStartGlyph ] - fY;
 				}
 			}
 
@@ -2483,7 +2486,7 @@ bool SalATSLayout::GetOutline( SalGraphics& /* rGraphics */, B2DPolyPolygonVecto
 						rVector.push_back( aPolyPolygon.getB2DPolyPolygon() );
 					}
 
-					aBoundPoint.x += pGlyphs[ i ]->mnNewWidth;
+					aBoundPoint.x += aDXArray[ i ];
 				}
 
 				CFRelease( aFont );

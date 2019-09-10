@@ -190,6 +190,9 @@ public:
 
     // methods using glyph indexing
     virtual int     GetNextGlyphs(int nLen, const GlyphItem** pGlyphs, Point& rPos, int&,
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
+                                  DeviceCoordinate* pGlyphAdvAry = nullptr,
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
                                   const PhysicalFontFace** pFallbackFonts = nullptr) const = 0;
     virtual bool    GetOutline( SalGraphics&, basegfx::B2DPolyPolygonVector& ) const;
     virtual bool    GetBoundRect( SalGraphics&, tools::Rectangle& ) const;
@@ -250,6 +253,9 @@ public:
     virtual DeviceCoordinate FillDXArray( DeviceCoordinate* pDXArray ) const override;
     virtual void    GetCaretPositions( int nArraySize, long* pCaretXArray ) const override;
     virtual int     GetNextGlyphs(int nLen, const GlyphItem** pGlyphs, Point& rPos, int&,
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
+                                  DeviceCoordinate* pGlyphAdvAry,
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
                                   const PhysicalFontFace** pFallbackFonts = nullptr) const override;
     virtual bool    GetOutline( SalGraphics&, basegfx::B2DPolyPolygonVector& ) const override;
     virtual bool    IsKashidaPosValid(int nCharPos) const override;
@@ -376,6 +382,9 @@ public:
 
     // used by display layers
     virtual int     GetNextGlyphs(int nLen, const GlyphItem** pGlyphs, Point& rPos, int&,
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
+                                  DeviceCoordinate* pGlyphAdvAry = nullptr,
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
                                   const PhysicalFontFace** pFallbackFonts = nullptr) const override;
 
 protected:

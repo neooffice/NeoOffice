@@ -1434,6 +1434,9 @@ sal_Int32 GenericSalLayout::GetTextBreak( DeviceCoordinate nMaxWidth, DeviceCoor
 
 int GenericSalLayout::GetNextGlyphs(int nLen, const GlyphItem** pGlyphs,
                                     Point& rPos, int& nStart,
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
+                                    DeviceCoordinate* pGlyphAdvAry,
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
                                     const PhysicalFontFace** /*pFallbackFonts*/) const
 {
     std::vector<GlyphItem>::const_iterator pGlyphIter = m_GlyphItems.begin();
@@ -1469,6 +1472,10 @@ int GenericSalLayout::GetNextGlyphs(int nLen, const GlyphItem** pGlyphs,
         // update return data with glyph info
         ++nCount;
         *(pGlyphs++) = &(*pGlyphIter);
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
+        if( pGlyphAdvAry )
+            *pGlyphAdvAry = pGlyphIter->mnNewWidth;
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
 
         // break at end of glyph list
         if( ++nStart >= (int)m_GlyphItems.size() )
@@ -1478,9 +1485,21 @@ int GenericSalLayout::GetNextGlyphs(int nLen, const GlyphItem** pGlyphs,
             break;
 
         long nGlyphAdvance = pGlyphIter[1].maLinearPos.X() - pGlyphIter->maLinearPos.X();
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
+        if( pGlyphAdvAry )
+        {
+            // override default advance width with correct value
+            *(pGlyphAdvAry++) = nGlyphAdvance;
+        }
+        else
+        {
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
         // stop when next x-position is unexpected
         if( pGlyphIter->mnOrigWidth != nGlyphAdvance )
             break;
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
+        }
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
 
         // advance to next glyph
         ++pGlyphIter;
@@ -1699,6 +1718,9 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
     int nStartOld[ MAX_FALLBACK ];
     int nStartNew[ MAX_FALLBACK ];
     const GlyphItem* pGlyphs[MAX_FALLBACK];
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
+    DeviceCoordinate nGlyphAdv[ MAX_FALLBACK ];
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
     int nValid[ MAX_FALLBACK ] = {0};
 
     Point aPos;
@@ -1724,7 +1746,11 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 
         // prepare merging components
         nStartNew[ nLevel ] = nStartOld[ nLevel ] = 0;
+#ifdef NO_LIBO_4_4_GLYPH_FLAGS
         nValid[nLevel] = mpLayouts[n]->GetNextGlyphs(1, &pGlyphs[nLevel], aPos, nStartNew[nLevel]);
+#else	// NO_LIBO_4_4_GLYPH_FLAGS
+        nValid[nLevel] = mpLayouts[n]->GetNextGlyphs(1, &pGlyphs[nLevel], aPos, nStartNew[nLevel], &nGlyphAdv[nLevel]);
+#endif	// NO_LIBO_4_4_GLYPH_FLAGS
 
         if( (n > 0) && !nValid[ nLevel ] )
         {
@@ -1791,7 +1817,11 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
             {
                 mpLayouts[0]->DropGlyph( nStartOld[0] );
                 nStartOld[0] = nStartNew[0];
+#ifdef NO_LIBO_4_4_GLYPH_FLAGS
                 nValid[0] = mpLayouts[0]->GetNextGlyphs(1, &pGlyphs[0], aPos, nStartNew[0]);
+#else	// NO_LIBO_4_4_GLYPH_FLAGS
+                nValid[0] = mpLayouts[0]->GetNextGlyphs(1, &pGlyphs[0], aPos, nStartNew[0], &nGlyphAdv[0]);
+#endif	// NO_LIBO_4_4_GLYPH_FLAGS
 
                 if( !nValid[0] )
                    break;
@@ -1803,12 +1833,20 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
         bool bKeepNotDef = (nFBLevel >= nLevel);
         for(;;)
         {
+#ifdef NO_LIBO_4_4_GLYPH_FLAGS
             nRunAdvance += pGlyphs[n]->mnNewWidth;
+#else	// NO_LIBO_4_4_GLYPH_FLAGS
+            nRunAdvance += nGlyphAdv[n];
+#endif	// NO_LIBO_4_4_GLYPH_FLAGS
 
             // proceed to next glyph
             nStartOld[n] = nStartNew[n];
             int nOrigCharPos = pGlyphs[n]->mnCharPos;
+#ifdef NO_LIBO_4_4_GLYPH_FLAGS
             nValid[n] = mpLayouts[n]->GetNextGlyphs(1, &pGlyphs[n], aPos, nStartNew[n]);
+#else	// NO_LIBO_4_4_GLYPH_FLAGS
+            nValid[n] = mpLayouts[n]->GetNextGlyphs(1, &pGlyphs[n], aPos, nStartNew[n], &nGlyphAdv[n]);
+#endif	// NO_LIBO_4_4_GLYPH_FLAGS
             // break after last glyph of active layout
             if( !nValid[n] )
             {
@@ -2075,6 +2113,9 @@ void MultiSalLayout::GetCaretPositions( int nMaxIndex, long* pCaretXArray ) cons
 
 int MultiSalLayout::GetNextGlyphs(int nLen, const GlyphItem** pGlyphs,
                                   Point& rPos, int& nStart,
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
+                                  DeviceCoordinate* pGlyphAdvAry,
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
                                   const PhysicalFontFace** pFallbackFonts) const
 {
     // for multi-level fallback only single glyphs should be used
@@ -2088,13 +2129,29 @@ int MultiSalLayout::GetNextGlyphs(int nLen, const GlyphItem** pGlyphs,
     {
         SalLayout& rLayout = *mpLayouts[ nLevel ];
         rLayout.InitFont();
+#ifdef NO_LIBO_4_4_GLYPH_FLAGS
         int nRetVal = rLayout.GetNextGlyphs(nLen, pGlyphs, rPos, nStart);
+#else	// NO_LIBO_4_4_GLYPH_FLAGS
+        int nRetVal = rLayout.GetNextGlyphs(nLen, pGlyphs, rPos, nStart, pGlyphAdvAry);
+#endif	// NO_LIBO_4_4_GLYPH_FLAGS
         if( nRetVal )
         {
             int nFontTag = nLevel << GF_FONTSHIFT;
             nStart |= nFontTag;
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
+            double fUnitMul = mnUnitsPerPixel;
+            fUnitMul /= mpLayouts[nLevel]->GetUnitsPerPixel();
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
             for( int i = 0; i < nRetVal; ++i )
             {
+#ifndef NO_LIBO_4_4_GLYPH_FLAGS
+                if( pGlyphAdvAry )
+                {
+                    DeviceCoordinate w = pGlyphAdvAry[i];
+                    w = static_cast<DeviceCoordinate>(w * fUnitMul + 0.5);
+                    pGlyphAdvAry[i] = w;
+                }
+#endif	// !NO_LIBO_4_4_GLYPH_FLAGS
                 // FIXME: This cast is ugly!
                 const_cast<GlyphItem*>(pGlyphs[i])->mnFallbackLevel = nLevel;
                 if( pFallbackFonts )
