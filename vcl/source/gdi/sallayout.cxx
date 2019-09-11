@@ -55,12 +55,10 @@
 #include "java/salatslayout.hxx"
 #endif	// USE_JAVA && MACOSX && !USE_SUBPIXEL_TEXT_RENDERING
 
-#ifdef NO_LIBO_4_4_GLYPH_FLAGS
 // Glyph Flags
 #define GF_FONTMASK  0xF0000000
 #define GF_FONTSHIFT 28
 #define GF_DROPPED   0xFFFFFFFF
-#endif	// NO_LIBO_4_4_GLYPH_FLAGS
 
 
 std::ostream &operator <<(std::ostream& s, ImplLayoutArgs &rArgs)

@@ -656,6 +656,7 @@ public:
         OString     m_aXObjectId;
         int         m_nCharPos;
         sal_Int32   m_nRealNativeWidth;
+        int         m_nFallbackLevel;
         SalLayout*  m_pLayout;
 #else	// USE_JAVA && MACOSX
         sal_uInt8   m_nMappedGlyphId;
@@ -673,6 +674,7 @@ public:
                   const OString &aXObjectId,
                   int nCharPos,
                   sal_Int32 nRealNativeWidth,
+                  int nFallbackLevel,
                   SalLayout *pLayout,
 #else	// USE_JAVA && MACOSX
                   sal_uInt8 nMappedGlyphId,
@@ -686,6 +688,7 @@ public:
           m_aXObjectId( aXObjectId ),
           m_nCharPos( nCharPos ),
           m_nRealNativeWidth( nRealNativeWidth ),
+          m_nFallbackLevel( nFallbackLevel ),
           m_pLayout( pLayout ),
 #endif	// USE_JAVA && MACOSX
           m_bVertical(bVertical)

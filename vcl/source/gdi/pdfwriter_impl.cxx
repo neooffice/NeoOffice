@@ -8552,7 +8552,7 @@ void PDFWriterImpl::drawVerticalGlyphs(
             SalATSLayout *pATSLayout = nullptr;
             MultiSalLayout *pMultiLayout = dynamic_cast<MultiSalLayout*>( rGlyphs[i].m_pLayout );
             if ( pMultiLayout )
-                pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( ( rGlyphs[i].m_nGlyphId & GF_FONTMASK ) >> GF_FONTSHIFT ) );
+                pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( rGlyphs[i].m_nFallbackLevel ) );
             if ( !pATSLayout )
                 pATSLayout = dynamic_cast<SalATSLayout*>( rGlyphs[i].m_pLayout );
 
@@ -8584,7 +8584,7 @@ void PDFWriterImpl::drawVerticalGlyphs(
             SalATSLayout *pATSLayout = nullptr;
             MultiSalLayout *pMultiLayout = dynamic_cast<MultiSalLayout*>( rGlyphs[i].m_pLayout );
             if ( pMultiLayout )
-                pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( ( rGlyphs[i].m_nGlyphId & GF_FONTMASK ) >> GF_FONTSHIFT ) );
+                pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( rGlyphs[i].m_nFallbackLevel ) );
             if ( !pATSLayout )
                 pATSLayout = dynamic_cast<SalATSLayout*>( rGlyphs[i].m_pLayout );
 
@@ -9102,7 +9102,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const OUString& rText, bool 
             SalATSLayout *pATSLayout = nullptr;
             MultiSalLayout *pMultiLayout = dynamic_cast<MultiSalLayout*>( &rLayout );
             if ( pMultiLayout )
-                pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( ( pGlyphs[i]->maGlyphId & GF_FONTMASK ) >> GF_FONTSHIFT ) );
+                pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( pGlyphs[i]->mnFallbackLevel ) );
             if ( !pATSLayout )
                 pATSLayout = dynamic_cast<SalATSLayout*>( &rLayout );
             sal_Int32 nNativeGlyphWidth = ( pATSLayout ? sal_Int32( ( static_cast< double >( pATSLayout->GetNativeGlyphWidth( pGlyphs[i]->maGlyphId, pGlyphs[i]->mnCharPos ) ) / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) : 0.0 );
@@ -9132,6 +9132,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const OUString& rText, bool 
                                          pMappedXObjects[i],
                                          pGlyphs[i]->mnCharPos,
                                          nNativeGlyphWidth,
+                                         pGlyphs[i]->mnFallbackLevel,
                                          &rLayout,
 #endif	// USE_JAVA && MACOSX
                                          pGlyphs[i]->IsVertical() ) );

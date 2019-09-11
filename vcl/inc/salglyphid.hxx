@@ -37,10 +37,6 @@ typedef sal_uInt32 sal_GlyphId;
 #define GF_ROTMASK  0x03000000
 #define GF_UNHINTED 0x04000000
 #define GF_GSUB     0x08000000
-#define GF_FONTMASK 0xF0000000
-#define GF_FONTSHIFT 28
-
-#define GF_DROPPED  0xFFFFFFFF
 #endif	// !NO_LIBO_4_4_GLYPH_FLAGS
 
 
