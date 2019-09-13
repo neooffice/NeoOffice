@@ -5,5 +5,11 @@
 	<true/>
 	<key>com.apple.security.inherit</key>
 	<true/>
+	<!-- Disable page protection or the application will crash on startup -->
+	<key>com.apple.security.cs.disable-executable-page-protection</key>
+	<true/>
+	<!-- Disable library validation or Java and native plugins won't load -->
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
 </dict>
 </plist>
