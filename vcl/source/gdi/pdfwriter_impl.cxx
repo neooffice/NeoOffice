@@ -1744,6 +1744,7 @@ void PDFWriterImpl::PDFPage::appendWaveLine( sal_Int32 nWidth, sal_Int32 nY, sal
         m_bOpen(false),
 #if defined USE_JAVA && defined MACOSX
         m_pParentWriter( pParentWriter ),
+        m_nMetafiles( 0 ),
 #endif	// USE_JAVA && MACOSX
         m_aDocDigest( rtl_digest_createMD5() ),
         m_aCipher( nullptr ),

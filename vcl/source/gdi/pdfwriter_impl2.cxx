@@ -273,6 +273,10 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
     }
     GDIMetaFile aMtf( i_rMtf );
 
+#if defined USE_JAVA && defined MACOSX
+    m_nMetafiles++;
+#endif	// USE_JAVA && MACOSX
+
     for( sal_uInt32 i = 0, nCount = aMtf.GetActionSize(); i < nCount; )
     {
         if ( !i_pOutDevData || !i_pOutDevData->PlaySyncPageAct( m_rOuterFace, i ) )
@@ -510,7 +514,11 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                                 xVDev->DrawMask( aPoint, aDstSizePixel, aMask, Color( COL_WHITE ) );
                                 aAlpha = xVDev->GetBitmap( aPoint, aDstSizePixel );
 
+#if defined USE_JAVA && defined MACOSX
+                                Graphic aGraphic = getCachedGraphic( m_nMetafiles, i, i_pOutDevData );
+#else	// USE_JAVA && MACOSX
                                 Graphic aGraphic = i_pOutDevData ? i_pOutDevData->GetCurrentGraphic() : Graphic();
+#endif	// USE_JAVA && MACOSX
 #ifdef USE_JAVA
                                 // Reset temporary metafile to reset map mode
                                 aTmpMtf = pA->GetGDIMetaFile();
@@ -616,7 +624,11 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                             // Convert EPS to bitmap
                             Point aPoint;
                             pVDev->DrawEPS( aPoint, aDstSizePixel, pA->GetLink() );
+#if defined USE_JAVA && defined MACOSX
+                            Graphic aGraphic = getCachedGraphic( m_nMetafiles, i, i_pOutDevData );
+#else	// USE_JAVA && MACOSX
                             Graphic aGraphic = i_pOutDevData ? i_pOutDevData->GetCurrentGraphic() : Graphic();
+#endif	// USE_JAVA && MACOSX
                             implWriteBitmapEx( rPos, rSize, pVDev->GetBitmapEx( aPoint, aDstSizePixel ), aGraphic, pDummyVDev, i_rContext );
                         }
                         delete pVDev;
@@ -913,7 +925,11 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                     if( ! ( aSize.Width() && aSize.Height() ) )
                         aSize = pDummyVDev->PixelToLogic( aBitmapEx.GetSizePixel() );
 
+#if defined USE_JAVA && defined MACOSX
+                    Graphic aGraphic = getCachedGraphic( m_nMetafiles, i, i_pOutDevData );
+#else	// USE_JAVA && MACOSX
                     Graphic aGraphic = i_pOutDevData ? i_pOutDevData->GetCurrentGraphic() : Graphic();
+#endif	// USE_JAVA && MACOSX
                     implWriteBitmapEx( pA->GetPoint(), aSize, aBitmapEx, aGraphic, pDummyVDev, i_rContext );
                 }
                 break;
@@ -921,7 +937,11 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                 case( MetaActionType::BMPSCALE ):
                 {
                     const MetaBmpScaleAction* pA = static_cast<const MetaBmpScaleAction*>(pAction);
+#if defined USE_JAVA && defined MACOSX
+                    Graphic aGraphic = getCachedGraphic( m_nMetafiles, i, i_pOutDevData );
+#else	// USE_JAVA && MACOSX
                     Graphic aGraphic = i_pOutDevData ? i_pOutDevData->GetCurrentGraphic() : Graphic();
+#endif	// USE_JAVA && MACOSX
                     implWriteBitmapEx( pA->GetPoint(), pA->GetSize(), BitmapEx( pA->GetBitmap() ), aGraphic, pDummyVDev, i_rContext );
                 }
                 break;
@@ -931,7 +951,11 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                     const MetaBmpScalePartAction* pA = static_cast<const MetaBmpScalePartAction*>(pAction);
                     BitmapEx aBitmapEx( pA->GetBitmap() );
                     aBitmapEx.Crop( tools::Rectangle( pA->GetSrcPoint(), pA->GetSrcSize() ) );
+#if defined USE_JAVA && defined MACOSX
+                    Graphic aGraphic = getCachedGraphic( m_nMetafiles, i, i_pOutDevData );
+#else	// USE_JAVA && MACOSX
                     Graphic aGraphic = i_pOutDevData ? i_pOutDevData->GetCurrentGraphic() : Graphic();
+#endif	// USE_JAVA && MACOSX
                     implWriteBitmapEx( pA->GetDestPoint(), pA->GetDestSize(), aBitmapEx, aGraphic, pDummyVDev, i_rContext );
                 }
                 break;
@@ -942,7 +966,11 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                     BitmapEx aBitmapEx( pA->GetBitmapEx() );
                     Size aSize( OutputDevice::LogicToLogic( aBitmapEx.GetPrefSize(),
                             aBitmapEx.GetPrefMapMode(), pDummyVDev->GetMapMode() ) );
+#if defined USE_JAVA && defined MACOSX
+                    Graphic aGraphic = getCachedGraphic( m_nMetafiles, i, i_pOutDevData );
+#else	// USE_JAVA && MACOSX
                     Graphic aGraphic = i_pOutDevData ? i_pOutDevData->GetCurrentGraphic() : Graphic();
+#endif	// USE_JAVA && MACOSX
                     implWriteBitmapEx( pA->GetPoint(), aSize, aBitmapEx, aGraphic, pDummyVDev, i_rContext );
                 }
                 break;
@@ -950,7 +978,11 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                 case( MetaActionType::BMPEXSCALE ):
                 {
                     const MetaBmpExScaleAction* pA = static_cast<const MetaBmpExScaleAction*>(pAction);
+#if defined USE_JAVA && defined MACOSX
+                    Graphic aGraphic = getCachedGraphic( m_nMetafiles, i, i_pOutDevData );
+#else	// USE_JAVA && MACOSX
                     Graphic aGraphic = i_pOutDevData ? i_pOutDevData->GetCurrentGraphic() : Graphic();
+#endif	// USE_JAVA && MACOSX
                     implWriteBitmapEx( pA->GetPoint(), pA->GetSize(), pA->GetBitmapEx(), aGraphic, pDummyVDev, i_rContext );
                 }
                 break;
@@ -960,7 +992,11 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                     const MetaBmpExScalePartAction* pA = static_cast<const MetaBmpExScalePartAction*>(pAction);
                     BitmapEx aBitmapEx( pA->GetBitmapEx() );
                     aBitmapEx.Crop( tools::Rectangle( pA->GetSrcPoint(), pA->GetSrcSize() ) );
+#if defined USE_JAVA && defined MACOSX
+                    Graphic aGraphic = getCachedGraphic( m_nMetafiles, i, i_pOutDevData );
+#else	// USE_JAVA && MACOSX
                     Graphic aGraphic = i_pOutDevData ? i_pOutDevData->GetCurrentGraphic() : Graphic();
+#endif	// USE_JAVA && MACOSX
                     implWriteBitmapEx( pA->GetDestPoint(), pA->GetDestSize(), aBitmapEx, aGraphic, pDummyVDev, i_rContext );
                 }
                 break;
@@ -2186,5 +2222,31 @@ static bool lcl_canUsePDFAxialShading(const Gradient& rGradient) {
     // TODO: handle step count
     return rGradient.GetSteps() <= 0;
 }
+
+#if defined USE_JAVA && defined MACOSX
+
+const Graphic PDFWriterImpl::getCachedGraphic( size_t nMetafile, size_t nAction, PDFExtOutDevData *pOutDevData )
+{
+    if ( pOutDevData && pOutDevData->GetCurrentGraphic().GetType() != GraphicType::NONE )
+    {
+        m_aCachedGraphics[ nMetafile ][ nAction ] = pOutDevData->GetCurrentGraphic();
+        return pOutDevData->GetCurrentGraphic();
+    }
+
+    std::map< size_t, std::map< size_t, Graphic > >::iterator mit = m_aCachedGraphics.find( nMetafile );
+    if ( mit != m_aCachedGraphics.end() )
+    {
+        std::map< size_t, Graphic >::iterator git = mit->second.find( nAction );
+        if ( git != mit->second.end() )
+            return git->second;
+    }
+
+    if ( m_pParentWriter )
+        return m_pParentWriter->getCachedGraphic( nMetafile, nAction, pOutDevData );
+
+    return Graphic();
+}
+
+#endif	// USE_JAVA && MACOSX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

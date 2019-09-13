@@ -81,25 +81,19 @@ public:
 
     CPPUNIT_TEST_SUITE(PdfExportTest);
 #if HAVE_FEATURE_PDFIUM
-#if !defined USE_JAVA || !defined MACOSX
     CPPUNIT_TEST(testTdf106059);
     CPPUNIT_TEST(testTdf105461);
-#endif	// !USE_JAVA || !MACOSX
     CPPUNIT_TEST(testTdf107868);
     CPPUNIT_TEST(testTdf105093);
     CPPUNIT_TEST(testTdf106206);
-#if !defined USE_JAVA || !defined MACOSX
     CPPUNIT_TEST(testTdf106693);
     CPPUNIT_TEST(testTdf106972);
     CPPUNIT_TEST(testTdf106972Pdf17);
     CPPUNIT_TEST(testTdf107013);
     CPPUNIT_TEST(testTdf107018);
     CPPUNIT_TEST(testTdf107089);
-#endif	// !USE_JAVA || !MACOSX
     CPPUNIT_TEST(testTdf99680);
-#if !defined USE_JAVA || !defined MACOSX
     CPPUNIT_TEST(testTdf99680_2);
-#endif	// !USE_JAVA || !MACOSX
 #endif
     CPPUNIT_TEST_SUITE_END();
 };

@@ -852,6 +852,8 @@ private:
 #if defined USE_JAVA && defined MACOSX
     PDFWriterImpl*                          m_pParentWriter;
     GDIMetaFile                             m_aReplayMtf;
+    size_t                                  m_nMetafiles;
+    std::map< size_t, std::map< size_t, Graphic > > m_aCachedGraphics;
 #endif	// USE_JAVA && MACOSX
 
     std::unique_ptr<ZCodec>                 m_pCodec;
@@ -1398,6 +1400,7 @@ public:
     PDFWriter& getPDFWriter() { return m_rOuterFace; }
     const GDIMetaFile& getReplayMetaFile() { return m_aReplayMtf; }
     bool isReplayWriter() { return ( m_pParentWriter ? true : false ); }
+    const Graphic getCachedGraphic( size_t nMetafile, size_t nAction, PDFExtOutDevData *pOutDevData );
 #endif	// USE_JAVA && MACOSX
 };
 
