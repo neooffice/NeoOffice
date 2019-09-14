@@ -306,11 +306,11 @@ int java_main( int argc, char **argv )
 	// Fix bug 1198 and eliminate "libzip.jnilib not found" crashes by
 	// unsetting DYLD_FRAMEWORK_PATH
   	const char *pEnvFrameworkPath = getenv( "DYLD_FRAMEWORK_PATH" );
+	NSString *pFrameworkPathEnv = ( pEnvFrameworkPath ? [NSString stringWithFormat:@"DYLD_FALLBACK_FRAMEWORK_PATH=%@", [NSString stringWithUTF8String:pEnvFrameworkPath]] : nil );
 	// Always unset DYLD_FRAMEWORK_PATH
 	unsetenv( "DYLD_FRAMEWORK_PATH" );
-  	if ( pEnvFrameworkPath )
+  	if ( pFrameworkPathEnv )
   	{
-		NSString *pFrameworkPathEnv = [NSString stringWithFormat:@"DYLD_FALLBACK_FRAMEWORK_PATH=%@", [NSString stringWithUTF8String:pEnvFrameworkPath]];
   		const char *pEnvFallbackFrameworkPath = getenv( "DYLD_FALLBACK_FRAMEWORK_PATH" );
 		if ( pEnvFallbackFrameworkPath )
 			pFrameworkPathEnv = [pFrameworkPathEnv stringByAppendingFormat:@":%@", [NSString stringWithUTF8String:pEnvFallbackFrameworkPath]];
