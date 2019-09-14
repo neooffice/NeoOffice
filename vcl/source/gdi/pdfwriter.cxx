@@ -1043,11 +1043,24 @@ bool PDFWriter::Emit()
         const PDFWriter::PDFWriterContext& rContext = xImplementation->getContext();
         PDFWriter& rPDFWriter = xImplementation->getPDFWriter();
 
-        std::unique_ptr<PDFWriterImpl> xFinalImplementation( new PDFWriterImpl( rContext, com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >(), rPDFWriter, xImplementation.get() ) );
-        xFinalImplementation.swap( xImplementation );
+        // Fix bug 3061 by making a substitute writer and copying the actions
+        // into that as the current writer seems to get mangled layouts in some
+        // cases
+        std::unique_ptr<PDFWriterImpl> xSubstituteImplementation( new PDFWriterImpl( rContext, com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >(), rPDFWriter, nullptr, xImplementation.get() ) );
+        xSubstituteImplementation.swap( xImplementation );
         ReplayMetaFile( *this, aMtf );
         bRet = xImplementation->emit();
-        xImplementation.swap( xFinalImplementation );
+        xImplementation.swap( xSubstituteImplementation );
+
+        // Now replay the same meta file into the final destination
+        if ( bRet )
+        {
+            std::unique_ptr<PDFWriterImpl> xFinalImplementation( new PDFWriterImpl( rContext, com::sun::star::uno::Reference< com::sun::star::beans::XMaterialHolder >(), rPDFWriter, xSubstituteImplementation.get(), xImplementation.get() ) );
+            xFinalImplementation.swap( xImplementation );
+            ReplayMetaFile( *this, aMtf );
+            bRet = xImplementation->emit();
+            xImplementation.swap( xFinalImplementation );
+        }
     }
 
     return bRet;

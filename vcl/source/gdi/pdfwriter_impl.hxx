@@ -854,6 +854,7 @@ private:
     GDIMetaFile                             m_aReplayMtf;
     size_t                                  m_nMetafiles;
     std::map< size_t, std::map< size_t, Graphic > > m_aCachedGraphics;
+    PDFWriterImpl*                          m_pCachedGraphicsWriter;
 #endif	// USE_JAVA && MACOSX
 
     std::unique_ptr<ZCodec>                 m_pCodec;
@@ -1165,7 +1166,7 @@ i12626
     void appendNonStrokingColor( const Color& rColor, OStringBuffer& rBuffer );
 public:
 #if defined USE_JAVA && defined MACOSX
-    PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, const css::uno::Reference< css::beans::XMaterialHolder >&, PDFWriter&, PDFWriterImpl *pParentWriter = nullptr );
+    PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, const css::uno::Reference< css::beans::XMaterialHolder >&, PDFWriter&, PDFWriterImpl *pParentWriter = nullptr, PDFWriterImpl *pCachedGraphicsWriter = nullptr );
 #else	// USE_JAVA && MACOSX
     PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, const css::uno::Reference< css::beans::XMaterialHolder >&, PDFWriter& );
 #endif	// USE_JAVA && MACOSX

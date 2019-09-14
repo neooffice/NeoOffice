@@ -2241,8 +2241,8 @@ const Graphic PDFWriterImpl::getCachedGraphic( size_t nMetafile, size_t nAction,
             return git->second;
     }
 
-    if ( m_pParentWriter )
-        return m_pParentWriter->getCachedGraphic( nMetafile, nAction, pOutDevData );
+    if ( m_pCachedGraphicsWriter && m_pCachedGraphicsWriter != this )
+        return m_pCachedGraphicsWriter->getCachedGraphic( nMetafile, nAction, pOutDevData );
 
     return Graphic();
 }

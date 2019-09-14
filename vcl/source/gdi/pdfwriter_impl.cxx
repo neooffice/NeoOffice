@@ -1720,7 +1720,7 @@ void PDFWriterImpl::PDFPage::appendWaveLine( sal_Int32 nWidth, sal_Int32 nY, sal
  PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext,
                                const css::uno::Reference< css::beans::XMaterialHolder >& xEnc,
 #if defined USE_JAVA && defined MACOSX
-                               PDFWriter& i_rOuterFace, PDFWriterImpl *pParentWriter)
+                               PDFWriter& i_rOuterFace, PDFWriterImpl *pParentWriter, PDFWriterImpl *pCachedGraphicsWriter)
 #else	// USE_JAVA && MACOSX
                                PDFWriter& i_rOuterFace)
 #endif	// USE_JAVA && MACOSX
@@ -1745,6 +1745,7 @@ void PDFWriterImpl::PDFPage::appendWaveLine( sal_Int32 nWidth, sal_Int32 nY, sal
 #if defined USE_JAVA && defined MACOSX
         m_pParentWriter( pParentWriter ),
         m_nMetafiles( 0 ),
+        m_pCachedGraphicsWriter( pCachedGraphicsWriter ),
 #endif	// USE_JAVA && MACOSX
         m_aDocDigest( rtl_digest_createMD5() ),
         m_aCipher( nullptr ),
