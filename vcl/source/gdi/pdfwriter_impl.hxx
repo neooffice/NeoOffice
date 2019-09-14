@@ -855,6 +855,7 @@ private:
     size_t                                  m_nMetafiles;
     std::map< size_t, std::map< size_t, Graphic > > m_aCachedGraphics;
     PDFWriterImpl*                          m_pCachedGraphicsWriter;
+    bool                                    m_bInOuterFace;
 #endif	// USE_JAVA && MACOSX
 
     std::unique_ptr<ZCodec>                 m_pCodec;
@@ -1402,6 +1403,8 @@ public:
     const GDIMetaFile& getReplayMetaFile() { return m_aReplayMtf; }
     bool isReplayWriter() { return ( m_pParentWriter ? true : false ); }
     const Graphic getCachedGraphic( size_t nMetafile, size_t nAction, PDFExtOutDevData *pOutDevData );
+    void setInOuterFace( bool bInOuterFace ) { m_bInOuterFace = bInOuterFace; }
+    bool isInOuterFace() { return m_bInOuterFace; }
 #endif	// USE_JAVA && MACOSX
 };
 

@@ -1025,10 +1025,15 @@ OutputDevice* PDFWriter::GetReferenceDevice()
 void PDFWriter::NewPage( double nPageWidth, double nPageHeight, Orientation eOrientation )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaNewPagePDFAction( nPageWidth, nPageHeight, eOrientation ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->newPage( nPageWidth, nPageHeight, eOrientation );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 bool PDFWriter::Emit()
@@ -1072,28 +1077,43 @@ bool PDFWriter::Emit()
 void PDFWriter::SetDocumentLocale( const css::lang::Locale& rLoc )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaSetLocalePDFAction( rLoc ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setDocumentLocale( rLoc );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetFont( const vcl::Font& rFont )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaFontAction( rFont ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setFont( rFont );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawText( const Point& rPos, const OUString& rText )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaTextAction( rPos, rText, 0, rText.getLength() ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawText( rPos, rText, 0, rText.getLength() );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawTextLine(
@@ -1104,10 +1124,15 @@ void PDFWriter::DrawTextLine(
                              FontLineStyle eOverline )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaTextLineAction( rPos, nWidth, eStrikeout, eUnderline, eOverline ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawTextLine( rPos, nWidth, eStrikeout, eUnderline, eOverline, false/*bUnderlineAbove*/ );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawTextArray(
@@ -1118,10 +1143,15 @@ void PDFWriter::DrawTextArray(
                               sal_Int32 nLen )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaTextArrayAction( rStartPt, rStr, pDXAry, nIndex, nLen ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawTextArray( rStartPt, rStr, pDXAry, nIndex, nLen );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawStretchText(
@@ -1132,10 +1162,15 @@ void PDFWriter::DrawStretchText(
                                 sal_Int32 nLen )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaStretchTextAction( rStartPt, nWidth, rStr, nIndex, nLen ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawStretchText( rStartPt, nWidth, rStr, nIndex, nLen );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawText(
@@ -1144,606 +1179,952 @@ void PDFWriter::DrawText(
                          DrawTextFlags nStyle )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaTextRectAction( rRect, rStr, nStyle ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawText( rRect, rStr, nStyle );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawLine( const Point& rStart, const Point& rStop )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaLineAction( rStart, rStop ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawLine( rStart, rStop );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawLine( const Point& rStart, const Point& rStop, const LineInfo& rInfo )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaLineAction( rStart, rStop, rInfo ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawLine( rStart, rStop, rInfo );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawPolygon( const tools::Polygon& rPoly )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaPolygonAction( rPoly ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawPolygon( rPoly );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawPolyLine( const tools::Polygon& rPoly )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaPolyLineAction( rPoly ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawPolyLine( rPoly );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawRect( const tools::Rectangle& rRect )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaRectAction( rRect ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawRectangle( rRect );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawRect( const tools::Rectangle& rRect, sal_uLong nHorzRound, sal_uLong nVertRound )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaRoundRectAction( rRect, nHorzRound, nVertRound ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawRectangle( rRect, nHorzRound, nVertRound );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawEllipse( const tools::Rectangle& rRect )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaEllipseAction( rRect ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawEllipse( rRect );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawArc( const tools::Rectangle& rRect, const Point& rStart, const Point& rStop )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaArcAction( rRect, rStart, rStop ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawArc( rRect, rStart, rStop, false, false );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawPie( const tools::Rectangle& rRect, const Point& rStart, const Point& rStop )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaPieAction( rRect, rStart, rStop ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawArc( rRect, rStart, rStop, true, false );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawChord( const tools::Rectangle& rRect, const Point& rStart, const Point& rStop )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaChordAction( rRect, rStart, rStop ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawArc( rRect, rStart, rStop, false, true );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawPolyLine( const tools::Polygon& rPoly, const LineInfo& rInfo )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaPolyLineAction( rPoly, rInfo ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawPolyLine( rPoly, rInfo );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawPolyLine( const tools::Polygon& rPoly, const ExtLineInfo& rInfo )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaPolyLinePDFAction( rPoly, rInfo ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawPolyLine( rPoly, rInfo );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawPolyPolygon( const tools::PolyPolygon& rPolyPoly )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaPolyPolygonAction( rPolyPoly ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawPolyPolygon( rPolyPoly );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawPixel( const Point& rPos, const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaPixelAction( rPos, rColor ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawPixel( rPos, rColor );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawBitmap( const Point& rDestPt, const Size& rDestSize, const Bitmap& rBitmap, const Graphic& rGraphic )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaBmpScalePDFAction( rDestPt, rDestSize, rBitmap, rGraphic ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawBitmap( rDestPt, rDestSize, rBitmap, rGraphic );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawBitmapEx( const Point& rDestPt, const Size& rDestSize, const BitmapEx& rBitmap )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaBmpExScaleAction( rDestPt, rDestSize, rBitmap ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawBitmap( rDestPt, rDestSize, rBitmap );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawHatch( const tools::PolyPolygon& rPolyPoly, const Hatch& rHatch )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaHatchAction( rPolyPoly, rHatch ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawHatch( rPolyPoly, rHatch );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawGradient( const tools::Rectangle& rRect, const Gradient& rGradient )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaGradientAction( rRect, rGradient ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawGradient( rRect, rGradient );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawGradient( const tools::PolyPolygon& rPolyPoly, const Gradient& rGradient )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaGradientExAction( rPolyPoly, rGradient ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->push(PushFlags::CLIPREGION);
     xImplementation->setClipRegion( rPolyPoly.getB2DPolyPolygon() );
     xImplementation->drawGradient( rPolyPoly.GetBoundRect(), rGradient );
     xImplementation->pop();
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawWallpaper( const tools::Rectangle& rRect, const Wallpaper& rWallpaper )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaWallpaperAction( rRect, rWallpaper ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawWallpaper( rRect, rWallpaper );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawTransparent( const tools::PolyPolygon& rPolyPoly, sal_uInt16 nTransparencePercent )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaTransparentAction( rPolyPoly, nTransparencePercent ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawTransparent( rPolyPoly, nTransparencePercent );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::BeginTransparencyGroup()
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaBeginTransparencyGroupPDFAction() );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->beginTransparencyGroup();
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::EndTransparencyGroup( const tools::Rectangle& rRect, sal_uInt16 nTransparentPercent )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaEndTransparencyGroupPDFAction( rRect, nTransparentPercent ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->endTransparencyGroup( rRect, nTransparentPercent );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::Push( PushFlags nFlags )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaPushAction( nFlags ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->push( nFlags );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::Pop()
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaPopAction() ); 
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->pop();
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetMapMode( const MapMode& rMapMode )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaMapModeAction( rMapMode ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setMapMode( rMapMode );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetLineColor( const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaLineColorAction( rColor, true ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setLineColor( rColor );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetFillColor( const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaFillColorAction( rColor, true ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setFillColor( rColor );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetClipRegion()
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaClipRegionAction( Region(), false ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->clearClipRegion();
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetClipRegion( const basegfx::B2DPolyPolygon& rRegion )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaClipRegionAction( Region( rRegion ), true ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setClipRegion( rRegion );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::MoveClipRegion( long nHorzMove, long nVertMove )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaMoveClipRegionAction( nHorzMove, nVertMove ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->moveClipRegion( nHorzMove, nVertMove );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::IntersectClipRegion( const basegfx::B2DPolyPolygon& rRegion )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaISectRegionClipRegionAction( Region( rRegion ) ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->intersectClipRegion( rRegion );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::IntersectClipRegion( const tools::Rectangle& rRect )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaISectRectClipRegionAction( rRect ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->intersectClipRegion( rRect );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetLayoutMode( ComplexTextLayoutFlags nMode )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaLayoutModeAction( nMode ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setLayoutMode( nMode );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetDigitLanguage( LanguageType eLang )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaDigitLanguagePDFAction( eLang ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setDigitLanguage( eLang );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetTextColor( const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaTextColorAction( rColor ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setTextColor( rColor );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetTextFillColor()
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaTextFillColorAction( Color( COL_TRANSPARENT ), false ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setTextFillColor();
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetTextFillColor( const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaTextFillColorAction( rColor, true ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setTextFillColor( rColor );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetTextLineColor()
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaTextLineColorAction( Color( COL_TRANSPARENT ), false ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setTextLineColor();
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetTextLineColor( const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaTextLineColorAction( rColor, true ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setTextLineColor( rColor );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetOverlineColor()
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaOverlineColorAction( Color( COL_TRANSPARENT ), false ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setOverlineColor();
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetOverlineColor( const Color& rColor )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaOverlineColorAction( rColor, true ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setOverlineColor( rColor );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetTextAlign( ::TextAlign eAlign )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaTextAlignAction( eAlign ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setTextAlign( eAlign );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::DrawJPGBitmap( SvStream& rStreamData, bool bIsTrueColor, const Size& rSrcSizePixel, const tools::Rectangle& rTargetArea, const Bitmap& rMask, const Graphic& rGraphic )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaJpgPDFAction( rStreamData, bIsTrueColor, rSrcSizePixel, rTargetArea, rMask, rGraphic ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->drawJPGBitmap( rStreamData, bIsTrueColor, rSrcSizePixel, rTargetArea, rMask, rGraphic );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 sal_Int32 PDFWriter::CreateLink( const tools::Rectangle& rRect, sal_Int32 nPageNr )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaCreateLinkPDFAction( rRect, nPageNr ) );
-#endif	// USE_JAVA && MACOSX
+    xImplementation->setInOuterFace( true );
+    sal_Int32 nRet = xImplementation->createLink( rRect, nPageNr );
+    xImplementation->setInOuterFace( bOldInOuterFace );
+    return nRet;
+#else	// USE_JAVA && MACOSX
     return xImplementation->createLink( rRect, nPageNr );
+#endif	// USE_JAVA && MACOSX
 }
 
 sal_Int32 PDFWriter::CreateScreen(const tools::Rectangle& rRect, sal_Int32 nPageNr)
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaCreateScreenPDFAction( rRect, nPageNr ) );
-#endif	// USE_JAVA && MACOSX
+    xImplementation->setInOuterFace( true );
+    sal_Int32 nRet = xImplementation->createScreen(rRect, nPageNr);
+    xImplementation->setInOuterFace( bOldInOuterFace );
+    return nRet;
+#else	// USE_JAVA && MACOSX
     return xImplementation->createScreen(rRect, nPageNr);
+#endif	// USE_JAVA && MACOSX
 }
 
 sal_Int32 PDFWriter::RegisterDestReference( sal_Int32 nDestId, const tools::Rectangle& rRect, sal_Int32 nPageNr, DestAreaType eType )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaRegisterDestReferencePDFAction( nDestId, rRect, nPageNr, eType ) );
-#endif	// USE_JAVA && MACOSX
+    xImplementation->setInOuterFace( true );
+    sal_Int32 nRet = xImplementation->registerDestReference( nDestId, rRect, nPageNr, eType );
+    xImplementation->setInOuterFace( bOldInOuterFace );
+    return nRet;
+#else	// USE_JAVA && MACOSX
     return xImplementation->registerDestReference( nDestId, rRect, nPageNr, eType );
+#endif	// USE_JAVA && MACOSX
 }
 //--->i56629
 sal_Int32 PDFWriter::CreateNamedDest( const OUString& sDestName, const tools::Rectangle& rRect, sal_Int32 nPageNr, PDFWriter::DestAreaType eType )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaCreateNamedDestPDFAction( sDestName, rRect, nPageNr, eType ) );
-#endif	// USE_JAVA && MACOSX
+    xImplementation->setInOuterFace( true );
+    sal_Int32 nRet = xImplementation->createNamedDest( sDestName, rRect, nPageNr, eType );
+    xImplementation->setInOuterFace( bOldInOuterFace );
+    return nRet;
+#else	// USE_JAVA && MACOSX
     return xImplementation->createNamedDest( sDestName, rRect, nPageNr, eType );
+#endif	// USE_JAVA && MACOSX
 }
 sal_Int32 PDFWriter::CreateDest( const tools::Rectangle& rRect, sal_Int32 nPageNr, PDFWriter::DestAreaType eType )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaCreateDestPDFAction( rRect, nPageNr, eType ) );
-#endif	// USE_JAVA && MACOSX
+    xImplementation->setInOuterFace( true );
+    sal_Int32 nRet = xImplementation->createDest( rRect, nPageNr, eType );
+    xImplementation->setInOuterFace( bOldInOuterFace );
+    return nRet;
+#else	// USE_JAVA && MACOSX
     return xImplementation->createDest( rRect, nPageNr, eType );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetLinkDest( sal_Int32 nLinkId, sal_Int32 nDestId )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaSetLinkDestPDFAction( nLinkId, nDestId ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setLinkDest( nLinkId, nDestId );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetLinkURL( sal_Int32 nLinkId, const OUString& rURL )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaSetLinkUrlPDFAction( nLinkId, rURL ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setLinkURL( nLinkId, rURL );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetScreenURL(sal_Int32 nScreenId, const OUString& rURL)
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaSetScreenStreamPDFAction( nScreenId, rURL ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setScreenURL(nScreenId, rURL);
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetScreenStream(sal_Int32 nScreenId, const OUString& rURL)
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaSetScreenStreamPDFAction( nScreenId, rURL ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setScreenStream(nScreenId, rURL);
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetLinkPropertyID( sal_Int32 nLinkId, sal_Int32 nPropertyId )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaSetLinkPropertyIdPDFAction( nLinkId, nPropertyId ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setLinkPropertyId( nLinkId, nPropertyId );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 sal_Int32 PDFWriter::CreateOutlineItem( sal_Int32 nParent, const OUString& rText, sal_Int32 nDestID )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaCreateOutlineItemPDFAction( nParent, rText, nDestID ) );
-#endif	// USE_JAVA && MACOSX
+    xImplementation->setInOuterFace( true );
+    sal_Int32 nRet = xImplementation->createOutlineItem( nParent, rText, nDestID );
+    xImplementation->setInOuterFace( bOldInOuterFace );
+    return nRet;
+#else	// USE_JAVA && MACOSX
     return xImplementation->createOutlineItem( nParent, rText, nDestID );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::CreateNote( const tools::Rectangle& rRect, const PDFNote& rNote, sal_Int32 nPageNr )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaCreateNotePDFAction( rRect, rNote, nPageNr ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->createNote( rRect, rNote, nPageNr );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 sal_Int32 PDFWriter::BeginStructureElement( PDFWriter::StructElement eType, const OUString& rAlias )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaBeginStructureElementPDFAction( eType, rAlias ) );
-#endif	// USE_JAVA && MACOSX
+    xImplementation->setInOuterFace( true );
+    sal_Int32 nRet = xImplementation->beginStructureElement( eType, rAlias );
+    xImplementation->setInOuterFace( bOldInOuterFace );
+    return nRet;
+#else	// USE_JAVA && MACOSX
     return xImplementation->beginStructureElement( eType, rAlias );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::EndStructureElement()
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaEndStructureElementPDFAction() );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->endStructureElement();
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 bool PDFWriter::SetCurrentStructureElement( sal_Int32 nID )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaSetCurrentStructureElementPDFAction( nID ) );
-#endif	// USE_JAVA && MACOSX
+    xImplementation->setInOuterFace( true );
+    bool bRet = xImplementation->setCurrentStructureElement( nID );
+    xImplementation->setInOuterFace( bOldInOuterFace );
+    return bRet;
+#else	// USE_JAVA && MACOSX
     return xImplementation->setCurrentStructureElement( nID );
+#endif	// USE_JAVA && MACOSX
 }
 
 bool PDFWriter::SetStructureAttribute( enum StructAttribute eAttr, enum StructAttributeValue eVal )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaSetStructureAttributePDFAction( eAttr, eVal ) );          
-#endif	// USE_JAVA && MACOSX
+    xImplementation->setInOuterFace( true );
+    bool bRet = xImplementation->setStructureAttribute( eAttr, eVal );
+    xImplementation->setInOuterFace( bOldInOuterFace );
+    return bRet;
+#else	// USE_JAVA && MACOSX
     return xImplementation->setStructureAttribute( eAttr, eVal );
+#endif	// USE_JAVA && MACOSX
 }
 
 bool PDFWriter::SetStructureAttributeNumerical( enum StructAttribute eAttr, sal_Int32 nValue )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaSetStructureAttributeNumericalPDFAction( eAttr, nValue ) );
-#endif	// USE_JAVA && MACOSX
+    xImplementation->setInOuterFace( true );
+    bool bRet = xImplementation->setStructureAttributeNumerical( eAttr, nValue );
+    xImplementation->setInOuterFace( bOldInOuterFace );
+    return bRet;
+#else	// USE_JAVA && MACOSX
     return xImplementation->setStructureAttributeNumerical( eAttr, nValue );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetStructureBoundingBox( const tools::Rectangle& rRect )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaSetStructureBoundingBoxPDFAction( rRect ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setStructureBoundingBox( rRect );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetActualText( const OUString& rText )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaSetActualTextPDFAction( rText ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setActualText( rText );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetAlternateText( const OUString& rText )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaSetAlternateTextPDFAction( rText ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setAlternateText( rText );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriter::SetPageTransition( PDFWriter::PageTransition eType, sal_uInt32 nMilliSec, sal_Int32 nPageNr )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaSetPageTransitionPDFAction( eType, nMilliSec, nPageNr ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->setPageTransition( eType, nMilliSec, nPageNr );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 sal_Int32 PDFWriter::CreateControl( const PDFWriter::AnyWidget& rControl )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaCreateControlPDFAction( rControl ) );
-#endif	// USE_JAVA && MACOSX
+    xImplementation->setInOuterFace( true );
+    sal_Int32 nRet = xImplementation->createControl( rControl );
+    xImplementation->setInOuterFace( bOldInOuterFace );
+    return nRet;
+#else	// USE_JAVA && MACOSX
     return xImplementation->createControl( rControl );
+#endif	// USE_JAVA && MACOSX
 }
 
 PDFOutputStream::~PDFOutputStream()
@@ -1753,10 +2134,15 @@ PDFOutputStream::~PDFOutputStream()
 void PDFWriter::AddStream( const OUString& rMimeType, PDFOutputStream* pStream )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaAddStreamPDFAction( rMimeType, pStream ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->addStream( rMimeType, pStream );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 std::set< PDFWriter::ErrorCode > PDFWriter::GetErrors()
@@ -1776,10 +2162,15 @@ PDFWriter::InitEncryption( const OUString& i_rOwnerPassword,
 void PDFWriter::PlayMetafile( const GDIMetaFile& i_rMTF, const vcl::PDFWriter::PlayMetafileContext& i_rPlayContext, PDFExtOutDevData* i_pData )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( !xImplementation->isReplayWriter() )
+    bool bOldInOuterFace = xImplementation->isInOuterFace();
+    if ( !bOldInOuterFace && !xImplementation->isReplayWriter() )
         xImplementation->addAction( new MetaPlayMetafilePDFAction( i_rMTF, i_rPlayContext, i_pData ) );
+    xImplementation->setInOuterFace( true );
 #endif	// USE_JAVA && MACOSX
     xImplementation->playMetafile( i_rMTF, i_pData, i_rPlayContext );
+#if defined USE_JAVA && defined MACOSX
+    xImplementation->setInOuterFace( bOldInOuterFace );
+#endif	// USE_JAVA && MACOSX
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
