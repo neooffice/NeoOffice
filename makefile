@@ -487,7 +487,7 @@ build.package_shared:
 ifdef PRODUCT_BUILD3
 # Fix failure to load Python shared libraries on macOS 10.15 by correcting the
 # path to the Python framework
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find Frameworks/LibreOfficePython.framework/Versions/3.3/lib/python3.3/lib-dynload -maxdepth 1 -type f -name "*.so"` ; do sh "$(PWD)/etc/updatepythonbinary.sh" "$$i" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find "Frameworks/LibreOfficePython.framework" -type f -name "LibreOfficePython"` ; do install_name_tool -id "@__________________________________________________OOO/LibreOfficePython" "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice2"
 	cd "$(INSTALL_HOME)/package/Contents" ; mv "program/soffice3" "MacOS/soffice.bin"
