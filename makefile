@@ -505,7 +505,8 @@ build.package_shared:
 ifdef PRODUCT_BUILD3
 # Fix failure to load Python shared libraries on macOS 10.15 by correcting the
 # path to the Python framework
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find Frameworks/LibreOfficePython.framework/Versions/3.3/lib/python3.3/lib-dynload -maxdepth 1 -type f -name "*.so"` ; do sh "$(PWD)/etc/updatepythonbinary.sh" "$$i" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find "Frameworks/LibreOfficePython.framework/Versions/3.3/lib/python3.3/lib-dynload" -maxdepth 1 -type f -name "*.so"` ; do sh "$(PWD)/etc/updatepythonbinary.sh" "$$i" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find "Frameworks/LibreOfficePython.framework" -type f -name "LibreOfficePython"` ; do install_name_tool -id "@__________________________________________________OOO/LibreOfficePython" "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice2"
 	cd "$(INSTALL_HOME)/package/Contents" ; mv "program/soffice3" "MacOS/soffice.bin"
@@ -798,6 +799,15 @@ build.patch_package_shared:
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/program"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/MacOS/uno" "program/uno" ; chmod a+x "program/uno"
 ifdef PRODUCT_BUILD3
+# Fix failure to load Python shared libraries on macOS 10.15 by correcting the
+# path to the Python framework
+	sh -e -c '( cd "$(PWD)/$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app/Contents" && ( find "Frameworks/LibreOfficePython.framework/Versions/3.3/lib/python3.3/lib-dynload" -maxdepth 1 -type f -name "*.so" | tar cf - -T - ) ) | ( cd "$(PWD)/$(PATCH_INSTALL_HOME)/package/Contents" && tar xvf - )'
+	sh -e -c '( cd "$(PWD)/$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app/Contents" && ( find "Frameworks/LibreOfficePython.framework" -type l -name "Current" | tar cf - -T - ) ) | ( cd "$(PWD)/$(PATCH_INSTALL_HOME)/package/Contents" && tar xvf - )'
+	sh -e -c '( cd "$(PWD)/$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app/Contents" && ( find "Frameworks/LibreOfficePython.framework" -type d -name "Resources" | tar cf - -T - ) ) | ( cd "$(PWD)/$(PATCH_INSTALL_HOME)/package/Contents" && tar xvf - )'
+	sh -e -c '( cd "$(PWD)/$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app/Contents" && ( find "Frameworks/LibreOfficePython.framework" -name "LibreOfficePython" | tar cf - -T - ) ) | ( cd "$(PWD)/$(PATCH_INSTALL_HOME)/package/Contents" && tar xvf - )'
+	cd "$(PATCH_INSTALL_HOME)/package/Contents/Frameworks/LibreOfficePython.framework" ; sh -e -c 'for i in `find . -type d -name "*.app"` ; do rm -R "$$i" ; done'
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find "Frameworks/LibreOfficePython.framework/Versions/3.3/lib/python3.3/lib-dynload" -maxdepth 1 -type f -name "*.so"` ; do sh "$(PWD)/etc/updatepythonbinary.sh" "$$i" ; done'
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find "Frameworks/LibreOfficePython.framework" -type f -name "LibreOfficePython"` ; do install_name_tool -id "@__________________________________________________OOO/LibreOfficePython" "$$i" ; done'
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/MacOS/soffice3" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libpyuno.dylib" "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libupdchklo.dylib" "Frameworks"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Resources/pythonscript.py" "Resources/pythonscript.py" ; chmod a+x "Resources/pythonscript.py"
