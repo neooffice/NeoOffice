@@ -113,3 +113,102 @@
 +))
 +
  # vim: set noet sw=4 ts=4:
+--- expat/ExternalProject_expat.mk	2018-05-09 03:27:29.000000000 -0700
++++ expat/ExternalProject_expat.mk	2019-09-22 18:50:39.000000000 -0700
+@@ -15,7 +15,7 @@
+ 
+ $(call gb_ExternalProject_get_state_target,expat,configure) :
+ 	$(call gb_ExternalProject_run,configure,\
+-		./configure \
++		./configure --without-docbook \
+ 			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM) \
+ 			$(if $(filter INTEL ARM,$(CPUNAME)),ac_cv_c_bigendian=no)) \
+ 	,,expat_configure.log)
+--- expat/StaticLibrary_expat.mk	2018-05-09 03:27:29.000000000 -0700
++++ expat/StaticLibrary_expat.mk	2019-09-22 18:52:00.000000000 -0700
+@@ -9,7 +9,7 @@
+ 
+ $(eval $(call gb_StaticLibrary_StaticLibrary,expat))
+ 
+-$(eval $(call gb_StaticLibrary_set_warnings_not_errors,expat))
++$(eval $(call gb_StaticLibrary_set_warnings_disabled,expat))
+ 
+ $(eval $(call gb_StaticLibrary_use_unpacked,expat,expat))
+ 
+@@ -42,13 +42,7 @@
+ ))
+ endif
+ 
+-# suppress warning spam
+-$(eval $(call gb_StaticLibrary_add_cflags,expat,\
+-	-w \
+-))
+-
+ $(eval $(call gb_StaticLibrary_add_generated_cobjects,expat,\
+-	UnpackedTarball/expat/lib/loadlibrary \
+ 	UnpackedTarball/expat/lib/xmlparse \
+ 	UnpackedTarball/expat/lib/xmlrole \
+ 	UnpackedTarball/expat/lib/xmltok \
+--- expat/StaticLibrary_expat_x64.mk	2018-05-09 03:27:29.000000000 -0700
++++ expat/StaticLibrary_expat_x64.mk	2019-09-22 18:52:16.000000000 -0700
+@@ -11,7 +11,7 @@
+ 
+ $(eval $(call gb_StaticLibrary_set_x64,expat_x64,YES))
+ 
+-$(eval $(call gb_StaticLibrary_set_warnings_not_errors,expat_x64))
++$(eval $(call gb_StaticLibrary_set_warnings_disabled,expat_x64))
+ 
+ $(eval $(call gb_StaticLibrary_use_unpacked,expat_x64,expat))
+ 
+@@ -25,7 +25,6 @@
+ ))
+ 
+ $(eval $(call gb_StaticLibrary_add_x64_generated_cobjects,expat_x64,\
+-	UnpackedTarball/expat/lib/loadlibrary_x64 \
+ 	UnpackedTarball/expat/lib/xmlparse_x64 \
+ 	UnpackedTarball/expat/lib/xmltok_x64 \
+ 	UnpackedTarball/expat/lib/xmlrole_x64 \
+--- expat/UnpackedTarball_expat.mk	2018-05-09 03:27:29.000000000 -0700
++++ expat/UnpackedTarball_expat.mk	2019-09-22 18:52:26.000000000 -0700
+@@ -11,6 +11,8 @@
+ 
+ $(eval $(call gb_UnpackedTarball_set_tarball,expat,$(EXPAT_TARBALL)))
+ 
++$(eval $(call gb_UnpackedTarball_update_autoconf_configs,expat,conftools))
++
+ $(eval $(call gb_UnpackedTarball_add_patches,expat,\
+ 	external/expat/expat-winapi.patch \
+ ))
+@@ -24,7 +26,6 @@
+ 
+ $(eval $(call gb_UnpackedTarball_set_post_action,expat,\
+ 	$(if $(filter $(BUILD_X64),TRUE),         \
+-	  cp lib/loadlibrary.c lib/loadlibrary_x64.c && \
+ 	  cp lib/xmlparse.c lib/xmlparse_x64.c && \
+ 	  cp lib/xmltok.c lib/xmltok_x64.c     && \
+ 	  cp lib/xmlrole.c lib/xmlrole_x64.c) \
+--- expat/expat-winapi.patch	2018-05-09 03:27:29.000000000 -0700
++++ expat/expat-winapi.patch	2019-09-22 18:52:47.000000000 -0700
+@@ -1,13 +1,13 @@
+ --- misc/expat-2.1.0/lib/expat_external.h	2009-11-16 08:53:17.375000000 +0000
+ +++ misc/build/expat-2.1.0/lib/expat_external.h	2009-11-16 08:53:34.703125000 +0000
+-@@ -7,10 +7,6 @@
++@@ -81,10 +81,6 @@
++ #  ifndef XML_BUILDING_EXPAT
++ /* using Expat from an application */
+  
+- /* External API definitions */
+- 
+--#if defined(_MSC_EXTENSIONS) && !defined(__BEOS__) && !defined(__CYGWIN__)
+--#define XML_USE_MSC_EXTENSIONS 1
+--#endif
++-#    if defined(_MSC_EXTENSIONS) && ! defined(__BEOS__) && ! defined(__CYGWIN__)
++-#      define XMLIMPORT __declspec(dllimport)
++-#    endif
+ -
+- /* Expat tries very hard to make the API boundary very specifically
+-    defined.  There are two macros defined to control this boundary;
+-    each of these can be defined before including this header to
++ #  endif
++ #endif /* not defined XML_STATIC */
++ 

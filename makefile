@@ -280,6 +280,7 @@ build.libo_checkout: \
 
 build.libo_patches: \
 	build.libo_configure.ac_patch \
+	build.libo_download.lst_patch \
 	build.libo_bin_patch \
 	build.libo_embeddedobj_patch \
 	build.libo_external_patch \
@@ -292,6 +293,16 @@ build.libo_patches: \
 	touch "$@"
 
 build.libo_configure.ac_patch: $(LIBO_PATCHES_HOME)/configure.ac.patch build.libo_checkout
+ifeq ("$(OS_TYPE)","macOS")
+	-( cd "$(LIBO_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(LIBO_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+else
+	-cat "$<" | unix2dos | ( cd "$(LIBO_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" )
+	cat "$<" | unix2dos | ( cd "$(LIBO_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" )
+endif
+	touch "$@"
+
+build.libo_download.lst_patch: $(LIBO_PATCHES_HOME)/download.lst.patch build.libo_checkout
 ifeq ("$(OS_TYPE)","macOS")
 	-( cd "$(LIBO_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(LIBO_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
