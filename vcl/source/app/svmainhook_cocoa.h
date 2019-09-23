@@ -41,4 +41,6 @@
 SAL_DLLPRIVATE void NSApplication_run();
 SAL_DLLPRIVATE void NSApplication_terminate();
 
+extern "C" SAL_DLLPUBLIC_EXPORT int Application_validateReceipt();
+
 #endif

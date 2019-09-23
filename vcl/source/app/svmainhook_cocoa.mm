@@ -55,8 +55,8 @@
 #define FUNCTION( x ) DOFUNCTION( x )
 
 typedef BOOL BundleCheck_Type();
-typedef sal_Bool Application_canUseJava_Type();
 typedef sal_Bool Application_canSave_Type();
+typedef sal_Bool Application_isRunningInSandbox_Type();
 
 // The following are custom data types for Apple's App Store receipt payload
 // ASN.1 format as documented in the following URL:
@@ -74,8 +74,9 @@ typedef struct
 	AppReceiptAttribute**	mpAttrs;
 } AppReceiptAttributes;
 
-static Application_canUseJava_Type *pApplication_canUseJava = NULL;
+static const int nDefaultExitCode = 173;
 static Application_canSave_Type *pApplication_canSave = NULL;
+static Application_isRunningInSandbox_Type *pApplication_isRunningInSandbox = NULL;
 
 static const SecAsn1Template aAttributeTemplate[] = {
 	{ SEC_ASN1_SEQUENCE, 0, NULL, sizeof( AppReceiptAttribute ) },
@@ -287,18 +288,10 @@ void NSApplication_run()
 		}
 	}
 
-	mnExitCode = 173;
+	mnExitCode = nDefaultExitCode;
 
 	NSBundle *pBundle = [NSBundle mainBundle];
-	if ( !pApplication_canUseJava )
-		pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
-	if ( !pApplication_canSave )
-		pApplication_canSave = (Application_canSave_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canSave" );
-	if ( ( pApplication_canUseJava && pApplication_canUseJava() ) || ( pApplication_canSave && !pApplication_canSave() ) )
-	{
-		mnExitCode = 0;
-	}
-	else if ( pBundle )
+	if ( pBundle )
 	{
 		// Fix spurious crashes in CMS* functions by trapping SIGABRT and
 		// SIGSEGV signals
@@ -472,6 +465,23 @@ void NSApplication_run()
 
 void NSApplication_terminate()
 {
+	int nRet = nDefaultExitCode;
+
+	if ( !pApplication_canSave )
+		pApplication_canSave = (Application_canSave_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canSave" );
+	if ( !pApplication_isRunningInSandbox )
+		pApplication_isRunningInSandbox = (Application_isRunningInSandbox_Type *)dlsym( RTLD_MAIN_ONLY, "Application_isRunningInSandbox" );
+	if ( ( pApplication_isRunningInSandbox && !pApplication_isRunningInSandbox() ) || ( pApplication_canSave && !pApplication_canSave() ) )
+		nRet = 0;
+	else
+		nRet = Application_validateReceipt();
+
+    // Force exit since NSApplication won't shutdown when only exit() is invoked
+    _exit( nRet );
+}
+
+int Application_validateReceipt()
+{
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	GetExitCode *pGetExitCode = [GetExitCode create];
@@ -481,6 +491,5 @@ void NSApplication_terminate()
 
 	[pPool release];
 
-    // Force exit since NSApplication won't shutdown when only exit() is invoked
-    _exit( nRet );
+    return nRet;
 }
