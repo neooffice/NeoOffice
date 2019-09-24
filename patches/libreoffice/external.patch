@@ -18,62 +18,6 @@
  			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM)) \
  			$(if $(filter MACOSX,$(OS)),--prefix=/@.__________________________________________________OOO) \
  			$(if $(filter IOS ANDROID,$(OS)),--disable-shared,--disable-static) \
---- expat/UnpackedTarball_expat.mk	2015-11-25 04:55:38.000000000 -0800
-+++ expat/UnpackedTarball_expat.mk	2017-06-25 18:29:37.000000000 -0700
-@@ -12,7 +12,9 @@
- $(eval $(call gb_UnpackedTarball_set_tarball,expat,$(EXPAT_TARBALL)))
- 
- $(eval $(call gb_UnpackedTarball_add_patches,expat,\
--	external/expat/expat-2.1.0.patch \
-+	external/expat/expat-winapi.patch \
-+	external/expat/expat-iOS.patch \
-+	external/expat/expat-macOS.patch \
- ))
- 
- # This is a bit hackish.
---- expat/expat-iOS.patch	2017-06-25 18:29:24.000000000 -0700
-+++ expat/expat-iOS.patch	2017-06-25 18:31:42.000000000 -0700
-@@ -0,0 +1,20 @@
-+--- misc/expat-2.1.0/conftools/config.sub	2016-04-30 21:24:14.000000000 +0200
-++++ misc/build/expat-2.1.0/conftools/config.sub	2017-06-11 10:56:49.000000000 +0200
-+@@ -252,7 +252,7 @@
-+ 	| alpha64 | alpha64ev[4-8] | alpha64ev56 | alpha64ev6[78] | alpha64pca5[67] \
-+ 	| am33_2.0 \
-+ 	| arc | arceb \
-+-	| arm | arm[bl]e | arme[lb] | armv[2-8] | armv[3-8][lb] | armv7[arm] \
-++	| arm | arm[bl]e | arme[lb] | armv[2-8] | armv[3-8][lb] | armv7[arm] | arm64 \
-+ 	| avr | avr32 \
-+ 	| ba \
-+ 	| be32 | be64 \
-+@@ -374,7 +374,7 @@
-+ 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
-+ 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
-+ 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* | arceb-* \
-+-	| arm-*  | armbe-* | armle-* | armeb-* | armv*-* \
-++	| arm-*  | armbe-* | armle-* | armeb-* | armv*-* | arm64-* \
-+ 	| avr-* | avr32-* \
-+ 	| ba-* \
-+ 	| be32-* | be64-* \
---- expat/expat-macOS.patch 2017-06-25 21:48:41.000000000 -0700
-+++ expat/expat-macOS.patch	2017-06-25 21:55:54.000000000 -0700
-@@ -0,0 +1,17 @@
-+--- misc/expat-2.1.1/lib/xmlparse.c	2017-06-17 09:07:38.000000000 -0700
-++++ misc/build/expat-2.1.1/lib/xmlparse.c	2017-06-25 21:51:02.000000000 -0700
-+@@ -699,7 +699,14 @@
-+ # include <errno.h>
-+ 
-+ # if defined(HAVE_GETRANDOM)
-++#  ifdef __clang__
-++#    pragma push_macro("buffer")
-++#    undef buffer
-++#  endif
-+ #  include <sys/random.h>    /* getrandom */
-++#  ifdef __clang__
-++#    pragma pop_macro("buffer")
-++#  endif
-+ # else
-+ #  include <unistd.h>        /* syscall */
-+ #  include <sys/syscall.h>   /* SYS_getrandom */
 --- opencollada/patches/opencollada.libxml.patch.0	2015-11-25 05:55:38.000000000 -0700
 +++ opencollada/patches/opencollada.libxml.patch.0	2018-10-15 19:04:44.000000000 -0600
 @@ -10,3 +10,14 @@
@@ -134,3 +78,124 @@
 +))
 +
  # vim: set noet sw=4 ts=4:
+--- expat/ExternalProject_expat.mk	2015-11-25 04:55:38.000000000 -0800
++++ expat/ExternalProject_expat.mk	2019-09-22 19:18:51.000000000 -0700
+@@ -15,8 +15,9 @@
+ 
+ $(call gb_ExternalProject_get_state_target,expat,configure) :
+ 	$(call gb_ExternalProject_run,configure,\
+-		./configure \
+-			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM)) \
++		./configure --without-docbook \
++			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM) \
++			$(if $(filter INTEL ARM,$(CPUNAME)),ac_cv_c_bigendian=no)) \
+ 	,,expat_configure.log)
+ 
+ # vim: set noet sw=4 ts=4:
+--- expat/Module_expat.mk	2015-11-25 04:55:38.000000000 -0800
++++ expat/Module_expat.mk	2018-05-09 03:27:29.000000000 -0700
+@@ -14,14 +14,7 @@
+ 	StaticLibrary_expat \
+ ))
+ 
+-# Actually it wasn't that clear if we should
+-# run configure step on mingw or not:
+-# CONFIGURATION_ACTION wasn't set, but
+-# CROSS_COMPILE case was handled in original makefile
+-
+-# tested it on mingw and it doesn't hurt ;-)
+-#ifneq ($(OS),WNT)
+-ifneq ($(OS)$(COM),WNTMSC)
++ifneq ($(OS),WNT)
+ $(eval $(call gb_Module_add_targets,expat,\
+ 	ExternalProject_expat \
+ ))
+--- expat/README	2015-11-25 04:55:38.000000000 -0800
++++ expat/README	2018-05-09 03:27:29.000000000 -0700
+@@ -1,4 +1,4 @@
+ Simple SAX parser library with added UTF-16 support.
+ 
+ From:
+-[http://expat.sourceforge.net/]
++[https://github.com/libexpat/libexpat]
+--- expat/StaticLibrary_expat.mk	2015-11-25 04:55:38.000000000 -0800
++++ expat/StaticLibrary_expat.mk	2019-09-22 19:18:51.000000000 -0700
+@@ -9,13 +9,13 @@
+ 
+ $(eval $(call gb_StaticLibrary_StaticLibrary,expat))
+ 
+-$(eval $(call gb_StaticLibrary_set_warnings_not_errors,expat))
++$(eval $(call gb_StaticLibrary_set_warnings_disabled,expat))
+ 
+ $(eval $(call gb_StaticLibrary_use_unpacked,expat,expat))
+ 
+ # no configure step on windows, no dependency
+-ifneq ($(OS)$(COM),WNTMSC)
+-$(eval $(call gb_StaticLibrary_use_external_project,expat,expat))
++ifneq ($(OS),WNT)
++$(eval $(call gb_StaticLibrary_use_external_project,expat,expat,full))
+ endif
+ 
+ $(eval $(call gb_StaticLibrary_set_include,expat,\
+@@ -42,11 +42,6 @@
+ ))
+ endif
+ 
+-# suppress warning spam
+-$(eval $(call gb_StaticLibrary_add_cflags,expat,\
+-	-w \
+-))
+-
+ $(eval $(call gb_StaticLibrary_add_generated_cobjects,expat,\
+ 	UnpackedTarball/expat/lib/xmlparse \
+ 	UnpackedTarball/expat/lib/xmlrole \
+--- expat/StaticLibrary_expat_x64.mk	2015-11-25 04:55:38.000000000 -0800
++++ expat/StaticLibrary_expat_x64.mk	2019-09-22 19:18:51.000000000 -0700
+@@ -11,7 +11,7 @@
+ 
+ $(eval $(call gb_StaticLibrary_set_x64,expat_x64,YES))
+ 
+-$(eval $(call gb_StaticLibrary_set_warnings_not_errors,expat_x64))
++$(eval $(call gb_StaticLibrary_set_warnings_disabled,expat_x64))
+ 
+ $(eval $(call gb_StaticLibrary_use_unpacked,expat_x64,expat))
+ 
+--- expat/UnpackedTarball_expat.mk	2015-11-25 04:55:38.000000000 -0800
++++ expat/UnpackedTarball_expat.mk	2019-09-22 19:18:51.000000000 -0700
+@@ -11,8 +11,10 @@
+ 
+ $(eval $(call gb_UnpackedTarball_set_tarball,expat,$(EXPAT_TARBALL)))
+ 
++$(eval $(call gb_UnpackedTarball_update_autoconf_configs,expat,conftools))
++
+ $(eval $(call gb_UnpackedTarball_add_patches,expat,\
+-	external/expat/expat-2.1.0.patch \
++	external/expat/expat-winapi.patch \
+ ))
+ 
+ # This is a bit hackish.
+--- expat/expat-winapi.patch	2015-11-25 04:55:38.000000000 -0800
++++ 
+@@ -1,13 +1,13 @@
+ --- misc/expat-2.1.0/lib/expat_external.h	2009-11-16 08:53:17.375000000 +0000
+ +++ misc/build/expat-2.1.0/lib/expat_external.h	2009-11-16 08:53:34.703125000 +0000
+-@@ -7,10 +7,6 @@
++@@ -81,10 +81,6 @@
++ #  ifndef XML_BUILDING_EXPAT
++ /* using Expat from an application */
+  
+- /* External API definitions */
+- 
+--#if defined(_MSC_EXTENSIONS) && !defined(__BEOS__) && !defined(__CYGWIN__)
+--#define XML_USE_MSC_EXTENSIONS 1
+--#endif
++-#    if defined(_MSC_EXTENSIONS) && ! defined(__BEOS__) && ! defined(__CYGWIN__)
++-#      define XMLIMPORT __declspec(dllimport)
++-#    endif
+ -
+- /* Expat tries very hard to make the API boundary very specifically
+-    defined.  There are two macros defined to control this boundary;
+-    each of these can be defined before including this header to
++ #  endif
++ #endif /* not defined XML_STATIC */
++ 
