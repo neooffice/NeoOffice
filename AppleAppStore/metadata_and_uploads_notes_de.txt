@@ -34,7 +34,8 @@ What's New in this Version:
 Bevor Sie NeoOffice kaufen, klicken Sie bitte auf den „NeoOffice Support” Link und lesen die Installationshinweise.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would crash due to LibreOffice bugs #97879, #101821, #103063, #108123, and #113230
+• NeoOffice would fail to load many extensions that worked in earlier versions of NeoOffice
+• NeoOffice would fail to print or export to PDF nested tables in Writer documents due to LibreOffice bugs #88453
 
 
 Promotional Text:
