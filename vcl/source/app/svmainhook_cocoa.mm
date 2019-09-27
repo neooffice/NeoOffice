@@ -143,8 +143,8 @@ static CFDataRef ImplCreateMacAddress()
 
 void ImplHandleAbort( int /* nSig */ )
 {
-    // Force exit since NSApplication won't shutdown when only exit() is invoked
-    _exit( 0 );
+	// Force exit since NSApplication won't shutdown when only exit() is invoked
+	_exit( 0 );
 }
 
 #ifdef PRODUCT_CHECKSUM
@@ -489,20 +489,23 @@ void NSApplication_terminate()
 		[pPool release];
 	}
 
-    // Force exit since NSApplication won't shutdown when only exit() is invoked
-    _exit( nRet );
+	// Force exit since NSApplication won't shutdown when only exit() is invoked
+	_exit( nRet );
 }
 
-int Application_validateReceipt()
+sal_Bool Application_validateReceipt()
 {
+	sal_Bool bRet = sal_False;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	GetExitCode *pGetExitCode = [GetExitCode create];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pGetExitCode performSelectorOnMainThread:@selector(getExitCode:) withObject:pGetExitCode waitUntilDone:YES modes:pModes];
-	int nRet = [pGetExitCode exitCode];
+	if ( ![pGetExitCode exitCode] )
+		bRet = sal_True;
 
 	[pPool release];
 
-    return nRet;
+	return bRet;
 }
