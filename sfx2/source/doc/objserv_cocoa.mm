@@ -54,8 +54,10 @@
 #include <dlfcn.h>
 
 typedef sal_Bool Application_canSave_Type();
+typedef sal_Bool Application_validateReceipt_Type();
 
 static Application_canSave_Type *pApplication_canSave = nullptr;
+static Application_validateReceipt_Type *pApplication_validateReceipt = nullptr;
 static ResMgr *pUpdResMgr = nullptr;
 
 static OUString GetUpdResString( int nId )
@@ -221,31 +223,36 @@ sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, sal_uInt16 nID )
 			pApplication_canSave = reinterpret_cast< Application_canSave_Type* >( dlsym( RTLD_MAIN_ONLY, "Application_canSave" ) );
 		if ( !pApplication_canSave || !pApplication_canSave() )
 		{
-			bRet = sal_False;
+			if ( !pApplication_validateReceipt )
+				pApplication_validateReceipt = reinterpret_cast< Application_validateReceipt_Type* >( dlsym( RTLD_DEFAULT, "Application_validateReceipt" ) );
+			if ( !pApplication_validateReceipt || !pApplication_validateReceipt() )
+			{
+				bRet = sal_False;
 
-			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-			OUString aDesc = SfxResId( STR_SAVEDISABLEDCANNOTSAVE );
-			aDesc = aDesc.replaceAll( "~", "" );
-			NSString *pMessageText = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDesc.getStr() ) length:aDesc.getLength()];
+				OUString aDesc = SfxResId( STR_SAVEDISABLEDCANNOTSAVE );
+				aDesc = aDesc.replaceAll( "~", "" );
+				NSString *pMessageText = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDesc.getStr() ) length:aDesc.getLength()];
 
-			aDesc = SfxResId( STR_SAVEDISABLEDDOWNLOADPRODUCTTOSAVE );
-			aDesc = aDesc.replaceAll( "~", "" );
-			NSString *pInformativeText = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDesc.getStr() ) length:aDesc.getLength()];
+				aDesc = SfxResId( STR_SAVEDISABLEDDOWNLOADPRODUCTTOSAVE );
+				aDesc = aDesc.replaceAll( "~", "" );
+				NSString *pInformativeText = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDesc.getStr() ) length:aDesc.getLength()];
 
-			aDesc = GetUpdResString( RID_UPDATE_BTN_DOWNLOAD );
-			aDesc = aDesc.replaceAll( "~", "" );
-			NSString *pDefaultButton = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDesc.getStr() ) length:aDesc.getLength()];
+				aDesc = GetUpdResString( RID_UPDATE_BTN_DOWNLOAD );
+				aDesc = aDesc.replaceAll( "~", "" );
+				NSString *pDefaultButton = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDesc.getStr() ) length:aDesc.getLength()];
 
-			aDesc = GetUpdResString( RID_UPDATE_BTN_CANCEL );
-			aDesc = aDesc.replaceAll( "~", "" );
-			NSString *pAlternateButton = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDesc.getStr() ) length:aDesc.getLength()];
+				aDesc = GetUpdResString( RID_UPDATE_BTN_CANCEL );
+				aDesc = aDesc.replaceAll( "~", "" );
+				NSString *pAlternateButton = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDesc.getStr() ) length:aDesc.getLength()];
 
-			ShowSaveDisabledDialog *pShowSaveDisabledDialog = [ShowSaveDisabledDialog createWithMessageText:pMessageText defaultButton:pDefaultButton alternateButton:pAlternateButton informativeText:pInformativeText];
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pShowSaveDisabledDialog performSelectorOnMainThread:@selector(showSaveDisabledDialog:) withObject:pShowSaveDisabledDialog waitUntilDone:NO modes:pModes];
+				ShowSaveDisabledDialog *pShowSaveDisabledDialog = [ShowSaveDisabledDialog createWithMessageText:pMessageText defaultButton:pDefaultButton alternateButton:pAlternateButton informativeText:pInformativeText];
+				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+				[pShowSaveDisabledDialog performSelectorOnMainThread:@selector(showSaveDisabledDialog:) withObject:pShowSaveDisabledDialog waitUntilDone:NO modes:pModes];
 
-			[pPool release];
+				[pPool release];
+			}
 		}
 	}
 
