@@ -255,6 +255,7 @@ void NSApplication_run()
 }
 + (id)create;
 - (void)getExitCode:(id)pObject;
+- (void)getExitCodeForTermination:(id)pObject;
 - (int)exitCode;
 - (id)init;
 @end
@@ -271,22 +272,6 @@ void NSApplication_run()
 - (void)getExitCode:(id)pObject
 {
 	(void)pObject;
-
-	// Close any windows still showing so that all windows
-	// get the appropriate window closing delegate calls
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
-	{
-		NSArray *pWindows = [pApp windows];
-		if ( pWindows )
-		{
-			for ( NSWindow *pWindow in pWindows )
-			{
-				if ( pWindow )
-					[pWindow orderOut:pWindow];
-			}
-		}
-	}
 
 	mnExitCode = nDefaultExitCode;
 
@@ -461,6 +446,27 @@ void NSApplication_run()
 	return self;
 }
 
+- (void)getExitCodeForTermination:(id)pObject
+{
+	// Close any windows still showing so that all windows
+	// get the appropriate window closing delegate calls
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+	{
+		NSArray *pWindows = [pApp windows];
+		if ( pWindows )
+		{
+			for ( NSWindow *pWindow in pWindows )
+			{
+				if ( pWindow )
+					[pWindow orderOut:pWindow];
+			}
+		}
+	}
+
+	[self getExitCode:pObject];
+}
+
 @end
 
 void NSApplication_terminate()
@@ -472,9 +478,20 @@ void NSApplication_terminate()
 	if ( !pApplication_isRunningInSandbox )
 		pApplication_isRunningInSandbox = (Application_isRunningInSandbox_Type *)dlsym( RTLD_MAIN_ONLY, "Application_isRunningInSandbox" );
 	if ( ( pApplication_isRunningInSandbox && !pApplication_isRunningInSandbox() ) || ( pApplication_canSave && !pApplication_canSave() ) )
+	{
 		nRet = 0;
+	}
 	else
-		nRet = Application_validateReceipt();
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		GetExitCode *pGetExitCode = [GetExitCode create];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[pGetExitCode performSelectorOnMainThread:@selector(getExitCodeForTermination:) withObject:pGetExitCode waitUntilDone:YES modes:pModes];
+		nRet = [pGetExitCode exitCode];
+
+		[pPool release];
+	}
 
     // Force exit since NSApplication won't shutdown when only exit() is invoked
     _exit( nRet );
