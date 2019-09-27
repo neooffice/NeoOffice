@@ -57,6 +57,7 @@
 #include "../view/topfrm_cocoa.hxx"
 
 // LibreOffice headers are found relative to LibreOffice include directory
+#import "../desktop/source/app/desktop.hrc"
 #import "../vcl/inc/svids.hrc"
 
 #define DEFAULT_URL						"_default"
@@ -90,7 +91,11 @@ static const NSString *kMenuItemPrefBooleanValueKey = @"MenuItemPrefBooleanValue
 static const NSString *kMenuItemPrefStringValueKey = @"MenuItemPrefStringValue";
 static const NSString *kMenuItemValueIsDefaultForPrefKey = @"MenuItemValueIsDefaultForPref";
 static const NSString *kMenuItemForceDefaultIfUnsetPrefKey = @"MenuItemForceDefaultIfUnsetPref";
+static ResMgr *pDktResMgr = NULL;
 static ResMgr *pVclResMgr = NULL;
+static FSEventStreamRef aFSEventStream = NULL;
+static NSString *pRestartMessageText = nil;
+static CFStringRef aExecutablePath = NULL;
 
 using namespace com::sun::star::beans;
 using namespace com::sun::star::uno;
@@ -117,6 +122,23 @@ static bool IsRunningHighSierraOrLower()
 	return bIsRunningHighSierraOrLower;
 }
 
+static OUString GetDktResString( int nId )
+{
+	if ( !pDktResMgr )
+	{
+		pDktResMgr = ResMgr::CreateResMgr( "dkt" );
+		if ( !pDktResMgr )
+			return "";
+	}
+
+	ResId aResId( nId, *pDktResMgr );
+	aResId.SetRT( RSC_STRING );
+	if ( !pDktResMgr->IsAvailable( aResId ) )
+		return "";
+ 
+	return OUString( ResId( nId, *pDktResMgr ) );
+}
+
 static OUString GetVclResString( int nId )
 {
 	if ( !pVclResMgr )
@@ -132,6 +154,44 @@ static OUString GetVclResString( int nId )
 		return "";
  
 	return OUString( ResId( nId, *pVclResMgr ) );
+}
+
+static void ExecutableFSEventStreamCallback( ConstFSEventStreamRef aStreamRef, void *pClientCallBackInfo, size_t nNumEvents, void *pEventPaths, const FSEventStreamEventFlags *pEventFlags, const FSEventStreamEventId *pEventIds )
+{
+	(void)aStreamRef;
+	(void)pClientCallBackInfo;
+	(void)pEventIds;
+
+	if ( !aExecutablePath || !pEventPaths || CFGetTypeID( pEventPaths ) != CFArrayGetTypeID() )
+		return;
+
+	for ( size_t i = 0; i < nNumEvents; i++ )
+	{
+		CFStringRef aPath = (CFStringRef)CFArrayGetValueAtIndex( (CFArrayRef)pEventPaths, i );
+		if ( pEventFlags && pEventFlags[ i ] == kFSEventStreamEventFlagRootChanged && aPath && CFGetTypeID( aPath ) == CFStringGetTypeID() && CFStringCompare( aExecutablePath, aPath, kCFCompareCaseInsensitive ) == kCFCompareEqualTo )
+		{
+			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+			NSAlert *pRestartAlert = nil;
+			if ( pRestartMessageText )
+			{
+				pRestartAlert = [[NSAlert alloc] init];
+				if ( pRestartAlert )
+					pRestartAlert.messageText = pRestartMessageText;
+			}
+
+			if ( pRestartAlert )
+				[pRestartAlert runModal];
+
+			NSApplication *pApp = [NSApplication sharedApplication];
+			if ( pApp )
+				[pApp terminate:pApp];
+
+			[pPool release];
+
+			break;
+		}
+	}
 }
 
 @interface NSObject (ShutdownIconDelegate)
@@ -759,6 +819,56 @@ extern "C" void java_init_systray()
 	::std::vector< QuickstartMenuItemDescriptor > aAppMenuItems;
 	OUString aDesc;
 
+	// Watch for changes to the executable file
+	if ( !aFSEventStream )
+	{
+		if ( !pRestartMessageText )
+		{
+			aDesc = GetDktResString( STR_LO_MUST_BE_RESTARTED );
+			if ( !aDesc.isEmpty() )
+			{
+				pRestartMessageText = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
+				if ( pRestartMessageText )
+					[pRestartMessageText retain];
+			}
+		}
+
+		if ( !aExecutablePath )
+		{
+			NSBundle *pBundle = [NSBundle mainBundle];
+			if ( pBundle )
+			{
+				NSURL *pURL = [pBundle executableURL];
+				if ( pURL && [pURL isKindOfClass:[NSURL class]] && [pURL isFileURL] )
+				{
+					NSFileManager *pFileManager = [NSFileManager defaultManager];
+					if ( pFileManager && [pFileManager fileExistsAtPath:[pURL path]] )
+					{
+						aExecutablePath = (CFStringRef)[pURL path];
+						if ( aExecutablePath )
+							CFRetain( aExecutablePath );
+					}
+				}
+			}
+		}
+
+		if ( aExecutablePath )
+		{
+			CFArrayRef aPaths = CFArrayCreate( kCFAllocatorDefault, (const void **)&aExecutablePath, 1, NULL );
+			if ( aPaths )
+			{
+				aFSEventStream = FSEventStreamCreate( kCFAllocatorDefault, ExecutableFSEventStreamCallback, NULL, aPaths, kFSEventStreamEventIdSinceNow, 0.1, kFSEventStreamCreateFlagUseCFTypes | kFSEventStreamCreateFlagWatchRoot );
+				if ( aFSEventStream )
+				{
+					FSEventStreamScheduleWithRunLoop( aFSEventStream, CFRunLoopGetMain(), kCFRunLoopDefaultMode );
+					FSEventStreamStart( aFSEventStream );
+				}
+
+				CFRelease( aPaths );
+			}
+		}
+	}
+
 	// Insert the new document and default launch submenu entries
 	::std::vector< QuickstartMenuItemDescriptor > aNewSubmenuItems;
 	::std::vector< QuickstartMenuItemDescriptor > aOpenAtLaunchSubmenuItems;
@@ -891,6 +1001,29 @@ extern "C" void java_init_systray()
 
 extern "C" void java_shutdown_systray()
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if (aFSEventStream)
+	{
+		FSEventStreamStop(aFSEventStream);
+		FSEventStreamInvalidate(aFSEventStream);
+		FSEventStreamRelease(aFSEventStream);
+		aFSEventStream = NULL;
+	}
+
+	if ( pRestartMessageText )
+	{
+		[pRestartMessageText release];
+		pRestartMessageText = nil;
+	}
+
+	if ( aExecutablePath )
+	{
+		CFRelease( aExecutablePath );
+		aExecutablePath = NULL;
+	}
+
+	[pPool release];
 }
 
 bool ShutdownIcon::IsQuickstarterInstalled()

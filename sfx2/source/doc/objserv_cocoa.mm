@@ -49,35 +49,16 @@
 #import "objserv_cocoa.hrc"
 
 // LibreOffice headers are found relative to LibreOffice include directory
-#import "../desktop/source/app/desktop.hrc"
 #import "../extensions/source/update/check/updatehdl.hrc"
 
 #include <dlfcn.h>
 
 typedef sal_Bool Application_canSave_Type();
-typedef int Application_validateReceipt_Type();
+typedef sal_Bool Application_validateReceipt_Type();
 
 static Application_canSave_Type *pApplication_canSave = NULL;
 static Application_validateReceipt_Type *pApplication_validateReceipt = NULL;
-static ResMgr *pDktResMgr = NULL;
 static ResMgr *pUpdResMgr = NULL;
-
-static OUString GetDktResString( int nId )
-{
-	if ( !pDktResMgr )
-	{
-		pDktResMgr = ResMgr::CreateResMgr( "dkt" );
-		if ( !pDktResMgr )
-			return "";
-	}
-
-	ResId aResId( nId, *pDktResMgr );
-	aResId.SetRT( RSC_STRING );
-	if ( !pDktResMgr->IsAvailable( aResId ) )
-		return "";
- 
-	return OUString( ResId( nId, *pDktResMgr ) );
-}
 
 static OUString GetUpdResString( int nId )
 {
@@ -104,19 +85,18 @@ static NSAlert *pSaveDisabledAlert = nil;
 	NSString*				mpDefaultButton;
 	NSString*				mpAlternateButton;
 	NSString*				mpInformativeText;
-	BOOL					mbTerminate;
 }
-+ (id)createWithMessageText:(NSString *)pMessageText defaultButton:(NSString *)pDefaultButton alternateButton:(NSString *)pAlternateButton informativeText:(NSString *)pInformativeText terminate:(BOOL)bTerminate;
++ (id)createWithMessageText:(NSString *)pMessageText defaultButton:(NSString *)pDefaultButton alternateButton:(NSString *)pAlternateButton informativeText:(NSString *)pInformativeText;
 - (void)dealloc;
-- (id)initWithMessageText:(NSString *)pMessageText defaultButton:(NSString *)pDefaultButton alternateButton:(NSString *)pAlternateButton informativeText:(NSString *)pInformativeText terminate:(BOOL)bTerminate;
+- (id)initWithMessageText:(NSString *)pMessageText defaultButton:(NSString *)pDefaultButton alternateButton:(NSString *)pAlternateButton informativeText:(NSString *)pInformativeText;
 - (void)showSaveDisabledDialog:(id)pObject;
 @end
 
 @implementation ShowSaveDisabledDialog
 
-+ (id)createWithMessageText:(NSString *)pMessageText defaultButton:(NSString *)pDefaultButton alternateButton:(NSString *)pAlternateButton informativeText:(NSString *)pInformativeText terminate:(BOOL)bTerminate
++ (id)createWithMessageText:(NSString *)pMessageText defaultButton:(NSString *)pDefaultButton alternateButton:(NSString *)pAlternateButton informativeText:(NSString *)pInformativeText
 {
-	ShowSaveDisabledDialog *pRet = [[ShowSaveDisabledDialog alloc] initWithMessageText:pMessageText defaultButton:pDefaultButton alternateButton:pAlternateButton informativeText:pInformativeText terminate:bTerminate];
+	ShowSaveDisabledDialog *pRet = [[ShowSaveDisabledDialog alloc] initWithMessageText:pMessageText defaultButton:pDefaultButton alternateButton:pAlternateButton informativeText:pInformativeText];
 	[pRet autorelease];
 	return pRet;
 }
@@ -135,7 +115,7 @@ static NSAlert *pSaveDisabledAlert = nil;
 	[super dealloc];
 }
 
-- (id)initWithMessageText:(NSString *)pMessageText defaultButton:(NSString *)pDefaultButton alternateButton:(NSString *)pAlternateButton informativeText:(NSString *)pInformativeText terminate:(BOOL)bTerminate
+- (id)initWithMessageText:(NSString *)pMessageText defaultButton:(NSString *)pDefaultButton alternateButton:(NSString *)pAlternateButton informativeText:(NSString *)pInformativeText
 {
 	[super init];
 
@@ -151,7 +131,6 @@ static NSAlert *pSaveDisabledAlert = nil;
 	mpInformativeText = pInformativeText;
 	if ( mpInformativeText )
 		[mpInformativeText retain];
-	mbTerminate = bTerminate;
 
 	return self;
 }
@@ -177,7 +156,7 @@ static NSAlert *pSaveDisabledAlert = nil;
 		pSaveDisabledAlert = [[NSAlert alloc] init];
 		if ( pSaveDisabledAlert )
 		{
-			if ( !mbTerminate && pWorkspace && pURL )
+			if ( pWorkspace && pURL )
 			{
 				if ( mpMessageText )
 					pSaveDisabledAlert.messageText = mpMessageText;
@@ -218,12 +197,6 @@ static NSAlert *pSaveDisabledAlert = nil;
 				if ( mpMessageText )
 					pSaveDisabledAlert.messageText = mpMessageText;
 				[pSaveDisabledAlert runModal];
-				if ( mbTerminate )
-				{
-					NSApplication *pApp = [NSApplication sharedApplication];
-					if ( pApp )
-						[pApp terminate:self];
-				}
 			}
 		}
 	}
@@ -250,47 +223,36 @@ sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, sal_uInt16 nID )
 			pApplication_canSave = (Application_canSave_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canSave" );
 		if ( !pApplication_canSave || !pApplication_canSave() )
 		{
-			bRet = sal_False;
-
-			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-			NSString *pMessageText = nil;
-			NSString *pInformativeText = nil;
-			NSString *pDefaultButton = nil;
-			NSString *pAlternateButton = nil;
-
 			if ( !pApplication_validateReceipt )
 				pApplication_validateReceipt = (Application_validateReceipt_Type *)dlsym( RTLD_DEFAULT, "Application_validateReceipt" );
-			BOOL bTerminate = ( pApplication_validateReceipt && !pApplication_validateReceipt() );
-			if ( bTerminate )
+			if ( !pApplication_validateReceipt || !pApplication_validateReceipt() )
 			{
-				OUString aDesc = GetDktResString( STR_LO_MUST_BE_RESTARTED );
-				aDesc = aDesc.replaceAll( "~", "" );
-				pMessageText = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
-			}
-			else
-			{
+				bRet = sal_False;
+
+				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 				OUString aDesc = SfxResId( STR_SAVEDISABLEDCANNOTSAVE );
 				aDesc = aDesc.replaceAll( "~", "" );
-				pMessageText = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
+				NSString *pMessageText = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
 
 				aDesc = SfxResId( STR_SAVEDISABLEDDOWNLOADPRODUCTTOSAVE );
 				aDesc = aDesc.replaceAll( "~", "" );
-				pInformativeText = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
+				NSString *pInformativeText = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
 
 				aDesc = GetUpdResString( RID_UPDATE_BTN_DOWNLOAD );
 				aDesc = aDesc.replaceAll( "~", "" );
-				pDefaultButton = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
+				NSString *pDefaultButton = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
 
 				aDesc = GetUpdResString( RID_UPDATE_BTN_CANCEL );
 				aDesc = aDesc.replaceAll( "~", "" );
-				pAlternateButton = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
+				NSString *pAlternateButton = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
+
+				ShowSaveDisabledDialog *pShowSaveDisabledDialog = [ShowSaveDisabledDialog createWithMessageText:pMessageText defaultButton:pDefaultButton alternateButton:pAlternateButton informativeText:pInformativeText];
+				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+				[pShowSaveDisabledDialog performSelectorOnMainThread:@selector(showSaveDisabledDialog:) withObject:pShowSaveDisabledDialog waitUntilDone:NO modes:pModes];
+
+				[pPool release];
 			}
-
-			ShowSaveDisabledDialog *pShowSaveDisabledDialog = [ShowSaveDisabledDialog createWithMessageText:pMessageText defaultButton:pDefaultButton alternateButton:pAlternateButton informativeText:pInformativeText terminate:bTerminate];
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pShowSaveDisabledDialog performSelectorOnMainThread:@selector(showSaveDisabledDialog:) withObject:pShowSaveDisabledDialog waitUntilDone:NO modes:pModes];
-
-			[pPool release];
 		}
 	}
 
