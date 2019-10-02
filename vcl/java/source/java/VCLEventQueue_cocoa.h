@@ -177,6 +177,7 @@
 - (void)setNonFullScreenFrame:(NSRect)aFrame;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
 - (void)windowDidExitFullScreen:(NSNotification *)pNotification;
+- (void)windowDidFailToEnterFullScreen:(NSWindow *)pWindow;
 - (void)windowWillEnterFullScreen:(NSNotification *)pNotification;
 - (void)windowDidMove:(NSNotification *)pNotification;
 - (void)windowDidResize:(NSNotification *)pNotification;
