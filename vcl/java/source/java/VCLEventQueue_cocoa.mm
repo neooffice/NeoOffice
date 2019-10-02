@@ -1162,16 +1162,7 @@ static NSUInteger nMouseMask = 0;
 
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(NSInteger)nOtherWindowNumber
 {
-	if ( nOrderingMode != NSWindowOut && ![self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
-	{
-		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
-		if ( pNotificationCenter )
-		{
-			[pNotificationCenter addObserver:self selector:@selector(windowDidExitFullScreen:) name:@"NSWindowDidExitFullScreenNotification" object:self];
-			[pNotificationCenter addObserver:self selector:@selector(windowWillEnterFullScreen:) name:@"NSWindowWillEnterFullScreenNotification" object:self];
-		}
-	}
-	else if ( nOrderingMode == NSWindowOut && [self isVisible] )
+	if ( nOrderingMode == NSWindowOut && [self isVisible] )
 	{
 		if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
 		{
@@ -1198,13 +1189,6 @@ static NSUInteger nMouseMask = 0;
 				// Mac OS X 10.5
 				[pNeedRestoreModalWindows removeObject:self];
 				[self _clearModalWindowLevel];
-			}
-
-			NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
-			if ( pNotificationCenter )
-			{
-				[pNotificationCenter removeObserver:self name:@"NSWindowDidExitFullScreenNotification" object:self];
-				[pNotificationCenter removeObserver:self name:@"NSWindowWillEnterFullScreenNotification" object:self];
 			}
 		}
 #ifdef USE_NSPOPOVER_FIX
@@ -3482,7 +3466,7 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
 	}
 
-	aSelector = @selector(windowWillEnterFullScreen:);
+	aSelector = @selector(windowDidExitFullScreen:);
 	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
 	if ( aNewMethod )
 	{
@@ -3491,7 +3475,16 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
 	}
 
-	aSelector = @selector(windowDidExitFullScreen:);
+	aSelector = @selector(windowDidFailToEnterFullScreen:);
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aNewMethod )
+	{
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aNewIMP )
+			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+	}
+
+	aSelector = @selector(windowWillEnterFullScreen:);
 	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
 	if ( aNewMethod )
 	{
