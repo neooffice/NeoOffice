@@ -1982,6 +1982,13 @@ static NSUInteger nMouseMask = 0;
 	}
 }
 
+- (void)windowDidFailToEnterFullScreen:(NSWindow *)pWindow
+{
+	(void)pWindow;
+
+	[self windowDidExitFullScreen:nil];
+}
+
 - (void)windowWillEnterFullScreen:(NSNotification *)pNotification
 {
 	(void)pNotification;
