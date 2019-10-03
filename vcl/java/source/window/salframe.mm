@@ -99,11 +99,8 @@ static NSRect GetTotalScreenBounds()
 		NSArray *pScreens = [NSScreen screens];
 		if ( pScreens )
 		{
-			NSUInteger nCount = [pScreens count];
-			NSUInteger i = 0;
-			for ( ; i < nCount; i++ )
+			for ( NSScreen *pScreen in pScreens )
 			{
-				NSScreen *pScreen = [pScreens objectAtIndex:i];
 				if ( pScreen )
 				{
 					NSRect aScreenFrame = [pScreen frame];
@@ -121,6 +118,8 @@ static NSRect GetTotalScreenBounds()
 
 static void HandleScreensChangedRequest()
 {
+	NSWindow_resetCachedCGContext();
+
 	MutexGuard aGuard( aScreensMutex );
 
 	bScreensInitialized = true;
@@ -133,12 +132,9 @@ static void HandleScreensChangedRequest()
 	{
 		// Calculate the total combined screen so that we can flip coordinates
 		NSRect aTotalBounds = GetTotalScreenBounds();
-		NSUInteger nCount = [pScreens count];
-		NSUInteger i = 0;
-		for ( ; i < nCount; i++ )
+		NSRect aLastFullFrame = NSMakeRect( 0, 0, 0, 0 );
+		for ( NSScreen *pScreen in pScreens )
 		{
-			NSRect aLastFullFrame = NSMakeRect( 0, 0, 0, 0 );
-			NSScreen *pScreen = [pScreens objectAtIndex:i];
 			if ( pScreen )
 			{
 				NSRect aFullFrame = [pScreen frame];
@@ -146,7 +142,7 @@ static void HandleScreensChangedRequest()
 
 				// On some machines, there are two monitors for every mirrored
 				// display so eliminate those duplicate monitors
-				if ( i && NSEqualRects( aLastFullFrame, aFullFrame ) )
+				if ( !NSIsEmptyRect( aLastFullFrame ) && NSEqualRects( aLastFullFrame, aFullFrame ) )
 					continue;
 				aLastFullFrame = aFullFrame;
 
@@ -501,21 +497,12 @@ static BOOL bIOPMAssertionIDSet = NO;
 		if ( aContentRect.size.height <= 1.0f )
 			aContentRect.size.height = 1.0f;
 
-		// Fix macOS 10.14 failure to create a graphics context by using a
-		// cached graphics context if it is available
-		NSGraphicsContext *pContext = NSWindow_cachedGraphicsContext( pWindow );
-		if ( !pContext )
-			pContext = [NSGraphicsContext graphicsContextWithWindow:pWindow];
-
-		if ( pContext )
+		CGContextRef aContext = NSWindow_cachedCGContext();
+		if ( aContext )
 		{
-			CGContextRef aContext = [pContext CGContext];
-			if ( aContext )
-			{
-				maLayer = CGLayerCreateWithContext( aContext, CGSizeMake( aContentRect.size.width, aContentRect.size.height ), nullptr );
-				if ( maLayer )
-					aNativeWindowMap[ pWindow ] = mpGraphics;
-			}
+			maLayer = CGLayerCreateWithContext( aContext, CGSizeMake( aContentRect.size.width, aContentRect.size.height ), nullptr );
+			if ( maLayer )
+				aNativeWindowMap[ pWindow ] = mpGraphics;
 		}
 	}
 }
@@ -2416,12 +2403,6 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
 			if ( pContext )
 			{
-				// When compiled on macOS 10.14, the current context may not
-				// support retina display resolution so cache it only when
-				// a context does not already exist in the cache
-				if ( !NSWindow_cachedGraphicsContext( pWindow ) )
-					NSWindow_setCachedGraphicsContext( pWindow, pContext );
-
 				CGContextRef aContext = [pContext CGContext];
 				if ( aContext )
 				{

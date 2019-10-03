@@ -60,7 +60,7 @@
 #define MODIFIER_RELEASE_INTERVAL 100
 #define UNDEFINED_KEY_CODE 0xffff
 
-static ::std::map< NSWindow*, NSGraphicsContext* > aNativeGraphicsContextMap;
+static CGContextRef aCachedContext = nullptr;
 
 inline long FloatToLong( float f ) { return static_cast< long >( f == 0 ? f : f < 0 ? f - 0.5 : f + 0.5 ); }
 
@@ -801,8 +801,6 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 
 - (void)dealloc
 {
-	NSWindow_setCachedGraphicsContext( self, nil );
-
 	if ( mpLastWindowDraggedEvent )
 		[mpLastWindowDraggedEvent release];
 
@@ -1043,8 +1041,6 @@ static NSUInteger nMouseMask = 0;
 
 - (void)dealloc
 {
-	NSWindow_setCachedGraphicsContext( self, nil );
-
 	if ( mpLastWindowDraggedEvent )
 		[mpLastWindowDraggedEvent release];
 
@@ -1208,16 +1204,6 @@ static NSUInteger nMouseMask = 0;
 
 	if ( [super respondsToSelector:@selector(poseAsOrderWindow:relativeTo:)] )
 		[super poseAsOrderWindow:nOrderingMode relativeTo:nOtherWindowNumber];
-
-	// Don't remove the context from the cache when ordering out as we will
-	// need the cached context if compiled on macOS 10.14 and a floating window
-	// is reshown
-	if ( nOrderingMode != NSWindowOut && [self isVisible] )
-	{
-		NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithWindow:self];
-		if ( pContext )
-			NSWindow_setCachedGraphicsContext( self, pContext );
-	}
 }
 
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent
@@ -3725,38 +3711,63 @@ void VCLEventQueue_installVCLEventQueueClasses()
 	[pPool release];
 }
 
-SAL_DLLPRIVATE NSGraphicsContext *NSWindow_cachedGraphicsContext( NSWindow *pWindow )
+SAL_DLLPRIVATE CGContextRef NSWindow_cachedCGContext()
 {
-	NSGraphicsContext *pRet = nil;
-
-	if ( !pWindow )
-		return pRet;
-
-	std::map< NSWindow*, NSGraphicsContext* >::iterator it = aNativeGraphicsContextMap.find( pWindow );
-	if ( it != aNativeGraphicsContextMap.end() )
-		pRet = it->second;
-
-	return pRet;
+	if ( !aCachedContext )
+		NSWindow_resetCachedCGContext();
+ 
+	return aCachedContext;
 }
 
-SAL_DLLPRIVATE void NSWindow_setCachedGraphicsContext( NSWindow *pWindow, NSGraphicsContext *pContext )
+SAL_DLLPRIVATE void NSWindow_resetCachedCGContext()
 {
-	if ( !pWindow )
-		return;
-
-	if ( pContext )
-		[pContext retain];
-
-	std::map< NSWindow*, NSGraphicsContext* >::iterator it = aNativeGraphicsContextMap.find( pWindow );
-	if ( it != aNativeGraphicsContextMap.end() )
+	if ( aCachedContext )
 	{
-		if ( it->second )
-			[it->second release];
-		aNativeGraphicsContextMap.erase( it );
+		CGContextRelease( aCachedContext );
+		aCachedContext = nullptr;
 	}
 
-	if ( pContext )
-		aNativeGraphicsContextMap[ pWindow ] = pContext;
+	float fLastBackingScaleFactor = 1.0f;
+	NSScreen *pLastScreen = nullptr;
+	NSArray *pScreens = [NSScreen screens];
+	if ( pScreens )
+	{
+		for ( NSScreen *pScreen in pScreens )
+		{
+			if ( pScreen )
+			{
+				if ( pLastScreen )
+				{
+					if ( fLastBackingScaleFactor < [pScreen backingScaleFactor] )
+					{
+						fLastBackingScaleFactor = [pScreen backingScaleFactor];
+						pLastScreen = pScreen;
+					}
+				}
+				else
+				{
+					fLastBackingScaleFactor = [pScreen backingScaleFactor];
+					pLastScreen = pScreen;
+				}
+			}
+		}
+	}
+
+	// Create a non-deferred window on the screen with the highest scale factor
+	// and cached its graphics context
+	NSWindow *pWindow = [[NSWindow alloc] initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:NO screen:pLastScreen];
+	if ( pWindow )
+	{
+		[pWindow autorelease];
+
+		NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithWindow:pWindow];
+		if ( pContext )
+		{
+			CGContextRef aContext = [pContext CGContext];
+			if ( aContext )
+				aCachedContext = CGContextRetain( aContext );
+		}
+	}
 }
 
 SAL_DLLPRIVATE void VCLUpdateSystemAppearance_handleAppearanceChange()
