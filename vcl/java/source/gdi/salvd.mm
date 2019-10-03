@@ -99,51 +99,9 @@ using namespace vcl;
 		maLayer = NULL;
 	}
 
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
-	{
-		NSArray *pWindows = [pApp windows];
-		if ( pWindows )
-		{
-			float fLastBackingScaleFactor = 1.0f;
-			CGContextRef aLastContext = NULL;
-			NSUInteger nCount = [pWindows count];
-			NSUInteger i = 0;
-			for ( ; i < nCount; i++ )
-			{
-				NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
-				if ( pWindow && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
-				{
-					// Fix macOS 10.14 failure to create a graphics context by
-					// using a cached graphics context if it is available
-					NSGraphicsContext *pContext = NSWindow_cachedGraphicsContext( pWindow );
-					if ( !pContext )
-						pContext = [NSGraphicsContext graphicsContextWithWindow:pWindow];
-
-					if ( pContext )
-					{
-						CGContextRef aContext = [pContext CGContext];
-						if ( aContext )
-						{
-							if ( !aLastContext )
-								aLastContext = aContext;
-
-							float fBackingScaleFactor = [pWindow backingScaleFactor];
-							if ( fLastBackingScaleFactor < fBackingScaleFactor )
-							{
-								fLastBackingScaleFactor = fBackingScaleFactor;
-								aLastContext = aContext;
-								break;
-							}
-						}
-					}
-				}
-			}
-
-			if ( aLastContext )
-				maLayer = CGLayerCreateWithContext( aLastContext, CGSizeMake( mnDX, mnDY ), NULL );
-		}
-	}
+	CGContextRef aContext = NSWindow_cachedCGContext();
+	if ( aContext )
+		maLayer = CGLayerCreateWithContext( aContext, CGSizeMake( mnDX, mnDY ), NULL );
 }
 
 - (CGLayerRef)layer
