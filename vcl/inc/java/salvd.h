@@ -62,6 +62,8 @@ public:
 							JavaSalVirtualDevice();
 	virtual					~JavaSalVirtualDevice();
 
+	bool					ScreenParamsChanged();
+
 	virtual SalGraphics*	AcquireGraphics() override;
 	virtual void			ReleaseGraphics( SalGraphics* pGraphics ) override;
 	virtual bool			SetSize( long nNewDX, long nNewDY ) override;

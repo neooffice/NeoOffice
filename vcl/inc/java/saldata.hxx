@@ -48,6 +48,7 @@ class JavaSalEvent;
 class JavaSalFrame;
 class JavaSalGraphics;
 class JavaSalInstance;
+class JavaSalVirtualDevice;
 
 #include "salframe.hxx"
 #include "svdata.hxx"
@@ -91,6 +92,7 @@ public:
 	::vcl::Font				maMenuFont;
 	::vcl::Font				maTitleBarFont;
 	bool					mbNeedsFlushAllFrames;
+	::std::list< JavaSalVirtualDevice* >	maVirDevList;
 
 							SalData();
 							~SalData();
