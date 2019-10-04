@@ -1370,7 +1370,7 @@ void JavaSalGraphics::setLayer( CGLayerRef aLayer )
 
 	if ( aLayer != maLayer )
 	{
-		if ( mpFrame && aLayer )
+		if ( aLayer && ( mpFrame || mpVirDev ) )
 		{
 			CGSize aLayerSize = CGLayerGetSize( aLayer );
 			CGContextRef aContext = CGLayerGetContext( aLayer );

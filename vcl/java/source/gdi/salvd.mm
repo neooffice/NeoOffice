@@ -37,6 +37,7 @@
 #import <AppKit/AppKit.h>
 #include <postmac.h>
 
+#include "java/saldata.hxx"
 #include "java/salgdi.h"
 #include "java/salvd.h"
 
@@ -125,18 +126,57 @@ JavaSalVirtualDevice::JavaSalVirtualDevice() :
 	mpGraphics->mpVirDev = this;
 	mpGraphics->mnDPIX = MIN_SCREEN_RESOLUTION;
 	mpGraphics->mnDPIY = MIN_SCREEN_RESOLUTION;
+
+	// Insert this virtual device into the virtual device list
+	GetSalData()->maVirDevList.push_front( this );
 }
 
 // -----------------------------------------------------------------------
 
 JavaSalVirtualDevice::~JavaSalVirtualDevice()
 {
+	// Remove this virtual device from the virtual device list
+	GetSalData()->maVirDevList.remove( this );
+
 	if ( maVirDevLayer )
 		CGLayerRelease( maVirDevLayer );
 
 	// Delete graphics last as it may be needed by a JavaSalBitmap
 	if ( mpGraphics )
 		delete mpGraphics;
+}
+
+// -----------------------------------------------------------------------
+
+bool JavaSalVirtualDevice::ScreenParamsChanged()
+{
+	bool bRet = false;
+
+	if ( maVirDevLayer )
+	{
+		bool bContextChanged = true;
+		CGContextRef aOldContext = CGLayerGetContext( maVirDevLayer );
+		CGContextRef aContext = NSWindow_cachedCGContext();
+		if ( aOldContext && aContext )
+		{
+			CGSize aOldSize = CGContextConvertSizeToDeviceSpace( aOldContext, CGSizeMake( 1, 1 ) );
+			CGSize aSize = CGContextConvertSizeToDeviceSpace( aContext, CGSizeMake( 1, 1 ) );
+			if ( aSize.width > 0 && aSize.height > 0 && CGSizeEqualToSize( aOldSize, aSize ) )
+				bContextChanged = false;
+		}
+
+		if ( bContextChanged )
+		{
+			bRet = true;
+
+			CGLayerRelease( maVirDevLayer );
+			maVirDevLayer = NULL;
+
+			SetSize( mnWidth, mnHeight );
+		}
+	}
+
+	return bRet;
 }
 
 // -----------------------------------------------------------------------

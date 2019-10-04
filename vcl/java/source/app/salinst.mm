@@ -1542,11 +1542,26 @@ void JavaSalEvent::dispatch()
 		}
 		case SALEVENT_SCREENPARAMSCHANGED:
 		{
+			bool bChangedResolution = false;
+			for ( std::list< JavaSalVirtualDevice * >::const_iterator it = pSalData->maVirDevList.begin(); it != pSalData->maVirDevList.end(); ++it )
+			{
+				if ( (*it)->ScreenParamsChanged() )
+					bChangedResolution = true;
+			}
 			for ( std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
-				if ( (*it)->mbVisible )
-					(*it)->SetPosSize( 0, 0, 0, 0, 0 );
+				if ( (*it)->ScreenParamsChanged() )
+					bChangedResolution = true;
 			}
+
+			// Force complete redraw of all windows if any windows or virtual
+			// devices changed resolution
+			if ( bChangedResolution )
+			{
+				JavaSalEvent aEvent( SALEVENT_SYSTEMCOLORSCHANGED, NULL, NULL );
+				aEvent.dispatch();
+			}
+
 			return;
 		}
 		case SALEVENT_SYSTEMCOLORSCHANGED:

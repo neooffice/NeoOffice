@@ -134,6 +134,7 @@ public:
 	void					AddTrackingRect( vcl::Window *pWindow );
 	void					RemoveTrackingRect( vcl::Window *pWindow );
 	void					SetMovable( bool bMoveable );
+	bool					ScreenParamsChanged();
 
 	virtual SalGraphics*	AcquireGraphics() SAL_OVERRIDE;
 	virtual void			ReleaseGraphics( SalGraphics* pGraphics ) SAL_OVERRIDE;
