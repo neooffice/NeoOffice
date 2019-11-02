@@ -1703,7 +1703,10 @@ void JavaSalEvent::dispatch()
 		}
 		case SalEvent::Deminimized:
 		{
-			// Fix bug 3649 by not hiding any windows when minimizing
+			// Fix bug 3649 by not hiding any windows when minimizing. Also,
+			// Update the window's layer in case the native window has changed.
+			if ( pFrame && pFrame->mbVisible )
+				pFrame->UpdateLayer();
 			break;
 		}
 		case SalEvent::Minimized:
