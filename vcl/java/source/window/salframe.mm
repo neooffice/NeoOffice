@@ -503,7 +503,9 @@ static BOOL bIOPMAssertionIDSet = NO;
 		++it;
 	}
 
-	if ( mpGraphics && pWindow && [pWindow isVisible] )
+	// Allow creation of layer for minimized windows now that we create layers
+	// from a cached window
+	if ( mpGraphics && pWindow && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
 	{
 		NSRect aContentRect = [pWindow contentRectForFrameRect:[pWindow frame]];
 		if ( aContentRect.size.width <= 1.0f )
