@@ -3627,7 +3627,7 @@ bool JavaSalFrame::ScreenParamsChanged()
 		{
 			CGSize aOldSize = CGContextConvertSizeToDeviceSpace( aOldContext, CGSizeMake( 1, 1 ) );
 			CGSize aSize = CGContextConvertSizeToDeviceSpace( aContext, CGSizeMake( 1, 1 ) );
-			if ( aSize.width > 0 && aSize.height > 0 && CGSizeEqualToSize( aOldSize, aSize ) )
+			if ( aSize.width != 0 && aSize.height != 0 && CGSizeEqualToSize( aOldSize, aSize ) )
 				bContextChanged = false;
 		}
 
