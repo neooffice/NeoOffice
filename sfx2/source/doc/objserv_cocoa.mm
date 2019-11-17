@@ -223,12 +223,12 @@ sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, sal_uInt16 nID )
 			pApplication_canSave = (Application_canSave_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canSave" );
 		if ( !pApplication_canSave || !pApplication_canSave() )
 		{
-			bRet = sal_False;
-
 			if ( !pApplication_validateReceipt )
 				pApplication_validateReceipt = (Application_validateReceipt_Type *)dlsym( RTLD_DEFAULT, "Application_validateReceipt" );
 			if ( !pApplication_validateReceipt || !pApplication_validateReceipt() )
 			{
+				bRet = sal_False;
+
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 				OUString aDesc = SfxResId( STR_SAVEDISABLEDCANNOTSAVE );
