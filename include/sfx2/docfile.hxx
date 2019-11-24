@@ -286,12 +286,6 @@ typedef tools::SvRef<SfxMedium> SfxMediumRef;
 
 typedef ::std::vector< SfxMedium* > SfxMediumList;
 
-#ifdef USE_JAVA
-
-bool SFX2_DLLPUBLIC ImplIsValidSfxMedium( const SfxMedium *pMedium );
-
-#endif  // USE_JAVA
-
 #endif
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

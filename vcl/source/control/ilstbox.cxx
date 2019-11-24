@@ -2727,18 +2727,9 @@ void ImplWin::ImplDraw( bool bLayout )
 
 #ifdef USE_JAVA
             if ( !bNativeOK )
-            {
-                // Reduce effect of drawing listboxes that are owned by a
-                // ImplSmallBorderWindowView when in dark mode by clearing the
-                // area with the listbox's background
-                if ( dynamic_cast< ListBox* >( pWin ) )
-                    DrawWallpaper( aCtrlRegion, pWin->GetDisplayBackground() );
 #endif	// USE_JAVA
             bNativeOK = DrawNativeControl( CTRL_LISTBOX, PART_ENTIRE_CONTROL, aCtrlRegion, nState,
                 aControlValue, OUString() );
-#ifdef USE_JAVA
-            }
-#endif	// USE_JAVA
         }
 
 #ifdef USE_JAVA

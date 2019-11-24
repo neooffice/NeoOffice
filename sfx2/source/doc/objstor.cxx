@@ -2778,13 +2778,7 @@ bool SfxObjectShell::DoSave_Impl( const SfxItemSet* pArgs )
         // reconnect to object storage
         DoSaveCompleted( 0 );
 
-#ifdef USE_JAVA
-        // Attempt to fix Mac App Store crash by detecting if the medium has
-        // already been deleted
-        if( ImplIsValidSfxMedium( pRetrMedium ) && pRetrMedium->GetItemSet() )
-#else	// USE_JAVA
         if( pRetrMedium->GetItemSet() )
-#endif	// USE_JAVA
         {
             pRetrMedium->GetItemSet()->ClearItem( SID_INTERACTIONHANDLER );
             pRetrMedium->GetItemSet()->ClearItem( SID_PROGRESS_STATUSBAR_CONTROL );

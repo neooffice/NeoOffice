@@ -42,7 +42,6 @@
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
-#import <objc/objc-class.h>
 #include <postmac.h>
 #undef check
 
@@ -72,7 +71,6 @@
 // Increase adjustment factor slightly to increase height in text fields in the
 // Preference dialog's User Data panel.
 #define EDITBOX_HEIGHT					( Application::GetSettings().GetStyleSettings().GetToolFont().GetHeight() * 3 )
-#define EDITBOX_HEIGHT_SLOP				( IsRunningHighSierraOrLower() ? 0 : 1 )
 #define EDITFRAMEPADDING_WIDTH			1
 #define FOCUSRING_WIDTH					3
 #define FRAME_TRIMWIDTH					1
@@ -122,9 +120,6 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 	void					ReleaseContext();
 };
 
-static bool bIsRunningHighSierraOrLowerInitizalized  = false;
-static bool bIsRunningHighSierraOrLower = false;
-
 static VCLBitmapBuffer aSharedComboBoxBuffer;
 static VCLBitmapBuffer aSharedListBoxBuffer;
 static VCLBitmapBuffer aSharedHorizontalScrollBarBuffer;
@@ -145,30 +140,6 @@ static VCLBitmapBuffer aSharedBevelButtonBuffer;
 static VCLBitmapBuffer aSharedCheckboxBuffer;
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
-
-// =======================================================================
-
-static bool IsRunningHighSierraOrLower()
-{
-	if ( !bIsRunningHighSierraOrLowerInitizalized )
-	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-		NSProcessInfo *pProcessInfo = [NSProcessInfo processInfo];
-		if ( pProcessInfo )
-		{
-			NSOperatingSystemVersion aVersion = pProcessInfo.operatingSystemVersion;
-			if ( aVersion.majorVersion <= 10 && aVersion.minorVersion <= 13 )
-				bIsRunningHighSierraOrLower = true;
-		}
-
-		bIsRunningHighSierraOrLowerInitizalized = true;
-
-		[pPool release];
-	}
-
-	return bIsRunningHighSierraOrLower;
-}
 
 // =======================================================================
 
@@ -260,49 +231,6 @@ static bool IsRunningHighSierraOrLower()
 - (void)setInactive:(BOOL)bInactive
 {
 	mbInactive = bInactive;
-}
-
-@end
-
-// =======================================================================
-
-@interface VCLNativeControlView : NSView
-{
-	BOOL					mbFlipped;
-}
-+ (id)createWithControl:(NSControl *)pControl;
-- (id)initWithControl:(NSControl *)pControl;
-- (BOOL)isFlipped;
-@end
-
-@implementation VCLNativeControlView
-
-+ (id)createWithControl:(NSControl *)pControl
-{
-	VCLNativeControlView *pRet = nil;
-
-	if ( pControl )
-	{
-		pRet = [[VCLNativeControlView alloc] initWithControl:pControl];
-		if ( pRet )
-			[pRet autorelease];
-	}
-
-	return pRet;
-}
-
-- (id)initWithControl:(NSControl *)pControl
-{
-	[super initWithFrame:[pControl frame]];
-
-	mbFlipped = [pControl isFlipped];
-
-	return self;
-}
-
-- (BOOL)isFlipped
-{
-	return mbFlipped;
 }
 
 @end
@@ -505,24 +433,7 @@ static bool IsRunningHighSierraOrLower()
 							}
 						}
 
-						// Fix failure to draw on macOS 10.14 by passing a
-						// regular view instead of the control itself. Fix
-						// failure to draw control in inactive state on
-						// macOS 10.14 by attaching view to the control's
-						// window.
-						NSView *pControlView = ( IsRunningHighSierraOrLower() ? nil : [VCLNativeControlView createWithControl:pButton] );
-						if ( pControlView )
-						{
-							NSWindow *pWindow = [pButton window];
-							if ( pWindow )
-							{
-								NSView *pContentView = [pWindow contentView];
-								if ( pContentView )
-									[pContentView addSubview:pControlView positioned:NSWindowBelow relativeTo:nil];
-							}
-						}
-
-						[pCell drawWithFrame:aDrawRect inView:( pControlView ? pControlView : pButton )];
+						[pCell drawWithFrame:aDrawRect inView:pButton];
 
 						if ( mbRedraw )
 						{
@@ -543,9 +454,6 @@ static bool IsRunningHighSierraOrLower()
 								CGContextEndTransparencyLayer( mpBuffer->maContext );
 							}
 						}
-
-						if ( pControlView )
-							[pControlView removeFromSuperview];
 
 						if ( bAttachToKeyWindow )
 							[pButton removeFromSuperview];
@@ -791,34 +699,12 @@ static bool IsRunningHighSierraOrLower()
 						}
 
 						// Vertically center control
-						aDrawRect.origin.y += ( ( fOffscreenHeight - fCellHeight ) / 2 ) + COMBOBOX_HEIGHT_SLOP;
+						aDrawRect.origin.y += ( ( fOffscreenHeight - fCellHeight ) / 2 ) + ( mbEditable ? COMBOBOX_HEIGHT_SLOP : 0 );
 						aDrawRect.size.height = fCellHeight;
 
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
-
-						// Fix failure to draw on macOS 10.14 by passing a
-						// regular view instead of the control itself. Fix
-						// failure to draw control in inactive state on
-						// macOS 10.14 by attaching view to the control's
-						// window.
-						NSView *pControlView = ( IsRunningHighSierraOrLower() ? nil : [VCLNativeControlView createWithControl:pControl] );
-						if ( pControlView )
-						{
-							NSWindow *pWindow = [pControl window];
-							if ( pWindow )
-							{
-								NSView *pContentView = [pWindow contentView];
-								if ( pContentView )
-									[pContentView addSubview:pControlView positioned:NSWindowBelow relativeTo:nil];
-							}
-						}
-
-						[pCell drawWithFrame:aDrawRect inView:( pControlView ? pControlView : pControl )];
-
-						if ( pControlView )
-							[pControlView removeFromSuperview];
-
+						[pCell drawWithFrame:aDrawRect inView:pControl];
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
 						mbDrawn = true;
@@ -1044,15 +930,8 @@ static bool IsRunningHighSierraOrLower()
 					[NSGraphicsContext setCurrentContext:pContext];
 
 
-					// Fix bug 2031 by always filling the background with white.
-					// Fix incorrect dark mode drawing by filling with a system
-					// color instead of white.
-					if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedContentBackgroundColor) ) )
-						[[NSColor unemphasizedSelectedContentBackgroundColor] set];
-					else if ( class_getClassMethod( [NSColor class], @selector(scrollBarColor) ) )
-						[[NSColor scrollBarColor] set];
-					else
-						[[NSColor controlBackgroundColor] set];
+					// Fix bug 2031 by always filling the background with white
+					[[NSColor whiteColor] set];
 					[NSBezierPath fillRect:NSRectFromCGRect( aAdjustedDestRect )];
 
 					// Draw arrows on Mac OS X 10.6
@@ -2087,13 +1966,7 @@ static bool IsRunningHighSierraOrLower()
 
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
-
-						// Fix height of text fields on macOS 10.14 by adding
-						// height to the top of the text field
-						NSRect aCellDrawRect = aDrawRect;
-						aCellDrawRect.origin.y -= EDITBOX_HEIGHT_SLOP;
-						aCellDrawRect.size.height += EDITBOX_HEIGHT_SLOP;
-						[pCell drawWithFrame:aCellDrawRect inView:pTextField];
+						[pCell drawWithFrame:aDrawRect inView:pTextField];
 
 						// Draw focus ring
 						if ( mnControlState & CTRL_STATE_FOCUSED && [pTextField isEnabled] )
@@ -2230,10 +2103,7 @@ static bool IsRunningHighSierraOrLower()
 						}
 						else
 						{
-							if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedContentBackgroundColor) ) )
-								[[NSColor unemphasizedSelectedContentBackgroundColor] set];
-							else
-								[[NSColor controlColor] set];
+							[[NSColor controlColor] set];
 							[NSBezierPath fillRect:aDrawRect];
 						}
 						[NSGraphicsContext setCurrentContext:pOldContext];

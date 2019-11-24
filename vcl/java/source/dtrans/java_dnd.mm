@@ -131,7 +131,8 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 - (void)registerForDraggedTypes:(id)pSender;
 - (void)setLastMouseEvent:(NSEvent *)pEvent;
 - (void)startDrag:(id)pSender;
-- (void)unregisterAndDestroy:(id)pSender;
+- (void)unregisterDraggedTypesAndReleaseView:(id)pSender;
+- (void)unregisterDragSourceAndReleaseView:(id)pSender;
 @end
 
 @implementation JavaDNDPasteboardHelper
@@ -340,7 +341,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 	}
 }
 
-- (void)unregisterAndDestroy:(id)pSender
+- (void)unregisterDraggedTypesAndReleaseView:(id)pSender
 {
 	(void)pSender;
 
@@ -355,24 +356,11 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 		[mpDestination release];
 		mpDestination = nil;
 	}
+}
 
-	if ( mpDraggingSource )
-	{
-		[mpDraggingSource release];
-		mpDraggingSource = nil;
-	}
-
-	if ( mpLastMouseEvent )
-	{
-		[mpLastMouseEvent release];
-		mpLastMouseEvent = nil;
-	}
-
-	if ( mpNewTypes )
-	{
-		[mpNewTypes release];
-		mpNewTypes = nil;
-	}
+- (void)unregisterDragSourceAndReleaseView:(id)pSender
+{
+	(void)pSender;
 
 	if ( mpSource )
 	{
@@ -1055,7 +1043,7 @@ JavaDragSource::~JavaDragSource()
 	if ( mpPasteboardHelper )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpPasteboardHelper performSelectorOnMainThread:@selector(unregisterAndDestroy:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
+		[mpPasteboardHelper performSelectorOnMainThread:@selector(unregisterDragSourceAndReleaseView:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
 
 		[mpPasteboardHelper release];
 	}
@@ -1254,7 +1242,7 @@ void JavaDropTarget::disposing()
 	if ( mpPasteboardHelper )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(JavaDNDPasteboardHelper *)mpPasteboardHelper performSelectorOnMainThread:@selector(unregisterAndDestroy:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
+		[(JavaDNDPasteboardHelper *)mpPasteboardHelper performSelectorOnMainThread:@selector(unregisterDraggedTypesAndReleaseView:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
 
 		[mpPasteboardHelper release];
 		mpPasteboardHelper = nil;

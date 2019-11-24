@@ -42,7 +42,6 @@
 #include <com/sun/star/awt/MouseButton.hpp>
 #include <com/sun/star/awt/SystemPointer.hpp>
 #include <com/sun/star/media/ZoomLevel.hpp>
-#include <vcl/svapp.hxx>
 
 #ifndef USE_QUICKTIME
 #define PREFERRED_TIMESCALE 1000
@@ -116,7 +115,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	// Only process the event if both the event and the view are visible
 	if ( pEvent && pView && pMoviePlayer && [pEvent window] && [pView window] && [[pView window] isVisible] )
 	{
-		com::sun::star::awt::MouseEvent aEvt;
+		MouseEvent aEvt;
 
 		NSPoint aPoint = [pView convertPoint:[pEvent locationInWindow] fromView:nil];
 		aEvt.Modifiers = 0;
@@ -134,70 +133,58 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		if ( nKeyModifiers & NSEventModifierFlagCommand )
 			aEvt.Modifiers |= KeyModifier::MOD1;
 
-		NSUInteger nType = [pEvent type];
-
-		if ( !Application::IsShutDown() )
+		// Set buttons
+		switch ( [pEvent type] )
 		{
-			comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-			rSolarMutex.acquire();
-			if ( !Application::IsShutDown() )
-			{
-				// Set buttons
-				switch ( nType )
-				{
-					case NSEventTypeLeftMouseDown:
-						if ( nKeyModifiers & NSEventModifierFlagControl )
-							aEvt.Buttons = MouseButton::RIGHT;
-						else
-							aEvt.Buttons = MouseButton::LEFT;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMousePressedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
-						break;
-					case NSEventTypeRightMouseDown:
-						aEvt.Buttons = MouseButton::RIGHT;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMousePressedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
-						break;
-					case NSEventTypeOtherMouseDown:
-						aEvt.Buttons = MouseButton::MIDDLE;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMousePressedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
-						break;
-					case NSEventTypeLeftMouseDragged:
-						if ( nKeyModifiers & NSEventModifierFlagControl )
-							aEvt.Buttons = MouseButton::RIGHT;
-						else
-							aEvt.Buttons = MouseButton::LEFT;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMouseMovedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
-						break;
-					case NSEventTypeRightMouseDragged:
-						aEvt.Buttons = MouseButton::RIGHT;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMouseMovedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
-						break;
-					case NSEventTypeOtherMouseDragged:
-						aEvt.Buttons = MouseButton::MIDDLE;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMouseMovedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
-						break;
-					case NSEventTypeLeftMouseUp:
-						if ( nKeyModifiers & NSEventModifierFlagControl )
-							aEvt.Buttons = MouseButton::RIGHT;
-						else
-							aEvt.Buttons = MouseButton::LEFT;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMouseReleasedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
-						break;
-					case NSEventTypeRightMouseUp:
-						aEvt.Buttons = MouseButton::RIGHT;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMouseReleasedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
-						break;
-					case NSEventTypeOtherMouseUp:
-						aEvt.Buttons = MouseButton::MIDDLE;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMouseReleasedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
-						break;
-					default:
-						aEvt.ClickCount = 0;
-						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMouseMovedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
-						break;
-				}
-			}
-
-			rSolarMutex.release();
+			case NSEventTypeLeftMouseDown:
+				if ( nKeyModifiers & NSEventModifierFlagControl )
+					aEvt.Buttons = MouseButton::RIGHT;
+				else
+					aEvt.Buttons = MouseButton::LEFT;
+				Window::fireMousePressedEvent( pMoviePlayer, aEvt );
+				break;
+			case NSEventTypeRightMouseDown:
+				aEvt.Buttons = MouseButton::RIGHT;
+				Window::fireMousePressedEvent( pMoviePlayer, aEvt );
+				break;
+			case NSEventTypeOtherMouseDown:
+				aEvt.Buttons = MouseButton::MIDDLE;
+				Window::fireMousePressedEvent( pMoviePlayer, aEvt );
+				break;
+			case NSEventTypeLeftMouseDragged:
+				if ( nKeyModifiers & NSEventModifierFlagControl )
+					aEvt.Buttons = MouseButton::RIGHT;
+				else
+					aEvt.Buttons = MouseButton::LEFT;
+				Window::fireMouseMovedEvent( pMoviePlayer, aEvt );
+				break;
+			case NSEventTypeRightMouseDragged:
+				aEvt.Buttons = MouseButton::RIGHT;
+				Window::fireMouseMovedEvent( pMoviePlayer, aEvt );
+				break;
+			case NSEventTypeOtherMouseDragged:
+				aEvt.Buttons = MouseButton::MIDDLE;
+				Window::fireMouseMovedEvent( pMoviePlayer, aEvt );
+				break;
+			case NSEventTypeLeftMouseUp:
+				if ( nKeyModifiers & NSEventModifierFlagControl )
+					aEvt.Buttons = MouseButton::RIGHT;
+				else
+					aEvt.Buttons = MouseButton::LEFT;
+				Window::fireMouseReleasedEvent( pMoviePlayer, aEvt );
+				break;
+			case NSEventTypeRightMouseUp:
+				aEvt.Buttons = MouseButton::RIGHT;
+				Window::fireMouseReleasedEvent( pMoviePlayer, aEvt );
+				break;
+			case NSEventTypeOtherMouseUp:
+				aEvt.Buttons = MouseButton::MIDDLE;
+				Window::fireMouseReleasedEvent( pMoviePlayer, aEvt );
+				break;
+			default:
+				aEvt.ClickCount = 0;
+				Window::fireMouseMovedEvent( pMoviePlayer, aEvt );
+				break;
 		}
 	}
 }
@@ -1156,8 +1143,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	// Only process the event if both the event and the view are visible
 	if ( bRet && mpMoviePlayer && [self window] && [[self window] isVisible] )
 	{
-		com::sun::star::awt::FocusEvent aEvt;
-		Application::PostUserEvent( STATIC_LINK( NULL, Window, fireFocusGainedEvent ), new FocusEventData( mpMoviePlayer, aEvt ) );
+		FocusEvent aEvt;
+		Window::fireFocusGainedEvent( mpMoviePlayer, aEvt );
 	}
 
 	return bRet;

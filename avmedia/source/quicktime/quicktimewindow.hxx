@@ -44,28 +44,11 @@
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/media/XPlayerWindow.hpp>
 #include <cppuhelper/interfacecontainer.h>
-#include <tools/link.hxx>
 
 namespace avmedia
 {
 namespace quicktime
 {
-
-struct FocusEventData
-{
-	const void*			mpMoviePlayer;
-	const ::com::sun::star::awt::FocusEvent	maFocusEvent;
-
-						FocusEventData( const void* pMoviePlayer, const ::com::sun::star::awt::FocusEvent &rFocusEvent ) : mpMoviePlayer( pMoviePlayer ), maFocusEvent( rFocusEvent ) {}
-};
-
-struct MouseEventData
-{
-	const void*			mpMoviePlayer;
-	const ::com::sun::star::awt::MouseEvent	maMouseEvent;
-
-						MouseEventData( const void* pMoviePlayer, const ::com::sun::star::awt::MouseEvent &rMouseEvent ) : mpMoviePlayer( pMoviePlayer ), maMouseEvent( rMouseEvent ) {}
-};
 
 // ----------
 // - Window -
@@ -85,16 +68,17 @@ class Window : public ::cppu::WeakImplHelper2 < ::com::sun::star::media::XPlayer
 	sal_Bool			mbVisible;
 	::com::sun::star::media::ZoomLevel	mnZoomLevel;
 
-	static Window*		findWindow( const void* pMoviePlayer );
+	static Window*		findWindowAndLockSolarMutex( void* pMoviePlayer );
+	static void			releaseSolarMutex();
 
 public:
 						Window( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& rxMgr );
 						~Window();
 
-	DECL_STATIC_LINK( Window, fireFocusGainedEvent, void *pEvtData );
-	DECL_STATIC_LINK( Window, fireMouseMovedEvent, void *pEvtData );
-	DECL_STATIC_LINK( Window, fireMousePressedEvent, void *pEvtData );
-	DECL_STATIC_LINK( Window, fireMouseReleasedEvent, void *pEvtData );
+	static void			fireFocusGainedEvent( void *pMoviePlayer, const ::com::sun::star::awt::FocusEvent& rEvt );
+	static void			fireMouseMovedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt );
+	static void			fireMousePressedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt );
+	static void			fireMouseReleasedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt );
 
     // XPlayerWindow
     virtual void SAL_CALL update(  ) throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;

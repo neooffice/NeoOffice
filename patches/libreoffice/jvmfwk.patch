@@ -1,6 +1,6 @@
 --- distributions/OpenOfficeorg/javavendors_macosx.xml	2015-11-25 04:55:38.000000000 -0800
-+++ distributions/OpenOfficeorg/javavendors_macosx.xml	2018-05-08 17:18:19.000000000 -0700
-@@ -23,17 +23,9 @@
++++ distributions/OpenOfficeorg/javavendors_macosx.xml	2017-02-18 09:05:43.000000000 -0800
+@@ -23,17 +23,8 @@
   <updated>2013-04-09</updated>
  
   <vendorInfos>
@@ -16,7 +16,6 @@
 - <vendor name="Azul Systems, Inc.">
 -  <minVersion>1.6.0</minVersion>
 +  <minVersion>1.8.0</minVersion>
-+  <maxVersion>1.8.999</maxVersion>
   </vendor>
  </vendorInfos>
  

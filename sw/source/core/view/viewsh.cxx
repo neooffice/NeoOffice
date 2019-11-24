@@ -2058,11 +2058,7 @@ OutputDevice& SwViewShell::GetRefDev() const
 
 const SwNodes& SwViewShell::GetNodes() const
 {
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     return mpDoc->GetNodes();
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    return mxDoc->GetNodes();
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 
 void SwViewShell::DrawSelChanged()
@@ -2141,11 +2137,7 @@ void SwViewShell::ImplApplyViewOptions( const SwViewOption &rOpt )
 
     if( mpOpt->IsShowHiddenField() != rOpt.IsShowHiddenField() )
     {
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         ((SwHiddenTxtFieldType*)mpDoc->getIDocumentFieldsAccess().GetSysFldType( RES_HIDDENTXTFLD ))->
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        static_cast<SwHiddenTxtFieldType*>(mxDoc->getIDocumentFieldsAccess().GetSysFldType( RES_HIDDENTXTFLD ))->
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                             SetHiddenFlag( !rOpt.IsShowHiddenField() );
         bReformat = true;
     }
@@ -2229,21 +2221,13 @@ void SwViewShell::ImplApplyViewOptions( const SwViewOption &rOpt )
     *mpOpt = rOpt;   // First the options are taken.
     mpOpt->SetUIOptions(rOpt);
 
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     mpDoc->GetDocumentSettingManager().set(IDocumentSettingAccess::HTML_MODE, 0 != ::GetHtmlMode(mpDoc->GetDocShell()));
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    mxDoc->GetDocumentSettingManager().set(IDocumentSettingAccess::HTML_MODE, 0 != ::GetHtmlMode(mxDoc->GetDocShell()));
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     if( bBrowseModeChanged )
     {
         // #i44963# Good occasion to check if page sizes in
         // page descriptions are still set to (LONG_MAX, LONG_MAX) (html import)
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         mpDoc->CheckDefaultPageFmt();
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        mxDoc->CheckDefaultPageFmt();
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         CheckBrowseView( true );
     }
 
@@ -2371,11 +2355,7 @@ uno::Reference< ::com::sun::star::accessibility::XAccessible > SwViewShell::Crea
     OSL_ENSURE( mpLayout, "no layout, no access" );
     OSL_ENSURE( GetWin(), "no window, no access" );
 
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if( mpDoc->getIDocumentLayoutAccess().GetCurrentViewShell() && GetWin() )
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    if( mxDoc->getIDocumentLayoutAccess().GetCurrentViewShell() && GetWin() )
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         xAcc = Imp()->GetAccessibleMap().GetDocumentView();
 
     return xAcc;
@@ -2578,7 +2558,6 @@ SwPostItMgr* SwViewShell::GetPostItMgr()
 /*
  * Document Interface Access
  */
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 const IDocumentSettingAccess* SwViewShell::getIDocumentSettingAccess() const { return &mpDoc->GetDocumentSettingManager(); }
 IDocumentSettingAccess* SwViewShell::getIDocumentSettingAccess() { return &mpDoc->GetDocumentSettingManager(); }
 const IDocumentDeviceAccess* SwViewShell::getIDocumentDeviceAccess() const { return &mpDoc->getIDocumentDeviceAccess(); }
@@ -2594,54 +2573,21 @@ IDocumentLayoutAccess* SwViewShell::getIDocumentLayoutAccess() { return &mpDoc->
 IDocumentContentOperations* SwViewShell::getIDocumentContentOperations() { return &mpDoc->getIDocumentContentOperations(); }
 IDocumentStylePoolAccess* SwViewShell::getIDocumentStylePoolAccess() { return &mpDoc->getIDocumentStylePoolAccess(); }
 const IDocumentStatistics* SwViewShell::getIDocumentStatistics() const { return &mpDoc->getIDocumentStatistics(); }
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-const IDocumentSettingAccess* SwViewShell::getIDocumentSettingAccess() const { return &mxDoc->GetDocumentSettingManager(); }
-IDocumentSettingAccess* SwViewShell::getIDocumentSettingAccess() { return &mxDoc->GetDocumentSettingManager(); }
-const IDocumentDeviceAccess* SwViewShell::getIDocumentDeviceAccess() const { return &mxDoc->getIDocumentDeviceAccess(); }
-IDocumentDeviceAccess* SwViewShell::getIDocumentDeviceAccess() { return &mxDoc->getIDocumentDeviceAccess(); }
-const IDocumentMarkAccess* SwViewShell::getIDocumentMarkAccess() const { return mxDoc->getIDocumentMarkAccess(); }
-IDocumentMarkAccess* SwViewShell::getIDocumentMarkAccess() { return mxDoc->getIDocumentMarkAccess(); }
-const IDocumentDrawModelAccess* SwViewShell::getIDocumentDrawModelAccess() const { return & mxDoc->getIDocumentDrawModelAccess(); }
-IDocumentDrawModelAccess* SwViewShell::getIDocumentDrawModelAccess() { return & mxDoc->getIDocumentDrawModelAccess(); }
-const IDocumentRedlineAccess* SwViewShell::getIDocumentRedlineAccess() const { return &mxDoc->getIDocumentRedlineAccess(); }
-IDocumentRedlineAccess* SwViewShell::getIDocumentRedlineAccess() { return &mxDoc->getIDocumentRedlineAccess(); }
-const IDocumentLayoutAccess* SwViewShell::getIDocumentLayoutAccess() const { return &mxDoc->getIDocumentLayoutAccess(); }
-IDocumentLayoutAccess* SwViewShell::getIDocumentLayoutAccess() { return &mxDoc->getIDocumentLayoutAccess(); }
-IDocumentContentOperations* SwViewShell::getIDocumentContentOperations() { return &mxDoc->getIDocumentContentOperations(); }
-IDocumentStylePoolAccess* SwViewShell::getIDocumentStylePoolAccess() { return &mxDoc->getIDocumentStylePoolAccess(); }
-const IDocumentStatistics* SwViewShell::getIDocumentStatistics() const { return &mxDoc->getIDocumentStatistics(); }
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
 IDocumentUndoRedo      & SwViewShell::GetIDocumentUndoRedo()
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 { return mpDoc->GetIDocumentUndoRedo(); }
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-{ return mxDoc->GetIDocumentUndoRedo(); }
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 IDocumentUndoRedo const& SwViewShell::GetIDocumentUndoRedo() const
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 { return mpDoc->GetIDocumentUndoRedo(); }
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-{ return mxDoc->GetIDocumentUndoRedo(); }
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
 // --> OD 2007-11-14 #i83479#
 const IDocumentListItems* SwViewShell::getIDocumentListItemsAccess() const
 {
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     return &mpDoc->getIDocumentListItems();
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    return &mxDoc->getIDocumentListItems();
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 
 const IDocumentOutlineNodes* SwViewShell::getIDocumentOutlineNodesAccess() const
 {
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     return &mpDoc->getIDocumentOutlineNodes();
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    return &mxDoc->getIDocumentOutlineNodes();
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

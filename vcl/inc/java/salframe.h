@@ -103,7 +103,6 @@ public:
 	static const Rectangle	GetScreenBounds( long nX, long nY, long nWidth, long nHeight, sal_Bool bFullScreenMode );
 	static const Rectangle	GetScreenBounds( unsigned int nScreen, sal_Bool bFullScreenMode );
 	static unsigned int		GetScreenCount();
-	static bool				UseDarkModeColors();
 	static bool				GetAlternateSelectedControlTextColor( SalColor& rSalColor );
 	static bool				GetControlTextColor( SalColor& rSalColor );
 	static bool				GetDisabledControlTextColor( SalColor& rSalColor );
@@ -186,8 +185,5 @@ public:
 // module
 extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool IsShowOnlyMenusWindow( vcl::Window *pWindow );
 extern "C" SAL_DLLPUBLIC_EXPORT void ShowOnlyMenusForWindow( vcl::Window *pWindow, sal_Bool bShowOnlyMenus );
-// Note: this must not be static as the symbol will be loaded by the svtools
-// module
-extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool UseDarkModeColors();
 
 #endif // _SV_SALFRAME_H

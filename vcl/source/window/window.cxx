@@ -80,10 +80,6 @@
 #include <win/salframe.h>
 #endif
 
-#ifdef USE_JAVA
-static ::boost::unordered_map< const vcl::Window*, const vcl::Window* > aWindowMap;
-#endif	// USE_JAVA
-
 
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
@@ -97,9 +93,6 @@ namespace vcl {
 Window::Window( WindowType nType )
 {
     ImplInitWindowData( nType );
-#ifdef USE_JAVA
-    aWindowMap[ this ] = this;
-#endif	// USE_JAVA
 }
 
 Window::Window( vcl::Window* pParent, WinBits nStyle )
@@ -107,9 +100,6 @@ Window::Window( vcl::Window* pParent, WinBits nStyle )
 
     ImplInitWindowData( WINDOW_WINDOW );
     ImplInit( pParent, nStyle, NULL );
-#ifdef USE_JAVA
-    aWindowMap[ this ] = this;
-#endif	// USE_JAVA
 }
 
 Window::Window( vcl::Window* pParent, const ResId& rResId )
@@ -123,10 +113,6 @@ Window::Window( vcl::Window* pParent, const ResId& rResId )
 
     if ( !(nStyle & WB_HIDE) )
         Show();
-
-#ifdef USE_JAVA
-    aWindowMap[ this ] = this;
-#endif	// USE_JAVA
 }
 
 #if OSL_DEBUG_LEVEL > 0
@@ -154,12 +140,6 @@ namespace
 
 Window::~Window()
 {
-#ifdef USE_JAVA
-    ::boost::unordered_map< const vcl::Window*, const vcl::Window* >::iterator it = aWindowMap.find( this );
-    if ( it != aWindowMap.end() )
-        aWindowMap.erase( it );
-#endif	// USE_JAVA
-
     vcl::LazyDeletor<vcl::Window>::Undelete( this );
 
     DBG_ASSERT( !mpWindowImpl->mbInDtor, "~Window - already in DTOR!" );
@@ -3985,16 +3965,6 @@ bool ImplDoTiledRendering()
     return false;
 #endif
 }
-
-#ifdef USE_JAVA
-
-bool ImplIsValidWindow( const vcl::Window* pWindow )
-{
-    ::boost::unordered_map< const vcl::Window*, const vcl::Window* >::const_iterator it = aWindowMap.find( pWindow );
-    return ( it != aWindowMap.end() ? true : false );
-}
-
-#endif	// USE_JAVA
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

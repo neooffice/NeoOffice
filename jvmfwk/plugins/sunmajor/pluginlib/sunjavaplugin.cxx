@@ -702,11 +702,6 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         if (opt.startsWith("-Xss")) {
             hasStackSize = true;
         }
-#ifdef USE_JAVA
-        // Fix failure to load Java 10.x in dbaccess unit tests by not adding
-        // empty options
-        if (opt.getLength())
-#endif	// USE_JAVA
         options.push_back(Option(opt, arOptions[i].extraInfo));
     }
     if (addForceInterpreted) {
@@ -750,19 +745,11 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     OString aPathSeparator( SAL_PATHSEPARATOR );
 
     // Limit the directories that extensions can be loaded from to prevent
-    // random JVM crashing. Fix failure to load Java 10.x by only adding
-    // directories that actually exist.
-    OString aExtProp( "-Djava.ext.dirs=" );
-    OUString aExtPath( sPathLocation );
-    aExtPath += OStringToOUString( aPathDelimiter + "lib" + aPathDelimiter + "ext", osl_getThreadTextEncoding() );
-    OUString aExtURL;
-    if ( osl_getFileURLFromSystemPath( aExtPath.pData, &aExtURL.pData ) == osl_File_E_None )
-    {
-        DirectoryItem aDirItem;
-        if ( DirectoryItem::get( aExtURL, aDirItem ) == File::E_None )
-            aExtProp += OUStringToOString( aExtPath, osl_getThreadTextEncoding() );
-    }
-    options.push_back( Option( aExtProp, nullptr ) );
+    // random JVM crashing
+    OString aExtPath( "-Djava.ext.dirs=" );
+    aExtPath += OUStringToOString( sPathLocation, osl_getThreadTextEncoding() );
+    aExtPath += aPathDelimiter + "lib" + aPathDelimiter + "ext";
+    options.push_back( Option( aExtPath, nullptr ) );
 
     // Set the library path to include the executable path but none of the
     // extensions

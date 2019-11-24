@@ -111,8 +111,15 @@
 #include <boost/scoped_ptr.hpp>
 
 #if defined USE_JAVA && defined MACOSX
+
+#include <osl/file.h>
+#include <vcl/sysdata.hxx>
+
 #include "objserv_cocoa.h"
 #include "../view/topfrm_cocoa.hxx"
+
+class NSView;
+
 #endif	// USE_JAVA
 
 using namespace ::com::sun::star;
@@ -443,21 +450,47 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
     }
 #endif	// MACOSX
 
+    OUString aUserData;
     if ( nId == SID_SAVEDOC )
     {
-#ifdef MACOSX
-        if ( GetMedium() && nId == SID_SAVEDOC )
+        if ( GetMedium() )
         {
-            // Discourage saving to invalid system paths
-            OUString aOrigURL( GetMedium()->GetOrigURL() );
-            OUString aOrigPath;
-            if ( osl_getSystemPathFromFileURL( aOrigURL.pData, &aOrigPath.pData ) == osl_File_E_None && !NSDocument_isValidMoveToPath( aOrigPath ) )
+            // If we are saving to an Office XML format, forcing the file save
+            // as dialog to appear by changing this to a save as operation.
+            // Note that we had to put "OXML" in the "UserData" field in each
+            // filter's modules/org/openoffice/TypeDetection/Filter/fcfg_*_filters.xcu
+            // file.
+            OUString aFilterName;
+            SFX_ITEMSET_ARG( GetMedium()->GetItemSet(), pFilterNameItem, SfxStringItem, SID_FILTER_NAME, sal_False );
+            if( pFilterNameItem )
             {
-                nId = SID_SAVEASDOC;
-                rReq.SetSlot( nId );
+                aFilterName = pFilterNameItem->GetValue();
+                const SfxFilter* pFilter = GetFactory().GetFilterContainer()->GetFilter4FilterName( aFilterName );
+                if ( pFilter )
+                {
+                    aUserData = pFilter->GetUserData();
+                    if ( aUserData == "OXML" )
+                    {
+                        nId = SID_SAVEASDOC;
+                        rReq.SetSlot( nId );
+                    }
+                }
             }
-        }
+
+#ifdef MACOSX
+            if ( nId == SID_SAVEDOC )
+            {
+                // Discourage saving to invalid system paths
+                OUString aOrigURL( GetMedium()->GetOrigURL() );
+                OUString aOrigPath;
+                if ( osl_getSystemPathFromFileURL( aOrigURL.pData, &aOrigPath.pData ) == osl_File_E_None && !NSDocument_isValidMoveToPath( aOrigPath ) )
+                {
+                    nId = SID_SAVEASDOC;
+                    rReq.SetSlot( nId );
+                }
+            }
 #endif	// MACOSX
+        }
 
         if ( nId == SID_SAVEDOC && pImp->IsDeleted() )
         {
@@ -721,6 +754,14 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
                                     *rReq.GetArgs(),
                                      aDispatchArgs,
                                      NULL );
+
+#ifdef USE_JAVA
+                // Pass the filter's user data down to the save as dialog
+                sal_uInt32 nArgsLen = aDispatchArgs.getLength();
+                aDispatchArgs.realloc( nArgsLen + 1 );
+                aDispatchArgs[ nArgsLen ].Name = "UserData";
+                aDispatchArgs[ nArgsLen ].Value <<= aUserData;
+#endif	// USE_JAVA
 
                 const SfxSlot* pSlot = GetModule()->GetSlotPool()->GetSlot( nId );
                 if ( !pSlot )

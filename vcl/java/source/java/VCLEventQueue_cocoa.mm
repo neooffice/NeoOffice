@@ -540,101 +540,6 @@ static void RegisterMainBundleWithLaunchServices()
 	}
 }
 
-static NSString *pAppleInterfaceStylePref = @"AppleInterfaceStyle";
-static NSString *pDisableDarkModePref = @"DisableDarkMode";
-
-@interface VCLUpdateSystemAppearance : NSObject
-{
-}
-+ (id)create;
-- (id)init;
-- (void)observeValueForKeyPath:(NSString *)pKeyPath ofObject:(id)pObject change:(NSDictionary<NSKeyValueChangeKey, id> *)pChange context:(void *)pContext;
-@end
-
-static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
-
-@implementation VCLUpdateSystemAppearance
-
-+ (id)create
-{
-	VCLUpdateSystemAppearance *pRet = [[VCLUpdateSystemAppearance alloc] init];
-	[pRet autorelease];
-	return pRet;
-}
-
-- (id)init
-{
-	[super init];
- 
-	if ( !pVCLUpdateSystemAppearance )
-	{
-		NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
-		if ( pDefaults )
-		{
-			pVCLUpdateSystemAppearance = self;
-			[pVCLUpdateSystemAppearance retain];
-			[pDefaults addObserver:self forKeyPath:pDisableDarkModePref options:NSKeyValueObservingOptionNew context:NULL];
-			// Force observer to fire immediately to set initial appearance
-			[pDefaults addObserver:self forKeyPath:pAppleInterfaceStylePref options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:NULL];
-		}
-	}
-
-	return self;
-}
-
-- (void)observeValueForKeyPath:(NSString *)pKeyPath ofObject:(id)pObject change:(NSDictionary<NSKeyValueChangeKey, id> *)pChange context:(void *)pContext
-{
-	(void)pKeyPath;
-	(void)pObject;
-	(void)pChange;
-	(void)pContext;
-
-	NSApplication *pApp = [NSApplication sharedApplication];
-	NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
-	if ( pApp && pDefaults )
-	{
-		NSAppearance *pAppearance = nil;
-		NSNumber *pDisableDarkMode = [pDefaults objectForKey:pDisableDarkModePref];
-
-		// Dark mode is enabled by default
-		if ( !pDisableDarkMode || ![pDisableDarkMode isKindOfClass:[NSNumber class]] || ![pDisableDarkMode boolValue] )
-		{
-			NSString *pStyle = [pDefaults stringForKey:pAppleInterfaceStylePref];
-			NSRange aRange = NSMakeRange( NSNotFound, 0 );
-			if ( pStyle )
-				aRange = [pStyle rangeOfString:@"dark" options:NSCaseInsensitiveSearch];
-
-			NSString *pAppearanceName = nil;
-			if ( aRange.location != NSNotFound && aRange.length )
-				pAppearanceName = NSAppearanceNameDarkAqua;
-			else
-				pAppearanceName = NSAppearanceNameAqua;
-
-			pAppearance = [NSAppearance appearanceNamed:pAppearanceName];
-		}
-
-		if ( [pApp respondsToSelector:@selector(appearance)] && [pApp respondsToSelector:@selector(setAppearance:)] && pAppearance != [pApp appearance] )
-		{
-			[pApp setAppearance:pAppearance];
-
-			// Post a NSSystemColorsDidChangeNotification notification so
-			// that colors will be updated in our system color change
-			// handler
-			NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
-			if ( pNotificationCenter )
-			{
-				// Delay posting of notification to allow NSColor class to
-				// update system colors to match the new appearance
-				NSNotification *pNotification = [NSNotification notificationWithName:NSSystemColorsDidChangeNotification object:nil];
-				if ( pNotification )
-					[pNotificationCenter performSelector:@selector(postNotification:) withObject:pNotification afterDelay:0];
-			}
-		}
-	}
-}
-
-@end
-
 @interface IsApplicationActive : NSObject
 {
 	BOOL					mbActive;
@@ -1160,12 +1065,8 @@ static NSUInteger nMouseMask = 0;
 		{
 			// Fix crashing on OS X 10.10 when displaying the Save dialog while
 			// the titlebar popover window is displayed by removing the
-			// titlebar popover window's content view before ordering it out.
-			// Attempt to fix Mac App Store crash by replacing content view
-			// with a new, empty view.
-			NSView *pContentView = [[NSView alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1)];
-			[self setContentView:pContentView];
-			[pContentView autorelease];
+			// titlebar popover window's content view before ordering it out
+			[self setContentView:nil];
 		}
 	}
 
@@ -2536,10 +2437,6 @@ static CFDataRef aRTFSelection = nil;
 	NSWindow *pWindow = [self window];
 	if ( pWindow && [pWindow isVisible] && mpFrame )
 	{
-		// Attempt to fix crash in [pWindow contentRectForFrameRect:] by
-		// retaining the window
-		[pWindow retain];
-
 		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
@@ -2620,8 +2517,6 @@ static CFDataRef aRTFSelection = nil;
 		}
 
 		rSolarMutex.release();
-
-		[pWindow release];
 	}
 
 	return aRet;
@@ -3519,8 +3414,6 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 			}
 		}
 	}
-
-	[VCLUpdateSystemAppearance create];
 
 #ifndef USE_AUTOMATIC_WINDOW_TABBING
 	// Disable automatic window tabbing in on macOS 10.12

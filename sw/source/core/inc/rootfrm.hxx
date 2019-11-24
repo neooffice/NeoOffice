@@ -226,7 +226,13 @@ public:
         SwViewShell* lcl_pCurrShell = GetCurrShell();
         // May be NULL if called from SfxBaseModel::dispose
         // (this happens in the build test 'rtfexport').
+#ifdef USE_JAVA
+        // Fix crash when printing comments by checking the current shell's
+        // document is NULL
+        if (lcl_pCurrShell != NULL && lcl_pCurrShell->GetDoc() != NULL)
+#else	// USE_JAVA
         if (lcl_pCurrShell != NULL)
+#endif	// USE_JAVA
             lcl_pCurrShell->GetDoc()->getIDocumentTimerAccess().StartBackgroundJobs();
     }
     bool IsIdleFormat()  const { return bIdleFormat; }

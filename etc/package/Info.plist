@@ -11,7 +11,6 @@
 				<string>odg</string>
 				<string>sda</string>
 				<string>sxd</string>
-				<string>wpg</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>sxd_sda.icns</string>
@@ -537,7 +536,6 @@
 			<array>
 				<string>wp</string>
 				<string>wpd</string>
-				<string>wps</string>
 				<string>xml</string>
 				<string>psw</string>
 				<string>pdb</string>
@@ -844,11 +842,9 @@
 				<string>slk</string>
 				<string>sylk</string>
 				<string>wb2</string>
-				<string>wdb</string>
 				<string>wk1</string>
-				<string>wk2</string>
-				<string>wk4</string>
 				<string>wks</string>
+				<string>wk2</string>
 				<string>xml</string>
 				<string>pxl</string>
 			</array>

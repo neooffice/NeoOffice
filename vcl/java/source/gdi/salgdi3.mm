@@ -752,7 +752,7 @@ IMPL_STATIC_LINK_NOINSTANCE( JavaPhysicalFontFace, RunNativeFontsTimer, void*, /
 
 // -----------------------------------------------------------------------
 
-JavaPhysicalFontFace::JavaPhysicalFontFace( const ImplDevFontAttributes& rAttributes, const OUString& rFontName, sal_IntPtr nNativeFontID, const OUString& rFamilyName ) : PhysicalFontFace( rAttributes, 0 ), maFontName( rFontName ), mnNativeFontID( nNativeFontID ), maFamilyName( rFamilyName ), mpParent( NULL )
+JavaPhysicalFontFace::JavaPhysicalFontFace( const ImplDevFontAttributes& rAttributes, const OUString& rFontName, sal_IntPtr nNativeFontID, const OUString& rFamilyName ) : PhysicalFontFace( rAttributes, 0 ), maFontName( rFontName ), mnNativeFontID( nNativeFontID ), maFamilyName( rFamilyName )
 {
 	if ( mnNativeFontID )
 		CFRetain( (CTFontRef)mnNativeFontID );
@@ -768,23 +768,13 @@ JavaPhysicalFontFace::JavaPhysicalFontFace( const ImplDevFontAttributes& rAttrib
 
 JavaPhysicalFontFace::~JavaPhysicalFontFace()
 {
-	if ( mpParent )
-		mpParent->maChildren.remove( this );
-
 	if ( mnNativeFontID )
 		CFRelease( (CTFontRef)mnNativeFontID );
 
-	if ( maChildren.size() )
+	while ( maChildren.size() )
 	{
-		// Copy list as deleting a child will try to remove the child from
-		// the list
-		::std::list< JavaPhysicalFontFace* > aChildren( maChildren );
-		maChildren.clear();
-		while ( aChildren.size() )
-		{
-			delete aChildren.front();
-			aChildren.pop_front();
-		}
+		delete maChildren.front();
+		maChildren.pop_front();
 	}
 }
 
@@ -1015,23 +1005,7 @@ sal_uInt16 JavaSalGraphics::SetFont( FontSelectPattern* pFont, int nFallbackLeve
 			JavaPhysicalFontFace *pChildFontData = (JavaPhysicalFontFace *)pFontData->Clone();
 			if ( pChildFontData )
 			{
-				const JavaPhysicalFontFace *pJavaFontData = dynamic_cast<const JavaPhysicalFontFace *>( pFont->mpFontData );
-				if ( pJavaFontData )
-				{
-					// Fix stack overflow crash due to excessively long chains
-					// of child fonts by replacing the last chained font
-					// instead of adding to the chain
-					if ( pJavaFontData->mpParent )
-					{
-						delete pJavaFontData;
-					}
-					else
-					{
-						pChildFontData->mpParent = pJavaFontData;
-						pJavaFontData->maChildren.push_back( pChildFontData );
-					}
-				}
-
+				((JavaPhysicalFontFace *)pFont->mpFontData)->maChildren.push_back( pChildFontData );
 				pFont->mpFontData = pChildFontData;
 			}
 		}
@@ -1129,10 +1103,7 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric, int /* nFallba
 	pMetric->mnExtLeading = 0;
 	pMetric->mbKernableFont = false;
 	pMetric->mnSlant = 0;
-
-	// Fix missing kashidas by setting the font's minimum kashida width to a
-	// non-zero width
-	pMetric->mnMinKashida = 1;
+	pMetric->mnMinKashida = 0;
 }
 
 // -----------------------------------------------------------------------

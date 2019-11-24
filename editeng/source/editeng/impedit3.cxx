@@ -83,33 +83,6 @@
 
 #ifdef USE_JAVA
 #include <svtools/optionsdrawinglayer.hxx>
-
-#ifdef MACOSX
-
-typedef sal_Bool UseDarkModeColors_Type();
-
-static ::osl::Module aModule;
-static UseDarkModeColors_Type *pUseDarkModeColors = NULL;
-
-static sal_Bool UseDarkModeColors()
-{
-    sal_Bool bRet = sal_False;
-
-    // Load libvcl and invoke the UseDarkModeColors function
-    if (!pUseDarkModeColors)
-    {
-        if (aModule.load("libvcllo.dylib"))
-            pUseDarkModeColors = (UseDarkModeColors_Type *)aModule.getSymbol( "UseDarkModeColors");
-    }
-
-    if (pUseDarkModeColors)
-        bRet = pUseDarkModeColors();
-
-    return bRet;
-}
-
-#endif	// MACOSX
-
 #endif	// USE_JAVA
 
 using namespace ::com::sun::star;
@@ -2699,11 +2672,6 @@ void ImpEditEngine::SeekCursor( ContentNode* pNode, sal_Int32 nPos, SvxFont& rFo
 
     if ( aStatus.DoNotUseColors() )
     {
-#if defined USE_JAVA && defined MACOSX
-        if (UseDarkModeColors())
-            rFont.SetColor( /* rColorItem.GetValue() */ COL_WHITE );
-        else
-#endif	// USE_JAVA && MACOSX
         rFont.SetColor( /* rColorItem.GetValue() */ COL_BLACK );
     }
 
@@ -4492,14 +4460,7 @@ Color ImpEditEngine::GetAutoColor() const
 {
     Color aColor = const_cast<ImpEditEngine*>(this)->GetColorConfig().GetColorValue( svtools::FONTCOLOR ).nColor;
 
-#if defined USE_JAVA && defined MACOSX
-    // Fix wrong text color when printing in macOS Dark Mode. Fix wrong text
-    // color in Writer and Calc comments by not adjusting color if there is an
-    // active view.
-    if ( GetBackgroundColor() != COL_AUTO || ( !pActiveView && UseDarkModeColors() ) )
-#else	// USE_JAVA && MACOSX
     if ( GetBackgroundColor() != COL_AUTO )
-#endif	// USE_JAVA && MACOSX
     {
         if ( GetBackgroundColor().IsDark() && aColor.IsDark() )
             aColor = COL_WHITE;

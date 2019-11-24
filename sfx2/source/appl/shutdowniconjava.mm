@@ -82,40 +82,14 @@
 typedef void VCLOpenPrintFileHandler_Type( const char *pPath, sal_Bool bPrint );
 typedef void VCLRequestShutdownHandler_Type();
 
-static bool bIsRunningHighSierraOrLowerInitizalized  = false;
-static bool bIsRunningHighSierraOrLower = false;
-
 static const NSString *kMenuItemPrefNameKey = @"MenuItemPrefName";
 static const NSString *kMenuItemPrefBooleanValueKey = @"MenuItemPrefBooleanValue";
 static const NSString *kMenuItemPrefStringValueKey = @"MenuItemPrefStringValue";
 static const NSString *kMenuItemValueIsDefaultForPrefKey = @"MenuItemValueIsDefaultForPref";
-static const NSString *kMenuItemForceDefaultIfUnsetPrefKey = @"MenuItemForceDefaultIfUnsetPref";
 static ResMgr *pVclResMgr = NULL;
 
 using namespace com::sun::star::beans;
 using namespace com::sun::star::uno;
-
-static bool IsRunningHighSierraOrLower()
-{
-	if ( !bIsRunningHighSierraOrLowerInitizalized )
-	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-		NSProcessInfo *pProcessInfo = [NSProcessInfo processInfo];
-		if ( pProcessInfo )
-		{
-			NSOperatingSystemVersion aVersion = pProcessInfo.operatingSystemVersion;
-			if ( aVersion.majorVersion <= 10 && aVersion.minorVersion <= 13 )
-				bIsRunningHighSierraOrLower = true;
-		}
-
-		bIsRunningHighSierraOrLowerInitizalized = true;
-
-		[pPool release];
-	}
-
-	return bIsRunningHighSierraOrLower;
-}
 
 static OUString GetVclResString( int nId )
 {
@@ -190,11 +164,10 @@ class QuickstartMenuItemDescriptor
 	CFStringRef					maPrefName;
 	CFPropertyListRef			maCheckedPrefValue;
 	BOOL						mbValueIsDefaultForPref;
-	BOOL						mbForceDefaultIfUnsetPref;
 
 public:
-								QuickstartMenuItemDescriptor( SEL aSelector, OUString aText, CFStringRef aPrefName = NULL, CFPropertyListRef aCheckedPrefValue = NULL, BOOL bValueIsDefaultForPref = NO, BOOL bForceDefaultIfUnsetPref = NO ) : maSelector( aSelector ), maText( aText ), maPrefName( aPrefName ), maCheckedPrefValue( aCheckedPrefValue ), mbValueIsDefaultForPref( bValueIsDefaultForPref ), mbForceDefaultIfUnsetPref( bForceDefaultIfUnsetPref ) {}
-								QuickstartMenuItemDescriptor( ::std::vector< QuickstartMenuItemDescriptor > &rItems, OUString aText ) : maSelector( NULL ), maText( aText ), maItems( rItems ), maPrefName( NULL ), maCheckedPrefValue( NULL ), mbValueIsDefaultForPref( NO ), mbForceDefaultIfUnsetPref( NO ) {}
+								QuickstartMenuItemDescriptor( SEL aSelector, OUString aText, CFStringRef aPrefName = NULL, CFPropertyListRef aCheckedPrefValue = NULL, BOOL bValueIsDefaultForPref = NO ) : maSelector( aSelector ), maText( aText ), maPrefName( aPrefName ), maCheckedPrefValue( aCheckedPrefValue ), mbValueIsDefaultForPref( bValueIsDefaultForPref ) {}
+								QuickstartMenuItemDescriptor( ::std::vector< QuickstartMenuItemDescriptor > &rItems, OUString aText ) : maSelector( NULL ), maText( aText ), maItems( rItems ), maPrefName( NULL ), maCheckedPrefValue( NULL ), mbValueIsDefaultForPref( NO ) {}
 								~QuickstartMenuItemDescriptor() {};
 	NSMenuItem*					CreateMenuItem( const ShutdownIconDelegate *pDelegate ) const;
 };
@@ -247,12 +220,11 @@ NSMenuItem *QuickstartMenuItemDescriptor::QuickstartMenuItemDescriptor::CreateMe
 						pPrefKey = kMenuItemPrefStringValueKey;
 						pPrefValue = (NSString *)maCheckedPrefValue;
 					}
-
 					NSObject *pValueIsDefaultForPref = [NSNumber numberWithBool:mbValueIsDefaultForPref];
-					NSObject *pForceDefaultIfUnsetPref = [NSNumber numberWithBool:mbForceDefaultIfUnsetPref];
-					if ( pPrefKey && pPrefValue && pValueIsDefaultForPref && pForceDefaultIfUnsetPref )
+
+					if ( pPrefKey && pPrefValue && pValueIsDefaultForPref )
 					{
-						NSDictionary *pDict = [NSDictionary dictionaryWithObjectsAndKeys:(NSString *)maPrefName, kMenuItemPrefNameKey, pPrefValue, pPrefKey, pValueIsDefaultForPref, kMenuItemValueIsDefaultForPrefKey, pForceDefaultIfUnsetPref, kMenuItemForceDefaultIfUnsetPrefKey, nil];
+						NSDictionary *pDict = [NSDictionary dictionaryWithObjectsAndKeys:(NSString *)maPrefName, kMenuItemPrefNameKey, pPrefValue, pPrefKey, pValueIsDefaultForPref, kMenuItemValueIsDefaultForPrefKey, nil];
 						if ( pDict )
 							[pRet setRepresentedObject:pDict];
 					}
@@ -554,15 +526,12 @@ void ProcessShutdownIconCommand( int nCommand )
 						NSNumber *pPrefBooleanValue = (NSNumber *)[pDict objectForKey:kMenuItemPrefBooleanValueKey];
 						NSString *pPrefStringValue = (NSString *)[pDict objectForKey:kMenuItemPrefStringValueKey];
 						NSNumber *pValueIsDefaultForPref = (NSNumber *)[pDict objectForKey:kMenuItemValueIsDefaultForPrefKey];
-						NSNumber *pForceDefaultIfUnsetPref = (NSNumber *)[pDict objectForKey:kMenuItemForceDefaultIfUnsetPrefKey];
 						if ( pPrefBooleanValue )
 						{
 							if ( pDefaults )
 							{
 								NSNumber *pValue = (NSNumber *)[pDefaults objectForKey:pPrefName];
 								if ( pValue && [pValue boolValue] == [pPrefBooleanValue boolValue] )
-									[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
-								else if ( !pValue && pForceDefaultIfUnsetPref && [pForceDefaultIfUnsetPref boolValue] )
 									[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
 							}
 						}
@@ -582,8 +551,6 @@ void ProcessShutdownIconCommand( int nCommand )
 									if ( pValue && [pValue isEqualToString:pPrefStringValue] )
 										[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
 								}
-								else if ( !pValue && pForceDefaultIfUnsetPref && [pForceDefaultIfUnsetPref boolValue] )
-									[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
 							}
 						}
 
@@ -591,7 +558,7 @@ void ProcessShutdownIconCommand( int nCommand )
 						// item is marked as the default checked item, make it
 						// the checked item until another menu item becomes the
 						// checked item
-						if ( pValueIsDefaultForPref && [pValueIsDefaultForPref boolValue] && ( !pForceDefaultIfUnsetPref || ![pForceDefaultIfUnsetPref boolValue] ) && pCheckedMenuItems && ![pCheckedMenuItems objectForKey:pPrefName] )
+						if ( pValueIsDefaultForPref && [pValueIsDefaultForPref boolValue] && pCheckedMenuItems && ![pCheckedMenuItems objectForKey:pPrefName] )
 							[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
 					}
 				}
@@ -741,9 +708,8 @@ extern "C" void java_init_systray()
 		BOOL						bValueIsDefaultForPref;
 	} aMenuItems[] =
 	{
-		{ SvtModuleOptions::E_SWRITER, WRITER_URL, WRITER_FALLBACK_DESC, @selector(handleWriterCommand:), CFSTR( "--writer" ), NO },
-		// Make Calc the preferred default document
-		{ SvtModuleOptions::E_SCALC, CALC_URL, CALC_FALLBACK_DESC, @selector(handleCalcCommand:), CFSTR( "--calc" ), YES },
+		{ SvtModuleOptions::E_SWRITER, WRITER_URL, WRITER_FALLBACK_DESC, @selector(handleWriterCommand:), CFSTR( "--writer" ), YES },
+		{ SvtModuleOptions::E_SCALC, CALC_URL, CALC_FALLBACK_DESC, @selector(handleCalcCommand:), CFSTR( "--calc" ), NO },
 		{ SvtModuleOptions::E_SIMPRESS, IMPRESS_WIZARD_URL, IMPRESS_WIZARD_FALLBACK_DESC, @selector(handleImpressCommand:), CFSTR( "--impress" ), NO },
 		{ SvtModuleOptions::E_SDRAW, DRAW_URL, DRAW_FALLBACK_DESC, @selector(handleDrawCommand:), CFSTR( "--draw" ), NO },
 		{ SvtModuleOptions::E_SDATABASE, BASE_URL, BASE_FALLBACK_DESC, @selector(handleBaseCommand:), CFSTR( "--base" ), NO },
@@ -864,13 +830,6 @@ extern "C" void java_init_systray()
 		aDesc = SfxResId( STR_DISABLERESUMESUPPORT );
 		aDesc = aDesc.replaceAll( "~", "" );
 		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableResume" ), kCFBooleanTrue, NO ) );
-
-		if ( !IsRunningHighSierraOrLower() )
-		{
-			aDesc = SfxResId( STR_DISABLEDARKMODE );
-			aDesc = aDesc.replaceAll( "~", "" );
-			aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableDarkMode" ), kCFBooleanTrue, NO ) );
-		}
 	}
 
 	// Insert the Mac OS X submenu

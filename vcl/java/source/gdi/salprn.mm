@@ -147,7 +147,7 @@ static sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Ori
 					// Fix bugs 543, 1678, 2202, and 2913 by detecting when the
 					// paper should be rotated determining the minimum unmatched
 					// area
-					pValue = [pDictionary objectForKey:NSPrintPaperSize];
+					NSValue *pValue = [pDictionary objectForKey:NSPrintPaperSize];
 					if ( pValue )
 					{
 						aSize = [pValue sizeValue];

@@ -725,12 +725,6 @@ class VCL_DLLPUBLIC PrinterOptionsHelper
 
 }
 
-#ifdef USE_JAVA
-
-bool VCL_DLLPUBLIC ImplIsValidPrinter( const Printer *pPrinter );
-
-#endif  // USE_JAVA
-
 
 #endif // INCLUDED_VCL_PRINT_HXX
 

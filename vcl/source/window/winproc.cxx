@@ -1459,21 +1459,7 @@ static bool ImplHandleWheelEvent( vcl::Window* pWindow, const SalWheelMouseEvent
     // avoid the problem that scrolling via wheel to this point brings a widget
     // under the mouse that also accepts wheel commands, so stick with the old
     // widget if the time gap is very small
-#ifdef USE_JAVA
-    // Attempt to fix Mac App Store crash by detecting if the previous window
-    // has been deleted
-    bool bAcceptableWheelScrollTarget = false;
-    if (shouldReusePreviousMouseWindow(aPreviousEvent, rEvt))
-    {
-        if (pPreviousWindow && !ImplIsValidWindow(pPreviousWindow))
-            pPreviousWindow = NULL;
-
-        bAcceptableWheelScrollTarget = acceptableWheelScrollTarget(pPreviousWindow);
-    }
-    if (bAcceptableWheelScrollTarget)
-#else	// USE_JAVA
     if (shouldReusePreviousMouseWindow(aPreviousEvent, rEvt) && acceptableWheelScrollTarget(pPreviousWindow))
-#endif	// USE_JAVA
     {
         pMouseWindow = pPreviousWindow;
     }

@@ -98,32 +98,6 @@
 // if we layout more often we stop, this should never happen
 #define MAX_LOOP_COUNT                      50
 
-#if defined USE_JAVA && defined MACOSX
-
-typedef sal_Bool UseDarkModeColors_Type();
-
-static ::osl::Module aModule;
-static UseDarkModeColors_Type *pUseDarkModeColors = NULL;
-
-static sal_Bool UseDarkModeColors()
-{
-    sal_Bool bRet = sal_False;
-
-    // Load libvcl and invoke the UseDarkModeColors function
-    if (!pUseDarkModeColors)
-    {
-        if (aModule.load("libvcllo.dylib"))
-            pUseDarkModeColors = (UseDarkModeColors_Type *)aModule.getSymbol( "UseDarkModeColors");
-    }
-
-    if (pUseDarkModeColors)
-        bRet = pUseDarkModeColors();
-
-    return bRet;
-}
-
-#endif	// USE_JAVA && MACOSX
-
 using namespace sw::sidebarwindows;
 
 bool comp_pos(const SwSidebarItem* a, const SwSidebarItem* b)
@@ -1856,14 +1830,7 @@ Color SwPostItMgr::GetColorDark(sal_uInt16 aAuthorIndex)
             COL_AUTHOR4_NORMAL,     COL_AUTHOR5_NORMAL,     COL_AUTHOR6_NORMAL,
             COL_AUTHOR7_NORMAL,     COL_AUTHOR8_NORMAL,     COL_AUTHOR9_NORMAL };
 
-#if defined USE_JAVA && defined MACOSX
-        Color aRet( aArrayNormal[ aAuthorIndex % (sizeof( aArrayNormal )/ sizeof( aArrayNormal[0] ))]);
-        if (UseDarkModeColors())
-            aRet.Invert();
-        return aRet;
-#else	// USE_JAVA && MACOSX
         return Color( aArrayNormal[ aAuthorIndex % (sizeof( aArrayNormal )/ sizeof( aArrayNormal[0] ))]);
-#endif	// USE_JAVA && MACOSX
     }
     else
         return Color(COL_WHITE);
@@ -1878,14 +1845,7 @@ Color SwPostItMgr::GetColorLight(sal_uInt16 aAuthorIndex)
             COL_AUTHOR4_LIGHT,      COL_AUTHOR5_LIGHT,      COL_AUTHOR6_LIGHT,
             COL_AUTHOR7_LIGHT,      COL_AUTHOR8_LIGHT,      COL_AUTHOR9_LIGHT };
 
-#if defined USE_JAVA && defined MACOSX
-        Color aRet( aArrayLight[ aAuthorIndex % (sizeof( aArrayLight )/ sizeof( aArrayLight[0] ))]);
-        if (UseDarkModeColors())
-            aRet.Invert();
-        return aRet;
-#else	// USE_JAVA && MACOSX
         return Color( aArrayLight[ aAuthorIndex % (sizeof( aArrayLight )/ sizeof( aArrayLight[0] ))]);
-#endif	// USE_JAVA && MACOSX
     }
     else
         return Color(COL_WHITE);

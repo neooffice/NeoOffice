@@ -62,8 +62,6 @@
 
 #include <com/sun/star/view/XViewSettingsSupplier.hpp>
 
-#include <vcl/print.hxx>
-
 static const OUString sShowOnlineLayout( "ShowOnlineLayout" );
 
 #endif	// USE_JAVA
@@ -437,31 +435,15 @@ void SfxPrinterController::jobFinished( com::sun::star::view::PrintableState nSt
             // the printer's SfxItemSet here to copy. Awkward, but at the moment there is no
             // other way here to get the item set.
             SfxPrinter* pDocPrt = mpViewShell->GetPrinter(true);
-#ifdef USE_JAVA
-            // Attempt to fix Mac App Store crash by detecting if the printer
-            // has been deleted
-            if( pDocPrt && ImplIsValidPrinter( (Printer *)pDocPrt ) && ImplIsValidPrinter( getPrinter().get() ) )
-#else	// USE_JAVA
             if( pDocPrt )
-#endif	// USE_JAVA
             {
                 if( pDocPrt->GetName() == getPrinter()->GetName() )
                     pDocPrt->SetJobSetup( getPrinter()->GetJobSetup() );
                 else
                 {
-#ifdef USE_JAVA
-                    // Attempt to fix Mac App Store crash by checking if the
-                    // printer's options pointer is NULL
-                    const SfxItemSet *pOptions = &pDocPrt->GetOptions();
-                    if ( pOptions )
-                    {
-#endif	// USE_JAVA
                     SfxPrinter* pNewPrt = new SfxPrinter( pDocPrt->GetOptions().Clone(), getPrinter()->GetName() );
                     pNewPrt->SetJobSetup( getPrinter()->GetJobSetup() );
                     mpViewShell->SetPrinter( pNewPrt, SFX_PRINTER_PRINTER | SFX_PRINTER_JOBSETUP );
-#ifdef USE_JAVA
-                    }
-#endif	// USE_JAVA
                 }
             }
         }
@@ -715,12 +697,6 @@ void SfxViewShell::ExecPrint( const uno::Sequence < beans::PropertyValue >& rPro
 
     // FIXME: job setup
     SfxPrinter* pDocPrt = GetPrinter(false);
-#ifdef USE_JAVA
-    // Attempt to fix Mac App Store crash by detecting if the printer has been
-    // deleted
-    if ( pDocPrt && !ImplIsValidPrinter( pDocPrt ) )
-        pDocPrt = NULL;
-#endif	// USE_JAVA
     JobSetup aJobSetup = pDocPrt ? pDocPrt->GetJobSetup() : GetJobSetup();
     Printer::PrintJob( pController, aJobSetup );
 }
@@ -897,13 +873,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
                 // use default printer from document
                 pPrinter = pDocPrinter;
 
-#ifdef USE_JAVA
-            // Attempt to fix Mac App Store crash by detecting if the printer
-            // has been deleted
-            if( !pPrinter || !ImplIsValidPrinter( pPrinter ) || !pPrinter->IsValid() )
-#else	// USE_JAVA
             if( !pPrinter || !pPrinter->IsValid() )
-#endif	// USE_JAVA
             {
                 // no valid printer either in ItemSet or at the document
                 if ( !bSilent )
@@ -977,14 +947,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 
                 if ( nDialogRet == RET_OK )
                 {
-#ifdef USE_JAVA
-                    // Attempt to fix Mac App Store crash by checking if the
-                    // printer names are valid strings. Attempt to fix Mac App
-                    // Store crash by detecting if the printer has been deleted.
-                    if ( ImplIsValidPrinter( pPrinter ) && ImplIsValidPrinter( pDlgPrinter ) && pPrinter->GetName().pData && pDlgPrinter->GetName().pData && pPrinter->GetName() != pDlgPrinter->GetName() )
-#else	// USE_JAVA
                     if ( pPrinter->GetName() != pDlgPrinter->GetName() )
-#endif	// USE_JAVA
                     {
                         // user has changed the printer -> macro recording
                         SfxRequest aReq( GetViewFrame(), SID_PRINTER_NAME );

@@ -1457,7 +1457,14 @@ void CalcCntnt( SwLayoutFrm *pLay,
             if ( bNoCalcFollow && pFrm->IsTxtFrm() )
                 static_cast<SwTxtFrm*>(pFrm)->ForbidFollowFormat();
 
+#ifdef NO_LIBO_BUG_91695_FIX
             pFrm->Calc();
+#else	// NO_LIBO_BUG_91695_FIX
+            {
+                SwFrmDeleteGuard aDeleteGuard(pSect);
+                pFrm->Calc();
+            }
+#endif	// NO_LIBO_BUG_91695_FIX
 
             // OD 14.03.2003 #i11760# - reset control flag for follow format.
             if ( pFrm->IsTxtFrm() )

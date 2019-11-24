@@ -851,7 +851,6 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 		CGMutablePathRef aPath = CGPathCreateMutable();
 		if ( aPath )
 		{
-			bool bShiftLines = true;
 			CGRect aUnflippedRect = UnflipFlippedRect( CGRectMake( nX, nY, nWidth, nHeight ), maNativeBounds );
 
 			// The OOo code expects any line drawing to be drawn within the
@@ -870,23 +869,6 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 					aUnflippedRect.size.height = 0;
 				else
 					aUnflippedRect.size.height -= fNativeLineWidth;
-
-				// Fix stray lines just below the spreadsheet column headings
-				// on Retina displays after arrowing past the right edge,
-				// jumping back to the leftmost column and arrowing past the
-				// right edge again by disabling JavaSalGraphicsDrawPathOp's
-				// shift lines option
-				if ( maLayer )
-				{
-					CGContextRef aContext = CGLayerGetContext( maLayer );
-					if ( aContext )
-					{
-						CGSize aSize = CGContextConvertSizeToDeviceSpace( aContext, CGSizeMake( 1, 1 ) );
-						if ( fabs( aSize.width ) > 1 || fabs( aSize.height ) > 1 )
-							bShiftLines = false;
-					}
-				}
-
 			}
 			CGPathAddRect( aPath, NULL, aUnflippedRect );
 			if ( !mnLineColor && CGRectIsEmpty( aUnflippedRect ) )
@@ -897,7 +879,7 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 
 			if ( aPath )
 			{
-				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, false, mnFillColor, mnLineColor, aPath, bShiftLines ) );
+				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, false, mnFillColor, mnLineColor, aPath ) );
 				CGPathRelease( aPath );
 			}
 		}

@@ -40,24 +40,6 @@
 
 #ifdef __OBJC__
 
-#ifndef NSAppearanceNameDarkAqua
-#define NSAppearanceNameDarkAqua @"NSAppearanceNameDarkAqua"
-#endif	// NSAppearanceNameDarkAqua
-
-@interface NSApplication (VCLApplication)
-- (NSAppearance *)appearance;
-- (void)setAppearance:(NSAppearance *)pAppearance;
-@end
-
-@interface NSColor (VCLColor)
-+ (NSColor *)linkColor;
-+ (NSColor *)selectedContentBackgroundColor;
-+ (NSColor *)separatorColor;
-+ (NSColor *)unemphasizedSelectedContentBackgroundColor;
-+ (NSColor *)unemphasizedSelectedTextBackgroundColor;
-+ (NSColor *)unemphasizedSelectedTextColor;
-@end
-
 @interface VCLView : NSView <NSDraggingDestination, NSDraggingSource, NSTextInputClient>
 {
 	JavaSalFrame*			mpFrame;

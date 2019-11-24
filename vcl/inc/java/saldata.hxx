@@ -60,6 +60,7 @@ class SalData
 {
 public:
 	JavaSalInstance*		mpFirstInstance;
+	::std::list< JavaSalBitmap* >	maBitmapList;
 	::std::list< JavaSalFrame* >	maFrameList;
 	JavaSalFrame*			mpFocusFrame;
 	timeval					maTimeout;

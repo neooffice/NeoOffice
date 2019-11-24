@@ -225,21 +225,7 @@ void NSApplication_run()
 			// by adding our custom run loop mode to the list of common modes
 			CFRunLoopAddCommonMode( CFRunLoopGetMain(), CFSTR( "AWTRunLoopMode" ) );
 
-			// Attempt to stop crashing due to uncaught Objective-C exceptions
-			// in the main thread by running until the [NSApplication run]
-			// selector exits cleanly
-			bool bContinue = true;
-			while ( bContinue )
-			{
-				try
-				{
-					[pApp run];
-					bContinue = false;
-				}
-				catch ( ... )
-				{
-				}
-			}
+			[pApp run];
 		}
 	}
 

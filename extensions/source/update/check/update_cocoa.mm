@@ -36,9 +36,6 @@
 #include "updatei18n_cocoa.hxx"
 #include "updatewebview_cocoa.h"
 
-// Uncomment the following line to enable the native web view code
-// #define USE_NATIVE_WEB_VIEW
-
 //========================================================================
 
 NSString *kUpdateLastURLPref = @"updateLastURL";
@@ -94,10 +91,9 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 {
 	(void)obj;
 
-	NSURL *pURL = [NSURL URLWithString:mpURL];
-#ifdef USE_NATIVE_WEB_VIEW
 	// If the OOo update check URL is out of sync with the server type that
 	// the web view is using, do not use the web view to handle updates
+	NSURL *pURL = [NSURL URLWithString:mpURL];
 	if ( !pURL || ![UpdateWebView isUpdateURL:pURL syncServer:NO] )
 		return;
 
@@ -161,15 +157,6 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 
 		mbWebViewShowing = YES;
 	}
-#else	// USE_NATIVE_WEB_VIEW
-	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
-	if ( pURL && pWorkspace )
-	{
-		mbWebViewShowing = [pWorkspace openURL:pURL];
-		if ( !mbWebViewShowing )
-			mbWebViewShowing = [pWorkspace openURLs:[NSArray arrayWithObject:pURL] withAppBundleIdentifier:@"com.apple.Safari" options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
-	}
-#endif	// USE_NATIVE_WEB_VIEW
 }
 @end
 

@@ -129,8 +129,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/scoped_ptr.hpp>
 
-#ifdef USE_JAVA
-#ifdef MACOSX
+#if defined USE_JAVA && defined MACOSX
 
 #include <dlfcn.h>
 #include <osl/file.h>
@@ -144,11 +143,7 @@ typedef void Application_cacheSecurityScopedURLFromOUString_Type( const OUString
 
 static Application_cacheSecurityScopedURLFromOUString_Type *pApplication_cacheSecurityScopedURLFromOUString = NULL;
 
-#endif	// MACOSX
-
-static ::boost::unordered_map< const SfxMedium*, const SfxMedium* > aMediumMap;
-
-#endif  // USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -2529,9 +2524,6 @@ void SfxMedium::Init_Impl()
 SfxMedium::SfxMedium() : pImp(new SfxMedium_Impl(this))
 {
     Init_Impl();
-#ifdef USE_JAVA
-    aMediumMap[ this ] = this;
-#endif  // USE_JAVA
 }
 
 
@@ -2861,9 +2853,6 @@ SfxMedium::SfxMedium(const OUString &rName, StreamMode nOpenMode, const SfxFilte
     pImp->m_aLogicName = rName;
     pImp->m_nStorOpenMode = nOpenMode;
     Init_Impl();
-#ifdef USE_JAVA
-    aMediumMap[ this ] = this;
-#endif  // USE_JAVA
 }
 
 SfxMedium::SfxMedium(const OUString &rName, const OUString &rReferer, StreamMode nOpenMode, const SfxFilter *pFlt, SfxItemSet *pInSet) :
@@ -2878,9 +2867,6 @@ SfxMedium::SfxMedium(const OUString &rName, const OUString &rReferer, StreamMode
     pImp->m_aLogicName = rName;
     pImp->m_nStorOpenMode = nOpenMode;
     Init_Impl();
-#ifdef USE_JAVA
-    aMediumMap[ this ] = this;
-#endif  // USE_JAVA
 }
 
 SfxMedium::SfxMedium( const uno::Sequence<beans::PropertyValue>& aArgs ) :
@@ -2948,9 +2934,6 @@ SfxMedium::SfxMedium( const uno::Sequence<beans::PropertyValue>& aArgs ) :
     pImp->m_aLogicName = pFileNameItem->GetValue();
     pImp->m_nStorOpenMode = readOnly ? SFX_STREAM_READONLY : SFX_STREAM_READWRITE;
     Init_Impl();
-#ifdef USE_JAVA
-    aMediumMap[ this ] = this;
-#endif  // USE_JAVA
 }
 
 
@@ -2971,10 +2954,6 @@ SfxMedium::SfxMedium( const uno::Reference < embed::XStorage >& rStor, const OUS
     GetItemSet()->Put( SfxStringItem( SID_DOC_BASEURL, rBaseURL ) );
     if ( p )
         GetItemSet()->Put( *p );
-
-#ifdef USE_JAVA
-    aMediumMap[ this ] = this;
-#endif  // USE_JAVA
 }
 
 
@@ -2993,22 +2972,12 @@ SfxMedium::SfxMedium( const uno::Reference < embed::XStorage >& rStor, const OUS
     GetItemSet()->Put( SfxStringItem( SID_DOC_BASEURL, rBaseURL ) );
     if ( p )
         GetItemSet()->Put( *p );
-
-#ifdef USE_JAVA
-    aMediumMap[ this ] = this;
-#endif  // USE_JAVA
 }
 
 
 
 SfxMedium::~SfxMedium()
 {
-#ifdef USE_JAVA
-    ::boost::unordered_map< const SfxMedium*, const SfxMedium* >::iterator it = aMediumMap.find( this );
-    if ( it != aMediumMap.end() )
-        aMediumMap.erase( it );
-#endif  // USE_JAVA
-
     // if there is a requirement to clean the backup this is the last possibility to do it
     ClearBackup_Impl();
 
@@ -3783,8 +3752,7 @@ bool SfxMedium::IsInCheckIn( )
     return pImp->m_bInCheckIn;
 }
 
-#ifdef USE_JAVA
-#ifdef MACOSX
+#if defined USE_JAVA && defined MACOSX
 
 void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, OUString aNewURL )
 {
@@ -3915,14 +3883,6 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, OUString aNewURL )
     pDoc->Broadcast( SfxSimpleHint( SFX_HINT_TITLECHANGED ) );
 }
  
-#endif	// MACOSX
-
-bool ImplIsValidSfxMedium( const SfxMedium *pMedium )
-{
-    ::boost::unordered_map< const SfxMedium*, const SfxMedium* >::const_iterator it = aMediumMap.find( pMedium );
-    return ( it != aMediumMap.end() ? true : false );
-}
-
-#endif  // USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

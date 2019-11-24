@@ -115,16 +115,6 @@ String STR_DISABLERESUMESUPPORT
 	Text [ nl ] = "Schakel Mac Resume uit";
 };
 
-String STR_DISABLEDARKMODE
-{
-	Text [ de ] = "Deaktiviere Dunkemodus";
-	Text [ en-US ] = "Disable Dark Mode";
-	Text [ es ] = "Deshabilitar modo oscuro";
-	Text [ fr ] = "Désactiver Mode foncé";
-	Text [ it ] = "Disattiva Modalità scura";
-	Text [ nl ] = "Schakel Donkere modus";
-};
-
 String STR_QUICKLOOKSUPPORT
 {
 	Text [ de ] = "Übersicht Unterstützung für Dokumente";

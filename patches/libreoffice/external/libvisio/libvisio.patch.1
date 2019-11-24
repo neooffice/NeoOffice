@@ -1,0 +1,66 @@
+--- a/src/lib/VDXParser.cpp
++++ b/src/lib/VDXParser.cpp
+@@ -73,7 +73,7 @@
+   if (!input)
+     return false;
+ 
+-  xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET|XML_PARSE_RECOVER);
++  xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NONET|XML_PARSE_RECOVER);
+   if (!reader)
+     return false;
+   int ret = xmlTextReaderRead(reader);
+--- a/src/lib/VSDXMLHelper.cpp
++++ b/src/lib/VSDXMLHelper.cpp
+@@ -244,7 +244,7 @@
+ {
+   if (input)
+   {
+-    xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET|XML_PARSE_RECOVER);
++    xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NONET|XML_PARSE_RECOVER);
+     if (reader)
+     {
+       bool inRelationships = false;
+--- a/src/lib/VSDXMetaData.cpp
++++ b/src/lib/VSDXMetaData.cpp
+@@ -94,7 +94,7 @@
+   if (!input)
+     return false;
+ 
+-  xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET);
++  xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NONET);
+   if (!reader)
+     return false;
+ 
+--- a/src/lib/VSDXParser.cpp
++++ b/src/lib/VSDXParser.cpp
+@@ -306,7 +306,7 @@
+ 
+   m_rels = &rels;
+ 
+-  xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET);
++  xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NONET);
+   if (!reader)
+     return;
+   int ret = xmlTextReaderRead(reader);
+--- a/src/lib/VSDXTheme.cpp
++++ b/src/lib/VSDXTheme.cpp
+@@ -60,7 +60,7 @@
+   if (!input)
+     return false;
+ 
+-  xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET);
++  xmlTextReaderPtr reader = xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NONET);
+   if (!reader)
+     return false;
+ 
+--- a/src/lib/VisioDocument.cpp
++++ b/src/lib/VisioDocument.cpp
+@@ -249,7 +249,7 @@
+   try
+   {
+     input->seek(0, librevenge::RVNG_SEEK_SET);
+-    reader = libvisio::xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NOENT|XML_PARSE_NONET|XML_PARSE_RECOVER);
++    reader = libvisio::xmlReaderForStream(input, 0, 0, XML_PARSE_NOBLANKS|XML_PARSE_NONET|XML_PARSE_RECOVER);
+     if (!reader)
+       return false;
+     int ret = xmlTextReaderRead(reader);

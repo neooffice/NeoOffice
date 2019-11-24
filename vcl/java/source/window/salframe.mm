@@ -66,7 +66,6 @@ static ::std::vector< Rectangle > aVCLScreensFullBoundsList;
 static ::std::vector< Rectangle > aVCLScreensVisibleBoundsList;
 static ::osl::Mutex aScreensMutex;
 static bool bSystemColorsInitialized = false;
-static bool	bVCLUseDarkModeColors = false;
 static SalColor *pVCLControlTextColor = NULL;
 static SalColor *pVCLTextColor = NULL;
 static SalColor *pVCLHighlightColor = NULL;
@@ -78,8 +77,6 @@ static SalColor *pVCLSelectedControlTextColor = NULL;
 static SalColor *pVCLSelectedMenuItemColor = NULL;
 static SalColor *pVCLSelectedMenuItemTextColor = NULL;
 static SalColor *pVCLShadowColor = NULL;
-static SalColor *pVCLWindowColor = NULL;
-static SalColor *pVCLLinkColor = NULL;
 static long nVCLScrollbarSize = 0;
 
 static ::osl::Mutex aSystemColorsMutex;
@@ -177,13 +174,8 @@ static sal_Bool SetSalColorFromNSColor( NSColor *pNSColor, SalColor **ppSalColor
 			pNSColor = [pNSColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
 			if ( pNSColor )
 			{
-				// Remove transparency by blending color with opaque gray
-				float fAlpha = [pNSColor alphaComponent];
-				float fRed = [pNSColor redComponent];
-				float fGreen = [pNSColor greenComponent];
-				float fBlue = [pNSColor blueComponent];
 				*ppSalColor = new SalColor;
-				**ppSalColor = MAKE_SALCOLOR( (unsigned char)( ( 0.5f + ( ( fRed - 0.5f ) * fAlpha ) ) * 0xff ), (unsigned char)( ( 0.5f + ( ( fGreen - 0.5f ) * fAlpha ) ) * 0xff ), (unsigned char)( ( 0.5f + ( ( fBlue - 0.5f ) * fAlpha ) ) * 0xff ) );
+				**ppSalColor = MAKE_SALCOLOR( (unsigned char)( [pNSColor redComponent] * 0xff ), (unsigned char)( [pNSColor greenComponent] * 0xff ), (unsigned char)( [pNSColor blueComponent] * 0xff ) );
 				bRet = sal_True;
 			}
 		}
@@ -198,40 +190,17 @@ static void HandleSystemColorsChangedRequest()
 
 	bSystemColorsInitialized = true;
 
-	bVCLUseDarkModeColors = false;
-
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp && [pApp respondsToSelector:@selector(appearance)] )
-	{
-		NSAppearance *pAppearance = [pApp appearance];
-		if ( pAppearance && [NSAppearanceNameDarkAqua isEqualToString:[pAppearance name]] )
-			bVCLUseDarkModeColors = true;
-	}
-
 	SetSalColorFromNSColor( [NSColor controlTextColor], &pVCLControlTextColor );
 	SetSalColorFromNSColor( [NSColor textColor], &pVCLTextColor );
 	SetSalColorFromNSColor( [NSColor selectedTextBackgroundColor], &pVCLHighlightColor );
 	SetSalColorFromNSColor( [NSColor selectedTextColor], &pVCLHighlightTextColor );
 	SetSalColorFromNSColor( [NSColor disabledControlTextColor], &pVCLDisabledControlTextColor );
-	if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedContentBackgroundColor) ) )
-		SetSalColorFromNSColor( [NSColor unemphasizedSelectedContentBackgroundColor], &pVCLBackColor );
-	else if ( class_getClassMethod( [NSColor class], @selector(controlHighlightColor) ) )
-		SetSalColorFromNSColor( [NSColor controlHighlightColor], &pVCLBackColor );
+	SetSalColorFromNSColor( [NSColor controlHighlightColor], &pVCLBackColor );
 	SetSalColorFromNSColor( [NSColor alternateSelectedControlTextColor], &pVCLAlternateSelectedControlTextColor );
 	SetSalColorFromNSColor( [NSColor selectedControlTextColor], &pVCLSelectedControlTextColor );
-	// Use deprecated selector for selected menu item for macOS 10.14 light mode
-	if ( !bVCLUseDarkModeColors && class_getClassMethod( [NSColor class], @selector(selectedMenuItemColor) ) )
-		SetSalColorFromNSColor( [NSColor selectedMenuItemColor], &pVCLSelectedMenuItemColor );
-	else if ( class_getClassMethod( [NSColor class], @selector(selectedContentBackgroundColor) ) )
-		SetSalColorFromNSColor( [NSColor selectedContentBackgroundColor], &pVCLSelectedMenuItemColor );
-	else if ( class_getClassMethod( [NSColor class], @selector(selectedMenuItemColor) ) )
-		SetSalColorFromNSColor( [NSColor selectedMenuItemColor], &pVCLSelectedMenuItemColor );
+	SetSalColorFromNSColor( [NSColor selectedMenuItemColor], &pVCLSelectedMenuItemColor );
 	SetSalColorFromNSColor( [NSColor selectedMenuItemTextColor], &pVCLSelectedMenuItemTextColor );
-	if ( class_getClassMethod( [NSColor class], @selector(controlShadowColor) ) )
-		SetSalColorFromNSColor( [NSColor controlShadowColor], &pVCLShadowColor );
-	SetSalColorFromNSColor( [NSColor windowBackgroundColor], &pVCLWindowColor );
-	if ( class_getClassMethod( [NSColor class], @selector(linkColor) ) )
-		SetSalColorFromNSColor( [NSColor linkColor], &pVCLLinkColor );
+	SetSalColorFromNSColor( [NSColor controlShadowColor], &pVCLShadowColor );
 
 	// Always use NSScrollerStyleLegacy scrollbars as we always draw scrollbars 
 	// with that style in vcl/java/source/gdi/salnativewidgets.mm
@@ -1360,7 +1329,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		if ( mbFullScreen )
 			[mpWindow setBackgroundColor:[NSColor blackColor]];
 		else
-			[mpWindow setBackgroundColor:[NSColor windowBackgroundColor]];
+			[mpWindow setBackgroundColor:[NSColor whiteColor]];
 
 		if ( mbUtility )
 		{
@@ -1446,7 +1415,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			if ( mbUndecorated && !mbShowOnlyMenus && !mbFullScreen )
 			{
 				[(VCLPanel *)mpWindow setBecomesKeyOnlyIfNeeded:NO];
-				[(VCLPanel *)mpWindow setCanBecomeKeyWindow:mnStyle & SAL_FRAME_STYLE_FLOAT_FOCUSABLE ? YES : NO];
+				[(VCLPanel *)mpWindow setCanBecomeKeyWindow:NO];
 			}
 			else if ( mbUtility )
 			{
@@ -1957,9 +1926,9 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		[self adjustColorLevelAndShadow];
 
 		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
-			[(VCLPanel *)mpWindow setCanBecomeKeyWindow:( mbFullScreen || mnStyle & SAL_FRAME_STYLE_FLOAT_FOCUSABLE ) ? YES : NO];
+			[(VCLPanel *)mpWindow setCanBecomeKeyWindow:mbFullScreen];
 		else
-			[(VCLWindow *)mpWindow setCanBecomeKeyWindow:( mbFullScreen || mnStyle & SAL_FRAME_STYLE_FLOAT_FOCUSABLE ) ? YES : NO];
+			[(VCLWindow *)mpWindow setCanBecomeKeyWindow:mbFullScreen];
 	}
 }
 
@@ -2343,15 +2312,6 @@ void ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bShowOnlyMenus )
 		pFrame->SetParent( pFrame->mpParent );
 
 	pFrame->mbInShowOnlyMenus = sal_False;
-}
-
-// -----------------------------------------------------------------------
-
-// Note: this must not be static as the symbol will be loaded by the svtools
-// module
-sal_Bool UseDarkModeColors()
-{
-	return JavaSalFrame::UseDarkModeColors();
 }
 
 // -----------------------------------------------------------------------
@@ -3044,18 +3004,6 @@ unsigned int JavaSalFrame::GetScreenCount()
 
 // -----------------------------------------------------------------------
 
-bool JavaSalFrame::UseDarkModeColors()
-{
-	bool bRet = false;
-
-	MutexGuard aGuard( aSystemColorsMutex );
-	bRet = bVCLUseDarkModeColors;
-
-	return bRet;
-}
-
-// -----------------------------------------------------------------------
-
 bool JavaSalFrame::GetAlternateSelectedControlTextColor( SalColor& rSalColor )
 {
 	bool bRet = false;
@@ -3063,7 +3011,6 @@ bool JavaSalFrame::GetAlternateSelectedControlTextColor( SalColor& rSalColor )
 	// Update colors if any system colors have not yet been set
 	InitializeSystemColors();
 
-	MutexGuard aGuard( aSystemColorsMutex );
 	if ( pVCLAlternateSelectedControlTextColor )
 	{
 		rSalColor = *pVCLAlternateSelectedControlTextColor;
@@ -3082,7 +3029,6 @@ bool JavaSalFrame::GetControlTextColor( SalColor& rSalColor )
 	// Update colors if any system colors have not yet been set
 	InitializeSystemColors();
 
-	MutexGuard aGuard( aSystemColorsMutex );
 	if ( pVCLControlTextColor )
 	{
 		rSalColor = *pVCLControlTextColor;
@@ -3101,7 +3047,6 @@ bool JavaSalFrame::GetDisabledControlTextColor( SalColor& rSalColor )
 	// Update colors if any system colors have not yet been set
 	InitializeSystemColors();
 
-	MutexGuard aGuard( aSystemColorsMutex );
 	if ( pVCLDisabledControlTextColor )
 	{
 		rSalColor = *pVCLDisabledControlTextColor;
@@ -3120,7 +3065,6 @@ bool JavaSalFrame::GetSelectedControlTextColor( SalColor& rSalColor )
 	// Update colors if any system colors have not yet been set
 	InitializeSystemColors();
 
-	MutexGuard aGuard( aSystemColorsMutex );
 	if ( pVCLSelectedControlTextColor )
 	{
 		rSalColor = *pVCLSelectedControlTextColor;
@@ -3139,7 +3083,6 @@ bool JavaSalFrame::GetSelectedMenuItemTextColor( SalColor& rSalColor )
 	// Update colors if any system colors have not yet been set
 	InitializeSystemColors();
 
-	MutexGuard aGuard( aSystemColorsMutex );
 	if ( pVCLSelectedMenuItemTextColor )
 	{
 		rSalColor = *pVCLSelectedMenuItemTextColor;
@@ -3188,7 +3131,7 @@ bool JavaSalFrame::Deminimize()
 
 bool JavaSalFrame::IsFloatingFrame()
 {
-	return ( ! ( mnStyle & ( SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE | SAL_FRAME_STYLE_FLOAT_FOCUSABLE ) ) && this != GetSalData()->mpPresentationFrame && !mbShowOnlyMenus );
+	return ( ! ( mnStyle & ( SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE ) ) && this != GetSalData()->mpPresentationFrame && !mbShowOnlyMenus );
 }
 
 // -----------------------------------------------------------------------
@@ -3473,8 +3416,6 @@ void JavaSalFrame::UpdateLayer()
 		mpGraphics->setLayer( maFrameLayer );
 		if ( mbFullScreen )
 			mpGraphics->setBackgroundColor( 0xff000000 );
-		else if ( pVCLWindowColor )
-			mpGraphics->setBackgroundColor( *pVCLWindowColor );
 		else
 			mpGraphics->setBackgroundColor( 0xffffffff );
 
@@ -4445,10 +4386,9 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 		aStyleSettings.SetRadioCheckTextColor( aThemeDialogColor );
 		aStyleSettings.SetGroupTextColor( aThemeDialogColor );
 		aStyleSettings.SetLabelTextColor( aThemeDialogColor );
-		aStyleSettings.SetHelpTextColor( aTextColor );
 		aStyleSettings.SetInfoTextColor( aTextColor );
-		aStyleSettings.SetFieldTextColor( aTextColor );
 		aStyleSettings.SetWindowTextColor( aTextColor );
+		aStyleSettings.SetFieldTextColor( aTextColor );
 	}
 
 	if ( pVCLHighlightColor )
@@ -4489,27 +4429,19 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 		aStyleSettings.SetMenuColor( aBackColor );
 		aStyleSettings.SetMenuBarColor( aBackColor );
 
-		Color aLightColor = aStyleSettings.GetLightColor();
-		if( aLightColor.GetColorError( aBackColor ) < 0x4 )
-			aLightColor.Invert();
-		aStyleSettings.SetCheckedColor( Color( (sal_uInt8)( ( (sal_uInt16)aBackColor.GetRed() + (sal_uInt16)aLightColor.GetRed() ) / 2 ), (sal_uInt8)( ( (sal_uInt16)aBackColor.GetGreen() + (sal_uInt16)aLightColor.GetGreen() ) / 2 ), (sal_uInt8)( ( (sal_uInt16)aBackColor.GetBlue() + (sal_uInt16)aLightColor.GetBlue() ) / 2 ) ) );
+		if( aBackColor == COL_LIGHTGRAY )
+		{
+			aStyleSettings.SetCheckedColor( Color( 0xCC, 0xCC, 0xCC ) );
+		}
+		else
+		{
+			Color aColor2 = aStyleSettings.GetLightColor();
+			aStyleSettings.SetCheckedColor( Color( (sal_uInt8)( ( (sal_uInt16)aBackColor.GetRed() + (sal_uInt16)aColor2.GetRed() ) / 2 ), (sal_uInt8)( ( (sal_uInt16)aBackColor.GetGreen() + (sal_uInt16)aColor2.GetGreen() ) / 2 ), (sal_uInt8)( ( (sal_uInt16)aBackColor.GetBlue() + (sal_uInt16)aColor2.GetBlue() ) / 2 ) ) );
+		}
 	}
 
 	if ( pVCLShadowColor )
 		aStyleSettings.SetShadowColor( Color( *pVCLShadowColor ) );
-
-	if ( pVCLWindowColor )
-	{
-		Color aWindowColor( *pVCLWindowColor );
-
-		aStyleSettings.SetActiveTabColor( aWindowColor );
-		aStyleSettings.SetFieldColor( aWindowColor );
-		aStyleSettings.SetWindowColor( aWindowColor );
-		aStyleSettings.SetWorkspaceColor( aWindowColor );
-	}
-
-	if ( pVCLLinkColor )
-		aStyleSettings.SetLinkColor( Color( *pVCLLinkColor ) );
 
 	// Mnemonics is needed for our code in OutputDevice::ImplDrawMnemonicLine()
 	aStyleSettings.SetOptions( aStyleSettings.GetOptions() & ~STYLE_OPTION_NOMNEMONICS );

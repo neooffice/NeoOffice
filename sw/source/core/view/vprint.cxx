@@ -665,18 +665,10 @@ void SwViewShell::PrtOle2( SwDoc *pDoc, const SwViewOption *pOpt, const SwPrintD
 bool SwViewShell::IsAnyFieldInDoc() const
 {
     const SfxPoolItem* pItem;
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     sal_uInt32 nMaxItems = mpDoc->GetAttrPool().GetItemCount2( RES_TXTATR_FIELD );
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    sal_uInt32 nMaxItems = mxDoc->GetAttrPool().GetItemCount2( RES_TXTATR_FIELD );
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     for( sal_uInt32 n = 0; n < nMaxItems; ++n )
     {
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( 0 != (pItem = mpDoc->GetAttrPool().GetItem2( RES_TXTATR_FIELD, n )))
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        if( nullptr != (pItem = mxDoc->GetAttrPool().GetItem2( RES_TXTATR_FIELD, n )))
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         {
             const SwFmtFld* pFmtFld = (SwFmtFld*)pItem;
             const SwTxtFld* pTxtFld = pFmtFld->GetTxtFld();
@@ -687,18 +679,10 @@ bool SwViewShell::IsAnyFieldInDoc() const
         }
     }
 
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     nMaxItems = mpDoc->GetAttrPool().GetItemCount2( RES_TXTATR_INPUTFIELD );
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    nMaxItems = mxDoc->GetAttrPool().GetItemCount2( RES_TXTATR_INPUTFIELD );
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     for( sal_uInt32 n = 0; n < nMaxItems; ++n )
     {
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if( 0 != (pItem = mpDoc->GetAttrPool().GetItem2( RES_TXTATR_INPUTFIELD, n )))
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        if( nullptr != (pItem = mxDoc->GetAttrPool().GetItem2( RES_TXTATR_INPUTFIELD, n )))
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         {
             const SwFmtFld* pFmtFld = (SwFmtFld*)pItem;
             const SwTxtFld* pTxtFld = pFmtFld->GetTxtFld();

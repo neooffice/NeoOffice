@@ -78,31 +78,6 @@ static const NSString *pProductionBaseURLs[] = {
 };
 #endif	// !TEST
 
-static bool bIsRunningSierraOrLowerInitizalized  = false;
-static bool bIsRunningSierraOrLower = false;
-
-static bool IsRunningSierraOrLower()
-{
-	if ( !bIsRunningSierraOrLowerInitizalized )
-	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-		NSProcessInfo *pProcessInfo = [NSProcessInfo processInfo];
-		if ( pProcessInfo )
-		{
-			NSOperatingSystemVersion aVersion = pProcessInfo.operatingSystemVersion;
-			if ( aVersion.majorVersion <= 10 && aVersion.minorVersion <= 12 )
-				bIsRunningSierraOrLower = true;
-		}
-
-		bIsRunningSierraOrLowerInitizalized = true;
-
-		[pPool release];
-	}
-
-	return bIsRunningSierraOrLower;
-}
-
 /**
  * Overrides WebKit's [WebJavaScriptTextInputPanel windowDidLoad] selector to
  * set the JavaScript prompt dialog to have no title like the other JavaScript
@@ -677,11 +652,6 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 - (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame reason:(NSError *)pError
 {
-	// Fix crashing on High Sierra when the internet is disconnected during
-	// a download by not trying to reload from the next server
-	if (!IsRunningSierraOrLower())
-		return;
-
 	int errCode = pError ? [pError code] : 0;
 
 	if ( !errCode || errCode == WebKitErrorFrameLoadInterruptedByPolicyChange )
@@ -802,8 +772,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		}
 	}
 
-	if ( pError )
-		ShowModalAlert( [NSString stringWithFormat:@"%@ %@", UpdateGetLocalizedString(UPDATEERROR), [pError localizedDescription]], nil, nil );
+	ShowModalAlert( [NSString stringWithFormat:@"%@ %@", UpdateGetLocalizedString(UPDATEERROR), [pError localizedDescription]], nil, nil );
 }
 
 - (void)stopLoading:(id)pSender
@@ -1109,11 +1078,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			unsigned long long nExpectedContentLength = [it->second expectedContentLength];
 			if (nExpectedContentLength > 0)
 			{
-				// Disable resuming partial downloads on High Sierra and higher
-				// as it is no longer supported using NSURLDownload
 				if (GetFileSize(filePath) == nExpectedContentLength)
 					bCompleteDownload = YES;
-				else if (IsRunningSierraOrLower())
+				else
 					bPartialDownload = YES;
 			}
 		}
@@ -1488,11 +1455,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 				[pRetryDownloadURLs retain];
 		}
 
-		// Disable resuming downloads on High Sierra and higher as it is no
-		// longer supported using NSURLDownload
 		BOOL bRetry = NO;
 		NSString *pPath = [it->second path];
-		if (pPath && pRetryDownloadURLs && IsRunningSierraOrLower())
+		if (pPath && pRetryDownloadURLs)
 		{
 			NSObject *pValue = [pRetryDownloadURLs objectForKey:pPath];
 			if (!pValue || ![pValue isKindOfClass:[NSNull class]])
@@ -1757,10 +1722,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 {
 	BOOL bRet = NO;
 
-	// Eliminate thread error messages on High Sierra and Mojave by disabling
-	// redownloading on macOS versions that no longer support resuming
-	// downloads using NSURLDownload
-	if (pDownload && pPath && IsRunningSierraOrLower())
+	if (pDownload && pPath)
 	{
 		if (!pRetryDownloadURLs)
 		{
