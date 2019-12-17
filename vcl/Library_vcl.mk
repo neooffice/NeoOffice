@@ -102,7 +102,7 @@ ifeq ($(OS),MACOSX)
 $(eval $(call gb_Library_add_libs,vcl,\
     -framework IOKit \
     -F/System/Library/PrivateFrameworks \
-    -framework CoreUI \
+    $(if $(filter-out java,$(GUIBASE)),-framework CoreUI) \
     -lobjc \
 ))
 endif
