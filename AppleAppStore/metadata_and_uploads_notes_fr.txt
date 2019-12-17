@@ -34,8 +34,8 @@ What's New in this Version:
 Avant d'acheter NeoOffice, s'il vous plaît cliquer sur le lien « Assistance : NeoOffice » et lire les notes d'installation.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would fail to load many extensions that worked in earlier versions of NeoOffice
-• NeoOffice would fail to print or export to PDF nested tables in Writer documents due to LibreOffice bugs #88453
+• NeoOffice windows originally opened on a non-Retina display would not display at full resolution when moved to a Retina display due to LibreOffice bug #85499
+• NeoOffice would display Reiwa era dates as Heisei era dates when using a Japanese date format
 
 
 Promotional Text:
