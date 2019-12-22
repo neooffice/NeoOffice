@@ -3609,28 +3609,14 @@ bool JavaSalFrame::ScreenParamsChanged()
 	if ( mbVisible )
 		SetPosSize( 0, 0, 0, 0, 0 );
 
-	if ( maFrameLayer )
+	if ( maFrameLayer && NSWindow_cachedCGContextScaleFactorHasChanged( maFrameLayer ) )
 	{
-		bool bContextChanged = true;
-		CGContextRef aOldContext = CGLayerGetContext( maFrameLayer );
-		CGContextRef aContext = NSWindow_cachedCGContext();
-		if ( aOldContext && aContext )
-		{
-			CGSize aOldSize = CGContextConvertSizeToDeviceSpace( aOldContext, CGSizeMake( 1, 1 ) );
-			CGSize aSize = CGContextConvertSizeToDeviceSpace( aContext, CGSizeMake( 1, 1 ) );
-			if ( aSize.width != 0 && aSize.height != 0 && CGSizeEqualToSize( aOldSize, aSize ) )
-				bContextChanged = false;
-		}
+		bRet = true;
 
-		if ( bContextChanged )
-		{
-			bRet = true;
+		CGLayerRelease( maFrameLayer );
+		maFrameLayer = nullptr;
 
-			CGLayerRelease( maFrameLayer );
-			maFrameLayer = nullptr;
-
-			UpdateLayer();
-		}
+		UpdateLayer();
 	}
 
 	return bRet;

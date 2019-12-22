@@ -157,28 +157,14 @@ bool JavaSalVirtualDevice::ScreenParamsChanged()
 {
 	bool bRet = false;
 
-	if ( maVirDevLayer )
+	if ( maVirDevLayer && NSWindow_cachedCGContextScaleFactorHasChanged( maVirDevLayer ) )
 	{
-		bool bContextChanged = true;
-		CGContextRef aOldContext = CGLayerGetContext( maVirDevLayer );
-		CGContextRef aContext = NSWindow_cachedCGContext();
-		if ( aOldContext && aContext )
-		{
-			CGSize aOldSize = CGContextConvertSizeToDeviceSpace( aOldContext, CGSizeMake( 1, 1 ) );
-			CGSize aSize = CGContextConvertSizeToDeviceSpace( aContext, CGSizeMake( 1, 1 ) );
-			if ( aSize.width > 0 && aSize.height > 0 && CGSizeEqualToSize( aOldSize, aSize ) )
-				bContextChanged = false;
-		}
+		bRet = true;
 
-		if ( bContextChanged )
-		{
-			bRet = true;
+		CGLayerRelease( maVirDevLayer );
+		maVirDevLayer = nullptr;
 
-			CGLayerRelease( maVirDevLayer );
-			maVirDevLayer = nullptr;
-
-			SetSize( mnWidth, mnHeight );
-		}
+		SetSize( mnWidth, mnHeight );
 	}
 
 	return bRet;
