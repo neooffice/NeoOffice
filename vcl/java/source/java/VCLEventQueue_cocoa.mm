@@ -61,6 +61,9 @@
 #define UNDEFINED_KEY_CODE 0xffff
 
 static CGContextRef aCachedContext = NULL;
+static ::osl::Mutex aCachedContextMutex;
+
+using namespace osl;
 
 inline long FloatToLong( float f ) { return (long)( f == 0 ? f : f < 0 ? f - 0.5 : f + 0.5 ); }
 
@@ -3727,14 +3730,42 @@ void VCLEventQueue_installVCLEventQueueClasses()
 
 SAL_DLLPRIVATE CGContextRef NSWindow_cachedCGContext()
 {
+	MutexGuard aGuard( aCachedContextMutex );
+
 	if ( !aCachedContext )
 		NSWindow_resetCachedCGContext();
 
 	return aCachedContext;
 }
 
+SAL_DLLPRIVATE sal_Bool NSWindow_cachedCGContextScaleFactorHasChanged( CGLayerRef aLayer )
+{
+	sal_Bool bRet = sal_True;
+
+	if ( !aLayer )
+		return bRet;
+
+	CGContextRef aLayerContext = CGLayerGetContext( aLayer );
+	if ( !aLayerContext )
+		return bRet;
+
+	MutexGuard aGuard( aCachedContextMutex );
+
+	if ( !aCachedContext )
+		return bRet;
+
+	CGSize aLayerSize = CGContextConvertSizeToDeviceSpace( aLayerContext, CGSizeMake( 1, 1 ) );
+	CGSize aCachedSize = CGContextConvertSizeToDeviceSpace( aCachedContext, CGSizeMake( 1, 1 ) );
+	if ( aCachedSize.width != 0 && aCachedSize.height != 0 && CGSizeEqualToSize( aLayerSize, aCachedSize ) )
+		bRet = false;
+
+	return bRet;
+}
+
 SAL_DLLPRIVATE void NSWindow_resetCachedCGContext()
 {
+	MutexGuard aGuard( aCachedContextMutex );
+
 	if ( aCachedContext )
 	{
 		CGContextRelease( aCachedContext );

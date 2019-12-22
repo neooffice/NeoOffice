@@ -195,6 +195,7 @@ SAL_DLLPRIVATE void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect 
 SAL_DLLPRIVATE NSCursor *JavaSalFrame_getCursor( NSView *pView );
 SAL_DLLPRIVATE sal_Bool NSWindow_hasMarkedText( NSWindow *pWindow );
 SAL_DLLPRIVATE CGContextRef NSWindow_cachedCGContext();
+SAL_DLLPRIVATE sal_Bool NSWindow_cachedCGContextScaleFactorHasChanged( CGLayerRef aLayer );
 SAL_DLLPRIVATE void NSWindow_resetCachedCGContext();
 
 #endif	// __OBJC__
