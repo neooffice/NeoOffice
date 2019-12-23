@@ -34,8 +34,7 @@ What's New in this Version:
 Bevor Sie NeoOffice kaufen, klicken Sie bitte auf den „NeoOffice Support” Link und lesen die Installationshinweise.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice windows originally opened on a non-Retina display would not display at full resolution when moved to a Retina display due to LibreOffice bug #85499
-• NeoOffice would display Reiwa era dates as Heisei era dates when using a Japanese date format
+• NeoOffice would sometimes crash when connecting or disconnecting a display due to our fix for LibreOffice bug 85499
 
 
 Promotional Text:
