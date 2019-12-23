@@ -62,6 +62,7 @@
 
 static CGContextRef aCachedContext = NULL;
 static ::osl::Mutex aCachedContextMutex;
+static CGSize aCachedContextSize = CGSizeMake( 0, 0 );
 
 using namespace osl;
 
@@ -3751,12 +3752,7 @@ SAL_DLLPRIVATE sal_Bool NSWindow_cachedCGContextScaleFactorHasChanged( CGLayerRe
 
 	MutexGuard aGuard( aCachedContextMutex );
 
-	if ( !aCachedContext )
-		return bRet;
-
-	CGSize aLayerSize = CGContextConvertSizeToDeviceSpace( aLayerContext, CGSizeMake( 1, 1 ) );
-	CGSize aCachedSize = CGContextConvertSizeToDeviceSpace( aCachedContext, CGSizeMake( 1, 1 ) );
-	if ( aCachedSize.width != 0 && aCachedSize.height != 0 && CGSizeEqualToSize( aLayerSize, aCachedSize ) )
+	if ( aCachedContextSize.width != 0 && aCachedContextSize.height != 0 && CGSizeEqualToSize( CGContextConvertSizeToDeviceSpace( aLayerContext, CGSizeMake( 1, 1 ) ), aCachedContextSize ) )
 		bRet = false;
 
 	return bRet;
@@ -3770,6 +3766,7 @@ SAL_DLLPRIVATE void NSWindow_resetCachedCGContext()
 	{
 		CGContextRelease( aCachedContext );
 		aCachedContext = NULL;
+		aCachedContextSize = CGSizeMake( 0, 0 );
 	}
 
 	float fLastBackingScaleFactor = 1.0f;
@@ -3810,7 +3807,10 @@ SAL_DLLPRIVATE void NSWindow_resetCachedCGContext()
 		{
 			CGContextRef aContext = [pContext CGContext];
 			if ( aContext )
+			{
 				aCachedContext = CGContextRetain( aContext );
+				aCachedContextSize = CGContextConvertSizeToDeviceSpace( aCachedContext, CGSizeMake( 1, 1 ) );
+			}
 		}
 	}
 }
