@@ -60,6 +60,8 @@
 #import "../desktop/source/app/desktop.hrc"
 #import "../vcl/inc/svids.hrc"
 
+#include <dlfcn.h>
+
 #define DEFAULT_URL						"_default"
 
 #define WRITER_COMMAND_ID				'SDI1'
@@ -80,8 +82,7 @@
 
 #define DEFAULT_LAUNCH_OPTIONS_KEY		CFSTR( "DefaultLaunchOptions" )
 
-typedef void VCLOpenPrintFileHandler_Type( const char *pPath, sal_Bool bPrint );
-typedef void VCLRequestShutdownHandler_Type();
+typedef sal_Bool Application_canSave_Type();
 
 static bool bIsRunningHighSierraOrLowerInitizalized  = false;
 static bool bIsRunningHighSierraOrLower = false;
@@ -96,6 +97,7 @@ static ResMgr *pVclResMgr = nullptr;
 static FSEventStreamRef aFSEventStream = nullptr;
 static NSString *pRestartMessageText = nil;
 static CFStringRef aExecutablePath = nullptr;
+static Application_canSave_Type *pApplication_canSave = nullptr;
 
 using namespace com::sun::star::beans;
 using namespace com::sun::star::uno;
@@ -182,6 +184,14 @@ static void ExecutableFSEventStreamCallback( ConstFSEventStreamRef aStreamRef, v
 
 			if ( pRestartAlert )
 				[pRestartAlert runModal];
+
+			// The native save dialog won't appear if this is a read-only
+			// product that has been overwritten by the Mac App Store product
+			// so abort to save changes as recovery files
+			if ( !pApplication_canSave )
+				pApplication_canSave = (Application_canSave_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canSave" );
+			if ( !pApplication_canSave || !pApplication_canSave() )
+				abort();
 
 			NSApplication *pApp = [NSApplication sharedApplication];
 			if ( pApp )
