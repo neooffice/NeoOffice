@@ -195,6 +195,7 @@ PRODUCT_MODULES = \
 	apple_remote \
 	avmedia \
 	basic \
+	bridges \
 	canvas \
 	chart2 \
 	connectivity \
