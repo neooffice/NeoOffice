@@ -63,6 +63,7 @@
 static CGContextRef aCachedContext = nullptr;
 static ::osl::Mutex aCachedContextMutex;
 static CGSize aCachedContextSize = CGSizeMake( 0, 0 );
+static NSWindow *pCachedContextWindow = nil;
 
 using namespace osl;
 
@@ -3752,11 +3753,18 @@ SAL_DLLPRIVATE void NSWindow_resetCachedCGContext()
 	{
 		CGContextRelease( aCachedContext );
 		aCachedContext = nullptr;
-		aCachedContextSize = CGSizeMake( 0, 0 );
+	}
+
+	aCachedContextSize = CGSizeMake( 0, 0 );
+
+	if ( pCachedContextWindow )
+	{
+		[pCachedContextWindow release];
+		pCachedContextWindow = nil;
 	}
 
 	float fLastBackingScaleFactor = 1.0f;
-	NSScreen *pLastScreen = nullptr;
+	NSScreen *pLastScreen = nil;
 	NSArray *pScreens = [NSScreen screens];
 	if ( pScreens )
 	{
@@ -3786,7 +3794,8 @@ SAL_DLLPRIVATE void NSWindow_resetCachedCGContext()
 	NSWindow *pWindow = [[NSWindow alloc] initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:NO screen:pLastScreen];
 	if ( pWindow )
 	{
-		[pWindow autorelease];
+		// Prevent crashing on macOS 11 by caching the context's window
+		pCachedContextWindow = pWindow;
 
 		NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithWindow:pWindow];
 		if ( pContext )
