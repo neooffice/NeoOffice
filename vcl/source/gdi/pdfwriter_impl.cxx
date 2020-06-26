@@ -13225,7 +13225,8 @@ void PDFWriterImpl::encodeGlyphs()
                 }
 
                 // Update stream lengths
-                OString aStreamLengthTag( "<< /Length " );
+                OString aStreamStartTag( "<<" );
+                OString aStreamLengthTag( " /Length " );
                 OString aRef( " 0 R " );
                 for ( PDFObjectMapping::iterator pit = rEmit.m_aObjectMapping.begin(); pit != rEmit.m_aObjectMapping.end(); ++pit )
                 {
@@ -13233,19 +13234,23 @@ void PDFWriterImpl::encodeGlyphs()
                     if ( rObj.m_bStream )
                     {
                         // Find stream length
-                        sal_Int32 nLenPos = rObj.m_aContent.indexOf( aStreamLengthTag );
-                        if ( nLenPos >= 0 )
+                        sal_Int32 nStartPos = rObj.m_aContent.indexOf( aStreamStartTag );
+                        if ( nStartPos >= 0 )
                         {
-                            OStringBuffer aLenBuf;
-                            nLenPos += aStreamLengthTag.getLength();
-                            const sal_Char *pBuf = rObj.m_aContent.getStr();
-                            for ( pBuf += nLenPos; *pBuf && *pBuf != ' '; pBuf++ )
-                                aLenBuf.append( *pBuf );
-                            sal_Int32 nStreamLen = aLenBuf.makeStringAndClear().toInt32();
-                            if ( nStreamLen && !OString( pBuf ).compareTo( aRef, aRef.getLength() ) )
-                                rObj.m_nStreamLen = rEmit.m_aObjectMapping[ nStreamLen ].m_aContent.toInt32();
-                            else
-                                rObj.m_nStreamLen = nStreamLen;
+                            sal_Int32 nLenPos = rObj.m_aContent.indexOf( aStreamLengthTag );
+                            if ( nLenPos >= 0 && nLenPos >= nStartPos + aStreamStartTag.getLength() )
+                            {
+                                OStringBuffer aLenBuf;
+                                nLenPos += aStreamLengthTag.getLength();
+                                const sal_Char *pBuf = rObj.m_aContent.getStr();
+                                for ( pBuf += nLenPos; *pBuf && *pBuf != ' '; pBuf++ )
+                                    aLenBuf.append( *pBuf );
+                                sal_Int32 nStreamLen = aLenBuf.makeStringAndClear().toInt32();
+                                if ( nStreamLen && !OString( pBuf ).compareTo( aRef, aRef.getLength() ) )
+                                    rObj.m_nStreamLen = rEmit.m_aObjectMapping[ nStreamLen ].m_aContent.toInt32();
+                                else
+                                    rObj.m_nStreamLen = nStreamLen;
+                            }
                         }
                     }
                 }
