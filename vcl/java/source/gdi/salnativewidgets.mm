@@ -126,6 +126,8 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 
 static bool bIsRunningHighSierraOrLowerInitizalized  = false;
 static bool bIsRunningHighSierraOrLower = false;
+static bool bIsRunningCatalinaOrLowerInitizalized  = false;
+static bool bIsRunningCatalinaOrLower = false;
 
 static VCLBitmapBuffer aSharedComboBoxBuffer;
 static VCLBitmapBuffer aSharedListBoxBuffer;
@@ -170,6 +172,28 @@ static bool IsRunningHighSierraOrLower()
 	}
 
 	return bIsRunningHighSierraOrLower;
+}
+
+static bool IsRunningCatalinaOrLower()
+{
+	if ( !bIsRunningCatalinaOrLowerInitizalized )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSProcessInfo *pProcessInfo = [NSProcessInfo processInfo];
+		if ( pProcessInfo )
+		{
+			NSOperatingSystemVersion aVersion = pProcessInfo.operatingSystemVersion;
+			if ( aVersion.majorVersion <= 10 && aVersion.minorVersion <= 15 )
+				bIsRunningCatalinaOrLower = true;
+		}
+
+		bIsRunningCatalinaOrLowerInitizalized = true;
+
+		[pPool release];
+	}
+
+	return bIsRunningCatalinaOrLower;
 }
 
 // =======================================================================
@@ -4611,10 +4635,20 @@ bool JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 			{
 				if ( nState & ControlState::SELECTED )
 				{
-					if ( ! ( nState & ControlState::INACTIVE ) )
-						bReturn = JavaSalFrame::GetAlternateSelectedControlTextColor( nTextColor );
+					if ( IsRunningCatalinaOrLower() )
+					{
+						if ( ! ( nState & ControlState::INACTIVE ) )
+							bReturn = JavaSalFrame::GetAlternateSelectedControlTextColor( nTextColor );
+						else
+							bReturn = JavaSalFrame::GetSelectedTabTextColor( nTextColor );
+					}
 					else
-						bReturn = JavaSalFrame::GetSelectedTabTextColor( nTextColor );
+					{
+						if ( JavaSalFrame::UseDarkModeColors() )
+							bReturn = JavaSalFrame::GetAlternateSelectedControlTextColor( nTextColor );
+						else
+							bReturn = JavaSalFrame::GetSelectedTabTextColor( nTextColor );
+					}
 				}
 				else if ( nState & ControlState::PRESSED )
 				{
