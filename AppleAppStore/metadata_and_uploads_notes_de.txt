@@ -33,9 +33,6 @@ Zwei Ingenieure erstellten NeoOffice im Jahr 2003, als sie OpenOffice auf OS X z
 What's New in this Version:
 Bevor Sie NeoOffice kaufen, klicken Sie bitte auf den „NeoOffice Support” Link und lesen die Installationshinweise.
 
-This version of NeoOffice fixes the following bugs:
-• NeoOffice would sometimes crash when connecting or disconnecting a display due to our fix for LibreOffice bug 85499
-
 
 Promotional Text:
 NeoOffice enthält den nativen Dunkelmodus!

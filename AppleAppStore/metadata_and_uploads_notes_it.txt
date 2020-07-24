@@ -33,9 +33,6 @@ Due ingegneri di NeoOffice hanno creato NeoOffice nel 2003, quando hanno fatto O
 What's New in this Version:
 Prima di acquistare NeoOffice, per favore clicca sul link «Supporto per NeoOffice» e leggi le note d'installazione.
 
-This version of NeoOffice fixes the following bugs:
-• NeoOffice would sometimes crash when connecting or disconnecting a display due to our fix for LibreOffice bug 85499
-
 
 Promotional Text:
 NeoOffice include la Modalità scura nativa!

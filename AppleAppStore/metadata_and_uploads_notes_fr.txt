@@ -33,9 +33,6 @@ Deux ingénieurs ont créé NeoOffice en 2003 quand ils ont fait OpenOffice fonc
 What's New in this Version:
 Avant d'acheter NeoOffice, s'il vous plaît cliquer sur le lien « Assistance : NeoOffice » et lire les notes d'installation.
 
-This version of NeoOffice fixes the following bugs:
-• NeoOffice would sometimes crash when connecting or disconnecting a display due to our fix for LibreOffice bug 85499
-
 
 Promotional Text:
 NeoOffice inclut le Mode foncé natif !
