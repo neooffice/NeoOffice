@@ -862,8 +862,14 @@ SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, sal_uLong nSalFrameSt
 			JavaSalFrame* pNextFrame = NULL;
 			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
+				// Fix bug that sets window to 1 pixel square after launching
+				// without an existing preferences folder, setting the default
+				// document window to full screen mode, closing it, and then
+				// opening a different document type by skipping "show only
+				// menus" frames
 				if ( (*it) && (*it) != pFrame &&
 					! (*it)->mpParent &&
+					! (*it)->mbShowOnlyMenus &&
 					(*it)->mnStyle != SAL_FRAME_STYLE_DEFAULT &&
 					(*it)->mnStyle & SAL_FRAME_STYLE_SIZEABLE &&
 					(*it)->GetGeometry().nWidth &&
