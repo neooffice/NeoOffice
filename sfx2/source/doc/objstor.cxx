@@ -1464,8 +1464,18 @@ bool SfxObjectShell::SaveTo_Impl
             }
 #endif	// MACOSX
 
-            OUString aUserInstallURL;
-            if ( !bDisablePDF && ::utl::Bootstrap::locateUserInstallation( aUserInstallURL ) == ::utl::Bootstrap::PATH_EXISTS && rMedium.GetName() != aUserInstallURL )
+            // Fix automatic scrolling to cursor in Writer documents during
+            // autosave by disabling PDF thumbnail if saving to the backup path
+            if ( !bDisablePDF )
+            {
+                const OUString aName = rMedium.GetName();
+                const OUString aBackupPath = SvtPathOptions().GetBackupPath();
+                sal_Int32 nBackupPathLen = aBackupPath.getLength();
+                if ( nBackupPathLen > 0 && aName.getLength() > nBackupPathLen && aName.startsWith( aBackupPath ) && ( aBackupPath[ nBackupPathLen - 1 ] == '/' || aName[ aBackupPath.getLength() ] == '/' ) )
+                    bDisablePDF = true;
+            }
+
+            if ( !bDisablePDF )
             {
                 try
                 {
