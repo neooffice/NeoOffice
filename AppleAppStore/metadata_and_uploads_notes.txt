@@ -31,7 +31,11 @@ Two engineers created NeoOffice in 2003 when they made OpenOffice run natively o
 
 
 What's New in this Version:
-Before you buy NeoOffice, please click on the "NeoOffice Support" link and read the installation notes.
+Before you buy NeoOffice, please click on the "Support" link and read the installation notes.
+
+This version of NeoOffice fixes the following bugs:
+• After each automatic backup of a Writer document, NeoOffice would automatically scroll back to the cursor
+• NeoOffice would fail to load many extensions that worked in earlier versions of NeoOffice
 
 
 Promotional Text:

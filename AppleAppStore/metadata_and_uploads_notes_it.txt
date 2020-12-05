@@ -31,7 +31,11 @@ Due ingegneri di NeoOffice hanno creato NeoOffice nel 2003, quando hanno fatto O
 
 
 What's New in this Version:
-Prima di acquistare NeoOffice, per favore clicca sul link «Supporto per NeoOffice» e leggi le note d'installazione.
+Prima di acquistare NeoOffice, per favore clicca sul link «Supporto» e leggi le note d'installazione.
+
+This version of NeoOffice fixes the following bugs:
+• After each automatic backup of a Writer document, NeoOffice would automatically scroll back to the cursor
+• NeoOffice would fail to load many extensions that worked in earlier versions of NeoOffice
 
 
 Promotional Text:

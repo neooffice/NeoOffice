@@ -31,7 +31,11 @@ Zwei Ingenieure erstellten NeoOffice im Jahr 2003, als sie OpenOffice auf OS X z
 
 
 What's New in this Version:
-Bevor Sie NeoOffice kaufen, klicken Sie bitte auf den „NeoOffice Support” Link und lesen die Installationshinweise.
+Bevor Sie NeoOffice kaufen, klicken Sie bitte auf den „Support” Link und lesen die Installationshinweise.
+
+This version of NeoOffice fixes the following bugs:
+• After each automatic backup of a Writer document, NeoOffice would automatically scroll back to the cursor
+• NeoOffice would fail to load many extensions that worked in earlier versions of NeoOffice
 
 
 Promotional Text:
