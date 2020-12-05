@@ -126,6 +126,8 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 
 static bool bIsRunningHighSierraOrLowerInitizalized  = false;
 static bool bIsRunningHighSierraOrLower = false;
+static bool bIsRunningMojaveOrLowerInitizalized  = false;
+static bool bIsRunningMojaveOrLower = false;
 static bool bIsRunningCatalinaOrLowerInitizalized  = false;
 static bool bIsRunningCatalinaOrLower = false;
 
@@ -172,6 +174,28 @@ static bool IsRunningHighSierraOrLower()
 	}
 
 	return bIsRunningHighSierraOrLower;
+}
+
+static bool IsRunningMojaveOrLower()
+{
+	if ( !bIsRunningMojaveOrLowerInitizalized )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSProcessInfo *pProcessInfo = [NSProcessInfo processInfo];
+		if ( pProcessInfo )
+		{
+			NSOperatingSystemVersion aVersion = pProcessInfo.operatingSystemVersion;
+			if ( aVersion.majorVersion <= 10 && aVersion.minorVersion <= 14 )
+				bIsRunningMojaveOrLower = true;
+		}
+
+		bIsRunningMojaveOrLowerInitizalized = true;
+
+		[pPool release];
+	}
+
+	return bIsRunningMojaveOrLower;
 }
 
 static bool IsRunningCatalinaOrLower()
@@ -1834,7 +1858,9 @@ static NSComboBox *pSharedComboBox = nil;
 
 	[pStepper setAutorepeat:NO];
 
-	if ( mpSpinbuttonValue )
+	// Hack: fix slowness on macOS 10.15 and higher by disabling rendering of
+	// pressed spin buttons
+	if ( mpSpinbuttonValue && IsRunningMojaveOrLower() )
 	{
 		if ( mpSpinbuttonValue->mnUpperState & ControlState::PRESSED )
 		{
