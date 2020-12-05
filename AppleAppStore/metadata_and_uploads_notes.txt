@@ -34,6 +34,7 @@ What's New in this Version:
 Before you buy NeoOffice, please click on the "Support" link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
+• When running on macOS Big Sur, NeoOffice would freeze for several seconds when switching to a different document window
 • After each automatic backup of a Writer document, NeoOffice would automatically scroll back to the cursor
 • NeoOffice would fail to load many extensions that worked in earlier versions of NeoOffice
 
