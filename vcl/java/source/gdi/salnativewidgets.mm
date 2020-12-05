@@ -218,13 +218,19 @@ static bool IsRunningCatalinaOrLower()
 
 	if ( pView && ( ![pView isKindOfClass:[NSControl class]] || [(NSControl *)pView isEnabled] ) )
 	{
+		// Fix slowness on macOS 11 by only attaching inactive views as active
+		// views don't need to be attached on macOS 10.14 and higher
+		BOOL bInactive = ( nControlState & CTRL_STATE_INACTIVE ? YES : NO );
+		if ( !bInactive && !IsRunningHighSierraOrLower() && ![pView isKindOfClass:[NSProgressIndicator class]] )
+			return pRet;
+
 		pRet = [[VCLNativeControlWindow alloc] initWithContentRect:[pView frame] styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:YES];
 		if ( pRet )
 		{
 			[pRet autorelease];
 			[pRet setReleasedWhenClosed:NO];
 			[pRet setContentView:pView];
-			[pRet setInactive:( nControlState & CTRL_STATE_INACTIVE ? YES : NO )];
+			[pRet setInactive:bInactive];
 		}
 	}
 
