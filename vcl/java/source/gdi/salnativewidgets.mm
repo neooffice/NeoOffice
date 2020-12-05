@@ -675,6 +675,8 @@ static bool IsRunningCatalinaOrLower()
 - (NSSize)size;
 @end
 
+static NSComboBox *pSharedComboBox = nil;
+
 @implementation VCLNativeComboBox
 
 + (id)createWithControlState:(ControlState)nControlState editable:(BOOL)bEditable bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
@@ -686,11 +688,26 @@ static bool IsRunningCatalinaOrLower()
 
 - (NSControl *)comboBox
 {
-	NSComboBox *pComboBox = [[NSComboBox alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
-	if ( !pComboBox )
-		return nil;
+	NSComboBox *pComboBox;
+	if ( IsRunningHighSierraOrLower() )
+	{
+		pComboBox = [[NSComboBox alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
+		if ( !pComboBox )
+			return nil;
 
-	[pComboBox autorelease];
+		[pComboBox autorelease];
+	}
+	else
+	{
+		// Fix slowness on macOS 11 by reusing the same combobox
+		if ( !pSharedComboBox )
+			pSharedComboBox = [[NSComboBox alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
+		pComboBox = pSharedComboBox;
+		if ( !pComboBox )
+			return nil;
+
+		[pComboBox setFrame:NSMakeRect( 0, 0, 1, 1 )];
+	}
 
 	NSCell *pCell = [pComboBox cell];
 	if ( !pCell )
