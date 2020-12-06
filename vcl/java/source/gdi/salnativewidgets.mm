@@ -724,22 +724,35 @@ static NSComboBox *pSharedComboBox = nil;
 	else
 	{
 		// Fix slowness on macOS 11 by reusing the same combobox. Make sure
-		// that the combobox is not still attached to a superview or window
+		// that the combobox is not still attached to a superview or window.
 		if ( pSharedComboBox )
 		{
 			NSWindow *pWindow = [pSharedComboBox window];
-			if ( pWindow )
+			if ( pWindow || [pSharedComboBox superview] )
 			{
-				NSView *pContentView = [pWindow contentView];
-				if ( pContentView && pContentView == pSharedComboBox )
-					[pWindow setContentView:nil];
+				// Something has gone wrong so dispose of the combobox
+				@try
+				{
+					if ( pWindow )
+					{
+						NSView *pContentView = [pWindow contentView];
+						if ( pContentView && pContentView == pSharedComboBox )
+							[pWindow setContentView:nil];
+					}
+
+					[pSharedComboBox removeFromSuperview];
+					[pSharedComboBox release];
+				}
+				@catch ( NSException *pExc )
+				{
+				}
+
+				pSharedComboBox = nil;
 			}
-			[pSharedComboBox removeFromSuperview];
 		}
-		else
-		{
+
+		if ( !pSharedComboBox )
 			pSharedComboBox = [[NSComboBox alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
-		}
 
 		pComboBox = pSharedComboBox;
 		if ( !pComboBox )
@@ -1951,18 +1964,29 @@ static NSComboBox *pSharedComboBox = nil;
 
 	[pStepper setAutorepeat:NO];
 
-	// Hack: fix slowness on macOS 10.15 and higher by disabling rendering of
-	// pressed spin buttons
-	if ( mpSpinbuttonValue && IsRunningMojaveOrLower() )
+	if ( mpSpinbuttonValue )
 	{
-		if ( mpSpinbuttonValue->mnUpperState & CTRL_STATE_PRESSED )
+		BOOL mbMoveUp = ( mpSpinbuttonValue->mnUpperState & CTRL_STATE_PRESSED );
+		BOOL mbMoveDown = ( mpSpinbuttonValue->mnLowerState & CTRL_STATE_PRESSED );
+		if ( mbMoveUp || mbMoveDown )
 		{
-			[pStepper moveUp:self];
-			[pCell setHighlighted:YES];
-		}
-		else if ( mpSpinbuttonValue->mnLowerState & CTRL_STATE_PRESSED )
-		{
-			[pStepper moveDown:self];
+			if ( !IsRunningMojaveOrLower() )
+			{
+				// Fix slowness on macOS 10.15 and higher by posting an empty
+				// event so that the moveUp: and moveDown: calls do not block
+				NSApplication *pApp = [NSApplication sharedApplication];
+				if ( pApp )
+				{
+					NSEvent* pEvent = [NSEvent otherEventWithType:NSEventTypeApplicationDefined location:NSZeroPoint modifierFlags:0 timestamp:0 windowNumber:0 context:nil subtype:0 data1:0 data2:0];
+					if ( pEvent )
+						[pApp postEvent:pEvent atStart:YES];
+				}
+			}
+
+			if ( mbMoveUp )
+				[pStepper moveUp:self];
+			else
+				[pStepper moveDown :self];
 			[pCell setHighlighted:YES];
 		}
 	}
