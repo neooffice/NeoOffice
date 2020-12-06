@@ -31,10 +31,12 @@ Deux ingénieurs ont créé NeoOffice en 2003 quand ils ont fait OpenOffice fonc
 
 
 What's New in this Version:
-Avant d'acheter NeoOffice, s'il vous plaît cliquer sur le lien « Assistance : NeoOffice » et lire les notes d'installation.
+Avant d'acheter NeoOffice, s'il vous plaît cliquer sur le lien « Assistance » et lire les notes d'installation.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would sometimes crash when connecting or disconnecting a display due to our fix for LibreOffice bug 85499
+• When running on macOS Big Sur, NeoOffice would freeze for several seconds when switching to a different document window
+• After each automatic backup of a Writer document, NeoOffice would automatically scroll back to the cursor
+• NeoOffice would fail to load many extensions that worked in earlier versions of NeoOffice
 
 
 Promotional Text:
