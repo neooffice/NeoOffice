@@ -725,9 +725,24 @@ static NSComboBox *pSharedComboBox = nil;
 	}
 	else
 	{
-		// Fix slowness on macOS 11 by reusing the same combobox
-		if ( !pSharedComboBox )
+		// Fix slowness on macOS 11 by reusing the same combobox. Make sure
+		// that the combobox is not still attached to a superview or window
+		if ( pSharedComboBox )
+		{
+			NSWindow *pWindow = [pSharedComboBox window];
+			if ( pWindow )
+			{
+				NSView *pContentView = [pWindow contentView];
+				if ( pContentView && pContentView == pSharedComboBox )
+					[pWindow setContentView:nil];
+			}
+			[pSharedComboBox removeFromSuperview];
+		}
+		else
+		{
 			pSharedComboBox = [[NSComboBox alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
+		}
+
 		pComboBox = pSharedComboBox;
 		if ( !pComboBox )
 			return nil;
