@@ -1986,7 +1986,7 @@ static NSComboBox *pSharedComboBox = nil;
 			if ( mbMoveUp )
 				[pStepper moveUp:self];
 			else
-				[pStepper moveDown :self];
+				[pStepper moveDown:self];
 			[pCell setHighlighted:YES];
 		}
 	}
