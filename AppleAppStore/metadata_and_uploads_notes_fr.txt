@@ -42,6 +42,8 @@ This version of NeoOffice fixes the following bugs:
 Promotional Text:
 NeoOffice inclut le Mode foncé natif !
 
+Utilisateurs de macOS Big Sur: suivez-nous sur Twitter @NeoOffice pour télécharger les dernières corrections de bogues.
+
 
 Keywords:
 neo,office,document,tableur,texte,présentations,open,libre

@@ -42,6 +42,8 @@ This version of NeoOffice fixes the following bugs:
 Promotional Text:
 NeoOffice enthält den nativen Dunkelmodus!
 
+Benutzer von macOS Big Sur: Folgen Sie uns auf Twitter @NeoOffice, um die neuesten Fehlerbehebungen herunterzuladen.
+
 
 Keywords:
 neo,office,dokument,tabelle,text,präsentationen,open,libre
