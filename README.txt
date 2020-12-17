@@ -2,31 +2,27 @@ Intructions for Building NeoOffice
 ----------------------------------
 
 
-Steps for building on macOS 10.12 Sierra or 10.14 Mojave for Intel
-------------------------------------------------------------------
+Steps for building on macOS 10.12 Big Sur for Intel
+---------------------------------------------------
 
-At this time, NeoOffice will only build on macOS 10.12 Sierra or macOS 10.14 Mojave.
+At this time, NeoOffice will only build on macOS 10.15 Big Sur on Intel only.
 
 1. Make sure that you have downloaded and installed the following dependencies from http://developer.apple.com/ website:
 
-   macOS 10.12 Sierra:
-     Xcode v8.3.3
-     Command Line Tools for Xcode v8.3.2
-   macOS 10.14 Mojave:
-     Xcode v10.3
-     Command Line Tools for Xcode v10.3
+   macOS 10.15 Big Sur:
+     Xcode v12.3
+     Command Line Tools for Xcode v12.3
 
 2. Download and install Oracle's Java 1.8 Development Kit (JDK) from the following URL:
 
    http://www.neooffice.org/neojava/javadownload.php
 
-   Important: the build will fail if Oracle's Java 9 or 10 are installed so be sure to delete such versions from the /Library/Java/JavaVirtualMachines folder before starting the build.
+   Important: the build will fail if Oracle's Java 9 or later are installed so be sure to delete such versions from the /Library/Java/JavaVirtualMachines folder before starting the build.
 
 3. Install the following Mac Ports packages by downloading, compiling, and installing the following packages from the http://www.macports.org/ website. Note that you will need download and install the latest MacPorts Yosemite package to install the MacPorts "port" command. The "port" command is then used to do the downloading, compiling, and installation of the following packages:
 
    sudo /opt/local/bin/port install autoconf -x11
    sudo /opt/local/bin/port install automake -x11
-   sudo /opt/local/bin/port install cvs -x11
    sudo /opt/local/bin/port install gnutar -x11
    sudo /opt/local/bin/port install xz -x11
 
