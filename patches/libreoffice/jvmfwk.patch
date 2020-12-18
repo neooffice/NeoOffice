@@ -172,8 +172,8 @@
  }
  #endif // ifdef SOLARIS
  #endif // ifdef UNX
---- /dev/null
-+++ plugins/sunmajor/pluginlib/util_cocoa.hxx
+--- /dev/null	2020-12-17 19:19:58.000000000 -0500
++++ plugins/sunmajor/pluginlib/util_cocoa.hxx	2020-12-17 19:05:21.000000000 -0500
 @@ -0,0 +1,6 @@
 +#ifndef __UTIL_COCOA_H__
 +#define __UTIL_COCOA_H__
@@ -181,8 +181,8 @@
 +bool JvmfwkUtil_isLoadableJVM( OUString aURL );
 +
 +#endif
---- /dev/null
-+++ plugins/sunmajor/pluginlib/util_cocoa.mm
+--- /dev/null	2020-12-17 19:19:58.000000000 -0500
++++ plugins/sunmajor/pluginlib/util_cocoa.mm	2020-12-17 19:05:21.000000000 -0500
 @@ -0,0 +1,129 @@
 +#include <rtl/ustring.hxx>
 +
