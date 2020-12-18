@@ -62,6 +62,9 @@ OS_TYPE=macOS
 OS_MAJOR_VERSION:=$(shell /usr/bin/sw_vers -productVersion | awk -F. '{ print $$1 }')
 OS_MINOR_VERSION:=$(shell /usr/bin/sw_vers -productVersion | awk -F. '{ print $$2 }')
 OS_VERSION:=$(OS_MAJOR_VERSION).$(OS_MINOR_VERSION)
+# Limit to Oracle's Java SE 8 only as other JDK versions are likely to break
+# the LibreOffice build
+JDK_HOME:=$(shell /usr/libexec/java_home -V 2>&1 | grep '"Oracle Corporation" - "Java SE 8"' | awk '{ print $$NF }')
 ifeq ($(shell test $(OS_MAJOR_VERSION) -eq 10 && test $(OS_MINOR_VERSION) -ge 14; echo $$?),0)
 CODESIGN_EXTRA_OPTIONS:=--timestamp
 ifndef NO_HARDENED_RUNTIME
@@ -334,8 +337,9 @@ endif
 
 build.libo_configure: build.libo_patches
 ifeq ("$(OS_TYPE)","macOS")
-# Build --without-java now that we only release in Apple's Mac App Store
-	cd "$(LIBO_BUILD_HOME)" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; autoconf ; ./configure --without-java --without-parallelism --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --with-macosx-version-min-required="$(PRODUCT_MIN_OSVERSION)" --without-junit --disable-cups --disable-odk --with-lang="$(LIBO_LANGUAGES)" --without-fonts --with-help --with-myspell-dicts --enable-bogus-pkg-config
+# Check that JDK_HOME is set to something reasonable
+	@sh -e -c 'if [ ! -d "$(JDK_HOME)" -o ! -x "$(JDK_HOME)/bin/java" ] ; then echo "JDK_HOME is invalid Java SDK path: $(JDK_HOME)" ; exit 1 ; fi'
+	cd "$(LIBO_BUILD_HOME)" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; autoconf ; ./configure --with-jdk-home="$(JDK_HOME)" --without-parallelism --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --with-macosx-version-min-required="$(PRODUCT_MIN_OSVERSION)" --without-junit --disable-cups --disable-odk --with-lang="$(LIBO_LANGUAGES)" --without-fonts --with-help --with-myspell-dicts --enable-bogus-pkg-config
 else
 	@echo "$@ not implemented" ; exit 1
 endif
