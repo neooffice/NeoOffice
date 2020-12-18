@@ -1,4 +1,4 @@
---- source/appl/shutdowniconaqua.mm.bak	2015-11-25 07:55:38.000000000 -0500
+--- source/appl/shutdowniconaqua.mm	2015-11-25 07:55:38.000000000 -0500
 +++ source/appl/shutdowniconaqua.mm	2020-12-18 05:03:40.000000000 -0500
 @@ -360,7 +360,7 @@
      // confused. Anyway, to avoid warnings, instead of this:
@@ -19,3 +19,14 @@
  
          [pRecentMenu setAutoenablesItems: NO];
          [pItem setSubmenu: pRecentMenu];
+--- source/appl/shutdownicon.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/appl/shutdownicon.cxx	2020-12-18 18:50:14.000000000 -0500
+@@ -177,7 +177,7 @@
+ #endif // ENABLE_QUICKSTART_APPLET
+     }
+     assert(!boost::logic::indeterminate(loaded));
+-    return loaded;
++    return bool(loaded);
+ }
+ 
+ }
