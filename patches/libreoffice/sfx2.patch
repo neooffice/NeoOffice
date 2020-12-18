@@ -1,0 +1,21 @@
+--- source/appl/shutdowniconaqua.mm.bak	2015-11-25 07:55:38.000000000 -0500
++++ source/appl/shutdowniconaqua.mm	2020-12-18 05:03:40.000000000 -0500
+@@ -360,7 +360,7 @@
+     // confused. Anyway, to avoid warnings, instead of this:
+     // [pRecentMenu setDelegate: pRecentDelegate];
+     // do this:
+-    objc_msgSend(pRecentMenu, @selector(setDelegate:), pRecentDelegate);
++    [pRecentMenu setDelegate: pRecentDelegate];
+ 
+     [pRecentMenu setAutoenablesItems: NO];
+     [pItem setSubmenu: pRecentMenu];
+@@ -376,8 +376,7 @@
+         pRecentMenu = [[NSMenu alloc] initWithTitle: getAutoreleasedString( i_rTitle ) ];
+ 
+         // See above
+-        // [pRecentMenu setDelegate: pRecentDelegate];
+-        objc_msgSend(pRecentMenu, @selector(setDelegate:), pRecentDelegate);
++        [pRecentMenu setDelegate: pRecentDelegate];
+ 
+         [pRecentMenu setAutoenablesItems: NO];
+         [pItem setSubmenu: pRecentMenu];
