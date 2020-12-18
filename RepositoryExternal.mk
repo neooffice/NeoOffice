@@ -2734,6 +2734,38 @@ endef
 endif # SYSTEM_OPENLDAP
 
 
+ifneq ($(SYSTEM_LIBTOMMATH),)
+
+define gb_LinkTarget__use_libtommath
+$(call gb_LinkTarget_set_include,$(1),\
+	$(LIBTOMMATH_CFLAGS) \
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_add_libs,$(1),$(LIBTOMMATH_LIBS))
+
+endef
+
+else # !SYSTEM_LIBTOMMATH
+define gb_LinkTarget__use_libtommath
+$(call gb_LinkTarget_set_include,$(1),\
+	-I${WORKDIR}/UnpackedTarball/libtommath \
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_add_libs,$(1),\
+	$(call gb_UnpackedTarball_get_dir,libtommath)/libtommath$(gb_StaticLibrary_PLAINEXT) \
+)
+$(call gb_LinkTarget_use_external_project,$(1),libtommath)
+
+endef
+
+endif # SYSTEM_LIBTOMMATH
+
+define gb_ExternalProject__use_libtommath
+$(call gb_ExternalProject_use_external_project,$(1),libtommath)
+
+endef
+
+
 ifeq ($(ENABLE_FIREBIRD_SDBC),TRUE)
 
 ifneq ($(SYSTEM_FIREBIRD),)

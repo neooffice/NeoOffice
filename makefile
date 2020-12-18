@@ -274,9 +274,8 @@ build.libo_external_tarballs_checkout: build.libo_src_checkout build.libo_downlo
 	touch "$@"
 
 build.libo_external_patches_checkout: build.libo_src_checkout
-	cd "$(LIBO_PATCHES_HOME)/external/hsqldb/patches" ; sh -c -e 'for i in `find . -type f -maxdepth 1 | grep -v /CVS/` ; do cp "$$i" "$(PWD)/$(LIBO_BUILD_HOME)/external/hsqldb/patches/$$i" ; done'
-	cd "$(LIBO_PATCHES_HOME)/external/libabw" ; sh -c -e 'for i in `find . -type f -maxdepth 1 | grep -v /CVS/` ; do cp "$$i" "$(PWD)/$(LIBO_BUILD_HOME)/external/libabw/$$i" ; done'
-	cd "$(LIBO_PATCHES_HOME)/external/libvisio" ; sh -c -e 'for i in `find . -type f -maxdepth 1 | grep -v /CVS/` ; do cp "$$i" "$(PWD)/$(LIBO_BUILD_HOME)/external/libvisio/$$i" ; done'
+	cd "$(LIBO_PATCHES_HOME)/external" ; sh -c -e 'for i in `find . -type f -maxdepth 1 -name "*.tar.gz"` ; do ( cd "$(PWD)/$(LIBO_BUILD_HOME)/external" && tar zxvf "$(PWD)/$(LIBO_PATCHES_HOME)/external/$$i" ) ; done'
+	cd "$(LIBO_PATCHES_HOME)/external" ; sh -c -e 'for i in `find . -type d -maxdepth 2 -name "patches"` ; do for j in `find "$$i" -type f -maxdepth 3 | grep -v /CVS/` ; do cp "$$j" "$(PWD)/$(LIBO_BUILD_HOME)/external/$$j" ; done ; done'
 	touch "$@"
 
 build.libo_checkout: \
@@ -287,6 +286,7 @@ build.libo_checkout: \
 	touch "$@"
 
 build.libo_patches: \
+	build.libo_RepositoryExternal.mk_patch \
 	build.libo_configure.ac_patch \
 	build.libo_download.lst_patch \
 	build.libo_avmedia_patch \
@@ -303,6 +303,16 @@ build.libo_patches: \
 	build.libo_vcl_patch \
 	build.libo_writerperfect_patch \
 	build.libo_xmlhelp_patch
+	touch "$@"
+
+build.libo_RepositoryExternal.mk_patch: $(LIBO_PATCHES_HOME)/RepositoryExternal.mk.patch build.libo_checkout
+ifeq ("$(OS_TYPE)","macOS")
+	-( cd "$(LIBO_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(LIBO_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+else
+	-cat "$<" | unix2dos | ( cd "$(LIBO_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" )
+	cat "$<" | unix2dos | ( cd "$(LIBO_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" )
+endif
 	touch "$@"
 
 build.libo_configure.ac_patch: $(LIBO_PATCHES_HOME)/configure.ac.patch build.libo_checkout

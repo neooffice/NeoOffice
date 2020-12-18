@@ -1,12 +1,38 @@
---- download.lst	2015-11-25 04:55:38.000000000 -0800
-+++ download.lst	2017-06-25 18:17:09.000000000 -0700
-@@ -36,7 +36,8 @@
+--- download.lst	2015-11-25 07:55:38.000000000 -0500
++++ download.lst	2020-12-18 15:46:50.000000000 -0500
+@@ -15,7 +15,9 @@
+ export APR_TARBALL := apr-1.4.8.tar.gz
+ export APR_UTIL_MD5SUM := 71a11d037240b292f824ba1eb537b4e3
+ export APR_UTIL_TARBALL := apr-util-1.5.3.tar.gz
+-export BOOST_TARBALL := d6eef4b4cacb2183f2bf265a5a03a354-boost_1_55_0.tar.bz2
++# please repack the tarball using external/boost/repack_tarball.sh
++export BOOST_MD5SUM := 5b6a53ed00bca773fffc443240557eb5
++export BOOST_TARBALL := boost_1_71_0.tar.bz2
+ export BSH_TARBALL := ea570af93c284aa9e5621cd563f54f4d-bsh-2.0b1-src.tar.gz
+ export CAIRO_TARBALL := f101a9e88b783337b20b2e26dfd26d5f-cairo-1.10.2.tar.gz
+ export CDR_MD5SUM := b33fd0be3befdd1b37777e08ce058bd9
+@@ -36,11 +38,10 @@
  export EPM_TARBALL := 3ade8cfe7e59ca8e65052644fed9fca4-epm-3.7.tar.gz
  export ETONYEK_MD5SUM := 805f941b06448212a988cb65f0691a7a
  export ETONYEK_TARBALL := libetonyek-0.1.1.tar.bz2
 -export EXPAT_TARBALL := dd7dab7a5fea97d2a6a43f511449b7cd-expat-2.1.0.tar.gz
+-export FIREBIRD_MD5SUM := 21154d2004e025c8a3666625b0357bb5
+-export FIREBIRD_TARBALL := Firebird-2.5.2.26540-0.tar.bz2
+-# FIREBIRD_MD5SUM := b259c2d1c60a03bd104108405ae990a7
+-# export FIREBIRD_TARBALL := Firebird-3.0-alpha1-20130302.tar.gz
 +export EXPAT_MD5SUM := 00858041acfea5757af55e6ee6b86231
 +export EXPAT_TARBALL := expat-2.2.8.tar.bz2
- export FIREBIRD_MD5SUM := 21154d2004e025c8a3666625b0357bb5
- export FIREBIRD_TARBALL := Firebird-2.5.2.26540-0.tar.bz2
- # FIREBIRD_MD5SUM := b259c2d1c60a03bd104108405ae990a7
++export FIREBIRD_MD5SUM := 821260b61dafc22899d1464d4e91ee6a
++export FIREBIRD_TARBALL := Firebird-3.0.0.32483-0.tar.bz2
+ export FONTCONFIG_TARBALL := 77e15a92006ddc2adbb06f840d591c0e-fontconfig-2.8.0.tar.gz
+ export FONT_CALADEA_TARBALL := 368f114c078f94214a308a74c7e991bc-crosextrafonts-20130214.tar.gz
+ export FONT_CARLITO_TARBALL := c74b7223abe75949b4af367942d96c7a-crosextrafonts-carlito-20130920.tar.gz
+@@ -95,6 +96,8 @@
+ export LIBGLTF_TARBALL := libgltf-0.0.2.tar.bz2
+ export LIBLANGTAG_TARBALL := 36271d3fa0d9dec1632029b6d7aac925-liblangtag-0.5.1.tar.bz2
+ export LIBXMLSEC_TARBALL := 1f24ab1d39f4a51faf22244c94a6203f-xmlsec1-1.2.14.tar.gz
++export LIBTOMMATH_MD5SUM := da283d2e3e72137d0c600ac36b991c9d
++export LIBTOMMATH_TARBALL := ltm-1.0.zip
+ export LIBXML_TARBALL := daece17e045f1c107610e137ab50c179-libxml2-2.9.3.tar.gz
+ export LIBXSLT_TARBALL := 9667bf6f9310b957254fdcf6596600b7-libxslt-1.1.28.tar.gz
+ export LPSOLVE_TARBALL := 26b3e95ddf3d9c077c480ea45874b3b8-lp_solve_5.5.tar.gz

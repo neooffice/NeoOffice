@@ -35,28 +35,6 @@
 + #include <memory>
 + #include <string.h>
 + #include <limits>
---- firebird/firebird-macosx.patch.1	2015-11-25 05:55:38.000000000 -0700
-+++ firebird/firebird-macosx.patch.1	2018-10-15 21:40:42.000000000 -0600
-@@ -109,3 +109,19 @@
-  EMBED_UTIL_TARGETS=gstat gds_relay gsec fbguard nbackup fb_lock_print fbsvcmgr fbtracemgr
-  CLIENT_UTIL_TARGETS=gds_relay gstat gsec fbguard fbmgr_bin nbackup fb_lock_print fbsvcmgr \
-  	fbtracemgr
-+--- firebird/src/common/classes/FpeControl.h	2013-03-19 02:38:21.000000000 -0600
-++++ firebird/src/common/classes/FpeControl.h	2018-10-15 21:31:47.000000000 -0600
-+@@ -208,11 +208,13 @@
-+ }
-+ #else
-+ #ifndef isinf
-++#ifndef __APPLE__
-+ template <typename F>
-+ inline bool isinf(F x)
-+ {
-+ 	return !isnan(x) && isnan(x - x);
-+ }
-++#endif // __APPLE__
-+ #endif // isinf
-+ #endif // WIN_NT
-+ 
 --- libvisio/UnpackedTarball_libvisio.mk	2015-11-25 04:55:38.000000000 -0800
 +++ libvisio/UnpackedTarball_libvisio.mk	2019-08-07 19:37:41.000000000 -0700
 @@ -13,6 +13,7 @@
@@ -199,3 +177,13 @@
 + #  endif
 + #endif /* not defined XML_STATIC */
 + 
+--- Module_external.mk	2015-11-25 07:55:38.000000000 -0500
++++ Module_external.mk	2020-12-18 15:40:25.000000000 -0500
+@@ -64,6 +64,7 @@
+ 	$(call gb_Helper_optional,LIBXML2,libxml2) \
+ 	$(call gb_Helper_optional,LIBXSLT,libxslt) \
+ 	$(call gb_Helper_optional,LPSOLVE,lpsolve) \
++	$(call gb_Helper_optional,LIBTOMMATH,libtommath) \
+ 	$(call gb_Helper_optional,MARIADB,libmariadb) \
+ 	$(call gb_Helper_optional,MDDS,mdds) \
+ 	$(if $(WITH_EXTRA_EXTENSIONS),misc_extensions) \

@@ -1,6 +1,18 @@
 --- configure.ac	2015-11-25 07:55:38.000000000 -0500
-+++ configure.ac	2020-12-17 16:19:06.000000000 -0500
-@@ -2291,7 +2291,7 @@
++++ configure.ac	2020-12-18 16:41:52.000000000 -0500
+@@ -1670,6 +1670,11 @@
+          driver. If fb_config is not in PATH, use FBCONFIG to point to it.]),,
+     [with_system_firebird="$with_system_libs"])
+ 
++AC_ARG_WITH(system-libtommath,
++            AS_HELP_STRING([--with-system-libtommath],
++                           [Use libtommath already on system]),,
++            [with_system_libtommath="$with_system_libs"])
++
+ AC_ARG_WITH(system-hsqldb,
+     AS_HELP_STRING([--with-system-hsqldb],
+         [Use hsqldb already on system.]))
+@@ -2291,7 +2296,7 @@
      [
                            Usage:     --with-macosx-sdk=<version>
  
@@ -9,7 +21,7 @@
  
                            there are 3 options to control the MacOSX build:
                            --with-macosx-sdk (referred as 'sdk' below)
-@@ -2305,15 +2305,15 @@
+@@ -2305,15 +2310,15 @@
                            ==========================================
                             command line      || config result
                            ==========================================
@@ -34,7 +46,7 @@
  
  
                            see: http://developer.apple.com/library/mac/#technotes/tn2064/_index.html
-@@ -2329,7 +2329,7 @@
+@@ -2329,7 +2334,7 @@
      [
                            Usage:     --with-macosx-version-min-required=<version>
  
@@ -43,7 +55,7 @@
                            see --with-macosx-sdk for more info
      ],
  ,)
-@@ -2340,7 +2340,7 @@
+@@ -2340,7 +2345,7 @@
      [
                            Usage:     --with-macosx-version-max-allowed=<version>
  
@@ -52,7 +64,7 @@
                            see --with-macosx-sdk for more info
      ],
  ,)
-@@ -2724,7 +2724,7 @@
+@@ -2724,7 +2729,7 @@
  
      AC_MSG_CHECKING([what Mac OS X SDK to use])
  
@@ -61,7 +73,7 @@
          MACOSX_SDK_PATH=`xcrun --sdk macosx${_macosx_sdk} --show-sdk-path 2> /dev/null`
          if test -d "$MACOSX_SDK_PATH"; then
              with_macosx_sdk="${_macosx_sdk}"
-@@ -2743,25 +2743,16 @@
+@@ -2743,25 +2748,16 @@
      AC_MSG_RESULT([SDK $with_macosx_sdk at $MACOSX_SDK_PATH])
  
      case $with_macosx_sdk in
@@ -91,7 +103,7 @@
      fi
  
      if test "$with_macosx_version_max_allowed" = "" ; then
-@@ -2776,20 +2767,11 @@
+@@ -2776,20 +2772,11 @@
      MACOSX_DEPLOYMENT_TARGET="$with_macosx_version_min_required"
  
      case "$with_macosx_version_min_required" in
@@ -115,7 +127,7 @@
          ;;
      esac
  
-@@ -2813,20 +2795,11 @@
+@@ -2813,20 +2800,11 @@
      fi
  
      case "$with_macosx_version_max_allowed" in
@@ -139,3 +151,28 @@
          ;;
      esac
  
+@@ -8394,8 +8372,22 @@
+ 
+         AC_MSG_RESULT([internal])
+         SYSTEM_FIREBIRD=
+-        FIREBIRD_CFLAGS="-I${WORKDIR}/UnpackedTarball/firebird/include"
+-        FIREBIRD_LIBS="-lfbembed"
++        FIREBIRD_CFLAGS="-I${WORKDIR}/UnpackedTarball/firebird/gen/Release/firebird/include"
++        FIREBIRD_LIBS="-lfbclient"
++
++        if test "$with_system_libtommath" = "yes"; then
++            SYSTEM_LIBTOMMATH=TRUE
++            dnl check for tommath presence
++            save_LIBS=$LIBS
++            AC_CHECK_HEADER(tommath.h,,AC_MSG_ERROR(Include file for tommath not found - please install development tommath package))
++            AC_CHECK_LIB(tommath, mp_init, TOMMATH_LIBS=-ltommath, AC_MSG_ERROR(Library tommath not found - please install development tommath package))
++            LIBS=$save_LIBS
++        else
++            SYSTEM_LIBTOMMATH=
++            LIBTOMMATH_CFLAGS="-I${WORKDIR}/UnpackedTarball/libtommath"
++            LIBTOMMATH_LIBS="-ltommath"
++            BUILD_TYPE="$BUILD_TYPE LIBTOMMATH"
++        fi
+ 
+         BUILD_TYPE="$BUILD_TYPE FIREBIRD"
+         ENABLE_FIREBIRD_SDBC="TRUE"
