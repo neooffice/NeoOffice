@@ -1,0 +1,10 @@
+--- source/range/b2drangeclipper.cxx.bak	2015-11-25 07:55:38.000000000 -0500
++++ source/range/b2drangeclipper.cxx	2020-12-18 17:15:21.000000000 -0500
+@@ -31,6 +31,7 @@
+ #include <o3tl/vector_pool.hxx>
+ #include <boost/bind.hpp>
+ #include <boost/utility.hpp>
++#include <boost/next_prior.hpp>
+ 
+ #include <algorithm>
+ #include <deque>

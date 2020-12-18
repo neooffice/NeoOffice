@@ -290,6 +290,7 @@ build.libo_patches: \
 	build.libo_configure.ac_patch \
 	build.libo_download.lst_patch \
 	build.libo_avmedia_patch \
+	build.libo_basegfx_patch \
 	build.libo_bin_patch \
 	build.libo_embeddedobj_patch \
 	build.libo_external_patch \
