@@ -37,7 +37,7 @@
    DataProviderPtr_t dp;
  
    if ([sysFormat caseInsensitiveCompare: NSFilenamesPboardType] == NSOrderedSame)
---- osx/salframe.cxx.bak	2015-11-25 07:55:38.000000000 -0500
+--- osx/salframe.cxx	2015-11-25 07:55:38.000000000 -0500
 +++ osx/salframe.cxx	2020-12-17 21:24:36.000000000 -0500
 @@ -197,7 +197,7 @@
  
