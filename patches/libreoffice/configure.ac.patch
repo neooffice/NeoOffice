@@ -1,5 +1,5 @@
 --- configure.ac	2015-11-25 07:55:38.000000000 -0500
-+++ configure.ac	2020-12-18 16:41:52.000000000 -0500
++++ configure.ac	2020-12-19 09:15:03.000000000 -0500
 @@ -1670,6 +1670,11 @@
           driver. If fb_config is not in PATH, use FBCONFIG to point to it.]),,
      [with_system_firebird="$with_system_libs"])
@@ -151,7 +151,153 @@
          ;;
      esac
  
-@@ -8394,8 +8372,22 @@
+@@ -3703,6 +3681,64 @@
+ UNOWINREG_DLL="185d60944ea767075d27247c3162b3bc-unowinreg.dll"
+ AC_SUBST(UNOWINREG_DLL)
+ 
++COM_IS_CLANG=
++AC_MSG_CHECKING([whether the compiler is actually Clang])
++AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
++    #ifndef __clang__
++    you lose
++    #endif
++    int foo=42;
++    ]])],
++    [AC_MSG_RESULT([yes])
++     COM_IS_CLANG=TRUE],
++    [AC_MSG_RESULT([no])])
++AC_SUBST(COM_IS_CLANG)
++
++CC_PLAIN=$CC
++CLANGVER=
++if test "$COM_IS_CLANG" = TRUE; then
++    AC_MSG_CHECKING([whether Clang is new enough])
++    AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
++        #if !defined __apple_build_version__
++        #error
++        #endif
++        ]])],
++        [my_apple_clang=yes],[my_apple_clang=])
++    if test "$my_apple_clang" = yes; then
++        AC_MSG_RESULT([assumed yes (Apple Clang)])
++    else
++        if test "$_os" = WINNT; then
++            dnl In which case, assume clang-cl:
++            my_args="/EP /TC"
++            dnl Filter out -FIIntrin.h, which needs to be explicitly stated for
++            dnl clang-cl:
++            CC_PLAIN=
++            for i in $CC; do
++                case $i in
++                -FIIntrin.h)
++                    ;;
++                *)
++                    CC_PLAIN="$CC_PLAIN $i"
++                    ;;
++                esac
++            done
++        else
++            my_args="-E -P"
++        fi
++        clang_version=`echo __clang_major__.__clang_minor__.__clang_patchlevel__ | $CC_PLAIN $my_args - | sed 's/ //g'`
++        CLANG_FULL_VERSION=`echo __clang_version__ | $CC_PLAIN $my_args -`
++        CLANGVER=`echo $clang_version \
++            | $AWK -F. '{ print \$1*10000+(\$2<100?\$2:99)*100+(\$3<100?\$3:99) }'`
++        if test "$CLANGVER" -ge 50002; then
++            AC_MSG_RESULT([yes ($clang_version)])
++        else
++            AC_MSG_ERROR(["$CLANG_FULL_VERSION" is too old or unrecognized, must be at least Clang 5.0.2])
++        fi
++        AC_DEFINE_UNQUOTED(CLANG_VERSION,$CLANGVER)
++        AC_DEFINE_UNQUOTED(CLANG_FULL_VERSION,$CLANG_FULL_VERSION)
++    fi
++fi
++
+ #
+ # prefix C with ccache if needed
+ #
+@@ -8325,8 +8361,8 @@
+ dnl ===================================================================
+ dnl Check for Firebird stuff
+ dnl ===================================================================
+-ENABLE_FIREBIRD_SDBC=""
+-if test "x$enable_firebird_sdbc" = "xyes"; then
++ENABLE_FIREBIRD_SDBC=
++if test "$enable_firebird_sdbc" = "yes" ; then
+     SCPDEFS="$SCPDEFS -DWITH_FIREBIRD_SDBC"
+ 
+     dnl ===================================================================
+@@ -8339,51 +8375,59 @@
+         AC_PATH_PROG(FIREBIRDCONFIG, [fb_config])
+         if test -z "$FIREBIRDCONFIG"; then
+             AC_MSG_NOTICE([No fb_config -- using pkg-config])
+-            PKG_CHECK_MODULES(FIREBIRD, fbembed)
+-            FIREBIRD_VERSION=`pkg-config --modversion fbembed`
++            PKG_CHECK_MODULES([FIREBIRD], [fbclient >= 3], [FIREBIRD_PKGNAME=fbclient], [
++                PKG_CHECK_MODULES([FIREBIRD], [fbembed], [FIREBIRD_PKGNAME=fbembed])
++            ])
++            FIREBIRD_VERSION=`pkg-config --modversion "$FIREBIRD_PKGNAME"`
+         else
+             AC_MSG_NOTICE([fb_config found])
+             FIREBIRD_VERSION=`$FIREBIRDCONFIG --version`
+             AC_MSG_CHECKING([for Firebird Client library])
+             FIREBIRD_CFLAGS=`$FIREBIRDCONFIG --cflags`
+             FIREBIRD_LIBS=`$FIREBIRDCONFIG --embedlibs`
++            FilterLibs "${FIREBIRD_LIBS}"
++            FIREBIRD_LIBS="${filteredlibs}"
+         fi
+         AC_MSG_RESULT([includes `$FIREBIRD_CFLAGS', libraries `$FIREBIRD_LIBS'])
+         AC_MSG_CHECKING([Firebird version])
+         if test -n "${FIREBIRD_VERSION}"; then
+             FIREBIRD_MAJOR=`echo $FIREBIRD_VERSION | cut -d"." -f1`
+             FIREBIRD_MINOR=`echo $FIREBIRD_VERSION | cut -d"." -f2`
+-            if test "$FIREBIRD_MAJOR" -eq "2" -a "$FIREBIRD_MINOR" -eq "5"; then
++            if test "$FIREBIRD_MAJOR" -eq "3" -a "$FIREBIRD_MINOR" -eq "0"; then
+                 AC_MSG_RESULT([OK])
+             else
+-                AC_MSG_ERROR([Ensure firebird 2.5.x is installed])
++                AC_MSG_ERROR([Ensure firebird 3.0.x is installed])
+             fi
+         else
+             __save_CFLAGS="${CFLAGS}"
+             CFLAGS="${CFLAGS} ${FIREBIRD_CFLAGS}"
+             AC_COMPILE_IFELSE([AC_LANG_SOURCE([[#include <ibase.h>
+-#if defined(FB_API_VER) && FB_API_VER == 25
++#if defined(FB_API_VER) && FB_API_VER == 30
++int fb_api_is_30(void) { return 0; }
+ #else
+ #error "Wrong Firebird API version"
+-#endif]])],AC_MSG_RESULT([OK]),AC_MSG_ERROR([Ensure firebird 2.5.x is installed]))
++#endif]])],AC_MSG_RESULT([OK]),AC_MSG_ERROR([Ensure firebird 3.0.x is installed]))
+             CFLAGS="${__save_CFLAGS}"
+         fi
+-        ENABLE_FIREBIRD_SDBC="TRUE"
++        ENABLE_FIREBIRD_SDBC=TRUE
++        AC_DEFINE([ENABLE_FIREBIRD_SDBC],1)
+     elif test "$enable_database_connectivity" != yes; then
+         AC_MSG_RESULT([none])
+     elif test "$cross_compiling" = "yes"; then
+         AC_MSG_RESULT([none])
+     else
+-        dnl We need libatomic-ops for any non X86/X64 system
++        dnl Embedded Firebird has version 3.0
++        AC_DEFINE(HAVE_FIREBIRD_30, 1)
++        dnl We need libatomic_ops for any non X86/X64 system
+         if test "${CPUNAME}" != INTEL -a "${CPUNAME}" != X86_64; then
+             dnl ===================================================================
+-            dnl Check for system libatomic-ops
++            dnl Check for system libatomic_ops
+             dnl ===================================================================
+             libo_CHECK_SYSTEM_MODULE([libatomic_ops],[ATOMIC_OPS],[atomic_ops >= 0.7.2])
+             if test "$with_system_libatomic_ops" = "yes"; then
+                 SYSTEM_LIBATOMIC_OPS=TRUE
+                 AC_CHECK_HEADERS(atomic_ops.h, [],
+-                [AC_MSG_ERROR(atomic_ops.h not found. install libatomic-ops)], [])
++                [AC_MSG_ERROR(atomic_ops.h not found. install libatomic_ops)], [])
+             else
+                 SYSTEM_LIBATOMIC_OPS=
+                 LIBATOMIC_OPS_CFLAGS="-I${WORKDIR}/UnpackedTarball/libatomic_ops/include"
+@@ -8394,11 +8438,26 @@
  
          AC_MSG_RESULT([internal])
          SYSTEM_FIREBIRD=
@@ -175,4 +321,77 @@
 +        fi
  
          BUILD_TYPE="$BUILD_TYPE FIREBIRD"
-         ENABLE_FIREBIRD_SDBC="TRUE"
+-        ENABLE_FIREBIRD_SDBC="TRUE"
++        ENABLE_FIREBIRD_SDBC=TRUE
++        AC_DEFINE([ENABLE_FIREBIRD_SDBC],1)
+     fi
+ fi
+ AC_SUBST(ENABLE_FIREBIRD_SDBC)
+@@ -8408,8 +8467,8 @@
+ AC_SUBST(SYSTEM_FIREBIRD)
+ AC_SUBST(FIREBIRD_CFLAGS)
+ AC_SUBST(FIREBIRD_LIBS)
+-dnl AC_SUBST([TOMMATH_CFLAGS])
+-dnl AC_SUBST([TOMMATH_LIBS])
++AC_SUBST([TOMMATH_CFLAGS])
++AC_SUBST([TOMMATH_LIBS])
+ 
+ dnl ===================================================================
+ dnl Check for system curl
+@@ -8484,15 +8543,11 @@
+ if test "$with_system_boost" = "yes"; then
+     AC_MSG_RESULT([external])
+     SYSTEM_BOOST=TRUE
+-    AX_BOOST_BASE(1.47)
++    AX_BOOST_BASE([1.66],,[AC_MSG_ERROR([no suitable Boost found])])
+     AX_BOOST_DATE_TIME
++    AX_BOOST_FILESYSTEM
+     AX_BOOST_IOSTREAMS
+-    mingw_boost_date_time_dll=`echo $BOOST_DATE_TIME_LIB | sed -e 's/^-l//' -e 's/\.dll$//'`
+-    libo_MINGW_TRY_DLL([$mingw_boost_date_time_dll])
+-    if test -z "$MINGW_BOOST_DATE_TIME_DLL"; then
+-        # if not found, try again with 'lib' prefix
+-        libo_MINGW_CHECK_DLL([lib$mingw_boost_date_time_dll])
+-    fi
++    AX_BOOST_LOCALE
+     AC_LANG_PUSH([C++])
+     save_CXXFLAGS=$CXXFLAGS
+     CXXFLAGS="$CXXFLAGS $BOOST_CPPFLAGS $CXXFLAGS_CXX11"
+@@ -8500,28 +8555,21 @@
+        [AC_MSG_ERROR(boost/shared_ptr.hpp not found. install boost)], [])
+     AC_CHECK_HEADER(boost/spirit/include/classic_core.hpp, [],
+        [AC_MSG_ERROR(boost/spirit/include/classic_core.hpp not found. install boost >= 1.36)], [])
+-    AC_CHECK_HEADER(boost/function.hpp, [],
+-       [AC_MSG_ERROR(boost/function.hpp not found. install boost)], [])
+-    AC_MSG_CHECKING([whether boost signals2 works])
+-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <boost/signals2/signal.hpp>]],
+-        [[ boost::signals2::signal<void()> s; s(); ]])],
+-        [AC_MSG_RESULT([yes])],
+-        [AC_MSG_ERROR([no, install boost >= 1.55 or use --without-system-boost])])
+-    CXXFLAGS="$CXXFLAGS -fno-exceptions"
+-    AC_MSG_CHECKING([whether boost/function.hpp compiles with -fno-exceptions])
+-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <boost/function.hpp>
+-]], [[]])],[ac_cv_cxx_boost_no_exceptions_broken=no],[ac_cv_cxx_boost_no_exceptions_broken=yes])
+-    if test "$ac_cv_cxx_boost_no_exceptions_broken" = "yes"; then
+-        AC_MSG_ERROR([no, see https://bugzilla.redhat.com/show_bug.cgi?id=477131])
+-    else
+-        AC_MSG_RESULT([yes])
+-    fi
+     CXXFLAGS=$save_CXXFLAGS
+     AC_LANG_POP([C++])
++    # this is in m4/ax_boost_base.m4
++    FilterLibs "${BOOST_LDFLAGS}"
++    BOOST_LDFLAGS="${filteredlibs}"
+ else
+     AC_MSG_RESULT([internal])
+     BUILD_TYPE="$BUILD_TYPE BOOST"
+     SYSTEM_BOOST=
++    if test "${COM}" = "GCC" -o "${COM_IS_CLANG}" = "TRUE"; then
++        # use warning-suppressing wrapper headers
++        BOOST_CPPFLAGS="-I${SRC_ROOT}/external/boost/include -I${WORKDIR}/UnpackedTarball/boost"
++    else
++        BOOST_CPPFLAGS="-I${WORKDIR}/UnpackedTarball/boost"
++    fi
+ fi
+ AC_SUBST(SYSTEM_BOOST)
+ 
