@@ -81,3 +81,43 @@
  #endif // INCLUDED_SVX_SVDOOLE2_HXX
  
  /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
+--- cppuhelper/propshlp.hxx	2015-11-25 07:55:38.000000000 -0500
++++ cppuhelper/propshlp.hxx	2020-12-19 10:59:19.000000000 -0500
+@@ -649,7 +649,7 @@
+ 
+     /** reserved for future use. finally, the future has arrived...
+      */
+-    const std::auto_ptr<Impl> m_pReserved;
++    const std::unique_ptr<Impl> m_pReserved;
+ 
+ private:
+     OPropertySetHelper( const OPropertySetHelper & );
+--- cppuhelper/unourl.hxx	2015-11-25 07:55:38.000000000 -0500
++++ cppuhelper/unourl.hxx	2020-12-19 11:00:05.000000000 -0500
+@@ -50,7 +50,7 @@
+     explicit UnoUrlDescriptor(rtl::OUString const & rDescriptor);
+ 
+     /// @cond INTERNAL
+-    explicit UnoUrlDescriptor(std::auto_ptr< Impl > & rImpl);
++    explicit UnoUrlDescriptor(std::unique_ptr< Impl > & rImpl);
+     /// @endcond
+ 
+     UnoUrlDescriptor(UnoUrlDescriptor const & rOther);
+@@ -98,7 +98,7 @@
+     rtl::OUString getParameter(rtl::OUString const & rKey) const;
+ 
+ private:
+-    std::auto_ptr< Impl > m_xImpl;
++    std::unique_ptr< Impl > m_xImpl;
+ };
+ 
+ /** Parse UNO URLs into their components.
+@@ -175,7 +175,7 @@
+ private:
+     class Impl;
+ 
+-    std::auto_ptr< Impl > m_xImpl;
++    std::unique_ptr< Impl > m_xImpl;
+ };
+ 
+ }
