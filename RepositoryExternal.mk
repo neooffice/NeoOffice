@@ -2779,38 +2779,33 @@ $(call gb_LinkTarget_add_libs,$(1),$(FIREBIRD_LIBS))
 
 endef
 
-# gb_LinkTarget__use_atomic_ops :=
-# gb_LinkTarget__use_tommath :=
-
 else # !SYSTEM_FIREBIRD
 
+$(eval $(call gb_Helper_register_packages_for_install,firebirdsdbc,\
+	firebird \
+))
+
 #$(call gb_LinkTarget__use_libatomic_ops,$(1))
+#$(call gb_LinkTarget__use_libtommath,$(1))
 
 define gb_LinkTarget__use_libfbembed
 $(call gb_LinkTarget_use_package,$(1),firebird)
 $(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,firebird)/gen/$(if $(ENABLE_DEBUG),Debug,Release)/firebird/include \
 	$$(INCLUDE) \
-	-I$(call gb_UnpackedTarball_get_dir,firebird)/gen/firebird/include \
 )
 ifeq ($(COM),MSC)
 $(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,firebird)/gen/firebird/bin/ifbembed.lib \
+	$(call gb_UnpackedTarball_get_dir,firebird)/gen/$(if $(ENABLE_DEBUG),Debug,Release)/firebird/bin/ifbclient.lib \
 )
 else
 $(call gb_LinkTarget_add_libs,$(1),\
-	-L$(call gb_UnpackedTarball_get_dir,firebird)/gen/firebird/lib -lfbembed \
+	-L$(call gb_UnpackedTarball_get_dir,firebird)/gen/$(if $(ENABLE_DEBUG),Debug,Release)/firebird/lib -lfbclient \
 )
 endif
 
 endef
 
-# define gb_LinkTarget__use_tommath
-# $(call gb_LinkTarget_set_include,$(1),\
-# 	$(TOMMATH_CFLAGS) \
-# 	$$(INCLUDE) \
-# )
-
-# $(call gb_LinkTarget_add_libs,$(1),$(TOMMATH_LIBS))
 
 # endef
 
@@ -2820,7 +2815,7 @@ else # !ENABLE_FIREBIRD_SDBC
 
 gb_LinkTarget__use_firebird :=
 # gb_LinkTarget__use_atomic_ops :=
-# gb_LinkTarget__use_tommath :=
+# gb_LinkTarget__use_libtommath :=
 
 endif # ENABLE_FIREBIRD_SDBC
 
