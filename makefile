@@ -296,6 +296,7 @@ build.libo_patches: \
 	build.libo_external_patch \
 	build.libo_include_patch \
 	build.libo_jvmfwk_patch \
+	build.libo_oox_patch \
 	build.libo_sc_patch \
 	build.libo_sd_patch \
 	build.libo_sfx2_patch \
