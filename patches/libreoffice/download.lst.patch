@@ -1,5 +1,5 @@
 --- download.lst	2015-11-25 07:55:38.000000000 -0500
-+++ download.lst	2020-12-18 15:46:50.000000000 -0500
++++ download.lst	2020-12-19 19:15:22.000000000 -0500
 @@ -15,7 +15,9 @@
  export APR_TARBALL := apr-1.4.8.tar.gz
  export APR_UTIL_MD5SUM := 71a11d037240b292f824ba1eb537b4e3
@@ -36,3 +36,13 @@
  export LIBXML_TARBALL := daece17e045f1c107610e137ab50c179-libxml2-2.9.3.tar.gz
  export LIBXSLT_TARBALL := 9667bf6f9310b957254fdcf6596600b7-libxslt-1.1.28.tar.gz
  export LPSOLVE_TARBALL := 26b3e95ddf3d9c077c480ea45874b3b8-lp_solve_5.5.tar.gz
+@@ -125,7 +128,8 @@
+ export PNG_TARBALL := libpng-1.5.24.tar.gz
+ export POPPLER_MD5SUM := 35c0660065d023365e9854c13e289d12
+ export POPPLER_TARBALL := poppler-0.26.4.tar.gz
+-export POSTGRESQL_TARBALL := c0b4799ea9850eae3ead14f0a60e9418-postgresql-9.2.1.tar.bz2
++export POSTGRESQL_MD5SUM := 0dc9fe28127cc97c62effc6e4dd5ce59
++export POSTGRESQL_TARBALL := postgresql-9.2.24.tar.bz2
+ export PYTHON_MD5SUM := 803a75927f8f241ca78633890c798021
+ export PYTHON_TARBALL := Python-3.3.5.tgz
+ export RAPTOR_TARBALL := 4ceb9316488b0ea01acf011023cf7fff-raptor2-2.0.9.tar.gz

@@ -1,5 +1,5 @@
 --- configure.ac	2015-11-25 07:55:38.000000000 -0500
-+++ configure.ac	2020-12-19 09:15:03.000000000 -0500
++++ configure.ac	2020-12-19 19:27:06.000000000 -0500
 @@ -1670,6 +1670,11 @@
           driver. If fb_config is not in PATH, use FBCONFIG to point to it.]),,
      [with_system_firebird="$with_system_libs"])
@@ -216,7 +216,108 @@
  #
  # prefix C with ccache if needed
  #
-@@ -8325,8 +8361,8 @@
+@@ -8179,7 +8215,9 @@
+ dnl ===================================================================
+ dnl Check for PostgreSQL stuff
+ dnl ===================================================================
++AC_MSG_CHECKING([whether to build the PostgreSQL SDBC driver])
+ if test "x$enable_postgresql_sdbc" != "xno"; then
++    AC_MSG_RESULT([yes])
+     SCPDEFS="$SCPDEFS -DWITH_POSTGRESQL_SDBC"
+ 
+     if test "$with_krb5" = "yes" -a "$enable_openssl" = "no"; then
+@@ -8189,9 +8227,9 @@
+         AC_MSG_ERROR([GSSAPI needs OpenSSL, but --disable-openssl was given.])
+     fi
+ 
+-    AC_MSG_CHECKING([PostgreSQL C interface])
++    postgres_interface=""
+     if test "$with_system_postgresql" = "yes"; then
+-        AC_MSG_RESULT([external PostgreSQL])
++        postgres_interface="external PostgreSQL"
+         SYSTEM_POSTGRESQL=TRUE
+         if test "$_os" = Darwin; then
+             supp_path=''
+@@ -8200,11 +8238,19 @@
+             done
+         fi
+         AC_PATH_PROG(PGCONFIG, pg_config, ,$PATH$pg_supp_path)
+-        if test -z "$PGCONFIG"; then
+-            AC_MSG_ERROR([pg_config needed; set PGCONFIG if not in PATH])
++        if test -n "$PGCONFIG"; then
++            POSTGRESQL_INC=-I$(${PGCONFIG} --includedir)
++            POSTGRESQL_LIB="-L$(${PGCONFIG} --libdir)"
++        else
++            PKG_CHECK_MODULES(POSTGRESQL, libpq, [
++              POSTGRESQL_INC=$POSTGRESQL_CFLAGS
++              POSTGRESQL_LIB=$POSTGRESQL_LIBS
++            ],[
++              AC_MSG_ERROR([pg_config or 'pkg-config libpq' needed; set PGCONFIG if not in PATH])
++            ])
+         fi
+-        POSTGRESQL_INC=-I$(${PGCONFIG} --includedir)
+-        POSTGRESQL_LIB="-L$(${PGCONFIG} --libdir)"
++        FilterLibs "${POSTGRESQL_LIB}"
++        POSTGRESQL_LIB="${filteredlibs}"
+     else
+         # if/when anything else than PostgreSQL uses Kerberos,
+         # move this out of `test "x$enable_postgresql_sdbc" != "xno"'
+@@ -8212,16 +8258,18 @@
+         WITH_GSSAPI=
+         case "$_os" in
+         Darwin)
+-            # MacOS X has system MIT Kerberos 5 since 10.4
++            # macOS has system MIT Kerberos 5 since 10.4
+             if test "$with_krb5" != "no"; then
+                 WITH_KRB5=TRUE
+                 save_LIBS=$LIBS
++                # Not sure whether it makes any sense here to search multiple potential libraries; it is not likely
++                # that the libraries where these functions are located on macOS will change, is it?
+                 AC_SEARCH_LIBS(com_err, [com_err 'com_err -lssl -lcrypto' krb5 'krb5 -lcrypto -ldes -lasn1 -lroken'], [],
+-                    [AC_MSG_ERROR([could not find function 'com_err' required for Kerberos 5, try installing libcom_err devel package])])
++                    [AC_MSG_ERROR([could not find function 'com_err' required for Kerberos 5])])
+                 KRB5_LIBS=$LIBS
+                 LIBS=$save_LIBS
+                 AC_SEARCH_LIBS(krb5_sendauth, [krb5 'krb5 -lcrypto -ldes -lasn1 -lroken'], [],
+-                    [AC_MSG_ERROR([could not find function 'krb5_sendauth' required for Kerberos 5, try installing krb5 devel package])])
++                    [AC_MSG_ERROR([could not find function 'krb5_sendauth' required for Kerberos 5])])
+                 KRB5_LIBS="$KRB5_LIBS $LIBS"
+                 LIBS=$save_LIBS
+             fi
+@@ -8286,17 +8334,21 @@
+ 
+         if test -n "$with_libpq_path"; then
+             SYSTEM_POSTGRESQL=TRUE
+-            AC_MSG_RESULT([external libpq])
++            postgres_interface="external libpq"
+             POSTGRESQL_LIB="-L${with_libpq_path}/lib/"
+             POSTGRESQL_INC=-I"${with_libpq_path}/include/"
+         else
+             SYSTEM_POSTGRESQL=
+-            AC_MSG_RESULT([internal])
++            postgres_interface="internal"
+             POSTGRESQL_LIB=""
+             POSTGRESQL_INC="%OVERRIDE_ME%"
+             BUILD_TYPE="$BUILD_TYPE POSTGRESQL"
+         fi
+     fi
++
++    AC_MSG_CHECKING([PostgreSQL C interface])
++    AC_MSG_RESULT([$postgres_interface])
++
+     if test "${SYSTEM_POSTGRESQL}" = "TRUE"; then
+         AC_MSG_NOTICE([checking system PostgreSQL prerequisites])
+         save_CFLAGS=$CFLAGS
+@@ -8312,6 +8364,8 @@
+         LIBS=$save_LIBS
+     fi
+     BUILD_POSTGRESQL_SDBC=TRUE
++else
++    AC_MSG_RESULT([no])
+ fi
+ AC_SUBST(WITH_KRB5)
+ AC_SUBST(WITH_GSSAPI)
+@@ -8325,8 +8379,8 @@
  dnl ===================================================================
  dnl Check for Firebird stuff
  dnl ===================================================================
@@ -227,7 +328,7 @@
      SCPDEFS="$SCPDEFS -DWITH_FIREBIRD_SDBC"
  
      dnl ===================================================================
-@@ -8339,51 +8375,59 @@
+@@ -8339,51 +8393,59 @@
          AC_PATH_PROG(FIREBIRDCONFIG, [fb_config])
          if test -z "$FIREBIRDCONFIG"; then
              AC_MSG_NOTICE([No fb_config -- using pkg-config])
@@ -297,7 +398,7 @@
              else
                  SYSTEM_LIBATOMIC_OPS=
                  LIBATOMIC_OPS_CFLAGS="-I${WORKDIR}/UnpackedTarball/libatomic_ops/include"
-@@ -8394,11 +8438,26 @@
+@@ -8394,11 +8456,26 @@
  
          AC_MSG_RESULT([internal])
          SYSTEM_FIREBIRD=
@@ -327,7 +428,7 @@
      fi
  fi
  AC_SUBST(ENABLE_FIREBIRD_SDBC)
-@@ -8408,8 +8467,8 @@
+@@ -8408,8 +8485,8 @@
  AC_SUBST(SYSTEM_FIREBIRD)
  AC_SUBST(FIREBIRD_CFLAGS)
  AC_SUBST(FIREBIRD_LIBS)
@@ -338,7 +439,7 @@
  
  dnl ===================================================================
  dnl Check for system curl
-@@ -8484,15 +8543,11 @@
+@@ -8484,15 +8561,11 @@
  if test "$with_system_boost" = "yes"; then
      AC_MSG_RESULT([external])
      SYSTEM_BOOST=TRUE
@@ -357,7 +458,7 @@
      AC_LANG_PUSH([C++])
      save_CXXFLAGS=$CXXFLAGS
      CXXFLAGS="$CXXFLAGS $BOOST_CPPFLAGS $CXXFLAGS_CXX11"
-@@ -8500,28 +8555,21 @@
+@@ -8500,28 +8573,21 @@
         [AC_MSG_ERROR(boost/shared_ptr.hpp not found. install boost)], [])
      AC_CHECK_HEADER(boost/spirit/include/classic_core.hpp, [],
         [AC_MSG_ERROR(boost/spirit/include/classic_core.hpp not found. install boost >= 1.36)], [])
