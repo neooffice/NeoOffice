@@ -1,5 +1,5 @@
 --- configure.ac	2015-11-25 07:55:38.000000000 -0500
-+++ configure.ac	2020-12-19 19:27:06.000000000 -0500
++++ configure.ac	2020-12-20 14:16:19.000000000 -0500
 @@ -1670,6 +1670,11 @@
           driver. If fb_config is not in PATH, use FBCONFIG to point to it.]),,
      [with_system_firebird="$with_system_libs"])
@@ -216,6 +216,15 @@
  #
  # prefix C with ccache if needed
  #
+@@ -7543,7 +7579,7 @@
+ dnl ===================================================================
+ # libcmis requires curl and we can't build curl for iOS
+ if test $_os != iOS; then
+-    libo_CHECK_SYSTEM_MODULE([libcmis],[CMIS],[libcmis-0.5 >= 0.5.0])
++    libo_CHECK_SYSTEM_MODULE([libcmis],[CMIS],[libcmis-0.5 >= 0.5.2])
+     ENABLE_CMIS=TRUE
+ else
+     ENABLE_CMIS=
 @@ -8179,7 +8215,9 @@
  dnl ===================================================================
  dnl Check for PostgreSQL stuff

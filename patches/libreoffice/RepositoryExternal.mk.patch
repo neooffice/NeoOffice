@@ -1,5 +1,19 @@
 --- RepositoryExternal.mk	2015-11-25 07:55:38.000000000 -0500
-+++ RepositoryExternal.mk	2020-12-19 15:08:21.000000000 -0500
++++ RepositoryExternal.mk	2020-12-20 14:30:18.000000000 -0500
+@@ -778,11 +778,11 @@
+ 
+ define gb_LinkTarget__use_cmis
+ $(call gb_LinkTarget_set_include,$(1),\
+-	-I$(call gb_UnpackedTarball_get_dir,cmis)/src \
++	-I$(call gb_UnpackedTarball_get_dir,cmis)/inc \
+ 	$$(INCLUDE) \
+ )
+ $(call gb_LinkTarget_use_static_libraries,$(1),\
+-	cmislib \
++	cmis \
+ )
+ 
+ endef
 @@ -2727,6 +2727,38 @@
  endif # SYSTEM_OPENLDAP
  
