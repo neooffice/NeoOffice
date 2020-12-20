@@ -275,7 +275,7 @@ build.libo_external_tarballs_checkout: build.libo_src_checkout build.libo_root_d
 
 build.libo_external_patches_checkout: build.libo_src_checkout
 	cd "$(LIBO_PATCHES_HOME)/external" ; sh -c -e 'for i in `find . -type f -maxdepth 1 -name "*.tar.gz"` ; do ( cd "$(PWD)/$(LIBO_BUILD_HOME)/external" && tar zxvf "$(PWD)/$(LIBO_PATCHES_HOME)/external/$$i" ) ; done'
-	cd "$(LIBO_PATCHES_HOME)/external" ; sh -c -e 'for i in `find . -type d -maxdepth 2 -name "patches"` ; do for j in `find "$$i" -type f -maxdepth 3 | grep -v /CVS/` ; do cp "$$j" "$(PWD)/$(LIBO_BUILD_HOME)/external/$$j" ; done ; done'
+	cd "$(LIBO_PATCHES_HOME)/external" ; sh -c -e 'for i in `find . -type f \! -name "*.gz" | grep -v /tarballs/ | grep -v /CVS/` ; do echo cp "$$i" "$(PWD)/$(LIBO_BUILD_HOME)/external/$$i" ; done'
 	touch "$@"
 
 build.libo_checkout: \
@@ -295,6 +295,7 @@ build.libo_patches: \
 	build.libo_bin_patch \
 	build.libo_cppuhelper_patch \
 	build.libo_embeddedobj_patch \
+	build.libo_extensions_patch \
 	build.libo_external_patch \
 	build.libo_include_patch \
 	build.libo_jvmfwk_patch \
