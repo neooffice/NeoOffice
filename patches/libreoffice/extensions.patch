@@ -1,0 +1,22 @@
+--- source/macosx/spotlight/OOoMetaDataParser.m	2015-11-25 07:55:38.000000000 -0500
++++ source/macosx/spotlight/OOoMetaDataParser.m	2020-12-20 10:44:13.000000000 -0500
+@@ -95,7 +95,7 @@
+     // So instead of this:
+     // [parser setDelegate:self];
+     // do this:
+-    objc_msgSend(parser, @selector(setDelegate:), self);
++    [parser setDelegate:self];
+ 
+     [parser setShouldResolveExternalEntities:NO];
+     [parser parse];
+--- source/macosx/spotlight/OOoContentDataParser.m	2015-11-25 07:55:38.000000000 -0500
++++ source/macosx/spotlight/OOoContentDataParser.m	2020-12-20 10:45:46.000000000 -0500
+@@ -52,7 +52,7 @@
+     // So instead of this:
+     // [parser setDelegate:self];
+     // do this:
+-    objc_msgSend(parser, @selector(setDelegate:), self);
++    [parser setDelegate:self];
+ 
+     [parser setShouldResolveExternalEntities:NO];
+     [parser parse];
