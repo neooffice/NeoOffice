@@ -198,3 +198,54 @@
  
  $(eval $(call gb_UnpackedTarball_set_patchlevel,libcmis,1))
  
+--- libcmis/StaticLibrary_libcmis.mk.bak	2020-12-09 13:56:14.000000000 -0500
++++ libcmis/StaticLibrary_libcmis.mk	2020-12-20 15:12:24.000000000 -0500
+@@ -7,39 +7,39 @@
+ # file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ #
+ 
+-$(eval $(call gb_StaticLibrary_StaticLibrary,libcmis))
++$(eval $(call gb_StaticLibrary_StaticLibrary,cmislib))
+ 
+-$(eval $(call gb_StaticLibrary_set_warnings_disabled,libcmis))
++$(eval $(call gb_StaticLibrary_set_warnings_disabled,cmislib))
+ 
+-$(eval $(call gb_StaticLibrary_set_precompiled_header,libcmis,external/libcmis/inc/pch/precompiled_libcmis))
++$(eval $(call gb_StaticLibrary_set_precompiled_header,cmislib,external/libcmis/inc/pch/precompiled_libcmis))
+ 
+ ifeq ($(COM_IS_CLANG),TRUE)
+ # Avoid narrowing conversion error (even though the option is technically a warning)
+ # caused by boost
+-$(eval $(call gb_StaticLibrary_add_cxxflags,libcmis,\
++$(eval $(call gb_StaticLibrary_add_cxxflags,cmislib,\
+     -Wno-error=c++11-narrowing \
+ ))
+ endif
+ 
+-$(eval $(call gb_StaticLibrary_add_defs,libcmis, \
++$(eval $(call gb_StaticLibrary_add_defs,cmislib, \
+ 	-DBOOST_ALL_NO_LIB \
+ ))
+ 
+-$(eval $(call gb_StaticLibrary_set_include,libcmis, \
++$(eval $(call gb_StaticLibrary_set_include,cmislib, \
+     -I$(call gb_UnpackedTarball_get_dir,libcmis/inc) \
+     -I$(call gb_UnpackedTarball_get_dir,libcmis/src/libcmis) \
+     $$(INCLUDE) \
+ ))
+ 
+-$(eval $(call gb_StaticLibrary_use_unpacked,libcmis,libcmis))
++$(eval $(call gb_StaticLibrary_use_unpacked,cmislib,cmis))
+ 
+-$(eval $(call gb_StaticLibrary_use_externals,libcmis,\
++$(eval $(call gb_StaticLibrary_use_externals,cmislib,\
+ 	boost_headers \
+ 	curl \
+ 	libxml2 \
+ ))
+ 
+-$(eval $(call gb_StaticLibrary_add_generated_exception_objects,libcmis,\
++$(eval $(call gb_StaticLibrary_add_generated_exception_objects,cmislib,\
+ 	UnpackedTarball/libcmis/src/libcmis/allowable-actions \
+ 	UnpackedTarball/libcmis/src/libcmis/atom-document \
+ 	UnpackedTarball/libcmis/src/libcmis/atom-folder \
