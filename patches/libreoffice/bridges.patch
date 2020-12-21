@@ -1,0 +1,33 @@
+--- inc/vtablefactory.hxx	2020-12-09 13:56:14.000000000 -0500
++++ inc/vtablefactory.hxx	2020-12-21 18:23:20.000000000 -0500
+@@ -209,7 +209,7 @@
+     static void flushCode(
+         unsigned char const * begin, unsigned char const * end);
+ 
+-    typedef std::unordered_map< OUString, Vtables > Map;
++    typedef std::unordered_map< OUString, Vtables, OUStringHash > Map;
+ 
+     osl::Mutex m_mutex;
+     Map m_map;
+--- source/cpp_uno/gcc3_macosx_x86-64/except.cxx	2020-12-09 13:56:14.000000000 -0500
++++ source/cpp_uno/gcc3_macosx_x86-64/except.cxx	2020-12-21 18:24:45.000000000 -0500
+@@ -145,7 +145,7 @@
+ 
+ class RTTI
+ {
+-    typedef std::unordered_map< OUString, std::type_info * > t_rtti_map;
++    typedef std::unordered_map< OUString, std::type_info *, OUStringHash > t_rtti_map;
+ 
+     Mutex m_mutex;
+     t_rtti_map m_rttis;
+--- source/cpp_uno/shared/vtablefactory.cxx	2020-12-09 13:56:14.000000000 -0500
++++ source/cpp_uno/shared/vtablefactory.cxx	2020-12-21 18:28:04.000000000 -0500
+@@ -174,7 +174,7 @@
+     sal_Int32 calculate(
+         typelib_InterfaceTypeDescription * type, sal_Int32 offset);
+ 
+-    std::unordered_map< OUString, sal_Int32 > m_map;
++    std::unordered_map< OUString, sal_Int32, OUStringHash > m_map;
+ };
+ 
+ sal_Int32 VtableFactory::BaseOffset::calculate(
