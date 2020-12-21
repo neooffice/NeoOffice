@@ -1,5 +1,14 @@
 --- RepositoryExternal.mk	2015-11-25 07:55:38.000000000 -0500
-+++ RepositoryExternal.mk	2020-12-21 06:53:16.000000000 -0500
++++ RepositoryExternal.mk	2020-12-21 11:50:26.000000000 -0500
+@@ -712,7 +712,7 @@
+ )
+ 
+ $(call gb_LinkTarget_use_static_libraries,$(1),\
+-	boostdatetime \
++	boost_date_time \
+ )
+ 
+ endef
 @@ -778,11 +778,11 @@
  
  define gb_LinkTarget__use_cmis
