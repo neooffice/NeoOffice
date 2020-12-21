@@ -67,3 +67,13 @@
      CHECK_GL_ERROR();
  }
  
+--- source/inc/listenercontainer.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/inc/listenercontainer.hxx	2020-12-21 11:28:12.000000000 -0500
+@@ -21,6 +21,7 @@
+ 
+ #include <osl/mutex.hxx>
+ #include <boost/utility.hpp>
++#include <boost/next_prior.hpp>
+ #include <algorithm>
+ #include <vector>
+ 
