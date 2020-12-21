@@ -187,19 +187,8 @@
  	$(call gb_Helper_optional,MARIADB,libmariadb) \
  	$(call gb_Helper_optional,MDDS,mdds) \
  	$(if $(WITH_EXTRA_EXTENSIONS),misc_extensions) \
---- libcmis/UnpackedTarball_libcmis.mk	2020-12-09 13:56:14.000000000 -0500
-+++ libcmis/UnpackedTarball_libcmis.mk	2020-12-20 14:21:40.000000000 -0500
-@@ -9,7 +9,7 @@
- 
- $(eval $(call gb_UnpackedTarball_UnpackedTarball,libcmis))
- 
--$(eval $(call gb_UnpackedTarball_set_tarball,libcmis,$(LIBCMIS_TARBALL)))
-+$(eval $(call gb_UnpackedTarball_set_tarball,libcmis,$(CMIS_TARBALL)))
- 
- $(eval $(call gb_UnpackedTarball_set_patchlevel,libcmis,1))
- 
---- libcmis/StaticLibrary_libcmis.mk.bak	2020-12-09 13:56:14.000000000 -0500
-+++ libcmis/StaticLibrary_libcmis.mk	2020-12-20 15:12:24.000000000 -0500
+--- libcmis/StaticLibrary_libcmis.mk	2020-12-09 13:56:14.000000000 -0500
++++ libcmis/StaticLibrary_libcmis.mk	2020-12-20 15:26:09.000000000 -0500
 @@ -7,39 +7,39 @@
  # file, You can obtain one at http://mozilla.org/MPL/2.0/.
  #
@@ -249,3 +238,23 @@
  	UnpackedTarball/libcmis/src/libcmis/allowable-actions \
  	UnpackedTarball/libcmis/src/libcmis/atom-document \
  	UnpackedTarball/libcmis/src/libcmis/atom-folder \
+--- libcmis/UnpackedTarball_libcmis.mk	2020-12-20 14:42:07.000000000 -0500
++++ libcmis/UnpackedTarball_libcmis.mk	2020-12-20 18:52:58.000000000 -0500
+@@ -7,13 +7,13 @@
+ # file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ #
+ 
+-$(eval $(call gb_UnpackedTarball_UnpackedTarball,libcmis))
++$(eval $(call gb_UnpackedTarball_UnpackedTarball,cmislib))
+ 
+-$(eval $(call gb_UnpackedTarball_set_tarball,libcmis,$(LIBCMIS_TARBALL)))
++$(eval $(call gb_UnpackedTarball_set_tarball,cmislib,$(CMIS_TARBALL)))
+ 
+-$(eval $(call gb_UnpackedTarball_set_patchlevel,libcmis,1))
++$(eval $(call gb_UnpackedTarball_set_patchlevel,cmislib,1))
+ 
+-$(eval $(call gb_UnpackedTarball_add_patches,libcmis, \
++$(eval $(call gb_UnpackedTarball_add_patches,cmislib, \
+ 	external/libcmis/libcmis-libxml2_compatibility.patch \
+ 	external/libcmis/0001-rename-class-GetObject-to-avoid-name-clash-on-Window.patch \
+ ))
