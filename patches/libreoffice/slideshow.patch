@@ -1,0 +1,69 @@
+--- source/engine/OGLTrans/generic/OGLTrans_TransitionerImpl.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/engine/OGLTrans/generic/OGLTrans_TransitionerImpl.cxx	2020-12-21 10:44:43.000000000 -0500
+@@ -75,6 +75,14 @@
+ 
+ #include <vcl/sysdata.hxx>
+ 
++#ifdef MACOSX
++
++#include <dlfcn.h>
++
++typedef GLint gluBuild2DMipmaps_Type( GLenum target, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, const void *data );
++
++#endif	// MACOSX
++
+ #if OSL_DEBUG_LEVEL > 1
+ #include <boost/date_time/posix_time/posix_time.hpp>
+ using namespace ::boost::posix_time;
+@@ -962,6 +970,14 @@
+                      uno::Sequence<sal_Int8>& data,
+                      const OGLFormat* pFormat )
+ {
++#ifdef MACOSX
++    void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
++    if ( pLib )
++    {
++        gluBuild2DMipmaps_Type *pGluBuild2DMipmaps = (gluBuild2DMipmaps_Type *)dlsym( pLib, "gluBuild2DMipmaps" );
++        if (pGluBuild2DMipmaps)
++        {
++#endif	// MACOSX
+     if( !pFormat )
+     {
+         CHECK_GL_ERROR();
+@@ -970,7 +986,11 @@
+             maSlideBitmapLayout.ColorSpace->convertToIntegerColorSpace(
+                 data,
+                 getOGLColorSpace()));
++#ifdef MACOSX
++        pGluBuild2DMipmaps(GL_TEXTURE_2D,
++#else	// MACOSX
+         gluBuild2DMipmaps(GL_TEXTURE_2D,
++#endif	// MACOSX
+                           4,
+                           maSlideSize.Width,
+                           maSlideSize.Height,
+@@ -990,7 +1010,11 @@
+             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+         } else {
++#ifdef MACOSX
++            pGluBuild2DMipmaps( GL_TEXTURE_2D, pFormat->nInternalFormat, maSlideSize.Width, maSlideSize.Height, pFormat->eFormat, pFormat->eType, &data[0] );
++#else	// MACOSX
+             gluBuild2DMipmaps( GL_TEXTURE_2D, pFormat->nInternalFormat, maSlideSize.Width, maSlideSize.Height, pFormat->eFormat, pFormat->eType, &data[0] );
++#endif	// MACOSX
+             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR ); //TRILINEAR FILTERING
+ 
+@@ -1000,6 +1024,12 @@
+             glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, largest_supported_anisotropy );
+         }
+     }
++#ifdef MACOSX
++        }
++
++        dlclose(pLib);
++    }
++#endif	// MACOSX
+     CHECK_GL_ERROR();
+ }
+ 
