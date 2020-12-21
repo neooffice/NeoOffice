@@ -719,7 +719,7 @@ $(call gb_LinkTarget_add_defs,$(1),\
 )
 
 $(call gb_LinkTarget_use_static_libraries,$(1),\
-	boostdatetime \
+	boost_date_time \
 )
 
 endef
