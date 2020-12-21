@@ -187,3 +187,14 @@
  	$(call gb_Helper_optional,MARIADB,libmariadb) \
  	$(call gb_Helper_optional,MDDS,mdds) \
  	$(if $(WITH_EXTRA_EXTENSIONS),misc_extensions) \
+--- libcmis/UnpackedTarball_libcmis.mk	2020-12-09 13:56:14.000000000 -0500
++++ libcmis/UnpackedTarball_libcmis.mk	2020-12-21 06:56:15.000000000 -0500
+@@ -9,7 +9,7 @@
+ 
+ $(eval $(call gb_UnpackedTarball_UnpackedTarball,libcmis))
+ 
+-$(eval $(call gb_UnpackedTarball_set_tarball,libcmis,$(LIBCMIS_TARBALL)))
++$(eval $(call gb_UnpackedTarball_set_tarball,libcmis,$(CMIS_TARBALL)))
+ 
+ $(eval $(call gb_UnpackedTarball_set_patchlevel,libcmis,1))
+ 
