@@ -785,11 +785,11 @@ else # !SYSTEM_CMIS
 
 define gb_LinkTarget__use_cmis
 $(call gb_LinkTarget_set_include,$(1),\
-	-I$(call gb_UnpackedTarball_get_dir,cmis)/inc \
+	-I$(call gb_UnpackedTarball_get_dir,libcmis)/inc \
 	$$(INCLUDE) \
 )
 $(call gb_LinkTarget_use_static_libraries,$(1),\
-	cmislib \
+	libcmis \
 )
 
 endef
