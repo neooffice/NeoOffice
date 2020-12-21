@@ -28,3 +28,33 @@
          bRet = SdXMLFilter( rMedium, *this, true, SDXMLMODE_Normal, SotStorage::GetVersion( rMedium.GetStorage() ) ).Import( nError );
      }
  
+--- source/ui/remotecontrol/BluetoothServer.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/ui/remotecontrol/BluetoothServer.cxx	2020-12-21 10:55:07.000000000 -0500
+@@ -53,6 +53,10 @@
+   #include <postmac.h>
+   #import "OSXBluetooth.h"
+   #include "OSXBluetoothWrapper.hxx"
++
++  #include <dlfcn.h>
++
++  typedef IOReturn IOBluetoothAddServiceDict_Type( CFDictionaryRef aServiceDict, IOBluetoothSDPServiceRecordRef *pOutServiceRecord );
+ #endif
+ 
+ #ifdef __MINGW32__
+@@ -1491,7 +1495,15 @@
+ 
+     // Create service
+     IOBluetoothSDPServiceRecordRef serviceRecordRef;
+-    IOReturn rc = IOBluetoothAddServiceDict((CFDictionaryRef) dict, &serviceRecordRef);
++    IOReturn rc = kIOReturnError;
++    void *pLib = dlopen(NULL, RTLD_LAZY | RTLD_LOCAL);
++    if (pLib)
++    {
++        IOBluetoothAddServiceDict_Type *pIOBluetoothAddServiceDict = (IOBluetoothAddServiceDict_Type *)dlsym(pLib, "IOBluetoothAddServiceDict");
++        if (pIOBluetoothAddServiceDict)
++            rc = pIOBluetoothAddServiceDict((CFDictionaryRef) dict, &serviceRecordRef);
++        dlclose(pLib);
++    }
+ 
+     SAL_INFO("sdremote.bluetooth", "IOBluetoothAddServiceDict returned " << rc);
+ 
