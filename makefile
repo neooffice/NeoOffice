@@ -276,6 +276,10 @@ build.libo_bridges_patches_checkout: build.libo_src_checkout
 	cd "$(LIBO_PATCHES_HOME)/bridges" ; sh -c -e 'for i in `find . -type f -maxdepth 1 -name "*.tar.gz"` ; do ( cd "$(PWD)/$(LIBO_BUILD_HOME)/bridges" && tar zxvf "$(PWD)/$(LIBO_PATCHES_HOME)/bridges/$$i" ) ; done'
 	touch "$@"
 
+build.libo_dbaccess_patches_checkout: build.libo_src_checkout
+	cd "$(LIBO_PATCHES_HOME)/dbaccess" ; sh -c -e 'for i in `find . -type f -maxdepth 1 -name "*.tar.gz"` ; do ( cd "$(PWD)/$(LIBO_BUILD_HOME)/dbaccess" && tar zxvf "$(PWD)/$(LIBO_PATCHES_HOME)/dbaccess/$$i" ) ; done'
+	touch "$@"
+
 build.libo_external_patches_checkout: build.libo_src_checkout
 	cd "$(LIBO_PATCHES_HOME)/external" ; sh -c -e 'for i in `find . -type f -maxdepth 1 -name "*.tar.gz"` ; do ( cd "$(PWD)/$(LIBO_BUILD_HOME)/external" && tar zxvf "$(PWD)/$(LIBO_PATCHES_HOME)/external/$$i" ) ; done'
 	cd "$(LIBO_PATCHES_HOME)/external" ; sh -c -e 'for i in `find . -type f \! -name "*.gz" | grep -v /tarballs/ | grep -v /CVS/` ; do cp "$$i" "$(PWD)/$(LIBO_BUILD_HOME)/external/$$i" ; done'
@@ -290,6 +294,7 @@ build.libo_checkout: \
 	build.ant_checkout \
 	build.libo_external_tarballs_checkout \
 	build.libo_bridges_patches_checkout \
+	build.libo_dbaccess_patches_checkout \
 	build.libo_external_patches_checkout \
 	build.libo_include_patches_checkout
 	touch "$@"
@@ -304,6 +309,7 @@ build.libo_patches: \
 	build.libo_bin_patch \
 	build.libo_bridges_patch \
 	build.libo_cppuhelper_patch \
+	build.libo_dbaccess_patch \
 	build.libo_embeddedobj_patch \
 	build.libo_extensions_patch \
 	build.libo_external_patch \
