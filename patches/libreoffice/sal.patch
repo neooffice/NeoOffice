@@ -1,0 +1,21 @@
+--- osl/unx/salinit.cxx	2015-11-25 07:55:38.000000000 -0500
++++ osl/unx/salinit.cxx	2020-12-22 07:56:11.000000000 -0500
+@@ -60,12 +60,14 @@
+     // OS X appears to have no better interface to close all fds (like
+     // closefrom):
+     long openMax = sysconf(_SC_OPEN_MAX);
+-    if (openMax == -1) {
+-        // Some random value, but hopefully sysconf never returns -1 anyway:
+-        openMax = 1024;
++    // When LibreOffice restarts itself on macOS 11 beta on arm64, for
++    // some reason sysconf(_SC_OPEN_MAX) returns 0x7FFFFFFFFFFFFFFF,
++    // so use a sanity limit here.
++    if (openMax == -1 || openMax == std::numeric_limits<long>::max()) {
++        openMax = 100000;
+     }
+     assert(openMax >= 0 && openMax <= std::numeric_limits< int >::max());
+-    for (int fd = 3; fd < openMax; ++fd) {
++    for (int fd = 3; fd < int(openMax); ++fd) {
+         struct stat s;
+         if (fstat(fd, &s) != -1 && S_ISREG(s.st_mode))
+             close(fd);
