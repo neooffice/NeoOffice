@@ -12,7 +12,7 @@ escape()
 	sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g' | \
 	sed "s/^/escape('/" | \
 	sed "s/$/');/" | \
-	/System/Library/Frameworks/JavaScriptCore.framework/Resources/jsc
+	/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc
 	return $?
 }
 
