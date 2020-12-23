@@ -143,6 +143,7 @@ bool SunVersion::init(const char *szVersion)
                     //1.8.0_102-, 1.8.0_01a,
                     size_t len = pCur - pLast;
                     if (len > sizeof(buf) - 1)
+                        return false;
 #endif	// NO_LIBO_BUG_101057_FIX
                     //we've got the update: 01, 02 etc
                     strncpy(buf, pLast, len);
