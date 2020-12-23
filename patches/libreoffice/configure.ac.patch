@@ -1,5 +1,5 @@
 --- configure.ac	2015-11-25 07:55:38.000000000 -0500
-+++ configure.ac	2020-12-20 14:16:19.000000000 -0500
++++ configure.ac	2020-12-23 16:54:16.000000000 -0500
 @@ -1670,6 +1670,11 @@
           driver. If fb_config is not in PATH, use FBCONFIG to point to it.]),,
      [with_system_firebird="$with_system_libs"])
@@ -89,7 +89,7 @@
 -    10.11)
 -        MACOSX_SDK_VERSION=101100
 +    11.1)
-+        MACOSX_SDK_VERSION=101200
++        MACOSX_SDK_VERSION=110100
          ;;
      *)
 -        AC_MSG_ERROR([with-macosx-sdk $with_macosx_sdk is not a supported value, supported values are 10.8--11])
@@ -119,7 +119,7 @@
 -    10.11)
 -        MAC_OS_X_VERSION_MIN_REQUIRED="101100"
 +    11.1)
-+        MAC_OS_X_VERSION_MIN_REQUIRED="101200"
++        MAC_OS_X_VERSION_MIN_REQUIRED="110100"
          ;;
      *)
 -        AC_MSG_ERROR([with-macosx-version-min-required $with_macosx_version_min_required is not a supported value, supported values are 10.8--11])
@@ -143,7 +143,7 @@
 -    10.11)
 -        MAC_OS_X_VERSION_MAX_ALLOWED="101100"
 +    11.1)
-+        MAC_OS_X_VERSION_MAX_ALLOWED="101200"
++        MAC_OS_X_VERSION_MAX_ALLOWED="110100"
          ;;
      *)
 -        AC_MSG_ERROR([with-macosx-version-max-allowed $with_macosx_version_max_allowed is not a supported value, supported values are 10.8--11])
