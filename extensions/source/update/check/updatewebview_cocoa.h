@@ -31,6 +31,10 @@
  *
  *************************************************************************/
 
+#include "update_cocoa.hxx"
+
+#ifdef USE_NATIVE_WEB_VIEW
+
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 #import <WebKit/WebKit.h>
@@ -122,3 +126,5 @@
 - (id)initWithUserAgent:(NSString *)pUserAgent;
 - (UpdateWebView *)webView;
 @end
+
+#endif	// USE_NATIVE_WEB_VIEW

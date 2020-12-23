@@ -31,13 +31,14 @@
  *
  *************************************************************************/
 
+#ifdef USE_NATIVE_WEB_VIEW
+
 #include <map>
 
 #include <premac.h>
 #import <objc/objc-class.h>
 #include <postmac.h>
 
-#include "update_cocoa.hxx"
 #include "update_java.hxx"
 #include "updatei18n_cocoa.hxx"
 #include "updatewebview_cocoa.h"
@@ -2212,3 +2213,5 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 }
 
 @end
+
+#endif	// USE_NATIVE_WEB_VIEW
