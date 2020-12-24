@@ -515,8 +515,8 @@ build.package_shared:
 ifdef PRODUCT_BUILD3
 # Fix failure to load Python shared libraries on macOS 10.15 by correcting the
 # path to the Python framework
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find "Frameworks/LibreOfficePython.framework/Versions/3.3/lib/python3.3/lib-dynload" -maxdepth 1 -type f -name "*.so"` ; do sh "$(PWD)/etc/updatepythonbinary.sh" "$$i" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find "Frameworks/LibreOfficePython.framework" -type f -name "LibreOfficePython"` ; do install_name_tool -id "@__________________________________________________OOO/LibreOfficePython" "$$i" ; done'
+#	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find "Frameworks/LibreOfficePython.framework/Versions/3.7/lib/python3.7/lib-dynload" -maxdepth 1 -type f -name "*.so"` ; do sh "$(PWD)/etc/updatepythonbinary.sh" "$$i" ; done'
+#	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find "Frameworks/LibreOfficePython.framework" -type f -name "LibreOfficePython"` ; do install_name_tool -id "@__________________________________________________OOO/LibreOfficePython" "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice2"
 	cd "$(INSTALL_HOME)/package/Contents" ; mv "program/soffice3" "MacOS/soffice.bin"
@@ -690,7 +690,7 @@ ifdef PRODUCT_BUILD3
 # Sign "A" version of each framework
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "Contents/Frameworks" -type d -name "A"` ; do codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 # Sign LibreOfficePython framework
-	cd "$(INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" "Contents/Frameworks/LibreOfficePython.framework/Versions/3.3"
+	cd "$(INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" "Contents/Frameworks/LibreOfficePython.framework/Versions/3.7"
 	cat "etc/package/Entitlements_hardened_runtime_no_sandbox.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$(INSTALL_HOME)/Entitlements.plist"
 	cd "$(INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(INSTALL_HOME)/Entitlements.plist" .
 else
@@ -699,7 +699,16 @@ else
 	cd "$(INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(INSTALL_HOME)/Entitlements.plist" .
 endif
 # Test that all libraries will load
-	cd "$(INSTALL_HOME)/package" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; $(CC) -arch "$(TARGET_MACHINE)" -o "Contents/MacOS/loaddyliblist" "$(PWD)/etc/package/loaddyliblist.c" ; sh -e -c 'grep -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "$(BUNDLE_FILE_TYPE)" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" | sed "s#:.*\$$##" | "Contents/MacOS/loaddyliblist" ; rm -f "Contents/MacOS/loaddyliblist"'
+	$(CC) -arch "$(TARGET_MACHINE)" -o "$(INSTALL_HOME)/package/Contents/MacOS/loaddyliblist" "$(PWD)/etc/package/loaddyliblist.c"
+ifdef PRODUCT_BUILD3
+	cd "$(INSTALL_HOME)/package" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; sh -e -c 'grep -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "$(BUNDLE_FILE_TYPE)" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" | sed "s#:.*\$$##" | grep -v "/lib-dynload/" | "Contents/MacOS/loaddyliblist"'
+# Fix failure to load Python shared libraries on macOS 11.1 by load the
+# LibreOfficePython framework before the Python shared libraries
+	cd "$(INSTALL_HOME)/package" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; sh -e -c 'grep -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "$(BUNDLE_FILE_TYPE)" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" | sed "s#:.*\$$##" | grep "/lib-dynload/" | "Contents/MacOS/loaddyliblist" "Contents/Frameworks/LibreOfficePython.framework/LibreOfficePython"'
+else
+	cd "$(INSTALL_HOME)/package" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; sh -e -c 'grep -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "$(BUNDLE_FILE_TYPE)" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" | sed "s#:.*\$$##" | "Contents/MacOS/loaddyliblist"'
+endif
+	rm "$(INSTALL_HOME)/package/Contents/MacOS/loaddyliblist"
 # Verify codesigning
 	cd "$(INSTALL_HOME)/package" ; codesign --verify --deep .
 	mkdir -p "$(INSTALL_HOME)/tmp"

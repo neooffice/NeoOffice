@@ -5,7 +5,7 @@ if [ ! -w "$1" ] ; then
 	exit 1
 fi
 
-for i in `otool -L "$1" | awk '{ print $1 }' | grep -e '@__________________________________________________OOO/LibreOfficePython.framework/Versions/3.3/LibreOfficePython$'`
+for i in `otool -L "$1" | awk '{ print $1 }' | grep -e '@__________________________________________________OOO/LibreOfficePython.framework/Versions/3.7/LibreOfficePython$'`
 do
 	install_name_tool -change "$i" '@loader_path/../../../'`basename "$i"` "$1"
 done
