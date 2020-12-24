@@ -1,5 +1,5 @@
 --- configure.ac	2015-11-25 07:55:38.000000000 -0500
-+++ configure.ac	2020-12-23 16:54:16.000000000 -0500
++++ configure.ac	2020-12-23 20:48:17.000000000 -0500
 @@ -1670,6 +1670,11 @@
           driver. If fb_config is not in PATH, use FBCONFIG to point to it.]),,
      [with_system_firebird="$with_system_libs"])
@@ -225,7 +225,260 @@
      ENABLE_CMIS=TRUE
  else
      ENABLE_CMIS=
-@@ -8179,7 +8215,9 @@
+@@ -7741,18 +7777,25 @@
+ AC_SUBST(XMLLINT)
+ 
+ # =====================================================================
+-# Checking for a Python interpreter with version >= 2.6.
+-# Build and runtime requires Python 3 compatible version (>= 2.6).
++# Checking for a Python interpreter with version >= 3.3.
+ # Optionally user can pass an option to configure, i. e.
+ # ./configure PYTHON=/usr/bin/python
+ # =====================================================================
++if test $_os = Darwin -a "$enable_python" != fully-internal -a "$enable_python" != internal; then
++    # Only allowed choices for macOS are 'internal' (default) and 'fully-internal'
++    enable_python=internal
++fi
+ if test "$build_os" != "cygwin" -a "$enable_python" != fully-internal; then
+-    # This allows a lack of system python with no error, we use internal one in that case.
+-    AM_PATH_PYTHON([2.6],, [:])
+-    # Clean PYTHON_VERSION checked below if cross-compiling
+-    PYTHON_VERSION=""
+-    if test "$PYTHON" != ":"; then
++    if test -n "$PYTHON"; then
+         PYTHON_FOR_BUILD=$PYTHON
++    else
++        # This allows a lack of system python with no error, we use internal one in that case.
++        AM_PATH_PYTHON([3.3],, [:])
++        # Clean PYTHON_VERSION checked below if cross-compiling
++        PYTHON_VERSION=""
++        if test "$PYTHON" != ":"; then
++            PYTHON_FOR_BUILD=$PYTHON
++        fi
+     fi
+ fi
+ AC_SUBST(PYTHON_FOR_BUILD)
+@@ -7777,10 +7820,6 @@
+     elif test $build_os = cygwin; then
+         dnl When building on Windows we don't attempt to use any installed
+         dnl "system"  Python.
+-        dnl
+-        dnl (When cross-compiling to Windows from Linux using the mingw32-cross
+-        dnl compiler from OBS, use mingw32-python from OBS, and ditto for other
+-        dnl MinGW cross-compilation setups.)
+         AC_MSG_RESULT([fully internal])
+         enable_python=internal
+     elif test "$cross_compiling" = yes; then
+@@ -7789,8 +7828,10 @@
+     else
+         # Unset variables set by the above AM_PATH_PYTHON so that
+         # we actually do check anew.
++        AC_MSG_RESULT([])
+         unset PYTHON am_cv_pathless_PYTHON ac_cv_path_PYTHON am_cv_python_version am_cv_python_platform am_cv_python_pythondir am_cv_python_pyexecdir
+         AM_PATH_PYTHON([3.3],, [:])
++        AC_MSG_CHECKING([which Python to use for Pyuno])
+         if test "$PYTHON" = ":"; then
+             if test -z "$PYTHON_FOR_BUILD"; then
+                 AC_MSG_RESULT([fully internal])
+@@ -7813,6 +7854,9 @@
+     ;;
+ system)
+     AC_MSG_RESULT([system])
++    if test "$_os" = Darwin; then
++        AC_MSG_ERROR([--enable-python=system doesn't work on macOS because the version provided is obsolete])
++    fi
+     ;;
+ *)
+     AC_MSG_ERROR([Incorrect --enable-python option])
+@@ -7824,17 +7868,6 @@
+ fi
+ 
+ if test $enable_python = system; then
+-    if test -z "$PYTHON_CFLAGS" -a $_os = Darwin; then
+-        python_version=2.7
+-        PYTHON=python$python_version
+-        if test -d "$FRAMEWORKSHOME/Python.framework/Versions/${python_version}/include/python${python_version}"; then
+-            PYTHON_CFLAGS="-I$FRAMEWORKSHOME/Python.framework/Versions/${python_version}/include/python${python_version}"
+-            PYTHON_LIBS="-framework Python"
+-        else
+-            PYTHON_CFLAGS="`$PYTHON-config --includes`"
+-            PYTHON_LIBS="`$PYTHON-config --libs`"
+-        fi
+-    fi
+     if test -n "$PYTHON_CFLAGS" -a -n "$PYTHON_LIBS"; then
+         # Fallback: Accept these in the environment, or as set above
+         # for MacOSX.
+@@ -7852,6 +7885,9 @@
+         if test -z "$PKG_CONFIG"; then
+             PYTHON_CFLAGS="-I$python_include"
+             PYTHON_LIBS="-L$python_libdir -lpython$python_version $python_libs"
++        elif $PKG_CONFIG --exists python-$python_version-embed; then
++            PYTHON_CFLAGS="`$PKG_CONFIG --cflags python-$python_version-embed`"
++            PYTHON_LIBS="`$PKG_CONFIG --libs python-$python_version-embed` $python_libs"
+         elif $PKG_CONFIG --exists python-$python_version; then
+             PYTHON_CFLAGS="`$PKG_CONFIG --cflags python-$python_version`"
+             PYTHON_LIBS="`$PKG_CONFIG --libs python-$python_version` $python_libs"
+@@ -7859,27 +7895,10 @@
+             PYTHON_CFLAGS="-I$python_include"
+             PYTHON_LIBS="-L$python_libdir -lpython$python_version $python_libs"
+         fi
++        FilterLibs "${PYTHON_LIBS}"
++        PYTHON_LIBS="${filteredlibs}"
+     else
+         dnl How to find out the cross-compilation Python installation path?
+-        dnl Let's hardocode what we know for different distributions for now...
+-        for python_version in 2.6; do
+-            if test -f ${MINGW_SYSROOT}/include/python${python_version}/Python.h; then
+-                PYTHON_CFLAGS="-I${MINGW_SYSROOT}/include/python$python_version"
+-                PYTHON_LIBS="-L${MINGW_SYSROOT}/lib -lpython$python_version $python_libs"
+-                AC_MSG_CHECKING([for python.exe])
+-                libo_MINGW_CHECK_DLL([libpython$python_version])
+-                libo_MINGW_CHECK_DLL([libreadline6])
+-                libo_MINGW_CHECK_DLL([libtermcap])
+-                # could we somehow extract the really mingw python version from
+-                # actual distro package?
+-                # 2.6.2 currently on OpenSUSE 12.1?
+-                # rpm -q mingw32-python => mingw32-python-2.6.2-17.17.noarch
+-                PYTHON_VERSION=$python_version.2
+-                PYTHON_VERSION_MAJOR=`echo $python_version | cut -d . -f 1`
+-                PYTHON_VERSION_MINOR=`echo $python_version | cut -d . -f 2`
+-                break
+-            fi
+-        done
+         AC_MSG_CHECKING([for python version])
+         AS_IF([test -n "$PYTHON_VERSION"],
+               [AC_MSG_RESULT([$PYTHON_VERSION])],
+@@ -7887,62 +7906,100 @@
+                AC_MSG_ERROR([no usable python found])])
+         test -n "$PYTHON_CFLAGS" && break
+     fi
++
++    dnl Check if the headers really work
++    save_CPPFLAGS="$CPPFLAGS"
++    CPPFLAGS="$CPPFLAGS $PYTHON_CFLAGS"
++    AC_CHECK_HEADER(Python.h)
++    CPPFLAGS="$save_CPPFLAGS"
++
+     # let the PYTHON_FOR_BUILD match the same python installation that
+     # provides PYTHON_CFLAGS/PYTHON_LDFLAGS for pyuno, which should be
+     # better for PythonTests.
+     PYTHON_FOR_BUILD=$PYTHON
+ fi
+ 
++if test "$with_lxml" != no; then
++    if test -z "$PYTHON_FOR_BUILD"; then
++        case $build_os in
++            cygwin)
++                AC_MSG_WARN([No system-provided python lxml, gla11y will only report widget classes and ids])
++                ;;
++            *)
++                if test "$cross_compiling" != yes ; then
++                    BUILD_TYPE="$BUILD_TYPE LXML"
++                fi
++                ;;
++        esac
++    else
++        AC_MSG_CHECKING([for python lxml])
++        if $PYTHON_FOR_BUILD -c "import lxml.etree as ET" 2> /dev/null ; then
++            AC_MSG_RESULT([yes])
++        else
++            case $build_os in
++                cygwin)
++                    AC_MSG_RESULT([no, gla11y will only report widget classes and ids])
++                    ;;
++                *)
++                    if test "$cross_compiling" != yes -a "x$ac_cv_header_Python_h" = "xyes"; then
++                        if test -n ${SYSTEM_LIBXSLT} -o -n ${SYSTEM_LIBXML}; then
++                            AC_MSG_RESULT([no, and no system libxml/libxslt, gla11y will only report widget classes and ids])
++                        else
++                            BUILD_TYPE="$BUILD_TYPE LXML"
++                            AC_MSG_RESULT([no, using internal lxml])
++                        fi
++                    else
++                        AC_MSG_RESULT([no, and system does not provide python development headers, gla11y will only report widget classes and ids])
++                    fi
++                    ;;
++            esac
++        fi
++    fi
++fi
++
+ dnl By now enable_python should be "system", "internal" or "no"
+ case $enable_python in
+ system)
+     SYSTEM_PYTHON=TRUE
+ 
+-    if test "$CROSS_COMPILING" != TRUE; then
+-        dnl Check if the headers really work
+-        save_CPPFLAGS="$CPPFLAGS"
+-        CPPFLAGS="$CPPFLAGS $PYTHON_CFLAGS"
+-        AC_CHECK_HEADER(Python.h, [],
+-           [AC_MSG_ERROR([Python headers not found. You probably want to set both the PYTHON_CFLAGS and PYTHON_LIBS environment variables.])],
+-           [])
+-        CPPFLAGS="$save_CPPFLAGS"
++    if test "x$ac_cv_header_Python_h" != "xyes"; then
++       AC_MSG_ERROR([Python headers not found. You probably want to set both the PYTHON_CFLAGS and PYTHON_LIBS environment variables.])
++    fi
+ 
+-        AC_LANG_PUSH(C)
+-        CFLAGS="$CFLAGS $PYTHON_CFLAGS"
+-        AC_MSG_CHECKING([for correct python library version])
+-           AC_RUN_IFELSE([AC_LANG_SOURCE([[
++    AC_LANG_PUSH(C)
++    CFLAGS="$CFLAGS $PYTHON_CFLAGS"
++    AC_MSG_CHECKING([for correct python library version])
++       AC_RUN_IFELSE([AC_LANG_SOURCE([[
+ #include <Python.h>
+ 
+ int main(int argc, char **argv) {
+-       if ((PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION >= 6) ||
+-           (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3)) return 0;
+-       else return 1;
++   if ((PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3)) return 0;
++   else return 1;
+ }
+-           ]])],[AC_MSG_RESULT([ok])],[AC_MSG_ERROR([Python >= 3.3 is needed when building with Python 3, or Python >= 2.6 when building with Python 2])],[])
+-        CFLAGS=$save_CFLAGS
+-        AC_LANG_POP(C)
++       ]])],[AC_MSG_RESULT([ok])],[AC_MSG_ERROR([Python >= 3.3 is needed when building with Python 3])],[AC_MSG_RESULT([skipped; cross-compiling])])
++    CFLAGS=$save_CFLAGS
++    AC_LANG_POP(C)
+ 
+-        dnl FIXME Check if the Python library can be linked with, too?
+-    fi
++    dnl FIXME Check if the Python library can be linked with, too?
+     ;;
+ 
+ internal)
+     SYSTEM_PYTHON=
+     PYTHON_VERSION_MAJOR=3
+-    PYTHON_VERSION_MINOR=3
+-    PYTHON_VERSION=${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}.3
++    PYTHON_VERSION_MINOR=7
++    PYTHON_VERSION=${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}.7
++    if ! grep -q -i python.*${PYTHON_VERSION} ${SRC_ROOT}/download.lst; then
++        AC_MSG_ERROR([PYTHON_VERSION ${PYTHON_VERSION} but no matching file in download.lst])
++    fi
++    AC_DEFINE_UNQUOTED([PYTHON_VERSION_STRING], [L"${PYTHON_VERSION}"])
+     BUILD_TYPE="$BUILD_TYPE PYTHON"
++    if test "$OS" = LINUX; then
++        BUILD_TYPE="$BUILD_TYPE LIBFFI"
++    fi
+     # Embedded Python dies without Home set
+     if test "$HOME" = ""; then
+         export HOME=""
+     fi
+-    # bz2 tarball and bzip2 is not standard
+-    if test -z "$BZIP2"; then
+-        AC_PATH_PROG( BZIP2, bzip2)
+-        if test -z "$BZIP2"; then
+-            AC_MSG_ERROR([the internal Python module has a .tar.bz2. You need bzip2])
+-        fi
+-    fi
+     ;;
+ no)
+     DISABLE_PYTHON=TRUE
+@@ -8179,7 +8236,9 @@
  dnl ===================================================================
  dnl Check for PostgreSQL stuff
  dnl ===================================================================
@@ -235,7 +488,7 @@
      SCPDEFS="$SCPDEFS -DWITH_POSTGRESQL_SDBC"
  
      if test "$with_krb5" = "yes" -a "$enable_openssl" = "no"; then
-@@ -8189,9 +8227,9 @@
+@@ -8189,9 +8248,9 @@
          AC_MSG_ERROR([GSSAPI needs OpenSSL, but --disable-openssl was given.])
      fi
  
@@ -247,7 +500,7 @@
          SYSTEM_POSTGRESQL=TRUE
          if test "$_os" = Darwin; then
              supp_path=''
-@@ -8200,11 +8238,19 @@
+@@ -8200,11 +8259,19 @@
              done
          fi
          AC_PATH_PROG(PGCONFIG, pg_config, ,$PATH$pg_supp_path)
@@ -271,7 +524,7 @@
      else
          # if/when anything else than PostgreSQL uses Kerberos,
          # move this out of `test "x$enable_postgresql_sdbc" != "xno"'
-@@ -8212,16 +8258,18 @@
+@@ -8212,16 +8279,18 @@
          WITH_GSSAPI=
          case "$_os" in
          Darwin)
@@ -293,7 +546,7 @@
                  KRB5_LIBS="$KRB5_LIBS $LIBS"
                  LIBS=$save_LIBS
              fi
-@@ -8286,17 +8334,21 @@
+@@ -8286,17 +8355,21 @@
  
          if test -n "$with_libpq_path"; then
              SYSTEM_POSTGRESQL=TRUE
@@ -317,7 +570,7 @@
      if test "${SYSTEM_POSTGRESQL}" = "TRUE"; then
          AC_MSG_NOTICE([checking system PostgreSQL prerequisites])
          save_CFLAGS=$CFLAGS
-@@ -8312,6 +8364,8 @@
+@@ -8312,6 +8385,8 @@
          LIBS=$save_LIBS
      fi
      BUILD_POSTGRESQL_SDBC=TRUE
@@ -326,7 +579,7 @@
  fi
  AC_SUBST(WITH_KRB5)
  AC_SUBST(WITH_GSSAPI)
-@@ -8325,8 +8379,8 @@
+@@ -8325,8 +8400,8 @@
  dnl ===================================================================
  dnl Check for Firebird stuff
  dnl ===================================================================
@@ -337,7 +590,7 @@
      SCPDEFS="$SCPDEFS -DWITH_FIREBIRD_SDBC"
  
      dnl ===================================================================
-@@ -8339,51 +8393,59 @@
+@@ -8339,51 +8414,59 @@
          AC_PATH_PROG(FIREBIRDCONFIG, [fb_config])
          if test -z "$FIREBIRDCONFIG"; then
              AC_MSG_NOTICE([No fb_config -- using pkg-config])
@@ -407,7 +660,7 @@
              else
                  SYSTEM_LIBATOMIC_OPS=
                  LIBATOMIC_OPS_CFLAGS="-I${WORKDIR}/UnpackedTarball/libatomic_ops/include"
-@@ -8394,11 +8456,26 @@
+@@ -8394,11 +8477,26 @@
  
          AC_MSG_RESULT([internal])
          SYSTEM_FIREBIRD=
@@ -437,7 +690,7 @@
      fi
  fi
  AC_SUBST(ENABLE_FIREBIRD_SDBC)
-@@ -8408,8 +8485,8 @@
+@@ -8408,8 +8506,8 @@
  AC_SUBST(SYSTEM_FIREBIRD)
  AC_SUBST(FIREBIRD_CFLAGS)
  AC_SUBST(FIREBIRD_LIBS)
@@ -448,7 +701,7 @@
  
  dnl ===================================================================
  dnl Check for system curl
-@@ -8484,15 +8561,11 @@
+@@ -8484,15 +8582,11 @@
  if test "$with_system_boost" = "yes"; then
      AC_MSG_RESULT([external])
      SYSTEM_BOOST=TRUE
@@ -467,7 +720,7 @@
      AC_LANG_PUSH([C++])
      save_CXXFLAGS=$CXXFLAGS
      CXXFLAGS="$CXXFLAGS $BOOST_CPPFLAGS $CXXFLAGS_CXX11"
-@@ -8500,28 +8573,21 @@
+@@ -8500,28 +8594,21 @@
         [AC_MSG_ERROR(boost/shared_ptr.hpp not found. install boost)], [])
      AC_CHECK_HEADER(boost/spirit/include/classic_core.hpp, [],
         [AC_MSG_ERROR(boost/spirit/include/classic_core.hpp not found. install boost >= 1.36)], [])

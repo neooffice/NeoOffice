@@ -341,7 +341,7 @@ build.libo_configure: build.libo_patches
 ifeq ("$(OS_TYPE)","macOS")
 # Check that JDK_HOME is set to something reasonable
 	@sh -e -c 'if [ ! -d "$(JDK_HOME)" -o ! -x "$(JDK_HOME)/bin/java" ] ; then echo "JDK_HOME is invalid Java SDK path: $(JDK_HOME)" ; exit 1 ; fi'
-	cd "$(LIBO_BUILD_HOME)" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; autoconf ; ./configure --with-jdk-home="$(JDK_HOME)" --without-parallelism --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --with-macosx-version-min-required="$(PRODUCT_MIN_OSVERSION)" --without-junit --disable-cups --disable-odk --with-lang="$(LIBO_LANGUAGES)" --without-fonts --with-help --with-myspell-dicts --enable-bogus-pkg-config --enable-python=internal
+	cd "$(LIBO_BUILD_HOME)" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; autoconf ; ./configure --with-jdk-home="$(JDK_HOME)" --without-parallelism --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --with-macosx-version-min-required="$(PRODUCT_MIN_OSVERSION)" --without-junit --disable-cups --disable-odk --with-lang="$(LIBO_LANGUAGES)" --without-fonts --with-help --with-myspell-dicts --enable-bogus-pkg-config
 else
 	@echo "$@ not implemented" ; exit 1
 endif
