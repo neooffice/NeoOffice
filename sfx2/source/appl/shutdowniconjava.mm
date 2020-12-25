@@ -559,7 +559,7 @@ void ProcessShutdownIconCommand( int nCommand )
 				if ( pPrefBooleanValue )
 				{
 					BOOL bValue = [pPrefBooleanValue boolValue];
-					[pDefaults setBool:( [pMenuItem state] == NSOffState ? bValue : !bValue ) forKey:pPrefName];
+					[pDefaults setBool:( [pMenuItem state] == NSControlStateValueOff ? bValue : !bValue ) forKey:pPrefName];
 					[pDefaults synchronize];
 				}
 				else if ( pPrefStringValue )
@@ -615,7 +615,7 @@ void ProcessShutdownIconCommand( int nCommand )
 				NSObject *pPrefs = [pMenuItem representedObject];
 				if ( pPrefs && [pPrefs isKindOfClass:[NSDictionary class]] )
 				{
-					[pMenuItem setState:NSOffState];
+					[pMenuItem setState:NSControlStateValueOff];
 
 					NSDictionary *pDict = (NSDictionary *)pPrefs;
 					NSString *pPrefName = (NSString *)[pDict objectForKey:kMenuItemPrefNameKey];
@@ -679,7 +679,7 @@ void ProcessShutdownIconCommand( int nCommand )
 				{
 					NSMenuItem *pMenuItem = (NSMenuItem *)[pArray objectAtIndex:i];
 					if ( pMenuItem )
-						[pMenuItem setState:NSOnState];
+						[pMenuItem setState:NSControlStateValueOn];
 				}
 			}
 		}

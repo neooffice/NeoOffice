@@ -1788,9 +1788,9 @@ static NSComboBox *pSharedComboBox = nil;
 	[pTableHeaderCell setStringValue:@""];
 
 	if ( mnControlState & CTRL_STATE_PRESSED )
-		[pTableHeaderCell setState:NSOnState];
+		[pTableHeaderCell setState:NSControlStateValueOn];
 	else
-		[pTableHeaderCell setState:NSOffState];
+		[pTableHeaderCell setState:NSControlStateValueOff];
 
 	// The enabled state is controlled by the [NSWindow _hasActiveControls]
 	// selector so we need to attach a custom hidden window to draw enabled.
@@ -3454,14 +3454,14 @@ static bool DrawNativeDisclosureButton( JavaSalGraphics *pGraphics, const Rectan
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	NSInteger nButtonState = NSOffState;
+	NSInteger nButtonState = NSControlStateValueOff;
 	if ( pValue && pValue->getTristateVal() == BUTTONVALUE_ON )
-		nButtonState = NSOnState;
+		nButtonState = NSControlStateValueOn;
 
 	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 		nState |= CTRL_STATE_INACTIVE;
 
-	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSOnOffButton bezelStyle:NSDisclosureBezelStyle controlSize:NSControlSizeRegular buttonState:nButtonState controlState:nState drawRTL:NO bitmapBuffer:&aSharedDisclosureBtnBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSButtonTypeOnOff bezelStyle:NSDisclosureBezelStyle controlSize:NSControlSizeRegular buttonState:nButtonState controlState:nState drawRTL:NO bitmapBuffer:&aSharedDisclosureBtnBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
 	bRet = [pVCLNativeButton drawn];
@@ -3578,14 +3578,14 @@ static bool DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& 
 
 	NSInteger nButtonState;
 	if ( aValue.getTristateVal() == BUTTONVALUE_ON )
-		nButtonState = NSOnState;
+		nButtonState = NSControlStateValueOn;
 	else
-		nButtonState = NSOffState;
+		nButtonState = NSControlStateValueOff;
 
 	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 		nState |= CTRL_STATE_INACTIVE;
 
-	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSOnOffButton bezelStyle:NSShadowlessSquareBezelStyle controlSize:NSControlSizeRegular buttonState:nButtonState controlState:nState drawRTL:NO bitmapBuffer:&aSharedBevelButtonBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSButtonTypeOnOff bezelStyle:NSShadowlessSquareBezelStyle controlSize:NSControlSizeRegular buttonState:nButtonState controlState:nState drawRTL:NO bitmapBuffer:&aSharedBevelButtonBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
 	bRet = [pVCLNativeButton drawn];
@@ -3615,11 +3615,11 @@ static bool DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 	NSControlSize nControlSize = ( rDestBounds.GetWidth() < CHECKBOX_WIDTH - ( FOCUSRING_WIDTH * 2 ) || rDestBounds.GetHeight() < CHECKBOX_HEIGHT - ( FOCUSRING_WIDTH * 2 ) ? NSControlSizeSmall : NSControlSizeRegular );
 	NSInteger nButtonState;
 	if ( aValue.getTristateVal() == BUTTONVALUE_ON )
-		nButtonState = NSOnState;
+		nButtonState = NSControlStateValueOn;
 	else if ( aValue.getTristateVal() == BUTTONVALUE_MIXED )
-		nButtonState = NSMixedState;
+		nButtonState = NSControlStateValueMixed;
 	else
-		nButtonState = NSOffState;
+		nButtonState = NSControlStateValueOff;
 
 	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 		nState |= CTRL_STATE_INACTIVE;
@@ -3654,11 +3654,11 @@ static bool DrawNativeRadioButton( JavaSalGraphics *pGraphics, const Rectangle& 
 	NSControlSize nControlSize = ( rDestBounds.GetWidth() < RADIOBUTTON_WIDTH - ( FOCUSRING_WIDTH * 2 ) || rDestBounds.GetHeight() < RADIOBUTTON_HEIGHT - ( FOCUSRING_WIDTH * 2 ) ? NSControlSizeSmall : NSControlSizeRegular );
 	NSInteger nButtonState;
 	if ( aValue.getTristateVal() == BUTTONVALUE_ON )
-		nButtonState = NSOnState;
+		nButtonState = NSControlStateValueOn;
 	else if ( aValue.getTristateVal() == BUTTONVALUE_MIXED )
-		nButtonState = NSMixedState;
+		nButtonState = NSControlStateValueMixed;
 	else
-		nButtonState = NSOffState;
+		nButtonState = NSControlStateValueOff;
 
 	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 		nState |= CTRL_STATE_INACTIVE;
@@ -3693,11 +3693,11 @@ static bool DrawNativePushButton( JavaSalGraphics *pGraphics, const Rectangle& r
 
 	NSInteger nButtonState;
 	if ( aValue.getTristateVal() == BUTTONVALUE_ON )
-		nButtonState = NSOnState;
+		nButtonState = NSControlStateValueOn;
 	else if ( aValue.getTristateVal() == BUTTONVALUE_MIXED )
-		nButtonState = NSMixedState;
+		nButtonState = NSControlStateValueMixed;
 	else
-		nButtonState = NSOffState;
+		nButtonState = NSControlStateValueOff;
 
 	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 		nState |= CTRL_STATE_INACTIVE;
@@ -4149,7 +4149,7 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				// appropriate style.
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-				VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSMomentaryLightButton bezelStyle:NSRoundedBezelStyle controlSize:NSControlSizeRegular buttonState:NSOffState controlState:0 drawRTL:NO bitmapBuffer:NULL graphics:NULL destRect:CGRectZero];
+				VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSMomentaryLightButton bezelStyle:NSRoundedBezelStyle controlSize:NSControlSizeRegular buttonState:NSControlStateValueOff controlState:0 drawRTL:NO bitmapBuffer:NULL graphics:NULL destRect:CGRectZero];
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 				[pVCLNativeButton performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
 				NSSize aSize = [pVCLNativeButton size];

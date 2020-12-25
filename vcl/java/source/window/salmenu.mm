@@ -281,7 +281,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	{
 		NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:nPos];
 		if ( pMenuItem )
-			[pMenuItem setState:( [pCheck boolValue] ? NSOnState : NSOffState )];
+			[pMenuItem setState:( [pCheck boolValue] ? NSControlStateValueOn : NSControlStateValueOff )];
 	}
 }
 

@@ -534,7 +534,11 @@ static OUString filterAccelerator( rtl::OUString const & rText )
     {
         NSButton* pBtn = (NSButton*)pSender;
         int nTag = [pBtn tag];
+#ifdef USE_JAVA
+        mpController->changePropertyWithBoolValue( nTag, [pBtn state] == NSControlStateValueOn );
+#else	// USE_JAVA
         mpController->changePropertyWithBoolValue( nTag, [pBtn state] == NSOnState );
+#endif	// USE_JAVA
     }
     else if( [pSender isMemberOfClass: [NSMatrix class]] )
     {
@@ -846,7 +850,11 @@ static void addBool( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
     NSRect aCheckRect = { { static_cast<CGFloat>(rCurX + nAttachOffset), 0 }, { 0, 15 } };
     NSButton* pBtn = [[NSButton alloc] initWithFrame: aCheckRect];
     [pBtn setButtonType: NSSwitchButton];                
+#ifdef USE_JAVA
+    [pBtn setState: bValue ? NSControlStateValueOn : NSControlStateValueOff];
+#else	// USE_JAVA
     [pBtn setState: bValue ? NSOnState : NSOffState];
+#endif	// USE_JAVA
     if( ! bEnabled )
         [pBtn setEnabled: NO];
     linebreakCell( [pBtn cell], rText );

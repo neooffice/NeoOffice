@@ -657,7 +657,7 @@ static NSString *pBlankItem = @" ";
 			[pButton autorelease];
 
 			[pButton setButtonType:NSSwitchButton];
-			[pButton setState:NSOffState];
+			[pButton setState:NSControlStateValueOff];
 			[pButton setTitle:@""];
 			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILTEROPTIONS] stringValue]];
 		}
@@ -700,7 +700,7 @@ static NSString *pBlankItem = @" ";
 			[pButton autorelease];
 
 			[pButton setButtonType:NSSwitchButton];
-			[pButton setState:NSOffState];
+			[pButton setState:NSControlStateValueOff];
 			[pButton setTitle:@""];
 			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_LINK] stringValue]];
 		}
@@ -716,7 +716,7 @@ static NSString *pBlankItem = @" ";
 			[pButton autorelease];
 
 			[pButton setButtonType:NSSwitchButton];
-			[pButton setState:NSOffState];
+			[pButton setState:NSControlStateValueOff];
 			[pButton setTitle:@""];
 			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_PASSWORD] stringValue]];
 		}
@@ -732,7 +732,7 @@ static NSString *pBlankItem = @" ";
 			[pButton autorelease];
 
 			[pButton setButtonType:NSSwitchButton];
-			[pButton setState:NSOffState];
+			[pButton setState:NSControlStateValueOff];
 			[pButton setTitle:@""];
 			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_READONLY] stringValue]];
 		}
@@ -748,7 +748,7 @@ static NSString *pBlankItem = @" ";
 			[pButton autorelease];
 
 			[pButton setButtonType:NSSwitchButton];
-			[pButton setState:NSOffState];
+			[pButton setState:NSControlStateValueOff];
 			[pButton setTitle:@""];
 			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_SELECTION] stringValue]];
 		}
@@ -847,7 +847,7 @@ static NSString *pBlankItem = @" ";
 	{
 		NSButton *pButton = (NSButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
 		if ( pButton )
-			bRet = ( [pButton state] == NSOnState );
+			bRet = ( [pButton state] == NSControlStateValueOn );
 	}
 
 	[pArgs setResult:[NSNumber numberWithBool:bRet]];
@@ -1143,7 +1143,7 @@ static NSString *pBlankItem = @" ";
 	{
 		NSButton *pButton = (NSButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
 		if ( pButton )
-			[pButton setState:( bChecked ? NSOnState : NSOffState )];
+			[pButton setState:( bChecked ? NSControlStateValueOn : NSControlStateValueOff )];
 	}
 }
 
