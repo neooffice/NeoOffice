@@ -783,7 +783,7 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 		{
 			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
-			if ( nResult == NSFileHandlingPanelOKButton )
+			if ( nResult == NSModalResponseOK )
 			{
 				NSArray *pURLs = [mpOpenPanel URLs];
 				if ( pURLs && [pURLs count] )

@@ -1295,7 +1295,7 @@ static NSString *pBlankItem = @" ";
 			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
 			mbExtensionHidden = [mpFilePanel isExtensionHidden];
-			if ( nResult == NSFileHandlingPanelOKButton )
+			if ( nResult == NSModalResponseOK )
 			{
 				if ( mbUseFileOpenDialog )
 				{
