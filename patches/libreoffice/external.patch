@@ -198,14 +198,14 @@
  
  $(eval $(call gb_UnpackedTarball_set_patchlevel,libcmis,1))
  
---- boost/boost.wunused.patch	2015-11-25 07:55:38.000000000 -0500
-+++ boost/boost.wunused.patch	2020-12-25 17:13:08.000000000 -0500
-@@ -18,3 +18,14 @@
-              BOOST_ASSERT(node_alloc() == other.node_alloc());
-          }
-  
-+--- foo/foo/foo/boost/ptr_container/ptr_sequence_adapter.hpp
-++++ foo/foo/foo/boost/ptr_container/ptr_sequence_adapter.hpp
+--- boost/clang-cl.patch.0	2020-12-09 13:56:14.000000000 -0500
++++ boost/clang-cl.patch.0	2020-12-25 18:11:14.000000000 -0500
+@@ -46,3 +46,14 @@
+        //For compilers supporting auto-tss cleanup
+              //with Boost.Threads lib, use Boost.Threads lib
+  #           define BOOST_THREAD_USE_LIB
++--- boost/ptr_container/ptr_sequence_adapter.hpp
+++++ boost/ptr_container/ptr_sequence_adapter.hpp
 +@@ -714,6 +714,8 @@
 +             BOOST_ASSERT( first <= last && "out of range unique()/erase_if()" );
 +             BOOST_ASSERT( this->begin() <= first && "out of range unique()/erase_if()" );
