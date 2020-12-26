@@ -1527,6 +1527,10 @@ static NSComboBox *pSharedComboBox = nil;
 
 // =======================================================================
 
+@interface NSBox (VCLBox)
+- (void)setBorderType:(NSBorderType)nBorderType;
+@end
+
 @interface VCLNativeBox : NSObject
 {
 	ControlState			mnControlState;
@@ -1665,7 +1669,8 @@ static NSComboBox *pSharedComboBox = nil;
 	[pBox autorelease];
 
 	[pBox setBoxType:NSBoxCustom];
-	[pBox setBorderType:NSLineBorder];
+	if ( [pBox respondsToSelector:@selector(setBorderType:)] )
+		[pBox setBorderType:NSLineBorder];
 	[pBox setBorderColor:[NSColor gridColor]];
 
 	return pBox;
