@@ -914,6 +914,10 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 @end
 
+@interface PDFView (SFXPDFView)
+- (void)setAllowsDragging:(BOOL)bFlag;
+@end
+
 @interface SFXDocumentRevision : SFXDocument
 {
 	PDFView*				mpPDFView;
@@ -1086,7 +1090,9 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 					if ( mpPDFView )
 					{
 						[mpPDFView setDocument:pPDFDoc];
-						[mpPDFView setAllowsDragging:NO];
+						[mpPDFView setAcceptsDraggedFiles:NO];
+						if ( [mpPDFView respondsToSelector:@selector(setAllowsDragging:)] )
+							[mpPDFView setAllowsDragging:NO];
 						[mpPDFView setAutoScales:YES];
 						[mpPDFView setDisplaysPageBreaks:NO];
 						[pWindow setContentView:mpPDFView];
