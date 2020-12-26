@@ -104,9 +104,11 @@ $(eval $(call gb_Library_add_cxxflags,vcl,\
     $(gb_OBJCXXFLAGS) \
 ))
 
+ifneq ($(strip $(GUIBASE)),java)
 $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/osx/OpenGLWrapper \
 ))
+endif	# GUIBASE == java
 
 endif
 
