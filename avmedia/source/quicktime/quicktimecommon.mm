@@ -290,6 +290,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 #endif	// USE_QUICKTIME
 
+@interface NSCursor (AvmediaCursor)
+- (void)setOnMouseEntered:(BOOL)bFlag;
+@end
+
 @implementation AvmediaMoviePlayer
 
 - (void)bounds:(AvmediaArgs *)pArgs
@@ -718,7 +722,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		AVPlayerItem *pAVPlayerItem = mpAVPlayer.currentItem;
 		if ( pAVPlayerItem )
 		{
-			[pAVPlayerItem seekToTime:kCMTimeZero toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+			[pAVPlayerItem seekToTime:kCMTimeZero toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:nil];
 			[mpAVPlayer play];
 		}
 	}
@@ -805,7 +809,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	{
 		AVPlayerItem *pAVPlayerItem = mpAVPlayer.currentItem;
 		if ( pAVPlayerItem )
-			[pAVPlayerItem seekToTime:CMTimeMakeWithSeconds( [pTime doubleValue], PREFERRED_TIMESCALE ) toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+			[pAVPlayerItem seekToTime:CMTimeMakeWithSeconds( [pTime doubleValue], PREFERRED_TIMESCALE ) toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:nil];
 	}
 #endif	// USE_QUICKTIME
 }
@@ -1321,7 +1325,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( mpCursor )
 	{
 		[self addCursorRect:[self visibleRect] cursor:mpCursor];
-		[mpCursor setOnMouseEntered:YES];
+		if ( [mpCursor respondsToSelector:@selector(setOnMouseEntered:)] )
+			[mpCursor setOnMouseEntered:YES];
 	}
 }
 
