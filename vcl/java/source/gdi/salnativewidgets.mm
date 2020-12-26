@@ -509,7 +509,7 @@ static bool IsRunningCatalinaOrLower()
 						CGContextScaleCTM( mpBuffer->maContext, -1.0f, 1.0f );
 					}
 
-					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithCGContext:mpBuffer->maContext flipped:YES];
 					if ( pContext )
 					{
 						NSRect aDrawRect = NSRectFromCGRect( aAdjustedDestRect );
@@ -877,7 +877,7 @@ static NSComboBox *pSharedComboBox = nil;
 						CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 					}
 
-					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithCGContext:mpBuffer->maContext flipped:YES];
 					if ( pContext )
 					{
 						NSRect aDrawRect = NSRectFromCGRect( aAdjustedDestRect );
@@ -1136,7 +1136,7 @@ static NSComboBox *pSharedComboBox = nil;
 					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 				}
 
-				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithCGContext:mpBuffer->maContext flipped:YES];
 				if ( pContext )
 				{
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
@@ -1455,7 +1455,7 @@ static NSComboBox *pSharedComboBox = nil;
 				// to draw the control.
 				CGContextTranslateCTM( mpBuffer->maContext, 0, ( ( fOffscreenHeight - [pProgressIndicator frame].size.height ) / 2 ) + PROGRESSBAR_HEIGHT_SLOP );
 
-				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithCGContext:mpBuffer->maContext flipped:YES];
 				if ( pContext )
 				{
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
@@ -1580,7 +1580,7 @@ static NSComboBox *pSharedComboBox = nil;
 					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 				}
 
-				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithCGContext:mpBuffer->maContext flipped:YES];
 				if ( pContext )
 				{
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
@@ -1686,7 +1686,7 @@ static NSComboBox *pSharedComboBox = nil;
 					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 				}
 
-				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithCGContext:mpBuffer->maContext flipped:YES];
 				if ( pContext )
 				{
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
@@ -1841,7 +1841,7 @@ static NSComboBox *pSharedComboBox = nil;
 							CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 						}
 
-						NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+						NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithCGContext:mpBuffer->maContext flipped:YES];
 						if ( pContext )
 						{
 							// Shift control to right by same amount so that
@@ -2047,7 +2047,7 @@ static NSComboBox *pSharedComboBox = nil;
 					float fYAdjust = ( fOffscreenHeight - fCellHeight ) / 2;
 					CGContextTranslateCTM( mpBuffer->maContext, fXAdjust, fYAdjust );
 
-					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithCGContext:mpBuffer->maContext flipped:YES];
 					if ( pContext )
 					{
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
@@ -2198,7 +2198,7 @@ static NSComboBox *pSharedComboBox = nil;
 						CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 					}
 
-					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithCGContext:mpBuffer->maContext flipped:YES];
 					if ( pContext )
 					{
 						NSRect aDrawRect = NSRectFromCGRect( aAdjustedDestRect );
@@ -2340,7 +2340,7 @@ static NSComboBox *pSharedComboBox = nil;
 						CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 					}
 
-					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithCGContext:mpBuffer->maContext flipped:YES];
 					if ( pContext )
 					{
 						NSRect aDrawRect = NSRectFromCGRect( aAdjustedDestRect );
@@ -2473,7 +2473,7 @@ static NSComboBox *pSharedComboBox = nil;
 					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 				}
 
-				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithCGContext:mpBuffer->maContext flipped:YES];
 				if ( pContext )
 				{
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
@@ -2700,7 +2700,7 @@ static NSComboBox *pSharedComboBox = nil;
 						CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 					}
 
-					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithCGContext:mpBuffer->maContext flipped:YES];
 					if ( pContext )
 					{
 						// Shift control to right by same amount so that the

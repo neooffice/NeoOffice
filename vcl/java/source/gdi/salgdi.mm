@@ -331,7 +331,7 @@ void JavaSalGraphicsDrawEPSOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef 
 		// until after the print operation has ended
 		VCLInstance_retainIfInDragPrintLock( pImageRep );
 
-		NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:aContext flipped:NO];
+		NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithCGContext:aContext flipped:NO];
 		if ( pContext )
 		{
 			NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
