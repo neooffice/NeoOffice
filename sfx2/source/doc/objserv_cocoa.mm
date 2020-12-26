@@ -189,7 +189,12 @@ static NSAlert *pSaveDisabledAlert = nil;
 					// the default browser is not Safari and the browser is not
 					// running
 					if ( ![pWorkspace openURL:pURL] )
-						[pWorkspace openURLs:[NSArray arrayWithObject:pURL] withAppBundleIdentifier:@"com.apple.Safari" options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
+					{
+						NSURL *pAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:@"com.apple.Safari"];
+						NSWorkspaceOpenConfiguration *pConfiguration = [NSWorkspaceOpenConfiguration configuration];
+						if ( pAppURL && pConfiguration )
+							[pWorkspace openURLs:[NSArray arrayWithObject:pURL] withApplicationAtURL:pAppURL configuration:pConfiguration completionHandler:nil];
+					}
 				}
 			}
 			else

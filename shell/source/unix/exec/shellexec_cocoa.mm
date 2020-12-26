@@ -56,6 +56,10 @@ using namespace com::sun::star::uno;
 - (BOOL)result;
 @end
 
+@interface NSWorkspace (ShellExecOpenURL)
+- (BOOL)openURLs:(NSArray<NSURL *> *)pURLs withAppBundleIdentifier:(NSString *)pBundleIdentifier options:(NSWorkspaceLaunchOptions)nOptions additionalEventParamDescriptor:(NSAppleEventDescriptor *)pDescriptor launchIdentifiers:(NSArray<NSNumber *> * _Nullable *)pIdentifiers;
+@end
+
 @implementation ShellExecOpenURL
 
 + (id)createWithURL:(NSURL *)pURL
@@ -94,19 +98,15 @@ using namespace com::sun::star::uno;
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
 	if ( pWorkspace && mpURL )
 	{
-		NSArray *pURLs = [NSArray arrayWithObject:mpURL];
-		if ( pURLs )
+		mbResult = [pWorkspace openURL:mpURL];
+		if ( !mbResult && [pWorkspace respondsToSelector:@selector(openURLs:withAppBundleIdentifier:options:additionalEventParamDescriptor:launchIdentifiers:)] )
 		{
-			mbResult = [pWorkspace openURLs:pURLs withAppBundleIdentifier:nil options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
-			if ( !mbResult )
-			{
-				NSString *pAppID = nil;
-				if ( [@"mailto" isEqualToString:[mpURL scheme]] )
-					pAppID = @"com.apple.mail";
-				else
-					pAppID = @"com.apple.Safari";
-				mbResult = [pWorkspace openURLs:pURLs withAppBundleIdentifier:pAppID options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
-			}
+			NSString *pAppID = nil;
+			if ( [@"mailto" isEqualToString:[mpURL scheme]] )
+				pAppID = @"com.apple.mail";
+			else
+				pAppID = @"com.apple.Safari";
+			mbResult = [pWorkspace openURLs:[NSArray arrayWithObject:mpURL] withAppBundleIdentifier:pAppID options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
 		}
 	}
 }

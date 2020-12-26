@@ -71,7 +71,12 @@
 	// will prevent our application from accessing a device's files
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
 	if ( pWorkspace )
-		[pWorkspace launchAppWithBundleIdentifier:@"com.apple.Image_Capture" options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifier:nil];
+	{
+		NSURL *pAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:@"com.apple.Image_Capture"];
+		NSWorkspaceOpenConfiguration *pConfiguration = [NSWorkspaceOpenConfiguration configuration];
+		if ( pAppURL && pConfiguration )
+			[pWorkspace openApplicationAtURL:pAppURL configuration:pConfiguration completionHandler:nil];
+	}
 }
 
 @end

@@ -57,6 +57,10 @@ using namespace com::sun::star::uno;
 - (BOOL)result;
 @end
 
+@interface NSWorkspace (CmdMailSupplOpenURLs)
+- (BOOL)openURLs:(NSArray<NSURL *> *)pURLs withAppBundleIdentifier:(NSString *)pBundleIdentifier options:(NSWorkspaceLaunchOptions)nOptions additionalEventParamDescriptor:(NSAppleEventDescriptor *)pDescriptor launchIdentifiers:(NSArray<NSNumber *> * _Nullable *)pIdentifiers;
+@end
+
 @implementation CmdMailSupplOpenURLs
 
 + (id)createWithURLs:(NSArray *)pURLs appID:(NSString *)pAppID
@@ -99,7 +103,7 @@ using namespace com::sun::star::uno;
 	mbResult = NO;
 
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
-	if ( pWorkspace && mpURLs && [mpURLs count] )
+	if ( pWorkspace && mpURLs && [mpURLs count] && [pWorkspace respondsToSelector:@selector(openURLs:withAppBundleIdentifier:options:additionalEventParamDescriptor:launchIdentifiers:)] )
 	{
 		if ( mpAppID && [mpAppID length] )
 			mbResult = [pWorkspace openURLs:mpURLs withAppBundleIdentifier:mpAppID options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];

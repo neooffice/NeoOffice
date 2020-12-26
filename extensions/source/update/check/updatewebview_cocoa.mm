@@ -1408,7 +1408,12 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 					NSArray *pURLs = [NSArray arrayWithObject:[NSURL fileURLWithPath:path]];
 					NSString *pBundleID = [[NSBundle mainBundle] bundleIdentifier];
 					if (pWorkspace && pURLs && pBundleID)
-						[pWorkspace openURLs:pURLs withAppBundleIdentifier:pBundleID options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
+					{
+						NSURL *pAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:pBundleID];
+						NSWorkspaceOpenConfiguration *pConfiguration = [NSWorkspaceOpenConfiguration configuration];
+						if ( pAppURL && pConfiguration )
+							[pWorkspace openURLs:pURLs withApplicationAtURL:pAppURL configuration:pConfiguration completionHandler:nil];
+					}
 				}
 				@catch (NSException *pExc)
 				{
