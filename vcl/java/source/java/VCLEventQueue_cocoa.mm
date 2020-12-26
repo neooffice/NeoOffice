@@ -745,6 +745,7 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 
 @interface NSResponder (VCLResponder)
 - (void)abandonInput;
+- (nullable id)accessibilityAttributeValue:(NSAccessibilityAttributeName)attribute;
 - (void)copy:(id)pSender;
 - (void)cut:(id)pSender;
 - (void)paste:(id)pSender;
