@@ -82,8 +82,8 @@ OUString GetMacDictLoookupResString( int nId )
 		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithUniqueName];
 		if ( pPasteboard )
 		{
-			[pPasteboard declareTypes:[NSArray arrayWithObject:NSStringPboardType] owner:nil];
-			[pPasteboard setString:pString forType:NSStringPboardType];
+			[pPasteboard declareTypes:[NSArray arrayWithObject:NSPasteboardTypeString] owner:nil];
+			[pPasteboard setString:pString forType:NSPasteboardTypeString];
 			NSPerformService( @"Look Up in Dictionary", pPasteboard );
 		}
 	}

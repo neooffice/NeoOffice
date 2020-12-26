@@ -67,7 +67,7 @@ static sal_uInt16 nSupportedTypes = 7;
 // pointer to a local static NSString that the symbol address should be
 // assigned to.
 static NSString *aSupportedPasteboardTypeSymbolNames[] = {
-	NSURLPboardType, URL_TYPE_TAG,
+	NSPasteboardTypeURL, URL_TYPE_TAG,
 	NSPasteboardTypeRTF, nil,
 	NSPasteboardTypeHTML, HTML_TYPE_TAG,
 	NSPasteboardTypeString, STRING_TYPE_TAG,
@@ -384,7 +384,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 				{
 					NSBitmapImageRep *pPasteboardImageRep = [NSBitmapImageRep imageRepWithData:pPasteboardData];
 					if ( pPasteboardImageRep )
-						mpPNGData = [pPasteboardImageRep representationUsingType:NSPNGFileType properties:[NSDictionary dictionary]];
+						mpPNGData = [pPasteboardImageRep representationUsingType:NSBitmapImageFileTypePNG properties:[NSDictionary dictionary]];
 
 					if ( !mpPNGData )
 					{
@@ -398,7 +398,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 							{
 								NSBitmapImageRep *pTIFFImageRep = [NSBitmapImageRep imageRepWithData:pTIFFData];
 								if ( pTIFFImageRep )
-									mpPNGData = [pTIFFImageRep representationUsingType:NSPNGFileType properties:[NSDictionary dictionary]];
+									mpPNGData = [pTIFFImageRep representationUsingType:NSBitmapImageFileTypePNG properties:[NSDictionary dictionary]];
 							}
 						}
 					}

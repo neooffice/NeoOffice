@@ -3161,9 +3161,9 @@ static CFDataRef aRTFSelection = nil;
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType
 {
 	NSWindow *pWindow = [self window];
-	if ( pWindow && [pWindow isVisible] && pSharedResponder && ![pSharedResponder disableServicesMenu] && pSendType && ( !pReturnType || [pReturnType isEqual:NSRTFPboardType] || [pReturnType isEqual:NSStringPboardType] ) )
+	if ( pWindow && [pWindow isVisible] && pSharedResponder && ![pSharedResponder disableServicesMenu] && pSendType && ( !pReturnType || [pReturnType isEqual:NSPasteboardTypeRTF] || [pReturnType isEqual:NSPasteboardTypeString] ) )
 	{
-		if ( [pSendType isEqual:NSRTFPboardType] )
+		if ( [pSendType isEqual:NSPasteboardTypeRTF] )
 		{
 			if ( aRTFSelection )
 			{
@@ -3175,7 +3175,7 @@ static CFDataRef aRTFSelection = nil;
 			if ( aRTFSelection )
 				return self;
 		}
-		else if ( [pSendType isEqual:NSStringPboardType] )
+		else if ( [pSendType isEqual:NSPasteboardTypeString] )
 		{
 			if ( aTextSelection )
 			{
@@ -3212,17 +3212,17 @@ static CFDataRef aRTFSelection = nil;
 		NSMutableArray *pTypesDeclared = [NSMutableArray arrayWithCapacity:2];
 		if ( pTypesDeclared )
 		{
-			if ( aRTFSelection && [pTypes containsObject:NSRTFPboardType] )
-				[pTypesDeclared addObject:NSRTFPboardType];
-			if ( aTextSelection && [pTypes containsObject:NSStringPboardType] )
-				[pTypesDeclared addObject:NSStringPboardType];
+			if ( aRTFSelection && [pTypes containsObject:NSPasteboardTypeRTF] )
+				[pTypesDeclared addObject:NSPasteboardTypeRTF];
+			if ( aTextSelection && [pTypes containsObject:NSPasteboardTypeString] )
+				[pTypesDeclared addObject:NSPasteboardTypeString];
 
 			[pPasteboard declareTypes:pTypesDeclared owner:nil];
 			if ( [pTypesDeclared count] )
 			{
-				if ( aRTFSelection && [pTypesDeclared containsObject:NSRTFPboardType] && [pPasteboard setData:(NSData *)aRTFSelection forType:NSRTFPboardType] )
+				if ( aRTFSelection && [pTypesDeclared containsObject:NSPasteboardTypeRTF] && [pPasteboard setData:(NSData *)aRTFSelection forType:NSPasteboardTypeRTF] )
 					bRet = YES;
-				if ( aTextSelection && [pTypesDeclared containsObject:NSStringPboardType] && [pPasteboard setString:(NSString *)aTextSelection forType:NSStringPboardType] )
+				if ( aTextSelection && [pTypesDeclared containsObject:NSPasteboardTypeString] && [pPasteboard setString:(NSString *)aTextSelection forType:NSPasteboardTypeString] )
 					bRet = YES;
 			}
 		}
