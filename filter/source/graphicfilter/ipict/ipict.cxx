@@ -39,9 +39,15 @@
 
 #if defined USE_JAVA && defined MACOSX
 
+#include <dlfcn.h>
+
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
 #include <postmac.h>
+
+typedef CTFontRef CTFontCreateWithPlatformFont_Type( ATSFontRef pPlatformFont, CGFloat fSize, const CGAffineTransform *pMatrix, CTFontDescriptorRef pAttributes );
+
+static CTFontCreateWithPlatformFont_Type *pCTFontCreateWithPlatformFont = NULL;
 
 #endif	// USE_JAVA && MACOSX
 
@@ -1494,7 +1500,11 @@ sal_uLong PictReader::ReadData(sal_uInt16 nOpcode)
 #ifdef USE_JAVA
         {
 #ifdef MACOSX
-            CTFontRef aCTFont = CTFontCreateWithPlatformFont( (ATSFontRef)nUSHORT, 0, NULL, NULL );
+            CTFontRef aCTFont = NULL;
+            if ( !pCTFontCreateWithPlatformFont )
+                pCTFontCreateWithPlatformFont = (CTFontCreateWithPlatformFont_Type *)dlsym( RTLD_DEFAULT, "CTFontCreateWithPlatformFont" );
+            if ( pCTFontCreateWithPlatformFont )
+                aCTFont = pCTFontCreateWithPlatformFont( (ATSFontRef)nUSHORT, 0, NULL, NULL );
             if ( aCTFont )
             {
                 CFStringRef aCTFontName = CTFontCopyFullName( aCTFont );
