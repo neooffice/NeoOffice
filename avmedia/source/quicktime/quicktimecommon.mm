@@ -722,8 +722,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		AVPlayerItem *pAVPlayerItem = mpAVPlayer.currentItem;
 		if ( pAVPlayerItem )
 		{
-			[pAVPlayerItem seekToTime:kCMTimeZero toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:nil];
-			[mpAVPlayer play];
+			[pAVPlayerItem seekToTime:kCMTimeZero toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:^(BOOL bFinished) {
+				if ( bFinished )
+					[mpAVPlayer play];
+			}];
 		}
 	}
 }
