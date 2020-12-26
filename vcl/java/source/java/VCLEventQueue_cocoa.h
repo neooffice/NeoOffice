@@ -51,8 +51,12 @@
 @end
 
 @interface NSColor (VCLColor)
++ (NSColor *)controlHighlightColor;
++ (NSColor *)controlShadowColor;
 + (NSColor *)linkColor;
++ (NSColor *)scrollBarColor;
 + (NSColor *)selectedContentBackgroundColor;
++ (NSColor *)selectedMenuItemColor;
 + (NSColor *)separatorColor;
 + (NSColor *)unemphasizedSelectedContentBackgroundColor;
 + (NSColor *)unemphasizedSelectedTextBackgroundColor;

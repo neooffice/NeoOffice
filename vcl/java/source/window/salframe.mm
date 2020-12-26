@@ -172,7 +172,7 @@ static sal_Bool SetSalColorFromNSColor( NSColor *pNSColor, SalColor **ppSalColor
 
 		if ( pNSColor )
 		{
-			pNSColor = [pNSColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+			pNSColor = [pNSColor colorUsingColorSpace:[NSColorSpace deviceRGBColorSpace]];
 			if ( pNSColor )
 			{
 				// Remove transparency by blending color with opaque gray
