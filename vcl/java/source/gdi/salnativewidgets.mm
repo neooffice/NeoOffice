@@ -61,6 +61,9 @@
 // Comment out the following line to disable native frame
 #define USE_NATIVE_CTRL_FRAME
 
+// Uncomment out the following line to enable scrollbar arrows
+// #define USE_SCROLLBAR_ARROWS
+
 #define COMBOBOX_BUTTON_WIDTH			19
 #define COMBOBOX_HEIGHT					28
 #define COMBOBOX_HEIGHT_SLOP			1
@@ -77,7 +80,6 @@
 #define FOCUSRING_WIDTH					3
 #define FRAME_TRIMWIDTH					1
 #define LISTBOX_BUTTON_WIDTH			19
-#define SCROLLBAR_SUPPRESS_ARROWS		true
 #define SPINNER_WIDTH_SLOP				1
 #define SPINNER_FOCUSRING_LEFT_OFFSET	0
 #define SPINNER_FOCUSRING_TOP_OFFSET	1
@@ -1159,8 +1161,8 @@ static NSComboBox *pSharedComboBox = nil;
 						[[NSColor controlBackgroundColor] set];
 					[NSBezierPath fillRect:NSRectFromCGRect( aAdjustedDestRect )];
 
+#ifdef USE_SCROLLBAR_ARROWS
 					// Draw arrows on Mac OS X 10.6
-					if ( !SCROLLBAR_SUPPRESS_ARROWS )
 					{
 						// Disabling on Mac OS X 10.6 draws the scroller with
 						// no arrows
@@ -1226,6 +1228,7 @@ static NSComboBox *pSharedComboBox = nil;
 							}
 						}
 					}
+#endif	// USE_SCROLLBAR_ARROWS
 
 					[pScroller drawKnobSlotInRect:[pScroller rectForPart:NSScrollerKnobSlot] highlight:NO];
 					if ( !mbDrawOnlyTrack )
@@ -1264,6 +1267,7 @@ static NSComboBox *pSharedComboBox = nil;
 		{
 			BOOL bFlipped = [pScroller isFlipped];
 
+#ifdef USE_SCROLLBAR_ARROWS
 			maDecrementArrowBounds = [pScroller rectForPart:NSScrollerDecrementLine];
 			if ( !bFlipped )
 				maDecrementArrowBounds.origin.y = maDestRect.size.height - maDecrementArrowBounds.origin.y - maDecrementArrowBounds.size.height;
@@ -1279,6 +1283,7 @@ static NSComboBox *pSharedComboBox = nil;
 			maIncrementPageBounds = [pScroller rectForPart:NSScrollerIncrementPage];
 			if ( !bFlipped )
 				maIncrementPageBounds.origin.y = maDestRect.size.height - maIncrementPageBounds.origin.y - maIncrementPageBounds.size.height;
+#endif	// USE_SCROLLBAR_ARROWS
 
 			maThumbBounds = [pScroller rectForPart:NSScrollerKnob];
 			if ( !bFlipped )
@@ -1400,7 +1405,7 @@ static NSComboBox *pSharedComboBox = nil;
 	[pProgressIndicator autorelease];
 
 	[pProgressIndicator setControlSize:mnControlSize];
-	[pProgressIndicator setStyle:NSProgressIndicatorBarStyle];
+	[pProgressIndicator setStyle:NSProgressIndicatorStyleBar];
 	[pProgressIndicator setIndeterminate:NO];
 
 	double fRange = [pProgressIndicator maxValue] - [pProgressIndicator minValue];

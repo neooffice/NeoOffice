@@ -1513,7 +1513,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				if ( mpWaitingView )
 				{
 					[mpWaitingView setIndeterminate:YES];
-					[mpWaitingView setStyle:NSProgressIndicatorSpinningStyle];
+					[mpWaitingView setStyle:NSProgressIndicatorStyleSpinning];
 					[mpWaitingView setDisplayedWhenStopped:NO];
 					[mpWaitingView sizeToFit];
 					[mpWaitingView setAutoresizingMask:NSViewMinXMargin | NSViewMaxXMargin | NSViewMinYMargin | NSViewMaxYMargin];
