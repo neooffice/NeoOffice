@@ -656,7 +656,7 @@ static NSString *pBlankItem = @" ";
 			// Add to autorelease pool as invoking alloc disables autorelease
 			[pButton autorelease];
 
-			[pButton setButtonType:NSSwitchButton];
+			[pButton setButtonType:NSButtonTypeSwitch];
 			[pButton setState:NSControlStateValueOff];
 			[pButton setTitle:@""];
 			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILTEROPTIONS] stringValue]];
@@ -699,7 +699,7 @@ static NSString *pBlankItem = @" ";
 			// Add to autorelease pool as invoking alloc disables autorelease
 			[pButton autorelease];
 
-			[pButton setButtonType:NSSwitchButton];
+			[pButton setButtonType:NSButtonTypeSwitch];
 			[pButton setState:NSControlStateValueOff];
 			[pButton setTitle:@""];
 			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_LINK] stringValue]];
@@ -715,7 +715,7 @@ static NSString *pBlankItem = @" ";
 			// Add to autorelease pool as invoking alloc disables autorelease
 			[pButton autorelease];
 
-			[pButton setButtonType:NSSwitchButton];
+			[pButton setButtonType:NSButtonTypeSwitch];
 			[pButton setState:NSControlStateValueOff];
 			[pButton setTitle:@""];
 			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_PASSWORD] stringValue]];
@@ -731,7 +731,7 @@ static NSString *pBlankItem = @" ";
 			// Add to autorelease pool as invoking alloc disables autorelease
 			[pButton autorelease];
 
-			[pButton setButtonType:NSSwitchButton];
+			[pButton setButtonType:NSButtonTypeSwitch];
 			[pButton setState:NSControlStateValueOff];
 			[pButton setTitle:@""];
 			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_READONLY] stringValue]];
@@ -747,7 +747,7 @@ static NSString *pBlankItem = @" ";
 			// Add to autorelease pool as invoking alloc disables autorelease
 			[pButton autorelease];
 
-			[pButton setButtonType:NSSwitchButton];
+			[pButton setButtonType:NSButtonTypeSwitch];
 			[pButton setState:NSControlStateValueOff];
 			[pButton setTitle:@""];
 			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_SELECTION] stringValue]];

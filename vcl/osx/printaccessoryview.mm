@@ -849,10 +849,11 @@ static void addBool( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
 {
     NSRect aCheckRect = { { static_cast<CGFloat>(rCurX + nAttachOffset), 0 }, { 0, 15 } };
     NSButton* pBtn = [[NSButton alloc] initWithFrame: aCheckRect];
-    [pBtn setButtonType: NSSwitchButton];                
 #ifdef USE_JAVA
+    [pBtn setButtonType: NSButtonTypeSwitch];                
     [pBtn setState: bValue ? NSControlStateValueOn : NSControlStateValueOff];
 #else	// USE_JAVA
+    [pBtn setButtonType: NSSwitchButton];                
     [pBtn setState: bValue ? NSOnState : NSOffState];
 #endif	// USE_JAVA
     if( ! bEnabled )
@@ -922,7 +923,11 @@ static void addRadio( NSView* pCurParent, long& rCurX, long& rCurY, long nAttach
     
     NSRect aRadioRect = { { static_cast<CGFloat>(rCurX + nOff), 0 }, { static_cast<CGFloat>(280 - rCurX), static_cast<CGFloat>(5*rChoices.getLength()) } };
     [pProto setTitle: @"RadioButtonGroup"];
+#ifdef USE_JAVA
+    [pProto setButtonType: NSButtonTypeRadio];
+#else	// USE_JAVA
     [pProto setButtonType: NSRadioButton];
+#endif	// USE_JAVA
     NSMatrix* pMatrix = [[NSMatrix alloc] initWithFrame: aRadioRect
                                           mode: NSRadioModeMatrix
                                           prototype: (NSCell*)pProto
