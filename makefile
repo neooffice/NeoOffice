@@ -80,7 +80,7 @@ TARGET_FILE_TYPE=Mach-O 64-bit executable $(TARGET_MACHINE)
 SHARED_LIBRARY_FILE_TYPE=Mach-O 64-bit dynamically linked shared library $(TARGET_MACHINE)
 BUNDLE_FILE_TYPE=Mach-O 64-bit bundle $(TARGET_MACHINE)
 ifdef CROSS_COMPILE_ARM64
-CONFIGURE_EXTRA_OPTIONS=--host=arm64-apple-darwin$(shell uname -r) --build=$(TARGET_MACHINE)-apple-darwin$(shell uname -r) --with-build-platform-configure-options='--disable-odk --without-fonts'
+CONFIGURE_EXTRA_OPTIONS=--host=arm64-apple-darwin --build=$(TARGET_MACHINE)-apple-darwin --with-build-platform-configure-options='--disable-odk --without-fonts'
 endif
 else
 OS_TYPE=Win32
@@ -294,6 +294,7 @@ build.libo_patches: \
 	build.libo_root_Makefile.gbuild_patch \
 	build.libo_root_Makefile.in_patch \
 	build.libo_root_RepositoryExternal.mk_patch \
+	build.libo_root_config.guess_patch \
 	build.libo_root_config.sub_patch \
 	build.libo_root_config_host.mk.in_patch \
 	build.libo_root_configure.ac_patch \

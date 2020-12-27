@@ -1,5 +1,5 @@
 --- configure.ac	2015-11-25 07:55:38.000000000 -0500
-+++ configure.ac	2020-12-27 10:08:21.000000000 -0500
++++ configure.ac	2020-12-27 16:08:05.000000000 -0500
 @@ -538,6 +538,10 @@
  INSTROOTSUFFIX=
  SDKDIRNAME=sdk
@@ -143,7 +143,7 @@
      fi
  
      if test "$with_macosx_version_max_allowed" = "" ; then
-@@ -2776,20 +2791,11 @@
+@@ -2776,57 +2791,58 @@
      MACOSX_DEPLOYMENT_TARGET="$with_macosx_version_min_required"
  
      case "$with_macosx_version_min_required" in
@@ -167,7 +167,47 @@
          ;;
      esac
  
-@@ -2813,20 +2819,11 @@
+-    LIBTOOL=libtool
++    LIBTOOL=/usr/bin/libtool
+     INSTALL_NAME_TOOL=install_name_tool
+     if test -z "$save_CC"; then
+-        AC_MSG_CHECKING([what compiler to use])
+         stdlib=-stdlib=libc++
+         if test "$ENABLE_LTO" = TRUE; then
+             lto=-flto
+         fi
+-        CC="`xcrun -find clang` -m64 $lto -mmacosx-version-min=$with_macosx_version_min_required -isysroot $MACOSX_SDK_PATH"
+-        CXX="`xcrun -find clang++` -m64 $lto $stdlib -mmacosx-version-min=$with_macosx_version_min_required -isysroot $MACOSX_SDK_PATH"
++
++        AC_MSG_CHECKING([what C compiler to use])
++        CC="`xcrun -find clang`"
++        CC_BASE=`first_arg_basename "$CC"`
++        if test "$host_cpu" = x86_64; then
++            CC+=" -target x86_64-apple-macos"
++        else
++            CC+=" -target arm64-apple-macos"
++        fi
++        CC+=" $lto -mmacosx-version-min=$with_macosx_version_min_required -isysroot $MACOSX_SDK_PATH"
++        AC_MSG_RESULT([$CC])
++
++        AC_MSG_CHECKING([what C++ compiler to use])
++        CXX="`xcrun -find clang++`"
++        CXX_BASE=`first_arg_basename "$CXX"`
++        if test "$host_cpu" = x86_64; then
++            CXX+=" -target x86_64-apple-macos"
++        else
++            CXX+=" -target arm64-apple-macos"
++        fi
++        CXX+=" $lto $stdlib -mmacosx-version-min=$with_macosx_version_min_required -isysroot $MACOSX_SDK_PATH"
++        AC_MSG_RESULT([$CXX])
++
+         INSTALL_NAME_TOOL=`xcrun -find install_name_tool`
+         AR=`xcrun -find ar`
+         NM=`xcrun -find nm`
+         STRIP=`xcrun -find strip`
+         LIBTOOL=`xcrun -find libtool`
+         RANLIB=`xcrun -find ranlib`
+-        AC_MSG_RESULT([$CC and $CXX])
      fi
  
      case "$with_macosx_version_max_allowed" in
@@ -191,7 +231,7 @@
          ;;
      esac
  
-@@ -3703,6 +3700,64 @@
+@@ -3703,6 +3719,64 @@
  UNOWINREG_DLL="185d60944ea767075d27247c3162b3bc-unowinreg.dll"
  AC_SUBST(UNOWINREG_DLL)
  
@@ -256,7 +296,7 @@
  #
  # prefix C with ccache if needed
  #
-@@ -3974,11 +4029,14 @@
+@@ -3974,11 +4048,14 @@
      P_SEP=:
  
      case "$host_cpu" in
@@ -276,7 +316,7 @@
          ;;
      i*86)
          AC_MSG_ERROR([Can't build 64-bit code in 32-bit OS])
-@@ -4421,6 +4479,7 @@
+@@ -4421,6 +4498,7 @@
          solenv/bin/getcompver.awk \
          solenv/inc/langlist.mk \
          android/experimental/LOAndroid3/AndroidManifest.xml.in \
@@ -284,7 +324,7 @@
          config_host.mk.in \
          Makefile.in \
          lo.xcent.in \
-@@ -7543,7 +7602,7 @@
+@@ -7543,7 +7621,7 @@
  dnl ===================================================================
  # libcmis requires curl and we can't build curl for iOS
  if test $_os != iOS; then
@@ -293,7 +333,7 @@
      ENABLE_CMIS=TRUE
  else
      ENABLE_CMIS=
-@@ -7741,18 +7800,25 @@
+@@ -7741,18 +7819,25 @@
  AC_SUBST(XMLLINT)
  
  # =====================================================================
@@ -326,7 +366,7 @@
      fi
  fi
  AC_SUBST(PYTHON_FOR_BUILD)
-@@ -7777,10 +7843,6 @@
+@@ -7777,10 +7862,6 @@
      elif test $build_os = cygwin; then
          dnl When building on Windows we don't attempt to use any installed
          dnl "system"  Python.
@@ -337,7 +377,7 @@
          AC_MSG_RESULT([fully internal])
          enable_python=internal
      elif test "$cross_compiling" = yes; then
-@@ -7789,8 +7851,10 @@
+@@ -7789,8 +7870,10 @@
      else
          # Unset variables set by the above AM_PATH_PYTHON so that
          # we actually do check anew.
@@ -348,7 +388,7 @@
          if test "$PYTHON" = ":"; then
              if test -z "$PYTHON_FOR_BUILD"; then
                  AC_MSG_RESULT([fully internal])
-@@ -7813,6 +7877,9 @@
+@@ -7813,6 +7896,9 @@
      ;;
  system)
      AC_MSG_RESULT([system])
@@ -358,7 +398,7 @@
      ;;
  *)
      AC_MSG_ERROR([Incorrect --enable-python option])
-@@ -7824,17 +7891,6 @@
+@@ -7824,17 +7910,6 @@
  fi
  
  if test $enable_python = system; then
@@ -376,7 +416,7 @@
      if test -n "$PYTHON_CFLAGS" -a -n "$PYTHON_LIBS"; then
          # Fallback: Accept these in the environment, or as set above
          # for MacOSX.
-@@ -7852,6 +7908,9 @@
+@@ -7852,6 +7927,9 @@
          if test -z "$PKG_CONFIG"; then
              PYTHON_CFLAGS="-I$python_include"
              PYTHON_LIBS="-L$python_libdir -lpython$python_version $python_libs"
@@ -386,7 +426,7 @@
          elif $PKG_CONFIG --exists python-$python_version; then
              PYTHON_CFLAGS="`$PKG_CONFIG --cflags python-$python_version`"
              PYTHON_LIBS="`$PKG_CONFIG --libs python-$python_version` $python_libs"
-@@ -7859,27 +7918,10 @@
+@@ -7859,27 +7937,10 @@
              PYTHON_CFLAGS="-I$python_include"
              PYTHON_LIBS="-L$python_libdir -lpython$python_version $python_libs"
          fi
@@ -416,7 +456,7 @@
          AC_MSG_CHECKING([for python version])
          AS_IF([test -n "$PYTHON_VERSION"],
                [AC_MSG_RESULT([$PYTHON_VERSION])],
-@@ -7887,62 +7929,100 @@
+@@ -7887,62 +7948,100 @@
                 AC_MSG_ERROR([no usable python found])])
          test -n "$PYTHON_CFLAGS" && break
      fi
@@ -546,7 +586,7 @@
      ;;
  no)
      DISABLE_PYTHON=TRUE
-@@ -8179,7 +8259,9 @@
+@@ -8179,7 +8278,9 @@
  dnl ===================================================================
  dnl Check for PostgreSQL stuff
  dnl ===================================================================
@@ -556,7 +596,7 @@
      SCPDEFS="$SCPDEFS -DWITH_POSTGRESQL_SDBC"
  
      if test "$with_krb5" = "yes" -a "$enable_openssl" = "no"; then
-@@ -8189,9 +8271,9 @@
+@@ -8189,9 +8290,9 @@
          AC_MSG_ERROR([GSSAPI needs OpenSSL, but --disable-openssl was given.])
      fi
  
@@ -568,7 +608,7 @@
          SYSTEM_POSTGRESQL=TRUE
          if test "$_os" = Darwin; then
              supp_path=''
-@@ -8200,11 +8282,19 @@
+@@ -8200,11 +8301,19 @@
              done
          fi
          AC_PATH_PROG(PGCONFIG, pg_config, ,$PATH$pg_supp_path)
@@ -592,7 +632,7 @@
      else
          # if/when anything else than PostgreSQL uses Kerberos,
          # move this out of `test "x$enable_postgresql_sdbc" != "xno"'
-@@ -8212,16 +8302,18 @@
+@@ -8212,16 +8321,18 @@
          WITH_GSSAPI=
          case "$_os" in
          Darwin)
@@ -614,7 +654,7 @@
                  KRB5_LIBS="$KRB5_LIBS $LIBS"
                  LIBS=$save_LIBS
              fi
-@@ -8286,17 +8378,21 @@
+@@ -8286,17 +8397,21 @@
  
          if test -n "$with_libpq_path"; then
              SYSTEM_POSTGRESQL=TRUE
@@ -638,7 +678,7 @@
      if test "${SYSTEM_POSTGRESQL}" = "TRUE"; then
          AC_MSG_NOTICE([checking system PostgreSQL prerequisites])
          save_CFLAGS=$CFLAGS
-@@ -8312,6 +8408,8 @@
+@@ -8312,6 +8427,8 @@
          LIBS=$save_LIBS
      fi
      BUILD_POSTGRESQL_SDBC=TRUE
@@ -647,7 +687,7 @@
  fi
  AC_SUBST(WITH_KRB5)
  AC_SUBST(WITH_GSSAPI)
-@@ -8325,8 +8423,8 @@
+@@ -8325,8 +8442,8 @@
  dnl ===================================================================
  dnl Check for Firebird stuff
  dnl ===================================================================
@@ -658,7 +698,7 @@
      SCPDEFS="$SCPDEFS -DWITH_FIREBIRD_SDBC"
  
      dnl ===================================================================
-@@ -8339,51 +8437,59 @@
+@@ -8339,51 +8456,59 @@
          AC_PATH_PROG(FIREBIRDCONFIG, [fb_config])
          if test -z "$FIREBIRDCONFIG"; then
              AC_MSG_NOTICE([No fb_config -- using pkg-config])
@@ -728,7 +768,7 @@
              else
                  SYSTEM_LIBATOMIC_OPS=
                  LIBATOMIC_OPS_CFLAGS="-I${WORKDIR}/UnpackedTarball/libatomic_ops/include"
-@@ -8394,11 +8500,26 @@
+@@ -8394,11 +8519,26 @@
  
          AC_MSG_RESULT([internal])
          SYSTEM_FIREBIRD=
@@ -758,7 +798,7 @@
      fi
  fi
  AC_SUBST(ENABLE_FIREBIRD_SDBC)
-@@ -8408,8 +8529,8 @@
+@@ -8408,8 +8548,8 @@
  AC_SUBST(SYSTEM_FIREBIRD)
  AC_SUBST(FIREBIRD_CFLAGS)
  AC_SUBST(FIREBIRD_LIBS)
@@ -769,7 +809,7 @@
  
  dnl ===================================================================
  dnl Check for system curl
-@@ -8484,15 +8605,11 @@
+@@ -8484,15 +8624,11 @@
  if test "$with_system_boost" = "yes"; then
      AC_MSG_RESULT([external])
      SYSTEM_BOOST=TRUE
@@ -788,7 +828,7 @@
      AC_LANG_PUSH([C++])
      save_CXXFLAGS=$CXXFLAGS
      CXXFLAGS="$CXXFLAGS $BOOST_CPPFLAGS $CXXFLAGS_CXX11"
-@@ -8500,28 +8617,21 @@
+@@ -8500,28 +8636,21 @@
         [AC_MSG_ERROR(boost/shared_ptr.hpp not found. install boost)], [])
      AC_CHECK_HEADER(boost/spirit/include/classic_core.hpp, [],
         [AC_MSG_ERROR(boost/spirit/include/classic_core.hpp not found. install boost >= 1.36)], [])
