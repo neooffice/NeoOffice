@@ -1,6 +1,26 @@
 --- configure.ac	2015-11-25 07:55:38.000000000 -0500
-+++ configure.ac	2020-12-23 20:48:17.000000000 -0500
-@@ -1670,6 +1670,11 @@
++++ configure.ac	2020-12-27 07:59:27.000000000 -0500
+@@ -660,6 +660,19 @@
+ 
+     # -undefined error is the default
+     LINKFLAGSNOUNDEFS=""
++    case "$host_cpu" in
++    aarch64|arm64)
++        case "$host_os" in
++        macos*)
++            # HOST_PLATFORM is used for external projects and their configury occasionally doesn't like
++            # the "macos" part so be sure to use aarch64-apple-darwin for now.
++            HOST_PLATFORM=aarch64-apple-darwin
++            ;;
++        esac
++
++        # Apple's Clang uses "arm64"
++        host_cpu_for_clang=arm64
++    esac
+ ;;
+ 
+ freebsd*)
+@@ -1670,6 +1683,11 @@
           driver. If fb_config is not in PATH, use FBCONFIG to point to it.]),,
      [with_system_firebird="$with_system_libs"])
  
@@ -12,7 +32,7 @@
  AC_ARG_WITH(system-hsqldb,
      AS_HELP_STRING([--with-system-hsqldb],
          [Use hsqldb already on system.]))
-@@ -2291,7 +2296,7 @@
+@@ -2291,7 +2309,7 @@
      [
                            Usage:     --with-macosx-sdk=<version>
  
@@ -21,7 +41,7 @@
  
                            there are 3 options to control the MacOSX build:
                            --with-macosx-sdk (referred as 'sdk' below)
-@@ -2305,15 +2310,15 @@
+@@ -2305,15 +2323,15 @@
                            ==========================================
                             command line      || config result
                            ==========================================
@@ -46,7 +66,7 @@
  
  
                            see: http://developer.apple.com/library/mac/#technotes/tn2064/_index.html
-@@ -2329,7 +2334,7 @@
+@@ -2329,7 +2347,7 @@
      [
                            Usage:     --with-macosx-version-min-required=<version>
  
@@ -55,7 +75,7 @@
                            see --with-macosx-sdk for more info
      ],
  ,)
-@@ -2340,7 +2345,7 @@
+@@ -2340,7 +2358,7 @@
      [
                            Usage:     --with-macosx-version-max-allowed=<version>
  
@@ -64,7 +84,7 @@
                            see --with-macosx-sdk for more info
      ],
  ,)
-@@ -2724,7 +2729,7 @@
+@@ -2724,7 +2742,7 @@
  
      AC_MSG_CHECKING([what Mac OS X SDK to use])
  
@@ -73,7 +93,7 @@
          MACOSX_SDK_PATH=`xcrun --sdk macosx${_macosx_sdk} --show-sdk-path 2> /dev/null`
          if test -d "$MACOSX_SDK_PATH"; then
              with_macosx_sdk="${_macosx_sdk}"
-@@ -2743,25 +2748,16 @@
+@@ -2743,25 +2761,16 @@
      AC_MSG_RESULT([SDK $with_macosx_sdk at $MACOSX_SDK_PATH])
  
      case $with_macosx_sdk in
@@ -103,7 +123,7 @@
      fi
  
      if test "$with_macosx_version_max_allowed" = "" ; then
-@@ -2776,20 +2772,11 @@
+@@ -2776,20 +2785,11 @@
      MACOSX_DEPLOYMENT_TARGET="$with_macosx_version_min_required"
  
      case "$with_macosx_version_min_required" in
@@ -127,7 +147,7 @@
          ;;
      esac
  
-@@ -2813,20 +2800,11 @@
+@@ -2813,20 +2813,11 @@
      fi
  
      case "$with_macosx_version_max_allowed" in
@@ -151,7 +171,7 @@
          ;;
      esac
  
-@@ -3703,6 +3681,64 @@
+@@ -3703,6 +3694,64 @@
  UNOWINREG_DLL="185d60944ea767075d27247c3162b3bc-unowinreg.dll"
  AC_SUBST(UNOWINREG_DLL)
  
@@ -216,7 +236,35 @@
  #
  # prefix C with ccache if needed
  #
-@@ -7543,7 +7579,7 @@
+@@ -3974,11 +4023,14 @@
+     P_SEP=:
+ 
+     case "$host_cpu" in
+-    arm*)
+-        CPUNAME=ARM
+-        RTL_ARCH=ARM_EABI
+-        PLATFORMID=ios_arm
+-        OS=IOS
++    aarch64|arm64)
++        if test "$enable_ios_simulator" = "yes"; then
++            OS=iOS
++        else
++            CPUNAME=AARCH64
++            RTL_ARCH=AARCH64
++            PLATFORMID=macosx_arm64
++        fi
+         ;;
+     i*86)
+         AC_MSG_ERROR([Can't build 64-bit code in 32-bit OS])
+@@ -4421,6 +4473,7 @@
+         solenv/bin/getcompver.awk \
+         solenv/inc/langlist.mk \
+         android/experimental/LOAndroid3/AndroidManifest.xml.in \
++        download.lst \
+         config_host.mk.in \
+         Makefile.in \
+         lo.xcent.in \
+@@ -7543,7 +7596,7 @@
  dnl ===================================================================
  # libcmis requires curl and we can't build curl for iOS
  if test $_os != iOS; then
@@ -225,7 +273,7 @@
      ENABLE_CMIS=TRUE
  else
      ENABLE_CMIS=
-@@ -7741,18 +7777,25 @@
+@@ -7741,18 +7794,25 @@
  AC_SUBST(XMLLINT)
  
  # =====================================================================
@@ -258,7 +306,7 @@
      fi
  fi
  AC_SUBST(PYTHON_FOR_BUILD)
-@@ -7777,10 +7820,6 @@
+@@ -7777,10 +7837,6 @@
      elif test $build_os = cygwin; then
          dnl When building on Windows we don't attempt to use any installed
          dnl "system"  Python.
@@ -269,7 +317,7 @@
          AC_MSG_RESULT([fully internal])
          enable_python=internal
      elif test "$cross_compiling" = yes; then
-@@ -7789,8 +7828,10 @@
+@@ -7789,8 +7845,10 @@
      else
          # Unset variables set by the above AM_PATH_PYTHON so that
          # we actually do check anew.
@@ -280,7 +328,7 @@
          if test "$PYTHON" = ":"; then
              if test -z "$PYTHON_FOR_BUILD"; then
                  AC_MSG_RESULT([fully internal])
-@@ -7813,6 +7854,9 @@
+@@ -7813,6 +7871,9 @@
      ;;
  system)
      AC_MSG_RESULT([system])
@@ -290,7 +338,7 @@
      ;;
  *)
      AC_MSG_ERROR([Incorrect --enable-python option])
-@@ -7824,17 +7868,6 @@
+@@ -7824,17 +7885,6 @@
  fi
  
  if test $enable_python = system; then
@@ -308,7 +356,7 @@
      if test -n "$PYTHON_CFLAGS" -a -n "$PYTHON_LIBS"; then
          # Fallback: Accept these in the environment, or as set above
          # for MacOSX.
-@@ -7852,6 +7885,9 @@
+@@ -7852,6 +7902,9 @@
          if test -z "$PKG_CONFIG"; then
              PYTHON_CFLAGS="-I$python_include"
              PYTHON_LIBS="-L$python_libdir -lpython$python_version $python_libs"
@@ -318,7 +366,7 @@
          elif $PKG_CONFIG --exists python-$python_version; then
              PYTHON_CFLAGS="`$PKG_CONFIG --cflags python-$python_version`"
              PYTHON_LIBS="`$PKG_CONFIG --libs python-$python_version` $python_libs"
-@@ -7859,27 +7895,10 @@
+@@ -7859,27 +7912,10 @@
              PYTHON_CFLAGS="-I$python_include"
              PYTHON_LIBS="-L$python_libdir -lpython$python_version $python_libs"
          fi
@@ -348,7 +396,7 @@
          AC_MSG_CHECKING([for python version])
          AS_IF([test -n "$PYTHON_VERSION"],
                [AC_MSG_RESULT([$PYTHON_VERSION])],
-@@ -7887,62 +7906,100 @@
+@@ -7887,62 +7923,100 @@
                 AC_MSG_ERROR([no usable python found])])
          test -n "$PYTHON_CFLAGS" && break
      fi
@@ -478,7 +526,7 @@
      ;;
  no)
      DISABLE_PYTHON=TRUE
-@@ -8179,7 +8236,9 @@
+@@ -8179,7 +8253,9 @@
  dnl ===================================================================
  dnl Check for PostgreSQL stuff
  dnl ===================================================================
@@ -488,7 +536,7 @@
      SCPDEFS="$SCPDEFS -DWITH_POSTGRESQL_SDBC"
  
      if test "$with_krb5" = "yes" -a "$enable_openssl" = "no"; then
-@@ -8189,9 +8248,9 @@
+@@ -8189,9 +8265,9 @@
          AC_MSG_ERROR([GSSAPI needs OpenSSL, but --disable-openssl was given.])
      fi
  
@@ -500,7 +548,7 @@
          SYSTEM_POSTGRESQL=TRUE
          if test "$_os" = Darwin; then
              supp_path=''
-@@ -8200,11 +8259,19 @@
+@@ -8200,11 +8276,19 @@
              done
          fi
          AC_PATH_PROG(PGCONFIG, pg_config, ,$PATH$pg_supp_path)
@@ -524,7 +572,7 @@
      else
          # if/when anything else than PostgreSQL uses Kerberos,
          # move this out of `test "x$enable_postgresql_sdbc" != "xno"'
-@@ -8212,16 +8279,18 @@
+@@ -8212,16 +8296,18 @@
          WITH_GSSAPI=
          case "$_os" in
          Darwin)
@@ -546,7 +594,7 @@
                  KRB5_LIBS="$KRB5_LIBS $LIBS"
                  LIBS=$save_LIBS
              fi
-@@ -8286,17 +8355,21 @@
+@@ -8286,17 +8372,21 @@
  
          if test -n "$with_libpq_path"; then
              SYSTEM_POSTGRESQL=TRUE
@@ -570,7 +618,7 @@
      if test "${SYSTEM_POSTGRESQL}" = "TRUE"; then
          AC_MSG_NOTICE([checking system PostgreSQL prerequisites])
          save_CFLAGS=$CFLAGS
-@@ -8312,6 +8385,8 @@
+@@ -8312,6 +8402,8 @@
          LIBS=$save_LIBS
      fi
      BUILD_POSTGRESQL_SDBC=TRUE
@@ -579,7 +627,7 @@
  fi
  AC_SUBST(WITH_KRB5)
  AC_SUBST(WITH_GSSAPI)
-@@ -8325,8 +8400,8 @@
+@@ -8325,8 +8417,8 @@
  dnl ===================================================================
  dnl Check for Firebird stuff
  dnl ===================================================================
@@ -590,7 +638,7 @@
      SCPDEFS="$SCPDEFS -DWITH_FIREBIRD_SDBC"
  
      dnl ===================================================================
-@@ -8339,51 +8414,59 @@
+@@ -8339,51 +8431,59 @@
          AC_PATH_PROG(FIREBIRDCONFIG, [fb_config])
          if test -z "$FIREBIRDCONFIG"; then
              AC_MSG_NOTICE([No fb_config -- using pkg-config])
@@ -660,7 +708,7 @@
              else
                  SYSTEM_LIBATOMIC_OPS=
                  LIBATOMIC_OPS_CFLAGS="-I${WORKDIR}/UnpackedTarball/libatomic_ops/include"
-@@ -8394,11 +8477,26 @@
+@@ -8394,11 +8494,26 @@
  
          AC_MSG_RESULT([internal])
          SYSTEM_FIREBIRD=
@@ -690,7 +738,7 @@
      fi
  fi
  AC_SUBST(ENABLE_FIREBIRD_SDBC)
-@@ -8408,8 +8506,8 @@
+@@ -8408,8 +8523,8 @@
  AC_SUBST(SYSTEM_FIREBIRD)
  AC_SUBST(FIREBIRD_CFLAGS)
  AC_SUBST(FIREBIRD_LIBS)
@@ -701,7 +749,7 @@
  
  dnl ===================================================================
  dnl Check for system curl
-@@ -8484,15 +8582,11 @@
+@@ -8484,15 +8599,11 @@
  if test "$with_system_boost" = "yes"; then
      AC_MSG_RESULT([external])
      SYSTEM_BOOST=TRUE
@@ -720,7 +768,7 @@
      AC_LANG_PUSH([C++])
      save_CXXFLAGS=$CXXFLAGS
      CXXFLAGS="$CXXFLAGS $BOOST_CPPFLAGS $CXXFLAGS_CXX11"
-@@ -8500,28 +8594,21 @@
+@@ -8500,28 +8611,21 @@
         [AC_MSG_ERROR(boost/shared_ptr.hpp not found. install boost)], [])
      AC_CHECK_HEADER(boost/spirit/include/classic_core.hpp, [],
         [AC_MSG_ERROR(boost/spirit/include/classic_core.hpp not found. install boost >= 1.36)], [])
