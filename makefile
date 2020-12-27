@@ -79,6 +79,9 @@ TARGET_MACHINE=x86_64
 TARGET_FILE_TYPE=Mach-O 64-bit executable $(TARGET_MACHINE)
 SHARED_LIBRARY_FILE_TYPE=Mach-O 64-bit dynamically linked shared library $(TARGET_MACHINE)
 BUNDLE_FILE_TYPE=Mach-O 64-bit bundle $(TARGET_MACHINE)
+ifdef CROSS_COMPILE_ARM64
+CONFIGURE_EXTRA_OPTIONS=--host=arm64-apple-darwin$(shell uname -r) --build=$(TARGET_MACHINE)-apple-darwin$(shell uname -r) --with-build-platform-configure-options='--disable-odk --without-fonts'
+endif
 else
 OS_TYPE=Win32
 endif
