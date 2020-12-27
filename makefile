@@ -288,6 +288,8 @@ build.libo_checkout: \
 	touch "$@"
 
 build.libo_patches: \
+	build.libo_root_Makefile.gbuild_patch \
+	build.libo_root_Makefile.in_patch \
 	build.libo_root_RepositoryExternal.mk_patch \
 	build.libo_root_config.sub_patch \
 	build.libo_root_config_host.mk.in_patch \
