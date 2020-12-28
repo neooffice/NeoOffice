@@ -215,3 +215,14 @@
 +         }
 +         
 +         void range_check( iterator first, iterator last )
+--- libpng/UnpackedTarball_libpng.mk	2020-12-17 16:59:38.000000000 -0500
++++ libpng/UnpackedTarball_libpng.mk	2020-12-28 12:49:19.000000000 -0500
+@@ -9,7 +9,7 @@
+ 
+ $(eval $(call gb_UnpackedTarball_UnpackedTarball,libpng))
+ 
+-$(eval $(call gb_UnpackedTarball_set_tarball,libpng,$(LIBPNG_TARBALL)))
++$(eval $(call gb_UnpackedTarball_set_tarball,libpng,$(PNG_TARBALL)))
+ 
+ $(eval $(call gb_UnpackedTarball_add_files,libpng,.,\
+ 	external/libpng/configs/pnglibconf.h \
