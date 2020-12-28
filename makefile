@@ -79,7 +79,8 @@ TARGET_MACHINE:=$(shell uname -m)
 ifneq ($(TARGET_MACHINE),arm64)
 ifdef CROSS_COMPILE_ARM64
 CONFIGURE_EXTRA_OPTIONS:=--host=arm64-apple-darwin --build=$(TARGET_MACHINE)-apple-darwin --with-build-platform-configure-options='--disable-odk --without-fonts'
-TARGET_MACHINE:=arm64
+CROSS_COMPILE=true;
+TARGET_MACHINE=arm64
 endif
 endif
 TARGET_FILE_TYPE=Mach-O 64-bit executable $(TARGET_MACHINE)
@@ -709,6 +710,7 @@ else
 	cat "etc/package/Entitlements_hardened_runtime.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$(INSTALL_HOME)/Entitlements.plist"
 	cd "$(INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(INSTALL_HOME)/Entitlements.plist" .
 endif
+ifndef CROSS_COMPILE
 # Test that all libraries will load
 	$(CC) -o "$(INSTALL_HOME)/package/Contents/MacOS/loaddyliblist" "$(PWD)/etc/package/loaddyliblist.c"
 ifdef PRODUCT_BUILD3
@@ -720,6 +722,7 @@ else
 	cd "$(INSTALL_HOME)/package" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; sh -e -c 'grep -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "$(BUNDLE_FILE_TYPE)" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" | sed "s#:.*\$$##" | "Contents/MacOS/loaddyliblist"'
 endif
 	rm "$(INSTALL_HOME)/package/Contents/MacOS/loaddyliblist"
+endif
 # Verify codesigning
 	cd "$(INSTALL_HOME)/package" ; codesign --verify --deep .
 	mkdir -p "$(INSTALL_HOME)/tmp"
