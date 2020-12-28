@@ -1,5 +1,5 @@
 --- configure.ac	2015-11-25 07:55:38.000000000 -0500
-+++ configure.ac	2020-12-27 16:08:05.000000000 -0500
++++ configure.ac	2020-12-27 19:31:02.000000000 -0500
 @@ -538,6 +538,10 @@
  INSTROOTSUFFIX=
  SDKDIRNAME=sdk
@@ -866,3 +866,87 @@
  fi
  AC_SUBST(SYSTEM_BOOST)
  
+@@ -8648,6 +8777,19 @@
+ AC_SUBST(MSVC80_DLL_PATH)
+ 
+ dnl ===================================================================
++dnl Check for system NSS
++dnl ===================================================================
++if test "$enable_fuzzers" != "yes"; then
++    libo_CHECK_SYSTEM_MODULE([nss],[NSS],[nss >= 3.9.3 nspr >= 4.8])
++    AC_DEFINE(HAVE_FEATURE_NSS)
++    ENABLE_NSS="TRUE"
++    AC_DEFINE(ENABLE_NSS)
++elif test $_os != iOS ; then
++    with_tls=openssl
++fi
++AC_SUBST(ENABLE_NSS)
++
++dnl ===================================================================
+ dnl Check for TLS/SSL and cryptographic implementation to use
+ dnl ===================================================================
+ AC_MSG_CHECKING([which TLS/SSL and cryptographic implementation to use])
+@@ -8656,53 +8798,42 @@
+     openssl)
+         AC_DEFINE(USE_TLS_OPENSSL)
+         TLS=OPENSSL
++        AC_MSG_RESULT([$TLS])
+ 
+         if test "$enable_openssl" != "yes"; then
+             AC_MSG_ERROR(["Disabling OpenSSL was requested, but the requested TLS to use is actually OpenSSL."])
+         fi
+ 
+         # warn that OpenSSL has been selected but not all TLS code has this option
+-        AC_MSG_WARN([TLS/SSL implementation to use is OpenSSL but some code may still be depending on NSS or GNUTLS])
+-        add_warning "TLS/SSL implementation to use is OpenSSL but some code may still be depending on NSS or GNUTLS"
++        AC_MSG_WARN([TLS/SSL implementation to use is OpenSSL but some code may still depend on NSS or GNUTLS])
++        add_warning "TLS/SSL implementation to use is OpenSSL but some code may still depend on NSS or GNUTLS"
+         ;;
+     nss)
+         AC_DEFINE(USE_TLS_NSS)
+         TLS=NSS
++        AC_MSG_RESULT([$TLS])
++        ;;
++    no)
++        AC_MSG_RESULT([none])
++        AC_MSG_WARN([Skipping TLS/SSL])
+         ;;
+     *)
++        AC_MSG_RESULT([])
+         AC_MSG_ERROR([unsupported implementation $with_tls. Supported are:
+ openssl - OpenSSL
+ nss - Mozilla's Network Security Services (NSS)
+     ])
+         ;;
+     esac
+-elif test $_os = iOS -o $_os = Android; then
+-    # We don't build NSS for iOS and Android
+-    AC_DEFINE(USE_TLS_OPENSSL)
+-    TLS=OPENSSL
+ else
+     # default to using NSS, it results in smaller oox lib
+     AC_DEFINE(USE_TLS_NSS)
+     TLS=NSS
++    AC_MSG_RESULT([$TLS])
+ fi
+-AC_MSG_RESULT([$TLS])
+ AC_SUBST(TLS)
+ 
+ dnl ===================================================================
+-dnl Check for system NSS
+-dnl ===================================================================
+-libo_CHECK_SYSTEM_MODULE([nss],[NSS],[nss >= 3.9.3 nspr >= 4.8])
+-if test "$with_system_nss" = "yes"; then
+-    libo_MINGW_CHECK_DLL([libnspr4])
+-    libo_MINGW_CHECK_DLL([libplc4])
+-    libo_MINGW_CHECK_DLL([libplds4])
+-    libo_MINGW_CHECK_DLL([nss3])
+-    libo_MINGW_CHECK_DLL([nssutil3])
+-    libo_MINGW_CHECK_DLL([smime3])
+-    libo_MINGW_CHECK_DLL([ssl3])
+-fi
+-
+-dnl ===================================================================
+ dnl Check for system mozilla headers
+ dnl ===================================================================
+ HAVE_NON_CONST_NPP_GETMIMEDESCRIPTION=

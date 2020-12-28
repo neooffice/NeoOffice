@@ -1,5 +1,5 @@
 --- download.lst	2015-11-25 07:55:38.000000000 -0500
-+++ download.lst	2020-12-23 20:31:23.000000000 -0500
++++ download.lst	2020-12-27 18:30:24.000000000 -0500
 @@ -15,13 +15,16 @@
  export APR_TARBALL := apr-1.4.8.tar.gz
  export APR_UTIL_MD5SUM := 71a11d037240b292f824ba1eb537b4e3
@@ -44,7 +44,17 @@
  export LIBXML_TARBALL := daece17e045f1c107610e137ab50c179-libxml2-2.9.3.tar.gz
  export LIBXSLT_TARBALL := 9667bf6f9310b957254fdcf6596600b7-libxslt-1.1.28.tar.gz
  export LPSOLVE_TARBALL := 26b3e95ddf3d9c077c480ea45874b3b8-lp_solve_5.5.tar.gz
-@@ -125,9 +129,10 @@
+@@ -108,7 +112,8 @@
+ export MYSQLCPPCONN_TARBALL := 7239a4430efd4d0189c4f24df67f08e5-mysql-connector-c++-1.1.4.tar.gz
+ export MYTHES_TARBALL := a8c2c5b8f09e7ede322d5c602ff6a4b6-mythes-1.2.4.tar.gz
+ export NEON_TARBALL := ff369e69ef0f0143beb5626164e87ae2-neon-0.29.5.tar.gz
+-export NSS_TARBALL := 478e0e90ebc4a90159549e77021021fd-nss-3.19.4-with-nspr-4.10.10.tar.gz
++export NSS_MD5SUM := d18bfd181e345cd07c0213d62bdf9ad7
++export NSS_TARBALL := nss-3.55-with-nspr-4.27.tar.gz
+ export ODFGEN_MD5SUM := 47d292edebac7b60c61d5cf307da1d64
+ export ODFGEN_VERSION_MICRO := 3
+ export ODFGEN_TARBALL := libodfgen-0.1.$(ODFGEN_VERSION_MICRO).tar.bz2
+@@ -125,9 +130,10 @@
  export PNG_TARBALL := libpng-1.5.24.tar.gz
  export POPPLER_MD5SUM := 35c0660065d023365e9854c13e289d12
  export POPPLER_TARBALL := poppler-0.26.4.tar.gz
