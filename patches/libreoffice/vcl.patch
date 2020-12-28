@@ -48,3 +48,13 @@
      }
      const NSRect aRect = { NSZeroPoint, NSMakeSize( maGeometry.nWidth, maGeometry.nHeight )};
      mnTrackingRectTag = [mpNSView addTrackingRect: aRect owner: mpNSView userData: nil assumeInside: NO];
+--- Library_vcl.mk	2015-11-25 07:55:38.000000000 -0500
++++ Library_vcl.mk	2020-12-27 22:26:31.000000000 -0500
+@@ -499,7 +499,6 @@
+     vcl/osx/salobj \
+ ))
+ $(eval $(call gb_Library_use_system_darwin_frameworks,vcl,\
+-    $(if $(filter X86_64,$(CPUNAME)),,QuickTime) \
+     Cocoa \
+     Carbon \
+     CoreFoundation \
