@@ -2494,6 +2494,8 @@ $(call gb_LinkTarget_add_libs,$(1),\
 
 endef
 
+gb_ExternalProject__use_png :=
+
 else # !SYSTEM_LIBPNG
 
 define gb_LinkTarget__use_png
@@ -2502,9 +2504,16 @@ $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
 )
 $(call gb_LinkTarget_use_static_libraries,$(1),\
-	png \
+	libpng \
 )
 $(call gb_LinkTarget__use_zlib,$(1))
+
+endef
+
+define gb_ExternalProject__use_png
+$(call gb_ExternalProject_use_static_libraries,$(1),\
+	libpng \
+)
 
 endef
 
@@ -3076,7 +3085,7 @@ ifneq ($(SYSTEM_PYTHON),)
 
 define gb_LinkTarget__use_python_headers
 $(call gb_LinkTarget_add_defs,$(1),\
-	$(filter-out -I% -isystem%,$(subst -isystem /,-isystem/,$(PYHTON_CFLAGS)))) \
+	$(filter-out -I% -isystem%,$(subst -isystem /,-isystem/,$(PYTHON_CFLAGS)))) \
 )
 
 $(call gb_LinkTarget_set_include,$(1),\
@@ -3101,9 +3110,8 @@ $(eval $(call gb_Helper_register_packages_for_install,python,\
 	python3 \
 ))
 
-# depend on external project because on MACOSX the Package is disabled...
 define gb_LinkTarget__use_python_headers
-$(call gb_LinkTarget_use_external_project,$(1),python3)
+$(call gb_LinkTarget_use_external_project,$(1),python3,full)
 $(call gb_LinkTarget_set_include,$(1),\
 	-I$(call gb_UnpackedTarball_get_dir,python3) \
 	-I$(call gb_UnpackedTarball_get_dir,python3)/PC \
@@ -3123,7 +3131,7 @@ endif
 
 ifeq ($(OS),WNT)
 $(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,python3)/PCbuild$(if $(filter X86_64,$(CPUNAME)),/amd64)/python$(PYTHON_VERSION_MAJOR)$(PYTHON_VERSION_MINOR)$(if $(MSVC_USE_DEBUG_RUNTIME),_d).lib \
+	$(call gb_UnpackedTarball_get_dir,python3)/PCbuild/$(if $(filter X86_64,$(CPUNAME)),amd64,win32)/python$(PYTHON_VERSION_MAJOR)$(PYTHON_VERSION_MINOR)$(if $(MSVC_USE_DEBUG_RUNTIME),_d).lib \
 )
 else ifeq ($(OS),MACOSX)
 $(call gb_LinkTarget_add_libs,$(1),\
@@ -3135,6 +3143,12 @@ $(call gb_LinkTarget_add_libs,$(1),\
 	-lpython$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)m \
 )
 endif
+
+endef
+
+# this is only used by python currently
+define gb_ExternalProject__use_libffi
+$(call gb_ExternalProject_use_external_project,$(1),libffi)
 
 endef
 
