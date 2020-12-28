@@ -1,5 +1,5 @@
 --- configure.ac	2015-11-25 07:55:38.000000000 -0500
-+++ configure.ac	2020-12-27 19:31:02.000000000 -0500
++++ configure.ac	2020-12-28 09:00:17.000000000 -0500
 @@ -538,6 +538,10 @@
  INSTROOTSUFFIX=
  SDKDIRNAME=sdk
@@ -950,3 +950,12 @@
  dnl Check for system mozilla headers
  dnl ===================================================================
  HAVE_NON_CONST_NPP_GETMIMEDESCRIPTION=
+@@ -11843,7 +11974,7 @@
+ dnl Test whether to build libpng or rely on the system version
+ dnl ===================================================================
+ 
+-libo_CHECK_SYSTEM_MODULE([libpng],[LIBPNG],[libpng],["-I${WORKDIR}/UnpackedTarball/png"],["-L${WORKDIR}/LinkTarget/StaticLibrary -lpng"])
++libo_CHECK_SYSTEM_MODULE([libpng],[LIBPNG],[libpng],["-I${WORKDIR}/UnpackedTarball/libpng"],["-L${WORKDIR}/LinkTarget/StaticLibrary -llibpng"])
+ 
+ dnl ===================================================================
+ dnl Check for runtime JVM search path

@@ -1,5 +1,5 @@
 --- RepositoryExternal.mk	2015-11-25 07:55:38.000000000 -0500
-+++ RepositoryExternal.mk	2020-12-23 20:52:53.000000000 -0500
++++ RepositoryExternal.mk	2020-12-28 09:06:31.000000000 -0500
 @@ -712,7 +712,7 @@
  )
  
@@ -23,7 +23,37 @@
  )
  
  endef
-@@ -2727,6 +2727,38 @@
+@@ -2487,6 +2487,8 @@
+ 
+ endef
+ 
++gb_ExternalProject__use_png :=
++
+ else # !SYSTEM_LIBPNG
+ 
+ define gb_LinkTarget__use_png
+@@ -2495,12 +2497,19 @@
+ 	$$(INCLUDE) \
+ )
+ $(call gb_LinkTarget_use_static_libraries,$(1),\
+-	png \
++	libpng \
+ )
+ $(call gb_LinkTarget__use_zlib,$(1))
+ 
+ endef
+ 
++define gb_ExternalProject__use_png
++$(call gb_ExternalProject_use_static_libraries,$(1),\
++	libpng \
++)
++
++endef
++
+ endif # !SYSTEM_LIBPNG
+ 
+ 
+@@ -2727,6 +2736,38 @@
  endif # SYSTEM_OPENLDAP
  
  
@@ -62,7 +92,7 @@
  ifeq ($(ENABLE_FIREBIRD_SDBC),TRUE)
  
  ifneq ($(SYSTEM_FIREBIRD),)
-@@ -2740,38 +2772,33 @@
+@@ -2740,38 +2781,33 @@
  
  endef
  
@@ -109,7 +139,7 @@
  
  # endef
  
-@@ -2781,7 +2808,7 @@
+@@ -2781,7 +2817,7 @@
  
  gb_LinkTarget__use_firebird :=
  # gb_LinkTarget__use_atomic_ops :=
@@ -118,7 +148,7 @@
  
  endif # ENABLE_FIREBIRD_SDBC
  
-@@ -3042,7 +3069,7 @@
+@@ -3042,7 +3078,7 @@
  
  define gb_LinkTarget__use_python_headers
  $(call gb_LinkTarget_add_defs,$(1),\
@@ -127,7 +157,7 @@
  )
  
  $(call gb_LinkTarget_set_include,$(1),\
-@@ -3067,9 +3094,8 @@
+@@ -3067,9 +3103,8 @@
  	python3 \
  ))
  
@@ -138,7 +168,7 @@
  $(call gb_LinkTarget_set_include,$(1),\
  	-I$(call gb_UnpackedTarball_get_dir,python3) \
  	-I$(call gb_UnpackedTarball_get_dir,python3)/PC \
-@@ -3089,7 +3115,7 @@
+@@ -3089,7 +3124,7 @@
  
  ifeq ($(OS),WNT)
  $(call gb_LinkTarget_add_libs,$(1),\
@@ -147,7 +177,7 @@
  )
  else ifeq ($(OS),MACOSX)
  $(call gb_LinkTarget_add_libs,$(1),\
-@@ -3104,6 +3130,12 @@
+@@ -3104,6 +3139,12 @@
  
  endef
  
