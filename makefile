@@ -75,13 +75,16 @@ CODESIGN_EXTRA_OPTIONS:=
 endif
 ULONGNAME=Intel
 CPUNAME=I
-TARGET_MACHINE=x86_64
+TARGET_MACHINE:=$(shell uname -m)
+ifneq ($(TARGET_MACHINE),arm64)
+ifdef CROSS_COMPILE_ARM64
+CONFIGURE_EXTRA_OPTIONS:=--host=arm64-apple-darwin --build=$(TARGET_MACHINE)-apple-darwin --with-build-platform-configure-options='--disable-odk --without-fonts'
+TARGET_MACHINE:=arm64
+endif
+endif
 TARGET_FILE_TYPE=Mach-O 64-bit executable $(TARGET_MACHINE)
 SHARED_LIBRARY_FILE_TYPE=Mach-O 64-bit dynamically linked shared library $(TARGET_MACHINE)
 BUNDLE_FILE_TYPE=Mach-O 64-bit bundle $(TARGET_MACHINE)
-ifdef CROSS_COMPILE_ARM64
-CONFIGURE_EXTRA_OPTIONS=--host=arm64-apple-darwin --build=$(TARGET_MACHINE)-apple-darwin --with-build-platform-configure-options='--disable-odk --without-fonts'
-endif
 else
 OS_TYPE=Win32
 endif
@@ -707,7 +710,7 @@ else
 	cd "$(INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(INSTALL_HOME)/Entitlements.plist" .
 endif
 # Test that all libraries will load
-	$(CC) -arch "$(TARGET_MACHINE)" -o "$(INSTALL_HOME)/package/Contents/MacOS/loaddyliblist" "$(PWD)/etc/package/loaddyliblist.c"
+	$(CC) -o "$(INSTALL_HOME)/package/Contents/MacOS/loaddyliblist" "$(PWD)/etc/package/loaddyliblist.c"
 ifdef PRODUCT_BUILD3
 	cd "$(INSTALL_HOME)/package" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; sh -e -c 'grep -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "$(BUNDLE_FILE_TYPE)" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" | sed "s#:.*\$$##" | grep -v "/lib-dynload/" | "Contents/MacOS/loaddyliblist"'
 # Fix failure to load Python shared libraries on macOS 11.1 by load the
