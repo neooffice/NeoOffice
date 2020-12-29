@@ -270,8 +270,8 @@
 + "debug-darwin-ppc-cc","cc:-DBN_DEBUG -DREF_CHECK -DCONF_DEBUG -DCRYPTO_MDEBUG -DB_ENDIAN -g -Wall -O::-D_REENTRANT:MACOSX::BN_LLONG RC4_CHAR RC4_CHUNK DES_UNROLL BF_PTR:${ppc32_asm}:osx32:dlfcn:darwin-shared:-fPIC:-dynamiclib:.\$(SHLIB_MAJOR).\$(SHLIB_MINOR).dylib",
 + # iPhoneOS/iOS
 + "iphoneos-cross","llvm-gcc:-O3 -isysroot \$(CROSS_TOP)/SDKs/\$(CROSS_SDK) -fomit-frame-pointer -fno-common::-D_REENTRANT:iOS:-Wl,-search_paths_first%:BN_LLONG RC4_CHAR RC4_CHUNK DES_UNROLL BF_PTR:${no_asm}:dlfcn:darwin-shared:-fPIC -fno-common:-dynamiclib:.\$(SHLIB_MAJOR).\$(SHLIB_MINOR).dylib",
---- openldap-2.4.31.patch	2015-11-25 07:55:38.000000000 -0500
-+++ openldap-2.4.31.patch	2020-12-29 17:30:12.000000000 -0500
+--- openldap/openldap-2.4.31.patch	2015-11-25 07:55:38.000000000 -0500
++++ openldap/openldap-2.4.31.patch	2020-12-29 17:30:12.000000000 -0500
 @@ -71,3 +71,2988 @@
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
   /* end confdefs.h.  */
