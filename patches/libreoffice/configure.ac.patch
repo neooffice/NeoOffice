@@ -1,5 +1,5 @@
 --- configure.ac	2015-11-25 07:55:38.000000000 -0500
-+++ configure.ac	2020-12-28 09:00:17.000000000 -0500
++++ configure.ac	2020-12-29 08:36:33.000000000 -0500
 @@ -538,6 +538,10 @@
  INSTROOTSUFFIX=
  SDKDIRNAME=sdk
@@ -324,7 +324,178 @@
          config_host.mk.in \
          Makefile.in \
          lo.xcent.in \
-@@ -7543,7 +7621,7 @@
+@@ -5862,8 +5940,170 @@
+     AC_LANG_POP([C++])
+ fi
+ 
++dnl ===================================================================
++dnl GCC features
++dnl ===================================================================
++HAVE_GCC_STACK_CLASH_PROTECTION=
++if test "$GCC" = "yes" -o "$COM_IS_CLANG" = TRUE; then
++    AC_MSG_CHECKING([whether $CC_BASE supports -fstack-clash-protection])
++    save_CFLAGS=$CFLAGS
++    CFLAGS="$CFLAGS -fstack-clash-protection"
++    AC_LINK_IFELSE(
++        [AC_LANG_PROGRAM(, [[return 0;]])],
++        [AC_MSG_RESULT([yes]); HAVE_GCC_STACK_CLASH_PROTECTION=TRUE],
++        [AC_MSG_RESULT([no])])
++    CFLAGS=$save_CFLAGS
++
++    AC_MSG_CHECKING([whether $CC_BASE supports -mno-avx])
++    save_CFLAGS=$CFLAGS
++    CFLAGS="$CFLAGS -Werror -mno-avx"
++    AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[ return 0; ]])],[ HAVE_GCC_AVX=TRUE ],[])
++    CFLAGS=$save_CFLAGS
++    if test "$HAVE_GCC_AVX" = "TRUE"; then
++        AC_MSG_RESULT([yes])
++    else
++        AC_MSG_RESULT([no])
++    fi
++
++    AC_MSG_CHECKING([whether $CC_BASE supports atomic functions])
++    AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[
++    int v = 0;
++    if (__sync_add_and_fetch(&v, 1) != 1 ||
++        __sync_sub_and_fetch(&v, 1) != 0)
++        return 1;
++    __sync_synchronize();
++    if (__sync_val_compare_and_swap(&v, 0, 1) != 0 ||
++        v != 1)
++        return 1;
++    return 0;
++]])],[HAVE_GCC_BUILTIN_ATOMIC=TRUE],[])
++    if test "$HAVE_GCC_BUILTIN_ATOMIC" = "TRUE"; then
++        AC_MSG_RESULT([yes])
++        AC_DEFINE(HAVE_GCC_BUILTIN_ATOMIC)
++    else
++        AC_MSG_RESULT([no])
++    fi
++
++    AC_MSG_CHECKING([whether $CXX_BASE defines __base_class_type_info in cxxabi.h])
++    AC_LANG_PUSH([C++])
++    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
++            #include <cstddef>
++            #include <cxxabi.h>
++            std::size_t f() { return sizeof(__cxxabiv1::__base_class_type_info); }
++        ])], [
++            AC_DEFINE([HAVE_CXXABI_H_BASE_CLASS_TYPE_INFO],[1])
++            AC_MSG_RESULT([yes])
++        ], [AC_MSG_RESULT([no])])
++    AC_LANG_POP([C++])
++
++    AC_MSG_CHECKING([whether $CXX_BASE defines __class_type_info in cxxabi.h])
++    AC_LANG_PUSH([C++])
++    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
++            #include <cstddef>
++            #include <cxxabi.h>
++            std::size_t f() { return sizeof(__cxxabiv1::__class_type_info); }
++        ])], [
++            AC_DEFINE([HAVE_CXXABI_H_CLASS_TYPE_INFO],[1])
++            AC_MSG_RESULT([yes])
++        ], [AC_MSG_RESULT([no])])
++    AC_LANG_POP([C++])
++
++    AC_MSG_CHECKING([whether $CXX_BASE declares __cxa_allocate_exception in cxxabi.h])
++    AC_LANG_PUSH([C++])
++    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
++            #include <cxxabi.h>
++            void * f() { return __cxxabiv1::__cxa_allocate_exception(0); }
++        ])], [
++            AC_DEFINE([HAVE_CXXABI_H_CXA_ALLOCATE_EXCEPTION],[1])
++            AC_MSG_RESULT([yes])
++        ], [AC_MSG_RESULT([no])])
++    AC_LANG_POP([C++])
++
++    AC_MSG_CHECKING([whether $CXX_BASE defines __cxa_eh_globals in cxxabi.h])
++    AC_LANG_PUSH([C++])
++    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
++            #include <cstddef>
++            #include <cxxabi.h>
++            std::size_t f() { return sizeof(__cxxabiv1::__cxa_eh_globals); }
++        ])], [
++            AC_DEFINE([HAVE_CXXABI_H_CXA_EH_GLOBALS],[1])
++            AC_MSG_RESULT([yes])
++        ], [AC_MSG_RESULT([no])])
++    AC_LANG_POP([C++])
++
++    AC_MSG_CHECKING([whether $CXX_BASE defines __cxa_exception in cxxabi.h])
++    AC_LANG_PUSH([C++])
++    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
++            #include <cstddef>
++            #include <cxxabi.h>
++            std::size_t f() { return sizeof(__cxxabiv1::__cxa_exception); }
++        ])], [
++            AC_DEFINE([HAVE_CXXABI_H_CXA_EXCEPTION],[1])
++            AC_MSG_RESULT([yes])
++        ], [AC_MSG_RESULT([no])])
++    AC_LANG_POP([C++])
++
++    AC_MSG_CHECKING([whether $CXX_BASE declares __cxa_get_globals in cxxabi.h])
++    AC_LANG_PUSH([C++])
++    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
++            #include <cxxabi.h>
++            void * f() { return __cxxabiv1::__cxa_get_globals(); }
++        ])], [
++            AC_DEFINE([HAVE_CXXABI_H_CXA_GET_GLOBALS],[1])
++            AC_MSG_RESULT([yes])
++        ], [AC_MSG_RESULT([no])])
++    AC_LANG_POP([C++])
++
++    AC_MSG_CHECKING([whether $CXX_BASE declares __cxa_current_exception_type in cxxabi.h])
++    AC_LANG_PUSH([C++])
++    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
++            #include <cxxabi.h>
++            void * f() { return __cxxabiv1::__cxa_current_exception_type(); }
++        ])], [
++            AC_DEFINE([HAVE_CXXABI_H_CXA_CURRENT_EXCEPTION_TYPE],[1])
++            AC_MSG_RESULT([yes])
++        ], [AC_MSG_RESULT([no])])
++    AC_LANG_POP([C++])
++
++    AC_MSG_CHECKING([whether $CXX_BASE declares __cxa_throw in cxxabi.h])
++    AC_LANG_PUSH([C++])
++    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
++            #include <cxxabi.h>
++            void f() { __cxxabiv1::__cxa_throw(0, 0, 0); }
++        ])], [
++            AC_DEFINE([HAVE_CXXABI_H_CXA_THROW],[1])
++            AC_MSG_RESULT([yes])
++        ], [AC_MSG_RESULT([no])])
++    AC_LANG_POP([C++])
++
++    AC_MSG_CHECKING([whether $CXX_BASE defines __si_class_type_info in cxxabi.h])
++    AC_LANG_PUSH([C++])
++    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
++            #include <cstddef>
++            #include <cxxabi.h>
++            std::size_t f() { return sizeof(__cxxabiv1::__si_class_type_info); }
++        ])], [
++            AC_DEFINE([HAVE_CXXABI_H_SI_CLASS_TYPE_INFO],[1])
++            AC_MSG_RESULT([yes])
++        ], [AC_MSG_RESULT([no])])
++    AC_LANG_POP([C++])
++
++    AC_MSG_CHECKING([whether $CXX_BASE defines __vmi_class_type_info in cxxabi.h])
++    AC_LANG_PUSH([C++])
++    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
++            #include <cstddef>
++            #include <cxxabi.h>
++            std::size_t f() { return sizeof(__cxxabiv1::__vmi_class_type_info); }
++        ])], [
++            AC_DEFINE([HAVE_CXXABI_H_VMI_CLASS_TYPE_INFO],[1])
++            AC_MSG_RESULT([yes])
++        ], [AC_MSG_RESULT([no])])
++    AC_LANG_POP([C++])
++fi
++
+ AC_SUBST(HAVE_GCC_AVX)
+ AC_SUBST(HAVE_GCC_BUILTIN_ATOMIC)
++AC_SUBST(HAVE_GCC_STACK_CLASH_PROTECTION)
+ 
+ dnl ===================================================================
+ dnl Identify the C++ library
+@@ -7543,7 +7783,7 @@
  dnl ===================================================================
  # libcmis requires curl and we can't build curl for iOS
  if test $_os != iOS; then
@@ -333,7 +504,7 @@
      ENABLE_CMIS=TRUE
  else
      ENABLE_CMIS=
-@@ -7741,18 +7819,25 @@
+@@ -7741,18 +7981,25 @@
  AC_SUBST(XMLLINT)
  
  # =====================================================================
@@ -366,7 +537,7 @@
      fi
  fi
  AC_SUBST(PYTHON_FOR_BUILD)
-@@ -7777,10 +7862,6 @@
+@@ -7777,10 +8024,6 @@
      elif test $build_os = cygwin; then
          dnl When building on Windows we don't attempt to use any installed
          dnl "system"  Python.
@@ -377,7 +548,7 @@
          AC_MSG_RESULT([fully internal])
          enable_python=internal
      elif test "$cross_compiling" = yes; then
-@@ -7789,8 +7870,10 @@
+@@ -7789,8 +8032,10 @@
      else
          # Unset variables set by the above AM_PATH_PYTHON so that
          # we actually do check anew.
@@ -388,7 +559,7 @@
          if test "$PYTHON" = ":"; then
              if test -z "$PYTHON_FOR_BUILD"; then
                  AC_MSG_RESULT([fully internal])
-@@ -7813,6 +7896,9 @@
+@@ -7813,6 +8058,9 @@
      ;;
  system)
      AC_MSG_RESULT([system])
@@ -398,7 +569,7 @@
      ;;
  *)
      AC_MSG_ERROR([Incorrect --enable-python option])
-@@ -7824,17 +7910,6 @@
+@@ -7824,17 +8072,6 @@
  fi
  
  if test $enable_python = system; then
@@ -416,7 +587,7 @@
      if test -n "$PYTHON_CFLAGS" -a -n "$PYTHON_LIBS"; then
          # Fallback: Accept these in the environment, or as set above
          # for MacOSX.
-@@ -7852,6 +7927,9 @@
+@@ -7852,6 +8089,9 @@
          if test -z "$PKG_CONFIG"; then
              PYTHON_CFLAGS="-I$python_include"
              PYTHON_LIBS="-L$python_libdir -lpython$python_version $python_libs"
@@ -426,7 +597,7 @@
          elif $PKG_CONFIG --exists python-$python_version; then
              PYTHON_CFLAGS="`$PKG_CONFIG --cflags python-$python_version`"
              PYTHON_LIBS="`$PKG_CONFIG --libs python-$python_version` $python_libs"
-@@ -7859,27 +7937,10 @@
+@@ -7859,27 +8099,10 @@
              PYTHON_CFLAGS="-I$python_include"
              PYTHON_LIBS="-L$python_libdir -lpython$python_version $python_libs"
          fi
@@ -456,7 +627,7 @@
          AC_MSG_CHECKING([for python version])
          AS_IF([test -n "$PYTHON_VERSION"],
                [AC_MSG_RESULT([$PYTHON_VERSION])],
-@@ -7887,62 +7948,100 @@
+@@ -7887,62 +8110,100 @@
                 AC_MSG_ERROR([no usable python found])])
          test -n "$PYTHON_CFLAGS" && break
      fi
@@ -586,7 +757,7 @@
      ;;
  no)
      DISABLE_PYTHON=TRUE
-@@ -8179,7 +8278,9 @@
+@@ -8179,7 +8440,9 @@
  dnl ===================================================================
  dnl Check for PostgreSQL stuff
  dnl ===================================================================
@@ -596,7 +767,7 @@
      SCPDEFS="$SCPDEFS -DWITH_POSTGRESQL_SDBC"
  
      if test "$with_krb5" = "yes" -a "$enable_openssl" = "no"; then
-@@ -8189,9 +8290,9 @@
+@@ -8189,9 +8452,9 @@
          AC_MSG_ERROR([GSSAPI needs OpenSSL, but --disable-openssl was given.])
      fi
  
@@ -608,7 +779,7 @@
          SYSTEM_POSTGRESQL=TRUE
          if test "$_os" = Darwin; then
              supp_path=''
-@@ -8200,11 +8301,19 @@
+@@ -8200,11 +8463,19 @@
              done
          fi
          AC_PATH_PROG(PGCONFIG, pg_config, ,$PATH$pg_supp_path)
@@ -632,7 +803,7 @@
      else
          # if/when anything else than PostgreSQL uses Kerberos,
          # move this out of `test "x$enable_postgresql_sdbc" != "xno"'
-@@ -8212,16 +8321,18 @@
+@@ -8212,16 +8483,18 @@
          WITH_GSSAPI=
          case "$_os" in
          Darwin)
@@ -654,7 +825,7 @@
                  KRB5_LIBS="$KRB5_LIBS $LIBS"
                  LIBS=$save_LIBS
              fi
-@@ -8286,17 +8397,21 @@
+@@ -8286,17 +8559,21 @@
  
          if test -n "$with_libpq_path"; then
              SYSTEM_POSTGRESQL=TRUE
@@ -678,7 +849,7 @@
      if test "${SYSTEM_POSTGRESQL}" = "TRUE"; then
          AC_MSG_NOTICE([checking system PostgreSQL prerequisites])
          save_CFLAGS=$CFLAGS
-@@ -8312,6 +8427,8 @@
+@@ -8312,6 +8589,8 @@
          LIBS=$save_LIBS
      fi
      BUILD_POSTGRESQL_SDBC=TRUE
@@ -687,7 +858,7 @@
  fi
  AC_SUBST(WITH_KRB5)
  AC_SUBST(WITH_GSSAPI)
-@@ -8325,8 +8442,8 @@
+@@ -8325,8 +8604,8 @@
  dnl ===================================================================
  dnl Check for Firebird stuff
  dnl ===================================================================
@@ -698,7 +869,7 @@
      SCPDEFS="$SCPDEFS -DWITH_FIREBIRD_SDBC"
  
      dnl ===================================================================
-@@ -8339,51 +8456,59 @@
+@@ -8339,51 +8618,59 @@
          AC_PATH_PROG(FIREBIRDCONFIG, [fb_config])
          if test -z "$FIREBIRDCONFIG"; then
              AC_MSG_NOTICE([No fb_config -- using pkg-config])
@@ -768,7 +939,7 @@
              else
                  SYSTEM_LIBATOMIC_OPS=
                  LIBATOMIC_OPS_CFLAGS="-I${WORKDIR}/UnpackedTarball/libatomic_ops/include"
-@@ -8394,11 +8519,26 @@
+@@ -8394,11 +8681,26 @@
  
          AC_MSG_RESULT([internal])
          SYSTEM_FIREBIRD=
@@ -798,7 +969,7 @@
      fi
  fi
  AC_SUBST(ENABLE_FIREBIRD_SDBC)
-@@ -8408,8 +8548,8 @@
+@@ -8408,8 +8710,8 @@
  AC_SUBST(SYSTEM_FIREBIRD)
  AC_SUBST(FIREBIRD_CFLAGS)
  AC_SUBST(FIREBIRD_LIBS)
@@ -809,7 +980,7 @@
  
  dnl ===================================================================
  dnl Check for system curl
-@@ -8484,15 +8624,11 @@
+@@ -8484,15 +8786,11 @@
  if test "$with_system_boost" = "yes"; then
      AC_MSG_RESULT([external])
      SYSTEM_BOOST=TRUE
@@ -828,7 +999,7 @@
      AC_LANG_PUSH([C++])
      save_CXXFLAGS=$CXXFLAGS
      CXXFLAGS="$CXXFLAGS $BOOST_CPPFLAGS $CXXFLAGS_CXX11"
-@@ -8500,28 +8636,21 @@
+@@ -8500,28 +8798,21 @@
         [AC_MSG_ERROR(boost/shared_ptr.hpp not found. install boost)], [])
      AC_CHECK_HEADER(boost/spirit/include/classic_core.hpp, [],
         [AC_MSG_ERROR(boost/spirit/include/classic_core.hpp not found. install boost >= 1.36)], [])
@@ -866,7 +1037,7 @@
  fi
  AC_SUBST(SYSTEM_BOOST)
  
-@@ -8648,6 +8777,19 @@
+@@ -8648,6 +8939,19 @@
  AC_SUBST(MSVC80_DLL_PATH)
  
  dnl ===================================================================
@@ -886,7 +1057,7 @@
  dnl Check for TLS/SSL and cryptographic implementation to use
  dnl ===================================================================
  AC_MSG_CHECKING([which TLS/SSL and cryptographic implementation to use])
-@@ -8656,53 +8798,42 @@
+@@ -8656,53 +8960,42 @@
      openssl)
          AC_DEFINE(USE_TLS_OPENSSL)
          TLS=OPENSSL
@@ -950,7 +1121,7 @@
  dnl Check for system mozilla headers
  dnl ===================================================================
  HAVE_NON_CONST_NPP_GETMIMEDESCRIPTION=
-@@ -11843,7 +11974,7 @@
+@@ -11843,7 +12136,7 @@
  dnl Test whether to build libpng or rely on the system version
  dnl ===================================================================
  

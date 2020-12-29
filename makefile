@@ -307,6 +307,7 @@ build.libo_patches: \
 	build.libo_basegfx_patch \
 	build.libo_bin_patch \
 	build.libo_bridges_patch \
+	build.libo_config_host_patch \
 	build.libo_cppuhelper_patch \
 	build.libo_dbaccess_patch \
 	build.libo_embeddedobj_patch \
