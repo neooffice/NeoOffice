@@ -1,5 +1,5 @@
 --- configure.ac	2015-11-25 07:55:38.000000000 -0500
-+++ configure.ac	2020-12-29 08:36:33.000000000 -0500
++++ configure.ac	2020-12-29 08:44:36.000000000 -0500
 @@ -538,6 +538,10 @@
  INSTROOTSUFFIX=
  SDKDIRNAME=sdk
@@ -1130,3 +1130,11 @@
  
  dnl ===================================================================
  dnl Check for runtime JVM search path
+@@ -12819,6 +13112,7 @@
+                  ios/lo.xcconfig])
+ AC_CONFIG_HEADERS([config_host/config_buildid.h])
+ AC_CONFIG_HEADERS([config_host/config_clang.h])
++AC_CONFIG_HEADERS([config_host/config_cxxabi.h])
+ AC_CONFIG_HEADERS([config_host/config_eot.h])
+ AC_CONFIG_HEADERS([config_host/config_features.h])
+ AC_CONFIG_HEADERS([config_host/config_folders.h])
