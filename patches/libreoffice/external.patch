@@ -236,3 +236,37 @@
  			--disable-shared \
  			--enable-static \
  			--with-pic \
+--- openssl/ExternalProject_openssl.mk	2015-11-25 07:55:38.000000000 -0500
++++ openssl/ExternalProject_openssl.mk	2020-12-29 12:42:21.000000000 -0500
+@@ -52,6 +52,7 @@
+             $(if $(filter POWERPC,$(CPUNAME)),darwin-ppc-cc)\
+             $(if $(filter INTEL,$(CPUNAME)),darwin-i386-cc)\
+             $(if $(filter X86_64,$(CPUNAME)),darwin64-x86_64-cc)\
++            $(if $(filter AARCH64,$(CPUNAME)),darwin64-arm64-cc)\
+           )\
+         )\
+       )\
+--- openssl/UnpackedTarball_openssl.mk	2015-11-25 07:55:38.000000000 -0500
++++ openssl/UnpackedTarball_openssl.mk	2020-12-29 12:41:34.000000000 -0500
+@@ -31,6 +31,7 @@
+ 	external/openssl/opensslios.patch \
+ 	external/openssl/opensslosxppc.patch \
+ 	external/openssl/openssl-3650-masm.patch.1 \
++	external/openssl/openssl-macos-arm64.patch.1 \
+ ))
+ 
+ # vim: set noet sw=4 ts=4:
+--- /dev/null	2020-12-29 12:49:06.000000000 -0500
++++ openssl/openssl-macos-arm64.patch.1	2020-12-29 12:47:48.000000000 -0500
+@@ -0,0 +1,11 @@
++--- a/Configure
+++++ b/Configure
++@@ -626,6 +626,8 @@
++ "debug-darwin-i386-cc","cc:-arch i386 -g3 -DL_ENDIAN::-D_REENTRANT:MACOSX:-Wl,-search_paths_first%:BN_LLONG RC4_INT RC4_CHUNK DES_UNROLL BF_PTR:${x86_asm}:macosx:dlfcn:darwin-shared:-fPIC -fno-common:-arch i386 -dynamiclib:.\$(SHLIB_MAJOR).\$(SHLIB_MINOR).dylib",
++ "darwin64-x86_64-cc","cc:-arch x86_64 -O3 -DL_ENDIAN -Wall::-D_REENTRANT:MACOSX:-Wl,-search_paths_first%:SIXTY_FOUR_BIT_LONG RC4_CHUNK DES_INT DES_UNROLL:".eval{my $asm=$x86_64_asm;$asm=~s/rc4\-[^:]+//;$asm}.":macosx:dlfcn:darwin-shared:-fPIC -fno-common:-arch x86_64 -dynamiclib:.\$(SHLIB_MAJOR).\$(SHLIB_MINOR).dylib",
++ "debug-darwin64-x86_64-cc","cc:-arch x86_64 -ggdb -g2 -O0 -DL_ENDIAN -Wall::-D_REENTRANT:MACOSX:-Wl,-search_paths_first%:SIXTY_FOUR_BIT_LONG RC4_CHUNK DES_INT DES_UNROLL:".eval{my $asm=$x86_64_asm;$asm=~s/rc4\-[^:]+//;$asm}.":macosx:dlfcn:darwin-shared:-fPIC -fno-common:-arch x86_64 -dynamiclib:.\$(SHLIB_MAJOR).\$(SHLIB_MINOR).dylib",
+++"darwin64-arm64-cc","cc:-arch arm64 -O3 -DL_ENDIAN -Wall::-D_REENTRANT:MACOSX:-Wl,-search_paths_first%:SIXTY_FOUR_BIT_LONG RC4_CHUNK DES_INT DES_UNROLL:${no_asm}:macosx:dlfcn:darwin-shared:-fPIC -fno-common:-arch x86_64 -dynamiclib:.\$(SHLIB_MAJOR).\$(SHLIB_MINOR).dylib",
+++"debug-darwin64-arm64-cc","cc:-arch arm64 -ggdb -g2 -O0 -DL_ENDIAN -Wall::-D_REENTRANT:MACOSX:-Wl,-search_paths_first%:SIXTY_FOUR_BIT_LONG RC4_CHUNK DES_INT DES_UNROLL:${no_asm}:macosx:dlfcn:darwin-shared:-fPIC -fno-common:-arch x86_64 -dynamiclib:.\$(SHLIB_MAJOR).\$(SHLIB_MINOR).dylib",
++ "debug-darwin-ppc-cc","cc:-DBN_DEBUG -DREF_CHECK -DCONF_DEBUG -DCRYPTO_MDEBUG -DB_ENDIAN -g -Wall -O::-D_REENTRANT:MACOSX::BN_LLONG RC4_CHAR RC4_CHUNK DES_UNROLL BF_PTR:${ppc32_asm}:osx32:dlfcn:darwin-shared:-fPIC:-dynamiclib:.\$(SHLIB_MAJOR).\$(SHLIB_MINOR).dylib",
++ # iPhoneOS/iOS
++ "iphoneos-cross","llvm-gcc:-O3 -isysroot \$(CROSS_TOP)/SDKs/\$(CROSS_SDK) -fomit-frame-pointer -fno-common::-D_REENTRANT:iOS:-Wl,-search_paths_first%:BN_LLONG RC4_CHAR RC4_CHUNK DES_UNROLL BF_PTR:${no_asm}:dlfcn:darwin-shared:-fPIC -fno-common:-dynamiclib:.\$(SHLIB_MAJOR).\$(SHLIB_MINOR).dylib",
