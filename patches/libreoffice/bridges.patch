@@ -1,6 +1,6 @@
---- inc/vtablefactory.hxx	2020-12-09 13:56:14.000000000 -0500
-+++ inc/vtablefactory.hxx	2020-12-21 18:23:20.000000000 -0500
-@@ -209,7 +209,7 @@
+--- inc/vtablefactory.hxx.bak	2020-12-17 16:59:38.000000000 -0500
++++ inc/vtablefactory.hxx	2020-12-29 07:37:42.000000000 -0500
+@@ -208,7 +208,7 @@
      static void flushCode(
          unsigned char const * begin, unsigned char const * end);
  
@@ -9,8 +9,8 @@
  
      osl::Mutex m_mutex;
      Map m_map;
---- source/cpp_uno/gcc3_macosx_x86-64/except.cxx	2020-12-09 13:56:14.000000000 -0500
-+++ source/cpp_uno/gcc3_macosx_x86-64/except.cxx	2020-12-21 18:24:45.000000000 -0500
+--- source/cpp_uno/gcc3_macosx_x86-64/except.cxx.bak	2020-12-17 16:59:38.000000000 -0500
++++ source/cpp_uno/gcc3_macosx_x86-64/except.cxx	2020-12-29 07:39:52.000000000 -0500
 @@ -145,7 +145,7 @@
  
  class RTTI
@@ -20,8 +20,8 @@
  
      Mutex m_mutex;
      t_rtti_map m_rttis;
---- source/cpp_uno/shared/vtablefactory.cxx	2020-12-09 13:56:14.000000000 -0500
-+++ source/cpp_uno/shared/vtablefactory.cxx	2020-12-21 18:28:04.000000000 -0500
+--- source/cpp_uno/shared/vtablefactory.cxx.bak	2020-12-17 16:59:38.000000000 -0500
++++ source/cpp_uno/shared/vtablefactory.cxx	2020-12-29 07:39:07.000000000 -0500
 @@ -174,7 +174,7 @@
      sal_Int32 calculate(
          typelib_InterfaceTypeDescription * type, sal_Int32 offset);
@@ -31,3 +31,14 @@
  };
  
  sal_Int32 VtableFactory::BaseOffset::calculate(
+--- source/cpp_uno/gcc3_linux_aarch64/abi.cxx.bak	2020-12-17 16:59:38.000000000 -0500
++++ source/cpp_uno/gcc3_linux_aarch64/abi.cxx	2020-12-29 07:40:25.000000000 -0500
+@@ -81,7 +81,7 @@
+     std::type_info * getRtti(typelib_TypeDescription const & type);
+ 
+ private:
+-    typedef std::unordered_map<OUString, std::type_info *> Map;
++    typedef std::unordered_map<OUString, std::type_info *, OUStringHash > Map;
+ 
+     void * app_;
+ 
