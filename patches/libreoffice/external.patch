@@ -375,3 +375,27 @@
 + 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
 + 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
 + 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* \
+--- libmspub/UnpackedTarball_libmspub.mk	2015-11-25 07:55:38.000000000 -0500
++++ libmspub/UnpackedTarball_libmspub.mk	2020-12-29 21:06:22.000000000 -0500
+@@ -11,4 +11,8 @@
+ 
+ $(eval $(call gb_UnpackedTarball_set_tarball,libmspub,$(MSPUB_TARBALL)))
+ 
++$(eval $(call gb_UnpackedTarball_add_patches,libmspub,\
++    external/libmspub/libmspub-macos.patch \
++))
++
+ # vim: set noet sw=4 ts=4:
+--- /dev/null	2020-12-29 21:10:06.000000000 -0500
++++ libmspub/libmspub-macos.patch	2020-12-29 21:09:20.000000000 -0500
+@@ -0,0 +1,10 @@
++--- a/libmspub/config.sub	2012-06-30 08:54:32.000000000 -0400
+++++ b/libmspub/config.sub	2020-12-29 21:00:35.000000000 -0500
++@@ -355,6 +355,7 @@
++ 	# Recognize the basic CPU types with company name.
++ 	580-* \
++ 	| a29k-* \
+++	| aarch64-* | aarch64_be-* \
++ 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
++ 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
++ 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* \
