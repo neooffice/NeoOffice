@@ -1,5 +1,5 @@
 --- configure.ac	2015-11-25 07:55:38.000000000 -0500
-+++ configure.ac	2020-12-30 10:36:17.000000000 -0500
++++ configure.ac	2020-12-30 10:39:47.000000000 -0500
 @@ -538,6 +538,10 @@
  INSTROOTSUFFIX=
  SDKDIRNAME=sdk
@@ -627,7 +627,7 @@
          AC_MSG_CHECKING([for python version])
          AS_IF([test -n "$PYTHON_VERSION"],
                [AC_MSG_RESULT([$PYTHON_VERSION])],
-@@ -7887,43 +8110,80 @@
+@@ -7887,62 +8110,99 @@
                 AC_MSG_ERROR([no usable python found])])
          test -n "$PYTHON_CFLAGS" && break
      fi
@@ -728,10 +728,12 @@
      ;;
  
  internal)
-@@ -7931,18 +8191,18 @@
+     SYSTEM_PYTHON=
      PYTHON_VERSION_MAJOR=3
-     PYTHON_VERSION_MINOR=3
-     PYTHON_VERSION=${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}.3
+-    PYTHON_VERSION_MINOR=3
+-    PYTHON_VERSION=${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}.3
++    PYTHON_VERSION_MINOR=7
++    PYTHON_VERSION=${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}.7
 +    if ! grep -q -i python.*${PYTHON_VERSION} ${SRC_ROOT}/download.lst; then
 +        AC_MSG_ERROR([PYTHON_VERSION ${PYTHON_VERSION} but no matching file in download.lst])
 +    fi
