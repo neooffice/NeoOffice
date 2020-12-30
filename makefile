@@ -404,14 +404,20 @@ build.neo_configure: build.neo_instdir build.neo_workdir $(INSTDIR) $(WORKDIR)
 	echo "# Override LibreOffice environment variables" >> "$@"
 	echo "export GUIBASE:=java" >> "$@"
 	echo "export INSTDIR:=$(realpath $(INSTDIR))" >> "$@"
+ifndef CROSS_COMPILE
 	echo "export INSTDIR_FOR_BUILD:=$(realpath $(INSTDIR))" >> "$@"
+endif
 	echo "export INSTROOT:=$(realpath $(INSTDIR))"'/$$(PRODUCTNAME).app/Contents' >> "$@"
+ifndef CROSS_COMPILE
 	echo "export INSTROOT_FOR_BUILD:=$(realpath $(INSTDIR))"'/$$(PRODUCTNAME).app/Contents' >> "$@"
+endif
 	echo "export SOLARINC:=-I. -I$(realpath include)"' $$(SOLARINC)' >> "$@"
 	echo "export SRC_ROOT:=$(realpath .)" >> "$@"
 	echo "export SRCDIR:=$(realpath .)" >> "$@"
 	echo "export WORKDIR:=$(realpath $(WORKDIR))" >> "$@"
+ifndef CROSS_COMPILE
 	echo "export WORKDIR_FOR_BUILD:=$(realpath $(WORKDIR))" >> "$@"
+endif
 	echo "# Add custom environment variables" >> "$@"
 	echo "export PRODUCT_BUILD_TYPE:=java" >> "$@"
 	echo "export PRODUCT_NAME:=$(PRODUCT_NAME)" >> "$@"
