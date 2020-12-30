@@ -474,7 +474,9 @@ build.neo_tests: $(PRODUCT_MODULES:%=build.neo_%_test)
 	touch "$@"
 
 build.neo_%_test: build.neo_patches
+ifndef CROSS_COMPILE
 	cd "$(@:build.neo_%_test=%)" ; $(MAKE) $(MFLAGS) check
+endif
 	touch "$@"
 
 build.check_env_vars: build.neo_configure
