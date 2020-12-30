@@ -78,7 +78,7 @@ CPUNAME=I
 TARGET_MACHINE:=$(shell uname -m)
 ifneq ($(TARGET_MACHINE),arm64)
 ifdef CROSS_COMPILE_ARM64
-CONFIGURE_EXTRA_OPTIONS:=--host=arm64-apple-darwin --build=$(TARGET_MACHINE)-apple-darwin --enable-python=no --with-galleries --with-build-platform-configure-options='--disable-odk --without-fonts --enable-python=no'
+CONFIGURE_EXTRA_OPTIONS:=--host=arm64-apple-darwin --build=$(TARGET_MACHINE)-apple-darwin --enable-python=no --with-galleries=no --with-build-platform-configure-options='--disable-odk --without-fonts --enable-python=no'
 CROSS_COMPILE=true;
 TARGET_MACHINE=arm64
 endif
