@@ -1,5 +1,5 @@
---- configure.ac	2015-11-25 07:55:38.000000000 -0500
-+++ configure.ac	2020-12-30 10:39:47.000000000 -0500
+--- configure.ac
++++ configure.ac	2020-12-30 16:56:20.000000000 -0500
 @@ -538,6 +538,10 @@
  INSTROOTSUFFIX=
  SDKDIRNAME=sdk
@@ -504,6 +504,15 @@
      ENABLE_CMIS=TRUE
  else
      ENABLE_CMIS=
+@@ -7574,7 +7814,7 @@
+ dnl ===================================================================
+ dnl Check for system cppunit
+ dnl ===================================================================
+-if test "$cross_compiling" != "yes"; then
++if test "$_os" != "Android" ; then
+     libo_CHECK_SYSTEM_MODULE([cppunit],[CPPUNIT],[cppunit >= 1.12.0])
+ fi
+ 
 @@ -7741,18 +7981,25 @@
  AC_SUBST(XMLLINT)
  
