@@ -1,5 +1,5 @@
 --- configure.ac	2015-11-25 07:55:38.000000000 -0500
-+++ configure.ac	2020-12-29 08:44:36.000000000 -0500
++++ configure.ac	2020-12-30 05:57:16.000000000 -0500
 @@ -538,6 +538,10 @@
  INSTROOTSUFFIX=
  SDKDIRNAME=sdk
@@ -514,8 +514,8 @@
  # Optionally user can pass an option to configure, i. e.
  # ./configure PYTHON=/usr/bin/python
  # =====================================================================
-+if test $_os = Darwin -a "$enable_python" != fully-internal -a "$enable_python" != internal; then
-+    # Only allowed choices for macOS are 'internal' (default) and 'fully-internal'
++if test $_os = Darwin -a "$enable_python" != no -a "$enable_python" != fully-internal -a "$enable_python" != internal; then
++    # Only allowed choices for macOS are 'no', 'internal' (default), and 'fully-internal'
 +    enable_python=internal
 +fi
  if test "$build_os" != "cygwin" -a "$enable_python" != fully-internal; then
@@ -627,7 +627,7 @@
          AC_MSG_CHECKING([for python version])
          AS_IF([test -n "$PYTHON_VERSION"],
                [AC_MSG_RESULT([$PYTHON_VERSION])],
-@@ -7887,62 +8110,100 @@
+@@ -7887,62 +8110,99 @@
                 AC_MSG_ERROR([no usable python found])])
          test -n "$PYTHON_CFLAGS" && break
      fi
@@ -720,7 +720,6 @@
 -        CFLAGS=$save_CFLAGS
 -        AC_LANG_POP(C)
 +       ]])],[AC_MSG_RESULT([ok])],[AC_MSG_ERROR([Python >= 3.3 is needed when building with Python 3])],[AC_MSG_RESULT([skipped; cross-compiling])])
-+    CFLAGS=$save_CFLAGS
 +    AC_LANG_POP(C)
  
 -        dnl FIXME Check if the Python library can be linked with, too?
@@ -733,14 +732,14 @@
      PYTHON_VERSION_MAJOR=3
 -    PYTHON_VERSION_MINOR=3
 -    PYTHON_VERSION=${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}.3
-+    PYTHON_VERSION_MINOR=7
-+    PYTHON_VERSION=${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}.7
++    PYTHON_VERSION_MINOR=8
++    PYTHON_VERSION=${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}.4
 +    if ! grep -q -i python.*${PYTHON_VERSION} ${SRC_ROOT}/download.lst; then
 +        AC_MSG_ERROR([PYTHON_VERSION ${PYTHON_VERSION} but no matching file in download.lst])
 +    fi
 +    AC_DEFINE_UNQUOTED([PYTHON_VERSION_STRING], [L"${PYTHON_VERSION}"])
      BUILD_TYPE="$BUILD_TYPE PYTHON"
-+    if test "$OS" = LINUX; then
++    if test "$OS" = LINUX -o "$OS" = WNT ; then
 +        BUILD_TYPE="$BUILD_TYPE LIBFFI"
 +    fi
      # Embedded Python dies without Home set
@@ -757,7 +756,7 @@
      ;;
  no)
      DISABLE_PYTHON=TRUE
-@@ -8179,7 +8440,9 @@
+@@ -8179,7 +8439,9 @@
  dnl ===================================================================
  dnl Check for PostgreSQL stuff
  dnl ===================================================================
@@ -767,7 +766,7 @@
      SCPDEFS="$SCPDEFS -DWITH_POSTGRESQL_SDBC"
  
      if test "$with_krb5" = "yes" -a "$enable_openssl" = "no"; then
-@@ -8189,9 +8452,9 @@
+@@ -8189,9 +8451,9 @@
          AC_MSG_ERROR([GSSAPI needs OpenSSL, but --disable-openssl was given.])
      fi
  
@@ -779,7 +778,7 @@
          SYSTEM_POSTGRESQL=TRUE
          if test "$_os" = Darwin; then
              supp_path=''
-@@ -8200,11 +8463,19 @@
+@@ -8200,11 +8462,19 @@
              done
          fi
          AC_PATH_PROG(PGCONFIG, pg_config, ,$PATH$pg_supp_path)
@@ -803,7 +802,7 @@
      else
          # if/when anything else than PostgreSQL uses Kerberos,
          # move this out of `test "x$enable_postgresql_sdbc" != "xno"'
-@@ -8212,16 +8483,18 @@
+@@ -8212,16 +8482,18 @@
          WITH_GSSAPI=
          case "$_os" in
          Darwin)
@@ -825,7 +824,7 @@
                  KRB5_LIBS="$KRB5_LIBS $LIBS"
                  LIBS=$save_LIBS
              fi
-@@ -8286,17 +8559,21 @@
+@@ -8286,17 +8558,21 @@
  
          if test -n "$with_libpq_path"; then
              SYSTEM_POSTGRESQL=TRUE
@@ -849,7 +848,7 @@
      if test "${SYSTEM_POSTGRESQL}" = "TRUE"; then
          AC_MSG_NOTICE([checking system PostgreSQL prerequisites])
          save_CFLAGS=$CFLAGS
-@@ -8312,6 +8589,8 @@
+@@ -8312,6 +8588,8 @@
          LIBS=$save_LIBS
      fi
      BUILD_POSTGRESQL_SDBC=TRUE
@@ -858,7 +857,7 @@
  fi
  AC_SUBST(WITH_KRB5)
  AC_SUBST(WITH_GSSAPI)
-@@ -8325,8 +8604,8 @@
+@@ -8325,8 +8603,8 @@
  dnl ===================================================================
  dnl Check for Firebird stuff
  dnl ===================================================================
@@ -869,7 +868,7 @@
      SCPDEFS="$SCPDEFS -DWITH_FIREBIRD_SDBC"
  
      dnl ===================================================================
-@@ -8339,51 +8618,59 @@
+@@ -8339,51 +8617,59 @@
          AC_PATH_PROG(FIREBIRDCONFIG, [fb_config])
          if test -z "$FIREBIRDCONFIG"; then
              AC_MSG_NOTICE([No fb_config -- using pkg-config])
@@ -939,7 +938,7 @@
              else
                  SYSTEM_LIBATOMIC_OPS=
                  LIBATOMIC_OPS_CFLAGS="-I${WORKDIR}/UnpackedTarball/libatomic_ops/include"
-@@ -8394,11 +8681,26 @@
+@@ -8394,11 +8680,26 @@
  
          AC_MSG_RESULT([internal])
          SYSTEM_FIREBIRD=
@@ -969,7 +968,7 @@
      fi
  fi
  AC_SUBST(ENABLE_FIREBIRD_SDBC)
-@@ -8408,8 +8710,8 @@
+@@ -8408,8 +8709,8 @@
  AC_SUBST(SYSTEM_FIREBIRD)
  AC_SUBST(FIREBIRD_CFLAGS)
  AC_SUBST(FIREBIRD_LIBS)
@@ -980,7 +979,7 @@
  
  dnl ===================================================================
  dnl Check for system curl
-@@ -8484,15 +8786,11 @@
+@@ -8484,15 +8785,11 @@
  if test "$with_system_boost" = "yes"; then
      AC_MSG_RESULT([external])
      SYSTEM_BOOST=TRUE
@@ -999,7 +998,7 @@
      AC_LANG_PUSH([C++])
      save_CXXFLAGS=$CXXFLAGS
      CXXFLAGS="$CXXFLAGS $BOOST_CPPFLAGS $CXXFLAGS_CXX11"
-@@ -8500,28 +8798,21 @@
+@@ -8500,28 +8797,21 @@
         [AC_MSG_ERROR(boost/shared_ptr.hpp not found. install boost)], [])
      AC_CHECK_HEADER(boost/spirit/include/classic_core.hpp, [],
         [AC_MSG_ERROR(boost/spirit/include/classic_core.hpp not found. install boost >= 1.36)], [])
@@ -1037,7 +1036,7 @@
  fi
  AC_SUBST(SYSTEM_BOOST)
  
-@@ -8648,6 +8939,19 @@
+@@ -8648,6 +8938,19 @@
  AC_SUBST(MSVC80_DLL_PATH)
  
  dnl ===================================================================
@@ -1057,7 +1056,7 @@
  dnl Check for TLS/SSL and cryptographic implementation to use
  dnl ===================================================================
  AC_MSG_CHECKING([which TLS/SSL and cryptographic implementation to use])
-@@ -8656,53 +8960,42 @@
+@@ -8656,53 +8959,42 @@
      openssl)
          AC_DEFINE(USE_TLS_OPENSSL)
          TLS=OPENSSL
@@ -1121,7 +1120,7 @@
  dnl Check for system mozilla headers
  dnl ===================================================================
  HAVE_NON_CONST_NPP_GETMIMEDESCRIPTION=
-@@ -11843,7 +12136,7 @@
+@@ -11843,7 +12135,7 @@
  dnl Test whether to build libpng or rely on the system version
  dnl ===================================================================
  
@@ -1130,7 +1129,7 @@
  
  dnl ===================================================================
  dnl Check for runtime JVM search path
-@@ -12819,6 +13112,7 @@
+@@ -12819,6 +13111,7 @@
                   ios/lo.xcconfig])
  AC_CONFIG_HEADERS([config_host/config_buildid.h])
  AC_CONFIG_HEADERS([config_host/config_clang.h])
