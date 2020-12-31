@@ -1275,6 +1275,7 @@ static NSComboBox *pSharedComboBox = nil;
 			maIncrementArrowBounds = [pScroller rectForPart:NSScrollerIncrementLine];
 			if ( !bFlipped )
 				maIncrementArrowBounds.origin.y = maDestRect.size.height - maIncrementArrowBounds.origin.y - maIncrementArrowBounds.size.height;
+#endif	// USE_SCROLLBAR_ARROWS
 
 			maDecrementPageBounds = [pScroller rectForPart:NSScrollerDecrementPage];
 			if ( !bFlipped )
@@ -1283,7 +1284,6 @@ static NSComboBox *pSharedComboBox = nil;
 			maIncrementPageBounds = [pScroller rectForPart:NSScrollerIncrementPage];
 			if ( !bFlipped )
 				maIncrementPageBounds.origin.y = maDestRect.size.height - maIncrementPageBounds.origin.y - maIncrementPageBounds.size.height;
-#endif	// USE_SCROLLBAR_ARROWS
 
 			maThumbBounds = [pScroller rectForPart:NSScrollerKnob];
 			if ( !bFlipped )
