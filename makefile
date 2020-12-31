@@ -534,10 +534,6 @@ build.package_shared:
 	chmod -Rf u+w,a+r "$(INSTALL_HOME)/package"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program" ; mv -f "MacOS" "program" ; mkdir -p "MacOS"
 ifdef PRODUCT_BUILD3
-# Fix failure to load Python shared libraries on macOS 10.15 by correcting the
-# path to the Python framework
-#	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find "Frameworks/LibreOfficePython.framework/Versions/3.7/lib/python3.7/lib-dynload" -maxdepth 1 -type f -name "*.so"` ; do sh "$(PWD)/etc/updatepythonbinary.sh" "$$i" ; done'
-#	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find "Frameworks/LibreOfficePython.framework" -type f -name "LibreOfficePython"` ; do install_name_tool -id "@__________________________________________________OOO/LibreOfficePython" "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/soffice2"
 	cd "$(INSTALL_HOME)/package/Contents" ; mv "program/soffice3" "MacOS/soffice.bin"
@@ -710,8 +706,10 @@ ifdef PRODUCT_BUILD3
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `grep "$(TARGET_FILE_TYPE)" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" | sed "s#:.*\\$$##" | grep -v "\/soffice\.bin"` ; do codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/etc/package/Entitlements_inherit_only_no_sandbox.plist" "$$i" ; done'
 # Sign "A" version of each framework
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "Contents/Frameworks" -type d -name "A"` ; do codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" "$$i" ; done'
+ifndef CROSS_COMPILE_ARM64
 # Sign LibreOfficePython framework
 	cd "$(INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" "Contents/Frameworks/LibreOfficePython.framework/Versions/3.7"
+endif
 	cat "etc/package/Entitlements_hardened_runtime_no_sandbox.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$(INSTALL_HOME)/Entitlements.plist"
 	cd "$(INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(INSTALL_HOME)/Entitlements.plist" .
 else
