@@ -65,13 +65,9 @@ OS_VERSION:=$(OS_MAJOR_VERSION).$(OS_MINOR_VERSION)
 # Limit to Oracle's Java SE 8 only as other JDK versions are likely to break
 # the LibreOffice build
 JDK_HOME:=$(shell /usr/libexec/java_home -V 2>&1 | grep '"Oracle Corporation" - "Java SE 8"' | awk '{ print $$NF }')
-ifeq ($(shell test $(OS_MAJOR_VERSION) -eq 10 && test $(OS_MINOR_VERSION) -ge 14; echo $$?),0)
 CODESIGN_EXTRA_OPTIONS:=--timestamp
 ifndef NO_HARDENED_RUNTIME
 CODESIGN_EXTRA_OPTIONS+=--options runtime
-endif
-else
-CODESIGN_EXTRA_OPTIONS:=
 endif
 ULONGNAME=Intel
 TARGET_MACHINE:=$(shell uname -m)
@@ -731,7 +727,7 @@ endif
 	rm "$(INSTALL_HOME)/package/Contents/MacOS/loaddyliblist"
 endif
 # Verify codesigning
-	cd "$(INSTALL_HOME)/package" ; codesign --verify --deep .
+	cd "$(INSTALL_HOME)/package" ; codesign --verify --deep --strict .
 	mkdir -p "$(INSTALL_HOME)/tmp"
 	mkdir "$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app"
 	mv -f "$(INSTALL_HOME)/package/Contents" "$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app"
@@ -865,7 +861,7 @@ else
 	cd "$(PATCH_INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(PATCH_INSTALL_HOME)/Entitlements.plist" .
 endif
 # Verify codesigning
-	cd "$(PATCH_INSTALL_HOME)/package" ; codesign --verify --deep .
+	cd "$(PATCH_INSTALL_HOME)/package" ; codesign --verify --deep --strict .
 # Mac App Store requires files to be writable by root
 	chmod -Rf u+w,og-w,a+r "$(PATCH_INSTALL_HOME)/package"
 # Mark certain directories writable for group
