@@ -1963,7 +1963,11 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		if ( [mpWindow isVisible] )
 		{
 			NSRect aOldFrame = [mpWindow frame];
-			if ( aFrame.size.width != aOldFrame.size.width || aFrame.size.height != aOldFrame.size.height )
+
+			// Don't change bounds of non-full screen native tabbed windows
+			if ( mpWindow.tabbedWindows )
+				aFrame = aOldFrame;
+			else if ( aFrame.size.width != aOldFrame.size.width || aFrame.size.height != aOldFrame.size.height )
 				bDisplay = YES;
 		}
 
