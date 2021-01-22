@@ -888,7 +888,9 @@ static NSUInteger nMouseMask = 0;
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp && ![pApp isActive] )
 	{
-		[pApp enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
+		// Eliminate temporary hang on macOS 11 by not requesting ordered
+		// windows
+		[pApp enumerateWindowsWithOptions:0 usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
 			if ( bStop )
 				*bStop = NO;
 
