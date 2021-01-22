@@ -881,21 +881,17 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 		mpModalWindow = [pApp modalWindow];
 		if ( !mpModalWindow )
 		{
-			NSArray *pWindows = [pApp windows];
-			if ( pWindows )
-			{
-				NSUInteger nCount = [pWindows count];
-				NSUInteger i = 0;
-				for ( ; i < nCount ; i++ )
+			[pApp enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
+				if ( bStop )
+					*bStop = NO;
+
+				if ( pWindow && [pWindow isSheet] && [pWindow isVisible] )
 				{
-					NSWindow *pWindow = [pWindows objectAtIndex:i];
-					if ( [pWindow isSheet] && [pWindow isVisible] )
-					{
-						mpModalWindow = pWindow;
-						break;
-					}
+					mpModalWindow = pWindow;
+					if ( bStop )
+						*bStop = YES;
 				}
-			}
+			}];
 		}
 	}
 }

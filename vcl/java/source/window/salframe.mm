@@ -1218,33 +1218,29 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 {
 	// Fix bug 3032 by disabling focus for show only menus windows when
 	// any frames are visible
-	BOOL bShow = YES;
+	__block BOOL bShow = YES;
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 	{
-		NSArray *pWindows = [pApp windows];
-		if ( pWindows )
-		{
-			NSUInteger nCount = [pWindows count];
-			NSUInteger i = 0;
-			for ( ; i < nCount; i++ )
+		// Fix bug reported in the following NeoOffice forum post by
+		// only letting the subset of windows that are VCLWindows stop
+		// the show only menus windows from showing:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63338#63338
+		[pApp enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
+			if ( bStop )
+				*bStop = NO;
+
+			if ( pWindow && [pWindow isKindOfClass:[VCLWindow class]] && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
 			{
-				// Fix bug reported in the following NeoOffice forum post by
-				// only letting the subset of windows that are VCLWindows stop
-				// the show only menus windows from showing:
-				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63338#63338
-				NSWindow *pWindow = [pWindows objectAtIndex:i];
-				if ( pWindow && [pWindow isKindOfClass:[VCLWindow class]] && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
+				::std::map< NSWindow*, VCLWindow* >::const_iterator it = aShowOnlyMenusWindowMap.find( pWindow );
+				if ( it == aShowOnlyMenusWindowMap.end() )
 				{
-					::std::map< NSWindow*, VCLWindow* >::const_iterator it = aShowOnlyMenusWindowMap.find( pWindow );
-					if ( it == aShowOnlyMenusWindowMap.end() )
-					{
-						bShow = NO;
-						break;
-					}
+					bShow = NO;
+					if ( bStop )
+						*bStop = YES;
 				}
 			}
-		}
+		}];
 	}
 
 	for ( ::std::map< NSWindow*, VCLWindow* >::const_iterator it = aShowOnlyMenusWindowMap.begin(); it != aShowOnlyMenusWindowMap.end(); ++it )

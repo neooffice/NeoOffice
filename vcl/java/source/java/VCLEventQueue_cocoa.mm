@@ -888,25 +888,20 @@ static NSUInteger nMouseMask = 0;
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp && ![pApp isActive] )
 	{
-		NSArray *pWindows = [pApp windows];
-		if ( pWindows )
-		{
-			unsigned int nCount = [pWindows count];
-			unsigned int i = 0;
-			for ( ; i < nCount; i++ )
-			{
-				NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
-				if ( pWindow && [pWindow level] == NSModalPanelWindowLevel && [pWindow respondsToSelector:@selector(_clearModalWindowLevel)] && ( [pWindow isKindOfClass:[VCLPanel class]] || [pWindow isKindOfClass:[VCLWindow class]] ) )
-				{
-					[pNeedRestoreModalWindows removeObject:pWindow];
-					[pWindow _clearModalWindowLevel];
+		[pApp enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
+			if ( bStop )
+				*bStop = NO;
 
-					// Make sure that that the current window is at the
-					// back of the array
-					[pNeedRestoreModalWindows addObject:pWindow];
-				}
+			if ( pWindow && [pWindow level] == NSModalPanelWindowLevel && [pWindow respondsToSelector:@selector(_clearModalWindowLevel)] && ( [pWindow isKindOfClass:[VCLPanel class]] || [pWindow isKindOfClass:[VCLWindow class]] ) )
+			{
+				[pNeedRestoreModalWindows removeObject:pWindow];
+				[pWindow _clearModalWindowLevel];
+
+				// Make sure that that the current window is at the
+				// back of the array
+				[pNeedRestoreModalWindows addObject:pWindow];
 			}
-		}
+		}];
 	}
 }
 
@@ -1246,18 +1241,13 @@ static NSUInteger nMouseMask = 0;
 					NSApplication *pApp = [NSApplication sharedApplication];
 					if ( pApp )
 					{
-						NSArray *pWindows = [pApp windows];
-						if ( pWindows )
-						{
-							NSUInteger nCount = [pWindows count];
-							NSUInteger i = 0;
-							for ( ; i < nCount; i++ )
-							{
-								NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
-								if ( pWindow && [pWindow styleMask] & NSWindowStyleMaskMiniaturizable && ! ( [pWindow styleMask] & NSWindowStyleMaskUtilityWindow ) )
-									[pWindow miniaturize:self];
-							}
-						}
+						[pApp enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
+							if ( bStop )
+								*bStop = NO;
+
+							if ( pWindow && [pWindow styleMask] & NSWindowStyleMaskMiniaturizable && ! ( [pWindow styleMask] & NSWindowStyleMaskUtilityWindow ) )
+								[pWindow miniaturize:self];
+						}];
 					}
 				}
 				else if ( [self styleMask] & NSWindowStyleMaskMiniaturizable && ! ( [self styleMask] & NSWindowStyleMaskUtilityWindow ) )
@@ -1274,18 +1264,13 @@ static NSUInteger nMouseMask = 0;
 					NSApplication *pApp = [NSApplication sharedApplication];
 					if ( pApp )
 					{
-						NSArray *pWindows = [pApp windows];
-						if ( pWindows )
-						{
-							NSUInteger nCount = [pWindows count];
-							NSUInteger i = 0;
-							for ( ; i < nCount; i++ )
-							{
-								NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
-								if ( pWindow && [pWindow isVisible] )
-									[pWindow performSelector:@selector(performClose:) withObject:self afterDelay:0];
-							}
-						}
+						[pApp enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
+							if ( bStop )
+								*bStop = NO;
+
+							if ( pWindow && [pWindow isVisible] )
+								[pWindow performSelector:@selector(performClose:) withObject:self afterDelay:0];
+						}];
 					}
 				}
 				else if ( [self isVisible] )

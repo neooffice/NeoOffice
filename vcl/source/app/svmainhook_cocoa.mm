@@ -453,15 +453,13 @@ void NSApplication_run()
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 	{
-		NSArray *pWindows = [pApp windows];
-		if ( pWindows )
-		{
-			for ( NSWindow *pWindow in pWindows )
-			{
-				if ( pWindow )
-					[pWindow orderOut:pWindow];
-			}
-		}
+		[pApp enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
+			if ( bStop )
+				*bStop = NO;
+
+			if ( pWindow )
+				[pWindow orderOut:pWindow];
+		}];
 	}
 
 	[self getExitCode:pObject];
