@@ -1241,7 +1241,9 @@ static NSUInteger nMouseMask = 0;
 					NSApplication *pApp = [NSApplication sharedApplication];
 					if ( pApp )
 					{
-						[pApp enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
+						// Eliminate temporary hang on macOS 11 by not
+						// requesting ordered windows
+						[pApp enumerateWindowsWithOptions:0 usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
 							if ( bStop )
 								*bStop = NO;
 
@@ -1258,13 +1260,14 @@ static NSUInteger nMouseMask = 0;
 			}
 			else if ( pChars && [pChars isEqualToString:@"w"] )
 			{
-				// Fix bug 3562 by not allowing utility windows to be minimized
 				if ( [pEvent modifierFlags] & NSEventModifierFlagOption )
 				{
 					NSApplication *pApp = [NSApplication sharedApplication];
 					if ( pApp )
 					{
-						[pApp enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
+						// Eliminate temporary hang on macOS 11 by not
+						// requesting ordered windows
+						[pApp enumerateWindowsWithOptions:0 usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
 							if ( bStop )
 								*bStop = NO;
 

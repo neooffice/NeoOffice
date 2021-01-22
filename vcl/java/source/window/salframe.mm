@@ -1226,7 +1226,9 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		// only letting the subset of windows that are VCLWindows stop
 		// the show only menus windows from showing:
 		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63338#63338
-		[pApp enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
+		// Eliminate temporary hang on macOS 11 by not requesting ordered
+		// windows
+		[pApp enumerateWindowsWithOptions:0 usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
 			if ( bStop )
 				*bStop = NO;
 
