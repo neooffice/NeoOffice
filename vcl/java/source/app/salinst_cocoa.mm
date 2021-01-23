@@ -883,17 +883,21 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 		{
 			// Eliminate temporary hang on macOS 11 by not requesting ordered
 			// windows
+fprintf( stderr, "Before\n" );
 			[pApp enumerateWindowsWithOptions:0 usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
 				if ( bStop )
 					*bStop = NO;
 
-				if ( pWindow && [pWindow isSheet] && [pWindow isVisible] )
+				// Eliminate temporary hang in [NSWindow isSheet] on macOS 11
+				// by checking if a window has a sheet parent
+				if ( pWindow && [pWindow isVisible] && [pWindow sheetParent] )
 				{
 					mpModalWindow = pWindow;
 					if ( bStop )
 						*bStop = YES;
 				}
 			}];
+fprintf( stderr, "After\n" );
 		}
 	}
 }
