@@ -887,25 +887,22 @@ static NSUInteger nMouseMask = 0;
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp && ![pApp isActive] )
 	{
-		NSArray *pWindows = [pApp windows];
-		if ( pWindows )
-		{
-			unsigned int nCount = [pWindows count];
-			unsigned int i = 0;
-			for ( ; i < nCount; i++ )
-			{
-				NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
-				if ( pWindow && [pWindow level] == NSModalPanelWindowLevel && [pWindow respondsToSelector:@selector(_clearModalWindowLevel)] && ( [pWindow isKindOfClass:[VCLPanel class]] || [pWindow isKindOfClass:[VCLWindow class]] ) )
-				{
-					[pNeedRestoreModalWindows removeObject:pWindow];
-					[pWindow _clearModalWindowLevel];
+		// Eliminate temporary hang on macOS 11 by not requesting ordered
+		// windows
+		[pApp enumerateWindowsWithOptions:0 usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
+			if ( bStop )
+				*bStop = NO;
 
-					// Make sure that that the current window is at the
-					// back of the array
-					[pNeedRestoreModalWindows addObject:pWindow];
-				}
+			if ( pWindow && [pWindow level] == NSModalPanelWindowLevel && [pWindow respondsToSelector:@selector(_clearModalWindowLevel)] && ( [pWindow isKindOfClass:[VCLPanel class]] || [pWindow isKindOfClass:[VCLWindow class]] ) )
+			{
+				[pNeedRestoreModalWindows removeObject:pWindow];
+				[pWindow _clearModalWindowLevel];
+
+				// Make sure that that the current window is at the
+				// back of the array
+				[pNeedRestoreModalWindows addObject:pWindow];
 			}
-		}
+		}];
 	}
 }
 
@@ -1245,18 +1242,15 @@ static NSUInteger nMouseMask = 0;
 					NSApplication *pApp = [NSApplication sharedApplication];
 					if ( pApp )
 					{
-						NSArray *pWindows = [pApp windows];
-						if ( pWindows )
-						{
-							NSUInteger nCount = [pWindows count];
-							NSUInteger i = 0;
-							for ( ; i < nCount; i++ )
-							{
-								NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
-								if ( pWindow && [pWindow styleMask] & NSWindowStyleMaskMiniaturizable && ! ( [pWindow styleMask] & NSWindowStyleMaskUtilityWindow ) )
-									[pWindow miniaturize:self];
-							}
-						}
+						// Eliminate temporary hang on macOS 11 by not
+						// requesting ordered windows
+						[pApp enumerateWindowsWithOptions:0 usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
+							if ( bStop )
+								*bStop = NO;
+
+							if ( pWindow && [pWindow styleMask] & NSWindowStyleMaskMiniaturizable && ! ( [pWindow styleMask] & NSWindowStyleMaskUtilityWindow ) )
+								[pWindow miniaturize:self];
+						}];
 					}
 				}
 				else if ( [self styleMask] & NSWindowStyleMaskMiniaturizable && ! ( [self styleMask] & NSWindowStyleMaskUtilityWindow ) )
@@ -1267,24 +1261,20 @@ static NSUInteger nMouseMask = 0;
 			}
 			else if ( pChars && [pChars isEqualToString:@"w"] )
 			{
-				// Fix bug 3562 by not allowing utility windows to be minimized
 				if ( [pEvent modifierFlags] & NSEventModifierFlagOption )
 				{
 					NSApplication *pApp = [NSApplication sharedApplication];
 					if ( pApp )
 					{
-						NSArray *pWindows = [pApp windows];
-						if ( pWindows )
-						{
-							NSUInteger nCount = [pWindows count];
-							NSUInteger i = 0;
-							for ( ; i < nCount; i++ )
-							{
-								NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
-								if ( pWindow && [pWindow isVisible] )
-									[pWindow performSelector:@selector(performClose:) withObject:self afterDelay:0];
-							}
-						}
+						// Eliminate temporary hang on macOS 11 by not
+						// requesting ordered windows
+						[pApp enumerateWindowsWithOptions:0 usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
+							if ( bStop )
+								*bStop = NO;
+
+							if ( pWindow && [pWindow isVisible] )
+								[pWindow performSelector:@selector(performClose:) withObject:self afterDelay:0];
+						}];
 					}
 				}
 				else if ( [self isVisible] )
@@ -2995,9 +2985,12 @@ static CFDataRef aRTFSelection = nil;
 	NSWindow *pWindow = [self window];
 	if ( pWindow && [pWindow isVisible] && [self isKindOfClass:[VCLView class]] )
 	{
-		[pWindow disableFlushWindow];
+		BOOL bFlushWindow = ( [pWindow respondsToSelector:@selector(disableFlushWindow)] && [pWindow respondsToSelector:@selector(enableFlushWindow)] ? YES : NO );
+		if ( bFlushWindow )
+			[pWindow disableFlushWindow];
 		JavaSalFrame_drawToNSView( self, aDirtyRect );
-		[pWindow enableFlushWindow];
+		if ( bFlushWindow )
+			[pWindow enableFlushWindow];
 	}
 }
 

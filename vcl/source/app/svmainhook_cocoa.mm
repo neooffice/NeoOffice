@@ -453,15 +453,15 @@ void NSApplication_run()
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 	{
-		NSArray *pWindows = [pApp windows];
-		if ( pWindows )
-		{
-			for ( NSWindow *pWindow in pWindows )
-			{
-				if ( pWindow )
-					[pWindow orderOut:pWindow];
-			}
-		}
+		// Eliminate temporary hang on macOS 11 by not requesting ordered
+		// windows
+		[pApp enumerateWindowsWithOptions:0 usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
+			if ( bStop )
+				*bStop = NO;
+
+			if ( pWindow )
+				[pWindow orderOut:pWindow];
+		}];
 	}
 
 	[self getExitCode:pObject];
