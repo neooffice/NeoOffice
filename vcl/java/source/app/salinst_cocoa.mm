@@ -883,7 +883,6 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 		{
 			// Eliminate temporary hang on macOS 11 by not requesting ordered
 			// windows
-fprintf( stderr, "Before\n" );
 			[pApp enumerateWindowsWithOptions:0 usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
 				if ( bStop )
 					*bStop = NO;
@@ -897,7 +896,6 @@ fprintf( stderr, "Before\n" );
 						*bStop = YES;
 				}
 			}];
-fprintf( stderr, "After\n" );
 		}
 	}
 }
