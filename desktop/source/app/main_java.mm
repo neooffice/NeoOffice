@@ -73,7 +73,7 @@ static BOOL IsSupportedMacOSXVersion()
 #endif	// PRODUCT_MIN_OSVERSION
 
 	NSInteger nMajorMaxOSVersion = 0;
-	NSInteger nMinorMaxOSVersion = 0;
+	NSInteger nMinorMaxOSVersion = 0xffff;
 #ifdef PRODUCT_MAX_OSVERSION
 	char *pMaxOSVersion = strdup( PRODUCT_MAX_OSVERSION );
 	if ( pMaxOSVersion )
@@ -90,7 +90,6 @@ static BOOL IsSupportedMacOSXVersion()
 	}
 #else	// PRODUCT_MIN_OSVERSION
 	nMajorMaxOSVersion = 0xffff;
-	nMinorMaxOSVersion = 0xffff;
 #endif	// PRODUCT_MIN_OSVERSION
 
 	BOOL bRet = NO;
