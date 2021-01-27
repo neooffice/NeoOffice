@@ -125,8 +125,6 @@
 - (void)_clearModalWindowLevel;
 - (void)_restoreModalWindowLevel;
 - (void)_setModalWindowLevel;
-- (void)disableFlushWindow;
-- (void)enableFlushWindow;
 @end
 
 @interface VCLPanel : NSPanel <NSWindowDelegate>

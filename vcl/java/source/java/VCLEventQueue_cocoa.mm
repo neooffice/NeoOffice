@@ -2985,14 +2985,7 @@ static CFDataRef aRTFSelection = nil;
 {
 	NSWindow *pWindow = [self window];
 	if ( pWindow && [pWindow isVisible] && [self isKindOfClass:[VCLView class]] )
-	{
-		BOOL bFlushWindow = ( [pWindow respondsToSelector:@selector(disableFlushWindow)] && [pWindow respondsToSelector:@selector(enableFlushWindow)] ? YES : NO );
-		if ( bFlushWindow )
-			[pWindow disableFlushWindow];
 		JavaSalFrame_drawToNSView( self, aDirtyRect );
-		if ( bFlushWindow )
-			[pWindow enableFlushWindow];
-	}
 }
 
 - (void)resetCursorRects
