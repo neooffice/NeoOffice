@@ -1206,6 +1206,7 @@ static void CloseOrOrderOutWindow( NSWindow *pWindow )
 			id<NSWindowDelegate> pDelegate = [pLastTabbedWindow delegate];
 			if ( pDelegate && [pDelegate respondsToSelector:@selector(windowDidResize:)] )
 				[pDelegate windowDidResize:[NSNotification notificationWithName:NSWindowDidResizeNotification object:pLastTabbedWindow]];
+			[pLastTabbedWindow release];
 		}
 	}
 }
