@@ -3741,6 +3741,12 @@ void JavaSalFrame::Show( bool bVisible, bool bNoActivate )
 				}
 			}
 		}
+
+		// Fix empty menubar after selecting Calc's Insert > Sheet From File
+		// menu item and then cancelling the native Open dialog by forcing the
+		// menubar to be set to the focus frame's menubar 
+		if ( mpParent && mpParent != pSalData->mpFocusFrame && !IsUtilityWindow() )
+			JavaSalMenu::SetMenuBarToFocusFrame();
 	}
 	// Fix bug 3153 by setting parent to the focus frame for dialogs that
 	// have a show only menus frame as their parent
