@@ -1195,7 +1195,12 @@ static void CloseOrOrderOutWindow( NSWindow *pWindow )
 				}
 			}
 		}
-		
+
+		// Release the content view's layer now
+		NSView *pContentView = [pWindow contentView];
+		if ( pContentView && pContentView.layer )
+			pContentView.layer = nil;
+
 		[pWindow close];
 
 		// Fix missized window contents when tabbed windows are closed using
