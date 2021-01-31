@@ -1153,9 +1153,9 @@ void SalYieldMutex::acquire()
 				// Fix hanging that occurs when the native Open dialog and the 
 				// the OOo "Enter password" dialogs are both displayed and the
 				// OOo dialog is closed first by dispatching any pending
-				// NSModalPanelRunLoopMode events
-				if ( NSApplication_getModalWindow() )
-					NSApplication_dispatchPendingEvents( bInNativeDragPrint, sal_False );
+				// NSModalPanelRunLoopMode events. Don't check if there is a
+				// modal window as that check is very slow on macOS 11 Big Sur.
+				NSApplication_dispatchPendingEvents( bInNativeDragPrint, sal_False );
 
 				// Fix crashing bug when quitting by checking if another thread
 				// has started shutting down the application to avoid using this
