@@ -234,6 +234,8 @@ static bool IsRunningCatalinaOrLower()
 - (void)setInactive:(BOOL)bInactive;
 @end
 
+static VCLNativeControlWindow *pSharedNativeControlWindow = nil;
+
 @implementation VCLNativeControlWindow
 
 + (id)createAndAttachToView:(NSView *)pView controlState:(ControlState)nControlState
@@ -248,13 +250,46 @@ static bool IsRunningCatalinaOrLower()
 		if ( !bInactive && !IsRunningHighSierraOrLower() && ![pView isKindOfClass:[NSProgressIndicator class]] )
 			return pRet;
 
-		pRet = [[VCLNativeControlWindow alloc] initWithContentRect:[pView frame] styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:YES];
+		// [NSApplication windows] seems to flush all windows on macOS 11 so
+		// reduce the number of window instances by reusing the window 
+		if ( pSharedNativeControlWindow )
+		{
+			@try
+			{
+				NSView *pContentView = [pSharedNativeControlWindow contentView];
+				if ( pContentView )
+				{
+					// Release the content view's layer now
+					if ( pContentView.layer )
+						pContentView.layer = nil;
+				}
+
+				// Fix failure to draw some controls on macOS 10.14 by
+				// attaching the control to a regular view instead of as the
+				// content view
+				[pSharedNativeControlWindow setContentView:[[NSView alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )]];
+			}
+			@catch ( NSException *pExc )
+			{
+				// Something has gone wrong so dispose of the window
+				VCLNativeControlWindow *pOldSharedNativeControlWindow = pSharedNativeControlWindow;
+				pSharedNativeControlWindow = nil;
+				[pOldSharedNativeControlWindow release];
+			}
+		}
+
+		if ( !pSharedNativeControlWindow )
+			pSharedNativeControlWindow = [[VCLNativeControlWindow alloc] initWithContentRect:[pView frame] styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:YES];
+
+		pRet = pSharedNativeControlWindow;
 		if ( pRet )
 		{
-			[pRet autorelease];
 			[pRet setReleasedWhenClosed:NO];
-			[pRet setContentView:pView];
 			[pRet setInactive:bInactive];
+
+			NSView *pContentView = [pSharedNativeControlWindow contentView];
+			if ( pContentView )
+				[pContentView addSubview:pView];
 		}
 	}
 
@@ -314,49 +349,6 @@ static bool IsRunningCatalinaOrLower()
 - (void)setInactive:(BOOL)bInactive
 {
 	mbInactive = bInactive;
-}
-
-@end
-
-// =======================================================================
-
-@interface VCLNativeControlView : NSView
-{
-	BOOL					mbFlipped;
-}
-+ (id)createWithControl:(NSControl *)pControl;
-- (id)initWithControl:(NSControl *)pControl;
-- (BOOL)isFlipped;
-@end
-
-@implementation VCLNativeControlView
-
-+ (id)createWithControl:(NSControl *)pControl
-{
-	VCLNativeControlView *pRet = nil;
-
-	if ( pControl )
-	{
-		pRet = [[VCLNativeControlView alloc] initWithControl:pControl];
-		if ( pRet )
-			[pRet autorelease];
-	}
-
-	return pRet;
-}
-
-- (id)initWithControl:(NSControl *)pControl
-{
-	[super initWithFrame:[pControl frame]];
-
-	mbFlipped = [pControl isFlipped];
-
-	return self;
-}
-
-- (BOOL)isFlipped
-{
-	return mbFlipped;
 }
 
 @end
@@ -557,27 +549,8 @@ static bool IsRunningCatalinaOrLower()
 							}
 						}
 
-						// Fix failure to draw on macOS 10.14 by passing a
-						// regular view instead of the control itself. Fix
-						// failure to draw control in inactive state on
-						// macOS 10.14 by attaching view to the control's
-						// window.
-						NSView *pControlView = ( IsRunningHighSierraOrLower() ? nil : [VCLNativeControlView createWithControl:pButton] );
-						if ( pControlView )
-						{
-							NSWindow *pWindow = [pButton window];
-							if ( pWindow )
-							{
-								NSView *pContentView = [pWindow contentView];
-								if ( pContentView )
-									[pContentView addSubview:pControlView positioned:NSWindowBelow relativeTo:nil];
-							}
-						}
-
 						CGContextClipToRect( mpBuffer->maContext, aAdjustedDestRect );
-						// CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
-						[pCell drawWithFrame:aDrawRect inView:( pControlView ? pControlView : pButton )];
-						// CGContextEndTransparencyLayer( mpBuffer->maContext );
+						[pCell drawWithFrame:aDrawRect inView:( pButton )];
 
 						if ( mbRedraw )
 						{
@@ -590,17 +563,10 @@ static bool IsRunningCatalinaOrLower()
 							if ( fAlpha > 0 )
 							{
 								CGContextSetAlpha( mpBuffer->maContext, fAlpha > 1.0f ? 1.0f : fAlpha );
-								// CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
-
 								[pButton highlight:YES];
 								[pCell drawWithFrame:aDrawRect inView:pButton];
-
-								// CGContextEndTransparencyLayer( mpBuffer->maContext );
 							}
 						}
-
-						if ( pControlView )
-							[pControlView removeFromSuperview];
 
 						if ( bAttachToKeyWindow )
 							[pButton removeFromSuperview];
@@ -730,7 +696,6 @@ static NSComboBox *pSharedComboBox = nil;
 			NSWindow *pWindow = [pSharedComboBox window];
 			if ( pWindow || [pSharedComboBox superview] )
 			{
-				// Something has gone wrong so dispose of the combobox
 				@try
 				{
 					if ( pWindow )
@@ -741,13 +706,20 @@ static NSComboBox *pSharedComboBox = nil;
 					}
 
 					[pSharedComboBox removeFromSuperview];
-					[pSharedComboBox release];
+					[pSharedComboBox prepareForReuse];
+
+					// Release the content view's layer now
+					if ( pSharedComboBox.layer )
+						pSharedComboBox.layer = nil;
 				}
 				@catch ( NSException *pExc )
 				{
+					// Something has gone wrong so dispose of the combobox
+CFShow( [pSharedComboBox className] );
+					NSComboBox *pOldSharedComboBox = pSharedComboBox;
+					pSharedComboBox = nil;
+					[pOldSharedComboBox release];
 				}
-
-				pSharedComboBox = nil;
 			}
 		}
 
@@ -895,30 +867,8 @@ static NSComboBox *pSharedComboBox = nil;
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
 
-						// Fix failure to draw on macOS 10.14 by passing a
-						// regular view instead of the control itself. Fix
-						// failure to draw control in inactive state on
-						// macOS 10.14 by attaching view to the control's
-						// window.
-						NSView *pControlView = ( IsRunningHighSierraOrLower() ? nil : [VCLNativeControlView createWithControl:pControl] );
-						if ( pControlView )
-						{
-							NSWindow *pWindow = [pControl window];
-							if ( pWindow )
-							{
-								NSView *pContentView = [pWindow contentView];
-								if ( pContentView )
-									[pContentView addSubview:pControlView positioned:NSWindowBelow relativeTo:nil];
-							}
-						}
-
 						CGContextClipToRect( mpBuffer->maContext, aAdjustedDestRect );
-						// CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
-						[pCell drawWithFrame:aDrawRect inView:( pControlView ? pControlView : pControl )];
-						// CGContextEndTransparencyLayer( mpBuffer->maContext );
-
-						if ( pControlView )
-							[pControlView removeFromSuperview];
+						[pCell drawWithFrame:aDrawRect inView:( pControl )];
 
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
@@ -1142,7 +1092,6 @@ static NSComboBox *pSharedComboBox = nil;
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
 					CGContextClipToRect( mpBuffer->maContext, aAdjustedDestRect );
-					// CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 					// Fix bug 2031 by always filling the background with white.
 					// Fix incorrect dark mode drawing by filling with a system
@@ -1231,7 +1180,6 @@ static NSComboBox *pSharedComboBox = nil;
 					if ( !mbDrawOnlyTrack )
 						[pScroller drawKnob];
 
-					// CGContextEndTransparencyLayer( mpBuffer->maContext );
 					[NSGraphicsContext setCurrentContext:pOldContext];
 
 					mbDrawn = true;
@@ -1461,9 +1409,7 @@ static NSComboBox *pSharedComboBox = nil;
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
 					CGContextClipToRect( mpBuffer->maContext, aAdjustedDestRect );
-					// CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 					[pProgressIndicator drawRect:[pProgressIndicator frame]];
-					// CGContextEndTransparencyLayer( mpBuffer->maContext );
 					[NSGraphicsContext setCurrentContext:pOldContext];
 
 					mbDrawn = true;
@@ -1586,9 +1532,7 @@ static NSComboBox *pSharedComboBox = nil;
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
 					CGContextClipToRect( mpBuffer->maContext, aAdjustedDestRect );
-					// CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 					[pBox drawRect:[pBox frame]];
-					// CGContextEndTransparencyLayer( mpBuffer->maContext );
 					[NSGraphicsContext setCurrentContext:pOldContext];
 
 					mbDrawn = true;
@@ -1692,9 +1636,7 @@ static NSComboBox *pSharedComboBox = nil;
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
 					CGContextClipToRect( mpBuffer->maContext, aAdjustedDestRect );
-					// CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 					[pView drawRect:[pView frame]];
-					// CGContextEndTransparencyLayer( mpBuffer->maContext );
 					[NSGraphicsContext setCurrentContext:pOldContext];
 
 					mbDrawn = true;
@@ -1853,7 +1795,6 @@ static NSComboBox *pSharedComboBox = nil;
 							NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 							[NSGraphicsContext setCurrentContext:pContext];
 							CGContextClipToRect( mpBuffer->maContext, aAdjustedDestRect );
-							// CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 							if ( bHighlighted )
 								[pTableHeaderCell highlight:YES withFrame:aDrawRect inView:pTableHeaderView];
@@ -1880,7 +1821,6 @@ static NSComboBox *pSharedComboBox = nil;
 									[pTableHeaderCell drawSortIndicatorWithFrame:aDrawRect inView:pTableHeaderView ascending:bSortAscending priority:0];
 							}
 
-							// CGContextEndTransparencyLayer( mpBuffer->maContext );
 							[NSGraphicsContext setCurrentContext:pOldContext];
 
 							mbDrawn = true;
@@ -2053,7 +1993,6 @@ static NSComboBox *pSharedComboBox = nil;
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
 						CGContextClipToRect( mpBuffer->maContext, aAdjustedDestRect );
-						// CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 						[pStepper drawRect:[pStepper frame]];
 
@@ -2068,7 +2007,6 @@ static NSComboBox *pSharedComboBox = nil;
 								[pPath fill];
 						}
 
-						// CGContextEndTransparencyLayer( mpBuffer->maContext );
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
 						mbDrawn = true;
@@ -2210,7 +2148,6 @@ static NSComboBox *pSharedComboBox = nil;
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
 						CGContextClipToRect( mpBuffer->maContext, aAdjustedDestRect );
-						// CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 						// Fix height of text fields on macOS 10.14 by adding
 						// height to the top of the text field
@@ -2227,7 +2164,6 @@ static NSComboBox *pSharedComboBox = nil;
 							[NSBezierPath fillRect:aDrawRect];
 						}
 
-						// CGContextEndTransparencyLayer( mpBuffer->maContext );
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
 						mbDrawn = true;
@@ -2348,7 +2284,6 @@ static NSComboBox *pSharedComboBox = nil;
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
 						CGContextClipToRect( mpBuffer->maContext, aAdjustedDestRect );
-						// CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 						if ( mbDrawSeparator )
 						{
@@ -2367,7 +2302,6 @@ static NSComboBox *pSharedComboBox = nil;
 							[NSBezierPath fillRect:aDrawRect];
 						}
 
-						// CGContextEndTransparencyLayer( mpBuffer->maContext );
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
 						mbDrawn = true;
@@ -2479,9 +2413,7 @@ static NSComboBox *pSharedComboBox = nil;
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
 					CGContextClipToRect( mpBuffer->maContext, aAdjustedDestRect );
-					// CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 					[pTabView drawRect:[pTabView frame]];
-					// CGContextEndTransparencyLayer( mpBuffer->maContext );
 					[NSGraphicsContext setCurrentContext:pOldContext];
 
 					mbDrawn = true;
@@ -2713,7 +2645,6 @@ static NSComboBox *pSharedComboBox = nil;
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
 						CGContextClipToRect( mpBuffer->maContext, aAdjustedDestRect );
-						// CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 						[pTabView _drawTabViewItem:pItem inRect:[pTabView frame]];
 
@@ -2751,7 +2682,6 @@ static NSComboBox *pSharedComboBox = nil;
 							}
 						}
 
-						// CGContextEndTransparencyLayer( mpBuffer->maContext );
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
 						mbDrawn = true;
