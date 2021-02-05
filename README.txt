@@ -11,7 +11,7 @@ At this time, NeoOffice will only build on macOS 10.15 Big Sur on Intel only.
 
    macOS 10.15 Big Sur:
      Xcode v12.4
-     Command Line Tools for Xcode v12.3
+     Command Line Tools for Xcode v12.4
 
 2. Download and install Oracle's Java 1.8 Development Kit (JDK) from the following URL:
 
