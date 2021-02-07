@@ -1332,12 +1332,30 @@ void ScDocument::DeleteRow( SCCOL nStartCol, SCTAB nStartTab,
     while ( lcl_GetNextTabRange( nTabRangeStart, nTabRangeEnd, pTabMark, static_cast<SCTAB>(maTabs.size()) ) );
 
     sc::RefUpdateContext aCxt(*this);
+#ifdef NO_LIBO_BUG_108788_FIX
     if ( ValidRow(nStartRow+nSize) )
+#else	// NO_LIBO_BUG_108788_FIX
+    const bool bLastRowIncluded = (nStartRow + nSize == MAXROWCOUNT && ValidRow(nStartRow));
+    if ( ValidRow(nStartRow+nSize) || bLastRowIncluded )
+#endif	// NO_LIBO_BUG_108788_FIX
     {
         lcl_GetFirstTabRange( nTabRangeStart, nTabRangeEnd, pTabMark, static_cast<SCTAB>(maTabs.size()) );
         aCxt.meMode = URM_INSDEL;
+#ifdef NO_LIBO_BUG_108788_FIX
         aCxt.maRange = ScRange(nStartCol, nStartRow+nSize, nTabRangeStart, nEndCol, MAXROW, nTabRangeEnd);
+#endif	// NO_LIBO_BUG_108788_FIX
         aCxt.mnRowDelta = -(static_cast<SCROW>(nSize));
+#ifndef NO_LIBO_BUG_108788_FIX
+        if (bLastRowIncluded)
+        {
+            // Last row is included, shift a virtually non-existent row in.
+            aCxt.maRange = ScRange( nStartCol, MAXROWCOUNT, nTabRangeStart, nEndCol, MAXROWCOUNT, nTabRangeEnd);
+        }
+        else
+        {
+            aCxt.maRange = ScRange( nStartCol, nStartRow+nSize, nTabRangeStart, nEndCol, MAXROW, nTabRangeEnd);
+        }
+#endif	// !NO_LIBO_BUG_108788_FIX
         do
         {
             UpdateReference(aCxt, pRefUndoDoc, true, false);
@@ -1363,7 +1381,11 @@ void ScDocument::DeleteRow( SCCOL nStartCol, SCTAB nStartTab,
     // Mark all joined groups for group listening.
     SetNeedsListeningGroups(aGroupPos);
 
+#ifdef NO_LIBO_BUG_108788_FIX
     if ( ValidRow(nStartRow+nSize) )
+#else	// NO_LIBO_BUG_108788_FIX
+    if ( ValidRow(nStartRow+nSize) || bLastRowIncluded )
+#endif	// NO_LIBO_BUG_108788_FIX
     {
         // Listeners have been removed in UpdateReference
         StartNeededListeners();
@@ -1535,12 +1557,31 @@ void ScDocument::DeleteCol(SCROW nStartRow, SCTAB nStartTab, SCROW nEndRow, SCTA
     while ( lcl_GetNextTabRange( nTabRangeStart, nTabRangeEnd, pTabMark, static_cast<SCTAB>(maTabs.size()) ) );
 
     sc::RefUpdateContext aCxt(*this);
+#ifdef NO_LIBO_BUG_108788_FIX
     if ( ValidCol(sal::static_int_cast<SCCOL>(nStartCol+nSize)) )
+#else	// NO_LIBO_BUG_108788_FIX
+    const bool bLastColIncluded = (nStartCol + nSize == MAXCOLCOUNT && ValidCol(nStartCol));
+    if ( ValidCol(sal::static_int_cast<SCCOL>(nStartCol+nSize)) || bLastColIncluded )
+#endif	// NO_LIBO_BUG_108788_FIX
     {
         lcl_GetFirstTabRange( nTabRangeStart, nTabRangeEnd, pTabMark, static_cast<SCTAB>(maTabs.size()) );
         aCxt.meMode = URM_INSDEL;
+#ifdef NO_LIBO_BUG_108788_FIX
         aCxt.maRange = ScRange(sal::static_int_cast<SCCOL>(nStartCol+nSize), nStartRow, nTabRangeStart, MAXCOL, nEndRow, nTabRangeEnd);
+#endif	// NO_LIBO_BUG_108788_FIX
         aCxt.mnColDelta = -(static_cast<SCCOL>(nSize));
+#ifndef NO_LIBO_BUG_108788_FIX
+        if (bLastColIncluded)
+        {
+            // Last column is included, shift a virtually non-existent column in.
+            aCxt.maRange = ScRange( MAXCOLCOUNT, nStartRow, nTabRangeStart, MAXCOLCOUNT, nEndRow, nTabRangeEnd);
+        }
+        else
+        {
+            aCxt.maRange = ScRange( sal::static_int_cast<SCCOL>(nStartCol+nSize), nStartRow, nTabRangeStart,
+                    MAXCOL, nEndRow, nTabRangeEnd);
+        }
+#endif	// !NO_LIBO_BUG_108788_FIX
         do
         {
             UpdateReference(aCxt, pRefUndoDoc, true, false);
@@ -1557,7 +1598,11 @@ void ScDocument::DeleteCol(SCROW nStartRow, SCTAB nStartTab, SCROW nEndRow, SCTA
             maTabs[i]->DeleteCol(aCxt.maRegroupCols, nStartCol, nStartRow, nEndRow, nSize, pUndoOutline);
     }
 
+#ifdef NO_LIBO_BUG_108788_FIX
     if ( ValidCol(sal::static_int_cast<SCCOL>(nStartCol+nSize)) )
+#else	// NO_LIBO_BUG_108788_FIX
+    if ( ValidCol(sal::static_int_cast<SCCOL>(nStartCol+nSize)) || bLastColIncluded )
+#endif	// NO_LIBO_BUG_108788_FIX
     {
         // Listeners have been removed in UpdateReference
         StartNeededListeners();
