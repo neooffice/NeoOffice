@@ -1609,7 +1609,11 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
     case NS_ooxml::LN_EG_RPrBase_effect:
         // The file-format has many character animations. We have only
         // one, so we use it always. Suboptimal solution though.
+#ifdef NO_LIBO_BUG_92045_FIX
         if (nIntValue)
+#else	// NO_LIBO_BUG_92045_FIX
+        if (nIntValue != NS_ooxml::LN_Value_ST_TextEffect_none)
+#endif	// NO_LIBO_BUG_92045_FIX
             rContext->Insert(PROP_CHAR_FLASH, uno::makeAny( true ));
         else
             rContext->Insert(PROP_CHAR_FLASH, uno::makeAny( false ));
