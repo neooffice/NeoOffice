@@ -2330,7 +2330,16 @@ void SwFtnBossFrm::RearrangeFtns( const SwTwips nDeadLine, const bool bLock,
             }
             if( pDel )
             {
+#ifndef NO_LIBO_BUG_107126_FIX
+                bool bUnlockLastFtnFrmGuard = pLastFtnFrm && !pLastFtnFrm->IsColLocked();
+                if (bUnlockLastFtnFrmGuard)
+                    pLastFtnFrm->ColLock();
+#endif	// !NO_LIBO_BUG_107126_FIX
                 pDel->Cut();
+#ifndef NO_LIBO_BUG_107126_FIX
+                if (bUnlockLastFtnFrmGuard)
+                    pLastFtnFrm->ColUnlock();
+#endif	// !NO_LIBO_BUG_107126_FIX
                 delete pDel;
             }
             if ( bMore )

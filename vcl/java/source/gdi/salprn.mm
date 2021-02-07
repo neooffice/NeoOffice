@@ -700,6 +700,50 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 			NSDictionary *pDict = [pInfo dictionary];
 			if ( pDict )
 			{
+				// Fix hanging when saving to a PDF file that is open in Draw
+				// by changing the job disposition to preview
+				NSString *pDisposition = [pInfo jobDisposition];
+				if ( pDisposition && [pDisposition isEqualToString:NSPrintSaveJob] )
+				{
+					NSURL *pSavingURL = [pDict objectForKey:NSPrintJobSavingURL];
+					if ( pSavingURL && [pSavingURL isFileURL] )
+					{
+						pSavingURL = [pSavingURL URLByStandardizingPath];
+						if ( pSavingURL )
+						{
+							pSavingURL = [pSavingURL URLByResolvingSymlinksInPath];
+							if ( pSavingURL )
+							{
+								NSString *pSavingPath = [pSavingURL path];
+								if ( pSavingPath )
+								{
+									NSArray<id<NSFilePresenter>> *pPresenters = NSFileCoordinator.filePresenters;
+									if ( pPresenters )
+									{
+										for ( id<NSFilePresenter> aPresenter in pPresenters )
+										{
+											NSURL *pURL = ( aPresenter ? aPresenter.presentedItemURL : nil );
+											if ( pURL && [pURL isFileURL] )
+											{
+												pURL = [pURL URLByStandardizingPath];
+												if ( pURL )
+												{
+													pURL = [pURL URLByResolvingSymlinksInPath];
+													if ( pURL && [pSavingPath isEqualToString:[pURL path]] )
+													{
+														[pInfo setJobDisposition:NSPrintPreviewJob];
+														break;
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+
 				NSNumber *pAllPages = [pDict objectForKey:NSPrintAllPages];
 				if ( !pAllPages || ![pAllPages boolValue] )
 				{
