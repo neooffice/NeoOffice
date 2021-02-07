@@ -1977,13 +1977,13 @@ bool SwCntntFrm::_WouldFit( SwTwips nSpace,
             SwFrm *pOldNext = pTmpFrm->GetNext();
             pTmpFrm->Remove();
             pTmpFrm->InsertBefore( pNewUpper, 0 );
-#ifndef NO_LIBO_BUG_17126_FIX
+#ifndef NO_LIBO_BUG_107126_FIX
             // tdf#107126 for a section in a footnote, we have only inserted
             // the SwTextFrame but no SwSectionFrame - reset mbInfSct flag
             // to avoid crashing (but perhaps we should create a temp
             // SwSectionFrame here because WidowsAndOrphans checks for that?)
             pTmpFrm->InvalidateInfFlags();
-#endif	// !NO_LIBO_BUG_17126_FIX
+#endif	// !NO_LIBO_BUG_107126_FIX
             if ( pFrm->IsTxtFrm() &&
                  ( bTstMove ||
                    static_cast<SwTxtFrm*>(pFrm)->HasFollow() ||
@@ -2001,9 +2001,9 @@ bool SwCntntFrm::_WouldFit( SwTwips nSpace,
 
             pTmpFrm->Remove();
             pTmpFrm->InsertBefore( pUp, pOldNext );
-#ifndef NO_LIBO_BUG_17126_FIX
+#ifndef NO_LIBO_BUG_107126_FIX
             pTmpFrm->InvalidateInfFlags(); // restore flags
-#endif	// !NO_LIBO_BUG_17126_FIX
+#endif	// !NO_LIBO_BUG_107126_FIX
         }
         else
         {
