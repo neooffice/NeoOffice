@@ -1017,7 +1017,11 @@ void DomainMapper_Impl::finishParagraph( PropertyMapPtr pPropertyMap )
 #ifdef NO_LIBO_RTF_EMPTY_TABLE_MANAGERS_STACK_FIX
     if (xTextAppend.is() && !getTableManager( ).isIgnore() && pParaContext != nullptr)
 #else	// NO_LIBO_RTF_EMPTY_TABLE_MANAGERS_STACK_FIX
+#ifdef NO_LIBO_CHECK_TABLE_MANAGER_FIX
     if (xTextAppend.is() && pParaContext != nullptr && !getTableManager().isIgnore())
+#else	// NO_LIBO_CHECK_TABLE_MANAGER_FIX
+    if (xTextAppend.is() && pParaContext && hasTableManager() && !getTableManager().isIgnore())
+#endif	// NO_LIBO_CHECK_TABLE_MANAGER_FIX
 #endif	// NO_LIBO_RTF_EMPTY_TABLE_MANAGERS_STACK_FIX
     {
         try
@@ -1306,7 +1310,11 @@ void DomainMapper_Impl::appendTextContent(
         return;
     uno::Reference< text::XTextAppendAndConvert >  xTextAppendAndConvert( m_aTextAppendStack.top().xTextAppend, uno::UNO_QUERY );
     OSL_ENSURE( xTextAppendAndConvert.is(), "trying to append a text content without XTextAppendAndConvert" );
+#ifdef NO_LIBO_CHECK_TABLE_MANAGER_FIX
     if(xTextAppendAndConvert.is() && ! getTableManager( ).isIgnore())
+#else	// NO_LIBO_CHECK_TABLE_MANAGER_FIX
+    if (xTextAppendAndConvert.is() && hasTableManager() && !getTableManager().isIgnore())
+#endif	// NO_LIBO_CHECK_TABLE_MANAGER_FIX
     {
         try
         {
@@ -2020,8 +2028,16 @@ void DomainMapper_Impl::UpdateEmbeddedShapeProps(const uno::Reference< drawing::
 
 void DomainMapper_Impl::PopShapeContext()
 {
+#ifdef NO_LIBO_CHECK_TABLE_MANAGER_FIX
     getTableManager().endLevel();
     popTableManager();
+#else	// NO_LIBO_CHECK_TABLE_MANAGER_FIX
+    if (hasTableManager())
+    {
+        getTableManager().endLevel();
+        popTableManager();
+    }
+#endif	// NO_LIBO_CHECK_TABLE_MANAGER_FIX
     if ( m_aAnchoredStack.size() > 0 )
     {
         // For OLE object replacement shape, the text append context was already removed
@@ -4109,7 +4125,11 @@ void DomainMapper_Impl::CloseFieldCommand()
                  */
                 OUString aCode( pContext->GetCommand().trim() );
                 // Don't waste resources on wrapping shapes inside a fieldmark.
+#ifdef NO_LIBO_CHECK_TABLE_MANAGER_FIX
                 if (aCode != "SHAPE")
+#else	// NO_LIBO_CHECK_TABLE_MANAGER_FIX
+                if (aCode != "SHAPE" && m_xTextFactory.is())
+#endif	// NO_LIBO_CHECK_TABLE_MANAGER_FIX
                 {
                     xFieldInterface = m_xTextFactory->createInstance("com.sun.star.text.Fieldmark");
                     const uno::Reference<text::XTextContent> xTextContent(xFieldInterface, uno::UNO_QUERY_THROW);
