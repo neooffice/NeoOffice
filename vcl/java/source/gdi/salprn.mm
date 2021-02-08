@@ -591,6 +591,10 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 - (void)runPrintJob:(id)pObject;
 @end
 
+@interface NSView (VCLPrintView)
+- (void)_printForCurrentOperation;
+@end
+
 @interface VCLPrintView : NSView
 {
 	NSRect					maDrawRect;
@@ -606,8 +610,10 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 	BOOL					mbPrintOperationAborted;
 	BOOL					mbPrintOperationEnded;
 }
+- (void)_printForCurrentOperation;
 - (void)abortPrintOperation;
 - (BOOL)canDraw;
+- (void)checkForSavingToOpenPDFFile;
 - (void)dealloc;
 - (void)drawRect:(NSRect)aRect;
 - (void)drawUndrawnNativeOps:(JavaSalGraphics *)pGraphics;
@@ -625,6 +631,17 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 
 @implementation VCLPrintView
 
+- (void)_printForCurrentOperation
+{
+	// On macos 10.15 and higher, this is the only known selector that we
+	// can fetch the save path before the print operation deadlocks in a file
+	// coordinator
+	[self checkForSavingToOpenPDFFile];
+
+	if ( [super respondsToSelector:@selector(_printForCurrentOperation)] )
+		[super _printForCurrentOperation];
+}
+
 - (void)abortPrintOperation
 {
 	// Don't abort immediately. Instead, abort the print operation before the
@@ -635,6 +652,64 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 - (BOOL)canDraw
 {
 	return ( !Application::IsShutDown() && !mbNewPrintOperationNeeded && !mbPrintOperationAborted && !mbPrintOperationEnded );
+}
+
+- (void)checkForSavingToOpenPDFFile
+{
+	if ( mpPrintOperation )
+	{
+		NSPrintInfo *pInfo = [mpPrintOperation printInfo];
+		if ( pInfo )
+		{
+			NSDictionary *pDict = [pInfo dictionary];
+			if ( pDict )
+			{
+				// Fix hanging when saving to a PDF file that is open in Draw
+				// by changing the job disposition to preview
+				NSString *pDisposition = [pInfo jobDisposition];
+				if ( pDisposition && [pDisposition isEqualToString:NSPrintSaveJob] )
+				{
+					NSURL *pSavingURL = [pDict objectForKey:NSPrintJobSavingURL];
+					if ( pSavingURL && [pSavingURL isFileURL] )
+					{
+						pSavingURL = [pSavingURL URLByStandardizingPath];
+						if ( pSavingURL )
+						{
+							pSavingURL = [pSavingURL URLByResolvingSymlinksInPath];
+							if ( pSavingURL )
+							{
+								NSString *pSavingPath = [pSavingURL path];
+								if ( pSavingPath )
+								{
+									NSArray<id<NSFilePresenter>> *pPresenters = NSFileCoordinator.filePresenters;
+									if ( pPresenters )
+									{
+										for ( id<NSFilePresenter> aPresenter in pPresenters )
+										{
+											NSURL *pURL = ( aPresenter ? aPresenter.presentedItemURL : nil );
+											if ( pURL && [pURL isFileURL] )
+											{
+												pURL = [pURL URLByStandardizingPath];
+												if ( pURL )
+												{
+													pURL = [pURL URLByResolvingSymlinksInPath];
+													if ( pURL && [pSavingPath isEqualToString:[pURL path]] )
+													{
+														[pInfo setJobDisposition:NSPrintPreviewJob];
+														break;
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 - (void)dealloc
@@ -700,49 +775,8 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 			NSDictionary *pDict = [pInfo dictionary];
 			if ( pDict )
 			{
-				// Fix hanging when saving to a PDF file that is open in Draw
-				// by changing the job disposition to preview
-				NSString *pDisposition = [pInfo jobDisposition];
-				if ( pDisposition && [pDisposition isEqualToString:NSPrintSaveJob] )
-				{
-					NSURL *pSavingURL = [pDict objectForKey:NSPrintJobSavingURL];
-					if ( pSavingURL && [pSavingURL isFileURL] )
-					{
-						pSavingURL = [pSavingURL URLByStandardizingPath];
-						if ( pSavingURL )
-						{
-							pSavingURL = [pSavingURL URLByResolvingSymlinksInPath];
-							if ( pSavingURL )
-							{
-								NSString *pSavingPath = [pSavingURL path];
-								if ( pSavingPath )
-								{
-									NSArray<id<NSFilePresenter>> *pPresenters = NSFileCoordinator.filePresenters;
-									if ( pPresenters )
-									{
-										for ( id<NSFilePresenter> aPresenter in pPresenters )
-										{
-											NSURL *pURL = ( aPresenter ? aPresenter.presentedItemURL : nil );
-											if ( pURL && [pURL isFileURL] )
-											{
-												pURL = [pURL URLByStandardizingPath];
-												if ( pURL )
-												{
-													pURL = [pURL URLByResolvingSymlinksInPath];
-													if ( pURL && [pSavingPath isEqualToString:[pURL path]] )
-													{
-														[pInfo setJobDisposition:NSPrintPreviewJob];
-														break;
-													}
-												}
-											}
-										}
-									}
-								}
-							}
-						}
-					}
-				}
+				// This save path is only avaiable here on macos 10.14 and lower
+				[self checkForSavingToOpenPDFFile];
 
 				NSNumber *pAllPages = [pDict objectForKey:NSPrintAllPages];
 				if ( !pAllPages || ![pAllPages boolValue] )
