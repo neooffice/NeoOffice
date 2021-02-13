@@ -215,6 +215,7 @@ PRODUCT_MODULES = \
 	editeng \
 	extensions \
 	filter \
+	forms \
 	fpicker \
 	framework \
 	hwpfilter \
