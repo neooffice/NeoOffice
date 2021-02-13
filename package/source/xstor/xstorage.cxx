@@ -932,7 +932,11 @@ void OStorage_Impl::CopyStorageElement( SotElement_Impl* pElement,
                 AddLog( THROW_WHERE "No Encryption" );
             }
 
+#ifdef NO_LIBO_BUG_93389_FIX
             if ( bHasCommonEncryptionData && ::package::PackageEncryptionDatasEqual( pElement->m_pStream->GetCachedEncryptionData(), aCommonEncryptionData ) )
+#else	// NO_LIBO_BUG_93389_FIX
+            if (bHasCommonEncryptionData && ::package::PackageEncryptionDataLessOrEqual(pElement->m_pStream->GetCachedEncryptionData(), aCommonEncryptionData))
+#endif	// NO_LIBO_BUG_93389_FIX
             {
                 // If the stream can be opened with the common storage password
                 // it must be stored with the common storage password as well

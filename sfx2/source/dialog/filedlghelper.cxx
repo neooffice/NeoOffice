@@ -2676,6 +2676,10 @@ ErrCode RequestPassword(const SfxFilter* pCurrentFilter, OUString& aURL, SfxItem
     {
         if ( pPasswordRequest->getPassword().getLength() )
         {
+#ifndef NO_LIBO_BUG_118639_FIX
+            css::uno::Sequence< css::beans::NamedValue > aEncryptionData;
+#endif	// !NO_LIBO_BUG_118639_FIX
+
             // TODO/LATER: The filters should show the password dialog themself in future
             if ( bMSType )
             {
@@ -2684,7 +2688,11 @@ ErrCode RequestPassword(const SfxFilter* pCurrentFilter, OUString& aURL, SfxItem
                 {
                     ::comphelper::SequenceAsHashMap aHashData;
                     aHashData[ OUString( "OOXPassword"  ) ] <<= pPasswordRequest->getPassword();
+#ifdef NO_LIBO_BUG_118639_FIX
                     pSet->Put( SfxUnoAnyItem( SID_ENCRYPTIONDATA, uno::makeAny( aHashData.getAsConstNamedValueList() ) ) );
+#else	// NO_LIBO_BUG_118639_FIX
+                    aEncryptionData = aHashData.getAsConstNamedValueList();
+#endif	// NO_LIBO_BUG_118639_FIX
                 }
                 else
                 {
@@ -2697,7 +2705,11 @@ ErrCode RequestPassword(const SfxFilter* pCurrentFilter, OUString& aURL, SfxItem
                         aHashData[ OUString( "STD97EncryptionKey"  ) ] <<= aEncryptionKey;
                         aHashData[ OUString( "STD97UniqueID"  ) ] <<= aUniqueID;
 
+#ifdef NO_LIBO_BUG_118639_FIX
                         pSet->Put( SfxUnoAnyItem( SID_ENCRYPTIONDATA, uno::makeAny( aHashData.getAsConstNamedValueList() ) ) );
+#else	// NO_LIBO_BUG_118639_FIX
+                        aEncryptionData = aHashData.getAsConstNamedValueList();
+#endif	// NO_LIBO_BUG_118639_FIX
                     }
                     else
                     {
@@ -2705,10 +2717,21 @@ ErrCode RequestPassword(const SfxFilter* pCurrentFilter, OUString& aURL, SfxItem
                     }
                 }
             }
+#ifdef NO_LIBO_BUG_118639_FIX
             else
             {
                 pSet->Put( SfxUnoAnyItem( SID_ENCRYPTIONDATA, uno::makeAny( ::comphelper::OStorageHelper::CreatePackageEncryptionData( pPasswordRequest->getPassword() ) ) ) );
             }
+#else	// NO_LIBO_BUG_118639_FIX
+
+            // tdf#118639: We need ODF encryption data for autorecovery where password will already
+            // be unavailable, even for non-ODF documents, so append it here unconditionally
+            pSet->Put(SfxUnoAnyItem(
+                SID_ENCRYPTIONDATA,
+                uno::makeAny(comphelper::concatSequences(
+                    aEncryptionData, comphelper::OStorageHelper::CreatePackageEncryptionData(
+                                         pPasswordRequest->getPassword())))));
+#endif	// NO_LIBO_BUG_118639_FIX
         }
 
         if ( pPasswordRequest->getRecommendReadOnly() )

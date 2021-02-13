@@ -20,6 +20,10 @@
 #include <algorithm>
 
 #include <comphelper/docpasswordhelper.hxx>
+#ifndef NO_LIBO_BUG_118639_FIX
+#include <comphelper/storagehelper.hxx>
+#include <comphelper/sequence.hxx>
+#endif	// !NO_LIBO_BUG_118639_FIX
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/task/XInteractionHandler.hpp>
 
@@ -365,7 +369,31 @@ Sequence< sal_Int8 > DocPasswordHelper::GetXLHashAsSequence(
         bool* pbIsDefaultPassword )
 {
     ::com::sun::star::uno::Sequence< ::com::sun::star::beans::NamedValue > aEncData;
+#ifndef NO_LIBO_BUG_118639_FIX
+    OUString aPassword;
+#endif	// !NO_LIBO_BUG_118639_FIX
     DocPasswordVerifierResult eResult = DocPasswordVerifierResult_WRONG_PASSWORD;
+
+#ifndef NO_LIBO_BUG_93389_FIX
+    sal_Int32 nMediaEncDataCount = rMediaEncData.getLength();
+
+    // tdf#93389: if the document is being restored from autorecovery, we need to add encryption
+    // data also for real document type.
+    // TODO: get real filter name here (from CheckPasswd_Impl), to only add necessary data
+    bool bForSalvage = false;
+    if (nMediaEncDataCount)
+    {
+        for (auto& val : rMediaEncData)
+        {
+            if (val.Name == "ForSalvage")
+            {
+                --nMediaEncDataCount; // don't consider this element below
+                val.Value >>= bForSalvage;
+                break;
+            }
+        }
+    }
+#endif	// !NO_LIBO_BUG_93389_FIX
 
     // first, try provided default passwords
     if( pbIsDefaultPassword )
@@ -378,8 +406,17 @@ Sequence< sal_Int8 > DocPasswordHelper::GetXLHashAsSequence(
             if( !aIt->isEmpty() )
             {
                 eResult = rVerifier.verifyPassword( *aIt, aEncData );
+#ifdef NO_LIBO_BUG_118639_FIX
                 if( pbIsDefaultPassword )
                     *pbIsDefaultPassword = eResult == DocPasswordVerifierResult_OK;
+#else	// NO_LIBO_BUG_118639_FIX
+                if (eResult == DocPasswordVerifierResult_OK)
+                {
+                    aPassword = *aIt;
+                    if (pbIsDefaultPassword)
+                        *pbIsDefaultPassword = true;
+                }
+#endif	// NO_LIBO_BUG_118639_FIX
             }
         }
     }
@@ -387,7 +424,11 @@ Sequence< sal_Int8 > DocPasswordHelper::GetXLHashAsSequence(
     // try media encryption data (skip, if result is OK or ABORT)
     if( eResult == DocPasswordVerifierResult_WRONG_PASSWORD )
     {
+#ifdef NO_LIBO_BUG_93389_FIX
         if( rMediaEncData.getLength() > 0 )
+#else	// NO_LIBO_BUG_93389_FIX
+        if (nMediaEncDataCount)
+#endif	// NO_LIBO_BUG_93389_FIX
         {
             eResult = rVerifier.verifyEncryptionData( rMediaEncData );
             if( eResult == DocPasswordVerifierResult_OK )
@@ -399,7 +440,15 @@ Sequence< sal_Int8 > DocPasswordHelper::GetXLHashAsSequence(
     if( eResult == DocPasswordVerifierResult_WRONG_PASSWORD )
     {
         if( !rMediaPassword.isEmpty() )
+#ifndef NO_LIBO_BUG_118639_FIX
+        {
+#endif	// !NO_LIBO_BUG_118639_FIX
             eResult = rVerifier.verifyPassword( rMediaPassword, aEncData );
+#ifndef NO_LIBO_BUG_118639_FIX
+            if (eResult == DocPasswordVerifierResult_OK)
+                aPassword = rMediaPassword;
+        }
+#endif	// !NO_LIBO_BUG_118639_FIX
     }
 
     // request a password (skip, if result is OK or ABORT)
@@ -415,6 +464,10 @@ Sequence< sal_Int8 > DocPasswordHelper::GetXLHashAsSequence(
             {
                 if( !pRequest->getPassword().isEmpty() )
                     eResult = rVerifier.verifyPassword( pRequest->getPassword(), aEncData );
+#ifndef NO_LIBO_BUG_118639_FIX
+                if (eResult == DocPasswordVerifierResult_OK)
+                    aPassword = pRequest->getPassword();
+#endif	// !NO_LIBO_BUG_118639_FIX
             }
             else
             {
@@ -426,6 +479,45 @@ Sequence< sal_Int8 > DocPasswordHelper::GetXLHashAsSequence(
     catch( Exception& )
     {
     }
+
+#ifndef NO_LIBO_BUG_118639_FIX
+    if (eResult == DocPasswordVerifierResult_OK && !aPassword.isEmpty())
+    {
+        sal_Int32 nInd = 0;
+        for ( ; nInd < aEncData.getLength(); nInd++ )
+        {
+            if ( aEncData[nInd].Name == PACKAGE_ENCRYPTIONDATA_SHA256UTF8 )
+                break;
+        }
+        if ( nInd == aEncData.getLength() )
+        {
+            // tdf#118639: We need ODF encryption data for autorecovery, where password
+            // will already be unavailable, so generate and append it here
+            aEncData = comphelper::concatSequences(
+                aEncData, OStorageHelper::CreatePackageEncryptionData(aPassword));
+        }
+
+#ifndef NO_LIBO_BUG_93389_FIX
+        if (bForSalvage)
+        {
+            // TODO: add individual methods for different target filter, and only call what's needed
+
+            // 1. Prepare binary MS formats encryption data
+            auto aUniqueID = GenerateRandomByteSequence(16);
+            auto aEnc97Key = GenerateStd97Key(aPassword.getStr(), aUniqueID);
+            // 2. Add MS binary and OOXML encryption data to result
+            uno::Sequence< beans::NamedValue > aOOXPassword(3);
+            aOOXPassword[0].Name = "STD97EncryptionKey";
+            aOOXPassword[0].Value = css::uno::Any(aEnc97Key);
+            aOOXPassword[1].Name = "STD97UniqueID";
+            aOOXPassword[1].Value = css::uno::Any(aUniqueID);
+            aOOXPassword[1].Name = "OOXPassword";
+            aOOXPassword[1].Value = css::uno::Any(aPassword );
+            aEncData = comphelper::concatSequences(aEncData, aOOXPassword);
+        }
+#endif	// !NO_LIBO_BUG_93389_FIX
+    }
+#endif	// !NO_LIBO_BUG_118639_FIX
 
     return (eResult == DocPasswordVerifierResult_OK) ? aEncData : uno::Sequence< beans::NamedValue >();
 }
