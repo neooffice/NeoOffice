@@ -2,7 +2,7 @@
 #
 # This file incorporates work covered by the following license notice:
 #
-#   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+#   Modified February 2021 by Patrick Luby. NeoOffice is only distributed
 #   under the GNU General Public License, Version 3 as allowed by Section 3.3
 #   of the Mozilla Public License, v. 2.0.
 #
