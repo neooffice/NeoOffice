@@ -40,6 +40,9 @@
 #include <svtools/htmltokn.h>
 #include <svtools/htmlkywd.hxx>
 #include <unotools/eventcfg.hxx>
+#ifndef NO_LIBO_LOAD_HTML_IMAGES_FIX
+#include <unotools/securityoptions.hxx>
+#endif	// !NO_LIBO_LOAD_HTML_IMAGES_FIX
 
 #include <fmtornt.hxx>
 #include <fmturl.hxx>
@@ -310,6 +313,24 @@ void SwHTMLParser::GetDefaultScriptType( ScriptType& rType,
     rType = GetScriptType( pHeaderAttrs );
     rTypeStr = GetScriptTypeString( pHeaderAttrs );
 }
+
+#ifndef NO_LIBO_LOAD_HTML_IMAGES_FIX
+
+namespace
+{
+    bool allowAccessLink(SwDoc& rDoc)
+    {
+        OUString sReferer;
+        SfxObjectShell * sh = rDoc.GetPersist();
+        if (sh != nullptr && sh->HasName())
+        {
+            sReferer = sh->GetMedium()->GetName();
+        }
+        return !SvtSecurityOptions().isUntrustedReferer(sReferer);
+    }
+}
+
+#endif	// !NO_LIBO_LOAD_HTML_IMAGES_FIX
 
 /*  */
 
@@ -626,7 +647,11 @@ IMAGE_SETEVENT:
     bool bSetScaleImageMap = false;
     sal_uInt8 nPrcWidth = 0, nPrcHeight = 0;
 
+#ifdef NO_LIBO_LOAD_HTML_IMAGES_FIX
     if( !nWidth || !nHeight )
+#else	// NO_LIBO_LOAD_HTML_IMAGES_FIX
+    if ((!nWidth || !nHeight) && allowAccessLink(*m_xDoc))
+#endif	// NO_LIBO_LOAD_HTML_IMAGES_FIX
     {
         // Es fehlt die Breite oder die Hoehe
         // Wenn die Grfik in einer Tabelle steht, wird sie gleich
