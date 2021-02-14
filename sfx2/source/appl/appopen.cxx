@@ -245,6 +245,21 @@ sal_uInt32 CheckPasswd_Impl
 
                             OUString aDocumentName = INetURLObject( pFile->GetOrigURL() ).GetMainURL( INetURLObject::DECODE_WITH_CHARSET );
 
+#ifndef NO_LIBO_BUG_93389_FIX
+                            // tdf#93389: if recoverying a document, encryption data should contain
+                            // entries for the real filter, not only for recovery ODF, to keep it
+                            // encrypted. Pass this in encryption data.
+                            // TODO: pass here the real filter (from AutoRecovery::implts_openDocs)
+                            // to marshal this to requestAndVerifyDocPassword
+                            if (pSet->GetItemState(SID_DOC_SALVAGE, false) == SfxItemState::SET)
+                            {
+                                uno::Sequence< beans::NamedValue > aForSalvage(1);
+                                aForSalvage[0].Name = "ForSalvage";
+                                aForSalvage[0].Value = css::uno::Any(true);
+                                aEncryptionData = comphelper::concatSequences(aEncryptionData, aForSalvage);
+                            }
+#endif	// !NO_LIBO_BUG_93389_FIX
+
                             SfxDocPasswordVerifier aVerifier( xStorage );
                             aEncryptionData = ::comphelper::DocPasswordHelper::requestAndVerifyDocPassword(
                                 aVerifier, aEncryptionData, aPassword, xInteractionHandler, aDocumentName, comphelper::DocPasswordRequestType_STANDARD );
