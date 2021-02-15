@@ -1230,8 +1230,9 @@ else
 $(call gb_LinkTarget_use_packages,$(1),raptor rasqal redland)
 
 $(call gb_LinkTarget_add_libs,$(1),\
-	-L$(call gb_UnpackedTarball_get_dir,raptor)/src/.libs -lraptor2 \
 	-L$(call gb_UnpackedTarball_get_dir,redland)/src/.libs -lrdf \
+	-L$(call gb_UnpackedTarball_get_dir,raptor)/src/.libs -lraptor2 \
+	-L$(call gb_UnpackedTarball_get_dir,rasqal)/src/.libs -lrasqal \
 )
 endif
 
