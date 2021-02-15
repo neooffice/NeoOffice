@@ -8,16 +8,6 @@
  ))
  
  # vim: set noet sw=4 ts=4:
---- redland/ExternalProject_raptor.mk	2015-11-25 04:55:38.000000000 -0800
-+++ redland/ExternalProject_raptor.mk	2017-02-25 15:18:56.000000000 -0800
-@@ -45,6 +45,7 @@
- 			 --enable-parsers="rdfxml ntriples turtle trig guess rss-tag-soup" \
- 			--with-www=xml \
- 			--without-xslt-config \
-+			$(if $(filter MACOSX,$(OS)),--with-xml2-config=/usr/bin/xml2-config) \
- 			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM)) \
- 			$(if $(filter MACOSX,$(OS)),--prefix=/@.__________________________________________________OOO) \
- 			$(if $(filter IOS ANDROID,$(OS)),--disable-shared,--disable-static) \
 --- opencollada/patches/opencollada.libxml.patch.0	2015-11-25 05:55:38.000000000 -0700
 +++ opencollada/patches/opencollada.libxml.patch.0	2018-10-15 19:04:44.000000000 -0600
 @@ -10,3 +10,14 @@
