@@ -450,6 +450,11 @@ public:
     static SwPaM * NewSwPaM(SwDoc & rDoc,
                             sal_uLong const nStartIdx, sal_uLong const nEndIdx);
 
+#ifndef NO_LIBO_BUG_63211_FIX
+    // If applicable copy a local file into internet.
+    bool CopyLocalFileToINet( OUString& rFileNm );
+#endif	// !NO_LIBO_BUG_63211_FIX
+
     // Stream-specific routines. Do not use in storage-writer!
 
     // Optimizing output on stream.

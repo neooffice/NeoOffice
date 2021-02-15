@@ -157,6 +157,9 @@ SwHTMLWriter::SwHTMLWriter( const OUString& rBaseURL )
     , bCfgNetscape4( false )
     , mbSkipImages(false)
     , mbSkipHeaderFooter(false)
+#ifndef NO_LIBO_BUG_63211_FIX
+    , mbEmbedImages(false)
+#endif	// !NO_LIBO_BUG_63211_FIX
     , bCfgPrintLayout( false )
     , bParaDotLeaders( false )
 {
@@ -188,6 +191,12 @@ void SwHTMLWriter::SetupFilterOptions(SfxMedium& rMedium)
     {
         mbSkipHeaderFooter = true;
     }
+#ifndef NO_LIBO_BUG_63211_FIX
+    else if (sFilterOptions == "EmbedImages" )
+    {
+        mbEmbedImages = true;
+    }
+#endif	// !NO_LIBO_BUG_63211_FIX
 }
 
 sal_uLong SwHTMLWriter::WriteStream()
@@ -1114,8 +1123,15 @@ const SwPageDesc *SwHTMLWriter::MakeHeader( sal_uInt16 &rHeaderAttrs )
         OutDirection( nDirection );
 
         if( bCfgOutStyles )
+#ifdef NO_LIBO_BUG_63211_FIX
             OutCSS1_BodyTagStyleOpt( *this, rItemSet );
 
+#else	// NO_LIBO_BUG_63211_FIX
+        {
+            OUString dummy;
+            OutCSS1_BodyTagStyleOpt( *this, rItemSet, dummy );
+        }
+#endif	// NO_LIBO_BUG_63211_FIX
         // Events anhaengen
         if( pDoc->GetDocShell() )   // nur mit DocShell ist Basic moeglich
             OutBasicBodyEvents();
@@ -1287,16 +1303,50 @@ void SwHTMLWriter::OutBackground( const SvxBrushItem *pBrushItem, bool bGraphic 
 
     OUString aGraphicInBase64;
     const Graphic* pGrf = pBrushItem->GetGraphic();
+#ifdef NO_LIBO_BUG_63211_FIX
     if( pGrf )
+#else	// NO_LIBO_BUG_63211_FIX
+    OUString GraphicURL = pBrushItem->GetGraphicLink();
+    if( mbEmbedImages || GraphicURL.isEmpty())
+#endif	// NO_LIBO_BUG_63211_FIX
     {
+#ifdef NO_LIBO_BUG_63211_FIX
         sal_uLong nErr = XOutBitmap::GraphicToBase64(*pGrf, aGraphicInBase64);
         if( nErr )
+#else	// NO_LIBO_BUG_63211_FIX
+        if( pGrf )
+#endif	// NO_LIBO_BUG_63211_FIX
         {
+#ifdef NO_LIBO_BUG_63211_FIX
             nWarn = WARN_SWG_POOR_LOAD | WARN_SW_WRITE_BASE;
+#else	// NO_LIBO_BUG_63211_FIX
+            if( !XOutBitmap::GraphicToBase64(*pGrf, aGraphicInBase64) )
+            {
+                nWarn = WARN_SWG_POOR_LOAD | WARN_SW_WRITE_BASE;
+            }
+            Strm().WriteCharPtr( " " OOO_STRING_SVTOOLS_HTML_O_background "=\"" );
+            Strm().WriteCharPtr( OOO_STRING_SVTOOLS_HTML_O_data ":" );
+            HTMLOutFuncs::Out_String( Strm(), aGraphicInBase64, eDestEnc, &aNonConvertableCharacters ).WriteChar( '\"' );
+#endif	// NO_LIBO_BUG_63211_FIX
         }
+#ifdef NO_LIBO_BUG_63211_FIX
         Strm().WriteCharPtr( " " OOO_STRING_SVTOOLS_HTML_O_background "=\"" );
         Strm().WriteCharPtr( OOO_STRING_SVTOOLS_HTML_O_data ":" );
         HTMLOutFuncs::Out_String( Strm(), aGraphicInBase64, eDestEnc, &aNonConvertableCharacters ).WriteChar( '\"' );
+#else	// NO_LIBO_BUG_63211_FIX
+    }
+    else
+    {
+        if( bCfgCpyLinkedGrfs )
+        {
+            CopyLocalFileToINet( GraphicURL );
+        }
+        OUString s( URIHelper::simpleNormalizedMakeRelative( GetBaseURL(), GraphicURL));
+        Strm().WriteCharPtr(" " OOO_STRING_SVTOOLS_HTML_O_background "=\"" );
+        HTMLOutFuncs::Out_String( Strm(), s, eDestEnc, &aNonConvertableCharacters );
+        Strm().WriteCharPtr("\"");
+
+#endif	// NO_LIBO_BUG_63211_FIX
     }
 }
 
