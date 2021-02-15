@@ -1,5 +1,5 @@
---- configure.ac
-+++ configure.ac	2020-12-30 16:56:20.000000000 -0500
+--- configure.ac	2015-11-25 07:55:38.000000000 -0500
++++ configure.ac	2021-02-15 18:09:23.000000000 -0500
 @@ -538,6 +538,10 @@
  INSTROOTSUFFIX=
  SDKDIRNAME=sdk
@@ -1129,7 +1129,20 @@
  dnl Check for system mozilla headers
  dnl ===================================================================
  HAVE_NON_CONST_NPP_GETMIMEDESCRIPTION=
-@@ -11843,7 +12135,7 @@
+@@ -9246,12 +9538,8 @@
+ dnl raptor2: need at least 2.0.7 for CVE-2012-0037
+ libo_CHECK_SYSTEM_MODULE([redland],[REDLAND],[redland >= 1.0.8 raptor2 >= 2.0.7])
+ if test "$with_system_redland" = "yes"; then
+-    libo_MINGW_CHECK_DLL([librdf])
+     AC_CHECK_LIB([rdf], [librdf_world_set_raptor_init_handler], [:],
+             [AC_MSG_ERROR(librdf too old. Need >= 1.0.16)], [])
+-    libo_MINGW_TRY_DLL([libraptor])
+-    libo_MINGW_TRY_DLL([librasqal])
+-    libo_MINGW_TRY_DLL([libsqlite3])
+ else
+     RAPTOR_MAJOR="0"
+     RASQAL_MAJOR="3"
+@@ -11843,7 +12131,7 @@
  dnl Test whether to build libpng or rely on the system version
  dnl ===================================================================
  
@@ -1138,7 +1151,7 @@
  
  dnl ===================================================================
  dnl Check for runtime JVM search path
-@@ -12819,6 +13111,7 @@
+@@ -12819,6 +13107,7 @@
                   ios/lo.xcconfig])
  AC_CONFIG_HEADERS([config_host/config_buildid.h])
  AC_CONFIG_HEADERS([config_host/config_clang.h])
