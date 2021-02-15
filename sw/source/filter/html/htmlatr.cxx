@@ -985,7 +985,12 @@ void OutHTML_SwFmt( Writer& rWrt, const SwFmt& rFmt,
         OSL_ENSURE( aNumInfo.GetNumRule(), "Wo ist die Numerierung geblieben???" );
         OSL_ENSURE( nBulletGrfLvl < MAXLEVEL, "So viele Ebenen gibt's nicht" );
         const SwNumFmt& rNumFmt = aNumInfo.GetNumRule()->Get(nBulletGrfLvl);
+#ifdef NO_LIBO_BUG_63211_FIX
         OutHTML_BulletImage( rWrt, OOO_STRING_SVTOOLS_HTML_image, rNumFmt.GetBrush() );
+#else	// NO_LIBO_BUG_63211_FIX
+        OutHTML_BulletImage( rWrt, OOO_STRING_SVTOOLS_HTML_image, rNumFmt.GetBrush(),
+                rHWrt.aBulletGrfs[nBulletGrfLvl]);
+#endif	// NO_LIBO_BUG_63211_FIX
     }
 
     rHWrt.GetNumInfo() = aNumInfo;

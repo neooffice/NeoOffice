@@ -405,6 +405,9 @@ public:
     bool mbSkipImages : 1;
     /// If HTML header and footer should be written as well, or just the content itself.
     bool mbSkipHeaderFooter : 1;
+#ifndef NO_LIBO_BUG_63211_FIX
+    bool mbEmbedImages : 1;
+#endif	// !NO_LIBO_BUG_63211_FIX
 
 #define sCSS2_P_CLASS_leaders "leaders"
     bool bCfgPrintLayout : 1;       // PrintLayout option for TOC dot leaders
@@ -662,19 +665,31 @@ Writer& OutHTML_HeaderFooter( Writer& rWrt, const SwFrmFmt& rFrmFmt,
                               bool bHeader );
 
 Writer& OutHTML_Image( Writer&, const SwFrmFmt& rFmt,
+#ifndef NO_LIBO_BUG_63211_FIX
+                       const OUString& rGraphicURL,
+#endif	// !NO_LIBO_BUG_63211_FIX
                        Graphic& rGraphic, const OUString& rAlternateTxt,
                        const Size& rRealSize, sal_uInt32 nFrmOpts,
                        const sal_Char *pMarkType = 0,
                        const ImageMap *pGenImgMap = 0 );
 
 Writer& OutHTML_BulletImage( Writer& rWrt, const sal_Char *pTag,
+#ifdef NO_LIBO_BUG_63211_FIX
                              const SvxBrushItem* pBrush );
+#else	// NO_LIBO_BUG_63211_FIX
+                             const SvxBrushItem* pBrush,
+                             const OUString& rGraphicURL);
+#endif	// NO_LIBO_BUG_63211_FIX
 
 Writer& OutHTML_SwFmtFld( Writer& rWrt, const SfxPoolItem& rHt );
 Writer& OutHTML_SwFmtFtn( Writer& rWrt, const SfxPoolItem& rHt );
 Writer& OutHTML_INetFmt( Writer&, const SwFmtINetFmt& rINetFmt, bool bOn );
 
+#ifdef NO_LIBO_BUG_63211_FIX
 Writer& OutCSS1_BodyTagStyleOpt( Writer& rWrt, const SfxItemSet& rItemSet );
+#else	// NO_LIBO_BUG_63211_FIX
+Writer& OutCSS1_BodyTagStyleOpt( Writer& rWrt, const SfxItemSet& rItemSet, const OUString& rGraphicURL );
+#endif	// NO_LIBO_BUG_63211_FIX
 Writer& OutCSS1_ParaTagStyleOpt( Writer& rWrt, const SfxItemSet& rItemSet );
 
 Writer& OutCSS1_HintSpanTag( Writer& rWrt, const SfxPoolItem& rHt );

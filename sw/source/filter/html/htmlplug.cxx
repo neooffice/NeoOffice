@@ -1365,9 +1365,36 @@ Writer& OutHTML_FrmFmtOLENodeGrf( Writer& rWrt, const SwFrmFmt& rFrmFmt,
     }
 
     Graphic aGraphic( *pOLENd->GetGraphic() );
+#ifndef NO_LIBO_BUG_63211_FIX
+    OUString aGraphicURL;
+    if(!rHTMLWrt.mbEmbedImages)
+    {
+        const OUString* pTempFileName = rHTMLWrt.GetOrigFileName();
+        if(pTempFileName)
+            aGraphicURL = *pTempFileName;
+
+        sal_uInt16 nErr = XOutBitmap::WriteGraphic( aGraphic, aGraphicURL,
+                                    OUString("JPG"),
+                                    (XOUTBMP_USE_GIF_IF_POSSIBLE |
+                                     XOUTBMP_USE_NATIVE_IF_POSSIBLE) );
+        if( nErr )              // fehlerhaft, da ist nichts auszugeben
+        {
+            rHTMLWrt.nWarn = WARN_SWG_POOR_LOAD | WARN_SW_WRITE_BASE;
+            return rWrt;
+        }
+        aGraphicURL = URIHelper::SmartRel2Abs(
+            INetURLObject(rWrt.GetBaseURL()), aGraphicURL,
+            URIHelper::GetMaybeFileHdl() );
+
+    }
+#endif	// !NO_LIBO_BUG_63211_FIX
     sal_uLong nFlags = bInCntnr ? HTML_FRMOPTS_GENIMG_CNTNR
         : HTML_FRMOPTS_GENIMG;
+#ifdef NO_LIBO_BUG_63211_FIX
     OutHTML_Image( rWrt, rFrmFmt, aGraphic,
+#else	// NO_LIBO_BUG_63211_FIX
+    OutHTML_Image( rWrt, rFrmFmt, aGraphicURL, aGraphic,
+#endif	// NO_LIBO_BUG_63211_FIX
             pOLENd->GetTitle(), pOLENd->GetTwipSize(),
             nFlags, "ole" );
 
