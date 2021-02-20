@@ -947,7 +947,10 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	}
 
 	if ( mpMenuItem )
+	{
 		[mpMenuItem release];
+		mpMenuItem = nil;
+	}
 }
 
 @end

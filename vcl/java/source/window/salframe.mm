@@ -566,7 +566,6 @@ static BOOL bIOPMAssertionIDSet = NO;
 - (void)adjustColorLevelAndShadow;
 - (void)animateWaitingView:(BOOL)bAnimate;
 - (id)initWithStyle:(sal_uLong)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(BOOL)bShowOnlyMenus utility:(BOOL)bUtility;
-- (void)dealloc;
 - (void)deminimize:(VCLWindowWrapperArgs *)pArgs;
 - (void)destroy:(id)pObject;
 - (void)flush:(id)pObject;
@@ -1542,13 +1541,6 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	}
 }
 
-- (void)dealloc
-{
-	[self destroy:self];
-
-	[super dealloc];
-}
-
 - (void)flush:(id)pObject
 {
 	(void)pObject;
@@ -1597,7 +1589,13 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 - (void)destroy:(id)pObject
 {
-	(void)pObject;
+	// Attempt to fix Mac App Store crash by delaying release of native window
+	// and related objects
+	if ( pObject )
+	{
+		[self performSelector:@selector(destroy:) withObject:nil afterDelay:0.5f];
+		return;
+	}
 
 	if ( mpParent )
 	{
