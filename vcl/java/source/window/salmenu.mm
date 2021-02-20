@@ -287,7 +287,14 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 - (void)destroy:(id)pObject
 {
-	(void)pObject;
+	// Attempt to fix Mac App Store crash when opening a menu by delaying
+	// release of the native menu and menu items
+	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
+	if ( pObject || bInPerformKeyEquivalent || ( pAppDelegate && [pAppDelegate isInTracking] ) )
+	{
+		[self performSelector:@selector(destroy:) withObject:nil afterDelay:MAIN_MENU_CHANGE_WAIT_INTERVAL];
+		return;
+	}
 
 	[self removeMenuAsMainMenu:self];
 
@@ -930,10 +937,20 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 - (void)destroy:(id)pObject
 {
-	(void)pObject;
+	// Attempt to fix Mac App Store crash when opening a menu by delaying
+	// release of the native menu item
+	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
+	if ( pObject || bInPerformKeyEquivalent || ( pAppDelegate && [pAppDelegate isInTracking] ) )
+	{
+		[self performSelector:@selector(destroy:) withObject:nil afterDelay:MAIN_MENU_CHANGE_WAIT_INTERVAL];
+		return;
+	}
 
 	if ( mpMenuItem )
+	{
 		[mpMenuItem release];
+		mpMenuItem = nil;
+	}
 }
 
 @end
