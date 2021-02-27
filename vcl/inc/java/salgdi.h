@@ -131,9 +131,11 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawImageOp : public JavaSalGraphicsOp
 {
 	CGImageRef				maImage;
 	CGRect					maRect;
+	bool					mbFlipHorz;
+	bool					mbFlipVert;
 
 public:
-							JavaSalGraphicsDrawImageOp( const CGPathRef aFrameClip, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGDataProviderRef aProvider, int nDataBitCount, size_t nDataScanlineSize, size_t nDataWidth, size_t nDataHeight, const CGRect aSrcRect, const CGRect aRect );
+							JavaSalGraphicsDrawImageOp( const CGPathRef aFrameClip, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGDataProviderRef aProvider, int nDataBitCount, size_t nDataScanlineSize, size_t nDataWidth, size_t nDataHeight, const CGRect aSrcRect, const CGRect aRect, const bool bFlipHorz = false, const bool bFlipVert = false );
 	virtual					~JavaSalGraphicsDrawImageOp();
 
 	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds );
@@ -301,7 +303,7 @@ public:
 	virtual bool			drawNativeControl( ControlType nType, ControlPart nPart, const Rectangle& rControlRegion, ControlState nState, const ImplControlValue& aValue, const OUString& rCaption ) SAL_OVERRIDE;
 	virtual bool			getNativeControlRegion( ControlType nType, ControlPart nPart, const Rectangle& rControlRegion, ControlState nState, const ImplControlValue& aValue, const OUString& rCaption, Rectangle& rNativeBoundingRegion, Rectangle& rNativeContentRegion ) SAL_OVERRIDE;
 	virtual bool			getNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& aValue, SalColor& textColor ) SAL_OVERRIDE;
-	virtual bool			drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitmap& rSourceBitmap, const SalBitmap& rAlphaBitmap ) SAL_OVERRIDE;
+	virtual bool			drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitmap& rSourceBitmap, const SalBitmap& rAlphaBitmap, const bool bFlipHorz = false, const bool bFlipVert = false ) SAL_OVERRIDE;
 	virtual bool			drawTransformedBitmap( const basegfx::B2DPoint& rNull, const basegfx::B2DPoint& rX, const basegfx::B2DPoint& rY, const SalBitmap& rSourceBitmap, const SalBitmap* pAlphaBitmap ) SAL_OVERRIDE;
 	virtual bool			drawAlphaRect( long nX, long nY, long nWidth, long nHeight, sal_uInt8 nTransparency ) SAL_OVERRIDE;
 	virtual bool			supportsOperation( OutDevSupportType ) const SAL_OVERRIDE;
