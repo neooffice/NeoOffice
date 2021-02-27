@@ -825,10 +825,6 @@ void JavaSalGraphics::invert( sal_uInt32 nPoints, const SalPoint* pPtAry, SalInv
 
 bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitmap& rSourceBitmap, const SalBitmap& rAlphaBitmap )
 {
-	// Don't do anything if the source is not a printer
-	if ( !mpPrinter )
-		return false;
-
 	JavaSalBitmap *pJavaSalBitmap = (JavaSalBitmap *)&rSourceBitmap;
 	JavaSalBitmap *pTransJavaSalBitmap = (JavaSalBitmap *)&rAlphaBitmap;
 
