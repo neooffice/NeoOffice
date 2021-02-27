@@ -815,16 +815,30 @@ bool SalGraphics::BlendAlphaBitmap( const SalTwoRect& rPosAry,
 bool SalGraphics::DrawAlphaBitmap( const SalTwoRect& rPosAry,
                                    const SalBitmap& rSourceBitmap,
                                    const SalBitmap& rAlphaBitmap,
+#if defined USE_JAVA && defined MACOSX
+                                   const OutputDevice *pOutDev,
+                                   const bool bFlipHorz,
+                                   const bool bFlipVert )
+#else	// USE_JAVA && MACOSX
                                    const OutputDevice *pOutDev )
+#endif	// USE_JAVA && MACOSX
 {
     if( (m_nLayout & SAL_LAYOUT_BIDI_RTL) || (pOutDev && pOutDev->IsRTLEnabled()) )
     {
         SalTwoRect aPosAry2 = rPosAry;
         mirror( aPosAry2.mnDestX, aPosAry2.mnDestWidth, pOutDev );
+#if defined USE_JAVA && defined MACOSX
+        return drawAlphaBitmap( aPosAry2, rSourceBitmap, rAlphaBitmap, bFlipHorz, bFlipVert );
+#else	// USE_JAVA && MACOSX
         return drawAlphaBitmap( aPosAry2, rSourceBitmap, rAlphaBitmap );
+#endif	// USE_JAVA && MACOSX
     }
     else
+#if defined USE_JAVA && defined MACOSX
+        return drawAlphaBitmap( rPosAry, rSourceBitmap, rAlphaBitmap, bFlipHorz, bFlipVert );
+#else	// USE_JAVA && MACOSX
         return drawAlphaBitmap( rPosAry, rSourceBitmap, rAlphaBitmap );
+#endif	// USE_JAVA && MACOSX
 }
 
 bool SalGraphics::DrawTransformedBitmap(

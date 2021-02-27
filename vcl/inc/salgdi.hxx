@@ -433,7 +433,13 @@ public:
                                     const SalTwoRect&,
                                     const SalBitmap& rSourceBitmap,
                                     const SalBitmap& rAlphaBitmap,
+#if defined USE_JAVA && defined MACOSX
+                                    const OutputDevice *pOutDev,
+                                    const bool bFlipHorz = false,
+                                    const bool bFlipVert = false );
+#else	// USE_JAVA && MACOSX
                                     const OutputDevice *pOutDev );
+#endif	// USE_JAVA && MACOSX
 
     bool                        DrawTransformedBitmap(
                                     const basegfx::B2DPoint& rNull,
@@ -606,7 +612,13 @@ protected:
     virtual bool                drawAlphaBitmap(
                                     const SalTwoRect&,
                                     const SalBitmap& rSourceBitmap,
+#if defined USE_JAVA && defined MACOSX
+                                    const SalBitmap& rAlphaBitmap,
+                                    const bool bFlipHorz = false,
+                                    const bool bFlipVert = false ) = 0;
+#else	// USE_JAVA && MACOSX
                                     const SalBitmap& rAlphaBitmap ) = 0;
+#endif	// USE_JAVA && MACOSX
 
     /** draw transformed bitmap (maybe with alpha) where Null, X, Y define the coordinate system */
     virtual bool                drawTransformedBitmap(

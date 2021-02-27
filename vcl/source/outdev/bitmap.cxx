@@ -669,7 +669,11 @@ void OutputDevice::DrawDeviceAlphaBitmap( const Bitmap& rBmp, const AlphaMask& r
             }
             else
             {
+#if defined USE_JAVA && defined MACOSX
+                if (mpGraphics->DrawAlphaBitmap( aTR, *pSalSrcBmp, *pSalAlphaBmp, this, bHMirr, bVMirr ))
+#else	// USE_JAVA && MACOSX
                 if (mpGraphics->DrawAlphaBitmap( aTR, *pSalSrcBmp, *pSalAlphaBmp, this ))
+#endif	// USE_JAVA && MACOSX
                     return;
             }
         }
