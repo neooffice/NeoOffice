@@ -889,7 +889,8 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 		if ( aPosAry.mnDestWidth < 1 )
 			return true;
 		aPosAry.mnSrcWidth = (long)( ( aPosAry.mnDestWidth / fScaleX ) + 0.5 );
-		aPosAry.mnSrcX -= (long)( ( aPosAry.mnDestX / fScaleX ) + 0.5 );
+		if ( !bFlipHorz )
+			aPosAry.mnSrcX -= (long)( ( aPosAry.mnDestX / fScaleX ) + 0.5 );
 		aPosAry.mnDestX = 0;
 	}
 	if ( aPosAry.mnDestY < 0 )
@@ -898,7 +899,8 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 		if ( aPosAry.mnDestHeight < 1 )
 			return true;
 		aPosAry.mnSrcHeight = (long)( ( aPosAry.mnDestHeight / fScaleY ) + 0.5 );
-		aPosAry.mnSrcY -= (long)( ( aPosAry.mnDestY / fScaleY ) + 0.5 );
+		if ( !bFlipVert )
+			aPosAry.mnSrcY -= (long)( ( aPosAry.mnDestY / fScaleY ) + 0.5 );
 		aPosAry.mnDestY = 0;
 	}
 
