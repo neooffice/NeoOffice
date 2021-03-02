@@ -1,4 +1,4 @@
-# Intructions for building NeoOffice 2017
+# Instructions for building NeoOffice 2017
 
 Important: NeoOffice 2017 will build on **macOS 10.12 Sierra or macOS 10.14 Mojave only**.
 
