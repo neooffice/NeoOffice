@@ -4,7 +4,7 @@ Important: NeoOffice 2017 will build on **macOS 10.12 Sierra or macOS 10.14 Moja
 
 ## Getting NeoOffice 2017 sources
 
-Download and extract the NeoOffice-2017_25.tar.gz file from https://github.com/neooffice/NeoOffice/releases.
+Download and extract the NeoOffice-2017_26.tar.gz file from https://github.com/neooffice/NeoOffice/releases.
 
 ## Install build dependencies
 
