@@ -863,6 +863,11 @@ bool ScViewFunc::PasteFromClip( InsertDeleteFlags nFlags, ScDocument* pClipDoc,
         return false;
     }
 
+#ifndef NO_LIBO_BUG_60021_FIX
+    if (GetViewData().SelectionForbidsPaste())
+        return false;
+#endif	// !NO_LIBO_BUG_60021_FIX
+
     //  fuer Undo etc. immer alle oder keine Inhalte sichern
     InsertDeleteFlags nContFlags = IDF_NONE;
     if (nFlags & IDF_CONTENTS)

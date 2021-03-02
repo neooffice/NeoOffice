@@ -4039,6 +4039,11 @@ bool ScDocFunc::EnterMatrix( const ScRange& rRange, const ScMarkData* pTabMark,
         const ScTokenArray* pTokenArray, const OUString& rString, bool bApi, bool bEnglish,
         const OUString& rFormulaNmsp, const formula::FormulaGrammar::Grammar eGrammar )
 {
+#ifndef NO_LIBO_BUG_96568_FIX
+    if (ScViewData::SelectionFillDOOM( rRange ))
+        return false;
+#endif	// !NO_LIBO_BUG_96568_FIX
+
     ScDocShellModificator aModificator( rDocShell );
 
     bool bSuccess = false;
