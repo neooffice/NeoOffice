@@ -648,7 +648,11 @@ void Window::EnableAlwaysOnTop( bool bEnable )
 
 bool Window::IsTopWindow() const
 {
+#ifdef NO_LIBO_DISPOSED_WINDOW_FIX
     if ( mpWindowImpl->mbInDtor )
+#else	// NO_LIBO_DISPOSED_WINDOW_FIX
+    if ( !mpWindowImpl || mpWindowImpl->mbInDispose )
+#endif	// NO_LIBO_DISPOSED_WINDOW_FIX
         return false;
 
 #ifdef USE_JAVA
@@ -1047,6 +1051,10 @@ void Window::SetParent( vcl::Window* pNewParent )
 
 sal_uInt16 Window::GetChildCount() const
 {
+#ifndef NO_LIBO_DISPOSED_WINDOW_FIX
+    if (!mpWindowImpl)
+        return 0;
+#endif	// !NO_LIBO_DISPOSED_WINDOW_FIX
 
     sal_uInt16  nChildCount = 0;
     vcl::Window* pChild = mpWindowImpl->mpFirstChild;
@@ -1061,6 +1069,10 @@ sal_uInt16 Window::GetChildCount() const
 
 vcl::Window* Window::GetChild( sal_uInt16 nChild ) const
 {
+#ifndef NO_LIBO_DISPOSED_WINDOW_FIX
+    if (!mpWindowImpl)
+        return NULL;
+#endif	// !NO_LIBO_DISPOSED_WINDOW_FIX
 
     sal_uInt16  nChildCount = 0;
     vcl::Window* pChild = mpWindowImpl->mpFirstChild;
@@ -1077,6 +1089,10 @@ vcl::Window* Window::GetChild( sal_uInt16 nChild ) const
 
 vcl::Window* Window::GetWindow( sal_uInt16 nType ) const
 {
+#ifndef NO_LIBO_DISPOSED_WINDOW_FIX
+    if (!mpWindowImpl)
+        return 0;
+#endif	// !NO_LIBO_DISPOSED_WINDOW_FIX
 
     switch ( nType )
     {

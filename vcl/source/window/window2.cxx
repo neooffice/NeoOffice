@@ -1229,22 +1229,38 @@ bool Window::IsControlBackground() const
 
 bool Window::IsInPaint() const
 {
+#ifdef NO_LIBO_DISPOSED_WINDOW_FIX
     return mpWindowImpl->mbInPaint;
+#else	// NO_LIBO_DISPOSED_WINDOW_FIX
+    return mpWindowImpl ? mpWindowImpl->mbInPaint : false;
+#endif	// NO_LIBO_DISPOSED_WINDOW_FIX
 }
 
 vcl::Window* Window::GetParent() const
 {
+#ifdef NO_LIBO_DISPOSED_WINDOW_FIX
     return mpWindowImpl->mpRealParent;
+#else	// NO_LIBO_DISPOSED_WINDOW_FIX
+    return mpWindowImpl ? mpWindowImpl->mpRealParent : NULL;
+#endif	// NO_LIBO_DISPOSED_WINDOW_FIX
 }
 
 bool Window::IsVisible() const
 {
+#ifdef NO_LIBO_DISPOSED_WINDOW_FIX
     return mpWindowImpl->mbVisible;
+#else	// NO_LIBO_DISPOSED_WINDOW_FIX
+    return mpWindowImpl ? mpWindowImpl->mbVisible : false;
+#endif	// NO_LIBO_DISPOSED_WINDOW_FIX
 }
 
 bool Window::IsReallyVisible() const
 {
+#ifdef NO_LIBO_DISPOSED_WINDOW_FIX
     return mpWindowImpl->mbReallyVisible;
+#else	// NO_LIBO_DISPOSED_WINDOW_FIX
+    return mpWindowImpl ? mpWindowImpl->mbReallyVisible : false;
+#endif	// NO_LIBO_DISPOSED_WINDOW_FIX
 }
 
 bool Window::IsReallyShown() const
@@ -1454,6 +1470,11 @@ void Window::InvalidateSizeCache()
 
 void Window::queue_resize(StateChangedType eReason)
 {
+#ifndef NO_LIBO_DISPOSED_WINDOW_FIX
+    if (IsDisposed())
+        return;
+#endif	// !NO_LIBO_DISPOSED_WINDOW_FIX
+
     bool bSomeoneCares = queue_ungrouped_resize(this);
 
     if (eReason != StateChangedType::VISIBLE)

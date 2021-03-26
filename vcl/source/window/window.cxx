@@ -152,6 +152,15 @@ namespace
 }
 #endif
 
+#ifndef NO_LIBO_DISPOSED_WINDOW_FIX
+
+bool Window::IsDisposed() const
+{
+    return !mpWindowImpl;
+}
+
+#endif	// !NO_LIBO_DISPOSED_WINDOW_FIX
+
 Window::~Window()
 {
 #ifdef USE_JAVA
@@ -163,6 +172,17 @@ Window::~Window()
     vcl::LazyDeletor<vcl::Window>::Undelete( this );
 
     DBG_ASSERT( !mpWindowImpl->mbInDtor, "~Window - already in DTOR!" );
+
+#ifndef NO_LIBO_DISPOSED_WINDOW_FIX
+    if (IsDisposed())
+        return;
+
+    // TODO: turn this assert on once we have switched to using VclPtr everywhere
+    //assert( !mpWindowImpl->mbInDispose && "vcl::Window - already in dispose()" );
+    if (mpWindowImpl->mbInDispose)
+        return;
+    mpWindowImpl->mbInDispose = true;
+#endif	// !NO_LIBO_DISPOSED_WINDOW_FIX
 
     dispose();
 
@@ -179,7 +199,9 @@ Window::~Window()
             xCanvasComponent->dispose();
     }
 
+#ifdef NO_LIBO_DISPOSED_WINDOW_FIX
     mpWindowImpl->mbInDtor = true;
+#endif	// NO_LIBO_DISPOSED_WINDOW_FIX
 
     ImplCallEventListeners( VCLEVENT_OBJECT_DYING );
 
@@ -733,7 +755,11 @@ WindowImpl::WindowImpl( WindowType nType )
     mbCompoundControlHasFocus           = false;                     // true: Composite Control has focus somewhere
     mbPaintDisabled                     = false;                     // true: Paint should not be executed
     mbAllResize                         = false;                     // true: Also sent ResizeEvents with 0,0
+#ifdef NO_LIBO_DISPOSED_WINDOW_FIX
     mbInDtor                            = false;                     // true: We're still in Window-Dtor
+#else	// NO_LIBO_DISPOSED_WINDOW_FIX
+    mbInDispose                         = false;                     // true: We're still in Window::dispose()
+#endif	// NO_LIBO_DISPOSED_WINDOW_FIX
     mbExtTextInput                      = false;                     // true: ExtTextInput-Mode is active
     mbInFocusHdl                        = false;                     // true: Within GetFocus-Handler
     mbCreatedWithToolkit                = false;
@@ -1421,6 +1447,14 @@ void Window::ImplSetReallyVisible()
 
 void Window::ImplAddDel( ImplDelData* pDel ) // TODO: make "const" when incompatibility ok
 {
+#ifndef NO_LIBO_DISPOSED_WINDOW_FIX
+    if ( IsDisposed() )
+    {
+        pDel->mbDel = true;
+        return;
+    }
+#endif	// !NO_LIBO_DISPOSED_WINDOW_FIX
+
     DBG_ASSERT( !pDel->mpWindow, "Window::ImplAddDel(): cannot add ImplDelData twice !" );
     if( !pDel->mpWindow )
     {
@@ -1439,6 +1473,12 @@ void Window::ImplAddDel( ImplDelData* pDel ) // TODO: make "const" when incompat
 void Window::ImplRemoveDel( ImplDelData* pDel ) // TODO: make "const" when incompatibility ok
 {
     pDel->mpWindow = NULL;      // #112873# pDel is not associated with a Window anymore
+
+#ifndef NO_LIBO_DISPOSED_WINDOW_FIX
+    if ( IsDisposed() )
+        return;
+#endif	// !NO_LIBO_DISPOSED_WINDOW_FIX
+
     if ( mpWindowImpl->mpFirstDel == pDel )
         mpWindowImpl->mpFirstDel = pDel->mpNext;
     else

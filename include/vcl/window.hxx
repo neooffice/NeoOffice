@@ -777,6 +777,9 @@ public:
     bool                                IsMenuFloatingWindow() const;
     bool                                IsToolbarFloatingWindow() const;
     bool                                IsTopWindow() const;
+#ifndef NO_LIBO_DISPOSED_WINDOW_FIX
+    bool                                IsDisposed() const;
+#endif	// !NO_LIBO_DISPOSED_WINDOW_FIX
     SystemWindow*                       GetSystemWindow() const;
 
     void                                EnableAllResize( bool bEnable = true );
