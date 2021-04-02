@@ -869,7 +869,11 @@ void SvxRTFParser::_ClearStyleAttr( SvxRTFItemStackType& rStkType )
     {
         for( sal_uInt16 nWhich = aIter.GetCurWhich(); nWhich; nWhich = aIter.NextWhich() )
         {
+#ifdef NO_LIBO_WHICH_MAX_FIX
             if( SFX_WHICH_MAX > nWhich &&
+#else	// NO_LIBO_WHICH_MAX_FIX
+            if (SfxItemPool::IsWhich(nWhich) &&
+#endif	// NO_LIBO_WHICH_MAX_FIX
                 SfxItemState::SET == rSet.GetItemState( nWhich, false, &pItem ) &&
                      rPool.GetDefaultItem( nWhich ) == *pItem )
                 rSet.ClearItem( nWhich );       // delete
@@ -890,7 +894,11 @@ void SvxRTFParser::_ClearStyleAttr( SvxRTFItemStackType& rStkType )
                     && *pItem == *pSItem )
                     rSet.ClearItem( nWhich );       // delete
             }
+#ifdef NO_LIBO_WHICH_MAX_FIX
             else if( SFX_WHICH_MAX > nWhich &&
+#else	// NO_LIBO_WHICH_MAX_FIX
+            else if (SfxItemPool::IsWhich(nWhich) &&
+#endif	// NO_LIBO_WHICH_MAX_FIX
                     SfxItemState::SET == rSet.GetItemState( nWhich, false, &pItem ) &&
                      rPool.GetDefaultItem( nWhich ) == *pItem )
                 rSet.ClearItem( nWhich );       // delete
