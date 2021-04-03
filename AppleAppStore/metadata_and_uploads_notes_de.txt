@@ -34,8 +34,8 @@ What's New in this Version:
 Bevor Sie NeoOffice kaufen, klicken Sie bitte auf den „Support” Link und lesen die Installationshinweise.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would sometimes crash in the LibreOffice 4.4 code when opening certain .docx files
-• NeoOffice would sometimes crash in the LibreOffice 4.4 code while editing certain Writer and Calc documents with unexpectedly null attributes
+• NeoOffice would sometimes crash when opening certain .docx files
+• NeoOffice would sometimes crash while editing certain Writer and Calc documents with unexpectedly null attributes
 
 
 Promotional Text:
