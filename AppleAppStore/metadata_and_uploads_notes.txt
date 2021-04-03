@@ -34,13 +34,8 @@ What's New in this Version:
 Before you buy NeoOffice, please click on the "Support" link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would crash if a modal alert dialog is displayed while launching
-• NeoOffice would fail to create autorecovery files for certain password protected documents due to LibreOffice bugs #93389 and #118639
-• NeoOffice would sometimes crash when changing the text direction while editing a cell in a Calc document
-• NeoOffice would sometimes crash when connecting to the macOS Contacts possibly due to LibreOffice bug #111634
-• When running on a Mac with Retina display, NeoOffice would scale the resolution of some images with an alpha channel down to the resolution of a non-Retina display
-• NeoOffice would sometimes crash due to RedHat bug #1301346
-• When pasting to a Calc sheet that is completely selected, NeoOffice would sometimes freeze due to LibreOffice bugs #60021 and #96568
+• NeoOffice would sometimes crash in the LibreOffice 4.4 code when opening certain .docx files
+• NeoOffice would sometimes crash in the LibreOffice 4.4 code while editing certain Writer and Calc documents with unexpectedly null attributes
 
 
 Promotional Text:
