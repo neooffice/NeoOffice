@@ -892,6 +892,11 @@ void SwShellTableCrsr::FillRects()
     for (size_t n = 0; n < m_SelectedBoxes.size(); ++n)
     {
         const SwStartNode* pSttNd = m_SelectedBoxes[n]->GetSttNd();
+#ifdef USE_JAVA
+        // Fix Mac App Store crash by checking for NULL start node
+        if ( !pSttNd )
+            continue;
+#endif	// USE_JAVA
         const SwTableNode* pSelTblNd = pSttNd->FindTableNode();
 
         SwNodeIndex aIdx( *pSttNd );

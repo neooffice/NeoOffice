@@ -205,7 +205,11 @@ static bool IsWindowFocused(const WindowImpl& rWinImpl)
 void Window::ImplGrabFocus( sal_uInt16 nFlags )
 {
     // #143570# no focus for destructing windows
+#ifdef NO_LIBO_DISPOSED_WINDOW_FIX
     if( mpWindowImpl->mbInDtor )
+#else	// NO_LIBO_DISPOSED_WINDOW_FIX
+    if( !mpWindowImpl || mpWindowImpl->mbInDispose )
+#endif	// NO_LIBO_DISPOSED_WINDOW_FIX
         return;
 
     // some event listeners do really bad stuff
@@ -290,7 +294,13 @@ void Window::ImplGrabFocus( sal_uInt16 nFlags )
         pParent = pParent->mpWindowImpl->mpParent;
     }
 
+#ifdef NO_LIBO_DISPOSED_WINDOW_FIX
     if ( ( pSVData->maWinData.mpFocusWin != this && ! mpWindowImpl->mbInDtor ) || ( bAsyncFocusWaiting && !bHasFocus && !bMustNotGrabFocus ) )
+#else	// NO_LIBO_DISPOSED_WINDOW_FIX
+    if ( ( pSVData->maWinData.mpFocusWin != this &&
+           mpWindowImpl && !mpWindowImpl->mbInDispose ) ||
+         ( bAsyncFocusWaiting && !bHasFocus && !bMustNotGrabFocus ) )
+#endif	// NO_LIBO_DISPOSED_WINDOW_FIX
     {
         // EndExtTextInput if it is not the same window
         if ( pSVData->maWinData.mpExtTextInputWin &&

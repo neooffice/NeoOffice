@@ -357,7 +357,11 @@ public:
                         mbCompoundControlHasFocus:1,
                         mbPaintDisabled:1,
                         mbAllResize:1,
+#ifdef NO_LIBO_DISPOSED_WINDOW_FIX
                         mbInDtor:1,
+#else	// NO_LIBO_DISPOSED_WINDOW_FIX
+                        mbInDispose:1,
+#endif	// NO_LIBO_DISPOSED_WINDOW_FIX
                         mbExtTextInput:1,
                         mbInFocusHdl:1,
                         mbOverlapVisible:1,

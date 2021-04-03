@@ -1745,6 +1745,10 @@ void ScInputHandler::ForgetLastPattern()
 }
 
 void ScInputHandler::UpdateAdjust( sal_Unicode cTyped )
+#if defined USE_JAVA && defined __clang__
+// Fix another Mac App Store crash by checking if the pool is NULL
+__attribute__ ((optnone))
+#endif  // USE_JAVA && __clang__
 {
     SvxAdjust eSvxAdjust;
     switch (eAttrAdjust)
@@ -1781,8 +1785,9 @@ void ScInputHandler::UpdateAdjust( sal_Unicode cTyped )
     // item set is NULL
     if ( pLastPattern )
     {
+        // Fix another Mac App Store crash by checking if the pool is NULL
         const SfxItemSet *pSet = static_cast< const SfxItemSet* >( &pLastPattern->GetItemSet() );
-        if ( pSet )
+        if ( pSet && pSet->GetPool() )
         {
             SFX_ITEMSET_GET( *pSet, pStackedItem, SfxBoolItem, ATTR_STACKED, true );
             SFX_ITEMSET_GET( *pSet, pVerticalAsianItem, SfxBoolItem, ATTR_VERTICAL_ASIAN, true );
