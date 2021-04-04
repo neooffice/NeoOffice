@@ -34,12 +34,8 @@ What's New in this Version:
 Before you buy NeoOffice, please click on the "Support" link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
-• When running on macOS Big Sur, NeoOffice would sometimes freeze for a few seconds when clicking on the menubar or pressing menu shortcut keys
-• When "Prefer tabs when opening documents" is set to "Always" in the macOS System Preferences application, NeoOffice would fail to release a native tab's memory when closing the last two native tabs within a window
-• When "Prefer tabs when opening documents" is set to "Always" in the macOS System Preferences application, NeoOffice would sometimes move and/or resize an existing window after opening a document in a new native tab
-• NeoOffice would crash when changing the page style in certain text documents due to LibreOffice bug #107126
-• NeoOffice would crash when deleting certain combinations of spreadsheet rows and columns due to LibreOffice bug #108788
-• Certain .doc and .docx files would show blinking text when opened in NeoOffice due to LibreOffice bug #92045
+• NeoOffice would sometimes crash when opening certain .docx files
+• NeoOffice would sometimes crash while editing certain Writer and Calc documents with unexpectedly null attributes
 
 
 Promotional Text:
