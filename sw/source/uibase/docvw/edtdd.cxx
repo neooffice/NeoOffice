@@ -408,6 +408,14 @@ sal_Int8 SwEditWin::AcceptDrop( const AcceptDropEvent& rEvt )
             //Drawing objects in Headers/Footers are not allowed
 
             SwWrtShell *pSrcSh = pMod->pDragDrop->GetShell();
+#ifdef USE_JAVA
+            // Fix Mac App Store crash by checking for NULL shell
+            if( !pSrcSh )
+            {
+                bCleanup = true;
+            }
+            else
+#endif	// USE_JAVA
             if( (pSrcSh->GetSelFrmType() == FRMTYPE_DRAWOBJ) &&
                 pSrcSh->IsSelContainsControl() &&
                  (rSh.GetFrmType( &aDocPt, false ) & (FRMTYPE_HEADER|FRMTYPE_FOOTER)) )
