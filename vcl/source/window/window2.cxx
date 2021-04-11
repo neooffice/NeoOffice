@@ -1238,10 +1238,6 @@ bool Window::IsInPaint() const
 
 vcl::Window* Window::GetParent() const
 {
-    // Attempt to fix Mac App Store crash by checking for invalid window
-    if ( !ImplIsValidWindow( this ) )
-        return NULL;
-
 #ifdef NO_LIBO_DISPOSED_WINDOW_FIX
     return mpWindowImpl->mpRealParent;
 #else	// NO_LIBO_DISPOSED_WINDOW_FIX
