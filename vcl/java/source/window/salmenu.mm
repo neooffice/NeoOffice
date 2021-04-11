@@ -178,9 +178,20 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 {
 	BOOL bRet = NO;
 
+	BOOL bOldInPerformKeyEquivalent = bInPerformKeyEquivalent;
 	bInPerformKeyEquivalent = YES;
-	bRet = [super performKeyEquivalent:pEvent];
-	bInPerformKeyEquivalent = NO;
+
+	@try
+	{
+		bRet = [super performKeyEquivalent:pEvent];
+	}
+	@catch ( NSException *pExc )
+	{
+		if ( pExc )
+			NSLog( @"%@", [pExc callStackSymbols] );
+	}
+
+	bInPerformKeyEquivalent = bOldInPerformKeyEquivalent;
 
 	return bRet;
 }
@@ -300,12 +311,39 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 	if ( mpMenu )
 	{
+		NSMenu *pSupermenu = [mpMenu supermenu];
+		if ( pSupermenu )
+		{
+			NSUInteger nCount = [pSupermenu numberOfItems];
+			if ( nCount > 0 )
+			{
+				// Remove remaining menus while still showing
+				NSUInteger i = nCount - 1;
+				for ( ; i > 0; i-- )
+				{
+					NSMenuItem *pMenuItem = [pSupermenu itemAtIndex:i];
+					if ( pMenuItem && [pMenuItem submenu] == mpMenu )
+						[pSupermenu removeItem:pMenuItem];
+				}
+			}
+		}
+
 		[mpMenu release];
 		mpMenu = nil;
 	}
 
 	if ( mpMenuItems )
 	{
+		for ( NSMenuItem *pMenuItem in mpMenuItems )
+		{
+			if ( pMenuItem )
+			{
+				NSMenu *pMenu = [pMenuItem menu];
+				if ( pMenu )
+					[pMenu removeItem:pMenuItem];
+			}
+		}
+
 		[mpMenuItems release];
 		mpMenuItems = nil;
 	}
@@ -382,11 +420,8 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 		mpMenu = [[VCLMenu alloc] initWithTitle:@""];
 		if ( mpMenu )
 		{
-			unsigned int nCount = [mpMenuItems count];
-			unsigned int i = 0;
-			for ( ; i < nCount; i++ )
+			for ( NSMenuItem *pMenuItem in mpMenuItems )
 			{
-				NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:i];
 				if ( pMenuItem )
 					[mpMenu addItem:pMenuItem];
 			}
@@ -547,11 +582,8 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 				// to get called.
 				if ( mpMenuItems )
 				{
-					nCount = [mpMenuItems count];
-					i = 0;
-					for ( ; i < nCount; i++ )
+					for ( NSMenuItem *pMenuItem in mpMenuItems )
 					{
-						NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:i];
 						if ( pMenuItem )
 						{
 							NSMenu *pMenu = [pMenuItem menu];
@@ -948,6 +980,10 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 	if ( mpMenuItem )
 	{
+		NSMenu *pMenu = [mpMenuItem menu];
+		if ( pMenu )
+			[pMenu removeItem:mpMenuItem];
+		[mpMenuItem setSubmenu:nil];
 		[mpMenuItem release];
 		mpMenuItem = nil;
 	}
