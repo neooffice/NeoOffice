@@ -483,8 +483,11 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	}
 
 	// Fix empty menu bug that occurs when opening a document using the
-	// File :: Recent Documents menu by clearing the pending main menu
-	if ( pPendingSetMenuAsMainMenu )
+	// File :: Recent Documents menu by clearing the pending main menu. Fix
+	// empty menu bug when using clicking on the Window :: Close menu by
+	// only applying the fix for the File :: Recent Documents menu if the
+	// pending main menu is set to the menu that was just removed.
+	if ( pPendingSetMenuAsMainMenu == self )
 	{
 		[pPendingSetMenuAsMainMenu release];
 		pPendingSetMenuAsMainMenu = nil;
