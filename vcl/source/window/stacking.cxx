@@ -1208,7 +1208,12 @@ bool Window::IsWindowOrChild( const vcl::Window* pWindow, bool bSystemWindow ) c
 void Window::ImplSetFrameParent( const vcl::Window* pParent )
 {
     vcl::Window* pFrameWindow = ImplGetSVData()->maWinData.mpFirstFrame;
+#ifdef USE_JAVA
+    // Attempt to fix Mac App Store crash by checking for invalid window
+    while( pFrameWindow && ImplIsValidWindow( pFrameWindow ) )
+#else	// USE_JAVA
     while( pFrameWindow )
+#endif	// USE_JAVA
     {
         // search all frames that are children of this window
         // and reparent them

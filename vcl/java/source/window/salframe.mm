@@ -1670,7 +1670,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 - (void)getFrame:(VCLWindowWrapperArgs *)pArgs
 {
 	NSArray *pArgArray = [pArgs args];
-	if ( !pArgArray || [pArgArray count] < 3 )
+	if ( !pArgArray || [pArgArray count] < 4 )
 		return;
 
     NSValue *pInLiveResize = (NSValue *)[pArgArray objectAtIndex:0];
@@ -1683,6 +1683,10 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
     NSNumber *pFullScreen = (NSNumber *)[pArgArray objectAtIndex:2];
     if ( !pFullScreen )
+        return;
+
+    NSNumber *pNonTabbed = (NSNumber *)[pArgArray objectAtIndex:3];
+    if ( !pNonTabbed )
         return;
 
 	if ( mbShowOnlyMenus )
@@ -1737,6 +1741,18 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			// a different inset than untabbed windows
 			NSRect aContentRect = [mpWindow contentRectForFrameRect:aFrame];
 			maInsets = NSMakeRect( aContentRect.origin.x - aFrame.origin.x, aContentRect.origin.y - aFrame.origin.y, aFrame.origin.x + aFrame.size.width - aContentRect.origin.x - aContentRect.size.width, aFrame.origin.y + aFrame.size.height - aContentRect.origin.y - aContentRect.size.height );
+
+			// Adjust frame for non-tabbed window insets
+			if ( [pNonTabbed boolValue] && mpWindow.tabbedWindows )
+			{
+				NSRect aNonTabbedFrame = [NSWindow frameRectForContentRect:aContentRect styleMask:[mpWindow styleMask]];
+				CGFloat fWidthAdjust = aNonTabbedFrame.origin.x + aNonTabbedFrame.size.width - aContentRect.origin.x - aContentRect.size.width;
+				CGFloat fHeightAdjust = aNonTabbedFrame.origin.y + aNonTabbedFrame.size.height - aContentRect.origin.y - aContentRect.size.height;
+				aFrame.origin.x -= fWidthAdjust;
+				aFrame.origin.y -= fHeightAdjust;
+				aFrame.size.width += fWidthAdjust;
+				aFrame.size.height += fHeightAdjust;
+			}
 		}
 
 		// Flip to OOo coordinates
@@ -3288,7 +3304,7 @@ void JavaSalFrame::FlushAllObjects()
 
 // -----------------------------------------------------------------------
 
-const Rectangle JavaSalFrame::GetBounds( sal_Bool *pInLiveResize, sal_Bool *pInFullScreenMode, sal_Bool bUseFullScreenOriginalBounds )
+const Rectangle JavaSalFrame::GetBounds( sal_Bool *pInLiveResize, sal_Bool *pInFullScreenMode, sal_Bool bUseFullScreenOriginalBounds, bool bUseNonTabbedBounds )
 {
 	Rectangle aRet( Point( 0, 0 ), Size( 0, 0 ) );
 
@@ -3296,7 +3312,7 @@ const Rectangle JavaSalFrame::GetBounds( sal_Bool *pInLiveResize, sal_Bool *pInF
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		VCLWindowWrapperArgs *pGetFrameArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSValue valueWithPointer:pInLiveResize], [NSValue valueWithPointer:pInFullScreenMode], [NSNumber numberWithBool:bUseFullScreenOriginalBounds], nil]];
+		VCLWindowWrapperArgs *pGetFrameArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSValue valueWithPointer:pInLiveResize], [NSValue valueWithPointer:pInFullScreenMode], [NSNumber numberWithBool:bUseFullScreenOriginalBounds], [NSNumber numberWithBool:bUseNonTabbedBounds], nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[mpWindow performSelectorOnMainThread:@selector(getFrame:) withObject:pGetFrameArgs waitUntilDone:YES modes:pModes];
 		NSValue *pFrame = (NSValue *)[pGetFrameArgs result];
@@ -4196,7 +4212,9 @@ void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 
 bool JavaSalFrame::GetWindowState( SalFrameState* pState )
 {
-	Rectangle aBounds( GetBounds( NULL, NULL, sal_True ) );
+	// Fix shrinking window size after quitting with tabbed windows by using
+	// adjusted non-tabbed windows bounds
+	Rectangle aBounds( GetBounds( NULL, NULL, sal_True, sal_True ) );
 	pState->mnMask = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT | WINDOWSTATE_MASK_STATE;
 	pState->mnX = aBounds.Left();
 	pState->mnY = aBounds.Top();
