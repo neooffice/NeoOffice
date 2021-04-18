@@ -195,6 +195,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 	return bRet;
 }
+
 @end
 
 @implementation VCLMainMenuDidEndTracking
@@ -248,12 +249,17 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 @interface VCLMenuItem : NSMenuItem
 {
 	sal_uInt16				mnID;
+	BOOL					mbHelpMenuType;
 	Menu*					mpMenu;
 	BOOL					mbReallyEnabled;
+	BOOL					mbWindowsMenuType;
 }
 - (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(sal_uInt16)nID menu:(Menu *)pMenu;
+- (BOOL)isHelpMenuType;
 - (BOOL)isReallyEnabled;
+- (BOOL)isWindowsMenuType;
 - (void)selected;
+- (void)setMenuTypes:(VCLMenuWrapperArgs *)pArgs;
 - (void)setReallyEnabled:(BOOL)bEnabled;
 - (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem;
 @end
@@ -596,6 +602,15 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 							NSMenu *pSubmenu = [pMenuItem submenu];
 							if ( pSubmenu )
 								[pMainMenu addItem:pMenuItem];
+
+							if ( [pMenuItem isKindOfClass:[VCLMenuItem class]] )
+							{
+								// Set help menu
+								if ( [(VCLMenuItem *)pMenuItem isHelpMenuType] )
+									pApp.helpMenu = pSubmenu;
+
+								// TODO: Add special handling of windows menu
+							}
 						}
 					}
 				}
@@ -729,8 +744,10 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	[super initWithTitle:( pTitle ? pTitle : @"" ) action:nil keyEquivalent:@""];
 
 	mnID = nID;
+	mbHelpMenuType = NO;
 	mpMenu = pMenu;
 	mbReallyEnabled = [self isEnabled];
+	mbWindowsMenuType = NO;
 
 	[self setTarget:self];
 	[self setAction:@selector(selected)];
@@ -738,9 +755,19 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	return self;
 }
 
+- (BOOL)isHelpMenuType
+{
+	return mbHelpMenuType;
+}
+
 - (BOOL)isReallyEnabled
 {
 	return mbReallyEnabled;
+}
+
+- (BOOL)isWindowsMenuType
+{
+	return mbWindowsMenuType;
 }
 
 - (void)selected
@@ -778,6 +805,24 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 	nLastMenuItemSelectedTime = [NSDate timeIntervalSinceReferenceDate] + MAIN_MENU_CHANGE_WAIT_INTERVAL;
 	bInPerformKeyEquivalent = bOldInPerformKeyEquivalent;
+}
+
+- (void)setMenuTypes:(VCLMenuWrapperArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 2 )
+		return;
+
+    NSNumber *pIsHelpMenuType = (NSNumber *)[pArgArray objectAtIndex:0];
+    if ( !pIsHelpMenuType )
+        return;
+
+    NSNumber *pIsWindowMenuType = (NSNumber *)[pArgArray objectAtIndex:1];
+    if ( !pIsWindowMenuType )
+        return;
+
+	mbHelpMenuType = [pIsHelpMenuType boolValue];
+	mbWindowsMenuType = [pIsWindowMenuType boolValue];
 }
 
 - (void)setReallyEnabled:(BOOL)bEnabled
@@ -1271,7 +1316,9 @@ void JavaSalMenu::GetSystemMenuData( SystemMenuData* /* pData */ )
 
 JavaSalMenuItem::JavaSalMenuItem() :
 	mpMenuItem( NULL ),
-	mpSalSubmenu( NULL )
+	mpSalSubmenu( NULL ),
+	mbIsHelpMenu( false ),
+	mbIsWindowsMenu( false )
 {
 }
 
@@ -1292,6 +1339,41 @@ JavaSalMenuItem::~JavaSalMenuItem()
 }
 
 //-----------------------------------------------------------------------------
+
+void JavaSalMenuItem::SetCommand( const OUString& rCommand )
+{
+	bool bOldIsHelpMenu = mbIsHelpMenu;
+	bool bOldIsWindowsMenu = mbIsWindowsMenu;
+
+	if ( rCommand == ".uno:HelpMenu" )
+	{
+		mbIsHelpMenu = true;
+		mbIsWindowsMenu = false;
+	}
+	else if ( rCommand == ".uno:WindowList" )
+	{
+		mbIsHelpMenu = false;
+		mbIsWindowsMenu = true;
+	}
+	else
+	{
+		mbIsHelpMenu = false;
+		mbIsWindowsMenu = false;
+	}
+
+	if ( mpMenuItem && ( bOldIsHelpMenu != mbIsHelpMenu || bOldIsWindowsMenu != mbIsWindowsMenu ) )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		VCLMenuWrapperArgs *pSetMenuTypesArgs = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithBool:mbIsHelpMenu], [NSNumber numberWithBool:mbIsWindowsMenu], nil]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[mpMenuItem performSelectorOnMainThread:@selector(setMenuTypes:) withObject:pSetMenuTypesArgs waitUntilDone:NO modes:pModes];
+
+		[pPool release];
+	}
+}
+
+// =======================================================================
 
 SalMenu* JavaSalInstance::CreateMenu( bool bMenuBar, Menu *pVCLMenuWrapper )
 {

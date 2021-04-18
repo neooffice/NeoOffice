@@ -78,9 +78,13 @@ class JavaSalMenuItem : public SalMenuItem
 public:
 	id						mpMenuItem;
 	JavaSalMenu*			mpSalSubmenu;	// Submenu SalMenu if this item has a submenu
+	bool					mbIsHelpMenu;
+	bool					mbIsWindowsMenu;
 
 							JavaSalMenuItem();
 	virtual					~JavaSalMenuItem();
+
+	void					SetCommand( const OUString& rCommand );
 };
 
 SAL_DLLPRIVATE void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdateSubmenus );

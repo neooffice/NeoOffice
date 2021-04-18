@@ -75,7 +75,13 @@
 #include <vector>
 
 #ifdef USE_JAVA
+
+#ifdef MACOSX
+#include "java/salmenu.h"
+#endif	// MACOSX
+
 static ::std::map< Menu*, Menu* > aMenuMap;
+
 #endif	// USE_JAVA
 
 namespace vcl
@@ -1191,7 +1197,16 @@ void Menu::SetItemCommand( sal_uInt16 nItemId, const OUString& rCommand )
     MenuItemData* pData = pItemList->GetData( nItemId, nPos );
 
     if ( pData )
+#if defined USE_JAVA && defined MACOSX
+    {
+#endif	// USE_JAVA && MACOSX
         pData->aCommandStr = rCommand;
+#if defined USE_JAVA && defined MACOSX
+        JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pData->pSalMenuItem;
+		if ( pJavaSalMenuItem )
+		    pJavaSalMenuItem->SetCommand( rCommand );
+    }
+#endif	// USE_JAVA && MACOSX
 }
 
 OUString Menu::GetItemCommand( sal_uInt16 nItemId ) const
