@@ -1278,7 +1278,7 @@ void JavaSalMenu::GetSystemMenuData( SystemMenuData* /* pData */ )
 // =======================================================================
 
 JavaSalMenuItem::JavaSalMenuItem() :
-	mpMenuItem( NULL ),
+	mpMenuItem( nil ),
 	meMenuType( JavaSalMenuItemType::NONE ),
 	mpSalSubmenu( NULL )
 {
