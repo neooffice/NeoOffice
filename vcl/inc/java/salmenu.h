@@ -73,13 +73,19 @@ public:
 	virtual void			GetSystemMenuData( SystemMenuData* pData ) SAL_OVERRIDE;
 };
 
+enum JavaSalMenuItemType
+{
+	NONE	= 0,
+	HELP	= 1,
+	WINDOWS	= 2
+};
+
 class JavaSalMenuItem : public SalMenuItem
 {
 public:
 	id						mpMenuItem;
+	JavaSalMenuItemType		meMenuType;
 	JavaSalMenu*			mpSalSubmenu;	// Submenu SalMenu if this item has a submenu
-	bool					mbIsHelpMenu;
-	bool					mbIsWindowsMenu;
 
 							JavaSalMenuItem();
 	virtual					~JavaSalMenuItem();
