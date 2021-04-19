@@ -1005,7 +1005,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 //=============================================================================
 
 JavaSalMenu::JavaSalMenu() :
-	mpMenu( NULL ),
+	mpMenu( nil ),
 	mpParentFrame( NULL ),
 	mbIsMenuBarMenu( false ),
 	mpParentVCLMenu( NULL )
@@ -1331,8 +1331,7 @@ SalMenu* JavaSalInstance::CreateMenu( bool bMenuBar, Menu *pVCLMenuWrapper )
 #ifndef NO_NATIVE_MENUS
 	JavaSalMenu *pSalMenu = new JavaSalMenu();
 	pSalMenu->mbIsMenuBarMenu = bMenuBar;
-	pSalMenu->mpMenu = NULL;
-	pSalMenu->mpParentVCLMenu=pVCLMenuWrapper;
+	pSalMenu->mpParentVCLMenu = pVCLMenuWrapper;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
