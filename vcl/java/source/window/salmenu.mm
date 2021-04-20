@@ -195,6 +195,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 	return bRet;
 }
+
 @end
 
 @implementation VCLMainMenuDidEndTracking
@@ -254,6 +255,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 - (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(sal_uInt16)nID menu:(Menu *)pMenu;
 - (BOOL)isReallyEnabled;
 - (void)selected;
+- (void)setMenuType:(NSNumber *)pMenuType;
 - (void)setReallyEnabled:(BOOL)bEnabled;
 - (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem;
 @end
@@ -583,20 +585,21 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 				// the menu items after the menu has been set as the
 				// main menu for [VCLApplicationDelegate addMenuItem:]
 				// to get called.
-				if ( mpMenuItems )
+				for ( NSMenuItem *pMenuItem in mpMenuItems )
 				{
-					for ( NSMenuItem *pMenuItem in mpMenuItems )
+					if ( pMenuItem )
 					{
-						if ( pMenuItem )
-						{
-							NSMenu *pMenu = [pMenuItem menu];
-							if ( pMenu )
-								[pMenu removeItem:pMenuItem];
+						NSMenu *pMenu = [pMenuItem menu];
+						if ( pMenu )
+							[pMenu removeItem:pMenuItem];
 
-							NSMenu *pSubmenu = [pMenuItem submenu];
-							if ( pSubmenu )
-								[pMainMenu addItem:pMenuItem];
-						}
+						NSMenu *pSubmenu = [pMenuItem submenu];
+						if ( pSubmenu )
+							[pMainMenu addItem:pMenuItem];
+
+						// Set help menu
+						if ( pMenuItem.representedObject && [pMenuItem.representedObject isKindOfClass:[NSNumber class]] && (JavaSalMenuItemType)[(NSNumber *)pMenuItem.representedObject intValue] == JavaSalMenuItemType::HELP )
+							pApp.helpMenu = pSubmenu;
 					}
 				}
 			}
@@ -778,6 +781,11 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 	nLastMenuItemSelectedTime = [NSDate timeIntervalSinceReferenceDate] + MAIN_MENU_CHANGE_WAIT_INTERVAL;
 	bInPerformKeyEquivalent = bOldInPerformKeyEquivalent;
+}
+
+- (void)setMenuType:(NSNumber *)pMenuType
+{
+	self.representedObject = pMenuType;
 }
 
 - (void)setReallyEnabled:(BOOL)bEnabled
@@ -997,7 +1005,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 //=============================================================================
 
 JavaSalMenu::JavaSalMenu() :
-	mpMenu( NULL ),
+	mpMenu( nil ),
 	mpParentFrame( NULL ),
 	mbIsMenuBarMenu( false ),
 	mpParentVCLMenu( NULL )
@@ -1270,7 +1278,8 @@ void JavaSalMenu::GetSystemMenuData( SystemMenuData* /* pData */ )
 // =======================================================================
 
 JavaSalMenuItem::JavaSalMenuItem() :
-	mpMenuItem( NULL ),
+	mpMenuItem( nil ),
+	meMenuType( JavaSalMenuItemType::NONE ),
 	mpSalSubmenu( NULL )
 {
 }
@@ -1293,13 +1302,36 @@ JavaSalMenuItem::~JavaSalMenuItem()
 
 //-----------------------------------------------------------------------------
 
+void JavaSalMenuItem::SetCommand( const OUString& rCommand )
+{
+	JavaSalMenuItemType eOldMenuType = meMenuType;
+
+	if ( rCommand == ".uno:HelpMenu" )
+		meMenuType = JavaSalMenuItemType::HELP;
+	else if ( rCommand == ".uno:WindowList" )
+		meMenuType = JavaSalMenuItemType::WINDOWS;
+	else
+		meMenuType = JavaSalMenuItemType::NONE;
+
+	if ( mpMenuItem && eOldMenuType != meMenuType )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[mpMenuItem performSelectorOnMainThread:@selector(setMenuType:) withObject:[NSNumber numberWithInt:meMenuType] waitUntilDone:NO modes:pModes];
+
+		[pPool release];
+	}
+}
+
+// =======================================================================
+
 SalMenu* JavaSalInstance::CreateMenu( bool bMenuBar, Menu *pVCLMenuWrapper )
 {
 #ifndef NO_NATIVE_MENUS
 	JavaSalMenu *pSalMenu = new JavaSalMenu();
 	pSalMenu->mbIsMenuBarMenu = bMenuBar;
-	pSalMenu->mpMenu = NULL;
-	pSalMenu->mpParentVCLMenu=pVCLMenuWrapper;
+	pSalMenu->mpParentVCLMenu = pVCLMenuWrapper;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 

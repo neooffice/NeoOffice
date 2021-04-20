@@ -216,6 +216,25 @@ void NSApplication_run()
 
  			[pBundle loadNibNamed:@"MainMenu" owner:pApp topLevelObjects:nil];
 
+			// Menu items in the windows menu aren't localized automatically
+			NSBundle *pAppBundle = [NSBundle bundleForClass:[pApp class]];
+			if ( pAppBundle && pApp.windowsMenu )
+			{
+				for ( NSMenuItem *pMenuItem in [pApp.windowsMenu itemArray] )
+				{
+					if ( !pMenuItem || [pMenuItem isSeparatorItem] )
+						continue;
+
+					NSString *pTitle = [pMenuItem title];
+					if ( pTitle )
+					{
+						NSString *pLocalizedTitle = [pAppBundle localizedStringForKey:pTitle value:nil table:@"MenuCommands"];
+						if ( pLocalizedTitle )
+							[pMenuItem setTitle:pLocalizedTitle];
+					}
+				}
+			}
+
 			VCLEventQueue_installVCLEventQueueClasses();
 
 			// Make sure our application is registered with launch services

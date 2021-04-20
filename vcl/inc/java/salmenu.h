@@ -73,14 +73,24 @@ public:
 	virtual void			GetSystemMenuData( SystemMenuData* pData ) SAL_OVERRIDE;
 };
 
+enum JavaSalMenuItemType
+{
+	NONE	= 0,
+	HELP	= 1,
+	WINDOWS	= 2
+};
+
 class JavaSalMenuItem : public SalMenuItem
 {
 public:
 	id						mpMenuItem;
+	JavaSalMenuItemType		meMenuType;
 	JavaSalMenu*			mpSalSubmenu;	// Submenu SalMenu if this item has a submenu
 
 							JavaSalMenuItem();
 	virtual					~JavaSalMenuItem();
+
+	void					SetCommand( const OUString& rCommand );
 };
 
 SAL_DLLPRIVATE void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdateSubmenus );
