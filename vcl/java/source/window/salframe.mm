@@ -88,17 +88,17 @@ static bool bScrollbarJumpPage = false;
 static ::osl::Mutex aSystemColorsMutex;
 static NSString *pVCLTrackingAreaWindowKey = @"VCLTrackingAreaWindow";
 
-static bool bIsRunningHighSierraOrLowerInitizalized  = false;
-static bool bIsRunningHighSierraOrLower = false;
+static bool bIsRunningCatalinaOrLowerInitizalized  = false;
+static bool bIsRunningCatalinaOrLower = false;
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 using namespace osl;
 using namespace vcl;
 
-static bool IsRunningHighSierraOrLower()
+static bool IsRunningCatalinaOrLower()
 {
-	if ( !bIsRunningHighSierraOrLowerInitizalized )
+	if ( !bIsRunningCatalinaOrLowerInitizalized )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -106,16 +106,16 @@ static bool IsRunningHighSierraOrLower()
 		if ( pProcessInfo )
 		{
 			NSOperatingSystemVersion aVersion = pProcessInfo.operatingSystemVersion;
-			if ( aVersion.majorVersion <= 10 && aVersion.minorVersion <= 13 )
-				bIsRunningHighSierraOrLower = true;
+			if ( aVersion.majorVersion <= 10 && aVersion.minorVersion <= 15 )
+				bIsRunningCatalinaOrLower = true;
 		}
 
-		bIsRunningHighSierraOrLowerInitizalized = true;
+		bIsRunningCatalinaOrLowerInitizalized = true;
 
 		[pPool release];
 	}
 
-	return bIsRunningHighSierraOrLower;
+	return bIsRunningCatalinaOrLower;
 }
 
 static NSRect GetTotalScreenBounds()
@@ -1459,7 +1459,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 - (void)adjustCornerRadius
 {
 	// Round corners of popup windows
-	if ( mbUndecorated && !mbShowOnlyMenus && !mbFullScreen && mpWindow && !IsRunningHighSierraOrLower() )
+	if ( mbUndecorated && !mbShowOnlyMenus && !mbFullScreen && mpWindow && !IsRunningCatalinaOrLower() )
 	{
 		NSView *pContentView = [mpWindow contentView];
 		if ( pContentView )
