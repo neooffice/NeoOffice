@@ -36,6 +36,7 @@
 #include <map>
 
 #include <vcl/window.hxx>
+#include <framework/menuconfiguration.hxx>
 #include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
 
 #include <premac.h>
@@ -51,6 +52,9 @@
 
 #include "../app/salinst_cocoa.h"
 #include "../java/VCLApplicationDelegate_cocoa.h"
+
+// Comment out the following line to disable using the native windows menu
+#define USE_NATIVE_WINDOWS_MENU
 
 #define MAIN_MENU_CHANGE_WAIT_INTERVAL ( (NSTimeInterval)0.25f )
 
@@ -130,6 +134,7 @@ using namespace vcl;
 @interface VCLMenu : NSMenu
 {
 }
+- (id)copyWithZone:(NSZone *)pZone;
 - (id)initWithTitle:(NSString *)pTitle;
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
 @end
@@ -164,6 +169,28 @@ static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
 static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 @implementation VCLMenu
+
+- (id)copyWithZone:(NSZone *)pZone
+{
+	VCLMenu *pRet = [[VCLMenu alloc] initWithTitle:[self title]];
+	if ( pRet )
+	{
+		for ( NSMenuItem *pItem in [self itemArray] )
+		{
+			if ( pItem )
+			{
+				pItem = [pItem copy];
+				if ( pItem )
+				{
+					[pItem autorelease];
+					[pRet addItem:pItem];
+				}
+			}
+		}
+	}
+
+	return pRet;
+}
 
 - (id)initWithTitle:(NSString *)pTitle
 {
@@ -251,7 +278,10 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	sal_uInt16				mnID;
 	Menu*					mpMenu;
 	BOOL					mbReallyEnabled;
+	MenuItemType			meType;
 }
+- (sal_uInt16)ID;
+- (id)copyWithZone:(NSZone *)pZone;
 - (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(sal_uInt16)nID menu:(Menu *)pMenu;
 - (BOOL)isReallyEnabled;
 - (void)selected;
@@ -595,11 +625,48 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 						NSMenu *pSubmenu = [pMenuItem submenu];
 						if ( pSubmenu )
-							[pMainMenu addItem:pMenuItem];
+						{
+							if ( pMenuItem.representedObject && [pMenuItem.representedObject isKindOfClass:[NSNumber class]] && [pMenuItem isKindOfClass:[VCLMenuItem class]] )
+							{
+								// Set help menu
+								if ( (JavaSalMenuItemType)[(NSNumber *)pMenuItem.representedObject intValue] == JavaSalMenuItemType::HELP )
+								{
+									pApp.helpMenu = pSubmenu;
+								}
+#ifdef USE_NATIVE_WINDOWS_MENU
+								// Set windows menu
+								else if ( (JavaSalMenuItemType)[(NSNumber *)pMenuItem.representedObject intValue] == JavaSalMenuItemType::WINDOWS && pApp.windowsMenu && [pSubmenu isKindOfClass:[VCLMenu class]] )
+								{
+									pMenuItem = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
+									if ( pMenuItem )
+									{
+										[pMenuItem autorelease];
 
-						// Set help menu
-						if ( pMenuItem.representedObject && [pMenuItem.representedObject isKindOfClass:[NSNumber class]] && (JavaSalMenuItemType)[(NSNumber *)pMenuItem.representedObject intValue] == JavaSalMenuItemType::HELP )
-							pApp.helpMenu = pSubmenu;
+										// Remove windows menu from parent item
+										NSMenu *pSupermenu = [pApp.windowsMenu supermenu];
+										if ( pSupermenu )
+										{
+											for ( NSMenuItem *pSupermenuItem in [pSupermenu itemArray] )
+											{
+												if ( pSupermenuItem && [pSupermenuItem submenu] == pApp.windowsMenu )
+												{
+													[pSupermenuItem setSubmenu:nil];
+													break;
+												}
+											}
+										}
+
+										// Cache the copied submenu to add later
+										pMenuItem.representedObject = pSubmenu;
+										[pMenuItem setSubmenu:pApp.windowsMenu];
+										[pApp.windowsMenu setTitle:[pSubmenu title]];
+									}
+								}
+#endif	// USE_NATIVE_WINDOWS_MENU
+							}
+
+							[pMainMenu addItem:pMenuItem];
+						}
 					}
 				}
 			}
@@ -725,6 +792,36 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 @implementation VCLMenuItem
 
+- (sal_uInt16)ID
+{
+	return mnID;
+}
+
+- (id)copyWithZone:(NSZone *)pZone
+{
+	VCLMenuItem *pRet = [[VCLMenuItem alloc] initWithTitle:[self title] type:meType id:mnID menu:mpMenu];
+	if ( pRet )
+	{
+		NSMenu *pSubmenu = [self submenu];
+		if ( pSubmenu )
+		{
+			pSubmenu = [pSubmenu copy];
+			if ( pSubmenu )
+			{
+				[pSubmenu autorelease];
+				[pRet setSubmenu:pSubmenu];
+			}
+		}
+
+		[pRet setKeyEquivalent:[self keyEquivalent]];
+		[pRet setKeyEquivalentModifierMask:[self keyEquivalentModifierMask]];
+		[pRet setTag:[self tag]];
+		[pRet setReallyEnabled:mbReallyEnabled];
+	}
+
+	return pRet;
+}
+
 - (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(sal_uInt16)nID menu:(Menu *)pMenu
 {
 	(void)eType;
@@ -734,6 +831,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	mnID = nID;
 	mpMenu = pMenu;
 	mbReallyEnabled = [self isEnabled];
+	meType = eType;
 
 	[self setTarget:self];
 	[self setAction:@selector(selected)];
@@ -1484,4 +1582,84 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdate
 	pDeactivateEvent->dispatch();
 	pDeactivateEvent->release();
 #endif	// !NO_NATIVE_MENUS
+}
+
+//-----------------------------------------------------------------------------
+
+void VCLMenu_updateNativeWindowsMenu()
+{
+#ifdef USE_NATIVE_WINDOWS_MENU
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp && pApp.windowsMenu )
+	{
+		NSMenu *pMainMenu = [pApp mainMenu];
+		if ( pMainMenu && pMainMenu == [pApp.windowsMenu supermenu] )
+		{
+			// Remove previously copied menu items
+			for ( NSMenuItem *pWindowsItem in [pApp.windowsMenu itemArray] )
+			{
+				if ( pWindowsItem && pWindowsItem.representedObject && [pWindowsItem.representedObject isKindOfClass:[VCLMenu class]] )
+					[pApp.windowsMenu removeItem:pWindowsItem];
+			}
+
+			VCLMenu *pSubmenu = nil;
+			for ( NSMenuItem *pMainMenuItem in [pMainMenu itemArray] )
+			{
+				if ( pMainMenuItem && pMainMenuItem.representedObject && [pMainMenuItem.representedObject isKindOfClass:[VCLMenu class]] )
+				{
+					pSubmenu = (VCLMenu *)pMainMenuItem.representedObject;
+					break;
+				}
+			}
+
+			// Copy submenu items into windows menu
+			if ( pSubmenu )
+			{
+				NSInteger nInsertIndex = 0;
+
+				// Insert after "Bring All to Front" menu item
+				for ( NSMenuItem *pWindowsMenuItem in [pApp.windowsMenu itemArray] )
+				{
+					if ( pWindowsMenuItem && [pWindowsMenuItem action] == @selector(arrangeInFront:) )
+						break;
+
+					nInsertIndex++;
+				}
+
+				for ( NSMenuItem *pSubmenuItem in [pSubmenu itemArray] )
+				{
+					if ( pSubmenuItem )
+					{
+						// Don't copy windows list items
+						if ( [pSubmenuItem isKindOfClass:[VCLMenuItem class]] )
+						{
+							sal_uInt16 nID = [(VCLMenuItem *)pSubmenuItem ID];
+							if ( nID >= START_ITEMID_WINDOWLIST && nID < END_ITEMID_WINDOWLIST )
+								continue;
+						}
+
+						pSubmenuItem = [pSubmenuItem copy];
+						if ( pSubmenuItem )
+						{
+							[pSubmenuItem autorelease];
+
+							pSubmenuItem.representedObject = pSubmenu;
+							[pApp.windowsMenu insertItem:pSubmenuItem atIndex:nInsertIndex++];
+						}
+					}
+				}
+
+				if ( nInsertIndex && nInsertIndex < [pApp.windowsMenu numberOfItems] )
+				{
+					NSMenuItem *pSeparatorItem = [NSMenuItem separatorItem];
+					if ( pSeparatorItem )
+					{
+						pSeparatorItem.representedObject = pSubmenu;
+						[pApp.windowsMenu insertItem:pSeparatorItem atIndex:nInsertIndex++];
+					}
+				}
+			}
+		}
+	}
+#endif	// USE_NATIVE_WINDOWS_MENU
 }
