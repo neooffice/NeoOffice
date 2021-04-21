@@ -88,10 +88,35 @@ static bool bScrollbarJumpPage = false;
 static ::osl::Mutex aSystemColorsMutex;
 static NSString *pVCLTrackingAreaWindowKey = @"VCLTrackingAreaWindow";
 
+static bool bIsRunningCatalinaOrLowerInitizalized  = false;
+static bool bIsRunningCatalinaOrLower = false;
+
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 using namespace osl;
 using namespace vcl;
+
+static bool IsRunningCatalinaOrLower()
+{
+	if ( !bIsRunningCatalinaOrLowerInitizalized )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSProcessInfo *pProcessInfo = [NSProcessInfo processInfo];
+		if ( pProcessInfo )
+		{
+			NSOperatingSystemVersion aVersion = pProcessInfo.operatingSystemVersion;
+			if ( aVersion.majorVersion <= 10 && aVersion.minorVersion <= 15 )
+				bIsRunningCatalinaOrLower = true;
+		}
+
+		bIsRunningCatalinaOrLowerInitizalized = true;
+
+		[pPool release];
+	}
+
+	return bIsRunningCatalinaOrLower;
+}
 
 static NSRect GetTotalScreenBounds()
 {
@@ -1434,7 +1459,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 - (void)adjustCornerRadius
 {
 	// Round corners of popup windows
-	if ( mbUndecorated && !mbShowOnlyMenus && !mbFullScreen && mpWindow )
+	if ( mbUndecorated && !mbShowOnlyMenus && !mbFullScreen && mpWindow && !IsRunningCatalinaOrLower() )
 	{
 		NSView *pContentView = [mpWindow contentView];
 		if ( pContentView )
