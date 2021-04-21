@@ -800,6 +800,7 @@ build.patch_package_shared:
 # The uno executable needs the same hardened runtime entitlements as soffice.bin
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/program"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in checknativefont uno uri-encode xpdfimport ; do cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/program/$$i" "program/$$i" ; chmod a+x "program/$$i" ; done'
+	sh -e -c '( cd "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Resources" && tar cf - MainMenu.nib ) | ( cd "$(PWD)/$(PATCH_INSTALL_HOME)/package/Contents/Resources" && tar xvf - )'
 ifdef PRODUCT_BUILD3
 # Fix failure to load Python shared libraries on macOS 10.15 by correcting the
 # path to the Python framework
