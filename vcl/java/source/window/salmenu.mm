@@ -815,6 +815,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 		[pRet setKeyEquivalent:[self keyEquivalent]];
 		[pRet setKeyEquivalentModifierMask:[self keyEquivalentModifierMask]];
+		[pRet setState:[self state]];
 		[pRet setTag:[self tag]];
 		[pRet setReallyEnabled:mbReallyEnabled];
 	}
