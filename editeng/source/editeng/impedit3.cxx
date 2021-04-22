@@ -4090,6 +4090,7 @@ EditSelection ImpEditEngine::MoveParagraphs( Range aOldPositions, sal_Int32 nNew
 
         ParaPortion* pUpperPortion = GetParaPortions().SafeGetObject( nFirstPortion );
         ParaPortion* pLowerPortion = GetParaPortions().SafeGetObject( nLastPortion );
+#ifdef NO_LIBO_NULL_PARAPORTION_FIX
 
         aInvalidRect = Rectangle();  // make empty
         aInvalidRect.Left() = 0;
@@ -4098,6 +4099,18 @@ EditSelection ImpEditEngine::MoveParagraphs( Range aOldPositions, sal_Int32 nNew
         aInvalidRect.Bottom() = GetParaPortions().GetYOffset( pLowerPortion ) + pLowerPortion->GetHeight();
 
         UpdateViews( pCurView );
+#else	// NO_LIBO_NULL_PARAPORTION_FIX
+        if (pUpperPortion && pLowerPortion)
+        {
+            aInvalidRect = Rectangle();  // make empty
+            aInvalidRect.Left() = 0;
+            aInvalidRect.Right() = aPaperSize.Width();
+            aInvalidRect.Top() = GetParaPortions().GetYOffset( pUpperPortion );
+            aInvalidRect.Bottom() = GetParaPortions().GetYOffset( pLowerPortion ) + pLowerPortion->GetHeight();
+
+            UpdateViews( pCurView );
+        }
+#endif	// NO_LIBO_NULL_PARAPORTION_FIX
     }
     else
     {

@@ -232,7 +232,16 @@ void ImpEditView::DrawSelection( EditSelection aTmpSel, vcl::Region* pRegion, Ou
     for ( sal_Int32 nPara = nStartPara; nPara <= nEndPara; nPara++ )
     {
         ParaPortion* pTmpPortion = pEditEngine->GetParaPortions().SafeGetObject( nPara );
+#ifdef NO_LIBO_NULL_PARAPORTION_FIX
         DBG_ASSERT( pTmpPortion, "Portion in Selection not found!" );
+#else	// NO_LIBO_NULL_PARAPORTION_FIX
+        if (!pTmpPortion)
+        {
+            SAL_WARN( "editeng", "Portion in Selection not found!" );
+            continue;
+        }
+#endif	// NO_LIBO_NULL_PARAPORTION_FIX
+
         DBG_ASSERT( !pTmpPortion->IsInvalid(), "Portion in Selection not formatted!" );
 
         if ( !pTmpPortion->IsVisible() || pTmpPortion->IsInvalid() )
@@ -1944,6 +1953,10 @@ void ImpEditView::dragOver(const ::com::sun::star::datatransfer::dnd::DropTarget
             {
                 sal_Int32 nPara = pEditEngine->GetEditDoc().GetPos( aPaM.GetNode() );
                 ParaPortion* pPPortion = pEditEngine->GetParaPortions().SafeGetObject( nPara );
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+                if (pPPortion)
+                {
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
                 long nDestParaStartY = pEditEngine->GetParaPortions().GetYOffset( pPPortion );
                 long nRel = aDocPos.Y() - nDestParaStartY;
                 if ( nRel < ( pPPortion->GetHeight() / 2 ) )
@@ -1960,6 +1973,9 @@ void ImpEditView::dragOver(const ::com::sun::star::datatransfer::dnd::DropTarget
                 {
                     bAccept = false;
                 }
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+                }
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
             }
             else if ( HasSelection() )
             {
@@ -1978,11 +1994,20 @@ void ImpEditView::dragOver(const ::com::sun::star::datatransfer::dnd::DropTarget
                 Rectangle aEditCursor;
                 if ( pDragAndDropInfo->bOutlinerMode )
                 {
+#ifdef NO_LIBO_NULL_PARAPORTION_FIX
                     long nDDYPos;
+#else	// NO_LIBO_NULL_PARAPORTION_FIX
+                    long nDDYPos(0);
+#endif	// NO_LIBO_NULL_PARAPORTION_FIX
                     if ( pDragAndDropInfo->nOutlinerDropDest < pEditEngine->GetEditDoc().Count() )
                     {
                         ParaPortion* pPPortion = pEditEngine->GetParaPortions().SafeGetObject( pDragAndDropInfo->nOutlinerDropDest );
+#ifdef NO_LIBO_NULL_PARAPORTION_FIX
                         nDDYPos = pEditEngine->GetParaPortions().GetYOffset( pPPortion );
+#else	// NO_LIBO_NULL_PARAPORTION_FIX
+                        if (pPPortion)
+                            nDDYPos = pEditEngine->GetParaPortions().GetYOffset( pPPortion );
+#endif	// NO_LIBO_NULL_PARAPORTION_FIX
                     }
                     else
                     {
