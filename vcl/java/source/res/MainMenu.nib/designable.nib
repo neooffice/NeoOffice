@@ -2,7 +2,6 @@
 <document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="17701" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
         <deployment version="101200" identifier="macosx"/>
-        <development version="10000" identifier="xcode"/>
         <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="17701"/>
     </dependencies>
     <objects>
@@ -62,17 +61,6 @@
             <modifierMask key="keyEquivalentModifierMask"/>
             <menu key="submenu" title="Window" systemMenu="window" id="8yM-bT-gcv">
                 <items>
-                    <menuItem title="Minimize" keyEquivalent="m" id="l6w-3k-vhe">
-                        <connections>
-                            <action selector="performMiniaturize:" target="-1" id="NJ0-c1-gVb"/>
-                        </connections>
-                    </menuItem>
-                    <menuItem title="Zoom" id="WDD-ax-3Rq">
-                        <modifierMask key="keyEquivalentModifierMask"/>
-                        <connections>
-                            <action selector="performZoom:" target="-1" id="vsI-Jt-vrJ"/>
-                        </connections>
-                    </menuItem>
                     <menuItem isSeparatorItem="YES" id="vqa-fk-RNh"/>
                     <menuItem title="Bring All to Front" id="b3H-Vg-FFg">
                         <modifierMask key="keyEquivalentModifierMask"/>
