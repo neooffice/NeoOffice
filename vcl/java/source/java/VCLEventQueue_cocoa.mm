@@ -916,11 +916,8 @@ static NSUInteger nMouseMask = 0;
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp && [pApp isActive] )
 	{
-		unsigned int nCount = [pNeedRestoreModalWindows count];
-		unsigned int i = 0;
-		for ( ; i < nCount; i++ )
+		for ( NSWindow *pWindow in pNeedRestoreModalWindows )
 		{
-			NSWindow *pWindow = (NSWindow *)[pNeedRestoreModalWindows objectAtIndex:i];
 			if ( pWindow && [pWindow level] != NSModalPanelWindowLevel && [pWindow respondsToSelector:@selector(_restoreModalWindowLevel)] )
 			{
 				if ( [pWindow isVisible] )
@@ -3084,11 +3081,8 @@ static CFDataRef aRTFSelection = nil;
 			{
 				[pGeneralPasteboard declareTypes:pTypes owner:nil];
 
-				unsigned int nCount = [pTypes count];
-				unsigned int i = 0;
-				for ( ; i < nCount; i++ )
+				for ( NSString *pType in pTypes )
 				{
-					NSString *pType = (NSString *)[pTypes objectAtIndex:i];
 					if ( pType )
 					{
 						NSData *pData = [pPasteboard dataForType:pType];
