@@ -180,6 +180,7 @@
 - (void)setJavaFrame:(JavaSalFrame *)pFrame;
 - (void)setNonFullScreenFrame:(NSRect)aFrame;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
+- (IBAction)toggleTabBar:(id)pSender;
 - (void)windowDidExitFullScreen:(NSNotification *)pNotification;
 - (void)windowDidFailToEnterFullScreen:(NSWindow *)pWindow;
 - (void)windowWillEnterFullScreen:(NSNotification *)pNotification;

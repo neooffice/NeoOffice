@@ -864,6 +864,7 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 - (BOOL)poseAsPerformKeyEquivalent:(NSEvent *)pEvent;
 - (void)poseAsResignKeyWindow;
 - (void)poseAsSendEvent:(NSEvent *)pEvent;
+- (void)poseAsToggleTabBar:(id)pSender;
 @end
 
 static BOOL bJavaAWTInitialized = NO;
@@ -1922,6 +1923,19 @@ static NSUInteger nMouseMask = 0;
 			else
 				[pDraggingSourceDelegates removeObjectForKey:pKey];
 		}
+	}
+}
+
+- (IBAction)toggleTabBar:(id)pSender
+{
+	if ( [super respondsToSelector:@selector(poseAsToggleTabBar:)] )
+		[super poseAsToggleTabBar:pSender];
+
+	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
+	{
+		JavaSalEvent *pMoveResizeEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
+		JavaSalEventQueue::postCachedEvent( pMoveResizeEvent );
+		pMoveResizeEvent->release();
 	}
 }
 
@@ -3316,7 +3330,7 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 	// Do not retain as invoking alloc disables autorelease
 	pSharedResponder = [[VCLResponder alloc] init];
 
-	// VCLWindow selectors
+	// NSWindow selectors
 
 	SEL aSelector = @selector(becomeKeyWindow);
 	SEL aPoseAsSelector = @selector(poseAsBecomeKeyWindow);
@@ -3428,6 +3442,18 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 
 	aSelector = @selector(sendEvent:);
 	aPoseAsSelector = @selector(poseAsSendEvent:);
+	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSWindow class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	aSelector = @selector(toggleTabBar:);
+	aPoseAsSelector = @selector(poseAsToggleTabBar:);
 	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
 	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
 	if ( aOldMethod && aNewMethod )
@@ -3557,7 +3583,7 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
 	}
 
-	// VCLApplication selectors
+	// NSApplication selectors
 
 	aSelector = @selector(setDelegate:);
 	aPoseAsSelector = @selector(poseAsSetDelegate:);
