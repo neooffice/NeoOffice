@@ -1203,6 +1203,7 @@ static void CloseOrOrderOutWindow( NSWindow *pWindow )
 			{
 				pLastTabbedWindow = pTabbedWindow;
 				[pLastTabbedWindow retain];
+				break;
 			}
 		}
 
