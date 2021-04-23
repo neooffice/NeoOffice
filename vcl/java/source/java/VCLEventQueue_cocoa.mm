@@ -3204,9 +3204,17 @@ static CFDataRef aRTFSelection = nil;
 		NSMutableArray *pTypesDeclared = [NSMutableArray arrayWithCapacity:2];
 		if ( pTypesDeclared )
 		{
-			if ( aRTFSelection && [pTypes containsObject:NSPasteboardTypeRTF] )
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+			// Deprecated pasteboard type is needed on macOS 11
+			if ( aRTFSelection && ( [pTypes containsObject:NSRTFPboardType] || [pTypes containsObject:NSPasteboardTypeRTF] ) )
+#pragma clang diagnostic pop
 				[pTypesDeclared addObject:NSPasteboardTypeRTF];
-			if ( aTextSelection && [pTypes containsObject:NSPasteboardTypeString] )
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+			// Deprecated pasteboard type is needed on macOS 11
+			if ( aTextSelection && ( [pTypes containsObject:NSStringPboardType] || [pTypes containsObject:NSPasteboardTypeString] ) )
+#pragma clang diagnostic pop
 				[pTypesDeclared addObject:NSPasteboardTypeString];
 
 			[pPasteboard declareTypes:pTypesDeclared owner:nil];
