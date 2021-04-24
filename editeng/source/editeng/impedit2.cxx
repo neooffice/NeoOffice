@@ -491,6 +491,10 @@ void ImpEditEngine::Command( const CommandEvent& rCEvt, EditView* pView )
                 FormatDoc();
 
             ParaPortion* pParaPortion = GetParaPortions().SafeGetObject( GetEditDoc().GetPos( aPaM.GetNode() ) );
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+            if (pParaPortion)
+            {
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
             sal_Int32 nLine = pParaPortion->GetLines().FindLine( aPaM.GetIndex(), true );
             const EditLine* pLine = pParaPortion->GetLines()[nLine];
             if ( pLine && ( nInputEnd > pLine->GetEnd() ) )
@@ -498,6 +502,9 @@ void ImpEditEngine::Command( const CommandEvent& rCEvt, EditView* pView )
             Rectangle aR2 = PaMtoEditCursor( EditPaM( aPaM.GetNode(), nInputEnd ), GETCRSR_ENDOFLINE );
             Rectangle aRect = pView->GetImpEditView()->GetWindowPos( aR1 );
             pView->GetWindow()->SetCursorRect( &aRect, aR2.Left()-aR1.Right() );
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+            }
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
         }
         else
         {
@@ -549,6 +556,10 @@ void ImpEditEngine::Command( const CommandEvent& rCEvt, EditView* pView )
                 FormatDoc();
 
             ParaPortion* pParaPortion = GetParaPortions().SafeGetObject( GetEditDoc().GetPos( aPaM.GetNode() ) );
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+            if (pParaPortion)
+            {
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
             sal_Int32 nLine = pParaPortion->GetLines().FindLine( aPaM.GetIndex(), true );
             const EditLine* pLine = pParaPortion->GetLines()[nLine];
             if ( pLine )
@@ -564,6 +575,9 @@ void ImpEditEngine::Command( const CommandEvent& rCEvt, EditView* pView )
                 }
                 pView->GetWindow()->SetCompositionCharRect( aRects.get(), mpIMEInfos->nLen );
             }
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+            }
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
         }
     }
 
@@ -923,6 +937,10 @@ EditPaM ImpEditEngine::CursorVisualStartEnd( EditView* pEditView, const EditPaM&
 
     sal_Int32 nPara = GetEditDoc().GetPos( aPaM.GetNode() );
     ParaPortion* pParaPortion = GetParaPortions().SafeGetObject( nPara );
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+    if (!pParaPortion)
+        return aPaM;
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
 
     sal_Int32 nLine = pParaPortion->GetLines().FindLine( aPaM.GetIndex(), false );
     const EditLine* pLine = pParaPortion->GetLines()[nLine];
@@ -979,6 +997,10 @@ EditPaM ImpEditEngine::CursorVisualLeftRight( EditView* pEditView, const EditPaM
 
     sal_Int32 nPara = GetEditDoc().GetPos( aPaM.GetNode() );
     ParaPortion* pParaPortion = GetParaPortions().SafeGetObject( nPara );
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+    if (!pParaPortion)
+        return aPaM;
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
 
     sal_Int32 nLine = pParaPortion->GetLines().FindLine( aPaM.GetIndex(), false );
     const EditLine* pLine = pParaPortion->GetLines()[nLine];
@@ -1363,6 +1385,10 @@ EditPaM ImpEditEngine::CursorEndOfDoc()
     ContentNode* pLastNode = aEditDoc.GetObject( aEditDoc.Count()-1 );
     ParaPortion* pLastPortion = GetParaPortions().SafeGetObject( aEditDoc.Count()-1 );
     OSL_ENSURE( pLastNode && pLastPortion, "CursorEndOfDoc: Node or Portion not found" );
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+    if (!(pLastNode && pLastPortion))
+        return EditPaM();
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
 
     if ( !pLastPortion->IsVisible() )
     {
@@ -1601,6 +1627,11 @@ static  bool lcl_HasStrongLTR ( const OUString& rTxt, sal_Int32 nStart, sal_Int3
 void ImpEditEngine::InitScriptTypes( sal_Int32 nPara )
 {
     ParaPortion* pParaPortion = GetParaPortions().SafeGetObject( nPara );
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+    if (!pParaPortion)
+        return;
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
+
     ScriptTypePosInfos& rTypes = pParaPortion->aScriptInfos;
     rTypes.clear();
 
@@ -1791,6 +1822,11 @@ sal_uInt16 ImpEditEngine::GetItemScriptType( const EditSelection& rSel ) const
     for ( sal_Int32 nPara = nStartPara; nPara <= nEndPara; nPara++ )
     {
         const ParaPortion* pParaPortion = GetParaPortions().SafeGetObject( nPara );
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+        if (!pParaPortion)
+            continue;
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
+
         if ( pParaPortion->aScriptInfos.empty() )
             ((ImpEditEngine*)this)->InitScriptTypes( nPara );
 
@@ -1835,6 +1871,10 @@ bool ImpEditEngine::IsScriptChange( const EditPaM& rPaM ) const
     {
         sal_Int32 nPara = GetEditDoc().GetPos( rPaM.GetNode() );
         const ParaPortion* pParaPortion = GetParaPortions().SafeGetObject( nPara );
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+        if (pParaPortion)
+        {
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
         if ( pParaPortion->aScriptInfos.empty() )
             ((ImpEditEngine*)this)->InitScriptTypes( nPara );
 
@@ -1848,6 +1888,9 @@ bool ImpEditEngine::IsScriptChange( const EditPaM& rPaM ) const
                 break;
             }
         }
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+        }
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
     }
     return bScriptChange;
 }
@@ -1857,6 +1900,10 @@ bool ImpEditEngine::HasScriptType( sal_Int32 nPara, sal_uInt16 nType ) const
     bool bTypeFound = false;
 
     const ParaPortion* pParaPortion = GetParaPortions().SafeGetObject( nPara );
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+    if (pParaPortion)
+    {
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
     if ( pParaPortion->aScriptInfos.empty() )
         ((ImpEditEngine*)this)->InitScriptTypes( nPara );
 
@@ -1866,12 +1913,20 @@ bool ImpEditEngine::HasScriptType( sal_Int32 nPara, sal_uInt16 nType ) const
         if ( rTypes[--n].nScriptType == nType )
                 bTypeFound = true;
     }
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+    }
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
     return bTypeFound;
 }
 
 void ImpEditEngine::InitWritingDirections( sal_Int32 nPara )
 {
     ParaPortion* pParaPortion = GetParaPortions().SafeGetObject( nPara );
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+    if (!pParaPortion)
+        return;
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
+
     WritingDirectionInfos& rInfos = pParaPortion->aWritingDirectionInfos;
     rInfos.clear();
 
@@ -1960,11 +2015,19 @@ bool ImpEditEngine::IsRightToLeft( sal_Int32 nPara ) const
 
 bool ImpEditEngine::HasDifferentRTLLevels( const ContentNode* pNode )
 {
+#ifdef NO_LIBO_NULL_PARAPORTION_FIX
     sal_Int32 nPara = GetEditDoc().GetPos( (ContentNode*)pNode );
     ParaPortion* pParaPortion = GetParaPortions().SafeGetObject( nPara );
+#endif	// NO_LIBO_NULL_PARAPORTION_FIX
 
     bool bHasDifferentRTLLevels = false;
 
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+    sal_Int32 nPara = GetEditDoc().GetPos( pNode );
+    ParaPortion* pParaPortion = GetParaPortions().SafeGetObject( nPara );
+    if (pParaPortion)
+    {
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
     sal_uInt16 nRTLLevel = IsRightToLeft( nPara ) ? 1 : 0;
     for ( sal_Int32 n = 0; n < (sal_Int32)pParaPortion->GetTextPortions().Count(); n++ )
     {
@@ -1975,6 +2038,9 @@ bool ImpEditEngine::HasDifferentRTLLevels( const ContentNode* pNode )
             break;
         }
     }
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+    }
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
     return bHasDifferentRTLLevels;
 }
 
@@ -1987,6 +2053,10 @@ sal_uInt8 ImpEditEngine::GetRightToLeft( sal_Int32 nPara, sal_Int32 nPos, sal_In
     if ( pNode && pNode->Len() )
     {
         ParaPortion* pParaPortion = GetParaPortions().SafeGetObject( nPara );
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+        if (pParaPortion)
+        {
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
         if ( pParaPortion->aWritingDirectionInfos.empty() )
             InitWritingDirections( nPara );
 
@@ -2003,6 +2073,9 @@ sal_uInt8 ImpEditEngine::GetRightToLeft( sal_Int32 nPara, sal_Int32 nPos, sal_In
                 break;
             }
         }
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+        }
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
     }
     return nRightToLeft;
 }
@@ -4082,6 +4155,10 @@ void ImpEditEngine::CalcHeight( ParaPortion* pPortion )
             if ( nPortion && !aStatus.ULSpaceSummation() )
             {
                 ParaPortion* pPrev = GetParaPortions().SafeGetObject( nPortion-1 );
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+                if (pPrev)
+                {
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
                 const SvxULSpaceItem& rPrevULItem = static_cast<const SvxULSpaceItem&>(pPrev->GetNode()->GetContentAttribs().GetItem( EE_PARA_ULSPACE ));
                 const SvxLineSpacingItem& rPrevLSItem = static_cast<const SvxLineSpacingItem&>(pPrev->GetNode()->GetContentAttribs().GetItem( EE_PARA_SBL ));
 
@@ -4133,6 +4210,9 @@ void ImpEditEngine::CalcHeight( ParaPortion* pPortion )
                         }
                     }
                 }
+#ifndef NO_LIBO_NULL_PARAPORTION_FIX
+                }
+#endif	// !NO_LIBO_NULL_PARAPORTION_FIX
             }
         }
     }
