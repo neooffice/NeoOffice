@@ -106,7 +106,13 @@ uno::Reference< datatransfer::XTransferable > SAL_CALL JavaClipboard::getContent
 
 	uno::Reference< datatransfer::XTransferable > aContents( maContents );
 
-	if ( mbSystemClipboard && !mbPrivateClipboard )
+	// Don't send any changedContents notifications to listeners if this is
+	// a private clipboard as it will cause Calc's Edit > Paste menus to be
+	// disabled when another application has ownership of the system clipboard
+	if ( mbPrivateClipboard )
+		return aContents;
+
+	if ( mbSystemClipboard )
 	{
 		DTransTransferable *pTransferable = NULL;
 		if ( maContents.is() )
@@ -180,7 +186,13 @@ void SAL_CALL JavaClipboard::setContents( const uno::Reference< datatransfer::XT
 	uno::Reference< datatransfer::clipboard::XClipboardOwner > aOldOwner( maOwner );
 	maOwner = xClipboardOwner;
 
-	if ( mbSystemClipboard && !mbPrivateClipboard )
+	// Don't send any changedContents notifications to listeners if this is
+	// a private clipboard as it will cause Calc's Edit > Paste menus to be
+	// disabled when another application has ownership of the system clipboard
+	if ( mbPrivateClipboard )
+		return;
+
+	if ( mbSystemClipboard )
 	{
 		DTransTransferable *pTransferable = NULL;
 		if ( aOldContents.is() )
@@ -295,15 +307,8 @@ void JavaClipboard::setPrivateClipboard( sal_Bool bPrivateClipboard )
 		}
 		else
 		{
-			DTransTransferable *pTransferable = NULL;
-			if ( maPrivateContents.is() )
-				pTransferable = (DTransTransferable *)maPrivateContents.get();
-
-			if ( pTransferable && pTransferable->hasOwnership() )
-			{
-				maContents = maPrivateContents;
-				maOwner = maPrivateOwner;
-			}
+			maContents = maPrivateContents;
+			maOwner = maPrivateOwner;
 
 			maPrivateContents.clear();
 			maPrivateOwner.clear();

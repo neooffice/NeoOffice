@@ -94,5 +94,6 @@ public:
 };
 
 SAL_DLLPRIVATE void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdateSubmenus );
+SAL_DLLPRIVATE void VCLMenu_updateNativeWindowsMenu();
 
 #endif // _SV_SALMENU_H

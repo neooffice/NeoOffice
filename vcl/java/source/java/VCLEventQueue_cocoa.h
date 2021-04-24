@@ -51,8 +51,12 @@
 @end
 
 @interface NSColor (VCLColor)
++ (NSColor *)controlHighlightColor;
++ (NSColor *)controlShadowColor;
 + (NSColor *)linkColor;
++ (NSColor *)scrollBarColor;
 + (NSColor *)selectedContentBackgroundColor;
++ (NSColor *)selectedMenuItemColor;
 + (NSColor *)separatorColor;
 + (NSColor *)unemphasizedSelectedContentBackgroundColor;
 + (NSColor *)unemphasizedSelectedTextBackgroundColor;
@@ -176,6 +180,7 @@
 - (void)setJavaFrame:(JavaSalFrame *)pFrame;
 - (void)setNonFullScreenFrame:(NSRect)aFrame;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
+- (IBAction)toggleTabBar:(id)pSender;
 - (void)windowDidExitFullScreen:(NSNotification *)pNotification;
 - (void)windowDidFailToEnterFullScreen:(NSWindow *)pWindow;
 - (void)windowWillEnterFullScreen:(NSNotification *)pNotification;

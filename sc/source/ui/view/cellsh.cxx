@@ -15,6 +15,13 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified April 2021 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "scitems.hxx"
@@ -463,6 +470,18 @@ IMPL_LINK( ScCellShell, ClipboardChanged, TransferableDataHelper*, pDataHelper )
         rBindings.Invalidate( SID_PASTE_ONLY_TEXT );
         rBindings.Invalidate( SID_PASTE_ONLY_FORMULA );
         rBindings.Invalidate( SID_CLIPBOARD_FORMAT_ITEMS );
+
+#ifdef USE_JAVA
+        // Clear the copy source overlay rectangle when this transferable has
+        // lost ownership of the system clipboard
+        ScViewData *pViewData = GetViewData();
+        if ( !pViewData->IsAnyFillMode() )
+        {
+            pViewData->SetPasteMode( SC_PASTE_NONE );
+            // Clear CopySourceOverlay in each window of a split/frozen tabview
+            pViewData->GetView()->UpdateCopySourceOverlay();
+        }
+#endif	// USE_JAVA
     }
     return 0;
 }

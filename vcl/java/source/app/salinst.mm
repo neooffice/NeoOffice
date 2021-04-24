@@ -363,6 +363,9 @@ sal_Bool VCLInstance_updateNativeMenus()
 		if ( bRet && pSalData->maFrameList.size() != nFrames )
 			bRet = sal_False;
 
+		if ( bRet )
+			VCLMenu_updateNativeWindowsMenu();
+
 		// We need to let any timers run that were added by any menu
 		// changes. Otherwise, some menus will be drawn in the state
 		// that they were in before we updated the menus.

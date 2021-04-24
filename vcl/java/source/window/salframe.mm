@@ -1003,17 +1003,10 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 				// do not set the focus. Otherwise, if there are full screen
 				// windows with a modal dialog child window, focus can never be
 				// set the modal dialog.
-				NSArray *pWindows = [pApp orderedWindows];
-				if ( pWindows )
+				for ( NSWindow *pWindow in [pApp orderedWindows] )
 				{
-					NSUInteger nCount = [pWindows count];
-					NSUInteger i = 0;
-					for ( ; i < nCount; i++ )
-					{
-						NSWindow *pWindow = [pWindows objectAtIndex:i];
-						if ( pWindow && [pWindow isVisible] && ! ( [pWindow styleMask] & NSWindowStyleMaskFullScreen ) && [pWindow canBecomeKeyWindow] )
-							return;
-					}
+					if ( pWindow && [pWindow isVisible] && ! ( [pWindow styleMask] & NSWindowStyleMaskFullScreen ) && [pWindow canBecomeKeyWindow] )
+						return;
 				}
 
 				[pKeyWindow makeKeyAndOrderFront:pKeyWindow];
@@ -1204,23 +1197,13 @@ static void CloseOrOrderOutWindow( NSWindow *pWindow )
 	if ( pWindow )
 	{
 		NSWindow *pLastTabbedWindow = nil;
-		NSArray<NSWindow*> *pTabbedWindows = pWindow.tabbedWindows;
-		if ( pTabbedWindows )
+		for ( NSWindow *pTabbedWindow in pWindow.tabbedWindows )
 		{
-			NSUInteger nCount = [pTabbedWindows count];
-			if ( nCount <= 2 )
+			if ( pTabbedWindow && pTabbedWindow != pWindow )
 			{
-				NSUInteger i = 0;
-				for ( ; i < nCount; i++ )
-				{
-					NSWindow *pTabbedWindow = [pTabbedWindows objectAtIndex:i];
-					if ( pTabbedWindow && pTabbedWindow != pWindow )
-					{
-						pLastTabbedWindow = pTabbedWindow;
-						[pLastTabbedWindow retain];
-					}
-
-				}
+				pLastTabbedWindow = pTabbedWindow;
+				[pLastTabbedWindow retain];
+				break;
 			}
 		}
 
@@ -1304,53 +1287,46 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8556
 	if ( !bShow && pApp && [pApp isActive] && ![pApp keyWindow] )
 	{
-		NSArray *pWindows = [pApp orderedWindows];
-		if ( pWindows )
+		NSWindow *pVisibleWindow = nil;
+		JavaSalFrame *pMinitiarizedFrame = NULL;
+		for ( NSWindow *pWindow in [pApp orderedWindows] )
 		{
-			NSWindow *pVisibleWindow = nil;
-			JavaSalFrame *pMinitiarizedFrame = NULL;
-			NSUInteger nCount = [pWindows count];
-			NSUInteger i = 0;
-			for ( ; i < nCount; i++ )
+			if ( pWindow && ![pWindow parentWindow] && ! ( [pWindow styleMask] & NSWindowStyleMaskUtilityWindow ) && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
 			{
-				NSWindow *pWindow = [pWindows objectAtIndex:i];
-				if ( pWindow && ![pWindow parentWindow] && ! ( [pWindow styleMask] & NSWindowStyleMaskUtilityWindow ) && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
+				::std::map< NSWindow*, VCLWindow* >::const_iterator it = aShowOnlyMenusWindowMap.find( pWindow );
+				if ( it == aShowOnlyMenusWindowMap.end() )
 				{
-					::std::map< NSWindow*, VCLWindow* >::const_iterator it = aShowOnlyMenusWindowMap.find( pWindow );
-					if ( it == aShowOnlyMenusWindowMap.end() )
+					if ( [pWindow isVisible] && [pWindow canBecomeKeyWindow] )
 					{
-						if ( [pWindow isVisible] && [pWindow canBecomeKeyWindow] )
+						if ( !pVisibleWindow )
 						{
-							if ( !pVisibleWindow )
-							{
-								pVisibleWindow = pWindow;
-							}
-							else if ( ! ( [pVisibleWindow styleMask] & NSWindowStyleMaskFullScreen ) && [pWindow styleMask] & NSWindowStyleMaskFullScreen )
-							{
-								pVisibleWindow = pWindow;
-								break;
-							}
+							pVisibleWindow = pWindow;
 						}
-						else if ( !pMinitiarizedFrame && [pWindow isMiniaturized] )
+						else if ( ! ( [pVisibleWindow styleMask] & NSWindowStyleMaskFullScreen ) && [pWindow styleMask] & NSWindowStyleMaskFullScreen )
 						{
-							::std::map< NSWindow*, JavaSalGraphics* >::iterator nwit = aNativeWindowMap.find( pWindow );
-							if ( nwit != aNativeWindowMap.end() )
-								pMinitiarizedFrame = nwit->second->mpFrame;
+							pVisibleWindow = pWindow;
+							break;
 						}
+					}
+					else if ( !pMinitiarizedFrame && [pWindow isMiniaturized] )
+					{
+						::std::map< NSWindow*, JavaSalGraphics* >::iterator nwit = aNativeWindowMap.find( pWindow );
+						if ( nwit != aNativeWindowMap.end() )
+							pMinitiarizedFrame = nwit->second->mpFrame;
 					}
 				}
 			}
+		}
 
-			if ( pVisibleWindow )
-			{
-				[pVisibleWindow makeKeyAndOrderFront:pVisibleWindow];
-			}
-			else if ( pMinitiarizedFrame )
-			{
-				JavaSalEvent *pGetFocusEvent = new JavaSalEvent( SALEVENT_GETFOCUS, pMinitiarizedFrame, NULL );
-				JavaSalEventQueue::postCachedEvent( pGetFocusEvent );
-				pGetFocusEvent->release();
-			}
+		if ( pVisibleWindow )
+		{
+			[pVisibleWindow makeKeyAndOrderFront:pVisibleWindow];
+		}
+		else if ( pMinitiarizedFrame )
+		{
+			JavaSalEvent *pGetFocusEvent = new JavaSalEvent( SALEVENT_GETFOCUS, pMinitiarizedFrame, NULL );
+			JavaSalEventQueue::postCachedEvent( pGetFocusEvent );
+			pGetFocusEvent->release();
 		}
 	}
 }
@@ -1930,23 +1906,16 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			if ( pTrackingAreas )
 			{
 				// Make a copy since we may remove some elements
-				pTrackingAreas = [NSArray arrayWithArray:pTrackingAreas];
-				if ( pTrackingAreas )
+				for ( NSTrackingArea *pTrackingArea in [NSArray arrayWithArray:pTrackingAreas] )
 				{
-					NSUInteger i = 0;
-					NSUInteger nCount = [pTrackingAreas count];
-					for ( ; i < nCount; i++ )
+					if ( pTrackingArea )
 					{
-						NSTrackingArea *pTrackingArea = [pTrackingAreas objectAtIndex:i];
-						if ( pTrackingArea )
+						NSDictionary *pDict = [pTrackingArea userInfo];
+						if ( pDict )
 						{
-							NSDictionary *pDict = [pTrackingArea userInfo];
-							if ( pDict )
-							{
-								NSValue *pValue = [pDict objectForKey:pVCLTrackingAreaWindowKey];
-								if ( pValue && [pValue pointerValue] == [pWindow pointerValue] )
-									[pContentView removeTrackingArea:pTrackingArea];
-							}
+							NSValue *pValue = [pDict objectForKey:pVCLTrackingAreaWindowKey];
+							if ( pValue && [pValue pointerValue] == [pWindow pointerValue] )
+								[pContentView removeTrackingArea:pTrackingArea];
 						}
 					}
 				}

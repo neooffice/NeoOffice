@@ -863,6 +863,7 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 - (BOOL)poseAsPerformKeyEquivalent:(NSEvent *)pEvent;
 - (void)poseAsResignKeyWindow;
 - (void)poseAsSendEvent:(NSEvent *)pEvent;
+- (void)poseAsToggleTabBar:(id)pSender;
 @end
 
 static BOOL bJavaAWTInitialized = NO;
@@ -914,11 +915,8 @@ static NSUInteger nMouseMask = 0;
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp && [pApp isActive] )
 	{
-		unsigned int nCount = [pNeedRestoreModalWindows count];
-		unsigned int i = 0;
-		for ( ; i < nCount; i++ )
+		for ( NSWindow *pWindow in pNeedRestoreModalWindows )
 		{
-			NSWindow *pWindow = (NSWindow *)[pNeedRestoreModalWindows objectAtIndex:i];
 			if ( pWindow && [pWindow level] != NSModalPanelWindowLevel && [pWindow respondsToSelector:@selector(_restoreModalWindowLevel)] )
 			{
 				if ( [pWindow isVisible] )
@@ -1921,6 +1919,19 @@ static NSUInteger nMouseMask = 0;
 			else
 				[pDraggingSourceDelegates removeObjectForKey:pKey];
 		}
+	}
+}
+
+- (IBAction)toggleTabBar:(id)pSender
+{
+	if ( [super respondsToSelector:@selector(poseAsToggleTabBar:)] )
+		[super poseAsToggleTabBar:pSender];
+
+	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
+	{
+		JavaSalEvent *pMoveResizeEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
+		JavaSalEventQueue::postCachedEvent( pMoveResizeEvent );
+		pMoveResizeEvent->release();
 	}
 }
 
@@ -3076,11 +3087,8 @@ static CFDataRef aRTFSelection = nil;
 			{
 				[pGeneralPasteboard declareTypes:pTypes owner:nil];
 
-				unsigned int nCount = [pTypes count];
-				unsigned int i = 0;
-				for ( ; i < nCount; i++ )
+				for ( NSString *pType in pTypes )
 				{
-					NSString *pType = (NSString *)[pTypes objectAtIndex:i];
 					if ( pType )
 					{
 						NSData *pData = [pPasteboard dataForType:pType];
@@ -3322,7 +3330,7 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 	// Do not retain as invoking alloc disables autorelease
 	pSharedResponder = [[VCLResponder alloc] init];
 
-	// VCLWindow selectors
+	// NSWindow selectors
 
 	SEL aSelector = @selector(becomeKeyWindow);
 	SEL aPoseAsSelector = @selector(poseAsBecomeKeyWindow);
@@ -3434,6 +3442,18 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 
 	aSelector = @selector(sendEvent:);
 	aPoseAsSelector = @selector(poseAsSendEvent:);
+	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSWindow class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	aSelector = @selector(toggleTabBar:);
+	aPoseAsSelector = @selector(poseAsToggleTabBar:);
 	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
 	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
 	if ( aOldMethod && aNewMethod )
@@ -3563,7 +3583,7 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
 	}
 
-	// VCLApplication selectors
+	// NSApplication selectors
 
 	aSelector = @selector(setDelegate:);
 	aPoseAsSelector = @selector(poseAsSetDelegate:);
