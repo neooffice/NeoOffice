@@ -15,13 +15,6 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- * 
- *   Modified November 2017 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 3.3
- *   of the Mozilla Public License, v. 2.0.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <bookmrk.hxx>
@@ -75,13 +68,14 @@ namespace
 
         SwPosition rStart = pField->GetMarkStart();
         SwTxtNode const*const pStartTxtNode = rStart.nNode.GetNode().GetTxtNode();
-#ifdef USE_JAVA
-        // Attempt to fix Mac App Store crash
-        const sal_Unicode ch_start = ( !pStartTxtNode || rStart.nContent.GetIndex() >= pStartTxtNode->GetTxt().getLength() ) ? 0 :
-#else	// USE_JAVA
+#ifdef NO_LIBO_BOOKMARK_TEXTNODE_FIX
         const sal_Unicode ch_start = ( rStart.nContent.GetIndex() >= pStartTxtNode->GetTxt().getLength() ) ? 0 :
-#endif	// USE_JAVA
             pStartTxtNode->GetTxt()[rStart.nContent.GetIndex()];
+#else	// NO_LIBO_BOOKMARK_TEXTNODE_FIX
+        sal_Unicode ch_start = 0;
+        if( pStartTxtNode && ( rStart.nContent.GetIndex() < pStartTxtNode->GetTxt().getLength() ) )
+            ch_start = pStartTxtNode->GetTxt()[rStart.nContent.GetIndex()];
+#endif	// NO_LIBO_BOOKMARK_TEXTNODE_FIX
         if( ( ch_start != aStartMark ) && ( aEndMark != CH_TXT_ATR_FORMELEMENT ) )
         {
             SwPaM aStartPaM(rStart);
@@ -94,7 +88,13 @@ namespace
         SwTxtNode const*const pEndTxtNode = rEnd.nNode.GetNode().GetTxtNode();
         const sal_Int32 nEndPos = ( rEnd == rStart ||  rEnd.nContent.GetIndex() == 0 ) ?
             rEnd.nContent.GetIndex() : rEnd.nContent.GetIndex() - 1;
+#ifdef NO_LIBO_BOOKMARK_TEXTNODE_FIX
         const sal_Unicode ch_end = nEndPos >= pEndTxtNode->GetTxt().getLength() ? 0 : pEndTxtNode->GetTxt()[nEndPos];
+#else	// NO_LIBO_BOOKMARK_TEXTNODE_FIX
+        sal_Unicode ch_end = 0;
+        if ( pEndTxtNode && ( nEndPos < pEndTxtNode->GetTxt().getLength() ) )
+            ch_end = pEndTxtNode->GetTxt()[nEndPos];
+#endif	// NO_LIBO_BOOKMARK_TEXTNODE_FIX
         if ( aEndMark && ( ch_end != aEndMark ) )
         {
             SwPaM aEndPaM(rEnd);
@@ -114,8 +114,14 @@ namespace
 
         const SwPosition& rStart = pField->GetMarkStart();
         SwTxtNode const*const pStartTxtNode = rStart.nNode.GetNode().GetTxtNode();
+#ifdef NO_LIBO_BOOKMARK_TEXTNODE_FIX
         const sal_Unicode ch_start =
             pStartTxtNode->GetTxt()[rStart.nContent.GetIndex()];
+#else	// NO_LIBO_BOOKMARK_TEXTNODE_FIX
+        sal_Unicode ch_start = 0;
+        if( pStartTxtNode )
+            ch_start = pStartTxtNode->GetTxt()[rStart.nContent.GetIndex()];
+#endif	// NO_LIBO_BOOKMARK_TEXTNODE_FIX
 
         if( ch_start == aStartMark )
         {
@@ -129,7 +135,13 @@ namespace
         const sal_Int32 nEndPos = ( rEnd == rStart ||  rEnd.nContent.GetIndex() == 0 )
                                    ? rEnd.nContent.GetIndex()
                                    : rEnd.nContent.GetIndex() - 1;
+#ifdef NO_LIBO_BOOKMARK_TEXTNODE_FIX
         const sal_Unicode ch_end = pEndTxtNode->GetTxt()[nEndPos];
+#else	// NO_LIBO_BOOKMARK_TEXTNODE_FIX
+        sal_Unicode ch_end = 0;
+        if ( pEndTxtNode )
+            ch_end = pEndTxtNode->GetTxt()[nEndPos];
+#endif	// NO_LIBO_BOOKMARK_TEXTNODE_FIX
         if ( ch_end == aEndMark )
         {
             SwPaM aEnd(rEnd, rEnd);
