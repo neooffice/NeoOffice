@@ -137,7 +137,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 @interface DTransPasteboardHelper : NSObject
 {
 	NSData*							mpPNGData;
-	int								mnChangeCount;
+	NSInteger						mnChangeCount;
 	NSData*							mpData;
 	NSString*						mpPasteboardName;
 	NSString*						mpString;
@@ -145,7 +145,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 	NSArray*						mpTypes;
 }
 + (id)createWithPasteboardName:(NSString *)pPasteboardName;
-- (int)changeCount;
+- (NSInteger)changeCount;
 - (void)clearContentsWithChangeCount:(NSNumber *)pChangeCount;
 - (NSData *)dataForType;
 - (void)dealloc;
@@ -167,14 +167,14 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 
 @interface DTransPasteboardOwner : NSObject <NSPasteboardWriting>
 {
-	int								mnChangeCount;
+	NSInteger						mnChangeCount;
 	DTransTransferable*				mpTransferable;
 	BOOL							mbTransferableOwner;
 	NSString*						mpPasteboardName;
 	NSArray*						mpTypes;
 }
 + (id)createWithTransferable:(DTransTransferable *)pTransferable pasteboardName:(NSString *)pPasteboardName types:(NSArray *)pTypes;
-- (int)changeCount;
+- (NSInteger)changeCount;
 - (void)dealloc;
 - (id)initWithTransferable:(DTransTransferable *)pTransferable pasteboardName:(NSString *)pPasteboardName types:(NSArray *)pTypes;
 - (void)pasteboard:(NSPasteboard *)pSender provideDataForType:(NSString *)pType;
@@ -203,7 +203,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 	return pRet;
 }
 
-- (int)changeCount
+- (NSInteger)changeCount
 {
 	return mnChangeCount;
 }
@@ -586,7 +586,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 	return pRet;
 }
 
-- (int)changeCount
+- (NSInteger)changeCount
 {
 	return mnChangeCount;
 }
@@ -957,7 +957,7 @@ NSArray *DTransTransferable::getSupportedPasteboardTypes()
 void DTransTransferable::flush()
 {
 	// Force transferable to render data if we still have ownership
-	if ( mnChangeCount >= 0 )
+	if ( mxTransferable.is() && mnChangeCount >= 0 )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -974,7 +974,7 @@ void DTransTransferable::flush()
 
 // ----------------------------------------------------------------------------
 
-int DTransTransferable::getChangeCount()
+NSInteger DTransTransferable::getChangeCount()
 {
 	return mnChangeCount;
 }
@@ -1163,7 +1163,7 @@ DTransTransferable::~DTransTransferable()
 	// by clearing the pasteboard's contents is this object is the pasteboard
 	// owner:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8508
-	if ( mnChangeCount >= 0 )
+	if ( mxTransferable.is() && mnChangeCount >= 0 )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1232,7 +1232,7 @@ sal_Bool DTransTransferable::hasOwnership()
 {
 	sal_Bool out = sal_False;
 
-	if ( mnChangeCount >= 0 )
+	if ( mxTransferable.is() && mnChangeCount >= 0 )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1381,3 +1381,24 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 
 	return out;
 }
+
+// ----------------------------------------------------------------------------
+
+void DTransTransferable::updateChangeCount()
+{
+	if ( !mxTransferable.is() && mnChangeCount < 0 )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
+		if ( pHelper )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pHelper performSelectorOnMainThread:@selector(getChangeCount:) withObject:pHelper waitUntilDone:YES modes:pModes];
+			mnChangeCount = [pHelper changeCount];
+		}
+
+		[pPool release];
+	}
+}
+
