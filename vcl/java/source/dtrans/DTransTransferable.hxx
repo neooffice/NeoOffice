@@ -80,6 +80,7 @@ public:
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	getTransferable() { return mxTransferable; }
 	sal_Bool			hasOwnership();
 	sal_Bool			setContents( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable > &xTransferable, id *pPasteboardWriter = NULL );
+	void				updateChangeCount();
 };
 
 #endif // _DTRANSTRANSFERABLE_HXX

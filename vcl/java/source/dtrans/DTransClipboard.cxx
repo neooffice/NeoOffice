@@ -43,16 +43,22 @@ using namespace com::sun::star::uno;
 
 DTransTransferable *DTransClipboard::getContents()
 {
-	return new DTransTransferable( TRANSFERABLE_TYPE_CLIPBOARD );
+	DTransTransferable *out = new DTransTransferable( TRANSFERABLE_TYPE_CLIPBOARD );
+	if ( out )
+		out->updateChangeCount();
+
+	return out;
 }
 
 // ----------------------------------------------------------------------------
 
 DTransTransferable *DTransClipboard::setContents( const Reference< XTransferable > &xTransferable )
 {
-	DTransTransferable *out = new DTransTransferable( TRANSFERABLE_TYPE_CLIPBOARD );
+	if ( !xTransferable.is() )
+		return NULL;
 
-	if ( !xTransferable.is() || !out->setContents( xTransferable ) )
+	DTransTransferable *out = new DTransTransferable( TRANSFERABLE_TYPE_CLIPBOARD );
+	if ( out && !out->setContents( xTransferable ) )
 	{
 		delete out;
 		out = NULL;

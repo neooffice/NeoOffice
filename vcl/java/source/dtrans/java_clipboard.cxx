@@ -129,44 +129,54 @@ uno::Reference< datatransfer::XTransferable > SAL_CALL JavaClipboard::getContent
 		else
 		{
 			uno::Reference< datatransfer::XTransferable > aOldContents( maContents );
+			NSInteger nOldChangeCount = -1;
 			if ( pTransferable )
+			{
+				nOldChangeCount = pTransferable->getChangeCount();
 				aOldContents = pTransferable->getTransferable();
+			}
+
+			NSInteger nChangeCount = -1;
 			pTransferable = DTransClipboard::getContents();
 			if ( pTransferable )
+			{
+				nChangeCount = pTransferable->getChangeCount();
 				maContents = uno::Reference< datatransfer::XTransferable >( pTransferable );
+			}
 			else
+			{
 				maContents = uno::Reference< datatransfer::XTransferable >();
+			}
 
 			uno::Reference< datatransfer::clipboard::XClipboardOwner > aOldOwner( maOwner );
 			maOwner = uno::Reference< datatransfer::clipboard::XClipboardOwner >();
 
 			aContents = maContents;
 
-			// Fix bug 3650 by not sending lost ownership notifications to
+			// Fix bug 3650 by not sending lostOwnership notifications to
 			// transferables that were never pushed to the system clipboard
-			// by our application
-			if ( aOldContents.is() )
+			// by our application. Fix Edit menu update failure when the system
+			// clipboard is changed in another application by sending
+			// changedContents notifications when the system clipboard's change
+			// count has changed.
+			if ( nOldChangeCount != nChangeCount )
 			{
-				pTransferable = (DTransTransferable *)aOldContents.get();
-				if ( pTransferable && pTransferable->getChangeCount() >= 0 )
+				::std::list< uno::Reference< datatransfer::clipboard::XClipboardListener > > listeners( maListeners );
+
+				maMutex.release();
+
+				if ( aOldOwner.is() )
+					aOldOwner->lostOwnership( static_cast< datatransfer::clipboard::XClipboard* >( this ), aOldContents );
+
+				datatransfer::clipboard::ClipboardEvent aEvent( static_cast< OWeakObject* >( this ), aContents );
+				while ( listeners.begin() != listeners.end() )
 				{
-					::std::list< uno::Reference< datatransfer::clipboard::XClipboardListener > > listeners( maListeners );
-
-					maMutex.release();
-
-					if ( aOldOwner.is() )
-						aOldOwner->lostOwnership( static_cast< datatransfer::clipboard::XClipboard* >( this ), aOldContents );
-
-					datatransfer::clipboard::ClipboardEvent aEvent( static_cast< OWeakObject* >( this ), aContents );
-					while ( listeners.begin() != listeners.end() )
-					{
-						if( listeners.front().is() )
-							listeners.front()->changedContents( aEvent );
-						listeners.pop_front();
-					}
-
-					maMutex.acquire();
+					if( listeners.front().is() )
+						listeners.front()->changedContents( aEvent );
+					listeners.pop_front();
 				}
+
+				maMutex.acquire();
 			}
 		}
 	}

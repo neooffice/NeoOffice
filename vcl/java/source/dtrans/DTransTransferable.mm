@@ -957,7 +957,7 @@ NSArray *DTransTransferable::getSupportedPasteboardTypes()
 void DTransTransferable::flush()
 {
 	// Force transferable to render data if we still have ownership
-	if ( mnChangeCount >= 0 )
+	if ( mxTransferable.is() && mnChangeCount >= 0 )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1163,7 +1163,7 @@ DTransTransferable::~DTransTransferable()
 	// by clearing the pasteboard's contents is this object is the pasteboard
 	// owner:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8508
-	if ( mnChangeCount >= 0 )
+	if ( mxTransferable.is() && mnChangeCount >= 0 )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1232,7 +1232,7 @@ sal_Bool DTransTransferable::hasOwnership()
 {
 	sal_Bool out = sal_False;
 
-	if ( mnChangeCount >= 0 )
+	if ( mxTransferable.is() && mnChangeCount >= 0 )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1381,3 +1381,24 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 
 	return out;
 }
+
+// ----------------------------------------------------------------------------
+
+void DTransTransferable::updateChangeCount()
+{
+	if ( !mxTransferable.is() && mnChangeCount < 0 )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
+		if ( pHelper )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pHelper performSelectorOnMainThread:@selector(getChangeCount:) withObject:pHelper waitUntilDone:YES modes:pModes];
+			mnChangeCount = [pHelper changeCount];
+		}
+
+		[pPool release];
+	}
+}
+
