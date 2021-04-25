@@ -179,7 +179,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 		{
 			if ( pItem )
 			{
-				pItem = [pItem copy];
+				pItem = [pItem copyWithZone:pZone];
 				if ( pItem )
 				{
 					[pItem autorelease];
@@ -805,7 +805,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 		NSMenu *pSubmenu = [self submenu];
 		if ( pSubmenu )
 		{
-			pSubmenu = [pSubmenu copy];
+			pSubmenu = [pSubmenu copyWithZone:pZone];
 			if ( pSubmenu )
 			{
 				[pSubmenu autorelease];
