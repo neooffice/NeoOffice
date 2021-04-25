@@ -137,7 +137,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 @interface DTransPasteboardHelper : NSObject
 {
 	NSData*							mpPNGData;
-	int								mnChangeCount;
+	NSInteger						mnChangeCount;
 	NSData*							mpData;
 	NSString*						mpPasteboardName;
 	NSString*						mpString;
@@ -145,7 +145,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 	NSArray*						mpTypes;
 }
 + (id)createWithPasteboardName:(NSString *)pPasteboardName;
-- (int)changeCount;
+- (NSInteger)changeCount;
 - (void)clearContentsWithChangeCount:(NSNumber *)pChangeCount;
 - (NSData *)dataForType;
 - (void)dealloc;
@@ -167,14 +167,14 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 
 @interface DTransPasteboardOwner : NSObject <NSPasteboardWriting>
 {
-	int								mnChangeCount;
+	NSInteger						mnChangeCount;
 	DTransTransferable*				mpTransferable;
 	BOOL							mbTransferableOwner;
 	NSString*						mpPasteboardName;
 	NSArray*						mpTypes;
 }
 + (id)createWithTransferable:(DTransTransferable *)pTransferable pasteboardName:(NSString *)pPasteboardName types:(NSArray *)pTypes;
-- (int)changeCount;
+- (NSInteger)changeCount;
 - (void)dealloc;
 - (id)initWithTransferable:(DTransTransferable *)pTransferable pasteboardName:(NSString *)pPasteboardName types:(NSArray *)pTypes;
 - (void)pasteboard:(NSPasteboard *)pSender provideDataForType:(NSString *)pType;
@@ -203,7 +203,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 	return pRet;
 }
 
-- (int)changeCount
+- (NSInteger)changeCount
 {
 	return mnChangeCount;
 }
@@ -586,7 +586,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 	return pRet;
 }
 
-- (int)changeCount
+- (NSInteger)changeCount
 {
 	return mnChangeCount;
 }
@@ -974,7 +974,7 @@ void DTransTransferable::flush()
 
 // ----------------------------------------------------------------------------
 
-int DTransTransferable::getChangeCount()
+NSInteger DTransTransferable::getChangeCount()
 {
 	return mnChangeCount;
 }

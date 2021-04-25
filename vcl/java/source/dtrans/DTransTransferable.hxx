@@ -40,6 +40,10 @@
 #include <com/sun/star/datatransfer/DataFlavor.hpp>
 #include <com/sun/star/datatransfer/XTransferable.hpp>
 
+#include <premac.h>
+#include <objc/NSObjCRuntime.h>
+#include <postmac.h>
+
 #define TRANSFERABLE_TYPE_CLIPBOARD		0x0
 #define TRANSFERABLE_TYPE_DRAG			0x1
 
@@ -55,7 +59,7 @@ struct NSString;
 class DTransTransferable : public ::cppu::WeakImplHelper1 < ::com::sun::star::datatransfer::XTransferable >
 {
 private:
-	int					mnChangeCount;
+	NSInteger			mnChangeCount;
 	NSString*			mpPasteboardName;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	mxTransferable;
 
@@ -72,7 +76,7 @@ public:
 	virtual sal_Bool	isDataFlavorSupported( const ::com::sun::star::datatransfer::DataFlavor& aFlavor ) throw ( ::com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
 	void				flush();
-	int					getChangeCount();
+	NSInteger			getChangeCount();
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	getTransferable() { return mxTransferable; }
 	sal_Bool			hasOwnership();
 	sal_Bool			setContents( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable > &xTransferable, id *pPasteboardWriter = NULL );
