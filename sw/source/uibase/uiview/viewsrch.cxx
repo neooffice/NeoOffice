@@ -227,7 +227,6 @@ void SwView::ExecSearch(SfxRequest& rReq, bool bNoMessage)
                     if ( pDlgWrp )
 #else	// NO_LIBO_STATIC_SEARCH_DIALOG_FIX
                     pSrchDlg = GetSearchDialog();
-fprintf( stderr, "Here 0: %p\n", pSrchDlg );
                     if (pSrchDlg)
 #endif	// NO_LIBO_STATIC_SEARCH_DIALOG_FIX
                     {
@@ -265,7 +264,6 @@ fprintf( stderr, "Here 0: %p\n", pSrchDlg );
                     if ( pDlgWrp )
 #else	// NO_LIBO_STATIC_SEARCH_DIALOG_FIX
                     pSrchDlg = GetSearchDialog();
-fprintf( stderr, "Here 1: %p\n", pSrchDlg );
                     if (pSrchDlg)
 #endif	// NO_LIBO_STATIC_SEARCH_DIALOG_FIX
                     {
@@ -337,7 +335,6 @@ fprintf( stderr, "Here 1: %p\n", pSrchDlg );
                     if ( pDlgWrp )
 #else	// NO_LIBO_STATIC_SEARCH_DIALOG_FIX
                     pSrchDlg = GetSearchDialog();
-fprintf( stderr, "Here 2: %p\n", pSrchDlg );
                     if (pSrchDlg)
 #endif	// NO_LIBO_STATIC_SEARCH_DIALOG_FIX
                     {
@@ -422,7 +419,6 @@ fprintf( stderr, "Here 2: %p\n", pSrchDlg );
                 if ( pDlgWrp )
 #else	// NO_LIBO_STATIC_SEARCH_DIALOG_FIX
                 pSrchDlg = GetSearchDialog();
-fprintf( stderr, "Here 3: %p\n", pSrchDlg );
                 if (pSrchDlg)
 #endif	// NO_LIBO_STATIC_SEARCH_DIALOG_FIX
                 {
