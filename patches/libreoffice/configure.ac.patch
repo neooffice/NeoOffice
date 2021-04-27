@@ -1,5 +1,5 @@
---- configure.ac	2015-11-25 07:55:38.000000000 -0500
-+++ configure.ac	2021-04-27 17:37:12.000000000 -0400
+--- configure.ac	2021-04-27 19:04:12.000000000 -0400
++++ configure.ac	2021-04-27 19:28:40.000000000 -0400
 @@ -538,6 +538,10 @@
  INSTROOTSUFFIX=
  SDKDIRNAME=sdk
@@ -1135,6 +1135,15 @@
  dnl Check for system mozilla headers
  dnl ===================================================================
  HAVE_NON_CONST_NPP_GETMIMEDESCRIPTION=
+@@ -8915,7 +9216,7 @@
+     ENABLE_ORCUS="TRUE"
+     AC_DEFINE(ENABLE_ORCUS)
+ 
+-    libo_CHECK_SYSTEM_MODULE([orcus],[ORCUS],[liborcus-0.8 >= 0.7.0])
++    libo_CHECK_SYSTEM_MODULE([orcus],[ORCUS],[liborcus-0.16 >= 0.16.0])
+     if test "$with_system_orcus" != "yes"; then
+         if test "$SYSTEM_BOOST" = "TRUE"; then
+             # ===========================================================
 @@ -9246,12 +9547,8 @@
  dnl raptor2: need at least 2.0.7 for CVE-2012-0037
  libo_CHECK_SYSTEM_MODULE([redland],[REDLAND],[redland >= 1.0.8 raptor2 >= 2.0.7])
