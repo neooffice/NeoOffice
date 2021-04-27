@@ -1,5 +1,5 @@
 --- configure.ac	2015-11-25 07:55:38.000000000 -0500
-+++ configure.ac	2021-02-15 18:09:23.000000000 -0500
++++ configure.ac	2021-04-27 08:47:16.000000000 -0400
 @@ -538,6 +538,10 @@
  INSTROOTSUFFIX=
  SDKDIRNAME=sdk
@@ -109,31 +109,52 @@
      AC_MSG_CHECKING([what Mac OS X SDK to use])
  
 -    for _macosx_sdk in $with_macosx_sdk 10.8 10.9 10.10 10.11; do
-+    for _macosx_sdk in $with_macosx_sdk 11.1; do
++    for _macosx_sdk in $with_macosx_sdk 11.1 11.2 11.3 11.4 11.5 11.6 11.7 11.8 11.9 ; do
          MACOSX_SDK_PATH=`xcrun --sdk macosx${_macosx_sdk} --show-sdk-path 2> /dev/null`
          if test -d "$MACOSX_SDK_PATH"; then
              with_macosx_sdk="${_macosx_sdk}"
-@@ -2743,25 +2767,16 @@
+@@ -2743,25 +2767,40 @@
      AC_MSG_RESULT([SDK $with_macosx_sdk at $MACOSX_SDK_PATH])
  
      case $with_macosx_sdk in
 -    10.8)
 -        MACOSX_SDK_VERSION=1080
--        ;;
--    10.9)
--        MACOSX_SDK_VERSION=1090
--        ;;
--    10.10)
--        MACOSX_SDK_VERSION=101000
--        ;;
--    10.11)
--        MACOSX_SDK_VERSION=101100
 +    11.1)
 +        MACOSX_SDK_VERSION=110100
++        ;;
++    11.2)
++        MACOSX_SDK_VERSION=110200
++        ;;
++    11.3)
++        MACOSX_SDK_VERSION=110300
++        ;;
++    11.4)
++        MACOSX_SDK_VERSION=110400
+         ;;
+-    10.9)
+-        MACOSX_SDK_VERSION=1090
++    11.5)
++        MACOSX_SDK_VERSION=110500
+         ;;
+-    10.10)
+-        MACOSX_SDK_VERSION=101000
++    11.6)
++        MACOSX_SDK_VERSION=110600
+         ;;
+-    10.11)
+-        MACOSX_SDK_VERSION=101100
++    11.7)
++        MACOSX_SDK_VERSION=110700
++        ;;
++    11.8)
++        MACOSX_SDK_VERSION=110800
++        ;;
++    11.9)
++        MACOSX_SDK_VERSION=110900
          ;;
      *)
 -        AC_MSG_ERROR([with-macosx-sdk $with_macosx_sdk is not a supported value, supported values are 10.8--11])
-+        AC_MSG_ERROR([with-macosx-sdk $with_macosx_sdk is not a supported value, supported values are 11.1])
++        AC_MSG_ERROR([with-macosx-sdk $with_macosx_sdk is not a supported value, supported values are 11.1 11.2 11.3 11.4 11.5 11.6 11.7 11.8 11.9])
          ;;
      esac
  
@@ -143,27 +164,48 @@
      fi
  
      if test "$with_macosx_version_max_allowed" = "" ; then
-@@ -2776,57 +2791,58 @@
+@@ -2776,57 +2815,106 @@
      MACOSX_DEPLOYMENT_TARGET="$with_macosx_version_min_required"
  
      case "$with_macosx_version_min_required" in
 -    10.8)
 -        MAC_OS_X_VERSION_MIN_REQUIRED="1080"
--        ;;
--    10.9)
--        MAC_OS_X_VERSION_MIN_REQUIRED="1090"
--        ;;
--    10.10)
--        MAC_OS_X_VERSION_MIN_REQUIRED="101000"
--        ;;
--    10.11)
--        MAC_OS_X_VERSION_MIN_REQUIRED="101100"
 +    11.1)
 +        MAC_OS_X_VERSION_MIN_REQUIRED="110100"
++        ;;
++    11.2)
++        MAC_OS_X_VERSION_MIN_REQUIRED="110200"
++        ;;
++    11.3)
++        MAC_OS_X_VERSION_MIN_REQUIRED="110300"
+         ;;
+-    10.9)
+-        MAC_OS_X_VERSION_MIN_REQUIRED="1090"
++    11.4)
++        MAC_OS_X_VERSION_MIN_REQUIRED="110400"
+         ;;
+-    10.10)
+-        MAC_OS_X_VERSION_MIN_REQUIRED="101000"
++    11.5)
++        MAC_OS_X_VERSION_MIN_REQUIRED="110500"
+         ;;
+-    10.11)
+-        MAC_OS_X_VERSION_MIN_REQUIRED="101100"
++    11.6)
++        MAC_OS_X_VERSION_MIN_REQUIRED="110600"
++        ;;
++    11.7)
++        MAC_OS_X_VERSION_MIN_REQUIRED="110700"
++        ;;
++    11.8)
++        MAC_OS_X_VERSION_MIN_REQUIRED="110800"
++        ;;
++    11.9)
++        MAC_OS_X_VERSION_MIN_REQUIRED="110900"
          ;;
      *)
 -        AC_MSG_ERROR([with-macosx-version-min-required $with_macosx_version_min_required is not a supported value, supported values are 10.8--11])
-+        AC_MSG_ERROR([with-macosx-version-min-required $with_macosx_version_min_required is not a supported value, supported values are 11.1])
++        AC_MSG_ERROR([with-macosx-version-min-required $with_macosx_version_min_required is not a supported value, supported values are 11.1 11.2 11.3 11.4 11.5 11.6 11.7 11.8 11.9])
          ;;
      esac
  
@@ -213,25 +255,46 @@
      case "$with_macosx_version_max_allowed" in
 -    10.8)
 -        MAC_OS_X_VERSION_MAX_ALLOWED="1080"
--        ;;
--    10.9)
--        MAC_OS_X_VERSION_MAX_ALLOWED="1090"
--        ;;
--    10.10)
--        MAC_OS_X_VERSION_MAX_ALLOWED="101000"
--        ;;
--    10.11)
--        MAC_OS_X_VERSION_MAX_ALLOWED="101100"
 +    11.1)
 +        MAC_OS_X_VERSION_MAX_ALLOWED="110100"
++        ;;
++    11.2)
++        MAC_OS_X_VERSION_MAX_REQUIRED="110200"
+         ;;
+-    10.9)
+-        MAC_OS_X_VERSION_MAX_ALLOWED="1090"
++    11.3)
++        MAC_OS_X_VERSION_MAX_REQUIRED="110300"
+         ;;
+-    10.10)
+-        MAC_OS_X_VERSION_MAX_ALLOWED="101000"
++    11.4)
++        MAC_OS_X_VERSION_MAX_REQUIRED="110400"
+         ;;
+-    10.11)
+-        MAC_OS_X_VERSION_MAX_ALLOWED="101100"
++    11.5)
++        MAC_OS_X_VERSION_MAX_REQUIRED="110500"
++        ;;
++    11.6)
++        MAC_OS_X_VERSION_MAX_REQUIRED="110600"
++        ;;
++    11.7)
++        MAC_OS_X_VERSION_MAX_REQUIRED="110700"
++        ;;
++    11.8)
++        MAC_OS_X_VERSION_MAX_REQUIRED="110800"
++        ;;
++    11.9)
++        MAC_OS_X_VERSION_MAX_REQUIRED="110900"
          ;;
      *)
 -        AC_MSG_ERROR([with-macosx-version-max-allowed $with_macosx_version_max_allowed is not a supported value, supported values are 10.8--11])
-+        AC_MSG_ERROR([with-macosx-version-max-allowed $with_macosx_version_max_allowed is not a supported value, supported values are 11.1])
++        AC_MSG_ERROR([with-macosx-version-max-allowed $with_macosx_version_max_allowed is not a supported value, supported values are 11.1 11.2 11.3 11.4 11.5 11.6 11.7 11.8 11.9])
          ;;
      esac
  
-@@ -3703,6 +3719,64 @@
+@@ -3703,6 +3791,64 @@
  UNOWINREG_DLL="185d60944ea767075d27247c3162b3bc-unowinreg.dll"
  AC_SUBST(UNOWINREG_DLL)
  
@@ -296,7 +359,7 @@
  #
  # prefix C with ccache if needed
  #
-@@ -3974,11 +4048,14 @@
+@@ -3974,11 +4120,14 @@
      P_SEP=:
  
      case "$host_cpu" in
@@ -316,7 +379,7 @@
          ;;
      i*86)
          AC_MSG_ERROR([Can't build 64-bit code in 32-bit OS])
-@@ -4421,6 +4498,7 @@
+@@ -4421,6 +4570,7 @@
          solenv/bin/getcompver.awk \
          solenv/inc/langlist.mk \
          android/experimental/LOAndroid3/AndroidManifest.xml.in \
@@ -324,7 +387,7 @@
          config_host.mk.in \
          Makefile.in \
          lo.xcent.in \
-@@ -5862,8 +5940,170 @@
+@@ -5862,8 +6012,170 @@
      AC_LANG_POP([C++])
  fi
  
@@ -495,7 +558,7 @@
  
  dnl ===================================================================
  dnl Identify the C++ library
-@@ -7543,7 +7783,7 @@
+@@ -7543,7 +7855,7 @@
  dnl ===================================================================
  # libcmis requires curl and we can't build curl for iOS
  if test $_os != iOS; then
@@ -504,7 +567,7 @@
      ENABLE_CMIS=TRUE
  else
      ENABLE_CMIS=
-@@ -7574,7 +7814,7 @@
+@@ -7574,7 +7886,7 @@
  dnl ===================================================================
  dnl Check for system cppunit
  dnl ===================================================================
@@ -513,7 +576,7 @@
      libo_CHECK_SYSTEM_MODULE([cppunit],[CPPUNIT],[cppunit >= 1.12.0])
  fi
  
-@@ -7741,18 +7981,25 @@
+@@ -7741,18 +8053,25 @@
  AC_SUBST(XMLLINT)
  
  # =====================================================================
@@ -546,7 +609,7 @@
      fi
  fi
  AC_SUBST(PYTHON_FOR_BUILD)
-@@ -7777,10 +8024,6 @@
+@@ -7777,10 +8096,6 @@
      elif test $build_os = cygwin; then
          dnl When building on Windows we don't attempt to use any installed
          dnl "system"  Python.
@@ -557,7 +620,7 @@
          AC_MSG_RESULT([fully internal])
          enable_python=internal
      elif test "$cross_compiling" = yes; then
-@@ -7789,8 +8032,10 @@
+@@ -7789,8 +8104,10 @@
      else
          # Unset variables set by the above AM_PATH_PYTHON so that
          # we actually do check anew.
@@ -568,7 +631,7 @@
          if test "$PYTHON" = ":"; then
              if test -z "$PYTHON_FOR_BUILD"; then
                  AC_MSG_RESULT([fully internal])
-@@ -7813,6 +8058,9 @@
+@@ -7813,6 +8130,9 @@
      ;;
  system)
      AC_MSG_RESULT([system])
@@ -578,7 +641,7 @@
      ;;
  *)
      AC_MSG_ERROR([Incorrect --enable-python option])
-@@ -7824,17 +8072,6 @@
+@@ -7824,17 +8144,6 @@
  fi
  
  if test $enable_python = system; then
@@ -596,7 +659,7 @@
      if test -n "$PYTHON_CFLAGS" -a -n "$PYTHON_LIBS"; then
          # Fallback: Accept these in the environment, or as set above
          # for MacOSX.
-@@ -7852,6 +8089,9 @@
+@@ -7852,6 +8161,9 @@
          if test -z "$PKG_CONFIG"; then
              PYTHON_CFLAGS="-I$python_include"
              PYTHON_LIBS="-L$python_libdir -lpython$python_version $python_libs"
@@ -606,7 +669,7 @@
          elif $PKG_CONFIG --exists python-$python_version; then
              PYTHON_CFLAGS="`$PKG_CONFIG --cflags python-$python_version`"
              PYTHON_LIBS="`$PKG_CONFIG --libs python-$python_version` $python_libs"
-@@ -7859,27 +8099,10 @@
+@@ -7859,27 +8171,10 @@
              PYTHON_CFLAGS="-I$python_include"
              PYTHON_LIBS="-L$python_libdir -lpython$python_version $python_libs"
          fi
@@ -636,7 +699,7 @@
          AC_MSG_CHECKING([for python version])
          AS_IF([test -n "$PYTHON_VERSION"],
                [AC_MSG_RESULT([$PYTHON_VERSION])],
-@@ -7887,62 +8110,99 @@
+@@ -7887,62 +8182,99 @@
                 AC_MSG_ERROR([no usable python found])])
          test -n "$PYTHON_CFLAGS" && break
      fi
@@ -765,7 +828,7 @@
      ;;
  no)
      DISABLE_PYTHON=TRUE
-@@ -8179,7 +8439,9 @@
+@@ -8179,7 +8511,9 @@
  dnl ===================================================================
  dnl Check for PostgreSQL stuff
  dnl ===================================================================
@@ -775,7 +838,7 @@
      SCPDEFS="$SCPDEFS -DWITH_POSTGRESQL_SDBC"
  
      if test "$with_krb5" = "yes" -a "$enable_openssl" = "no"; then
-@@ -8189,9 +8451,9 @@
+@@ -8189,9 +8523,9 @@
          AC_MSG_ERROR([GSSAPI needs OpenSSL, but --disable-openssl was given.])
      fi
  
@@ -787,7 +850,7 @@
          SYSTEM_POSTGRESQL=TRUE
          if test "$_os" = Darwin; then
              supp_path=''
-@@ -8200,11 +8462,19 @@
+@@ -8200,11 +8534,19 @@
              done
          fi
          AC_PATH_PROG(PGCONFIG, pg_config, ,$PATH$pg_supp_path)
@@ -811,7 +874,7 @@
      else
          # if/when anything else than PostgreSQL uses Kerberos,
          # move this out of `test "x$enable_postgresql_sdbc" != "xno"'
-@@ -8212,16 +8482,18 @@
+@@ -8212,16 +8554,18 @@
          WITH_GSSAPI=
          case "$_os" in
          Darwin)
@@ -833,7 +896,7 @@
                  KRB5_LIBS="$KRB5_LIBS $LIBS"
                  LIBS=$save_LIBS
              fi
-@@ -8286,17 +8558,21 @@
+@@ -8286,17 +8630,21 @@
  
          if test -n "$with_libpq_path"; then
              SYSTEM_POSTGRESQL=TRUE
@@ -857,7 +920,7 @@
      if test "${SYSTEM_POSTGRESQL}" = "TRUE"; then
          AC_MSG_NOTICE([checking system PostgreSQL prerequisites])
          save_CFLAGS=$CFLAGS
-@@ -8312,6 +8588,8 @@
+@@ -8312,6 +8660,8 @@
          LIBS=$save_LIBS
      fi
      BUILD_POSTGRESQL_SDBC=TRUE
@@ -866,7 +929,7 @@
  fi
  AC_SUBST(WITH_KRB5)
  AC_SUBST(WITH_GSSAPI)
-@@ -8325,8 +8603,8 @@
+@@ -8325,8 +8675,8 @@
  dnl ===================================================================
  dnl Check for Firebird stuff
  dnl ===================================================================
@@ -877,7 +940,7 @@
      SCPDEFS="$SCPDEFS -DWITH_FIREBIRD_SDBC"
  
      dnl ===================================================================
-@@ -8339,51 +8617,59 @@
+@@ -8339,51 +8689,59 @@
          AC_PATH_PROG(FIREBIRDCONFIG, [fb_config])
          if test -z "$FIREBIRDCONFIG"; then
              AC_MSG_NOTICE([No fb_config -- using pkg-config])
@@ -947,7 +1010,7 @@
              else
                  SYSTEM_LIBATOMIC_OPS=
                  LIBATOMIC_OPS_CFLAGS="-I${WORKDIR}/UnpackedTarball/libatomic_ops/include"
-@@ -8394,11 +8680,26 @@
+@@ -8394,11 +8752,26 @@
  
          AC_MSG_RESULT([internal])
          SYSTEM_FIREBIRD=
@@ -977,7 +1040,7 @@
      fi
  fi
  AC_SUBST(ENABLE_FIREBIRD_SDBC)
-@@ -8408,8 +8709,8 @@
+@@ -8408,8 +8781,8 @@
  AC_SUBST(SYSTEM_FIREBIRD)
  AC_SUBST(FIREBIRD_CFLAGS)
  AC_SUBST(FIREBIRD_LIBS)
@@ -988,7 +1051,7 @@
  
  dnl ===================================================================
  dnl Check for system curl
-@@ -8484,15 +8785,11 @@
+@@ -8484,15 +8857,11 @@
  if test "$with_system_boost" = "yes"; then
      AC_MSG_RESULT([external])
      SYSTEM_BOOST=TRUE
@@ -1007,7 +1070,7 @@
      AC_LANG_PUSH([C++])
      save_CXXFLAGS=$CXXFLAGS
      CXXFLAGS="$CXXFLAGS $BOOST_CPPFLAGS $CXXFLAGS_CXX11"
-@@ -8500,28 +8797,21 @@
+@@ -8500,28 +8869,21 @@
         [AC_MSG_ERROR(boost/shared_ptr.hpp not found. install boost)], [])
      AC_CHECK_HEADER(boost/spirit/include/classic_core.hpp, [],
         [AC_MSG_ERROR(boost/spirit/include/classic_core.hpp not found. install boost >= 1.36)], [])
@@ -1045,7 +1108,7 @@
  fi
  AC_SUBST(SYSTEM_BOOST)
  
-@@ -8648,6 +8938,19 @@
+@@ -8648,6 +9010,19 @@
  AC_SUBST(MSVC80_DLL_PATH)
  
  dnl ===================================================================
@@ -1065,7 +1128,7 @@
  dnl Check for TLS/SSL and cryptographic implementation to use
  dnl ===================================================================
  AC_MSG_CHECKING([which TLS/SSL and cryptographic implementation to use])
-@@ -8656,53 +8959,42 @@
+@@ -8656,53 +9031,42 @@
      openssl)
          AC_DEFINE(USE_TLS_OPENSSL)
          TLS=OPENSSL
@@ -1129,7 +1192,7 @@
  dnl Check for system mozilla headers
  dnl ===================================================================
  HAVE_NON_CONST_NPP_GETMIMEDESCRIPTION=
-@@ -9246,12 +9538,8 @@
+@@ -9246,12 +9610,8 @@
  dnl raptor2: need at least 2.0.7 for CVE-2012-0037
  libo_CHECK_SYSTEM_MODULE([redland],[REDLAND],[redland >= 1.0.8 raptor2 >= 2.0.7])
  if test "$with_system_redland" = "yes"; then
@@ -1142,7 +1205,7 @@
  else
      RAPTOR_MAJOR="0"
      RASQAL_MAJOR="3"
-@@ -11843,7 +12131,7 @@
+@@ -11843,7 +12203,7 @@
  dnl Test whether to build libpng or rely on the system version
  dnl ===================================================================
  
@@ -1151,7 +1214,7 @@
  
  dnl ===================================================================
  dnl Check for runtime JVM search path
-@@ -12819,6 +13107,7 @@
+@@ -12819,6 +13179,7 @@
                   ios/lo.xcconfig])
  AC_CONFIG_HEADERS([config_host/config_buildid.h])
  AC_CONFIG_HEADERS([config_host/config_clang.h])
