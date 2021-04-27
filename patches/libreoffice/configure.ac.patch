@@ -259,34 +259,34 @@
 +        MAC_OS_X_VERSION_MAX_ALLOWED="110100"
 +        ;;
 +    11.2)
-+        MAC_OS_X_VERSION_MAX_REQUIRED="110200"
++        MAC_OS_X_VERSION_MAX_ALLOWED="110200"
          ;;
 -    10.9)
 -        MAC_OS_X_VERSION_MAX_ALLOWED="1090"
 +    11.3)
-+        MAC_OS_X_VERSION_MAX_REQUIRED="110300"
++        MAC_OS_X_VERSION_MAX_ALLOWED="110300"
          ;;
 -    10.10)
 -        MAC_OS_X_VERSION_MAX_ALLOWED="101000"
 +    11.4)
-+        MAC_OS_X_VERSION_MAX_REQUIRED="110400"
++        MAC_OS_X_VERSION_MAX_ALLOWED="110400"
          ;;
 -    10.11)
 -        MAC_OS_X_VERSION_MAX_ALLOWED="101100"
 +    11.5)
-+        MAC_OS_X_VERSION_MAX_REQUIRED="110500"
++        MAC_OS_X_VERSION_MAX_ALLOWED="110500"
 +        ;;
 +    11.6)
-+        MAC_OS_X_VERSION_MAX_REQUIRED="110600"
++        MAC_OS_X_VERSION_MAX_ALLOWED="110600"
 +        ;;
 +    11.7)
-+        MAC_OS_X_VERSION_MAX_REQUIRED="110700"
++        MAC_OS_X_VERSION_MAX_ALLOWED="110700"
 +        ;;
 +    11.8)
-+        MAC_OS_X_VERSION_MAX_REQUIRED="110800"
++        MAC_OS_X_VERSION_MAX_ALLOWED="110800"
 +        ;;
 +    11.9)
-+        MAC_OS_X_VERSION_MAX_REQUIRED="110900"
++        MAC_OS_X_VERSION_MAX_ALLOWED="110900"
          ;;
      *)
 -        AC_MSG_ERROR([with-macosx-version-max-allowed $with_macosx_version_max_allowed is not a supported value, supported values are 10.8--11])
