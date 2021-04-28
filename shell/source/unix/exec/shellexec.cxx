@@ -209,6 +209,11 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
             {
                 throw css::lang::IllegalArgumentException(
                     "XSystemShellExecute.execute, cannot process <" + aCommand + ">", {}, 0);
+            } else if (pathname.endsWithIgnoreAsciiCase(".class")
+                       || pathname.endsWithIgnoreAsciiCase(".fileloc")
+                       || pathname.endsWithIgnoreAsciiCase(".jar"))
+            {
+                dir = true;
             }
         }
 #endif	// !NO_LIBO_OPEN_EXECUTABLE_FIX
