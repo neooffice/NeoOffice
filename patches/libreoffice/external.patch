@@ -405,3 +405,26 @@
 + 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
 + 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
 + 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* \
+--- liborcus/include.patch.0	2020-12-17 16:59:38.000000000 -0500
++++ liborcus/include.patch.0	2021-04-28 19:40:47.000000000 -0400
+@@ -28,3 +28,20 @@
+  
+  using namespace std;
+  
++--- src/parser/types.cpp
+++++ src/parser/types.cpp
++@@ -13,6 +13,14 @@
++ #include <sstream>
++ #include <mdds/sorted_string_map.hpp>
++ 
+++#if __cplusplus <= 201103L
+++namespace std
+++{
+++template< class T >
+++using underlying_type_t = typename underlying_type<T>::type;
+++}
+++#endif
+++
++ namespace orcus {
++ 
++ const xmlns_id_t XMLNS_UNKNOWN_ID = nullptr;
