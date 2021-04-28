@@ -1,95 +1,173 @@
---- RepositoryExternal.mk	2015-11-25 07:55:38.000000000 -0500
-+++ RepositoryExternal.mk	2021-04-28 08:16:39.000000000 -0400
-@@ -646,6 +646,40 @@
+--- RepositoryExternal.mk	2021-04-28 08:49:32.000000000 -0400
++++ RepositoryExternal.mk	2021-04-28 08:53:10.000000000 -0400
+@@ -630,7 +630,7 @@
  
- endef
+ ifneq ($(SYSTEM_BOOST),)
  
-+define gb_LinkTarget__use_boost_filesystem
-+$(call gb_LinkTarget_set_include,$(1),\
-+	$$(INCLUDE) \
-+	$(BOOST_CPPFLAGS) \
-+)
-+
-+$(call gb_LinkTarget_add_ldflags,$(1),\
-+	$(BOOST_LDFLAGS) \
-+)
-+
-+$(call gb_LinkTarget_add_libs,$(1),\
-+	$(BOOST_FILESYSTEM_LIB) \
-+)
-+
-+endef
-+
-+gb_ExternalProject__use_boost_filesystem :=
-+
-+define gb_LinkTarget__use_boost_system
-+$(call gb_LinkTarget_set_include,$(1),\
-+	$$(INCLUDE) \
-+	$(BOOST_CPPFLAGS) \
-+)
-+
-+$(call gb_LinkTarget_add_ldflags,$(1),\
-+	$(BOOST_LDFLAGS) \
-+)
-+
-+$(call gb_LinkTarget_add_libs,$(1),\
-+	$(BOOST_SYSTEM_LIB) \
-+)
-+
-+endef
-+
- define gb_LinkTarget__use_boost_iostreams
+-define gb_LinkTarget__use_boostdatetime
++define gb_LinkTarget__use_boost_lib
  $(call gb_LinkTarget_set_include,$(1),\
  	$$(INCLUDE) \
-@@ -712,18 +746,44 @@
+ 	$(BOOST_CPPFLAGS) \
+@@ -640,43 +640,36 @@
+ 	$(BOOST_LDFLAGS) \
  )
  
- $(call gb_LinkTarget_use_static_libraries,$(1),\
--	boostdatetime \
-+	boost_date_time \
- )
+-$(call gb_LinkTarget_add_libs,$(1),\
+-	$(BOOST_DATE_TIME_LIB) \
+-)
++$(call gb_LinkTarget_add_libs,$(1),$(2))
  
  endef
  
 -define gb_LinkTarget__use_boost_iostreams
+-$(call gb_LinkTarget_set_include,$(1),\
+-	$$(INCLUDE) \
+-	$(BOOST_CPPFLAGS) \
+-)
++define gb_LinkTarget__use_boost_locale
++$(call gb_LinkTarget__use_boost_lib,$(1),$(BOOST_LOCALE_LIB))
+ 
+-$(call gb_LinkTarget_add_ldflags,$(1),\
+-	$(BOOST_LDFLAGS) \
+-)
++endef
+ 
+-$(call gb_LinkTarget_add_libs,$(1),\
+-	$(BOOST_IOSTREAMS_LIB) \
+-)
++define gb_LinkTarget__use_boostdatetime
++$(call gb_LinkTarget__use_boost_lib,$(1),$(BOOST_DATE_TIME_LIB))
+ 
+ endef
+ 
+-gb_ExternalProject__use_boost_iostreams :=
 +define gb_LinkTarget__use_boost_filesystem
++$(call gb_LinkTarget__use_boost_lib,$(1),$(BOOST_FILESYSTEM_LIB))
+ 
+-define gb_LinkTarget__use_boost_system
+-$(call gb_LinkTarget_set_include,$(1),\
+-	$$(INCLUDE) \
+-	$(BOOST_CPPFLAGS) \
+-)
++endef
+ 
+-$(call gb_LinkTarget_add_ldflags,$(1),\
+-	$(BOOST_LDFLAGS) \
+-)
++gb_ExternalProject__use_boost_filesystem :=
+ 
+-$(call gb_LinkTarget_add_libs,$(1),\
+-	$(BOOST_SYSTEM_LIB) \
+-)
++define gb_LinkTarget__use_boost_iostreams
++$(call gb_LinkTarget__use_boost_lib,$(1),$(BOOST_IOSTREAMS_LIB))
++
++endef
++
++gb_ExternalProject__use_boost_iostreams :=
++
++define gb_LinkTarget__use_boost_system
++$(call gb_LinkTarget__use_boost_lib,$(1),$(BOOST_SYSTEM_LIB))
+ 
+ endef
+ 
+@@ -694,37 +687,44 @@
+ 
+ else # !SYSTEM_BOOST
+ 
+-ifeq ($(OS),WNT)
+-define gb_LinkTarget__use_boostthread
++define gb_LinkTarget__use_boost_lib
  $(call gb_LinkTarget_add_defs,$(1),\
  	-DBOOST_ALL_NO_LIB \
  )
  
- $(call gb_LinkTarget_use_static_libraries,$(1),\
--	boost_iostreams \
-+	boost_filesystem \
-+)
+-$(call gb_LinkTarget_use_static_libraries,$(1),\
+-	boostthread \
++$(call gb_LinkTarget_use_static_libraries,$(1),$(2))
 +
 +endef
 +
-+define gb_ExternalProject__use_boost_filesystem
-+$(call gb_ExternalProject_use_static_libraries,$(1),boost_filesystem)
++define gb_LinkTarget__use_boost_locale
++$(call gb_LinkTarget__use_boost_lib,$(1),boost_locale)
++$(call gb_LinkTarget_add_libs,$(1),\
++	$(if $(filter $(OS),MACOSX),-liconv) \
+ )
++
 +endef
 +
-+define gb_LinkTarget__use_boost_system
-+$(call gb_LinkTarget_add_defs,$(1),\
-+	-DBOOST_ALL_NO_LIB \
-+)
++define gb_LinkTarget__use_boostthread
++$(call gb_LinkTarget__use_boost_lib,$(1),boostthread)
 +
-+$(call gb_LinkTarget_use_static_libraries,$(1),\
-+	boost_system \
-+)
-+
+ endef
+-endif
+ 
+ define gb_LinkTarget__use_boostdatetime
+-$(call gb_LinkTarget_add_defs,$(1),\
+-	-DBOOST_ALL_NO_LIB \
+-)
++$(call gb_LinkTarget__use_boost_lib,$(1),boost_date_time)
+ 
+-$(call gb_LinkTarget_use_static_libraries,$(1),\
+-	boostdatetime \
+-)
 +endef
 +
 +define gb_LinkTarget__use_boost_filesystem
-+$(call gb_LinkTarget_add_defs,$(1),\
-+	-DBOOST_ALL_NO_LIB \
-+)
-+
-+$(call gb_LinkTarget_use_static_libraries,$(1),\
-+	boost_filesystem \
- )
++$(call gb_LinkTarget__use_boost_lib,$(1),boost_filesystem)
  
  endef
-@@ -778,11 +838,11 @@
+ 
+-define gb_LinkTarget__use_boost_iostreams
+-$(call gb_LinkTarget_add_defs,$(1),\
+-	-DBOOST_ALL_NO_LIB \
+-)
++define gb_ExternalProject__use_boost_filesystem
++$(call gb_ExternalProject_use_static_libraries,$(1),boost_filesystem)
++endef
+ 
+-$(call gb_LinkTarget_use_static_libraries,$(1),\
+-	boost_iostreams \
+-)
++define gb_LinkTarget__use_boost_iostreams
++$(call gb_LinkTarget__use_boost_lib,$(1),boost_iostreams)
+ 
+ endef
+ 
+@@ -733,13 +733,7 @@
+ endef
+ 
+ define gb_LinkTarget__use_boost_system
+-$(call gb_LinkTarget_add_defs,$(1),\
+-	-DBOOST_ALL_NO_LIB \
+-)
+-
+-$(call gb_LinkTarget_use_static_libraries,$(1),\
+-	boost_system \
+-)
++$(call gb_LinkTarget__use_boost_lib,$(1),boost_system)
+ 
+ endef
+ 
+@@ -750,7 +744,7 @@
+ define gb_LinkTarget__use_boost_headers
+ $(call gb_LinkTarget_use_unpacked,$(1),boost)
+ $(call gb_LinkTarget_set_include,$(1),\
+-	-I$(call gb_UnpackedTarball_get_dir,boost) \
++	$(BOOST_CPPFLAGS) \
+ 	$$(INCLUDE) \
+ )
+ 
+@@ -760,6 +754,7 @@
+ $(call gb_ExternalProject_get_preparation_target,$(1)) :| $(call gb_UnpackedTarball_get_final_target,boost)
+ 
+ endef
++
+ endif # SYSTEM_BOOST
+ 
+ 
+@@ -778,11 +773,11 @@
  
  define gb_LinkTarget__use_cmis
  $(call gb_LinkTarget_set_include,$(1),\
@@ -103,7 +181,7 @@
  )
  
  endef
-@@ -1223,8 +1283,9 @@
+@@ -1223,8 +1218,9 @@
  $(call gb_LinkTarget_use_packages,$(1),raptor rasqal redland)
  
  $(call gb_LinkTarget_add_libs,$(1),\
@@ -114,7 +192,7 @@
  )
  endif
  
-@@ -2487,6 +2548,8 @@
+@@ -2487,6 +2483,8 @@
  
  endef
  
@@ -123,7 +201,7 @@
  else # !SYSTEM_LIBPNG
  
  define gb_LinkTarget__use_png
-@@ -2495,12 +2558,19 @@
+@@ -2495,12 +2493,19 @@
  	$$(INCLUDE) \
  )
  $(call gb_LinkTarget_use_static_libraries,$(1),\
@@ -144,7 +222,7 @@
  endif # !SYSTEM_LIBPNG
  
  
-@@ -2727,6 +2797,38 @@
+@@ -2727,6 +2732,38 @@
  endif # SYSTEM_OPENLDAP
  
  
@@ -183,7 +261,7 @@
  ifeq ($(ENABLE_FIREBIRD_SDBC),TRUE)
  
  ifneq ($(SYSTEM_FIREBIRD),)
-@@ -2740,38 +2842,33 @@
+@@ -2740,38 +2777,33 @@
  
  endef
  
@@ -230,7 +308,7 @@
  
  # endef
  
-@@ -2781,7 +2878,7 @@
+@@ -2781,7 +2813,7 @@
  
  gb_LinkTarget__use_firebird :=
  # gb_LinkTarget__use_atomic_ops :=
@@ -239,7 +317,7 @@
  
  endif # ENABLE_FIREBIRD_SDBC
  
-@@ -3042,7 +3139,7 @@
+@@ -3042,7 +3074,7 @@
  
  define gb_LinkTarget__use_python_headers
  $(call gb_LinkTarget_add_defs,$(1),\
@@ -248,7 +326,7 @@
  )
  
  $(call gb_LinkTarget_set_include,$(1),\
-@@ -3067,9 +3164,8 @@
+@@ -3067,9 +3099,8 @@
  	python3 \
  ))
  
@@ -259,7 +337,7 @@
  $(call gb_LinkTarget_set_include,$(1),\
  	-I$(call gb_UnpackedTarball_get_dir,python3) \
  	-I$(call gb_UnpackedTarball_get_dir,python3)/PC \
-@@ -3089,7 +3185,7 @@
+@@ -3089,7 +3120,7 @@
  
  ifeq ($(OS),WNT)
  $(call gb_LinkTarget_add_libs,$(1),\
@@ -268,7 +346,7 @@
  )
  else ifeq ($(OS),MACOSX)
  $(call gb_LinkTarget_add_libs,$(1),\
-@@ -3104,6 +3200,12 @@
+@@ -3104,6 +3135,12 @@
  
  endef
  
@@ -281,7 +359,7 @@
  endif # SYSTEM_PYTHON
  
  # ORCUS
-@@ -3125,35 +3227,78 @@
+@@ -3125,35 +3162,78 @@
  
  else # !SYSTEM_LIBORCUS
  
@@ -292,12 +370,11 @@
 +	orcus-parser \
 +))
 +
- define gb_LinkTarget__use_orcus
--$(call gb_LinkTarget_use_external_project,$(1),liborcus)
- $(call gb_LinkTarget_set_include,$(1),\
- 	-I$(call gb_UnpackedTarball_get_dir,liborcus/include) \
- 	$$(INCLUDE) \
- )
++define gb_LinkTarget__use_orcus
++$(call gb_LinkTarget_set_include,$(1),\
++	-I$(call gb_UnpackedTarball_get_dir,liborcus/include) \
++	$$(INCLUDE) \
++)
 +
 +$(call gb_LinkTarget_use_libraries,$(1),\
 +	orcus \
@@ -323,13 +400,14 @@
 +	liborcus \
 +))
 +
-+define gb_LinkTarget__use_orcus
+ define gb_LinkTarget__use_orcus
+-$(call gb_LinkTarget_use_external_project,$(1),liborcus)
 +$(call gb_LinkTarget_use_package,$(1),liborcus)
 +
-+$(call gb_LinkTarget_set_include,$(1),\
-+	-I$(call gb_UnpackedTarball_get_dir,liborcus/include) \
-+	$$(INCLUDE) \
-+)
+ $(call gb_LinkTarget_set_include,$(1),\
+ 	-I$(call gb_UnpackedTarball_get_dir,liborcus/include) \
+ 	$$(INCLUDE) \
+ )
 +
  $(call gb_LinkTarget_add_libs,$(1),\
 -	$(call gb_UnpackedTarball_get_dir,liborcus)/src/liborcus/.libs/liborcus-0.8$(gb_StaticLibrary_PLAINEXT) \
