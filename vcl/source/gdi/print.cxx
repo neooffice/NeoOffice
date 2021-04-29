@@ -128,10 +128,6 @@ PrinterOptions::PrinterOptions() :
 {
 }
 
-PrinterOptions::~PrinterOptions()
-{
-}
-
 #define PROPERTYNAME_REDUCETRANSPARENCY                 OUString("ReduceTransparency")
 #define PROPERTYNAME_REDUCEDTRANSPARENCYMODE            OUString("ReducedTransparencyMode")
 #define PROPERTYNAME_REDUCEGRADIENTS                    OUString("ReduceGradients")
@@ -381,20 +377,6 @@ QueueInfo::QueueInfo()
 {
     mnStatus    = 0;
     mnJobs      = 0;
-}
-
-QueueInfo::QueueInfo( const QueueInfo& rInfo ) :
-    maPrinterName( rInfo.maPrinterName ),
-    maDriver( rInfo.maDriver ),
-    maLocation( rInfo.maLocation ),
-    maComment( rInfo.maComment ),
-    mnStatus( rInfo.mnStatus ),
-    mnJobs( rInfo.mnJobs )
-{
-}
-
-QueueInfo::~QueueInfo()
-{
 }
 
 bool QueueInfo::operator==( const QueueInfo& rInfo ) const

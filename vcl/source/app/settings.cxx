@@ -490,10 +490,6 @@ MouseSettings::MouseSettings()
 {
 }
 
-MouseSettings::~MouseSettings()
-{
-}
-
 void MouseSettings::CopyData()
 {
     // copy if other references exist
@@ -775,10 +771,6 @@ void ImplStyleData::SetStandardStyles()
 
 StyleSettings::StyleSettings()
 : mpData(boost::make_shared<ImplStyleData>())
-{
-}
-
-StyleSettings::~StyleSettings()
 {
 }
 
@@ -2416,10 +2408,6 @@ MiscSettings::MiscSettings()
 {
 }
 
-MiscSettings::~MiscSettings()
-{
-}
-
 void MiscSettings::CopyData()
 {
     // copy if other references exist
@@ -2620,10 +2608,6 @@ HelpSettings::HelpSettings()
 {
 }
 
-HelpSettings::~HelpSettings()
-{
-}
-
 void HelpSettings::CopyData()
 {
     // copy if other references exist
@@ -2719,15 +2703,6 @@ ImplAllSettingsData::~ImplAllSettingsData()
 
 AllSettings::AllSettings()
 : mpData(boost::make_shared<ImplAllSettingsData>())
-{
-}
-
-AllSettings::AllSettings( const AllSettings& rSet )
-{
-    mpData = rSet.mpData;
-}
-
-AllSettings::~AllSettings()
 {
 }
 
