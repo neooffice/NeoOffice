@@ -58,3 +58,126 @@
      Cocoa \
      Carbon \
      CoreFoundation \
+--- source/app/IconThemeScanner.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/app/IconThemeScanner.cxx	2021-04-29 17:10:53.000000000 -0400
+@@ -170,9 +170,6 @@
+     return url;
+ }
+ 
+-IconThemeScanner::~IconThemeScanner()
+-{;}
+-
+ namespace
+ {
+     class SameTheme :
+--- source/app/settings.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/app/settings.cxx	2021-04-29 17:10:02.000000000 -0400
+@@ -483,10 +483,6 @@
+ {
+ }
+ 
+-MouseSettings::~MouseSettings()
+-{
+-}
+-
+ void MouseSettings::CopyData()
+ {
+     // copy if other references exist
+@@ -771,10 +767,6 @@
+ {
+ }
+ 
+-StyleSettings::~StyleSettings()
+-{
+-}
+-
+ void
+ StyleSettings::SetFaceColor( const Color& rColor )
+ {
+@@ -2409,10 +2401,6 @@
+ {
+ }
+ 
+-MiscSettings::~MiscSettings()
+-{
+-}
+-
+ void MiscSettings::CopyData()
+ {
+     // copy if other references exist
+@@ -2613,10 +2601,6 @@
+ {
+ }
+ 
+-HelpSettings::~HelpSettings()
+-{
+-}
+-
+ void HelpSettings::CopyData()
+ {
+     // copy if other references exist
+@@ -2715,15 +2699,6 @@
+ {
+ }
+ 
+-AllSettings::AllSettings( const AllSettings& rSet )
+-{
+-    mpData = rSet.mpData;
+-}
+-
+-AllSettings::~AllSettings()
+-{
+-}
+-
+ void AllSettings::CopyData()
+ {
+     // copy if other references exist
+--- source/gdi/print.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/gdi/print.cxx	2021-04-29 17:06:53.000000000 -0400
+@@ -115,10 +115,6 @@
+ {
+ }
+ 
+-PrinterOptions::~PrinterOptions()
+-{
+-}
+-
+ #define PROPERTYNAME_REDUCETRANSPARENCY                 OUString("ReduceTransparency")
+ #define PROPERTYNAME_REDUCEDTRANSPARENCYMODE            OUString("ReducedTransparencyMode")
+ #define PROPERTYNAME_REDUCEGRADIENTS                    OUString("ReduceGradients")
+@@ -362,20 +358,6 @@
+     mnJobs      = 0;
+ }
+ 
+-QueueInfo::QueueInfo( const QueueInfo& rInfo ) :
+-    maPrinterName( rInfo.maPrinterName ),
+-    maDriver( rInfo.maDriver ),
+-    maLocation( rInfo.maLocation ),
+-    maComment( rInfo.maComment ),
+-    mnStatus( rInfo.mnStatus ),
+-    mnJobs( rInfo.mnJobs )
+-{
+-}
+-
+-QueueInfo::~QueueInfo()
+-{
+-}
+-
+ bool QueueInfo::operator==( const QueueInfo& rInfo ) const
+ {
+     return
+--- source/window/keyevent.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/window/keyevent.cxx	2021-04-29 17:04:44.000000000 -0400
+@@ -22,12 +22,6 @@
+ #include <tools/debug.hxx>
+ #include <vcl/event.hxx>
+ 
+-KeyEvent::KeyEvent (const KeyEvent& rKeyEvent) :
+-    maKeyCode (rKeyEvent.maKeyCode),
+-    mnRepeat  (rKeyEvent.mnRepeat),
+-    mnCharCode(rKeyEvent.mnCharCode)
+-{}
+-
+ KeyEvent KeyEvent::LogicalTextDirectionality (TextDirectionality eMode) const
+ {
+     KeyEvent aClone(*this);
