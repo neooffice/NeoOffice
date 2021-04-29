@@ -100,8 +100,6 @@ private:
 
 public:
                                QueueInfo();
-                               QueueInfo( const QueueInfo& rInfo );
-                               ~QueueInfo();
 
     const OUString&            GetPrinterName() const { return maPrinterName; }
     const OUString&            GetDriver() const { return maDriver; }
@@ -161,7 +159,6 @@ private:
 public:
 
                                 PrinterOptions();
-                                ~PrinterOptions();
 
     bool                        IsReduceTransparency() const { return mbReduceTransparency; }
     void                        SetReduceTransparency( bool bSet ) { mbReduceTransparency = bSet; }
