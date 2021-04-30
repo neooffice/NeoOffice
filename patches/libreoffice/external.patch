@@ -405,3 +405,13 @@
 + 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
 + 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
 + 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* \
+--- liborcus/ExternalProject_liborcus.mk	2015-11-25 07:55:38.000000000 -0500
++++ liborcus/ExternalProject_liborcus.mk	2021-04-30 07:12:43.000000000 -0400
+@@ -95,6 +95,7 @@
+ 			--disable-werror \
+ 			$(if $(SYSTEM_BOOST),,--with-boost=$(WORKDIR)/UnpackedTarball/boost) \
+ 			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM)) \
++		&& rm -f VERSION \
+ 		&& $(if $(VERBOSE)$(verbose),V=1) \
+ 		   $(MAKE) \
+ 	)
