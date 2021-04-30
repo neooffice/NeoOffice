@@ -4335,7 +4335,11 @@ void wwSectionManager::SetSegmentToPageDesc(const wwSection &rSection,
         Rectangle aRect(0, 0, 100, 100); // A dummy, we don't care about the size
         SvxMSDffImportData aData(aRect);
         SdrObject* pObject = 0;
+#ifdef NO_LIBO_BUG_107786_FIX
         if (mrReader.pMSDffManager->GetShape(0x401, pObject, aData))
+#else	// NO_LIBO_BUG_107786_FIX
+        if (mrReader.pMSDffManager->GetShape(0x401, pObject, aData) && !aData.empty())
+#endif	// NO_LIBO_BUG_107786_FIX
         {
             // Only handle shape if it is a background shape
             if ((aData.begin()->nFlags & 0x400) != 0)
