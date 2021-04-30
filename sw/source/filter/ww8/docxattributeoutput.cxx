@@ -1069,7 +1069,7 @@ void DocxAttributeOutput::EndRun()
 #ifdef NO_LIBO_BUG_101178_FIX
             if ( m_pHyperlinkAttrList )
 #else	// NO_LIBO_BUG_101178_FIX
-            if (m_startedHyperlink || m_pHyperlinkAttrList.is())
+            if (m_startedHyperlink || m_pHyperlinkAttrList)
 #endif	// NO_LIBO_BUG_101178_FIX
             {
 #ifdef NO_LIBO_BUG_101178_FIX
