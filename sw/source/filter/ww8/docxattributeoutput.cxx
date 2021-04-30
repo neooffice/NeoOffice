@@ -4035,16 +4035,31 @@ void DocxAttributeOutput::WriteSrcRect(const SdrObject* pSdrObj )
 
     OUString sUrl;
     xPropSet->getPropertyValue("GraphicURL") >>= sUrl;
+#ifdef NO_LIBO_DOUBLE_GRAPHIC_LOAD_FIX
     Size aOriginalSize( GraphicObject::CreateGraphicObjectFromURL( sUrl ).GetPrefSize() );
+#else	// NO_LIBO_DOUBLE_GRAPHIC_LOAD_FIX
+    const GraphicObject aGrafObj(GraphicObject::CreateGraphicObjectFromURL(sUrl));
+
+    Size aOriginalSize(aGrafObj.GetPrefSize());
+#endif	// NO_LIBO_DOUBLE_GRAPHIC_LOAD_FIX
 
     ::com::sun::star::text::GraphicCrop aGraphicCropStruct;
     xPropSet->getPropertyValue( "GraphicCrop" ) >>= aGraphicCropStruct;
 
     const MapMode aMap100mm( MAP_100TH_MM );
+#ifdef NO_LIBO_DOUBLE_GRAPHIC_LOAD_FIX
     const MapMode& mapMode = GraphicObject::CreateGraphicObjectFromURL( sUrl ).GetPrefMapMode();
     if( mapMode.GetMapUnit() == MAP_PIXEL )
+#else	// NO_LIBO_DOUBLE_GRAPHIC_LOAD_FIX
+    const MapMode& rMapMode = aGrafObj.GetPrefMapMode();
+    if (rMapMode.GetMapUnit() == MAP_PIXEL)
+#endif	// NO_LIBO_DOUBLE_GRAPHIC_LOAD_FIX
     {
+#ifdef NO_LIBO_DOUBLE_GRAPHIC_LOAD_FIX
         aOriginalSize = Application::GetDefaultDevice()->PixelToLogic(aOriginalSize, aMap100mm );
+#else	// NO_LIBO_DOUBLE_GRAPHIC_LOAD_FIX
+        aOriginalSize = Application::GetDefaultDevice()->PixelToLogic(aOriginalSize, aMap100mm);
+#endif	// NO_LIBO_DOUBLE_GRAPHIC_LOAD_FIX
     }
 
     if ( (0 != aGraphicCropStruct.Left) || (0 != aGraphicCropStruct.Top) || (0 != aGraphicCropStruct.Right) || (0 != aGraphicCropStruct.Bottom) )
