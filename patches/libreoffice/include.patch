@@ -268,3 +268,41 @@
  
      void                                    SetMouseSettings( const MouseSettings& rSet );
      const MouseSettings&                    GetMouseSettings() const;
+--- osl/profile.hxx	2015-11-25 07:55:38.000000000 -0500
++++ osl/profile.hxx	2021-05-01 17:22:26.000000000 -0400
+@@ -100,7 +100,7 @@
+             }
+             pStrings[ nItems ] = NULL;
+             sal_uInt32 nRet = osl_readProfileIdent(profile, rSection.getStr(), rEntry.getStr(), nFirstId, pStrings, nDefault);
+-            delete pStrings;
++            delete[] pStrings;
+             return nRet;
+         }
+ 
+@@ -131,7 +131,7 @@
+             pStrings[ nItems ] = NULL;
+             bool bRet =
+                 osl_writeProfileIdent(profile, rSection.getStr(), rEntry.getStr(), nFirstId, pStrings, nValue );
+-            delete pStrings;
++            delete[] pStrings;
+             return bRet;
+         }
+ 
+@@ -162,7 +162,7 @@
+                 size_t nLen;
+                 for( n = 0; ( nLen = strlen( pBuf+n ) ); n += nLen+1 )
+                     aEntries.push_back( rtl::OString( pBuf+n ) );
+-                delete pBuf;
++                delete[] pBuf;
+             }
+ 
+             return aEntries;
+@@ -184,7 +184,7 @@
+                 size_t nLen;
+                 for( n = 0; ( nLen = strlen( pBuf+n ) ); n += nLen+1 )
+                     aSections.push_back( rtl::OString( pBuf+n ) );
+-                delete pBuf;
++                delete[] pBuf;
+             }
+ 
+             return aSections;
