@@ -181,3 +181,52 @@
  KeyEvent KeyEvent::LogicalTextDirectionality (TextDirectionality eMode) const
  {
      KeyEvent aClone(*this);
+--- source/gdi/pdfwriter_impl.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/gdi/pdfwriter_impl.hxx	2021-05-02 12:59:23.000000000 -0400
+@@ -819,14 +819,14 @@
+     sal_Int32                               m_nEncryptionBufferSize;
+ 
+     /* check and reallocate the buffer for encryption */
+-    bool checkEncryptionBufferSize( register sal_Int32 newSize );
++    bool checkEncryptionBufferSize( sal_Int32 newSize );
+     /* this function implements part of the PDF spec algorithm 3.1 in encryption, the rest (the actual encryption) is in PDFWriterImpl::writeBuffer */
+-    void checkAndEnableStreamEncryption( register sal_Int32 nObject );
++    void checkAndEnableStreamEncryption( sal_Int32 nObject );
+ 
+     void disableStreamEncryption() { m_bEncryptThisStream = false; };
+ 
+     /* */
+-    void enableStringEncryption( register sal_Int32 nObject );
++    void enableStringEncryption( sal_Int32 nObject );
+ 
+ // test if the encryption is active, if yes than encrypt the unicode string  and add to the OStringBuffer parameter
+     void appendUnicodeTextStringEncrypt( const OUString& rInString, const sal_Int32 nInObjectNumber, OStringBuffer& rOutBuffer );
+--- source/gdi/pdfwriter_impl2.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/gdi/pdfwriter_impl2.cxx	2021-05-02 13:00:54.000000000 -0400
+@@ -1133,7 +1133,7 @@
+     return pResult;
+ }
+ 
+-bool PDFWriterImpl::checkEncryptionBufferSize( register sal_Int32 newSize )
++bool PDFWriterImpl::checkEncryptionBufferSize( sal_Int32 newSize )
+ {
+     if( m_nEncryptionBufferSize < newSize )
+     {
+@@ -1148,7 +1148,7 @@
+     return ( m_nEncryptionBufferSize != 0 );
+ }
+ 
+-void PDFWriterImpl::checkAndEnableStreamEncryption( register sal_Int32 nObject )
++void PDFWriterImpl::checkAndEnableStreamEncryption( sal_Int32 nObject )
+ {
+     if( m_aContext.Encryption.Encrypt() )
+     {
+@@ -1168,7 +1168,7 @@
+     }
+ }
+ 
+-void PDFWriterImpl::enableStringEncryption( register sal_Int32 nObject )
++void PDFWriterImpl::enableStringEncryption( sal_Int32 nObject )
+ {
+     if( m_aContext.Encryption.Encrypt() )
+     {
