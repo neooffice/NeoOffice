@@ -1,0 +1,60 @@
+--- source/core/attrlist.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/attrlist.cxx	2021-05-01 20:28:00.000000000 -0400
+@@ -41,12 +41,6 @@
+     {
+     }
+ 
+-    SvXMLTagAttribute_Impl( const SvXMLTagAttribute_Impl& r ) :
+-        sName(r.sName),
+-        sValue(r.sValue)
+-    {
+-    }
+-
+     OUString sName;
+     OUString sValue;
+ };
+@@ -59,11 +53,6 @@
+         vecAttribute.reserve(20);
+     }
+ 
+-    SvXMLAttributeList_Impl( const SvXMLAttributeList_Impl& r ) :
+-            vecAttribute( r.vecAttribute )
+-    {
+-    }
+-
+     ::std::vector<struct SvXMLTagAttribute_Impl> vecAttribute;
+     typedef ::std::vector<struct SvXMLTagAttribute_Impl>::size_type size_type;
+ };
+--- source/style/xmlprmap.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/style/xmlprmap.cxx	2021-05-01 20:13:01.000000000 -0400
+@@ -67,9 +67,6 @@
+         const XMLPropertyMapEntry& rMapEntry,
+         const rtl::Reference< XMLPropertyHandlerFactory >& rFactory );
+ 
+-    XMLPropertySetMapperEntry_Impl(
+-        const XMLPropertySetMapperEntry_Impl& rEntry );
+-
+     sal_uInt32 GetPropType() const { return nType & XML_TYPE_PROP_MASK; }
+ };
+ 
+@@ -88,20 +85,6 @@
+ {
+ }
+ 
+-XMLPropertySetMapperEntry_Impl::XMLPropertySetMapperEntry_Impl(
+-        const XMLPropertySetMapperEntry_Impl& rEntry ) :
+-    sXMLAttributeName( rEntry.sXMLAttributeName),
+-    sAPIPropertyName( rEntry.sAPIPropertyName),
+-    nType( rEntry.nType),
+-    nXMLNameSpace( rEntry.nXMLNameSpace),
+-    nContextId( rEntry.nContextId),
+-    nEarliestODFVersionForExport( rEntry.nEarliestODFVersionForExport ),
+-    bImportOnly( rEntry.bImportOnly),
+-    pHdl( rEntry.pHdl)
+-{
+-    DBG_ASSERT( pHdl, "Unknown XML property type handler!" );
+-}
+-
+ struct XMLPropertySetMapper::Impl
+ {
+     std::vector<XMLPropertySetMapperEntry_Impl> maMapEntries;
