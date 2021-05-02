@@ -415,3 +415,39 @@
  		&& $(if $(VERBOSE)$(verbose),V=1) \
  		   $(MAKE) \
  	)
+--- lcms2/UnpackedTarball_lcms2.mk	2015-11-25 07:55:38.000000000 -0500
++++ lcms2/UnpackedTarball_lcms2.mk	2021-05-02 15:10:02.000000000 -0400
+@@ -19,6 +19,7 @@
+ 	external/lcms2/lcms2-vc2013-project.patch \
+ 	external/lcms2/lcms2-config-guess.patch.0 \
+ 	external/lcms2/ubsan.patch.0 \
++	external/lcms2/c++17.patch.0 \
+ ))
+ 
+ # vim: set noet sw=4 ts=4:
+--- /dev/null	2021-05-02 15:11:02.000000000 -0400
++++ lcms2/c++17.patch.0	2021-05-02 15:08:39.000000000 -0400
+@@ -0,0 +1,23 @@
++--- include/lcms2.h
+++++ include/lcms2.h
++@@ -1243,13 +1243,13 @@
++ CMSAPI void*             CMSEXPORT cmsStageData(const cmsStage* mpe);
++ 
++ // Sampling
++-typedef cmsInt32Number (* cmsSAMPLER16)   (register const cmsUInt16Number In[],
++-                                            register cmsUInt16Number Out[],
++-                                            register void * Cargo);
++-
++-typedef cmsInt32Number (* cmsSAMPLERFLOAT)(register const cmsFloat32Number In[],
++-                                            register cmsFloat32Number Out[],
++-                                            register void * Cargo);
+++typedef cmsInt32Number (* cmsSAMPLER16)   (const cmsUInt16Number In[],
+++                                            cmsUInt16Number Out[],
+++                                            void * Cargo);
+++
+++typedef cmsInt32Number (* cmsSAMPLERFLOAT)(const cmsFloat32Number In[],
+++                                            cmsFloat32Number Out[],
+++                                            void * Cargo);
++ 
++ // Use this flag to prevent changes being written to destination
++ #define SAMPLER_INSPECT     0x01000000
