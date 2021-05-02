@@ -187,3 +187,17 @@
  }
  
  DECLARE_RTFIMPORT_TEST(testFdo45543, "fdo45543.rtf")
+--- source/core/inc/mvsave.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/inc/mvsave.hxx	2021-05-01 21:16:54.000000000 -0400
+@@ -158,11 +158,6 @@
+ public:
+     _ZSortFly( const SwFrmFmt* pFrmFmt, const SwFmtAnchor* pFlyAnchor,
+                 sal_uInt32 nArrOrdNum );
+-    _ZSortFly& operator=( const _ZSortFly& rCpy )
+-    {
+-        pFmt = rCpy.pFmt, pAnchor = rCpy.pAnchor, nOrdNum = rCpy.nOrdNum;
+-        return *this;
+-    }
+ 
+     bool operator==( const _ZSortFly& ) const { return false; }
+     bool operator<( const _ZSortFly& rCmp ) const
