@@ -327,7 +327,8 @@ build.libo_patches: \
 	build.libo_sw_patch \
 	build.libo_vcl_patch \
 	build.libo_writerperfect_patch \
-	build.libo_xmlhelp_patch
+	build.libo_xmlhelp_patch \
+	build.libo_xmloff_patch
 	touch "$@"
 
 build.libo_root_%_patch: $(LIBO_PATCHES_HOME)/%.patch build.libo_src_checkout
