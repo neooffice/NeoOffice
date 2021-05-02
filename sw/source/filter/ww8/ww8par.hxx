@@ -565,7 +565,6 @@ namespace sw
             sal_Int32 mnPtCntnt;
         public:
             Position(const SwPosition &rPos);
-            Position(const Position &rPos);
             operator SwPosition() const;
             SwNodeIndex GetPtNode() { return maPtNode; };
             sal_Int32 GetPtCntnt() { return mnPtCntnt; };

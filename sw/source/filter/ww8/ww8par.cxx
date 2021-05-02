@@ -6335,11 +6335,6 @@ namespace sw
         {
         }
 
-        Position::Position(const Position &rPos)
-            : maPtNode(rPos.maPtNode), mnPtCntnt(rPos.mnPtCntnt)
-        {
-        }
-
         Position::operator SwPosition() const
         {
             SwPosition aRet(maPtNode);
