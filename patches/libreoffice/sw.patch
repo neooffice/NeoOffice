@@ -201,3 +201,27 @@
  
      bool operator==( const _ZSortFly& ) const { return false; }
      bool operator<( const _ZSortFly& rCmp ) const
+--- source/filter/ww8/ww8par.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/filter/ww8/ww8par.cxx	2021-05-01 21:28:30.000000000 -0400
+@@ -6295,11 +6295,6 @@
+         {
+         }
+ 
+-        Position::Position(const Position &rPos)
+-            : maPtNode(rPos.maPtNode), mnPtCntnt(rPos.mnPtCntnt)
+-        {
+-        }
+-
+         Position::operator SwPosition() const
+         {
+             SwPosition aRet(maPtNode);
+--- source/filter/ww8/ww8par.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/filter/ww8/ww8par.hxx	2021-05-01 21:29:33.000000000 -0400
+@@ -557,7 +557,6 @@
+             sal_Int32 mnPtCntnt;
+         public:
+             Position(const SwPosition &rPos);
+-            Position(const Position &rPos);
+             operator SwPosition() const;
+             SwNodeIndex GetPtNode() { return maPtNode; };
+             sal_Int32 GetPtCntnt() { return mnPtCntnt; };
