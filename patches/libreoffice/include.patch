@@ -306,3 +306,14 @@
              }
  
              return aSections;
+--- svl/macitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ svl/macitem.hxx	2021-05-01 19:55:57.000000000 -0400
+@@ -60,8 +60,6 @@
+     ScriptType GetScriptType() const        { return eType; }
+ 
+     bool HasMacro() const { return !aMacName.isEmpty(); }
+-
+-    SvxMacro& operator=( const SvxMacro& rBase );
+ };
+ 
+ inline SvxMacro::SvxMacro( const OUString &rMacName, const OUString &rLibName,
