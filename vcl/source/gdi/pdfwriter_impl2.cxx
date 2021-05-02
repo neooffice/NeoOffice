@@ -1250,7 +1250,7 @@ EncHashTransporter* EncHashTransporter::getEncHashTransporter( const uno::Refere
     return pResult;
 }
 
-bool PDFWriterImpl::checkEncryptionBufferSize( register sal_Int32 newSize )
+bool PDFWriterImpl::checkEncryptionBufferSize( sal_Int32 newSize )
 {
     if( m_nEncryptionBufferSize < newSize )
     {
@@ -1265,7 +1265,7 @@ bool PDFWriterImpl::checkEncryptionBufferSize( register sal_Int32 newSize )
     return ( m_nEncryptionBufferSize != 0 );
 }
 
-void PDFWriterImpl::checkAndEnableStreamEncryption( register sal_Int32 nObject )
+void PDFWriterImpl::checkAndEnableStreamEncryption( sal_Int32 nObject )
 {
     if( m_aContext.Encryption.Encrypt() )
     {
@@ -1285,7 +1285,7 @@ void PDFWriterImpl::checkAndEnableStreamEncryption( register sal_Int32 nObject )
     }
 }
 
-void PDFWriterImpl::enableStringEncryption( register sal_Int32 nObject )
+void PDFWriterImpl::enableStringEncryption( sal_Int32 nObject )
 {
     if( m_aContext.Encryption.Encrypt() )
     {
