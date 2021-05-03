@@ -373,3 +373,13 @@
      OTypeCollection(
          const ::com::sun::star::uno::Type & rType1,
          const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Type > & rAddTypes = ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Type >() );
+--- svtools/ctrlbox.hxx	2015-11-25 07:55:38.000000000 -0500
++++ svtools/ctrlbox.hxx	2021-05-03 08:48:30.000000000 -0400
+@@ -251,7 +251,6 @@
+     BorderWidthImpl( sal_uInt16 nFlags = CHANGE_LINE1, double nRate1 = 0.0,
+             double nRate2 = 0.0, double nRateGap = 0.0 );
+ 
+-    BorderWidthImpl& operator= ( const BorderWidthImpl& r );
+     bool operator== ( const BorderWidthImpl& r ) const;
+ 
+     long GetLine1 ( long nWidth ) const;
