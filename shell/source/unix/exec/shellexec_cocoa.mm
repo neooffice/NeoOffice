@@ -46,21 +46,26 @@ using namespace com::sun::star::uno;
 
 @interface ShellExecOpenURL : NSObject
 {
+	BOOL				mbSelectInFinder;
 	BOOL				mbResult;
 	NSURL*				mpURL;
 }
-+ (id)createWithURL:(NSURL *)pURL;
++ (id)createWithURL:(NSURL *)pURL selectInFinder:(BOOL)bSelectInFinder;
 - (void)dealloc;
-- (id)initWithURL:(NSURL *)pURL;
+- (id)initWithURL:(NSURL *)pURL selectInFinder:(BOOL)bSelectInFinder;
 - (void)openURL:(id)pSender;
 - (BOOL)result;
 @end
 
+@interface NSWorkspace (ShellExecOpenURL)
+- (BOOL)openURLs:(NSArray<NSURL *> *)pURLs withAppBundleIdentifier:(NSString *)pBundleIdentifier options:(NSWorkspaceLaunchOptions)nOptions additionalEventParamDescriptor:(NSAppleEventDescriptor *)pDescriptor launchIdentifiers:(NSArray<NSNumber *> * _Nullable *)pIdentifiers;
+@end
+
 @implementation ShellExecOpenURL
 
-+ (id)createWithURL:(NSURL *)pURL
++ (id)createWithURL:(NSURL *)pURL selectInFinder:(BOOL)bSelectInFinder
 {
-	ShellExecOpenURL *pRet = [[ShellExecOpenURL alloc] initWithURL:pURL];
+	ShellExecOpenURL *pRet = [[ShellExecOpenURL alloc] initWithURL:pURL selectInFinder:bSelectInFinder];
 	[pRet autorelease];
 	return pRet;
 }
@@ -73,10 +78,11 @@ using namespace com::sun::star::uno;
 	[super dealloc];
 }
 
-- (id)initWithURL:(NSURL *)pURL
+- (id)initWithURL:(NSURL *)pURL selectInFinder:(BOOL)bSelectInFinder
 {
 	[super init];
 
+	mbSelectInFinder = bSelectInFinder;
 	mbResult = NO;
 	mpURL = pURL;
 	if ( mpURL )
@@ -94,18 +100,22 @@ using namespace com::sun::star::uno;
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
 	if ( pWorkspace && mpURL )
 	{
-		NSArray *pURLs = [NSArray arrayWithObject:mpURL];
-		if ( pURLs )
+		if ( mbSelectInFinder )
 		{
-			mbResult = [pWorkspace openURLs:pURLs withAppBundleIdentifier:nil options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
-			if ( !mbResult )
+			[pWorkspace activateFileViewerSelectingURLs:[NSArray arrayWithObject:mpURL]];
+			mbResult = YES;
+		}
+		else
+		{
+			mbResult = [pWorkspace openURL:mpURL];
+			if ( !mbResult && [pWorkspace respondsToSelector:@selector(openURLs:withAppBundleIdentifier:options:additionalEventParamDescriptor:launchIdentifiers:)] )
 			{
 				NSString *pAppID = nil;
 				if ( [@"mailto" isEqualToString:[mpURL scheme]] )
 					pAppID = @"com.apple.mail";
 				else
 					pAppID = @"com.apple.Safari";
-				mbResult = [pWorkspace openURLs:pURLs withAppBundleIdentifier:pAppID options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
+				mbResult = [pWorkspace openURLs:[NSArray arrayWithObject:mpURL] withAppBundleIdentifier:pAppID options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
 			}
 		}
 	}
@@ -118,7 +128,7 @@ using namespace com::sun::star::uno;
 
 @end
 
-sal_Bool ShellExec_openURL( OUString &rURL )
+sal_Bool ShellExec_openURL( OUString &rURL, sal_Bool bSelectInFinder )
 {
 	sal_Bool bRet = sal_False;
 
@@ -130,7 +140,7 @@ sal_Bool ShellExec_openURL( OUString &rURL )
 		NSURL *pURL = [NSURL URLWithString:pURLString];
 		if ( pURL )
 		{
-			ShellExecOpenURL *pShellExecOpenURL = [ShellExecOpenURL createWithURL:pURL];
+			ShellExecOpenURL *pShellExecOpenURL = [ShellExecOpenURL createWithURL:pURL selectInFinder:bSelectInFinder];
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 			[pShellExecOpenURL performSelectorOnMainThread:@selector(openURL:) withObject:pShellExecOpenURL waitUntilDone:YES modes:pModes];
 			bRet = [pShellExecOpenURL result];

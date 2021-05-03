@@ -173,6 +173,7 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
 
 #ifdef MACOSX
 #ifndef NO_LIBO_OPEN_EXECUTABLE_FIX
+        bool dir = false;
         if (uri->getScheme().equalsIgnoreAsciiCase("file")) {
             OUString pathname;
             auto const e1 = osl::FileBase::getSystemPathFromFileURL(aCommand, pathname);
@@ -198,17 +199,18 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
                 auto const e3 = errno;
                 SAL_INFO("shell", "stat(" << pathname8 << ") failed with errno " << e3);
             }
-#ifdef USE_JAVA
-            // Fix failure to open directories
-            if (e2 != 0 || (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
-                || ((st.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) != 0 && !S_ISDIR(st.st_mode)))
-#else	// USE_JAVA
-            if (e2 != 0 || !S_ISREG(st.st_mode)
-                || (st.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) != 0)
-#endif	// USE_JAVA
+            if (e2 == 0 && S_ISDIR(st.st_mode)) {
+                dir = true;
+            } else if (e2 != 0 || !S_ISREG(st.st_mode)
+                       || (st.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) != 0)
             {
                 throw css::lang::IllegalArgumentException(
                     "XSystemShellExecute.execute, cannot process <" + aCommand + ">", {}, 0);
+            } else if (pathname.endsWithIgnoreAsciiCase(".class")
+                       || pathname.endsWithIgnoreAsciiCase(".fileloc")
+                       || pathname.endsWithIgnoreAsciiCase(".jar"))
+            {
+                dir = true;
             }
         }
 #endif	// !NO_LIBO_OPEN_EXECUTABLE_FIX
@@ -228,7 +230,7 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
         }
 
         // Fix bug 3584 by not throwing an exception if we can't open a URL
-        sal_Bool bOpened = ShellExec_openURL( aURL );
+        sal_Bool bOpened = ShellExec_openURL( aURL, dir );
 
         if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
             pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
@@ -261,7 +263,11 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
         // 2.4  If it does not match an exitsting pathname (relative to CWD):
         //  Results in "The file /.../foo:bar does not exits." (where "/..." is
         //  the CWD) on stderr and SystemShellExecuteException.
-        aBuffer.append("open --");
+        aBuffer.append("open");
+        if (dir) {
+            aBuffer.append(" -R");
+        }
+        aBuffer.append(" --");
 #endif	// USE_JAVA
 #else
         // The url launchers are expected to be in the $BRAND_BASE_DIR/LIBO_LIBEXEC_FOLDER
