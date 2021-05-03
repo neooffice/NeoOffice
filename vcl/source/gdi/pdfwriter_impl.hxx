@@ -189,6 +189,14 @@ public:
 
         BitmapID() : m_nSize( 0 ), m_nChecksum( 0 ), m_nMaskChecksum( 0 ) {}
 
+        BitmapID( const BitmapID& rID ) :
+                m_aPixelSize( rID.m_aPixelSize ),
+                m_nSize( rID.m_nSize ),
+                m_nChecksum( rID.m_nChecksum ),
+                m_nMaskChecksum( rID.m_nMaskChecksum )
+        {
+        }
+
         BitmapID& operator=( const BitmapID& rCopy )
         {
             m_aPixelSize    = rCopy.m_aPixelSize;
