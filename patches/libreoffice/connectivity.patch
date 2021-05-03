@@ -1,0 +1,51 @@
+--- connectivity/source/commontools/dbcharset.cxx	2015-11-25 07:55:38.000000000 -0500
++++ connectivity/source/commontools/dbcharset.cxx	2021-05-03 07:17:40.000000000 -0400
+@@ -157,18 +157,6 @@
+     }
+ 
+ 
+-    OCharsetMap::CharsetIterator::CharsetIterator(const CharsetIterator& _rSource)
+-        :m_pContainer( _rSource.m_pContainer )
+-        ,m_aPos( _rSource.m_aPos )
+-    {
+-    }
+-
+-
+-    OCharsetMap::CharsetIterator::~CharsetIterator()
+-    {
+-    }
+-
+-
+     CharsetIteratorDerefHelper OCharsetMap::CharsetIterator::operator*() const
+     {
+         OSL_ENSURE( m_aPos != m_pContainer->m_aEncodings.end(), "OCharsetMap::CharsetIterator::operator*: invalid position!");
+--- connectivity/source/commontools/dbexception.cxx	2015-11-25 07:55:38.000000000 -0500
++++ connectivity/source/commontools/dbexception.cxx	2021-05-03 07:17:40.000000000 -0400
+@@ -79,13 +79,6 @@
+ }
+ 
+ 
+-SQLExceptionInfo::SQLExceptionInfo(const SQLExceptionInfo& _rCopySource)
+-    :m_aContent(_rCopySource.m_aContent)
+-    ,m_eType(_rCopySource.m_eType)
+-{
+-}
+-
+-
+ const SQLExceptionInfo& SQLExceptionInfo::operator=(const ::com::sun::star::sdbc::SQLException& _rError)
+ {
+     m_aContent <<= _rError;
+--- connectivity/source/parse/sqlnode.cxx	2015-11-25 07:55:38.000000000 -0500
++++ connectivity/source/parse/sqlnode.cxx	2021-05-03 07:17:40.000000000 -0400
+@@ -218,11 +218,6 @@
+ }
+ 
+ 
+-SQLParseNodeParameter::~SQLParseNodeParameter()
+-{
+-}
+-
+-
+ //= OSQLParseNode
+ 
+ 

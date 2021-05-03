@@ -328,3 +328,36 @@
  };
  
  #endif // INCLUDED_XMLOFF_MAPTYPE_HXX
+--- include/connectivity/dbcharset.hxx	2015-11-25 07:55:38.000000000 -0500
++++ include/connectivity/dbcharset.hxx	2021-05-03 07:17:40.000000000 -0400
+@@ -133,9 +133,6 @@
+         OCharsetMap::TextEncBag::const_iterator m_aPos;
+ 
+     public:
+-        CharsetIterator(const CharsetIterator& _rSource);
+-        ~CharsetIterator();
+-
+         CharsetIteratorDerefHelper operator*() const;
+         // no -> operator
+         // this would require us to a) store CharsetIteratorDerefHelper instances ourself so that we
+--- include/connectivity/dbexception.hxx	2015-11-25 07:55:38.000000000 -0500
++++ include/connectivity/dbexception.hxx	2021-05-03 07:17:40.000000000 -0400
+@@ -83,8 +83,6 @@
+     */
+     SQLExceptionInfo( const OUString& _rSimpleErrorMessage );
+ 
+-    SQLExceptionInfo(const SQLExceptionInfo& _rCopySource);
+-
+             // use for events got via XSQLErrorListener::errorOccured
+     SQLExceptionInfo(const ::com::sun::star::uno::Any& _rError);
+             // use with the Reason member of an SQLErrorEvent or with NextElement of an SQLException
+--- include/connectivity/sqlnode.hxx	2015-11-25 07:55:38.000000000 -0500
++++ include/connectivity/sqlnode.hxx	2021-05-03 07:17:40.000000000 -0400
+@@ -105,7 +105,6 @@
+             bool _bPredicate,
+             bool _bParseToSDBC
+         );
+-        ~SQLParseNodeParameter();
+     };
+ 
+ 
