@@ -324,6 +324,7 @@ build.libo_patches: \
 	build.libo_slideshow_patch \
 	build.libo_solenv_patch \
 	build.libo_svl_patch \
+	build.libo_svtools_patch \
 	build.libo_svx_patch \
 	build.libo_sw_patch \
 	build.libo_vcl_patch \
