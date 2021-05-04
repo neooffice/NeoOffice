@@ -225,3 +225,240 @@
              operator SwPosition() const;
              SwNodeIndex GetPtNode() { return maPtNode; };
              sal_Int32 GetPtCntnt() { return mnPtCntnt; };
+--- inc/fmtfordr.hxx	2015-11-25 07:55:38.000000000 -0500
++++ inc/fmtfordr.hxx	2021-05-04 17:23:06.000000000 -0400
+@@ -37,7 +37,6 @@
+ {
+ public:
+     SwFmtFillOrder( SwFillOrder = ATT_TOP_DOWN );
+-    inline SwFmtFillOrder &operator=( const SwFmtFillOrder &rCpy );
+ 
+     /// "Pure virtual methods" of SfxPoolItem.
+     virtual SfxPoolItem*    Clone( SfxItemPool *pPool = 0 ) const SAL_OVERRIDE;
+@@ -46,12 +45,6 @@
+     SwFillOrder GetFillOrder() const { return SwFillOrder(GetValue()); }
+ };
+ 
+-inline SwFmtFillOrder &SwFmtFillOrder::operator=( const SwFmtFillOrder &rCpy )
+-{
+-    SetValue( rCpy.GetValue() );
+-    return *this;
+-}
+-
+ inline const SwFmtFillOrder &SwAttrSet::GetFillOrder(bool bInP) const
+     { return static_cast<const SwFmtFillOrder&>(Get( RES_FILL_ORDER,bInP)); }
+ 
+--- inc/fmtfsize.hxx	2015-11-25 07:55:38.000000000 -0500
++++ inc/fmtfsize.hxx	2021-05-04 17:22:14.000000000 -0400
+@@ -62,7 +62,6 @@
+ public:
+     SwFmtFrmSize( SwFrmSize eSize = ATT_VAR_SIZE,
+                   SwTwips nWidth = 0, SwTwips nHeight = 0 );
+-    SwFmtFrmSize& operator=( const SwFmtFrmSize& rCpy );
+ 
+     /// "Pure virtual methods" of SfxPoolItem.
+     virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
+--- inc/fmtsrnd.hxx	2015-11-25 07:55:38.000000000 -0500
++++ inc/fmtsrnd.hxx	2021-05-04 17:13:09.000000000 -0400
+@@ -36,7 +36,6 @@
+ public:
+     SwFmtSurround( SwSurround eNew = SURROUND_PARALLEL );
+     SwFmtSurround( const SwFmtSurround & );
+-    inline SwFmtSurround &operator=( const SwFmtSurround &rCpy );
+ 
+     // "Pure virtual Methods" of SfxPoolItem.
+     virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
+@@ -60,15 +59,6 @@
+     void    SetOutside( bool bNew )         { bOutside = bNew; }
+ };
+ 
+-inline SwFmtSurround &SwFmtSurround::operator=( const SwFmtSurround &rCpy )
+-{
+-    bAnchorOnly = rCpy.IsAnchorOnly();
+-    bContour = rCpy.IsContour();
+-    bOutside = rCpy.IsOutside();
+-    SfxEnumItem::SetValue( rCpy.GetValue() );
+-    return *this;
+-}
+-
+ inline const SwFmtSurround &SwAttrSet::GetSurround(bool bInP) const
+     { return static_cast<const SwFmtSurround&>(Get( RES_SURROUND,bInP)); }
+ 
+--- inc/fmtwrapinfluenceonobjpos.hxx	2015-11-25 07:55:38.000000000 -0500
++++ inc/fmtwrapinfluenceonobjpos.hxx	2021-05-04 17:10:22.000000000 -0400
+@@ -40,8 +40,10 @@
+             const SwFmtWrapInfluenceOnObjPos& _rCpy );
+     virtual ~SwFmtWrapInfluenceOnObjPos();
+ 
+-    SwFmtWrapInfluenceOnObjPos& operator=(
+-            const SwFmtWrapInfluenceOnObjPos& _rSource );
++    SwFmtWrapInfluenceOnObjPos(SwFmtWrapInfluenceOnObjPos const &) = default;
++    SwFmtWrapInfluenceOnObjPos(SwFmtWrapInfluenceOnObjPos &&) = default;
++    SwFmtWrapInfluenceOnObjPos & operator =(SwFmtWrapInfluenceOnObjPos const &) = default;
++    SwFmtWrapInfluenceOnObjPos & operator =(SwFmtWrapInfluenceOnObjPos &&) = default;
+ 
+     /// pure virtual methods of class <SfxPoolItem>
+     virtual bool operator==( const SfxPoolItem& _rAttr ) const SAL_OVERRIDE;
+--- inc/grfatr.hxx	2015-11-25 07:55:38.000000000 -0500
++++ inc/grfatr.hxx	2021-05-04 17:07:50.000000000 -0400
+@@ -68,13 +68,6 @@
+     virtual bool             PutValue( const com::sun::star::uno::Any& rVal,
+                                         sal_uInt8 nMemberId = 0 ) SAL_OVERRIDE;
+ 
+-    inline SwMirrorGrf& operator=( const SwMirrorGrf& rMirrorGrf )
+-        {
+-            SfxEnumItem::SetValue( rMirrorGrf.GetValue() );
+-            bGrfToggle = rMirrorGrf.IsGrfToggle();
+-            return *this;
+-        }
+-
+     inline bool IsGrfToggle() const         { return bGrfToggle; }
+     inline void SetGrfToggle( bool bNew )   { bGrfToggle = bNew; }
+ };
+@@ -204,12 +197,6 @@
+         : SfxPoolItem( RES_GRFATR_GAMMA ), nValue( rVal )
+     {}
+ 
+-    inline SwGammaGrf& operator=( const SwGammaGrf& rCopy )
+-        {
+-            SetValue( rCopy.GetValue() );
+-            return *this;
+-        }
+-
+     // pure virtual methods from SfxEnumItem
+     virtual SfxPoolItem*    Clone( SfxItemPool *pPool = 0 ) const SAL_OVERRIDE;
+     virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
+--- inc/paratr.hxx	2015-11-25 07:55:38.000000000 -0500
++++ inc/paratr.hxx	2021-05-04 17:06:37.000000000 -0400
+@@ -117,9 +117,6 @@
+ 
+     inline SwRegisterItem( const bool bRegister = false );
+ 
+-    /// @@@ public copy assignment, but no copy ctor?
+-    inline SwRegisterItem& operator=( const SwRegisterItem& rRegister );
+-
+     /// "pure virtual methods" of SfxPoolItem
+     virtual SfxPoolItem*    Clone( SfxItemPool *pPool = 0 ) const SAL_OVERRIDE;
+     virtual bool GetPresentation( SfxItemPresentation ePres,
+@@ -133,13 +130,6 @@
+     SfxBoolItem( RES_PARATR_REGISTER, bRegister )
+ {}
+ 
+-inline SwRegisterItem& SwRegisterItem::operator=(
+-    const SwRegisterItem& rRegister )
+-{
+-    SetValue( rRegister.GetValue() );
+-    return *this;
+-}
+-
+ class SW_DLLPUBLIC SwNumRuleItem : public SfxStringItem
+ {
+ public:
+@@ -177,9 +167,6 @@
+ 
+     inline SwParaConnectBorderItem( const bool bConnect = true );
+ 
+-    /// @@@ public copy assignment, but no copy ctor?
+-    inline SwParaConnectBorderItem& operator=( const SwParaConnectBorderItem& rConnect );
+-
+     /// "pure virtual methods" of SfxPoolItem
+     virtual SfxPoolItem*    Clone( SfxItemPool *pPool = 0 ) const SAL_OVERRIDE;
+     virtual bool GetPresentation( SfxItemPresentation ePres,
+@@ -193,13 +180,6 @@
+     SfxBoolItem( RES_PARATR_CONNECT_BORDER, bConnect )
+ {}
+ 
+-inline SwParaConnectBorderItem& SwParaConnectBorderItem::operator=(
+-    const SwParaConnectBorderItem& rConnect )
+-{
+-    SetValue( rConnect.GetValue() );
+-    return *this;
+-}
+-
+ //  Implementation of paragraph-attributes methods of SwAttrSet
+ inline const SvxLineSpacingItem &SwAttrSet::GetLineSpacing(bool bInP) const
+     {   return static_cast<const SvxLineSpacingItem&>(Get( RES_PARATR_LINESPACING,bInP)); }
+--- inc/tgrditem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ inc/tgrditem.hxx	2021-05-04 17:03:58.000000000 -0400
+@@ -50,6 +50,11 @@
+     SwTextGridItem();
+     virtual ~SwTextGridItem();
+ 
++    SwTextGridItem(SwTextGridItem const &) = default;
++    SwTextGridItem(SwTextGridItem &&) = default;
++    SwTextGridItem & operator =(SwTextGridItem const &) = default;
++    SwTextGridItem & operator =(SwTextGridItem &&) = default;
++
+     // "pure virtual methods" of SfxPoolItem
+     virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
+     virtual SfxPoolItem*    Clone( SfxItemPool* pPool = 0 ) const SAL_OVERRIDE;
+@@ -61,8 +66,6 @@
+     virtual bool             QueryValue( com::sun::star::uno::Any& rVal, sal_uInt8 nMemberId = 0 ) const SAL_OVERRIDE;
+     virtual bool             PutValue( const com::sun::star::uno::Any& rVal, sal_uInt8 nMemberId = 0 ) SAL_OVERRIDE;
+ 
+-    SwTextGridItem&  operator=( const SwTextGridItem& );
+-
+     const Color& GetColor() const { return m_aColor; }
+     void SetColor( const Color& rCol )  { m_aColor = rCol; }
+ 
+--- source/core/attr/fmtwrapinfluenceonobjpos.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/attr/fmtwrapinfluenceonobjpos.cxx	2021-05-04 17:02:59.000000000 -0400
+@@ -42,13 +42,6 @@
+ {
+ }
+ 
+-SwFmtWrapInfluenceOnObjPos& SwFmtWrapInfluenceOnObjPos::operator=( const SwFmtWrapInfluenceOnObjPos& _rSource )
+-{
+-    mnWrapInfluenceOnPosition = _rSource.GetWrapInfluenceOnObjPos();
+-
+-    return *this;
+-}
+-
+ bool SwFmtWrapInfluenceOnObjPos::operator==( const SfxPoolItem& rAttr ) const
+ {
+     assert(SfxPoolItem::operator==(rAttr));
+--- source/core/layout/atrfrm.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/layout/atrfrm.cxx	2021-05-04 17:02:06.000000000 -0400
+@@ -184,18 +184,6 @@
+     m_nWidthPercent = m_eWidthPercentRelation = m_nHeightPercent = m_eHeightPercentRelation = 0;
+ }
+ 
+-SwFmtFrmSize& SwFmtFrmSize::operator=( const SwFmtFrmSize& rCpy )
+-{
+-    m_aSize = rCpy.GetSize();
+-    m_eFrmHeightType = rCpy.GetHeightSizeType();
+-    m_eFrmWidthType = rCpy.GetWidthSizeType();
+-    m_nHeightPercent = rCpy.GetHeightPercent();
+-    m_eHeightPercentRelation  = rCpy.GetHeightPercentRelation();
+-    m_nWidthPercent  = rCpy.GetWidthPercent();
+-    m_eWidthPercentRelation  = rCpy.GetWidthPercentRelation();
+-    return *this;
+-}
+-
+ bool SwFmtFrmSize::operator==( const SfxPoolItem& rAttr ) const
+ {
+     assert(SfxPoolItem::operator==(rAttr));
+@@ -2138,23 +2126,6 @@
+     return new SwTextGridItem( *this );
+ }
+ 
+-SwTextGridItem& SwTextGridItem::operator=( const SwTextGridItem& rCpy )
+-{
+-    m_aColor = rCpy.GetColor();
+-    m_nLines = rCpy.GetLines();
+-    m_nBaseHeight = rCpy.GetBaseHeight();
+-    m_nRubyHeight = rCpy.GetRubyHeight();
+-    m_eGridType = rCpy.GetGridType();
+-    m_bRubyTextBelow = rCpy.GetRubyTextBelow();
+-    m_bPrintGrid = rCpy.GetPrintGrid();
+-    m_bDisplayGrid = rCpy.GetDisplayGrid();
+-    m_nBaseWidth = rCpy.GetBaseWidth();
+-    m_bSnapToChars = rCpy.GetSnapToChars();
+-    m_bSquaredMode = rCpy.GetSquaredMode();
+-
+-    return *this;
+-}
+-
+ bool SwTextGridItem::QueryValue( uno::Any& rVal, sal_uInt8 nMemberId ) const
+ {
+     bool bRet = true;

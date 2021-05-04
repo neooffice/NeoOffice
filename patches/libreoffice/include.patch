@@ -383,3 +383,528 @@
      bool operator== ( const BorderWidthImpl& r ) const;
  
      long GetLine1 ( long nWidth ) const;
+--- editeng/autokernitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/autokernitem.hxx	2021-05-04 19:16:13.000000000 -0400
+@@ -48,12 +48,6 @@
+                                     SfxMapUnit eCoreMetric,
+                                     SfxMapUnit ePresMetric,
+                                     OUString &rText, const IntlWrapper * = 0 ) const SAL_OVERRIDE;
+-
+-    inline SvxAutoKernItem& operator=(const SvxAutoKernItem& rAutoKern)
+-        {
+-            SetValue( rAutoKern.GetValue() );
+-            return *this;
+-        }
+ };
+ 
+ #endif
+--- editeng/blinkitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/blinkitem.hxx	2021-05-04 19:15:15.000000000 -0400
+@@ -47,11 +47,6 @@
+                                     SfxMapUnit eCoreMetric,
+                                     SfxMapUnit ePresMetric,
+                                     OUString &rText, const IntlWrapper * = 0 ) const SAL_OVERRIDE;
+-
+-    inline SvxBlinkItem& operator=(const SvxBlinkItem& rBlink) {
+-            SetValue(rBlink.GetValue());
+-            return *this;
+-        }
+ };
+ 
+ #endif
+--- editeng/charhiddenitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/charhiddenitem.hxx	2021-05-04 19:14:31.000000000 -0400
+@@ -41,11 +41,6 @@
+                                     SfxMapUnit eCoreMetric,
+                                     SfxMapUnit ePresMetric,
+                                     OUString &rText, const IntlWrapper * = 0 ) const SAL_OVERRIDE;
+-
+-    inline SvxCharHiddenItem& operator=(const SvxCharHiddenItem& rHidden) {
+-            SetValue(rHidden.GetValue());
+-            return *this;
+-        }
+ };
+ 
+ #endif
+--- editeng/charreliefitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/charreliefitem.hxx	2021-05-04 19:13:59.000000000 -0400
+@@ -55,12 +55,6 @@
+ 
+     virtual bool            QueryValue( com::sun::star::uno::Any& rVal, sal_uInt8 nMemberId = 0 ) const SAL_OVERRIDE;
+     virtual bool            PutValue( const com::sun::star::uno::Any& rVal, sal_uInt8 nMemberId = 0 ) SAL_OVERRIDE;
+-
+-    inline SvxCharReliefItem& operator=( const SvxCharReliefItem& rItem )
+-    {
+-        SetValue( rItem.GetValue() );
+-        return *this;
+-    }
+ };
+ 
+ #endif
+--- editeng/charrotateitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/charrotateitem.hxx	2021-05-04 18:28:06.000000000 -0400
+@@ -57,13 +57,6 @@
+     virtual bool            QueryValue( com::sun::star::uno::Any& rVal, sal_uInt8 nMemberId = 0 ) const SAL_OVERRIDE;
+     virtual bool            PutValue( const com::sun::star::uno::Any& rVal, sal_uInt8 nMemberId = 0 ) SAL_OVERRIDE;
+ 
+-    inline SvxCharRotateItem& operator=( const SvxCharRotateItem& rItem )
+-    {
+-        SetValue( rItem.GetValue() );
+-        SetFitToLine( rItem.IsFitToLine() );
+-        return *this;
+-    }
+-
+     virtual bool             operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
+ 
+     // our currently only degree values
+--- editeng/charscaleitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/charscaleitem.hxx	2021-05-04 18:27:39.000000000 -0400
+@@ -53,13 +53,6 @@
+ 
+     virtual bool            QueryValue( com::sun::star::uno::Any& rVal, sal_uInt8 nMemberId = 0 ) const SAL_OVERRIDE;
+     virtual bool            PutValue( const com::sun::star::uno::Any& rVal, sal_uInt8 nMemberId = 0 ) SAL_OVERRIDE;
+-
+-    inline SvxCharScaleWidthItem& operator=(const SvxCharScaleWidthItem& rItem )
+-    {
+-        SetValue( rItem.GetValue() );
+-        return *this;
+-    }
+-
+ };
+ 
+ #endif
+--- editeng/charsetcoloritem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/charsetcoloritem.hxx	2021-05-04 18:27:04.000000000 -0400
+@@ -52,13 +52,6 @@
+ 
+     inline rtl_TextEncoding&    GetCharSet() { return eFrom; }
+     inline rtl_TextEncoding     GetCharSet() const { return eFrom; }
+-
+-    inline SvxCharSetColorItem& operator=(const SvxCharSetColorItem& rColor)
+-    {
+-        SetValue( rColor.GetValue() );
+-        eFrom = rColor.GetCharSet();
+-        return *this;
+-    }
+ };
+ 
+ #endif
+--- editeng/cmapitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/cmapitem.hxx	2021-05-04 18:26:35.000000000 -0400
+@@ -56,12 +56,6 @@
+     void                    SetValue( sal_uInt16 nNewVal )
+                                 {SfxEnumItem::SetValue(nNewVal); }
+ 
+-    inline SvxCaseMapItem& operator=(const SvxCaseMapItem& rMap)
+-        {
+-            SetValue( rMap.GetValue() );
+-            return *this;
+-        }
+-
+     // enum cast
+     SvxCaseMap              GetCaseMap() const
+                                 { return (SvxCaseMap)GetValue(); }
+--- editeng/emphasismarkitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/emphasismarkitem.hxx	2021-05-04 18:26:04.000000000 -0400
+@@ -55,12 +55,6 @@
+     virtual bool            QueryValue( com::sun::star::uno::Any& rVal, sal_uInt8 nMemberId = 0 ) const SAL_OVERRIDE;
+     virtual bool            PutValue( const com::sun::star::uno::Any& rVal, sal_uInt8 nMemberId = 0 ) SAL_OVERRIDE;
+ 
+-    inline SvxEmphasisMarkItem& operator=(const SvxEmphasisMarkItem& rItem )
+-    {
+-        SetValue( rItem.GetValue() );
+-        return *this;
+-    }
+-
+     // enum cast
+     FontEmphasisMark        GetEmphasisMark() const
+                                 { return (FontEmphasisMark)GetValue(); }
+--- editeng/escapementitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/escapementitem.hxx	2021-05-04 18:25:25.000000000 -0400
+@@ -83,13 +83,6 @@
+     inline sal_uInt8 &GetProp() { return nProp; }
+     inline sal_uInt8 GetProp() const { return nProp; }
+ 
+-    inline SvxEscapementItem& operator=(const SvxEscapementItem& rEsc)
+-        {
+-            nEsc  = rEsc.GetEsc();
+-            nProp = rEsc.GetProp();
+-            return *this;
+-        }
+-
+     virtual sal_uInt16      GetValueCount() const SAL_OVERRIDE;
+     virtual OUString   GetValueTextByPos( sal_uInt16 nPos ) const SAL_OVERRIDE;
+     virtual sal_uInt16      GetEnumValue() const SAL_OVERRIDE;
+--- editeng/forbiddenruleitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/forbiddenruleitem.hxx	2021-05-04 18:24:52.000000000 -0400
+@@ -46,13 +46,6 @@
+                                     SfxMapUnit ePresMetric,
+                                     OUString &rText,
+                                     const IntlWrapper * = 0 ) const SAL_OVERRIDE;
+-
+-    inline SvxForbiddenRuleItem& operator=(
+-                                    const SvxForbiddenRuleItem& rItem )
+-    {
+-        SetValue( rItem.GetValue() );
+-        return *this;
+-    }
+ };
+ 
+ #endif
+--- editeng/hngpnctitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/hngpnctitem.hxx	2021-05-04 18:24:27.000000000 -0400
+@@ -45,13 +45,6 @@
+                                     SfxMapUnit ePresMetric,
+                                     OUString &rText,
+                                     const IntlWrapper * = 0 ) const SAL_OVERRIDE;
+-
+-    inline SvxHangingPunctuationItem& operator=(
+-                                    const SvxHangingPunctuationItem& rItem )
+-    {
+-        SetValue( rItem.GetValue() );
+-        return *this;
+-    }
+ };
+ 
+ #endif
+--- editeng/hyphenzoneitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/hyphenzoneitem.hxx	2021-05-04 18:23:53.000000000 -0400
+@@ -76,16 +76,6 @@
+ 
+     inline sal_uInt8 &GetMaxHyphens() { return nMaxHyphens; }
+     inline sal_uInt8 GetMaxHyphens() const { return nMaxHyphens; }
+-
+-    inline SvxHyphenZoneItem &operator=( const SvxHyphenZoneItem &rNew )
+-    {
+-        bHyphen = rNew.IsHyphen();
+-        bPageEnd = rNew.IsPageEnd();
+-        nMinLead = rNew.GetMinLead();
+-        nMinTrail = rNew.GetMinTrail();
+-        nMaxHyphens = rNew.GetMaxHyphens();
+-        return *this;
+-    }
+ };
+ 
+ #endif
+--- editeng/justifyitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/justifyitem.hxx	2021-05-04 18:22:55.000000000 -0400
+@@ -110,8 +110,6 @@
+     virtual OUString        GetValueText( sal_uInt16 nVal ) const;
+     virtual SfxPoolItem*    Clone( SfxItemPool *pPool = 0 ) const SAL_OVERRIDE;
+     virtual SfxPoolItem*    Create( SvStream& rStream, sal_uInt16 nVer ) const SAL_OVERRIDE;
+-
+-    SvxJustifyMethodItem& operator=(const SvxJustifyMethodItem& r);
+ };
+ 
+ #endif
+--- editeng/kernitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/kernitem.hxx	2021-05-04 18:19:16.000000000 -0400
+@@ -53,11 +53,6 @@
+                                     SfxMapUnit ePresMetric,
+                                     OUString &rText, const IntlWrapper * = 0 ) const SAL_OVERRIDE;
+ 
+-    inline SvxKerningItem& operator=(const SvxKerningItem& rKern) {
+-            SetValue( rKern.GetValue() );
+-            return *this;
+-        }
+-
+     virtual bool            QueryValue( com::sun::star::uno::Any& rVal, sal_uInt8 nMemberId = 0 ) const SAL_OVERRIDE;
+     virtual bool            PutValue( const com::sun::star::uno::Any& rVal, sal_uInt8 nMemberId = 0 ) SAL_OVERRIDE;
+ };
+--- editeng/nhypitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/nhypitem.hxx	2021-05-04 18:18:42.000000000 -0400
+@@ -40,12 +40,6 @@
+                                     SfxMapUnit eCoreMetric,
+                                     SfxMapUnit ePresMetric,
+                                     OUString &rText, const IntlWrapper * = 0 ) const SAL_OVERRIDE;
+-
+-    inline SvxNoHyphenItem& operator=(const SvxNoHyphenItem& rNHH)
+-        {
+-            SetValue( rNHH.GetValue() );
+-            return *this;
+-        }
+ };
+ 
+ #endif
+--- editeng/optitems.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/optitems.hxx	2021-05-04 18:18:16.000000000 -0400
+@@ -88,13 +88,6 @@
+ 
+     inline sal_uInt8 &GetMinTrail() { return nMinTrail; }
+     inline sal_uInt8 GetMinTrail() const { return nMinTrail; }
+-
+-    inline SfxHyphenRegionItem& operator=( const SfxHyphenRegionItem& rNew )
+-    {
+-        nMinLead = rNew.GetMinLead();
+-        nMinTrail = rNew.GetMinTrail();
+-        return *this;
+-    }
+ };
+ 
+ #endif
+--- editeng/orphitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/orphitem.hxx	2021-05-04 18:17:02.000000000 -0400
+@@ -48,12 +48,6 @@
+                                     SfxMapUnit eCoreMetric,
+                                     SfxMapUnit ePresMetric,
+                                     OUString &rText, const IntlWrapper * = 0 ) const SAL_OVERRIDE;
+-
+-    inline SvxOrphansItem& operator=( const SvxOrphansItem& rOrphans )
+-    {
+-        SetValue( rOrphans.GetValue() );
+-        return *this;
+-    }
+ };
+ 
+ #endif
+--- editeng/paravertalignitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/paravertalignitem.hxx	2021-05-04 18:15:56.000000000 -0400
+@@ -54,12 +54,6 @@
+     virtual bool            QueryValue( com::sun::star::uno::Any& rVal, sal_uInt8 nMemberId = 0 ) const SAL_OVERRIDE;
+     virtual bool            PutValue( const com::sun::star::uno::Any& rVal, sal_uInt8 nMemberId = 0 ) SAL_OVERRIDE;
+ 
+-    inline SvxParaVertAlignItem& operator=( const SvxParaVertAlignItem& rItem )
+-    {
+-        SetValue( rItem.GetValue() );
+-        return *this;
+-    }
+-
+     virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
+ 
+ };
+--- editeng/pbinitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/pbinitem.hxx	2021-05-04 18:13:53.000000000 -0400
+@@ -40,7 +40,6 @@
+ 
+     explicit inline SvxPaperBinItem( const sal_uInt16 nId ,
+                             const sal_uInt8 nTray = PAPERBIN_PRINTER_SETTINGS );
+-    inline SvxPaperBinItem &operator=( const SvxPaperBinItem &rCpy );
+ 
+     // "pure virtual Methods" from SfxPoolItem
+     virtual SfxPoolItem*    Clone( SfxItemPool *pPool = 0 ) const SAL_OVERRIDE;
+@@ -56,13 +55,6 @@
+     : SfxByteItem( nId, nT )
+ {}
+ 
+-inline SvxPaperBinItem &SvxPaperBinItem::operator=(
+-    const SvxPaperBinItem &rCpy )
+-{
+-    SetValue( rCpy.GetValue() );
+-    return *this;
+-}
+-
+ #endif
+ 
+ /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
+--- editeng/prntitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/prntitem.hxx	2021-05-04 17:44:01.000000000 -0400
+@@ -39,7 +39,6 @@
+     TYPEINFO_OVERRIDE();
+ 
+     explicit SvxPrintItem( const sal_uInt16 nId , const bool bPrt = true );
+-    inline SvxPrintItem &operator=( const SvxPrintItem &rCpy );
+ 
+     // "pure virtual Methods" from SfxPoolItem
+     virtual SfxPoolItem*    Clone( SfxItemPool *pPool = 0 ) const SAL_OVERRIDE;
+@@ -56,15 +55,6 @@
+     : SfxBoolItem( nId, bPrt )
+ {}
+ 
+-inline SvxPrintItem &SvxPrintItem::operator=( const SvxPrintItem &rCpy )
+-{
+-    SetValue( rCpy.GetValue() );
+-    return *this;
+-}
+-
+-
+-
+-
+ #endif
+ 
+ /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
+--- editeng/scriptspaceitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/scriptspaceitem.hxx	2021-05-04 17:42:39.000000000 -0400
+@@ -47,13 +47,6 @@
+                                     SfxMapUnit ePresMetric,
+                                     OUString &rText,
+                                     const IntlWrapper * = 0 ) const SAL_OVERRIDE;
+-
+-    inline SvxScriptSpaceItem& operator=(const SvxScriptSpaceItem& rItem )
+-    {
+-        SetValue( rItem.GetValue() );
+-        return *this;
+-    }
+-
+ };
+ 
+ #endif
+--- editeng/spltitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/spltitem.hxx	2021-05-04 17:41:47.000000000 -0400
+@@ -39,7 +39,11 @@
+ 
+     inline SvxFmtSplitItem( const bool bSplit /*= true*/,
+                             const sal_uInt16 nWh  );
+-    inline SvxFmtSplitItem& operator=( const SvxFmtSplitItem& rSplit );
++
++    SvxFmtSplitItem(SvxFmtSplitItem const &) = default;
++    SvxFmtSplitItem(SvxFmtSplitItem &&) = default;
++    SvxFmtSplitItem & operator =(SvxFmtSplitItem const &) = default;
++    SvxFmtSplitItem & operator =(SvxFmtSplitItem &&) = default;
+ 
+     // "pure virtual Methods" from SfxPoolItem
+     virtual SfxPoolItem*    Clone( SfxItemPool *pPool = 0 ) const SAL_OVERRIDE;
+@@ -56,13 +60,6 @@
+     SfxBoolItem( nWh, bSplit )
+ {}
+ 
+-inline SvxFmtSplitItem& SvxFmtSplitItem::operator=(
+-    const SvxFmtSplitItem& rSplit )
+-{
+-    SetValue( rSplit.GetValue() );
+-    return *this;
+-}
+-
+ #endif
+ 
+ /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
+--- editeng/twolinesitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/twolinesitem.hxx	2021-05-04 17:40:08.000000000 -0400
+@@ -38,6 +38,11 @@
+     SvxTwoLinesItem( const SvxTwoLinesItem& rAttr );
+     virtual ~SvxTwoLinesItem();
+ 
++    SvxTwoLinesItem(SvxTwoLinesItem const &) = default;
++    SvxTwoLinesItem(SvxTwoLinesItem &&) = default;
++    SvxTwoLinesItem & operator =(SvxTwoLinesItem const &) = default;
++    SvxTwoLinesItem & operator =(SvxTwoLinesItem &&) = default;
++
+     // "pure virtual Methods" from SfxPoolItem
+     virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
+     virtual SfxPoolItem*    Clone( SfxItemPool* pPool = 0 ) const SAL_OVERRIDE;
+@@ -54,14 +59,6 @@
+ 
+     virtual sal_uInt16          GetVersion( sal_uInt16 nFFVer ) const SAL_OVERRIDE;
+ 
+-    SvxTwoLinesItem&        operator=( const SvxTwoLinesItem& rCpy )
+-    {
+-        SetValue( rCpy.GetValue() );
+-        SetStartBracket( rCpy.GetStartBracket() );
+-        SetEndBracket( rCpy.GetEndBracket() );
+-        return *this;
+-    }
+-
+     bool GetValue() const                       { return bOn; }
+     void SetValue( bool bFlag )                 { bOn = bFlag; }
+ 
+--- editeng/widwitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/widwitem.hxx	2021-05-04 17:38:10.000000000 -0400
+@@ -48,12 +48,6 @@
+                                     SfxMapUnit eCoreMetric,
+                                     SfxMapUnit ePresMetric,
+                                     OUString &rText, const IntlWrapper * = 0 ) const SAL_OVERRIDE;
+-
+-    inline SvxWidowsItem& operator=( const SvxWidowsItem& rWidows )
+-    {
+-        SetValue( rWidows.GetValue() );
+-        return *this;
+-    }
+ };
+ 
+ #endif
+--- editeng/writingmodeitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/writingmodeitem.hxx	2021-05-04 17:37:29.000000000 -0400
+@@ -35,6 +35,10 @@
+     virtual ~SvxWritingModeItem();
+ 
+     SvxWritingModeItem& operator=( const SvxWritingModeItem& rItem );
++    SvxWritingModeItem(SvxWritingModeItem const &) = default;
++    SvxWritingModeItem(SvxWritingModeItem &&) = default;
++    SvxWritingModeItem & operator =(SvxWritingModeItem const &) = default;
++    SvxWritingModeItem & operator =(SvxWritingModeItem &&) = default;
+ 
+     virtual SfxPoolItem*    Clone( SfxItemPool *pPool = 0 ) const SAL_OVERRIDE;
+     virtual SfxPoolItem*    Create(SvStream &, sal_uInt16) const SAL_OVERRIDE;
+--- editeng/wrlmitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/wrlmitem.hxx	2021-05-04 17:35:57.000000000 -0400
+@@ -49,12 +49,6 @@
+                                     SfxMapUnit eCoreMetric,
+                                     SfxMapUnit ePresMetric,
+                                     OUString &rText, const IntlWrapper * = 0 ) const SAL_OVERRIDE;
+-
+-    inline SvxWordLineModeItem& operator=( const SvxWordLineModeItem& rWLM )
+-        {
+-            SetValue( rWLM.GetValue() );
+-            return *this;
+-        }
+ };
+ 
+ #endif
+--- svx/grfcrop.hxx	2015-11-25 07:55:38.000000000 -0500
++++ svx/grfcrop.hxx	2021-05-04 17:29:51.000000000 -0400
+@@ -36,6 +36,11 @@
+                 sal_uInt16  );
+     virtual ~SvxGrfCrop();
+ 
++    SvxGrfCrop(SvxGrfCrop const &) = default;
++    SvxGrfCrop(SvxGrfCrop &&) = default;
++    SvxGrfCrop & operator =(SvxGrfCrop const &) = default;
++    SvxGrfCrop & operator =(SvxGrfCrop &&) = default;
++
+     // "pure virtual methods" from SfxPoolItem
+     virtual bool                operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
+     virtual SfxPoolItem*        Create(SvStream &, sal_uInt16 nVer) const SAL_OVERRIDE;
+@@ -59,13 +64,6 @@
+     sal_Int32 GetRight() const          { return nRight; }
+     sal_Int32 GetTop() const            { return nTop; }
+     sal_Int32 GetBottom() const         { return nBottom; }
+-
+-    inline SvxGrfCrop& operator=( const SvxGrfCrop& rCrop )
+-        {
+-            nLeft = rCrop.GetLeft();        nTop = rCrop.GetTop();
+-            nRight = rCrop.GetRight();      nBottom = rCrop.GetBottom();
+-            return *this;
+-        }
+ };
+ 
+ #endif  // INCLUDED_SVX_GRFCROP_HXX
+--- svx/postattr.hxx	2015-11-25 07:55:38.000000000 -0500
++++ svx/postattr.hxx	2021-05-04 17:28:21.000000000 -0400
+@@ -44,12 +44,6 @@
+                                     OUString &rText, const IntlWrapper * = 0 ) const SAL_OVERRIDE;
+ 
+     virtual SfxPoolItem*    Clone( SfxItemPool *pPool = 0 ) const SAL_OVERRIDE;
+-
+-    inline SvxPostItAuthorItem& operator=( const SvxPostItAuthorItem& rAuthor )
+-    {
+-        SetValue( rAuthor.GetValue() );
+-        return *this;
+-    }
+ };
+ 
+ 
+@@ -75,12 +69,6 @@
+                                     OUString &rText, const IntlWrapper * = 0 ) const SAL_OVERRIDE;
+ 
+     virtual SfxPoolItem*    Clone( SfxItemPool *pPool = 0 ) const SAL_OVERRIDE;
+-
+-    inline SvxPostItDateItem& operator=( const SvxPostItDateItem& rDate )
+-    {
+-        SetValue( rDate.GetValue() );
+-        return *this;
+-    }
+ };
+ 
+ 
+@@ -107,12 +95,6 @@
+                                     OUString &rText, const IntlWrapper * = 0 ) const SAL_OVERRIDE;
+ 
+     virtual SfxPoolItem*    Clone( SfxItemPool *pPool = 0 ) const SAL_OVERRIDE;
+-
+-    inline SvxPostItTextItem& operator=( const SvxPostItTextItem& rText )
+-    {
+-        SetValue( rText.GetValue() );
+-        return *this;
+-    }
+ };
+ 
+ 
