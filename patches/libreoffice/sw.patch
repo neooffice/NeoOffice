@@ -588,3 +588,41 @@
                  }
                  else
                  {
+--- source/filter/basflt/fltini.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/filter/basflt/fltini.cxx	2021-05-05 19:14:32.000000000 -0400
+@@ -309,9 +309,9 @@
+         if( SfxItemState::SET != rFlySet.GetItemState( RES_FRM_SIZE, true, &pItem ) ||
+                 MINFLY > ((SwFmtFrmSize*)pItem)->GetWidth() )
+         {
+-                SwFmtFrmSize aSz((SwFmtFrmSize&)rFlySet.Get(RES_FRM_SIZE, true));
++                std::shared_ptr<SwFmtFrmSize> aSz(static_cast<SwFmtFrmSize*>(rFlySet.Get(RES_FRM_SIZE, true).Clone()));
+                 if (pItem)
+-                        aSz = (SwFmtFrmSize&)(*pItem);
++                        aSz.reset(static_cast<SwFmtFrmSize*>(pItem->Clone()));
+ 
+                 SwTwips nWidth;
+                 // determine the width; if there is a table use the width of the table;
+@@ -400,16 +400,16 @@
+                 if( MINFLY > nWidth )
+                         nWidth = MINFLY;
+ 
+-                aSz.SetWidth( nWidth );
+-                if( MINFLY > aSz.GetHeight() )
+-                        aSz.SetHeight( MINFLY );
+-                rFlySet.Put( aSz );
++                aSz->SetWidth( nWidth );
++                if( MINFLY > aSz->GetHeight() )
++                    aSz->SetHeight( MINFLY );
++                rFlySet.Put( *aSz );
+         }
+         else if( MINFLY > ((SwFmtFrmSize*)pItem)->GetHeight() )
+         {
+-                SwFmtFrmSize aSz( *(SwFmtFrmSize*)pItem );
+-                aSz.SetHeight( MINFLY );
+-                rFlySet.Put( aSz );
++                std::shared_ptr<SwFmtFrmSize> aSz(static_cast<SwFmtFrmSize*>(pItem->Clone()));
++                aSz->SetHeight( MINFLY );
++                rFlySet.Put( *aSz );
+         }
+ }
+ 
