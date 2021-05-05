@@ -626,22 +626,6 @@
  };
  
  #endif
---- editeng/optitems.hxx	2015-11-25 07:55:38.000000000 -0500
-+++ editeng/optitems.hxx	2021-05-04 18:18:16.000000000 -0400
-@@ -88,13 +88,6 @@
- 
-     inline sal_uInt8 &GetMinTrail() { return nMinTrail; }
-     inline sal_uInt8 GetMinTrail() const { return nMinTrail; }
--
--    inline SfxHyphenRegionItem& operator=( const SfxHyphenRegionItem& rNew )
--    {
--        nMinLead = rNew.GetMinLead();
--        nMinTrail = rNew.GetMinTrail();
--        return *this;
--    }
- };
- 
- #endif
 --- editeng/orphitem.hxx	2015-11-25 07:55:38.000000000 -0500
 +++ editeng/orphitem.hxx	2021-05-04 18:17:02.000000000 -0400
 @@ -48,12 +48,6 @@
@@ -767,35 +751,6 @@
  #endif
  
  /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
---- editeng/twolinesitem.hxx	2015-11-25 07:55:38.000000000 -0500
-+++ editeng/twolinesitem.hxx	2021-05-04 17:40:08.000000000 -0400
-@@ -38,6 +38,11 @@
-     SvxTwoLinesItem( const SvxTwoLinesItem& rAttr );
-     virtual ~SvxTwoLinesItem();
- 
-+    SvxTwoLinesItem(SvxTwoLinesItem const &) = default;
-+    SvxTwoLinesItem(SvxTwoLinesItem &&) = default;
-+    SvxTwoLinesItem & operator =(SvxTwoLinesItem const &) = default;
-+    SvxTwoLinesItem & operator =(SvxTwoLinesItem &&) = default;
-+
-     // "pure virtual Methods" from SfxPoolItem
-     virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
-     virtual SfxPoolItem*    Clone( SfxItemPool* pPool = 0 ) const SAL_OVERRIDE;
-@@ -54,14 +59,6 @@
- 
-     virtual sal_uInt16          GetVersion( sal_uInt16 nFFVer ) const SAL_OVERRIDE;
- 
--    SvxTwoLinesItem&        operator=( const SvxTwoLinesItem& rCpy )
--    {
--        SetValue( rCpy.GetValue() );
--        SetStartBracket( rCpy.GetStartBracket() );
--        SetEndBracket( rCpy.GetEndBracket() );
--        return *this;
--    }
--
-     bool GetValue() const                       { return bOn; }
-     void SetValue( bool bFlag )                 { bOn = bFlag; }
- 
 --- editeng/widwitem.hxx	2015-11-25 07:55:38.000000000 -0500
 +++ editeng/widwitem.hxx	2021-05-04 17:38:10.000000000 -0400
 @@ -48,12 +48,6 @@
@@ -960,3 +915,155 @@
          inline StreamSocket( oslSocket Socket , __sal_NoAcquire noacquire );
  
          inline StreamSocket( oslSocket Socket );
+--- editeng/borderline.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/borderline.hxx	2021-05-05 08:14:11.000000000 -0400
+@@ -76,9 +76,6 @@
+                 Color (*pColorOutFn)( Color ) = &darkColor,
+                 Color (*pColorInFn)( Color ) = &darkColor,
+                 Color (*pColorGapFn)( Color ) = NULL );
+-        SvxBorderLine( const SvxBorderLine& r );
+-
+-        SvxBorderLine& operator=( const SvxBorderLine& r );
+ 
+         const Color&    GetColor() const { return aColor; }
+         Color           GetColorOut( bool bLeftOrTop = true ) const;
+--- editeng/colritem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/colritem.hxx	2021-05-05 08:13:41.000000000 -0400
+@@ -45,7 +45,6 @@
+     explicit SvxColorItem( const sal_uInt16 nId );
+     SvxColorItem( const Color& aColor, const sal_uInt16 nId  );
+     SvxColorItem( SvStream& rStrm, const sal_uInt16 nId  );
+-    SvxColorItem( const SvxColorItem& rCopy );
+     virtual ~SvxColorItem();
+ 
+     // "pure virtual Methods" from SfxPoolItem
+@@ -89,7 +88,6 @@
+         SvxBackgroundColorItem( const Color& rCol,
+                                 const sal_uInt16 nId );
+         SvxBackgroundColorItem( SvStream& rStrm, const sal_uInt16 nId  );
+-        SvxBackgroundColorItem( const SvxBackgroundColorItem& rCopy );
+ 
+         virtual SfxPoolItem* Clone(SfxItemPool* pPool = 0) const SAL_OVERRIDE;
+         virtual SvStream& Store(SvStream& rStream, sal_uInt16 nVersion) const SAL_OVERRIDE;
+--- editeng/flstitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/flstitem.hxx	2021-05-05 08:12:00.000000000 -0400
+@@ -46,7 +46,6 @@
+ 
+     SvxFontListItem( const FontList* pFontLst,
+                      const sal_uInt16 nId  );
+-    SvxFontListItem( const SvxFontListItem& rItem );
+ 
+     virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
+     virtual SfxPoolItem*    Clone( SfxItemPool *pPool = 0 ) const SAL_OVERRIDE;
+--- editeng/formatbreakitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/formatbreakitem.hxx	2021-05-05 08:11:27.000000000 -0400
+@@ -40,7 +40,6 @@
+ 
+     inline SvxFmtBreakItem( const SvxBreak eBrk /*= SVX_BREAK_NONE*/,
+                             const sal_uInt16 nWhich );
+-    inline SvxFmtBreakItem( const SvxFmtBreakItem& rBreak );
+     inline SvxFmtBreakItem& operator=( const SvxFmtBreakItem& rCpy );
+ 
+     // "pure virtual Methods" from SfxPoolItem
+@@ -74,10 +73,6 @@
+     SfxEnumItem( _nWhich, (sal_uInt16)eBreak )
+ {}
+ 
+-inline SvxFmtBreakItem::SvxFmtBreakItem( const SvxFmtBreakItem& rBreak ) :
+-    SfxEnumItem( rBreak )
+-{}
+-
+ inline SvxFmtBreakItem& SvxFmtBreakItem::operator=(
+     const SvxFmtBreakItem& rBreak )
+ {
+--- editeng/optitems.hxx	2021-05-04 20:53:36.000000000 -0400
++++ editeng/optitems.hxx	2021-05-05 08:09:53.000000000 -0400
+@@ -40,7 +40,6 @@
+     SfxSpellCheckItem( ::com::sun::star::uno::Reference<
+                             ::com::sun::star::linguistic2::XSpellChecker1 >  &xChecker,
+                        sal_uInt16 nWhich  );
+-    SfxSpellCheckItem( const SfxSpellCheckItem& rItem );
+ 
+     virtual bool GetPresentation( SfxItemPresentation ePres,
+                                     SfxMapUnit eCoreMetric,
+@@ -88,13 +87,6 @@
+ 
+     inline sal_uInt8 &GetMinTrail() { return nMinTrail; }
+     inline sal_uInt8 GetMinTrail() const { return nMinTrail; }
+-
+-    inline SfxHyphenRegionItem& operator=( const SfxHyphenRegionItem& rNew )
+-    {
+-        nMinLead = rNew.GetMinLead();
+-        nMinTrail = rNew.GetMinTrail();
+-        return *this;
+-    }
+ };
+ 
+ #endif
+--- editeng/paragraphdata.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/paragraphdata.hxx	2021-05-05 08:09:18.000000000 -0400
+@@ -40,11 +40,8 @@
+     bool                mbParaIsNumberingRestart;
+ 
+ public:
+-    ParagraphData( const ParagraphData& );
+     ParagraphData();
+ 
+-    ParagraphData& operator=( const ParagraphData& );
+-
+     // compare operator
+     bool operator==(const ParagraphData& rCandidate) const;
+ 
+--- editeng/swafopt.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/swafopt.hxx	2021-05-05 08:08:34.000000000 -0400
+@@ -123,8 +123,6 @@
+          ;
+ 
+     SvxSwAutoFmtFlags();
+-    SvxSwAutoFmtFlags( const SvxSwAutoFmtFlags& rAFFlags ) { *this = rAFFlags; }
+-    SvxSwAutoFmtFlags& operator=( const SvxSwAutoFmtFlags& );
+ };
+ 
+ #endif
+--- editeng/tstpitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/tstpitem.hxx	2021-05-05 08:07:43.000000000 -0400
+@@ -112,7 +112,6 @@
+                     const sal_uInt16 nDist,
+                     const SvxTabAdjust eAdjst /*= SVX_TAB_ADJUST_DEFAULT*/,
+                     sal_uInt16 nWhich  );
+-    SvxTabStopItem( const SvxTabStopItem& rTSI );
+ 
+     // Returns index of the tab or TAB_NOTFOUND
+     sal_uInt16          GetPos( const SvxTabStop& rTab ) const;
+--- editeng/twolinesitem.hxx	2021-05-04 20:53:36.000000000 -0400
++++ editeng/twolinesitem.hxx	2021-05-05 08:07:21.000000000 -0400
+@@ -35,9 +35,13 @@
+                      sal_Unicode nStartBracket /*= 0*/,
+                      sal_Unicode nEndBracket /*= 0*/,
+                      sal_uInt16 nId  );
+-    SvxTwoLinesItem( const SvxTwoLinesItem& rAttr );
+     virtual ~SvxTwoLinesItem();
+ 
++    SvxTwoLinesItem(SvxTwoLinesItem const &) = default;
++    SvxTwoLinesItem(SvxTwoLinesItem &&) = default;
++    SvxTwoLinesItem & operator =(SvxTwoLinesItem const &) = default;
++    SvxTwoLinesItem & operator =(SvxTwoLinesItem &&) = default;
++
+     // "pure virtual Methods" from SfxPoolItem
+     virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
+     virtual SfxPoolItem*    Clone( SfxItemPool* pPool = 0 ) const SAL_OVERRIDE;
+@@ -54,14 +58,6 @@
+ 
+     virtual sal_uInt16          GetVersion( sal_uInt16 nFFVer ) const SAL_OVERRIDE;
+ 
+-    SvxTwoLinesItem&        operator=( const SvxTwoLinesItem& rCpy )
+-    {
+-        SetValue( rCpy.GetValue() );
+-        SetStartBracket( rCpy.GetStartBracket() );
+-        SetEndBracket( rCpy.GetEndBracket() );
+-        return *this;
+-    }
+-
+     bool GetValue() const                       { return bOn; }
+     void SetValue( bool bFlag )                 { bOn = bFlag; }
+ 
