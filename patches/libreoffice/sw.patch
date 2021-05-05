@@ -284,16 +284,14 @@
  inline const SwFmtSurround &SwAttrSet::GetSurround(bool bInP) const
      { return static_cast<const SwFmtSurround&>(Get( RES_SURROUND,bInP)); }
  
---- inc/fmtwrapinfluenceonobjpos.hxx	2015-11-25 07:55:38.000000000 -0500
-+++ inc/fmtwrapinfluenceonobjpos.hxx	2021-05-04 17:10:22.000000000 -0400
-@@ -40,8 +40,10 @@
+--- inc/fmtwrapinfluenceonobjpos.hxx	2021-05-04 19:29:20.000000000 -0400
++++ inc/fmtwrapinfluenceonobjpos.hxx	2021-05-05 16:09:47.000000000 -0400
+@@ -40,8 +40,8 @@
              const SwFmtWrapInfluenceOnObjPos& _rCpy );
      virtual ~SwFmtWrapInfluenceOnObjPos();
  
 -    SwFmtWrapInfluenceOnObjPos& operator=(
 -            const SwFmtWrapInfluenceOnObjPos& _rSource );
-+    SwFmtWrapInfluenceOnObjPos(SwFmtWrapInfluenceOnObjPos const &) = default;
-+    SwFmtWrapInfluenceOnObjPos(SwFmtWrapInfluenceOnObjPos &&) = default;
 +    SwFmtWrapInfluenceOnObjPos & operator =(SwFmtWrapInfluenceOnObjPos const &) = default;
 +    SwFmtWrapInfluenceOnObjPos & operator =(SwFmtWrapInfluenceOnObjPos &&) = default;
  
