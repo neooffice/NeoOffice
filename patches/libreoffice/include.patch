@@ -908,3 +908,55 @@
  };
  
  
+--- osl/pipe.hxx	2015-11-25 07:55:38.000000000 -0500
++++ osl/pipe.hxx	2021-05-04 20:50:43.000000000 -0400
+@@ -168,10 +168,6 @@
+     {}
+ 
+ 
+-    inline StreamPipe::StreamPipe(const StreamPipe& aPipe)
+-        : Pipe( aPipe )
+-    {}
+-
+     inline StreamPipe::StreamPipe( oslPipe pipe, __sal_NoAcquire noacquire )
+         : Pipe( pipe , noacquire )
+     {}
+--- osl/pipe_decl.hxx	2015-11-25 07:55:38.000000000 -0500
++++ osl/pipe_decl.hxx	2021-05-04 20:49:05.000000000 -0400
+@@ -151,11 +151,6 @@
+     */
+     inline StreamPipe(oslPipe Pipe);
+ 
+-    /** Copy constructor.
+-        @param Pipe
+-    */
+-    inline StreamPipe(const StreamPipe& Pipe);
+-
+     /** Creates a pipe.
+         @param strName
+         @param Options
+--- osl/socket.hxx	2015-11-25 07:55:38.000000000 -0500
++++ osl/socket.hxx	2021-05-04 20:48:21.000000000 -0400
+@@ -420,11 +420,6 @@
+     {}
+ 
+ 
+-    inline StreamSocket::StreamSocket( const StreamSocket & socket )
+-        : Socket( socket )
+-    {}
+-
+-
+     inline sal_Int32 StreamSocket::read(void* pBuffer, sal_uInt32 n)
+     {
+         return osl_readSocket( m_handle, pBuffer, n );
+--- osl/socket_decl.hxx	2015-11-25 07:55:38.000000000 -0500
++++ osl/socket_decl.hxx	2021-05-04 20:47:39.000000000 -0400
+@@ -511,8 +511,6 @@
+                             oslProtocol Protocol = osl_Socket_ProtocolIp,
+                             oslSocketType   Type = osl_Socket_TypeStream);
+ 
+-        inline StreamSocket( const StreamSocket & );
+-
+         inline StreamSocket( oslSocket Socket , __sal_NoAcquire noacquire );
+ 
+         inline StreamSocket( oslSocket Socket );
