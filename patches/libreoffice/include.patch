@@ -766,8 +766,8 @@
  };
  
  #endif
---- include/editeng/writingmodeitem.hxx	2021-05-05 08:42:26.000000000 -0400
-+++ include/editeng/writingmodeitem.hxx	2021-05-05 10:00:08.000000000 -0400
+--- editeng/writingmodeitem.hxx	2021-05-05 08:42:26.000000000 -0400
++++ editeng/writingmodeitem.hxx	2021-05-05 10:00:08.000000000 -0400
 @@ -34,7 +34,10 @@
                  sal_uInt16 nWhich /*= SDRATTR_TEXTDIRECTION*/ );
      virtual ~SvxWritingModeItem();
