@@ -460,3 +460,33 @@
  bool SwTextGridItem::QueryValue( uno::Any& rVal, sal_uInt8 nMemberId ) const
  {
      bool bRet = true;
+--- source/core/doc/doclay.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/doc/doclay.cxx	2021-05-05 17:34:20.000000000 -0400
+@@ -783,9 +783,9 @@
+                 pNewSet->Put( pOldFmt->GetAnchor() );
+ 
+                 // The new one should be changeable in its height.
+-                SwFmtFrmSize aFrmSize( pOldFmt->GetFrmSize() );
+-                aFrmSize.SetHeightSizeType( ATT_MIN_SIZE );
+-                pNewSet->Put( aFrmSize );
++                std::shared_ptr<SwFmtFrmSize> aFrameSize(static_cast<SwFmtFrmSize*>(pOldFmt->GetFrmSize().Clone()));
++                aFrameSize->SetHeightSizeType( ATT_MIN_SIZE );
++                pNewSet->Put( *aFrameSize );
+ 
+                 SwStartNode* pSttNd = rDoc.GetNodes().MakeTextSection(
+                             SwNodeIndex( rDoc.GetNodes().GetEndOfAutotext() ),
+@@ -830,10 +830,10 @@
+                 pNewSet->Put( SwFmtVertOrient( 0, eVert ) );
+                 pNewSet->Put( SwFmtHoriOrient( 0, text::HoriOrientation::CENTER ) );
+ 
+-                aFrmSize = pOldFmt->GetFrmSize();
+-                aFrmSize.SetWidthPercent( 0 );
+-                aFrmSize.SetHeightPercent( 255 );
+-                pNewSet->Put( aFrmSize );
++                aFrameSize.reset(static_cast<SwFmtFrmSize*>(pOldFmt->GetFrmSize().Clone()));
++                aFrameSize->SetWidthPercent( 0 );
++                aFrameSize->SetHeightPercent( 255 );
++                pNewSet->Put( *aFrameSize );
+ 
+                 // Hard-set the attributes, because they could come from the Template
+                 // and then size calculations could not be correct anymore.
