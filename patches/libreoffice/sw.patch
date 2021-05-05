@@ -490,3 +490,55 @@
  
                  // Hard-set the attributes, because they could come from the Template
                  // and then size calculations could not be correct anymore.
+--- source/core/doc/tblrwcl.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/doc/tblrwcl.cxx	2021-05-05 17:53:16.000000000 -0400
+@@ -1924,20 +1924,43 @@
+         // Find the Frame Format in the list of all Frame Formats
+         _CpyTabFrm aFindFrm(static_cast<SwTableBoxFmt*>(rFndBox.GetBox()->GetFrmFmt()));
+ 
+-        SwFmtFrmSize aFrmSz;
++        std::shared_ptr<SwFmtFrmSize> aFrameSz(std::make_shared<SwFmtFrmSize>());
+         _CpyTabFrms::const_iterator itFind = pCpyPara->rTabFrmArr.lower_bound( aFindFrm );
+         sal_uInt16 nFndPos = itFind - pCpyPara->rTabFrmArr.begin();
+-        if( itFind == pCpyPara->rTabFrmArr.end() || !(*itFind == aFindFrm) ||
+-            ( aFrmSz = ( aFindFrm = pCpyPara->rTabFrmArr[ nFndPos ]).pNewFrmFmt->
+-                GetFrmSize()).GetWidth() != (SwTwips)nSize )
++
++        // It *is* sometimes cool to have multiple tests/if's and assignments
++        // in a single statement, and it is technically possible. But it is definitely
++        // not simply readable - where from my POV reading code is done 1000 times
++        // more often than writing it. Thus I dismantled the expression in smaller
++        // chunks to keep it handy/understandable/changeable (hopefully without error)
++        // The original for reference:
++        // if( itFind == pCpyPara->rTabFrmArr.end() || !(*itFind == aFindFrm) ||
++        //     ( aFrameSz = ( aFindFrm = pCpyPara->rTabFrmArr[ nFndPos ]).pNewFrmFmt->
++        //         GetFrmSize()).GetWidth() != static_cast<SwTwips>(nSize) )
++
++        bool DoCopyIt(itFind == pCpyPara->rTabFrmArr.end());
++
++        if(!DoCopyIt)
++        {
++            DoCopyIt = !(*itFind == aFindFrm);
++        }
++
++        if(!DoCopyIt)
++        {
++            aFindFrm = pCpyPara->rTabFrmArr[ nFndPos ];
++            aFrameSz.reset(static_cast<SwFmtFrmSize*>(aFindFrm.pNewFrmFmt->GetFrmSize().Clone()));
++            DoCopyIt = aFrameSz->GetWidth() != static_cast<SwTwips>(nSize);
++        }
++
++        if(DoCopyIt)
+         {
+             // It doesn't exist yet, so copy it
+             aFindFrm.pNewFrmFmt = pCpyPara->pDoc->MakeTableBoxFmt();
+             aFindFrm.pNewFrmFmt->CopyAttrs( *rFndBox.GetBox()->GetFrmFmt() );
+             if( !pCpyPara->bCpyCntnt )
+                 aFindFrm.pNewFrmFmt->ResetFmtAttr(  RES_BOXATR_FORMULA, RES_BOXATR_VALUE );
+-            aFrmSz.SetWidth( nSize );
+-            aFindFrm.pNewFrmFmt->SetFmtAttr( aFrmSz );
++            aFrameSz->SetWidth( nSize );
++            aFindFrm.pNewFrmFmt->SetFmtAttr( *aFrameSz );
+             pCpyPara->rTabFrmArr.insert( aFindFrm );
+         }
+ 
