@@ -284,19 +284,6 @@
  inline const SwFmtSurround &SwAttrSet::GetSurround(bool bInP) const
      { return static_cast<const SwFmtSurround&>(Get( RES_SURROUND,bInP)); }
  
---- inc/fmtwrapinfluenceonobjpos.hxx	2021-05-04 19:29:20.000000000 -0400
-+++ inc/fmtwrapinfluenceonobjpos.hxx	2021-05-05 16:09:47.000000000 -0400
-@@ -40,8 +40,8 @@
-             const SwFmtWrapInfluenceOnObjPos& _rCpy );
-     virtual ~SwFmtWrapInfluenceOnObjPos();
- 
--    SwFmtWrapInfluenceOnObjPos& operator=(
--            const SwFmtWrapInfluenceOnObjPos& _rSource );
-+    SwFmtWrapInfluenceOnObjPos & operator =(SwFmtWrapInfluenceOnObjPos const &) = default;
-+    SwFmtWrapInfluenceOnObjPos & operator =(SwFmtWrapInfluenceOnObjPos &&) = default;
- 
-     /// pure virtual methods of class <SfxPoolItem>
-     virtual bool operator==( const SfxPoolItem& _rAttr ) const SAL_OVERRIDE;
 --- inc/grfatr.hxx	2015-11-25 07:55:38.000000000 -0500
 +++ inc/grfatr.hxx	2021-05-04 17:07:50.000000000 -0400
 @@ -68,13 +68,6 @@
@@ -376,45 +363,18 @@
  //  Implementation of paragraph-attributes methods of SwAttrSet
  inline const SvxLineSpacingItem &SwAttrSet::GetLineSpacing(bool bInP) const
      {   return static_cast<const SvxLineSpacingItem&>(Get( RES_PARATR_LINESPACING,bInP)); }
---- inc/tgrditem.hxx	2015-11-25 07:55:38.000000000 -0500
-+++ inc/tgrditem.hxx	2021-05-04 17:03:58.000000000 -0400
-@@ -50,6 +50,11 @@
+--- inc/tgrditem.hxx	2021-05-05 19:16:16.000000000 -0400
++++ inc/tgrditem.hxx	2021-05-05 21:02:21.000000000 -0400
+@@ -50,6 +50,9 @@
      SwTextGridItem();
      virtual ~SwTextGridItem();
  
 +    SwTextGridItem(SwTextGridItem const &) = default;
 +    SwTextGridItem(SwTextGridItem &&) = default;
-+    SwTextGridItem & operator =(SwTextGridItem const &) = default;
-+    SwTextGridItem & operator =(SwTextGridItem &&) = default;
 +
      // "pure virtual methods" of SfxPoolItem
      virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
      virtual SfxPoolItem*    Clone( SfxItemPool* pPool = 0 ) const SAL_OVERRIDE;
-@@ -61,8 +66,6 @@
-     virtual bool             QueryValue( com::sun::star::uno::Any& rVal, sal_uInt8 nMemberId = 0 ) const SAL_OVERRIDE;
-     virtual bool             PutValue( const com::sun::star::uno::Any& rVal, sal_uInt8 nMemberId = 0 ) SAL_OVERRIDE;
- 
--    SwTextGridItem&  operator=( const SwTextGridItem& );
--
-     const Color& GetColor() const { return m_aColor; }
-     void SetColor( const Color& rCol )  { m_aColor = rCol; }
- 
---- source/core/attr/fmtwrapinfluenceonobjpos.cxx	2015-11-25 07:55:38.000000000 -0500
-+++ source/core/attr/fmtwrapinfluenceonobjpos.cxx	2021-05-04 17:02:59.000000000 -0400
-@@ -42,13 +42,6 @@
- {
- }
- 
--SwFmtWrapInfluenceOnObjPos& SwFmtWrapInfluenceOnObjPos::operator=( const SwFmtWrapInfluenceOnObjPos& _rSource )
--{
--    mnWrapInfluenceOnPosition = _rSource.GetWrapInfluenceOnObjPos();
--
--    return *this;
--}
--
- bool SwFmtWrapInfluenceOnObjPos::operator==( const SfxPoolItem& rAttr ) const
- {
-     assert(SfxPoolItem::operator==(rAttr));
 --- source/core/layout/atrfrm.cxx	2015-11-25 07:55:38.000000000 -0500
 +++ source/core/layout/atrfrm.cxx	2021-05-04 17:02:06.000000000 -0400
 @@ -184,18 +184,6 @@
@@ -626,3 +586,24 @@
          }
  }
  
+--- source/core/layout/atrfrm.cxx	2021-05-05 19:16:16.000000000 -0400
++++ source/core/layout/atrfrm.cxx	2021-05-05 21:06:15.000000000 -0400
+@@ -184,18 +184,6 @@
+     m_nWidthPercent = m_eWidthPercentRelation = m_nHeightPercent = m_eHeightPercentRelation = 0;
+ }
+ 
+-SwFmtFrmSize& SwFmtFrmSize::operator=( const SwFmtFrmSize& rCpy )
+-{
+-    m_aSize = rCpy.GetSize();
+-    m_eFrmHeightType = rCpy.GetHeightSizeType();
+-    m_eFrmWidthType = rCpy.GetWidthSizeType();
+-    m_nHeightPercent = rCpy.GetHeightPercent();
+-    m_eHeightPercentRelation  = rCpy.GetHeightPercentRelation();
+-    m_nWidthPercent  = rCpy.GetWidthPercent();
+-    m_eWidthPercentRelation  = rCpy.GetWidthPercentRelation();
+-    return *this;
+-}
+-
+ bool SwFmtFrmSize::operator==( const SfxPoolItem& rAttr ) const
+ {
+     assert(SfxPoolItem::operator==(rAttr));
