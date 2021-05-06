@@ -586,7 +586,6 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/osx/salobj \
 ))
 $(eval $(call gb_Library_use_system_darwin_frameworks,vcl,\
-    $(if $(filter X86_64,$(CPUNAME)),,QuickTime) \
     Cocoa \
     Carbon \
     CoreFoundation \
