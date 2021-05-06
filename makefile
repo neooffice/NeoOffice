@@ -307,7 +307,6 @@ build.libo_patches: \
 	build.libo_bridges_patch \
 	build.libo_config_host_patch \
 	build.libo_cppuhelper_patch \
-	build.libo_connectivity_patch \
 	build.libo_dbaccess_patch \
 	build.libo_editeng_patch \
 	build.libo_embeddedobj_patch \
