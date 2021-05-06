@@ -375,8 +375,8 @@
      // "pure virtual methods" of SfxPoolItem
      virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
      virtual SfxPoolItem*    Clone( SfxItemPool* pPool = 0 ) const SAL_OVERRIDE;
---- source/core/layout/atrfrm.cxx	2015-11-25 07:55:38.000000000 -0500
-+++ source/core/layout/atrfrm.cxx	2021-05-04 17:02:06.000000000 -0400
+--- source/core/layout/atrfrm.cxx	2021-05-05 19:16:16.000000000 -0400
++++ source/core/layout/atrfrm.cxx	2021-05-05 21:06:15.000000000 -0400
 @@ -184,18 +184,6 @@
      m_nWidthPercent = m_eWidthPercentRelation = m_nHeightPercent = m_eHeightPercentRelation = 0;
  }
@@ -396,30 +396,6 @@
  bool SwFmtFrmSize::operator==( const SfxPoolItem& rAttr ) const
  {
      assert(SfxPoolItem::operator==(rAttr));
-@@ -2138,23 +2126,6 @@
-     return new SwTextGridItem( *this );
- }
- 
--SwTextGridItem& SwTextGridItem::operator=( const SwTextGridItem& rCpy )
--{
--    m_aColor = rCpy.GetColor();
--    m_nLines = rCpy.GetLines();
--    m_nBaseHeight = rCpy.GetBaseHeight();
--    m_nRubyHeight = rCpy.GetRubyHeight();
--    m_eGridType = rCpy.GetGridType();
--    m_bRubyTextBelow = rCpy.GetRubyTextBelow();
--    m_bPrintGrid = rCpy.GetPrintGrid();
--    m_bDisplayGrid = rCpy.GetDisplayGrid();
--    m_nBaseWidth = rCpy.GetBaseWidth();
--    m_bSnapToChars = rCpy.GetSnapToChars();
--    m_bSquaredMode = rCpy.GetSquaredMode();
--
--    return *this;
--}
--
- bool SwTextGridItem::QueryValue( uno::Any& rVal, sal_uInt8 nMemberId ) const
- {
-     bool bRet = true;
 --- source/core/doc/doclay.cxx	2015-11-25 07:55:38.000000000 -0500
 +++ source/core/doc/doclay.cxx	2021-05-05 17:34:20.000000000 -0400
 @@ -783,9 +783,9 @@
@@ -586,24 +562,3 @@
          }
  }
  
---- source/core/layout/atrfrm.cxx	2021-05-05 19:16:16.000000000 -0400
-+++ source/core/layout/atrfrm.cxx	2021-05-05 21:06:15.000000000 -0400
-@@ -184,18 +184,6 @@
-     m_nWidthPercent = m_eWidthPercentRelation = m_nHeightPercent = m_eHeightPercentRelation = 0;
- }
- 
--SwFmtFrmSize& SwFmtFrmSize::operator=( const SwFmtFrmSize& rCpy )
--{
--    m_aSize = rCpy.GetSize();
--    m_eFrmHeightType = rCpy.GetHeightSizeType();
--    m_eFrmWidthType = rCpy.GetWidthSizeType();
--    m_nHeightPercent = rCpy.GetHeightPercent();
--    m_eHeightPercentRelation  = rCpy.GetHeightPercentRelation();
--    m_nWidthPercent  = rCpy.GetWidthPercent();
--    m_eWidthPercentRelation  = rCpy.GetWidthPercentRelation();
--    return *this;
--}
--
- bool SwFmtFrmSize::operator==( const SfxPoolItem& rAttr ) const
- {
-     assert(SfxPoolItem::operator==(rAttr));
