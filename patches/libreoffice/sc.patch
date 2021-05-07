@@ -211,3 +211,29 @@
  }
  
  /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
+--- inc/typedstrdata.hxx	2015-11-25 07:55:38.000000000 -0500
++++ inc/typedstrdata.hxx	2021-05-07 08:53:04.000000000 -0400
+@@ -29,8 +29,6 @@
+     ScTypedStrData( const OUString& rStr, double nVal = 0.0,
+                     StringType eType = Standard, bool bDate = false );
+ 
+-    ScTypedStrData( const ScTypedStrData& rCpy );
+-
+     bool IsStrData() const;
+     bool IsDate() const { return mbIsDate;}
+     const OUString& GetString() const { return maStrValue;}
+--- source/core/tool/typedstrdata.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/tool/typedstrdata.cxx	2021-05-07 08:54:38.000000000 -0400
+@@ -93,12 +93,6 @@
+     meStrType(nType),
+     mbIsDate( bDate ) {}
+ 
+-ScTypedStrData::ScTypedStrData( const ScTypedStrData& rCpy ) :
+-    maStrValue(rCpy.maStrValue),
+-    mfValue(rCpy.mfValue),
+-    meStrType(rCpy.meStrType),
+-    mbIsDate( rCpy.mbIsDate ) {}
+-
+ bool ScTypedStrData::IsStrData() const
+ {
+     return meStrType != Value;
