@@ -1260,6 +1260,10 @@ EditSelection ImpEditEngine::InsertTextObject( const EditTextObject& rTextObject
 
         ParaPortion* pPortion = FindParaPortion( aPaM.GetNode() );
         DBG_ASSERT( pPortion, "Blind Portion in FastInsertText" );
+#ifdef USE_JAVA
+        // Fix Mac App Store crash by checking for NULL
+        if ( pPortion )
+#endif	// USE_JAVA
         pPortion->MarkInvalid( nStartPos, pC->GetText().getLength() );
 
         // Character attributes ...
@@ -1308,6 +1312,10 @@ EditSelection ImpEditEngine::InsertTextObject( const EditTextObject& rTextObject
                 UpdateFields();
 
             // Otherwise, quick format => no attributes!
+#ifdef USE_JAVA
+            // Fix Mac App Store crash by checking for NULL
+            if ( pPortion )
+#endif	// USE_JAVA
             pPortion->MarkSelectionInvalid( nStartPos, pC->GetText().getLength() );
         }
 
