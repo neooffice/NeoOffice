@@ -527,6 +527,15 @@ void SwHTMLParser::NewNumBulListItem( int nToken )
         AppendTxtNode( AM_NOSPACE, false );
     bNoParSpace = false;    // In <LI> wird kein Abstand eingefuegt!
 
+#ifndef NO_LIBO_NULL_TEXTNODE_FIX
+    SwTxtNode* pTxtNode = pPam->GetNode().GetTxtNode();
+    if (!pTxtNode)
+    {
+        SAL_WARN("sw.html", "No Text-Node at PaM-Position");
+        return;
+    }
+#endif	// !NO_LIBO_NULL_TEXTNODE_FIX
+
     const bool bCountedInList( HTML_LISTHEADER_ON==nToken ? false : true );
 
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
@@ -576,7 +585,9 @@ void SwHTMLParser::NewNumBulListItem( int nToken )
         nOpenParaToken = static_cast< sal_uInt16 >(nToken);
     }
 
+#ifdef NO_LIBO_NULL_TEXTNODE_FIX
     SwTxtNode* pTxtNode = pPam->GetNode().GetTxtNode();
+#endif	// NO_LIBO_NULL_TEXTNODE_FIX
     ((SwCntntNode *)pTxtNode)->SetAttr( SwNumRuleItem(aNumRuleName) );
     pTxtNode->SetAttrListLevel(nLevel);
     // #i57656# - <IsCounted()> state of text node has to be adjusted accordingly.
@@ -711,7 +722,15 @@ void SwHTMLParser::EndNumBulListItem( int nToken, bool bSetColl,
 void SwHTMLParser::SetNodeNum( sal_uInt8 nLevel, bool bCountedInList )
 {
     SwTxtNode* pTxtNode = pPam->GetNode().GetTxtNode();
+#ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     OSL_ENSURE( pTxtNode, "Kein Text-Node an PaM-Position" );
+#else	// NO_LIBO_HTML_PARSER_LEAK_FIX
+    if (!pTxtNode)
+    {
+        SAL_WARN("sw.html", "No Text-Node at PaM-Position");
+        return;
+    }
+#endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
     OSL_ENSURE( GetNumInfo().GetNumRule(), "Kein Numerierungs-Regel" );
     const OUString& rName = GetNumInfo().GetNumRule()->GetName();

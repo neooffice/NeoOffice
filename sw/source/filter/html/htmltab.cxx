@@ -4774,11 +4774,20 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
                 }
 
                 SwNode const*const pNd = & pPam->GetPoint()->nNode.GetNode();
+#ifdef NO_LIBO_NULL_TEXTNODE_FIX
                 if( !bAppended && !bForceFrame )
+#else	// NO_LIBO_NULL_TEXTNODE_FIX
+                SwTxtNode *const pOldTxtNd = (!bAppended && !bForceFrame) ?
+                    pSavePos->nNode.GetNode().GetTxtNode() : nullptr;
+
+                if (pOldTxtNd)
+#endif	// NO_LIBO_NULL_TEXTNODE_FIX
                 {
+#ifdef NO_LIBO_NULL_TEXTNODE_FIX
                     SwTxtNode *const pOldTxtNd =
                         pSavePos->nNode.GetNode().GetTxtNode();
                     OSL_ENSURE( pOldTxtNd, "Wieso stehen wir in keinem Txt-Node?" );
+#endif	// NO_LIBO_NULL_TEXTNODE_FIX
                     SwFrmFmt *pFrmFmt = pSwTable->GetFrmFmt();
 
                     const SfxPoolItem* pItem2;
