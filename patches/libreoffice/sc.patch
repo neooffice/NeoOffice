@@ -237,3 +237,61 @@
  bool ScTypedStrData::IsStrData() const
  {
      return meStrType != Value;
+--- inc/refupdatecontext.hxx	2015-11-25 07:55:38.000000000 -0500
++++ inc/refupdatecontext.hxx	2021-05-07 09:57:27.000000000 -0400
+@@ -98,7 +98,6 @@
+     bool mbNameModified;
+ 
+     RefUpdateResult();
+-    RefUpdateResult(const RefUpdateResult& r);
+ };
+ 
+ struct RefUpdateInsertTabContext
+--- inc/viewopti.hxx	2015-11-25 07:55:38.000000000 -0500
++++ inc/viewopti.hxx	2021-05-07 10:00:00.000000000 -0400
+@@ -69,7 +69,6 @@
+                 ScGridOptions( const SvxOptionsGrid& rOpt ) : SvxOptionsGrid( rOpt ) {}
+ 
+     void                    SetDefaults();
+-    const ScGridOptions&    operator=  ( const ScGridOptions& rCpy );
+     bool                    operator== ( const ScGridOptions& rOpt ) const;
+     bool                    operator!= ( const ScGridOptions& rOpt ) const { return !(operator==(rOpt)); }
+ };
+--- source/core/data/refupdatecontext.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/data/refupdatecontext.cxx	2021-05-07 09:58:29.000000000 -0400
+@@ -56,10 +56,6 @@
+ }
+ 
+ RefUpdateResult::RefUpdateResult() : mbValueChanged(false), mbReferenceModified(false), mbNameModified(false) {}
+-RefUpdateResult::RefUpdateResult(const RefUpdateResult& r) :
+-    mbValueChanged(r.mbValueChanged),
+-    mbReferenceModified(r.mbReferenceModified),
+-    mbNameModified(r.mbNameModified) {}
+ 
+ RefUpdateInsertTabContext::RefUpdateInsertTabContext(ScDocument& rDoc, SCTAB nInsertPos, SCTAB nSheets) :
+     mrDoc(rDoc), mnInsertPos(nInsertPos), mnSheets(nSheets) {}
+--- source/core/tool/viewopti.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/tool/viewopti.cxx	2021-05-07 10:01:03.000000000 -0400
+@@ -63,22 +63,6 @@
+     nFldDivisionY = 1;
+ }
+ 
+-const ScGridOptions& ScGridOptions::operator=( const ScGridOptions& rCpy )
+-{
+-    nFldDrawX       = rCpy.nFldDrawX;       // UINT32
+-    nFldDivisionX   = rCpy.nFldDivisionX;
+-    nFldDrawY       = rCpy.nFldDrawY;
+-    nFldDivisionY   = rCpy.nFldDivisionY;
+-    nFldSnapX       = rCpy.nFldSnapX;
+-    nFldSnapY       = rCpy.nFldSnapY;
+-    bUseGridsnap    = rCpy.bUseGridsnap;    // BitBool
+-    bSynchronize    = rCpy.bSynchronize;
+-    bGridVisible    = rCpy.bGridVisible;
+-    bEqualGrid      = rCpy.bEqualGrid;
+-
+-    return *this;
+-}
+-
+ bool ScGridOptions::operator==( const ScGridOptions& rCpy ) const
+ {
+     return (   nFldDrawX        == rCpy.nFldDrawX
