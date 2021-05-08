@@ -983,7 +983,14 @@ bool SdrEditView::InsertObjectAtView(SdrObject* pObj, SdrPageView& rPV, sal_uInt
         }
     }
     if( IsUndoEnabled() )
+#ifndef NO_LIBO_BUG_111522_AND_125824_FIXES
+    {
+        EndTextEditAllViews();
+#endif	// !NO_LIBO_BUG_111522_AND_125824_FIXES
         AddUndo(GetModel()->GetSdrUndoFactory().CreateUndoNewObject(*pObj));
+#ifndef NO_LIBO_BUG_111522_AND_125824_FIXES
+    }
+#endif	// !NO_LIBO_BUG_111522_AND_125824_FIXES
 
     if ((nOptions & SDRINSERT_DONTMARK)==0) {
         if ((nOptions & SDRINSERT_ADDMARK)==0) UnmarkAllObj();
@@ -1038,5 +1045,23 @@ bool SdrEditView::IsUndoEnabled() const
 {
     return pMod->IsUndoEnabled();
 }
+
+#ifndef NO_LIBO_BUG_111522_AND_125824_FIXES
+
+void SdrEditView::EndTextEditAllViews() const
+{
+    size_t nViews = pMod->GetListenerCount();
+    for (size_t nView = 0; nView < nViews; ++nView)
+    {
+        SdrObjEditView* pView = dynamic_cast<SdrObjEditView*>(pMod->GetListener(nView));
+        if (!pView)
+            continue;
+
+        if (pView->IsTextEdit())
+            pView->SdrEndTextEdit();
+    }
+}
+
+#endif	// !NO_LIBO_BUG_111522_AND_125824_FIXES
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
