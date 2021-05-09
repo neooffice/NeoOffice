@@ -427,8 +427,31 @@
                  // Hard-set the attributes, because they could come from the Template
                  // and then size calculations could not be correct anymore.
 --- source/core/doc/tblrwcl.cxx	2015-11-25 07:55:38.000000000 -0500
-+++ source/core/doc/tblrwcl.cxx	2021-05-05 17:53:16.000000000 -0400
-@@ -1924,20 +1924,43 @@
++++ source/core/doc/tblrwcl.cxx	2021-05-09 09:10:03.000000000 -0400
+@@ -91,8 +91,6 @@
+     _CpyTabFrm( SwTableBoxFmt* pAktFrmFmt ) : pNewFrmFmt( 0 )
+     {   Value.pFrmFmt = pAktFrmFmt; }
+ 
+-    _CpyTabFrm& operator=( const _CpyTabFrm& );
+-
+     bool operator==( const _CpyTabFrm& rCpyTabFrm ) const
+         { return  (sal_uLong)Value.nSize == (sal_uLong)rCpyTabFrm.Value.nSize; }
+     bool operator<( const _CpyTabFrm& rCpyTabFrm ) const
+@@ -241,13 +239,6 @@
+ 
+ typedef bool (*FN_lcl_SetLineHeight)(SwTableLine*, CR_SetLineHeight&, SwTwips, bool );
+ 
+-_CpyTabFrm& _CpyTabFrm::operator=( const _CpyTabFrm& rCpyTabFrm )
+-{
+-    pNewFrmFmt = rCpyTabFrm.pNewFrmFmt;
+-    Value = rCpyTabFrm.Value;
+-    return *this;
+-}
+-
+ typedef o3tl::sorted_vector<_CpyTabFrm> _CpyTabFrms;
+ 
+ struct _CpyPara
+@@ -1924,20 +1915,43 @@
          // Find the Frame Format in the list of all Frame Formats
          _CpyTabFrm aFindFrm(static_cast<SwTableBoxFmt*>(rFndBox.GetBox()->GetFrmFmt()));
  
