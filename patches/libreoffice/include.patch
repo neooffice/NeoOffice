@@ -1107,3 +1107,16 @@
      SvBorder & operator += ( const SvBorder & rBorder )
              {
                  Left()   += rBorder.Left();
+--- unotools/confignode.hxx	2015-11-25 07:55:38.000000000 -0500
++++ unotools/confignode.hxx	2021-05-09 17:01:40.000000000 -0400
+@@ -249,10 +249,6 @@
+             const bool i_bUpdatable
+         );
+ 
+-        /// copy ctor
+-        OConfigurationTreeRoot(const OConfigurationTreeRoot& _rSource)
+-            :OConfigurationNode(_rSource), m_xCommitter(_rSource.m_xCommitter) { }
+-
+         /** open a new top-level configuration node
+ 
+             opens a new node which is the root if an own configuration sub tree. This is what "top level" means: The
