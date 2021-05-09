@@ -1120,3 +1120,20 @@
          /** open a new top-level configuration node
  
              opens a new node which is the root if an own configuration sub tree. This is what "top level" means: The
+--- salhelper/timer.hxx	2015-11-25 07:55:38.000000000 -0500
++++ salhelper/timer.hxx	2021-05-09 17:08:57.000000000 -0400
+@@ -56,14 +56,6 @@
+         normalize();
+     }
+ 
+-    TTimeValue( const TTimeValue& rTimeValue )
+-    {
+-        Seconds = rTimeValue.Seconds;
+-        Nanosec = rTimeValue.Nanosec;
+-
+-        normalize();
+-    }
+-
+     TTimeValue( const TimeValue& rTimeValue )
+     {
+         Seconds = rTimeValue.Seconds;
