@@ -889,16 +889,18 @@
      virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
      virtual SfxPoolItem*    Clone( SfxItemPool *pPool = 0 ) const SAL_OVERRIDE;
 --- editeng/formatbreakitem.hxx	2015-11-25 07:55:38.000000000 -0500
-+++ editeng/formatbreakitem.hxx	2021-05-05 08:11:27.000000000 -0400
-@@ -40,7 +40,6 @@
++++ editeng/formatbreakitem.hxx	2021-05-08 21:27:44.000000000 -0400
+@@ -40,8 +40,8 @@
  
      inline SvxFmtBreakItem( const SvxBreak eBrk /*= SVX_BREAK_NONE*/,
                              const sal_uInt16 nWhich );
 -    inline SvxFmtBreakItem( const SvxFmtBreakItem& rBreak );
      inline SvxFmtBreakItem& operator=( const SvxFmtBreakItem& rCpy );
++    SvxFmtBreakItem(SvxFmtBreakItem const &) = default; // SfxPoolItem copy function dichotomy
  
      // "pure virtual Methods" from SfxPoolItem
-@@ -74,10 +73,6 @@
+     virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
+@@ -74,10 +74,6 @@
      SfxEnumItem( _nWhich, (sal_uInt16)eBreak )
  {}
  
@@ -959,7 +961,7 @@
  
  #endif
 --- editeng/tstpitem.hxx	2015-11-25 07:55:38.000000000 -0500
-+++ editeng/tstpitem.hxx	2021-05-05 08:07:43.000000000 -0400
++++ editeng/tstpitem.hxx	2021-05-08 20:50:55.000000000 -0400
 @@ -112,7 +112,6 @@
                      const sal_uInt16 nDist,
                      const SvxTabAdjust eAdjst /*= SVX_TAB_ADJUST_DEFAULT*/,
@@ -968,6 +970,14 @@
  
      // Returns index of the tab or TAB_NOTFOUND
      sal_uInt16          GetPos( const SvxTabStop& rTab ) const;
+@@ -132,6 +131,7 @@
+ 
+     // Assignment operator, equality operator (caution: expensive!)
+     SvxTabStopItem& operator=( const SvxTabStopItem& rTSI );
++    SvxTabStopItem(SvxTabStopItem const &) = default; // SfxPoolItem copy function dichotomy
+ 
+     // this is already included in SfxPoolItem declaration
+     //int             operator!=( const SvxTabStopItem& rTSI ) const
 --- editeng/twolinesitem.hxx	2021-05-05 10:06:12.000000000 -0400
 +++ editeng/twolinesitem.hxx	2021-05-05 21:56:31.000000000 -0400
 @@ -35,9 +35,11 @@
@@ -983,3 +993,73 @@
      // "pure virtual Methods" from SfxPoolItem
      virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
      virtual SfxPoolItem*    Clone( SfxItemPool* pPool = 0 ) const SAL_OVERRIDE;
+--- editeng/lrspitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/lrspitem.hxx	2021-05-08 20:36:22.000000000 -0400
+@@ -71,6 +71,7 @@
+                     const long nTLeft /*= 0*/, const short nOfset /*= 0*/,
+                     const sal_uInt16 nId  );
+     inline SvxLRSpaceItem& operator=( const SvxLRSpaceItem &rCpy );
++    SvxLRSpaceItem(SvxLRSpaceItem const &) = default;
+ 
+     // "pure virtual Methods" from SfxPoolItem
+     virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
+--- editeng/fhgtitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/fhgtitem.hxx	2021-05-08 21:22:46.000000000 -0400
+@@ -72,6 +72,7 @@
+             ePropUnit = rSize.ePropUnit;
+             return *this;
+         }
++    SvxFontHeightItem(SvxFontHeightItem const &) = default; // SfxPoolItem copy function dichotomy
+ 
+     void SetHeight( sal_uInt32 nNewHeight, const sal_uInt16 nNewProp = 100,
+                      SfxMapUnit eUnit = SFX_MAPUNIT_RELATIVE );
+--- editeng/fontitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/fontitem.hxx	2021-05-08 20:43:46.000000000 -0400
+@@ -84,6 +84,7 @@
+     rtl_TextEncoding GetCharSet() const { return eTextEncoding; }
+ 
+     SvxFontItem& operator=(const SvxFontItem& rFont);
++    SvxFontItem(SvxFontItem const &) = default; // SfxPoolItem copy function dichotomy
+ 
+     static void EnableStoreUnicodeNames( bool bEnable );
+ 
+--- editeng/langitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/langitem.hxx	2021-05-08 21:25:55.000000000 -0400
+@@ -56,6 +56,7 @@
+             SetValue( rLang.GetValue() );
+             return *this;
+         }
++    SvxLanguageItem(SvxLanguageItem const &) = default; // SfxPoolItem copy function dichotomy
+ 
+     // enum cast
+     LanguageType            GetLanguage() const
+--- editeng/shaditem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/shaditem.hxx	2021-05-08 21:13:55.000000000 -0400
+@@ -50,6 +50,7 @@
+                  const SvxShadowLocation eLoc = SVX_SHADOW_NONE );
+ 
+     inline SvxShadowItem& operator=( const SvxShadowItem& rFmtShadow );
++    SvxShadowItem(SvxShadowItem const &) = default; // SfxPoolItem copy function dichotomy
+ 
+     // "pure virtual Methods" from SfxPoolItem
+     virtual bool             operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
+--- editeng/udlnitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/udlnitem.hxx	2021-05-08 21:36:25.000000000 -0400
+@@ -69,6 +69,7 @@
+             SetColor( rTextLine.GetColor() );
+             return *this;
+         }
++    SvxTextLineItem(SvxTextLineItem const &) = default; // SfxPoolItem copy function dichotomy
+ 
+     // enum cast
+     FontUnderline           GetLineStyle() const
+--- editeng/ulspitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/ulspitem.hxx	2021-05-08 20:40:36.000000000 -0400
+@@ -45,6 +45,7 @@
+     SvxULSpaceItem( const sal_uInt16 nUp, const sal_uInt16 nLow,
+                     const sal_uInt16 nId  );
+     inline SvxULSpaceItem& operator=( const SvxULSpaceItem &rCpy );
++    SvxULSpaceItem(SvxULSpaceItem const &) = default; // SfxPoolItem copy function dichotomy
+ 
+     // "pure virtual Methods" from SfxPoolItem
+     virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
