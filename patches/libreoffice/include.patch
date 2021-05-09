@@ -1246,8 +1246,8 @@
  };
  
  #endif
---- svx/algitem.hxx-11-25 07:55:38.000000000 -0500
-+++ svx/algitem.hxx	2021-05-09 17:34:40.000000000 -0400
+--- svx/algitem.hxx	2021-05-09 17:38:23.000000000 -0400
++++ svx/algitem.hxx	2021-05-09 18:58:20.000000000 -0400
 @@ -60,6 +60,7 @@
                  SetValue( rOrientation.GetValue() );
                  return *this;
@@ -1256,11 +1256,3 @@
  
      /** Returns sal_True, if the item represents STACKED state. */
      bool                    IsStacked() const;
-@@ -115,6 +116,7 @@
-                 nBottomMargin = rMargin.nBottomMargin;
-                 return *this;
-             }
-+    SvxMarginItem(SvxMarginItem const &) = default; // SfxPoolItem copy function dichotomy
- };
- 
- #endif
