@@ -591,3 +591,36 @@
  
      /// "Pure virtual methods" of SfxPoolItem.
      virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
+--- source/core/inc/swfont.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/inc/swfont.hxx	2021-05-09 08:44:56.000000000 -0400
+@@ -67,8 +67,6 @@
+     inline void CopyMagic( const SwSubFont& rFnt )
+         { pMagic = rFnt.pMagic; nFntIndex = rFnt.nFntIndex; }
+ 
+-    SwSubFont& operator=( const SwSubFont &rFont );
+-
+     short _CheckKerning( );
+ 
+     bool ChgFnt( SwViewShell const *pSh, OutputDevice& rOut );
+--- source/core/txtnode/swfont.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/txtnode/swfont.cxx	2021-05-09 08:46:57.000000000 -0400
+@@ -907,19 +907,6 @@
+     delete pBackColor;
+ }
+ 
+-SwSubFont& SwSubFont::operator=( const SwSubFont &rFont )
+-{
+-    SvxFont::operator=( rFont );
+-    pMagic = rFont.pMagic;
+-    nFntIndex = rFont.nFntIndex;
+-    nOrgHeight = rFont.nOrgHeight;
+-    nOrgAscent = rFont.nOrgAscent;
+-    nPropWidth = rFont.nPropWidth;
+-    aSize = rFont.aSize;
+-    smallCapsPercentage66 = rFont.smallCapsPercentage66;
+-    return *this;
+-}
+-
+ SwFont& SwFont::operator=( const SwFont &rFont )
+ {
+     aSub[SW_LATIN] = rFont.aSub[SW_LATIN];
