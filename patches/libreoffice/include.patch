@@ -1074,3 +1074,20 @@
              // use for events got via XSQLErrorListener::errorOccured
      SQLExceptionInfo(const ::com::sun::star::uno::Any& _rError);
              // use with the Reason member of an SQLErrorEvent or with NextElement of an SQLException
+--- tools/svborder.hxx	2015-11-25 07:55:38.000000000 -0500
++++ tools/svborder.hxx	2021-05-09 14:14:07.000000000 -0400
+@@ -51,14 +51,6 @@
+             }
+     bool    operator != ( const SvBorder & rObj ) const
+             { return !(*this == rObj); }
+-    SvBorder & operator = ( const SvBorder & rBorder )
+-            {
+-                Left()   = rBorder.Left();
+-                Top()    = rBorder.Top();
+-                Right()  = rBorder.Right();
+-                Bottom() = rBorder.Bottom();
+-                return *this;
+-            }
+     SvBorder & operator += ( const SvBorder & rBorder )
+             {
+                 Left()   += rBorder.Left();
