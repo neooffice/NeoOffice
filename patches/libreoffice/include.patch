@@ -553,9 +553,25 @@
  };
  
  #endif
---- editeng/justifyitem.hxx	2015-11-25 07:55:38.000000000 -0500
-+++ editeng/justifyitem.hxx	2021-05-04 18:22:55.000000000 -0400
-@@ -110,8 +110,6 @@
+--- editeng/justifyitem.hxx	2021-05-08 21:49:46.000000000 -0400
++++ editeng/justifyitem.hxx	2021-05-09 17:27:28.000000000 -0400
+@@ -54,6 +54,7 @@
+                 SetValue( rHorJustify.GetValue() );
+                 return *this;
+             }
++    SvxHorJustifyItem(SvxHorJustifyItem const &) = default; // SfxPoolItem copy function dichotomy
+ };
+ 
+ 
+@@ -87,6 +88,7 @@
+                 SetValue( rVerJustify.GetValue() );
+                 return *this;
+             }
++    SvxVerJustifyItem(SvxVerJustifyItem const &) = default; // SfxPoolItem copy function dichotomy
+ };
+ 
+ 
+@@ -110,8 +112,6 @@
      virtual OUString        GetValueText( sal_uInt16 nVal ) const;
      virtual SfxPoolItem*    Clone( SfxItemPool *pPool = 0 ) const SAL_OVERRIDE;
      virtual SfxPoolItem*    Create( SvStream& rStream, sal_uInt16 nVer ) const SAL_OVERRIDE;
@@ -1137,3 +1153,114 @@
      TTimeValue( const TimeValue& rTimeValue )
      {
          Seconds = rTimeValue.Seconds;
+--- editeng/wghtitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/wghtitem.hxx	2021-05-09 17:15:37.000000000 -0400
+@@ -63,6 +63,7 @@
+             SetValue( rWeight.GetValue() );
+             return *this;
+         }
++    SvxWeightItem(SvxWeightItem const &) = default; // SfxPoolItem copy function dichotomy
+ 
+     // enum cast
+     FontWeight              GetWeight() const
+--- editeng/sizeitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/sizeitem.hxx	2021-05-09 17:17:05.000000000 -0400
+@@ -42,6 +42,7 @@
+     SvxSizeItem( const sal_uInt16 nId, const Size& rSize);
+ 
+     inline SvxSizeItem& operator=( const SvxSizeItem &rCpy );
++    SvxSizeItem(SvxSizeItem const &) = default; // SfxPoolItem copy function dichotomy
+ 
+     // "pure virtual Methods" from SfxPoolItem
+     virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
+--- editeng/shdditem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/shdditem.hxx	2021-05-09 17:18:39.000000000 -0400
+@@ -53,7 +53,7 @@
+             SetValue(rShadow.GetValue());
+             return *this;
+         }
+-
++    SvxShadowedItem(SvxShadowedItem const &) = default; // SfxPoolItem copy function dichotomy
+ };
+ 
+ #endif
+--- editeng/protitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/protitem.hxx	2021-05-09 17:20:35.000000000 -0400
+@@ -43,6 +43,7 @@
+ 
+     explicit inline SvxProtectItem( const sal_uInt16 nId  );
+     inline SvxProtectItem &operator=( const SvxProtectItem &rCpy );
++    SvxProtectItem(SvxProtectItem const &) = default; // SfxPoolItem copy function dichotomy
+ 
+     // "pure virtual Methods" from SfxPoolItem
+     virtual bool             operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
+--- editeng/postitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/postitem.hxx	2021-05-09 17:22:15.000000000 -0400
+@@ -63,7 +63,8 @@
+         SetValue( rPost.GetValue() );
+         return *this;
+     }
+-
++    SvxPostureItem(SvxPostureItem const &) = default; // SfxPoolItem copy function dichotomy
++ 
+     // enum cast
+     FontItalic              GetPosture() const
+                                 { return (FontItalic)GetValue(); }
+--- editeng/opaqitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/opaqitem.hxx	2021-05-09 17:23:48.000000000 -0400
+@@ -39,6 +39,7 @@
+ 
+     explicit SvxOpaqueItem( const sal_uInt16 nId , const bool bOpa = true );
+     inline SvxOpaqueItem &operator=( const SvxOpaqueItem &rCpy );
++    SvxOpaqueItem(SvxOpaqueItem const &) = default; // SfxPoolItem copy function dichotomy
+ 
+     // "pure virtual Methods" from SfxPoolItem
+     virtual SfxPoolItem*    Clone( SfxItemPool *pPool = 0 ) const SAL_OVERRIDE;
+--- editeng/keepitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/keepitem.hxx	2021-05-09 17:25:35.000000000 -0400
+@@ -38,6 +38,7 @@
+     inline SvxFmtKeepItem( const bool bKeep /*= false*/,
+                            const sal_uInt16 _nWhich  );
+     inline SvxFmtKeepItem& operator=( const SvxFmtKeepItem& rSplit );
++    SvxFmtKeepItem(SvxFmtKeepItem const &) = default; // SfxPoolItem copy function dichotomy
+ 
+     // "pure virtual Methods" from SfxPoolItem
+     virtual SfxPoolItem*    Clone( SfxItemPool *pPool = 0 ) const SAL_OVERRIDE;
+--- editeng/crossedoutitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/crossedoutitem.hxx	2021-05-09 17:30:00.000000000 -0400
+@@ -66,6 +66,7 @@
+             SetValue( rCross.GetValue() );
+             return *this;
+         }
++    SvxCrossedOutItem(SvxCrossedOutItem const &) = default; // SfxPoolItem copy function dichotomy
+ 
+     // enum cast
+     FontStrikeout           GetStrikeout() const
+--- editeng/contouritem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/contouritem.hxx	2021-05-09 17:31:14.000000000 -0400
+@@ -51,6 +51,7 @@
+         SetValue(rCont.GetValue());
+         return *this;
+     }
++    SvxContourItem(SvxContourItem const &) = default; // SfxPoolItem copy function dichotomy
+ };
+ 
+ #endif
+--- svx/algitem.hxx-11-25 07:55:38.000000000 -0500
++++ svx/algitem.hxx	2021-05-09 17:34:40.000000000 -0400
+@@ -60,6 +60,7 @@
+                 SetValue( rOrientation.GetValue() );
+                 return *this;
+             }
++    SvxOrientationItem(SvxOrientationItem const &) = default; // SfxPoolItem copy function dichotomy
+ 
+     /** Returns sal_True, if the item represents STACKED state. */
+     bool                    IsStacked() const;
+@@ -115,6 +116,7 @@
+                 nBottomMargin = rMargin.nBottomMargin;
+                 return *this;
+             }
++    SvxMarginItem(SvxMarginItem const &) = default; // SfxPoolItem copy function dichotomy
+ };
+ 
+ #endif
