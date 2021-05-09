@@ -573,3 +573,21 @@
      inline sal_uInt16 Height() const { return nHeight; }
      inline void Height( const sal_uInt16 nNew ) { nHeight = nNew; }
      inline sal_uInt16 Width() const { return nWidth; }
+--- inc/fmtornt.hxx	2015-11-25 07:55:38.000000000 -0500
++++ inc/fmtornt.hxx	2021-05-09 08:22:31.000000000 -0400
+@@ -40,6 +40,7 @@
+     SwFmtVertOrient( SwTwips nY = 0, sal_Int16 eVert = com::sun::star::text::VertOrientation::NONE,
+                      sal_Int16 eRel = com::sun::star::text::RelOrientation::PRINT_AREA );
+     inline SwFmtVertOrient &operator=( const SwFmtVertOrient &rCpy );
++    SwFmtVertOrient(SwFmtVertOrient const &) = default; // SfxPoolItem copy function dichotomy
+ 
+     /// "Pure virtual methods" of SfxPoolItem.
+     virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
+@@ -75,6 +76,7 @@
+     SwFmtHoriOrient( SwTwips nX = 0, sal_Int16 eHori = com::sun::star::text::HoriOrientation::NONE,
+         sal_Int16 eRel = com::sun::star::text::RelOrientation::PRINT_AREA, bool bPos = false );
+     inline SwFmtHoriOrient &operator=( const SwFmtHoriOrient &rCpy );
++    SwFmtHoriOrient(SwFmtHoriOrient const &) = default; // SfxPoolItem copy function dichotomy
+ 
+     /// "Pure virtual methods" of SfxPoolItem.
+     virtual bool            operator==( const SfxPoolItem& ) const SAL_OVERRIDE;
