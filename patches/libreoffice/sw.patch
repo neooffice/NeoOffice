@@ -715,3 +715,25 @@
  bool PlcDrawObj::Append( WW8Export& rWrt, WW8_CP nCp, const sw::Frame& rFmt,
      const Point& rNdTopLeft )
  {
+--- source/filter/inc/msfilter.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/filter/inc/msfilter.hxx	2021-05-09 09:46:10.000000000 -0400
+@@ -364,8 +364,7 @@
+             explicit SetInDocAndDelete(SwDoc &rDoc) : mrDoc(rDoc) {}
+             void operator()(SwFltStackEntry *pEntry);
+         private:
+-            //No assignment
+-            SetInDocAndDelete& operator=(const SetInDocAndDelete&);
++            SetInDocAndDelete& operator=(const SetInDocAndDelete&) = delete;
+         };
+ 
+         /**
+@@ -384,8 +383,7 @@
+                     pEntry->SetEndPos(mrPos);
+             }
+         private:
+-            //No assignment
+-            SetEndIfOpen& operator=(const SetEndIfOpen&);
++            SetEndIfOpen& operator=(const SetEndIfOpen&) = delete;
+         };
+ 
+         /**
