@@ -562,3 +562,14 @@
          }
  }
  
+--- source/core/text/possiz.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/text/possiz.hxx	2021-05-09 08:00:09.000000000 -0400
+@@ -32,6 +32,8 @@
+         : nWidth(nW), nHeight(nH) { }
+     inline SwPosSize( const Size &rSize )
+         : nWidth(sal_uInt16(rSize.Width())), nHeight(sal_uInt16(rSize.Height())){ }
++    SwPosSize(SwPosSize const &) = default;
++    SwPosSize(SwPosSize &&) = default;
+     inline sal_uInt16 Height() const { return nHeight; }
+     inline void Height( const sal_uInt16 nNew ) { nHeight = nNew; }
+     inline sal_uInt16 Width() const { return nWidth; }
