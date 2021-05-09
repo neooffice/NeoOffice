@@ -960,9 +960,25 @@
  };
  
  #endif
---- editeng/tstpitem.hxx	2015-11-25 07:55:38.000000000 -0500
-+++ editeng/tstpitem.hxx	2021-05-08 20:50:55.000000000 -0400
-@@ -112,7 +112,6 @@
+--- editeng/tstpitem.hxx	2021-05-08 21:49:46.000000000 -0400
++++ editeng/tstpitem.hxx	2021-05-09 16:33:54.000000000 -0400
+@@ -80,15 +80,6 @@
+                         { return nTabPos == rTS.nTabPos; }
+     bool            operator <( const SvxTabStop& rTS ) const
+                         { return nTabPos < rTS.nTabPos; }
+-
+-    SvxTabStop&     operator=( const SvxTabStop& rTS )
+-                        {
+-                            nTabPos = rTS.nTabPos;
+-                            eAdjustment = rTS.eAdjustment;
+-                            m_cDecimal = rTS.m_cDecimal;
+-                            cFill = rTS.cFill;
+-                            return *this;
+-                        }
+ };
+ 
+ // class SvxTabStopItem --------------------------------------------------
+@@ -112,7 +103,6 @@
                      const sal_uInt16 nDist,
                      const SvxTabAdjust eAdjst /*= SVX_TAB_ADJUST_DEFAULT*/,
                      sal_uInt16 nWhich  );
@@ -970,7 +986,7 @@
  
      // Returns index of the tab or TAB_NOTFOUND
      sal_uInt16          GetPos( const SvxTabStop& rTab ) const;
-@@ -132,6 +131,7 @@
+@@ -132,6 +122,7 @@
  
      // Assignment operator, equality operator (caution: expensive!)
      SvxTabStopItem& operator=( const SvxTabStopItem& rTSI );
