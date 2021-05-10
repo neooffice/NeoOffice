@@ -98,3 +98,86 @@
  FontEntry::FontEntry() :
      pFontName       ( NULL ),
      eCharSetType    ( CST_CCOMPLETE ),
+--- source/xsltdialog/xmlfiltercommon.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/xsltdialog/xmlfiltercommon.hxx	2021-05-10 16:37:01.000000000 -0400
+@@ -70,7 +70,6 @@
+     bool        mbNeedsXSLT2;
+ 
+     filter_info_impl();
+-    filter_info_impl( const filter_info_impl& rInfo );
+     bool operator==( const filter_info_impl& ) const;
+ 
+     com::sun::star::uno::Sequence< OUString > getFilterUserData() const;
+--- source/xsltdialog/xmlfiltersettingsdialog.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/xsltdialog/xmlfiltersettingsdialog.cxx	2021-05-10 16:39:00.000000000 -0400
+@@ -1574,30 +1574,6 @@
+ 
+ 
+ 
+-filter_info_impl::filter_info_impl( const filter_info_impl& rInfo ) :
+-    maFilterName( rInfo.maFilterName ),
+-    maType( rInfo.maType ),
+-    maDocumentService( rInfo.maDocumentService ),
+-    maFilterService( rInfo.maFilterService ),
+-    maInterfaceName( rInfo.maInterfaceName ),
+-    maComment( rInfo.maComment ),
+-    maExtension( rInfo.maExtension ),
+-    maExportXSLT( rInfo.maExportXSLT ),
+-    maImportXSLT( rInfo.maImportXSLT ),
+-    maImportTemplate( rInfo.maImportTemplate ),
+-    maDocType( rInfo.maDocType ),
+-    maImportService( rInfo.maImportService ),
+-    maExportService( rInfo.maExportService ),
+-    maFlags( rInfo.maFlags ),
+-    maFileFormatVersion( rInfo.maFileFormatVersion ),
+-    mnDocumentIconID( rInfo.mnDocumentIconID ),
+-    mbReadonly( rInfo.mbReadonly ),
+-    mbNeedsXSLT2( rInfo.mbNeedsXSLT2 )
+-{
+-}
+-
+-
+-
+ bool filter_info_impl::operator==( const filter_info_impl& r ) const
+ {
+     return maFilterName == r.maFilterName &&
+--- source/graphicfilter/idxf/dxfvec.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/graphicfilter/idxf/dxfvec.hxx	2021-05-10 16:41:16.000000000 -0400
+@@ -43,16 +43,6 @@
+         nDotCount(0),
+         fDotLen(0),
+         fDistance(0) {}
+-
+-    DXFLineInfo(const DXFLineInfo& x) :
+-        eStyle(x.eStyle),
+-        fWidth(x.fWidth),
+-        nDashCount(x.nDashCount),
+-        fDashLen(x.fDashLen),
+-        nDotCount(x.nDotCount),
+-        fDotLen(x.fDotLen),
+-        fDistance(x.fDistance) {}
+-
+ };
+ 
+ 
+@@ -68,7 +58,6 @@
+     double fx,fy,fz; // public ! - why not?
+ 
+     inline DXFVector(double fX=0.0, double fY=0.0, double fZ=0.0);
+-    inline DXFVector(const DXFVector & rV);
+ 
+     // summation/subtraktion:
+     DXFVector & operator += (const DXFVector & rV);
+@@ -178,12 +167,6 @@
+ }
+ 
+ 
+-inline DXFVector::DXFVector(const DXFVector & rV)
+-{
+-    fx=rV.fx; fy=rV.fy; fz=rV.fz;
+-}
+-
+-
+ inline DXFVector & DXFVector::operator += (const DXFVector & rV)
+ {
+     fx+=rV.fx; fy+=rV.fy; fz+=rV.fz;
