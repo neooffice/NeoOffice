@@ -1,0 +1,26 @@
+--- source/msfilter/svdfppt.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/msfilter/svdfppt.cxx	2021-05-10 09:04:12.000000000 -0400
+@@ -3797,11 +3797,6 @@
+     }
+ }
+ 
+-PPTCharSheet::PPTCharSheet( const PPTCharSheet& rAttr )
+-{
+-    *this = rAttr;
+-}
+-
+ void PPTCharSheet::Read( SvStream& rIn, bool /*bMasterStyle*/, sal_uInt32 nLevel, bool /*bFirst*/)
+ {
+     // Zeichenattribute
+@@ -3893,11 +3888,6 @@
+     }
+ }
+ 
+-PPTParaSheet::PPTParaSheet( const PPTParaSheet& rSheet )
+-{
+-    *this = rSheet;
+-}
+-
+ bool PPTParaSheet::Read( SdrPowerPointImport&
+ #ifdef DBG_UTIL
+                     rManager

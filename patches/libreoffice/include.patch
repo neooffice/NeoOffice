@@ -1346,3 +1346,21 @@
  
      const Color& GetColor() const
      {
+--- filter/msfilter/svdfppt.hxx	2015-11-25 07:55:38.000000000 -0500
++++ filter/msfilter/svdfppt.hxx	2021-05-10 09:02:38.000000000 -0400
+@@ -767,7 +767,6 @@
+     PPTCharLevel    maCharLevel[nMaxPPTLevels];
+ 
+                     explicit PPTCharSheet( sal_uInt32 nInstance );
+-                    PPTCharSheet( const PPTCharSheet& rCharSheet );
+ 
+     void            Read( SvStream& rIn, bool bMasterStyle, sal_uInt32 nLevel, bool bFirst );
+ };
+@@ -800,7 +799,6 @@
+     PPTParaLevel    maParaLevel[nMaxPPTLevels];
+ 
+                     explicit PPTParaSheet( sal_uInt32 nInstance );
+-                    PPTParaSheet( const PPTParaSheet& rParaSheet );
+ 
+     bool            Read(
+                         SdrPowerPointImport& rMan,
