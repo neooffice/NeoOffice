@@ -3825,11 +3825,6 @@ PPTCharSheet::PPTCharSheet( sal_uInt32 nInstance )
     }
 }
 
-PPTCharSheet::PPTCharSheet( const PPTCharSheet& rAttr )
-{
-    *this = rAttr;
-}
-
 void PPTCharSheet::Read( SvStream& rIn, bool /*bMasterStyle*/, sal_uInt32 nLevel, bool /*bFirst*/)
 {
     // Zeichenattribute
@@ -3919,11 +3914,6 @@ PPTParaSheet::PPTParaSheet( sal_uInt32 nInstance )
         maParaLevel[ i ].mnAsianLineBreak = 0;
         maParaLevel[ i ].mnBiDi = 0;
     }
-}
-
-PPTParaSheet::PPTParaSheet( const PPTParaSheet& rSheet )
-{
-    *this = rSheet;
 }
 
 bool PPTParaSheet::Read( SdrPowerPointImport&

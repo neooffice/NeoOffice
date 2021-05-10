@@ -771,7 +771,6 @@ struct PPTCharSheet
     PPTCharLevel    maCharLevel[nMaxPPTLevels];
 
                     explicit PPTCharSheet( sal_uInt32 nInstance );
-                    PPTCharSheet( const PPTCharSheet& rCharSheet );
 
     void            Read( SvStream& rIn, bool bMasterStyle, sal_uInt32 nLevel, bool bFirst );
 };
@@ -804,7 +803,6 @@ public:
     PPTParaLevel    maParaLevel[nMaxPPTLevels];
 
                     explicit PPTParaSheet( sal_uInt32 nInstance );
-                    PPTParaSheet( const PPTParaSheet& rParaSheet );
 
     bool            Read(
                         SdrPowerPointImport& rMan,
