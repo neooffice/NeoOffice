@@ -1336,3 +1336,13 @@
  
      void SetWidth( sal_uInt16 nNewWidth, const sal_uInt16 nNewProp = 100 )
          {
+--- svx/xtable.hxx	2015-11-25 07:55:38.000000000 -0500
++++ svx/xtable.hxx	2021-05-10 08:36:14.000000000 -0400
+@@ -64,7 +64,6 @@
+ 
+ public:
+     XColorEntry(const Color& rColor, const OUString& rName);
+-    XColorEntry(const XColorEntry& rOther);
+ 
+     const Color& GetColor() const
+     {
