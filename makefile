@@ -313,6 +313,7 @@ build.libo_patches: \
 	build.libo_embeddedobj_patch \
 	build.libo_extensions_patch \
 	build.libo_external_patch \
+	build.libo_filter_patch \
 	build.libo_fpicker_patch \
 	build.libo_include_patch \
 	build.libo_jvmfwk_patch \
