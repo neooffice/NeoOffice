@@ -1293,3 +1293,26 @@
  };
  
  #endif
+--- editeng/pmdlitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/pmdlitem.hxx	2021-05-10 08:19:27.000000000 -0400
+@@ -40,7 +40,6 @@
+     explicit inline SvxPageModelItem( sal_uInt16 nWh  );
+     inline SvxPageModelItem( const OUString& rModel, bool bA /*= false*/,
+                              sal_uInt16 nWh  );
+-    inline SvxPageModelItem& operator=( const SvxPageModelItem& rModel );
+ 
+     virtual SfxPoolItem*    Clone( SfxItemPool *pPool = 0 ) const SAL_OVERRIDE;
+ 
+@@ -66,12 +65,6 @@
+     bAuto( bA )
+ {}
+ 
+-inline SvxPageModelItem& SvxPageModelItem::operator=( const SvxPageModelItem& rModel )
+-{
+-    SetValue( rModel.GetValue() );
+-    return *this;
+-}
+-
+ #endif
+ 
+ /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
