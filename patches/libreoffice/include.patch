@@ -1283,3 +1283,13 @@
          };
  
          typedef ::std::vector< InteractionInfo > InteractionList;
+--- editeng/prszitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/prszitem.hxx	2021-05-10 08:10:02.000000000 -0400
+@@ -52,6 +52,7 @@
+         SetValue( rPropSize.GetValue() );
+         return *this;
+     }
++    SvxPropSizeItem(SvxPropSizeItem const &) = default; // SfxPoolItem copy function dichotomy
+ };
+ 
+ #endif
