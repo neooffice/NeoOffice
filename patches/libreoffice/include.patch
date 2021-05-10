@@ -1267,3 +1267,19 @@
      SvxColumnDescription(long start, long end, bool bVis = true);
  
      SvxColumnDescription(long start, long end,
+--- framework/preventduplicateinteraction.hxx	2015-11-25 07:55:38.000000000 -0500
++++ framework/preventduplicateinteraction.hxx	2021-05-10 08:01:31.000000000 -0400
+@@ -79,13 +79,6 @@
+                     , m_nMaxCount   (nMaxCount   )
+                     , m_nCallCount  (0           )
+                 {}
+-
+-                InteractionInfo(const InteractionInfo& aCopy)
+-                    : m_aInteraction(aCopy.m_aInteraction)
+-                    , m_nMaxCount   (aCopy.m_nMaxCount   )
+-                    , m_nCallCount  (aCopy.m_nCallCount  )
+-                    , m_xRequest    (aCopy.m_xRequest    )
+-                {}
+         };
+ 
+         typedef ::std::vector< InteractionInfo > InteractionList;
