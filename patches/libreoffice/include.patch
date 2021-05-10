@@ -1326,3 +1326,13 @@
  };
  
  
+--- editeng/fwdtitem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ editeng/fwdtitem.hxx	2021-05-10 08:28:32.000000000 -0400
+@@ -63,6 +63,7 @@
+             SetProp( rItem.GetProp() );
+             return *this;
+         }
++    SvxFontWidthItem(SvxFontWidthItem const &) = default; // SfxPoolItem copy function dichotomy
+ 
+     void SetWidth( sal_uInt16 nNewWidth, const sal_uInt16 nNewProp = 100 )
+         {
