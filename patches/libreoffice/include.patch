@@ -1256,3 +1256,14 @@
  
      /** Returns sal_True, if the item represents STACKED state. */
      bool                    IsStacked() const;
+--- svx/rulritem.hxx	2015-11-25 07:55:38.000000000 -0500
++++ svx/rulritem.hxx	2021-05-10 07:49:41.000000000 -0400
+@@ -134,8 +134,6 @@
+ 
+     SvxColumnDescription();
+ 
+-    SvxColumnDescription(const SvxColumnDescription &rCopy);
+-
+     SvxColumnDescription(long start, long end, bool bVis = true);
+ 
+     SvxColumnDescription(long start, long end,

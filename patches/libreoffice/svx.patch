@@ -187,3 +187,20 @@
  
  #endif // INCLUDED_SVX_SOURCE_INC_FMITEMS_HXX
  
+--- source/dialog/rulritem.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/dialog/rulritem.cxx	2021-05-10 07:52:20.000000000 -0400
+@@ -650,14 +650,6 @@
+     nEndMax  (0)
+ {}
+ 
+-SvxColumnDescription::SvxColumnDescription(const SvxColumnDescription &rCopy) :
+-    nStart   (rCopy.nStart),
+-    nEnd     (rCopy.nEnd),
+-    bVisible (rCopy.bVisible),
+-    nEndMin  (rCopy.nEndMin),
+-    nEndMax  (rCopy.nEndMax)
+-{}
+-
+ SvxColumnDescription::SvxColumnDescription(long start, long end, bool bVis) :
+     nStart   (start),
+     nEnd     (end),
