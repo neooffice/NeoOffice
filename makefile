@@ -315,6 +315,7 @@ build.libo_patches: \
 	build.libo_external_patch \
 	build.libo_filter_patch \
 	build.libo_fpicker_patch \
+	build.libo_framework_patch \
 	build.libo_include_patch \
 	build.libo_jvmfwk_patch \
 	build.libo_oox_patch \
