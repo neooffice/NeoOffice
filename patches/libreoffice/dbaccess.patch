@@ -9,3 +9,39 @@
  
      uno::Reference< XConnection > xConnection =
          getConnectionForDocument(xDocument);
+--- source/ui/inc/charsets.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/ui/inc/charsets.hxx	2021-05-11 16:57:38.000000000 -0400
+@@ -99,8 +99,6 @@
+         base_iterator               m_aPosition;
+ 
+     public:
+-        ExtendedCharsetIterator(const ExtendedCharsetIterator& _rSource);
+-
+         CharsetDisplayDerefHelper operator*() const;
+ 
+         /// prefix increment
+--- source/ui/misc/charsets.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/ui/misc/charsets.cxx	2021-05-11 16:58:45.000000000 -0400
+@@ -103,12 +103,6 @@
+         OSL_ENSURE(m_pContainer, "OCharsetDisplay::ExtendedCharsetIterator::ExtendedCharsetIterator : invalid container!");
+     }
+ 
+-    OCharsetDisplay::ExtendedCharsetIterator::ExtendedCharsetIterator(const ExtendedCharsetIterator& _rSource)
+-        :m_pContainer( _rSource.m_pContainer )
+-        ,m_aPosition( _rSource.m_aPosition )
+-    {
+-    }
+-
+     CharsetDisplayDerefHelper OCharsetDisplay::ExtendedCharsetIterator::operator*() const
+     {
+         OSL_ENSURE( m_aPosition != m_pContainer->OCharsetDisplay_Base::end(), "OCharsetDisplay::ExtendedCharsetIterator::operator* : invalid position!");
+--- source/ui/dlg/dbfindex.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/ui/dlg/dbfindex.hxx	2021-05-11 16:59:50.000000000 -0400
+@@ -40,7 +40,6 @@
+ 
+ public:
+     OTableIndex() { }
+-    OTableIndex( const OTableIndex& _rSource) : aIndexFileName(_rSource.aIndexFileName) { }
+     OTableIndex( const OUString& rFileName ) : aIndexFileName( rFileName ) { }
+ 
+     void SetIndexFileName( const OUString& rFileName ) { aIndexFileName = rFileName; }
