@@ -392,7 +392,7 @@
      void operator() (const ScTokenRef& pToken)
      {
          bool bExternal = ScRefTokenHelper::isExternalRef(pToken);
---- source/filter/inc/namebuff.hxx.orig	2015-11-25 07:55:38.000000000 -0500
+--- source/filter/inc/namebuff.hxx	2015-11-25 07:55:38.000000000 -0500
 +++ source/filter/inc/namebuff.hxx	2021-05-11 09:26:38.000000000 -0400
 @@ -46,9 +46,6 @@
  public:
