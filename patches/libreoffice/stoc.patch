@@ -1,0 +1,12 @@
+--- source/security/permissions.h	2015-11-25 07:55:38.000000000 -0500
++++ source/security/permissions.h	2021-05-11 12:58:51.000000000 -0400
+@@ -67,9 +67,6 @@
+ public:
+     inline PermissionCollection()
+         {}
+-    inline PermissionCollection( PermissionCollection const & collection )
+-        : m_head( collection.m_head )
+-        {}
+     inline PermissionCollection( ::rtl::Reference< Permission > const & single )
+         : m_head( single )
+         {}
