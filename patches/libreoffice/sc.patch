@@ -295,3 +295,31 @@
  bool ScGridOptions::operator==( const ScGridOptions& rCpy ) const
  {
      return (   nFldDrawX        == rCpy.nFldDrawX
+--- inc/dpnumgroupinfo.hxx	2015-11-25 07:55:38.000000000 -0500
++++ inc/dpnumgroupinfo.hxx	2021-05-11 08:32:34.000000000 -0400
+@@ -25,7 +25,6 @@
+     double mfStep;
+ 
+     SC_DLLPUBLIC ScDPNumGroupInfo();
+-    SC_DLLPUBLIC ScDPNumGroupInfo(const ScDPNumGroupInfo& r);
+ 
+ #if DEBUG_PIVOT_TABLE
+     void Dump() const;
+--- source/core/data/dpnumgroupinfo.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/data/dpnumgroupinfo.cxx	2021-05-11 08:34:01.000000000 -0400
+@@ -17,15 +17,6 @@
+     mbIntegerOnly(true),
+     mfStart(0.0), mfEnd(0.0), mfStep(0.0) {}
+ 
+-ScDPNumGroupInfo::ScDPNumGroupInfo(const ScDPNumGroupInfo& r) :
+-    mbEnable(r.mbEnable),
+-    mbDateValues(r.mbDateValues),
+-    mbAutoStart(r.mbAutoStart),
+-    mbAutoEnd(r.mbAutoEnd),
+-    mbIntegerOnly(r.mbIntegerOnly),
+-    mfStart(r.mfStart),
+-    mfEnd(r.mfEnd), mfStep(r.mfStep) {}
+-
+ #if DEBUG_PIVOT_TABLE
+ using std::cout;
+ using std::endl;
