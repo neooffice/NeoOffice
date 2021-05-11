@@ -1,6 +1,31 @@
---- source/core/drawdoc.cxx	2015-11-25 04:55:38.000000000 -0800
-+++ source/core/drawdoc.cxx	2016-12-08 17:07:22.000000000 -0800
-@@ -691,6 +691,12 @@
+--- source/core/drawdoc.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/drawdoc.cxx	2021-05-11 13:11:01.000000000 -0400
+@@ -128,24 +128,6 @@
+ {
+ }
+ 
+-PresentationSettings::PresentationSettings( const PresentationSettings& r )
+-:   maPresPage( r.maPresPage ),
+-    mbAll( r.mbAll ),
+-    mbEndless( r.mbEndless ),
+-    mbCustomShow( r.mbCustomShow ),
+-    mbManual( r.mbManual ),
+-    mbMouseVisible( r.mbMouseVisible ),
+-    mbMouseAsPen( r.mbMouseAsPen ),
+-    mbLockedPages( r.mbLockedPages ),
+-    mbAlwaysOnTop( r.mbAlwaysOnTop ),
+-    mbFullScreen( r.mbFullScreen ),
+-    mbAnimationAllowed( r.mbAnimationAllowed ),
+-    mnPauseTimeout( r.mnPauseTimeout ),
+-    mbShowPauseLogo( r.mbShowPauseLogo ),
+-    mbStartWithNavigator( r.mbStartWithNavigator )
+-{
+-}
+-
+ SdDrawDocument::SdDrawDocument(DocumentType eType, SfxObjectShell* pDrDocSh)
+ : FmFormModel( SvtPathOptions().GetPalettePath(), NULL, pDrDocSh )
+ , bReadOnly(false)
+@@ -691,6 +673,12 @@
      {
          pDocLockedInsertingLinks = this; // lock inserting links. only links in this document should by resolved
  
@@ -57,4 +82,50 @@
 +    }
  
      SAL_INFO("sdremote.bluetooth", "IOBluetoothAddServiceDict returned " << rc);
+ 
+--- source/ui/slidesorter/inc/view/SlsLayouter.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/ui/slidesorter/inc/view/SlsLayouter.hxx	2021-05-11 13:07:14.000000000 -0400
+@@ -202,7 +202,6 @@
+ {
+ public:
+     InsertPosition (void);
+-    InsertPosition& operator= (const InsertPosition& rInsertPosition);
+     bool operator== (const InsertPosition& rInsertPosition) const;
+     bool operator!= (const InsertPosition& rInsertPosition) const;
+ 
+--- source/ui/slidesorter/view/SlsLayouter.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/ui/slidesorter/view/SlsLayouter.cxx	2021-05-11 13:08:28.000000000 -0400
+@@ -1199,23 +1199,6 @@
+ {
+ }
+ 
+-InsertPosition& InsertPosition::operator= (const InsertPosition& rInsertPosition)
+-{
+-    if (this != &rInsertPosition)
+-    {
+-        mnRow = rInsertPosition.mnRow;
+-        mnColumn = rInsertPosition.mnColumn;
+-        mnIndex = rInsertPosition.mnIndex;
+-        mbIsAtRunStart = rInsertPosition.mbIsAtRunStart;
+-        mbIsAtRunEnd = rInsertPosition.mbIsAtRunEnd;
+-        mbIsExtraSpaceNeeded = rInsertPosition.mbIsExtraSpaceNeeded;
+-        maLocation = rInsertPosition.maLocation;
+-        maLeadingOffset = rInsertPosition.maLeadingOffset;
+-        maTrailingOffset = rInsertPosition.maTrailingOffset;
+-    }
+-    return *this;
+-}
+-
+ bool InsertPosition::operator== (const InsertPosition& rInsertPosition) const
+ {
+     // Do not compare the geometrical information (maLocation).
+--- inc/drawdoc.hxx	2015-11-25 07:55:38.000000000 -0500
++++ inc/drawdoc.hxx	2021-05-11 13:09:29.000000000 -0400
+@@ -128,7 +128,6 @@
+         bool mbStartWithNavigator;
+ 
+         PresentationSettings();
+-        PresentationSettings( const PresentationSettings& r );
+     };
+ }
  
