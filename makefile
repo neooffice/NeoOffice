@@ -309,6 +309,7 @@ build.libo_patches: \
 	build.libo_connectivity_patch \
 	build.libo_cppuhelper_patch \
 	build.libo_dbaccess_patch \
+	build.libo_desktop_patch \
 	build.libo_drawinglayer_patch \
 	build.libo_editeng_patch \
 	build.libo_embeddedobj_patch \
