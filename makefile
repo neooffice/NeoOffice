@@ -318,6 +318,7 @@ build.libo_patches: \
 	build.libo_framework_patch \
 	build.libo_include_patch \
 	build.libo_jvmfwk_patch \
+	build.libo_lotuswordpro_patch \
 	build.libo_oox_patch \
 	build.libo_pyuno_patch \
 	build.libo_sal_patch \
