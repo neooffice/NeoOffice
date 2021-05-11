@@ -26,3 +26,14 @@
      OGroupComp();
  
      bool operator==( const OGroupComp& rComp ) const;
+--- source/inc/property.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/inc/property.hxx	2021-05-11 16:45:13.000000000 -0400
+@@ -53,8 +53,6 @@
+         sal_Int32           nHandle;
+ 
+         PropertyAssignment() { nHandle = -1; }
+-        PropertyAssignment(const PropertyAssignment& _rSource)
+-            :sName(_rSource.sName), nHandle(_rSource.nHandle) { }
+         PropertyAssignment(const OUString& _rName, sal_Int32 _nHandle)
+             :sName(_rName), nHandle(_nHandle) { }
+ 
