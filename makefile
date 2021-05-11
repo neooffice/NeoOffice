@@ -318,6 +318,7 @@ build.libo_patches: \
 	build.libo_fpicker_patch \
 	build.libo_framework_patch \
 	build.libo_helpcompiler_patch \
+	build.libo_idl_patch \
 	build.libo_include_patch \
 	build.libo_jvmfwk_patch \
 	build.libo_lotuswordpro_patch \
