@@ -80,3 +80,20 @@
              {
                  beans::Property aValue;
                  aValue.Name = PROPERTY_FORMULALIST;
+--- source/core/sdr/PropertyForward.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/sdr/PropertyForward.cxx	2021-05-12 13:47:45.000000000 -0400
+@@ -119,11 +119,9 @@
+                             aFind = ::std::find_if(
+                                 m_aNameMap.begin(),
+                                 m_aNameMap.end(),
+-                                ::o3tl::compose1(
+-                                ::std::bind2nd(::std::equal_to< OUString >(), evt.PropertyName),
+-                                    ::o3tl::compose1(::o3tl::select1st<TPropertyConverter>(),::o3tl::select2nd<TPropertyNamePair::value_type>())
+-                                )
+-                            );
++                                [&evt] (TPropertyNamePair::value_type namePair) {
++                                    return namePair.second.first == evt.PropertyName;
++                                });
+                             if ( aFind != m_aNameMap.end() )
+                                 sPropName = aFind->first;
+                         }
