@@ -58,3 +58,35 @@
  struct XMLPropertySetMapper::Impl
  {
      std::vector<XMLPropertySetMapperEntry_Impl> maMapEntries;
+--- source/forms/layerimport.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/forms/layerimport.cxx	2021-05-12 07:26:21.000000000 -0400
+@@ -52,6 +52,7 @@
+ #include <xmloff/xmlnmspe.hxx>
+ #include <rtl/strbuf.hxx>
+ #include <algorithm>
++#include <functional>
+ 
+ namespace xmloff
+ {
+@@ -581,18 +582,15 @@
+     // process XForms-bindings; call registerXFormsValueBinding for each
+     std::for_each( m_aXFormsValueBindings.begin(),
+                    m_aXFormsValueBindings.end(),
+-                   bind1st( ptr_fun( bindXFormsValueBinding ),
+-                            rImport.GetModel() ) );
++                   std::bind( bindXFormsValueBinding, rImport.GetModel(), std::placeholders::_1 ) );
+     // same for list bindings
+     std::for_each( m_aXFormsListBindings.begin(),
+                    m_aXFormsListBindings.end(),
+-                   bind1st( ptr_fun( bindXFormsListBinding ),
+-                            rImport.GetModel() ) );
++                   std::bind( bindXFormsListBinding, rImport.GetModel(), std::placeholders::_1 ) );
+     // same for submissions
+     std::for_each( m_aXFormsSubmissions.begin(),
+                    m_aXFormsSubmissions.end(),
+-                   bind1st( ptr_fun( bindXFormsSubmission ),
+-                            rImport.GetModel() ) );
++                   std::bind( bindXFormsSubmission, rImport.GetModel(), std::placeholders::_1 ) );
+ }
+ 
+ }   // namespace xmloff
