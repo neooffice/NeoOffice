@@ -103,3 +103,20 @@
  #endif
  
  /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
+--- source/filter/xfilter/xfmargins.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/filter/xfilter/xfmargins.cxx	2021-05-11 13:54:48.000000000 -0400
+@@ -114,14 +114,4 @@
+     return !(indent1==indent2);
+ }
+ 
+-XFMargins& XFMargins::operator=(const XFMargins& other)
+-{
+-    m_nFlag = other.m_nFlag;
+-    m_fLeft = other.m_fLeft;
+-    m_fRight = other.m_fRight;
+-    m_fTop = other.m_fTop;
+-    m_fBottom = other.m_fBottom;
+-    return *this;
+-}
+-
+ /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
