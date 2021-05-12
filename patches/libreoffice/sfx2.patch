@@ -30,3 +30,14 @@
  }
  
  }
+--- source/doc/sfxbasemodel.cxx.orig	2015-11-25 07:55:38.000000000 -0500
++++ source/doc/sfxbasemodel.cxx	2021-05-12 12:52:26.000000000 -0400
+@@ -575,7 +575,7 @@
+             io_rTypes.getConstArray(),
+             io_rTypes.getConstArray() + io_rTypes.getLength(),
+             aStrippedTypes.getArray(),
+-            ::std::bind2nd( ::std::equal_to< uno::Type >(), i_rTypeToStrip )
++            [&i_rTypeToStrip](const uno::Type& aType) { return aType == i_rTypeToStrip; }
+         );
+         io_rTypes = aStrippedTypes;
+     }
