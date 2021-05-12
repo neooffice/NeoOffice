@@ -327,6 +327,7 @@ build.libo_patches: \
 	build.libo_lotuswordpro_patch \
 	build.libo_oox_patch \
 	build.libo_pyuno_patch \
+	build.libo_reportdesign_patch \
 	build.libo_sal_patch \
 	build.libo_sc_patch \
 	build.libo_sd_patch \
