@@ -774,3 +774,237 @@
              }
  
              DELETEZ( pProgressDlg );
+--- source/filter/ww8/wrtw8sty.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/filter/ww8/wrtw8sty.cxx	2021-05-12 09:02:23.000000000 -0400
+@@ -976,8 +976,8 @@
+     /*
+      * Write them all to pTableStream
+      */
+-    ::std::for_each(aFontList.begin(), aFontList.end(),
+-        ::std::bind2nd(::std::mem_fun(&wwFont::Write),pTableStream));
++    for ( auto aFont : aFontList )
++        aFont->Write(pTableStream);
+ 
+     /*
+      * Write the position and len in the FIB
+@@ -996,16 +996,16 @@
+ {
+     ::std::vector<const wwFont *> aFontList( AsVector() );
+ 
+-    ::std::for_each( aFontList.begin(), aFontList.end(),
+-        ::std::bind2nd( ::std::mem_fun( &wwFont::WriteDocx ), &rAttrOutput ) );
++    for ( auto aFont : aFontList )
++        aFont->WriteDocx(&rAttrOutput);
+ }
+ 
+ void wwFontHelper::WriteFontTable( const RtfAttributeOutput& rAttrOutput )
+ {
+     ::std::vector<const wwFont *> aFontList( AsVector() );
+ 
+-    ::std::for_each( aFontList.begin(), aFontList.end(),
+-        ::std::bind2nd( ::std::mem_fun( &wwFont::WriteRtf ), &rAttrOutput ) );
++    for ( auto aFont : aFontList )
++        aFont->WriteRtf(&rAttrOutput);
+ }
+ 
+ WW8_WrPlc0::WW8_WrPlc0( sal_uLong nOffset )
+--- source/core/doc/lineinfo.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/doc/lineinfo.cxx	2021-05-12 09:07:53.000000000 -0400
+@@ -35,13 +35,13 @@
+          (rNew.IsCountBlankLines() != mpLineNumberInfo->IsCountBlankLines() ||
+           rNew.IsRestartEachPage() != mpLineNumberInfo->IsRestartEachPage()) )
+     {
+-        std::set<SwRootFrm*> aAllLayouts = GetAllLayouts();
+         pTmpRoot->StartAllAction();
+         // FME 2007-08-14 #i80120# Invalidate size, because ChgThisLines()
+         // is only (onny may only be) called by the formatting routines
+         //pTmpRoot->InvalidateAllCntnt( INV_LINENUM | INV_SIZE );
+-        std::for_each( aAllLayouts.begin(), aAllLayouts.end(),std::bind2nd(std::mem_fun(&SwRootFrm::InvalidateAllCntnt), INV_LINENUM | INV_SIZE));
+-         pTmpRoot->EndAllAction();
++        for( auto aLayout : GetAllLayouts() )
++            aLayout->InvalidateAllCntnt( INV_LINENUM | INV_SIZE );
++        pTmpRoot->EndAllAction();
+     }
+     *mpLineNumberInfo = rNew;
+     getIDocumentState().SetModified();
+@@ -140,9 +140,8 @@
+     if( pRoot )
+     {
+         pRoot->StartAllAction();
+-        std::set<SwRootFrm*> aAllLayouts = pDoc->GetAllLayouts();
+-        std::for_each( aAllLayouts.begin(), aAllLayouts.end(),std::mem_fun(&SwRootFrm::AllAddPaintRect));
+-        //pRoot->GetCurrShell()->AddPaintRect( pRoot->Frm() );
++        for( auto aLayout : pDoc->GetAllLayouts() )
++            aLayout->AllAddPaintRect();
+         pRoot->EndAllAction();
+     }
+ }
+--- source/core/doc/docftn.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/doc/docftn.cxx	2021-05-12 09:44:41.000000000 -0400
+@@ -279,12 +279,15 @@
+         {
+             std::set<SwRootFrm*> aAllLayouts = GetAllLayouts();
+             if ( bFtnPos )
+-                std::for_each( aAllLayouts.begin(), aAllLayouts.end(),std::mem_fun(&SwRootFrm::AllRemoveFtns));
++                for( auto aLayout : aAllLayouts )
++                    aLayout->AllRemoveFtns();
+             else
+             {
+-                std::for_each( aAllLayouts.begin(), aAllLayouts.end(),std::mem_fun(&SwRootFrm::UpdateFtnNums));
++                for( auto aLayout : aAllLayouts )
++                    aLayout->UpdateFtnNums();
+                 if ( bFtnDesc )
+-                    std::for_each( aAllLayouts.begin(), aAllLayouts.end(),std::bind2nd(std::mem_fun(&SwRootFrm::CheckFtnPageDescs), false));
++                    for( auto aLayout : aAllLayouts )
++                        aLayout->CheckFtnPageDescs(false);
+                 if ( bExtra )
+                 {
+                     // For messages regarding ErgoSum etc. we save the extra code and use the
+@@ -351,8 +354,8 @@
+         {
+             if ( bFtnDesc )
+             {
+-                std::set<SwRootFrm*> aAllLayouts = GetAllLayouts();
+-                std::for_each( aAllLayouts.begin(), aAllLayouts.end(),std::bind2nd(std::mem_fun(&SwRootFrm::CheckFtnPageDescs), true));
++                for( auto aLayout : GetAllLayouts() )
++                    aLayout->CheckFtnPageDescs(true);
+             }
+             if ( bExtra )
+             {
+@@ -487,8 +490,8 @@
+         }
+         else if( pTmpRoot )
+         {
+-            std::set<SwRootFrm*> aAllLayouts = GetAllLayouts();
+-            std::for_each( aAllLayouts.begin(), aAllLayouts.end(),std::mem_fun(&SwRootFrm::UpdateFtnNums));
++            for( auto aLayout : GetAllLayouts() )
++                aLayout->UpdateFtnNums();
+         }
+         getIDocumentState().SetModified();
+     }
+--- source/core/doc/docdesc.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/doc/docdesc.cxx	2021-05-12 09:50:18.000000000 -0400
+@@ -484,8 +484,8 @@
+     if ( (bUseOn || bFollow) && pTmpRoot)
+         // Inform layout!
+     {
+-        std::set<SwRootFrm*> aAllLayouts = GetAllLayouts();
+-        std::for_each( aAllLayouts.begin(), aAllLayouts.end(),std::mem_fun(&SwRootFrm::AllCheckPageDescs));
++        for( auto aLayout : GetAllLayouts() )
++            aLayout->AllCheckPageDescs();
+     }
+ 
+     // Take over the page attributes.
+@@ -557,8 +557,8 @@
+         mpFtnInfo->ChgPageDesc( maPageDescs[0] );
+         if ( bHasLayout )
+         {
+-            std::set<SwRootFrm*> aAllLayouts = GetAllLayouts();
+-            std::for_each( aAllLayouts.begin(), aAllLayouts.end(),std::bind2nd(std::mem_fun(&SwRootFrm::CheckFtnPageDescs), false));
++            for( auto aLayout : GetAllLayouts() )
++                aLayout->CheckFtnPageDescs(false);
+         }
+     }
+     else if ( mpEndNoteInfo->DependsOn( pDel ) )
+@@ -566,8 +566,8 @@
+         mpEndNoteInfo->ChgPageDesc( maPageDescs[0] );
+         if ( bHasLayout )
+         {
+-            std::set<SwRootFrm*> aAllLayouts = GetAllLayouts();
+-            std::for_each( aAllLayouts.begin(), aAllLayouts.end(),std::bind2nd(std::mem_fun(&SwRootFrm::CheckFtnPageDescs), true));
++            for( auto aLayout : GetAllLayouts() )
++                aLayout->CheckFtnPageDescs(true);
+         }
+     }
+ 
+@@ -578,8 +578,8 @@
+             maPageDescs[j]->SetFollow( 0 );
+             if( bHasLayout )
+             {
+-                std::set<SwRootFrm*> aAllLayouts = GetAllLayouts();
+-                std::for_each( aAllLayouts.begin(), aAllLayouts.end(),std::mem_fun(&SwRootFrm::AllCheckPageDescs));
++                for( auto aLayout : GetAllLayouts() )
++                    aLayout->AllCheckPageDescs();
+             }
+         }
+     }
+--- source/core/doc/doc.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/doc/doc.cxx	2021-05-12 09:56:35.000000000 -0400
+@@ -1137,14 +1137,18 @@
+     OSL_ENSURE( getIDocumentLayoutAccess().GetCurrentLayout(), "SpellAgain: Where's my RootFrm?" );
+     if( bInvalid )
+     {
+-        std::for_each( aAllLayouts.begin(), aAllLayouts.end(),std::bind2nd(std::mem_fun(&SwRootFrm::AllInvalidateSmartTagsOrSpelling),bSmartTags));
+-        std::for_each( aAllLayouts.begin(), aAllLayouts.end(),std::bind2nd(std::mem_fun(&SwRootFrm::SetNeedGrammarCheck), true) );
++        for ( auto aLayout : aAllLayouts )
++        {
++            aLayout->AllInvalidateSmartTagsOrSpelling(bSmartTags);
++            aLayout->SetNeedGrammarCheck(true);
++        }
+         if ( bSmartTags )
+             GetNodes().ForEach( lcl_CheckSmartTagsAgain, &bOnlyWrong );
+         GetNodes().ForEach( lcl_SpellAndGrammarAgain, &bOnlyWrong );
+     }
+ 
+-    std::for_each( aAllLayouts.begin(), aAllLayouts.end(),std::mem_fun(&SwRootFrm::SetIdleFlags));
++    for ( auto aLayout : aAllLayouts )
++        aLayout->SetIdleFlags();
+ }
+ 
+ void SwDoc::InvalidateAutoCompleteFlag()
+@@ -1153,14 +1157,16 @@
+     if( pTmpRoot )
+     {
+         std::set<SwRootFrm*> aAllLayouts = GetAllLayouts();
+-        std::for_each( aAllLayouts.begin(), aAllLayouts.end(),std::mem_fun(&SwRootFrm::AllInvalidateAutoCompleteWords));
++        for( auto aLayout : aAllLayouts )
++            aLayout->AllInvalidateAutoCompleteWords();
+         for( sal_uLong nNd = 1, nCnt = GetNodes().Count(); nNd < nCnt; ++nNd )
+         {
+             SwTxtNode* pTxtNode = GetNodes()[ nNd ]->GetTxtNode();
+             if ( pTxtNode ) pTxtNode->SetAutoCompleteWordDirty( true );
+         }
+ 
+-        std::for_each( aAllLayouts.begin(), aAllLayouts.end(),std::mem_fun(&SwRootFrm::SetIdleFlags));
++        for( auto aLayout : aAllLayouts )
++            aLayout->SetIdleFlags();
+     }
+ }
+ 
+--- source/core/doc/DocumentDeviceManager.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/doc/DocumentDeviceManager.cxx	2021-05-12 10:00:54.000000000 -0400
+@@ -332,8 +332,8 @@
+ 
+             pFntCache->Flush();
+ 
+-            std::set<SwRootFrm*> aAllLayouts = m_rDoc.GetAllLayouts();
+-            std::for_each( aAllLayouts.begin(), aAllLayouts.end(),std::bind2nd(std::mem_fun(&SwRootFrm::InvalidateAllCntnt), INV_SIZE));
++            for(SwRootFrm* aLayout : m_rDoc.GetAllLayouts())
++                aLayout->InvalidateAllCntnt(INV_SIZE);
+ 
+             do
+             {
+--- source/core/doc/DocumentSettingManager.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/doc/DocumentSettingManager.cxx	2021-05-12 10:03:04.000000000 -0400
+@@ -416,8 +416,8 @@
+     if( pTmpRoot && !m_rDoc.IsInReading() )
+     {
+         pTmpRoot->StartAllAction();
+-        std::set<SwRootFrm*> aAllLayouts = m_rDoc.GetAllLayouts();
+-        std::for_each( aAllLayouts.begin(), aAllLayouts.end(), std::bind2nd(std::mem_fun(&SwRootFrm::InvalidateAllCntnt), INV_SIZE));
++        for(SwRootFrm* aLayout : m_rDoc.GetAllLayouts())
++            aLayout->InvalidateAllCntnt(INV_SIZE);
+         pTmpRoot->EndAllAction();
+     }
+     m_rDoc.getIDocumentState().SetModified();
+@@ -486,8 +486,8 @@
+         if( pTmpRoot && !m_rDoc.IsInReading() )
+         {
+             pTmpRoot->StartAllAction();
+-            std::set<SwRootFrm*> aAllLayouts = m_rDoc.GetAllLayouts();
+-            std::for_each( aAllLayouts.begin(), aAllLayouts.end(), std::bind2nd(std::mem_fun(&SwRootFrm::InvalidateAllCntnt), INV_SIZE));
++            for( auto aLayout : m_rDoc.GetAllLayouts() )
++                aLayout->InvalidateAllCntnt(INV_SIZE);
+             pTmpRoot->EndAllAction();
+         }
+         m_rDoc.getIDocumentState().SetModified();
