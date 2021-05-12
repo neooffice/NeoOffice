@@ -129,3 +129,20 @@
      };
  }
  
+--- source/ui/tools/PropertySet.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/ui/tools/PropertySet.cxx	2021-05-12 08:15:40.000000000 -0400
+@@ -119,10 +119,10 @@
+         ::std::find_if(
+             aRange.first,
+             aRange.second,
+-            o3tl::compose1(
+-                std::bind1st(std::equal_to<Reference<beans::XPropertyChangeListener> >(),
+-                    rxListener),
+-                o3tl::select2nd<ChangeListenerContainer::value_type>())));
++            [&rxListener] (const ChangeListenerContainer::value_type& listener) {
++                return listener.second == rxListener;
++            }));
++
+     if (iListener != mpChangeListeners->end())
+     {
+         mpChangeListeners->erase(iListener);
