@@ -219,3 +219,23 @@
  XLineEndEntry::XLineEndEntry(const basegfx::B2DPolyPolygon& rB2DPolyPolygon, const OUString& rName)
  :   XPropertyEntry(rName),
      aB2DPolyPolygon(rB2DPolyPolygon)
+--- source/svdraw/svdotextpathdecomposition.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/svdraw/svdotextpathdecomposition.cxx	2021-05-12 12:42:03.000000000 -0400
+@@ -496,7 +496,7 @@
+                                     double fDXOffset= *(pCandidate->getDoubleDXArray().begin() + (nPortionIndex - 1));
+                                     ::std::transform(
+                                         aNewDXArray.begin(), aNewDXArray.end(),
+-                                        aNewDXArray.begin(), ::std::bind2nd(::std::minus<double>(), fDXOffset));
++                                        aNewDXArray.begin(), [fDXOffset](double x) { return x - fDXOffset; });
+                                 }
+ 
+                                 if(bAutosizeScale)
+@@ -504,7 +504,7 @@
+                                     // when autosize scaling, adapt to DXArray, too
+                                     ::std::transform(
+                                         aNewDXArray.begin(), aNewDXArray.end(),
+-                                        aNewDXArray.begin(), ::std::bind2nd(::std::multiplies<double>(), fAutosizeScaleFactor));
++                                        aNewDXArray.begin(), [fAutosizeScaleFactor](double x) { return x * fAutosizeScaleFactor; });
+                                 }
+                             }
+ 
