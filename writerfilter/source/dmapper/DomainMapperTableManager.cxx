@@ -15,6 +15,13 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified May 2021 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <boost/optional.hpp>
 #include <DomainMapperTableManager.hxx>
@@ -578,12 +585,24 @@ void DomainMapperTableManager::endLevel( )
     if (oCurrentWidth && !m_aCellWidths.empty() && !m_aCellWidths.back()->empty())
         m_aCellWidths.back()->push_back(*oCurrentWidth);
 
+#ifdef USE_JAVA
+    // Attempt to fix Mac App Store crash by checking for empty stack
+    if (!m_nCell.empty())
+#endif	// ifdef USE_JAVA
     m_nCell.pop_back( );
     m_nTableWidth = 0;
     m_nLayoutType = 0;
     m_nMaxFixedWidth = 0;
 
+#ifdef USE_JAVA
+    // Attempt to fix Mac App Store crash by checking for empty stack
+    if (!m_aTmpPosition.empty())
+#endif	// ifdef USE_JAVA
     m_aTmpPosition.pop_back( );
+#ifdef USE_JAVA
+    // Attempt to fix Mac App Store crash by checking for empty stack
+    if (!m_aTmpTableProperties.empty())
+#endif	// ifdef USE_JAVA
     m_aTmpTableProperties.pop_back( );
 
     DomainMapperTableManager_Base_t::endLevel( );
