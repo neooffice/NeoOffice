@@ -319,10 +319,20 @@ public:
      */
     ScFormulaCell* SetFormulaCell(
         SCROW nRow, ScFormulaCell* pCell,
+#ifdef NO_LIBO_BUG_114710_FIX
         sc::StartListeningType eListenType = sc::SingleCellListening );
+#else	// NO_LIBO_BUG_114710_FIX
+        sc::StartListeningType eListenType = sc::SingleCellListening,
+        bool bInheritNumFormatIfNeeded = true);
+#endif	// NO_LIBO_BUG_114710_FIX
     ScFormulaCell* SetFormulaCell(
         sc::ColumnBlockPosition& rBlockPos, SCROW nRow, ScFormulaCell* pCell,
+#ifdef NO_LIBO_BUG_114710_FIX
         sc::StartListeningType eListenType = sc::SingleCellListening );
+#else	// NO_LIBO_BUG_114710_FIX
+        sc::StartListeningType eListenType = sc::SingleCellListening,
+        bool bInheritNumFormatIfNeeded = true);
+#endif	// NO_LIBO_BUG_114710_FIX
 
     bool SetFormulaCells( SCROW nRow, std::vector<ScFormulaCell*>& rCells );
 

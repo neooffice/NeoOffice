@@ -936,7 +936,13 @@ public:
                         {
                             mrDestCol.SetFormulaCell(
                                 maDestBlockPos, nSrcRow + mnRowOffset,
+#ifdef NO_LIBO_BUG_114710_FIX
                                 new ScFormulaCell(rSrcCell, mrDestCol.GetDoc(), aDestPos));
+#else	// NO_LIBO_BUG_114710_FIX
+                                new ScFormulaCell(rSrcCell, mrDestCol.GetDoc(), aDestPos),
+                                sc::SingleCellListening,
+                                rSrcCell.NeedsNumberFormat());
+#endif	// NO_LIBO_BUG_114710_FIX
                         }
                     }
                     else if (bNumeric || bDateTime || bString)
@@ -1885,11 +1891,20 @@ void ScColumn::SetFormula( SCROW nRow, const OUString& rFormula, formula::Formul
 }
 
 ScFormulaCell* ScColumn::SetFormulaCell(
+#ifdef NO_LIBO_BUG_114710_FIX
     SCROW nRow, ScFormulaCell* pCell, sc::StartListeningType eListenType )
+#else	// NO_LIBO_BUG_114710_FIX
+    SCROW nRow, ScFormulaCell* pCell, sc::StartListeningType eListenType,
+    bool bInheritNumFormatIfNeeded )
+#endif	// NO_LIBO_BUG_114710_FIX
 {
     sc::CellStoreType::iterator it = GetPositionToInsert(nRow);
     sal_uInt32 nCellFormat = GetNumberFormat(nRow);
+#ifdef NO_LIBO_BUG_114710_FIX
     if( (nCellFormat % SV_COUNTRY_LANGUAGE_OFFSET) == 0)
+#else	// NO_LIBO_BUG_114710_FIX
+    if( (nCellFormat % SV_COUNTRY_LANGUAGE_OFFSET) == 0 && bInheritNumFormatIfNeeded )
+#endif	// NO_LIBO_BUG_114710_FIX
         pCell->SetNeedNumberFormat(true);
     it = maCells.set(it, nRow, pCell);
     maCellTextAttrs.set(nRow, sc::CellTextAttr());
@@ -1902,11 +1917,20 @@ ScFormulaCell* ScColumn::SetFormulaCell(
 
 ScFormulaCell* ScColumn::SetFormulaCell(
     sc::ColumnBlockPosition& rBlockPos, SCROW nRow, ScFormulaCell* pCell,
+#ifdef NO_LIBO_BUG_114710_FIX
     sc::StartListeningType eListenType )
+#else	// NO_LIBO_BUG_114710_FIX
+    sc::StartListeningType eListenType,
+    bool bInheritNumFormatIfNeeded )
+#endif	// NO_LIBO_BUG_114710_FIX
 {
     rBlockPos.miCellPos = GetPositionToInsert(rBlockPos.miCellPos, nRow);
     sal_uInt32 nCellFormat = GetNumberFormat(nRow);
+#ifdef NO_LIBO_BUG_114710_FIX
     if( (nCellFormat % SV_COUNTRY_LANGUAGE_OFFSET) == 0)
+#else	// NO_LIBO_BUG_114710_FIX
+    if( (nCellFormat % SV_COUNTRY_LANGUAGE_OFFSET) == 0 && bInheritNumFormatIfNeeded )
+#endif	// NO_LIBO_BUG_114710_FIX
         pCell->SetNeedNumberFormat(true);
     rBlockPos.miCellPos = maCells.set(rBlockPos.miCellPos, nRow, pCell);
     rBlockPos.miCellTextAttrPos = maCellTextAttrs.set(
