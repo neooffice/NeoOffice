@@ -558,6 +558,14 @@ void DomainMapperTableManager::startLevel( )
 
 void DomainMapperTableManager::endLevel( )
 {
+#ifndef NO_LIBO_EMPTY_TABLE_GRID_CHECK_FIX
+    if (m_aTableGrid.empty())
+    {
+        SAL_WARN("writerfilter.dmapper", "Table stack is empty");
+        return;
+    }
+#endif	// !NO_LIBO_EMPTY_TABLE_GRID_CHECK_FIX
+
     m_aTableGrid.pop_back( );
     m_aGridSpans.pop_back( );
 
