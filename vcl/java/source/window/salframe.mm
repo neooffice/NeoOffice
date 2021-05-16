@@ -56,7 +56,6 @@
 #include "../java/VCLEventQueue_cocoa.h"
 
 #define MIN_CONTENT_WIDTH 130
-#define FLOATING_WINDOW_CORNER_RADIUS 5.0f
 
 static ::std::map< NSWindow*, JavaSalGraphics* > aNativeWindowMap;
 static ::std::map< NSWindow*, NSCursor* > aNativeCursorMap;
@@ -88,35 +87,10 @@ static bool bScrollbarJumpPage = false;
 static ::osl::Mutex aSystemColorsMutex;
 static NSString *pVCLTrackingAreaWindowKey = @"VCLTrackingAreaWindow";
 
-static bool bIsRunningCatalinaOrLowerInitizalized  = false;
-static bool bIsRunningCatalinaOrLower = false;
-
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 using namespace osl;
 using namespace vcl;
-
-static bool IsRunningCatalinaOrLower()
-{
-	if ( !bIsRunningCatalinaOrLowerInitizalized )
-	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-		NSProcessInfo *pProcessInfo = [NSProcessInfo processInfo];
-		if ( pProcessInfo )
-		{
-			NSOperatingSystemVersion aVersion = pProcessInfo.operatingSystemVersion;
-			if ( aVersion.majorVersion <= 10 && aVersion.minorVersion <= 15 )
-				bIsRunningCatalinaOrLower = true;
-		}
-
-		bIsRunningCatalinaOrLowerInitizalized = true;
-
-		[pPool release];
-	}
-
-	return bIsRunningCatalinaOrLower;
-}
 
 static NSRect GetTotalScreenBounds()
 {
@@ -586,12 +560,10 @@ static BOOL bIOPMAssertionIDSet = NO;
 	NSProgressIndicator*	mpWaitingView;
 	NSWindow*				mpWindow;
 	NSUInteger				mnWindowStyleMask;
-	BOOL					mbRoundedCorners;
 }
 + (void)updateShowOnlyMenusWindows;
 - (void)addTrackingArea:(VCLWindowWrapperArgs *)pArgs;
 - (void)adjustColorLevelAndShadow;
-- (void)adjustCornerRadius;
 - (void)animateWaitingView:(BOOL)bAnimate;
 - (id)initWithStyle:(sal_uLong)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(BOOL)bShowOnlyMenus utility:(BOOL)bUtility;
 - (void)deminimize:(VCLWindowWrapperArgs *)pArgs;
@@ -609,7 +581,6 @@ static BOOL bIOPMAssertionIDSet = NO;
 - (void)mouseMoved:(NSEvent *)pEvent;
 - (void)removeTrackingArea:(VCLWindowWrapperArgs *)pArgs;
 - (void)requestFocus:(VCLWindowWrapperArgs *)pArgs;
-- (BOOL)roundedCorners;
 - (void)setContentMinSize:(NSSize)aContentMinSize;
 - (void)setJavaFrame:(VCLWindowWrapperArgs *)pArgs;
 - (void)setFullScreenMode:(VCLWindowWrapperArgs *)pArgs;
@@ -1432,26 +1403,6 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	}
 }
 
-- (void)adjustCornerRadius
-{
-	// Round corners of popup windows
-	if ( mbUndecorated && !mbShowOnlyMenus && !mbFullScreen && mpWindow && !IsRunningCatalinaOrLower() )
-	{
-		NSView *pContentView = [mpWindow contentView];
-		if ( pContentView )
-		{
-			pContentView.wantsLayer = YES;
-			CALayer *pLayer = [pContentView layer];
-			if ( pLayer )
-			{
-				pLayer.cornerRadius = FLOATING_WINDOW_CORNER_RADIUS;
-				pLayer.masksToBounds = YES;
-				mbRoundedCorners = YES;
-			}
-		}
-	}
-}
-
 - (id)initWithStyle:(sal_uLong)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(BOOL)bShowOnlyMenus utility:(BOOL)bUtility
 {
 	[super init];
@@ -1473,7 +1424,6 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	mpWaitingView = nil;
 	mpWindow = nil;
 	mnWindowStyleMask = NSWindowStyleMaskBorderless;
-	mbRoundedCorners = NO;
 
 	if ( !mbUtility && ( mbShowOnlyMenus || ! ( mnStyle & ( SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE ) ) ) )
 		mbUndecorated = YES;
@@ -1933,11 +1883,6 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	}
 }
 
-- (BOOL)roundedCorners
-{
-	return mbRoundedCorners;
-}
-
 - (void)setContentMinSize:(NSSize)aContentMinSize
 {
 	if ( mpWindow )
@@ -2173,11 +2118,6 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			NSApplication *pApp = [NSApplication sharedApplication];
 			if ( pApp )
 				pKeyWindow = [pApp keyWindow];
-
-			// The corner radius for floating windows gets removed when a
-			// combobox or listbox is reopened so always apply immediately
-			// before displaying the window
-			[self adjustCornerRadius];
 
 			[mpWindow orderWindow:NSWindowAbove relativeTo:( mpParent ? [mpParent windowNumber] : 0 )];
 			BOOL bCanBecomeKeyWindow;
@@ -2469,12 +2409,9 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 		[NSBezierPath fillRect:aDirtyRect];
 	}
 
-	JavaSalFrame *pFrame = NULL;
 	::std::map< NSWindow*, JavaSalGraphics* >::iterator it = aNativeWindowMap.find( pWindow );
 	if ( it != aNativeWindowMap.end() && it->second )
 	{
-		pFrame = it->second->mpFrame;
-
 		CGRect aBounds = CGRectStandardize( NSRectToCGRect( [pView bounds] ) );
 		CGRect aDestRect = CGRectStandardize( NSRectToCGRect( aDirtyRect ) );
 		if ( CGRectIntersectsRect( aBounds, aDestRect ) )
@@ -2502,38 +2439,6 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 					it->second->copyToContext( NULL, NULL, false, false, aContext, aBounds, aDestRect, aDestRect, true, !bFlipped );
 
 					CGContextRestoreGState( aContext );
-				}
-			}
-		}
-	}
-
-	if ( pFrame && pFrame->mpWindow && [pFrame->mpWindow roundedCorners] && pView.wantsLayer )
-	{
-		CALayer *pLayer = pView.layer;
-		if ( pLayer )
-		{
-			CGFloat fCornerRadius = pLayer.cornerRadius;
-			NSRect aBounds = [pView bounds];
-			if ( fCornerRadius > 0 && !NSIsEmptyRect( aBounds ) )
-			{
-#if MACOSX_SDK_VERSION < 101400
-				if ( class_getClassMethod( [NSColor class], @selector(separatorColor) ) )
-#else // MACOSX_SDK_VERSION < 101400
-				if ( @available(macOS 10.14, * ) )
-#endif	// MACOSX_SDK_VERSION < 101400
-					pColor = [NSColor separatorColor];
-				else
-					pColor = [NSColor quaternaryLabelColor];
-
-				if ( pColor )
-				{
-					NSBezierPath *pPath = [NSBezierPath bezierPathWithRoundedRect:aBounds xRadius:fCornerRadius yRadius:fCornerRadius];
-					if ( pPath )
-					{
-						[pColor setStroke];
-						[pPath setLineWidth:2.0f];
-						[pPath stroke];
-					}
 				}
 			}
 		}
