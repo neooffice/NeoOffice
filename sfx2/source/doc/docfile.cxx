@@ -140,9 +140,14 @@
 
 #include "../view/topfrm_cocoa.hxx"
 
+typedef void* id;
+typedef id Application_acquireSecurityScopedURLFromOUString_Type( const OUString *pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const OUString *pDialogTitle );
 typedef void Application_cacheSecurityScopedURLFromOUString_Type( const OUString *pURL );
+typedef void Application_releaseSecurityScopedURL_Type( id pSecurityScopedURLs );
 
+static Application_acquireSecurityScopedURLFromOUString_Type *pApplication_acquireSecurityScopedURLFromOUString = NULL;
 static Application_cacheSecurityScopedURLFromOUString_Type *pApplication_cacheSecurityScopedURLFromOUString = NULL;
+static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
 
 #endif	// MACOSX
 
@@ -1908,6 +1913,16 @@ void SfxMedium::Transfer_Impl()
         {
             TransactedTransferForFS_Impl( aSource, aDest, xComEnv );
 
+#if defined USE_JAVA && defined MACOSX
+            id pSecurityScopedURL = NULL;
+            if ( !pApplication_acquireSecurityScopedURLFromOUString )
+                pApplication_acquireSecurityScopedURLFromOUString = (Application_acquireSecurityScopedURLFromOUString_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromOUString" );
+            if ( !pApplication_releaseSecurityScopedURL )
+                pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
+            if ( pApplication_acquireSecurityScopedURLFromOUString && pApplication_releaseSecurityScopedURL )
+                pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromOUString( &aDestURL, sal_True, NULL );
+#endif	// USE_JAVA && MACOSX
+
             // Hideous - no clean way to do this, so we re-open the file just to fsync it
             osl::File aFile( aDestURL );
             if ( aFile.open( osl_File_OpenFlag_Write ) == osl::FileBase::E_None )
@@ -1916,6 +1931,11 @@ void SfxMedium::Transfer_Impl()
                 SAL_INFO( "sfx.doc", "fsync'd saved file '" << aDestURL << "'" );
                 aFile.close();
             }
+
+#if defined USE_JAVA && defined MACOSX
+            if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+                pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
+#endif	// USE_JAVA && MACOSX
         }
         else
         {
