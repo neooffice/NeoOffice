@@ -228,11 +228,8 @@ static BOOL IsInIgnoreURLs( NSString *pURLString )
 				NSMutableArray *pTmpURLs = [NSMutableArray arrayWithCapacity:[pTmpPaths count] + 3];
 				if ( pTmpURLs )
 				{
-					NSUInteger nCount = [pTmpPaths count];
-					NSUInteger i = 0;
-					for ( ; i < nCount; i++ )
+					for ( NSString *pTmpPath in pTmpPaths )
 					{
-						NSString *pTmpPath = [pTmpPaths objectAtIndex:i];
 						if ( pTmpPath )
 						{
 							NSURL *pTmpURL = [NSURL fileURLWithPath:pTmpPath isDirectory:YES];
@@ -269,13 +266,11 @@ static BOOL IsInIgnoreURLs( NSString *pURLString )
 					}
 
 					// Convert URLs to absolute strings
-					nCount = [pTmpURLs count];
-					pTmpPaths = [NSMutableArray arrayWithCapacity:nCount];
+					pTmpPaths = [NSMutableArray arrayWithCapacity:[pTmpURLs count]];
 					if ( pTmpPaths )
 					{
-						for ( i = 0; i < nCount; i++ )
+						for ( NSURL *pTmpURL in pTmpURLs )
 						{
-							NSURL *pTmpURL = [pTmpURLs objectAtIndex:i];
 							if ( pTmpURL )
 							{
 								pTmpURL = [pTmpURL URLByStandardizingPath];
@@ -303,11 +298,8 @@ static BOOL IsInIgnoreURLs( NSString *pURLString )
 
 	if ( pIgnoreURLStrings )
 	{
-		NSUInteger nCount = [pIgnoreURLStrings count];
-		NSUInteger i = 0;
-		for ( ; i < nCount; i++ )
+		for ( NSString *pTmpURLString in pIgnoreURLStrings )
 		{
-			NSString *pTmpURLString = [pIgnoreURLStrings objectAtIndex:i];
 			if ( pTmpURLString )
 			{
 				NSRange aTmpRange = [pURLString rangeOfString:pTmpURLString];
@@ -1208,14 +1200,10 @@ void Application_releaseSecurityScopedURL( id pSecurityScopedURLs )
 	{
 		if ( [pSecurityScopedURLs isKindOfClass:[NSArray class]] )
 		{
-			NSArray *pArray = (NSArray *)pSecurityScopedURLs;
-			NSUInteger nCount = [pArray count];
-			NSUInteger i = 0;
-			for ( ; i < nCount; i++ )
+			for ( NSURL *pURL in (NSArray *)pSecurityScopedURLs )
 			{
-				NSURL *pURL = [pArray objectAtIndex:i];
 				if ( pURL && [pURL isKindOfClass:[NSURL class]] )
-					[(NSURL *)pURL stopAccessingSecurityScopedResource];
+					[pURL stopAccessingSecurityScopedResource];
 			}
 		}
 
