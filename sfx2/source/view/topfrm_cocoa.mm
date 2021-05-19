@@ -775,7 +775,9 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 		{
 			comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 			rSolarMutex.acquire();
-			if ( !Application::IsShutDown() )
+			// Fix Mac App Store crash by not reloading if SfxGetpApp() returns
+			// NULL as that means we are already in DeInitVCL()
+			if ( !Application::IsShutDown() && SfxGetpApp() )
 			{
 				SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
 				if ( pDoc == self )
