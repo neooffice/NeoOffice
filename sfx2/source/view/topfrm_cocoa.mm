@@ -775,7 +775,9 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 		{
 			comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 			rSolarMutex.acquire();
-			if ( !Application::IsShutDown() )
+			// Fix Mac App Store crash by not reloading if SfxGetpApp() returns
+			// NULL as that means we are already in DeInitVCL()
+			if ( !Application::IsShutDown() && SfxGetpApp() )
 			{
 				SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
 				if ( pDoc == self )
@@ -912,6 +914,11 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	return NO;
 }
 
+@end
+
+@interface PDFView (SFXPDFView)
+- (void)setAcceptsDraggedFiles:(BOOL)bFlag;
+- (void)setAllowsDragging:(BOOL)bFlag;
 @end
 
 @interface SFXDocumentRevision : SFXDocument
@@ -1086,7 +1093,10 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 					if ( mpPDFView )
 					{
 						[mpPDFView setDocument:pPDFDoc];
-						[mpPDFView setAllowsDragging:NO];
+						if ( [mpPDFView respondsToSelector:@selector(setAcceptsDraggedFiles:)] )
+							[mpPDFView setAcceptsDraggedFiles:NO];
+						if ( [mpPDFView respondsToSelector:@selector(setAllowsDragging:)] )
+							[mpPDFView setAllowsDragging:NO];
 						[mpPDFView setAutoScales:YES];
 						[mpPDFView setDisplaysPageBreaks:NO];
 						[pWindow setContentView:mpPDFView];
