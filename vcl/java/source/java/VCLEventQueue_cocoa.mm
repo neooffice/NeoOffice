@@ -649,7 +649,7 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 #if MACOSX_SDK_VERSION >= 101400
 		if ( @available(macOS 10.14, * ) )
 #else	// MACOSX_SDK_VERSION >= 101400
-		if ( [pApp respondsToSelector:@selector(appearance)] && [pApp respondsToSelector:@selector(effectiveAppearance)] )
+		if ( [pApp respondsToSelector:@selector(appearance)] && [pApp respondsToSelector:@selector(effectiveAppearance)] && [pApp respondsToSelector:@selector(setAppearance:)] )
 #endif	// MACOSX_SDK_VERSION >= 101400
 		{
 			// Reset to system appearance
@@ -681,16 +681,10 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 			}
 
 			NSAppearance *pAppearance = [NSAppearance appearanceNamed:pAppearanceName];
-
-#if MACOSX_SDK_VERSION < 101400
-			if ( [pApp respondsToSelector:@selector(appearance)] && [pApp respondsToSelector:@selector(setAppearance:)] )
-#endif	// MACOSX_SDK_VERSION < 101400
-			{
-				[pApp setAppearance:pAppearance];
-				if ( pLastAppearance != pAppearance )
-					PostSystemColorsDidChange();
-				pLastAppearance = pAppearance;
-			}
+			[pApp setAppearance:pAppearance];
+			if ( pLastAppearance != pAppearance )
+				PostSystemColorsDidChange();
+			pLastAppearance = pAppearance;
 		}
 	}
 }
@@ -745,6 +739,7 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 
 @interface NSResponder (VCLResponder)
 - (void)abandonInput;
+- (nullable id)accessibilityAttributeValue:(NSString *)attribute;
 - (void)copy:(id)pSender;
 - (void)cut:(id)pSender;
 - (void)paste:(id)pSender;
@@ -2995,14 +2990,7 @@ static CFDataRef aRTFSelection = nil;
 {
 	NSWindow *pWindow = [self window];
 	if ( pWindow && [pWindow isVisible] && [self isKindOfClass:[VCLView class]] )
-	{
-		BOOL bFlushWindow = ( [pWindow respondsToSelector:@selector(disableFlushWindow)] && [pWindow respondsToSelector:@selector(enableFlushWindow)] ? YES : NO );
-		if ( bFlushWindow )
-			[pWindow disableFlushWindow];
 		JavaSalFrame_drawToNSView( self, aDirtyRect );
-		if ( bFlushWindow )
-			[pWindow enableFlushWindow];
-	}
 }
 
 - (void)resetCursorRects
@@ -3159,9 +3147,9 @@ static CFDataRef aRTFSelection = nil;
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType
 {
 	NSWindow *pWindow = [self window];
-	if ( pWindow && [pWindow isVisible] && pSharedResponder && ![pSharedResponder disableServicesMenu] && pSendType && ( !pReturnType || [pReturnType isEqual:NSRTFPboardType] || [pReturnType isEqual:NSStringPboardType] ) )
+	if ( pWindow && [pWindow isVisible] && pSharedResponder && ![pSharedResponder disableServicesMenu] && pSendType && ( !pReturnType || [pReturnType isEqual:NSPasteboardTypeRTF] || [pReturnType isEqual:NSPasteboardTypeString] ) )
 	{
-		if ( [pSendType isEqual:NSRTFPboardType] )
+		if ( [pSendType isEqual:NSPasteboardTypeRTF] )
 		{
 			if ( aRTFSelection )
 			{
@@ -3173,7 +3161,7 @@ static CFDataRef aRTFSelection = nil;
 			if ( aRTFSelection )
 				return self;
 		}
-		else if ( [pSendType isEqual:NSStringPboardType] )
+		else if ( [pSendType isEqual:NSPasteboardTypeString] )
 		{
 			if ( aTextSelection )
 			{
@@ -3210,17 +3198,25 @@ static CFDataRef aRTFSelection = nil;
 		NSMutableArray *pTypesDeclared = [NSMutableArray arrayWithCapacity:2];
 		if ( pTypesDeclared )
 		{
-			if ( aRTFSelection && [pTypes containsObject:NSRTFPboardType] )
-				[pTypesDeclared addObject:NSRTFPboardType];
-			if ( aTextSelection && [pTypes containsObject:NSStringPboardType] )
-				[pTypesDeclared addObject:NSStringPboardType];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+			// Deprecated pasteboard type is needed on macOS 11
+			if ( aRTFSelection && ( [pTypes containsObject:NSRTFPboardType] || [pTypes containsObject:NSPasteboardTypeRTF] ) )
+#pragma clang diagnostic pop
+				[pTypesDeclared addObject:NSPasteboardTypeRTF];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+			// Deprecated pasteboard type is needed on macOS 11
+			if ( aTextSelection && ( [pTypes containsObject:NSStringPboardType] || [pTypes containsObject:NSPasteboardTypeString] ) )
+#pragma clang diagnostic pop
+				[pTypesDeclared addObject:NSPasteboardTypeString];
 
 			[pPasteboard declareTypes:pTypesDeclared owner:nil];
 			if ( [pTypesDeclared count] )
 			{
-				if ( aRTFSelection && [pTypesDeclared containsObject:NSRTFPboardType] && [pPasteboard setData:(NSData *)aRTFSelection forType:NSRTFPboardType] )
+				if ( aRTFSelection && [pTypesDeclared containsObject:NSPasteboardTypeRTF] && [pPasteboard setData:(NSData *)aRTFSelection forType:NSPasteboardTypeRTF] )
 					bRet = YES;
-				if ( aTextSelection && [pTypesDeclared containsObject:NSStringPboardType] && [pPasteboard setString:(NSString *)aTextSelection forType:NSStringPboardType] )
+				if ( aTextSelection && [pTypesDeclared containsObject:NSPasteboardTypeString] && [pPasteboard setString:(NSString *)aTextSelection forType:NSPasteboardTypeString] )
 					bRet = YES;
 			}
 		}
