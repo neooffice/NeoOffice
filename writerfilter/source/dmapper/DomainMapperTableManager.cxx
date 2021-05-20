@@ -574,6 +574,10 @@ void DomainMapperTableManager::endLevel( )
 #endif	// !NO_LIBO_EMPTY_TABLE_GRID_CHECK_FIX
 
     m_aTableGrid.pop_back( );
+#ifdef USE_JAVA
+    // Attempt to fix Mac App Store crash by checking for empty stack
+    if (hasCurrentSpans())
+#endif	// ifdef USE_JAVA
     m_aGridSpans.pop_back( );
 
     // Do the same trick as in startLevel(): pop the value that was pushed too early.
