@@ -797,7 +797,11 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 								// NSURLBookmarkResolutionWithoutUI or
 								// NSURLBookmarkResolutionWithoutMounting flags:
 								// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64379#64379
-								NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
+								// Add back the NSURLBookmarkResolutionWithoutUI
+								// flag as this call is extremely slow on
+								// macOS 11 without it and adding it back does
+								// not cause the above bug to reoccur.
+								NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
 								if ( pData )
 								{
 									BOOL bStale = NO;
@@ -1138,7 +1142,10 @@ void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 				// not using the NSURLBookmarkResolutionWithoutUI or
 				// NSURLBookmarkResolutionWithoutMounting flags:
 				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64379#64379
-				NSData *pData = [pURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
+				// Add back the NSURLBookmarkResolutionWithoutUI flag as this
+				// call is extremely slow on macOS 11 without it and adding it
+				// back does not cause the above bug to reoccur.
+				NSData *pData = [pURL bookmarkDataWithOptions:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
 				if ( pData )
 				{
 					BOOL bStale = NO;
