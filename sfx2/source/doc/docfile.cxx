@@ -142,11 +142,9 @@
 
 typedef void* id;
 typedef id Application_acquireSecurityScopedURLFromOUString_Type( const OUString *pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const OUString *pDialogTitle );
-typedef void Application_cacheSecurityScopedURLFromOUString_Type( const OUString *pURL );
 typedef void Application_releaseSecurityScopedURL_Type( id pSecurityScopedURLs );
 
 static Application_acquireSecurityScopedURLFromOUString_Type *pApplication_acquireSecurityScopedURLFromOUString = NULL;
-static Application_cacheSecurityScopedURLFromOUString_Type *pApplication_cacheSecurityScopedURLFromOUString = NULL;
 static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
 
 #endif	// MACOSX
@@ -3842,9 +3840,28 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, OUString aNewURL )
     if ( aOpenFilePath == aOrigPath || osl_getFileURLFromSystemPath( aOpenFilePath.pData, &aOpenFileURL.pData ) != osl_File_E_None )
         return;
 
-    // Ignore inaccessible paths
+    // Stop unexpected display of native Open dialogs when a Dropbox file is
+    // moved on a different machine by caching the new URL. Also, prevent
+    // failure to access the new path by trying to acquire a security scoped
+    // bookmark when the original file was accessed via its folder's bookmark
+    // and the file has been moved to a folder that we have not yet
+    // obtained a bookmark for.
+    id pSecurityScopedURL = NULL;
+    if ( !pApplication_acquireSecurityScopedURLFromOUString )
+        pApplication_acquireSecurityScopedURLFromOUString = (Application_acquireSecurityScopedURLFromOUString_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromOUString" );
+    if ( !pApplication_releaseSecurityScopedURL )
+        pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
+    if ( pApplication_acquireSecurityScopedURLFromOUString && pApplication_releaseSecurityScopedURL )
+        pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromOUString( &aOpenFileURL, sal_True, NULL );
+
     OString aNativeOpenFilePath = OUStringToOString( aOpenFilePath, osl_getThreadTextEncoding() );
-    if ( !NSDocument_isValidMoveToPath( aOpenFilePath ) || ( access( aNativeOpenFilePath.getStr(), R_OK) && access( aNativeOpenFilePath.getStr(), W_OK ) ) )
+    bool bInaccessiblePath = ( !NSDocument_isValidMoveToPath( aOpenFilePath ) || ( access( aNativeOpenFilePath.getStr(), R_OK) && access( aNativeOpenFilePath.getStr(), W_OK ) ) );
+
+    if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+        pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
+
+    // Ignore inaccessible paths
+    if ( bInaccessiblePath )
     {
         // Reset NSDocument's file URL to original URL
         SfxViewFrame* pFrame = NULL;
@@ -3860,13 +3877,6 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, OUString aNewURL )
 
         return;
     }
-
-    // Stop unexpected display of native Open dialogs when a Dropbox file is
-    // moved on a different machine by caching the new URL
-    if ( !pApplication_cacheSecurityScopedURLFromOUString )
-        pApplication_cacheSecurityScopedURLFromOUString = (Application_cacheSecurityScopedURLFromOUString_Type *)dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURLFromOUString" );
-    if ( pApplication_cacheSecurityScopedURLFromOUString )
-        pApplication_cacheSecurityScopedURLFromOUString( &aOpenFileURL );
 
     bool bUseOrigURL = false;
     bool bUseLogicNameMainURL = false;
