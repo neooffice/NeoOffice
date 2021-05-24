@@ -299,23 +299,7 @@ static void SetDocumentForFrame( SfxViewFrame *pFrame, SFXDocument *pDoc )
 			// otherwise it will never get released by its controllers
 			SFXDocument *pOldDoc = [pFrameDict objectForKey:pKey];
 			if ( pOldDoc )
-			{
-				// Fix unexpected closing of the old document's window when
-				// dragging an existing spreadsheet's icon from the titlebar
-				// into the spreadsheet's content area by remove all window
-				// controllers before closing the old document
-				NSArray *pOldWinControllers = [pOldDoc windowControllers];
-				while ( pOldWinControllers && [pOldWinControllers count] )
-				{
-					NSWindowController *pOldWinController = (NSWindowController *)[pOldWinControllers objectAtIndex:0];
-					if ( pOldWinController )
-						[pOldDoc removeWindowController:pOldWinController];
-
-					pOldWinControllers = [pOldDoc windowControllers];
-				}
-
 				[pOldDoc close];
-			}
 
 			if ( pDoc )
 				[pFrameDict setObject:pDoc forKey:pKey];
@@ -403,6 +387,20 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (void)close
 {
+	// Fix unexpected closing of the old document's window when dragging an
+	// existing spreadsheet's icon from the titlebar into the spreadsheet's
+	// content area by removing all window controllers before closing the old
+	// document
+	NSArray *pWinControllers = [self windowControllers];
+	while ( pWinControllers && [pWinControllers count] )
+	{
+		NSWindowController *pWinController = (NSWindowController *)[pWinControllers objectAtIndex:0];
+		if ( pWinController )
+			[self removeWindowController:pWinController];
+
+		pWinControllers = [self windowControllers];
+	}
+
 	// Fix short hang when closing a document when compiled on macOS 11 by
 	// removing the document immediately before closing it
 	NSDocumentController *pDocController = [NSDocumentController sharedDocumentController];
@@ -1249,13 +1247,13 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 				SFXDocument *pOldDoc = GetDocumentForFrame( mpFrame );
 				if ( pOldDoc )
 				{
-					NSURL *pOldURL = [pOldDoc fileURL];
-					[pOldDoc setFileURL:mpURL];
-
 					// If the URL has changed, disconnect the document from
 					// the old URL's version history
+					NSURL *pOldURL = [pOldDoc fileURL];
 					if ( !mpURL || !pOldURL || ![pOldURL isEqual:mpURL] )
 					{
+						[pOldDoc setFileURL:mpURL];
+
  						// Fix bug reported in the following NeoOffice forum
 						// post by preserving the edited status of the document:
 						// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64685#64685
