@@ -403,6 +403,12 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (void)close
 {
+	// Fix short hang when closing a document when compiled on macOS 11 by
+	// removing the document immediately before closing it
+	NSDocumentController *pDocController = [NSDocumentController sharedDocumentController];
+	if ( pDocController )
+		[pDocController removeDocument:self];
+
 	[super close];
 
 	// Set undo manager to nil otherwise the document will never be released
@@ -498,7 +504,10 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 			if ( mpWinController )
 			{
 				[self addWindowController:mpWinController];
-				[pDocController addDocument:self];
+
+				// Adding to document controller is slow when compiled on
+				// macOS 11 so don't block document loading in the LibO code
+				[pDocController performSelector:@selector(addDocument:) withObject:self afterDelay:0];
 			}
 		}
 	}
