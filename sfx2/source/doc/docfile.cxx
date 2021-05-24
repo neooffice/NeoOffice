@@ -3910,25 +3910,31 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, OUString aNewURL )
             pBaseModel->setURL( aOpenFileURL );
     }
 
+    OUString aFileName;
     if ( bUseOrigURL )
     {
-        GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, GetOrigURL() ) );
+        aFileName = GetOrigURL();
     }
     else if ( bUseLogicNameMainURL )
     {
-        GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, INetURLObject( pImp->m_aLogicName ).GetMainURL( INetURLObject::NO_DECODE ) ) );
+        aFileName = INetURLObject( pImp->m_aLogicName ).GetMainURL( INetURLObject::NO_DECODE );
     }
     else if ( bUseName )
     {
-        GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, GetName() ) );
+        aFileName = GetName();
     }
     else if ( bUsePhysicalName )
     {
-        OUString aFileName;
-        if ( pImp->m_aName.getLength() && ::utl::LocalFileHelper::ConvertPhysicalNameToURL( pImp->m_aName, aFileName ) )
-            GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, aFileName ) );
-        else
-            GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, GetName() ) );
+        if ( !pImp->m_aName.getLength() || !::utl::LocalFileHelper::ConvertPhysicalNameToURL( pImp->m_aName, aFileName ) )
+            aFileName = GetName();
+    }
+
+    // Fix failure to set the NSDocument's file URL to the new path by updating
+    // SID_DOC_BASEURL in addition to SID_FILE_NAME
+    if ( aFileName.getLength() )
+    {
+        GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, aFileName ) );
+        GetItemSet()->Put( SfxStringItem( SID_DOC_BASEURL, aFileName ) );
     }
 
     ReOpen();

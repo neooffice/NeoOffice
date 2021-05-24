@@ -69,6 +69,25 @@ static NSString *pSFXDocumentRevision = @"SFXDocumentRevision";
 
 using namespace vcl;
 
+#ifdef USE_NATIVE_RESUME
+
+static BOOL IsResumeEnabled()
+{
+	BOOL bRet = YES;
+
+	CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisableResume" ), kCFPreferencesCurrentApplication );
+	if ( aPref )
+	{
+		if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
+			bRet = NO;
+		CFRelease( aPref );
+	}
+
+	return bRet;
+}
+
+#endif	// USE_NATIVE_RESUME
+
 static void HandleAboutRequest()
 {
 	// If no application mutex exists yet, ignore event as we are likely to
@@ -281,20 +300,8 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	{
 		NSApplication *pApp = [NSApplication sharedApplication];
 		NSString *pPath = [pAbsoluteURL path];
-		if ( pApp && pPath )
-		{
-			BOOL bResume = YES;
-			CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisableResume" ), kCFPreferencesCurrentApplication );
-			if ( aPref )
-			{
-				if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
-					bResume = NO;
-				CFRelease( aPref );
-			}
-
-			if ( bResume )
-				[pSharedAppDelegate application:pApp openFile:pPath];
-		}
+		if ( pApp && pPath && IsResumeEnabled() )
+			[pSharedAppDelegate application:pApp openFile:pPath];
 	}
 #endif	// USE_NATIVE_RESUME
 
@@ -347,7 +354,10 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 			NSString *pPath = [pContentsURL path];
 			if ( pPath && [pPath length] )
 			{
-				HandleOpenPrintFileRequest( [pPath UTF8String], sal_False );
+#ifdef USE_NATIVE_RESUME
+				if ( IsResumeEnabled() )
+					HandleOpenPrintFileRequest( [pPath UTF8String], sal_False );
+#endif	// USE_NATIVE_RESUME
 
 				pDoc = [[VCLDocument alloc] init];
 				[pDoc autorelease];
