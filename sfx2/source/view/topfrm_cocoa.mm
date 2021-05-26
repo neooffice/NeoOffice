@@ -52,9 +52,13 @@
 
 #define PDF_BUF_SIZE ( 128 * 1024 )
 
+typedef id Application_acquireSecurityScopedURLFromNSURL_Type( const id pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const id pDialogTitle );
 typedef void Application_cacheSecurityScopedURL_Type( id pURL );
+typedef void Application_releaseSecurityScopedURL_Type( id pSecurityScopedURLs );
 
+static Application_acquireSecurityScopedURLFromNSURL_Type *pApplication_acquireSecurityScopedURLFromNSURL = NULL;
 static Application_cacheSecurityScopedURL_Type *pApplication_cacheSecurityScopedURL = NULL;
+static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
 static NSString *pNoTranslationValue = @" ";
 
 using namespace com::sun::star;
@@ -505,9 +509,21 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 			{
 				[self addWindowController:mpWinController];
 
-				// Adding to document controller is slow when compiled on
-				// macOS 11 so don't block document loading in the LibO code
-				[pDocController performSelector:@selector(addDocument:) withObject:self afterDelay:0];
+				// Fix extreme slowness in [NSDocumentController addDocument:]
+				// when running in the sandbox on macOS 11 by obtaining a
+				// security scoped bookmark during the call
+				id pSecurityScopedURL = NULL;
+				if ( !pApplication_acquireSecurityScopedURLFromNSURL )
+					pApplication_acquireSecurityScopedURLFromNSURL = (Application_acquireSecurityScopedURLFromNSURL_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromNSURL" );
+				if ( !pApplication_releaseSecurityScopedURL )
+					pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
+				if ( pApplication_acquireSecurityScopedURLFromNSURL && pApplication_releaseSecurityScopedURL )
+					pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromNSURL( pURL, sal_True, NULL );
+
+				[pDocController addDocument:self];
+
+				if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+					pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
 			}
 		}
 	}
