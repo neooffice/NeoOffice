@@ -52,9 +52,13 @@
 
 #define PDF_BUF_SIZE ( 128 * 1024 )
 
+typedef id Application_acquireSecurityScopedURLFromNSURL_Type( const id pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const id pDialogTitle );
 typedef void Application_cacheSecurityScopedURL_Type( id pURL );
+typedef void Application_releaseSecurityScopedURL_Type( id pSecurityScopedURLs );
 
+static Application_acquireSecurityScopedURLFromNSURL_Type *pApplication_acquireSecurityScopedURLFromNSURL = NULL;
 static Application_cacheSecurityScopedURL_Type *pApplication_cacheSecurityScopedURL = NULL;
+static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
 static NSString *pNoTranslationValue = @" ";
 
 using namespace com::sun::star;
@@ -299,7 +303,23 @@ static void SetDocumentForFrame( SfxViewFrame *pFrame, SFXDocument *pDoc )
 			// otherwise it will never get released by its controllers
 			SFXDocument *pOldDoc = [pFrameDict objectForKey:pKey];
 			if ( pOldDoc )
+			{
+				// Fix unexpected closing of the old document's window when
+				// dragging an existing spreadsheet's icon from the titlebar
+				// into the spreadsheet's content area by remove all window
+				// controllers before closing the old document
+				NSArray *pOldWinControllers = [pOldDoc windowControllers];
+				while ( pOldWinControllers && [pOldWinControllers count] )
+				{
+					NSWindowController *pOldWinController = (NSWindowController *)[pOldWinControllers objectAtIndex:0];
+					if ( pOldWinController )
+						[pOldDoc removeWindowController:pOldWinController];
+
+					pOldWinControllers = [pOldDoc windowControllers];
+				}
+
 				[pOldDoc close];
+			}
 
 			if ( pDoc )
 				[pFrameDict setObject:pDoc forKey:pKey];
@@ -387,25 +407,26 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (void)close
 {
-	// Fix unexpected closing of the old document's window when dragging an
-	// existing spreadsheet's icon from the titlebar into the spreadsheet's
-	// content area by removing all window controllers before closing the old
-	// document
-	NSArray *pWinControllers = [self windowControllers];
-	while ( pWinControllers && [pWinControllers count] )
-	{
-		NSWindowController *pWinController = (NSWindowController *)[pWinControllers objectAtIndex:0];
-		if ( pWinController )
-			[self removeWindowController:pWinController];
-
-		pWinControllers = [self windowControllers];
-	}
-
 	// Fix short hang when closing a document when compiled on macOS 11 by
 	// removing the document immediately before closing it
 	NSDocumentController *pDocController = [NSDocumentController sharedDocumentController];
 	if ( pDocController )
+	{
+		// Just to be safe, apply the [NSDocumentController addDocument:] fix
+		// when we call [NSDocumentController removeDocument:]
+		id pSecurityScopedURL = NULL;
+		if ( !pApplication_acquireSecurityScopedURLFromNSURL )
+			pApplication_acquireSecurityScopedURLFromNSURL = (Application_acquireSecurityScopedURLFromNSURL_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromNSURL" );
+		if ( !pApplication_releaseSecurityScopedURL )
+			pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
+		if ( pApplication_acquireSecurityScopedURLFromNSURL && pApplication_releaseSecurityScopedURL )
+			pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromNSURL( [self fileURL], sal_True, NULL );
+
 		[pDocController removeDocument:self];
+
+		if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+			pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
+	}
 
 	[super close];
 
@@ -503,9 +524,21 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 			{
 				[self addWindowController:mpWinController];
 
-				// Adding to document controller is slow when compiled on
-				// macOS 11 so don't block document loading in the LibO code
-				[pDocController performSelector:@selector(addDocument:) withObject:self afterDelay:0];
+				// Fix extreme slowness in [NSDocumentController addDocument:]
+				// when running in the sandbox on macOS 11 by obtaining a
+				// security scoped bookmark during the call
+				id pSecurityScopedURL = NULL;
+				if ( !pApplication_acquireSecurityScopedURLFromNSURL )
+					pApplication_acquireSecurityScopedURLFromNSURL = (Application_acquireSecurityScopedURLFromNSURL_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromNSURL" );
+				if ( !pApplication_releaseSecurityScopedURL )
+					pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
+				if ( pApplication_acquireSecurityScopedURLFromNSURL && pApplication_releaseSecurityScopedURL )
+					pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromNSURL( pURL, sal_True, NULL );
+
+				[pDocController addDocument:self];
+
+				if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+					pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
 			}
 		}
 	}
