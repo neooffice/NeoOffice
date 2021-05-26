@@ -411,7 +411,22 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	// removing the document immediately before closing it
 	NSDocumentController *pDocController = [NSDocumentController sharedDocumentController];
 	if ( pDocController )
+	{
+		// Just to be safe, apply the [NSDocumentController addDocument:] fix
+		// when we call [NSDocumentController removeDocument:]
+		id pSecurityScopedURL = NULL;
+		if ( !pApplication_acquireSecurityScopedURLFromNSURL )
+			pApplication_acquireSecurityScopedURLFromNSURL = (Application_acquireSecurityScopedURLFromNSURL_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromNSURL" );
+		if ( !pApplication_releaseSecurityScopedURL )
+			pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
+		if ( pApplication_acquireSecurityScopedURLFromNSURL && pApplication_releaseSecurityScopedURL )
+			pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromNSURL( [self fileURL], sal_True, NULL );
+
 		[pDocController removeDocument:self];
+
+		if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+			pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
+	}
 
 	[super close];
 
