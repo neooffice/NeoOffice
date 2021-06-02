@@ -2497,7 +2497,12 @@ void SwRootFrm::CalcFrmRects(SwShellCrsr &rCrsr)
 
         //Now the frames between, if there are any
         bool const bBody = pStartFrm->IsInDocBody();
+#ifdef USE_JAVA
+        // Fix Mac App Store crash by checking for NULL upper form
+        const SwTableBox* pCellBox = (pStartFrm->GetUpper() && pStartFrm->GetUpper()->IsCellFrm()) ?
+#else	// USE_JAVA
         const SwTableBox* pCellBox = pStartFrm->GetUpper()->IsCellFrm() ?
+#endif	// USE_JAVA
             ((SwCellFrm*)pStartFrm->GetUpper())->GetTabBox() : 0;
         if (pSh->IsSelectAll())
             pCellBox = 0;
