@@ -272,7 +272,7 @@ static SFXDocument *GetDocumentForFrame( SfxViewFrame *pFrame )
 
 	if ( pFrame && pFrameDict )
 	{
-		NSNumber *pKey = [NSNumber numberWithUnsignedLong:(unsigned long)pFrame];
+		NSValue *pKey = [NSValue valueWithPointer:pFrame];
 		if ( pKey )
 			pRet = [pFrameDict objectForKey:pKey];
 	}
@@ -296,7 +296,7 @@ static void SetDocumentForFrame( SfxViewFrame *pFrame, SFXDocument *pDoc )
 
 	if ( pFrameDict )
 	{
-		NSNumber *pKey = [NSNumber numberWithUnsignedLong:(unsigned long)pFrame];
+		NSValue *pKey = [NSValue valueWithPointer:pFrame];
 		if ( pKey )
 		{
 			// If we are replacing an existing document, close the old document
