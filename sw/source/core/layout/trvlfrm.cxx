@@ -1461,9 +1461,18 @@ void SwPageFrm::GetCntntPosition( const Point &rPt, SwPosition &rPos ) const
     else if ( aAct.X() > aRect.Right() )
         aAct.X() = aRect.Right();
 
+#ifdef NO_LIBO_BUG_100635_FIX
     if( !pAct->IsValid() )
+#else	// NO_LIBO_BUG_100635_FIX
+    if( !pAct->IsValid() ||
+        (pAct->IsTxtFrm() && !static_cast<SwTxtFrm const*>(pAct)->HasPara()))
+#endif	// NO_LIBO_BUG_100635_FIX
     {
         // CntntFrm not formated -> always on node-beginning
+#ifndef NO_LIBO_BUG_100635_FIX
+        // tdf#100635 also if the SwTextFrame would require reformatting,
+        // which is unwanted in case this is called from text formatting code
+#endif	// !NO_LIBO_BUG_100635_FIX
         SwCntntNode* pCNd = (SwCntntNode*)pAct->GetNode();
         OSL_ENSURE( pCNd, "Where is my CntntNode?" );
         rPos.nNode = *pCNd;
@@ -2488,7 +2497,12 @@ void SwRootFrm::CalcFrmRects(SwShellCrsr &rCrsr)
 
         //Now the frames between, if there are any
         bool const bBody = pStartFrm->IsInDocBody();
+#ifdef USE_JAVA
+        // Fix Mac App Store crash by checking for NULL upper form
+        const SwTableBox* pCellBox = (pStartFrm->GetUpper() && pStartFrm->GetUpper()->IsCellFrm()) ?
+#else	// USE_JAVA
         const SwTableBox* pCellBox = pStartFrm->GetUpper()->IsCellFrm() ?
+#endif	// USE_JAVA
             ((SwCellFrm*)pStartFrm->GetUpper())->GetTabBox() : 0;
         if (pSh->IsSelectAll())
             pCellBox = 0;
