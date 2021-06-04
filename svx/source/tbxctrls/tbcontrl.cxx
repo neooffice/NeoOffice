@@ -629,6 +629,11 @@ void SvxStyleBox_Impl::SetupEntry(sal_uInt16 nItem, const Rectangle& rRect, Outp
     else
     {
         SfxObjectShell *pShell = SfxObjectShell::Current();
+#ifdef USE_JAVA
+        // Fix Mac App Store crash by checking for NULL shell
+        if ( !pShell )
+            return;
+#endif	// USE_JAVA
         SfxStyleSheetBasePool* pPool = pShell->GetStyleSheetPool();
         SfxStyleSheetBase* pStyle = NULL;
 
