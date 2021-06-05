@@ -41,7 +41,7 @@ This version of NeoOffice fixes the following bugs:
 Promotional Text:
 NeoOffice include la Modalità scura nativa!
 
-Gli utenti di macOS Big Sur: seguici su Twitter @NeoOffice per scaricare le ultime correzioni di bug.
+Seguici su Twitter @NeoOffice per scaricare le ultime correzioni di bug.
 
 
 Keywords:
