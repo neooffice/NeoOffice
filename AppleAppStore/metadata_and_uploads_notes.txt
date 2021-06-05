@@ -41,7 +41,7 @@ This version of NeoOffice fixes the following bugs:
 Promotional Text:
 NeoOffice includes native Dark Mode!
 
-macOS Big Sur users: follow us on Twitter @NeoOffice to download the latest bug fixes.
+Follow us on Twitter @NeoOffice to download the latest bug fixes.
 
 
 Keywords:
