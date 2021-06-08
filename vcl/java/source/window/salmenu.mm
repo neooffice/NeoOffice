@@ -229,23 +229,19 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 + (void)mainMenuDidEndTracking:(BOOL)bNoDelay
 {
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
-	{
-		NSMenu *pMainMenu = [pApp mainMenu];
-		if ( pMainMenu )
-			[pMainMenu cancelTracking];
-	}
-
 	VCLMainMenuDidEndTracking *pVCLMainMenuDidEndTracking = [[VCLMainMenuDidEndTracking alloc] init];
 	[pVCLMainMenuDidEndTracking autorelease];
 
 	// Queue processing to occur after a very slight delay
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	if ( bNoDelay )
-		[pVCLMainMenuDidEndTracking performSelectorOnMainThread:@selector(handlePendingMainMenuChanges:) withObject:[NSNumber numberWithBool:bNoDelay] waitUntilDone:YES modes:pModes];
+	{
+		[pVCLMainMenuDidEndTracking handlePendingMainMenuChanges:[NSNumber numberWithBool:bNoDelay]];
+	}
 	else
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pVCLMainMenuDidEndTracking performSelector:@selector(handlePendingMainMenuChanges:) withObject:nil afterDelay:MAIN_MENU_CHANGE_WAIT_INTERVAL inModes:pModes];
+	}
 }
 
 - (void)handlePendingMainMenuChanges:(id)pObject
@@ -503,6 +499,9 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 		NSMenu *pMainMenu = [pApp mainMenu];
 		if ( pMainMenu )
 		{
+			// Just to be safe, cancel tracking before making any changes
+			[pMainMenu cancelTracking];
+
 			NSUInteger nCount = [pMainMenu numberOfItems];
 			if ( nCount > 0 )
 			{
@@ -603,6 +602,9 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 		NSMenu *pMainMenu = [pApp mainMenu];
 		if ( pMainMenu )
 		{
+			// Just to be safe, cancel tracking before making any changes
+			[pMainMenu cancelTracking];
+
 			NSUInteger nCount = [pMainMenu numberOfItems];
 			if ( nCount > 0 )
 			{
