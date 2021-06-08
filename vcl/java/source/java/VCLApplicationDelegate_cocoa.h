@@ -49,6 +49,7 @@
 @interface VCLApplicationDelegate : NSObject <NSApplicationDelegate, NSMenuDelegate>
 {
 	BOOL					mbAppMenuInitialized;
+	BOOL					mbAwaitingTracking;
 	BOOL					mbCancelTracking;
 	id						mpDelegate;
 	NSMenu*					mpDockMenu;

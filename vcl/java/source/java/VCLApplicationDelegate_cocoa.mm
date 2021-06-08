@@ -581,6 +581,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	[super init];
 
 	mbAppMenuInitialized = NO;
+	mbAwaitingTracking = NO;
 	mbCancelTracking = NO;
 	mpDelegate = nil;
 	mpDockMenu = [[NSMenu alloc] initWithTitle:@""];
@@ -750,6 +751,29 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		}
 	}
 
+	// Fix failure to display menubar submenus on macOS 12 after start of
+	// tracking until mouse is moved by delaying updating of menus until the
+	// first call to menuNeedsUpdate: after tracking has started
+	if ( mbAwaitingTracking && !mbInTracking && !mbCancelTracking )
+	{
+		mbAwaitingTracking = NO;
+
+		if ( VCLInstance_updateNativeMenus() )
+		{
+			mbInTracking = YES;
+
+			// Fix bug reported in the following NeoOffice forum
+			// topic by forcing any pending menu changes to be done
+			// before any menus are displayed:
+			// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8532
+			[VCLMainMenuDidEndTracking mainMenuDidEndTracking:YES];
+		}
+		else
+		{
+			mbCancelTracking = YES;
+		}
+	}
+
 	if ( pMenu && ( !mbInTracking || mbCancelTracking ) )
 		[pMenu cancelTracking];
 }
@@ -795,25 +819,13 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 				NSString *pName = [pNotification name];
 				if ( [NSMenuDidBeginTrackingNotification isEqualToString:pName] )
 				{
+					mbAwaitingTracking = YES;
 					mbCancelTracking = NO;
 					mbInTracking = NO;
-					if ( VCLInstance_updateNativeMenus() )
-					{
-						mbInTracking = YES;
-
-						// Fix bug reported in the following NeoOffice forum
-						// topic by forcing any pending menu changes to be done
-						// before any menus are displayed:
-						// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8532
-						[VCLMainMenuDidEndTracking mainMenuDidEndTracking:YES];
-					}
-					else
-					{
-						mbCancelTracking = YES;
-					}
 				}
 				else if ( [NSMenuDidEndTrackingNotification isEqualToString:pName] )
 				{
+					mbAwaitingTracking = NO;
 					mbCancelTracking = YES;
 					mbInTracking = NO;
 				}
