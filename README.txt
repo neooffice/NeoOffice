@@ -2,14 +2,14 @@ Intructions for Building NeoOffice
 ----------------------------------
 
 
-Steps for building on macOS 10.15 Big Sur for Intel
+Steps for building on macOS 11 Big Sur for Intel
 ---------------------------------------------------
 
-At this time, NeoOffice will only build on macOS 10.15 Big Sur on Intel only.
+At this time, NeoOffice will only build on macOS 11 Big Sur on Intel only.
 
 1. Make sure that you have downloaded and installed the following dependencies from http://developer.apple.com/ website:
 
-   macOS 10.15 Big Sur:
+   macOS 11 Big Sur:
      Xcode v12.4
      Command Line Tools for Xcode v12.4
 
