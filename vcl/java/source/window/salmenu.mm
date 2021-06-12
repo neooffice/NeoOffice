@@ -339,6 +339,9 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 	if ( mpMenu )
 	{
+		// Fix Mac App Store crash by removing delegate
+		[mpMenu setDelegate:nil];
+
 		NSMenu *pSupermenu = [mpMenu supermenu];
 		if ( pSupermenu )
 		{
