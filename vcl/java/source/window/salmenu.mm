@@ -136,7 +136,6 @@ using namespace vcl;
 }
 - (id)copyWithZone:(NSZone *)pZone;
 - (id)initWithTitle:(NSString *)pTitle;
-- (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
 @end
 
 @interface VCLMenuWrapper : NSObject
@@ -161,7 +160,6 @@ using namespace vcl;
 - (void)setMenuItemTitle:(VCLMenuWrapperArgs *)pArgs;
 @end
 
-static BOOL bInPerformKeyEquivalent = NO;
 static NSTimeInterval nLastMenuItemSelectedTime = 0;
 static JavaSalFrame *pMenuBarFrame = NULL;
 static VCLMenuWrapper *pMenuBarMenu = nil;
@@ -201,28 +199,6 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	return self;
 }
 
-- (BOOL)performKeyEquivalent:(NSEvent *)pEvent
-{
-	BOOL bRet = NO;
-
-	BOOL bOldInPerformKeyEquivalent = bInPerformKeyEquivalent;
-	bInPerformKeyEquivalent = YES;
-
-	@try
-	{
-		bRet = [super performKeyEquivalent:pEvent];
-	}
-	@catch ( NSException *pExc )
-	{
-		if ( pExc )
-			NSLog( @"%@", [pExc callStackSymbols] );
-	}
-
-	bInPerformKeyEquivalent = bOldInPerformKeyEquivalent;
-
-	return bRet;
-}
-
 @end
 
 @implementation VCLMainMenuDidEndTracking
@@ -247,7 +223,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 - (void)handlePendingMainMenuChanges:(id)pObject
 {
 	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
-	if ( bInPerformKeyEquivalent || ( pAppDelegate && [pAppDelegate isInTracking] ) || nLastMenuItemSelectedTime > [NSDate timeIntervalSinceReferenceDate] || NSApplication_getModalWindow() )
+	if ( ( pAppDelegate && ( [pAppDelegate isInPerformKeyEquivalent] || [pAppDelegate isInTracking] ) ) || nLastMenuItemSelectedTime > [NSDate timeIntervalSinceReferenceDate] || NSApplication_getModalWindow() )
 	{
 		// Requeue this operation to occur later if the no delay flag is not set
 		if ( !pObject || ![pObject isKindOfClass:[NSNumber class]] || ![(NSNumber *)pObject boolValue] )
@@ -329,7 +305,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	// Attempt to fix Mac App Store crash when opening a menu by delaying
 	// release of the native menu and menu items
 	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
-	if ( pObject || bInPerformKeyEquivalent || ( pAppDelegate && [pAppDelegate isInTracking] ) )
+	if ( pObject || ( pAppDelegate && ( [pAppDelegate isInPerformKeyEquivalent] || [pAppDelegate isInTracking] ) ) )
 	{
 		[self performSelector:@selector(destroy:) withObject:nil afterDelay:MAIN_MENU_CHANGE_WAIT_INTERVAL];
 		return;
@@ -339,6 +315,9 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 	if ( mpMenu )
 	{
+		// Fix Mac App Store crash by removing delegate
+		[mpMenu setDelegate:nil];
+
 		NSMenu *pSupermenu = [mpMenu supermenu];
 		if ( pSupermenu )
 		{
@@ -472,7 +451,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	// VCLApplicationDelegate class when this case is true:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62810#62810
 	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
-	if ( bInPerformKeyEquivalent || ( pAppDelegate && [pAppDelegate isInTracking] ) || nLastMenuItemSelectedTime > [NSDate timeIntervalSinceReferenceDate] || NSApplication_getModalWindow() )
+	if ( ( pAppDelegate && ( [pAppDelegate isInPerformKeyEquivalent] || [pAppDelegate isInTracking] ) ) || nLastMenuItemSelectedTime > [NSDate timeIntervalSinceReferenceDate] || NSApplication_getModalWindow() )
 	{
 		if ( !pPendingSetMenuAsMainMenu )
 		{
@@ -576,7 +555,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	// VCLApplicationDelegate class when this case is true:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62810#62810
 	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
-	if ( bInPerformKeyEquivalent || ( pAppDelegate && [pAppDelegate isInTracking] ) || nLastMenuItemSelectedTime > [NSDate timeIntervalSinceReferenceDate] || NSApplication_getModalWindow() )
+	if ( ( pAppDelegate && ( [pAppDelegate isInPerformKeyEquivalent] || [pAppDelegate isInTracking] ) ) || nLastMenuItemSelectedTime > [NSDate timeIntervalSinceReferenceDate] || NSApplication_getModalWindow() )
 	{
 		if ( pPendingSetMenuAsMainMenu != self )
 		{
@@ -849,8 +828,13 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 - (void)selected
 {
-	BOOL bOldInPerformKeyEquivalent = bInPerformKeyEquivalent;
-	bInPerformKeyEquivalent = YES;
+	BOOL bOldInPerformKeyEquivalent = NO;
+	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
+	if ( pAppDelegate )
+	{
+		bOldInPerformKeyEquivalent = [pAppDelegate isInPerformKeyEquivalent];
+		[pAppDelegate setInPerformKeyEquivalent:YES];
+	}
 
 	// If no application mutex exists yet, ignore event as we are likely to
 	// crash. Check if ImplSVData exists first since Application::IsShutDown()
@@ -881,7 +865,9 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	}
 
 	nLastMenuItemSelectedTime = [NSDate timeIntervalSinceReferenceDate] + MAIN_MENU_CHANGE_WAIT_INTERVAL;
-	bInPerformKeyEquivalent = bOldInPerformKeyEquivalent;
+
+	if ( pAppDelegate )
+		[pAppDelegate setInPerformKeyEquivalent:bOldInPerformKeyEquivalent];
 }
 
 - (void)setMenuType:(NSNumber *)pMenuType
@@ -1084,7 +1070,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	// Attempt to fix Mac App Store crash when opening a menu by delaying
 	// release of the native menu item
 	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
-	if ( pObject || bInPerformKeyEquivalent || ( pAppDelegate && [pAppDelegate isInTracking] ) )
+	if ( pObject || ( pAppDelegate && ( [pAppDelegate isInPerformKeyEquivalent] || [pAppDelegate isInTracking] ) ) )
 	{
 		[self performSelector:@selector(destroy:) withObject:nil afterDelay:MAIN_MENU_CHANGE_WAIT_INTERVAL];
 		return;
