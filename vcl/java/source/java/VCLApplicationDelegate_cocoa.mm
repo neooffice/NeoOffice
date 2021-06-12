@@ -585,6 +585,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	mbCancelTracking = NO;
 	mpDelegate = nil;
 	mpDockMenu = [[NSMenu alloc] initWithTitle:@""];
+	mbInPerformKeyEquivalent = NO;
 	mbInTermination = NO;
 	mbInTracking = NO;
 	mpAppleRemoteMainController = [[AppleRemoteMainController alloc] init];
@@ -623,6 +624,11 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		[mpDockMenu setDelegate:self];
 
 	return self;
+}
+
+- (BOOL)isInPerformKeyEquivalent
+{
+	return mbInPerformKeyEquivalent;
 }
 
 - (BOOL)isInTracking
@@ -791,6 +797,11 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
     	mpDelegate = pDelegate;
     	[mpDelegate retain];
 	}
+}
+
+- (void)setInPerformKeyEquivalent:(BOOL)bInPerformKeyEquivalent
+{
+	mbInPerformKeyEquivalent = bInPerformKeyEquivalent;
 }
 
 - (void)showAbout

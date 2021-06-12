@@ -3240,14 +3240,41 @@ static CFDataRef aRTFSelection = nil;
 @end
 
 @interface NSApplication (VCLApplicationPoseAs)
+- (BOOL)poseAs_handleKeyEquivalent:(id)pObject;
 - (void)poseAsSetDelegate:(id< NSApplicationDelegate >)pObject;
 @end
 
 @interface VCLApplication : NSApplication
+- (BOOL)_handleKeyEquivalent:(id)pObject;
 - (void)setDelegate:(id< NSApplicationDelegate >)pObject;
 @end
 
 @implementation VCLApplication
+
+- (BOOL)_handleKeyEquivalent:(id)pObject
+{
+	BOOL bRet = NO;
+
+	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
+	if ( pAppDelegate )
+		[pAppDelegate setInPerformKeyEquivalent:YES];
+
+	@try
+	{
+		if ( [super respondsToSelector:@selector(poseAs_handleKeyEquivalent:)] )
+			bRet = [super poseAs_handleKeyEquivalent:pObject];
+	}
+	@catch ( NSException *pExc )
+	{
+		if ( pExc )
+			NSLog( @"%@", [pExc callStackSymbols] );
+	}
+
+	if ( pAppDelegate )
+		[pAppDelegate setInPerformKeyEquivalent:NO];
+
+	return bRet;
+}
 
 - (void)setDelegate:(id< NSApplicationDelegate >)pObject
 {
@@ -3580,6 +3607,18 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 	}
 
 	// NSApplication selectors
+
+	aSelector = @selector(_handleKeyEquivalent:);
+	aPoseAsSelector = @selector(poseAs_handleKeyEquivalent:);
+	aOldMethod = class_getInstanceMethod( [NSApplication class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLApplication class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSApplication class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
 
 	aSelector = @selector(setDelegate:);
 	aPoseAsSelector = @selector(poseAsSetDelegate:);
