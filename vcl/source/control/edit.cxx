@@ -2670,7 +2670,20 @@ void Edit::ImplSetSelection( const Selection& rSelection, bool bPaint )
                 maSelection = aNew;
 
                 if ( bPaint && ( aOld.Len() || aNew.Len() || IsPaintTransparent() ) )
+#ifdef USE_JAVA
+                {
+                    // Fix failure to repaint background in font combobox when
+                    // changing the selection of the font in the font combobox
+                    // using the mouse and the font name is wider than the
+                    // edit box by invalidating the parent
+                    if ( ImplGetNativeControlType() == CTRL_COMBOBOX && IsNativeControlSupported( CTRL_COMBOBOX, PART_ENTIRE_CONTROL ) )
+                        GetParent()->Invalidate();
+                    else
+#endif	// USE_JAVA
                     ImplInvalidateOrRepaint();
+#ifdef USE_JAVA
+                }
+#endif	// USE_JAVA
                 ImplShowCursor();
 
                 bool bCaret = false, bSelection = false;
