@@ -2660,15 +2660,33 @@ void DomainMapper_Impl::PushFieldContext()
     dmapper_logger->element("pushFieldContext");
 #endif
 
+#ifdef NO_LIBO_PUSH_FIELD_CONTEXT_FIX
     uno::Reference< text::XTextAppend >  xTextAppend;
+#else	// NO_LIBO_PUSH_FIELD_CONTEXT_FIX
+    uno::Reference<text::XTextCursor> xCrsr;
+#endif	// NO_LIBO_PUSH_FIELD_CONTEXT_FIX
     if (!m_aTextAppendStack.empty())
+#ifdef NO_LIBO_PUSH_FIELD_CONTEXT_FIX
         xTextAppend = m_aTextAppendStack.top().xTextAppend;
     uno::Reference< text::XTextRange > xStart;
     if (xTextAppend.is())
+#endif	// NO_LIBO_PUSH_FIELD_CONTEXT_FIX
     {
+#ifdef NO_LIBO_PUSH_FIELD_CONTEXT_FIX
         uno::Reference< text::XTextCursor > xCrsr = xTextAppend->createTextCursorByRange( xTextAppend->getEnd() );
         xStart = xCrsr->getStart();
+#else	// NO_LIBO_PUSH_FIELD_CONTEXT_FIX
+        uno::Reference<text::XTextAppend> xTextAppend = m_aTextAppendStack.top().xTextAppend;
+        if (xTextAppend.is())
+            xCrsr = xTextAppend->createTextCursorByRange(xTextAppend->getEnd());
+#endif	// NO_LIBO_PUSH_FIELD_CONTEXT_FIX
     }
+#ifndef NO_LIBO_PUSH_FIELD_CONTEXT_FIX
+
+    uno::Reference< text::XTextRange > xStart;
+    if (xCrsr.is())
+        xStart = xCrsr->getStart();
+#endif	// !NO_LIBO_PUSH_FIELD_CONTEXT_FIX
     m_aFieldStack.push( FieldContextPtr( new FieldContext( xStart ) ) );
 }
 /*-------------------------------------------------------------------------
