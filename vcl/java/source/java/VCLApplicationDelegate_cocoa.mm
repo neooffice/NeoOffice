@@ -633,7 +633,9 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (BOOL)isInTracking
 {
-	return mbInTracking;
+	// Attempt to fix Mac App Store crash when tracking menubar by counting
+	// "awaiting tracking" as "in tracking"
+	return ( mbAwaitingTracking || mbInTracking );
 }
 
 - (void)menuNeedsUpdate:(NSMenu *)pMenu
