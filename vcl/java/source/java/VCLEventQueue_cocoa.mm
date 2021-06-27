@@ -3323,6 +3323,47 @@ static CFDataRef aRTFSelection = nil;
 
 @end
 
+@interface NSObject (VCLCarbonMenuImplPoseAs)
+- (int)poseAs_carbonGetAccessibleAttributeEvent:(struct OpaqueEventRef *)pArg1 handlerCallRef:(struct OpaqueEventHandlerCallRef *)pArg2 axElement:(struct __AXUIElement *)pArg3;
+@end
+
+@interface VCLCarbonMenuImpl : NSObject
+- (int)_carbonGetAccessibleAttributeEvent:(struct OpaqueEventRef *)pArg1 handlerCallRef:(struct OpaqueEventHandlerCallRef *)pArg2 axElement:(struct __AXUIElement *)pArg3;
+@end
+
+@implementation VCLCarbonMenuImpl
+
+- (int)_carbonGetAccessibleAttributeEvent:(struct OpaqueEventRef *)pArg1 handlerCallRef:(struct OpaqueEventHandlerCallRef *)pArg2 axElement:(struct __AXUIElement *)pArg3
+{
+	int nRet = 0;
+
+	BOOL bOldInPerformKeyEquivalent = NO;
+	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
+	if ( pAppDelegate )
+	{
+		bOldInPerformKeyEquivalent = [pAppDelegate isInPerformKeyEquivalent];
+		[pAppDelegate setInPerformKeyEquivalent:YES];
+	}
+
+	@try
+	{
+		if ( [self respondsToSelector:@selector(poseAs_carbonGetAccessibleAttributeEvent:handlerCallRef:axElement:)] )
+			nRet = [self poseAs_carbonGetAccessibleAttributeEvent:pArg1 handlerCallRef:pArg2 axElement:pArg3];
+	}
+	@catch ( NSException *pExc )
+	{
+		if ( pExc )
+			NSLog( @"%@", [pExc callStackSymbols] );
+	}
+
+	if ( pAppDelegate )
+		[pAppDelegate setInPerformKeyEquivalent:bOldInPerformKeyEquivalent];
+
+	return nRet;
+}
+
+@end
+
 static BOOL bVCLEventQueueClassesInitialized = NO;
 
 @interface InstallVCLEventQueueClasses : NSObject
@@ -3659,6 +3700,24 @@ static BOOL bVCLEventQueueClassesInitialized = NO;
 			IMP aNewIMP = method_getImplementation( aNewMethod );
 			if ( aNewIMP )
 				class_addMethod( [NSMenuItem class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+		}
+	}
+
+	// NSCarbonMenuImpl selectors
+
+	Class aCarbonMenuImplClass = NSClassFromString( @"NSCarbonMenuImpl" );
+	if ( aCarbonMenuImplClass )
+	{
+		aSelector = @selector(_carbonGetAccessibleAttributeEvent:handlerCallRef:axElement:);
+		aPoseAsSelector = @selector(poseAs_carbonGetAccessibleAttributeEvent:handlerCallRef:axElement:);
+		aOldMethod = class_getInstanceMethod( aCarbonMenuImplClass, aSelector );
+		aNewMethod = class_getInstanceMethod( [VCLCarbonMenuImpl class], aSelector );
+		if ( aOldMethod && aNewMethod )
+		{
+			IMP aOldIMP = method_getImplementation( aOldMethod );
+			IMP aNewIMP = method_getImplementation( aNewMethod );
+			if ( aOldIMP && aNewIMP && class_addMethod( aCarbonMenuImplClass, aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+				method_setImplementation( aOldMethod, aNewIMP );
 		}
 	}
 
