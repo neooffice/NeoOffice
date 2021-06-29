@@ -607,10 +607,16 @@ void SwHTMLTableLayout::AutoLayoutPass1()
                             nIdx++;
                         }
                     }
+#ifdef NO_LIBO_NULL_TABLE_NODE_FIX
                     else
+#else	// NO_LIBO_NULL_TABLE_NODE_FIX
+                    else if (SwHTMLTableLayout *pChild = pCnts->GetTable())
+#endif	// NO_LIBO_NULL_TABLE_NODE_FIX
                     {
                         OSL_ENSURE( false, "Sub tables in HTML import?" );
+#ifdef NO_LIBO_NULL_TABLE_NODE_FIX
                         SwHTMLTableLayout *pChild = pCnts->GetTable();
+#endif	// NO_LIBO_NULL_TABLE_NODE_FIX
                         pChild->AutoLayoutPass1();
                         sal_uLong nMaxTableCnts = pChild->nMax;
                         sal_uLong nAbsMinTableCnts = pChild->nMin;
@@ -1662,7 +1668,11 @@ void SwHTMLTableLayout::SetWidths( bool bCallPass2, sal_uInt16 nAbsAvail,
                 {
                     SetBoxWidth( pBox, j, pCell->GetColSpan() );
                 }
+#ifdef NO_LIBO_NULL_TABLE_NODE_FIX
                 else
+#else	// NO_LIBO_NULL_TABLE_NODE_FIX
+                else if (SwHTMLTableLayout *pTable = pCntnts->GetTable())
+#endif	// NO_LIBO_NULL_TABLE_NODE_FIX
                 {
                     sal_uInt16 nAbs = 0, nRel = 0, nLSpace = 0, nRSpace = 0,
                            nInhSpace = 0;
@@ -1674,7 +1684,11 @@ void SwHTMLTableLayout::SetWidths( bool bCallPass2, sal_uInt16 nAbsAvail,
                         nRSpace = GetRightCellSpace( j, nColSpan );
                         nInhSpace = GetInhCellSpace( j, nColSpan );
                     }
+#ifdef NO_LIBO_NULL_TABLE_NODE_FIX
                     pCntnts->GetTable()->SetWidths( bCallPass2, nAbs, nRel,
+#else	// NO_LIBO_NULL_TABLE_NODE_FIX
+                    pTable->SetWidths( bCallPass2, nAbs, nRel,
+#endif	// NO_LIBO_NULL_TABLE_NODE_FIX
                                                     nLSpace, nRSpace,
                                                     nInhSpace );
                 }

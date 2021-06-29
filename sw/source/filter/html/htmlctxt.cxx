@@ -403,6 +403,9 @@ void SwHTMLParser::ClearContext( _HTMLAttrContext *pContext )
         // dann was falsch gemacht hat, sieht es uebel aus.
         DeleteAttr( rAttrs[i] );
     }
+#ifndef NO_LIBO_NULL_TABLE_NODE_FIX
+    rAttrs.clear();
+#endif	// !NO_LIBO_NULL_TABLE_NODE_FIX
 
     OSL_ENSURE( !pContext->GetSpansSection(),
             "Bereich kann nicht mehr verlassen werden" );
