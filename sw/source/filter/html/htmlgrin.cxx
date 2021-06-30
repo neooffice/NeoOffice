@@ -277,6 +277,14 @@ void SwHTMLParser::SetAnchorAndAdjustment( sal_Int16 eVertOri,
     if( bMoveBackward )
         pPam->Move( fnMoveBackward );
 
+#ifndef NO_LIBO_NULL_TABLE_NODE_FIX
+    if (aAnchor.GetAnchorId() == RndStdIds::FLY_AS_CHAR && !pPam->GetNode().GetTxtNode())
+    {
+        eState = SVPAR_ERROR;
+        return;
+    }
+#endif	// !NO_LIBO_NULL_TABLE_NODE_FIX
+
     aAnchor.SetAnchor( pPam->GetPoint() );
 
     if( bMoveBackward )

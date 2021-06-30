@@ -15,13 +15,6 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- * 
- *   Modified April 2018 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 3.3
- *   of the Mozilla Public License, v. 2.0.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "hintids.hxx"
@@ -2361,9 +2354,17 @@ SwTableBox *HTMLTable::MakeTableBox( SwTableLine *pUpper,
             pBox = NewTableBox( pCnts->GetStartNode(), pUpper );
             pCnts->SetTableBox( pBox );
         }
+#ifdef NO_LIBO_NULL_TABLE_NODE_FIX
         else
+#else	// NO_LIBO_NULL_TABLE_NODE_FIX
+        else if (HTMLTable* pTable = pCnts->GetTable().get())
+#endif	// NO_LIBO_NULL_TABLE_NODE_FIX
         {
+#ifdef NO_LIBO_NULL_TABLE_NODE_FIX
             pCnts->GetTable()->InheritVertBorders( this, nLeftCol,
+#else	// NO_LIBO_NULL_TABLE_NODE_FIX
+            pTable->InheritVertBorders( this, nLeftCol,
+#endif	// NO_LIBO_NULL_TABLE_NODE_FIX
                                                    nRightCol-nLeftCol );
             // und die ist eine Tabelle: dann bauen wir eine neue
             // Box und fuegen die Zeilen der Tabelle in die Zeilen
@@ -2377,6 +2378,12 @@ SwTableBox *HTMLTable::MakeTableBox( SwTableLine *pUpper,
             pCnts->GetTable()->MakeTable( pBox, nAbs, nRel, nLSpace, nRSpace,
                                           nInhSpace );
         }
+#ifndef NO_LIBO_NULL_TABLE_NODE_FIX
+        else
+        {
+            return nullptr;
+        }
+#endif	// !NO_LIBO_NULL_TABLE_NODE_FIX
     }
     else
     {
@@ -3679,6 +3686,13 @@ const SwStartNode *SwHTMLParser::InsertTableSection( sal_uInt16 nPoolId )
     else
     {
         SwTableNode *pTblNd = pNd->FindTableNode();
+#ifndef NO_LIBO_NULL_TABLE_NODE_FIX
+        if (!pTblNd)
+        {
+            eState = SVPAR_ERROR;
+            return nullptr;
+        }
+#endif	// !NO_LIBO_NULL_TABLE_NODE_FIX
         if( pTblNd->GetTable().GetHTMLTableLayout() )
         { // if there is already a HTMTableLayout, this table is already finished
           // and we have to look for the right table in the environment
@@ -3705,6 +3719,13 @@ const SwStartNode *SwHTMLParser::InsertTableSection( sal_uInt16 nPoolId )
         m_xTable->IncBoxCount();
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     }
+
+#ifndef NO_LIBO_NULL_TEXTNODE_FIX
+    if (!pStNd)
+    {
+        eState = SVPAR_ERROR;
+    }
+#endif	// !NO_LIBO_NULL_TEXTNODE_FIX
 
     return pStNd;
 }
@@ -5268,12 +5289,7 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                                         ? RES_POOLCOLL_TABLE_HDLN
                                         : RES_POOLCOLL_TABLE ));
-#ifdef USE_JAVA
-        // Attempt to fix Mac App Store crash by checking if starting node is
-        // NULL
-        if ( pStNd )
-        {
-#endif	// USE_JAVA
+#ifdef NO_LIBO_NULL_TABLE_NODE_FIX
         const SwEndNode *pEndNd = pStNd->EndOfSectionNode();
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SwCntntNode *pCNd = pDoc->GetNodes()[pEndNd->GetIndex()-1] ->GetCntntNode();
@@ -5287,6 +5303,23 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
         pCNd->SetAttr( aFontHeightCJK );
         SvxFontHeightItem aFontHeightCTL( 40, 100, RES_CHRATR_CTL_FONTSIZE );
         pCNd->SetAttr( aFontHeightCTL );
+#else	// NO_LIBO_NULL_TABLE_NODE_FIX
+
+        if (!pStNd)
+            eState = SVPAR_ERROR;
+        else
+        {
+            const SwEndNode *pEndNd = pStNd->EndOfSectionNode();
+            SwCntntNode *pCNd = m_xDoc->GetNodes()[pEndNd->GetIndex()-1] ->GetCntntNode();
+            //Added defaults to CJK and CTL
+            SvxFontHeightItem aFontHeight( 40, 100, RES_CHRATR_FONTSIZE );
+            pCNd->SetAttr( aFontHeight );
+            SvxFontHeightItem aFontHeightCJK( 40, 100, RES_CHRATR_CJK_FONTSIZE );
+            pCNd->SetAttr( aFontHeightCJK );
+            SvxFontHeightItem aFontHeightCTL( 40, 100, RES_CHRATR_CTL_FONTSIZE );
+            pCNd->SetAttr( aFontHeightCTL );
+        }
+#endif	// NO_LIBO_NULL_TABLE_NODE_FIX
 
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         pSaveStruct->AddContents( new HTMLTableCnts(pStNd) );
@@ -5295,9 +5328,6 @@ void SwHTMLParser::BuildTableCell( HTMLTable *pCurTable, bool bReadOptions,
         xSaveStruct->AddContents( new HTMLTableCnts(pStNd) );
         xSaveStruct->ClearIsInSection();
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
-#ifdef USE_JAVA
-        }
-#endif	// USE_JAVA
     }
 
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
