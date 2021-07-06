@@ -115,10 +115,14 @@ public:
     /** Creates a defined name in the Calc document. */
     void                createNameObject( sal_Int32 nIndex );
     /** Converts the formula string or BIFF token array for this defined name. */
+#ifdef NO_LIBO_WEBSERVICE_LOADING_FIX
     void                convertFormula();
+#else	// NO_LIBO_WEBSERVICE_LOADING_FIX
+    void                convertFormula( const css::uno::Sequence<css::sheet::ExternalLinkInfo>& rExternalLinks );
+#endif	// NO_LIBO_WEBSERVICE_LOADING_FIX
     ApiTokenSequence    getTokens();
 #ifndef NO_LIBO_WEBSERVICE_LOADING_FIX
-    std::unique_ptr<ScTokenArray> getScTokens();
+    std::unique_ptr<ScTokenArray> getScTokens( const css::uno::Sequence<css::sheet::ExternalLinkInfo>& rExternalLinks );
 #endif	// !NO_LIBO_WEBSERVICE_LOADING_FIX
     /** Returns true, if this defined name is global in the document. */
     inline bool         isGlobalName() const { return mnCalcSheet < 0; }

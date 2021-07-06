@@ -384,11 +384,13 @@ DefinedName::getTokens()
 
 #ifndef NO_LIBO_WEBSERVICE_LOADING_FIX
 
-std::unique_ptr<ScTokenArray> DefinedName::getScTokens()
+std::unique_ptr<ScTokenArray> DefinedName::getScTokens(
+        const css::uno::Sequence<css::sheet::ExternalLinkInfo>& rExternalLinks )
 {
     ScTokenArray aTokenArray;
     ScCompiler aCompiler(&getScDocument(), ScAddress(0, 0, mnCalcSheet));
     aCompiler.SetGrammar(formula::FormulaGrammar::GRAM_OOXML);
+    aCompiler.SetExternalLinks( rExternalLinks);
     std::unique_ptr<ScTokenArray> pArray(aCompiler.CompileString(maModel.maFormula));
     // Compile the tokens into RPN once to populate information into tokens
     // where necessary, e.g. for TableRef inner reference. RPN can be discarded
@@ -403,7 +405,11 @@ std::unique_ptr<ScTokenArray> DefinedName::getScTokens()
 
 #endif	// !NO_LIBO_WEBSERVICE_LOADING_FIX
 
+#ifdef NO_LIBO_WEBSERVICE_LOADING_FIX
 void DefinedName::convertFormula()
+#else	// NO_LIBO_WEBSERVICE_LOADING_FIX
+void DefinedName::convertFormula( const css::uno::Sequence<css::sheet::ExternalLinkInfo>& rExternalLinks )
+#endif	// NO_LIBO_WEBSERVICE_LOADING_FIX
 {
     // macro function or vba procedure
     if(!mpScRangeData)
@@ -418,7 +424,7 @@ void DefinedName::convertFormula()
         (void)ScTokenConversion::ConvertToTokenArray( this->getScDocument(), aTokenArray, aTokens );
         mpScRangeData->SetCode( aTokenArray );
 #else	// NO_LIBO_WEBSERVICE_LOADING_FIX
-        std::unique_ptr<ScTokenArray> pTokenArray = getScTokens();
+        std::unique_ptr<ScTokenArray> pTokenArray = getScTokens( rExternalLinks);
         mpScRangeData->SetCode( *pTokenArray );
 #endif	// NO_LIBO_WEBSERVICE_LOADING_FIX
     }
@@ -517,7 +523,11 @@ void DefinedNamesBuffer::finalizeImport()
 
     /*  Now convert all name formulas, so that the formula parser can find all
         names in case of circular dependencies. */
+#ifdef NO_LIBO_WEBSERVICE_LOADING_FIX
     maDefNames.forEachMem( &DefinedName::convertFormula );
+#else	// NO_LIBO_WEBSERVICE_LOADING_FIX
+    maDefNames.forEachMem( &DefinedName::convertFormula, getExternalLinks().getLinkInfos());
+#endif	// NO_LIBO_WEBSERVICE_LOADING_FIX
 }
 
 DefinedNameRef DefinedNamesBuffer::getByIndex( sal_Int32 nIndex ) const
