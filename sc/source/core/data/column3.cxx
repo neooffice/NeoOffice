@@ -1662,11 +1662,24 @@ bool ScColumn::ParseString(
             rCell.set(rPool.intern(rString));
         }
         else // = Formula
+#ifdef NO_LIBO_WEBSERVICE_LOADING_FIX
             rCell.set(
                 new ScFormulaCell(
+#else	// NO_LIBO_WEBSERVICE_LOADING_FIX
+        {
+            ScFormulaCell* pFormulaCell = new ScFormulaCell(
+#endif	// NO_LIBO_WEBSERVICE_LOADING_FIX
                     pDocument, ScAddress(nCol, nRow, nTabP), rString,
                     formula::FormulaGrammar::mergeToGrammar(formula::FormulaGrammar::GRAM_DEFAULT, eConv),
+#ifdef NO_LIBO_WEBSERVICE_LOADING_FIX
                     MM_NONE));
+#else	// NO_LIBO_WEBSERVICE_LOADING_FIX
+                    MM_NONE);
+            if (aParam.mbCheckLinkFormula)
+                GetDoc().CheckLinkFormulaNeedingCheck( *pFormulaCell->GetCode());
+            rCell.set( pFormulaCell);
+        }
+#endif	// NO_LIBO_WEBSERVICE_LOADING_FIX
     }
     else if ( cFirstChar == '\'') // 'Text
     {

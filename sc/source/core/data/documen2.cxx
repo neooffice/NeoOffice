@@ -181,12 +181,19 @@ ScDocument::ScDocument( ScDocumentMode eMode, SfxObjectShell* pDocShell ) :
         bHardRecalcState(false),
         nVisibleTab( 0 ),
         eLinkMode(LM_UNKNOWN),
+#ifdef NO_LIBO_WEBSERVICE_LOADING_FIX
         bAutoCalc( eMode == SCDOCMODE_DOCUMENT ),
+#else	// NO_LIBO_WEBSERVICE_LOADING_FIX
+        bAutoCalc( eMode == SCDOCMODE_DOCUMENT || eMode == SCDOCMODE_FUNCTIONACCESS ),
+#endif	// NO_LIBO_WEBSERVICE_LOADING_FIX
         bAutoCalcShellDisabled( false ),
         bForcedFormulaPending( false ),
         bCalculatingFormulaTree( false ),
         bIsClip( eMode == SCDOCMODE_CLIP ),
         bIsUndo( eMode == SCDOCMODE_UNDO ),
+#ifndef NO_LIBO_WEBSERVICE_LOADING_FIX
+        bIsFunctionAccess( eMode == SCDOCMODE_FUNCTIONACCESS ),
+#endif	// !NO_LIBO_WEBSERVICE_LOADING_FIX
         bIsVisible( false ),
         bIsEmbedded( false ),
         bInsertingFromOtherDoc( false ),
@@ -201,6 +208,9 @@ ScDocument::ScDocument( ScDocumentMode eMode, SfxObjectShell* pDocShell ) :
         bInDtorClear( false ),
         bExpandRefs( false ),
         bDetectiveDirty( false ),
+#ifndef NO_LIBO_WEBSERVICE_LOADING_FIX
+        bLinkFormulaNeedingCheck( false ),
+#endif	// !NO_LIBO_WEBSERVICE_LOADING_FIX
         nMacroCallMode( SC_MACROCALL_ALLOWED ),
         bHasMacroFunc( false ),
         nVisSpellState( 0 ),
@@ -225,7 +235,13 @@ ScDocument::ScDocument( ScDocumentMode eMode, SfxObjectShell* pDocShell ) :
 
     eSrcSet = osl_getThreadTextEncoding();
 
+#ifdef NO_LIBO_WEBSERVICE_LOADING_FIX
     if ( eMode == SCDOCMODE_DOCUMENT )
+#else	// NO_LIBO_WEBSERVICE_LOADING_FIX
+    /* TODO: for SCDOCMODE_FUNCTIONACCESS it might not even be necessary to
+     * have all of these available. */
+    if ( eMode == SCDOCMODE_DOCUMENT || eMode == SCDOCMODE_FUNCTIONACCESS )
+#endif	// NO_LIBO_WEBSERVICE_LOADING_FIX
     {
         xPoolHelper = new ScPoolHelper( this );
 

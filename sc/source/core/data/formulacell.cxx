@@ -1344,6 +1344,14 @@ void ScFormulaCell::CompileXML( sc::CompileFormulaContext& rCxt, ScProgress& rPr
     if ( !pDocument->GetHasMacroFunc() && pCode->HasOpCodeRPN( ocMacro ) )
         pDocument->SetHasMacroFunc( true );
 
+#ifndef NO_LIBO_WEBSERVICE_LOADING_FIX
+    //  After loading, it must be known if ocDde/ocWebservice is in any formula
+    //  (for external links warning, CompileXML is called at the end of loading XML file)
+    if (!pDocument->HasLinkFormulaNeedingCheck() && (pCode->HasOpCodeRPN(ocDde) || pCode->HasOpCodeRPN(ocWebservice)))
+        pDocument->SetLinkFormulaNeedingCheck(true);
+    pDocument->CheckLinkFormulaNeedingCheck(*pCode);
+#endif	// !NO_LIBO_WEBSERVICE_LOADING_FIX
+
     //volatile cells must be added here for import
     if( pCode->IsRecalcModeAlways() || pCode->IsRecalcModeForced() ||
         pCode->IsRecalcModeOnLoad() || pCode->IsRecalcModeOnLoadOnce() )
@@ -2239,6 +2247,15 @@ svl::SharedString ScFormulaCell::GetResultString() const
 {
     return aResult.GetString();
 }
+
+#ifndef NO_LIBO_WEBSERVICE_LOADING_FIX
+
+bool ScFormulaCell::HasHybridStringResult() const
+{
+    return aResult.GetType() == formula::svHybridCell && !aResult.GetString().isEmpty();
+}
+
+#endif	// !NO_LIBO_WEBSERVICE_LOADING_FIX
 
 void ScFormulaCell::SetResultMatrix( SCCOL nCols, SCROW nRows, const ScConstMatrixRef& pMat, formula::FormulaToken* pUL )
 {
