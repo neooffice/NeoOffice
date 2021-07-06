@@ -306,12 +306,8 @@ void ScInterpreter::ScWebservice()
             //don't update this link until the links are updated in response to the users
             //decision
             bLinkFormulaNeedingCheck = pDok->HasLinkFormulaNeedingCheck();
-fprintf( stderr, "Here 0: %i\n", bLinkFormulaNeedingCheck );
             if (!bLinkFormulaNeedingCheck)
-            {
-fprintf( stderr, "Here 1\n" );
                 pLink->Update();
-            }
 #endif	// NO_LIBO_WEBSERVICE_LOADING_FIX
 
 #ifdef NO_LIBO_WEBSERVICE_LOADING_FIX
