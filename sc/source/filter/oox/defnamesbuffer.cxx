@@ -39,6 +39,7 @@
 #include "tokenuno.hxx"
 #ifndef NO_LIBO_WEBSERVICE_LOADING_FIX
 #include "compiler.hxx"
+#include <document.hxx>
 #endif	// !NO_LIBO_WEBSERVICE_LOADING_FIX
 
 namespace oox {
@@ -397,6 +398,7 @@ std::unique_ptr<ScTokenArray> DefinedName::getScTokens(
     // after, a resulting error must be reset.
     sal_uInt16 nErr = pArray->GetCodeError();
     aCompiler.CompileTokenArray();
+    getScDocument().CheckLinkFormulaNeedingCheck( *pArray);
     pArray->DelRPN();
     pArray->SetCodeError(nErr);
 
