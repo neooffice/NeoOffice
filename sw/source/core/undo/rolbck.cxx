@@ -1030,6 +1030,12 @@ void SwHistory::Add( SwTxtAttr* pHint, sal_uLong nNodeIdx, bool bNewAttr )
 {
     OSL_ENSURE( !m_nEndDiff, "History was not deleted after REDO" );
 
+#ifdef USE_JAVA
+    // Fix Mac App Store crash by checking for NULL hint
+    if ( !pHint )
+        return;
+#endif	// USE_JAVA
+
     SwHistoryHint * pHt = 0;
     if( !bNewAttr )
     {

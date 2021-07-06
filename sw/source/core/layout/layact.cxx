@@ -66,6 +66,14 @@
 #include <objectformatter.hxx>
 #include <vector>
 
+#if defined USE_JAVA && defined MACOSX
+
+#include <premac.h>
+#import <CoreFoundation/CoreFoundation.h>
+#include <postmac.h>
+
+#endif	// USE_JAVA && MACOSX
+
 // SwLayAction static stuff
 
 #define IS_FLYS (pPage->GetSortedObjs())
@@ -2169,6 +2177,13 @@ SwLayIdle::SwLayIdle( SwRootFrm *pRt, SwViewImp *pI ) :
 #endif
 {
 #ifdef USE_JAVA
+#ifdef MACOSX
+    // Fix excessively long blocking of the main thread when running on
+    // macOS 12 by not running any idle jobs on the main thread
+    if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
+        return;
+#endif	// MACOSX
+
     // Fix excessively long loop times that occur when pasting huge
     // amounts of data into a table cell by applying OOo's "stop
     // formatting" loop control in this object and its children after
