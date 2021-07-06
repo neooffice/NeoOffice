@@ -478,6 +478,11 @@ OUString ScGlobal::GetLongErrorString(sal_uInt16 nErrNumber)
         case errNoValue:
             nErrNumber = STR_LONG_ERR_NO_VALUE;
         break;
+#if defined USE_JAVA && !defined NO_LIBO_WEBSERVICE_LOADING_FIX
+        case errLinkFormulaNeedingCheck:
+        // TODO: Backport LibreOffice localized resource strings
+        return "External content disabled.";
+#endif	// USE_JAVA && !NO_LIBO_WEBSERVICE_LOADING_FIX
         case NOTAVAILABLE:
             nErrNumber = STR_LONG_ERR_NV;
         break;
