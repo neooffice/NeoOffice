@@ -319,6 +319,9 @@ void ScEEImport::WriteToDocument( bool bSizeColsRows, double nOutputFactor, SvNu
                 aParam.mbDetectNumberFormat = true;
                 aParam.meSetTextNumFormat = ScSetStringParam::SpecialNumberOnly;
                 aParam.mbHandleApostrophe = false;
+#ifndef NO_LIBO_WEBSERVICE_LOADING_FIX
+                aParam.mbCheckLinkFormula = true;
+#endif	// !NO_LIBO_WEBSERVICE_LOADING_FIX
 
                 if (!aValStr.isEmpty())
                     mpDoc->SetValue( nCol, nRow, nTab, fVal );

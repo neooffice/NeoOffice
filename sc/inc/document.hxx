@@ -223,7 +223,12 @@ enum ScDocumentMode
     {
         SCDOCMODE_DOCUMENT,
         SCDOCMODE_CLIP,
+#ifdef NO_LIBO_WEBSERVICE_LOADING_FIX
         SCDOCMODE_UNDO
+#else	// NO_LIBO_WEBSERVICE_LOADING_FIX
+    SCDOCMODE_UNDO,
+    SCDOCMODE_FUNCTIONACCESS
+#endif	// NO_LIBO_WEBSERVICE_LOADING_FIX
     };
 
 struct ScDocStat
@@ -395,6 +400,9 @@ private:
     bool                bCalculatingFormulaTree;
     bool                bIsClip;
     bool                bIsUndo;
+#ifndef NO_LIBO_WEBSERVICE_LOADING_FIX
+    bool                bIsFunctionAccess;
+#endif	// !NO_LIBO_WEBSERVICE_LOADING_FIX
     bool                bIsVisible;                     // set from view ctor
 
     bool                bIsEmbedded;                    // display/adjust Embedded area?
@@ -421,6 +429,10 @@ private:
     bool                bExpandRefs;
     // for detective update, is set for each change of a formula
     bool                bDetectiveDirty;
+
+#ifndef NO_LIBO_WEBSERVICE_LOADING_FIX
+    bool                bLinkFormulaNeedingCheck; // valid only after loading, for ocDde and ocWebservice
+#endif	// !NO_LIBO_WEBSERVICE_LOADING_FIX
 
     sal_uInt8               nMacroCallMode;     // Macros per warning dialog disabled?
     bool                bHasMacroFunc;      // valid only after loading
@@ -1185,6 +1197,9 @@ public:
     bool            IsClipboard() const                         { return bIsClip; }
     bool            IsUndoEnabled() const                       { return mbUndoEnabled; }
     SC_DLLPUBLIC void EnableUndo( bool bVal );
+#ifndef NO_LIBO_WEBSERVICE_LOADING_FIX
+    bool                IsFunctionAccess() const        { return bIsFunctionAccess; }
+#endif	// !NO_LIBO_WEBSERVICE_LOADING_FIX
 
     bool            IsAdjustHeightEnabled() const               { return mbAdjustHeightEnabled; }
     void            EnableAdjustHeight( bool bVal )             { mbAdjustHeightEnabled = bVal; }
@@ -1755,6 +1770,13 @@ public:
 
     bool            IsDetectiveDirty() const     { return bDetectiveDirty; }
     void            SetDetectiveDirty(bool bSet) { bDetectiveDirty = bSet; }
+
+#ifndef NO_LIBO_WEBSERVICE_LOADING_FIX
+    bool            HasLinkFormulaNeedingCheck() const      { return bLinkFormulaNeedingCheck; }
+    void            SetLinkFormulaNeedingCheck(bool bSet)   { bLinkFormulaNeedingCheck = bSet; }
+    /** Check token array and set link check if ocDde/ocWebservice is contained. */
+    SC_DLLPUBLIC void CheckLinkFormulaNeedingCheck( const ScTokenArray& rCode );
+#endif	// !NO_LIBO_WEBSERVICE_LOADING_FIX
 
     sal_uInt8           GetMacroCallMode() const     { return nMacroCallMode; }
     void            SetMacroCallMode(sal_uInt8 nNew)     { nMacroCallMode = nNew; }

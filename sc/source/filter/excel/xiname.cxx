@@ -262,7 +262,14 @@ void XclImpName::InsertName(const ScTokenArray* pArray)
         }
     }
     if (pData)
+#ifndef NO_LIBO_WEBSERVICE_LOADING_FIX
+    {
+        GetDoc().CheckLinkFormulaNeedingCheck( *pData->GetCode());
+#endif	// !NO_LIBO_WEBSERVICE_LOADING_FIX
         mpScData = pData;               // cache for later use
+#ifndef NO_LIBO_WEBSERVICE_LOADING_FIX
+    }
+#endif	// !NO_LIBO_WEBSERVICE_LOADING_FIX
 }
 
 XclImpNameManager::XclImpNameManager( const XclImpRoot& rRoot ) :
