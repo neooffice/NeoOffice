@@ -34,13 +34,10 @@ What's New in this Version:
 Before you buy NeoOffice, please click on the "Support" link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would clear the menubar after selecting the Window > Close menu item
-• NeoOffice would crash when printing gradients in certain charts
-• The border animation around the most recently copied Calc cells would not automatically stop when copying something in a different document or a different application
-• NeoOffice would not display the native macOS tile and tab menu items in the Windows menu
-• NeoOffice would sometimes save a document to the file's previous location if the document was moved or renamed in the macOS Finder while open in NeoOffice
-• NeoOffice would momentarily freeze while opening or closing a document when running the Mac App Store version of NeoOffice on macOS Big Sur
-• NeoOffice would crash due to the LibreOffice bugs #70062, #90606, #100635, #101178, #107786, #108305, #111522,, #114710 #125824, and #128073
+• NeoOffice would sommetimes crash when pressing menu shortcut keys
+• NeoOffice would crash when opening certain .docx documents that contain text fields
+• NeoOffice would crash pasting malformed HTML tables into a Writer document
+• NeoOffice would sometimes become unresponsive when spellchecking a large block of text on the application's main thread
 
 
 Promotional Text:
