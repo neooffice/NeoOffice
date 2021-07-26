@@ -910,9 +910,6 @@ SdrEndTextEditKind SdrObjEditView::SdrEndTextEdit(bool bDontDeleteReally)
             const bool bUndo = IsUndoEnabled();
             if( bUndo )
             {
-#ifndef NO_LIBO_BUG_111522_AND_125824_FIXES
-                EndTextEditAllViews();
-#endif	// !NO_LIBO_BUG_111522_AND_125824_FIXES
                 OUString aObjName(pTEObj->TakeObjNameSingul());
                 BegUndo(ImpGetResStr(STR_UndoObjSetText),aObjName);
             }
