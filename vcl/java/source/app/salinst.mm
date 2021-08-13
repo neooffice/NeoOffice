@@ -599,9 +599,20 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	if ( ( !Application::IsShutDown() || pSVData->maWinData.mpLastExecuteDlg ) && ( pEvent = JavaSalEventQueue::getNextCachedEvent( 0, sal_False ) ) != NULL )
 	{
 		pEvent->dispatch();
-		pEvent->release();
 		if ( !bMainEventLoop )
+		{
 			aEventQueueMutex.release();
+
+			// Fix excessive slowness in menubar updates by explicitly yielding
+			// to the main thread for wakeup events
+			if ( pEvent->getID() == SALEVENT_WAKEUP )
+			{
+				nCount = ReleaseYieldMutex();
+				Thread::yield();
+				AcquireYieldMutex( nCount );
+			}
+		}
+		pEvent->release();
 		return;
 	}
 
@@ -1127,7 +1138,6 @@ void SalYieldMutex::acquire()
 		{
 			// Wait for other thread to release mutex
 			// We need to let any pending timers run so that we don't deadlock
-			sal_uInt16 nIterationsSinceLastWakeUpEvent = 0;
 			while ( !Application::IsShutDown() )
 			{
 				// Fix hanging in bug 3503 by posting a dummy event to wakeup
@@ -1137,19 +1147,14 @@ void SalYieldMutex::acquire()
 				// a wake up event so that
 				// JavaSalInstance::AnyEvent( VCL_INPUT_OTHER ) will eventually
 				// succeed.
-				if ( ++nIterationsSinceLastWakeUpEvent % 10000 == 0 || nCurrentTimeout > 100 )
-				{
-					nIterationsSinceLastWakeUpEvent = 0;
-
-					TimeValue aDelay;
-					aDelay.Seconds = 0;
-					aDelay.Nanosec = 10000;
-					maMainThreadCondition.reset();
-					Application_postWakeUpEvent();
-					if ( !maMainThreadCondition.check() )
-						maMainThreadCondition.wait( &aDelay );
-					maMainThreadCondition.set();
-				}
+				TimeValue aDelay;
+				aDelay.Seconds = 0;
+				aDelay.Nanosec = 100;
+				maMainThreadCondition.reset();
+				Application_postWakeUpEvent();
+				if ( !maMainThreadCondition.check() )
+					maMainThreadCondition.wait( &aDelay );
+				maMainThreadCondition.set();
 
 				CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
 
