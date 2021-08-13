@@ -599,20 +599,9 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	if ( ( !Application::IsShutDown() || pSVData->maWinData.mpLastExecuteDlg ) && ( pEvent = JavaSalEventQueue::getNextCachedEvent( 0, sal_False ) ) != NULL )
 	{
 		pEvent->dispatch();
-		if ( !bMainEventLoop )
-		{
-			aEventQueueMutex.release();
-
-			// Fix excessive slowness in menubar updates by explicitly yielding
-			// to the main thread for wakeup events
-			if ( pEvent->getID() == SALEVENT_WAKEUP )
-			{
-				nCount = ReleaseYieldMutex();
-				Thread::yield();
-				AcquireYieldMutex( nCount );
-			}
-		}
 		pEvent->release();
+		if ( !bMainEventLoop )
+			aEventQueueMutex.release();
 		return;
 	}
 
@@ -1115,6 +1104,7 @@ SalYieldMutex::SalYieldMutex() :
 	mnReacquireThreadId( 0 )
 {
 	maMainThreadCondition.set();
+	maMainThreadWaitingCondition.set();
 	maReacquireThreadCondition.set();
 }
 
@@ -1136,6 +1126,8 @@ void SalYieldMutex::acquire()
 		}
 		else if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 		{
+			maMainThreadWaitingCondition.reset();
+
 			// Wait for other thread to release mutex
 			// We need to let any pending timers run so that we don't deadlock
 			while ( !Application::IsShutDown() )
@@ -1149,7 +1141,7 @@ void SalYieldMutex::acquire()
 				// succeed.
 				TimeValue aDelay;
 				aDelay.Seconds = 0;
-				aDelay.Nanosec = 100;
+				aDelay.Nanosec = 10000;
 				maMainThreadCondition.reset();
 				Application_postWakeUpEvent();
 				if ( !maMainThreadCondition.check() )
@@ -1172,6 +1164,8 @@ void SalYieldMutex::acquire()
 					break;
 			}
 
+			maMainThreadWaitingCondition.set();
+
 			return;
 		}
 	}
@@ -1192,6 +1186,8 @@ void SalYieldMutex::acquire()
 
 void SalYieldMutex::release()
 {
+	bool bNotifyMainThread = false;
+
 	if ( mnThreadId == Thread::getCurrentIdentifier() )
 	{
 		if ( mnCount == 1 )
@@ -1200,15 +1196,24 @@ void SalYieldMutex::release()
 		if ( mnCount )
 			mnCount--;
 
-		// Notify main thread that it can grab the mutex
-		if ( !mnCount && !maMainThreadCondition.check() )
-		{
-			maMainThreadCondition.set();
-			Thread::yield();
-		}
+		if ( !mnCount && CFRunLoopGetCurrent() != CFRunLoopGetMain() )
+			bNotifyMainThread = true;
 	}
 
 	maMutex.release();
+
+	// Notify main thread that it can grab the mutex
+	if ( bNotifyMainThread && !maMainThreadWaitingCondition.check() )
+	{
+		maMainThreadCondition.set();
+
+		// Fix excessive slowness in menubar updates by waiting so that the
+		// main thread has a chance to acquire the mutex
+		TimeValue aDelay;
+		aDelay.Seconds = 0;
+		aDelay.Nanosec = 10000;
+		maMainThreadWaitingCondition.wait( &aDelay );
+	}
 }
 
 // -------------------------------------------------------------------------
