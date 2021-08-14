@@ -60,7 +60,31 @@ static Application_endModalSheet_Type *pApplication_endModalSheet = NULL;
 static Application_postWakeUpEvent_Type *pApplication_postWakeUpEvent = NULL;
 static Application_cacheSecurityScopedURL_Type *pApplication_cacheSecurityScopedURL = NULL;
 
+static bool bIsRunningCatalinaOrLowerInitizalized  = false;
+static bool bIsRunningCatalinaOrLower = false;
 static NSString *pBlankItem = @" ";
+
+static bool IsRunningCatalinaOrLower()
+{
+	if ( !bIsRunningCatalinaOrLowerInitizalized )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSProcessInfo *pProcessInfo = [NSProcessInfo processInfo];
+		if ( pProcessInfo )
+		{
+			NSOperatingSystemVersion aVersion = pProcessInfo.operatingSystemVersion;
+			if ( aVersion.majorVersion <= 10 && aVersion.minorVersion <= 15 )
+				bIsRunningCatalinaOrLower = true;
+		}
+
+		bIsRunningCatalinaOrLowerInitizalized = true;
+
+		[pPool release];
+	}
+
+	return bIsRunningCatalinaOrLower;
+}
 
 @interface ShowFileDialogArgs : NSObject
 {
@@ -194,7 +218,7 @@ static NSString *pBlankItem = @" ";
 - (void)setEnabled:(ShowFileDialogArgs *)pArgs;
 - (void)setLabel:(ShowFileDialogArgs *)pArgs;
 - (void)setMultiSelectionMode:(ShowFileDialogArgs *)pArgs;
-- (void)setResult:(NSInteger)nResult;
+- (void)setResult:(NSModalResponse)nResult;
 - (void)setSelectedFilter:(ShowFileDialogArgs *)pArgs;
 - (void)setSelectedItem:(ShowFileDialogArgs *)pArgs;
 - (void)setTitle:(ShowFileDialogArgs *)pArgs;
@@ -1286,7 +1310,7 @@ static NSString *pBlankItem = @" ";
 	}
 }
 
-- (void)setResult:(NSInteger)nResult
+- (void)setResult:(NSModalResponse)nResult
 {
 	if ( mpFilePanel && !mbFinished )
 	{
@@ -1479,8 +1503,9 @@ static NSString *pBlankItem = @" ";
 	}
 
 	// Don't use sheet if it is an open dialog or there is no window to attach
-	// a sheet to
-	if ( mbUseFileOpenDialog || !mpWindow || [mpWindow attachedSheet] || ![mpWindow canBecomeKeyWindow] || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
+	// a sheet to. Don't use sheet on macOS 11 or higher as macOS 12 no longer
+	// creates a sheet for a window.
+	if ( mbUseFileOpenDialog || !IsRunningCatalinaOrLower() || !mpWindow || [mpWindow attachedSheet] || ![mpWindow canBecomeKeyWindow] || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
 	{
 		if ( mpWindow )
 			[mpWindow release];
@@ -1679,7 +1704,7 @@ static NSString *pBlankItem = @" ";
 					// Retain self to ensure that we don't release it before
 					// the completion handler executes
 					[self retain];
-					[mpFilePanel beginSheetModalForWindow:mpWindow completionHandler:^(NSInteger nRet) {
+					[mpFilePanel beginSheetModalForWindow:mpWindow completionHandler:^(NSModalResponse nRet) {
 						if ( pParentWindow )
 						{
 							[pParentWindow addChildWindow:mpWindow ordered:NSWindowAbove];
