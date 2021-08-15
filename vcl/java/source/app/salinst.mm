@@ -1104,6 +1104,7 @@ SalYieldMutex::SalYieldMutex() :
 	mnReacquireThreadId( 0 )
 {
 	maMainThreadCondition.set();
+	maMainThreadWaitingCondition.set();
 	maReacquireThreadCondition.set();
 }
 
@@ -1125,9 +1126,10 @@ void SalYieldMutex::acquire()
 		}
 		else if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 		{
+			maMainThreadWaitingCondition.reset();
+
 			// Wait for other thread to release mutex
 			// We need to let any pending timers run so that we don't deadlock
-			sal_uInt16 nIterationsSinceLastWakeUpEvent = 0;
 			while ( !Application::IsShutDown() )
 			{
 				// Fix hanging in bug 3503 by posting a dummy event to wakeup
@@ -1137,19 +1139,14 @@ void SalYieldMutex::acquire()
 				// a wake up event so that
 				// JavaSalInstance::AnyEvent( VCL_INPUT_OTHER ) will eventually
 				// succeed.
-				if ( ++nIterationsSinceLastWakeUpEvent % 10000 == 0 || nCurrentTimeout > 100 )
-				{
-					nIterationsSinceLastWakeUpEvent = 0;
-
-					TimeValue aDelay;
-					aDelay.Seconds = 0;
-					aDelay.Nanosec = 10000;
-					maMainThreadCondition.reset();
-					Application_postWakeUpEvent();
-					if ( !maMainThreadCondition.check() )
-						maMainThreadCondition.wait( &aDelay );
-					maMainThreadCondition.set();
-				}
+				TimeValue aDelay;
+				aDelay.Seconds = 0;
+				aDelay.Nanosec = 10000;
+				maMainThreadCondition.reset();
+				Application_postWakeUpEvent();
+				if ( !maMainThreadCondition.check() )
+					maMainThreadCondition.wait( &aDelay );
+				maMainThreadCondition.set();
 
 				CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
 
@@ -1166,6 +1163,8 @@ void SalYieldMutex::acquire()
 				if ( Application::IsShutDown() || tryToAcquire() )
 					break;
 			}
+
+			maMainThreadWaitingCondition.set();
 
 			return;
 		}
@@ -1187,6 +1186,8 @@ void SalYieldMutex::acquire()
 
 void SalYieldMutex::release()
 {
+	bool bNotifyMainThread = false;
+
 	if ( mnThreadId == Thread::getCurrentIdentifier() )
 	{
 		if ( mnCount == 1 )
@@ -1195,15 +1196,24 @@ void SalYieldMutex::release()
 		if ( mnCount )
 			mnCount--;
 
-		// Notify main thread that it can grab the mutex
-		if ( !mnCount && !maMainThreadCondition.check() )
-		{
-			maMainThreadCondition.set();
-			Thread::yield();
-		}
+		if ( !mnCount && CFRunLoopGetCurrent() != CFRunLoopGetMain() )
+			bNotifyMainThread = true;
 	}
 
 	maMutex.release();
+
+	// Notify main thread that it can grab the mutex
+	if ( bNotifyMainThread && !maMainThreadWaitingCondition.check() )
+	{
+		maMainThreadCondition.set();
+
+		// Fix excessive slowness in menubar updates by waiting so that the
+		// main thread has a chance to acquire the mutex
+		TimeValue aDelay;
+		aDelay.Seconds = 0;
+		aDelay.Nanosec = 10000;
+		maMainThreadWaitingCondition.wait( &aDelay );
+	}
 }
 
 // -------------------------------------------------------------------------

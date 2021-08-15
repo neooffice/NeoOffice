@@ -1603,10 +1603,8 @@ sal_Bool ImplementationRegistration::revokeImplementation(const OUString& locati
     {
         throw;
     }
-    catch( const std::exception &e )
-    {
-        throw;
-    }
+    // Attempt to fix Mac App Store crash by not rethrowing std::exception or
+    // its subclasses
     catch ( ... )
     {
         throw RuntimeException( "ImplementationRegistration::revokeImplementation method raised an unknown exception" );

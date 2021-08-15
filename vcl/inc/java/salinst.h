@@ -68,6 +68,7 @@ class SalYieldMutex : public comphelper::SolarMutex
 	::osl::Mutex			maMutex;
 	sal_uLong				mnCount;
 	::osl::Condition		maMainThreadCondition;
+	::osl::Condition		maMainThreadWaitingCondition;
 	::osl::Condition		maReacquireThreadCondition;
 	oslThreadIdentifier		mnThreadId;
 	oslThreadIdentifier		mnReacquireThreadId;

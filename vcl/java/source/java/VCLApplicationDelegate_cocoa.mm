@@ -759,6 +759,11 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		}
 	}
 
+	// Attempt to fix Mac App Store crash by ensuring that the menu is not
+	// released by the VCLInstance_updateNativeMenus() function
+	if ( pMenu )
+		[pMenu retain];
+
 	// Fix failure to display menubar submenus on macOS 12 after start of
 	// tracking until mouse is moved by delaying updating of menus until the
 	// first call to menuNeedsUpdate: after tracking has started
@@ -782,8 +787,12 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		}
 	}
 
-	if ( pMenu && ( !mbInTracking || mbCancelTracking ) )
-		[pMenu cancelTracking];
+	if ( pMenu )
+	{
+		if ( !mbInTracking || mbCancelTracking )
+			[pMenu cancelTracking];
+		[pMenu release];
+	}
 }
 
 - (void)setDelegate:(id)pDelegate
