@@ -56,6 +56,8 @@
 #include "../app/salinst_cocoa.h"
 #include "../java/VCLEventQueue_cocoa.h"
 
+static bool bIsRunningCatalinaOrLowerInitizalized  = false;
+static bool bIsRunningCatalinaOrLower = false;
 static OUString aPageScalingFactorKey( "PAGE_SCALING_FACTOR" );
 static ResMgr *pSfxResMgr = NULL;
 
@@ -70,6 +72,28 @@ inline long ImplPixelTo100thMM( float n ) { return (long)( n * 2540 / 72 ); }
 inline float ImplPrinterToPixel( long n ) { return (float)n * 72 / MIN_PRINTER_RESOLUTION; }
 
 inline long ImplPixelToPrinter( float n ) { return (long)( n * MIN_PRINTER_RESOLUTION / 72 ); }
+
+static bool IsRunningCatalinaOrLower()
+{
+	if ( !bIsRunningCatalinaOrLowerInitizalized )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSProcessInfo *pProcessInfo = [NSProcessInfo processInfo];
+		if ( pProcessInfo )
+		{
+			NSOperatingSystemVersion aVersion = pProcessInfo.operatingSystemVersion;
+			if ( aVersion.majorVersion <= 10 && aVersion.minorVersion <= 15 )
+				bIsRunningCatalinaOrLower = true;
+		}
+
+		bIsRunningCatalinaOrLowerInitizalized = true;
+
+		[pPool release];
+	}
+
+	return bIsRunningCatalinaOrLower;
+}
 
 static OUString GetSfxResString( int nId )
 {
@@ -499,8 +523,9 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		return;
 
 	// Don't use sheet if it is an open dialog or there is no window to attach
-	// a sheet to
-	if ( !mpWindow || [mpWindow attachedSheet] || ![mpWindow canBecomeKeyWindow] || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
+	// a sheet to. Don't use sheet on macOS 11 or higher as macOS 12 no longer
+	// creates a sheet for a window.
+	if ( !IsRunningCatalinaOrLower() || !mpWindow || [mpWindow attachedSheet] || ![mpWindow canBecomeKeyWindow] || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
 	{
 		if ( mpWindow )
 			[mpWindow release];
