@@ -291,7 +291,7 @@ bool SwTxtFrm::FormatEmpty()
 
 #ifdef USE_JAVA
     // Fix Mac App Store crash by checking if text node is NULL
-    if ( HasFollow() || GetTxtNode() || GetTxtNode()->GetpSwpHints() ||
+    if ( HasFollow() || !GetTxtNode() || GetTxtNode()->GetpSwpHints() ||
 #else	// USE_JAVA
     if ( HasFollow() || GetTxtNode()->GetpSwpHints() ||
 #endif	// USE_JAVA
