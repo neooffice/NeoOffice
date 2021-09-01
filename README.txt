@@ -42,8 +42,8 @@ At this time, NeoOffice will only build on macOS 10.12 Sierra or macOS 10.14 Moj
 
 6. To build the installers, obtain the following types of codesigning certificates from Apple and install the certificates in the macOS Keychain Access application:
 
-   Developer ID Application
-   Developer ID Installer
+   3rd Party Mac Developer Application
+   3rd Party Mac Developer Installer
    Developer ID Application
    Developer ID Installer
 
