@@ -47,32 +47,32 @@ At this time, NeoOffice will only build on macOS 10.12 Sierra or macOS 10.14 Moj
    Developer ID Application
    Developer ID Installer
 
-7. Assign the codesigning certificates obtained in the previous step by copying the $NEO_HOME/certs.neo.mk file to $NEO_HOME/certs.mk. Then, open the $NEO_HOME/certs.mk file and replace all of Planamesa Inc.'s certificate names and team ID with your certificate names team ID. Important note: each certificate name assigned in the $NEO_HOME/certs.mk file must match the certificate's "Common Name" field in the macOS Keychain Access application.
+7. Assign the codesigning certificates obtained in the previous step by copying the "<uncompressed source folder>/certs.neo.mk" file to "<uncompressed source folder>/certs.mk". Then, open the "<uncompressed source folder>/certs.mk" file and replace all of Planamesa Inc.'s certificate names and team ID with your certificate names team ID. Important note: each certificate name assigned in the "<uncompressed source folder>/certs.mk" file must match the certificate's "Common Name" field in the macOS Keychain Access application.
 
-8. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of the NeoOffice source directory:
+8. Start the build by invoking the following commands:
 
-   cd $NEO_HOME
+   cd "<uncompressed source folder>"
    make
 
-   A successful build will create the following 3 $NEO_HOME/install*/*.dmg files:
+   A successful build will create the following 3 "<uncompressed source folder>/install*/*.dmg" files:
 
-      $NEO_HOME/install/*.dmg - Installer for the Mac App Store version
-      $NEO_HOME/install2/*.dmg - Installer for the Viewer version
-      $NEO_HOME/install3/*.dmg - Installer for the Professional Edition version
+      "<uncompressed source folder>/install/*.dmg" - Installer for the Mac App Store version
+      "<uncompressed source folder>/install2/*.dmg" - Installer for the Viewer version
+      "<uncompressed source folder>/install3/*.dmg" - Installer for the Professional Edition version
 
    Important note: if the build fails in the build.neo_tests make target, uncheck iCloud Drive in the System Preferences iCloud panel and reinvoke the above commands to continue the build.
 
-9. After a successful build, you can optionally build patch installers by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of the NeoOffice source directory:
+9. After a successful build, you can optionally build patch installers by invoking the following commands:
 
-   cd $NEO_HOME
+   cd "<uncompressed source folder>"
    make build.all_patches
 
-   A successful build will create the following 3 $NEO_HOME/patch_install*/*.dmg files:
+   A successful build will create the following 3 "<uncompressed source folder>/patch_install*/*.dmg" files:
 
-      $NEO_HOME/patch_install/*.dmg - Patch installer for the Mac App Store version
-      $NEO_HOME/patch_install3/*.dmg - Patch installer for the Professional Edition version
+      "<uncompressed source folder>/patch_install/*.dmg" - Patch installer for the Mac App Store version
+      "<uncompressed source folder>/patch_install3/*.dmg" - Patch installer for the Professional Edition version
 
-10. If you are building NeoOffice on macOS 10.14 Mojave, you can notarize the installers using Apple's notarization service by opening the $NEO_HOME/certs.mk file that you created and setting the APPLEDEVELOPERID macro to the e-mail of your Apple Developer ID. Then, invoke the following command:
+10. If you are building NeoOffice on macOS 10.14 Mojave, you can notarize the installers using Apple's notarization service by opening the "<uncompressed source folder>/certs.mk" file that you created and setting the APPLEDEVELOPERID macro to the e-mail of your Apple Developer ID. Then, invoke the following command:
 
    make build.notarize_all
 
