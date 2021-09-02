@@ -3,7 +3,7 @@ Intructions for Building NeoOffice
 
 
 Steps for building on macOS 11 Big Sur for Intel
----------------------------------------------------
+------------------------------------------------
 
 At this time, NeoOffice will only build on macOS 11 Big Sur on Intel only.
 
@@ -32,9 +32,50 @@ At this time, NeoOffice will only build on macOS 11 Big Sur on Intel only.
 
    sudo cpan -i Archive::Zip
 
-5. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of your workspace's "neojava" directory:
+5. To build the installers, obtain the following types of codesigning certificates from Apple and install the certificates in the macOS Keychain Access application:
 
-   cd $NEO_HOME
+   3rd Party Mac Developer Application
+   3rd Party Mac Developer Installer
+   Developer ID Application
+   Developer ID Installer
+
+6. Assign the codesigning certificates obtained in the previous step by copying the "<uncompressed source folder>/certs.neo.mk" file to "<uncompressed source folder>/certs.mk". Then, open the "<uncompressed source folder>/certs.mk" file and replace all of Planamesa Inc.'s certificate names and team ID with your certificate names team ID. Important note: each certificate name assigned in the "<uncompressed source folder>/certs.mk" file must match the certificate's "Common Name" field in the macOS Keychain Access application.
+
+7. Start the build by invoking the following commands:
+
+   cd "<uncompressed source folder>"
    make
 
+   A successful build will create the following 3 "<uncompressed source folder>/install*/*.dmg" files:
+
+      "<uncompressed source folder>/install/*.dmg" - Installer for the Mac App Store version
+      "<uncompressed source folder>/install2/*.dmg" - Installer for the Viewer version
+      "<uncompressed source folder>/install3/*.dmg" - Installer for the Professional Edition version
+
    Important note: if the build fails in the build.neo_tests make target, uncheck iCloud Drive in the System Preferences iCloud panel and reinvoke the above commands to continue the build.
+
+8. After a successful build, you can optionally build patch installers by invoking the following commands:
+
+   cd "<uncompressed source folder>"
+   make build.all_patches
+
+   A successful build will create the following 3 "<uncompressed source folder>/patch_install*/*.dmg" files:
+
+      "<uncompressed source folder>/patch_install/*.dmg" - Patch installer for the Mac App Store version
+      "<uncompressed source folder>/patch_install3/*.dmg" - Patch installer for the Professional Edition version
+
+9. You can notarize the installers using Apple's notarization service by opening the "<uncompressed source folder>/certs.mk" file that you created and setting the APPLEDEVELOPERID macro to the e-mail of your Apple Developer ID. Then, invoke the following command:
+
+   make build.notarize_all
+
+   If you built patch installers, also invoke the following command:
+
+   make build.notarize_all_patches
+
+10. If you notarized the installers in the previous step and Apple has sent you  an e-mail saving that your installers were successfully notarized, "staple" Apple's notarization to the installers by invoking the following command:
+
+   make build.staple_all
+
+   If you built patch installers, also invoke the following command:
+
+   make build.staple_all_patches

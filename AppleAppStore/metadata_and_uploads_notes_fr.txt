@@ -34,10 +34,8 @@ What's New in this Version:
 Avant d'acheter NeoOffice, s'il vous plaît cliquer sur le lien « Assistance » et lire les notes d'installation.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would sommetimes crash when pressing menu shortcut keys
-• NeoOffice would crash when opening certain .docx documents that contain text fields
-• NeoOffice would crash pasting malformed HTML tables into a Writer document
-• NeoOffice would sometimes become unresponsive when spellchecking a large block of text on the application's main thread
+• When running on macOS Big Sur or higher, NeoOffice now displays all native dialogs as modal dialog windows instead of sheet windows
+• When running in Dark Mode, NeoOffice would copy text from a Writer comment and would change the automatic color to black when pasted into any Writer comments
 
 
 Promotional Text:
