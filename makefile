@@ -250,7 +250,8 @@ PRODUCT_MODULES = \
 	uui \
 	writerfilter \
 	writerperfect \
-	xmloff
+	xmloff \
+	xmlsecurity
 
 .DELETE_ON_ERROR : build.neo_configure
 
