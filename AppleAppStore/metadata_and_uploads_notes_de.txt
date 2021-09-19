@@ -39,9 +39,7 @@ This version of NeoOffice fixes the following bugs:
 
 
 Promotional Text:
-NeoOffice enthält den nativen Dunkelmodus!
-
-Folgen Sie uns auf Twitter @NeoOffice, um die neuesten Fehlerbehebungen herunterzuladen.
+Warnung an Silicon Mac-Benutzer: NeoOffice ist eine Anwendung, die auf dem Intel-Prozessor basiert. Sie müssen Rosetta von Apple installieren, um NeoOffice auf dem Apple Silicon-Prozessor auszuführen.
 
 
 Keywords:
