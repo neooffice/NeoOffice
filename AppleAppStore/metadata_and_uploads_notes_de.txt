@@ -39,7 +39,7 @@ This version of NeoOffice fixes the following bugs:
 
 
 Promotional Text:
-Warnung an Silicon Mac-Benutzer: NeoOffice ist eine Intel-basierte Anwendung. Sie müssen Apple Rosetta installieren, um NeoOffice auf Apple Silicon ausführen zu können.
+Silicon Mac Benutzer: NeoOffice ist eine Intel-basierte Anwendung. Sie müssen Apple Rosetta installieren, um NeoOffice auf Apple Silicon ausführen zu können.
 
 
 Keywords:
