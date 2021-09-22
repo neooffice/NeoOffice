@@ -158,9 +158,6 @@ void deleteRootsModule()
 
 OString getMozillaCurrentProfile( const css::uno::Reference< css::uno::XComponentContext > &rxContext )
 {
-#ifdef USE_JAVA
-    (void)rxContext;
-#else	// USE_JAVA
     // first, try to get the profile from "MOZILLA_CERTIFICATE_FOLDER"
     const char* pEnv = getenv("MOZILLA_CERTIFICATE_FOLDER");
     if (pEnv)
@@ -222,6 +219,17 @@ OString getMozillaCurrentProfile( const css::uno::Reference< css::uno::XComponen
                 return OUStringToOString(sProfilePath, osl_getThreadTextEncoding());
             }
         }
+    }
+
+#ifdef USE_JAVA
+    // lastly, try to get the profile from "MOZILLA_CERTIFICATE_FOLDER_FALLBACK"
+    pEnv = getenv("MOZILLA_CERTIFICATE_FOLDER_FALLBACK");
+    if (pEnv)
+    {
+        SAL_INFO(
+            "xmlsecurity.xmlsec",
+            "Using Mozilla profile from MOZILLA_CERTIFICATE_FOLDER_FALLBACK=" << pEnv);
+        return OString(pEnv);
     }
 #endif	// USE_JAVA
 
