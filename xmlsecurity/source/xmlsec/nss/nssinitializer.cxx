@@ -322,7 +322,6 @@ bool nsscrypto_initialize( const css::uno::Reference< css::uno::XComponentContex
             OUString aCertURL;
             if (::osl::File::E_None == ::osl::File::getFileURLFromSystemPath(aCertDir, aCertURL))
                 pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromOUString( &aCertURL, sal_True, NULL );
-fprintf( stderr, "Here: %p %s\n", pSecurityScopedURL, OUStringToOString( aCertURL, RTL_TEXTENCODING_UTF8 ).getStr() );
         }
 #endif	// USE_JAVA && MACOSX
 
