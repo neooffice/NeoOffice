@@ -769,12 +769,14 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	// first call to menuNeedsUpdate: after tracking has started
 	if ( mbAwaitingTracking && !mbInTracking && !mbCancelTracking )
 	{
+		// Attempt to fix Mac App Store crash by immediately changing status
+		// to in tracking so that out code will not change the native menubar's
+		// menu items while updating the menus
+		mbInTracking = YES;
 		mbAwaitingTracking = NO;
 
 		if ( VCLInstance_updateNativeMenus() )
 		{
-			mbInTracking = YES;
-
 			// Fix bug reported in the following NeoOffice forum
 			// topic by forcing any pending menu changes to be done
 			// before any menus are displayed:
@@ -783,6 +785,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		}
 		else
 		{
+			mbInTracking = NO;
 			mbCancelTracking = YES;
 		}
 	}
