@@ -304,10 +304,11 @@ bool nsscrypto_initialize( const css::uno::Reference< css::uno::XComponentContex
         static OString sDBMPrefix( "dbm:" );
         static OString sExternPrefix( "extern:" );
         static OString sRDBPrefix( "rdb:" );
-        sal_Int32 nPrefixLen = 0;
+
         if ( pApplication_acquireSecurityScopedURLFromOUString && pApplication_releaseSecurityScopedURL )
         {
             // Trim database modifiers listed in nss/lib/nssinit.c
+            sal_Int32 nPrefixLen = 0;
             if ( sCertDir.startsWith( sSQLPrefix ) )
                 nPrefixLen = sSQLPrefix.getLength();
             else if ( sCertDir.startsWith( sDBMPrefix ) )
@@ -327,14 +328,6 @@ bool nsscrypto_initialize( const css::uno::Reference< css::uno::XComponentContex
 
         if( NSS_InitReadWrite( sCertDir.getStr() ) != SECSuccess )
         {
-#ifdef USE_JAVA
-            // Older versions of NSS can't read newer Mozilla databases without
-            // the sql: prefix
-            if ( !nPrefixLen )
-                sCertDir = sSQLPrefix + sCertDir;
-            if( nPrefixLen || NSS_InitReadWrite( sCertDir.getStr() ) != SECSuccess )
-            {
-#endif	// USE_JAVA
             SAL_INFO("xmlsecurity.xmlsec", "Initializing NSS with profile failed.");
             int errlen = PR_GetErrorTextLength();
             if(errlen > 0)
@@ -344,9 +337,6 @@ bool nsscrypto_initialize( const css::uno::Reference< css::uno::XComponentContex
                 SAL_INFO("xmlsecurity.xmlsec", error.get());
             }
             bSuccess = false;
-#ifdef USE_JAVA
-            }
-#endif	// USE_JAVA
         }
     }
 
