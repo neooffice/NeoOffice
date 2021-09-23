@@ -65,6 +65,19 @@
 #include <secmod.h>
 #include <nssckbi.h>
 
+#if defined USE_JAVA && defined MACOSX
+
+#include <dlfcn.h>
+
+typedef void* id;
+typedef id Application_acquireSecurityScopedURLFromOUString_Type( const OUString *pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const OUString *pDialogTitle );
+typedef void Application_releaseSecurityScopedURL_Type( id pSecurityScopedURLs );
+
+static Application_acquireSecurityScopedURLFromOUString_Type *pApplication_acquireSecurityScopedURLFromOUString = NULL;
+static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
+
+#endif	// USE_JAVA && MACOSX
+
 namespace cssu = css::uno;
 namespace cssl = css::lang;
 
@@ -158,9 +171,6 @@ void deleteRootsModule()
 
 OString getMozillaCurrentProfile( const css::uno::Reference< css::uno::XComponentContext > &rxContext )
 {
-#ifdef USE_JAVA
-    (void)rxContext;
-#else	// USE_JAVA
     // first, try to get the profile from "MOZILLA_CERTIFICATE_FOLDER"
     const char* pEnv = getenv("MOZILLA_CERTIFICATE_FOLDER");
     if (pEnv)
@@ -223,6 +233,17 @@ OString getMozillaCurrentProfile( const css::uno::Reference< css::uno::XComponen
             }
         }
     }
+
+#ifdef USE_JAVA
+    // lastly, try to get the profile from "MOZILLA_CERTIFICATE_FOLDER_FALLBACK"
+    pEnv = getenv("MOZILLA_CERTIFICATE_FOLDER_FALLBACK");
+    if (pEnv)
+    {
+        SAL_INFO(
+            "xmlsecurity.xmlsec",
+            "Using Mozilla profile from MOZILLA_CERTIFICATE_FOLDER_FALLBACK=" << pEnv);
+        return OString(pEnv);
+    }
 #endif	// USE_JAVA
 
     SAL_INFO("xmlsecurity.xmlsec", "No Mozilla profile found");
@@ -266,12 +287,54 @@ bool nsscrypto_initialize( const css::uno::Reference< css::uno::XComponentContex
 
     PR_Init( PR_USER_THREAD, PR_PRIORITY_NORMAL, 1 ) ;
 
+#if defined USE_JAVA && defined MACOSX
+    id pSecurityScopedURL = NULL;
+    if ( !pApplication_acquireSecurityScopedURLFromOUString )
+        pApplication_acquireSecurityScopedURLFromOUString = (Application_acquireSecurityScopedURLFromOUString_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromOUString" );
+    if ( !pApplication_releaseSecurityScopedURL )
+        pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
+#endif	// USE_JAVA && MACOSX
+
     bool bSuccess = true;
     // there might be no profile
     if ( !sCertDir.isEmpty() )
     {
+#if defined USE_JAVA && defined MACOSX
+        static OString sSQLPrefix( "sql:" );
+        static OString sDBMPrefix( "dbm:" );
+        static OString sExternPrefix( "extern:" );
+        static OString sRDBPrefix( "rdb:" );
+        sal_Int32 nPrefixLen = 0;
+        if ( pApplication_acquireSecurityScopedURLFromOUString && pApplication_releaseSecurityScopedURL )
+        {
+            // Trim database modifiers listed in nss/lib/nssinit.c
+            if ( sCertDir.startsWith( sSQLPrefix ) )
+                nPrefixLen = sSQLPrefix.getLength();
+            else if ( sCertDir.startsWith( sDBMPrefix ) )
+                nPrefixLen = sDBMPrefix.getLength();
+            else if ( sCertDir.startsWith( sExternPrefix ) )
+                nPrefixLen = sExternPrefix.getLength();
+            // Apparently RDB isn't a path so don't treat it as a path
+            else if ( sCertDir.startsWith( sRDBPrefix ) )
+                nPrefixLen = sCertDir.getLength();
+
+            OUString aCertDir = OStringToOUString(sCertDir.getStr() + nPrefixLen, osl_getThreadTextEncoding());
+            OUString aCertURL;
+            if (::osl::File::E_None == ::osl::File::getFileURLFromSystemPath(aCertDir, aCertURL))
+                pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromOUString( &aCertURL, sal_True, NULL );
+        }
+#endif	// USE_JAVA && MACOSX
+
         if( NSS_InitReadWrite( sCertDir.getStr() ) != SECSuccess )
         {
+#ifdef USE_JAVA
+            // Older versions of NSS can't read newer Mozilla databases without
+            // the sql: prefix
+            if ( !nPrefixLen )
+                sCertDir = sSQLPrefix + sCertDir;
+            if( nPrefixLen || NSS_InitReadWrite( sCertDir.getStr() ) != SECSuccess )
+            {
+#endif	// USE_JAVA
             SAL_INFO("xmlsecurity.xmlsec", "Initializing NSS with profile failed.");
             int errlen = PR_GetErrorTextLength();
             if(errlen > 0)
@@ -281,11 +344,19 @@ bool nsscrypto_initialize( const css::uno::Reference< css::uno::XComponentContex
                 SAL_INFO("xmlsecurity.xmlsec", error.get());
             }
             bSuccess = false;
+#ifdef USE_JAVA
+            }
+#endif	// USE_JAVA
         }
     }
 
     if( sCertDir.isEmpty() || !bSuccess )
     {
+#if defined USE_JAVA && defined MACOSX
+        if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+            pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
+#endif	// USE_JAVA && MACOSX
+
         SAL_INFO("xmlsecurity.xmlsec", "Initializing NSS without profile.");
         if ( NSS_NoDB_Init(NULL) != SECSuccess )
         {
@@ -357,6 +428,11 @@ bool nsscrypto_initialize( const css::uno::Reference< css::uno::XComponentContex
         }
     }
 #endif
+
+#if defined USE_JAVA && defined MACOSX
+    if ( !return_value && pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+        pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
+#endif	// USE_JAVA && MACOSX
 
     return return_value;
 }
