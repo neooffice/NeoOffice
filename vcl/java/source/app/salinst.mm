@@ -283,6 +283,16 @@ sal_Bool VCLInstance_updateNativeMenus()
 	if ( NSWindow_hasMarkedText( nil ) )
 		return bRet;
 
+	NSApplication *pApp = [NSApplication sharedApplication];
+	NSMenu *pMainMenu = nil;
+	NSArray<NSMenuItem *> *pOldMainMenuItems = nil;
+	if ( pApp )
+	{
+		pMainMenu = [pApp mainMenu];
+		if ( pMainMenu )
+			pOldMainMenuItems = [pMainMenu itemArray];
+	}
+
 	// Make sure that any events fetched from the queue while the application
 	// mutex was unlocked are already dispatched before we try to lock the
 	// mutex. Fix bug 3467 by speeding up acquiring of the event queue mutex
@@ -374,6 +384,18 @@ sal_Bool VCLInstance_updateNativeMenus()
 
 	rSolarMutex.release();
 	aEventQueueMutex.release();
+
+	if ( bRet )
+	{
+		NSArray<NSMenuItem *> *pMainMenuItems = nil;
+		if ( pMainMenu )
+			pMainMenuItems = [pMainMenu itemArray];
+
+		// Just to be safe, cancel menu tracking if any of the menu items in
+		// main menu have changed
+		if ( !pMainMenuItems || !pOldMainMenuItems || ![pMainMenuItems isEqualToArray:pOldMainMenuItems] )
+			bRet = sal_False;
+	}
 
 	return bRet;
 }
