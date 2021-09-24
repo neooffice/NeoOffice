@@ -65,7 +65,9 @@
 #include <secmod.h>
 #include <nssckbi.h>
 
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
+
+#ifdef MACOSX
 
 #include <dlfcn.h>
 
@@ -76,7 +78,14 @@ typedef void Application_releaseSecurityScopedURL_Type( id pSecurityScopedURLs )
 static Application_acquireSecurityScopedURLFromOUString_Type *pApplication_acquireSecurityScopedURLFromOUString = NULL;
 static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
 
-#endif	// USE_JAVA && MACOSX
+#endif	// MACOSX
+
+static OString sSQLPrefix( "sql:" );
+static OString sDBMPrefix( "dbm:" );
+static OString sExternPrefix( "extern:" );
+static OString sRDBPrefix( "rdb:" );
+
+#endif	// USE_JAVA
 
 namespace cssu = css::uno;
 namespace cssl = css::lang;
@@ -193,7 +202,11 @@ OString getMozillaCurrentProfile( const css::uno::Reference< css::uno::XComponen
                 "xmlsecurity.xmlsec",
                 "Using Mozilla profile from /org.openoffice.Office.Common/"
                     "Security/Scripting/CertDir: " << sUserSetCertPath);
+#ifdef USE_JAVA
+            return sSQLPrefix + OUStringToOString(sUserSetCertPath, osl_getThreadTextEncoding());
+#else	// USE_JAVA
             return OUStringToOString(sUserSetCertPath, osl_getThreadTextEncoding());
+#endif	// USE_JAVA
         }
     }
     catch (const uno::Exception &e)
@@ -229,7 +242,11 @@ OString getMozillaCurrentProfile( const css::uno::Reference< css::uno::XComponen
                 SAL_INFO(
                     "xmlsecurity.xmlsec",
                     "Using Mozilla profile " << sProfilePath);
+#ifdef USE_JAVA
+                return sSQLPrefix + OUStringToOString(sProfilePath, osl_getThreadTextEncoding());
+#else	// USE_JAVA
                 return OUStringToOString(sProfilePath, osl_getThreadTextEncoding());
+#endif	// USE_JAVA
             }
         }
     }
@@ -300,11 +317,6 @@ bool nsscrypto_initialize( const css::uno::Reference< css::uno::XComponentContex
     if ( !sCertDir.isEmpty() )
     {
 #if defined USE_JAVA && defined MACOSX
-        static OString sSQLPrefix( "sql:" );
-        static OString sDBMPrefix( "dbm:" );
-        static OString sExternPrefix( "extern:" );
-        static OString sRDBPrefix( "rdb:" );
-
         if ( pApplication_acquireSecurityScopedURLFromOUString && pApplication_releaseSecurityScopedURL )
         {
             // Trim database modifiers listed in nss/lib/nssinit.c
