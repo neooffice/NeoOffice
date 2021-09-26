@@ -485,15 +485,9 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 			if ( nCount > 0 )
 			{
 				// Remove remaining menus while still showing
-				NSMenuItem *pAppMenu = [pMainMenu itemAtIndex:0];
-				if ( pAppMenu )
-					[pAppMenu retain];
-				[pMainMenu removeAllItems];
-				if ( pAppMenu )
-				{
-					[pMainMenu addItem:pAppMenu];
-					[pAppMenu release];
-				}
+				NSUInteger i = nCount - 1;
+				for ( ; i > 0; i-- )
+					[pMainMenu removeItemAtIndex:i];
 			}
 		}
 	}
@@ -594,15 +588,9 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 			if ( nCount > 0 )
 			{
 				// Remove remaining menus while still showing
-				NSMenuItem *pAppMenu = [pMainMenu itemAtIndex:0];
-				if ( pAppMenu )
-					[pAppMenu retain];
-				[pMainMenu removeAllItems];
-				if ( pAppMenu )
-				{
-					[pMainMenu addItem:pAppMenu];
-					[pAppMenu release];
-				}
+				NSUInteger i = nCount - 1;
+				for ( ; i > 0; i-- )
+					[pMainMenu removeItemAtIndex:i];
 
 				// Add our menu items to menubar. Note that we must add
 				// the menu items after the menu has been set as the
