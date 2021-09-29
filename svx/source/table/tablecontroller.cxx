@@ -1104,14 +1104,34 @@ void SvxTableController::SetTableStyle( const SfxItemSet* pArgs )
                     {
                         SfxItemSet aSet( xCell->GetItemSet() );
                         bool bChanges = false;
+#ifdef NO_REDHAT_BUG_1255200_FIX
                         const SfxItemSet& rStyleAttribs = xCell->GetStyleSheet()->GetItemSet();
 
                         for ( sal_uInt16 nWhich = SDRATTR_START; nWhich <= SDRATTR_TABLE_LAST; nWhich++ )
+#else	// NO_REDHAT_BUG_1255200_FIX
+                        SfxStyleSheet *pStyleSheet = xCell->GetStyleSheet();
+                        SAL_WARN_IF(!pStyleSheet, "svx", "no stylesheet for table cell?");
+                        if (pStyleSheet)
+#endif	// NO_REDHAT_BUG_1255200_FIX
                         {
+#ifdef NO_REDHAT_BUG_1255200_FIX
                             if( (rStyleAttribs.GetItemState( nWhich ) == SfxItemState::SET) && (aSet.GetItemState( nWhich ) == SfxItemState::SET) )
+#else	// NO_REDHAT_BUG_1255200_FIX
+                            const SfxItemSet& rStyleAttribs = pStyleSheet->GetItemSet();
+
+                            for ( sal_uInt16 nWhich = SDRATTR_START; nWhich <= SDRATTR_TABLE_LAST; nWhich++ )
+#endif	// NO_REDHAT_BUG_1255200_FIX
                             {
+#ifdef NO_REDHAT_BUG_1255200_FIX
                                 aSet.ClearItem( nWhich );
                                 bChanges = true;
+#else	// NO_REDHAT_BUG_1255200_FIX
+                                if( (rStyleAttribs.GetItemState( nWhich ) == SfxItemState::SET) && (aSet.GetItemState( nWhich ) == SfxItemState::SET) )
+                                {
+                                    aSet.ClearItem( nWhich );
+                                    bChanges = true;
+                                }
+#endif	// NO_REDHAT_BUG_1255200_FIX
                             }
                         }
 

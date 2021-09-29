@@ -199,6 +199,7 @@ static OUString aSaveAVersionLocalizedString;
 @interface SFXDocument : NSDocument
 {
 	SfxViewFrame*			mpFrame;
+	BOOL					mbClosed;
 	BOOL					mbInSetDocumentModified;
 	BOOL					mbRelinquished;
 	NSLock*					mpRelinquishedLock;
@@ -407,37 +408,31 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (void)close
 {
-	// Fix short hang when closing a document when compiled on macOS 11 by
-	// removing the document immediately before closing it
-	NSDocumentController *pDocController = [NSDocumentController sharedDocumentController];
-	if ( pDocController )
-	{
-		// Just to be safe, apply the [NSDocumentController addDocument:] fix
-		// when we call [NSDocumentController removeDocument:]
-		id pSecurityScopedURL = NULL;
-		if ( !pApplication_acquireSecurityScopedURLFromNSURL )
-			pApplication_acquireSecurityScopedURLFromNSURL = (Application_acquireSecurityScopedURLFromNSURL_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromNSURL" );
-		if ( !pApplication_releaseSecurityScopedURL )
-			pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
-		if ( pApplication_acquireSecurityScopedURLFromNSURL && pApplication_releaseSecurityScopedURL )
-			pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromNSURL( [self fileURL], sal_True, NULL );
-
-		[pDocController removeDocument:self];
-
-		if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
-			pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
-	}
+	// Just to be safe, apply the [NSDocumentController addDocument:] fix
+	// when closing the document
+	id pSecurityScopedURL = NULL;
+	if ( !pApplication_acquireSecurityScopedURLFromNSURL )
+		pApplication_acquireSecurityScopedURLFromNSURL = (Application_acquireSecurityScopedURLFromNSURL_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromNSURL" );
+	if ( !pApplication_releaseSecurityScopedURL )
+		pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
+	if ( pApplication_acquireSecurityScopedURLFromNSURL && pApplication_releaseSecurityScopedURL )
+		pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromNSURL( [self fileURL], sal_True, NULL );
 
 	[super close];
 
 	// Set undo manager to nil otherwise the document will never be released
 	[self setUndoManager:nil];
+
+	mbClosed = YES;
+
+	if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+		pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
 }
 
 - (void)dealloc
 {
-	// Release our custom undo manager
-	[self setUndoManager:nil];
+	if ( !mbClosed )
+		[self close];
 
 	if ( mpRelinquishedLock )
 		[mpRelinquishedLock release];
@@ -450,10 +445,6 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 	if ( mpWindow )
 		[mpWindow release];
-
-	NSDocumentController *pDocController = [NSDocumentController sharedDocumentController];
-	if ( pDocController )
-		[pDocController removeDocument:self];
 
 	[super dealloc];
 }
@@ -507,6 +498,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	[super initWithContentsOfURL:pURL ofType:pTypeName error:ppError];
 
 	mpFrame = pFrame;
+	mbClosed = NO;
 	mbInSetDocumentModified = NO;
 	mbRelinquished = NO;
 	mpRelinquishedLock = [[NSLock alloc] init];
