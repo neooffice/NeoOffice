@@ -1556,12 +1556,6 @@ sal_Bool ImplementationRegistration::revokeImplementation(const OUString& locati
 {
     bool ret = false;
 
-#ifdef USE_JAVA
-    // Fix Mac App Store crash when synching extensions by catching any
-    // unexpected exception types
-    try
-    {
-#endif	// USE_JAVA
     Reference < XSimpleRegistry > xRegistry;
 
     if (xReg.is()) {
@@ -1580,6 +1574,15 @@ sal_Bool ImplementationRegistration::revokeImplementation(const OUString& locati
             }
             catch ( UnknownPropertyException & ) {
             }
+#ifdef USE_JAVA
+            // Attempt to fix Mac App Store crash by not allowing any
+            // exceptions to be thrown. In previous versions, a new
+            // RuntimeException was thrown for any caught exceptions but that
+            // did not fix the crash.
+            catch ( ... ) {
+                OSL_FAIL( "ImplementationRegistration::revokeImplementation method raised an unknown exception" );
+            }
+#endif	// USE_JAVA
         }
     }
 
@@ -1596,20 +1599,17 @@ sal_Bool ImplementationRegistration::revokeImplementation(const OUString& locati
             // exception is not appropriate.
             OSL_FAIL( "InvalidRegistryException during revokeImplementation" );
         }
-    }
 #ifdef USE_JAVA
-    }
-    catch( const com::sun::star::uno::RuntimeException &e )
-    {
-        throw;
-    }
-    // Attempt to fix Mac App Store crash by not rethrowing std::exception or
-    // its subclasses
-    catch ( ... )
-    {
-        throw RuntimeException( "ImplementationRegistration::revokeImplementation method raised an unknown exception" );
-    }
+        // Attempt to fix Mac App Store crash by not allowing any
+        // exceptions to be thrown. In previous versions, a new
+        // RuntimeException was thrown for any caught exceptions but that
+        // did not fix the crash.
+        catch ( ... )
+        {
+            OSL_FAIL( "ImplementationRegistration::revokeImplementation method raised an unknown exception" );
+        }
 #endif	// USE_JAVA
+    }
 
     return ret;
 }
