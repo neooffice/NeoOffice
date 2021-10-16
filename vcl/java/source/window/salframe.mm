@@ -182,6 +182,32 @@ static void HandleScreensChangedRequest()
 			}
 		}
 	}
+
+	// Starting in macOS 10.15, removing a monitor will not automatically move
+	// windows on that monitor so manually move such windows to the main monitor
+	NSApplication *pApp = [NSApplication sharedApplication];
+	NSScreen *pMainScreen = [NSScreen mainScreen];
+	if ( pApp && pMainScreen )
+	{
+		for ( NSWindow *pWindow in [pApp windows] )
+		{
+			if ( pWindow && ![pWindow screen] && [pWindow styleMask] & NSWindowStyleMaskFullScreen )
+			{
+				NSRect aFrame = [pWindow frame];
+				NSRect aMainScreenFrame = [pMainScreen frame];
+				aFrame.origin.x = aMainScreenFrame.origin.x;
+				if ( aFrame.size.width < aMainScreenFrame.size.width )
+					aFrame.origin.x = ( aMainScreenFrame.size.width - aFrame.size.width  ) / 2;
+				else
+					aFrame.size.width = aMainScreenFrame.size.width;
+				if ( aFrame.size.height < aMainScreenFrame.size.height )
+					aFrame.origin.y = ( aMainScreenFrame.size.height - aFrame.size.height  ) / 2;
+				else
+					aFrame.size.height = aMainScreenFrame.size.height;
+				[pWindow setFrame:aFrame display:YES];
+			}
+		}
+	}
 }
 
 static sal_Bool SetSalColorFromNSColor( NSColor *pNSColor, SalColor **ppSalColor )
