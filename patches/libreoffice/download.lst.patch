@@ -28,8 +28,8 @@
 -export FIREBIRD_TARBALL := Firebird-2.5.2.26540-0.tar.bz2
 -# FIREBIRD_MD5SUM := b259c2d1c60a03bd104108405ae990a7
 -# export FIREBIRD_TARBALL := Firebird-3.0-alpha1-20130302.tar.gz
-+export EXPAT_MD5SUM := 00858041acfea5757af55e6ee6b86231
-+export EXPAT_TARBALL := expat-2.2.8.tar.bz2
++export EXPAT_MD5SUM := 476cdf4b5e40280316fff36b2086a390
++export EXPAT_TARBALL := expat-2.4.1.tar.bz2
 +export FIREBIRD_MD5SUM := 821260b61dafc22899d1464d4e91ee6a
 +export FIREBIRD_TARBALL := Firebird-3.0.0.32483-0.tar.bz2
  export FONTCONFIG_TARBALL := 77e15a92006ddc2adbb06f840d591c0e-fontconfig-2.8.0.tar.gz
