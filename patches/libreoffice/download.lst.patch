@@ -1,13 +1,13 @@
 --- download.lst	2015-11-25 07:55:38.000000000 -0500
-+++ download.lst	2021-02-15 12:39:11.000000000 -0500
++++ download.lst	2021-10-25 13:47:18.000000000 -0400
 @@ -15,13 +15,16 @@
  export APR_TARBALL := apr-1.4.8.tar.gz
  export APR_UTIL_MD5SUM := 71a11d037240b292f824ba1eb537b4e3
  export APR_UTIL_TARBALL := apr-util-1.5.3.tar.gz
 -export BOOST_TARBALL := d6eef4b4cacb2183f2bf265a5a03a354-boost_1_55_0.tar.bz2
 +# please repack the tarball using external/boost/repack_tarball.sh
-+export BOOST_MD5SUM := 5b6a53ed00bca773fffc443240557eb5
-+export BOOST_TARBALL := boost_1_71_0.tar.bz2
++export BOOST_MD5SUM := e0a4777d528bfb277da8fa567158c596
++export BOOST_TARBALL := boost_1_75_0.tar.bz2
  export BSH_TARBALL := ea570af93c284aa9e5621cd563f54f4d-bsh-2.0b1-src.tar.gz
  export CAIRO_TARBALL := f101a9e88b783337b20b2e26dfd26d5f-cairo-1.10.2.tar.gz
  export CDR_MD5SUM := b33fd0be3befdd1b37777e08ce058bd9

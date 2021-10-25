@@ -188,23 +188,6 @@
  
  $(eval $(call gb_UnpackedTarball_set_patchlevel,libcmis,1))
  
---- boost/clang-cl.patch.0	2020-12-09 13:56:14.000000000 -0500
-+++ boost/clang-cl.patch.0	2020-12-25 18:11:14.000000000 -0500
-@@ -46,3 +46,14 @@
-        //For compilers supporting auto-tss cleanup
-              //with Boost.Threads lib, use Boost.Threads lib
-  #           define BOOST_THREAD_USE_LIB
-+--- boost/ptr_container/ptr_sequence_adapter.hpp
-++++ boost/ptr_container/ptr_sequence_adapter.hpp
-+@@ -714,6 +714,8 @@
-+             BOOST_ASSERT( first <= last && "out of range unique()/erase_if()" );
-+             BOOST_ASSERT( this->begin() <= first && "out of range unique()/erase_if()" );
-+             BOOST_ASSERT( last <= this->end() && "out of range unique()/erase_if)(" );             
-++            (void)first;
-++            (void)last;
-+         }
-+         
-+         void range_check( iterator first, iterator last )
 --- libpng/UnpackedTarball_libpng.mk	2020-12-17 16:59:38.000000000 -0500
 +++ libpng/UnpackedTarball_libpng.mk	2020-12-28 12:49:19.000000000 -0500
 @@ -9,7 +9,7 @@
