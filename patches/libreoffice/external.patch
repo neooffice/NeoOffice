@@ -313,3 +313,30 @@
 + 
 + // Use this flag to prevent changes being written to destination
 + #define SAMPLER_INSPECT     0x01000000
+--- boost/clang-cl.patch.0	2021-10-05 20:34:15.000000000 -0400
++++ boost/clang-cl.patch.0	2021-10-25 15:26:15.000000000 -0400
+@@ -18,3 +18,24 @@
+    // Deal with VC 2010 output_iterator_tag requirement
+    typedef array_iterator<T,T*,mpl::size_t<NumDims>,reference,
+                           mutable_iterator_tag> iterator;
++--- boost/ptr_container/ptr_sequence_adapter.hpp	2020-12-03 00:00:59.000000000 -0500
+++++ boost/ptr_container/ptr_sequence_adapter.hpp	2021-10-25 15:23:37.000000000 -0400
++@@ -714,6 +714,8 @@
++             BOOST_ASSERT( first <= last && "out of range unique()/erase_if()" );
++             BOOST_ASSERT( this->begin() <= first && "out of range unique()/erase_if()" );
++             BOOST_ASSERT( last <= this->end() && "out of range unique()/erase_if)(" );             
+++            (void)first;
+++            (void)last;
++         }
++         
++         void range_check( iterator first, iterator last )
++--- boost/bind.hpp	2020-12-03 00:00:59.000000000 -0500
+++++ boost/bind.hpp	2021-10-25 15:21:52.000000000 -0400
++@@ -25,6 +25,7 @@
++ //  adding the using directive locally where appropriate.
++ //  Alternatively, the existing behavior may be preserved by defining
++ //  the macro BOOST_BIND_GLOBAL_PLACEHOLDERS.
+++#define BOOST_BIND_GLOBAL_PLACEHOLDERS
++ 
++ #include <boost/bind/bind.hpp>
++ #include <boost/config/pragma_message.hpp>
