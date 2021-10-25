@@ -263,3 +263,25 @@
      WinMtfFillStyle& operator=(WinMtfFillStyle* pStyle)
      {
          aFillColor = pStyle->aFillColor;
+--- source/control/combobox.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/control/combobox.cxx	2021-10-25 16:35:54.000000000 -0400
+@@ -32,6 +32,8 @@
+ #include <ilstbox.hxx>
+ #include <controldata.hxx>
+ 
++using namespace boost::placeholders;
++
+ static void lcl_GetSelectedEntries( ::std::set< sal_Int32 >& rSelectedPos, const OUString& rText, sal_Unicode cTokenSep, const ImplEntryList* pEntryList )
+ {
+     for (sal_Int32 n = comphelper::string::getTokenCount(rText, cTokenSep); n;)
+--- source/control/lstbox.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/control/lstbox.cxx	2021-10-25 16:35:43.000000000 -0400
+@@ -37,6 +37,8 @@
+ 
+ #include <com/sun/star/datatransfer/dnd/XDropTarget.hpp>
+ 
++using namespace boost::placeholders;
++
+ void ListBox::EnableQuickSelection( const bool& b )
+ {
+     mpImplLB->GetMainWindow().EnableQuickSelection(b);
