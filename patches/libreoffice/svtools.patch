@@ -59,3 +59,13 @@
  SvtScriptedTextHelper_Impl::~SvtScriptedTextHelper_Impl()
  {
  }
+--- source/control/inettbc.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/control/inettbc.cxx	2021-10-26 09:16:27.000000000 -0400
+@@ -71,6 +71,7 @@
+ using namespace ::com::sun::star::task;
+ using namespace ::com::sun::star::ucb;
+ using namespace ::com::sun::star::uno;
++using namespace ::boost::placeholders;
+ 
+ class SvtURLBox_Impl
+ {

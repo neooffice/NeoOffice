@@ -39,7 +39,7 @@
 #include <ilstbox.hxx>
 #include <controldata.hxx>
 
-using namespace boost::placeholders;
+using namespace ::boost::placeholders;
 
 static void lcl_GetSelectedEntries( ::std::set< sal_Int32 >& rSelectedPos, const OUString& rText, sal_Unicode cTokenSep, const ImplEntryList* pEntryList )
 {

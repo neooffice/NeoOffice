@@ -44,7 +44,7 @@
 
 #include <com/sun/star/datatransfer/dnd/XDropTarget.hpp>
 
-using namespace boost::placeholders;
+using namespace ::boost::placeholders;
 
 void ListBox::EnableQuickSelection( const bool& b )
 {
