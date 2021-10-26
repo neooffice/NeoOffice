@@ -10,8 +10,8 @@ At this time, NeoOffice will only build on macOS 11 Big Sur on Intel only.
 1. Make sure that you have downloaded and installed the following dependencies from http://developer.apple.com/ website:
 
    macOS 11.6.1 Big Sur:
-     Xcode v13
-     Command Line Tools for Xcode v13
+     Xcode v13.1
+     Command Line Tools for Xcode v13.1
 
 2. Download and install Oracle's Java 1.8 Development Kit (JDK) from the following URL:
 
