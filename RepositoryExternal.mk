@@ -2770,7 +2770,6 @@ $(call gb_ExternalProject_use_external_project,$(1),libtommath)
 
 endef
 
-
 ifeq ($(ENABLE_FIREBIRD_SDBC),TRUE)
 
 ifneq ($(SYSTEM_FIREBIRD),)
@@ -3104,6 +3103,7 @@ else # !SYSTEM_PYTHON
 
 $(eval $(call gb_Helper_register_packages_for_install,python,\
 	python3 \
+    $(if $(filter WNT,$(OS)),libffi) \
 ))
 
 define gb_LinkTarget__use_python_headers
@@ -3126,8 +3126,15 @@ $(call gb_LinkTarget_use_package,$(1),python3)
 endif
 
 ifeq ($(OS),WNT)
+ifeq ($(CPUNAME),X86_64)
+python_arch_subdir=amd64
+else ifeq ($(CPUNAME),AARCH64)
+python_arch_subdir=arm64
+else
+python_arch_subdir=win32
+endif
 $(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,python3)/PCbuild/$(if $(filter X86_64,$(CPUNAME)),amd64,win32)/python$(PYTHON_VERSION_MAJOR)$(PYTHON_VERSION_MINOR)$(if $(MSVC_USE_DEBUG_RUNTIME),_d).lib \
+	$(call gb_UnpackedTarball_get_dir,python3)/PCbuild/$(python_arch_subdir)/python$(PYTHON_VERSION_MAJOR)$(PYTHON_VERSION_MINOR)$(if $(MSVC_USE_DEBUG_RUNTIME),_d).lib \
 )
 else ifeq ($(OS),MACOSX)
 $(call gb_LinkTarget_add_libs,$(1),\
@@ -3136,7 +3143,7 @@ $(call gb_LinkTarget_add_libs,$(1),\
 else
 $(call gb_LinkTarget_add_libs,$(1),\
 	-L$(call gb_UnpackedTarball_get_dir,python3) \
-	-lpython$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)m \
+	-lpython$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)$(if $(ENABLE_DBGUTIL),d) \
 )
 endif
 
@@ -3929,7 +3936,7 @@ $(call gb_ExternalExecutable_add_dependencies,python,$(call gb_GeneratedPackage_
 
 else
 
-$(call gb_ExternalExecutable_set_internal,python,$(INSTROOT)/$(LIBO_BIN_FOLDER)/$(if $(filter WNT,$(OS)),python-core-$(PYTHON_VERSION)/bin/python.exe,python.bin))
+$(call gb_ExternalExecutable_set_internal,python,$(INSTROOT_FOR_BUILD)/$(LIBO_BIN_FOLDER)/$(if $(filter WNT,$(OS)),python-core-$(PYTHON_VERSION)/bin/python.exe,python.bin))
 $(call gb_ExternalExecutable_set_precommand,python,$(subst $$,$$$$,$(gb_Python_PRECOMMAND)))
 $(call gb_ExternalExecutable_add_dependencies,python,$(call gb_Package_get_target_for_build,python3))
 

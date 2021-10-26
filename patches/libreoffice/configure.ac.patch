@@ -1,5 +1,5 @@
 --- configure.ac	2015-11-25 07:55:38.000000000 -0500
-+++ configure.ac	2021-10-26 12:12:40.000000000 -0400
++++ configure.ac	2021-10-26 12:55:14.000000000 -0400
 @@ -538,6 +538,10 @@
  INSTROOTSUFFIX=
  SDKDIRNAME=sdk
@@ -342,7 +342,28 @@
          config_host.mk.in \
          Makefile.in \
          lo.xcent.in \
-@@ -5862,8 +5967,170 @@
+@@ -4558,11 +4663,19 @@
+ AC_MSG_CHECKING([whether to turn warnings to errors])
+ if test -n "$enable_werror" -a "$enable_werror" != "no"; then
+     ENABLE_WERROR="TRUE"
++    PYTHONWARNINGS="error"
+     AC_MSG_RESULT([yes])
+ else
+-    AC_MSG_RESULT([no])
++    if test -n "$LODE_HOME" -a -z "$enable_werror"; then
++        ENABLE_WERROR="TRUE"
++        PYTHONWARNINGS="error"
++        AC_MSG_RESULT([yes])
++    else
++        AC_MSG_RESULT([no])
++    fi
+ fi
+ AC_SUBST(ENABLE_WERROR)
++AC_SUBST(PYTHONWARNINGS)
+ 
+ dnl Set the ASSERT_ALWAYS_ABORT variable. (Activate --enable-assert-always-abort)
+ dnl ===================================================================
+@@ -5862,8 +5975,170 @@
      AC_LANG_POP([C++])
  fi
  
@@ -513,7 +534,7 @@
  
  dnl ===================================================================
  dnl Identify the C++ library
-@@ -7543,7 +7810,7 @@
+@@ -7543,7 +7818,7 @@
  dnl ===================================================================
  # libcmis requires curl and we can't build curl for iOS
  if test $_os != iOS; then
@@ -522,7 +543,7 @@
      ENABLE_CMIS=TRUE
  else
      ENABLE_CMIS=
-@@ -7574,7 +7841,7 @@
+@@ -7574,7 +7849,7 @@
  dnl ===================================================================
  dnl Check for system cppunit
  dnl ===================================================================
@@ -531,7 +552,7 @@
      libo_CHECK_SYSTEM_MODULE([cppunit],[CPPUNIT],[cppunit >= 1.12.0])
  fi
  
-@@ -7741,18 +8008,25 @@
+@@ -7741,18 +8016,26 @@
  AC_SUBST(XMLLINT)
  
  # =====================================================================
@@ -541,8 +562,9 @@
  # Optionally user can pass an option to configure, i. e.
  # ./configure PYTHON=/usr/bin/python
  # =====================================================================
-+if test $_os = Darwin -a "$enable_python" != no -a "$enable_python" != fully-internal -a "$enable_python" != internal; then
++if test $_os = Darwin -a "$enable_python" != no -a "$enable_python" != fully-internal -a "$enable_python" != internal -a "$enable_python" != system; then
 +    # Only allowed choices for macOS are 'no', 'internal' (default), and 'fully-internal'
++    # unless PYTHON is defined as above which allows 'system'
 +    enable_python=internal
 +fi
  if test "$build_os" != "cygwin" -a "$enable_python" != fully-internal; then
@@ -564,7 +586,20 @@
      fi
  fi
  AC_SUBST(PYTHON_FOR_BUILD)
-@@ -7777,10 +8051,6 @@
+@@ -7765,7 +8048,11 @@
+         # Python is required to build LibreOffice. In theory we could separate the build-time Python
+         # requirement from the choice whether to include Python stuff in the installer, but why
+         # bother?
+-        AC_MSG_ERROR([Python is required at build time.])
++        if test "$cross_compiling" = yes; then
++            enable_python=system
++        else
++            AC_MSG_ERROR([Python is required at build time.])
++        fi
+     fi
+     enable_python=no
+     AC_MSG_RESULT([none])
+@@ -7777,10 +8064,6 @@
      elif test $build_os = cygwin; then
          dnl When building on Windows we don't attempt to use any installed
          dnl "system"  Python.
@@ -575,7 +610,7 @@
          AC_MSG_RESULT([fully internal])
          enable_python=internal
      elif test "$cross_compiling" = yes; then
-@@ -7789,8 +8059,10 @@
+@@ -7789,8 +8072,10 @@
      else
          # Unset variables set by the above AM_PATH_PYTHON so that
          # we actually do check anew.
@@ -586,17 +621,17 @@
          if test "$PYTHON" = ":"; then
              if test -z "$PYTHON_FOR_BUILD"; then
                  AC_MSG_RESULT([fully internal])
-@@ -7813,6 +8085,9 @@
+@@ -7813,6 +8098,9 @@
      ;;
  system)
      AC_MSG_RESULT([system])
-+    if test "$_os" = Darwin; then
++    if test "$_os" = Darwin -a -z "$PYTHON"; then
 +        AC_MSG_ERROR([--enable-python=system doesn't work on macOS because the version provided is obsolete])
 +    fi
      ;;
  *)
      AC_MSG_ERROR([Incorrect --enable-python option])
-@@ -7824,17 +8099,6 @@
+@@ -7824,17 +8112,6 @@
  fi
  
  if test $enable_python = system; then
@@ -614,7 +649,7 @@
      if test -n "$PYTHON_CFLAGS" -a -n "$PYTHON_LIBS"; then
          # Fallback: Accept these in the environment, or as set above
          # for MacOSX.
-@@ -7852,6 +8116,9 @@
+@@ -7852,6 +8129,9 @@
          if test -z "$PKG_CONFIG"; then
              PYTHON_CFLAGS="-I$python_include"
              PYTHON_LIBS="-L$python_libdir -lpython$python_version $python_libs"
@@ -624,7 +659,7 @@
          elif $PKG_CONFIG --exists python-$python_version; then
              PYTHON_CFLAGS="`$PKG_CONFIG --cflags python-$python_version`"
              PYTHON_LIBS="`$PKG_CONFIG --libs python-$python_version` $python_libs"
-@@ -7859,27 +8126,10 @@
+@@ -7859,27 +8139,10 @@
              PYTHON_CFLAGS="-I$python_include"
              PYTHON_LIBS="-L$python_libdir -lpython$python_version $python_libs"
          fi
@@ -654,7 +689,7 @@
          AC_MSG_CHECKING([for python version])
          AS_IF([test -n "$PYTHON_VERSION"],
                [AC_MSG_RESULT([$PYTHON_VERSION])],
-@@ -7887,62 +8137,99 @@
+@@ -7887,62 +8150,99 @@
                 AC_MSG_ERROR([no usable python found])])
          test -n "$PYTHON_CFLAGS" && break
      fi
@@ -783,7 +818,7 @@
      ;;
  no)
      DISABLE_PYTHON=TRUE
-@@ -8179,7 +8466,9 @@
+@@ -8179,7 +8479,9 @@
  dnl ===================================================================
  dnl Check for PostgreSQL stuff
  dnl ===================================================================
@@ -793,7 +828,7 @@
      SCPDEFS="$SCPDEFS -DWITH_POSTGRESQL_SDBC"
  
      if test "$with_krb5" = "yes" -a "$enable_openssl" = "no"; then
-@@ -8189,9 +8478,9 @@
+@@ -8189,9 +8491,9 @@
          AC_MSG_ERROR([GSSAPI needs OpenSSL, but --disable-openssl was given.])
      fi
  
@@ -805,7 +840,7 @@
          SYSTEM_POSTGRESQL=TRUE
          if test "$_os" = Darwin; then
              supp_path=''
-@@ -8200,11 +8489,19 @@
+@@ -8200,11 +8502,19 @@
              done
          fi
          AC_PATH_PROG(PGCONFIG, pg_config, ,$PATH$pg_supp_path)
@@ -829,7 +864,7 @@
      else
          # if/when anything else than PostgreSQL uses Kerberos,
          # move this out of `test "x$enable_postgresql_sdbc" != "xno"'
-@@ -8212,16 +8509,18 @@
+@@ -8212,16 +8522,18 @@
          WITH_GSSAPI=
          case "$_os" in
          Darwin)
@@ -851,7 +886,7 @@
                  KRB5_LIBS="$KRB5_LIBS $LIBS"
                  LIBS=$save_LIBS
              fi
-@@ -8286,17 +8585,21 @@
+@@ -8286,17 +8598,21 @@
  
          if test -n "$with_libpq_path"; then
              SYSTEM_POSTGRESQL=TRUE
@@ -875,7 +910,7 @@
      if test "${SYSTEM_POSTGRESQL}" = "TRUE"; then
          AC_MSG_NOTICE([checking system PostgreSQL prerequisites])
          save_CFLAGS=$CFLAGS
-@@ -8312,6 +8615,8 @@
+@@ -8312,6 +8628,8 @@
          LIBS=$save_LIBS
      fi
      BUILD_POSTGRESQL_SDBC=TRUE
@@ -884,7 +919,7 @@
  fi
  AC_SUBST(WITH_KRB5)
  AC_SUBST(WITH_GSSAPI)
-@@ -8325,8 +8630,8 @@
+@@ -8325,8 +8643,8 @@
  dnl ===================================================================
  dnl Check for Firebird stuff
  dnl ===================================================================
@@ -895,7 +930,7 @@
      SCPDEFS="$SCPDEFS -DWITH_FIREBIRD_SDBC"
  
      dnl ===================================================================
-@@ -8339,51 +8644,59 @@
+@@ -8339,51 +8657,57 @@
          AC_PATH_PROG(FIREBIRDCONFIG, [fb_config])
          if test -z "$FIREBIRDCONFIG"; then
              AC_MSG_NOTICE([No fb_config -- using pkg-config])
@@ -918,16 +953,17 @@
          AC_MSG_CHECKING([Firebird version])
          if test -n "${FIREBIRD_VERSION}"; then
              FIREBIRD_MAJOR=`echo $FIREBIRD_VERSION | cut -d"." -f1`
-             FIREBIRD_MINOR=`echo $FIREBIRD_VERSION | cut -d"." -f2`
+-            FIREBIRD_MINOR=`echo $FIREBIRD_VERSION | cut -d"." -f2`
 -            if test "$FIREBIRD_MAJOR" -eq "2" -a "$FIREBIRD_MINOR" -eq "5"; then
-+            if test "$FIREBIRD_MAJOR" -eq "3" -a "$FIREBIRD_MINOR" -eq "0"; then
++            if test "$FIREBIRD_MAJOR" -ge "3"; then
                  AC_MSG_RESULT([OK])
              else
 -                AC_MSG_ERROR([Ensure firebird 2.5.x is installed])
-+                AC_MSG_ERROR([Ensure firebird 3.0.x is installed])
++                AC_MSG_ERROR([Ensure firebird >= 3 is installed])
              fi
          else
-             __save_CFLAGS="${CFLAGS}"
+-            __save_CFLAGS="${CFLAGS}"
++            save_CFLAGS="${CFLAGS}"
              CFLAGS="${CFLAGS} ${FIREBIRD_CFLAGS}"
              AC_COMPILE_IFELSE([AC_LANG_SOURCE([[#include <ibase.h>
 -#if defined(FB_API_VER) && FB_API_VER == 25
@@ -936,27 +972,29 @@
  #else
  #error "Wrong Firebird API version"
 -#endif]])],AC_MSG_RESULT([OK]),AC_MSG_ERROR([Ensure firebird 2.5.x is installed]))
+-            CFLAGS="${__save_CFLAGS}"
 +#endif]])],AC_MSG_RESULT([OK]),AC_MSG_ERROR([Ensure firebird 3.0.x is installed]))
-             CFLAGS="${__save_CFLAGS}"
++            CFLAGS="$save_CFLAGS"
          fi
 -        ENABLE_FIREBIRD_SDBC="TRUE"
+-    elif test "$enable_database_connectivity" != yes; then
 +        ENABLE_FIREBIRD_SDBC=TRUE
 +        AC_DEFINE([ENABLE_FIREBIRD_SDBC],1)
-     elif test "$enable_database_connectivity" != yes; then
++    elif test "$enable_database_connectivity" = no; then
          AC_MSG_RESULT([none])
      elif test "$cross_compiling" = "yes"; then
          AC_MSG_RESULT([none])
      else
 -        dnl We need libatomic-ops for any non X86/X64 system
 +        dnl Embedded Firebird has version 3.0
-+        AC_DEFINE(HAVE_FIREBIRD_30, 1)
 +        dnl We need libatomic_ops for any non X86/X64 system
          if test "${CPUNAME}" != INTEL -a "${CPUNAME}" != X86_64; then
              dnl ===================================================================
 -            dnl Check for system libatomic-ops
 +            dnl Check for system libatomic_ops
              dnl ===================================================================
-             libo_CHECK_SYSTEM_MODULE([libatomic_ops],[ATOMIC_OPS],[atomic_ops >= 0.7.2])
+-            libo_CHECK_SYSTEM_MODULE([libatomic_ops],[ATOMIC_OPS],[atomic_ops >= 0.7.2])
++            libo_CHECK_SYSTEM_MODULE([libatomic_ops],[LIBATOMIC_OPS],[atomic_ops >= 0.7.2])
              if test "$with_system_libatomic_ops" = "yes"; then
                  SYSTEM_LIBATOMIC_OPS=TRUE
                  AC_CHECK_HEADERS(atomic_ops.h, [],
@@ -965,7 +1003,7 @@
              else
                  SYSTEM_LIBATOMIC_OPS=
                  LIBATOMIC_OPS_CFLAGS="-I${WORKDIR}/UnpackedTarball/libatomic_ops/include"
-@@ -8394,11 +8707,26 @@
+@@ -8394,11 +8718,26 @@
  
          AC_MSG_RESULT([internal])
          SYSTEM_FIREBIRD=
@@ -979,7 +1017,7 @@
 +            dnl check for tommath presence
 +            save_LIBS=$LIBS
 +            AC_CHECK_HEADER(tommath.h,,AC_MSG_ERROR(Include file for tommath not found - please install development tommath package))
-+            AC_CHECK_LIB(tommath, mp_init, TOMMATH_LIBS=-ltommath, AC_MSG_ERROR(Library tommath not found - please install development tommath package))
++            AC_CHECK_LIB(tommath, mp_init, LIBTOMMATH_LIBS=-ltommath, AC_MSG_ERROR(Library tommath not found - please install development tommath package))
 +            LIBS=$save_LIBS
 +        else
 +            SYSTEM_LIBTOMMATH=
@@ -995,18 +1033,19 @@
      fi
  fi
  AC_SUBST(ENABLE_FIREBIRD_SDBC)
-@@ -8408,8 +8736,8 @@
+@@ -8408,8 +8747,9 @@
  AC_SUBST(SYSTEM_FIREBIRD)
  AC_SUBST(FIREBIRD_CFLAGS)
  AC_SUBST(FIREBIRD_LIBS)
 -dnl AC_SUBST([TOMMATH_CFLAGS])
 -dnl AC_SUBST([TOMMATH_LIBS])
-+AC_SUBST([TOMMATH_CFLAGS])
-+AC_SUBST([TOMMATH_LIBS])
++AC_SUBST(SYSTEM_LIBTOMMATH)
++AC_SUBST(LIBTOMMATH_CFLAGS)
++AC_SUBST(LIBTOMMATH_LIBS)
  
  dnl ===================================================================
  dnl Check for system curl
-@@ -8484,15 +8812,11 @@
+@@ -8484,15 +8824,11 @@
  if test "$with_system_boost" = "yes"; then
      AC_MSG_RESULT([external])
      SYSTEM_BOOST=TRUE
@@ -1025,7 +1064,7 @@
      AC_LANG_PUSH([C++])
      save_CXXFLAGS=$CXXFLAGS
      CXXFLAGS="$CXXFLAGS $BOOST_CPPFLAGS $CXXFLAGS_CXX11"
-@@ -8500,28 +8824,21 @@
+@@ -8500,28 +8836,21 @@
         [AC_MSG_ERROR(boost/shared_ptr.hpp not found. install boost)], [])
      AC_CHECK_HEADER(boost/spirit/include/classic_core.hpp, [],
         [AC_MSG_ERROR(boost/spirit/include/classic_core.hpp not found. install boost >= 1.36)], [])
@@ -1063,7 +1102,7 @@
  fi
  AC_SUBST(SYSTEM_BOOST)
  
-@@ -8648,6 +8965,19 @@
+@@ -8648,6 +8977,19 @@
  AC_SUBST(MSVC80_DLL_PATH)
  
  dnl ===================================================================
@@ -1083,7 +1122,7 @@
  dnl Check for TLS/SSL and cryptographic implementation to use
  dnl ===================================================================
  AC_MSG_CHECKING([which TLS/SSL and cryptographic implementation to use])
-@@ -8656,53 +8986,42 @@
+@@ -8656,53 +8998,42 @@
      openssl)
          AC_DEFINE(USE_TLS_OPENSSL)
          TLS=OPENSSL
@@ -1147,7 +1186,7 @@
  dnl Check for system mozilla headers
  dnl ===================================================================
  HAVE_NON_CONST_NPP_GETMIMEDESCRIPTION=
-@@ -9246,12 +9565,8 @@
+@@ -9246,12 +9577,8 @@
  dnl raptor2: need at least 2.0.7 for CVE-2012-0037
  libo_CHECK_SYSTEM_MODULE([redland],[REDLAND],[redland >= 1.0.8 raptor2 >= 2.0.7])
  if test "$with_system_redland" = "yes"; then
@@ -1160,7 +1199,7 @@
  else
      RAPTOR_MAJOR="0"
      RASQAL_MAJOR="3"
-@@ -11843,7 +12158,7 @@
+@@ -11843,7 +12170,7 @@
  dnl Test whether to build libpng or rely on the system version
  dnl ===================================================================
  
@@ -1169,7 +1208,7 @@
  
  dnl ===================================================================
  dnl Check for runtime JVM search path
-@@ -12819,6 +13134,7 @@
+@@ -12819,6 +13146,7 @@
                   ios/lo.xcconfig])
  AC_CONFIG_HEADERS([config_host/config_buildid.h])
  AC_CONFIG_HEADERS([config_host/config_clang.h])
