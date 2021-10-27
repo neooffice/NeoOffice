@@ -47,7 +47,16 @@
 +
  # vim: set noet sw=4 ts=4:
 --- Module_external.mk	2015-11-25 07:55:38.000000000 -0500
-+++ Module_external.mk	2020-12-18 15:40:25.000000000 -0500
++++ Module_external.mk	2021-10-27 08:43:49.000000000 -0400
+@@ -19,7 +19,7 @@
+ 
+ $(eval $(call gb_Module_add_moduledirs,external,\
+ 	accessories \
+-	libxmlsec \
++	xmlsec \
+ 	$(call gb_Helper_optional,ABW,libabw) \
+ 	$(call gb_Helper_optional,APACHE_COMMONS,apache-commons) \
+ 	$(call gb_Helper_optional,APR,apr) \
 @@ -64,6 +64,7 @@
  	$(call gb_Helper_optional,LIBXML2,libxml2) \
  	$(call gb_Helper_optional,LIBXSLT,libxslt) \
@@ -340,3 +349,14 @@
 + 
 + #include <boost/bind/bind.hpp>
 + #include <boost/config/pragma_message.hpp>
+--- xmlsec/UnpackedTarball_xmlsec.mk	2021-10-05 20:34:15.000000000 -0400
++++ xmlsec/UnpackedTarball_xmlsec.mk	2021-10-27 09:13:53.000000000 -0400
+@@ -11,7 +11,7 @@
+ 
+ $(eval $(call gb_UnpackedTarball_UnpackedTarball,xmlsec))
+ 
+-$(eval $(call gb_UnpackedTarball_set_tarball,xmlsec,$(XMLSEC_TARBALL),,xmlsec))
++$(eval $(call gb_UnpackedTarball_set_tarball,xmlsec,$(LIBXMLSEC_TARBALL),,xmlsec))
+ 
+ $(eval $(call gb_UnpackedTarball_update_autoconf_configs,xmlsec))
+ 
