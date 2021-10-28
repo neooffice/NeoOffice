@@ -54,8 +54,8 @@
      }
  
 --- source/ui/remotecontrol/BluetoothServer.cxx	2015-11-25 07:55:38.000000000 -0500
-+++ source/ui/remotecontrol/BluetoothServer.cxx	2020-12-21 10:55:07.000000000 -0500
-@@ -53,6 +53,10 @@
++++ source/ui/remotecontrol/BluetoothServer.cxx	2021-10-28 19:01:40.000000000 -0400
+@@ -53,6 +53,11 @@
    #include <postmac.h>
    #import "OSXBluetooth.h"
    #include "OSXBluetoothWrapper.hxx"
@@ -63,10 +63,11 @@
 +  #include <dlfcn.h>
 +
 +  typedef IOReturn IOBluetoothAddServiceDict_Type( CFDictionaryRef aServiceDict, IOBluetoothSDPServiceRecordRef *pOutServiceRecord );
++  typedef IOBluetoothUserNotificationRef IOBluetoothRegisterForFilteredRFCOMMChannelOpenNotifications_Type( IOBluetoothUserNotificationCallback aCallback, void *pRefCon, BluetoothRFCOMMChannelID aChannelID, IOBluetoothUserNotificationChannelDirection aDirection );
  #endif
  
  #ifdef __MINGW32__
-@@ -1491,7 +1495,15 @@
+@@ -1491,7 +1496,15 @@
  
      // Create service
      IOBluetoothSDPServiceRecordRef serviceRecordRef;
@@ -82,6 +83,34 @@
 +    }
  
      SAL_INFO("sdremote.bluetooth", "IOBluetoothAddServiceDict returned " << rc);
+ 
+@@ -1507,12 +1520,21 @@
+         [serviceRecord getServiceRecordHandle: &serviceRecordHandle];
+ 
+         // Register callback for incoming connections
+-        IOBluetoothUserNotificationRef callbackRef =
+-            IOBluetoothRegisterForFilteredRFCOMMChannelOpenNotifications(
+-                incomingCallback,
+-                this,
+-                channelID,
+-                kIOBluetoothUserNotificationChannelDirectionIncoming);
++        IOBluetoothUserNotificationRef callbackRef = NULL;
++        void *pLib = dlopen(NULL, RTLD_LAZY | RTLD_LOCAL);
++        if (pLib)
++        {
++            IOBluetoothRegisterForFilteredRFCOMMChannelOpenNotifications_Type *pIOBluetoothRegisterForFilteredRFCOMMChannelOpenNotifications = (IOBluetoothRegisterForFilteredRFCOMMChannelOpenNotifications_Type *)dlsym(pLib, "IOBluetoothRegisterForFilteredRFCOMMChannelOpenNotifications");
++            if (pIOBluetoothRegisterForFilteredRFCOMMChannelOpenNotifications)
++            {
++                pIOBluetoothRegisterForFilteredRFCOMMChannelOpenNotifications(
++                    incomingCallback,
++                    this,
++                    channelID,
++                    kIOBluetoothUserNotificationChannelDirectionIncoming);
++            }
++            dlclose(pLib);
++        }
+ 
+         (void) callbackRef;
  
 --- source/ui/slidesorter/inc/view/SlsLayouter.hxx	2015-11-25 07:55:38.000000000 -0500
 +++ source/ui/slidesorter/inc/view/SlsLayouter.hxx	2021-05-11 13:07:14.000000000 -0400
