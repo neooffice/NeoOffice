@@ -1,0 +1,116 @@
+--- ./inc/xmlsecurity/xmlsec-wrapper.h	2015-11-25 07:55:38.000000000 -0500
++++ ./inc/xmlsecurity/xmlsec-wrapper.h	2021-10-29 10:01:26.000000000 -0400
+@@ -25,7 +25,7 @@
+ #include <sal/types.h>
+ 
+ // Cf. xmlsec's configure.in:
+-#if SAL_TYPES_SIZEOFPOINTER != 4
++#if SAL_TYPES_SIZEOFPOINTER != 4 && !defined SYSTEM_XMLSEC
+ #define XMLSEC_NO_SIZE_T
+ #endif
+ 
+@@ -40,6 +40,9 @@
+ #include "xmlsec/xmlenc.h"
+ #include "xmlsec/xmlsec.h"
+ #include "xmlsec/xmltree.h"
++#ifdef XMLSEC_CRYPTO_NSS
++#include "xmlsec/nss/pkikeys.h"
++#endif
+ 
+ #endif
+ 
+--- ./source/xmlsec/nss/securityenvironment_nssimpl.cxx	2015-11-25 07:55:38.000000000 -0500
++++ ./source/xmlsec/nss/securityenvironment_nssimpl.cxx	2021-10-29 09:53:36.000000000 -0400
+@@ -591,6 +591,9 @@
+ }
+ 
+ Sequence< Reference < XCertificate > > SecurityEnvironment_NssImpl :: buildCertificatePath( const Reference< XCertificate >& begin ) throw( SecurityException , RuntimeException, std::exception ) {
++    // Remember the signing certificate.
++    m_xSigningCertificate = begin;
++
+     const X509Certificate_NssImpl* xcert ;
+     const CERTCertificate* cert ;
+     CERTCertList* certChain ;
+@@ -1011,19 +1014,8 @@
+     return xcert ;
+ }
+ 
+-
+-/* Native methods */
+ xmlSecKeysMngrPtr SecurityEnvironment_NssImpl::createKeysManager() throw( Exception, RuntimeException ) {
+ 
+-    unsigned int i ;
+-    CERTCertDBHandle* handler = NULL ;
+-    PK11SymKey* symKey = NULL ;
+-    SECKEYPublicKey* pubKey = NULL ;
+-    SECKEYPrivateKey* priKey = NULL ;
+-    xmlSecKeysMngrPtr pKeysMngr = NULL ;
+-
+-    handler = this->getCertDb() ;
+-
+     /*-
+      * The following lines is based on the private version of xmlSec-NSS
+      * crypto engine
+@@ -1035,36 +1027,26 @@
+     for (CIT_SLOTS islots = m_Slots.begin();islots != m_Slots.end(); islots++, count++)
+         slots[count] = *islots;
+ 
+-    pKeysMngr = xmlSecNssAppliedKeysMngrCreate(slots, cSlots, handler ) ;
+-    if( pKeysMngr == NULL )
+-        throw RuntimeException() ;
++    xmlSecKeysMngrPtr pKeysMngr = xmlSecKeysMngrCreate();
++    if (!pKeysMngr)
++        throw RuntimeException();
+ 
+-    /*-
+-     * Adopt symmetric key into keys manager
+-     */
+-    for( i = 0 ; ( symKey = this->getSymKey( i ) ) != NULL ; i ++ ) {
+-        if( xmlSecNssAppliedKeysMngrSymKeyLoad( pKeysMngr, symKey ) < 0 ) {
+-            throw RuntimeException() ;
+-        }
+-    }
++    if (xmlSecNssAppDefaultKeysMngrInit(pKeysMngr) < 0)
++        throw RuntimeException();
+ 
+-    /*-
+-     * Adopt asymmetric public key into keys manager
+-     */
+-    for( i = 0 ; ( pubKey = this->getPubKey( i ) ) != NULL ; i ++ ) {
+-        if( xmlSecNssAppliedKeysMngrPubKeyLoad( pKeysMngr, pubKey ) < 0 ) {
+-            throw RuntimeException() ;
++    // Adopt the private key of the signing certificate, if it has any.
++    if (auto pCertificate = dynamic_cast<X509Certificate_NssImpl*>(m_xSigningCertificate.get()))
++    {
++        if (auto pCERTCertificate = const_cast<CERTCertificate*>(pCertificate->getNssCert()))
++        {
++            SECKEYPrivateKey* pPrivateKey = PK11_FindPrivateKeyFromCert(pCERTCertificate->slot, pCERTCertificate, nullptr);
++            xmlSecKeyDataPtr pKeyData = xmlSecNssPKIAdoptKey(pPrivateKey, nullptr);
++            xmlSecKeyPtr pKey = xmlSecKeyCreate();
++            xmlSecKeySetValue(pKey, pKeyData);
++            xmlSecNssAppDefaultKeysMngrAdoptKey(pKeysMngr, pKey);
+         }
+     }
+ 
+-    /*-
+-     * Adopt asymmetric private key into keys manager
+-     */
+-    for( i = 0 ; ( priKey = this->getPriKey( i ) ) != NULL ; i ++ ) {
+-        if( xmlSecNssAppliedKeysMngrPriKeyLoad( pKeysMngr, priKey ) < 0 ) {
+-            throw RuntimeException() ;
+-        }
+-    }
+     return pKeysMngr ;
+ }
+ void SecurityEnvironment_NssImpl::destroyKeysManager(xmlSecKeysMngrPtr pKeysMngr) throw( Exception, RuntimeException ) {
+--- ./source/xmlsec/nss/securityenvironment_nssimpl.hxx	2015-11-25 07:55:38.000000000 -0500
++++ ./source/xmlsec/nss/securityenvironment_nssimpl.hxx	2021-10-29 09:55:02.000000000 -0400
+@@ -54,6 +54,8 @@
+ 
+     std::list< PK11SlotInfo* > m_Slots;
+     typedef std::list< PK11SlotInfo* >::const_iterator CIT_SLOTS;
++    /// The last used certificate which has the private key for signing.
++    css::uno::Reference<css::security::XCertificate> m_xSigningCertificate;
+ 
+     osl::Mutex m_mutex;
+ 
