@@ -285,3 +285,18 @@
  void ListBox::EnableQuickSelection( const bool& b )
  {
      mpImplLB->GetMainWindow().EnableQuickSelection(b);
+--- osx/saldata.cxx	2015-11-25 07:55:38.000000000 -0500
++++ osx/saldata.cxx	2021-10-29 14:01:26.000000000 -0400
+@@ -74,8 +74,10 @@
+         pPool = reinterpret_cast<NSAutoreleasePool*>( osl_getThreadKeyData( s_aAutoReleaseKey ) );
+         if( pPool )
+         {
+-            osl_setThreadKeyData( s_aAutoReleaseKey, NULL );
+-            [pPool release];
++            // Avoid double release of pool by only releasing when setting the
++            // thread key data fails
++            if ( !osl_setThreadKeyData( s_aAutoReleaseKey, NULL ) )
++                [pPool release];
+         }
+ 
+         osl_destroyThreadKey( s_aAutoReleaseKey );
