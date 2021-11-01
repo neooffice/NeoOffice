@@ -340,3 +340,20 @@
 + 
 + #include <boost/bind/bind.hpp>
 + #include <boost/config/pragma_message.hpp>
+--- libxmlsec/xmlsec1-configure.patch	2015-11-25 07:55:38.000000000 -0500
++++ libxmlsec/xmlsec1-configure.patch	2021-10-31 20:10:11.000000000 -0400
+@@ -28,6 +28,14 @@
+  pkgconfig_DATA = xmlsec1.pc @XMLSEC_CRYPTO_PC_FILES_LIST@
+ --- misc/xmlsec1-1.2.14/configure.in	2009-06-25 22:53:18.000000000 +0200
+ +++ misc/build/xmlsec1-1.2.14/configure.in	2009-10-01 10:28:50.990755126 +0200
++@@ -29,6 +29,7 @@
++ dnl Check the environment
++ dnl
++ AC_PROG_CC
+++AC_PROG_CPP
++ AC_PROG_INSTALL
++ AC_HEADER_STDC
++ 
+ @@ -192,8 +192,8 @@
+  dnl ==========================================================================
+  LIBXML_MIN_VERSION="2.7.4"
