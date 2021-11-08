@@ -514,7 +514,21 @@ void Window::ImplCallFocusChangeActivate( vcl::Window* pNewOverlapWindow,
     bool bCallActivate = true;
     bool bCallDeactivate = true;
 
+#ifndef NO_LIBO_DISPOSED_WINDOW_FIX
+    if (!pOldOverlapWindow)
+    {
+        return;
+    }
+#endif	// !NO_LIBO_DISPOSED_WINDOW_FIX
+
     pOldRealWindow = pOldOverlapWindow->ImplGetWindow();
+#ifndef NO_LIBO_DISPOSED_WINDOW_FIX
+    if (!pNewOverlapWindow)
+    {
+        return;
+    }
+#endif	// !NO_LIBO_DISPOSED_WINDOW_FIX
+
     pNewRealWindow = pNewOverlapWindow->ImplGetWindow();
     if ( (pOldRealWindow->GetType() != WINDOW_FLOATINGWINDOW) ||
          pOldRealWindow->GetActivateMode() )
