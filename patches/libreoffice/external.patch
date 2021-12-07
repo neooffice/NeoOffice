@@ -199,3 +199,13 @@
 + #  endif
 + #endif /* not defined XML_STATIC */
 + 
+--- redland/UnpackedTarball_raptor.mk	2015-11-25 07:55:38.000000000 -0500
++++ redland/UnpackedTarball_raptor.mk	2021-12-07 12:35:00.000000000 -0500
+@@ -20,6 +20,7 @@
+ 	$(if $(filter WNTGCC,$(OS)$(COM)),external/redland/raptor/raptor-mingw.patch.1) \
+ 	$(if $(filter-out WNT,$(OS)),external/redland/raptor/raptor-bundled-soname.patch.1) \
+ 	$(if $(filter ANDROID,$(OS)),external/redland/raptor/raptor-android.patch.1) \
++	external/redland/raptor/0001-CVE-2020-25713-raptor2-malformed-input-file-can-lead.patch.1 \
+ ))
+ 
+ # vim: set noet sw=4 ts=4:
