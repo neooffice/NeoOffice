@@ -993,31 +993,58 @@ vcl::Window* Window::ImplGetWindow()
 
 ImplFrameData* Window::ImplGetFrameData()
 {
+#ifdef NO_LIBO_DISPOSED_WINDOW_FIX
     return mpWindowImpl->mpFrameData;
+#else	// NO_LIBO_DISPOSED_WINDOW_FIX
+    return mpWindowImpl ? mpWindowImpl->mpFrameData : NULL;
+#endif	// NO_LIBO_DISPOSED_WINDOW_FIX
 }
 
 SalFrame* Window::ImplGetFrame() const
 {
+#ifdef NO_LIBO_DISPOSED_WINDOW_FIX
     return mpWindowImpl->mpFrame;
+#else	// NO_LIBO_DISPOSED_WINDOW_FIX
+    return mpWindowImpl ? mpWindowImpl->mpFrame : NULL;
+#endif	// NO_LIBO_DISPOSED_WINDOW_FIX
 }
 
 vcl::Window* Window::ImplGetParent() const
 {
+#ifdef NO_LIBO_DISPOSED_WINDOW_FIX
     return mpWindowImpl->mpParent;
+#else	// NO_LIBO_DISPOSED_WINDOW_FIX
+    return mpWindowImpl ? mpWindowImpl->mpParent : NULL;
+#endif	// NO_LIBO_DISPOSED_WINDOW_FIX
 }
 
 vcl::Window* Window::ImplGetClientWindow() const
 {
+#ifdef NO_LIBO_DISPOSED_WINDOW_FIX
     return mpWindowImpl->mpClientWindow;
+#else	// NO_LIBO_DISPOSED_WINDOW_FIX
+    return mpWindowImpl ? mpWindowImpl->mpClientWindow : NULL;
+#endif	// NO_LIBO_DISPOSED_WINDOW_FIX
 }
 
 vcl::Window* Window::ImplGetBorderWindow() const
 {
+#ifdef NO_LIBO_DISPOSED_WINDOW_FIX
     return mpWindowImpl->mpBorderWindow;
+#else	// NO_LIBO_DISPOSED_WINDOW_FIX
+    return mpWindowImpl ? mpWindowImpl->mpBorderWindow : NULL;
+#endif	// NO_LIBO_DISPOSED_WINDOW_FIX
 }
 
 vcl::Window* Window::ImplGetFirstOverlapWindow()
 {
+#ifndef NO_LIBO_DISPOSED_WINDOW_FIX
+    if (!mpWindowImpl)
+    {
+        return nullptr;
+    }
+#endif	// !NO_LIBO_DISPOSED_WINDOW_FIX
+
     if ( mpWindowImpl->mbOverlapWin )
         return this;
     else
@@ -1265,7 +1292,11 @@ bool Window::IsReallyVisible() const
 
 bool Window::IsReallyShown() const
 {
+#ifdef NO_LIBO_POST_DISPOSE_WINDOW_FIX
     return mpWindowImpl->mbReallyShown;
+#else	// NO_LIBO_POST_DISPOSE_WINDOW_FIX
+    return mpWindowImpl ? mpWindowImpl->mbReallyShown : false;
+#endif	// NO_LIBO_POST_DISPOSE_WINDOW_FIX
 }
 
 bool Window::IsInInitShow() const
@@ -1275,12 +1306,20 @@ bool Window::IsInInitShow() const
 
 bool Window::IsEnabled() const
 {
+#ifdef NO_LIBO_POST_DISPOSE_WINDOW_FIX
     return !mpWindowImpl->mbDisabled;
+#else	// NO_LIBO_POST_DISPOSE_WINDOW_FIX
+    return mpWindowImpl ? !mpWindowImpl->mbDisabled : false;
+#endif	// NO_LIBO_POST_DISPOSE_WINDOW_FIX
 }
 
 bool Window::IsInputEnabled() const
 {
+#ifdef NO_LIBO_POST_DISPOSE_WINDOW_FIX
     return !mpWindowImpl->mbInputDisabled;
+#else	// NO_LIBO_POST_DISPOSE_WINDOW_FIX
+    return mpWindowImpl ? !mpWindowImpl->mbInputDisabled : false;
+#endif	// NO_LIBO_POST_DISPOSE_WINDOW_FIX
 }
 
 bool Window::IsAlwaysEnableInput() const
