@@ -33,12 +33,10 @@ Zwei Ingenieure erstellten NeoOffice im Jahr 2003, als sie OpenOffice auf OS X z
 What's New in this Version:
 Bevor Sie NeoOffice kaufen, klicken Sie bitte auf den „Support” Link und lesen die Installationshinweise.
 
-This version of NeoOffice fixes the following bugs:
-• When running on macOS Catalina or Big Sur, clicking on the menubar would sometimes cause NeoOffice to crash in Apple's native menubar code
-• When applying a table theme to a table in an Impress document, NeoOffice would crash due to RedHat crashing bug #1255200
-• NeoOffice would ignore any Thunderbird or Firefox certificate paths set in the Options dialog or via the MOZILLA_CERTIFICATE_FOLDER environment variable
+This version of NeoOffice fixes the following bug:
+• After exiting a presentation, the macOS menubar and Dock would remain hidden in certain cases when there are document windows in full screen mode
 
-This version also includes code backported from the OpenOffice 4.1.11 code that fixes several document signing security vulnerabilities.
+This version also includes a fix for security vulnerability CVE-2021-43527 in Mozilla Foundation's NSS cryptographic library.
 
 
 Promotional Text:
