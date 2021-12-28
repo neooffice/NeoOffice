@@ -25,46 +25,57 @@ At this time, NeoOffice will only build on macOS 11 Big Sur on Intel only.
    sudo /opt/local/bin/port install automake -x11
    sudo /opt/local/bin/port install gnutar -x11
    sudo /opt/local/bin/port install xz -x11
+   sudo /opt/local/bin/port install git-lfs -x11
 
    After running the above command, add "/opt/local/bin" to the end of your shell's PATH environment variable so that the build can all of the commands installed by /opt/local/bin/port command in the previous step.
 
-4. Installed the Perl Archive::Zip module using the following command. You may need to run this command more than once as the unit tests may fail the first time that you run it:
+4. Make sure the git LFS extension is installed:
+
+   git lfs install
+
+5. Download all LFS files from Github's LFS repository:
+
+   cd "<source folder>"
+   git lfs fetch
+   git lfs checkout
+
+6. Installed the Perl Archive::Zip module using the following command. You may need to run this command more than once as the unit tests may fail the first time that you run it:
 
    sudo cpan -i Archive::Zip
 
-5. To build the installers, obtain the following types of codesigning certificates from Apple and install the certificates in the macOS Keychain Access application:
+7. To build the installers, obtain the following types of codesigning certificates from Apple and install the certificates in the macOS Keychain Access application:
 
    3rd Party Mac Developer Application
    3rd Party Mac Developer Installer
    Developer ID Application
    Developer ID Installer
 
-6. Assign the codesigning certificates obtained in the previous step by copying the "<uncompressed source folder>/certs.neo.mk" file to "<uncompressed source folder>/certs.mk". Then, open the "<uncompressed source folder>/certs.mk" file and replace all of Planamesa Inc.'s certificate names and team ID with your certificate names team ID. Important note: each certificate name assigned in the "<uncompressed source folder>/certs.mk" file must match the certificate's "Common Name" field in the macOS Keychain Access application.
+8. Assign the codesigning certificates obtained in the previous step by copying the "<source folder>/certs.neo.mk" file to "<source folder>/certs.mk". Then, open the "<source folder>/certs.mk" file and replace all of Planamesa Inc.'s certificate names and team ID with your certificate names team ID. Important note: each certificate name assigned in the "<source folder>/certs.mk" file must match the certificate's "Common Name" field in the macOS Keychain Access application.
 
-7. Start the build by invoking the following commands:
+9. Start the build by invoking the following commands:
 
-   cd "<uncompressed source folder>"
+   cd "<source folder>"
    make
 
-   A successful build will create the following 3 "<uncompressed source folder>/install*/*.dmg" files:
+   A successful build will create the following 3 "<source folder>/install*/*.dmg" files:
 
-      "<uncompressed source folder>/install/*.dmg" - Installer for the Mac App Store version
-      "<uncompressed source folder>/install2/*.dmg" - Installer for the Viewer version
-      "<uncompressed source folder>/install3/*.dmg" - Installer for the Professional Edition version
+      "<source folder>/install/*.dmg" - Installer for the Mac App Store version
+      "<source folder>/install2/*.dmg" - Installer for the Viewer version
+      "<source folder>/install3/*.dmg" - Installer for the Professional Edition version
 
    Important note: if the build fails in the build.neo_tests make target, uncheck iCloud Drive in the System Preferences iCloud panel and reinvoke the above commands to continue the build.
 
-8. After a successful build, you can optionally build patch installers by invoking the following commands:
+10. After a successful build, you can optionally build patch installers by invoking the following commands:
 
-   cd "<uncompressed source folder>"
+   cd "<source folder>"
    make build.all_patches
 
-   A successful build will create the following 3 "<uncompressed source folder>/patch_install*/*.dmg" files:
+   A successful build will create the following 3 "<source folder>/patch_install*/*.dmg" files:
 
-      "<uncompressed source folder>/patch_install/*.dmg" - Patch installer for the Mac App Store version
-      "<uncompressed source folder>/patch_install3/*.dmg" - Patch installer for the Professional Edition version
+      "<source folder>/patch_install/*.dmg" - Patch installer for the Mac App Store version
+      "<source folder>/patch_install3/*.dmg" - Patch installer for the Professional Edition version
 
-9. You can notarize the installers using Apple's notarization service by opening the "<uncompressed source folder>/certs.mk" file that you created and setting the APPLEDEVELOPERID macro to the e-mail of your Apple Developer ID. Then, invoke the following command:
+10. You can notarize the installers using Apple's notarization service by opening the "<source folder>/certs.mk" file that you created and setting the APPLEDEVELOPERID macro to the e-mail of your Apple Developer ID. Then, invoke the following command:
 
    make build.notarize_all
 
@@ -72,7 +83,7 @@ At this time, NeoOffice will only build on macOS 11 Big Sur on Intel only.
 
    make build.notarize_all_patches
 
-10. If you notarized the installers in the previous step and Apple has sent you  an e-mail saving that your installers were successfully notarized, "staple" Apple's notarization to the installers by invoking the following command:
+11. If you notarized the installers in the previous step and Apple has sent you  an e-mail saving that your installers were successfully notarized, "staple" Apple's notarization to the installers by invoking the following command:
 
    make build.staple_all
 
