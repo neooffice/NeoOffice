@@ -1,6 +1,14 @@
 Intructions for Building NeoOffice
 ----------------------------------
 
+This git branch - master - contains unfinished code for building NeoOffice with the LibreOffice 5.4 code on macOS Mojave for Intel. No work on this git branch has been done recently so this branch may no longer build.
+
+None of the official NeoOffice releases are built from this branch. If you are looking to build the latest official NeoOffice release, switch to the NeoOffice-2017_branch git branch. If you want to build NeoOffice on macOS Big Sur for Intel, switch to the NeoOffice-2021_branch git branch.
+
+Important: In order to build NeoOffice, all of the steps below must be followed. These steps install several third party tools that are needed by NeoOffice's underlying LibreOffice code. Also, these steps will install the git LFS extension so that several very large files needed by the build can be downloaded from GitHub's LFS repository.
+
+If any third party tools are not installed or the build is run on a different version of macOS or with a different version of Xcode, the build will likely fail.
+
 
 Steps for building on 10.14 Mojave for Intel
 --------------------------------------------
@@ -26,18 +34,29 @@ At this time, NeoOffice will only build on macOS 10.14 Mojave.
    sudo /opt/local/bin/port install gnutar -x11
    sudo /opt/local/bin/port install xz -x11
    sudo /opt/local/bin/port install nasm -x11
+   sudo /opt/local/bin/port install git-lfs -x11
 
    After running the above command, add "/opt/local/bin" to the end of your shell's PATH environment variable so that the build can all of the commands installed by /opt/local/bin/port command in the previous step.
 
-4. Installed the Perl Archive::Zip module using the following command. You may need to run this command more than once as the unit tests may fail the first time that you run it:
+4. Make sure the git LFS extension is installed:
+
+   git lfs install
+
+5. Download all LFS files from Github's LFS repository:
+
+   cd "$NEO_HOME"
+   git lfs fetch
+   git lfs checkout
+
+6. Installed the Perl Archive::Zip module using the following command. You may need to run this command more than once as the unit tests may fail the first time that you run it:
 
    sudo cpan -i Archive::Zip
 
-5. Disable System Integrity Protection (SIP). SIP must be disabled as it causes exporting DYLD_* environment variables in makefiles to fail which will break the build. To disable SIP, reboot into Recovery mode, run the following command in the Terminal, and then reboot normally:
+7. Disable System Integrity Protection (SIP). SIP must be disabled as it causes exporting DYLD_* environment variables in makefiles to fail which will break the build. To disable SIP, reboot into Recovery mode, run the following command in the Terminal, and then reboot normally:
 
    csrutil disable
 
-6. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of your workspace's "neojava" directory:
+8. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of your workspace's "neojava" directory:
 
    cd $NEO_HOME
    make
