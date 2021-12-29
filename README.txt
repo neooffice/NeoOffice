@@ -3,7 +3,7 @@ Intructions for Building NeoOffice
 
 This git branch - NeoOffice-2021_branch - contains experimental code for building NeoOffice on macOS Big Sur for Intel.
 
-None of the official NeoOffice releases are built from this branch. If you are looking to build the latest official NeoOffice release, switch to the NeoOffice-2017_branch git branch.
+None of the official NeoOffice releases are built from this branch. If you want to build the latest official NeoOffice release, switch to the NeoOffice-2017_branch git branch.
 
 Important: In order to build NeoOffice, all of the steps below must be followed. These steps install several third party tools that are needed by NeoOffice's underlying LibreOffice code. Also, these steps will install the git LFS extension so that several very large files needed by the build can be downloaded from GitHub's LFS repository.
 
