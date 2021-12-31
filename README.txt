@@ -34,7 +34,6 @@ At this time, NeoOffice will only build on macOS 10.12 Sierra or macOS 10.14 Moj
 
    sudo /opt/local/bin/port install autoconf -x11
    sudo /opt/local/bin/port install automake -x11
-   sudo /opt/local/bin/port install cvs -x11
    sudo /opt/local/bin/port install gnutar -x11
    sudo /opt/local/bin/port install xz -x11
 
