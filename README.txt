@@ -30,21 +30,21 @@ At this time, NeoOffice will only build on macOS 10.14 Mojave.
 
    sudo /opt/local/bin/port install autoconf -x11
    sudo /opt/local/bin/port install automake -x11
-   sudo /opt/local/bin/port install cvs -x11
    sudo /opt/local/bin/port install gnutar -x11
    sudo /opt/local/bin/port install xz -x11
    sudo /opt/local/bin/port install nasm -x11
-   sudo /opt/local/bin/port install git-lfs -x11
 
    After running the above command, add "/opt/local/bin" to the end of your shell's PATH environment variable so that the build can all of the commands installed by /opt/local/bin/port command in the previous step.
 
-4. Make sure the git LFS extension is installed:
+4. Make sure the git LFS extension is installed by downloading git-lfs:
 
+   curl -L -O https://github.com/git-lfs/git-lfs/releases/download/v3.0.2/git-lfs-darwin-amd64-v3.0.2.zip
+   mkdir git-lfs-darwin-amd64-v3.0.2 && cd git-lfs-darwin-amd64-v3.0.2 && unzip ../git-lfs-darwin-amd64-v3.0.2.zip && sudo ./install.sh
    git lfs install
 
 5. Download all LFS files from Github's LFS repository:
 
-   cd "$NEO_HOME"
+   cd "<source folder>"
    git lfs fetch
    git lfs checkout
 
@@ -56,9 +56,9 @@ At this time, NeoOffice will only build on macOS 10.14 Mojave.
 
    csrutil disable
 
-8. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of your workspace's "neojava" directory:
+8. Start the build by invoking the following commands:
 
-   cd $NEO_HOME
+   cd "<source folder>"
    make
 
    Important note: if the build fails in the build.neo_tests make target, uncheck iCloud Drive in the System Preferences iCloud panel and reinvoke the above commands to continue the build.
