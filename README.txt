@@ -29,16 +29,17 @@ At this time, NeoOffice will only build on macOS 11 Big Sur on Intel only.
 
 3. Install the following Mac Ports packages by downloading, compiling, and installing the following packages from the http://www.macports.org/ website. Note that you will need download and install the latest MacPorts Yosemite package to install the MacPorts "port" command. The "port" command is then used to do the downloading, compiling, and installation of the following packages:
 
-   sudo /opt/local/bin/port install autoconf -x11
-   sudo /opt/local/bin/port install automake -x11
-   sudo /opt/local/bin/port install gnutar -x11
-   sudo /opt/local/bin/port install xz -x11
-   sudo /opt/local/bin/port install git-lfs -x11
+   sudo /opt/local/bin/port install autoconf -x11 +universal
+   sudo /opt/local/bin/port install automake -x11 +universal
+   sudo /opt/local/bin/port install gnutar -x11 +universal
+   sudo /opt/local/bin/port install xz -x11 +universal
 
    After running the above command, add "/opt/local/bin" to the end of your shell's PATH environment variable so that the build can all of the commands installed by /opt/local/bin/port command in the previous step.
 
-4. Make sure the git LFS extension is installed:
+4. Make sure the git LFS extension is installed by downloading git-lfs:
 
+   curl -L -O https://github.com/git-lfs/git-lfs/releases/download/v3.0.2/git-lfs-darwin-amd64-v3.0.2.zip
+   mkdir git-lfs-darwin-amd64-v3.0.2 && cd git-lfs-darwin-amd64-v3.0.2 && unzip ../git-lfs-darwin-amd64-v3.0.2.zip && sudo ./install.sh
    git lfs install
 
 5. Download all LFS files from Github's LFS repository:
