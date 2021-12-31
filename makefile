@@ -459,7 +459,7 @@ build.neo_svtools_patch: build.neo_extensions_patch build.neo_vcl_patch
 build.neo_solenv_patch: solenv build.neo_configure
 	cd "$<" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . -type d | sed "s/ /\\ /g" | grep -v /CVS$$ ) | while read i ; do mkdir -p "$$i" ; done'
 ifeq ("$(OS_TYPE)","macOS")
-	cd "$<" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . ! -type d | sed "s/ /\\ /g" | grep -v /CVS/ ) | while read i ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(LIBO_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
+	cd "$<" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . ! -type d | sed "s/ /\\ /g" | grep -v /CVS/ | grep -v /.gitignore ) | while read i ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(LIBO_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
 else
 # Use hardlinks for Windows
 	cd "$<" ; sh -e -c 'CYGWIN=winsymlinks ; export CYGWIN ; ( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ ) | while read i ; do if [ ! -f "$$i" ] ; then ln -f "$(PWD)/$(LIBO_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
@@ -469,7 +469,7 @@ endif
 build.neo_%_patch: build.neo_solenv_patch
 	cd "$(@:build.neo_%_patch=%)" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$(@:build.neo_%_patch=%)" ; find . -type d | sed "s/ /\\ /g" | grep -v /CVS$$ ) | while read i ; do mkdir -p "$$i" ; done'
 ifeq ("$(OS_TYPE)","macOS")
-	cd "$(@:build.neo_%_patch=%)" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$(@:build.neo_%_patch=%)" ; find . ! -type d | sed "s/ /\\ /g" | grep -v /CVS/ ) | while read i ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(LIBO_BUILD_HOME)/$(@:build.neo_%_patch=%)/$$i" "$$i" 2>/dev/null ; fi ; done'
+	cd "$(@:build.neo_%_patch=%)" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$(@:build.neo_%_patch=%)" ; find . ! -type d | sed "s/ /\\ /g" | grep -v /CVS/ | grep -v /.gitignore ) | while read i ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(LIBO_BUILD_HOME)/$(@:build.neo_%_patch=%)/$$i" "$$i" 2>/dev/null ; fi ; done'
 else
 # Use hardlinks for Windows
 	cd "$(@:build.neo_%_patch=%)" ; sh -e -c 'CYGWIN=winsymlinks ; export CYGWIN ; ( cd "$(PWD)/$(LIBO_BUILD_HOME)/$(@:build.neo_%_patch=%)" ; find . ! -type d | grep -v /CVS/ ) | while read i ; do if [ ! -f "$$i" ] ; then ln -f "$(PWD)/$(LIBO_BUILD_HOME)/$(@:build.neo_%_patch=%)/$$i" "$$i" 2>/dev/null ; fi ; done'
