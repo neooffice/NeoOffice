@@ -27,7 +27,7 @@ At this time, NeoOffice will only build on macOS 11 Big Sur on Intel only.
 
    Important: the build will fail if Oracle's Java 9 or later are installed so be sure to delete such versions from the /Library/Java/JavaVirtualMachines folder before starting the build.
 
-3. Install the following Mac Ports packages by downloading, compiling, and installing the following packages from the http://www.macports.org/ website. Note that you will need download and install the latest MacPorts Yosemite package to install the MacPorts "port" command. The "port" command is then used to do the downloading, compiling, and installation of the following packages:
+3. Install the following Mac Ports packages by downloading, compiling, and installing the following packages from the http://www.macports.org/ website. Note that you will need download and install the MacPorts package to install the MacPorts "port" command. The "port" command is then used to do the downloading, compiling, and installation of the following packages:
 
    sudo /opt/local/bin/port install autoconf -x11 +universal
    sudo /opt/local/bin/port install automake -x11 +universal
