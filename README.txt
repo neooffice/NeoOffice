@@ -17,7 +17,7 @@ At this time, NeoOffice will only build on macOS 11 Big Sur on Intel only.
 
 1. Make sure that you have downloaded and installed the following dependencies from http://developer.apple.com/ website:
 
-   macOS 11.6.2 Big Sur:
+   macOS 11.6.3 Big Sur:
      Xcode v13.2.1
      Command Line Tools for Xcode v13.2
 
