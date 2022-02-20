@@ -226,3 +226,14 @@
  @@ -192,8 +192,8 @@
   dnl ==========================================================================
   LIBXML_MIN_VERSION="2.7.4"
+--- expat/ExternalProject_expat.mk	2022-02-19 14:34:37.000000000 -0500
++++ expat/ExternalProject_expat.mk	2022-02-19 19:13:33.000000000 -0500
+@@ -17,7 +17,7 @@
+ 	$(call gb_Trace_StartRange,expat,EXTERNAL)
+ 	$(call gb_ExternalProject_run,configure,\
+ 		$(gb_RUN_CONFIGURE) ./configure --without-docbook \
+-			$(gb_CONFIGURE_PLATFORMS) \
++			--host=$(HOST_PLATFORM) \
+ 			$(if $(CROSS_COMPILING),$(if $(filter INTEL ARM,$(CPUNAME)),ac_cv_c_bigendian=no)) \
+ 	,,expat_configure.log)
+ 	$(call gb_Trace_EndRange,expat,EXTERNAL)
