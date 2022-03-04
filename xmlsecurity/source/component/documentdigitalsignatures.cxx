@@ -394,6 +394,13 @@ void DocumentDigitalSignatures::showCertificate(
 sal_Bool DocumentDigitalSignatures::isAuthorTrusted(
     const Reference< css::security::XCertificate >& Author ) throw (RuntimeException, std::exception)
 {
+#ifndef NO_LIBO_IS_AUTHOR_TRUSTED_FIX
+    if (!Author.is())
+    {
+        return false;
+    }
+#endif	// !NO_LIBO_IS_AUTHOR_TRUSTED_FIX
+
     bool bFound = false;
 
     Reference<security::XSerialNumberAdapter> xSerialNumberAdapter =
@@ -407,11 +414,28 @@ sal_Bool DocumentDigitalSignatures::isAuthorTrusted(
     for ( ; pAuthors != pAuthorsEnd; ++pAuthors )
     {
         SvtSecurityOptions::Certificate aAuthor = *pAuthors;
+#ifdef NO_LIBO_IS_AUTHOR_TRUSTED_FIX
         if ( ( aAuthor[0] == Author->getIssuerName() ) && ( aAuthor[1] == sSerialNum ) )
         {
             bFound = true;
             break;
         }
+#else	// NO_LIBO_IS_AUTHOR_TRUSTED_FIX
+        if (!xmlsecurity::EqualDistinguishedNames(aAuthor[0], Author->getIssuerName(), xmlsecurity::EqualMode::NOCOMPAT))
+            break;
+        if (aAuthor[1] != sSerialNum)
+            break;
+
+        XMLSignatureHelper aSignatureHelper( mxCtx );
+        if (!aSignatureHelper.Init())
+            break;
+        Reference<css::security::XCertificate> xCert = aSignatureHelper.GetSecurityEnvironment()->createCertificateFromAscii(aAuthor[2]);
+        if (xCert->getSHA1Thumbprint() == Author->getSHA1Thumbprint())
+        {
+            bFound = true;
+            break;
+        }
+#endif	// NO_LIBO_IS_AUTHOR_TRUSTED_FIX
     }
 
     return bFound;
