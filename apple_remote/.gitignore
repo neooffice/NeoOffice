@@ -1,0 +1,16 @@
+source/RemoteControlContainer.m
+source/MultiClickRemoteBehavior.m
+source/HIDRemoteControlDevice.h
+source/KeyspanFrontRowControl.m
+source/RemoteControl.m
+source/GlobalKeyboardDevice.m
+source/AppleRemote.h
+source/MultiClickRemoteBehavior.h
+source/RemoteControlContainer.h
+source/KeyspanFrontRowControl.h
+source/HIDRemoteControlDevice.m
+source/GlobalKeyboardDevice.h
+source/AppleRemote.m
+Library_AppleRemote.mk
+README
+Module_apple_remote.mk
