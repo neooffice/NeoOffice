@@ -1,0 +1,11 @@
+Library_i18nutil.mk
+source/utility/casefolding.cxx
+source/utility/unicode.cxx
+source/utility/widthfolding_data.h
+source/utility/widthfolding.cxx
+source/utility/casefolding_data.h
+source/utility/oneToOneMapping.cxx
+source/utility/scripttypedetector.cxx
+source/utility/unicode_data.h
+README
+Module_i18nutil.mk
