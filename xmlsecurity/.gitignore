@@ -10,7 +10,6 @@ inc/xmlsecurity/xmlsec-wrapper.h
 inc/xmlsecurity/macrosecurity.hxx
 inc/xmlsecurity/documentsignaturehelper.hxx
 inc/xmlsecurity/sigstruct.hxx
-inc/xmlsecurity/biginteger.hxx
 inc/xmlsecurity/certvalidity.hxx
 inc/xmlsecurity/certificateviewer.hxx
 inc/xmlsecurity/global.hrc
@@ -20,7 +19,6 @@ util/xmlsecurity.component
 util/xsec_fw.component
 util/xsec_xmlsec.windows.component
 util/xsec_xmlsec.component
-Library_xmlsecurity.mk
 workben/makefile.mk
 workben/signaturetest.cxx
 Library_xsec_fw.mk
@@ -72,7 +70,6 @@ source/xmlsec/nss/xmlencryption_nssimpl.cxx
 source/xmlsec/nss/securityenvironment_nssimpl.hxx
 source/xmlsec/nss/ciphercontext.hxx
 source/xmlsec/nss/nssrenam.h
-source/xmlsec/nss/x509certificate_nssimpl.cxx
 source/xmlsec/nss/xmlsignature_nssimpl.hxx
 source/xmlsec/nss/xmlencryption_nssimpl.hxx
 source/xmlsec/nss/securityenvironment_nssimpl.cxx
@@ -102,7 +99,6 @@ source/xmlsec/mscrypt/securityenvironment_mscryptimpl.hxx
 source/xmlsec/mscrypt/xmlencryption_mscryptimpl.hxx
 source/xmlsec/mscrypt/xsec_mscrypt.cxx
 source/xmlsec/mscrypt/seinitializer_mscryptimpl.hxx
-source/xmlsec/mscrypt/x509certificate_mscryptimpl.cxx
 source/xmlsec/mscrypt/xmlsignature_mscryptimpl.hxx
 source/xmlsec/mscrypt/sanextension_mscryptimpl.hxx
 source/xmlsec/xmlelementwrapper_xmlsecimpl.cxx
