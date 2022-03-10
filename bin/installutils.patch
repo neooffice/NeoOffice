@@ -58,7 +58,7 @@ check_installation() {
 			return 1;
 		fi
 	done
-	echo "$file_types" | sed "s#^$target_file_type_base ##" | while read i ; do
+	for i in `echo "$file_types" | sed "s#^$target_file_type_base ##"` ; do
 		file_type_found=0;
 		for j in $target_file_types ; do
 			if [ "$i" == "$j" ] ; then
