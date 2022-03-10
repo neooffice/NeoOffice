@@ -71,15 +71,20 @@ CODESIGN_EXTRA_OPTIONS:=--timestamp
 ifndef NO_HARDENED_RUNTIME
 CODESIGN_EXTRA_OPTIONS+=--options runtime
 endif
-ULONGNAME=Intel
 TARGET_MACHINE:=$(shell uname -m)
-ifneq ($(TARGET_MACHINE),arm64)
+ifeq ($(TARGET_MACHINE),arm64)
+ULONGNAME=Silicon
+else
+ULONGNAME=Intel
 ifdef CROSS_COMPILE_ARM64
 CONFIGURE_EXTRA_OPTIONS:=--host=arm64-apple-darwin --build=$(TARGET_MACHINE)-apple-darwin --enable-python=no --with-galleries=no --with-build-platform-configure-options='--disable-odk --without-fonts --enable-python=no'
 CROSS_COMPILE=true;
-ULONGNAME=Silicon
 TARGET_MACHINE=arm64
+ULONGNAME=Silicon
 endif
+endif
+ifdef PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS
+ULONGNAME=Universal
 endif
 TARGET_FILE_TYPE=Mach-O 64-bit executable $(TARGET_MACHINE)
 SHARED_LIBRARY_FILE_TYPE=Mach-O 64-bit dynamically linked shared library $(TARGET_MACHINE)
