@@ -59,6 +59,7 @@ SHELL:=/bin/bash
 UNAME:=$(shell uname -p)
 ifeq ("$(shell uname -s)","Darwin")
 OS_TYPE=macOS
+OS_AVAILABLE_ARCHS=x86_64 arm64
 OS_MAJOR_VERSION:=$(shell /usr/bin/sw_vers -productVersion | awk -F. '{ print $$1 }')
 OS_MINOR_VERSION:=$(shell /usr/bin/sw_vers -productVersion | awk -F. '{ print $$2 }')
 OS_VERSION:=$(OS_MAJOR_VERSION).$(OS_MINOR_VERSION)
@@ -695,6 +696,10 @@ endif
 # Check if any binaries are linked to local libraries
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `grep -e "$(TARGET_FILE_TYPE)" -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "$(BUNDLE_FILE_TYPE)" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" | sed "s#:.*\\$$##"` ; do if otool -L "$$i" | grep -q "\/local\/" ; then otool -L "$$i" ; exit 1 ; fi ; done'
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `grep -e "$(TARGET_FILE_TYPE)" -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "$(BUNDLE_FILE_TYPE)" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" | sed "s#:.*\\$$##"` ; do strip -S -x "$$i" ; done'
+ifdef PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS
+	@sh -e -c 'if [ ! -d "$(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS)/$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app" ] ; then echo "Cannot build universal installer. $(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS) does not exist or does not contain an installer build." ; exit 1 ; fi'
+	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `grep -e "$(TARGET_FILE_TYPE)" -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "$(BUNDLE_FILE_TYPE)" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" | sed "s#:.*\\$$##"` ; do lipo "$$i" "$(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS)/$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app/$$i" -create -output "out" ; lipo "out" -verify_arch $(OS_AVAILABLE_ARCHS) ; mv "out" "$$i" ; done'
+endif
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Library/Spotlight"
 	cd "$(INSTALL_HOME)/package/Contents/Library/Spotlight" ; tar zxvf "$(PWD)/$(NEOOFFICE_PATCHES_HOME)/neolight.mdimporter.tgz"
 # Make Spotlight plugin ID unique for each build. Fix bug 2711 by updating
@@ -719,7 +724,7 @@ ifdef PRODUCT_BUILD3
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "Contents/Frameworks" -type d -name "A"` ; do codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 ifndef CROSS_COMPILE_ARM64
 # Sign LibreOfficePython framework
-	cd "$(INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" "Contents/Frameworks/LibreOfficePython.framework/Versions/3.7"
+	cd "$(INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" "Contents/Frameworks/LibreOfficePython.framework/Versions/3.8"
 endif
 	cat "etc/package/Entitlements_hardened_runtime_no_sandbox.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$(INSTALL_HOME)/Entitlements.plist"
 	cd "$(INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(INSTALL_HOME)/Entitlements.plist" .
@@ -857,6 +862,10 @@ endif
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/Resources/versionrc" | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_UPDATE_CHECK_URL)#$(PRODUCT_UPDATE_CHECK_URL)#g' | sed 's#$$(LIBO_PRODUCT_VERSION)#$(LIBO_PRODUCT_VERSION)#g' | sed 's# #%20#g' | sed 's#^BuildVersion=.*$$#BuildVersion=$(PRODUCT_PATCH_VERSION)#' > "Resources/versionrc"
 	cd "$(PATCH_INSTALL_HOME)/package" ; find . -type f -exec file {} \; > "$(PWD)/$(PATCH_INSTALL_HOME)/filetypes.txt"
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `grep -e "$(TARGET_FILE_TYPE)" -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "$(BUNDLE_FILE_TYPE)" "$(PWD)/$(PATCH_INSTALL_HOME)/filetypes.txt" | sed "s#:.*\\$$##"` ; do strip -S -x "$$i" ; done'
+ifdef PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS
+	@sh -e -c 'if [ ! -d "$(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS)/$(PATCH_INSTALL_HOME)/package" ] ; then echo "Cannot build universal installer. $(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS) does not exist or does not contain an installer build." ; exit 1 ; fi'
+	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `grep -e "$(TARGET_FILE_TYPE)" -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "$(BUNDLE_FILE_TYPE)" "$(PWD)/$(PATCH_INSTALL_HOME)/filetypes.txt" | sed "s#:.*\\$$##"` ; do lipo "$$i" "$(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS)/$(PATCH_INSTALL_HOME)/package/$$i" -create -output "out" ; lipo "out" -verify_arch $(OS_AVAILABLE_ARCHS) ; mv "out" "$$i" ; done'
+endif
 	xattr -rcs "$(PATCH_INSTALL_HOME)/package"
 # Sign all binaries
 	chmod -Rf u+rw "$(PATCH_INSTALL_HOME)/package"
