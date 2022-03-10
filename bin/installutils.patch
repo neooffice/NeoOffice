@@ -37,7 +37,8 @@
 product_minor_version=`echo '$(PRODUCT_VERSION)' | sed 's#^$(PRODUCT_VERSION_BASE)\.*\([0-9]*\) *$(PRODUCT_VERSION_EXT)$#\1#'`
 product_patch_version=`echo '$(PRODUCT_PATCH_VERSION)' | sed 's#^Patch ##'`
 userinstall="$(PRODUCT_USER_INSTALL_DIR)"
-target_file_type="$(TARGET_FILE_TYPE)"
+target_file_base="$(TARGET_FILE_TYPE_BASE)"
+target_file_types="$(TARGET_MACHINE)"
 last_installed_product_found=
 
 check_installation() {
@@ -50,10 +51,13 @@ check_installation() {
 		return 1;
 	fi
 
-	file_type=`file "$1/Contents/MacOS/soffice.bin" | sed 's#^.*: ##'`
-	if [ "$file_type" != "$target_file_type" ] ; then
-		return 1
-	fi
+	file_types=`file "$1/Contents/MacOS/soffice.bin" | tr -s '\t' ' ' | sed 's#^.*: ##'`
+	for i in $target_file_types ; do
+		echo "$file_types" | grep -q "^$target_file_base $i"
+		if [ "$?" != "0" ] ; then
+			return 1;
+		fi
+	done
 
 	if [ -f "$1/Contents/Resources/bootstraprc" ] ; then
 		# Check for matching build machine. Note: we trim "local." off the end
