@@ -215,7 +215,6 @@ source/uno/services.cxx
 source/dialogs/hltpbase.cxx
 source/dialogs/scriptdlg.src
 source/dialogs/sdrcelldlg.cxx
-source/dialogs/iconcdlg.cxx
 source/dialogs/multipat.src
 source/dialogs/cuifmsearch.cxx
 source/dialogs/cuigaldlg.cxx
