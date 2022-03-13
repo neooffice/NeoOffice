@@ -234,7 +234,6 @@ source/dialogs/SpellAttrib.hxx
 source/dialogs/plfilter.cxx
 source/dialogs/scriptdlg.hrc
 source/dialogs/hlmarkwn.cxx
-source/dialogs/cuihyperdlg.cxx
 source/dialogs/hyphen.cxx
 source/dialogs/hlmailtp.cxx
 source/dialogs/svuidlg.src
