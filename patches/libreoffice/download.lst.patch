@@ -1,5 +1,5 @@
 --- download.lst	2015-11-25 07:55:38.000000000 -0500
-+++ download.lst	2022-02-19 13:37:49.000000000 -0500
++++ download.lst	2022-03-23 10:41:34.000000000 -0400
 @@ -15,13 +15,16 @@
  export APR_TARBALL := apr-1.4.8.tar.gz
  export APR_UTIL_MD5SUM := 71a11d037240b292f824ba1eb537b4e3
@@ -35,6 +35,17 @@
  export FONTCONFIG_TARBALL := 77e15a92006ddc2adbb06f840d591c0e-fontconfig-2.8.0.tar.gz
  export FONT_CALADEA_TARBALL := 368f114c078f94214a308a74c7e991bc-crosextrafonts-20130214.tar.gz
  export FONT_CARLITO_TARBALL := c74b7223abe75949b4af367942d96c7a-crosextrafonts-carlito-20130920.tar.gz
+@@ -86,8 +88,8 @@
+ export LANGUAGETOOL_TARBALL := b63e6340a02ff1cacfeadb2c42286161-JLanguageTool-1.7.0.tar.bz2
+ export LCMS2_MD5SUM := f4c08d38ceade4a664ebff7228910a33
+ export LCMS2_TARBALL := lcms2-2.6.tar.gz
+-export LIBATOMIC_OPS_MD5SUM := c0b86562d5aa40761a87134f83e6adcf
+-export LIBATOMIC_OPS_TARBALL := libatomic_ops-7_2d.zip
++export LIBATOMIC_OPS_MD5SUM := 99128f05e3e3f4e0cd39aa23f23bbe0c
++export LIBATOMIC_OPS_TARBALL := libatomic_ops-7.6.8.tar.gz
+ export LIBEOT_MD5SUM := aa24f5dd2a2992f4a116aa72af817548
+ export LIBEOT_TARBALL := libeot-0.01.tar.bz2
+ export LIBEXTTEXTCAT_TARBALL := 10d61fbaa6a06348823651b1bd7940fe-libexttextcat-3.4.4.tar.bz2
 @@ -95,6 +97,8 @@
  export LIBGLTF_TARBALL := libgltf-0.0.2.tar.bz2
  export LIBLANGTAG_TARBALL := 36271d3fa0d9dec1632029b6d7aac925-liblangtag-0.5.1.tar.bz2
