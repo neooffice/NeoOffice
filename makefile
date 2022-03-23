@@ -77,7 +77,7 @@ ULONGNAME=Silicon
 else
 ULONGNAME=Intel
 ifdef CROSS_COMPILE_ARM64
-CONFIGURE_EXTRA_OPTIONS:=--host=arm64-apple-darwin --build=$(TARGET_MACHINE)-apple-darwin --enable-python=no --with-galleries=no --with-build-platform-configure-options='--disable-odk --without-fonts --enable-python=no'
+CONFIGURE_EXTRA_OPTIONS:=--host=aarch64-apple-darwin --build=$(TARGET_MACHINE)-apple-darwin --enable-python=no --with-galleries=no --with-build-platform-configure-options='--disable-odk --without-fonts --enable-python=no'
 CROSS_COMPILE=true;
 TARGET_MACHINE=arm64
 ULONGNAME=Silicon
