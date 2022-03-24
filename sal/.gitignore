@@ -286,6 +286,7 @@ qa/rtl/alloc/rtl_alloc.cxx
 qa/rtl/bootstrap/expand.cxx
 qa/rtl/oustring/joblist.txt
 qa/rtl/oustring/rtl_OUString2.cxx
+qa/rtl/oustring/rtl_OUString2.cxx.orig
 qa/rtl/oustring/rtl_ustr.cxx
 qa/rtl/oustring/rtl_ustr.xsce
 qa/rtl/textenc/rtl_tencinfo.cxx

@@ -845,6 +845,7 @@ CppunitTest_dbaccess_hsqldb_test.mk
 CppunitTest_dbaccess_firebird_test.mk
 UIConfig_dbquery.mk
 UIConfig_dbapp.mk
+Module_dbaccess.mk.orig
 CppunitTest_dbaccess_embeddeddb_performancetest.mk
 Library_dba.mk
 win32/source/odbcconfig/odbcconfig.cxx
