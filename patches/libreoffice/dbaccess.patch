@@ -45,3 +45,24 @@
      OTableIndex( const OUString& rFileName ) : aIndexFileName( rFileName ) { }
  
      void SetIndexFileName( const OUString& rFileName ) { aIndexFileName = rFileName; }
+--- Module_dbaccess.mk	2015-11-25 07:55:38.000000000 -0500
++++ Module_dbaccess.mk	2022-03-24 09:26:22.000000000 -0400
+@@ -41,15 +41,15 @@
+ endif
+ 
+ $(eval $(call gb_Module_add_check_targets,dbaccess,\
+-	CppunitTest_dbaccess_dialog_save \
+-	CppunitTest_dbaccess_empty_stdlib_save \
++	$(if $(filter-out macosx_arm64,$(PLATFORMID)),CppunitTest_dbaccess_dialog_save) \
++	$(if $(filter-out macosx_arm64,$(PLATFORMID)),CppunitTest_dbaccess_empty_stdlib_save) \
+ 	CppunitTest_dbaccess_nolib_save \
+ 	CppunitTest_dbaccess_macros_test \
+ ))
+ 
+ ifeq ($(ENABLE_JAVA),TRUE)
+ $(eval $(call gb_Module_add_check_targets,dbaccess,\
+-    CppunitTest_dbaccess_hsqldb_test \
++	$(if $(filter-out macosx_arm64,$(PLATFORMID)),CppunitTest_dbaccess_hsqldb_test) \
+ ))
+ endif
+ 
