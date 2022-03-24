@@ -336,6 +336,7 @@ build.libo_patches: \
 	build.libo_jvmfwk_patch \
 	build.libo_lotuswordpro_patch \
 	build.libo_oox_patch \
+	build.libo_postprocess_patch \
 	build.libo_pyuno_patch \
 	build.libo_reportdesign_patch \
 	build.libo_sal_patch \
