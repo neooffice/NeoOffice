@@ -21,6 +21,7 @@ if [ "$?" != "0" -o -z "$escapedtext" ] ; then
 	exit 1
 fi
 
-echo "$escapedtext" | sed '/^undefined$/d'
+# jsc on macOS 12 adds leading and trailing double quotes so strip those out
+echo "$escapedtext" | sed '/^undefined$/d' | sed 's/^"//' | sed 's/"$//'
 
 exit 0
