@@ -19,7 +19,6 @@ UIConfig_dbtdata.mk
 util/dba.component
 util/dbu.component
 util/sdbt.component
-Module_dbaccess.mk
 Library_dbmm.mk
 UIConfig_dbtable.mk
 Library_dbu.mk
