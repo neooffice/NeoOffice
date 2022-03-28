@@ -367,7 +367,7 @@
 -
  /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
 --- source/cpp_uno/gcc3_linux_aarch64/cpp2uno.cxx	2020-12-17 16:59:38.000000000 -0500
-+++ source/cpp_uno/gcc3_linux_aarch64/cpp2uno.cxx	2021-04-28 11:02:09.000000000 -0400
++++ source/cpp_uno/gcc3_linux_aarch64/cpp2uno.cxx	2022-03-28 15:15:43.000000000 -0400
 @@ -41,8 +41,7 @@
  #include <vtablefactory.hxx>
  
@@ -491,7 +491,7 @@
              if (parameters[i].bOut) {
                  uno_destructData(
                      cppArgs[i], argtds[i],
-@@ -282,14 +281,14 @@
+@@ -282,25 +281,53 @@
                      cppArgs[i], args[i], argtds[i],
                      proxy->getBridge()->getUno2Cpp());
              }
@@ -508,8 +508,48 @@
 +        switch (rtd == nullptr ? typelib_TypeClass_VOID : rtd->eTypeClass) {
          case typelib_TypeClass_VOID:
              break;
++#if defined MACOSX
++        case typelib_TypeClass_BOOLEAN:
++            assert(rtd->nSize == sizeof (bool));
++            *gpr = static_cast<unsigned long>(*static_cast<bool *>(retin));
++            assert(!retConv);
++            break;
++        case typelib_TypeClass_BYTE:
++            assert(rtd->nSize == sizeof (sal_Int8));
++            *gpr = *static_cast<sal_Int8 *>(retin);
++            assert(!retConv);
++            break;
++        case typelib_TypeClass_SHORT:
++            assert(rtd->nSize == sizeof (sal_Int16));
++            *gpr = *static_cast<sal_Int16 *>(retin);
++            assert(!retConv);
++            break;
++        case typelib_TypeClass_UNSIGNED_SHORT:
++            assert(rtd->nSize == sizeof (sal_uInt16));
++            *gpr = *static_cast<sal_uInt16 *>(retin);
++            assert(!retConv);
++            break;
++        case typelib_TypeClass_CHAR:
++            assert(rtd->nSize == sizeof (sal_Unicode));
++            *gpr = *static_cast<sal_Unicode *>(retin);
++            assert(!retConv);
++            break;
++#else
          case typelib_TypeClass_BOOLEAN:
-@@ -322,7 +321,7 @@
+         case typelib_TypeClass_BYTE:
+         case typelib_TypeClass_SHORT:
+         case typelib_TypeClass_UNSIGNED_SHORT:
++        case typelib_TypeClass_CHAR:
++#endif
+         case typelib_TypeClass_LONG:
+         case typelib_TypeClass_UNSIGNED_LONG:
+         case typelib_TypeClass_HYPER:
+         case typelib_TypeClass_UNSIGNED_HYPER:
+-        case typelib_TypeClass_CHAR:
+         case typelib_TypeClass_ENUM:
+             std::memcpy(gpr, retin, rtd->nSize);
+             assert(!retConv);
+@@ -322,7 +349,7 @@
          }
          break;
      case abi_aarch64::RETURN_KIND_HFA_FLOAT:
@@ -518,7 +558,7 @@
          switch (rtd->nSize) {
          case 16:
              std::memcpy(fpr + 3, static_cast<char *>(retin) + 12, 4);
-@@ -342,7 +341,7 @@
+@@ -342,7 +369,7 @@
          assert(!retConv);
          break;
      case abi_aarch64::RETURN_KIND_HFA_DOUBLE:
@@ -527,7 +567,7 @@
          std::memcpy(fpr, retin, rtd->nSize);
          assert(!retConv);
          break;
-@@ -353,14 +352,16 @@
+@@ -353,14 +380,16 @@
      if (retConv) {
          uno_copyAndConvertData(
              retout, retin, rtd, proxy->getBridge()->getUno2Cpp());
@@ -547,7 +587,7 @@
      sal_Int32 functionIndex, sal_Int32 vtableOffset,
      unsigned long * gpr, unsigned long * fpr, unsigned long  * stack,
      void * indirectRet)
-@@ -380,15 +381,15 @@
+@@ -380,15 +409,15 @@
                  proxy, desc,
                  reinterpret_cast<typelib_InterfaceAttributeTypeDescription *>(
                      desc.get())->pAttributeTypeRef,
@@ -566,7 +606,7 @@
          }
          break;
      case typelib_TypeClass_INTERFACE_METHOD:
-@@ -401,21 +402,21 @@
+@@ -401,21 +430,21 @@
              break;
          case 0:
              {
@@ -593,7 +633,7 @@
                              reinterpret_cast<uno_AcquireFunc>(
                                  css::uno::cpp_acquire));
                          ifc->release();
-@@ -443,6 +444,8 @@
+@@ -443,6 +472,8 @@
      }
  }
  
@@ -602,7 +642,7 @@
  std::size_t const codeSnippetSize = 8 * 4;
  
  unsigned char * generateCodeSnippet(
-@@ -490,8 +493,8 @@
+@@ -490,8 +521,8 @@
      typelib_InterfaceTypeDescription *)
  {
      Slot * slots = mapBlockToVtable(block);
@@ -613,7 +653,7 @@
      return slots + slotCount;
  }
  
-@@ -509,9 +512,9 @@
+@@ -509,9 +540,9 @@
      (*slots) -= functionCount;
      Slot * s = *slots;
      for (sal_Int32 i = 0; i != type->nMembers; ++i) {
@@ -625,7 +665,7 @@
          switch (td->eTypeClass) {
          case typelib_TypeClass_INTERFACE_ATTRIBUTE:
              {
-@@ -551,7 +554,15 @@
+@@ -551,7 +582,15 @@
             RTLD_DEFAULT, "__clear_cache");
     (*clear_cache)(begin, end);
  #else
