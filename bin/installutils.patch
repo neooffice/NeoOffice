@@ -51,7 +51,7 @@ check_installation() {
 		return 1;
 	fi
 
-	file_types=`file "$1/Contents/MacOS/soffice.bin" | tr -s '\t' ' ' | sed 's#^.*: ##' | grep '[[:alnum:]]$'`
+	file_types=`file "$1/Contents/MacOS/soffice.bin" | tr -s '\t' ' ' | sed 's#^.*: ##' | grep '^[[:alnum:]].*[[:alnum:]]$'`
 	for i in $target_file_types ; do
 		echo "$file_types" | grep -q "^$target_file_type_base $i$"
 		if [ "$?" != "0" ] ; then
