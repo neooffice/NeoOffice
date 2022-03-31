@@ -37,6 +37,9 @@
 #include <com/sun/star/frame/XLoadable.hpp>
 #include <com/sun/star/frame/XLayoutManager.hpp>
 #include <com/sun/star/frame/XComponentLoader.hpp>
+#ifndef NO_LIBO_MASTER_PASSWORD_FIX
+#include <com/sun/star/task/PasswordContainer.hpp>
+#endif	// !NO_LIBO_MASTER_PASSWORD_FIX
 #include <officecfg/Office/Common.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <vcl/splitwin.hxx>
@@ -53,6 +56,9 @@
 #include <svtools/miscopt.hxx>
 #include <svtools/ehdl.hxx>
 #include <tools/diagnose_ex.h>
+#ifndef NO_LIBO_MASTER_PASSWORD_FIX
+#include <com/sun/star/container/XHierarchicalNameAccess.hpp>
+#endif	// !NO_LIBO_MASTER_PASSWORD_FIX
 #include <com/sun/star/container/XIndexAccess.hpp>
 #include <com/sun/star/frame/XFramesSupplier.hpp>
 #include <com/sun/star/frame/FrameSearchFlag.hpp>
@@ -1493,6 +1499,47 @@ void SfxViewFrame::Notify( SfxBroadcaster& /*rBC*/, const SfxHint& rHint )
                 rBind.Invalidate( SID_DOCINFO_TITLE );
                 rBind.Invalidate( SID_EDITDOC );
                 rBind.Invalidate( SID_RELOAD );
+#ifndef NO_LIBO_MASTER_PASSWORD_FIX
+                static bool bPasswordStorageVersionChecked = false;
+                if (!bPasswordStorageVersionChecked)
+                {
+                    bPasswordStorageVersionChecked = true;
+
+                    if (officecfg::Office::Common::Passwords::HasMaster::get())
+                    {
+                        sal_Int32 nResult = 0;
+                        try
+                        {
+                            css::uno::Reference< com::sun::star::container::XHierarchicalNameAccess > xPasswords = officecfg::Office::Common::Passwords::get();
+                            if (xPasswords.is())
+                            {
+                                Any aStorageVersion(xPasswords->getByHierarchicalName("StorageVersion"));
+                                aStorageVersion >>= nResult;
+                            }
+                        }
+                        catch (const Exception&)
+                        {}
+
+                        if (nResult == 0)
+                        {
+                            try
+                            {
+                                Reference< task::XPasswordContainer2 > xMasterPasswd(
+                                    task::PasswordContainer::create(comphelper::getProcessComponentContext()));
+
+                                css::uno::Reference<css::frame::XFrame> xFrame = GetFrame().GetFrameInterface();
+                                css::uno::Reference<css::awt::XWindow> xContainerWindow = xFrame->getContainerWindow();
+
+                                uno::Reference<task::XInteractionHandler> xTmpHandler(task::InteractionHandler::createWithParent(comphelper::getProcessComponentContext(),
+                                    xContainerWindow));
+                                xMasterPasswd->changeMasterPassword(xTmpHandler);
+                            }
+                            catch (const Exception&)
+                            {}
+                        }
+                    }
+                }
+#endif	// !NO_LIBO_MASTER_PASSWORD_FIX
                 break;
             }
 
