@@ -33,7 +33,6 @@ source/notify/broadcast.cxx
 source/notify/isethint.cxx
 source/svsql/converter.cxx
 source/inc/registerservices.hxx
-source/inc/passwordcontainer.hxx
 source/inc/poolio.hxx
 source/inc/stringio.hxx
 source/inc/fsfactory.hxx
@@ -110,7 +109,6 @@ source/fsstor/fsstorage.cxx
 source/passwordcontainer/syscreds.cxx
 source/passwordcontainer/syscreds.hxx
 source/passwordcontainer/passwordcontainer.component
-source/passwordcontainer/passwordcontainer.cxx
 qa/unit/notify/test_SfxBroadcaster.cxx
 qa/unit/svl.cxx
 qa/unit/test_lngmisc.cxx

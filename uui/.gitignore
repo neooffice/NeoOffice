@@ -33,7 +33,6 @@ source/services.cxx
 source/sslwarndlg.cxx
 source/openlocked.src
 source/passworderrs.src
-source/iahndl-authentication.cxx
 source/iahndl-errorhandler.cxx
 source/masterpassworddlg.hxx
 source/requeststringresolver.cxx
