@@ -10,8 +10,8 @@ Important: In order to build NeoOffice, all of the steps below must be followed.
 If any third party tools are not installed or the build is run on a different version of macOS or with a different version of Xcode, the build will likely fail.
 
 
-Steps for building on macOS 11 Big Sur or 12 Monterey
------------------------------------------------------
+Steps for building on macOS 11 Big Sur or macOS 12 Monterey
+-----------------------------------------------------------
 
 At this time, NeoOffice will only build on macOS 11 Big Sur or macOS 12 Monterey.
 
@@ -21,7 +21,7 @@ At this time, NeoOffice will only build on macOS 11 Big Sur or macOS 12 Monterey
      Xcode v13.2.1
      Command Line Tools for Xcode v13.2
 
-   macOS 11.3 Monterey:
+   macOS 12.3 Monterey:
      Xcode v13.3
      Command Line Tools for Xcode v13.3
 
