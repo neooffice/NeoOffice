@@ -374,7 +374,7 @@
   #include <architecture/i386/io.h>
   #else
   #include <io.h>
-+--- builds/make.new/config/config.sub.bak	2020-10-20 04:40:51.000000000 -0400
++--- builds/make.new/config/config.sub	2020-10-20 04:40:51.000000000 -0400
 ++++ builds/make.new/config/config.sub	2022-03-23 13:21:34.000000000 -0400
 +@@ -339,6 +339,7 @@
 + 	# Recognize the basic CPU types with company name.
@@ -384,3 +384,37 @@
 + 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
 + 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
 + 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* \
+--- python3/ExternalProject_python3.mk	2021-10-05 20:34:15.000000000 -0400
++++ python3/ExternalProject_python3.mk	2022-04-03 10:44:40.000000000 -0400
+@@ -100,9 +100,9 @@
+ 			--enable-shared \
+ 			$(if $(filter 1090 101000 101100 101200,$(MAC_OS_X_VERSION_MIN_REQUIRED)),ac_cv_func_utimensat=no) \
+ 		) \
+-		$(if $(ENABLE_OPENSSL),$(if $(SYSTEM_OPENSSL),,\
++		$(if $(SYSTEM_OPENSSL)$(DISABLE_OPENSSL),,\
+ 			--with-openssl=$(call gb_UnpackedTarball_get_dir,openssl) \
+-		) ) \
++		) \
+ 		$(if $(filter LINUX,$(OS)), \
+ 			PKG_CONFIG_LIBDIR="$(call gb_UnpackedTarball_get_dir,libffi)/$(HOST_PLATFORM)$${PKG_CONFIG_LIBDIR:+:$$PKG_CONFIG_LIBDIR}" \
+ 		) \
+--- python3/ExternalPackage_python3.mk	2021-10-05 20:34:15.000000000 -0400
++++ python3/ExternalPackage_python3.mk	2022-04-03 10:41:22.000000000 -0400
+@@ -79,7 +79,7 @@
+ 	LO_lib/_elementtree.$(python3_EXTENSION_MODULE_SUFFIX).so \
+ 	LO_lib/fcntl.$(python3_EXTENSION_MODULE_SUFFIX).so \
+ 	LO_lib/grp.$(python3_EXTENSION_MODULE_SUFFIX).so \
+-	$(if $(ENABLE_OPENSSL), \
++	$(if $(DISABLE_OPENSSL),, \
+ 		LO_lib/_hashlib.$(python3_EXTENSION_MODULE_SUFFIX).so \
+ 	) \
+ 	LO_lib/_heapq.$(python3_EXTENSION_MODULE_SUFFIX).so \
+@@ -107,7 +107,7 @@
+ 	LO_lib/_sha512.$(python3_EXTENSION_MODULE_SUFFIX).so \
+ 	LO_lib/_socket.$(python3_EXTENSION_MODULE_SUFFIX).so \
+ 	LO_lib/spwd.$(python3_EXTENSION_MODULE_SUFFIX).so \
+-	$(if $(ENABLE_OPENSSL), \
++	$(if $(DISABLE_OPENSSL),, \
+ 		LO_lib/_ssl.$(python3_EXTENSION_MODULE_SUFFIX).so \
+ 	) \
+ 	LO_lib/_statistics.$(python3_EXTENSION_MODULE_SUFFIX).so \
