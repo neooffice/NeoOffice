@@ -21,7 +21,7 @@ At this time, NeoOffice will only build on macOS 11 Big Sur or macOS 12 Monterey
      Xcode v13.2.1
      Command Line Tools for Xcode v13.2
 
-   macOS 12.3 Monterey:
+   macOS 12.3.1 Monterey:
      Xcode v13.3
      Command Line Tools for Xcode v13.3
 
