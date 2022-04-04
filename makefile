@@ -88,8 +88,10 @@ ULONGNAME=Universal
 endif
 TARGET_FILE_TYPE_BASE=Mach-O 64-bit executable
 TARGET_FILE_TYPE=$(TARGET_FILE_TYPE_BASE) $(TARGET_MACHINE)
-SHARED_LIBRARY_FILE_TYPE=Mach-O 64-bit dynamically linked shared library $(TARGET_MACHINE)
-BUNDLE_FILE_TYPE=Mach-O 64-bit bundle $(TARGET_MACHINE)
+SHARED_LIBRARY_FILE_TYPE_BASE=Mach-O 64-bit dynamically linked shared library
+SHARED_LIBRARY_FILE_TYPE=$(SHARED_LIBRARY_FILE_TYPE_BASE) $(TARGET_MACHINE)
+BUNDLE_FILE_TYPE_BASE=Mach-O 64-bit bundle
+BUNDLE_FILE_TYPE=$(BUNDLE_FILE_TYPE_BASE) $(TARGET_MACHINE)
 else
 OS_TYPE=Win32
 endif
@@ -705,8 +707,8 @@ endif
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `grep -e "$(TARGET_FILE_TYPE)" -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "$(BUNDLE_FILE_TYPE)" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" | sed "s#:.*\\$$##"` ; do if otool -L "$$i" | grep -q "\/local\/" ; then otool -L "$$i" ; exit 1 ; fi ; done'
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `grep -e "$(TARGET_FILE_TYPE)" -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "$(BUNDLE_FILE_TYPE)" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" | sed "s#:.*\\$$##"` ; do strip -S -x "$$i" ; done'
 ifdef PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS
-	@sh -e -c 'if [ ! -d "$(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS)/$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app" ] ; then echo "Cannot build universal installer. $(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS) does not exist or does not contain an installer build." ; exit 1 ; fi'
-	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `grep -e "$(TARGET_FILE_TYPE)" -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "$(BUNDLE_FILE_TYPE)" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" | sed "s#:.*\\$$##"` ; do lipo "$$i" "$(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS)/$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app/$$i" -create -output "out" ; lipo "out" -verify_arch $(OS_AVAILABLE_ARCHS) ; mv "out" "$$i" ; done'
+	@sh -e -c 'if [ ! -f "$(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS)/$(INSTALL_HOME)/filetypes.txt" -o ! -d "$(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS)/$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app" ] ; then echo "Cannot build universal installer. $(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS) does not exist or does not contain an installer build." ; exit 1 ; fi'
+	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/filetypes.txt" "$(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS)/$(INSTALL_HOME)/filetypes.txt" | grep -e "$(TARGET_FILE_TYPE_BASE)" -e "$(SHARED_LIBRARY_FILE_TYPE_BASE)" -e "$(BUNDLE_FILE_TYPE_BASE)" | sed "s#:.*\\$$##" | sort -u` ; do lipo "$$i" "$(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS)/$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app/$$i" -create -output "out" ; lipo "out" -verify_arch $(OS_AVAILABLE_ARCHS) ; mv "out" "$$i" ; done'
 endif
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Library/Spotlight"
 	cd "$(INSTALL_HOME)/package/Contents/Library/Spotlight" ; tar zxvf "$(PWD)/$(NEOOFFICE_PATCHES_HOME)/neolight.mdimporter.tgz"
@@ -871,8 +873,8 @@ endif
 	cd "$(PATCH_INSTALL_HOME)/package" ; find . -type f -exec file {} \; > "$(PWD)/$(PATCH_INSTALL_HOME)/filetypes.txt"
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `grep -e "$(TARGET_FILE_TYPE)" -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "$(BUNDLE_FILE_TYPE)" "$(PWD)/$(PATCH_INSTALL_HOME)/filetypes.txt" | sed "s#:.*\\$$##"` ; do strip -S -x "$$i" ; done'
 ifdef PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS
-	@sh -e -c 'if [ ! -d "$(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS)/$(PATCH_INSTALL_HOME)/package" ] ; then echo "Cannot build universal installer. $(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS) does not exist or does not contain an installer build." ; exit 1 ; fi'
-	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `grep -e "$(TARGET_FILE_TYPE)" -e "$(SHARED_LIBRARY_FILE_TYPE)" -e "$(BUNDLE_FILE_TYPE)" "$(PWD)/$(PATCH_INSTALL_HOME)/filetypes.txt" | sed "s#:.*\\$$##"` ; do lipo "$$i" "$(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS)/$(PATCH_INSTALL_HOME)/package/$$i" -create -output "out" ; lipo "out" -verify_arch $(OS_AVAILABLE_ARCHS) ; mv "out" "$$i" ; done'
+	@sh -e -c 'if [ ! -f "$(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS)/$(PATCH_INSTALL_HOME)/filetypes.txt" -o ! -d "$(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS)/$(PATCH_INSTALL_HOME)/package" ] ; then echo "Cannot build universal installer. $(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS) does not exist or does not contain an installer build." ; exit 1 ; fi'
+	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `cat "$(PWD)/$(PATCH_INSTALL_HOME)/filetypes.txt" "$(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS)/$(PATCH_INSTALL_HOME)/filetypes.txt" | grep -e "$(TARGET_FILE_TYPE_BASE)" -e "$(SHARED_LIBRARY_FILE_TYPE_BASE)" -e "$(BUNDLE_FILE_TYPE_BASE)" | sed "s#:.*\\$$##" | sort -u` ; do lipo "$$i" "$(PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS)/$(PATCH_INSTALL_HOME)/package/$$i" -create -output "out" ; lipo "out" -verify_arch $(OS_AVAILABLE_ARCHS) ; mv "out" "$$i" ; done'
 endif
 	xattr -rcs "$(PATCH_INSTALL_HOME)/package"
 # Sign all binaries
