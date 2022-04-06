@@ -6,7 +6,6 @@ plugins/sunmajor/pluginlib/util_cocoa.hxx
 plugins/sunmajor/pluginlib/vendorbase.cxx
 plugins/sunmajor/pluginlib/util.hxx
 plugins/sunmajor/pluginlib/gnujre.cxx
-plugins/sunmajor/pluginlib/sunjre.cxx
 plugins/sunmajor/pluginlib/otherjre.cxx
 plugins/sunmajor/pluginlib/JREProperties.java
 plugins/sunmajor/pluginlib/sunversion.hxx
@@ -22,7 +21,6 @@ plugins/sunmajor/pluginlib/vendorlist.cxx
 plugins/sunmajor/pluginlib/sunversion.cxx.orig
 plugins/sunmajor/pluginlib/vendorbase.hxx
 plugins/sunmajor/pluginlib/sunjavaplugin.cxx.orig
-plugins/sunmajor/pluginlib/util.cxx
 plugins/sunmajor/pluginlib/sunjre.hxx
 plugins/sunmajor/pluginlib/gnujre.hxx
 plugins/sunmajor/pluginlib/otherjre.hxx
