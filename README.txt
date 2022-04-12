@@ -22,8 +22,8 @@ At this time, NeoOffice will only build on macOS 11 Big Sur or macOS 12 Monterey
      Command Line Tools for Xcode v13.2
 
    macOS 12.3.1 Monterey:
-     Xcode v13.3
-     Command Line Tools for Xcode v13.3
+     Xcode v13.3.1
+     Command Line Tools for Xcode v13.3.1
 
 2. Download and install Oracle's Java 1.8 Development Kit (JDK) from the following URL:
 
