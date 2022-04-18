@@ -6741,11 +6741,13 @@
             <value xml:lang="uk">Запит</value>
           </prop>
         </node>
+        <!-- Disable Java-based report object bar
         <node oor:name="private:resource/toolbar/reportobjectbar">
           <prop oor:name="UIName" oor:type="xs:string">
             <value xml:lang="uk">Звіт</value>
           </prop>
         </node>
+        -->
         <node oor:name="private:resource/toolbar/formobjectbar">
           <prop oor:name="UIName" oor:type="xs:string">
             <value xml:lang="uk">Форма</value>
@@ -14945,6 +14947,7 @@
         </node>
       </node>
       <node oor:name="Wizard">
+        <!-- Disable Python-based wizards
         <node oor:name="m0">
           <prop oor:name="Title">
             <value xml:lang="uk">~Лист...</value>
@@ -14960,16 +14963,19 @@
             <value xml:lang="uk">~Порядок денний...</value>
           </prop>
         </node>
+        -->
         <node oor:name="m5">
           <prop oor:name="Title">
             <value xml:lang="uk">~Презентація...</value>
           </prop>
         </node>
+        <!-- Disable Python-based wizards
         <node oor:name="m7">
           <prop oor:name="Title">
             <value xml:lang="uk">~Веб-сторінка...</value>
           </prop>
         </node>
+        -->
         <node oor:name="m11">
           <prop oor:name="Title">
             <value xml:lang="uk">~Конвертор документів...</value>
@@ -20833,6 +20839,7 @@
       </node>
     </node>
   </oor:component-data>
+  <!-- Disable update check
   <oor:component-data xmlns:install="http://openoffice.org/2004/installation" oor:name="Addons" oor:package="org.openoffice.Office">
     <node oor:name="AddonUI">
       <node oor:name="OfficeHelp">
@@ -20844,4 +20851,5 @@
       </node>
     </node>
   </oor:component-data>
+  -->
 </oor:data>
