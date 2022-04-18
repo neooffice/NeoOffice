@@ -7756,7 +7756,7 @@
           <value>OXML</value>
         </prop>
         <prop oor:name="UIName">
-          <value xml:lang="en-US">Microsoft Word 2007-2016 XML</value>
+          <value xml:lang="en-US">Microsoft Word 2007-365 XML</value>
         </prop>
         <prop oor:name="FileFormatVersion">
           <value>0</value>
@@ -7781,7 +7781,7 @@
           <value>OXML</value>
         </prop>
         <prop oor:name="UIName">
-          <value xml:lang="en-US">Microsoft Word 2007-2016 XML Template</value>
+          <value xml:lang="en-US">Microsoft Word 2007-365 XML Template</value>
         </prop>
         <prop oor:name="FileFormatVersion">
           <value>0</value>
@@ -9132,7 +9132,7 @@
           <value>MS Word 2007 XML</value>
         </prop>
         <prop oor:name="UIName">
-          <value xml:lang="en-US">Microsoft Word 2007-2016 XML</value>
+          <value xml:lang="en-US">Microsoft Word 2007-365 XML</value>
         </prop>
         <prop oor:name="ClipboardFormat">
           <value>MSWordDoc</value>
@@ -9156,7 +9156,7 @@
           <value>MS Word 2007 XML Template</value>
         </prop>
         <prop oor:name="UIName">
-          <value xml:lang="en-US">Microsoft Word 2007-2016 XML Template</value>
+          <value xml:lang="en-US">Microsoft Word 2007-365 XML Template</value>
         </prop>
         <prop oor:name="ClipboardFormat">
           <value>MSWordDoc</value>
