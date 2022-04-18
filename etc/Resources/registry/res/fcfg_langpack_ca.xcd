@@ -1,0 +1,1187 @@
+<?xml version="1.0" encoding="utf8"?>
+<oor:data xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:oor="http://openoffice.org/2001/registry">
+  <oor:component-data xmlns:install="http://openoffice.org/2004/installation" oor:package="org.openoffice.TypeDetection" oor:name="Filter">
+    <node oor:name="Filters">
+      <node oor:name="writer_web_HTML_help">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Contingut de l'ajuda</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Base)">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Base de dades ODF</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Base) Report">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Informe de base de dades ODF</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Base) Report Chart">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Diagrama d'informe de l'OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="MS WinWord 5">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Microsoft WinWord 1/2/5</value>
+        </prop>
+      </node>
+      <node oor:name="MS WinWord 6.0">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Microsoft Word 6.0</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 95">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Microsoft Word 95</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 97">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Microsoft Word 97/2000/XP/2003</value>
+        </prop>
+      </node>
+      <node oor:name="Rich Text Format">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Text enriquit</value>
+        </prop>
+      </node>
+      <node oor:name="WordPerfect">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del WordPerfect</value>
+        </prop>
+      </node>
+      <node oor:name="MS_Works">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del Microsoft Works</value>
+        </prop>
+      </node>
+      <node oor:name="Beagle_Works">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document de text del BeagleWorks/WordPerfect Works v1</value>
+        </prop>
+      </node>
+      <node oor:name="ClarisWorks">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document de text del ClarisWorks/AppleWorks</value>
+        </prop>
+      </node>
+      <node oor:name="DocMaker">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del DOCMaker (v4)</value>
+        </prop>
+      </node>
+      <node oor:name="eDoc_Document">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document eDOC (v2)</value>
+        </prop>
+      </node>
+      <node oor:name="FullWrite_Professional">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del FullWrite Professional</value>
+        </prop>
+      </node>
+      <node oor:name="Great_Works">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document de text del GreatWorks</value>
+        </prop>
+      </node>
+      <node oor:name="HanMac_Word_J">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del HanMac Word-J</value>
+        </prop>
+      </node>
+      <node oor:name="HanMac_Word_K">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del HanMac Word-K</value>
+        </prop>
+      </node>
+      <node oor:name="LightWayText">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">LightWayText per a Mac v4.5</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Acta">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document de l'Acta Mac Classic</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_More">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del More Mac v2-3</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_RagTime">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del RagTime Mac v2-3</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Word">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Microsoft Word per a Mac (v1-v5)</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Works">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document de text del Microsoft Works for Mac (v. 1-4)</value>
+        </prop>
+      </node>
+      <node oor:name="MacDoc">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del MacDoc v1</value>
+        </prop>
+      </node>
+      <node oor:name="MacWrite">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del MacWrite</value>
+        </prop>
+      </node>
+      <node oor:name="MacWritePro">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del MacWrite II/MacWritePro</value>
+        </prop>
+      </node>
+      <node oor:name="Mariner_Write">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Mariner Write Mac Classic v1.6 - v3.5</value>
+        </prop>
+      </node>
+      <node oor:name="MindWrite">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del MindWrite</value>
+        </prop>
+      </node>
+      <node oor:name="Nisus_Writer">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Nisus Writer Mac Classic v3.4-6.5</value>
+        </prop>
+      </node>
+      <node oor:name="TeachText">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del TechText/SimpleText v1</value>
+        </prop>
+      </node>
+      <node oor:name="TexEdit">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del Tex-Edit v2</value>
+        </prop>
+      </node>
+      <node oor:name="WriteNow">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del WriteNow</value>
+        </prop>
+      </node>
+      <node oor:name="WriterPlus">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del WriterPlus</value>
+        </prop>
+      </node>
+      <node oor:name="ZWrite">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del Z-Write 1.3</value>
+        </prop>
+      </node>
+      <node oor:name="AbiWord">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document de l'AbiWord</value>
+        </prop>
+      </node>
+      <node oor:name="T602Document">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document T602</value>
+        </prop>
+      </node>
+      <node oor:name="LotusWordPro">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del Lotus WordPro</value>
+        </prop>
+      </node>
+      <node oor:name="writer_MIZI_Hwp_97">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Hangul WP 97</value>
+        </prop>
+      </node>
+      <node oor:name="writer_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PDF - Format de document portable</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">XML del Microsoft Word 2007/2010/2013</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla XML del Microsoft Word 2007/2010/2013</value>
+        </prop>
+      </node>
+      <node oor:name="Office Open XML Text">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Text Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="Office Open XML Text Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla de text Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="writer_layout_dump">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">XML de format del Writer</value>
+        </prop>
+      </node>
+      <node oor:name="BroadBand eBook">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Llibre electrònic BroadBand</value>
+        </prop>
+      </node>
+      <node oor:name="eReader eBook">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Llibre electrònic eReader</value>
+        </prop>
+      </node>
+      <node oor:name="FictionBook 2">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">FictionBook 2.0</value>
+        </prop>
+      </node>
+      <node oor:name="PalmDoc">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Llibre electrònic PalmDoc</value>
+        </prop>
+      </node>
+      <node oor:name="Plucker eBook">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Llibre electrònic Plucker</value>
+        </prop>
+      </node>
+      <node oor:name="TealDoc">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Llibre electrònic TealDoc</value>
+        </prop>
+      </node>
+      <node oor:name="zTXT">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Llibre electrònic zTXT</value>
+        </prop>
+      </node>
+      <node oor:name="HTML (StarWriter)">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document HTML (Writer)</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 95 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla del Microsoft Word 95</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 97 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla del Microsoft Word 97/2000/XP/2003</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Writer)">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document de text de l'OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="Text">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Text</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded)">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Text - trieu la codificació</value>
+        </prop>
+      </node>
+      <node oor:name="writer_StarOffice_XML_Writer_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla de document de text de l'OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="writer8">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document de text ODF</value>
+        </prop>
+      </node>
+      <node oor:name="writer8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla de document de text ODF</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">XML del Microsoft Word 2007/2010/2013</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla XML del Microsoft Word 2007/2010/2013</value>
+        </prop>
+      </node>
+      <node oor:name="Office Open XML Text">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Text Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="Office Open XML Text Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla de text Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="writer_web_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PDF - Format de document portable</value>
+        </prop>
+      </node>
+      <node oor:name="HTML">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document HTML</value>
+        </prop>
+      </node>
+      <node oor:name="Text (StarWriter/Web)">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Text (Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded) (StarWriter/Web)">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Text - trieu la codificació (Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_web_StarOffice_XML_Writer">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document de text de l'OpenOffice.org  Writer/Web 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="writer_web_StarOffice_XML_Writer_Web_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla HTML de l'OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="writerweb8_writer_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla de document HTML</value>
+        </prop>
+      </node>
+      <node oor:name="writerweb8_writer">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Text (Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_globaldocument_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PDF - Format de document portable</value>
+        </prop>
+      </node>
+      <node oor:name="writerglobal8_HTML">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">HTML (Writer/Global)</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded) (StarWriter/GlobalDocument)">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Text - trieu la codificació (document mestre)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_globaldocument_StarOffice_XML_Writer">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document de text de l'OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="writer_globaldocument_StarOffice_XML_Writer_GlobalDocument">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document mestre de l'OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="writerglobal8">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document mestre ODF</value>
+        </prop>
+      </node>
+      <node oor:name="writerglobal8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla de document mestre ODF</value>
+        </prop>
+      </node>
+      <node oor:name="writerglobal8_writer">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document de text ODF</value>
+        </prop>
+      </node>
+      <node oor:name="DIF">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Format d'intercanvi de dades</value>
+        </prop>
+      </node>
+      <node oor:name="Lotus">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Lotus 1-2-3</value>
+        </prop>
+      </node>
+      <node oor:name="Quattro Pro 6.0">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Quattro Pro 6.0</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 4.0">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Microsoft Excel 4.0</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 5.0/95">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Microsoft Excel 5.0</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 95">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Microsoft Excel 95</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 97">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Microsoft Excel 97/2000/XP/2003</value>
+        </prop>
+      </node>
+      <node oor:name="Rich Text Format (StarCalc)">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Format de text enriquit (Calc)</value>
+        </prop>
+      </node>
+      <node oor:name="SYLK">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">SYLK</value>
+        </prop>
+      </node>
+      <node oor:name="calc_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PDF - Format de document portable</value>
+        </prop>
+      </node>
+      <node oor:name="dBase">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">dBASE</value>
+        </prop>
+      </node>
+      <node oor:name="MS_Works_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del Microsoft Works</value>
+        </prop>
+      </node>
+      <node oor:name="Beagle_Works_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Full de càlcul del BeagleWorks/WordPerfect Works v1</value>
+        </prop>
+      </node>
+      <node oor:name="ClarisWorks_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Full de càlcul del ClarisWorks/AppleWorks</value>
+        </prop>
+      </node>
+      <node oor:name="Claris_Resolve_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del ClarisResolve</value>
+        </prop>
+      </node>
+      <node oor:name="Great_Works_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Full de càlcul del GreatWorks</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Wingz_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document del Wingz per a Mac</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Works_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Full de càlcul del Microsoft Works for Mac (v. 1-4)</value>
+        </prop>
+      </node>
+      <node oor:name="HTML (StarCalc)">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document HTML (Calc)</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 4.0 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla del Microsoft Excel 4.0</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 5.0/95 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla del Microsoft Excel 5.0</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 95 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla del Microsoft Excel 95</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 97 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Microsoft PowerPoint 97/2000/XP/2003</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Calc)">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Full de càlcul de l'OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="Text - txt - csv (StarCalc)">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Text CSV</value>
+        </prop>
+      </node>
+      <node oor:name="calc_HTML_WebQuery">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Consulta de pàgina web (Calc)</value>
+        </prop>
+      </node>
+      <node oor:name="calc_StarOffice_XML_Calc_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla de full de càlcul de l'OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="calc8">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Full de càlcul ODF</value>
+        </prop>
+      </node>
+      <node oor:name="calc8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla de full de càlcul ODF</value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">XML del Microsoft Excel 2007/2010/2013</value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla XML del Microsoft Excel 2007/2010/2013</value>
+        </prop>
+      </node>
+      <node oor:name="Calc MS Excel 2007 Binary">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Binari del Microsoft Excel 2007</value>
+        </prop>
+      </node>
+      <node oor:name="Calc Office Open XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Full de càlcul Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="Calc Office Open XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla de full de càlcul Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="draw_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PDF - Format de document portable</value>
+        </prop>
+      </node>
+      <node oor:name="WordPerfect Graphics">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Imatges del WordPerfect</value>
+        </prop>
+      </node>
+      <node oor:name="Visio Document">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Microsoft Visio 2000-2013</value>
+        </prop>
+      </node>
+      <node oor:name="Publisher Document">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Microsoft Publisher 98-2010</value>
+        </prop>
+      </node>
+      <node oor:name="Corel Draw Document">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Corel Draw</value>
+        </prop>
+      </node>
+      <node oor:name="Corel Presentation Exchange">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Corel Presentation Exchange</value>
+        </prop>
+      </node>
+      <node oor:name="Freehand Document">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Adobe/Macromedia Freehand</value>
+        </prop>
+      </node>
+      <node oor:name="Beagle_Works_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Dibuix del BeagleWorks/WordPerfect Works v1</value>
+        </prop>
+      </node>
+      <node oor:name="ClarisWorks_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Dibuix del ClarisWorks/AppleWorks</value>
+        </prop>
+      </node>
+      <node oor:name="Great_Works_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Dibuix del GreatWorks</value>
+        </prop>
+      </node>
+      <node oor:name="MacDraw_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">MacDraw (v0-v1)</value>
+        </prop>
+      </node>
+      <node oor:name="MacDrawPro_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">MacDraw II</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Works_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Dibuix del Microsoft Works for Mac (v. 1-4)</value>
+        </prop>
+      </node>
+      <node oor:name="MacPaint_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">MacPaint (v1)</value>
+        </prop>
+      </node>
+      <node oor:name="SuperPaint_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">SuperPaint (v1)</value>
+        </prop>
+      </node>
+      <node oor:name="PageMaker Document">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Adobe PageMaker</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Draw)">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Dibuix de l'OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="draw_StarOffice_XML_Draw_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla de dibuix de l'OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="draw8">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Dibuix ODF</value>
+        </prop>
+      </node>
+      <node oor:name="draw8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla de dibuix ODF</value>
+        </prop>
+      </node>
+      <node oor:name="Apple Keynote">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Apple Keynote 5</value>
+        </prop>
+      </node>
+      <node oor:name="MS PowerPoint 97">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Microsoft PowerPoint 97/2000/XP/2003</value>
+        </prop>
+      </node>
+      <node oor:name="MS PowerPoint 97 AutoPlay">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Microsoft PowerPoint 97/2000/XP/2003 de reproducció automàtica</value>
+        </prop>
+      </node>
+      <node oor:name="impress_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PDF - Format de document portable</value>
+        </prop>
+      </node>
+      <node oor:name="placeware_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PWP - PlaceWare</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML AutoPlay">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">XML de reproducció automàtica del Microsoft PowerPoint 2007/2010/2013</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla XML del Microsoft PowerPoint 2007/2010/2013</value>
+        </prop>
+      </node>
+      <node oor:name="Impress Office Open XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Presentació Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="Impress Office Open XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla de presentació Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="Impress Office Open XML AutoPlay">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla de presentació Office Open XML de reproducció automàtica</value>
+        </prop>
+      </node>
+      <node oor:name="ClarisWorks_Impress">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Presentació del ClarisWorks/AppleWorks</value>
+        </prop>
+      </node>
+      <node oor:name="MS PowerPoint 97 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla del Microsoft PowerPoint 97/2000/XP/2003</value>
+        </prop>
+      </node>
+      <node oor:name="impress_StarOffice_XML_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Dibuix de l'OpenOffice.org  Impress 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Impress)">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Presentació de l'OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="impress_StarOffice_XML_Impress_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla de presentació de l'OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="impress8">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Presentació ODF</value>
+        </prop>
+      </node>
+      <node oor:name="impress8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla de presentació ODF</value>
+        </prop>
+      </node>
+      <node oor:name="impress8_draw">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Dibuix ODF (Impress)</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">XML del Microsoft PowerPoint 2007/2010/2013</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla XML del Microsoft PowerPoint 2007/2010/2013</value>
+        </prop>
+      </node>
+      <node oor:name="Impress Office Open XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Presentació Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="Impress Office Open XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Plantilla de presentació Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Chart)">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Diagrama de l'OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="chart8">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Diagrama ODF</value>
+        </prop>
+      </node>
+      <node oor:name="MathML XML (Math)">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">MathML 1.01</value>
+        </prop>
+      </node>
+      <node oor:name="MathType 3.x">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">MathType3.x</value>
+        </prop>
+      </node>
+      <node oor:name="math_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PDF - Format de document portable</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Math)">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Fórmula de l'OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="math8">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Fórmula ODF</value>
+        </prop>
+      </node>
+      <node oor:name="BMP - MS Windows">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">BMP - Mapa de bits del Windows</value>
+        </prop>
+      </node>
+      <node oor:name="DXF - AutoCAD Interchange">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">DXF - Format d'intercanvi d'AutoCAD</value>
+        </prop>
+      </node>
+      <node oor:name="EMF - MS Windows Metafile">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">EMF - Metafitxer millorat</value>
+        </prop>
+      </node>
+      <node oor:name="EPS - Encapsulated PostScript">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">EPS - PostScript encapsulat</value>
+        </prop>
+      </node>
+      <node oor:name="GIF - Graphics Interchange">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">GIF - Format d'intercanvi de gràfics</value>
+        </prop>
+      </node>
+      <node oor:name="JPG - JPEG">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">JPEG - Grup combinat d'experts fotogràfics</value>
+        </prop>
+      </node>
+      <node oor:name="MET - OS/2 Metafile">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">MET - Metafitxer de l'OS/2</value>
+        </prop>
+      </node>
+      <node oor:name="MOV - MOV">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">MOV - Format de fitxer del QuickTime</value>
+        </prop>
+      </node>
+      <node oor:name="PBM - Portable Bitmap">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PBM - Mapa de bits portable</value>
+        </prop>
+      </node>
+      <node oor:name="PCT - Mac Pict">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PCT - Dibuix de Mac</value>
+        </prop>
+      </node>
+      <node oor:name="PCX - Zsoft Paintbrush">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PCX - Zsoft Paintbrush</value>
+        </prop>
+      </node>
+      <node oor:name="PGM - Portable Graymap">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PGM - Mapa de grisos portable</value>
+        </prop>
+      </node>
+      <node oor:name="PNG - Portable Network Graphic">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PNG - Gràfic de xarxa portable</value>
+        </prop>
+      </node>
+      <node oor:name="PPM - Portable Pixelmap">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PPM - Mapa de píxels portable</value>
+        </prop>
+      </node>
+      <node oor:name="PSD - Adobe Photoshop">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PSD - Adobe Photoshop</value>
+        </prop>
+      </node>
+      <node oor:name="RAS - Sun Rasterfile">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">RAS - Imatge d'escombratge de Sun (raster)</value>
+        </prop>
+      </node>
+      <node oor:name="SGF - StarOffice Writer SGF">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">SGF - Format de gràfics StarWriter</value>
+        </prop>
+      </node>
+      <node oor:name="SGV - StarDraw 2.0">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">SGV - StarDraw 2.0</value>
+        </prop>
+      </node>
+      <node oor:name="SVG - Scalable Vector Graphics">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">SVG - Gràfics vectorials escalables</value>
+        </prop>
+      </node>
+      <node oor:name="SVM - StarView Metafile">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">SVM - Metafitxer de l'StarView</value>
+        </prop>
+      </node>
+      <node oor:name="TGA - Truevision TARGA">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">TGA - Truevision Targa</value>
+        </prop>
+      </node>
+      <node oor:name="TIF - Tag Image File">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">TIFF - Format de fitxer d'imatge amb etiquetes</value>
+        </prop>
+      </node>
+      <node oor:name="WMF - MS Windows Metafile">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">WMF - Metafitxer del Windows</value>
+        </prop>
+      </node>
+      <node oor:name="XBM - X-Consortium">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">XPM - Mapa de píxels X</value>
+        </prop>
+      </node>
+      <node oor:name="XPM">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">XPM - Mapa de píxels X</value>
+        </prop>
+      </node>
+      <node oor:name="draw_PCD_Photo_CD_Base">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PCD - Kodak Photo CD (768x512)</value>
+        </prop>
+      </node>
+      <node oor:name="draw_PCD_Photo_CD_Base16">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PCD - Kodak Photo CD (192x128)</value>
+        </prop>
+      </node>
+      <node oor:name="draw_PCD_Photo_CD_Base4">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PCD - Kodak Photo CD (384x256)</value>
+        </prop>
+      </node>
+      <node oor:name="draw_bmp_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">BMP - Mapa de bits del Windows</value>
+        </prop>
+      </node>
+      <node oor:name="draw_emf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">EMF - Metafitxer millorat</value>
+        </prop>
+      </node>
+      <node oor:name="draw_eps_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">EPS - PostScript encapsulat</value>
+        </prop>
+      </node>
+      <node oor:name="draw_flash_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Macromedia Flash (SWF)</value>
+        </prop>
+      </node>
+      <node oor:name="draw_gif_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">GIF - Format d'intercanvi de gràfics</value>
+        </prop>
+      </node>
+      <node oor:name="draw_jpg_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">JPEG - Grup combinat d'experts fotogràfics</value>
+        </prop>
+      </node>
+      <node oor:name="draw_met_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">MET - Metafitxer OS/2</value>
+        </prop>
+      </node>
+      <node oor:name="draw_pbm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PBM - Mapa de bits portable</value>
+        </prop>
+      </node>
+      <node oor:name="draw_pct_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PCT - Dibuix de Mac</value>
+        </prop>
+      </node>
+      <node oor:name="draw_pgm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PGM - Mapa de grisos portable</value>
+        </prop>
+      </node>
+      <node oor:name="draw_png_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PNG - Gràfic de xarxa portable</value>
+        </prop>
+      </node>
+      <node oor:name="draw_ppm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PPM - Mapa de píxels portable</value>
+        </prop>
+      </node>
+      <node oor:name="draw_ras_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">RAS - Imatge d'escombratge de Sun (raster)</value>
+        </prop>
+      </node>
+      <node oor:name="draw_svg_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">SVG - Gràfics vectorials escalables</value>
+        </prop>
+      </node>
+      <node oor:name="draw_svm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">SVM - Metafitxer de l'StarView</value>
+        </prop>
+      </node>
+      <node oor:name="draw_tif_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">TIFF - Format de fitxer d'imatge amb etiquetes</value>
+        </prop>
+      </node>
+      <node oor:name="draw_wmf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">WMF - Metafitxer del Windows</value>
+        </prop>
+      </node>
+      <node oor:name="draw_xpm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">XPM - Mapa de píxels X</value>
+        </prop>
+      </node>
+      <node oor:name="draw_html_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document HTML (Draw)</value>
+        </prop>
+      </node>
+      <node oor:name="CGM - Computer Graphics Metafile">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">CGM - Metafitxer de gràfics d'ordinador</value>
+        </prop>
+      </node>
+      <node oor:name="impress_bmp_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">BMP - Mapa de bits del Windows</value>
+        </prop>
+      </node>
+      <node oor:name="impress_emf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">EMF - Metafitxer millorat</value>
+        </prop>
+      </node>
+      <node oor:name="impress_eps_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">EPS - PostScript encapsulat</value>
+        </prop>
+      </node>
+      <node oor:name="impress_flash_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Macromedia Flash (SWF)</value>
+        </prop>
+      </node>
+      <node oor:name="impress_gif_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">GIF - Format d'intercanvi de gràfics</value>
+        </prop>
+      </node>
+      <node oor:name="impress_jpg_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">JPEG - Grup combinat d'experts fotogràfics</value>
+        </prop>
+      </node>
+      <node oor:name="impress_met_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">MET - Metafitxer OS/2</value>
+        </prop>
+      </node>
+      <node oor:name="impress_pbm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PBM - Mapa de bits portable</value>
+        </prop>
+      </node>
+      <node oor:name="impress_pct_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PCT - Dibuix de Mac</value>
+        </prop>
+      </node>
+      <node oor:name="impress_pgm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PGM - Mapa de grisos portable</value>
+        </prop>
+      </node>
+      <node oor:name="impress_png_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PNG - Gràfic de xarxa portable</value>
+        </prop>
+      </node>
+      <node oor:name="impress_ppm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PPM - Mapa de píxels portable</value>
+        </prop>
+      </node>
+      <node oor:name="impress_ras_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">RAS - Imatge d'escombratge de Sun (raster)</value>
+        </prop>
+      </node>
+      <node oor:name="impress_svg_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">SVG - Gràfics vectorials escalables</value>
+        </prop>
+      </node>
+      <node oor:name="impress_svm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">SVM - Metafitxer de l'StarView</value>
+        </prop>
+      </node>
+      <node oor:name="impress_tif_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">TIFF - Format de fitxer d'imatge amb etiquetes</value>
+        </prop>
+      </node>
+      <node oor:name="impress_wmf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">WMF - Metafitxer del Windows</value>
+        </prop>
+      </node>
+      <node oor:name="impress_xpm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">XPM - Mapa de píxels X</value>
+        </prop>
+      </node>
+      <node oor:name="impress_html_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">Document HTML (Impress)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_jpg_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">JPEG - Grup combinat d'experts fotogràfics</value>
+        </prop>
+      </node>
+      <node oor:name="writer_png_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">PNG - Gràfic de xarxa portable</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 2003 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">XML del Microsoft Excel 2003</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2003 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="ca">XML del Microsoft Word 2003</value>
+        </prop>
+      </node>
+    </node>
+  </oor:component-data>
+</oor:data>
