@@ -33,14 +33,11 @@ Two engineers created NeoOffice in 2003 when they made OpenOffice run natively o
 What's New in this Version:
 Before you buy NeoOffice, please click on the "Support" link and read the installation notes.
 
-This version of NeoOffice fixes the following bug:
-• When using the hyperlink dialog, LibreOffice bug #86845 would occur in NeoOffice
-
-This version also includes a backport of LibreOffice's most current password management code. If you have previously set a master password, NeoOffice will prompt you to reset your master password at launch. Resetting your master password will reencode all your saved passwords in a more secure format than in previous versions of NeoOffice.
+This version of NeoOffice adds native support for Apple Silicon.
 
 
 Promotional Text:
-Silicon Mac users: NeoOffice is an application based on Intel. You must install Apple's Rosetta to run NeoOffice on Apple Silicon.
+NeoOffice now runs natively on on Apple Silicon.
 
 
 Keywords:
