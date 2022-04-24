@@ -538,7 +538,7 @@ endif
 build.package_shared:
 # Check that codesign and productsign executables exist before proceeding
 	@sh -e -c 'for i in codesign productsign ; do if [ -z "`which $$i`" ] ; then echo "$$i command not found" ; exit 1 ; fi ; done'
-	sh -e -c 'if [ -d "$(INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(INSTALL_HOME)" ; fi'
+	sh -e -c 'if [ -d "$(INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(INSTALL_HOME)" ; fi'
 	mkdir -p "$(INSTALL_HOME)/package"
 	sh -e -c '( cd "$(LIBO_INSTDIR)/$(LIBO_PRODUCT_NAME).app" && tar cf - . ) | ( cd "$(PWD)/$(INSTALL_HOME)/package" && tar xvf - )'
 	sh -e -c '( cd "$(INSTDIR)/$(LIBO_PRODUCT_NAME).app" && ( find . -type f | tar cf - -T - ) ) | ( cd "$(PWD)/$(INSTALL_HOME)/package" && tar xvf - )'
@@ -855,7 +855,7 @@ endif
 build.patch_package_shared:
 # Check that codesign and productsign executables exist before proceeding
 	@sh -e -c 'for i in codesign productsign ; do if [ -z "`which $$i`" ] ; then echo "$$i command not found" ; exit 1 ; fi ; done'
-	sh -e -c 'if [ -d "$(PATCH_INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(PATCH_INSTALL_HOME)" ; fi'
+	sh -e -c 'if [ -d "$(PATCH_INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PATCH_INSTALL_HOME)" ; fi'
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Frameworks"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/MacOS"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
@@ -1077,3 +1077,6 @@ build.clean_neo:
 	rm -Rf "$(WORKDIR)"
 	rm -f build.neo*
 	find . -type l -not -path './'"$(BUILD_HOME)"'/*' -exec rm {} \;
+
+build.clean_all:
+	sh -e -c 'if [ -d "$(BUILD_HOME)" ] ; then echo "Running sudo to delete previous build files..." ; sudo rm -f build.* && sudo rm -Rf "$(BUILD_HOME)" ; fi'
