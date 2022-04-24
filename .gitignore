@@ -1,6 +1,3 @@
 /build*
 /certs.mk
 /custom.mk
-/source*
-/install*
-/patch_install*
