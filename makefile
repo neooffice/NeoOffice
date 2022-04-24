@@ -538,7 +538,7 @@ endif
 build.package_shared:
 # Check that codesign and productsign executables exist before proceeding
 	@sh -e -c 'for i in codesign productsign ; do if [ -z "`which $$i`" ] ; then echo "$$i command not found" ; exit 1 ; fi ; done'
-	sh -e -c 'if [ -d "$(INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(INSTALL_HOME)" ; fi'
+	@sh -e -c 'if [ -d "$(INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(INSTALL_HOME)" ; fi'
 	mkdir -p "$(INSTALL_HOME)/package"
 	sh -e -c '( cd "$(LIBO_INSTDIR)/$(LIBO_PRODUCT_NAME).app" && tar cf - . ) | ( cd "$(PWD)/$(INSTALL_HOME)/package" && tar xvf - )'
 	sh -e -c '( cd "$(INSTDIR)/$(LIBO_PRODUCT_NAME).app" && ( find . -type f | tar cf - -T - ) ) | ( cd "$(PWD)/$(INSTALL_HOME)/package" && tar xvf - )'
@@ -766,7 +766,7 @@ endif
 # Mark certain directories writable for group
 	chmod -f 775 "$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app"
 	chmod -f 775 "$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app/Contents/Resources"
-	echo "Running sudo to chown installation files..."
+	@echo "Running sudo to chown installation files..."
 	sudo chown -Rf root:admin "$(INSTALL_HOME)/package"
 	mkdir -p "$(INSTALL_HOME)/package.pkg/Resources"
 	mkdir -p "$(INSTALL_HOME)/package.pkg/contents.pkg"
@@ -855,7 +855,7 @@ endif
 build.patch_package_shared:
 # Check that codesign and productsign executables exist before proceeding
 	@sh -e -c 'for i in codesign productsign ; do if [ -z "`which $$i`" ] ; then echo "$$i command not found" ; exit 1 ; fi ; done'
-	sh -e -c 'if [ -d "$(PATCH_INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PATCH_INSTALL_HOME)" ; fi'
+	@sh -e -c 'if [ -d "$(PATCH_INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PATCH_INSTALL_HOME)" ; fi'
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Frameworks"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/MacOS"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
@@ -901,7 +901,7 @@ endif
 # Mark certain directories writable for group
 	chmod -f 775 "$(PATCH_INSTALL_HOME)/package"
 	chmod -f 775 "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
-	echo "Running sudo to chown installation files..."
+	@echo "Running sudo to chown installation files..."
 	sudo chown -Rf root:admin "$(PATCH_INSTALL_HOME)/package"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package.pkg/Resources"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package.pkg/contents.pkg/Scripts"
@@ -1079,4 +1079,19 @@ build.clean_neo:
 	find . -type l -not -path './'"$(BUILD_HOME)"'/*' -exec rm {} \;
 
 build.clean_all:
-	sh -e -c 'if [ -d "$(BUILD_HOME)" ] ; then echo "Running sudo to delete previous build files..." ; sudo rm -f build.* && sudo rm -Rf "$(BUILD_HOME)" ; fi'
+	@sh -e -c 'if [ -d "$(BUILD_HOME)" ] ; then echo "Running sudo to delete previous build files..." ; sudo rm -f build.* && sudo rm -Rf "$(BUILD_HOME)" ; fi'
+
+clean:
+	@echo ""
+	@echo "Error: make $@ does nothing."
+	@echo ""
+	@echo "To clean only the custom modules and preserve the LibreOffice build, execute"
+	@echo "the following commmand:"
+	@echo ""
+	@echo "  make build.clean_neo"
+	@echo ""
+	@echo "To completely clean all build files, execute the following command:"
+	@echo ""
+	@echo "  make build.clean_all"
+	@echo ""
+	@exit 1

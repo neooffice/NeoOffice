@@ -107,3 +107,11 @@ At this time, NeoOffice will only build on macOS 11 Big Sur or macOS 12 Monterey
    If you built patch installers, also invoke the following command:
 
    make build.staple_all_patches
+
+14. There are two ways to clean build files. To clean only the custom modules and preserve the LibreOffice build, execute the following commmand:
+
+	make build.clean_neo
+
+	To completely clean all build files, execute the following command:
+
+	make build.clean_all
