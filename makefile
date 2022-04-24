@@ -1074,10 +1074,18 @@ build.staple_all: build.staple_package2 build.staple_package3
 build.staple_all_patches: build.staple_patch_package build.staple_patch_package3
 	touch "$@"
 
+build.clean_neo_installers:
+	rm -f build.package*
+	rm -f build.patch_package*
+
+build.clean_neo_tests:
+	rm -f build.neo_*_test
+	rm -f build.neo_tests
+
 build.clean_neo:
 	rm -Rf "$(INSTDIR)"
 	rm -Rf "$(WORKDIR)"
-	rm -f build.neo*
+	rm -f build.neo_*
 	find . -type l -not -path './'"$(BUILD_HOME)"'/*' -exec rm {} \;
 
 build.clean_all:
@@ -1087,8 +1095,13 @@ clean:
 	@echo ""
 	@echo "Error: make $@ does nothing."
 	@echo ""
-	@echo "To clean only the custom modules and preserve the LibreOffice build, execute"
-	@echo "the following commmand:"
+	@echo "To clean only the NeoOffice unit tests and preserve the both the LibreoOffice"
+	@echo "build and custom NeoOffice code build, execute the following commmand:"
+	@echo ""
+	@echo "  make build.clean_neo_tests"
+	@echo ""
+	@echo "To clean only the custom NeoOffice code and preserve the LibreOffice build,"
+	@echo "execute the following commmand:"
 	@echo ""
 	@echo "  make build.clean_neo"
 	@echo ""
@@ -1097,13 +1110,3 @@ clean:
 	@echo "  make build.clean_all"
 	@echo ""
 	@exit 1
-
-pat:
-	@echo $(PRODUCT_NAME)
-	@echo $(PRODUCT_DIR_NAME)
-	@echo $(PRODUCT_DIR_NAME2)
-	@echo $(PRODUCT_DIR_NAME3)
-	@echo $(PRODUCT_DOMAIN)
-	@echo $(PRODUCT_TRADEMARKED_NAME)
-	@echo $(PRODUCT_TRADEMARKED_NAME_RTF)
-	@echo $(PRODUCT_DIR_PATCH_VERSION_EXTRA)
