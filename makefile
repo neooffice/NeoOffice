@@ -34,7 +34,7 @@
 ##########################################################################
 
 # Macros that are overridable by make command line options
-PRODUCT_NAME=My Untested Office Suite
+PRODUCT_NAME=NeoOffice Developer Build
 PRODUCT_DIR_NAME=$(subst $(SPACE),,$(PRODUCT_NAME))
 PRODUCT_DIR_NAME2=$(PRODUCT_DIR_NAME)
 PRODUCT_DIR_NAME3=$(PRODUCT_DIR_NAME)
@@ -43,10 +43,12 @@ PRODUCT_TRADEMARKED_NAME=$(PRODUCT_NAME)
 PRODUCT_TRADEMARKED_NAME_RTF=$(PRODUCT_NAME)
 PRODUCT_DIR_PATCH_VERSION_EXTRA=
 
-# Custom overrides go in the following file
+# Custom overrides go in the following file. For builds with the NeoOffice
+# trademark, copy custom.neo.mk to custom.mk.
 -include custom.mk
 
-# Custom code signing certificate macros go in the following file
+# Custom code signing certificate macros go in the following file. For builds
+# with the NeoOffice trademark, copy certs.neo.mk to certs.mk and set the APPLEDEVELOPERID macro to e-mail address of your Apple Developer account.
 -include certs.mk
 
 EMPTY:=
@@ -1095,3 +1097,13 @@ clean:
 	@echo "  make build.clean_all"
 	@echo ""
 	@exit 1
+
+pat:
+	@echo $(PRODUCT_NAME)
+	@echo $(PRODUCT_DIR_NAME)
+	@echo $(PRODUCT_DIR_NAME2)
+	@echo $(PRODUCT_DIR_NAME3)
+	@echo $(PRODUCT_DOMAIN)
+	@echo $(PRODUCT_TRADEMARKED_NAME)
+	@echo $(PRODUCT_TRADEMARKED_NAME_RTF)
+	@echo $(PRODUCT_DIR_PATCH_VERSION_EXTRA)
