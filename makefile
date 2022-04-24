@@ -104,17 +104,17 @@ endif
 # Build location macros
 BUILD_HOME:=build
 ifdef PRODUCT_BUILD3
-INSTALL_HOME:=install3
-PATCH_INSTALL_HOME:=patch_install3
+INSTALL_HOME:=$(BUILD_HOME)/install3
+PATCH_INSTALL_HOME:=$(BUILD_HOME)/patch_install3
 else ifdef PRODUCT_BUILD2
-INSTALL_HOME:=install2
-PATCH_INSTALL_HOME:=patch_install2
+INSTALL_HOME:=$(BUILD_HOME)/install2
+PATCH_INSTALL_HOME:=$(BUILD_HOME)/patch_install2
 else
-INSTALL_HOME:=install
-PATCH_INSTALL_HOME:=patch_install
+INSTALL_HOME:=$(BUILD_HOME)/install
+PATCH_INSTALL_HOME:=$(BUILD_HOME)/patch_install
 endif
 SOURCE_HOME:=source
-CD_INSTALL_HOME:=cd_install
+CD_INSTALL_HOME:=$(BUILD_HOME)/cd_install
 APACHE_PATCHES_HOME:=patches/apache
 NEOOFFICE_PATCHES_HOME:=patches/neooffice
 LIBO_PATCHES_HOME:=patches/libreoffice

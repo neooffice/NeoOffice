@@ -74,11 +74,11 @@ At this time, NeoOffice will only build on macOS 11 Big Sur or macOS 12 Monterey
    cd "<source folder>"
    make
 
-   A successful build will create the following 3 "<source folder>/install*/*.dmg" files:
+   A successful build will create the following 3 "<source folder>/build/install*/*.dmg" files:
 
-      "<source folder>/install/*.dmg" - Installer for the Mac App Store version
-      "<source folder>/install2/*.dmg" - Installer for the Viewer version
-      "<source folder>/install3/*.dmg" - Installer for the Professional Edition version
+      "<source folder>/build/install/*.dmg" - Installer for the Mac App Store version
+      "<source folder>/build/install2/*.dmg" - Installer for the Viewer version
+      "<source folder>/build/install3/*.dmg" - Installer for the Professional Edition version
 
    Important note: if the build fails in the build.neo_tests make target, uncheck iCloud Drive in the System Preferences iCloud panel and reinvoke the above commands to continue the build.
 
@@ -87,10 +87,10 @@ At this time, NeoOffice will only build on macOS 11 Big Sur or macOS 12 Monterey
    cd "<source folder>"
    make build.all_patches
 
-   A successful build will create the following 3 "<source folder>/patch_install*/*.dmg" files:
+   A successful build will create the following 3 "<source folder>/build/patch_install*/*.dmg" files:
 
-      "<source folder>/patch_install/*.dmg" - Patch installer for the Mac App Store version
-      "<source folder>/patch_install3/*.dmg" - Patch installer for the Professional Edition version
+      "<source folder>/build/patch_install/*.dmg" - Patch installer for the Mac App Store version
+      "<source folder>/build/patch_install3/*.dmg" - Patch installer for the Professional Edition version
 
 12. You can notarize the installers using Apple's notarization service by opening the "<source folder>/certs.mk" file that you created and setting the APPLEDEVELOPERID macro to the e-mail of your Apple Developer ID. Then, invoke the following command:
 
