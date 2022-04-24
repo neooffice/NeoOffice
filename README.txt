@@ -108,7 +108,11 @@ At this time, NeoOffice will only build on macOS 11 Big Sur or macOS 12 Monterey
 
    make build.staple_all_patches
 
-14. There are two ways to clean build files. To clean only the NeoOffice unit tests and preserve the both the LibreoOffice build and custom NeoOffice code build, execute the following commmand:
+14. There are several make rules to clean build files. To clean only the NeoOffice installers and patch installers execute the following commmand:
+
+    make build.clean_neo_installers
+
+    To clean only the NeoOffice unit tests and preserve the both the LibreoOffice build and custom NeoOffice code build, execute the following commmand:
 
     make build.clean_neo_tests
 
