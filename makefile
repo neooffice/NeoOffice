@@ -1071,3 +1071,9 @@ build.staple_all: build.staple_package2 build.staple_package3
 
 build.staple_all_patches: build.staple_patch_package build.staple_patch_package3
 	touch "$@"
+
+build.clean_neo:
+	rm -Rf "$(INSTDIR)"
+	rm -Rf "$(WORKDIR)"
+	rm -f build.neo*
+	find . -type l -not -path './'"$(BUILD_HOME)"'/*' -exec rm {} \;
