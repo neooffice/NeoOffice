@@ -138,7 +138,7 @@ LIBO_PRODUCT_NAME=LibreOfficeDev
 LIBO_PRODUCT_VERSION=$(LIBO_PRODUCT_VERSION_FAMILY).4.7.2
 PRODUCT_INSTALL_DIR_NAME=$(PRODUCT_NAME)
 PRODUCT_VERSION_FAMILY=4.0
-PRODUCT_VERSION_BASE=2022
+PRODUCT_VERSION_BASE=2022 Developer Preview
 PRODUCT_VERSION=$(PRODUCT_VERSION_BASE)
 PRODUCT_VERSION2=$(PRODUCT_VERSION) $(PRODUCT_VERSION_EXT2)
 PRODUCT_VERSION3=$(PRODUCT_VERSION) $(PRODUCT_VERSION_EXT3)
@@ -201,7 +201,7 @@ YOURSWAYCREATEDMG_PACKAGE=jaeggir-yoursway-create-dmg-a22ac11
 YOURSWAYCREATEDMG_SOURCE_FILENAME=yoursway-create-dmg.zip
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-NEO_TAG:=NeoOffice-2022
+NEO_TAG:=NeoOffice-2022_Developer_Preview
 NEO_TAG2:=$(NEO_TAG)
 NEO_TAG3:=$(NEO_TAG)
 PRODUCT_MODULES = \
@@ -626,7 +626,9 @@ endif
 	chmod -Rf u+rw "$(INSTALL_HOME)/package/Contents/tmp"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "Resources/flat_logo.svg" "Resources/intro.png" "Resources/shell/about.svg"
 ifeq ($(filter NeoOffice,$(PRODUCT_NAME)),NeoOffice)
-ifdef PRODUCT_BUILD3
+ifneq ($(filter-out NeoOffice,$(PRODUCT_NAME)),)
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/etc/package/intro_developer.png" "Resources/intro.png"
+else ifdef PRODUCT_BUILD3
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/etc/package/intro_professional.png" "Resources/intro.png"
 else ifdef PRODUCT_BUILD2
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/etc/package/intro_free.png" "Resources/intro.png"
