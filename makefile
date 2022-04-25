@@ -823,9 +823,9 @@ endif
 	mkdir -p "$(INSTALL_HOME)/tmp"
 	cd "$(INSTALL_HOME)/tmp" ; unzip "$(PWD)/etc/package/$(YOURSWAYCREATEDMG_SOURCE_FILENAME)"
 ifeq ($(filter NeoOffice,$(PRODUCT_NAME)),NeoOffice)
-	sync ; "$(INSTALL_HOME)/tmp/$(YOURSWAYCREATEDMG_PACKAGE)/create-dmg" --volname "Install $(PRODUCT_NAME) $(PRODUCT_VERSION)" --volicon "etc/package/ship.icns" --icon-size 128 --icon "Install $(PRODUCT_NAME) $(PRODUCT_VERSION).pkg" 150 100 --icon "ReadMe.rtf" 350 100 --icon "Install $(PRODUCT_NAME) $(PRODUCT_VERSION).pkg" 150 100 --icon "ReadMe.rtf" 350 100 --window-pos 400 300 --window-size 500 260 "$(INSTALL_HOME)/$(PRODUCT_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)"
+	sync ; "$(INSTALL_HOME)/tmp/$(YOURSWAYCREATEDMG_PACKAGE)/create-dmg" --volname "Install $(PRODUCT_NAME) $(PRODUCT_VERSION)" --volicon "etc/package/ship.icns" --icon-size 128 --icon "Install $(PRODUCT_NAME) $(PRODUCT_VERSION).pkg" 150 100 --icon "ReadMe.rtf" 350 100 --icon "Install $(PRODUCT_NAME) $(PRODUCT_VERSION).pkg" 150 100 --icon "ReadMe.rtf" 350 100 --window-pos 400 300 --window-size 500 260 "$(INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)"
 else
-	sync ; "$(INSTALL_HOME)/tmp/$(YOURSWAYCREATEDMG_PACKAGE)/create-dmg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)"
+	sync ; "$(INSTALL_HOME)/tmp/$(YOURSWAYCREATEDMG_PACKAGE)/create-dmg" "$(INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)"
 endif
 	rm -Rf "$(INSTALL_HOME)/tmp"
 
@@ -946,9 +946,9 @@ endif
 	mkdir -p "$(PATCH_INSTALL_HOME)/tmp"
 	cd "$(PATCH_INSTALL_HOME)/tmp" ; unzip "$(PWD)/etc/package/$(YOURSWAYCREATEDMG_SOURCE_FILENAME)"
 ifeq ($(filter NeoOffice,$(PRODUCT_NAME)),NeoOffice)
-	sync ; "$(PATCH_INSTALL_HOME)/tmp/$(YOURSWAYCREATEDMG_PACKAGE)/create-dmg" --volname "Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)" --volicon "etc/package/ship.icns" --icon-size 128 --icon "Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION).pkg" 250 100 --icon "Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION).pkg" 250 100 --window-pos 400 300 --window-size 500 260 "$(PATCH_INSTALL_HOME)/$(PRODUCT_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME)"
+	sync ; "$(PATCH_INSTALL_HOME)/tmp/$(YOURSWAYCREATEDMG_PACKAGE)/create-dmg" --volname "Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)" --volicon "etc/package/ship.icns" --icon-size 128 --icon "Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION).pkg" 250 100 --icon "Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION).pkg" 250 100 --window-pos 400 300 --window-size 500 260 "$(PATCH_INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME)"
 else
-	sync ; "$(PATCH_INSTALL_HOME)/tmp/$(YOURSWAYCREATEDMG_PACKAGE)/create-dmg" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME)"
+	sync ; "$(PATCH_INSTALL_HOME)/tmp/$(YOURSWAYCREATEDMG_PACKAGE)/create-dmg" "$(PATCH_INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME)"
 endif
 	rm -Rf "$(PATCH_INSTALL_HOME)/tmp"
 
@@ -981,11 +981,7 @@ endif
 endif
 
 build.notarize_package_shared:
-ifeq ($(filter NeoOffice,$(PRODUCT_NAME)),NeoOffice)
-	xcrun altool --notarize-app -f "$(INSTALL_HOME)/$(PRODUCT_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg" --primary-bundle-id "$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" -u "$(APPLEDEVELOPERID)"
-else
-	xcrun altool --notarize-app -f "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg" --primary-bundle-id "$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" -u "$(APPLEDEVELOPERID)"
-endif
+	xcrun altool --notarize-app -f "$(INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg" --primary-bundle-id "$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" -u "$(APPLEDEVELOPERID)"
 
 build.notarize_patch_package: build.patch_package
 	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
@@ -1000,11 +996,7 @@ ifndef PRODUCT_BUILD3
 endif
 
 build.notarize_patch_package_shared:
-ifeq ($(filter NeoOffice,$(PRODUCT_NAME)),NeoOffice)
-	xcrun altool --notarize-app -f "$(PATCH_INSTALL_HOME)/$(PRODUCT_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg" --primary-bundle-id "$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" -u "$(APPLEDEVELOPERID)"
-else
-	xcrun altool --notarize-app -f "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg" --primary-bundle-id "$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" -u "$(APPLEDEVELOPERID)"
-endif
+	xcrun altool --notarize-app -f "$(PATCH_INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg" --primary-bundle-id "$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" -u "$(APPLEDEVELOPERID)"
 
 build.notarize_all: build.notarize_package2 build.notarize_package3
 	touch "$@"
@@ -1037,11 +1029,7 @@ endif
 build.staple_package_shared:
 # Check that stapler executables exist before proceeding
 	@sh -e -c 'for i in stapler; do if [ -z "`which $$i`" ] ; then echo "$$i command not found" ; exit 1 ; fi ; done'
-ifeq ($(filter NeoOffice,$(PRODUCT_NAME)),NeoOffice)
-	stapler staple "$(INSTALL_HOME)/$(PRODUCT_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg"
-else
-	stapler staple "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg"
-endif
+	stapler staple "$(INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg"
 
 build.staple_patch_package: build.notarize_patch_package
 	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
@@ -1056,11 +1044,7 @@ ifndef PRODUCT_BUILD3
 endif
 
 build.staple_patch_package_shared:
-ifeq ($(filter NeoOffice,$(PRODUCT_NAME)),NeoOffice)
-	stapler staple "$(PATCH_INSTALL_HOME)/$(PRODUCT_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg"
-else
-	stapler staple "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg"
-endif
+	stapler staple "$(PATCH_INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg"
 
 build.staple_all: build.staple_package2 build.staple_package3
 	touch "$@"
