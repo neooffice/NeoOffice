@@ -54,9 +54,15 @@
 #define DOFUNCTION( x ) BOOL SAL_DLLPUBLIC_EXPORT _##x ()
 #define FUNCTION( x ) DOFUNCTION( x )
 
+// Uncomment the following line to force validation of the App Store receipt
+// upon application termination
+// #define VALIDATE_APP_STORE_RECEIPT_ON_EXIT
+
 typedef BOOL BundleCheck_Type();
+#ifdef VALIDATE_APP_STORE_RECEIPT_ON_EXIT
 typedef sal_Bool Application_canSave_Type();
 typedef sal_Bool Application_isRunningInSandbox_Type();
+#endif	// VALIDATE_APP_STORE_RECEIPT_ON_EXIT
 
 // The following are custom data types for Apple's App Store receipt payload
 // ASN.1 format as documented in the following URL:
@@ -74,9 +80,13 @@ typedef struct
 	AppReceiptAttribute**	mpAttrs;
 } AppReceiptAttributes;
 
+#ifdef VALIDATE_APP_STORE_RECEIPT_ON_EXIT
 static const int nDefaultExitCode = 173;
 static Application_canSave_Type *pApplication_canSave = NULL;
 static Application_isRunningInSandbox_Type *pApplication_isRunningInSandbox = NULL;
+#else	// VALIDATE_APP_STORE_RECEIPT_ON_EXIT
+static const int nDefaultExitCode = 0;
+#endif	// VALIDATE_APP_STORE_RECEIPT_ON_EXIT
 
 static const SecAsn1Template aAttributeTemplate[] = {
 	{ SEC_ASN1_SEQUENCE, 0, NULL, sizeof( AppReceiptAttribute ) },
@@ -492,6 +502,7 @@ void NSApplication_terminate()
 {
 	int nRet = nDefaultExitCode;
 
+#ifdef VALIDATE_APP_STORE_RECEIPT_ON_EXIT
 	if ( !pApplication_canSave )
 		pApplication_canSave = (Application_canSave_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canSave" );
 	if ( !pApplication_isRunningInSandbox )
@@ -511,6 +522,7 @@ void NSApplication_terminate()
 
 		[pPool release];
 	}
+#endif	// VALIDATE_APP_STORE_RECEIPT_ON_EXIT
 
 	// Force exit since NSApplication won't shutdown when only exit() is invoked
 	_exit( nRet );
