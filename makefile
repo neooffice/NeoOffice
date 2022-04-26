@@ -958,6 +958,15 @@ build.all: build.package build.package2 build.package3
 build.all_patches: build.patch_package build.patch_package3
 	touch "$@"
 
+build.notarize_package: build.package
+ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
+	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.notarize_package"
+else
+	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
+	"$(MAKE)" $(MFLAGS) "build.notarize_package_shared"
+	touch "$@"
+endif
+
 build.notarize_package2: build.package2
 ifndef PRODUCT_BUILD2
 ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
@@ -998,11 +1007,20 @@ endif
 build.notarize_patch_package_shared:
 	xcrun altool --notarize-app -f "$(PATCH_INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg" --primary-bundle-id "$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" -u "$(APPLEDEVELOPERID)"
 
-build.notarize_all: build.notarize_package2 build.notarize_package3
+build.notarize_all: build.notarize_package build.notarize_package2 build.notarize_package3
 	touch "$@"
 
 build.notarize_all_patches: build.notarize_patch_package build.notarize_patch_package3
 	touch "$@"
+
+build.staple_package: build.notarize_package
+ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
+	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.staple_package"
+else
+	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
+	"$(MAKE)" $(MFLAGS) "build.staple_package_shared"
+	touch "$@"
+endif
 
 build.staple_package2: build.notarize_package2
 ifndef PRODUCT_BUILD2
