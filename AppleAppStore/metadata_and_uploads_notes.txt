@@ -40,7 +40,7 @@ This version of NeoOffice adds native support for Apple Silicon.
 
 
 Promotional Text:
-NeoOffice now runs natively on on Apple Silicon.
+NeoOffice now runs natively on Apple Silicon.
 
 
 Keywords:
