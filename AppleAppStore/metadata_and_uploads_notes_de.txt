@@ -21,6 +21,9 @@ NeoOffice ist ein Office-Paket für Mac, die auf OpenOffice und LibreOffice basi
 Zwei Ingenieure erstellten NeoOffice im Jahr 2003, als sie OpenOffice auf OS X zum ersten Mal native ausführbar machten. Seitdem haben die NeoOffice-Ingenieure immer wieder Verbesserungen zu NeoOffice hinzugefügt, dass Sie nicht in OpenOffice oder LibreOffice finden werden, wie zum Beispiel:
 
 • Nativer Dunkelmodus
+• Natives Menü mit Akzentzeichen durch halten eine Taste auf der Tastatur gedrückt
+• Nativen Tabs durch aktivieren der Systemeinstellung „Tabs bevorzugen”
+• Nativer Vollbildmodus
 • NeoOffice > Beim Starten Öffnen Menü für die Öffnung von Calc oder Impress anstelle Writer beim Start
 • Datei > Alle Versionen durchsuchen Menü für die Wiederherstellung von vorherigen Versionen von Ihrer Dokumente
 • Native Datei-Sperrung für die sichere Bearbeitung von Dateien in iCloud Drive, Dropbox oder Netzlaufwerke
