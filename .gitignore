@@ -1,3 +1,4 @@
 /build*
 /certs.mk
 /custom.mk
+**/.DS_Store
