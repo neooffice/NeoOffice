@@ -24,7 +24,7 @@ Deux ingénieurs ont créé NeoOffice en 2003 quand ils ont fait OpenOffice fonc
 • Menu d'accents natif en maintenant enfoncé une touche du clavier
 • Onglets natifs en activant la préférence système « Préférer les onglets »
 • Mode plein écran natif
-• Menu de NeoOffice > Document par défault pour ouvrir de Calc ou Impress au lieu de Writer au démarrage
+• Menu de NeoOffice > Document par défaut pour ouvrir de Calc ou Impress au lieu de Writer au démarrage
 • Menu de Fichier > Parcourir toutes les versions pour restaurer les versions précédentes de vos documents
 • Verrouillage natif des fichiers pour modifier sans encombre des fichiers dans iCloud Drive, Dropbox ou lecteurs réseau
 • Vérification de la grammaire natif Mac
