@@ -75,6 +75,10 @@
 #include <svx/unofill.hxx>
 #include <vcl/openglwin.hxx>
 #include <vcl/opengl/OpenGLContext.hxx>
+#ifdef USE_JAVA
+#include <editeng/unoprnms.hxx>
+#include <svx/xflclit.hxx>
+#endif	// USE_JAVA
 
 #include <drawinglayer/XShapeDumper.hxx>
 
@@ -2433,6 +2437,9 @@ void formatPage(
     , const awt::Size& rPageSize
     , const uno::Reference< drawing::XShapes >& xTarget
     , const uno::Reference< lang::XMultiServiceFactory>& xShapeFactory
+#ifdef USE_JAVA
+    , SdrPage *pPage
+#endif	// USE_JAVA
     )
 {
     try
@@ -2447,6 +2454,19 @@ void formatPage(
         //format page
         tPropertyNameValueMap aNameValueMap;
         PropertyMapper::getValueMap( aNameValueMap, PropertyMapper::getPropertyNameMapForFillAndLineProperties(), xModelPage );
+
+#ifdef USE_JAVA
+        if( pPage )
+        {
+            sal_Int32 nColor = 0;
+            std::map< OUString, uno::Any >::const_iterator it = aNameValueMap.find( UNO_NAME_FILLCOLOR );
+            if( it != aNameValueMap.end() )
+                it->second >>= nColor;
+
+            pPage->getSdrPageProperties().PutItem( XFillStyleItem( drawing::FillStyle_SOLID ) );
+            pPage->getSdrPageProperties().PutItem( XFillColorItem( OUString(), Color( nColor ) ) );
+        }
+#endif	// USE_JAVA
 
         OUString aCID( ObjectIdentifier::createClassifiedIdentifier( OBJECTTYPE_PAGE, OUString() ) );
         aNameValueMap.insert( tPropertyNameValueMap::value_type( "Name", uno::makeAny( aCID ) ) ); //CID OUString
@@ -3099,7 +3119,11 @@ void ChartView::createShapes2D( const awt::Size& rPageSize )
 
     // todo: it would be nicer to just pass the page m_xDrawPage and format it,
     // but the draw page does not support XPropertySet
+#ifdef USE_JAVA
+    formatPage( mrChartModel, rPageSize, mxRootShape, m_xShapeFactory, ChartView::getSdrPage() );
+#else	// USE_JAVA
     formatPage( mrChartModel, rPageSize, mxRootShape, m_xShapeFactory );
+#endif	// USE_JAVA
 
     CreateShapeParam2D aParam;
     aParam.maRemainingSpace.X = 0;
