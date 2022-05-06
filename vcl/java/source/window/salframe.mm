@@ -4555,9 +4555,12 @@ void JavaSalFrame::SetInputContext( SalInputContext* pContext )
 
 void JavaSalFrame::EndExtTextInput( sal_uInt16 /* nFlags */ )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalFrame::EndExtTextInput not implemented\n" );
-#endif
+	// Fix issue #3 by immediately dispatching a SALEVENT_ENDEXTTEXTINPUT so
+	// that the IME state in vcl is in sync after ImpEditEngine::Clear() is
+	// called in editeng/source/editeng/impedit2.cxx
+	JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_ENDEXTTEXTINPUT, this, NULL );
+	pEvent->dispatch();
+	pEvent->release();
 }
 
 // -----------------------------------------------------------------------
