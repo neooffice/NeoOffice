@@ -2476,12 +2476,7 @@ EditPaM ImpEditEngine::ImpDeleteSelection(const EditSelection& rCurSel)
     OSL_ENSURE( nStartNode <= nEndNode, "Start > End ?!" );
 
     // Remove all nodes in between ....
-#ifdef USE_JAVA
-    // Fix issue #3 by detecting integer overflows
-    for ( sal_Int32 z = nStartNode+1; z >= 0 && z < nEndNode; z++ )
-#else	// USE_JAVA
     for ( sal_Int32 z = nStartNode+1; z < nEndNode; z++ )
-#endif	// USE_JAVA
     {
         // Always nStartNode+1, due to Remove()!
         ImpRemoveParagraph( nStartNode+1 );
