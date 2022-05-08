@@ -50,9 +50,9 @@ $(eval $(call gb_Module_add_check_targets,dbaccess,\
 endif
 
 $(eval $(call gb_Module_add_check_targets,dbaccess,\
-	$(if $(filter-out MACOSX,$(OS)$(filter java,$(PRODUCT_BUILD_TYPE))),CppunitTest_dbaccess_dialog_save) \
-	$(if $(filter-out MACOSX,$(OS)$(filter java,$(PRODUCT_BUILD_TYPE))),CppunitTest_dbaccess_empty_stdlib_save) \
-	$(if $(filter-out MACOSX,$(OS)$(filter java,$(PRODUCT_BUILD_TYPE))),CppunitTest_dbaccess_nolib_save) \
+	$(if $(filter-out MACOSX,$(OS)$(filter-out X86_64,$(CPUNAME))),CppunitTest_dbaccess_dialog_save) \
+	$(if $(filter-out MACOSX,$(OS)$(filter-out X86_64,$(CPUNAME))),CppunitTest_dbaccess_empty_stdlib_save) \
+	$(if $(filter-out MACOSX,$(OS)$(filter-out X86_64,$(CPUNAME))),CppunitTest_dbaccess_nolib_save) \
 	CppunitTest_dbaccess_macros_test \
 ))
 
