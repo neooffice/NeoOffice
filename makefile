@@ -962,8 +962,10 @@ build.notarize_package: build.package
 ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
 	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.notarize_package"
 else
+ifeq ($(findstring 3rd Party Mac Developer,$(CERTAPPIDENTITY)),)
 	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
 	"$(MAKE)" $(MFLAGS) "build.notarize_package_shared"
+endif
 	touch "$@"
 endif
 
@@ -1017,8 +1019,10 @@ build.staple_package: build.notarize_package
 ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
 	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.staple_package"
 else
+ifeq ($(findstring 3rd Party Mac Developer,$(CERTAPPIDENTITY)),)
 	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
 	"$(MAKE)" $(MFLAGS) "build.staple_package_shared"
+endif
 	touch "$@"
 endif
 
