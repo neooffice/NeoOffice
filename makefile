@@ -1064,7 +1064,7 @@ endif
 build.staple_patch_package_shared:
 	stapler staple "$(PATCH_INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg"
 
-build.staple_all: build.staple_package2 build.staple_package3
+build.staple_all: build.staple_package build.staple_package2 build.staple_package3
 	touch "$@"
 
 build.staple_all_patches: build.staple_patch_package build.staple_patch_package3
