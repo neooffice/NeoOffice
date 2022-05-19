@@ -258,7 +258,6 @@ source/ui/dlg/indexfieldscontrol.cxx
 source/ui/dlg/dbfindex.cxx
 source/ui/dlg/UserAdmin.src
 source/ui/dlg/admincontrols.hxx
-source/ui/dlg/odbcconfig.cxx
 source/ui/dlg/sqlmessage.src
 source/ui/dlg/dbwizsetup.cxx
 source/ui/dlg/paramdialog.cxx

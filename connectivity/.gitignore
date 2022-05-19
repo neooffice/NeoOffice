@@ -647,7 +647,6 @@ source/drivers/odbc/ODatabaseMetaDataResultSet.cxx
 source/drivers/odbc/OTools.cxx
 source/drivers/odbc/OResultSet.cxx
 source/drivers/odbc/OConnection.cxx
-source/drivers/odbc/OFunctions.cxx
 source/drivers/odbc/appendsqlwchars.hxx
 source/drivers/odbc/ORealDriver.hxx
 source/drivers/odbc/ODriver.cxx
