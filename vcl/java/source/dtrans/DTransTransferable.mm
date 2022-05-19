@@ -52,6 +52,7 @@
 #define PDF_TYPE_TAG @"PDF"
 #define STRING_TYPE_TAG @"STRING"
 #define URL_TYPE_TAG @"URL"
+#define FILE_TYPE_TAG @"FILE"
 
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::io;
@@ -60,7 +61,7 @@ using namespace vcl;
 
 CFStringRef kNeoOfficeInternalPboardType = CFSTR( "NeoOfficeInternalPboardType" );
 
-static sal_uInt16 nSupportedTypes = 7;
+static sal_uInt16 nSupportedTypes = 8;
 
 // List of supported native type symbol names in priority order. The first
 // item on each line is the most current symbol name and the second item is a
@@ -68,6 +69,7 @@ static sal_uInt16 nSupportedTypes = 7;
 // assigned to.
 static NSString *aSupportedPasteboardTypeSymbolNames[] = {
 	NSPasteboardTypeURL, URL_TYPE_TAG,
+	NSPasteboardTypeFileURL, FILE_TYPE_TAG,
 	NSPasteboardTypeRTF, nil,
 	NSPasteboardTypeHTML, HTML_TYPE_TAG,
 	NSPasteboardTypeString, STRING_TYPE_TAG,
@@ -79,6 +81,7 @@ static NSString *aSupportedPasteboardTypeSymbolNames[] = {
 static NSArray *pSupportedPasteboardTypes = nil;
 
 // Special native symbols for conditional checking
+static const NSString *pFilePasteboardType = nil;
 static const NSString *pHTMLPasteboardType = nil;
 static const NSString *pPDFPasteboardType = nil;
 static const NSString *pStringPasteboardType = nil;
@@ -86,6 +89,7 @@ static const NSString *pURLPasteboardType = nil;
 
 // List of supported native types in priority order
 static NSString *aSupportedPasteboardTypes[] = {
+	nil,
 	nil,
 	nil,
 	nil,
@@ -101,6 +105,7 @@ static bool aSupportedTextTypes[] = {
 	true,
 	true,
 	true,
+	true,
 	false,
 	false,
 	false
@@ -108,6 +113,7 @@ static bool aSupportedTextTypes[] = {
 
 // List of supported mime types in priority order
 static OUString aSupportedMimeTypes[] = {
+	"application/x-openoffice-file;windows_formatname=\"FileName\"",
 	"application/x-openoffice-file;windows_formatname=\"FileName\"",
 	"text/richtext",
 	"text/html",
@@ -119,6 +125,7 @@ static OUString aSupportedMimeTypes[] = {
 
 // List of supported data types in priority order
 static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
+	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
@@ -296,7 +303,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 						{
 							bStringTypeFound = true;
 						}
-						else if ( pURLPasteboardType && [pURLPasteboardType isEqualToString:pType] )
+						else if ( ( pFilePasteboardType && [pFilePasteboardType isEqualToString:pType] ) || ( pURLPasteboardType && [pURLPasteboardType isEqualToString:pType] ) )
 						{
 							bURLTypeFound = true;
 							NSURL *pURL = [NSURL URLFromPasteboard:pPasteboard];
@@ -442,7 +449,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 			if ( pFilteredTypes && [pFilteredTypes containsObject:pType] )
 			{
 				mbTypeAvailable = YES;
-				if ( pURLPasteboardType && [pURLPasteboardType isEqualToString:pType] )
+				if ( ( pFilePasteboardType && [pFilePasteboardType isEqualToString:pType] ) || ( pURLPasteboardType && [pURLPasteboardType isEqualToString:pType] ) )
 				{
 					NSURL *pURL = [NSURL URLFromPasteboard:pPasteboard];
 					if ( pURL && [pURL isFileURL] )
@@ -796,6 +803,8 @@ static void ImplInitializeSupportedPasteboardTypes()
 							pStringPasteboardType = aSupportedPasteboardTypes[ i ];
 						else if ( [URL_TYPE_TAG isEqualToString:pLocalName] )
 							pURLPasteboardType = aSupportedPasteboardTypes[ i ];
+						else if ( [FILE_TYPE_TAG isEqualToString:pLocalName] )
+							pFilePasteboardType = aSupportedPasteboardTypes[ i ];
 					}
 
 					// Add to supported types array
@@ -1263,13 +1272,11 @@ sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	const NSString *pRequestedType = nil;
-	Type aRequestedDataType;
 	for ( sal_uInt16 i = 0; i < nSupportedTypes; i++ )
 	{
 		if ( aFlavor.MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ i ] ) )
 		{
 			pRequestedType = aSupportedPasteboardTypes[ i ];
-			aRequestedDataType = aSupportedDataTypes[ i ];
 			break;
 		}
 	}
