@@ -2333,6 +2333,39 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 @end
 
+@interface VCLDiscardMarkedText : NSObject
+{
+}
++ (id)create;
+- (id)init;
+- (void)discardMarkedText:(id)pObject;
+@end
+
+@implementation VCLDiscardMarkedText
+
++ (id)create
+{
+	VCLDiscardMarkedText *pRet = [[VCLDiscardMarkedText alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)init
+{
+	[super init];
+
+	return self;
+}
+
+- (void)discardMarkedText:(id)pObject
+{
+	NSTextInputContext *pContext = [NSTextInputContext currentInputContext];
+	if ( pContext )
+		[pContext discardMarkedText];
+}
+
+@end
+
 // =======================================================================
 
 static void InitializeScreens()
@@ -4561,6 +4594,14 @@ void JavaSalFrame::EndExtTextInput( sal_uInt16 /* nFlags */ )
 	JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_ENDEXTTEXTINPUT, this, NULL );
 	pEvent->dispatch();
 	pEvent->release();
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	VCLDiscardMarkedText *pVCLDiscardMarkedText = [VCLDiscardMarkedText create];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLDiscardMarkedText performSelectorOnMainThread:@selector(discardMarkedText:) withObject:pVCLDiscardMarkedText waitUntilDone:YES modes:pModes];
+
+	[pPool release];
 }
 
 // -----------------------------------------------------------------------
