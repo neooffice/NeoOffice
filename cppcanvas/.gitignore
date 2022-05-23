@@ -46,7 +46,6 @@ source/mtfrenderer/pointaction.hxx
 source/mtfrenderer/lineaction.hxx
 source/mtfrenderer/transparencygroupaction.cxx
 source/mtfrenderer/polypolyaction.cxx
-source/mtfrenderer/emfplus.cxx
 source/mtfrenderer/bitmapaction.hxx
 source/uno/uno_mtfrenderer.hxx
 source/uno/uno_mtfrenderer.cxx

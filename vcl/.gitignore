@@ -970,7 +970,6 @@ source/filter/wmf/enhwmf.cxx
 source/filter/wmf/emfwr.hxx
 source/filter/wmf/wmf.cxx
 source/filter/wmf/wmfwr.cxx
-source/filter/wmf/winwmf.cxx
 source/filter/wmf/winmtf.hxx.orig
 source/filter/wmf/wmfwr.hxx
 source/filter/wmf/emfwr.cxx
