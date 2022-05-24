@@ -106,4 +106,17 @@ endif
 
 endif
 
+ifeq ($(strip $(GUIBASE)),java)
+ifeq ($(OS),MACOSX)
+ifneq ($(strip $(ENABLE_ASAN)),)
+$(eval $(call gb_Executable_add_cflags,soffice3_bin,\
+    -fsanitize=address \
+))
+$(eval $(call gb_Executable_add_libs,soffice3_bin,\
+    -fsanitize=address \
+))
+endif	# ENABLE_ASAN != ""
+endif	# OS == MACOSX
+endif	# GUIBASE == java
+
 # vim: set ts=4 sw=4 et:
