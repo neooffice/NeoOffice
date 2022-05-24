@@ -1519,7 +1519,6 @@ source/filter/lotus/lotimpop.cxx
 source/filter/lotus/lotus.cxx
 source/filter/lotus/lotform.cxx
 source/filter/lotus/lotattr.cxx
-source/filter/lotus/op.cxx
 source/filter/lotus/lotfilter.hxx
 source/filter/lotus/memory.cxx
 source/filter/lotus/lotread.cxx
