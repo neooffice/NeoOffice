@@ -340,7 +340,7 @@ static OUString NSStringToOUString( NSString *pString )
     if ( !pArgArray || [pArgArray count] < 1 )
         return;
 
-    NSMutableSet *pLocales = (NSMutableSet *)[pArgArray objectAtIndex:0];
+    NSMutableArray *pLocales = (NSMutableArray *)[pArgArray objectAtIndex:0];
 	if ( !pLocales )
 		return;
 
@@ -359,33 +359,23 @@ static OUString NSStringToOUString( NSString *pString )
 			NSMutableSet *pCanonicalLocales = [NSMutableSet setWithCapacity:[pLocales count]];
 			if ( pCanonicalLocales )
 			{
-				NSArray *pLocaleArray = [pLocales allObjects];
-				if ( pLocaleArray )
+				for ( NSString *pLocale in pLocales )
 				{
-					unsigned nCount = [pLocaleArray count];
-					unsigned i = 0;
-					for ( ; i < nCount; i++ )
+					if ( pLocale )
 					{
-						NSString *pLocale = [NSLocale canonicalLocaleIdentifierFromString:[pLocaleArray objectAtIndex:i]];
-						if ( pLocale )
-							[pCanonicalLocales addObject:pLocale];
+						NSString *pLocaleID = [NSLocale canonicalLocaleIdentifierFromString:pLocale];
+						if ( pLocaleID )
+							[pCanonicalLocales addObject:pLocaleID];
 					}
 				}
 
 				NSMutableArray *pRet = [NSMutableArray arrayWithCapacity:[pCanonicalLocales count]];
 				if ( pRet )
 				{
-					pLocaleArray = [pCanonicalLocales allObjects];
-					if ( pLocaleArray )
+					for ( NSString *pLocale in pCanonicalLocales )
 					{
-						unsigned nCount = [pLocaleArray count];
-						unsigned i = 0;
-						for ( ; i < nCount; i++ )
-						{
-							NSString *pLocale = (NSString *)[pLocaleArray objectAtIndex:i];
-							if ( pLocale && [pChecker setLanguage:(NSString *)pLocale] )
-								[pRet addObject:pLocale];
-						}
+						if ( pLocale && [pChecker setLanguage:pLocale] )
+							[pRet addObject:pLocale];
 					}
 
 					[pArgs setResult:pRet];
@@ -440,7 +430,7 @@ sal_Bool NSSpellChecker_checkSpellingOfString( CFStringRef aString, CFStringRef 
 
 CFArrayRef NSSpellChecker_getGuesses( CFStringRef aString, CFStringRef aLocale )
 {
-	CFMutableArrayRef aRet = nil;
+	CFArrayRef aRet = nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -453,25 +443,8 @@ CFArrayRef NSSpellChecker_getGuesses( CFStringRef aString, CFStringRef aLocale )
 		NSArray *pRet = (NSArray *)[pArgs result];
 		if ( pRet )
 		{
-			unsigned int nCount = [pRet count];
-			aRet = CFArrayCreateMutable( NULL, 0, &kCFTypeArrayCallBacks );
-			if ( aRet )
-			{
-				unsigned i = 0;
-				for ( ; i < nCount; i++ )
-				{
-					NSString *pString = [pRet objectAtIndex:i];
-					if ( pString )
-					{
-						CFStringRef aString = CFStringCreateCopy( NULL, (CFStringRef)pString );
-						if ( aString )
-						{
-							CFArrayAppendValue( aRet, aString );
-							CFRelease( aString );
-						}
-					}
-				}
-			}
+			[pRet retain];
+			aRet = (CFArrayRef)pRet;
 		}
 	}
 
@@ -482,36 +455,19 @@ CFArrayRef NSSpellChecker_getGuesses( CFStringRef aString, CFStringRef aLocale )
 
 CFArrayRef NSSpellChecker_getLocales( CFArrayRef aAppLocales )
 {
-	CFMutableArrayRef aRet = nil;
+	CFArrayRef aRet = nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	RunSpellCheckerArgs *pArgs = [RunSpellCheckerArgs argsWithArgs:[NSArray arrayWithObject:( aAppLocales ? [NSMutableSet setWithArray:(NSArray *)aAppLocales] : [NSMutableSet setWithCapacity:64] )]];
+	RunSpellCheckerArgs *pArgs = [RunSpellCheckerArgs argsWithArgs:[NSArray arrayWithObject:( aAppLocales ? [NSMutableArray arrayWithArray:(NSArray *)aAppLocales] : [NSMutableArray arrayWithCapacity:64] )]];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	RunSpellChecker *pRunSpellChecker = [RunSpellChecker create];
 	[pRunSpellChecker performSelectorOnMainThread:@selector(getLocales:) withObject:pArgs waitUntilDone:YES modes:pModes];
 	NSArray *pRet = (NSArray *)[pArgs result];
 	if ( pRet )
 	{
-		unsigned int nCount = [pRet count];
-		aRet = CFArrayCreateMutable( NULL, 0, &kCFTypeArrayCallBacks );
-		if ( aRet )
-		{
-			unsigned i = 0;
-			for ( ; i < nCount; i++ )
-			{
-				NSString *pString = [pRet objectAtIndex:i];
-				if ( pString && [pString length] )
-				{
-					CFStringRef aString = CFStringCreateCopy( NULL, (CFStringRef)pString );
-					if ( aString )
-					{
-						CFArrayAppendValue( aRet, aString );
-						CFRelease( aString );
-					}
-				}
-			}
-		}
+		[pRet retain];
+		aRet = (CFArrayRef)pRet;
 	}
 
 	[pPool release];
