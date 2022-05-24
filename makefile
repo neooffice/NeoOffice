@@ -866,7 +866,7 @@ else ifdef PRODUCT_BUILD2
 else
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/MacOS/soffice" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
 endif
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; echo cp \
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libcppcanvaslo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libdbulo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libodbclo.dylib" \
