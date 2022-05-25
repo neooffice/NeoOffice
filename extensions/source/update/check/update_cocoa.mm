@@ -63,10 +63,6 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 - (void)showWebView:(id)obj;
 @end
 
-@interface NSWorkspace (UpdateCreateWebViewImpl)
-- (BOOL)openURLs:(NSArray<NSURL *> *)pURLs withAppBundleIdentifier:(NSString *)pBundleIdentifier options:(NSWorkspaceLaunchOptions)nOptions additionalEventParamDescriptor:(NSAppleEventDescriptor *)pDescriptor launchIdentifiers:(NSArray<NSNumber *> * _Nullable *)pIdentifiers;
-@end
-
 @implementation UpdateCreateWebViewImpl
 
 + (id)createWithURL:(const NSString *)pURL userAgent:(const NSString *)pUserAgent title:(NSString *)pTitle
@@ -169,8 +165,16 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 	if ( pURL && pWorkspace )
 	{
 		mbWebViewShowing = [pWorkspace openURL:pURL];
-		if ( !mbWebViewShowing && [pWorkspace respondsToSelector:@selector(openURLs:withAppBundleIdentifier:options:additionalEventParamDescriptor:launchIdentifiers:)] )
-			mbWebViewShowing = [pWorkspace openURLs:[NSArray arrayWithObject:pURL] withAppBundleIdentifier:@"com.apple.Safari" options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
+		if ( !mbWebViewShowing )
+		{
+			NSURL *pAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:@"com.apple.Safari"];
+			NSWorkspaceOpenConfiguration *pConfiguration = [NSWorkspaceOpenConfiguration configuration];
+			if ( pAppURL && pConfiguration )
+			{
+				[pWorkspace openURLs:[NSArray arrayWithObject:pURL] withApplicationAtURL:pAppURL configuration:pConfiguration completionHandler:nil];
+				mbWebViewShowing = YES;
+			}
+		}
 	}
 #endif	// USE_NATIVE_WEB_VIEW
 }
