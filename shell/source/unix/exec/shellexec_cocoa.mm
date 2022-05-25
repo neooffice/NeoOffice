@@ -140,6 +140,12 @@ sal_Bool ShellExec_openURL( OUString &rURL, sal_Bool bSelectInFinder )
 		NSURL *pURL = [NSURL URLWithString:pURLString];
 		if ( pURL )
 		{
+			// If the file is an alias file, open the directory in the Finder
+			// like LibO does for softlinks and other insecure extensions
+			NSNumber *pAlias = nil;
+			if ( !bSelectInFinder && [pURL getResourceValue:&pAlias forKey:NSURLIsAliasFileKey error:nil] && pAlias && [pAlias boolValue] )
+				bSelectInFinder = sal_True;
+
 			ShellExecOpenURL *pShellExecOpenURL = [ShellExecOpenURL createWithURL:pURL selectInFinder:bSelectInFinder];
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 			[pShellExecOpenURL performSelectorOnMainThread:@selector(openURL:) withObject:pShellExecOpenURL waitUntilDone:YES modes:pModes];
