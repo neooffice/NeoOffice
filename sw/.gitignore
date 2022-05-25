@@ -1753,7 +1753,6 @@ source/filter/ww8/staticassert.hxx
 source/filter/ww8/sprmids.hxx
 source/filter/ww8/docxexport.cxx
 source/filter/ww8/styles.cxx
-source/filter/ww8/wrtw8sty.cxx
 source/filter/ww8/attributeoutputbase.hxx
 source/filter/ww8/wrtw8num.cxx
 source/filter/ww8/WW8FibData.hxx
