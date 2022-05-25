@@ -866,7 +866,6 @@ source/gdi/oldprintadaptor.cxx
 source/gdi/pngread.cxx
 source/gdi/pdfwriter_impl2.cxx.orig
 source/gdi/impvect.cxx
-source/gdi/cvtsvm.cxx
 source/gdi/bitmapex.cxx
 source/edit/textdoc.hxx
 source/edit/textdata.cxx
