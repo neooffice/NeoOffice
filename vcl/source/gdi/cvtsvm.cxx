@@ -31,9 +31,9 @@
 #include <rtl/strbuf.hxx>
 
 #include <cvtsvm.hxx>
-#ifdef NO_LIBO_SVM1_TEXT_RANGE_FIX
+#ifdef NO_LIBO_OWMTGGWJ_FIX
 #include <boost/scoped_array.hpp>
-#endif	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#endif	// NO_LIBO_OWMTGGWJ_FIX
 
 // Inlines
 void ImplReadRect( SvStream& rIStm, Rectangle& rRect )
@@ -446,7 +446,7 @@ SVMConverter::SVMConverter( SvStream& rStm, GDIMetaFile& rMtf, sal_uLong nConver
     }
 }
 
-#ifndef NO_LIBO_SVM1_TEXT_RANGE_FIX
+#ifndef NO_LIBO_OWMTGGWJ_FIX
 
 namespace
 {
@@ -464,7 +464,7 @@ namespace
     }
 }
 
-#endif	// !NO_LIBO_SVM1_TEXT_RANGE_FIX
+#endif	// !NO_LIBO_OWMTGGWJ_FIX
 
 void SVMConverter::ImplConvertFromSVM1( SvStream& rIStm, GDIMetaFile& rMtf )
 {
@@ -870,12 +870,12 @@ void SVMConverter::ImplConvertFromSVM1( SvStream& rIStm, GDIMetaFile& rMtf )
                         OUString aStr(OStringToOUString(aByteStr, eActualCharSet));
                         if ( nUnicodeCommentActionNumber == i )
                             ImplReadUnicodeComment( nUnicodeCommentStreamPos, rIStm, aStr );
-#ifdef NO_LIBO_SVM1_TEXT_RANGE_FIX
+#ifdef NO_LIBO_OWMTGGWJ_FIX
                         rMtf.AddAction( new MetaTextAction( aPt, aStr, nIndex, nLen ) );
-#else	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#else	// NO_LIBO_OWMTGGWJ_FIX
                         if (NormalizeRange(aStr, nIndex, nLen))
                             rMtf.AddAction( new MetaTextAction( aPt, aStr, nIndex, nLen ) );
-#endif	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#endif	// NO_LIBO_OWMTGGWJ_FIX
                     }
                     rIStm.Seek( nActBegin + nActionSize );
                 }
@@ -895,44 +895,44 @@ void SVMConverter::ImplConvertFromSVM1( SvStream& rIStm, GDIMetaFile& rMtf )
 
                         OUString aStr(OStringToOUString(aByteStr, eActualCharSet));
 
-#ifdef NO_LIBO_SVM1_TEXT_RANGE_FIX
+#ifdef NO_LIBO_OWMTGGWJ_FIX
                         boost::scoped_array<long> pDXAry;
-#else	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#else	// NO_LIBO_OWMTGGWJ_FIX
                         std::vector<long> aDXAry;
-#endif	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#endif	// NO_LIBO_OWMTGGWJ_FIX
                         if (nAryLen > 0)
                         {
                             sal_Int32 nStrLen( aStr.getLength() );
 
-#ifdef NO_LIBO_SVM1_TEXT_RANGE_FIX
+#ifdef NO_LIBO_OWMTGGWJ_FIX
                             pDXAry.reset(new long[ std::max( nAryLen, nStrLen ) ]);
-#else	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#else	// NO_LIBO_OWMTGGWJ_FIX
                             aDXAry.resize(nAryLen);
-#endif	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#endif	// NO_LIBO_OWMTGGWJ_FIX
 
                             for (sal_Int32 j = 0; j < nAryLen; ++j)
-#ifdef NO_LIBO_SVM1_TEXT_RANGE_FIX
+#ifdef NO_LIBO_OWMTGGWJ_FIX
                                 rIStm.ReadInt32( nTmp ), pDXAry[ j ] = nTmp;
-#else	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#else	// NO_LIBO_OWMTGGWJ_FIX
                                 rIStm.ReadInt32( nTmp ), aDXAry[ j ] = nTmp;
-#endif	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#endif	// NO_LIBO_OWMTGGWJ_FIX
 
                             // #106172# Add last DX array elem, if missing
                             if( nAryLen != nStrLen )
                             {
                                 if( nAryLen+1 == nStrLen )
                                 {
-#ifdef NO_LIBO_SVM1_TEXT_RANGE_FIX
+#ifdef NO_LIBO_OWMTGGWJ_FIX
                                     boost::scoped_array<long> pTmpAry(new long[nStrLen]);
-#else	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#else	// NO_LIBO_OWMTGGWJ_FIX
                                     std::vector<long> aTmpAry;
-#endif	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#endif	// NO_LIBO_OWMTGGWJ_FIX
 
-#ifdef NO_LIBO_SVM1_TEXT_RANGE_FIX
+#ifdef NO_LIBO_OWMTGGWJ_FIX
                                     aFontVDev.GetTextArray( aStr, pTmpAry.get(), nIndex, nLen );
-#else	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#else	// NO_LIBO_OWMTGGWJ_FIX
                                     aFontVDev.GetTextArray( aStr, aTmpAry.data(), nIndex, nLen );
-#endif	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#endif	// NO_LIBO_OWMTGGWJ_FIX
 
                                     // now, the difference between the
                                     // last and the second last DX array
@@ -942,17 +942,17 @@ void SVMConverter::ImplConvertFromSVM1( SvStream& rIStm, GDIMetaFile& rMtf )
                                     // difference to last elem and store
                                     // in very last.
                                     if( nStrLen > 1 )
-#ifdef NO_LIBO_SVM1_TEXT_RANGE_FIX
+#ifdef NO_LIBO_OWMTGGWJ_FIX
                                         pDXAry[ nStrLen-1 ] = pDXAry[ nStrLen-2 ] + pTmpAry[ nStrLen-1 ] - pTmpAry[ nStrLen-2 ];
-#else	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#else	// NO_LIBO_OWMTGGWJ_FIX
                                         aDXAry[ nStrLen-1 ] = aDXAry[ nStrLen-2 ] + aTmpAry[ nStrLen-1 ] - aTmpAry[ nStrLen-2 ];
-#endif	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#endif	// NO_LIBO_OWMTGGWJ_FIX
                                     else
-#ifdef NO_LIBO_SVM1_TEXT_RANGE_FIX
+#ifdef NO_LIBO_OWMTGGWJ_FIX
                                         pDXAry[ nStrLen-1 ] = pTmpAry[ nStrLen-1 ]; // len=1: 0th position taken to be 0
-#else	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#else	// NO_LIBO_OWMTGGWJ_FIX
                                         aDXAry[ nStrLen-1 ] = aTmpAry[ nStrLen-1 ]; // len=1: 0th position taken to be 0
-#endif	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#endif	// NO_LIBO_OWMTGGWJ_FIX
                                 }
     #ifdef DBG_UTIL
                                 else
@@ -962,12 +962,12 @@ void SVMConverter::ImplConvertFromSVM1( SvStream& rIStm, GDIMetaFile& rMtf )
                         }
                         if ( nUnicodeCommentActionNumber == i )
                             ImplReadUnicodeComment( nUnicodeCommentStreamPos, rIStm, aStr );
-#ifdef NO_LIBO_SVM1_TEXT_RANGE_FIX
+#ifdef NO_LIBO_OWMTGGWJ_FIX
                         rMtf.AddAction( new MetaTextArrayAction( aPt, aStr, pDXAry.get(), nIndex, nLen ) );
-#else	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#else	// NO_LIBO_OWMTGGWJ_FIX
                         if (NormalizeRange(aStr, nIndex, nLen, &aDXAry))
                             rMtf.AddAction( new MetaTextArrayAction( aPt, aStr, aDXAry.data(), nIndex, nLen ) );
-#endif	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#endif	// NO_LIBO_OWMTGGWJ_FIX
                     }
                     rIStm.Seek( nActBegin + nActionSize );
                 }
@@ -988,12 +988,12 @@ void SVMConverter::ImplConvertFromSVM1( SvStream& rIStm, GDIMetaFile& rMtf )
                         OUString aStr(OStringToOUString(aByteStr, eActualCharSet));
                         if ( nUnicodeCommentActionNumber == i )
                             ImplReadUnicodeComment( nUnicodeCommentStreamPos, rIStm, aStr );
-#ifdef NO_LIBO_SVM1_TEXT_RANGE_FIX
+#ifdef NO_LIBO_OWMTGGWJ_FIX
                         rMtf.AddAction( new MetaStretchTextAction( aPt, nWidth, aStr, nIndex, nLen ) );
-#else	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#else	// NO_LIBO_OWMTGGWJ_FIX
                         if (NormalizeRange(aStr, nIndex, nLen))
                             rMtf.AddAction( new MetaStretchTextAction( aPt, nWidth, aStr, nIndex, nLen ) );
-#endif	// NO_LIBO_SVM1_TEXT_RANGE_FIX
+#endif	// NO_LIBO_OWMTGGWJ_FIX
                     }
                     rIStm.Seek( nActBegin + nActionSize );
                 }
