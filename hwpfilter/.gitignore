@@ -9,12 +9,10 @@ source/formula.h
 source/hutil.cxx
 source/solver.cxx
 source/hwpeq.h
-source/hwpfile.cxx
 source/datecode.h
 source/hgzip.h
 source/hpara.cxx
 source/precompile.h
-source/hwpfile.h
 source/drawing.h
 source/hwp.component
 source/hbox.h
