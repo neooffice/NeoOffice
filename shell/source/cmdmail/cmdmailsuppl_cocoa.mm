@@ -57,10 +57,6 @@ using namespace com::sun::star::uno;
 - (BOOL)result;
 @end
 
-@interface NSWorkspace (CmdMailSupplOpenURLs)
-- (BOOL)openURLs:(NSArray<NSURL *> *)pURLs withAppBundleIdentifier:(NSString *)pBundleIdentifier options:(NSWorkspaceLaunchOptions)nOptions additionalEventParamDescriptor:(NSAppleEventDescriptor *)pDescriptor launchIdentifiers:(NSArray<NSNumber *> * _Nullable *)pIdentifiers;
-@end
-
 @implementation CmdMailSupplOpenURLs
 
 + (id)createWithURLs:(NSArray *)pURLs appID:(NSString *)pAppID
@@ -103,27 +99,22 @@ using namespace com::sun::star::uno;
 	mbResult = NO;
 
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
-	if ( pWorkspace && mpURLs && [mpURLs count] && [pWorkspace respondsToSelector:@selector(openURLs:withAppBundleIdentifier:options:additionalEventParamDescriptor:launchIdentifiers:)] )
+	if ( pWorkspace && mpURLs && [mpURLs count] )
 	{
+		NSURL *pAppURL = nil;
 		if ( mpAppID && [mpAppID length] )
-			mbResult = [pWorkspace openURLs:mpURLs withAppBundleIdentifier:mpAppID options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
-		if ( !mbResult )
-		{
-			NSURL *pDefaultMailApp = [pWorkspace URLForApplicationToOpenURL:[NSURL URLWithString:@"mailto://"]];
-			if ( pDefaultMailApp )
-			{
-				NSBundle *pBundle = [NSBundle bundleWithURL:pDefaultMailApp];
-				if ( pBundle )
-				{
-					NSString *pDefaultMailAppID = [pBundle bundleIdentifier];
-					if ( pDefaultMailAppID && [pDefaultMailAppID length] )
-						mbResult = [pWorkspace openURLs:mpURLs withAppBundleIdentifier:pDefaultMailAppID options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
-				}
-			}
-		}
+			pAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:mpAppID];
+		else
+			pAppURL = [pWorkspace URLForApplicationToOpenURL:[NSURL URLWithString:@"mailto://"]];
+		if ( !pAppURL )
+			pAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:@"com.apple.mail"];
 
-		if ( !mbResult )
-			mbResult = [pWorkspace openURLs:mpURLs withAppBundleIdentifier:@"com.apple.mail" options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
+		NSWorkspaceOpenConfiguration *pConfiguration = [NSWorkspaceOpenConfiguration configuration];
+		if ( pAppURL && pConfiguration )
+		{
+			[pWorkspace openURLs:mpURLs withApplicationAtURL:pAppURL configuration:pConfiguration completionHandler:nil];
+			mbResult = YES;
+		}
 	}
 }
 
