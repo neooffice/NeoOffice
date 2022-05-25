@@ -683,17 +683,35 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     // all versions below 1.5.1
     options.push_back(Option("abort", reinterpret_cast<void*>(abort_handler)));
     bool hasStackSize = false;
+#ifndef NO_LIBO_KLX6N3W9_FIX
+#ifdef UNX
+    // Until java 1.5 we need to put a plugin.jar or javaplugin.jar (<1.4.2)
+    // in the class path in order to have applet support:
+    OString sAddPath = getPluginJarPath(pInfo->sVendor, pInfo->sLocation,pInfo->sVersion);
+#endif
+#endif	// !NO_LIBO_KLX6N3W9_FIX
     for (int i = 0; i < cOptions; i++)
     {
         OString opt(arOptions[i].optionString);
 #ifdef UNX
+#ifdef NO_LIBO_KLX6N3W9_FIX
         // Until java 1.5 we need to put a plugin.jar or javaplugin.jar (<1.4.2)
         // in the class path in order to have applet support:
+#endif	// NO_LIBO_KLX6N3W9_FIX
         if (opt.startsWith("-Djava.class.path="))
         {
+#ifdef NO_LIBO_KLX6N3W9_FIX
             OString sAddPath = getPluginJarPath(pInfo->sVendor, pInfo->sLocation,pInfo->sVersion);
+#endif	// NO_LIBO_KLX6N3W9_FIX
             if (!sAddPath.isEmpty())
+#ifndef NO_LIBO_KLX6N3W9_FIX
+            {
+#endif	// !NO_LIBO_KLX6N3W9_FIX
                 opt += OString(SAL_PATHSEPARATOR) + sAddPath;
+#ifndef NO_LIBO_KLX6N3W9_FIX
+                sAddPath.clear();
+            }
+#endif	// !NO_LIBO_KLX6N3W9_FIX
         }
 #endif
         if (opt == "-Xint") {
@@ -817,6 +835,13 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     options.push_back( Option( "-Djava.awt.headless=false", nullptr ) );
 #endif	// MACOSX
 #endif	// USE_JAVA
+#ifndef NO_LIBO_KLX6N3W9_FIX
+#ifdef UNX
+    if (!sAddPath.isEmpty()) {
+        options.emplace_back("-Djava.class.path=" + sAddPath, nullptr);
+    }
+#endif
+#endif	// !NO_LIBO_KLX6N3W9_FIX
 
     boost::scoped_array<JavaVMOption> sarOptions(new JavaVMOption[options.size()]);
     for (std::vector<Option>::size_type i = 0; i != options.size(); ++i) {

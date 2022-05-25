@@ -31,7 +31,6 @@ source/javasettings_template.xml
 source/libxmlutil.cxx
 source/fwkbase.hxx
 source/framework.cxx.orig
-source/fwkbase.cxx
 source/libxmlutil.hxx
 source/jvmfwk3rc
 source/readme.txt

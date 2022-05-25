@@ -304,8 +304,17 @@ javaFrameworkError SAL_CALL jfw_startVM(
                 //In direct mode the options are specified by bootstrap variables
                 //of the form UNO_JAVA_JFW_PARAMETER_1 .. UNO_JAVA_JFW_PARAMETER_n
                 vmParams = jfw::BootParams::getVMParameters();
+#ifdef NO_LIBO_KLX6N3W9_FIX
                 sUserClassPath =
                     "-Djava.class.path=" + jfw::BootParams::getClasspath();
+#else	// NO_LIBO_KLX6N3W9_FIX
+                auto const cp = jfw::BootParams::getClasspath();
+                if (!cp.isEmpty())
+                {
+                    sUserClassPath =
+                        "-Djava.class.path=" + cp;
+                }
+#endif	// NO_LIBO_KLX6N3W9_FIX
             }
             else
                 OSL_ASSERT(false);
