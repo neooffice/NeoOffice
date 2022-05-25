@@ -69,7 +69,6 @@ source/primitive2d/controlprimitive2d.cxx
 source/primitive2d/wallpaperprimitive2d.cxx
 source/primitive2d/graphicprimitivehelper2d.cxx
 source/primitive2d/textstrikeoutprimitive2d.cxx
-source/primitive2d/textlayoutdevice.cxx
 source/primitive2d/gridprimitive2d.cxx
 source/primitive2d/openglprimitive2d.cxx
 source/primitive2d/textlineprimitive2d.cxx
