@@ -15,6 +15,13 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified May 2022 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <algorithm>
@@ -456,10 +463,17 @@ namespace
         const sal_uInt32 nStrLength = rStr.getLength();
         rIndex = std::min<sal_uInt32>(rIndex, nStrLength);
         rLength = std::min<sal_uInt32>(rLength, nStrLength - rIndex);
+#ifdef USE_JAVA
+        // If rIndex is negative, it makes no sense to resize the array to a
+        // large unsigned value since the array will not be used again when
+        // the negative rIndex causes this function to return false
+        (void)pDXAry;
+#else	// USE_JAVA
         if (pDXAry && pDXAry->size() > static_cast<size_t>(rLength))
         {
             pDXAry->resize(rLength);
         }
+#endif	// USE_JAVA
         return rLength > 0;
     }
 }
