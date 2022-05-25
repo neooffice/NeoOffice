@@ -8,7 +8,6 @@ source/hstream.cxx
 source/formula.h
 source/hutil.cxx
 source/solver.cxx
-source/hwpreader.cxx
 source/hwpeq.h
 source/hwpfile.cxx
 source/datecode.h
