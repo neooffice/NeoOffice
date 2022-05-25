@@ -194,12 +194,24 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
                     0);
             }
             struct stat st;
+#ifdef NO_LIBO_PQ967WYM_FIX
             auto const e2 = stat(pathname8.getStr(), &st);
+#else	// NO_LIBO_PQ967WYM_FIX
+            auto const e2 = lstat(pathname8.getStr(), &st);
+#endif	// NO_LIBO_PQ967WYM_FIX
             if (e2 != 0) {
                 auto const e3 = errno;
+#ifdef NO_LIBO_PQ967WYM_FIX
                 SAL_INFO("shell", "stat(" << pathname8 << ") failed with errno " << e3);
+#else	// NO_LIBO_PQ967WYM_FIX
+                SAL_INFO("shell", "lstat(" << pathname8 << ") failed with errno " << e3);
+#endif	// NO_LIBO_PQ967WYM_FIX
             }
+#ifdef NO_LIBO_PQ967WYM_FIX
             if (e2 == 0 && S_ISDIR(st.st_mode)) {
+#else	// NO_LIBO_PQ967WYM_FIX
+            if (e2 == 0 && (S_ISDIR(st.st_mode) || S_ISLNK(st.st_mode))) {
+#endif	// NO_LIBO_PQ967WYM_FIX
                 dir = true;
             } else if (e2 != 0 || !S_ISREG(st.st_mode)
                        || (st.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) != 0)
