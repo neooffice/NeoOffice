@@ -3675,10 +3675,17 @@ const SwStartNode *SwHTMLParser::InsertTableSection( sal_uInt16 nPoolId )
     if (m_xTable->bFirstCell)
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     {
-        pNd->GetTxtNode()->ChgFmtColl( pColl );
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
+        pNd->GetTxtNode()->ChgFmtColl( pColl );
         pTable->bFirstCell = false;
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+        SwTxtNode* pTextNd = pNd->GetTxtNode();
+        if (!pTextNd)
+        {
+            eState = SVPAR_ERROR;
+            return nullptr;
+        }
+        pTextNd->ChgFmtColl(pColl);
         m_xTable->bFirstCell = false;
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         pStNd = pNd->FindTableBoxStartNode();
