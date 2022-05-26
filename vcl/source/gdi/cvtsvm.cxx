@@ -467,13 +467,13 @@ namespace
         // If rIndex is negative, it makes no sense to resize the array to a
         // large unsigned value since the array will not be used again when
         // the negative rIndex causes this function to return false
-        (void)pDXAry;
+        if (pDXAry && pDXAry->size() > static_cast<size_t>(rLength) && rLength > 0)
 #else	// USE_JAVA
         if (pDXAry && pDXAry->size() > static_cast<size_t>(rLength))
+#endif	// USE_JAVA
         {
             pDXAry->resize(rLength);
         }
-#endif	// USE_JAVA
         return rLength > 0;
     }
 }
