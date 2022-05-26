@@ -17,7 +17,6 @@ inc/resourcemodel/util.hxx
 inc/resourcemodel/ResourceModelHelper.hxx
 inc/resourcemodel/QNameToString.hxx
 inc/resourcemodel/TagLogger.hxx
-inc/resourcemodel/TableManager.hxx
 inc/resourcemodel/LoggedResources.hxx
 inc/resourcemodel/TableData.hxx
 util/writerfilter.component
