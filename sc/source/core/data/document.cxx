@@ -6210,14 +6210,30 @@ ScPostIt* ScDocument::GetNote(SCCOL nCol, SCROW nRow, SCTAB nTab)
 
 }
 
+#ifdef NO_LIBO_BUG_91995_FIX
 void ScDocument::SetNote(const ScAddress& rPos, ScPostIt* pNote)
+#else	// NO_LIBO_BUG_91995_FIX
+void ScDocument::SetNote(const ScAddress& rPos, std::unique_ptr<ScPostIt> pNote)
+#endif	// NO_LIBO_BUG_91995_FIX
 {
+#ifdef NO_LIBO_BUG_91995_FIX
     return SetNote(rPos.Col(), rPos.Row(), rPos.Tab(), pNote);
+#else	// NO_LIBO_BUG_91995_FIX
+    return SetNote(rPos.Col(), rPos.Row(), rPos.Tab(), std::move(pNote));
+#endif	// NO_LIBO_BUG_91995_FIX
 }
 
+#ifdef NO_LIBO_BUG_91995_FIX
 void ScDocument::SetNote(SCCOL nCol, SCROW nRow, SCTAB nTab, ScPostIt* pNote)
+#else	// NO_LIBO_BUG_91995_FIX
+void ScDocument::SetNote(SCCOL nCol, SCROW nRow, SCTAB nTab, std::unique_ptr<ScPostIt> pNote)
+#endif	// NO_LIBO_BUG_91995_FIX
 {
+#ifdef NO_LIBO_BUG_91995_FIX
     return maTabs[nTab]->aCol[nCol].SetCellNote(nRow, pNote);
+#else	// NO_LIBO_BUG_91995_FIX
+    return maTabs[nTab]->aCol[nCol].SetCellNote(nRow, std::move(pNote));
+#endif	// NO_LIBO_BUG_91995_FIX
 }
 
 bool ScDocument::HasNote(const ScAddress& rPos) const
@@ -6269,7 +6285,11 @@ bool ScDocument::HasNotes() const
     return false;
 }
 
+#ifdef NO_LIBO_BUG_91995_FIX
 ScPostIt* ScDocument::ReleaseNote(const ScAddress& rPos)
+#else	// NO_LIBO_BUG_91995_FIX
+std::unique_ptr<ScPostIt> ScDocument::ReleaseNote(const ScAddress& rPos)
+#endif	// NO_LIBO_BUG_91995_FIX
 {
     ScTable* pTab = FetchTable(rPos.Tab());
     if (!pTab)
@@ -6292,7 +6312,11 @@ ScPostIt* ScDocument::CreateNote(const ScAddress& rPos)
 #else	// NO_LIBO_5_4_4_POSTIT_FIXES
     ScPostIt* pPostIt = new ScPostIt(*this, rPos);
 #endif	// NO_LIBO_5_4_4_POSTIT_FIXES
+#ifdef NO_LIBO_BUG_91995_FIX
     SetNote(rPos, pPostIt);
+#else	// NO_LIBO_BUG_91995_FIX
+    SetNote(rPos, std::unique_ptr<ScPostIt>(pPostIt));
+#endif	// NO_LIBO_BUG_91995_FIX
     return pPostIt;
 }
 

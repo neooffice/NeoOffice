@@ -1715,12 +1715,16 @@ public:
         SCROW nDestRow = nRow + mnDestOffset;
         ScAddress aSrcPos(mnSrcCol, nRow, mnSrcTab);
         ScAddress aDestPos(mnDestCol, nDestRow, mnDestTab);
+#ifdef NO_LIBO_BUG_91995_FIX
 #ifdef USE_JAVA
         // Attempt to fix Mac App Store crash by checking if ScPostIt is NULL
         miPos = mrDestNotes.set(miPos, nDestRow, p ? p->Clone(aSrcPos, mrDestCol.GetDoc(), aDestPos, mbCloneCaption) : NULL);
 #else	// USE_JAVA
         miPos = mrDestNotes.set(miPos, nDestRow, p->Clone(aSrcPos, mrDestCol.GetDoc(), aDestPos, mbCloneCaption));
 #endif	// USE_JAVA
+#else	// NO_LIBO_BUG_91995_FIX
+        miPos = mrDestNotes.set(miPos, nDestRow, p->Clone(aSrcPos, mrDestCol.GetDoc(), aDestPos, mbCloneCaption).release());
+#endif	// NO_LIBO_BUG_91995_FIX
     }
 };
 
@@ -1830,10 +1834,19 @@ const ScPostIt* ScColumn::GetCellNote( sc::ColumnBlockConstPosition& rBlockPos, 
     return sc::cellnote_block::at(*aPos.first->data, aPos.second);
 }
 
+#ifdef NO_LIBO_BUG_91995_FIX
 void ScColumn::SetCellNote(SCROW nRow, ScPostIt* pNote)
+#else	// NO_LIBO_BUG_91995_FIX
+void ScColumn::SetCellNote(SCROW nRow, std::unique_ptr<ScPostIt> pNote)
+#endif	// NO_LIBO_BUG_91995_FIX
 {
+fprintf( stderr, "Here: %p %p\n", this, dynamic_cast<ScColumn*>(this) );
     //pNote->UpdateCaptionPos(ScAddress(nCol, nRow, nTab)); // TODO notes useful ? slow import with many notes
+#ifdef NO_LIBO_BUG_91995_FIX
     maCellNotes.set(nRow, pNote);
+#else	// NO_LIBO_BUG_91995_FIX
+    maCellNotes.set(nRow, pNote.release());
+#endif	// NO_LIBO_BUG_91995_FIX
 }
 
 namespace {

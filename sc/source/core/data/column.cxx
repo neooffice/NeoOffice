@@ -1206,9 +1206,24 @@ void ScColumn::CopyCellToDocument( SCROW nSrcRow, SCROW nDestRow, ScColumn& rDes
     {
         rDestCol.maCellTextAttrs.set(nDestRow, maCellTextAttrs.get<sc::CellTextAttr>(nSrcRow));
         ScPostIt* pNote = maCellNotes.get<ScPostIt*>(nSrcRow);
+#ifdef NO_LIBO_BUG_91995_FIX
         rDestCol.maCellNotes.set(nDestRow, pNote);
+#endif	// NO_LIBO_BUG_91995_FIX
         if (pNote)
+#ifndef NO_LIBO_BUG_91995_FIX
+        {
+            pNote = pNote->Clone(ScAddress(nCol, nSrcRow, nTab),
+                                 rDestCol.GetDoc(),
+                                 ScAddress(rDestCol.nCol, nDestRow, rDestCol.nTab),
+                                 false).release();
+            rDestCol.maCellNotes.set(nDestRow, pNote);
+#endif	// !NO_LIBO_BUG_91995_FIX
             pNote->UpdateCaptionPos(ScAddress(rDestCol.nCol, nDestRow, rDestCol.nTab));
+#ifndef NO_LIBO_BUG_91995_FIX
+        }
+        else
+            rDestCol.maCellNotes.set_empty(nDestRow, nDestRow);
+#endif	// !NO_LIBO_BUG_91995_FIX
     }
     else
     {

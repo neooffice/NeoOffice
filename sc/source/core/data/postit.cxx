@@ -1020,10 +1020,18 @@ ScPostIt::~ScPostIt()
     RemoveCaption();
 }
 
+#ifdef NO_LIBO_BUG_91995_FIX
 ScPostIt* ScPostIt::Clone( const ScAddress& rOwnPos, ScDocument& rDestDoc, const ScAddress& rDestPos, bool bCloneCaption ) const
+#else	// NO_LIBO_BUG_91995_FIX
+std::unique_ptr<ScPostIt> ScPostIt::Clone( const ScAddress& rOwnPos, ScDocument& rDestDoc, const ScAddress& rDestPos, bool bCloneCaption ) const
+#endif	// NO_LIBO_BUG_91995_FIX
 {
     CreateCaptionFromInitData( rOwnPos );
+#ifdef NO_LIBO_BUG_91995_FIX
     return bCloneCaption ? new ScPostIt( rDestDoc, rDestPos, *this ) : new ScPostIt( rDestDoc, rDestPos, maNoteData, false );
+#else	// NO_LIBO_BUG_91995_FIX
+    return bCloneCaption ? std::unique_ptr<ScPostIt>( new ScPostIt( rDestDoc, rDestPos, *this ) ) : std::unique_ptr<ScPostIt>( new ScPostIt( rDestDoc, rDestPos, maNoteData, false ) );
+#endif	// NO_LIBO_BUG_91995_FIX
 }
 
 void ScPostIt::SetDate( const OUString& rDate )
@@ -1399,7 +1407,11 @@ ScPostIt* ScNoteUtil::CreateNoteFromCaption(
     ScPostIt* pNote = new ScPostIt( rDoc, rPos, aNoteData, false );
     pNote->AutoStamp();
 
+#ifdef NO_LIBO_4_4_TYPES
     rDoc.SetNote(rPos, pNote);
+#else	// NO_LIBO_4_4_TYPES
+    rDoc.SetNote(rPos, std::unique_ptr<ScPostIt>(pNote));
+#endif	// NO_LIBO_4_4_TYPES
 
     // ScNoteCaptionCreator c'tor updates the caption object to be part of a note
     ScNoteCaptionCreator aCreator( rDoc, rPos, aNoteData.mxCaption, bShown );
@@ -1446,7 +1458,11 @@ ScPostIt* ScNoteUtil::CreateNoteFromObjectData(
     ScPostIt* pNote = new ScPostIt( rDoc, rPos, aNoteData, bAlwaysCreateCaption );
     pNote->AutoStamp();
 
+#ifdef NO_LIBO_BUG_91995_FIX
     rDoc.SetNote(rPos, pNote);
+#else	// NO_LIBO_BUG_91995_FIX
+    rDoc.SetNote(rPos, std::unique_ptr<ScPostIt>(pNote));
+#endif	// NO_LIBO_BUG_91995_FIX
 
     return pNote;
 }
@@ -1469,7 +1485,11 @@ ScPostIt* ScNoteUtil::CreateNoteFromString(
         pNote = new ScPostIt( rDoc, rPos, aNoteData, bAlwaysCreateCaption );
         pNote->AutoStamp();
         //insert takes ownership
+#ifdef NO_LIBO_BUG_91995_FIX
         rDoc.SetNote(rPos, pNote);
+#else	// NO_LIBO_BUG_91995_FIX
+        rDoc.SetNote(rPos, std::unique_ptr<ScPostIt>(pNote));
+#endif	// NO_LIBO_BUG_91995_FIX
     }
     return pNote;
 }

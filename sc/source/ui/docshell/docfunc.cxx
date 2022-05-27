@@ -1281,7 +1281,11 @@ bool ScDocFunc::ReplaceNote( const ScAddress& rPos, const OUString& rNoteText, c
         ::svl::IUndoManager* pUndoMgr = (pDrawLayer && rDoc.IsUndoEnabled()) ? rDocShell.GetUndoManager() : 0;
 
         ScNoteData aOldData;
+#ifdef NO_LIBO_BUG_91995_FIX
         ScPostIt* pOldNote = rDoc.ReleaseNote( rPos );
+#else	// NO_LIBO_BUG_91995_FIX
+        std::unique_ptr<ScPostIt> pOldNote = rDoc.ReleaseNote( rPos );
+#endif	// NO_LIBO_BUG_91995_FIX
         if( pOldNote )
         {
             // ensure existing caption object before draw undo tracking starts
@@ -1295,7 +1299,12 @@ bool ScDocFunc::ReplaceNote( const ScAddress& rPos, const OUString& rNoteText, c
             pDrawLayer->BeginCalcUndo(false);
 
         // delete the note (creates drawing undo action for the caption object)
+#ifdef NO_LIBO_BUG_91995_FIX
         delete pOldNote;
+#else	// NO_LIBO_BUG_91995_FIX
+        bool hadOldNote(pOldNote);
+        pOldNote.reset();
+#endif	// NO_LIBO_BUG_91995_FIX
 
         // create new note (creates drawing undo action for the new caption object)
         ScNoteData aNewData;

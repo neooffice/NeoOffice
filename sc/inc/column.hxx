@@ -578,10 +578,18 @@ public:
     const ScPostIt* GetCellNote( sc::ColumnBlockConstPosition& rBlockPos, SCROW nRow ) const;
     void DeleteCellNotes( sc::ColumnBlockPosition& rBlockPos, SCROW nRow1, SCROW nRow2, bool bForgetCaptionOwnership );
     bool HasCellNotes() const;
+#ifdef NO_LIBO_BUG_91995_FIX
     void SetCellNote( SCROW nRow, ScPostIt* pNote);
+#else	// NO_LIBO_BUG_91995_FIX
+    void SetCellNote( SCROW nRow, std::unique_ptr<ScPostIt> pNote);
+#endif	// NO_LIBO_BUG_91995_FIX
     bool IsNotesEmptyBlock(SCROW nStartRow, SCROW nEndRow) const;
 
+#ifdef NO_LIBO_BUG_91995_FIX
     ScPostIt* ReleaseNote( SCROW nRow );
+#else	// NO_LIBO_BUG_91995_FIX
+    std::unique_ptr<ScPostIt> ReleaseNote( SCROW nRow );
+#endif	// NO_LIBO_BUG_91995_FIX
     size_t GetNoteCount() const;
     void CreateAllNoteCaptions();
 #ifdef NO_LIBO_BUG_104967_FIX

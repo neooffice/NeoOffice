@@ -239,7 +239,11 @@ void ScColumn::CopyOneCellFromClip( sc::CopyFromClipContext& rCxt, SCROW nRow1, 
         for (size_t i = 0; i < nDestSize; ++i)
         {
             bool bCloneCaption = (nFlags & IDF_NOCAPTIONS) == IDF_NONE;
+#ifdef NO_LIBO_BUG_91995_FIX
             aNotes.push_back(pNote->Clone(rSrcPos, *pDocument, aDestPos, bCloneCaption));
+#else	// NO_LIBO_BUG_91995_FIX
+            aNotes.push_back(pNote->Clone(rSrcPos, *pDocument, aDestPos, bCloneCaption).release());
+#endif	// NO_LIBO_BUG_91995_FIX
             aDestPos.IncRow();
         }
 
@@ -552,14 +556,22 @@ void ScColumn::CloneFormulaCell(
     CellStorageModified();
 }
 
+#ifdef NO_LIBO_BUG_91995_FIX
 ScPostIt* ScColumn::ReleaseNote( SCROW nRow )
+#else	// NO_LIBO_BUG_91995_FIX
+std::unique_ptr<ScPostIt> ScColumn::ReleaseNote( SCROW nRow )
+#endif	// NO_LIBO_BUG_91995_FIX
 {
     if (!ValidRow(nRow))
         return NULL;
 
     ScPostIt* p = NULL;
     maCellNotes.release(nRow, p);
+#ifdef NO_LIBO_BUG_91995_FIX
     return p;
+#else	// NO_LIBO_BUG_91995_FIX
+    return std::unique_ptr<ScPostIt>(p);
+#endif	// NO_LIBO_BUG_91995_FIX
 }
 
 size_t ScColumn::GetNoteCount() const

@@ -979,8 +979,13 @@ void ScTable::TransposeColNotes(ScTable* pTransClip, SCCOL nCol1, SCCOL nCol, SC
                         ScPostIt* pNote = *itData;
                         if (pNote)
                         {
+#ifdef NO_LIBO_BUG_91995_FIX
                             ScPostIt* pClonedNote = pNote->Clone( ScAddress(nCol, curRow, nTab), *pTransClip->pDocument, aDestPos, bCloneCaption );
                             pTransClip->pDocument->SetNote(aDestPos, pClonedNote);
+#else	// NO_LIBO_BUG_91995_FIX
+                            std::unique_ptr<ScPostIt> pClonedNote = pNote->Clone( ScAddress(nCol, curRow, nTab), *pTransClip->pDocument, aDestPos, true );
+                            pTransClip->pDocument->SetNote(aDestPos, std::move(pClonedNote));
+#endif	// NO_LIBO_BUG_91995_FIX
                         }
                     }
                     break; // we reached the last valid block
@@ -996,8 +1001,13 @@ void ScTable::TransposeColNotes(ScTable* pTransClip, SCCOL nCol1, SCCOL nCol, SC
                         ScPostIt* pNote = *itData;
                         if (pNote)
                         {
+#ifdef NO_LIBO_BUG_91995_FIX
                             ScPostIt* pClonedNote = pNote->Clone( ScAddress(nCol, curRow, nTab), *pTransClip->pDocument, aDestPos, bCloneCaption );
                             pTransClip->pDocument->SetNote(aDestPos, pClonedNote);
+#else	// NO_LIBO_BUG_91995_FIX
+                            std::unique_ptr<ScPostIt> pClonedNote = pNote->Clone( ScAddress(nCol, curRow, nTab), *pTransClip->pDocument, aDestPos, true );
+                            pTransClip->pDocument->SetNote(aDestPos, std::move(pClonedNote));
+#endif	// NO_LIBO_BUG_91995_FIX
                         }
                     }
                 }
@@ -1531,7 +1541,11 @@ ScFormulaCell* ScTable::GetFormulaCell( SCCOL nCol, SCROW nRow )
     return aCol[nCol].GetFormulaCell(nRow);
 }
 
+#ifdef NO_LIBO_BUG_91995_FIX
 ScPostIt* ScTable::ReleaseNote( SCCOL nCol, SCROW nRow )
+#else	// NO_LIBO_BUG_91995_FIX
+std::unique_ptr<ScPostIt> ScTable::ReleaseNote( SCCOL nCol, SCROW nRow )
+#endif	// NO_LIBO_BUG_91995_FIX
 {
     if (!ValidCol(nCol))
         return NULL;

@@ -948,14 +948,23 @@ public:
     /** Notes **/
     SC_DLLPUBLIC ScPostIt*       GetNote(const ScAddress& rPos);
     SC_DLLPUBLIC ScPostIt*       GetNote(SCCOL nCol, SCROW nRow, SCTAB nTab);
+#ifdef NO_LIBO_BUG_91995_FIX
     void                         SetNote(const ScAddress& rPos, ScPostIt* pNote);
     void                         SetNote(SCCOL nCol, SCROW nRow, SCTAB nTab, ScPostIt* pNote);
+#else	// NO_LIBO_BUG_91995_FIX
+    void                         SetNote(const ScAddress& rPos, std::unique_ptr<ScPostIt> pNote);
+    void                         SetNote(SCCOL nCol, SCROW nRow, SCTAB nTab, std::unique_ptr<ScPostIt> pNote);
+#endif	// NO_LIBO_BUG_91995_FIX
     SC_DLLPUBLIC bool HasNote(const ScAddress& rPos) const;
     bool HasNote(SCCOL nCol, SCROW nRow, SCTAB nTab) const;
     SC_DLLPUBLIC bool HasColNotes(SCCOL nCol, SCTAB nTab) const;
     SC_DLLPUBLIC bool HasTabNotes(SCTAB nTab) const;
     bool HasNotes() const;
+#ifdef NO_LIBO_BUG_91995_FIX
     SC_DLLPUBLIC ScPostIt*       ReleaseNote(const ScAddress& rPos);
+#else	// NO_LIBO_BUG_91995_FIX
+    SC_DLLPUBLIC std::unique_ptr<ScPostIt> ReleaseNote(const ScAddress& rPos);
+#endif	// NO_LIBO_BUG_91995_FIX
     SC_DLLPUBLIC ScPostIt*       GetOrCreateNote(const ScAddress& rPos);
     SC_DLLPUBLIC ScPostIt*       CreateNote(const ScAddress& rPos);
     size_t GetNoteCount( SCTAB nTab, SCCOL nCol ) const;

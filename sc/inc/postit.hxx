@@ -197,7 +197,11 @@ public:
             object (used e.g. in Undo documents to restore the pointer to the
             existing caption object).
      */
+#ifdef NO_LIBO_BUG_91995_FIX
     ScPostIt*           Clone(
+#else	// NO_LIBO_BUG_91995_FIX
+    std::unique_ptr<ScPostIt> Clone(
+#endif	// NO_LIBO_BUG_91995_FIX
                             const ScAddress& rOwnPos,
                             ScDocument& rDestDoc, const ScAddress& rDestPos,
                             bool bCloneCaption ) const;

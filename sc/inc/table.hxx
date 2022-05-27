@@ -390,7 +390,11 @@ public:
     void        GetFirstDataPos(SCCOL& rCol, SCROW& rRow) const;
     void        GetLastDataPos(SCCOL& rCol, SCROW& rRow) const;
 
+#ifdef NO_LIBO_BUG_91995_FIX
     ScPostIt* ReleaseNote( SCCOL nCol, SCROW nRow );
+#else	// NO_LIBO_BUG_91995_FIX
+    std::unique_ptr<ScPostIt> ReleaseNote( SCCOL nCol, SCROW nRow );
+#endif	// NO_LIBO_BUG_91995_FIX
 
     size_t GetNoteCount( SCCOL nCol ) const;
     SCROW GetNotePosition( SCCOL nCol, size_t nIndex ) const;

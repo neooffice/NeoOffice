@@ -823,7 +823,6 @@ source/ui/view/tabview5.cxx
 source/ui/view/tabview4.cxx
 source/ui/view/pfuncache.cxx
 source/ui/view/cliputil.cxx
-source/ui/view/drawview.cxx
 source/ui/view/preview.cxx
 source/ui/view/waitoff.cxx
 source/ui/view/dbfunc4.cxx
@@ -1720,7 +1719,6 @@ qa/unit/opencl-test.cxx
 qa/unit/subsequent_filters-test.cxx
 qa/unit/ucalc_pivottable.cxx
 qa/unit/filters-test.cxx
-qa/unit/ucalc.cxx
 qa/unit/subsequent_export-test.cxx
 qa/unit/ucalc_sharedformula.cxx
 qa/unit/ucalc_column.cxx
