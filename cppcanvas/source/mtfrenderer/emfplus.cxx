@@ -236,6 +236,7 @@ namespace cppcanvas
 {
     namespace internal
     {
+
         struct EMFPPath : public EMFPObject
         {
             ::basegfx::B2DPolyPolygon    aPolygon;
@@ -1341,7 +1342,11 @@ namespace cppcanvas
             } else {
                 rState.isFillColorSet = true;
                 // extract UseBrush
+#ifdef NO_LIBO_311XVJ95_FIX
                 EMFPBrush* brush = static_cast<EMFPBrush*>( aObjects [brushIndexOrColor & 0xff] );
+#else	// NO_LIBO_311XVJ95_FIX
+                EMFPBrush* brush = dynamic_cast<EMFPBrush*>( aObjects [brushIndexOrColor & 0xff] );
+#endif	// NO_LIBO_311XVJ95_FIX
                 SAL_INFO("cppcanvas.emf", "EMF+\tbrush fill slot: " << brushIndexOrColor << " (type: " << (brush ? brush->GetType() : -1) << ")");
 
                 // give up in case something wrong happened
@@ -1824,7 +1829,13 @@ namespace cppcanvas
 
         double ImplRenderer::setFont (sal_uInt8 objectId, const ActionFactoryParameters& rParms, OutDevState& rState)
         {
+#ifdef NO_LIBO_311XVJ95_FIX
             EMFPFont *font = static_cast<EMFPFont*>( aObjects[ objectId ] );
+#else	// NO_LIBO_311XVJ95_FIX
+            EMFPFont *font = dynamic_cast<EMFPFont*>( aObjects[ objectId ] );
+            if (!font)
+                return 0.0;
+#endif	// NO_LIBO_311XVJ95_FIX
 
             rendering::FontRequest aFontRequest;
             aFontRequest.FontDescription.FamilyName = font->family;
@@ -1990,7 +2001,16 @@ namespace cppcanvas
 
                             SAL_INFO("cppcanvas.emf", "EMF+ FillPath slot: " << index);
 
+#ifdef NO_LIBO_EMF_WMF_SIGNED_INT_FIX
                             EMFPPlusFillPolygon( static_cast<EMFPPath*>( aObjects [index])->GetPolygon (*this), rFactoryParms, rState, rCanvas, flags & 0x8000, brushIndexOrColor);
+#else	// NO_LIBO_EMF_WMF_SIGNED_INT_FIX
+                            EMFPPath* path = dynamic_cast<EMFPPath*>(aObjects[index]);
+                            if (path)
+                                EMFPPlusFillPolygon(path->GetPolygon (*this), rFactoryParms, rState, rCanvas, flags & 0x8000, brushIndexOrColor);
+                            else
+                                SAL_WARN("cppcanvas.emf", "EmfPlusRecordTypeFillPath missing path");
+
+#endif	// NO_LIBO_EMF_WMF_SIGNED_INT_FIX
                         }
                         break;
                     case EmfPlusRecordTypeDrawEllipse:
@@ -2122,10 +2142,18 @@ namespace cppcanvas
                             SAL_INFO("cppcanvas.emf", "EMF+ DrawPath");
                             SAL_INFO("cppcanvas.emf", "EMF+\tpen: " << penIndex);
 
+#ifdef NO_LIBO_EMF_WMF_SIGNED_INT_FIX
                             EMFPPath* path = static_cast<EMFPPath*>( aObjects [flags & 0xff] );
                             SAL_WARN_IF( !path, "cppcanvas.emf", "EmfPlusRecordTypeDrawPath missing path" );
 
                             EMFPPlusDrawPolygon (path->GetPolygon (*this), rFactoryParms, rState, rCanvas, penIndex);
+#else	// NO_LIBO_EMF_WMF_SIGNED_INT_FIX
+                            EMFPPath* path = dynamic_cast<EMFPPath*>( aObjects [flags & 0xff] );
+                            if (path)
+                                EMFPPlusDrawPolygon(path->GetPolygon (*this), rFactoryParms, rState, rCanvas, penIndex);
+                            else
+                                SAL_WARN("cppcanvas.emf", "EmfPlusRecordTypeDrawPath missing path");
+#endif	// NO_LIBO_EMF_WMF_SIGNED_INT_FIX
 
                             break;
                         }
@@ -2140,8 +2168,14 @@ namespace cppcanvas
                             SAL_INFO("cppcanvas.emf", "EMF+ " << (type == EmfPlusRecordTypeDrawImagePoints ? "DrawImagePoints" : "DrawImage") << "attributes index: " << attrIndex << "source unit: " << sourceUnit);
                             SAL_INFO("cppcanvas.emf", "EMF+\tTODO: use image attributes");
 
+#ifdef NO_LIBO_311XVJ95_FIX
                             if (sourceUnit == 2 && aObjects [flags & 0xff]) { // we handle only GraphicsUnit.Pixel now
                                 EMFPImage& image = *static_cast<EMFPImage *>( aObjects [flags & 0xff]);
+#else	// NO_LIBO_311XVJ95_FIX
+                            if (EMFPImage* image = sourceUnit == 2 ?
+                                    dynamic_cast<EMFPImage*>(aObjects[flags & 0xff]) :
+                                    nullptr) {
+#endif	// NO_LIBO_311XVJ95_FIX
                                 float sx, sy, sw, sh;
                                 sal_Int32 aCount;
 
@@ -2186,7 +2220,11 @@ namespace cppcanvas
                                 }
 
                                 if (bValid) {
+#ifdef NO_LIBO_311XVJ95_FIX
                                     BitmapEx aBmp( image.graphic.GetBitmapEx () );
+#else	// NO_LIBO_311XVJ95_FIX
+                                    BitmapEx aBmp( image->graphic.GetBitmapEx () );
+#endif	// NO_LIBO_311XVJ95_FIX
                                     aBmp.Crop( aSource );
 
                                     Size aSize( aBmp.GetSizePixel() );
@@ -2427,8 +2465,19 @@ namespace cppcanvas
                             SAL_INFO("cppcanvas.emf", "EMF+ SetClipPath combine mode: " << combineMode);
                             SAL_INFO("cppcanvas.emf", "EMF+\tpath in slot: " << (flags & 0xff));
 
+#ifdef NO_LIBO_311XVJ95_FIX
                             EMFPPath& path = *static_cast<EMFPPath*>( aObjects [flags & 0xff] );
                             ::basegfx::B2DPolyPolygon& clipPoly (path.GetPolygon (*this));
+#else	// NO_LIBO_311XVJ95_FIX
+                            EMFPPath *path = dynamic_cast<EMFPPath*>( aObjects [flags & 0xff] );
+                            if (!path)
+                            {
+                                SAL_WARN("drawinglayer.emf", "EMF+\t TODO Unable to find path in slot: " << (flags & 0xff));
+                                break;
+                            }
+
+                            ::basegfx::B2DPolyPolygon& clipPoly(path->GetPolygon(*this));
+#endif	// NO_LIBO_311XVJ95_FIX
 
                             clipPoly.transform (rState.mapModeTransform);
                             switch (combineMode)
@@ -2452,7 +2501,11 @@ namespace cppcanvas
 
                         SAL_INFO("cppcanvas.emf", "EMF+ SetClipRegion");
                         SAL_INFO("cppcanvas.emf", "EMF+\tregion in slot: " << (flags & 0xff) << " combine mode: " << combineMode);
+#ifdef NO_LIBO_311XVJ95_FIX
                         EMFPRegion *region = static_cast<EMFPRegion*>(aObjects [flags & 0xff]);
+#else	// NO_LIBO_311XVJ95_FIX
+                        EMFPRegion *region = dynamic_cast<EMFPRegion*>(aObjects [flags & 0xff]);
+#endif	// NO_LIBO_311XVJ95_FIX
 
                         // reset clip
                         if (region && region->parts == 0 && region->initialState == EmfPlusRegionInitialStateInfinite) {
