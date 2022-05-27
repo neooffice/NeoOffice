@@ -15,6 +15,13 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified May 2022 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "table.hxx"
@@ -1552,6 +1559,33 @@ std::unique_ptr<ScPostIt> ScTable::ReleaseNote( SCCOL nCol, SCROW nRow )
 
     return aCol[nCol].ReleaseNote(nRow);
 }
+
+#ifndef NO_LIBO_BUG_91995_FIX
+
+ScPostIt* ScTable::GetNote( SCCOL nCol, SCROW nRow )
+{
+#ifdef USE_JAVA
+    if (!ValidCol(nCol))
+#else	// USE_JAVA
+    if (!ValidCol(nCol) || nCol >= GetAllocatedColumnsCount())
+#endif	// USE_JAVA
+        return nullptr;
+    return aCol[nCol].GetCellNote(nRow);
+}
+
+void ScTable::SetNote( SCCOL nCol, SCROW nRow, std::unique_ptr<ScPostIt> pNote )
+{
+    if (!ValidColRow(nCol, nRow))
+        return;
+
+#ifdef USE_JAVA
+    aCol[nCol].SetCellNote(nRow, std::move(pNote));
+#else	// USE_JAVA
+    CreateColumnIfNotExists(nCol).SetCellNote(nRow, std::move(pNote));
+#endif	// USE_JAVA
+}
+
+#endif	// !NO_LIBO_BUG_91995_FIX
 
 size_t ScTable::GetNoteCount( SCCOL nCol ) const
 {

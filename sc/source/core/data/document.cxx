@@ -15,6 +15,13 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified May 2022 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "scitems.hxx"
@@ -6203,8 +6210,13 @@ ScPostIt* ScDocument::GetNote(const ScAddress& rPos)
 
 ScPostIt* ScDocument::GetNote(SCCOL nCol, SCROW nRow, SCTAB nTab)
 {
+#ifdef NO_LIBO_BUG_91995_FIX
     if (ValidTab(nTab) && nTab < static_cast<SCTAB>(maTabs.size()))
         return maTabs[nTab]->aCol[nCol].GetCellNote(nRow);
+#else	// NO_LIBO_BUG_91995_FIX
+    if (ValidTab(nTab) && nTab < static_cast<SCTAB>(maTabs.size()))
+        return maTabs[nTab]->GetNote(nCol, nRow);
+#endif	// NO_LIBO_BUG_91995_FIX
     else
         return NULL;
 
@@ -6232,7 +6244,8 @@ void ScDocument::SetNote(SCCOL nCol, SCROW nRow, SCTAB nTab, std::unique_ptr<ScP
 #ifdef NO_LIBO_BUG_91995_FIX
     return maTabs[nTab]->aCol[nCol].SetCellNote(nRow, pNote);
 #else	// NO_LIBO_BUG_91995_FIX
-    return maTabs[nTab]->aCol[nCol].SetCellNote(nRow, std::move(pNote));
+    if (ValidTab(nTab) && nTab < static_cast<SCTAB>(maTabs.size()))
+        maTabs[nTab]->SetNote(nCol, nRow, std::move(pNote));
 #endif	// NO_LIBO_BUG_91995_FIX
 }
 
@@ -6262,6 +6275,13 @@ bool ScDocument::HasColNotes(SCCOL nCol, SCTAB nTab) const
     const ScTable* pTab = FetchTable(nTab);
     if (!pTab)
         return false;
+
+#ifndef NO_LIBO_BUG_91995_FIX
+#ifndef USE_JAVA
+    if (nCol >= pTab->GetAllocatedColumnsCount())
+        return false;
+#endif	// USE_JAVA
+#endif	// !NO_LIBO_BUG_91995_FIX
 
     return pTab->aCol[nCol].HasCellNotes();
 }

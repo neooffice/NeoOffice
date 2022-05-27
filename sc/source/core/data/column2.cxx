@@ -1840,7 +1840,6 @@ void ScColumn::SetCellNote(SCROW nRow, ScPostIt* pNote)
 void ScColumn::SetCellNote(SCROW nRow, std::unique_ptr<ScPostIt> pNote)
 #endif	// NO_LIBO_BUG_91995_FIX
 {
-fprintf( stderr, "Here: %p %p\n", this, dynamic_cast<ScColumn*>(this) );
     //pNote->UpdateCaptionPos(ScAddress(nCol, nRow, nTab)); // TODO notes useful ? slow import with many notes
 #ifdef NO_LIBO_BUG_91995_FIX
     maCellNotes.set(nRow, pNote);
