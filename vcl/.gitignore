@@ -608,7 +608,6 @@ osx/a11ytextwrapper.h
 osx/salnsmenu.mm
 osx/salframe.cxx
 osx/DataFlavorMapping.cxx
-osx/salsys.cxx
 osx/a11ywrapperlist.mm
 osx/a11ywrappercombobox.mm
 osx/a11ywrappertabgroup.h

@@ -77,13 +77,3 @@ OUString JavaSalSystem::GetDisplayScreenName( unsigned int nScreen )
 {
 	return OUString::number( (sal_Int32)nScreen );
 }
-
-// -----------------------------------------------------------------------
-
-int JavaSalSystem::ShowNativeMessageBox( const OUString& /* rTitle */, const OUString& /* rMessage */, int /* nButtonCombination */, int /* nDefaultButton */, bool /* bUseResources */ )
-{
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalSystem::ShowNativeMessageBox not implemented\n" );
-#endif
-	return -1;
-}

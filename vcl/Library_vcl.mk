@@ -475,6 +475,7 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/java/source/gdi/salgdi2 \
     vcl/java/source/java/VCLEventQueue \
     vcl/osx/HtmlFmtFlt \
+    vcl/osx/salsys \
     vcl/quartz/utils \
 ))
 
