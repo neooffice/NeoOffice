@@ -152,6 +152,8 @@ static NSString* getStandardString( int nButtonId, bool bUseResources )
 
 - (void)checkForErrors:(id)pObject
 {
+	(void)pObject;
+
     // Detect if the alert window has been closed without any call to the
     // completion handler
     if ( !mbFinished && !mbCancelled && ( !mpAlert || ![mpAlert window] || ![[mpAlert window] isVisible] ) )
@@ -167,6 +169,8 @@ static NSString* getStandardString( int nButtonId, bool bUseResources )
 
 - (void)destroy:(id)pObject
 {
+	(void)pObject;
+
     if ( mpAlert )
     {
         [mpAlert release];
