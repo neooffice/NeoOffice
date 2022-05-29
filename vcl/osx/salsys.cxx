@@ -121,6 +121,7 @@ static NSString* getStandardString( int nButtonId, bool bUseResources )
 
 @interface VCLShowNativeMessageBox : NSObject
 {
+    NSAlert*                mpAlert;
     BOOL                    mbCancelled;
     BOOL                    mbFinished;
     NSModalResponse         mnModalResponse;
@@ -131,7 +132,9 @@ static NSString* getStandardString( int nButtonId, bool bUseResources )
     NSString*               mpOthText;
 }
 + (id)createShowNativeMessageBox:(NSString *)pTitle message:(NSString *)pMessage defText:(NSString *)pDefText altText:(NSString *)pAltText othText:(NSString *)pOthText;
+- (void)checkForErrors:(id)pObject;
 - (void)dealloc;
+- (void)destroy:(id)pObject;
 - (id)initShowNativeMessageBox:(NSString *)pTitle message:(NSString *)pMessage defText:(NSString *)pDefText altText:(NSString *)pAltText othText:(NSString *)pOthText;
 - (BOOL)finished;
 - (NSModalResponse)modalResponse;
@@ -147,26 +150,65 @@ static NSString* getStandardString( int nButtonId, bool bUseResources )
     return pRet;
 }
 
+- (void)checkForErrors:(id)pObject
+{
+    // Detect if the alert window has been closed without any call to the
+    // completion handler
+    if ( !mbFinished && !mbCancelled && ( !mpAlert || ![mpAlert window] || ![[mpAlert window] isVisible] ) )
+        mbCancelled = YES;
+}
+
 - (void)dealloc
 {
-    if ( mpTitle )
-        [mpTitle release];
-    if ( mpMessage )
-        [mpMessage release];
-    if ( mpDefText )
-        [mpDefText release];
-    if ( mpAltText )
-        [mpAltText release];
-    if ( mpOthText )
-        [mpOthText release];
+    [self destroy:self];
 
     [super dealloc];
+}
+
+- (void)destroy:(id)pObject
+{
+    if ( mpAlert )
+    {
+        [mpAlert release];
+        mpAlert = nil;
+    }
+
+    if ( mpTitle )
+    {
+        [mpTitle release];
+        mpTitle = nil;
+    }
+
+    if ( mpMessage )
+    {
+        [mpMessage release];
+        mpMessage = nil;
+    }
+
+    if ( mpDefText )
+    {
+        [mpDefText release];
+        mpDefText = nil;
+    }
+
+    if ( mpAltText )
+    {
+        [mpAltText release];
+        mpAltText = nil;
+    }
+
+    if ( mpOthText )
+    {
+        [mpOthText release];
+        mpOthText = nil;
+    }
 }
 
 - (id)initShowNativeMessageBox:(NSString *)pTitle message:(NSString *)pMessage defText:(NSString *)pDefText altText:(NSString *)pAltText othText:(NSString *)pOthText
 {
     [super init];
 
+    mpAlert = nil;
     mbCancelled = NO;
     mbFinished = NO;
     mnModalResponse = NSModalResponseCancel;
@@ -201,7 +243,8 @@ static NSString* getStandardString( int nButtonId, bool bUseResources )
 
 - (void)showNativeMessageBox:(id)pObject
 {
-    if ( mbCancelled || mbFinished )
+    // Do not allow recursion or reuse
+    if ( mpAlert || mbCancelled || mbFinished )
     {
         return;
     }
@@ -235,27 +278,25 @@ static NSString* getStandardString( int nButtonId, bool bUseResources )
         }
     }
 
-    NSAlert *pAlert = [[NSAlert alloc] init];
-    if ( pAlert )
+    mpAlert = [[NSAlert alloc] init];
+    if ( mpAlert )
     {
-        [pAlert autorelease];
-
         if ( mpTitle )
-            pAlert.messageText = mpTitle;
+            mpAlert.messageText = mpTitle;
         if ( mpMessage )
-            pAlert.informativeText = mpMessage;
+            mpAlert.informativeText = mpMessage;
         if ( mpDefText )
-            [pAlert addButtonWithTitle:mpDefText];
+            [mpAlert addButtonWithTitle:mpDefText];
         if ( mpAltText )
-            [pAlert addButtonWithTitle:mpAltText];
+            [mpAlert addButtonWithTitle:mpAltText];
         if ( mpOthText )
-            [pAlert addButtonWithTitle:mpOthText];
+            [mpAlert addButtonWithTitle:mpOthText];
 
         @try
         {
             // When running in the sandbox, native alert dialog calls may
             // throw exceptions if the PowerBox daemon process is killed
-            [pAlert beginSheetModalForWindow:pParentWindow completionHandler:^(NSModalResponse nReturnCode) {
+            [mpAlert beginSheetModalForWindow:pParentWindow completionHandler:^(NSModalResponse nReturnCode) {
                 mnModalResponse = nReturnCode;
                 mbFinished = YES;
             }];
@@ -353,7 +394,7 @@ int AquaSalSystem::ShowNativeMessageBox( const OUString& rTitle,
             NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
             [pVCLShowNativeMessageBox performSelectorOnMainThread:@selector(showNativeMessageBox:) withObject:pNSWindow waitUntilDone:YES modes:pModes];
              while ( ![pVCLShowNativeMessageBox finished] && !Application::IsShutDown() )
-                 usleep( 10000 );
+                 [pVCLShowNativeMessageBox performSelectorOnMainThread:@selector(checkForErrors:) withObject:pVCLShowNativeMessageBox waitUntilDone:YES modes:pModes];
 
             NSModalResponse nModalResponse = [pVCLShowNativeMessageBox modalResponse];
             if ( nModalResponse == NSAlertFirstButtonReturn )
@@ -362,6 +403,8 @@ int AquaSalSystem::ShowNativeMessageBox( const OUString& rTitle,
                 nResult = 2;
             else if ( nModalResponse == NSAlertThirdButtonReturn )
                 nResult = 3;
+
+            [pVCLShowNativeMessageBox performSelectorOnMainThread:@selector(destroy:) withObject:pVCLShowNativeMessageBox waitUntilDone:YES modes:pModes];
 
             Application_endModalSheet();
         }
