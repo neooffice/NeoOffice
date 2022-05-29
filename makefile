@@ -75,14 +75,22 @@ CODESIGN_EXTRA_OPTIONS+=--options runtime
 endif
 TARGET_MACHINE:=$(shell uname -m)
 ifeq ($(TARGET_MACHINE),arm64)
-ULONGNAME=Silicon
-else
+ifdef CROSS_COMPILE_X86_64
+CONFIGURE_EXTRA_OPTIONS:=--host=x86_64-apple-darwin --build=$(TARGET_MACHINE)-apple-darwin --enable-python=no --with-galleries=no --with-build-platform-configure-options='--disable-odk --without-fonts --enable-python=no --enable-bogus-pkg-config'
+CROSS_COMPILE=true;
+TARGET_MACHINE=x86_64
 ULONGNAME=Intel
+else
+ULONGNAME=Silicon
+endif
+else
 ifdef CROSS_COMPILE_ARM64
-CONFIGURE_EXTRA_OPTIONS:=--host=aarch64-apple-darwin --build=$(TARGET_MACHINE)-apple-darwin --enable-python=no --with-galleries=no --with-build-platform-configure-options='--disable-odk --without-fonts --enable-python=no'
+CONFIGURE_EXTRA_OPTIONS:=--host=aarch64-apple-darwin --build=$(TARGET_MACHINE)-apple-darwin --enable-python=no --with-galleries=no --with-build-platform-configure-options='--disable-odk --without-fonts --enable-python=no --enable-bogus-pkg-config'
 CROSS_COMPILE=true;
 TARGET_MACHINE=arm64
 ULONGNAME=Silicon
+else
+ULONGNAME=Intel
 endif
 endif
 ifdef PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS
