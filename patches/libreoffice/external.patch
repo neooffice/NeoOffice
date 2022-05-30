@@ -418,3 +418,27 @@
  		LO_lib/_ssl.$(python3_EXTENSION_MODULE_SUFFIX).so \
  	) \
  	LO_lib/_statistics.$(python3_EXTENSION_MODULE_SUFFIX).so \
+--- python3/UnpackedTarball_python3.mk	2021-10-05 20:34:15.000000000 -0400
++++ python3/UnpackedTarball_python3.mk	2022-05-30 09:23:58.000000000 -0400
+@@ -27,6 +27,7 @@
+ 	external/python3/python-3.5.tweak.strip.soabi.patch \
+ 	external/python3/darwin.patch.0 \
+ 	external/python3/macos-11.patch.0 \
++	external/python3/openssl.patch.0 \
+ ))
+ 
+ ifneq ($(filter DRAGONFLY FREEBSD LINUX NETBSD OPENBSD SOLARIS,$(OS)),)
+--- /dev/null	2022-05-30 09:40:46.000000000 -0400
++++ python3/openssl.patch.0	2022-05-30 09:38:43.000000000 -0400
+@@ -0,0 +1,11 @@
++--- configure	2022-05-30 09:37:27.000000000 -0400
+++++ configure	2022-05-30 09:38:13.000000000 -0400
++@@ -17295,7 +17295,7 @@
++ $as_echo_n "checking for openssl/ssl.h in $ssldir... " >&6; }
++             if test -f "$ssldir/include/openssl/ssl.h"; then
++                 OPENSSL_INCLUDES="-I$ssldir/include"
++-                OPENSSL_LDFLAGS="-L$ssldir/lib"
+++                OPENSSL_LDFLAGS="-L$ssldir"
++                 OPENSSL_LIBS="-lssl -lcrypto"
++                 found=true
++                 { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5

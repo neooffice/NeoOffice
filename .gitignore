@@ -1,4 +1,5 @@
 /build*
 /certs.mk
 /custom.mk
+/patch.rej
 **/.DS_Store
