@@ -33,7 +33,6 @@ source/module/pyuno.cxx
 source/module/pyuno_impl.hxx
 source/officehelper.py
 source/loader/pythonloader.component
-source/loader/pythonloader.py
 source/loader/pyuno_loader.cxx
 Library_pythonloader.mk
 qa/pytests/testdocuments/fdo74824.ods
