@@ -978,15 +978,9 @@ IMPL_LINK(SwMailMergeOutputPage, SendDocumentsHdl_Impl, PushButton*, pButton)
         {
             //Make sure we don't pick e.g. the flat xml filter
             //for this format
-#ifdef NO_LIBO_BUG_131767_FIX
             pSfxFlt = SwIoSystem::GetFilterOfFormat(
                 OUString( FILTER_XML ),
                 SwDocShell::Factory().GetFilterContainer() );
-#else	// NO_LIBO_BUG_131767_FIX
-            pSfxFlt = pFilterContainer->GetFilter4FilterName(
-                "writer8",
-                SFX_FILTER_EXPORT);
-#endif	// NO_LIBO_BUG_131767_FIX
         }
         break;
         case MM_DOCTYPE_PDF:
