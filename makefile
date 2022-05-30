@@ -870,11 +870,17 @@ build.patch_package_shared:
 ifdef PRODUCT_BUILD3
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/MacOS/soffice3" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
 # Copy missing Python SSL libraries
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Frameworks/LibreOfficePython.framework/Versions/3.8/Resources"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents/Frameworks/LibreOfficePython.framework/Versions" ; ln -s "3.8" "Current"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents/Frameworks/LibreOfficePython.framework" ; ln -s "Versions/Current/Resources" "Resources"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents/Frameworks/LibreOfficePython.framework/Versions/3.8" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/LibreOfficePython.framework/Versions/3.8/Resources/Info.plist" "Resources"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents/Frameworks/LibreOfficePython.framework/Versions" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/LibreOfficePython.framework/Versions/3.8/LibreOfficePython" "3.8"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents/Frameworks/LibreOfficePython.framework" ; ln -s "Versions/Current/LibreOfficePython" "LibreOfficePython"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Frameworks/LibreOfficePython.framework/Versions/3.8/lib/python3.8/lib-dynload"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp \
+	cd "$(PATCH_INSTALL_HOME)/package/Contents/Frameworks/LibreOfficePython.framework/Versions/3.8/lib/python3.8" ; cp \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/LibreOfficePython.framework/Versions/3.8/lib/python3.8/lib-dynload/_hashlib.cpython-3.8.so" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/LibreOfficePython.framework/Versions/3.8/lib/python3.8/lib-dynload/_ssl.cpython-3.8.so" \
-	"Frameworks"
+	"lib-dynload"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Resources/mailmerge.py" "Resources"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Resources/pythonloader.py" "Resources"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libupdchklo.dylib" "Frameworks"
