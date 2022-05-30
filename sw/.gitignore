@@ -560,7 +560,6 @@ source/ui/vba/vbacheckbox.hxx
 source/ui/utlui/poolfmt.src
 source/ui/utlui/swrenamexnameddlg.cxx
 source/ui/utlui/utlui.src
-source/ui/dbui/mmlayoutpage.cxx
 source/ui/dbui/dbtablepreviewdialog.cxx
 source/ui/dbui/mmmergepage.cxx
 source/ui/dbui/mmdocselectpage.cxx

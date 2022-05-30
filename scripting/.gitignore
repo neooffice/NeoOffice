@@ -13,7 +13,6 @@ workben/bindings/script.xlb
 workben/bindings/Highlight.xdl
 source/pyprov/mailmerge.README
 source/pyprov/msgbox.py
-source/pyprov/mailmerge.py
 source/pyprov/scriptproviderforpython.rdb
 source/pyprov/mailmerge.component
 source/stringresource/stringresource.hxx
