@@ -659,9 +659,16 @@ IMPL_LINK(SwMailMergeOutputPage, SaveOutputHdl_Impl, PushButton*, pButton)
         OUString sTargetTempURL = URIHelper::SmartRel2Abs(
             INetURLObject(), utl::TempFile::CreateTempName(),
             URIHelper::GetMaybeFileHdl());
+#ifdef NO_LIBO_BUG_131767_FIX
         const SfxFilter *pSfxFlt = SwIoSystem::GetFilterOfFormat(
                 OUString( FILTER_XML ),
                 SwDocShell::Factory().GetFilterContainer() );
+#else	// NO_LIBO_BUG_131767_FIX
+        SfxFilterContainer* pFilterContainer = SwDocShell::Factory().GetFilterContainer();
+        const SfxFilter *pSfxFlt = pFilterContainer->GetFilter4FilterName(
+                "writer8",
+                SFX_FILTER_EXPORT);
+#endif	// NO_LIBO_BUG_131767_FIX
 
         uno::Sequence< beans::PropertyValue > aValues(1);
         beans::PropertyValue* pValues = aValues.getArray();
@@ -978,9 +985,15 @@ IMPL_LINK(SwMailMergeOutputPage, SendDocumentsHdl_Impl, PushButton*, pButton)
         {
             //Make sure we don't pick e.g. the flat xml filter
             //for this format
+#ifdef NO_LIBO_BUG_131767_FIX
             pSfxFlt = SwIoSystem::GetFilterOfFormat(
                 OUString( FILTER_XML ),
                 SwDocShell::Factory().GetFilterContainer() );
+#else	// NO_LIBO_BUG_131767_FIX
+            pSfxFlt = pFilterContainer->GetFilter4FilterName(
+                "writer8",
+                SFX_FILTER_EXPORT);
+#endif	// NO_LIBO_BUG_131767_FIX
         }
         break;
         case MM_DOCTYPE_PDF:
@@ -1094,9 +1107,15 @@ IMPL_LINK(SwMailMergeOutputPage, SendDocumentsHdl_Impl, PushButton*, pButton)
     OUString sTargetTempURL = URIHelper::SmartRel2Abs(
         INetURLObject(), utl::TempFile::CreateTempName(),
         URIHelper::GetMaybeFileHdl());
+#ifdef NO_LIBO_BUG_131767_FIX
     const SfxFilter *pTargetSfxFlt = SwIoSystem::GetFilterOfFormat(
             OUString( FILTER_XML ),
             SwDocShell::Factory().GetFilterContainer() );
+#else	// NO_LIBO_BUG_131767_FIX
+    const SfxFilter *pTargetSfxFlt = pFilterContainer->GetFilter4FilterName(
+                "writer8",
+                SFX_FILTER_EXPORT);
+#endif	// NO_LIBO_BUG_131767_FIX
 
     uno::Sequence< beans::PropertyValue > aValues(1);
     beans::PropertyValue* pValues = aValues.getArray();
