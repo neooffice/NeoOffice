@@ -55,6 +55,10 @@
 #include <vector>
 #include <math.h>
 
+#if defined USE_JAVA && defined MACOSX
+#include "java/salframe.h"
+#endif	// USE_JAVA && MACOSX
+
 #define SMALLBUTTON_HSIZE           7
 #define SMALLBUTTON_VSIZE           7
 
@@ -540,6 +544,10 @@ void ToolBox::ImplDrawBackground( ToolBox* pThis, const Rectangle &rRect )
                 if( !pThis->IsInPaint() )
                     ImplDrawTransparentBackground( pThis, aPaintRegion );
             }
+#if defined USE_JAVA && defined MACOSX
+            else if ( pThis->mpData->mbNeedDarkBackground && pThis->IsBackground() )
+                ImplDrawConstantBackground( pThis, aPaintRegion, bIsInPopupMode );
+#endif	// USE_JAVA && MACOSX
             else
                 ImplDrawGradientBackground( pThis, pWrapper );
         }
@@ -1478,6 +1486,15 @@ void ToolBox::ImplInitSettings( bool bFont,
                 ( GetAlign() == WINDOWALIGN_TOP && !Application::GetSettings().GetStyleSettings().GetPersonaHeader().IsEmpty() )||
                 ( GetAlign() == WINDOWALIGN_BOTTOM && !Application::GetSettings().GetStyleSettings().GetPersonaFooter().IsEmpty()) )
             {
+#if defined USE_JAVA && defined MACOSX
+                mpData->mbNeedDarkBackground = ( JavaSalFrame::UseDarkModeColors() && Application::GetSettings().GetStyleSettings().DetermineIconTheme() == "sifr" );
+                if ( mpData->mbNeedDarkBackground )
+                {
+                    aColor = rStyleSettings.GetShadowColor();
+                    SetBackground( aColor );
+                }
+                else
+#endif	// USE_JAVA && MACOSX
                 SetBackground();
                 SetTextColor(rStyleSettings.GetMenuBarTextColor());
                 SetPaintTransparent( true );
