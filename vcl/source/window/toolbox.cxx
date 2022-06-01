@@ -544,10 +544,6 @@ void ToolBox::ImplDrawBackground( ToolBox* pThis, const Rectangle &rRect )
                 if( !pThis->IsInPaint() )
                     ImplDrawTransparentBackground( pThis, aPaintRegion );
             }
-#if defined USE_JAVA && defined MACOSX
-            else if ( pThis->mpData->mbNeedDarkBackground && pThis->IsBackground() )
-                ImplDrawConstantBackground( pThis, aPaintRegion, bIsInPopupMode );
-#endif	// USE_JAVA && MACOSX
             else
                 ImplDrawGradientBackground( pThis, pWrapper );
         }
@@ -1366,7 +1362,6 @@ IMPL_LINK( ImplTBDragMgr, SelectHdl, Accelerator*, pAccel )
 
 void ToolBox::ImplInit( vcl::Window* pParent, WinBits nStyle )
 {
-
     // initialize variables
     ImplGetWindowImpl()->mbToolBox         = true;
     mpData                = new ImplToolBoxPrivateData;
@@ -1440,6 +1435,11 @@ void ToolBox::ImplInit( vcl::Window* pParent, WinBits nStyle )
     }
 
     ImplInitSettings( true, true, true );
+
+#if defined USE_JAVA && defined MACOSX
+    OUString aTheme = GetSettings().GetStyleSettings().DetermineIconTheme();
+    JavaSalFrame::UpdateColorsForIconTheme( aTheme );
+#endif	// USE_JAVA && MACOSX
 }
 
 void ToolBox::ImplInitSettings( bool bFont,
@@ -1486,14 +1486,6 @@ void ToolBox::ImplInitSettings( bool bFont,
                 ( GetAlign() == WINDOWALIGN_TOP && !Application::GetSettings().GetStyleSettings().GetPersonaHeader().IsEmpty() )||
                 ( GetAlign() == WINDOWALIGN_BOTTOM && !Application::GetSettings().GetStyleSettings().GetPersonaFooter().IsEmpty()) )
             {
-#if defined USE_JAVA && defined MACOSX
-                // Unselected Sifr icons are nearly the same color as a
-                // document toolbar's parent so draw a lighter background color
-                mpData->mbNeedDarkBackground = ( JavaSalFrame::UseDarkModeColors() && rStyleSettings.DetermineIconTheme() == "sifr" );
-                if ( mpData->mbNeedDarkBackground )
-                    SetBackground( rStyleSettings.GetShadowColor() );
-                else
-#endif	// USE_JAVA && MACOSX
                 SetBackground();
                 SetTextColor(rStyleSettings.GetMenuBarTextColor());
                 SetPaintTransparent( true );

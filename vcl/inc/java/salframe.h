@@ -110,6 +110,7 @@ public:
 	static bool				GetSelectedControlTextColor( SalColor& rSalColor );
 	static bool				GetSelectedMenuItemTextColor( SalColor& rSalColor );
 	static bool				GetSelectedTabTextColor( SalColor& rSalColor );
+	static void				UpdateColorsForIconTheme( OUString& rTheme );
 
 							JavaSalFrame( sal_uLong nSalFrameStyle, JavaSalFrame *pParent );
 	virtual					~JavaSalFrame();

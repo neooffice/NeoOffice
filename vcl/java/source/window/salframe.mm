@@ -68,6 +68,7 @@ static ::std::vector< Rectangle > aVCLScreensVisibleBoundsList;
 static ::osl::Mutex aScreensMutex;
 static bool bSystemColorsInitialized = false;
 static bool	bVCLUseDarkModeColors = false;
+static bool	bVCLUseSifrIconTheme = false;
 static SalColor *pVCLControlTextColor = NULL;
 static SalColor *pVCLTextColor = NULL;
 static SalColor *pVCLHighlightColor = NULL;
@@ -263,10 +264,14 @@ static void HandleSystemColorsChangedRequest()
 	SetSalColorFromNSColor( [NSColor selectedTextBackgroundColor], &pVCLHighlightColor );
 	SetSalColorFromNSColor( [NSColor selectedTextColor], &pVCLHighlightTextColor );
 	SetSalColorFromNSColor( [NSColor disabledControlTextColor], &pVCLDisabledControlTextColor );
+	// Unselected Sifr icons are nearly the same color as the background
+	// color when running in Dark Mode so lighten the background slightly
+	if ( bVCLUseDarkModeColors && bVCLUseSifrIconTheme )
+		SetSalColorFromNSColor( [NSColor darkGrayColor], &pVCLBackColor );
 #if MACOSX_SDK_VERSION < 101400
-	if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedContentBackgroundColor) ) )
+	else if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedContentBackgroundColor) ) )
 #else // MACOSX_SDK_VERSION < 101400
-	if ( @available(macOS 10.14, * ) )
+	else if ( @available(macOS 10.14, * ) )
 #endif	// MACOSX_SDK_VERSION < 101400
 		SetSalColorFromNSColor( [NSColor unemphasizedSelectedContentBackgroundColor], &pVCLBackColor );
 	else if ( class_getClassMethod( [NSColor class], @selector(controlHighlightColor) ) )
@@ -3339,6 +3344,37 @@ bool JavaSalFrame::GetSelectedTabTextColor( SalColor& rSalColor )
 
 // -----------------------------------------------------------------------
 
+void JavaSalFrame::UpdateColorsForIconTheme( OUString& rTheme )
+{
+	bool bSifrTheme = ( rTheme == "sifr" );
+
+	// Update colors if any system colors have not yet been set
+	InitializeSystemColors();
+
+	ClearableMutexGuard aGuard( aSystemColorsMutex );
+	if ( bVCLUseSifrIconTheme != bSifrTheme )
+	{
+		bVCLUseSifrIconTheme = bSifrTheme;
+
+		// Force reinitialization of system colors when the icon theme has
+		// change to or from Sifr while in Dark Mode
+		if ( bVCLUseDarkModeColors )
+		{
+			aGuard.clear();
+
+			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+			VCLUpdateSystemColors *pVCLUpdateSystemColors = [VCLUpdateSystemColors create];
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pVCLUpdateSystemColors performSelectorOnMainThread:@selector(systemColorsChanged:) withObject:nil waitUntilDone:YES modes:pModes];
+
+			[pPool release];
+		}
+	}
+}
+
+// -----------------------------------------------------------------------
+
 void JavaSalFrame::AddObject( JavaSalObject *pObject, bool bVisible )
 {
 	if ( pObject )
@@ -4254,7 +4290,7 @@ void JavaSalFrame::GetWorkArea( Rectangle &rRect )
 	long nY = rRect.Top();
 	long nWidth = rRect.GetWidth();
 	long nHeight = rRect.GetHeight();
-    
+
 	// Use the parent frame's bounds if there is one. Fix bug 3163 by always
 	// excluding the frame's insets
 	if ( mpParent )

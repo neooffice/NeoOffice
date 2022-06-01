@@ -256,6 +256,7 @@ inc/PhysicalFontFace.hxx
 inc/sft.hxx
 inc/vcldemo-debug.hxx
 inc/salvd.hxx
+inc/toolbox.h
 inc/langboost.hxx
 inc/graphite_serverfont.hxx
 inc/salgdiimpl.hxx

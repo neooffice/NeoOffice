@@ -99,9 +99,6 @@ ImplToolBoxPrivateData::ImplToolBoxPrivateData() :
     mbPageScroll = false;
     mbWillUsePopupMode = false;
     mbDropDownByKeyboard = false;
-#if defined USE_JAVA && defined MACOSX
-    mbNeedDarkBackground = false;
-#endif	// USE_JAVA && MACOSX
 }
 
 ImplToolBoxPrivateData::~ImplToolBoxPrivateData()
