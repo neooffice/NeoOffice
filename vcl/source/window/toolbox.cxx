@@ -1489,7 +1489,7 @@ void ToolBox::ImplInitSettings( bool bFont,
 #if defined USE_JAVA && defined MACOSX
                 // Unselected Sifr icons are nearly the same color as a
                 // document toolbar's parent so draw a lighter background color
-                mpData->mbNeedDarkBackground = ( JavaSalFrame::UseDarkModeColors() && Application::GetSettings().GetStyleSettings().DetermineIconTheme() == "sifr" );
+                mpData->mbNeedDarkBackground = ( JavaSalFrame::UseDarkModeColors() && rStyleSettings.DetermineIconTheme() == "sifr" );
                 if ( mpData->mbNeedDarkBackground )
                     SetBackground( rStyleSettings.GetShadowColor() );
                 else
