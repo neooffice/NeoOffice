@@ -102,17 +102,23 @@ using namespace com::sun::star::uno;
 	if ( pWorkspace && mpURLs && [mpURLs count] )
 	{
 		NSURL *pAppURL = nil;
+		NSURL *pFallbackAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:@"com.apple.mail"];
 		if ( mpAppID && [mpAppID length] )
 			pAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:mpAppID];
-		else
-			pAppURL = [pWorkspace URLForApplicationToOpenURL:[NSURL URLWithString:@"mailto://"]];
 		if ( !pAppURL )
-			pAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:@"com.apple.mail"];
+		{
+			pAppURL = pFallbackAppURL;
+			pFallbackAppURL = nil;
+		}
 
 		NSWorkspaceOpenConfiguration *pConfiguration = [NSWorkspaceOpenConfiguration configuration];
 		if ( pAppURL && pConfiguration )
 		{
-			[pWorkspace openURLs:mpURLs withApplicationAtURL:pAppURL configuration:pConfiguration completionHandler:nil];
+			[pWorkspace openURLs:mpURLs withApplicationAtURL:pAppURL configuration:pConfiguration completionHandler:^(NSRunningApplication *pApp, NSError *pError) {
+				(void)pError;
+				if ( !pApp && pFallbackAppURL )
+					[pWorkspace openURLs:mpURLs withApplicationAtURL:pFallbackAppURL configuration:pConfiguration completionHandler:nil];
+			}];
 			mbResult = YES;
 		}
 	}
