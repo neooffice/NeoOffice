@@ -101,25 +101,46 @@ using namespace com::sun::star::uno;
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
 	if ( pWorkspace && mpURLs && [mpURLs count] )
 	{
-		NSURL *pAppURL = nil;
-		NSURL *pFallbackAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:@"com.apple.mail"];
-		if ( mpAppID && [mpAppID length] )
-			pAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:mpAppID];
-		if ( !pAppURL )
+		NSMutableArray *pAppURLs = [NSMutableArray arrayWithCapacity:3];
+		if ( pAppURLs )
 		{
-			pAppURL = pFallbackAppURL;
-			pFallbackAppURL = nil;
-		}
+			NSURL *pAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:@"com.apple.mail"];
+			if ( pAppURL )
+				[pAppURLs addObject:pAppURL];
+			pAppURL = [pWorkspace URLForApplicationToOpenURL:[NSURL URLWithString:@"mailto://"]];
+			if ( pAppURL )
+				[pAppURLs addObject:pAppURL];
+			if ( mpAppID && [mpAppID length] )
+			{
+				pAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:mpAppID];
+				if ( pAppURL )
+					[pAppURLs addObject:pAppURL];
+			}
 
-		NSWorkspaceOpenConfiguration *pConfiguration = [NSWorkspaceOpenConfiguration configuration];
-		if ( pAppURL && pConfiguration )
-		{
-			[pWorkspace openURLs:mpURLs withApplicationAtURL:pAppURL configuration:pConfiguration completionHandler:^(NSRunningApplication *pApp, NSError *pError) {
-				(void)pError;
-				if ( !pApp && pFallbackAppURL )
-					[pWorkspace openURLs:mpURLs withApplicationAtURL:pFallbackAppURL configuration:pConfiguration completionHandler:nil];
-			}];
-			mbResult = YES;
+			NSWorkspaceOpenConfiguration *pConfiguration = [NSWorkspaceOpenConfiguration configuration];
+			if ( [pAppURLs count] && pConfiguration )
+			{
+				pAppURL = [pAppURLs lastObject];
+				[pAppURLs removeLastObject];
+				[pWorkspace openURLs:mpURLs withApplicationAtURL:pAppURL configuration:pConfiguration completionHandler:^(NSRunningApplication *pApp, NSError *pError) {
+					(void)pError;
+					if ( !pApp && [pAppURLs count] )
+					{
+						NSURL *pAppURL = [pAppURLs lastObject];
+						[pAppURLs removeLastObject];
+						[pWorkspace openURLs:mpURLs withApplicationAtURL:pAppURL configuration:pConfiguration completionHandler:^(NSRunningApplication *pApp, NSError *pError) {
+							(void)pError;
+							if ( !pApp && [pAppURLs count] )
+							{
+								NSURL *pAppURL = [pAppURLs lastObject];
+								[pAppURLs removeLastObject];
+								[pWorkspace openURLs:mpURLs withApplicationAtURL:pAppURL configuration:pConfiguration completionHandler:nil];
+							}
+						}];
+					}
+				}];
+				mbResult = YES;
+			}
 		}
 	}
 }
