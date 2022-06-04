@@ -22,7 +22,7 @@ At this time, NeoOffice will only build on macOS 11 Big Sur or macOS 12 Monterey
      Command Line Tools for Xcode v13.2
 
    macOS 12.4 Monterey:
-     Xcode v13.4
+     Xcode v13.4.1
      Command Line Tools for Xcode v13.4
 
 2. Download and install Oracle's Java 8 Development Kit (JDK) from the following URL:
@@ -31,7 +31,7 @@ At this time, NeoOffice will only build on macOS 11 Big Sur or macOS 12 Monterey
 
    Important: the build will fail if Oracle's Java 9 or later are installed so be sure to delete such versions from the /Library/Java/JavaVirtualMachines folder before starting the build.
 
-3. If you are building on an Apple Silicon machine, you will need Apple's Rosetta to run Oracle's JDK 1.8 so run the following command to ensure that Rosetta is installed:
+3. If you are building on an Apple Silicon machine, you will need Apple's Rosetta to run Oracle's JDK 8 so run the following command to ensure that Rosetta is installed:
 
    sudo softwareupdate --install-rosetta --agree-to-license
 
