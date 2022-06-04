@@ -1182,6 +1182,10 @@
 <xsl:template match="paragraph[@id='par_idN1091F' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidescriptingxml']]]" />
 <xsl:template match="paragraph[(@id='par_idN105AA' or @id='par_idN105BA' or @id='par_idN10622' or @id='par_idN10597' or @id='par_idN105A7' or @id='par_idN105FB') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0106130200xml']]]" />
 <xsl:template match="paragraph[@id='par_idN109BB' and ancestor::body/preceding-sibling::meta[topic[@id='textshared0106130000xml']]]" />
+<xsl:template match="paragraph[(@id='par_idN105E5') and ancestor::body/preceding-sibling::meta[topic[@id='textswriter01mailmerge08xml']]]">
+	<xsl:apply-templates mode="securitywarning" select="." />
+</xsl:template>
+<xsl:template match="paragraph[(@id='par_idN105E8' or @id='par_idN105EC' or @id='par_idN105EF' or @id='par_idN105F3' or @id='par_idN10600' or @id='par_idN10604' or @id='par_idN10607' or @id='par_idN1060B' or @id='par_idN1060E' or @id='par_idN10611' or @id='par_idN10615' or @id='par_idN10626' or @id='par_idN1062A' or @id='par_idN1062D' or @id='par_idN10631' or @id='par_idN10642' or @id='par_idN10646') and ancestor::body/preceding-sibling::meta[topic[@id='textswriter01mailmerge08xml']]]" />
 
 <!-- Remove LDAP text -->
 <xsl:template match="paragraph[@id='par_idN10558' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedexplorerdatabasedabawiz02ldapxml']]]">

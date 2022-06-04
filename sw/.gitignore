@@ -576,7 +576,6 @@ source/ui/dbui/mmoutputtypepage.hxx
 source/ui/dbui/mmgreetingspage.hxx
 source/ui/dbui/mmaddressblockpage.hxx
 source/ui/dbui/mailmergewizard.cxx
-source/ui/dbui/mmoutputtypepage.cxx
 source/ui/dbui/dbui.src
 source/ui/dbui/mmgreetingspage.cxx
 source/ui/dbui/mmoutputpage.hxx

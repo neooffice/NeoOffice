@@ -37,7 +37,6 @@ source/options/doclinkdialog.cxx
 source/options/personalization.src
 source/options/optsave.cxx
 source/options/optctl.cxx
-source/options/treeopt.cxx
 source/options/optjava.src
 source/options/optbasic.hxx
 source/options/webconninfo.cxx

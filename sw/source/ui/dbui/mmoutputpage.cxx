@@ -15,6 +15,13 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified June 2022 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <mmoutputpage.hxx>
@@ -74,6 +81,16 @@
 #include <comphelper/string.hxx>
 #include <boost/scoped_ptr.hpp>
 
+#if defined USE_JAVA && defined MACOSX
+
+#include <dlfcn.h>
+
+typedef sal_Bool Application_canUseJava_Type();
+
+static Application_canUseJava_Type *pApplication_canUseJava = NULL;
+
+#endif	// USE_JAVA && MACOSX
+
 using namespace svt;
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -83,6 +100,17 @@ using namespace ::com::sun::star::uno;
 #define MM_DOCTYPE_WORD             3
 #define MM_DOCTYPE_HTML             4
 #define MM_DOCTYPE_TEXT             5
+
+#if defined USE_JAVA && defined MACOSX
+
+static sal_Bool lcl_canUseJava()
+{
+    if ( !pApplication_canUseJava )
+        pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+    return ( pApplication_canUseJava && pApplication_canUseJava() );
+}
+
+#endif	// USE_JAVA && MACOSX
 
 static OUString lcl_GetExtensionForDocType(sal_uLong nDocType)
 {
@@ -263,6 +291,10 @@ SwMailMergeOutputPage::SwMailMergeOutputPage(SwMailMergeWizard* _pParent)
     // #i51949# hide e-Mail option if e-Mail is not supported
     if(!rConfigItem.IsMailAvailable())
         m_pSendMailRB->Hide();
+#if defined USE_JAVA && defined MACOSX
+    else if (!lcl_canUseJava())
+        m_pSendMailRB->Hide();
+#endif	// USE_JAVA && MACOSX
 
     Link aLink = LINK(this, SwMailMergeOutputPage, OutputTypeHdl_Impl);
     m_pSaveStartDocRB->SetClickHdl(aLink);
