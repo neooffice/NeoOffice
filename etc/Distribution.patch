@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <installer-gui-script minSpecVersion="2">
     <title>$(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)</title>
-    <options customize="never" allow-external-scripts="yes" hostArchitectures="$(TARGET_MACHINE)"/>
+    <options customize="never" allow-external-scripts="true" hostArchitectures="$(TARGET_MACHINE)"/>
     <domains enable_anywhere="true"/>
     <choices-outline>
         <line choice="choice0"/>
