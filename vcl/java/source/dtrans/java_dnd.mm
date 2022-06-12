@@ -1019,6 +1019,8 @@ static uno::Sequence< OUString > JavaDropTarget_getSupportedServiceNames()
 
 IMPL_STATIC_LINK( JavaDragSource, dragDropEnd, void*, pData )
 {
+	(void)pThis;
+
 	datatransfer::dnd::DragSourceDropEvent *pDragEvent = (datatransfer::dnd::DragSourceDropEvent *)pData;
 
 	if ( pDragEvent )
